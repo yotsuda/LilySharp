@@ -230,7 +230,7 @@ internal sealed class VoiceWalkRecording
     /// <summary>Walk-local, cleared-per-walk lists, copied at walk end. Their
     /// prefix (by checkpoint count) is what a resume adopts.</summary>
     public List<(int, int, string, bool, int)>? PendingInlineVoltas;
-    public List<(Syntax.ParallelExpressionSyntax, int, Fraction, OctaveSnapshot)>? ParallelSpans;
+    public List<(Syntax.ParallelExpressionSyntax, int, Fraction, OctaveSnapshot, Fraction, int)>? ParallelSpans;
 
     /// <summary>The walk's resolved-spelling log, in insertion order: every note or
     /// chord this walk resolved that IS the original of some <c>q</c> / bare duration

@@ -325,7 +325,7 @@ internal static class CollectResumePlanner
     {
         if (rec.ParallelSpans == null)
             return false;
-        foreach (var (node, _, _, _) in rec.ParallelSpans)
+        foreach (var (node, _, _, _, _, _) in rec.ParallelSpans)
         {
             bool first = true;
             foreach (var voice in node.Voices)

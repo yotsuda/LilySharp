@@ -668,8 +668,11 @@ public sealed class MidiExporter
                 // …and the music AFTER the span reads from the frame the span opened in
                 // too: no branch moves it, so which branch was written last cannot matter
                 // (MeasureCollector's _parallelSpans carries the same rule for the page).
+                // The note-value default is part of that frame (session 398): the LAST
+                // branch's last value used to leak out here while the page took voice 0's.
                 _currentNoteName = startNoteName;
                 _currentOctave = startOctave;
+                _defaultDuration = startDuration;
                 break;
 
             case PhraseDeclarationSyntax:

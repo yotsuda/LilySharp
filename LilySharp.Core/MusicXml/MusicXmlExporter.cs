@@ -1618,6 +1618,9 @@ public sealed class MusicXmlExporter
         // voice reads from, and what the music after the span reads from"), and this walk
         // is a second reader of it — not a second rule.
         int spanOctave = _currentOctave, spanStep = _currentStep;
+        // …and the note-value default is part of that frame (session 398, the same rule in
+        // MeasureCollector.MusicWalk): every voice opens at it, and so does the music after.
+        var spanDefault = _defaultDuration;
 
         int startMeasure = _currentPart.Measures.Count;
         ProcessNode(voices[0]);
@@ -1646,10 +1649,10 @@ public sealed class MusicXmlExporter
             // 2026-08-17: page/MIDI/LilyPond all read B3 C3 where this wrote B2 C2).
             _currentOctave = spanOctave;
             _currentStep = spanStep;
-            // The DURATION default does reset — the collector resets it too
-            // (BuildExtraVoiceTracks: `_defaultDuration = Fraction.Quarter`), so this line
-            // agrees with the page and only the octave above was a second rule.
-            _defaultDuration = Fraction.Quarter;
+            // The DURATION default is the span's too (BuildExtraVoiceTracks reads the
+            // recorded span's value; until session 398 both sides reset it to a quarter,
+            // which drew `c8 voice { d e } { f g }`'s f g as crotchets).
+            _defaultDuration = spanDefault;
             _tieToNextNote = false;
             _tieOpen.Clear();
             ProcessNode(voices[v]);
@@ -1698,6 +1701,7 @@ public sealed class MusicXmlExporter
         // note from. Leaving voice 1's end here read `d` two octaves off in the probe.
         _currentOctave = spanOctave;
         _currentStep = spanStep;
+        _defaultDuration = spanDefault;
     }
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig)

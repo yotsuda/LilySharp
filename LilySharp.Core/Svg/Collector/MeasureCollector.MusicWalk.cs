@@ -911,9 +911,15 @@ public sealed partial class MeasureCollector
                     // music does not move the relative frame (see _parallelSpans). Voice 0
                     // is walked inline here, so it is saved and restored around that walk;
                     // the other voices take the recorded frame in BuildExtraVoiceTracks.
+                    // The note-value default travels by the same rule (session 398): every
+                    // voice opens at the value in force at the span, and so does the music
+                    // after it — voice 0's last value used to leak out, the way its last
+                    // pitch did before 2026-08-01.
                     var spanFrame = _octave.Snapshot();
+                    var (spanDuration, spanDots) = (_defaultDuration, _defaultDots);
                     _parallelSpans.Add(
-                        (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame));
+                        (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame,
+                            spanDuration, spanDots));
                     if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
@@ -921,6 +927,7 @@ public sealed partial class MeasureCollector
                         ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
                         _cursor.VoiceScope = null;
                         _octave.Restore(spanFrame);
+                        (_defaultDuration, _defaultDots) = (spanDuration, spanDots);
                     }
                 }
                 break;

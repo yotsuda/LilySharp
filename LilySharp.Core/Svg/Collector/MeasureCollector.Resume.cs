@@ -472,21 +472,21 @@ public sealed partial class MeasureCollector
         // references, and their extra voices are walked LIVE after this walk —
         // they must be re-resolved against the new tree, not adopted (except on
         // the identity path, where the old tree's text IS the new text).
-        var spanTail = new List<(ParallelExpressionSyntax, int, Fraction, OctaveSnapshot)>(
+        var spanTail = new List<(ParallelExpressionSyntax, int, Fraction, OctaveSnapshot, Fraction, int)>(
             endCk.ParallelSpanCount - ck.ParallelSpanCount);
         for (int i = ck.ParallelSpanCount; i < endCk.ParallelSpanCount; i++)
         {
-            var (oldNode, startMeasure, startOffset, frame) = rec.ParallelSpans![i];
+            var (oldNode, startMeasure, startOffset, frame, duration, dots) = rec.ParallelSpans![i];
             if (identity)
             {
-                spanTail.Add((oldNode, startMeasure, startOffset, frame));
+                spanTail.Add((oldNode, startMeasure, startOffset, frame, duration, dots));
                 continue;
             }
             if (_root == null
                 || CollectTailShifter.ResolveShifted(_root, oldNode, w)
                     is not ParallelExpressionSyntax resolved)
                 return DeclineSplice("a tail parallel span does not resolve on the new tree");
-            spanTail.Add((resolved, startMeasure, startOffset, frame));
+            spanTail.Add((resolved, startMeasure, startOffset, frame, duration, dots));
         }
 
         // Resolved spellings of the adopted tail (finding 3-4), re-keyed onto this
@@ -713,9 +713,10 @@ public sealed partial class MeasureCollector
             return DeclineSplice("parallel span count differs");
         for (int i = 0; i < _parallelSpans.Count; i++)
         {
-            var (liveNode, liveStart, liveOffset, liveFrame) = _parallelSpans[i];
-            var (recNode, recStart, recOffset, recFrame) = _suffixPlan!.Recording.ParallelSpans![i];
-            if (liveStart != recStart || liveOffset != recOffset || liveFrame != recFrame)
+            var (liveNode, liveStart, liveOffset, liveFrame, liveDuration, liveDots) = _parallelSpans[i];
+            var (recNode, recStart, recOffset, recFrame, recDuration, recDots) = _suffixPlan!.Recording.ParallelSpans![i];
+            if (liveStart != recStart || liveOffset != recOffset || liveFrame != recFrame
+                || liveDuration != recDuration || liveDots != recDots)
                 return DeclineSplice("a parallel span's start or frame differs");
             if (!w.TryShift(recNode.FullSpan.Start, out int nodeStart)
                 || liveNode.FullSpan.Start != nodeStart

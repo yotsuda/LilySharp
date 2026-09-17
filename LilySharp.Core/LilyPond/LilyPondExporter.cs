@@ -915,6 +915,13 @@ public sealed class LilyPondExporter
             var buf = new LilyPondExporter
             { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
             CarryFrameInto(buf);
+            // The body's note-value memory is what it was before CarryFrameInto carried the
+            // stream's (session 398): a fresh quarter, nothing forced — kept byte-identical
+            // here, and NOT a claim that it is right. Whether a phrase body opens at the
+            // stream's value or at Lily#'s fresh frame is HANDOFF §2 R14's twin item.
+            buf._lastWrittenValue = "4";
+            buf._lastWrittenDots = 0;
+            buf._forceNextDuration = false;
             // Both sides open a FRESH frame for the body — LilyPond the nested \relative
             // written below, Lily# its EnterDefaultFrame — at the anchor of the SECTION being
             // played, moved by the reference's own marks.
@@ -2480,6 +2487,18 @@ public sealed class LilyPondExporter
         buf._homeTimeBeatType = _homeTimeBeatType;
         buf._homeTimeSenza = _homeTimeSenza;
         buf._homeTimeNode = _homeTimeNode;
+        // The note-value memory goes in with the frame (session 398): a tuplet, cue or repeat
+        // body is sequential music on both sides, so its first bare note reads what the
+        // stream last wrote — and reads it the same way on both sides only if the buffer
+        // knows it. A fresh buffer knew "4" and forced nothing, so `c8 tuplet 3/2 { d e f }`
+        // wrote `d e f` bare and LilyPond read them as quavers by luck of the lexical carry,
+        // while a site that had to force a value (a voice branch) then forced the WRONG one
+        // after its tuplet. Sites whose body opens its own memory (a grace at an eighth, a
+        // voice branch at the span's value, a phrase body) overwrite these three after
+        // this call.
+        buf._lastWrittenValue = _lastWrittenValue;
+        buf._lastWrittenDots = _lastWrittenDots;
+        buf._forceNextDuration = _forceNextDuration;
     }
 
     /// <summary>
@@ -2502,6 +2521,13 @@ public sealed class LilyPondExporter
         _timeBeats = buf._timeBeats;
         _timeBeatType = buf._timeBeatType;
         _timeSenza = buf._timeSenza;
+        // …and the note-value memory comes back out with it: the note after a tuplet, a cue
+        // or a repeat reads the body's last value on both sides (the page walks the body
+        // inline; LilyPond's parser carries the last value written). The grace site puts the
+        // stream's own value back after this, because Lily# does not carry a grace's out.
+        _lastWrittenValue = buf._lastWrittenValue;
+        _lastWrittenDots = buf._lastWrittenDots;
+        _forceNextDuration = buf._forceNextDuration;
     }
 
     /// <summary>Octave marks for a net shift: <c>'</c> up, <c>,</c> down.</summary>
@@ -3697,6 +3723,17 @@ public sealed class LilyPondExporter
         // difference by itself (EmitMusicPitch), and so does the first pitch after the span.
         int spanStep = _lysStep, spanOctave = _lysOctave;
         int chainStep = _lyStep, chainOctave = _lyOctave;
+        // The note-value default parts the same way (session 398, MeasureCollector.MusicWalk's
+        // rule): Lily# opens every branch, and the music after the span, at the value in
+        // force where the span opened; LilyPond's parser carries the last value WRITTEN, so
+        // it reads branch 2's first bare note from branch 1's end and the note after the
+        // span from the last branch's end. Each branch therefore starts from the span's
+        // value with its first event forced to write it out, and so does the first event
+        // after the span. (Until then the nested buffers started at a fresh quarter and the
+        // main stream carried the last branch's value — `c8 << { d e } \\ { f g } >> a`
+        // read f g a as quavers in LilyPond and the page drew f g as crotchets.)
+        string spanValue = _lastWrittenValue;
+        int spanDots = _lastWrittenDots;
 
         var bodies = new List<string>();
         foreach (var (_, block) in par.NamedVoices)
@@ -3708,6 +3745,9 @@ public sealed class LilyPondExporter
             buf._lysOctave = spanOctave;
             buf._lyStep = chainStep;
             buf._lyOctave = chainOctave;
+            buf._lastWrittenValue = spanValue;
+            buf._lastWrittenDots = spanDots;
+            buf._forceNextDuration = true;
             buf.EmitMusicStream(MusicItems(block).ToList(), "");
             chainStep = buf._lyStep;
             chainOctave = buf._lyOctave;
@@ -3722,6 +3762,9 @@ public sealed class LilyPondExporter
         _lysOctave = spanOctave;
         _lyStep = chainStep;
         _lyOctave = chainOctave;
+        _lastWrittenValue = spanValue;
+        _lastWrittenDots = spanDots;
+        _forceNextDuration = true;
 
         if (bodies.Count == 0)
             return "";
@@ -3747,6 +3790,7 @@ public sealed class LilyPondExporter
         // wrote). So the body's first event writes its value out unless it states one, and the
         // events after it inherit — which is the same carry on both sides from there on.
         buf._lastWrittenValue = "8";
+        buf._lastWrittenDots = 0;
         buf._forceNextDuration = true;
         buf.EmitMusicStream(MusicItems(g.Body).ToList(), "");
         // ⚠️ The OCTAVE frame does NOT leak the way the duration does: the grace body advances
@@ -3755,11 +3799,16 @@ public sealed class LilyPondExporter
         // OctaveContext.Snapshot mentions is the parallel span's, not this). Measured, because
         // the comment here used to claim the opposite: `a4 grace { e8 } c4` renders A3 E3 C3,
         // and its twin reads A3 E3 C3 in LilyPond.
+        string streamValue = _lastWrittenValue;
+        int streamDots = _lastWrittenDots;
         CarryFrameBack(buf);
         _warnings.AddRange(buf._warnings);
         string body = buf._sb.ToString().Replace("\n", " ").Trim();
         // LilyPond carries the grace body's last duration out to the next event; Lily# does
-        // not. See EmitEventDuration.
+        // not — the stream's own memory stands, and the next event writes it out. See
+        // EmitEventDuration.
+        _lastWrittenValue = streamValue;
+        _lastWrittenDots = streamDots;
         _forceNextDuration = true;
         return $"{kw} {{ {body} }}";
     }

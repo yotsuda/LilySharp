@@ -213,7 +213,12 @@ public sealed partial class MeasureCollector
     // member stacks on the root and `<c e g>` == `<c g e>` (CreateChordItem). Written
     // 2026-08-01 on the user's call; before that voices 2..N restarted at the PART's
     // default octave and voice 0 leaked its last pitch into the music after the span.
-    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame)> _parallelSpans = new();
+    // Duration / Dots are the note-value default at the same opening, carried by the same
+    // rule (session 398, HANDOFF §2 R4): until then voices 2..N restarted at a QUARTER
+    // (`c8 voice { d e } { f g }` drew f g as crotchets against d e's quavers) and the
+    // music after the span carried whatever voice 0 last wrote — the page, the MIDI, the
+    // MusicXML and the twin each with its own answer.
+    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame, Fraction Duration, int Dots)> _parallelSpans = new();
     // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
     // this collector so two voices of the same staff cannot be handed the same number.
     private int _nextBeamId;
@@ -2021,7 +2026,7 @@ public sealed partial class MeasureCollector
 
         // Map named voices (voice sop { … }) to their measure track so a
         // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
-        foreach (var (parallel, _, _, _) in _parallelSpans)
+        foreach (var (parallel, _, _, _, _, _) in _parallelSpans)
         {
             int vi = 0;
             foreach (var (name, _) in parallel.NamedVoices)
@@ -2084,7 +2089,7 @@ public sealed partial class MeasureCollector
     {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
-        foreach (var (parallel, _, _, _) in _parallelSpans)
+        foreach (var (parallel, _, _, _, _, _) in _parallelSpans)
             voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
 
         var tracks = new List<ImmutableArray<Measure>>();
@@ -2094,7 +2099,7 @@ public sealed partial class MeasureCollector
             for (int m = 0; m < totalMeasures; m++)
                 trackMeasures[m] = EmptyMeasure(track0[m]);
 
-            foreach (var (parallel, start, startOffset, spanFrame) in _parallelSpans)
+            foreach (var (parallel, start, startOffset, spanFrame, spanDuration, spanDots) in _parallelSpans)
             {
                 var blocks = parallel.Voices.ToList();
                 if (t >= blocks.Count)
@@ -2104,13 +2109,14 @@ public sealed partial class MeasureCollector
                 // one voice 0 read, so the voices are order-independent and none of them
                 // drags the next (see _parallelSpans). ⚠️ It used to be the part's default
                 // octave, which made `voice { c'1 } voice { d1 }` after a low g read its d
-                // two octaves from where the MIDI put it.
+                // two octaves from where the MIDI put it. The note-value default is the
+                // opening's too (it used to be a fresh quarter — see the field's remarks).
                 var savedOctave = _octave.Snapshot();
                 var savedDuration = _defaultDuration;
                 var savedDots = _defaultDots;
                 _octave.Restore(spanFrame);
-                _defaultDuration = Fraction.Quarter;
-                _defaultDots = 0;
+                _defaultDuration = spanDuration;
+                _defaultDots = spanDots;
 
                 // The sub-voice's cursor, installed for exactly the walk below:
                 //   * MetadataMeasureOffset — per-note metadata in this sub-voice is

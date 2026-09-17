@@ -16,10 +16,13 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.LilyPond;
 using LilySharp.Core.Midi;
 using LilySharp.Core.Music;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -142,6 +145,89 @@ public class VoiceSpanOutputsTests
         // ... and it is a DIFFERENT piece from the spanned book, which is what "simultaneous
         // music does not move the frame" means: b, reads from a' here and from c' there.
         Assert.NotEqual(Expected.OrderBy(k => k).ToArray(), page.ToArray());
+    }
+
+    /// <summary>The NOTE VALUE is part of the frame the span opens in (session 398, HANDOFF
+    /// §2 R4): every branch reads its bare notes at the value in force where the span opened,
+    /// and so does the music after the span. The book is built to part the candidate
+    /// readings — the span opens at a QUAVER (after <c>g'</c>), voice 0 ends at a MINIM,
+    /// the last voice ends at a CROTCHET — so the eight bare notes after the span fill
+    /// one bar under the rule, two under "the last voice's end" (the MIDI's old reading)
+    /// and four under "voice 0's end" (the page's), and the second voice's four bare notes
+    /// are quavers under the rule and crotchets under the old fresh-quarter reset.</summary>
+    private const string ValueBook = """
+        part melody
+        section Main { melody { c'2 d'8 e' f' g' | voice { a'2 b' | } { c'' d'' e'' f'' g''4 a'' | } g'' a'' b'' c''' d''' e''' f''' g''' | } }
+        form main { Main }
+        score main { staff melody }
+        """;
+
+    /// <summary>The same piece with every value written out — the differential's other side.</summary>
+    private const string ValueBookExplicit = """
+        part melody
+        section Main { melody { c'2 d'8 e' f' g' | voice { a'2 b' | } { c''8 d'' e'' f'' g''4 a'' | } g''8 a'' b'' c''' d''' e''' f''' g''' | } }
+        form main { Main }
+        score main { staff melody }
+        """;
+
+    [Fact]
+    public void AVoiceSpan_OpensEveryVoiceAndTheMusicAfterIt_AtTheValueInForceWhereItOpened()
+    {
+        var tree = SyntaxTree.Parse(ValueBook);
+
+        // ⑴ the page: three bars in voice 0, the second voice's bare notes are quavers, and
+        //    the eight bare notes after the span are quavers filling ONE bar
+        var score = new MeasureCollector().Collect(tree, null);
+        Assert.Equal(2, score.Voices.Length);
+        Assert.Equal(3, score.Voices[0].Measures.Length);
+        var second = score.Voices[1].Measures[1].Items.OfType<NoteItem>().ToList();
+        Assert.Equal(6, second.Count);
+        Assert.All(second.Take(4), n => Assert.Equal(Fraction.Eighth, n.BaseDuration));
+        var after = score.Voices[0].Measures[2].Items.OfType<NoteItem>().ToList();
+        Assert.Equal(8, after.Count);
+        Assert.All(after, n => Assert.Equal(Fraction.Eighth, n.BaseDuration));
+
+        // ⑵ the MIDI: the piece ends three bars (six minims) after it starts
+        var notes = new MidiExporter().Export(tree).Tracks.SelectMany(t => t.Notes).ToList();
+        Assert.Equal(21, notes.Count);
+        int minim = notes.OrderBy(n => n.StartTick).First().DurationTicks;
+        Assert.Equal(6 * minim, notes.Max(n => n.StartTick + n.DurationTicks));
+
+        // ⑶ the MusicXML: three measures, the last holding eight eighths
+        var doc = new MusicXmlExporter().Export(tree);
+        var measures = doc.Parts.Single().Measures;
+        Assert.Equal(3, measures.Count);
+        var last = measures[2].Notes.Where(n => !n.IsBackup).ToList();
+        Assert.Equal(8, last.Count);
+        Assert.All(last, n => Assert.Equal("eighth", n.Type));
+
+        // ⑷ the twin: LilyPond's parser carries the last value WRITTEN, so the twin has to
+        //    write the value out where the two rules part — at the second branch's first
+        //    event and at the first event after the span
+        string ly = new LilyPondExporter().Export(tree);
+        Assert.Matches(@"\\\\ \{ [a-g][',]*8\b", ly);
+        Assert.Matches(@">> [a-g][',]*8\b", ly);
+    }
+
+    [Fact]
+    public void AVoiceSpan_TheBareSpellingIsTheExplicitSpelling()
+    {
+        // The differential: the piece with every value written is the same piece — in
+        // what sounds and in what is exported. (The twin differs by construction: it
+        // writes the forced values in one and copies the source's in the other.)
+        var bare = SyntaxTree.Parse(ValueBook);
+        var explicitly = SyntaxTree.Parse(ValueBookExplicit);
+
+        static IEnumerable<(int, int, int)> Sounding(SyntaxTree t)
+            => new MidiExporter().Export(t).Tracks.SelectMany(tr => tr.Notes)
+                .Select(n => (n.Pitch, n.StartTick, n.DurationTicks)).OrderBy(n => n);
+        Assert.Equal(Sounding(explicitly), Sounding(bare));
+
+        static IEnumerable<string> Exported(SyntaxTree t)
+            => new MusicXmlExporter().Export(t).Parts.Single().Measures.Select(m => m.ToXml().ToString());
+        var exportedExplicit = Exported(explicitly).ToList();
+        Assert.Equal(3, exportedExplicit.Count); // the differential is a claim only over a real piece
+        Assert.Equal(exportedExplicit, Exported(bare));
     }
 
     private static IEnumerable<int> XmlKeys(SyntaxTree tree)
