@@ -1049,6 +1049,34 @@ public class IncrementalCompilerTests
             session.SystemCache!.PassCounters(SystemLayoutCache.Store.StaffSkylines));
     }
 
+    /// <summary>
+    /// The page's first Y is read off system 0's silhouette BEFORE the per-system loop, and
+    /// that read goes through the same memo entry the loop reads for system 0 — one
+    /// computation, not two. Liveness by count: on an edit confined to the LAST system the
+    /// Skylines store serves the five unchanged systems PLUS that up-front read (six hits) and
+    /// computes the edited one; a direct call beside the memo would show five hits and would
+    /// be laying out system 0's edge beams on every keystroke (session 403: 3.1 ms / 3.0 MB
+    /// of a 21.7 ms keystroke on perf-plain1k, RULES §7 9).
+    /// </summary>
+    [Fact]
+    public void LayoutMemo_TheFirstSystemsSilhouette_IsReadThroughTheMemo()
+    {
+        string src = PinnedSystemsBook();
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // The last bar of the last system (the only "… | break" followed by the closing braces).
+        var change = Replace(src, "e'8 d' c' b a g f e | break\n} }", "e'8 d' c' b a g f d | break\n} }");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        Assert.Equal(new SystemLayoutCache.MemoCounters(6, 0, 1),
+            session.SystemCache!.PassCounters(SystemLayoutCache.Store.Skylines));
+        // (A content-unchanged re-type is not the regime to count in: whole-layout reuse
+        // skips the layout outright and no store is read at all — ContentUnchangedEdit_*.)
+    }
+
     /// <summary>The mirror: a bar deleted from the first system, the tail shifted back.</summary>
     [Fact]
     public void LayoutMemo_ADeletedMeasure_ReStampsTheShiftedSystems()

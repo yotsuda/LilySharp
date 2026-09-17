@@ -81,6 +81,14 @@ workflow attaches that section to the GitHub Release verbatim.
   whose block is one `<< \\ >>` span, is unchanged. What the collect produces does not change:
   a resume from every recorded boundary of every net book still equals the full collect, and
   the seeked walk is the full walk's remainder site by site.
+- **A keystroke no longer lays out the first system's beams twice.** The page's first Y is
+  read off the first system's silhouette before the per-system loop, and that read used to
+  build the silhouette directly — quanting the edge staff's beams on every keystroke — while
+  the loop's own copy of the same system came from the per-system memo. The up-front read now
+  goes through the same memo entry. Measured on an edit at the last bar (Release, tiered
+  compilation off, min of 6): 3.1 ms and 3.0 MB of a 21.7 ms keystroke on the plain 1000-bar
+  book, 3.7 ms and 4.4 MB on the fingered one. The picture does not change: the memo hands
+  back the very silhouette the loop reads.
 - **A keystroke's collect walks the book five times less.** Even when the preview's
   incremental collect adopted every bar of the previous keystroke, it still walked the whole
   tree five more times for facts that do not depend on the edit: twice per part for the

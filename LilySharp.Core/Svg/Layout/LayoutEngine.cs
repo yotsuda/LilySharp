@@ -309,12 +309,30 @@ internal sealed partial class LayoutEngine
                     score, edgeLastStaff, edgeLastStaffIndex, mls, sysIdx)
                 : default);
 
-        // Pre-calculate first system skylines for initial Y positioning
-        var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts, 0);
-        var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
-            score, firstSystemMeasureLayouts, systemHeight, indent,
-            firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts,
-            firstStaffSkylines.Skylines);
+        // Pre-calculate first system skylines for initial Y positioning — through the SAME
+        // memo entry the loop below reads for system 0 (same key: measure range 0..n,
+        // first, last-if-only, indent, shortest, height), so the two are one computation.
+        // ⚠️ It used to be a direct call: the edge staff's beams were laid out (quanted)
+        // here on EVERY keystroke while the loop's copy hit the memo — MEASURED (session
+        // 403, Release, TieredCompilation=0, an edit at the last bar): 3.1 ms / 3.0 MB of a
+        // 21.7 ms plain1k keystroke, 3.7 ms / 4.4 MB on fingbeam1k, for one system whose
+        // silhouette the memo then served in 0.04 ms. A memo hit here returns the very
+        // instance the loop gets, so the page's first Y reads the same silhouette as before.
+        // The degenerate arms (no measures, a zero body) keep the direct call: the loop
+        // never asks the memo with those keys.
+        (VerticalSkyline up, VerticalSkyline down) FirstSystemSkylines()
+        {
+            var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts, 0);
+            return _skylineBuilder.BuildSystemSkylines(
+                score, firstSystemMeasureLayouts, systemHeight, indent,
+                firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts,
+                firstStaffSkylines.Skylines);
+        }
+        var (firstUpSkyline, _) = systemMeasures.Count > 0 && systemHeight > 0
+            ? ComputeSystemSkyline(systemCache, 0, systemMeasures[0].Count, true,
+                systemMeasures.Count == 1, indent, commonShortestDuration, systemHeight,
+                FirstSystemSkylines)
+            : FirstSystemSkylines();
         var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             _options.MarginTop, header, LayoutUtilities.CalculateUpExtent(firstUpSkyline),
