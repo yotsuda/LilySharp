@@ -4,7 +4,7 @@ A music notation language and engraving engine — publication-quality sheet mus
 from plain text, with an IDE-first toolchain.
 
 [![CI](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml/badge.svg)](https://github.com/yotsuda/LilySharp/actions/workflows/ci.yml)
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/yotsuda.lilysharp?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version/yotsuda.lilysharp.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
 ## Overview
