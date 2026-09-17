@@ -256,6 +256,7 @@ public sealed class MusicXmlExporter
             // auto-transpose baseline reverts to _homeTonic just above.
             _homeKey = (_keyFifths, _keyMode, _keyCustomXml);
             _homeTime = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
+            BuildSectionHeaderRegistry(root);
             ProcessSections(root);
         }
 
@@ -352,6 +353,81 @@ public sealed class MusicXmlExporter
     /// <see cref="Semantics.ScoreHomeMeter"/>).</summary>
     private TimeSignatureSyntax? _sectionTime;
 
+    /// <summary>The section's HEADER pickup — the third of the family (<see cref="_sectionKey"/>,
+    /// <see cref="_sectionTime"/>): <see cref="EmitPartMusic"/> arms it on the first bar of
+    /// EVERY part's play of the section, the way the page shortens every part's first measure
+    /// with it (MeasureCollector.Form.cs, <c>_sectionHeaderPartials</c>).</summary>
+    private PartialDeclarationSyntax? _sectionPartial;
+
+    /// <summary>The section's HEADER tempo — the fourth of the family: the piece's opening
+    /// tempo when the part's first bar is this section's, a metronome direction at the
+    /// section's start otherwise (the page's ProcessSectionPrologue draws the same line:
+    /// "at the very first timestep the section tempo IS the piece's opening tempo").</summary>
+    private TempoDeclarationSyntax? _sectionTempo;
+
+    // The section HEADER registry, keyed by NAME — the reading the page, the MIDI and the
+    // LilyPond twin all take (MeasureCollector.Definitions.cs, MidiExporter's
+    // _sectionHeaderKeys / _sectionHeaderTimes / _sectionHeaderPartials, the twin's
+    // BuildSectionHeaderRegistry): every declaration of a name that holds no inline music
+    // contributes its first direct `key` / `time` / `tempo` / `partial`, first declaration
+    // wins.
+    // ⚠️ Keyed by name and not read off the declaration being played, because in a
+    // part-major book the header is a DIFFERENT declaration from the cell: `section A
+    // { partial 8 }` beside `part m { section A { … } }`. Until 2026-09-17 this exporter
+    // scanned only the declaration in hand, so the standalone header's key, time and
+    // pickup never reached the cell (MEASURED on LilySharp-Lab/sessions/p398/probes/
+    // xml-partial: `key d major time 3/4` in the header exported fifths 0 in 4/4, and the
+    // pickup of `test/chord-flag` exported as a full bar 1), while the header declaration
+    // itself was emitted as music — under "Part 1" when no single engraved part owned it,
+    // an EMPTY <part/> the schema forbids and the importer cannot read back.
+    private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PartialDeclarationSyntax> _sectionHeaderPartials = new(StringComparer.Ordinal);
+
+    /// <summary>Fills the three header registries from every section declaration of the file
+    /// (see the fields' remarks). A declaration with inline music registers nothing — its
+    /// directives are walked as music, from their own position.</summary>
+    private void BuildSectionHeaderRegistry(SyntaxNode root)
+    {
+        _sectionHeaderKeys.Clear();
+        _sectionHeaderTimes.Clear();
+        _sectionHeaderTempos.Clear();
+        _sectionHeaderPartials.Clear();
+        foreach (var section in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
+        {
+            if (Svg.Collector.MeasureCollector.SectionHasInlineMusic(section))
+                continue;
+            var name = section.SectionName;
+            if (FirstDirect<KeySignatureSyntax>(section) is { } hk) _sectionHeaderKeys.TryAdd(name, hk);
+            if (FirstDirect<TimeSignatureSyntax>(section) is { } ht) _sectionHeaderTimes.TryAdd(name, ht);
+            if (FirstDirect<TempoDeclarationSyntax>(section) is { } htp) _sectionHeaderTempos.TryAdd(name, htp);
+            if (FirstDirect<PartialDeclarationSyntax>(section) is { } hp) _sectionHeaderPartials.TryAdd(name, hp);
+        }
+    }
+
+    /// <summary>The first direct-child directive of type <typeparamref name="T"/>, or null.</summary>
+    private static T? FirstDirect<T>(SectionDeclarationSyntax section) where T : SyntaxNode
+    {
+        foreach (var child in DirectChildren(section))
+            if (child is T t)
+                return t;
+        return null;
+    }
+
+    /// <summary>True when the section is a HEADER and nothing else: a TOP-LEVEL declaration
+    /// with no part, chord or lyrics block and no inline music — only directives
+    /// (<c>section A { partial 8 }</c> in a part-major book). Its directives reach every play
+    /// of the name through the registry, so the declaration itself has no music to emit.
+    /// ⚠️ Top-level only, the line the LilyPond twin draws ("a header is exactly what it
+    /// turns away", its section walk): a directives-only cell INSIDE a part —
+    /// <c>part bl { section Body { } }</c> — is that part's play of the section, empty, and
+    /// still opens the part (the bass corpus has one such book, an empty chord chart).</summary>
+    private static bool IsHeaderOnly(SectionDeclarationSyntax section)
+        => section.Parent is CompilationUnitSyntax
+           && !Svg.Collector.MeasureCollector.SectionHasInlineMusic(section)
+           && !DirectChildren(section).Any(c => c is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax);
+
     /// <summary>The octave shift written on the section REFERENCE currently being played
     /// (<c>~B'</c> = +1), read by <see cref="EmitPartMusic"/> when it arms the frame. It is
     /// a field rather than a parameter because the two things it moves are armed one level
@@ -366,28 +442,23 @@ public sealed class MusicXmlExporter
         // A section is self-contained: its phrase auto-transpose baseline reverts
         // to the score's home key (a mid-section modulation cannot leak out).
         _ambientTonic = _homeTonic;
-        _sectionKey = null;
-        _sectionTime = null;
+        // The section's header, by NAME (see the registry's remarks): the same header for the
+        // section-major declaration that carries it and for a part-major cell whose header
+        // is a standalone declaration.
         // ⚠️ ONLY A SECTION THAT WRAPS ITS MUSIC IN PART BLOCKS HAS A HEADER.
         // A part-major section holds its music INLINE, so a `key` or `time` written in the
-        // MIDDLE of that music is also a direct child of the section node — and this scan
-        // read it as the section's header, applying it at the section's FIRST bar.
-        // Measured 2026-08-31 on `section A { c'4 d e f | key g major g a b c | }`: the page
-        // turns G major on at bar 2, the export claimed it from bar 1, and the same book
-        // written section-major placed it correctly. The collector's registry draws the
+        // MIDDLE of that music is also a direct child of the section node — and a scan of
+        // the declaration read it as the section's header, applying it at the section's
+        // FIRST bar. Measured 2026-08-31 on `section A { c'4 d e f | key g major g a b c | }`:
+        // the page turns G major on at bar 2, the export claimed it from bar 1, and the
+        // same book written section-major placed it correctly. The registry draws the
         // same line in the same words (MeasureCollector.SectionHasInlineMusic, which the
         // LilyPond exporter's BuildSectionHeaderRegistry already consults: "a declaration
         // with inline music walks its own directives as music and registers NOTHING").
-        if (!Svg.Collector.MeasureCollector.SectionHasInlineMusic(section))
-        {
-            for (int i = 0; i < section.SlotCount; i++)
-            {
-                if (section.GetChild(i) is KeySignatureSyntax sk)
-                    _sectionKey = sk;
-                else if (section.GetChild(i) is TimeSignatureSyntax st)
-                    _sectionTime = st;
-            }
-        }
+        _sectionKey = _sectionHeaderKeys.TryGetValue(section.SectionName, out var headerKey) ? headerKey : null;
+        _sectionTime = _sectionHeaderTimes.TryGetValue(section.SectionName, out var headerTime) ? headerTime : null;
+        _sectionTempo = _sectionHeaderTempos.TryGetValue(section.SectionName, out var headerTempo) ? headerTempo : null;
+        _sectionPartial = _sectionHeaderPartials.TryGetValue(section.SectionName, out var headerPartial) ? headerPartial : null;
 
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
@@ -416,6 +487,13 @@ public sealed class MusicXmlExporter
             }
             if (firstPart != null && sectionLyrics.Count > 0)
                 AttachLyrics(firstPart, firstBefore, sectionLyrics);
+        }
+        else if (IsHeaderOnly(section))
+        {
+            // A standalone header (`section A { partial 8 }` beside the parts' cells): its
+            // directives have already reached the registry, and it holds no music — emitting
+            // it opened a part for it ("Part 1" when no single engraved part owned it) and
+            // wrote nothing into it, an empty <part/>.
         }
         else
         {
@@ -848,7 +926,23 @@ public sealed class MusicXmlExporter
 
         // If this is the first measure for this part, add attributes
         bool isFirst = _currentPart!.Measures.Count == 0;
+        // The section's header tempo, in the collector's order (time, tempo, key, partial):
+        // read before the part's opening measure so that measure's direction carries it as
+        // the piece's opening tempo, and after any later measure is opened so ProcessTempo
+        // writes it as a metronome direction at the section's start. Until 2026-09-17 it
+        // reached the document only because the header declaration was walked as music
+        // (`section A { tempo 110 }` in the bass corpus's test.lys — 110 became 120 the
+        // moment the header stopped being played).
+        if (_sectionTempo is { } sectionTempo && isFirst)
+            ProcessTempo(sectionTempo);
         StartNewMeasure(addAttributes: isFirst);
+        if (_sectionTempo is { } laterSectionTempo && !isFirst)
+            ProcessTempo(laterSectionTempo);
+        // The section's header pickup shortens this part's first bar of the section — the
+        // page applies its registry at the same spot, after the section meter, so the pickup
+        // restores to the section's own time when it closes (MeasureCollector.Form.cs).
+        if (_sectionPartial is { } sectionPartial)
+            ArmPickup(sectionPartial);
 
         // Process the music; lyrics blocks are collected and mapped onto the emitted
         // notes afterwards.
@@ -993,6 +1087,33 @@ public sealed class MusicXmlExporter
         _lastEmittedNotes.Clear();
         // The pickup, if one was pending, is this bar: spent.
         _pendingPickup = false;
+    }
+
+    /// <summary>
+    /// Anacrusis: the measure currently being built is a pickup of the declared length. Mark
+    /// it implicit and arm the duration-based auto-close (no written barline required) — the
+    /// ONE arm for a <c>partial</c> written in the music and for a section header's
+    /// (<see cref="EmitPartMusic"/>). A LEADING pickup — the part's first measure — is bar 0,
+    /// so the first FULL measure becomes 1; a pickup later in the part keeps the number it
+    /// was dealt and the count runs on, which is how the page numbers it (Measure.IsPickup:
+    /// "a LEADING pickup (index 0) is bar 0"; LayoutEngine.Annotations shifts the numbers by
+    /// one only when measures[0] is the pickup). Until 2026-09-17 every pickup restarted the
+    /// count at 0 — a mid-piece <c>partial</c> numbered the rest of the part from 1 again.
+    /// LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
+    /// </summary>
+    private void ArmPickup(PartialDeclarationSyntax partial)
+    {
+        if (_currentMeasure == null || _currentMeasure.Notes.Count != 0)
+            return;
+        _currentMeasure.Implicit = true;
+        if (_currentPart != null && _currentPart.Measures.Count == 0)
+        {
+            _currentMeasure.Number = 0;
+            _measureNumber = 1;
+        }
+        _pendingPickup = true;
+        _pickupLength = partial.ToFraction();
+        _pickupAccumulated = Fraction.Zero;
     }
 
     /// <summary>
@@ -1198,19 +1319,7 @@ public sealed class MusicXmlExporter
                 break;
 
             case PartialDeclarationSyntax partial:
-                // Anacrusis: the measure currently being built is a pickup. Mark it
-                // implicit and number it 0, so the first FULL measure becomes 1, and
-                // arm the duration-based auto-close (no written barline required).
-                // LILYPOND-REF: ly/music-functions-init.ly:1697-1705 partial = context-spec-music 'Timing
-                if (_currentMeasure != null && _currentMeasure.Notes.Count == 0)
-                {
-                    _currentMeasure.Implicit = true;
-                    _currentMeasure.Number = 0;
-                    _measureNumber = 1;
-                    _pendingPickup = true;
-                    _pickupLength = partial.ToFraction();
-                    _pickupAccumulated = Fraction.Zero;
-                }
+                ArmPickup(partial);
                 break;
 
             case BarlineSyntax barline:
@@ -2416,13 +2525,23 @@ public sealed class MusicXmlExporter
                 break;
 
             case SlurSyntax slur:
-                // Slur follows a note — mark start/stop on the last note
-                if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+                // Slur follows a note — mark start/stop on the last note. Read off the SAME
+                // record as the tie arm above: the notes just emitted, which outlive the
+                // measure they were written into. Reading the current measure's last note
+                // instead lost every slur opened on a pickup note — MaybeClosePickup closes
+                // the pickup the moment its length is filled, BEFORE the `(` after the note
+                // is walked, so the marker met an empty measure (MEASURED 2026-09-17 on
+                // `partial 4  g'4( | c'4 d' e' f') |`: no slur start, one slur stop; the bass
+                // corpus writes it under a header pickup, `dis,4( | d2.)`).
+                var slurred = _lastEmittedNotes.Count > 0 ? _lastEmittedNotes[^1]
+                    : _currentMeasure is { Notes.Count: > 0 } m ? m.Notes[^1]
+                    : null;
+                if (slurred != null)
                 {
                     if (slur.IsOpen)
-                        _currentMeasure.Notes[^1].SlurStart = true;
+                        slurred.SlurStart = true;
                     else
-                        _currentMeasure.Notes[^1].SlurStop = true;
+                        slurred.SlurStop = true;
                 }
                 break;
         }

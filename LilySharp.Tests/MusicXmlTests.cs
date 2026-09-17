@@ -113,6 +113,23 @@ c4 d4";
     }
 
     [Fact]
+    public void Partial_ASlurOpenedOnThePickupNote_SurvivesTheAutoClose()
+    {
+        // The pickup closes the moment its length is filled — BEFORE the `(` written after
+        // the note is walked. The slur arm read the current measure's last note, which by
+        // then was an empty measure, so the start was lost and only the stop was written
+        // (the tie arm read the notes just emitted and never lost its start). One record
+        // for both now. Session 398, found when section-header pickups started being armed.
+        var tree = SyntaxTree.Parse("time 4/4 partial 4 g'4( | c'4 d' e' f') |");
+        var measures = new MusicXmlExporter().Export(tree).Parts[0].Measures;
+
+        Assert.Equal(2, measures.Count);
+        Assert.True(measures[0].Implicit);
+        Assert.True(measures[0].Notes[0].SlurStart);
+        Assert.True(measures[1].Notes[^1].SlurStop);
+    }
+
+    [Fact]
     public void Partial_ImplicitAttributeSerialized()
     {
         var tree = SyntaxTree.Parse("time 4/4 partial 4 g4 | c4 d e f |");
