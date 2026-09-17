@@ -1,0 +1,50 @@
+// Nocturne in D — an original eight-bar piece written for the Lily# README.
+//
+// On display: grand staff, pickup, slurs over notes and chords, a tie, a triplet,
+// a grace note, parallel thirds, hairpins, pedal changes (@!sustain@sustain on one
+// note), a ritardando spanner,
+// fermatas and the final bar line.
+title "Nocturne"
+composer "Lily#"
+tempo "Andante espressivo" 4 = 66
+time 4/4
+key d major
+octave absolute
+
+part rh { clef treble }
+part lh { clef bass octave 3 }
+
+section Main {
+  partial 4
+  rh {
+    a8@p( cis' |
+    fis'2 e'8 d' e' fis' |
+    d'4. cis'8 b2) |
+    tuplet 3/2 { b8( cis' d' } e'4@cresc~ e'8 d' cis' b) |
+    grace { b16 } a4( cis'8 e' g'4 fis'8 e') |
+    <fis' a'>4.@f( <e' g'>8 <d' fis'>4 <cis' e'>) |
+    <b d'>2( <bes d'>2@decresc) |
+    tuplet 3/2 { a8@rit( b a } fis4 e8 g fis e) |
+    <a d' fis'>1@fermata@pp@!rit |.
+  }
+  lh {
+    r4 |
+    d,8@sustain a, d fis a fis d a, |
+    b,,8@!sustain@sustain fis, b, d fis d b, fis, |
+    g,8@!sustain@sustain d g a b a g d |
+    a,8@!sustain@sustain e g a g e cis e |
+    fis,8@!sustain@sustain a, d fis a fis d a, |
+    g,8@!sustain@sustain d g b g, bes, d g |
+    a,8@!sustain@sustain d fis a a, cis e g |
+    d,8@!sustain@sustain a, d fis a2@fermata@!sustain |.
+  }
+}
+
+form main { ~Main }
+
+score main "nocturne" {
+  grandStaff {
+    staff rh
+    staff lh
+  }
+}
