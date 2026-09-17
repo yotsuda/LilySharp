@@ -89,6 +89,56 @@ public class CueRegionTests
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
 
+    // Absolute octaves: a phrase body opens its own relative frame (so that a phrase sounds
+    // the same wherever it is played), which is not what this net is about.
+    private static string Book(string phrases, string music) =>
+        "octave absolute\ntime 4/4\npart m\n" + phrases + "\nsection A { m { " + music + " } }\nform main { A }\n"
+        + "score main \"x\" { staff m }";
+
+    private static List<NoteItem> BookNotes(string book)
+    {
+        var tree = SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.ToString())));
+        var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        return multi.StaffGroups[0].Staves[0].PrimaryVoice.Measures
+            .SelectMany(m => m.Items).OfType<NoteItem>().ToList();
+    }
+
+    /// <summary>
+    /// A phrase referenced INSIDE a cue engraves what the phrase holds, cue-sized — the same
+    /// items as writing its body in the region. <c>ProcessCueRegion</c> listed the body as
+    /// bare sites, so a reference (a container, like everything else the walk expands through
+    /// <c>GatherMusicSite</c>) was dropped without a word (HANDOFF §2 R5, session 397).
+    /// </summary>
+    [Fact]
+    public void APhraseReferencedInsideACue_EngravesThePhraseCueSized()
+    {
+        var referenced = BookNotes(Book("phrase ph { e'4 f' }", "c'4 d' cue { ph } |"));
+        var inline = BookNotes(Book("", "c'4 d' cue { e'4 f' } |"));
+        Assert.Equal(4, inline.Count);
+        Assert.Equal(
+            inline.Select(n => (n.StaffPosition, n.IsCue, n.BeginsCueRegion)),
+            referenced.Select(n => (n.StaffPosition, n.IsCue, n.BeginsCueRegion)));
+        Assert.True(referenced[2].IsCue);
+        Assert.True(referenced[2].BeginsCueRegion);
+    }
+
+    /// <summary>
+    /// …and the bar that holds <c>cue { ph }</c> validates exactly as the bar holding a bare
+    /// <c>ph</c> does. ⚠️ NOT "as the inline body does": the validator reads a phrase reference
+    /// as an opaque item wherever it stands (HANDOFF §2 R12⒝, open), and the cue must not add a
+    /// second answer to that question — this pins only that the region changes nothing.
+    /// </summary>
+    [Fact]
+    public void APhraseReferencedInsideACue_ValidatesLikeTheBareReference()
+    {
+        var inCue = SemanticValidation.Run(SyntaxTree.Parse(Book("phrase ph { e'4 f' }", "c'4 d' cue { ph } |")))
+            .Select(d => d.Code).OrderBy(c => c).ToList();
+        var bare = SemanticValidation.Run(SyntaxTree.Parse(Book("phrase ph { e'4 f' }", "c'4 d' ph |")))
+            .Select(d => d.Code).OrderBy(c => c).ToList();
+        Assert.Equal(bare, inCue);
+    }
+
     /// <summary>A full document: the exporter walks parts and sections, not a bare block.</summary>
     private static string Doc(string music) =>
         "time 4/4\npart m\nsection A { m { " + music + " } }\nform main { A }\n"

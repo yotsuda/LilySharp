@@ -1575,9 +1575,14 @@ public sealed partial class MeasureCollector
         // which is what tells THIS region from the one that may sit right next to it.
         _cueRegionPending = true;
         // The body items are reds already (a cue region is always live).
+        // ⚠️ GatherMusicSite, NOT a bare GreenSite each: a phrase reference is a CONTAINER,
+        // and `cue { P }` must engrave what `cue { P's body }` does. Until session 397 the
+        // reference was listed as a site of its own kind, which no arm of the walk reads, so
+        // the phrase was dropped without a word (HANDOFF §2 R5) — the grace region's walk
+        // had made the same repair in session 300.
         var cueSites = new List<GreenSite>();
         foreach (var item in cue.Body.Items)
-            cueSites.Add(new GreenSite(item));
+            GatherMusicSite(new GreenSite(item), cueSites);
         ProcessMusicNodeSequence(cueSites, builder);
         // Cleared here too, for the region that emits no note or chord at all (`cue { r4 }`):
         // the stamp belongs to this region, not to the next item that happens to be cued.
