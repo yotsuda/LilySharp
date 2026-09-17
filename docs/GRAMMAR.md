@@ -1864,7 +1864,10 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
                         mark nothing printed, and LilyPond has no such command either *)
                      @startTrillSpan … @stopTrillSpan ,
                      @sustain … @!sustain , @sostenuto … @!sostenuto ,
-                     @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word] *)
+                     @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word]
+                     (* a pedal CHANGE is both marks on one note, release first:
+                        c4@!sustain@sustain — engraved the same as a second @sustain
+                        while the pedal is down *) *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 
