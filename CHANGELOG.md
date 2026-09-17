@@ -79,6 +79,14 @@ workflow attaches that section to the GitHub Release verbatim.
   21 to 13 ms on the two-voice one; the whole keystroke from 33 to 25, 99 to 51 and 29 to
   18 ms. The page does not change — the walk answers exactly as the whole-tree readers do
   on every book of the net, which a new test holds.
+- **The Problems panel walks the book once, not twenty-eight times.** Every validator that
+  looked for one kind of node — a section, a key, a cue, a grand staff, a part cell — began
+  with its own walk of the whole tree to find it, and twenty-eight of them did, on every
+  settled keystroke. The tree is now walked once per text and the walk kept, and a validator
+  asking for a kind of node is answered from that one walk. Measured on the validation pass
+  of a freshly parsed 1000-bar book (min of 5): 51 → 11 ms on the plain one, 292 → 107 ms
+  on the fingered one, 42 → 9 ms on the two-voice one. What the panel says does not change
+  (760 books, every diagnostic identical and in the same order).
 
 ### Engraving
 
