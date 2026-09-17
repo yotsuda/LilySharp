@@ -39,29 +39,25 @@ internal sealed class CrossPartMeasureValidator
 {
     private readonly DiagnosticBag _diagnostics;
     private readonly HashSet<(int Start, int Length)> _warnedSpans;
-    private Dictionary<string, SyntaxNode>? _phraseBodies;
+    private readonly IReadOnlyDictionary<string, SyntaxNode> _phraseBodies;
 
     /// <summary>
     /// Shares the caller's diagnostic bag and warned-span set so the cross-part
-    /// pass runs AFTER (and defers to) the per-block fullness pass.
+    /// pass runs AFTER (and defers to) the per-block fullness pass — and the caller's
+    /// phrase-body table (<see cref="MeasureValidator"/> gathers it for its own pass with
+    /// the same rule: a phrase's body, a variable's expression, keyed by name), so this
+    /// pass does not walk the whole tree a second time to build the same dictionary.
     /// </summary>
-    public CrossPartMeasureValidator(DiagnosticBag diagnostics, HashSet<(int Start, int Length)> warnedSpans)
+    public CrossPartMeasureValidator(DiagnosticBag diagnostics, HashSet<(int Start, int Length)> warnedSpans,
+        IReadOnlyDictionary<string, SyntaxNode> phraseBodies)
     {
         _diagnostics = diagnostics;
         _warnedSpans = warnedSpans;
+        _phraseBodies = phraseBodies;
     }
 
     public void Validate(SyntaxNode root)
     {
-        _phraseBodies = new Dictionary<string, SyntaxNode>();
-        foreach (var n in root.DescendantNodes())
-        {
-            if (n is PhraseDeclarationSyntax ph)
-                _phraseBodies[ph.Name.Text] = ph.Body;
-            else if (n is VariableDeclarationSyntax vd)
-                _phraseBodies[vd.Name.Text] = vd.Expression;
-        }
-
         // Document-order walk: top-level time declarations update the score
         // time; each section validates with the time in force at its site.
         var time = new Fraction(4, 4);
@@ -101,11 +97,15 @@ internal sealed class CrossPartMeasureValidator
         // the semantic counter, MeasureModel.Split with the score-level meter in force),
         // the same index the LilyPond / MIDI / MusicXML exporters pad by, so what this
         // warning says is short is what those pad. Section name -> its part-major voices.
+        // Section-major voices are ValidateSectionCrossPart's (which also compares beats), so
+        // they are not asked for here — asking would split every one of their bars into a
+        // count this pass then threw away. MEASURED (session 400, perf-fingbeam1k, one
+        // section-major part of 1000 bars): 31 ms of the panel pass's 69 ms in this validator
+        // were that split; with the second one below, this validator produced nothing for
+        // 58 ms out of 69 on a book with one part.
         var byName = new Dictionary<string, List<SectionVoice>>();
-        foreach (var voice in Svg.Collector.SectionBarCounts.SemanticVoices(root))
+        foreach (var voice in Svg.Collector.SectionBarCounts.SemanticVoices(root, _phraseBodies, partMajorOnly: true))
         {
-            if (!voice.PartMajor)
-                continue; // section-major voices: ValidateSectionCrossPart, which also compares beats
             if (!byName.TryGetValue(voice.SectionName, out var list))
                 byName[voice.SectionName] = list = new();
             list.Add(new SectionVoice(voice.Label, voice.IsChords, voice.Bars, voice.Anchor));
@@ -204,7 +204,7 @@ internal sealed class CrossPartMeasureValidator
         // Section items in document order: a section-level time declaration
         // applies to the part blocks that follow it. Each part records the
         // time in force at its own position.
-        var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>();
+        var blocks = new List<(string Name, Fraction Time, TextSpan TimeSpan, PartBlockSyntax Block)>();
         // Named chord blocks of the section: voices of the bar-count check only (a chord
         // row has bars but no beats to compare per measure). Its lyrics cells (`lyrics w
         // [sings p] { … }`) join the same list, as the short side only.
@@ -218,7 +218,7 @@ internal sealed class CrossPartMeasureValidator
                     time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
                     break;
                 case PartBlockSyntax pb:
-                    parts.Add((pb.Name, time, pb.PartName.Span, BuildPartMeasures(pb, time)));
+                    blocks.Add((pb.Name, time, pb.PartName.Span, pb));
                     break;
                 case ChordPartBlockSyntax { PartName: { } track, NameToken: { } nameToken } cb:
                     chordVoices.Add(SectionVoice.Chords(track, Svg.Collector.ChordNameCollector.CountBars(cb), nameToken.Span));
@@ -229,8 +229,16 @@ internal sealed class CrossPartMeasureValidator
             }
         }
 
-        if (parts.Count + chordVoices.Count < 2)
-            return time;
+        if (blocks.Count + chordVoices.Count < 2)
+            return time; // one voice has nothing to align with — and nothing to split for
+        // Only now are the part blocks split into bars: the split is the whole cost of this
+        // pass (MeasureModel.Split over every bar of every part), and a section with one
+        // voice, which is most sections of most books, used to pay it before the gate
+        // above and then throw the bars away (MEASURED, session 400 — see
+        // ValidatePartMajorSections).
+        var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>(blocks.Count);
+        foreach (var (name, blockTime, span, block) in blocks)
+            parts.Add((name, blockTime, span, BuildPartMeasures(block, blockTime)));
         if (parts.Count < 2)
         {
             // One part beside chord rows: nothing to compare per measure, only the count.
@@ -313,6 +321,6 @@ internal sealed class CrossPartMeasureValidator
     /// repeat-flow auto-complete.
     /// </summary>
     private List<MeasureModel.Bar> BuildPartMeasures(SyntaxNode scope, Fraction time)
-        => MeasureModel.Split(scope, _phraseBodies!, time);
+        => MeasureModel.Split(scope, _phraseBodies, time);
 
 }

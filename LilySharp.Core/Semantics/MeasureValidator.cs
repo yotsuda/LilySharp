@@ -75,7 +75,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // a different code. EmptyMeasureValidatorTests asserts the silence directly.)
         // Cross-part alignment runs AFTER per-block fullness and shares its
         // warned spans, so a fullness warning suppresses a mismatch report.
-        new CrossPartMeasureValidator(_diagnostics, _warnedSpans).Validate(root);
+        new CrossPartMeasureValidator(_diagnostics, _warnedSpans, _phraseBodies).Validate(root);
         ReportBlankScore(root);
     }
 

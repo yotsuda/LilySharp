@@ -93,15 +93,32 @@ internal static class SectionBarCounts
     /// (outside every part / section / music body) arms everything after it, a section's
     /// own direct-child <c>time</c> arms the part blocks after it in that section. (The meter
     /// only steers <see cref="MeasureModel.Split"/>'s repeat-flow auto-complete.)</summary>
-    public static List<SemanticVoice> SemanticVoices(SyntaxNode root)
+    /// <param name="root">The tree.</param>
+    /// <param name="phraseBodies">The book's phrase-body table (a phrase's body, a variable's
+    /// expression, by name), when the caller already holds one; null gathers it here with the
+    /// same rule.</param>
+    /// <param name="partMajorOnly">Only the cells written inside a <c>part</c> or a
+    /// <c>chords</c> track (<see cref="SemanticVoice.PartMajor"/>), for the cross-part
+    /// validator's part-major pass, which reads the section-major voices from the section
+    /// itself: a section-major voice's bars are not split at all then — splitting them for a
+    /// reader that discards them was most of that validator's cost on a one-part book
+    /// (MEASURED, session 400). The meter rule is unchanged: a score-level <c>time</c> is
+    /// still read wherever it stands.</param>
+    public static List<SemanticVoice> SemanticVoices(SyntaxNode root,
+        IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null, bool partMajorOnly = false)
     {
-        var phrases = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
-        foreach (var n in root.DescendantNodes())
+        var phrases = phraseBodies;
+        if (phrases == null)
         {
-            if (n is PhraseDeclarationSyntax ph)
-                phrases[ph.Name.Text] = ph.Body;
-            else if (n is VariableDeclarationSyntax vd)
-                phrases[vd.Name.Text] = vd.Expression;
+            var gathered = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+            foreach (var n in root.DescendantNodes())
+            {
+                if (n is PhraseDeclarationSyntax ph)
+                    gathered[ph.Name.Text] = ph.Body;
+                else if (n is VariableDeclarationSyntax vd)
+                    gathered[vd.Name.Text] = vd.Expression;
+            }
+            phrases = gathered;
         }
 
         var voices = new List<SemanticVoice>();
@@ -124,6 +141,8 @@ internal static class SectionBarCounts
                 case ChordPartBlockSyntax or LyricsBlockSyntax:
                     continue; // a nameless chord block's cell, or a lyrics cell: no voice
             }
+            if (partMajorOnly)
+                continue;
             // Section-major (or a standalone / header declaration): its blocks are the voices.
             var local = time;
             bool anyBlock = false;
@@ -153,7 +172,7 @@ internal static class SectionBarCounts
     }
 
     private static SemanticVoice Music(string section, string label, SyntaxNode container, TextSpan anchor,
-        Fraction time, Dictionary<string, SyntaxNode> phrases, bool partMajor)
+        Fraction time, IReadOnlyDictionary<string, SyntaxNode> phrases, bool partMajor)
     {
         int bars = MeasureModel.Split(container, phrases, time).Count;
         MeasureCollector.CountBarsInScope(container, out bool open);

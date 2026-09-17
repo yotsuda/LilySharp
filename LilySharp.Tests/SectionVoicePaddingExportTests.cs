@@ -124,6 +124,47 @@ public class SectionVoicePaddingExportTests
         Assert.Equal(new[] { true, false, true, false }, voices.Select(v => v.TrailingOpen));
     }
 
+    /// <summary>
+    /// The cross-part validator's part-major pass asks for the part-major voices ONLY, so that
+    /// a section-major voice — most sections of most books — is not split into bars for a
+    /// reader that discards the count (MEASURED, session 400: on a one-part 1000-bar book that
+    /// split was 31 ms of the validator's 69). The filtered call must be exactly the unfiltered
+    /// call's part-major subset, in order, on every book of the net — the same voices, the same
+    /// counts — and the same again when the caller hands over its own phrase table instead of
+    /// letting the count gather one.
+    /// </summary>
+    [Fact]
+    public void PartMajorOnly_IsTheUnfilteredCallsPartMajorSubset_OnEveryNetBook()
+    {
+        int books = 0, partMajor = 0, sectionMajor = 0;
+        foreach (var path in NetAndAuditBooks())
+        {
+            SyntaxTree tree;
+            try { tree = SyntaxTree.Parse(System.IO.File.ReadAllText(path)); }
+            catch { continue; }
+            books++;
+            var root = tree.GetRoot();
+            var all = SectionBarCounts.SemanticVoices(root);
+            var expected = all.Where(v => v.PartMajor).Select(Key).ToList();
+            Assert.Equal(expected, SectionBarCounts.SemanticVoices(root, partMajorOnly: true).Select(Key).ToList());
+            // The caller's table, gathered by the rule MeasureValidator uses.
+            var bodies = new Dictionary<string, SyntaxNode>();
+            foreach (var n in root.DescendantNodes())
+            {
+                if (n is PhraseDeclarationSyntax ph) bodies[ph.Name.Text] = ph.Body;
+                else if (n is VariableDeclarationSyntax vd) bodies[vd.Name.Text] = vd.Expression;
+            }
+            Assert.Equal(expected, SectionBarCounts.SemanticVoices(root, bodies, partMajorOnly: true).Select(Key).ToList());
+            partMajor += expected.Count;
+            sectionMajor += all.Count - expected.Count;
+        }
+        Assert.True(books >= 50 && partMajor >= 50 && sectionMajor >= 50,
+            $"the net must hold both layouts: books {books} partMajor {partMajor} sectionMajor {sectionMajor}");
+
+        static string Key(SectionBarCounts.SemanticVoice v)
+            => $"{v.SectionName}|{v.Label}|{v.IsChords}|{v.Bars}|{v.TrailingOpen}|{v.Container.Span.Start}";
+    }
+
     [Fact]
     public void SemanticCount_ExpandsRestsRepeatsAndPhrases_SyntacticDoesNot()
     {

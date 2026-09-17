@@ -64,7 +64,11 @@ workflow attaches that section to the GitHub Release verbatim.
   98 ms; what it says does not change. The check for a shadowed plain lyric verse (LYS4004)
   then stopped collecting the book a third time for itself — on a book with no lyrics at all
   it was 46 of the validators' 110 ms — and reads the same collect; it now also sees a
-  shadowed verse under any staff the score draws, not only the first part's.
+  shadowed verse under any staff the score draws, not only the first part's. The cross-part
+  bar check then stopped splitting every bar of a section that has only one voice into a
+  count it never compared, and stopped gathering the book's phrase table a second time — on
+  a one-part 1000-bar book that was 58 of the bar validator's 69 ms, and 12 of its 15 ms on
+  the plain one; what it reports does not change (759 books, identical).
 
 ### Engraving
 
