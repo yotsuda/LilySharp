@@ -61,7 +61,10 @@ workflow attaches that section to the GitHub Release verbatim.
   preview's collect when the preview has rendered the current text (and the default score, which
   is the one the panel's collector-backed warnings are asked of), and collects for itself only
   when there is nothing to borrow. Measured on a 1000-bar book, the pass went from 139 ms to
-  98 ms; what it says does not change.
+  98 ms; what it says does not change. The check for a shadowed plain lyric verse (LYS4004)
+  then stopped collecting the book a third time for itself — on a book with no lyrics at all
+  it was 46 of the validators' 110 ms — and reads the same collect; it now also sees a
+  shadowed verse under any staff the score draws, not only the first part's.
 
 ### Engraving
 

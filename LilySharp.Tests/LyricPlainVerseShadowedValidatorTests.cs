@@ -79,4 +79,58 @@ public class LyricPlainVerseShadowedValidatorTests
             score main { staff melody  lyrics w }
             """));
     }
+
+    // ---- session 399: the validator reads the SHARED collect instead of making its own ----
+
+    private const string TwoParts = """
+        time 4/4
+        key c major
+        part melody { clef treble
+          section A { c'4 d' e' f' | }
+        }
+        part harmony { clef treble
+          section A { a4 b c' d' | }
+        }
+        """;
+
+    [Fact]
+    public void AShadowedVerseUnderTheSecondStaff_IsFlagged()
+    {
+        // The words are the harmony's, placed under the SECOND staff. The validator used
+        // to collect the first declared part alone and could not see this line at all; the
+        // shared collect is every staff the score draws, so it is reported like the
+        // melody's would be.
+        Assert.True(PlainShadowed(TwoParts + """
+            lyrics w sings harmony { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            form main { A A }
+            score main { staff melody  staff harmony  lyrics w }
+            """));
+    }
+
+    [Fact]
+    public void ItReadsTheLentCollect_NotOneOfItsOwn()
+    {
+        // The poison that proves the validator no longer collects for itself: lend it the
+        // collect of a book whose plain verse IS shadowed while the tree it validates has
+        // no lyrics at all — the diagnostic follows the lent collect.
+        var shadowed = SyntaxTree.Parse(Melody + """
+            lyrics w sings melody { section A { [1. one two three four |] [2. aa bb cc dd |] zz zz zz zz | } }
+            form main { A A }
+            score main { staff melody  lyrics w }
+            """);
+        var lent = SemanticValidation.TryCollect(shadowed);
+        Assert.NotNull(lent);
+        Assert.NotEmpty(lent!.LyricShadowedPlainWarnings);
+
+        var wordless = SyntaxTree.Parse(Melody + """
+            form main { A A }
+            score main { staff melody }
+            """);
+        var validator = new LyricPlainVerseShadowedValidator();
+        validator.ValidateWith(wordless, new System.Lazy<LilySharp.Core.Svg.Collector.MeasureCollector?>(() => lent));
+        Assert.Contains(validator.Diagnostics, d => d.Code == DiagnosticCodes.LyricPlainVerseShadowed);
+
+        // And the same validator on its own answers for the wordless tree: nothing.
+        Assert.False(PlainShadowed(wordless.Text));
+    }
 }

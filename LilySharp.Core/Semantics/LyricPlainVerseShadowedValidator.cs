@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -28,54 +29,43 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// Whether the plain line is reached depends on how many times the section is written out
-/// in the form, which <see cref="Svg.Collector.MeasureCollector"/> only counts with a voice bound — the
-/// shared no-voice collect skips part-major music and UNDER-counts occurrences, which
-/// would turn a genuinely-used plain line into a false positive. So, like
-/// <see cref="NavigationPlacementValidator"/>, this collects the primary part itself and
-/// reads back the placements recorded as a side effect
-/// (<see cref="Svg.Collector.MeasureCollector.LyricShadowedPlainWarnings"/>).
+/// in the form, which <see cref="MeasureCollector"/> counts while placing the verse under
+/// its staff (<see cref="MeasureCollector.LyricShadowedPlainWarnings"/>). This reads that
+/// off the shared collect — the render path's own, every staff of the first score with its
+/// bound tracks — so a shadowed line under ANY drawn staff is reported.
+/// <para>
+/// ⚠️ IT USED TO COLLECT THE BOOK ITSELF, a third full collect per settled keystroke
+/// (46 of the pass's 110 ms on perf-plain1k, session 399 — on a book with no lyrics at
+/// all), under a remark that the shared collect was "no-voice" and under-counted
+/// occurrences. That was true of the bare <c>new MeasureCollector().Collect(tree)</c> the
+/// validators once shared; since 2026-08-16 the shared collect is the render path's
+/// (<see cref="SemanticValidation.TryCollect(SyntaxTree)"/>), which walks every drawn
+/// part with its voice bound. Its own collect also looked at the FIRST declared part
+/// only; the shared one sees every staff the score draws, which is the whole of what the
+/// warning is about (MEASURED over 759 books — fixtures and the Lab corpora — the two
+/// answers were identical, both empty; the second-staff case is held by its tests).
+/// </para>
 /// </remarks>
-internal sealed class LyricPlainVerseShadowedValidator : ISemanticValidator
+internal sealed class LyricPlainVerseShadowedValidator : ISharedCollectValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
-    public void Validate(SyntaxTree tree)
+    public void Validate(SyntaxTree tree) =>
+        ValidateWith(tree, new System.Lazy<MeasureCollector?>(
+            () => SemanticValidation.TryCollect(tree)));
+
+    public void ValidateWith(SyntaxTree tree, System.Lazy<MeasureCollector?> sharedCollect)
     {
-        // The occurrence count is only accurate when the form is walked with a voice
-        // bound. The first declared part names the primary voice.
-        var root = tree.GetRoot();
-        string? voice = TopLevelNodes.OfRoot<PartDeclarationSyntax>(root).FirstOrDefault()?.Name.Text;
+        // A malformed score (null collector) surfaces its real error elsewhere.
+        var warnings = sharedCollect.Value?.LyricShadowedPlainWarnings;
+        if (warnings == null)
+            return;
 
-        // Lyrics attach EXPLICITLY (`staff X with lyrics NAME`) — there is no auto-attach,
-        // so resolve the tracks the score binds to this voice and collect them; otherwise
-        // no verse is aligned and a genuinely-shadowed plain line goes unreported.
-        IReadOnlyList<string>? attachedLyrics = null;
-        var spec = Svg.Collector.RenderSpecParser.FindFirst(tree);
-        if (spec != null && voice != null)
-        {
-            var names = spec.GetVoiceBindings()
-                .Where(b => b.VoiceName == voice)
-                .SelectMany(b => b.WithLyrics)
-                .Distinct()
-                .ToList();
-            if (names.Count > 0)
-                attachedLyrics = names;
-        }
-
-        Svg.Collector.MeasureCollector collector;
-        try
-        {
-            collector = new Svg.Collector.MeasureCollector();
-            collector.Collect(tree, voice, attachedLyricParts: attachedLyrics);
-        }
-        catch
-        {
-            return; // a malformed score surfaces its real error elsewhere
-        }
-
-        foreach (var w in collector.LyricShadowedPlainWarnings)
+        // A track placed under two staves places its verse twice; one spelling is one
+        // fault, so report each source position once.
+        foreach (var w in warnings.DistinctBy(w => w.Span.Start))
             // ASCII punctuation only: this exact string reaches legacy-codepage
             // consoles through the CLI.
             _diagnostics.Warning(w.Span, DiagnosticCodes.LyricPlainVerseShadowed,
