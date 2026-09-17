@@ -86,7 +86,10 @@ workflow attaches that section to the GitHub Release verbatim.
   asking for a kind of node is answered from that one walk. Measured on the validation pass
   of a freshly parsed 1000-bar book (min of 5): 51 → 11 ms on the plain one, 292 → 107 ms
   on the fingered one, 42 → 9 ms on the two-voice one. What the panel says does not change
-  (760 books, every diagnostic identical and in the same order).
+  (760 books, every diagnostic identical and in the same order). The undefined-name check
+  then stopped scanning every node of the book for its handful of declarations and
+  references, and asks that same kept walk for just the kinds it reads: 107 → 91 ms on
+  the fingered book, and again nothing it says changes.
 
 ### Engraving
 
