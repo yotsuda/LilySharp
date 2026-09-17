@@ -374,6 +374,83 @@ public sealed class SystemCountPageScoreTests
     }
 
     /// <summary>
+    /// The count loop's "more systems" arm stacks a candidate's lines ONCE and asks the
+    /// page-count bound and the page DP of that same stacked list (session 403). The two
+    /// stacked-line entries answer exactly what the stacking entries answer — pages, forces,
+    /// penalty, bound — on the books the DP net above compares, so the fold changed no number.
+    /// </summary>
+    [Fact]
+    public void StackedLineEntries_AnswerWhatTheStackingEntriesAnswer()
+    {
+        SystemDetails Sys(double h, BreakPermission after = BreakPermission.Allow) =>
+            PageBreaker.CreateFromLayout(4, (h - 4) / 2, (h - 4) / 2, padding: 1, springLength: 12)
+                with { PagePermission = after };
+        var books = new[]
+        {
+            Enumerable.Range(0, 30).Select(i => Sys(6 + (i * 7) % 11)).ToArray(),
+            Enumerable.Range(0, 45).Select(i => Sys(5 + (i * 3) % 9)).ToArray(),
+            Enumerable.Range(0, 24).Select(i => Sys(8, i == 9 ? BreakPermission.Force : BreakPermission.Allow)).ToArray(),
+            Enumerable.Range(0, 24).Select(i => Sys(8, i == 5 ? BreakPermission.Forbid : BreakPermission.Allow)).ToArray(),
+            new[] { Sys(100), Sys(100), Sys(100) },
+        };
+        foreach (double header in new[] { 0.0, 9.5 })
+        foreach (var book in books)
+        {
+            var breaker = new PageBreaker(169.009370, 5.690551, 5.690551, header, PageBreakingParameters.Default);
+            var stacked = PageBreaker.CalcLineHeights(book);
+            Assert.Equal(breaker.MinPageCount(book), breaker.MinPageCountOfLines(stacked));
+            var viaSystems = breaker.BreakIntoPagesScored(book);
+            var viaLines = breaker.BreakIntoPagesScoredOfLines(stacked);
+            Assert.Equal(viaSystems.Penalty, viaLines.Penalty);
+            Assert.Equal(viaSystems.SystemsPerPage, viaLines.SystemsPerPage);
+            Assert.Equal(viaSystems.Forces, viaLines.Forces);
+        }
+        Assert.Equal(0, new PageBreaker(169.009370, 5.690551, 5.690551, 0, PageBreakingParameters.Default)
+            .MinPageCountOfLines(Array.Empty<SystemDetails>()));
+    }
+
+    /// <summary>
+    /// The unconstrained DP walks every line with ONE page accumulator, cleared per line, where
+    /// it used to construct one per line (LilyPond constructs a fresh Page_spacing per line,
+    /// page-spacing.cc:311). Cleared, the accumulator must be the constructor's: the same
+    /// Resize → Prepend walk on a cleared instance and on a fresh one yields the same force at
+    /// every step, including a walk whose earlier life ended overfull and re-seated the band.
+    /// </summary>
+    [Fact]
+    public void PageSpacing_ClearedIsAsGoodAsNew()
+    {
+        var vs = VerticalSpacingParameters.Default;
+        PageSpacing Fresh() => new(169.009370, 5.690551, 5.690551, vs.TopSystem, vs.LastBottom, vs.TopMarkup);
+        var lines = PageBreaker.CalcLineHeights(Enumerable.Range(0, 12)
+            .Select(i => PageBreaker.CreateFromLayout(4, 2 + (i * 5) % 7, 2 + (i * 3) % 5, padding: 1, springLength: 12))
+            .ToArray());
+
+        var reused = Fresh();
+        // An earlier life: a page filled past overfull, with the first page's band.
+        reused.Resize(5.690551 + 9.5);
+        foreach (var line in lines) reused.PrependSystem(line);
+        Assert.True(double.IsNegativeInfinity(reused.Force), "the earlier life must have ended overfull for the net to test anything");
+        reused.Clear();
+
+        var fresh = Fresh();
+        foreach (double band in new[] { 5.690551, 5.690551 + 9.5 })
+        {
+            for (int i = lines.Count - 1; i >= 0; i--)
+            {
+                reused.Resize(band);
+                fresh.Resize(band);
+                reused.PrependSystem(lines[i]);
+                fresh.PrependSystem(lines[i]);
+                Assert.Equal(fresh.Force, reused.Force);
+                Assert.Equal(fresh.RodHeight, reused.RodHeight);
+                Assert.Equal(fresh.SpringLength, reused.SpringLength);
+            }
+            reused.Clear();
+            fresh = Fresh();
+        }
+    }
+
+    /// <summary>
     /// The scored breaker reports what the loop reads: pages, systems per page, forces —
     /// and a ragged last page that would stretch is reported at force 0 (page-spacing.cc:357).
     /// </summary>

@@ -436,11 +436,14 @@ internal sealed partial class LayoutEngine
             double bestDemeritsForThisCount = double.PositiveInfinity;
             if (lineBreaks.For(count) is { } candidate)
             {
-                var details = EstimatedSystemDetails(candidate.Breaks, estimate, measures);
+                // The candidate's lines stacked ONCE (PageBreaker.CalcLineHeights) for both the
+                // page-count bound and the DP — each used to stack them again for itself.
+                var lines = PageBreaker.CalcLineHeights(
+                    EstimatedSystemDetails(candidate.Breaks, estimate, measures));
                 // :207-211 — a count that cannot keep the ideal page count is not priced.
-                if (breaker.MinPageCount(details) <= pageCount)
+                if (breaker.MinPageCountOfLines(lines) <= pageCount)
                 {
-                    var pages = breaker.BreakIntoPagesScored(details);
+                    var pages = breaker.BreakIntoPagesScoredOfLines(lines);
                     double demerits = breaker.Demerits(
                         pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum);
                     if (demerits < bestDemerits)

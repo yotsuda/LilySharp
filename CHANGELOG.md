@@ -88,7 +88,12 @@ workflow attaches that section to the GitHub Release verbatim.
   goes through the same memo entry. Measured on an edit at the last bar (Release, tiered
   compilation off, min of 6): 3.1 ms and 3.0 MB of a 21.7 ms keystroke on the plain 1000-bar
   book, 3.7 ms and 4.4 MB on the fingered one. The picture does not change: the memo hands
-  back the very silhouette the loop reads.
+  back the very silhouette the loop reads. The system-count loop that follows — LilyPond's
+  "try more systems than the ideal", which prices some seventy line counts on a 200-system
+  book every keystroke — then stopped stacking each candidate's lines twice (once for the
+  page-count bound, once for the page DP) and constructing a fresh page accumulator per line
+  inside the DP: 13.0 MB → 7.7 MB per keystroke on the same books, the loop's time 6.1 → 5.7
+  ms. Every count is priced by the same numbers as before.
 - **A keystroke's collect walks the book five times less.** Even when the preview's
   incremental collect adopted every bar of the previous keystroke, it still walked the whole
   tree five more times for facts that do not depend on the edit: twice per part for the

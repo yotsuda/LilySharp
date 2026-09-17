@@ -729,7 +729,29 @@ internal sealed class PageBreaker
                 SystemsPerPage = ImmutableArray<int>.Empty,
             };
         }
-        return SolveUnconstrained(CalcLineHeights(systems));
+        return BreakIntoPagesScoredOfLines(CalcLineHeights(systems));
+    }
+
+    /// <summary>
+    /// <see cref="BreakIntoPagesScored"/> for lines whose tallness <see cref="CalcLineHeights"/>
+    /// has already stacked — the system-count loop's "more systems" arm asks
+    /// <see cref="MinPageCountOfLines"/> and this of the SAME stacked list, where each used to
+    /// stack the candidate's lines again for itself (one quantity, two places: a second
+    /// per-line copy of every SystemDetails per count, 3.7 MB of a keystroke's 13 MB on a
+    /// 200-system book, session 403).
+    /// </summary>
+    internal PageBreakResult BreakIntoPagesScoredOfLines(IReadOnlyList<SystemDetails> lines)
+    {
+        if (lines.Count == 0)
+        {
+            return new PageBreakResult
+            {
+                Penalty = 0,
+                Forces = ImmutableArray<double>.Empty,
+                SystemsPerPage = ImmutableArray<int>.Empty,
+            };
+        }
+        return SolveUnconstrained(lines);
     }
 
     /// <summary>
@@ -773,13 +795,19 @@ internal sealed class PageBreaker
         Array.Fill(penalty, double.PositiveInfinity);
         Array.Fill(prev, -1);
 
+        // ONE accumulator for every line, cleared per line — LilyPond constructs a fresh
+        // Page_spacing per line (page-spacing.cc:311), and Clear puts this one back in the
+        // constructor's state (the page band is re-seated by Resize before every prepend).
+        // The count loop runs this DP some 70 times a keystroke on a 200-system book, so a
+        // per-line construction was ~17,000 of them per keystroke (session 403).
+        var space = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
+            _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
         for (int line = 0; line < n; line++)
         {
             bool last = line == n - 1;
             bool ragged = _params.RaggedBottom || (_params.RaggedLastBottom && last);
             bool endsOnForbid = !last && lines[line].PagePermission == BreakPermission.Forbid;
-            var space = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
-                _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
+            space.Clear();
             int lineCount = 0;
 
             for (int pageStart = line; pageStart >= 0; pageStart--)
@@ -921,10 +949,14 @@ internal sealed class PageBreaker
     /// </para>
     /// </remarks>
     internal int MinPageCount(IReadOnlyList<SystemDetails> systems)
+        => systems.Count == 0 ? 0 : MinPageCountOfLines(CalcLineHeights(systems));
+
+    /// <summary><see cref="MinPageCount"/> for lines <see cref="CalcLineHeights"/> has already
+    /// stacked (see <see cref="BreakIntoPagesScoredOfLines"/>).</summary>
+    internal int MinPageCountOfLines(IReadOnlyList<SystemDetails> lines)
     {
-        if (systems.Count == 0)
+        if (lines.Count == 0)
             return 0;
-        var lines = CalcLineHeights(systems);
         var whitespace = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
             _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
         double FirstBand() => _pageHeight - (_topMargin + _headerHeight) - _bottomMargin;
