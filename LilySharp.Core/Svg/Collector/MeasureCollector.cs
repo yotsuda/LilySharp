@@ -2861,7 +2861,7 @@ public sealed partial class MeasureCollector
             }
         }
 
-        void ProcessNodes(List<GreenSite> nodeList)
+        void ProcessNodes(MusicSiteList nodeList)
         {
             // A spliced walk is done: everything after the adopted tail is state
             // the splice already restored (the end-of-walk checkpoint).
@@ -2915,26 +2915,31 @@ public sealed partial class MeasureCollector
                 var addressProbe = WalkProbe!;
                 var addressWindow = new CollectTailShifter.Window(
                     addressProbe.WindowPrefix, addressProbe.WindowSuffixStart, addressProbe.WindowDelta);
-                if (target.NodeIndex >= nodeList.Count
+                // The gather seek (MusicSiteList.TrySeek): a lazy list enters the
+                // container's walk AT the target by its recorded slot path, so the
+                // sites before it are never gathered. A declined seek (no path, a path
+                // the new tree does not lead through) gathers up to the index as
+                // before; either way the address check below is the judge.
+                if (target.GatherPath is { } gatherPath)
+                    nodeList.TrySeek(target.NodeIndex, gatherPath);
+                if (!nodeList.TryGet(target.NodeIndex, out var targetSite)
                     || !addressWindow.TryShift(target.NodeStart, out int expectedStart)
-                    || nodeList[target.NodeIndex].Position != expectedStart
-                    || nodeList[target.NodeIndex].Kind != target.NodeKind
+                    || targetSite.Position != expectedStart
+                    || targetSite.Kind != target.NodeKind
                     || (target.NodeKind == SyntaxKind.None
-                        && (nodeList[target.NodeIndex].Node is PhraseEndMarker) != target.NodeIsPhraseEnd))
+                        && (targetSite.Node is PhraseEndMarker) != target.NodeIsPhraseEnd))
                     throw new CollectResumeAbortException(
                         $"collect resume address drifted (node {target.NodeIndex} of invocation {invocation})");
                 RestoreWalkCheckpoint(plan, builder);
                 startIndex = target.NodeIndex;
             }
-            for (int i = startIndex; i < nodeList.Count; i++)
+            for (int i = startIndex; nodeList.TryGet(i, out var site); i++)
             {
-                var site = nodeList[i];
-
                 // Record mode: an eligible measure boundary right before node i is a
                 // resume point. Cheap when off (_probeRecording null in production).
                 if (_probeRecording is { IneligibleReason: null } rec && builder.AtCleanBoundary)
                     TryCaptureWalkCheckpoint(rec, builder, invocation, i, site.Position, site.Kind,
-                        site.Kind == SyntaxKind.None && site.Node is PhraseEndMarker);
+                        site.Kind == SyntaxKind.None && site.Node is PhraseEndMarker, nodeList.PathOf(i));
 
                 // Resume mode, suffix side: at a clean boundary whose shifted
                 // walk-order address matches a recorded checkpoint, try to splice
@@ -3041,7 +3046,7 @@ public sealed partial class MeasureCollector
             foreach (var s in MusicSitesLazy(_root, includeParallel: true))
                 if (IsCollectableMusicKind(s.Kind))
                     musicNodes.Add(s);
-            ProcessNodes(musicNodes);
+            ProcessNodes(MusicSiteList.Preset(musicNodes));
         }
 
         if (_resumePending != null)
@@ -3186,7 +3191,7 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private void ProcessForm(Action<List<GreenSite>> processNodes, MeasureBuilder builder)
+    private void ProcessForm(Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
         foreach (var child in _form!.DescendantNodes())
         {
@@ -3354,7 +3359,7 @@ public sealed partial class MeasureCollector
                 // tokens inside FormRepeatBlockSyntax, not BarlineSyntax, so this arm
                 // cannot double-count them; the guard is for a nested form only.
                 case BarlineSyntax formBar when !IsInsideRepeatBlock(formBar):
-                    processNodes([new GreenSite(formBar)]);
+                    processNodes(MusicSiteList.Preset([new GreenSite(formBar)]));
                     break;
             }
         }
@@ -3690,13 +3695,32 @@ public sealed partial class MeasureCollector
     /// </remarks>
     internal static IEnumerable<SyntaxNode> MusicSites(SyntaxNode container, bool includeParallel)
     {
+        if (IsUnderProcessedContainer(container, includeParallel))
+            return [];
+        return container.GreenSites(MusicSiteRule(includeParallel));
+    }
+
+    /// <summary>The old guard's boundary, as the gathers ask it of their container: a
+    /// container standing inside a processed container yields nothing (its parent-chain
+    /// walk extended ABOVE the container).</summary>
+    private static bool IsUnderProcessedContainer(SyntaxNode container, bool includeParallel)
+    {
         for (var p = container.Parent; p != null; p = p.Parent)
             if (IsProcessedContainer(p, includeParallel))
-                return [];
-        return container.GreenSites(g => (
-            IsMusicCandidateKind(g.Kind),
-            !IsProcessedContainerKind(g.Kind, includeParallel)));
+                return true;
+        return false;
     }
+
+    private static readonly GreenSiteRule s_musicSiteRuleParallelWrapped = static g => (
+        IsMusicCandidateKind(g.Kind), !IsProcessedContainerKind(g.Kind, includeParallel: true));
+    private static readonly GreenSiteRule s_musicSiteRuleParallelFlattened = static g => (
+        IsMusicCandidateKind(g.Kind), !IsProcessedContainerKind(g.Kind, includeParallel: false));
+
+    /// <summary>The music gather's green-walk rule — collect every candidate kind, walk into
+    /// everything but a processed container — the one rule both spellings of the gather and
+    /// the resumed collect's seek (<see cref="MusicSiteList.TrySeek"/>) walk by.</summary>
+    internal static GreenSiteRule MusicSiteRule(bool includeParallel)
+        => includeParallel ? s_musicSiteRuleParallelWrapped : s_musicSiteRuleParallelFlattened;
 
     /// <summary>
     /// The production music gather: the same candidate set, order and container
@@ -3717,12 +3741,9 @@ public sealed partial class MeasureCollector
     /// </remarks>
     internal static IEnumerable<GreenSite> MusicSitesLazy(SyntaxNode container, bool includeParallel)
     {
-        for (var p = container.Parent; p != null; p = p.Parent)
-            if (IsProcessedContainer(p, includeParallel))
-                return [];
-        return container.GreenSitesLazy(g => (
-            IsMusicCandidateKind(g.Kind),
-            !IsProcessedContainerKind(g.Kind, includeParallel)));
+        if (IsUnderProcessedContainer(container, includeParallel))
+            return [];
+        return container.GreenSitesLazy(MusicSiteRule(includeParallel));
     }
 
     /// <summary>

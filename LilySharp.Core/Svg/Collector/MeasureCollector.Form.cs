@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Collector;
 // MeasureCollector.cs as a partial class; same instance state, no behavior change.
 public sealed partial class MeasureCollector
 {
-    private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
+    private void ProcessRepeatBlock(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
         // Checkpoint/resume (finding 3-4): a repeat block's bookkeeping (the volta
         // start/end pairing below, the synthesized barlines between sections) lives
@@ -50,7 +50,7 @@ public sealed partial class MeasureCollector
         }
     }
 
-    private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<List<GreenSite>> processNodes, MeasureBuilder builder)
+    private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
@@ -62,7 +62,7 @@ public sealed partial class MeasureCollector
         void PushFormBarline(string barText, int position)
         {
             builder.ArmBoundaryForStructuralBarline();
-            processNodes([new GreenSite(CreateBarlineSyntax(barText, position))]);
+            processNodes(MusicSiteList.Preset([new GreenSite(CreateBarlineSyntax(barText, position))]));
         }
 
         for (int i = 0; i < repeat.SlotCount; i++)
@@ -208,7 +208,7 @@ public sealed partial class MeasureCollector
     /// opened this play (<c>~B'</c> = +1, <c>~B,</c> = -1). It belongs to the play, not to
     /// the declaration, so it is threaded from the form walk rather than read off the
     /// section — the same section referenced twice can open at two different octaves.</param>
-    private void ProcessSection(SectionDeclarationSyntax section, Action<List<GreenSite>> processNodes, MeasureBuilder builder, int octaveOffset = 0)
+    private void ProcessSection(SectionDeclarationSyntax section, Action<MusicSiteList> processNodes, MeasureBuilder builder, int octaveOffset = 0)
     {
         // Checkpoint/resume gate (CollectWalkProbe): a section wholly before the
         // resume target is in the adopted prefix — prologue, music and epilogue —
@@ -472,7 +472,7 @@ public sealed partial class MeasureCollector
     /// <summary>The section's container walk and padding epilogue — the part of
     /// <see cref="ProcessSection"/> after the prologue (see the resume gate there).</summary>
     private void ProcessSectionBody(SectionDeclarationSyntax section,
-        Action<List<GreenSite>> processNodes, MeasureBuilder builder, int startMeasure)
+        Action<MusicSiteList> processNodes, MeasureBuilder builder, int startMeasure)
     {
         bool matched = false;
         // Direct children only: a PartBlockSyntax is produced exclusively by
@@ -524,7 +524,7 @@ public sealed partial class MeasureCollector
                 else if (child != null && IsCollectableMusicNode(child))
                     inline.Add(new GreenSite(child));
             }
-            processNodes(inline);
+            processNodes(MusicSiteList.Preset(inline));
         }
 
         // Pad this voice up to the section's canonical bar count so every staff stays
@@ -1066,7 +1066,7 @@ public sealed partial class MeasureCollector
     /// Process the music inside a container node — a <c>part-block</c> (section-major)
     /// or a part-major inner <c>section</c>. Both expose their music as descendants.
     /// </summary>
-    private void ProcessMusicContainer(SyntaxNode container, Action<List<GreenSite>> processNodes)
+    private void ProcessMusicContainer(SyntaxNode container, Action<MusicSiteList> processNodes)
     {
         // Collect all music sites, expanding variable references. MusicSitesLazy
         // walks the green tree and yields only candidate sites outside processed
@@ -1076,20 +1076,47 @@ public sealed partial class MeasureCollector
         // leak out flat; a << \\ >> span likewise travels as one node). No red
         // node is created here — only the consumption points in ProcessNodes
         // materialize, so an adopted prefix / spliced tail stays red-free.
-        var musicNodes = new List<GreenSite>();
-
-        foreach (var site in MusicSitesLazy(container, includeParallel: true))
+        //
+        // A RESUMED collect gathers on demand (MusicSiteList.Lazy): the walk is pulled
+        // only as far as ProcessNodes reads, and a prefix restore enters it at the
+        // checkpoint's site by its recorded slot path — so a keystroke that adopts a
+        // prefix and splices a tail never gathers the adopted bars (session 402, R13:
+        // the whole gather on every keystroke was 2.9 ms / 9000 sites on perf-plain1k,
+        // 12.2 ms / 33000 on perf-fingbeam1k, with every bar adopted). The RECORDING
+        // collect gathers whole, as it always did: it consumes every site anyway, and
+        // the expansion budget is charged in GATHER order there — every reference of
+        // the container before any of its music is processed — which is the order the
+        // full collect's truncation point (ExpansionBudgetExceededAt, what the page
+        // draws past the cap) is defined by. The lazy list interleaves those charges
+        // with the walk's own (unfolded repeats, multi-measure rests); that is
+        // unobservable only in resume mode, where a spent budget aborts to the full
+        // collect (ChargeExpansion) before anything is drawn from it.
+        if (WalkProbe is { IsRecording: false } resumer && !IsUnderProcessedContainer(container, includeParallel: true))
         {
-            if (site.Kind == SyntaxKind.VariableReference)
-            {
-                var varRef = (VariableReferenceSyntax)site.Node;
-                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef);
-            }
-            else if (IsCollectableMusicKind(site.Kind))
-                musicNodes.Add(site);
+            processNodes(MusicSiteList.Lazy(container, MusicSiteRule(includeParallel: true),
+                MusicSitesLazy(container, includeParallel: true), GatherContainerSite, resumer));
+            return;
         }
 
-        processNodes(musicNodes);
+        var musicNodes = new List<GreenSite>();
+        foreach (var site in MusicSitesLazy(container, includeParallel: true))
+            GatherContainerSite(site, musicNodes);
+        processNodes(MusicSiteList.Eager(musicNodes, container));
+    }
+
+    /// <summary>One gathered site of a container into the flat list: a reference expands
+    /// in place (its red is materialized — the name and marks live on it), a collectable
+    /// site is the entry itself, anything else is nothing. The one spelling behind the
+    /// eager and the lazy gather of <see cref="ProcessMusicContainer"/>.</summary>
+    private void GatherContainerSite(GreenSite site, List<GreenSite> musicNodes)
+    {
+        if (site.Kind == SyntaxKind.VariableReference)
+        {
+            var varRef = (VariableReferenceSyntax)site.Node;
+            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef);
+        }
+        else if (IsCollectableMusicKind(site.Kind))
+            musicNodes.Add(site);
     }
 
     private void ExpandVariable(string name, int octaveOffset, List<GreenSite> musicNodes,

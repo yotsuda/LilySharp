@@ -157,6 +157,15 @@ internal sealed class CollectWalkProbe
     /// window is still the walk of the same node stream, positions shifted.</summary>
     public bool? WindowTriviaOnly;
 
+    /// <summary>RESUME mode, diagnostic: how many prefix restores entered their
+    /// container's gather at the checkpoint's site by its recorded slot path
+    /// (<see cref="MusicSiteList.TrySeek"/>) instead of gathering the list up to it, and
+    /// how many music sites the resumed collect's lazy lists produced in all — the
+    /// counters the gather-seek net reads (GatherSeekTests).</summary>
+    public int GatherSeeks;
+    /// <inheritdoc cref="GatherSeeks"/>
+    public int GatherSitesMaterialized;
+
     public static CollectWalkProbe Recorder() => new(recording: true);
 
     public static CollectWalkProbe Resumer() => new(recording: false);
@@ -412,6 +421,15 @@ internal sealed class WalkCheckpoint
     /// not pass for the recorded node.</summary>
     public required Syntax.SyntaxKind NodeKind { get; init; }
     public required bool NodeIsPhraseEnd { get; init; }
+    /// <summary>The slot path of the node at <see cref="NodeIndex"/> from the invocation's
+    /// gather root (<see cref="Syntax.GreenSite.PathFrom"/>), so a resume can enter the
+    /// container's green walk AT the node (<see cref="MusicSiteList.TrySeek"/>) instead
+    /// of gathering every site before it; null when the node was not gathered under the
+    /// container (a synthetic phrase marker, a phrase body's site, a fabricated bar line,
+    /// a section's inline child) — such a resume gathers up to the index as it always did.
+    /// A hint for reuse only: what the seek finds is judged by <see cref="NodeStart"/> /
+    /// <see cref="NodeKind"/> exactly as a gathered node is.</summary>
+    public int[]? GatherPath { get; init; }
     /// <summary>How many of the walk's <see cref="VoiceWalkRecording.HeaderReads"/>
     /// had been read at this boundary — the planner validates exactly that prefix,
     /// so a shifted LATER section header does not reject an EARLIER checkpoint.</summary>

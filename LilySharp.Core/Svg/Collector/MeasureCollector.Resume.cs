@@ -33,7 +33,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void TryCaptureWalkCheckpoint(
         VoiceWalkRecording rec, MeasureBuilder builder, int invocation, int nodeIndex,
-        int nodeStart, SyntaxKind nodeKind, bool nodeIsPhraseEnd)
+        int nodeStart, SyntaxKind nodeKind, bool nodeIsPhraseEnd, int[]? gatherPath)
     {
         if (!WalkCarriesNothing())
             return;
@@ -49,7 +49,7 @@ public sealed partial class MeasureCollector
         if (_formRepeatDepth > 0)
             return;
         rec.Checkpoints.Add(BuildWalkCheckpoint(
-            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart, nodeKind, nodeIsPhraseEnd));
+            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart, nodeKind, nodeIsPhraseEnd, gatherPath));
     }
 
     /// <summary>True when no cross-measure carry is in flight — the shared
@@ -105,7 +105,7 @@ public sealed partial class MeasureCollector
     /// fields (-2/-1) — a splice consumes its value state, never its address.</summary>
     private WalkCheckpoint BuildWalkCheckpoint(
         MeasureBuilder builder, int sectionVisit, int invocation, int nodeIndex, int nodeStart,
-        SyntaxKind nodeKind = SyntaxKind.None, bool nodeIsPhraseEnd = false)
+        SyntaxKind nodeKind = SyntaxKind.None, bool nodeIsPhraseEnd = false, int[]? gatherPath = null)
     {
         var tables = CumulativeSideTables();
         var counts = new int[tables.Length];
@@ -122,6 +122,7 @@ public sealed partial class MeasureCollector
             NodeStart = nodeStart,
             NodeKind = nodeKind,
             NodeIsPhraseEnd = nodeIsPhraseEnd,
+            GatherPath = gatherPath,
             HeaderReadCount = _walkHeaderReads.Count,
             Builder = builder.Capture(),
             Octave = OctaveCheckpoint.Capture(_octave),

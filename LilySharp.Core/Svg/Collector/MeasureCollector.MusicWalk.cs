@@ -58,6 +58,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void ProcessMusicNodeSequence(List<GreenSite> musicNodes, MeasureBuilder builder)
     {
+        var nodes = MusicSiteList.Preset(musicNodes);
         for (int i = 0; i < musicNodes.Count; i++)
         {
             var site = musicNodes[i];
@@ -95,12 +96,12 @@ public sealed partial class MeasureCollector
                 }
             }
 
-            ProcessMusicNode(site.Node, builder, PeekMarkers(musicNodes, i, out _));
+            ProcessMusicNode(site.Node, builder, PeekMarkers(nodes, i, out _));
         }
     }
 
     /// <summary>
-    /// True when list entry <paramref name="j"/> is a NOTE-ATTACHED mark the
+    /// True when the peeked <paramref name="site"/> is a NOTE-ATTACHED mark the
     /// lookahead must skip. The flattened walk lists a note's own
     /// <c>@name(...)</c> mark (a MusicMarkSyntax child in its articulations)
     /// right after the note — it must stay in the list, because for a rehearsal
@@ -117,9 +118,9 @@ public sealed partial class MeasureCollector
     /// so it materializes at most the marker run it reads plus any attached
     /// marks it skips — never the adopted prefix or the spliced tail.
     /// </remarks>
-    private static bool IsAttachedMark(List<GreenSite> nodes, int j)
-        => nodes[j].Kind == SyntaxKind.MusicMark
-            && nodes[j].Node is MusicMarkSyntax mark
+    private static bool IsAttachedMark(in GreenSite site)
+        => site.Kind == SyntaxKind.MusicMark
+            && site.Node is MusicMarkSyntax mark
             && (mark.IsInside<NoteSyntax>() || mark.IsInside<ChordSyntax>()
                 || mark.IsInside<DrumNoteSyntax>() || mark.IsInside<RestSyntax>()
                 || mark.IsInside<ChordRepetitionSyntax>()
@@ -277,15 +278,18 @@ public sealed partial class MeasureCollector
     /// </para>
     /// </remarks>
     private static MarkerFlags PeekMarkers(
-        List<GreenSite> nodes, int i, out SyntaxNode? furthestRead)
+        MusicSiteList nodes, int i, out SyntaxNode? furthestRead)
     {
-        var flags = FoldOwnMarkers(default, nodes[i].Node);
+        nodes.TryGet(i, out var own);
+        var flags = FoldOwnMarkers(default, own.Node);
         furthestRead = null;
-        for (int j = i + 1; j < nodes.Count; j++)
+        // TryGet pulls a lazy list forward only as far as the run reads — the peek
+        // materializes the marker run it reads and nothing past its terminator.
+        for (int j = i + 1; nodes.TryGet(j, out var peeked); j++)
         {
-            if (IsAttachedMark(nodes, j))
+            if (IsAttachedMark(in peeked))
                 continue;
-            var node = nodes[j].Node;
+            var node = peeked.Node;
             furthestRead = node;
             if (!IsMarkerNode(node))
                 break;

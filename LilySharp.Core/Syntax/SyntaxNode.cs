@@ -355,14 +355,17 @@ public abstract class SyntaxNode
     /// below them materializes.
     /// </remarks>
     internal IEnumerable<GreenSite> GreenSitesLazy(GreenSiteRule rule)
+        => GreenSitesLazyFrom(rule, [new GreenWalkFrame(Green, 0, Position, -1, new GreenSiteSpine(this))]);
+
+    /// <summary>
+    /// The walk of <see cref="GreenSitesLazy"/> itself, started from a frame stack — the
+    /// root's alone (<see cref="GreenSitesLazy"/>), or the stack
+    /// <see cref="TryGreenSiteAt"/> leaves standing just past one site, so the walk resumes
+    /// there in the same pre-order as if it had visited everything before. One spelling
+    /// of the walk for both entries: the seek's continuation IS this loop.
+    /// </summary>
+    internal static IEnumerable<GreenSite> GreenSitesLazyFrom(GreenSiteRule rule, List<GreenWalkFrame> frames)
     {
-        // Frame: a green node being iterated, the next slot to visit, that
-        // slot's absolute full-span start, the slot this green occupies in ITS
-        // parent, and the frame's spine link once some collected site needs it.
-        var frames = new List<(GreenNode Green, int NextSlot, int NextPos, int SlotInParent, GreenSiteSpine? Spine)>
-        {
-            (Green, 0, Position, -1, new GreenSiteSpine(this)),
-        };
         while (frames.Count > 0)
         {
             var (green, slot, pos, slotInParent, spine) = frames[^1];
@@ -372,7 +375,7 @@ public abstract class SyntaxNode
                 continue;
             }
             var child = green.GetSlot(slot);
-            frames[^1] = (green, slot + 1, pos + (child?.FullWidth ?? 0), slotInParent, spine);
+            frames[^1] = new GreenWalkFrame(green, slot + 1, pos + (child?.FullWidth ?? 0), slotInParent, spine);
             if (child == null || child.IsToken)
                 continue;
             var (collect, descend) = rule(child);
@@ -382,19 +385,91 @@ public abstract class SyntaxNode
                 // overlapping spines share the links already built).
                 if (spine == null)
                 {
-                    for (int i = 1; i < frames.Count; i++)
-                    {
-                        if (frames[i].Spine == null)
-                            frames[i] = (frames[i].Green, frames[i].NextSlot, frames[i].NextPos,
-                                frames[i].SlotInParent, new GreenSiteSpine(frames[i - 1].Spine!, frames[i].SlotInParent));
-                    }
+                    LinkSpines(frames);
                     spine = frames[^1].Spine;
                 }
                 yield return new GreenSite(child, pos, spine!, slot);
             }
             if (descend && child.SlotCount > 0)
-                frames.Add((child, 0, pos, slot, null));
+                frames.Add(new GreenWalkFrame(child, 0, pos, slot, null));
         }
+    }
+
+    /// <summary>Gives every frame of the stack its spine link (root→top; links already
+    /// built are kept, so overlapping spines share them).</summary>
+    private static void LinkSpines(List<GreenWalkFrame> frames)
+    {
+        for (int i = 1; i < frames.Count; i++)
+        {
+            if (frames[i].Spine == null)
+                frames[i] = frames[i] with { Spine = new GreenSiteSpine(frames[i - 1].Spine!, frames[i].SlotInParent) };
+        }
+    }
+
+    /// <summary>
+    /// <see cref="GreenSitesLazy"/> entered at ONE site by its slot path from this node
+    /// (<see cref="GreenSite.PathFrom"/>), without visiting anything before it: the site
+    /// itself, and the frame stack the walk stands on just past it — hand that to
+    /// <see cref="GreenSitesLazyFrom"/> and the walk continues exactly as the full one
+    /// would from the same site (GatherSeekTests hold the two equal, site by site).
+    /// False when the path does not lead to a site the rule collects through frames it
+    /// descends: a slot out of range, a token or empty slot, a container the rule does
+    /// not walk into, a leaf it does not collect — the caller then walks from the start.
+    /// </summary>
+    /// <remarks>
+    /// WHY (session 402, R13): the collector's keystroke walk resumed at a recorded
+    /// checkpoint by INDEX into its flat site list, so the list had to be gathered whole
+    /// before the first adopted bar could be skipped — the whole part block's green walk
+    /// on every keystroke (perf-plain1k 2.9 ms / 9000 sites, perf-fingbeam1k 12.2 ms /
+    /// 33000 sites, min of 5, Debug), even when every bar was adopted. Descending a
+    /// recorded slot path costs the widths of the slots BEFORE each step (one addition
+    /// per sibling), no rule call and no site for anything skipped.
+    /// </remarks>
+    internal bool TryGreenSiteAt(GreenSiteRule rule, int[] path, out GreenSite site, out List<GreenWalkFrame> frames)
+    {
+        site = default;
+        frames = null!;
+        if (path.Length == 0)
+            return false;
+        var stack = new List<GreenWalkFrame>(path.Length + 1)
+        {
+            new GreenWalkFrame(Green, 0, Position, -1, new GreenSiteSpine(this)),
+        };
+        for (int depth = 0; depth < path.Length; depth++)
+        {
+            var frame = stack[^1];
+            var green = frame.Green;
+            int slot = path[depth];
+            if (slot < 0 || slot >= green.SlotCount)
+                return false;
+            // The slot's absolute full-span start — the walk's NextPos as it reaches it.
+            int pos = frame.NextPos;
+            for (int s = 0; s < slot; s++)
+                pos += green.GetSlot(s)?.FullWidth ?? 0;
+            var child = green.GetSlot(slot);
+            if (child == null || child.IsToken)
+                return false;
+            var (collect, descend) = rule(child);
+            bool last = depth == path.Length - 1;
+            if (last ? !collect : !descend)
+                return false;
+            // The frame as the walk leaves this slot behind.
+            stack[^1] = frame with { NextSlot = slot + 1, NextPos = pos + child.FullWidth };
+            if (!last)
+            {
+                if (child.SlotCount == 0)
+                    return false;
+                stack.Add(new GreenWalkFrame(child, 0, pos, slot, null));
+                continue;
+            }
+            LinkSpines(stack);
+            site = new GreenSite(child, pos, stack[^1].Spine!, slot);
+            if (descend && child.SlotCount > 0)
+                stack.Add(new GreenWalkFrame(child, 0, pos, slot, null));
+            frames = stack;
+            return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -527,6 +602,13 @@ public abstract class SyntaxNode
 /// whether to walk into its children. Called once per green node in pre-order.</summary>
 internal delegate (bool Collect, bool Descend) GreenSiteRule(InternalSyntax.GreenNode green);
 
+/// <summary>One frame of the <see cref="SyntaxNode.GreenSitesLazy"/> walk: a green node
+/// being iterated, the next slot to visit, that slot's absolute full-span start, the slot
+/// this green occupies in ITS parent, and the frame's spine link once some collected site
+/// needs it.</summary>
+internal readonly record struct GreenWalkFrame(
+    InternalSyntax.GreenNode Green, int NextSlot, int NextPos, int SlotInParent, GreenSiteSpine? Spine);
+
 /// <summary>
 /// A lazily materializable ancestor link of a <see cref="GreenSite"/>: one per
 /// ancestor frame of the <see cref="SyntaxNode.GreenSitesLazy"/> walk that owns
@@ -552,6 +634,11 @@ internal sealed class GreenSiteSpine
     /// <summary>This frame's red node, materialized on first demand through the
     /// parent chain.</summary>
     internal SyntaxNode Node => _red ??= _parent!.Node.GetChild(_slotInParent)!;
+
+    internal GreenSiteSpine? Parent => _parent;
+    internal int SlotInParent => _slotInParent;
+    /// <summary>The walk root's red (the link with no parent); null on any other link.</summary>
+    internal SyntaxNode? RootRed => _parent == null ? _red : null;
 }
 
 /// <summary>
@@ -603,6 +690,35 @@ internal readonly struct GreenSite
     /// expansion). Parent-cached <see cref="SyntaxNode.GetChild"/> makes every
     /// later read the same instance.</summary>
     internal SyntaxNode Node => _red ?? _parent!.Node.GetChild(_slot)!;
+
+    /// <summary>
+    /// The site's slot path from <paramref name="root"/> — the walk root of the
+    /// <see cref="SyntaxNode.GreenSitesLazy"/> that gathered it — as
+    /// <see cref="SyntaxNode.TryGreenSiteAt"/> reads it back; null for a site that wraps
+    /// a preset red (a synthetic marker, a fabricated bar line, a direct child) or was
+    /// gathered under another root (a phrase body's expansion). Spine reads only — no red
+    /// is materialized.
+    /// </summary>
+    internal int[]? PathFrom(SyntaxNode root)
+    {
+        if (_parent == null)
+            return null;
+        int depth = 1;
+        var link = _parent;
+        while (link.Parent != null)
+        {
+            depth++;
+            link = link.Parent;
+        }
+        if (!ReferenceEquals(link.RootRed, root))
+            return null;
+        var path = new int[depth];
+        path[depth - 1] = _slot;
+        int i = depth - 2;
+        for (var s = _parent; s.Parent != null; s = s.Parent)
+            path[i--] = s.SlotInParent;
+        return path;
+    }
 }
 
 /// <summary>
