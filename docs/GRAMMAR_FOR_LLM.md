@@ -160,6 +160,10 @@ form main { Main }
 score main "out" { staff melody }
 ```
 
+⚠️ That document prints a boxed **"Main"** over its first bar: every section reference prints
+its name as a section label by default. A piece with one section rarely wants that — write
+`form main { ~Main }` (the `~` hides the label; see "Rules and gotchas").
+
 **Music always lives inside a part.** A file is a set of declarations; a note stream at the
 top level is an error (LYS0020), as are a top-level `{ … }` block, `grace`/`tuplet` group,
 `break`, or phrase reference. This is what makes a top-level `clef`/`key`/`time`/`tempo`
@@ -547,6 +551,15 @@ trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@q
 pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` ... `@!unaCorda`
 (`@treCorde` is the same release written as the word the Text style prints) — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
+A pedal CHANGE (release and re-press on the same note, LilyPond's `\sustainOff\sustainOn`) is
+both marks on one note: `g,4@!sustain@sustain` — the bracket draws its notch there. A second
+`@sustain` while the pedal is down means the same and engraves identically. How the span is
+drawn is the PART's: `part lh { clef bass pedal text }` (`text` = "Ped. … *", `bracket` =
+what an unset part draws, or `mixed` = text at the start, bracket for the hold).
+
+```
+d,4@sustain a, d a, | g,4@!sustain@sustain d g d | a,1@!sustain |
+```
 An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier
 instead (`@fermata.up`), so `@notehead.x` does not work either.
 (The navigation marks above are the bare form — `ds al fine`, no `@` — in a form and in music alike.)

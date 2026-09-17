@@ -1407,8 +1407,18 @@ spanner and an ottava. A pedal nobody releases draws nothing at all, and says so
 ⚠️ A second `@sustain` while the pedal is down is **re-pedalling**, not a mistake: it
 releases and re-engages, which is what "Ped. … Ped." means on the page.
 
+The explicit spelling of a pedal change is both marks on ONE note, release first:
+`@!sustain@sustain` (LilyPond's `\sustainOff\sustainOn`). It engraves identically to the
+second `@sustain`, and says what the pianist's foot does, so prefer it when the pedal
+changes at every bar or chord.
+
+The drawing is a part property: `part lh { clef bass pedal text }` picks "Ped. … *",
+`pedal bracket` (what a part without the property draws) or `pedal mixed` (text at the
+start, bracket for the hold).
+
 ```
 c4@sustain d e f@!sustain |           // Sustain pedal
+c4@sustain d e f | g4@!sustain@sustain a b c@!sustain |   // pedal change on g
 c4@sostenuto d@!sostenuto |           // Sostenuto pedal
 c4@unaCorda d@!unaCorda |             // Una corda pedal
 c4@unaCorda d@treCorde |              // the same release, written as the word it prints
