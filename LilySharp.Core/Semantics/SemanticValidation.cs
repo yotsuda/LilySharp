@@ -135,11 +135,38 @@ public static class SemanticValidation
     /// keystroke started. Throws <see cref="OperationCanceledException"/>.
     /// </summary>
     public static IReadOnlyList<Diagnostic> Run(SyntaxTree tree, System.Threading.CancellationToken token)
+        => Run(tree, token, previewCollect: null);
+
+    /// <summary>
+    /// <see cref="Run(SyntaxTree, System.Threading.CancellationToken)"/> with a collect the
+    /// caller already has: <paramref name="previewCollect"/> is asked ONCE, lazily, the first
+    /// time a collector-backed validator needs the collect, and a non-null answer stands in
+    /// for <see cref="TryCollect(SyntaxTree)"/>. Null (nothing to lend) falls through to
+    /// that fresh collect, so the answer is never worse than without it.
+    /// </summary>
+    /// <remarks>
+    /// The language server is the lender: a keystroke starts TWO computations over the same
+    /// tree — the preview's incremental compile and, debounced behind it, this pass — and
+    /// until session 399 the pass began with its own full collect of the whole book, no
+    /// resume, no probe, on top of the collect the preview had just finished (HANDOFF §2
+    /// R13⒜). What is lent must be THE collect this pass would have made: the same tree
+    /// and the FIRST render block, the one <see cref="TryCollect(SyntaxTree)"/> takes —
+    /// <see cref="Svg.IncrementalCompiler.CollectFor"/> answers null for a session
+    /// previewing any other block (a named render), so a validator asked of "the first
+    /// score" (<see cref="DiagnosticCodes.UnengravedRehearsalMark"/>'s remarks) keeps
+    /// being asked of the first score whichever block the picker shows.
+    /// <c>PreviewCollectSharingTests</c> hold both halves: the lent collect's diagnostics
+    /// equal a fresh collect's across the edit-resume net's synthetic edits, and the
+    /// server actually lends (and declines) where this says.
+    /// </remarks>
+    public static IReadOnlyList<Diagnostic> Run(SyntaxTree tree, System.Threading.CancellationToken token,
+        Func<MeasureCollector?>? previewCollect)
     {
         var result = new List<Diagnostic>();
         // One shared single-staff collect, computed at most once and reused by every
         // collector-backed validator (previously each re-ran the full collector).
-        var sharedCollect = new Lazy<MeasureCollector?>(() => TryCollect(tree));
+        var sharedCollect = new Lazy<MeasureCollector?>(
+            () => previewCollect?.Invoke() ?? TryCollect(tree));
         foreach (var v in CreateAll())
         {
             token.ThrowIfCancellationRequested();

@@ -313,13 +313,87 @@ public sealed partial class LilySharpLanguageServer
     /// </remarks>
     internal static IReadOnlyList<CoreDiagnostic> DocumentDiagnostics(
         string text, SyntaxTree unexpanded, string basePath, Func<string, string?> readFile,
-        CancellationToken token = default)
+        CancellationToken token = default,
+        Func<SyntaxTree, LilySharp.Core.Svg.Collector.MeasureCollector?>? previewCollect = null)
     {
         var (tree, usingDiagnostics) = ExpandUsings(text, unexpanded, basePath, readFile);
 
         var result = new List<CoreDiagnostic>(usingDiagnostics);
-        result.AddRange(SemanticValidation.Run(tree, token).Where(d => d.Span.Start < text.Length));
+        // The preview's collect of THIS expanded tree, when the server has one (the
+        // instance method below); the validators otherwise collect the book again.
+        Func<LilySharp.Core.Svg.Collector.MeasureCollector?>? lend =
+            previewCollect == null ? null : () => previewCollect(tree);
+        result.AddRange(SemanticValidation.Run(tree, token, lend).Where(d => d.Span.Start < text.Length));
         return result;
+    }
+
+    /// <summary>
+    /// <see cref="DocumentDiagnostics(string, SyntaxTree, string, Func{string, string?}, CancellationToken, Func{SyntaxTree, LilySharp.Core.Svg.Collector.MeasureCollector?}?)"/>
+    /// for an open document, with the preview's collect lent to the validators
+    /// (<see cref="PreviewCollectFor"/>). <paramref name="lentByPreview"/> says whether the
+    /// collector-backed validators ran on the preview's collect (true) or on a fresh collect
+    /// of the pass's own (false) — for diagnostics / tests.
+    /// </summary>
+    internal IReadOnlyList<CoreDiagnostic> DocumentDiagnostics(Document doc, CancellationToken token,
+        out bool lentByPreview)
+    {
+        bool lent = false;
+        var result = DocumentDiagnostics(doc.Text, doc.Tree,
+            doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
+            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null,
+            token,
+            tree =>
+            {
+                var collector = PreviewCollectFor(doc.Uri, tree);
+                lent = collector != null;
+                return collector;
+            });
+        lentByPreview = lent;
+        return result;
+    }
+
+    /// <summary>The open document at <paramref name="uri"/>, or null. For tests.</summary>
+    internal Document? DocumentAt(Uri uri) => _documentManager.GetDocument(uri);
+
+    /// <summary>
+    /// The preview's collect of <paramref name="tree"/> for the document at
+    /// <paramref name="uri"/>, from whichever of its render sessions collected exactly
+    /// that tree against the first render block (<see cref="IncrementalCompiler.CollectFor"/>);
+    /// null when none did. Reads the sessions without their gates: a slot's session is a
+    /// reference swapped whole under its gate, and a lent collect is immutable from the
+    /// moment it is lent, so the borrower never waits behind a running render.
+    /// </summary>
+    /// <remarks>
+    /// The second computation a keystroke starts used to begin with a full collect of the
+    /// whole book on top of the one the preview had just made (HANDOFF §2 R13⒜, session
+    /// 399); on a settled keystroke the two collects are now one, and
+    /// <c>PreviewCollectSharingTests</c> hold where the pass borrows and where it must not.
+    /// The pass still walks the tree once per validator (R13⒜'s other half); this lends
+    /// only the collect.
+    /// </remarks>
+    internal LilySharp.Core.Svg.Collector.MeasureCollector? PreviewCollectFor(Uri uri, SyntaxTree tree)
+    {
+        System.Collections.Generic.List<IncrementalCompiler>? sessions = null;
+        lock (_svgSessionLock)
+        {
+            foreach (var (key, slot) in _svgSessions)
+            {
+                if (key.Uri != uri)
+                    continue;
+                var session = System.Threading.Volatile.Read(ref slot.Session);
+                if (session != null)
+                    (sessions ??= new()).Add(session);
+            }
+        }
+        if (sessions == null)
+            return null;
+        foreach (var session in sessions)
+        {
+            var collector = session.CollectFor(tree);
+            if (collector != null)
+                return collector;
+        }
+        return null;
     }
 
     [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]

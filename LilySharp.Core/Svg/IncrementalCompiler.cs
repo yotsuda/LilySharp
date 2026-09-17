@@ -163,6 +163,13 @@ public sealed class IncrementalCompiler
     private CollectWalkProbe? _collectRecording;
     private SyntaxTree? _collectBaselineTree;
 
+    // The collector of the most recent compile — full or resumed — with the tree it
+    // collected and whether the block it collected is the tree's FIRST render block.
+    // Lent to the semantic-validation pass through CollectFor (its remarks); swapped
+    // whole, under Volatile, because the lender's thread is not the borrower's.
+    private sealed record LentCollect(SyntaxTree Tree, MeasureCollector Collector, bool FirstBlock);
+    private LentCollect? _lastCollect;
+
     // Baseline re-record heuristic (2026-08-26 review, finding 3-3). The dirty
     // window is computed against the LAST FULL COLLECT's text, so it is the UNION
     // of every edit since then: edit measure 10, then measure 900, and every later
@@ -278,6 +285,49 @@ public sealed class IncrementalCompiler
     /// <summary>The current syntax tree (after the last edit).</summary>
     public SyntaxTree Tree => _tree;
 
+    /// <summary>
+    /// The collect this session's most recent compile made of <paramref name="tree"/>, for
+    /// a reader that would otherwise collect the same tree again — the semantic-validation
+    /// pass (<see cref="Semantics.SemanticValidation.Run(SyntaxTree, System.Threading.CancellationToken, System.Func{MeasureCollector?}?)"/>).
+    /// Null when the last compile collected another tree, or another render block than the
+    /// tree's first.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// WHAT IS LENT IS THE PASS'S OWN COLLECT, not a look-alike: the same tree (the same
+    /// instance, or the same text — the server's expansion cache hands both readers one
+    /// instance per document version, and a re-parse of identical text collects
+    /// identically), against the FIRST render block, which is what
+    /// <see cref="Semantics.SemanticValidation.TryCollect(SyntaxTree)"/> collects
+    /// (<see cref="RenderSpecParser.FindFirst"/> — the same first parseable block
+    /// <see cref="RenderSpecParser.Choose"/> falls back to). A session previewing a NAMED
+    /// block answers null rather than lend a collect of the wrong score: the pass's
+    /// validators are asked of the first score by contract, whichever block the picker
+    /// shows (<see cref="Syntax.DiagnosticCodes.UnengravedRehearsalMark"/>'s remarks), so the
+    /// panel does not change its mind with the preview's selection.
+    /// </para>
+    /// <para>
+    /// A RESUMED collect lends as well as a full one: every table a validator reads is
+    /// either a cumulative side table the resume adopts from the source by COPY
+    /// (<c>MeasureCollector.CumulativeSideTables</c> — ties, slurs, beams, cue boundaries,
+    /// marks, chord names) or the product of a post-walk scanner that runs live on the
+    /// measures the resume ends up with (repeat pairing, lyrics, tab, mid-bar breaks);
+    /// <c>PreviewCollectSharingTests</c> hold that equality across the edit-resume net's
+    /// synthetic edits. The lent collector is never touched again by this session — a
+    /// later compile collects into a NEW collector and only READS this one as its resume
+    /// source — so the borrower may read it while the next keystroke compiles.
+    /// </para>
+    /// </remarks>
+    public MeasureCollector? CollectFor(SyntaxTree tree)
+    {
+        var lent = System.Threading.Volatile.Read(ref _lastCollect);
+        if (lent == null || !lent.FirstBlock)
+            return null;
+        if (!ReferenceEquals(lent.Tree, tree) && lent.Tree.Text != tree.Text)
+            return null;
+        return lent.Collector;
+    }
+
     /// <summary>Test/diagnostic access to the per-system layout cache (null until an
     /// override-free, single-voice edit first installs one; retained thereafter, even
     /// across intervening ineligible edits, though it is not consulted while ineligible).
@@ -372,7 +422,12 @@ public sealed class IncrementalCompiler
         _beamMemo.BeginCollect();
         // Finding 3-5: arm the nested-collect resume channels for this compile.
         _nestedResume.BeginCompile(tree, allowResume: allowSkip);
-        var score = CollectWithResume(tree, spec, allowResume: allowSkip);
+        var score = CollectWithResume(tree, spec, allowResume: allowSkip, out var collector);
+        // Lend the collect (CollectFor's remarks) the moment it is complete — before the
+        // cancellation below, since a collect given up AFTER collecting is still the
+        // whole collect of this tree.
+        System.Threading.Volatile.Write(ref _lastCollect,
+            new LentCollect(tree, collector, FirstBlock: ReferenceEquals(spec, specs.Count > 0 ? specs[0] : null)));
         // Sound to stop here: the collect and beam memos above are addressed by the
         // tree/content they recorded and verified on read, never by "the last compile".
         Checkpoint(CompileStage.Collected, token);
@@ -811,7 +866,8 @@ public sealed class IncrementalCompiler
     /// <paramref name="tree"/>; the CollectResumeTests / CollectEditResumeTests
     /// completeness nets and this class's incremental==full net stand on that.
     /// </summary>
-    private MultiStaffScore CollectWithResume(SyntaxTree tree, RenderSpec? spec, bool allowResume)
+    private MultiStaffScore CollectWithResume(SyntaxTree tree, RenderSpec? spec, bool allowResume,
+        out MeasureCollector collector)
     {
         if (allowResume && !_rerecordNext && _collectRecording != null
             && _collectSource != null && _collectBaselineTree != null)
@@ -822,7 +878,7 @@ public sealed class IncrementalCompiler
             {
                 try
                 {
-                    var collector = new MeasureCollector
+                    var resumedCollector = new MeasureCollector
                     {
                         ScoreTranspose = spec?.ScoreTranspose,
                         ScoreConcert = spec?.ScoreConcert ?? false,
@@ -830,7 +886,7 @@ public sealed class IncrementalCompiler
                         BeamMemo = _beamMemo,
                         NestedResume = _nestedResume,
                     };
-                    var resumed = SvgGenerator.CollectScore(collector, tree, spec);
+                    var resumed = SvgGenerator.CollectScore(resumedCollector, tree, spec);
                     int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
                     foreach (var plan in resumer.ResumePlans.Values)
                     {
@@ -873,6 +929,7 @@ public sealed class IncrementalCompiler
                             _rerecordNext = true;
                         }
                     }
+                    collector = resumedCollector;
                     return resumed;
                 }
                 catch (CollectResumeAbortException)
@@ -899,6 +956,7 @@ public sealed class IncrementalCompiler
         _collectSource = source;
         _collectRecording = recorder;
         _collectBaselineTree = tree;
+        collector = source;
         return score;
     }
 

@@ -447,12 +447,14 @@ public sealed partial class LilySharpLanguageServer
         //
         // Defensive: a validator that throws on a broken tree must NOT blank the Problems
         // panel — the parser diagnostics (which usually explain the breakage) still publish.
+        //
+        // The collector-backed validators borrow the preview's collect of this very tree
+        // when a render session has one (DocumentDiagnostics(Document, ·) → PreviewCollectFor):
+        // the pass runs AFTER the preview by design (the SvgQuietMs wait above), so on a
+        // settled keystroke the collect is there to lend.
         try
         {
-            foreach (var d in DocumentDiagnostics(doc.Text, doc.Tree,
-                         doc.Uri.IsFile ? doc.Uri.LocalPath : string.Empty,
-                         p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null,
-                         token))
+            foreach (var d in DocumentDiagnostics(doc, token, out _))
             {
                 diagnostics.Add(ConvertDiagnostic(d, doc.Text));
             }

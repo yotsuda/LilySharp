@@ -1295,7 +1295,7 @@ score main { staff m }
     /// that fires anyway corrupts the whole tail, which is what makes this the
     /// edit that bites on a poisoned state match). "Late" maximizes the
     /// adoptable prefix; the mid variants check strictly inside the walk.</summary>
-    private static IEnumerable<string> SyntheticEdits(string text)
+    internal static IEnumerable<string> SyntheticEdits(string text)
     {
         int late = text.LastIndexOf(' ');
         if (late > 0)

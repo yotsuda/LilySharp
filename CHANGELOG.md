@@ -52,6 +52,17 @@ workflow attaches that section to the GitHub Release verbatim.
   the editor's preview plays its timbre from the same sound (which also stops it reading
   `piano-bass` as a bass guitar).
 
+### Editor
+
+- **The Problems panel no longer collects the book a second time.** A keystroke starts two
+  computations over the same text — the preview's incremental compile and, behind it, the
+  validation pass that fills the panel — and the pass used to open with a full collect of the
+  whole book of its own, on top of the one the preview had just finished. It now borrows the
+  preview's collect when the preview has rendered the current text (and the default score, which
+  is the one the panel's collector-backed warnings are asked of), and collects for itself only
+  when there is nothing to borrow. Measured on a 1000-bar book, the pass went from 139 ms to
+  98 ms; what it says does not change.
+
 ### Engraving
 
 - **A bar whose only rest or note shares it with a skip ending inside the bar is spaced as
