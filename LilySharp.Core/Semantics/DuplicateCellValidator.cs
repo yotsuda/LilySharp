@@ -37,7 +37,7 @@ internal sealed class DuplicateCellValidator : ISemanticValidator
     {
         var seen = new HashSet<(string section, string part)>();
 
-        foreach (var section in tree.GetRoot().DescendantNodes().OfType<SectionDeclarationSyntax>())
+        foreach (var section in tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>())
         {
             var owningPart = EnclosingPartName(section);
             if (owningPart != null)
@@ -47,8 +47,14 @@ internal sealed class DuplicateCellValidator : ISemanticValidator
             }
             else
             {
-                // Section-major: each part-block in the section is a cell.
-                foreach (var partBlock in section.DescendantNodes().OfType<PartBlockSyntax>())
+                // Section-major: each part-block in the section is a cell. Direct children
+                // only: a PartBlockSyntax is produced exclusively by ParseSectionItem
+                // (Parser.Sections.cs — the Identifier and clef-keyword arms), so every part
+                // block is a DIRECT child of its section declaration (the collector's
+                // ProcessSectionBody reads them the same way). The descendant walk this
+                // replaced visited every note of the section to find its part blocks, on
+                // every settled keystroke (MEASURED, session 401: 5.4 ms on perf-fingbeam1k).
+                foreach (var partBlock in section.ChildNodes().OfType<PartBlockSyntax>())
                     Record(seen, section.SectionName, partBlock.Name, partBlock.PartName);
             }
         }

@@ -41,9 +41,9 @@ internal sealed class DuplicateTrackSectionValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        foreach (var lyrics in root.DescendantNodes().OfType<LyricsBlockSyntax>())
+        foreach (var lyrics in root.DescendantNodes<LyricsBlockSyntax>())
             CheckDuplicates(lyrics.Sections, "lyrics");
-        foreach (var chords in root.DescendantNodes().OfType<ChordPartBlockSyntax>())
+        foreach (var chords in root.DescendantNodes<ChordPartBlockSyntax>())
             CheckDuplicates(chords.Sections, "chords");
     }
 

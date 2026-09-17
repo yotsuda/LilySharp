@@ -71,7 +71,7 @@ internal sealed class PartialScopeValidator : ISemanticValidator
         if (!TopLevelNodes.IsStructured(root))
             return;
 
-        foreach (var partial in root.DescendantNodes().OfType<PartialDeclarationSyntax>())
+        foreach (var partial in root.DescendantNodes<PartialDeclarationSyntax>())
         {
             string? where = partial.Parent switch
             {

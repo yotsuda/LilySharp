@@ -39,7 +39,7 @@ internal sealed class ChordDisplayModeValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var row in tree.GetRoot().DescendantNodes().OfType<ChordRowRenderSyntax>())
+        foreach (var row in tree.GetRoot().DescendantNodes<ChordRowRenderSyntax>())
         {
             if (row.DisplayModeToken is not { } token || token.Text.Length == 0)
                 continue;

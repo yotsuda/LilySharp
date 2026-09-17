@@ -44,7 +44,7 @@ internal sealed class SectionMusicNeedsPartValidator : ISemanticValidator
         if (PartSectionLayoutConverter.Detect(root) != LayoutForm.PartMajor)
             return;
 
-        foreach (var section in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
+        foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>())
         {
             // Only a GENUINE top-level section (a direct member of the file). A part cell's
             // parent is the part; a lyrics/chords track section's parent is that track.

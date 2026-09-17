@@ -77,7 +77,7 @@ internal sealed class PartSettingInSectionHeaderValidator : ISemanticValidator
     {
         ReportPartBlockOptions(tree);
 
-        foreach (var section in tree.GetRoot().DescendantNodes().OfType<SectionDeclarationSyntax>())
+        foreach (var section in tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>())
         {
             if (HasOwnMusic(section))
                 continue;
@@ -127,7 +127,7 @@ internal sealed class PartSettingInSectionHeaderValidator : ISemanticValidator
     /// </remarks>
     private void ReportPartBlockOptions(SyntaxTree tree)
     {
-        foreach (var cell in tree.GetRoot().DescendantNodes().OfType<PartBlockSyntax>())
+        foreach (var cell in tree.GetRoot().DescendantNodes<PartBlockSyntax>())
         {
             foreach (var option in cell.ChildNodes().OfType<PropertyAssignmentSyntax>())
             {

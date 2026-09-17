@@ -42,7 +42,7 @@ internal sealed class CueRegionValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var cue in tree.GetRoot().DescendantNodes().OfType<CueExpressionSyntax>())
+        foreach (var cue in tree.GetRoot().DescendantNodes<CueExpressionSyntax>())
         {
             // Report at the INNER keyword: it is the one to delete, and squiggling the whole
             // outer region would bury it under bars of music.

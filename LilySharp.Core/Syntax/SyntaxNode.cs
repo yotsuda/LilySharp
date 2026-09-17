@@ -403,13 +403,26 @@ public abstract class SyntaxNode
     /// iterator produced.
     /// </summary>
     /// <remarks>
+    /// On the ROOT of a tree the answer is the tree's <see cref="DescendantIndex"/>:
+    /// walked once, kept on the root, so the many root-level walks of the diagnostics
+    /// pass are paid once per tree (its remarks have the numbers). Below the root the
+    /// walk is <see cref="WalkDescendants"/>, lazy as ever.
+    /// </remarks>
+    public IEnumerable<SyntaxNode> DescendantNodes()
+        => this is CompilationUnitSyntax root ? root.Descendants.Nodes : WalkDescendants();
+
+    /// <summary>
+    /// The pre-order walk itself — what <see cref="DescendantNodes()"/> is below the
+    /// root, and what the root's <see cref="DescendantIndex"/> is built from.
+    /// </summary>
+    /// <remarks>
     /// Iterative with an explicit stack: the recursive version chained one
     /// iterator per tree level, so every element bubbled through O(depth)
     /// MoveNext calls — measured at ~13 ms (plain1k) / ~76 ms (fingbeam1k) per
     /// full-tree enumeration on a warm red tree (session 144), and the collect
     /// phase runs several such walks per keystroke.
     /// </remarks>
-    public IEnumerable<SyntaxNode> DescendantNodes()
+    internal IEnumerable<SyntaxNode> WalkDescendants()
     {
         var stack = new Stack<(SyntaxNode Node, int Slot)>();
         var current = (Node: this, Slot: 0);
@@ -439,11 +452,16 @@ public abstract class SyntaxNode
 
     /// <summary>
     /// Returns all descendant nodes of a specific type (pre-order, as
-    /// <see cref="DescendantNodes()"/>).
+    /// <see cref="DescendantNodes()"/>). On the root this is a bucket lookup in the
+    /// tree's <see cref="DescendantIndex"/> — O(matches) — so a root-level
+    /// <c>DescendantNodes().OfType&lt;T&gt;()</c> should be spelled this way instead.
     /// </summary>
     public IEnumerable<T> DescendantNodes<T>() where T : SyntaxNode
+        => this is CompilationUnitSyntax root ? root.Descendants.OfType<T>() : WalkDescendants<T>();
+
+    private IEnumerable<T> WalkDescendants<T>() where T : SyntaxNode
     {
-        foreach (var node in DescendantNodes())
+        foreach (var node in WalkDescendants())
             if (node is T typed)
                 yield return typed;
     }

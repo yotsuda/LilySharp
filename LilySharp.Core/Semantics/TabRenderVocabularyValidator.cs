@@ -123,7 +123,7 @@ internal sealed class TabRenderVocabularyValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var tab in tree.GetRoot().DescendantNodes().OfType<TabRenderSyntax>())
+        foreach (var tab in tree.GetRoot().DescendantNodes<TabRenderSyntax>())
         {
             if (tab.DisplayModeToken is { } style && style.Text.Length > 0
                 && !StyleVocabulary.Contains(style.Text, StringComparer.Ordinal))

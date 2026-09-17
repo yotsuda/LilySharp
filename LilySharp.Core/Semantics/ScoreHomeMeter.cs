@@ -66,7 +66,7 @@ public static class ScoreHomeMeter
     public static TimeSignatureSyntax? Declaration(SyntaxNode root)
     {
         TimeSignatureSyntax? home = null;
-        foreach (var time in root.DescendantNodes().OfType<TimeSignatureSyntax>())
+        foreach (var time in root.DescendantNodes<TimeSignatureSyntax>())
             if (!IsInsideMusicContent(time))
                 home = time;
         return home;

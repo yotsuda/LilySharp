@@ -48,10 +48,11 @@ internal sealed class NavigationPlacementValidator : ISemanticValidator
         var root = tree.GetRoot();
         // No navigation mark anywhere: nothing to place, so no collect — this validator
         // used to run one FULL collect per declared part on every settled keystroke of a
-        // book that had no segno, coda or fine at all (session 395). A green walk for the
-        // kind costs a fraction of one collect; a mark in a form (not music) still reaches
-        // here, harmlessly, and the collect below answers for it as before.
-        if (!root.KindSites(SyntaxKind.NavigationMark).Any())
+        // book that had no segno, coda or fine at all (session 395). The root's typed
+        // lookup (the tree's DescendantIndex, session 401; a green walk for the kind
+        // before that) costs a fraction of one collect; a mark in a form (not music)
+        // still reaches here, harmlessly, and the collect below answers for it as before.
+        if (!root.DescendantNodes<NavigationMarkSyntax>().Any())
             return;
         var voices = TopLevelNodes.OfRoot<PartDeclarationSyntax>(root)
             .Select(p => p.Name.Text).Distinct().ToList();

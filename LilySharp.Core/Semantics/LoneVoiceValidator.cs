@@ -46,7 +46,7 @@ internal sealed class LoneVoiceValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var span in tree.GetRoot().DescendantNodes().OfType<ParallelExpressionSyntax>())
+        foreach (var span in tree.GetRoot().DescendantNodes<ParallelExpressionSyntax>())
         {
             // Only the `voice` spelling; `<< … >>` recovery opens with the angle token.
             if (span.OpenAngle.Kind != SyntaxKind.VoiceKeyword)

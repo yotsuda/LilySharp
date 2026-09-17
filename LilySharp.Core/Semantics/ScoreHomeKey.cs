@@ -54,7 +54,7 @@ public static class ScoreHomeKey
     public static KeyTonic Read(SyntaxNode root)
     {
         var home = KeyTonic.CMajor;
-        foreach (var key in root.DescendantNodes().OfType<KeySignatureSyntax>())
+        foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
             if (!IsInsideMusicContent(key))
                 home = KeyTonic.Of(key);
         return home;
@@ -69,7 +69,7 @@ public static class ScoreHomeKey
     public static int Sharps(SyntaxNode root)
     {
         int sharps = 0;
-        foreach (var key in root.DescendantNodes().OfType<KeySignatureSyntax>())
+        foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
             if (!IsInsideMusicContent(key) && !key.IsCustom)
                 sharps = KeySpelling.SharpsFor(
                     key.Pitch.ToFullString().Trim().ToLowerInvariant(),
@@ -86,7 +86,7 @@ public static class ScoreHomeKey
     public static KeySignatureSyntax? Declaration(SyntaxNode root)
     {
         KeySignatureSyntax? home = null;
-        foreach (var key in root.DescendantNodes().OfType<KeySignatureSyntax>())
+        foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
             if (!IsInsideMusicContent(key))
                 home = key;
         return home;

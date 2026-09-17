@@ -30,6 +30,26 @@ public sealed class CompilationUnitSyntax : SyntaxNode
     {
     }
 
+    private DescendantIndex? _descendants;
+
+    /// <summary>
+    /// The tree's descendant index, built on first demand and kept for the life of this
+    /// root (the red tree is immutable, so the walk's answer never changes). Concurrent
+    /// first demands each build one and the first published wins — equal by determinism,
+    /// like the red children themselves.
+    /// </summary>
+    internal DescendantIndex Descendants
+    {
+        get
+        {
+            var index = Volatile.Read(ref _descendants);
+            if (index != null)
+                return index;
+            var built = DescendantIndex.Build(this);
+            return Interlocked.CompareExchange(ref _descendants, built, null) ?? built;
+        }
+    }
+
     /// <summary>
     /// All members (notes, declarations, etc.)
     /// </summary>

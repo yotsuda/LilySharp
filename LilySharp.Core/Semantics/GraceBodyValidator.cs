@@ -52,10 +52,11 @@ namespace LilySharp.Core.Semantics;
 /// ⚠️ IT RUNS ON EVERY KEYSTROKE. <see cref="SemanticValidation.Run(SyntaxTree, System.Threading.CancellationToken)"/> is the LSP's
 /// diagnostics pass, so this walk is paid by every book, and the books that write no
 /// <c>grace</c> at all are nearly all of them (1697 on disk, a handful write one). That is
-/// why it goes through <see cref="SyntaxNode.KindSites"/> rather than
-/// <c>DescendantNodes().OfType&lt;T&gt;()</c>: the same pre-order over GREEN nodes, with a
-/// red materialized only per match, so a book with no grace pays the walk and allocates
-/// nothing.
+/// why the grace nodes are asked of the root's typed lookup
+/// (<see cref="SyntaxNode.DescendantNodes{T}()"/> — the tree's
+/// <see cref="DescendantIndex"/>, O(matches)): a book with no grace pays nothing here. It
+/// went through <see cref="SyntaxNode.KindSites"/> before the index existed (session 401),
+/// the green walk that materialized a red only per match.
 /// </para>
 /// </remarks>
 internal sealed class GraceBodyValidator : ISemanticValidator
@@ -70,12 +71,11 @@ internal sealed class GraceBodyValidator : ISemanticValidator
         Dictionary<string, SyntaxNode>? phrases = null;
         int budget = Svg.Collector.MeasureCollector.DefaultExpansionBudgetCap;
 
-        foreach (var grace in root
-                     .KindSites(SyntaxKind.GraceExpression).OfType<GraceExpressionSyntax>())
+        foreach (var grace in root.DescendantNodes<GraceExpressionSyntax>())
         {
             // The phrase table is built ONCE, and only for a book that writes a grace at
-            // all: the KindSites walk above costs nothing for the books that write none,
-            // and hoisting this DescendantNodes pass out of the loop would undo that.
+            // all: the lookup above costs nothing for the books that write none, and
+            // hoisting this walk out of the loop would undo that.
             phrases ??= PhraseBodies(root);
 
             // ⚠️ THE BODY IS EXPANDED THROUGH THE STATEMENT THE COLLECTOR READS. A phrase
@@ -156,10 +156,10 @@ internal sealed class GraceBodyValidator : ISemanticValidator
     /// pair on the diagnostics side. The two tables must agree or the collector and this
     /// validator would disagree about which references are containers.
     /// <para>
-    /// ⚠️ IT IS A GREEN WALK, not <c>DescendantNodes()</c>, for the reason the grace walk
-    /// above is one: this runs on every keystroke, and materializing a red for every node in
-    /// the book to find the handful of declarations would cost more than everything else
-    /// this validator does put together.
+    /// ⚠️ IT IS A GREEN WALK, not <c>DescendantNodes()</c>: it is reached only by a book
+    /// that writes a grace, and a red-free finder was the cheapest single walk when it was
+    /// written. (Since session 401 the root's reds are all materialized by the pass's
+    /// descendant index anyway; one walk per grace-writing book is not worth respelling.)
     /// </para>
     /// </remarks>
     private static Dictionary<string, SyntaxNode> PhraseBodies(SyntaxNode root)

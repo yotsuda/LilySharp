@@ -62,7 +62,7 @@ internal sealed class KeyTonicValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var key in tree.GetRoot().DescendantNodes().OfType<KeySignatureSyntax>())
+        foreach (var key in tree.GetRoot().DescendantNodes<KeySignatureSyntax>())
         {
             // A non-traditional signature names its altered pitches instead of a tonic, and
             // the parser has already gated those on IsPitchStart.

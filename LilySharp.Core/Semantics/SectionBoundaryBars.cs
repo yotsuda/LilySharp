@@ -188,7 +188,7 @@ internal sealed class SectionBoundaryBars
         if (_bars.TryGetValue(key, out var cached))
             return cached;
         List<MeasureModel.Bar>? bars = null;
-        foreach (var sec in _root.DescendantNodes().OfType<SectionDeclarationSyntax>())
+        foreach (var sec in _root.DescendantNodes<SectionDeclarationSyntax>())
         {
             if (sec.SectionName != section)
                 continue;

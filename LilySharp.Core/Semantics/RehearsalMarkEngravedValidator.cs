@@ -85,7 +85,7 @@ internal sealed class RehearsalMarkEngravedValidator : ISharedCollectValidator
         // walk of the same tree for every book that does, which is the population that
         // matters; the books that write none pay one pass over a tree the parser just built.
         var engraved = collector.EngravedRehearsalMarkPositions;
-        foreach (var node in tree.GetRoot().DescendantNodes().OfType<MusicMarkSyntax>())
+        foreach (var node in tree.GetRoot().DescendantNodes<MusicMarkSyntax>())
         {
             if (AnnotationValues.Rehearsal(node, out _) is null)
                 continue;

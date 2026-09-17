@@ -38,7 +38,7 @@ internal sealed class CondensedStaffValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var condensed in tree.GetRoot().DescendantNodes().OfType<CondensedStaffRenderSyntax>())
+        foreach (var condensed in tree.GetRoot().DescendantNodes<CondensedStaffRenderSyntax>())
         {
             // A non-part member (`staff X`, a nested group) is reported by the PARSER, which
             // is where it is visible: those tokens never reach this node, because the parser

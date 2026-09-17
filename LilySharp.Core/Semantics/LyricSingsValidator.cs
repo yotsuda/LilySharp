@@ -113,7 +113,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         // attached verse (score = a vertical stack of bands), so a row that sings
         // no adjacent staff has no place a group can give it. The fold itself is
         // RenderSpecParser.ParseGrandStaff; this is its refusal half.
-        foreach (var group in root.DescendantNodes().OfType<GrandStaffRenderSyntax>())
+        foreach (var group in root.DescendantNodes<GrandStaffRenderSyntax>())
         {
             string? partAbove = null;
             bool sharedStaffAbove = false;

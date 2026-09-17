@@ -57,7 +57,7 @@ internal sealed class TrackNeedsSectionsValidator : ISemanticValidator
         if (PartSectionLayoutConverter.Detect(root) != LayoutForm.PartMajor)
             return;
 
-        foreach (var block in root.DescendantNodes().OfType<LyricsBlockSyntax>())
+        foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())
         {
             if (block.HasSections || HasPartOrSectionAncestor(block))
                 continue;
@@ -66,7 +66,7 @@ internal sealed class TrackNeedsSectionsValidator : ISemanticValidator
                 "write 'lyrics { section A { … } }' (mirroring the part's sections).");
         }
 
-        foreach (var block in root.DescendantNodes().OfType<ChordPartBlockSyntax>())
+        foreach (var block in root.DescendantNodes<ChordPartBlockSyntax>())
         {
             if (block.HasSections || HasPartOrSectionAncestor(block))
                 continue;

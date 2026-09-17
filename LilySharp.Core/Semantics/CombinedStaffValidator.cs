@@ -36,7 +36,7 @@ internal sealed class CombinedStaffValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var combined in tree.GetRoot().DescendantNodes().OfType<CombinedStaffRenderSyntax>())
+        foreach (var combined in tree.GetRoot().DescendantNodes<CombinedStaffRenderSyntax>())
         {
             var names = combined.PartNames.Where(n => n.Length > 0).ToList();
             if (names.Count == 2)
