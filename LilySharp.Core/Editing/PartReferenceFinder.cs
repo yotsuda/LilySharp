@@ -108,10 +108,42 @@ public static class PartReferenceFinder
     public static IReadOnlyList<SyntaxTokenNode> ReferenceTokens(SyntaxNode root)
     {
         var tokens = new List<SyntaxTokenNode>();
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodesOfKinds(ReferenceKinds))
             CollectReferenceTokens(node, tokens);
         return tokens;
     }
+
+    /// <summary>The kinds <see cref="CollectReferenceTokens"/> answers on — the six render
+    /// spellings of a part reference — so <see cref="ReferenceTokens"/> asks the tree's
+    /// descendant index for those nodes instead of walking every node to ask the switch.</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH BELOW, kept beside it on purpose (the same shape
+    /// as <see cref="Editing.SectionSymbols.DeclaringKinds"/>): the switch stays the one
+    /// answer for a caller already holding a node (the language server's semantic tokens
+    /// fold it into their own walk), and this list is how a whole-tree caller reaches only
+    /// the nodes the switch can answer on. A seventh render form must be added to BOTH, or
+    /// the validator goes silent on it while the editor colours it. Pinned by
+    /// <c>SymbolKindsTests</c> over every node of the net books.
+    /// </remarks>
+    public static readonly SyntaxKind[] ReferenceKinds =
+    [
+        SyntaxKind.MidiPartRender, SyntaxKind.StaffRender, SyntaxKind.OssiaRender,
+        SyntaxKind.TabRender, SyntaxKind.CondensedStaffRender, SyntaxKind.CombinedStaffRender,
+    ];
+
+    /// <summary>The kinds <see cref="DeclaredName"/> answers on — the header and the
+    /// section-body block. See <see cref="ReferenceKinds"/> for why the list exists.</summary>
+    public static readonly SyntaxKind[] DeclaringKinds = [SyntaxKind.PartDeclaration, SyntaxKind.PartBlock];
+
+    /// <summary>The kinds <see cref="Tracks"/> reads — the two declaring blocks
+    /// (<see cref="DeclaredTrackName"/>) and the two row references
+    /// (<see cref="ReferencedTrackName"/>). See <see cref="ReferenceKinds"/> for why the
+    /// list exists.</summary>
+    public static readonly SyntaxKind[] TrackKinds =
+    [
+        SyntaxKind.ChordPartBlock, SyntaxKind.LyricsBlock,
+        SyntaxKind.ChordRowRender, SyntaxKind.LyricsRowRender,
+    ];
 
     /// <summary>
     /// The part references ONE node spells, appended to <paramref name="into"/> — the same
@@ -220,7 +252,7 @@ public static class PartReferenceFinder
         var refs = new List<(SyntaxTokenNode, bool)>();
         var chords = new HashSet<string>();
         var lyrics = new HashSet<string>();
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodesOfKinds(TrackKinds))
         {
             if (ReferencedTrackName(node) is { } reference)
                 refs.Add((reference.Token, reference.IsChord));

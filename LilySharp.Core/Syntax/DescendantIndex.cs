@@ -64,14 +64,15 @@ internal sealed class DescendantIndex
     /// <see cref="SyntaxNode.DescendantNodes()"/> yields.</summary>
     internal readonly SyntaxNode[] Nodes;
 
-    // Per kind: that kind's nodes in pre-order (null = none in this tree), and the red
-    // type those nodes had (null = none).
-    private readonly SyntaxNode[]?[] _byKind;
+    // Per kind: the pre-order ORDINALS (indices into Nodes) of that kind's nodes, ascending
+    // (null = none in this tree) — ordinals rather than nodes so several kinds' buckets can
+    // be merged back into pre-order (OfKinds) — and the red type those nodes had.
+    private readonly int[]?[] _byKind;
     private readonly Type?[] _typeOfKind;
 
     private static readonly int KindCount = Enum.GetValues<SyntaxKind>().Max(k => (int)k) + 1;
 
-    private DescendantIndex(SyntaxNode[] nodes, SyntaxNode[]?[] byKind, Type?[] typeOfKind)
+    private DescendantIndex(SyntaxNode[] nodes, int[]?[] byKind, Type?[] typeOfKind)
     {
         Nodes = nodes;
         _byKind = byKind;
@@ -90,20 +91,20 @@ internal sealed class DescendantIndex
             counts[(int)node.Kind]++;
         }
 
-        var byKind = new SyntaxNode[]?[KindCount];
+        var byKind = new int[]?[KindCount];
         var fill = new int[KindCount];
         var typeOfKind = new Type?[KindCount];
         for (int k = 0; k < KindCount; k++)
             if (counts[k] > 0)
-                byKind[k] = new SyntaxNode[counts[k]];
-        foreach (var node in nodes)
+                byKind[k] = new int[counts[k]];
+        for (int i = 0; i < nodes.Count; i++)
         {
-            int k = (int)node.Kind;
-            byKind[k]![fill[k]++] = node;
+            int k = (int)nodes[i].Kind;
+            byKind[k]![fill[k]++] = i;
         }
         for (int k = 0; k < KindCount; k++)
             if (byKind[k] is { } bucket)
-                typeOfKind[k] = bucket[0].GetType();
+                typeOfKind[k] = nodes[bucket[0]].GetType();
 
         return new DescendantIndex(nodes.ToArray(), byKind, typeOfKind);
     }
@@ -116,7 +117,7 @@ internal sealed class DescendantIndex
         var type = typeof(T);
         if (type.IsSealed)
         {
-            SyntaxNode[]? bucket = null;
+            int[]? bucket = null;
             int owned = 0;
             for (int k = 0; k < _typeOfKind.Length; k++)
             {
@@ -134,10 +135,51 @@ internal sealed class DescendantIndex
         return Scan<T>();
     }
 
-    private static IEnumerable<T> Cast<T>(SyntaxNode[] bucket) where T : SyntaxNode
+    /// <summary>The nodes of any of <paramref name="kinds"/>, in pre-order — the buckets
+    /// merged by ordinal (a kind named twice counts once; a kind absent from the tree
+    /// contributes nothing). What a walk with a type switch over those kinds visits.</summary>
+    internal IEnumerable<SyntaxNode> OfKinds(SyntaxKind[] kinds)
     {
-        foreach (var node in bucket)
-            yield return (T)node;
+        var buckets = new List<int[]>(kinds.Length);
+        for (int i = 0; i < kinds.Length; i++)
+        {
+            if (Array.IndexOf(kinds, kinds[i], 0, i) >= 0)
+                continue; // named already
+            if (_byKind[(int)kinds[i]] is { } bucket)
+                buckets.Add(bucket);
+        }
+        if (buckets.Count == 0)
+            return [];
+        if (buckets.Count == 1)
+            return Cast<SyntaxNode>(buckets[0]);
+        return Merge(buckets);
+    }
+
+    private IEnumerable<SyntaxNode> Merge(List<int[]> buckets)
+    {
+        var heads = new int[buckets.Count];
+        while (true)
+        {
+            int best = -1, bestOrdinal = int.MaxValue;
+            for (int b = 0; b < buckets.Count; b++)
+            {
+                if (heads[b] < buckets[b].Length && buckets[b][heads[b]] < bestOrdinal)
+                {
+                    best = b;
+                    bestOrdinal = buckets[b][heads[b]];
+                }
+            }
+            if (best < 0)
+                yield break;
+            heads[best]++;
+            yield return Nodes[bestOrdinal];
+        }
+    }
+
+    private IEnumerable<T> Cast<T>(int[] bucket) where T : SyntaxNode
+    {
+        foreach (var ordinal in bucket)
+            yield return (T)Nodes[ordinal];
     }
 
     private IEnumerable<T> Scan<T>() where T : SyntaxNode

@@ -127,6 +127,43 @@ public sealed class DescendantIndexTests
     }
 
     [Fact]
+    public void TheKindsLookup_IsTheWalkFilteredByKind_InPreOrder_OnEveryNetBook()
+    {
+        // Sets that mix a class kind with a GenericSyntaxNode kind (SilentSectionReference),
+        // a set naming a kind twice, and a set of kinds no book has.
+        SyntaxKind[][] sets =
+        [
+            [SyntaxKind.VariableReference, SyntaxKind.SectionReference, SyntaxKind.SilentSectionReference],
+            [SyntaxKind.Note, SyntaxKind.Barline, SyntaxKind.Note],
+            [SyntaxKind.SectionDeclaration, SyntaxKind.PartDeclaration, SyntaxKind.PartBlock,
+                SyntaxKind.VariableDeclaration, SyntaxKind.PhraseDeclaration],
+            [SyntaxKind.KeySignature],
+            [SyntaxKind.DrummapDeclaration, SyntaxKind.OssiaRender],
+            [],
+        ];
+        int matched = 0;
+        foreach (var (path, root) in Roots())
+        {
+            var walk = root.WalkDescendants().ToList();
+            foreach (var set in sets)
+            {
+                var expected = walk.Where(n => Array.IndexOf(set, n.Kind) >= 0).ToList();
+                var answered = root.DescendantNodesOfKinds(set).ToList();
+                Assert.True(expected.Count == answered.Count,
+                    $"{path}: [{string.Join(", ", set)}] — walk {expected.Count}, index {answered.Count}");
+                for (int i = 0; i < expected.Count; i++)
+                    Assert.Same(expected[i], answered[i]);
+                matched += expected.Count;
+                // Below the root the same question is the walk itself.
+                if (root.ChildNodes().FirstOrDefault(c => c.SlotCount > 0) is { } child)
+                    Assert.Equal(child.WalkDescendants().Where(n => Array.IndexOf(set, n.Kind) >= 0).ToList(),
+                        child.DescendantNodesOfKinds(set).ToList());
+            }
+        }
+        Assert.True(matched >= 5_000, $"only {matched} kind matches in the net"); // 8,144 when written
+    }
+
+    [Fact]
     public void BelowTheRoot_TheLookupIsStillTheWalk()
     {
         // A subtree question is not indexed (nothing keeps it); it must still answer.

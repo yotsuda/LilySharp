@@ -49,15 +49,19 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         _definedParts.Clear();
 
         var root = tree.GetRoot();
-        var nodes = new List<SyntaxNode> { root };
-        nodes.AddRange(root.DescendantNodes());
 
+        // Both passes ask the tree's descendant index for the kinds their predicates answer
+        // on (pre-order across the kinds, so the reference errors keep document order),
+        // where they used to walk every node of the book twice — on perf-fingbeam1k the two
+        // passes plus the two part/track walks below were 15 of the validation pass's
+        // 61 ms (MEASURED, session 401). The kind lists live beside the predicates they
+        // mirror (SectionSymbols / PartReferenceFinder), with the net that keeps them in step.
         // First pass: collect all definitions
-        foreach (var node in nodes)
+        foreach (var node in root.DescendantNodesOfKinds(DefiningKinds))
             CollectDefinitions(node);
 
         // Second pass: validate references
-        foreach (var node in nodes)
+        foreach (var node in root.DescendantNodesOfKinds(ReferencingKinds))
             ValidateReferences(node);
 
         // A score's staff/ossia/tab render targets — and the bare members of a
@@ -93,6 +97,19 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 + $"('{keyword} {token.Text} {{ … }}').");
         }
     }
+
+    /// <summary>The kinds <see cref="CollectDefinitions"/> answers on: its own two cases
+    /// plus the section and part predicates' lists.</summary>
+    private static readonly SyntaxKind[] DefiningKinds =
+    [
+        SyntaxKind.VariableDeclaration, SyntaxKind.PhraseDeclaration,
+        .. SectionSymbols.DeclaringKinds, .. PartReferenceFinder.DeclaringKinds,
+    ];
+
+    /// <summary>The kinds <see cref="ValidateReferences"/> answers on: its own case plus
+    /// the section predicate's list.</summary>
+    private static readonly SyntaxKind[] ReferencingKinds =
+        [SyntaxKind.VariableReference, .. SectionSymbols.ReferencingKinds];
 
     private void CollectDefinitions(SyntaxNode node)
     {

@@ -467,6 +467,23 @@ public abstract class SyntaxNode
     }
 
     /// <summary>
+    /// The descendants whose kind is one of <paramref name="kinds"/>, in pre-order — what
+    /// a walk with a type switch over those kinds visits. On the root it is a merge of the
+    /// <see cref="DescendantIndex"/>'s kind buckets (O(matches)); below the root, the walk
+    /// with the kind test. A kind can be one <c>CreateRed</c> gives no class of its own
+    /// (a <see cref="GenericSyntaxNode"/> kind), which a type cannot ask for.
+    /// </summary>
+    public IEnumerable<SyntaxNode> DescendantNodesOfKinds(params SyntaxKind[] kinds)
+        => this is CompilationUnitSyntax root ? root.Descendants.OfKinds(kinds) : WalkDescendantsOfKinds(kinds);
+
+    private IEnumerable<SyntaxNode> WalkDescendantsOfKinds(SyntaxKind[] kinds)
+    {
+        foreach (var node in WalkDescendants())
+            if (Array.IndexOf(kinds, node.Kind) >= 0)
+                yield return node;
+    }
+
+    /// <summary>
     /// True when any ancestor (walking the parent chain, excluding this node)
     /// is of type <typeparamref name="T"/>. The single source for the many
     /// <c>IsInsideXxx</c> parent-chain walks in the collector and exporters.

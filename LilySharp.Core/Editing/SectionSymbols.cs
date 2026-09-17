@@ -49,6 +49,25 @@ namespace LilySharp.Core.Editing;
 /// </remarks>
 public static class SectionSymbols
 {
+    /// <summary>The kinds <see cref="DeclaredName"/> answers on — what a caller that reads
+    /// the tree's descendant index (<c>SyntaxNode.DescendantNodesOfKinds</c>) asks for
+    /// instead of walking every node to ask the predicate.</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE PREDICATE'S TYPE TEST, kept beside it on purpose: the
+    /// predicate stays the one answer for a caller that already holds a node (the language
+    /// server's semantic tokens), and this list is how the validator reaches only the nodes
+    /// the predicate can answer on. The two must agree — a kind the predicate learns and
+    /// this list does not is a spelling the validator goes silent on. Pinned by
+    /// <c>SymbolKindsTests</c>: over every node of the net books, a non-null answer implies
+    /// the kind is listed here.
+    /// </remarks>
+    public static readonly SyntaxKind[] DeclaringKinds = [SyntaxKind.SectionDeclaration];
+
+    /// <summary>The kinds <see cref="ReferencedName"/> answers on — see
+    /// <see cref="DeclaringKinds"/> for why the list exists beside the predicate.</summary>
+    public static readonly SyntaxKind[] ReferencingKinds =
+        [SyntaxKind.SectionReference, SyntaxKind.SilentSectionReference];
+
     /// <summary>The name token this node DECLARES as a section, or null if it declares
     /// none. Part-major and section-major spell a declaration the same way — a
     /// <c>section NAME { … }</c> inside a <c>part { }</c> is the same node as one at the
