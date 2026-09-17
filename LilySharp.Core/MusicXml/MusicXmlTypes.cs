@@ -352,7 +352,13 @@ internal sealed class MusicXmlAttributes
 internal sealed class MusicXmlDirection
 {
     public string? DynamicType { get; set; }
+    /// <summary>The metronome's per-minute figure, in <see cref="TempoBeatUnit"/>s.</summary>
     public int? Tempo { get; set; }
+    /// <summary>The metronome's beat unit as a note value (4 = quarter) and its dots. Until
+    /// session 398 the unit was written as a quarter whatever the source said, so
+    /// <c>tempo 2 = 60</c> came out ♩ = 60 — half the speed.</summary>
+    public int TempoBeatUnit { get; set; } = 4;
+    public int TempoBeatDots { get; set; }
     public string? Placement { get; set; }
     /// <summary>Hairpin: "crescendo" / "diminuendo" / "stop".</summary>
     public string? WedgeType { get; set; }
@@ -391,15 +397,31 @@ internal sealed class MusicXmlDirection
 
         if (Tempo.HasValue)
         {
-            direction.Add(new XElement("direction-type",
-                new XElement("metronome",
-                    new XElement("beat-unit", "quarter"),
-                    new XElement("per-minute", Tempo.Value))));
-            direction.Add(new XElement("sound", new XAttribute("tempo", Tempo.Value)));
+            var metronome = new XElement("metronome", new XElement("beat-unit", BeatUnitName(TempoBeatUnit)));
+            for (int i = 0; i < TempoBeatDots; i++)
+                metronome.Add(new XElement("beat-unit-dot"));
+            metronome.Add(new XElement("per-minute", Tempo.Value));
+            direction.Add(new XElement("direction-type", metronome));
+            // <sound tempo> is in QUARTER notes per minute whatever the metronome's unit.
+            var value = new Syntax.TempoValue(null, TempoBeatUnit, TempoBeatDots, Tempo.Value, 0);
+            direction.Add(new XElement("sound", new XAttribute("tempo",
+                System.Math.Round(value.QuarterBpm!.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture))));
         }
 
         return direction;
     }
+
+    /// <summary>MusicXML's note-type name of a beat unit written as a note value.</summary>
+    private static string BeatUnitName(int unit) => unit switch
+    {
+        1 => "whole",
+        2 => "half",
+        8 => "eighth",
+        16 => "16th",
+        32 => "32nd",
+        64 => "64th",
+        _ => "quarter",
+    };
 }
 
 /// <summary>

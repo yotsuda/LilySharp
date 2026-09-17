@@ -44,7 +44,10 @@ public readonly record struct MidiNote(
     // The part whose music made the note, or null for music no part claims. The exporter
     // gives each part its own track and channel by it (MidiExporter.SplitIntoPartTracks).
     // Not written to .mid files.
-    string? Part = null
+    string? Part = null,
+    // A grace note: it sounds, but it is not an onset a lyric syllable is sung on
+    // (MidiExporter.AttachLyrics). Not written to .mid files.
+    bool IsGrace = false
 );
 
 /// <summary>

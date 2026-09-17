@@ -195,6 +195,15 @@ public sealed class MidiExporter
         _tiePending = startsTie;
     }
 
+    /// <summary>A silence (a rest, a slash) ends the tie memory both ways: no tie is pending
+    /// past it, and nothing before it can be extended by a tie written after it.</summary>
+    private void ForgetOnset()
+    {
+        _tiePending = false;
+        _lastOnset.Clear();
+        _lastNoteTrack = null;
+    }
+
     // Sounding-pitch transpose for the part currently being played. A part option
     // transpose: shifts every note by the interval's semitones (no respelling).
     private SyntaxNode? _root;
@@ -377,6 +386,8 @@ public sealed class MidiExporter
         if (!conductorTrack.TimeSignatures.Any(ts => ts.Tick == 0))
             conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
 
+        // A section-less file's lyric blocks were met on the root stream: sing them now.
+        AttachLyrics(mainTrack, null, 0, 0);
         SplitIntoPartTracks(midi, mainTrack);
 
         return midi;
@@ -639,7 +650,9 @@ public sealed class MidiExporter
                 break;
 
             case LyricsBlockSyntax lyrics:
-                ProcessLyrics(lyrics, track);
+                // Sung AFTER the section's notes exist, on their onsets (AttachLyrics); the
+                // part in force now is what a block inside a part block sings.
+                _sectionLyrics.Add((lyrics, _currentPart));
                 break;
 
             case ParallelExpressionSyntax parallel:
@@ -661,9 +674,11 @@ public sealed class MidiExporter
                     _currentNoteName = startNoteName;
                     _currentOctave = startOctave;
                     _defaultDuration = startDuration;
+                    _pendingGraceSteal = 0; // a lane opens with no grace debt (PlaySection says why)
                     ProcessNode(voice, track, conductorTrack);
                     voicesEndTick = Math.Max(voicesEndTick, _currentTick);
                 }
+                _pendingGraceSteal = 0;
                 _currentTick = voicesEndTick;
                 // …and the music AFTER the span reads from the frame the span opened in
                 // too: no branch moves it, so which branch was written last cannot matter
@@ -860,6 +875,20 @@ public sealed class MidiExporter
     private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
         int octaveOffset = 0)
     {
+        // The lyric blocks met in this section are sung onto its notes once the play is
+        // done, whichever of PlaySectionCore's exits it leaves by (AttachLyrics).
+        int notesBefore = track.Notes.Count;
+        int sectionStart = _currentTick;
+        var outerLyrics = _sectionLyrics;
+        _sectionLyrics = new List<(LyricsBlockSyntax, string?)>();
+        PlaySectionCore(section, track, conductorTrack, octaveOffset);
+        AttachLyrics(track, section, notesBefore, sectionStart);
+        _sectionLyrics = outerLyrics;
+    }
+
+    private void PlaySectionCore(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack,
+        int octaveOffset)
+    {
         // A section is self-contained: its phrase auto-transpose baseline and the
         // scale-degree key both revert to the score's home key (a mid-section
         // modulation cannot leak out).
@@ -961,7 +990,15 @@ public sealed class MidiExporter
                 _currentTimbre = PartTimbre(pname);
                 var outerPart = _currentPart;
                 _currentPart = pname;
+                // A lane opens with no grace debt: a grace that closed the PREVIOUS lane with
+                // nothing after it to steal from used to take its ticks off this lane's first
+                // note (MEASURED, sessions/p398/probes/r14/grace-steal-lane: the second part's
+                // first crotchet 453 ticks, its whole section 27 short). Such a trailing
+                // grace's steal is simply dropped — the note it would have shortened is in
+                // another voice, or does not exist.
+                _pendingGraceSteal = 0;
                 ProcessNode(sectionPart, track, conductorTrack);
+                _pendingGraceSteal = 0;
                 _currentPart = outerPart;
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
                 _currentTick += PaddingTicks(sectionPart);
@@ -993,6 +1030,7 @@ public sealed class MidiExporter
         foreach (var section in sections)
         {
             _currentTick = start;
+            _pendingGraceSteal = 0; // each part's copy is a lane of its own (PlaySection says why)
             PlaySection(section, track, conductorTrack, octaveOffset);
             // A part-major cell (or a bare section the score attributes to one part) is one
             // part's voice: pad it to the section's canonical bar count. A section-major
@@ -1870,8 +1908,13 @@ public sealed class MidiExporter
 
     private void ProcessRest(RestSyntax rest)
     {
-        // A rest breaks any pending tie (a tie cannot span a rest).
-        _tiePending = false;
+        // A rest breaks any pending tie (a tie cannot span a rest) — and forgets the onset
+        // before it, so a `~` WRITTEN AFTER the rest (`c4 r4 ~ c4`) has nothing to extend:
+        // until session 398 it still pointed at the pre-rest c, which then swallowed the c
+        // after the rest into one note sounding through the silence (MEASURED,
+        // LilySharp-Lab/sessions/p398/probes/r14/tie-over-rest: one note of 960 ticks
+        // where the page draws two crotchets and a rest).
+        ForgetOnset();
         var duration = GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this rest
@@ -1893,7 +1936,7 @@ public sealed class MidiExporter
     /// running duration forward.</summary>
     private void ProcessSlashNote(SlashNoteSyntax slash)
     {
-        _tiePending = false;
+        ForgetOnset();
         var duration = GetDuration(slash.Duration);
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
@@ -2247,10 +2290,14 @@ public sealed class MidiExporter
 
     private void ProcessTempo(TempoDeclarationSyntax tempo, MidiTrack conductorTrack)
     {
-        if (tempo.Bpm is int bpm)
+        // The meta event is microseconds per QUARTER, so the bpm is read in the unit the
+        // source states (TempoValue.QuarterBpm): `tempo 2 = 60` is 120 crotchets a minute,
+        // `tempo 4. = 40` is 60. Until session 398 the unit was ignored and both played at
+        // the written figure — half and two-thirds speed.
+        if (tempo.Value.QuarterBpm is double quarterBpm)
         {
-            _tempo = bpm;
-            conductorTrack.TempoChanges.Add(new TempoChange(_currentTick, BpmToMicroseconds(bpm)));
+            _tempo = (int)System.Math.Round(quarterBpm);
+            conductorTrack.TempoChanges.Add(new TempoChange(_currentTick, BpmToMicroseconds(quarterBpm)));
         }
     }
 
@@ -2324,7 +2371,9 @@ public sealed class MidiExporter
     /// <summary>Nearest-integer division for non-negative operands (a &gt;= 0, b &gt; 0).</summary>
     private static long RoundedDiv(long a, long b) => b <= 0 ? 0 : (a + b / 2) / b;
 
-    private static int BpmToMicroseconds(int bpm) => 60_000_000 / Math.Max(1, bpm);
+    // Truncated, as the integer division before it was: a rounding here moved the tempo meta of
+    // 157 books by one microsecond in the session-398 sweep, for no reader's benefit.
+    private static int BpmToMicroseconds(double bpm) => (int)(60_000_000 / Math.Max(1.0, bpm));
 
     private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
     {
@@ -2494,7 +2543,8 @@ public sealed class MidiExporter
                     int midiPitch = SoundKey(CalculateRelativeMidiPitch(note.Pitch), note.Position);
                     track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, g,
                         note.Position, QuarterBend: note.Pitch.QuarterOffset,
-                        SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre, Part: _currentPart));
+                        SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre, Part: _currentPart,
+                        IsGrace: true));
                     _currentTick += g;
                     _pendingGraceSteal += g;
                     break;
@@ -2524,7 +2574,8 @@ public sealed class MidiExporter
                         isFirst = false;
                         track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
                             chord.Position, QuarterBend: pitch.QuarterOffset,
-                            SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
+                            SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
+                            IsGrace: true));
                     }
                     // The chord reads the frame and never writes it — ProcessChord's rule.
                     _currentNoteName = frameNameIn;
@@ -2580,21 +2631,73 @@ public sealed class MidiExporter
         };
     }
 
-    private void ProcessLyrics(LyricsBlockSyntax lyrics, MidiTrack track)
+    /// <summary>The lyric blocks met while playing the current section, with the part in
+    /// force where each was met — sung onto that section's notes once they exist.</summary>
+    private List<(LyricsBlockSyntax Block, string? Part)> _sectionLyrics = new();
+
+    /// <summary>
+    /// Sings a section's lyric blocks onto the notes the section just sounded: one lyric
+    /// meta event per syllable, at the onset it is sung on — the MusicXML's rule
+    /// (MusicXmlExporter.AttachLyrics) read on ticks instead of note lists. Syllables
+    /// advance onset by onset (a chord is one onset; grace notes, rests and tie
+    /// continuations are not sung), a lyric bar line moves to the first onset of the next
+    /// bar, and a melisma holds its onset without a syllable.
+    /// </summary>
+    /// <remarks>
+    /// Which notes a block sings: the part block it names (<c>lyrics NAME { … }</c>), else
+    /// the part in force where it was met (a block inside a part block), else the section's
+    /// FIRST part block — as the MusicXML binds section-level lyrics. Until session 398 the
+    /// walk wrote every syllable at the tick the block was met, which was the section's
+    /// start — and then wrote nothing at all, because it read the block's children as bare
+    /// tokens after the parser had made them syllable nodes (MEASURED,
+    /// LilySharp-Lab/sessions/p398/probes/r14/lyrics-midi: no lyric events in the .mid).
+    /// ⚠️ Bars are counted at the section's meter at its end and its header pickup; a meter
+    /// change INSIDE a section shifts the bar-line sync from there on (the page and the
+    /// MusicXML sync on real measures). The events go to the main track and land in the
+    /// first part track (SplitIntoPartTracks), wherever the sung part's notes went.
+    /// </remarks>
+    private void AttachLyrics(MidiTrack track, SectionDeclarationSyntax? section, int notesBefore, int sectionStart)
     {
-        // For now, we add each syllable as a lyric event at the current tick
-        // A more sophisticated implementation would sync lyrics with notes
-        foreach (var syllable in lyrics.Syllables)
+        if (_sectionLyrics.Count == 0)
+            return;
+        // A null section is the section-less file (Export plays the root as one stream).
+        var partNames = new List<string>();
+        for (int i = 0; section != null && i < section.SlotCount; i++)
+            if (section.GetChild(i) is PartBlockSyntax pb)
+                partNames.Add(pb.Name);
+        int firstBar = FractionToTicks(
+            section != null && _sectionHeaderPartials.TryGetValue(section.SectionName, out var hp)
+                ? hp.ToFraction()
+                : _partial ?? new Fraction(_timeNumerator, _timeDenominator));
+        int barTicks = FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+
+        foreach (var (block, partAtBlock) in _sectionLyrics)
         {
-            if (syllable is SyntaxTokenNode token)
+            string? sung = block.VoiceName is { } named && partNames.Contains(named)
+                ? named
+                : partAtBlock ?? partNames.FirstOrDefault();
+            var onsets = track.Notes.Skip(notesBefore)
+                .Where(n => !n.IsGrace && (sung == null || n.Part == sung))
+                .Select(n => n.StartTick).Distinct().OrderBy(t => t).ToList();
+            int bar = 0, oi = 0;
+            foreach (var (text, _, _, isBarline, isMelisma) in Svg.Collector.LyricCollector.ParseSyllables(block))
             {
-                var text = token.Text.Trim();
-                if (!string.IsNullOrEmpty(text) && text != "--")
+                if (isBarline)
                 {
-                    // Add lyric event at current tick
-                    track.Lyrics.Add(new LyricEvent(_currentTick, text));
+                    bar++;
+                    int barStart = sectionStart + firstBar + (bar - 1) * barTicks;
+                    while (oi < onsets.Count && onsets[oi] < barStart)
+                        oi++;
+                    continue;
                 }
+                if (oi >= onsets.Count)
+                    break; // more syllables than onsets — stop quietly, as the MusicXML does
+                int tick = onsets[oi++];
+                if (isMelisma)
+                    continue;
+                track.Lyrics.Add(new LyricEvent(tick, text));
             }
         }
+        _sectionLyrics.Clear();
     }
 }

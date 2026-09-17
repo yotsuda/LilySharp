@@ -1171,7 +1171,7 @@ public sealed class MusicXmlExporter
                     : null
             };
 
-            _currentMeasure.Direction = new MusicXmlDirection { Tempo = _tempo };
+            _currentMeasure.Direction = TempoDirection();
             RecordWrittenAttributes();
             _attributesDirty = false;
         }
@@ -1719,14 +1719,27 @@ public sealed class MusicXmlExporter
 
     private void ProcessTempo(TempoDeclarationSyntax tempo)
     {
-        if (tempo.Bpm is not int bpm)
+        var value = tempo.Value;
+        if (value.Bpm is not int bpm)
             return;
         _tempo = bpm;
+        _tempoBeatUnit = value.BeatUnit ?? 4;
+        _tempoBeatDots = value.BeatDots;
         // A mid-piece tempo change emits a metronome direction at this point; the
         // initial tempo is carried by the first measure's attributes direction.
         if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
-            _currentMeasure.Directions.Add(new MusicXmlDirection { Tempo = bpm });
+            _currentMeasure.Directions.Add(TempoDirection());
     }
+
+    // The beat unit the running _tempo counts in (session 398): `tempo 2 = 60` is sixty
+    // minims a minute, and the document writes that unit in its <metronome> and the
+    // crotchet rate in <sound tempo>. Until then every metronome said "quarter".
+    private int _tempoBeatUnit = 4;
+    private int _tempoBeatDots;
+
+    /// <summary>The running tempo as a direction — the ONE place the three numbers meet.</summary>
+    private MusicXmlDirection TempoDirection()
+        => new() { Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots };
 
     private void ProcessMetadata(MetadataDeclarationSyntax metadata)
     {

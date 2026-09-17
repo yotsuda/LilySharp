@@ -107,6 +107,35 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **The `.mid` carries the lyrics, on the notes they are sung on.** Each syllable of a
+  `lyrics { … }` block is a lyric meta event at the onset of the note it belongs to — a rest is
+  not sung, a tie continuation holds its note, a hyphenated word is its syllables, a lyric
+  bar line moves to the next bar — where the file used to carry no lyric events at all.
+
+- **A tempo is played and exported in the beat it names.** `tempo 2 = 60` is sixty minims a
+  minute: the `.mid` now plays 120 crotchets a minute, and the MusicXML writes
+  `<beat-unit>half</beat-unit>` with `<sound tempo="120">`; `tempo 4. = 40` writes the dotted
+  unit and plays at 60. Both used to take the figure as crotchets whatever the unit said.
+
+- **A section's header reaches the MusicXML.** `section A { partial 8 }`, and a header's `key`,
+  `time` and `tempo`, apply to every part's first bar of the section as they do on the page —
+  the pickup is an implicit measure 0. A standalone header declaration no longer opens an
+  empty `<part>` of its own, which the schema forbade and the importer could not read.
+
+- **A `voice { } { }` span reads bare note values from where it opened, in every output.** A
+  second voice used to restart at a crotchet (`c8 voice { d e } { f g }` drew f g as crotchets
+  against d e's quavers), and the music after the span took a different length in each output.
+  Every branch, and the music after the span, now read the value in force where the span
+  opened — the rule the octave frame already followed. The twin writes the value out where
+  LilyPond's own carry would differ.
+
+- **Smaller repairs.** A `~` written after a rest (`c4 r4 ~ c4`) no longer sustains the note
+  before the rest through it in the `.mid`; a grace note that closes one part's cell no longer
+  shortens the next part's first note; `time 3+2/8` reaches the twin as `\time #'((3 2) . 8)`,
+  which LilyPond 2.26.0 accepts (it rejects `\time 3+2/8`); the twin writes the crotchet a phrase
+  body opens at, and the value a tuplet, cue or repeat body last wrote carries out of it as it
+  does on the page.
+
 - **A `voice { } { }` span in a combined part reaches the twin as one voice.** Inside a
   `combinedStaff` the page reads a span's blocks as one voice's simultaneous music — the
   combiner chooses between the silences they hold — but `lysc ly` wrote them as separate voices

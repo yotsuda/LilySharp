@@ -51,6 +51,17 @@ public sealed record TempoValue(
     /// <summary>A run with nothing readable in it (<c>tempo</c> alone).</summary>
     public static readonly TempoValue Empty = new(null, null, 0, null, 0);
 
+    /// <summary>How many crotchets one beat of this tempo is worth: <c>2 = 60</c> beats in
+    /// minims (2.0), <c>4. = 40</c> in dotted crotchets (1.5), a bare <c>tempo 120</c> in
+    /// crotchets (1.0). What a reader that counts in crotchets — the MIDI's
+    /// microseconds-per-quarter, MusicXML's <c>&lt;sound tempo&gt;</c> — multiplies the bpm by.
+    /// Until session 398 both readers took the bpm as crotchets whatever the unit said.</summary>
+    public double QuarterNotesPerBeat
+        => 4.0 / (BeatUnit ?? 4) * (2.0 - System.Math.Pow(2.0, -BeatDots));
+
+    /// <summary>The tempo in crotchets per minute, or null when the run states no bpm.</summary>
+    public double? QuarterBpm => Bpm is int bpm ? bpm * QuarterNotesPerBeat : null;
+
     /// <summary>
     /// Reads the value run left to right, in ONE pass.
     /// </summary>

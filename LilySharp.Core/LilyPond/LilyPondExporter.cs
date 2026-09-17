@@ -915,13 +915,16 @@ public sealed class LilyPondExporter
             var buf = new LilyPondExporter
             { _octaveAbsolute = _octaveAbsolute, _anchorOctave = _anchorOctave };
             CarryFrameInto(buf);
-            // The body's note-value memory is what it was before CarryFrameInto carried the
-            // stream's (session 398): a fresh quarter, nothing forced — kept byte-identical
-            // here, and NOT a claim that it is right. Whether a phrase body opens at the
-            // stream's value or at Lily#'s fresh frame is HANDOFF §2 R14's twin item.
+            // The body opens Lily#'s FRESH frame — a crotchet (MeasureCollector.MusicWalk
+            // EnterDefaultFrame: `_defaultDuration = … Fraction.Quarter`) — where LilyPond
+            // carries the last value written before the reference, so the body's first bare
+            // event writes the crotchet out. What the body last wrote carries OUT on both
+            // sides (the page walks on with it; PhraseEndMarker restores no value), so it
+            // comes back below. Until session 398 the buffer opened at "4" with nothing
+            // forced, and `c8 G` read G's first bare note as a quaver in LilyPond.
             buf._lastWrittenValue = "4";
             buf._lastWrittenDots = 0;
-            buf._forceNextDuration = false;
+            buf._forceNextDuration = true;
             // Both sides open a FRESH frame for the body — LilyPond the nested \relative
             // written below, Lily# its EnterDefaultFrame — at the anchor of the SECTION being
             // played, moved by the reference's own marks.
@@ -943,6 +946,9 @@ public sealed class LilyPondExporter
             buf.EmitMusicStream(MusicItems(body).ToList(), "");
             _warnings.AddRange(buf._warnings);
             string inner = buf._sb.ToString().Replace("\n", " ").Trim();
+            _lastWrittenValue = buf._lastWrittenValue;
+            _lastWrittenDots = buf._lastWrittenDots;
+            _forceNextDuration = buf._forceNextDuration;
             // The nested \relative the reference opens is where the two frames part company
             // (the warning above says so); stop tracking rather than guess.
             _frameTracked = false;
@@ -3279,8 +3285,21 @@ public sealed class LilyPondExporter
         return " \\partial " + ChordModeDuration(measureLength);
     }
 
+    /// <summary>An additive meter (<c>time 3+2/8</c>) in LilyPond 2.26.0's spelling: the
+    /// numerator as a Scheme list, <c>\time #'((3 2) . 8)</c>. MEASURED 2026-09-17
+    /// (LilySharp-Lab/sessions/p398/probes/r14): <c>\time 3+2/8</c> is a syntax error
+    /// ("unexpected '+'"), <c>\compoundMeter</c> is no longer a command, and the pair
+    /// spelling compiles.
+    /// LILYPOND-REF: ly/music-functions-init.ly:2375-2410 time, sane-time-signature? — "The
+    ///   numerator is one number or a list of two or more numbers. A list represents
+    ///   concatenation."</summary>
     private static string TimeText(TimeSignatureSyntax ts)
-        => "\\time " + (ts.BeatsText ?? ts.Beats.ToString()) + "/" + ts.BeatType;
+    {
+        string beats = ts.BeatsText ?? ts.Beats.ToString();
+        if (beats.Contains('+'))
+            return "\\time #'((" + beats.Replace("+", " ") + ") . " + ts.BeatType + ")";
+        return "\\time " + beats + "/" + ts.BeatType;
+    }
 
     private static string EmitTempo(TempoDeclarationSyntax t)
     {
