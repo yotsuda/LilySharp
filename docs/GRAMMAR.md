@@ -98,7 +98,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'percussion' | 'drummap'
         | 'transpose' | 'octave' | 'pitch' | 'using' | 'break' | 'noBreak' | 'pageBreak' | 'noPageBreak' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura' | 'cue'
-        | 'repeat' | 'volta' | 'alternative' | 'embedded' | 'fonts' | 'paper' | 'layout'
+        | 'repeat' | 'embedded' | 'fonts' | 'paper' | 'layout'
         | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
@@ -114,16 +114,16 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
    above (p, pp, mp, …) cannot be identifiers. 'swing'/'shuffle' are NOT reserved
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
-   NOT reserved. 'alternative' is reserved only to reject the removed LilyPond-style
-   form; 'using' is the multi-file include ('using "other.lys"', UsingDecl below —
+   NOT reserved. 'using' is the multi-file include ('using "other.lys"', UsingDecl below —
    implemented, top level only: LYS0029 elsewhere).
 
-   ⚠️ 'volta' was in that sentence too, and stopped belonging there when the fonts
-   block landed: 'repeat volta 2 { … }' is removed (LYS0006) but
-   'fonts { volta "TeX Gyre Schola" }' binds the volta-bracket face and compiles.
-   The word has a DEAD spelling and a LIVE one, which is why the editor's grammar no
-   longer paints it — or anything — as an error: a per-line regular expression cannot
-   tell the two apart, and only a diagnostic knows where a word stands
+   ⚠️ 'volta' and 'alternative' are NOT reserved either (2026-09-17). LilyPond's
+   'repeat volta 2 { … }' is refused by the word's TEXT after 'repeat' (LYS0006 points at
+   the form), 'fonts { volta "TeX Gyre Schola" }' binds the volta-bracket face — a fonts
+   key, read by text like every other — and LilyPond's 'alternative' is an ordinary
+   identifier that falls to whatever a stray word gets. One word, two positions, opposite
+   answers is why the editor's grammar paints nothing as an error: a per-line regular
+   expression cannot tell the two apart, and only a diagnostic knows where a word stands
    (EditorColouringTests, 2026-08-18).
 
    ⚠️ This list is one table in the implementation (Lexer.GetKeywordKind) and was

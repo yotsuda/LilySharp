@@ -467,7 +467,7 @@
             ]
         },
         "keywords": {
-            "comment": "⚠️ THIS FILE MAY SAY WHAT A WORD IS, AND MAY NOT SAY THAT IT IS WRONG. A rule here sees one line and no position, so it cannot tell a dead spelling from a live one: `repeat volta 2` is removed (LYS0006) while `fonts { volta \"TeX Gyre Schola\" }` is accepted, and one regex holds nothing that separates them. Errors travel as diagnostics, which are anchored to a span — user decision 2026-08-18, ratcheted by EditorColouringTests.TheGrammarCallsNothingInvalid. ⚠️ The words below are held to Lexer.GetKeywordKind by that same file: a reserved word a writer can type and no pattern here matches is a word the editor leaves plain (23 of them were, until 2026-08-18). A spelling that is NOT reserved is equally a defect. The '_8' clefs are written before their shorter twins so the longer spelling is read whole.",
+            "comment": "⚠️ THIS FILE MAY SAY WHAT A WORD IS, AND MAY NOT SAY THAT IT IS WRONG. A rule here sees one line and no position, so it cannot tell a dead spelling from a live one: `repeat volta 2` is refused (LYS0006, LilyPond's spelling) while `fonts { volta \"TeX Gyre Schola\" }` is accepted, and one regex holds nothing that separates them. Errors travel as diagnostics, which are anchored to a span — user decision 2026-08-18, ratcheted by EditorColouringTests.TheGrammarCallsNothingInvalid. ⚠️ The words below are held to Lexer.GetKeywordKind by that same file: a reserved word a writer can type and no pattern here matches is a word the editor leaves plain (23 of them were, until 2026-08-18). A spelling that is NOT reserved is equally a defect. The '_8' clefs are written before their shorter twins so the longer spelling is read whole.",
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
@@ -480,7 +480,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|layout|embedded|volta|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|layout|embedded|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

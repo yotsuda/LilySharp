@@ -16,6 +16,7 @@
 
 using System.Linq;
 using Xunit;
+using LilySharp.Core.Parser;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Syntax.InternalSyntax;
@@ -803,26 +804,32 @@ theme");
     [Fact]
     public void RepeatVolta_IsRejected_WithSymbolicHint()
     {
-        // 'repeat volta' was removed in favor of the symbolic |: … :| form.
+        // 'repeat volta' is LilyPond's spelling; a Lily# repeat that changes the playing
+        // order is written in the form (|: … :|), and the message points there.
         var tree = SyntaxTree.Parse("repeat volta 2 { c4 d e f }");
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics,
-            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
+            d => d.Code == DiagnosticCodes.LilyPondRepeatVolta);
     }
 
     [Fact]
-    public void RepeatVoltaWithAlternative_IsRejected_ButRecovers()
+    public void RepeatVoltaWithAlternative_IsRejected_AndAlternativeIsAnOrdinaryWord()
     {
+        // LilyPond's `\alternative` is not a word of the language (user decision
+        // 2026-09-17): it lexes as an identifier and gets whatever a stray word gets, with
+        // no clause of its own in the tree. The repeat itself still parses its count and
+        // body, so nothing cascades past the one message.
         var tree = SyntaxTree.Parse(@"repeat volta 2 { c4 d e f } alternative { { g2 } { a2 } }");
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics,
-            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
+            d => d.Code == DiagnosticCodes.LilyPondRepeatVolta);
+        Assert.Equal(SyntaxKind.Identifier, new Lexer("alternative").ScanAllTokens().First().Kind);
+        Assert.Equal(SyntaxKind.Identifier, new Lexer("volta").ScanAllTokens().First().Kind);
 
-        // Recovery still parses the full structure (no cascade), including the
-        // alternative clause, so the tree round-trips faithfully.
+        // Keyword, kind, count, body — and nothing after the body.
         var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
         Assert.NotNull(repeat);
-        Assert.NotNull(repeat.GetSlot(4) as AlternativeClauseGreen);
+        Assert.Equal(4, repeat.SlotCount);
     }
 
     [Fact]
@@ -1021,7 +1028,7 @@ theme");
 }");
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics,
-            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
+            d => d.Code == DiagnosticCodes.LilyPondRepeatVolta);
     }
 
     [Fact]

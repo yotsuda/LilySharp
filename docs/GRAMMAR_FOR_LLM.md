@@ -414,8 +414,9 @@ score main { staff melody }
   move the break to a beat nothing crosses. `e2 break |` (a bar line right after) is the
   ordinary bar-line break.
 - Percent repeat (repeat the previous measure): `repeat percent 2 { c4 d e f | }`.
-- NOT supported: `repeat volta` / `alternative` keywords (the parser rejects them — use
-  the symbolic `|: ... :|` form above). `repeat` is only for `percent` / `unfold` / `tremolo`.
+- NOT Lily#: `repeat volta` / `alternative` are LilyPond's spellings (the parser refuses
+  `repeat volta` and points at the symbolic `|: ... :|` form above; `alternative` is just a
+  word). `repeat` is only for `percent` / `unfold` / `tremolo`.
 
 ## Tuplets
 
@@ -833,7 +834,7 @@ part is fine). Keywords:
 ```text
 section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
-voice phrase repeat volta alternative break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
+voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone

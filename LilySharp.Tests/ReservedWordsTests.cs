@@ -35,8 +35,8 @@ public class ReservedWordsTests
     {
         "section", "form", "using", "tab", "ossia", "transpose", "octave",
         "instrument",
-        "score", "part", "staff", "grandStaff", "voice", "phrase", "repeat", "volta",
-        "alternative", "break", "partial",
+        "score", "part", "staff", "grandStaff", "voice", "phrase", "repeat",
+        "break", "partial",
         "title", "composer", "tempo", "time", "key", "clef",
         "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian",
         "tuplet", "grace", "acciaccatura", "appoggiatura", "lyrics", "chords",

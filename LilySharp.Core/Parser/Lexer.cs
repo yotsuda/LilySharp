@@ -656,8 +656,11 @@ internal sealed class Lexer
             "voice" => SyntaxKind.VoiceKeyword,
             "phrase" => SyntaxKind.PhraseKeyword,
             "repeat" => SyntaxKind.RepeatKeyword,
-            "volta" => SyntaxKind.VoltaKeyword,
-            "alternative" => SyntaxKind.AlternativeKeyword,
+            // `volta` and `alternative` are ordinary words (user decision 2026-09-17): the
+            // repeat kind after `repeat` is read by its TEXT (Parser.ParseRepeatExpression
+            // refuses LilyPond's `volta` there by that text), `fonts { volta "…" }` reads its
+            // key by text as every fonts key is, and LilyPond's `\alternative` never was a
+            // Lily# construct — it falls to whatever a stray word gets.
 
             // Metadata keywords
             "title" => SyntaxKind.TitleKeyword,

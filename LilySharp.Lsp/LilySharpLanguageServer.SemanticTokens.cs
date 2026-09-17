@@ -222,17 +222,13 @@ public sealed partial class LilySharpLanguageServer
             {
                 // Keywords
                 //
-                // ⚠️ VoltaKeyword sits beside AlternativeKeyword because they are one pair in
-                // the parser, and until 2026-08-18 only one of them was here — so the two
-                // colourers said different things about the same word. The TextMate grammar
-                // painted `volta` and `alternative` as errors while this list painted
-                // `alternative` a keyword, and a semantic token LAYERS OVER the grammar: the
-                // word with the entry came out a keyword, the word without it came out red.
-                // The grammar no longer says anything is wrong (see its `keywords` comment),
-                // and `volta` is a live spelling — `fonts { volta "TeX Gyre Schola" }` binds
-                // the volta-bracket face — so both belong here, saying the same thing.
+                // ⚠️ A semantic token LAYERS OVER the TextMate grammar, so the two colourers
+                // must say the same thing about a word (2026-08-18: the grammar painted
+                // `volta` and `alternative` as errors while this list painted `alternative`
+                // a keyword — one came out red, the other a keyword). Neither word is a
+                // keyword since 2026-09-17: `volta` is a fonts key and the text the parser
+                // refuses after `repeat` (LYS0006), `alternative` an ordinary identifier.
                 SyntaxKind.RepeatKeyword or
-                SyntaxKind.VoltaKeyword or SyntaxKind.AlternativeKeyword or
                 SyntaxKind.ScoreKeyword or SyntaxKind.PartKeyword or SyntaxKind.StaffKeyword or
                 SyntaxKind.VoiceKeyword or SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword or
                 SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword or
@@ -511,7 +507,7 @@ public sealed partial class LilySharpLanguageServer
                           PartDeclarationSyntax or
                           RepeatExpressionSyntax or ParallelExpressionSyntax or
                           TupletExpressionSyntax or GraceExpressionSyntax or
-                          LyricsBlockSyntax or AlternativeClauseSyntax or
+                          LyricsBlockSyntax or
                           SectionDeclarationSyntax or PhraseDeclarationSyntax or
                           FormDeclarationSyntax or RenderDeclarationSyntax;
 

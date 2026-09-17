@@ -215,8 +215,12 @@ public static class DiagnosticCodes
     public const string UnterminatedString = "LYS0003";
     /// <summary>Parser error: a comment was not terminated.</summary>
     public const string UnterminatedComment = "LYS0004";
-    /// <summary>Parser error: the removed repeat-volta syntax was used.</summary>
-    public const string RepeatVoltaRemoved = "LYS0006";
+    /// <summary>Parser error: LilyPond's <c>\repeat volta</c> spelling was written in the
+    /// music. A Lily# repeat that changes the playing order lives in the form
+    /// (<c>|: A [1. B] :| [2. C]</c>); the message points there. Kept as a code of its own
+    /// because it guides a writer who knows LilyPond (GRAMMAR_AUDIT §1.1), not because the
+    /// spelling was ever Lily#'s.</summary>
+    public const string LilyPondRepeatVolta = "LYS0006";
     /// <summary>Parser error: a legacy declaration form was used.</summary>
     public const string LegacyDeclarationForm = "LYS0007";
     /// <summary>Parser error: the removed parallel syntax was used.</summary>
@@ -731,8 +735,8 @@ public static class DiagnosticCodes
     /// ⚠️ USER DECISION 2026-08-31 (§3, HANDOFF §2 F ⒫), and the line it draws is
     /// "does it change the playing ORDER". <c>|:</c> <c>:|</c> <c>[N. …]</c> move to the form;
     /// <c>repeat percent</c>, <c>repeat unfold</c> and <c>tremolo</c> STAY in music, because
-    /// they are abbreviations for notes and the order is unchanged. <c>repeat volta</c> was
-    /// already refused elsewhere (<see cref="RepeatVoltaRemoved"/>).
+    /// they are abbreviations for notes and the order is unchanged. LilyPond's
+    /// <c>repeat volta</c> is refused where it stands (<see cref="LilyPondRepeatVolta"/>).
     /// </para>
     /// <para>
     /// ⚠️ TWO SPELLINGS THIS MUST NOT CATCH, both of which a naive count did catch (three

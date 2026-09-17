@@ -119,10 +119,6 @@ public enum SyntaxKind : ushort
     PhraseKeyword,
     /// <summary>The <c>repeat</c> keyword (legacy).</summary>
     RepeatKeyword,
-    /// <summary>The <c>volta</c> keyword (legacy).</summary>
-    VoltaKeyword,
-    /// <summary>The <c>alternative</c> keyword (legacy).</summary>
-    AlternativeKeyword,
     /// <summary>The <c>title</c> keyword.</summary>
     TitleKeyword,
     /// <summary>The <c>composer</c> keyword.</summary>
@@ -522,8 +518,6 @@ public enum SyntaxKind : ushort
     // === Nodes: Repeat and Parallel ===
     /// <summary>A repeat expression node.</summary>
     RepeatExpression,
-    /// <summary>An alternative (volta) clause node.</summary>
-    AlternativeClause,
     /// <summary>A parallel expression node.</summary>
     ParallelExpression,
     /// <summary>An inline volta node (<c>[1. ...]</c> inline volta ending inside a <c>|: :|</c> repeat).</summary>

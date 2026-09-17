@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **`volta` and `alternative` are ordinary words.** Neither is reserved any more, so a part,
+  section or phrase may carry either name. LilyPond's `\repeat volta` is still refused where it
+  is written — LYS0006 points at the form's `|: A [1. B] :| [2. C]` — by the word, not by a
+  keyword. LilyPond's `\alternative { … }` after a `repeat unfold` / `percent` / `tremolo`,
+  which the parser used to accept and every reader but the `.mid` dropped in silence, is now an
+  ordinary error (an undefined name).
+
 - **An instrument preset has one name.** Fourteen presets were second names for another —
   identical in clef, octave, tuning, transposition and, measured byte for byte, in the `.mid` —
   and are gone: `uke` (write `ukulele`), `acoustic-guitar` and `electric-guitar` (`guitar`),

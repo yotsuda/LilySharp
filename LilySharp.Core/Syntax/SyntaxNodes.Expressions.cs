@@ -21,7 +21,11 @@ using LilySharp.Core.Syntax.InternalSyntax;
 namespace LilySharp.Core.Syntax;
 
 /// <summary>
-/// Repeat expression: repeat volta 2 { ... } alternative { ... }
+/// Repeat expression: <c>repeat unfold 2 { ... }</c> (<c>percent</c>, <c>tremolo</c>) — an
+/// abbreviation for notes. A repeat that changes the playing order is written in the form
+/// (<c>|: A [1. B] :| [2. C]</c>); LilyPond's <c>\repeat volta</c> is refused where it is
+/// written (<see cref="DiagnosticCodes.LilyPondRepeatVolta"/>) and its <c>\alternative</c>
+/// is an ordinary word.
 /// </summary>
 public sealed class RepeatExpressionSyntax : SyntaxNode
 {
@@ -32,41 +36,12 @@ public sealed class RepeatExpressionSyntax : SyntaxNode
 
     /// <summary>The <c>repeat</c> keyword token.</summary>
     public SyntaxTokenNode RepeatKeyword => (SyntaxTokenNode)GetChild(0)!;
-    /// <summary>The repeat-type token (e.g. <c>volta</c>).</summary>
+    /// <summary>The repeat-kind token (<c>unfold</c>, <c>percent</c>, <c>tremolo</c>).</summary>
     public SyntaxTokenNode RepeatType => (SyntaxTokenNode)GetChild(1)!;
     /// <summary>The repeat-count token.</summary>
     public SyntaxTokenNode Count => (SyntaxTokenNode)GetChild(2)!;
     /// <summary>The repeated music block.</summary>
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(3)!;
-    /// <summary>The optional trailing alternative clause, or null.</summary>
-    public AlternativeClauseSyntax? Alternative => GetChild(4) as AlternativeClauseSyntax;
-}
-
-/// <summary>
-/// Alternative clause: alternative { { ... } { ... } }
-/// </summary>
-public sealed class AlternativeClauseSyntax : SyntaxNode
-{
-    internal AlternativeClauseSyntax(InternalSyntax.AlternativeClauseGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    /// <summary>The <c>alternative</c> keyword token.</summary>
-    public SyntaxTokenNode AlternativeKeyword => (SyntaxTokenNode)GetChild(0)!;
-
-    /// <summary>The alternative-ending music blocks, in order.</summary>
-    public IEnumerable<MusicBlockSyntax> Alternatives
-    {
-        get
-        {
-            for (int i = 2; i < SlotCount - 1; i++)
-            {
-                if (GetChild(i) is MusicBlockSyntax block)
-                    yield return block;
-            }
-        }
-    }
 }
 
 /// <summary>

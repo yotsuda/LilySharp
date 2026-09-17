@@ -28,25 +28,25 @@ internal sealed partial class Parser
         int startPos = _textPosition;
         var repeatKeyword = Expect(SyntaxKind.RepeatKeyword);
 
-        // Expect repeat type: unfold, percent, tremolo (volta is no longer a Lily#
-        // construct — see the diagnostic below).
+        // The repeat kind is a plain word — unfold, percent, tremolo
+        // (SyntaxFacts.RepeatKindVocabulary) — read by its text, not by a keyword kind.
         SyntaxToken repeatType;
-        if (Check(SyntaxKind.VoltaKeyword) || Check(SyntaxKind.Identifier))
+        if (Check(SyntaxKind.Identifier))
         {
             repeatType = Advance();
 
-            // 'repeat volta' / 'alternative' were removed in favor of the symbolic
-            // |: … :| form. Reject with a friendly hint and recover by parsing the rest so
-            // no cascade errors follow.
+            // LilyPond's `\repeat volta` has no counterpart in the music: a repeat that
+            // changes the playing order is written in the form. Say so where the word
+            // stands, and go on parsing the count and the body so nothing cascades.
             // ⚠️ THE HINT NAMES THE FORM, and it has to (2026-08-31, LYS1034): it used to end
             // "with inline volta endings '[1. …] [2. …]'", which is a spelling this compiler
-            // now refuses — an error message advertising an error.
-            if (repeatType.Kind == SyntaxKind.VoltaKeyword || repeatType.Text == "volta")
+            // refuses — an error message advertising an error.
+            if (repeatType.Text == "volta")
             {
                 var voltaSpan = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
-                _diagnostics.Error(voltaSpan, DiagnosticCodes.RepeatVoltaRemoved,
-                    "'repeat volta' is not a Lily# construct. A repeat is written in the "
-                    + "form: cut the repeated bars into a section and write "
+                _diagnostics.Error(voltaSpan, DiagnosticCodes.LilyPondRepeatVolta,
+                    "'repeat volta' is LilyPond's spelling. In Lily# a repeat is written in "
+                    + "the form: cut the repeated bars into a section and write "
                     + "'form main { |: A :| }' (explicit count ':|*N', volta endings "
                     + "'|: A [1. B] :| [2. C]').");
             }
@@ -58,7 +58,7 @@ internal sealed partial class Parser
                 $"Expected repeat type ({string.Join(", ", Syntax.SyntaxFacts.RepeatKindVocabulary)})");
             // Missing token: zero-width so root.FullWidth == text.Length holds
             // (matches Expect); the diagnostic above already reported the error.
-            repeatType = new SyntaxToken(SyntaxKind.VoltaKeyword, "", null, null);
+            repeatType = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
         }
 
         // Expect count
@@ -67,29 +67,7 @@ internal sealed partial class Parser
         // Parse body
         var body = ParseMusicBlock();
 
-        // Parse optional alternative
-        AlternativeClauseGreen? alternative = null;
-        if (Check(SyntaxKind.AlternativeKeyword))
-        {
-            alternative = ParseAlternativeClause();
-        }
-
-        return new RepeatExpressionGreen(repeatKeyword, repeatType, count, body, alternative);
-    }
-
-    private AlternativeClauseGreen ParseAlternativeClause()
-    {
-        var alternativeKeyword = Expect(SyntaxKind.AlternativeKeyword);
-        var openBrace = Expect(SyntaxKind.OpenBrace);
-
-        var alternatives = new List<GreenNode?>();
-        while (Check(SyntaxKind.OpenBrace))
-        {
-            alternatives.Add(ParseMusicBlock());
-        }
-
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new AlternativeClauseGreen(alternativeKeyword, openBrace, [.. alternatives], closeBrace);
+        return new RepeatExpressionGreen(repeatKeyword, repeatType, count, body);
     }
 
     /// <summary>

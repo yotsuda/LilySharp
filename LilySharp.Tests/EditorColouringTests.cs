@@ -93,13 +93,13 @@ public class EditorColouringTests
     /// <list type="bullet">
     /// <item>The level marks are written <c>@p</c>; the bare word is reserved only so that no
     /// part may be named <c>p</c>. The grammar colours them in the <c>@</c> form already.</item>
-    /// <item><c>alternative</c> is reachable only inside <c>repeat volta</c>, which is removed,
-    /// so every occurrence already sits under LYS0006. (<c>volta</c> is NOT here: the fonts
-    /// block gives it a live spelling.)</item>
+    /// <item><c>alternative</c> stood here while it was reserved only to be refused inside
+    /// <c>repeat volta</c>; since 2026-09-17 neither it nor <c>volta</c> is reserved at all
+    /// (the fonts block reads <c>volta</c> by text, as it reads every key).</item>
     /// </list>
     /// </remarks>
     private static readonly string[] ReservedOnlyToRefuse =
-        ["p", "pp", "ppp", "mp", "mf", "ff", "fff", "alternative"];
+        ["p", "pp", "ppp", "mp", "mf", "ff", "fff"];
 
     /// <summary>
     /// Every <c>match</c>/<c>begin</c>/<c>end</c> regex the editor can actually reach, found
@@ -900,7 +900,7 @@ public class EditorColouringTests
         Assert.Contains(
             SyntaxTree.Parse("part m { clef treble }\nsection A { m { repeat volta 2 { c'4 } } }")
                 .Diagnostics,
-            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
+            d => d.Code == DiagnosticCodes.LilyPondRepeatVolta);
 
         // ⑵ The exception list is measured, not assumed: the level marks really are refused
         //    where a dynamic would stand, so painting them would advertise a spelling nobody
@@ -950,7 +950,11 @@ public class EditorColouringTests
 
         // ⑹ Both directions of the main check bite, on words that were actually wrong.
         Assert.Contains("staffGroup", ReservedSpellings(), StringComparer.Ordinal);
-        Assert.Contains("volta", ReservedSpellings(), StringComparer.Ordinal);
+        Assert.Contains("partial", ReservedSpellings(), StringComparer.Ordinal);
+        //    (`volta` was the second word here until 2026-09-17, when it stopped being
+        //    reserved; it must now be ABSENT from both lists, which ⑷'s shape also covers.)
+        Assert.DoesNotContain("volta", ReservedSpellings(), StringComparer.Ordinal);
+        Assert.DoesNotContain("volta", WordsPaintedAsKeywords(), StringComparer.Ordinal);
         Assert.Contains("staffGroup", WordsPaintedAsKeywords(), StringComparer.Ordinal);
         Assert.False(IsColoured("zzznotaword"));
         Assert.NotEmpty(Patterns());

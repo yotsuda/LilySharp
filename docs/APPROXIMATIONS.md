@@ -234,7 +234,7 @@
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:409** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
-- **:2342** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2338** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`

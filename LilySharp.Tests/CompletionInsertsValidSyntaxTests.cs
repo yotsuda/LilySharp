@@ -67,7 +67,7 @@ public class CompletionInsertsValidSyntaxTests(ITestOutputHelper output)
     /// </remarks>
     private static readonly string[] RemovedSpellingCodes =
     [
-        DiagnosticCodes.RepeatVoltaRemoved,
+        DiagnosticCodes.LilyPondRepeatVolta,
         DiagnosticCodes.ParallelSyntaxRemoved,
     ];
 
@@ -145,7 +145,7 @@ public class CompletionInsertsValidSyntaxTests(ITestOutputHelper output)
         // ★ The net was written after a fix, so it was green for free (RULES §5.4). It bit
         // on the `font` keyword item when that inserted the removed one-liner; `font` is not
         // a spelling at all any more, so the demonstration moves to a spelling that IS still
-        // refused by name — the removed repeat-volta form.
+        // refused by name — LilyPond's repeat-volta spelling.
         var wasWrong = new CompletionItem
         {
             Label = "repeat",

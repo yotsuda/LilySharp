@@ -2257,8 +2257,6 @@ public sealed class MidiExporter
         if (int.TryParse(repeat.Count.Text, out int count))
             repeatCount = count;
 
-        var alternatives = repeat.Alternative?.Alternatives.ToList();
-
         // percent (％ signs) and tremolo (one slashed note) are engraved
         // ONCE; unfold is printed in full, so its ordinals keep counting.
         string repType = repeat.RepeatType.Text;
@@ -2290,13 +2288,11 @@ public sealed class MidiExporter
             if (i > 0)
                 (_currentOctave, _currentNoteName, _defaultDuration) = frame;
             ProcessNode(repeat.Body, track, conductorTrack);
-
-            if (alternatives != null && alternatives.Count > 0)
-            {
-                int altIndex = Math.Min(i, alternatives.Count - 1);
-                ProcessNode(alternatives[altIndex], track, conductorTrack);
-            }
         }
+        // (Until 2026-09-17 this walk alone played a LilyPond-style `alternative { … }`
+        // clause after the body — the page, the twin and the MusicXML dropped it — choosing
+        // the LAST ending for every pass beyond the endings' count, where LilyPond's `\volta`
+        // -less alternative repeats the FIRST. The clause left the language; HANDOFF §2 R1.)
     }
 
     private Fraction GetDuration(DurationSyntax? duration)

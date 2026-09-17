@@ -48,8 +48,8 @@ namespace LilySharp.Tests;
 /// <c>DescendantNodes&lt;T&gt;()</c>, so having no typed accessor is not being unread.</item>
 /// <item>"a red type nobody names outside the syntax layer" — 2 of 72 types, both false
 /// positives (<c>UsingDirectiveSyntax</c> is read by <c>Parser/UsingExpander</c>;
-/// <c>AlternativeClauseSyntax</c> is reached through a property by the MIDI exporter and the
-/// engraver).</item>
+/// the alternative-clause node, since removed with its word on 2026-09-17, was reached
+/// through a property by the MIDI exporter and the engraver).</item>
 /// </list>
 /// ⇒ Perturb the spelling and diff the output. That is what proved the MIDI options dead,
 /// and it is what this file does for every vocabulary the editor offers.

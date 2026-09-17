@@ -1019,8 +1019,6 @@ public sealed partial class MeasureCollector
                         }
                         bars = (int)Math.Min(DefaultExpansionBudgetCap, (long)bars + (long)turns * bodyBars);
                         pendingMusic = bodyPending;
-                        if (rep.Alternative is { } alternative)
-                            WalkBarsRed(alternative, ref bars, ref pendingMusic, ref confirmable);
                         confirmable = !pendingMusic;
                     }
                     break;

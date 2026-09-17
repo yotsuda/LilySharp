@@ -812,10 +812,10 @@ This is LilyPond's behaviour for the same shape. Note that it is the *tree* that
 decides, not the reading order: in `|: A [1. D] :| [2. O]` the ending written after the
 `:|` still belongs to that repeat, while in `|: A :| B [1. B]` it does not.
 
-> Note: `repeat volta` / `alternative` are **not** Lily# constructs — the parser
-> rejects them with a hint to use the symbolic form above. The `repeat` keyword
-> survives only for `unfold` / `percent` / `tremolo` (see below), which stay in the
-> music because they abbreviate notes rather than reorder them.
+> Note: `repeat volta` / `alternative` are LilyPond's spellings, **not** Lily#'s — the
+> parser refuses `repeat volta` with a hint to the symbolic form above, and `alternative`
+> is an ordinary word. The `repeat` keyword is for `unfold` / `percent` / `tremolo` (see
+> below), which stay in the music because they abbreviate notes rather than reorder them.
 
 #### One-sided repeat barlines
 
@@ -1497,7 +1497,7 @@ be declared and referenced).
 | Group | Words |
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `pitch` `instrument` `percussion` `drummap` |
-| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `volta` `alternative` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
+| Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
@@ -1509,7 +1509,7 @@ be declared and referenced).
 ⚠️ The `fonts { }` keys (`serif` `header` `lyricText` `chordName` `barNumber` …) are **not**
 reserved words — they are read inside that block only, against the role vocabulary, so
 they stay free as part / section / phrase names. Several of them (`title`, `lyrics`,
-`chords`, `tempo`, `instrument`, `tuplet`, `volta`) are reserved for other reasons and
+`chords`, `tempo`, `instrument`, `tuplet`) are reserved for other reasons and
 appear above. The `paper { }` keys and units (`paperWidth`, `mm`, `basicDistance`, …)
 are free the same way.
 

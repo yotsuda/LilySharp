@@ -596,7 +596,10 @@ internal sealed class DynamicGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Repeat expression: repeat volta 2 { ... } alternative { ... }
+/// Repeat expression: <c>repeat unfold 2 { ... }</c> (<c>percent</c>, <c>tremolo</c>) — an
+/// abbreviation for notes; a repeat that changes the playing order is the form's
+/// <c>|: … :|</c>. (LilyPond's <c>\alternative</c> clause was carried as a fifth slot until
+/// 2026-09-17, read by the MIDI alone; the word is an ordinary identifier now.)
 /// </summary>
 internal sealed class RepeatExpressionGreen : GreenSyntaxNode
 {
@@ -604,24 +607,8 @@ internal sealed class RepeatExpressionGreen : GreenSyntaxNode
         SyntaxToken repeatKeyword,
         SyntaxToken repeatType,
         SyntaxToken count,
-        MusicBlockGreen body,
-        AlternativeClauseGreen? alternative)
-        : base(SyntaxKind.RepeatExpression, [repeatKeyword, repeatType, count, body, alternative])
-    {
-    }
-}
-
-/// <summary>
-/// Alternative clause: alternative { { ... } { ... } }
-/// </summary>
-internal sealed class AlternativeClauseGreen : GreenSyntaxNode
-{
-    public AlternativeClauseGreen(
-        SyntaxToken alternativeKeyword,
-        SyntaxToken openBrace,
-        GreenNode?[] alternatives,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.AlternativeClause, [alternativeKeyword, openBrace, .. alternatives, closeBrace])
+        MusicBlockGreen body)
+        : base(SyntaxKind.RepeatExpression, [repeatKeyword, repeatType, count, body])
     {
     }
 }
