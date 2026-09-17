@@ -113,10 +113,27 @@ public static class ConcertPitch
     {
         foreach (var prop in root.GreenSites(
                      static g => (g.Kind == SyntaxKind.PropertyAssignment, Descend: true)))
-            if (prop is PropertyAssignmentSyntax pa
-                && !pa.IsInside<PartDeclarationSyntax>() && !pa.IsInside<RenderDeclarationSyntax>()
-                && ReadProperty(pa) is { } mode)
-                return mode;
+            if (prop is PropertyAssignmentSyntax pa && TryReadFileMode(pa, out bool concert))
+                return concert;
+        return false;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="prop"/> is a site <see cref="FileIsConcert"/> answers from — a
+    /// <c>pitch</c> outside every part header and score block carrying one of the two words —
+    /// and, when it is, the mode. One predicate for the whole-tree read above and for the
+    /// collector's definitions walk, which meets every property assignment in the same
+    /// pre-order and keeps the first such site (see <see cref="PartTranspose.TryReadScoreDefault"/>).
+    /// </summary>
+    public static bool TryReadFileMode(PropertyAssignmentSyntax prop, out bool concert)
+    {
+        if (!prop.IsInside<PartDeclarationSyntax>() && !prop.IsInside<RenderDeclarationSyntax>()
+            && ReadProperty(prop) is { } mode)
+        {
+            concert = mode;
+            return true;
+        }
+        concert = false;
         return false;
     }
 

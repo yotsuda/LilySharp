@@ -43,7 +43,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// (<see cref="SemanticVoices"/>): a music voice's bars are <see cref="MeasureModel.Split"/>'s
 /// — <c>R1*4</c> is four bars, a <c>repeat</c> its body COUNT times, a phrase reference its
 /// body — the count the validator has always compared (LYS2007) and the one the exporters
-/// pad by. <b>Syntactic</b> (<see cref="CanonicalByNameSyntactic"/>): the page's count,
+/// pad by. <b>Syntactic</b> (<see cref="CanonicalByNameSyntactic(SyntaxNode)"/>): the page's count,
 /// <see cref="MeasureCollector.CountBarsInScope(SyntaxNode, out bool, MeasureCollector.PhraseBarTable)"/>
 /// on greens with the book's phrase table — kept because the page pays it per keystroke and
 /// the green walk exists to avoid a whole-book red first-touch (session 155). It reads the
@@ -269,10 +269,20 @@ internal static class SectionBarCounts
     /// <see cref="ChordNameCollector.CountBars(ChordPartBlockSyntax)"/> for chord rows) — see
     /// the class remarks for why the page keeps this counter and what it undercounts.</summary>
     public static Dictionary<string, int> CanonicalByNameSyntactic(SyntaxNode root)
+        => CanonicalByNameSyntactic(
+            root.KindSites(SyntaxKind.SectionDeclaration).OfType<SectionDeclarationSyntax>(),
+            MeasureCollector.PhraseGreens(root));
+
+    /// <summary>The same count over section declarations a caller already holds, in document
+    /// order, with the phrase table it holds: the collector's definitions walk meets every
+    /// section, phrase and variable declaration (the same pre-order the walks above take) and
+    /// hands them here, so the page's per-collect count costs no further walk of the tree
+    /// (MEASURED, session 400: three whole-tree green walks per collect, on every keystroke).</summary>
+    public static Dictionary<string, int> CanonicalByNameSyntactic(
+        IEnumerable<SectionDeclarationSyntax> sections, MeasureCollector.PhraseBarTable phrases)
     {
         var result = new Dictionary<string, int>(StringComparer.Ordinal);
-        var phrases = MeasureCollector.PhraseGreens(root);
-        foreach (var section in root.KindSites(SyntaxKind.SectionDeclaration).OfType<SectionDeclarationSyntax>())
+        foreach (var section in sections)
         {
             int bars = DeclarationBarsSyntactic(section, phrases);
             if (bars < 0)

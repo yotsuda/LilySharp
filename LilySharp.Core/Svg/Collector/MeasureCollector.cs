@@ -793,7 +793,8 @@ public sealed partial class MeasureCollector
         {
             // Part-body grob defaults (`part <voice> { override … }`) — staff 0 here.
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
-            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName, ScoreConcert);
+            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
+                tree.GetRoot(), voiceName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
             // The POSITION follows the clef it describes. A part without its own
             // `clef` keeps the top-level one, so overwriting the offset regardless
             // dropped it to 0 — and 0 reads as "no position", which left the clef
@@ -1393,7 +1394,8 @@ public sealed partial class MeasureCollector
             }
 
             // Set clef and octave for this voice from part definition
-            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(tree.GetRoot(), voiceName, ScoreConcert);
+            var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
+                tree.GetRoot(), voiceName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
             // A clef the staff item wrote (`staff bass melody`) wins over the part's: it is
             // this rendering's clef, the one the page draws (pitches do not depend on it).
             if (renderSpec.WrittenClefOf(voiceName) is { } writtenClef)
@@ -2225,7 +2227,8 @@ public sealed partial class MeasureCollector
     /// sub-collect rides its own per-part resume channel (finding 3-5).</summary>
     private ImmutableArray<Measure> CollectMelodyFor(SyntaxTree tree, RenderSpec renderSpec, string partName)
     {
-        var (partClef, _, _, _, _, _) = GetPartDefaults(tree.GetRoot(), partName, ScoreConcert);
+        var (partClef, _, _, _, _, _) = GetPartDefaults(
+            tree.GetRoot(), partName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
         var spec = renderSpec with
         {
             Items = ImmutableArray.Create<RenderItemSpec>(
@@ -2536,6 +2539,12 @@ public sealed partial class MeasureCollector
         _voiceMeasuresByName.Clear();
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
+        // The definitions walk's own gatherings (its fields say what for): cleared here as
+        // every collection field is, and refilled by CollectDefinitions right after.
+        _sectionDeclarationsInOrder.Clear();
+        _phraseDeclarationsInOrder.Clear();
+        _variableDeclarationsInOrder.Clear();
+        _phraseGreens = null;
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();

@@ -72,13 +72,19 @@ public sealed partial class MeasureCollector
     /// <param name="scoreConcert">Whether the score being collected prints at concert pitch
     /// (<see cref="ScoreConcert"/>): its shift is composed onto the part's transpose here,
     /// beside the part's own, so ApplyTranspose sees one interval.</param>
+    /// <param name="fileTranspose">The file's top-level <c>transpose</c> default, read once per
+    /// collect by <see cref="CollectDefinitions"/> (<see cref="PartTranspose.ReadScoreDefault"/>'s answer).</param>
+    /// <param name="fileIsConcert">Whether the file is written at concert pitch, read the same
+    /// way (<see cref="ConcertPitch.FileIsConcert"/>'s answer).</param>
     // NOTE (cross-edit resume): the part-level config reads that seed a walk's entry
     // state — GetPartDefaults (clef/instrument/octave/transpose/header key) and
     // CollectPartBodyOverrides — are plan-time-checkable constants, verified by
     // CollectResumePlanner.WindowRespectsTopLevel (every part declaration's
     // non-section direct children must be content- and position-stable across the
     // edit), NOT folded into MaxSourceRead. See ProcessSection's matching note.
-    private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(SyntaxNode root, string partName, bool scoreConcert)
+    private static (string? clef, int? octave, int? explicitOctave, (int step, int alt, int oct)? transpose, int clefPos, KeySignatureSyntax? key) GetPartDefaults(
+        SyntaxNode root, string partName, bool scoreConcert,
+        (int step, int alt, int oct)? fileTranspose, bool fileIsConcert)
     {
         foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
         {
@@ -132,9 +138,11 @@ public sealed partial class MeasureCollector
             // The part's transpose (own, else the file default, with a concert-pitch FILE's
             // instrument shift inside it — PartTranspose.Read), then a concert-pitch SCORE's
             // shift back to sounding pitch on top: with both, a transposing part prints
-            // what the letters say, as ConcertPitch's table spells out.
+            // what the letters say, as ConcertPitch's table spells out. The two file
+            // defaults come from the definitions walk (see the fields beside it) — asking
+            // PartTranspose.Read(root, partName) here walked the whole tree twice per part.
             transpose = PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
-                PartTranspose.Read(root, partName),
+                PartTranspose.Read(partDecl, fileTranspose, fileIsConcert),
                 ConcertPitch.OutputShift(scoreConcert, partDecl)));
 
             // Resolve clef: explicit > instrument > null
@@ -171,9 +179,47 @@ public sealed partial class MeasureCollector
         _meta.KeyPosition = KeyDataPos(key);
     }
 
+    // The file's two part-independent defaults — the top-level `transpose` and `pitch` —
+    // read ONCE per collect by the definitions walk below (they are a function of the whole
+    // tree, not of the part). GetPartDefaults used to ask PartTranspose.Read(root, part) for
+    // them, which walked the whole tree twice per PART per collect — 3.7 ms of a 27 ms
+    // resumed collect on perf-plain1k, 14.5 of 71 on perf-fingbeam1k, for a book with ONE
+    // part (MEASURED, session 400). Same first-site rule as the whole-tree readers
+    // (PartTranspose.TryReadScoreDefault / ConcertPitch.TryReadFileMode): DefinitionSites
+    // is the same pre-order green walk over the same nodes, so the first site it meets is
+    // the one those readers answer from. CollectDefinitionsFoldTests holds the equality on
+    // every net book.
+    private (int step, int alt, int oct)? _fileTransposeDefault;
+    private bool _fileTransposeDefaultSeen;
+    private bool _fileIsConcert;
+    private bool _fileIsConcertSeen;
+
+    // Every section, phrase and variable declaration the definitions walk met, in walk
+    // order — the node sets SectionBarCounts.CanonicalByNameSyntactic and PhraseGreens
+    // walked the tree AGAIN for (three KindSites walks, the same pre-order over the same
+    // greens), handed to them instead so the page's canonical bar count costs no walk of
+    // its own (GetCanonicalSectionBars).
+    private readonly List<SectionDeclarationSyntax> _sectionDeclarationsInOrder = new();
+    private readonly List<PhraseDeclarationSyntax> _phraseDeclarationsInOrder = new();
+    private readonly List<VariableDeclarationSyntax> _variableDeclarationsInOrder = new();
+    private PhraseBarTable? _phraseGreens;
+
+    /// <summary>The file defaults the definitions walk read (the fields above) — for the net
+    /// that holds them equal to the whole-tree readers on every book.</summary>
+    internal ((int step, int alt, int oct)? Transpose, bool Concert) FileDefaultsForTest
+        => (_fileTransposeDefault, _fileIsConcert);
+
     private void CollectDefinitions(SyntaxNode root)
     {
         _root = root;
+        _fileTransposeDefault = null;
+        _fileTransposeDefaultSeen = false;
+        _fileIsConcert = false;
+        _fileIsConcertSeen = false;
+        _sectionDeclarationsInOrder.Clear();
+        _phraseDeclarationsInOrder.Clear();
+        _variableDeclarationsInOrder.Clear();
+        _phraseGreens = null;
         List<DrummapDeclarationSyntax>? drummaps = null;
         // The paper a book without a `paper { }` lays out on: the defaults, or the snippet
         // layout a Markdown fence starts from (PaperBase). A written block overlays it below.
@@ -307,7 +353,23 @@ public sealed partial class MeasureCollector
                         _filePartial = partialDecl.ToFraction();
                     break;
 
+                case PropertyAssignmentSyntax prop:
+                    // The file's transpose default and pitch convention (the fields above):
+                    // the first qualifying site wins, exactly as the whole-tree readers answer.
+                    if (!_fileTransposeDefaultSeen && PartTranspose.TryReadScoreDefault(prop, out var fileTranspose))
+                    {
+                        _fileTransposeDefaultSeen = true;
+                        _fileTransposeDefault = fileTranspose;
+                    }
+                    if (!_fileIsConcertSeen && ConcertPitch.TryReadFileMode(prop, out bool concert))
+                    {
+                        _fileIsConcertSeen = true;
+                        _fileIsConcert = concert;
+                    }
+                    break;
+
                 case SectionDeclarationSyntax section:
+                    _sectionDeclarationsInOrder.Add(section); // every one, cells included (the fields above)
                     // A section INSIDE a `chords` / `lyrics` block is that track's cell,
                     // not a structure section: it must not become a structure
                     // ordering/label rep or a part cell (its body is chord entries or
@@ -365,15 +427,20 @@ public sealed partial class MeasureCollector
 
                 case VariableDeclarationSyntax varDecl:
                     _variables[varDecl.Name.Text] = varDecl.Expression;
+                    _variableDeclarationsInOrder.Add(varDecl);
                     break;
 
                 case PhraseDeclarationSyntax phraseDecl:
                     _variables[phraseDecl.Name.Text] = phraseDecl.Body;
+                    _phraseDeclarationsInOrder.Add(phraseDecl);
                     break;
             }
         }
 
         _drumOverrides = drummaps == null ? null : DrumOverrides.Build(drummaps);
+        // The phrase table the canonical bar count expands references with, from the sites
+        // this walk just met (PhraseGreens' own rule, fed without its two walks).
+        _phraseGreens = PhraseGreens(_phraseDeclarationsInOrder, _variableDeclarationsInOrder);
 
         // A STRUCTURED file (a form or sections) can carry a top-level override / revert /
         // once (grammar §2.1 lists them as TopLevelItems). Such a directive sits OUTSIDE
@@ -441,7 +508,10 @@ public sealed partial class MeasureCollector
         or SyntaxKind.OctaveDirective or SyntaxKind.PartialDeclaration
         or SyntaxKind.SectionDeclaration or SyntaxKind.FormDeclaration
         or SyntaxKind.VariableDeclaration or SyntaxKind.PhraseDeclaration
-        or SyntaxKind.DrummapDeclaration;
+        or SyntaxKind.DrummapDeclaration
+        // ...and every property assignment, for the two file defaults (the fields above
+        // CollectDefinitions): a part header's and a score block's are met and passed over.
+        or SyntaxKind.PropertyAssignment;
 
     /// <summary>
     /// The definitions walk's node source: every node of exactly the kinds the

@@ -703,8 +703,11 @@ public sealed partial class MeasureCollector
         // walk over the section declarations). The page keeps the SYNTACTIC counter (its
         // remarks say what it undercounts and why the exporters use the semantic one).
         // Until 2026-09-10 this method folded the collector's own cell registry (parts only).
-        _canonicalByName ??= SectionBarCounts.CanonicalByNameSyntactic(SectionBarCounts.RootOf(section));
-        int max = _canonicalByName.TryGetValue(section.SectionName, out int bars) ? bars : 0;
+        // …over the section declarations the definitions walk met (every one, in the
+        // pre-order the count's own KindSites walk would visit them) and the phrase table
+        // it built, so the count costs this collect no walk of the tree: three whole-tree
+        // green walks per collect before, paid on every keystroke (MEASURED, session 400).
+        int max = CanonicalByName().TryGetValue(section.SectionName, out int bars) ? bars : 0;
 
         _canonicalSectionBars[section] = max;
         return max;
@@ -713,6 +716,13 @@ public sealed partial class MeasureCollector
     // section name -> canonical bar count for the whole book (SectionBarCounts.CanonicalByNameSyntactic);
     // computed on first use per collect, cleared with _canonicalSectionBars (Reset).
     private Dictionary<string, int>? _canonicalByName;
+
+    private Dictionary<string, int> CanonicalByName()
+        => _canonicalByName ??= SectionBarCounts.CanonicalByNameSyntactic(_sectionDeclarationsInOrder, _phraseGreens!);
+
+    /// <summary>The page's canonical bar counts as this collect computes them — for the net
+    /// that holds them equal to the whole-tree count on every book.</summary>
+    internal Dictionary<string, int> CanonicalByNameForTest() => CanonicalByName();
 
     /// <summary>
     /// Bar count of a music scope (a part block or a part-major section cell),
@@ -783,11 +793,20 @@ public sealed partial class MeasureCollector
 
     /// <inheritdoc cref="PhraseBarTable"/>
     internal static PhraseBarTable PhraseGreens(SyntaxNode root)
+        => PhraseGreens(
+            root.KindSites(SyntaxKind.PhraseDeclaration).OfType<PhraseDeclarationSyntax>(),
+            root.KindSites(SyntaxKind.VariableDeclaration).OfType<VariableDeclarationSyntax>());
+
+    /// <summary>The table over declarations a caller already holds, in document order — the
+    /// collector's definitions walk meets every one and feeds them here (its fields say why).
+    /// Every phrase, then every variable, a later declaration of a name winning.</summary>
+    internal static PhraseBarTable PhraseGreens(
+        IEnumerable<PhraseDeclarationSyntax> phrases, IEnumerable<VariableDeclarationSyntax> variables)
     {
         var table = new PhraseBarTable();
-        foreach (var ph in root.KindSites(SyntaxKind.PhraseDeclaration).OfType<PhraseDeclarationSyntax>())
+        foreach (var ph in phrases)
             table.Greens[ph.Name.Text] = ph.Body.Green;
-        foreach (var vd in root.KindSites(SyntaxKind.VariableDeclaration).OfType<VariableDeclarationSyntax>())
+        foreach (var vd in variables)
             table.Greens[vd.Name.Text] = vd.Expression.Green;
         return table;
     }

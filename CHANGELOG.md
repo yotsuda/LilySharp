@@ -69,6 +69,16 @@ workflow attaches that section to the GitHub Release verbatim.
   count it never compared, and stopped gathering the book's phrase table a second time — on
   a one-part 1000-bar book that was 58 of the bar validator's 69 ms, and 12 of its 15 ms on
   the plain one; what it reports does not change (759 books, identical).
+- **A keystroke's collect walks the book five times less.** Even when the preview's
+  incremental collect adopted every bar of the previous keystroke, it still walked the whole
+  tree five more times for facts that do not depend on the edit: twice per part for the
+  file's `transpose` default and `pitch` convention, and three times for the section bar
+  counts the page pads by. Those are now read in the one definitions walk every collect
+  makes anyway. Measured on an unchanged-tree keystroke (Debug, min of 5): the collect went
+  from 25 to 18 ms on a plain 1000-bar book, from 72 to 33 ms on the fingered one and from
+  21 to 13 ms on the two-voice one; the whole keystroke from 33 to 25, 99 to 51 and 29 to
+  18 ms. The page does not change — the walk answers exactly as the whole-tree readers do
+  on every book of the net, which a new test holds.
 
 ### Engraving
 

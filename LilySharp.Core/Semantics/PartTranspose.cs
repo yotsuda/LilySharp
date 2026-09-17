@@ -48,10 +48,25 @@ public static class PartTranspose
         // ReadScoreDefault stays on the descendant walk, but no longer counts a
         // render block's own transpose as the file's default — see there.
         var partDecl = ConcertPitch.FindPart(root, partName);
+        return Read(partDecl, ReadScoreDefault(root), ConcertPitch.FileIsConcert(root));
+    }
+
+    /// <summary>
+    /// The same reading for a caller that already holds the file's two defaults —
+    /// <paramref name="scoreDefault"/> is <see cref="ReadScoreDefault"/>'s answer,
+    /// <paramref name="fileIsConcert"/> is <see cref="ConcertPitch.FileIsConcert"/>'s. The
+    /// page's collector reads both ONCE per collect, in the definitions walk it makes anyway
+    /// (they are a function of the whole tree, not of the part), where asking
+    /// <see cref="Read(SyntaxNode, string)"/> per part walked the tree twice for every part
+    /// it collected.
+    /// </summary>
+    public static (int step, int alt, int oct)? Read(PartDeclarationSyntax? partDecl,
+        (int step, int alt, int oct)? scoreDefault, bool fileIsConcert)
+    {
         // a part's own transpose overrides the default
-        var written = (partDecl != null ? Read(partDecl) : null) ?? ReadScoreDefault(root);
+        var written = (partDecl != null ? Read(partDecl) : null) ?? scoreDefault;
         return PitchTransposer.NullIfIdentity(PitchTransposer.Compose(
-            ConcertPitch.InputShift(ConcertPitch.FileIsConcert(root), partDecl), written));
+            ConcertPitch.InputShift(fileIsConcert, partDecl), written));
     }
 
     /// <summary>
@@ -105,10 +120,27 @@ public static class PartTranspose
         // is unchanged.
         foreach (var prop in root.GreenSites(
                      static g => (g.Kind == SyntaxKind.PropertyAssignment, Descend: true)))
-            if (prop is PropertyAssignmentSyntax pa && IsTranspose(pa)
-                && !IsInsidePart(pa) && !IsInsideRender(pa))
-                return Parse(pa);
+            if (prop is PropertyAssignmentSyntax pa && TryReadScoreDefault(pa, out var interval))
+                return interval;
         return null;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="prop"/> is THE site <see cref="ReadScoreDefault"/> answers from —
+    /// a <c>transpose</c> outside every part header and score block — and, when it is, its
+    /// interval (null for a target the parser refused: the site still ends the search). One
+    /// predicate for the whole-tree read above and for the collector's definitions walk, which
+    /// meets every property assignment in the same pre-order and keeps the first such site.
+    /// </summary>
+    public static bool TryReadScoreDefault(PropertyAssignmentSyntax prop, out (int step, int alt, int oct)? interval)
+    {
+        if (IsTranspose(prop) && !IsInsidePart(prop) && !IsInsideRender(prop))
+        {
+            interval = Parse(prop);
+            return true;
+        }
+        interval = null;
+        return false;
     }
 
     private static bool IsTranspose(PropertyAssignmentSyntax prop)

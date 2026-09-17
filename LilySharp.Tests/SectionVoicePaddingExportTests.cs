@@ -244,7 +244,7 @@ public class SectionVoicePaddingExportTests
     /// <summary>The fixture net plus the LilyPond-regression books under <c>audit/</c> —
     /// the probe shapes live there (a beat repeat, a grace before a volta), and the
     /// fixture net alone let the first cut of the repeat rule through.</summary>
-    private static IEnumerable<string> NetAndAuditBooks()
+    internal static IEnumerable<string> NetAndAuditBooks()
     {
         string? repo = null;
         foreach (var path in CollectResumeTests.NetBooks())
