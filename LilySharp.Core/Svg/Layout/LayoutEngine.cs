@@ -56,6 +56,20 @@ internal sealed partial class LayoutEngine
     private readonly SystemBreaker _systemBreaker;
     private readonly MultiStaffLayouter _multiStaffLayouter;
 
+    /// <summary>How the LAST <see cref="Layout(MultiStaffScore, LineBreakSolutions,
+    /// SystemLayoutCache, MeasureSpringData[], System.Nullable{double})"/> got the system
+    /// silhouette's edge-staff beams: served out of the staff-skyline room, or laid out
+    /// again because that room held no entry for the staff.</summary>
+    /// <remarks>
+    /// THE LIVENESS COUNTER OF THE ROOM'S BEAMS (session 414), and it exists because the
+    /// fallback is SILENT: a change that stopped filling
+    /// <c>MultiStaffLayouter.StaffSkylineSet.Beams</c> would still draw the right picture
+    /// and would still pass every net, while the quanter ran a second time for every system
+    /// — 4.31% of a keystroke, measured on the owner's corpus. This is the same guard
+    /// <c>SystemLayoutCache.LyricBandStats</c> and <c>BowMemoStats</c> are for their memos.
+    /// </remarks>
+    internal (int FromRoom, int LaidOut) EdgeBeamSource { get; private set; }
+
     public LayoutEngine(LayoutOptions? options = null)
     {
         _options = options ?? LayoutOptions.Default;
@@ -96,6 +110,7 @@ internal sealed partial class LayoutEngine
         // The faces this score reserves against — see the field's remark for why the
         // builder cannot be given them in the constructor.
         _skylineBuilder = new SkylineBuilder(_options.StaffHeight, score.TextMetrics);
+        EdgeBeamSource = default;   // per layout, like the memo stores' pass counters
 
         // The book title as LilyPond pages it — a top-aligned column at the head of the
         // page's chain, or nothing (HeaderBand). It reaches the first system's placement,
@@ -300,19 +315,46 @@ internal sealed partial class LayoutEngine
         // pair BuildSystemSkylines picks (StaffGroups[0].Staves[0] is the first
         // yield, StaffGroups[^1].Staves[^1] the last) — the index comes from the
         // same enumeration, so no reference matching or fallback is involved.
+        // ★ AND THE BEAMS ARE READ OUT OF THE STAFF-SKYLINE ROOM, NOT LAID OUT AGAIN
+        // (session 414). That room built every staff's skylines FROM these very beams and
+        // now carries them (MultiStaffLayouter.StaffSkylineSet.Beams), so the pair below is
+        // a list index where it used to be a second run of the quanter. MEASURED before the
+        // change (owner's corpus, 231 books × 8 forward keystrokes, Release, allocation
+        // bytes): the skyline memo's misses cost 6.02% of a keystroke and 71.8% of that was
+        // this pair — 4.32% — while LayoutBeams ran 3.5 times a keystroke with EXACTLY 50.0%
+        // of the calls repeating a (staff, system, first, length) the same keystroke had
+        // already done, all 3,264 repeats value-identical to the first answer.
+        // ⚠️ THE ROOM IS THE RIGHT SOURCE rather than a memo of its own: it is keyed on the
+        // same content slice, so a keystroke that serves the staff skylines from the memo
+        // serves these beams with them — the case a per-call memo would also have to catch,
+        // caught by construction instead.
         var edgeFirstStaff = score.StaffGroups[0].PrimaryStaff;
         var edgeLastStaff = score.StaffGroups[^1].Staves[^1];
         int edgeFirstStaffIndex = 0, edgeLastStaffIndex = 0;
         foreach (var (_, _, gi) in score.EnumerateStaves())
             edgeLastStaffIndex = gi;
+        // ⚠️ THE FALLBACK IS NOT DEAD CODE INSURANCE: a room built for a score whose staff
+        // walk did not reach that index (a staff the loop skipped) has no entry, and the
+        // direct call is exactly what ran before.
+        ImmutableArray<BeamLayout> RoomBeams(
+            MultiStaffLayouter.StaffSkylineSet room, Staff staff, int staffIdx,
+            ImmutableArray<MeasureLayout> mls, int sysIdx)
+        {
+            if (room.Beams is { } beams && staffIdx >= 0 && staffIdx < beams.Count)
+            {
+                EdgeBeamSource = (EdgeBeamSource.FromRoom + 1, EdgeBeamSource.LaidOut);
+                return beams[staffIdx];
+            }
+            EdgeBeamSource = (EdgeBeamSource.FromRoom, EdgeBeamSource.LaidOut + 1);
+            return multiStaffLayouter.StaffBeamLayouts(score, staff, staffIdx, mls, sysIdx);
+        }
         (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last) EdgeStaffBeams(
-            ImmutableArray<MeasureLayout> mls, int sysIdx) =>
-            (multiStaffLayouter.StaffBeamLayouts(
-                score, edgeFirstStaff, edgeFirstStaffIndex, mls, sysIdx),
-             edgeLastStaff != edgeFirstStaff
-                ? multiStaffLayouter.StaffBeamLayouts(
-                    score, edgeLastStaff, edgeLastStaffIndex, mls, sysIdx)
-                : default);
+            MultiStaffLayouter.StaffSkylineSet room,
+            ImmutableArray<MeasureLayout> mls, int sysIdx)
+            => (RoomBeams(room, edgeFirstStaff, edgeFirstStaffIndex, mls, sysIdx),
+                edgeLastStaff != edgeFirstStaff
+                    ? RoomBeams(room, edgeLastStaff, edgeLastStaffIndex, mls, sysIdx)
+                    : default);
 
         // Pre-calculate first system skylines for initial Y positioning — through the SAME
         // memo entry the loop below reads for system 0 (same key: measure range 0..n,
@@ -327,7 +369,7 @@ internal sealed partial class LayoutEngine
         // never asks the memo with those keys.
         (VerticalSkyline up, VerticalSkyline down) FirstSystemSkylines()
         {
-            var firstEdgeBeams = EdgeStaffBeams(firstSystemMeasureLayouts, 0);
+            var firstEdgeBeams = EdgeStaffBeams(firstStaffSkylines, firstSystemMeasureLayouts, 0);
             return _skylineBuilder.BuildSystemSkylines(
                 score, firstSystemMeasureLayouts, systemHeight, indent,
                 firstEdgeBeams.first, firstEdgeBeams.last, firstStaffGroupLayouts,
@@ -596,9 +638,10 @@ internal sealed partial class LayoutEngine
         /// <summary>System 0's pair-run suppliers (note-bound block + attached chord
         /// line), built once and shared by the placement and the springs.</summary>
         public MultiStaffLayouter.PairRunSources FirstRunSources { get; init; }
-        /// <summary>This system's edge-staff beams — the measure layouts AND the system they
-        /// belong to, because the beams are stamped with it (BeamLayout.SystemIndex).</summary>
-        public required Func<ImmutableArray<MeasureLayout>, int,
+        /// <summary>This system's edge-staff beams — the system's staff-skyline ROOM, which
+        /// carries the beams its skylines were built from (session 414), plus the measure
+        /// layouts AND the system they belong to for the fallback that lays them out.</summary>
+        public required Func<MultiStaffLayouter.StaffSkylineSet, ImmutableArray<MeasureLayout>, int,
             (ImmutableArray<BeamLayout> first, ImmutableArray<BeamLayout> last)> EdgeStaffBeams { get; init; }
         public required double FirstSystemY { get; init; }
     }
@@ -768,7 +811,7 @@ internal sealed partial class LayoutEngine
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
                 () =>
                 {
-                    var edgeBeams = EdgeStaffBeams(measureLayouts, sysIdx);
+                    var edgeBeams = EdgeStaffBeams(sysStaffSkylines, measureLayouts, sysIdx);
                     return _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent,
                         edgeBeams.first, edgeBeams.last, sysStaffGroups,
                         sysStaffSkylines.Skylines);

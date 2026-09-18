@@ -3143,12 +3143,26 @@ internal sealed class MultiStaffLayouter
     /// built from, both indexed by global staff index. <c>PedalLines</c> is the pedal
     /// brackets the DOWN profiles were solved WITH -- the draw reads these instead of
     /// re-deriving (one computation, two readers; see PedalEngraver.SolveAndSeed).</summary>
+    /// <remarks>
+    /// ★ <c>Beams</c> RIDES HERE FOR THE SAME REASON <c>Spanners</c> DOES (session 414): the
+    /// staves' skylines are built FROM these beams (<see cref="StaffBeamLayouts"/>, one call
+    /// per staff above), and the system's own silhouette seeds its edge staves from the very
+    /// same beams — so without this the layout laid the same (staff, system) beams out
+    /// TWICE per keystroke, once here and once in <c>LayoutEngine</c>'s edge pair.
+    /// MEASURED (session 414, owner's corpus, 231 books × 8 forward keystrokes, Release,
+    /// allocation bytes): <c>LayoutBeams</c> ran 6,528 times over 1,848 keystrokes and
+    /// EXACTLY 3,264 of them — 50.0% — repeated a (staff, system, first measure, length)
+    /// the same keystroke had already laid out, worth 4.31% of a keystroke; all 3,264
+    /// repeats were value-identical to the first answer.
+    /// ⚠️ SHARED AND READ-ONLY like everything else in this room.
+    /// </remarks>
     internal readonly record struct StaffSkylineSet(
         List<(VerticalSkyline Up, VerticalSkyline Down)> Skylines,
         List<StaffInsideSpanners> Spanners,
         List<(VerticalSkyline Up, VerticalSkyline Down)> Inside,
         List<ImmutableArray<PedalEngraver.SolvedPedalLine>> PedalLines,
-        List<ImmutableArray<PedalEngraver.SolvedPedalRow>> PedalRows);
+        List<ImmutableArray<PedalEngraver.SolvedPedalRow>> PedalRows,
+        List<ImmutableArray<BeamLayout>> Beams);
 
     /// <summary>
     /// Builds UP/DOWN skylines for every staff in the score.
@@ -3163,6 +3177,7 @@ internal sealed class MultiStaffLayouter
         var inside = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
         var pedalLines = new List<ImmutableArray<PedalEngraver.SolvedPedalLine>>();
         var pedalRows = new List<ImmutableArray<PedalEngraver.SolvedPedalRow>>();
+        var beamsByStaff = new List<ImmutableArray<BeamLayout>>();
 
         // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
         // widen the gap to the staff below; filter so a staff reserves room only
@@ -3382,11 +3397,12 @@ internal sealed class MultiStaffLayouter
                     ? textRows : mixedRows);
 
                 result.Add(sky);
+                beamsByStaff.Add(beams);
                 staffIndex++;
             }
         }
 
-        return new StaffSkylineSet(result, spanners, inside, pedalLines, pedalRows);
+        return new StaffSkylineSet(result, spanners, inside, pedalLines, pedalRows, beamsByStaff);
     }
 
     /// <summary>

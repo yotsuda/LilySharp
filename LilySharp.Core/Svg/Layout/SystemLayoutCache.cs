@@ -684,6 +684,18 @@ internal sealed class SystemLayoutCache
         return b.MoveToImmutable();
     }
 
+    // ⚠️ AND THE BEAMS THAT RIDE IN THE ROOM ARE SHIFTED (session 414): they carry
+    // BeamLayout's own absolute measure stamps, exactly like the spanners beside them, so
+    // ShiftBeams runs over them for the same reason ShiftSlurs runs over the slurs.
+    // ⚠️ THE SYSTEM STAMP IS NOT SHIFTED HERE, and that is deliberate rather than an
+    // oversight: this store has no system-stamp function at all (it is keyed on the content
+    // slice, and a `break` that moves a system's NUMBER leaves this key alone), while
+    // BeamLayout.SystemIndex is a number the room's only consumer never reads — the system
+    // silhouette seeds the edge staves' beam INK (SkylineBuilder.AddBeamsToSkyline,
+    // AddTabStemsAndBeamsToSkylines, BeamedItemsToSuppress), all of which read geometry and
+    // items. The beams that are DRAWN, and whose SystemIndex a consumer does select on, come
+    // from the annotation pass's own store (GetOrComputeStaffSystemBeams), which HAS that
+    // shift. Re-stamping here would make a number look repaired that nothing reads.
     // The room's per-staff skylines are pure geometry in the staff's own frame and are
     // SHARED with the entry they were found under (read-only by contract — see
     // GetOrComputeStaffSkylines). The spanners and the pedal lines carry measures.
@@ -727,7 +739,10 @@ internal sealed class SystemLayoutCache
                 lb.Add(l with { StartMeasureIndex = l.StartMeasureIndex + delta });
             pedalLines.Add(lb.MoveToImmutable());
         }
-        return set with { Spanners = spanners, PedalLines = pedalLines };
+        var beams = new List<ImmutableArray<BeamLayout>>(set.Beams.Count);
+        foreach (var staffBeams in set.Beams)
+            beams.Add(ShiftBeams(staffBeams, delta));
+        return set with { Spanners = spanners, PedalLines = pedalLines, Beams = beams };
     }
 
     // A keyed memo: bucket by a hash of (system shape + extra scalars + content slice),

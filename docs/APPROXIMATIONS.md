@@ -89,7 +89,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:2743** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:2795** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3581** same approximation the scripts' own remark records for the movers; the books that
+- **:3597** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1063** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:1814** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -188,7 +188,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4433** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4449** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:747** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1278** pinned there), no ledger point.
@@ -335,7 +335,7 @@
 - **:1599** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **:1894** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:763** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:806** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:526** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
 - **:752** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only

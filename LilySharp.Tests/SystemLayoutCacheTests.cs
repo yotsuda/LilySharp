@@ -17,7 +17,9 @@
 using System;
 using System.Collections.Immutable;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -67,7 +69,8 @@ public class SystemLayoutCacheTests
                 new List<MultiStaffLayouter.StaffInsideSpanners>(),
                 new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
                 new List<System.Collections.Immutable.ImmutableArray<PedalEngraver.SolvedPedalLine>>(),
-                new List<System.Collections.Immutable.ImmutableArray<PedalEngraver.SolvedPedalRow>>());
+                new List<System.Collections.Immutable.ImmutableArray<PedalEngraver.SolvedPedalRow>>(),
+                new List<System.Collections.Immutable.ImmutableArray<BeamLayout>>());
         };
 
         var first = cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
@@ -88,6 +91,101 @@ public class SystemLayoutCacheTests
             new MeasureContentKey(3), new MeasureContentKey(4)));
         cache.GetOrComputeStaffSkylines(0, 2, true, false, 2.0, 0.25, factory);
         Assert.Equal(3, calls);
+    }
+
+    /// <summary>One laid-out beam filed under <paramref name="measureIndex"/> — the stamp
+    /// this test is about; the geometry is arbitrary.</summary>
+    private static BeamLayout BeamAt(int measureIndex)
+    {
+        var note = new NoteItem(0, Fraction.Eighth, 0, null, false, 0);
+        var members = ImmutableArray.Create(
+            new BeamMember(note, 1, 0, 1, 0, 0, memberStemUp: true),
+            new BeamMember(note, 1, 1, 0, 0, 1, memberStemUp: true));
+        return new BeamLayout(
+            new BeamGroup(members, measureIndex, 0, stemUp: true),
+            leftY: 0, rightY: 0, leftX: 0, rightX: 1, leftStemX: 0, rightStemX: 1,
+            ImmutableArray.Create(0.0, 1.0), staffIndex: 0, systemIndex: 0);
+    }
+
+    /// <summary>
+    /// The BEAMS the room carries since session 414 are re-stamped on a shifted hit, exactly
+    /// like the slurs and ties beside them: an entry found under other measure numbers is the
+    /// same geometry under new ones, and a beam names its measure
+    /// (<c>BeamGroup.MeasureIndex</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE NET FOR WHAT THE ROOM GAINED. Before the beams rode here the system
+    /// silhouette laid them out itself on every miss, so nothing in this store carried a
+    /// beam's measure stamp. A shift that forgot them would hand the silhouette a beam filed
+    /// under the wrong bar, while the DRAWN beams — the annotation pass's own — stayed right,
+    /// so no rendering net would see it.
+    /// </remarks>
+    [Fact]
+    public void StaffSkylines_ShiftedHit_ReStampsTheBeamsRidingInTheRoom()
+    {
+        var cache = new SystemLayoutCache();
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(1), new MeasureContentKey(2),
+            new MeasureContentKey(3), new MeasureContentKey(4)));
+
+        int calls = 0;
+        Func<MultiStaffLayouter.StaffSkylineSet> factory = () =>
+        {
+            calls++;
+            return new MultiStaffLayouter.StaffSkylineSet(
+                new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
+                new List<MultiStaffLayouter.StaffInsideSpanners>(),
+                new List<(VerticalSkyline Up, VerticalSkyline Down)>(),
+                new List<ImmutableArray<PedalEngraver.SolvedPedalLine>>(),
+                new List<ImmutableArray<PedalEngraver.SolvedPedalRow>>(),
+                new List<ImmutableArray<BeamLayout>> { ImmutableArray.Create(BeamAt(2)) });
+        };
+
+        var stored = cache.GetOrComputeStaffSkylines(2, 2, false, true, 1.0, 0.25, factory);
+        Assert.Equal(1, calls);
+        Assert.Equal(2, stored.Beams[0][0].Group.MeasureIndex);
+
+        // A bar inserted at index 1: the same content slice now starts at 3, not 2.
+        cache.SetContentKeys(ImmutableArray.Create(
+            new MeasureContentKey(1), new MeasureContentKey(99), new MeasureContentKey(2),
+            new MeasureContentKey(3), new MeasureContentKey(4)));
+        var shifted = cache.GetOrComputeStaffSkylines(3, 2, false, true, 1.0, 0.25, factory);
+        Assert.Equal(1, calls);                                    // served, not recomputed
+        Assert.Equal(3, shifted.Beams[0][0].Group.MeasureIndex);   // ...and re-stamped
+        Assert.Equal(2, stored.Beams[0][0].Group.MeasureIndex);    // the stored value untouched
+    }
+
+    /// <summary>
+    /// The system silhouette's edge-staff beams come OUT OF the staff-skyline room, not from
+    /// a second run of the quanter (session 414).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE FALLBACK IS SILENT, which is the whole reason this net exists: a change that
+    /// stopped filling <c>StaffSkylineSet.Beams</c> would draw exactly the same picture and
+    /// keep every other net green, while <c>LayoutBeams</c> ran twice for every system.
+    /// MEASURED at 4.31% of a keystroke (owner's corpus, 231 books × 8 forward keystrokes,
+    /// Release, allocation bytes) — EXACTLY 50.0% of the 6,528 calls a run made repeated a
+    /// (staff, system, first, length) the same keystroke had already laid out, and all 3,264
+    /// repeats were value-identical to the first answer.
+    /// </remarks>
+    [Fact]
+    public void SystemSilhouette_TakesItsEdgeBeamsFromTheStaffSkylineRoom()
+    {
+        string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody { c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | c8[ d8] e8[ f8] g8[ a8] b8[ c'8] | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
+        var engine = new LayoutEngine();
+        engine.Layout(score);
+
+        Assert.True(engine.EdgeBeamSource.FromRoom > 0,
+            "the silhouette asked for edge beams at all — a zero means this net stopped watching");
+        Assert.Equal(0, engine.EdgeBeamSource.LaidOut);
     }
 
     [Fact]
