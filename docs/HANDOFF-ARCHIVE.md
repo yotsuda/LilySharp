@@ -37946,3 +37946,55 @@ top-level＝ファイル既定（既定 `written`）／part header＝その part
 
 ユーザー: 「歌詞を複数のメロディに対して利用できるようにして。今は L34, L36, L38 でエラーになってしまう」（`scratch/site-showcase/ode-to-joy.lys`＝四声コラールで 1 つの `verse` を `lyrics verse sings sop / alt / ten / bas` と 4 つの譜の下に置く本。**LYS7005 ×3 ＋ LYS6012 ×3**）。⇒ ★★ **これは下の 2026-08-19・第218「score の行でも `sings` を綴れる＝*同じ 1 つの track 属性*」を*置き換える***: **定義の `sings` は track の*既定*メロディ（定義ブロック同士の食い違いは LYS7005 のまま）／score 行の `sings` は*その行の置き場所*の束縛で、既定を上書きする（行同士は衝突しない・`sings` の無い行は既定を取る）**。★ **読み手は 1 軒**（`LyricBindings.TargetOfRow`＝fold・LYS6012・collector の 3 人がこれを訊く）。**`LyricsRowSpec` が `Sings` を運ぶ**。★ **LP に対応物あり**: `\lyricsto "alt"` は *placement* ごとに voice を名指す——Lily# の綴りがそれに収束した形。⚠️ **意図的に採らなかった読み**: 「定義に `sings` が無いとき、最初の行の `sings` が track の既定になる」——**行の束縛は行のもの**で、他の score の行にまで効かせると 08-19 の曖昧さが戻る。**既存 fixture・snapshot 236 枚は 1 枚も動かず**、追跡 587 冊で「行に `sings`・定義に無し」は `test/sings-chorus-row` 族の 2 冊だけ（どちらも行 1 本なので読みは同じ）。番人: `SingsLyricsTests` 4 本 ＋ snapshot `test/sings-per-row`。
 
+#### ★★★★ 撤去した綴りに移行ヒントも Did you mean も付けない＝その語が受ける汎用メッセージだけ。0.x を公開した後も同じ（2026-09-15・第385・0.7.0 準備中・ユーザー「lily# のユーザ…
+
+移行ヒントは守るべき既存ユーザーのための装置で、その利用者がまだいない＝**診断文は資産ではなく負債**（2026-07-31 の `version` 撤去と同じ判断の延長）。**撤去の手順**（の `version` ディレクティブ撤去で明示。`RepeatVoltaRemoved`・`ParallelSyntaxRemoved` のような専用 LYS コードに揃える案はユーザーが却下）: ⑴ 予約語も含めて全層から消す ⑵ 専用の診断を新設しない ⑶ 既に振った LYS コードは再利用せず退役させる（番号に穴が空くのは正しい）⑷ 撤去した綴りは、その語が受ける汎用メッセージ（`Undefined variable or phrase: 'x'` など）に落ちればよい。0.7.0 で退役させた二重綴り: `lys` フェンス・`@feather(accel)`・調弦 `standard`/`uke`・`on\|off`（1 構文 1 綴り）。⚠️ **typo 提案候補が撤去語を正しい語へ誘導するなら候補から外す**（`@feather(rit)`→`right` は逆向きへの誘導だった）。**残すもの**＝LP の綴りを書いた人への案内（LYS0006／0007／0008・`\` コマンド）と現在形の typo 助言＝`GRAMMAR_AUDIT.md` §1.1 の線引き。
+
+#### ★★★ section 冒頭の pickup は section header にだけ書く（`section A { partial 4 … }`／part-major では単独の `section A { partia…
+
+冒頭の pickup は section のもので、全 part に一度に効く＝header 1 行で書ける事実を part ごとに書く 2 綴り目を閉じた。**途中の `partial` は各 part に書くしかない**（Lily# は小節長を voice ごとに持つ・2026-09-08 の決定のまま）。判定は「その part の音楽でこの `partial` より前に小節線が無い」＝voice・repeat の中も含む・phrase 本体と section 自身の単声 body は対象外。追跡 `.lys` で壊れた本は 0。
+
+#### ★★★ LP が綴れない形を含む本は、そのままでは LP と比べない。比べる形に直してから比べる（2026-09-14・第381 の後・ユーザー決定）
+
+綴れない形（LILYSHARP-OWN の配置など）を含む本の双子は、どう書いても別の楽譜で、残差が何の差か読めない。**比較の側で記号を除外・補正するのではなく、本の側を LP が綴れる形の変種にする**（追跡コピーに作り、何を直したかを header に書く）。例: bench の和音行は列がぶつかる記号を持ち上げる（下の行）＝ぶつからない変種で比べる。**見つけ方**＝コードの remarks にある LILYSHARP-OWN・exporter の warning・双子とページで行数や記号数が違うこと。⚠️ **直した変種で測った値を、元の本の値として書かない。** 原本はそのまま残す（第381 第 2 便: `ChordNameEngraver.ChordLineOfSystem` が列のぶつかる記号 `Dmaj7` を持ち上げる＝LILYSHARP-OWN。「持ち上げた記号を比較から外す」案は採らなかった）。
+
+#### ★★★ `chords { }` の和音名と inline `@chord` の和音名は同じ高さ（1 本の和音行）に描く＝意図どおり（2026-09-14・第381 の後・ユーザー決定「コード名の y 位置ががたがたでは…
+
+**列がぶつかる所だけは和音行の記号を 1 段持ち上げる**（2026-09-06 のオーナー決定・`ChordNameEngraver.ChordLineOfSystem`・LILYSHARP-OWN）＝この行はその規則の「揃える」側を読み手の言葉で確かめ直したもの。LP の双子が別々の ChordNames 行に積むのは**双子の側の違い**で、ページを LP に寄せる理由にならない。⇒ 縦の位置を LP と比べるときは、**双子のほうを 1 本の ChordNames 行に畳んで**同じ楽譜にする（§2 E「bench の縦の残差」）。
+
+#### ★★★ 和音の品質の既定は LP の語彙＝`chordQualities symbols` が既定（`C°`／`C+`／`Cø`／`C°7` ＋ maj7 の三角）。`words`（`Cdim`／`Caug`／`Cm7♭…
+
+**前日（第371）に `words` を既定にした理由は「ディスク上の全ての本が今そう刷っている」だけ**で、LP の既定は昔から三角と例外表。⇒ **その同じ便で上付きと三角が移植された**ので `symbols` は「例外表の部分移植」ではなく **LP の絵そのもの**になり、既定にしない理由が消えた。**数が決めた**: `lyrics.chord-run.staff-to-chord` は **+0.337483977 → 0.000000000**<!-- ledger: lyrics.chord-run.staff-to-chord = 0.0 -->（LP の 5.659653422 と 9 桁一致・部屋 `lyrics.chord-run.staff-to-staff` も 9.704653422 で一致<!-- ledger: lyrics.chord-run.staff-to-staff = 0.0 -->）。⚠️ **`Default` が兼ねていた 2 つの意味を割った**——「書かなければこう描く」＝`ChordSpelling.Default`、「パーサが読み戻せる綴り」＝**`ChordSpelling.Canonical`**（MusicXML の `<harmony>` と補完の詳細。`C°` を渡すと綴りとして読めない・§5.2.1②）。**射程**（第371 の census）: maj7 族 約 270 site・135 冊、dim/aug/m7♭5 はそれより少ない。**MIDI と MusicXML は不動**（表示スイッチは絵だけを動かす）。
+
+#### ★★★★ 出力に基づいて発明してはならない。可能な限り LP のコードを字面通りに移植する＝Lily# 開発の原則（ユーザー指示・2026-09-12 に「原則だ」と明示・本文と worked example は RUL…
+
+既に RULES §5.2 が「実測値に基づいてコードを直すことは禁止／可能な限り字面通りに移植」「LP 由来なら字面でなくても `LILYPOND-REF` を付ける」と書いていたが、**第371 第 7 便が*同値な簡約*という形でそれを破った**（`Math.Pow(2.0,-0.5)` は `magstep(-3)` の簡約＝LP に在る語は `(- font-size 3)` の **3**／`Magstep(FontSizeStep + StepOf(...))` は「property そのもの」の再構成＝LP に在る語は `(* 1.0 (magstep font-size))` の **font-size**）。⚠️ **この破り方は反証しうる観測が原理的に無い**——出力が 1 バイトも変わらないので測っても掃いても番人も緑。⇒ **判定は出力ではなく*語*で行う**: **LP の式に現れている語（property 名・offset の数値・関数名）がコードにそのまま現れているか**。⇒ **「同値だから」は綴りを変える理由にならない**（`-0.5` から `(- font-size 3)` へは辿れない）。**型**: property は 1 つの家に・offset は LP の語ごとの定数に・**piece が運ぶのは因子ではなく `font-size`**（LP の markup は font-size を運び、stencil の種類ごとに自分の規則でサイズへ変える）。
+
+#### ★★★ score 全体の表示スイッチは `layout [NAME] { }` ブロックに集める＝`marks stacked\|beside`・`barNumbers lines\|none\|every N`。裸の…
+
+裸 `marks` の 3 根拠（override にしない・paper にしない・`pitch` と同形）は生きていたが、**⒜ 音楽の設定の列に混じった唯一の表示専用の裸グローバル**で、**⒝ `fonts { marks "…" }` の font グループと同じ語**＝裸形にはどちらの意味か言う場所が無い。ブロックなら「marks の*どの面*か」をブロック自身が言う。**`layout {}` の値打ちは名前付きブロックの再利用**（`fonts NAME`／`paper NAME` と同じ 2 段）なので**キー 1 つでは裸語より悪い**＝2 つ目（`barNumbers`）と同時に作った。**入る条件**＝表示専用・score 全体・単位なしの閉じた語彙・grob 単位でない。**paper との線引き**＝単位のある量（mm・ss・justify のフラグ）は paper、描き方の切り替えは layout（`indent`／`raggedRight` は LP 自身が `\paper` に置くので paper に残す）。`layout` は LP の `\layout` からバックスラッシュを落とした綴り（`break`／`pageBreak` の決定と同じ規則）。**2 つ目のキーは `barNumbers`（同便）、3 つ目は `accidentals`（第370 第 3 便・LP の `\accidentalStyle` 表の移植・§1 ⑼）**。**キーは 7 つ**＝`marks`・`barNumbers`・`accidentals`（第 3 便）・`sectionLabels`・`partCombineText`（第 5 便・ユーザー「すべて進めて」）・`chordQualities`・`minorChords`（第371・同じ承認の ⑤）。**`sectionLabels` は `boxed|plain|none` の 3 語**——`plain` は第 6 便（`3b4873d2`）で、**箱の値付け 9 箇所に `bool boxed` を*必須*引数で配り、スイッチを `MusicMarkLayout.Boxed` としてマークに載せる**形で通した（既定値を付けないので落とした site はコンパイルが通らない＝§5.2.1② の再発防止そのもの・§1 ⑿）。**⑤ 和音記号の綴りは 2 キーに割った**（第371）＝`chordQualities words|symbols`（LP の `ignatzekExceptions` の 4 記号 `°` `+` `ø` `°7`）と `minorChords upper|lower`（LP の `chordNameLowercaseMinor`）。**⚠️ `chordQualities` は最初 `chordNames` で出したが同便第 3 便で改名**（**ユーザーの問い「`names|roman` と一貫させるべきでは」**）——**`chords NAME as names|roman` とは別の軸**（あちらは*何を出すか*＝量、こちらは*どう綴るか*）で、しかも **`as names|roman` は `layout {}` に載せられない**（GRAMMAR の正本 `chords prog as roman  chords prog as names` が**1 score で両方の値を同時に要る**＝score 全体の設定ではない）。**直すべきは語の衝突の側**＝`names` が 2 つの意味を持っていた（`fonts { marks }` 対 top-level `marks` の再発）。番人 `TheDegreesRowIsUnmovedByTheVocabulary_WhileTheNamesRowBesideItChanges` が直交をページで押さえる。**候補 5 つは全部出荷済み**。⚠️ **この行が「`maj7` は切り替えられない・上付きも多角形も家が無い」と書いていたのは 2026-09-11 の半日だけ**——同じ便の第 6 便が `\super` と `\triangle` を移植し、`maj7` は `symbols` の側で三角になった。**そして翌日その `symbols` が既定になった**（この表の最上段）。
+
+#### ★★ フェンスに頁は無い＝LP の `ly:one-page-breaking` に写す。1 頁・頁高さは中身・自動改頁なし・`pageBreak` は `break` と同じ強制改行・段間は自然長。頁幅は最も広い段（＋…
+
+`PageHeight = 0` は元から「中身で決まる 1 頁」（段数採点・強制改頁経路・溢れ検査が全部 `PageHeight > 0` の裏）＝`one-page-breaking.cc:64-183` の写しで、新しい判断は無い。幅の切り抜きは lilypond-book の `use-paper-size-for-page #f`（段ごとのインク箱）の写し。ragged は LP の規則どおり「段が 1 つのときだけ」（`constrained-breaking.cc:142-148`）で、複数段は行幅に justify＝頁幅は行幅のまま。indent は触らない（楽器名の場所）。
+
+#### ★★ Markdown の lily# フェンスは絵を 1 枚描く＝`score {}` をちょうど 1 個書く。0 個も 2 個以上も理由付きで拒否（2026-09-10・第360 第 5 便・ユーザー「省略できない方…
+
+暗黙の score（全 part を宣言順の譜表に）は score が名指すもの＝歌詞行・和音行・tab・ensemble を*黙って*落とし、ファイル側の fallback（`GenerateAll` の single-voice）とは別の「score 無しに何を描くか」の 2 綴り目だった。score 1 行で断片が完全な `.lys` になる。フェンスの外（`.lys`・AI パネル）の規則は不変。
+
+#### ★★★ clef は音高を動かさない（どこに書いても）＝第196 を撤回（2026-09-15・第390・ユーザー決定・✅ 同便実装）
+
+相対 anchor＝`octave N` > preset > 4（LP の `\clef` と同じ）。旧規則は途中 clef で「octave は clef・文字は直前の音」に割れていた。網 `ClefMovesNoPitchTests`。既存 938 冊中 53 冊をヘッダ ` octave 3` と octave 記号で音高一致に戻した
+
+#### ★ サンセリフ体は TeX Gyre Heros のまま同梱する。LP の Nimbus Sans には合わせない（ユーザー判断・2026-09-12・第373）
+
+**上の行（セリフ体）と同じ島・同じ理由**。LP は `"LilyPond Sans Serif"` を **Nimbus Sans** に解決し（`share/lilypond/2.26.0/fonts/otf/NimbusSans-Regular.otf`。⚠️ **LP は TeX Gyre も同じディレクトリに同梱したうえで URW を選んでいる**）、Lily# は **TeX Gyre Heros**。⚠️ **上流の条項を逐語で確認した**（`ArtifexSoftware/urw-base35-fonts` の `LICENSE`・2026-09-12 取得）＝**AGPLv3 ＋ 例外は「これらのフォントプログラムを Postscript または PDF ファイルに*含める*こと」だけ**（"permission is granted to include these font programs in a Postscript or PDF file …"）⇒ **アプリに同梱するのは素の AGPLv3 で、例外は届かない**。⚠️ **出典は上流 `LICENSE` 1 本**——フォントファイル自身は name table にライセンス文字列（nameID 13/14）を持たず copyright `(URW)++ … 2014` のみ、LP の src `v2.26.0` にも URW のライセンス記述は無い（対照: TeX Gyre は copyright 欄に GUST Font License を明記）。★ **「GPLv3 なら例外は要らないのでは」への答え＝要らないが §13 が付いてくる**: **GPLv3 §13 が AGPLv3 との結合を明示的に許す**ので同梱自体は可能だが、**同じ §13 が AGPL のネットワーク条項を*結合物全体*に、そして再配布・ホストする全員に載せる**。⇒ **0.084 ss と引き換えにする額ではない**。⚠️ **逃げ道は無い**: **TeX Gyre Heros が Nimbus Sans の metric 互換の子孫**なので（だから送り幅も `A` も `m` も完全一致し `chord.symbol-width.*` は全部 exact）、**許諾のゆるい Nimbus Sans という選択肢は存在しない**。**割れるのは 2 つだけ**＝**丸い大文字の overshoot**（`C` は Nimbus `[-0.023, 0.741]` em 対 Heros `[-0.018, 0.747]` em）と**上付き数字の背**（`Em7` のインクは LP `(0 . 2.500823590)` 対 Lily# `(0 . 2.473087762)`）。⇒ **恒久非ゼロは 4 点**（タグは右）。⚠️ **波及は和音記号だけ**——sans が既定の role は `ChordName` のみ（LP 自身の例外 `(font-family . sans)`・他の text grob は全部 roman）。⚠️ `page.chord-row.staff-to-chord-baseline` は**約 1e-5 だけフォントでは説明できない**（FreeType の 26.6 グリッドが第一容疑）＝差し替えても 0 にはならない。★ **差し替えは後からできる**（`TextFontMetrics.SansFamily` と `Fonts/` とライセンス表記だけ）
+
+#### ★★★ `volta`・`alternative` は予約語ではない。LYS0006 は「`repeat volta` は LilyPond の綴りだ」と form へ案内するだけで、撤去した体の文面を取らない。Lily…
+
+`repeat volta` は Lily# に在ったことがない綴りとして扱う＝診断の名前も `RepeatVoltaRemoved` から `LilyPondRepeatVolta` へ（LYS0006 の番号はそのまま・GRAMMAR_AUDIT §1.1「LP の綴りを書いた人への案内は残す」の側）。`volta` を予約していた唯一の生きた綴り `fonts { volta "…" }` は fonts key を text で読むので予約語である必要が無く、`repeat` の kind も text で読む（`unfold`/`percent`/`tremolo` は元から識別子）。`alternative` は「撤去した綴りを断るためだけの予約語」で、`repeat unfold/percent/tremolo` の後ろでは黙って parse され MIDI だけが鳴らしていた（§2 R1）＝節ごと消せば 4 読み手の食い違いは問いごと消える。撤去の手順は上の 2026-09-15 の行のとおり（予約語も含めて全層から消す・専用診断を新設しない）。コーパス 27,000 冊にこの 2 語を識別子として使う本は 0、`.lys` で `alternative {` を書く本も 0（`voltagrace-probe.lys` の `repeat volta` は LYS0006 のまま）。
+
+#### ★★★★ 和音・アルペジオは枠を読むが書かない。動かすのは `>`/`>>` の後のマークだけ・着地は「元の枠 ± マーク」（群のアンカーではない）（2026-09-16・ユーザー決定・✅ 同便・詳細は GRAMMAR／…
+
+旧規則は根音の素の文字でアンカーを連鎖させ、和音 4 つで 1 オクターブ漂流した。案⒜（根音のマークもアンカーに入れる＝LP 寄り）は**漂流を直さず** `<c, e g>`＝C3 E4 G4 を失うので退けた。⚠️ 私の反対論は実測で折れた——逃げ道の楽中 `octave N` は**無く**（part ヘッダ専用）、局所シフトは `<g' b' d'>` で書ける。決め手は一貫性「単音 `g,` が伝播するなら `<>,` も」。exporter は Lily# 側の枠だけ変更（LP 側は第 1 メンバ連鎖）。
+
