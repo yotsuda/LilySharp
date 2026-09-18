@@ -478,13 +478,26 @@ public abstract class SyntaxNode
     /// iterator produced.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// On the ROOT of a tree the answer is the tree's <see cref="DescendantIndex"/>:
     /// walked once, kept on the root, so the many root-level walks of the diagnostics
     /// pass are paid once per tree (its remarks have the numbers). Below the root the
     /// walk is <see cref="WalkDescendants"/>, lazy as ever.
+    /// </para>
+    /// <para>
+    /// The return type is a struct so that <c>foreach</c> over the root's answer walks the
+    /// index's ARRAY directly instead of through <see cref="IEnumerator{T}"/>: the
+    /// diagnostics pass holds a dozen validators that each scan the whole flat list for a
+    /// handful of nodes, and on perf-fingbeam1k's 234,030 nodes the interface dispatch was
+    /// 0.56 ms of each such scan against 0.40 for the array (MEASURED, session 408). It
+    /// still implements <see cref="IEnumerable{T}"/>, so LINQ and every existing call site
+    /// are unchanged — <c>foreach</c> simply binds to the struct enumerator instead.
+    /// </para>
     /// </remarks>
-    public IEnumerable<SyntaxNode> DescendantNodes()
-        => this is CompilationUnitSyntax root ? root.Descendants.Nodes : WalkDescendants();
+    public DescendantNodeList DescendantNodes()
+        => this is CompilationUnitSyntax root
+            ? new DescendantNodeList(root.Descendants.Nodes)
+            : new DescendantNodeList(WalkDescendants());
 
     /// <summary>
     /// The pre-order walk itself — what <see cref="DescendantNodes()"/> is below the

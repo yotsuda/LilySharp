@@ -79,26 +79,46 @@ public sealed record MarkArgument(string Text, LysValue? Value)
         if (tokens.Count == 0)
             return [];
 
-        var arguments = ImmutableArray.CreateBuilder<MarkArgument>();
-        var run = new StringBuilder();
-        SyntaxTokenNode? only = null;   // the run's single token, while it has one
-        int runEnd = -1;                // source offset just past the run so far
+        // ⚠️ NOTHING CACHES THIS. Every reader of a mark's argument comes through
+        // AnnotationValues, and each of its readings calls Arguments again, so this runs
+        // once per reader per mark per keystroke — 24,000 times in perf-fingbeam1k's
+        // diagnostics pass and 48,000 in a full collect (counted, session 408, HANDOFF
+        // §2 R13⒩). So the shapes below are built only when the argument actually has
+        // them: a run of one token is its token's text (no builder), and a single
+        // argument needs no list. The ALGORITHM is unchanged — the runs divide where
+        // they always did.
+        MarkArgument? first = null;            // the first argument, while it is the only one
+        List<MarkArgument>? more = null;       // the rest, once there is a second
+        int runStart = -1, runTokens = 0, runLength = 0;
+        int runEnd = -1;                       // source offset just past the run so far
 
         void Flush()
         {
-            if (run.Length == 0)
+            if (runLength == 0)
+            {
+                runTokens = 0;
                 return;
+            }
             // A one-token run denotes a value; a longer one is a sub-language and
             // denotes nothing this type can name, so it reports its text and null.
-            arguments.Add(new MarkArgument(
-                run.ToString(),
-                only is null ? null : LysValue.FromToken(only.Kind, only.Text)));
-            run.Clear();
-            only = null;
+            var only = runTokens == 1 ? tokens[runStart] : null;
+            var text = only is not null
+                ? only.Text
+                : Concat(tokens, runStart, runTokens, runLength);
+            var argument = new MarkArgument(
+                text,
+                only is null ? null : LysValue.FromToken(only.Kind, only.Text));
+            if (first is null)
+                first = argument;
+            else
+                (more ??= []).Add(argument);
+            runTokens = 0;
+            runLength = 0;
         }
 
-        foreach (var token in tokens)
+        for (int i = 0; i < tokens.Count; i++)
         {
+            var token = tokens[i];
             if (token.Kind == SyntaxKind.Comma)
             {
                 Flush();
@@ -111,18 +131,32 @@ public sealed record MarkArgument(string Text, LysValue? Value)
             if (token.Span.Start != runEnd)
             {
                 Flush();
-                only = token;
-            }
-            else
-            {
-                only = null;   // the run has grown past one token
+                runStart = i;
             }
 
-            run.Append(token.Text);
+            runTokens++;
+            runLength += token.Text.Length;
             runEnd = token.Span.End;
         }
 
         Flush();
-        return arguments.ToImmutable();
+        if (first is null)
+            return [];
+        if (more is null)
+            return [first];
+
+        var arguments = ImmutableArray.CreateBuilder<MarkArgument>(more.Count + 1);
+        arguments.Add(first);
+        arguments.AddRange(more);
+        return arguments.MoveToImmutable();
+    }
+
+    /// <summary>The text of a multi-token run, which is the sub-language case.</summary>
+    private static string Concat(IReadOnlyList<SyntaxTokenNode> tokens, int start, int count, int length)
+    {
+        var run = new StringBuilder(length);
+        for (int i = start; i < start + count; i++)
+            run.Append(tokens[i].Text);
+        return run.ToString();
     }
 }

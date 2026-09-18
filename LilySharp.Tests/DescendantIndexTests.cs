@@ -55,8 +55,12 @@ public sealed class DescendantIndexTests
             Assert.True(walk.Count == listed.Count, $"{path}: walk {walk.Count} nodes, index {listed.Count}");
             for (int i = 0; i < walk.Count; i++)
                 Assert.Same(walk[i], listed[i]);
-            // Built once: a second ask hands back the very same list.
-            Assert.Same(root.DescendantNodes(), root.DescendantNodes());
+            // Built once: a second ask hands back the very same list. Asked of the index and
+            // of its array, because since session 408 DescendantNodes() returns a STRUCT that
+            // wraps them — a value has no identity to compare, and what must not be rebuilt
+            // is what it wraps.
+            Assert.Same(root.Descendants, root.Descendants);
+            Assert.Same(root.Descendants.Nodes, root.Descendants.Nodes);
             books++;
             nodes += walk.Count;
         }

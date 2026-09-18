@@ -201,6 +201,35 @@ workflow attaches that section to the GitHub Release verbatim.
   then stopped scanning every node of the book for its handful of declarations and
   references, and asks that same kept walk for just the kinds it reads: 107 → 91 ms on
   the fingered book, and again nothing it says changes.
+- **Checking the annotations no longer rebuilds every one of them to answer "is this known?".**
+  The check that catches a mistyped `@glisando` visits each annotation and asks whether anything
+  consumes it — and on a book of 24,000 fingerings that question was doing three things nobody
+  read the result of. It walked all 234,030 nodes of the book to reach the 24,000 annotations;
+  it built each annotation's internal dotted name, a string only the branches that report
+  something need; and the reading of the argument that answers the question built a growing
+  list, a text builder and a second copy of text it already had. All three are now paid only
+  where they are used: the check asks the kept walk for the two kinds it has a case for, the
+  dotted name is read inside the branches that name it (the three `@chord` tests ask the note's
+  shape first, which is a reference test rather than a string to build), and an argument of one
+  token is that token's own text. Counted per settled keystroke on the fingered 1000-bar book
+  (Release, tiered compilation off, min of 5): 234,030 nodes visited → 24,000, 24,000 dotted
+  names built → 0, and the whole check 18.8 MB → 6.9 MB and 6.8 → 3.1 ms. Every reader of an
+  annotation's arguments — the collector and the exporters as well as this check — goes through
+  the same reading, so all of them allocate less; a full collect of that book built 48,000 of
+  them. What the panel says does not change (760 books, every diagnostic identical and in the
+  same order), and none of the three is unobserved: dropping either kind from the list reddens
+  33 tests, and poisoning the three arms of the argument reading reddens 175, 20 and 9.
+- **The Problems panel's validators walk the book as the array it already is.** A dozen of the
+  checks scan the whole flat list of the book's nodes for the handful they are about — 234,030
+  nodes apiece on a fingered 1000-bar book, some 2.6 million node visits per settled keystroke.
+  On a book's root that list is already an array, kept since the walk-once change above, but it
+  was handed back as a general sequence, so every element cost an interface call. It is now
+  handed back as a value that a `foreach` can walk directly, which needed no change at any of
+  the places that ask for it. Measured back to back on the fingered book (Release, tiered
+  compilation off, min of 5): the pass on a freshly parsed book 44.4 → 39.9 ms, the sum of its
+  validators 21.0 → 17.3 ms, and each scan also stops allocating an enumerator. The check whose
+  walk the previous entry had already moved onto the kind buckets does not change, which is the
+  control. The nodes, their order and every diagnostic are the same (760 books, identical).
 
 ### Engraving
 

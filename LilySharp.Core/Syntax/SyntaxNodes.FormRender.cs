@@ -543,7 +543,16 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     {
         get
         {
-            ImmutableArray<SyntaxTokenNode>.Builder? interior = null;
+            // Counted first, then filled exactly: this is built on every read, by every
+            // reader, of every mark (see Arguments), and a growing builder plus its copy
+            // to an exact array was a third of what one reading allocated — measured
+            // session 408, HANDOFF §2 R13⒩. The slots are few and their reds are cached,
+            // so walking them twice costs nothing worth naming.
+            int count = CountInteriorTokens();
+            if (count == 0)
+                return [];
+
+            var interior = ImmutableArray.CreateBuilder<SyntaxTokenNode>(count);
             bool open = false;
             for (int i = 0; i < SlotCount; i++)
             {
@@ -552,7 +561,7 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
                 if (token.Kind == SyntaxKind.OpenParen)
                 {
                     open = true;
-                    interior = ImmutableArray.CreateBuilder<SyntaxTokenNode>();
+                    interior.Clear();   // a later '(' replaces what an earlier one held
                 }
                 else if (token.Kind == SyntaxKind.CloseParen)
                 {
@@ -560,11 +569,43 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
                 }
                 else if (open)
                 {
-                    interior!.Add(token);
+                    interior.Add(token);
                 }
             }
-            return interior is null ? [] : interior.ToImmutable();
+            // Drain, not Move: a malformed '@x(a b)(c)' fills the builder past the count
+            // the last pair asked for, and DrainToImmutable copies in that case instead
+            // of throwing on the capacity mismatch.
+            return interior.DrainToImmutable();
         }
+    }
+
+    /// <summary>
+    /// How many tokens the LAST '(' … ')' pair holds — the pair
+    /// <see cref="ArgumentTokens"/> returns, so that it can size its builder exactly.
+    /// </summary>
+    private int CountInteriorTokens()
+    {
+        int count = 0;
+        bool open = false;
+        for (int i = 0; i < SlotCount; i++)
+        {
+            if (GetChild(i) is not SyntaxTokenNode token)
+                continue;
+            if (token.Kind == SyntaxKind.OpenParen)
+            {
+                open = true;
+                count = 0;
+            }
+            else if (token.Kind == SyntaxKind.CloseParen)
+            {
+                open = false;
+            }
+            else if (open)
+            {
+                count++;
+            }
+        }
+        return count;
     }
 
     /// <summary>

@@ -135,12 +135,28 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// <summary>
     /// Validates all <c>@name</c> annotations in a syntax tree.
     /// </summary>
+    /// <summary>
+    /// The kinds <see cref="CheckNode"/>'s switch has a case for. The list mirrors that
+    /// switch, and <c>AnnotationKindsTests</c> is the net that keeps the two in step: it
+    /// walks every net book and asks that the nodes these kinds yield are, one for one and
+    /// in the same order, the nodes the switch would match.
+    /// </summary>
+    /// <remarks>
+    /// A kind list rather than the type switch's own walk because the walk visited the whole
+    /// book to reach a tenth of it — 234,030 nodes for 24,000 marks on perf-fingbeam1k, on
+    /// every settled keystroke (measured, session 408). It is a second spelling of the
+    /// switch's cases, which is why the net above exists; the same trade session 401 made
+    /// for <see cref="SymbolReferenceValidator"/>.
+    /// </remarks>
+    internal static readonly SyntaxKind[] AnnotationKinds =
+        [SyntaxKind.Articulation, SyntaxKind.MusicMark];
+
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
         // root is a CompilationUnit — it never matches an annotation-bearing case,
         // so it is not checked separately (the old CheckNode(root) was a no-op).
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodesOfKinds(AnnotationKinds))
             CheckNode(node);
     }
 
@@ -169,13 +185,24 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             }
             case MusicMarkSyntax mark:
             {
-                var name = mark.MarkName;
+                // ⚠️ The dotted MarkName is BUILT on every read — it joins the name tokens
+                // through a list — and every branch below that needs it is a branch that is
+                // about to report something. On the settled-keystroke path almost no mark
+                // reports anything, so reading it once at the top built a string for every
+                // mark and gave it to nobody: 24,000 of them per diagnostics pass in
+                // perf-fingbeam1k, 3.1 MB and a fifth of this validator's time (measured
+                // session 408, HANDOFF §2 R13⒩). It is now read inside the branches that
+                // name it, and the three '@chord' tests ask the PARENT first — a reference
+                // test against a string the node has to build. Both sides are pure, so the
+                // order changes only what gets built.
+                //
                 // '@!X' is a TERMINATOR, and only the families that have one may be written
                 // with it. Asking IsKnownCompoundName here would answer about '@X' — so
                 // '@!sustainOn' would read as "known" and then be dropped by the collector
                 // in silence, which is the one failure this validator exists to prevent.
                 if (mark.IsSpanEnd)
                 {
+                    var name = mark.MarkName;
                     if (MusicMarkItem.ParseSpanEndName(name) is null)
                         _diagnostics.Warning(
                             mark.Span,
@@ -193,7 +220,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         && UnregisteredChordQuality(mark) is { } quality)
                         WarnUnregisteredChordQuality(mark, quality);
                     else
-                        WarnUnknown(mark, name);
+                        WarnUnknown(mark, mark.MarkName);
                 }
                 else if (AnnotationValues.Rehearsal(mark, out var labelIsQuoted) is not null
                          && !labelIsQuoted)
@@ -201,30 +228,33 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         mark.Span,
                         DiagnosticCodes.MarkLabelNotQuoted,
                         "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
-                else if (name == "chord" && mark.Parent is ChordSyntax chord && !CanNameChord(chord))
+                else if (mark.Parent is ChordSyntax chord && mark.MarkName == "chord" && !CanNameChord(chord))
                     _diagnostics.Warning(
                         chord.Span,
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this chord — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(Cmaj7).");
-                else if (name == "chord" && mark.Parent is ChordRepetitionSyntax rep
+                else if (mark.Parent is ChordRepetitionSyntax rep && mark.MarkName == "chord"
                          && Music.ChordRepetitions.OriginalOf(rep) is { } orig && !CanNameChord(orig))
                     _diagnostics.Warning(
                         rep.Span,
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this chord repetition — the repeated chord's notes "
                         + "match no known chord quality; use the explicit form, e.g. @chord(Cmaj7).");
-                else if (name == "chord" && mark.Parent is ArpeggioSyntax arp && !CanNameArpeggio(arp))
+                else if (mark.Parent is ArpeggioSyntax arp && mark.MarkName == "chord" && !CanNameArpeggio(arp))
                     _diagnostics.Warning(
                         arp.Span,
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this arpeggio — its notes match no known chord quality; "
                         + "use the explicit form, e.g. @chord(Cmaj7).");
-                else if (OnArpeggioGroup(mark)
-                         && name != "chord"
-                         && AnnotationValues.Chord(mark, ChordSpelling.Default, out _) == null)
+                else if (OnArpeggioGroup(mark))
+                {
                     // Chord names work on the group; other marks belong on a member.
-                    WarnArpeggioUnsupported(mark, name);
+                    var name = mark.MarkName;
+                    if (name != "chord"
+                        && AnnotationValues.Chord(mark, ChordSpelling.Default, out _) == null)
+                        WarnArpeggioUnsupported(mark, name);
+                }
                 break;
             }
         }
