@@ -88,22 +88,6 @@ internal static class SectionBarCounts
         string SectionName, string Label, bool IsChords, SyntaxNode Container, TextSpan Anchor,
         int Bars, bool TrailingOpen, bool PartMajor, bool IsLyrics = false);
 
-    /// <summary>The semantic voices of every section under <paramref name="root"/>, in
-    /// document order, with the meter rule the validator applies: a score-level <c>time</c>
-    /// (outside every part / section / music body) arms everything after it, a section's
-    /// own direct-child <c>time</c> arms the part blocks after it in that section. (The meter
-    /// only steers <see cref="MeasureModel.Split"/>'s repeat-flow auto-complete.)</summary>
-    /// <param name="root">The tree.</param>
-    /// <param name="phraseBodies">The book's phrase-body table (a phrase's body, a variable's
-    /// expression, by name), when the caller already holds one; null gathers it here with the
-    /// same rule.</param>
-    /// <param name="partMajorOnly">Only the cells written inside a <c>part</c> or a
-    /// <c>chords</c> track (<see cref="SemanticVoice.PartMajor"/>), for the cross-part
-    /// validator's part-major pass, which reads the section-major voices from the section
-    /// itself: a section-major voice's bars are not split at all then — splitting them for a
-    /// reader that discards them was most of that validator's cost on a one-part book
-    /// (MEASURED, session 400). The meter rule is unchanged: a score-level <c>time</c> is
-    /// still read wherever it stands.</param>
     /// <summary>The kinds <see cref="SemanticVoices"/>'s walk does something for: it arms
     /// the meter from a score-level <c>time</c> and makes a voice of a section. Every other
     /// node it used to be offered was skipped.</summary>
@@ -124,6 +108,22 @@ internal static class SectionBarCounts
     public static readonly SyntaxKind[] SemanticVoiceKinds =
         [SyntaxKind.TimeSignature, SyntaxKind.SectionDeclaration];
 
+    /// <summary>The semantic voices of every section under <paramref name="root"/>, in
+    /// document order, with the meter rule the validator applies: a score-level <c>time</c>
+    /// (outside every part / section / music body) arms everything after it, a section's
+    /// own direct-child <c>time</c> arms the part blocks after it in that section. (The meter
+    /// only steers <see cref="MeasureModel.Split"/>'s repeat-flow auto-complete.)</summary>
+    /// <param name="root">The tree.</param>
+    /// <param name="phraseBodies">The book's phrase-body table (a phrase's body, a variable's
+    /// expression, by name), when the caller already holds one; null gathers it here with the
+    /// same rule.</param>
+    /// <param name="partMajorOnly">Only the cells written inside a <c>part</c> or a
+    /// <c>chords</c> track (<see cref="SemanticVoice.PartMajor"/>), for the cross-part
+    /// validator's part-major pass, which reads the section-major voices from the section
+    /// itself: a section-major voice's bars are not split at all then — splitting them for a
+    /// reader that discards them was most of that validator's cost on a one-part book
+    /// (MEASURED, session 400). The meter rule is unchanged: a score-level <c>time</c> is
+    /// still read wherever it stands.</param>
     public static List<SemanticVoice> SemanticVoices(SyntaxNode root,
         IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null, bool partMajorOnly = false)
     {
