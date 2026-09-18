@@ -173,7 +173,8 @@ public class BeamDetectionInputMemoTests
     /// <summary>
     /// Two inputs under one key must not evict each other. A one-slot table would answer
     /// every one of these calls with a fresh detection while looking exactly like a memo —
-    /// the failure <c>_pagingAugments</c> is on record for.
+    /// the failure <c>_pagingAugments</c> was on record for until session 413 gave it a
+    /// second room.
     /// </summary>
     [Fact]
     public void TwoInputsUnderOneKey_BothKeepServing()

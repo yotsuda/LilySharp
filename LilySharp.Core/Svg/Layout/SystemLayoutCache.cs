@@ -533,26 +533,74 @@ internal sealed class SystemLayoutCache
     /// recomputed (even if byte-equal) pair just misses into a recompute — conservative,
     /// never wrong.
     /// <para>
-    /// One entry per system index, overwritten on miss — the store is bounded by the
-    /// widest system count the session ever saw, so it needs no generation eviction. The
-    /// cached pair is SHARED across keystrokes; the paging consumer only reads
-    /// (<c>PageLayouter</c>'s <c>Distance</c>), verified 2026-08-12.
+    /// ★ TWO ROOMS PER SYSTEM INDEX since session 413, the older evicted on a miss. ONE
+    /// room was the shape that never warmed: <c>LayoutEngine.Layout</c> places the book
+    /// TWICE on a keystroke whose page score picks another line count (its
+    /// <c>ChooseSystemCount</c> leg), and the two placements break the score differently,
+    /// so system s is a DIFFERENT run of measures in each — different baseline instances,
+    /// a miss, and the second placement took the first placement's slot. The next
+    /// keystroke's first placement then missed on the slot the second had taken, recomputed
+    /// and took it back, so the store thrashed for as long as the count loop kept choosing.
+    /// MEASURED (session 412, 292 books × 8 keystrokes, Release, allocation bytes): of the
+    /// 13,896 misses, every single one was "entry present, baseline is another instance" —
+    /// never a missing entry, never a differing program — splitting 2,024 genuinely edited
+    /// systems (1.6% of a keystroke, the floor) against 5,936 + 5,936, the two halves of
+    /// one eviction each, worth 8.3%. ★ The two counts being EQUAL is the signature: each
+    /// slot the second placement took cost the next keystroke's first placement exactly one
+    /// miss. A hit is near-free beside a miss (399 B against 115,157 B, session 412), so
+    /// the hit rate is the saving.
+    /// </para>
+    /// <para>
+    /// ⚠️ TWO IS THE COUNT LOOP'S OWN BOUND, not a tuning knob — <c>Layout</c> calls
+    /// <c>PlaceSystems</c> at most twice — so the store stays bounded by twice the widest
+    /// system count the session ever saw and still needs no generation eviction. A lookup
+    /// served from the older room PROMOTES it, so the two placements settle one per room
+    /// and keep hitting; a miss evicts the older room, the one the current placement is not
+    /// using. Eviction is sound for the same reason it is in <see cref="TypedCache{T}"/>: a
+    /// dropped entry costs a recompute, never a wrong reuse. The cached pair is SHARED
+    /// across keystrokes; the paging consumer only reads (<c>PageLayouter</c>'s
+    /// <c>Distance</c>), verified 2026-08-12.
     /// </para>
     /// </remarks>
     public (VerticalSkyline up, VerticalSkyline down) GetOrComputePagingAugment(
         int systemIndex, (VerticalSkyline up, VerticalSkyline down) baseline,
         PagingAugmentProgram program)
     {
-        if (_pagingAugments.TryGetValue(systemIndex, out var e)
-            && ReferenceEquals(e.BaseUp, baseline.up)
-            && ReferenceEquals(e.BaseDown, baseline.down)
-            && program.Matches(e.Program))
-            return e.Value;
+        _pagingAugments.TryGetValue(systemIndex, out var slot);
+        if (Serves(slot.Recent, baseline, program))
+        {
+            PagingAugmentStats = (PagingAugmentStats.Hits + 1, PagingAugmentStats.Misses);
+            return slot.Recent!.Value;
+        }
+        if (Serves(slot.Older, baseline, program))
+        {
+            _pagingAugments[systemIndex] = new PagingAugmentSlot(slot.Older, slot.Recent);
+            PagingAugmentStats = (PagingAugmentStats.Hits + 1, PagingAugmentStats.Misses);
+            return slot.Older!.Value;
+        }
         var value = program.Execute(baseline);
-        _pagingAugments[systemIndex] = new PagingAugmentEntry(
-            baseline.up, baseline.down, program, value);
+        _pagingAugments[systemIndex] = new PagingAugmentSlot(
+            new PagingAugmentEntry(baseline.up, baseline.down, program, value), slot.Recent);
+        PagingAugmentStats = (PagingAugmentStats.Hits, PagingAugmentStats.Misses + 1);
         return value;
+
+        // The whole key, in one place: same baseline INSTANCES + equal program.
+        static bool Serves(
+            PagingAugmentEntry? e, (VerticalSkyline up, VerticalSkyline down) baseline,
+            PagingAugmentProgram program)
+            => e is not null
+                && ReferenceEquals(e.BaseUp, baseline.up)
+                && ReferenceEquals(e.BaseDown, baseline.down)
+                && program.Matches(e.Program);
     }
+
+    /// <summary>Lookups of the paging-augment store by outcome, since this cache was made
+    /// (diagnostics / tests) — the liveness counter of the two rooms above.</summary>
+    public (int Hits, int Misses) PagingAugmentStats { get; private set; }
+
+    /// <summary>One system index's two rooms, the most recently served one first.</summary>
+    private readonly record struct PagingAugmentSlot(
+        PagingAugmentEntry? Recent, PagingAugmentEntry? Older);
 
     private sealed record PagingAugmentEntry(
         VerticalSkyline BaseUp, VerticalSkyline BaseDown,
@@ -568,7 +616,7 @@ internal sealed class SystemLayoutCache
             => new(a.Hits + b.Hits, a.ShiftedHits + b.ShiftedHits, a.Misses + b.Misses);
     }
 
-    private readonly Dictionary<int, PagingAugmentEntry> _pagingAugments = new();
+    private readonly Dictionary<int, PagingAugmentSlot> _pagingAugments = new();
 
     // ---- the shift functions: where each store's absolute measure stamps live ----
 

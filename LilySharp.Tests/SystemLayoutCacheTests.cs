@@ -361,6 +361,88 @@ public class SystemLayoutCacheTests
         Assert.Equal(full, incremental);
     }
 
+    private static (VerticalSkyline up, VerticalSkyline down) Pair(double end)
+        => (VerticalSkyline.FromBox(0, end, 1, 1, VerticalDirection.Up),
+            VerticalSkyline.FromBox(0, end, 1, 1, VerticalDirection.Down));
+
+    /// <summary>A one-step UP program — so the DOWN instance comes straight back and the
+    /// UP one is the identity the assertions read.</summary>
+    private static PagingAugmentProgram VoltaProgram(double start, double end)
+    {
+        var builder = new PagingAugmentProgram.Builder();
+        builder.AddVoltaBox(start, end, 4, 4);
+        return builder.Build();
+    }
+
+    private static List<(double Start, double End, double Value)> Shape(VerticalSkyline s)
+        => s.Buildings.Select(b => (b.Start, b.End, b.ValueAt(b.Start))).ToList();
+
+    /// <summary>
+    /// The PAGING-AUGMENT store's two rooms: the count loop's two placements of the same
+    /// book must not evict each other under a shared system index.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS A LIVENESS NET, AND LIVENESS IS ALL IT CAN BE — a memo that serves nothing
+    /// is still CORRECT (every miss just recomputes), so the incremental==full harness stays
+    /// green while the store is dead machinery. MEASURED before the second room (session 412,
+    /// 292 books × 8 keystrokes, Release, allocation bytes): 13,896 lookups missed and every
+    /// one of them found an entry whose baseline was another INSTANCE — never a missing
+    /// entry, never a differing program. 5,936 of those were the second placement taking the
+    /// first's slot and 5,936 the next keystroke's first placement taking it back, one for
+    /// one. ★ With one room this test reads 0 hits and 8 misses.
+    /// </remarks>
+    [Fact]
+    public void PagingAugments_TheTwoPlacementsOfOneSystemIndex_BothKeepServing()
+    {
+        var cache = new SystemLayoutCache();
+        // Two placements' system 0: a different run of measures, hence different instances
+        // out of GetOrComputeSkyline and a different resolved program.
+        var ideal = Pair(100);
+        var chosen = Pair(80);
+
+        var first = cache.GetOrComputePagingAugment(0, ideal, VoltaProgram(10, 20));
+        var second = cache.GetOrComputePagingAugment(0, chosen, VoltaProgram(30, 40));
+        Assert.Equal((0, 2), cache.PagingAugmentStats);
+        Assert.NotSame(first.up, second.up);
+
+        // Three more keystrokes over an unedited book: each placement rebuilds an EQUAL
+        // program (what AugmentSkylinesForPaging does every time) and finds its own room.
+        for (int keystroke = 0; keystroke < 3; keystroke++)
+        {
+            Assert.Same(first.up,
+                cache.GetOrComputePagingAugment(0, ideal, VoltaProgram(10, 20)).up);
+            Assert.Same(second.up,
+                cache.GetOrComputePagingAugment(0, chosen, VoltaProgram(30, 40)).up);
+        }
+        Assert.Equal((6, 2), cache.PagingAugmentStats);
+    }
+
+    /// <summary>A third distinct lookup evicts the OLDER room — which is what keeps the
+    /// store bounded, and costs a recompute rather than a wrong answer.</summary>
+    [Fact]
+    public void PagingAugments_AThirdDistinctLookup_EvictsTheOlderRoomAndStaysCorrect()
+    {
+        var cache = new SystemLayoutCache();
+        var (a, b, c) = (Pair(100), Pair(80), Pair(60));
+
+        var va = cache.GetOrComputePagingAugment(0, a, VoltaProgram(10, 20));
+        cache.GetOrComputePagingAugment(0, b, VoltaProgram(10, 20));
+        var vc = cache.GetOrComputePagingAugment(0, c, VoltaProgram(10, 20));
+        Assert.Equal((0, 3), cache.PagingAugmentStats);
+
+        // b and c hold the rooms — and asking for b PROMOTES it, so the miss below evicts c.
+        Assert.Same(vc.up, cache.GetOrComputePagingAugment(0, c, VoltaProgram(10, 20)).up);
+        var vb = cache.GetOrComputePagingAugment(0, b, VoltaProgram(10, 20));
+        Assert.Equal((2, 3), cache.PagingAugmentStats);
+
+        // a was evicted: it recomputes, and the recompute is the same silhouette.
+        var again = cache.GetOrComputePagingAugment(0, a, VoltaProgram(10, 20));
+        Assert.NotSame(va.up, again.up);
+        Assert.Equal(Shape(va.up), Shape(again.up));
+        Assert.Same(vb.up, cache.GetOrComputePagingAugment(0, b, VoltaProgram(10, 20)).up);
+        Assert.Equal((3, 4), cache.PagingAugmentStats);
+    }
+
     private static string LoadFixture(string rel)
     {
         var dir = System.AppContext.BaseDirectory;

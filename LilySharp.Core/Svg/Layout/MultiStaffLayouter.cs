@@ -3946,8 +3946,10 @@ internal sealed class MultiStaffLayouter
     /// <remarks>
     /// ⚠️ A LIST PER VOICE, NOT ONE SLOT. The staff quantity and the annotation quantity
     /// share a first voice on every single-voice score, so a one-slot table would have them
-    /// evict each other and miss every time — the shape <c>_pagingAugments</c> is on record
-    /// for. The list holds one entry per distinct input; in practice that is two, and it is
+    /// evict each other and miss every time — the shape <c>_pagingAugments</c> was on record
+    /// for until session 413 measured the thrash and gave it rooms of its own
+    /// (<see cref="SystemLayoutCache.GetOrComputePagingAugment"/>'s remarks).
+    /// The list holds one entry per distinct input; in practice that is two, and it is
     /// capped so a score that somehow keeps producing new ones cannot grow it without bound.
     /// </remarks>
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
