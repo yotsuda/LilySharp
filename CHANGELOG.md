@@ -144,6 +144,19 @@ workflow attaches that section to the GitHub Release verbatim.
   1000-bar book, 0.50 ms and 1.7 MB a keystroke with the rest. Nothing moves: a system's own beams
   are the ones its memo key is already built from, and every book of the incremental net — including
   a beamed, fingered one edited twice — still equals its full compile.
+- **The installed extension's language server starts in about half the time.** The server is now
+  precompiled to native (ReadyToRun) in the published build, which the Marketplace VSIXs never were
+  — the development deploy and the downloadable release archives have been precompiled for some
+  time, so this closes a gap where the copy users install was the slow one. The server pays a JIT warm-up once per process and the process starts
+  on every activation. Measured on a grand-staff sample, min of five cold starts, driving the real
+  server over its own protocol in the shape the Marketplace ships: 152 ms to initialize, 283 more to
+  the first diagnostics and 521 for the first picture, 958 ms in all — while the SAME render takes
+  2.7 ms once the server is warm. That factor of roughly two hundred is warm-up, not the score. With
+  the change: 531 ms. Warm performance is unchanged, as expected. The VSIX grows by 13 MB; a blanket
+  precompile would have cost 41 MB and saved no further time, because 28 MB of it is one imaging
+  dependency the startup path never touches, so that one is excluded. No environment variable
+  substitutes for this: the two that make the JIT work harder up front measured 59% and 81% WORSE,
+  so the cost is the amount of JIT work rather than the quality of the code it first produces.
 - **One measure map for the whole annotation pass, not nine.** The map from a bar to the system it
   fell on is a pure function of the laid-out systems, and almost everyone in the pass built a private
   copy: the pass's own staff-Y resolver, its pedal lookup, both outside-staff stackers, the walk that

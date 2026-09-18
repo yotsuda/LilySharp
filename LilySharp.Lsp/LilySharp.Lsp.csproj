@@ -7,7 +7,48 @@
     <Nullable>enable</Nullable>
     <AssemblyName>lilysharp-lsp</AssemblyName>
     <RollForward>LatestMajor</RollForward>
+
+    <!-- Precompile to native on publish: the server pays a JIT tier-0 cost ONCE PER PROCESS,
+         and the process starts every time the extension activates. MEASURED (session 407,
+         YT-DELL2, samples/canon-in-d.lys, min of 5 cold starts, driving the real server over
+         stdio, in the shape the Marketplace ships — self-contained, win-x64): 152 ms to
+         initialize + 283 to the first diagnostics + 521 for the first picture = 958 ms, while
+         the SAME render costs 2.7 ms once warm — a factor of about 200, and none of it is the
+         score. With this on: 531 ms.
+         ⚠️ THIS IS HERE BECAUSE THE THREE PUBLISH PATHS DISAGREED, AND THE ONE THAT REACHES
+         THE MARKETPLACE WAS THE SLOW ONE. tools/Deploy-Lsp.ps1 has passed
+         -p:PublishReadyToRun=true since session 329 (its measurements are in its comment) and
+         .github/workflows/release.yml passes it for the GitHub Release artifacts — but
+         editors/vscode/publish-marketplace.ps1, which is the script that actually uploads
+         (-Publish), never did. So the VSIXs users install were un-precompiled while both the
+         developer's machine and the downloadable archives were not. Setting it HERE is what
+         makes all three agree: every one of them passes a RID, so every one picks it up, and
+         the two that already spell it out are simply redundant now.
+         ⚠️ CROSS-PUBLISH VERIFIED, because this property now fires for targets this machine
+         cannot run: publish-marketplace.ps1 builds eight, and win-arm64, linux-arm,
+         linux-musl-x64 and osx-arm64 were each published from this win-x64 host with R2R on
+         (session 407) — all four succeeded with LilySharp.Core.dll crossgen'd to 8.7-9.3 MB.
+         ⚠️ ONLY WHEN A RID IS GIVEN. PublishReadyToRun needs a RuntimeIdentifier, so the
+         condition keeps a plain `dotnet build` / `dotnet publish` working.
+         ⚠️ NO ENVIRONMENT VARIABLE DOES THIS. Measured the same way: TieredPGO=0 gives 9%
+         back while spending steady-state quality over a long-lived session, and the knobs
+         that make the JIT work harder up front (TC_QuickJitForLoops=0, TieredCompilation=0)
+         are 59% and 81% WORSE — the cost is the AMOUNT of JIT work, not tier-0 code quality.
+         Numbers and the harness: LilySharp-Lab/sessions/p407/lsp-coldstart.txt. -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ⚠️ IMAGESHARP IS EXCLUDED, AND IT IS THE WHOLE SIZE STORY. Crossgen expands it from
+         1.7 MB to 30.0 MB on generic instantiations — 28 of the 41 MB a blanket R2R adds to
+         this publish — and it buys 2 ms of the cold start, which is noise. MEASURED (session
+         407, framework-dependent, the shape the dev deploy uses): 50.8 MB / 971 ms with no
+         R2R at all, 63.8 MB / 541 ms with this exclusion, 92.1 MB / 539 ms without it — so
+         the 28 MB buys 2 ms, which is noise. Nothing on the startup path touches ImageSharp;
+         it is reached when a render is exported to a raster. The exclusion applies to the
+         self-contained Marketplace publish too (verified: it stays 1.7 MB there). -->
+    <PublishReadyToRunExclude Include="SixLabors.ImageSharp.dll" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- The LSP wire types are Lily#'s own (Protocol/LspTypes.cs). The obvious
