@@ -504,11 +504,27 @@ internal sealed partial class LayoutEngine
         // passes, preserving their exact behavior. Without hara-kiri every system has
         // the same staff Y, so staffYAt collapses to the old staffYByIndex lookup and
         // the result is byte-identical.
+        // ⚠️ ONE measure→system map for the whole pass. It is a pure function of `systems` —
+        // the same walk over the same measures — and the pass's own staff-Y resolver, its pedal
+        // lookup and BOTH outside-staff stackers each used to walk the whole score for their own
+        // copy. COUNTED (session 407, Release, tiered compilation off, per KEYSTROKE, and the
+        // pass runs twice per keystroke): fourteen such fills on perf-plain1k, eighteen on
+        // perf-fingbeam1k, sixteen on perf-v2bow1k — every one of them a walk of all 1000 bars,
+        // and the count did not move with the edit's position. Built here once and handed down;
+        // each house keeps its own build behind a default null, so the CLI and the per-system
+        // callers are unchanged.
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+
+        // …and its (system, layout) half, on the same one walk. Session 406 built this for the
+        // tail's three walkers; it is hoisted to the top of the pass because the script walk
+        // wants the layout half too. ⚠️ Both maps keep the LAST system's entry for a repeated
+        // MeasureIndex — the property ComputeFingeringsAndScripts's unit plan is derived from.
+        var passMeasureMap = LayoutUtilities.BuildMeasureMap(systems);
+
         Func<int, int, double>? staffYAt = null;
         Func<int, double>? minStaffYAt = null;
         if (staffYByIndex != null)
         {
-            var measureToSystem = new Dictionary<int, int>();
             var staffYBySystem = new List<Dictionary<int, double>>(systems.Length);
             for (int s = 0; s < systems.Length; s++)
             {
@@ -518,8 +534,6 @@ internal sealed partial class LayoutEngine
                         foreach (var st in sg.Staves)
                             map[st.StaffIndex] = -st.Y;   // Y-up storage → device-down offset
                 staffYBySystem.Add(map);
-                foreach (var m in systems[s].Measures)
-                    measureToSystem[m.MeasureIndex] = s;
             }
             int SysOf(int measureIndex) =>
                 staffYBySystem.Count == 0 ? 0
@@ -549,7 +563,8 @@ internal sealed partial class LayoutEngine
         // renderer draws (ledger fingering.chord.beamed-*).
         var (articulationLayouts, fingeringLayouts) = ComputeFingeringsAndScripts(
             ctx, score, systems, voicesByStaff, beamLayouts ?? default,
-            articulations, ml, measuresByStaff, staffYAt, staffByIndex);
+            articulations, ml, measuresByStaff, staffYAt, staffByIndex,
+            measureToSystem, passMeasureMap);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);
@@ -643,15 +658,9 @@ internal sealed partial class LayoutEngine
         if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
         {
             // measure -> system INDEX, to find the solved line of the system a bracket
-            // starts on (the profile that reserved it).
-            Dictionary<int, int>? measureToSysIdx = null;
-            if (ctx.PedalLines != null)
-            {
-                measureToSysIdx = new Dictionary<int, int>();
-                for (int si = 0; si < systems.Length; si++)
-                    foreach (var m in systems[si].Measures)
-                        measureToSysIdx[m.MeasureIndex] = si;
-            }
+            // starts on (the profile that reserved it) — the pass's one map, not a second
+            // walk of the same measures.
+            Dictionary<int, int>? measureToSysIdx = ctx.PedalLines != null ? measureToSystem : null;
             foreach (var staffIndex in musicMarks
                 .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
             {
@@ -930,7 +939,8 @@ internal sealed partial class LayoutEngine
                 articulationLayouts, applyStaffOffsets: staffYAt != null,
                 staffProfile: staffProfile, lineGroups: dynamicLineGroups,
                 trills: trillSpannerLayouts,
-                memo: ctx.BelowStackMemo, profileIdentity: profileIdentity);
+                memo: ctx.BelowStackMemo, profileIdentity: profileIdentity,
+                prebuiltMeasureToSystem: measureToSystem);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
@@ -1033,7 +1043,8 @@ internal sealed partial class LayoutEngine
             memo: ctx.AboveStackMemo, profileIdentity: profileIdentity,
             // The combined staff's a2 / Solo labels (priority 475) — in BOTH passes, so the
             // preliminary extents reserve what the final pass draws.
-            partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml, beamLayouts ?? default));
+            partCombineTexts: PartCombineLayoutsOf(ctx.MultiScore, ml, beamLayouts ?? default),
+            prebuiltMeasureToSystem: measureToSystem);
         stackedDynamics = stackedDynamicsAbove;
         stackedArticulations = stackedArticulationsAbove;
         // (No To-Coda/label co-placement here any more: the pass above owns it. A
@@ -1049,6 +1060,19 @@ internal sealed partial class LayoutEngine
         // The fingerings were placed in the script-column walk itself (with the
         // articulations, above) — nothing to re-clamp after the movers' pass: a
         // fingering does not dodge a fermata; the fermata, a MOVER, goes above it.
+
+        // ⚠️ ONE MAP FOR THE TAIL'S THREE WALKERS. Each of them used to build its own measure →
+        // (system, layout) dictionary of the WHOLE score, and the tie-variant engraver built two
+        // (the layout half is the system half minus the system, over the identical key set). On a
+        // 1000-bar book that is four dictionaries of a thousand entries per annotation pass —
+        // and the pass runs TWICE per keystroke. COUNTED (session 406, Release, tiered
+        // compilation off, per pass): the half-tie walk 228 KB and the multi-measure-rest walk
+        // 375 KB on every one of the three perf books, producing NOTHING on any of them, and the
+        // ledger walk's bare map 128 KB. The map is a pure function of `systems` — the same
+        // walk, the same keys — so building it here and handing it over is the same dictionary,
+        // not an equivalent one. (Session 407 hoisted the build to the top of the pass, where
+        // the script walk reads the same map; the tail's three walkers are unchanged.)
+        var tailMeasureMap = passMeasureMap;
 
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
@@ -1075,16 +1099,17 @@ internal sealed partial class LayoutEngine
             Fingerings: fingeringLayouts,
             // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
             TieVariants: score != null
-                ? TieVariantEngraver.Calculate(score, systems)
+                ? TieVariantEngraver.Calculate(score, systems, measureMap: tailMeasureMap)
                 : ImmutableArray<TieVariantLayout>.Empty,
             // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
             MultiMeasureRests: score != null
                 ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
-                    voicesByStaff: voicesByStaff)
+                    voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap)
                 : ImmutableArray<MultiMeasureRestLayout>.Empty,
             // LILYPOND-REF: lily/ledger-line-spanner.cc — LedgerLineSpanner grob.
             LedgerLineSpans: score != null
-                ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight)
+                ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight,
+                    prebuiltMeasureMap: tailMeasureMap)
                 : ImmutableArray<LedgerLineSpan>.Empty,
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
             BarNumbers: stackedBarNumbers,

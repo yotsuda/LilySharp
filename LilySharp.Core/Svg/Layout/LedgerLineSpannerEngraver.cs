@@ -62,16 +62,20 @@ internal static class LedgerLineSpannerEngraver
     /// <summary>
     /// Calculates ledger-line spans for a single-staff score.
     /// </summary>
+    /// <param name="prebuiltMeasureMap">The caller's measure → (system, layout) map, when it
+    /// has one — see <see cref="TieVariantEngraver.Calculate"/>'s parameter for why the
+    /// annotation pass's tail shares one.</param>
     public static ImmutableArray<LedgerLineSpan> Calculate(
         Score score,
         ImmutableArray<SystemLayout> systems,
         double staffHeight,
-        int staffIndex = -1)
+        int staffIndex = -1,
+        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<LedgerLineSpan>.Empty;
 
-        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
+        var measureMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         var builder = ImmutableArray.CreateBuilder<LedgerLineSpan>();
         var voice = score.Voice;
 

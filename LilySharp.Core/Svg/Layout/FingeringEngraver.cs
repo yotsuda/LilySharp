@@ -227,16 +227,18 @@ internal static class FingeringEngraver
 
     /// <summary>
     /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>
-    /// for a caller that runs this body MANY TIMES over one score and has therefore already
-    /// built the beamed-stem-tip map ONCE — the per-(staff, system) shape
-    /// <see cref="FingScriptMemo"/> runs in.
+    /// for a caller that runs this body per (staff, system) — the shape
+    /// <see cref="FingScriptMemo"/> runs in — and hands it the beamed-stem-tip map for THAT
+    /// unit's beams, built by the caller from the beams it already attributes to the unit.
     /// </summary>
     /// <remarks>
     /// ⚠️ THE MAP IS THE ONLY DIFFERENCE, and it is the whole point: the sibling overload
     /// folds <c>beamLayouts</c> on every call, which is O(the score's beams) per SYSTEM once
     /// a caller runs per system — the same O(score)-per-system shape
     /// <c>MultiStaffLayouter.StaffArticulationLayouts</c> warns about, and the shape this
-    /// engraver's own measure-walk remark was written to avoid.
+    /// engraver's own measure-walk remark was written to avoid. Until session 406 the caller
+    /// built ONE whole-score map per pass and handed it to every miss; with a memo that hits
+    /// 199 of 200 units that fold was paid for one unit, so the map is now the unit's own.
     /// </remarks>
     internal static ImmutableArray<FingeringLayout> CalculateWithTips(
         Rendering.ScoreTextMetrics fonts,

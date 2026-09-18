@@ -131,6 +131,42 @@ workflow attaches that section to the GitHub Release verbatim.
   does not change: a replayed bar's groups equal a live detection's on every field the quanter and
   the seeds read, the notes they point at are the live ones, and every book of the incremental net
   — including two chained edits and a bar inserted before the beams — still equals its full compile.
+- **A book with no fingering and no script no longer pays for the pass that places them.** The
+  annotation pass runs twice per keystroke, and each run opened by folding a map of every beamed
+  note in the score, two more per-bar maps and a probe of every system's fingering memo — before
+  discovering there was nothing to place. Counted on a plain 1000-bar book (Release, tiered
+  compilation off, min of 6): 8,000 beam members folded and 200 memo units probed per pass for an
+  empty answer, 0.44 ms and 1.4 MB a pass, 0.87 ms and 2.9 MB a keystroke. The pass now asks first
+  whether any note carries a digit, which is one read per note and no allocation. On a book that
+  DOES carry digits, the beam map a rebuilt system needs is now built from that system's own beams
+  rather than from the whole score's: with the memo serving 199 systems of 200, the whole-score fold
+  was being paid for the one system that changed — 0.23 ms and 0.8 MB a pass on the fingered
+  1000-bar book, 0.50 ms and 1.7 MB a keystroke with the rest. Nothing moves: a system's own beams
+  are the ones its memo key is already built from, and every book of the incremental net — including
+  a beamed, fingered one edited twice — still equals its full compile.
+- **One measure map for the whole annotation pass, not nine.** The map from a bar to the system it
+  fell on is a pure function of the laid-out systems, and almost everyone in the pass built a private
+  copy: the pass's own staff-Y resolver, its pedal lookup, both outside-staff stackers, the walk that
+  places fingerings and scripts, and the script engraver — and the above-staff stacker built it twice
+  inside one call, its own remark calling that "the same map the core builds (cheap)". Counted per
+  keystroke (Release, tiered compilation off; the pass runs twice per keystroke): 14 whole-score
+  builds on a plain 1000-bar book, 18 on the fingered one, 16 on the two-voice one — every one a walk
+  of all 1000 bars, at any edit position. The pass now builds one of each kind at the top and hands
+  them down, each house keeping its own build for the callers that arrive without one: 14 → 8,
+  18 → 8, 16 → 10, and the pass itself builds two where it built five to nine. No time is claimed —
+  the difference is below this machine's measurement floor. Nothing moves: both spellings of the map
+  keep the last system's entry for a repeated bar index, which is the property the fingering walk's
+  unit plan is derived from; the 249 SVG snapshots are unmoved; and poisoning the shared maps reddens
+  205 and 148 tests, so neither is unobserved.
+- **The annotation pass builds its measure map once, not four times.** Three of the engravers that
+  close the pass — half-ties, multi-measure rests, ledger lines — each opened by building their own
+  dictionary of every measure in the score, and the half-tie one built two (the second is the first
+  plus the system, over the same keys). The pass runs twice per keystroke, so a 1000-bar book paid
+  eight of those builds per keystroke; two of the three walkers draw nothing at all on the books
+  measured and paid anyway. The pass now builds one map and hands it over: eight builds become two,
+  about 710 KB less per keystroke on each of the three perf books. No time is claimed — the
+  difference is below this machine's measurement floor. Nothing moves: the map is the same walk over
+  the same systems, and poisoning the half-tie engraver reddens 17 tests, so the fixtures do reach it.
 - **A keystroke's collect walks the book five times less.** Even when the preview's
   incremental collect adopted every bar of the previous keystroke, it still walked the whole
   tree five more times for facts that do not depend on the edit: twice per part for the

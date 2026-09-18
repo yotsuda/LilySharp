@@ -120,8 +120,19 @@ internal sealed partial class LayoutEngine
             ImmutableArray<MeasureLayout> ml,
             Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
             Func<int, int, double>? staffYAt,
-            Dictionary<int, Staff>? staffByIndex)
+            Dictionary<int, Staff>? staffByIndex,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null,
+            Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
+        // NOTHING TO PLACE, NOTHING PAID. A book with no script and no digit used to run the
+        // whole memo apparatus for an empty answer — the beam-tip fold (8,000 members of
+        // perf-plain1k's 2,000 beams), the per-measure beam and slur maps, the plan and 200
+        // unit probes — twice per keystroke (both passes), 0.44 ms / 1.4 MB a pass on a book
+        // that has neither (COUNTED, session 406, Release, TieredCompilation=0). The digit
+        // test is one allocation-free read per item, cheaper than the first fold it spares.
+        if (articulations.IsDefaultOrEmpty && !AnyFingering(score, voicesByStaff))
+            return (ImmutableArray<ArticulationLayout>.Empty, ImmutableArray<FingeringLayout>.Empty);
+
         var memo = ctx.FingScriptMemo;
         if (memo == null || score == null)
         {
@@ -130,15 +141,20 @@ internal sealed partial class LayoutEngine
             if (score != null)
                 scripts = ArticulationEngraver.CalculateWithFingerings(
                     ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
-                    beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, islands, out islands);
+                    beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, islands, out islands,
+                    prebuiltMeasureMap);
             return (scripts, islands);
         }
 
-        // ONE fold of each whole-score table, shared by every unit's key and by every
-        // unit's island call — the per-unit shape's whole risk is paying an O(score)
-        // fold per system, which is the cost this memo exists to remove.
-        var tips = beamLayouts.IsDefaultOrEmpty
-            ? null : ArticulationEngraver.BuildBeamedStemTips(beamLayouts);
+        // ONE fold of each whole-score table, shared by every unit's key — the per-unit
+        // shape's whole risk is paying an O(score) fold per system, which is the cost this
+        // memo exists to remove. ⚠️ THE BEAM-TIP MAP IS NOT AMONG THEM any more: a unit's
+        // island call reads tips for ITS OWN measures only, and those come from the beams
+        // the beam map already attributes to it — so a miss builds a map of its own few
+        // beams instead of this pass folding all 2,000 members for the one unit that misses
+        // (COUNTED, session 406: 0.23 ms / 0.8 MB per pass on perf-fingbeam1k, twice per
+        // keystroke, for a 199/200 memo; the walk below folds the whole map once more for the
+        // scripts, which is where the one whole-score fold now lives).
         var beamsAt = BuildBeamsByMeasure(beamLayouts);
         var slursAt = BuildVoiceZeroSlursByMeasure(ctx.SlurLayouts);
         var scriptedMeasures = new HashSet<(int, int)>();
@@ -159,15 +175,14 @@ internal sealed partial class LayoutEngine
         // properties are load-bearing for the reassembly, so the plan is derived from that
         // map rather than from the systems directly — a per-system split that walked
         // systems[s].Measures would emit a repeated index twice.
-        var layoutOf = new Dictionary<int, MeasureLayout>();
-        var systemOf = new Dictionary<int, int>();
-        for (int s = 0; s < systems.Length; s++)
-            foreach (var m in systems[s].Measures)
-            {
-                layoutOf[m.MeasureIndex] = m;
-                systemOf[m.MeasureIndex] = s;
-            }
-        var ascending = new List<int>(layoutOf.Keys);
+        // …and they are the pass's own two maps when the pass has them: it walks the same
+        // systems for its staff-Y resolver and its tail, and both keep the LAST entry for a
+        // repeated MeasureIndex, which is the property named just above. The self-build stays
+        // for the callers that arrive without them.
+        var passMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
+        var systemOf = prebuiltMeasureToSystem
+            ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+        var ascending = new List<int>(passMap.Keys);
         ascending.Sort();
         // Whether each system's measures form ONE ascending run. They do for any layout
         // that breaks lines at barlines; a layout that interleaved them would make a
@@ -190,7 +205,8 @@ internal sealed partial class LayoutEngine
             var wholeIslands = ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts);
             var wholeScripts = ArticulationEngraver.CalculateWithFingerings(
                 ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
-                beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, wholeIslands, out wholeIslands);
+                beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, wholeIslands, out wholeIslands,
+                passMap);
             return (wholeScripts, wholeIslands);
         }
 
@@ -210,7 +226,7 @@ internal sealed partial class LayoutEngine
                     bySystem[s] = b = ImmutableArray.CreateBuilder<MeasureLayout>();
                     systemOrder.Add(s);
                 }
-                b.Add(layoutOf[mi]);
+                b.Add(passMap[mi].Measure);
             }
             foreach (int s in systemOrder)
             {
@@ -223,7 +239,7 @@ internal sealed partial class LayoutEngine
                     Layouts = new object[layouts.Length],
                     StaffOffsets = new double[layouts.Length],
                 };
-                var beams = new List<object>();
+                var beams = new List<BeamLayout>();
                 var slurs = new List<SlurLayout>();
                 for (int i = 0; i < layouts.Length; i++)
                 {
@@ -244,8 +260,16 @@ internal sealed partial class LayoutEngine
                 var hit = eligible ? memo.TryMatch(keyStaff, s, probe) : null;
                 if (hit == null)
                 {
+                    // The unit's own beams are exactly the ones whose members sit in its
+                    // measures (BuildBeamsByMeasure attributes a beam to every measure and
+                    // staff a member of it names), so a map built from them answers every
+                    // (staff, measure, item) lookup this unit's island can make with the
+                    // value the whole-score map would give.
                     var built = FingeringEngraver.CalculateWithTips(
-                        ctx.Fonts, staffScore, layouts, staffIndex, tips);
+                        ctx.Fonts, staffScore, layouts, staffIndex,
+                        beams.Count == 0
+                            ? null
+                            : ArticulationEngraver.BuildBeamedStemTips(beams.ToImmutableArray()));
                     liveSpans.Add((units.Count, live.Count, built.Length));
                     live.AddRange(built);
                 }
@@ -257,7 +281,7 @@ internal sealed partial class LayoutEngine
         var articulationLayouts = ArticulationEngraver.CalculateWithFingerings(
             ctx.Fonts, score, articulations, ml, measuresByStaff, staffYAt, staffByIndex,
             beamLayouts, ctx.TieLayouts, ctx.SlurLayouts, liveIslands,
-            out var liveAdjusted);
+            out var liveAdjusted, passMap);
 
         // Reassemble in unit order: a hit replays its stored digits, a miss takes its own
         // contiguous slice of the walk's answer and becomes the unit's new entry.
@@ -285,6 +309,36 @@ internal sealed partial class LayoutEngine
             }
         }
         return (articulationLayouts, fingerings.ToImmutable());
+    }
+
+    /// <summary>Whether any note of the voices the fingering island walks
+    /// (<see cref="FingeringStaffScores"/>: each staff's primary voice, else the score's)
+    /// carries a digit — the gate that lets a book without one skip the pass's whole
+    /// apparatus. One read per item, no allocation.</summary>
+    private static bool AnyFingering(Score? score, Dictionary<int, ImmutableArray<Voice>>? voicesByStaff)
+    {
+        if (score == null)
+            return false;
+        foreach (var (_, staffScore) in FingeringStaffScores(score, voicesByStaff))
+        {
+            if (staffScore.Voices.IsDefaultOrEmpty)
+                continue;
+            foreach (var measure in staffScore.Voice.Measures)
+                foreach (var item in measure.Items)
+                {
+                    switch (item)
+                    {
+                        case NoteItem n when n.Fingering.HasValue:
+                            return true;
+                        case ChordItem c:
+                            foreach (var note in c.Notes)
+                                if (note.Fingering.HasValue)
+                                    return true;
+                            break;
+                    }
+                }
+        }
+        return false;
     }
 
     /// <summary>Which beams touch each (staff, measure) — the reference set a unit's key

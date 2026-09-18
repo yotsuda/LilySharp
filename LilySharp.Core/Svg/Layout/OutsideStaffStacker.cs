@@ -191,13 +191,15 @@ internal static class OutsideStaffStacker
             ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups = default,
             ImmutableArray<TrillSpannerLayout> trills = default,
             BelowStackMemo? memo = null,
-            Func<int, int, (object Up, object Down)?>? profileIdentity = null)
+            Func<int, int, (object Up, object Down)?>? profileIdentity = null,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
             return StackBelowStaffCore(fonts, systems, dynamics, hairpins, articulations,
-                applyStaffOffsets, staffProfile, lineGroups, trills);
+                applyStaffOffsets, staffProfile, lineGroups, trills, prebuiltMeasureToSystem);
         return StackBelowStaffMemoized(fonts, systems, dynamics, hairpins, articulations,
-            applyStaffOffsets, staffProfile, lineGroups, trills, memo, profileIdentity);
+            applyStaffOffsets, staffProfile, lineGroups, trills, memo, profileIdentity,
+            prebuiltMeasureToSystem);
     }
 
     private static (ImmutableArray<DynamicLayout> Dynamics,
@@ -213,7 +215,8 @@ internal static class OutsideStaffStacker
             bool applyStaffOffsets,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups,
-            ImmutableArray<TrillSpannerLayout> trills)
+            ImmutableArray<TrillSpannerLayout> trills,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // A below-staff script that DECLARES a priority (the fermata family's 75) is a mover
         // of this pass in its own right, so the pass has to run for it even on a page with
@@ -230,11 +233,10 @@ internal static class OutsideStaffStacker
             return (dynamics, hairpins, articulations, trills);
         }
 
-        // Build measure-to-system mapping
-        var measureToSystem = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-            foreach (var m in systems[sysIdx].Measures)
-                measureToSystem[m.MeasureIndex] = sysIdx;
+        // The annotation pass's one map when it has one (it built the same walk for its own
+        // staff-Y resolver); the self-build keeps the CLI and the per-system callers working.
+        var measureToSystem = prebuiltMeasureToSystem
+            ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         // Each system's own staff-Y offsets. Under hara-kiri a staff's within-system
         // offset can differ between systems, so seed each staff's tracker from ITS
@@ -632,12 +634,11 @@ internal static class OutsideStaffStacker
             ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups,
             ImmutableArray<TrillSpannerLayout> trills,
             BelowStackMemo memo,
-            Func<int, int, (object Up, object Down)?> profileIdentity)
+            Func<int, int, (object Up, object Down)?> profileIdentity,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
-        var measureToSystem = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-            foreach (var m in systems[sysIdx].Measures)
-                measureToSystem[m.MeasureIndex] = sysIdx;
+        var measureToSystem = prebuiltMeasureToSystem
+            ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         // 1. Partition every family by system (a grob whose measure maps to none is the
         // core's untouched passthrough and stays on the live path).
@@ -776,7 +777,7 @@ internal static class OutsideStaffStacker
         // 4. Stack the live systems (byte-identical to stacking them in the full call:
         // a system's grobs are all-in or all-out, and only same-system grobs interact).
         var core = StackBelowStaffCore(fonts, systems, liveDynamics, liveHairpins,
-            liveArtics, applyStaffOffsets, staffProfile, liveGroups, liveTrills);
+            liveArtics, applyStaffOffsets, staffProfile, liveGroups, liveTrills, measureToSystem);
 
         // 5. Reassemble: live results scatter back by index; hit systems replay their
         // stored outputs, positionally parallel to the (equal) stored inputs.
@@ -1034,7 +1035,8 @@ internal static class OutsideStaffStacker
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile = null,
             AboveStackMemo? memo = null,
             Func<int, int, (object Up, object Down)?>? profileIdentity = null,
-            ImmutableArray<PartCombineLayout> partCombineTexts = default)
+            ImmutableArray<PartCombineLayout> partCombineTexts = default,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // ⚠️ A BOOK WITH PART-COMBINE LABELS STACKS LIVE: the memo's program does not carry
         // them (AboveStackMemo.SystemEntry has no field for the family), and a replayed
@@ -1045,11 +1047,11 @@ internal static class OutsideStaffStacker
             return StackAboveStaffCore(fonts, systems, systemSkylines, tupletBrackets, trills,
                 barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
                 aboveDynamics, textSpanners, chordNames, chordItems, staffProfile,
-                partCombineTexts);
+                partCombineTexts, prebuiltMeasureToSystem);
         var m = StackAboveStaffMemoized(fonts, systems, systemSkylines, tupletBrackets, trills,
             barNumbers, ottavas, customTexts, voltas, musicMarks, articulations,
             aboveDynamics, textSpanners, chordNames, chordItems, staffProfile, memo,
-            profileIdentity);
+            profileIdentity, prebuiltMeasureToSystem);
         return (m.Trills, m.BarNumbers, m.Ottavas, m.CustomTexts, m.Voltas, m.MusicMarks,
             m.Dynamics, m.TextSpanners, m.Articulations, partCombineTexts);
     }
@@ -1098,14 +1100,14 @@ internal static class OutsideStaffStacker
             ImmutableArray<ChordNameItem> chordItems,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             AboveStackMemo memo,
-            Func<int, int, (object Up, object Down)?> profileIdentity)
+            Func<int, int, (object Up, object Down)?> profileIdentity,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
-        // The same measure→system map and top-staff resolution the core builds (cheap:
-        // one dictionary fill + one pass over the staves).
-        var measureToSystem = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-            foreach (var m in systems[sysIdx].Measures)
-                measureToSystem[m.MeasureIndex] = sysIdx;
+        // The same measure→system map the core needs — so it is built ONCE and handed on
+        // (this remark used to say "the same map the core builds (cheap)", which is how one
+        // walk of the whole score came to be two).
+        var measureToSystem = prebuiltMeasureToSystem
+            ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var topStaff = TopStaffBySystem(systems);
 
         // 1. Partition every family by system (grobs whose measure maps to none are the
@@ -1190,7 +1192,8 @@ internal static class OutsideStaffStacker
         // a system's grobs are all-in or all-out, and only same-system grobs interact).
         var core = StackAboveStaffCore(fonts, systems, systemSkylines, liveTuplets, liveTrills,
             liveBarNumbers, liveOttavas, liveCustomTexts, liveVoltas, liveMarks, liveArtics,
-            liveDynamics, liveTextSpanners, liveChordNames, chordItems, staffProfile);
+            liveDynamics, liveTextSpanners, liveChordNames, chordItems, staffProfile,
+            prebuiltMeasureToSystem: measureToSystem);
 
         // 5. Reassemble: live results scatter back by index; hit systems replay their
         // stored outputs, positionally parallel to the (equal) stored inputs.
@@ -1383,16 +1386,15 @@ internal static class OutsideStaffStacker
             ImmutableArray<ChordNameLayout> chordNames,
             ImmutableArray<ChordNameItem> chordItems,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
-            ImmutableArray<PartCombineLayout> partCombineTexts = default)
+            ImmutableArray<PartCombineLayout> partCombineTexts = default,
+            Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
                 aboveDynamics, textSpanners, articulations, partCombineTexts);
 
-        var measureToSystem = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-            foreach (var m in systems[sysIdx].Measures)
-                measureToSystem[m.MeasureIndex] = sysIdx;
+        var measureToSystem = prebuiltMeasureToSystem
+            ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         var topStaff = TopStaffBySystem(systems);
         var trackers = AboveTrackers(systems, systemSkylines, staffProfile, topStaff);

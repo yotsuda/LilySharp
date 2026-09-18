@@ -345,7 +345,8 @@ internal static class ArticulationEngraver
         ImmutableArray<TieLayout> tieLayouts,
         ImmutableArray<SlurLayout> slurLayouts,
         ImmutableArray<FingeringLayout> fingerings,
-        out ImmutableArray<FingeringLayout> adjustedFingerings)
+        out ImmutableArray<FingeringLayout> adjustedFingerings,
+        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         adjustedFingerings = fingerings;
         // ⚠️ THE FINGERINGS ARE A SECOND REASON TO BE HERE, and until 2026-08-11 they were
@@ -432,9 +433,30 @@ internal static class ArticulationEngraver
         // positionally read a neighbour's measure there (or fell off the end and dropped the
         // script), which is the same positional/by-index trap MultiStaffLayouter.LyricRowInk
         // names on its own overload.
-        var layoutAt = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
-        foreach (var m in measureLayouts)
-            layoutAt[m.MeasureIndex] = m;
+        // The whole-score caller (the annotation pass) hands its own map over — it walked the
+        // same layouts for its staff-Y resolver and its tail, and both keep the LAST entry for
+        // a repeated MeasureIndex. The per-system callers arrive without one and build theirs,
+        // which is a fill the size of ONE system.
+        Dictionary<int, MeasureLayout>? layoutAtOwn = null;
+        if (prebuiltMeasureMap == null)
+        {
+            layoutAtOwn = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
+            foreach (var m in measureLayouts)
+                layoutAtOwn[m.MeasureIndex] = m;
+        }
+        bool TryLayoutAt(int measureIndex,
+            [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out MeasureLayout layout)
+        {
+            if (layoutAtOwn != null)
+                return layoutAtOwn.TryGetValue(measureIndex, out layout);
+            if (prebuiltMeasureMap!.TryGetValue(measureIndex, out var e))
+            {
+                layout = e.Measure;
+                return true;
+            }
+            layout = null;
+            return false;
+        }
 
         var beamedTips = BuildBeamedStemTips(beamLayouts);
         var beamGroups = BuildBeamGroupMap(beamLayouts);
@@ -613,7 +635,7 @@ internal static class ArticulationEngraver
                 continue;
 
             // Find the measure layout
-            if (!layoutAt.TryGetValue(articulation.MeasureIndex, out var measureLayout))
+            if (!TryLayoutAt(articulation.MeasureIndex, out var measureLayout))
                 continue;
 
             // Bounds guard (single-staff layouts only; multi-staff layouts

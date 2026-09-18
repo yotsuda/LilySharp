@@ -2154,6 +2154,72 @@ public class IncrementalCompilerTests
             $"a scripted unit must never be memoized (prelim {prelim.Hits}, final {final.Hits})");
     }
 
+    /// <summary>
+    /// THE EMPTY GATE (session 406): a book with no script and no digit must not run the
+    /// pass's apparatus at all — no beam-tip fold, no per-measure maps, no unit probes —
+    /// and must render exactly as it did. Counted rather than timed: the memo is never
+    /// consulted (0 hits AND 0 misses, on a book whose systems would otherwise probe one
+    /// unit each), and the picture equals a full recompile.
+    /// </summary>
+    [Fact]
+    public void FingScripts_BookWithNeitherScriptNorDigit_NeverProbesTheMemo_AndMatchesFull()
+    {
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat("c8 d e f g f e d |", 14))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryFingScripts;
+        var final = session.SystemCache!.FinalFingScripts;
+
+        var change = Replace(source, "g f e d |", "g f e c |");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "g f e d |", "g f e c |")), incremental);
+        Assert.True(prelim.Hits == 0 && prelim.Misses == 0 && final.Hits == 0 && final.Misses == 0,
+            $"the pass ran on a book with neither (prelim {prelim.Hits}/{prelim.Misses}, "
+            + $"final {final.Hits}/{final.Misses})");
+    }
+
+    /// <summary>
+    /// BEAMED digits, which is what the per-unit beam-tip map (session 406) serves: a
+    /// beamed stem ends on the beam and the digit's island answer is read off that face,
+    /// so a unit that misses now folds ITS OWN beams instead of the score's. The picture
+    /// must equal a full recompile — on the first edit and on a chained second one in
+    /// another system, which is where a map missing a beam would show.
+    /// </summary>
+    [Fact]
+    public void FingScripts_BeamedDigits_PerUnitTips_MatchFullAcrossChainedEdits()
+    {
+        // Fourteen identical beamed bars, then a LAST bar spelt differently so the second
+        // edit can name it — it falls in a later system than the first edit's.
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { "
+            + string.Join(" ", Enumerable.Repeat(
+                "c8@finger(1) d@finger(2) e@finger(3) f@finger(4) "
+                + "g8@finger(1) a@finger(2) b@finger(3) c'@finger(4) |", 14))
+            + " g8@finger(5) a@finger(1) b@finger(2) c'@finger(3) "
+            + "d'8@finger(4) e'@finger(1) f'@finger(2) g'@finger(3) | } }\n";
+        var tree = SyntaxTree.Parse(source);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryFingScripts;
+        int hits0 = prelim.Hits;
+
+        var change = Replace(source, "e@finger(3)", "d@finger(3)");
+        var edited = tree.WithChange(change);
+        Assert.Equal(Full(edited.Text), Norm(session.Edit(change)));
+        Assert.True(prelim.Hits > hits0,
+            $"the fingering memo never replayed a beamed unit (hits {prelim.Hits})");
+
+        // A second edit, in the LAST bar: the units the first edit rebuilt now replay,
+        // and the newly edited one folds its own beams.
+        var change2 = Replace(edited.Text, "g8@finger(5)", "a8@finger(5)");
+        var edited2 = edited.WithChange(change2);
+        Assert.Equal(Full(edited2.Text), Norm(session.Edit(change2)));
+    }
+
     // ============================================================
     // Line-break DP row-prefix resume (2026-08-26 review, finding 4-5)
     // ============================================================

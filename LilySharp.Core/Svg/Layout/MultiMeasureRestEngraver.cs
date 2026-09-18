@@ -150,12 +150,16 @@ internal static class MultiMeasureRestEngraver
     /// <summary>
     /// Calculates MMR layouts for a single-staff score.
     /// </summary>
+    /// <param name="prebuiltMeasureMap">The caller's measure → (system, layout) map, when it
+    /// has one — see <see cref="TieVariantEngraver.Calculate"/>'s parameter for why the
+    /// annotation pass's tail shares one.</param>
     public static ImmutableArray<MultiMeasureRestLayout> Calculate(
         Score score,
         ImmutableArray<SystemLayout> systems,
         double staffHeight,
         int staffIndex = -1,
-        IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
+        IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MultiMeasureRestLayout>.Empty;
@@ -166,7 +170,7 @@ internal static class MultiMeasureRestEngraver
             => si >= 0 && voicesByStaff != null && voicesByStaff.TryGetValue(si, out var vs)
                 ? vs : score.Voices;
 
-        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
+        var measureMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
         // Every staff's voices: the bounding columns a rest centres between span the system.

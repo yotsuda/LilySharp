@@ -271,26 +271,31 @@ internal static class TieVariantEngraver
     /// <summary>
     /// Calculates layouts for all half-ties (laissez-vibrer + repeat-tie) in the score.
     /// </summary>
+    /// <param name="measureMap">The caller's measure → (system, layout) map, when it has one
+    /// (<c>LayoutEngine.CalculateAnnotationLayouts</c> builds it once for the tail's three
+    /// engravers). Null ⇒ build it here, which is what every non-keystroke caller does.</param>
     public static ImmutableArray<TieVariantLayout> Calculate(
         Score score,
         ImmutableArray<SystemLayout> systems,
-        int staffIndex = -1)
+        int staffIndex = -1,
+        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<TieVariantLayout>.Empty;
 
-        var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
-        var systemMap = LayoutUtilities.BuildMeasureMap(systems);
+        // ⚠️ ONE MAP, NOT TWO. This used to build BuildMeasureLayoutMap AND BuildMeasureMap —
+        // the second is the first plus the system, over the identical key set by construction
+        // (both walk every system's Measures and key on MeasureIndex), so the layout half was
+        // a whole second dictionary of the score's measures for a value already in hand.
+        var map = measureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         var builder = ImmutableArray.CreateBuilder<TieVariantLayout>();
 
         var voice = score.Voice;
         for (int mi = 0; mi < voice.Measures.Length; mi++)
         {
-            if (!measureMap.TryGetValue(mi, out var measureLayout))
+            if (!map.TryGetValue(mi, out var info))
                 continue;
-            if (!systemMap.TryGetValue(mi, out var info))
-                continue;
-            var (system, _) = info;
+            var (system, measureLayout) = info;
 
             var measure = voice.Measures[mi];
             for (int ii = 0; ii < measure.Items.Length; ii++)
