@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -59,7 +60,7 @@ internal sealed class SvgDocumentContext : IDocumentContext
     private StringBuilder? _currentContent;
     private double _currentWidth, _currentHeight;
     private SvgDrawingContext? _currentPage;
-    private string? _result;
+    private string? _result;   // the one-string document, assembled on first read
     private bool _disposed;
 
     /// <summary>
@@ -123,20 +124,58 @@ internal sealed class SvgDocumentContext : IDocumentContext
     {
         if (!_disposed)
             throw new InvalidOperationException("Dispose the document before reading SVG.");
-        return _result ?? "";
+        return _result ??= Assemble();
+    }
+
+    /// <summary>
+    /// The same document as pages (<see cref="SvgPageSet"/> — its remarks say what a page
+    /// is), each classified against <paramref name="previous"/>, the session's previous
+    /// render, with <paramref name="window"/> the edit between the two renders' texts. A page
+    /// equal to its predecessor is the predecessor's string (no copy is made of it); the
+    /// others are materialized once. Call after <see cref="Dispose"/>.
+    /// </summary>
+    public SvgPageSet ToPages(SvgPageSet? previous, SvgEditWindow window)
+    {
+        if (!_disposed)
+            throw new InvalidOperationException("Dispose the document before reading SVG.");
+        var (head, pages, tail) = BuildPieces();
+        int count = pages.Count;
+        var texts = ImmutableArray.CreateBuilder<string>(count);
+        var changes = ImmutableArray.CreateBuilder<SvgPageChange>(count);
+        // A previous set of another page count compares nowhere: every page is Changed and
+        // carries its text (the viewer replaces the whole document from them).
+        bool compare = previous != null && previous.Pages.Length == count;
+        bool noEdit = window.Delta == 0 && window.Prefix >= window.SuffixStart;
+        for (int i = 0; i < count; i++)
+        {
+            var page = pages[i];
+            string? was = compare ? previous!.Pages[i] : null;
+            if (was != null && page.Equals(was))
+            {
+                texts.Add(was);
+                changes.Add(SvgPageChange.Same);
+                continue;
+            }
+            string text = page.Materialize();
+            texts.Add(text);
+            changes.Add(was != null && !noEdit && SvgPageSet.SameModuloWindow(was, text, window)
+                ? SvgPageChange.Shifted
+                : SvgPageChange.Changed);
+        }
+        return new SvgPageSet(head, texts.MoveToImmutable(), changes.MoveToImmutable(), tail, window);
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         if (_currentPage != null) EndPage();
-        _result = Assemble();
         _disposed = true;
     }
 
     private string Assemble()
     {
-        if (_pages.Count == 0)
+        var (head, pages, tail) = BuildPieces();
+        if (pages.Count == 0)
             return "";
 
         // ⚠️ THE PAGE BODIES ARE COPIED ONCE, INTO THE RESULT, and on a long score that is
@@ -147,27 +186,81 @@ internal sealed class SvgDocumentContext : IDocumentContext
         // perf-plain1k's 66.3 MB keystroke for a 3.76 MB document — two copies where one is
         // the floor this method's string return imposes. Writing straight into the result
         // pays that floor and nothing else.
-        // ⚠️ EVERY PIECE MUST MATCH WHAT THE BUILDER WROTE, CHARACTER FOR CHARACTER,
-        // including AppendLine's Environment.NewLine. The 566-book SVG A/B is what checks
-        // that, and it is not optional for a change of this shape.
+        int total = head.Length + tail.Length;
+        foreach (var p in pages) total += p.Length;
+        return string.Create(total, (head, pages, tail), static (span, doc) =>
+        {
+            int at = 0;
+            doc.head.AsSpan().CopyTo(span);
+            at += doc.head.Length;
+            foreach (var p in doc.pages)
+            {
+                p.CopyTo(span[at..]);
+                at += p.Length;
+            }
+            doc.tail.AsSpan().CopyTo(span[at..]);
+        });
+    }
+
+    /// <summary>One page of the finished document: its wrapper's opening tag (empty when the
+    /// page is not wrapped), its body still in the builder, and the closing tag.</summary>
+    private readonly struct PagePieces
+    {
+        public readonly string Open;
+        public readonly StringBuilder Body;
+        public readonly string Close;
+        public PagePieces(string open, StringBuilder body, string close)
+        {
+            Open = open;
+            Body = body;
+            Close = close;
+        }
+        public int Length => Open.Length + Body.Length + Close.Length;
+        public void CopyTo(Span<char> at)
+        {
+            Open.AsSpan().CopyTo(at);
+            Body.CopyTo(0, at[Open.Length..], Body.Length);
+            Close.AsSpan().CopyTo(at[(Open.Length + Body.Length)..]);
+        }
+        /// <summary>Whether the page's text is exactly <paramref name="text"/> — read out
+        /// of the builder, without materializing the page.</summary>
+        public bool Equals(string text)
+            => text.Length == Length
+               && text.AsSpan(0, Open.Length).SequenceEqual(Open)
+               && Body.Equals(text.AsSpan(Open.Length, Body.Length))
+               && text.AsSpan(Open.Length + Body.Length).SequenceEqual(Close);
+        public string Materialize()
+            => string.Create(Length, this, static (span, page) => page.CopyTo(span));
+    }
+
+    /// <summary>
+    /// The document as its pieces, in emission order: the header, one
+    /// <see cref="PagePieces"/> per page, the closing tag. THE one spelling of the
+    /// document's shape — the one-string render (<see cref="Assemble"/>) and the page set
+    /// (<see cref="ToPages"/>) both join exactly these.
+    /// ⚠️ EVERY PIECE MUST MATCH WHAT THE BUILDER WROTE, CHARACTER FOR CHARACTER,
+    /// including AppendLine's Environment.NewLine. The 566-book SVG A/B is what checks
+    /// that, and it is not optional for a change of this shape.
+    /// </summary>
+    private (string Head, List<PagePieces> Pages, string Tail) BuildPieces()
+    {
         string nl = Environment.NewLine;
+        var pages = new List<PagePieces>(_pages.Count);
+        if (_pages.Count == 0)
+            return ("", pages, "");
 
-        // The document as a flat list of pieces, in emission order. A piece is either a
-        // literal (the header, the wrappers) or one page's body, and the list is the whole
-        // spelling of the document's shape — there is no second code path to keep in step.
-        var pieces = new List<Piece>(_pages.Count * 3 + 2);
-
-        // Single page: emit exactly as a one-page document (no <g> wrapper) so the
-        // output is byte-identical to the common case.
-        if (_pages.Count == 1)
+        // Single page, static export: emit exactly as a one-page document (no <g> wrapper)
+        // so the output is byte-identical to the common case. The INTERACTIVE document wraps
+        // a single page like any other: the preview swaps, shifts and keeps pages by their
+        // wrapper, and a one-page score used to have none — so every keystroke on it
+        // replaced the whole picture (session 404).
+        if (_pages.Count == 1 && !_options.Interactive)
         {
             var (body, w, h) = _pages[0];
             var head1 = new StringBuilder(512);
             WriteHeader(head1, w, h);
-            pieces.Add(Piece.Of(head1));
-            pieces.Add(Piece.Of(body));
-            pieces.Add(Piece.Of("</svg>" + nl));
-            return Compose(pieces);
+            pages.Add(new PagePieces("", body, ""));
+            return (head1.ToString(), pages, "</svg>" + nl);
         }
 
         double totalHeight = 0, maxWidth = 0;
@@ -179,55 +272,21 @@ internal sealed class SvgDocumentContext : IDocumentContext
 
         var head = new StringBuilder(512);
         WriteHeader(head, maxWidth, totalHeight);
-        pieces.Add(Piece.Of(head));
 
         double yOffset = 0;
         foreach (var (body, _, h) in _pages)
         {
             // class/data attributes let a viewer (the VS Code preview toolbar)
             // find the page boundaries for fit-page zoom and page navigation.
-            pieces.Add(Piece.Of(string.Format(CultureInfo.InvariantCulture,
-                "<g class=\"page\" data-page-top=\"{0:F2}\" data-page-height=\"{1:F2}\" transform=\"translate(0, {0:F2})\">",
-                yOffset, h) + nl));
-            pieces.Add(Piece.Of(body));
-            pieces.Add(Piece.Of("</g>" + nl));
+            pages.Add(new PagePieces(
+                string.Format(CultureInfo.InvariantCulture,
+                    "<g class=\"page\" data-page-top=\"{0:F2}\" data-page-height=\"{1:F2}\" transform=\"translate(0, {0:F2})\">",
+                    yOffset, h) + nl,
+                body,
+                "</g>" + nl));
             yOffset += h;
         }
-        pieces.Add(Piece.Of("</svg>" + nl));
-        return Compose(pieces);
-    }
-
-    /// <summary>One span of the finished document: a literal, or a page body still in its
-    /// builder. Exactly one of the two is set.</summary>
-    private readonly struct Piece
-    {
-        private readonly string? _text;
-        private readonly StringBuilder? _body;
-        private Piece(string? text, StringBuilder? body) { _text = text; _body = body; }
-        public static Piece Of(string text) => new(text, null);
-        public static Piece Of(StringBuilder body) => new(null, body);
-        public int Length => _text?.Length ?? _body!.Length;
-        public void CopyTo(Span<char> at)
-        {
-            if (_text != null) _text.AsSpan().CopyTo(at);
-            else _body!.CopyTo(0, at, _body.Length);
-        }
-    }
-
-    /// <summary>Joins the pieces, allocating exactly the result and nothing else.</summary>
-    private static string Compose(List<Piece> pieces)
-    {
-        int total = 0;
-        foreach (var p in pieces) total += p.Length;
-        return string.Create(total, pieces, static (span, ps) =>
-        {
-            int at = 0;
-            foreach (var p in ps)
-            {
-                p.CopyTo(span[at..]);
-                at += p.Length;
-            }
-        });
+        return (head.ToString(), pages, "</svg>" + nl);
     }
 
     private void WriteHeader(StringBuilder sb, double widthSpaces, double heightSpaces)

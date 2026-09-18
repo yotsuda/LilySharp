@@ -36,6 +36,65 @@ public class SvgParams
     /// so the server can say how long the request took to REACH its dispatch thread
     /// (<see cref="SvgTiming.ReceivedAfterMs"/>). Optional; older clients omit it.</summary>
     public long? ClientSentAt { get; set; }
+    /// <summary>True when the client understands a page-wise answer
+    /// (<see cref="SvgResponse.Pages"/>): the server then answers with pages instead of
+    /// <see cref="SvgResponse.Svg"/> whenever the render went through the incremental
+    /// session. Older clients omit it and get the one string.</summary>
+    public bool PageDiff { get; set; }
+    /// <summary>The <see cref="SvgPages.Version"/> of the picture the client's viewer
+    /// holds, so the server can answer with only the pages that changed since it
+    /// (<see cref="SvgPages.BaseVersion"/>); null (or a version the server no longer
+    /// has) gets every page.</summary>
+    public int? ShownVersion { get; set; }
+}
+
+/// <summary>
+/// The preview's picture as pages (R13⒝, session 404): the frame around them
+/// (<see cref="Head"/>/<see cref="Tail"/>) and one <see cref="SvgPageItem"/> per page.
+/// With <see cref="BaseVersion"/> set, it is a DELTA against the picture of that version,
+/// which the client said it holds (<see cref="SvgParams.ShownVersion"/>): a page that is
+/// <c>same</c> carries no markup, a page that is <c>shifted</c> carries none either and
+/// the viewer maps every <c>data-pos</c>/<c>data-alt</c> number of the page it holds through
+/// <see cref="Window"/>, and only a <c>changed</c> page carries its markup. Without
+/// <see cref="BaseVersion"/>, every page carries its markup. Joined
+/// (<c>Head + markup… + Tail</c>) the pages are the document the one-string answer would
+/// have carried. Measured on a 1000-bar book, the one string was 3.6–12 MB of JSON per
+/// keystroke; one page is 200–700 KB, and a keystroke changes one.
+/// </summary>
+public class SvgPages
+{
+    /// <summary>Identifies this picture, for the client's next <see cref="SvgParams.ShownVersion"/>.
+    /// Unique across every document and score of this server.</summary>
+    public int Version { get; set; }
+    /// <summary>The version this delta is against, or null for a full answer.</summary>
+    public int? BaseVersion { get; set; }
+    public string Head { get; set; } = "";
+    public string Tail { get; set; } = "";
+    /// <summary>The edit window the <c>shifted</c> pages' offsets moved by (present when any
+    /// page is shifted): an offset below <see cref="SvgEditWindowDto.Prefix"/> is unchanged,
+    /// one at or after <see cref="SvgEditWindowDto.SuffixStart"/> moves by
+    /// <see cref="SvgEditWindowDto.Delta"/>.</summary>
+    public SvgEditWindowDto? Window { get; set; }
+    public SvgPageItem[] Items { get; set; } = [];
+}
+
+/// <summary>One page of <see cref="SvgPages"/>.</summary>
+public class SvgPageItem
+{
+    /// <summary><c>same</c>, <c>shifted</c> or <c>changed</c> (see <see cref="SvgPages"/>).</summary>
+    public string Change { get; set; } = "changed";
+    /// <summary>The page's markup — from its <c>&lt;g class="page"</c> tag through its
+    /// closing tag and the newline after it; present for a <c>changed</c> page and for every
+    /// page of a full answer.</summary>
+    public string? Markup { get; set; }
+}
+
+/// <summary>The edit window between two renders' source texts (see <see cref="SvgPages.Window"/>).</summary>
+public class SvgEditWindowDto
+{
+    public int Prefix { get; set; }
+    public int SuffixStart { get; set; }
+    public int Delta { get; set; }
 }
 
 /// <summary>
@@ -83,7 +142,13 @@ public class SvgTiming
 /// </summary>
 public class SvgResponse
 {
+    /// <summary>The whole picture as one string — null when <see cref="Pages"/> carries it
+    /// instead (a client that asked for <see cref="SvgParams.PageDiff"/> and a render that
+    /// went through the incremental session), and on an error.</summary>
     public string? Svg { get; set; }
+    /// <summary>The picture as pages (see <see cref="SvgPages"/>), for a client that asked
+    /// for it; null when <see cref="Svg"/> carries it, and on an error.</summary>
+    public SvgPages? Pages { get; set; }
     public string? Error { get; set; }
     /// <summary>Server-side timing of this request (see <see cref="SvgTiming"/>).</summary>
     public SvgTiming? Timing { get; set; }

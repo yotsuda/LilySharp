@@ -127,6 +127,16 @@ public sealed class IncrementalCompiler
     // keeps entries from replaying across a pass that did not refresh them.
     private Rendering.Svg.SvgSystemFragmentCache? _fragments;
 
+    // R13⒝ (session 404): the page set of the previous PAGES render
+    // (RenderIncrementalPages), which the next one classifies its pages against — Same,
+    // Shifted or Changed (SvgPageSet's remarks) — so the language server ships a viewer
+    // that holds the previous picture only the changed pages. Null after a one-string
+    // render (nothing to compare the next page set with) and until the first pages render.
+    // _lastWindow is the edit between the previous render's text and the current one,
+    // set by every compile (the same window the fragment replay maps its slots through).
+    private Rendering.Svg.SvgPageSet? _lastPages;
+    private Rendering.Svg.SvgEditWindow _lastWindow;
+
     // F3/B-2: the whole previous ScoreLayout, plus the complete per-measure content
     // key vector and the score-global layout inputs it was built from. When an edit
     // leaves ALL of these (and the line-break gate) unchanged, the layout geometry is
@@ -348,11 +358,11 @@ public sealed class IncrementalCompiler
     }
 
     /// <summary>Fully compiles the current tree and (re)establishes the cache.</summary>
-    public string Render() => Compile(_tree, allowSkip: false);
+    public string Render() => AsOneString(Compile(_tree, allowSkip: false));
 
     /// <summary>Applies an edit and renders incrementally (line-breaking skipped
     /// when the gate is unchanged). Result equals a full recompile of the edited text.</summary>
-    public string Edit(TextChange change) => Compile(_tree.WithChange(change), allowSkip: true);
+    public string Edit(TextChange change) => AsOneString(Compile(_tree.WithChange(change), allowSkip: true));
 
     /// <summary>Renders an ALREADY-updated tree incrementally — for a caller (the LSP
     /// preview) that maintains the tree itself (its own incremental reparse) rather than
@@ -360,7 +370,7 @@ public sealed class IncrementalCompiler
     /// (full compile); later calls reuse the systems whose content is unchanged. The
     /// result is byte-identical to a full recompile of <paramref name="tree"/> — reuse is
     /// keyed on the new score's per-measure content, not on how the tree was produced.</summary>
-    public string RenderIncremental(SyntaxTree tree) => Compile(tree, allowSkip: true);
+    public string RenderIncremental(SyntaxTree tree) => AsOneString(Compile(tree, allowSkip: true));
 
     /// <summary>
     /// <see cref="RenderIncremental(SyntaxTree)"/> with a cancellation: the compile is
@@ -376,7 +386,33 @@ public sealed class IncrementalCompiler
     /// timing line, 17–142 ms per burst keystroke, session 330).
     /// </summary>
     public string RenderIncremental(SyntaxTree tree, CancellationToken token)
-        => Compile(tree, allowSkip: true, token);
+        => AsOneString(Compile(tree, allowSkip: true, token));
+
+    /// <summary>
+    /// <see cref="RenderIncremental(SyntaxTree, CancellationToken)"/> as pages: the same
+    /// document, joined (<see cref="Rendering.Svg.SvgPageSet.ToSvg"/>) byte-identical to
+    /// the one-string render, with each page classified against the page set the PREVIOUS
+    /// call of this method returned — <see cref="Rendering.Svg.SvgPageChange.Same"/>,
+    /// <see cref="Rendering.Svg.SvgPageChange.Shifted"/> by the set's window, or
+    /// <see cref="Rendering.Svg.SvgPageChange.Changed"/> (the set's remarks). Every page is
+    /// Changed on the first call and after a one-string render. The language server's
+    /// preview entry (R13⒝): a viewer that holds the previous picture is sent only the
+    /// changed pages, and shifts or keeps the rest.
+    /// </summary>
+    public Rendering.Svg.SvgPageSet RenderIncrementalPages(SyntaxTree tree, CancellationToken token)
+    {
+        var doc = Compile(tree, allowSkip: true, token);
+        var pages = doc.ToPages(_lastPages, _lastWindow);
+        _lastPages = pages;
+        return pages;
+    }
+
+    private string AsOneString(Rendering.Svg.SvgDocumentContext doc)
+    {
+        // The next pages render has no previous page set to compare with.
+        _lastPages = null;
+        return doc.ToSvg();
+    }
 
     /// <summary>Where a compile can be given up — see <see cref="RenderIncremental(SyntaxTree, CancellationToken)"/>.</summary>
     internal enum CompileStage { Collected, BeforeLayout, BeforeRender }
@@ -391,7 +427,7 @@ public sealed class IncrementalCompiler
         token.ThrowIfCancellationRequested();
     }
 
-    private string Compile(SyntaxTree tree, bool allowSkip, CancellationToken token = default)
+    private Rendering.Svg.SvgDocumentContext Compile(SyntaxTree tree, bool allowSkip, CancellationToken token = default)
     {
         var specs = RenderSpecParser.FindAll(tree);
         var spec = RenderSpecParser.Choose(specs, _renderName);
@@ -700,15 +736,19 @@ public sealed class IncrementalCompiler
         // (a conservative miss, never a wrong replay).
         Checkpoint(CompileStage.BeforeRender, token);
 
+        // The edit between the previous render's text and this one — the fragment replay
+        // maps its slots through it, and the page set (RenderIncrementalPages) classifies
+        // its pages by it. One window, computed once.
+        var (prefix, suffixStart, delta) = CollectResumePlanner.ComputeWindow(oldText, tree.Text);
+        _lastWindow = new Rendering.Svg.SvgEditWindow(prefix, suffixStart, delta);
+
         Rendering.Svg.SvgSystemFragmentCache? fragments = null;
         if (reuseEligible)
         {
             _fragments ??= new Rendering.Svg.SvgSystemFragmentCache();
             bool windowValid = allowSkip;
-            var (prefix, suffixStart, delta) = windowValid
-                ? CollectResumePlanner.ComputeWindow(oldText, tree.Text)
-                : (0, 0, 0);
-            _fragments.BeginPass(contentKeys, windowValid, prefix, suffixStart, delta);
+            _fragments.BeginPass(contentKeys, windowValid,
+                windowValid ? prefix : 0, windowValid ? suffixStart : 0, windowValid ? delta : 0);
             fragments = _fragments;
         }
         else
@@ -746,7 +786,7 @@ public sealed class IncrementalCompiler
         // 75.4/78.5/80.8 ms before and 74.9/81.8/84.0 ms after — inside the run-to-run
         // spread of the unpatched build. The full path (SvgGenerator.Generate) is untouched
         // and still skips it: a layout it built has no session behind it.
-        return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: true,
+        return SvgGenerator.RenderDocument(score, layout, _options, resolveDataPos: true,
             fragments);
     }
 

@@ -79,12 +79,25 @@ public sealed partial class LilySharpLanguageServer
         public CancellationTokenSource? Running;
         public readonly object RunningGate = new();
 
+        /// <summary>The <see cref="SvgPages.Version"/> of the page set the session's most
+        /// recent render produced — the picture the session classifies the next page set
+        /// against — or 0 when the most recent render was not a pages render (a one-string
+        /// answer, the fallback, none yet). A request whose <see cref="SvgParams.ShownVersion"/>
+        /// equals it is answered with a delta. Guarded by <see cref="Gate"/>.</summary>
+        public int LastPagesVersion;
+
         public void CancelRunning()
         {
             lock (RunningGate)
                 Running?.Cancel();
         }
     }
+
+    /// <summary>The page-set version counter, one for the whole server: a version names one
+    /// picture of one selection, so a viewer that was showing another score (another slot)
+    /// can never present a version this slot's session would take for its own previous
+    /// render.</summary>
+    private static int s_pagesVersion;
 
     // All of a document's slots are dropped on close. _svgSessionLock guards the MAP
     // only — never a render (that is each slot's Gate).
@@ -544,7 +557,8 @@ public sealed partial class LilySharpLanguageServer
             // Preview mode: @font-face is defined in HTML, not in SVG
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
 
-            string svg;
+            string? svg;
+            SvgPages? pages;
             long lockStart = System.Diagnostics.Stopwatch.GetTimestamp();
             lock (slot.Gate)
             {
@@ -567,7 +581,7 @@ public sealed partial class LilySharpLanguageServer
                     slot.Running = running;
                 try
                 {
-                    svg = RenderSvgIncremental(slot, @params.RenderName, tree, renderOptions, running.Token);
+                    (svg, pages) = RenderSvgIncremental(slot, @params, tree, renderOptions, running.Token);
                 }
                 finally
                 {
@@ -581,6 +595,7 @@ public sealed partial class LilySharpLanguageServer
             return WithTiming(new SvgResponse
             {
                 Svg = svg,
+                Pages = pages,
                 Error = errorText,
                 Renders = renders,
                 SelectedRender = drawnRender
@@ -606,22 +621,38 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Renders the score <paramref name="renderName"/> selects (null/empty = default)
-    /// through the selection's persistent <see cref="IncrementalCompiler"/> session
-    /// (created on first use), reusing unchanged systems. The output is byte-identical
-    /// to <see cref="SvgGenerator.Generate"/> with the same name. Any failure in the
-    /// session path drops the (possibly corrupted) session and falls back to a full
-    /// compile, so the optimization can never break the preview. The caller holds
-    /// <paramref name="slot"/>'s Gate.
+    /// Renders the score the request's <see cref="SvgParams.RenderName"/> selects
+    /// (null/empty = default) through the selection's persistent
+    /// <see cref="IncrementalCompiler"/> session (created on first use), reusing unchanged
+    /// systems. The output is byte-identical to <see cref="SvgGenerator.Generate"/> with
+    /// the same name — as pages (<see cref="SvgPages"/>) when the request asked for them,
+    /// else as one string. Any failure in the session path drops the (possibly corrupted)
+    /// session and falls back to a full compile, as one string, so the optimization can
+    /// never break the preview. The caller holds <paramref name="slot"/>'s Gate.
     /// </summary>
-    private static string RenderSvgIncremental(SvgSessionSlot slot, string? renderName,
-        SyntaxTree tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions options,
+    private static (string? Svg, SvgPages? Pages) RenderSvgIncremental(SvgSessionSlot slot,
+        SvgParams @params, SyntaxTree tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions options,
         CancellationToken token)
     {
+        string? renderName = @params.RenderName;
         try
         {
             slot.Session ??= new IncrementalCompiler(tree, options, renderName);
-            return slot.Session.RenderIncremental(tree, token);
+            if (!@params.PageDiff)
+            {
+                slot.LastPagesVersion = 0;
+                return (slot.Session.RenderIncremental(tree, token), null);
+            }
+            var set = slot.Session.RenderIncrementalPages(tree, token);
+            // The session classified the set against ITS previous pages render, which is
+            // the picture of LastPagesVersion: a delta serves a client that holds exactly
+            // that picture. Anyone else — a fresh viewer, a client whose response was
+            // dropped, a viewer that was showing another score — gets every page.
+            int previous = slot.LastPagesVersion;
+            int version = System.Threading.Interlocked.Increment(ref s_pagesVersion);
+            slot.LastPagesVersion = version;
+            bool delta = previous != 0 && @params.ShownVersion == previous;
+            return (null, PagesOf(set, version, delta ? previous : null));
         }
         catch (OperationCanceledException)
         {
@@ -632,8 +663,43 @@ public sealed partial class LilySharpLanguageServer
         catch
         {
             slot.Session = null;
-            return LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName);
+            slot.LastPagesVersion = 0;
+            return (LilySharp.Core.Svg.SvgGenerator.Generate(tree, options, renderName), null);
         }
+    }
+
+    /// <summary>The wire shape of a page set: with <paramref name="baseVersion"/>, a delta
+    /// (markup on the changed pages only); without, every page's markup.</summary>
+    private static SvgPages PagesOf(LilySharp.Core.Rendering.Svg.SvgPageSet set, int version, int? baseVersion)
+    {
+        var items = new SvgPageItem[set.Pages.Length];
+        bool shifted = false;
+        for (int i = 0; i < items.Length; i++)
+        {
+            var change = baseVersion == null ? LilySharp.Core.Rendering.Svg.SvgPageChange.Changed : set.Changes[i];
+            shifted |= change == LilySharp.Core.Rendering.Svg.SvgPageChange.Shifted;
+            items[i] = new SvgPageItem
+            {
+                Change = change switch
+                {
+                    LilySharp.Core.Rendering.Svg.SvgPageChange.Same => "same",
+                    LilySharp.Core.Rendering.Svg.SvgPageChange.Shifted => "shifted",
+                    _ => "changed",
+                },
+                Markup = change == LilySharp.Core.Rendering.Svg.SvgPageChange.Changed ? set.Pages[i] : null,
+            };
+        }
+        return new SvgPages
+        {
+            Version = version,
+            BaseVersion = baseVersion,
+            Head = set.Head,
+            Tail = set.Tail,
+            Window = shifted
+                ? new SvgEditWindowDto { Prefix = set.Window.Prefix, SuffixStart = set.Window.SuffixStart, Delta = set.Window.Delta }
+                : null,
+            Items = items,
+        };
     }
 
     /// <summary>Drops every incremental SVG session of a closed document (one per

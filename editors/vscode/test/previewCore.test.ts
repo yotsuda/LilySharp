@@ -16,7 +16,28 @@
 
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { svgPostKey } from '../src/previewCore';
+import { svgPostKey, pagesSummary } from '../src/previewCore';
+
+describe('the page answer summary', () => {
+    it('counts the pages by what they did and the characters that travelled', () => {
+        const summary = pagesSummary({
+            Version: 7, BaseVersion: 5, Head: '<svg>', Tail: '</svg>',
+            Window: { Prefix: 10, SuffixStart: 10, Delta: 1 },
+            Items: [
+                { Change: 'same' }, { Change: 'shifted' }, { Change: 'changed', Markup: '<g class="page">…</g>' },
+            ],
+        });
+        assert.equal(summary, '3 (delta v5->v7: same 1, shifted 1, changed 1; 32 chars)');
+    });
+
+    it('says a full answer is one', () => {
+        const summary = pagesSummary({
+            Version: 1, BaseVersion: null, Head: '', Tail: '',
+            Items: [{ Change: 'changed', Markup: 'ab' }, { Change: 'changed', Markup: 'cd' }],
+        });
+        assert.equal(summary, '2 (full v1: same 0, shifted 0, changed 2; 4 chars)');
+    });
+});
 
 describe('the svg post key', () => {
     const svg = '<svg/>';

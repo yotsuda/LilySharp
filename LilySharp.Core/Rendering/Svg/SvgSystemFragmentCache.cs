@@ -417,38 +417,34 @@ internal sealed class SvgSystemFragmentCache
     {
         if (live.Length != recorded.Length)
             return false;
+        var window = new SvgEditWindow(_windowPrefix, _windowSuffixStart, _windowDelta);
         for (int i = 0; i < live.Length; i++)
         {
-            int v = recorded[i];
-            if (v >= _windowPrefix)
-            {
-                if (v < _windowSuffixStart)
-                    return false; // inside the edit window — undefined shift
-                v += _windowDelta;
-            }
-            if (live[i] != v)
+            // Inside the edit window — undefined shift.
+            if (!window.TryMap(recorded[i], out int v) || live[i] != v)
                 return false;
         }
         return true;
     }
 
-    /// <summary>Maps every recorded slot value through the edit window, all-or-nothing:
-    /// false when any value lands inside the window (undefined shift — the fragment
-    /// must decline). Returns the original array when nothing moved.</summary>
+    /// <summary>Maps every recorded slot value through the edit window
+    /// (<see cref="SvgEditWindow.TryMap"/>), all-or-nothing: false when any value lands
+    /// inside the window (undefined shift — the fragment must decline). Returns the
+    /// original array when nothing moved.</summary>
     private bool TryMapSlots(int[] values, out int[] final)
     {
+        var window = new SvgEditWindow(_windowPrefix, _windowSuffixStart, _windowDelta);
         int[]? mapped = null;
         for (int i = 0; i < values.Length; i++)
         {
             int v = values[i];
-            if (v < _windowPrefix)
-                continue;
-            if (v < _windowSuffixStart)
+            if (!window.TryMap(v, out int shifted))
             {
                 final = values;
                 return false; // inside the edit window — undefined shift
             }
-            (mapped ??= (int[])values.Clone())[i] = v + _windowDelta;
+            if (shifted != v)
+                (mapped ??= (int[])values.Clone())[i] = shifted;
         }
         final = mapped ?? values;
         return true;

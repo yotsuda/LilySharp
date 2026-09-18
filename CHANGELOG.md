@@ -54,6 +54,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The preview receives only the pages a keystroke changed.** The language server used to
+  answer every preview request with the whole SVG document — on a 1000-bar book 3.6–12 MB of
+  JSON per keystroke, serialized, parsed, keyed, cloned into the preview page and split there
+  again, of which one page (200–700 KB) had changed. The answer is now page-wise: the client says
+  which picture its preview holds, and the server replies with the pages that changed, tells it
+  which pages are the same and which only moved their source offsets (with the edit window to
+  move them by), and the preview keeps or shifts those in place. A single-page score now gets the
+  same page wrapper as a multi-page one in the preview, so it takes the page-wise path too where
+  it used to replace the whole picture on every keystroke. Exported SVG files are unchanged.
+
 - **The Problems panel no longer collects the book a second time.** A keystroke starts two
   computations over the same text — the preview's incremental compile and, behind it, the
   validation pass that fills the panel — and the pass used to open with a full collect of the

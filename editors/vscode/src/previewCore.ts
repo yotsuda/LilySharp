@@ -38,6 +38,41 @@ export interface RenderEntry {
  * 2026-09-11). A post whose SVG is unchanged is cheap on the webview side (the page
  * markup compares equal and every page is kept).
  */
+/**
+ * The picture as pages (the server's SvgPages, 2026-09-18): the frame around them and one
+ * item per page. With BaseVersion, a DELTA against the picture of that version, which this
+ * client said the webview holds: a 'same' page carries no markup, a 'shifted' page carries
+ * none either and the webview maps every data-pos / data-alt of the page it holds through
+ * Window, and only a 'changed' page carries its markup. Without BaseVersion every page
+ * carries its markup, and Head + markup… + Tail is the one-string picture.
+ */
+export interface SvgPages {
+    Version: number;
+    BaseVersion?: number | null;
+    Head: string;
+    Tail: string;
+    Window?: { Prefix: number; SuffixStart: number; Delta: number } | null;
+    Items: SvgPageItem[];
+}
+
+export interface SvgPageItem {
+    Change: 'same' | 'shifted' | 'changed';
+    Markup?: string | null;
+}
+
+/** One line on a page answer for the output channel: how many pages did what, and how
+ *  many characters travelled — the number that says whether a keystroke shipped one page
+ *  or the whole book. */
+export function pagesSummary(pages: SvgPages): string {
+    let same = 0, shifted = 0, changed = 0, chars = 0;
+    for (const item of pages.Items) {
+        if (item.Change === 'same') { same++; } else if (item.Change === 'shifted') { shifted++; } else { changed++; }
+        chars += item.Markup ? item.Markup.length : 0;
+    }
+    return `${pages.Items.length} (${pages.BaseVersion != null ? 'delta v' + pages.BaseVersion + '->' : 'full '}v${pages.Version}`
+        + `: same ${same}, shifted ${shifted}, changed ${changed}; ${chars + pages.Head.length + pages.Tail.length} chars)`;
+}
+
 export function svgPostKey(
     svg: string, error: string | null | undefined,
     renders: readonly RenderEntry[] | null | undefined, drawnRender: string): string {

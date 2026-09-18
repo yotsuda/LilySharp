@@ -30,7 +30,7 @@ import { registerAiComplete } from './aiComplete';
 import { registerSmartTyping } from './smartTyping';
 import { registerExportBatch } from './exportBatch';
 import { markdownItExtensionApi } from './markdownFence';
-import { svgPostKey } from './previewCore';
+import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -133,6 +133,9 @@ function migratePreviewKey(oldUri: string, newUri: string) {
     if (render !== undefined) { selectedRenders.delete(oldUri); selectedRenders.set(newUri, render); }
     const posted = lastPostedSvg.get(oldUri);
     if (posted !== undefined) { lastPostedSvg.delete(oldUri); lastPostedSvg.set(newUri, posted); }
+    // The server's session for the old URI is gone with its didClose; the new URI's starts
+    // over and cannot recognise the version, so it is not worth carrying.
+    shownPagesVersion.delete(oldUri);
     // Drop any pending debounce refresh: its callback captured the now-closed untitled
     // document, so letting it fire would render the wrong (stale) doc. A later edit to
     // the saved file schedules a fresh one under the new key.
@@ -190,6 +193,14 @@ const selectedRenders = new Map<string, string>();
 // hundreds-of-KB) string across the extension→webview channel again. Invalidated when the
 // webview reloads (webviewReady) and when a panel is disposed / re-keyed.
 const lastPostedSvg = new Map<string, string>();
+
+// The page-set version (per URI) the webview holds — SvgPages.Version of the last page
+// answer posted to it. Sent with the next lilysharp/svg request as shownVersion, so the
+// server answers with only the pages that changed since (a delta against that version);
+// the webview keeps or shifts the rest. Forgotten when the webview reloads (it holds
+// nothing), when the webview asks for the whole picture (requestFull) and when a panel is
+// disposed / re-keyed — a version the server does not recognise costs one full answer.
+const shownPagesVersion = new Map<string, number>();
 
 // One live lilysharp/svg request per URI. The generation stamps each request as it is
 // sent; a response arriving after a newer request has been issued is DROPPED instead of
@@ -780,6 +791,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             panelReady.delete(key);
             selectedRenders.delete(key);
             lastPostedSvg.delete(key);
+            shownPagesVersion.delete(key);
             cancelSvgRequest(key);
             svgRequestGeneration.delete(key);
             const timer = debounceTimers.get(key);
@@ -796,9 +808,23 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
             outputChannel.appendLine(`Received message from webview: ${message.type}`);
             if (message.type === 'webviewReady') {
                 // A (re)loaded webview is blank — drop the dedup memory so the next render
-                // always re-posts, even if the SVG matches what a previous instance showed.
+                // always re-posts, even if the SVG matches what a previous instance showed,
+                // and the page version, so the next answer carries every page.
                 lastPostedSvg.delete(uri);
+                shownPagesVersion.delete(uri);
                 panelReady.get(uri)?.resolve();
+                return;
+            }
+            if (message.type === 'requestFull') {
+                // The webview could not apply a page delta to what it shows (its account
+                // is in `why`): forget the version it was against and render again — the
+                // server answers with every page.
+                outputChannel.appendLine(`Webview asks for the whole picture: ${message.why}`);
+                shownPagesVersion.delete(uri);
+                const doc = await previewDocument(uri);
+                if (doc) {
+                    updatePreviewContent(doc, panel, context);
+                }
                 return;
             }
             if (message.type === 'webviewError') {
@@ -981,10 +1007,15 @@ async function updatePreviewContent(
     const lagProbe = new EventLoopLagProbe();
     lagProbe.start();
     try {
+        // The version the webview holds when the request leaves; the answer is checked
+        // against what it holds when the answer arrives (a reload in between blanks it).
+        const shownVersion = shownPagesVersion.get(uri) ?? null;
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
             renderName: selectedRender || null,
-            clientSentAt: requestedAt
+            clientSentAt: requestedAt,
+            pageDiff: true,
+            shownVersion
         }, requestCancellation.token);
         const hostLag = lagProbe.stop();
 
@@ -1002,7 +1033,8 @@ async function updatePreviewContent(
               + ` last didChange ${ms(t.LastDidChangeMs)}, pool ${t.ThreadPoolThreads ?? '-'} threads`
               + ` / ${t.PendingWorkItems ?? '-'} queued`
             : '';
-        outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`
+        const pagesAccount = response.Pages ? `, pages=${pagesSummary(response.Pages)}` : '';
+        outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}${pagesAccount}`
             + `, drew score ${JSON.stringify(response.SelectedRender ?? null)}`
             + ` (${Date.now() - requestedAt} ms round trip${split}; host lag max ${hostLag} ms)`);
 
@@ -1044,7 +1076,39 @@ async function updatePreviewContent(
                 + ` document; drew ${JSON.stringify(drawnRender)} instead`);
             selectedRenders.set(uri, drawnRender);
         }
-        if (response.Svg) {
+        if (response.Pages) {
+            // The picture as pages (SvgPages): a delta against the version the webview
+            // holds carries only the changed pages' markup, a full answer every page's.
+            // The delta is applied to what the webview holds NOW: if that is no longer the
+            // version the server built it against (the webview reloaded, or a request
+            // that forgot the version raced this one), the delta is unusable — ask again
+            // with no version, which gets every page.
+            const pages = response.Pages;
+            const held = shownPagesVersion.get(uri) ?? null;
+            if (pages.BaseVersion != null && pages.BaseVersion !== held) {
+                outputChannel.appendLine(`Page delta is against version ${pages.BaseVersion}, the webview holds `
+                    + `${held}; asking for every page`);
+                shownPagesVersion.delete(uri);
+                if (retries > 0) {
+                    setTimeout(() => updatePreviewContent(document, panel, context, retries - 1), 0);
+                }
+                return;
+            }
+            // A page answer is a few hundred bytes when nothing changed, so it is posted
+            // every time (the picker's list and the banner ride with it); the one-string
+            // dedup memory no longer describes what the webview shows.
+            lastPostedSvg.delete(uri);
+            shownPagesVersion.set(uri, pages.Version);
+            outputChannel.appendLine(`Sending pages to webview (${pagesSummary(pages)}`
+                + `${response.Error ? ', with error banner' : ''})`);
+            panel.webview.postMessage({
+                type: 'updateContent',
+                pages,
+                error: response.Error ?? undefined,
+                renders: response.Renders || [],
+                selectedRender: drawnRender
+            });
+        } else if (response.Svg) {
             // The response may carry an error TOO: a file with parse errors still
             // renders best-effort (the bad parts are dropped), the score shows
             // un-dimmed, and the banner carries the message. The dedup key folds
@@ -1067,6 +1131,8 @@ async function updatePreviewContent(
                 outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length}`
                     + `${response.Error ? ', with error banner' : ''})`);
                 lastPostedSvg.set(uri, key);
+                // A one-string picture is not a version the next delta can be against.
+                shownPagesVersion.delete(uri);
                 panel.webview.postMessage({
                     type: 'updateContent',
                     svg: response.Svg,
@@ -1728,7 +1794,10 @@ interface RenderInfo {
 }
 
 interface SvgResponse {
+    // The whole picture as one string — null when Pages carries it instead (servers
+    // from 2026-09-18 on, asked with pageDiff), and on an error.
     Svg: string | null;
+    Pages?: SvgPages | null;
     Error: string | null;
     Renders: RenderInfo[] | null;
     // WHICH score was drawn (a RenderInfo.Filename). Normally the one asked for; when the
@@ -2437,7 +2506,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     const blank = was.blank || (was.blank = prev.text.replace(SOURCE_ATTRS, ' $1'));
                     let list = pool.get(blank);
                     if (!list) pool.set(blank, list = []);
-                    list.push({ node: nodes[k], prev, label: was.label, page: i, index: k, blank });
+                    // stale: the page's offsets were shifted in place (applyPages) since
+                    // this record was made, so its text no longer says which offsets
+                    // the live group carries — a carried group from it is always
+                    // re-stamped. Its blank form is unaffected (offsets blanked).
+                    list.push({ node: nodes[k], prev, label: was.label, page: i, index: k, blank, stale: !!shown.stale });
                 }
             }
             let carried = 0, parsed = 0, moved = 0, kept = 0;
@@ -2506,7 +2579,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         const transformed = next.transform !== hit.prev.transform;
                         if (transformed && !setFrameTransform(node, next.transform))
                             return { fail: 'page ' + i + ': a carried system has no frame' };
-                        if (next.text !== hit.prev.text && !restampPage(node, chunk.markup))
+                        if ((hit.stale || next.text !== hit.prev.text) && !restampPage(node, chunk.markup))
                             return { fail: 'page ' + i + ': a carried group could not be re-stamped' };
                         if (node.parentNode !== parent) carried++;
                         else if (transformed) moved++;
@@ -2528,7 +2601,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 for (const node of existing) if (!keep.has(node) && node.parentNode === parent) parent.removeChild(node);
                 // The frame's own offsets (the first page's header): a whole-page
                 // re-stamp is exact now that the DOM order is the markup's.
-                if (pieces.head !== before.head && !restampPage(page, markup))
+                if ((shownPages[i].stale || pieces.head !== before.head) && !restampPage(page, markup))
                     return { fail: 'page ' + i + ': the frame could not be re-stamped' };
                 shownPages[i] = { markup, blank: markup.replace(SOURCE_ATTRS, ' $1'), split: pieces };
             }
@@ -2591,6 +2664,116 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 }
             }
             return 'pages kept ' + pagesKept + ', re-stamped ' + pagesRestamped + account;
+        }
+
+        // ---- page-wise answers --------------------------------------------------
+        // The server can send the picture as PAGES (SvgPages): with a base version, a
+        // DELTA against the picture on screen — which pages are the same, which only
+        // moved their source offsets, and the markup of the ones that changed — so the
+        // whole document no longer travels on every keystroke (2026-09-18: on a 1000-bar
+        // book 3–12 MB of markup per keystroke, of which one page had changed). A 'same'
+        // page is left alone. A 'shifted' page has every data-pos / data-alt mapped
+        // through the answer's window, the arithmetic the server verified the new page
+        // against (below the prefix unchanged, at or after the suffix start moved by the
+        // delta); its stored markup then no longer says the right numbers, which the
+        // reconcile allows for (stale). A 'changed' page goes through the same group
+        // reconcile a changed page of a one-string answer does. Whatever this cannot
+        // apply — no picture on screen, another page count, another frame, a shift the
+        // window declines — asks the host for the whole picture (requestFull) and
+        // returns null; the answer to that carries every page and replaces the document.
+        function requestFull(why) {
+            vscode.postMessage({ type: 'requestFull', why });
+            return null;
+        }
+        function pagesChars(ps) {
+            let n = ps.Head.length + ps.Tail.length;
+            for (const item of ps.Items) n += item.Markup ? item.Markup.length : 0;
+            return n;
+        }
+        // Maps one offset through the window; NaN when the window has no image for it.
+        function shiftOffset(n, w) {
+            return n < w.Prefix ? n : n >= w.SuffixStart ? n + w.Delta : NaN;
+        }
+        // Re-stamps every source offset the page carries through the window. false when
+        // an offset lies inside the window — the server never calls such a page shifted,
+        // so this is the picture and the answer disagreeing, and the caller starts over.
+        function shiftPage(page, w) {
+            if (!w) return false;
+            for (const el of page.querySelectorAll('[data-pos], [data-alt]')) {
+                const pos = el.getAttribute('data-pos');
+                if (pos !== null) {
+                    const m = shiftOffset(parseInt(pos, 10), w);
+                    if (!Number.isFinite(m)) return false;
+                    el.setAttribute('data-pos', String(m));
+                }
+                const alt = el.getAttribute('data-alt');
+                if (alt) {
+                    const parts = alt.split(' ').map(a => shiftOffset(parseInt(a, 10), w));
+                    if (parts.some(m => !Number.isFinite(m))) return false;
+                    el.setAttribute('data-alt', parts.join(' '));
+                }
+            }
+            return true;
+        }
+        function applyPages(ps) {
+            const items = ps.Items;
+            const frame = ps.Head + ps.Tail;
+            const live = svgContainer.querySelector('svg');
+            const livePages = live ? live.querySelectorAll(':scope > g.page') : [];
+            const allMarkup = items.every(it => typeof it.Markup === 'string');
+            if (!shownPages || !live || livePages.length !== items.length || frame !== shownFrame) {
+                if (!allMarkup) {
+                    return requestFull(!live ? 'no picture on screen'
+                        : !shownPages ? 'no record of the pages shown'
+                        : livePages.length !== items.length ? 'page count ' + livePages.length + ' -> ' + items.length
+                        : 'the frame around the pages changed');
+                }
+                svgContainer.innerHTML = ps.Head + items.map(it => it.Markup).join('') + ps.Tail;
+                shownFrame = frame;
+                shownPages = items.map(it => ({ markup: it.Markup, blank: it.Markup.replace(SOURCE_ATTRS, ' $1') }));
+                return 'whole document (' + items.length + ' pages)';
+            }
+            let pagesKept = 0, pagesShifted = 0, pagesReplaced = 0;
+            const changed = [];
+            const markups = new Array(items.length);
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.Change === 'same') { pagesKept++; continue; }
+                if (item.Change === 'shifted') {
+                    if (!shiftPage(livePages[i], ps.Window)) {
+                        return requestFull('page ' + i + ' holds an offset the window has no image for');
+                    }
+                    shownPages[i].stale = true;
+                    pagesShifted++;
+                    continue;
+                }
+                if (typeof item.Markup !== 'string') {
+                    return requestFull('page ' + i + ' is changed but carries no markup');
+                }
+                markups[i] = item.Markup;
+                changed.push(i);
+            }
+            let account = '';
+            if (changed.length) {
+                const r = reflowPages(livePages, { pages: markups }, changed);
+                if (r.fail) {
+                    for (const i of changed) {
+                        const fresh = parseOne(markups[i]);
+                        if (!fresh) {
+                            return requestFull('page ' + i + ' did not parse alone');
+                        }
+                        live.replaceChild(fresh, livePages[i]);
+                        const markup = markups[i];
+                        shownPages[i] = { markup, blank: markup.replace(SOURCE_ATTRS, ' $1') };
+                        pagesReplaced++;
+                    }
+                    account = ', replaced ' + pagesReplaced + ' (reconcile gave up: ' + r.fail + ')';
+                } else {
+                    account = ', reconciled ' + changed.length + ' (groups kept ' + r.kept + ', moved ' + r.moved
+                        + ', carried ' + r.carried + ', parsed ' + r.parsed + (r.why ? '; ' + r.why : '') + ')';
+                }
+            }
+            return 'pages kept ' + pagesKept + ', shifted ' + pagesShifted + account;
         }
 
         // ---- source-position index -------------------------------------------
@@ -3267,10 +3450,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             forgetShownPages();
                             invalidateSourcePositions();
                         }
-                    } else if (message.svg) {
+                    } else if (message.svg || message.pages) {
                         // A score arrived — it is CURRENT, so never dimmed. It may
                         // still carry an error banner: a file with parse errors
                         // renders best-effort (the bad parts are simply dropped).
+                        // It comes as one string (an older server) or as pages — a
+                        // delta against the picture on screen, or every page.
                         if (message.error) {
                             showErrorBanner(message.error);
                         } else {
@@ -3278,8 +3463,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         }
                         svgContainer.classList.remove('stale');
                         const applyStart = performance.now();
-                        const applied = applySvg(message.svg);
+                        const applied = message.pages ? applyPages(message.pages) : applySvg(message.svg);
                         const applyEnd = performance.now();
+                        if (applied === null) {
+                            // The delta could not be applied to what is shown; the
+                            // whole picture has been asked for and will replace it.
+                            break;
+                        }
                         invalidateSourcePositions();
                         // The score changed: the cached note list is stale, so the
                         // next audition / Play refetches fresh events.
@@ -3296,9 +3486,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             highlightNearestElement(lastHighlightPos, lastHighlightTokenStart);
                         }
                         const settled = performance.now();
+                        const chars = message.pages ? pagesChars(message.pages) : message.svg.length;
                         vscode.postMessage({ type: 'webviewPerf', text: 'update: ' + applied
                             + ' in ' + (applyEnd - applyStart).toFixed(1) + ' ms, then pages/fit/highlight '
-                            + (settled - applyEnd).toFixed(1) + ' ms (' + message.svg.length + ' chars)' });
+                            + (settled - applyEnd).toFixed(1) + ' ms (' + chars + ' chars)' });
                     } else if (message.error) {
                         // Nothing could render at all. Keep the last good preview,
                         // DIM it, and show the error in a banner. Only when nothing

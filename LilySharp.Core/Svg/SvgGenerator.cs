@@ -214,6 +214,14 @@ public static class SvgGenerator
     internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,
         SvgRenderOptions options, bool resolveDataPos = false,
         Rendering.Svg.SvgSystemFragmentCache? fragments = null)
+        => RenderDocument(score, layout, options, resolveDataPos, fragments).ToSvg();
+
+    /// <summary>Draws the document and returns it finished (every page ended), for a
+    /// caller to read as one string (<see cref="Rendering.Svg.SvgDocumentContext.ToSvg"/>)
+    /// or as pages (<see cref="Rendering.Svg.SvgDocumentContext.ToPages"/>).</summary>
+    internal static Rendering.Svg.SvgDocumentContext RenderDocument(MultiStaffScore score,
+        ScoreLayout layout, SvgRenderOptions options, bool resolveDataPos,
+        Rendering.Svg.SvgSystemFragmentCache? fragments)
     {
         var docOptions = new SvgDocumentOptions
         {
@@ -222,10 +230,10 @@ public static class SvgGenerator
             FontDirectory = options.FontDirectory,
             Interactive = options.Interactive,
         };
-        using var doc = new SvgDocumentContext(docOptions);
+        var doc = new SvgDocumentContext(docOptions);
         SharedRenderer.RenderTo(score, layout, doc, resolveDataPos, fragments);
         doc.Dispose();
-        return doc.ToSvg();
+        return doc;
     }
 
     /// <summary>
