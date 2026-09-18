@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -99,74 +99,10 @@ public class BreakAlignSpacingTests
         Assert.Equal(2.5, entry.Value, 2);
     }
 
-    // === CalculateDistance tests ===
-
-    [Fact]
-    public void MinimumSpace_ReturnsValueWhenLargerThanExtent()
-    {
-        // Clef width (2.564) < minimum-space value (3.5)
-        double distance = BreakAlignSpacing.CalculateDistance(
-            new SpacingEntry(SpacingStyle.MinimumSpace, 3.5),
-            leftItemRightExtent: GlyphMetrics.GClefWidth);
-
-        Assert.Equal(3.5, distance, 2);
-    }
-
-    [Fact]
-    public void MinimumSpace_ReturnsExtentWhenLarger()
-    {
-        // Wide item (4.0) > minimum-space value (3.5)
-        double distance = BreakAlignSpacing.CalculateDistance(
-            new SpacingEntry(SpacingStyle.MinimumSpace, 3.5),
-            leftItemRightExtent: 4.0);
-
-        Assert.True(distance > 3.5,
-            $"MinimumSpace with wide item ({distance:F2}) should exceed value (3.5)");
-    }
-
-    [Fact]
-    public void ExtraSpace_AddsValueToExtent()
-    {
-        double distance = BreakAlignSpacing.CalculateDistance(
-            new SpacingEntry(SpacingStyle.ExtraSpace, 1.15),
-            leftItemRightExtent: 2.2);
-
-        Assert.Equal(3.35, distance, 2);
-    }
-
-    [Fact]
-    public void FixedSpace_AddsValueToExtent()
-    {
-        double distance = BreakAlignSpacing.CalculateDistance(
-            new SpacingEntry(SpacingStyle.FixedSpace, 2.0),
-            leftItemRightExtent: 2.1);
-
-        Assert.Equal(4.1, distance, 2);
-    }
-
-    [Fact]
-    public void SemiFixedSpace_IsLeftExtentPlusValue()
-    {
-        // LILYPOND-REF: staff-spacing.cc:176-179 — ideal = leftRight + distance.
-        // Independent of the RIGHT item's left extent (the old half-half formula used it).
-        double distance = BreakAlignSpacing.CalculateDistance(
-            new SpacingEntry(SpacingStyle.SemiFixedSpace, 1.3),
-            leftItemRightExtent: 2.0);
-
-        Assert.Equal(3.3, distance, 2);
-    }
-
-    [Fact]
-    public void SemiShrinkSpace_IsLeftExtentPlusValue()
-    {
-        // LILYPOND-REF: staff-spacing.cc:193-196 — same ideal as semi-fixed
-        // (leftRight + distance); the old 0.8/0.6 factors were ungrounded.
-        double distance = BreakAlignSpacing.CalculateDistance(
-            new SpacingEntry(SpacingStyle.SemiShrinkSpace, 1.3),
-            leftItemRightExtent: 2.0);
-
-        Assert.Equal(3.3, distance, 2);
-    }
+    // (The six CalculateDistance tests stood here. They pinned a second, approximate
+    // spelling of SpaceAlistDistances that no drawing path called — including a minimum-space
+    // answer the live model does not give — so they were deleted with it in session 407. The
+    // SpaceAlistDistances tests below are the ones that describe what the engine runs.)
 
     // === CalculatePrefixWidth integration tests ===
 

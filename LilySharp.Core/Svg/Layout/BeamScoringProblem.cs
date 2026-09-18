@@ -163,13 +163,6 @@ internal sealed class BeamScoringProblem
     // is the same value read three times, not a third spelling.
     private readonly StemInfo[] _stemInfos;
 
-    // True when this beam is quanted from TAB string lines (stemPositions) rather than
-    // pitch. Forced-direction shortening keys off a note's natural (pitch) stem
-    // direction, which a string line does not have, so it does not apply here.
-    // LILYSHARP-OWN: a TAB string position carries no pitch default-direction.
-    // ⚠️ CURRENTLY ALWAYS FALSE — nothing passes stemPositions any more (see its param doc).
-    private readonly bool _isTab;
-
     // Edge (first/last member) beam counts and stem directions.
     // LILYPOND-REF: beam-quanting.cc edge_beam_counts_, edge_dirs_
     private readonly int[] _edgeBeamCounts; // [0]=left, [1]=right
@@ -207,10 +200,11 @@ internal sealed class BeamScoringProblem
     /// concaveness head positions) — used to quant a TAB beam from the notes'
     /// STRING lines instead of their pitch. One value per member, in staff
     /// positions (half-spaces). Null keeps the notation-staff behaviour.
-    /// ⚠️ NO CALLER PASSES IT — <c>d06686ee</c> (2026-07-12) took tab beams off this
-    /// quanter and onto <c>TabBeamQuant</c>'s own arithmetic, and this seam is what a
-    /// port would come back through. It is kept, not deleted, for that reason; it has
-    /// no observer, so treat it as unverified until one measures it.
+    /// ⚠️ THIS DOC SAID "NO CALLER PASSES IT" UNTIL 2026-09-18, AND THAT WAS FALSE:
+    /// <c>TabStaffGeometry.SolveTabBeam</c> passes it on every tab beam. The claim dated
+    /// from <c>d06686ee</c> (2026-07-12), which took tab beams off this quanter; they came
+    /// back, and the remark did not. It was live enough that HANDOFF §2 R15 listed the
+    /// parameter as dead code on this comment's word — read the callers, not the remark.
     /// </param>
     /// <param name="lengthFraction">
     /// The beam's (and its stems') <c>length-fraction</c>. 1.0 for an ordinary beam;
@@ -380,7 +374,6 @@ internal sealed class BeamScoringProblem
             ? Array.Empty<BeamCollision>()
             : suppliedCollisions;
 
-        _isTab = stemPositions != null;
         _beamDir = group.StemUp ? 1 : -1;
 
         // LILYPOND-REF: beam-quanting.cc:333 is_knee_

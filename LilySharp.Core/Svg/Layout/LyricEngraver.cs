@@ -82,15 +82,6 @@ internal sealed record LyricParameters
     /// <summary>Minimum distance between syllables in staff spaces.</summary>
     public double MinSyllableSpacing { get; init; } = 0.5;
 
-    /// <summary>Font size relative to staff space.</summary>
-    public double FontSize { get; init; } = 1.2;
-
-    /// <summary>Hyphen character width estimate (in staff spaces).</summary>
-    public double HyphenWidth { get; init; } = 0.4;
-
-    /// <summary>Minimum hyphen length before it's drawn (in staff spaces).</summary>
-    public double MinHyphenLength { get; init; } = 0.3;
-
     /// <summary>Padding between syllable and hyphen (in staff spaces).</summary>
     public double HyphenPadding { get; init; } = 0.2;
 

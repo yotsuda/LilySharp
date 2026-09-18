@@ -1332,40 +1332,6 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawLedgerLines(int staffPosition, double x, double staffMiddleY,
-        IDrawingContext gc, double headWidth = EngravingDefaults.NoteheadBlackWidth,
-        double unit = 1.0)
-    {
-        // ledger_extent = head_extent widened by length-fraction·head_width —
-        // proportional to the ACTUAL head, so whole/half noteheads (wider than
-        // black ones) get correspondingly longer, centered ledgers.
-        // LILYPOND-REF: lily/ledger-line-spanner.cc:204-233 (length-fraction 0.25)
-        // LILYPOND-REF: lily/staff-symbol.cc:337-344 (thickness 1.0·line + 0.1·space)
-        double ext = EngravingDefaults.LedgerLengthFraction * headWidth;
-        double thickness = EngravingDefaults.LegerLineThickness;
-        double x1 = x - ext;
-        double x2 = x + headWidth + ext;
-
-        // `unit` shrinks the per-step offsets from the (already-transformed)
-        // staff middle — used by ossia grace groups, whose Ys go through the
-        // staff-top affine while this helper computes offsets itself.
-        double YOf(int pos) => staffMiddleY
-            + ((staffMiddleY + pos / 2.0) - staffMiddleY) * unit;
-
-        // Ledger lines above staff (staff position > 4 = above top line)
-        for (int pos = 6; pos <= staffPosition; pos += 2)
-        {
-            double y = YOf(pos);
-            gc.DrawLine(x1, y, x2, y, Color.Black, thickness);
-        }
-        // Ledger lines below staff (staff position < -4 = below bottom line)
-        for (int pos = -6; pos >= staffPosition; pos -= 2)
-        {
-            double y = YOf(pos);
-            gc.DrawLine(x1, y, x2, y, Color.Black, thickness);
-        }
-    }
-
     private static void DrawRest(RestItem rest, double x, double staffY, int? dotOffset,
         IDrawingContext gc, double staffPosition)
     {

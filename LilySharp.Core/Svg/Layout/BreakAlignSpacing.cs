@@ -301,63 +301,18 @@ internal static class BreakAlignSpacing
         _ => new SpacingEntry(SpacingStyle.ExtraSpace, 1.0)
     };
 
-    /// <summary>
-    /// Calculates the effective distance for a spacing entry, considering item extents.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/staff-spacing.cc:166-198 Staff_spacing::get_spacing — the
-    /// break-align style set (fixed / extra / semi-fixed / minimum / minimum-fixed /
-    /// shrink / semi-shrink). LP builds a SPRING (ideal, min=fixed, stretchability); this
-    /// returns the IDEAL distance only, so the shrink/stretch distinctions collapse.
-    /// With <c>fixed = last_ext[RIGHT]</c> (= leftItemRightExtent) and distance = value:
-    /// - ExtraSpace / FixedSpace / SemiFixedSpace / SemiShrinkSpace: ideal = leftRight + value
-    /// - MinimumSpace / MinimumFixedSpace: LP is last_ext[LEFT] + max(item length, value);
-    ///   approximated here as max(value, leftRight + minPad) — the left item's LEFT edge and
-    ///   length, and the right item's own extent, are not threaded through this signature.
-    /// </remarks>
-    public static double CalculateDistance(SpacingEntry entry,
-        double leftItemRightExtent)
-    {
-        const double minPad = 0.1;  // minimum padding between items
-
-        return entry.Style switch
-        {
-            // LILYPOND-REF: extra-space: adds value to the right extent of left item
-            SpacingStyle.ExtraSpace =>
-                leftItemRightExtent + entry.Value,
-
-            // LILYPOND-REF: minimum-space: at least 'value' from left edge of left item
-            SpacingStyle.MinimumSpace =>
-                Math.Max(entry.Value, leftItemRightExtent + minPad),
-
-            // LILYPOND-REF: fixed-space: fixed distance from right edge of left item
-            SpacingStyle.FixedSpace =>
-                leftItemRightExtent + entry.Value,
-
-            // LILYPOND-REF: minimum-fixed-space: at least 'value' from left edge (like minimum-space)
-            // but also ensures fixed spacing from right edge when item is wider than value
-            SpacingStyle.MinimumFixedSpace =>
-                Math.Max(entry.Value, leftItemRightExtent + minPad),
-
-            // semi-fixed-space (staff-spacing.cc:176-179): fixed = leftRight + distance/2,
-            // ideal = fixed + distance/2 = leftRight + distance. (The distinction from
-            // extra-space is the SPRING min/stretch, which this fixed-distance model drops.)
-            SpacingStyle.SemiFixedSpace =>
-                leftItemRightExtent + entry.Value,
-
-            // shrink-space (staff-spacing.cc:188-192) / semi-shrink-space (:193-197): the
-            // same ideal as extra-space / semi-fixed (leftRight + distance); they differ
-            // only by being non-stretchable, which this single-distance model does not
-            // represent. <see cref="SpaceAlistDistances"/> is the model that does.
-            SpacingStyle.ShrinkSpace =>
-                leftItemRightExtent + entry.Value,
-
-            SpacingStyle.SemiShrinkSpace =>
-                leftItemRightExtent + entry.Value,
-
-            _ => leftItemRightExtent + entry.Value
-        };
-    }
+    // ⚠️ CalculateDistance STOOD HERE UNTIL SESSION 407, AND IT WAS THE SECOND SPELLING OF
+    // SpaceAlistDistances BELOW. No production path called it; the live one is read per staff
+    // from LineStartColumn. It answered the IDEAL distance alone, so shrink and stretch
+    // collapsed into extra-space, and it could not spell minimum-space at all — LilyPond's is
+    // last_ext[LEFT] + max(length, value), and the signature had neither the left edge nor the
+    // length, so it APPROXIMATED with max(value, leftRight + 0.1). That 0.1 was invented, and
+    // it sat in audit/magic_constants.csv as Green by borrowing the extra-space REF written
+    // four lines below it. Its six tests pinned the approximation — two of them asserted the
+    // minimum-space answer the live model does not give — so they went with it; the equivalent
+    // tests against SpaceAlistDistances were already there, and that is the model the drawing
+    // reads. (HANDOFF §2 R15: production code that only tests reach is kept when the test is
+    // worth keeping. Here the good test already existed against the other spelling.)
 
     /// <summary>One placed break-align column: its symbol and ink extent, in the column frame.</summary>
     public readonly record struct PlacedColumn(BreakAlignSymbol Symbol, double Left, double Right);

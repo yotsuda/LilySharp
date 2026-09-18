@@ -37792,3 +37792,11 @@ percent / tremolo に第195 が入れた「各 pass はその 1 コピー」と�
 
 LP のタブ数字は小さくて読みにくい。Lily# は `TabConstants.FretFontSize = 2.6`（単数字幅 1.625・高さ 1.7875）＝LP の TabNoteHead 幅 0.990155 の約 1.64 倍。和音で数字が被る問題は**じぐざぐ配置**（`SpacingRules.ApplyTabChordSpacing` ほか）で解いてある。**「LP と違う＝発明だから消す」で削らないこと。** ⚠️ 弦間隔（`TabStringSpace`）は別の話で、そちらは LP の 1.5 に揃える
 
+#### ★★★ `voice { } { }` の span は音価の既定も動かさない＝全 branch は span が開いた時点の (Duration, Dots) から読み、span の後ろの音楽もそこから読む。octav…
+
+LilyPond の parser は「最後に*書かれた*音価」を lexical に継ぐので `c8 << { d4 e } \\ { f g } >> a` の `a` は 4 分になるが、Lily# は span を「同時に鳴る音楽で何も動かさない」と読む＝octave と同じ言い方で音価も言える。4 読み手（page・MIDI・XML・twin）が同じ規則。twin は LP が違う読みをする 2 箇所（各 branch の先頭・span 直後の最初の event）に音価を書き出して対を保つ。掃き 938 冊で page／MIDI／XML は 1 冊も動かず（母集団に差の出る綴りが無い）、twin は 4 冊（2 冊は base の twin が LP に別の音価を読ませていた側の修正）。
+
+#### ★ tab の弦選択（運指）は Lily# 固有機能・LP に合わせない。自動提案は DP 版で打ち止め（ユーザー判断・2026-08-02／2026-09-14）
+
+LP `determine-frets-and-strings`（translation-functions.scm:591-796）＝実質「非負の最小フレット・開放弦最優先」は使いにくいので意図的に変えた。**「LP と違う」を欠陥として起票しない**。DP 版 `TabFingeringPlanner` をプレビューで見たユーザー判断＝「さっきより良い。奏者の好みもある、これ以上追及しなくて良い」⇒ **好みの違いは `\N` で書く。再調整を自分から持ち出さない**。互換の約束は明示 `\N`（と小節内の同音明示）だけ。⚠️ 重み付き貪欲は高音域の旋律と「低位置へ戻る」を両立できず却下（4 音先読み・連続 2 音跳躍コスト・小節ごと範囲縮小はどれも承認箇所を崩した）。重み（機械探索）: Shift 1・FirstFret 0.75・MaxShiftFrets 6・Stretch 0.5・Skip 1・High 1.5・HeightPerFret 0.1・Free 0.35・Slur 5・OpenPerHandFret 0.05。**護り＝repo の tab fixture 41 冊で「`\N` 無し・第 1 ポジションに収まる小節で 4 より上を弾いた音数」（435→1）**。perf: resolve 1000 音で 1〜3 ms（Release・JIT 温め後）。⚠️ 開放弦リセットと移動コストはコーパスを 1 枚も動かさない＝単体テストだけが観測者、触る前に fixture を足す。弦を明示しない tab 本は LP と恒久的に比較できない（`test/tab-string-pinned` の形で固定）。
+

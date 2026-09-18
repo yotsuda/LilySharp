@@ -36,7 +36,8 @@ public class SpringRodModelTests
         Assert.Equal(1.0, p.KneeSpacingCorrection);
         Assert.Equal(0.25, p.SameDirectionCorrection);
         Assert.Equal(0.5, p.StemSpacingCorrection);
-        Assert.True(p.SpaceToBarline);
+        // (space-to-barline was asserted here; the property it read declared a LilyPond
+        // feature Lily# does not model and nothing else read it — both are gone.)
     }
 
     // --- knee_correction: LILYPOND-REF: lily/note-spacing.cc:117-137 knee_correction,

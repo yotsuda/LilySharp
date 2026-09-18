@@ -139,9 +139,6 @@ internal static class EngravingDefaults
     /// +0.065) 0.04 below the end.
     /// </remarks>
     public const double BlotDiameter = 0.08;
-    // LILYPOND-REF: scm/define-grobs.scm:3448 Stem (lengths . (3.5 3.5 3.5 4.25 5.0 ...)) —
-    // the first three entries (whole/half/quarter) are 3.5, LP's ideal single-note stem.
-    public const double IdealStemLength = 3.5;
     // LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
     // ⚠️ ITS FIRST CONSUMER IS GONE (session 85). It used to floor the UNBEAMED stem too, in
     // StemCalculator.CalculateStemEndY, on the claim that "LP never lets a lone stem drop
@@ -158,7 +155,6 @@ internal static class EngravingDefaults
     // === Beams ===
     // LILYPOND-REF: scm/define-grobs.scm Beam (beam-thickness . 0.48) — in staff-space.
     public const double BeamThickness = 0.48;
-    public const double BeamSpacing = 0.25;
     /// <summary>Distance between beam centers for multiple beams.</summary>
     // LILYPOND-REF: lily/beam.cc Beam::get_beam_translation — for <4 beams,
     // (2·ss + line − beam-thickness)/2 (ss = staff-space = 1.0 here).

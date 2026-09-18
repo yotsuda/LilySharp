@@ -245,14 +245,25 @@ public class MagicConstantInventoryTests
                 int lo = Math.Max(0, i - Context);
                 int hi = Math.Min(lines.Length - 1, i + Context);
                 string nearbyRef = "";
-                for (int j = lo; j <= hi; j++)
+                // ⚠️ NEAREST FIRST, ABOVE BEFORE BELOW — not a top-down sweep of the window.
+                // A REF sits immediately above the constant it documents, so when two
+                // constants are within Context lines of each other the top-down sweep handed
+                // the SECOND one the FIRST one's reference. MEASURED (session 407): deleting
+                // the dead BeamSpacing moved BeamTranslation four lines up, which pulled
+                // BeamThickness's `(beam-thickness . 0.48)` into its window and displaced its
+                // own `beam.cc get_beam_translation` — the row stayed Green while naming the
+                // wrong LilyPond source, which is the failure RULES §7.6 is about.
+                for (int j = i; j >= lo && nearbyRef.Length == 0; j--)
                 {
                     var m = Reference.Match(lines[j]);
                     if (m.Success)
-                    {
                         nearbyRef = m.Value.Trim();
-                        break;
-                    }
+                }
+                for (int j = i + 1; j <= hi && nearbyRef.Length == 0; j++)
+                {
+                    var m = Reference.Match(lines[j]);
+                    if (m.Success)
+                        nearbyRef = m.Value.Trim();
                 }
 
                 string decision;

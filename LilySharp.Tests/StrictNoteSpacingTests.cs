@@ -36,15 +36,6 @@ public class StrictNoteSpacingTests
     }
 
     [Fact]
-    public void BaseNoteSpace_MatchesLilyPondDefault()
-    {
-        // LILYPOND-REF: scm/define-grobs.scm SpacingSpanner
-        // BaseNoteSpace = ShortestDurationSpace * SpacingIncrement = 2.0 * 1.2 = 2.4
-        var p = NoteSpacingParameters.Default;
-        Assert.Equal(2.4, p.BaseNoteSpace, 2);
-    }
-
-    [Fact]
     public void StrictMode_EnforcesMinDistanceEqualToIdeal()
     {
         // LILYPOND-REF: lily/note-spacing.cc:229-264

@@ -227,8 +227,6 @@ internal static partial class SharedRenderer
         ClefType clef, int transposition, IDrawingContext gc)
     {
         double tabTopY = syUp - g.StaffYOffset;
-        int[] tuningArray = Tunings.GetTuning(tuning);
-        int octaveShift = Tunings.SoundingShift(clef, transposition);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
         // Tab grace digits sit only slightly below the main fret size (NOT the notehead
         // grace scale, GraceNoteItem.ScaleFactor): on a tab staff the fret number IS the

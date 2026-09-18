@@ -76,11 +76,6 @@ internal sealed class SpringSolver
     }
 
     /// <summary>
-    /// Gets the minimum possible total length (all springs compressed to MinDistance).
-    /// </summary>
-    public double MinTotalLength => TotalLength(double.NegativeInfinity);
-
-    /// <summary>
     /// Gets the ideal total length (all springs at IdealDistance with zero force).
     /// </summary>
     public double IdealTotalLength => TotalLength(0);

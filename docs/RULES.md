@@ -2324,6 +2324,40 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   2 箇所が 0 本だったが、**理由は staff 数ではなく「4 分音符だけで梁が 1 本も無い」**
   （両方とも梁ゼロで早期 return）＝**構造上は staff 数で増えるが、それを測れる本が木に無い**、
   と書く。**「0 だった」と「測れなかった」は別。**
+  ⇒ ★★★★ **dead code の台帳は*スナップショット*＝消す前に 1 件ずつ呼び手を読む**
+  （2026-09-18・第407 第 3 便・§2 R15 をユーザー承認で着手）。**一覧 14 項のうち実際に死んでいたのは 8 件**で、
+  **`AdjustSpringForGraceNotes`・`GetGraceGroupWidth`・`MinItemGap`・`_percentCoveredDepth`・
+  `LineStartColumn.Prefatory*` は現役だった**（`MinItemGap` は**隣のコメントが「still live」と
+  書いていた**）。⚠️⚠️ ★★★ **そして `BeamScoringProblem.stemPositions` は、
+  param doc の「⚠️ NO CALLER PASSES IT」を信じて dead に載っていたが、
+  `TabStaffGeometry.SolveTabBeam` が全 tab 梁で渡している**——**消していれば tab 梁の quanting が壊れた。**
+  ⇒ **コメントの「もう誰も使っていない」は根拠にならない。呼び手を grep する。**
+  （綴りだけ名前を持つテストも同じ罠＝`IdealStemLength_GrowsWithBeamCount` は**定数を読んでいない**。）
+  ⇒ ★★★★ **そして「死んでいる」と「製品コードは読まないがテストだけが読む」を分けること**
+  ——後者は dead code の掃除とは別の判断。**★ ユーザー規則（2026-09-18・第407 第 5 便）＝
+  「テストだけが使う製品コードは*テストの質*に依る。良いテストができるなら残して。
+  役に立たないテストなら製品コードを削除して」。** 判定に効いた問いは 3 つ:
+  ⑴ **その製品コードは*生きた綴り*か、2 綴り目か**——`BreakAlignSpacing.CalculateDistance` は
+  `SpaceAlistDistances`（描画が `LineStartColumn` から読む）の 2 綴り目で、**ideal しか返さず
+  minimum-space を綴れず `0.1` を発明して近似**していた。⇒ **網は*生きていない模型*を緑にしていた**
+  （6 本中 2 本は近似の答えを pin＝生きた模型が返さない値）＝**良い網は既に他方に在る**⇒ 両方削除。
+  ⚠️ **発明した 0.1 は census で「4 行下の別ケースの REF を借りて Green」**＝§7.6 の偽の出所。
+  ⑵ **その property は*実装していない機能*を宣言していないか**——`SpaceToBarline` は Lily# が
+  模型を持たない LP プロパティで、**移植済みの knob に見えるぶん無いより悪い**⇒ 削除。
+  ⑶ **観測者は*既に覆われた理由*でしか落ちないのでは**——`BaseNoteSpace` の網は
+  「2 つの定数の積が 2.4」を言うだけで、**両因子は自分の REF と census 行を持つ**⇒ 削除。
+  ⇒ ★★★ **逆に、残す形もはっきりしている**: `IsInsideProcessedContainer(ExceptParallel)` は
+  `MusicSitesEquivalenceTests`（**全 fixture を参照同一性で比べる差分の網**）の**宣言された
+  reference oracle**＝**差分の網の oracle として意図的に残した旧綴りは dead code ではない。**
+  **見分け方＝その網が「新旧 2 つの実装の一致」を主張しているなら、旧は網の一部。**
+  ⇒ ★★★★ **緑の provenance 行が*違う出典*を名乗ることがある**（同便・`magic_constants.csv` の
+  生成則）。census は定数の ±5 行の窓を**上から**走査して**最初の** `LILYPOND-REF` を採っていたので、
+  **定数が 2 つ 5 行以内に並ぶと、後の定数が前の定数の REF を貰う**——色は Green のままで、
+  **§7.6 の「実在する出所を消す」がそのまま起きる**。**近い方（上→下）に直したら 16 行が変わり、
+  全部が改善だった**: `SlurMidThickness` が **Tie** の `thickness . 1.2` を、
+  `ThickBarlineThickness` が **hair-thickness 1.9** を、`HorizonPadding` が **right-padding** を、
+  `EdgeHeight` が **bound-padding** を名乗っていた（どれも第407 より前からの誤り）。
+  ⚠️ **見つかったのは死んだ定数を 1 つ消して行が 4 行動いたから**＝**この種の誤りは自分では鳴らない。**
 
 - ★★★★ ⚠️⚠️⚠️ **「X ができない」と書かれた起票は、その機構が*無い*のか*届いていない*のかを、
   同じ木の中の*隣の構文*で 1 対測ってから読む**（2026-08-31・第309セッション。**§2 U8 で 5 例目の割り直し**）。

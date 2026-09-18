@@ -49,11 +49,10 @@ internal sealed record NoteSpacingParameters
     /// </summary>
     public double StemSpacingCorrection { get; init; } = 0.5;
 
-    /// <summary>
-    /// Whether to measure distance to the barline (or next note).
-    /// LILYPOND-REF: define-grobs.scm:2655 (space-to-barline . #t)
-    /// </summary>
-    public bool SpaceToBarline { get; init; } = true;
+    // (space-to-barline stood here until session 407. NOTHING read it — it declared a
+    // LilyPond property Lily# does not model, and its only observer was one assertion that
+    // it still defaulted to true, which no drawing depends on. A parameter naming a feature
+    // the engine does not implement reads as a ported knob and is worse than its absence.)
 
     /// <summary>
     /// When true, enforces strictly proportional spacing based on duration.
@@ -67,16 +66,10 @@ internal sealed record NoteSpacingParameters
     /// </remarks>
     public bool StrictNoteSpacing { get; init; } = false;
 
-    /// <summary>
-    /// Base note space: the minimum space for the shortest note in strict mode.
-    /// Equals ShortestDurationSpace * SpacingIncrement in LilyPond.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/note-spacing.cc:229-264
-    /// LILYPOND-REF: scm/define-grobs.scm SpacingSpanner.base-shortest-duration
-    /// </remarks>
-    public double BaseNoteSpace { get; init; } = EngravingDefaults.ShortestDurationSpace
-                                                  * EngravingDefaults.SpacingIncrement;
+    // (base-note-space stood here until session 407. No production reader; its only observer
+    // asserted that ShortestDurationSpace * SpacingIncrement is still 2.4, which is a product
+    // of two constants that carry their own REFs and their own census rows — so the assertion
+    // could only fail for a reason already covered, against a property that moves nothing.)
 
     /// <summary>
     /// LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is

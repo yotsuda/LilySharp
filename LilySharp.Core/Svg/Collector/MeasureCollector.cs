@@ -3503,43 +3503,10 @@ public sealed partial class MeasureCollector
         return false;
     }
 
-    /// <summary>
-    /// Checks if a node is inside a TupletExpression (to avoid double-counting).
-    /// Top-level TupletExpressionSyntax nodes pass through (processed by main loop).
-    /// Nested TupletExpressionSyntax nodes are filtered (processed recursively by ProcessTuplet).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc - notes inside tuplets are processed together
-    /// </remarks>
-    private static bool IsInsideTuplet(SyntaxNode node) => node.IsInside<TupletExpressionSyntax>();
-
-    /// <summary>
-    /// Checks if a node is inside a <c>&lt;&lt; \\ &gt;&gt;</c> parallel expression. The primary
-    /// walk uses this to SKIP a span's inner nodes (they are processed by the
-    /// ParallelExpressionSyntax handler) while the span node itself passes
-    /// through atomically.
-    /// </summary>
-    private static bool IsInsideParallel(SyntaxNode node) => node.IsInside<ParallelExpressionSyntax>();
-
-    /// <summary>
-    /// Checks if a node is inside an OnceModifierSyntax.
-    /// Prevents double-processing of inner override/revert in once modifier.
-    /// </summary>
-    private static bool IsInsideOnce(SyntaxNode node) => node.IsInside<OnceModifierSyntax>();
-
-    /// <summary>
-    /// Checks if a node is inside a GraceExpressionSyntax.
-    /// Prevents double-processing of notes inside grace expressions.
-    /// </summary>
-    private static bool IsInsideGrace(SyntaxNode node) => node.IsInside<GraceExpressionSyntax>();
-
-    /// <summary>
-    /// Checks if a node is inside a RepeatExpressionSyntax.
-    /// Prevents double-processing of notes inside repeat expressions.
-    /// </summary>
-    private static bool IsInsideRepeat(SyntaxNode node) => node.IsInside<RepeatExpressionSyntax>();
-
-    private static bool IsInsideInlineVolta(SyntaxNode node) => node.IsInside<InlineVoltaSyntax>();
+    // (The six per-container IsInside* predicates that stood here — Tuplet, Parallel, Once,
+    // Grace, Repeat, InlineVolta — were deleted in session 407. Nothing had called any of them
+    // since the walk started asking IsInsideProcessedContainer below, which folds the same
+    // question over the whole container set in one place.)
 
     /// <summary>
     /// Single source of truth for "this node is a flat music node the collector
