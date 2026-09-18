@@ -138,10 +138,20 @@ internal sealed class MeasureValidator : ISemanticValidator
     // play order, per part; see SectionBoundaryBars.
     private SectionBoundaryBars? _boundaries;
 
+    /// <remarks>
+    /// The kinds come from <see cref="PhraseCycleValidator.DeclaringKinds"/> — the SAME
+    /// question that validator asks, one list for both switches (the shape
+    /// <c>LyricBindings</c> has with <c>PartReferenceFinder.DeclaringKinds</c>). Before
+    /// session 410 this offered every node of the book to the switch below: one of the
+    /// three whole-tree flat walks the pass still made after every settled keystroke —
+    /// 234,030 node visits on perf-fingbeam1k to build a table of a handful of entries,
+    /// invisible on a millisecond list because a flat array walk is ~2.2 ns/node
+    /// (HANDOFF §2 R13⒮).
+    /// </remarks>
     private static Dictionary<string, SyntaxNode> CollectPhraseBodies(SyntaxNode root)
     {
         var bodies = new Dictionary<string, SyntaxNode>();
-        foreach (var n in root.DescendantNodes())
+        foreach (var n in root.DescendantNodesOfKinds(PhraseCycleValidator.DeclaringKinds))
         {
             if (n is PhraseDeclarationSyntax ph)
                 bodies[ph.Name.Text] = ph.Body;

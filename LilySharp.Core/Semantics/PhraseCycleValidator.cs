@@ -44,6 +44,15 @@ internal sealed class PhraseCycleValidator : ISemanticValidator
     /// spelling must be added to BOTH, or a cycle through it goes unreported. Pinned by
     /// <c>TailValidatorKindsTests</c>, which spells the two TYPES itself and compares the
     /// plain walk's answer with the index's, over every net book.
+    /// <para>
+    /// ⚠️ IT NOW HAS THREE READERS, and the other two ask the SAME question of the same
+    /// tree: <c>MeasureValidator.CollectPhraseBodies</c> and
+    /// <see cref="Svg.Collector.SectionBarCounts.SemanticVoices"/>'s own gather both build
+    /// a name -> body table with this switch (session 410 folded them off their whole-tree
+    /// walks; HANDOFF §2 R13⒮). MEASURED when the list was poisoned: dropping
+    /// <c>VariableDeclaration</c> turned NO behavioural test red — only the net above. The
+    /// list has no other guard.
+    /// </para>
     /// </remarks>
     internal static readonly SyntaxKind[] DeclaringKinds =
         [SyntaxKind.PhraseDeclaration, SyntaxKind.VariableDeclaration];

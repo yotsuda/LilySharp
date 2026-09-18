@@ -104,6 +104,26 @@ internal static class SectionBarCounts
     /// reader that discards them was most of that validator's cost on a one-part book
     /// (MEASURED, session 400). The meter rule is unchanged: a score-level <c>time</c> is
     /// still read wherever it stands.</param>
+    /// <summary>The kinds <see cref="SemanticVoices"/>'s walk does something for: it arms
+    /// the meter from a score-level <c>time</c> and makes a voice of a section. Every other
+    /// node it used to be offered was skipped.</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THAT LOOP'S TYPE TESTS, kept beside it on purpose (the shape
+    /// <see cref="Semantics.PhraseCycleValidator.DeclaringKinds"/> has): a kind dropped here
+    /// makes the validator go silent on a spelling it used to report — no test of the
+    /// diagnostic itself need fail — so <c>FlatWalkKindsTests</c> compares the plain walk's
+    /// answer with the index's over every net book. The walk INSIDE each section
+    /// (<c>sec.ChildNodes()</c>) is unchanged.
+    /// <para>
+    /// WHY (session 410): this and <see cref="LyricsCells"/> were two of the three
+    /// whole-tree flat walks the diagnostics pass still made after every settled keystroke
+    /// — 3 x 234,030 = 702,090 node visits on perf-fingbeam1k, and the reason the tree's
+    /// descendant index had to materialize every red in the book (HANDOFF §2 R13⒮).
+    /// </para>
+    /// </remarks>
+    public static readonly SyntaxKind[] SemanticVoiceKinds =
+        [SyntaxKind.TimeSignature, SyntaxKind.SectionDeclaration];
+
     public static List<SemanticVoice> SemanticVoices(SyntaxNode root,
         IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null, bool partMajorOnly = false)
     {
@@ -111,7 +131,9 @@ internal static class SectionBarCounts
         if (phrases == null)
         {
             var gathered = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
-            foreach (var n in root.DescendantNodes())
+            // The same list PhraseCycleValidator and MeasureValidator.CollectPhraseBodies
+            // ask with — one list, three switches (HANDOFF §2 R13⒮).
+            foreach (var n in root.DescendantNodesOfKinds(Semantics.PhraseCycleValidator.DeclaringKinds))
             {
                 if (n is PhraseDeclarationSyntax ph)
                     gathered[ph.Name.Text] = ph.Body;
@@ -123,7 +145,7 @@ internal static class SectionBarCounts
 
         var voices = new List<SemanticVoice>();
         var time = DurationCalculator.ParseTimeSignature(4, 4);
-        foreach (var n in root.DescendantNodes())
+        foreach (var n in root.DescendantNodesOfKinds(SemanticVoiceKinds))
         {
             if (n is TimeSignatureSyntax ts && !ts.IsSenzaMisura && IsScoreLevel(ts))
                 time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
@@ -199,7 +221,9 @@ internal static class SectionBarCounts
     public static List<SemanticVoice> LyricsCells(SyntaxNode root)
     {
         var cells = new List<SemanticVoice>();
-        foreach (var n in root.DescendantNodes())
+        // ONE type, so no kind list: the index answers the type itself and there is no
+        // second spelling to keep in step (session 409's rule; HANDOFF §2 R13⒮).
+        foreach (var n in root.DescendantNodes<SectionDeclarationSyntax>())
             if (n is SectionDeclarationSyntax { Parent: LyricsBlockSyntax track } sec)
                 cells.Add(LyricsCell(sec.SectionName, track, sec, sec.Name.Span, partMajor: true));
         return cells;

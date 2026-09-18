@@ -44,7 +44,22 @@ namespace LilySharp.Core.Syntax;
 /// (<see cref="SyntaxNode.KindSites"/>, <see cref="SyntaxNode.GreenSites"/>) is NOT routed
 /// through this: the render path's keystroke walk is red-free by design (HANDOFF's
 /// incremental workstream), and building this index materializes every red in the book.
-/// The index exists for the passes that materialize them anyway.
+/// </para>
+/// <para>
+/// ⚠️⚠️ THIS USED TO SAY "the index exists for the passes that materialize them anyway",
+/// AND THAT PREMISE HAS EXPIRED. It was true when this was written: 28 validators each ran
+/// their own full red walk. Sessions 401, 408, 409 and 410 moved every one of them — and
+/// the last three whole-tree flat walks (HANDOFF §2 R13⒮) — onto kind buckets, so MEASURED
+/// on a keystroke tree the pass now asks for 14.1% of the nodes on perf-fingbeam1k, 20.9%
+/// on perf-plain1k, and 19.7% over the owner's 330 real books, with zero type-scan
+/// fallbacks. Nobody else materializes them first either: the preview's collect RESUMES,
+/// so it never touches the adopted measures' reds. The build is therefore 78-94% of the
+/// pass's whole allocation (26,198,520 B of 33,509,192 on perf-fingbeam1k — its arrays are
+/// 7.0 MB of that and the reds it forces are 19.2 MB).
+/// ⇒ The open item is to build this from GREEN sites (<see cref="SyntaxNode.GreenSitesLazy"/>
+/// is already that machinery) and materialize a red only per consumed site. Not attempted
+/// and not costed: <see cref="Nodes"/> and the pre-order ordinals <see cref="OfKinds"/>
+/// merges on both assume the red walk. HANDOFF §2 R13⒯.
 /// </para>
 /// <para>
 /// ⚠️ THE TYPED LOOKUP RESTS ON "ONE KIND, ONE RED TYPE". <see cref="SyntaxNode"/>'s
