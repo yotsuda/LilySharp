@@ -314,8 +314,29 @@ public class HistoryCitationTests
     /// are the record of what those sessions committed. The LIVE ratchet did not fall (825,
     /// floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 699 → 730, THE SAME WAY, ON 2026-09-19 (after session 411). The fifty-two
+    /// unpushed commits of sessions 402-411 were regrouped into eleven before pushing, outside
+    /// any session's view: the session that followed met the ceiling already red, at its
+    /// start-of-session full run and on origin/master's CI alike. Thirty-eight of the folded
+    /// commits are cited by SHA in §1, the archive and this file's own remarks — each session's
+    /// own "these commits", the tip a leg started from, the commit a measurement was taken at —
+    /// and the thirty-one of those tokens this census reads as citation-shaped went dead with
+    /// the regroup; the other seven carry fewer than two letters in their abbreviation, so
+    /// <c>LooksLikeCitation</c> does not see them, which is the same honest miss the paragraphs
+    /// above declare. ⚠️ THE ORDER WAS THE OTHER WAY ROUND HERE, and it is worth naming: the
+    /// census was read FIRST, because the start-of-session run failed on it, and the prediction
+    /// from the tree was computed afterwards — 38 cited minus 7 unshaped — and landed on 31
+    /// exactly. A prediction made after the answer is known is worth less than one made before
+    /// it, so what it confirms is only that the rise is accounted for by the fold and carries
+    /// nothing else. The reflog still holds the old commits, so the tree check the paragraphs
+    /// above describe was made here as well: the pre-regroup tip and the new tip name the SAME
+    /// tree object and the diff between them is empty. Not re-pointed, for the reason the
+    /// paragraphs above give: the sentences are the record of what those sessions committed.
+    /// The LIVE ratchet did not fall (858, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 699;
+    private const int DeadCitationsWhenWritten = 730;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
