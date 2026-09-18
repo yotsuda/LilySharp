@@ -254,6 +254,16 @@ public sealed class IncrementalCompiler
     /// replays the rest even on a full compile). For diagnostics / tests.</summary>
     internal (int Reused, int Recomputed) LastBeamMemo => (_beamMemo.Hits, _beamMemo.Misses);
 
+    /// <summary>The LAYOUT side's twin of <see cref="LastBeamMemo"/>: how the most recent
+    /// compile's per-staff beam detection (the preliminary pass's, on the baked items) was
+    /// paid for through <see cref="SystemLayoutCache.BeamDetection"/> — replayed bars vs
+    /// bars detected live. (0, 0) when no layout ran (whole-layout reuse) or the cache was
+    /// not consulted. For diagnostics / tests.</summary>
+    internal (int Reused, int Recomputed) LastLayoutBeamMemo =>
+        _systemCache is { } c && _lastCompileConsultedCache
+            ? (c.BeamDetection.Hits, c.BeamDetection.Misses)
+            : (0, 0);
+
     /// <summary>How this session's NESTED collects (finding 3-5) were paid for over
     /// its lifetime: channel resumes vs full runs. For diagnostics / tests — the
     /// liveness half of the nested-resume nets.</summary>

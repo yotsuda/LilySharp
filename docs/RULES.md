@@ -2248,9 +2248,19 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   moment ごとに 1 grob を置く量）、scratch は訊かれた小節だけ解き（`VoiceCollisionTable`）、
   全小節を要る読み手は `SystemLayoutCache` の content-keyed store（system × staff の slice・
   shifted hit で小節番号を振り直す）から受ける。計算の綴りは 1 つ（全体＝小節の和集合）。
-  **同じ顔が残る家（未計測）**: `MultiStaffLayouter.RestCollisionsOf`（`Staff` 鍵・
-  `CalculateRestNoteCollisions` の全小節走査）・`ElementCoordinator.RestDotOffsetsOf`。
-  判定は計器 1 本＝**打鍵あたりの fill 回数と歩いた列数**（`sessions/p405/Zz405Probe.cs.txt`）。
+  **同じ顔の家を数えた結果（第405 第 2 便・第406）**: `MultiStaffLayouter.RestCollisionsOf`（`Staff` 鍵）・
+  `ElementCoordinator.RestDotOffsetsOf`＝1 fill＝1000 小節の*走査*で 0.4 ms／0.3 MB＝測って保留（要ユーザー判断）／
+  **`MultiStaffLayouter.StaffBeamGroupsOf`（`Staff` 鍵）＋`BeamGroupsOf`（`Voice` 鍵）＝1 fill＝1000 小節の
+  *検出*＝2,000 群・2.8 ms／2.8 MB／打鍵（plain1k・prelim 段の 65%）**——しかも collect 側の probe は
+  同じ 1000 小節を per-measure memo（`BeamDetectionMemo`）で 1000/0 replay していた（第406・`7bc22207`）。
+  ⇒ **直しの型 ②＝collect と layout が同じ計算を 2 度走らせ、collect 側に content 鍵の memo が在るなら、
+  layout 側にも*同じ機構の 2 つ目の instance* を置く**（`SystemLayoutCache.BeamDetection`＝別 owner・
+  別 generation・cache と一緒に shed）。⚠️ **ただし読み手が model の参照（`Member.Item`）を読むなら、
+  replay を生きた instance に結び直す**（`ReplayWithLiveItems`→`BeamGroup.WithLiveItems`）——collect の
+  bake は index で住所を引くので要らず、layout の quanter・seed・tuplet・script は参照を読む。
+  健全性は memo 自身の主張（鍵が読み集合を全部畳む＝生きた item は畳んだ全 field で一致）。
+  判定は計器 1 本＝**打鍵あたりの fill 回数と歩いた列数／小節数**（`sessions/p405/Zz405Probe.cs.txt`・
+  `sessions/p406/Zz406Probe.cs.txt`）。
   ⚠️ **`dotnet test --no-build` は古い DLL を回す**——新しい網が「通った」ように見える。build を挟む。
 
 - ★★★★ ⚠️⚠️⚠️ **「X ができない」と書かれた起票は、その機構が*無い*のか*届いていない*のかを、

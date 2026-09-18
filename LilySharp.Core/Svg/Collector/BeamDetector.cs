@@ -52,11 +52,18 @@ internal sealed class BeamDetector
     /// LILYPOND-REF: lily/auto-beam-engraver.cc — one Beam per Voice context.
     /// LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
     ///   — each <c>\\</c> sublist gets its own Voice context with the property set at its head.
+    /// <para>
+    /// With a <paramref name="memo"/> (the layout's per-measure memo,
+    /// <c>SystemLayoutCache.BeamDetection</c>) the single-voice path replays the bars a
+    /// previous keystroke detected; the multi-voice fan hands the memo down too, where the
+    /// per-voice call's eligibility gate (a nonzero voice index, a direction callback)
+    /// bypasses it — the same gate the collect probe's calls stand under.
+    /// </para>
     /// </remarks>
-    public ImmutableArray<BeamGroup> DetectBeamGroups(Score score)
+    public ImmutableArray<BeamGroup> DetectBeamGroups(Score score, BeamDetectionMemo? memo = null)
     {
         if (score.Voices.Length <= 1)
-            return DetectBeamGroups(score.Voice, score.TimeSignature, score.TupletBrackets);
+            return DetectBeamGroups(score.Voice, score.TimeSignature, score.TupletBrackets, memo: memo);
 
         var all = ImmutableArray.CreateBuilder<BeamGroup>();
         for (int v = 0; v < score.Voices.Length; v++)
@@ -71,7 +78,8 @@ internal sealed class BeamDetector
             all.AddRange(DetectBeamGroups(
                 score.Voices[v], score.TimeSignature, voiceTuplets,
                 voiceIndex: v,
-                forceStemUpAt: mi => VoiceDefaults.GetDefaultStemUpAt(score.Voices, voiceIndex, mi)));
+                forceStemUpAt: mi => VoiceDefaults.GetDefaultStemUpAt(score.Voices, voiceIndex, mi),
+                memo: memo));
         }
         return all.ToImmutable();
     }
@@ -110,7 +118,10 @@ internal sealed class BeamDetector
     /// index-addressed (<c>MeasureIndex</c> −1 = the group's), so nothing else in them is
     /// positional. The stale <c>Member.Item</c> references a stored group carries are never
     /// read by the bake (<c>ResolveBeamStemDirections</c> addresses the LIVE measure by
-    /// <c>ItemIndex</c>); the groups themselves are discarded after it.
+    /// <c>ItemIndex</c>); the groups themselves are discarded after it. The LAYOUT's owner
+    /// of a memo reads them, so it asks for the members to be re-pointed at the live
+    /// measure's items on replay (<see cref="BeamDetectionMemo.ReplayWithLiveItems"/>,
+    /// <see cref="BeamGroup.WithLiveItems"/>).
     /// </para>
     /// <para>
     /// ⚠️ BeamId stays OUT of the memo on purpose: identities are numbered by the bake, in
@@ -204,10 +215,14 @@ internal sealed class BeamDetector
 #endif
                     // Re-base to the live measure index; everything else in a stored
                     // per-measure group is measure-local (members carry the −1 sentinel).
+                    // The layout's owner also has the members re-pointed at the live items
+                    // (its readers read Member.Item; the bake does not — see the memo).
                     foreach (var g in stored)
-                        beamGroups.Add(g.MeasureIndex == measureIndex ? g : new BeamGroup(
-                            g.Members, measureIndex, g.StartIndex, g.StemUp,
-                            g.GrowDirection, g.VoiceIndex, g.RestStems));
+                        beamGroups.Add(memo.ReplayWithLiveItems
+                            ? g.WithLiveItems(measure, measureIndex)
+                            : g.MeasureIndex == measureIndex ? g : new BeamGroup(
+                                g.Members, measureIndex, g.StartIndex, g.StemUp,
+                                g.GrowDirection, g.VoiceIndex, g.RestStems));
                     continue;
                 }
                 int before = beamGroups.Count;

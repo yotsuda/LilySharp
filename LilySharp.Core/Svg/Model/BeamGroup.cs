@@ -135,6 +135,31 @@ public sealed record BeamGroup
     }
 
     /// <summary>
+    /// The same group, at <paramref name="measureIndex"/>, with every member's
+    /// <see cref="BeamMember.Item"/> re-pointed at <paramref name="measure"/>'s item of the
+    /// member's own <see cref="BeamMember.ItemIndex"/>. What the per-measure detection memo
+    /// hands its LAYOUT owner (<c>BeamDetectionMemo.ReplayWithLiveItems</c>): a stored group
+    /// describes the previous edit's instance of this bar, and the layout's readers of the
+    /// member item must see the live one. Single-measure groups only — every member lives in
+    /// the group's own measure (the <c>-1</c> sentinel), which is what the memo's eligibility
+    /// gate guarantees; an explicit foreign measure index is a broken invariant and throws
+    /// rather than guessing.
+    /// </summary>
+    internal BeamGroup WithLiveItems(Measure measure, int measureIndex)
+    {
+        var members = ImmutableArray.CreateBuilder<BeamMember>(Members.Length);
+        foreach (var m in Members)
+        {
+            if (m.MeasureIndex >= 0 && m.MeasureIndex != measureIndex)
+                throw new InvalidOperationException(
+                    "WithLiveItems: a replayed single-measure beam group carries a member of another measure");
+            members.Add(m.WithItem(measure.Items[m.ItemIndex]));
+        }
+        return new BeamGroup(members.MoveToImmutable(), measureIndex, StartIndex,
+            StemUp, GrowDirection, VoiceIndex, RestStems);
+    }
+
+    /// <summary>
     /// Whether this beam is a kneed beam (stems change direction within the group).
     /// </summary>
     /// <remarks>
@@ -334,6 +359,15 @@ public sealed record BeamMember
             ? this
             : new BeamMember(Item, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
                 ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex + delta,
+                HeadPositionMin, HeadPositionMax);
+
+    /// <summary>The same member describing <paramref name="item"/> — the live instance of
+    /// the note this member was detected on. See <see cref="BeamGroup.WithLiveItems"/>.</summary>
+    internal BeamMember WithItem(MusicItem item)
+        => ReferenceEquals(item, Item)
+            ? this
+            : new BeamMember(item, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
+                ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex,
                 HeadPositionMin, HeadPositionMax);
 }
 

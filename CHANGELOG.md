@@ -115,6 +115,22 @@ workflow attaches that section to the GitHub Release verbatim.
   book: 2,000 bars and 6,000 columns solved per keystroke before, 3 bars and 8 columns after
   (15 MB less per keystroke). Nothing moves: a bar's answer reads that bar of every voice and
   nothing else, and every book of the incremental net still equals its full compile.
+- **A keystroke detects the beams of the bar it changed, not of the whole staff.** The layout
+  detects each staff's beam groups a second time after the collect (on the bars with their stem
+  directions baked in), and its memos for that answer were keyed on the staff and voice objects
+  an edit replaces — so every keystroke walked every bar again: on the plain 1000-bar book, 1,000
+  bars and 2,000 groups per keystroke, at any edit position, while the collect's own detection of
+  the same bars was already replaying all 1,000 from its per-bar memo. The layout now has a per-bar
+  memo of the same kind, kept with the rest of the session's geometry, and replays the bars a
+  previous keystroke detected with their groups pointed at the live notes; only the edited bar is
+  detected. Counted on the plain and the fingered 1000-bar books (Release, tiered compilation off,
+  min of 6): 1,000 bars walked per keystroke before, 0 after (999 replayed, 1 detected in a real
+  session); the detection step 2.8 → 0.3 ms and 2.8 → 0.8 MB, 3.4 → 0.3 ms and 4.1 → 0.8 MB; the
+  preliminary annotation pass it sits in 4.4 → 1.7 ms and 5.9 → 2.7 ms. A staff with two or more
+  voices is unchanged (its detection is the per-voice fan the memo does not serve). The picture
+  does not change: a replayed bar's groups equal a live detection's on every field the quanter and
+  the seeds read, the notes they point at are the live ones, and every book of the incremental net
+  — including two chained edits and a bar inserted before the beams — still equals its full compile.
 - **A keystroke's collect walks the book five times less.** Even when the preview's
   incremental collect adopted every bar of the previous keystroke, it still walked the whole
   tree five more times for facts that do not depend on the edit: twice per part for the

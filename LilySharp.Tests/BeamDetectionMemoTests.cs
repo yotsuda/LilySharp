@@ -119,6 +119,43 @@ public class BeamDetectionMemoTests
         Assert.Equal(0, memo.Misses);
     }
 
+    /// <summary>The LAYOUT owner's contract (session 406): with
+    /// <see cref="BeamDetectionMemo.ReplayWithLiveItems"/> a replayed group's members point
+    /// at the LIVE voice's items — the instances a live detection of that voice would hand
+    /// out — while the surface stays the live detection's. Without it (the collect owner's
+    /// default) the members keep the storing detection's items, which is what makes the flag
+    /// load-bearing rather than decorative.</summary>
+    [Fact]
+    public void ReplayWithLiveItems_PointsEveryMemberAtTheLiveVoice()
+    {
+        var (voiceA, sigA, tupletsA) = FirstStaffDetectionInput(Book);
+        var (voiceB, sigB, tupletsB) = FirstStaffDetectionInput("\n" + Book);
+        var live = new BeamDetector().DetectBeamGroups(voiceB, sigB, tupletsB);
+
+        var memo = new BeamDetectionMemo { ReplayWithLiveItems = true };
+        memo.BeginCollect();
+        new BeamDetector().DetectBeamGroups(voiceA, sigA, tupletsA, memo: memo);
+        memo.BeginCollect();
+        var replayed = new BeamDetector().DetectBeamGroups(voiceB, sigB, tupletsB, memo: memo);
+
+        Assert.Equal(live.Select(Surface).ToArray(), replayed.Select(Surface).ToArray());
+        Assert.Equal(voiceB.Measures.Length - 2, memo.Hits);   // liveness: the replay fired
+        foreach (var g in replayed)
+            foreach (var m in g.Members)
+                Assert.Same(
+                    voiceB.Measures[m.ResolveMeasureIndex(g.MeasureIndex)].Items[m.ItemIndex],
+                    m.Item);
+
+        // The default (collect owner) keeps the STORING detection's items on a replay.
+        var plain = new BeamDetectionMemo();
+        plain.BeginCollect();
+        new BeamDetector().DetectBeamGroups(voiceA, sigA, tupletsA, memo: plain);
+        plain.BeginCollect();
+        var kept = new BeamDetector().DetectBeamGroups(voiceB, sigB, tupletsB, memo: plain);
+        Assert.Contains(kept, g => g.Members.Any(m =>
+            ReferenceEquals(m.Item, voiceA.Measures[m.ResolveMeasureIndex(g.MeasureIndex)].Items[m.ItemIndex])));
+    }
+
     // ---------- helpers ----------
 
     private static (Voice Voice, TimeSignature Sig, System.Collections.Immutable.ImmutableArray<TupletBracketItem> Tuplets)

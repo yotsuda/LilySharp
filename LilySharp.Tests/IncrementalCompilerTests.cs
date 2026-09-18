@@ -1658,6 +1658,60 @@ public class IncrementalCompilerTests
         Assert.Equal((7, 1), session.LastBeamMemo);
     }
 
+    /// <summary>
+    /// The LAYOUT side's twin of the memo above (session 406): the per-staff beam detection
+    /// the preliminary pass runs on the baked items used to walk every bar on every
+    /// keystroke (its own tables are keyed on the Staff and Voice an edit replaces). Through
+    /// <see cref="SystemLayoutCache.BeamDetection"/> a pitch edit re-detects EXACTLY the
+    /// edited bar and replays the other seven, on a first edit and on a chained second one
+    /// (session 190's lesson: a memo that freezes something shows on the SECOND edit), and
+    /// each picture equals a full recompile — which is the claim that the replayed groups
+    /// point at the LIVE notes (the quanter and the seeds read <c>Member.Item</c>).
+    /// </summary>
+    [Fact]
+    public void LayoutBeamMemo_ChainedPitchEdits_RedetectOnlyTheEditedBar_AndMatchFullRecompile()
+    {
+        var tree = SyntaxTree.Parse(BeamedBook);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+        // The first compile detects every bar live and stores it.
+        Assert.Equal((0, 8), session.LastLayoutBeamMemo);
+
+        var change = Replace(BeamedBook, "e d c b", "e d c a");   // measure index 5
+        var edited = tree.WithChange(change);
+        Assert.Equal(Full(edited.Text), Norm(session.Edit(change)));
+        Assert.Equal((7, 1), session.LastLayoutBeamMemo);
+
+        // Chained: a second edit in ANOTHER bar. Bar 5 now replays from the FIRST edit's
+        // detection (its items are that edit's instances), bar 6 detects live.
+        var change2 = Replace(edited.Text, "b8 c d e f e d c", "b8 c d e f e d a");   // measure index 6
+        var edited2 = edited.WithChange(change2);
+        Assert.Equal(Full(edited2.Text), Norm(session.Edit(change2)));
+        Assert.Equal((7, 1), session.LastLayoutBeamMemo);
+    }
+
+    /// <summary>A bar INSERTED before the beamed bars moves every later bar's number and
+    /// source offsets but not its content, so all of them replay (the key is
+    /// position-blind) and only the new bar detects live; the picture — every beam a bar
+    /// further on — equals the full recompile.</summary>
+    [Fact]
+    public void LayoutBeamMemo_InsertedBar_ReplaysTheShiftedBars_AndMatchesFullRecompile()
+    {
+        var tree = SyntaxTree.Parse(BeamedBook);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(BeamedBook, "d8 e f g a g f e |", "c4 d e f | d8 e f g a g f e |");
+        var edited = tree.WithChange(change);
+        Assert.Equal(Full(edited.Text), Norm(session.Edit(change)));
+        // Seven beamed bars keep their content and replay (one of them under a new
+        // number); the inserted quarter-note bar and the bar the edit rewrote in place
+        // are detected live.
+        var (reused, recomputed) = session.LastLayoutBeamMemo;
+        Assert.Equal(9, reused + recomputed);
+        Assert.True(reused >= 7, $"expected the seven untouched beamed bars to replay, got {reused}");
+    }
+
     // --- ⒭ per-system SVG fragment memo (HANDOFF §1 ▶) -----------------------------
     // On every edit the renderer replays the recorded SVG text of each system whose
     // content-key window and drawn geometry are unchanged, re-emitting its data-pos /

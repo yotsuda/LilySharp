@@ -115,6 +115,11 @@ internal sealed partial class LayoutEngine
                 multiStaffLayouter = new MultiStaffLayouter(overriddenOptions, _measureLayouter);
             }
         }
+        // The session's per-measure beam-detection memo rides with the cache (null outside
+        // a session): the layouter's own detection tables are per-keystroke scratch, and
+        // this is what keeps their one fill from walking the whole book — see
+        // MultiStaffLayouter.BeamDetectionMemo.
+        multiStaffLayouter.BeamDetectionMemo = systemCache?.BeamDetection;
 
         // LILYPOND-REF: lily/spacing-spanner.cc
         // Calculate the common shortest duration across all voices for Gourlay spacing

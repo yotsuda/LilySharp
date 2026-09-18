@@ -227,8 +227,13 @@ internal sealed class ElementCoordinator
     /// Detects beam groups (raw, without layout calculation).
     /// Used for tuplet bracket-visibility checks.
     /// </summary>
-    public ImmutableArray<BeamGroup> DetectBeamGroups(Score score)
-        => _beamDetector.DetectBeamGroups(score);
+    /// <param name="score">The detection input: its voices, time signature and tuplet
+    /// brackets (nothing else of it is read — <see cref="BeamDetector"/>).</param>
+    /// <param name="memo">The layout's per-measure detection memo, when a session has one
+    /// (<c>SystemLayoutCache.BeamDetection</c>): the bars a previous keystroke detected
+    /// replay instead of walking again. Null ⇒ detect every bar live.</param>
+    public ImmutableArray<BeamGroup> DetectBeamGroups(Score score, BeamDetectionMemo? memo = null)
+        => _beamDetector.DetectBeamGroups(score, memo);
 
     /// <summary>
     /// Moves a beam voice's item X table onto the x its heads are DRAWN at, when a

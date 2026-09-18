@@ -64,6 +64,25 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal double CurrentIndent { get; set; }
 
+    /// <summary>
+    /// The session's per-measure beam-detection memo for THIS layout's detections
+    /// (<see cref="BeamGroupsOf"/>), or null outside an incremental session — set by
+    /// <c>LayoutEngine.Layout</c> from <see cref="SystemLayoutCache.BeamDetection"/>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE TWO TABLES BELOW ARE NOT A SESSION MEMO. <c>_staffBeamGroups</c> and
+    /// <c>_beamGroupsByInput</c> are keyed on the <see cref="Staff"/> and <see cref="Voice"/>
+    /// instances, and an edit replaces every one of them — so across keystrokes they are
+    /// per-keystroke scratch that dedups the consumers WITHIN one layout (RULES §5.3: count
+    /// the fills, not the hits). COUNTED (session 406, perf-plain1k, Release, tiered
+    /// compilation off): one fill per keystroke, and that fill walked all 1,000 bars and
+    /// produced 2,000 groups — 2.8 ms and 2.8 MB of a 21 ms keystroke, on an edit at any bar
+    /// — while the collect's probe replayed the same 1,000 bars from ITS memo. This memo is
+    /// what makes the one fill cheap: the detection behind it replays every bar the previous
+    /// keystroke detected and walks only the edited one.
+    /// </remarks>
+    internal BeamDetectionMemo? BeamDetectionMemo { get; set; }
+
     public MultiStaffLayouter(LayoutOptions options, MeasureLayouter measureLayouter)
     {
         _options = options;
@@ -3977,7 +3996,7 @@ internal sealed class MultiStaffLayouter
         var voices = detectionScore.Voices;
         var tuplets = detectionScore.TupletBrackets;
         if (voices.IsDefaultOrEmpty)
-            return _elementCoordinator.DetectBeamGroups(detectionScore);
+            return _elementCoordinator.DetectBeamGroups(detectionScore, BeamDetectionMemo);
 
         if (_beamGroupsByInput.TryGetValue(voices[0], out var entries))
         {
@@ -3993,7 +4012,10 @@ internal sealed class MultiStaffLayouter
             _beamGroupsByInput.Add(voices[0], entries);
         }
 
-        var groups = _elementCoordinator.DetectBeamGroups(detectionScore);
+        // Through the session's per-measure memo when there is one (BeamDetectionMemo's
+        // remarks): the walk this table fronts is the one that used to re-detect the
+        // whole book on every keystroke.
+        var groups = _elementCoordinator.DetectBeamGroups(detectionScore, BeamDetectionMemo);
         if (entries.Count == BeamDetectionEntriesPerVoice)
             entries.RemoveAt(0);
         entries.Add(new BeamDetectionEntry(

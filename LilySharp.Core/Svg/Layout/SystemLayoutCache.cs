@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -147,10 +148,24 @@ internal sealed class SystemLayoutCache
         _lyricBands.NextGeneration();
         _looseLines.NextGeneration();
         _voiceCollisions.NextGeneration();
+        BeamDetection.BeginCollect();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
     public int Count => _measures.Count;
+
+    /// <summary>
+    /// The LAYOUT's per-measure beam-detection memo — the second owner of the mechanism the
+    /// collect probe's <c>IncrementalCompiler._beamMemo</c> is the first of (see
+    /// <see cref="BeamDetectionMemo"/>'s remarks for the count that put it here). Keyed on
+    /// each bar's detection-input content, not on this cache's content-key vector, so it is
+    /// sound on its own terms; it lives here so it is generation-swapped with the rest of the
+    /// session's geometry on every keystroke (<see cref="SetContentKeys"/>) and shed with it
+    /// on a font or paper change. Replays hand the layout LIVE items
+    /// (<see cref="BeamDetectionMemo.ReplayWithLiveItems"/>): the quanter and the seeds read
+    /// <c>Member.Item</c>, and the stored one is the previous edit's.
+    /// </summary>
+    public BeamDetectionMemo BeamDetection { get; } = new() { ReplayWithLiveItems = true };
 
     /// <summary>The above-staff stacking memo of the PRELIMINARY annotation pass. One
     /// instance per pass — the two passes stack different systems every keystroke, so a
