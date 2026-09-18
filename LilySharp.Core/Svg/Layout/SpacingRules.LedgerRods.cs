@@ -110,7 +110,7 @@ internal static partial class SpacingRules
                         if (timings[k] == onset) { t = k; break; }
                     if (t >= 0)
                     {
-                        double shift = shifts.GetValueOrDefault(new VoiceItemKey(measureIndex, v + 1, oi));
+                        double shift = shifts.ShiftOf(measureIndex, v + 1, oi);
                         var font = IsCueItem(item) ? EngravingDefaults.CueFont : GlyphMetrics.Design20;
                         int noteValue = GetNoteValue(item);
                         double width = GlyphMetrics.GetNoteheadBBox(font, noteValue).Width;

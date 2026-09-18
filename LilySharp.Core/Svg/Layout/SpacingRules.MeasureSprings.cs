@@ -969,13 +969,15 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     /// <summary>
-    /// One collision-offsets computation per STAFF object, not per measure:
-    /// <see cref="ElementCoordinator.ComputeVoiceOffsets"/> walks every measure of
-    /// every voice, and this decoration runs once per measure in BOTH the break gate
-    /// and the system layout — calling it inline made the pass O(measures²) per staff
-    /// (MEASURED: +26% end-to-end on a 120-bar two-voice book, 1991→2514 ms). The
-    /// offsets derive purely from the staff's immutable Voices, so one computation per
-    /// Staff instance is exact; a model rebuild makes new Staff objects and refills.
+    /// One collision table per STAFF object, filled a measure at a time
+    /// (<see cref="VoiceCollisionTable"/>): this decoration runs once per measure in BOTH
+    /// the break gate and the system layout, and computing the staff's collisions inline
+    /// made the pass O(measures²) per staff (MEASURED: +26% end-to-end on a 120-bar
+    /// two-voice book, 1991→2514 ms). The answer derives purely from the staff's immutable
+    /// Voices, so one table per Staff instance is exact; a model rebuild makes new Staff
+    /// objects and a fresh table — which then solves only the bars it is asked about
+    /// (session 405: the whole-staff fill on every edit was 3 ms / 7.5 MB on the two-voice
+    /// 1000-bar book, for the three bars the spring memo re-springs).
     /// </summary>
     /// <remarks>
     /// Keyed on the VOICES, not on the <see cref="Model.Staff"/> that holds them, so that the
@@ -986,35 +988,31 @@ internal static partial class SpacingRules
     /// underlying array is one object per staff and the memo is exactly as sharp as before.
     /// </remarks>
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
-        Model.Voice[], ImmutableDictionary<VoiceItemKey, double>> s_staffVoiceOffsets = new();
+        Model.Voice[], VoiceCollisionTable> s_staffVoiceCollisions = new();
 
     /// <summary>
-    /// The staff's note-collision X shifts, settled once per staff — THE answer every
-    /// consumer reads (this spacing pass, the skyline seed that must reserve a
-    /// shifted voice where it is DRAWN, and the beam frame whose stems stand on those
-    /// shifted heads). Keys are 1-based VoiceId, matching
+    /// The staff's note-collision table — THE answer every consumer reads (this spacing
+    /// pass, the ledger rods, the skyline seed that must reserve a shifted voice where it
+    /// is DRAWN, the beam frame whose stems stand on those shifted heads, and the finishing
+    /// pass that files the renderer's tables from it). VoiceId is 1-based, matching
     /// VoiceCollector / the renderer's VoiceItemKey.
     /// </summary>
-    internal static ImmutableDictionary<VoiceItemKey, double> VoiceCollisionShiftsOf(
-        Model.Staff staff)
+    internal static VoiceCollisionTable VoiceCollisionShiftsOf(Model.Staff staff)
         => VoiceCollisionShiftsOf(staff.Voices);
 
     /// <inheritdoc cref="VoiceCollisionShiftsOf(Model.Staff)"/>
-    internal static ImmutableDictionary<VoiceItemKey, double> VoiceCollisionShiftsOf(
-        ImmutableArray<Model.Voice> voices)
+    internal static VoiceCollisionTable VoiceCollisionShiftsOf(ImmutableArray<Model.Voice> voices)
     {
-        // A single voice collides with nothing: ComputeVoiceOffsets returns Empty for it
-        // anyway, and answering here keeps the one-voice book — every book, mostly — off the
-        // table entirely.
+        // A single voice collides with nothing: answering here keeps the one-voice book —
+        // every book, mostly — off the table entirely.
         if (voices.Length < 2)
-            return ImmutableDictionary<VoiceItemKey, double>.Empty;
+            return VoiceCollisionTable.Empty;
 
         var key = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(voices)!;
-        if (s_staffVoiceOffsets.TryGetValue(key, out var cached))
+        if (s_staffVoiceCollisions.TryGetValue(key, out var cached))
             return cached;
 
-        var computed = ElementCoordinator.ComputeVoiceOffsets(voices).VoiceOffsets;
-        return s_staffVoiceOffsets.GetValue(key, _ => computed);
+        return s_staffVoiceCollisions.GetValue(key, _ => new VoiceCollisionTable(voices));
     }
 
     internal static ImmutableArray<Spring> ApplyCrossVoiceColumnSpacing(
@@ -1050,8 +1048,7 @@ internal static partial class SpacingRules
                         if (timings[t] == onset)
                         {
                             (columns[t] ??= new()).Add((item,
-                                offsets.GetValueOrDefault(
-                                    new VoiceItemKey(measureIndex, v + 1, oi)),
+                                offsets.ShiftOf(measureIndex, v + 1, oi),
                                 v));
                             break;
                         }

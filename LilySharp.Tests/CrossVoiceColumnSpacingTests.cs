@@ -242,8 +242,8 @@ public class CrossVoiceColumnSpacingTests
         var (_, _, _, score) = Collect(HalfNoteSeconds, 1);
         var shifts = SpacingRules.VoiceCollisionShiftsOf(score.StaffGroups[0].Staves[0]);
         // The down voice (voice 2) is a half head right; the up voice stays.
-        Assert.Equal(GlyphMetrics.GetNoteheadBBox(2).Width, shifts[new VoiceItemKey(1, 2, 0)], precision: 6);
-        Assert.False(shifts.ContainsKey(new VoiceItemKey(1, 1, 0)));
+        Assert.Equal(GlyphMetrics.GetNoteheadBBox(2).Width, shifts.ShiftOf(1, 2, 0), precision: 6);
+        Assert.Equal(0.0, shifts.ShiftOf(1, 1, 0));
         Assert.Equal(11.086, BarToBar(HalfNoteSeconds, 1), precision: 2);
     }
 
@@ -259,7 +259,7 @@ public class CrossVoiceColumnSpacingTests
     {
         var (_, _, _, score) = Collect(WholeNoteSeconds, 0);
         var shifts = SpacingRules.VoiceCollisionShiftsOf(score.StaffGroups[0].Staves[0]);
-        Assert.Equal(GlyphMetrics.GetNoteheadBBox(1).Width, shifts[new VoiceItemKey(0, 1, 0)], precision: 6);
-        Assert.False(shifts.ContainsKey(new VoiceItemKey(0, 2, 0)));
+        Assert.Equal(GlyphMetrics.GetNoteheadBBox(1).Width, shifts.ShiftOf(0, 1, 0), precision: 6);
+        Assert.Equal(0.0, shifts.ShiftOf(0, 2, 0));
     }
 }

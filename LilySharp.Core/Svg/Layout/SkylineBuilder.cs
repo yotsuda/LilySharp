@@ -589,11 +589,10 @@ internal sealed class SkylineBuilder
         // before vertical spacing reads the grobs, so LilyPond's skylines carry the
         // shift by construction. Measured: stems-clash-between-staves.ly, where the
         // shifted voice's down stem is the whole inter-staff constraint.
-        // (Empty → null, so a shift-less multi-voice staff — e.g. a rests-only second
-        // voice — pays no per-item lookup at all.)
+        // (A one-voice staff — every staff, mostly — asks nothing; a multi-voice bar that
+        // moved nothing answers each item from an empty entry list.)
         var collisionShifts = staff.Voices.Length >= 2
-            && SpacingRules.VoiceCollisionShiftsOf(staff) is { IsEmpty: false } shifts
-            ? shifts
+            ? SpacingRules.VoiceCollisionShiftsOf(staff)
             : null;
 
         for (int vi = 0; vi < staff.Voices.Length; vi++)
@@ -651,10 +650,8 @@ internal sealed class SkylineBuilder
                     // 1 − magstep(-3) of a head on an ossia's shifted voice. No corpus
                     // point reaches an ossia multi-voice collision yet — the audit caught
                     // it, not a measurement.
-                    if (collisionShifts is not null
-                        && collisionShifts.TryGetValue(
-                            new VoiceItemKey(measureIndex, vi + 1, itemIndex), out var collisionShift))
-                        itemX += collisionShift;
+                    if (collisionShifts is not null)
+                        itemX += collisionShifts.ShiftOf(measureIndex, vi + 1, itemIndex);
 
                     // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
                     // reserve an unbeamed stem, or the stale over-reservation would win.

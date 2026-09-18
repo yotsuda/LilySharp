@@ -84,11 +84,12 @@ internal sealed class SystemLayoutCache
     private ImmutableArray<MeasureContentKey> _keys;
     // One shift function per store: where that store's absolute measure stamps live
     // (see the class remarks). `Unstamped` is the identity — the value carries none.
-    // ...and, for the three per-(staff, system) stores, a second one for the SYSTEM
+    // ...and, for the per-(staff, system) stores, a second one for the SYSTEM
     // stamp: a bar inserted with a `break` before a system moves its number by one
     // while its measures and its music stay. Only a beam carries that number
     // (BeamLayout.SystemIndex); a tie or slur is drawn in the staff's within-system
-    // frame and carries none, so its shift is the identity.
+    // frame and carries none, and a collision entry names a measure only, so their
+    // shift is the identity.
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new(ShiftMeasures);
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new(Unstamped);
     private readonly TypedCache<MultiStaffLayouter.StaffSkylineSet> _staffSkylines = new(ShiftStaffSkylines);
@@ -97,12 +98,13 @@ internal sealed class SystemLayoutCache
     private readonly TypedCache<ImmutableArray<SlurLayout>> _staffSystemSlurs = new(ShiftSlurs, Unstamped);
     private readonly TypedCache<LayoutEngine.LooseBlockProfiles> _lyricBands = new(Unstamped);
     private readonly TypedCache<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> _looseLines = new(Unstamped);
+    private readonly TypedCache<ImmutableArray<VoiceCollisionEntry>> _voiceCollisions = new(ShiftVoiceCollisions);
 
     /// <summary>The memo stores, for <see cref="PassCounters"/>.</summary>
     public enum Store
     {
         Measures, Skylines, StaffSkylines, StaffSystemBeams, StaffSystemTies, StaffSystemSlurs,
-        LyricBands, LooseLines,
+        LyricBands, LooseLines, VoiceCollisions,
     }
 
     /// <summary>How one store paid for the CURRENT pass's lookups (since the last
@@ -119,13 +121,15 @@ internal sealed class SystemLayoutCache
         Store.StaffSystemSlurs => _staffSystemSlurs.Pass,
         Store.LyricBands => _lyricBands.Pass,
         Store.LooseLines => _looseLines.Pass,
+        Store.VoiceCollisions => _voiceCollisions.Pass,
         _ => throw new ArgumentOutOfRangeException(nameof(store)),
     };
 
     /// <summary>The sum of <see cref="PassCounters"/> over every store.</summary>
     public MemoCounters PassCountersTotal =>
         _measures.Pass + _skylines.Pass + _staffSkylines.Pass + _staffSystemBeams.Pass
-        + _staffSystemTies.Pass + _staffSystemSlurs.Pass + _lyricBands.Pass + _looseLines.Pass;
+        + _staffSystemTies.Pass + _staffSystemSlurs.Pass + _lyricBands.Pass + _looseLines.Pass
+        + _voiceCollisions.Pass;
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
     /// called before the layout consults the cache. Also marks the edit boundary for
@@ -142,6 +146,7 @@ internal sealed class SystemLayoutCache
         _staffSystemSlurs.NextGeneration();
         _lyricBands.NextGeneration();
         _looseLines.NextGeneration();
+        _voiceCollisions.NextGeneration();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
@@ -475,6 +480,28 @@ internal sealed class SystemLayoutCache
         return result;
     }
 
+    /// <summary>Reuses or computes ONE staff's note-collision entries for ONE system's
+    /// measures — the finishing pass's unit (<c>LayoutEngine.CalculateVoiceCollisions</c>),
+    /// which files the renderer's tables from these slices.</summary>
+    /// <remarks>
+    /// Keyed on the content slice and the staff (extra2) ALONE: the edge flags, indent and
+    /// shortest duration the other stores carry are passed as constants, because the value
+    /// reads none of them — a bar's collisions are a function of that bar's items in every
+    /// voice of the staff (<see cref="VoiceCollisionTable"/>'s remarks), and the slice folds
+    /// every voice's measures (<c>MeasureContentKey.Compute</c>'s secondary-voice fold). Each
+    /// entry carries its absolute measure index, so a hit found under other measure numbers
+    /// is re-stamped (<c>ShiftVoiceCollisions</c>); nothing here carries a system number.
+    /// The SPACING side reads the same answer from its own home
+    /// (<c>SpacingRules.VoiceCollisionShiftsOf</c>), which is where the compute lambda
+    /// reads it from too, so the two readers cannot hold different shifts.
+    /// </remarks>
+    public ImmutableArray<VoiceCollisionEntry> GetOrComputeStaffSystemVoiceCollisions(
+        int staffIndex, int firstMeasureIndex, int measureCount,
+        Func<ImmutableArray<VoiceCollisionEntry>> compute)
+        => _voiceCollisions.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+            isFirst: false, isLast: false, indent: 0, shortest: 0, extra: 0,
+            compute, out _, extra2: staffIndex);
+
     /// <summary>Reuses or computes ONE system's augmented PAGING skyline — its base
     /// skyline pair with the annotation ink merged in (scripts, tuplet brackets, bows,
     /// figured bass, voltas, marks, texts, chord names, bar numbers).</summary>
@@ -572,6 +599,16 @@ internal sealed class SystemLayoutCache
         var b = ImmutableArray.CreateBuilder<BeamLayout>(v.Length);
         foreach (var beam in v)
             b.Add(beam.WithMeasureIndicesShifted(delta));
+        return b.MoveToImmutable();
+    }
+
+    private static ImmutableArray<VoiceCollisionEntry> ShiftVoiceCollisions(
+        ImmutableArray<VoiceCollisionEntry> v, int delta)
+    {
+        if (v.IsDefaultOrEmpty) return v;
+        var b = ImmutableArray.CreateBuilder<VoiceCollisionEntry>(v.Length);
+        foreach (var e in v)
+            b.Add(e with { MeasureIndex = e.MeasureIndex + delta });
         return b.MoveToImmutable();
     }
 

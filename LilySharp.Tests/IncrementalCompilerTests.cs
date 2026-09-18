@@ -1077,6 +1077,108 @@ public class IncrementalCompilerTests
         // skips the layout outright and no store is read at all — ContentUnchangedEdit_*.)
     }
 
+    /// <summary>Six pinned systems of a TWO-VOICE staff whose voices collide in every
+    /// system — half-note seconds (the down voice shifts a head width, as
+    /// CrossVoiceColumnSpacingTests measures) and the dot-column adjustment every down
+    /// entry of a collided column carries — so the collision store has entries in every
+    /// system to serve and to re-stamp.</summary>
+    private static string PinnedTwoVoiceBook()
+    {
+        var upper = new[]
+        {
+            "d'2 e'2 |",
+            "c'2 e'2 |",
+            "g'4. g'8 a'2 |",
+            "e'8 d' c' b a g f e | break",
+        };
+        var lower = new[]
+        {
+            "c'2 d'2 |",
+            "c'2 e'2 |",
+            "g'4. g'8 f'2 |",
+            "c'8 b a g f e d c |",
+        };
+        var sb = new System.Text.StringBuilder(
+            "octave absolute\ntime 4/4\nkey c major\ntempo 96\npart melody { clef treble }\n"
+            + "section Main { melody {\nvoice {\n");
+        for (int i = 0; i < 6; i++)
+            foreach (var bar in upper)
+                sb.Append(bar).Append('\n');
+        sb.Append("} {\n");
+        for (int i = 0; i < 6; i++)
+            foreach (var bar in lower)
+                sb.Append(bar).Append('\n');
+        sb.Append("} } }\nform main { Main }\nscore main \"x\" { staff melody }\n");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// The renderer's collision tables (a voice's shift, a merged head's wipe, a dot column)
+    /// are filed from the per-system memo: on an edit confined to the last of six systems
+    /// the VoiceCollisions store serves five systems and computes one, and the picture
+    /// equals a full compile. Until session 405 the finishing pass solved every bar of the
+    /// staff again on every keystroke, beside the spacing side's own whole-staff solve
+    /// (RULES §7 9, counted on perf-v2bow1k: 2 × 1,000 bars and 6,000 columns per keystroke
+    /// → the re-sprung bars' 3 and 8).
+    /// </summary>
+    [Fact]
+    public void LayoutMemo_VoiceCollisions_AreServedPerSystem()
+    {
+        string src = PinnedTwoVoiceBook();
+        var tree = SyntaxTree.Parse(src);
+
+        // The book collides — the store has something to serve. (A fixture with nothing in
+        // its slices would pass the counts below without a single entry re-stamped. The
+        // unison half notes merge with BOTH heads drawn coincident and no wipe — LilyPond
+        // wipes only across a merge-differently-* switch, note-collision.cc:254-318 — so
+        // the wipe table is not asked for; the shifts and the dot adjustments are.)
+        var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var (offsets, wipes, dots) =
+            ElementCoordinator.ComputeVoiceOffsets(multi.StaffGroups[0].Staves[0].Voices);
+        Assert.True(offsets.Count > 0 && dots.Count > 0,
+            $"the fixture must collide: {offsets.Count} shifts, {wipes.Count} wipes, {dots.Count} dot adjustments");
+
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // The last bar of the upper voice's last system.
+        var change = Replace(src, "e'8 d' c' b a g f e | break\n} {", "e'8 d' c' b a g f d | break\n} {");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        Assert.Equal(new SystemLayoutCache.MemoCounters(5, 0, 1),
+            session.SystemCache!.PassCounters(SystemLayoutCache.Store.VoiceCollisions));
+    }
+
+    /// <summary>
+    /// A bar inserted into the first system of the two-voice book (into each voice, one
+    /// keystroke apiece): every later system's collision entries are found under their old
+    /// measure numbers and served re-stamped — their (measure, voice, item) keys move with
+    /// the bars — and each keystroke's picture equals a full compile of its text, the
+    /// misaligned one between the two keystrokes included.
+    /// </summary>
+    [Fact]
+    public void LayoutMemo_VoiceCollisions_AreReStampedWhenABarIsInserted()
+    {
+        string src = PinnedTwoVoiceBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(src), Opt);
+        session.Render();
+
+        string live = src;
+        var first = Replace(live, "d'2 e'2 |\n", "d'2 e'2 |\na'4 a' a' a' |\n");
+        live = SyntaxTree.Parse(live).WithChange(first).Text;
+        Assert.Equal(Full(live), Norm(session.Edit(first)));
+
+        var second = Replace(live, "} {\nc'2 d'2 |\n", "} {\nc'2 d'2 |\nf'4 f' f' f' |\n");
+        live = SyntaxTree.Parse(live).WithChange(second).Text;
+        Assert.Equal(Full(live), Norm(session.Edit(second)));
+
+        // Six systems: the first is computed (it holds the new bar), the five after it are
+        // the original systems one bar later — served shifted, none computed.
+        Assert.Equal(new SystemLayoutCache.MemoCounters(0, 5, 1),
+            session.SystemCache!.PassCounters(SystemLayoutCache.Store.VoiceCollisions));
+    }
+
     /// <summary>The mirror: a bar deleted from the first system, the tail shifted back.</summary>
     [Fact]
     public void LayoutMemo_ADeletedMeasure_ReStampsTheShiftedSystems()

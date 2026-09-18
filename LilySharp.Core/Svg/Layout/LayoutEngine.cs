@@ -548,7 +548,7 @@ internal sealed partial class LayoutEngine
             score, systemsArray, annotations, annotationContext.SolvedRowBaselines);
 
         var (voiceOffsets, headWipes, dotAdjustments) =
-            CalculateVoiceCollisions(score, systemsArray);
+            CalculateVoiceCollisions(score, systemsArray, systemCache);
 
         // The dot-column answer for every dotted rest, through the static memo so the
         // renderer and the skyline seed read what one solve produced (same slot-sharing

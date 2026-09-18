@@ -104,6 +104,17 @@ workflow attaches that section to the GitHub Release verbatim.
   page-count bound, once for the page DP) and constructing a fresh page accumulator per line
   inside the DP: 13.0 MB → 7.7 MB per keystroke on the same books, the loop's time 6.1 → 5.7
   ms. Every count is priced by the same numbers as before.
+- **A keystroke solves the note collisions of the bars it changed, not the whole staff twice.**
+  On a staff with two or more voices the collision pass — which voice a second pushes aside,
+  which head a unison merges away, where a dot column goes — ran over every bar of the staff
+  twice per keystroke: once for the spacing floor, in a memo keyed on a voice list that every
+  edit replaces, and once more for the picture, with no memo at all. It is now solved a bar at
+  a time on first ask; the spacing side asks only for the bars it re-springs, and the picture's
+  tables are filed from the per-system memo, which serves the unchanged systems (re-stamped when
+  a bar was inserted before them). Counted on an edit at the last bar of the two-voice 1000-bar
+  book: 2,000 bars and 6,000 columns solved per keystroke before, 3 bars and 8 columns after
+  (15 MB less per keystroke). Nothing moves: a bar's answer reads that bar of every voice and
+  nothing else, and every book of the incremental net still equals its full compile.
 - **A keystroke's collect walks the book five times less.** Even when the preview's
   incremental collect adopted every bar of the previous keystroke, it still walked the whole
   tree five more times for facts that do not depend on the edit: twice per part for the

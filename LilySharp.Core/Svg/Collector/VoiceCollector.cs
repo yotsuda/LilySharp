@@ -94,119 +94,98 @@ internal sealed class VoiceCollector
     }
 
     /// <summary>
-    /// Collects voice columns from multiple voices, aligning by time position.
+    /// Collects voice columns from multiple voices, aligning by time position — measure by
+    /// measure, in measure order (<see cref="CollectMeasure"/>): a column holds one measure's
+    /// moment, so the whole staff's columns are its measures' columns laid end to end.
     /// </summary>
-    private ImmutableArray<VoiceColumn> CollectMultipleVoices(ImmutableArray<Voice> voices)
+    private static ImmutableArray<VoiceColumn> CollectMultipleVoices(ImmutableArray<Voice> voices)
     {
-        // Build a timeline: map from (measureIndex, timeWithinMeasure) to entries
-        var timeline = new SortedDictionary<TimelineKey, List<VoiceEntry>>();
+        int measureCount = 0;
+        foreach (var voice in voices)
+            measureCount = Math.Max(measureCount, voice.Measures.Length);
 
-        for (int voiceIndex = 0; voiceIndex < voices.Length; voiceIndex++)
-        {
-            var voice = voices[voiceIndex];
-            int voiceId = voiceIndex + 1;
-
-            for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
-            {
-                var measure = voice.Measures[measureIndex];
-                var timePosition = Fraction.Zero;
-
-                // Forced stem direction for this voice, where the voice { } span
-                // actually reaches.
-                // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-                bool? defaultStemUp = VoiceDefaults.GetDefaultStemUpAt(
-                    voices, voiceIndex, measureIndex);
-
-                for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
-                {
-                    var item = measure.Items[itemIndex];
-
-                    // Add non-rest items to timeline.
-                    // ⚠️ AND NOT GRACE TIME. A grace takes no measure time, so it lands on
-                    // the moment of the note it leads — putting a THIRD head into a column
-                    // that holds one note from each voice, and the collision solver then
-                    // shifts a head that is nowhere near it: MEASURED, in
-                    // `voice { c''4 c''4 c''2 } { g4 grace { d''16 } g4 g2 }` the UPPER
-                    // voice's second c'' moved 1.04 (a notehead) to the right, on account
-                    // of a grace in the lower one.
-                    // ⚠️ This is not a permanent answer, and HANDOFF §2 U8b is the open
-                    // ticket for the real one: LilyPond DOES collide two simultaneous
-                    // graces with each other (session 308 measured its two accidentals
-                    // stacked at 16.2208 / 17.0831), and Lily# still draws them on top of
-                    // each other. What the ticket needs is a column of grace time, beside
-                    // this one — not grace heads inside this one.
-                    if (item is not RestItem && !item.GraceTime)
-                    {
-                        var key = new TimelineKey(measureIndex, timePosition);
-
-                        if (!timeline.TryGetValue(key, out var entries))
-                        {
-                            entries = new List<VoiceEntry>();
-                            timeline[key] = entries;
-                        }
-
-                        // Writer's @stemUp/@stemDown outranks the voice default
-                        // (must match ResolveVoiceStemDirections, which skips
-                        // these when baking).
-                        bool? writerAsk = item switch
-                        {
-                            NoteItem n => n.ForcedStemUp,
-                            ChordItem c => c.ForcedStemUp,
-                            _ => null,
-                        };
-                        entries.Add(new VoiceEntry(voiceId, item, itemIndex, writerAsk ?? defaultStemUp));
-                    }
-
-                    // Advance time position
-                    timePosition = timePosition + item.Duration;
-                }
-            }
-        }
-
-        // Convert timeline to voice columns
         var columns = ImmutableArray.CreateBuilder<VoiceColumn>();
-
-        foreach (var kvp in timeline)
-        {
-            var column = new VoiceColumn(
-                kvp.Value.ToImmutableArray(),
-                kvp.Key.MeasureIndex);
-
-            columns.Add(column);
-        }
-
+        for (int measureIndex = 0; measureIndex < measureCount; measureIndex++)
+            columns.AddRange(CollectMeasure(voices, measureIndex));
         return columns.ToImmutable();
     }
 
     /// <summary>
-    /// Key for timeline indexing, ordered by measure, then time within measure.
+    /// The columns of ONE measure across every voice, in time order — the unit the
+    /// collision table solves a bar at a time (<see cref="Layout.VoiceCollisionTable"/>),
+    /// and what <see cref="Collect(ImmutableArray{Voice})"/> concatenates for the staff.
+    /// A voice shorter than the measure index contributes nothing.
     /// </summary>
-    private readonly struct TimelineKey : IComparable<TimelineKey>
+    public static ImmutableArray<VoiceColumn> CollectMeasure(ImmutableArray<Voice> voices, int measureIndex)
     {
-        public int MeasureIndex { get; }
-        public Fraction TimePosition { get; }
+        // Build the measure's timeline: time within the measure → entries, in voice order.
+        var timeline = new SortedDictionary<Fraction, List<VoiceEntry>>();
 
-        public TimelineKey(int measureIndex, Fraction timePosition)
+        for (int voiceIndex = 0; voiceIndex < voices.Length; voiceIndex++)
         {
-            MeasureIndex = measureIndex;
-            TimePosition = timePosition;
+            var voice = voices[voiceIndex];
+            if (measureIndex >= voice.Measures.Length)
+                continue;
+            int voiceId = voiceIndex + 1;
+            var measure = voice.Measures[measureIndex];
+            var timePosition = Fraction.Zero;
+
+            // Forced stem direction for this voice, where the voice { } span
+            // actually reaches.
+            // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+            bool? defaultStemUp = VoiceDefaults.GetDefaultStemUpAt(
+                voices, voiceIndex, measureIndex);
+
+            for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
+            {
+                var item = measure.Items[itemIndex];
+
+                // Add non-rest items to timeline.
+                // ⚠️ AND NOT GRACE TIME. A grace takes no measure time, so it lands on
+                // the moment of the note it leads — putting a THIRD head into a column
+                // that holds one note from each voice, and the collision solver then
+                // shifts a head that is nowhere near it: MEASURED, in
+                // `voice { c''4 c''4 c''2 } { g4 grace { d''16 } g4 g2 }` the UPPER
+                // voice's second c'' moved 1.04 (a notehead) to the right, on account
+                // of a grace in the lower one.
+                // ⚠️ This is not a permanent answer, and HANDOFF §2 U8b is the open
+                // ticket for the real one: LilyPond DOES collide two simultaneous
+                // graces with each other (session 308 measured its two accidentals
+                // stacked at 16.2208 / 17.0831), and Lily# still draws them on top of
+                // each other. What the ticket needs is a column of grace time, beside
+                // this one — not grace heads inside this one.
+                if (item is not RestItem && !item.GraceTime)
+                {
+                    if (!timeline.TryGetValue(timePosition, out var entries))
+                    {
+                        entries = new List<VoiceEntry>();
+                        timeline[timePosition] = entries;
+                    }
+
+                    // Writer's @stemUp/@stemDown outranks the voice default
+                    // (must match ResolveVoiceStemDirections, which skips
+                    // these when baking).
+                    bool? writerAsk = item switch
+                    {
+                        NoteItem n => n.ForcedStemUp,
+                        ChordItem c => c.ForcedStemUp,
+                        _ => null,
+                    };
+                    entries.Add(new VoiceEntry(voiceId, item, itemIndex, writerAsk ?? defaultStemUp));
+                }
+
+                // Advance time position
+                timePosition = timePosition + item.Duration;
+            }
         }
 
-        public int CompareTo(TimelineKey other)
-        {
-            // First compare by measure
-            int measureCompare = MeasureIndex.CompareTo(other.MeasureIndex);
-            if (measureCompare != 0)
-                return measureCompare;
+        if (timeline.Count == 0)
+            return ImmutableArray<VoiceColumn>.Empty;
 
-            // Then by time within measure
-            return TimePosition.CompareTo(other.TimePosition);
-        }
-
-        public override bool Equals(object? obj) =>
-            obj is TimelineKey other && CompareTo(other) == 0;
-
-        public override int GetHashCode() =>
-            HashCode.Combine(MeasureIndex, TimePosition.GetHashCode());
+        // Convert the timeline to voice columns
+        var columns = ImmutableArray.CreateBuilder<VoiceColumn>(timeline.Count);
+        foreach (var kvp in timeline)
+            columns.Add(new VoiceColumn(kvp.Value.ToImmutableArray(), measureIndex));
+        return columns.MoveToImmutable();
     }
 }

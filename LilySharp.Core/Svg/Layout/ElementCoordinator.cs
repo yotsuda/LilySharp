@@ -59,51 +59,85 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Calculates X offsets and head wipe flags for notes that collide in multi-voice contexts.
+    /// The whole staff's X offsets, head wipes and dot adjustments for the notes that
+    /// collide in multi-voice contexts — the three tables the renderer reads, as the union
+    /// over the staff's measures of <see cref="ComputeVoiceCollisionsOfMeasure"/>. The
+    /// finishing pass files the same tables from the same measures through the per-system
+    /// memo (<c>LayoutEngine.CalculateVoiceCollisions</c>); this whole-staff spelling is the
+    /// one the nets compare it against, not a second computation.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:254-317 — head wipe
     /// LILYPOND-REF: lily/note-collision.cc:607-622 — force-hshift manual override
-    /// Returns both voice offsets and head wipe entries (noteheads to hide on merge).
     /// </remarks>
-    public (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
-            ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
-            ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments) CalculateVoiceOffsets(
-        Score score, GrobPropertyResolver? resolver = null)
-        => ComputeVoiceOffsets(score.Voices, resolver);
-
-    /// <summary>
-    /// The static core of <see cref="CalculateVoiceOffsets"/>, reachable from the SPACING
-    /// side without a <see cref="Score"/> or a coordinator instance:
-    /// <see cref="SpacingRules.ApplyCrossVoiceColumnSpacing"/> must price a column's ink at
-    /// the X the renderer will draw it — collision shift included — and the only
-    /// non-drifting way to know that shift is to ask the SAME computation the renderer's
-    /// offsets come from. LILYPOND-REF: lily/note-collision.cc calc_positioning_done runs
-    /// before spacing reads the columns' extents, so LilyPond's separation boxes carry the
-    /// shifts by construction; Lily# applies them at render time, so the spacing side has
-    /// to ask.
-    /// </summary>
     internal static (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
             ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
             ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments) ComputeVoiceOffsets(
         ImmutableArray<Voice> voices, GrobPropertyResolver? resolver = null)
     {
-        if (voices.Length <= 1)
-            return (ImmutableDictionary<VoiceItemKey, double>.Empty,
-                    ImmutableHashSet<VoiceItemKey>.Empty,
-                    ImmutableDictionary<VoiceItemKey, DotAdjustment>.Empty);
-
-        var voiceColumns = new VoiceCollector().Collect(voices);
-        var noteCollision = new NoteCollision();
-
-        if (voiceColumns.Length == 0)
-            return (ImmutableDictionary<VoiceItemKey, double>.Empty,
-                    ImmutableHashSet<VoiceItemKey>.Empty,
-                    ImmutableDictionary<VoiceItemKey, DotAdjustment>.Empty);
-
         var offsetBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
         var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
+        if (voices.Length > 1)
+        {
+            int measureCount = 0;
+            foreach (var voice in voices)
+                measureCount = Math.Max(measureCount, voice.Measures.Length);
+            for (int m = 0; m < measureCount; m++)
+                AddVoiceCollisions(ComputeVoiceCollisionsOfMeasure(voices, m, resolver),
+                    offsetBuilder, headWipeBuilder, dotAdjustBuilder);
+        }
+        return (offsetBuilder.ToImmutable(), headWipeBuilder.ToImmutable(), dotAdjustBuilder.ToImmutable());
+    }
+
+    /// <summary>
+    /// Files a run of collision entries into the renderer's three tables — the one place
+    /// that knows which field of an entry goes to which table.
+    /// </summary>
+    internal static void AddVoiceCollisions(
+        ImmutableArray<VoiceCollisionEntry> entries,
+        ImmutableDictionary<VoiceItemKey, double>.Builder offsets,
+        ImmutableHashSet<VoiceItemKey>.Builder headWipes,
+        ImmutableDictionary<VoiceItemKey, DotAdjustment>.Builder dotAdjustments)
+    {
+        foreach (var e in entries)
+        {
+            var key = new VoiceItemKey(e.MeasureIndex, e.VoiceId, e.ItemIndex);
+            if (e.XOffset != 0)
+                offsets[key] = e.XOffset;
+            if (e.HeadTransparent)
+                headWipes.Add(key);
+            if (e.Dot != default)
+                dotAdjustments[key] = e.Dot;
+        }
+    }
+
+    /// <summary>
+    /// ONE measure's collision entries: the measure's columns across every voice
+    /// (<see cref="VoiceCollector.CollectMeasure"/>), each solved by
+    /// <see cref="NoteCollision.CalculateVoiceOffsets"/> — the unit
+    /// <see cref="VoiceCollisionTable"/> fills a bar at a time and the per-system memo
+    /// slices. Reachable from the SPACING side without a <see cref="Score"/> or a
+    /// coordinator instance: <see cref="SpacingRules.ApplyCrossVoiceColumnSpacing"/> must
+    /// price a column's ink at the X the renderer will draw it — collision shift included —
+    /// and the only non-drifting way to know that shift is to ask the SAME computation the
+    /// renderer's offsets come from. LILYPOND-REF: lily/note-collision.cc
+    /// calc_positioning_done runs before spacing reads the columns' extents, so LilyPond's
+    /// separation boxes carry the shifts by construction; Lily# applies them at render
+    /// time, so the spacing side has to ask. Empty (no allocation) where nothing collided.
+    /// </summary>
+    internal static ImmutableArray<VoiceCollisionEntry> ComputeVoiceCollisionsOfMeasure(
+        ImmutableArray<Voice> voices, int measureIndex, GrobPropertyResolver? resolver = null)
+    {
+        if (voices.Length <= 1)
+            return ImmutableArray<VoiceCollisionEntry>.Empty;
+
+        var voiceColumns = VoiceCollector.CollectMeasure(voices, measureIndex);
+        if (voiceColumns.Length == 0)
+            return ImmutableArray<VoiceCollisionEntry>.Empty;
+
+        var noteCollision = new NoteCollision();
+        ImmutableArray<VoiceCollisionEntry>.Builder? entries = null;
 
         foreach (var column in voiceColumns)
         {
@@ -132,32 +166,26 @@ internal sealed class ElementCoordinator
 
             foreach (var (voiceId, itemIndex, xOffset, headTransparent, dot) in offsets)
             {
-                var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
-
                 // LILYPOND-REF: lily/note-collision.cc:607-622
                 // force-hshift overrides auto-calculated offsets for all columns at this position.
                 double effectiveOffset = forceHshift.HasValue
                     ? forceHshift.Value * noteheadWidth
                     : xOffset;
 
-                if (Math.Abs(effectiveOffset) > 0.001)
-                {
-                    offsetBuilder[key] = effectiveOffset;
-                }
+                // A shift under a thousandth of a space is no shift — the renderer's table
+                // never held one, and a wipe or a dot adjustment rides in without it.
+                if (Math.Abs(effectiveOffset) <= 0.001)
+                    effectiveOffset = 0;
+                if (effectiveOffset == 0 && !headTransparent && dot == default)
+                    continue;
 
-                if (headTransparent)
-                {
-                    headWipeBuilder.Add(key);
-                }
-
-                if (dot != default)
-                {
-                    dotAdjustBuilder[key] = dot;
-                }
+                (entries ??= ImmutableArray.CreateBuilder<VoiceCollisionEntry>()).Add(
+                    new VoiceCollisionEntry(column.MeasureIndex, voiceId, itemIndex,
+                        effectiveOffset, headTransparent, dot));
             }
         }
 
-        return (offsetBuilder.ToImmutable(), headWipeBuilder.ToImmutable(), dotAdjustBuilder.ToImmutable());
+        return entries?.ToImmutable() ?? ImmutableArray<VoiceCollisionEntry>.Empty;
     }
 
     /// <summary>
@@ -227,23 +255,21 @@ internal sealed class ElementCoordinator
     /// </para>
     /// <para>
     /// Empty for every single-voice book (the overwhelming majority), which is answered
-    /// without a lookup; the per-item probe runs only where a staff actually has shifts.
+    /// without a lookup; the per-item probe runs only where the bar actually has shifts.
     /// </para>
     /// </remarks>
     private static void ApplyVoiceCollisionShifts(
         List<double> itemXPositions,
-        ImmutableDictionary<VoiceItemKey, double> voiceShifts,
+        VoiceCollisionTable voiceShifts,
         int measureIndex, int voiceIndex)
     {
-        if (voiceShifts.IsEmpty)
+        if (!voiceShifts.AnyShiftIn(measureIndex))
             return;
 
         // VoiceId is 1-based, as VoiceCollector stamps it and as the renderer and the skyline
         // seed both read it back (SkylineBuilder's `vi + 1`).
         for (int i = 0; i < itemXPositions.Count; i++)
-            if (voiceShifts.TryGetValue(
-                    new VoiceItemKey(measureIndex, voiceIndex + 1, i), out double shift))
-                itemXPositions[i] += shift;
+            itemXPositions[i] += voiceShifts.ShiftOf(measureIndex, voiceIndex + 1, i);
     }
 
     /// <summary>
@@ -457,12 +483,7 @@ internal sealed class ElementCoordinator
             if (itemIdx >= measureLayout.Items.Length)
                 return null;
 
-            double shift = voiceShifts.IsEmpty
-                ? 0.0
-                : voiceShifts.TryGetValue(
-                      new VoiceItemKey(measureIdx, group.VoiceIndex + 1, itemIdx), out double s)
-                    ? s
-                    : 0.0;
+            double shift = voiceShifts.ShiftOf(measureIdx, group.VoiceIndex + 1, itemIdx);
 
             var measure = score.Voices[group.VoiceIndex].Measures[measureIdx];
             if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)

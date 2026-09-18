@@ -2237,6 +2237,22 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⚠️ **反対向きにも効く**: 数秒の計器で「速くなった」も、昇格の順序の差でありうる＝A/B は同じ順序・同じ
   run 数で、できれば TC=0 でも 1 回取る。
 
+- ★★ ⚠️ **edit ごとに作り直される model instance（`Staff`・`Voice[]`）を鍵にした静的
+  `ConditionalWeakTable` は session memo ではなく*打鍵ごとの scratch*＝「memo がある」と読まず、
+  *打鍵あたり何回埋めたか*を数える**（2026-09-18・第405・R13⒧）。
+  **`SpacingRules.VoiceCollisionShiftsOf` は `Voice[]` 鍵の CWT で「一度計算したら再利用」の顔を
+  していたが、resume 後の `Voice[]` は毎 edit 新品＝spring memo が訊く 3 小節のために 1000 小節を
+  丸ごと埋め、finishing 側（`LayoutEngine.CalculateVoiceCollisions`）は memo 無しでもう一度歩いていた**
+  （2 × 1000 小節・6,000 列・15 MB／打鍵・filed した entry は 0＝衝突の無い本で）。
+  ⇒ **直しの型**: 答えを*小節単位*に割り（その小節の全 voice だけを読む計算なら健全＝LP が
+  moment ごとに 1 grob を置く量）、scratch は訊かれた小節だけ解き（`VoiceCollisionTable`）、
+  全小節を要る読み手は `SystemLayoutCache` の content-keyed store（system × staff の slice・
+  shifted hit で小節番号を振り直す）から受ける。計算の綴りは 1 つ（全体＝小節の和集合）。
+  **同じ顔が残る家（未計測）**: `MultiStaffLayouter.RestCollisionsOf`（`Staff` 鍵・
+  `CalculateRestNoteCollisions` の全小節走査）・`ElementCoordinator.RestDotOffsetsOf`。
+  判定は計器 1 本＝**打鍵あたりの fill 回数と歩いた列数**（`sessions/p405/Zz405Probe.cs.txt`）。
+  ⚠️ **`dotnet test --no-build` は古い DLL を回す**——新しい網が「通った」ように見える。build を挟む。
+
 - ★★★★ ⚠️⚠️⚠️ **「X ができない」と書かれた起票は、その機構が*無い*のか*届いていない*のかを、
   同じ木の中の*隣の構文*で 1 対測ってから読む**（2026-08-31・第309セッション。**§2 U8 で 5 例目の割り直し**）。
   **§1 は「装飾音符が `ItemIndex` を名乗れないこと」を難所と名指し、次の便に*住所を設計せよ*と書いた。**

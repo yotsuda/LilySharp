@@ -341,32 +341,52 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// Voice collision offsets / head-wipes / dot-force-down for multi-voice staves
-    /// (so the renderer can nudge opposing voices apart). Keys are (measureIndex, voiceId,
-    /// itemIndex) — correct for the common single-multi-voice-staff case. Extracted verbatim
-    /// from the multi-staff <c>Layout</c> body. (The part-combine labels left this method in
-    /// session 378: they are placed by the outside-staff pass — see
-    /// <see cref="PartCombineLayoutsOf"/>.)
+    /// Voice collision offsets / head-wipes / dot-force-down for multi-voice staves (so the
+    /// renderer can nudge opposing voices apart), keyed (measureIndex, voiceId, itemIndex)
+    /// — correct for the common single-multi-voice-staff case. Filed from the SAME
+    /// per-measure table the spacing floor, the ledger rods, the skyline seed and the beam
+    /// frame read (<see cref="SpacingRules.VoiceCollisionShiftsOf(Staff)"/>), a system's
+    /// measures at a time through the per-system memo — so on a keystroke only the edited
+    /// system's bars are solved and the rest are served, re-stamped when a bar was inserted
+    /// before them. (The part-combine labels left this method in session 378: they are
+    /// placed by the outside-staff pass — see <see cref="PartCombineLayoutsOf"/>.)
     /// </summary>
-    private (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
+    /// <remarks>
+    /// ⚠️ UNTIL SESSION 405 this was a SECOND whole-staff computation beside the spacing
+    /// side's — every bar of every voice solved again, per keystroke, with no memo.
+    /// MEASURED on perf-v2bow1k (Release, TieredCompilation=0, an edit at the last bar):
+    /// 3.1 ms / 7.5 MB of a 27 ms keystroke here, and the same again on the spacing side,
+    /// for a book with no collision in it. The renderer reads nothing but these three
+    /// tables, so the union over the systems' slices is the answer it always had.
+    /// </remarks>
+    private static (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
              ImmutableHashSet<VoiceItemKey> HeadWipes,
              ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments)
-        CalculateVoiceCollisions(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray)
+        CalculateVoiceCollisions(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
+            SystemLayoutCache? systemCache)
     {
         var voiceOffsetsBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
         var dotAdjustBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, DotAdjustment>();
-        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
             if (staff.Voices.Length < 2)
                 continue;
 
-            var staffScore = new Score(
-                staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef));
-            var (vo, hw, da) = _elementCoordinator.CalculateVoiceOffsets(staffScore);
-            foreach (var kv in vo) voiceOffsetsBuilder[kv.Key] = kv.Value;
-            foreach (var k in hw) headWipeBuilder.Add(k);
-            foreach (var kv in da) dotAdjustBuilder[kv.Key] = kv.Value;
+            var table = SpacingRules.VoiceCollisionShiftsOf(staff);
+            foreach (var system in systemsArray)
+            {
+                if (system.Measures.IsDefaultOrEmpty)
+                    continue;
+                int first = system.Measures[0].MeasureIndex;
+                int count = system.Measures[^1].MeasureIndex - first + 1;
+                var slice = systemCache is null
+                    ? table.SliceOf(first, count)
+                    : systemCache.GetOrComputeStaffSystemVoiceCollisions(
+                        staffIndex, first, count, () => table.SliceOf(first, count));
+                ElementCoordinator.AddVoiceCollisions(
+                    slice, voiceOffsetsBuilder, headWipeBuilder, dotAdjustBuilder);
+            }
         }
 
         return (voiceOffsetsBuilder.ToImmutable(), headWipeBuilder.ToImmutable(),
