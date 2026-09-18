@@ -43,16 +43,9 @@ internal sealed class RevertContextValidator : ISemanticValidator
         var root = tree.GetRoot();
         bool structured = TopLevelNodes.IsStructured(root);
 
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodesOfKinds(DirectiveKinds))
         {
-            // `once` (wrapping override OR revert) is music-only whatever it wraps. A bare
-            // `revert` inside a `once` is reported via the OnceModifier, so skip it here.
-            string? kind = node switch
-            {
-                OnceModifierSyntax => "once",
-                RevertDeclarationSyntax r when r.Parent is not OnceModifierSyntax => "revert",
-                _ => null,
-            };
+            string? kind = DirectiveKindOf(node);
             if (kind == null)
                 continue;
 
@@ -74,6 +67,29 @@ internal sealed class RevertContextValidator : ISemanticValidator
                 + "Set a default with a plain 'override' here, and 'revert' inside a section or voice.");
         }
     }
+
+    /// <summary>The kinds <see cref="DirectiveKindOf"/> answers on, so the walk asks the
+    /// tree's descendant index for those nodes instead of offering it every node of the
+    /// book (this pass runs after every settled keystroke).</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a third
+    /// point-in-the-music directive must be added to BOTH, or it is accepted in a header
+    /// in silence. Pinned by <c>TailValidatorKindsTests</c> over every node of the net books.
+    /// </remarks>
+    internal static readonly SyntaxKind[] DirectiveKinds =
+        [SyntaxKind.OnceModifier, SyntaxKind.RevertDeclaration];
+
+    /// <summary>Which point-in-the-music directive this node is, or null. <c>once</c>
+    /// (wrapping override OR revert) is music-only whatever it wraps; a bare <c>revert</c>
+    /// inside a <c>once</c> is reported via the OnceModifier, so it is skipped here.
+    /// </summary>
+    internal static string? DirectiveKindOf(SyntaxNode node) => node switch
+    {
+        OnceModifierSyntax => "once",
+        RevertDeclarationSyntax r when r.Parent is not OnceModifierSyntax => "revert",
+        _ => null,
+    };
 
     /// <summary>A section-major section holds part blocks (its body is per-part music),
     /// so a directive directly in it is structural — unlike a single-voice section whose

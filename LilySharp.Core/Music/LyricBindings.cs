@@ -92,7 +92,10 @@ public static class LyricBindings
         while (root.Parent != null)
             root = root.Parent;
         var first = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var node in root.DescendantNodes())
+        // Definition blocks only, so the tree's descendant index answers in O(blocks)
+        // rather than O(tree) — this runs inside the diagnostics pass, after every
+        // settled keystroke, and a thousand-bar book holds no lyrics block at all.
+        foreach (var node in root.DescendantNodes<LyricsBlockSyntax>())
         {
             if (DefinitionBindingOf(node) is not ({ } name, { } target))
                 continue;
@@ -111,7 +114,7 @@ public static class LyricBindings
     private static Dictionary<string, string> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodes<LyricsBlockSyntax>())
             if (DefinitionBindingOf(node) is ({ } name, { } target) && !map.ContainsKey(name))
                 map[name] = target;
         return map;
@@ -139,7 +142,10 @@ public static class LyricBindings
     private static Dictionary<string, HashSet<string>> BuildVoiceMap(SyntaxNode root)
     {
         var map = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var n in root.DescendantNodes())
+        // The two spellings that declare a part, asked of the index by the kind list that
+        // stands beside PartReferenceFinder.DeclaredName (the same switch as below, pinned
+        // to that list by SymbolKindsTests). The walk INSIDE each part stays a subtree walk.
+        foreach (var n in root.DescendantNodesOfKinds(Editing.PartReferenceFinder.DeclaringKinds))
         {
             string? part = n switch
             {

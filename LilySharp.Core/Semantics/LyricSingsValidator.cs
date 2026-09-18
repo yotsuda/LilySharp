@@ -59,16 +59,25 @@ internal sealed class LyricSingsValidator : ISemanticValidator
         // this validator calls it unknown would be the editor contradicting itself inside
         // one line. Two callers, one answer — and the wider set (parts AND voices) is the
         // half a caller is most likely to get wrong on its own.
-        foreach (var n in root.DescendantNodes())
-        {
+        // Each predicate is asked of the kinds it can answer on — its list beside it in
+        // PartReferenceFinder, pinned to the predicate by SymbolKindsTests (the declaring
+        // kinds) and LyricSingsWalkTests (the other two) — rather than of every node: the
+        // sets below name a handful of nodes in a book of hundreds of thousands, and this
+        // pass runs after every settled keystroke.
+        foreach (var n in root.DescendantNodesOfKinds(PartReferenceFinder.DeclaringKinds))
             if (PartReferenceFinder.DeclaredName(n) is { } part)
                 partNames.Add(part.Text);
+        foreach (var n in root.DescendantNodesOfKinds(PartReferenceFinder.VoiceIntroducingKinds))
             PartReferenceFinder.CollectVoiceNames(n, voiceNames);
-        }
 
         // Both sites — the definition block (the track's default) and the score
         // row (`lyrics verse sings melody`, this placement's own melody) — name a
         // part, so both go through the unknown-target net.
+        // ⚠️ THE SAME TWO SITES PartReferenceFinder.SingsTargetToken answers on, which is
+        // why the loop below reaches them through that predicate's kind list (SingsKinds):
+        // this switch wants the name, the span and the target TEXT, that one the token an
+        // editor colours. A third sings site would have to be written into both switches,
+        // and LyricSingsWalkTests would fail on the list until it was.
         static (string? Name, string? Target, TextSpan Span)? SingsOf(SyntaxNode node) => node switch
         {
             LyricsBlockSyntax b => (b.VoiceName, b.SingsTarget, (b.SingsKeyword ?? b.LyricsKeyword).Span),
@@ -76,7 +85,7 @@ internal sealed class LyricSingsValidator : ISemanticValidator
             _ => null,
         };
 
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodesOfKinds(PartReferenceFinder.SingsKinds))
         {
             if (SingsOf(node) is not ({ } name, { } target, var span))
                 continue;

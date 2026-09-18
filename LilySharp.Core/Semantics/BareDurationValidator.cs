@@ -41,10 +41,11 @@ internal sealed class BareDurationValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        // One type, so the tree's descendant index answers it directly — no kind list to
+        // keep beside the test, and no walk of a book whose every node but a handful is
+        // something else (this pass runs after every settled keystroke).
+        foreach (var bare in tree.GetRoot().DescendantNodes<BareDurationSyntax>())
         {
-            if (node is not BareDurationSyntax bare)
-                continue;
             if (BareDurations.OriginalOf(bare) is null)
                 _diagnostics.Error(
                     bare.Span,

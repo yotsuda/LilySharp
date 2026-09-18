@@ -230,6 +230,18 @@ workflow attaches that section to the GitHub Release verbatim.
   validators 21.0 → 17.3 ms, and each scan also stops allocating an enumerator. The check whose
   walk the previous entry had already moved onto the kind buckets does not change, which is the
   control. The nodes, their order and every diagnostic are the same (760 books, identical).
+- **The bar checker stops reading the whole book to find four kinds of thing.** It used to
+  look for its work by walking the entire book, stepping around the containers whose bodies
+  are not bars of their own — a tuplet, a grace, a cue, a repeat, a voice span, a chord cell.
+  On a fingered 1000-bar book that walk entered 65,009 nodes, and every slot of each, to
+  arrive at TWO. It now asks the kept walk for the four kinds its checks act on and asks
+  whether a candidate stands inside one of those containers, which is a question about its
+  parents. Measured back to back (Release, tiered compilation off, min of 5): the check 3.39
+  → 2.33 ms per settled keystroke on that book, its walk 2.12 → 1.06, the rest being the
+  checking itself. Every reason for stepping around a container is kept where it was written
+  — each one is a bug that was reported once — and a new test holds the old walk beside the
+  new one over every book in the net, asking that they act on the same nodes in the same
+  order. What the panel says does not change (760 books, identical).
 
 ### Engraving
 

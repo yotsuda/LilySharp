@@ -36,27 +36,14 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var groups = new Dictionary<string, List<SyntaxNode>>();
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        // Asked of the kinds the switch can answer on rather than of every node: the switch
+        // was cheap and the parent-chain test below was not, but asked of a whole book BOTH
+        // were the validator (MEASURED, session 401: 6.4 of 6.4 ms on perf-fingbeam1k with
+        // the chain first, 234,030 nodes for a handful of declarations — and session 409:
+        // that book holds NONE of these kinds at all). Both are pure reads.
+        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(GlobalSettingKinds))
         {
-            // The kind test first: it is a type switch, and the music test below walks the
-            // parent chain — asked of every node of the book it was most of this validator
-            // (MEASURED, session 401: 6.4 of 6.4 ms on perf-fingbeam1k with the chain
-            // first, 234,030 nodes for a handful of declarations). Both are pure reads.
-            string? kind = node switch
-            {
-                TempoDeclarationSyntax => "tempo",
-                TimeSignatureSyntax => "time",
-                KeySignatureSyntax => "key",
-                OctaveDirectiveSyntax => "octave",
-                // A NAMED fonts/paper block is a declaration, not the singleton file
-                // default — several may coexist (name collisions are the
-                // FontBinding/Paper validators' job), so only the unnamed form groups.
-                FontDeclarationSyntax { NameToken: null } => "font",
-                PaperDeclarationSyntax { NameToken: null } => "paper",
-                LayoutDeclarationSyntax { NameToken: null } => "layout",
-                MetadataDeclarationSyntax m => m.Keyword.ToLowerInvariant(), // title / composer
-                _ => null,
-            };
+            string? kind = SettingKindOf(node);
             if (kind == null || IsInMusic(node))
                 continue;
             if (!groups.TryGetValue(kind, out var list))
@@ -70,6 +57,40 @@ internal sealed class DuplicateGlobalSettingValidator : ISemanticValidator
                 _diagnostics.Warning(list[i].Span, DiagnosticCodes.DuplicateGlobalSetting,
                     $"This '{kind}' is overwritten by a later '{kind}'; only the last one takes effect.");
     }
+
+    /// <summary>The kinds <see cref="SettingKindOf"/> answers on, so the walk asks the
+    /// tree's descendant index for those nodes instead of offering it every node of the
+    /// book (this pass runs after every settled keystroke).</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a ninth global
+    /// setting must be added to BOTH, or its duplicate goes unreported. Pinned by
+    /// <c>TailValidatorKindsTests</c> over every node of the net books.
+    /// </remarks>
+    internal static readonly SyntaxKind[] GlobalSettingKinds =
+    [
+        SyntaxKind.TempoDeclaration, SyntaxKind.TimeSignature, SyntaxKind.KeySignature,
+        SyntaxKind.OctaveDirective, SyntaxKind.FontDeclaration, SyntaxKind.PaperDeclaration,
+        SyntaxKind.LayoutDeclaration, SyntaxKind.MetadataDeclaration,
+    ];
+
+    /// <summary>Which global setting this node states, or null. The singleton file
+    /// defaults — the ones a later spelling of the same thing overwrites.</summary>
+    internal static string? SettingKindOf(SyntaxNode node) => node switch
+    {
+        TempoDeclarationSyntax => "tempo",
+        TimeSignatureSyntax => "time",
+        KeySignatureSyntax => "key",
+        OctaveDirectiveSyntax => "octave",
+        // A NAMED fonts/paper block is a declaration, not the singleton file
+        // default — several may coexist (name collisions are the
+        // FontBinding/Paper validators' job), so only the unnamed form groups.
+        FontDeclarationSyntax { NameToken: null } => "font",
+        PaperDeclarationSyntax { NameToken: null } => "paper",
+        LayoutDeclarationSyntax { NameToken: null } => "layout",
+        MetadataDeclarationSyntax m => m.Keyword.ToLowerInvariant(), // title / composer
+        _ => null,
+    };
 
     private static bool IsInMusic(SyntaxNode node)
     {

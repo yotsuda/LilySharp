@@ -38,9 +38,12 @@ internal sealed class ChordRepetitionValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        // One type, so the tree's descendant index answers it directly — no kind list to
+        // keep beside the test, and no walk of a book whose every node but a handful is
+        // something else (this pass runs after every settled keystroke).
+        foreach (var rep in tree.GetRoot().DescendantNodes<ChordRepetitionSyntax>())
         {
-            if (node is ChordRepetitionSyntax rep && ChordRepetitions.OriginalOf(rep) is null)
+            if (ChordRepetitions.OriginalOf(rep) is null)
                 _diagnostics.Warning(
                     rep.Span,
                     DiagnosticCodes.BadChordRepetition,

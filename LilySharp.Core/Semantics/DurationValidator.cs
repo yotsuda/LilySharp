@@ -37,25 +37,43 @@ internal sealed class DurationValidator : ISemanticValidator
         var root = tree.GetRoot();
         // root is a CompilationUnit — it never matches a duration-bearing case,
         // so it is not checked separately (the old CheckNode(root) was a no-op).
-        foreach (var node in root.DescendantNodes())
+        foreach (var node in root.DescendantNodesOfKinds(DurationBearingKinds))
             CheckNode(node);
     }
 
-    // Token nodes fall to the default case (no duration), so walking them via
-    // DescendantNodes() instead of hand-rolled recursion is behavior-preserving.
+    /// <summary>The kinds <see cref="CheckNode"/> finds a duration on, so the walk asks the
+    /// tree's descendant index for those nodes instead of offering it every node of the
+    /// book — a thousand-bar book is 3% duration-bearing nodes and 97% everything else
+    /// (MEASURED, session 409), and this pass runs after every settled keystroke.</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH BELOW, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): an eighth
+    /// duration-bearing spelling must be added to BOTH, or a bad duration on it is accepted
+    /// in silence. Pinned by <c>TailValidatorKindsTests</c> over every node of the net books.
+    /// </remarks>
+    internal static readonly SyntaxKind[] DurationBearingKinds =
+    [
+        SyntaxKind.Note, SyntaxKind.DrumNote, SyntaxKind.Rest, SyntaxKind.Chord,
+        SyntaxKind.ChordRepetition, SyntaxKind.SlashNote, SyntaxKind.BareDuration,
+    ];
+
+    /// <summary>The duration this node carries, or null — the half of
+    /// <see cref="CheckNode"/> that <see cref="DurationBearingKinds"/> is the kind list of.
+    /// </summary>
+    internal static DurationSyntax? DurationOf(SyntaxNode node) => node switch
+    {
+        NoteSyntax note => note.Duration,
+        DrumNoteSyntax drum => drum.Duration,
+        RestSyntax rest => rest.Duration,
+        ChordSyntax chord => chord.Duration,
+        ChordRepetitionSyntax rep => rep.Duration,
+        SlashNoteSyntax slash => slash.Duration,
+        BareDurationSyntax bare => bare.Duration,
+        _ => null,
+    };
     private void CheckNode(SyntaxNode node)
     {
-        DurationSyntax? duration = node switch
-        {
-            NoteSyntax note => note.Duration,
-            DrumNoteSyntax drum => drum.Duration,
-            RestSyntax rest => rest.Duration,
-            ChordSyntax chord => chord.Duration,
-            ChordRepetitionSyntax rep => rep.Duration,
-            SlashNoteSyntax slash => slash.Duration,
-            BareDurationSyntax bare => bare.Duration,
-            _ => null
-        };
+        DurationSyntax? duration = DurationOf(node);
 
         if (duration != null && !ValidDurations.Contains(duration.Value))
         {

@@ -71,7 +71,7 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(RepeatStructureKinds))
         {
             switch (node)
             {
@@ -106,4 +106,18 @@ internal sealed class RepeatStructureScopeValidator : ISemanticValidator
             }
         }
     }
+
+    /// <summary>The kinds the switch above has a case for, so the walk asks the tree's
+    /// descendant index for those nodes instead of offering it every node of the book
+    /// (this pass runs after every settled keystroke).</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a third repeat
+    /// spelling must be added to BOTH, or it is accepted in the music in silence. The
+    /// cases carry typed bindings and long messages, so there is no predicate to ask
+    /// instead — <c>TailValidatorKindsTests</c> spells the two TYPES itself and compares
+    /// the plain walk's answer with the index's, over every net book.
+    /// </remarks>
+    internal static readonly SyntaxKind[] RepeatStructureKinds =
+        [SyntaxKind.Barline, SyntaxKind.InlineVolta];
 }

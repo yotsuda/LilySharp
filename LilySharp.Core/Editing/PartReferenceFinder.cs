@@ -135,6 +135,18 @@ public static class PartReferenceFinder
     /// section-body block. See <see cref="ReferenceKinds"/> for why the list exists.</summary>
     public static readonly SyntaxKind[] DeclaringKinds = [SyntaxKind.PartDeclaration, SyntaxKind.PartBlock];
 
+    /// <summary>The kinds <see cref="SingsTargetToken"/> answers on — the definition block
+    /// (<c>lyrics ja sings vocal { … }</c>) and the score row (<c>lyrics ja sings alt</c>).
+    /// See <see cref="ReferenceKinds"/> for why the list exists.</summary>
+    public static readonly SyntaxKind[] SingsKinds = [SyntaxKind.LyricsBlock, SyntaxKind.LyricsRowRender];
+
+    /// <summary>The kinds <see cref="CollectVoiceNames"/> answers on — the parallel voice
+    /// span is the only spelling that introduces a named voice, and
+    /// <see cref="Syntax.ParallelExpressionSyntax"/> is the one node both
+    /// <c>voice sop { … } alt { … }</c> and the recovered <c>&lt;&lt; … &gt;&gt;</c> shape parse
+    /// to. See <see cref="ReferenceKinds"/> for why the list exists.</summary>
+    public static readonly SyntaxKind[] VoiceIntroducingKinds = [SyntaxKind.ParallelExpression];
+
     /// <summary>The kinds <see cref="Tracks"/> reads — the two declaring blocks
     /// (<see cref="DeclaredTrackName"/>) and the two row references
     /// (<see cref="ReferencedTrackName"/>). See <see cref="ReferenceKinds"/> for why the

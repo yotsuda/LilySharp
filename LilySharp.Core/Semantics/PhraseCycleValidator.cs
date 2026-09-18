@@ -35,13 +35,26 @@ internal sealed class PhraseCycleValidator : ISemanticValidator
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
+    /// <summary>The two spellings that declare a body a reference can name, so the walk
+    /// asks the tree's descendant index for those nodes instead of offering it every node
+    /// of the book (this pass runs after every settled keystroke).</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE TEST BELOW, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a third declaring
+    /// spelling must be added to BOTH, or a cycle through it goes unreported. Pinned by
+    /// <c>TailValidatorKindsTests</c>, which spells the two TYPES itself and compares the
+    /// plain walk's answer with the index's, over every net book.
+    /// </remarks>
+    internal static readonly SyntaxKind[] DeclaringKinds =
+        [SyntaxKind.PhraseDeclaration, SyntaxKind.VariableDeclaration];
+
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
 
         // Each phrase/variable name -> the body node that defines it.
         var bodies = new Dictionary<string, SyntaxNode>();
-        foreach (var n in root.DescendantNodes())
+        foreach (var n in root.DescendantNodesOfKinds(DeclaringKinds))
         {
             if (n is PhraseDeclarationSyntax ph)
                 bodies[ph.Name.Text] = ph.Body;

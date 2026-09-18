@@ -37,18 +37,13 @@ internal sealed class ScoreSettingInPartHeaderValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(ScoreSettingKinds))
         {
             // Only a header attribute — a DIRECT child of the part declaration. A tempo/time
             // nested in the part's inner section is music (a mid-piece change), not a header.
             if (node.Parent is not PartDeclarationSyntax)
                 continue;
-            string? kind = node switch
-            {
-                TempoDeclarationSyntax => "tempo",
-                TimeSignatureSyntax => "time",
-                _ => null,
-            };
+            string? kind = SettingKindOf(node);
             if (kind == null)
                 continue;
             _diagnostics.Error(node.Span, DiagnosticCodes.ScoreSettingInPartHeader,
@@ -57,4 +52,25 @@ internal sealed class ScoreSettingInPartHeaderValidator : ISemanticValidator
                 + "change that applies to every part).");
         }
     }
+
+    /// <summary>The kinds <see cref="SettingKindOf"/> answers on, so the walk asks the
+    /// tree's descendant index for those nodes instead of offering it every node of the
+    /// book (this pass runs after every settled keystroke).</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a third score-wide
+    /// setting must be added to BOTH, or writing it in a part header goes unreported.
+    /// Pinned by <c>TailValidatorKindsTests</c> over every node of the net books.
+    /// </remarks>
+    internal static readonly SyntaxKind[] ScoreSettingKinds =
+        [SyntaxKind.TempoDeclaration, SyntaxKind.TimeSignature];
+
+    /// <summary>Which score-wide setting this node states, or null — the ones every part
+    /// shares, so no part may state its own.</summary>
+    internal static string? SettingKindOf(SyntaxNode node) => node switch
+    {
+        TempoDeclarationSyntax => "tempo",
+        TimeSignatureSyntax => "time",
+        _ => null,
+    };
 }

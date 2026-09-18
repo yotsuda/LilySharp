@@ -62,14 +62,9 @@ internal sealed class OverrideVocabularyValidator : ISemanticValidator
     {
         // `once override X` / `once revert X` need no case of their own: the wrapped
         // command is a descendant, so the walk reaches it and reports the same span.
-        foreach (var node in tree.GetRoot().DescendantNodes())
+        foreach (var node in tree.GetRoot().DescendantNodesOfKinds(CommandKinds))
         {
-            var (keyword, grob, property) = node switch
-            {
-                OverrideDeclarationSyntax o => ("override", o.GrobName, o.PropertyName),
-                RevertDeclarationSyntax r => ("revert", r.GrobName, r.PropertyName),
-                _ => (null, null, null),
-            };
+            var (keyword, grob, property) = CommandOf(node);
             if (keyword == null || grob == null || property == null)
                 continue;
 
@@ -84,4 +79,25 @@ internal sealed class OverrideVocabularyValidator : ISemanticValidator
                 + "Grob names are PascalCase and properties are lisp-case, both case-sensitive.");
         }
     }
+
+    /// <summary>The kinds <see cref="CommandOf"/> answers on, so the walk asks the tree's
+    /// descendant index for those nodes instead of offering it every node of the book
+    /// (this pass runs after every settled keystroke).</summary>
+    /// <remarks>
+    /// ⚠️ A SECOND SPELLING OF THE SWITCH, kept beside it on purpose (the shape
+    /// <see cref="Editing.PartReferenceFinder.ReferenceKinds"/> has): a third command
+    /// spelling must be added to BOTH, or an unsupported property under it is accepted in
+    /// silence. Pinned by <c>TailValidatorKindsTests</c> over every node of the net books.
+    /// </remarks>
+    internal static readonly SyntaxKind[] CommandKinds =
+        [SyntaxKind.OverrideDeclaration, SyntaxKind.RevertDeclaration];
+
+    /// <summary>The keyword and the grob/property this node names, or nulls.</summary>
+    internal static (string? Keyword, SyntaxTokenNode? Grob, SyntaxTokenNode? Property) CommandOf(
+        SyntaxNode node) => node switch
+    {
+        OverrideDeclarationSyntax o => ("override", o.GrobName, o.PropertyName),
+        RevertDeclarationSyntax r => ("revert", r.GrobName, r.PropertyName),
+        _ => (null, null, null),
+    };
 }

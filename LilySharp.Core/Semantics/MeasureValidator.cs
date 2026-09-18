@@ -65,7 +65,15 @@ internal sealed class MeasureValidator : ISemanticValidator
         _structured = TopLevelNodes.IsStructured(root);
         _phraseBodies = CollectPhraseBodies(root);
         _boundaries = new SectionBoundaryBars(root, _phraseBodies);
-        ValidateNode(root);
+        // The nodes the walk does something at, in document order — asked of the tree's
+        // descendant index rather than found by walking the book. The recursion this
+        // replaces entered every non-token node (65,009 of them on perf-fingbeam1k, each
+        // through a GetChild per slot) to arrive at TWO; the prunes it took on the way down
+        // are asked of a candidate's ancestors instead. See WorkKinds for the measurement
+        // and for the net that keeps the kinds and the switch in step.
+        foreach (var node in root.DescendantNodesOfKinds(WorkKinds))
+            if (!IsInsidePrunedContainer(node))
+                ValidateWorkNode(node);
         // (An empty `| |` placeholder is NOT reported. It was, over every defined scope,
         // until 2026-08-28: the owner asked for `| |` to be written without a complaint
         // and for the engine to supply the bar's contents itself, which
@@ -143,56 +151,99 @@ internal sealed class MeasureValidator : ISemanticValidator
         return bodies;
     }
 
-    private void ValidateNode(SyntaxNode node)
+    /// <summary>
+    /// The kinds <see cref="ValidateWorkNode"/> does something for. Its switch has two more
+    /// cases — a metadata declaration and a property assignment — which do nothing, so
+    /// nothing looks for them.
+    /// </summary>
+    /// <remarks>
+    /// A kind list rather than the whole-tree recursion that used to find them: on
+    /// perf-fingbeam1k that recursion walked 65,009 nodes (every slot of each, through
+    /// <see cref="SyntaxNode.GetChild"/>) to arrive at TWO — 1.0 ms of this validator's
+    /// 2.2 ms walk, on every settled keystroke (MEASURED, session 408, HANDOFF §2 R13⒫).
+    /// It is a second spelling of the switch's cases, and <c>MeasureValidatorWalkTests</c>
+    /// is the net: it keeps the old recursion as its reference and asks, over every net
+    /// book, that the two name the same nodes in the same order.
+    /// </remarks>
+    internal static readonly SyntaxKind[] WorkKinds =
+    [
+        SyntaxKind.MusicBlock, SyntaxKind.SectionDeclaration,
+        SyntaxKind.TimeSignature, SyntaxKind.PartialDeclaration,
+    ];
+
+    /// <summary>
+    /// True for a node the walk must not enter — asked of a candidate's ANCESTORS, which
+    /// is where the recursion's early returns used to stand. The reasons are each one's own.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Every entry here is a bug that was reported. Read the reason before removing one;
+    /// they are the same reasons the recursion carried, moved rather than rewritten.
+    /// </remarks>
+    internal static bool IsPrunedContainer(SyntaxNode node)
+        => node switch
+        {
+            // A tuplet/grace body is a nested MusicBlock, but its notes belong to the
+            // enclosing measure (and are counted there with the correct tuplet scale).
+            // Don't enter it, or it would be validated as a short standalone bar.
+            // …and a cue region for the same reason: its body is metric material of the
+            // ENCLOSING bar (folded in by MeasureDurations.ItemDuration), never a bar of its own.
+            TupletExpressionSyntax or GraceExpressionSyntax or CueExpressionSyntax => true,
+
+            // A tremolo repeat's body ("{ c32 }") is metric material of the
+            // ENCLOSING measure (counted above via ItemDuration), never a
+            // standalone bar — entering it flagged it as a 1/32 "first measure".
+            // A percent/volta/unfold body IS a bar stream, but it is validated from
+            // the enclosing stream's pass (ValidateMeasures), which knows the frame
+            // the repeat opens in — the running default note value, meter, and
+            // elapsed beats. Entering it here validated it as a standalone block in a
+            // fresh quarter-note frame: `c8 c c c c c c c | repeat percent 4
+            // { a a … }` flagged duration-2 bars the renderer fills exactly (the
+            // bare a's inherit the eighth ACROSS the repeat, as the collector walks
+            // them — reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).
+            RepeatExpressionSyntax => true,
+
+            // LYS0010 recovery: a nested voice's block INLINES into the enclosing
+            // voice (SplitIntoMeasures expands it there) — validating it as a
+            // standalone block would re-add the phantom short-bar warnings.
+            NestedVoiceRecoverySyntax => true,
+
+            // A voice span's blocks are not standalone bar streams: voice 1 is INLINED into
+            // the enclosing stream by SplitIntoMeasures (the collector walks it inline too),
+            // and voices 2..N are validated from there with the bar's lead-in. Entering them
+            // here would validate each voice as its own stream starting on a barline — which
+            // is what reported three short "first measures" for
+            // `c'2 voice { d'2 } voice { e'2 }`, a bar the renderer fills exactly.
+            ParallelExpressionSyntax => true,
+
+            // A chord track is not a bar stream of durations: its entries carry none and divide
+            // each bar on the meter's beat grid (ChordEntrySyntax, Svg.Collector.ChordRhythm), so
+            // a bar of it can be neither underfull nor overfull and the grid walk owns its own
+            // diagnostics (LYS2010). The part-major form wraps its cells in
+            // SectionDeclarationSyntax, which ValidateSectionInlineMusic would otherwise read as
+            // inline music — pricing a slot's `s` / `r` as a QUARTER rest and reporting every
+            // bar that holds one as "1/4 is less than 2/4" (reported 2026-09-04 on the Lambada
+            // proposal, a 2/4 row spelled `s | C#m | …`).
+            ChordPartBlockSyntax => true,
+
+            _ => false,
+        };
+
+    /// <summary>True when any ancestor is a container the walk must not enter.</summary>
+    private static bool IsInsidePrunedContainer(SyntaxNode node)
     {
-        // A tuplet/grace body is a nested MusicBlock, but its notes belong to the
-        // enclosing measure (and are counted there with the correct tuplet scale).
-        // Don't recurse into it, or it would be validated as a short standalone bar.
-        // …and a cue region for the same reason: its body is metric material of the
-        // ENCLOSING bar (folded in by MeasureDurations.ItemDuration), never a bar of its own.
-        if (node is TupletExpressionSyntax or GraceExpressionSyntax or CueExpressionSyntax)
-            return;
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (IsPrunedContainer(p))
+                return true;
+        return false;
+    }
 
-        // A tremolo repeat's body ("{ c32 }") is metric material of the
-        // ENCLOSING measure (counted above via ItemDuration), never a
-        // standalone bar — recursing flagged it as a 1/32 "first measure".
-        // A percent/volta/unfold body IS a bar stream, but it is validated from
-        // the enclosing stream's pass (ValidateMeasures), which knows the frame
-        // the repeat opens in — the running default note value, meter, and
-        // elapsed beats. Recursing here validated it as a standalone block in a
-        // fresh quarter-note frame: `c8 c c c c c c c | repeat percent 4
-        // { a a … }` flagged duration-2 bars the renderer fills exactly (the
-        // bare a's inherit the eighth ACROSS the repeat, as the collector walks
-        // them — reported 2026-08-13, scratch/ベースタブLy/1stbarline.lys).
-        if (node is RepeatExpressionSyntax)
-            return;
-
-        // LYS0010 recovery: a nested voice's block INLINES into the enclosing
-        // voice (SplitIntoMeasures expands it there) — validating it as a
-        // standalone block would re-add the phantom short-bar warnings.
-        if (node is NestedVoiceRecoverySyntax)
-            return;
-
-        // A voice span's blocks are not standalone bar streams: voice 1 is INLINED into
-        // the enclosing stream by SplitIntoMeasures (the collector walks it inline too),
-        // and voices 2..N are validated from there with the bar's lead-in. Recursing here
-        // would validate each voice as its own stream starting on a barline — which is
-        // what reported three short "first measures" for `c'2 voice { d'2 } voice { e'2 }`,
-        // a bar the renderer fills exactly.
-        if (node is ParallelExpressionSyntax)
-            return;
-
-        // A chord track is not a bar stream of durations: its entries carry none and divide
-        // each bar on the meter's beat grid (ChordEntrySyntax, Svg.Collector.ChordRhythm), so
-        // a bar of it can be neither underfull nor overfull and the grid walk owns its own
-        // diagnostics (LYS2010). The part-major form wraps its cells in
-        // SectionDeclarationSyntax, which ValidateSectionInlineMusic would otherwise read as
-        // inline music — pricing a slot's `s` / `r` as a QUARTER rest and reporting every
-        // bar that holds one as "1/4 is less than 2/4" (reported 2026-09-04 on the Lambada
-        // proposal, a 2/4 row spelled `s | C#m | …`).
-        if (node is ChordPartBlockSyntax)
-            return;
-
+    /// <summary>
+    /// What the walk does at one node it has arrived at. The cases that prune — a tuplet,
+    /// grace, cue, repeat, recovered nested voice, voice span or chord cell — are not here:
+    /// they are <see cref="IsPrunedContainer"/>, asked of the ancestors before arriving.
+    /// </summary>
+    private void ValidateWorkNode(SyntaxNode node)
+    {
         switch (node)
         {
             case MusicBlockSyntax block:
@@ -230,16 +281,6 @@ internal sealed class MeasureValidator : ISemanticValidator
             case PropertyAssignmentSyntax:
                 // Property assignments are handled within blocks
                 break;
-        }
-
-        // Recurse into children
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child != null && child is not SyntaxTokenNode)
-            {
-                ValidateNode(child);
-            }
         }
     }
 
