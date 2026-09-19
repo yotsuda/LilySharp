@@ -40,38 +40,53 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/dot-column.cc:194-224 — insertion order and the second
 /// remove_collision call for on-line dots.
 /// </remarks>
-internal sealed class DotConfiguration
+internal static class DotConfiguration
 {
-    private readonly struct Entry
+    /// <summary>
+    /// One dot: where it is now, where it started, which input it came from, and which way it
+    /// would rather move. LP keeps this in a <c>map&lt;int, Dot_position&gt;</c> keyed by the
+    /// current position; here the key rides along in <see cref="Pos"/> and a configuration is
+    /// a span of these kept sorted by it, which is the same thing said in a way that fits on
+    /// the stack.
+    /// </summary>
+    private struct Slot
     {
-        public Entry(int originalPos, int inputIndex, int dir)
+        public Slot(int pos, int originalPos, int inputIndex, int dir)
         {
+            Pos = pos;
             OriginalPos = originalPos;
             InputIndex = inputIndex;
             Dir = dir;
         }
 
-        public int OriginalPos { get; }
-        public int InputIndex { get; }
+        public int Pos;
+        public int OriginalPos;
+        public int InputIndex;
         /// <summary>Preferred displacement direction (Dots.direction); 0 = none.</summary>
-        public int Dir { get; }
+        public int Dir;
     }
 
-    // Sorted by current dot position, like LP's map<int, Dot_position>.
-    private readonly SortedDictionary<int, Entry> _entries = new();
+    /// <summary>
+    /// How many dots a chord may have before its scratch comes off the heap instead of the
+    /// stack. MEASURED (session 427, the owner's corpus, 231 books × eight forward
+    /// keystrokes): of 45,320 calls, 45,248 were handed ONE position, two were handed two,
+    /// seventy were handed three or four, and NONE was handed five or more. Eight is that
+    /// measurement with room over it, and the path above it is the same code — see Resolve.
+    /// </summary>
+    private const int StackSlots = 8;
 
     /// <summary>
     /// LILYPOND-REF: lily/dot-configuration.cc:25-44 badness() —
     /// 2·(p−orig)², +2 when moved against the preferred direction,
     /// else +1 when the move direction is not UP.
     /// </summary>
-    private int Badness()
+    private static int Badness(ReadOnlySpan<Slot> cfg)
     {
         int total = 0;
-        foreach (var (p, ent) in _entries)
+        foreach (ref readonly var ent in cfg)
         {
-            int demerit = 2 * (p - ent.OriginalPos) * (p - ent.OriginalPos);
-            int moveDir = Math.Sign(p - ent.OriginalPos);
+            int demerit = 2 * (ent.Pos - ent.OriginalPos) * (ent.Pos - ent.OriginalPos);
+            int moveDir = Math.Sign(ent.Pos - ent.OriginalPos);
             if (ent.Dir != 0 && moveDir != ent.Dir)
                 demerit += 2;
             else if (moveDir != 1)
@@ -82,63 +97,136 @@ internal sealed class DotConfiguration
     }
 
     /// <summary>
+    /// Puts <paramref name="slot"/> at its position, replacing whatever was there — the
+    /// <c>cfg[pos] = ent</c> of the map this replaces, including the part where a write onto
+    /// an occupied position DROPS the entry that was there. The span stays sorted by position.
+    /// </summary>
+    private static void SetAt(Span<Slot> cfg, ref int count, in Slot slot)
+    {
+        int at = 0;
+        while (at < count && cfg[at].Pos < slot.Pos)
+            at++;
+        if (at < count && cfg[at].Pos == slot.Pos)
+        {
+            cfg[at] = slot;
+            return;
+        }
+        for (int i = count; i > at; i--)
+            cfg[i] = cfg[i - 1];
+        cfg[at] = slot;
+        count++;
+    }
+
+    private static bool Contains(ReadOnlySpan<Slot> cfg, int count, int pos)
+    {
+        for (int i = 0; i < count; i++)
+            if (cfg[i].Pos == pos)
+                return true;
+        return false;
+    }
+
+    /// <summary>
     /// LILYPOND-REF: lily/dot-configuration.cc:55-101 shifted() — move the
     /// entry at K one step (line dots) or two (space dots) in direction D;
     /// following entries (in D's iteration order) cascade by 2·D while their
     /// slots collide, and stop cascading at the first free slot.
     /// </summary>
-    private DotConfiguration Shifted(int k, int d)
+    /// <remarks>
+    /// ⚠️ THE ITERATION ORDER IS PART OF THE ANSWER, which is why this walks the source
+    /// ascending for D &gt; 0 and descending for D &lt; 0 rather than sorting afterwards: the
+    /// cascade stops at "the first slot the new configuration does not already hold", and what
+    /// it holds depends on how far the walk has got. The destination is written in that walk
+    /// order and sorted at the end; the map this replaces got the sorting for free and the
+    /// order from its own iterator.
+    /// </remarks>
+    private static int Shifted(
+        ReadOnlySpan<Slot> src, int count, int k, int d, Span<Slot> dst)
     {
-        var newCfg = new DotConfiguration();
+        int m = 0;
         int offset = 0;
-
-        void Process(int p, Entry ent)
-        {
-            if (p == k)
-            {
-                // On a line: one step puts the dot in the adjacent space.
-                p += IsOnLine(p) ? d : 2 * d;
-                offset = 2 * d;
-                newCfg._entries[p] = ent;
-            }
-            else
-            {
-                if (!newCfg._entries.ContainsKey(p))
-                    offset = 0;
-                newCfg._entries[p + offset] = ent;
-            }
-        }
 
         if (d > 0)
         {
-            foreach (var (p, ent) in _entries)
-                Process(p, ent);
+            for (int i = 0; i < count; i++)
+                Place(dst, ref m, ref offset, src[i], k, d);
         }
         else
         {
-            foreach (var (p, ent) in _entries.Reverse())
-                Process(p, ent);
+            for (int i = count - 1; i >= 0; i--)
+                Place(dst, ref m, ref offset, src[i], k, d);
         }
 
-        return newCfg;
+        SortByPosition(dst, m);
+        return m;
+    }
+
+    /// <summary>One step of <see cref="Shifted"/>'s walk: where this entry lands, and the
+    /// cascade offset the next one inherits. A method rather than the local function it reads
+    /// like, because a local function may not capture a span.</summary>
+    private static void Place(
+        Span<Slot> dst, ref int m, ref int offset, in Slot ent, int k, int d)
+    {
+        int p = ent.Pos;
+        var moved = ent;
+        if (p == k)
+        {
+            // On a line: one step puts the dot in the adjacent space.
+            p += IsOnLine(p) ? d : 2 * d;
+            offset = 2 * d;
+            moved.Pos = p;
+        }
+        else
+        {
+            if (!Contains(dst, m, p))
+                offset = 0;
+            moved.Pos = p + offset;
+        }
+
+        for (int i = 0; i < m; i++)
+        {
+            if (dst[i].Pos != moved.Pos)
+                continue;
+            dst[i] = moved;           // a write onto an occupied slot replaces it, as the map did
+            return;
+        }
+        dst[m++] = moved;
+    }
+
+    /// <summary>Insertion sort — the configurations are chord-sized (never more than four in
+    /// the corpus measured for <see cref="StackSlots"/>), and positions are unique inside one,
+    /// so there is no tie for a stable sort to have an opinion about.</summary>
+    private static void SortByPosition(Span<Slot> cfg, int count)
+    {
+        for (int i = 1; i < count; i++)
+        {
+            var x = cfg[i];
+            int j = i - 1;
+            while (j >= 0 && cfg[j].Pos > x.Pos)
+            {
+                cfg[j + 1] = cfg[j];
+                j--;
+            }
+            cfg[j + 1] = x;
+        }
     }
 
     /// <summary>
     /// LILYPOND-REF: lily/dot-configuration.cc:103-122 remove_collision() —
     /// when P is occupied, take the better of shifting up vs down.
     /// </summary>
-    private void RemoveCollision(int p)
+    private static void RemoveCollision(
+        Span<Slot> cfg, ref int count, int p, Span<Slot> up, Span<Slot> down)
     {
-        if (!_entries.ContainsKey(p))
+        if (!Contains(cfg, count, p))
             return;
 
-        var up = Shifted(p, +1);
-        var down = Shifted(p, -1);
-        var best = up.Badness() < down.Badness() ? up : down;
+        int upCount = Shifted(cfg, count, p, +1, up);
+        int downCount = Shifted(cfg, count, p, -1, down);
+        bool takeUp = Badness(up[..upCount]) < Badness(down[..downCount]);
 
-        _entries.Clear();
-        foreach (var (pos, ent) in best._entries)
-            _entries[pos] = ent;
+        var best = takeUp ? up : down;
+        count = takeUp ? upCount : downCount;
+        best[..count].CopyTo(cfg);
     }
 
     private static bool IsOnLine(int position) => position % 2 == 0;
@@ -162,23 +250,51 @@ internal sealed class DotConfiguration
     /// </remarks>
     public static int[] Resolve(IReadOnlyList<int> notePositions, IReadOnlyList<int>? directions = null)
     {
-        var cfg = new DotConfiguration();
-        var order = Enumerable.Range(0, notePositions.Count)
-            .OrderBy(i => notePositions[i])
-            .ToArray();
+        int n = notePositions.Count;
+        var result = new int[n];
+        if (n == 0)
+            return result;
 
-        foreach (int i in order)
+        // ⚠️ THE ONE HOME, not a fast path beside a slow one (RULES §5.2.1②). Only the SOURCE
+        // of the scratch forks on size; every line below runs for a chord of one dot and for a
+        // chord of forty. A configuration never grows — a shift can merge two dots onto one
+        // position but never invent one — so n slots is the bound for all three buffers.
+        Span<Slot> cfg = n <= StackSlots ? stackalloc Slot[StackSlots] : new Slot[n];
+        Span<Slot> up = n <= StackSlots ? stackalloc Slot[StackSlots] : new Slot[n];
+        Span<Slot> down = n <= StackSlots ? stackalloc Slot[StackSlots] : new Slot[n];
+        Span<int> order = n <= StackSlots ? stackalloc int[StackSlots] : new int[n];
+
+        // Ascending by position, and STABLE, because two dots can share one: the map keyed by
+        // position would keep whichever arrived last, so which input that is has to stay what
+        // LINQ's OrderBy made it. Insertion sort is stable and the arrays are chord-sized.
+        for (int i = 0; i < n; i++)
+            order[i] = i;
+        for (int i = 1; i < n; i++)
         {
-            int p = notePositions[i];
-            cfg.RemoveCollision(p);
-            cfg._entries[p] = new Entry(p, i, dir: directions?[i] ?? 0);
-            if (IsOnLine(p))
-                cfg.RemoveCollision(p);
+            int x = order[i];
+            int key = notePositions[x];
+            int j = i - 1;
+            while (j >= 0 && notePositions[order[j]] > key)
+            {
+                order[j + 1] = order[j];
+                j--;
+            }
+            order[j + 1] = x;
         }
 
-        var result = new int[notePositions.Count];
-        foreach (var (pos, ent) in cfg._entries)
-            result[ent.InputIndex] = pos;
+        int count = 0;
+        for (int oi = 0; oi < n; oi++)
+        {
+            int i = order[oi];
+            int p = notePositions[i];
+            RemoveCollision(cfg, ref count, p, up, down);
+            SetAt(cfg, ref count, new Slot(p, p, i, dir: directions?[i] ?? 0));
+            if (IsOnLine(p))
+                RemoveCollision(cfg, ref count, p, up, down);
+        }
+
+        for (int s = 0; s < count; s++)
+            result[cfg[s].InputIndex] = cfg[s].Pos;
         return result;
     }
 }
