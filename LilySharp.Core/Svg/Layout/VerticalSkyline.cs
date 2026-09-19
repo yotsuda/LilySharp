@@ -660,9 +660,10 @@ internal sealed class VerticalSkyline
     /// property the batch path relies on.
     /// </summary>
     /// <remarks>
-    /// The walk's three scratch buffers are created ONCE HERE and handed down, not allocated
-    /// per overlapping building. They are plain locals — no field, no static, so two threads
-    /// resolving two skylines share nothing and the buffers die with the walk.
+    /// The walk's three scratch buffers are taken ONCE HERE and handed down, not allocated
+    /// per overlapping building. They are rented from the thread and given back at the end of
+    /// the walk (<see cref="t_resolveScratch"/>, which is where the measurement is), so two
+    /// threads resolving two skylines still share nothing.
     /// <para>
     /// ⚠️ WHY THAT IS WORTH A PARAMETER. MEASURED (session 416, Release, the owner's corpus,
     /// eight forward keystrokes a book, allocated bytes): this walk ran 83,538 times a corpus
@@ -759,7 +760,7 @@ internal sealed class VerticalSkyline
         result.Clear();
 
         // Lazily, so a walk that never overlaps — a resolved profile merged into an empty
-        // skyline, which is most of the placement copies — still allocates nothing.
+        // skyline, which is most of the placement copies — still rents nothing.
         ResolveScratch? scratch = null;
 
         foreach (var building in allBuildings)
@@ -788,9 +789,12 @@ internal sealed class VerticalSkyline
             else
             {
                 // Overlapping - need to merge
-                MergeOverlapping(result, building, scratch ??= new ResolveScratch());
+                MergeOverlapping(result, building, scratch ??= RentScratch());
             }
         }
+
+        if (scratch is not null)
+            ReturnScratch(scratch);
 
         // ⚠️ R IS KNOWN ONLY NOW, and that is the whole point. Clearing first means the sizing
         // has nothing to copy, and the AddRange below then takes ONE growth step — to R, or to
@@ -863,7 +867,9 @@ internal sealed class VerticalSkyline
     /// <summary>
     /// The scratch one resolve walk lends to every overlap it has to merge: the tail it
     /// lifts out of the result, the boundary points it cuts that tail at, and the segments
-    /// it builds back. One set per walk, cleared at each use.
+    /// it builds back. Cleared at each use, and lent from the thread
+    /// (<see cref="RentScratch"/>) so the three lists keep the capacity the last walk grew
+    /// them to.
     /// </summary>
     /// <remarks>
     /// ⚠️ THE THREE ARE ALIVE AT THE SAME TIME AND MUST STAY DISTINCT:
@@ -888,6 +894,69 @@ internal sealed class VerticalSkyline
         internal readonly List<double> Boundaries = new();
         internal readonly List<SkylineBuilding> Merged = new();
     }
+
+    /// <summary>
+    /// The thread's <see cref="ResolveScratch"/>, kept between walks — the third buffer in
+    /// this file to be scoped to the thread rather than to the call, for the reason the other
+    /// two give: the walk's own doubling is paid once per thread instead of once per walk.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE WHOLE OF THE WALK'S REMAINING ALLOCATION, and nothing else in it was.
+    /// Session 416 hoisted these three lists out of the per-OVERLAP loop into one set per
+    /// WALK; what a walk then paid was the set itself and the climb of three lists from EMPTY.
+    /// MEASURED (session 429, Release, the owner's corpus, 231 books × eight forward
+    /// keystrokes, allocated bytes, per region inside the walk): the walk allocated
+    /// 40,172,952 B a sweep, <b>0.270% of a keystroke</b>, and the split came to
+    /// <b>100.0%</b> of it — the <c>new ResolveScratch()</c> 10,444,936 B (26.0%, 136 B over
+    /// 76,801 of 83,538 walks: the object and three empty Lists),
+    /// <see cref="ResolveScratch.Overlapping"/> 11,673,752 B (29.1%),
+    /// <see cref="ResolveScratch.Merged"/> 11,716,872 B (29.2%) and
+    /// <see cref="ResolveScratch.Boundaries"/> 6,337,392 B (15.8%). The two lists that were
+    /// ALREADY lent — the result buffer the walk writes and the input it reads — paid
+    /// <b>zero</b> in the same run. So the island was not the arithmetic, the sort or the
+    /// copies: it was three lists that began every walk at capacity 0.
+    /// <para>
+    /// ⚠️ THE CLEARING IS AT THE POINT OF USE, not here, and that is why this pool needs no
+    /// emptying of its own — unlike <see cref="RentBatch"/> and <see cref="RentMergeInput"/>,
+    /// where a stale buffer would be READ. All three lists are <c>Clear</c>ed by the code that
+    /// fills them (<see cref="MergeOverlapping"/> for <see cref="ResolveScratch.Overlapping"/>,
+    /// <see cref="MergeBuildingSet"/> for the other two) because they were already reused
+    /// across the overlaps of ONE walk; reusing them across walks asks nothing new of them.
+    /// <c>SkylineMergeTests.ASecondWalkOnTheSameThread_DoesNotInheritTheFirstsScratch</c> is
+    /// what says so, and it is a NEW observer rather than a restatement: within a walk the
+    /// tail in <see cref="ResolveScratch.Overlapping"/> is this skyline's own earlier
+    /// buildings, so a missing clear cannot change a maximum and no net could see it; across
+    /// walks it is another skyline's ink. Verified by poison both ways.
+    /// </para>
+    /// <para>
+    /// ⚠️ RENTING TAKES IT OUT OF THE DRAWER, as with the other two: a walk that re-entered
+    /// would get a scratch of its own rather than the one being written, and the scratch goes
+    /// back only when the walk that took it is finished. The two walks that rent —
+    /// <see cref="RebuildKeepingHighest"/> and <see cref="SortAndResolve"/> — run one after
+    /// the other inside <see cref="Padded"/>, never nested, and this is what keeps that from
+    /// having to stay true.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT IT RETAINS is three lists a thread at the high-water mark of that thread's
+    /// widest overlap, and a <see cref="SkylineBuilding"/> holds no references, so an unemptied
+    /// scratch in the drawer pins nothing — the same argument <see cref="ReturnBatch"/> makes.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ResolveScratch? t_resolveScratch;
+
+    /// <summary>Takes the thread's scratch, or makes the thread's first.</summary>
+    private static ResolveScratch RentScratch()
+    {
+        var scratch = t_resolveScratch;
+        if (scratch is null)
+            return new ResolveScratch();
+        t_resolveScratch = null;
+        return scratch;
+    }
+
+    /// <summary>Puts a finished walk's scratch back, with its three capacities.</summary>
+    private static void ReturnScratch(ResolveScratch scratch) => t_resolveScratch = scratch;
 
     /// <summary>
     /// The list a resolve walk READS — the combined buildings it is about to sort — lent from
@@ -1312,8 +1381,9 @@ internal sealed class VerticalSkyline
 
         var resolved = new List<SkylineBuilding>();
         resolved.Add(_buildings[0]);
-        // One set of scratch buffers for this whole walk, as RebuildKeepingHighest does and
-        // for the same measured reason (ResolveScratch): the padding of a system profile
+        // One set of scratch buffers for this whole walk, rented as RebuildKeepingHighest
+        // rents them and for the same measured reason (ResolveScratch): the padding of a
+        // system profile
         // enters here with four buildings per original one, and every one of them overlaps
         // its neighbours by construction.
         ResolveScratch? scratch = null;
@@ -1327,9 +1397,12 @@ internal sealed class VerticalSkyline
             }
             else
             {
-                MergeOverlapping(resolved, b, scratch ??= new ResolveScratch());
+                MergeOverlapping(resolved, b, scratch ??= RentScratch());
             }
         }
+
+        if (scratch is not null)
+            ReturnScratch(scratch);
 
         _buildings.Clear();
         _buildings.AddRange(resolved);

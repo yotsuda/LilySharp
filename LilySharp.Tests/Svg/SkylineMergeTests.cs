@@ -531,6 +531,64 @@ public class SkylineMergeTests
         Assert.Equal(double.NegativeInfinity, low.Height(50));
     }
 
+    /// <summary>The scratch a resolve walk cuts its overlaps with is lent by the thread too —
+    /// so the SECOND walk must not find the first one's tail or segments still in it.</summary>
+    /// <remarks>
+    /// The three lists moved out of the call and up to the thread in session 429, which
+    /// measured them as the WHOLE of what a walk still allocated (0.270% of a keystroke, and
+    /// the split came to 100.0% of the walk). Before that, a fresh
+    /// <c>ResolveScratch</c> per walk made this true by construction; now it is true because
+    /// every one of the three is cleared by the code that fills it, and this is the gate that
+    /// says so.
+    /// <para>
+    /// ⚠️ THE SECOND WALK HAS EXACTLY ONE OVERLAP, deliberately, and that is what makes this
+    /// net the ONE the pooling needs. Of the three lists, only <c>Overlapping</c> goes stale
+    /// in a way no existing net could see: within a walk the tail it carries over is this
+    /// same skyline's own earlier buildings, so re-reading them cannot change a maximum — the
+    /// idempotent stale again — while ACROSS walks it is another skyline's ink. With one
+    /// overlap there is no within-walk reuse to hide behind. VERIFIED BY POISON, all four
+    /// ways: dropping <c>overlapping.Clear()</c> turns this red (1,090 reads 60 instead of
+    /// -∞) and leaves the pre-429 shape — a fresh scratch every walk — green.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE OTHER TWO CLEARS ARE PINNED ALREADY, and were before this change: dropping the
+    /// <c>Clear</c> on <c>scratch.Merged</c> duplicates segments within one walk (this net's
+    /// own first assertion goes red, pooled or not), and dropping
+    /// <c>boundaryList.Clear()</c> turns <see cref="MergeSlope_LeavesWhatTheFromSlopePairLeaves"/>
+    /// and <see cref="ABatchsResultList_IsSizedByWhatTheResolveKeeps_NotByWhatItWasHanded"/>
+    /// red. That last one is the reason this remark says "verified" rather than "by
+    /// construction": the first draft of it argued a stale boundary could not reach a page —
+    /// an extra cut fuses straight back — and the poison said otherwise in four seconds.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ASecondWalkOnTheSameThread_DoesNotInheritTheFirstsScratch()
+    {
+        // A walk with MANY overlaps, far off on the horizon and far up: it leaves the widest
+        // tail and the most segments this thread's scratch will have held.
+        var far = new VerticalSkyline(VerticalDirection.Up);
+        far.BeginBatch();
+        for (int i = 0; i < 12; i++)
+            far.Merge(VerticalSkyline.FromBox(1000 + i * 5, 1000 + i * 5 + 40, 0, 50 + i,
+                VerticalDirection.Up));
+        far.EndBatch();
+        Assert.Equal(61.0, far.Height(1090), Epsilon);
+
+        // And now a walk with ONE overlap, close in and low.
+        var near = new VerticalSkyline(VerticalDirection.Up);
+        near.BeginBatch();
+        near.Merge(VerticalSkyline.FromBox(0, 10, 0, 1, VerticalDirection.Up));
+        near.Merge(VerticalSkyline.FromBox(5, 15, 0, 2, VerticalDirection.Up));
+        near.EndBatch();
+
+        Assert.Equal(1.0, near.Height(2.5), Epsilon);   // its own ink, left of the overlap
+        Assert.Equal(2.0, near.Height(7.5), Epsilon);   // the overlap resolved to the higher
+        Assert.Equal(2.0, near.Height(12.5), Epsilon);  // and right of it
+        // Nothing at all out where only the first walk had ink.
+        Assert.Equal(double.NegativeInfinity, near.Height(1090));
+        Assert.Equal(double.NegativeInfinity, near.Height(1005));
+    }
+
     /// <summary>A cached profile merged into an ALREADY-RESOLVED skyline keeps both
     /// silhouettes: this skyline's own ink, and the profile's at the offset it was placed
     /// at.</summary>

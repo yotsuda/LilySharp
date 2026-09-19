@@ -429,7 +429,7 @@
 - **:164** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
-- **:1169** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
+- **:1238** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
