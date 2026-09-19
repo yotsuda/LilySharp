@@ -589,6 +589,65 @@ public class SkylineMergeTests
         Assert.Equal(double.NegativeInfinity, near.Height(1005));
     }
 
+    /// <summary>The list <c>Padded</c> builds its padding buildings in is lent by the thread
+    /// as well — so the SECOND padding must not find the first one's buildings still in
+    /// it.</summary>
+    /// <remarks>
+    /// The padding list moved out of the call and up to the thread in session 430, together
+    /// with the intermediate skyline that used to be built around it — 0.382% of a keystroke
+    /// between them, of which two thirds was that intermediate's list climbing 4-8-16-… while
+    /// being handed buildings that were already in a right-sized list.
+    /// <para>
+    /// ⚠️ THIS IS THE INVENTING KIND OF STALE, like the merge input's and unlike the scratch's:
+    /// the whole padding list is merged into the answer, so buildings left over from the
+    /// previous padding raise this skyline's silhouette with another grob's.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT THE POISON SAID, which is not what the first draft of this remark predicted.
+    /// Dropping the <c>Clear</c> in <c>RentPadding</c> turns this red — the near skyline's
+    /// padded profile reads 61 out at 1,090, where it has no ink at all — and it also turns
+    /// <see cref="Distance_BetweenFacingSystems_IsTheirInkAndNoMore"/> red. So the claim this
+    /// remark was about to make, that nothing here could see the leak, was wrong. What is
+    /// true is narrower and worth the distinction: run ALONE, that one is GREEN under the same
+    /// poison. It pads twice and catches the leak only when some earlier test in the class has
+    /// already padded on this thread — it is a victim of the pollution, not an observer of it,
+    /// and which tests are victims depends on the order they run in. This one pads twice
+    /// itself, so it says the same thing whatever else ran.
+    /// </para>
+    /// <para>
+    /// The two paddings are deliberately far apart on the horizon: the first is twelve
+    /// overlapping boxes around x = 1,000 and some 50 units up, the second one box over
+    /// [0, 10] one unit up. The padding is 2, so the second's own answer is flat at 1 from -2
+    /// to 12 and slopes to nothing by 14 — everything asserted here is inside that, except the
+    /// last two lines, which are where only the FIRST padding had buildings.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ASecondPaddingOnTheSameThread_DoesNotInheritTheFirstsBuildings()
+    {
+        var far = new VerticalSkyline(VerticalDirection.Up);
+        far.BeginBatch();
+        for (int i = 0; i < 12; i++)
+            far.Merge(VerticalSkyline.FromBox(1000 + i * 5, 1000 + i * 5 + 40, 0, 50 + i,
+                VerticalDirection.Up));
+        far.EndBatch();
+        var farPadded = far.Padded(2.0);
+        Assert.Equal(61.0, farPadded.Height(1090), Epsilon);
+
+        // The next padding on this thread is handed the very buffer that one filled.
+        var near = new VerticalSkyline(VerticalDirection.Up);
+        near.Merge(VerticalSkyline.FromBox(0, 10, 0, 1, VerticalDirection.Up));
+        var nearPadded = near.Padded(2.0);
+
+        Assert.Equal(1.0, nearPadded.Height(5), Epsilon);    // its own ink
+        Assert.Equal(1.0, nearPadded.Height(-1), Epsilon);   // the flat pad on the left
+        Assert.Equal(1.0, nearPadded.Height(11), Epsilon);   // and on the right
+        Assert.Equal(0.0, nearPadded.Height(13), Epsilon);   // the 45° slope, halfway down
+        // And nothing at all out where only the first padding had buildings.
+        Assert.Equal(double.NegativeInfinity, nearPadded.Height(1090));
+        Assert.Equal(double.NegativeInfinity, nearPadded.Height(1005));
+    }
+
     /// <summary>A cached profile merged into an ALREADY-RESOLVED skyline keeps both
     /// silhouettes: this skyline's own ink, and the profile's at the offset it was placed
     /// at.</summary>

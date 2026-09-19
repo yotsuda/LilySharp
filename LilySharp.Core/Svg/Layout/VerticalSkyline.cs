@@ -1317,7 +1317,7 @@ internal sealed class VerticalSkyline
         if (horizonPadding <= 0.0)
             return this;
 
-        var padBuildings = new List<SkylineBuilding>(_buildings.Count * 4);
+        var padBuildings = RentPadding(_buildings.Count * 4);
 
         foreach (var b in _buildings)
         {
@@ -1353,34 +1353,112 @@ internal sealed class VerticalSkyline
         }
 
         if (padBuildings.Count == 0)
+        {
+            ReturnPadding(padBuildings);
             return this;
+        }
 
-        // Build a skyline from padding buildings
-        var padSkyline = new VerticalSkyline(_direction);
-        foreach (var pb in padBuildings)
-            padSkyline._buildings.Add(pb);
+        // Resolve overlaps among the padding buildings, in the buffer they were built in.
+        SortAndResolve(padBuildings);
 
-        // Resolve overlaps among padding buildings
-        padSkyline.SortAndResolve();
+        // Merge padding with original. The two lists go into the walk's input together, which
+        // is what MergeInternal would have done with a COPY of this skyline as the result's
+        // starting point: same buildings, same order, same resolve — and the answer's list is
+        // then sized by the answer rather than by this skyline's count.
+        var all = RentMergeInput(_buildings.Count + padBuildings.Count);
+        all.AddRange(_buildings);
+        all.AddRange(padBuildings);
+        ReturnPadding(padBuildings);
 
-        // Merge padding with original
-        var result = new VerticalSkyline(new List<SkylineBuilding>(_buildings), _direction);
-        result.MergeInternal(padSkyline._buildings);
+        var result = new VerticalSkyline(_direction);
+        result.ResolveFrom(all);
         return result;
     }
 
     /// <summary>
+    /// The buffer <see cref="Padded"/> builds its padding buildings in — four per building of
+    /// the skyline being padded — lent from the thread, like the other three buffers in this
+    /// file and for the same reason: the list is written once, read once and dropped.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE EMPTYING IS LOAD-BEARING, as in <see cref="RentMergeInput"/> and unlike the
+    /// <see cref="ResolveScratch"/> clears: the whole list is merged into the answer, so a
+    /// buffer still holding the previous <see cref="Padded"/>'s buildings would raise this
+    /// skyline's silhouette with another one's padding — ink from a grob that is not there.
+    /// <c>SkylineMergeTests.ASecondPaddingOnTheSameThread_DoesNotInheritTheFirstsBuildings</c>
+    /// is what says so, and it pads twice itself, so it says it whatever ran before it. The
+    /// poison also reddens <c>Distance_BetweenFacingSystems_IsTheirInkAndNoMore</c> — but only
+    /// in a run where something else padded first; alone, that one stays green under the same
+    /// poison. A test downstream of the pollution is a victim of it, not an observer of it.
+    /// <para>
+    /// ⚠️ WHY THE SKYLINE THAT USED TO OWN IT IS GONE. MEASURED (session 430, Release, the
+    /// owner's corpus, 231 books × eight forward keystrokes, allocated bytes, per region inside
+    /// <see cref="Padded"/>): the call ran 7,185 times a sweep (3.9 a keystroke) and its own
+    /// copying came to 56,812,640 B, <b>0.382% of a keystroke</b> — and the split was
+    /// <b>66.5%</b> the intermediate skyline (37,785,800 B: a fresh <see cref="VerticalSkyline"/>
+    /// whose list climbed 4-8-16-… as the padding buildings were <c>Add</c>ed into it ONE AT A
+    /// TIME, having just been built in a list that was already the right size), 26.0% this
+    /// buffer (14,750,136 B) and 7.5% the copy of the original the answer started from
+    /// (4,276,704 B). The intermediate held nothing the padding list did not: it was a place to
+    /// call <see cref="SortAndResolve"/> from, and that now takes the list.
+    /// </para>
+    /// <para>
+    /// The measured saving is the whole of that plus a little more: A/B over the same corpus,
+    /// 8,017,590 / 8,017,598 B a keystroke before and 7,986,759 / 7,986,771 after,
+    /// <b>-0.385%</b>. The extra 162,776 B a sweep is the exit: the answer's list used to start
+    /// as a copy of this skyline's N buildings and then climb to <c>max(2N, R)</c> when the
+    /// resolve kept more than N, and starting it empty lands it on R. ⚠️ A model built from the
+    /// AVERAGE N and R predicted 726,736 B for that term, 4.5× the truth — a max does not
+    /// commute with an average, and the island itself (which does) came in exact.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT IS TAKEN OUT OF THE DRAWER, as with the others: <see cref="Padded"/> does not
+    /// nest — the resolve and the merge it runs pad nothing — and this is what keeps that from
+    /// having to stay true. What it retains is one list a thread at that thread's widest
+    /// padding: 1,076 buildings, 34 KB, over the whole corpus, measured the same run.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<SkylineBuilding>? t_padding;
+
+    /// <summary>
+    /// Takes the thread's padding buffer, EMPTY and sized for <paramref name="capacity"/>
+    /// buildings.
+    /// </summary>
+    private static List<SkylineBuilding> RentPadding(int capacity)
+    {
+        var list = t_padding;
+        if (list is null)
+            return new List<SkylineBuilding>(capacity);
+        t_padding = null;
+        list.Clear();
+        list.EnsureCapacity(capacity);
+        return list;
+    }
+
+    /// <summary>Puts a finished padding buffer back, with its capacity.</summary>
+    private static void ReturnPadding(List<SkylineBuilding> list) => t_padding = list;
+
+    /// <summary>
     /// Sorts buildings and resolves overlaps to form a valid skyline.
     /// </summary>
-    private void SortAndResolve()
+    /// <remarks>
+    /// Takes the list rather than this skyline's own, because its one caller
+    /// (<see cref="Padded"/>) has the buildings in a lent buffer and used to build a whole
+    /// <see cref="VerticalSkyline"/> around them to be able to call this — see
+    /// <see cref="t_padding"/> for what that cost. It stays an instance method because the
+    /// walk it runs is this class's (<see cref="MergeOverlapping"/>), and the skyline it is
+    /// called on is the one being padded: the same direction the intermediate carried.
+    /// </remarks>
+    private void SortAndResolve(List<SkylineBuilding> buildings)
     {
-        if (_buildings.Count <= 1)
+        if (buildings.Count <= 1)
             return;
 
-        _buildings.Sort((a, b) => a.Start.CompareTo(b.Start));
+        buildings.Sort((a, b) => a.Start.CompareTo(b.Start));
 
         var resolved = new List<SkylineBuilding>();
-        resolved.Add(_buildings[0]);
+        resolved.Add(buildings[0]);
         // One set of scratch buffers for this whole walk, rented as RebuildKeepingHighest
         // rents them and for the same measured reason (ResolveScratch): the padding of a
         // system profile
@@ -1388,9 +1466,9 @@ internal sealed class VerticalSkyline
         // its neighbours by construction.
         ResolveScratch? scratch = null;
 
-        for (int i = 1; i < _buildings.Count; i++)
+        for (int i = 1; i < buildings.Count; i++)
         {
-            var b = _buildings[i];
+            var b = buildings[i];
             if (b.Start >= resolved[^1].End)
             {
                 resolved.Add(b);
@@ -1404,8 +1482,8 @@ internal sealed class VerticalSkyline
         if (scratch is not null)
             ReturnScratch(scratch);
 
-        _buildings.Clear();
-        _buildings.AddRange(resolved);
+        buildings.Clear();
+        buildings.AddRange(resolved);
     }
 
     /// <summary>
