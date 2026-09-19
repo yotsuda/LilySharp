@@ -275,6 +275,85 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
+    /// Merges ONE BOX into this skyline — the seed <c>Merge(FromBox(…))</c> delivers, without
+    /// building a skyline to carry it.
+    /// </summary>
+    /// <remarks>
+    /// THE SAME BUILDING, APPENDED AT THE SAME POINT IN THE SAME ORDER, and that is why this
+    /// is not a second spelling of <see cref="FromBox"/>: the edge and the height are read off
+    /// the identical expression, and a batched <see cref="Merge(VerticalSkyline)"/> already
+    /// drops the two ±inf padders <see cref="AddBuilding"/> puts either side of the box (the
+    /// filter is in that method, and its remark says the resolve would drop them anyway). So
+    /// the list this leaves is the list the pair left, building for building.
+    /// <para>
+    /// ⚠️ WHAT IT SAVES IS THE CARRIER, NOT THE GEOMETRY. <c>FromBox</c> allocates a
+    /// <see cref="VerticalSkyline"/>, its <see cref="List{T}"/> and the List's array to deliver
+    /// one 32-byte struct into a batch that keeps one of the three buildings it is handed.
+    /// MEASURED over the owner's corpus (231 books, eight keystrokes each, allocated bytes):
+    /// a keystroke makes 454,829 batched merges of such a wrapper, 387,515 of them this exact
+    /// shape — three buildings offered, one kept.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE DIRECTION IS THIS SKYLINE'S. The pair it replaces names a direction at the call
+    /// site and <see cref="Merge(VerticalSkyline)"/> throws when the two disagree; here there
+    /// is only one direction and nothing to disagree with. Every converted site passed its own
+    /// skyline's direction, so what the throw guarded is gone rather than silenced.
+    /// </para>
+    /// <para>
+    /// OUTSIDE A BATCH there is no saving to take: an unbatched merge resolves against what is
+    /// already here, and the padders take part in that resolve. Those callers go the old way,
+    /// through the one <c>FromBox</c> that has always served them.
+    /// </para>
+    /// </remarks>
+    public void MergeBox(double xLeft, double xRight, double yBottom, double yTop)
+    {
+        if (!_deferResolve)
+        {
+            Merge(FromBox(xLeft, xRight, yBottom, yTop, _direction));
+            return;
+        }
+        // The identical two lines FromBox reads the box with. The sign convention has ONE
+        // home and it is that method's citation; repeating the address here would give it a
+        // second, and one of two addresses always rots (HANDOFF §7.6).
+        double edge = _direction == VerticalDirection.Up ? yTop : yBottom;
+        var building = new SkylineBuilding(xLeft, xRight, (int)_direction * edge);
+        if (double.IsNegativeInfinity(building.ValueAt(building.Start))
+            && double.IsNegativeInfinity(building.ValueAt(building.End)))
+            return;
+        _buildings.Add(building);
+    }
+
+    /// <summary>
+    /// Merges ONE SLOPED REGION — a beam's outer edge — without building a skyline to carry
+    /// it. <see cref="MergeBox"/>'s twin; see its remark for what is saved and why the result
+    /// is the same list.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A SLOPE CARRIES NO PADDERS. <see cref="FromSlope"/> makes a skyline of exactly one
+    /// building — no ±inf regions either side, unlike <see cref="FromBox"/> — so the batched
+    /// merge it feeds already appends that one building untouched, and this appends the same
+    /// one. What goes is the carrier, not a building.
+    /// </remarks>
+    public void MergeSlope(double xLeft, double yLeft, double xRight, double yRight,
+        double thickness)
+    {
+        if (!_deferResolve)
+        {
+            Merge(FromSlope(xLeft, yLeft, xRight, yRight, thickness, _direction));
+            return;
+        }
+        // FromSlope's own two arms, sign for sign: UP keeps the top edge as +y_up, DOWN keeps
+        // the bottom edge (lowered by the thickness) as -y_up.
+        var building = _direction == VerticalDirection.Up
+            ? new SkylineBuilding(xLeft, yLeft, yRight, xRight)
+            : new SkylineBuilding(xLeft, -(yLeft + thickness), -(yRight + thickness), xRight);
+        if (double.IsNegativeInfinity(building.ValueAt(building.Start))
+            && double.IsNegativeInfinity(building.ValueAt(building.End)))
+            return;
+        _buildings.Add(building);
+    }
+
+    /// <summary>
     /// Merges another skyline into this one.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/skyline.cc:178-260 internal_merge_skyline()</remarks>

@@ -224,29 +224,25 @@ internal sealed class PagingAugmentProgram
                 }
                 case Kind.FiguredBassBox:
                 {
-                    Down().Merge(VerticalSkyline.FromBox(
-                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
-                        VerticalDirection.Down));
+                    Down().MergeBox(
+                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
                     a += BoxArgs;
                     break;
                 }
                 case Kind.VoltaBox:
                 case Kind.BarNumberBox:
                 {
-                    Up().Merge(VerticalSkyline.FromBox(
-                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
-                        VerticalDirection.Up));
+                    Up().MergeBox(
+                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
                     a += BoxArgs;
                     break;
                 }
                 case Kind.MarkBox:
                 {
-                    Up().Merge(VerticalSkyline.FromBox(
-                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
-                        VerticalDirection.Up));
-                    Down().Merge(VerticalSkyline.FromBox(
-                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3],
-                        VerticalDirection.Down));
+                    Up().MergeBox(
+                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
+                    Down().MergeBox(
+                        _args[a], _args[a + 1], _args[a + 2], _args[a + 3]);
                     a += BoxArgs;
                     break;
                 }

@@ -1015,8 +1015,8 @@ internal static class ChordNameEngraver
             var ds = DisplaySymbol(chord);
         var (bottom, top) = SymbolInk(fonts, ds.Text, ds.SuperFrom);
             double right = x + SymbolWidth(fonts, chord);
-            up.Merge(VerticalSkyline.FromBox(x, right, bottom + lift, top + lift, VerticalDirection.Up));
-            down.Merge(VerticalSkyline.FromBox(x, right, bottom + lift, top + lift, VerticalDirection.Down));
+            up.MergeBox(x, right, bottom + lift, top + lift);
+            down.MergeBox(x, right, bottom + lift, top + lift);
         }
         return (up, down);
     }

@@ -4176,7 +4176,7 @@ internal sealed class MultiStaffLayouter
         // frame.
         double protrusion = up.MaxProtrusionInRange(xLeft, xRight);
         double bandTop = ChordRowStaffPadding + protrusion + ChordSymbolCapHeight;
-        up.Merge(VerticalSkyline.FromBox(xLeft, xRight, halfStaff, bandTop, VerticalDirection.Up));
+        up.MergeBox(xLeft, xRight, halfStaff, bandTop);
     }
 
     /// <summary>

@@ -823,10 +823,9 @@ internal static class MusicMarkEngraver
                     // the reservation and the draw read (one house).
                     sky ??= new VerticalSkyline(VerticalDirection.Up);
                     var ink = ChordNameEngraver.SymbolInk(fonts, cn);
-                    sky.Merge(VerticalSkyline.FromBox(
+                    sky.MergeBox(
                         cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn),
-                        chordUp + ink.Bottom, chordUp + ink.Top,
-                        VerticalDirection.Up));
+                        chordUp + ink.Bottom, chordUp + ink.Top);
                 }
                 chordBandUpBySystem[sysIdx] = sky;
                 return sky;

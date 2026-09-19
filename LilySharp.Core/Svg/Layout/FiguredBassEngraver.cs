@@ -262,11 +262,10 @@ internal static class FiguredBassEngraver
         foreach (var col in columns)
         {
             string topText = col.Texts.Length > 0 ? col.Texts[0] : string.Empty;
-            ink.Merge(VerticalSkyline.FromBox(
+            ink.MergeBox(
                 col.X - MinFigureBoxWidth / 2.0, col.X + MinFigureBoxWidth / 2.0,
                 placedYUp - BassFigureAlignment.ColumnDepth(fonts, rowOffsets, col.Texts),
-                placedYUp + FigureInkTop(fonts, topText),
-                VerticalDirection.Down));
+                placedYUp + FigureInkTop(fonts, topText));
         }
         return ink;
     }

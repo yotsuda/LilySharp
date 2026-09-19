@@ -282,13 +282,11 @@ internal static class PedalEngraver
         var up = VerticalSkyline.FromBox(
             startX, endX, -HalfThickness, HalfThickness, VerticalDirection.Up);
         if (leftHook)
-            up.Merge(VerticalSkyline.FromBox(
-                startX, startX + HookWidth,
-                -HalfThickness, EdgeHeight + HalfThickness, VerticalDirection.Up));
+            up.MergeBox(startX, startX + HookWidth,
+                -HalfThickness, EdgeHeight + HalfThickness);
         if (rightHook)
-            up.Merge(VerticalSkyline.FromBox(
-                endX - HookWidth, endX,
-                -HalfThickness, EdgeHeight + HalfThickness, VerticalDirection.Up));
+            up.MergeBox(endX - HookWidth, endX,
+                -HalfThickness, EdgeHeight + HalfThickness);
         return up;
     }
 
@@ -432,8 +430,7 @@ internal static class PedalEngraver
             {
                 // The stencil's box, from the one spelling the page's silhouette reads too.
                 var (bx0, bx1, bBottom, bTop) = BracketStencilBox(p.StartX, p.EndX, lineYUp);
-                downProfile.Merge(VerticalSkyline.FromBox(
-                    bx0, bx1, bBottom, bTop, VerticalDirection.Down));
+                downProfile.MergeBox(bx0, bx1, bBottom, bTop);
                 solved.Add(new SolvedPedalLine(p.Type, p.StartMeasureIndex, lineYUp,
                     p.StartX, p.EndX, p.LeftHook, p.RightHook));
             }

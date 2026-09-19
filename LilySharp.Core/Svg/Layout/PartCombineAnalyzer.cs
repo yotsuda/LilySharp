@@ -243,8 +243,7 @@ internal static class PartCombineAnalyzer
                 AlignedSideBaselineUp(fonts, voices, mark, x0, beamMembers, staffIndex: 0),
                 accumulatedUp.MaxProtrusionInRange(x0, x1)
                     + OutsideStaffStacker.OutsideStaffPadding - bottom);
-            ink.Merge(VerticalSkyline.FromBox(
-                x0, x1, baseline + bottom, baseline + top, VerticalDirection.Up));
+            ink.MergeBox(x0, x1, baseline + bottom, baseline + top);
         }
         return ink;
     }

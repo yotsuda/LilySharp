@@ -933,10 +933,8 @@ internal static class OutsideStaffStacker
         {
             double gx0 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Left;
             double gx1 = t.GlyphX + GlyphMetrics.OrnTrillGlyphOutline.Right;
-            qUp.Merge(VerticalSkyline.FromBox(gx0, gx1,
-                t.YUp - reach, t.YUp + top, VerticalDirection.Up));
-            qDown.Merge(VerticalSkyline.FromBox(gx0, gx1,
-                t.YUp - reach, t.YUp + top, VerticalDirection.Down));
+            qUp.MergeBox(gx0, gx1, t.YUp - reach, t.YUp + top);
+            qDown.MergeBox(gx0, gx1, t.YUp - reach, t.YUp + top);
         }
         if (t.LineStartX < t.LineEndX)
         {
@@ -1895,10 +1893,8 @@ internal static class OutsideStaffStacker
             // SymbolInkWidth the draw and the reservation read — the same box the inline
             // seed above merges, in the same frame (cn.YUp is above the system top).
             double x1 = cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn);
-            pair.Up.Merge(VerticalSkyline.FromBox(
-                cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Up));
-            pair.Down.Merge(VerticalSkyline.FromBox(
-                cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top, VerticalDirection.Down));
+            pair.Up.MergeBox(cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top);
+            pair.Down.MergeBox(cn.X, x1, cn.YUp + ink.Bottom, cn.YUp + ink.Top);
         }
         return support;
     }
@@ -2410,10 +2406,8 @@ internal static class OutsideStaffStacker
                     // mark.second-ending.*.line-to-box-bottom, both books).
                     void AddBox(double x0, double x1, double bottom)
                     {
-                        spanUp.Merge(VerticalSkyline.FromBox(
-                            x0, x1, bottom, anchor0 + half, VerticalDirection.Up));
-                        spanDown.Merge(VerticalSkyline.FromBox(
-                            x0, x1, bottom, anchor0 + half, VerticalDirection.Down));
+                        spanUp.MergeBox(x0, x1, bottom, anchor0 + half);
+                        spanDown.MergeBox(x0, x1, bottom, anchor0 + half);
                     }
                     bool hasText = !string.IsNullOrEmpty(v.VoltaText);
                     AddBox(v.StartX, v.EndX, anchor0 - half);           // the line
@@ -2600,10 +2594,10 @@ internal static class OutsideStaffStacker
                         double stemRight = tx + att.X * noteScale;
                         double stemTop = centreY
                             + MetronomeMarkGeometry.StemTopAboveCentre(fonts, m.TempoBeatUnit);
-                        tUp.Merge(VerticalSkyline.FromBox(stemRight - stemTh, stemRight,
-                            centreY + att.Y * noteScale, stemTop, VerticalDirection.Up));
-                        tDown.Merge(VerticalSkyline.FromBox(stemRight - stemTh, stemRight,
-                            centreY + att.Y * noteScale, stemTop, VerticalDirection.Down));
+                        tUp.MergeBox(stemRight - stemTh, stemRight,
+                            centreY + att.Y * noteScale, stemTop);
+                        tDown.MergeBox(stemRight - stemTh, stemRight,
+                            centreY + att.Y * noteScale, stemTop);
                         if (tempoLog >= 3)
                             MergeGlyph(EmmentalerGlyphs.Flag8thUp,
                                 stemRight - stemTh / 2, stemTop, GlyphMetrics.Flag8thUp);
@@ -2630,10 +2624,8 @@ internal static class OutsideStaffStacker
                         // MetronomeMarkGeometry.SwingEquationReach.
                         double sw0 = eqX + fonts.Advance(eq, em, TextRole.Tempo, tempoPlainStyle);
                         double sw1 = sw0 + MetronomeMarkGeometry.SwingEquationReach;
-                        tUp.Merge(VerticalSkyline.FromBox(sw0, sw1,
-                            anchor - 0.5, anchor + 2.0, VerticalDirection.Up));
-                        tDown.Merge(VerticalSkyline.FromBox(sw0, sw1,
-                            anchor - 0.5, anchor + 2.0, VerticalDirection.Down));
+                        tUp.MergeBox(sw0, sw1, anchor - 0.5, anchor + 2.0);
+                        tDown.MergeBox(sw0, sw1, anchor - 0.5, anchor + 2.0);
                     }
                 }
                 double tMove = trackers(sysIdx, m.StaffIndex).Place(tUp, tDown, OutsideStaffPadding,

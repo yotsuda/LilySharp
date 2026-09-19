@@ -91,8 +91,8 @@
 - **:2795** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
 - **:3597** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
-- **:1091** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:1854** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:1090** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
+- **:1853** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -101,9 +101,9 @@
 - **:1090** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
 - **:1184** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
-- **:493** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
+- **:489** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **:472** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
+- **:469** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:451** case of broken slur") — not ported; every slur this scorer sees lives on
 - **:626** column allows only 0.3 of movement) is not ported: every edge here
@@ -191,7 +191,7 @@
 - **:4449** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:774** does not spell a per-type padding — no point observes a segno/coda over a
-- **:1318** pinned there), no ledger point.
+- **:1317** pinned there), no ledger point.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:460** no observer distinguishes the two until a merge-differently-* producer lands.
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
@@ -199,9 +199,9 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1614** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1612** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **:485** same part (leftHand). No book reaches the configuration, so no ledger point and
+- **:482** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -379,19 +379,19 @@
 - **:149** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:175** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
 - **:587** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
-- **:1313** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
-- **:1348** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
-- **:1754** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:1998** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2187** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2282** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2293** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2339** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:1312** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
+- **:1347** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
+- **:1753** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:1997** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2186** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2281** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2292** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2338** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:75** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1043** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:2949** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1041** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:2941** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
@@ -429,7 +429,7 @@
 - **:164** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
-- **:848** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
+- **:927** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`

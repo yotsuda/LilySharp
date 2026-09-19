@@ -609,4 +609,108 @@ public class SkylineMergeTests
         for (int i = 0; i < 12; i++)
             yield return (3.0 * i, 3.0 * i + 5.0, 1.0 + (i * 7) % 5);
     }
+
+    /// <summary>
+    /// <c>MergeBox</c> leaves the SAME BUILDINGS, IN THE SAME ORDER, as building a
+    /// <c>FromBox</c> skyline and merging it — batched and unbatched, up and down.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS IS THE ONLY THING THAT KEEPS THEM ONE QUANTITY. There are now two roads to a
+    /// seeded box: the pair, which every caller outside this repository's hot paths still
+    /// takes, and the direct append, which the seeds take. They agree today because the
+    /// direct one re-reads the pair's own two lines — the sign convention and the ±inf
+    /// filter — and nothing in the compiler says they have to keep agreeing.
+    /// <para>
+    /// ⚠️ WHAT IT CATCHES, MEASURED BY POISON (HANDOFF §5.4), IS THE SIGN CONVENTION AND NOT
+    /// THE FILTER. Swapping the edge the direction picks turns the two BATCHED cases red (the
+    /// unbatched ones go through <c>FromBox</c> itself, so they cannot). Deleting the ±inf
+    /// filter turns NOTHING red — and that is a fact about the filter, not a hole here: the
+    /// resolve drops those buildings anyway, which is what <c>Merge</c>'s own remark says, so
+    /// its absence cannot reach a page. It is kept because it keeps the batch small.
+    /// </para>
+    /// HANDOFF §7.7 — the same quantity spelt twice, guarded rather than trusted.
+    /// </remarks>
+    [Theory]
+    [InlineData(VerticalDirection.Up, true)]
+    [InlineData(VerticalDirection.Up, false)]
+    [InlineData(VerticalDirection.Down, true)]
+    [InlineData(VerticalDirection.Down, false)]
+    public void MergeBox_LeavesWhatTheFromBoxPairLeaves(VerticalDirection dir, bool batched)
+    {
+        var pair = new VerticalSkyline(dir);
+        var direct = new VerticalSkyline(dir);
+        if (batched)
+        {
+            pair.BeginBatch();
+            direct.BeginBatch();
+        }
+        foreach (var (left, right, top) in OverlappingBoxes())
+        {
+            pair.Merge(VerticalSkyline.FromBox(left, right, top - 2.0, top, dir));
+            direct.MergeBox(left, right, top - 2.0, top);
+        }
+        // ...and a box whose own edge is -infinity, which is what makes the ±inf FILTER
+        // load-bearing rather than incidental: a batch drops such a building on both roads,
+        // an unbatched merge keeps all three. Nothing in OverlappingBoxes reaches it.
+        double empty = dir == VerticalDirection.Up
+            ? double.NegativeInfinity : double.PositiveInfinity;
+        pair.Merge(VerticalSkyline.FromBox(1.0, 4.0, empty, empty, dir));
+        direct.MergeBox(1.0, 4.0, empty, empty);
+        if (batched)
+        {
+            pair.EndBatch();
+            direct.EndBatch();
+        }
+
+        Assert.Equal(pair.Buildings.Count, direct.Buildings.Count);
+        for (int i = 0; i < pair.Buildings.Count; i++)
+        {
+            var (w, g) = (pair.Buildings[i], direct.Buildings[i]);
+            Assert.Equal(w.Start, g.Start);
+            Assert.Equal(w.End, g.End);
+            Assert.Equal(w.Slope, g.Slope);
+            Assert.Equal(w.Intercept, g.Intercept);
+        }
+    }
+
+    /// <summary>
+    /// <c>MergeSlope</c> is <c>MergeBox</c>'s twin and carries the same obligation — see
+    /// that test's remark. A slope carries no padders, so what a poisoned sign would change
+    /// here is the building itself.
+    /// </summary>
+    [Theory]
+    [InlineData(VerticalDirection.Up, true)]
+    [InlineData(VerticalDirection.Up, false)]
+    [InlineData(VerticalDirection.Down, true)]
+    [InlineData(VerticalDirection.Down, false)]
+    public void MergeSlope_LeavesWhatTheFromSlopePairLeaves(VerticalDirection dir, bool batched)
+    {
+        var pair = new VerticalSkyline(dir);
+        var direct = new VerticalSkyline(dir);
+        if (batched)
+        {
+            pair.BeginBatch();
+            direct.BeginBatch();
+        }
+        foreach (var (left, right, top) in OverlappingBoxes())
+        {
+            pair.Merge(VerticalSkyline.FromSlope(left, top, right, top - 1.0, 0.25, dir));
+            direct.MergeSlope(left, top, right, top - 1.0, 0.25);
+        }
+        if (batched)
+        {
+            pair.EndBatch();
+            direct.EndBatch();
+        }
+
+        Assert.Equal(pair.Buildings.Count, direct.Buildings.Count);
+        for (int i = 0; i < pair.Buildings.Count; i++)
+        {
+            var (w, g) = (pair.Buildings[i], direct.Buildings[i]);
+            Assert.Equal(w.Start, g.Start);
+            Assert.Equal(w.End, g.End);
+            Assert.Equal(w.Slope, g.Slope);
+            Assert.Equal(w.Intercept, g.Intercept);
+        }
+    }
 }

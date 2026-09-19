@@ -484,12 +484,10 @@ internal static class DynamicEngraver
                     var ink = GlyphMetrics.GetNoteheadBBox(col.NoteValue);
                     double headTop = col.TopHeadPosition * 0.5 + ink.Top;
                     double headBottom = col.BottomHeadPosition * 0.5 + ink.Bottom;
-                    up.Merge(VerticalSkyline.FromBox(
-                        xColumn + ink.Left, xColumn + ink.Right,
-                        headBottom, headTop, VerticalDirection.Up));
-                    down.Merge(VerticalSkyline.FromBox(
-                        xColumn + ink.Left, xColumn + ink.Right,
-                        headBottom, headTop, VerticalDirection.Down));
+                    up.MergeBox(
+                        xColumn + ink.Left, xColumn + ink.Right, headBottom, headTop);
+                    down.MergeBox(
+                        xColumn + ink.Left, xColumn + ink.Right, headBottom, headTop);
 
                     // The REAL stem — drawn length (shortening, middle-line pull,
                     // beam-quanted face) at its own thin X: the renderer's attach (down
@@ -503,11 +501,9 @@ internal static class DynamicEngraver
                             xColumn, col.StemUp, col.NoteValue, col.Notehead);
                         double half = EngravingDefaults.StemThickness / 2;
                         if (col.StemUp)
-                            up.Merge(VerticalSkyline.FromBox(stemCentre - half, stemCentre + half,
-                                anchorUp, tipUp, VerticalDirection.Up));
+                            up.MergeBox(stemCentre - half, stemCentre + half, anchorUp, tipUp);
                         else
-                            down.Merge(VerticalSkyline.FromBox(stemCentre - half, stemCentre + half,
-                                tipUp, anchorUp, VerticalDirection.Down));
+                            down.MergeBox(stemCentre - half, stemCentre + half, tipUp, anchorUp);
                     }
                 }
                 // A rest has no head/stem grob to support off — the staff floor stands.

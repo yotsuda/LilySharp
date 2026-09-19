@@ -584,12 +584,11 @@ internal static class TextSpannerEngraver
             // everywhere and the text stands only where the text is, which is what a row
             // whose symbols sit past the label has to clear (LilyPond reads the stencil's
             // own outline).
-            ink.Merge(VerticalSkyline.FromBox(
-                startX, endX, y - lineHalf, y + lineHalf, VerticalDirection.Up));
+            ink.MergeBox(startX, endX, y - lineHalf, y + lineHalf);
             if (!string.IsNullOrEmpty(text))
-                ink.Merge(VerticalSkyline.FromBox(
+                ink.MergeBox(
                     startX, Math.Min(startX + text.Length * CharWidth + TextLinePadding, endX),
-                    y - bottom, y + top, VerticalDirection.Up));
+                    y - bottom, y + top);
         }
 
         return ink;

@@ -390,12 +390,10 @@ internal sealed class SkylineBuilder
         // thickness further out — the same fact SeedStaffSymbol carries, seen from the
         // system's frame instead of the staff's.
         double halfLine = EngravingDefaults.StaffLineThickness / 2.0;
-        upSkyline.Merge(VerticalSkyline.FromBox(
-            systemLeft, xRight, -topLineY + halfLine, -topLineY + halfLine,
-            VerticalDirection.Up));
-        downSkyline.Merge(VerticalSkyline.FromBox(
-            systemLeft, xRight, -bottomLineY - halfLine, -bottomLineY - halfLine,
-            VerticalDirection.Down));
+        upSkyline.MergeBox(
+            systemLeft, xRight, -topLineY + halfLine, -topLineY + halfLine);
+        downSkyline.MergeBox(
+            systemLeft, xRight, -bottomLineY - halfLine, -bottomLineY - halfLine);
     }
 
     // The clef's X comes from EngravingDefaults, not from a literal copied out of the
@@ -451,12 +449,12 @@ internal sealed class SkylineBuilder
             // protrude, 0.64 each way — exactly as LilyPond's glyph does.
             var tab = size.Ink(GlyphMetrics.ClefTabOutline);
             double tabX = systemLeft + EngravingDefaults.ClefGlyphXOffset;
-            upSkyline.Merge(VerticalSkyline.FromBox(
+            upSkyline.MergeBox(
                 tabX + tab.Left, tabX + tab.Right,
-                staffMiddleUp + tab.Bottom, staffMiddleUp + tab.Top, VerticalDirection.Up));
-            downSkyline.Merge(VerticalSkyline.FromBox(
+                staffMiddleUp + tab.Bottom, staffMiddleUp + tab.Top);
+            downSkyline.MergeBox(
                 tabX + tab.Left, tabX + tab.Right,
-                staffMiddleUp + tab.Bottom, staffMiddleUp + tab.Top, VerticalDirection.Down));
+                staffMiddleUp + tab.Bottom, staffMiddleUp + tab.Top);
             return;
         }
 
@@ -836,12 +834,10 @@ internal sealed class SkylineBuilder
                         double lineUp = topLineUp - (stringNum - 1) * space;
                         double width = TabConstants.FretGlyphWidth(_fonts,
                             fret.ToString(CultureInfo.InvariantCulture), fretEm);
-                        upSkyline.Merge(VerticalSkyline.FromBox(
-                            x - width / 2, x + width / 2, lineUp - half, lineUp + half,
-                            VerticalDirection.Up));
-                        downSkyline.Merge(VerticalSkyline.FromBox(
-                            x - width / 2, x + width / 2, lineUp - half, lineUp + half,
-                            VerticalDirection.Down));
+                        upSkyline.MergeBox(
+                            x - width / 2, x + width / 2, lineUp - half, lineUp + half);
+                        downSkyline.MergeBox(
+                            x - width / 2, x + width / 2, lineUp - half, lineUp + half);
                     }
                 }
             }
@@ -914,8 +910,7 @@ internal sealed class SkylineBuilder
                 double yLeft = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xLeft));
                 double yRight = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xRight));
                 var sky = up ? upSkyline : downSkyline;
-                sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0,
-                    up ? VerticalDirection.Up : VerticalDirection.Down));
+                sky.MergeSlope(xLeft, yLeft, xRight, yRight, thickness: 0);
             }
         }
 
@@ -949,11 +944,9 @@ internal sealed class SkylineBuilder
                     double yHead = YUp(headY);
                     double yTip = YUp(tipY);
                     if (stemUp)
-                        upSkyline.Merge(VerticalSkyline.FromBox(
-                            x - halfStem, x + halfStem, yHead, yTip, VerticalDirection.Up));
+                        upSkyline.MergeBox(x - halfStem, x + halfStem, yHead, yTip);
                     else
-                        downSkyline.Merge(VerticalSkyline.FromBox(
-                            x - halfStem, x + halfStem, yTip, yHead, VerticalDirection.Down));
+                        downSkyline.MergeBox(x - halfStem, x + halfStem, yTip, yHead);
 
                     // ...and the FLAG of an unbeamed eighth or shorter, hanging from the tip
                     // back towards the digit and running right of the stem — the same box the
@@ -969,11 +962,9 @@ internal sealed class SkylineBuilder
                         double flagLeft = x - halfStem;
                         double flagRight = flagLeft + EngravingDefaults.FlagWidth;
                         if (stemUp)
-                            upSkyline.Merge(VerticalSkyline.FromBox(
-                                flagLeft, flagRight, yTip - flagHeight, yTip, VerticalDirection.Up));
+                            upSkyline.MergeBox(flagLeft, flagRight, yTip - flagHeight, yTip);
                         else
-                            downSkyline.Merge(VerticalSkyline.FromBox(
-                                flagLeft, flagRight, yTip, yTip + flagHeight, VerticalDirection.Down));
+                            downSkyline.MergeBox(flagLeft, flagRight, yTip, yTip + flagHeight);
                     }
                 }
             }
@@ -1388,7 +1379,7 @@ internal sealed class SkylineBuilder
             double yRight = size.Span(b.OuterEdgeStaffSpaceAtX(xRight, stemUp)) + staffMiddleUp;
             var direction = stemUp ? VerticalDirection.Up : VerticalDirection.Down;
             var sky = stemUp ? upSkyline : downSkyline;
-            sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+            sky.MergeSlope(xLeft, yLeft, xRight, yRight, thickness: 0);
         }
     }
 
@@ -1480,7 +1471,7 @@ internal sealed class SkylineBuilder
                 // test, while thickness 0 means "store exactly this edge" in both arms.
                 double yLeft = size.Span(leftFirst ? b.StartYUp : b.EndYUp) + dir * half + staffTopUp;
                 double yRight = size.Span(leftFirst ? b.EndYUp : b.StartYUp) + dir * half + staffTopUp;
-                sky.Merge(VerticalSkyline.FromSlope(xLeft, yLeft, xRight, yRight, thickness: 0, direction));
+                sky.MergeSlope(xLeft, yLeft, xRight, yRight, thickness: 0);
             }
 
             // THE NUMBER, which reaches further out than the line it straddles. Centred on
@@ -1499,9 +1490,9 @@ internal sealed class SkylineBuilder
                 double halfH = fonts.InkHeight(
                     b.NumberText, fontSize, Rendering.TextRole.Tuplet, tupletStyle) / 2;
                 double midYUp = size.Span(b.NumberYUp) + staffTopUp;
-                sky.Merge(VerticalSkyline.FromBox(
+                sky.MergeBox(
                     b.NumberX - halfW, b.NumberX + halfW,
-                    midYUp - halfH, midYUp + halfH, direction));
+                    midYUp - halfH, midYUp + halfH);
             }
         }
     }
@@ -1654,7 +1645,7 @@ internal sealed class SkylineBuilder
                     bool leftFirst = prevX <= x;
                     double yl = leftFirst ? prevY : y;
                     double yr = leftFirst ? y : prevY;
-                    sky.Merge(VerticalSkyline.FromSlope(xl, yl, xr, yr, thickness: 0, direction));
+                    sky.MergeSlope(xl, yl, xr, yr, thickness: 0);
                 }
             }
             prevX = x;
@@ -1713,8 +1704,7 @@ internal sealed class SkylineBuilder
             double x0 = f.X - width / 2.0;
             var box = VerticalSkyline.FromBox(x0, x0 + width, bottom, top, VerticalDirection.Up);
             upSkyline.Merge(box);
-            downSkyline.Merge(VerticalSkyline.FromBox(
-                x0, x0 + width, bottom, top, VerticalDirection.Down));
+            downSkyline.MergeBox(x0, x0 + width, bottom, top);
         }
     }
 
@@ -1813,10 +1803,8 @@ internal sealed class SkylineBuilder
         double staffBottom = -half + staffMiddleUp;  // Y-up of the bottom line's ink
 
         // UP skyline takes the top line; DOWN skyline takes the bottom line.
-        upSkyline.Merge(VerticalSkyline.FromBox(
-            xLeft, xRight, staffBottom, staffTop, VerticalDirection.Up));
-        downSkyline.Merge(VerticalSkyline.FromBox(
-            xLeft, xRight, staffBottom, staffTop, VerticalDirection.Down));
+        upSkyline.MergeBox(xLeft, xRight, staffBottom, staffTop);
+        downSkyline.MergeBox(xLeft, xRight, staffBottom, staffTop);
     }
 
     /// <summary>
@@ -2132,12 +2120,10 @@ internal sealed class SkylineBuilder
                     + size.Span(restShiftUp);
                 double restTop = restOriginUp + restBox.Top;
                 double restBottom = restOriginUp + restBox.Bottom;
-                var restUp = VerticalSkyline.FromBox(
-                    x + restBox.Left, x + restBox.Right, restBottom, restTop, VerticalDirection.Up);
-                var restDown = VerticalSkyline.FromBox(
-                    x + restBox.Left, x + restBox.Right, restBottom, restTop, VerticalDirection.Down);
-                upSkyline.Merge(restUp);
-                downSkyline.Merge(restDown);
+                upSkyline.MergeBox(
+                    x + restBox.Left, x + restBox.Right, restBottom, restTop);
+                downSkyline.MergeBox(
+                    x + restBox.Left, x + restBox.Right, restBottom, restTop);
                 // The rest's dots, where the renderer puts them (SharedRenderer.DrawRest):
                 // one dot width right of the rest's LILC ink, at the dot-column answer
                 // RELATIVE to the glyph origin — riding the same shift the glyph took.
@@ -2190,10 +2176,8 @@ internal sealed class SkylineBuilder
         double advance = 2 * size.Span(GlyphMetrics.AugmentationDot.Width);
         double left = dotStartX + dotBox.Left;
         double right = dotStartX + (dotCount - 1) * advance + dotBox.Right;
-        upSkyline.Merge(VerticalSkyline.FromBox(left, right,
-            dotUp + dotBox.Bottom, dotUp + dotBox.Top, VerticalDirection.Up));
-        downSkyline.Merge(VerticalSkyline.FromBox(left, right,
-            dotUp + dotBox.Bottom, dotUp + dotBox.Top, VerticalDirection.Down));
+        upSkyline.MergeBox(left, right, dotUp + dotBox.Bottom, dotUp + dotBox.Top);
+        downSkyline.MergeBox(left, right, dotUp + dotBox.Bottom, dotUp + dotBox.Top);
     }
 
     /// <summary>
@@ -2301,10 +2285,10 @@ internal sealed class SkylineBuilder
         }
         // No walkable glyph — the bundled music font could not be located. The designed
         // outline box, which is what this seeded before the walk existed.
-        upSkyline.Merge(VerticalSkyline.FromBox(inkLeft, inkLeft + bbox.Width,
-            headY + bbox.Bottom, headY + bbox.Top, VerticalDirection.Up));
-        downSkyline.Merge(VerticalSkyline.FromBox(inkLeft, inkLeft + bbox.Width,
-            headY + bbox.Bottom, headY + bbox.Top, VerticalDirection.Down));
+        upSkyline.MergeBox(inkLeft, inkLeft + bbox.Width,
+            headY + bbox.Bottom, headY + bbox.Top);
+        downSkyline.MergeBox(inkLeft, inkLeft + bbox.Width,
+            headY + bbox.Bottom, headY + bbox.Top);
     }
 
     /// <summary>
@@ -2420,10 +2404,8 @@ internal sealed class SkylineBuilder
         double headTopUp = noteUp + headBox.Top;
         double headBottomUp = noteUp + headBox.Bottom;
 
-        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp), VerticalDirection.Up);
-        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp), VerticalDirection.Down);
-        upSkyline.Merge(noteheadUp);
-        downSkyline.Merge(noteheadDown);
+        upSkyline.MergeBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp));
+        downSkyline.MergeBox(noteLeft, noteRight, ToSystemUp(headBottomUp), ToSystemUp(headTopUp));
 
         // LILYPOND-REF: lily/ledger-line-spanner.cc:228-230 — `Interval head_extent =
         //   h->extent (common_x, X_AXIS); ledger_extent.widen (length_fraction *
@@ -2444,8 +2426,8 @@ internal sealed class SkylineBuilder
                 double ledgerUp = size.Span(pos * 0.5);
                 double ledgerTopUp = ledgerUp + ledgerThickness / 2;
                 double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
-                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp), VerticalDirection.Up);
-                upSkyline.Merge(ledger);
+                upSkyline.MergeBox(ledgerLeft, ledgerRight,
+                    ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp));
             }
         }
 
@@ -2457,8 +2439,8 @@ internal sealed class SkylineBuilder
                 double ledgerUp = size.Span(pos * 0.5);
                 double ledgerTopUp = ledgerUp + ledgerThickness / 2;
                 double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
-                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp), VerticalDirection.Down);
-                downSkyline.Merge(ledger);
+                downSkyline.MergeBox(ledgerLeft, ledgerRight,
+                    ToSystemUp(ledgerBottomUp), ToSystemUp(ledgerTopUp));
             }
         }
 
@@ -2515,8 +2497,8 @@ internal sealed class SkylineBuilder
             // Stem extends UPWARD from the head: tip = noteUp + stemLength.
             double stemTipUp = noteUp + stemLength;
             double stemBaseUp = noteUp;
-            var stemSkyline = VerticalSkyline.FromBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth, ToSystemUp(stemBaseUp), ToSystemUp(stemTipUp), VerticalDirection.Up);
-            upSkyline.Merge(stemSkyline);
+            upSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
+                ToSystemUp(stemBaseUp), ToSystemUp(stemTipUp));
 
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
             // Flag for eighth notes and shorter (noteValue >= 8), hanging DOWN
@@ -2528,8 +2510,8 @@ internal sealed class SkylineBuilder
                 double flagRight = flagLeft + flagWidth;
                 double flagTopUp = stemTipUp;
                 double flagBottomUp = stemTipUp - flagHeight;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp), VerticalDirection.Up);
-                upSkyline.Merge(flagSkyline);
+                upSkyline.MergeBox(flagLeft, flagRight,
+                    ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp));
             }
         }
         else
@@ -2537,8 +2519,8 @@ internal sealed class SkylineBuilder
             // Stem extends DOWNWARD from the head: tip = noteUp - stemLength.
             double stemTipUp = noteUp - stemLength;
             double stemBaseUp = noteUp;
-            var stemSkyline = VerticalSkyline.FromBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth, ToSystemUp(stemTipUp), ToSystemUp(stemBaseUp), VerticalDirection.Down);
-            downSkyline.Merge(stemSkyline);
+            downSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
+                ToSystemUp(stemTipUp), ToSystemUp(stemBaseUp));
 
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
             // Flag rises UP from the stem bottom.
@@ -2549,8 +2531,8 @@ internal sealed class SkylineBuilder
                 double flagRight = flagLeft + flagWidth;
                 double flagTopUp = stemTipUp + flagHeight;
                 double flagBottomUp = stemTipUp;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp), VerticalDirection.Down);
-                downSkyline.Merge(flagSkyline);
+                downSkyline.MergeBox(flagLeft, flagRight,
+                    ToSystemUp(flagBottomUp), ToSystemUp(flagTopUp));
             }
         }
     }

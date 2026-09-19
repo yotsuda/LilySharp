@@ -230,10 +230,8 @@ internal static class OttavaBracketEngraver
             startX, lineY - LabelInkCentre(fonts, text, fontSize));
         if (lineStartX < endX)
         {
-            up.Merge(VerticalSkyline.FromBox(
-                lineStartX, endX, lineY - half, lineY + half, VerticalDirection.Up));
-            down.Merge(VerticalSkyline.FromBox(
-                lineStartX, endX, lineY - half, lineY + half, VerticalDirection.Down));
+            up.MergeBox(lineStartX, endX, lineY - half, lineY + half);
+            down.MergeBox(lineStartX, endX, lineY - half, lineY + half);
         }
         if (edgeHeight > 0)
         {
@@ -243,10 +241,8 @@ internal static class OttavaBracketEngraver
             double tip = lineY + (isAbove ? -edgeHeight : edgeHeight);
             double lo = Math.Min(lineY - half, tip);
             double hi = Math.Max(lineY + half, tip);
-            up.Merge(VerticalSkyline.FromBox(
-                endX - half, endX + half, lo, hi, VerticalDirection.Up));
-            down.Merge(VerticalSkyline.FromBox(
-                endX - half, endX + half, lo, hi, VerticalDirection.Down));
+            up.MergeBox(endX - half, endX + half, lo, hi);
+            down.MergeBox(endX - half, endX + half, lo, hi);
         }
         return (up, down);
     }
