@@ -2183,6 +2183,88 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// THE DIGIT GATE (session 419): the gate above fires only when the book carries NEITHER,
+    /// so a book full of SCRIPTS and with no digit still ran the whole fingering half — the
+    /// per-measure beam and slur maps, the unit plan, one probe per (staff, system), the
+    /// memo's match and store, and a walk for every miss — to hand back an empty array.
+    /// Counted rather than timed, exactly as the session-406 sibling above: the memo is never
+    /// consulted (0 hits AND 0 misses on a book whose systems would otherwise probe one unit
+    /// each), and the picture equals a full recompile.
+    /// </summary>
+    [Fact]
+    public void FingScripts_BookWithScriptsButNoDigit_NeverProbesTheMemo_AndMatchesFull()
+    {
+        // ⚠️ THE SCRIPTS ARE IN THE FIRST BAR ONLY. A unit carrying ANY script declines the
+        // memo (FingScriptMemo), so a book scripted throughout probes it zero times whether
+        // or not this gate exists — the first cut of this test asserted 0/0 on such a book
+        // and stayed GREEN under a poison that removed the gate. With thirteen plain bars,
+        // their systems' units are eligible and DO probe it once the gate is gone.
+        string source = "time 4/4\nkey c major\npart melody { clef treble }\n"
+            + "section Main { melody { c8@staccato d@accent e f@tenuto g f e d | "
+            + string.Join(" ", Enumerable.Repeat("c8 d e f g f e d |", 13))
+            + " } }\n";
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryFingScripts;
+        var final = session.SystemCache!.FinalFingScripts;
+
+        var change = Replace(source, "g f e d |", "g f e c |");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "g f e d |", "g f e c |")), incremental);
+        Assert.True(prelim.Hits == 0 && prelim.Misses == 0 && final.Hits == 0 && final.Misses == 0,
+            $"the fingering apparatus ran for a book with no digit (prelim "
+            + $"{prelim.Hits}/{prelim.Misses}, final {final.Hits}/{final.Misses})");
+    }
+
+    /// <summary>
+    /// …AND THE GATE MUST SEE EVERY STAFF (session 419). The digit test walks
+    /// <c>FingeringStaffScores</c> — each staff's PRIMARY voice — which is exactly the list
+    /// the island walk consumes, so a gate that read only the score's own voice would drop
+    /// the digits of a book whose SECOND staff carries them. Asserted as an identity pair
+    /// rather than by counting: the same book with and without that one digit must not render
+    /// the same page, which goes red the moment the gate stops seeing staff n. The
+    /// incremental session must still agree with a full recompile, and the memo — declined
+    /// wholesale by the book above — must be consulted here.
+    /// </summary>
+    [Fact]
+    public void FingScripts_ADigitOnTheSecondStaffStillReachesThePage()
+    {
+        string with = TwoStaffScriptBook("c4@finger(3) d e f |");
+        string without = TwoStaffScriptBook("c4 d e f |");
+        // ⚠️ data-pos MASKED: the two sources differ in LENGTH, so every later grob's
+        // data-pos differs and an unmasked comparison would be unequal whether or not the
+        // digit was ever drawn — it passed under the poison that proved the counter below.
+        Assert.NotEqual(NoPos(Full(without)), NoPos(Full(with)));
+
+        var session = new IncrementalCompiler(SyntaxTree.Parse(with), Opt);
+        session.Render();
+        var prelim = session.SystemCache!.PreliminaryFingScripts;
+        var final = session.SystemCache!.FinalFingScripts;
+        Assert.True(prelim.Hits + prelim.Misses + final.Hits + final.Misses > 0,
+            "the gate skipped the apparatus for a book whose SECOND staff carries the digit");
+
+        var change = Replace(with, "g f e d |", "g f e c |");
+        Assert.Equal(Full(ApplyFirst(with, "g f e d |", "g f e c |")), Norm(session.Edit(change)));
+    }
+
+    /// <summary>The page with its source addresses masked — for comparing two books whose
+    /// SOURCES differ in length (every later grob's data-pos then differs by construction).
+    /// </summary>
+    private static string NoPos(string svg)
+        => System.Text.RegularExpressions.Regex.Replace(svg, " data-pos=\"[^\"]*\"", "");
+
+    /// <summary>Two staves for the gate's reach: the upper one carries scripts and no digit,
+    /// the lower one is plain but for whatever <paramref name="firstLowerBar"/> spells.</summary>
+    private static string TwoStaffScriptBook(string firstLowerBar)
+        => "time 4/4\nkey c major\npart m { clef treble }\npart n { clef bass }\n"
+            + "section Main { m { "
+            + string.Join(" ", Enumerable.Repeat("c8@staccato d@accent e f@tenuto g f e d |", 8))
+            + " } n { " + firstLowerBar + " "
+            + string.Join(" ", Enumerable.Repeat("c4 d e f |", 7))
+            + " } }\nform main { Main }\nscore main { staff m staff n }\n";
+
+    /// <summary>
     /// BEAMED digits, which is what the per-unit beam-tip map (session 406) serves: a
     /// beamed stem ends on the beam and the digit's island answer is read off that face,
     /// so a unit that misses now folds ITS OWN beams instead of the score's. The picture

@@ -130,13 +130,33 @@ internal sealed partial class LayoutEngine
         // unit probes — twice per keystroke (both passes), 0.44 ms / 1.4 MB a pass on a book
         // that has neither (COUNTED, session 406, Release, TieredCompilation=0). The digit
         // test is one allocation-free read per item, cheaper than the first fold it spares.
-        if (articulations.IsDefaultOrEmpty && !AnyFingering(score, voicesByStaff))
+        bool anyFingering = AnyFingering(score, voicesByStaff);
+        if (articulations.IsDefaultOrEmpty && !anyFingering)
             return (ImmutableArray<ArticulationLayout>.Empty, ImmutableArray<FingeringLayout>.Empty);
 
-        var memo = ctx.FingScriptMemo;
+        // …AND NO DIGIT, NO APPARATUS, even in a book full of scripts. The gate above fires
+        // only when the book carries NEITHER, so a book with scripts and no digit still ran
+        // the whole fingering half — the per-measure beam and slur maps, the unit plan, one
+        // probe per (staff, system), the memo's match and store, and a CalculateWithTips walk
+        // for every miss — to hand back an EMPTY array. COUNTED (session 419, Release,
+        // TieredCompilation=0, the user's 231-book corpus, eight keystrokes each, both passes):
+        // NOT ONE of those books carries a digit, 1,402 of 2,170 preliminary calls got past the
+        // gate above, and that half cost 1.79% of a keystroke — 38% of this step — for zero
+        // fingerings. The digit test is one allocation-free read per item (0.017% of a
+        // keystroke on the same sweep) and is now paid on every call rather than only when the
+        // script list is empty.
+        // ⚠️ SOUND BY CONSTRUCTION, NOT BY MEASUREMENT: AnyFingering walks
+        // FingeringStaffScores — the very list ComputeFingeringIslands consumes — and
+        // FingeringEngraver.Calculate reads score.Voice of each of those scores. "No digit
+        // there" therefore means every fingering path below returns the empty array anyway,
+        // and CalculateWithFingerings hands an empty `fingerings` straight back out
+        // (adjustedFingerings = fingerings, its first line).
+        var memo = anyFingering ? ctx.FingScriptMemo : null;
         if (memo == null || score == null)
         {
-            var islands = ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts);
+            var islands = anyFingering
+                ? ComputeFingeringIslands(ctx.Fonts, score, systems, voicesByStaff, beamLayouts)
+                : ImmutableArray<FingeringLayout>.Empty;
             var scripts = ImmutableArray<ArticulationLayout>.Empty;
             if (score != null)
                 scripts = ArticulationEngraver.CalculateWithFingerings(
