@@ -418,6 +418,29 @@ internal sealed class VerticalSkyline
     /// resolving all buildings at once equals merging them one at a time — the
     /// property the batch path relies on.
     /// </summary>
+    /// <remarks>
+    /// The walk's three scratch buffers are created ONCE HERE and handed down, not allocated
+    /// per overlapping building. They are plain locals — no field, no static, so two threads
+    /// resolving two skylines share nothing and the buffers die with the walk.
+    /// <para>
+    /// ⚠️ WHY THAT IS WORTH A PARAMETER. MEASURED (session 416, Release, the owner's corpus,
+    /// eight forward keystrokes a book, allocated bytes): this walk ran 83,538 times a corpus
+    /// and entered <see cref="MergeOverlapping"/> 1,691,308 times — twenty overlaps a walk —
+    /// and each of those allocated three Lists that lived for the length of one overlap:
+    /// <c>overlapping</c>, <c>boundaryList</c> and the merged result. 398 B an overlap,
+    /// 673,848,928 B, <b>3.97% of a keystroke</b>, of which the system silhouette's own
+    /// resolve (HANDOFF §1's island ⒳) was only 1.16% — the same three lists cost more in
+    /// everyone else's merges than in the island that was named. The arithmetic was never
+    /// the cost: the sort allocates nothing, and the inner loop reads 17.3
+    /// (interval × building) pairs a call.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT IS NOT A QUADRATIC RESOLVE, which is what a reader expects of the shape.
+    /// MEASURED the same run: the tail a new building drags back through the merge is 1.52
+    /// buildings on average and never exceeded 18, over inputs of up to 596 buildings. The
+    /// walk is linear; it was the churn.
+    /// </para>
+    /// </remarks>
     /// <param name="allBuildings">⚠️ MUST BE THE CALLER'S OWN LIST, never
     /// <see cref="_buildings"/> itself: this rebuilds in place, so it clears
     /// <see cref="_buildings"/> before the walk and uses it as the result buffer. Both
@@ -442,6 +465,10 @@ internal sealed class VerticalSkyline
         // list — allBuildings already holds everything that was in it.
         var result = _buildings;
         result.Clear();
+
+        // Lazily, so a walk that never overlaps — a resolved profile merged into an empty
+        // skyline, which is most of the placement copies — still allocates nothing.
+        ResolveScratch? scratch = null;
 
         foreach (var building in allBuildings)
         {
@@ -469,15 +496,45 @@ internal sealed class VerticalSkyline
             else
             {
                 // Overlapping - need to merge
-                MergeOverlapping(result, building);
+                MergeOverlapping(result, building, scratch ??= new ResolveScratch());
             }
         }
     }
 
     /// <summary>
+    /// The scratch one resolve walk lends to every overlap it has to merge: the tail it
+    /// lifts out of the result, the boundary points it cuts that tail at, and the segments
+    /// it builds back. One set per walk, cleared at each use.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE THREE ARE ALIVE AT THE SAME TIME AND MUST STAY DISTINCT:
+    /// <see cref="Overlapping"/> is read as <c>existing</c> throughout
+    /// <see cref="MergeBuildingSet"/>, which is writing <see cref="Boundaries"/> and
+    /// <see cref="Merged"/> as it goes. Reusing one list for two of those roles is the one
+    /// way this can be got wrong, and it does not throw — it silently drops silhouette.
+    /// <para>
+    /// ⚠️ AND NOTHING MAY OUTLIVE THE WALK. <see cref="MergeBuildingSet"/> RETURNS
+    /// <see cref="Merged"/> rather than a copy, so its one caller has to consume it before
+    /// the next overlap — it does, by <c>AddRange</c>-ing it into the result on the next
+    /// line. A second caller that kept the reference would hold a list the walk goes on
+    /// rewriting. <c>SkylineMergeTests</c>' two scratch nets pin the reuse: one compares the
+    /// many-overlap walk against merging one at a time, the other against the arithmetic —
+    /// a stale buffer that corrupted BOTH paths alike would pass the first and fail the
+    /// second.
+    /// </para>
+    /// </remarks>
+    private sealed class ResolveScratch
+    {
+        internal readonly List<SkylineBuilding> Overlapping = new();
+        internal readonly List<double> Boundaries = new();
+        internal readonly List<SkylineBuilding> Merged = new();
+    }
+
+    /// <summary>
     /// Merges a new building with the existing result, handling overlaps.
     /// </summary>
-    private void MergeOverlapping(List<SkylineBuilding> result, SkylineBuilding newBuilding)
+    private void MergeOverlapping(
+        List<SkylineBuilding> result, SkylineBuilding newBuilding, ResolveScratch scratch)
     {
         // Find all buildings that overlap with newBuilding
         int firstOverlap = -1;
@@ -496,22 +553,26 @@ internal sealed class VerticalSkyline
         }
 
         // Extract overlapping buildings
-        var overlapping = new List<SkylineBuilding>();
+        var overlapping = scratch.Overlapping;
+        overlapping.Clear();
         for (int i = firstOverlap; i < result.Count; i++)
             overlapping.Add(result[i]);
         result.RemoveRange(firstOverlap, result.Count - firstOverlap);
 
-        // Merge newBuilding with overlapping buildings
-        var merged = MergeBuildingSet(overlapping, newBuilding);
+        // Merge newBuilding with overlapping buildings. `merged` IS scratch.Merged — consumed
+        // on the next line, before the walk's next overlap rewrites it (ResolveScratch).
+        var merged = MergeBuildingSet(overlapping, newBuilding, scratch);
         result.AddRange(merged);
     }
 
     /// <summary>
     /// Merges a set of overlapping buildings with a new building.
     /// </summary>
-    private List<SkylineBuilding> MergeBuildingSet(List<SkylineBuilding> existing, SkylineBuilding newBuilding)
+    private List<SkylineBuilding> MergeBuildingSet(
+        List<SkylineBuilding> existing, SkylineBuilding newBuilding, ResolveScratch scratch)
     {
-        var result = new List<SkylineBuilding>();
+        var result = scratch.Merged;
+        result.Clear();
 
         // Collect all boundary points. A plain List sorted in place replaces a
         // SortedSet (a red-black tree that allocates a node per insert) — this
@@ -535,7 +596,9 @@ internal sealed class VerticalSkyline
         //   gaps the same way).
         bool reachesLeft = double.IsNegativeInfinity(newBuilding.Start);
         bool reachesRight = double.IsPositiveInfinity(newBuilding.End);
-        var boundaryList = new List<double>(existing.Count * 2 + 4);
+        var boundaryList = scratch.Boundaries;
+        boundaryList.Clear();
+        boundaryList.EnsureCapacity(existing.Count * 2 + 4);
         foreach (var b in existing)
         {
             if (double.IsNegativeInfinity(b.Start)) reachesLeft = true;
@@ -827,6 +890,11 @@ internal sealed class VerticalSkyline
 
         var resolved = new List<SkylineBuilding>();
         resolved.Add(_buildings[0]);
+        // One set of scratch buffers for this whole walk, as RebuildKeepingHighest does and
+        // for the same measured reason (ResolveScratch): the padding of a system profile
+        // enters here with four buildings per original one, and every one of them overlaps
+        // its neighbours by construction.
+        ResolveScratch? scratch = null;
 
         for (int i = 1; i < _buildings.Count; i++)
         {
@@ -837,7 +905,7 @@ internal sealed class VerticalSkyline
             }
             else
             {
-                MergeOverlapping(resolved, b);
+                MergeOverlapping(resolved, b, scratch ??= new ResolveScratch());
             }
         }
 
