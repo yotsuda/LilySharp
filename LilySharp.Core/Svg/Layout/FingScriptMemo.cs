@@ -79,9 +79,26 @@ namespace LilySharp.Core.Svg.Layout;
 /// same order, with the same source indices). Stated rather than silently approximated:
 /// a book with digits AND scripts in one system pays the old price.
 /// <para>
-/// Entries are stored one per (staff, system) and overwritten on miss, so the store is
-/// bounded by the session's widest system count. A stale entry can only ever MATCH inputs
-/// that are reference/value-identical to the ones its outputs were computed from.
+/// A stale entry can only ever MATCH inputs that are reference/value-identical to the ones
+/// its outputs were computed from.
+/// ★ TWO ROOMS PER (staff, system) since session 417, the older evicted on a miss — the
+/// shape <see cref="AboveStackMemo"/> took in session 415 and
+/// <see cref="SystemLayoutCache.GetOrComputePagingAugment"/> in session 413. ⚠️ THE STORE
+/// IS PER PASS, WHICH IS ONE LEVEL SHORT OF WHAT IT NEEDS: the PRELIMINARY pass itself runs
+/// twice on a keystroke whose page score picks another line count
+/// (<c>LayoutEngine.Layout</c>'s <c>ChooseSystemCount</c> leg calls <c>PlaceSystems</c>
+/// again), those two placements break the score differently, and with one room they took
+/// each other's slot. MEASURED (session 417, the owner's 231 books × 8 forward keystrokes,
+/// Release): of this store's 10,756 preliminary misses, <b>4,208</b> landed on a slot the
+/// SECOND placement wrote and <b>4,208</b> on a slot the FIRST wrote — ★ the two counts
+/// EQUAL, which is the signature — against a floor of 2,340 on a slot the same placement
+/// wrote. Hit rate by placement 83.5% / 38.1% before, 93.4% / 95.6% after.
+/// ⚠️ TWO IS THE COUNT LOOP'S OWN BOUND, not a tuning knob — <c>Layout</c> calls
+/// <c>PlaceSystems</c> at most twice — so the store stays bounded by twice the session's
+/// widest system count and needs no generation eviction. A lookup served from the older room
+/// PROMOTES it, and <see cref="TryMatch"/> returns the room that MATCHED, so a promotion can
+/// never hand back the other placement's digits. Eviction is sound: a dropped entry costs a
+/// recomputation, never a wrong reuse.
 /// </para>
 /// </remarks>
 internal sealed class FingScriptMemo
@@ -100,7 +117,7 @@ internal sealed class FingScriptMemo
         public FingeringLayout[] Adjusted = Array.Empty<FingeringLayout>();
     }
 
-    private readonly Dictionary<(int Staff, int System), UnitEntry> _byUnit = new();
+    private readonly Dictionary<(int Staff, int System), Slot> _byUnit = new();
 
     /// <summary>Cumulative hit/miss counters (diagnostics, and the liveness half of the
     /// nets — a net that asserts byte equality but never hits proves nothing).</summary>
@@ -109,20 +126,36 @@ internal sealed class FingScriptMemo
     /// <inheritdoc cref="Hits"/>
     public int Misses { get; private set; }
 
-    /// <summary>The stored entry for this unit when its program matches
-    /// <paramref name="probe"/> exactly, else null. Counts the hit/miss.</summary>
+    /// <summary>The stored entry for this unit when EITHER room's program matches
+    /// <paramref name="probe"/> exactly, else null. A unit served from the older room is
+    /// PROMOTED. Counts the hit/miss.</summary>
     public UnitEntry? TryMatch(int staff, int system, UnitEntry probe)
     {
-        if (_byUnit.TryGetValue((staff, system), out var stored) && Matches(stored, probe))
+        _byUnit.TryGetValue((staff, system), out var slot);
+        if (slot.Recent is { } recent && Matches(recent, probe))
         {
             Hits++;
-            return stored;
+            return recent;
+        }
+        if (slot.Older is { } older && Matches(older, probe))
+        {
+            _byUnit[(staff, system)] = new Slot(older, slot.Recent);
+            Hits++;
+            return older;
         }
         Misses++;
         return null;
     }
 
-    public void Store(int staff, int system, UnitEntry entry) => _byUnit[(staff, system)] = entry;
+    /// <summary>Files this unit's entry in the recent room, demoting what was there.</summary>
+    public void Store(int staff, int system, UnitEntry entry)
+    {
+        _byUnit.TryGetValue((staff, system), out var slot);
+        _byUnit[(staff, system)] = new Slot(entry, slot.Recent);
+    }
+
+    /// <summary>One unit's two rooms, the most recently served one first.</summary>
+    private readonly record struct Slot(UnitEntry? Recent, UnitEntry? Older);
 
     private static bool Matches(UnitEntry a, UnitEntry b)
         => a.MeasureIndices.AsSpan().SequenceEqual(b.MeasureIndices)

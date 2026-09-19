@@ -49,9 +49,30 @@ namespace LilySharp.Core.Svg.Layout;
 /// compared BY REFERENCE against the stored instances, with the above memo's
 /// conservatism: a (system, staff) whose identity is unavailable is never memoized.</item>
 /// </list>
-/// Font metrics and the pass's declared paddings are process constants. Entries are
-/// stored one per system index and overwritten on miss; retention across ineligible
-/// edits is sound because a stale entry can only match value-identical inputs.
+/// Font metrics and the pass's declared paddings are process constants. Retention across
+/// ineligible edits is sound because a stale entry can only match value-identical inputs.
+/// <para>
+/// ★ TWO ROOMS PER SYSTEM INDEX since session 417, the older evicted on a miss — the shape
+/// <see cref="AboveStackMemo"/> took in session 415 and
+/// <see cref="SystemLayoutCache.GetOrComputePagingAugment"/> in session 413, for the same
+/// reason and against the same signature. ⚠️ THE ABOVE MEMO'S SUMMARY NAMED THE DISEASE
+/// FOR ITS OWN STORE AND NOBODY ASKED ITS MIRROR: the preliminary pass runs twice on a
+/// keystroke whose page score picks another line count (<c>LayoutEngine.Layout</c>'s
+/// <c>ChooseSystemCount</c> leg calls <c>PlaceSystems</c> again), those two placements break
+/// the score differently, and with one room they took each other's slot.
+/// MEASURED (session 417, the owner's 231 books × 8 forward keystrokes, Release, allocation
+/// bytes): of this store's 1,932 preliminary misses, <b>866</b> landed on a slot the SECOND
+/// placement wrote and <b>866</b> on a slot the FIRST wrote — ★ the two counts EQUAL, each
+/// slot one placement takes costing the other exactly one miss — against a floor of 199 on a
+/// slot the same placement wrote. Hit rate by placement 85.6% / 55.5% before, 97.0% / 97.2%
+/// after.
+/// ⚠️ TWO IS THE COUNT LOOP'S OWN BOUND, not a tuning knob — <c>Layout</c> calls
+/// <c>PlaceSystems</c> at most twice — so the store stays bounded by twice the widest system
+/// count the session ever saw and needs no generation eviction. A lookup served from the
+/// older room PROMOTES it, so the two placements settle one per room and keep hitting; a
+/// miss evicts the older room, the one the current placement is not using. Eviction is sound
+/// for the reason above: a dropped entry costs a restack, never a wrong reuse.
+/// </para>
 /// </remarks>
 internal sealed class BelowStackMemo
 {
@@ -81,7 +102,7 @@ internal sealed class BelowStackMemo
         public TrillSpannerLayout[] OutTrills = Array.Empty<TrillSpannerLayout>();
     }
 
-    private readonly Dictionary<int, SystemEntry> _bySystem = new();
+    private readonly Dictionary<int, Slot> _bySystem = new();
 
     /// <summary>Cumulative hit/miss counters (diagnostics / the liveness half of the
     /// nets — a net that asserts byte equality but never hits proves nothing).</summary>
@@ -90,12 +111,21 @@ internal sealed class BelowStackMemo
     /// <inheritdoc cref="Hits"/>
     public int Misses { get; private set; }
 
-    /// <summary>Whether the stored entry for <paramref name="systemIndex"/> matches
-    /// <paramref name="probe"/>'s program exactly. Counts the hit/miss.</summary>
+    /// <summary>Whether either room stored for <paramref name="systemIndex"/> matches
+    /// <paramref name="probe"/>'s program exactly. A room served from the older slot is
+    /// PROMOTED, so <see cref="Get"/> always reads the room that matched. Counts the
+    /// hit/miss.</summary>
     public bool TryMatch(int systemIndex, SystemEntry probe)
     {
-        if (_bySystem.TryGetValue(systemIndex, out var stored) && Matches(stored, probe))
+        _bySystem.TryGetValue(systemIndex, out var slot);
+        if (slot.Recent is { } recent && Matches(recent, probe))
         {
+            Hits++;
+            return true;
+        }
+        if (slot.Older is { } older && Matches(older, probe))
+        {
+            _bySystem[systemIndex] = new Slot(older, slot.Recent);
             Hits++;
             return true;
         }
@@ -103,10 +133,21 @@ internal sealed class BelowStackMemo
         return false;
     }
 
+    /// <summary>The room that last matched or was stored for this system — only ever read
+    /// for a system <see cref="TryMatch"/> just answered true for, and the promotion above
+    /// is what makes that the matching one.</summary>
     public SystemEntry? Get(int systemIndex)
-        => _bySystem.TryGetValue(systemIndex, out var e) ? e : null;
+        => _bySystem.TryGetValue(systemIndex, out var s) ? s.Recent : null;
 
-    public void Store(int systemIndex, SystemEntry entry) => _bySystem[systemIndex] = entry;
+    /// <summary>Files this system's entry in the recent room, demoting what was there.</summary>
+    public void Store(int systemIndex, SystemEntry entry)
+    {
+        _bySystem.TryGetValue(systemIndex, out var slot);
+        _bySystem[systemIndex] = new Slot(entry, slot.Recent);
+    }
+
+    /// <summary>One system index's two rooms, the most recently served one first.</summary>
+    private readonly record struct Slot(SystemEntry? Recent, SystemEntry? Older);
 
     private static bool Matches(SystemEntry a, SystemEntry b)
         => a.ApplyStaffOffsets == b.ApplyStaffOffsets

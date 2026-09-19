@@ -285,4 +285,140 @@ public class OutsideStaffStackMemoTests
         Assert.Equal(expectedSecond.Texts, backAgain.Texts);       // …to the same answer
         Assert.Equal(expectedSecond.BarNumbers, backAgain.BarNumbers);
     }
+
+    // --- the BELOW-side mirror's rooms (session 417) ------------------------------
+    // The above memo got its second room in session 415; its below-side mirror kept ONE,
+    // and the two placements took each other's slot exactly as the above pair had.
+    // MEASURED (session 417, the owner's 231 books × 8 forward keystrokes, Release): of the
+    // preliminary below store's 1,932 misses, 866 landed on a slot the SECOND placement
+    // wrote and 866 on a slot the FIRST wrote — the two counts EQUAL, which is the
+    // signature — against a floor of 199 on a slot the same placement wrote. Hit rate
+    // 85.6% / 55.5% by placement before, 97.0% / 97.2% after.
+
+    /// <summary>A per-(system, staff) profile source for the BELOW pass: the bump is under
+    /// the staff, so the placed YUp depends on its DEPTH (the above source's down side is a
+    /// constant and would make every placement agree).</summary>
+    private sealed class BelowProfileSource
+    {
+        public readonly Dictionary<(int Sys, int Staff), double> Depth = new();
+        public readonly Dictionary<(int Sys, int Staff), (object Up, object Down)> Ids = new();
+
+        public void Set(int sys, int staff, double depth)
+        {
+            Depth[(sys, staff)] = depth;
+            Ids[(sys, staff)] = (new object(), new object());
+        }
+
+        public (VerticalSkyline Up, VerticalSkyline Down)? Profile(int sys, int staff)
+        {
+            if (!Depth.TryGetValue((sys, staff), out double d))
+                return null;
+            return (VerticalSkyline.FromBox(15, 25, 2, 2, VerticalDirection.Up),
+                    VerticalSkyline.FromBox(15, 25, -d, -d, VerticalDirection.Down));
+        }
+
+        public (object Up, object Down)? Identity(int sys, int staff)
+            => Ids.TryGetValue((sys, staff), out var id) ? id : null;
+    }
+
+    private static (ImmutableArray<DynamicLayout> Dynamics, ImmutableArray<HairpinLayout> Hairpins)
+        RunBelow(ImmutableArray<SystemLayout> systems, BelowProfileSource profiles,
+            BelowStackMemo? memo)
+    {
+        var dynamics = ImmutableArray.Create(
+            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, YUp: -4.0, Text: "f",
+                SourcePosition: 0),
+            new DynamicLayout(MeasureIndex: 2, ItemIndex: 0, X: 20, YUp: -4.0, Text: "p",
+                SourcePosition: 1));
+        var hairpins = ImmutableArray.Create(
+            new HairpinLayout(StartMeasureIndex: 0, StartX: 18, EndX: 25, YUp: -5.2,
+                StartOpening: 0, EndOpening: 0.333, Direction: HairpinDirection.Crescendo,
+                SourcePosition: 0),
+            new HairpinLayout(StartMeasureIndex: 2, StartX: 18, EndX: 25, YUp: -5.2,
+                StartOpening: 0, EndOpening: 0.333, Direction: HairpinDirection.Crescendo,
+                SourcePosition: 1));
+        var (d, h, _, _) = OutsideStaffStacker.StackBelowStaff(
+            ScoreTextMetrics.Bundled, systems, dynamics, hairpins,
+            staffProfile: profiles.Profile,
+            memo: memo, profileIdentity: memo == null ? null : profiles.Identity);
+        return (d, h);
+    }
+
+    /// <summary>Two rooms per system index, below side: both placements must keep hitting.
+    /// ⚠️ WITH ONE ROOM THIS READS 0 hits / 8 misses.</summary>
+    [Fact]
+    public void BelowTwoPlacementsAlternating_BothKeepHitting()
+    {
+        var systems = CreateTwoSystems();
+        var first = new BelowProfileSource();
+        first.Set(0, 0, 3.0);
+        first.Set(1, 0, 3.0);
+        var second = new BelowProfileSource();
+        second.Set(0, 0, 6.0);
+        second.Set(1, 0, 6.0);
+
+        var expectedFirst = RunBelow(systems, first, memo: null);
+        var expectedSecond = RunBelow(systems, second, memo: null);
+        // The two placements must not agree by accident, or "both keep hitting" would be
+        // one room answering both.
+        Assert.NotEqual(expectedFirst.Dynamics, expectedSecond.Dynamics);
+
+        var memo = new BelowStackMemo();
+        RunBelow(systems, first, memo);
+        RunBelow(systems, second, memo);
+        Assert.Equal(0, memo.Hits);
+        Assert.Equal(4, memo.Misses); // two systems, twice: each placement's cold fill
+
+        for (int keystroke = 0; keystroke < 2; keystroke++)
+        {
+            var a = RunBelow(systems, first, memo);
+            var b = RunBelow(systems, second, memo);
+            Assert.Equal(expectedFirst.Dynamics, a.Dynamics);
+            Assert.Equal(expectedFirst.Hairpins, a.Hairpins);
+            Assert.Equal(expectedSecond.Dynamics, b.Dynamics);
+            Assert.Equal(expectedSecond.Hairpins, b.Hairpins);
+        }
+        Assert.Equal(8, memo.Hits);   // both systems, both placements, both keystrokes
+        Assert.Equal(4, memo.Misses); // nothing evicted anything
+    }
+
+    /// <summary>Two is the count loop's bound below the staff too, so a THIRD distinct
+    /// placement evicts the older room — and the evicted one recomputes to the same answer
+    /// rather than replaying a wrong one.</summary>
+    [Fact]
+    public void BelowAThirdPlacement_EvictsTheOlderRoom_AndTheEvictedOneRecomputes()
+    {
+        var systems = CreateTwoSystems();
+        var first = new BelowProfileSource();
+        first.Set(0, 0, 3.0);
+        first.Set(1, 0, 3.0);
+        var second = new BelowProfileSource();
+        second.Set(0, 0, 6.0);
+        second.Set(1, 0, 6.0);
+        var third = new BelowProfileSource();
+        third.Set(0, 0, 9.0);
+        third.Set(1, 0, 9.0);
+
+        var expectedSecond = RunBelow(systems, second, memo: null);
+
+        var memo = new BelowStackMemo();
+        RunBelow(systems, first, memo);            // rooms: [first, -]
+        RunBelow(systems, second, memo);           // rooms: [second, first]
+        Assert.Equal(0, memo.Hits);
+        Assert.Equal(4, memo.Misses);
+
+        RunBelow(systems, first, memo);            // served from the OLDER room, promoted
+        Assert.Equal(2, memo.Hits);
+        Assert.Equal(4, memo.Misses);
+
+        RunBelow(systems, third, memo);            // rooms: [third, first] — second evicted
+        Assert.Equal(2, memo.Hits);
+        Assert.Equal(6, memo.Misses);
+
+        var backAgain = RunBelow(systems, second, memo);
+        Assert.Equal(2, memo.Hits);
+        Assert.Equal(8, memo.Misses); // the evicted placement recomputes…
+        Assert.Equal(expectedSecond.Dynamics, backAgain.Dynamics);  // …to the same answer
+        Assert.Equal(expectedSecond.Hairpins, backAgain.Hairpins);
+    }
 }
