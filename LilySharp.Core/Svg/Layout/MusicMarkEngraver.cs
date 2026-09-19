@@ -491,7 +491,7 @@ internal static class MusicMarkEngraver
         // 407's shape, and this is the house that never got the door (see the remark at
         // `measureToSystemIdx` below). Null keeps the local build, so the CLI, the
         // per-system callers and the tests are unchanged.
-        Dictionary<int, int>? prebuiltMeasureToSystem = null)
+        IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,

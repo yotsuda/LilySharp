@@ -331,8 +331,29 @@ internal static class LayoutUtilities
     /// <summary>
     /// Builds a map from measure index to (system, measureLayout) for quick lookup.
     /// </summary>
-    public static Dictionary<int, (SystemLayout System, MeasureLayout Measure)> BuildMeasureMap(
-        ImmutableArray<SystemLayout> systems)
+    public static IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>
+        BuildMeasureMap(ImmutableArray<SystemLayout> systems)
+    {
+        var arr = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(systems);
+        if (arr is null || arr.Length == 0)
+            return EmptyMeasureMap;
+        return MeasureMaps.GetValue(arr, BuildMeasureMapFor);
+    }
+
+    private static readonly Dictionary<int, (SystemLayout System, MeasureLayout Measure)>
+        EmptyMeasureMap = new();
+
+    /// <summary>One table per system array, keyed on the ARRAY ITSELF — the same structure
+    /// and the same argument as
+    /// <see cref="SpannerBreakSubstitution.BuildMeasureToSystemMap"/>, whose remarks carry
+    /// the measured account. These two walk the same systems and differ only in what they
+    /// remember about each measure.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<
+        SystemLayout[], Dictionary<int, (SystemLayout System, MeasureLayout Measure)>>
+        MeasureMaps = new();
+
+    private static Dictionary<int, (SystemLayout System, MeasureLayout Measure)>
+        BuildMeasureMapFor(SystemLayout[] systems)
     {
         var map = new Dictionary<int, (SystemLayout, MeasureLayout)>();
         foreach (var system in systems)

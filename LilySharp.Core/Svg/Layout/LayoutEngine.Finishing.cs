@@ -121,8 +121,8 @@ internal sealed partial class LayoutEngine
             Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
             Func<int, int, double>? staffYAt,
             Dictionary<int, Staff>? staffByIndex,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null,
-            Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null,
+            IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         // NOTHING TO PLACE, NOTHING PAID. A book with no script and no digit used to run the
         // whole memo apparatus for an empty answer — the beam-tip fold (8,000 members of

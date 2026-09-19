@@ -70,7 +70,7 @@ internal static class LedgerLineSpannerEngraver
         ImmutableArray<SystemLayout> systems,
         double staffHeight,
         int staffIndex = -1,
-        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<LedgerLineSpan>.Empty;

@@ -660,7 +660,7 @@ internal static class ChordNameEngraver
             Rendering.ScoreTextMetrics fonts,
             List<(ChordNameItem chord, double x, double staffOffset, bool topStaff, int sysIdx, int idx)> prepared,
             ImmutableArray<MeasureLayout> measureLayouts,
-            Dictionary<int, int> measureToSystem,
+            IReadOnlyDictionary<int, int> measureToSystem,
             Dictionary<int, ImmutableArray<Measure>>? measuresByStaff,
             ImmutableArray<Measure> measures,
             Func<int, int, double>? staffYAt,

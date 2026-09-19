@@ -278,7 +278,7 @@ internal static class TieVariantEngraver
         Score score,
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
-        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<TieVariantLayout>.Empty;

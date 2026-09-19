@@ -616,7 +616,7 @@ internal sealed partial class LayoutEngine
     private static void AppendScriptSteps(
         ImmutableArray<ArticulationLayout> articulations,
         ImmutableArray<SystemLayout> systems,
-        Dictionary<int, int> measureToSystem,
+        IReadOnlyDictionary<int, int> measureToSystem,
         Func<int, PagingAugmentProgram.Builder> builderAt)
     {
         if (articulations.IsDefaultOrEmpty)

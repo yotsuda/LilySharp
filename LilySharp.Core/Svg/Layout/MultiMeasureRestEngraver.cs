@@ -159,7 +159,7 @@ internal static class MultiMeasureRestEngraver
         double staffHeight,
         int staffIndex = -1,
         IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MultiMeasureRestLayout>.Empty;

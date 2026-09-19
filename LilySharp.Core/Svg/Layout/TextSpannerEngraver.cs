@@ -310,7 +310,7 @@ internal static class TextSpannerEngraver
     private static double CalculateYWithPriorityStacking(
         double startX, double endX, int startMeasureIndex,
         ImmutableArray<DynamicLayout> dynamicLayouts,
-        Dictionary<int, int> measureToSystem,
+        IReadOnlyDictionary<int, int> measureToSystem,
         double staffOffset = 0)
     {
         // Minimum Y: below THIS staff (its within-system offset) with padding + text ascent

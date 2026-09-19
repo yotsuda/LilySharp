@@ -317,7 +317,7 @@ internal static class DynamicAlignEngraver
         List<(int LayoutIdx, int HairpinItemIdx)> wedgePieces,
         ImmutableArray<HairpinLayout> hairpinLayouts,
         ImmutableArray<DynamicLayout> dynamicLayouts,
-        Dictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem)
     {
         var seen = new SortedSet<int>();
         foreach (int di in line.DynamicLayoutIndices)
@@ -338,7 +338,7 @@ internal static class DynamicAlignEngraver
     private static IEnumerable<(int Measure, int Item, double X)> SpanColumns(
         DynamicLine line, int sysIdx,
         ImmutableArray<Measure> staffMeasures, ImmutableArray<MeasureLayout> measureLayouts,
-        Dictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem)
     {
         if (staffMeasures.IsDefaultOrEmpty)
             yield break;

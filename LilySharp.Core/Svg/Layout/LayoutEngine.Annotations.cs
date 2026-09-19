@@ -660,7 +660,7 @@ internal sealed partial class LayoutEngine
             // measure -> system INDEX, to find the solved line of the system a bracket
             // starts on (the profile that reserved it) — the pass's one map, not a second
             // walk of the same measures.
-            Dictionary<int, int>? measureToSysIdx = ctx.PedalLines != null ? measureToSystem : null;
+            IReadOnlyDictionary<int, int>? measureToSysIdx = ctx.PedalLines != null ? measureToSystem : null;
             foreach (var staffIndex in musicMarks
                 .Where(m => IsPedalMark(m.Type)).Select(m => m.StaffIndex).Distinct())
             {

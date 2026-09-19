@@ -192,7 +192,7 @@ internal static class OutsideStaffStacker
             ImmutableArray<TrillSpannerLayout> trills = default,
             BelowStackMemo? memo = null,
             Func<int, int, (object Up, object Down)?>? profileIdentity = null,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         if (memo is null || profileIdentity is null || systems.IsDefaultOrEmpty)
             return StackBelowStaffCore(fonts, systems, dynamics, hairpins, articulations,
@@ -216,7 +216,7 @@ internal static class OutsideStaffStacker
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups,
             ImmutableArray<TrillSpannerLayout> trills,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // A below-staff script that DECLARES a priority (the fermata family's 75) is a mover
         // of this pass in its own right, so the pass has to run for it even on a page with
@@ -635,7 +635,7 @@ internal static class OutsideStaffStacker
             ImmutableArray<TrillSpannerLayout> trills,
             BelowStackMemo memo,
             Func<int, int, (object Up, object Down)?> profileIdentity,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         var measureToSystem = prebuiltMeasureToSystem
             ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
@@ -1036,7 +1036,7 @@ internal static class OutsideStaffStacker
             AboveStackMemo? memo = null,
             Func<int, int, (object Up, object Down)?>? profileIdentity = null,
             ImmutableArray<PartCombineLayout> partCombineTexts = default,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // ⚠️ A BOOK WITH PART-COMBINE LABELS STACKS LIVE: the memo's program does not carry
         // them (AboveStackMemo.SystemEntry has no field for the family), and a replayed
@@ -1101,7 +1101,7 @@ internal static class OutsideStaffStacker
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             AboveStackMemo memo,
             Func<int, int, (object Up, object Down)?> profileIdentity,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // The same measure→system map the core needs — so it is built ONCE and handed on
         // (this remark used to say "the same map the core builds (cheap)", which is how one
@@ -1387,7 +1387,7 @@ internal static class OutsideStaffStacker
             ImmutableArray<ChordNameItem> chordItems,
             Func<int, int, (VerticalSkyline Up, VerticalSkyline Down)?>? staffProfile,
             ImmutableArray<PartCombineLayout> partCombineTexts = default,
-            Dictionary<int, int>? prebuiltMeasureToSystem = null)
+            IReadOnlyDictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks,
@@ -1672,7 +1672,7 @@ internal static class OutsideStaffStacker
         ImmutableArray<TupletBracketLayout> tupletBrackets,
         ImmutableArray<ChordNameLayout> chordNames,
         ImmutableArray<ChordNameItem> chordItems,
-        Dictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem)
     {
         // Above-staff scripts that declare NO outside-staff-priority (accents, staccato,
         // ornaments, bows, editorial accidentals …) are bound to their notes: they enter
@@ -1868,7 +1868,7 @@ internal static class OutsideStaffStacker
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<ChordNameLayout> chordNames,
         ImmutableArray<ChordNameItem> chordItems,
-        Dictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem)
     {
         var support = new Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>();
         if (chordNames.IsDefaultOrEmpty || chordItems.IsDefaultOrEmpty)
@@ -1906,7 +1906,7 @@ internal static class OutsideStaffStacker
     // ---- 50: TrillSpanner ----
     private static ImmutableArray<TrillSpannerLayout> PlaceTrills(
         ImmutableArray<TrillSpannerLayout> trills, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem)
     {
         if (trills.IsDefaultOrEmpty)
             return trills;
@@ -2011,7 +2011,7 @@ internal static class OutsideStaffStacker
     /// </remarks>
     private static ImmutableArray<ArticulationLayout> PlaceArticulations(
         ImmutableArray<ArticulationLayout> articulations, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (articulations.IsDefaultOrEmpty)
             return articulations;
@@ -2045,7 +2045,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<BarNumberLayout> PlaceBarNumbers(
         ScoreTextMetrics fonts,
         ImmutableArray<BarNumberLayout> barNumbers, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, int[] topStaff,
+        IReadOnlyDictionary<int, int> measureToSystem, int[] topStaff,
         ImmutableArray<SystemLayout> systems)
     {
         if (barNumbers.IsDefaultOrEmpty)
@@ -2107,7 +2107,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<DynamicLayout> PlaceAboveDynamics(
         ScoreTextMetrics fonts,
         ImmutableArray<DynamicLayout> aboveDynamics, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (aboveDynamics.IsDefaultOrEmpty)
             return aboveDynamics;
@@ -2138,7 +2138,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<TextSpannerLayout> PlaceTextSpanners(
         ScoreTextMetrics fonts,
         ImmutableArray<TextSpannerLayout> textSpanners, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return textSpanners;
@@ -2195,7 +2195,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<OttavaBracketLayout> PlaceOttavas(
         ScoreTextMetrics fonts,
         ImmutableArray<OttavaBracketLayout> ottavas, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem)
+        IReadOnlyDictionary<int, int> measureToSystem)
     {
         if (ottavas.IsDefaultOrEmpty)
             return ottavas;
@@ -2237,7 +2237,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<CustomTextLayout> PlaceCustomTexts(
         ScoreTextMetrics fonts,
         ImmutableArray<CustomTextLayout> customTexts, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (customTexts.IsDefaultOrEmpty)
             return customTexts;
@@ -2297,7 +2297,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<PartCombineLayout> PlacePartCombineTexts(
         ScoreTextMetrics fonts,
         ImmutableArray<PartCombineLayout> labels, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
     {
         if (labels.IsDefaultOrEmpty)
             return labels;
@@ -2334,7 +2334,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<VoltaBracketLayout> PlaceVoltas(
         ScoreTextMetrics fonts,
         ImmutableArray<VoltaBracketLayout> voltas, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, int[] topStaff,
+        IReadOnlyDictionary<int, int> measureToSystem, int[] topStaff,
         Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>? rowSupport = null)
     {
         if (voltas.IsDefaultOrEmpty)
@@ -2452,7 +2452,7 @@ internal static class OutsideStaffStacker
     private static ImmutableArray<MusicMarkLayout> PlaceMusicMarks(
         ScoreTextMetrics fonts,
         ImmutableArray<MusicMarkLayout> musicMarks, Func<int, int, OutsideStaffSkylines> trackers,
-        Dictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems,
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems,
         Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>? rowSupport = null)
     {
         if (musicMarks.IsDefaultOrEmpty)

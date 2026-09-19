@@ -26,6 +26,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -78,13 +80,49 @@ internal static class SpannerBreakSubstitution
     /// <remarks>
     /// LILYPOND-REF: lily/system.cc:143-192 — fixup_refpoints walks all systems once.
     /// </remarks>
-    public static Dictionary<int, int> BuildMeasureToSystemMap(
+    public static IReadOnlyDictionary<int, int> BuildMeasureToSystemMap(
         ImmutableArray<SystemLayout> systems)
     {
-        var map = new Dictionary<int, int>();
-        if (systems.IsDefaultOrEmpty)
-            return map;
+        var arr = ImmutableCollectionsMarshal.AsArray(systems);
+        if (arr is null || arr.Length == 0)
+            return EmptyMeasureToSystem;
+        return MeasureToSystemMaps.GetValue(arr, BuildMeasureToSystemMapFor);
+    }
 
+    private static readonly Dictionary<int, int> EmptyMeasureToSystem = new();
+
+    /// <summary>One table per system array, keyed on the ARRAY ITSELF.</summary>
+    /// <remarks>
+    /// ⚠️ THE TABLE IS SHARED AND READ-ONLY BY TYPE. Every caller of
+    /// <see cref="BuildMeasureToSystemMap"/> now receives the SAME instance for the same
+    /// systems, which is sound because the map is a pure function of the array (its only
+    /// inputs are each <c>MeasureLayout.MeasureIndex</c> and its position in the array, and
+    /// an <c>ImmutableArray</c>'s contents cannot change) and because
+    /// <see cref="IReadOnlyDictionary{TKey,TValue}"/> is what they are handed: the compiler,
+    /// not a remark, is what keeps the sharing honest.
+    /// <para>
+    /// ⚠️ A <c>ConditionalWeakTable</c> AND NOT A SLOT, so the entry dies with the system
+    /// array it belongs to — a two-slot cache would root two whole layouts past the
+    /// keystroke that made them. RULES §5.3's warning about this structure ("a table made
+    /// once per tree is paid every keystroke when the tree is new every keystroke") is about
+    /// reading its claim, not about using it: the key here is ONE PASS's system array, which
+    /// is exactly the scope the duplicate builds live in.
+    /// </para>
+    /// <para>
+    /// MEASURED (session 422, the owner's 231 books × 8 forward keystrokes): this table and
+    /// its twin <c>LayoutUtilities.BuildMeasureMap</c> were built 29,108 times over 1,848
+    /// keystrokes — 15.75 times a keystroke, 0.755% of one — because sixteen houses each
+    /// built their own. Session 420 had given ONE of them (MusicMarkEngraver) a door to a
+    /// prebuilt map, which is the shape RULES §7.6 warns about: "N 箇所を 1 軒にした" is not
+    /// "counted them all".
+    /// </para>
+    /// </remarks>
+    private static readonly ConditionalWeakTable<SystemLayout[], Dictionary<int, int>>
+        MeasureToSystemMaps = new();
+
+    private static Dictionary<int, int> BuildMeasureToSystemMapFor(SystemLayout[] systems)
+    {
+        var map = new Dictionary<int, int>();
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
         {
             foreach (var ml in systems[sysIdx].Measures)
@@ -117,7 +155,7 @@ internal static class SpannerBreakSubstitution
         int spannerStartMeasure,
         int spannerEndMeasure,
         ImmutableArray<SystemLayout> systems,
-        Dictionary<int, int> measureToSystemIdx)
+        IReadOnlyDictionary<int, int> measureToSystemIdx)
     {
         if (systems.IsDefaultOrEmpty)
             return ImmutableArray<SpannerBreakSegment>.Empty;
@@ -182,7 +220,7 @@ internal static class SpannerBreakSubstitution
         int spannerStartMeasure,
         int spannerEndMeasure,
         ImmutableArray<SystemLayout> systems,
-        Dictionary<int, int> measureToSystemIdx)
+        IReadOnlyDictionary<int, int> measureToSystemIdx)
     {
         foreach (var segment in Split(spannerStartMeasure, spannerEndMeasure, systems, measureToSystemIdx))
             yield return (segment, systems[segment.SystemIndex]);

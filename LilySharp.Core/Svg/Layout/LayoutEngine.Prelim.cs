@@ -332,10 +332,13 @@ internal sealed partial class LayoutEngine
         if (systemCache is null || groups.IsEmpty || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex, groups);
 
-        var measureToSystem = new Dictionary<int, int>();
-        for (int k = 0; k < prelimSystems.Length; k++)
-            foreach (var ml in prelimSystems[k].Measures)
-                measureToSystem[ml.MeasureIndex] = k;
+        // ⚠️ THE SHARED TABLE, NOT A HAND COPY. This walk was
+        // SpannerBreakSubstitution.BuildMeasureToSystemMap's (:88-92) line for line, and it
+        // ran ONCE PER STAFF although it is a function of prelimSystems alone — 3,732 builds
+        // over 1,848 keystrokes (measured session 422). The shared table is keyed on this
+        // very array, so the staves of one placement now share one build with every other
+        // house that asks the same question of the same systems.
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(prelimSystems);
 
         // Which single system each group lives in; -1 = spans systems or reaches an
         // unmapped measure (either way: not memoizable).

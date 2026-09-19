@@ -346,7 +346,7 @@ internal static class ArticulationEngraver
         ImmutableArray<SlurLayout> slurLayouts,
         ImmutableArray<FingeringLayout> fingerings,
         out ImmutableArray<FingeringLayout> adjustedFingerings,
-        Dictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
     {
         adjustedFingerings = fingerings;
         // ⚠️ THE FINGERINGS ARE A SECOND REASON TO BE HERE, and until 2026-08-11 they were

@@ -65,7 +65,7 @@ public class MeasureToSystemHandoffTests
     }
 
     /// <summary>The map the annotation pass hands down.</summary>
-    private static Dictionary<int, int> PassMap(ImmutableArray<SystemLayout> systems)
+    private static IReadOnlyDictionary<int, int> PassMap(ImmutableArray<SystemLayout> systems)
         => SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
     private sealed class ProfileSource
@@ -124,7 +124,7 @@ public class MeasureToSystemHandoffTests
         profiles.Set(2, 0, 9.0);
 
         (ImmutableArray<CustomTextLayout>, ImmutableArray<BarNumberLayout>) Run(
-            Dictionary<int, int>? prebuilt, AboveStackMemo? memo)
+            IReadOnlyDictionary<int, int>? prebuilt, AboveStackMemo? memo)
         {
             var (_, bn, _, tx, _, _, _, _, _, _) = OutsideStaffStacker.StackAboveStaff(
                 ScoreTextMetrics.Bundled, systems, systemSkylines: null,
@@ -181,7 +181,7 @@ public class MeasureToSystemHandoffTests
         profiles.Set(2, 0, 9.0);
 
         (ImmutableArray<DynamicLayout>, ImmutableArray<HairpinLayout>) Run(
-            Dictionary<int, int>? prebuilt, BelowStackMemo? memo)
+            IReadOnlyDictionary<int, int>? prebuilt, BelowStackMemo? memo)
         {
             var (d, h, _, _) = OutsideStaffStacker.StackBelowStaff(
                 ScoreTextMetrics.Bundled, systems, dynamics, hairpins,

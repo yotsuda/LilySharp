@@ -411,7 +411,7 @@ internal sealed class ElementCoordinator
     /// </remarks>
     private IEnumerable<BeamLayout> LayoutCrossMeasureBeamPieces(
         Score score, BeamGroup group,
-        Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
         int staffIndex)
     {
         // Group members by their system index. Members of the same system stay
@@ -470,7 +470,7 @@ internal sealed class ElementCoordinator
     /// </remarks>
     private BeamLayout? LayoutSingleSystemBeamPiece(
         Score score, BeamGroup group,
-        Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
         int staffIndex, int systemIndex)
     {
         // The same collision shifts the single-measure path adds to its table — see
