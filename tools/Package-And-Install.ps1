@@ -10,7 +10,7 @@
 # `vsce package` runs the extension's `vscode:prepublish` script itself
 # (tsc --noEmit + a production esbuild), so a type error fails the build here and
 # nothing is packaged. The current server/ folder is bundled into the VSIX as-is
-# (this script does NOT rebuild the LSP server — use Deploy-Lsp.ps1 for that).
+# (this script does NOT rebuild the LSP server - use Deploy-Lsp.ps1 for that).
 #
 # Faster alternative for a client-only change: Deploy-Lsp.ps1 copies out/ +
 # package.json straight into the installed extension (no reinstall) and also
@@ -31,17 +31,40 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $extDir = Join-Path $repoRoot 'editors\vscode'
 
+# A shell started before Node.js was installed keeps its old PATH; re-read it from
+# the registry so `npx` is found (see the same step in Deploy-Lsp.ps1).
+if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
+    $env:Path = (@(
+        [Environment]::GetEnvironmentVariable('Path', 'Machine') -split ';'
+        [Environment]::GetEnvironmentVariable('Path', 'User') -split ';'
+        $env:Path -split ';'
+    ) | Where-Object { $_ } | Select-Object -Unique) -join ';'
+}
+
 # Locate the VS Code CLI (a code.cmd shim on Windows) whether or not it's on PATH.
+# Stable first, Insiders only when there is no stable install -- the same order
+# Deploy-Lsp.ps1 searches the extension folders in.
 function Get-CodeCli {
-    $cmd = Get-Command code -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    foreach ($p in @(
-            "$env:ProgramFiles\Microsoft VS Code\bin\code.cmd",
-            "${env:ProgramFiles(x86)}\Microsoft VS Code\bin\code.cmd",
-            "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd")) {
-        if (Test-Path $p) { return $p }
+    foreach ($name in 'code', 'code-insiders') {
+        $cmd = Get-Command $name -ErrorAction SilentlyContinue
+        if ($cmd) { return $cmd.Source }
+        $folder = if ($name -eq 'code') { 'Microsoft VS Code' } else { 'Microsoft VS Code Insiders' }
+        foreach ($p in @(
+                "$env:ProgramFiles\$folder\bin\$name.cmd",
+                "${env:ProgramFiles(x86)}\$folder\bin\$name.cmd",
+                "$env:LOCALAPPDATA\Programs\$folder\bin\$name.cmd")) {
+            if (Test-Path $p) { return $p }
+        }
     }
     return $null
+}
+
+# Windows PowerShell 5.1 turns redirected stderr lines into ErrorRecords, and under
+# $ErrorActionPreference = 'Stop' the first one ends the script -- the VS Code CLI
+# prints a Node DeprecationWarning there on every install. The exit code is the verdict.
+function Invoke-Native([scriptblock]$Command) {
+    $ErrorActionPreference = 'Continue'
+    & $Command
 }
 
 Push-Location $extDir
@@ -62,16 +85,16 @@ try {
 
     $code = Get-CodeCli
     if (-not $code) {
-        throw 'VS Code CLI (code) not found. Install manually: code --install-extension <vsix> --force'
+        throw 'VS Code CLI (code / code-insiders) not found. Install manually: code --install-extension <vsix> --force'
     }
 
     if ($Clean) {
         Write-Host 'Uninstalling existing lilysharp extension...'
-        & $code --uninstall-extension yotsuda.lilysharp 2>&1 | Out-Host
+        Invoke-Native { & $code --uninstall-extension yotsuda.lilysharp 2>&1 | Out-Host }
     }
 
     Write-Host 'Installing VSIX...' -ForegroundColor Cyan
-    & $code --install-extension $vsix --force 2>&1 | Out-Host
+    Invoke-Native { & $code --install-extension $vsix --force 2>&1 | Out-Host }
     if ($LASTEXITCODE -ne 0) { throw "install failed ($LASTEXITCODE)" }
 
     Write-Host "Installed lilysharp $version." -ForegroundColor Green

@@ -29,6 +29,40 @@ $repoRoot = Split-Path $PSScriptRoot -Parent
 $repoServer = Join-Path $repoRoot 'editors\vscode\server'
 $repoExt = Join-Path $repoRoot 'editors\vscode'
 
+# A shell started before Node.js (or the .NET SDK) was installed keeps the PATH it
+# was born with, so `npm` is "not found" although the installer already put it on
+# the machine PATH (seen 2026-09-16: C:\Program Files\nodejs on the machine PATH,
+# absent from the session's). Re-read PATH from the registry before calling a tool missing.
+if (-not (Get-Command npm -ErrorAction SilentlyContinue) -or -not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    $env:Path = (@(
+        [Environment]::GetEnvironmentVariable('Path', 'Machine') -split ';'
+        [Environment]::GetEnvironmentVariable('Path', 'User') -split ';'
+        $env:Path -split ';'
+    ) | Where-Object { $_ } | Select-Object -Unique) -join ';'
+}
+
+# Runs a native command whose stderr is redirected. Windows PowerShell 5.1 turns every
+# redirected stderr line into an ErrorRecord, and under $ErrorActionPreference = 'Stop'
+# the first one -- a harmless warning -- ends the script. The exit code is the verdict.
+function Invoke-Native([scriptblock]$Command) {
+    $ErrorActionPreference = 'Continue'
+    & $Command
+}
+
+# The server is published for the runtime that will launch it, not for x64 by
+# assumption: on an ARM64 PC a win-x64 publish carries only the x64 libSkiaSharp.dll,
+# which the native arm64 `dotnet` cannot load. `dotnet --info` names its own RID.
+function Get-DotnetRid {
+    $info = Invoke-Native { dotnet --info 2>&1 }
+    $m = [regex]::Match(($info | Out-String), '(?m)^\s*RID:\s*(win-\S+)')
+    if ($m.Success) { return $m.Groups[1].Value }
+    switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
+        'Arm64' { return 'win-arm64' }
+        'X86' { return 'win-x86' }
+        default { return 'win-x64' }
+    }
+}
+
 # ---------------------------------------------------------------- helpers ----
 
 # Every file under $Root, keyed by its path relative to $Root, with its hash.
@@ -152,14 +186,15 @@ function Publish-Server([string[]]$Extra) {
     # 0.15-0.19 s. ReadyToRun needs a RID; --self-contained false keeps the
     # framework-dependent shape the client runs via `dotnet` (no coreclr beside it).
     dotnet publish (Join-Path $repoRoot 'LilySharp.Lsp') -c $Configuration -o $repoServer --nologo `
-        -r win-x64 --self-contained false -p:PublishReadyToRun=true @Extra | Out-Host
+        -r $rid --self-contained false -p:PublishReadyToRun=true @Extra | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
     $dll = Join-Path $repoServer 'lilysharp-lsp.dll'
     if (-not (Test-Path $dll)) { throw "publish produced no lilysharp-lsp.dll in $repoServer" }
     return [System.Diagnostics.FileVersionInfo]::GetVersionInfo($dll).ProductVersion
 }
 
-Write-Host "Publishing LilySharp.Lsp ($Configuration)..."
+$rid = Get-DotnetRid
+Write-Host "Publishing LilySharp.Lsp ($Configuration, $rid)..."
 $builtVersion = Publish-Server @()
 
 # ---------------------------------------------------------- pick the target --
@@ -170,38 +205,49 @@ $builtVersion = Publish-Server @()
 # publisher spelling (ytsuda.lilysharp-0.3.0) still has a folder on disk that the
 # editor no longer loads. A deploy into that folder succeeds, verifies, and changes
 # nothing the user can see, which is the worst kind of green.
-$extRoots = @(
-    $env:VSCODE_EXTENSIONS
-    (Join-Path $env:USERPROFILE '.vscode\extensions')
-    (Join-Path $env:USERPROFILE '.vscode-insiders\extensions')
-) | Where-Object { $_ -and (Test-Path $_) }
-
-$extDir = $null
-foreach ($root in $extRoots) {
-    $manifest = Join-Path $root 'extensions.json'
-    if (-not (Test-Path $manifest)) { continue }
-    $entry = @(Get-Content $manifest -Raw | ConvertFrom-Json) |
-        Where-Object { $_.identifier.id -like '*.lilysharp' } |
-        Sort-Object { $_.version } -Descending | Select-Object -First 1
-    if (-not $entry) { continue }
-    # location.path is a URI-ish '/c:/Users/...' form; make it a Windows path.
-    $p = ($entry.location.path -replace '^/', '') -replace '/', '\'
-    if (Test-Path $p) { $extDir = Get-Item $p; break }
-}
-if (-not $extDir) {
+function Find-InstalledExtension {
+    $roots = @(
+        $env:VSCODE_EXTENSIONS
+        (Join-Path $env:USERPROFILE '.vscode\extensions')
+        (Join-Path $env:USERPROFILE '.vscode-insiders\extensions')
+    ) | Where-Object { $_ -and (Test-Path $_) }
+    foreach ($root in $roots) {
+        $manifest = Join-Path $root 'extensions.json'
+        if (-not (Test-Path $manifest)) { continue }
+        # Assigned first and piped second: in Windows PowerShell 5.1 ConvertFrom-Json
+        # emits a JSON array as ONE object, and @(...) around it would filter the whole
+        # registry as a single entry.
+        $entries = Get-Content $manifest -Raw | ConvertFrom-Json
+        $entry = $entries |
+            Where-Object { $_.identifier.id -like '*.lilysharp' } |
+            Sort-Object { $_.version } -Descending | Select-Object -First 1
+        if (-not $entry) { continue }
+        # location.path is a URI-ish '/c:/Users/...' form; make it a Windows path.
+        $p = ($entry.location.path -replace '^/', '') -replace '/', '\'
+        if (Test-Path $p) { return Get-Item $p }
+    }
     # Fallback: the registry was unreadable, so scan. BOTH publisher spellings,
     # because the folder name is not the identifier.
-    $extDir = $extRoots |
+    $guess = $roots |
         ForEach-Object { Get-ChildItem $_ -Directory -Filter '*.lilysharp-*' -ErrorAction SilentlyContinue } |
         Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if ($extDir) { Write-Host "  extensions.json unreadable - guessed $($extDir.Name) by folder date" -ForegroundColor Yellow }
+    if ($guess) { Write-Host "  extensions.json unreadable - guessed $($guess.Name) by folder date" -ForegroundColor Yellow }
+    return $guess
 }
+
+$extDir = Find-InstalledExtension
 if (-not $extDir) {
-    Write-Host 'No installed lilysharp extension found - repo publish only.' -ForegroundColor Yellow
-    if ($extRoots) { Write-Host "  looked in: $($extRoots -join '; ')" -ForegroundColor DarkGray }
-    else { Write-Host '  no VS Code extensions folder exists on this machine.' -ForegroundColor DarkGray }
-    Write-Host '  install it once with: pwsh tools/Package-And-Install.ps1' -ForegroundColor DarkGray
-    return
+    # NOT INSTALLED YET (a fresh machine, or a VS Code reinstall that emptied the
+    # extensions folder): install it once from a VSIX so there is a folder the editor
+    # loads, then fall through to the normal swap + verification below. The VSIX
+    # bundles the server/ that was just published, minus its .pdb files, which the
+    # swap below restores so the byte comparison still covers the full tree.
+    Write-Host 'No installed lilysharp extension found - installing it from a VSIX first...' -ForegroundColor Yellow
+    & (Join-Path $PSScriptRoot 'Package-And-Install.ps1')
+    $extDir = Find-InstalledExtension
+    if (-not $extDir) {
+        throw 'Package-And-Install.ps1 finished but VS Code still lists no lilysharp extension.'
+    }
 }
 $dest = Join-Path $extDir.FullName 'server'
 Write-Host "Deploying to $dest"
@@ -371,13 +417,19 @@ if ($problems) {
     throw "Deploy verification failed: $($problems.Count) asset file(s) do not match."
 }
 
-$head = git -C $repoRoot rev-parse HEAD 2>$null
-if ($LASTEXITCODE -eq 0 -and $head) {
+# Informational only, so a machine without git (a source ZIP) skips it rather than
+# failing a deploy that already landed and verified.
+$head = $null
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $head = Invoke-Native { git -C $repoRoot rev-parse HEAD 2>$null }
+    if ($LASTEXITCODE -ne 0) { $head = $null }
+}
+if ($head) {
     $stamped = ($deployedVersion -split '\+')[-1]
     if ($stamped -and $head -notlike "$stamped*" -and $stamped -notlike "$head*") {
         Write-Host "  version stamp $stamped is not this HEAD ($($head.Substring(0, 8)))" -ForegroundColor Yellow
     }
-    $dirty = @(git -C $repoRoot status --porcelain)
+    $dirty = @(Invoke-Native { git -C $repoRoot status --porcelain 2>$null })
     if ($dirty) {
         Write-Host "  NOTE: the working tree has $($dirty.Count) uncommitted change(s), so the" -ForegroundColor Yellow
         Write-Host '        stamped commit names the build BASE, not its contents.' -ForegroundColor Yellow
