@@ -3660,6 +3660,30 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   ⚠️ 同じ便で**逆向きの例**も出た: 文字のシェイピングは **318,784 回で distinct な綴りが 81**（比 3,900）
   ——だが **1 回 64 B** なので賞金は 0.130% しかない。**比が大きいことも、効く証拠ではない。**
 
+- ★★★ **使い回す buffer を「instance の field」と「thread の 1 本」のどちらに置くかは、
+  *呼び出し数 ÷ distinct な instance 数*が決める。好みで選ばない**（2026-09-19・第421）。
+  `VerticalSkyline.EndBatch` は **10,284 呼び出し／distinct な skyline 10,284＝比 1.00**——
+  `BeginBatch`/`EndBatch` は**構築の作法**（1 度 batch して、あとは読むだけ）なので、
+  **instance に buffer を吊るしても、それを使えたはずの唯一の呼び出しが自分で allocate するだけで
+  何も償却しない**。同じ機構でも `MergeInternal` は 4.51 呼び出し／instance だった。
+  ⇒ ★★ **計器は 2 本**: 呼び出しのカウンタと、**instance ごとに 1 度だけ立てる bool**（`if (!_seen) { _seen = true; Count(...); }`）。
+  比が 1 に張り付いたら**寿命を 1 段上げる**（instance → thread）。
+  ⚠️ **上げた段の代償は retention**＝その段が見た**最大**の walk ぶんを持ち続ける（ここは thread あたり
+  596 building・19 KB）。**合計ではなく最大を刷ること**（`Max` のカウンタ。合計は「どこまで育つか」を答えない）。
+  ⚠️ **call をまたぐ buffer は `Clear` が*正しさ*に要る**——第416 の per-walk の局所は
+  「入力側の Clear は冪等」だったが、**跨いだ瞬間に前の walk の中身がこの答えに混ざる**。
+
+- ★★★ **割当の見積もりを「中身のバイト」で立てると、*再成長*を丸ごと落とす**
+  （2026-09-19・第421・**起票の推定を 2.7 倍外した原因**）。`MergeInternal` は
+  **1 呼び出し 3,978 B** を払うのに、入る building は **46.5 本 × 32 B ＝ 1,488 B** しかなかった。
+  差は `new List<T>(src)` が*ちょうどの*大きさで建ち、**次の行の `AddRange(other)` がそれを溢れさせて
+  倍の配列に建て直す**こと＝**1 呼び出しに配列 2 本**。
+  ⇒ ★★ **判定法**: `new List<T>(a)` の直後に `AddRange(b)` が在ったら、それは 2 本。
+  **建てる時点で `a + b` を知っているなら、その大きさで建てる**（同じファイルの `ReserveForBatch` の註が
+  197 便前に「点は最後の数 % ではなく doubling の段だ」と書いていたのに、2 軒隣で同じ段を踏んでいた）。
+  ⚠️ **裏返し**: 継ぎ目の実測が「中身」から計算した値より大きいとき、**差を『測定誤差』にしない**。
+  容器の成長は実費で、そこが島であることが多い。
+
 ### 5.4 テストの原則
 
 - ★★★ ⚠️⚠️ **「新しい道は観測されている」を、*古い道*の観測と取り違えない。毒は*自分が触る腕*に当てる**
@@ -4166,6 +4190,10 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
   - バックアップ tag（`pre-squash-YYYY-MM-DD`）がある間は `CitedCommitsAreNotHeldAliveByAnotherRef` が zombie で赤——push 後 `git tag -d` で緑。detached worktree の HEAD は ref ではない。
   - ⚠️ **ユーザーが便の外で畳んで push すると、次便は「開始時 full の赤 1 本」で出会い `origin/master` の CI も同じ赤**＝天井 commit を push するまで緑にならない。
   - ⚠️ **amend 1 回でも同じ赤**（第375）: §1 に自分の doc commit の SHA を書いてから amend すると到達不能。`git cat-file -e` は reflog で解決でき「生きている」と出るが、定義は**到達可能性**（`git merge-base --is-ancestor <sha> HEAD`）。直し方は文を張り替える＝**§1 には親の SHA を書く**。
+    ⇒ ★★★ **具体形として禁止**: §1 の終了時欄に「**終了時 HEAD `<sha>`**」を書かない。
+    **それはこの文を含む doc commit 自身の SHA**で、§7 の残りで 1 度でも amend すれば即座に死ぬ
+    （2026-09-19・第421 が書いて `DeadCitationsDoNotGrow` に捕まった。§0 が要求する
+    「開始時と終了時の両方の数」は**未 push 数**で足りる＝次便が引き算できる）。
   - テストだけ: `dotnet test LilySharp.Tests --filter "FullyQualifiedName~HistoryCitationTests"`（約 2 分 20 秒）。census の `git grep -o` は `git -c color.grep=never grep --no-color`。
 - spring は 2 系統＋改行 gate の 3 箇所を**必ず一致**させる
   （`MeasureLayouter.CreateTimingSprings` / `SpacingRules.CreateSpringsForMeasure` /
