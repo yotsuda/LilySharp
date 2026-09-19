@@ -307,7 +307,8 @@ internal sealed class VerticalSkyline
     /// </remarks>
     public void MergeBox(double xLeft, double xRight, double yBottom, double yTop)
     {
-        if (!_deferResolve)
+        var batch = _batch;
+        if (batch is null)
         {
             Merge(FromBox(xLeft, xRight, yBottom, yTop, _direction));
             return;
@@ -320,7 +321,7 @@ internal sealed class VerticalSkyline
         if (double.IsNegativeInfinity(building.ValueAt(building.Start))
             && double.IsNegativeInfinity(building.ValueAt(building.End)))
             return;
-        _buildings.Add(building);
+        batch.Add(building);
     }
 
     /// <summary>
@@ -337,7 +338,8 @@ internal sealed class VerticalSkyline
     public void MergeSlope(double xLeft, double yLeft, double xRight, double yRight,
         double thickness)
     {
-        if (!_deferResolve)
+        var batch = _batch;
+        if (batch is null)
         {
             Merge(FromSlope(xLeft, yLeft, xRight, yRight, thickness, _direction));
             return;
@@ -350,7 +352,7 @@ internal sealed class VerticalSkyline
         if (double.IsNegativeInfinity(building.ValueAt(building.Start))
             && double.IsNegativeInfinity(building.ValueAt(building.End)))
             return;
-        _buildings.Add(building);
+        batch.Add(building);
     }
 
     /// <summary>
@@ -370,7 +372,7 @@ internal sealed class VerticalSkyline
         // resolving the whole set once is byte-identical to merging one at a
         // time — but O(K log K) instead of O(K^2). This is the fix for the
         // per-note skyline construction that dominated layout allocation.
-        if (_deferResolve)
+        if (_batch is { } batch)
         {
             // Batch mode: append only the REAL buildings. FromBox wraps each box in
             // ±inf empty-region padders; EndBatch's resolve drops those anyway (the
@@ -381,7 +383,7 @@ internal sealed class VerticalSkyline
                 if (double.IsNegativeInfinity(b.ValueAt(b.Start))
                     && double.IsNegativeInfinity(b.ValueAt(b.End)))
                     continue;
-                _buildings.Add(b);
+                batch.Add(b);
             }
             return;
         }
@@ -415,7 +417,8 @@ internal sealed class VerticalSkyline
     {
         if (resolved.Count == 0) return;
         double raise = (int)_direction * dy;
-        if (!_deferResolve && !IsEmpty)
+        var batch = _batch;
+        if (batch is null && !IsEmpty)
         {
             // EXACTLY the sequence MergeInternal would have been handed — this skyline's
             // buildings, then the placed ones — so the sort sees the same input in the same
@@ -430,16 +433,100 @@ internal sealed class VerticalSkyline
         }
         // Batch (or empty): append the placed buildings straight in — the same filtering
         // Merge(VerticalSkyline) does, since a resolved profile carries no empty padders.
+        var target = batch ?? _buildings;
         foreach (var b in resolved)
-            _buildings.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
+            target.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
     }
 
-    private bool _deferResolve;
+    /// <summary>
+    /// The list an open BATCH accumulates into — non-null exactly while one is open, which is
+    /// what "deferring the resolve" now means. Lent from a per-thread pool
+    /// (<see cref="RentBatch"/>), so a batch appends into the capacity the last batch on this
+    /// thread grew to instead of growing one of its own.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ IT IS NOT <see cref="_buildings"/>, and that is the whole saving. A batch appends
+    /// every seed of a staff or a system — hundreds of buildings — into a list that starts
+    /// EMPTY, and <see cref="List{T}"/> doubles: delivering N buildings that way allocates and
+    /// discards about 2N-4N slots of array before the resolve keeps a fraction of them.
+    /// MEASURED (session 426, the owner's corpus, 231 books × eight forward keystrokes,
+    /// allocated bytes, counted per call site): the four batches
+    /// <see cref="SkylineBuilder.BuildSystemSkylines"/> and
+    /// <c>SkylineBuilder.BuildStaffSkylines</c> open appended 897,518 buildings a sweep and
+    /// paid 83,353,208 B of doubling for them — 2.90 slots per building, <b>0.556% of a
+    /// keystroke</b>, which is more than the whole island that led here (0.353%). The one
+    /// batch site that already counted its appends and reserved for them
+    /// (<c>LyricEngraver</c>, <see cref="ReserveForBatch"/>, session 224) paid ZERO in the
+    /// same run — the control was already in the tree.
+    /// <para>
+    /// ⚠️ A POOL ON THE THREAD, not a field on the skyline, for the reason
+    /// <see cref="RentMergeInput"/>'s own remark gives: batching is a CONSTRUCTION idiom, one
+    /// batch per skyline (session 421 measured <see cref="EndBatch"/> over 10,284 distinct
+    /// skylines, a ratio of 1.00), so an instance buffer would be allocated by the one call
+    /// that could have used it. And a STACK rather than one slot, because the UP and DOWN
+    /// skylines of the same system are batched at the same time (measured high-water mark: 2).
+    /// </para>
+    /// <para>
+    /// ⚠️ A BATCH THAT IS NEVER ENDED simply loses its buffer to the garbage collector and the
+    /// next <see cref="BeginBatch"/> makes a new one. Nothing is corrupted, because the buffer
+    /// is only reachable from the skyline that holds it.
+    /// </para>
+    /// </remarks>
+    private List<SkylineBuilding>? _batch;
 
     /// <summary>Start deferring overlap resolution; every <c>Merge</c> (both overloads) just
     /// appends until <see cref="EndBatch"/>. The skyline must NOT be read between
     /// Begin/End (callers only merge boxes in during construction).</summary>
-    public void BeginBatch() => _deferResolve = true;
+    public void BeginBatch()
+    {
+        var batch = RentBatch();
+        // A BATCH THAT OPENS ON A NON-EMPTY SKYLINE resolves the buildings already here
+        // together with the ones to come, in that order — so the buffer starts as those and
+        // _buildings is the OUTPUT alone. The sequence the resolve's sort sees is byte for
+        // byte the one it saw before: List.Sort is NOT stable, so where two buildings share a
+        // Start their order is part of the answer, and this keeps it.
+        if (_buildings.Count > 0)
+        {
+            batch.AddRange(_buildings);
+            _buildings.Clear();
+        }
+        _batch = batch;
+    }
+
+    /// <summary>Takes a batch buffer off this thread's pool, EMPTY, or makes the thread's
+    /// first.</summary>
+    /// <remarks>
+    /// ⚠️ THE EMPTYING IS LOAD-BEARING and it is HERE, once. A buffer handed to a batch still
+    /// holding the last batch's buildings resolves them into this skyline — silhouette from
+    /// grobs it never saw, exactly what <see cref="RentMergeInput"/>'s own remark describes, and
+    /// <c>SkylineMergeTests.ASecondResolveOnTheSameThread_DoesNotInheritTheFirstsBuildings</c>
+    /// is what catches it (verified by poison). <see cref="ReturnBatch"/> deliberately does NOT
+    /// clear as well: a second clear is a second spelling of one guarantee (HANDOFF §5.2.1②),
+    /// it was measured to make no test fail when removed, and a <c>SkylineBuilding</c> holds no
+    /// references, so an unemptied buffer in the pool pins nothing.
+    /// It is <see cref="List{T}.Clear"/> rather than a fresh list because the capacity is the
+    /// whole point.
+    /// </remarks>
+    private static List<SkylineBuilding> RentBatch()
+    {
+        var pool = t_batchPool;
+        if (pool is null || pool.Count == 0)
+            return new List<SkylineBuilding>();
+        var list = pool.Pop();
+        list.Clear();
+        return list;
+    }
+
+    /// <summary>Puts a finished batch's buffer back, with its capacity. See
+    /// <see cref="RentBatch"/> for why it is not emptied here.</summary>
+    private static void ReturnBatch(List<SkylineBuilding> batch) =>
+        (t_batchPool ??= new()).Push(batch);
+
+    // One buffer per batch open AT ONCE on this thread; the pool never holds more than the
+    // deepest nesting reached. See _batch's remark for the measurement and for why the scope
+    // is the thread.
+    [ThreadStatic]
+    private static Stack<List<SkylineBuilding>>? t_batchPool;
 
     /// <summary>
     /// Reserves room for <paramref name="additional"/> more buildings before a batch of
@@ -460,21 +547,61 @@ internal sealed class VerticalSkyline
     /// EnsureCapacity grows by doubling too, so incremental reservations replay the same
     /// rungs. Only a caller that can COUNT the batch up front can retire them.
     /// </remarks>
-    internal void ReserveForBatch(int additional) =>
-        _buildings.EnsureCapacity(_buildings.Count + additional);
+    internal void ReserveForBatch(int additional)
+    {
+        var target = _batch ?? _buildings;
+        target.EnsureCapacity(target.Count + additional);
+    }
 
     /// <summary>Resolve all buildings accumulated since <see cref="BeginBatch"/> in a
     /// single sort+rebuild, restoring the normal (fully resolved) invariant.</summary>
+    /// <remarks>
+    /// ⚠️ IT ALSO SERVES A CALLER THAT NEVER BEGAN A BATCH — <see cref="FromGlyphOutline"/>
+    /// fills <see cref="_buildings"/> itself and asks for the one resolve. That arm is the
+    /// <c>batch is null</c> one, and it is what it always was: a rented copy of those
+    /// buildings, resolved back into them.
+    /// </remarks>
     public void EndBatch()
     {
-        _deferResolve = false;
-        if (_buildings.Count > 1)
+        var batch = _batch;
+        _batch = null;
+        if (batch is null)
         {
-            var input = RentMergeInput(_buildings.Count);
-            input.AddRange(_buildings);
-            ResolveFrom(input);
+            if (_buildings.Count > 1)
+            {
+                var copy = RentMergeInput(_buildings.Count);
+                copy.AddRange(_buildings);
+                ResolveFrom(copy);
+                CoalesceColinear();
+            }
+        }
+        else if (batch.Count > 1)
+        {
+            // ⚠️ ROOM FOR THE RESULT, IN ONE ARRAY. The resolve rebuilds INTO _buildings, and a
+            // pooled batch leaves that EMPTY — so without this the doubling the batch stopped
+            // paying comes straight back on the way out, at the resolved count instead of the
+            // appended one. MEASURED by the two gates in SkylineMergeTests: a warm 240-box
+            // batch allocated 16,496 B growing its output, and the merge
+            // AMergeIntoALargeSkyline_DoesNotCopyItToReadIt makes into a batched 302-building
+            // skyline allocated 19,928 B against its 3,000 B ceiling, because that merge
+            // rebuilds into a list with no room left in it. The batch's count is the bound the
+            // resolve needs (it keeps at most one building per input and splits only where two
+            // overlap), so this is the ONE array a batch allocates — the capacity it used to
+            // arrive at by rungs.
+            _buildings.EnsureCapacity(batch.Count);
+            // The batch's own buffer IS the resolve's input — the list the appends built, in
+            // the order they built it. What went is the copy EndBatch used to make of it.
+            RebuildKeepingHighest(batch);
             CoalesceColinear();
         }
+        else if (batch.Count == 1)
+        {
+            // _buildings is empty here by construction (BeginBatch moved anything it held
+            // into the buffer), so the one building resolves against nothing.
+            _buildings.Add(batch[0]);
+        }
+        if (batch is not null)
+            ReturnBatch(batch);
     }
 
     /// <summary>
@@ -987,7 +1114,7 @@ internal sealed class VerticalSkyline
     /// </remarks>
     public VerticalSkyline ClippedToRange(double xLeft, double xRight)
     {
-        if (_deferResolve)
+        if (_batch is not null)
             throw new InvalidOperationException(
                 "ClippedToRange on an open batch — EndBatch first, the roofs are not final.");
         var clipped = new List<SkylineBuilding>();

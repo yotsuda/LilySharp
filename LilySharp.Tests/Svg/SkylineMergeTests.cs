@@ -585,11 +585,19 @@ public class SkylineMergeTests
         Assert.True(sky.Buildings.Count >= 300,
             $"the fixture resolved to {sky.Buildings.Count} buildings; this gate needs a big one");
 
-        // Built outside the measurement, and merged once to warm: the first merge after a
+        // Built outside the measurement, and merged to warm: the first merge after a
         // 300-building batch is the one that grows the thread's buffer to fit.
-        var warm = VerticalSkyline.FromBox(1.5, 2.5, 0, 9, VerticalDirection.Up);
+        // ⚠️ THREE OF THEM, NOT ONE, SINCE SESSION 426 — and the reason is this fixture rather
+        // than this gate. A batch now reserves its result list at the batch's own count
+        // (EndBatch), which in the product leaves room to spare because the resolve keeps far
+        // fewer buildings than the seeds append; here the boxes are DISJOINT, so it keeps one
+        // per box and the reservation lands exactly on the count. The next merges then grow the
+        // list once, and the measured round has to be past that — the steady state is what the
+        // ceiling below is about. Distinct x each time, so every warm merge really does add a
+        // building rather than resolving to the same profile.
         var measured = VerticalSkyline.FromBox(3.5, 4.5, 0, 9, VerticalDirection.Up);
-        sky.Merge(warm);
+        foreach (double x in new[] { 1.5, 701.5, 703.5 })
+            sky.Merge(VerticalSkyline.FromBox(x, x + 1.0, 0, 9, VerticalDirection.Up));
 
         long before = System.GC.GetAllocatedBytesForCurrentThread();
         sky.Merge(measured);
@@ -712,5 +720,135 @@ public class SkylineMergeTests
             Assert.Equal(w.Slope, g.Slope);
             Assert.Equal(w.Intercept, g.Intercept);
         }
+    }
+
+    /// <summary>
+    /// A batch OPENED ON A SKYLINE THAT ALREADY HAS INK resolves the ink that was there
+    /// together with what the batch appends.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NO PRODUCT CALLER DOES THIS TODAY — all six <c>BeginBatch</c> sites batch a skyline
+    /// they have just made — and that is exactly why the arm needs an observer of its own: the
+    /// batch accumulates into a buffer borrowed from the thread (session 426), so what used to
+    /// be "append beside the buildings already in the list" is now "start the buffer as those
+    /// buildings". A poison that drops the seeding leaves every other test green, because every
+    /// other test's batch starts empty; here the low ink at x=5 disappears.
+    /// <para>
+    /// AND IN THAT ORDER, which is not decoration: the resolve sorts by Start with
+    /// <c>List.Sort</c>, which is NOT stable, so where two buildings share a Start their input
+    /// order is part of the answer. Old-then-new is the order the appends made when the batch
+    /// was the list itself.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ABatchOpenedOnANonEmptySkyline_ResolvesTheInkThatWasAlreadyThere()
+    {
+        var sky = new VerticalSkyline(VerticalDirection.Up);
+        sky.MergeBox(0, 10, 0, 3);            // unbatched: resolved straight away
+        Assert.Equal(3.0, sky.Height(5), Epsilon);
+
+        sky.BeginBatch();
+        sky.MergeBox(20, 30, 0, 7);
+        sky.EndBatch();
+
+        Assert.Equal(3.0, sky.Height(5), Epsilon);    // the ink that was here
+        Assert.Equal(7.0, sky.Height(25), Epsilon);   // and the ink the batch brought
+    }
+
+    /// <summary>
+    /// TWO BATCHES OPEN AT ONCE — a system's up and down skylines are batched together —
+    /// keep their buildings apart.
+    /// </summary>
+    /// <remarks>
+    /// The batch buffers come from one pool on the thread (session 426), so this is the net on
+    /// the pool handing out a DIFFERENT list to each open batch: a single shared slot would let
+    /// the second <c>BeginBatch</c> take the list the first is still filling, and both profiles
+    /// would come out as the union of the two. Both directions are Up here on purpose — a
+    /// direction mismatch would throw, which is a different failure and would hide this one.
+    /// </remarks>
+    [Fact]
+    public void TwoBatchesOpenAtOnce_DoNotShareABuffer()
+    {
+        var first = new VerticalSkyline(VerticalDirection.Up);
+        var second = new VerticalSkyline(VerticalDirection.Up);
+        first.BeginBatch();
+        second.BeginBatch();
+        first.MergeBox(0, 10, 0, 3);
+        second.MergeBox(100, 110, 0, 9);
+        first.MergeBox(5, 15, 0, 4);
+        second.MergeBox(105, 115, 0, 8);
+        first.EndBatch();
+        second.EndBatch();
+
+        Assert.Equal(4.0, first.Height(12), Epsilon);
+        Assert.Equal(double.NegativeInfinity, first.Height(105));
+        Assert.Equal(9.0, second.Height(102), Epsilon);
+        Assert.Equal(double.NegativeInfinity, second.Height(12));
+    }
+
+    /// <summary>A batch of ONE building leaves that building in the skyline.</summary>
+    /// <remarks>
+    /// The arm the resolve skips: one building is already resolved, so <c>EndBatch</c> moves it
+    /// out of the buffer rather than sorting it. Without that move the buffer goes back to the
+    /// pool with the only ink the skyline had in it. A staff with a single seeded box is the
+    /// product shape (a one-note system's edge), and it would go silently empty.
+    /// </remarks>
+    [Fact]
+    public void ABatchOfOneBuilding_LeavesItInTheSkyline()
+    {
+        var sky = new VerticalSkyline(VerticalDirection.Up);
+        sky.BeginBatch();
+        sky.MergeBox(0, 10, 0, 3);
+        sky.EndBatch();
+
+        Assert.False(sky.IsEmpty);
+        Assert.Equal(3.0, sky.Height(5), Epsilon);
+    }
+
+    /// <summary>A batch does not GROW an array: the buffer it appends into already has the
+    /// capacity the last batch on this thread reached.</summary>
+    /// <remarks>
+    /// The only observer of what session 426 was for, and the shape
+    /// <see cref="OneResolveWalkAllocatesItsScratchOnce_NotOncePerOverlap"/> already uses: the
+    /// profile is identical either way, so nothing but a cost gate can see the difference.
+    /// MEASURED (the owner's corpus, 231 books × eight forward keystrokes, allocated bytes,
+    /// counted per call site): the four batches <c>SkylineBuilder</c> opens appended 897,518
+    /// buildings a sweep into lists that started EMPTY, and List's doubling allocated 2.90
+    /// slots of array for every building delivered — 83,353,208 B, 0.556% of a keystroke,
+    /// against ZERO for the one site that counted its appends and reserved for them
+    /// (<c>LyricEngraver</c>, session 224). With the buffer pooled the same sweep grew an array
+    /// ONCE, for the thread's first batch.
+    /// <para>
+    /// What a warm batch may still allocate is ONE array for the resolve's output, reserved at
+    /// the batch's own count (<c>EndBatch</c>) — 240 × 32 B ≈ 7.7 kB here. Growing to the same
+    /// place by rungs costs about twice that, and it is measured: this gate read 16,496 B while
+    /// the reservation was missing. The ceiling sits between the two, one-sided, and leaves
+    /// List's growth policy free to drift.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ABatchAppendsIntoAPooledBuffer_NotIntoAGrowingOne()
+    {
+        long Batch()
+        {
+            var sky = new VerticalSkyline(VerticalDirection.Up);
+            sky.BeginBatch();
+            for (int i = 0; i < 240; i++)
+                sky.MergeBox(i, i + 1, 0, 1.0 + (i % 7));
+            sky.EndBatch();
+            return sky.Buildings.Count;
+        }
+
+        Batch();                      // the thread's first batch pays for the buffer
+        Batch();                      // JIT and first-touch, so the measured round is steady
+        long before = System.GC.GetAllocatedBytesForCurrentThread();
+        Batch();
+        long spent = System.GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(spent < 11000,
+            $"a warm 240-box batch allocated {spent} B; one reserved array for 240 buildings is "
+            + "about 7,700 B and arriving at the same capacity by doubling costs about twice "
+            + "that (measured 16,496 B), so this is a list being grown per batch instead of "
+            + "lent by the thread and reserved once");
     }
 }
