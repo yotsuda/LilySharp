@@ -486,7 +486,12 @@ internal static class MusicMarkEngraver
         // `layout { sectionLabels … }` — passed the way `marksBeside` is, and for the same
         // reason: on a MULTI-staff score `score` is null here, so reading the plan off it
         // would silently answer the default for every book with more than one staff.
-        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed)
+        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed,
+        // The pass's own measure→system map, when the caller already holds one — session
+        // 407's shape, and this is the house that never got the door (see the remark at
+        // `measureToSystemIdx` below). Null keeps the local build, so the CLI, the
+        // per-system callers and the tests are unchanged.
+        Dictionary<int, int>? prebuiltMeasureToSystem = null)
     {
         // Does THIS mark carry a frame? Only a SECTION label loses one, and only under
         // `plain`: a `@mark` rehearsal box is a different spelling with its own meaning,
@@ -546,10 +551,18 @@ internal static class MusicMarkEngraver
         // X coordinates are SYSTEM-LOCAL: any ink comparison (chords, lyrics)
         // must be restricted to the mark's own system, or bar-1 marks dodge
         // phantom chords from every later line.
-        var measureToSystemIdx = new Dictionary<int, int>();
-        for (int si2 = 0; si2 < systems.Length; si2++)
-            foreach (var ml2 in systems[si2].Measures)
-                measureToSystemIdx[ml2.MeasureIndex] = si2;
+        // ⚠️ ONE measure→system map for the whole pass — session 407's shape, arriving here
+        // thirteen sessions late. The walk this replaces was
+        // SpannerBreakSubstitution.BuildMeasureToSystemMap's (:88-92) line for line, over the
+        // same `systems` the caller built ITS map from, so the prebuilt map IS this map;
+        // nothing about the answers changes. LayoutEngine.Annotations' own remark at its
+        // BuildMeasureToSystemMap call says "each house keeps its own build behind a default
+        // null" after COUNTING fourteen-to-eighteen such fills a keystroke — and this house
+        // had no door, while being reached from that very pass (its only product caller).
+        // ⇒ HANDOFF §7.6: a comment that says N sites were folded into one does not prove
+        // the N. The count is what proves it, and the count has to be re-taken.
+        var measureToSystemIdx = prebuiltMeasureToSystem
+            ?? SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         bool SameSystem(int measureA, int measureB)
             => measureToSystemIdx.TryGetValue(measureA, out int a)
             && measureToSystemIdx.TryGetValue(measureB, out int b)
@@ -622,19 +635,33 @@ internal static class MusicMarkEngraver
             return null;
         }
 
-        var measureToSystemBottom = new Dictionary<int, double>();
-        foreach (var system in systems)
+        // ⚠️ BUILT ON DEMAND, AND THE DEMAND IS RARE. This map has exactly ONE reader — the
+        // below-staff stacking base further down — and that reader stands behind
+        // `belowMarks.Count > 0`. A below-staff mark is what almost no book has: MEASURED on
+        // the owner's corpus (231 books, eight keystrokes each, session 420), 42,312 of the
+        // 42,328 mark groups carry NO below mark at all, so this walk over every measure of
+        // every system was made 4,010 times to be read by SIXTEEN groups. The walk is
+        // unchanged and the map it builds is the same map; only WHEN it is built moved.
+        Dictionary<int, double>? measureToSystemBottom = null;
+        Dictionary<int, double> SystemBottomByMeasure()
         {
-            double bottom = 4.0;
-            if (!system.StaffGroups.IsDefaultOrEmpty)
+            if (measureToSystemBottom is { } built)
+                return built;
+            var map = new Dictionary<int, double>();
+            foreach (var system in systems)
             {
-                foreach (var g in system.StaffGroups)
-                    foreach (var st in g.Staves)
-                        if (!st.IsHidden)
-                            bottom = Math.Max(bottom, st.Height - st.Y);
+                double bottom = 4.0;
+                if (!system.StaffGroups.IsDefaultOrEmpty)
+                {
+                    foreach (var g in system.StaffGroups)
+                        foreach (var st in g.Staves)
+                            if (!st.IsHidden)
+                                bottom = Math.Max(bottom, st.Height - st.Y);
+                }
+                foreach (var ml in system.Measures)
+                    map[ml.MeasureIndex] = bottom;
             }
-            foreach (var ml in system.Measures)
-                measureToSystemBottom[ml.MeasureIndex] = bottom;
+            return measureToSystemBottom = map;
         }
 
         // Lowest lyric baseline per system — a below-staff mark (D.C./D.S./Fine)
@@ -1010,7 +1037,8 @@ internal static class MusicMarkEngraver
             // reflect its result to Y-up here (2 − device).
             double belowBaseUp = 2.0 - (BelowMarkBaseline(4.0) - Padding);
             if (belowMarks.Count > 0
-                && measureToSystemBottom.TryGetValue(belowMarks[0].Mark.MeasureIndex, out double sysBottom))
+                && SystemBottomByMeasure().TryGetValue(
+                       belowMarks[0].Mark.MeasureIndex, out double sysBottom))
             {
                 belowBaseUp = 2.0 - (BelowMarkBaseline(sysBottom) - Padding);
             }
@@ -1065,8 +1093,19 @@ internal static class MusicMarkEngraver
             //   Only the ORDER is fixed here; the step model is a separate quantity and has no
             //   ledger point yet.
             // The row each pedal family occupies in this group, stacked outward.
-            var pedalRowYUp = new Dictionary<int, double>();
+            // ⚠️ NOT BUILT FOR A GROUP THAT HAS NO BELOW MARK, and that is nearly every
+            // group. The rows are read at exactly one site — the pedal arm of the loop
+            // below — and that loop does not run when `belowMarks` is empty; the chain that
+            // FILLS them is itself `belowMarks.Where(IsPedal …)`, so on an empty belowMarks
+            // it yields nothing and the table stays empty either way. ⇒ the gate cannot
+            // change an answer; it can only skip a table nobody reads. MEASURED (session
+            // 420, the owner's corpus): this table came out EMPTY in ALL 42,328 groups —
+            // not once did the chain produce a row — and building it cost 9.5% of this
+            // engraver's allocation.
+            Dictionary<int, double>? pedalRowYUp = null;
+            if (belowMarks.Count > 0)
             {
+                pedalRowYUp = new Dictionary<int, double>();
                 double rowYUp = belowBaseUp - Padding;
                 double prevHalf = 0;
                 bool firstRow = true;
@@ -1127,7 +1166,8 @@ internal static class MusicMarkEngraver
                     // One baseline per pedal FAMILY (see PedalFamilyRank); the innermost is
                     // the plain pedal baseline, Padding below it = −Padding Y-up.
                     else
-                    yUp = pedalRowYUp.TryGetValue(PedalFamilyRank(mark.Type), out double rowYUp)
+                    yUp = pedalRowYUp is { } rows
+                          && rows.TryGetValue(PedalFamilyRank(mark.Type), out double rowYUp)
                         ? rowYUp
                         : belowBaseUp - Padding;
                     if (GroupHasPedalChange(mark.Type) && IsPedalRelease(mark.Type))

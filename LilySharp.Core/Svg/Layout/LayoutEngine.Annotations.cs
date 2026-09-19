@@ -1005,7 +1005,9 @@ internal sealed partial class LayoutEngine
             solvedPedalRowUp: solvedPedalRowUp,
             marksBeside: ctx.MultiScore?.MarksBeside ?? false,
             sectionLabels: ctx.MultiScore?.LayoutPlan.SectionLabels
-                ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed);
+                ?? ctx.Score?.LayoutPlan.SectionLabels ?? Semantics.SectionLabelStyle.Boxed,
+            // The pass's one map, handed down like the stackers' (see its build above).
+            prebuiltMeasureToSystem: measureToSystem);
         var customTextLayouts = CustomTextEngraver.Calculate(customTexts, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
