@@ -81,6 +81,31 @@ internal abstract record BowLayout
     /// <remarks>LILYPOND-REF: lily/item.cc:127-135 — break_status_dir == RIGHT broken piece.</remarks>
     public bool IsBrokenRight { get; }
 
+    /// <summary>
+    /// This bow moved <paramref name="dyUp"/> staff-spaces UP, everything else — X, the
+    /// direction, the broken-piece flags, the model it carries — unchanged.
+    /// </summary>
+    /// <remarks>
+    /// For a bow CARRIED from the preliminary pass onto systems whose staff paging then
+    /// moved: the bow bakes its staff's within-system offset into its Y as an additive base,
+    /// so the two passes' answers differ by exactly that offset's delta. The carry site
+    /// (<c>LayoutEngine.BowShiftsOf</c>) holds the measurement behind "exactly".
+    /// </remarks>
+    internal abstract BowLayout ShiftedUp(double dyUp);
+
+    /// <summary>
+    /// The four Y-up coordinates <see cref="ShiftedUp"/> produces.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ In ONE place on purpose: the slur's override and the tie's rebuild different
+    /// records, and "shift a bow" spelled twice is the second-model drift this repository
+    /// keeps finding (RULES §7.7). Each override decides only how to REBUILD itself.
+    /// </remarks>
+    protected (double StartYUp, double EndYUp, (double X, double Y) Control1,
+               (double X, double Y) Control2) ShiftedParts(double dyUp)
+        => (StartYUp + dyUp, EndYUp + dyUp,
+            (Control1.X, Control1.Y + dyUp), (Control2.X, Control2.Y + dyUp));
+
     protected BowLayout(
         double startX,
         double startYUp,

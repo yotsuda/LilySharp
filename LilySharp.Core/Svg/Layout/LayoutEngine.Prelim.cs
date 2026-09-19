@@ -45,24 +45,21 @@ internal sealed partial class LayoutEngine
     /// preliminary context's detection consumed the SAME voice/time-signature/tuplet
     /// instances, and the detector is a stateless pure function of exactly those three —
     /// see the carry site in <c>Layout</c> for the full argument.
-    /// ⚠️ TIES AND SLURS ARE CARRIED TOO (session 141), GATED PER STAFF. Both passes lay
-    /// them on the SAME quantity since session 140 (every voice — the staffSpannerScore
-    /// spelling), but unlike a beam (whose Y is staff positions), a bow bakes its own
-    /// staff's WITHIN-SYSTEM offset into its Y as an additive base
+    /// ⚠️ TIES AND SLURS ARE CARRIED TOO (session 141) AND RE-ANCHORED (session 424). Both
+    /// passes lay them on the SAME quantity since session 140 (every voice — the
+    /// staffSpannerScore spelling), but unlike a beam (whose Y is staff positions), a bow
+    /// bakes its own staff's WITHIN-SYSTEM offset into its Y as an additive base
     /// (BuildTieSpecification's staffY, the slur scorer's staffMiddleDown) — and page
     /// justification can MOVE that offset, because the staff springs sit in the page
     /// chain. MEASURED (2026-08-12, every .lys in the tree, 1,243 books): the divergence
     /// is exactly that — 4,201 of 26,140 bows differed, all of them ties on staves below
     /// the first in multi-page books, every one a rigid Y shift equal to the offset
-    /// delta, X bit-identical. Re-anchoring the carried bows by the delta closed all but
-    /// 87 to the bit and left those 87 ONE ULP off (the shift is rigid in exact
-    /// arithmetic, not in floats) — so the carry is gated on
-    /// <c>StaffOffsetsUnmoved</c> instead of re-anchored: a staff paging moved falls
-    /// back to the final layout (byte-identical by construction, the same shape as the
-    /// beam fallback above), and a staff paging left alone — every staff of every
-    /// single-page book, and staff 0 always — carries. With the gate: 21,793 bows
-    /// compared element-wise, 0 mismatches, poisoned control detected in 365/365
-    /// books with bows.
+    /// delta, X bit-identical. Sessions 141-423 answered that with a GATE — carry only a
+    /// staff no system moved, re-lay the whole staff otherwise; session 424 measured what
+    /// the gate cost (0.594% of a keystroke, and 96.3% of the systems it re-laid had
+    /// moved, so splitting it per system could have reached 0.005%) and pays the delta
+    /// back instead. <see cref="BowLayout.ShiftedUp"/> is the payment and
+    /// <c>LayoutEngine.BowShiftsOf</c> holds both measurements of why it is exact.
     /// </remarks>
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
@@ -853,25 +850,25 @@ internal sealed partial class LayoutEngine
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
                     || Math.Abs(kv.Value) > Math.Abs(existing))
                     restShiftsBuilder[kv.Key] = kv.Value;
-            // ...and the ties/slurs too (since session 141), gated per staff: a bow bakes
-            // its OWN staff's within-system offset into its Y (the scorers feed
-            // StaffOffsetInSystemDown as the additive base), and page justification can
-            // move that offset (the staff springs sit in the page chain) — so a staff
-            // whose offset paging moved falls back to the final layout, byte-identical
-            // to the old path by construction, the way the beam memo falls back on
-            // cross-system groups. See PreliminaryPass' remarks for the measured
-            // account (every .lys in the tree, element-wise, poisoned control).
-            bool carrySafe = StaffOffsetsUnmoved(prelimSystems, systemsArray, staffIndex);
-            var staffTies = carrySafe
-                ? prelimTiesByStaff[staffIndex]
-                : _elementCoordinator.LayoutTies(score.TextMetrics, staffSpannerScore, systemsArray, staffIndex, staff);
+            // ...and the ties/slurs too (since session 141), CARRIED AND RE-ANCHORED. A bow
+            // bakes its OWN staff's within-system offset into its Y as an additive base (the
+            // scorers feed StaffOffsetInSystemDown), and page justification can move that
+            // offset, because the staff springs sit in the page chain — so a carried bow has
+            // to be moved to where paging put its staff. BowShiftsOf holds the measurement
+            // that says the move is exactly that and nothing else; a staff whose systems
+            // paging left alone gets zero shifts and its own instances back, unchanged.
+            var bowShifts = BowShiftsOf(prelimSystems, systemsArray, staffIndex);
+            var bowSystemOf = SpannerBreakSubstitution.BuildMeasureToSystemMap(systemsArray);
+            var staffTies = bowShifts is null
+                ? default
+                : ReanchorBows(prelimTiesByStaff[staffIndex], bowShifts, bowSystemOf);
+            if (staffTies.IsDefault)
+                staffTies = _elementCoordinator.LayoutTies(score.TextMetrics, staffSpannerScore, systemsArray, staffIndex, staff);
             allTieLayouts.AddRange(staffTies);
-            ImmutableArray<SlurLayout> staffSlurs;
-            if (carrySafe)
-            {
-                staffSlurs = prelimSlursByStaff[staffIndex];
-            }
-            else
+            var staffSlurs = bowShifts is null
+                ? default
+                : ReanchorBows(prelimSlursByStaff[staffIndex], bowShifts, bowSystemOf);
+            if (staffSlurs.IsDefault)
             {
                 // The bow is scored around this staff's avoid-slur #'inside marks, so they
                 // have to be PLACED before it — the ordering half of that rule; the mark's
@@ -901,27 +898,98 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// Whether ONE staff's within-system offset is bit-identical between the
-    /// preliminary systems and the paged ones. Page justification stretches the staff
-    /// springs (they sit in the page chain), so a staff below the first can move
-    /// WITHIN its system when the page is solved; a bow bakes that offset into its Y
-    /// as an additive base, so a moved staff's carried bows would be off by the move.
-    /// The delta is mathematically a rigid shift, but not bitwise — measured
-    /// 2026-08-12 over every .lys in the tree (1,243 books, 26,140 bows): re-anchoring
-    /// carried bows by the delta left 87 bows one ulp (~9e-16) from the final layout's.
-    /// So the carry is gated on UNMOVED instead: exact by construction, and the moved
-    /// staves (multi-page, multi-staff books only) keep the final layout.
+    /// How far, in the page Y-UP frame, each system's copy of ONE staff moved between the
+    /// preliminary systems and the paged ones — what a bow carried from the preliminary pass
+    /// has to be moved by to stand where the final pass would have scored it. Empty when
+    /// nothing moved (carry the bows unchanged); null when the two passes do not have the
+    /// same systems at all, which no shift can repair.
     /// </summary>
-    private static bool StaffOffsetsUnmoved(
+    /// <remarks>
+    /// ⚠️ THE MOVE IS RIGID, AND THAT IS A MEASUREMENT, NOT AN ARGUMENT. Page justification
+    /// stretches the staff springs (they sit in the page chain), so a staff below the first
+    /// can move WITHIN its system when the page is solved; a bow bakes that offset into its Y
+    /// as an additive base (<see cref="LayoutUtilities.StaffOffsetInSystemDown"/>, fed to
+    /// <c>BuildTieSpecification</c>'s staffY and the slur scorer's staffMiddleDown), and every
+    /// other input the scorers read is either untouched by paging or derived from that same
+    /// base — so translating the base translates the answer.
+    /// <para>
+    /// MEASURED 2026-08-12 (every .lys in the tree, 1,243 books, 26,140 bows): re-anchoring
+    /// closed all but 87 to the bit and left those 87 ONE ULP (~9e-16) away. MEASURED AGAIN
+    /// 2026-09-19 at this HEAD, on the staves that actually move (a reader's corpus, 231 books
+    /// × 8 keystrokes, 5,552 bows): 5,463 bit-identical, 89 one ulp, NONE worse, and every X
+    /// and every direction bit-identical.
+    /// </para>
+    /// <para>
+    /// ⚠️ THIS REPLACED A GATE, and the gate is why the number above matters. Sessions 141 to
+    /// 423 carried a staff's bows only when EVERY system's offset was unmoved and re-laid the
+    /// whole staff otherwise. Measured at this HEAD: that gate rejected 1,336 of its 1,376
+    /// calls on staves below the first and the re-layout cost 0.594% of a keystroke — and of
+    /// the 32,707 systems inside a rejection only 1,223, 3.7%, had stood still, so splitting
+    /// the gate per system (the repair this repository had ticketed) could have reached
+    /// 0.005%. Re-anchoring retires the whole 0.594% instead.
+    /// </para>
+    /// <para>
+    /// LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+    /// pass to carry from — it breaks a spanner AFTER solving it, while Lily# scores bows once
+    /// for the spacing extents and again for the page. It goes away the day a bow is scored in
+    /// its STAFF'S OWN frame with the offset added at the draw site — the shape DrawSlurs
+    /// already has for <c>SystemLayout.Y</c> — because then the two passes agree bit-for-bit
+    /// and there is nothing to pay back. Observed by: the page hashes above, which is what
+    /// says the one-ulp tail never reaches a page.
+    /// </para>
+    /// <para>
+    /// ⚠️ Staff 0's offset is 0 on every system — measured, never once rejected by the old
+    /// gate — so its shifts are all zero and its bows come back as the SAME instances.
+    /// </para>
+    /// </remarks>
+    private static double[]? BowShiftsOf(
         ImmutableArray<SystemLayout> prelimSystems, ImmutableArray<SystemLayout> finalSystems,
         int staffIndex)
     {
-        if (prelimSystems.Length != finalSystems.Length) return false;
+        if (prelimSystems.Length != finalSystems.Length)
+            return null;
+        // Two passes so the common case — a staff paging left alone — allocates nothing.
+        bool moved = false;
+        for (int s = 0; s < finalSystems.Length && !moved; s++)
+            moved = LayoutUtilities.StaffOffsetInSystemDown(finalSystems[s], staffIndex)
+                != LayoutUtilities.StaffOffsetInSystemDown(prelimSystems[s], staffIndex);
+        if (!moved)
+            return [];
+        var shifts = new double[finalSystems.Length];
         for (int s = 0; s < finalSystems.Length; s++)
-            if (LayoutUtilities.StaffOffsetInSystemDown(finalSystems[s], staffIndex)
-                != LayoutUtilities.StaffOffsetInSystemDown(prelimSystems[s], staffIndex))
-                return false;
-        return true;
+            // Stored bow Y is page Y-UP while the offset is device-DOWN, hence the order.
+            shifts[s] = LayoutUtilities.StaffOffsetInSystemDown(prelimSystems[s], staffIndex)
+                - LayoutUtilities.StaffOffsetInSystemDown(finalSystems[s], staffIndex);
+        return shifts;
+    }
+
+    /// <summary>
+    /// The carried bows, each moved by ITS OWN system's shift (a bow's geometry reads the
+    /// system it was broken onto and no other).
+    /// </summary>
+    /// <remarks>
+    /// Returns <c>default</c> — the caller's signal to re-lay the staff, the posture the old
+    /// gate had for every moved staff — when a bow names a measure no system claims, so a
+    /// drift is never papered over with a guess.
+    /// </remarks>
+    private static ImmutableArray<T> ReanchorBows<T>(
+        ImmutableArray<T> carried, double[] shifts,
+        IReadOnlyDictionary<int, int> systemOfMeasure)
+        where T : BowLayout
+    {
+        if (shifts.Length == 0 || carried.IsDefaultOrEmpty)
+            return carried;
+        var moved = ImmutableArray.CreateBuilder<T>(carried.Length);
+        foreach (var bow in carried)
+        {
+            if (bow.RenderMeasureIndex < 0
+                || !systemOfMeasure.TryGetValue(bow.RenderMeasureIndex, out int sys)
+                || (uint)sys >= (uint)shifts.Length)
+                return default;
+            double dy = shifts[sys];
+            moved.Add(dy == 0 ? bow : (T)bow.ShiftedUp(dy));
+        }
+        return moved.MoveToImmutable();
     }
 
     // F3/S5-3a: route a system's measure layout through the session cache when one

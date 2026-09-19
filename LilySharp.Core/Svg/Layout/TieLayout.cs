@@ -57,4 +57,16 @@ internal sealed record TieLayout : BowLayout
         Tie = tie;
         CurveUp = curveUp;
     }
+
+    /// <inheritdoc/>
+    internal override TieLayout ShiftedUp(double dyUp)
+    {
+        var (startYUp, endYUp, control1, control2) = ShiftedParts(dyUp);
+        return new TieLayout(Tie, StartX, startYUp, EndX, endYUp, control1, control2,
+            CurveUp, IsBrokenLeft, IsBrokenRight)
+        {
+            StaffIndex = StaffIndex,
+            RenderMeasureIndex = RenderMeasureIndex,
+        };
+    }
 }

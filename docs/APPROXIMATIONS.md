@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 52 | 観測者がゼロだと自認しているもの |
-| `OWN` | 142 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **254** | |
+| `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **255** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -223,7 +223,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（142 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（143 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2466** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -344,6 +344,8 @@
 - **:384** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:501** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **:923** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
+- **:932** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`

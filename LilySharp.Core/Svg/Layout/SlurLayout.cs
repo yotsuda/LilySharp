@@ -47,4 +47,18 @@ internal sealed record SlurLayout : BowLayout
     {
         Slur = slur;
     }
+
+    /// <inheritdoc/>
+    /// <remarks>⚠️ No <c>curveUp</c> to carry: a slur reads its direction off
+    /// <see cref="Slur"/>, which moves with it.</remarks>
+    internal override SlurLayout ShiftedUp(double dyUp)
+    {
+        var (startYUp, endYUp, control1, control2) = ShiftedParts(dyUp);
+        return new SlurLayout(Slur, StartX, startYUp, EndX, endYUp, control1, control2,
+            IsBrokenLeft, IsBrokenRight)
+        {
+            StaffIndex = StaffIndex,
+            RenderMeasureIndex = RenderMeasureIndex,
+        };
+    }
 }
