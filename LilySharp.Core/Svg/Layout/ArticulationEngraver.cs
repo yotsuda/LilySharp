@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -458,8 +458,33 @@ internal static class ArticulationEngraver
             return false;
         }
 
-        var beamedTips = BuildBeamedStemTips(beamLayouts);
-        var beamGroups = BuildBeamGroupMap(beamLayouts);
+        // THE KEYS THE TWO BEAM MAPS CAN BE ASKED FOR, WHICH IS ONE PER SCRIPT. Both are
+        // looked up at the articulation's OWN (staff, voice, measure, item) — the only lookup
+        // either map has in this method — so the set of questions is known before the folds
+        // run, and a whole-score fold is a map ~23x larger than the questions put to it
+        // (COUNTED, session 419, the user's 231-book corpus, per call: 561 entries built,
+        // 24.7 asked; 1.47% of a keystroke across the two passes). Narrowed here rather than
+        // in the builders' other callers: FingeringEngraver hands its own unit's beams and
+        // wants all of them.
+        // ⚠️ THE OBSERVER WAS CHECKED, NOT ASSUMED (session 419, RULES §5.3): a poison that
+        // lets the narrowed map answer NOTHING reddens the snapshots test/fermata-down,
+        // test/scripts-stem-support and test/drum-groove.
+        var wantedBeamKeys = new HashSet<(int, int, int, int)>(
+            articulations.IsDefaultOrEmpty ? 0 : articulations.Length);
+        if (!articulations.IsDefaultOrEmpty)
+            foreach (var a in articulations)
+                wantedBeamKeys.Add((a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex));
+        var beamedTips = BuildBeamedStemTips(beamLayouts, wantedBeamKeys);
+        // …AND THE TAB MAP IS BUILT ON THE FIRST TAB ASK, not on every call. Only the tab
+        // branch below reads it, and a script on a NUMBERS-ONLY tab staff is dropped before
+        // that branch (TabStaffStencils.BlanksScript), so the ask can be zero on a book full
+        // of tab staves: COUNTED over the same sweep, the map was asked for 0 times in
+        // 1,848 keystrokes while costing 1.02% of every one of them.
+        // ⚠️ ITS observers are a different three, and they were checked the same way: a poison
+        // that answers the tab branch with an empty map reddens test/tab-beam-script,
+        // test/tab-staccato-beam-side and test/tab-beam-slope. The corpus sweep says NOTHING
+        // about this half — 0 asks — so the snapshots are the whole of its evidence.
+        Dictionary<(int Staff, int Voice, int Measure, int Item), BeamLayout>? beamGroups = null;
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
         // Per-note, per-side SUPPORT CHAIN so stacked scripts don't overprint: every
         // priority-less script already placed on the same (staff, measure, item, side)
@@ -820,6 +845,7 @@ internal static class ArticulationEngraver
                 const double tabGap = 1.0;
                 var geom = new TabStaffGeometry(fonts,
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
+                beamGroups ??= BuildBeamGroupMap(beamLayouts, wantedBeamKeys);
                 bool isTabBeamed = beamGroups.TryGetValue(
                     (articulation.StaffIndex, articulation.VoiceIndex,
                      articulation.MeasureIndex, articulation.ItemIndex),
@@ -1982,8 +2008,12 @@ internal static class ArticulationEngraver
     /// branch can find the group's outer beam edge (the tab beam Y lives only in the
     /// renderer's geometry, recomputed here from the group's members via TabStaffGeometry).
     /// </summary>
+    /// <param name="wanted">The keys the caller can ask for, or null for every member. A
+    /// caller that knows its questions in advance (one per script) passes them: the map is a
+    /// pure lookup table, so an entry no one asks for is only storage.</param>
     private static Dictionary<(int Staff, int Voice, int Measure, int Item), BeamLayout>
-        BuildBeamGroupMap(ImmutableArray<BeamLayout> beamLayouts)
+        BuildBeamGroupMap(ImmutableArray<BeamLayout> beamLayouts,
+            HashSet<(int, int, int, int)>? wanted = null)
     {
         var map = new Dictionary<(int, int, int, int), BeamLayout>();
         if (beamLayouts.IsDefaultOrEmpty)
@@ -1997,8 +2027,11 @@ internal static class ArticulationEngraver
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty && i < beam.MemberStaffIndices.Length
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
-                map[(staff, group.VoiceIndex,
-                     member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] = beam;
+                var key = (staff, group.VoiceIndex,
+                    member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex);
+                if (wanted != null && !wanted.Contains(key))
+                    continue;
+                map[key] = beam;
             }
         }
         return map;
@@ -2045,8 +2078,13 @@ internal static class ArticulationEngraver
     /// it (<see cref="NoteColumnLayout.OutwardTipDeviceY"/> →
     /// <see cref="BeamLayout.OuterEdgeStaffSpaceAtX"/>), and that face is in the stems' frame.
     /// </remarks>
+    /// <param name="wanted">The keys the caller can ask for, or null for every member — see
+    /// <see cref="BuildBeamGroupMap"/>'s same parameter. The script walk knows its questions
+    /// before the fold runs (one per script); the fingering island hands its own unit's beams
+    /// and wants all of them, so it omits this.</param>
     internal static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)>
-        BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts)
+        BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts,
+            HashSet<(int, int, int, int)>? wanted = null)
     {
         var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
         if (beamLayouts.IsDefaultOrEmpty)
@@ -2065,9 +2103,11 @@ internal static class ArticulationEngraver
                 int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
-                tips[(staff, group.VoiceIndex,
-                      member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] =
-                    (beam, beam.MemberStemX(i), member.MemberStemUp);
+                var key = (staff, group.VoiceIndex,
+                    member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex);
+                if (wanted != null && !wanted.Contains(key))
+                    continue;
+                tips[key] = (beam, beam.MemberStemX(i), member.MemberStemUp);
             }
         }
         return tips;
