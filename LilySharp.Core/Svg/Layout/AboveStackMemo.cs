@@ -52,11 +52,43 @@ namespace LilySharp.Core.Svg.Layout;
 /// null) is never memoized at all.</item>
 /// <item>the system-silhouette fallback pair, also by reference.</item>
 /// </list>
-/// Font metrics and the pass's declared paddings are process constants. Entries are
-/// stored one per system index and overwritten on miss, so the store is bounded by
-/// the widest system count of the session (the paging-augment memo's policy). A
-/// stale entry can only ever MATCH inputs that are value-identical to the ones its
-/// outputs were computed from, so retention across ineligible edits is sound.
+/// Font metrics and the pass's declared paddings are process constants. A stale entry
+/// can only ever MATCH inputs that are value-identical to the ones its outputs were
+/// computed from, so retention across ineligible edits is sound.
+/// <para>
+/// ★ TWO ROOMS PER SYSTEM INDEX since session 415, the older evicted on a miss — the
+/// shape <see cref="SystemLayoutCache.GetOrComputePagingAugment"/> took in session 413,
+/// for the same reason and against the same signature. ⚠️ THE SUMMARY ABOVE NAMED THIS
+/// DISEASE AND STOPPED ONE LEVEL SHORT: it gives the preliminary and the final pass
+/// separate instances because one instance "would overwrite each other every keystroke
+/// and never hit" — but the PRELIMINARY pass itself runs twice on a keystroke whose page
+/// score picks another line count (<c>LayoutEngine.Layout</c>'s <c>ChooseSystemCount</c>
+/// leg calls <c>PlaceSystems</c> again), and those two placements break the score
+/// differently, so system s is a different run of measures in each. With one room they
+/// took each other's slot, exactly as two passes would have.
+/// MEASURED (session 415, the owner's 231 books × 8 forward keystrokes, Release,
+/// allocation bytes), by which run consulted the store:
+/// <list type="bullet">
+/// <item>first placement 44,121 systems, 84.6% hit; SECOND placement 7,315 systems,
+/// <b>28.6%</b> hit; the final pass — which has no second run to fight with — 95.2%.
+/// The final pass's rate is what the preliminary one's ceiling looks like.</item>
+/// <item>of the preliminary pass's 12,034 misses, only <b>1,009</b> landed on a slot the
+/// same run had written (the edited system — the irreducible floor). 5,805 landed on a
+/// slot the second placement wrote and 5,216 on a slot the first placement wrote: ★ the
+/// two nearly equal counts are the signature, each slot one placement takes costing the
+/// other exactly one miss. Worth 2.8% of a keystroke, and a miss restacks the system live
+/// (43,636–46,074 B) where a hit replays.</item>
+/// </list>
+/// ⚠️ TWO IS THE COUNT LOOP'S OWN BOUND, not a tuning knob — <c>Layout</c> calls
+/// <c>PlaceSystems</c> at most twice — so the store stays bounded by twice the widest
+/// system count the session ever saw and needs no generation eviction. A lookup served
+/// from the older room PROMOTES it, so the two placements settle one per room and keep
+/// hitting; a miss evicts the older room, the one the current placement is not using.
+/// Eviction is sound for the reason above: a dropped entry costs a restack, never a wrong
+/// reuse. ★ The final pass's store has only one writer and so never fills its second room
+/// from a rival — what lands there is the PREVIOUS keystroke's entry, which an undo can
+/// then hit; that is a bonus, not the reason for the change.
+/// </para>
 /// </remarks>
 internal sealed class AboveStackMemo
 {
@@ -101,7 +133,7 @@ internal sealed class AboveStackMemo
         public TextSpannerLayout[] OutTextSpanners = Array.Empty<TextSpannerLayout>();
     }
 
-    private readonly Dictionary<int, SystemEntry> _bySystem = new();
+    private readonly Dictionary<int, Slot> _bySystem = new();
 
     /// <summary>Cumulative hit/miss counters (diagnostics / the liveness half of the
     /// nets — a net that asserts byte equality but never hits proves nothing).</summary>
@@ -110,12 +142,21 @@ internal sealed class AboveStackMemo
     /// <inheritdoc cref="Hits"/>
     public int Misses { get; private set; }
 
-    /// <summary>Whether the stored entry for <paramref name="systemIndex"/> matches
-    /// <paramref name="probe"/>'s program exactly. Counts the hit/miss.</summary>
+    /// <summary>Whether either room stored for <paramref name="systemIndex"/> matches
+    /// <paramref name="probe"/>'s program exactly. A room served from the older slot is
+    /// PROMOTED, so <see cref="Get"/> always reads the room that matched. Counts the
+    /// hit/miss.</summary>
     public bool TryMatch(int systemIndex, SystemEntry probe)
     {
-        if (_bySystem.TryGetValue(systemIndex, out var stored) && Matches(stored, probe))
+        _bySystem.TryGetValue(systemIndex, out var slot);
+        if (slot.Recent is { } recent && Matches(recent, probe))
         {
+            Hits++;
+            return true;
+        }
+        if (slot.Older is { } older && Matches(older, probe))
+        {
+            _bySystem[systemIndex] = new Slot(older, slot.Recent);
             Hits++;
             return true;
         }
@@ -123,10 +164,21 @@ internal sealed class AboveStackMemo
         return false;
     }
 
+    /// <summary>The room that last matched or was stored for this system — only ever read
+    /// for a system <see cref="TryMatch"/> just answered true for, and the promotion above
+    /// is what makes that the matching one.</summary>
     public SystemEntry? Get(int systemIndex)
-        => _bySystem.TryGetValue(systemIndex, out var e) ? e : null;
+        => _bySystem.TryGetValue(systemIndex, out var s) ? s.Recent : null;
 
-    public void Store(int systemIndex, SystemEntry entry) => _bySystem[systemIndex] = entry;
+    /// <summary>Files this system's entry in the recent room, demoting what was there.</summary>
+    public void Store(int systemIndex, SystemEntry entry)
+    {
+        _bySystem.TryGetValue(systemIndex, out var slot);
+        _bySystem[systemIndex] = new Slot(entry, slot.Recent);
+    }
+
+    /// <summary>One system index's two rooms, the most recently served one first.</summary>
+    private readonly record struct Slot(SystemEntry? Recent, SystemEntry? Older);
 
     private static bool Matches(SystemEntry a, SystemEntry b)
         => a.Indent == b.Indent

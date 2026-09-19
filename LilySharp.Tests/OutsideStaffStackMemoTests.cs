@@ -202,4 +202,87 @@ public class OutsideStaffStackMemoTests
             $"the taller profile must move the answer (stale {before.Texts[1].YUp:F2} "
             + $"vs live {actual.Texts[1].YUp:F2})");
     }
+
+    /// <summary>Two rooms per system index: the annotation pass's PRELIMINARY half runs
+    /// once per placement, and a keystroke whose page score picks another line count places
+    /// the book twice. Both placements must keep hitting. ⚠️ WITH ONE ROOM THIS READS
+    /// 0 hits / 8 misses — each placement evicted the other's entry every time, which is
+    /// what session 415 measured in the owner's corpus (second placement 28.6% hit).</summary>
+    [Fact]
+    public void TwoPlacementsAlternating_BothKeepHitting()
+    {
+        var systems = CreateTwoSystems();
+        var inputs = Inputs();
+        var first = new ProfileSource();
+        first.Set(0, 0, 3.0);
+        first.Set(1, 0, 3.0);
+        var second = new ProfileSource();
+        second.Set(0, 0, 6.0);
+        second.Set(1, 0, 6.0);
+
+        var expectedFirst = Run(systems, inputs, first, memo: null);
+        var expectedSecond = Run(systems, inputs, second, memo: null);
+        // The two placements must not agree by accident, or "both keep hitting" would be
+        // one room answering both.
+        Assert.NotEqual(expectedFirst.Texts, expectedSecond.Texts);
+
+        var memo = new AboveStackMemo();
+        Run(systems, inputs, first, memo);
+        Run(systems, inputs, second, memo);
+        Assert.Equal(0, memo.Hits);
+        Assert.Equal(4, memo.Misses); // two systems, twice: each placement's cold fill
+
+        for (int keystroke = 0; keystroke < 2; keystroke++)
+        {
+            var a = Run(systems, inputs, first, memo);
+            var b = Run(systems, inputs, second, memo);
+            Assert.Equal(expectedFirst.Texts, a.Texts);
+            Assert.Equal(expectedFirst.BarNumbers, a.BarNumbers);
+            Assert.Equal(expectedSecond.Texts, b.Texts);
+            Assert.Equal(expectedSecond.BarNumbers, b.BarNumbers);
+        }
+        Assert.Equal(8, memo.Hits);   // both systems, both placements, both keystrokes
+        Assert.Equal(4, memo.Misses); // nothing evicted anything
+    }
+
+    /// <summary>Two is the count loop's bound, so a THIRD distinct placement evicts the
+    /// older room — and the evicted one recomputes to the same answer rather than replaying
+    /// a wrong one. This is the half that says eviction is sound, not merely rare.</summary>
+    [Fact]
+    public void AThirdPlacement_EvictsTheOlderRoom_AndTheEvictedOneRecomputes()
+    {
+        var systems = CreateTwoSystems();
+        var inputs = Inputs();
+        var first = new ProfileSource();
+        first.Set(0, 0, 3.0);
+        first.Set(1, 0, 3.0);
+        var second = new ProfileSource();
+        second.Set(0, 0, 6.0);
+        second.Set(1, 0, 6.0);
+        var third = new ProfileSource();
+        third.Set(0, 0, 9.0);
+        third.Set(1, 0, 9.0);
+
+        var expectedSecond = Run(systems, inputs, second, memo: null);
+
+        var memo = new AboveStackMemo();
+        Run(systems, inputs, first, memo);            // rooms: [first, -]
+        Run(systems, inputs, second, memo);           // rooms: [second, first]
+        Assert.Equal(0, memo.Hits);
+        Assert.Equal(4, memo.Misses);
+
+        Run(systems, inputs, first, memo);            // served from the OLDER room, promoted
+        Assert.Equal(2, memo.Hits);
+        Assert.Equal(4, memo.Misses);
+
+        Run(systems, inputs, third, memo);            // rooms: [third, first] — second evicted
+        Assert.Equal(2, memo.Hits);
+        Assert.Equal(6, memo.Misses);
+
+        var backAgain = Run(systems, inputs, second, memo);
+        Assert.Equal(2, memo.Hits);
+        Assert.Equal(8, memo.Misses); // the evicted placement recomputes…
+        Assert.Equal(expectedSecond.Texts, backAgain.Texts);       // …to the same answer
+        Assert.Equal(expectedSecond.BarNumbers, backAgain.BarNumbers);
+    }
 }
