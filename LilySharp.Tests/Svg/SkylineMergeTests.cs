@@ -906,4 +906,63 @@ public class SkylineMergeTests
             + "an array reserved at the batch's own count would be 24 + 32 × 600 = 19,224 B, so "
             + "this is the result list being sized by the appends instead of by the answer");
     }
+
+    /// <summary>A skyline's FIRST merge gets its list in one allocation, at the size of the
+    /// answer, instead of climbing to that size a rung at a time.</summary>
+    /// <remarks>
+    /// The other half of <see cref="ABatchsResultList_IsSizedByWhatTheResolveKeeps_NotByWhatItWasHanded"/>,
+    /// and the half nobody had priced: that gate watches a skyline being BUILT, this one watches
+    /// one being MERGED INTO for the first time. Until session 428 the merge walk rebuilt
+    /// straight into <c>_buildings</c>, which a <c>Clear</c> leaves at whatever capacity it had
+    /// — nothing at all, the first time — so the walk climbed 4-8-16-…-R and allocated about
+    /// twice R getting there.
+    /// <para>
+    /// ⚠️ WHY IT MATTERS IN THE PRODUCT: MEASURED (session 428, the owner's corpus, 231 books ×
+    /// eight forward keystrokes, counted by construction) the non-batch walks climbed
+    /// 29,946,160 B a sweep, <b>0.201% of a keystroke</b>, and <b>92.4% of it was each
+    /// skyline's FIRST merge</b> — 12,769 walks of 14,061. The walk now writes to the buffer
+    /// the thread lends, as the batch arm has since session 427, and asks
+    /// <c>EnsureCapacity(R)</c> for the answer.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT IS NOT THE SAME POLICY AS THE BATCH ARM'S, which is why both gates are here.
+    /// <c>Capacity = R</c> fits the array to a skyline that is finished;
+    /// <see cref="AMergeIntoALargeSkyline_DoesNotCopyItToReadIt"/> is red under that rule
+    /// because a skyline that is merged into again must keep its headroom, and the simulation
+    /// agrees — exact-sizing every walk would have cost <b>0.372%</b> of a keystroke against
+    /// the 0.192% of doing nothing, all of it in the 17,474 walks that pay nothing today.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AFirstMergeIntoASkyline_DoesNotClimbToTheSizeOfTheAnswer()
+    {
+        // Three hundred disjoint boxes: the resolve keeps one building each, so the answer is
+        // large and its size is known. Built once, outside every measurement, and merged FROM
+        // rather than into, so the measured round allocates nothing on its behalf.
+        var wide = new VerticalSkyline(VerticalDirection.Up);
+        wide.BeginBatch();
+        for (int i = 0; i < 300; i++)
+            wide.MergeBox(10 + 2 * i, 11 + 2 * i, 0, 1.0 + (i % 7));
+        wide.EndBatch();
+        Assert.True(wide.Buildings.Count >= 300,
+            $"the fixture resolved to {wide.Buildings.Count} buildings; this gate needs a "
+            + "profile whose size is worth climbing to");
+
+        // The thread's two lent buffers — the walk's input and its result — grow to fit on
+        // first use, and that growth is a per-thread cost, not a per-merge one. Pay it here.
+        var warm = VerticalSkyline.FromBox(0, 1, 0, 2, VerticalDirection.Up);
+        warm.Merge(wide);
+
+        var cold = VerticalSkyline.FromBox(0, 1, 0, 2, VerticalDirection.Up);
+        long before = System.GC.GetAllocatedBytesForCurrentThread();
+        cold.Merge(wide);
+        long spent = System.GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(warm.Buildings.Count, cold.Buildings.Count);
+        Assert.True(spent < 15000,
+            $"a first merge that resolves to {cold.Buildings.Count} buildings allocated "
+            + $"{spent} B; one array for that answer is about 24 + 32 × 300 = 9,624 B, while "
+            + "climbing to it from a list that starts empty allocates 8 + 16 + … + 512 slots "
+            + "= 32,680 B — so this is the walk growing the skyline's list a rung at a time");
+    }
 }

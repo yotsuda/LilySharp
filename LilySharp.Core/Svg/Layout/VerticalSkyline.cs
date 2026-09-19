@@ -691,15 +691,20 @@ internal sealed class VerticalSkyline
     /// <para>
     /// ⚠️ THE REASON CHANGED IN SESSION 427 AND THE RULE DID NOT. Until then this rebuilt IN
     /// PLACE — it cleared <see cref="_buildings"/> and used it as the result buffer — so an
-    /// input that WAS <see cref="_buildings"/> would have been cleared mid-walk. The walk now
-    /// writes to <see cref="RentResolveOutput"/> and copies R out at the end, so that
-    /// particular damage is gone; what remains is that <see cref="ResolveFrom"/> hands the
-    /// input to the thread's pool afterwards, and a pool holding a live skyline's own list
-    /// resolves the next walk's buildings straight into that skyline.
+    /// input that WAS <see cref="_buildings"/> would have been cleared mid-walk. Session 427
+    /// took that arm off the batch path and session 428 off the last one, so no walk writes
+    /// into the list it is rebuilding any more and that particular damage is gone; what
+    /// remains is that <see cref="ResolveFrom"/> hands the input to the thread's pool
+    /// afterwards, and a pool holding a live skyline's own list resolves the next walk's
+    /// buildings straight into that skyline.
     /// </para></param>
     /// <param name="sizeResultExactly">
-    /// Whether <see cref="_buildings"/> may be allocated at exactly the count the walk comes
-    /// to, instead of being grown into by <see cref="List{T}"/>'s doubling.
+    /// Whether <see cref="_buildings"/> is allocated at exactly the count the walk comes to,
+    /// or left to the ONE growth step <see cref="List{T}.AddRange"/> takes — which is the same
+    /// array when the list is empty and twice what is there when it is not. ⚠️ The second is
+    /// not spelled out anywhere in the code, and deliberately: an explicit
+    /// <c>EnsureCapacity(R)</c> before the copy computes the identical number from the
+    /// identical source one line earlier (HANDOFF §5.2.1②).
     /// <para>
     /// ⚠️ THIS IS A POLICY AND THE MEASUREMENT THAT DECIDES IT IS ALREADY IN THIS FILE, in
     /// <see cref="t_mergeInput"/>'s remark: session 421 counted <see cref="EndBatch"/> running
@@ -719,6 +724,22 @@ internal sealed class VerticalSkyline
     /// every walk exactly and that gate went red, because its warm merges each add a building
     /// to a 300-building skyline and each one then reallocated.
     /// </para>
+    /// <para>
+    /// ⚠️ AND THE OTHER ARM IS NOT "NO POLICY", which is what it was until session 428: the
+    /// walk grew <see cref="_buildings"/> a rung at a time from whatever the Clear left, which
+    /// for a skyline being merged into for the FIRST time is nothing, so it climbed
+    /// 4-8-16-…-R and allocated about twice R on the way. MEASURED (session 428, the owner's
+    /// corpus, 231 books × eight forward keystrokes, counted by construction, and it
+    /// reproduces session 427's independently measured 29,912,072 B over 73,231 walks):
+    /// <see cref="MergeInternal"/> and the placed-profile merge climbed 29,946,160 B over
+    /// 73,254 walks, <b>0.201% of a keystroke</b> — and <b>92.4% of it was each skyline's
+    /// FIRST merge</b> (26,439,832 B of 28,610,688 over 12,769 of 14,061 growing walks).
+    /// <c>EnsureCapacity(R)</c> is both policies at once for exactly that reason, and the
+    /// simulation priced all four candidates in one sweep: the rung climb 0.192%, reserving
+    /// the input's count before the walk 0.159%, sizing every walk exactly <b>0.372%</b> —
+    /// worse than doing nothing, because 17,474 walks that pay nothing today would then
+    /// reallocate for the next merge — and this 0.113%.
+    /// </para>
     /// </param>
     private void RebuildKeepingHighest(
         List<SkylineBuilding> allBuildings, bool sizeResultExactly = false)
@@ -731,8 +752,10 @@ internal sealed class VerticalSkyline
 
         allBuildings.Sort((a, b) => a.Start.CompareTo(b.Start));
 
-        // WHERE THE WALK WRITES, and it is a policy, not a detail — see the parameter.
-        var result = sizeResultExactly ? RentResolveOutput() : _buildings;
+        // THE WALK WRITES TO THE LENT BUFFER — never into the list it is rebuilding. What
+        // that buys is R, and R is the only number that can size an array right; which of the
+        // two ways it is then spent is the parameter's business.
+        var result = RentResolveOutput();
         result.Clear();
 
         // Lazily, so a walk that never overlaps — a resolved profile merged into an empty
@@ -769,19 +792,20 @@ internal sealed class VerticalSkyline
             }
         }
 
-        if (!sizeResultExactly)
-        {
-            return;
-        }
-
-        // ⚠️ R IS KNOWN ONLY NOW, and that is the whole point. Clearing first means the
-        // capacity setter has nothing to copy; setting Capacity rather than calling
-        // EnsureCapacity is what makes the array EXACT — List.EnsureCapacity grows by
-        // doubling, so it would hand back up to twice this and put back the rungs this is
-        // here to retire.
+        // ⚠️ R IS KNOWN ONLY NOW, and that is the whole point. Clearing first means the sizing
+        // has nothing to copy, and the AddRange below then takes ONE growth step — to R, or to
+        // twice what this list already holds, whichever is larger. That is ACCUMULATION's
+        // policy, and it is List's own: a skyline merged into for the first time is sized at
+        // exactly the answer, and one merged into again keeps the headroom it amortises with.
         _buildings.Clear();
-        if (_buildings.Capacity < result.Count)
-            _buildings.Capacity = result.Count;
+        if (sizeResultExactly)
+        {
+            // CONSTRUCTION overrides it: the array is the answer and nothing more. The
+            // Capacity setter, because the growth AddRange would do is the doubling this is
+            // here to retire.
+            if (_buildings.Capacity < result.Count)
+                _buildings.Capacity = result.Count;
+        }
         _buildings.AddRange(result);
         ReturnResolveOutput(result);
     }
@@ -799,7 +823,14 @@ internal sealed class VerticalSkyline
     /// over 14,310 walks, 0.200% of a keystroke, and nobody had priced it) or a caller reserves
     /// an upper bound (what session 426 did for EndBatch, 0.206%, of which only 0.072% was ever
     /// filled). Resolving into a lent buffer and copying R out costs one memmove of R buildings
-    /// and lets _buildings be allocated at exactly R.
+    /// and lets _buildings be sized by the answer.
+    /// <para>
+    /// ⚠️ EVERY WALK, since session 428 — the batch arm was only the half that had been
+    /// measured. 38.4 non-batch walks a keystroke now copy their result out, 1,604 buildings
+    /// of memmove, and what that buys is on <c>RebuildKeepingHighest</c>'s
+    /// <c>sizeResultExactly</c>. The buffer stays ONE list a thread whichever arm rents it:
+    /// the walks do not nest.
+    /// </para>
     /// <para>
     /// ⚠️ THE EMPTYING IS LOAD-BEARING, exactly as in <see cref="RentMergeInput"/>: the walk
     /// asks <c>result.Count == 0</c> to decide whether it is placing the first building, so a
