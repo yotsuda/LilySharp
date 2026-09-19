@@ -851,4 +851,59 @@ public class SkylineMergeTests
             + "that (measured 16,496 B), so this is a list being grown per batch instead of "
             + "lent by the thread and reserved once");
     }
+
+    /// <summary>A batch's result list is sized by what the resolve KEEPS, not by what the
+    /// batch was handed.</summary>
+    /// <remarks>
+    /// The other half of <see cref="ABatchAppendsIntoAPooledBuffer_NotIntoAGrowingOne"/>, and
+    /// it needs its own fixture because the two cannot both be seen in one. That gate's boxes
+    /// are DISJOINT, so the resolve keeps one building per box and the count it was handed IS
+    /// the answer — reserving the bound and sizing exactly are the same array there, and only
+    /// a rung climb stands out. Here every box covers the same span, so 600 appends resolve to
+    /// a single building, and the two policies are 19,224 B apart.
+    /// <para>
+    /// ⚠️ WHY IT MATTERS IN THE PRODUCT, where the boxes are neither all disjoint nor all
+    /// stacked: MEASURED (session 427, the owner's corpus, 231 books × eight forward
+    /// keystrokes, counted by construction) the resolve keeps <b>0.363</b> of what the batch
+    /// appends — 486.5 buildings in a keystroke, 176.8 out. Session 426 reserved
+    /// <c>batch.Count</c> because the count the walk comes to is not known until it is over;
+    /// the walk now writes to a buffer the thread lends and copies that count out, so the
+    /// array is exactly R. Keystroke allocation over that corpus fell 0.134%, which is the
+    /// whole of what this gate is about.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND THE POLICY IS NOT "exact-size everywhere" — see <c>sizeResultExactly</c>'s
+    /// remark. A first version of the change sized every resolve exactly and
+    /// <see cref="AMergeIntoALargeSkyline_DoesNotCopyItToReadIt"/> went red, because a skyline
+    /// that is merged into again has something to amortise and an array sized at R has to be
+    /// replaced by the next merge that adds a building.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ABatchsResultList_IsSizedByWhatTheResolveKeeps_NotByWhatItWasHanded()
+    {
+        long Batch()
+        {
+            var sky = new VerticalSkyline(VerticalDirection.Up);
+            sky.BeginBatch();
+            for (int i = 0; i < 600; i++)
+                sky.MergeBox(0, 100, 0, 1.0 + (i % 7));   // every box over the SAME span
+            sky.EndBatch();
+            return sky.Buildings.Count;
+        }
+
+        Assert.True(Batch() <= 4,
+            "the fixture is meant to collapse 600 appends to a handful of buildings; if it "
+            + "stopped doing that, this gate is measuring the disjoint case and cannot see "
+            + "the difference it exists for");
+        Batch();                      // JIT and first-touch, so the measured round is steady
+        long before = System.GC.GetAllocatedBytesForCurrentThread();
+        Batch();
+        long spent = System.GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(spent < 3000,
+            $"a warm 600-box batch that resolves to a handful of buildings allocated {spent} B; "
+            + "an array reserved at the batch's own count would be 24 + 32 × 600 = 19,224 B, so "
+            + "this is the result list being sized by the appends instead of by the answer");
+    }
 }

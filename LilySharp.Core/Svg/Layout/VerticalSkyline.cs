@@ -577,21 +577,17 @@ internal sealed class VerticalSkyline
         }
         else if (batch.Count > 1)
         {
-            // ⚠️ ROOM FOR THE RESULT, IN ONE ARRAY. The resolve rebuilds INTO _buildings, and a
-            // pooled batch leaves that EMPTY — so without this the doubling the batch stopped
-            // paying comes straight back on the way out, at the resolved count instead of the
-            // appended one. MEASURED by the two gates in SkylineMergeTests: a warm 240-box
-            // batch allocated 16,496 B growing its output, and the merge
-            // AMergeIntoALargeSkyline_DoesNotCopyItToReadIt makes into a batched 302-building
-            // skyline allocated 19,928 B against its 3,000 B ceiling, because that merge
-            // rebuilds into a list with no room left in it. The batch's count is the bound the
-            // resolve needs (it keeps at most one building per input and splits only where two
-            // overlap), so this is the ONE array a batch allocates — the capacity it used to
-            // arrive at by rungs.
-            _buildings.EnsureCapacity(batch.Count);
             // The batch's own buffer IS the resolve's input — the list the appends built, in
             // the order they built it. What went is the copy EndBatch used to make of it.
-            RebuildKeepingHighest(batch);
+            // ⚠️ AND THE ROOM FOR THE RESULT IS NO LONGER RESERVED HERE. Session 426 reserved
+            // batch.Count, because the resolve rebuilt INTO _buildings and a pooled batch
+            // leaves that empty — the doubling the batch stopped paying came back on the way
+            // out. But batch.Count is the BOUND, not the answer, and the two are far apart:
+            // MEASURED (session 427) the resolve keeps 0.363 of what it is handed, so the
+            // reservation was 2.8x the fill. A batched skyline is built once and then read, so
+            // the resolve sizes the result at exactly what it comes to instead — the policy,
+            // and the measurement behind it, are on sizeResultExactly.
+            RebuildKeepingHighest(batch, sizeResultExactly: true);
             CoalesceColinear();
         }
         else if (batch.Count == 1)
@@ -687,27 +683,56 @@ internal sealed class VerticalSkyline
     /// </para>
     /// </remarks>
     /// <param name="allBuildings">⚠️ MUST BE A LIST THIS SKYLINE DOES NOT OWN, never
-    /// <see cref="_buildings"/> itself: this rebuilds in place, so it clears
-    /// <see cref="_buildings"/> before the walk and uses it as the result buffer. Every call
-    /// site hands over the thread's rented buffer (<see cref="RentMergeInput"/>), which is
-    /// what makes that sound — and what saves a whole second full-size list plus its copy-back
-    /// on EVERY merge. MEASURED (session 191, Release, keystroke allocation): merging is the
-    /// hot allocator of a script-dense page and the buffer was the larger half of it.</param>
-    private void RebuildKeepingHighest(List<SkylineBuilding> allBuildings)
+    /// <see cref="_buildings"/> itself. Every call site hands over a buffer the thread lends —
+    /// <see cref="RentMergeInput"/> or the batch's own — which is what saves a whole second
+    /// full-size list on EVERY merge. MEASURED (session 191, Release, keystroke allocation):
+    /// merging is the hot allocator of a script-dense page and the buffer was the larger half
+    /// of it.
+    /// <para>
+    /// ⚠️ THE REASON CHANGED IN SESSION 427 AND THE RULE DID NOT. Until then this rebuilt IN
+    /// PLACE — it cleared <see cref="_buildings"/> and used it as the result buffer — so an
+    /// input that WAS <see cref="_buildings"/> would have been cleared mid-walk. The walk now
+    /// writes to <see cref="RentResolveOutput"/> and copies R out at the end, so that
+    /// particular damage is gone; what remains is that <see cref="ResolveFrom"/> hands the
+    /// input to the thread's pool afterwards, and a pool holding a live skyline's own list
+    /// resolves the next walk's buildings straight into that skyline.
+    /// </para></param>
+    /// <param name="sizeResultExactly">
+    /// Whether <see cref="_buildings"/> may be allocated at exactly the count the walk comes
+    /// to, instead of being grown into by <see cref="List{T}"/>'s doubling.
+    /// <para>
+    /// ⚠️ THIS IS A POLICY AND THE MEASUREMENT THAT DECIDES IT IS ALREADY IN THIS FILE, in
+    /// <see cref="t_mergeInput"/>'s remark: session 421 counted <see cref="EndBatch"/> running
+    /// 10,284 times over 10,284 DISTINCT skylines — a ratio of 1.00, because Begin/EndBatch is
+    /// a CONSTRUCTION idiom, a skyline is batched once and then read — while
+    /// <see cref="MergeInternal"/> reads 4.51 calls an instance.
+    /// </para>
+    /// <para>
+    /// So the two want opposite arrays. A batch-built skyline has nothing to amortise: doubling
+    /// only overshoots, and session 426's reservation of <c>batch.Count</c> overshot the other
+    /// way — MEASURED (session 427, the owner's corpus, eight forward keystrokes a book) the
+    /// resolve keeps 0.363 of what the batch appends, so the exit paid 0.206% of a keystroke to
+    /// fill 0.072%. A skyline that is merged into again DOES have something to amortise, and
+    /// exact-size is actively wrong for it: sized at R, the very next merge that adds one
+    /// building has to allocate again. <c>SkylineMergeTests.AMergeIntoALargeSkyline_</c>
+    /// <c>DoesNotCopyItToReadIt</c> is what says so — a first version of this change sized
+    /// every walk exactly and that gate went red, because its warm merges each add a building
+    /// to a 300-building skyline and each one then reallocated.
+    /// </para>
+    /// </param>
+    private void RebuildKeepingHighest(
+        List<SkylineBuilding> allBuildings, bool sizeResultExactly = false)
     {
-        // The contract in the param remark, said by the machine rather than by prose: a
-        // third caller that handed over _buildings itself would have this method clear the
-        // very list it is walking, and the damage — a silently truncated skyline — is the
-        // kind that comes out as spacing, not as a throw.
+        // The contract in the param remark, said by the machine rather than by prose.
         System.Diagnostics.Debug.Assert(
             !ReferenceEquals(allBuildings, _buildings),
-            "RebuildKeepingHighest rebuilds into _buildings; its input must be a separate list");
+            "RebuildKeepingHighest's input is handed to the thread's pool afterwards; "
+            + "it must not be this skyline's own list");
 
         allBuildings.Sort((a, b) => a.Start.CompareTo(b.Start));
 
-        // Rebuild skyline keeping highest at each point, straight into this skyline's own
-        // list — allBuildings already holds everything that was in it.
-        var result = _buildings;
+        // WHERE THE WALK WRITES, and it is a policy, not a detail — see the parameter.
+        var result = sizeResultExactly ? RentResolveOutput() : _buildings;
         result.Clear();
 
         // Lazily, so a walk that never overlaps — a resolved profile merged into an empty
@@ -743,7 +768,66 @@ internal sealed class VerticalSkyline
                 MergeOverlapping(result, building, scratch ??= new ResolveScratch());
             }
         }
+
+        if (!sizeResultExactly)
+        {
+            return;
+        }
+
+        // ⚠️ R IS KNOWN ONLY NOW, and that is the whole point. Clearing first means the
+        // capacity setter has nothing to copy; setting Capacity rather than calling
+        // EnsureCapacity is what makes the array EXACT — List.EnsureCapacity grows by
+        // doubling, so it would hand back up to twice this and put back the rungs this is
+        // here to retire.
+        _buildings.Clear();
+        if (_buildings.Capacity < result.Count)
+            _buildings.Capacity = result.Count;
+        _buildings.AddRange(result);
+        ReturnResolveOutput(result);
     }
+
+    /// <summary>
+    /// The buffer a resolve walk WRITES — the result it is building, lent from one buffer the
+    /// thread keeps between walks, so that the walk's own doubling is paid once per thread
+    /// instead of once per walk.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WHY THE RESULT NEEDS A BUFFER OF ITS OWN, when session 191 deliberately had the walk
+    /// rebuild in place. In place is free of copies but it forces the ARRAY to be chosen before
+    /// the answer is known: either the walk grows _buildings by rungs (what session 426 found,
+    /// and it is the larger half — MEASURED session 427: MergeInternal's exit grew 29,912,072 B
+    /// over 14,310 walks, 0.200% of a keystroke, and nobody had priced it) or a caller reserves
+    /// an upper bound (what session 426 did for EndBatch, 0.206%, of which only 0.072% was ever
+    /// filled). Resolving into a lent buffer and copying R out costs one memmove of R buildings
+    /// and lets _buildings be allocated at exactly R.
+    /// <para>
+    /// ⚠️ THE EMPTYING IS LOAD-BEARING, exactly as in <see cref="RentMergeInput"/>: the walk
+    /// asks <c>result.Count == 0</c> to decide whether it is placing the first building, so a
+    /// buffer still holding the last walk's result would merge that skyline's silhouette into
+    /// this one. <c>SkylineMergeTests</c> pins it.
+    /// </para>
+    /// <para>
+    /// ⚠️ AND IT IS TAKEN OUT OF THE DRAWER, so a walk that re-entered would get a list of its
+    /// own rather than the one being written. No product path nests today — the walk calls
+    /// <see cref="MergeOverlapping"/>, which merges no skyline — and this is what keeps that
+    /// from having to stay true.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<SkylineBuilding>? t_resolveOutput;
+
+    private static List<SkylineBuilding> RentResolveOutput()
+    {
+        var list = t_resolveOutput;
+        if (list is null)
+            return new List<SkylineBuilding>();
+        t_resolveOutput = null;
+        list.Clear();
+        return list;
+    }
+
+    private static void ReturnResolveOutput(List<SkylineBuilding> list) =>
+        t_resolveOutput = list;
 
     /// <summary>
     /// The scratch one resolve walk lends to every overlap it has to merge: the tail it
