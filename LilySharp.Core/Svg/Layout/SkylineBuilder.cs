@@ -502,11 +502,7 @@ internal sealed class SkylineBuilder
         var resolved = GlyphOutlineCache.GetOrAdd((quads, direction, size.Magnification),
             k => VerticalSkyline.FromGlyphOutline(k.Dir, k.Quads, size, 0, 0)
                 .Buildings.ToArray());
-        var placed = new SkylineBuilding[resolved.Length];
-        double raise = (int)direction * originUp;
-        for (int i = 0; i < resolved.Length; i++)
-            placed[i] = resolved[i].ShiftedHorizon(x).RaisedBy(raise);
-        return VerticalSkyline.FromResolvedBuildings(direction, placed);
+        return VerticalSkyline.FromPlacedProfile(direction, resolved, x, originUp);
     }
 
     /// <summary>

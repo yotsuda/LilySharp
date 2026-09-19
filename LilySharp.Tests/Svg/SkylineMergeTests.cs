@@ -493,6 +493,114 @@ public class SkylineMergeTests
             + "back per overlap");
     }
 
+    /// <summary>The buffer a resolve walk reads is lent by the thread, not by the walk — so
+    /// the SECOND walk must not find the first one's buildings still in it.</summary>
+    /// <remarks>
+    /// The walk's input list moved out of the call and up to the thread in session 421 (the
+    /// copy it used to allocate was 2.06% of a keystroke), and that put a Clear on the
+    /// correctness path: a buffer handed over still holding the last skyline's buildings
+    /// resolves them into this one — silhouette from grobs this skyline never saw. It is not
+    /// the idempotent kind of stale that <see cref="OneResolveWalkAllocatesItsScratchOnce_NotOncePerOverlap"/>
+    /// describes; it invents ink.
+    /// <para>
+    /// The two walks are deliberately far apart on the horizon and far apart in height, so a
+    /// leak shows up as an answer rather than as a rounding: the tall one is 50 units high
+    /// over [0, 150], the low one 1 and 2 units high over [0, 2].
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ASecondResolveOnTheSameThread_DoesNotInheritTheFirstsBuildings()
+    {
+        var tall = new VerticalSkyline(VerticalDirection.Up);
+        tall.BeginBatch();
+        tall.Merge(VerticalSkyline.FromBox(0, 100, 0, 50, VerticalDirection.Up));
+        tall.Merge(VerticalSkyline.FromBox(50, 150, 0, 40, VerticalDirection.Up));
+        tall.EndBatch();
+        Assert.Equal(50.0, tall.Height(10), Epsilon);
+
+        // The next walk on this thread is handed the very buffer that one filled.
+        var low = new VerticalSkyline(VerticalDirection.Up);
+        low.BeginBatch();
+        low.Merge(VerticalSkyline.FromBox(0, 1, 0, 1, VerticalDirection.Up));
+        low.Merge(VerticalSkyline.FromBox(1, 2, 0, 2, VerticalDirection.Up));
+        low.EndBatch();
+
+        Assert.Equal(1.0, low.Height(0.5), Epsilon);
+        Assert.Equal(2.0, low.Height(1.5), Epsilon);
+        // And nothing at all out where only the first walk had ink.
+        Assert.Equal(double.NegativeInfinity, low.Height(50));
+    }
+
+    /// <summary>A cached profile merged into an ALREADY-RESOLVED skyline keeps both
+    /// silhouettes: this skyline's own ink, and the profile's at the offset it was placed
+    /// at.</summary>
+    /// <remarks>
+    /// ⚠️ THIS ARM HAD NO OBSERVER AT ALL until session 421 wrote this. <c>Merge(resolved,
+    /// dx, dy)</c> has two arms — the batch one, which appends and defers, and this one, for
+    /// a skyline that is already resolved — and the product reaches this one 2,380 times a
+    /// corpus keystroke sweep (measured), yet a poison that dropped this skyline's own
+    /// buildings from the walk left all 8,739 tests green. The batch arm is what the lyric
+    /// and system builders use, and it is covered many times over; this one is the pedal and
+    /// annotation path, and it was covered by nothing.
+    /// </remarks>
+    [Fact]
+    public void AResolvedProfileMergedIntoAResolvedSkyline_KeepsBothSilhouettes()
+    {
+        var sky = new VerticalSkyline(VerticalDirection.Up);
+        sky.Merge(VerticalSkyline.FromBox(0, 10, 0, 3, VerticalDirection.Up));
+        Assert.Equal(3.0, sky.Height(5), Epsilon);
+
+        // A resolved profile of its own, placed twenty units along the horizon and two up.
+        var profile = VerticalSkyline.FromBox(0, 4, 0, 7, VerticalDirection.Up).Buildings;
+        sky.Merge(profile, 20.0, 2.0);
+
+        Assert.Equal(3.0, sky.Height(5), Epsilon);    // its own ink survived the merge
+        Assert.Equal(9.0, sky.Height(22), Epsilon);   // the profile arrived, shifted AND raised
+    }
+
+    /// <summary>A merge into a large skyline does not copy that skyline to read it.</summary>
+    /// <remarks>
+    /// The companion gate to <see cref="OneResolveWalkAllocatesItsScratchOnce_NotOncePerOverlap"/>,
+    /// one level out: that one pins the scratch INSIDE a walk, this one pins the walk's INPUT.
+    /// MEASURED (session 421, Release, the owner's corpus, eight forward keystrokes a book):
+    /// the input list was rebuilt on every one of 73,254 merges and 10,284 batch ends —
+    /// 320,748,776 B, 2.06% of a keystroke — and the profile that came out was right every
+    /// time, so nothing in the suite could see it. A gate on the cost is the only observer it
+    /// has, exactly as session 416 found for the scratch.
+    /// <para>
+    /// One-sided and roomy: three hundred buildings copied twice (the exact-size copy, then
+    /// the regrowth behind AddRange) is about 29 kB a merge, so a ceiling an order of
+    /// magnitude under that separates a rented buffer from a rebuilt one while leaving the
+    /// measured figure free to drift with List's growth policy.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void AMergeIntoALargeSkyline_DoesNotCopyItToReadIt()
+    {
+        var sky = new VerticalSkyline(VerticalDirection.Up);
+        sky.BeginBatch();
+        for (int i = 0; i < 300; i++)
+            sky.Merge(VerticalSkyline.FromBox(2 * i, 2 * i + 1, 0, 1 + i % 7, VerticalDirection.Up));
+        sky.EndBatch();
+        Assert.True(sky.Buildings.Count >= 300,
+            $"the fixture resolved to {sky.Buildings.Count} buildings; this gate needs a big one");
+
+        // Built outside the measurement, and merged once to warm: the first merge after a
+        // 300-building batch is the one that grows the thread's buffer to fit.
+        var warm = VerticalSkyline.FromBox(1.5, 2.5, 0, 9, VerticalDirection.Up);
+        var measured = VerticalSkyline.FromBox(3.5, 4.5, 0, 9, VerticalDirection.Up);
+        sky.Merge(warm);
+
+        long before = System.GC.GetAllocatedBytesForCurrentThread();
+        sky.Merge(measured);
+        long spent = System.GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(spent < 3000,
+            $"one merge into a {sky.Buildings.Count}-building skyline allocated {spent} B; "
+            + "rebuilding the walk's input would be about 29,000 B, so this is the skyline "
+            + "being copied to be read");
+    }
+
     /// <summary>Box i spans [3i, 3i+5] — two units of overlap with its neighbour — at a
     /// height that rises and falls, so the winner changes hands along the horizon rather
     /// than one box shadowing the rest.</summary>

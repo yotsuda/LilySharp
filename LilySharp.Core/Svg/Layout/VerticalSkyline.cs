@@ -94,6 +94,38 @@ internal sealed class VerticalSkyline
         VerticalDirection direction, IEnumerable<SkylineBuilding> resolved)
         => new(new List<SkylineBuilding>(resolved), direction);
 
+    /// <summary>
+    /// A resolved profile PLACED: the cached buildings of a glyph, a string or a wave, shifted
+    /// by <paramref name="dx"/> along the horizon and raised by <paramref name="dy"/> in the
+    /// caller's Y-up frame. Nothing is re-resolved — a placement is a shift plus a raise, both
+    /// monotone, so it commutes with the resolve, which is what lets a profile be resolved once
+    /// per (glyph, size) and placed per grob.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE SPELLING WHERE THERE WERE FOUR, and the fourth is what it cost.
+    /// <c>TextOutlineSkylines</c>, <c>TrillWaveOutline</c> and <c>DynamicOutline</c> each
+    /// carried a byte-identical private <c>PlaceResolved</c>, and <c>SkylineBuilder</c> a
+    /// fourth copy inline; every one of them built an ARRAY of placed buildings that
+    /// <see cref="FromResolvedBuildings"/> then copied again into the skyline's list — two
+    /// full-size allocations for a placement that needs one. MEASURED (session 421, Release,
+    /// the owner's corpus, eight forward keystrokes a book, allocated bytes): that second copy
+    /// was 51,637,312 B over 40,372 placements, <b>0.33% of a keystroke</b>.
+    /// <para>
+    /// This is HANDOFF §5.2.1② — two of a quantity and one of them drifts — read in the
+    /// direction the duplication actually ran: four hand-written placements against one
+    /// operation the skyline can name.
+    /// </para>
+    /// </remarks>
+    internal static VerticalSkyline FromPlacedProfile(
+        VerticalDirection direction, IReadOnlyList<SkylineBuilding> resolved, double dx, double dy)
+    {
+        double raise = (int)direction * dy;
+        var placed = new List<SkylineBuilding>(resolved.Count);
+        for (int i = 0; i < resolved.Count; i++)
+            placed.Add(resolved[i].ShiftedHorizon(dx).RaisedBy(raise));
+        return new(placed, direction);
+    }
+
     public VerticalDirection Direction => _direction;
     public bool IsEmpty => _buildings.Count == 0;
     public IReadOnlyList<SkylineBuilding> Buildings => _buildings;
@@ -222,25 +254,24 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
-    /// Adds a building to the skyline, merging as necessary.
+    /// Seats the one building of a brand-new skyline, padding the horizon either side of it
+    /// with the empty regions LilyPond's invariant asks for.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SKYLINE IS EMPTY HERE BY CONSTRUCTION, and this used to carry a merge arm for
+    /// when it was not: build a one-building skyline and <see cref="MergeInternal"/> it. That
+    /// arm was unreachable — this is private, its one caller is <see cref="FromBox"/>, and
+    /// FromBox makes the skyline two lines earlier. Session 421 counted it over the owner's
+    /// corpus as well before removing it: 0 calls in 1,848 keystrokes.
+    /// </remarks>
     private void AddBuilding(SkylineBuilding b)
     {
-        if (_buildings.Count == 0)
-        {
-            // Initialize with empty regions on both sides
-            if (b.Start > NegativeInfinity)
-                _buildings.Add(new SkylineBuilding(NegativeInfinity, NegativeInfinity, NegativeInfinity, b.Start));
-            _buildings.Add(b);
-            if (b.End < PositiveInfinity)
-                _buildings.Add(new SkylineBuilding(b.End, NegativeInfinity, NegativeInfinity, PositiveInfinity));
-        }
-        else
-        {
-            // Need to merge with existing
-            var other = new VerticalSkyline(new List<SkylineBuilding> { b }, _direction);
-            MergeInternal(other._buildings);
-        }
+        // Initialize with empty regions on both sides
+        if (b.Start > NegativeInfinity)
+            _buildings.Add(new SkylineBuilding(NegativeInfinity, NegativeInfinity, NegativeInfinity, b.Start));
+        _buildings.Add(b);
+        if (b.End < PositiveInfinity)
+            _buildings.Add(new SkylineBuilding(b.End, NegativeInfinity, NegativeInfinity, PositiveInfinity));
     }
 
     /// <summary>
@@ -307,10 +338,15 @@ internal sealed class VerticalSkyline
         double raise = (int)_direction * dy;
         if (!_deferResolve && !IsEmpty)
         {
-            var placed = new List<SkylineBuilding>(resolved.Count);
+            // EXACTLY the sequence MergeInternal would have been handed — this skyline's
+            // buildings, then the placed ones — so the sort sees the same input in the same
+            // order and the resolve the same output. The list `placed` used to be is the
+            // walk's own input now, which is the one it always was.
+            var input = RentMergeInput(_buildings.Count + resolved.Count);
+            input.AddRange(_buildings);
             foreach (var b in resolved)
-                placed.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
-            MergeInternal(placed);
+                input.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
+            ResolveFrom(input);
             return;
         }
         // Batch (or empty): append the placed buildings straight in — the same filtering
@@ -355,7 +391,9 @@ internal sealed class VerticalSkyline
         _deferResolve = false;
         if (_buildings.Count > 1)
         {
-            RebuildKeepingHighest(new List<SkylineBuilding>(_buildings));
+            var input = RentMergeInput(_buildings.Count);
+            input.AddRange(_buildings);
+            ResolveFrom(input);
             CoalesceColinear();
         }
     }
@@ -407,9 +445,10 @@ internal sealed class VerticalSkyline
         }
 
         // Collect all buildings and resolve keeping the highest at each point.
-        var allBuildings = new List<SkylineBuilding>(_buildings);
+        var allBuildings = RentMergeInput(_buildings.Count + otherBuildings.Count);
+        allBuildings.AddRange(_buildings);
         allBuildings.AddRange(otherBuildings);
-        RebuildKeepingHighest(allBuildings);
+        ResolveFrom(allBuildings);
     }
 
     /// <summary>
@@ -441,14 +480,13 @@ internal sealed class VerticalSkyline
     /// walk is linear; it was the churn.
     /// </para>
     /// </remarks>
-    /// <param name="allBuildings">⚠️ MUST BE THE CALLER'S OWN LIST, never
+    /// <param name="allBuildings">⚠️ MUST BE A LIST THIS SKYLINE DOES NOT OWN, never
     /// <see cref="_buildings"/> itself: this rebuilds in place, so it clears
-    /// <see cref="_buildings"/> before the walk and uses it as the result buffer. Both
-    /// call sites hand over a fresh <c>new List&lt;SkylineBuilding&gt;(_buildings)</c>,
-    /// which is what makes that sound — and what saves a whole second full-size list plus
-    /// its copy-back on EVERY merge. MEASURED (session 191, Release, keystroke allocation):
-    /// merging is the hot allocator of a script-dense page and the buffer was the larger
-    /// half of it.</param>
+    /// <see cref="_buildings"/> before the walk and uses it as the result buffer. Every call
+    /// site hands over the thread's rented buffer (<see cref="RentMergeInput"/>), which is
+    /// what makes that sound — and what saves a whole second full-size list plus its copy-back
+    /// on EVERY merge. MEASURED (session 191, Release, keystroke allocation): merging is the
+    /// hot allocator of a script-dense page and the buffer was the larger half of it.</param>
     private void RebuildKeepingHighest(List<SkylineBuilding> allBuildings)
     {
         // The contract in the param remark, said by the machine rather than by prose: a
@@ -528,6 +566,69 @@ internal sealed class VerticalSkyline
         internal readonly List<SkylineBuilding> Overlapping = new();
         internal readonly List<double> Boundaries = new();
         internal readonly List<SkylineBuilding> Merged = new();
+    }
+
+    /// <summary>
+    /// The list a resolve walk READS — the combined buildings it is about to sort — lent from
+    /// one buffer the thread keeps between walks. Every such list was built, read once by
+    /// <see cref="RebuildKeepingHighest"/> and dropped.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WHY IT IS NOT A FIELD ON THE SKYLINE, which is the cheaper thing to reach for.
+    /// MEASURED (session 421, Release, the owner's corpus, eight forward keystrokes a book,
+    /// allocated bytes): <see cref="EndBatch"/> ran 10,284 times over 10,284 DISTINCT
+    /// skylines — a ratio of 1.00. Begin/EndBatch is a CONSTRUCTION idiom: a skyline is
+    /// batched once and then read, so a buffer hanging off the instance would be allocated by
+    /// the one call that could have used it and amortise nothing. <see cref="MergeInternal"/>
+    /// reads 4.51 calls an instance, so a field would have served that half and not the other.
+    /// One buffer a THREAD serves both: 29,312,416 B of EndBatch input copies and
+    /// 291,436,360 B of MergeInternal's — together 2.06% of a keystroke.
+    /// <para>
+    /// ⚠️ THE THREAD IS THE SCOPE, not the process: two threads resolving two skylines share
+    /// nothing, the same property session 416's per-walk <see cref="ResolveScratch"/> locals
+    /// have. What it retains is one list a thread, grown to the largest walk that thread has
+    /// seen — 596 buildings, 19 KB, over the whole corpus, measured the same run.
+    /// </para>
+    /// <para>
+    /// ⚠️ RENTING TAKES THE LIST OUT OF THE DRAWER. <see cref="RentMergeInput"/> nulls the
+    /// slot, so a walk that re-entered would get a list of its own rather than the one being
+    /// read, and the buffer goes back only when the walk that took it is finished with it. No
+    /// product path nests today — the walk calls <see cref="MergeOverlapping"/>, which merges
+    /// no skyline — and this is what keeps that from having to stay true.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<SkylineBuilding>? t_mergeInput;
+
+    /// <summary>
+    /// Takes the thread's merge-input buffer, EMPTY and sized for <paramref name="capacity"/>
+    /// buildings.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE EMPTYING IS LOAD-BEARING, unlike the <see cref="ResolveScratch"/> clears session
+    /// 416 measured: the walk reads the WHOLE list, so a buffer still holding the previous
+    /// walk's buildings would resolve them into this skyline — silhouette out of nowhere, in
+    /// a skyline that never saw those grobs. <c>SkylineMergeTests</c> pins it.
+    /// </remarks>
+    private static List<SkylineBuilding> RentMergeInput(int capacity)
+    {
+        var list = t_mergeInput;
+        if (list is null)
+            return new List<SkylineBuilding>(capacity);
+        t_mergeInput = null;
+        list.Clear();
+        list.EnsureCapacity(capacity);
+        return list;
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="input"/> into this skyline and puts the buffer back for the
+    /// next walk on this thread. ⚠️ Nothing may hold <paramref name="input"/> afterwards.
+    /// </summary>
+    private void ResolveFrom(List<SkylineBuilding> input)
+    {
+        RebuildKeepingHighest(input);
+        t_mergeInput = input;
     }
 
     /// <summary>

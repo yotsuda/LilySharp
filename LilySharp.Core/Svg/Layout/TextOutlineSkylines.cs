@@ -254,13 +254,7 @@ internal static class TextOutlineSkylines
 
     private static VerticalSkyline PlaceResolved(
         VerticalDirection direction, SkylineBuilding[] resolved, double x, double y)
-    {
-        var placed = new SkylineBuilding[resolved.Length];
-        double raise = (int)direction * y;
-        for (int i = 0; i < resolved.Length; i++)
-            placed[i] = resolved[i].ShiftedHorizon(x).RaisedBy(raise);
-        return VerticalSkyline.FromResolvedBuildings(direction, placed);
-    }
+        => VerticalSkyline.FromPlacedProfile(direction, resolved, x, y);
 
     /// <summary>
     /// Flattens the string's path into sign-framed skyline quads ([x1, v1, v2, x2] with
