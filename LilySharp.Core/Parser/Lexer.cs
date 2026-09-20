@@ -80,9 +80,16 @@ internal sealed class Lexer
         return GreenCache.GetToken(kind, text, leadingTrivia, trailingTrivia);
     }
 
+    /// <remarks>
+    /// The first node is held in hand and the list is built only when a SECOND one arrives,
+    /// because the answers for none and for one do not use a list at all. This is the most
+    /// often built container in LilySharp.Core: 3,632 scans a keystroke over the reader's
+    /// corpus, of which 2,906 find no trivia and 726 find exactly one (session 447).
+    /// </remarks>
     private GreenNode? ScanTrivia(bool leading)
     {
-        var triviaList = new List<GreenNode>();
+        GreenNode? first = null;
+        List<GreenNode>? more = null;
 
         while (!IsAtEnd)
         {
@@ -90,21 +97,21 @@ internal sealed class Lexer
             {
                 case ' ':
                 case '\t':
-                    triviaList.Add(ScanWhitespace());
+                    GreenRun.Take(ScanWhitespace(), ref first, ref more);
                     break;
 
                 case '\r':
                 case '\n':
-                    triviaList.Add(ScanEndOfLine());
+                    GreenRun.Take(ScanEndOfLine(), ref first, ref more);
                     if (!leading) goto done; // trailing trivia stops at end of line
                     break;
 
                 case '/' when Peek() == '/':
-                    triviaList.Add(ScanLineComment());
+                    GreenRun.Take(ScanLineComment(), ref first, ref more);
                     break;
 
                 case '/' when Peek() == '*':
-                    triviaList.Add(ScanBlockComment());
+                    GreenRun.Take(ScanBlockComment(), ref first, ref more);
                     break;
 
                 default:
@@ -113,12 +120,16 @@ internal sealed class Lexer
         }
 
         done:
-        return triviaList.Count switch
-        {
-            0 => null,
-            1 => triviaList[0],
-            _ => new SyntaxTriviaList([.. triviaList])
-        };
+        // ⚠️ A RUN OF ONE IS HANDED BACK BARE, AND NO TEST WATCHES THAT. Wrapping it in a
+        // one-element SyntaxTriviaList instead is +0 red over the whole suite (session 447,
+        // poison 5 — the only poison of eleven that came back green where red was predicted).
+        // What makes this arm load-bearing is COST, not correctness: GreenCache hands out one
+        // shared instance per distinct trivia, and a fresh list node around each one would
+        // defeat that sharing on every token. Kept, with the reason written down, rather than
+        // left looking like a distinction the tree enforces.
+        if (more is null)
+            return first;                  // none, or one — no list was ever built
+        return new SyntaxTriviaList([first!, .. more]);
     }
 
     private SyntaxTrivia ScanWhitespace()

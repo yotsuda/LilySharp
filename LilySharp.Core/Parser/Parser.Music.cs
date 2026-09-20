@@ -379,14 +379,19 @@ internal sealed partial class Parser
             return null;
 
         var number = Advance();
-        var dots = new List<GreenNode?>();
+        // 213 durations a keystroke over the reader's corpus and 182 of them carry no dot at
+        // all, so the list waits for a second dot that almost never comes (session 447).
+        GreenNode? first = null;
+        List<GreenNode>? more = null;
 
         while (Check(SyntaxKind.Dot) && CurrentGluedToPrevious)
         {
-            dots.Add(Advance());
+            GreenRun.Take(Advance(), ref first, ref more);
         }
 
-        return new DurationGreen(number, [.. dots]);
+        if (more is null)
+            return new DurationGreen(number, first is null ? [] : [first]);
+        return new DurationGreen(number, [first!, .. more]);
     }
 
     private NoteGreen ParseNote()
@@ -1050,9 +1055,13 @@ internal sealed partial class Parser
         || Check(SyntaxKind.CloseBrace)
         || Check(SyntaxKind.EndOfFile);
 
-private GreenNode?[] ParseArticulations()
+/// <remarks>The run is collected through <see cref="GreenRun"/>: 519 of these scans a keystroke
+    /// over the reader's corpus and 369 of them find nothing at all, so the list is built only
+    /// when a second articulation arrives (session 447).</remarks>
+    private GreenNode?[] ParseArticulations()
     {
-        var articulations = new List<GreenNode?>();
+        GreenNode? first = null;
+        List<GreenNode>? more = null;
 
         while (true)
         {
@@ -1073,7 +1082,7 @@ private GreenNode?[] ParseArticulations()
                 if (Check(SyntaxKind.DashedBar))
                 {
                     var bang = Advance();
-                    articulations.Add(new MusicMarkGreen([at, bang, ExpectMarkName()]));
+                    GreenRun.Take(new MusicMarkGreen([at, bang, ExpectMarkName()]), ref first, ref more);
                     continue;
                 }
 
@@ -1089,7 +1098,7 @@ private GreenNode?[] ParseArticulations()
                         $"A navigation mark is bare, not '@': write '{Current.Text}' (e.g. segno, ds al coda) — '@' modifies a note.");
                     var navParts = new List<SyntaxToken> { at, Advance() };
                     while (Check(SyntaxKind.Dot)) { navParts.Add(Advance()); navParts.Add(Advance()); }
-                    articulations.Add(new MusicMarkGreen([.. navParts]));
+                    GreenRun.Take(new MusicMarkGreen([.. navParts]), ref first, ref more);
                     continue;
                 }
 
@@ -1117,16 +1126,16 @@ private GreenNode?[] ParseArticulations()
                             // The qualifier is REJECTED, not forgotten: it stays on the node
                             // (after the direction slot, which stays null so the reading is
                             // unchanged) so the tree still spells the source.
-                            articulations.Add(new DynamicGreen(at, name, null, null, dot, dir));
+                            GreenRun.Take(new DynamicGreen(at, name, null, null, dot, dir), ref first, ref more);
                         }
                         else
                         {
-                            articulations.Add(new DynamicGreen(at, name, dot, dir));
+                            GreenRun.Take(new DynamicGreen(at, name, dot, dir), ref first, ref more);
                         }
                     }
                     else
                     {
-                        articulations.Add(new DynamicGreen(at, name));
+                        GreenRun.Take(new DynamicGreen(at, name), ref first, ref more);
                     }
                 }
                 else if (IsArticulationName())
@@ -1160,7 +1169,7 @@ private GreenNode?[] ParseArticulations()
                             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                                 $"an articulation takes only one of '.up' / '.down'; remove the extra '.{extra.Text}'.");
                         }
-                        articulations.Add(new ArticulationGreen(at, name, dot, dir, [.. rejected]));
+                        GreenRun.Take(new ArticulationGreen(at, name, dot, dir, [.. rejected]), ref first, ref more);
                     }
                     // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(d:m),
                     // @mark("A"), @finger(3), @feather(right). The '.' is reserved
@@ -1198,7 +1207,7 @@ private GreenNode?[] ParseArticulations()
                             parts.Add(Advance()); // .
                             parts.Add(Advance()); // up / down
                         }
-                        articulations.Add(new MusicMarkGreen([.. parts]));
+                        GreenRun.Take(new MusicMarkGreen([.. parts]), ref first, ref more);
                     }
                     else if (Current.Kind == SyntaxKind.Identifier
                              && Current.Text.Equals("chord", StringComparison.OrdinalIgnoreCase))
@@ -1208,14 +1217,14 @@ private GreenNode?[] ParseArticulations()
                         // @chord(…)) so the chord-name collector handles it; the
                         // explicit form is still @chord(c:maj7).
                         var name = Advance();
-                        articulations.Add(new MusicMarkGreen([at, name]));
+                        GreenRun.Take(new MusicMarkGreen([at, name]), ref first, ref more);
                     }
                     else
                     {
                         // @staccato, @accent, @trill, etc. (a bare name; an annotation
                         // argument must use the (…) form above, not a '.').
                         var name = Advance();
-                        articulations.Add(new ArticulationGreen(at, name));
+                        GreenRun.Take(new ArticulationGreen(at, name), ref first, ref more);
                     }
                 }
                 else
@@ -1231,7 +1240,7 @@ private GreenNode?[] ParseArticulations()
                 // \4, \3 … — tab string-number annotation on the note (forces the
                 // fret's string on a tab staff; ignored on a notation staff).
                 var stringNum = Advance();
-                articulations.Add(new StringNumberAnnotationGreen(stringNum));
+                GreenRun.Take(new StringNumberAnnotationGreen(stringNum), ref first, ref more);
             }
             else if (Check(SyntaxKind.Backslash))
             {
@@ -1246,7 +1255,7 @@ private GreenNode?[] ParseArticulations()
                     var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
                     _diagnostics.Error(span, DiagnosticCodes.LilypondBackslashCommand,
                         $"Use '@{name.Text}' for annotations; backslash is reserved for tablature (e.g. string numbers like \\3).");
-                    articulations.Add(new DynamicGreen(backslash, name));
+                    GreenRun.Take(new DynamicGreen(backslash, name), ref first, ref more);
                 }
                 else
                 {
@@ -1262,7 +1271,9 @@ private GreenNode?[] ParseArticulations()
             }
         }
 
-        return [.. articulations];
+        if (more is null)
+            return first is null ? [] : [first];   // nothing, or one — no list was built
+        return [first!, .. more];
     }
 
     // 'up' / 'down' lex as plain identifiers; they are the placement words for the

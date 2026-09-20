@@ -641,14 +641,19 @@ internal sealed partial class LayoutEngine
     private static SystemAlignment ClassifySystem(ImmutableArray<StaffGroupLayout> groups)
     {
         StaffLayout? first = null, last = null;
-        var leading = ImmutableArray.CreateBuilder<StaffLayout>();
-        var trailing = ImmutableArray.CreateBuilder<int>();
+        // ⚠️ THE THREE BUILDERS WAIT FOR THEIR FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()`
+        // is not `new List<T>()`: it lays out its first block — 88 B for a reference element —
+        // before a single Add, and this method runs 103 times a keystroke over the reader's
+        // corpus while all three stay EMPTY in every one of them (session 447: a system whose
+        // staves are all spaceable classifies into nothing but `first` and `last`).
+        ImmutableArray<StaffLayout>.Builder? leading = null;
+        ImmutableArray<int>.Builder? trailing = null;
         // The rows that turned out to stand BETWEEN two spaceable staves, paired with the
         // staff they hang under. They are collected in `trailing` first and moved here the
         // moment a spaceable staff appears below them, because which of the two a row is
         // cannot be known until the walk reaches the next staff -- the same reason LilyPond
         // cuts its runs in one pass (page-layout-problem.cc:919-925).
-        var between = ImmutableArray.CreateBuilder<(int Anchor, int Row)>();
+        ImmutableArray<(int Anchor, int Row)>.Builder? between = null;
         int anchor = -1;
 
         foreach (var group in groups)
@@ -672,7 +677,11 @@ internal sealed partial class LayoutEngine
                 // (audit/lp-geometry page.ossia-pair.compressed.first-staff-refpoint, book OSSK).
                 if (!StaffAffinity.IsSpaceable(st.StaffAffinity))
                 {
-                    if (first is null) { leading.Add(st); continue; }
+                    if (first is null)
+                    {
+                        (leading ??= ImmutableArray.CreateBuilder<StaffLayout>()).Add(st);
+                        continue;
+                    }
                     // ★ EVERY NON-SPACEABLE LINE IS AN ELEMENT OF ITS RUN (2026-08-26), which
                     // is what page-layout-problem.cc:919-925 and :948-990 collect: the walk
                     // pushes a line onto `loose_lines` because it is not spaceable, and asks
@@ -688,7 +697,7 @@ internal sealed partial class LayoutEngine
                     // StaffAffinity.GetSpacingSpec for each pair — so a DOWN-affinity line in
                     // the run takes its own branches (:1284-1294 and :1313-1337) instead of
                     // the Lyrics numbers a score-wide spec would have handed it.
-                    trailing.Add(st.StaffIndex);
+                    (trailing ??= ImmutableArray.CreateBuilder<int>()).Add(st.StaffIndex);
                     continue;
                 }
                 // A spaceable staff below a row means that row stood BETWEEN two of them.
@@ -697,8 +706,9 @@ internal sealed partial class LayoutEngine
                 // spaceable positions of ONE system (page-layout-problem.cc:936-939) -- so the
                 // run is a run like any other and the rows in it are its elements. They are
                 // kept, keyed by the staff they hang under, and LyricEngraver walks them.
-                if (trailing.Count > 0)
+                if (trailing is { Count: > 0 })
                 {
+                    between ??= ImmutableArray.CreateBuilder<(int Anchor, int Row)>();
                     foreach (int row in trailing)
                         between.Add((anchor, row));
                     trailing.Clear();
@@ -711,8 +721,8 @@ internal sealed partial class LayoutEngine
         }
 
         return new SystemAlignment(
-            first, last, leading.ToImmutable(), trailing.ToImmutable(),
-            between.ToImmutable());
+            first, last, leading?.ToImmutable() ?? [], trailing?.ToImmutable() ?? [],
+            between?.ToImmutable() ?? []);
     }
 
     /// <summary>
