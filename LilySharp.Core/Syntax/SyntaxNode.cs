@@ -257,14 +257,12 @@ public abstract class SyntaxNode
     /// discovery walks were about half of the keystroke's collect cost
     /// (session 144: plain1k 41 of 82 ms, fingbeam1k 208 of 525 ms).
     /// </summary>
-    public IEnumerable<SyntaxNode> ChildNodes()
-    {
-        for (int i = 0; i < SlotCount; i++)
-        {
-            if (GetChild(i) is { } child)
-                yield return child;
-        }
-    }
+    /// <remarks>
+    /// ⚠️ This used to be a <c>yield return</c> method, so every caller paid for a state
+    /// machine on the CALL, before a single child was looked at — see
+    /// <see cref="ChildNodeList"/> for what that cost a keystroke.
+    /// </remarks>
+    public ChildNodeList ChildNodes() => new(this, 0, ChildNodeFilter.Any);
 
     /// <summary>
     /// The green-tree finder behind the collector's definition/music gathers and

@@ -428,25 +428,50 @@ public sealed partial class MeasureCollector
         // why the member flag rides along (see ArticulationItem.IsChordMember).
         // LILYPOND-REF: lily/script-engraver.cc (listen_articulation);
         //   lily/new-fingering-engraver.cc:109-110,144-157 add_script.
-        var articulations = node switch
+        // ⚠️ WALKED, NOT QUERIED, and the order is the claim the Concat used to make: a
+        // chord's own scripts first, then each member's, member by member. The chain this
+        // replaced (Select / Concat / SelectMany over the two lists) built one query object
+        // on EVERY call — 599.65 calls a keystroke, 38,378 B/keystroke (session 445) — to
+        // walk a list that is usually empty. Collect is a local function and is never turned
+        // into a delegate, so what it captures rides a ref struct and costs nothing.
+        switch (node)
         {
-            NoteSyntax note => note.Articulations.Select(a => (Node: a, IsMember: false)),
-            ChordSyntax chord => chord.Articulations
-                .Select(a => (Node: a, IsMember: false))
-                .Concat(chord.Pitches.SelectMany(
-                    p => p.Articulations.Select(a => (Node: a, IsMember: true)))),
-            ChordRepetitionSyntax rep => rep.Articulations.Select(a => (Node: a, IsMember: false)),
-            SlashNoteSyntax slashNote => slashNote.Articulations.Select(a => (Node: a, IsMember: false)),
-            BareDurationSyntax bareDur => bareDur.Articulations.Select(a => (Node: a, IsMember: false)),
-            RestSyntax rest => rest.Articulations.Select(a => (Node: a, IsMember: false)),
+            case NoteSyntax note:
+                foreach (var a in note.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
+            case ChordSyntax chord:
+                foreach (var a in chord.Articulations)
+                    Collect(a, isChordMember: false);
+                foreach (var pitch in chord.Pitches)
+                    foreach (var a in pitch.Articulations)
+                        Collect(a, isChordMember: true);
+                break;
+            case ChordRepetitionSyntax rep:
+                foreach (var a in rep.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
+            case SlashNoteSyntax slashNote:
+                foreach (var a in slashNote.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
+            case BareDurationSyntax bareDur:
+                foreach (var a in bareDur.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
+            case RestSyntax rest:
+                foreach (var a in rest.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
             // A bare << >> member is a note of its own (one head, one column), so its
             // scripts are Script_engraver's like a note's, not a chord member's.
-            PitchSyntax { Parent: ArpeggioSyntax } member =>
-                member.Articulations.Select(a => (Node: a, IsMember: false)),
-            _ => Enumerable.Empty<(SyntaxNode Node, bool IsMember)>()
-        };
+            case PitchSyntax { Parent: ArpeggioSyntax } member:
+                foreach (var a in member.Articulations)
+                    Collect(a, isChordMember: false);
+                break;
+        }
 
-        foreach (var (articulation, isChordMember) in articulations)
+        void Collect(SyntaxNode articulation, bool isChordMember)
         {
             if (articulation is ArticulationSyntax articulationSyntax)
             {

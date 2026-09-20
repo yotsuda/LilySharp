@@ -306,7 +306,7 @@ internal static partial class SpacingRules
     /// same anchor, so the width booked here is the width drawn.
     /// </remarks>
     public static (double Left, double Right) ClefGroupExtent(MultiStaffScore score)
-        => ClefGroupExtent(EngravedClefStencils(score));
+        => Fold(EngravedClefStencils(score).GetEnumerator());
 
     /// <summary>
     /// The clef stencil each staff contributes to the break-align group, as an
@@ -320,14 +320,78 @@ internal static partial class SpacingRules
     /// left is 0.2 (probe CGT — grob at 0.6, ink 0.800..3.400), beside a notation staff it
     /// is 0 (probe TKC — grob at 0.8, tab ink 1.000..3.600).
     /// </remarks>
-    private static IEnumerable<(double Left, double Right)> EngravedClefStencils(
-        MultiStaffScore score)
+    /// <remarks>
+    /// ⚠️ A struct walk, not a <c>yield return</c> method, and the reason is worth keeping:
+    /// when <see cref="Model.MultiStaffScore.EnumerateStaves"/> became a struct walk in
+    /// session 445, THIS iterator got BIGGER — its state machine now had to hold the whole
+    /// staff enumerator by value instead of one reference, and the site went 5,741 to
+    /// 9,329 B/keystroke. An iterator that walks a struct walk is the one shape where the
+    /// change costs rather than pays, so the whole chain has to come out.
+    /// </remarks>
+    private static ClefStencilWalk EngravedClefStencils(MultiStaffScore score)
+        => new(score);
+
+    /// <summary>The stencils <see cref="EngravedClefStencils"/> hands out — one per staff
+    /// that engraves a clef, skipping the text and ossia rows that engrave none.</summary>
+    /// <remarks>
+    /// ⚠️ THAT SENTENCE MAKES TWO CLAIMS AND ONLY ONE OF THEM IS OBSERVED (session 445, by
+    /// poison): stop skipping the TEXT rows and 10 tests go red; stop skipping the OSSIA
+    /// rows and not one of 8,774 does. The ossia arm is still believed right — an ossia's
+    /// clef is drawn at its own scale, so booking it here at full size would widen the group
+    /// for ink nobody draws — but no book in the corpus or the fixtures says so, and a green
+    /// suite is not evidence about it.
+    /// </remarks>
+    private readonly struct ClefStencilWalk
     {
-        foreach (var (_, staff, _) in score.EnumerateStaves())
+        private readonly MultiStaffScore _score;
+
+        internal ClefStencilWalk(MultiStaffScore score) => _score = score;
+
+        public Enumerator GetEnumerator() => new(_score.EnumerateStaves().GetEnumerator());
+
+        /// <summary>Walks the staves, skipping the rows that engrave no clef.</summary>
+        public struct Enumerator : IEnumerator<(double Left, double Right)>
         {
-            if (staff.IsTextRow || staff.IsOssia)
-                continue;
-            yield return staff.IsTab ? TabClefStencil : ClefStencil(staff.Clef);
+            private Model.StaffWalk.Enumerator _staves;
+
+            internal Enumerator(Model.StaffWalk.Enumerator staves)
+            {
+                _staves = staves;
+                Current = default;
+            }
+
+            /// <summary>The stencil extent the walk is standing on.</summary>
+            public (double Left, double Right) Current { get; private set; }
+
+            readonly object System.Collections.IEnumerator.Current => Current;
+
+            /// <summary>Advances to the next clef-engraving staff.</summary>
+            /// <returns><c>false</c> once the staves run out.</returns>
+            public bool MoveNext()
+            {
+                while (_staves.MoveNext())
+                {
+                    var staff = _staves.Current.Staff;
+                    if (staff.IsTextRow || staff.IsOssia)
+                        continue;
+                    Current = staff.IsTab ? TabClefStencil : ClefStencil(staff.Clef);
+                    return true;
+                }
+                Current = default;
+                return false;
+            }
+
+            /// <summary>Returns the walk to the first staff.</summary>
+            public void Reset()
+            {
+                _staves.Reset();
+                Current = default;
+            }
+
+            /// <summary>Nothing is held, so nothing is released.</summary>
+            public readonly void Dispose()
+            {
+            }
         }
     }
 
@@ -355,10 +419,23 @@ internal static partial class SpacingRules
     /// </remarks>
     public static (double Left, double Right) ClefGroupExtent(
         IEnumerable<(double Left, double Right)> stencils)
+        => Fold(stencils.GetEnumerator());
+
+    /// <summary>THE fold — the union of a set of clef stencils, in the frame of a clef's own
+    /// grob origin, with the empty set giving the empty extent.</summary>
+    /// <remarks>
+    /// ⚠️ Generic over the ENUMERATOR, so the score walk can hand it a struct and pay no box
+    /// while the tests hand it an array through the interface. Writing the four lines twice
+    /// would be the second spelling this method exists to prevent — a tab staff's
+    /// contribution would then be modelled once for the score and once for the tests.
+    /// </remarks>
+    private static (double Left, double Right) Fold<TEnumerator>(TEnumerator stencils)
+        where TEnumerator : IEnumerator<(double Left, double Right)>
     {
         double left = double.PositiveInfinity, right = double.NegativeInfinity;
-        foreach (var (l, r) in stencils)
+        while (stencils.MoveNext())
         {
+            var (l, r) = stencils.Current;
             left = Math.Min(left, l);
             right = Math.Max(right, r);
         }

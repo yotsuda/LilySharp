@@ -3896,7 +3896,14 @@ public sealed partial class MeasureCollector
 
     /// <summary>The post-event articulations attached to a note or chord (empty for
     /// anything else). The single source for the former five-copy node switch.</summary>
-    private static IEnumerable<SyntaxNode> ArticulationsOf(SyntaxNode node) => node switch
+    /// <remarks>
+    /// ⚠️ The return type is <see cref="ChildNodeList"/>, NOT the interface, and the last arm
+    /// is that type's empty default rather than <c>Enumerable.Empty</c>: one interface-typed
+    /// arm would put the whole switch back on the interface, and the nine <c>foreach</c>es
+    /// that read this funnel would box again. MEASURED (session 445): this funnel is read
+    /// 3,223 times a keystroke from <c>HasNamedArticulation</c> alone.
+    /// </remarks>
+    private static ChildNodeList ArticulationsOf(SyntaxNode node) => node switch
     {
         NoteSyntax note => note.Articulations,
         ChordSyntax chord => chord.Articulations,
@@ -3915,7 +3922,7 @@ public sealed partial class MeasureCollector
         // kept working. LILYPOND-REF: lily/parser.yy — post-events attach to
         // rests; regression dynamics-rest-positioning.ly is the pin.
         RestSyntax rest => rest.Articulations,
-        _ => Enumerable.Empty<SyntaxNode>()
+        _ => default
     };
 
     /// <summary>Notehead style from a <c>@notehead(style)</c> annotation on the

@@ -174,8 +174,13 @@ internal static class MultiMeasureRestEngraver
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
         // Every staff's voices: the bounding columns a rest centres between span the system.
-        IEnumerable<ImmutableArray<Voice>> staves =
-            voicesByStaff != null ? voicesByStaff.Values : new[] { score.Voices };
+        // ⚠️ MATERIALISED ONCE, and typed as the array rather than the interface: the two arms
+        // hand back different concrete types (a dictionary's value collection and an array), so
+        // BarWidth could not narrow its parameter and boxed an enumerator on each of its 214
+        // calls a keystroke — 8,569 B/keystroke (session 445). Building the array here costs
+        // one object per CALL of this method instead of one per BAR.
+        ImmutableArray<ImmutableArray<Voice>> staves =
+            voicesByStaff != null ? [.. voicesByStaff.Values] : [score.Voices];
 
         // Measures a staff repeats under a % sign print ONLY the sign there:
         // LilyPond's percent iterator plays the body once, so its MMR engraver
@@ -367,7 +372,7 @@ internal static class MultiMeasureRestEngraver
     /// bar 2 (the cue clef back to treble before bar 3) −1.16.
     /// </remarks>
     private static (double StartX, double EndX) BarWidth(
-        Rendering.ScoreTextMetrics fonts, IEnumerable<ImmutableArray<Voice>> staves,
+        Rendering.ScoreTextMetrics fonts, ImmutableArray<ImmutableArray<Voice>> staves,
         SystemLayout system, MeasureLayout first, int firstIndex, BarlineType firstStartBarline,
         MeasureLayout last, int lastIndex, BarlineType lastEndBarline)
     {
@@ -644,23 +649,97 @@ internal static class MultiMeasureRestEngraver
     /// carries, or the single unindexed staff when the system has no groups — which is
     /// the single-staff path, where this keeps the previous behaviour exactly.
     /// </summary>
-    private static IEnumerable<int> StaffIndicesIn(SystemLayout system, int requested)
+    /// <remarks>
+    /// ⚠️ A struct walk, not a <c>yield return</c> method, and not because this one is hot
+    /// in itself: it is read 214 times a keystroke and the answer is ONE index on the
+    /// single-staff path, so the 88-byte state machine was 18,852 B/keystroke — 0.37% of the
+    /// keystroke — to carry a single <c>int</c> (session 445; see
+    /// <see cref="Syntax.ChildNodeList"/> for the shape).
+    /// </remarks>
+    private static StaffIndexWalk StaffIndicesIn(SystemLayout system, int requested)
+        => new(system, requested);
+
+    /// <summary>The walk <see cref="StaffIndicesIn"/> hands out. Allocates nothing.</summary>
+    private readonly struct StaffIndexWalk
     {
-        if (requested >= 0 || system.StaffGroups.IsDefaultOrEmpty)
+        private readonly SystemLayout _system;
+        private readonly int _requested;
+
+        internal StaffIndexWalk(SystemLayout system, int requested)
         {
-            yield return requested;
-            yield break;
+            _system = system;
+            _requested = requested;
         }
 
-        bool any = false;
-        foreach (var group in system.StaffGroups)
-            foreach (var staff in group.Staves)
+        public Enumerator GetEnumerator() => new(_system, _requested);
+
+        /// <summary>Yields the requested index alone, or every staff of every group —
+        /// and the requested index after all when the groups turn out to hold no staff.</summary>
+        public struct Enumerator
+        {
+            private readonly SystemLayout _system;
+            private readonly int _requested;
+            // Decided up front, as the yield-return version decided it before its first
+            // yield: StaffGroups may be DEFAULT here, and a default ImmutableArray has no
+            // Length to ask for.
+            private readonly bool _requestedOnly;
+            private int _group;
+            private int _staff;
+            private bool _any;
+            private bool _spentRequested;
+
+            internal Enumerator(SystemLayout system, int requested)
             {
-                any = true;
-                yield return staff.StaffIndex;
+                _system = system;
+                _requested = requested;
+                _requestedOnly = requested >= 0 || system.StaffGroups.IsDefaultOrEmpty;
+                _group = 0;
+                _staff = 0;
+                _any = false;
+                _spentRequested = false;
+                Current = 0;
             }
-        if (!any)
-            yield return requested;
+
+            /// <summary>The staff index the walk is standing on.</summary>
+            public int Current { get; private set; }
+
+            /// <summary>Advances to the next staff index.</summary>
+            /// <returns><c>false</c> once the walk is spent.</returns>
+            public bool MoveNext()
+            {
+                if (_requestedOnly)
+                {
+                    if (_spentRequested)
+                        return false;
+                    _spentRequested = true;
+                    Current = _requested;
+                    return true;
+                }
+
+                var groups = _system.StaffGroups;
+                while (_group < groups.Length)
+                {
+                    var group = groups[_group];
+                    if (_staff < group.Staves.Length)
+                    {
+                        Current = group.Staves[_staff].StaffIndex;
+                        _staff++;
+                        _any = true;
+                        return true;
+                    }
+                    _group++;
+                    _staff = 0;
+                }
+
+                if (!_any && !_spentRequested)
+                {
+                    _spentRequested = true;
+                    Current = _requested;
+                    return true;
+                }
+                return false;
+            }
+        }
     }
 
     /// <summary>

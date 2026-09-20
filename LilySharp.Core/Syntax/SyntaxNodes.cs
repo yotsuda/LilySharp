@@ -153,19 +153,7 @@ public sealed class PitchSyntax : SyntaxNode
     /// list never yielded it — the chord fretted as if unforced
     /// (tablature.ly's claim is exactly these entry forms).
     /// </remarks>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 1; i < SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
-                    or StringNumberAnnotationSyntax)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 1, ChildNodeFilter.PitchPostEvents);
 
     /// <summary>
     /// Gets the accidental as semitone offset (-2 to +2).
@@ -248,18 +236,7 @@ public sealed class NoteSyntax : SyntaxNode
     /// <summary>
     /// Gets the articulations and dynamics attached to this note.
     /// </summary>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 3; i < Green.SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child != null)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 3, ChildNodeFilter.Any);
 }
 
 /// <summary>
@@ -374,18 +351,7 @@ public sealed class DrumNoteSyntax : SyntaxNode
     public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
 
     /// <summary>The articulations and dynamics attached to this drum note.</summary>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 3; i < Green.SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child != null)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 3, ChildNodeFilter.Any);
 }
 
 /// <summary>
@@ -442,19 +408,7 @@ public sealed class RestSyntax : SyntaxNode
     /// that did not name it would leave the green tree holding a node no accessor hands
     /// out — a silent drop with no diagnostic anywhere.
     /// </para></remarks>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 4; i < SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
-                    or TieSyntax or SlurSyntax or BeamMarkerSyntax)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 4, ChildNodeFilter.RestPostEvents);
 }
 
 /// <summary>
@@ -556,22 +510,10 @@ public sealed class ArpeggioSyntax : SyntaxNode
     /// leaves the tree holding a node no accessor hands out. ⚠️ Only the slots AFTER
     /// <c>&gt;&gt;</c>: a slur written on a member (<c>&lt;&lt; c( e g) &gt;&gt;</c>) is a
     /// child before it, and belongs to <see cref="Sequence"/>, not to the group.</summary>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = CloseSlot + 1; i < SlotCount; i++)
-            {
-                var child = GetChild(i);
-                // The string number is on the list since 2026-09-07: `>>4\3` names every
-                // member's string, and without this arm it was dropped in silence.
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
-                    or StringNumberAnnotationSyntax
-                    or TieSyntax or SlurSyntax or BeamMarkerSyntax)
-                    yield return child;
-            }
-        }
-    }
+    /// <remarks>The string number is on the list since 2026-09-07: <c>&gt;&gt;4\3</c> names
+    /// every member's string, and without that kind it was dropped in silence — see
+    /// <see cref="ChildNodeFilter"/>.</remarks>
+    public ChildNodeList Articulations => new(this, CloseSlot + 1, ChildNodeFilter.FullPostEvents);
 
     /// <summary>The slot of the closing <c>&gt;&gt;</c> token (SlotCount when the group
     /// never closed — a parse error already reported).</summary>
@@ -788,20 +730,7 @@ public sealed class ChordSyntax : SyntaxNode
     /// lost its slur close from BOTH the MusicXML and the LilyPond twin, silently, while
     /// the engraved page was unaffected.
     /// </remarks>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 0; i < Green.SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax
-                    or StringNumberAnnotationSyntax
-                    or TieSyntax or SlurSyntax or BeamMarkerSyntax)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 0, ChildNodeFilter.FullPostEvents);
 }
 
 /// <summary>
@@ -858,18 +787,7 @@ public sealed class ChordRepetitionSyntax : SyntaxNode
 
     /// <summary>The articulations and dynamics attached to this repetition itself
     /// (the original chord's post-events are NOT copied — LP copies note events only).</summary>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = AfterOctaveMarks + 2; i < Green.SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child != null)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, AfterOctaveMarks + 2, ChildNodeFilter.Any);
 }
 
 /// <summary>
@@ -892,18 +810,7 @@ public sealed class SlashNoteSyntax : SyntaxNode
     public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
 
     /// <summary>The articulations and dynamics attached to this note.</summary>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 3; i < Green.SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child != null)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 3, ChildNodeFilter.Any);
 }
 
 /// <summary>
@@ -930,18 +837,7 @@ public sealed class BareDurationSyntax : SyntaxNode
 
     /// <summary>The articulations and dynamics attached to this repetition itself
     /// (the original's post-events are NOT copied — same rule as <c>q</c>).</summary>
-    public IEnumerable<SyntaxNode> Articulations
-    {
-        get
-        {
-            for (int i = 2; i < Green.SlotCount; i++)
-            {
-                var child = GetChild(i);
-                if (child != null)
-                    yield return child;
-            }
-        }
-    }
+    public ChildNodeList Articulations => new(this, 2, ChildNodeFilter.Any);
 }
 
 /// <summary>

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections;
 using System.Collections.Immutable;
 
 namespace LilySharp.Core.Svg.Model;
@@ -481,16 +482,97 @@ public sealed record MultiStaffScore
     /// <c>StaffLayout.StaffIndex</c> and <c>FindStaffYInSystem</c>; it
     /// continues across <see cref="StaffGroups"/> boundaries.
     /// </summary>
-    public IEnumerable<(StaffGroup Group, Staff Staff, int GlobalStaffIndex)> EnumerateStaves()
+    /// <remarks>
+    /// ⚠️ The return type is a struct, NOT the interface, and for the reason spelled out on
+    /// <see cref="Syntax.ChildNodeList"/>: this used to be a <c>yield return</c> method, so
+    /// every caller built an 88-byte state machine on the CALL. MEASURED (session 445, the
+    /// reader's corpus): the walks that read this cost 29,000 B/keystroke between them, and
+    /// the score of a lead sheet has ONE staff in it.
+    /// </remarks>
+    public StaffWalk EnumerateStaves() => new(this);
+}
+
+/// <summary>
+/// The walk <see cref="MultiStaffScore.EnumerateStaves"/> hands out: every staff of every
+/// group, with its group and its score-wide index. Walking it with <c>foreach</c> allocates
+/// nothing; handing it out as an <see cref="IEnumerable{T}"/> (LINQ, or a parameter declared
+/// as the interface) boxes it once.
+/// </summary>
+public readonly struct StaffWalk : IEnumerable<(StaffGroup Group, Staff Staff, int GlobalStaffIndex)>
+{
+    private readonly MultiStaffScore? _score;
+
+    internal StaffWalk(MultiStaffScore score) => _score = score;
+
+    /// <summary>The walk. <c>foreach</c> binds here, and allocates nothing.</summary>
+    public Enumerator GetEnumerator() => new(_score);
+
+    IEnumerator<(StaffGroup Group, Staff Staff, int GlobalStaffIndex)>
+        IEnumerable<(StaffGroup Group, Staff Staff, int GlobalStaffIndex)>.GetEnumerator()
+        => GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>Walks the groups in order, and each group's staves in order.</summary>
+    public struct Enumerator : IEnumerator<(StaffGroup Group, Staff Staff, int GlobalStaffIndex)>
     {
-        int globalIndex = 0;
-        foreach (var group in StaffGroups)
+        private readonly MultiStaffScore? _score;
+        private int _group;
+        private int _staff;
+        private int _global;
+        private (StaffGroup Group, Staff Staff, int GlobalStaffIndex) _current;
+
+        internal Enumerator(MultiStaffScore? score)
         {
-            for (int i = 0; i < group.Staves.Length; i++)
+            _score = score;
+            _group = 0;
+            _staff = 0;
+            _global = 0;
+            _current = default;
+        }
+
+        /// <summary>The staff the walk is standing on, with its group and score-wide index.</summary>
+        public readonly (StaffGroup Group, Staff Staff, int GlobalStaffIndex) Current => _current;
+
+        readonly object IEnumerator.Current => _current;
+
+        /// <summary>Advances to the next staff, crossing group boundaries without
+        /// restarting the score-wide index.</summary>
+        /// <returns><c>false</c> once the last group's last staff has been handed out.</returns>
+        public bool MoveNext()
+        {
+            if (_score is null)
+                return false;
+            var groups = _score.StaffGroups;
+            while (_group < groups.Length)
             {
-                yield return (group, group.Staves[i], globalIndex);
-                globalIndex++;
+                var group = groups[_group];
+                if (_staff < group.Staves.Length)
+                {
+                    _current = (group, group.Staves[_staff], _global);
+                    _staff++;
+                    _global++;
+                    return true;
+                }
+                _group++;
+                _staff = 0;
             }
+            _current = default;
+            return false;
+        }
+
+        /// <summary>Returns the walk to the first staff of the first group.</summary>
+        public void Reset()
+        {
+            _group = 0;
+            _staff = 0;
+            _global = 0;
+            _current = default;
+        }
+
+        /// <summary>Nothing is held, so nothing is released.</summary>
+        public readonly void Dispose()
+        {
         }
     }
 }
