@@ -236,7 +236,7 @@
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Parser/Parser.Music.cs`
-- **:435** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
+- **:440** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`

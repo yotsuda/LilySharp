@@ -354,18 +354,20 @@ internal sealed partial class Parser
         // a mean of 1.37 marks a pitch reads as "there is always something to hold", which is
         // why the ticket that priced this site prescribed sizing it instead.
         GreenNode? firstMark = null;
+        GreenNode? secondMark = null;
         List<GreenNode>? moreMarks = null;
 
         // Collect octave marks: ' or ,
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
         {
-            GreenRun.Take(Advance(), ref firstMark, ref moreMarks);
+            GreenRun.Take(Advance(), ref firstMark, ref secondMark, ref moreMarks);
         }
 
         GreenNode?[] octaveMarks =
             firstMark is null ? []
-            : moreMarks is null ? [firstMark]
-            : [firstMark, .. moreMarks];
+            : secondMark is null ? [firstMark]
+            : moreMarks is null ? [firstMark, secondMark]
+            : [firstMark, secondMark, .. moreMarks];
 
         // LILYPOND-REF: lily/parser.yy — chord_body grammar accepts post-event
         // articulations on each pitch (e.g., <c@finger.1 e@finger.3>). Outside of
@@ -394,16 +396,19 @@ internal sealed partial class Parser
         // 213 durations a keystroke over the reader's corpus and 182 of them carry no dot at
         // all, so the list waits for a second dot that almost never comes (session 447).
         GreenNode? first = null;
+        GreenNode? second = null;
         List<GreenNode>? more = null;
 
         while (Check(SyntaxKind.Dot) && CurrentGluedToPrevious)
         {
-            GreenRun.Take(Advance(), ref first, ref more);
+            GreenRun.Take(Advance(), ref first, ref second, ref more);
         }
 
-        if (more is null)
+        if (second is null)
             return new DurationGreen(number, first is null ? [] : [first]);
-        return new DurationGreen(number, [first!, .. more]);
+        if (more is null)
+            return new DurationGreen(number, [first!, second]);
+        return new DurationGreen(number, [first!, second, .. more]);
     }
 
     private NoteGreen ParseNote()
@@ -1073,6 +1078,7 @@ internal sealed partial class Parser
     private GreenNode?[] ParseArticulations()
     {
         GreenNode? first = null;
+        GreenNode? second = null;
         List<GreenNode>? more = null;
 
         while (true)
@@ -1094,7 +1100,7 @@ internal sealed partial class Parser
                 if (Check(SyntaxKind.DashedBar))
                 {
                     var bang = Advance();
-                    GreenRun.Take(new MusicMarkGreen([at, bang, ExpectMarkName()]), ref first, ref more);
+                    GreenRun.Take(new MusicMarkGreen([at, bang, ExpectMarkName()]), ref first, ref second, ref more);
                     continue;
                 }
 
@@ -1110,7 +1116,7 @@ internal sealed partial class Parser
                         $"A navigation mark is bare, not '@': write '{Current.Text}' (e.g. segno, ds al coda) — '@' modifies a note.");
                     var navParts = new List<SyntaxToken> { at, Advance() };
                     while (Check(SyntaxKind.Dot)) { navParts.Add(Advance()); navParts.Add(Advance()); }
-                    GreenRun.Take(new MusicMarkGreen([.. navParts]), ref first, ref more);
+                    GreenRun.Take(new MusicMarkGreen([.. navParts]), ref first, ref second, ref more);
                     continue;
                 }
 
@@ -1138,16 +1144,16 @@ internal sealed partial class Parser
                             // The qualifier is REJECTED, not forgotten: it stays on the node
                             // (after the direction slot, which stays null so the reading is
                             // unchanged) so the tree still spells the source.
-                            GreenRun.Take(new DynamicGreen(at, name, null, null, dot, dir), ref first, ref more);
+                            GreenRun.Take(new DynamicGreen(at, name, null, null, dot, dir), ref first, ref second, ref more);
                         }
                         else
                         {
-                            GreenRun.Take(new DynamicGreen(at, name, dot, dir), ref first, ref more);
+                            GreenRun.Take(new DynamicGreen(at, name, dot, dir), ref first, ref second, ref more);
                         }
                     }
                     else
                     {
-                        GreenRun.Take(new DynamicGreen(at, name), ref first, ref more);
+                        GreenRun.Take(new DynamicGreen(at, name), ref first, ref second, ref more);
                     }
                 }
                 else if (IsArticulationName())
@@ -1181,7 +1187,7 @@ internal sealed partial class Parser
                             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                                 $"an articulation takes only one of '.up' / '.down'; remove the extra '.{extra.Text}'.");
                         }
-                        GreenRun.Take(new ArticulationGreen(at, name, dot, dir, [.. rejected]), ref first, ref more);
+                        GreenRun.Take(new ArticulationGreen(at, name, dot, dir, [.. rejected]), ref first, ref second, ref more);
                     }
                     // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(d:m),
                     // @mark("A"), @finger(3), @feather(right). The '.' is reserved
@@ -1219,7 +1225,7 @@ internal sealed partial class Parser
                             parts.Add(Advance()); // .
                             parts.Add(Advance()); // up / down
                         }
-                        GreenRun.Take(new MusicMarkGreen([.. parts]), ref first, ref more);
+                        GreenRun.Take(new MusicMarkGreen([.. parts]), ref first, ref second, ref more);
                     }
                     else if (Current.Kind == SyntaxKind.Identifier
                              && Current.Text.Equals("chord", StringComparison.OrdinalIgnoreCase))
@@ -1229,14 +1235,14 @@ internal sealed partial class Parser
                         // @chord(…)) so the chord-name collector handles it; the
                         // explicit form is still @chord(c:maj7).
                         var name = Advance();
-                        GreenRun.Take(new MusicMarkGreen([at, name]), ref first, ref more);
+                        GreenRun.Take(new MusicMarkGreen([at, name]), ref first, ref second, ref more);
                     }
                     else
                     {
                         // @staccato, @accent, @trill, etc. (a bare name; an annotation
                         // argument must use the (…) form above, not a '.').
                         var name = Advance();
-                        GreenRun.Take(new ArticulationGreen(at, name), ref first, ref more);
+                        GreenRun.Take(new ArticulationGreen(at, name), ref first, ref second, ref more);
                     }
                 }
                 else
@@ -1252,7 +1258,7 @@ internal sealed partial class Parser
                 // \4, \3 … — tab string-number annotation on the note (forces the
                 // fret's string on a tab staff; ignored on a notation staff).
                 var stringNum = Advance();
-                GreenRun.Take(new StringNumberAnnotationGreen(stringNum), ref first, ref more);
+                GreenRun.Take(new StringNumberAnnotationGreen(stringNum), ref first, ref second, ref more);
             }
             else if (Check(SyntaxKind.Backslash))
             {
@@ -1267,7 +1273,7 @@ internal sealed partial class Parser
                     var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
                     _diagnostics.Error(span, DiagnosticCodes.LilypondBackslashCommand,
                         $"Use '@{name.Text}' for annotations; backslash is reserved for tablature (e.g. string numbers like \\3).");
-                    GreenRun.Take(new DynamicGreen(backslash, name), ref first, ref more);
+                    GreenRun.Take(new DynamicGreen(backslash, name), ref first, ref second, ref more);
                 }
                 else
                 {
@@ -1283,9 +1289,11 @@ internal sealed partial class Parser
             }
         }
 
-        if (more is null)
+        if (second is null)
             return first is null ? [] : [first];   // nothing, or one — no list was built
-        return [first!, .. more];
+        if (more is null)
+            return [first!, second];               // two — still no list
+        return [first!, second, .. more];
     }
 
     // 'up' / 'down' lex as plain identifiers; they are the placement words for the

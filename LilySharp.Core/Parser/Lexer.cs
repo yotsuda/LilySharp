@@ -89,6 +89,7 @@ internal sealed class Lexer
     private GreenNode? ScanTrivia(bool leading)
     {
         GreenNode? first = null;
+        GreenNode? second = null;
         List<GreenNode>? more = null;
 
         while (!IsAtEnd)
@@ -97,21 +98,21 @@ internal sealed class Lexer
             {
                 case ' ':
                 case '\t':
-                    GreenRun.Take(ScanWhitespace(), ref first, ref more);
+                    GreenRun.Take(ScanWhitespace(), ref first, ref second, ref more);
                     break;
 
                 case '\r':
                 case '\n':
-                    GreenRun.Take(ScanEndOfLine(), ref first, ref more);
+                    GreenRun.Take(ScanEndOfLine(), ref first, ref second, ref more);
                     if (!leading) goto done; // trailing trivia stops at end of line
                     break;
 
                 case '/' when Peek() == '/':
-                    GreenRun.Take(ScanLineComment(), ref first, ref more);
+                    GreenRun.Take(ScanLineComment(), ref first, ref second, ref more);
                     break;
 
                 case '/' when Peek() == '*':
-                    GreenRun.Take(ScanBlockComment(), ref first, ref more);
+                    GreenRun.Take(ScanBlockComment(), ref first, ref second, ref more);
                     break;
 
                 default:
@@ -127,9 +128,11 @@ internal sealed class Lexer
         // shared instance per distinct trivia, and a fresh list node around each one would
         // defeat that sharing on every token. Kept, with the reason written down, rather than
         // left looking like a distinction the tree enforces.
-        if (more is null)
+        if (second is null)
             return first;                  // none, or one — no list was ever built
-        return new SyntaxTriviaList([first!, .. more]);
+        if (more is null)
+            return new SyntaxTriviaList([first!, second]);   // two — still no list
+        return new SyntaxTriviaList([first!, second, .. more]);
     }
 
     private SyntaxTrivia ScanWhitespace()

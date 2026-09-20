@@ -19,7 +19,8 @@ using System.Collections.Generic;
 namespace LilySharp.Core.Parser;
 
 /// <summary>
-/// Collects a run of green nodes without building a list for the run that holds nothing or one.
+/// Collects a run of green nodes without building a list for the run that holds nothing, one
+/// or two.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -32,7 +33,16 @@ namespace LilySharp.Core.Parser;
 /// every one of those calls.
 /// </para>
 /// <para>
-/// ⚠️ It is a static taking two <c>ref</c>s and not a local function closing over the two
+/// ⚠️ THE SECOND HAND IS NOT SYMMETRY, IT IS THE MEASUREMENT. With only <c>first</c> held,
+/// this site became the most often built container in LilySharp.Core — 214.68 lists a
+/// keystroke — and the census that priced it found 99.6% of them holding EXACTLY ONE element
+/// (session 448): the run is exactly two nodes, so the list was built to carry a single node
+/// into a two-element finishing array. Holding the second node too removes 18,821 B a
+/// keystroke and leaves the list to the 0.4% of runs that are three or longer (max 11, an
+/// articulation pile).
+/// </para>
+/// <para>
+/// ⚠️ It is a static taking three <c>ref</c>s and not a local function closing over the three
 /// locals: a closure would allocate a display class on every call, which is the cost this
 /// exists to remove.
 /// </para>
@@ -42,12 +52,15 @@ internal static class GreenRun
     /// <summary>Adds <paramref name="node"/> to the run.</summary>
     /// <param name="node">The node to keep.</param>
     /// <param name="first">The first node of the run, or <c>null</c> while the run is empty.</param>
-    /// <param name="more">The rest of the run, built on the second node and not before.</param>
-    internal static void Take<T>(T node, ref T? first, ref List<T>? more)
+    /// <param name="second">The second node of the run, or <c>null</c> while the run is shorter.</param>
+    /// <param name="more">The rest of the run, built on the third node and not before.</param>
+    internal static void Take<T>(T node, ref T? first, ref T? second, ref List<T>? more)
         where T : class
     {
         if (first is null)
             first = node;
+        else if (second is null)
+            second = node;
         else
             (more ??= new List<T>()).Add(node);
     }
