@@ -415,7 +415,13 @@ internal sealed class AccidentalPlacement
         // each note-name+alteration is positioned against the reference; later ones at that
         // note name snap to the SAME column (same octave overstrikes, different octaves align
         // vertically — C♯4 and C♯5 sit in one column, as LilyPond draws them).
-        var apeColumn = new Dictionary<(int NoteName, string Accidental), double>();
+        // 40.11 of these a keystroke over the reader's corpus, and 99.9% of them finish
+        // holding ONE column — a chord's accidentals are almost always all the same note
+        // name. So the first column lives in a pair of locals and the dictionary is built on
+        // the second DISTINCT name, which arrives once in a thousand (session 448).
+        (int NoteName, string Accidental) firstApeKey = default;
+        double? firstApeOffset = null;
+        Dictionary<(int NoteName, string Accidental), double>? apeColumn = null;
         double lastOffset = 0.0;
 
         foreach (var entry in entries)
@@ -435,7 +441,12 @@ internal sealed class AccidentalPlacement
             glyphRight.Shift(yCenterSS);
 
             double offset;
-            if (apeColumn.TryGetValue(apeKey, out double sharedOffset))
+            if (firstApeOffset is { } firstShared && firstApeKey.Equals(apeKey))
+            {
+                offset = firstShared;
+            }
+            else if (apeColumn is not null
+                     && apeColumn.TryGetValue(apeKey, out double sharedOffset))
             {
                 offset = sharedOffset;
             }
@@ -449,7 +460,16 @@ internal sealed class AccidentalPlacement
                     offset = lastOffset;
                 else
                     offset -= _params.Padding;
-                apeColumn[apeKey] = offset;
+                if (firstApeOffset is null)
+                {
+                    firstApeKey = apeKey;
+                    firstApeOffset = offset;
+                }
+                else
+                {
+                    (apeColumn ??= new Dictionary<(int NoteName, string Accidental), double>())
+                        [apeKey] = offset;
+                }
                 lastOffset = offset;
             }
 

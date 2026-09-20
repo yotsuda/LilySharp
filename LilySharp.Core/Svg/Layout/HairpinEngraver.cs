@@ -564,8 +564,6 @@ internal static class HairpinEngraver
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<DynamicItem> dynamics)
     {
-        var hairpins = ImmutableArray.CreateBuilder<HairpinItem>();
-
         // Sort all events by position (measure, item). F3/B: keep each mark's ORIGINAL
         // index in musicMarks (== score.MusicMarks) so the hairpin can re-derive its
         // data-pos from the live score on reuse.
@@ -579,6 +577,13 @@ internal static class HairpinEngraver
 
         if (crescMarks.Count == 0)
             return ImmutableArray<HairpinItem>.Empty;
+
+        // ⚠️ BUILT AFTER THE GUARD ABOVE, not before it. `ImmutableArray.CreateBuilder<T>()`
+        // lays out its first block — 88 B for a reference element — before a single Add, and
+        // this method takes the `crescMarks.Count == 0` exit in all 4,010 of its calls over
+        // the reader's corpus, so the builder used to be laid out and thrown away every time
+        // (session 448).
+        var hairpins = ImmutableArray.CreateBuilder<HairpinItem>();
 
         // Sort dynamics by position. Free expressive text (@text) rides the
         // dynamics table but is NOT a dynamic level — a hairpin must run

@@ -288,7 +288,11 @@ internal static class TieVariantEngraver
         // (both walk every system's Measures and key on MeasureIndex), so the layout half was
         // a whole second dictionary of the score's measures for a value already in hand.
         var map = measureMap ?? LayoutUtilities.BuildMeasureMap(systems);
-        var builder = ImmutableArray.CreateBuilder<TieVariantLayout>();
+        // ⚠️ IT WAITS FOR ITS FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays out its
+        // first block — 88 B for a reference element — before a single Add, and over the
+        // reader's corpus this one is built 2.17 times a keystroke and stays EMPTY in every
+        // one of them: a book with no l.v. or repeat tie has nothing to lay out (session 448).
+        ImmutableArray<TieVariantLayout>.Builder? builder = null;
 
         var voice = score.Voice;
         for (int mi = 0; mi < voice.Measures.Length; mi++)
@@ -319,6 +323,7 @@ internal static class TieVariantEngraver
                         ChordItem c => c.BaseDuration,
                         _ => default,
                     });
+                    builder ??= ImmutableArray.CreateBuilder<TieVariantLayout>();
                     foreach (var tie in ties)
                         builder.Add(BuildLayout(
                             tie.StaffPosition, tie.CurveUp, tie.SourcePosition,
@@ -327,7 +332,7 @@ internal static class TieVariantEngraver
             }
         }
 
-        return builder.ToImmutable();
+        return builder?.ToImmutable() ?? [];
     }
 
     internal static readonly TieVariantKind[] KindPair =

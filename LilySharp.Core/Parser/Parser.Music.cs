@@ -347,13 +347,25 @@ internal sealed partial class Parser
     private PitchGreen ParsePitch(bool inChord = false)
     {
         var pitchToken = Advance(); // Consume pitch token (c, cis, des, etc.)
-        var octaveMarks = new List<GreenNode?>();
+
+        // 461.70 pitches a keystroke over the reader's corpus: 48.3% carry exactly one octave
+        // mark and 7.6% carry none, so the list waits for a second mark that comes to fewer
+        // than half of them (session 448). ⚠️ The count is NOT the reason the list was here —
+        // a mean of 1.37 marks a pitch reads as "there is always something to hold", which is
+        // why the ticket that priced this site prescribed sizing it instead.
+        GreenNode? firstMark = null;
+        List<GreenNode>? moreMarks = null;
 
         // Collect octave marks: ' or ,
         while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
         {
-            octaveMarks.Add(Advance());
+            GreenRun.Take(Advance(), ref firstMark, ref moreMarks);
         }
+
+        GreenNode?[] octaveMarks =
+            firstMark is null ? []
+            : moreMarks is null ? [firstMark]
+            : [firstMark, .. moreMarks];
 
         // LILYPOND-REF: lily/parser.yy — chord_body grammar accepts post-event
         // articulations on each pitch (e.g., <c@finger.1 e@finger.3>). Outside of
@@ -361,12 +373,12 @@ internal sealed partial class Parser
         // are consumed by ParseNote's own ParseArticulations call — we must NOT
         // pre-consume them here or they'd never reach the note.
         if (!inChord)
-            return new PitchGreen(pitchToken, [.. octaveMarks]);
+            return new PitchGreen(pitchToken, octaveMarks);
 
         var articulations = ParseArticulations();
         if (articulations.Length == 0)
-            return new PitchGreen(pitchToken, [.. octaveMarks]);
-        return new PitchGreen(pitchToken, [.. octaveMarks], articulations);
+            return new PitchGreen(pitchToken, octaveMarks);
+        return new PitchGreen(pitchToken, octaveMarks, articulations);
     }
 
     private DurationGreen? ParseOptionalDuration()

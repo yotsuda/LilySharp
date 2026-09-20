@@ -814,12 +814,17 @@ internal static class MusicMarkEngraver
             //
             // The per-system band skyline; null when the system has no chord ink above
             // the anchor staff's top line. Cached — MarkCeilingUp is asked per mark.
-            var chordBandUpBySystem = new Dictionary<int, VerticalSkyline?>();
+            // ⚠️ Built on the first question, not before: 22.90 of these a keystroke over the
+            // reader's corpus and 99.8% of them are never asked anything at all — MarkCeilingUp
+            // returns before it calls in whenever the system carries no chord names, which is
+            // almost every system (session 448).
+            Dictionary<int, VerticalSkyline?>? chordBandUpBySystem = null;
             VerticalSkyline? ChordBandUp(int measureIndex)
             {
                 if (!measureToSystemIdx.TryGetValue(measureIndex, out int sysIdx))
                     return null;
-                if (chordBandUpBySystem.TryGetValue(sysIdx, out var cached))
+                if (chordBandUpBySystem is not null
+                    && chordBandUpBySystem.TryGetValue(sysIdx, out var cached))
                     return cached;
                 VerticalSkyline? sky = null;
                 foreach (var cn in chordNames)
@@ -850,7 +855,7 @@ internal static class MusicMarkEngraver
                         cn.X, cn.X + ChordNameEngraver.SymbolInkWidth(fonts, cn),
                         chordUp + ink.Bottom, chordUp + ink.Top);
                 }
-                chordBandUpBySystem[sysIdx] = sky;
+                (chordBandUpBySystem ??= new Dictionary<int, VerticalSkyline?>())[sysIdx] = sky;
                 return sky;
             }
 

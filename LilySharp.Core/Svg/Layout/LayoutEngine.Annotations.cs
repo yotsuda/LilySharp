@@ -654,7 +654,11 @@ internal sealed partial class LayoutEngine
         PedalStyle StaffPedalStyle(int staffIndex) =>
             staffByIndex != null && staffByIndex.TryGetValue(staffIndex, out var st)
                 ? st.PedalStyle : PedalStyle.Text; // no staff info -> plain text
-        var pedalBracketBuilder = ImmutableArray.CreateBuilder<PedalBracketLayout>();
+        // ⚠️ IT WAITS FOR ITS FIRST BRACKET. `ImmutableArray.CreateBuilder<T>()` lays out its
+        // first block — 88 B for a reference element — before a single Add, and over the
+        // reader's corpus this one is built 2.17 times a keystroke and stays EMPTY in every
+        // one of them: no book in the corpus has a bracketed pedal (session 448).
+        ImmutableArray<PedalBracketLayout>.Builder? pedalBracketBuilder = null;
         if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
         {
             // measure -> system INDEX, to find the solved line of the system a bracket
@@ -688,12 +692,13 @@ internal sealed partial class LayoutEngine
                 double? staffTopDown =
                     staffYByIndex != null && staffYByIndex.TryGetValue(staffIndex, out var td)
                         ? td : null;
-                pedalBracketBuilder.AddRange(
-                    PedalEngraver.Calculate(brackets, systems, ml,
-                        isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDown));
+                (pedalBracketBuilder ??= ImmutableArray.CreateBuilder<PedalBracketLayout>())
+                    .AddRange(
+                        PedalEngraver.Calculate(brackets, systems, ml,
+                            isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDown));
             }
         }
-        var pedalBracketLayouts = pedalBracketBuilder.ToImmutable();
+        var pedalBracketLayouts = pedalBracketBuilder?.ToImmutable() ?? [];
         // A bracket/mixed style suppresses the "Ped." / "*" text a mark would draw.
         // The predicate is applied when the mark LAYOUT is built (below), so the raw
         // mark list — and every mark's SourceIndex into it — stays intact for the

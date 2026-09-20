@@ -172,7 +172,11 @@ internal static class MultiMeasureRestEngraver
 
         var measureMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         var voice = score.Voice;
-        var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
+        // ⚠️ IT WAITS FOR ITS FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays out its
+        // first block — 88 B for a reference element — before a single Add, and over the
+        // reader's corpus this one is built 2.17 times a keystroke and stays EMPTY in every
+        // one of them: a tab book has no multi-measure rest to lay out (session 448).
+        ImmutableArray<MultiMeasureRestLayout>.Builder? builder = null;
         // Every staff's voices: the bounding columns a rest centres between span the system.
         // ⚠️ MATERIALISED ONCE, and typed as the array rather than the interface: the two arms
         // hand back different concrete types (a dictionary's value collection and an array), so
@@ -282,6 +286,7 @@ internal static class MultiMeasureRestEngraver
                             continue;   // this voice holds the run's skips, not its rest
                         bool drawsCount = !counted;
                         counted = true;
+                        builder ??= ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
                         builder.Add(new MultiMeasureRestLayout(
                             DrawsCount: drawsCount,
                             StartMeasureIndex: runStart,
@@ -334,6 +339,7 @@ internal static class MultiMeasureRestEngraver
                     int ri = BarRestIndex(bar);
                     if (ri < 0 || ((RestItem)bar.Items[ri]).Duration < meters[m])
                         continue;
+                    builder ??= ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
                     builder.Add(new MultiMeasureRestLayout(
                         StartMeasureIndex: m,
                         MeasureCount: 1,
@@ -348,7 +354,7 @@ internal static class MultiMeasureRestEngraver
             }
         }
 
-        return builder.ToImmutable();
+        return builder?.ToImmutable() ?? [];
     }
 
     /// <summary>
@@ -612,7 +618,9 @@ internal static class MultiMeasureRestEngraver
             return false;
         }
 
-        var runs = ImmutableArray.CreateBuilder<MmrRun>();
+        // ⚠️ IT WAITS FOR ITS FIRST RUN, for the reason the builder at the top of this file
+        // carries: empty in all 4,010 of its builds over the reader's corpus (session 448).
+        ImmutableArray<MmrRun>.Builder? runs = null;
         int mi = 0;
         while (mi < primaryMeasures.Length)
         {
@@ -636,11 +644,12 @@ internal static class MultiMeasureRestEngraver
                 runEnd++;
             }
 
-            runs.Add(new MmrRun(runStart, runEnd - runStart + 1));
+            (runs ??= ImmutableArray.CreateBuilder<MmrRun>())
+                .Add(new MmrRun(runStart, runEnd - runStart + 1));
             mi = runEnd + 1;
         }
 
-        return runs.ToImmutable();
+        return runs?.ToImmutable() ?? [];
     }
 
     /// <summary>

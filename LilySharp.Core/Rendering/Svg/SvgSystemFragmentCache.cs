@@ -820,7 +820,12 @@ internal sealed class SvgSystemFragmentCache
             // The groups a leaf stands in, innermost first, each as its type and its order of
             // first appearance on the system — which says both what each group is and which
             // leaves share it: the delimiters, their X chain, span bars and ink are drawn from these.
-            var outerIds = new Dictionary<LilySharp.Core.Svg.Model.OuterStaffGroup, int>();
+            // ⚠️ Built on the first outer group, not before: 24.04 of these a keystroke over
+            // the reader's corpus and ALL 44,418 of them stayed empty — every group in the
+            // corpus has `Outer is null`, so nothing ever reaches the else branch below
+            // (session 448). The map is still what says which leaves share a group; it is
+            // only the empty case that no longer pays for one.
+            Dictionary<LilySharp.Core.Svg.Model.OuterStaffGroup, int>? outerIds = null;
             foreach (var g in system.StaffGroups)
             {
                 if (g.Outer is null)
@@ -829,6 +834,7 @@ internal sealed class SvgSystemFragmentCache
                 }
                 else
                 {
+                    outerIds ??= new Dictionary<LilySharp.Core.Svg.Model.OuterStaffGroup, int>();
                     foreach (var o in g.Outer.SelfAndOuters())
                     {
                         if (!outerIds.TryGetValue(o, out int id))

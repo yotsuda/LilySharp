@@ -140,7 +140,10 @@ internal static class StanzaNumberEngraver
                 firstLyricBySystem[key] = l;
         }
 
-        var builder = ImmutableArray.CreateBuilder<StanzaNumberLayout>();
+        // ⚠️ IT WAITS FOR ITS FIRST LABEL, for the reason the other eight builders of session
+        // 448 carry: `CreateBuilder<T>()` lays out its first block before a single Add, and
+        // this one was empty in every build over the reader's corpus.
+        ImmutableArray<StanzaNumberLayout>.Builder? builder = null;
         foreach (var ((sysIdx, _, verseNumber), lyric) in firstLyricBySystem)
         {
             if (sysIdx >= systems.Length) continue;
@@ -160,7 +163,8 @@ internal static class StanzaNumberEngraver
                 : system.Measures.IsDefaultOrEmpty
                     ? lyric.X - 4.0
                     : system.Measures[0].X - 4.0;
-            builder.Add(new StanzaNumberLayout(
+            (builder ??= ImmutableArray.CreateBuilder<StanzaNumberLayout>()).Add(
+                new StanzaNumberLayout(
                 VerseNumber: verseNumber,
                 SystemIndex: sysIdx,
                 MeasureIndex: lyric.Item.MeasureIndex,
@@ -169,6 +173,6 @@ internal static class StanzaNumberEngraver
                 Text: $"{verseNumber}."));
         }
 
-        return builder.ToImmutable();
+        return builder?.ToImmutable() ?? [];
     }
 }

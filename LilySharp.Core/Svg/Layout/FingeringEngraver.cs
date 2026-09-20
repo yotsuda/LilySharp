@@ -275,7 +275,12 @@ internal static class FingeringEngraver
         Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>?
             prebuiltTips = null)
     {
-        var layouts = ImmutableArray.CreateBuilder<FingeringLayout>();
+        // ⚠️ IT WAITS FOR THE FIRST FINGERED NOTE. `ImmutableArray.CreateBuilder<T>()` lays
+        // out its first block — 88 B for a reference element — before a single Add, and over
+        // the reader's corpus this one is built 1.8 times a keystroke and stays EMPTY in all
+        // of them: a tab book writes no fingerings (session 448). The two calls below are the
+        // only Adds and both already stand behind a "this item has one" gate.
+        ImmutableArray<FingeringLayout>.Builder? layouts = null;
 
         // Which beam each note belongs to — the STEM is a support of every fingering and a
         // beamed stem ends on the beam, so the gate below needs the same map the scripts use.
@@ -311,6 +316,7 @@ internal static class FingeringEngraver
 
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
+                    layouts ??= ImmutableArray.CreateBuilder<FingeringLayout>();
                     BuildLayouts(fonts,
                         new[] { (note.StaffPosition, note.Fingering.Value) },
                         new[] { note.StaffPosition },
@@ -325,6 +331,7 @@ internal static class FingeringEngraver
                         .ToArray();
                     if (fingered.Length == 0)
                         continue;
+                    layouts ??= ImmutableArray.CreateBuilder<FingeringLayout>();
                     BuildLayouts(fonts,
                         fingered,
                         chord.Notes.Select(n => n.StaffPosition).ToArray(),
@@ -334,7 +341,7 @@ internal static class FingeringEngraver
             }
         }
 
-        return layouts.ToImmutable();
+        return layouts?.ToImmutable() ?? [];
     }
 
     /// <summary>

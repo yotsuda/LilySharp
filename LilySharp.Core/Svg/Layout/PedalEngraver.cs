@@ -490,27 +490,33 @@ internal static class PedalEngraver
         if (musicMarks.IsDefaultOrEmpty)
             return ([], []);
 
-        var brackets = ImmutableArray.CreateBuilder<PedalBracketItem>();
-        var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
-        var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
+        // ⚠️ ALL THREE WAIT FOR THEIR FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays
+        // out its first block — 88 B for a reference element — before a single Add, and over
+        // the reader's corpus this method runs 2.17 times a keystroke with all three EMPTY in
+        // every one of them: no book in the corpus writes a pedal mark at all (session 448).
+        ImmutableArray<PedalBracketItem>.Builder? brackets = null;
+        ImmutableArray<UnpairedSpanWarning>.Builder? unpaired = null;
+        HashSet<(int Position, SpanPairingFault Fault)>? reported = null;
 
         void Report(int sourcePosition, SpanPairingFault fault)
         {
             // ONE ROOT CAUSE, ONE DIAGNOSTIC: a mark inside a repeated section arrives once
             // per playing, and the reader forgot one terminator however often it is played.
+            reported ??= new HashSet<(int Position, SpanPairingFault Fault)>();
             if (reported.Add((sourcePosition, fault)))
-                unpaired.Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Pedal, fault));
+                (unpaired ??= ImmutableArray.CreateBuilder<UnpairedSpanWarning>())
+                    .Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Pedal, fault));
         }
 
         // Each pedal is its own span: a sustain is not closed by a una corda.
         DetectBracketsForType(musicMarks, MusicMarkType.SustainOn, MusicMarkType.SustainOff,
-            PedalType.Sustain, brackets, Report);
+            PedalType.Sustain, ref brackets, Report);
         DetectBracketsForType(musicMarks, MusicMarkType.SostenutoOn, MusicMarkType.SostenutoOff,
-            PedalType.Sostenuto, brackets, Report);
+            PedalType.Sostenuto, ref brackets, Report);
         DetectBracketsForType(musicMarks, MusicMarkType.UnaCordaOn, MusicMarkType.UnaCordaOff,
-            PedalType.UnaCorda, brackets, Report);
+            PedalType.UnaCorda, ref brackets, Report);
 
-        return (brackets.ToImmutable(), unpaired.ToImmutable());
+        return (brackets?.ToImmutable() ?? [], unpaired?.ToImmutable() ?? []);
     }
 
     /// <summary>
@@ -526,7 +532,7 @@ internal static class PedalEngraver
         ImmutableArray<MusicMarkItem> musicMarks,
         MusicMarkType onType, MusicMarkType offType,
         PedalType pedalType,
-        ImmutableArray<PedalBracketItem>.Builder brackets,
+        ref ImmutableArray<PedalBracketItem>.Builder? brackets,
         Action<int, SpanPairingFault> report)
     {
         // Collect all on/off marks for this pedal type, ordered by position
@@ -545,7 +551,8 @@ internal static class PedalEngraver
                 // end the current bracket at this measure
                 if (activeOn != null)
                 {
-                    brackets.Add(new PedalBracketItem(
+                    (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(
+                        new PedalBracketItem(
                         pedalType,
                         activeOn.MeasureIndex,
                         mark.MeasureIndex,
@@ -564,7 +571,8 @@ internal static class PedalEngraver
                     report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
                     continue;
                 }
-                brackets.Add(new PedalBracketItem(
+                (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(
+                    new PedalBracketItem(
                     pedalType,
                     activeOn.MeasureIndex,
                     mark.MeasureIndex,

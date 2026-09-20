@@ -2837,7 +2837,13 @@ internal sealed class MultiStaffLayouter
             gi++;
         }
 
-        var builder = ImmutableArray.CreateBuilder<StaffSpring>();
+        // 27.83 of these a keystroke over the reader's corpus, and 76.6% of them end holding
+        // ONE spring with a further 23.4% holding none — a system is usually one spaceable
+        // pair or no pair at all. So the first spring lives in a local and the builder waits
+        // for the second (session 448). ⚠️ `CreateBuilder<T>()` is not `new List<T>()`: it
+        // lays out capacity 8 before a single Add, so an empty builder is on the books.
+        StaffSpring? firstSpring = null;
+        ImmutableArray<StaffSpring>.Builder? moreSprings = null;
         // CONSECUTIVE SPACEABLE, NOT ADJACENT — the walk this loop always claimed to be.
         // LILYPOND-REF: lily/page-layout-problem.cc:660-672 append_system — the loop springs
         // between consecutive `is_spaceable` elements and pushes everything else onto
@@ -2884,7 +2890,11 @@ internal sealed class MultiStaffLayouter
             upperEntry = i;
             between.Clear();
         }
-        return builder.ToImmutable();
+        if (moreSprings is not null)
+            return moreSprings.ToImmutable();
+        return firstSpring is null
+            ? ImmutableArray<StaffSpring>.Empty
+            : ImmutableArray.Create(firstSpring.Value);
 
         void AddSpring(
             (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex) up,
@@ -2945,8 +2955,19 @@ internal sealed class MultiStaffLayouter
             var (spec, minimum) = PairMinimum(
                 up.Group, low.Group, up.Layout.StaffIndex, low.Layout.StaffIndex,
                 staffSkylines, blocks, sp);
-            builder.Add(new StaffSpring(
-                up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum));
+            var spring = new StaffSpring(
+                up.Layout.StaffIndex, low.Layout.StaffIndex, spec, minimum);
+            if (firstSpring is null)
+                firstSpring = spring;
+            else
+                (moreSprings ??= Seeded(firstSpring.Value)).Add(spring);
+
+            static ImmutableArray<StaffSpring>.Builder Seeded(StaffSpring first)
+            {
+                var b = ImmutableArray.CreateBuilder<StaffSpring>();
+                b.Add(first);
+                return b;
+            }
         }
     }
 
