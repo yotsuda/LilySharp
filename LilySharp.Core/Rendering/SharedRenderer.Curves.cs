@@ -248,18 +248,31 @@ internal static partial class SharedRenderer
     // the measure is on another page).
     private static Dictionary<int, double> BuildMeasureToSystemTopYUp(PageLayout page)
     {
-        var map = new Dictionary<int, double>();
+        var map = new Dictionary<int, double>(MeasureCountOnPage(page));
         foreach (var system in page.Systems)
             foreach (var ml in system.Measures)
                 map[ml.MeasureIndex] = system.Y;
         return map;
     }
 
+    // The number of keys BOTH measure-keyed maps below end with — the Count, not a
+    // bound on it: a measure sits in exactly one of the page's systems, so the sum of
+    // the systems' measure counts IS the number of distinct keys. Session 440 measured
+    // that on the score-scoped twins of these maps (the size asked for equalled the
+    // finished Count in 37,022 of 37,022 calls). Allocates nothing.
+    private static int MeasureCountOnPage(PageLayout page)
+    {
+        int n = 0;
+        foreach (var system in page.Systems)
+            n += system.Measures.Length;
+        return n;
+    }
+
     // Measure → its SystemLayout, for drawers that need per-staff Y resolution
     // inside the system (the ossia bow shrink).
     private static Dictionary<int, SystemLayout> BuildMeasureToSystem(PageLayout page)
     {
-        var map = new Dictionary<int, SystemLayout>();
+        var map = new Dictionary<int, SystemLayout>(MeasureCountOnPage(page));
         foreach (var system in page.Systems)
             foreach (var ml in system.Measures)
                 map[ml.MeasureIndex] = system;

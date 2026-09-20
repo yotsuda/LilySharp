@@ -152,16 +152,26 @@ internal sealed class AccidentalPlacement
         GlyphMetrics.DesignMetrics? accidentalFont = null,
         GlyphMetrics.DesignMetrics? headFont = null)
     {
-        var accidentals = new List<(ChordNoteInfo Note, double HeadOffset)>();
+        // Counted before it is filled: the list's size is the number of accidental-
+        // carrying notes, which one pass over the chord already knows. The count also
+        // answers the empty case, so a chord with no accidental leaves with nothing
+        // built at all.
+        int accidentalCount = 0;
+        for (int i = 0; i < notes.Count; i++)
+            if (!string.IsNullOrEmpty(notes[i].Accidental))
+                accidentalCount++;
+
+        if (accidentalCount == 0)
+            return ImmutableArray<AccidentalLayout>.Empty;
+
+        var accidentals = new List<(ChordNoteInfo Note, double HeadOffset)>(accidentalCount);
         for (int i = 0; i < notes.Count; i++)
         {
+            if (string.IsNullOrEmpty(notes[i].Accidental))
+                continue;
             double off = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
-            if (!string.IsNullOrEmpty(notes[i].Accidental))
-                accidentals.Add((notes[i], off));
+            accidentals.Add((notes[i], off));
         }
-
-        if (accidentals.Count == 0)
-            return ImmutableArray<AccidentalLayout>.Empty;
 
         // Everything — a single accidental included — goes through the skyline packer:
         // LilyPond runs position_apes even for one accidental, so a lone accidental clears
@@ -374,7 +384,9 @@ internal sealed class AccidentalPlacement
         // accidental-carrying ones), at their real X extents; heads reversed to the LEFT of a
         // down-stem (seconds) shift their box. (LilyPond also adds the stems; for the LEFT
         // skyline they never protrude beyond the head boxes, so they are omitted here.)
-        var headBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        // Exactly one box per note of the column — the loop's own trip count.
+        var headBoxes =
+            new List<(double YBottom, double YTop, double XLeft, double XRight)>(allNotes.Count);
         for (int i = 0; i < allNotes.Count; i++)
         {
             double headOffset = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;

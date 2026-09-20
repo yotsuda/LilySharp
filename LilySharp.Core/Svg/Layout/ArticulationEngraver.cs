@@ -190,7 +190,10 @@ internal static class ArticulationEngraver
         int[] order = Enumerable.Range(0, articulations.Length).ToArray();
         if (articulations.Length > 1)
         {
-            var firstSeen = new Dictionary<(int, int, int), int>();
+            // One entry per distinct note, so the articulation count is the BOUND
+            // (several scripts on one note share an entry) — and it is the tightest
+            // one available here without walking the array twice.
+            var firstSeen = new Dictionary<(int, int, int), int>(articulations.Length);
             for (int k = 0; k < articulations.Length; k++)
             {
                 var a = articulations[k];
@@ -1183,8 +1186,15 @@ internal static class ArticulationEngraver
                 lastOnKey[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
             if (layout.OutsideStaffPriority is null)
             {
+                // ONE. Not a bound read off the shape of the loop — a measurement:
+                // over the reader's 231 books × 8 keystrokes, every list this line
+                // builds finished holding exactly one script (session 441, max 1 of
+                // 64,000-odd). A second same-side priority-less script on one note
+                // would regrow it, and a regrow from 1 is still cheaper than the
+                // empty list's first step to 4 — ArticulationLayout is 112 bytes, so
+                // the default builds four slots for the one that is used.
                 if (!supportScripts.TryGetValue(stackKey, out var placed))
-                    supportScripts[stackKey] = placed = new List<ArticulationLayout>();
+                    supportScripts[stackKey] = placed = new List<ArticulationLayout>(1);
                 placed.Add(layout);
             }
 
@@ -2086,9 +2096,20 @@ internal static class ArticulationEngraver
         BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts,
             HashSet<(int, int, int, int)>? wanted = null)
     {
-        var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
         if (beamLayouts.IsDefaultOrEmpty)
-            return tips;
+            return new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
+
+        // The bound the loop below cannot exceed: one entry per member it reaches,
+        // and never more than the keys the caller asked for. It is a bound and not
+        // the Count because two members can resolve to one key (the last write wins)
+        // and because `wanted` may name keys no beam carries.
+        int bound = 0;
+        foreach (var beam in beamLayouts)
+            bound += Math.Min(beam.Group.Members.Length, beam.MemberXPositions.Length);
+        if (wanted != null && wanted.Count < bound)
+            bound = wanted.Count;
+
+        var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>(bound);
         foreach (var beam in beamLayouts)
         {
             var group = beam.Group;

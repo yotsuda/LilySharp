@@ -709,8 +709,6 @@ internal sealed class SlurScoringProblem
     /// </remarks>
     private List<SlurCandidate> GenerateCandidates(double width)
     {
-        var candidates = new List<SlurCandidate>();
-
         bool preferUp = _slur.CurveUp;
         // Y-up: an up slur sits ABOVE its notes, so attachments move to larger Y.
         int dir = preferUp ? 1 : -1;
@@ -769,6 +767,20 @@ internal sealed class SlurScoringProblem
         //   os[d][Y_AXIS] += dir_ * staff_space_ / 2 on both loops.
         double step = 0.5 * _staffSpace; // half a staff space of THIS staff
         const double eps = 1e-9;
+
+        // The grid is a PRODUCT. Neither loop's bound reads the other's variable and
+        // every pair keeps its candidate (the too-short/too-steep case snaps X and is
+        // KEPT), so the count is (left steps) × (right steps) exactly. Counted by
+        // running the same accumulation with the body taken out rather than by a
+        // division: the loops step by repeated addition, and only repeated addition
+        // lands on the same last step they do.
+        int nLeft = 0;
+        for (double y = baseStartY; dir * y <= dir * endYLeft + eps; y += dir * step)
+            nLeft++;
+        int nRight = 0;
+        for (double y = baseEndY; dir * y <= dir * endYRight + eps; y += dir * step)
+            nRight++;
+        var candidates = new List<SlurCandidate>(nLeft * nRight);
 
         // The avoid points every candidate's curve is amplified over.
         // LILYPOND-REF: lily/slur-scoring.cc:709-719 generate_curves.

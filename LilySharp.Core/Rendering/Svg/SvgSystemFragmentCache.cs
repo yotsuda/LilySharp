@@ -630,35 +630,77 @@ internal sealed class SvgSystemFragmentCache
     {
         int first = system.Measures[0].MeasureIndex;
         int last = system.Measures[^1].MeasureIndex;
-        var anchors = new List<int>();
         bool isFirstSystem = system.SystemIndex == 0;
+        // The vector is built AT its length: the walk below is counted first
+        // (CountAnchors is the same walk with the writes taken out), so the fields go
+        // straight into the array the caller keeps. A List would have grown through
+        // every power of two on the way and then been copied into that array anyway.
+        var anchors = new int[CountAnchors(score, first, last, isFirstSystem)];
+        int n = 0;
         if (isFirstSystem)
         {
-            anchors.Add(score.Header.Key);
-            anchors.Add(score.Header.Time);
+            anchors[n++] = score.Header.Key;
+            anchors[n++] = score.Header.Time;
         }
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             if (isFirstSystem)
-                anchors.Add(staff.ClefPosition);
+                anchors[n++] = staff.ClefPosition;
             foreach (var voice in staff.Voices)
             {
                 var measures = voice.Measures;
                 for (int i = first; i <= last && i < measures.Length; i++)
                 {
-                    anchors.Add(measures[i].SourceStart);
-                    anchors.Add(measures[i].SourceEnd);
+                    anchors[n++] = measures[i].SourceStart;
+                    anchors[n++] = measures[i].SourceEnd;
                     foreach (var item in measures[i].Items)
                     {
-                        anchors.Add(item.SourcePosition);
+                        anchors[n++] = item.SourcePosition;
                         if (item is ChordItem chord)
                             foreach (var note in chord.Notes)
-                                anchors.Add(note.SourcePosition);
+                                anchors[n++] = note.SourcePosition;
                     }
                 }
             }
         }
-        return [.. anchors];
+        return anchors;
+    }
+
+    /// <summary>
+    /// How many anchors <see cref="PositionFingerprint"/> will write — its own walk
+    /// with the writes replaced by a count, so the two cannot drift apart silently:
+    /// an undercount throws on the write, an overcount leaves a zero the replay's
+    /// comparison sees. Allocates nothing, which is why it walks the staves through
+    /// <c>StaffGroups</c> (ImmutableArray, a struct enumerator) instead of
+    /// <see cref="MultiStaffScore.EnumerateStaves"/>, an iterator that would cost one
+    /// object per call; the two visit the same staves in the same order.
+    /// </summary>
+    private static int CountAnchors(MultiStaffScore score, int first, int last, bool isFirstSystem)
+    {
+        int n = isFirstSystem ? 2 : 0;
+        foreach (var group in score.StaffGroups)
+        {
+            foreach (var staff in group.Staves)
+            {
+                if (isFirstSystem)
+                    n++;
+                foreach (var voice in staff.Voices)
+                {
+                    var measures = voice.Measures;
+                    for (int i = first; i <= last && i < measures.Length; i++)
+                    {
+                        n += 2;
+                        foreach (var item in measures[i].Items)
+                        {
+                            n++;
+                            if (item is ChordItem chord)
+                                n += chord.Notes.Length;
+                        }
+                    }
+                }
+            }
+        }
+        return n;
     }
 
     // ⚠️ NOT the first measure's NUMBER. It used to be compared here (and every
