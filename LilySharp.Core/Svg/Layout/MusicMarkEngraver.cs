@@ -679,18 +679,41 @@ internal static class MusicMarkEngraver
 
         var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
 
+        // ONE SET OF BUFFERS FOR THE WHOLE PASS, not one per group. The split used to be two
+        // Where→OrderBy→ToList chains, and a chain of that shape allocates the same objects
+        // whether it is ordering twelve marks or one: MEASURED on the owner's corpus (231
+        // books, eight keystrokes each), 596 B a group over 42,328 groups = 0.172% of a
+        // keystroke, to answer "one mark, and it is above" — the marks arrive at 1.09 A GROUP
+        // (46,138 of them), 42,312 groups carry only the above side, and SIXTEEN groups in the
+        // whole corpus carry a below mark at all.
+        // ⚠️ THE ORDERING IS REAL WORK AND STAYS: 3,722 groups hold two or more above marks
+        // and 3,594 of those arrive in an order priority disagrees with. What goes is the
+        // allocation, not the order — see SortByOutsideStaffPriority for why the replacement
+        // has to be stable, as OrderBy was.
+        // ⚠️ SAFE ONLY BECAUSE NOTHING OUTLIVES ITS ITERATION: all three buffers are read
+        // inside the iteration that fills them (the one closure over belowMarks,
+        // GroupHasPedalChange, is a local function called from that same iteration). Anything
+        // that kept one past the `foreach` would read the NEXT group's marks.
+        var aboveMarks = new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
+        var belowMarks = new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
+        var placedAbove = new List<(double X0, double X1, double TopYUp)>();
+
         foreach (var group in groups)
         {
-            // Separate above-staff and below-staff marks
-            var aboveMarks = group
-                .Where(e => e.Mark.Vertical == MusicMarkVertical.Above)
-                .OrderBy(e => GetOutsideStaffPriority(e.Mark.Type))
-                .ToList();
-
-            var belowMarks = group
-                .Where(e => e.Mark.Vertical == MusicMarkVertical.Below)
-                .OrderBy(e => GetOutsideStaffPriority(e.Mark.Type))
-                .ToList();
+            // Separate above-staff and below-staff marks — one pass, keeping the order the
+            // group yields them in, which is the order the stable sort below preserves for
+            // equal priorities. A mark that is neither is dropped, as the two Wheres did.
+            aboveMarks.Clear();
+            belowMarks.Clear();
+            foreach (var e in group)
+            {
+                if (e.Mark.Vertical == MusicMarkVertical.Above)
+                    aboveMarks.Add(e);
+                else if (e.Mark.Vertical == MusicMarkVertical.Below)
+                    belowMarks.Add(e);
+            }
+            SortByOutsideStaffPriority(aboveMarks);
+            SortByOutsideStaffPriority(belowMarks);
 
             // Check if any mark in this group overlaps with a volta bracket
             bool hasVoltaOverlap = aboveMarks.Any(e => voltaMeasures.Contains(e.Mark.MeasureIndex));
@@ -878,7 +901,7 @@ internal static class MusicMarkEngraver
             // LILYPOND-REF: lily/axis-group-interface.cc avoid_outside_staff_collisions —
             //   outside-staff grobs are skylined pointwise, so two that do not meet in X do
             //   not raise each other however close their moments are.
-            var placedAbove = new List<(double X0, double X1, double TopYUp)>();
+            placedAbove.Clear();
             double stackTopYUp = baseAboveYUp;
             bool chainStarted = false;
 
@@ -1605,6 +1628,43 @@ internal static class MusicMarkEngraver
         MusicMarkType.Rehearsal => 1500,
         _ => 1500
     };
+
+    /// <summary>
+    /// Orders one anchor's marks by outside-staff priority, in place and STABLY.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Stability is the contract, not an implementation detail: the <c>OrderBy</c> this
+    /// replaces was stable, so marks of EQUAL priority kept the order the grouping yielded
+    /// them in, and that order is what the stack then builds outward from. Every type but the
+    /// five named in <see cref="GetOutsideStaffPriority"/> shares 1500, so ties are the common
+    /// case, not the corner. Insertion sort is stable because it only shifts a neighbour that
+    /// is STRICTLY greater; a comparison sort that is not (Array.Sort, List.Sort) would be a
+    /// silent change of output on any anchor holding two marks of one priority.
+    /// </para>
+    /// <para>
+    /// MEASURED (session 436, the owner's corpus): 1.09 marks arrive per anchor and 3,722 of
+    /// 42,328 anchors hold two or more, so the loop below almost always does nothing and never
+    /// had many to do — which is also why an O(n²) shape is the right one here. It is not a
+    /// shortcut around sorting: 3,594 of those anchors genuinely come out reordered.
+    /// </para>
+    /// </remarks>
+    private static void SortByOutsideStaffPriority(
+        List<(MusicMarkItem Mark, double X, int SourceIndex)> marks)
+    {
+        for (int i = 1; i < marks.Count; i++)
+        {
+            var item = marks[i];
+            int priority = GetOutsideStaffPriority(item.Mark.Type);
+            int j = i - 1;
+            while (j >= 0 && GetOutsideStaffPriority(marks[j].Mark.Type) > priority)
+            {
+                marks[j + 1] = marks[j];
+                j--;
+            }
+            marks[j + 1] = item;
+        }
+    }
 
     /// <summary>
     /// Gets the approximate half-height of a mark's visual extent in staff spaces.
