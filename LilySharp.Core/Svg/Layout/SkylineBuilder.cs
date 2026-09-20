@@ -252,7 +252,7 @@ internal sealed class SkylineBuilder
         if (staff is not null)
         {
             AddStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline,
-                BeamedItemsToSuppress(beams));
+                beams);
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         }
         // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
@@ -549,7 +549,7 @@ internal sealed class SkylineBuilder
         Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
         double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
-        IReadOnlySet<(int Voice, int Measure, int Item)>? suppressStems = null,
+        ImmutableArray<BeamLayout> beams,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
     {
         if (staff.IsTextRow)
@@ -568,6 +568,20 @@ internal sealed class SkylineBuilder
             AddTabStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline);
             return;
         }
+
+        // A beamed stem is DRAWN to whatever length the quanter gives its beat, which is not
+        // what Stem::calc_length gives an unbeamed one — the "draws right, reserves stale"
+        // double model. When the drawn beams are known, the beamed members' fixed stems are
+        // SUPPRESSED and the beam's own outer edge is seeded instead (AddBeamsToSkyline), the
+        // way AddTiesToSkyline seeds the drawn bow.
+        // audit/lp-geometry staff.staff.beam-{under,over}-notes.
+        // ★ ASKED FOR HERE, past the two returns above, because it is read nowhere else: both
+        // of this method's callers used to build it and hand it over, and a text row has no
+        // stems while a tab staff is served by AddTabStaffToSkylines before the set is ever
+        // touched — so 42.4% of the sets (2,774 of 6,536 a keystroke over the reader's corpus,
+        // carrying 43,096 of the 101,644 keys) were built and dropped on the next line. One
+        // home is also one spelling of the same quantity.
+        var suppressStems = BeamedItemsToSuppress(beams);
 
         // The rest-dot column memo, once per staff (a static CWT hit) — the per-item
         // read below is a plain dictionary lookup.
@@ -649,8 +663,7 @@ internal sealed class SkylineBuilder
 
                     // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
                     // reserve an unbeamed stem, or the stale over-reservation would win.
-                    bool reserveStem = suppressStems is null
-                        || !suppressStems.Contains((vi, measureIndex, itemIndex));
+                    bool reserveStem = !suppressStems.Contains((vi, measureIndex, itemIndex));
 
                     // ...and a rest that another voice pushed out of the staff is reserved
                     // WHERE IT WAS PUSHED TO. Without this the seed reads the rest's default
@@ -1113,14 +1126,6 @@ internal sealed class SkylineBuilder
         // while the origin was the top line and is the half-staff now that it is the middle.
         double staffTopUp = staffMiddleUp + staffHeight / 2.0;
 
-        // A beamed stem is DRAWN to whatever length the quanter gives its beat, which is not
-        // what Stem::calc_length gives an unbeamed one — the "draws right, reserves stale"
-        // double model. When the drawn beams are known, the
-        // beamed members' fixed stems are SUPPRESSED here and the beam's own outer edge is
-        // seeded instead (AddBeamsToSkyline), the way AddTiesToSkyline seeds the drawn bow.
-        // audit/lp-geometry staff.staff.beam-{under,over}-notes.
-        var suppressStems = BeamedItemsToSuppress(beams);
-
         // Everything up to the dynamics is a pure ACCUMULATION — one skyline built from many
         // boxes and outlines, with nothing reading it in between — which is what the batch
         // contract is for: append now, resolve once at EndBatch, instead of re-resolving the
@@ -1157,7 +1162,7 @@ internal sealed class SkylineBuilder
         SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
-            upSkyline, downSkyline, suppressStems, restShifts);
+            upSkyline, downSkyline, beams, restShifts);
 
         // A tab staff's above/below Scripts (fermata, flageolet, accent, …) are
         // engraved only after spacing, so they were absent from this skyline and a
@@ -1304,12 +1309,24 @@ internal sealed class SkylineBuilder
     /// until the band is measured from LP — see HANDOFF §1.
     /// audit/lp-geometry staff.staff.beam-{under,over}-notes.
     /// </remarks>
-    internal static HashSet<(int Voice, int Measure, int Item)> BeamedItemsToSuppress(
+    internal static IReadOnlySet<(int Voice, int Measure, int Item)> BeamedItemsToSuppress(
         ImmutableArray<BeamLayout> beams)
     {
-        var set = new HashSet<(int, int, int)>();
         if (beams.IsDefaultOrEmpty)
-            return set;
+            return NothingSuppressed;
+        // ★ THE ROOM FIRST, so the set is built once at its final size instead of growing
+        // through 3 -> 7 -> 17 -> ... and copying at every step. This is an UPPER BOUND on
+        // purpose: it counts a kneed group's members too, which the walk below skips, so the
+        // set can end up smaller than its room but never larger — and reading Members.Length
+        // costs no allocation and does not re-ask IsKnee. MEASURED over the reader's corpus
+        // (231 books x 8 keystrokes): 17.45 keys a call at 1,411.78 B, of which everything
+        // above ~31 B a key was regrowth; no call ever adds the same key twice.
+        int room = 0;
+        foreach (var b in beams)
+            room += b.Group.Members.Length;
+        if (room == 0)
+            return NothingSuppressed;
+        var set = new HashSet<(int, int, int)>(room);
         foreach (var b in beams)
         {
             var g = b.Group;
@@ -1320,6 +1337,13 @@ internal sealed class SkylineBuilder
         }
         return set;
     }
+
+    /// <summary>
+    /// The answer for a staff with nothing to suppress — one immutable instance for the whole
+    /// process, because the set is READ and never written.
+    /// </summary>
+    private static readonly IReadOnlySet<(int Voice, int Measure, int Item)> NothingSuppressed =
+        System.Collections.Frozen.FrozenSet<(int Voice, int Measure, int Item)>.Empty;
 
     /// <summary>
     /// Seeds the drawn beams into the per-staff skylines, so the inter-staff gap reserves the
