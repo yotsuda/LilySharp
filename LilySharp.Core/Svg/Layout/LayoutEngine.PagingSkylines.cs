@@ -230,7 +230,13 @@ internal sealed partial class LayoutEngine
         Array.Fill(up, upSeed);
         var down = new double[n];
 
-        var measureToSystem = new Dictionary<int, int>();
+        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives. The sum runs over
+        // the same n systems the fill below walks.
+        int measureCount = 0;
+        for (int i = 0; i < n; i++)
+            measureCount += systems[i].Measures.Length;
+
+        var measureToSystem = new Dictionary<int, int>(measureCount);
         var bottoms = new double[n];
         for (int i = 0; i < n; i++)
         {
@@ -647,7 +653,12 @@ internal sealed partial class LayoutEngine
         if (systemSkylines == null || articulations.IsDefaultOrEmpty)
             return systemSkylines;
 
-        var measureToSystem = new Dictionary<int, int>();
+        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
+        int measureCount = 0;
+        for (int s = 0; s < systems.Length && s < systemSkylines.Count; s++)
+            measureCount += systems[s].Measures.Length;
+
+        var measureToSystem = new Dictionary<int, int>(measureCount);
         for (int s = 0; s < systems.Length && s < systemSkylines.Count; s++)
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
@@ -774,7 +785,12 @@ internal sealed partial class LayoutEngine
             return null;
         int systemCount = skylines.Count;
 
-        var measureToSystem = new Dictionary<int, int>();
+        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
+        int measureCount = 0;
+        for (int s = 0; s < systems.Length && s < systemCount; s++)
+            measureCount += systems[s].Measures.Length;
+
+        var measureToSystem = new Dictionary<int, int>(measureCount);
         for (int s = 0; s < systems.Length && s < systemCount; s++)
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;

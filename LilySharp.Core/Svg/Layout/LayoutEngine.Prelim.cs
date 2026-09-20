@@ -428,7 +428,12 @@ internal sealed partial class LayoutEngine
     /// bow memos and the beam memo ask before memoizing per system.</summary>
     private static Dictionary<int, int> MeasureToSystemOf(ImmutableArray<SystemLayout> systems)
     {
-        var map = new Dictionary<int, int>();
+        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
+        int measures = 0;
+        for (int k = 0; k < systems.Length; k++)
+            measures += systems[k].Measures.Length;
+
+        var map = new Dictionary<int, int>(measures);
         for (int k = 0; k < systems.Length; k++)
             foreach (var ml in systems[k].Measures)
                 map[ml.MeasureIndex] = k;

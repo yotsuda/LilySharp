@@ -347,7 +347,21 @@ internal static partial class SharedRenderer
     // voice-2 flag at the same (staff,measure,item) and vice versa.
     private static HashSet<(int Staff, int Voice, int Measure, int Item)> BuildBeamedItemsSet(ScoreLayout layout)
     {
-        var set = new HashSet<(int, int, int, int)>();
+        // SIZED. Every key this set takes comes from an ImmutableArray whose Length is in
+        // hand before the walk: each beam's Members, and each eligible grace's column
+        // indices. Unlike the measure→system maps this is an UPPER bound, not the Count —
+        // the grace arm keeps only a beamed prefix of 2 or more, and the set itself
+        // collapses a duplicate — so it over-sizes a little rather than resizing through
+        // 3, 7, 17 ... (MEASURED, session 440: 549 keys a call, 26,588 B a keystroke,
+        // 0.398% of one, thrown away growing to them).
+        int keys = 0;
+        foreach (var beam in layout.BeamLayouts)
+            keys += beam.Group.Members.Length;
+        foreach (var g in layout.GraceNoteLayouts)
+            if (g.Tuning is null && !g.ColumnItemIndices.IsDefaultOrEmpty)
+                keys += g.ColumnItemIndices.Length;
+
+        var set = new HashSet<(int, int, int, int)>(keys);
         foreach (var beam in layout.BeamLayouts)
         {
             int staff = beam.StaffIndex < 0 ? 0 : beam.StaffIndex;

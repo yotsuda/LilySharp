@@ -122,7 +122,13 @@ internal static class SpannerBreakSubstitution
 
     private static Dictionary<int, int> BuildMeasureToSystemMapFor(SystemLayout[] systems)
     {
-        var map = new Dictionary<int, int>();
+        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives — this is the twin
+        // the MEASURED paragraph above already names.
+        int measures = 0;
+        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+            measures += systems[sysIdx].Measures.Length;
+
+        var map = new Dictionary<int, int>(measures);
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
         {
             foreach (var ml in systems[sysIdx].Measures)

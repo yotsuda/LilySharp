@@ -1243,41 +1243,63 @@ internal sealed class BeamScoringProblem
         double unquantedRightSS = _unquantedRightY;
 
         // LILYPOND-REF: lily/beam-quanting.cc:927-932
-        var unshiftedQuants = new List<double>();
+        // SIZED: the loop below is a plain product with no filter — 2 * regionSize rows of
+        // baseQuants — so the count is known before the first Add.
+        var unshiftedQuants = new List<double>(2 * regionSize * baseQuants.Length);
         for (int i = -regionSize; i < regionSize; i++)
         {
             foreach (double bq in baseQuants)
                 unshiftedQuants.Add(i + bq);
         }
 
+        // One candidate edge Y, in staff-spaces: the truncated seed plus the quant, less the
+        // grid shift where the quant leaves the 5-line staff. Both edges read the SAME shape
+        // and each reads only its OWN quant — which is the whole reason the count below is a
+        // product (a local function, never a delegate, so it carries no closure object).
+        // LILYPOND-REF: lily/beam-quanting.cc:933-938 (the shift), :157-158 (the truncation).
+        double EdgeY(int edge, double quant)
+        {
+            double unquanted = edge == 0 ? unquantedLeftSS : unquantedRightSS;
+            double corr = gridShift != 0.0 && (unquanted + quant) * _edgeDirs[edge] > 2.5
+                ? gridShift * _edgeDirs[edge]
+                : 0.0;
+            return (int)unquanted + quant - corr;
+        }
+
+        // LILYPOND-REF: lily/beam-quanting.cc:943-952 — drop candidates whose edge falls
+        // outside the feasible quant range.
+        bool OutOfRange(int edge, double y) => y < quantMin[edge] || y > quantMax[edge];
+
+        // SIZED, and this is the finding: the i test reads only unshiftedQuants[i] and the j
+        // test only unshiftedQuants[j], so the survivors of the i x j loop are exactly
+        // (i that pass) x (j that pass) — the COUNT, not a bound. Counting them first walks
+        // the quants once more and allocates nothing; hoisting the i test out of the inner
+        // loop then saves work too, because it used to be re-evaluated once per j.
+        // MEASURED (session 440, the owner's 231 books × 8 forward keystrokes): 237.66
+        // configs a call, max 1,024, and 58,639 B a keystroke — 0.878% of one — spent
+        // growing 4, 8, 16 ... to them.
+        int leftPasses = 0, rightPasses = 0;
+        for (int q = 0; q < unshiftedQuants.Count; q++)
+        {
+            if (!OutOfRange(0, EdgeY(0, unshiftedQuants[q])))
+                leftPasses++;
+            if (!OutOfRange(1, EdgeY(1, unshiftedQuants[q])))
+                rightPasses++;
+        }
+
         // LILYPOND-REF: lily/beam-quanting.cc:930-953 — the i x j loop over
         //   unshifted_quants that builds every candidate configuration.
-        var candidates = new List<BeamConfiguration>();
+        var candidates = new List<BeamConfiguration>(leftPasses * rightPasses);
         for (int i = 0; i < unshiftedQuants.Count; i++)
         {
+            double leftYSS = EdgeY(0, unshiftedQuants[i]);
+            if (OutOfRange(0, leftYSS))
+                continue;
+
             for (int j = 0; j < unshiftedQuants.Count; j++)
             {
-                // LILYPOND-REF: lily/beam-quanting.cc:933-938 — apply the grid
-                // shift only when the quant lies outside the 5-line staff.
-                double corrLeft = 0.0, corrRight = 0.0;
-                if (gridShift != 0.0)
-                {
-                    if ((unquantedLeftSS + unshiftedQuants[i]) * _edgeDirs[0] > 2.5)
-                        corrLeft = gridShift * _edgeDirs[0];
-                    if ((unquantedRightSS + unshiftedQuants[j]) * _edgeDirs[1] > 2.5)
-                        corrRight = gridShift * _edgeDirs[1];
-                }
-
-                // New config: truncate to integer + add quant offset
-                // LILYPOND-REF: lily/beam-quanting.cc:157-158
-                double leftYSS = (int)unquantedLeftSS + unshiftedQuants[i] - corrLeft;
-                double rightYSS = (int)unquantedRightSS + unshiftedQuants[j] - corrRight;
-
-                // LILYPOND-REF: lily/beam-quanting.cc:943-952 — drop candidates
-                // whose edge falls outside the feasible quant range.
-                if (leftYSS < quantMin[0] || leftYSS > quantMax[0])
-                    continue;
-                if (rightYSS < quantMin[1] || rightYSS > quantMax[1])
+                double rightYSS = EdgeY(1, unshiftedQuants[j]);
+                if (OutOfRange(1, rightYSS))
                     continue;
 
                 // Config is stored in staff-spaces (the quanting frame).

@@ -180,9 +180,9 @@
 - **:2156** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2178** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:508** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
+- **:514** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:867** paging augment families. Unreachable today, so no observer CAN be built; the
+- **:883** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:303** an unverified edge of this proxy (no point observes it).
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
@@ -247,7 +247,7 @@
 - **:376** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:65** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
-- **:539** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:553** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:237** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -299,7 +299,7 @@
 - **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:410** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1290** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:1312** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
 - **:91** LILYSHARP-OWN: the band is Lily#'s model of an independent row (HANDOFF 3); LilyPond
 - **:113** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
@@ -341,15 +341,15 @@
 - **:752** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
 - **:764** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:384** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
-- **:501** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:923** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **:390** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
+- **:507** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
+- **:939** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
-- **:945** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+- **:950** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:890** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
+- **:906** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:521** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
 - **:599** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see

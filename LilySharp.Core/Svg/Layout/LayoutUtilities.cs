@@ -355,7 +355,18 @@ internal static class LayoutUtilities
     private static Dictionary<int, (SystemLayout System, MeasureLayout Measure)>
         BuildMeasureMapFor(SystemLayout[] systems)
     {
-        var map = new Dictionary<int, (SystemLayout, MeasureLayout)>();
+        // SIZED. The table takes one entry per measure and Measures is an ImmutableArray,
+        // so the size is a sum of lengths already in hand — while a table grown from empty
+        // rebuilds its buckets AND its entries at every prime on the way (3, 7, 17 ...).
+        // MEASURED (session 440, the owner's 231 books × 8 forward keystrokes): this walk
+        // and the six others shaped like it threw away 51,293 B a keystroke, 0.768% of one,
+        // doing that. The sum is not a bound: a measure lives in exactly one system, so it
+        // IS the finished Count.
+        int measures = 0;
+        foreach (var system in systems)
+            measures += system.Measures.Length;
+
+        var map = new Dictionary<int, (SystemLayout, MeasureLayout)>(measures);
         foreach (var system in systems)
         {
             foreach (var measureLayout in system.Measures)
@@ -372,7 +383,12 @@ internal static class LayoutUtilities
     public static Dictionary<int, MeasureLayout> BuildMeasureLayoutMap(
         ImmutableArray<SystemLayout> systems)
     {
-        var map = new Dictionary<int, MeasureLayout>();
+        // SIZED, for the reason BuildMeasureMapFor above gives.
+        int measures = 0;
+        foreach (var system in systems)
+            measures += system.Measures.Length;
+
+        var map = new Dictionary<int, MeasureLayout>(measures);
         foreach (var system in systems)
         {
             foreach (var measureLayout in system.Measures)
