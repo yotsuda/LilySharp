@@ -228,7 +228,8 @@ internal sealed class HorizontalSkyline
     /// a directly-facing one.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/skyline.cc:530-554 Skyline::distance(other, horizon_padding).
-    /// LilyPond pads ONE side and reuses the other as-is; we pad <c>this</c>.</remarks>
+    /// LilyPond pads ONE side and reuses the other as-is; we pad <c>this</c> — and only as
+    /// far as the walk reads it, which is once (<see cref="SkylineMath.DistancePadded"/>).</remarks>
     public double Distance(HorizontalSkyline other, double horizonPadding)
     {
         if (_direction == other._direction)
@@ -236,7 +237,7 @@ internal sealed class HorizontalSkyline
         if (horizonPadding <= 0.0)
             return SkylineMath.Distance(_buildings, other._buildings);
 
-        return SkylineMath.Distance(Padded(horizonPadding), other._buildings);
+        return SkylineMath.DistancePadded(_buildings, horizonPadding, other._buildings);
     }
 
     /// <summary>
@@ -274,38 +275,26 @@ internal sealed class HorizontalSkyline
     /// concatenation sufficient (a shadowed pad building never wins the distance max), so —
     /// unlike LilyPond, which must canonicalise — no merge is needed.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded. Heights are in the
-    /// sign frame (sky*x); subtracting the padding lowers the roof for both directions.</remarks>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded, through
+    /// <see cref="SkylineMath.Pads"/> — the one spelling of that geometry, which
+    /// <see cref="SkylineMath.DistancePadded"/> reads without storing anything. ⚠️ ONLY A
+    /// CALLER THAT GOES ON TO READ THE OUTLINE NEEDS THIS LIST: measuring a distance against
+    /// it does not, and used to build it anyway (session 443).</remarks>
     private List<SkylineBuilding> Padded(double horizonPadding)
     {
-        double hp = horizonPadding;
         // The length is known before the fill: these buildings, plus at most four pad
         // buildings for each of them (two where its Start is finite, two where its End is).
         // The sibling says that bound out loud — <see cref="VerticalSkyline.Padded"/> asks
         // its lender for <c>_buildings.Count * 4</c> — while this list used to start at n and
         // regrow n → 2n → 4n → 8n to hold the same 5n.
-        var pad = new List<SkylineBuilding>(_buildings.Count * 5);
+        var pad = new List<SkylineBuilding>(_buildings.Count * (1 + SkylineMath.MaxPads));
         pad.AddRange(_buildings);
+        Span<SkylineBuilding> pads = stackalloc SkylineBuilding[SkylineMath.MaxPads];
         foreach (var b in _buildings)
         {
-            if (!double.IsInfinity(b.Start))
-            {
-                double h = b.ValueAt(b.Start);
-                if (!double.IsNegativeInfinity(h))
-                {
-                    pad.Add(new SkylineBuilding(b.Start - 2 * hp, h - hp, h, b.Start - hp));
-                    pad.Add(new SkylineBuilding(b.Start - hp, h, h, b.Start));
-                }
-            }
-            if (!double.IsInfinity(b.End))
-            {
-                double h = b.ValueAt(b.End);
-                if (!double.IsNegativeInfinity(h))
-                {
-                    pad.Add(new SkylineBuilding(b.End, h, h, b.End + hp));
-                    pad.Add(new SkylineBuilding(b.End + hp, h, h - hp, b.End + 2 * hp));
-                }
-            }
+            int n = SkylineMath.Pads(b, horizonPadding, pads);
+            for (int i = 0; i < n; i++)
+                pad.Add(pads[i]);
         }
         return pad;
     }

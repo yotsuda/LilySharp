@@ -184,36 +184,140 @@ internal static class SkylineMath
     /// visited. A RESOLVED list (sorted, disjoint — <see cref="VerticalSkyline"/>'s
     /// invariant) can take the O(n+m) merge walk instead:
     /// <see cref="DistanceResolved"/>, which is what LilyPond's own iterator walk is.
+    /// ⚠️ THE PARAMETER TYPE IS THE CONCRETE LIST, and that is not a preference: both
+    /// kernels are reached only from the two skyline classes, which each hold a
+    /// <c>List&lt;SkylineBuilding&gt;</c>, and a <c>foreach</c> over the INTERFACE boxes
+    /// <c>List&lt;T&gt;.Enumerator</c> on the heap. MEASURED (2026-09-20, session 443, the
+    /// reader's corpus, 231 books × 8 keystrokes): the inner loop ran once per outer
+    /// building, so the padded distance call alone allocated 806,926 B a keystroke — 64.0 B
+    /// a box (16 header + 8 list + 4 index + 4 version + 32 current), 12.5% of the whole
+    /// keystroke, and the same figure with tiered compilation and dynamic PGO left ON.
     /// </remarks>
-    public static double Distance(IReadOnlyList<SkylineBuilding> a, IReadOnlyList<SkylineBuilding> b)
+    public static double Distance(List<SkylineBuilding> a, List<SkylineBuilding> b)
     {
         if (a.Count == 0 || b.Count == 0)
             return double.NegativeInfinity;
 
         double max = double.NegativeInfinity;
         foreach (var b1 in a)
+            max = Math.Max(max, Against(b1, b));
+        return max;
+    }
+
+    /// <summary>
+    /// The all-pairs body for ONE building against a whole list: the largest gap value over
+    /// the pairs it forms, <see cref="double.NegativeInfinity"/> if it overlaps none of them.
+    /// </summary>
+    /// <remarks>
+    /// Split out so <see cref="DistancePadded"/> can hand it a pad building that was never
+    /// stored anywhere. Taking the maximum a building at a time is the same number as taking
+    /// it over all pairs at once: <see cref="Math.Max(double, double)"/> rounds nothing,
+    /// absorbs NaN and ranks -0.0 with +0.0, so the value does not depend on the order the
+    /// pairs are visited in.
+    /// </remarks>
+    private static double Against(in SkylineBuilding b1, List<SkylineBuilding> b)
+    {
+        double max = double.NegativeInfinity;
+        foreach (var b2 in b)
         {
-            foreach (var b2 in b)
+            double lo = Math.Max(b1.Start, b2.Start);
+            double hi = Math.Min(b1.End, b2.End);
+            // <=, not <: a ZERO-WIDTH overlap — buildings that merely TOUCH at one
+            // coordinate — is a real pairing in LilyPond, whose walk evaluates both
+            // heights AT every merge boundary, so two grobs whose seed boxes share an
+            // edge constrain each other at full height.
+            // ⚠️ THE BOOK THAT MEASURES IT RIDES ON THE OTHER ARM. Both arms carried the
+            // same sentence, naming stems-clash-between-staves.ly (the upper staff's down
+            // stem ends exactly where the lower staff's up stem begins, x 18.425, and the
+            // whole 6.5 + 3.333 clearance rides on that point). POISONED (2026-09-20,
+            // session 443): turning THIS `<=` into `<` leaves the whole suite green, while
+            // the same edit to DistanceResolved reddens exactly one net
+            // (StaffClashSpacingTests.ShiftedVoicesDownStem_PushesTheStaffBelowClear). The
+            // pairing is kept here because both arms must answer the same question — not
+            // because a book is watching this one.
+            // LILYPOND-REF: lily/skyline.cc:628-645 internal_distance — start_dist is taken at start == end after the boundary advance, so the zero-length segment still contributes.
+            if (lo <= hi)
             {
-                double lo = Math.Max(b1.Start, b2.Start);
-                double hi = Math.Min(b1.End, b2.End);
-                // <=, not <: a ZERO-WIDTH overlap — buildings that merely TOUCH at one
-                // x — is a real pairing in LilyPond. Its walk evaluates both heights AT
-                // every merge boundary, so two stems whose seed boxes share an edge
-                // constrain each other at full height. Measured:
-                // stems-clash-between-staves.ly, where the upper staff's down stem ends
-                // exactly where the lower staff's up stem begins (x 18.425) and the
-                // whole 6.5 + 3.333 clearance rides on that point.
-                // LILYPOND-REF: lily/skyline.cc:628-645 internal_distance — start_dist is taken at start == end after the boundary advance, so the zero-length segment still contributes.
-                if (lo <= hi)
-                {
-                    double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
-                    double dHi = b1.ValueAt(hi) + b2.ValueAt(hi);
-                    max = Math.Max(max, Math.Max(dLo, dHi));
-                }
+                double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
+                double dHi = b1.ValueAt(hi) + b2.ValueAt(hi);
+                max = Math.Max(max, Math.Max(dLo, dHi));
             }
         }
         return max;
+    }
+
+    /// <summary>
+    /// <see cref="Distance"/> against the list <paramref name="a"/> THICKENED along the
+    /// horizon by <paramref name="horizonPadding"/> — the same number
+    /// <c>Distance(a.Padded(hp), b)</c> gives, without the padded list existing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:530-554 Skyline::distance(other, horizon_padding), which
+    /// pads one side and reuses the other as-is.
+    /// ⚠️ A DISTANCE ONLY EVER READS THE PADDED OUTLINE ONCE. Building it first cost a
+    /// 5n-element list per call — MEASURED (2026-09-20, session 443): 171.85 calls a
+    /// keystroke, 14.47 buildings apiece, 407,587 B a keystroke, and not one of those calls
+    /// had an empty side to be let off by. Generating each pad building where it is used
+    /// keeps every pair the list version would have formed (<see cref="Pads"/> is the one
+    /// spelling of the geometry, shared with <see cref="HorizontalSkyline.PaddedCopy"/>,
+    /// which does store its answer) and allocates nothing.
+    /// </remarks>
+    public static double DistancePadded(List<SkylineBuilding> a, double horizonPadding, List<SkylineBuilding> b)
+    {
+        if (a.Count == 0 || b.Count == 0)
+            return double.NegativeInfinity;
+
+        Span<SkylineBuilding> pads = stackalloc SkylineBuilding[MaxPads];
+        double max = double.NegativeInfinity;
+        foreach (var b1 in a)
+        {
+            max = Math.Max(max, Against(b1, b));
+            int n = Pads(b1, horizonPadding, pads);
+            for (int p = 0; p < n; p++)
+                max = Math.Max(max, Against(pads[p], b));
+        }
+        return max;
+    }
+
+    /// <summary>The most pad buildings one building can have — two at each end.</summary>
+    public const int MaxPads = 4;
+
+    /// <summary>
+    /// Writes the pad buildings that thicken ONE building along the horizon by
+    /// <paramref name="horizonPadding"/> into <paramref name="into"/> (at most
+    /// <see cref="MaxPads"/>) and returns how many there are: a 45° ramp and a flat shelf at
+    /// each end the building actually has, and nothing at an end that runs to infinity or
+    /// whose roof is NegativeInfinity.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded. Heights are in the sign frame
+    /// (sky*coordinate); subtracting the padding lowers the roof for both directions.
+    /// The padding falls off at 45°, so a neighbour that is far away ALONG the horizon
+    /// pushes less than a directly-facing one.
+    /// </remarks>
+    public static int Pads(in SkylineBuilding b, double horizonPadding, Span<SkylineBuilding> into)
+    {
+        double hp = horizonPadding;
+        int n = 0;
+        if (!double.IsInfinity(b.Start))
+        {
+            double h = b.ValueAt(b.Start);
+            if (!double.IsNegativeInfinity(h))
+            {
+                into[n++] = new SkylineBuilding(b.Start - 2 * hp, h - hp, h, b.Start - hp);
+                into[n++] = new SkylineBuilding(b.Start - hp, h, h, b.Start);
+            }
+        }
+        if (!double.IsInfinity(b.End))
+        {
+            double h = b.ValueAt(b.End);
+            if (!double.IsNegativeInfinity(h))
+            {
+                into[n++] = new SkylineBuilding(b.End, h, h, b.End + hp);
+                into[n++] = new SkylineBuilding(b.End + hp, h, h - hp, b.End + 2 * hp);
+            }
+        }
+        return n;
     }
 
     /// <summary>
@@ -236,7 +340,7 @@ internal static class SkylineMath
     ///   profile (~hundreds) per dynamic priced a dynamics-heavy page at 3×
     ///   (measured 2026-07-30; this walk restored it).
     /// </remarks>
-    public static double DistanceResolved(IReadOnlyList<SkylineBuilding> a, IReadOnlyList<SkylineBuilding> b)
+    public static double DistanceResolved(List<SkylineBuilding> a, List<SkylineBuilding> b)
     {
         if (a.Count == 0 || b.Count == 0)
             return double.NegativeInfinity;
@@ -252,7 +356,10 @@ internal static class SkylineMath
             // <=, not <: a zero-width touch counts, as in the all-pairs loop above —
             // LilyPond's walk reaches the same pairing through its zero-length merge
             // segment (skyline.cc:628-645: after the boundary advance, start == end and
-            // start_dist is still taken). stems-clash-between-staves.ly measures it.
+            // start_dist is still taken). stems-clash-between-staves.ly measures it, and
+            // THIS is the arm it measures: poisoned to `<` (session 443) it reddens
+            // StaffClashSpacingTests.ShiftedVoicesDownStem_PushesTheStaffBelowClear, where
+            // the all-pairs arm's identical edit leaves the suite green.
             if (lo <= hi)
             {
                 double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
