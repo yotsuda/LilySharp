@@ -3725,6 +3725,16 @@ internal sealed class MultiStaffLayouter
     /// needs whatever it measures — the same judgement <see cref="RestCollisionsOf"/> was
     /// made on, and that one was worth 2× a whole-score scan.
     /// </para>
+    /// <para>
+    /// ★ AND SESSION 434 GAVE IT THE CONSUMER IT PAYS BACK ON: the PRELIMINARY pass detected
+    /// the same staff's bows a second time, on its own score, on every keystroke. COUNTED
+    /// over the reader's corpus (231 books × 8 forward keystrokes, Release, allocated bytes):
+    /// 2.06 preliminary staff-visits per keystroke running both detectors (4,133 + 1,185 B
+    /// per keystroke) beside this table's own 3.53 asks and 1.71 misses (5,145 B) — one
+    /// answer, detected twice per staff per keystroke. <see cref="StaffBowItemsOf"/> is the
+    /// entrance that pass now uses, and carries why the two passes' different
+    /// <c>Score</c> objects detect the same items.
+    /// </para>
     /// </remarks>
     private sealed class StaffSpannerItems
     {
@@ -3735,6 +3745,34 @@ internal sealed class MultiStaffLayouter
 
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<
         Staff, StaffSpannerItems> _staffSpannerItems = new();
+
+    /// <summary>
+    /// This staff's detected slurs and ties — the detection half of
+    /// <see cref="StaffSpannerItemsOf"/>, for the PRELIMINARY pass
+    /// (<c>LayoutEngine.RunPreliminaryAnnotationPass</c>), which lays its bows on the same
+    /// staff quantity and ran both detectors itself, once per staff per keystroke, until
+    /// session 434. The bow twin of <see cref="StaffBeamGroupsOf"/>, whose preliminary
+    /// per-staff pass is on its consumer list for the same reason.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ITEMS ARE THE SAME ITEMS ALTHOUGH THE TWO PASSES BUILD DIFFERENT Score
+    /// OBJECTS, and that is what makes sharing them output-identical by construction rather
+    /// than by measurement. This memo detects on <see cref="StaffLocalScore"/>, the
+    /// preliminary pass lays out on <c>LayoutEngine.StaffSpannerScoreOf</c>, and the two
+    /// differ ONLY in the tuplet list they carry — the voices are the same voices, chosen by
+    /// the same <c>staff.Voices.Length &gt; 1</c> test. Neither detector reads a tuplet, or
+    /// anything else about the score: <c>SlurDetector.DetectSlurs</c> and
+    /// <c>TieDetector.DetectTies</c> reach the score through <c>VoiceScan.WalkVoiceItems</c>
+    /// (<c>score.Voices[v].Measures</c>) and <c>score.Voices.Length</c> for the bow's
+    /// direction, and through nothing else. The preliminary pass keeps laying its bows out
+    /// on its own score, which does carry the tuplets its scorers read.
+    /// </remarks>
+    internal (ImmutableArray<SlurItem> Slurs, ImmutableArray<TieItem> Ties) StaffBowItemsOf(
+        MultiStaffScore score, Staff staff)
+    {
+        var items = StaffSpannerItemsOf(score, staff);
+        return (items.Slurs, items.Ties);
+    }
 
     private StaffSpannerItems StaffSpannerItemsOf(MultiStaffScore score, Staff staff)
         => _staffSpannerItems.GetValue(staff, s =>

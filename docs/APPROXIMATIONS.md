@@ -188,7 +188,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4449** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4487** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:774** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1317** pinned there), no ledger point.
@@ -345,7 +345,7 @@
 - **:501** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **:923** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
-- **:932** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+- **:945** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`

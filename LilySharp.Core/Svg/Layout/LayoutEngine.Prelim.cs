@@ -131,13 +131,20 @@ internal sealed partial class LayoutEngine
             // (StaffSpannerScoreOf; its remarks carry the measured account of what the
             // primary-voice-only prelim used to cost).
             var staffSpannerScore = StaffSpannerScoreOf(score, staff, staffTuplets, staffScore);
+            // ...and the bows' ITEMS come from the one detection too, the way the beams'
+            // groups do: the skylines detected this staff's slurs and ties already
+            // (MultiStaffLayouter.StaffBowItemsOf, whose remark carries why the two passes'
+            // different Score objects detect the same items). Until session 434 this pass
+            // ran both detectors itself, once per staff on every keystroke, for an answer
+            // the layouter was holding.
+            var staffBows = layouter.StaffBowItemsOf(score, staff);
             var staffPrelimBeams = LayoutPreliminaryStaffBeams(
                 staffBeamScore, layouter.StaffBeamGroupsOf(score, staff, staffIndex),
                 prelimSystems, staffIndex, systemCache, commonShortestDuration);
             prelimBeamsByStaff[staffIndex] = staffPrelimBeams;
             prelimBeams.AddRange(staffPrelimBeams);
             var staffPrelimTies = LayoutPreliminaryStaffTies(
-                score.TextMetrics, staffSpannerScore, prelimSystems, staffIndex, staff,
+                score.TextMetrics, staffBows.Ties, staffSpannerScore, prelimSystems, staffIndex, staff,
                 systemCache, commonShortestDuration);
             prelimTiesByStaff[staffIndex] = staffPrelimTies;
             prelimTies.AddRange(staffPrelimTies);
@@ -147,7 +154,7 @@ internal sealed partial class LayoutEngine
             var prelimStaffScripts = ArticulationEngraver.SidePositionedScriptsOf(
                 score.Articulations, staffIndex);
             var staffPrelimSlurs = LayoutPreliminaryStaffSlurs(
-                score.TextMetrics, staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes,
+                score.TextMetrics, staffBows.Slurs, staffSpannerScore, prelimSystems, staffIndex, staff, score.GraceNotes,
                 staffPrelimBeams, staffPrelimTies, prelimStaffScripts,
                 systemCache, commonShortestDuration);
             prelimSlursByStaff[staffIndex] = staffPrelimSlurs;
@@ -436,6 +443,14 @@ internal sealed partial class LayoutEngine
     /// once (it is a whole-score walk either way); the SOLVE — the per-column
     /// TieFormattingProblem — is memoized per system through
     /// <see cref="SystemLayoutCache.GetOrComputeStaffSystemTies"/>.
+    /// <para>
+    /// ⚠️ THE TIES ARRIVE DETECTED, from the layouter's per-staff memo
+    /// (<c>MultiStaffLayouter.StaffBowItemsOf</c>) — an explicit parameter and not an
+    /// optional one, the posture <see cref="ElementCoordinator"/>'s pre-detected overloads
+    /// argue for (§7.7: a defaulted one is how a whole island came to run with its side
+    /// tables at default). "Once" above used to mean once per staff per PASS; since
+    /// session 434 it means once per staff.
+    /// </para>
     /// </summary>
     /// <remarks>
     /// Fallback (whole staff, unmemoized — the beams' posture) when any tie COLUMN is
@@ -447,14 +462,13 @@ internal sealed partial class LayoutEngine
     /// column falls back to the plain call for the whole staff.
     /// </remarks>
     private ImmutableArray<TieLayout> LayoutPreliminaryStaffTies(
-        Rendering.ScoreTextMetrics fonts,
+        Rendering.ScoreTextMetrics fonts, ImmutableArray<TieItem> ties,
         Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
         Staff staff, SystemLayoutCache? systemCache, double commonShortestDuration)
     {
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutTies(
-                fonts, staffSpannerScore, prelimSystems, staffIndex, staff);
-        var ties = _elementCoordinator.DetectTies(staffSpannerScore);
+                fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff);
         if (ties.IsEmpty)
             return ImmutableArray<TieLayout>.Empty;
 
@@ -547,7 +561,7 @@ internal sealed partial class LayoutEngine
     /// coverage claim covers what the value read.
     /// </summary>
     private ImmutableArray<SlurLayout> LayoutPreliminaryStaffSlurs(
-        Rendering.ScoreTextMetrics fonts,
+        Rendering.ScoreTextMetrics fonts, ImmutableArray<SlurItem> slurs,
         Score staffSpannerScore, ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
         Staff staff, ImmutableArray<GraceNoteItem> graceNotes,
         ImmutableArray<BeamLayout> staffBeams, ImmutableArray<TieLayout> staffTies,
@@ -570,9 +584,8 @@ internal sealed partial class LayoutEngine
 
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutSlurs(
-                fonts, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
+                fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
                 staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
-        var slurs = _elementCoordinator.DetectSlurs(staffSpannerScore);
         if (slurs.IsEmpty)
             return ImmutableArray<SlurLayout>.Empty;
 
