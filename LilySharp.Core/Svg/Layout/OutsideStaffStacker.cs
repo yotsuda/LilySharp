@@ -716,29 +716,55 @@ internal static class OutsideStaffStacker
         }
 
         // 3. The live subset: everything not in a hit system, original order preserved,
-        // with an old→live index map per remappable family (the groups need it).
-        (ImmutableArray<T> Live, int[] Map, Dictionary<int, int> Remap) Filter<T>(
-            ImmutableArray<T> arr, Func<T, int> measureOf)
+        // with an old→live index map, and — for the two families the line groups read
+        // through — an old→live index DICTIONARY.
+        //
+        // Every family's survivor count is known before the walk: Collect's predicate and
+        // the skip below are THE SAME predicate, so what a family loses is exactly the hit
+        // systems' own index lists. ONE pass over the hit systems counts all four — one
+        // dictionary probe per hit system, not one per family per hit system — and each
+        // live subset is then built at its exact size and MOVED out of its builder instead
+        // of copied out of an array sized for the whole family.
+        // ⚠️ The count is a second spelling of Collect's predicate, so the two are checked
+        // against each other on every call: a count that disagreed with the walk fails in
+        // MoveToImmutable rather than returning a quietly short array.
+        int skipDynamics = 0, skipHairpins = 0, skipArtics = 0, skipTrills = 0;
+        foreach (int s in hits)
+        {
+            if (!parts.TryGetValue(s, out var hitPart))
+                continue;
+            skipDynamics += hitPart.Dynamics.Count;
+            skipHairpins += hitPart.Hairpins.Count;
+            skipArtics += hitPart.Articulations.Count;
+            skipTrills += hitPart.Trills.Count;
+        }
+        (ImmutableArray<T> Live, int[] Map, Dictionary<int, int>? Remap) Filter<T>(
+            ImmutableArray<T> arr, Func<T, int> measureOf, int skipped, bool needRemap = false)
         {
             if (arr.IsDefaultOrEmpty || hits.Count == 0)
-                return (arr, Array.Empty<int>(), new Dictionary<int, int>());
-            var live = ImmutableArray.CreateBuilder<T>(arr.Length);
-            var map = new List<int>(arr.Length);
-            var remap = new Dictionary<int, int>(arr.Length);
+                return (arr, Array.Empty<int>(), null);
+            int liveCount = arr.Length - skipped;
+            var live = ImmutableArray.CreateBuilder<T>(liveCount);
+            var map = new int[liveCount];
+            var remap = needRemap ? new Dictionary<int, int>(liveCount) : null;
             for (int i = 0; i < arr.Length; i++)
             {
                 if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s) && hits.Contains(s))
                     continue;
-                remap[i] = live.Count;
+                remap?.Add(i, live.Count);
+                map[live.Count] = i;
                 live.Add(arr[i]);
-                map.Add(i);
             }
-            return (live.ToImmutable(), map.ToArray(), remap);
+            return (live.MoveToImmutable(), map, remap);
         }
-        var (liveDynamics, mapDynamics, remapDyn) = Filter(dynamics, d => d.MeasureIndex);
-        var (liveHairpins, mapHairpins, remapHp) = Filter(hairpins, h => h.StartMeasureIndex);
-        var (liveArtics, mapArtics, _) = Filter(articulations, a => a.MeasureIndex);
-        var (liveTrills, mapTrills, _) = Filter(trills, t => t.StartMeasureIndex);
+        var (liveDynamics, mapDynamics, remapDyn) =
+            Filter(dynamics, d => d.MeasureIndex, skipDynamics, needRemap: true);
+        var (liveHairpins, mapHairpins, remapHp) =
+            Filter(hairpins, h => h.StartMeasureIndex, skipHairpins, needRemap: true);
+        var (liveArtics, mapArtics, _) =
+            Filter(articulations, a => a.MeasureIndex, skipArtics);
+        var (liveTrills, mapTrills, _) =
+            Filter(trills, t => t.StartMeasureIndex, skipTrills);
 
         // 3b. The live groups: every group not anchored in a hit system, its indices
         // remapped into the filtered arrays. The forced-live guard above is what makes
@@ -746,7 +772,8 @@ internal static class OutsideStaffStacker
         var liveGroups = lineGroups;
         if (!lineGroups.IsDefaultOrEmpty && hits.Count > 0)
         {
-            int RemapIdx(Dictionary<int, int> remap, int i) => remap.TryGetValue(i, out int v) ? v : i;
+            static int RemapIdx(Dictionary<int, int>? remap, int i) =>
+                remap is not null && remap.TryGetValue(i, out int v) ? v : i;
             var gb = ImmutableArray.CreateBuilder<DynamicAlignEngraver.AlignedLineGroup>(
                 lineGroups.Length);
             for (int gi = 0; gi < lineGroups.Length; gi++)
@@ -798,7 +825,9 @@ internal static class OutsideStaffStacker
                 for (int k = 0; k < idxs.Count; k++)
                     b[idxs[k]] = vals[k];
             }
-            return b.ToImmutable();
+            // ToBuilder leaves Count == Capacity == Length, so the builder's array IS the
+            // result: ToImmutable would copy the whole family into a second array.
+            return b.MoveToImmutable();
         }
         var resDynamics = Rebuild(dynamics, core.Dynamics, mapDynamics,
             p => p.Dynamics, e => e.OutDynamics);
@@ -1155,36 +1184,70 @@ internal static class OutsideStaffStacker
         }
 
         // 3. The live subset: everything not in a hit system, original order preserved.
-        (ImmutableArray<T> Live, int[] Map) Filter<T>(ImmutableArray<T> arr, Func<T, int> measureOf)
+        //
+        // Every family's survivor count is known before the walk: Collect's predicate and
+        // the skip below are THE SAME predicate, so what a family loses is exactly the hit
+        // systems' own index lists. ONE pass over the hit systems counts all eleven — one
+        // dictionary probe per hit system, not one per family per hit system — and each
+        // live subset is then built at its exact size and MOVED out of its builder instead
+        // of copied out of an array sized for the whole family.
+        // ⚠️ The count is a second spelling of Collect's predicate, so the two are checked
+        // against each other on every call: a count that disagreed with the walk fails in
+        // MoveToImmutable rather than returning a quietly short array.
+        int skipTuplets = 0, skipTrills = 0, skipBarNumbers = 0, skipOttavas = 0,
+            skipCustomTexts = 0, skipVoltas = 0, skipMarks = 0, skipArtics = 0,
+            skipDynamics = 0, skipTextSpanners = 0, skipChordNames = 0;
+        foreach (int s in hits)
+        {
+            if (!parts.TryGetValue(s, out var hitPart))
+                continue;
+            skipTuplets += hitPart.TupletBrackets.Count;
+            skipTrills += hitPart.Trills.Count;
+            skipBarNumbers += hitPart.BarNumbers.Count;
+            skipOttavas += hitPart.Ottavas.Count;
+            skipCustomTexts += hitPart.CustomTexts.Count;
+            skipVoltas += hitPart.Voltas.Count;
+            skipMarks += hitPart.MusicMarks.Count;
+            skipArtics += hitPart.Articulations.Count;
+            skipDynamics += hitPart.Dynamics.Count;
+            skipTextSpanners += hitPart.TextSpanners.Count;
+            skipChordNames += hitPart.ChordNames.Count;
+        }
+        (ImmutableArray<T> Live, int[] Map) Filter<T>(ImmutableArray<T> arr,
+            Func<T, int> measureOf, int skipped)
         {
             if (arr.IsDefaultOrEmpty || hits.Count == 0)
                 return (arr, Array.Empty<int>());
-            var live = ImmutableArray.CreateBuilder<T>(arr.Length);
-            var map = new List<int>(arr.Length);
+            int liveCount = arr.Length - skipped;
+            var live = ImmutableArray.CreateBuilder<T>(liveCount);
+            var map = new int[liveCount];
             for (int i = 0; i < arr.Length; i++)
             {
                 if (measureToSystem.TryGetValue(measureOf(arr[i]), out int s) && hits.Contains(s))
                     continue;
+                map[live.Count] = i;
                 live.Add(arr[i]);
-                map.Add(i);
             }
-            return (live.ToImmutable(), map.ToArray());
+            return (live.MoveToImmutable(), map);
         }
-        var (liveTuplets, _) = Filter(tupletBrackets, tb => tb.MeasureIndex);
-        var (liveTrills, mapTrills) = Filter(trills, t => t.StartMeasureIndex);
-        var (liveBarNumbers, mapBarNumbers) = Filter(barNumbers, bn => bn.MeasureIndex);
-        var (liveOttavas, mapOttavas) = Filter(ottavas, o => o.StartMeasureIndex);
-        var (liveCustomTexts, mapCustomTexts) = Filter(customTexts, ct => ct.MeasureIndex);
-        var (liveVoltas, mapVoltas) = Filter(voltas, v => v.StartMeasureIndex);
-        var (liveMarks, mapMarks) = Filter(musicMarks, m => m.MeasureIndex);
-        var (liveArtics, mapArtics) = Filter(articulations, a => a.MeasureIndex);
-        var (liveDynamics, mapDynamics) = Filter(aboveDynamics, d => d.MeasureIndex);
-        var (liveTextSpanners, mapTextSpanners) = Filter(textSpanners, ts => ts.StartMeasureIndex);
+        var (liveTuplets, _) = Filter(tupletBrackets, tb => tb.MeasureIndex, skipTuplets);
+        var (liveTrills, mapTrills) = Filter(trills, t => t.StartMeasureIndex, skipTrills);
+        var (liveBarNumbers, mapBarNumbers) =
+            Filter(barNumbers, bn => bn.MeasureIndex, skipBarNumbers);
+        var (liveOttavas, mapOttavas) = Filter(ottavas, o => o.StartMeasureIndex, skipOttavas);
+        var (liveCustomTexts, mapCustomTexts) =
+            Filter(customTexts, ct => ct.MeasureIndex, skipCustomTexts);
+        var (liveVoltas, mapVoltas) = Filter(voltas, v => v.StartMeasureIndex, skipVoltas);
+        var (liveMarks, mapMarks) = Filter(musicMarks, m => m.MeasureIndex, skipMarks);
+        var (liveArtics, mapArtics) = Filter(articulations, a => a.MeasureIndex, skipArtics);
+        var (liveDynamics, mapDynamics) = Filter(aboveDynamics, d => d.MeasureIndex, skipDynamics);
+        var (liveTextSpanners, mapTextSpanners) =
+            Filter(textSpanners, ts => ts.StartMeasureIndex, skipTextSpanners);
         // A seed-only family filters like the rest and is never scattered back: a hit
         // system's trackers are not consulted at all, so its symbols have nothing to seed.
         // ⚠️ The INDICES stay the originals', because the seed reads chordItems through
         // ChordNameLayout.SourceIndex — filtering the items alongside would renumber them.
-        var (liveChordNames, _) = Filter(chordNames, cn => cn.MeasureIndex);
+        var (liveChordNames, _) = Filter(chordNames, cn => cn.MeasureIndex, skipChordNames);
 
         // 4. Stack the live systems (byte-identical to stacking them in the full call:
         // a system's grobs are all-in or all-out, and only same-system grobs interact).
@@ -1212,7 +1275,9 @@ internal static class OutsideStaffStacker
                 for (int k = 0; k < idxs.Count; k++)
                     b[idxs[k]] = vals[k];
             }
-            return b.ToImmutable();
+            // ToBuilder leaves Count == Capacity == Length, so the builder's array IS the
+            // result: ToImmutable would copy the whole family into a second array.
+            return b.MoveToImmutable();
         }
         var resTrills = Rebuild(trills, core.Trills, mapTrills, p => p.Trills, e => e.OutTrills);
         var resBarNumbers = Rebuild(barNumbers, core.BarNumbers, mapBarNumbers,
