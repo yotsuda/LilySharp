@@ -174,8 +174,8 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:560** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:830** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:563** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:833** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2156** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2178** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -351,9 +351,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:890** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:517** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:595** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:603** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:521** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
+- **:599** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:607** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:210** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:294** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is

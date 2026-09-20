@@ -425,9 +425,12 @@ internal static class ItemSkylineFactory
     }
 
     private static List<(double YBottom, double YTop, double XLeft, double XRight)> BoxesOf(
-        IEnumerable<ColumnPart> parts, double staffY, ColumnElements which)
+        List<ColumnPart> parts, double staffY, ColumnElements which)
     {
-        var boxes = new List<(double, double, double, double)>();
+        // At most one box per part — and all three callers hold the very list ColumnParts
+        // built — so the boxes are built at that length instead of grown to it, and the walk
+        // takes the list's own enumerator instead of boxing a sequence's.
+        var boxes = new List<(double, double, double, double)>(parts.Count);
         foreach (var p in parts)
         {
             var set = p.Conditional ? ColumnElements.Conditional

@@ -106,11 +106,15 @@ internal static class LineStartColumn
         return Math.Max(0.0, right.Distance(left));
     }
 
-    private static IEnumerable<(double YBottom, double YTop, double XLeft, double XRight)>
+    // A list and not an iterator: the answer is as long as its input, and
+    // HorizontalSkyline.FromBoxes sizes its buildings from that length.
+    private static List<(double YBottom, double YTop, double XLeft, double XRight)>
         ToTuples(IReadOnlyList<ColumnBox> boxes)
     {
+        var tuples = new List<(double YBottom, double YTop, double XLeft, double XRight)>(boxes.Count);
         foreach (var b in boxes)
-            yield return (b.YBottom, b.YTop, b.XLeft, b.XRight);
+            tuples.Add((b.YBottom, b.YTop, b.XLeft, b.XRight));
+        return tuples;
     }
 
     /// <summary>

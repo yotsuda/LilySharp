@@ -86,17 +86,20 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
-    /// Creates a skyline from multiple bounding boxes.
+    /// Creates a skyline from multiple bounding boxes — one building apiece, so the
+    /// building list is built at that length rather than grown to it. The parameter is a
+    /// list and not a sequence for the same reason: a caller that cannot say how many
+    /// boxes it has cannot be sized for, and every caller holds a list or an array.
     /// </summary>
-    public static HorizontalSkyline FromBoxes(IEnumerable<(double YBottom, double YTop, double XLeft, double XRight)> boxes, HorizontalDirection direction)
+    public static HorizontalSkyline FromBoxes(IReadOnlyList<(double YBottom, double YTop, double XLeft, double XRight)> boxes, HorizontalDirection direction)
     {
-        var skyline = new HorizontalSkyline(direction);
-        foreach (var (yBottom, yTop, xLeft, xRight) in boxes)
+        var buildings = new List<SkylineBuilding>(boxes.Count);
+        for (int i = 0; i < boxes.Count; i++)
         {
-            var building = BoxBuilding(yBottom, yTop, xLeft, xRight, direction);
-            skyline._buildings.Add(building);
+            var (yBottom, yTop, xLeft, xRight) = boxes[i];
+            buildings.Add(BoxBuilding(yBottom, yTop, xLeft, xRight, direction));
         }
-        return skyline;
+        return new HorizontalSkyline(buildings, direction);
     }
 
     /// <summary>
@@ -276,7 +279,13 @@ internal sealed class HorizontalSkyline
     private List<SkylineBuilding> Padded(double horizonPadding)
     {
         double hp = horizonPadding;
-        var pad = new List<SkylineBuilding>(_buildings);
+        // The length is known before the fill: these buildings, plus at most four pad
+        // buildings for each of them (two where its Start is finite, two where its End is).
+        // The sibling says that bound out loud — <see cref="VerticalSkyline.Padded"/> asks
+        // its lender for <c>_buildings.Count * 4</c> — while this list used to start at n and
+        // regrow n → 2n → 4n → 8n to hold the same 5n.
+        var pad = new List<SkylineBuilding>(_buildings.Count * 5);
+        pad.AddRange(_buildings);
         foreach (var b in _buildings)
         {
             if (!double.IsInfinity(b.Start))
