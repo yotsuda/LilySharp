@@ -211,6 +211,44 @@ public class HandoffArchiveContinuityTests
     }
 
     /// <summary>
+    /// §1 carries its next-move list in ONE place, as a section a script can read out.
+    /// </summary>
+    /// <remarks>
+    /// Same shape as the three guards above: a rule that was correct, cheap and unrun. Until
+    /// session 431 the list was written twice per session — once in each of the two narrative
+    /// blocks §1 keeps — so the one thing every session needs FIRST had two copies that could
+    /// disagree, cost about 4 KB a session against the 450 KB ceiling this file also guards,
+    /// and had to be read out of the middle of a dense paragraph. The owner asked for the
+    /// start-of-session ritual to get cheaper; this is the half of it that lives in the
+    /// document rather than in <c>tools/Session-Check.ps1</c>.
+    /// <para>
+    /// The heading is the contract: <c>-Start</c> prints whatever is under it verbatim, so a
+    /// session that renames or drops it gets a start banner that says "拾うこと" instead of a
+    /// list. Asserting the heading and not the content is deliberate — the list's SHAPE is the
+    /// next session's business, and a guard that fixed it would be the kind of test that has
+    /// to be edited to do the work it is guarding.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void TheHandoffCarriesOneNextMoveList()
+    {
+        var text = File.ReadAllText(Path.Combine(DocsDir(), "HANDOFF.md"));
+        var headings = Regex.Matches(text, @"^###\s*1\.0\s", RegexOptions.Multiline);
+
+        _output.WriteLine($"§1.0 headings: {headings.Count}");
+        Assert.True(headings.Count == 1,
+            $"docs/HANDOFF.md has {headings.Count} \"### 1.0\" headings; it needs exactly one. "
+            + "The next-move list is maintained in ONE place (RULES §7 step 2) and "
+            + "tools/Session-Check.ps1 -Start prints that section verbatim at the start of a "
+            + "session. Two copies is what session 431 removed; none means -Start can only tell "
+            + "the next session to go and find the list in the prose.");
+
+        int s1 = text.IndexOf("## 1. 現在地", StringComparison.Ordinal);
+        Assert.True(s1 >= 0 && headings[0].Index > s1,
+            "\"### 1.0\" must sit inside §1, under the 現在地 heading.");
+    }
+
+    /// <summary>
     /// The census of numbers with no block at all. May shrink; must not grow.
     /// </summary>
     /// <remarks>

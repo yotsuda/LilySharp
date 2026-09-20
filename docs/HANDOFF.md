@@ -22,8 +22,19 @@
 
 ```powershell
 cd C:\MyProj\LilySharp
-tools\Session-Check.ps1 -Build -Test -Session pNNN    # git・数・CI・build・full（trx 付き）を 1 コマンドで（約 15 分）
+tools\Session-Check.ps1 -Start pNNN          # 開始の全部（約 15 分）
+tools\Session-Check.ps1 -End pNNN -DiffBase <開始時 HEAD>   # 終了の機械的な半分（§7）
 ```
+
+★★★ **`-Start` が §0 と §7 3.5 の*全部***: 裏取り（git・数・CI・build・full＋trx）→ **そのあと**
+§7 3.5 のアーカイブ（**落とすブロック番号は HANDOFF 自身から読む**＝手で「N−2」を数えない）→
+**§1.0「次の一手」を逐語で刷る** → 天井の残りと罠。⚠️ **順序は load-bearing**——
+**アーカイブを先に回すと §1 が predecessor を失い、`HandoffArchiveContinuityTests` の 2 本が
+*裏取りの run で*赤くなる**（第410 ⑾ が踏んだ形。便の途中で回しても同じ）。
+**`-End` は §7 の機械が言える分を門の表にする**。散文に残るのは **§7 7.5・7.6・7.7＝判断が要る 3 つだけ**。
+
+⚠️ **数は*スクリプトの出力を写す*。手で数え直さない**（数え方の定義は RULES §6.1＝スクリプトが実装。
+10 便が 10 通りに数え間違えた履歴がそこに在る）。**§1 には開始時と終了時の両方を書く**（次便が引き算できる）。
 
 ★★★ **作業記録は兄弟の private repo `..\LilySharp-Lab`（github `yotsuda/LilySharp-Lab`・2026-09-16〜）。
 複数の PC で開発するため。** 旧 `scratch\`（git 管理外）から選んで移した。
@@ -37,32 +48,75 @@ tools\Session-Check.ps1 -Build -Test -Session pNNN    # git・数・CI・build�
   ＝要るなら取り直す。コード内コメントや ARCHIVE の `scratch/` 表記は書き換えない。
 - 証明 ⑴ の道具は `LilySharp-Lab\tools\rerender-ls.ps1`（RULES §5.5 のコマンド一覧）。
 - ★★★ **開始時に `LilySharp-Lab\notes\CLAUDE-OPERATIONS.md` も通読する**＝シェルと道具の使い方（Bash・PowerShell ツール・ripple は禁止・pwsh MCP の作法）・push や commit のユーザー規則・機械と社内環境の罠。**user memory は使わない**（2026-09-17・ユーザー決定。PC ローカルで他の PC に届かない）＝知見は RULES §4 の表の置き場所へ書く（公開してよい技術知見は RULES §5、private なものは Lab の notes）。
-出た数を §1 の「開始時裏取り」と突き合わせる（HEAD・未 push・木・**full の*合計***・台帳・snapshot・`.lys`）。
-**数え方の定義は RULES §6.1「引き継ぐ数の数え方」＝スクリプトが実装している。手で数え直さない**
-（10 便が 10 通りに数え間違えた履歴が §6.1 に在る）。**§1 に数を書くときも同じスクリプトの出力を写す。**
-
-⚠️ **読み方の罠（全部この機械で実測済み・出典と経緯は RULES §5.5）**:
-- **`成功!`／`Passed!` の語でも終了コードでもなく*合計*を読む**——ホストが死ぬと残りが黙って走らず、
-  `Passed! … Total: 1625` ＋ exit 1 も、`成功!` ＋ 合計 5307（正しくは 6688）も実際に出た。理由は trx の
-  `RunInfos` に残る＝スクリプトが刷る。**flake が疑わしい 2 度目の緑には証拠が残らないので、trx は最初から。**
-- **solution を建てる**（Core だけ建てても `LilySharp.Cli\bin` の Core.dll は更新されない）。**既定は Debug**＝
-  lysc を測定・A/B に使う前に `dotnet build LilySharp.Cli -c Release` を明示。**生きている lysc は
-  `LilySharp.Cli\bin\Debug\net10.0`**（TFM が上がると化石が並ぶ＝スクリプトが列挙する）。
-- **Core の 0 警告は XML doc の健全性を含む**（`CS1573`／`CS1591` だけ `NoWarn`・csproj に数と理由）。
-  `--no-incremental` は「腐り対策」ではなく **0 警告を*確かめる*ため**（無変更の増分ビルドは何もコンパイルしない）。
+⚠️ **読み方の罠のうち、スクリプトが*刷れない*もの**（刷れる 4 つ——合計で読む・Release で測る・
+A/B の before はその場で・ベンチは静かな窓——は `-Start` が最後に出す。出典と経緯は全部 RULES §5.5）:
 - **CI は `gh run list`／`gh run view` で読む**（この機械に WSL は無い・2026-09-01）。`X` は fail-fast の
   巻き添えが多い＝**完走した脚だけが証拠**（`gh run view --job <id> --log > $env:TEMP\ci.log`・`--log-failed` は途中で切れる）。
   GitHub の ubuntu 脚は 214 便のあいだ読まれず赤だったことがある。
-- **開始時と終了時の両方の数を書く**（次便が引き算できるのは両端が在るときだけ）。**途中でユーザーが push したら
-  `origin/master` がこの便の commit を指す**＝1 行書く（`git --no-pager log --oneline -1 origin/master`）。
-- **A/B の before はその場で写す**（`audit/probe-out/pitches.csv` はどんな小さな run でも上書きされる。
-  「あとで」は無い。写し損ねたら `git stash push -- <触ったファイル>` → build → 全数 → 写す → pop）。
-- **このドキュメントも memory もコード内コメントも、書いた時点のスナップショット。** HEAD・テスト数・
+- **Core の 0 警告は XML doc の健全性を含む**（`CS1573`／`CS1591` だけ `NoWarn`・csproj に数と理由）。
+  `--no-incremental` は「腐り対策」ではなく **0 警告を*確かめる*ため**（無変更の増分ビルドは何もコンパイルしない）。
+- **途中でユーザーが push したら `origin/master` がこの便の commit を指す**＝1 行書く
+  （`git --no-pager log --oneline -1 origin/master`）。
+- **このドキュメントもコード内コメントも、書いた時点のスナップショット。** HEAD・テスト数・
   シンボル名・「完了」表記は実コードで再確認する。**「見つけた」と思ったら、まず §2 を grep**
   （62 便前から在った棚を「新発見」と書きかけた便がある）。
 
 ---
 ## 1. 現在地 ← **毎セッション書き換える**
+
+### 1.0 次の一手 ← **一覧はここだけ。語りの中に複写しない**
+
+> **保守は 1 か所**（第431 まで、この一覧は毎便 2 つの語りブロックに全文複写されていた＝1 便 4 KB 級が
+> 天井に載り、次便は密な段落の途中から拾っていた）。**閉じたら消す**（§7 3）。**値段は必ず分母つきで**
+> （「N B／sweep・M／打鍵・P%」）、**そして「直すなら X」は賞金とは別の予測**＝別に反証する（RULES §5.0 12例目）。
+> `tools\Session-Check.ps1 -Start pNNN` がこの節を逐語で刷るので、**次便はこれを読めば着手できる**。
+
+**⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- ★★★ **⒳⁗ `SortAndResolve` の `resolved` が素の `new List` で倍々**。⚠️ **値段は起票し直した**：第430 が
+  書いた 0.128%（18,912,792 B／sweep・10,234／打鍵）は **`pad.sr` ＝ region 全体**で、その内訳は
+  `walk.add` 3,082 ＋ `ov.range` 6,437 ＋ `sr.own` 715（／打鍵）。**`RentResolveOutput` を借りる直しが
+  当たるのは第 1 項だけ＝約 0.039%**（3.3 倍高く売られていた・RULES §5.0 14例目と同じ型）。
+  **着手する便は 3 項を region 別に測り直してから直すこと**＝`ov.range` が本体なら直し方が違う。
+  直し自体は安い（`Padded` は nest しない・書き戻す `buildings` は容量 4N を既に持つので出口は 0 B）。
+- ★ **⒴¹⁰ tab fork の残り＝`TabSoundingNotes` の iterator ちょうど 64 B × 34,717 items＝0.015%**
+  （⚠️ `fret.ToString`・`FretGlyphWidth`・`CalculateFret` は実測で 3 つとも 0 B）
+- ★ **⒴⁷ `BeamedItemsToSuppress` は beams が空でも `HashSet`＝0.028%**
+- ★ **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021%）
+- ★★ **⒢′ 拒否された staff の前処理＝検出器 0.023%**＝`StaffSpannerItemsOf` の memo を最終パスにも
+  通すだけ（一番安い・出力同一が構成で言える）。⚠️ **まず回数を測ること**
+- ★ **⒵⁵ `mm.g.split` 0.163%**（⚠️ `OrderBy` は*安定*）／★ **⒵⁶ 文字の 318,784 回／81 綴り 0.130%**
+- ★ **⒴⁵ artic と trill の remap 辞書は作って捨てている**（天井 0.174%）
+- **⒴⁸ batch でない `Merge` 147,417 回／打鍵は未値付け**＝値段が先
+
+**⒝ 土台の変更・要設計（1 便では閉じない）**
+- ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
+- ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
+- ★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり）
+- **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
+- ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
+  （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
+- ★★ **Ⓑ `RULES.md` から事例を `RULES-CASES.md` へ**（2026-09-20・第431 起票・ユーザー指示）＝
+  **§5.0 1,547 行＋§5.3 1,501 行＝全 5,410 行の 56% が*事例集***で、通読は毎便できていない
+  （第431 の実読は 15%・§5.5 は 0 行）。**見出し番号は据え置き**（`§5.2` はコード内 60 箇所・35 ファイルが引く）、
+  規則本文＋ポインタ 1 行だけ残して **≤ 900 行**。⚠️ **同時に行数の天井テストを足す**＝計器の無い規則は戻る
+  （`HandoffArchiveContinuityTests` と同じ形）。
+
+**⒞ ユーザー決定が先・触らない**
+- ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
+  （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
+- ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
+- ⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らない**
+- ⚠️ **⒜ と push は「後回し」＝催促しない**（第407 ⑺⑸）。**push はユーザー**（Lab も）
+- **R15 ✅**（残り＝「2 綴り」一族のみ・要承認）
+- ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
+- ⒥ は第409 が上限 4.7 ms と測った／**⒳‴ ⒞″ ⒟ R13⒦ ⒤ ✅ 閉じた**
+
+### 1.1 第431セッション（2026-09-20・YT-DELL2）
+
+*（この便の経緯——終了時に書く）*
+
+## 以下は第430セッションの経緯
+
 最終更新 第430セッション（2026-09-20・YT-DELL2）＝`/clear` 直後の新セッション。§0 の裏取りから入り（HEAD `17fb650e`・**未 push 45**・**full `sessions/p430/run1.trx` 8759 / 0 / 3 / 8762＝第429 最終と一致**・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・61 秒）、★ **裏取りは 1 つも赤を出さなかった**（CI の赤は `origin/master` が `9f5cd52a` のままだからで、第412〜第429 が予告したもの）。**§7 3.5 は*セッションの頭*で回した**（`-Archive 428`＝24 行 6,183 chars）。指示は「**HANDOFF を読んで着手**」＝§1 の「次の一手」の先頭＝**⒳‴**。★ ベンチは着手前に静かな窓をもらった。道具は pwsh MCP（Bash 0 回）。母集団と harness は第414〜第429 と同じ（実コーパス 231 冊 × 8 **forward** 打鍵・`RenderIncrementalPages`・**Release**・割当バイト・**両側 TC=0**）で、**before の打鍵 8,017,590／8,017,598 B は第429 最終の 8,017,579／8,017,630 B と一致**。⇒ **島を 1 つ閉じ、毒が註の初稿を反証した**:
 
 ★★★ **⑴ 脚 1 ＝ 島の 3 分の 2 は「中身を 1 つも持たない中間の skyline」だった**。`Padded` の中に region 別の割当時計を打つと（`pad.list`／`pad.fill`／`pad.rebuild`／`pad.sr`／`pad.copy`／`pad.merge` ＋ **外側の `whole`**）、**own ＝ 56,812,640 B は第429 の 1 本の counter と 1 バイト違わず一致**し、**`unattributed` は 0**（§5.0 15 例目の検算＝外側も測る）。内訳は **`pad.rebuild` 37,785,800（66.5%）／`pad.list` 14,750,136（26.0%）／`pad.copy` 4,276,704（7.5%）／`pad.fill` 0**。★★ **`pad.rebuild` は「右寸法の list に建てたばかりの棟を、`SortAndResolve` を呼ぶためだけの*空の* skyline に 1 棟ずつ `Add` する」**＝4-8-16-… の倍々で、**その中間は padding list が持たないものを 1 つも持っていなかった**。
@@ -77,30 +131,11 @@ tools\Session-Check.ps1 -Build -Test -Session pNNN    # git・数・CI・build�
 
 ★★ **⑹ 出力同一は 3 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline は `17fb650e` の木から取り直した）／⑵ **実コーパス全ページ SHA-256＝5,824 行・0 行差**（第429 の `hashes-after.txt` と突き合わせ）／⑶ suite 全緑・snapshot 249 枚不動・台帳 851 点／総和 22.584727806 不変。
 
-⇒ **次の一手**（⒜⒝⒝′ は第406 から変わらず）: **⒳‴ ✅ 第430 が閉じた**／★★★ **⒳⁗ `SortAndResolve` の `resolved` ＝ 0.128%**（**18,912,792 B／sweep・10,234／打鍵**＝今日の `pad.sr` を丸ごと測った値で、第429 の region 1 の `walk.add` 3,082 ＋ `ov.range` 6,437 ＋ `sr.own` 715 と一致する。**直しは `RentResolveOutput` を借りるだけ**＝`Padded` の中で nest しない・書き戻す `buildings` は容量 4N を既に持つので出口は 0 B。**これで `Padded` 一族は 0.176% → ほぼ `pad.merge` だけになる**）／★ **⒴¹⁰ tab fork の残りは `TabSoundingNotes` の iterator ちょうど 64 B × 34,717 items＝0.015%**（⚠️ `fret.ToString`・`FretGlyphWidth`・`CalculateFret` は 3 つとも 0 B）／★ **⒴⁷ `BeamedItemsToSuppress` は beams が空でも `HashSet` 0.028%**／★ **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021%）／⒴⁸ **batch でない `Merge` 147,417 回／打鍵は未値付け**／★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾・土台の変更・要設計）／★★ **⒢′ 拒否された staff の前処理＝検出器 0.023%＝`StaffSpannerItemsOf` の memo を最終パスにも通すだけ**（一番安い・出力同一が構成で言える）。⚠️ **まず回数を測ること**／★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）・土台の変更／★ **⒵⁵ `mm.g.split` 0.163%**（⚠️ `OrderBy` は*安定*）／★ **⒵⁶ 文字の 318,784 回／81 綴り 0.130%**／★ **⒴⁵ artic と trill の remap 辞書は作って捨てている**（天井 0.174%）／★★ **⒴⁗ 天井 2.03%＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*。開けるならユーザー決定が先**（実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**／⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らないこと**／⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（どちらも実機の 2 行を見てから）／★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり＝土台の変更）／⒵ **collect 17.8% と `S1.prelim` 17.0%**／⒥ は第409 が上限 4.7 ms と測った／**R13⒦ ⒤ ✅ 第410 が閉じた**／⚠️ `RestCollisionsOf`／`RestDotOffsetsOf` は **ユーザーが「今はやらない。着手はずっと後だ」と決めた（第407 ⑺⑴）＝提案しない**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms／**⒞″ ✅**・**⒟ ✅**（第407）／★★★ **LP 双子が要る R7〜R11 は*今日から着手できる*＝`lilypond.exe` の hang は 2026-09-20 に解決**（MCP コンソールのプロンプトの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"` で通る＝RULES §5.5）／**R15 ✅**（残り＝「2 綴り」一族のみ・要承認）。⚠️ **⒜ と push は「後回し」＝催促しない（第407 ⑺⑸）。**
+⇒ **次の一手**: ★ **第431 が §1.0 の一覧へ移した**（この段落には全文が書いてあった。毎便 2 つの語りブロックに
+複写されていたものを 1 か所にした＝ユーザー指示 2026-09-20。**⒳⁗ の値段はそのとき起票し直した**——
+第430 が書いた 0.128% は `pad.sr` ＝ region 全体で、名指した直しが当たるのはその 3 分の 1 の項だけ）。
 
 ★ **⑺ 終了時**: commit 2 本（code `c9bbd5ef`・docs 1 本＝§1 と RULES §5.0 ×2・§5.3 ×1。**この文を含むので SHA は書かない**＝§5.4）・**未 push 47**（開始時 45）・**最終 full `sessions/p430/run4.trx` 8760 / 0 / 3 / 8763**（**第429 最終 8762 から +1＝今便の網ちょうど 1 本**。`Zz430`／`ZZPOISON` の grep は**コードに 0 件**）・§7.5（対 `17fb650e`）**Core `+` 96 行／REF 0／OWN 0**（**うち実コードは 32 行＝rent／return と呼び替え。残りは註**・§7.6 ⒟「既存の家を指し直しただけ」）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609・棚卸しは **`APPROXIMATIONS.md` は増減 0・`magic_constants.csv` は 1 行だけ**（`VerticalSkyline.cs` の `horizonPadding <= 0.0` が 1423 → 1501＝**行番号のみ・定数の増減 0**。`LILYSHARP_UPDATE_DOCS=1` で再生成した）。計器と全文は Lab `sessions/p430/`（**`pad-split-leg1.txt`＝脚 1 の region 別の割りと site 表**・`Zz430.cs.txt`＋`Zz430Leg1.cs.txt`＝計器・`Zz430Ab.cs.txt` と `Zz430Hash.cs.txt`＝再利用可の A/B と証明 ⑵ の harness・`hashes-after.txt`・`ab-{before,after}-{1,2}-tc0.txt`）。⚠️ **毒は full suite を*止めうる*形（貸し buffer の `Clear` 落とし）＝確認は `--filter` で網 1 本に絞った**（第429 ⑹ と同じ）。⇒ ⚠️ **HANDOFF は第429 の記録 443 KB 級 → アーカイブ後 435,467 B → 今便を書いて 445 KB 級＝天井 450,000 まで 5 KB 級**（**`Fold-ClosedHandoffItems` の弁は第426 の時点で既に 0 件**・**§3 の圧力弁は第409・第410 で使い切っている。天井は上げない**）。⚠️ **次便は §1 を 1 行も書く前に `-Archive 429` を回すこと**（**途中で回すと網が 3 本赤くなる**・第410 ⑾）。**そして §1 はこの便の長さ以下に保つ。** **作業ツリーは空**。**push はユーザー**（Lab も）。⚠️ **`origin/master` の CI は `9f1d74a9` 以降が push されるまで赤のまま**＝次便が「CI が赤」を見ても、それは第412〜第430 の欠陥ではない。
-
-## 以下は第429セッションの経緯
-
-最終更新 第429セッション（2026-09-20・YT-DELL2）＝`/clear` 直後の新セッション。§0 の裏取りから入り（HEAD `b021d2f3`・**未 push 43**・**full `sessions/p429/run1.trx` 8758 / 0 / 3 / 8761＝第428 最終と一致**・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・124 秒）、★ **裏取りは 1 つも赤を出さなかった**（CI の赤は `origin/master` が `9f5cd52a` のままだからで、第412〜第428 が予告したもの）。**§7 3.5 は*セッションの頭*で回した**（`-Archive 427`＝24 行 6,651 chars）。指示は「**HANDOFF を読んで着手**」＝§1 の「次の一手」の先頭＝**⒴¹²**。★ ベンチは着手前に静かな窓をもらった。道具は pwsh MCP（Bash 0 回）。母集団と harness は第414〜第428 と同じ（実コーパス 231 冊 × 8 **forward** 打鍵・`RenderIncrementalPages`・**Release**・割当バイト・**両側 TC=0**）で、**before の打鍵 8,041,688／8,041,698 B は第428 最終の 8,041,673 B と一致**。⇒ **島を 1 つ閉じ、起票を 2 つ測り直した**:
-
-★★★ **⑴ 脚 1 ＝ 島の 100.0% は 1 つのもので、既に貸してある 2 本は 0 B だった**。割当時計を walk の中で region 別に打つと（`walk` / `scratch` / `ov.fill` / `mbs.bnd` / `mbs.seg` / `ov.range` / `walk.add`）、**島 40,172,952 B（83,538 walk・21,739／打鍵・0.270%）の内訳は `new ResolveScratch()` 10,444,936（26.0%・**136 B × 76,801 walk**＝object と空の List 3 本）／`Overlapping` 11,673,752（29.1%）／`Merged` 11,716,872（29.2%）／`Boundaries` 6,337,392（15.8%）で合計がちょうど 100.0%**。★★★ **第421・第428 が thread に貸した 2 本（walk が書く result と読む input）は同じ run で 0 B**＝**島は算術でも sort でも複写でもなく、「毎回 capacity 0 から始まる 3 本の List」だった**。
-
-⚠️⚠️ **⑵ 計器の最初の版は嘘をついた＝`MergeOverlapping` には*呼び手が 2 人*居る**。1 組の counter に足したら**部分の和が全体の 1.53 倍**になり、それで気づいた——`SortAndResolve`（`Padded` がもう 1 本回す walk）が同じ primitive を通る。region で割り直すと region 1 は **7,185 walk・22,025,864 B・11,919／打鍵＝0.148%**（**起票 ⒳″ の 0.15% と一致**）で、**その 80% は `resolved`（素の `new List`）の倍々**。⇒ ★★★ **§5.0 の「N を数え直す」の 15 例目で、外れたのは*walk の数***。**気づけたのは和を全体と突き合わせたから**＝**割ったら必ず足して戻ることを確かめる。**
-
-★★★ **⑶ 直し＝scratch を thread の引き出しに置いた**（`9a80c831`・**Core 1 ファイル**・網 1 本・**数値定数 0・LP 由来の式 0・REF 0／OWN 0＝算術を 1 つも足していない**）。`t_resolveScratch` は第421 の `t_mergeInput`・第428 の `t_resolveOutput` と同じ形（借りたら引き出しから出す・返すのは walk の終わり）。**3 本の Clear は使う側に既に在る**ので pool 自身は空にしない。⇒ **A/B ＝ −0.2995%**（8,041,688／8,041,698 → **8,017,579／8,017,630**・床 51 B）＝**脚 1 の表から組んだ模型の予測 −24,139 B に対し実測 −24,088 B**。⚠️ **口で言った予測 −21,984 は region 1 の scratch 3 本（2,155 B／打鍵）を落としていた**＝**表は持っていたのに、足すのを忘れた数がそのまま差になった。**
-
-★★ **⑷ 網 1 本と毒 4 つ**。`ASecondWalkOnTheSameThread_DoesNotInheritTheFirstsScratch`（**2 本目の walk は overlap ちょうど 1 つ**）。★★★ **3 本のうち*見えない形で腐るのは `Overlapping` だけ***＝**walk の中で持ち越す尾は「その skyline 自身の既出の棟」なので max を変えられない**（＝どの網にも映らない）が、**walk をまたぐと他人の ink になる**。毒: ⑴ `overlapping.Clear()` を落とす → **新網だけが赤**（1,090 が −∞ でなく 60）**で、pre-429 の形（毎回 `new`）では緑**／⑵ `Merged` の Clear → **どちらの形でも赤**（walk の中で重複する）／⑶ `boundaryList.Clear()` → **既存 2 本が赤**（`MergeSlope_LeavesWhatTheFromSlopePairLeaves`・`ABatchsResultList_…`）。⚠️⚠️ **⑶ は註の初稿が「stale な境界はページに届かない（余分な切れ目は融合して戻る）」と*論じていた*もので、毒が 4 秒で反証した**＝§5.3「推論と測定を混ぜない」。
-
-★★ **⑸ 出力同一は 3 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline は `b021d2f3` の木から取り直した）／⑵ **実コーパス全ページ SHA-256＝5,824 行・0 行差**（第428 の `hashes-after.txt` と突き合わせ）／⑶ suite 全緑・snapshot 249 枚不動・台帳 851 点／総和 22.584727806 不変。
-
-⇒ **次の一手**（⒜⒝⒝′ は第406 から変わらず）: **⒴¹² ✅ 第429 が閉じた**／★★★ **⒳‴ 新規＝`Padded` の*自前の*複写 0.382%**（**56,812,640 B／sweep・30,743／打鍵・3.9 回／打鍵・1 回 7,907 B**＝`padBuildings`（`_buildings.Count*4` で確保）＋`padSkyline` の建て直し＋`new List(_buildings)`。⚠️ **起票 ⒳″ の「`Padded` の複写 0.028%」は 13.6 倍低く売られていた**＝第426 の 14 例目と同じ形）／★★ **⒳⁗ `SortAndResolve` の `resolved` 0.119%**（**素の `new List` の倍々**・直しは第428 の「貸し buffer に書いて R が判ってから寸法」の型がそのまま当たる）。⚠️ **2 つで Padded 一族は 0.53%。まず `Distance(other, horizonPadding)` の呼び手を数えること**（3.9 回／打鍵が何か）／★ **⒴¹⁰ tab fork の残りは `TabSoundingNotes` の iterator ちょうど 64 B × 34,717 items＝0.015%**（⚠️ `fret.ToString`・`FretGlyphWidth`・`CalculateFret` は 3 つとも 0 B）／★ **⒴⁷ `BeamedItemsToSuppress` は beams が空でも `HashSet` 0.028%**／★ **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021%）／⒴⁸ **batch でない `Merge` 147,417 回／打鍵は未値付け**／★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾・土台の変更・要設計）／★★ **⒢′ 拒否された staff の前処理＝検出器 0.023%＝`StaffSpannerItemsOf` の memo を最終パスにも通すだけ**（一番安い・出力同一が構成で言える）。⚠️ **まず回数を測ること**／★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）・土台の変更／★ **⒵⁵ `mm.g.split` 0.163%**（⚠️ `OrderBy` は*安定*）／★ **⒵⁶ 文字の 318,784 回／81 綴り 0.130%**／★ **⒴⁵ artic と trill の remap 辞書は作って捨てている**（天井 0.174%）／★★ **⒴⁗ 天井 2.03%＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*。開けるならユーザー決定が先**（実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**／⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らないこと**／⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（どちらも実機の 2 行を見てから）／★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり＝土台の変更）／⒵ **collect 17.8% と `S1.prelim` 17.0%**／⒥ は第409 が上限 4.7 ms と測った／**R13⒦ ⒤ ✅ 第410 が閉じた**／⚠️ `RestCollisionsOf`／`RestDotOffsetsOf` は **ユーザーが「今はやらない。着手はずっと後だ」と決めた（第407 ⑺⑴）＝提案しない**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms／**⒞″ ✅**・**⒟ ✅**（第407）／★★★ **LP 双子が要る R7〜R11 は*今日から着手できる*＝`lilypond.exe` の hang は 2026-09-20 に解決**（MCP コンソールのプロンプトの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"` で通る＝RULES §5.5）／**R15 ✅**（残り＝「2 綴り」一族のみ・要承認）。⚠️ **⒜ と push は「後回し」＝催促しない（第407 ⑺⑸）。**
-
-★ **⑹ 終了時**: 恒久的な知見は §4 の表どおり **RULES §5.0 へ 3 本**（15 例目＝外れたのは walk の数・**検算は「部分の和が全体に戻るか」**／**註の「安全だ」は予測＝書く前に毒を打つ**／毒が full を止めるときは網 1 本に絞る）。commit 2 本（code `9a80c831`・docs 1 本＝§1 と RULES §5.0。**この文を含むので SHA は書かない**＝§5.4）・**未 push 45**（開始時 43）・**最終 full `sessions/p429/run4.trx` 8759 / 0 / 3 / 8762**（**第428 最終 8761 から +1＝今便の網ちょうど 1 本**。`Zz429`／`ZZPOISON` の grep は**コードに 0 件**）・§7.5（対 `b021d2f3`）**Core `+` 82 行／REF 0／OWN 0**（**うち実コードは 8 行＝rent と return。残りは註**・§7.6 ⒟「既存の家を指し直しただけ」）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609・棚卸しは **`APPROXIMATIONS.md` も `magic_constants.csv` も行の増減 0**（行番号だけ）。計器と全文は Lab `sessions/p429/`（**`walk-split-leg1.txt`＝脚 1 の region 別の割り**・`Zz429.cs.txt`＋`Zz429Leg1.cs.txt`＋`zz429-leg1-probe.diff.txt`＝脚 1 の計器と当て方・`Zz429Ab.cs.txt` と `Zz429Hash.cs.txt`＝再利用可の A/B と証明 ⑵ の harness・`hashes-after.txt`・`ab-{before,after}-{1,2}-tc0.txt`）。⚠️ **毒 ⑴⑵ は full suite を*止める***（Clear を落とすと resolve が膨らむ）＝**毒の確認は対象 1 本に絞って回すこと**。⇒ ⚠️ **HANDOFF は第428 の記録 445,843 B → アーカイブ後 434,265 B → 今便を書いて 443 KB 級＝天井 450,000 まで 7 KB 級**（**`Fold-ClosedHandoffItems` の弁は第426 の時点で既に 0 件**・**§3 の圧力弁は第409・第410 で使い切っている。天井は上げない**）。⚠️ **次便は §1 を 1 行も書く前に `-Archive 428` を回すこと**（**途中で回すと網が 3 本赤くなる**・第410 ⑾）。**そして §1 はこの便の長さ以下に保つ。** **作業ツリーは空**。**push はユーザー**（Lab も）。⚠️ **`origin/master` の CI は `9f1d74a9` 以降が push されるまで赤のまま**＝次便が「CI が赤」を見ても、それは第412〜第429 の欠陥ではない。
-
-
-
 
 ## 2. 開いている作業
 
