@@ -205,10 +205,18 @@ internal static class DotColumn
         // begins, and LilyPond leaves that dot at the head's ink right (1.754200). Widening
         // either comparison to >= pushes it to 2.517400.
         double off = headInkRight;
-        foreach (var s in supports)
-            foreach (int p in dotPositions)
+        // Indexed, not foreach: both lists arrive as interfaces, so foreach would box an
+        // enumerator — and the inner one once per support (RULES §5.3).
+        for (int i = 0; i < supports.Count; i++)
+        {
+            var s = supports[i];
+            for (int j = 0; j < dotPositions.Count; j++)
+            {
+                int p = dotPositions[j];
                 if (s.PositionBottom < p && p < s.PositionTop)
                     off = Math.Max(off, s.XRight);
+            }
+        }
         return off + dotWidth;
     }
 

@@ -336,7 +336,9 @@ internal static class BreakAlignSpacing
     /// (<see cref="EngravingDefaults.ClefGlyphXOffset"/>) at a line start, 0 at a mid-line boundary
     /// whose first grob is the column origin.
     /// </remarks>
-    public static IReadOnlyList<PlacedColumn> SolveColumns(
+    // The concrete type, not the interface: every caller walks the result, and foreach over
+    // an interface would box an enumerator on each line start (RULES §5.3).
+    public static List<PlacedColumn> SolveColumns(
         IEnumerable<(BreakAlignSymbol Symbol, double Width)> items, double startLeft)
     {
         // One column per present item, so the caller's own count BOUNDS this — and the bound

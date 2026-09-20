@@ -68,9 +68,12 @@ internal sealed class SpringSolver
     public double TotalLength(double force)
     {
         double total = 0;
-        foreach (var spring in _springs)
+        // Indexed, not foreach, at every walk of _springs: it is held as an interface (one
+        // constructor hands in an ImmutableArray), so foreach boxes an enumerator — and the
+        // solver walks it several times per force it tries (RULES §5.3).
+        for (int i = 0; i < _springs.Count; i++)
         {
-            total += spring.Length(force);
+            total += _springs[i].Length(force);
         }
         return total;
     }
@@ -87,9 +90,9 @@ internal sealed class SpringSolver
     private double MaxBlockingForce()
     {
         double result = 0.0;
-        foreach (var spring in _springs)
+        for (int i = 0; i < _springs.Count; i++)
         {
-            result = Math.Max(result, spring.BlockingForce);
+            result = Math.Max(result, _springs[i].BlockingForce);
         }
         return result;
     }
@@ -153,9 +156,9 @@ internal sealed class SpringSolver
     {
         // Sum of all inverse stretch strengths
         double invHooke = 0;
-        foreach (var spring in _springs)
+        for (int i = 0; i < _springs.Count; i++)
         {
-            invHooke += spring.InverseStretchStrength;
+            invHooke += _springs[i].InverseStretchStrength;
         }
 
         // Avoid division by zero - if springs are infinitely stiff, report very large force
@@ -243,9 +246,9 @@ internal sealed class SpringSolver
         var positions = new List<double> { startX };
         double currentX = startX;
 
-        foreach (var spring in _springs)
+        for (int i = 0; i < _springs.Count; i++)
         {
-            currentX += spring.Length(force);
+            currentX += _springs[i].Length(force);
             positions.Add(currentX);
         }
 
@@ -330,8 +333,9 @@ internal sealed class SpringSolver
         {
             bool changed = false;
 
-            foreach (var (left, right, dist) in rods)
+            for (int r = 0; r < rods.Count; r++)
             {
+                var (left, right, dist) = rods[r];
                 if (left < 0 || right > result.Length || left >= right)
                     continue;
 

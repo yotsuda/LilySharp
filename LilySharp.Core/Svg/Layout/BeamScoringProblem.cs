@@ -512,8 +512,13 @@ internal sealed class BeamScoringProblem
         //   The supply hands it over relative to that first STEM, so shift it here — the
         //   one place both frames are in view.
         _collisionPoints = new List<BeamCollisionPoint>(_collisions.Count);
-        foreach (var c in _collisions)
+        // Indexed, not foreach: _collisions is an interface, so foreach would box an
+        // enumerator on every beam — usually to walk an empty list (RULES §5.3).
+        for (int i = 0; i < _collisions.Count; i++)
+        {
+            var c = _collisions[i];
             AddCollision(c.X + halfBeamOverhang, c.MinY, c.MaxY, c.BasePenalty);
+        }
     }
 
     /// <summary>

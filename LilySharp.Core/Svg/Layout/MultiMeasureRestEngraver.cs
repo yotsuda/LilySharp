@@ -563,8 +563,10 @@ internal static class MultiMeasureRestEngraver
         {
             if (m >= primaryMeasures.Length)
                 return false;
-            foreach (var voices in allStaffVoices)
-                if (!StaffRests(voices, m))
+            // Indexed, not foreach: `allStaffVoices` is an interface, so foreach would box an
+            // enumerator on every bar this asks about (RULES §5.3).
+            for (int s = 0; s < allStaffVoices.Count; s++)
+                if (!StaffRests(allStaffVoices[s], m))
                     return false;
             return true;
         }
@@ -597,8 +599,8 @@ internal static class MultiMeasureRestEngraver
                 (HasLeadingBreakAlignedChange(primaryMeasures[m]) ||
                  StartsWrittenRest(primaryMeasures[m])))
                 return true;
-            foreach (var voices in allStaffVoices)
-                foreach (var v in voices)
+            for (int s = 0; s < allStaffVoices.Count; s++)
+                foreach (var v in allStaffVoices[s])
                     if (m < v.Measures.Length &&
                         (HasLeadingBreakAlignedChange(v.Measures[m]) || StartsWrittenRest(v.Measures[m])))
                         return true;
@@ -673,11 +675,16 @@ internal static class MultiMeasureRestEngraver
         var meter = initial;
         for (int m = 0; m < barCount; m++)
         {
-            foreach (var measures in voices)
+            // Indexed, not foreach: `voices` is an interface, so foreach would box an
+            // enumerator once per bar (RULES §5.3).
+            for (int v = 0; v < voices.Count; v++)
+            {
+                var measures = voices[v];
                 if (m < measures.Length)
                     foreach (var item in measures[m].Items)
                         if (item is TimeSignatureChangeItem tc)
                             meter = tc.NewTime.MeasureDuration;
+            }
             meters[m] = meter;
         }
         return meters;

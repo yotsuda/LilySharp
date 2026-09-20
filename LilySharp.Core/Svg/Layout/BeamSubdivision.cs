@@ -98,7 +98,15 @@ internal static class BeamSubdivision
     {
         if (prevRight.Count == 0) return 0;
         int lmin = int.MaxValue, lmax = int.MinValue;
-        foreach (int v in prevRight) { if (v < lmin) lmin = v; if (v > lmax) lmax = v; }
+        // Indexed, not foreach, here and below: both rank lists arrive as interfaces, so
+        // foreach would box an enumerator — and the inner one once per candidate shift
+        // (RULES §5.3).
+        for (int p = 0; p < prevRight.Count; p++)
+        {
+            int v = prevRight[p];
+            if (v < lmin) lmin = v;
+            if (v > lmax) lmax = v;
+        }
         // i ranges over the previous stem's right-rank span, stepping in leftDir.
         int start = leftDir > 0 ? lmin : lmax;
         int endB = leftDir > 0 ? lmax : lmin;
@@ -106,9 +114,9 @@ internal static class BeamSubdivision
         for (int i = start; (i - endB) * leftDir <= 0; i += leftDir)
         {
             int count = 0;
-            foreach (int beamNo in curLeft)
+            for (int c = 0; c < curLeft.Count; c++)
             {
-                int k = -rightDir * beamNo + i;
+                int k = -rightDir * curLeft[c] + i;
                 if (Contains(prevRight, k)) count++;
             }
             if (count > bestCount || (count == bestCount && !specialShift))
@@ -122,7 +130,7 @@ internal static class BeamSubdivision
 
     private static bool Contains(IReadOnlyList<int> list, int value)
     {
-        foreach (var v in list) if (v == value) return true;
+        for (int i = 0; i < list.Count; i++) if (list[i] == value) return true;
         return false;
     }
 

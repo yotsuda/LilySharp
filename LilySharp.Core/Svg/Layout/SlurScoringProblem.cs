@@ -171,7 +171,10 @@ internal sealed class SlurScoringProblem
     private readonly double _endY;
     private readonly SlurScoreParameters _parameters;
     private readonly IReadOnlyList<SlurObstacle>? _obstacles;
-    private readonly IReadOnlyList<SlurExtraObject>? _extraObjects;
+    // The concrete type, not the interface: the constructor already builds these as a List
+    // (they are reflected into the Y-up frame), and three scorers foreach them — over an
+    // interface each of those walks would box an enumerator (RULES §5.3).
+    private readonly List<SlurExtraObject>? _extraObjects;
     private readonly IReadOnlyList<SlurLayout>? _existingSlurs;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
@@ -269,9 +272,12 @@ internal sealed class SlurScoringProblem
         if (obstacles != null)
         {
             var reflected = new List<SlurObstacle>(obstacles.Count);
-            foreach (var o in obstacles)
+            for (int i = 0; i < obstacles.Count; i++)
+            {
+                var o = obstacles[i];
                 // -NaN is still NaN, so the no-stem marker survives the flip.
                 reflected.Add(new SlurObstacle(o.X, -o.TopY, -o.BottomY, -o.StemY));
+            }
             _obstacles = reflected;
         }
         else
@@ -284,8 +290,11 @@ internal sealed class SlurScoringProblem
         if (extraObjects != null)
         {
             var reflected = new List<SlurExtraObject>(extraObjects.Count);
-            foreach (var e in extraObjects)
+            for (int i = 0; i < extraObjects.Count; i++)
+            {
+                var e = extraObjects[i];
                 reflected.Add(e with { TopY = -e.TopY, BottomY = -e.BottomY });
+            }
             _extraObjects = reflected;
         }
         else
@@ -382,10 +391,10 @@ internal sealed class SlurScoringProblem
         {
             // LILYPOND-REF: lily/slur-scoring.cc:682-694 free_slur_distance —
             // the small slur's curve midpoint plus that distance.
-            foreach (var s in _existingSlurs)
+            for (int i = 0; i < _existingSlurs.Count; i++)
             {
-                double midX = (s.StartX + s.EndX) / 2.0;
-                double midY = (s.Control1.Y + s.Control2.Y) / 2.0;
+                double midX = (_existingSlurs[i].StartX + _existingSlurs[i].EndX) / 2.0;
+                double midY = (_existingSlurs[i].Control1.Y + _existingSlurs[i].Control2.Y) / 2.0;
                 avoid.Add((midX, midY + dir * _parameters.FreeSlurDistance));
             }
         }
@@ -400,7 +409,9 @@ internal sealed class SlurScoringProblem
     private static double FitFactor(
         (double X, double Y) dzUnit, (double X, double Y) dzPerp,
         double closeToEdgeLength, Bezier curve, int dir,
-        IReadOnlyList<(double X, double Y)> avoid)
+        // The concrete type, not the interface: this walk runs once per candidate curve,
+        // and foreach over an interface would box an enumerator each time (RULES §5.3).
+        List<(double X, double Y)> avoid)
     {
         double fit = 0.0;
         double x0X = curve.X0, x0Y = curve.Y0;
@@ -507,7 +518,7 @@ internal sealed class SlurScoringProblem
     /// LILYPOND-REF: lily/slur-configuration.cc:135-206 generate_curve —
     /// eccentricity defaults to 0.
     /// </remarks>
-    private void GenerateCurve(SlurCandidate config, IReadOnlyList<(double X, double Y)> avoid)
+    private void GenerateCurve(SlurCandidate config, List<(double X, double Y)> avoid)
     {
         int dir = config.CurveUp ? 1 : -1;
         double dzX = config.EndX - config.StartX;
@@ -1086,8 +1097,9 @@ internal sealed class SlurScoringProblem
             int nTs = config.Curve.SolveHorizontalTangent(ts);
             double peakY = config.Curve.CurveY(nTs > 0 ? ts[0] : 0.5);
 
-            foreach (var existing in _existingSlurs)
+            for (int i = 0; i < _existingSlurs.Count; i++)
             {
+                var existing = _existingSlurs[i];
                 bool xOverlap = !(config.EndX < existing.StartX || config.StartX > existing.EndX);
                 if (!xOverlap)
                     continue;

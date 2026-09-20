@@ -205,8 +205,12 @@ internal sealed class MeasureLayouter
         // solved positions. The measure is only truly empty — and collapses to
         // its rigid placeholder spring upstream — when EVERY staff is empty here.
         var totalDuration = Fraction.Zero;
-        foreach (var m in measuresToScan)
+        // Indexed, not foreach, at every walk of measuresToScan in this file: the `??` above
+        // leaves it an interface (a List in one arm, an array in the other), so its type
+        // cannot be narrowed — and foreach over an interface boxes an enumerator (RULES §5.3).
+        for (int mi = 0; mi < measuresToScan.Count; mi++)
         {
+            var m = measuresToScan[mi];
             var d = Fraction.Zero;
             foreach (var item in m.Items)
                 d += item.Duration;
@@ -242,8 +246,9 @@ internal sealed class MeasureLayouter
         // LILYPOND-REF: lily/simultaneous-music-iterator.cc:136-146 Simultaneous_music_iterator::pending_moment — the next timestep is the EARLIEST child's pending moment, a skip's end among them.
         // LILYPOND-REF: lily/spacing-spanner.cc:446-472 Spacing_spanner::fills_measure — !is_used (next) on that column.
         bool droppedOnsetFollows = false;
-        foreach (var m in measuresToScan)
+        for (int mi = 0; mi < measuresToScan.Count; mi++)
         {
+            var m = measuresToScan[mi];
             var t = Fraction.Zero;
             foreach (var item in m.Items)
             {
@@ -295,8 +300,9 @@ internal sealed class MeasureLayouter
         IReadOnlyList<Measure> measuresToScan)
     {
         var timingToItems = new Dictionary<Fraction, List<MusicItem>>();
-        foreach (var m in measuresToScan)
+        for (int mi = 0; mi < measuresToScan.Count; mi++)
         {
+            var m = measuresToScan[mi];
             var t = Fraction.Zero;
             foreach (var item in m.Items)
             {
@@ -502,10 +508,10 @@ internal sealed class MeasureLayouter
         var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
         // LILYPOND-REF: lily/spacing-basic.cc:144 — measure length caps shortest_playing (mmrest guard).
         Fraction measureLength = Fraction.Zero;
-        foreach (var vm in measuresToScan)
+        for (int vi = 0; vi < measuresToScan.Count; vi++)
         {
             var total = Fraction.Zero;
-            foreach (var item in vm.Items)
+            foreach (var item in measuresToScan[vi].Items)
                 total += item.Duration;
             if (total > measureLength)
                 measureLength = total;
@@ -556,8 +562,9 @@ internal sealed class MeasureLayouter
         // multi-voice.natural.wide-head-gap's +0.073200 = the half-vs-quarter
         // head-width difference).
         List<MusicItem>? wishLefts = null;
-        foreach (var vm in measuresToScan)
+        for (int vi = 0; vi < measuresToScan.Count; vi++)
         {
+            var vm = measuresToScan[vi];
             var prev = ItemStartingAt(vm, timings[i - 1]);
             var next = ItemStartingAt(vm, timings[i]);
             if (prev == null || next == null)

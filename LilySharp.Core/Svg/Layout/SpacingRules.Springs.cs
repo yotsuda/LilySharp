@@ -392,8 +392,11 @@ internal static partial class SpacingRules
         Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams, double increment)
     {
         var wishes = new List<Spring>();
-        foreach (var voice in voices)
+        // Indexed, not foreach, here and in MergeVoiceStemWishesToBarline: `voices` is an
+        // interface, so foreach would box an enumerator on every spring (RULES §5.3).
+        for (int v = 0; v < voices.Count; v++)
         {
+            var voice = voices[v];
             var left = NoteColumnAt(voice, tLeft);
             var right = NoteColumnAt(voice, tRight);
             if (left is null || right is null)
@@ -450,9 +453,9 @@ internal static partial class SpacingRules
         Fraction tLeft, NoteSpacingParameters noteParams)
     {
         var wishes = new List<Spring>();
-        foreach (var voice in voices)
+        for (int v = 0; v < voices.Count; v++)
         {
-            if (NoteColumnAt(voice, tLeft) is not { } left)
+            if (NoteColumnAt(voices[v], tLeft) is not { } left)
                 continue;
 
             double corr = CalculateStemCorrectionToBarline(left, noteParams);
@@ -502,8 +505,8 @@ internal static partial class SpacingRules
         if (nextItems == null)
             return 0;
         double maxOptical = 0;
-        foreach (var item in nextItems)
-            maxOptical = Math.Max(maxOptical, BarlineToStemOpticalCorrection(item));
+        for (int i = 0; i < nextItems.Count; i++)
+            maxOptical = Math.Max(maxOptical, BarlineToStemOpticalCorrection(nextItems[i]));
         return maxOptical;
     }
 

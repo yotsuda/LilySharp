@@ -193,8 +193,11 @@ internal sealed class TieChordOutline
 
         // The tied heads: a ONE-STAFF-SPACE box on the head's position, not the glyph's ink
         // height. LILYPOND-REF: :116-121.
-        foreach (var head in parts.TiedHeads)
+        // Indexed, not foreach, at every walk of a TieColumnParts list here and in AddBoxes:
+        // those properties are interfaces, so foreach boxes an enumerator (RULES §5.3).
+        for (int i = 0; i < parts.TiedHeads.Count; i++)
         {
+            var head = parts.TiedHeads[i];
             var box = new TieOutlineBox(
                 (head.Position - 1) * 0.5, (head.Position + 1) * 0.5, head.XLeft, head.XRight);
             headBoxes.Add(box);
@@ -311,8 +314,9 @@ internal sealed class TieChordOutline
         if (parts.HeadPositions.Count > 0)
         {
             int lo = int.MaxValue, hi = int.MinValue;
-            foreach (int p in parts.HeadPositions)
+            for (int i = 0; i < parts.HeadPositions.Count; i++)
             {
+                int p = parts.HeadPositions[i];
                 lo = Math.Min(lo, p);
                 hi = Math.Max(hi, p);
             }
@@ -326,7 +330,10 @@ internal sealed class TieChordOutline
         List<(double YBottom, double YTop, double XLeft, double XRight)> boxes,
         IReadOnlyList<TieOutlineBox> more)
     {
-        foreach (var b in more)
+        for (int i = 0; i < more.Count; i++)
+        {
+            var b = more[i];
             boxes.Add((b.YDown, b.YUp, b.XLeft, b.XRight));
+        }
     }
 }

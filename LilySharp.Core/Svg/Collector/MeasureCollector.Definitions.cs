@@ -841,9 +841,11 @@ public sealed partial class MeasureCollector
         AccidentalNeed Fold(IReadOnlyList<Semantics.AccidentalRule> rules)
         {
             bool acc = false, res = false;
-            foreach (var rule in rules)
+            // Indexed, not foreach: `rules` is an interface, so foreach would box an
+            // enumerator on every pitch — to walk a list that holds one rule (RULES §5.3).
+            for (int i = 0; i < rules.Count; i++)
             {
-                var one = CheckPitchAgainstSignature(step, actual, octave, rule);
+                var one = CheckPitchAgainstSignature(step, actual, octave, rules[i]);
                 acc |= one.NeedAcc;
                 res |= one.NeedRestore;
             }

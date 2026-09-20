@@ -112,8 +112,13 @@ internal static class LineStartColumn
         ToTuples(IReadOnlyList<ColumnBox> boxes)
     {
         var tuples = new List<(double YBottom, double YTop, double XLeft, double XRight)>(boxes.Count);
-        foreach (var b in boxes)
+        // Indexed, not foreach: `boxes` is an interface, so foreach would box an enumerator
+        // on every line start (RULES §5.3).
+        for (int i = 0; i < boxes.Count; i++)
+        {
+            var b = boxes[i];
             tuples.Add((b.YBottom, b.YTop, b.XLeft, b.XRight));
+        }
         return tuples;
     }
 

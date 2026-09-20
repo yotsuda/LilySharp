@@ -205,8 +205,11 @@ internal static partial class SpacingRules
         // the drawer widened. This is the same list SharedRenderer.KeySignatureGlyphs draws:
         // placement and reservation are ONE claim (HANDOFF §5.0).
         double width = 0.0;
-        foreach (var (_, alter) in Music.KeySpelling.SignatureSteps(key.Sharps))
-            width += GlyphMetrics.GetKeySignatureAccidentalWidth(alter);
+        // Indexed, not foreach: SignatureSteps hands back an interface, so foreach would box
+        // an enumerator on every key-signature reservation (RULES §5.3).
+        var steps = Music.KeySpelling.SignatureSteps(key.Sharps);
+        for (int i = 0; i < steps.Count; i++)
+            width += GlyphMetrics.GetKeySignatureAccidentalWidth(steps[i].Alter);
         return width;
     }
 
