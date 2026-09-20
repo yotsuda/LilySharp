@@ -336,19 +336,24 @@ internal static class BreakAlignSpacing
     /// (<see cref="EngravingDefaults.ClefGlyphXOffset"/>) at a line start, 0 at a mid-line boundary
     /// whose first grob is the column origin.
     /// </remarks>
-    // The concrete type, not the interface: every caller walks the result, and foreach over
-    // an interface would box an enumerator on each line start (RULES §5.3).
+    // The concrete type on BOTH sides, not the interface: every caller walks the result, and
+    // foreach over an interface boxes an enumerator on each line start (RULES §5.3). The
+    // parameter was the interface until session 446 measured it — 64.51 calls a keystroke,
+    // 3,096 B/keystroke of boxed List enumerator — and both callers there already hold a
+    // List of exactly this type, so narrowing costs nothing and the box goes.
     public static List<PlacedColumn> SolveColumns(
-        IEnumerable<(BreakAlignSymbol Symbol, double Width)> items, double startLeft)
+        List<(BreakAlignSymbol Symbol, double Width)> items, double startLeft)
     {
-        // One column per present item, so the caller's own count BOUNDS this — and the bound
-        // is exact on every caller there is: measured before the size was handed over,
-        // 119,209 calls, asked == Count every time, because neither caller ever offers an
-        // item of width 0 (both build their list from grobs they have already decided to
-        // engrave). An enumerable with no count falls back to the growth ladder.
-        var placed = items is ICollection<(BreakAlignSymbol Symbol, double Width)> itemCollection
-            ? new List<PlacedColumn>(itemCollection.Count)
-            : new List<PlacedColumn>();
+        // One column per present item, so the caller's own count BOUNDS this. On the reader's
+        // corpus the bound is also EXACT — measured before the size was handed over, 119,209
+        // calls, asked == Count every time.
+        // ⚠️ THAT IS A POPULATION, NOT A PROOF. The reason written here used to be "because
+        // neither caller ever offers an item of width 0", and session 446 poisoned the skip
+        // below (`if (width <= 0.0) continue` → never skip) to check it: EIGHT tests went red.
+        // The callers do offer zero-width items — a row score has no clef, and SolvePrefixColumns
+        // adds (Clef, 0) unconditionally — so the skip is load-bearing and the bound is only a
+        // bound. Over-reserving one slot is the right side to be wrong on.
+        var placed = new List<PlacedColumn>(items.Count);
         BreakAlignSymbol? prev = null;
         double prevLeft = 0.0, prevWidth = 0.0;
         foreach (var (symbol, width) in items)

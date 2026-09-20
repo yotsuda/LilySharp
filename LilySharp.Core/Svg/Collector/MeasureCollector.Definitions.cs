@@ -35,7 +35,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void CollectPartBodyOverrides(SyntaxNode root, string partName, int staffIndex)
     {
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodesOfKind<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
@@ -86,7 +86,7 @@ public sealed partial class MeasureCollector
         SyntaxNode root, string partName, bool scoreConcert,
         (int step, int alt, int oct)? fileTranspose, bool fileIsConcert)
     {
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
+        foreach (var partDecl in root.ChildNodesOfKind<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
@@ -99,8 +99,14 @@ public sealed partial class MeasureCollector
 
             // A part-header key (`part p { key bes major … }`) is this part's default
             // key — applied per-part below, not folded into the global (file) key.
-            KeySignatureSyntax? partKey = partDecl.ChildNodes()
-                .OfType<KeySignatureSyntax>().FirstOrDefault();
+            // The walk is written out: FirstOrDefault() over OfType<T>() boxes the struct
+            // child walk and builds a filter iterator over the box (RULES §5.3).
+            KeySignatureSyntax? partKey = null;
+            foreach (var k in partDecl.ChildNodesOfKind<KeySignatureSyntax>())
+            {
+                partKey = k;
+                break;
+            }
 
             // Check properties for clef, instrument, octave, and transpose
             foreach (var prop in partDecl.Properties)

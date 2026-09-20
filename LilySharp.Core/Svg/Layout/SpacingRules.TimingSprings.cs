@@ -139,12 +139,13 @@ internal static partial class SpacingRules
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
 
-    /// <summary>A one-item sequence, for the single-voice callers of
+    /// <summary>A one-item column, for the single-voice callers of
     /// <see cref="ApplyLeftHeadWidth"/> (which takes the simultaneous left column).</summary>
-    private static IEnumerable<MusicItem> One(MusicItem item)
-    {
-        yield return item;
-    }
+    /// <remarks>
+    /// This was a <c>yield return</c> one-item sequence until session 446, which cost a
+    /// 48-byte state machine per call — see <see cref="ItemColumn"/> for the measurement.
+    /// </remarks>
+    private static ItemColumn One(MusicItem item) => new(item);
 
     /// <summary>
     /// Refines a duration-based ideal to the LEFT note column's actual head width.
@@ -205,11 +206,12 @@ internal static partial class SpacingRules
     /// a drift — so this is a note rather than a guard.
     /// </para>
     /// </remarks>
-    private static int ContextMask(IEnumerable<MusicItem> items)
+    private static int ContextMask(ItemColumn items)
     {
         int mask = 0;
-        foreach (var item in items)
+        for (int i = 0; i < items.Count; i++)
         {
+            var item = items[i];
             if (item is not (NoteItem or ChordItem or RestItem { IsSpacer: false }))
                 continue;
             mask |= 1 << (int)ContextOf(item);
@@ -323,9 +325,9 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     private static bool CrossesVoiceBoundary(
-        IEnumerable<MusicItem> leftItems, IEnumerable<MusicItem>? rightItems)
+        ItemColumn leftItems, ItemColumn rightItems)
     {
-        if (rightItems is null)
+        if (rightItems.Count == 0)
             return false;
         int left = ContextMask(leftItems);
         if (left == 0)
@@ -366,11 +368,12 @@ internal static partial class SpacingRules
     /// LilyPond makes a wish for; false for a column with no cued item at all, which cannot
     /// reach this call (the shared cue bit says both columns have one).
     /// </remarks>
-    private static bool EveryCuedItemBeginsItsRegion(IEnumerable<MusicItem> items)
+    private static bool EveryCuedItemBeginsItsRegion(ItemColumn items)
     {
         bool anyCue = false;
-        foreach (var item in items)
+        for (int i = 0; i < items.Count; i++)
         {
+            var item = items[i];
             if (item is not (NoteItem or ChordItem) || ContextOf(item) != VoiceContextId.Cue)
                 continue;
             if (!item.BeginsCueRegion)
@@ -381,8 +384,8 @@ internal static partial class SpacingRules
     }
 
     internal static Spring ApplyLeftHeadWidth(
-        Spring spring, IEnumerable<MusicItem> leftItems, double increment,
-        IEnumerable<MusicItem>? rightItems = null, bool mergeWishAverage = false)
+        Spring spring, ItemColumn leftItems, double increment,
+        ItemColumn rightItems = default, bool mergeWishAverage = false)
     {
         if (CrossesVoiceBoundary(leftItems, rightItems))
             return spring;
@@ -401,8 +404,9 @@ internal static partial class SpacingRules
         double headSum = 0;
         int headCount = 0;
         bool any = false;
-        foreach (var p in leftItems)
+        for (int i = 0; i < leftItems.Count; i++)
         {
+            var p = leftItems[i];
             double w = p switch
             {
                 // The head's INK right edge, not its advance. LilyPond reads

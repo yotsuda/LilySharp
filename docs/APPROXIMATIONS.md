@@ -110,7 +110,7 @@
 - **:1024** approximation there); RIGHT wins when both edges match, as LP's
 - **:1027** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
-- **:339** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
+- **:341** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
 - **:124** order, so the warning has nothing to fire on and is not ported.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
@@ -209,7 +209,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:275** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
-- **:421** rest. No point observes it — see the branch below.
+- **:425** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:346** so removing the floor here would be an unobserved change to degenerate ties rather
 - **:1059** observed by: NOTHING. No ledger point measures a dotted tie
@@ -406,7 +406,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:242** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:757** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:765** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`
@@ -429,7 +429,7 @@
 - **:164** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
-- **:1276** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
+- **:1278** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`

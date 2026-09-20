@@ -58,12 +58,26 @@ internal static class BeamSubdivision
         public List<int> Left { get; } = new();
         public List<int> Right { get; } = new();
 
-        /// <summary>All ranks this stem touches (left ∪ right).</summary>
-        public IEnumerable<int> All()
-        {
-            foreach (var r in Left) yield return r;
-            foreach (var r in Right) yield return r;
-        }
+        /// <summary>How many ranks this stem touches (left ∪ right, with multiplicity).</summary>
+        /// <remarks>
+        /// ⚠️ THIS PAIR EXISTS IN ORDER NOT TO ALLOCATE, and that is the only reason the union
+        /// is not a walk. It was one <c>yield return</c> method, and a C# iterator builds its
+        /// state machine on the CALL rather than on the first <c>MoveNext</c> — 64 bytes per
+        /// ask, whether the stem carries four ranks or none. MEASURED (2026-09-20, session 446;
+        /// the reader's corpus, 231 books x 8 forward keystrokes, Release): the two readers
+        /// asked 83.02 + 27.84 times a keystroke, which is 7,095 B/keystroke for a walk of a
+        /// handful of ints. The order is LEFT first, then RIGHT: <see cref="Multiplicity"/>
+        /// takes a max or a min and cannot see it, but <c>CalcBeamSegments</c> feeds a
+        /// SortedSet, so the order is kept rather than argued about — and that reading was
+        /// measured, not assumed: session 446 poisoned the order (right side first) and all
+        /// 8,774 tests stayed green, while dropping the right side from the COUNT reddened
+        /// eight. What the suite observes here is membership; the order is kept because it is
+        /// free, not because a test asks for it (RULES §5.4).
+        /// </remarks>
+        public int AllCount => Left.Count + Right.Count;
+
+        /// <summary>The i-th rank of left ∪ right, the left side first.</summary>
+        public int AllAt(int i) => i < Left.Count ? Left[i] : Right[i - Left.Count];
 
         /// <summary>
         /// The extreme rank in the stem's direction — LilyPond's
@@ -74,8 +88,10 @@ internal static class BeamSubdivision
         {
             bool any = false;
             int best = 0;
-            foreach (var r in All())
+            int n = AllCount;
+            for (int i = 0; i < n; i++)
             {
+                int r = AllAt(i);
                 if (!any) { best = r; any = true; continue; }
                 best = dir > 0 ? Math.Max(best, r) : Math.Min(best, r);
             }
@@ -239,7 +255,10 @@ internal static class BeamSubdivision
         // Gather every distinct rank present.
         var allRanks = new SortedSet<int>();
         for (int i = 0; i < n; i++)
-            foreach (var r in ranks[i].All()) allRanks.Add(r);
+        {
+            var r = ranks[i];
+            for (int k = 0, m = r.AllCount; k < m; k++) allRanks.Add(r.AllAt(k));
+        }
 
         foreach (int rank in allRanks)
         {

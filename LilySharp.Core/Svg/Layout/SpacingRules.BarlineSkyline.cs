@@ -352,7 +352,7 @@ internal static partial class SpacingRules
     ///   its neighbours, horizontal-skylines from its stencil.
     /// </remarks>
     internal static (double SkyMin, double Rod) NoteColumnToBarlineFloorPair(
-        Rendering.ScoreTextMetrics fonts, MusicItem item, IEnumerable<MusicItem>? rightNeighbours = null)
+        Rendering.ScoreTextMetrics fonts, MusicItem item, ItemColumn rightNeighbours = default)
     {
         // A change item shares no column with a bar line in LilyPond (a mid-measure change
         // is its own non-musical column); a spacer engraves nothing. Both keep the type
@@ -370,14 +370,16 @@ internal static partial class SpacingRules
         var wishRight = ItemSkylineFactory.CreateWishRightSkylineAtColumn(item, 0, staffY: 0);
 
         var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
-        if (rightNeighbours != null)
-            foreach (var n in rightNeighbours)
-                if (IsMusicalColumn(n))
-                {
-                    var (nMin, nMax) = ItemSkylineFactory.ColumnYExtent(n, 0);
-                    yMin = Math.Min(yMin, nMin);
-                    yMax = Math.Max(yMax, nMax);
-                }
+        for (int i = 0; i < rightNeighbours.Count; i++)
+        {
+            var n = rightNeighbours[i];
+            if (IsMusicalColumn(n))
+            {
+                var (nMin, nMax) = ItemSkylineFactory.ColumnYExtent(n, 0);
+                yMin = Math.Min(yMin, nMin);
+                yMax = Math.Max(yMax, nMax);
+            }
+        }
         // Device frame, y down: the staff's top line is StaffYBottom (-2), its bottom line
         // StaffYTop (+2) — BoundaryColumn's box convention.
         double reachAbove = Math.Clamp(BoundaryColumn.StaffYBottom - yMin, 0, BarLineExtraSpacingHeightCap);

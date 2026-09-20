@@ -48,8 +48,12 @@ namespace LilySharp.Core.Semantics;
 internal static class TopLevelNodes
 {
     /// <summary>Root-level declarations of type <typeparamref name="T"/>, in document order.</summary>
-    public static IEnumerable<T> OfRoot<T>(SyntaxNode root) where T : SyntaxNode
-        => root.ChildNodes().OfType<T>();
+    /// <remarks>
+    /// The walk is a struct: <c>OfType&lt;T&gt;()</c> would box the child walk and build a
+    /// filter iterator over the box, two objects for every ask (RULES §5.3, session 446).
+    /// </remarks>
+    public static TypedChildNodeList<T> OfRoot<T>(SyntaxNode root) where T : SyntaxNode
+        => root.ChildNodesOfKind<T>();
 
     /// <summary>
     /// Root-level declarations of type <typeparamref name="T"/> and those written as a
@@ -74,6 +78,11 @@ internal static class TopLevelNodes
     /// plain note stream and several placement rules do not apply to it.
     /// </summary>
     public static bool IsStructured(SyntaxNode root)
-        => root.ChildNodes().Any(n =>
-            n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax);
+    {
+        // Written out rather than asked of Any(…): the predicate would box the struct walk.
+        foreach (var n in root.ChildNodes())
+            if (n is PartDeclarationSyntax or SectionDeclarationSyntax or FormDeclarationSyntax)
+                return true;
+        return false;
+    }
 }

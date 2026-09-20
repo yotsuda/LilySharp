@@ -806,7 +806,8 @@ internal sealed class MeasureLayouter
             double maxSkyDist = 0;
             foreach (var item in lastItems)
             {
-                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(fonts, item, rightNeighbours);
+                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(
+                    fonts, item, new ItemColumn(rightNeighbours));
                 maxSkyDist = Math.Max(maxSkyDist, skyDist);
                 maxRod = Math.Max(maxRod, rod);
             }

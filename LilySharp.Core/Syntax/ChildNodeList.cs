@@ -166,3 +166,82 @@ public readonly struct ChildNodeList : IEnumerable<SyntaxNode>
         }
     }
 }
+
+/// <summary>
+/// A node's direct children of ONE kind — the walk the top-level lookups make.
+/// </summary>
+/// <remarks>
+/// <para>
+/// ⚠️⚠️ THIS TYPE EXISTS IN ORDER NOT TO BE ALLOCATED, for the same reason
+/// <see cref="ChildNodeList"/> does. <c>ChildNodes().OfType&lt;T&gt;()</c> reads exactly
+/// these children, but handing a struct walk to LINQ BOXES it and then builds a filter
+/// iterator on top of the box — two objects per ask, on a walk whose whole point is to
+/// allocate nothing.
+/// </para>
+/// <para>
+/// MEASURED (2026-09-20, session 446; the reader's corpus, 231 books x 8 forward
+/// keystrokes, Release): the part-declaration lookups that read the root this way asked
+/// 4.96 + 4.96 + 3.77 + 3.73 + 2.48 + 1.84 + 1.84 times a keystroke, 1,793 B/keystroke
+/// between them — for a root whose children a book counts on one hand.
+/// </para>
+/// </remarks>
+/// <typeparam name="T">The child kind to keep.</typeparam>
+public readonly struct TypedChildNodeList<T> : IEnumerable<T> where T : SyntaxNode
+{
+    private readonly SyntaxNode? _owner;
+
+    internal TypedChildNodeList(SyntaxNode owner) => _owner = owner;
+
+    /// <summary>The walk. <c>foreach</c> binds here, and allocates nothing.</summary>
+    public Enumerator GetEnumerator() => new(_owner);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>Walks the children, keeping the ones of type <typeparamref name="T"/>.</summary>
+    public struct Enumerator : IEnumerator<T>
+    {
+        private ChildNodeList.Enumerator _children;
+        private T? _current;
+
+        internal Enumerator(SyntaxNode? owner)
+        {
+            _children = new ChildNodeList.Enumerator(owner, 0, ChildNodeFilter.Any);
+            _current = null;
+        }
+
+        /// <summary>The child the walk is standing on.</summary>
+        public readonly T Current => _current!;
+
+        readonly object IEnumerator.Current => _current!;
+
+        /// <summary>Advances to the next child of the kind.</summary>
+        /// <returns><c>false</c> once the children run out.</returns>
+        public bool MoveNext()
+        {
+            while (_children.MoveNext())
+            {
+                if (_children.Current is T t)
+                {
+                    _current = t;
+                    return true;
+                }
+            }
+            _current = null;
+            return false;
+        }
+
+        /// <summary>Returns the walk to the first child.</summary>
+        public void Reset()
+        {
+            _children.Reset();
+            _current = null;
+        }
+
+        /// <summary>Nothing is held, so nothing is released.</summary>
+        public readonly void Dispose()
+        {
+        }
+    }
+}

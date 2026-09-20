@@ -762,13 +762,13 @@ internal static partial class SpacingRules
     /// plus the grace→main rod), the same measure GraceNoteEngraver uses to PLACE
     /// the group, so reserved space and drawn space agree.
     /// </remarks>
-    internal static double LeadingGracePrefixWidth(IEnumerable<MusicItem>? items,
+    internal static double LeadingGracePrefixWidth(ItemColumn items,
         bool includeMainAccidental = false)
     {
-        if (items == null) return 0;
         double w = 0;
-        foreach (var item in items)
+        for (int i = 0; i < items.Count; i++)
         {
+            var item = items[i];
             var grace = item switch
             {
                 NoteItem n => n.LeadingGrace,
@@ -806,12 +806,11 @@ internal static partial class SpacingRules
     /// <see cref="SpringIntoGraceRun"/> — so they are separate readings rather than one
     /// number with a fudge.
     /// </remarks>
-    internal static double LeadingGraceRunSpan(IEnumerable<MusicItem>? items)
+    internal static double LeadingGraceRunSpan(ItemColumn items)
     {
-        if (items == null) return 0;
         double w = 0;
-        foreach (var item in items)
-            w = Math.Max(w, LeadingGraceRunSpan(item));
+        for (int i = 0; i < items.Count; i++)
+            w = Math.Max(w, LeadingGraceRunSpan(items[i]));
         return w;
     }
 
@@ -901,9 +900,9 @@ internal static partial class SpacingRules
                 // leftmost ink plus that grob's own. This is the only term that carries an
                 // opening accidental into the gap, and it is what decides probe K.
                 double reach = 0;
-                foreach (var item in firstItems)
-                    if (!IsChangeItem(item))
-                        reach = Math.Max(reach, MusicalColumnLeftReach(item));
+                for (int i = 0; i < firstItems.Count; i++)
+                    if (!IsChangeItem(firstItems[i]))
+                        reach = Math.Max(reach, MusicalColumnLeftReach(firstItems[i]));
                 minDistance = bPrefix + ChangeItemExtraSpacingWidth(bLast).Right + reach;
             }
             else
@@ -919,8 +918,11 @@ internal static partial class SpacingRules
                 // ledger point mid-piece.tab-numbers.change-bar-vs-plain-bar, which is what
                 // caught it. Asking IsChangeItem is a no-op for every book that reached here
                 // before — the only change item that could was the clef.
-                foreach (var item in firstItems)
+                // The interface is indexed rather than walked: foreach over an
+                // IReadOnlyList boxes its enumerator on every bar line (RULES §5.3).
+                for (int i = 0; i < firstItems.Count; i++)
                 {
+                    var item = firstItems[i];
                     if (IsChangeItem(item))
                         continue;
                     minDistance = Math.Max(minDistance,
@@ -931,7 +933,8 @@ internal static partial class SpacingRules
             // Leading grace notes on the first note hang left of its column, after
             // the bar line (LilyPond gives the grace its own column between the
             // bar line and the main note).
-            startLeadGrace = LeadingGracePrefixWidth(firstItems, includeMainAccidental: true);
+            startLeadGrace = LeadingGracePrefixWidth(
+                new ItemColumn(firstItems), includeMainAccidental: true);
         }
 
         // ONE Staff_spacing WISH PER STAFF, merged. The left column's spacing-wishes hold a

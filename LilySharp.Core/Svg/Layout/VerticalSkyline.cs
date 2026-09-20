@@ -426,16 +426,18 @@ internal sealed class VerticalSkyline
             // walk's own input now, which is the one it always was.
             var input = RentMergeInput(_buildings.Count + resolved.Count);
             input.AddRange(_buildings);
-            foreach (var b in resolved)
-                input.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
+            // Indexed, not walked, at both sites: `resolved` is an interface and foreach
+            // boxes its enumerator on every merge (RULES §5.3, measured session 446).
+            for (int i = 0; i < resolved.Count; i++)
+                input.Add(resolved[i].ShiftedHorizon(dx).RaisedBy(raise));
             ResolveFrom(input);
             return;
         }
         // Batch (or empty): append the placed buildings straight in — the same filtering
         // Merge(VerticalSkyline) does, since a resolved profile carries no empty padders.
         var target = batch ?? _buildings;
-        foreach (var b in resolved)
-            target.Add(b.ShiftedHorizon(dx).RaisedBy(raise));
+        for (int i = 0; i < resolved.Count; i++)
+            target.Add(resolved[i].ShiftedHorizon(dx).RaisedBy(raise));
     }
 
     /// <summary>

@@ -929,8 +929,13 @@ public static class RenderSpecParser
 
         // Search for part declaration with matching name. Part declarations are
         // top-level only (Parser.ParseTopLevelItem), as for every lookup below.
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
+        // ⚠️ The type test is written out rather than asked of OfType<T>() — ChildNodes()
+        // is a STRUCT walk since session 445, and handing it to LINQ boxes it and builds a
+        // filter iterator on top (RULES §5.3; 4.96 calls a keystroke here).
+        foreach (var child in root.ChildNodes())
         {
+            if (child is not PartDeclarationSyntax partDecl)
+                continue;
             if (partDecl.Name.Text != partName)
                 continue;
 
@@ -996,8 +1001,9 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
-            if (partDecl.Name.Text == partName && partDecl.DisplayName is { } dn)
+        foreach (var child in root.ChildNodes())
+            if (child is PartDeclarationSyntax partDecl
+                && partDecl.Name.Text == partName && partDecl.DisplayName is { } dn)
                 return dn;
         return null;
     }
@@ -1019,8 +1025,10 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
+        foreach (var child in root.ChildNodes())
         {
+            if (child is not PartDeclarationSyntax partDecl)
+                continue;
             if (partDecl.Name.Text != partName)
                 continue;
 
@@ -1053,8 +1061,10 @@ public static class RenderSpecParser
         while (root.Parent != null)
             root = root.Parent;
 
-        foreach (var partDecl in root.ChildNodes().OfType<PartDeclarationSyntax>())
+        foreach (var child in root.ChildNodes())
         {
+            if (child is not PartDeclarationSyntax partDecl)
+                continue;
             if (partDecl.Name.Text != partName)
                 continue;
             foreach (var prop in partDecl.Properties)

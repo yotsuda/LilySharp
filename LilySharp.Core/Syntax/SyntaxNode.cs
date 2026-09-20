@@ -264,6 +264,14 @@ public abstract class SyntaxNode
     /// </remarks>
     public ChildNodeList ChildNodes() => new(this, 0, ChildNodeFilter.Any);
 
+    /// <summary>The direct child nodes of one kind, in document order.</summary>
+    /// <remarks>
+    /// The named form of <c>ChildNodes().OfType&lt;T&gt;()</c>, which allocates two objects
+    /// per ask because LINQ boxes the struct walk — see <see cref="TypedChildNodeList{T}"/>.
+    /// </remarks>
+    /// <typeparam name="T">The child kind to keep.</typeparam>
+    public TypedChildNodeList<T> ChildNodesOfKind<T>() where T : SyntaxNode => new(this);
+
     /// <summary>
     /// The green-tree finder behind the collector's definition/music gathers and
     /// the semantics readers: visits every green node under this node in the

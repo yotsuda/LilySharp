@@ -61,12 +61,19 @@ internal static class BestFirstScorer
     /// dequeue → done? win : advance and re-enqueue. Candidates are mutated in
     /// place, so <typeparamref name="TConfig"/> must be a reference type.
     /// </remarks>
-    public static TConfig Solve<TConfig>(IEnumerable<TConfig> candidates, Action<TConfig> advanceScorer)
+    // Indexed, not walked: both callers hand over a List they have just built, and foreach
+    // over the interface boxed its enumerator on every beam and every slur — 21.50 calls a
+    // keystroke = 860 B/keystroke, measured session 446 (RULES §5.3). The queue is sized
+    // from the same count, which the interface could not tell it either.
+    public static TConfig Solve<TConfig>(IReadOnlyList<TConfig> candidates, Action<TConfig> advanceScorer)
         where TConfig : class, IScorableConfig
     {
-        var queue = new PriorityQueue<TConfig, double>();
-        foreach (var candidate in candidates)
+        var queue = new PriorityQueue<TConfig, double>(candidates.Count);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
             queue.Enqueue(candidate, candidate.Demerits);
+        }
 
         while (true)
         {

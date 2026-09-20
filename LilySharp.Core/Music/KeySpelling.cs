@@ -202,8 +202,13 @@ public static class KeySpelling
     {
         var list = new List<(int, int)>(7);
         if (sharps == 0) return list;
-        foreach (int step in PrintOrder(sharps))
+        // Indexed, not walked: PrintOrder hands back one of two shared arrays through
+        // IReadOnlyList, and foreach over an interface boxes an enumerator — 89.23 calls a
+        // keystroke = 2,855 B/keystroke, measured session 446 (RULES §5.3).
+        var order = PrintOrder(sharps);
+        for (int i = 0; i < order.Count; i++)
         {
+            int step = order[i];
             int alter = Alteration(step, sharps);
             if (alter != 0) list.Add((step, alter));
         }

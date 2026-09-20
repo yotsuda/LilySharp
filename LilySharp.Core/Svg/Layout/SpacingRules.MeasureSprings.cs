@@ -31,7 +31,11 @@ internal static partial class SpacingRules
     /// "playing" = a note that started at or before <paramref name="timing"/> and ends strictly after it.
     /// Returns <c>Fraction.Zero</c> if no voice has a note playing at <paramref name="timing"/>.
     /// </remarks>
-    public static Fraction ComputeShortestPlayingAt(Fraction timing, IEnumerable<Measure> allMeasures)
+    // Indexed, not walked: the callers hold two different concrete lists (a voice list and
+    // the one-measure array of the single-voice arm), so the parameter cannot be narrowed to
+    // one of them — and foreach over the interface boxes an enumerator on every column
+    // (44.83 calls a keystroke = 1,793 B/keystroke, measured session 446). RULES §5.3.
+    public static Fraction ComputeShortestPlayingAt(Fraction timing, IReadOnlyList<Measure> allMeasures)
     {
         // A spacer (`s`) never outranks a REAL playing note: LilyPond's spacing engraver
         // reads playing durations off the rhythmic grobs it acknowledges, and a skip
@@ -52,8 +56,9 @@ internal static partial class SpacingRules
         bool found = false;
         bool foundSpacer = false;
 
-        foreach (var m in allMeasures)
+        for (int mi = 0; mi < allMeasures.Count; mi++)
         {
+            var m = allMeasures[mi];
             Fraction t = Fraction.Zero;
             foreach (var item in m.Items)
             {
@@ -269,7 +274,8 @@ internal static partial class SpacingRules
         // BOTH its neighbours — the same pair the timing-column system prices
         // (MeasureLayouter.CreateLastToBarlineSpring). CreateSpring saw the left neighbour
         // only; the rod is applied after the headroom below.
-        var barPair = NoteColumnToBarlineFloorPair(fonts, lastItem, LeadingMusicalItems(nextMeasure));
+        var barPair = NoteColumnToBarlineFloorPair(
+            fonts, lastItem, new ItemColumn(LeadingMusicalItems(nextMeasure)));
         lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
         lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem), (spacing ?? SpacingOptions.Default).Increment);
 
@@ -539,8 +545,9 @@ internal static partial class SpacingRules
     {
         var left = new double[timings.Count];
         var right = new double[timings.Count];
-        foreach (var measure in measures)
+        for (int mi = 0; mi < measures.Count; mi++)
         {
+            var measure = measures[mi];
             var onset = Fraction.Zero;
             foreach (var item in measure.Items)
             {
@@ -607,8 +614,9 @@ internal static partial class SpacingRules
         var right = new double[timings.Count];
         var seen = new bool[timings.Count];
 
-        foreach (var measure in measures)
+        for (int mi = 0; mi < measures.Count; mi++)
         {
+            var measure = measures[mi];
             var onset = Fraction.Zero;
             foreach (var item in measure.Items)
             {

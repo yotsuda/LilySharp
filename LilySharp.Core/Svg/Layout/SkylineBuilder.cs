@@ -841,8 +841,9 @@ internal sealed class SkylineBuilder
                         + LayoutUtilities.GetItemXOffset(
                             voice.Measures, measureIndex, itemIndex, measureLayout)
                         + EngravingDefaults.TabHeadCenterOffset;
-                    foreach (var (midi, preferred) in TabSoundingNotes(item))
+                    for (int s = 0, sc = TabSoundingNoteCount(item); s < sc; s++)
                     {
+                        var (midi, preferred) = TabSoundingNote(item, s);
                         var (stringNum, fret) = Tunings.CalculateFret(midi + shift, tuning, preferred);
                         double lineUp = topLineUp - (stringNum - 1) * space;
                         double width = TabConstants.FretGlyphWidth(_fonts,
@@ -984,20 +985,35 @@ internal sealed class SkylineBuilder
         }
     }
 
-    /// <summary>The (midi, preferred string) of every fret digit an item draws.</summary>
-    private static IEnumerable<(int Midi, int PreferredString)> TabSoundingNotes(MusicItem item)
+    /// <summary>How many fret digits an item draws — a note one, a chord its notes.</summary>
+    /// <remarks>
+    /// ⚠️ THIS PAIR EXISTS IN ORDER NOT TO ALLOCATE. It was one <c>yield return</c> method,
+    /// and a C# iterator builds its state machine on the CALL — 64 bytes per tab item, whether
+    /// the item sounds one digit or six. MEASURED (2026-09-20, session 446; the reader's
+    /// corpus, 231 books x 8 forward keystrokes, Release): 37.57 calls a keystroke =
+    /// 2,405 B/keystroke, spent to read at most a handful of ints (RULES §5.3).
+    /// <para>
+    /// ⚠️ NO TEST OBSERVES THE CHORD ARM — of either half. Session 446 poisoned it twice:
+    /// reading note 0 for every digit of a chord left all 8,774 green, and so did a chord
+    /// sounding NO digit at all. That is a debt written down, not a licence to change the
+    /// shape (RULES §5.4: a green poison reports the absence of an observer).
+    /// </para>
+    /// </remarks>
+    private static int TabSoundingNoteCount(MusicItem item) => item switch
     {
-        switch (item)
+        NoteItem => 1,
+        ChordItem chord => chord.Notes.Length,
+        _ => 0
+    };
+
+    /// <summary>The (midi, preferred string) of the i-th fret digit an item draws.</summary>
+    private static (int Midi, int PreferredString) TabSoundingNote(MusicItem item, int i)
+        => item switch
         {
-            case NoteItem note:
-                yield return (note.Midi, note.StringNumber ?? 0);
-                break;
-            case ChordItem chord:
-                foreach (var n in chord.Notes)
-                    yield return (n.Midi, n.StringNumber ?? 0);
-                break;
-        }
-    }
+            NoteItem note => (note.Midi, note.StringNumber ?? 0),
+            ChordItem chord => (chord.Notes[i].Midi, chord.Notes[i].StringNumber ?? 0),
+            _ => default
+        };
 
     /// <summary>
     /// Builds vertical skylines for a single staff about its REFERENCE POINT — Y=0 at the
