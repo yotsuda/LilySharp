@@ -76,17 +76,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★ **⒴¹⁰ tab fork の残り＝`TabSoundingNotes` の iterator ちょうど 64 B × 34,717 items＝0.015%**
   （⚠️ `fret.ToString`・`FretGlyphWidth`・`CalculateFret` は実測で 3 つとも 0 B）
-- ★★★ **⒩″ 残りは*もう未値付けではない*＝347 サイトで 3.599%**（第440 が 1 run で全サイトを値付けした。
-  脚は Lab `sessions/p440/instrument.ps1`＋`Zz440.template.cs`＝List は `Count`／`Capacity` の会計、
-  **Dictionary と HashSet は複製を建てて実測**（`Entry<,>` の配置を知らなくてよい）。現在地は
-  `site-prices-after.txt`）。**頭が全て**＝上位 5 軒 1.627%・20 軒 2.521%・347 軒ぜんぶで 3.599%。
-  **次に大きい 4 軒**: `Svg/Collector/MusicSiteList.cs:83` **0.543%**（lazy＝寸法は設計を変えないと言えない）・
-  `Rendering/Svg/SvgSystemFragmentCache.cs:633` **0.190%**（`PositionFingerprint` の `anchors`＝歩きそのものが
-  長さ）・`ArticulationEngraver.cs:1187` **0.175%**（★ **112 B の struct を 4 枠建てて、実測 max 1 個しか
-  入れない**）・`AccidentalPlacement.cs:155` **0.158%**（上限は `notes.Count`・実測 0.98 個／回）
+- ★★★ **⒩‴ 島は 339 軒で 180,021 B／打鍵＝2.780%。★ 頭の 2 軒は*どちらも寸法を言えない***
+  （`Svg/Layout/ItemSkylineFactory.cs:465` **0.578%**＝`ColumnParts`・第439 実測／
+  `Svg/Collector/MusicSiteList.cs:83` **0.560%**＝lazy・第441 が histogram で反証。**2 軒で 1.138%**）。
+  **残る 337 軒は 1.641%** で、その頭は `Svg/Collector/MeasureCollector.Form.cs:1101` **0.135%**
+  （`MusicSiteList` の *eager の兄弟*＝同じ歩き）・`Svg/Collector/BeamDetector.cs:141` **0.095%**・
+  `Svg/Layout/ArticulationEngraver.cs:395` **0.060%**（`tiesAtBound`）・
+  `Svg/Layout/BreakAlignSpacing.cs:342` **0.047%**・`Svg/Layout/OutsideStaffStacker.cs:1355` **0.043%**。
+  ⇒ ★★ **この島にはもう「頭」が無い**＝0.1% 級を 5 軒束ねて 0.4% の便になる。現在地は Lab
+  `sessions/p441/site-prices-after.txt`（脚は `instrument.ps1`＋`Zz441.template.cs`＝1 run で全サイト）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
 - **⒴⁸ batch でない `Merge` 147,417 回／打鍵は未値付け**＝値段が先
+- ⚠️ **⒩‴ の脇: 第440 の毒 ⑶ は*切り分けていない***＝`BuildBeamedItemsSet` の grace の
+  `beamed < 2` を外しても +0 赤だったが、これは「観測者が居ない」証明ではない——`beamed` が
+  **ちょうど 1 の grace が母集団に無ければ毒は何も変えない**。**先に数えるだけで決まる**
+  （第440 ⑻⑶ が「⒩″ の脇に置く」と書いたまま一覧に入っていなかった＝第441 が拾った）
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 - ★★★ **⒨ memo の front の*program と partition*＝1.261%**＝**今この島で一番大きい**
@@ -129,9 +134,95 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **measure→system の地図 7 軒・beam quant の 2 つ・beamed items の集合は*寸法を言った*＝この 10 軒には
   戻らない**（第440。7 軒は「頼んだ寸法＝最終 `Count`」が **37,022 回すべてで一致**・beam の 2 つも
   **35,333 回ずつ一致**・集合だけ 1,848 回中 24 回 1 要素多い＝上限と言ったとおり）
+- ⚠️ **第441 が寸法を言った 9 軒には戻らない**（8 軒は「頼んだ寸法＝最終 `Count`」を*直す前に*実測して
+  UNDER 0・over 0。`BuildBeamedStemTips` だけ bound で slack 7.22 件／回＝**残り 1,523 B／打鍵 0.023% は
+  *上限の代償*で、詰めるには distinct な鍵を先に数える＝割に合わない**）
+- ⚠️ **`MusicSiteList.cs:83`（0.560%）は*定数の hint では弁護できない***＝第441 の histogram は
+  **1 件が 9.4%・32〜127 件に 55%・最大 885** と 1 桁半に散っている。直すなら「前回の同じ container の
+  数を憶える」＝**設計の変更で、値段が先**
 - ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒵⁵ ⒵⁶ ⒩′ ✅ 閉じた**
 
-### 1.1 第440セッション（2026-09-20・YT-DELL2）
+### 1.1 第441セッション（2026-09-20・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒩″**（ユーザーが
+選んだ・⒩″ と ⒫ と ⒨ と LP 双子を並べて訊いた）。★ **`-Start p441` の 1 コマンドで §0 が全部済んだ**
+（HEAD `cd3acd3d`・**未 push 67**・**full `sessions/p441/run1.trx` 8774 / 0 / 3 / 8777＝第440 最終と一致**・
+台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・§7 3.5 の `-Archive 439` も自動で回って
+93 行 5,747 chars）。★ **裏取りは 1 つも赤を出さなかった**（CI の赤は `origin/master` が `9f5cd52a` の
+ままだから＝第412〜第440 が予告したもの）。道具は pwsh MCP（Bash 0 回）。母集団と harness は第414〜第440 と
+同じ（実コーパス 231 冊 × 8 **forward** 打鍵・`RenderIncrementalPages`・**Release**・割当バイト・**両側 TC=0**）で、
+**before 6,542,241 / 6,542,166 は第440 最終と 54〜78 B 違い**。
+⇒ **起票が名指した 4 軒のうち直せたのは 3 軒。残る 1 軒＝島の頭は「寸法を言えない」ことを実証して
+閉じ、読んでいるうちに見つかった*同じ算術の隣家 5 軒*と合わせて 9 軒を直した。**
+
+★★★ **⑴ 「直す前に寸法を訊く」脚を先に立てた**（Lab `Zz441S.cs.txt`／`Zz441Leg.cs.txt`＝第440 ⑸ の規則）。
+**8 軒は `asked == Count`・UNDER 0・over 0**（a/b 31.32＝31.32・d 41.23＝41.23・f と g 1.00＝1.00・
+h 53.92＝53.92・i 61.82＝61.82）。**⒠ `BuildBeamedStemTips` だけが bound** で asked 27.98 / count 20.76・
+**over 2,811 回／6,331・maxslack 244**。★ **⒟ `firstSeen` は「上限のつもり」が実測では Count と一致**
+＝この母集団では 1 音符に 2 つの script が乗らない（一般には上限のまま）。
+
+★★★ **⑵ 直しは 3 つの算術で 9 サイト**（Core **+124 −24 行**・**LP 由来の式 0・REF 0／OWN 0**＝§7.6 ⒟。
+**新しい幾何の数は 0**）:
+⒜ **和**＝page 単位の **measure→system の地図 2 軒**（`SharedRenderer.Curves.cs` の `BuildMeasureToSystemTopYUp`
+／`BuildMeasureToSystem`＝第440 が score 単位の双子 7 軒で証明した「小節はちょうど 1 つの system に居る」の
+page 版）・`AccidentalPlacement` の `headBoxes`（`allNotes.Count`＝ループの周回数そのもの）・
+★★★ **`SvgSystemFragmentCache.PositionFingerprint` は「歩きを先に数えて `int[]` に直接書く」**
+＝**List の階段も最後の `[.. anchors]` の複写も丸ごと消える**（数える歩きは `StaffGroups` を辿る＝
+`EnumerateStaves` は iterator で 1 個建てるから使わない＝**割当 0**）。
+⒝ **積**＝`SlurScoringProblem.GenerateCandidates` の attachment grid（`nLeft × nRight`。2 つのループは
+互いの変数を読まず、どの組も candidate を 1 つ残す）。★★ **数え方は割り算ではなく*同じ浮動小数の足し込み***
+＝ループが止まる所にしか止まらない。
+⒞ **上限**＝`firstSeen`（`articulations.Length`）・`tips`（member 数の和、`wanted.Count` で頭打ち）。
+⒟ ★★★ **実測の寸法**＝support script の List は**容量 1**。**64,000 個あまりが 1 件も欠けず 1 件**で、
+`ArticulationLayout` は **112 B** ＝既定は使う 1 枠のために 4 枠建てていた。**これは論証ではなく観測**なので
+⑸ の毒で試した。
+
+★★★ **⑶ A/B ＝ −1.006%**（**6,542,204 → 6,476,370 B／打鍵**・before はこの便で取り直した）。
+**231 冊中 231 冊が改善**——**中央値 −0.782%・最良 −5.412%・最悪 −0.150%**で、**同じ木を 2 回回した
+対照帯 −0.079%〜+0.022% の外に 231 冊すべてが良い側に出た**。
+
+★★★ **⑷ 会計と A/B の 1,523 B の差には*実装前から名前が付いていた***。計器を回し直すと島は
+**240,420 → 180,021 B／打鍵（2.780%）＝−60,399 で、実装前の予測 60,398 と 1 B 違い**。A/B の **−65,834** は
+会計（60,399 ＋ h が消した List object と複写 6,958 ＝ **67,357**）に届かないが、**足りない 1,523 B は
+⒠ の bound の slack そのもの**（7.22 件／回 × 3.43 回／打鍵 × 約 60 B）。⇒ ★★ **寸法を言った site は
+計器の表から*消える*＝slack は「消える前」に脚で測っておくと、A/B と会計の食い違いが*予測の一部*になる**
+（RULES §5.3 へ 1 本）。★ **回数は動かない**——直していない **328 サイトで、回／打鍵も件／回も 1 つも
+動かなかった**（GONE 0）。
+
+★★★ **⑸ 出力同一は 2 つとも。ただし*baseline を疑うところから*始まった。**
+⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline `17fb650e`）／⑵ **実コーパス全ページ
+SHA-256＝5,824 行・0 行差**。⚠️⚠️ **最初 p440 の `hashes-after.txt` と突き合わせたら 1,349 行違い、
+素の HEAD（作業ツリー空）でも同じ 1,349 行が違った**＝**浮いていたのは保存ファイルのほう**。正しい絵は
+`p439/hashes-after.txt` で、**現 HEAD はこれとバイト一致**。**p440 の file は第440 の*毒の run*に
+上書きされたもの**（脚は固定名で書き、full suite を回すたびに上書きされる）。⇒ **今便も同じ罠で
+`ab-after-2` と `hashes-after` を 1 度失い、毒のあとに取り直した**（RULES §5.3 へ 1 本）。
+
+★★★ **⑹ 毒 5 つ——色は 5 つとも予測どおり**（素の木が赤 8 本＝HANDOFF の継ぎ目 3・licence・棚卸し 2・
+使い捨て 2 の状態で回したので**差分で読む**）:
+⑴ **⒟ の容量 1 → 4** → **+0 緑**＝「容量は*正しさ*ではなく性能の性質だ」の **5 例目**／
+⑵ **⒝ の積 −1** → **+0 緑**／⑶ **h の数える歩きが和音の構成音を落とす** → **+15 赤**／
+⑷ ★★★ **h の数える歩きが 1 多い** → **+0 緑**＝**多く数えた側には観測者が居ない**
+（余った末尾の 0 は capture と replay の両方に乗るので、比較は一致したまま）。**赤くなるのは
+少なく数えた側だけ**（RULES §5.4 へ 1 本）／⑸ **accidental の空判定を `<= 1` に** → **+75 赤**
+＝**網は accidental そのものを見ている**＝⑴⑵ が緑なのは*容量*の性質で、網が鈍いからではない。
+
+★ **⑺ 終了時**: commit 2 本（code `c3261a94`・docs 1 本＝この §1 と RULES §5.3 ×2・§5.4 ×1。
+**この文を含むので SHA は書かない**＝§5.4）・**未 push 69**（開始時 67）・**最終 full
+`sessions/p441/run3.trx` 8774 / 0 / 3 / 8777＝第440 最終と同じ**（網は 1 本も足していない。
+`Zz441` の grep は**コードに 0 件**）・§7.5（対 `cd3acd3d`）**Core `+` 124 −24 行／REF 0／OWN 0**・
+台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609・**棚卸しは再生成して
+`magic_constants.csv` 120 行・`APPROXIMATIONS.md` が*行番号だけ***（数字を伏せると両方向が完全一致・
+code の commit に同梱）。計器と全文は Lab `sessions/p441/`（`prediction.txt`＝実装前の予測・
+`Zz441S.cs.txt`／`Zz441Leg.cs.txt`＝⑴ の脚・`sized-sites.txt`・`instrument.ps1`／`Zz441.template.cs`／
+`Zz441Leg1.cs.txt`／`sites.txt`／`site-prices-after.txt`＝⑷ の値付け・`counts-compare.ps1`・
+`Zz441Ab.cs.txt`／`ab-*-tc0.txt`／`ab-analyse.ps1`・`Zz441Hash.cs.txt`／`hashes-before.txt`／
+`hashes-after.txt`・`poisons.ps1`／`poisons.txt`・`zz441-fix.diff.txt`）。
+⇒ ⚠️⚠️ **次便は `-Archive 440` を回すまで §1 に 1 字も足せない**。
+⇒ **次便は `-Start p442` の 1 コマンドから入る**。⚠️ **`origin/master` の CI は赤のまま**＝第412〜第441 の
+欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
+
+
+## 以下は第440セッションの経緯
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒩′**（ユーザーが
 選んだ・⒩′ と ⒫ と ⒨ と LP 双子を並べて訊いた）。★ **`-Start p440` の 1 コマンドで §0 が全部済んだ**
@@ -217,98 +308,6 @@ REF +2 −3／OWN 0**・台帳 851 点／総和 22.584727806 不変・snapshot 2
 ⇒ ⚠️⚠️ **次便は `-Archive 439` を回すまで §1 に 1 字も足せない**（天井 450,000 まで残り僅か）。
 ⇒ **次便は `-Start p441` の 1 コマンドから入る**。⚠️ **`origin/master` の CI は赤のまま**＝第412〜第440 の
 欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
-
-## 以下は第439セッションの経緯
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒩**（ユーザーが
-選んだ・⒩ と ⒴¹⁰ と ⒨ と LP 双子を並べて訊いた）。★ **`-Start p439` の 1 コマンドで §0 が全部済んだ**
-（HEAD `0a0be7ed`・**未 push 63**・**full `sessions/p439/run1.trx` 8774 / 0 / 3 / 8777＝第438 最終と一致**・
-台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・§7 3.5 の `-Archive 437` も自動で回って
-89 行 5,723 chars）。★ **裏取りは 1 つも赤を出さなかった**（CI の赤は `origin/master` が `9f5cd52a` の
-ままだから＝第412〜第438 が予告したもの）。道具は pwsh MCP（Bash 0 回）。母集団と harness は第414〜第438 と
-同じ（実コーパス 231 冊 × 8 **forward** 打鍵・`RenderIncrementalPages`・**Release**・割当バイト・**両側 TC=0**）で、
-**before 7,808,716 B／打鍵は第438 最終とバイト一致**。
-⇒ **起票が名指した*形*は当たっていた。外れたのは*桁*で、島は 14.19%＝この木で値付けされた中で一番大きい。**
-
-★★★ **⑴ 未値付けの 642 軒は「1 軒ずつ」ではなく*全サイトに数えるだけの継ぎ目*で絞った**
-（Lab `instrument.ps1` が `Svg\` と `Rendering\` の **519 サイト**を機械で pass-through counter に包む）。
-**live は 358・1 打鍵 2,875.8 建て**で、**上位 3 軒だけで島の 34%**（`HorizontalSkyline.cs:63` 378.51／
-`ItemSkylineFactory.cs:462` 311.05／`:430` 287.33 回／打鍵）——そして **3 軒は 1 本のパイプライン**だった
-（`ColumnParts` → `BoxesOf` → `FromBoxes` → `PaddedCopy`）。⚠️ **この脚は build 込み 1 分**＝
-「未値付け」を値付けの前に*母集団*へ変える最短の道。
-
-★★★ **⑵ 器の値段は scope のバイトではなく *`Count` と `Capacity`* で厳密に数えた**（`Zz439.Tally`）。
-List は空から 4→8→16… と建て直し、寸法を言えば 1 枚で済む——**その差が「寸法を言う」賞金そのもの**
-（B／打鍵・実コーパス）:
-
-| 段 | 回／打鍵 | 件／回 | 最大 | scope | 実 | 寸法ちょうど | 無駄 |
-|---|---|---|---|---|---|---|---|
-| parts | 311.05 | 2.12 | 9 | 707,219 | 87,200 | 49,743 | 37,457 |
-| boxes | 287.33 | 2.05 | 7 | 80,458 | 43,679 | 25,746 | 17,933 |
-| sky | 355.84 | 1.99 | 7 | 100,648 | 55,101 | 31,195 | 23,906 |
-| **pad** | 473.48 | 33.01 | 220 | 1,555,226 | **1,540,063** | 511,469 | **1,028,593** |
-| clone | 80.36 | 28.19 | 44 | 77,000 | 74,428 | 74,428 | 0 |
-
-⇒ **無駄の合計 1,107,889 B／打鍵＝14.19%**、うち **`pad` だけで 13.17%**。★★ **検算が 2 つとも閉じた**:
-⑴ Build の呼び手側の継ぎ目の和 **1,101,368 対 `b.build` 1,101,367（差 1 B）**＝第438 の規則で内側を信じてよい／
-⑵ `pad` の会計 **1,540,063 対 scope 1,555,226＝差はちょうど 32.00 B／回＝List オブジェクトそのもの**。
-
-★★★ **⑶ 隣の腕は*既に直っていた*** ——`VerticalSkyline.Padded` は `RentPadding(_buildings.Count * 4)` と
-**寸法を声に出して言っている**。**横の腕だけが言っていなかった**（第435「起票の天井は計器を入れた腕の
-天井」の裏返し＝**同じ形の兄弟のうち直っている側は、手本であり同じ run の中の対照**）。
-
-★★★ **⑷ 直しは 3 つの「寸法を言う」だけ**（`488038c8`・Core **+28 −12 行**・**LP 由来の式 0・REF 0／OWN 0**
-＝§7.6 ⒟。**新しい数は容量 `Count * 5` ただ 1 つで、幾何ではない**）: ⑴ **`Padded` は `Count*5`**（自分の
-建物＋1 つにつき最大 4 枚）**で建てて `AddRange`**／⑵ **`FromBoxes` は `IReadOnlyList` を取り
-`boxes.Count` で建てて添字で歩く**（`LineStartColumn.ToTuples` は iterator をやめて寸法つきのリストを返す）／
-⑶ **`BoxesOf` は呼び手 3 人が既に持っている `List<ColumnPart>` を取り `parts.Count` で建てる**。
-
-★★★ **⑸ A/B ＝ −14.45%**（**7,808,716 / 7,808,750 → 6,680,214 / 6,680,244 B／打鍵**・before はこの便で
-取り直した）。**231 冊中 230 冊が改善**・**中央値 −13.87%・最良 −25.76%・最悪 +0.005%**で、
-**同じ木を 2 回回した対照帯 −0.023%〜+0.044% の外に出た冊は 1 冊も無い**。継ぎ目は **無駄 1,107,889 →
-39,865**（`pad` 1,028,593 → 1,829・`sky` 23,906 → 0・`boxes` 17,933 → 578）で、**回数も件数も 1 つも動かない**
-（311.05 / 287.33 / 355.84 / 473.48 / 80.36 と 2.12 / 2.05 / 1.99 / 33.01 / 28.19 が前後で同一）。
-
-★★ **⑹ 予測は 8 つ中 6 つ的中・2 つは*良い側*に外れた**（Lab `prediction.txt`＝実装前）。外れたのは
-**`sky` と `boxes` の *scope***で、**予測より落ちた**＝`IEnumerable` の箱詰め enumerator と iterator が
-消えた分（net も予測帯 −13.3〜−14.5% の**良い端** −14.45%）。⚠️ **そして `parts` の scope は触っていないのに
-707,219 → 509,591 と落ちた**——`ColumnParts` は `AddAccidentals` 経由で臨時記号の詰め方を呼び、
-そこが skyline の客だから。⇒ ★★★ **scope の継ぎ目は*入れ子を含む*が、`Count`／`Capacity` の会計は含まない。
-2 つを並べる理由がこれで、差が List オブジェクトちょうどで閉じたら会計は正しい**（RULES §5.3 へ 1 本）。
-
-★★ **⑺ 出力同一は 3 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline `17fb650e`）／
-⑵ **実コーパス全ページ SHA-256＝5,824 行・0 行差**（第438 の `hashes-after.txt` と突き合わせ）／
-⑶ suite 全緑・snapshot 249 枚不動・台帳 851 点／総和 22.584727806 不変。
-
-★★★ **⑻ 毒 3 つ——そして*緑を予測した毒*が 2 便続けて当たった。**
-⑴ **`AddRange` を落とす**（padded が自分のインクを失う）→ **98 本赤**（snapshot 41・台帳 27・
-`TieChordOutlineTests` 5・spacing の不変条件ほか）／⑵ **`BoxesOf` が `which` の仕分けを無視** →
-**5 本赤**（台帳 `dots.wish.cluster-pair`・`percent.beat-slash.slash-to-barline`・`semi-tie.lv-to-arpeggio-gap`・
-`PercentRepeatTests`・snapshot `test/lv-meterchange`。⚠️ 行が減るので `ApproximationInventoryTests` も
-赤くなるが、これは行番号の副作用）／⑶ ★★★ **容量を `Count*5` → `*4`** → **0 赤**＝
-**第438 ⑹⑷「容量は*正しさ*ではなく性能の性質だ」の 2 例目**（RULES §5.4 へ 1 本）。
-
-★ **⑼ 終了時**: commit 2 本（code `488038c8`・docs 1 本＝この §1 と RULES §5.0 ×1・§5.3 ×1・§5.4 ×1。
-**この文を含むので SHA は書かない**＝§5.4）・**未 push 65**（開始時 63）・**最終 full
-`sessions/p439/run3.trx` 8774 / 0 / 3 / 8777**（**第438 最終と同じ＝今便は網を 1 本も足していない**
-——毒 ⑴⑵ が既存の 103 本で赤くなったので**網は要らない**。`Zz439`／`ZZPOISON` の grep は**コードに 0 件**）・
-§7.5（対 `0a0be7ed`）**Core `+` 28 −12 行／REF 0／OWN 0＝算術を 1 つも足していない**・台帳 851 点／
-総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609・**棚卸しは `LILYSHARP_UPDATE_DOCS=1` で
-再生成し、`APPROXIMATIONS.md` 5 行・`magic_constants.csv` 2 行が動いて*どちらも行番号だけ*
-（code の commit に同梱）**。計器と全文は Lab `sessions/p439/`（**`instrument.ps1`／`sites.txt`／
-`site-counts-before.txt`＝519 サイトを数えた脚 1**・**`prediction.txt`＝実装前の予測**・
-`pipeline-counts-before.txt`／`-before2`（模型を直した版）／`-after.txt`＝段ごとの前後・
-`Zz439.cs.txt`／`Zz439Leg1.cs.txt`＝計器・**`Zz439Ab.cs.txt`＝再利用可の A/B**・`Zz439Hash.cs.txt`＝証明 ⑵・
-`poisons.ps1`／`poisons.txt`＝毒 3 つの全文・`ab-before-1-tc0.txt`〜`ab-after-2-tc0.txt`・
-`zz439-seams.diff.txt`／`zz439-fix-plus-seams.diff.txt`）。
-⇒ ⚠️⚠️ **HANDOFF は `-Archive 437` 後 437,844 B → 今便を書いて 448,1xx B＝天井 450,000 まで
-残り 1,800 B 級**（`Fold-ClosedHandoffItems` の弁は第426 の時点で 0 件・§3 の圧力弁は第409・第410 で
-使い切り。**天井は上げない**）。⚠️⚠️⚠️ **次便は §1 に 1 字も足せない＝`-Archive 438` を回すまで
-書き始めないこと**（回せば今便の下のブロック約 9 KB が空く。**途中で回すと
-`HandoffArchiveContinuityTests` が 3 本赤くなる**＝第410 ⑾）。
-⇒ **次便は `-Start p440` の 1 コマンドから入る**（裏取り → `-Archive 438` 自動 → §1.0 の一覧）。
-⚠️ **`origin/master` の CI は `9f1d74a9` 以降が push されるまで赤のまま**＝次便が「CI が赤」を見ても、
-それは第412〜第439 の欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
