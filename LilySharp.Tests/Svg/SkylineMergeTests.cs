@@ -615,6 +615,14 @@ public class SkylineMergeTests
     /// itself, so it says the same thing whatever else ran.
     /// </para>
     /// <para>
+    /// ⚠️ AND SINCE SESSION 432 IT WATCHES A SECOND BUFFER, without a line of it changing.
+    /// <c>SortAndResolve</c>'s result list is now the thread's too (<c>t_resolveOutput</c>), so
+    /// dropping the <c>Clear</c> in <c>RentResolveOutput</c> turns this red as well — and red
+    /// RUN ALONE, so on that poison it is an observer and not a victim. Before that change the
+    /// same poison left it GREEN (the other walk clears that buffer again for itself, so only
+    /// the padding walk was exposed), and both sides were checked rather than argued.
+    /// </para>
+    /// <para>
     /// The two paddings are deliberately far apart on the horizon: the first is twelve
     /// overlapping boxes around x = 1,000 and some 50 units up, the second one box over
     /// [0, 10] one unit up. The padding is 2, so the second's own answer is flat at 1 from -2

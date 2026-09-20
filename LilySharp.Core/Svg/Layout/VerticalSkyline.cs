@@ -836,10 +836,48 @@ internal sealed class VerticalSkyline
     /// the walks do not nest.
     /// </para>
     /// <para>
+    /// ⚠️ AND BOTH WALKS, since session 432. <see cref="SortAndResolve"/> went on building its
+    /// result in a bare <c>new List</c>, and THAT WAS THE WHOLE OF WHAT IT ALLOCATED. MEASURED
+    /// (session 432, Release, the owner's corpus, 231 books × eight forward keystrokes,
+    /// allocated bytes, per region inside BOTH walks): it ran 7,185 times a sweep (3.9 a
+    /// keystroke, 332,150 overlaps) and its body came to 18,912,792 B, <b>0.128% of a
+    /// keystroke</b>, of which <b>100.0%</b> was that one list — the list object with its first
+    /// four-building rung 1,322,040 B (715 a keystroke, 184 B a walk), the loop's own
+    /// <c>Add</c> 5,695,472 B (3,082) and <see cref="MergeOverlapping"/>'s
+    /// <c>result.AddRange</c> 11,895,280 B (6,437). The sort, the scratch, the tail lift,
+    /// <see cref="MergeBuildingSet"/> and the write-back read <b>zero</b>, and so did
+    /// <c>unattributed</c>. The same run carried its own control: the other walk's result,
+    /// already lent, read zero on all three of those regions, and 100% of its 15,263 a
+    /// keystroke was the exit copy into <see cref="_buildings"/>.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE THREE REGIONS ARE ONE LIST, AND READING THEM AS THREE THINGS IS WHAT MISPRICED IT.
+    /// Session 431 re-ticketed this fix at 0.039% by taking only the loop's own <c>Add</c> to be
+    /// "the resolved list"; <c>AddRange</c> grows the same list from the same rung. The A/B says
+    /// the whole of it: 7,986,775 / 7,986,751 B a keystroke before and 7,976,522 / 7,976,517
+    /// after, <b>-0.128%</b> — 10,234 B a keystroke, the region's measured total to the byte.
+    /// The answer still goes back into <see cref="Padded"/>'s own buffer, which holds 4N and so
+    /// never grows for it: that exit stayed zero.
+    /// </para>
+    /// <para>
     /// ⚠️ THE EMPTYING IS LOAD-BEARING, exactly as in <see cref="RentMergeInput"/>: the walk
     /// asks <c>result.Count == 0</c> to decide whether it is placing the first building, so a
     /// buffer still holding the last walk's result would merge that skyline's silhouette into
     /// this one. <c>SkylineMergeTests</c> pins it.
+    /// <para>
+    /// ⚠️ AND WHICH TEST PINS IT CHANGED WITH SESSION 432, WITHOUT A LINE OF TEST BEING WRITTEN.
+    /// <see cref="RebuildKeepingHighest"/> clears the buffer again for itself, so dropping the
+    /// <c>Clear</c> here leaves that walk correct and breaks only the other one. VERIFIED BY
+    /// POISON, both sides of the change: before session 432 that poison left
+    /// <c>SkylineMergeTests.ASecondPaddingOnTheSameThread_DoesNotInheritTheFirstsBuildings</c>
+    /// GREEN; after it, that test is RED under the same poison and red RUN ALONE — an observer,
+    /// not a victim of another test's pollution — while
+    /// <c>ASecondWalkOnTheSameThread_DoesNotInheritTheFirstsScratch</c>,
+    /// <c>Distance_BetweenFacingSystems_IsTheirInkAndNoMore</c> and
+    /// <c>AMergeIntoALargeSkyline_DoesNotCopyItToReadIt</c> all stay green. So this change
+    /// wanted a REMARK and not a net: a second test saying the same thing would only restate it
+    /// (HANDOFF §5.4).
+    /// </para>
     /// </para>
     /// <para>
     /// ⚠️ AND IT IS TAKEN OUT OF THE DRAWER, so a walk that re-entered would get a list of its
@@ -1449,6 +1487,12 @@ internal sealed class VerticalSkyline
     /// <see cref="t_padding"/> for what that cost. It stays an instance method because the
     /// walk it runs is this class's (<see cref="MergeOverlapping"/>), and the skyline it is
     /// called on is the one being padded: the same direction the intermediate carried.
+    /// <para>
+    /// ⚠️ ITS RESULT IS THE THREAD'S BUFFER, since session 432, and that was the whole of what
+    /// this walk allocated — 0.128% of a keystroke, measured region by region. See
+    /// <see cref="t_resolveOutput"/> for the split, for the control that ran beside it and for
+    /// the poison that says which test now watches the emptying.
+    /// </para>
     /// </remarks>
     private void SortAndResolve(List<SkylineBuilding> buildings)
     {
@@ -1457,7 +1501,11 @@ internal sealed class VerticalSkyline
 
         buildings.Sort((a, b) => a.Start.CompareTo(b.Start));
 
-        var resolved = new List<SkylineBuilding>();
+        // THE WALK WRITES TO THE LENT BUFFER, the same one <see cref="RebuildKeepingHighest"/>
+        // writes and for the reason <see cref="t_resolveOutput"/> gives. It arrives empty and
+        // at the widest capacity this thread has needed, so the list that used to climb
+        // 4-8-16-… once per call climbs once per thread.
+        var resolved = RentResolveOutput();
         resolved.Add(buildings[0]);
         // One set of scratch buffers for this whole walk, rented as RebuildKeepingHighest
         // rents them and for the same measured reason (ResolveScratch): the padding of a
@@ -1482,8 +1530,11 @@ internal sealed class VerticalSkyline
         if (scratch is not null)
             ReturnScratch(scratch);
 
+        // The answer goes back into the caller's own buffer, which already holds 4N and so
+        // never grows for it, and the lent one goes back to the drawer with its capacity.
         buildings.Clear();
         buildings.AddRange(resolved);
+        ReturnResolveOutput(resolved);
     }
 
     /// <summary>
