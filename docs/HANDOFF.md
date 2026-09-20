@@ -78,8 +78,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （⚠️ `fret.ToString`・`FretGlyphWidth`・`CalculateFret` は実測で 3 つとも 0 B）
 - ★ **⒴⁷ `BeamedItemsToSuppress` は beams が空でも `HashSet`＝0.028%**
 - ★ **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021%）
-- ★★ **⒢′ 拒否された staff の前処理＝検出器 0.023%**＝`StaffSpannerItemsOf` の memo を最終パスにも
-  通すだけ（一番安い・出力同一が構成で言える）。⚠️ **まず回数を測ること**
 - ★ **⒵⁵ `mm.g.split` 0.163%**（⚠️ `OrderBy` は*安定*）／★ **⒵⁶ 文字の 318,784 回／81 綴り 0.130%**
 - ★ **⒴⁵ artic と trill の remap 辞書は作って捨てている**（天井 0.174%）
 - **⒴⁸ batch でない `Merge` 147,417 回／打鍵は未値付け**＝値段が先
@@ -100,9 +98,78 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **⒜ と push は「後回し」＝催促しない**（第407 ⑺⑸）。**push はユーザー**（Lab も）
 - **R15 ✅**（残り＝「2 綴り」一族のみ・要承認）
 - ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ✅ 閉じた**
+- ⚠️ **検出器（bow）はもう 1 打鍵 1 回＝残り 0.065% は*実仕事*＝この島には戻らない**（第434 ⑷）
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ✅ 閉じた**
 
-### 1.1 第433セッション（2026-09-20・YT-DELL2）
+### 1.1 第434セッション（2026-09-20・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒢′**（ユーザーが
+選んだ・⒜ の 3 つと LP 双子を並べて訊いた）。★ **`-Start p434` の 1 コマンドで §0 が全部済んだ**
+（HEAD `35a96bea`・**未 push 53**・**full `sessions/p434/run1.trx` 8765 / 0 / 3 / 8768＝第433 最終と一致**・
+台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・§7 3.5 の `-Archive 432` も自動で回って
+63 行 4,267 chars）。★ **裏取りは 1 つも赤を出さなかった**（CI の赤は `origin/master` が `9f5cd52a` の
+ままだから＝第412〜第433 が予告したもの）。★ 掃きの前に静かな窓をもらった。道具は pwsh MCP（Bash 0 回）。
+母集団と harness は第414〜第433 と同じ（実コーパス 231 冊 × 8 **forward** 打鍵・`RenderIncrementalPages`・
+**Release**・割当バイト・**両側 TC=0**）で、**before の打鍵 7,976,504 B は第432 最終の 7,976,522／7,976,517 と
+床 24 B 以内で一致**。⇒ **起票は 0 で閉じ、その隣で生きている島を同じ計器が名指した**:
+
+⚠️⚠️ **⑴ 起票の賞金は 0 だった。** ⒢′ が名指していた「最終パスの再検出」は、**1,848 打鍵で 1 回も走らない**
+（`fin.bowShifts=null` 0・`fin.ties` 0・`fin.slurs` 0）——**第424 の re-anchoring が経路ごと閉じていた**のに、
+起票はそのあと 10 便生き残っていた。⚠️ **起票自身の警告「まず回数を測ること」が、そのまま結論だった。**
+⇒ ★★★ **値段は木ごと期限切れになる＝「その経路がまだ通るか」は値段とは*別の数*で、着手の 1 手目に測る**
+（RULES §5.0 へ 1 本）。
+
+★★★ **⑵ 同じ計器が隣の生きた島を刷った——「誰が検出するか」を*3 軒とも*継ぎ目にしたから**
+（prelim・skyline の memo・最終パス）。**検出器は打鍵あたり 7.54 回走っていた**: prelim が
+`DetectTies` 2.06 ＋ `DetectSlurs` 2.06 回（**4,133 ＋ 1,185 B／打鍵**）・`StaffSpannerItemsOf` の memo が
+ask 3.53／**miss 1.71**（**5,145 B**）＝**合計 10,463 B／打鍵＝0.131%＝起票の 5.7 倍**。★ **memo は打鍵ごとに
+`Staff` が新品なので「1 打鍵 1 回」の店として効いており、prelim だけがその店を知らなかった。**
+
+★★★ **⑶ 直しは配線 1 本**（`696f0679`・**Core `+` 59 行のうち*実コード 13 行***＝新しい家は
+`StaffBowItemsOf` の 5 行で、残る 6 行は既存行に引数を足しただけ。**数値定数 0・LP 由来の式 0・REF 0／OWN 0**）
+＝**prelim が `layouter.StaffBowItemsOf(score, staff)` から items を受け取る**（beams が
+`StaffBeamGroupsOf` からもらっているのと同じ形）。`LayoutPreliminaryStaffTies`／`Slurs` は items を
+**明示の引数**で受ける（§7.7 の「既定引数にしない」＝`ElementCoordinator` の pre-detected overload と同じ姿勢）。
+★★★ **出力同一は*構成で*言える**: 2 つのパスが建てる `Score` は **tuplet 表しか違わず**、検出器は
+`VoiceScan.WalkVoiceItems` と `score.Voices.Length` しか読まない＝**答えは `Staff` の関数**。
+
+★★★ **⑷ A/B ＝ −0.065%**（7,976,504 → **7,971,322** B／打鍵）・**回数 7.54 → 3.48**（ask 3.53 → 5.60・
+**miss 1.71 → 1.74**）。⚠️ **予測（−0.053%）は安全側に外れた**——「prelim が訊く 2.06 の staff のうち 0.35 は
+memo が知らない」と見積もったが、**実際に増えた miss は 0.03 だけ**＝**prelim が触る staff は skyline が既に
+触った staff だった**。⇒ **残り＝打鍵ごとに新品の `Staff` を 1 回歩く 5,202 B／打鍵＝0.065% は*実仕事***
+（内容で鍵を作るのは土台の変更・`_staffBeamGroups` も同じ形）＝**この島には戻らない**。
+
+★★ **⑸ 出力同一は 3 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline `17fb650e`＝
+第430 の変更の*前*の木。第430・第432 が同じ道具で 0/81 を出しているので、**3 つ合わせて 0**）／⑵ **実コーパス
+全ページ SHA-256＝5,824 行・0 行差**（第432 の `hashes-after.txt` と突き合わせ）／⑶ suite 全緑・snapshot 249 枚
+不動・台帳 851 点／総和 22.584727806 不変。★ **加えて計器が「prelim が受け取る bow の数」を前後で
+ties 69,402・slurs 15,028 と*同数*で刷った**（前は prelim 自身の検出が出していた数）。
+
+★★ **⑹ 網 3 本（`StaffBowItemsSharingTests`）・毒 2 種**: ⑴ **共有を壊す毒**（`StaffBowItemsOf` が空を返す）
+→ **108 本赤**（snapshot・LP 幾何台帳・`IncrementalCompilerTests`）＝**共有は無観測ではない**／⑵ **新しい網への毒**
+（`SlurDetector` に tuplet 表を読ませる）→ **網 2 本だけ赤**（3 本目は「2 つの `Score` が実際に違う」と言う
+guard なので緑が正しい）。⚠️⚠️ **網の書き方で 1 つ踏んだ**: `Assert.Equal` が **Expected と Actual に同じ文字列を
+刷ったまま赤**になった——`SlurItem`／`TieItem` は `ModelIdentity` で **identity equality を宣言**しており、
+`ImmutableArray<T>` の `IEquatable` は**下の配列を参照で比べる**＝**その網は「同じ instance か」を pin して
+いた＝主張の逆**（共有*しない*実装だけが緑になる）。生成された `ToString` を要素ごとに比べる形に直した
+（RULES §5.4 へ 1 本）。
+
+★ **⑺ 終了時**: commit 2 本（code `696f0679`・docs 1 本＝この §1 と RULES §5.0 ×2・§5.4 ×1。**この文を
+含むので SHA は書かない**＝§5.4）・**未 push 55**（開始時 53）・**最終 full `sessions/p434/run4.trx`
+8768 / 0 / 3 / 8771**（**第433 最終の合計 8768 から +3＝今便の網ちょうど 3 本**。`Zz434`／`ZZPOISON` の grep は
+**コードに 0 件**）・§7.5（対 `35a96bea`）**Core `+` 59 行／うち実コード 13 行／REF 0／OWN 0＝算術を 1 つも
+足していない**（§7.6 ⒟「既存の家を借りただけ」）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
+追跡 `.lys` 609・**棚卸しは `APPROXIMATIONS.md` 2 行・`magic_constants.csv` 3 行とも*行番号だけ*＝定数の増減 0**
+（`LILYSHARP_UPDATE_DOCS=1` で再生成）。計器と全文は Lab `sessions/p434/`（**`detector-counts.txt`＝直す前の
+3 軒の回数**・**`detector-counts-after.txt`＝直した後**・`Zz434.cs.txt`／`Zz434Leg1.cs.txt`＝計器・
+**`Zz434Ab.cs.txt`＝再利用可の A/B**・**`Zz434Hash.cs.txt`＝証明 ⑵ の harness**・`ab-before-1-tc0.txt`／
+`ab-after-1-tc0.txt`）。⇒ ⚠️ **HANDOFF は第433 の記録 439,896 B → `-Archive 432` 後 434,601 B → 今便を書いて
+442,177 B＝天井 450,000 まで 7,823 B**（`Fold-ClosedHandoffItems` の弁は第426 の時点で 0 件・§3 の圧力弁は
+第409・第410 で使い切り。**天井は上げない**）。⇒ **次便は `-Start p435` の 1 コマンドから入る**（裏取り →
+`-Archive 433` 自動 → §1.0 の一覧）。⚠️ **`origin/master` の CI は `9f1d74a9` 以降が push されるまで赤のまま**
+＝次便が「CI が赤」を見ても、それは第412〜第434 の欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
+
+## 以下は第433セッションの経緯
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒝ の Ⓑ**（ユーザーが
 選んだ・⒜ の小さい 2 つと LP 双子を並べて訊いた）。★ **`-Start p433` の 1 コマンドで §0 が全部済んだ**
@@ -169,68 +236,6 @@ snapshot 249 枚不動・追跡 `.lys` 609・**棚卸しは `APPROXIMATIONS.md` 
 事例を書き戻すと当たる**。⇒ **次便は `-Start p434` の 1 コマンドから入る**（裏取り → `-Archive 432` 自動 →
 §1.0 の一覧）。⚠️ **`origin/master` の CI は `9f1d74a9` 以降が push されるまで赤のまま**＝次便が「CI が赤」を
 見ても、それは第412〜第433 の欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
-
-## 以下は第432セッションの経緯
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の先頭＝⒳⁗**（ユーザーが
-選んだ・⒝ の Ⓑ と小さい ⒜ を並べて訊いた）。★ **`-Start p432` の 1 コマンドで §0 が全部済んだ**（第431 の
-protocol の初使用。HEAD `5e7d44c3`・**未 push 49**・**full `sessions/p432/run1.trx` 8761 / 0 / 3 / 8764＝第431
-最終と一致**・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・§7 3.5 の `-Archive 430` も自動で
-回って 23 行 4,458 chars）。★ **裏取りは 1 つも赤を出さなかった**（CI の赤は `origin/master` が `9f5cd52a` の
-ままだから＝第412〜第431 が予告したもの）。★ ベンチは着手前に静かな窓をもらった。道具は pwsh MCP（Bash 0 回）。
-母集団と harness は第414〜第431 と同じ（実コーパス 231 冊 × 8 **forward** 打鍵・`RenderIncrementalPages`・
-**Release**・割当バイト・**両側 TC=0**）で、**before の打鍵 7,986,775／7,986,751 B は第430 最終の
-7,986,759／7,986,771 B と一致**。⇒ **島を 1 つ閉じ、前便の*訂正*が反証された**:
-
-⚠️⚠️ **⑴ 第431 の値段の書き直しが間違っていた——3 項は「3 つの物」ではなく*同じ 1 本の list への 3 つの
-書き口*だった**。§1.0 は「内訳は `walk.add` 3,082 ＋ `ov.range` 6,437 ＋ `sr.own` 715（／打鍵）で、buffer を
-借りる直しが当たるのは第 1 項だけ＝0.039%」と書いていたが、**`ov.range` は `MergeOverlapping` の
-`result.AddRange(merged)`＝渡された `resolved` そのものへの追記**（`VerticalSkyline.cs:1056`）、`sr.own` は
-`new List` とその最初の 4 棟の段（**184 B／walk ＝ list 32 ＋ 配列 24+4×32**）。⇒ **3 項とも同じ倍々**で、
-**起票（第430 の 0.128%）が正しく、訂正のほうが 3.3 倍*安かった***。
-
-★★★ **⑵ 測り直し**（region 別の割当時計・**両方の walk を同じ表に**）: `SortAndResolve` は **7,185 walk／
-sweep（3.9／打鍵）・332,150 overlap**で、**body 18,912,792 B ＝ 10,234／打鍵 ＝ 0.128%** ——その **100.0%** が
-`sr.list` 1,322,040（715／打鍵）＋ `walk.add` 5,695,472（3,082）＋ `ov.range` 11,895,280（6,437）。**sort・
-scratch・`ov.fill`・`ov.mbs`・書き戻しは*全部 0 B*・`unattributed` も 0**（§5.0 15例目の検算）。
-★★★ **対照が同じ表の中に居た**＝`RebuildKeepingHighest`（result は既に借り物）は **3 項とも 0 B** で、
-その 15,263／打鍵は 100% が出口の `_buildings` への複写だった。⇒ **RULES §5.0 16例目・§5.3 へ 1 本**
-（「region は*書き口*で割れている。項ごとに『どの家に書くか』を言う」）。
-
-★★★ **⑶ 直し**（`32ee8085`・**Core `+` 52 行のうち*実コード 2 行***＝`RentResolveOutput()` と `ReturnResolveOutput(resolved)`・
-**数値定数 0・LP 由来の式 0・REF 0／OWN 0**）: **`SortAndResolve` の `resolved` も thread の引き出しから借りる**
-（`RebuildKeepingHighest` と同じ 1 本・**walk は nest しない**）。⇒ **A/B ＝ −0.128%**
-（7,986,775／7,986,751 → **7,976,522／7,976,517**・床 24 B）＝**−10,234 B／打鍵＝region の実測合計と
-バイト単位で一致**（予測が当たった）。**書き戻す `buildings` は容量 4N を既に持つので出口は 0 B のまま**。
-
-★★★ **⑷ 網は 1 本も足していない——既存の 1 本が*書き換えずに*新しい観測者になった**。毒（`RentResolveOutput`
-の `Clear` を落とす）を**変更の両側で**打つと、**直しの前は `ASecondPaddingOnTheSameThread_DoesNotInheritTheFirsts`
-`Buildings` が緑・直しの後は赤**（**単独で回しても赤＝被害者ではなく観測者**）。**他の 3 本
-（`ASecondWalkOnTheSameThread…`・`Distance_BetweenFacingSystems_IsTheirInkAndNoMore`・
-`AMergeIntoALargeSkyline_DoesNotCopyItToReadIt`）は緑**＝`RebuildKeepingHighest` は自分で `Clear` を
-繰り返すので、この毒は**借り手が 2 人になった今だけ**届く。⇒ **足したのは網ではなく註**（RULES §5.4 の
-「無意味な網を足さない」・第430 ⑸ の予告「単独でも赤なら新しい網は要らないかもしれない」の初の実例）。
-
-★★ **⑸ 出力同一は 3 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（⚠️ baseline は `17fb650e`＝
-第430 の perf 変更の*前*の木。第430 が同じ道具で 0/81 を出しているので、**2 つ合わせて 0**）／⑵ **実コーパス
-全ページ SHA-256＝5,824 行・0 行差**（第430 の `hashes-after.txt` と突き合わせ）／⑶ suite 全緑・snapshot 249 枚
-不動・台帳 851 点／総和 22.584727806 不変。
-
-★ **⑹ 終了時**: commit 2 本（code `32ee8085`・docs 1 本＝この §1 と RULES §5.0 16例目・§5.3 ×1。**この文を
-含むので SHA は書かない**＝§5.4）・**未 push 51**（開始時 49）・**最終 full `sessions/p432/run3.trx`
-8761 / 0 / 3 / 8764＝第431 最終と*同数***（**網を 1 本も足していないので +0**＝⑷。`Zz432`／`ZZPOISON` の grep は
-**コードに 0 件**）・§7.5（対 `5e7d44c3`）**Core `+` 52 行／うち実コード 2 行／REF 0／OWN 0＝算術を 1 つも
-足していない**（§7.6 ⒟「既存の家を借りただけ」）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
-追跡 `.lys` 609・**棚卸しは `APPROXIMATIONS.md` 1 行・`magic_constants.csv` 4 行とも*行番号だけ*＝定数の増減 0**
-（`LILYSHARP_UPDATE_DOCS=1` で再生成）。計器と全文は Lab `sessions/p432/`（**`walk-split-leg1.txt`＝両 walk の
-region 別の割り**・`Zz432.cs.txt`＝計器・`Zz432Ab.cs.txt` と `Zz432Hash.cs.txt`＝再利用可の A/B と証明 ⑵ の
-harness・`Zz432Leg1.cs.txt`・`x4-fix.diff.txt`・`ab-{before,after}-{1,2}-tc0.txt`）。⚠️ **毒は full suite を
-*止めうる*形（貸し buffer の `Clear` 落とし）＝確認は `--filter` で網 1 本ずつに絞った**（第429 ⑹・第430 と同じ）。
-⇒ ⚠️ **HANDOFF は第431 の記録 442,072 B → アーカイブ後 434,836 B → 今便を書いて 441,115 B＝天井 450,000 まで
-8,885 B**（`Fold-ClosedHandoffItems` の弁は第426 の時点で 0 件・§3 の圧力弁は第409・第410 で使い切り。
-**天井は上げない**）。⇒ **次便は `-Start p433` の 1 コマンドから入る**（裏取り → `-Archive 431` 自動 → §1.0 の一覧）。
-⚠️ **`origin/master` の CI は `9f1d74a9` 以降が push されるまで赤のまま**＝次便が「CI が赤」を見ても、それは
-第412〜第432 の欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
