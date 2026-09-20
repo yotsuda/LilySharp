@@ -74,12 +74,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > `tools\Session-Check.ps1 -Start pNNN` がこの節を逐語で刷るので、**次便はこれを読めば着手できる**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **⒮ 器の census は 3 綴りしか数えていなかった**（第439〜第442 の ⒩ の計器は `new Dictionary`／
-  `new HashSet`／`new List` だけを包む）。**第446 は `new PriorityQueue` 1 軒が打鍵の 2.72% を持って
-  いたのを ⒭ の*隣*で見つけた**（寸法を言う 1 行で閉じた）。**残りは未値付け**:
-  `ImmutableArray.CreateBuilder` **176**・`StringBuilder` **44**・`Stack<>` **9**・`SortedSet<>` **8**・
-  `SortedDictionary<>` **5**・`Queue<>` **2**。⇒ **第442 の計器の母集団にこの 6 綴りを足して 1 run**
-  （賞金は「寸法をその場で言える軒」だけ＝RULES §5.3 第439）
+- ★★★ **⒮′ 器の*本体*の島＝99,628 B／打鍵 2.32%**（第447 が ⒮ を閉じた後の実測）。**寸法を言っても
+  消えない＝「建てない」だけが効く**。頭は `Parser/Parser.Music.cs:350` の `octaveMarks`
+  （obj **14,774**＋waste **8,606**・461.70 回／打鍵）だが **92% は 1 件以上入る**＝遅延生成は効かない。
+  **直すなら lookahead で数えて寸法を言う**
+- ★★ **⒮″ `Rendering/Svg/SvgDocumentContext.cs:106` の `StringBuilder` 27,355 B／打鍵 0.637%**
+  （3.15 回／打鍵・76,047 字／回・max 164,217・odd 64%＝実測は下限）。**寸法は*前のページ*が知っている**
+  ＝憶える設計変更だが、**値段はもう測った**
+- ★ **⒮‴ 「建てて一度も埋まらない」engraver の builder 8 軒＝約 6,600 B／打鍵**（TieVariant・
+  MultiMeasureRest ×2・Annotations・Pedal ×2・Fingering・Hairpin・StanzaNumber）＝**直し方は第447 の
+  `ClassifySystem` と同じ遅延生成 1 つ**。★ `Svg/Collector/CollectResumePlanner.cs:286/287` の `Stack`
+  2 本＝8,838 B／打鍵 0.21%（220.96 件／回・max 708）は**寸法を言えるか未調査**
 - ★★★ **⒩⁴ 島は 311 軒で 150,948 B／打鍵＝2.341%**（第442 が 25 軒を刈った後）。
   ⚠️ **残りの半分は*寸法を言えないと実証済みの 2 軒***（`Svg/Layout/ItemSkylineFactory.cs:465`
   **0.581%**＝`ColumnParts`・第439 実測／`Svg/Collector/MusicSiteList.cs:83` **0.563%**＝lazy・
@@ -166,9 +171,60 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | `IReadOnlyList` を `foreach` する腕（⒬） | 444 | 70 軒のうち**値段の 98.7% を持つ 36 軒**を閉じた。残り 34 軒＝1,410 B／打鍵（1 軒 41 B）＝⒬″。**別族の `IEnumerable` 137 軒は ⒬′ で別起票**（直し方が型では決まらない） |
   | `yield return` の器（⒬′） | 445 | 島は起票の 9 倍 568,346＝11.29% で、正体は LINQ ではなく**iterator のプロパティ**。**94% を閉じた**（A/B −11.71%）。残り ⒭。⚠️ **struct walk を歩く*外側*の iterator は太る**＝直すなら鎖ごと |
   | 器の尾（⒭） | 446 | 85.1% を閉じた（38,527 → 5,724 B／打鍵）。残りは ⒭′＝**`yield return` のアクセサ**だけで、直し方は第445 と同じ 1 つ |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒫ ⒬ ⒬′ ⒭ ✅ 閉じた**
+  | 器の census の綴り（⒮） | 447 | 9 綴りを `Core` 全体で数え直して**値段はすべて付いた**（798 軒）。`SortedSet`／`SortedDictionary` の 13 軒は**構造上 waste 0**（どの ctor も capacity を取らない）。残りは ⒮′ ⒮″ ⒮‴ に名前がついている |
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒫ ⒬ ⒬′ ⒭ ⒮ ✅ 閉じた**
 
-### 1.1 第446セッション（2026-09-20・YT-DELL2）
+### 1.1 第447セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮**（ユーザーが
+選んだ・⒮ と ⒭′ と ⒫′ と LP 双子を並べて訊いた）。★ **`-Start p447` の 1 コマンドで §0 が全部済んだ**
+（HEAD `ec7aba31`・未 push 2・full `sessions/p447/run1.trx` 8774 / 0 / 3 / 8777・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 445` も自動）。**裏取りは 1 つも赤を出さなかった**。
+道具は pwsh MCP（Bash 0 回）。★ **CI は第446 のユーザー push 以後 緑のまま**。
+
+★★★ **⑴ 起票の「6 綴り 244 軒」は*生の grep* だった**＝寸法を言っていない（空の括弧の）軒は **120**
+（`CreateBuilder` は **176 中 103 がすでに寸法を言っている**）。⇒ 3 綴り＋6 綴りを `Core` 全体で **798 軒
+/ 164 ファイル**包んで 1 run。★ **`SortedSet`／`SortedDictionary` の 13 軒は*構造上*寸法を言えない**
+（どの ctor も capacity を取らない）＝**waste 0 と*報告させた***——数えないでおくのが今便の直している失敗そのもの。
+
+★★★★ **⑵ 島は 150,948 → 287,293 B／打鍵で、そのうえ*配列しか数えていなかった*。** 器そのもの（object）を
+足すと **543,446 B／打鍵＝12.656%**（waste 287,293 ＋ **obj 256,153**）。新綴りの取り分は **Builder 56,780・
+StringBuilder 28,503・Stack 9,502＝94,785**＝**旧 census には原理的に映らない**。
+
+★★★★ **⑶ 頭は `Parser/Lexer.cs:85`＝`ScanTrivia` の `new List<GreenNode>()` が 3,632 回／打鍵・
+133,966 B（うち object 116,230＝2.71%）**。**2,906 回は空・726 回はちょうど 1 件**で、**器は「0 か 1 か
+多か」を見分けるためだけに在った**。⇒ ⚠️⚠️ **見えていなかった理由は A/B の括り**——第414〜第446 の harness は
+`SyntaxTree.Parse` の*後*でカウンタを読む＝**render しか測っていない**。**parse を別に括ったら
+561,865 B／打鍵**（`sessions/p447/Zz447Ab.cs.txt`＝以後 2 つを別に刷る。**render だけが第414〜第446 と比べられる**）。
+
+★★★★ **⑷ 直したのは「何かが入ると分かる前に建てている」4 か所**（`ScanTrivia`／`ParseArticulations`／
+`ParseOptionalDuration`＝**最初の 1 本を手で持ち 2 本目で list を建てる** `GreenRun.Take`（新 1 ファイル）／
+`ClassifySystem` の builder 3 本を遅延生成）。**A/B は parse −33.76%（561,865 → 372,202）・
+render −0.78%（4,293,911 → 4,260,303）・合計 −4.60%（4,855,776 → 4,632,505）**。
+⇒ ★★★ **render 側は部品ごとの予測 33,647 に対し実測 33,608＝39 B 一致**。島は **543,446 → 341,606**
+（建て数 **7,071 → 2,410／打鍵**）。⚠️ **`CreateBuilder<T>()` は `new List<T>()` と違い Add の前に
+capacity 8 を敷く**（参照型で 88 B・`(0)` なら 0 B）＝**空の builder は会計に*出る***。
+
+★★★ **⑸ 出力同一は 2 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**／⑵ **実コーパス全ページ
+SHA-256＝5,824 行・0 行差**（baseline `p439/hashes-after.txt`）。
+
+★★★ **⑹ 毒 11 本——10 本走って 9 本は予測どおり、1 本が予測を割った。** 赤: 最初の 1 本を list にも入れる
+**+1,109**／trivia の 2 件目以降を落とす **+273**／1 件だけの trivia を落とす **+882**／trivia を逆順 **+3**／
+articulation の 2 件目以降 **+64**／逆順 **+18**／付点を落とす **+117**／`leading` を捨てる **+1**。
+緑（予測どおり）: 空の `trailing` でも同じ枝へ **+0**。
+⚠️ ★★★ **予測を割った 1 本＝「1 件だけの trivia を 1 要素の list に包む」が +0 緑**＝古い `1 => triviaList[0]`
+の枝を**誰も見ていない**。⇒ **支えているのは正しさではなく*費用***（`GreenCache` の共有が毎トークン壊れる）。
+**直したのは註で、コードではない**（第443〜第447 の 5 例目）。★ 11 本目（`trailing` と `between` を入れ替え）は
+**型が違って build が赤**＝取り違えは構造上できない。
+
+★ **⑺ 終了時**: commit 2 本（code `120d5e50`・docs 1 本＝**この文を含むので SHA は書かない**＝§5.4）。
+**最終 full 8774 / 0 / 3 / 8777＝開始時と同値**・§7.5（対 `ec7aba31`）**Core +122 行／REF 0／OWN 0**
+（足した式も定数も 0＝§7.6 ⒟）・**未 push 3**・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
+追跡 `.lys` 609・**棚卸しも `magic_constants.csv` も差分なし**。全文は Lab `sessions/p447/`。**push はユーザー**（Lab も）。
+⚠️⚠️ **天井の残りは 2.8 KB＝次便は `-Archive 446` を回すまで §1 に 1 字も足せない**。**`-Start p448` の 1 コマンドから入る**。
+
+
+## 以下は第446セッションの経緯
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒭**（ユーザーが
 選んだ・⒭ と ⒨ と ⒫′ と LP 双子を並べて訊いた）。★ **`-Start p446` の 1 コマンドで §0 が全部済んだ**
@@ -228,73 +284,6 @@ tab は +0 緑**。⇒ **tie は「和音に member が在る」までが観測�
 （第445 と同じ顔ぶれ＋`ItemColumn.cs.txt`）。
 ⚠️⚠️ **天井の残りは 1.2 KB＝次便は `-Archive 445`（約 6 KB 空く）を回すまで §1 に 1 字も足せない**。
 **`-Start p447` の 1 コマンドから入る**。**push はユーザー**（Lab も）。
-
-
-## 以下は第445セッションの経緯
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 の ⒬′**（ユーザーが
-選んだ・⒬′ と ⒫′ と ⒨ と LP 双子を並べて訊いた）。★ **`-Start p445` の 1 コマンドで §0 が全部済んだ**
-（HEAD `f26cfbe6`・**未 push 75**・**full `sessions/p445/run1.trx` 8774 / 0 / 3 / 8777**・台帳 851 点／
-総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 443` も自動で 67 行 4,184 chars）。
-**裏取りは 1 つも赤を出さなかった**。道具は pwsh MCP（Bash 0 回）。母集団と harness は第414〜第444 と同じ。
-
-★★★★ **⑴ 起票の 62,896 B／打鍵（1.23%）は*測り方*が間違っていた——島は 568,346＝打鍵の 11.29%＝9 倍。**
-計器は第444 の脚に **`Mark()` を第 2 引数として足しただけ**（C# は引数を左から評価するので EXPR より先に走る）
-＝**`foreach` の*源を建てる*費用が 1 run で全 site 出る**。⇒ ★★★★ **LINQ と `yield return` の列は
-*`GetEnumerator` の初回が只***（`this` を返す）＝**払っているのは*建てるとき*で、第444 の `hits × box` は
-*複製*の寸法を測っていた**。★ **裏取りは同じ run の中に在った**——源が `foreach` の行に在る軒では
-**`built` と複製がバイト単位で一致**（48.00・88.00）＝だから前の行で建てている軒にも複製を代理に使える。
-
-★★★★ **⑵ 島の正体は「箱詰め enumerator」ではなく *`yield return` の器*。** `SyntaxNode.Articulations` は
-**プロパティが iterator ＝読むたびに 48 B**、**注釈が 0 個の音符でも**。`HasNamedArticulation` だけで
-**3,223 回／打鍵**。**`Articulations` 族 12 軒で 453,933 B／打鍵＝9.02%**。同じ形が `ChildNodes()`・
-`EnumerateStaves()`・`StaffIndicesIn`（**88 B の state machine で `int` 1 本**・18,852）。
-
-★★★ **⑶ 直しは型でも添字でもなく「器を struct にする」**（`ChildNodeList`／`StaffWalk`）。
-★★★ **struct が `IEnumerable<T>` を実装していれば呼び手は 1 つも壊れない**——`.Articulations` 163・
-`.EnumerateStaves()` 86・`.ChildNodes()` 53 が**無改変でコンパイルした**（`foreach` は pattern を先に見る／
-LINQ は 1 箱＝iterator 1 個と同値）。`CollectArticulations` の `Select`／`Concat`／`SelectMany` は
-**歩きに畳み、本体は local function へ**（delegate にしないので capture は ref struct＝0 B）。
-
-★★★★ **⑷ ⚠️ 1 軒だけ*高くなった*——iterator が struct walk を歩くと state machine ごと太る。**
-`EngravedClefStencils` は `EnumerateStaves` が参照でなくなった瞬間に **64 → 104 B／回（5,741 → 9,329）**。
-⇒ **struct にしたら、それを歩く外側の iterator も一緒に出す**。直しは**畳みを*enumerator で*ジェネリックに
-する**（`Fold<TEnumerator> where TEnumerator : IEnumerator<T>`）＝**1 綴りのまま**構造体側に箱が付かない。
-実測 9,329 → 0（A/B −9,325＝**4 B 一致**）。
-
-★★★ **⑸ A/B ＝ −11.71%**（**5,034,689 → 4,444,926 B／打鍵**・before はこの便で取り直した）。
-**231 冊中 231 冊が改善**（中央値 −11.247%・最良 −21.131%・**最悪でも −3.430%**）⇒ ★ **`Universe.lys` が
-対照帯に残るという予測は外れた**——この島は*木の歩き*に在るのでどの本も踏む。⚠️ **A/B 589,763 は
-会計 533,624 を 56,139 B（10.5%）追い越した**＝**計器は `Svg`＋`Rendering` の `foreach` しか見ない**ので、
-**他の namespace と LINQ の呼び手（`.Any()`／`.Count()`／`.OfType<>()`）は構造的に映らない**。
-
-★★★ **⑹ 出力同一は 2 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline `17fb650e`）／
-⑵ **実コーパス全ページ SHA-256＝5,824 行・0 行差**（baseline `p439/hashes-after.txt`）。
-
-★★★ **⑺ 毒 9 つ——8 つは予測どおり、1 つが*予測を割った*。**（素の木が赤 3 本＝§1 の継ぎ目だけ＝
-**差分で読む**。全文 Lab `poisons.txt`）: ⑴ 和音の member を先に歩く **+1 赤**／⑵ member を落とす **+4**／
-⑶ 音符の最初の post-event を飛ばす **+482**／⑷ slot を逆順に歩く **+132**／⑸ pitch の filter から
-`MusicMarkSyntax` を外す **+19**／⑹ staff の通し番号を進めない **+693**／⑻ `StaffIndicesIn` の
-「群が空だったときの控え」を落とす **+0 緑**（予測どおり＝観測者が居ない）。
-⚠️ ★★★ **⑺ `ClefStencilWalk` の *ossia* を飛ばすのをやめる → +0 緑。予測は赤だった。**
-⇒ ★★ **そこで*同じ 1 文の兄弟*＝text 行の側に同じ毒を入れたら +10 赤**（⑼）＝**「text 行と ossia 行は
-clef を彫らない」の 2 つの主張のうち、観測者が居るのは片方だけ**（第443・第444 と同じ形の 3 例目）。
-**直したのは註で、コードではない。**
-
-★ **⑻ 終了時**: commit 2 本（code `f27e39f8`・docs 1 本＝**この文を含むので SHA は書かない**＝§5.4）・
-**未 push 77**（開始時 75）・
-**最終 full 8774 / 0 / 3 / 8777＝第444 最終と同じ**・§7.5（対 `f26cfbe6`）**Core +333 −169 行＋新 168 行／
-REF 0／OWN 0**（足した式も定数も 0＝§7.6 ⒟）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
-追跡 `.lys` 609・**棚卸しと `magic_constants.csv` は再生成して net 新規 0／net 消滅 0＝行番号だけ**。
-全文は Lab `sessions/p445/`（`prediction.txt`・`instrument.ps1`＋`Zz445.template.cs`＋`Zz445Leg.cs.txt`・
-`site-prices-before.txt`／`-after.txt`・`Zz445Ab.cs.txt`／`ab-*-tc0.txt`・`Zz445Hash.cs.txt`・
-`poisons.ps1`／`poisons.txt`・`zz445-fix.diff.txt`）。
-⚠️⚠️ **計器を当てる前に `git -c color.diff=never diff -- <dir> > patch` を控えること**——この便は
-**`git checkout -- LilySharp.Core` で計器と一緒に自分の仕事を丸ごと捨てた**（RULES §5.4-027 の実演）。
-**落とした stash の commit から戻せたが、控えが無ければ作り直しだった。**
-⇒ ⚠️⚠️ **天井の残りは 1.4 KB＝次便は `-Archive 444` を回すまで §1 に 1 字も足せない**（`Fold-ClosedHandoffItems`
-は §2 §3 とも「畳むものは無い」と答えた）。**`-Start p446` の 1 コマンドから入る**。
-⚠️ **`origin/master` の CI は赤のまま**＝第412〜第445 の欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
 
 
 ## 2. 開いている作業

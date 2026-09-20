@@ -129,6 +129,73 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第445セッションの経緯
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 の ⒬′**（ユーザーが
+選んだ・⒬′ と ⒫′ と ⒨ と LP 双子を並べて訊いた）。★ **`-Start p445` の 1 コマンドで §0 が全部済んだ**
+（HEAD `f26cfbe6`・**未 push 75**・**full `sessions/p445/run1.trx` 8774 / 0 / 3 / 8777**・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 443` も自動で 67 行 4,184 chars）。
+**裏取りは 1 つも赤を出さなかった**。道具は pwsh MCP（Bash 0 回）。母集団と harness は第414〜第444 と同じ。
+
+★★★★ **⑴ 起票の 62,896 B／打鍵（1.23%）は*測り方*が間違っていた——島は 568,346＝打鍵の 11.29%＝9 倍。**
+計器は第444 の脚に **`Mark()` を第 2 引数として足しただけ**（C# は引数を左から評価するので EXPR より先に走る）
+＝**`foreach` の*源を建てる*費用が 1 run で全 site 出る**。⇒ ★★★★ **LINQ と `yield return` の列は
+*`GetEnumerator` の初回が只***（`this` を返す）＝**払っているのは*建てるとき*で、第444 の `hits × box` は
+*複製*の寸法を測っていた**。★ **裏取りは同じ run の中に在った**——源が `foreach` の行に在る軒では
+**`built` と複製がバイト単位で一致**（48.00・88.00）＝だから前の行で建てている軒にも複製を代理に使える。
+
+★★★★ **⑵ 島の正体は「箱詰め enumerator」ではなく *`yield return` の器*。** `SyntaxNode.Articulations` は
+**プロパティが iterator ＝読むたびに 48 B**、**注釈が 0 個の音符でも**。`HasNamedArticulation` だけで
+**3,223 回／打鍵**。**`Articulations` 族 12 軒で 453,933 B／打鍵＝9.02%**。同じ形が `ChildNodes()`・
+`EnumerateStaves()`・`StaffIndicesIn`（**88 B の state machine で `int` 1 本**・18,852）。
+
+★★★ **⑶ 直しは型でも添字でもなく「器を struct にする」**（`ChildNodeList`／`StaffWalk`）。
+★★★ **struct が `IEnumerable<T>` を実装していれば呼び手は 1 つも壊れない**——`.Articulations` 163・
+`.EnumerateStaves()` 86・`.ChildNodes()` 53 が**無改変でコンパイルした**（`foreach` は pattern を先に見る／
+LINQ は 1 箱＝iterator 1 個と同値）。`CollectArticulations` の `Select`／`Concat`／`SelectMany` は
+**歩きに畳み、本体は local function へ**（delegate にしないので capture は ref struct＝0 B）。
+
+★★★★ **⑷ ⚠️ 1 軒だけ*高くなった*——iterator が struct walk を歩くと state machine ごと太る。**
+`EngravedClefStencils` は `EnumerateStaves` が参照でなくなった瞬間に **64 → 104 B／回（5,741 → 9,329）**。
+⇒ **struct にしたら、それを歩く外側の iterator も一緒に出す**。直しは**畳みを*enumerator で*ジェネリックに
+する**（`Fold<TEnumerator> where TEnumerator : IEnumerator<T>`）＝**1 綴りのまま**構造体側に箱が付かない。
+実測 9,329 → 0（A/B −9,325＝**4 B 一致**）。
+
+★★★ **⑸ A/B ＝ −11.71%**（**5,034,689 → 4,444,926 B／打鍵**・before はこの便で取り直した）。
+**231 冊中 231 冊が改善**（中央値 −11.247%・最良 −21.131%・**最悪でも −3.430%**）⇒ ★ **`Universe.lys` が
+対照帯に残るという予測は外れた**——この島は*木の歩き*に在るのでどの本も踏む。⚠️ **A/B 589,763 は
+会計 533,624 を 56,139 B（10.5%）追い越した**＝**計器は `Svg`＋`Rendering` の `foreach` しか見ない**ので、
+**他の namespace と LINQ の呼び手（`.Any()`／`.Count()`／`.OfType<>()`）は構造的に映らない**。
+
+★★★ **⑹ 出力同一は 2 つとも**: ⑴ `rerender-ls -Compare`＝**絵が動いた本 0 / 81**（baseline `17fb650e`）／
+⑵ **実コーパス全ページ SHA-256＝5,824 行・0 行差**（baseline `p439/hashes-after.txt`）。
+
+★★★ **⑺ 毒 9 つ——8 つは予測どおり、1 つが*予測を割った*。**（素の木が赤 3 本＝§1 の継ぎ目だけ＝
+**差分で読む**。全文 Lab `poisons.txt`）: ⑴ 和音の member を先に歩く **+1 赤**／⑵ member を落とす **+4**／
+⑶ 音符の最初の post-event を飛ばす **+482**／⑷ slot を逆順に歩く **+132**／⑸ pitch の filter から
+`MusicMarkSyntax` を外す **+19**／⑹ staff の通し番号を進めない **+693**／⑻ `StaffIndicesIn` の
+「群が空だったときの控え」を落とす **+0 緑**（予測どおり＝観測者が居ない）。
+⚠️ ★★★ **⑺ `ClefStencilWalk` の *ossia* を飛ばすのをやめる → +0 緑。予測は赤だった。**
+⇒ ★★ **そこで*同じ 1 文の兄弟*＝text 行の側に同じ毒を入れたら +10 赤**（⑼）＝**「text 行と ossia 行は
+clef を彫らない」の 2 つの主張のうち、観測者が居るのは片方だけ**（第443・第444 と同じ形の 3 例目）。
+**直したのは註で、コードではない。**
+
+★ **⑻ 終了時**: commit 2 本（code `f27e39f8`・docs 1 本＝**この文を含むので SHA は書かない**＝§5.4）・
+**未 push 77**（開始時 75）・
+**最終 full 8774 / 0 / 3 / 8777＝第444 最終と同じ**・§7.5（対 `f26cfbe6`）**Core +333 −169 行＋新 168 行／
+REF 0／OWN 0**（足した式も定数も 0＝§7.6 ⒟）・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
+追跡 `.lys` 609・**棚卸しと `magic_constants.csv` は再生成して net 新規 0／net 消滅 0＝行番号だけ**。
+全文は Lab `sessions/p445/`（`prediction.txt`・`instrument.ps1`＋`Zz445.template.cs`＋`Zz445Leg.cs.txt`・
+`site-prices-before.txt`／`-after.txt`・`Zz445Ab.cs.txt`／`ab-*-tc0.txt`・`Zz445Hash.cs.txt`・
+`poisons.ps1`／`poisons.txt`・`zz445-fix.diff.txt`）。
+⚠️⚠️ **計器を当てる前に `git -c color.diff=never diff -- <dir> > patch` を控えること**——この便は
+**`git checkout -- LilySharp.Core` で計器と一緒に自分の仕事を丸ごと捨てた**（RULES §5.4-027 の実演）。
+**落とした stash の commit から戻せたが、控えが無ければ作り直しだった。**
+⇒ ⚠️⚠️ **天井の残りは 1.4 KB＝次便は `-Archive 444` を回すまで §1 に 1 字も足せない**（`Fold-ClosedHandoffItems`
+は §2 §3 とも「畳むものは無い」と答えた）。**`-Start p446` の 1 コマンドから入る**。
+⚠️ **`origin/master` の CI は赤のまま**＝第412〜第445 の欠陥ではない。**作業ツリーは空**。**push はユーザー**（Lab も）。
+
+
 ## 以下は第444セッションの経緯
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒝ の ⒬**（ユーザーが
