@@ -77,11 +77,23 @@ public sealed class ScoreTextMetrics
     /// Cached per (role, style) because the walk asks the font manager, and a page asks for
     /// a handful of roles once per drawn string.
     /// </para>
+    /// <para>
+    /// ⚠️ THE FACTORY IS <c>static</c> AND THE INSTANCE IS THE ARGUMENT, and that is not a
+    /// style preference — a factory that closes over <c>this</c> is a DELEGATE THE CALL SITE
+    /// BUILDS EVERY TIME, including the overwhelming majority of times the answer is already
+    /// in the dictionary and the factory never runs. MEASURED 2026-09-20 (session 437,
+    /// reader's corpus, 231 books × 8 keystrokes): 615,475 calls — 333 per keystroke — each
+    /// allocating exactly 64 bytes, while the factory ran ZERO times; 21,315 B of a keystroke
+    /// (0.269%) spent ASKING a question that was already answered. A static lambda is cached
+    /// in a field by the compiler and the <c>TArg</c> overload carries the receiver, so a hit
+    /// now allocates nothing. The same form, and the same reason, in
+    /// <c>Svg.Model.MeasureContentKey.Getters</c>.
+    /// </para>
     /// </remarks>
     public TextFace Face(TextRole role, FontStyle style = FontStyle.Regular)
-        => _faces.GetOrAdd((role, style), key =>
+        => _faces.GetOrAdd((role, style), static (key, self) =>
         {
-            var resolved = _plan.Resolve(key.Role);
+            var resolved = self._plan.Resolve(key.Role);
             bool sans = resolved.Family == TextFontFamily.Sans;
             if (!resolved.IsBundled)
             {
@@ -93,7 +105,7 @@ public sealed class ScoreTextMetrics
                 }
             }
             return TextFace.Bundled(sans, key.Style);
-        });
+        }, this);
 
     /// <summary>
     /// The em <paramref name="role"/> is set at: what the score's <c>fonts { }</c> wrote as

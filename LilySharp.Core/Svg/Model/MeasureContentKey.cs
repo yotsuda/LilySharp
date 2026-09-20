@@ -661,17 +661,31 @@ public readonly record struct MeasureContentKey(long Hash)
         return hc.ToHashCode();
     }
 
+    // ⚠️ THE FACTORY IS `static` AND `excluded` IS ITS ARGUMENT, not a captured variable.
+    // This is the hottest reader of a warm cache in the whole keystroke — the fold asks a
+    // type for its getters ONCE PER ITEM HASHED — and a factory that closes over a local
+    // costs TWO allocations on every one of those calls, hit or miss: the closure's display
+    // class and the delegate over it. MEASURED 2026-09-20 (session 437, reader's corpus,
+    // 231 books × 8 keystrokes): 1,802,668 calls, 975 per keystroke, 96 bytes each =
+    // 93,645 B of a keystroke, 1.181% — all of it for a dictionary that was already holding
+    // the answer (the factory itself runs once per type per process). A static lambda is
+    // cached in a field by the compiler and the TArg overload carries the set, so a hit
+    // allocates nothing. Same form, same reason: Rendering.ScoreTextMetrics.Face.
+    // ⚠️ 96 AND NOT 64: the display class is built at METHOD ENTRY, ahead of every statement
+    // this method could have hosted a seam in, so an instrument inside the method reads only
+    // the delegate's 64 and under-prices the form by a third. The number above is from the
+    // seam in the CALLER (HashContent) — see RULES §5.3.
     private static PropertyFold[] Getters(Type type, HashSet<string> excluded)
     {
         var cache = ReferenceEquals(excluded, ItemExclusions) ? ItemGetters : SideGetters;
-        return cache.GetOrAdd(type, t =>
+        return cache.GetOrAdd(type, static (t, excluded) =>
             t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanRead
                             && p.GetIndexParameters().Length == 0
                             && !excluded.Contains(p.Name))
                 .OrderBy(p => p.Name, StringComparer.Ordinal)
                 .Select(CompileFold)
-                .ToArray());
+                .ToArray(), excluded);
     }
 
     /// <summary>

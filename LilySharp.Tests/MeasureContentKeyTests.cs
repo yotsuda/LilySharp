@@ -113,6 +113,45 @@ public class MeasureContentKeyTests
         Assert.NotEqual(keys[0], keys[1]); // different content -> different key
     }
 
+    // Two identical measures, each carrying the same attached annotation, twice over.
+    private static string TwinBars(string bar) => $$"""
+        time 4/4
+        key c major
+        part melody { clef treble }
+        phrase mel {
+          r1 |
+          {{bar}} |
+          {{bar}} |
+          r1 |
+        }
+        section Main { melody { mel } }
+        form main { Main }
+        score main "x" { staff melody }
+        """;
+
+    /// <summary>
+    /// The SIDE TABLES are position-independent too, and that half of the key had no
+    /// observer of its own until session 437. A side-table item's <c>MeasureIndex</c> is
+    /// its bucketing key and not its content — it moves whenever anything above it is
+    /// edited — so a dynamic on two identical measures must leave both measures with the
+    /// same key. Every test above measures the INTRINSIC half (items + structural fields),
+    /// which is folded through a different exclusion set: the intrinsic set excludes the
+    /// bow offsets and <c>BeamId</c>, the side set excludes the absolute measure indices,
+    /// and nothing was pinning that the side half gets the SIDE set. Folding the side
+    /// tables through the intrinsic set instead — one wrong argument — puts the absolute
+    /// index back into the key and silently costs every downstream memo the reuse it was
+    /// built for, with all 8,776 other tests still green.
+    /// </summary>
+    [Fact]
+    public void SideTableAnnotations_AtDifferentPositions_ShareKey()
+    {
+        var keys = CompleteKeys(TwinBars("c4@f d e f"));
+        Assert.Equal(4, keys.Length);
+        Assert.Equal(keys[1], keys[2]);
+        // ...and the annotation is IN the key: the same bar without it is a different one.
+        Assert.NotEqual(keys[1], CompleteKeys(TwinBars("c4 d e f"))[1]);
+    }
+
     private static string BeamedBars(params string[] bars) =>
         "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
         + "section Main { melody {\n" + string.Join("\n", bars) + "\n} }\n"
