@@ -324,8 +324,14 @@ internal sealed class ElementCoordinator
             // item stream); single-voice scores keep VoiceIndex 0 = score.Voice.
             var measure = score.Voices[group.VoiceIndex].Measures[group.MeasureIndex];
 
-            var itemXPositions = new List<double>();
-            if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
+            // One X per item of whichever stream the branch below walks — the size is that
+            // walk's own trip count, not a bound (measured before it was handed over:
+            // 35,162 calls, asked == Count every time).
+            bool fromColumns = !measureLayout.Columns.IsDefaultOrEmpty
+                && measureLayout.Columns.Length > 0;
+            var itemXPositions = new List<double>(
+                fromColumns ? measure.Items.Length : measureLayout.Items.Length);
+            if (fromColumns)
             {
                 var currentTiming = Fraction.Zero;
                 foreach (var item in measure.Items)
@@ -1756,8 +1762,11 @@ internal sealed class ElementCoordinator
         bool stemUp = item is ChordItem c1 ? c1.StemUp : ((NoteItem)item).StemUp;
 
         // Every head of the column, with the seconds displacement the renderer draws it at.
-        var positions = new List<int>();
-        var offsets = new List<double>();
+        // One entry per chord member, or one for a lone note — the branch's own trip count
+        // (measured before it was handed over: 26,524 calls, asked == Count every time).
+        int headCount = item is ChordItem countChord ? countChord.Notes.Length : 1;
+        var positions = new List<int>(headCount);
+        var offsets = new List<double>(headCount);
         if (item is ChordItem chord)
         {
             // ⚠️ The OFFSETS come out of the cue's own font while headBBox above is still the
@@ -1781,7 +1790,11 @@ internal sealed class ElementCoordinator
 
         // bounds vs the rest. TiedHeads must come out sorted by position ASCENDING — the
         // recession boxes take the vector's ends and not its extremes by Y.
-        var tied = new List<TieOutlineHead>();
+        // The tied heads are a SUBSET of the column's heads, so positions.Count is a bound —
+        // and on the reader's corpus it is exact: measured before it was handed over, all
+        // 26,524 calls tied every head of the column (a tie column is named by the chord the
+        // ties leave, so an untied member is possible but rare enough never to appear there).
+        var tied = new List<TieOutlineHead>(positions.Count);
         var others = new List<TieOutlineBox>();
         for (int i = 0; i < positions.Count; i++)
         {
@@ -3236,7 +3249,13 @@ internal sealed class ElementCoordinator
         Dictionary<(int Measure, int Item), BeamLayout>? beamByMember = null;
         if (!beamLayouts.IsDefaultOrEmpty)
         {
-            beamByMember = new Dictionary<(int, int), BeamLayout>();
+            // The members of every beam, which BOUNDS the table (TryAdd drops a repeat).
+            // Measured before the size was handed over: 493 calls, asked == Count every one
+            // of them — nothing repeated, so the bound was the count on this corpus.
+            int memberCount = 0;
+            foreach (var bl in beamLayouts)
+                memberCount += bl.Group.Members.Length;
+            beamByMember = new Dictionary<(int, int), BeamLayout>(memberCount);
             foreach (var bl in beamLayouts)
                 foreach (var m in bl.Group.Members)
                     // TryAdd, not indexer: (measure, item) is ambiguous across

@@ -339,7 +339,14 @@ internal static class BreakAlignSpacing
     public static IReadOnlyList<PlacedColumn> SolveColumns(
         IEnumerable<(BreakAlignSymbol Symbol, double Width)> items, double startLeft)
     {
-        var placed = new List<PlacedColumn>();
+        // One column per present item, so the caller's own count BOUNDS this — and the bound
+        // is exact on every caller there is: measured before the size was handed over,
+        // 119,209 calls, asked == Count every time, because neither caller ever offers an
+        // item of width 0 (both build their list from grobs they have already decided to
+        // engrave). An enumerable with no count falls back to the growth ladder.
+        var placed = items is ICollection<(BreakAlignSymbol Symbol, double Width)> itemCollection
+            ? new List<PlacedColumn>(itemCollection.Count)
+            : new List<PlacedColumn>();
         BreakAlignSymbol? prev = null;
         double prevLeft = 0.0, prevWidth = 0.0;
         foreach (var (symbol, width) in items)

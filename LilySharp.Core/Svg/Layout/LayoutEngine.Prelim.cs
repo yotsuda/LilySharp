@@ -375,7 +375,10 @@ internal sealed partial class LayoutEngine
             list.Add(groups[i]);
         }
 
-        var perSystem = new Dictionary<int, ImmutableArray<BeamLayout>>();
+        // One entry per occupied system — the loop below writes exactly one, so the size is
+        // the bucketing's own Count (measured before it was handed over: 3,732 calls,
+        // asked == Count every time).
+        var perSystem = new Dictionary<int, ImmutableArray<BeamLayout>>(groupsBySystem.Count);
         foreach (var (k, sysGroups) in groupsBySystem)
         {
             var sys = prelimSystems[k];
@@ -393,7 +396,9 @@ internal sealed partial class LayoutEngine
                     sysGroups.ToImmutableArray()));
         }
 
-        var cursors = new Dictionary<int, int>();
+        // A cursor per system the reassembly actually reads — bounded by the laid systems,
+        // and measured exact on the reader's corpus (3,732 calls, asked == Count every one).
+        var cursors = new Dictionary<int, int>(perSystem.Count);
         var result = ImmutableArray.CreateBuilder<BeamLayout>();
         for (int i = 0; i < groups.Length; i++)
         {
@@ -491,14 +496,21 @@ internal sealed partial class LayoutEngine
             var key = (tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex);
             if (!columnTies.TryGetValue(key, out var list))
             {
-                columnTies[key] = list = new List<TieItem>();
+                // Capacity 1, from OBSERVATION and not from an argument: a column CAN hold a
+                // whole chord's ties, but the price instrument read 1.00 ties a column (max
+                // 2) over the reader's corpus, so the default four slots were three wasted.
+                // The poison run tests it (a capacity is not a correctness property).
+                columnTies[key] = list = new List<TieItem>(1);
                 columnKeys.Add(key);
             }
             list.Add(tie);
         }
 
         // Home system per column; any straddler (or unmapped measure) → fallback.
-        var columnSystem = new Dictionary<(int, int, int), int>();
+        // One entry per column key — the loop writes exactly one and there are no repeats
+        // (the keys came out of a dictionary), so the size is columnKeys.Count and not a
+        // bound (measured before it was handed over: 2,620 calls, asked == Count every time).
+        var columnSystem = new Dictionary<(int, int, int), int>(columnKeys.Count);
         foreach (var key in columnKeys)
         {
             int home = -2;
@@ -522,7 +534,8 @@ internal sealed partial class LayoutEngine
                 tiesBySystem[k] = list = new List<TieItem>();
             list.Add(tie);
         }
-        var perSystem = new Dictionary<int, ImmutableArray<TieLayout>>();
+        // One entry per occupied system, as on the beam side above (2,620 calls, exact).
+        var perSystem = new Dictionary<int, ImmutableArray<TieLayout>>(tiesBySystem.Count);
         foreach (var (k, sysTies) in tiesBySystem)
         {
             var sys = prelimSystems[k];
@@ -538,7 +551,7 @@ internal sealed partial class LayoutEngine
 
         // Column-major reassembly in detection order, one layout per tie (an
         // intra-system column has exactly one segment).
-        var cursors = new Dictionary<int, int>();
+        var cursors = new Dictionary<int, int>(perSystem.Count);
         var result = ImmutableArray.CreateBuilder<TieLayout>(ties.Length);
         foreach (var key in columnKeys)
         {

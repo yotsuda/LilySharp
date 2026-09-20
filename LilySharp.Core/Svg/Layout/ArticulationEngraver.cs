@@ -394,7 +394,11 @@ internal static class ArticulationEngraver
             {
                 tiesAtBound ??= new Dictionary<(int, int, int, int), List<TieLayout>>();
                 if (!tiesAtBound.TryGetValue(key, out var list))
-                    tiesAtBound[key] = list = new List<TieLayout>();
+                    // Capacity 1, from OBSERVATION and not from an argument: a chord's
+                    // members can all land on the one item, but the price instrument read
+                    // 1.01 ties a bound (max 2) over the reader's corpus, so the default four
+                    // slots were three wasted. The poison run tests it.
+                    tiesAtBound[key] = list = new List<TieLayout>(1);
                 list.Add(t);
             }
         }

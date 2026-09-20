@@ -727,29 +727,40 @@ internal sealed partial class LayoutEngine
         var EdgeStaffBeams = ctx.EdgeStaffBeams;
         double currentY = ctx.FirstSystemY;
 
-        // Layout each system with skyline extents
-        var systems = new List<SystemLayout>();
-        var perSystemExtents = new List<(double upExtent, double downExtent)>();
-        var perSystemSkylines = new List<(VerticalSkyline up, VerticalSkyline down)>();
+        // Layout each system with skyline extents.
+        // ⚠️ EVERY ONE OF THESE TWELVE IS EXACTLY systemMeasures.Count LONG — the loop below
+        // runs once per system and appends one entry to each of them, with no early exit and
+        // no conditional Add, so the size is the loop's trip count and not a bound. Measured
+        // before the sizes were handed over (session 442's leg, 2,170 calls, asked == Count
+        // every time): the default growth ladder was reaching 32 slots to hold 23.70.
+        int systemCount = systemMeasures.Count;
+        var systems = new List<SystemLayout>(systemCount);
+        var perSystemExtents = new List<(double upExtent, double downExtent)>(systemCount);
+        var perSystemSkylines = new List<(VerticalSkyline up, VerticalSkyline down)>(systemCount);
         // Per-system body height. Equals the scalar systemHeight for every system
         // unless hara-kiri hides different staves per system (then each system is as
         // tall as its OWN surviving staves). CreatePages spaces systems by this so a
         // hara-kiri'd system's gap is not over-reserved at the full height.
-        var perSystemHeights = new List<double>();
-        var perSystemLyricBands = new List<VerticalSkyline?>();
-        var perSystemCropDown = new List<double>();
-        var perSystemStaffSkylines = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
-        var perSystemStaffSpanners = new List<List<MultiStaffLayouter.StaffInsideSpanners>>();
-        var perSystemStaffInside = new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>();
-        var perSystemPedalLines = new List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>();
-        var perSystemPedalRows = new List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>();
+        var perSystemHeights = new List<double>(systemCount);
+        var perSystemLyricBands = new List<VerticalSkyline?>(systemCount);
+        var perSystemCropDown = new List<double>(systemCount);
+        var perSystemStaffSkylines =
+            new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>(systemCount);
+        var perSystemStaffSpanners =
+            new List<List<MultiStaffLayouter.StaffInsideSpanners>>(systemCount);
+        var perSystemStaffInside =
+            new List<List<(VerticalSkyline Up, VerticalSkyline Down)>>(systemCount);
+        var perSystemPedalLines =
+            new List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>(systemCount);
+        var perSystemPedalRows =
+            new List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>(systemCount);
         // Per-system pair-run suppliers, carried out for the FINAL annotation pass's
         // drawn-baseline walk (finding 4-4): it used to rebuild them per system per
         // keystroke; the carried instance is the same value — built from the same
         // measure layouts and range — with its within-pass caches along for the ride.
-        var perSystemRunSources = new List<MultiStaffLayouter.PairRunSources>();
+        var perSystemRunSources = new List<MultiStaffLayouter.PairRunSources>(systemCount);
         int firstMeasureIndex = 0;
-        for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
+        for (int sysIdx = 0; sysIdx < systemCount; sysIdx++)
         {
             bool isFirstSystem = sysIdx == 0;
             double sysIndent = isFirstSystem ? indent : shortIndent;

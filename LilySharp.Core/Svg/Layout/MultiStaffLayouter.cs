@@ -2810,7 +2810,22 @@ internal sealed class MultiStaffLayouter
         var sp = _options.StaffSpacing;
         // (model staff, its layout, the group it belongs to) in global staff order — the
         // order EnumerateStaves yields and the order the group layouts were built in.
-        var flat = new List<(Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex)>();
+        // The size is the same pairing arithmetic the fill performs — group by group, the
+        // SHORTER of the model's staves and the layout's — so it is the fill's trip count and
+        // not a bound (measured before it was handed over: 51,436 calls, asked == Count every
+        // time). Both walks are over ImmutableArray, whose enumerator is a struct.
+        int flatCount = 0, countedGroup = 0;
+        foreach (var group in score.StaffGroups)
+        {
+            if (countedGroup >= groups.Length)
+                break;
+            int modelStaves = group.Staves.Length;
+            int laidStaves = groups[countedGroup].Staves.Length;
+            flatCount += modelStaves < laidStaves ? modelStaves : laidStaves;
+            countedGroup++;
+        }
+        var flat = new List<(Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex)>(
+            flatCount);
         int gi = 0;
         foreach (var group in score.StaffGroups)
         {
