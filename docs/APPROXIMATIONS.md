@@ -311,7 +311,7 @@
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
 - **:107** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
-- **:258** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
+- **:266** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **:82** LILYSHARP-OWN: ink above / below the baseline for a label LilyPond does NOT spell in
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`

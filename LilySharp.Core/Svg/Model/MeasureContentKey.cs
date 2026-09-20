@@ -137,8 +137,9 @@ public readonly record struct MeasureContentKey(long Hash)
             var hc = new Hash64();
             AddIntrinsic(ref hc, measures, i);
             hc.Add(chain.Entry[i]);                  // line-start prefix identity
-            foreach (long itemHash in sideTables[i]) // attached annotations (ordered)
-                hc.Add(itemHash);
+            if (sideTables[i] is { } side)           // attached annotations (ordered)
+                foreach (long itemHash in side)
+                    hc.Add(itemHash);
             builder.Add(new MeasureContentKey(hc.ToHashCode()));
         }
         return builder.MoveToImmutable();
@@ -235,8 +236,9 @@ public readonly record struct MeasureContentKey(long Hash)
 
         var sideTables = BucketSideTables(score, n);
         for (int i = 0; i < n; i++)
-            foreach (long itemHash in sideTables[i])
-                acc[i].Add(itemHash);
+            if (sideTables[i] is { } side)
+                foreach (long itemHash in side)
+                    acc[i].Add(itemHash);
 
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
         for (int i = 0; i < n; i++)
@@ -482,11 +484,14 @@ public readonly record struct MeasureContentKey(long Hash)
         "SourcePosition", "MeasureIndex", "StartMeasureIndex", "EndMeasureIndex",
     };
 
-    private static List<long>[] BucketSideTables(Score score, int measureCount)
+    // ⚠️ THE BUCKETS ARE BUILT LAZILY — a null bucket and an empty one read the same to
+    // every caller, and 76.4% of them were never filled: 98.70 builds a keystroke at 32 B
+    // for the List object alone = 2,414 B/keystroke (session 448's census, session 450).
+    // A measure with no dynamic, no lyric, no mark and no spanner over it is the common
+    // measure, not the exception.
+    private static List<long>?[] BucketSideTables(Score score, int measureCount)
     {
-        var buckets = new List<long>[measureCount];
-        for (int i = 0; i < measureCount; i++)
-            buckets[i] = new List<long>();
+        var buckets = new List<long>?[measureCount];
 
         // Single-measure tables: each item belongs to one measure (item.MeasureIndex).
         // Fixed call order keeps the per-bucket fold deterministic.
@@ -524,11 +529,10 @@ public readonly record struct MeasureContentKey(long Hash)
         return buckets;
     }
 
-    private static List<long>[] BucketSideTables(MultiStaffScore score, int measureCount)
+    // Lazy for the reason the Score overload above gives.
+    private static List<long>?[] BucketSideTables(MultiStaffScore score, int measureCount)
     {
-        var buckets = new List<long>[measureCount];
-        for (int i = 0; i < measureCount; i++)
-            buckets[i] = new List<long>();
+        var buckets = new List<long>?[measureCount];
 
         // Same tables as the Score overload, by MeasureIndex across all staves.
         // (Tremolo has no side table anywhere — it lives on the note item as
@@ -555,17 +559,17 @@ public readonly record struct MeasureContentKey(long Hash)
         return buckets;
     }
 
-    private static void BucketSingle(IEnumerable items, List<long>[] buckets)
+    private static void BucketSingle(IEnumerable items, List<long>?[] buckets)
     {
         foreach (var item in items)
         {
             int mi = GetInt(item, "MeasureIndex");
             if (mi >= 0 && mi < buckets.Length)
-                buckets[mi].Add(HashContent(item, SideExclusions));
+                (buckets[mi] ??= new List<long>()).Add(HashContent(item, SideExclusions));
         }
     }
 
-    private static void BucketSpan(IEnumerable items, List<long>[] buckets)
+    private static void BucketSpan(IEnumerable items, List<long>?[] buckets)
     {
         foreach (var item in items)
         {
@@ -586,7 +590,7 @@ public readonly record struct MeasureContentKey(long Hash)
                 var hc = new Hash64();
                 hc.Add(role);
                 hc.Add(content);
-                buckets[mi].Add(hc.ToHashCode());
+                (buckets[mi] ??= new List<long>()).Add(hc.ToHashCode());
             }
         }
     }

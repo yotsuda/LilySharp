@@ -870,29 +870,49 @@ internal sealed class PageLayouter
         if (sprung.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
             return system.StaffGroups;
 
-        // Where each sprung staff was laid out, by global staff index.
-        var laidOut = new Dictionary<int, double>();
-        foreach (var group in system.StaffGroups)
-            foreach (var staff in group.Staves)
-                laidOut[staff.StaffIndex] = MultiStaffLayouter.StaffRefpoint(staff);
+        // Where a sprung staff was laid out, by global staff index — LOOKED UP, not mapped.
+        // The anchor is the same staff at every k, and each turn reads one more, so the
+        // Dictionary this was built a system (17.74 a keystroke, ALWAYS exactly two entries,
+        // 3,832 B/keystroke — session 448's census, session 450's fix) never had a second
+        // reader to pay for.
+        if (!TryStaffRefpoint(system, sprung[0].UpperStaffIndex, out double anchorY))
+            return system.StaffGroups;
 
         // How far each sprung staff moved from there. Measured against the LAID-OUT
         // distance, not against the spring's floor: the floor is the alignment minimum and
         // sits a basic-distance below where the staves were actually drawn.
-        var shift = new Dictionary<int, double>();
+        // ⚠️ The ONE shift is held in locals and the Dictionary is built only when a SECOND
+        // DISTINCT staff index arrives: 100% of the corpus's systems have exactly one spring
+        // (session 448's census, 3,832 B/keystroke). The many-case below is the old code —
+        // including its last-write-wins over a repeated index.
+        int oneIndex = 0;
+        double oneShift = 0;
+        bool haveOne = false;
+        Dictionary<int, double>? shifts = null;
         double cumulativeSolved = 0;
         for (int k = 0; k < sprung.Length; k++)
         {
-            if (!laidOut.TryGetValue(sprung[0].UpperStaffIndex, out double anchorY)
-                || !laidOut.TryGetValue(sprung[k].LowerStaffIndex, out double lowerY))
+            if (!TryStaffRefpoint(system, sprung[k].LowerStaffIndex, out double lowerY))
                 return system.StaffGroups;
             cumulativeSolved += positions[firstStaffPosition + k + 1]
                                 - positions[firstStaffPosition + k];
             double cumulativeLaidOut = anchorY - lowerY;
             // Y-up: a staff pushed further DOWN the page has a SMALLER Y.
-            shift[sprung[k].LowerStaffIndex] = -(cumulativeSolved - cumulativeLaidOut);
+            double moved = -(cumulativeSolved - cumulativeLaidOut);
+            int lower = sprung[k].LowerStaffIndex;
+            if (shifts is not null)
+                shifts[lower] = moved;
+            else if (!haveOne)
+                (oneIndex, oneShift, haveOne) = (lower, moved, true);
+            else if (lower == oneIndex)
+                oneShift = moved;
+            else
+                shifts = new Dictionary<int, double> { [oneIndex] = oneShift, [lower] = moved };
         }
-        if (shift.Values.All(v => Math.Abs(v) < 1e-9))
+        bool allStill = shifts is not null
+            ? shifts.Values.All(v => Math.Abs(v) < 1e-9)
+            : Math.Abs(oneShift) < 1e-9;
+        if (allStill)
             return system.StaffGroups;
 
         var groups = ImmutableArray.CreateBuilder<StaffGroupLayout>(system.StaffGroups.Length);
@@ -903,8 +923,13 @@ internal sealed class PageLayouter
             var staves = ImmutableArray.CreateBuilder<StaffLayout>(group.Staves.Length);
             foreach (var staff in group.Staves)
             {
-                if (shift.TryGetValue(staff.StaffIndex, out double own))
-                    running = own;
+                if (shifts is not null)
+                {
+                    if (shifts.TryGetValue(staff.StaffIndex, out double own))
+                        running = own;
+                }
+                else if (haveOne && staff.StaffIndex == oneIndex)
+                    running = oneShift;
                 staves.Add(staff with { Y = staff.Y + running });
             }
             var moved = staves.ToImmutable();
@@ -922,5 +947,29 @@ internal sealed class PageLayouter
             });
         }
         return groups.ToImmutable();
+    }
+
+    /// <summary>
+    /// Where the staff with this global index was laid out, or false if the system has no
+    /// such staff.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE LAST MATCH WINS, and that is not an accident of the loop: this replaced a
+    /// <c>Dictionary&lt;int, double&gt;</c> filled with <c>laidOut[staff.StaffIndex] = …</c>
+    /// over the same staves in the same order, where a repeated index kept the LAST write.
+    /// Breaking on the first match would be a different function for that input.
+    /// </remarks>
+    private static bool TryStaffRefpoint(SystemLayout system, int staffIndex, out double y)
+    {
+        y = 0;
+        bool found = false;
+        foreach (var group in system.StaffGroups)
+            foreach (var staff in group.Staves)
+                if (staff.StaffIndex == staffIndex)
+                {
+                    y = MultiStaffLayouter.StaffRefpoint(staff);
+                    found = true;
+                }
+        return found;
     }
 }

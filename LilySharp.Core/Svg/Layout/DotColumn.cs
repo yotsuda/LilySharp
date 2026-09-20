@@ -172,10 +172,18 @@ internal static class DotColumn
     /// <see cref="DotConfiguration.Resolve"/>, which runs FIRST because the row is what
     /// decides whether a support is in the way at all.</param>
     /// <param name="dotWidth">One dot's width, in the font THIS column's dots are drawn from.</param>
+    /// <remarks>
+    /// ⚠️ SPANS, NOT LISTS, since session 450: every caller fills at most two supports (a
+    /// stem and its flag) and hands them straight here, so the four callers were building
+    /// four <c>List&lt;Support&gt;</c> a column — 5,612 B/keystroke measured across them,
+    /// 70-93% of the lists holding zero or one item. A span costs the caller a
+    /// <c>stackalloc</c> of two structs and nothing on the heap. Both parameters are read
+    /// by index only, which is what they always were.
+    /// </remarks>
     internal static double OffsetX(
         double headInkRight,
-        IReadOnlyList<Support> supports,
-        IReadOnlyList<int> dotPositions,
+        ReadOnlySpan<Support> supports,
+        ReadOnlySpan<int> dotPositions,
         double dotWidth)
     {
         // THE MAX IS TAKEN PER SUPPORT, over the rows THAT support covers — which is what a
@@ -205,12 +213,12 @@ internal static class DotColumn
         // begins, and LilyPond leaves that dot at the head's ink right (1.754200). Widening
         // either comparison to >= pushes it to 2.517400.
         double off = headInkRight;
-        // Indexed, not foreach: both lists arrive as interfaces, so foreach would box an
-        // enumerator — and the inner one once per support (RULES §5.3).
-        for (int i = 0; i < supports.Count; i++)
+        // Indexed, not foreach: a span's foreach costs nothing, but this loop reads the same
+        // two fields per support and the index is what the second loop needs anyway.
+        for (int i = 0; i < supports.Length; i++)
         {
             var s = supports[i];
-            for (int j = 0; j < dotPositions.Count; j++)
+            for (int j = 0; j < dotPositions.Length; j++)
             {
                 int p = dotPositions[j];
                 if (s.PositionBottom < p && p < s.PositionTop)
@@ -276,7 +284,9 @@ internal static class DotColumn
             // row; SharedRenderer.DrawRest, ElementCoordinator.RestDotDefaultOffset).
             return (headInkRight + dotWidth, new[] { 1 });
 
-        var supports = new List<Support>();
+        // At most two: the stem, and the flag hung off it (see OffsetX's remarks).
+        Span<Support> supports = stackalloc Support[2];
+        int supportCount = 0;
         // Null is exactly "no Stem grob": a whole note has no stem and no flag.
         if (SpacingRules.StemSpacingInfo(item) is { } stem)
         {
@@ -285,9 +295,9 @@ internal static class DotColumn
             // one house, in the column's frame.
             double stemX = LayoutUtilities.StemX(
                 0, stem.StemUp, noteValue, LayoutUtilities.NoteheadStyleOf(item));
-            supports.Add(StemSupport(
+            supports[supportCount++] = StemSupport(
                 (int)(stem.StemUp ? stem.HeadMin : stem.HeadMax), stem.StemUp,
-                stemX + EngravingDefaults.StemThickness / 2));
+                stemX + EngravingDefaults.StemThickness / 2);
             // A beamed stem's Flag has suicided by spacing time (ItemSkylineFactory.AddFlag).
             bool beamed = item is NoteItem { IsBeamed: true } or ChordItem { IsBeamed: true };
             if (noteValue >= 8 && !beamed)
@@ -300,13 +310,13 @@ internal static class DotColumn
                     // FlagSupport converts spaces to positions.
                     double tip = LayoutUtilities.FlagPlacementY(
                         (stem.StemUp ? stem.StemMax : stem.StemMin) / 2.0, stem.StemUp);
-                    supports.Add(FlagSupport(
-                        tip + flagBox.Bottom, tip + flagBox.Top, stemX + flagBox.Right));
+                    supports[supportCount++] = FlagSupport(
+                        tip + flagBox.Bottom, tip + flagBox.Top, stemX + flagBox.Right);
                 }
             }
         }
         int[] rows = DotConfiguration.Resolve(headPositions);
-        return (OffsetX(headInkRight, supports, rows, dotWidth), rows);
+        return (OffsetX(headInkRight, supports[..supportCount], rows, dotWidth), rows);
     }
 
     /// <summary>
@@ -352,15 +362,16 @@ internal static class DotColumn
         var font = GraceNoteItem.Font;
         int noteValue = GlyphMetrics.NoteValueOf(column.BaseDuration);
         int[] headPositions = column.Heads.Select(h => h.StaffPosition).ToArray();
-        var supports = new List<Support>();
+        Span<Support> supports = stackalloc Support[2];
+        int supportCount = 0;
         if (noteValue >= 2 && !beamed)
         {
             // The stem stands on the TOP head: a grace stem is up (GraceColumnHeads.StemUp).
             int top = headPositions.Max();
             double stemX = LayoutUtilities.StemAttachX(
                 GraceColumnHeads.StemUp, noteValue, NoteheadStyle.Default, font);
-            supports.Add(StemSupport(top, GraceColumnHeads.StemUp,
-                stemX + EngravingDefaults.StemThickness / 2));
+            supports[supportCount++] = StemSupport(top, GraceColumnHeads.StemUp,
+                stemX + EngravingDefaults.StemThickness / 2);
             var flagBox = GlyphMetrics.GetFlagBBox(font, noteValue, GraceColumnHeads.StemUp);
             if (noteValue >= 8 && flagBox != default)
             {
@@ -369,12 +380,12 @@ internal static class DotColumn
                         GraceColumnHeads.StemUp, StemCalculator.GetDurationLog(noteValue), top,
                         GrobFontSize.GraceStemDetails) / 2.0,
                     GraceColumnHeads.StemUp);
-                supports.Add(FlagSupport(tip + flagBox.Bottom, tip + flagBox.Top,
-                                         stemX + flagBox.Right));
+                supports[supportCount++] = FlagSupport(tip + flagBox.Bottom, tip + flagBox.Top,
+                                                       stemX + flagBox.Right);
             }
         }
         int[] rows = DotConfiguration.Resolve(headPositions);
-        return (OffsetX(GraceColumnHeads.HeadInkRight(column), supports, rows,
+        return (OffsetX(GraceColumnHeads.HeadInkRight(column), supports[..supportCount], rows,
                         font.AugmentationDot.Width), rows);
     }
 }

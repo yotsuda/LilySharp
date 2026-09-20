@@ -688,7 +688,11 @@ internal static partial class SharedRenderer
         //     today), or the dot column is built where the stem is.
         //   observed by: no observer, and none is possible while the term is dominated — it
         //     becomes visible only for a head whose attachment is left of its own ink.
-        var dotSupports = new List<DotColumn.Support>();
+        // At most two — the stem and its flag (DotColumn.OffsetX's remarks). 70.4% of these
+        // columns have NEITHER (a beamed or unstemmed note), and the List they were held in
+        // was 2,675 B/keystroke of that nothing (session 448's census, session 450's fix).
+        Span<DotColumn.Support> dotSupports = stackalloc DotColumn.Support[2];
+        int dotSupportCount = 0;
 
         // Stem & flag — beamed notes are handled by DrawBeams (which draws the
         // beam-aware stem to the actual beam Y), so skip both here to avoid a
@@ -747,9 +751,9 @@ internal static partial class SharedRenderer
             // positions LilyPond walks from the head it stands on. Transparency does not
             // remove it: a transparent grob keeps its extent (lily/grob.cc:164-176).
             // LILYPOND-REF: lily/dot-column.cc:103-109, in Dot_column::calc_positioning_done.
-            dotSupports.Add(DotColumn.StemSupport(
+            dotSupports[dotSupportCount++] = DotColumn.StemSupport(
                 note.StaffPosition, stemUp,
-                stemX - x + EngravingDefaults.StemThickness / 2));
+                stemX - x + EngravingDefaults.StemThickness / 2);
 
             bool hasFlag = false;
             if (noteValue >= 8)
@@ -794,9 +798,9 @@ internal static partial class SharedRenderer
                     if (flagBox != default)
                     {
                         double flagY = LayoutUtilities.FlagPlacementY(stemEndY, stemUp) - staffMiddleY;
-                        dotSupports.Add(DotColumn.FlagSupport(
+                        dotSupports[dotSupportCount++] = DotColumn.FlagSupport(
                             flagY + flagBox.Bottom, flagY + flagBox.Top,
-                            stemX - x + flagBox.Right));
+                            stemX - x + flagBox.Right);
                     }
                 }
                 // An acciaccatura's stroke, drawn where the flag is because in LilyPond it IS
@@ -895,7 +899,7 @@ internal static partial class SharedRenderer
             double dotStartX = x + DotColumn.OffsetX(
                 GlyphMetrics.GetNoteheadBBox(
                     GrobFontSize.FontOf(note, SizedGrob.NoteHead), noteValue).Right,
-                dotSupports, new[] { dotPos }, dotWidth);
+                dotSupports[..dotSupportCount], [dotPos], dotWidth);
             // A collision's dot side supports push the whole dot column right of the
             // opposite voice's heads; the minimum X is in the staff column's frame
             // (x − voiceX), settled in NoteCollision.CalculateVoiceOffsets.
@@ -1027,7 +1031,8 @@ internal static partial class SharedRenderer
         // exactly what it was.
         bool chordHasStem = noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed;
         double stemX = 0, stemEndY = 0;
-        var dotSupports = new List<DotColumn.Support>();
+        Span<DotColumn.Support> dotSupports = stackalloc DotColumn.Support[2];
+        int dotSupportCount = 0;
         if (chordHasStem)
         {
             // The stem attaches at the head's own right (up) or left (down) edge, read from
@@ -1053,9 +1058,9 @@ internal static partial class SharedRenderer
             // The stem as a dot support: from the head it STANDS ON (the bottom head for an
             // up stem — Stem::head_positions[-dir]) seven positions along itself.
             // LILYPOND-REF: lily/dot-column.cc:103-109, in Dot_column::calc_positioning_done.
-            dotSupports.Add(DotColumn.StemSupport(
+            dotSupports[dotSupportCount++] = DotColumn.StemSupport(
                 stemUp ? minPos : maxPos, stemUp,
-                stemX - x + EngravingDefaults.StemThickness / 2));
+                stemX - x + EngravingDefaults.StemThickness / 2);
             // The flag as a dot support, at its glyph's ink and on the stem's CENTRE — the
             // pair of reasons is written out in DrawNote.
             // LILYPOND-REF: lily/dot-column.cc:130-141 Dot_column::calc_positioning_done —
@@ -1067,9 +1072,9 @@ internal static partial class SharedRenderer
                 if (flagBox != default)
                 {
                     double flagY = LayoutUtilities.FlagPlacementY(stemEndY, stemUp) - staffMiddleY;
-                    dotSupports.Add(DotColumn.FlagSupport(
+                    dotSupports[dotSupportCount++] = DotColumn.FlagSupport(
                         flagY + flagBox.Bottom, flagY + flagBox.Top,
-                        stemX - x + flagBox.Right));
+                        stemX - x + flagBox.Right);
                 }
             }
         }
@@ -1108,7 +1113,7 @@ internal static partial class SharedRenderer
                 GlyphMetrics.GetNoteheadBBox(
                         GrobFontSize.FontOf(chord, SizedGrob.NoteHead), noteValue).Right
                     + Math.Max(0, headOffsets.Max()),
-                dotSupports, resolved, dotWidth);
+                dotSupports[..dotSupportCount], resolved, dotWidth);
             // Collision dot side supports — same push as the single-note branch.
             // LILYPOND-REF: lily/note-collision.cc:352-372 check_meshing_chords — add_support.
             if (dotAdjust.ColumnMinX is { } dotMinX)
