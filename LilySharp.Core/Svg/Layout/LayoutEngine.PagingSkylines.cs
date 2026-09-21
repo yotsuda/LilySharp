@@ -230,18 +230,10 @@ internal sealed partial class LayoutEngine
         Array.Fill(up, upSeed);
         var down = new double[n];
 
-        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives. The sum runs over
-        // the same n systems the fill below walks.
-        int measureCount = 0;
-        for (int i = 0; i < n; i++)
-            measureCount += systems[i].Measures.Length;
-
-        var measureToSystem = new Dictionary<int, int>(measureCount);
+        var measureToSystem = MeasureToSystemOfFirst(systems, n);
         var bottoms = new double[n];
         for (int i = 0; i < n; i++)
         {
-            foreach (var m in systems[i].Measures)
-                measureToSystem[m.MeasureIndex] = i;
             // System bottom relative to its top: last visible staff's bottom
             // (4.0 for a single staff).
             bottoms[i] = 4.0;
@@ -653,21 +645,44 @@ internal sealed partial class LayoutEngine
         if (systemSkylines == null || articulations.IsDefaultOrEmpty)
             return systemSkylines;
 
-        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
-        int measureCount = 0;
-        for (int s = 0; s < systems.Length && s < systemSkylines.Count; s++)
-            measureCount += systems[s].Measures.Length;
-
-        var measureToSystem = new Dictionary<int, int>(measureCount);
-        for (int s = 0; s < systems.Length && s < systemSkylines.Count; s++)
-            foreach (var m in systems[s].Measures)
-                measureToSystem[m.MeasureIndex] = s;
+        var measureToSystem = MeasureToSystemOfFirst(systems, systemSkylines.Count);
 
         var builders = new PagingAugmentProgram.Builder?[systemSkylines.Count];
         AppendScriptSteps(articulations, systems, measureToSystem,
             s => builders[s] ??= new PagingAugmentProgram.Builder());
 
         return new LazyScriptAugmentedSkylines(systemSkylines, builders);
+    }
+
+    /// <summary>
+    /// The measure→system map of the first <paramref name="count"/> systems — the lookup
+    /// the three paging walks above and below make before they touch a system's skyline.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SHARED TABLE WHENEVER THE WALK COVERS EVERY SYSTEM, which is every call the
+    /// owner's corpus makes. These walks used to build their own, one each, over the very
+    /// array <see cref="SpannerBreakSubstitution.BuildMeasureToSystemMap"/> had already keyed
+    /// for the engravers — MEASURED (session 466, 231 books × 8 forward keystrokes): 6,902
+    /// builds, every one over an array the shared table already held, none of them short.
+    /// The short walk (fewer skylines than systems) keeps its own, because the shared table
+    /// would answer a system the caller holds no skyline for.
+    /// </remarks>
+    private static IReadOnlyDictionary<int, int> MeasureToSystemOfFirst(
+        ImmutableArray<SystemLayout> systems, int count)
+    {
+        if (count >= systems.Length)
+            return SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
+
+        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
+        int measureCount = 0;
+        for (int s = 0; s < count; s++)
+            measureCount += systems[s].Measures.Length;
+
+        var measureToSystem = new Dictionary<int, int>(measureCount);
+        for (int s = 0; s < count; s++)
+            foreach (var m in systems[s].Measures)
+                measureToSystem[m.MeasureIndex] = s;
+        return measureToSystem;
     }
 
     /// <summary>
@@ -785,15 +800,7 @@ internal sealed partial class LayoutEngine
             return null;
         int systemCount = skylines.Count;
 
-        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
-        int measureCount = 0;
-        for (int s = 0; s < systems.Length && s < systemCount; s++)
-            measureCount += systems[s].Measures.Length;
-
-        var measureToSystem = new Dictionary<int, int>(measureCount);
-        for (int s = 0; s < systems.Length && s < systemCount; s++)
-            foreach (var m in systems[s].Measures)
-                measureToSystem[m.MeasureIndex] = s;
+        var measureToSystem = MeasureToSystemOfFirst(systems, systemCount);
 
         // Lent, and given back cleared once every program has been built (see t_pagingBuilders).
         var builders = t_pagingBuilders ?? [];

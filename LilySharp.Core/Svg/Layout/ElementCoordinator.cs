@@ -1066,7 +1066,11 @@ internal sealed class ElementCoordinator
             return ImmutableDictionary<RestShiftKey, double>.Empty;
 
         var shifts = new Dictionary<RestShiftKey, double>();
-        var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
+        // ⚠️ THE SHARED TABLE, not a measure-only copy of it: the pass builds this very map
+        // for the same array later in the keystroke (MEASURED, session 466: 3,160 of 3,160
+        // calls over the owner's 231 books × 8 forward keystrokes), so a copy here was
+        // the one build nobody else could reuse.
+        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
 
         // LILYPOND-REF: beam.cc:2860 StaffSymbol has 5 lines -> positions [-4, 4].
         var staffSpan = (Low: -4.0, High: 4.0);
@@ -1118,9 +1122,10 @@ internal sealed class ElementCoordinator
                 else
                 {
                     // A producer that filled no rest x: fall back to the column x.
-                    if (!measureMap.TryGetValue(measureIndex, out var measureLayout)
-                        || rest.ItemIndex >= measureLayout.Items.Length)
+                    if (!measureMap.TryGetValue(measureIndex, out var placed)
+                        || rest.ItemIndex >= placed.Measure.Items.Length)
                         continue;
+                    var measureLayout = placed.Measure;
                     restX = measureLayout.X + measureLayout.Items[rest.ItemIndex].X;
                 }
 

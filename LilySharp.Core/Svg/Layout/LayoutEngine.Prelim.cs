@@ -574,19 +574,14 @@ internal sealed partial class LayoutEngine
 
     /// <summary>The measure→system map of the preliminary systems — the home test both
     /// bow memos and the beam memo ask before memoizing per system.</summary>
-    private static Dictionary<int, int> MeasureToSystemOf(ImmutableArray<SystemLayout> systems)
-    {
-        // SIZED, for the reason LayoutUtilities.BuildMeasureMapFor gives.
-        int measures = 0;
-        for (int k = 0; k < systems.Length; k++)
-            measures += systems[k].Measures.Length;
-
-        var map = new Dictionary<int, int>(measures);
-        for (int k = 0; k < systems.Length; k++)
-            foreach (var ml in systems[k].Measures)
-                map[ml.MeasureIndex] = k;
-        return map;
-    }
+    /// <remarks>
+    /// ⚠️ THE SHARED TABLE, for the reason the beam memo's own call gives. This was a hand
+    /// copy of it, built twice per staff (ties, then slurs) over the very array the beam
+    /// memo had already keyed — MEASURED (session 466, the owner's 231 books × 8 forward
+    /// keystrokes): 4,984 builds, 4,952 of them over an array the shared table already held.
+    /// </remarks>
+    private static IReadOnlyDictionary<int, int> MeasureToSystemOf(ImmutableArray<SystemLayout> systems)
+        => SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
     /// <summary>
     /// The preliminary pass's per-(staff, system) TIE memo — the tie twin of
