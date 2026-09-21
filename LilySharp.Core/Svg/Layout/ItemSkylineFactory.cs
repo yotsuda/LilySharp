@@ -325,11 +325,13 @@ internal static class ItemSkylineFactory
     internal static (double YMin, double YMax) ColumnYExtent(MusicItem item, double staffY)
     {
         double yMin = double.PositiveInfinity, yMax = double.NegativeInfinity;
-        foreach (var p in ColumnParts(item, 0, staffY))
+        var parts = ColumnParts(item, 0, staffY);
+        foreach (var p in parts)
         {
             yMin = Math.Min(yMin, p.YBottom);
             yMax = Math.Max(yMax, p.YTop);
         }
+        GiveParts(parts);
         return (yMin, yMax);
     }
 
@@ -343,7 +345,12 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static List<(double YBottom, double YTop, double XLeft, double XRight)> Boxes(
         MusicItem item, double referenceX, double staffY, ColumnElements which)
-        => BoxesOf(ColumnParts(item, referenceX, staffY), staffY, which);
+    {
+        var parts = ColumnParts(item, referenceX, staffY);
+        var boxes = BoxesOf(parts, staffY, which);
+        GiveParts(parts);
+        return boxes;
+    }
 
     /// <summary>
     /// The ROD's view of a GRACE column's DOTS, right side, in the grace column's own frame:
@@ -460,9 +467,61 @@ internal static class ItemSkylineFactory
     /// Everything the column has that reaches somewhere. One entry per drawn part, in no
     /// significant order — a skyline takes the extreme at each Y, so the list is a set.
     /// </summary>
+    /// <summary>
+    /// The buffer <see cref="ColumnParts"/> fills, lent from one list the thread keeps between
+    /// columns.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457, Release, the reader's corpus, eight forward keystrokes a book):
+    /// 311.05 columns a keystroke at 2.12 parts each (max 9), and ALL 574,829 of the lists built
+    /// were unreachable by the time the render that built them returned - one weak handle a
+    /// build, a forced blocking gen2 collection at each render boundary, the page set still held
+    /// by the caller. The lists and their arrays were 87,200 + 9,954 = 97,154 B a keystroke,
+    /// 2.43% of it.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: <see cref="ColumnParts"/> has exactly two callers and neither
+    /// keeps the list. <see cref="ColumnYExtent"/> walks it for a Y band and drops it;
+    /// <see cref="Boxes"/> hands it to <see cref="BoxesOf"/>, which reads it into a list of its
+    /// own and returns THAT. No Add* helper re-enters. Both callers give the buffer back where
+    /// they are finished with it.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE LIST OUT OF THE DRAWER - the idiom session 421 wrote for
+    /// <see cref="VerticalSkyline"/>'s three scratch buffers. A call that re-entered would get a
+    /// list of its own rather than the one being filled; a second thread has its own drawer, so
+    /// two renders share nothing; a walk that throws loses its buffer instead of mixing it.
+    /// THE CLEARING IS ON GIVE and not on rent (session 456): a buffer parked dirty is then
+    /// observable, and a defensive clear here would silence the poison that says so.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one list a thread at that thread's widest column - nine parts over
+    /// the whole corpus - and a <see cref="ColumnPart"/> holds no references, so a parked buffer
+    /// pins nothing.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<ColumnPart>? t_parts;
+
+    /// <summary>Takes the thread's parts buffer, or makes the thread's first.</summary>
+    private static List<ColumnPart> RentParts()
+    {
+        var parts = t_parts;
+        if (parts is null)
+            return new List<ColumnPart>();
+        t_parts = null;
+        return parts;
+    }
+
+    /// <summary>Puts a finished column's parts back, emptied, with its capacity.</summary>
+    private static void GiveParts(List<ColumnPart> parts)
+    {
+        parts.Clear();
+        t_parts = parts;
+    }
+
     private static List<ColumnPart> ColumnParts(MusicItem item, double referenceX, double staffY)
     {
-        var parts = new List<ColumnPart>();
+        var parts = RentParts();
 
         int noteValue = SpacingRules.GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);

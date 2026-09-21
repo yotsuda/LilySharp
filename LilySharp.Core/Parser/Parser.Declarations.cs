@@ -133,7 +133,7 @@ internal sealed partial class Parser
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var items = new List<GreenNode?>();
+        var items = RentSectionItems();
         while (_pendingPostEventMarkers.Count > 0
                || (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile)))
         {
@@ -145,7 +145,59 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
+        // `[.. items]` COPIES, so the buffer is finished with here and not one line later.
+        var section = new SectionDeclarationGreen(
+            keyword, tilde, name, openBrace, [.. items], closeBrace);
+        GiveSectionItems(items);
+        return section;
+    }
+
+    /// <summary>
+    /// The buffer <see cref="ParsePartInnerSection"/> gathers a section's items into, lent from
+    /// one list the thread keeps between sections.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457, Release, the reader's corpus, eight forward keystrokes a book):
+    /// 5.67 inner sections a keystroke at 111.36 items each (max 1,389), and all 10,480 of the
+    /// lists built were unreachable by the time the render that built them returned - a weak
+    /// handle a build and a forced blocking gen2 collection at each render boundary. The lists
+    /// and their arrays were 15,187 + 181 = 15,368 B a keystroke, 0.38% of it.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: the collection expression on the line above COPIES the buffer
+    /// into the green node's own array, so nothing that outlives this method has seen the list.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE LIST OUT OF THE DRAWER - the idiom session 421 wrote for
+    /// <c>VerticalSkyline</c>'s scratch buffers. A `part` declaration reached from inside a
+    /// section would find the drawer empty and gather into a list of its own; a second thread
+    /// parsing a second document has its own drawer; a parse that throws loses its buffer
+    /// instead of mixing it. THE CLEARING IS ON GIVE, not on rent (session 456), so a buffer
+    /// parked dirty is observable.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one list a thread at that thread's largest section - 1,389 entries,
+    /// about 11 KB, over the whole corpus, which is on the near side of the 85 KB boundary a
+    /// large-object allocation would cross.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<GreenNode?>? t_sectionItems;
+
+    /// <summary>Takes the thread's section-item buffer, or makes the thread's first.</summary>
+    private static List<GreenNode?> RentSectionItems()
+    {
+        var items = t_sectionItems;
+        if (items is null)
+            return new List<GreenNode?>();
+        t_sectionItems = null;
+        return items;
+    }
+
+    /// <summary>Puts a finished section's buffer back, emptied, with its capacity.</summary>
+    private static void GiveSectionItems(List<GreenNode?> items)
+    {
+        items.Clear();
+        t_sectionItems = items;
     }
 
     // Legacy part inside score: part Name "display" { staff... }

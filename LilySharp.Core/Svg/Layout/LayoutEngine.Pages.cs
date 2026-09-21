@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -864,7 +864,7 @@ internal sealed partial class LayoutEngine
     {
         if (system.StaffSprings.IsDefaultOrEmpty || system.StaffGroups.IsDefaultOrEmpty)
             return 0;
-        var byIndex = new Dictionary<int, StaffLayout>();
+        var byIndex = RentStaffIndex();
         foreach (var group in system.StaffGroups)
             foreach (var staff in group.Staves)
                 byIndex[staff.StaffIndex] = staff;
@@ -877,7 +877,65 @@ internal sealed partial class LayoutEngine
             double drawn = MultiStaffLayouter.StaffRefpoint(upper) - MultiStaffLayouter.StaffRefpoint(lower);
             total += Math.Max(0, drawn - spring.MinimumDistance);
         }
+        GiveStaffIndex(byIndex);
         return total;
+    }
+
+    /// <summary>
+    /// The staff-by-index map <see cref="StaffSpringCompression"/> reads its pairs out of, lent
+    /// from one dictionary the thread keeps between systems.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457, Release, the reader's corpus, eight forward keystrokes a book):
+    /// 35.69 systems a keystroke holding exactly 2.00 staves each (max 2), and all 65,948 of the
+    /// dictionaries built were unreachable by the time the render that built them returned - a
+    /// weak handle a build and a forced blocking gen2 collection at each render boundary. The
+    /// dictionaries and their arrays were 4,853 + 2,855 = 7,708 B a keystroke, 0.19% of it. It
+    /// is the one site in the census whose `waste` is ZERO and whose price is all `actual`: the
+    /// map is never oversized, it is simply built 35.69 times to be read once each.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: the map is filled, read for the pairs of ONE system and never
+    /// handed anywhere; the method returns a double.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE MAP OUT OF THE DRAWER - the idiom session 421 wrote for
+    /// <c>VerticalSkyline</c>'s scratch buffers, and THE CLEARING IS ON GIVE (session 456), so
+    /// a map parked with the staves of the system before it is observable.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one dictionary a thread holding at most the staves of one system - and
+    /// a parked map is EMPTY, so it pins no <see cref="StaffLayout"/>.
+    /// </para>
+    /// <para>
+    /// THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
+    /// poison 3 parked the map DIRTY and predicted many red; the suite came back all 8,783 green.
+    /// The reason is a postcondition: every key a spring asks for is written by the loop three
+    /// lines above, because the springs and the groups come from the SAME system - so a stale
+    /// entry can only sit at a key this call never asks about. A gate says so on both
+    /// populations: with the continue below replaced by a throw, the suite is green (8,783) and
+    /// all 231 books of the reader's corpus still render. The clear stays because it is what
+    /// makes the buffer's contract true for a system that does NOT hold every staff; it is just
+    /// not a shape this tree has yet.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<int, StaffLayout>? t_staffByIndex;
+
+    /// <summary>Takes the thread's staff-by-index map, or makes the thread's first.</summary>
+    private static Dictionary<int, StaffLayout> RentStaffIndex()
+    {
+        var map = t_staffByIndex;
+        if (map is null)
+            return new Dictionary<int, StaffLayout>();
+        t_staffByIndex = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished system's map back, emptied, with its capacity.</summary>
+    private static void GiveStaffIndex(Dictionary<int, StaffLayout> map)
+    {
+        map.Clear();
+        t_staffByIndex = map;
     }
 
 }

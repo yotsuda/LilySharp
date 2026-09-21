@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -2210,7 +2210,7 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal static List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
     {
-        var timings = new HashSet<Fraction>();
+        var timings = RentTimings();
         // Whether any NOTATION-staff spacer contributed an onset. Almost no measure has
         // one, and the prune below can only ever remove such onsets — so the anchor/span
         // bookkeeping it needs is built in a second pass, only when this trips. This
@@ -2253,8 +2253,58 @@ internal sealed class MultiStaffLayouter
         var sortedTimings = sawNotationSpacer
             ? PruneSpacerOnlyOnsets(score, measureIndex, timings)
             : timings.ToList();
+        // Both arms have COPIED what they need out of the set by here (PruneSpacerOnlyOnsets
+        // materializes its Where with ToList), so the buffer is finished with.
+        GiveTimings(timings);
         sortedTimings.Sort();
         return sortedTimings;
+    }
+
+    /// <summary>
+    /// The buffer <see cref="CollectAllTimingsForMeasure"/> gathers a measure's onsets into,
+    /// lent from one set the thread keeps between measures.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457, Release, the reader's corpus, eight forward keystrokes a book):
+    /// 7.03 measures a keystroke at 6.38 onsets each (max 15), and all 12,987 of the sets built
+    /// were unreachable by the time the render that built them returned - a weak handle a build
+    /// and a forced blocking gen2 collection at each render boundary. The sets and their arrays
+    /// were 3,023 + 450 = 3,473 B a keystroke.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: both arms of the return copy what they need out of the set
+    /// (<see cref="PruneSpacerOnlyOnsets"/> materializes its filter with ToList), and the method
+    /// returns the sorted LIST.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE SET OUT OF THE DRAWER - the idiom session 421 wrote for
+    /// <c>VerticalSkyline</c>'s scratch buffers - and THE CLEARING IS ON GIVE (session 456), so
+    /// a set parked holding the onsets of the measure before it is observable. This function
+    /// runs per measure from BOTH the layout and the line breaker, which is why the buffer is
+    /// worth more than its 7.03 calls suggest.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one set a thread at that thread's widest measure - fifteen onsets
+    /// over the whole corpus - and a parked set is EMPTY, so it pins nothing.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static HashSet<Fraction>? t_timings;
+
+    /// <summary>Takes the thread's onset buffer, or makes the thread's first.</summary>
+    private static HashSet<Fraction> RentTimings()
+    {
+        var timings = t_timings;
+        if (timings is null)
+            return new HashSet<Fraction>();
+        t_timings = null;
+        return timings;
+    }
+
+    /// <summary>Puts a finished measure's onset buffer back, emptied, with its capacity.</summary>
+    private static void GiveTimings(HashSet<Fraction> timings)
+    {
+        timings.Clear();
+        t_timings = timings;
     }
 
     /// <summary>
