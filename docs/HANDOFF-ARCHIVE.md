@@ -129,6 +129,40 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第467セッションの経緯
+
+### 1.1 第467セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰ の次の軒 8 つ**（ユーザーが選んだ）。
+★ **`-Start p467` の 1 コマンドで §0 が全部済んだ**（HEAD `bf1ae7da`・未 push 14・full `sessions/p467/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 465` も自動＝moved 37 行 2,659 字）。
+
+★★★ **⑴ 8 軒とも「自分のコードがどこで読み終えるか」を読み、直し方を 3 つに分けた**（Lab `sessions/p467/prediction.txt`＝直す前の予測）。
+**park 5**（articulation の slur 地図・tie solve の variation list・line start の prefatory boxes・`DrawBeams` の percent 集合・system の rods）／
+**寸法ちょうどの配列 2**（小節の springs＝`timings.Count + 1`・page breaker の forces／systems per page＝`prev` を 1 度歩いて数え、2 度目で後ろから埋める）／
+**建てない 1**（B）＝final pass の全 beam の list は、**prelim pass が annotation context のために写した配列と同じ中身・同じ順**
+＝その配列を `PreliminaryPass.AllBeams` で運んで返す。
+tie solve の `new[] { -1, +1 }` もループにした。
+
+★★★ **⑵ A/B −16,351 B／打鍵＝render の 0.55%**（予測の点 15,670 の 104.3%・帯 13,000〜18,000）。parse は不動・**出力は同一**（5,824 行・0 差）。
+
+★★ **⑶ 会計（1 軒ずつ抜く・和 16,320＝A/B の 99.8%）**: **`odd` 0 の 7 軒は 98.0〜102.0%**。外れたのは B の **113.9%** だけで、その census 行は
+**`odd` 1,736＝値段は下限**と書いてあった軒。しかも B の実体は list（約 2,180）より**呼び手の `ToImmutableArray()` 2 回（約 3,000）**が大きかった
+⇒ **census の行が値段を付けるのは `new` の器だけ。同じ答えの写しは隣に居る**＝§1.0 ⒮¹⁸ に起票。
+
+★★★ **⑷ 毒 8 本、予測を外したのは 3 本**（Lab `poisons.txt`・`green-to-corpus.txt`）。残る 5 本は予測どおり赤（17／9／331／207／2,555）。
+**外れ 1＝毒 1**（slur 地図を汚して park）: ⒮⁹ の穴と読んで緑と予測したが**赤 2**（`test/percent-covered-bows`・`fingering.slur.interior-note`）。
+**⒮⁹ の穴は「1 つの bucket の 2 本目以降」**で、汚れた地図は**他の楽譜の bucket を丸ごと**渡す＝bucket の 1 本目は見られている。
+**外れ 2＝毒 3**（staff の間で boxes を `Clear` しない）: 赤と予測して**スイート緑・コーパス 0 差**＝答えが staff の max なので吸われる＝§1.0 ⒮¹⁷ に起票。
+**外れ 3＝毒 6**（systems per page を逆順）: 赤多数と予測して**赤 1・コーパス 0 差**＝**読み手はデバッグ文字列を除けば `ChooseSystemCount` の
+探索下限 `minCount` だけ**（順が動かすのは下限で、答えはめったに動かない）。
+
+★ **⑸ 終了時**: commit 2 本（code `bb383457`＝Core 9 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run5.trx`）。
+§7.5（対 `bf1ae7da`）**Core '+' 196 行／REF 0／OWN 0**＝貸し器と寸法ちょうどの配列は LP に対応物が無い。**§7.6 コード中の新しい数は 0**（`+ 1` は
+spring の鎖の数・`d += 2` は −1 と +1。コメントの数は census の実測で出所つき）。**§7.7 の匂い**＝⒮¹⁸ の写し／`MeasureLayouter` の `looseRods` は
+空でも毎回建つ（225 B）／`PrefatoryGrobs` と variation の中の list は collection initializer＝どの census も数えない。
+台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p468` の 1 コマンドから入る**。
+
 ## 以下は第466セッションの経緯
 
 ### 1.1 第466セッション（2026-09-22・YT-DELL2）
