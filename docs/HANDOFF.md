@@ -297,8 +297,10 @@ REF 0／OWN 0**＝⚠️ **REF 0 は監査対象だが、足したのは器の�
 `APPROXIMATIONS.md`・`magic_constants.csv` は**行番号と 2 行の字面が動いただけ**で、
 **毒の前に `LILYSHARP_UPDATE_DOCS=1` で再生成した**＝第449 の罠を踏んでいない）・**§7.7 の匂いは 0**
 （新しい分岐は `NearestAllowedOne` 1 本で、**n==1 の sort が恒等だから**という証明が付いている）・
-**未 push 21**・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609。
-天井は `-End` 時点で **HANDOFF 439,897 B（残り 10,103）・§1 現在便 16,181 字（残り 3,819）**。
+**未 push 24**（`-End` 時点は 21・そのあと docs 3 本）・台帳 851 点／総和 22.584727806 不変・
+snapshot 249 枚不動・追跡 `.lys` 609。
+天井は**この文を含めて HANDOFF 442,0xx B（残り 約 8,000）・§1 現在便 約 17,500 字（残り 約 2,500）**
+（`-End` 時点は 439,897 / 16,181 で、そのあと RULES への出しと ⑻ が足された）。
 全文は Lab `sessions/p454/`（`prediction.txt`＝会計と*方向*・`poisons.ps1`／`poisons.txt`＝毒 12・
 `green-to-corpus.ps1`／`green-to-corpus.txt`＝緑を実コーパスに訊き直した台・`instrument.ps1`＋
 `Zz454.cs` の雛形＋`Zz454Count.cs.txt`＝⑷ の計数・`counts.txt`・`Zz454Ab.cs.txt`／`ab-*.txt`・
