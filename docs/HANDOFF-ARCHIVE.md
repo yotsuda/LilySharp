@@ -129,6 +129,41 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第464セッションの経緯
+
+### 1.1 第464セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵ ⑷＝scratch の尾**（ユーザーが選んだ）。
+★ **`-Start p464` の 1 コマンドで §0 が全部済んだ**（HEAD `6713cf3b`・未 push 8・full `sessions/p464/run1.trx`
+8785 / 0 / 3 / 8788・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 462` も自動＝moved 37 行 2,294 字）。
+
+★★ **⑴ 第463 の計器を HEAD で回し直した**（Lab `sessions/p464/`・分母 **3,483,771**）。第463 が触っていない行は 1 B も違わない（較正 `:362` 120,862）。
+
+★★★ **⑵ 6 軒・A/B −80,083 B／打鍵＝render の 2.53%**（予測の点 80,950 の 98.9%・帯 65,000〜95,000 の中）。
+park 4 軒（`TabResolver` の event と ref／`ArticulationEngraver` の layouts builder＋**地図の中の per-key list を pool へ**／
+break-align の item・column・candidate の 1 組＝`SolvePrefixColumns` と `BoundaryColumn` が共有・boundary の grob は配列へ直接／
+`AccidentalPlacement` の entries と headBoxes）・**建てない 2 軒**（`MeasureContentKey` は `MeasureContextChain` を建てずに entry を
+畳みながら歩く＝**`Exit` は誰も読んでいなかった**／`HaraKiri.DeadFilter` の地図＝訊かれたときに struct の staff walk で引く）。
+**出力は同一**（5,824 行・0 差）。
+
+★★ **⑶ 会計（1 ファイルずつ抜く・和 80,102）**: census の行だけの 2 軒は **100.0%・103.3%**。外れたのは**隣に tuple の list を
+持つ軒**で、上にも下にも外れた（D 108.7%・F 86.0%）＝**`List<(…)>` はどちらの census にも居ない** ⇒ ⒮¹⁶ を起票。
+
+★★★ **⑷ 毒 12 本、予測を外したのは 4 本＝どれも「誰も見ていない」**（Lab `poisons.txt`）。赤 62／107／10／73／1,160／97
+（10 は返らない＝entries が列ごとに伸びる）・緑 2 本（5＝⒮¹³ の穴が list の段にも続く・11）は予測どおり。
+**外れ**: ① `MeasureContentKey` の entry を**進めない**毒は、単独 staff（毒 2）でも **render が使う multi-staff**（毒 12・
+`IncrementalCompiler:572`）でも**緑**＝**mid-piece の key／clef／time 変更が後ろの小節の cache 鍵に届くことを誰も見ていなかった**。
+② exit を畳む毒 3 は緑＝ほぼ恒等（exit(i)＝entry(i)＋items(i)、items は hash 済み）。③ **`DeadFilter` の索引を −1 にする毒 9 は緑**
+＝**第395 の keepAlive（dynamics・chord names・figures・percent が休符だけの staff を生かす）に test が 1 本も無かった**。
+⇒ **網 2 本**（`MeasureContentKeyTests.AKeyChange_ReachesTheKeysOfTheBarsAfterIt`＝単独と multi・
+`HaraKiriTests.DeadFilter_ResolvesTheGlobalIndex_TheSideTablesAreKeyedBy`）。**毒 2・9・12 の下で 1 本ずつ赤**、毒 3 は緑のまま。
+
+★ **⑸ 終了時**: commit 2 本（code `c07869e0`＝Core 8 ファイル＋網 2 本＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p464/`
+（`prediction.txt`＝A/B と会計を追記・`attrib.txt`・`poisons.ps1`／`.txt`・`joined.csv`・`Zz464*`）。**最終 full 8789 / 0 / 3 / 8792**（網 4 本ぶん増えた・`run4.trx`＝`-End`）・
+§7.5（対 `6713cf3b`）**Core '+' 253 行／REF 0／OWN 0**＝貸し器と畳みは LP に対応物が無い。**§7.6 コード中の新しい数は 0**。
+**§7.7 の匂い**＝⑴ measure→system の地図を同じ systems に消費者ごとに建てる（⒮¹⁵ ⑷）／⑵ `DeadFilter` は system ごとに closure と delegate を建てる（未測定）。
+台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p465` の 1 コマンドから入る**。
+
 ## 以下は第463セッションの経緯
 
 ### 1.1 第463セッション（2026-09-21・YT-DELL2）

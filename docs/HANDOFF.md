@@ -148,17 +148,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ＝直すなら copy-on-write／保留の skyline＝**土台**（⒫′ と同じ家）／⑵ escape の頭＝`MeasureCollector.ItemFactory.cs:322` 51,103・
   `MeasureCollector.cs:232` 39,235（alive 95.5%＝session が持つ）／⑶ `AugmentSkylinesWithScripts` の遅延経路の builder（返す点が無い・
   `PagingAugmentProgram.cs:278-280` 17,542）／⑷ scratch の尾＝**第464 が HEAD で数え直して 6 軒 −80,083 を閉じた**（Lab `sessions/p464/joined.csv`・
-  分母 **3,483,771**・HorizontalSkyline を除く scratch は 155 軒 186,353 だった）。残りの頭＝**measure→system の地図 5 軒 約 21,000**
-  （`LayoutEngine.Prelim.cs:584`・`PagingSkylines.cs:239/:661/:793`・`LayoutUtilities.cs:391`＝**同じ systems 配列に消費者ごとに 1 枚**
-  ＝park を 5 つ書くより systems の identity ごとに 1 枚）／`SystemCount.cs:247` 4,482（details が page breaker へ渡る＝読み切っていない）／
+  分母 **3,483,771**・HorizontalSkyline を除く scratch は 155 軒 186,353 だった）。残りの頭（**measure→system の地図 5 軒は第466 が閉じた −20,951**）＝`SystemCount.cs:247` 4,482（details が page breaker へ渡る＝読み切っていない）／
   `PageBreaker.cs:1572` 3,754／⑸ **計器の外**＝
   `SlurScoringProblem` の候補 list と、`new PriorityQueue`・配列など**どちらの census の綴りにも無い器**（E の 76,594 はそこに居た）。
   ⚠️ **読み方の罠 2 つ**: ⑴ **`zero 100%` の Builder 行は `MoveToImmutable` で終わる軒**（Move が builder を空にするので drain が 0 件と読む
   ＝配列は手渡し済みで waste ではない。賞金は builder 本体だけ・34 軒）／⑵ **`obj` 欄の builder 56 B は本体 32 B＋長さ 0 の配列 24 B**
   （計器の `CreateBuilder<T>(0)` が配列を建てる）＝**第463 の C が予測の 57% に外れた理由**
-- ★★ **⒮¹⁶′ tuple 型の器の残り 約 23,500 B／打鍵**（第465 が 6 軒 −82,765 を閉じた・Lab sessions/p465/README.txt 末尾に一覧）。頭は LayoutUtilities.cs:369 10,794（memo＝⒮¹⁵ ⑷ の家）と
-  BuildBeamedStemTips の残り 2 人の呼び手 約 1,800。⚠️ collection initializer と 
-ew List<(…)>?[n] はどの census も数えない
+- ★★ **⒮¹⁶′ tuple 型の器の残り 約 23,500 B／打鍵**（第465 が 6 軒 −82,765 を閉じた・Lab sessions/p465/README.txt 末尾に一覧）。頭は LayoutUtilities.cs:369 10,794（**memo 自身の build**＝7.6 回／打鍵・平均 31 小節。int 版 `SpannerBreakSubstitution.cs:131` も 4.29 回 5,577＝**打鍵ごとに別の systems 配列が何枚もある理由は未測定**・第466）と
+  BuildBeamedStemTips の残り 2 人の呼び手 約 1,800。⚠️ collection initializer と `new List<(…)>?[n]` はどの census も数えない
 - ★★★ **⒮¹² splice の「trivia だけの窓」の門は、どちらの母集団にも観測者が居ない**（第458 起票・実測）。
   `MeasureCollector.TrySpliceSuffix`（`Resume.cs:340`）は**コーパス 1 sweep で 7,016 回訊かれ、7,016 回とも
   decline**（`WindowIsTriviaOnly` が true を返したのは **0 回**・裏の token walk は 891 回＝打鍵ごとに memo）。
@@ -272,6 +269,34 @@ ew List<(…)>?[n] はどの census も数えない
 - **`docs/RULES.md` は 242,086 / 250,000 B・1,874 / 2,000 行**（第462 が §5.3 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第466セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵ ⑷＝measure→system の地図 5 軒**（ユーザーが選んだ）。
+★ **`-Start p466` の 1 コマンドで §0 が全部済んだ**（HEAD `c0e60d1d`・未 push 12・full `sessions/p466/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 464` も自動＝moved 36 行 2,531 字）。
+
+★★★ **⑴ 直す前に計器で「共有の表はもうこの配列を持っているか」を訊いた**（Lab `sessions/p466/`・`probe-core.patch`＋`Zz466Probe_Run.cs.txt`）。
+int の地図 4 軒は **`SpannerBreakSubstitution.BuildMeasureToSystemMap` の CWT が同じ配列を既に持っていた**（Prelim 4,952／4,984・
+paging 3 軒 6,902／6,902・**短い歩きは 0 回**）。`BuildMeasureLayoutMap` は 3,160 回とも `CalculateRestShifts` からで tuple 表は miss だが、
+**同じ打鍵の終わりには 3,160 回とも建っていた**＝5 軒とも重複。
+
+★★★ **⑵ A/B −20,951 B／打鍵＝render の 0.70%**（予測の点 20,885 の 100.3%・帯 17,000〜23,000）。Prelim の home test と paging 3 軒は
+共有表を訊き（paging は**短い歩きのときだけ自前**＝`MeasureToSystemOfFirst`）、rest shift は tuple 表の `.Measure` を読む。**出力は同一**（5,824 行・0 差）。
+会計（1 ファイルずつ抜く）は **100.1%／99.7%／99.9%**。⚠️ `FingeringEngraver` の全 system 版は `BuildMeasureLayoutMap` のまま（private 本体が
+`Dictionary<int, MeasureLayout>` を取る・コーパスで 0 回）。
+
+★★ **⑶ 毒 5 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 5（home test を 1 system ずらす）／229（paging が最後の system を落とす）。
+**外れ＝毒 1**: home test を空にすると bow memo は全部 fallback＝答えは同じと読んで緑と予測したが**赤 4**＝`LayoutMemo_*_ReStampsTheShiftedSystems`
+が memo の hit を見ていた。緑 2 本は予測どおりで、**どちらも観測者が居ない枝**＝paging の短い歩き（コーパス 0 回・起こりうるかも未確認）／
+`CalculateRestShifts` の fallback（`RestXPositions` を埋めない producer）。
+
+★ **⑷ 終了時**: commit 2 本（code `6845a2a4`＝Core 3 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**
+（`run4.trx`＝`-End`）・§7.5（対 `c0e60d1d`）**Core '+' 49 行／REF 0／OWN 0**＝共有の表を訊くだけで LP に対応物は無い。**§7.6 コード中の新しい数は 0**
+（コメントの数は第466 の実測・出所つき）。**§7.7 の匂い**＝⑴ 2 つの CWT 自身が打鍵ごとに 7.6 回／4.29 回建つ（⒮¹⁶′ に書いた）／⑵ 上の観測者の居ない 2 枝。
+§1.0 ⒮¹⁶′ で第465 の `` `n `` が改行に化けていたのを直した。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p467` の 1 コマンドから入る**。
+
+## 以下は第465セッションの経緯
+
 ### 1.1 第465セッション（2026-09-21・YT-DELL2）
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶**（ユーザーが選んだ）。
@@ -305,41 +330,6 @@ ew List<(…)>?[n] はどの census も数えない
 ＝貸し器と「1 度だけ綴る」は LP に対応物が無い。**§7.6 コード中の新しい数は 1**＝`StepsKeptReach` 14（7 文字が全部重なる所＝2×7・コメントに出所）。
 **§7.7 の匂い**＝⑴ `OrderByScriptPriority` は LINQ の `OrderBy`／`ThenBy` と閉包を呼びごとに建てる／⑵ `BuildBeamedStemTips` の残り 2 人（どちらも未測定）。
 台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p466` の 1 コマンドから入る**。
-
-## 以下は第464セッションの経緯
-
-### 1.1 第464セッション（2026-09-21・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵ ⑷＝scratch の尾**（ユーザーが選んだ）。
-★ **`-Start p464` の 1 コマンドで §0 が全部済んだ**（HEAD `6713cf3b`・未 push 8・full `sessions/p464/run1.trx`
-8785 / 0 / 3 / 8788・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 462` も自動＝moved 37 行 2,294 字）。
-
-★★ **⑴ 第463 の計器を HEAD で回し直した**（Lab `sessions/p464/`・分母 **3,483,771**）。第463 が触っていない行は 1 B も違わない（較正 `:362` 120,862）。
-
-★★★ **⑵ 6 軒・A/B −80,083 B／打鍵＝render の 2.53%**（予測の点 80,950 の 98.9%・帯 65,000〜95,000 の中）。
-park 4 軒（`TabResolver` の event と ref／`ArticulationEngraver` の layouts builder＋**地図の中の per-key list を pool へ**／
-break-align の item・column・candidate の 1 組＝`SolvePrefixColumns` と `BoundaryColumn` が共有・boundary の grob は配列へ直接／
-`AccidentalPlacement` の entries と headBoxes）・**建てない 2 軒**（`MeasureContentKey` は `MeasureContextChain` を建てずに entry を
-畳みながら歩く＝**`Exit` は誰も読んでいなかった**／`HaraKiri.DeadFilter` の地図＝訊かれたときに struct の staff walk で引く）。
-**出力は同一**（5,824 行・0 差）。
-
-★★ **⑶ 会計（1 ファイルずつ抜く・和 80,102）**: census の行だけの 2 軒は **100.0%・103.3%**。外れたのは**隣に tuple の list を
-持つ軒**で、上にも下にも外れた（D 108.7%・F 86.0%）＝**`List<(…)>` はどちらの census にも居ない** ⇒ ⒮¹⁶ を起票。
-
-★★★ **⑷ 毒 12 本、予測を外したのは 4 本＝どれも「誰も見ていない」**（Lab `poisons.txt`）。赤 62／107／10／73／1,160／97
-（10 は返らない＝entries が列ごとに伸びる）・緑 2 本（5＝⒮¹³ の穴が list の段にも続く・11）は予測どおり。
-**外れ**: ① `MeasureContentKey` の entry を**進めない**毒は、単独 staff（毒 2）でも **render が使う multi-staff**（毒 12・
-`IncrementalCompiler:572`）でも**緑**＝**mid-piece の key／clef／time 変更が後ろの小節の cache 鍵に届くことを誰も見ていなかった**。
-② exit を畳む毒 3 は緑＝ほぼ恒等（exit(i)＝entry(i)＋items(i)、items は hash 済み）。③ **`DeadFilter` の索引を −1 にする毒 9 は緑**
-＝**第395 の keepAlive（dynamics・chord names・figures・percent が休符だけの staff を生かす）に test が 1 本も無かった**。
-⇒ **網 2 本**（`MeasureContentKeyTests.AKeyChange_ReachesTheKeysOfTheBarsAfterIt`＝単独と multi・
-`HaraKiriTests.DeadFilter_ResolvesTheGlobalIndex_TheSideTablesAreKeyedBy`）。**毒 2・9・12 の下で 1 本ずつ赤**、毒 3 は緑のまま。
-
-★ **⑸ 終了時**: commit 2 本（code `c07869e0`＝Core 8 ファイル＋網 2 本＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p464/`
-（`prediction.txt`＝A/B と会計を追記・`attrib.txt`・`poisons.ps1`／`.txt`・`joined.csv`・`Zz464*`）。**最終 full 8789 / 0 / 3 / 8792**（網 4 本ぶん増えた・`run4.trx`＝`-End`）・
-§7.5（対 `6713cf3b`）**Core '+' 253 行／REF 0／OWN 0**＝貸し器と畳みは LP に対応物が無い。**§7.6 コード中の新しい数は 0**。
-**§7.7 の匂い**＝⑴ measure→system の地図を同じ systems に消費者ごとに建てる（⒮¹⁵ ⑷）／⑵ `DeadFilter` は system ごとに closure と delegate を建てる（未測定）。
-台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p465` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
