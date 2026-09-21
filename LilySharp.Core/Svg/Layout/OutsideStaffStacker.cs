@@ -908,16 +908,22 @@ internal static class OutsideStaffStacker
             if (trills[i].Direction < 0)
                 (used ??= new SortedSet<int>()).Add(trills[i].StaffIndex);
 
-        var profUps = new List<object>(used?.Count ?? 0);
-        var profDowns = new List<object>(used?.Count ?? 0);
+        // Written straight into the entry's arrays: every staff in `used` fills one slot or
+        // the whole entry is declined (the same shape as BuildAboveProgram's staves).
+        object[] profUps = used is null ? [] : new object[used.Count];
+        object[] profDowns = used is null ? [] : new object[used.Count];
         if (used != null)
+        {
+            int slot = 0;
             foreach (int staff in used)
             {
                 if (profileIdentity(s, staff) is not { } id)
                     return null; // unstable identity: this system stacks live
-                profUps.Add(id.Up);
-                profDowns.Add(id.Down);
+                profUps[slot] = id.Up;
+                profDowns[slot] = id.Down;
+                slot++;
             }
+        }
 
         // Group structure as per-system ordinals: which of THIS system's dynamics /
         // hairpins each anchored group couples, immune to global index shifts.
@@ -948,8 +954,8 @@ internal static class OutsideStaffStacker
         {
             ApplyStaffOffsets = applyStaffOffsets,
             Staves = staves,
-            ProfileUps = profUps.ToArray(),
-            ProfileDowns = profDowns.ToArray(),
+            ProfileUps = profUps,
+            ProfileDowns = profDowns,
             Dynamics = Gather(dynamics, part.Dynamics),
             Hairpins = Gather(hairpins, part.Hairpins),
             Articulations = Gather(articulations, part.Articulations),
@@ -1468,14 +1474,18 @@ internal static class OutsideStaffStacker
                 used.Add(Resolve(chordItems[src].StaffIndex));
         }
 
-        var profUps = new List<object>(used.Count);
-        var profDowns = new List<object>(used.Count);
+        // Written straight into the entry's arrays (HANDOFF (s)15: a list told this exact
+        // size and then copied by ToArray, 51.41 systems a keystroke, 6,616 B — session 463).
+        var profUps = new object[used.Count];
+        var profDowns = new object[used.Count];
+        int slot = 0;
         foreach (int staff in used)
         {
             if (profileIdentity(s, staff) is not { } id)
                 return null; // unstable identity: this system stacks live
-            profUps.Add(id.Up);
-            profDowns.Add(id.Down);
+            profUps[slot] = id.Up;
+            profDowns[slot] = id.Down;
+            slot++;
         }
 
         object? silUp = null, silDown = null;
@@ -1490,8 +1500,8 @@ internal static class OutsideStaffStacker
             Indent = sys.Indent,
             TopStaff = topStaff[s],
             Staves = staves,
-            ProfileUps = profUps.ToArray(),
-            ProfileDowns = profDowns.ToArray(),
+            ProfileUps = profUps,
+            ProfileDowns = profDowns,
             SilhouetteUp = silUp,
             SilhouetteDown = silDown,
             Trills = Gather(trills, part.Trills),

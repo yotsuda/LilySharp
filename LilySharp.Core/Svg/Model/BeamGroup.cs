@@ -147,16 +147,21 @@ public sealed record BeamGroup
     /// </summary>
     internal BeamGroup WithLiveItems(Measure measure, int measureIndex)
     {
-        var members = ImmutableArray.CreateBuilder<BeamMember>(Members.Length);
-        foreach (var m in Members)
+        // The array itself, not a builder moved into one: the length is Members.Length before
+        // the first write, so the builder object was all a builder added — 56 B at 182.50
+        // replays a keystroke = 10,220 B (session 463's census; a moved builder reads as
+        // "never filled" there, because Move empties it).
+        var members = new BeamMember[Members.Length];
+        for (int i = 0; i < members.Length; i++)
         {
+            var m = Members[i];
             if (m.MeasureIndex >= 0 && m.MeasureIndex != measureIndex)
                 throw new InvalidOperationException(
                     "WithLiveItems: a replayed single-measure beam group carries a member of another measure");
-            members.Add(m.WithItem(measure.Items[m.ItemIndex]));
+            members[i] = m.WithItem(measure.Items[m.ItemIndex]);
         }
-        return new BeamGroup(members.MoveToImmutable(), measureIndex, StartIndex,
-            StemUp, GrowDirection, VoiceIndex, RestStems);
+        return new BeamGroup(System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(members),
+            measureIndex, StartIndex, StemUp, GrowDirection, VoiceIndex, RestStems);
     }
 
     /// <summary>

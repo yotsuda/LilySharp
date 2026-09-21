@@ -992,7 +992,9 @@ internal sealed class PageLayouter
                     running = oneShift;
                 staves.Add(staff with { Y = staff.Y + running });
             }
-            var moved = staves.ToImmutable();
+            // Moved, not copied: one Add per staff into a builder told Staves.Length, so it
+            // is exactly full (session 463's census: exact 100% at both builders here).
+            var moved = staves.MoveToImmutable();
             double top = moved[0].Y;
             double bottom = moved[^1].Y - moved[^1].Height;
             var delimiter = group.GrandStaffLayout is { } d
@@ -1006,7 +1008,7 @@ internal sealed class PageLayouter
                 GrandStaffLayout = delimiter,
             });
         }
-        return groups.ToImmutable();
+        return groups.MoveToImmutable();
     }
 
     /// <summary>

@@ -68,21 +68,55 @@ internal static class BestFirstScorer
     public static TConfig Solve<TConfig>(IReadOnlyList<TConfig> candidates, Action<TConfig> advanceScorer)
         where TConfig : class, IScorableConfig
     {
-        var queue = new PriorityQueue<TConfig, double>(candidates.Count);
-        for (int i = 0; i < candidates.Count; i++)
+        // Lent, and given back cleared (see Drawer).
+        var queue = Drawer<TConfig>.Parked ?? new PriorityQueue<TConfig, double>();
+        Drawer<TConfig>.Parked = null;
+        try
         {
-            var candidate = candidates[i];
-            queue.Enqueue(candidate, candidate.Demerits);
-        }
+            queue.EnsureCapacity(candidates.Count);
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                var candidate = candidates[i];
+                queue.Enqueue(candidate, candidate.Demerits);
+            }
 
-        while (true)
+            while (true)
+            {
+                var best = queue.Dequeue();
+                if (best.IsDone)
+                    return best;
+
+                advanceScorer(best);
+                queue.Enqueue(best, best.Demerits);
+            }
+        }
+        finally
         {
-            var best = queue.Dequeue();
-            if (best.IsDone)
-                return best;
-
-            advanceScorer(best);
-            queue.Enqueue(best, best.Demerits);
+            queue.Clear();
+            Drawer<TConfig>.Parked = queue;
         }
+    }
+
+    /// <summary>The queue <see cref="Solve"/> searches, lent from one per configuration type
+    /// the thread keeps between problems.</summary>
+    /// <remarks>
+    /// MEASURED (session 463): the queue is sized from the candidate count, so no census of
+    /// un-sized containers ever saw it, and <c>PriorityQueue</c> is no spelling of the census of
+    /// sized ones either. At 19.12 beams a keystroke and 237.66 candidates each its node array
+    /// alone is about 74,000 B a keystroke, slurs on top. The queue never outgrows the
+    /// candidate count (each step dequeues one before it enqueues one), so a queue sized once to
+    /// the thread's largest problem is never resized again.
+    /// <para>
+    /// Renting takes it out of the drawer (session 421's idiom) and the clearing is on give,
+    /// in a finally, because the winner is returned from inside the loop with the losers still
+    /// queued. A heap's order depends only on the operations since it was last empty, not on
+    /// its capacity, so a parked queue pops exactly what a new one would.
+    /// </para>
+    /// </remarks>
+    private static class Drawer<TConfig>
+        where TConfig : class, IScorableConfig
+    {
+        [ThreadStatic]
+        public static PriorityQueue<TConfig, double>? Parked;
     }
 }

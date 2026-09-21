@@ -128,7 +128,7 @@
 - **:743** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
 - **:1398** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
-- **:194** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
+- **:199** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
@@ -207,7 +207,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1763** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1773** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:482** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
@@ -307,7 +307,7 @@
 - **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:411** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1325** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:1360** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
 - **:91** LILYSHARP-OWN: the band is Lily#'s model of an independent row (HANDOFF 3); LilyPond
 - **:113** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
@@ -351,7 +351,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:390** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:507** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:939** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **:943** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
 - **:1167** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
@@ -398,8 +398,8 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:75** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1087** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3110** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1093** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:3120** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

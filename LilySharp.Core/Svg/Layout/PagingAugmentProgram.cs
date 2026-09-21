@@ -385,8 +385,26 @@ internal sealed class PagingAugmentProgram
             _lyricBands.Add(profile);
         }
 
+        /// <summary>Copies the steps out: the program owns arrays of its own, so the builder can
+        /// be <see cref="Clear"/>ed and filled again.</summary>
         public PagingAugmentProgram Build() => new(
             _kinds.ToArray(), _args.ToArray(), _texts.ToArray(),
             _scripts.ToArray(), _tupletGroups.ToArray(), _lyricBands.ToArray());
+
+        /// <summary>No step has been added since the builder was made or last cleared. Every
+        /// step adds one kind, so this is "no family touched this system".</summary>
+        public bool IsEmpty => _kinds.Count == 0;
+
+        /// <summary>Forgets every step and keeps the lists' arrays, for a builder lent again
+        /// (<c>LayoutEngine.AugmentSkylinesForPaging</c>'s drawer).</summary>
+        public void Clear()
+        {
+            _kinds.Clear();
+            _args.Clear();
+            _texts.Clear();
+            _scripts.Clear();
+            _tupletGroups.Clear();
+            _lyricBands.Clear();
+        }
     }
 }

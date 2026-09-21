@@ -913,9 +913,56 @@ internal sealed class SvgSystemFragmentCache
     private static bool TrySplit(string fragment, List<int> log,
         out string text, out int[] insertAt, out int[] values)
     {
-        var sb = new StringBuilder(fragment.Length);
-        var offsets = new List<int>(log.Count);
-        var found = new List<int>(log.Count);
+        // Lent, and given back cleared on every way out (see t_split).
+        var buffers = t_split ?? new SplitBuffers();
+        t_split = null;
+        try
+        {
+            buffers.Text.EnsureCapacity(fragment.Length);
+            buffers.Offsets.EnsureCapacity(log.Count);
+            buffers.Found.EnsureCapacity(log.Count);
+            return TrySplit(fragment, log, buffers.Text, buffers.Offsets, buffers.Found,
+                out text, out insertAt, out values);
+        }
+        finally
+        {
+            buffers.Text.Clear();
+            buffers.Offsets.Clear();
+            buffers.Found.Clear();
+            t_split = buffers;
+        }
+    }
+
+    /// <summary>The three scratch containers <see cref="TrySplit(string, List{int}, out string,
+    /// out int[], out int[])"/> fills and copies out of, lent from one set the thread keeps
+    /// between captures.</summary>
+    /// <remarks>
+    /// MEASURED (session 463's census of the containers session 457's could not see — a
+    /// constructor told a size was skipped): 1.84 splits a keystroke over the reader's corpus,
+    /// the text builder told the fragment's length, 10,185 characters on average and 20,186 at
+    /// most, then copied out by ToString; the two lists copied out by a spread. 38,627 B a
+    /// keystroke, all of it unreachable by the time the render returned.
+    /// <para>
+    /// Same idiom as <see cref="t_scalars"/>: renting takes the set out of the drawer, the
+    /// clearing is on give. The give is in a finally because the split declines at three
+    /// points. The builder is sized BEFORE the first Append and the text never outgrows the
+    /// fragment, so it stays one chunk at the thread's longest fragment.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static SplitBuffers? t_split;
+
+    private sealed class SplitBuffers
+    {
+        public readonly StringBuilder Text = new();
+        public readonly List<int> Offsets = new();
+        public readonly List<int> Found = new();
+    }
+
+    private static bool TrySplit(string fragment, List<int> log,
+        StringBuilder sb, List<int> offsets, List<int> found,
+        out string text, out int[] insertAt, out int[] values)
+    {
         int i = 0;
         // Each token's NEXT occurrence at/after i, advanced lazily: −1 = none remain
         // (never searched again). Re-running both IndexOf calls from i on EVERY hit

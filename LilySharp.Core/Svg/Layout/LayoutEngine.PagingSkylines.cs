@@ -795,7 +795,11 @@ internal sealed partial class LayoutEngine
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
 
-        var builders = new PagingAugmentProgram.Builder?[systemCount];
+        // Lent, and given back cleared once every program has been built (see t_pagingBuilders).
+        var builders = t_pagingBuilders ?? [];
+        t_pagingBuilders = null;
+        if (builders.Length < systemCount)
+            Array.Resize(ref builders, systemCount);   // keeps the parked builders it had
         PagingAugmentProgram.Builder BuilderAt(int s) => builders[s] ??= new();
 
         // NOTE-BOUND SCRIPTS, both directions — above scripts into the UP skyline, below
@@ -1315,7 +1319,8 @@ internal sealed partial class LayoutEngine
         var result = new List<(VerticalSkyline up, VerticalSkyline down)>(systemCount);
         for (int s = 0; s < systemCount; s++)
         {
-            if (builders[s] is not { } builder)
+            // A lent builder is there but EMPTY when no step touched this system.
+            if (builders[s] is not { IsEmpty: false } builder)
             {
                 result.Add(skylines[s]);
                 continue;
@@ -1325,8 +1330,36 @@ internal sealed partial class LayoutEngine
                 ? program.Execute(skylines[s])
                 : systemCache.GetOrComputePagingAugment(s, skylines[s], program));
         }
+
+        // Every program owns copies of its steps now; give the builders back cleared.
+        for (int s = 0; s < systemCount; s++)
+            builders[s]?.Clear();
+        t_pagingBuilders = builders;
         return result;
     }
+
+    /// <summary>
+    /// The per-system step builders <see cref="AugmentSkylinesForPaging"/> fills and builds,
+    /// lent from one array the thread keeps between renders.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 463's census of the containers session 457's could not see — six
+    /// target-typed <c>= new()</c> fields): 36.77 builders a keystroke over the reader's
+    /// corpus, each growing six lists from empty to be copied out once by
+    /// <see cref="PagingAugmentProgram.Builder.Build"/> — 46,519 B a keystroke across this
+    /// path and the lazy one in <see cref="AugmentSkylinesWithScripts"/>, which keeps building
+    /// its own (its builders are built on first READ, possibly never, and it hands back no
+    /// point where they are all done).
+    /// <para>
+    /// Renting takes the array out of the drawer (session 421's idiom), so a nested or
+    /// concurrent render builds its own; the clearing is on give, after the last Build. A
+    /// system no step touched finds its builder present but empty, which is why the replay
+    /// loop above asks <see cref="PagingAugmentProgram.Builder.IsEmpty"/> and not for null —
+    /// every step adds a kind, and every <c>BuilderAt</c> above adds a step.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static PagingAugmentProgram.Builder?[]? t_pagingBuilders;
 
     /// <param name="rowsAboveFirstStaff">
     /// Per system, <see cref="RowsAboveFirstStaff"/> — the raise that brings a STAFF-framed

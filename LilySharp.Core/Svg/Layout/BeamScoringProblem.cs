@@ -710,17 +710,48 @@ internal sealed class BeamScoringProblem
         // Phase 4: Generate quantized candidates
         // LILYPOND-REF: lily/beam-quanting.cc:892-954 generate_quants()
         var candidates = GenerateQuantCandidates();
+        try
+        {
+            if (candidates.Count == 0)
+                return AtOuterStems(_unquantedLeftY, _unquantedRightY);
 
-        if (candidates.Count == 0)
-            return AtOuterStems(_unquantedLeftY, _unquantedRightY);
+            // Phase 5: Score using priority queue (lazy evaluation)
+            // LILYPOND-REF: lily/beam-quanting.cc:1050-1083 — the best-first queue inside
+            //   Beam_scoring_problem::solve: configurations are scored lazily, cheapest first.
+            var best = BestFirstScorer.Solve(candidates, OneScorer);
 
-        // Phase 5: Score using priority queue (lazy evaluation)
-        // LILYPOND-REF: lily/beam-quanting.cc:1050-1083 — the best-first queue inside
-        //   Beam_scoring_problem::solve: configurations are scored lazily, cheapest first.
-        var best = BestFirstScorer.Solve(candidates, OneScorer);
-
-        return AtOuterStems(best.LeftY, best.RightY);
+            return AtOuterStems(best.LeftY, best.RightY);
+        }
+        finally
+        {
+            // The winner is read above; the list is not (see t_candidates).
+            candidates.Clear();
+            t_candidates = candidates;
+        }
     }
+
+    /// <summary>
+    /// The candidate list <see cref="GenerateQuantCandidates"/> fills and
+    /// <see cref="BestFirstScorer.Solve"/> reads, and the quant grid it is built from — lent
+    /// from one pair the thread keeps between beams.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 463's census of the containers a constructor was told the size of,
+    /// which session 457's skipped): 19.12 beams a keystroke over the reader's corpus, 237.66
+    /// candidates each (max 1,024) and 17.57 quants — 41,181 B a keystroke, every list
+    /// unreachable by the time the render returned. The configurations themselves are the
+    /// winner's and the queue's, not the list's.
+    /// <para>
+    /// Renting takes the list out of the drawer (session 421's idiom), the clearing is on
+    /// give, and the candidate list's give is in <see cref="Solve"/>'s finally, after the
+    /// winner has been read. A nested or concurrent beam finds the drawer empty and builds.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<BeamConfiguration>? t_candidates;
+
+    [ThreadStatic]
+    private static List<double>? t_unshiftedQuants;
 
     /// <summary>
     /// Maps a beam line, given by its Y at the two beam EDGES (x = 0 and x = _xSpan),
@@ -1258,7 +1289,9 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: lily/beam-quanting.cc:927-932
         // SIZED: the loop below is a plain product with no filter — 2 * regionSize rows of
         // baseQuants — so the count is known before the first Add.
-        var unshiftedQuants = new List<double>(2 * regionSize * baseQuants.Length);
+        var unshiftedQuants = t_unshiftedQuants ?? new List<double>();
+        t_unshiftedQuants = null;
+        unshiftedQuants.EnsureCapacity(2 * regionSize * baseQuants.Length);
         for (int i = -regionSize; i < regionSize; i++)
         {
             foreach (double bq in baseQuants)
@@ -1302,7 +1335,9 @@ internal sealed class BeamScoringProblem
 
         // LILYPOND-REF: lily/beam-quanting.cc:930-953 — the i x j loop over
         //   unshifted_quants that builds every candidate configuration.
-        var candidates = new List<BeamConfiguration>(leftPasses * rightPasses);
+        var candidates = t_candidates ?? new List<BeamConfiguration>();
+        t_candidates = null;
+        candidates.EnsureCapacity(leftPasses * rightPasses);
         for (int i = 0; i < unshiftedQuants.Count; i++)
         {
             double leftYSS = EdgeY(0, unshiftedQuants[i]);
@@ -1343,6 +1378,8 @@ internal sealed class BeamScoringProblem
             }
         }
 
+        unshiftedQuants.Clear();
+        t_unshiftedQuants = unshiftedQuants;
         return candidates;
     }
 

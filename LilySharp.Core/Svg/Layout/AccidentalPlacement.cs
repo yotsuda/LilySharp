@@ -410,7 +410,10 @@ internal sealed class AccidentalPlacement
 
         // Position right-to-left with skyline-to-skyline nesting.
         // LILYPOND-REF: accidental-placement.cc:391-438 position_apes.
-        var layouts = new List<AccidentalLayout>(entries.Count);
+        // One layout per entry, written straight into the result's array (a list told this
+        // exact size and then copied out was 3,211 B a keystroke — session 463).
+        var layouts = new AccidentalLayout[entries.Count];
+        int placed = 0;
 
         // LILYPOND-REF: accidental-placement.cc set_ape_skylines() — accidentals of the SAME
         // note name form one APE sharing a SINGLE column, whatever the octave. The first of
@@ -487,12 +490,12 @@ internal sealed class AccidentalPlacement
             // that much further left again (DrawAccidentalAtInkLeft: accInkLeft = inkLeftX +
             // leftParen.Width) and its box is already packed there, so the anchor must be the
             // group left, not the bare glyph's. All out of the accidental's own font.
-            layouts.Add(new AccidentalLayout(
+            layouts[placed++] = new AccidentalLayout(
                 entry.StaffPosition, entry.Accidental,
-                InkLeft(offset, bbox.Left, entry.IsCourtesy, accidentalFont), entry.IsCourtesy));
+                InkLeft(offset, bbox.Left, entry.IsCourtesy, accidentalFont), entry.IsCourtesy);
         }
 
-        return layouts.ToImmutableArray();
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(layouts);
     }
 
     /// <summary>
