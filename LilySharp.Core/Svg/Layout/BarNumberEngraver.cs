@@ -253,7 +253,7 @@ internal static class BarNumberEngraver
         if (systems.IsDefaultOrEmpty || policy.Mode == Semantics.BarNumberMode.None)
             return ImmutableArray<BarNumberLayout>.Empty;
 
-        var builder = ImmutableArray.CreateBuilder<BarNumberLayout>();
+        var builder = RentLayoutBuilder();
 
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
         {
@@ -421,6 +421,59 @@ internal static class BarNumberEngraver
             }
         }
 
-        return builder.ToImmutable();
+        // ToImmutable COPIES (see the drawer's remark), so the builder is finished with here.
+        var numbers = builder.ToImmutable();
+        GiveLayoutBuilder(builder);
+        return numbers;
+    }
+
+    /// <summary>
+    /// The builder <see cref="Calculate"/> gathers a score's bar-number layouts into, lent
+    /// from one builder the thread keeps between calculations.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.17 calculations a keystroke at 22.68 numbers each (max 47), and all 4,010
+    /// builders built were unreachable by the time the render that built them returned. The
+    /// builders and their growth ladders were 5,232 B a keystroke, 0.14% of it.
+    /// <para>
+    /// ⚠️ NOT THE SAME SHAPE AS <see cref="NumberMeasures"/>'s builder above, and
+    /// the difference is the whole reason one is parked and the other is not: that one knows
+    /// its size (<c>measures.Length</c>) and hands its array over with
+    /// <c>MoveToImmutable</c> — it allocates exactly the array that becomes the answer, so
+    /// there is nothing to save. This one cannot know its size (a system's numbers depend on
+    /// the visibility policy, the line starts and the every-nth arm), so it climbs from
+    /// capacity 0 every call.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a builder parked dirty would open the next score's numbers with this
+    /// score's, which every snapshot of a numbered score sees. There is no early return and no
+    /// throw between the rent and the give. <c>ToImmutable</c> copies, measured (session 459)
+    /// — see <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one builder a thread at that thread's longest score — 47 numbers,
+    /// emptied, so it pins no layout.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<BarNumberLayout>.Builder? t_layoutBuilder;
+
+    /// <summary>Takes the thread's layout builder, or makes the thread's first.</summary>
+    private static ImmutableArray<BarNumberLayout>.Builder RentLayoutBuilder()
+    {
+        var builder = t_layoutBuilder;
+        if (builder is null)
+            return ImmutableArray.CreateBuilder<BarNumberLayout>();
+        t_layoutBuilder = null;
+        return builder;
+    }
+
+    /// <summary>Puts a finished calculation's builder back, emptied, with its capacity.</summary>
+    private static void GiveLayoutBuilder(ImmutableArray<BarNumberLayout>.Builder builder)
+    {
+        builder.Clear();
+        t_layoutBuilder = builder;
     }
 }

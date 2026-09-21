@@ -399,7 +399,7 @@ internal sealed partial class LayoutEngine
         // A cursor per system the reassembly actually reads — bounded by the laid systems,
         // and measured exact on the reader's corpus (3,732 calls, asked == Count every one).
         var cursors = new Dictionary<int, int>(perSystem.Count);
-        var result = ImmutableArray.CreateBuilder<BeamLayout>();
+        var result = RentBeamLayoutBuilder();
         for (int i = 0; i < groups.Length; i++)
         {
             int k = groupSystem[i];
@@ -411,7 +411,60 @@ internal sealed partial class LayoutEngine
                 cursors[k] = c + 1;
             }
         }
-        return result.ToImmutable();
+        // ToImmutable COPIES (see the drawer's remark), so the builder is finished with here.
+        var reassembled = result.ToImmutable();
+        GiveBeamLayoutBuilder(result);
+        return reassembled;
+    }
+
+    /// <summary>
+    /// The builder <see cref="LayoutPreliminaryStaffBeams"/> reassembles a staff's beam
+    /// layouts into, lent from one builder the thread keeps between reassemblies.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.02 reassemblies a keystroke at 108.7 layouts each (max 330), and all 3,732
+    /// builders built were unreachable by the time the render that built them returned — the
+    /// reassembly copies into an <see cref="ImmutableArray{T}"/> and the builder dies. The
+    /// builders and their growth ladders were 5,388 B a keystroke, 0.14% of it.
+    /// <para>
+    /// The size is NOT known ahead of the loop, which is why this is a parked builder and not
+    /// an exact-sized one: the loop adds only the groups whose identity matches the cursor's
+    /// laid group, so <c>groups.Length</c> is an upper bound the reassembly is not obliged to
+    /// reach (it is the "a group the layout skipped advances nothing" case in the remark on
+    /// <see cref="LayoutPreliminaryStaffBeams"/>).
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a builder parked dirty would open the next staff's beams with this
+    /// staff's, and the renderer draws in list order, so the suite sees it. There is no early
+    /// return and no throw between the rent and the give; the memo calls and the per-system
+    /// sub-layouts all happen BEFORE the rent. <c>ToImmutable</c> copies, measured
+    /// (session 459) — see <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one builder a thread at that thread's busiest staff — 330 layouts,
+    /// emptied, so it pins no beam group.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<BeamLayout>.Builder? t_beamLayoutBuilder;
+
+    /// <summary>Takes the thread's beam-layout builder, or makes the thread's first.</summary>
+    private static ImmutableArray<BeamLayout>.Builder RentBeamLayoutBuilder()
+    {
+        var builder = t_beamLayoutBuilder;
+        if (builder is null)
+            return ImmutableArray.CreateBuilder<BeamLayout>();
+        t_beamLayoutBuilder = null;
+        return builder;
+    }
+
+    /// <summary>Puts a finished reassembly's builder back, emptied, with its capacity.</summary>
+    private static void GiveBeamLayoutBuilder(ImmutableArray<BeamLayout>.Builder builder)
+    {
+        builder.Clear();
+        t_beamLayoutBuilder = builder;
     }
 
     /// <summary>

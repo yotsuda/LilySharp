@@ -677,7 +677,7 @@ internal static class MusicMarkEngraver
                     && (!systemLyricBottomUp.TryGetValue(lySys, out double cur) || 2.0 + ly.YUp < cur))
                     systemLyricBottomUp[lySys] = 2.0 + ly.YUp;
 
-        var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
+        var layouts = RentLayoutBuilder();
 
         // ONE SET OF BUFFERS FOR THE WHOLE PASS, not one per group. The split used to be two
         // Where→OrderBy→ToList chains, and a chain of that shape allocates the same objects
@@ -1276,7 +1276,60 @@ internal static class MusicMarkEngraver
             }
         }
 
-        return layouts.ToImmutable();
+        // ToImmutable COPIES (see the drawer's remark), so the builder is finished with here.
+        var placed = layouts.ToImmutable();
+        GiveLayoutBuilder(layouts);
+        return placed;
+    }
+
+    /// <summary>
+    /// The builder <see cref="Calculate"/> gathers a score's placed mark layouts into, lent
+    /// from one builder the thread keeps between calculations.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.17 calculations a keystroke at 11.51 layouts each (max 23), and all 4,010
+    /// builders built were unreachable by the time the render that built them returned. The
+    /// builders and their growth ladders were 4,032 B a keystroke, 0.11% of it.
+    /// <para>
+    /// ⚠️ THE FOURTH BUFFER OF THE PASS, and it is the one the remark above the other three
+    /// could not cover: <c>aboveMarks</c>, <c>belowMarks</c> and <c>placedAbove</c> are read
+    /// inside the iteration that fills them, so ONE SET FOR THE WHOLE PASS was enough for
+    /// them; this one is written across every group of the pass and read after the last, so
+    /// the scope that can share it is not the pass but the THREAD.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a builder parked dirty would open the next score's marks with this
+    /// score's. There is no early return and no throw between the rent and the give: the
+    /// <c>return</c>s in this method's span belong to its local functions
+    /// (<c>ChordBandUp</c> and the band-clearance helper), not to the pass.
+    /// <c>ToImmutable</c> copies, measured (session 459) — see
+    /// <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one builder a thread at that thread's most-marked score — 23
+    /// layouts, emptied, so it pins no mark.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<MusicMarkLayout>.Builder? t_layoutBuilder;
+
+    /// <summary>Takes the thread's layout builder, or makes the thread's first.</summary>
+    private static ImmutableArray<MusicMarkLayout>.Builder RentLayoutBuilder()
+    {
+        var builder = t_layoutBuilder;
+        if (builder is null)
+            return ImmutableArray.CreateBuilder<MusicMarkLayout>();
+        t_layoutBuilder = null;
+        return builder;
+    }
+
+    /// <summary>Puts a finished calculation's builder back, emptied, with its capacity.</summary>
+    private static void GiveLayoutBuilder(ImmutableArray<MusicMarkLayout>.Builder builder)
+    {
+        builder.Clear();
+        t_layoutBuilder = builder;
     }
 
     // (CoPlaceTempoWithLabels — the "[Chorus] ♩ = 132" chart pair that re-anchored a

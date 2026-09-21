@@ -76,7 +76,7 @@ internal static class LedgerLineSpannerEngraver
             return ImmutableArray<LedgerLineSpan>.Empty;
 
         var measureMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
-        var builder = ImmutableArray.CreateBuilder<LedgerLineSpan>();
+        var builder = RentSpanBuilder();
         var voice = score.Voice;
 
         // Per-system, per-staff-position list of (left, right, sortKey) ledger entries.
@@ -148,7 +148,72 @@ internal static class LedgerLineSpannerEngraver
             EmitSpan(builder, systems, sysIdx, staffPos, mergedLeft, mergedRight, staffHeight, staffIndex);
         }
 
-        return builder.ToImmutable();
+        // ToImmutable COPIES — it never hands out the builder's own array — so the builder is
+        // finished with here and not at the caller's line. See the drawer's remark for the
+        // measurement that says so.
+        var spans = builder.ToImmutable();
+        GiveSpanBuilder(builder);
+        return spans;
+    }
+
+    /// <summary>
+    /// The builder <see cref="Calculate"/> gathers a score's ledger spans into, lent from one
+    /// builder the thread keeps between calculations.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, 231 books × eight forward
+    /// keystrokes): 2.17 calculations a keystroke at 40.3 spans each (max 444), and all 4,010
+    /// builders built were unreachable by the time the render that built them returned. The
+    /// builders and their growth ladders were 7,822 B a keystroke, 0.21% of it — the largest
+    /// single container left in the census after session 458.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK, and this is the question the whole family turned on:
+    /// <c>ImmutableArray&lt;T&gt;.Builder.ToImmutable</c> COPIES, so the array handed to the
+    /// caller is never the one the drawer keeps. MEASURED rather than read off the
+    /// documentation (session 459, .NET 10.0.12, reference identity through reflection on
+    /// <c>Builder._elements</c> and <c>ImmutableArray.array</c>): not aliased at
+    /// <c>Count == Capacity</c>, below capacity, at <c>Count == 0</c>, or after growing from
+    /// capacity 0 — while the same probe DID see <c>MoveToImmutable</c> and
+    /// <c>DrainToImmutable</c> hand their array over, which is what calibrates it. ⚠️ AND
+    /// THOSE TWO DETACH IT (they leave the builder at capacity 0), so no exit can leave a
+    /// parked builder owning a caller's array; what a Move/Drain site loses instead is the
+    /// POINT of parking, since the drawer would start from empty every time. That is why the
+    /// sibling at :219-style exits — <c>BarNumberEngraver</c>'s number list,
+    /// <c>LayoutEngine.Prelim</c>'s carried moves, <c>MeasureLayouter</c>'s item layouts — are
+    /// not parked: they are already exact-sized and already hand their array over.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE BUILDER OUT OF THE DRAWER (session 421's idiom): a re-entrant
+    /// calculation would gather into its own builder, a second thread has its own drawer, and a
+    /// calculation that threw would lose the builder instead of mixing it. THE CLEARING IS ON
+    /// GIVE, not on rent (session 456), so a builder parked dirty is observable — the next
+    /// score's spans would open with this score's.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one builder a thread at that thread's widest score — 444 spans,
+    /// emptied. <c>Clear</c> nulls the slots it drops (measured with the same probe), and a
+    /// <see cref="LedgerLineSpan"/> holds no references anyway, so the drawer pins nothing but
+    /// its own capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<LedgerLineSpan>.Builder? t_spanBuilder;
+
+    /// <summary>Takes the thread's span builder, or makes the thread's first.</summary>
+    private static ImmutableArray<LedgerLineSpan>.Builder RentSpanBuilder()
+    {
+        var builder = t_spanBuilder;
+        if (builder is null)
+            return ImmutableArray.CreateBuilder<LedgerLineSpan>();
+        t_spanBuilder = null;
+        return builder;
+    }
+
+    /// <summary>Puts a finished calculation's builder back, emptied, with its capacity.</summary>
+    private static void GiveSpanBuilder(ImmutableArray<LedgerLineSpan>.Builder builder)
+    {
+        builder.Clear();
+        t_spanBuilder = builder;
     }
 
     private static void AddEntry(

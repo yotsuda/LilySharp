@@ -513,7 +513,7 @@ internal sealed class PageLayouter
         // force as "how far apart are two systems". Lily# used to draw every system at the
         // Align_interface minimum on every page and at every force; the ledger points
         // page.natural/page.stretched.staff-staff-inside are the pair that measured it.
-        var springs = ImmutableArray.CreateBuilder<Spring>();
+        var springs = RentSpringBuilder();
 
         // What each spring IS, parallel to the builder — built only when a probe has asked
         // for the chain (LayoutEngine.DebugPageBreakingScoring; null in production, where
@@ -791,6 +791,11 @@ internal sealed class PageLayouter
             }
         }
 
+        // The chain is finished with once the page has solved and the dump has read it — both
+        // ToImmutable calls above COPY (see the drawer's remark), so nothing downstream points
+        // at the builder.
+        GiveSpringBuilder(springs);
+
         // The title column's top, where the page's first spring ended — solved with the
         // page like every other node of the chain (LilyPond's title Prob gets its Y-offset
         // from the same solution_, page-layout-problem.cc:868-878 find_system_offsets).
@@ -823,6 +828,61 @@ internal sealed class PageLayouter
         }
 
         return pageSystems.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The builder <see cref="PositionSystemsOnPage"/> builds a page's spring chain in, lent
+    /// from one builder the thread keeps between pages.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 3.10 pages a keystroke at 14.55 springs each (max 18), and all 5,728 builders
+    /// built were unreachable by the time the render that built them returned. The builders and
+    /// their growth ladders were 1,366 B a keystroke.
+    /// <para>
+    /// ⚠️ THE GIVE IS AFTER THE DUMP, not after the solve, because the chain is read TWICE:
+    /// once into the solver and once, when a probe has asked for the dump, to print spring by
+    /// spring. Both are <c>ToImmutable</c>, which COPIES (measured, session 459 — see
+    /// <see cref="LedgerLineSpannerEngraver"/>'s drawer), so neither the solver nor the dump
+    /// holds the builder; the give simply has to stand after the later of them.
+    /// </para>
+    /// <para>
+    /// The size is not known before the walk: a titled page opens with two springs instead of
+    /// one, a system contributes one node per staff spring (none on a hara-kiri'd system), and
+    /// the closing last-bottom spring is conditional — which is what
+    /// <c>firstStaffPosition</c> exists to record.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a builder parked dirty would hand the next page a chain that opens with
+    /// the previous page's springs, and every solved offset on the page would move. There is no
+    /// early return and no throw between the rent and the give.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one builder a thread at that thread's longest chain — 18 slots, and
+    /// they are EMPTY: a <see cref="Spring"/> is a reference (a sealed record), so what keeps
+    /// the drawer from pinning the previous page's chain is that <c>Clear</c> nulls the slots
+    /// it drops, which is measured with the same probe rather than assumed.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<Spring>.Builder? t_springBuilder;
+
+    /// <summary>Takes the thread's spring builder, or makes the thread's first.</summary>
+    private static ImmutableArray<Spring>.Builder RentSpringBuilder()
+    {
+        var builder = t_springBuilder;
+        if (builder is null)
+            return ImmutableArray.CreateBuilder<Spring>();
+        t_springBuilder = null;
+        return builder;
+    }
+
+    /// <summary>Puts a finished page's builder back, emptied, with its capacity.</summary>
+    private static void GiveSpringBuilder(ImmutableArray<Spring>.Builder builder)
+    {
+        builder.Clear();
+        t_springBuilder = builder;
     }
 
     // SprungStaffOffsets lived here: "how far below the anchor does the first (last) SPRUNG

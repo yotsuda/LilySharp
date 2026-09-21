@@ -92,7 +92,7 @@
 - **:3711** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1118** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:1918** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:1971** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -197,7 +197,7 @@
 - **:4601** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:797** does not spell a per-type padding — no point observes a segno/coda over a
-- **:1345** pinned there), no ledger point.
+- **:1398** pinned there), no ledger point.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:460** no observer distinguishes the two until a merge-differently-* producer lands.
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
@@ -351,7 +351,7 @@
 - **:507** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **:939** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
-- **:963** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+- **:1016** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
@@ -385,14 +385,14 @@
 - **:149** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:175** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
 - **:587** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
-- **:1340** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
-- **:1375** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
-- **:1818** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2062** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2251** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2346** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2357** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2403** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:1393** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
+- **:1428** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
+- **:1871** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:2115** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2304** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2399** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2410** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2456** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:75** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`

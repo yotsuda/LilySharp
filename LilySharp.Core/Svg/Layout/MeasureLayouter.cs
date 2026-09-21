@@ -944,7 +944,7 @@ internal sealed class MeasureLayouter
         var positions = new SpringSolver(springs).GetPositions(force, startX: 0);
 
         // Create columns with solved positions
-        var columns = ImmutableArray.CreateBuilder<ColumnLayout>();
+        var columns = RentColumnBuilder();
 
         for (int i = 0; i < timings.Count; i++)
         {
@@ -968,6 +968,59 @@ internal sealed class MeasureLayouter
                 columns.Add(new ColumnLayout(measure.TotalDuration, endX, 0));
         }
 
-        return columns.ToImmutable();
+        // ToImmutable COPIES (see the drawer's remark), so the builder is finished with here.
+        var laid = columns.ToImmutable();
+        GiveColumnBuilder(columns);
+        return laid;
+    }
+
+    /// <summary>
+    /// The builder <see cref="LayoutColumns"/> gathers a measure's solved columns into, lent
+    /// from one builder the thread keeps between measures.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 3.99 measures a keystroke at 7.35 columns each (max 16), and all 7,368
+    /// builders built were unreachable by the time the render that built them returned. The
+    /// builders and their growth ladders were 1,687 B a keystroke — the smallest of the six
+    /// this session parks, and the most-CALLED of them.
+    /// <para>
+    /// ⚠️ THE SENTINEL IS WHY THE SIZE IS NOT <c>timings.Count</c>: the closing column is
+    /// added only when the measure's total duration stands past the last onset, so the count
+    /// is <c>timings.Count</c> or one more. An exact-sized builder would have to decide that
+    /// before the loop, and the loop's own reading (<c>columns[^1].Timing</c>) is what decides
+    /// it — this is the shape session 451 named, read the other way round.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a builder parked dirty would open the next measure's columns with the
+    /// previous measure's, and <c>GetXForTiming</c> would read them. There is no early return
+    /// and no throw between the rent and the give (the empty-timings guard is at the top of
+    /// the method, before the rent). <c>ToImmutable</c> copies, measured (session 459) — see
+    /// <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one builder a thread at that thread's busiest measure — 16 columns,
+    /// emptied, so it pins no timing.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<ColumnLayout>.Builder? t_columnBuilder;
+
+    /// <summary>Takes the thread's column builder, or makes the thread's first.</summary>
+    private static ImmutableArray<ColumnLayout>.Builder RentColumnBuilder()
+    {
+        var builder = t_columnBuilder;
+        if (builder is null)
+            return ImmutableArray.CreateBuilder<ColumnLayout>();
+        t_columnBuilder = null;
+        return builder;
+    }
+
+    /// <summary>Puts a finished measure's builder back, emptied, with its capacity.</summary>
+    private static void GiveColumnBuilder(ImmutableArray<ColumnLayout>.Builder builder)
+    {
+        builder.Clear();
+        t_columnBuilder = builder;
     }
 }
