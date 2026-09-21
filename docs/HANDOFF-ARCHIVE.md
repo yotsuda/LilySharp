@@ -129,6 +129,46 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第461セッションの経緯
+
+### 1.1 第461セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
+選んだ・⒮¹⁰ と ⒮¹³ と ⒮⁹ と ⒮¹² を並べて訊いた）。★ **`-Start p461` の 1 コマンドで §0 が全部済んだ**
+（HEAD `e7d50aa7`・未 push 2・full `sessions/p461/run1.trx` 8783 / 0 / 3 / 8786・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 459` も自動＝moved 44 行 2,624 字）。
+
+★★★ **⑴ 6 軒 8 行・A/B −18,200 B／打鍵（会計 17,822 の 102.1%＝*上*・予測の帯 −17,500 ± 400 の*外*）。**
+`LayoutEngine.Prelim.cs:370`／`MeasureCollector.cs:4059`／ばねの願いの list を 1 枚の引き出しで 3 軒
+（`Springs.cs:394`＋`:455`＋`LineStartColumn.cs:554`＝**⒲ は型を変えずに同じ賞金で閉じた**）／
+`SvgSystemFragmentCache.cs:740`（StringBuilder）／`ElementCoordinator.cs:2024`／`BeamScoringProblem.cs:771`
+（**park ではなく*建てない***＝点は `_stemXPositions` と `_stemInfos` に既に在る。和の順は同じ）。
+`KnuthPlassBreaker.cs:781` は *1 呼びで N 個*なので外した。**出力は同一**（5,824 行・0 差）。
+⚠️ **上に外れた理由は census の行に書いてあった**＝StringBuilder の行は `odd` 1,738（下限）。§1.0 ⒮¹⁰ の
+「exact の条件」に 1 句足した。
+
+★★★ **⑵ 毒 7 本のうち予測を外したのは 1 本で、それが穴だった。** p1 赤 31／p2 59／p3 830／p5 106、
+p4（D を 1 字だけ残す＝文字列は mismatch 報告しか読まない）緑・p6 緑は予測どおり。**p7（B だけ rent が
+引き出しを空にしない）は赤と予測して緑**。第455 の順番でプローブを当てると、**入れ子の repeat は
+スタックオーバーフローでテストホストごと落ちる**（Lab `nest-probe.txt`）＝**壊れ方は本物で、8,786 本に
+入れ子の repeat を描く本が 1 冊も無かった**。しかも**スレッドで最初の入れ子は壊れない**（引き出しがまだ空）
+＝網の本は**「普通の repeat の後に入れ子」**でないと見えない。⇒ `UnfoldRepeatFrameTests.
+ARepeatNestedInARepeatBody_IsCollectedAsWritten`（2 本）を足した＝毒 7 の下で落ちるのを確かめた。
+
+★ **⑶ 自損 2 つ。** ⑴ **毒を戻すのに `git checkout -- <file>` を使い、未コミットの B の修正ごと消した**
+（プローブの後で気づき、当て直した）＝**毒の戻しは当てる前のバイトを保存して書き戻す**（`poisons.ps1` の
+`finally` がやっている形。手で当てるときも同じ）／⑵ **前便の commit で `OutsideStaffStacker.cs` の BOM が
+3 重**になっていた（`-Start` の後に全 tracked ファイルを走査して 1 軒だけ・今便のコード commit で 1 つに戻した）。
+
+★ **⑷ 終了時**: commit 2 本（code `2dbbeec6`＝Core 8 ファイル＋網＋再生成した 2 枚、**最後の docs は SHA を
+書かない**）。全文は Lab `sessions/p461/`（`prediction.txt`・`ab-*-tc0.txt`・`hashes-after.txt`・
+`poisons.ps1`／`.txt`・`nest-probe.txt`・`Zz461*.cs.txt`）。**最終 full 8785 / 0 / 3 / 8788**（`run2.trx`＝`-End`・
++2 は網）・§7.5（対 `e7d50aa7`）**Core '+' 254 行／REF 0／OWN 0**＝貸し器は LP に対応物が無い。**§7.6 コード中の
+新しい数は 0**（数値はコメント内の実測値だけ）。**§7.7 の匂い**＝⑴ `GeometryScalars` は capture ごとに 346 字の
+文字列を作るが、読むのは mismatch 報告だけ（毒 4 緑）＝**文字列そのものが次の値段**（未測定）／⑵ give を
+忘れても何も投げない（第457 以来同じ）。台帳 851 点／総和不変・snapshot 249・未追跡 0。**push はユーザー**（Lab も）。
+**`-Start p462` の 1 コマンドから入る**。
+
 ## 以下は第460セッションの経緯
 
 ### 1.1 第460セッション（2026-09-21・YT-DELL2）

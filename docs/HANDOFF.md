@@ -140,7 +140,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   `ToImmutable()` は**常に写す**（参照同一性で 4 形とも別配列。対照の `Move`／`Drain` は渡す）、しかも
   **渡す 2 つは builder から外す**（容量 0）＝**park した builder が呼び手の配列を持つことは起こらない**。
   ⚠️ 系＝**`Move`／`Drain` で終わる軒は park しても毎回空から**＝賞金が無い（出口の API を軒ごとに読む）。
-  ⇒ **次の軒**（census 時点の住所で、その行の文字列が HEAD に残るもの・**1 軒 1,600 B 未満＝⒮¹⁵ のほうが高い**）:
+  ⇒ **次の軒**（census 時点の住所で、その行の文字列が HEAD に残るもの・**1 軒 1,600 B 未満＝⒮¹⁵ の残りのほうが高い**）:
   `MeasureLayouter.cs:230` **1,571**／`LayoutEngine.Prelim.cs:827` **1,547**（`odd` 1,736＝下限）／`ArticulationEngraver.cs:422`
   **1,407**／`TieFormattingProblem.cs:775` **1,377**／`LineStartColumn.cs:254` **1,284**／`SharedRenderer.Beams.cs:45` **1,278**／
   `MultiStaffLayouter.cs:1572` **1,153**／`PageBreaker.cs:867`＋`:868` **2,050**＝約 11,670。
@@ -152,13 +152,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ★ **会計の当たり＝第458 99.97%・第459 98.57%・第460 104.2%・第461 102.1%・第462 は census の行だけのファイル 4 本で 99.7%**
   （ファイルを 1 つずつ抜く A/B・Lab `sessions/p462/attrib.txt`）＝**give 点が同じメソッドにあり、行が `actual` の形で、
   ⚠️ *その行の `odd` が 0 なら*、会計はほぼ exact**（上に外れた便は `odd` の行か、census に行の無い隣を持っていた＝**予測の前に `odd` 列を読む**）
-- ★★★ **⒮¹⁵ 寸法を言った器を*写して*捨てる軒＝census が構造的に見ない族**（第462 起票）。第457 の計器は
-  `new X<T>(…)`（括弧に何かある＝寸法を言った軒）を数えない（Lab `p457/instrument.ps1:63`）＝**寸法ちょうどの List を建てて
-  `ToArray`／`ToImmutableArray` で写す軒は、器を 2 度建てても表に出ない**。第462 がその 1 軒（`BuildAboveProgram` の `staves`）を
-  配列へ直接書く形にして **−5,080 B／打鍵**（ファイルを抜く A/B からの差し引き）＝**census のどの 1 行より高い**。
-  残り（grep・同じ変数を写す形だけ）9 軒: `OutsideStaffStacker.cs:911` `:912` `:1471` `:1472`（`profUps`／`profDowns`・
-  above 側は約 51 回／打鍵）／`MeasureCollector.ItemFactory.cs:719` `:853`／`AccidentalPlacement.cs:413`／
-  `ElementCoordinator.cs:511` `:535`。**値段は未測定**＝**計器を「寸法つき」にも広げて数えてから直す**
+- ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
+  と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
+  `Zz463Leg.cs.txt` を price／live の 2 回・join は `joined.csv`・写しの候補は `copies.csv`。**分母 3,687,958**）。
+  **445 軒・生きている 228 軒で actual＋obj 774,764 B／打鍵＝21.0%**（scratch 169 軒 650,950）。**第463 が 8 軒 −204,092 を閉じた**。残り（`remaining.txt`・census 時点の住所）:
+  ⑴ **`HorizontalSkyline.cs:194`（`Clone`）164,310／`:168`（`FromBoxes`）42,582／`:362` 120,862＝List が skyline の中身そのもの**
+  ＝直すなら copy-on-write／保留の skyline＝**土台**（⒫′ と同じ家）／⑵ escape の頭＝`MeasureCollector.ItemFactory.cs:322` 51,103・
+  `MeasureCollector.cs:232` 39,235（alive 95.5%＝session が持つ）／⑶ `AugmentSkylinesWithScripts` の遅延経路の builder（返す点が無い）／
+  ⑷ 1 軒 13,000 未満の scratch 約 140 軒（頭は `TabResolver.cs:310` 12,775）／⑸ **計器の外**＝
+  `SlurScoringProblem` の候補 list と、`new PriorityQueue`・配列など**どちらの census の綴りにも無い器**（E の 76,594 はそこに居た）。
+  ⚠️ **読み方の罠 2 つ**: ⑴ **`zero 100%` の Builder 行は `MoveToImmutable` で終わる軒**（Move が builder を空にするので drain が 0 件と読む
+  ＝配列は手渡し済みで waste ではない。賞金は builder 本体だけ・34 軒）／⑵ **`obj` 欄の builder 56 B は本体 32 B＋長さ 0 の配列 24 B**
+  （計器の `CreateBuilder<T>(0)` が配列を建てる）＝**第463 の C が予測の 57% に外れた理由**
 - ★★★ **⒮¹² splice の「trivia だけの窓」の門は、どちらの母集団にも観測者が居ない**（第458 起票・実測）。
   `MeasureCollector.TrySpliceSuffix`（`Resume.cs:340`）は**コーパス 1 sweep で 7,016 回訊かれ、7,016 回とも
   decline**（`WindowIsTriviaOnly` が true を返したのは **0 回**・裏の token walk は 891 回＝打鍵ごとに memo）。
@@ -276,6 +281,37 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 242,086 / 250,000 B・1,874 / 2,000 行**（第462 が §5.3 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第463セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵**（ユーザーが選んだ）。
+★ **`-Start p463` の 1 コマンドで §0 が全部済んだ**（HEAD `519e778a`・未 push 6・full `sessions/p463/run1.trx`
+8785 / 0 / 3 / 8788・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 461` も自動＝moved 41 行 2,381 字）。
+
+★★★ **⑴ 計器を「括弧に何かある」と target-typed に広げた＝第457 の census が見ない母集団は打鍵の 21.0%**
+（445 軒・生きている 228 軒・774,764 B／打鍵）。較正は ⒫′ と 1 B 差。数字と罠は §1.0 ⒮¹⁵。
+
+★★★ **⑵ 8 軒・A/B −204,092 B／打鍵＝打鍵の 6.06%**（予測の点 217,203 の 94.0%・帯 200,000〜250,000 の中）。
+park 4 軒（`TrySplit` の StringBuilder＋2 本の List／paging の builder の*配列*／beam の候補 list と quant 格子／
+`BestFirstScorer` の `PriorityQueue`）・**配列へ直接** 3 軒（`BeamGroup.WithLiveItems`・`AccidentalPlacement`・
+`OutsideStaffStacker` の profile 2 組＝⒮¹⁵ が名指した軒）・`MoveToImmutable` 1 軒（`PageLayouter`）。**出力は同一**（5,824 行・0 差）。
+**最大は census の外**＝`Solve` の寸法つき `PriorityQueue` 76,594（候補 list の隣で見つけた）。paging の builder は同時に生きるので**配列ごと** park。
+
+★★ **⑶ 会計をファイルごとに割った**（Lab `attrib.txt`・和 204,940）。**census の行だけのファイル 5 本は 97.4〜99.96%**。
+外れたのは C だけ＝**57%**＝計器の builder の `obj` 56 B は本体 32 B＋長さ 0 の配列 24 B。census の外の 2 軒は帯の中。
+
+★★ **⑷ 毒 11 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 75／8／136／132／148／1／33・緑 2 本は予測どおり。
+**毒 5（quant 格子を汚して返す）は返らない**＝格子が beam ごとに伸び、候補はその 2 乗（RULES §5.0 の宿主が 1 つ増えた）。
+**毒 7（profile の上下を入れ替える）は緑**＝読むのは memo の `RefSequenceEqual` だけで 2 列を対で比べる＝毒が恒等。
+毒 2 の 8 赤＝辞退は安全だが、fragment の*再利用*を数える網が居る。⚠️ 毒 7 の下の 1 赤 `Lsp.UsingExpansionCacheTests` は揺らぎ（毒の下で絞ると緑）。
+
+★ **⑸ 終了時**: commit 2 本（code＝Core 9 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p463/`（`README.txt`・`prediction.txt`・
+`attrib.txt`・`poisons.ps1`／`.txt`・`remaining.txt`・`Zz463*`）。**最終 full 8785 / 0 / 3 / 8788**（`run2.trx`＝`-End`）・§7.5（対 `519e778a`）
+**Core '+' 239 行／REF 1（既存行を `try` へ字下げ）／OWN 0**＝貸し器は LP に対応物が無い。**§7.6 コード中の新しい数は 0**。
+**§7.7 の匂い**＝⑴ `OneScorer` の method group が beam ごとに delegate を建てる／⑵ 候補の本体 `BeamConfiguration` は class で 1 beam 237 個（どちらも未測定）。
+台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p464` の 1 コマンドから入る**。
+
+## 以下は第462セッションの経緯
+
 ### 1.1 第462セッション（2026-09-21・YT-DELL2）
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが選んだ）。
@@ -309,46 +345,6 @@ tuplet の HashSet＝訊くのは 2 列だけ・tie の `columnKeys`＝貸した
 貸し器と歩き方は LP に対応物が無い。**§7.6 コード中の新しい数は 0**。**§7.7 の匂い**＝⑴ `MusicMarkEngraver` の `GroupBy` が
 pass ごとに Lookup と grouping を建てる／⑵ `prelimTies`・`prelimSlurs` を `ToImmutableArray()` で 3 回ずつ写す（どちらも未測定）／
 ⑶ give を忘れても何も投げない。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p463` の 1 コマンドから入る**。
-
-## 以下は第461セッションの経緯
-
-### 1.1 第461セッション（2026-09-21・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
-選んだ・⒮¹⁰ と ⒮¹³ と ⒮⁹ と ⒮¹² を並べて訊いた）。★ **`-Start p461` の 1 コマンドで §0 が全部済んだ**
-（HEAD `e7d50aa7`・未 push 2・full `sessions/p461/run1.trx` 8783 / 0 / 3 / 8786・台帳 851 点／
-総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 459` も自動＝moved 44 行 2,624 字）。
-
-★★★ **⑴ 6 軒 8 行・A/B −18,200 B／打鍵（会計 17,822 の 102.1%＝*上*・予測の帯 −17,500 ± 400 の*外*）。**
-`LayoutEngine.Prelim.cs:370`／`MeasureCollector.cs:4059`／ばねの願いの list を 1 枚の引き出しで 3 軒
-（`Springs.cs:394`＋`:455`＋`LineStartColumn.cs:554`＝**⒲ は型を変えずに同じ賞金で閉じた**）／
-`SvgSystemFragmentCache.cs:740`（StringBuilder）／`ElementCoordinator.cs:2024`／`BeamScoringProblem.cs:771`
-（**park ではなく*建てない***＝点は `_stemXPositions` と `_stemInfos` に既に在る。和の順は同じ）。
-`KnuthPlassBreaker.cs:781` は *1 呼びで N 個*なので外した。**出力は同一**（5,824 行・0 差）。
-⚠️ **上に外れた理由は census の行に書いてあった**＝StringBuilder の行は `odd` 1,738（下限）。§1.0 ⒮¹⁰ の
-「exact の条件」に 1 句足した。
-
-★★★ **⑵ 毒 7 本のうち予測を外したのは 1 本で、それが穴だった。** p1 赤 31／p2 59／p3 830／p5 106、
-p4（D を 1 字だけ残す＝文字列は mismatch 報告しか読まない）緑・p6 緑は予測どおり。**p7（B だけ rent が
-引き出しを空にしない）は赤と予測して緑**。第455 の順番でプローブを当てると、**入れ子の repeat は
-スタックオーバーフローでテストホストごと落ちる**（Lab `nest-probe.txt`）＝**壊れ方は本物で、8,786 本に
-入れ子の repeat を描く本が 1 冊も無かった**。しかも**スレッドで最初の入れ子は壊れない**（引き出しがまだ空）
-＝網の本は**「普通の repeat の後に入れ子」**でないと見えない。⇒ `UnfoldRepeatFrameTests.
-ARepeatNestedInARepeatBody_IsCollectedAsWritten`（2 本）を足した＝毒 7 の下で落ちるのを確かめた。
-
-★ **⑶ 自損 2 つ。** ⑴ **毒を戻すのに `git checkout -- <file>` を使い、未コミットの B の修正ごと消した**
-（プローブの後で気づき、当て直した）＝**毒の戻しは当てる前のバイトを保存して書き戻す**（`poisons.ps1` の
-`finally` がやっている形。手で当てるときも同じ）／⑵ **前便の commit で `OutsideStaffStacker.cs` の BOM が
-3 重**になっていた（`-Start` の後に全 tracked ファイルを走査して 1 軒だけ・今便のコード commit で 1 つに戻した）。
-
-★ **⑷ 終了時**: commit 2 本（code `2dbbeec6`＝Core 8 ファイル＋網＋再生成した 2 枚、**最後の docs は SHA を
-書かない**）。全文は Lab `sessions/p461/`（`prediction.txt`・`ab-*-tc0.txt`・`hashes-after.txt`・
-`poisons.ps1`／`.txt`・`nest-probe.txt`・`Zz461*.cs.txt`）。**最終 full 8785 / 0 / 3 / 8788**（`run2.trx`＝`-End`・
-+2 は網）・§7.5（対 `e7d50aa7`）**Core '+' 254 行／REF 0／OWN 0**＝貸し器は LP に対応物が無い。**§7.6 コード中の
-新しい数は 0**（数値はコメント内の実測値だけ）。**§7.7 の匂い**＝⑴ `GeometryScalars` は capture ごとに 346 字の
-文字列を作るが、読むのは mismatch 報告だけ（毒 4 緑）＝**文字列そのものが次の値段**（未測定）／⑵ give を
-忘れても何も投げない（第457 以来同じ）。台帳 851 点／総和不変・snapshot 249・未追跡 0。**push はユーザー**（Lab も）。
-**`-Start p462` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
