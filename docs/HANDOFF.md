@@ -78,24 +78,28 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > RULES §5.3 と同内容だった 1 件で **−979 字**）。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **⒮⁶ 「建てない」の島の残り＝47,756 B／打鍵 1.053%**（**第451 が census を回し直した実測**＝
-  引き算の 62,314 を置き換えた。zero 10,107 ＋ one 37,649・782 サイト中 live 367・分母 4,534,661。
-  現在地は Lab `sessions/p451/site-prices-after.txt`、脚は同 `instrument.ps1`＋`Zz451.template.cs`＋
-  `Zz451Leg.cs.txt`＝1 run で全サイト）。⚠️ **門前払いと実証済みの 3 軒 16,058 は除く**
-  （`ItemSkylineFactory.cs:465` 9,118＝器を返す／`HorizontalSkyline.cs:63` 4,171＝field を `Merge` が読む／
-  `BeamSubdivision.cs:253` 2,769＝器を返す。**第448 が挙げた 4 軒目 `MultiStaffLayouter.cs:754` 7,082 は
-  第451 が閉じた**＝「器が呼び手へ出る」は*その直し方*の門前払いであって、軒の門前払いではなかった）。
-  ⇒ **手が動く残りは約 31,700 B／打鍵 0.70%**: `LayoutEngine.Annotations.cs:531` **2,639**
-  （system ごとの Dictionary が `List<Dictionary>` に入る＝直すなら別の器）／`MeasureLayouter.cs:466`
-  **1,070**・`:319` **1,012**・`:573` **858**（返る器／辞書の中）／`LedgerLineSpannerEngraver.cs:160` **909**／
-  `ArticulationEngraver.cs:431` **817**／`SvgSystemFragmentCache.cs:237` **781**／
-  `SpacingRules.LedgerRods.cs:79` **766**／`MeasureContentKey.cs:568` **662**／`MeasureCollector.cs:3134` **611**／
-  `SpacingRules.MeasureSprings.cs:338` **606**／`LineStartColumn.cs:254` **601**／`ElementCoordinator.cs:600`
-  **549**（`CollectBeamCollisions` が 90.2% 空の器を返す＝第451 は兄弟の `:998` だけ閉じた）。
-  ⚠️⚠️ **`Syntax/SyntaxNode.cs:521` の Stack 744 は*計器の見間違い*＝一覧から落とす**——
-  **zero 欄は drain 時点の最終 `Count`** なので、**push/pop や `Clear` で空になった器が「一度も埋まらなかった」の
-  顔で出る**。**反証は同じ表の中にある**＝`actual` 546（＞0）は容量が伸びた証拠。**zero 欄は `actual` と
-  一緒に読む**（規則は RULES §5.3 末尾）
+- ★★ **⒮⁶ 「建てない」の島の残り＝41,734 B／打鍵 0.920%**（第451 census 47,756 から**第454 が閉じた
+  8 軒の census 行を*行ごと*引いた**＝aggregate どうしの引き算ではない。現在地は Lab
+  `sessions/p451/site-prices-after.txt`・脚は同 `instrument.ps1`＋`Zz451.template.cs`＝1 run で全サイト。
+  **次にこの島へ戻る便は回し直すこと**）。⚠️ **門前払いと実証済みの 3 軒 16,058 は除く**
+  （`ItemSkylineFactory.cs:465` 9,118／`HorizontalSkyline.cs:63` 4,171／`BeamSubdivision.cs:253` 2,769＝
+  どれも器が呼び手へ出る）。⇒ **手が動く残りは約 25,700 B／打鍵 0.57% で、主力は下の ⒮⁷ に移した**。
+  単独で残るのは `MeasureLayouter.cs:466` **1,070**（返る器の中の 1 件）／`SvgSystemFragmentCache.cs:237`
+  **781**（⚠️ **1 件で 1,928 B＝`Entry` が大きく capacity 3 が 3 枠取る。直すなら `Entry` を class にするか
+  鍵を減らす＝設計変更**）／`LineStartColumn.cs:254` **601**（max 3・`MinimumDistance` を span にすれば閉じる）／
+  `VerticalSkyline.cs:76` **511**／`LayoutEngine.Prelim.cs:534` **433**／`OutsideStaffStacker.cs:873` **401**／
+  `SpacingRules.LedgerRods.cs:79` の hold1 半分 **238**（第454 は lazy 半分だけ取った）。
+  ⚠️⚠️ **zero 欄も one 欄も「drain 時点の最終 `Count`」**＝`Clear` で使い回す器は*両方に*化けて出る
+  （zero の例＝`SyntaxNode.cs:521` の Stack 744・同じ表の `actual` 546 が反証／**one の例＝
+  `MusicMarkEngraver.cs:697` 330＝group ごとに `Clear` する 3 本のバッファ＝第454 が一覧から落とした**）。
+  **`actual` と*コード*の両方と突き合わせて読む**（規則は RULES §5.3 末尾）
+- ★★ **⒮⁷ 「辞書／配列の中の 1 件の器」＝6 軒 5,081 B／打鍵 0.112%・直し方は 1 つ**（第454 が ⒮⁶ から
+  括り出した）。`MeasureLayouter.cs:319` **1,012**・`:573` **858**（`wishLefts` は局所＝`ApplyLeftHeadWidth`
+  を span にすれば単独でも閉じる）／`LedgerLineSpannerEngraver.cs:160` **909**／
+  `ArticulationEngraver.cs:431` **817**／`MeasureContentKey.cs:568` **662**（要素が `long`＝struct 化が最も効く）／
+  `MeasureCollector.cs:3134` **611**。**どれも `Dictionary<K, List<V>>`／`List<V>?[]` に 1 件だけ入る形**で、
+  7 か所を別々に直すのではなく **`OneOrMany<T>` 相当の struct を 1 つ入れて `CollectionsMarshal
+  .GetValueRefOrAddDefault` で書く**のが筋。⚠️ **値段より先に「器が呼び手へ出るか」を軒ごとに見る**
 - ★★ **⒲ ばねの願いを 0／1／2 で持つ＝`SpacingRules.Springs.cs:394` 2,888 B／打鍵 0.063%**
   （第451 実測・37.81 回／打鍵・1.37 件／回・**max 2**＝zero 20.7%・one 21.1%・残り 58.2% が*ちょうど 2*。
   census の zero+one 欄が言うのは 952 だけで、**残りは「2 件のとき」＝島が原理的に見ない分**）。
@@ -166,6 +170,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ＝`role` が 0／1／3 の小節だけ。⚠️ **cache の健全性に触る**（RULES §5.0 の soundness bias）ので、
   **値段（1 打鍵あたりの系の再計算数）を測る前にまず判断**。網は `MeasureContentKeySpanTests`＝
   **端だけにすると赤になる**ので、直すときは網も一緒に書き換える
+- ★★ **⒳⁷ 小節線の floor は*誰にも届いていない*＝`LeadingMusicalItems` の答え**（第454 起票・実測）。
+  `MeasureLayouter.CreateLastToBarlineSpring` は次小節の先頭の音を `NoteColumnToBarlineFloorPair` に渡し、
+  `EnsureMinDistance` と rod にする。**計器（Lab `sessions/p454/counts.txt`）＝102,397 回／コーパス
+  ＝55.4 回／打鍵・90.8% が非 null・答えが sky を変えるのは 24 回（0.023%）だが rod は 6,647 回（6.5%）
+  変える**。それでも **その答えを常に null にする毒は、スイート 8,780 本も実コーパス 5,824 ページも
+  1 つも動かさない**（Lab `green-to-corpus.txt`）。⇒ **rod は圧縮長の床で、headroom の答えより下にあれば
+  force ≥ 0 では効かない**——`CreateInterColumnSpring` の ⚠️ が 2026-08-02 に同じことを書いている。
+  ⇒ 二択＝**⑴ 網を書く／⑵ 効かない床を計算しない**（55.4 回／打鍵ぶんの歩き）。**値段は未測定**。
+  ⚠️ **もう一方の caller `SpacingRules.MeasureSprings:278` はコーパスで 0 回**＝計器は両方に置くこと
 - ★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり）
 - **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
@@ -204,6 +217,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | `GreenRun` の 2 本目の手（⒮⁵） | 449 | 起票どおり閉じた（予測 18,821 対 実測 18,788＝99.8%）。**残りは尾の 0.4%＝約 33 B／打鍵**＝4 本目の手は仕上げ 4 本の代償に合わない。⚠️ **毒は「0.4% しか通らない腕」3 本も赤にした**＝尾は小さくても見ている本は在る |
   | ⒮⁶ の 6 軒（起票 3 ＋ 隣 2 ＋ 配列 1） | 450 | 実測 −16,910（予測 16,958＝99.7%）。**島が説明したのは 11,042 だけ**＝残りは「ちょうど 2 件の器」・span 化した軒の 2 件目・計器が見ていない 1 要素配列。**島は下限** |
   | ⒮⁶ の 6 軒（builder 2・遅延 4） | 451 | 実測 −14,689（会計 15,432＝**95.2%＝下に外れた**）。`StackStaves`／`LayoutStaffGroups` は**寸法が既知だったので「1 個を局所で持つ」ではなく*配列*が正解**＝census の hold1 欄は*直し方を選べない*。残りは ⒮⁶ の一覧（実測 47,756） |
+  | ⒮⁶ の 8 軒（器の置換 1・遅延 5・0/1 が 2） | 454 | 実測 **−14,056**（会計 12,953＝**108.5%＝上に外れた**。450 は上・451 は下・454 は上）。**79% は 1 軒**＝`LayoutEngine.Annotations:531` の「system ごとの Dictionary → 1 枚の flat な `double[]`」で、**census が付けた値段は 2,639 だったが実体は 11,105**（第451 の教訓の 2 例目＝hold1 欄は直し方を選べない）。⚠️ **`OutsideStaffStacker.Place` の 3 軒は 1 つのメソッドの中**＝毒 5 は 115 赤 |
 - ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒱ ✅ 閉じた**
   （⚠️ **⒱ と ⒩⁴ の脇は第453**＝**閉じ方 3 通り**〔網を建てた／原理的に観測者が居ない＝⒳⁵／網を*別の層*に建て直した〕と
   **「毒が緑」の 3 つの顔**は **RULES §5.4 末尾**に出た。経緯の全文は第453 の §1）
@@ -212,7 +226,84 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **残った印なしは 81 軒 27,193 B で、どれも尾が 200 字未満＝割らない**（印のほうが高くつく）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**。
 
-### 1.1 第453セッション（2026-09-21・YT-DELL2）
+### 1.1 第454セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮⁶**（ユーザーが
+選んだ・⒮⁶ と ⒮″ と ⒲ と ⒭′ を並べて訊いた）。★ **`-Start p454` の 1 コマンドで §0 が全部済んだ**
+（HEAD `7134e369`・未 push 20・full `sessions/p454/run1.trx` 8780 / 0 / 3 / 8783・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 452` も自動＝moved 61 行 3,786 B）。
+**裏取りは 1 つも赤を出さなかった。**
+
+★★★★ **⑴ census の hold1 欄が 4 倍*安く*値段を付けていた軒があり、それがこの便の 79% だった。**
+`LayoutEngine.Annotations.cs:531` は **system ごとに `Dictionary<int,double>`（staff index → −Y）を建てて
+`List<Dictionary>` に入れる**形で、census の「建てない」表は **hold1 2,639**（＝1 件で終わる 23.8% ぶん）と
+言っていた。だが **鍵は 0..n−1 の密な整数**なので、**直し方は「1 件を局所で持つ」ではなく*器の置換*＝
+stride（maxStaffIndex+1）の **flat な `double[]` 1 枚**（不在は NaN）。すると **第1 表の actual 6,992 ＋
+obj 4,113 = 11,105 が丸ごと消え**、代わりに払うのは配列 1 枚の約 870。⇒ **この軒は 2,639 ではなく約 10,200**。
+★★★ **第451 が `StackStaves` で書いた「hold1 欄は*直し方を選べない*」の 2 例目**で、**今回は 4 倍**。
+⇒ ★★ **census の第2 表（建てない）だけを見て軒を選ぶと、置換できる器を全部*安く*見積もる。
+値段を付け直すときは第1 表の `actual + obj` を隣に置く。**
+
+★★★ **⑵ 8 軒・5 ファイル・A/B は −14,056 B／打鍵＝会計 12,953 の 108.5%（*上*に外れた）。**
+内訳は器の置換 1（上記）／遅延 5（`OutsideStaffStacker.Place` の padded 2 本＝hPad≤0 で 71.3% が空・
+同 `BuildSystemMemo` の `used`＝99.6% が空・`LedgerColumnsOf`＝87.0% が空で共有の空配列を返す・
+`CollectBeamCollisions`＝90.2% が空で `ref List<BeamCollision>?` を 7 本のヘルパに通す）／0 か 1 が 2
+（`Place` の `forbidden`＝97.7% が*ちょうど 1*で、**1 件の sort は恒等だから `NearestAllowedOne` は
+定義上 `NearestAllowed` と同じ**・`LeadingMusicalItems`＝非 null が 100% 1 件なので 1 要素配列）。
+⚠️ **予測は「会計は外れる。*下*に外れたら flat 配列の width を疑え」と*方向まで*書いてあった**
+（Lab `prediction.txt`）——**外れたのは上**。**第450 上・第451 下・第454 上**＝器の置換の会計は両方向に外す。
+
+★★★ **⑶ 毒 12 本中 10 本が予測どおり。残り 2 本は「RED 予測なのに緑」で、*両集団とも*緑。**
+赤になったのは flat 配列の system 次元（書き側 +9・読み側 +1）・`minStaffYAt` を最大に（+2）・
+padded を素の profile に（+26）・**1 件の腕を黙らせる（+115）**・overflow を空で種まき（+3）・
+ledger 列を捨てる（+7）・beam collision を null で返す（+3）。緑を予測して緑だったのは 2 本
+（NaN 番人を素で返す＝*置いていない staff を訊かれる system が無い*／`LeadingMusicalItems` の
+overflow を空で種まき＝*2 件目が来ない*）。⇒ **予測外の 2 本は ⑷**。
+
+★★★★ **⑷ 緑の 2 本に*計器*で「腕は走ったか」を訊いたら、答えが正反対だった。**（第453 の作法）
+⒜ **hairpin を `used` に入れない毒**＝**コーパスで `part.Hairpins` のループが 0 回**（`hairpin.adds 0`）
+＝**腕がそもそも走らない**＝毒は恒等写像（第453 ⑼ の「3 つ目の顔」の 2 例目）。
+⒝ **`LeadingMusicalItems` を null にする毒**＝逆に **102,397 回／コーパス＝55.4 回／打鍵走り、90.8% が
+非 null**。しかも **答えは rod を 6,647 回（6.5%）・sky を 24 回変える**——**なのにスイート 8,780 本も
+実コーパス 5,824 ページも 1 つも動かない**。⇒ ★★★ **rod は*圧縮長の床*で、headroom の答えより下にあれば
+force ≥ 0 では効かない**（`CreateInterColumnSpring` の ⚠️ が 2026-08-02 に同じことを書いている）。
+⇒ ★★★ **「毒が緑」の 4 つ目の顔＝*腕は走り、値も変わり、それでも下流の不等号に飲まれる*。**
+⑴〜⑶（観測者が居ない／原理的に居ない／毒が恒等）と違い、**これは計器の回数を見ても分からず、
+「変えた値が誰に届くか」を追って初めて割れる**。起票は **⒳⁷**（§1.0 ⒝）。
+⚠️ **もう一方の caller（`SpacingRules.MeasureSprings:278`）はコーパスで 0 回**＝**計器は全 caller に置く**。
+
+★★ **⑸ `one` 欄にも `zero` 欄と同じ罠がある。** §1.0 は「`Clear` で空になった器が zero に化ける」と
+書いていたが（`SyntaxNode.cs:521`）、**`MusicMarkEngraver.cs:697` の 330 は group ごとに `Clear` して
+使い回す 3 本のバッファ**＝**最後の group の `Count` が 1 だっただけ**で、これは *one* 欄の同じ病。
+⇒ **一覧から落とした**（§1.0 に両方の例を並べた）。
+
+★★ **⑹ 残りを 2 つに割った。** ⒮⁶ の主力はもう「辞書／配列の中に 1 件だけ入る器」6 軒 5,081 B／打鍵で、
+**直し方が 1 つ（`OneOrMany<T>` 相当の struct ＋ `CollectionsMarshal.GetValueRefOrAddDefault`）**なので
+**⒮⁷ として括り出した**。⒮⁶ に残る単独の軒は 7 つ（§1.0）。⚠️ **⒮⁶ の 41,734 は
+「第451 census から閉じた 8 軒の*行*を引いた」数**＝aggregate どうしの引き算ではないが、
+**次にこの島へ戻る便は census を回し直すこと**。
+
+★ **⑺ 出力は同一。** 実コーパス 231 冊 × 8 打鍵の**全ページ SHA-256＝5,824 行・0 差**
+（p451／p439 と同じ絵）。full は開始時と同じ **8780 / 0 / 3 / 8783**＝**網は 1 本も増えていない**
+（⒳⁷ は「網を書くか計算をやめるか」の判断が先）。
+
+★ **⑻ 終了時**: commit 2 本（code `4fc41912`＝Core 5 ファイル＋再生成した `APPROXIMATIONS.md`／
+`magic_constants.csv`・docs 1 本＝**この文を含むので SHA は書かない**＝§5.4）。
+**最終 full 8780 / 0 / 3 / 8783**（`sessions/p454/run3.trx`）・§7.5（対 `7134e369`）**Core '+' 147 行／
+REF 0／OWN 0**＝⚠️ **REF 0 は監査対象だが、足したのは器の形だけで*式も定数も 0***（§7.6 ⒟。
+`APPROXIMATIONS.md`・`magic_constants.csv` は**行番号と 2 行の字面が動いただけ**で、
+**毒の前に `LILYSHARP_UPDATE_DOCS=1` で再生成した**＝第449 の罠を踏んでいない）・**§7.7 の匂いは 0**
+（新しい分岐は `NearestAllowedOne` 1 本で、**n==1 の sort が恒等だから**という証明が付いている）・
+**未 push 21**・台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609。
+天井は `-End` 時点で **HANDOFF 439,897 B（残り 10,103）・§1 現在便 16,181 字（残り 3,819）**。
+全文は Lab `sessions/p454/`（`prediction.txt`＝会計と*方向*・`poisons.ps1`／`poisons.txt`＝毒 12・
+`green-to-corpus.ps1`／`green-to-corpus.txt`＝緑を実コーパスに訊き直した台・`instrument.ps1`＋
+`Zz454.cs` の雛形＋`Zz454Count.cs.txt`＝⑷ の計数・`counts.txt`・`Zz454Ab.cs.txt`／`ab-*.txt`・
+`Zz454Hash.cs.txt`／`hashes-after.txt`・`p454-core.patch`・`commit-code.txt`）。**push はユーザー**（Lab も）。
+⚠️ **天井の残りは §1 が 3,819 字・HANDOFF 全体が 10,103 B**＝**次便は語る前に §1.0 の ✅ を落とすこと**。
+**`-Start p455` の 1 コマンドから入る**。
+
+## 以下は第453セッションの経緯
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒱**（ユーザーが
 選んだ・⒱ と ⒮⁶ と ⒲ と ⒮″ を並べて訊いた）。★ **`-Start p453` の 1 コマンドで §0 が全部済んだ**
@@ -305,66 +396,6 @@ CLAUDE-OPERATIONS の「2 行直したのに 10 行」と同じ合図。⇒ ★�
 §1.0 は `-Start` が逐語で刷る）。⇒ 代わりに **§7 3「閉じたら消す」を回した**＝上記 **−979 字**。
 ⇒ ★★ **「着手しない」の判断材料は意欲ではなく*口座*である**——天井は §1.0 と語りの**共有**なので、
 **次便の予算は「20,000 − §1.0」で先に読める**。
-
-## 以下は第452セッションの経緯
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒱**（ユーザーが
-選んだ・⒱ と ⒮⁶ と ⒮″ と ⒲ を並べて訊いた）。★ **`-Start p452` の 1 コマンドで §0 が全部済んだ**
-（HEAD `336d8f3a`・未 push 12・full `sessions/p452/run1.trx` 8774 / 0 / 3 / 8777・台帳 851 点／
-総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 450` も自動）。**裏取りは 1 つも赤を出さなかった**。
-⚠️ **`-Start` が最後に言う「次: §1 に『## 以下は第451セッションの経緯』を立ててから full」を*先に*
-やらないと `HandoffArchiveContinuityTests` の 3 本が赤**＝別件で回したフルで踏んだ。**§0 の順序は
-load-bearing** の 2 例目（1 例目は第410 ⑾ の「アーカイブを先に回すと §1 が predecessor を失う」）。
-
-★★★★ **⑴ 「空にする毒」が緑でも、*巨大にする毒*を当てると「建てていない」と「建てたが出会わない」が
-割れる。** ⒱ の 4 件は「`[]` にしても全部緑」だけが根拠だったので、**同じ箱を `(-1000, 1000, x, x+50)` に
-する毒**を並べて当てた。`OtherHeads`／`Dots`／`Accidentals` は**実寸の毒でも本が動いた**（＝網が無いだけ）。
-**`Flag` だけは実寸 0 冊・巨大 19 冊**＝**建っていて読まれているのに、実寸では誰の前にも立たない**。
-⇒ ★★★ **「毒が緑」は「観測者が居ない」の報せだが、*その箱が仕事をしているか*は別の毒が要る**
-（規則は RULES §5.4 末尾）。⇒ 旗は網ではなく **⒳⁵ として起票**（Lily# は `item is NoteItem` にしか
-旗の箱を建てず、単音の tie は必ず符尾の反対側＝原理的に出会えない。LP が旗を入れるのは和音の場合）。
-
-★★★★ **⑵ 網は 3 冊で、LP 双子は 3 冊とも EXACT。** `lysc ly` で書き出して
-`audit/lp-geometry/probes/tie-outline-boxes.ly` に組み、`Measure-LilyPondProbe.ps1` で 0.6 秒（⚠️ **`< NUL`
-の回避は効いたまま**）:
-| 本 | 音 | LP `w` / `y` | 何が居なければ違う答えになるか |
-|---|---|---|---|
-| TVDOT | `<c e g>4.~ <c e g>8 <c e g>2` | 4.006155 / −4.000000・**1.801955** / −2.750000・3.219055 / 0.225000 | **付点**（真ん中の tie は`w` 2.566955 になる＝付点 1 列ぶん広い） |
-| TVACC | `<c g>2~ <c g aes>2` | 3.875445 / −3.750000・**1.124045** / −0.671696 | **臨時記号**（上の tie は `w` 3.051745 になる＝`aes` の♭の前で止まらない） |
-| TVOTH | `c2~ <b, c>2` | 5.187845 / **−4.500000** | **結ばれていない符頭**（`y` −3.750000 になる。⚠️ **`w` は 1 ULP も動かない**） |
-⚠️⚠️ ★★ **TVOTH は*幅では見えない*** ——`b,` は tie の Y に居ないので outline の読みは変わらず、
-変わるのは**候補ごとの点数＝選ばれる position** だけ。**幅で書いた網はこの箱を捨てても緑**＝
-第451 の毒が返ってきた形そのもの。⇒ **同じ島でも「何で読むか」は箱ごとに決まる**。
-
-★★★ **⑶ 第450 の ⑶（`DrawChord` の付点 support）も閉じた＝同じ規則が*2 つの枝*に書いてある。**
-`DrawNote` と `DrawChord` は同じ「旗が付点の行に届いたら付点は旗の右」を別々に書いていて、
-**`DrawNote` 側の観測者 5 本（`dotted-flag-dot-column`／`cue-flag-dot`／`grace-dot-flag-column` の
-snapshot と `GraceBodyValidatorTests` 2 本）は*全部が単音か grace*** ＝和音の枝を通る本が 1 冊も無い。
-⇒ **和音版 4 列の本**（`<g b>8.` `<f a>8.` `<g b>16.` `<f a>16.`・⚠️ **休符は連桁断ち**＝連桁の列に旗は無い）
-を LP に訊くと **2.5174 / 1.7542 / 2.5174 / 2.5174＝単音の 4 つと同じ答え**で、**Lily# も 4 つとも一致**。
-毒（支柱を空 span に）は **3 列を 0.7632 縮める**——`<f a>8.` だけ動かないのが対照
-（旗が持ち上がらない付点の行に届かない）。probe は `chord-flag-dot-column.ly`。
-
-★★★ **⑷ 陽性対照は毒 1 本につき網 1 本**: `no-dots`／`no-accidentals`／`no-others` はそれぞれ
-**`TieOutlineBoxTests` の自分の 1 本だけ**を赤にし、残り 2 本は緑。`chord-nosupp` は
-**`ChordDotColumnTests` だけ**を赤にし、tie の 3 本は緑。`note-nosupp` は新しい 4 本すべて緑
-（＝単音の枝には既に別の観測者 5 本が居る）。**`no-flag` はどの網も赤にしない＝予測どおり**。
-
-★ **⑸ `Core` は 1 行も動いていない。** この便が足したのは試験 2 ファイル（`TieOutlineBoxTests.cs`
-`ChordDotColumnTests.cs`＝**+4 本**）と probe 2 ファイル（`tie-outline-boxes.ly`
-`chord-flag-dot-column.ly`）と docs だけ。⇒ **出力同一は構成から保証される**（`git diff -- LilySharp.Core`
-が空＝絵も SHA も動きようがない）。**台帳点は 1 つも足していない**（851 点のまま。台帳は網ではない）。
-
-★ **⑹ 終了時**: commit 2 本（test＋probe `a9414096`・docs 1 本＝**この文を含むので SHA は書かない**＝§5.4）。
-**最終 full 8778 / 0 / 3 / 8781＝開始時 8774 ＋ 新しい網 4 本**・§7.5（対 `336d8f3a`）**Core '+' 0 行／
-REF 0／OWN 0**（⚠️ **`git diff -- LilySharp.Core` そのものが空**＝§7.6 ⒟ の足した式も定数も 0。
-`APPROXIMATIONS.md`・`magic_constants.csv` とも差分なし＝**行番号すら動いていない**）・**§7.7 の匂いは 0**
-（`Core` を触っていないので当たる面が無い）・**未 push 12**・台帳 851 点／総和 22.584727806 不変・
-snapshot 249 枚不動・追跡 `.lys` 609。天井は `-End` 時点で **HANDOFF 432,141 B（残り 17,859）・
-§1 現在便 14,509 字（残り 5,491）**・**RULES 216,632 B / 1,849 行**。全文は Lab `sessions/p452/`
-（`poison-ends.ps1`＝4 族の毒・`poison-flag.ps1`＝巨大化の切り分け・`poison-nets.ps1`＝陽性対照・
-`poison-dots.ps1`＝和音の付点・`Zz452ProbeTests.cs.txt`・`books/`）。**push はユーザー**（Lab も）。
-⚠️ **⒱ は 2 件残っている**（第450 の ⑴⑵）。**`-Start p453` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
