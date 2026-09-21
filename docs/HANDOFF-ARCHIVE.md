@@ -129,6 +129,42 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第462セッションの経緯
+
+### 1.1 第462セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが選んだ）。
+★ **`-Start p462` の 1 コマンドで §0 が全部済んだ**（HEAD `82b2bd6a`・未 push 4・full `sessions/p462/run1.trx`
+8785 / 0 / 3 / 8788・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 460` も自動＝moved 48 行 2,810 字）。
+
+★★★ **⑴ 8 軒＋隣 2 軒・A/B −24,158 B／打鍵（予測 −21,300 ± 2,000＝実測前に改訂した値の*上*）。** park 4 軒
+（Ledger の地図・prelim の beam list・tab の bite・mark の entries）／**建てない 3 軒**（`Shape` の 2 本＝並べて歩く struct・
+tuplet の HashSet＝訊くのは 2 列だけ・tie の `columnKeys`＝貸した地図が挿入順に持っている）／**配列へ直接** 1 軒（:873）。
+**隣 2 軒**＝tab の弦ごとの `Where`＋`OrderBy`（sort 1 回＋弦ごとの区間・同じ left の順は線を変えない）と、:873 の
+双子 `BuildAboveProgram`（**寸法つき** List を `ToArray` で写していた）。**出力は同一**（5,824 行・0 差）。
+
+★★★ **⑵ ファイルを 1 つずつ抜く A/B で会計を割った**（Lab `attrib.txt`・和 24,120）。**census の行だけのファイル 4 本は
+99.7%**。上に外れたのは 3 つとも*予測の側*＝C＋F 4,291（会計 3,566・C の `odd` 下限＝予測した向き）・tab の隣 ≈3,390
+（見積り 3,000 の上）・above の双子 ≈5,080（5,000 の上）。⇒ **census に行の無い 2 軒が 35% を持っていた**＝⒮¹⁵ を起票。
+
+★★ **⑶ 毒 11 本、予測を外したのは 2 本。** 赤 2／25／37／640／3／18／145／35・緑（rent が抜かない）は予測どおり。
+⑴ **列を逆順に歩く毒は緑と予測して赤 13**——「prelim の結果は捨てられ、残るのは extent の和だけ」と読んだが、
+**tie と slur は第141 から final へ*運ばれて*描かれる**（`LayoutAllSpanners` の `ReanchorBows`）＝**鍵の列を消した直し
+（地図の挿入順）には観測者が 13 本居る**。`RunPreliminaryAnnotationPass` の「THROWN AWAY」は annotation の話で、bow ではない。
+⑵ **`Shape` の比較が「前が同じなら同じ」と答える毒は緑**＝3 つ目の顔（毒がほぼ恒等）: section の子には `{` `}` の
+トークンが入るので、整った section の shape は必ず `}` で終わり、strict prefix は `}` の欠けた木でしか起きない
+（⚠️ 未確認: 閉じていない section をパーサがどう持つか）。
+
+★ **⑷ 見つけたもの 2 つ（起票）**: **`LedgerLineSpans` は製品の誰も読まない**（⒮¹⁴・ユーザーは「今回は park だけ」を
+選んだ）／**census は寸法を言った器を数えない**（⒮¹⁵）。
+
+★ **⑸ 終了時**: commit 2 本（code `c7cfd3c7`＝Core 7 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。
+全文は Lab `sessions/p462/`（`prediction.txt`・`ab-*-tc0.txt`・`attrib.txt`・`poisons.ps1`／`.txt`・`Zz462*.cs.txt`）。
+**最終 full 8785 / 0 / 3 / 8788**（`run2.trx`＝`-End`）・§7.5（対 `82b2bd6a`）**Core '+' 337 行／REF 0／OWN 0**＝
+貸し器と歩き方は LP に対応物が無い。**§7.6 コード中の新しい数は 0**。**§7.7 の匂い**＝⑴ `MusicMarkEngraver` の `GroupBy` が
+pass ごとに Lookup と grouping を建てる／⑵ `prelimTies`・`prelimSlurs` を `ToImmutableArray()` で 3 回ずつ写す（どちらも未測定）／
+⑶ give を忘れても何も投げない。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p463` の 1 コマンドから入る**。
+
 ## 以下は第461セッションの経緯
 
 ### 1.1 第461セッション（2026-09-21・YT-DELL2）
