@@ -270,7 +270,9 @@ force ≥ 0 では効かない**（`CreateInterColumnSpring` の ⚠️ が 2026
 ⇒ ★★★ **「毒が緑」の 4 つ目の顔＝*腕は走り、値も変わり、それでも下流の不等号に飲まれる*。**
 ⑴〜⑶（観測者が居ない／原理的に居ない／毒が恒等）と違い、**これは計器の回数を見ても分からず、
 「変えた値が誰に届くか」を追って初めて割れる**。起票は **⒳⁷**（§1.0 ⒝）。
-⚠️ **もう一方の caller（`SpacingRules.MeasureSprings:278`）はコーパスで 0 回**＝**計器は全 caller に置く**。
+⚠️ **もう一方の caller（`SpacingRules.MeasureSprings:278`）はコーパスで 0 回**＝**計器は全 caller に置く**
+（片方だけに置いていたら「走っていない」と読み違えた）。⇒ **規則 3 本は RULES §5.4 末尾に出した**
+＝**4 つ目の顔**・**`one` 欄の罠**・**国勢調査は 2 枚の表**。
 
 ★★ **⑸ `one` 欄にも `zero` 欄と同じ罠がある。** §1.0 は「`Clear` で空になった器が zero に化ける」と
 書いていたが（`SyntaxNode.cs:521`）、**`MusicMarkEngraver.cs:697` の 330 は group ごとに `Clear` して
@@ -287,8 +289,9 @@ force ≥ 0 では効かない**（`CreateInterColumnSpring` の ⚠️ が 2026
 （p451／p439 と同じ絵）。full は開始時と同じ **8780 / 0 / 3 / 8783**＝**網は 1 本も増えていない**
 （⒳⁷ は「網を書くか計算をやめるか」の判断が先）。
 
-★ **⑻ 終了時**: commit 2 本（code `4fc41912`＝Core 5 ファイル＋再生成した `APPROXIMATIONS.md`／
-`magic_constants.csv`・docs 1 本＝**この文を含むので SHA は書かない**＝§5.4）。
+★ **⑻ 終了時**: commit 3 本（code `4fc41912`＝Core 5 ファイル＋再生成した `APPROXIMATIONS.md`／
+`magic_constants.csv`・docs `1e6a2f62`＝§1 と §1.0・**RULES の 3 本を含む最後の docs＝この文を含むので
+SHA は書かない**＝§5.4）。**RULES は 226,774 B / 1,859 行**（3 行足した・天井まで 23,226 B）。
 **最終 full 8780 / 0 / 3 / 8783**（`sessions/p454/run3.trx`）・§7.5（対 `7134e369`）**Core '+' 147 行／
 REF 0／OWN 0**＝⚠️ **REF 0 は監査対象だが、足したのは器の形だけで*式も定数も 0***（§7.6 ⒟。
 `APPROXIMATIONS.md`・`magic_constants.csv` は**行番号と 2 行の字面が動いただけ**で、
