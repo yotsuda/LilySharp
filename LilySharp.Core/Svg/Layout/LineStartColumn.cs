@@ -249,6 +249,9 @@ internal static class LineStartColumn
         int startMeasureIndex)
     {
         double worst = 0.0;
+        // Lent, and given back cleared below (see t_prefatoryBoxes).
+        var boxes = t_prefatoryBoxes ?? new List<ColumnBox>();
+        t_prefatoryBoxes = null;
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             // A lyric / chord row engraves no prefatory grob, and its text does not join the
@@ -260,7 +263,7 @@ internal static class LineStartColumn
             if (notes.Count == 0)
                 continue;
 
-            var boxes = new List<ColumnBox>();
+            boxes.Clear();
             foreach (var g in PrefatoryGrobs(
                          score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
                 boxes.Add(new ColumnBox(-SharedBand, SharedBand,
@@ -268,8 +271,32 @@ internal static class LineStartColumn
 
             worst = Math.Max(worst, MinimumDistance(boxes, notes));
         }
+        boxes.Clear();
+        t_prefatoryBoxes = boxes;
         return worst;
     }
+
+    /// <summary>
+    /// The prefatory boxes of one staff at a time for <see cref="MinimumDistanceAtLineStart"/>,
+    /// lent from one list the thread keeps between line starts.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 6.98 lists a keystroke at 1.54 boxes (max 3), 1,284 B with the growth ladder,
+    /// and every one unreachable when the render returned. The list's one reader is
+    /// <see cref="MinimumDistance"/>, which copies it into a skyline (<c>ToTuples</c> →
+    /// <c>HorizontalSkyline.FromBoxes</c>) and keeps nothing. RENTING TAKES IT OUT OF THE
+    /// DRAWER (session 421's idiom); THE CLEARING IS ON GIVE (session 456) and before each
+    /// staff — a stale box would widen the next staff's <c>min_dist</c> with a grob it does
+    /// not engrave. <see cref="ColumnBox"/> holds four doubles, so the drawer pins nothing.
+    /// ⚠️ THE CLEAR BEFORE EACH STAFF HAS NO OBSERVER (session 467, by poison): dropping it
+    /// leaves the suite green and the reader's corpus 0 pages moved. The answer is a MAX over
+    /// staves, so a later staff that also sees the earlier staves' boxes changes it only when
+    /// an earlier staff reaches further right AND the later staff's first note further left —
+    /// a shape neither population holds. Do not read that green as "per-staff does not matter".
+    /// </remarks>
+    [ThreadStatic]
+    private static List<ColumnBox>? t_prefatoryBoxes;
 
     /// <summary>The one Y band every box of a staff is given — see the remarks on
     /// <see cref="MinimumDistanceAtLineStart"/> for why one band is enough.</summary>

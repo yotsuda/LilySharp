@@ -426,22 +426,47 @@ internal sealed class TieFormattingProblem
         var baseConfig = GenerateBaseChordConfiguration();
         double baseScore = ScoreTies(baseConfig);
 
-        var vars = _specs.Count > 1
-            ? GenerateCollisionVariations(baseConfig)
-            : GenerateSingleTieVariations(baseConfig);
+        // Lent, and given back cleared below (see t_variations).
+        var vars = t_variations ?? new List<List<(int Index, TieCandidate Config)>>();
+        t_variations = null;
+        if (_specs.Count > 1)
+            GenerateCollisionVariations(baseConfig, vars);
+        else
+            GenerateSingleTieVariations(baseConfig, vars);
         var (best, bestScore) = FindBestVariation(baseConfig, baseScore, vars);
 
         if (_specs.Count > 1)
         {
-            vars = GenerateExtremalTieVariations(best);
+            vars.Clear();
+            GenerateExtremalTieVariations(best, vars);
             (best, _) = FindBestVariation(best, bestScore, vars);
         }
+        vars.Clear();
+        t_variations = vars;
 
         var layouts = new TieLayout[best.Length];
         for (int i = 0; i < best.Length; i++)
             layouts[i] = CreateLayout(best[i]);
         return layouts;
     }
+
+    /// <summary>
+    /// The variation list <see cref="Solve"/> hands to its generators and then to
+    /// <see cref="FindBestVariation"/>, lent from one list the thread keeps between solves.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): the lone tie's list was built 7.84 times a keystroke at 6.98 variations (max
+    /// 7), 1,377 B with its growth ladder, and every one unreachable when the solve returned.
+    /// The list never leaves <see cref="Solve"/>: the generators fill it, the 1-opt reads it
+    /// and keeps only a CLONE of the base (<see cref="FindBestVariation"/>), and what leaves
+    /// is the layout array. RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom); THE
+    /// CLEARING IS ON GIVE (session 456) and before the second pass — a stale variation would
+    /// be scored against the next column, whose tie indexes it does not know. Clearing also
+    /// drops the one-entry lists it holds, so the drawer pins no candidate.
+    /// </remarks>
+    [ThreadStatic]
+    private static List<List<(int Index, TieCandidate Config)>>? t_variations;
 
     /// <summary>
     /// 1-opt: every variation is applied to the BASE on its own, and the best survivor is
@@ -770,14 +795,16 @@ internal sealed class TieFormattingProblem
     /// the walk direction doubles as the candidate's curve direction, and a direction imposed
     /// on the tie admits only its own (<c>has_manual_dir_</c>, :1138-1139).
     /// </remarks>
-    private List<List<(int Index, TieCandidate Config)>> GenerateSingleTieVariations(TieCandidate[] ties)
+    private void GenerateSingleTieVariations(
+        TieCandidate[] ties, List<List<(int Index, TieCandidate Config)>> vars)
     {
-        var vars = new List<List<(int, TieCandidate)>>();
         int sz = _details.SingleTieRegionSize;
 
         for (int i = 0; i < sz; i++)
         {
-            foreach (int d in new[] { -1, +1 })
+            // -1 then +1 — a loop, not `new[] { -1, +1 }`, which built a two-slot array on
+            // every step of every solve (the order is unchanged, and it is the variation order).
+            for (int d = -1; d <= 1; d += 2)
             {
                 if (i == 0 && ties[0].Dir == d)
                     continue;
@@ -787,8 +814,6 @@ internal sealed class TieFormattingProblem
                 vars.Add([(0, GetConfiguration(0, ties[0].Position + i * d, d))]);
             }
         }
-
-        return vars;
     }
 
     /// <summary>
@@ -806,11 +831,11 @@ internal sealed class TieFormattingProblem
     /// <c>i &lt; ties.size ()</c>, so the test can never hold.
     /// </para>
     /// </remarks>
-    private List<List<(int Index, TieCandidate Config)>> GenerateCollisionVariations(TieCandidate[] ties)
+    private void GenerateCollisionVariations(
+        TieCandidate[] ties, List<List<(int Index, TieCandidate Config)>> vars)
     {
         const double centerDistanceTolerance = 0.25;
 
-        var vars = new List<List<(int, TieCandidate)>>();
         double lastCenter = 0.0;
 
         for (int i = 0; i < ties.Length; i++)
@@ -838,8 +863,6 @@ internal sealed class TieFormattingProblem
 
             lastCenter = center;
         }
-
-        return vars;
     }
 
     /// <summary>
@@ -856,16 +879,16 @@ internal sealed class TieFormattingProblem
     /// variation's -8 in a three-tie one.
     /// </para>
     /// </remarks>
-    private List<List<(int Index, TieCandidate Config)>> GenerateExtremalTieVariations(TieCandidate[] ties)
+    private void GenerateExtremalTieVariations(
+        TieCandidate[] ties, List<List<(int Index, TieCandidate Config)>> vars)
     {
-        var vars = new List<List<(int, TieCandidate)>>();
-
         for (int i = 1; i <= _details.MultiTieRegionSize; i++)
         {
             TieCandidate? down = null;
             TieCandidate? up = null;
 
-            foreach (int d in new[] { -1, +1 })
+            // -1 then +1, as in GenerateSingleTieVariations.
+            for (int d = -1; d <= 1; d += 2)
             {
                 int index = d < 0 ? 0 : ties.Length - 1;
                 var config = ties[index];
@@ -883,8 +906,6 @@ internal sealed class TieFormattingProblem
             if (down is not null && up is not null)
                 vars.Add([(0, down), (ties.Length - 1, up)]);
         }
-
-        return vars;
     }
 
     // ---------------------------------------------------------------

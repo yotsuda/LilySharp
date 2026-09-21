@@ -1569,7 +1569,9 @@ internal sealed class MultiStaffLayouter
 
         // The system's rods, all fed through the one Simple_spacer::add_rod port
         // (SpringSolver.ApplyRods, blocking-force propagation included).
-        var rods = new List<(int Left, int Right, double Distance)>();
+        // Lent, and given back cleared once ApplyRods has read it (see t_systemRods).
+        var rods = t_systemRods ?? new List<(int Left, int Right, double Distance)>();
+        t_systemRods = null;
 
         // KEEP-INSIDE-LINE: no column may push its ink into either margin.
         // LILYPOND-REF: lily/simple-spacer.cc:431-432 — every column but the line starter is
@@ -1840,6 +1842,8 @@ internal sealed class MultiStaffLayouter
                 offset += n;
             }
         }
+        rods.Clear();
+        t_systemRods = rods;
 
         double springTargetWidth = availableWidth - totalBarlineWidth;
 
@@ -2259,6 +2263,23 @@ internal sealed class MultiStaffLayouter
         sortedTimings.Sort();
         return sortedTimings;
     }
+
+    /// <summary>
+    /// The system's rods <see cref="LayoutMeasures"/> gathers for
+    /// <see cref="SpringSolver.ApplyRods"/>, lent from one list the thread keeps between systems.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.01 lists a keystroke at 24.5 rods (max 46), 1,153 B with the growth ladder,
+    /// and every one unreachable when the render returned. Its one reader is ApplyRods, which
+    /// folds the rods into a NEW spring array and keeps none of them, and the give stands right
+    /// after it — no return lies between the rent and the give. RENTING TAKES IT OUT OF THE
+    /// DRAWER (session 421's idiom); THE CLEARING IS ON GIVE (session 456) — a stale rod would
+    /// hold two columns of the next system apart by a distance measured on this one. The rods
+    /// are value tuples, so the drawer pins nothing.
+    /// </remarks>
+    [ThreadStatic]
+    private static List<(int Left, int Right, double Distance)>? t_systemRods;
 
     /// <summary>
     /// The buffer <see cref="CollectAllTimingsForMeasure"/> gathers a measure's onsets into,

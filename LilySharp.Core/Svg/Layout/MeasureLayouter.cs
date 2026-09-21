@@ -227,7 +227,13 @@ internal sealed class MeasureLayouter
         // across the collapsed run (SpacingRules.MmrRodDistance), not from shrinking
         // each rested measure. See the note in SpacingRules.CreateSpringsForMeasure.
 
-        var springs = new List<Spring>();
+        // One spring per gap of the chain — bar line → first column, one per adjacent pair,
+        // last column → bar line — so the count is timings.Count + 1 before a spring is made,
+        // and the array IS the answer (no list, and no copy of one).
+        // MEASURED (session 457's census, Release, the reader's corpus, eight forward
+        // keystrokes a book): the list and its growth ladder were 1,571 B a keystroke, and
+        // every one was unreachable once its copy was taken.
+        var springs = new Spring[timings.Count + 1];
 
         // Rods raised over the neighbors of PRUNED loose change columns — they span two
         // or more springs, so they go through the blocking-force machinery, not a
@@ -267,24 +273,25 @@ internal sealed class MeasureLayouter
 
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring), one Staff_spacing
         // wish per staff when the caller says which staff each measure belongs to.
-        springs.Add(CreateBarlineToFirstSpring(
+        springs[0] = CreateBarlineToFirstSpring(
             fonts, timings, columns, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
-            droppedOnsetFollows, so, StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0])));
+            droppedOnsetFollows, so, StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0]));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
-            springs.Add(CreateInterColumnSpring(fonts, i, timings, columns, measuresToScan,
-                so, looseRods));
+            springs[i] = CreateInterColumnSpring(fonts, i, timings, columns, measuresToScan,
+                so, looseRods);
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
-        springs.Add(CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
+        springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
             so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure),
-            SpacingRules.LeadingMusicalItems(nextMeasure)));
+            SpacingRules.LeadingMusicalItems(nextMeasure));
 
+        var chain = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(springs);
         return looseRods.Count > 0
-            ? SpringSolver.ApplyRods(springs.ToImmutableArray(), looseRods)
-            : springs.ToImmutableArray();
+            ? SpringSolver.ApplyRods(chain, looseRods)
+            : chain;
     }
 
     /// <summary>

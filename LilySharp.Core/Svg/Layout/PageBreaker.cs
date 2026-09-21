@@ -864,23 +864,30 @@ internal sealed class PageBreaker
         }
 
         // LILYPOND-REF: lily/page-spacing.cc:157-180 Page_spacer::solve — the walk back from the last line.
-        var forces = new List<double>();
-        var perPage = new List<int>();
+        // The walk runs twice — once to COUNT the pages, once to fill them from the back — so
+        // each answer is an array of its exact length, written in page order, and is the
+        // result itself. MEASURED (session 457's census, Release, the reader's corpus, eight
+        // forward keystrokes a book): the two lists this replaced, reversed and then copied,
+        // were built 10.83 times a keystroke at 3.53 pages (max 7), 1,147 + 903 B with their
+        // growth ladders. The second walk is as long as the page count.
+        int pageCount = 0;
+        for (int s = n - 1; s >= 0; s = prev[s])
+            pageCount++;
+        var forces = new double[pageCount];
+        var perPage = new int[pageCount];
         int system = n - 1;
-        while (system >= 0)
+        for (int page = pageCount - 1; page >= 0; page--)
         {
             int p = prev[system];
-            forces.Add(force[system]);
-            perPage.Add(system - p);
+            forces[page] = force[system];
+            perPage[page] = system - p;
             system = p;
         }
-        forces.Reverse();
-        perPage.Reverse();
         return new PageBreakResult
         {
             Penalty = penalty[n - 1] + lines[n - 1].PagePenalty + lines[n - 1].TurnPenalty,
-            Forces = forces.ToImmutableArray(),
-            SystemsPerPage = perPage.ToImmutableArray(),
+            Forces = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(forces),
+            SystemsPerPage = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(perPage),
         };
     }
 

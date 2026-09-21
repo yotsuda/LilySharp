@@ -42,7 +42,9 @@ internal static partial class SharedRenderer
         // 3 of `repeat percent 2 { … | … | }` printed two beams and eight stems standing over
         // nothing. A BEAT slash hides no measure at all, so reading its anchor here blanked
         // every beam in the bar it stands in, including the written beat it repeats.
-        var percentByStaff = new HashSet<(int Staff, int Measure)>();
+        // Lent, and given back cleared at the end (see t_percentByStaff).
+        var percentByStaff = t_percentByStaff ?? new HashSet<(int Staff, int Measure)>();
+        t_percentByStaff = null;
         foreach (var prItem in score.PercentRepeats)
             for (int m = prItem.FirstCoveredMeasure; m <= prItem.MeasureIndex; m++)
                 percentByStaff.Add((prItem.StaffIndex, m));
@@ -475,7 +477,25 @@ internal static partial class SharedRenderer
                 ossiaScope?.Dispose();
             }
         }
+        percentByStaff.Clear();
+        t_percentByStaff = percentByStaff;
     }
+
+    /// <summary>
+    /// The (staff, measure) pairs a percent sign hides, for one <see cref="DrawBeams"/> call,
+    /// lent from one set the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.84 sets a keystroke at 10.77 pairs (max 164), 1,278 B with the growth
+    /// ladder, and every one unreachable when the render returned — the set is asked by the
+    /// beam walk of the call that fills it and by nothing else. RENTING TAKES IT OUT OF THE
+    /// DRAWER (session 421's idiom); THE CLEARING IS ON GIVE (session 456) — a stale pair would
+    /// hide the beams of a measure on the next page that no sign covers. The method has no
+    /// return between the rent and the give; a throw loses the set rather than mixing it.
+    /// </remarks>
+    [ThreadStatic]
+    private static HashSet<(int Staff, int Measure)>? t_percentByStaff;
 
     // LILYPOND-REF: lily/stem.cc Stem::extremal_heads — the stem attaches at the
     // extremal head: lowest (Min) staff position for a stem-up chord, highest (Max)

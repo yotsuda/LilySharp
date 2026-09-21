@@ -455,7 +455,9 @@ internal static class ArticulationEngraver
         Dictionary<(int Staff, int Voice, int Measure), OneOrMany<SlurLayout>>? slursAtMeasure = null;
         if (!slurLayouts.IsDefaultOrEmpty)
         {
-            slursAtMeasure = new Dictionary<(int, int, int), OneOrMany<SlurLayout>>();
+            // Lent, and given back cleared at the end (see t_slursAtMeasure).
+            slursAtMeasure = t_slursAtMeasure ?? new Dictionary<(int, int, int), OneOrMany<SlurLayout>>();
+            t_slursAtMeasure = null;
             foreach (var s in slurLayouts)
             {
                 int slurStaff = Math.Max(s.StaffIndex, 0);
@@ -1270,6 +1272,11 @@ internal static class ArticulationEngraver
         t_layouts = layouts;
         if (tiesAtBound != null)
             GiveTieBounds(tiesAtBound);
+        if (slursAtMeasure != null)
+        {
+            slursAtMeasure.Clear();
+            t_slursAtMeasure = slursAtMeasure;
+        }
         GiveSupportScripts(supportScripts);
         wantedBeamKeys.Clear();
         t_wantedBeamKeys = wantedBeamKeys;
@@ -1326,6 +1333,27 @@ internal static class ArticulationEngraver
     /// <inheritdoc cref="t_tieBounds"/>
     [ThreadStatic]
     private static Dictionary<(int, int, int, bool), List<ArticulationLayout>>? t_supportScripts;
+
+    /// <summary>
+    /// The drawn slurs by (staff, voice, measure) of one <see cref="CalculateWithFingerings"/>
+    /// call, lent from one dictionary the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 0.91 maps a keystroke at 12 keys (max 88), 1,407 B with the growth ladder, and
+    /// every one unreachable when the render returned. It is a local of the call, read by the
+    /// script walk and the fingering flush and by nothing that leaves (what leaves is the
+    /// layout array), and it is built after the method's one early return — the same argument
+    /// as <see cref="t_tieBounds"/>, whose give it stands beside. RENTING TAKES IT OUT OF THE
+    /// DRAWER; THE CLEARING IS ON GIVE, and it matters twice here: a stale bucket would offer
+    /// this page's scripts another page's slurs, and a bucket holding two or more keeps its
+    /// slurs in a list (<see cref="OneOrMany{T}"/>) that only the clearing lets go of.
+    /// ⚠️ PARKING IT DIRTY REDDENS 2 NETS (session 467, by poison: test/percent-covered-bows and
+    /// fingering.slur.interior-note) — they see a foreign bucket's FIRST slur. A stale SECOND
+    /// slur of a bucket is the case nothing in the suite watches (HANDOFF §1.0 ⒮⁹).
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int, int, int), OneOrMany<SlurLayout>>? t_slursAtMeasure;
 
     /// <summary>Takes the thread's tie-bound map, or makes the thread's first.</summary>
     private static Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>> RentTieBounds()

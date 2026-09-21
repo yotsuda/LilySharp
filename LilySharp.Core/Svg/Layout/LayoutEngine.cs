@@ -472,7 +472,7 @@ internal sealed partial class LayoutEngine
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
             LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf,
-                prelim.BeamsByStaff, prelim.TiesByStaff, prelim.SlursByStaff,
+                prelim.BeamsByStaff, prelim.AllBeams, prelim.TiesByStaff, prelim.SlursByStaff,
                 systems.ToImmutableArray());
 
         // Resolve cross-staff layouts per voice
@@ -548,7 +548,7 @@ internal sealed partial class LayoutEngine
             // reach the detector; if detection ever grows such an input, this carry
             // must be re-examined.
             BeamGroups = prelim.AnnotationBeamGroups,
-            BeamLayouts = allBeamLayouts.ToImmutableArray(),
+            BeamLayouts = allBeamLayouts,
             TieLayouts = allTieLayouts.ToImmutableArray(),
             SlurLayouts = allSlurLayouts.ToImmutableArray(),
             SystemSkylines = perSystemSkylines,
@@ -606,7 +606,7 @@ internal sealed partial class LayoutEngine
                 restDotOffsetsBuilder[kv.Key] = kv.Value;
 
         var result = BuildScoreLayout(pages, systemsArray,
-            allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
+            allBeamLayouts, allTieLayouts.ToImmutableArray(),
             allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
             annotations,
             voiceOffsets,
