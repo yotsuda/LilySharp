@@ -168,4 +168,27 @@ public class UnfoldRepeatFrameTests
         Assert.Equal(notes[0].DurationTicks, notes[2].DurationTicks);
         Assert.NotEqual(notes[1].DurationTicks, notes[2].DurationTicks);
     }
+
+    /// <summary>
+    /// A repeat inside a repeat body is collected as written: each copy of the outer body
+    /// holds the inner repeat's copies, once.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PLAIN REPEAT IN FRONT IS THE POINT, not decoration. The collector lends each
+    /// repeat's body list from one list a thread keeps (<c>MeasureCollector.RentRepeatBody</c>),
+    /// and the inner repeat must get a list of its OWN while the outer one is still being
+    /// walked. On a thread's first repeat the drawer is empty either way, so a nested repeat
+    /// on its own cannot tell a correct drawer from one that hands the outer list out twice —
+    /// the repeat before it is what fills the drawer. MEASURED (session 461): with the rent
+    /// leaving the drawer filled, the inner repeat appends to the outer list, walks it from
+    /// the start, meets itself, and the collect overflows the stack. Before this test no net
+    /// in the suite drew a nested repeat at all (that poison was green over 8,786 tests).
+    /// </remarks>
+    [Theory]
+    [InlineData("repeat unfold 2 { c4 } repeat unfold 2 { d4 repeat unfold 2 { e4 } f4 } |", 10)]
+    [InlineData("repeat unfold 2 { c4 } repeat unfold 2 { repeat percent 2 { d4 e f g } } |", 10)]
+    public void ARepeatNestedInARepeatBody_IsCollectedAsWritten(string body, int notes)
+    {
+        Assert.Equal(notes, PageStaffPositions(Book(body)).Length);
+    }
 }

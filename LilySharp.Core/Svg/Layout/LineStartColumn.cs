@@ -551,7 +551,8 @@ internal static class LineStartColumn
         double frame = columns.Right + measureStartBarWidth;
         double floor = ownFixedFloor is { } f ? frame + f : double.NegativeInfinity;
 
-        var wishes = new List<Spring>();
+        // Lent, and given back at both exits below (see SpacingRules.RentWishes).
+        var wishes = SpacingRules.RentWishes();
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
             // A lyric / chord row is a Lyrics-like context: no Staff_spacing grob, hence no
@@ -630,6 +631,7 @@ internal static class LineStartColumn
             else
             {
                 var standard = StandardBreakableColumnSpacing(minDistance);
+                SpacingRules.GiveWishes(wishes);
                 return new Spring(
                     standard.IdealDistance - frame, standard.MinDistance - frame,
                     standard.InverseStretchStrength);
@@ -637,6 +639,7 @@ internal static class LineStartColumn
         }
 
         var merged = Spring.MergeSprings(wishes);
+        SpacingRules.GiveWishes(wishes);
 
         return new Spring(
             merged.IdealDistance - frame, merged.MinDistance - frame,

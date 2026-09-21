@@ -367,7 +367,8 @@ internal sealed partial class LayoutEngine
                     staffBeamScore, prelimSystems, staffIndex, groups);
         }
 
-        var groupsBySystem = new Dictionary<int, List<BeamGroup>>();
+        // Lent, and given back after the memo loop below — its last reader (see RentGroupsBySystem).
+        var groupsBySystem = RentGroupsBySystem();
         for (int i = 0; i < groups.Length; i++)
         {
             if (!groupsBySystem.TryGetValue(groupSystem[i], out var list))
@@ -395,6 +396,7 @@ internal sealed partial class LayoutEngine
                     staffBeamScore, ImmutableArray.Create(sys), staffIndex,
                     sysGroups.ToImmutableArray()));
         }
+        GiveGroupsBySystem(groupsBySystem);
 
         // A cursor per system the reassembly actually reads — bounded by the laid systems,
         // and measured exact on the reader's corpus (3,732 calls, asked == Count every one).
@@ -415,6 +417,52 @@ internal sealed partial class LayoutEngine
         var reassembled = result.ToImmutable();
         GiveBeamLayoutBuilder(result);
         return reassembled;
+    }
+
+    /// <summary>
+    /// The system → groups map <see cref="LayoutPreliminaryStaffBeams"/> partitions a staff's
+    /// beam groups into, lent from one map the thread keeps between staves.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.02 partitions a keystroke at 19.29 systems each (max 45), and all 3,732 maps
+    /// built were unreachable by the time the render that built them returned. The maps and
+    /// their growth ladders were 3,237 B a keystroke, 0.09% of it. The per-system LISTS are
+    /// not parked — only the map; clearing it drops them. Each list is read by the memo's
+    /// compute lambda, which captures the list and not the map, and which
+    /// <see cref="SystemLayoutCache.GetOrComputeStaffSystemBeams"/> runs before it returns.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a map given back dirty would hand the next staff this staff's list
+    /// under every system number the two share, and the next staff would lay out this staff's
+    /// groups beside its own. There is no early return and no throw between the rent and the
+    /// give. Reuse keeps the walk order: a cleared <see cref="Dictionary{TKey, TValue}"/>
+    /// fills its entries from the front again, so the memo loop visits the systems in
+    /// insertion order exactly as a new map would.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one map a thread at that thread's longest staff — 45 systems,
+    /// emptied, so it pins no beam group.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<int, List<BeamGroup>>? t_groupsBySystem;
+
+    /// <summary>Takes the thread's system → groups map, or makes the thread's first.</summary>
+    private static Dictionary<int, List<BeamGroup>> RentGroupsBySystem()
+    {
+        var map = t_groupsBySystem;
+        if (map is null)
+            return new Dictionary<int, List<BeamGroup>>();
+        t_groupsBySystem = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished partition's map back, emptied, with its capacity.</summary>
+    private static void GiveGroupsBySystem(Dictionary<int, List<BeamGroup>> map)
+    {
+        map.Clear();
+        t_groupsBySystem = map;
     }
 
     /// <summary>

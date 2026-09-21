@@ -2021,7 +2021,8 @@ internal sealed class ElementCoordinator
         // audit/lp-geometry system.tie-{under,over}-notes, and tie.y.{seconds,triad}.lower for
         // what solving them ONE AT A TIME cost.
         var columns = new List<List<TieItem>>();
-        var columnOf = new Dictionary<(int Voice, int Measure, int Item), int>();
+        // Lent, and given back right after the bucketing — its only reader (see RentColumnOf).
+        var columnOf = RentColumnOf();
         foreach (var tie in ties)
         {
             var key = (tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex);
@@ -2033,6 +2034,7 @@ internal sealed class ElementCoordinator
             }
             columns[existing].Add(tie);
         }
+        GiveColumnOf(columnOf);
 
         foreach (var column in columns)
         {
@@ -2124,6 +2126,45 @@ internal sealed class ElementCoordinator
         }
 
         return tieLayouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The key → column index map <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>
+    /// buckets a staff's ties into columns with, lent from one map the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.27 bucketings a keystroke at 20.01 columns each (max 142), and all 2,356
+    /// maps built were unreachable by the time the render that built them returned — the map
+    /// is read only inside the bucketing loop; the columns themselves are a list. The maps and
+    /// their growth ladders were 2,667 B a keystroke, 0.08% of it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a map given back dirty would answer a key the previous staff had with
+    /// an index into THIS staff's column list: a tie filed under another chord's column, or an
+    /// index past its end. There is no early return and no throw between the rent and the
+    /// give, and the map is only ever looked up, never walked, so its reuse cannot reorder
+    /// anything. It holds value tuples and ints, so the drawer pins nothing but its capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int Voice, int Measure, int Item), int>? t_columnOf;
+
+    /// <summary>Takes the thread's key → column map, or makes the thread's first.</summary>
+    private static Dictionary<(int Voice, int Measure, int Item), int> RentColumnOf()
+    {
+        var map = t_columnOf;
+        if (map is null)
+            return new Dictionary<(int Voice, int Measure, int Item), int>();
+        t_columnOf = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished bucketing's map back, emptied, with its capacity.</summary>
+    private static void GiveColumnOf(Dictionary<(int Voice, int Measure, int Item), int> map)
+    {
+        map.Clear();
+        t_columnOf = map;
     }
 
     /// <summary>

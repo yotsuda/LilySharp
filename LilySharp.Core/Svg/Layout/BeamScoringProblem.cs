@@ -774,12 +774,13 @@ internal sealed class BeamScoringProblem
         // far-from-staff stems toward the centre line, so the seed already matches
         // what ScoreStemLengths optimises against.
         // LILYPOND-REF: lily/stem.cc:1137-1266 calc_stem_info.
-        var ideals = new List<(double x, double y)>();
-        for (int i = 0; i < _headMin.Length; i++)
-        {
-            double idealY = _stemInfos[i].IdealY; // staff-spaces (native quanter frame)
-            ideals.Add((_stemXPositions[i], idealY));
-        }
+        // The ideal points are (_stemXPositions[i], _stemInfos[i].IdealY) — staff-spaces, the
+        // native quanter frame — and are READ where they are, not copied into a list first.
+        // MEASURED (session 457's census): that list was 19.12 a keystroke at 2.88 points each,
+        // 2,296 B a keystroke, and nothing read it but this method and MinimiseLeastSquares.
+        int idealCount = _headMin.Length;
+        double firstIdealY = _stemInfos[0].IdealY;
+        double lastIdealY = _stemInfos[idealCount - 1].IdealY;
 
         double leftY, rightY;
 
@@ -795,7 +796,7 @@ internal sealed class BeamScoringProblem
         // not because anything looked at the knee.
         // The equality is LilyPond's exact float compare: both sides come from the same
         // calc_stem_info expression, so equal inputs give a bit-identical answer.
-        if (ideals[0].y == ideals[^1].y)
+        if (firstIdealY == lastIdealY)
         {
             // LILYPOND-REF: :562-575 — two stems that both reach the middle line have
             // equal ideals for a second reason, and a flat beam there reads as squashed;
@@ -803,8 +804,8 @@ internal sealed class BeamScoringProblem
             // chord moves. chord_start_y is the head at the stem's own end
             // (lily/stem.cc:114-122 last_head).
             double chordLeft = ChordStartY(0);
-            double chordRight = ChordStartY(ideals.Count - 1);
-            if (ideals[0].y == 0.0 && chordRight != chordLeft && ideals.Count == 2)
+            double chordRight = ChordStartY(idealCount - 1);
+            if (firstIdealY == 0.0 && chordRight != chordLeft && idealCount == 2)
             {
                 double half = _beamThickness / 2;
                 bool rising = chordRight > chordLeft;
@@ -813,7 +814,7 @@ internal sealed class BeamScoringProblem
             }
             else
             {
-                leftY = rightY = ideals[0].y;
+                leftY = rightY = firstIdealY;
             }
 
             _musicalDy = rightY - leftY;
@@ -821,15 +822,15 @@ internal sealed class BeamScoringProblem
         else
         {
             double slope, intercept;
-            if (ideals.Count == 1 || _xSpan < 0.001)
+            if (idealCount == 1 || _xSpan < 0.001)
             {
                 slope = 0;
-                intercept = ideals[0].y;
+                intercept = firstIdealY;
             }
             else
             {
                 // Least-squares linear regression
-                MinimiseLeastSquares(ideals, out slope, out intercept);
+                MinimiseLeastSquares(_stemXPositions, _stemInfos, idealCount, out slope, out intercept);
             }
 
             // LILYPOND-REF: lily/beam-quanting.cc:590-597 least_squares_positions —
@@ -918,20 +919,21 @@ internal sealed class BeamScoringProblem
     }
 
     /// <summary>
-    /// Least-squares linear regression.
+    /// Least-squares linear regression through the first <paramref name="n"/> points
+    /// (<paramref name="xs"/>[i], <paramref name="stemInfos"/>[i].IdealY).
     /// </summary>
     // LILYPOND-REF: lily/least-squares.cc minimise_least_squares()
     private static void MinimiseLeastSquares(
-        List<(double x, double y)> points, out double slope, out double intercept)
+        double[] xs, StemInfo[] stemInfos, int n, out double slope, out double intercept)
     {
-        int n = points.Count;
         double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
         for (int i = 0; i < n; i++)
         {
-            sumX += points[i].x;
-            sumY += points[i].y;
-            sumXY += points[i].x * points[i].y;
-            sumX2 += points[i].x * points[i].x;
+            double x = xs[i], y = stemInfos[i].IdealY;
+            sumX += x;
+            sumY += y;
+            sumXY += x * y;
+            sumX2 += x * x;
         }
 
         double denom = n * sumX2 - sumX * sumX;

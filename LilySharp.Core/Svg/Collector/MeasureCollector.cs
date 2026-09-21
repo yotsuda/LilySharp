@@ -4056,7 +4056,8 @@ public sealed partial class MeasureCollector
         // the phrase-boundary reset marker; honour it like the main loop does
         // (each $call evaluates in the default frame). The body items are reds
         // already (a repeat body is always live), so the sites wrap them preset.
-        var bodyNodes = new List<GreenSite>();
+        // Lent, and given back at the end of this method (see RentRepeatBody).
+        var bodyNodes = RentRepeatBody();
         foreach (var item in repeat.Body.Items)
         {
             if (item is VariableReferenceSyntax varRef)
@@ -4326,6 +4327,57 @@ public sealed partial class MeasureCollector
                 ProcessBodyOnce();
             }
         }
+        GiveRepeatBody(bodyNodes);
+    }
+
+    /// <summary>
+    /// The site list <see cref="ProcessRepeatExpression"/> expands a repeat's body into, lent
+    /// from one list the thread keeps between repeats.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.68 repeat bodies a keystroke at 17.99 sites each (max 110), and all 3,111
+    /// lists built were unreachable by the time the render that built them returned — the
+    /// body walk (<see cref="MusicSiteList.Preset"/>) wraps the list for the walk's duration
+    /// and nothing in the collector keeps either. The lists and their growth were 3,004 B a
+    /// keystroke, 0.08% of it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), and here that is load-bearing:
+    /// A REPEAT NESTS (a repeat inside the body, or inside a phrase the body expands, re-enters
+    /// this method while the outer body is still being walked), and the inner call must get a
+    /// list of its own, which it does because the drawer is empty while the outer one is out.
+    /// MEASURED (session 461): with the rent leaving the drawer filled, the inner repeat appends
+    /// to the OUTER list and walks it from the start, meets itself again, and the collect
+    /// overflows the stack (<c>repeat unfold 2 { repeat percent 2 { … } }</c>). Held by
+    /// <c>UnfoldRepeatFrameTests.ARepeatNestedInARepeatBody_IsCollectedAsWritten</c>, whose book
+    /// puts a plain repeat FIRST: a thread's first repeat finds the drawer empty either way.
+    /// THE CLEARING IS ON GIVE (session 456) — a list given back dirty would open the next
+    /// repeat's body with this one's sites, collected a second time. The method has one exit;
+    /// a throw between the rent and the give only loses the list (the next repeat makes one).
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one list a thread at that thread's longest body — 110 sites,
+    /// emptied, so it pins no syntax node.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<GreenSite>? t_repeatBody;
+
+    /// <summary>Takes the thread's repeat-body list, or makes a new one if it is out.</summary>
+    private static List<GreenSite> RentRepeatBody()
+    {
+        var body = t_repeatBody;
+        if (body is null)
+            return new List<GreenSite>();
+        t_repeatBody = null;
+        return body;
+    }
+
+    /// <summary>Puts a finished repeat's body list back, emptied, with its capacity.</summary>
+    private static void GiveRepeatBody(List<GreenSite> body)
+    {
+        body.Clear();
+        t_repeatBody = body;
     }
 
     /// <summary>

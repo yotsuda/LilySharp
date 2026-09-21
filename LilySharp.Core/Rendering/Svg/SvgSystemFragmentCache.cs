@@ -737,7 +737,9 @@ internal sealed class SvgSystemFragmentCache
     // The scalar half of the geometry fold spelled out, for a mismatch report.
     private static string GeometryScalars(SystemLayout system, double pageHeight)
     {
-        var sb = new StringBuilder();
+        // Lent, and given back once ToString has copied it out (see t_scalars).
+        var sb = t_scalars ?? new StringBuilder();
+        t_scalars = null;
         sb.Append(CultureInfo.InvariantCulture,
             $"[first={system.SystemIndex == 0} Y={system.Y} W={system.Width} P={system.PrefixWidth} I={system.Indent} H={pageHeight} measures=");
         foreach (var m in system.Measures)
@@ -752,8 +754,34 @@ internal sealed class SvgSystemFragmentCache
                 sb.Append(']');
             }
         sb.Append(']');
-        return sb.ToString();
+        var scalars = sb.ToString();
+        sb.Clear();
+        t_scalars = sb;
+        return scalars;
     }
+
+    /// <summary>
+    /// The builder <see cref="GeometryScalars"/> spells a system's geometry into, lent from one
+    /// builder the thread keeps between captures.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.14 spellings a keystroke at 346 characters each (max 864) — one for every
+    /// fragment captured, although only a mismatch report ever reads the string — and all
+    /// 3,952 builders built were unreachable by the time the render that built them returned.
+    /// The builders and their chunks were 2,787 B a keystroke, 0.08% of it; the string itself
+    /// is the entry's and stays.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a builder given back dirty would prefix the next system's spelling
+    /// with this one's. There is no early return and no throw between the rent and the give.
+    /// A builder that grew past one chunk is folded back into one by its first
+    /// <see cref="StringBuilder.Clear"/>, so the drawer holds one array at the thread's
+    /// longest spelling.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static StringBuilder? t_scalars;
 
     private ImmutableArray<MeasureContentKey> SliceFor(
         SystemLayout system, out bool hasLeft, out bool hasRight)

@@ -391,7 +391,7 @@ internal static partial class SpacingRules
         Spring baseSpring, IReadOnlyList<Measure> voices,
         Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams, double increment)
     {
-        var wishes = new List<Spring>();
+        var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         // Indexed, not foreach, here and in MergeVoiceStemWishesToBarline: `voices` is an
         // interface, so foreach would box an enumerator on every spring (RULES §5.3).
         for (int v = 0; v < voices.Count; v++)
@@ -415,7 +415,54 @@ internal static partial class SpacingRules
             // included, and the ideal handed in is :77's unclamped one (ApplyLeftHeadWidth).
             wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance + corr)));
         }
-        return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
+        var merged = wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
+        GiveWishes(wishes);
+        return merged;
+    }
+
+    /// <summary>
+    /// The wish list <see cref="MergeVoiceStemWishes"/>, <see cref="MergeVoiceStemWishesToBarline"/>
+    /// and <see cref="LineStartColumn.LineStartSpring"/> gather a column pair's spacing wishes
+    /// into before <see cref="Spring.MergeSprings"/> averages them — lent from one list the
+    /// thread keeps between pairs.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 37.81 + 7.03 + 4.05 wish lists a keystroke at 1.37 / 1.60 / 1.74 wishes each
+    /// (max 2 in all three), and all 90,343 built were unreachable by the time the render
+    /// that built them returned — <see cref="Spring.MergeSprings"/> reads the list and returns
+    /// a new spring. The lists and their arrays were 3,831 B a keystroke, 0.11% of it.
+    /// <para>
+    /// ⚠️ HANDOFF (w) PRICED THE OTHER REPAIR for the first house: a span over an inline
+    /// two-slot buffer, which would need <see cref="Spring.MergeSprings"/>'s parameter and
+    /// all five callers changed together. A parked list asks for neither and keeps the
+    /// <see cref="Spring"/> records themselves, which were never in this price.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a list given back dirty would average the previous pair's wishes into
+    /// this pair's spring. None of the three nests and none throws between the rent and the
+    /// give; <see cref="LineStartColumn.LineStartSpring"/> has two exits and gives at both.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<Spring>? t_wishes;
+
+    /// <summary>Takes the thread's wish list, or makes the thread's first.</summary>
+    internal static List<Spring> RentWishes()
+    {
+        var wishes = t_wishes;
+        if (wishes is null)
+            return new List<Spring>();
+        t_wishes = null;
+        return wishes;
+    }
+
+    /// <summary>Puts a merged pair's wish list back, emptied, with its capacity.</summary>
+    internal static void GiveWishes(List<Spring> wishes)
+    {
+        wishes.Clear();
+        t_wishes = wishes;
     }
 
     /// <summary>
@@ -452,7 +499,7 @@ internal static partial class SpacingRules
         Spring baseSpring, IReadOnlyList<Measure> voices,
         Fraction tLeft, NoteSpacingParameters noteParams)
     {
-        var wishes = new List<Spring>();
+        var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         for (int v = 0; v < voices.Count; v++)
         {
             if (NoteColumnAt(voices[v], tLeft) is not { } left)
@@ -463,7 +510,9 @@ internal static partial class SpacingRules
             // for every wish, a zero correction included (session 379).
             wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance + corr)));
         }
-        return wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
+        var merged = wishes.Count > 0 ? Spring.MergeSprings(wishes) : baseSpring;
+        GiveWishes(wishes);
+        return merged;
     }
 
     /// <summary>
