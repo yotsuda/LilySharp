@@ -172,11 +172,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   前の呼びの tie support が付く」。⚠️ **隣の support-chain 地図は 104 本が見ている**＝同じメソッドの
   2 枚の地図で観測者の数が 104 対 0。**第464 が地図の*中の* list を pool にした**＝**汚した list を pool へ返す毒も緑**
   （support 側の同じ毒は 10 赤）＝穴は list の段にも続く
-- ★★ **⒮¹⁸ 同じ答えを 2 度以上写す族＝どの census の綴りにも無い**（第467 起票・**未値付け**）。第467 の B は census の list 1,547 に対し
-  実測 5,182＝**同じ配列の `ToImmutableArray()` が呼び手で 2 回**だった。同じ形が隣に残る: `LayoutEngine.cs:552-553`／`:609-610`（ties・slurs を
-  2 回ずつ）・`LayoutEngine.Prelim.cs:242-243`／`:288`／`:297-298`（`prelimTies`／`prelimSlurs` を 3 回ずつ）・`systems.ToImmutableArray()`
-  3 回（`LayoutEngine.cs:219`／`:444`／`:476`）・`MultiStaffLayouter.cs:1841` の `ImmutableArray.Create(span.ToArray())`（写しの写し）。ほかに
-  `DrawBeams` は**system ごとに楽譜全体の beam を歩き、1 本ごとに閉包つきの `Any`**（`SharedRenderer.Beams.cs:54`）、`:34` で `ToDictionary` を建てる
+- ★★ **⒮¹⁹ 閉包は*スコープの入口*で建つ＝`continue` で捨てる反復も払う**（第468 起票・**未値付け**）。`DrawBeams` は本体の lambda／local function が
+  `beam` を捕まえていたので、**system の外の beam 324 本／打鍵が 1 本 96 B ずつ払っていた**（31,121 B＝render の 1.05%・本体をメソッドへ出して閉じた）。
+  **同じ形＝ループ本体に loop 変数を捕まえる lambda があり、その前に `continue` の門がある軒**は `new` が無いのでどの census にも乗らない＝grep で拾い、
+  本体の先頭と `continue` を `GC.GetAllocatedBytesForCurrentThread` で挟む（Lab `sessions/p468/probe-core.patch` の形）。描く側の `DrawBeam` も
+  1 本 827 B（16.69 本／打鍵＝13,813）で `Enumerable.Range(…).All(閉包)`・`Select`・`Max` が混ざる＝実仕事との切り分けは未。
+  ⒮¹⁸ の写しの尾＝`allGlissandoLayouts`（list＋写し 1 回）・`LayoutPreliminaryStaffSlurs` の memo miss 側の `SelectMany(…).ToImmutableArray()`
 - ★ **⒮¹⁷ line-start の `min_dist` が*staff ごと*であることに観測者が居ない**（第467 起票・毒で実測）。`LineStartColumn.MinimumDistanceAtLineStart`
   で staff の間の `Clear` を抜く毒は**スイート緑・コーパス 0 差**。答えが staff の max なので、**前の staff が右へ出て、後の staff の
   最初の音が左へ出る**形でしか動かない（未確認）＝網を書くならその形を 1 つ作る。**値段ではなく忠実度の穴**
@@ -267,10 +268,38 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
   | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
   | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒱ ⒲ ✅ 閉じた**
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 242,086 / 250,000 B・1,874 / 2,000 行**（第462 が §5.3 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第468セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁸＝同じ答えを 2 度以上写す族**（ユーザーが選んだ）。
+★ **`-Start p468` の 1 コマンドで §0 が全部済んだ**（HEAD `7cc64cc4`・未 push 16・full `sessions/p468/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 466` も自動＝moved 29 行 1,993 字）。
+
+★★★ **⑴ 起票は「未値付け」だったので、直す前に 1 軒ずつ値段を付けた**（Lab `sessions/p468/`・`probe-core.patch`＋`Zz468Price.cs.txt`＝各軒を
+`GC.GetAllocatedBytesForCurrentThread` で挟み、前進 8 打鍵だけ数える・`price.txt`）。**起票の主役の写しは合わせて約 3,000 B で、
+本当の頭は起票が「ほかに」と書いた `DrawBeams`**だった＝**system の外の beam 324.17 本／打鍵が 1 本 96 B ずつ払い 31,121 B（render の 1.05%）**。
+⚠️ `Any` の行だけを挟んだ計器は 21,816 と答えた＝**閉包は*スコープの入口*で建つ**ので反復ごとに挟む。
+
+★★★ **⑵ 直し方は 3 つ**（`prediction.txt`＝直す前の予測）: **建てない**（`DrawBeams` の本体を `DrawBeam` へ出し、門は素の loop＝外の beam は何も建てない・
+staff の辞書は `EnumerateStaves` の歩き・`ImmutableArray` の `ToImmutableArray()`）／**寸法ちょうど・1 回だけ写す**（prelim の ties／slurs は既に持つ
+staff ごとの表から 1 回連結＝list も写し 5 回も消えた・system の配列は `PreliminaryPass.Systems` で運ぶ・spring の連結と slice）／**park**（final の ties／slurs の list）。
+**A/B −35,362 B／打鍵＝render の 1.19%**（予測の点 35,560 の 99.4%）。parse は不動・**出力は同一**（5,824 行・0 差）。
+**会計（ファイルを 1 つずつ抜く・和 35,401＝A/B の 100.1%）**＝`DrawBeams` 32,618（99.6%）／bows と systems 2,180（98.2%）／springs 603（101.9%）。
+
+★★ **⑶ 毒 8 本、予測を外したのは 0 本**（`poisons.txt`）。赤 27／174／21／14／301／20／331。**緑 1 本は予測どおり**＝prelim の ties／slurs を
+staff の逆順に連結する毒で、**コーパスも 0 差**（`green-to-corpus.txt`）＝その順を見る者はスイートにもコーパスにも居ない（読み手が順に依らないのが理由と読むが、
+1 人ずつは読んでいない）。⚠️ 毒 1（filter を外して全 beam を全 system に描く）は 27 赤だけ＝1 system の本には「外の beam」が無いと読む（未確認）。
+
+★ **⑷ 終了時**: commit 2 本（code `01d31316`＝Core 4 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run3.trx`＝`-End`）。
+§7.5（対 `7cc64cc4`）**Core '+' 544 行／REF 16／OWN 1 だが `-w` では 148 行／新規 REF・OWN 0**＝差の大半は `DrawBeam` へ移した本体の字下げ（REF／OWN はその中の既存コメント）。
+**§7.6 コード中の新しい数は 0**（コメントの数は第468 の計器・出所つき）。**§7.7 の匂い**＝§1.0 ⒮¹⁹（同じ形の軒・描く側 827 B／本・写しの尾）。台帳・snapshot 不変・未追跡 0。
+**push はユーザー**（Lab も）。**`-Start p469` の 1 コマンドから入る**。
+
+## 以下は第467セッションの経緯
 
 ### 1.1 第467セッション（2026-09-22・YT-DELL2）
 
@@ -303,34 +332,6 @@ tie solve の `new[] { -1, +1 }` もループにした。
 spring の鎖の数・`d += 2` は −1 と +1。コメントの数は census の実測で出所つき）。**§7.7 の匂い**＝⒮¹⁸ の写し／`MeasureLayouter` の `looseRods` は
 空でも毎回建つ（225 B）／`PrefatoryGrobs` と variation の中の list は collection initializer＝どの census も数えない。
 台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p468` の 1 コマンドから入る**。
-
-## 以下は第466セッションの経緯
-
-### 1.1 第466セッション（2026-09-22・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵ ⑷＝measure→system の地図 5 軒**（ユーザーが選んだ）。
-★ **`-Start p466` の 1 コマンドで §0 が全部済んだ**（HEAD `c0e60d1d`・未 push 12・full `sessions/p466/run1.trx`
-8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 464` も自動＝moved 36 行 2,531 字）。
-
-★★★ **⑴ 直す前に計器で「共有の表はもうこの配列を持っているか」を訊いた**（Lab `sessions/p466/`・`probe-core.patch`＋`Zz466Probe_Run.cs.txt`）。
-int の地図 4 軒は **`SpannerBreakSubstitution.BuildMeasureToSystemMap` の CWT が同じ配列を既に持っていた**（Prelim 4,952／4,984・
-paging 3 軒 6,902／6,902・**短い歩きは 0 回**）。`BuildMeasureLayoutMap` は 3,160 回とも `CalculateRestShifts` からで tuple 表は miss だが、
-**同じ打鍵の終わりには 3,160 回とも建っていた**＝5 軒とも重複。
-
-★★★ **⑵ A/B −20,951 B／打鍵＝render の 0.70%**（予測の点 20,885 の 100.3%・帯 17,000〜23,000）。Prelim の home test と paging 3 軒は
-共有表を訊き（paging は**短い歩きのときだけ自前**＝`MeasureToSystemOfFirst`）、rest shift は tuple 表の `.Measure` を読む。**出力は同一**（5,824 行・0 差）。
-会計（1 ファイルずつ抜く）は **100.1%／99.7%／99.9%**。⚠️ `FingeringEngraver` の全 system 版は `BuildMeasureLayoutMap` のまま（private 本体が
-`Dictionary<int, MeasureLayout>` を取る・コーパスで 0 回）。
-
-★★ **⑶ 毒 5 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 5（home test を 1 system ずらす）／229（paging が最後の system を落とす）。
-**外れ＝毒 1**: home test を空にすると bow memo は全部 fallback＝答えは同じと読んで緑と予測したが**赤 4**＝`LayoutMemo_*_ReStampsTheShiftedSystems`
-が memo の hit を見ていた。緑 2 本は予測どおりで、**どちらも観測者が居ない枝**＝paging の短い歩き（コーパス 0 回・起こりうるかも未確認）／
-`CalculateRestShifts` の fallback（`RestXPositions` を埋めない producer）。
-
-★ **⑷ 終了時**: commit 2 本（code `6845a2a4`＝Core 3 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**
-（`run4.trx`＝`-End`）・§7.5（対 `c0e60d1d`）**Core '+' 49 行／REF 0／OWN 0**＝共有の表を訊くだけで LP に対応物は無い。**§7.6 コード中の新しい数は 0**
-（コメントの数は第466 の実測・出所つき）。**§7.7 の匂い**＝⑴ 2 つの CWT 自身が打鍵ごとに 7.6 回／4.29 回建つ（⒮¹⁶′ に書いた）／⑵ 上の観測者の居ない 2 枝。
-§1.0 ⒮¹⁶′ で第465 の `` `n `` が改行に化けていたのを直した。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p467` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 

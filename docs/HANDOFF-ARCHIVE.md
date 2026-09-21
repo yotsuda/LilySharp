@@ -129,6 +129,34 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第466セッションの経緯
+
+### 1.1 第466セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵ ⑷＝measure→system の地図 5 軒**（ユーザーが選んだ）。
+★ **`-Start p466` の 1 コマンドで §0 が全部済んだ**（HEAD `c0e60d1d`・未 push 12・full `sessions/p466/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 464` も自動＝moved 36 行 2,531 字）。
+
+★★★ **⑴ 直す前に計器で「共有の表はもうこの配列を持っているか」を訊いた**（Lab `sessions/p466/`・`probe-core.patch`＋`Zz466Probe_Run.cs.txt`）。
+int の地図 4 軒は **`SpannerBreakSubstitution.BuildMeasureToSystemMap` の CWT が同じ配列を既に持っていた**（Prelim 4,952／4,984・
+paging 3 軒 6,902／6,902・**短い歩きは 0 回**）。`BuildMeasureLayoutMap` は 3,160 回とも `CalculateRestShifts` からで tuple 表は miss だが、
+**同じ打鍵の終わりには 3,160 回とも建っていた**＝5 軒とも重複。
+
+★★★ **⑵ A/B −20,951 B／打鍵＝render の 0.70%**（予測の点 20,885 の 100.3%・帯 17,000〜23,000）。Prelim の home test と paging 3 軒は
+共有表を訊き（paging は**短い歩きのときだけ自前**＝`MeasureToSystemOfFirst`）、rest shift は tuple 表の `.Measure` を読む。**出力は同一**（5,824 行・0 差）。
+会計（1 ファイルずつ抜く）は **100.1%／99.7%／99.9%**。⚠️ `FingeringEngraver` の全 system 版は `BuildMeasureLayoutMap` のまま（private 本体が
+`Dictionary<int, MeasureLayout>` を取る・コーパスで 0 回）。
+
+★★ **⑶ 毒 5 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 5（home test を 1 system ずらす）／229（paging が最後の system を落とす）。
+**外れ＝毒 1**: home test を空にすると bow memo は全部 fallback＝答えは同じと読んで緑と予測したが**赤 4**＝`LayoutMemo_*_ReStampsTheShiftedSystems`
+が memo の hit を見ていた。緑 2 本は予測どおりで、**どちらも観測者が居ない枝**＝paging の短い歩き（コーパス 0 回・起こりうるかも未確認）／
+`CalculateRestShifts` の fallback（`RestXPositions` を埋めない producer）。
+
+★ **⑷ 終了時**: commit 2 本（code `6845a2a4`＝Core 3 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**
+（`run4.trx`＝`-End`）・§7.5（対 `c0e60d1d`）**Core '+' 49 行／REF 0／OWN 0**＝共有の表を訊くだけで LP に対応物は無い。**§7.6 コード中の新しい数は 0**
+（コメントの数は第466 の実測・出所つき）。**§7.7 の匂い**＝⑴ 2 つの CWT 自身が打鍵ごとに 7.6 回／4.29 回建つ（⒮¹⁶′ に書いた）／⑵ 上の観測者の居ない 2 枝。
+§1.0 ⒮¹⁶′ で第465 の `` `n `` が改行に化けていたのを直した。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p467` の 1 コマンドから入る**。
+
 ## 以下は第465セッションの経緯
 
 ### 1.1 第465セッション（2026-09-21・YT-DELL2）
