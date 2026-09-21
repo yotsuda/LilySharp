@@ -53,12 +53,31 @@ namespace LilySharp.Core.Svg.Layout;
 internal readonly struct ItemColumn
 {
     private readonly MusicItem? _one;
+    private readonly MusicItem? _two;
     private readonly IReadOnlyList<MusicItem>? _many;
 
     /// <summary>The column of a single item — the single-voice callers' shape.</summary>
     internal ItemColumn(MusicItem item)
     {
         _one = item;
+        _two = null;
+        _many = null;
+    }
+
+    /// <summary>The column of one or two items, held in the struct.</summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND SLOT IS NOT A ROUND NUMBER — it is the measured maximum.
+    /// <c>MeasureLayouter</c>'s left-head wishes are one per VOICE occupying both columns,
+    /// and session 455's census measured that container over 231 books x 8 keystrokes at
+    /// 37.80 builds a keystroke, mean 1.74 items and <b>max 2</b>: one slot would leave
+    /// 74.2% of 3,327 B/keystroke on the floor, and a third would never be filled by this
+    /// corpus. It is not a BOUND — three voices can occupy two adjacent columns — so the
+    /// caller spills to a list from the third item on, and that arm stays observed.
+    /// </remarks>
+    internal ItemColumn(MusicItem first, MusicItem? second)
+    {
+        _one = first;
+        _two = second;
         _many = null;
     }
 
@@ -71,6 +90,7 @@ internal readonly struct ItemColumn
     internal ItemColumn(IReadOnlyList<MusicItem>? items)
     {
         _one = null;
+        _two = null;
         _many = items;
     }
 
@@ -81,9 +101,44 @@ internal readonly struct ItemColumn
     /// </remarks>
     public static implicit operator ItemColumn(List<MusicItem>? items) => new(items);
 
+    /// <summary>An array IS a column too — the one-item callers that wrote
+    /// <c>new[] { item }</c> before this type existed.</summary>
+    public static implicit operator ItemColumn(MusicItem[]? items) => new(items);
+
+    /// <summary>The column with one more item, for the array of columns
+    /// <c>MeasureLayouter</c> accumulates a measure's moments into.</summary>
+    /// <remarks>
+    /// ⚠️ THE SPILL LIST IS MUTATED IN PLACE, and that is sound only because the column
+    /// being built is its only holder: this overload creates the list itself, on the THIRD
+    /// item. A column handed a list from outside is copied rather than appended to, so a
+    /// caller's list is never grown behind its back.
+    /// </remarks>
+    internal ItemColumn Append(MusicItem item)
+    {
+        if (_many is not null)
+        {
+            if (_many is List<MusicItem> spill)
+            {
+                spill.Add(item);
+                return this;
+            }
+            var copy = new List<MusicItem>(_many.Count + 1);
+            for (int i = 0; i < _many.Count; i++)
+                copy.Add(_many[i]);
+            copy.Add(item);
+            return new ItemColumn(copy);
+        }
+        if (_one is null)
+            return new ItemColumn(item);
+        if (_two is null)
+            return new ItemColumn(_one, item);
+        return new ItemColumn(new List<MusicItem>(4) { _one, _two, item });
+    }
+
     /// <summary>How many items the column holds.</summary>
-    public int Count => _many?.Count ?? (_one is null ? 0 : 1);
+    public int Count => _many?.Count ?? (_one is null ? 0 : _two is null ? 1 : 2);
 
     /// <summary>The i-th item, in the order the caller built them.</summary>
-    public MusicItem this[int i] => _many is null ? _one! : _many[i];
+    public MusicItem this[int i] =>
+        _many is null ? (i == 0 ? _one! : _two!) : _many[i];
 }

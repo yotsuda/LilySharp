@@ -220,9 +220,9 @@ internal static partial class SpacingRules
         var firstSpring = firstOnset > Fraction.Zero
             ? SkipOpenedBarFirstSpring(fonts,
                 measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline,
-                measure.Items, new[] { firstItem }, firstOnset,
+                measure.Items, new ItemColumn(firstItem), firstOnset,
                 spacing ?? SpacingOptions.Default)
-            : BarlineToFirstColumnSpring(fonts, new[] { firstItem }, FillsMeasure(measure),
+            : BarlineToFirstColumnSpring(fonts, new ItemColumn(firstItem), FillsMeasure(measure),
                 leftBound: measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline);
         springs.Add(firstSpring);
 

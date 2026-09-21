@@ -500,9 +500,9 @@ internal static partial class SpacingRules
     ///   bar_y_positions, :95-110 next_notes_correction, :206-208 (applied to BOTH
     ///   fixed and ideal).
     /// </remarks>
-    internal static double BarlineToNextNotesCorrection(IReadOnlyList<MusicItem>? nextItems)
+    internal static double BarlineToNextNotesCorrection(in ItemColumn nextItems)
     {
-        if (nextItems == null)
+        if (nextItems.Count == 0)
             return 0;
         double maxOptical = 0;
         for (int i = 0; i < nextItems.Count; i++)

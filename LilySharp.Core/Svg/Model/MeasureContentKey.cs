@@ -137,9 +137,7 @@ public readonly record struct MeasureContentKey(long Hash)
             var hc = new Hash64();
             AddIntrinsic(ref hc, measures, i);
             hc.Add(chain.Entry[i]);                  // line-start prefix identity
-            if (sideTables[i] is { } side)           // attached annotations (ordered)
-                foreach (long itemHash in side)
-                    hc.Add(itemHash);
+            hc.Add(sideTables[i].ToHashCode());      // attached annotations (ordered)
             builder.Add(new MeasureContentKey(hc.ToHashCode()));
         }
         return builder.MoveToImmutable();
@@ -236,9 +234,7 @@ public readonly record struct MeasureContentKey(long Hash)
 
         var sideTables = BucketSideTables(score, n);
         for (int i = 0; i < n; i++)
-            if (sideTables[i] is { } side)
-                foreach (long itemHash in side)
-                    acc[i].Add(itemHash);
+            acc[i].Add(sideTables[i].ToHashCode());
 
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
         for (int i = 0; i < n; i++)
@@ -484,14 +480,21 @@ public readonly record struct MeasureContentKey(long Hash)
         "SourcePosition", "MeasureIndex", "StartMeasureIndex", "EndMeasureIndex",
     };
 
-    // ⚠️ THE BUCKETS ARE BUILT LAZILY — a null bucket and an empty one read the same to
-    // every caller, and 76.4% of them were never filled: 98.70 builds a keystroke at 32 B
-    // for the List object alone = 2,414 B/keystroke (session 448's census, session 450).
-    // A measure with no dynamic, no lyric, no mark and no spanner over it is the common
-    // measure, not the exception.
-    private static List<long>?[] BucketSideTables(Score score, int measureCount)
+    // ⚠️ THERE IS NO BUCKET — the side-table hashes fold straight into a per-measure
+    // accumulator. The buckets used to be `List<long>?[]`, built lazily because 76.4% of
+    // them were never filled (session 448's census). But the ONLY read of a bucket was
+    // `foreach (long h in side) hc.Add(h)`, and Hash64 is one ulong — EIGHT BYTES, exactly
+    // what the reference it replaces occupied — so the array costs what it always did and
+    // the 19.00 + 4.27 List builds a keystroke (1,936 + 376 B/keystroke of array and
+    // object, session 455's census) are gone rather than made lazy.
+    // ⚠️ THE KEY VALUES MOVED: two item hashes used to fold into the measure key one after
+    // the other, and now fold as ONE long (their FNV composition). The keys are opaque
+    // cache identities — nothing reads their value, only their equality — and the fold is
+    // still a function of the same items in the same order. A measure with no side items
+    // folds the zero accumulator, which every measure without one folds alike.
+    private static Hash64[] BucketSideTables(Score score, int measureCount)
     {
-        var buckets = new List<long>?[measureCount];
+        var buckets = new Hash64[measureCount];
 
         // Single-measure tables: each item belongs to one measure (item.MeasureIndex).
         // Fixed call order keeps the per-bucket fold deterministic.
@@ -529,10 +532,10 @@ public readonly record struct MeasureContentKey(long Hash)
         return buckets;
     }
 
-    // Lazy for the reason the Score overload above gives.
-    private static List<long>?[] BucketSideTables(MultiStaffScore score, int measureCount)
+    // No bucket, for the reason the Score overload above gives.
+    private static Hash64[] BucketSideTables(MultiStaffScore score, int measureCount)
     {
-        var buckets = new List<long>?[measureCount];
+        var buckets = new Hash64[measureCount];
 
         // Same tables as the Score overload, by MeasureIndex across all staves.
         // (Tremolo has no side table anywhere — it lives on the note item as
@@ -559,17 +562,17 @@ public readonly record struct MeasureContentKey(long Hash)
         return buckets;
     }
 
-    private static void BucketSingle(IEnumerable items, List<long>?[] buckets)
+    private static void BucketSingle(IEnumerable items, Hash64[] buckets)
     {
         foreach (var item in items)
         {
             int mi = GetInt(item, "MeasureIndex");
             if (mi >= 0 && mi < buckets.Length)
-                (buckets[mi] ??= new List<long>()).Add(HashContent(item, SideExclusions));
+                buckets[mi].Add(HashContent(item, SideExclusions));
         }
     }
 
-    private static void BucketSpan(IEnumerable items, List<long>?[] buckets)
+    private static void BucketSpan(IEnumerable items, Hash64[] buckets)
     {
         foreach (var item in items)
         {
@@ -590,7 +593,7 @@ public readonly record struct MeasureContentKey(long Hash)
                 var hc = new Hash64();
                 hc.Add(role);
                 hc.Add(content);
-                (buckets[mi] ??= new List<long>()).Add(hc.ToHashCode());
+                buckets[mi].Add(hc.ToHashCode());
             }
         }
     }

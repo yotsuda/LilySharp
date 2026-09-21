@@ -81,8 +81,10 @@ public class TabOnlyMeterColumnTests
         score main "x" { {{scoreBlock}} }
         """;
 
-    private static IReadOnlyList<MusicItem> MeasureItems(MultiStaffScore score, int measureIndex)
-        => score.StaffGroups[0].Staves[0].Voices[0].Measures[measureIndex].Items;
+    // A List, not the ImmutableArray, so the column parameters (ItemColumn) take it
+    // through the implicit conversion session 446 wrote for exactly these callers.
+    private static List<MusicItem> MeasureItems(MultiStaffScore score, int measureIndex)
+        => [.. score.StaffGroups[0].Staves[0].Voices[0].Measures[measureIndex].Items];
 
     private static TimeSignatureChangeItem TheMeterChange(MultiStaffScore score) =>
         score.StaffGroups[0].Staves.SelectMany(s => s.Voices)

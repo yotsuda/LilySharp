@@ -416,10 +416,10 @@ internal static class ArticulationEngraver
         //   lily/slur.cc:388-402 auxiliary_acknowledge_extra_object — 'outside /
         //   'around chain outside_slur_callback, 'inside becomes extra encompass
         //   (the SLUR bends, the script stays), 'ignore does nothing.
-        Dictionary<(int Staff, int Voice, int Measure), List<SlurLayout>>? slursAtMeasure = null;
+        Dictionary<(int Staff, int Voice, int Measure), OneOrMany<SlurLayout>>? slursAtMeasure = null;
         if (!slurLayouts.IsDefaultOrEmpty)
         {
-            slursAtMeasure = new Dictionary<(int, int, int), List<SlurLayout>>();
+            slursAtMeasure = new Dictionary<(int, int, int), OneOrMany<SlurLayout>>();
             foreach (var s in slurLayouts)
             {
                 int slurStaff = Math.Max(s.StaffIndex, 0);
@@ -427,9 +427,10 @@ internal static class ArticulationEngraver
                 for (int m = sl.StartMeasureIndex; m <= sl.EndMeasureIndex; m++)
                 {
                     var key = (slurStaff, sl.VoiceIndex, m);
-                    if (!slursAtMeasure.TryGetValue(key, out var list))
-                        slursAtMeasure[key] = list = new List<SlurLayout>();
-                    list.Add(s);
+                    // ⚠️ BY REFERENCE. OneOrMany.Add mutates the struct, so TryGetValue's
+                    // copy would keep only the first slur of a bucket (OneOrMany's remarks).
+                    System.Runtime.InteropServices.CollectionsMarshal
+                        .GetValueRefOrAddDefault(slursAtMeasure, key, out _).Add(s);
                 }
             }
         }
@@ -1317,12 +1318,13 @@ internal static class ArticulationEngraver
     /// (auxiliary_acknowledge_extra_object takes a RUNNING slur over an ended one,
     /// slurs[0] before end_slurs[0]).
     /// </summary>
-    private static SlurLayout? CoveringSlurPiece(List<SlurLayout> voiceSlurs, int m, int i)
+    private static SlurLayout? CoveringSlurPiece(in OneOrMany<SlurLayout> voiceSlurs, int m, int i)
     {
         SlurLayout? best = null;
         int bestStart = int.MinValue;
-        foreach (var s in voiceSlurs)
+        for (int k = 0; k < voiceSlurs.Count; k++)
         {
+            var s = voiceSlurs[k];
             var sl = s.Slur;
             bool onOrAfterStart = sl.StartMeasureIndex < m
                 || (sl.StartMeasureIndex == m && sl.StartItemIndex <= i);

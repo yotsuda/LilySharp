@@ -220,7 +220,7 @@ internal sealed class MeasureLayouter
 
         if (totalDuration == Fraction.Zero)
             return ImmutableArray<Spring>.Empty;
-        var timingToItems = BuildTimingToItemsMap(measuresToScan);
+        var columns = BuildTimingColumns(measuresToScan, timings);
 
         // NOTE: full-measure rests get ORDINARY springs, mirroring LilyPond — the
         // compaction of a multi-measure rest comes from the run-level rod applied
@@ -268,17 +268,17 @@ internal sealed class MeasureLayouter
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring), one Staff_spacing
         // wish per staff when the caller says which staff each measure belongs to.
         springs.Add(CreateBarlineToFirstSpring(
-            fonts, timings, timingToItems, measure,
+            fonts, timings, columns, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
             droppedOnsetFollows, so, StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0])));
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
-            springs.Add(CreateInterColumnSpring(fonts, i, timings, timingToItems, measuresToScan,
+            springs.Add(CreateInterColumnSpring(fonts, i, timings, columns, measuresToScan,
                 so, looseRods));
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
-        springs.Add(CreateLastToBarlineSpring(fonts, timings, timingToItems, measuresToScan, totalDuration,
+        springs.Add(CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
             so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure),
             SpacingRules.LeadingMusicalItems(nextMeasure)));
 
@@ -288,22 +288,43 @@ internal sealed class MeasureLayouter
     }
 
     /// <summary>
-    /// Builds the timing → items map used for skyline-based rod calculation:
-    /// each column's minimum distance must account for collisions between items
-    /// at adjacent timing points across ALL voices (accidentals, noteheads).
+    /// The items each SPRING COLUMN holds, index-aligned with <paramref name="timings"/>:
+    /// each column's minimum distance must account for collisions between items at
+    /// adjacent timing points across ALL voices (accidentals, noteheads).
     /// </summary>
     /// <remarks>
+    /// <para>
+    /// ⚠️⚠️ THERE IS NO MAP. This was a <c>Dictionary&lt;Fraction, List&lt;MusicItem&gt;&gt;</c>
+    /// until session 455, and every one of its four reads was <c>TryGetValue(timings[k])</c>
+    /// — at <c>timings[0]</c>, <c>timings[i-1]</c>, <c>timings[i]</c> and
+    /// <c>timings[^1]</c>. A map keyed by a value nobody holds except as an INDEX is an
+    /// array; <paramref name="timings"/> arrives sorted ascending
+    /// (<c>MultiStaffLayouter.CollectAllTimingsForMeasure</c> ends on <c>Sort()</c>), so a
+    /// cursor assigns each item its column with no hash at all.
+    /// </para>
+    /// <para>
+    /// MEASURED (2026-09-21, session 455; the reader's corpus, 231 books x 8 forward
+    /// keystrokes, Release): the dictionary cost 3,900 + 562 and its value lists
+    /// 2,511 + 1,435 = 8,408 B/keystroke of array and object together.
+    /// </para>
+    /// <para>
+    /// ⚠️ AN ONSET THAT IS NOT A COLUMN IS DROPPED, and it was already unread. The map
+    /// bucketed EVERY onset, including the unused columns
+    /// <c>MultiStaffLayouter.PruneSpacerOnlyOnsets</c> had already taken out of
+    /// <paramref name="timings"/> — built, filled, and never asked for.
+    /// </para>
     /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
     /// LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves.
     /// </remarks>
-    private static Dictionary<Fraction, List<MusicItem>> BuildTimingToItemsMap(
-        IReadOnlyList<Measure> measuresToScan)
+    private static ItemColumn[] BuildTimingColumns(
+        IReadOnlyList<Measure> measuresToScan, List<Fraction> timings)
     {
-        var timingToItems = new Dictionary<Fraction, List<MusicItem>>();
+        var columns = new ItemColumn[timings.Count];
         for (int mi = 0; mi < measuresToScan.Count; mi++)
         {
             var m = measuresToScan[mi];
             var t = Fraction.Zero;
+            int k = 0;
             foreach (var item in m.Items)
             {
                 // Grace time is spaced by its own machine (SpacingRules.Grace), which
@@ -314,16 +335,16 @@ internal sealed class MeasureLayouter
                 // (LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing).
                 if (item.GraceTime)
                     continue;
-                if (!timingToItems.TryGetValue(t, out var items))
-                {
-                    items = new List<MusicItem>();
-                    timingToItems[t] = items;
-                }
-                items.Add(item);
+                // t never decreases inside a measure, so one cursor serves the whole walk;
+                // a zero-duration change item shares the note's t and does not move it.
+                while (k < timings.Count && timings[k] < t)
+                    k++;
+                if (k < timings.Count && timings[k] == t)
+                    columns[k] = columns[k].Append(item);
                 t += item.Duration;
             }
         }
-        return timingToItems;
+        return columns;
     }
 
     /// <summary>The MUSICAL item in <paramref name="m"/> (one voice's sequential items) that
@@ -397,7 +418,7 @@ internal sealed class MeasureLayouter
     /// side, because the two spring gates must price identically.
     /// </remarks>
     /// <param name="timings">The kept onsets — a skip's unused column is not among them.</param>
-    /// <param name="timingToItems">Items by onset.</param>
+    /// <param name="columns">Items by column, index-aligned with the timings.</param>
     /// <param name="measure">The primary measure (its leading change items ride the bar).</param>
     /// <param name="leftBound">The bar line drawn at the bar's left bounding column.</param>
     /// <param name="droppedOnsetFollows">Whether an unused (skip-only) onset was dropped AFTER
@@ -409,11 +430,11 @@ internal sealed class MeasureLayouter
     /// duration-space spring.</param>
     private static Spring CreateBarlineToFirstSpring(
         Rendering.ScoreTextMetrics fonts,
-        List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
+        List<Fraction> timings, ItemColumn[] columns,
         Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
         SpacingOptions spacing, IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems)
     {
-        timingToItems.TryGetValue(timings[0], out var firstItems);
+        var firstItems = columns[0];
         // A bar that opens with a skip: the bar line's neighbour is a column at a later
         // moment — the duration-space branch, not Staff_spacing.
         if (timings[0] > Fraction.Zero)
@@ -422,12 +443,17 @@ internal sealed class MeasureLayouter
         // A grace run on ANY staff at this moment puts a grace column between the bar line and
         // the first musical column, and fills_measure then sees a musical `next`
         // (SpacingRules.HasLeadingGraceColumn).
+        bool anyMusical = false, anyLeadingGrace = false;
+        for (int q = 0; q < firstItems.Count; q++)
+        {
+            anyMusical |= SpacingRules.IsMusicalColumn(firstItems[q]);
+            anyLeadingGrace |= SpacingRules.HasLeadingGraceColumn(firstItems[q]);
+        }
         bool fillsMeasure =
             timings.Count == 1
             && !droppedOnsetFollows
-            && firstItems != null
-            && firstItems.Any(SpacingRules.IsMusicalColumn)
-            && !firstItems.Any(SpacingRules.HasLeadingGraceColumn)
+            && anyMusical
+            && !anyLeadingGrace
             && !(staffFirstItems?.Any(items => items.Any(SpacingRules.HasLeadingGraceColumn)) ?? false);
         return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure, staffFirstItems, leftBound);
     }
@@ -496,7 +522,7 @@ internal sealed class MeasureLayouter
     private Spring CreateInterColumnSpring(
         Rendering.ScoreTextMetrics fonts,
         int i, List<Fraction> timings,
-        Dictionary<Fraction, List<MusicItem>> timingToItems,
+        ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, SpacingOptions spacing,
         List<(int Left, int Right, double Distance)> looseRods)
     {
@@ -520,8 +546,8 @@ internal sealed class MeasureLayouter
             segmentDuration, shortestPlaying, spacing,
             measureLength: measureLength > Fraction.Zero ? measureLength : null);
 
-        timingToItems.TryGetValue(timings[i - 1], out var prevItems);
-        timingToItems.TryGetValue(timings[i], out var nextItems);
+        var prevItems = columns[i - 1];
+        var nextItems = columns[i];
 
         // Collision rods are PER VOICE: two noteheads force a horizontal minimum only when the
         // SAME voice puts one at each of these adjacent columns. Pairing items across voices/staves
@@ -561,7 +587,12 @@ internal sealed class MeasureLayouter
         // equal to the digit; charging the widest head instead was the whole of
         // multi-voice.natural.wide-head-gap's +0.073200 = the half-vs-quarter
         // head-width difference).
-        List<MusicItem>? wishLefts = null;
+        // ⚠️ NOT A LIST. Session 455's census: 37.80 builds a keystroke, mean 1.74 items,
+        // MAX 2 — so the whole 3,327 B/keystroke this container cost was two slots wide.
+        // ItemColumn carries both in the struct; the third wish (three voices occupying
+        // both columns — expressible, and absent from 231 books) spills to a real list.
+        MusicItem? wish0 = null, wish1 = null;
+        List<MusicItem>? wishMany = null;
         for (int vi = 0; vi < measuresToScan.Count; vi++)
         {
             var vm = measuresToScan[vi];
@@ -570,7 +601,10 @@ internal sealed class MeasureLayouter
             if (prev == null || next == null)
                 continue;
             anyWish = true;
-            (wishLefts ??= new List<MusicItem>()).Add(prev);
+            if (wishMany is not null) wishMany.Add(prev);
+            else if (wish0 is null) wish0 = prev;
+            else if (wish1 is null) wish1 = prev;
+            else wishMany = [wish0, wish1, prev];
             // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the
             //   spring's own minimum, taken with the right column's skyline-vertical-padding
             //   and with NO spanner padding.
@@ -609,13 +643,14 @@ internal sealed class MeasureLayouter
         // anyway held the two cross-staff gaps of spacing-loose-polyphony.ly at 1.20/1.70
         // where LilyPond's bare ideals are 0.80/1.60. The cue check stays on top of this:
         // see SpacingRules.CrossesVoiceBoundary (spacing-spanner.cc:352-358).
-        if (wishLefts != null)
+        if (wish0 != null)
             spring = SpacingRules.ApplyLeftHeadWidth(
                 spring,
                 // One left item per WISH — per voice occupying both columns with a
-                // rhythmic grob at each (ItemStartingAt); anyWish and wishLefts are the
+                // rhythmic grob at each (ItemStartingAt); anyWish and wish0 are the
                 // same fact, so a pair no voice spans keeps its raw duration ideal.
-                wishLefts, spacing.Increment, nextItems,
+                wishMany is not null ? new ItemColumn(wishMany) : new ItemColumn(wish0, wish1),
+                spacing.Increment, nextItems,
                 // Several wishes merge as LilyPond merges them — by AVERAGING the
                 // ideals (merge_springs) — not by taking the widest head.
                 mergeWishAverage: true);
@@ -640,7 +675,7 @@ internal sealed class MeasureLayouter
         // compression becomes a rod spanning its own-staff neighbors.
         // LILYPOND-REF: lily/spacing-determine-loose-columns.cc:192-278 prune_loose_columns
         //   — loose columns leave the cols vector and get between-cols instead.
-        if (changeGaps is { } pruned && nextItems != null)
+        if (changeGaps is { } pruned && nextItems.Count > 0)
         {
             var ownLeft = SpacingRules.LooseChangeLeftNeighborTiming(measuresToScan, nextItems);
             if (SpacingRules.IsLooseChangeColumn(fonts, timings, ownLeft, timings[i], nextItems))
@@ -660,7 +695,7 @@ internal sealed class MeasureLayouter
                 {
                     var ownPrev = SpacingRules.LooseChangeOwnPrevItem(measuresToScan, nextItems);
                     var ownArms = SpacingRules.MidMeasureChangeGaps(
-                        fonts, nextItems, ownPrev != null ? new[] { ownPrev } : null,
+                        fonts, nextItems, ownPrev != null ? new ItemColumn(ownPrev) : default,
                         spring.IdealDistance);
                     looseRods.Add((leftIndex + 1, i + 1, (ownArms ?? pruned).MinDistance));
                 }
@@ -715,7 +750,7 @@ internal sealed class MeasureLayouter
             // for every wish. MergeVoiceStemWishes clamps the NOTE wishes it sees; a wish
             // whose left column is a rest never reaches it, and ApplyLeftHeadWidth (:77)
             // no longer clamps, so the pair's wish is clamped here too.
-            if (wishLefts != null)
+            if (wish0 != null)
                 spring = spring.WithIdealDistance(Math.Max(0.0, spring.IdealDistance));
         }
 
@@ -767,7 +802,7 @@ internal sealed class MeasureLayouter
     /// line's other neighbours (SpacingRules.NoteColumnToBarlineFloorPair).</param>
     private static Spring CreateLastToBarlineSpring(
         Rendering.ScoreTextMetrics fonts,
-        List<Fraction> timings, Dictionary<Fraction, List<MusicItem>> timingToItems,
+        List<Fraction> timings, ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, SpacingOptions spacing,
         double boundaryClefAllowance = 0, IReadOnlyList<MusicItem>? rightNeighbours = null)
     {
@@ -779,7 +814,8 @@ internal sealed class MeasureLayouter
         // The column ROD toward the bar line, applied last (below) — a floor on the
         // compressed length alone, as on every inter-column spring.
         double maxRod = 0;
-        if (timingToItems.TryGetValue(timings[^1], out var lastItems))
+        var lastItems = columns[^1];
+        if (lastItems.Count > 0)
         {
             endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment);
 
@@ -804,8 +840,9 @@ internal sealed class MeasureLayouter
             // LILYPOND-REF: lily/note-spacing.cc:78-83 get_spacing (the minimum);
             // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods (the rod).
             double maxSkyDist = 0;
-            foreach (var item in lastItems)
+            for (int q = 0; q < lastItems.Count; q++)
             {
+                var item = lastItems[q];
                 var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(
                     fonts, item, new ItemColumn(rightNeighbours));
                 maxSkyDist = Math.Max(maxSkyDist, skyDist);

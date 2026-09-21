@@ -291,16 +291,15 @@ internal static partial class SpacingRules
     internal static Spring SkipOpenedBarFirstSpring(
         Rendering.ScoreTextMetrics fonts,
         BarlineType leftBound, ImmutableArray<MusicItem> measureItems,
-        IReadOnlyList<MusicItem>? firstItems, Fraction dt, SpacingOptions spacing)
+        in ItemColumn firstItems, Fraction dt, SpacingOptions spacing)
     {
         var leftColumnRight = BoundaryColumn.Build(fonts, leftBound, measureItems).RightSkylineFromBarLine();
         // The note column's left reach: its leftmost ink plus its extra-spacing-width, the
         // right-hand term of minimum_distance (MusicalColumnLeftReach), over every voice.
         double reach = 0;
-        if (firstItems != null)
-            foreach (var item in firstItems)
-                if (!IsChangeItem(item) && item is not RestItem { IsSpacer: true })
-                    reach = Math.Max(reach, MusicalColumnLeftReach(item));
+        for (int q = 0; q < firstItems.Count; q++)
+            if (!IsChangeItem(firstItems[q]) && firstItems[q] is not RestItem { IsSpacer: true })
+                reach = Math.Max(reach, MusicalColumnLeftReach(firstItems[q]));
         var noteColumnLeft = HorizontalSkyline.FromBox(
             BoundaryColumn.StaffYBottom, BoundaryColumn.StaffYTop,
             xLeft: -reach, xRight: 0.1, HorizontalDirection.Left);
