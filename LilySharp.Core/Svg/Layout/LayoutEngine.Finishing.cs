@@ -457,7 +457,8 @@ internal sealed partial class LayoutEngine
                 var slice = systemCache is null
                     ? table.SliceOf(first, count)
                     : systemCache.GetOrComputeStaffSystemVoiceCollisions(
-                        staffIndex, first, count, () => table.SliceOf(first, count));
+                        staffIndex, first, count, (Table: table, First: first, Count: count),
+                        static s => s.Table.SliceOf(s.First, s.Count));
                 ElementCoordinator.AddVoiceCollisions(
                     slice, voiceOffsetsBuilder, headWipeBuilder, dotAdjustBuilder);
             }

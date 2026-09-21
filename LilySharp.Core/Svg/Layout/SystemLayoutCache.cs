@@ -258,9 +258,18 @@ internal sealed class SystemLayoutCache
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
         Func<ImmutableArray<MeasureLayout>> compute)
+        => GetOrComputeMeasures(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
+            indent, commonShortestDuration, compute, static c => c());
+
+    /// <summary>The same, with the computation's inputs as <paramref name="state"/> so the
+    /// caller's lambda can be static (see <c>TypedCache.GetOrCompute</c>).</summary>
+    public ImmutableArray<MeasureLayout> GetOrComputeMeasures<TState>(
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        TState state, Func<TState, ImmutableArray<MeasureLayout>> compute)
     {
         var result = _measures.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
-            isLastSystem, indent, commonShortestDuration, extra: 0, compute, out bool hit);
+            isLastSystem, indent, commonShortestDuration, extra: 0, state, compute, out bool hit);
         LastWasHit = hit;
         return result;
     }
@@ -298,8 +307,16 @@ internal sealed class SystemLayoutCache
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
         Func<MultiStaffLayouter.StaffSkylineSet> compute)
+        => GetOrComputeStaffSkylines(firstMeasureIndex, measureCount, isFirstSystem,
+            isLastSystem, indent, commonShortestDuration, compute, static c => c());
+
+    /// <summary>The same, with the computation's inputs as <paramref name="state"/>.</summary>
+    public MultiStaffLayouter.StaffSkylineSet GetOrComputeStaffSkylines<TState>(
+        int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration,
+        TState state, Func<TState, MultiStaffLayouter.StaffSkylineSet> compute)
         => _staffSkylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
-            isLastSystem, indent, commonShortestDuration, extra: 0, compute, out _);
+            isLastSystem, indent, commonShortestDuration, extra: 0, state, compute, out _);
 
     /// <summary>Hits and misses of <see cref="GetOrComputeLyricBand"/> over this cache's
     /// lifetime (diagnostics / tests) — what lets a net assert the memo actually served
@@ -345,14 +362,14 @@ internal sealed class SystemLayoutCache
     /// not, the second walk is the arithmetic this memo exists to avoid repeating — see
     /// <see cref="LayoutEngine.LooseBlockProfiles"/> for which consumer wants which.
     /// </remarks>
-    public LayoutEngine.LooseBlockProfiles GetOrComputeLyricBand(
+    public LayoutEngine.LooseBlockProfiles GetOrComputeLyricBand<TState>(
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
-        Func<LayoutEngine.LooseBlockProfiles> compute)
+        TState state, Func<TState, LayoutEngine.LooseBlockProfiles> compute)
     {
         var result = _lyricBands.GetOrCompute(_keys, firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
-            compute, out bool hit);
+            state, compute, out bool hit);
         LyricBandStats = hit
             ? (LyricBandStats.Hits + 1, LyricBandStats.Misses)
             : (LyricBandStats.Hits, LyricBandStats.Misses + 1);
@@ -402,12 +419,12 @@ internal sealed class SystemLayoutCache
 
     /// <summary>Reuses or computes the system's up/down skyline. Keyed additionally
     /// on <paramref name="systemHeight"/>, which the skyline depends on.</summary>
-    public (VerticalSkyline up, VerticalSkyline down) GetOrComputeSkyline(
+    public (VerticalSkyline up, VerticalSkyline down) GetOrComputeSkyline<TState>(
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration, double systemHeight,
-        Func<(VerticalSkyline up, VerticalSkyline down)> compute)
+        TState state, Func<TState, (VerticalSkyline up, VerticalSkyline down)> compute)
         => _skylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
-            isLastSystem, indent, commonShortestDuration, extra: systemHeight, compute, out _);
+            isLastSystem, indent, commonShortestDuration, extra: systemHeight, state, compute, out _);
 
     /// <summary>Reuses or computes ONE staff's laid-out beams for ONE system — the
     /// preliminary annotation pass's per-(staff, system) unit of work.</summary>
@@ -435,14 +452,14 @@ internal sealed class SystemLayoutCache
     /// for the whole staff when any such group exists.</item>
     /// </list>
     /// </remarks>
-    public ImmutableArray<BeamLayout> GetOrComputeStaffSystemBeams(
+    public ImmutableArray<BeamLayout> GetOrComputeStaffSystemBeams<TState>(
         int staffIndex, int systemIndex,
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
-        Func<ImmutableArray<BeamLayout>> compute)
+        TState state, Func<TState, ImmutableArray<BeamLayout>> compute)
         => _staffSystemBeams.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: 0,
-            compute, out _, extra2: staffIndex, systemIndex: systemIndex);
+            state, compute, out _, extra2: staffIndex, systemIndex: systemIndex);
 
     /// <summary>Reuses or computes ONE staff's laid-out TIES for ONE system — keyed like
     /// <see cref="GetOrComputeStaffSystemBeams"/> and standing on the same claim, extended
@@ -461,15 +478,15 @@ internal sealed class SystemLayoutCache
     /// exercising the memo at all).</summary>
     public (int Hits, int Misses) BowMemoStats { get; private set; }
 
-    public ImmutableArray<TieLayout> GetOrComputeStaffSystemTies(
+    public ImmutableArray<TieLayout> GetOrComputeStaffSystemTies<TState>(
         int staffIndex, int systemIndex,
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
-        Func<ImmutableArray<TieLayout>> compute)
+        TState state, Func<TState, ImmutableArray<TieLayout>> compute)
     {
         var result = _staffSystemTies.GetOrCompute(_keys, firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
-            compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
+            state, compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
         BowMemoStats = hit
             ? (BowMemoStats.Hits + 1, BowMemoStats.Misses)
             : (BowMemoStats.Hits, BowMemoStats.Misses + 1);
@@ -480,15 +497,15 @@ internal sealed class SystemLayoutCache
     /// <see cref="GetOrComputeStaffSystemTies"/>; the slur's extra inputs (its beams, the
     /// 'inside scripts, the grace notes) are the per-system beam value under this same key
     /// family plus side-tables folded per measure.</summary>
-    public ImmutableArray<SlurLayout> GetOrComputeStaffSystemSlurs(
+    public ImmutableArray<SlurLayout> GetOrComputeStaffSystemSlurs<TState>(
         int staffIndex, int systemIndex,
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
-        Func<ImmutableArray<SlurLayout>> compute)
+        TState state, Func<TState, ImmutableArray<SlurLayout>> compute)
     {
         var result = _staffSystemSlurs.GetOrCompute(_keys, firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
-            compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
+            state, compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
         BowMemoStats = hit
             ? (BowMemoStats.Hits + 1, BowMemoStats.Misses)
             : (BowMemoStats.Hits, BowMemoStats.Misses + 1);
@@ -510,12 +527,12 @@ internal sealed class SystemLayoutCache
     /// (<c>SpacingRules.VoiceCollisionShiftsOf</c>), which is where the compute lambda
     /// reads it from too, so the two readers cannot hold different shifts.
     /// </remarks>
-    public ImmutableArray<VoiceCollisionEntry> GetOrComputeStaffSystemVoiceCollisions(
+    public ImmutableArray<VoiceCollisionEntry> GetOrComputeStaffSystemVoiceCollisions<TState>(
         int staffIndex, int firstMeasureIndex, int measureCount,
-        Func<ImmutableArray<VoiceCollisionEntry>> compute)
+        TState state, Func<TState, ImmutableArray<VoiceCollisionEntry>> compute)
         => _voiceCollisions.GetOrCompute(_keys, firstMeasureIndex, measureCount,
             isFirst: false, isLast: false, indent: 0, shortest: 0, extra: 0,
-            compute, out _, extra2: staffIndex);
+            state, compute, out _, extra2: staffIndex);
 
     /// <summary>Reuses or computes ONE system's augmented PAGING skyline — its base
     /// skyline pair with the annotation ink merged in (scripts, tuplet brackets, bows,
@@ -836,11 +853,28 @@ internal sealed class SystemLayoutCache
         public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
             double extra, Func<T> compute, out bool hit, double extra2 = 0, int systemIndex = 0)
+            => GetOrCompute(keys, first, count, isFirst, isLast, indent, shortest, extra,
+                compute, static c => c(), out hit, extra2, systemIndex);
+
+        /// <summary>The same lookup with the computation's inputs passed as
+        /// <paramref name="state"/>, so a caller can hand a STATIC lambda.</summary>
+        /// <remarks>
+        /// ⚠️ A LAMBDA THAT CAPTURES IS BUILT BEFORE THE CALL, HIT OR MISS: a closure
+        /// environment and a delegate on every lookup, although only a miss runs it. The
+        /// per-system stores are looked up once per system per keystroke and mostly hit, so
+        /// the captured factories cost 18,026 B of a 2,931,095 B keystroke over the tab
+        /// corpus (session 469, A/B with this change alone left out) to build computations that
+        /// were almost never run.
+        /// </remarks>
+        public T GetOrCompute<TState>(ImmutableArray<MeasureContentKey> keys,
+            int first, int count, bool isFirst, bool isLast, double indent, double shortest,
+            double extra, TState state, Func<TState, T> compute, out bool hit,
+            double extra2 = 0, int systemIndex = 0)
         {
             if (keys.IsDefault || first < 0 || first + count > keys.Length)
             {
                 hit = false;
-                return compute();
+                return compute(state);
             }
 
             // Hash and match straight off the caller's keys — a HIT allocates nothing.
@@ -899,7 +933,7 @@ internal sealed class SystemLayoutCache
             }
             else
             {
-                value = compute();
+                value = compute(state);
                 Pass = Pass.WithMiss();
                 hit = false;
             }

@@ -623,25 +623,33 @@ internal static partial class SharedRenderer
                 return (half, half);
             }
             case ChordItem c when c.Notes.Length > 0:
-            {
-                var notes = Tunings.CalculateChordFrets(
-                        c.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(), tuning)
-                    .Select(p => (str: p.stringNum, fret: p.fret))
-                    .OrderBy(p => p.str)
-                    .ToList();
-                double[] dx = TabChordColumns.Offsets(fonts, notes);
-                double left = 0, right = 0;
-                for (int i = 0; i < notes.Count; i++)
-                {
-                    double half = TabChordColumns.FretWidth(fonts, notes[i].fret) / 2;
-                    left = Math.Max(left, -dx[i] + half);
-                    right = Math.Max(right, dx[i] + half);
-                }
-                return (left, right);
-            }
+                return TabChordHalfExtent(fonts, c, tuning, octaveShift);
             default:
                 return (0, 0);
         }
+    }
+
+    // ⚠️ A METHOD OF ITS OWN because its lambda captures `octaveShift`, a PARAMETER — so the
+    // closure's environment was built at the entry of TabItemHalfExtent, and paid by every
+    // single note and rest that never reaches a chord: 737 B a keystroke over the tab corpus
+    // (session 469, A/B of this file alone).
+    private static (double Left, double Right) TabChordHalfExtent(
+        ScoreTextMetrics fonts, ChordItem c, int[] tuning, int octaveShift)
+    {
+        var notes = Tunings.CalculateChordFrets(
+                c.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(), tuning)
+            .Select(p => (str: p.stringNum, fret: p.fret))
+            .OrderBy(p => p.str)
+            .ToList();
+        double[] dx = TabChordColumns.Offsets(fonts, notes);
+        double left = 0, right = 0;
+        for (int i = 0; i < notes.Count; i++)
+        {
+            double half = TabChordColumns.FretWidth(fonts, notes[i].fret) / 2;
+            left = Math.Max(left, -dx[i] + half);
+            right = Math.Max(right, dx[i] + half);
+        }
+        return (left, right);
     }
 
     private static void DrawTabNote(ScoreTextMetrics fonts, int midi,

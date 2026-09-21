@@ -44,14 +44,14 @@ internal sealed partial class LayoutEngine
     /// <summary>The below-system lyric band, through the per-system cache when the session
     /// has one — see <see cref="SystemLayoutCache.GetOrComputeLyricBand"/> for the key's
     /// coverage claim. Null cache (the full-render path) computes live, as everywhere.</summary>
-    private static LooseBlockProfiles ComputeLyricBand(
+    private static LooseBlockProfiles ComputeLyricBand<TState>(
         SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
         bool isLastSystem, double indent, double commonShortestDuration,
-        Func<LooseBlockProfiles> compute)
+        TState state, Func<TState, LooseBlockProfiles> compute)
         => cache == null
-            ? compute()
+            ? compute(state)
             : cache.GetOrComputeLyricBand(firstMeasureIndex, measureCount, isFirstSystem,
-                isLastSystem, indent, commonShortestDuration, compute);
+                isLastSystem, indent, commonShortestDuration, state, compute);
 
     /// <summary>
     /// One (system, staff)'s inside-staff spanners out of the per-system lists the room
@@ -142,25 +142,25 @@ internal sealed partial class LayoutEngine
     // served the whole score, so there was nothing worth memoising. On a fifty-system
     // score a one-note edit rebuilt all fifty without this. Null cache => direct compute,
     // byte-identical to the non-incremental path.
-    private static MultiStaffLayouter.StaffSkylineSet ComputeStaffSkylines(
+    private static MultiStaffLayouter.StaffSkylineSet ComputeStaffSkylines<TState>(
         SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
         bool isLastSystem, double indent, double commonShortestDuration,
-        Func<MultiStaffLayouter.StaffSkylineSet> compute)
+        TState state, Func<TState, MultiStaffLayouter.StaffSkylineSet> compute)
         => cache == null
-            ? compute()
+            ? compute(state)
             : cache.GetOrComputeStaffSkylines(firstMeasureIndex, measureCount, isFirstSystem,
-                isLastSystem, indent, commonShortestDuration, compute);
+                isLastSystem, indent, commonShortestDuration, state, compute);
 
     // F3/S5-3c: route a system's skyline through the session cache (the dominant
     // per-system cost, esp. multi-staff). Keyed additionally on systemHeight.
-    private static (VerticalSkyline up, VerticalSkyline down) ComputeSystemSkyline(
+    private static (VerticalSkyline up, VerticalSkyline down) ComputeSystemSkyline<TState>(
         SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
         bool isLastSystem, double indent, double commonShortestDuration, double systemHeight,
-        Func<(VerticalSkyline up, VerticalSkyline down)> compute)
+        TState state, Func<TState, (VerticalSkyline up, VerticalSkyline down)> compute)
         => cache == null
-            ? compute()
+            ? compute(state)
             : cache.GetOrComputeSkyline(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
-                indent, commonShortestDuration, systemHeight, compute);
+                indent, commonShortestDuration, systemHeight, state, compute);
 
     /// <summary>
     /// Splits every system's paging silhouette into the two buckets the page BREAKER

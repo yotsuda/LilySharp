@@ -626,8 +626,9 @@ internal static class MusicMarkEngraver
             // is gated on (LayoutEngine hands it ctx.ChordNames), so the two arms cover
             // exactly the same set of books.
             var chordItems = score?.ChordNames ?? ImmutableArray<ChordNameItem>.Empty;
-            if (chordItems.IsDefaultOrEmpty
-                || !chordItems.Any(c => c.IsChordRow && c.StaffIndex == anchor))
+            // (A loop, not a lambda over `anchor`: the lambda's environment was built on
+            // every call, before the bail-out above — see HasChordRowOn.)
+            if (chordItems.IsDefaultOrEmpty || !HasChordRowOn(chordItems, anchor))
                 return null;
             if (system.StaffGroups.IsDefaultOrEmpty) return null;
             foreach (var g in system.StaffGroups)
@@ -918,10 +919,15 @@ internal static class MusicMarkEngraver
             // The pair is the one BesidePair names, so the chord-row reservation
             // (BoxedLabelXWindows) widens the same label the tempo lands beside.
             int besideTempo = -1, besideLabel = -1;
+            // ⚠️ INDEXED BY A LOOP, NOT `FindIndex(e => … pair …)`: those two lambdas captured
+            // `pair`, which made this loop body's whole scope a heap environment (with the
+            // chord-band cache the local functions above share) — built for EVERY group,
+            // `marks beside` or not: 1,098 B a keystroke over the tab corpus (session 469,
+            // allocation sampling).
             if (marksBeside && BesidePair(aboveMarks.Select(e => e.Mark).ToList()) is { } pair)
             {
-                besideTempo = aboveMarks.FindIndex(e => ReferenceEquals(e.Mark, pair.Tempo));
-                besideLabel = aboveMarks.FindIndex(e => ReferenceEquals(e.Mark, pair.Label));
+                besideTempo = IndexOfMark(aboveMarks, pair.Tempo);
+                besideLabel = IndexOfMark(aboveMarks, pair.Label);
             }
 
             for (int i = 0; i < aboveMarks.Count; i++)
@@ -2110,12 +2116,15 @@ internal static class MusicMarkEngraver
         // condition the placement applies, spelled the same way (see
         // StafflessAnchorRefpointBelowTop for why it says "staffless" too). The two arms have
         // to cover the same books or one of them acts alone, which is HANDOFF 5.3's shape.
+        // ⚠️ A LOOP, NOT `Any(c => … == anchor)`: the lambda captured the loop's `anchor`, so
+        // its environment was built at the top of EVERY system's iteration — the
+        // no-chord-names `continue` included — 1,257 B a keystroke over the tab corpus
+        // (session 469, allocation sampling).
         var stafflessMeasures = new HashSet<int>();
         foreach (var system in systems)
         {
             int anchor = LayoutUtilities.TopScoreGrobStaff(system);
-            if (chordNames.IsDefaultOrEmpty
-                || !chordNames.Any(c => c.IsChordRow && c.StaffIndex == anchor))
+            if (chordNames.IsDefaultOrEmpty || !HasChordRowOn(chordNames, anchor))
                 continue;
             foreach (var m in system.Measures)
                 stafflessMeasures.Add(m.MeasureIndex);
@@ -2145,6 +2154,26 @@ internal static class MusicMarkEngraver
             windows.Add((mark.MeasureIndex, x0, x1));
         }
         return windows;
+    }
+
+    /// <summary>The index in <paramref name="marks"/> of <paramref name="mark"/> by
+    /// reference, or −1.</summary>
+    private static int IndexOfMark(
+        List<(MusicMarkItem Mark, double X, int SourceIndex)> marks, MusicMarkItem mark)
+    {
+        for (int i = 0; i < marks.Count; i++)
+            if (ReferenceEquals(marks[i].Mark, mark))
+                return i;
+        return -1;
+    }
+
+    /// <summary>Whether a chord-row symbol stands on staff <paramref name="staffIndex"/>.</summary>
+    private static bool HasChordRowOn(ImmutableArray<ChordNameItem> chordNames, int staffIndex)
+    {
+        foreach (var c in chordNames)
+            if (c.IsChordRow && c.StaffIndex == staffIndex)
+                return true;
+        return false;
     }
 
     /// <summary>

@@ -477,9 +477,11 @@ internal sealed partial class LayoutEngine
                 sys.Measures[0].MeasureIndex, sys.Measures.Length,
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
-                () => _elementCoordinator.LayoutBeams(
-                    staffBeamScore, ImmutableArray.Create(sys), staffIndex,
-                    sysGroups.ToImmutableArray()));
+                (Coordinator: _elementCoordinator, Score: staffBeamScore, Sys: sys,
+                    StaffIndex: staffIndex, Groups: sysGroups),
+                static s => s.Coordinator.LayoutBeams(
+                    s.Score, ImmutableArray.Create(s.Sys), s.StaffIndex,
+                    s.Groups.ToImmutableArray()));
         }
         GiveGroupsBySystem(groupsBySystem);
 
@@ -729,9 +731,11 @@ internal sealed partial class LayoutEngine
                 sys.Measures[0].MeasureIndex, sys.Measures.Length,
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
-                () => _elementCoordinator.LayoutTies(
-                    fonts, sysTies.ToImmutableArray(), staffSpannerScore,
-                    ImmutableArray.Create(sys), staffIndex, staff));
+                (Coordinator: _elementCoordinator, Fonts: fonts, Ties: sysTies,
+                    Score: staffSpannerScore, Sys: sys, StaffIndex: staffIndex, Staff: staff),
+                static s => s.Coordinator.LayoutTies(
+                    s.Fonts, s.Ties.ToImmutableArray(), s.Score,
+                    ImmutableArray.Create(s.Sys), s.StaffIndex, s.Staff));
         }
 
         // Column-major reassembly in detection order, one layout per tie (an
@@ -813,6 +817,64 @@ internal sealed partial class LayoutEngine
         t_columnTies = map;
     }
 
+    /// <summary>The inside-slur script factory a slur solve takes — null when the staff has
+    /// no scripts. Static, so the closure is built only when a solve asks for it: as a local
+    /// function capturing the method's parameters it made the whole method's environment,
+    /// which every call paid at entry, memo hit or not (session 469).</summary>
+    private static Func<ImmutableArray<InsideSlurScript>>? InsideScriptFactory(
+        Rendering.ScoreTextMetrics fonts, Score staffSpannerScore, int staffIndex, Staff staff,
+        ImmutableArray<ArticulationItem> staffScripts, ImmutableArray<SystemLayout> systems,
+        ImmutableArray<BeamLayout> beams, ImmutableArray<TieLayout> tieLayouts)
+        => staffScripts.IsEmpty ? null : () =>
+            ArticulationEngraver.InsideSlurScriptLayouts(
+                fonts, staffSpannerScore, staffScripts,
+                systems.SelectMany(s => s.Measures).ToImmutableArray(),
+                measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
+                    { [staffIndex] = staff.PrimaryVoice.Measures },
+                staffYAt: null,
+                staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
+                beamLayouts: beams,
+                tieLayouts: tieLayouts);
+
+    /// <summary>
+    /// ONE system's slur solve for <see cref="LayoutPreliminaryStaffSlurs"/>' memo — the
+    /// inputs as a value, so the memo is handed a static lambda.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SYSTEM'S BEAMS AND TIES ARE FILTERED HERE, INSIDE THE SOLVE: only the solve
+    /// reads them, and they used to be filtered (two <c>Where</c>s and two copies) before the
+    /// memo was asked, so every HIT paid for a solve it did not run (session 469).
+    /// </remarks>
+    private readonly record struct SystemSlurSolve(
+        ElementCoordinator Coordinator, Rendering.ScoreTextMetrics Fonts, List<SlurItem> Slurs,
+        Score Score, SystemLayout Sys, int SystemKey, int StaffIndex, Staff Staff,
+        ImmutableArray<GraceNoteItem> GraceNotes, ImmutableArray<BeamLayout> StaffBeams,
+        ImmutableArray<TieLayout> StaffTies, ImmutableArray<ArticulationItem> StaffScripts,
+        IReadOnlyDictionary<int, int> MeasureToSystem)
+    {
+        public ImmutableArray<SlurLayout> Solve()
+        {
+            var single = ImmutableArray.Create(Sys);
+            int systemIndex = Sys.SystemIndex;
+            var sysBeams = StaffBeams.IsDefaultOrEmpty
+                ? StaffBeams
+                : StaffBeams.Where(b => b.SystemIndex == systemIndex).ToImmutableArray();
+            var measureToSystem = MeasureToSystem;
+            int k = SystemKey;
+            var sysTies = StaffTies.IsDefaultOrEmpty
+                ? StaffTies
+                : StaffTies.Where(t =>
+                        measureToSystem.TryGetValue(t.Tie.StartMeasureIndex, out int tk)
+                        && tk == k)
+                    .ToImmutableArray();
+            return Coordinator.LayoutSlurs(
+                Fonts, Slurs.ToImmutableArray(), Score, single, StaffIndex,
+                Staff, GraceNotes, sysBeams,
+                InsideScriptFactory(Fonts, Score, StaffIndex, Staff, StaffScripts,
+                    single, sysBeams, sysTies));
+        }
+    }
+
     /// <summary>
     /// The preliminary pass's per-(staff, system) SLUR memo — see
     /// <see cref="LayoutPreliminaryStaffTies"/>; same posture, slur-shaped inputs. The
@@ -828,30 +890,18 @@ internal sealed partial class LayoutEngine
         ImmutableArray<ArticulationItem> staffScripts,
         SystemLayoutCache? systemCache, double commonShortestDuration)
     {
-        Func<ImmutableArray<InsideSlurScript>>? FactoryOver(
-            ImmutableArray<SystemLayout> systems,
-            ImmutableArray<BeamLayout> beams, ImmutableArray<TieLayout> tieLayouts)
-            => staffScripts.IsEmpty ? null : () =>
-                ArticulationEngraver.InsideSlurScriptLayouts(
-                    fonts, staffSpannerScore, staffScripts,
-                    systems.SelectMany(s => s.Measures).ToImmutableArray(),
-                    measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
-                        { [staffIndex] = staff.PrimaryVoice.Measures },
-                    staffYAt: null,
-                    staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
-                    beamLayouts: beams,
-                    tieLayouts: tieLayouts);
-
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutSlurs(
                 fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
-                staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
+                staffBeams, InsideScriptFactory(fonts, staffSpannerScore, staffIndex, staff,
+                    staffScripts, prelimSystems, staffBeams, staffTies));
         if (slurs.IsEmpty)
             return ImmutableArray<SlurLayout>.Empty;
 
         ImmutableArray<SlurLayout> Fallback() => _elementCoordinator.LayoutSlurs(
             fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
-            staffBeams, FactoryOver(prelimSystems, staffBeams, staffTies));
+            staffBeams, InsideScriptFactory(fonts, staffSpannerScore, staffIndex, staff,
+                staffScripts, prelimSystems, staffBeams, staffTies));
 
         var measureToSystem = MeasureToSystemOf(prelimSystems);
         var slurSystem = new int[slurs.Length];
@@ -875,24 +925,15 @@ internal sealed partial class LayoutEngine
         foreach (var (k, sysSlurs) in slursBySystem)
         {
             var sys = prelimSystems[k];
-            var single = ImmutableArray.Create(sys);
-            var sysBeams = staffBeams.IsDefaultOrEmpty
-                ? staffBeams
-                : staffBeams.Where(b => b.SystemIndex == sys.SystemIndex).ToImmutableArray();
-            var sysTies = staffTies.IsDefaultOrEmpty
-                ? staffTies
-                : staffTies.Where(t =>
-                        measureToSystem.TryGetValue(t.Tie.StartMeasureIndex, out int tk)
-                        && tk == k)
-                    .ToImmutableArray();
             perSystem[k] = systemCache.GetOrComputeStaffSystemSlurs(
                 staffIndex, sys.SystemIndex,
                 sys.Measures[0].MeasureIndex, sys.Measures.Length,
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
-                () => _elementCoordinator.LayoutSlurs(
-                    fonts, sysSlurs.ToImmutableArray(), staffSpannerScore, single, staffIndex,
-                    staff, graceNotes, sysBeams, FactoryOver(single, sysBeams, sysTies)));
+                new SystemSlurSolve(_elementCoordinator, fonts, sysSlurs, staffSpannerScore,
+                    sys, k, staffIndex, staff, graceNotes, staffBeams, staffTies, staffScripts,
+                    measureToSystem),
+                static s => s.Solve());
         }
 
         // Reassembly in detection order. A slur emits AT MOST one layout for its one
@@ -1307,13 +1348,13 @@ internal sealed partial class LayoutEngine
     // F3/S5-3a: route a system's measure layout through the session cache when one
     // is installed (single-staff incremental path). Null cache => direct compute,
     // byte-identical to the non-incremental path.
-    private static ImmutableArray<MeasureLayout> ComputeSystemMeasures(
+    private static ImmutableArray<MeasureLayout> ComputeSystemMeasures<TState>(
         SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
         bool isLastSystem, double indent, double commonShortestDuration,
-        Func<ImmutableArray<MeasureLayout>> compute)
+        TState state, Func<TState, ImmutableArray<MeasureLayout>> compute)
         => cache == null
-            ? compute()
+            ? compute(state)
             : cache.GetOrComputeMeasures(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
-                indent, commonShortestDuration, compute);
+                indent, commonShortestDuration, state, compute);
 
 }

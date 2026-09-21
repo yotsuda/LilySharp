@@ -2029,7 +2029,21 @@ internal sealed partial class LayoutEngine
             if (!l.IsLyricsRow) { anyNoteBound = true; break; }
         if (!anyNoteBound)
             return null;
+        return LooseLinesSupplier(score, measureLayouts, startMeasure, endMeasure,
+            cache, isFirstSystem, isLastSystem, indent, commonShortestDuration);
+    }
 
+    // ⚠️ THE SUPPLIER IS BUILT IN ITS OWN METHOD so that the closure's environment — which
+    // captures the parameters, and so is allocated at METHOD ENTRY, before either bail-out
+    // above — is paid only by the scores that get a supplier. Inline, every system of an
+    // unsung score paid it and returned null (session 469; the same shape for
+    // BuildRowVerseInk and BuildAttachedChordLines below).
+    private MultiStaffLayouter.LooseLinesBetween LooseLinesSupplier(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+        int startMeasure, int endMeasure,
+        SystemLayoutCache? cache, bool isFirstSystem, bool isLastSystem,
+        double indent, double commonShortestDuration)
+    {
         var engraver = BuildBlockEngraver(score);
         // A note-bound verse is a Lyrics line wherever it hangs, so it carries the Lyrics
         // context's affinity and spec set into the walk.
@@ -2118,7 +2132,17 @@ internal sealed partial class LayoutEngine
     {
         if (score.Lyrics.IsDefaultOrEmpty || !score.Lyrics.Any(l => l.IsLyricsRow))
             return null;
+        return RowVerseInkSupplier(score, measureLayouts, startMeasure, endMeasure);
+    }
 
+    /// <summary>The body of <see cref="BuildRowVerseInk"/> past its bail-out — a method of
+    /// its own so the closure's environment is built only here (see
+    /// <see cref="LooseLinesSupplier"/>).</summary>
+    private static Func<int, IReadOnlyList<(VerticalSkyline Up, VerticalSkyline Down)>?>
+        RowVerseInkSupplier(
+            MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts,
+            int startMeasure, int endMeasure)
+    {
         var staffByIndex = new Dictionary<int, Staff>();
         foreach (var (_, st, idx) in score.EnumerateStaves())
             staffByIndex[idx] = st;
@@ -2146,7 +2170,15 @@ internal sealed partial class LayoutEngine
         if (score.ChordNames.IsDefaultOrEmpty
             || !score.ChordNames.Any(c => !c.IsChordRow && c.UseTiming))
             return null;
+        return AttachedChordLineSupplier(score, measureLayouts);
+    }
 
+    /// <summary>The body of <see cref="BuildAttachedChordLines"/> past its bail-out — a
+    /// method of its own so the closure's environment is built only here (see
+    /// <see cref="LooseLinesSupplier"/>).</summary>
+    private Func<int, MultiStaffLayouter.PairLooseLine?> AttachedChordLineSupplier(
+        MultiStaffScore score, ImmutableArray<MeasureLayout> measureLayouts)
+    {
         var staffByIndex = new Dictionary<int, Staff>();
         foreach (var (_, st, idx) in score.EnumerateStaves())
             staffByIndex[idx] = st;

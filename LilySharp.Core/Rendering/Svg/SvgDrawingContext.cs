@@ -397,31 +397,59 @@ internal sealed class SvgDrawingContext : IDrawingContext
             : null;
     }
 
+    // ⚠️ THE SOURCE AND FACE SCOPES RESTORE FROM A STACK, NOT FROM A CLOSURE. Each call used
+    // to return `new ScopeAction(() => … = prev)` — a closure environment, its Action and
+    // the ScopeAction, about 120 B — and a live-drawn page opens one per notehead, rest,
+    // barline and mark: 168 of them per keystroke over the tab corpus, 20,643 B of a
+    // 2,931,095 B render (session 469, A/B of this file alone). Every caller disposes
+    // them in `using` order, so the saved values form a stack and ONE restorer per kind can
+    // pop it. The one-argument Source restores the aliases too; in LIFO order that is the
+    // value they already hold (any inner scope that changed them has restored them).
+    private readonly List<(int? Position, IReadOnlyList<int>? Aliases)> _savedSources = [];
+    private readonly List<int> _savedDesigns = [];
+    private SourceRestore? _sourceRestore;
+    private DesignRestore? _designRestore;
+
     public IDisposable Source(int sourcePosition)
     {
-        var prev = _currentSourcePosition;
+        _savedSources.Add((_currentSourcePosition, _currentAliases));
         _currentSourcePosition = sourcePosition;
-        return new ScopeAction(() => _currentSourcePosition = prev);
+        return _sourceRestore ??= new SourceRestore(this);
     }
 
     public IDisposable Source(int sourcePosition, IReadOnlyList<int> aliases)
     {
-        var prevPos = _currentSourcePosition;
-        var prevAliases = _currentAliases;
+        _savedSources.Add((_currentSourcePosition, _currentAliases));
         _currentSourcePosition = sourcePosition;
         _currentAliases = _interactive && aliases.Count > 0 ? aliases : null;
-        return new ScopeAction(() =>
-        {
-            _currentSourcePosition = prevPos;
-            _currentAliases = prevAliases;
-        });
+        return _sourceRestore ??= new SourceRestore(this);
     }
 
     public IDisposable MusicFace(int rounded)
     {
-        var prev = _musicDesign;
+        _savedDesigns.Add(_musicDesign);
         _musicDesign = rounded;
-        return new ScopeAction(() => _musicDesign = prev);
+        return _designRestore ??= new DesignRestore(this);
+    }
+
+    private sealed class SourceRestore(SvgDrawingContext owner) : IDisposable
+    {
+        public void Dispose()
+        {
+            var saved = owner._savedSources;
+            (owner._currentSourcePosition, owner._currentAliases) = saved[^1];
+            saved.RemoveAt(saved.Count - 1);
+        }
+    }
+
+    private sealed class DesignRestore(SvgDrawingContext owner) : IDisposable
+    {
+        public void Dispose()
+        {
+            var saved = owner._savedDesigns;
+            owner._musicDesign = saved[^1];
+            saved.RemoveAt(saved.Count - 1);
+        }
     }
 
     public IDisposable BeginGroup(DrawingTransform transform)

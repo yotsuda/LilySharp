@@ -269,9 +269,10 @@ internal sealed partial class LayoutEngine
         var firstSystemMeasureLayouts = systemMeasures.Count > 0
             ? ComputeSystemMeasures(systemCache, 0, systemMeasures[0].Count, true,
                 systemMeasures.Count == 1, indent, commonShortestDuration,
-                () => multiStaffLayouter.LayoutMeasures(score, 0, 0, systemMeasures[0].Count,
-                    isLastSystem: systemMeasures.Count == 1,
-                    baseShortestDuration: commonShortestDuration))
+                (Layouter: multiStaffLayouter, Score: score, Count: systemMeasures[0].Count,
+                    IsLast: systemMeasures.Count == 1, Shortest: commonShortestDuration),
+                static s => s.Layouter.LayoutMeasures(s.Score, 0, 0, s.Count,
+                    isLastSystem: s.IsLast, baseShortestDuration: s.Shortest))
             : ImmutableArray<MeasureLayout>.Empty;
         // System 0's own placement — the same call the loop below makes for every system,
         // with system 0's measure range. LILYPOND-REF: lily/align-interface.cc:217-268 runs
@@ -285,8 +286,9 @@ internal sealed partial class LayoutEngine
         var firstStaffSkylines = ComputeStaffSkylines(systemCache, 0,
             systemMeasures.Count > 0 ? systemMeasures[0].Count : 0, true,
             systemMeasures.Count <= 1, indent, commonShortestDuration,
-            () => multiStaffLayouter.BuildStaffSkylines(
-                score, _skylineBuilder, firstSystemMeasureLayouts, systemIndex: 0));
+            (Layouter: multiStaffLayouter, Score: score, Builder: _skylineBuilder,
+                Measures: firstSystemMeasureLayouts),
+            static s => s.Layouter.BuildStaffSkylines(s.Score, s.Builder, s.Measures, systemIndex: 0));
         var firstRunSources = systemMeasures.Count > 0
             ? BuildPairRunSources(
                 score, firstSystemMeasureLayouts, 0, systemMeasures[0].Count,
@@ -378,7 +380,7 @@ internal sealed partial class LayoutEngine
         var (firstUpSkyline, _) = systemMeasures.Count > 0 && systemHeight > 0
             ? ComputeSystemSkyline(systemCache, 0, systemMeasures[0].Count, true,
                 systemMeasures.Count == 1, indent, commonShortestDuration, systemHeight,
-                FirstSystemSkylines)
+                (Func<(VerticalSkyline up, VerticalSkyline down)>)FirstSystemSkylines, static f => f())
             : FirstSystemSkylines();
         var firstAnchor = PageAnchorOffsets(firstStaffGroupLayouts);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
@@ -770,8 +772,11 @@ internal sealed partial class LayoutEngine
                 ? firstSystemMeasureLayouts
                 : ComputeSystemMeasures(systemCache, firstMeasureIndex, measureCount, false,
                     sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration,
-                    () => multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
-                        sysIdx == systemMeasures.Count - 1, commonShortestDuration));
+                    (Layouter: multiStaffLayouter, Score: score, SysIdx: sysIdx,
+                        First: firstMeasureIndex, Count: measureCount,
+                        IsLast: sysIdx == systemMeasures.Count - 1, Shortest: commonShortestDuration),
+                    static s => s.Layouter.LayoutMeasures(s.Score, s.SysIdx, s.First, s.Count,
+                        s.IsLast, s.Shortest));
 
             // THIS system's staff skylines, built ONCE and used by both its placement and
             // its page springs below. Building them is the expensive part of laying a system
@@ -781,8 +786,10 @@ internal sealed partial class LayoutEngine
                 ? firstStaffSkylines
                 : ComputeStaffSkylines(systemCache, firstMeasureIndex, measureCount, false,
                     sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration,
-                    () => multiStaffLayouter.BuildStaffSkylines(
-                        score, _skylineBuilder, measureLayouts, sysIdx));
+                    (Layouter: multiStaffLayouter, Score: score, Builder: _skylineBuilder,
+                        Measures: measureLayouts, SysIdx: sysIdx),
+                    static s => s.Layouter.BuildStaffSkylines(
+                        s.Score, s.Builder, s.Measures, s.SysIdx));
 
             // THIS system's placement, from ITS music. LILYPOND-REF:
             // lily/align-interface.cc:217-268 — each System has its own VerticalAlignment and
@@ -820,12 +827,14 @@ internal sealed partial class LayoutEngine
 
             var (upSky, downSky) = ComputeSystemSkyline(systemCache, firstMeasureIndex, measureCount,
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
-                () =>
+                (EdgeStaffBeams, Builder: _skylineBuilder, Score: score, Room: sysStaffSkylines,
+                    Measures: measureLayouts, SysIdx: sysIdx, Height: sysHeight, Indent: sysIndent,
+                    Groups: sysStaffGroups),
+                static s =>
                 {
-                    var edgeBeams = EdgeStaffBeams(sysStaffSkylines, measureLayouts, sysIdx);
-                    return _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent,
-                        edgeBeams.first, edgeBeams.last, sysStaffGroups,
-                        sysStaffSkylines.Skylines);
+                    var edgeBeams = s.EdgeStaffBeams(s.Room, s.Measures, s.SysIdx);
+                    return s.Builder.BuildSystemSkylines(s.Score, s.Measures, s.Height, s.Indent,
+                        edgeBeams.first, edgeBeams.last, s.Groups, s.Room.Skylines);
                 });
             perSystemSkylines.Add((upSky, downSky));
             // The loose block's two profiles, in the system-origin frame. The MINIMUM's
@@ -836,9 +845,11 @@ internal sealed partial class LayoutEngine
             var lyricBand = ComputeLyricBand(systemCache, firstMeasureIndex, measureCount,
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent,
                 commonShortestDuration,
-                () => LyricReservationBelowSystem(
-                    score, measureLayouts, sysStaffSkylines.Skylines, sysStaffGroups,
-                    firstMeasureIndex, firstMeasureIndex + measureCount));
+                (Engine: this, Score: score, Measures: measureLayouts,
+                    Skylines: sysStaffSkylines.Skylines, Groups: sysStaffGroups,
+                    First: firstMeasureIndex, End: firstMeasureIndex + measureCount),
+                static s => s.Engine.LyricReservationBelowSystem(
+                    s.Score, s.Measures, s.Skylines, s.Groups, s.First, s.End));
             perSystemLyricBands.Add(lyricBand.Minimum);
             double staffDown = LayoutUtilities.CalculateDownExtent(downSky, sysHeight);
             double BandDown(VerticalSkyline? band) =>

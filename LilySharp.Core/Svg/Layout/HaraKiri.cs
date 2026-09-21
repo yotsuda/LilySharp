@@ -69,6 +69,26 @@ internal static class HaraKiri
         // per system: the walk is a struct and allocates nothing, a score has 1.77 staves on
         // the reader's corpus, and the map was 6,012 B a keystroke at 27.83 filters (session
         // 464's census). The FIRST staff by reference wins, as the map's TryAdd kept it.
+        // ⚠️ A SCORE WITH NO `RemoveEmpty` STAFF GETS THE SHARED FILTER: its closure — the
+        // environment and the delegate, 104 B — was built per system for an answer that is
+        // false for every staff it can be asked about (ShouldHideStaff's first test), which
+        // was 2,911 B a keystroke over the tab corpus (session 469, A/B of this file alone).
+        bool anyRemovable = false;
+        foreach (var (_, s, _) in score.EnumerateStaves())
+            if (s.RemoveEmpty) { anyRemovable = true; break; }
+        if (!anyRemovable)
+            return NothingDies;
+        return LiveFilter(score, startMeasure, endMeasure, isFirstSystem);
+    }
+
+    /// <summary>The filter for a score none of whose staves may commit hara-kiri.</summary>
+    private static readonly Func<Staff, bool> NothingDies = static _ => false;
+
+    /// <summary><see cref="DeadFilter"/>'s closure, in a method of its own so its environment
+    /// is built only when it is returned.</summary>
+    private static Func<Staff, bool> LiveFilter(
+        MultiStaffScore score, int startMeasure, int endMeasure, bool isFirstSystem)
+    {
         return staff => ShouldHideStaff(
             staff, GlobalIndexOf(score, staff), score,
             startMeasure, endMeasure, isFirstSystem);

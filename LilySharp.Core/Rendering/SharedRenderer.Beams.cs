@@ -134,8 +134,14 @@ internal static partial class SharedRenderer
         // the STRINGS (tab heads), not the notated pitch, so a bass run on the
         // bottom strings beams UP like LilyPond — the opposite of the notation
         // group's pitch-based direction.
-        bool allTab = grp.Members.Length > 0 && Enumerable.Range(0, grp.Members.Length)
-            .All(i => MemberStaffOf(i)?.IsTab == true);
+        // ⚠️ A LOOP, NOT `Enumerable.Range(…).All(i => …)`: that lambda was the one thing in
+        // this method that captured, and it made the local functions' shared environment a
+        // heap object — with the range iterator and the delegate, per drawn beam: 2,452 B a
+        // keystroke (session 469, A/B of this file alone). Without it
+        // the local functions' environment is a struct on the stack.
+        bool allTab = grp.Members.Length > 0;
+        for (int i = 0; allTab && i < grp.Members.Length; i++)
+            allTab = MemberStaffOf(i)?.IsTab == true;
         // A numbers-only tab (`tab … as numbers`) prints fret digits alone — no
         // beams (its stems are already suppressed in DrawTabMeasure). The finally
         // below still disposes any ossia scope.

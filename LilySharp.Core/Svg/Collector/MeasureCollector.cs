@@ -3191,6 +3191,29 @@ public sealed partial class MeasureCollector
         }
     }
 
+    // ⚠️ THE TWO PER-PART GUARDS BELOW ARE LOOPS, NOT `Any(m => …)`: the lambdas captured
+    // the switch's pattern variables, which live in the loop body's scope, so a heap
+    // environment was built for EVERY node the form's DescendantNodes yields — its tokens
+    // included — though only a navigation mark or a free text ever reaches a guard:
+    // 1,725 B a keystroke over the tab corpus (session 469, A/B of this file alone).
+    private bool HasMusicMark(MusicMarkType type, int measureIndex, int sourcePosition)
+    {
+        foreach (var m in _musicMarks)
+            if (m.Type == type && m.MeasureIndex == measureIndex
+                && m.SourcePosition == sourcePosition)
+                return true;
+        return false;
+    }
+
+    private bool HasCustomText(string text, int measureIndex, int sourcePosition)
+    {
+        foreach (var t in _customTexts)
+            if (t.Text == text && t.MeasureIndex == measureIndex
+                && t.SourcePosition == sourcePosition)
+                return true;
+        return false;
+    }
+
     private void ProcessForm(Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
         foreach (var child in _form!.DescendantNodes())
@@ -3285,9 +3308,7 @@ public sealed partial class MeasureCollector
                     // ProcessForm runs once PER PART; a structure-level mark
                     // must engrave once per SCORE — without this guard a grand
                     // staff printed "Fine" / "D.C. al Fine" twice, stacked.
-                    if (!_musicMarks.Any(m => m.Type == navMark
-                            && m.MeasureIndex == navMeasure
-                            && m.SourcePosition == nav.SourceStart))
+                    if (!HasMusicMark(navMark, navMeasure, nav.SourceStart))
                         _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.SourceStart));
                     break;
 
@@ -3307,9 +3328,7 @@ public sealed partial class MeasureCollector
                         break;
                     // Same per-part guard as the navigation marks above.
                     int textMeasure = Math.Max(0, builder.CurrentMeasureIndex - 1);
-                    if (!_customTexts.Any(t => t.Text == custom.Text
-                            && t.MeasureIndex == textMeasure
-                            && t.SourcePosition == custom.SourceStart))
+                    if (!HasCustomText(custom.Text, textMeasure, custom.SourceStart))
                         _customTexts.Add(new CustomTextItem(
                             custom.Text, textMeasure, custom.SourceStart));
                     break;
