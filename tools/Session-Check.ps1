@@ -191,8 +191,13 @@ if ($Archive) {
     function Enc([string]$p) { $b = [IO.File]::ReadAllBytes($p); New-Object System.Text.UTF8Encoding(($b[0] -eq 0xEF -and $b[1] -eq 0xBB)) }
     $he = Enc $hp; $ae = Enc $ap
     $h = [IO.File]::ReadAllText($hp, $he)
-    $s = $h.IndexOf("## 以下は第${Archive}セッションの経緯")
-    $e2 = $h.IndexOf('## 2. 開いている作業')
+    # Both markers are line-anchored, the way HandoffBlocks reads them: §1's prose quotes this very
+    # heading (p452 did, naming the seam it had to build), and a bare IndexOf cuts at the quotation
+    # instead — carrying the current session's own narrative into the archive with the predecessor.
+    $ms = [regex]::Match($h, "(?m)^## 以下は第${Archive}セッションの経緯")
+    $me = [regex]::Match($h, '(?m)^## 2\. 開いている作業')
+    $s = if ($ms.Success) { $ms.Index } else { -1 }
+    $e2 = if ($me.Success) { $me.Index } else { -1 }
     if ($s -lt 0 -or $e2 -le $s) { throw "markers not found in HANDOFF.md: block=$s §2=$e2" }
     $block = $h.Substring($s, $e2 - $s)
     $a = [IO.File]::ReadAllText($ap, $ae)
