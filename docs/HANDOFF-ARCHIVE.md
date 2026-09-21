@@ -129,6 +129,59 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第458セッションの経緯
+
+### 1.1 第458セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
+選んだ・⒮¹⁰ と ⒮⁹ と ⒳⁶⁄⒳⁷ と ⒮⁸ を並べて訊いた）。★ **`-Start p458` の 1 コマンドで §0 が全部済んだ**
+（HEAD `b6080613`・未 push 7・full `sessions/p458/run1.trx` 8783 / 0 / 3 / 8786・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 456` も自動＝moved 77 行 4,404 字）。
+**裏取りは 1 つも赤を出さなかった。**
+
+★★★★ **⑴ 6 軒・A/B −98,875 B／打鍵（会計 98,901 の 99.97%＝*下*・予告どおり）。**
+内訳は `MusicSiteList.cs:83` **55,484** ＋ `MeasureCollector.Form.cs:1101` **13,310**（**gather の引き出しは
+1 枚を lazy と eager の 2 つの腕で共有**）／`CollectResumePlanner.cs:286/287` **5,297×2**／
+`BeamDetector.cs:141` **9,345**／`ArticulationEngraver.cs:395` **6,564**／同 `:504` **3,604**。
+**parse 半分は −175＝同じ側を 2 回取った振れ（250）の中**＝島は全部 render 側。
+★★ **ここまで合ったのは初めてで、合う条件は言える**——**give 点が同じメソッドの中にあり、census の行が
+`actual` の形なら、会計はほぼ exact**。第450〜第455 が外したのはどれも*直し方*が変わった便で、
+**値段そのものが外れたことは一度も無い**。
+
+★★★★ **⑵ 毒 7 本のうち 3 本の色を外し、外した 3 本のほうが高かった。**
+⑴ **p7＝「rent が枠を空けない」毒は*赤 1*（予測 緑）で、理由は入れ子ではなく*throw* だった。**
+`ProcessMusicContainer` は入れ子にならない（呼び graph は正しかった）——赤くなるのは
+`CollectResumeAbortException` が rent と give の間で飛ぶから。**abort 経路*だけ*で park する毒を別に書くと
+同じ 1 本が赤**（`CollectEditResumeTests.BarLineTypedBeforePhraseReferences_…`）＝**「抜く」rent が
+支えているのは例外であって再入ではない**（註を書き直した）。
+⑵ **p5＝tie-bound 地図の dirty park はスイート 8,783 本すべて緑なのに、実コーパスは 2,760／5,824 ページ
+動き、ページ数まで動く**（⇒ **⒮¹³**）。⑶ **p3＝trivia 門を true に固定しても両母集団 0 差**で、
+計器は **7,016 回訊かれて 7,016 回 decline**（⇒ **⒮¹²**）。
+
+★★★ **⑶ p1 は「返らない毒」の 3 例目**（第430・第457 に続く）。gather を `Clear` せず park すると
+器が render ごとに膨らみ、**full は 13 分経っても返らない**（clean は 1 分 47 秒）。
+⇒ **網 1 本に絞れば 2 秒で赤**（`IncrementalCompilerTests.FirstRender_EqualsFullGenerate`）。
+
+★★ **⑷ 緑の毒は第455 の*順番*どおりに歩いた**（事後条件 → 計器 → もう一方の母集団 → 下流）。
+p3 は計器（`trivia-guard-counts.txt`）が、p5 は母集団（`green-to-corpus.txt`＝ハッシュ脚を毒の下で
+回すと 1 本 20 秒）が答えた。⚠️ **毒は全部*行数を変えない*置換で書いた**（`sites.Clear();` →
+`_ = sites.Count;`）＝第457 の「行を消す毒は `ApproximationInventoryTests` を 1 赤にする」を避けるため。
+
+★ **⑸ 出力は同一**（実コーパス 231 冊 × 8 打鍵の全ページ SHA-256＝**5,824 行・0 差**＝p439 以来の絵）。
+**網は 1 本も増えていない**＝full **8783 / 0 / 3 / 8786** のまま。**見つけた穴 2 つは閉じずに起票した**
+＝第455 の「主張しない網を出荷するより、穴を起票＋証拠で渡すほうが安い」。
+
+★ **⑹ 終了時**: commit 1 本（code `3b90a6ec`＝Core 6 ファイル＋再生成した `APPROXIMATIONS.md`／
+`magic_constants.csv`、**最後の docs＝この文を含むので SHA は書かない**）。**最終 full 8783 / 0 / 3 / 8786**
+（`sessions/p458/run3.trx`）・§7.5（対 `b6080613`）**Core '+' 340 行／REF 0／OWN 0**＝⚠️ **LP に対応物が無い**
+（貸し buffer は LP に無い）。**§7.6 コード中の新しい数は 0**＝数値を含む追加行はすべてコメント内の実測値。
+**§7.7 の匂いは 1 つ**＝⒮¹³ の地図は*スイートに観測者が居ないまま* park している（註に「あの緑を
+『関係ない』と読むな」と書いた）。台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
+追跡 `.lys` 609・未追跡 0。全文は Lab `sessions/p458/`（`prediction.txt`＝会計と方向と 7 色・
+`poisons.ps1`／`poisons.txt`・`green-to-corpus.ps1`／`.txt`・`trivia-guard-counts.txt`・
+`ab-*-tc0.txt`＝A/B 5 本・`hashes-after.txt`・`core-p458.patch.txt`）。**push はユーザー**（Lab も）。
+**`-Start p459` の 1 コマンドから入る**。
+
 ## 以下は第457セッションの経緯
 
 ### 1.1 第457セッション（2026-09-21・YT-DELL2）

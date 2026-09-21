@@ -141,22 +141,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （`VerticalSkyline.cs:76` 94,888 alive 11.2%／`BeamDetectionMemo.cs:108` 4,004 100%／
   `SvgSystemFragmentCache.cs:237` 1,973 100%／`MeasureCollector.cs:3134` 612 66.0%＝⒮⁸ ⑵ が名指した軒／
   `MultiStaffLayouter.cs:3239-3244` 100%）＝**memo と cache と layout ばかり＝計器の較正**。
-  そこから**第457 が閉じた 4 軒 123,703・第458 の 6 軒 98,901・第459 の Builder 6 軒 25,527** を引いた
-  （残り 323 軒 130,451＝**今の打鍵 約 3,751,500 B の 3.48%**）。
+  そこから**第457 が閉じた 4 軒 123,703・第458 の 6 軒 98,901・第459 の Builder 6 軒 25,527・第460 の 5 軒 20,293** を引いた
+  （残り 318 軒 110,158＝**今の打鍵 約 3,730,400 B の 2.95%**）。
   ★ **Builder は park してよいと実証済み**（第459・Lab `sessions/p459/builder-alias-probe.txt`）＝
   `ToImmutable()` は**常に写す**（参照同一性で 4 形とも別配列。対照の `Move`／`Drain` は渡す）、しかも
   **渡す 2 つは builder から外す**（容量 0）＝**park した builder が呼び手の配列を持つことは起こらない**。
   ⚠️ 系＝**`Move`／`Drain` で終わる軒は park しても毎回空から**＝賞金が無い（出口の API を軒ごとに読む）。
-  ⇒ **次の軒**（census 時点の住所・`LayoutEngine.Prelim.cs` は第459 が +53 行動かした）:
-  `BeamSubdivision.cs:253` **4,379**／`OutsideStaffStacker.cs:1146` **4,275**／
-  `HorizontalSkyline.cs:63` **4,170**／`LayoutEngine.Prelim.cs:493`（今は :546 付近）**3,831**／
-  `TieChordOutline.cs:191` **3,638**＝約 20,300。
+  ⇒ **次の軒**（census 時点の住所）: `LayoutEngine.Prelim.cs:370` **3,237**（Dictionary）／
+  `MeasureCollector.cs:4059` **3,004**／`SpacingRules.Springs.cs:394` **2,888**（＝⒲ の軒。park なら型は変えずに済む）／
+  `SvgSystemFragmentCache.cs:740` **2,787**（StringBuilder）／`KnuthPlassBreaker.cs:781` **2,779**＝約 14,700。
+  その下に `ElementCoordinator.cs:2024` 2,667／`BeamScoringProblem.cs:771` 2,296（19.12 回＝第460 が貸した quanter と同じ回数）。
   ⚠️ **`LayoutEngine.Prelim.cs:374` と `LedgerLineSpannerEngraver.cs:160` は*1 呼びで N 個*建てる軒**
   ＝引き出し 1 枚では足りない＝**別の直し方**（この島の数に混ぜない）。
   ⚠️⚠️ **直し方は 1 つ＝`VerticalSkyline.cs:985` の `[ThreadStatic]`＋「抜く」rent＋**Give** で `Clear`**
   （第421 が書いた形）。**軒ごとに要るのは「自分のコードがどこで読み終えるか」を読むことだけ**——
   **liveness は必要条件しか言わない**（RULES §5.3）。
-  ★ **第458 の実測＝会計 98,901 に対し −98,875（99.97%）・第459 は 25,527 に対し −25,163（98.57%）**
+  ★ **第458 の実測＝会計 98,901 に対し −98,875（99.97%）・第459 は 25,527 に対し −25,163（98.57%）・第460 は 20,293 に対し −21,135（104.2%＝上＝箱 skyline の本体ぶん）**
   ＝**give 点が同じメソッドの中にあり、
   census の行が `actual` の形をしているなら、会計はほぼ exact**（外れてきた便は値段ではなく*直し方*が
   変わった便だった）
@@ -224,6 +224,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   force ≥ 0 では効かない**——`CreateInterColumnSpring` の ⚠️ が 2026-08-02 に同じことを書いている。
   ⇒ 二択＝**⑴ 網を書く／⑵ 効かない床を計算しない**（55.4 回／打鍵ぶんの歩き）。**値段は未測定**。
   ⚠️ **もう一方の caller `SpacingRules.MeasureSprings:278` はコーパスで 0 回**＝計器は両方に置くこと
+  ⚠️ **第460 が 2 人目の証人を足した**＝`HorizontalSkyline.GiveBox` の `Clear` を抜く毒はスイート緑・
+  コーパス 0 差で、stale な箱が答えを変えたのは **862 回すべて `NoteColumnToBarlineFloorPair`**
+  （Lab `sessions/p460/stale-box-counts.txt`）＝**この床を効かせる便は、あの `Clear` にも初めて観測者を付ける**
 - ★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり）
 - **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
@@ -270,6 +273,53 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 241,492 / 250,000 B・1,873 / 2,000 行**（第457 が規則を 4 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第460セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
+選んだ・⒮¹⁰ と ⒮¹³ と ⒮⁹ と ⒮¹² を並べて訊いた）。★ **`-Start p460` の 1 コマンドで §0 が全部済んだ**
+（HEAD `881d5423`・未 push 11・full `sessions/p460/run1.trx` 8783 / 0 / 3 / 8786・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 458` も自動＝moved 54 行 2,962 字）。
+継ぎ目は最初の full の前に立てた（第459 ⑷ の罠）。
+
+★★★ **⑴ 5 軒・A/B −21,135 B／打鍵（会計 20,293 の 104.2%＝*上*・予測 −20,700 ± 500 の帯の中）。**
+`BeamSubdivision.cs:253`／`OutsideStaffStacker.cs:1146`／`HorizontalSkyline.cs:63`／`LayoutEngine.Prelim.cs:546`／
+`TieChordOutline.cs:191`。**上に出た分は census の行の外**＝`FromBox` の箱は list ではなく **skyline ごと**貸した
+（product の呼び手 4 軒とも `Distance` か `Merge` で 1 度読んで捨てる。`Merge` は写す）ので、skyline 本体
+約 725 も消えた＝予測に書いた方向。parse は動かない（振れの中）。**出力は同一**（5,824 行・0 差）。
+
+★★ **⑵ 呼び手が 2 系統の軒は、プローブ 1 本で割れた。** `CalcBeamSegments` の 28.81 回＝quanter 19.12＋
+renderer 9.69（Lab `beamseg-callers.txt`・和は census と一致）。★ **quanter のフィールド `_segments` は ctor の
+中でしか読まれていなかった**＝フィールドに見えて寿命は ctor＝give 点は同じメソッドに在った。
+⇒ **「器が呼び手へ出る」は*最後に読む場所*を読むまで判定しない**（⒮⁶ が門前払いした 3 軒のうち、
+`HorizontalSkyline.cs:63` と `BeamSubdivision.cs:253` をこの便が park した）。
+
+★★★ **⑶ 毒 7 本のうち予測を外したのは 2 本で、外した 2 本のほうが高かった。** p1 赤 239／p2 57／p5 47／
+p6 緑は予測どおり。⑴ **p4（tie の列地図を dirty で返す）は緑と予測して赤 21**——「fallback はバイト同一」は
+正しかったが、**`columnKeys` は地図の *miss* でしか足されない**＝stale な鍵を持つ列は reassembly から消え、
+`columnSystem[...]` が引けない。⑵ **p3（箱を dirty で返す）は 600 秒で返らず、そこまで 7,996 本 0 赤**。
+境界つきの p7（前の箱の 1 棟だけ残す）で**スイート緑・コーパス 0 差**。第455 の順番で歩くと計器
+（`Zz460Box`）が答えた＝stale な棟が答えを変えたのは 44,356 回中 862 回で、**全部 `NoteColumnToBarlineFloorPair`
+＝⒳⁷ の床**。⇒ **新しい穴ではなく ⒳⁷ の 2 人目の証人**（§1.0 ⒳⁷ に 1 行。コードの remark にも書き、
+`APPROXIMATIONS.md` の UNWATCHED が 56 → 57）。
+
+★ **⑷ 自損 2 つ。** ⑴ **`cmd /c "… --filter A|B …"` の `|` は cmd のパイプ**＝inventory の再生成が片方しか
+走らなかった（合計の行が 1 本しか出なかったので気づいた）＝フィルタは 1 本ずつ回す。⑵ **行番号の表は 2 枚**
+＝`docs/APPROXIMATIONS.md` と **`audit/magic_constants.csv`**（`MagicConstantInventoryTests`）。最初の full は後者で
+1 赤＝93 行すべて行番号だけ。**両方を毒と full の前に再生成し、LF を CRLF に揃える**（CLAUDE-OPERATIONS §1）。
+
+★ **⑸ 終了時**: commit 2 本（code `60d2b4fb`＝Core 11 ファイル＋再生成した 2 枚、**最後の docs は SHA を
+書かない**）。**最終 full 8783 / 0 / 3 / 8786**
+（`sessions/p460/run3.trx`＝`-End`）・§7.5（対 `881d5423`）**Core '+' 302 行／REF 0／OWN 0**＝⚠️ **LP に対応物が
+無い**（貸し器は LP に無い）。**§7.6 コード中の新しい数は 0**（数値はすべてコメント内の実測値）。**§7.7 の匂いは
+2 つ**＝⑴ 箱の `Clear` に観測者が居ない（上の ⑶⑵・remark に UNWATCHED）／⑵ give を忘れても何も投げない
+（観測者は A/B だけ・第457 以来同じ）。台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609・
+未追跡 0。
+全文は Lab `sessions/p460/`（`prediction.txt`・`beamseg-callers.txt`・`ab-*-tc0.txt`・`hashes-after.txt`・
+`poisons.ps1`／`.txt`・`stale-box-counts.txt`・`core-p460.patch.txt`・`Zz460*.cs.txt`）。
+**push はユーザー**（Lab も）。**`-Start p461` の 1 コマンドから入る**。
+
+## 以下は第459セッションの経緯
+
 ### 1.1 第459セッション（2026-09-21・YT-DELL2）
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
@@ -310,59 +360,6 @@ SHA を書かない**）。**最終 full 8783 / 0 / 3 / 8786**（`sessions/p459/
 追跡 `.lys` 609・未追跡 0。全文は Lab `sessions/p459/`（`README.txt`・`prediction.txt`・`builder-alias-probe.*`・
 `poisons.ps1`／`.txt`・`ab-*-tc0.txt`・`hashes-after.txt`・`core-p459.patch.txt`・`end-gate.txt`）。
 **push はユーザー**（Lab も）。**`-Start p460` の 1 コマンドから入る**。
-
-## 以下は第458セッションの経緯
-
-### 1.1 第458セッション（2026-09-21・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
-選んだ・⒮¹⁰ と ⒮⁹ と ⒳⁶⁄⒳⁷ と ⒮⁸ を並べて訊いた）。★ **`-Start p458` の 1 コマンドで §0 が全部済んだ**
-（HEAD `b6080613`・未 push 7・full `sessions/p458/run1.trx` 8783 / 0 / 3 / 8786・台帳 851 点／
-総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 456` も自動＝moved 77 行 4,404 字）。
-**裏取りは 1 つも赤を出さなかった。**
-
-★★★★ **⑴ 6 軒・A/B −98,875 B／打鍵（会計 98,901 の 99.97%＝*下*・予告どおり）。**
-内訳は `MusicSiteList.cs:83` **55,484** ＋ `MeasureCollector.Form.cs:1101` **13,310**（**gather の引き出しは
-1 枚を lazy と eager の 2 つの腕で共有**）／`CollectResumePlanner.cs:286/287` **5,297×2**／
-`BeamDetector.cs:141` **9,345**／`ArticulationEngraver.cs:395` **6,564**／同 `:504` **3,604**。
-**parse 半分は −175＝同じ側を 2 回取った振れ（250）の中**＝島は全部 render 側。
-★★ **ここまで合ったのは初めてで、合う条件は言える**——**give 点が同じメソッドの中にあり、census の行が
-`actual` の形なら、会計はほぼ exact**。第450〜第455 が外したのはどれも*直し方*が変わった便で、
-**値段そのものが外れたことは一度も無い**。
-
-★★★★ **⑵ 毒 7 本のうち 3 本の色を外し、外した 3 本のほうが高かった。**
-⑴ **p7＝「rent が枠を空けない」毒は*赤 1*（予測 緑）で、理由は入れ子ではなく*throw* だった。**
-`ProcessMusicContainer` は入れ子にならない（呼び graph は正しかった）——赤くなるのは
-`CollectResumeAbortException` が rent と give の間で飛ぶから。**abort 経路*だけ*で park する毒を別に書くと
-同じ 1 本が赤**（`CollectEditResumeTests.BarLineTypedBeforePhraseReferences_…`）＝**「抜く」rent が
-支えているのは例外であって再入ではない**（註を書き直した）。
-⑵ **p5＝tie-bound 地図の dirty park はスイート 8,783 本すべて緑なのに、実コーパスは 2,760／5,824 ページ
-動き、ページ数まで動く**（⇒ **⒮¹³**）。⑶ **p3＝trivia 門を true に固定しても両母集団 0 差**で、
-計器は **7,016 回訊かれて 7,016 回 decline**（⇒ **⒮¹²**）。
-
-★★★ **⑶ p1 は「返らない毒」の 3 例目**（第430・第457 に続く）。gather を `Clear` せず park すると
-器が render ごとに膨らみ、**full は 13 分経っても返らない**（clean は 1 分 47 秒）。
-⇒ **網 1 本に絞れば 2 秒で赤**（`IncrementalCompilerTests.FirstRender_EqualsFullGenerate`）。
-
-★★ **⑷ 緑の毒は第455 の*順番*どおりに歩いた**（事後条件 → 計器 → もう一方の母集団 → 下流）。
-p3 は計器（`trivia-guard-counts.txt`）が、p5 は母集団（`green-to-corpus.txt`＝ハッシュ脚を毒の下で
-回すと 1 本 20 秒）が答えた。⚠️ **毒は全部*行数を変えない*置換で書いた**（`sites.Clear();` →
-`_ = sites.Count;`）＝第457 の「行を消す毒は `ApproximationInventoryTests` を 1 赤にする」を避けるため。
-
-★ **⑸ 出力は同一**（実コーパス 231 冊 × 8 打鍵の全ページ SHA-256＝**5,824 行・0 差**＝p439 以来の絵）。
-**網は 1 本も増えていない**＝full **8783 / 0 / 3 / 8786** のまま。**見つけた穴 2 つは閉じずに起票した**
-＝第455 の「主張しない網を出荷するより、穴を起票＋証拠で渡すほうが安い」。
-
-★ **⑹ 終了時**: commit 1 本（code `3b90a6ec`＝Core 6 ファイル＋再生成した `APPROXIMATIONS.md`／
-`magic_constants.csv`、**最後の docs＝この文を含むので SHA は書かない**）。**最終 full 8783 / 0 / 3 / 8786**
-（`sessions/p458/run3.trx`）・§7.5（対 `b6080613`）**Core '+' 340 行／REF 0／OWN 0**＝⚠️ **LP に対応物が無い**
-（貸し buffer は LP に無い）。**§7.6 コード中の新しい数は 0**＝数値を含む追加行はすべてコメント内の実測値。
-**§7.7 の匂いは 1 つ**＝⒮¹³ の地図は*スイートに観測者が居ないまま* park している（註に「あの緑を
-『関係ない』と読むな」と書いた）。台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・
-追跡 `.lys` 609・未追跡 0。全文は Lab `sessions/p458/`（`prediction.txt`＝会計と方向と 7 色・
-`poisons.ps1`／`poisons.txt`・`green-to-corpus.ps1`／`.txt`・`trivia-guard-counts.txt`・
-`ab-*-tc0.txt`＝A/B 5 本・`hashes-after.txt`・`core-p458.patch.txt`）。**push はユーザー**（Lab も）。
-**`-Start p459` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
