@@ -329,17 +329,27 @@ internal static partial class SpacingRules
     {
         if (measure == null)
             return null;
+        // The loop stops at the first item with duration, so a SECOND musical column can
+        // only come from a zero-duration one — which never happened in 12,720 non-null
+        // answers (session 451's census: `one 100.0%`). The single item goes back in a
+        // one-element array; the List is built only if that day ever comes.
+        MusicItem? only = null;
         List<MusicItem>? items = null;
         foreach (var item in measure.Items)
         {
             if (item.GraceTime || IsChangeItem(item))
                 continue;
             if (IsMusicalColumn(item))
-                (items ??= new List<MusicItem>()).Add(item);
+            {
+                if (only == null)
+                    only = item;
+                else
+                    (items ??= new List<MusicItem> { only }).Add(item);
+            }
             if (item.Duration > Fraction.Zero)
                 break;
         }
-        return items;
+        return (IReadOnlyList<MusicItem>?)items ?? (only != null ? new[] { only } : null);
     }
 
     /// <summary>

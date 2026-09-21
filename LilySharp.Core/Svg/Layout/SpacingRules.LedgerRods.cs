@@ -73,12 +73,18 @@ internal static partial class SpacingRules
     /// carry this rod too, but Lily#'s grace notes are not columns of the spacing chain.
     /// </para>
     /// </remarks>
-    internal static List<LedgerColumn> LedgerColumnsOf(
+    /// <remarks>
+    /// The list is built on the first ledgered column, not on entry: 87.0% of these calls
+    /// find no head at |position| &gt;= 6 at all (session 451's census, 231 books × 8
+    /// keystrokes) and handed back an empty List object for 528 B/keystroke. Both callers
+    /// read Count and the indexer only, so the empty answer is the shared empty array.
+    /// </remarks>
+    internal static IReadOnlyList<LedgerColumn> LedgerColumnsOf(
         Model.Staff staff, int measureIndex, IReadOnlyList<Fraction> timings)
     {
-        var result = new List<LedgerColumn>();
+        List<LedgerColumn>? result = null;
         if (staff.IsTab || staff.IsTextRow || timings.Count == 0)
-            return result;
+            return Array.Empty<LedgerColumn>();
 
         int n = timings.Count;
         var upLeft = new double[n];
@@ -148,8 +154,9 @@ internal static partial class SpacingRules
 
         for (int t = 0; t < n; t++)
             if (headWidth[t] > 0)
-                result.Add(new LedgerColumn(t, upLeft[t], upRight[t], downLeft[t], downRight[t], headWidth[t]));
-        return result;
+                (result ??= new List<LedgerColumn>()).Add(
+                    new LedgerColumn(t, upLeft[t], upRight[t], downLeft[t], downRight[t], headWidth[t]));
+        return (IReadOnlyList<LedgerColumn>?)result ?? Array.Empty<LedgerColumn>();
     }
 
     /// <summary>

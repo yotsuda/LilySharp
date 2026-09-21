@@ -879,28 +879,32 @@ internal static class OutsideStaffStacker
 
         // The staves this system's below stacking PLACES on — the same predicate the
         // core's placedStaves uses, over this system's slice.
-        var used = new SortedSet<int>();
+        // Built on the first staff that wants it: 99.6% of these systems place NOTHING
+        // below (session 451's census), and an empty SortedSet is 432 B/keystroke of
+        // tree object that no walk ever enters.
+        SortedSet<int>? used = null;
         foreach (int i in part.Dynamics)
             if (!dynamics[i].IsAbove)
-                used.Add(dynamics[i].StaffIndex);
+                (used ??= new SortedSet<int>()).Add(dynamics[i].StaffIndex);
         foreach (int i in part.Hairpins)
-            used.Add(hairpins[i].StaffIndex);
+            (used ??= new SortedSet<int>()).Add(hairpins[i].StaffIndex);
         foreach (int i in part.Articulations)
             if (!articulations[i].IsAbove && articulations[i].OutsideStaffPriority is not null)
-                used.Add(articulations[i].StaffIndex);
+                (used ??= new SortedSet<int>()).Add(articulations[i].StaffIndex);
         foreach (int i in part.Trills)
             if (trills[i].Direction < 0)
-                used.Add(trills[i].StaffIndex);
+                (used ??= new SortedSet<int>()).Add(trills[i].StaffIndex);
 
-        var profUps = new List<object>(used.Count);
-        var profDowns = new List<object>(used.Count);
-        foreach (int staff in used)
-        {
-            if (profileIdentity(s, staff) is not { } id)
-                return null; // unstable identity: this system stacks live
-            profUps.Add(id.Up);
-            profDowns.Add(id.Down);
-        }
+        var profUps = new List<object>(used?.Count ?? 0);
+        var profDowns = new List<object>(used?.Count ?? 0);
+        if (used != null)
+            foreach (int staff in used)
+            {
+                if (profileIdentity(s, staff) is not { } id)
+                    return null; // unstable identity: this system stacks live
+                profUps.Add(id.Up);
+                profDowns.Add(id.Down);
+            }
 
         // Group structure as per-system ordinals: which of THIS system's dynamics /
         // hairpins each anchored group couples, immune to global index shifts.
@@ -2999,26 +3003,44 @@ internal static class OutsideStaffStacker
             // distance call; Skyline::padded is the expensive resolve here, and one
             // Place queries every prior entry) — build each distinct padding once.
             // Byte-identical: distance(other, hPad) IS paddedBy(hPad).distance(other).
-            var paddedUp = new Dictionary<double, VerticalSkyline>();
-            var paddedDown = new Dictionary<double, VerticalSkyline>();
-            VerticalSkyline PaddedBy(Dictionary<double, VerticalSkyline> cache,
+            // Built on the FIRST padded copy, not on entry: hPad <= 0 returns the profile
+            // itself, and in 71.3% of these calls (session 451's census) no entry ever asks
+            // for a padded one, so both tables stayed empty for 286 B a call each.
+            Dictionary<double, VerticalSkyline>? paddedUp = null;
+            Dictionary<double, VerticalSkyline>? paddedDown = null;
+            static VerticalSkyline PaddedBy(ref Dictionary<double, VerticalSkyline>? cache,
                 VerticalSkyline sky, double hPad)
             {
                 if (hPad <= 0)
                     return sky;
+                cache ??= new Dictionary<double, VerticalSkyline>();
                 if (!cache.TryGetValue(hPad, out var p))
                     cache[hPad] = p = sky.Padded(hPad);
                 return p;
             }
 
-            var forbidden = new List<(double Lo, double Hi)>();
+            // 0 / 1 / many: 97.7% of these calls raise exactly ONE forbidden interval, and a
+            // one-element list is a sort that cannot reorder anything followed by a single
+            // comparison — NearestAllowedOne IS NearestAllowed at n == 1, by construction.
+            (double Lo, double Hi) onlyForbidden = default;
+            int forbiddenCount = 0;
+            List<(double Lo, double Hi)>? forbidden = null;
+            void AddForbidden(double lo, double hi)
+            {
+                if (forbiddenCount == 0)
+                    onlyForbidden = (lo, hi);
+                else
+                    (forbidden ??= new List<(double Lo, double Hi)> { onlyForbidden })
+                        .Add((lo, hi));
+                forbiddenCount++;
+            }
             for (int j = 0; j < _entries.Count; j++)
             {
                 var (eUp, eDown, ePad, eHPad) = _entries[j];
                 double pad = Math.Max(padding, ePad);
                 double hPad = Math.Max(horizonPadding, eHPad);
-                double pushUp = PaddedBy(paddedDown, down, hPad).Distance(eUp) + pad;
-                double pushDown = PaddedBy(paddedUp, up, hPad).Distance(eDown) + pad;
+                double pushUp = PaddedBy(ref paddedDown, down, hPad).Distance(eUp) + pad;
+                double pushDown = PaddedBy(ref paddedUp, up, hPad).Distance(eDown) + pad;
                 // LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
                 // LilyPond needs no such branch — its support pair carries the staff
                 // contents' REAL far profile (notes, ledger ink, the other staff edge),
@@ -3033,17 +3055,19 @@ internal static class OutsideStaffStacker
                     else pushUp = double.PositiveInfinity;
                 }
                 if (-pushDown < pushUp)   // empty when either side has no skyline
-                    forbidden.Add((-pushDown, pushUp));
+                    AddForbidden(-pushDown, pushUp);
             }
             if (extraSupport is { } extra)
             {
-                double pushUp = PaddedBy(paddedDown, down, horizonPadding).Distance(extra.Up) + padding;
-                double pushDown = PaddedBy(paddedUp, up, horizonPadding).Distance(extra.Down) + padding;
+                double pushUp = PaddedBy(ref paddedDown, down, horizonPadding).Distance(extra.Up) + padding;
+                double pushDown = PaddedBy(ref paddedUp, up, horizonPadding).Distance(extra.Down) + padding;
                 if (-pushDown < pushUp)
-                    forbidden.Add((-pushDown, pushUp));
+                    AddForbidden(-pushDown, pushUp);
             }
 
-            double move = NearestAllowed(forbidden, _dir);
+            double move = forbidden != null ? NearestAllowed(forbidden, _dir)
+                : forbiddenCount == 0 ? 0
+                : NearestAllowedOne(onlyForbidden.Lo, onlyForbidden.Hi, _dir);
             // The pair stored for LATER grobs is the SAME pair the move was computed with
             // — LilyPond hands one v_skylines to avoid_outside_staff_collisions and then
             // pushes that same pair onto all_v_skylines (:798-803). (Until 2026-07-30 the
@@ -3069,6 +3093,12 @@ internal static class OutsideStaffStacker
         /// where "allowed" is outside every (open) forbidden interval — LilyPond's
         /// <c>Interval_set::nearest_point (0, dir)</c>. Touching an interval's edge is
         /// allowed (the paddings are already inside the bounds).</summary>
+        /// <summary><see cref="NearestAllowed"/> for the single-interval case, which is
+        /// 97.7% of the calls: sorting one interval cannot reorder it, so the whole method
+        /// is its one comparison.</summary>
+        private static double NearestAllowedOne(double lo, double hi, int dir) =>
+            0 > lo && 0 < hi ? (dir > 0 ? hi : lo) : 0;
+
         private static double NearestAllowed(List<(double Lo, double Hi)> forbidden, int dir)
         {
             double m = 0;

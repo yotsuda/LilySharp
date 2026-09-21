@@ -371,7 +371,7 @@ internal sealed class ElementCoordinator
             double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
             double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
             AppendCrossVoiceBeamCollisions(
-                collisions, score, group, measureLayout, beamLeftX, beamRightX);
+                ref collisions, score, group, measureLayout, beamLeftX, beamRightX);
 
             // The system comes from the SAME measureMap lookup that gave the X positions, so
             // the stamp and the frame the X is in cannot disagree.
@@ -592,12 +592,12 @@ internal sealed class ElementCoordinator
     /// <summary>
     /// Collects collision objects for beam scoring.
     /// </summary>
-    private List<BeamCollision> CollectBeamCollisions(
+    private List<BeamCollision>? CollectBeamCollisions(
         Measure measure,
         BeamGroup group,
         IReadOnlyList<double> itemXPositions)
     {
-        var collisions = new List<BeamCollision>();
+        List<BeamCollision>? collisions = null;
         var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
 
         int firstMemberIndex = group.Members[0].ItemIndex;
@@ -641,12 +641,12 @@ internal sealed class ElementCoordinator
                 continue;
             double itemX = itemXPositions[i];
 
-            AddItemCollisions(collisions, item, itemX,
+            AddItemCollisions(ref collisions, item, itemX,
                               beamEdgeLeftX, beamEdgeRightX, beamOriginX,
                               _beamEngraver.Parameters.StemCollisionFactor);
         }
 
-        AddAccidentalCollisions(collisions, measure, itemXPositions,
+        AddAccidentalCollisions(ref collisions, measure, itemXPositions,
                                 beamEdgeLeftX, beamEdgeRightX, beamOriginX);
         return collisions;
     }
@@ -667,7 +667,7 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     private static void AddItemCollisions(
-        List<BeamCollision> collisions, MusicItem item, double itemX,
+        ref List<BeamCollision>? collisions, MusicItem item, double itemX,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX,
         double stemCollisionFactor)
     {
@@ -686,7 +686,7 @@ internal sealed class ElementCoordinator
             //   lily/beam.cc:1331 rest_collision_callback moves the rest instead.
             case NoteItem note:
                 anyBooked = AddHeadCollision(
-                    collisions, itemX, note.StaffPosition,
+                    ref collisions, itemX, note.StaffPosition,
                     LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration),
                     beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                 break;
@@ -700,7 +700,7 @@ internal sealed class ElementCoordinator
                 for (int n = 0; n < chord.Notes.Length; n++)
                 {
                     anyBooked |= AddHeadCollision(
-                        collisions, itemX + offsets[n], chord.Notes[n].StaffPosition,
+                        ref collisions, itemX + offsets[n], chord.Notes[n].StaffPosition,
                         noteValue, beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                 }
                 break;
@@ -708,7 +708,7 @@ internal sealed class ElementCoordinator
         }
 
         if (anyBooked)
-            AddStemCollision(collisions, item, itemX, beamOriginX, stemCollisionFactor);
+            AddStemCollision(ref collisions, item, itemX, beamOriginX, stemCollisionFactor);
     }
 
     /// <summary>
@@ -738,7 +738,7 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     private static void AddStemCollision(
-        List<BeamCollision> collisions, MusicItem item, double itemX, double beamOriginX,
+        ref List<BeamCollision>? collisions, MusicItem item, double itemX, double beamOriginX,
         double stemCollisionFactor)
     {
         bool up;
@@ -774,7 +774,7 @@ internal sealed class ElementCoordinator
             return;
 
         double chordStartY = chordStartPosition * 0.5;
-        collisions.Add(new BeamCollision(
+        (collisions ??= new List<BeamCollision>()).Add(new BeamCollision(
             LayoutUtilities.StemX(itemX, up, noteValue,
                 LayoutUtilities.NoteheadStyleOf(item)) - beamOriginX,
             up ? chordStartY : double.NegativeInfinity,
@@ -784,12 +784,12 @@ internal sealed class ElementCoordinator
 
     /// <summary>One note head's box as a covered grob; false when the rejects dropped it.</summary>
     private static bool AddHeadCollision(
-        List<BeamCollision> collisions, double headX, int staffPosition, int noteValue,
+        ref List<BeamCollision>? collisions, double headX, int staffPosition, int noteValue,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
         var box = GlyphMetrics.GetNoteheadBBox(noteValue);
         double centreSs = staffPosition * 0.5;
-        return AddBoxCollision(collisions, headX + box.Left, headX + box.Right,
+        return AddBoxCollision(ref collisions, headX + box.Left, headX + box.Right,
                                centreSs + box.Bottom, centreSs + box.Top,
                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
     }
@@ -803,7 +803,7 @@ internal sealed class ElementCoordinator
     ///   reject, the empty reject, <c>width_factor</c>, and one add_collision per x edge.
     /// </remarks>
     private static bool AddBoxCollision(
-        List<BeamCollision> collisions,
+        ref List<BeamCollision>? collisions,
         double inkLeft, double inkRight, double minY, double maxY,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
@@ -821,8 +821,8 @@ internal sealed class ElementCoordinator
         // :391-392 — TWO entries per grob, at its two x edges, each carrying the WHOLE y
         // extent. x is measured from the beam's left STEM; the quanter moves it the last
         // half stem width onto the beam's drawn edge.
-        collisions.Add(new BeamCollision(inkLeft - beamOriginX, minY, maxY, widthFactor));
-        collisions.Add(new BeamCollision(inkRight - beamOriginX, minY, maxY, widthFactor));
+        (collisions ??= new List<BeamCollision>()).Add(new BeamCollision(inkLeft - beamOriginX, minY, maxY, widthFactor));
+        (collisions ??= new List<BeamCollision>()).Add(new BeamCollision(inkRight - beamOriginX, minY, maxY, widthFactor));
         return true;
     }
 
@@ -869,7 +869,7 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     private void AddAccidentalCollisions(
-        List<BeamCollision> collisions, Measure measure,
+        ref List<BeamCollision>? collisions, Measure measure,
         IReadOnlyList<double> itemXPositions,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
@@ -888,7 +888,7 @@ internal sealed class ElementCoordinator
                             note, CueAccidentalFont(note.IsCue), CueAccidentalFont(note.IsCue));
                     if (single is { } singleLayout)
                         AddAccidentalCollision(
-                            collisions, singleLayout, itemX, note.IsCue ? CueAccidentalScale : 1.0,
+                            ref collisions, singleLayout, itemX, note.IsCue ? CueAccidentalScale : 1.0,
                             beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                     break;
 
@@ -897,7 +897,7 @@ internal sealed class ElementCoordinator
                     // so the column must be solved, not assumed.
                     // LILYPOND-REF: lily/accidental-placement.cc position_apes.
                     foreach (var al in ChordAccidentalLayouts(chord))
-                        AddAccidentalCollision(collisions, al, itemX, 1.0,
+                        AddAccidentalCollision(ref collisions, al, itemX, 1.0,
                                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
                     break;
             }
@@ -961,7 +961,7 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     private static void AddAccidentalCollision(
-        List<BeamCollision> collisions, AccidentalLayout layout,
+        ref List<BeamCollision>? collisions, AccidentalLayout layout,
         double itemX, double scale,
         double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
     {
@@ -978,7 +978,7 @@ internal sealed class ElementCoordinator
         // in staff positions, the box is in staff spaces — and staff spaces is what
         // BeamCollision speaks.
         double headSs = layout.StaffPosition * 0.5;
-        AddBoxCollision(collisions, inkLeft, inkLeft + width,
+        AddBoxCollision(ref collisions, inkLeft, inkLeft + width,
                         headSs + box.Bottom * scale, headSs + box.Top * scale,
                         beamEdgeLeftX, beamEdgeRightX, beamOriginX);
     }
@@ -992,7 +992,7 @@ internal sealed class ElementCoordinator
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/beam-collision-engraver.cc.</remarks>
     private void AppendCrossVoiceBeamCollisions(
-        List<BeamCollision> collisions,
+        ref List<BeamCollision>? collisions,
         Score score, BeamGroup group, MeasureLayout measureLayout,
         double beamLeftX, double beamRightX)
     {
@@ -1024,7 +1024,7 @@ internal sealed class ElementCoordinator
                 timing += GetItemDuration(item);
                 // No window here: the x-span reject IS LilyPond's, against the beam's
                 // drawn extent and the grob's own box (AddBoxCollision, :381).
-                AddItemCollisions(collisions, item, itemX,
+                AddItemCollisions(ref collisions, item, itemX,
                                   beamEdgeLeftX, beamEdgeRightX, beamOriginX,
                                   _beamEngraver.Parameters.StemCollisionFactor);
             }

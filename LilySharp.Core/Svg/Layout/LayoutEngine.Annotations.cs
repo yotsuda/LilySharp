@@ -525,27 +525,60 @@ internal sealed partial class LayoutEngine
         Func<int, double>? minStaffYAt = null;
         if (staffYByIndex != null)
         {
-            var staffYBySystem = new List<Dictionary<int, double>>(systems.Length);
+            // ONE flat row-per-system array, not a Dictionary<int,double> a system. The map
+            // is (staff index → -Y) over indices that are already a dense 0..n-1 range, so
+            // the dictionary was paying a hash table to index an array: MEASURED (session
+            // 451's census, 231 books × 8 keystrokes) 51.41 builds a keystroke, 1.76 entries
+            // each, max 2 — 6,992 B/keystroke of buckets and entries plus 4,113 of dictionary
+            // objects, against 8 B a slot here. NaN is "this system does not place that
+            // staff", which is the absent key: a staff whose Y were NaN would read 0 where
+            // TryGetValue read NaN, and every page of such a book is already ruined.
+            int staffWidth = 0;
             for (int s = 0; s < systems.Length; s++)
-            {
-                var map = new Dictionary<int, double>();
                 if (!systems[s].StaffGroups.IsDefaultOrEmpty)
                     foreach (var sg in systems[s].StaffGroups)
                         foreach (var st in sg.Staves)
-                            map[st.StaffIndex] = -st.Y;   // Y-up storage → device-down offset
-                staffYBySystem.Add(map);
-            }
+                            if (st.StaffIndex >= staffWidth)
+                                staffWidth = st.StaffIndex + 1;
+            double[] staffYFlat = staffWidth > 0
+                ? new double[systems.Length * staffWidth]
+                : Array.Empty<double>();
+            Array.Fill(staffYFlat, double.NaN);
+            for (int s = 0; s < systems.Length; s++)
+                if (!systems[s].StaffGroups.IsDefaultOrEmpty)
+                    foreach (var sg in systems[s].StaffGroups)
+                        foreach (var st in sg.Staves)
+                            // Y-up storage → device-down offset. The LAST write for a
+                            // repeated staff index wins, as the dictionary's indexer did.
+                            staffYFlat[s * staffWidth + st.StaffIndex] = -st.Y;
             int SysOf(int measureIndex) =>
-                staffYBySystem.Count == 0 ? 0
+                staffYFlat.Length == 0 ? 0
                 : measureToSystem.TryGetValue(measureIndex, out var s) ? s : 0;
             staffYAt = (measureIndex, staffIndex) =>
-                staffYBySystem.Count > 0
-                && staffYBySystem[SysOf(measureIndex)].TryGetValue(staffIndex, out var y) ? y : 0;
+            {
+                if (staffYFlat.Length == 0 || staffIndex < 0 || staffIndex >= staffWidth)
+                    return 0;
+                double y = staffYFlat[SysOf(measureIndex) * staffWidth + staffIndex];
+                return double.IsNaN(y) ? 0 : y;
+            };
             minStaffYAt = measureIndex =>
             {
-                if (staffYBySystem.Count == 0) return 0;
-                var map = staffYBySystem[SysOf(measureIndex)];
-                return map.Count > 0 ? map.Values.Min() : 0;
+                if (staffYFlat.Length == 0) return 0;
+                int row = SysOf(measureIndex) * staffWidth;
+                double min = 0;
+                bool any = false;
+                for (int i = 0; i < staffWidth; i++)
+                {
+                    double y = staffYFlat[row + i];
+                    if (double.IsNaN(y))
+                        continue;
+                    if (!any || y < min)
+                    {
+                        min = y;
+                        any = true;
+                    }
+                }
+                return any ? min : 0;
             };
         }
 
