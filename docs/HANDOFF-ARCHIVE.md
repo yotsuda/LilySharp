@@ -129,6 +129,42 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第465セッションの経緯
+
+### 1.1 第465セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶**（ユーザーが選んだ）。
+★ **`-Start p465` の 1 コマンドで §0 が全部済んだ**（HEAD `0b2ac2a3`・未 push 10・full `sessions/p465/run1.trx`
+8789 / 0 / 3 / 8792・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 463` も自動＝moved 32 行 2,101 字）。
+
+★★★ **⑴ 計器の `<…>` の歩きに括弧の深さを持たせ、*型引数に `(` を持つ器だけ*を数えた**（Lab `sessions/p465/`・分母 **3,403,783**）。
+**277 軒・生きている 143 軒・125,623 B／打鍵＝3.69%**。⚠️ **起票は半分だけ正しかった**: **第457 の census は `(` で諦めない**
+（諦めるのは改行）＝**1 行の `new List<(int, int)>()` は数えていた**（`TieFormattingProblem:775` 1,377 などが ⒮¹⁰ の一覧と 1 B も違わない）。
+`(` で諦めたのは第463 の census（寸法つき・target-typed）だけ。**誰も見ていなかったのは 57 軒 106,237 B＝3.12%**（`split.ps1`）。
+
+★★★ **⑵ 6 軒・A/B −82,765 B／打鍵＝render の 2.68%**（予測の点 84,602 の 97.8%・帯 70,000〜95,000 の中）。
+**park 3 軒**（`FromBoxes` に渡して写させる box list＝`HorizontalSkyline.RentBoxList`・`ItemSkylineFactory` と `LineStartColumn` が共有／
+描画 1 回の beamed 集合／`ArticulationEngraver` の firstSeen・wanted keys・tips map）・**答えを 1 度だけ綴る 1 軒**（`KeySpelling.SignatureSteps`
+＝`sharps` だけの純関数＝±14 まで配列を持つ）・**建てない 2 軒**（`AccidentalPlacement` の `(Note, HeadOffset)` の list＝**`HeadOffset` の半分は誰も読んでいなかった**／
+`StaffSprings` の `flat`＝上の staff を local に持って歩く）。**出力は同一**（5,824 行・0 差）。
+
+★★ **⑶ 会計（1 軒ずつ抜く・和 82,836）**: 呼び手が 1 人の 5 軒は **99.9〜100.8%**。外れたのは D の **84.5%** だけで、理由は
+**census の行 `:2275` が共有 helper `BuildBeamedStemTips` の中にあり、呼び手 3 人の和**だったこと（park したのは script walk の 1 人）
+⇒ **値段を付ける前に、census の行が居るメソッドの呼び手を grep する**。
+
+★★★ **⑷ 毒 9 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 35（box list を汚すと列ごとに伸びて**返らない**＝上限で止めた）／214／68／7／11／17・
+緑 2 本（wanted keys＝上位集合の濾しは同じ問いに同じ答え・rent が抜かない）は予測どおり。
+**外れ＝毒 8**: `StaffSprings` が上の staff を進めない（(0,1),(0,2),…）毒は**スイート緑・実コーパス 0 差**。コーパスは**全 system が 2 staff**
+（第448 の census）＝どう歩いても対は 1 つ。スイートには 3 staff の譜があるが、網は spring を*数える*か*1 対*を見るだけだった
+⇒ **網 1 本**（`StaffLayoutFrameTests.ThreeSpaceableStaves_SpringAsAChain_AndASkippedLineDoesNotBreakIt`）＝毒 8 の下で赤。
+
+★ **⑸ 終了時**: commit 2 本（code `7443fd6d`＝Core 8 ファイル＋網 1 本＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p465/`
+（`README.txt`・`prediction.txt`＝A/B・会計・毒を追記・`attrib.txt`・`poisons.ps1`／`.txt`・`joined-split.csv`・`Zz465*`）。
+**最終 full 8790 / 0 / 3 / 8793**（網 1 本ぶん増えた・`run3.trx`＝`-End`）・§7.5（対 `0b2ac2a3`）**Core '+' 257 行／REF 2（既存の 2 行を字下げ）／OWN 0**
+＝貸し器と「1 度だけ綴る」は LP に対応物が無い。**§7.6 コード中の新しい数は 1**＝`StepsKeptReach` 14（7 文字が全部重なる所＝2×7・コメントに出所）。
+**§7.7 の匂い**＝⑴ `OrderByScriptPriority` は LINQ の `OrderBy`／`ThenBy` と閉包を呼びごとに建てる／⑵ `BuildBeamedStemTips` の残り 2 人（どちらも未測定）。
+台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p466` の 1 コマンドから入る**。
+
 ## 以下は第464セッションの経緯
 
 ### 1.1 第464セッション（2026-09-21・YT-DELL2）
