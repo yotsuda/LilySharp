@@ -252,15 +252,47 @@ internal static class BeamSubdivision
         int n = stems.Count;
         var segs = new List<Segment>();
 
-        // Gather every distinct rank present.
-        var allRanks = new SortedSet<int>();
+        // Gather every distinct rank present. 28.81 of these a keystroke over the reader's
+        // corpus, and 63.2% of them find exactly ONE rank — a beam whose stems all carry the
+        // same beam count, which is most beams. So the first rank lives in a local and the
+        // set is built on the second DISTINCT one, seeded with the first so the ascending
+        // walk below is the same walk (session 451; the census prices the container, not the
+        // red-black node each Add allocates on top of it).
+        int firstRank = 0;
+        bool haveRank = false;
+        SortedSet<int>? allRanks = null;
         for (int i = 0; i < n; i++)
         {
             var r = ranks[i];
-            for (int k = 0, m = r.AllCount; k < m; k++) allRanks.Add(r.AllAt(k));
+            for (int k = 0, m = r.AllCount; k < m; k++)
+            {
+                int rv = r.AllAt(k);
+                if (!haveRank)
+                {
+                    firstRank = rv;
+                    haveRank = true;
+                }
+                else if (rv != firstRank)
+                {
+                    (allRanks ??= new SortedSet<int> { firstRank }).Add(rv);
+                }
+            }
         }
 
-        foreach (int rank in allRanks)
+        if (allRanks is null)
+        {
+            if (haveRank)
+                EmitRank(firstRank);
+        }
+        else
+        {
+            foreach (int rank in allRanks)
+                EmitRank(rank);
+        }
+
+        return segs;
+
+        void EmitRank(int rank)
         {
             // "hasRight[i]" = stem i carries this rank on its right (connects to i+1);
             // "hasLeft[i]" = on its left (connects to i-1).
@@ -342,7 +374,5 @@ internal static class BeamSubdivision
                 i = e + 1;
             }
         }
-
-        return segs;
     }
 }

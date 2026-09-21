@@ -370,8 +370,8 @@ internal sealed class ElementCoordinator
             // polyphonic staff's stem-up beam rides over a high note held below).
             double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
             double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
-            collisions.AddRange(CollectCrossVoiceBeamCollisions(
-                score, group, measureLayout, beamLeftX, beamRightX));
+            AppendCrossVoiceBeamCollisions(
+                collisions, score, group, measureLayout, beamLeftX, beamRightX);
 
             // The system comes from the SAME measureMap lookup that gave the X positions, so
             // the stamp and the frame the X is in cannot disagree.
@@ -991,14 +991,20 @@ internal sealed class ElementCoordinator
     /// so this is skipped for the item-slot layout path.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/beam-collision-engraver.cc.</remarks>
-    private List<BeamCollision> CollectCrossVoiceBeamCollisions(
+    private void AppendCrossVoiceBeamCollisions(
+        List<BeamCollision> collisions,
         Score score, BeamGroup group, MeasureLayout measureLayout,
         double beamLeftX, double beamRightX)
     {
-        var collisions = new List<BeamCollision>();
+        // ⚠️ INTO THE CALLER'S LIST. It used to build one of its own and hand it back to an
+        // AddRange, and over the reader's corpus that list was ALWAYS EMPTY — 19.03 builds a
+        // keystroke, capacity never off zero in 231 books (session 448's census). The books
+        // that reach here are monophonic, so the guard below returns before the first Add.
+        // Appending here is the same order the AddRange gave: this voice's entries first,
+        // the other voices' after (session 451).
         if (score.Voices.Length <= 1
             || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
-            return collisions;
+            return;
 
         double beamOriginX = BeamStemX(group, 0, beamLeftX);
         double halfStemWidth = EngravingDefaults.StemThickness / 2;
@@ -1023,8 +1029,6 @@ internal sealed class ElementCoordinator
                                   _beamEngraver.Parameters.StemCollisionFactor);
             }
         }
-
-        return collisions;
     }
 
     /// <summary>
@@ -1794,8 +1798,16 @@ internal sealed class ElementCoordinator
         // and on the reader's corpus it is exact: measured before it was handed over, all
         // 26,524 calls tied every head of the column (a tie column is named by the chord the
         // ties leave, so an untied member is possible but rare enough never to appear there).
+        // ⚠️ `others` IS NULL UNTIL AN UNTIED MEMBER ARRIVES, and over the reader's corpus one
+        // never does: session 442's leg proved all 26,524 calls tie every head of the column
+        // (tied == positions.Count), and session 448's census then priced the four lists this
+        // method builds per call — `others`, `dots`, `flag`, `accidentals` — at 0.00, 0.00,
+        // 0.21 and 0.04 items each. They are HANDOFF 1.0 (n)^5: a family the capacity-based
+        // accounting cannot see, because an empty List's capacity is zero and only its OBJECT
+        // is on the books. TieColumnParts already defaults every one of them to [], so null
+        // here is the same answer (session 451).
         var tied = new List<TieOutlineHead>(positions.Count);
-        var others = new List<TieOutlineBox>();
+        List<TieOutlineBox>? others = null;
         for (int i = 0; i < positions.Count; i++)
         {
             double left = columnX + offsets[i] + headLeftInk;
@@ -1805,7 +1817,7 @@ internal sealed class ElementCoordinator
             else
                 // An UNTIED chord member enters with its own ink height, not the tied heads'
                 // one-staff-space box (:221, Staff_symbol_referencer::extent_in_staff).
-                others.Add(new TieOutlineBox(
+                (others ??= []).Add(new TieOutlineBox(
                     positions[i] * 0.5 + headBBox.Bottom, positions[i] * 0.5 + headBBox.Top,
                     left, right));
         }
@@ -1853,7 +1865,7 @@ internal sealed class ElementCoordinator
         // Where they stand is the reserved dot column — DotColumn.Reserved, the house the
         // renderer draws by and the spacing box reserves by: head ink, one dot width, a flag's
         // push, on DotConfiguration's rows (a line-note's dot lifted into the space).
-        var dots = new List<TieOutlineBox>();
+        List<TieOutlineBox>? dots = null;
         int dotCount = SpacingRules.GetDots(item);
         if (isLeftBound && dotCount > 0)
         {
@@ -1866,7 +1878,7 @@ internal sealed class ElementCoordinator
                 for (int d = 0; d < dotCount; d++)
                 {
                     double dotX = columnX + dotOffset + d * 2 * dotBBox.Width;
-                    dots.Add(new TieOutlineBox(
+                    (dots ??= []).Add(new TieOutlineBox(
                         dotY - dotRadius, dotY + dotRadius, dotX, dotX + dotBBox.Width));
                 }
             }
@@ -1874,7 +1886,7 @@ internal sealed class ElementCoordinator
 
         // The flag, on the LEFT bound of an unbeamed short note. Its ink hangs off the stem
         // end, so the glyph's own box is already in the stem's frame (:186-188).
-        var flag = new List<TieOutlineBox>();
+        List<TieOutlineBox>? flag = null;
         if (isLeftBound && stemInfo is not null && item is NoteItem fn && noteValue >= 8 && !fn.IsBeamed)
         {
             var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, stemUp);
@@ -1883,14 +1895,14 @@ internal sealed class ElementCoordinator
                 double tipY = (stemUp ? stemInfo.Value.StemMax : stemInfo.Value.StemMin) * 0.5;
                 double flagX = LayoutUtilities.StemX(supportLeft, stemUp, noteValue,
                     LayoutUtilities.NoteheadStyleOf(item));
-                flag.Add(new TieOutlineBox(
+                (flag ??= []).Add(new TieOutlineBox(
                     tipY + flagBBox.Bottom, tipY + flagBBox.Top, flagX, flagX + flagBBox.Width));
             }
         }
 
         // The accidentals, on the RIGHT bound only — they stand between the arriving tie and
         // the head it is arriving at, and no other bound can meet them (:231-236).
-        var accidentals = new List<TieOutlineBox>();
+        List<TieOutlineBox>? accidentals = null;
         if (!isLeftBound)
         {
             var placement = new AccidentalPlacement();
@@ -1910,7 +1922,7 @@ internal sealed class ElementCoordinator
                 var accBBox = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
                 double accX = columnX + layout.XOffset;
                 double accY = layout.StaffPosition * 0.5;
-                accidentals.Add(new TieOutlineBox(
+                (accidentals ??= []).Add(new TieOutlineBox(
                     accY + accBBox.Bottom, accY + accBBox.Top, accX, accX + accBBox.Width));
             }
         }
@@ -1918,11 +1930,11 @@ internal sealed class ElementCoordinator
         return new TieColumnParts
         {
             TiedHeads = tied,
-            OtherHeads = others,
+            OtherHeads = (IReadOnlyList<TieOutlineBox>?)others ?? [],
             Stem = stem,
-            Dots = dots,
-            Flag = flag,
-            Accidentals = accidentals,
+            Dots = (IReadOnlyList<TieOutlineBox>?)dots ?? [],
+            Flag = (IReadOnlyList<TieOutlineBox>?)flag ?? [],
+            Accidentals = (IReadOnlyList<TieOutlineBox>?)accidentals ?? [],
             HeadPositions = positions,
         };
     }

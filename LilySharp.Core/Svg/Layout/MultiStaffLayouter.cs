@@ -737,7 +737,7 @@ internal sealed class MultiStaffLayouter
     /// as of 2026-07-26 the only callers of the two skyline-less overloads are tests.
     /// </para>
     /// </remarks>
-    private ImmutableArray<StaffLayout>.Builder StackStaves(
+    private ImmutableArray<StaffLayout> StackStaves(
         MultiStaffScore score,
         StaffGroup group, double y, VerticalSpacingSpec staffSpec, int startIndex,
         List<(VerticalSkyline Up, VerticalSkyline Down)>? staffSkylines,
@@ -751,7 +751,15 @@ internal sealed class MultiStaffLayouter
         // below (MEASURED on がくふ: four rows placed, none given room).
         PairRunSources runSources = default)
     {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        // EVERY staff of the group puts EXACTLY ONE layout here — the dead arm below adds a
+        // hidden one and the live arm adds a placed one — so the size is known before the loop
+        // and this is an array, not a builder. It used to be `CreateBuilder<StaffLayout>()`,
+        // which lays out capacity 8 (88 B) before a single Add and keeps its own object (56 B)
+        // to hand back, and two of the three callers then copied it TWICE with ToImmutable()
+        // while the third never copied it at all. 49.18 of these a keystroke over the reader's
+        // corpus, 100.0% of them one staff long (session 448's census; session 451 measured
+        // the repair).
+        var staffLayouts = new StaffLayout[group.Staves.Length];
         currentY = y;
         anyVisible = false;
         int lastVisibleIndex = -1;
@@ -766,7 +774,7 @@ internal sealed class MultiStaffLayouter
 
             if (isDead(staff))
             {
-                staffLayouts.Add(new StaffLayout(
+                staffLayouts[i] = new StaffLayout(
                     StaffIndex: globalIndex,
                     Clef: staff.Clef,
                     Y: currentY,
@@ -776,7 +784,7 @@ internal sealed class MultiStaffLayouter
                     IsOssia: staff.IsOssia,
                     IsHidden: true,
                     StaffAffinity: staff.StaffAffinity,
-                    RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
+                    RefpointBelowTop: PlacedRefpointBelowTop(score, staff));
                 continue;
             }
 
@@ -812,7 +820,7 @@ internal sealed class MultiStaffLayouter
                 currentY -= lastVisibleHeight + gap;
             }
 
-            staffLayouts.Add(new StaffLayout(
+            staffLayouts[i] = new StaffLayout(
                 StaffIndex: globalIndex,
                 Clef: staff.Clef,
                 Y: currentY,
@@ -821,14 +829,16 @@ internal sealed class MultiStaffLayouter
                 InstrumentName: staff.InstrumentName,
                 IsOssia: staff.IsOssia,
                 StaffAffinity: staff.StaffAffinity,
-                RefpointBelowTop: PlacedRefpointBelowTop(score, staff)));
+                RefpointBelowTop: PlacedRefpointBelowTop(score, staff));
             anyVisible = true;
             lastVisibleIndex = globalIndex;
             lastVisibleHeight = thisStaffHeight;
             lastVisibleStaff = staff;
         }
 
-        return staffLayouts;
+        // No copy: the array was built here and nothing else holds it.
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal
+            .AsImmutableArray(staffLayouts);
     }
 
     /// <summary>
@@ -858,9 +868,9 @@ internal sealed class MultiStaffLayouter
     private static readonly Func<Staff, bool> NothingDies = _ => false;
 
     /// <summary>Height of the last visible staff in a stacked group (0 if none).</summary>
-    private static double LastVisibleStaffHeight(ImmutableArray<StaffLayout>.Builder staffLayouts)
+    private static double LastVisibleStaffHeight(ImmutableArray<StaffLayout> staffLayouts)
     {
-        for (int i = staffLayouts.Count - 1; i >= 0; i--)
+        for (int i = staffLayouts.Length - 1; i >= 0; i--)
             if (!staffLayouts[i].IsHidden)
                 return staffLayouts[i].Height;
         return 0;
@@ -884,8 +894,8 @@ internal sealed class MultiStaffLayouter
             // Every staff in the group committed hara-kiri — a zero-height group, which is
             // what leaves it out of the system's extent (see SystemHeightOf).
             return StaffGroupLayout.CreateGrandStaff(
-                staffLayouts.ToImmutable(), y, 0,
-                new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0));
+                staffLayouts, y, 0,
+                new GrandStaffLayout(staffLayouts, 0, 0, 0));
         }
 
         double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
@@ -895,13 +905,13 @@ internal sealed class MultiStaffLayouter
         double braceX = SystemStartBraceRightEdge(CurrentIndent);
 
         var grandStaffLayout = new GrandStaffLayout(
-            Staves: staffLayouts.ToImmutable(),
+            Staves: staffLayouts,
             BraceX: braceX,
             BraceTop: y,
             BraceBottom: y - totalHeight);
 
         return StaffGroupLayout.CreateGrandStaff(
-            staffLayouts.ToImmutable(), y, totalHeight, grandStaffLayout);
+            staffLayouts, y, totalHeight, grandStaffLayout);
     }
 
     /// <summary>
@@ -945,15 +955,15 @@ internal sealed class MultiStaffLayouter
         {
             return StaffGroupLayout.CreateBracketGroup(
                 group.Type,
-                staffLayouts.ToImmutable(), y, 0,
-                new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0, SystemStartDelimiterType.Bracket));
+                staffLayouts, y, 0,
+                new GrandStaffLayout(staffLayouts, 0, 0, 0, SystemStartDelimiterType.Bracket));
         }
 
         double totalHeight = y - currentY + LastVisibleStaffHeight(staffLayouts);
         double bracketX = SystemStartBracketCentre(CurrentIndent);
 
         var delimiterLayout = new GrandStaffLayout(
-            Staves: staffLayouts.ToImmutable(),
+            Staves: staffLayouts,
             BraceX: bracketX,
             BraceTop: y,
             BraceBottom: y - totalHeight,
@@ -961,7 +971,7 @@ internal sealed class MultiStaffLayouter
 
         return StaffGroupLayout.CreateBracketGroup(
             group.Type,
-            staffLayouts.ToImmutable(), y, totalHeight, delimiterLayout);
+            staffLayouts, y, totalHeight, delimiterLayout);
     }
 
     /// <summary>
@@ -2510,7 +2520,12 @@ internal sealed class MultiStaffLayouter
         Func<Staff, bool> isDead,
         PairRunSources runSources = default)
     {
-        var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
+        // One layout per group, unconditionally — the dead-group arm below still puts its
+        // (zero-height) layout here — so the size is known before the loop and this is an
+        // array, not a builder. Same reading as StackStaves: a builder lays out capacity 8
+        // before a single Add, keeps its own object to hand back, and ToImmutable then copies
+        // the lot. 27.83 of these a keystroke over the reader's corpus (session 451).
+        var groupLayouts = new StaffGroupLayout[score.StaffGroups.Length];
         double currentY = 0;
         double staffHeight = _options.StaffHeight;
         var sp = _options.StaffSpacing;
@@ -2553,8 +2568,13 @@ internal sealed class MultiStaffLayouter
         // The last SPACEABLE staff placed so far and the text rows placed since — the state
         // that lets a spaceable pair with rows between it be placed at the alignment's own
         // answer (see the pair branch below) instead of at the rows' stacked bands.
+        // ⚠️ NULL UNTIL A ROW ACTUALLY STANDS BETWEEN TWO STAVES, which over the reader's
+        // corpus is never: 27.83 of these a keystroke and the capacity never left ZERO in
+        // 231 books (session 448's census — and the capacity is what says it, since the
+        // Clear() below means a finished Count of 0 would prove nothing). The branch that
+        // reads it is guarded on Count > 0, so null is the same answer.
         (Staff Staff, StaffLayout Layout, StaffGroup Group)? lastSpaceable = null;
-        var rowsSinceSpaceable = new List<(Staff Staff, StaffLayout Layout)>();
+        List<(Staff Staff, StaffLayout Layout)>? rowsSinceSpaceable = null;
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -2572,7 +2592,7 @@ internal sealed class MultiStaffLayouter
                         score, group, currentY, sp.StaffStaff, globalStaffIndex, staffSkylines, isDead,
                         runSources);
             layout = layout with { Outer = group.Outer };
-            builder.Add(layout);
+            groupLayouts[i] = layout;
 
             // A group with no survivor takes no room and no gap: it is not in the alignment.
             bool groupIsDead = layout.Staves.All(s => s.IsHidden);
@@ -2589,11 +2609,12 @@ internal sealed class MultiStaffLayouter
                     if (StaffAffinity.IsSpaceable(group.Staves[k].StaffAffinity))
                     {
                         lastSpaceable = (group.Staves[k], layout.Staves[k], group);
-                        rowsSinceSpaceable.Clear();
+                        rowsSinceSpaceable?.Clear();
                     }
                     else if (lastSpaceable is not null)
                     {
-                        rowsSinceSpaceable.Add((group.Staves[k], layout.Staves[k]));
+                        (rowsSinceSpaceable ??= [])
+                            .Add((group.Staves[k], layout.Staves[k]));
                     }
                 }
 
@@ -2680,7 +2701,7 @@ internal sealed class MultiStaffLayouter
                     // and RespaceStaves moves what the single-page path left alone — the two
                     // page paths must read one geometry.
                     if (staffSkylines is not null
-                        && rowsSinceSpaceable.Count > 0
+                        && rowsSinceSpaceable is { Count: > 0 }
                         && lastSpaceable is { } upper)
                     {
                         int lowIdx = FirstLiveIndex(next);
@@ -2707,7 +2728,9 @@ internal sealed class MultiStaffLayouter
             globalStaffIndex += group.StaffCount;
         }
 
-        return builder.ToImmutable();
+        // No copy: the array was built here and nothing else holds it.
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal
+            .AsImmutableArray(groupLayouts);
     }
 
     /// <summary>
@@ -2861,8 +2884,12 @@ internal sealed class MultiStaffLayouter
         // (scratch/ベースタブLy/Untitled-6.lys, user report 2026-08-25): system 0's second
         // staff and system 1's first were drawn 0.470000 apart — through each other — where
         // the pair's own numbers put them 12.000000 apart.
+        // ⚠️ NULL UNTIL A LINE ACTUALLY STANDS BETWEEN TWO SPACEABLE STAVES — never, over the
+        // reader's corpus: 27.83 builds a keystroke and the capacity never left ZERO in 231
+        // books (session 448's census; the Clear() below is why the finished Count could not
+        // have said it and the CAPACITY had to). `NoRows` is the same answer as an empty list.
         int upperEntry = -1;
-        var between = new List<(Staff Staff, StaffLayout Layout)>();
+        List<(Staff Staff, StaffLayout Layout)>? between = null;
         for (int i = 0; i < flat.Count; i++)
         {
             var entry = flat[i];
@@ -2882,13 +2909,14 @@ internal sealed class MultiStaffLayouter
                 // run the PREVIOUS system's chain closes, not to any pair here
                 // (:948-990, LayoutEngine.BuildLooseChainEnds).
                 if (upperEntry >= 0)
-                    between.Add((entry.Staff, entry.Layout));
+                    (between ??= []).Add((entry.Staff, entry.Layout));
                 continue;
             }
             if (upperEntry >= 0)
-                AddSpring(flat[upperEntry], entry, between);
+                AddSpring(flat[upperEntry], entry,
+                    (IReadOnlyList<(Staff Staff, StaffLayout Layout)>?)between ?? NoRows);
             upperEntry = i;
-            between.Clear();
+            between?.Clear();
         }
         if (moreSprings is not null)
             return moreSprings.ToImmutable();
@@ -2899,7 +2927,7 @@ internal sealed class MultiStaffLayouter
         void AddSpring(
             (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex) up,
             (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex) low,
-            List<(Staff Staff, StaffLayout Layout)> lines)
+            IReadOnlyList<(Staff Staff, StaffLayout Layout)> lines)
         {
             // ★ THE PAIR IS SPRUNG WHATEVER STANDS BETWEEN IT (2026-08-26), which is
             // page-layout-problem.cc:660-672 unchanged: the loop springs between consecutive
