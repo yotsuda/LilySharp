@@ -221,7 +221,8 @@ public static class SvgGenerator
     /// or as pages (<see cref="Rendering.Svg.SvgDocumentContext.ToPages"/>).</summary>
     internal static Rendering.Svg.SvgDocumentContext RenderDocument(MultiStaffScore score,
         ScoreLayout layout, SvgRenderOptions options, bool resolveDataPos,
-        Rendering.Svg.SvgSystemFragmentCache? fragments)
+        Rendering.Svg.SvgSystemFragmentCache? fragments,
+        Rendering.Svg.SvgPageBuffers? pageBuffers = null)
     {
         var docOptions = new SvgDocumentOptions
         {
@@ -230,7 +231,7 @@ public static class SvgGenerator
             FontDirectory = options.FontDirectory,
             Interactive = options.Interactive,
         };
-        var doc = new SvgDocumentContext(docOptions);
+        var doc = new SvgDocumentContext(docOptions, pageBuffers);
         SharedRenderer.RenderTo(score, layout, doc, resolveDataPos, fragments);
         doc.Dispose();
         return doc;

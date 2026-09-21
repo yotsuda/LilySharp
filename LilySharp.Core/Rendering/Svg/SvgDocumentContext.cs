@@ -62,6 +62,11 @@ internal sealed class SvgDocumentContext : IDocumentContext
     private SvgDrawingContext? _currentPage;
     private string? _result;   // the one-string document, assembled on first read
     private bool _disposed;
+    /// <summary>The session's page buffers (<see cref="SvgPageBuffers"/>), or null for a
+    /// caller with no session behind it — which is every one-shot render, and which is
+    /// exactly today's behaviour: a fresh builder per page, dropped with the document.</summary>
+    private readonly SvgPageBuffers? _buffers;
+    private bool _released;
 
     /// <summary>
     /// The Emmentaler designs the pages actually drew glyphs from. The header is assembled
@@ -71,9 +76,10 @@ internal sealed class SvgDocumentContext : IDocumentContext
     /// </summary>
     private readonly HashSet<int> _usedDesigns = new();
 
-    public SvgDocumentContext(SvgDocumentOptions? options = null)
+    public SvgDocumentContext(SvgDocumentOptions? options = null, SvgPageBuffers? buffers = null)
     {
         _options = options ?? new SvgDocumentOptions();
+        _buffers = buffers;
     }
 
     /// <summary>The open page's text buffer — the append target
@@ -103,7 +109,10 @@ internal sealed class SvgDocumentContext : IDocumentContext
             throw new InvalidOperationException("Previous page not ended.");
         // Buffer each page separately so we can size the root <svg> to all pages
         // and offset them at Dispose (we don't know the total height up front).
-        _currentContent = new StringBuilder();
+        // The session (if there is one) lends this page the buffer it drew into last
+        // render — already cleared, already the size this page came out at — which is
+        // what keeps a keystroke from allocating the whole document again (SvgPageBuffers).
+        _currentContent = _buffers?.Take(_pages.Count) ?? new StringBuilder();
         _currentWidth = widthSpaces;
         _currentHeight = heightSpaces;
         _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive, _usedDesigns, Fonts);
@@ -124,7 +133,39 @@ internal sealed class SvgDocumentContext : IDocumentContext
     {
         if (!_disposed)
             throw new InvalidOperationException("Dispose the document before reading SVG.");
-        return _result ??= Assemble();
+        if (_result != null)
+            return _result;
+        ThrowIfReleased();
+        return _result = Assemble();
+    }
+
+    /// <summary>
+    /// Hands every page's buffer back to the session pool it came from
+    /// (<see cref="SvgPageBuffers"/>), and forgets the pages. THE DOCUMENT IS NOT READABLE
+    /// AFTERWARDS — the buffers belong to the next render from this point on — so only the
+    /// owner of the pool calls this, and only once it has taken what it wanted:
+    /// <see cref="ToSvg"/>'s string (which is cached, so a later call still answers) or
+    /// <see cref="ToPages"/>'s materialized set. A document with no pool is untouched.
+    /// </summary>
+    internal void ReleaseBuffers()
+    {
+        if (_buffers == null || _released)
+            return;
+        _released = true;
+        for (int i = 0; i < _pages.Count; i++)
+            _buffers.Give(i, _pages[i].Content);
+        _pages.Clear();
+        _currentContent = null;
+        _currentPage = null;
+    }
+
+    /// <summary>The pages are gone (<see cref="ReleaseBuffers"/>) and the answer was not
+    /// taken while they were here. Says so rather than returning an empty document.</summary>
+    private void ThrowIfReleased()
+    {
+        if (_released)
+            throw new InvalidOperationException(
+                "The page buffers were released; read the document before releasing it.");
     }
 
     /// <summary>
@@ -138,6 +179,7 @@ internal sealed class SvgDocumentContext : IDocumentContext
     {
         if (!_disposed)
             throw new InvalidOperationException("Dispose the document before reading SVG.");
+        ThrowIfReleased();
         var (head, pages, tail) = BuildPieces();
         int count = pages.Count;
         var texts = ImmutableArray.CreateBuilder<string>(count);

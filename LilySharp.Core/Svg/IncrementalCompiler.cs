@@ -127,6 +127,14 @@ public sealed class IncrementalCompiler
     // keeps entries from replaying across a pass that did not refresh them.
     private Rendering.Svg.SvgSystemFragmentCache? _fragments;
 
+    // ⒮″ (session 456): the page BODY BUFFERS of the previous render, lent back to the
+    // pages of this one (SvgPageBuffers — why the buffer and not just its size is in its
+    // remarks). Unlike every other cache on this session it carries NO information: what
+    // is kept is the array, cleared, and a render handed an empty pool draws exactly the
+    // same bytes at a higher price. So it is never shed — there is nothing to shed — and
+    // it is the only field here that a wrong answer cannot come out of.
+    private readonly Rendering.Svg.SvgPageBuffers _pageBuffers = new();
+
     // R13⒝ (session 404): the page set of the previous PAGES render
     // (RenderIncrementalPages), which the next one classifies its pages against — Same,
     // Shifted or Changed (SvgPageSet's remarks) — so the language server ships a viewer
@@ -216,6 +224,13 @@ public sealed class IncrementalCompiler
     // complete fresh collect of every undrawn part. Shed on spec-resolution drift
     // with everything else (a channel baseline was recorded under the old spec).
     private readonly NestedCollectResume _nestedResume = new();
+
+    /// <summary>How this session's page bodies have been paid for over its lifetime
+    /// (<see cref="Rendering.Svg.SvgPageBuffers"/>): pages drawn into a buffer the previous
+    /// render handed back, pages that had to build one, and pages re-parked into a roomier
+    /// buffer. For diagnostics / tests — output cannot see the pool, so this is the only
+    /// thing that can (PageBuffersTests).</summary>
+    internal (int Served, int Fresh, int Reparked) PageBufferStats => _pageBuffers.Stats;
 
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
@@ -413,6 +428,10 @@ public sealed class IncrementalCompiler
     {
         var doc = Compile(tree, allowSkip: true, token);
         var pages = doc.ToPages(_lastPages, _lastWindow);
+        // Every page this set kept is a string of its own (ToPages materializes, or holds
+        // the PREVIOUS set's string); nothing below reads a builder again, so the buffers
+        // go back to the pool for the next keystroke.
+        doc.ReleaseBuffers();
         _lastPages = pages;
         return pages;
     }
@@ -421,7 +440,9 @@ public sealed class IncrementalCompiler
     {
         // The next pages render has no previous page set to compare with.
         _lastPages = null;
-        return doc.ToSvg();
+        string svg = doc.ToSvg();
+        doc.ReleaseBuffers();
+        return svg;
     }
 
     /// <summary>Where a compile can be given up — see <see cref="RenderIncremental(SyntaxTree, CancellationToken)"/>.</summary>
@@ -797,7 +818,7 @@ public sealed class IncrementalCompiler
         // spread of the unpatched build. The full path (SvgGenerator.Generate) is untouched
         // and still skips it: a layout it built has no session behind it.
         return SvgGenerator.RenderDocument(score, layout, _options, resolveDataPos: true,
-            fragments);
+            fragments, _pageBuffers);
     }
 
     /// <summary>
