@@ -337,6 +337,15 @@ public sealed partial class MeasureCollector
             // (re-walked live after the splice — the v2bow whole-walk shape). Anything
             // else declines; candidates PAST the window are unaffected.
             bool extraVoiceWindow = CollectResumePlanner.WindowInsideParallelExtraVoice(rec, w.Prefix, w.SuffixStart);
+            // ⚠️ COUNTED (session 458, the reader's 231-book corpus, eight forward keystrokes a
+            // book): this guard is asked 7,016 times a sweep — 3.80 a keystroke — and DECLINES
+            // all 7,016. WindowIsTriviaOnly answered true zero times; the token walk behind it
+            // ran 891 times (it is memoized per keystroke). A poison that forces the answer TRUE
+            // — every one of those 7,016 splices taken — leaves the suite green (8,783) AND the
+            // corpus byte-identical (5,824 page hashes). So nothing in either population
+            // observes the UNSOUND direction; what says the guard is needed is session 366's
+            // own sweep (88 divergences over 258 books × 30 edit classes), which is a
+            // population neither of ours covers. HANDOFF §1.0 ⒮¹².
             if (ck.NodeStart < w.Prefix
                 && !extraVoiceWindow
                 && !CollectResumePlanner.WindowIsTriviaOnly(WalkProbe!))

@@ -392,7 +392,7 @@ internal static class ArticulationEngraver
             }
             void AddTieBound((int, int, int, int) key, TieLayout t)
             {
-                tiesAtBound ??= new Dictionary<(int, int, int, int), List<TieLayout>>();
+                tiesAtBound ??= RentTieBounds();
                 if (!tiesAtBound.TryGetValue(key, out var list))
                     // Capacity 1, from OBSERVATION and not from an argument: a chord's
                     // members can all land on the one item, but the price instrument read
@@ -501,7 +501,7 @@ internal static class ArticulationEngraver
         //   an outside-staff-priority is added to the side-support-elements of the
         //   scripts ordered after it (:168-171); the ones WITH a priority are movers
         //   and are left to the outside-staff machinery.
-        var supportScripts = new Dictionary<(int, int, int, bool), List<ArticulationLayout>>();
+        var supportScripts = RentSupportScripts();
         // The previous script of each (note, side) in the priority-ordered walk: its
         // DECLARED priority and its CURRENT one (they differ once a script is bumped).
         // LILYPOND-REF: lily/script-column.cc:147-156 order_grobs — last /
@@ -1215,7 +1215,98 @@ internal static class ArticulationEngraver
             adjustedFingerings = adjFingerings!.ToImmutable();
         }
 
-        return layouts.ToImmutable();
+        // Both scratch maps are finished with here — the fingering flush above is the last
+        // read of either — and the builder's ToImmutable copies.
+        var engraved = layouts.ToImmutable();
+        if (tiesAtBound != null)
+            GiveTieBounds(tiesAtBound);
+        GiveSupportScripts(supportScripts);
+        return engraved;
+    }
+
+    /// <summary>
+    /// The two scratch maps <see cref="CalculateWithFingerings"/> reads its supports out of —
+    /// the ties standing at each note's bound, and the scripts already placed on each
+    /// (note, side) — lent from two dictionaries the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): the tie map was built 1.29 times a keystroke at 47.74 bounds (max 284) and the
+    /// support map 1.89 times at 18.45 keys (max 359), and all 5,863 dictionaries built were
+    /// unreachable by the time the render that built them returned. The two and their growth
+    /// ladders were 6,564 + 3,604 = 10,168 B a keystroke, 0.25% of it.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: both are locals of one call, read only by it (the tie map by
+    /// the support lookup, the support map by the stacking walk and the fingering flush), and
+    /// what leaves the method is the layout array. The ONE early return in the method stands
+    /// before either is built.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE MAP OUT OF THE DRAWER (session 421's idiom): a re-entrant call builds
+    /// its own, a second thread has its own drawer, and a call that throws loses the map
+    /// rather than mixing it. THE CLEARING IS ON GIVE, not on rent (session 456).
+    /// </para>
+    /// <para>
+    /// ⚠️ THE TWO MAPS ARE WATCHED BY DIFFERENT POPULATIONS (session 458, measured by poison).
+    /// Parking the SUPPORT map dirty reddens 104 nets — a stale chain stacks this page's
+    /// scripts on the previous page's. Parking the TIE-BOUND map dirty leaves all 8,783 nets
+    /// GREEN, and the reader's corpus disagrees with them: the same poison moves 2,760 of its
+    /// 5,824 page hashes and changes the page COUNT (5,824 → 5,832). So the clearing of
+    /// <see cref="t_tieBounds"/> is a correctness property with NO observer in the suite — a
+    /// stale bound hands a script the tie support of a note nothing tied. Do not read that
+    /// green as "this one does not matter"; the hole is HANDOFF §1.0 ⒮¹³.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT IS NOT RECOVERED is the per-key <c>List</c> each map holds: clearing the map
+    /// drops them, so the 1.01-tie and 1-script lists are still built per call. They are
+    /// their own census rows (ArticulationEngraver.cs:401 and :644), a tenth the size of
+    /// their maps, and pooling a list per key is a different repair.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is two dictionaries a thread at that thread's densest page, emptied,
+    /// so they pin no tie and no layout.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>>? t_tieBounds;
+
+    /// <inheritdoc cref="t_tieBounds"/>
+    [ThreadStatic]
+    private static Dictionary<(int, int, int, bool), List<ArticulationLayout>>? t_supportScripts;
+
+    /// <summary>Takes the thread's tie-bound map, or makes the thread's first.</summary>
+    private static Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>> RentTieBounds()
+    {
+        var map = t_tieBounds;
+        if (map is null)
+            return new Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>>();
+        t_tieBounds = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished call's tie-bound map back, emptied, with its capacity.</summary>
+    private static void GiveTieBounds(
+        Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>> map)
+    {
+        map.Clear();
+        t_tieBounds = map;
+    }
+
+    /// <summary>Takes the thread's support-chain map, or makes the thread's first.</summary>
+    private static Dictionary<(int, int, int, bool), List<ArticulationLayout>> RentSupportScripts()
+    {
+        var map = t_supportScripts;
+        if (map is null)
+            return new Dictionary<(int, int, int, bool), List<ArticulationLayout>>();
+        t_supportScripts = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished call's support-chain map back, emptied, with its capacity.</summary>
+    private static void GiveSupportScripts(Dictionary<(int, int, int, bool), List<ArticulationLayout>> map)
+    {
+        map.Clear();
+        t_supportScripts = map;
     }
 
     /// <summary>

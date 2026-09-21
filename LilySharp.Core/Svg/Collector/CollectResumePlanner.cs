@@ -283,18 +283,28 @@ internal static class CollectResumePlanner
 
     private static bool TokensAgree(GreenNode a, GreenNode b)
     {
-        var sa = new Stack<GreenNode>();
-        var sb = new Stack<GreenNode>();
+        var sa = RentBaselineStack();
+        var sb = RentNewStack();
         sa.Push(a);
         sb.Push(b);
-        while (true)
+        bool agree = Compare(sa, sb);
+        // Both walks are finished with here — the comparison reads nothing else — and the
+        // give EMPTIES them, which the early exits below leave them needing.
+        GiveBaselineStack(sa);
+        GiveNewStack(sb);
+        return agree;
+
+        static bool Compare(Stack<GreenNode> sa, Stack<GreenNode> sb)
         {
-            var ta = NextToken(sa);
-            var tb = NextToken(sb);
-            if (ta == null || tb == null)
-                return ta == null && tb == null;
-            if (ta.Kind != tb.Kind || !string.Equals(ta.Text, tb.Text, StringComparison.Ordinal))
-                return false;
+            while (true)
+            {
+                var ta = NextToken(sa);
+                var tb = NextToken(sb);
+                if (ta == null || tb == null)
+                    return ta == null && tb == null;
+                if (ta.Kind != tb.Kind || !string.Equals(ta.Text, tb.Text, StringComparison.Ordinal))
+                    return false;
+            }
         }
 
         static GreenNode? NextToken(Stack<GreenNode> stack)
@@ -313,6 +323,88 @@ internal static class CollectResumePlanner
             }
             return null;
         }
+    }
+
+    /// <summary>
+    /// The two explicit walk stacks <see cref="TokensAgree"/> pushes the baseline tree and the
+    /// new one onto, lent from two lists the thread keeps between comparisons.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 0.48 comparisons a keystroke, 220.96 nodes on a stack (max 708), 891 builds of
+    /// each, and every one unreachable by the time the render that built it returned. The two
+    /// stacks and their growth ladders were 5,297 + 5,297 = 10,594 B a keystroke, 0.26% of it.
+    /// <para>
+    /// TWO DRAWERS AND NOT ONE because both stacks are alive at once — the comparison
+    /// advances them in step. They are kept apart by ROLE (baseline, new) so a reader of the
+    /// rent points can tell which is which; nothing else distinguishes them.
+    /// </para>
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: the stacks are locals of one comparison, read by nothing else,
+    /// and the answer that leaves the method is a bool. RENTING TAKES THEM OUT OF THE DRAWER
+    /// (session 421's idiom): a re-entrant comparison would walk stacks of its own, a second
+    /// thread has its own drawers, and a throw loses them rather than mixing them. THE
+    /// CLEARING IS ON GIVE, not on rent (session 456) — and here the give is also what the
+    /// EARLY exits need: a mismatch returns with both stacks still loaded.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHAT A DIRTY PARK DOES, MEASURED, and why NOTHING sees it (session 458): a stale
+    /// node left on a stack makes the next comparison pop it first, the kinds disagree, and
+    /// <see cref="TokensAgree"/> answers FALSE — which only DECLINES a splice. The poison
+    /// (both stacks parked dirty) leaves the suite green at 8,783 and the reader's corpus
+    /// byte-identical, and the reason is stronger than "no observer": the answer is ALREADY
+    /// false in 7,016 of 7,016 asks over that corpus (the count is at the one caller,
+    /// <c>MeasureCollector.TrySpliceSuffix</c>), so on this population the poison is close to
+    /// an IDENTITY. The poison for the other direction — this method forced to answer TRUE,
+    /// i.e. every one of those 7,016 splices taken — is green in both populations too.
+    /// ⇒ The clearing here is a REUSE property, not a correctness one, which is the opposite
+    /// of the gather buffer in <c>MeasureCollector.ProcessMusicContainer</c>; and the guard
+    /// itself is unobserved in this tree (HANDOFF §1.0 ⒮¹²).
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is two stacks a thread at the deepest tree that thread has compared —
+    /// 708 entries, about 6 KB — emptied, so they pin no green node.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Stack<GreenNode>? t_baselineTokens;
+
+    /// <inheritdoc cref="t_baselineTokens"/>
+    [ThreadStatic]
+    private static Stack<GreenNode>? t_newTokens;
+
+    /// <summary>Takes the thread's baseline-side walk stack, or makes the thread's first.</summary>
+    private static Stack<GreenNode> RentBaselineStack()
+    {
+        var stack = t_baselineTokens;
+        if (stack is null)
+            return new Stack<GreenNode>();
+        t_baselineTokens = null;
+        return stack;
+    }
+
+    /// <summary>Takes the thread's new-side walk stack, or makes the thread's first.</summary>
+    private static Stack<GreenNode> RentNewStack()
+    {
+        var stack = t_newTokens;
+        if (stack is null)
+            return new Stack<GreenNode>();
+        t_newTokens = null;
+        return stack;
+    }
+
+    /// <summary>Puts a finished comparison's baseline stack back, emptied, with its capacity.</summary>
+    private static void GiveBaselineStack(Stack<GreenNode> stack)
+    {
+        stack.Clear();
+        t_baselineTokens = stack;
+    }
+
+    /// <summary>Puts a finished comparison's new-side stack back, emptied, with its capacity.</summary>
+    private static void GiveNewStack(Stack<GreenNode> stack)
+    {
+        stack.Clear();
+        t_newTokens = stack;
     }
 
     /// <summary>The window lies wholly inside an EXTRA voice (the second or later

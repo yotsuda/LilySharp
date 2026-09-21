@@ -138,7 +138,7 @@ internal sealed class BeamDetector
         int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null,
         BeamDetectionMemo? memo = null)
     {
-        var beamGroups = new List<BeamGroup>();
+        var beamGroups = RentGroupBuffer();
         var consumed = new HashSet<(int measureIndex, int itemIndex)>();
 
         // Every tuplet bracket resolved to its TIME SPAN — what LilyPond's beam engraver
@@ -238,7 +238,60 @@ internal sealed class BeamDetector
             DetectBeamGroupsInMeasure(measure, measureIndex, beamingMeter, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt);
         }
 
-        return beamGroups.ToImmutableArray();
+        // ToImmutableArray COPIES, so the accumulator is finished with here and not at the
+        // caller's line.
+        var detected = beamGroups.ToImmutableArray();
+        GiveGroupBuffer(beamGroups);
+        return detected;
+    }
+
+    /// <summary>
+    /// The accumulator
+    /// <see cref="DetectBeamGroups(Model.Voice, Model.TimeSignature, ImmutableArray{Model.TupletBracketItem}, int, Func{int, bool?}, BeamDetectionMemo)"/>
+    /// gathers a voice's beam groups into, lent from one list the thread keeps between
+    /// detections.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 3.53 detections a keystroke at 106.24 groups each (max 330), and all 6,528
+    /// lists built were unreachable by the time the render that built them returned. The lists
+    /// and their growth ladders were 9,345 B a keystroke, 0.23% of it.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: the return copies the list into an <see cref="ImmutableArray{T}"/>,
+    /// and the per-measure slices the memo stores are their own arrays
+    /// (<c>MoveToImmutable</c> on a builder sized to the slice) — nothing that outlives the
+    /// detection points at the list. There is no early return between the rent and the give.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE LIST OUT OF THE DRAWER (session 421's idiom): a re-entrant detection
+    /// would gather into its own list, a second thread has its own drawer, and a detection
+    /// that throws loses the buffer instead of mixing it. THE CLEARING IS ON GIVE, not on rent
+    /// (session 456), so a buffer parked dirty is observable — the next voice's detection
+    /// would return the previous voice's beams ahead of its own.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one list a thread at that thread's busiest voice — 330 groups,
+    /// emptied, so it pins no measure.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<BeamGroup>? t_groupBuffer;
+
+    /// <summary>Takes the thread's group accumulator, or makes the thread's first.</summary>
+    private static List<BeamGroup> RentGroupBuffer()
+    {
+        var groups = t_groupBuffer;
+        if (groups is null)
+            return new List<BeamGroup>();
+        t_groupBuffer = null;
+        return groups;
+    }
+
+    /// <summary>Puts a finished detection's accumulator back, emptied, with its capacity.</summary>
+    private static void GiveGroupBuffer(List<BeamGroup> groups)
+    {
+        groups.Clear();
+        t_groupBuffer = groups;
     }
 
     /// <summary>The metered signature a beat grid is read from: <paramref name="timeSig"/>

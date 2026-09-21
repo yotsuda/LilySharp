@@ -77,10 +77,13 @@ internal sealed class MusicSiteList
     /// <paramref name="emit"/> turns one walked site into the list's entries (a reference
     /// into its expansion, a collectable site into itself, anything else into nothing).
     /// <paramref name="probe"/> counts what gets materialized (a resume-mode diagnostic).
+    /// <paramref name="sites"/> is the buffer the pulled sites land in — LENT by the caller
+    /// (<c>MeasureCollector.ProcessMusicContainer</c>, which takes it back once the walk it
+    /// hands this list to has returned), the same buffer its eager arm gathers into.
     /// </summary>
     public static MusicSiteList Lazy(SyntaxNode container, GreenSiteRule rule, IEnumerable<GreenSite> source,
-        Action<GreenSite, List<GreenSite>> emit, CollectWalkProbe? probe)
-        => new(new List<GreenSite>(), container, rule, emit, source.GetEnumerator(), probe);
+        Action<GreenSite, List<GreenSite>> emit, CollectWalkProbe? probe, List<GreenSite> sites)
+        => new(sites, container, rule, emit, source.GetEnumerator(), probe);
 
     /// <summary>The gather root the sites' paths are relative to; null for a preset list.</summary>
     public SyntaxNode? Container => _container;

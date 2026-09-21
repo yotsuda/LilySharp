@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 53 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
 | `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **256** | |
+| **計** | **259** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,11 +24,11 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 9 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
@@ -62,7 +62,7 @@
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:615** that does not exist yet. Named, not silently approximated.
-- **:2263** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:2354** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -132,7 +132,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（53 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（56 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2471** container, and the value stops being unobserved with the line above.
@@ -147,6 +147,9 @@
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:187** subdivision; a malformed meter has no observer. It disappears when Lily#
+### `LilySharp.Core/Svg/Collector/CollectResumePlanner.cs`
+- **:355** byte-identical, and the reason is stronger than "no observer": the answer is ALREADY
+- **:362** itself is unobserved in this tree (HANDOFF §1.0 ⒮¹²).
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:456** this is unobserved rather than known-good; it closes when the labels travel with
 - **:1627** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
@@ -157,9 +160,10 @@
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:277** hands the scorer the band it would have had without the digit. No book reaches that
-- **:1577** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:1738** see the difference, and no fixture and no ledger point reaches it.
-- **:2375** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:1255** is a correctness property with NO observer in the suite — a
+- **:1668** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:1829** see the difference, and no fixture and no ledger point reaches it.
+- **:2466** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -270,9 +274,9 @@
 - **:264** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:272** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
-- **:1125** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
-- **:1155** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
-- **:1238** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
+- **:1178** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
+- **:1208** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
+- **:1291** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`

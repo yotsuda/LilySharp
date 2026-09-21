@@ -1093,15 +1093,89 @@ public sealed partial class MeasureCollector
         // collect (ChargeExpansion) before anything is drawn from it.
         if (WalkProbe is { IsRecording: false } resumer && !IsUnderProcessedContainer(container, includeParallel: true))
         {
+            var lazySites = RentGatherSites();
             processNodes(MusicSiteList.Lazy(container, MusicSiteRule(includeParallel: true),
-                MusicSitesLazy(container, includeParallel: true), GatherContainerSite, resumer));
+                MusicSitesLazy(container, includeParallel: true), GatherContainerSite, resumer, lazySites));
+            GiveGatherSites(lazySites);
             return;
         }
 
-        var musicNodes = new List<GreenSite>();
+        var musicNodes = RentGatherSites();
         foreach (var site in MusicSitesLazy(container, includeParallel: true))
             GatherContainerSite(site, musicNodes);
         processNodes(MusicSiteList.Eager(musicNodes, container));
+        GiveGatherSites(musicNodes);
+    }
+
+    /// <summary>
+    /// The buffer one container's gather lands in — its sites, in walk order — lent from one
+    /// list the thread keeps between containers rather than built per container.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): the two arms of <see cref="ProcessMusicContainer"/> built 6.58 + 1.37 of these
+    /// a keystroke at 89.43 / 103.27 sites each (max 885 / 1,410), and every one of the 14,681
+    /// lists was unreachable by the time the render that built it returned (a weak handle a
+    /// build, a forced blocking gen2 collection at each render boundary). The lists and their
+    /// growth ladders were 55,484 + 13,310 = 68,794 B a keystroke, 1.72% of it.
+    /// <para>
+    /// WHY IT IS SAFE TO PARK: the list is read by exactly one call — the
+    /// <c>processNodes</c> walk the factory's result is handed to — and nothing that outlives
+    /// that call holds either. A checkpoint records an INDEX and a slot path
+    /// (<see cref="MusicSiteList.PathOf"/> returns a fresh array), never the list; the sites
+    /// themselves are green nodes the tree owns. The buffer goes back after the walk returns,
+    /// which is the line the gather's whole lifetime ends on.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES THE LIST OUT OF THE DRAWER — session 421's idiom for
+    /// <c>VerticalSkyline</c>'s scratch buffers. A container reached while another's walk is
+    /// live would gather into a list of its own; a second thread collecting a second score has
+    /// its own drawer. THE CLEARING IS ON GIVE, not on rent (session 456), so a buffer parked
+    /// dirty is observable — and it is observed loudly: the poison that skips the clear does
+    /// not merely redden the suite, it stops it RETURNING (the buffer grows across every
+    /// render the process makes), while one net says the same thing in two seconds —
+    /// <c>IncrementalCompilerTests.FirstRender_EqualsFullGenerate</c>.
+    /// </para>
+    /// <para>
+    /// ⚠️ WHY THE RENT MUST EMPTY THE DRAWER IS THE THROW, NOT NESTING, and the poison is
+    /// what says which (session 458; the reading below was written first and was half wrong).
+    /// <see cref="ProcessMusicContainer"/> is reached from <see cref="ProcessSectionBody"/>
+    /// alone, which runs from <see cref="ProcessSection"/> — the form's item loop, a repeat
+    /// block's section arms, the section-major loop — all OUTSIDE any <c>processNodes</c>
+    /// call, and nothing inside the walk reaches back here (the gather's
+    /// <c>ExpandVariable</c> only appends to the list it was handed). So no container nests
+    /// inside another. What DOES happen is the abort: the walk throws
+    /// <c>CollectResumeAbortException</c> (a drifted address bails to a full collect) between
+    /// the rent and the give, and because the rent emptied the drawer the half-filled buffer
+    /// goes with it instead of being handed to the next container. A poison that parks that
+    /// buffer on the abort path ALONE reddens exactly one net —
+    /// <c>CollectEditResumeTests.BarLineTypedBeforePhraseReferences_DoesNotResumeInsideTheExpansion</c>
+    /// — and it is the same single net the "renting leaves the slot filled" poison reddens.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one list a thread at that thread's largest container — 1,410
+    /// entries over the whole corpus, well inside the 85 KB boundary a large-object
+    /// allocation would cross — and its entries are cleared, so it pins no syntax tree.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<GreenSite>? t_gatherSites;
+
+    /// <summary>Takes the thread's gather buffer, or makes the thread's first.</summary>
+    private static List<GreenSite> RentGatherSites()
+    {
+        var sites = t_gatherSites;
+        if (sites is null)
+            return new List<GreenSite>();
+        t_gatherSites = null;
+        return sites;
+    }
+
+    /// <summary>Puts a finished container's gather buffer back, emptied, with its capacity.</summary>
+    private static void GiveGatherSites(List<GreenSite> sites)
+    {
+        sites.Clear();
+        t_gatherSites = sites;
     }
 
     /// <summary>One gathered site of a container into the flat list: a reference expands
