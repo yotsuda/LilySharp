@@ -129,6 +129,53 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第460セッションの経緯
+
+### 1.1 第460セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁰**（ユーザーが
+選んだ・⒮¹⁰ と ⒮¹³ と ⒮⁹ と ⒮¹² を並べて訊いた）。★ **`-Start p460` の 1 コマンドで §0 が全部済んだ**
+（HEAD `881d5423`・未 push 11・full `sessions/p460/run1.trx` 8783 / 0 / 3 / 8786・台帳 851 点／
+総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 458` も自動＝moved 54 行 2,962 字）。
+継ぎ目は最初の full の前に立てた（第459 ⑷ の罠）。
+
+★★★ **⑴ 5 軒・A/B −21,135 B／打鍵（会計 20,293 の 104.2%＝*上*・予測 −20,700 ± 500 の帯の中）。**
+`BeamSubdivision.cs:253`／`OutsideStaffStacker.cs:1146`／`HorizontalSkyline.cs:63`／`LayoutEngine.Prelim.cs:546`／
+`TieChordOutline.cs:191`。**上に出た分は census の行の外**＝`FromBox` の箱は list ではなく **skyline ごと**貸した
+（product の呼び手 4 軒とも `Distance` か `Merge` で 1 度読んで捨てる。`Merge` は写す）ので、skyline 本体
+約 725 も消えた＝予測に書いた方向。parse は動かない（振れの中）。**出力は同一**（5,824 行・0 差）。
+
+★★ **⑵ 呼び手が 2 系統の軒は、プローブ 1 本で割れた。** `CalcBeamSegments` の 28.81 回＝quanter 19.12＋
+renderer 9.69（Lab `beamseg-callers.txt`・和は census と一致）。★ **quanter のフィールド `_segments` は ctor の
+中でしか読まれていなかった**＝フィールドに見えて寿命は ctor＝give 点は同じメソッドに在った。
+⇒ **「器が呼び手へ出る」は*最後に読む場所*を読むまで判定しない**（⒮⁶ が門前払いした 3 軒のうち、
+`HorizontalSkyline.cs:63` と `BeamSubdivision.cs:253` をこの便が park した）。
+
+★★★ **⑶ 毒 7 本のうち予測を外したのは 2 本で、外した 2 本のほうが高かった。** p1 赤 239／p2 57／p5 47／
+p6 緑は予測どおり。⑴ **p4（tie の列地図を dirty で返す）は緑と予測して赤 21**——「fallback はバイト同一」は
+正しかったが、**`columnKeys` は地図の *miss* でしか足されない**＝stale な鍵を持つ列は reassembly から消え、
+`columnSystem[...]` が引けない。⑵ **p3（箱を dirty で返す）は 600 秒で返らず、そこまで 7,996 本 0 赤**。
+境界つきの p7（前の箱の 1 棟だけ残す）で**スイート緑・コーパス 0 差**。第455 の順番で歩くと計器
+（`Zz460Box`）が答えた＝stale な棟が答えを変えたのは 44,356 回中 862 回で、**全部 `NoteColumnToBarlineFloorPair`
+＝⒳⁷ の床**。⇒ **新しい穴ではなく ⒳⁷ の 2 人目の証人**（§1.0 ⒳⁷ に 1 行。コードの remark にも書き、
+`APPROXIMATIONS.md` の UNWATCHED が 56 → 57）。
+
+★ **⑷ 自損 2 つ。** ⑴ **`cmd /c "… --filter A|B …"` の `|` は cmd のパイプ**＝inventory の再生成が片方しか
+走らなかった（合計の行が 1 本しか出なかったので気づいた）＝フィルタは 1 本ずつ回す。⑵ **行番号の表は 2 枚**
+＝`docs/APPROXIMATIONS.md` と **`audit/magic_constants.csv`**（`MagicConstantInventoryTests`）。最初の full は後者で
+1 赤＝93 行すべて行番号だけ。**両方を毒と full の前に再生成し、LF を CRLF に揃える**（CLAUDE-OPERATIONS §1）。
+
+★ **⑸ 終了時**: commit 2 本（code `60d2b4fb`＝Core 11 ファイル＋再生成した 2 枚、**最後の docs は SHA を
+書かない**）。**最終 full 8783 / 0 / 3 / 8786**
+（`sessions/p460/run3.trx`＝`-End`）・§7.5（対 `881d5423`）**Core '+' 302 行／REF 0／OWN 0**＝⚠️ **LP に対応物が
+無い**（貸し器は LP に無い）。**§7.6 コード中の新しい数は 0**（数値はすべてコメント内の実測値）。**§7.7 の匂いは
+2 つ**＝⑴ 箱の `Clear` に観測者が居ない（上の ⑶⑵・remark に UNWATCHED）／⑵ give を忘れても何も投げない
+（観測者は A/B だけ・第457 以来同じ）。台帳 851 点／総和 22.584727806 不変・snapshot 249 枚不動・追跡 `.lys` 609・
+未追跡 0。
+全文は Lab `sessions/p460/`（`prediction.txt`・`beamseg-callers.txt`・`ab-*-tc0.txt`・`hashes-after.txt`・
+`poisons.ps1`／`.txt`・`stale-box-counts.txt`・`core-p460.patch.txt`・`Zz460*.cs.txt`）。
+**push はユーザー**（Lab も）。**`-Start p461` の 1 コマンドから入る**。
+
 ## 以下は第459セッションの経緯
 
 ### 1.1 第459セッション（2026-09-21・YT-DELL2）
