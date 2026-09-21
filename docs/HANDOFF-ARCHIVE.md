@@ -129,6 +129,37 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第463セッションの経緯
+
+### 1.1 第463セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵**（ユーザーが選んだ）。
+★ **`-Start p463` の 1 コマンドで §0 が全部済んだ**（HEAD `519e778a`・未 push 6・full `sessions/p463/run1.trx`
+8785 / 0 / 3 / 8788・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 461` も自動＝moved 41 行 2,381 字）。
+
+★★★ **⑴ 計器を「括弧に何かある」と target-typed に広げた＝第457 の census が見ない母集団は打鍵の 21.0%**
+（445 軒・生きている 228 軒・774,764 B／打鍵）。較正は ⒫′ と 1 B 差。数字と罠は §1.0 ⒮¹⁵。
+
+★★★ **⑵ 8 軒・A/B −204,092 B／打鍵＝打鍵の 6.06%**（予測の点 217,203 の 94.0%・帯 200,000〜250,000 の中）。
+park 4 軒（`TrySplit` の StringBuilder＋2 本の List／paging の builder の*配列*／beam の候補 list と quant 格子／
+`BestFirstScorer` の `PriorityQueue`）・**配列へ直接** 3 軒（`BeamGroup.WithLiveItems`・`AccidentalPlacement`・
+`OutsideStaffStacker` の profile 2 組＝⒮¹⁵ が名指した軒）・`MoveToImmutable` 1 軒（`PageLayouter`）。**出力は同一**（5,824 行・0 差）。
+**最大は census の外**＝`Solve` の寸法つき `PriorityQueue` 76,594（候補 list の隣で見つけた）。paging の builder は同時に生きるので**配列ごと** park。
+
+★★ **⑶ 会計をファイルごとに割った**（Lab `attrib.txt`・和 204,940）。**census の行だけのファイル 5 本は 97.4〜99.96%**。
+外れたのは C だけ＝**57%**＝計器の builder の `obj` 56 B は本体 32 B＋長さ 0 の配列 24 B。census の外の 2 軒は帯の中。
+
+★★ **⑷ 毒 11 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 75／8／136／132／148／1／33・緑 2 本は予測どおり。
+**毒 5（quant 格子を汚して返す）は返らない**＝格子が beam ごとに伸び、候補はその 2 乗（RULES §5.0 の宿主が 1 つ増えた）。
+**毒 7（profile の上下を入れ替える）は緑**＝読むのは memo の `RefSequenceEqual` だけで 2 列を対で比べる＝毒が恒等。
+毒 2 の 8 赤＝辞退は安全だが、fragment の*再利用*を数える網が居る。⚠️ 毒 7 の下の 1 赤 `Lsp.UsingExpansionCacheTests` は揺らぎ（毒の下で絞ると緑）。
+
+★ **⑸ 終了時**: commit 2 本（code＝Core 9 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p463/`（`README.txt`・`prediction.txt`・
+`attrib.txt`・`poisons.ps1`／`.txt`・`remaining.txt`・`Zz463*`）。**最終 full 8785 / 0 / 3 / 8788**（`run2.trx`＝`-End`）・§7.5（対 `519e778a`）
+**Core '+' 239 行／REF 1（既存行を `try` へ字下げ）／OWN 0**＝貸し器は LP に対応物が無い。**§7.6 コード中の新しい数は 0**。
+**§7.7 の匂い**＝⑴ `OneScorer` の method group が beam ごとに delegate を建てる／⑵ 候補の本体 `BeamConfiguration` は class で 1 beam 237 個（どちらも未測定）。
+台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p464` の 1 コマンドから入る**。
+
 ## 以下は第462セッションの経緯
 
 ### 1.1 第462セッション（2026-09-21・YT-DELL2）

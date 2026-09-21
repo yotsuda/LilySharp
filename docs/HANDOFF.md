@@ -156,11 +156,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **読み方の罠 2 つ**: ⑴ **`zero 100%` の Builder 行は `MoveToImmutable` で終わる軒**（Move が builder を空にするので drain が 0 件と読む
   ＝配列は手渡し済みで waste ではない。賞金は builder 本体だけ・34 軒）／⑵ **`obj` 欄の builder 56 B は本体 32 B＋長さ 0 の配列 24 B**
   （計器の `CreateBuilder<T>(0)` が配列を建てる）＝**第463 の C が予測の 57% に外れた理由**
-- ★★★ **⒮¹⁶ tuple を型引数に持つ器は、どちらの census にも居ない**（第464 起票・実測）。計器の `<…>` の歩きは `(` で諦める
-  （Lab `sessions/p464/instrument.ps1` の `Find-Close -Generic`）ので **`List<(int, int)>`・`Dictionary<(…), T>` は 1 軒も数えられない**。
-  第464 が直した 6 軒のうち 3 軒がそれを隣に持っていて、**会計の外れ（D 108.7%・F 86.0%）は全部そこ**・3 本で約 15,300 B／打鍵＝A/B の 19%。
-  `<(` の綴りは Core に **245 箇所・88 ファイル**（`ArticulationEngraver` 10・`MeasureCollector` 15・`LayoutEngine.Annotations` 13）。
-  ⇒ **計器の `Find-Close -Generic` に括弧の深さを持たせて census を回し直す**のが先（値段はまだ無い）
+- ★★ **⒮¹⁶′ tuple 型の器の残り 約 23,500 B／打鍵**（第465 が 6 軒 −82,765 を閉じた・Lab sessions/p465/README.txt 末尾に一覧）。頭は LayoutUtilities.cs:369 10,794（memo＝⒮¹⁵ ⑷ の家）と
+  BuildBeamedStemTips の残り 2 人の呼び手 約 1,800。⚠️ collection initializer と 
+ew List<(…)>?[n] はどの census も数えない
 - ★★★ **⒮¹² splice の「trivia だけの窓」の門は、どちらの母集団にも観測者が居ない**（第458 起票・実測）。
   `MeasureCollector.TrySpliceSuffix`（`Resume.cs:340`）は**コーパス 1 sweep で 7,016 回訊かれ、7,016 回とも
   decline**（`WindowIsTriviaOnly` が true を返したのは **0 回**・裏の token walk は 891 回＝打鍵ごとに memo）。
@@ -175,10 +173,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   前の呼びの tie support が付く」。⚠️ **隣の support-chain 地図は 104 本が見ている**＝同じメソッドの
   2 枚の地図で観測者の数が 104 対 0。**第464 が地図の*中の* list を pool にした**＝**汚した list を pool へ返す毒も緑**
   （support 側の同じ毒は 10 赤）＝穴は list の段にも続く
-- ★ **⒩⁴（寸法を言う）は*尾しか残っていない*＝着手先としては最後**（311 軒 150,948 B／打鍵 2.341%・
-  現在地は Lab `sessions/p442/site-prices-after.txt`）。**top10 の 1.619% のうち 1.144% は「寸法を言えない」
-  と実証済みの 2 軒**（第439・第441 が histogram で反証）で、**その下の上位 4 軒は第457・第458 が
-  *器ごと* park した**＝この島の頭の値段は、寸法を言う前にもう建たなくなっている
+- ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
 - ★ **⒭′ 器の尾の残り＝81 軒 5,724 B／打鍵 0.133%**（第446 実測・分母 4,293,941。**第446 が 85.1% を
@@ -272,10 +267,46 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
   | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
   | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒱ ⒲ ✅ 閉じた**
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 242,086 / 250,000 B・1,874 / 2,000 行**（第462 が §5.3 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第465セッション（2026-09-21・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶**（ユーザーが選んだ）。
+★ **`-Start p465` の 1 コマンドで §0 が全部済んだ**（HEAD `0b2ac2a3`・未 push 10・full `sessions/p465/run1.trx`
+8789 / 0 / 3 / 8792・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 463` も自動＝moved 32 行 2,101 字）。
+
+★★★ **⑴ 計器の `<…>` の歩きに括弧の深さを持たせ、*型引数に `(` を持つ器だけ*を数えた**（Lab `sessions/p465/`・分母 **3,403,783**）。
+**277 軒・生きている 143 軒・125,623 B／打鍵＝3.69%**。⚠️ **起票は半分だけ正しかった**: **第457 の census は `(` で諦めない**
+（諦めるのは改行）＝**1 行の `new List<(int, int)>()` は数えていた**（`TieFormattingProblem:775` 1,377 などが ⒮¹⁰ の一覧と 1 B も違わない）。
+`(` で諦めたのは第463 の census（寸法つき・target-typed）だけ。**誰も見ていなかったのは 57 軒 106,237 B＝3.12%**（`split.ps1`）。
+
+★★★ **⑵ 6 軒・A/B −82,765 B／打鍵＝render の 2.68%**（予測の点 84,602 の 97.8%・帯 70,000〜95,000 の中）。
+**park 3 軒**（`FromBoxes` に渡して写させる box list＝`HorizontalSkyline.RentBoxList`・`ItemSkylineFactory` と `LineStartColumn` が共有／
+描画 1 回の beamed 集合／`ArticulationEngraver` の firstSeen・wanted keys・tips map）・**答えを 1 度だけ綴る 1 軒**（`KeySpelling.SignatureSteps`
+＝`sharps` だけの純関数＝±14 まで配列を持つ）・**建てない 2 軒**（`AccidentalPlacement` の `(Note, HeadOffset)` の list＝**`HeadOffset` の半分は誰も読んでいなかった**／
+`StaffSprings` の `flat`＝上の staff を local に持って歩く）。**出力は同一**（5,824 行・0 差）。
+
+★★ **⑶ 会計（1 軒ずつ抜く・和 82,836）**: 呼び手が 1 人の 5 軒は **99.9〜100.8%**。外れたのは D の **84.5%** だけで、理由は
+**census の行 `:2275` が共有 helper `BuildBeamedStemTips` の中にあり、呼び手 3 人の和**だったこと（park したのは script walk の 1 人）
+⇒ **値段を付ける前に、census の行が居るメソッドの呼び手を grep する**。
+
+★★★ **⑷ 毒 9 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 35（box list を汚すと列ごとに伸びて**返らない**＝上限で止めた）／214／68／7／11／17・
+緑 2 本（wanted keys＝上位集合の濾しは同じ問いに同じ答え・rent が抜かない）は予測どおり。
+**外れ＝毒 8**: `StaffSprings` が上の staff を進めない（(0,1),(0,2),…）毒は**スイート緑・実コーパス 0 差**。コーパスは**全 system が 2 staff**
+（第448 の census）＝どう歩いても対は 1 つ。スイートには 3 staff の譜があるが、網は spring を*数える*か*1 対*を見るだけだった
+⇒ **網 1 本**（`StaffLayoutFrameTests.ThreeSpaceableStaves_SpringAsAChain_AndASkippedLineDoesNotBreakIt`）＝毒 8 の下で赤。
+
+★ **⑸ 終了時**: commit 2 本（code `7443fd6d`＝Core 8 ファイル＋網 1 本＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p465/`
+（`README.txt`・`prediction.txt`＝A/B・会計・毒を追記・`attrib.txt`・`poisons.ps1`／`.txt`・`joined-split.csv`・`Zz465*`）。
+**最終 full 8790 / 0 / 3 / 8793**（網 1 本ぶん増えた・`run3.trx`＝`-End`）・§7.5（対 `0b2ac2a3`）**Core '+' 257 行／REF 2（既存の 2 行を字下げ）／OWN 0**
+＝貸し器と「1 度だけ綴る」は LP に対応物が無い。**§7.6 コード中の新しい数は 1**＝`StepsKeptReach` 14（7 文字が全部重なる所＝2×7・コメントに出所）。
+**§7.7 の匂い**＝⑴ `OrderByScriptPriority` は LINQ の `OrderBy`／`ThenBy` と閉包を呼びごとに建てる／⑵ `BuildBeamedStemTips` の残り 2 人（どちらも未測定）。
+台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p466` の 1 コマンドから入る**。
+
+## 以下は第464セッションの経緯
 
 ### 1.1 第464セッション（2026-09-21・YT-DELL2）
 
@@ -309,37 +340,6 @@ break-align の item・column・candidate の 1 組＝`SolvePrefixColumns` と `
 §7.5（対 `6713cf3b`）**Core '+' 253 行／REF 0／OWN 0**＝貸し器と畳みは LP に対応物が無い。**§7.6 コード中の新しい数は 0**。
 **§7.7 の匂い**＝⑴ measure→system の地図を同じ systems に消費者ごとに建てる（⒮¹⁵ ⑷）／⑵ `DeadFilter` は system ごとに closure と delegate を建てる（未測定）。
 台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p465` の 1 コマンドから入る**。
-
-## 以下は第463セッションの経緯
-
-### 1.1 第463セッション（2026-09-21・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁵**（ユーザーが選んだ）。
-★ **`-Start p463` の 1 コマンドで §0 が全部済んだ**（HEAD `519e778a`・未 push 6・full `sessions/p463/run1.trx`
-8785 / 0 / 3 / 8788・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 461` も自動＝moved 41 行 2,381 字）。
-
-★★★ **⑴ 計器を「括弧に何かある」と target-typed に広げた＝第457 の census が見ない母集団は打鍵の 21.0%**
-（445 軒・生きている 228 軒・774,764 B／打鍵）。較正は ⒫′ と 1 B 差。数字と罠は §1.0 ⒮¹⁵。
-
-★★★ **⑵ 8 軒・A/B −204,092 B／打鍵＝打鍵の 6.06%**（予測の点 217,203 の 94.0%・帯 200,000〜250,000 の中）。
-park 4 軒（`TrySplit` の StringBuilder＋2 本の List／paging の builder の*配列*／beam の候補 list と quant 格子／
-`BestFirstScorer` の `PriorityQueue`）・**配列へ直接** 3 軒（`BeamGroup.WithLiveItems`・`AccidentalPlacement`・
-`OutsideStaffStacker` の profile 2 組＝⒮¹⁵ が名指した軒）・`MoveToImmutable` 1 軒（`PageLayouter`）。**出力は同一**（5,824 行・0 差）。
-**最大は census の外**＝`Solve` の寸法つき `PriorityQueue` 76,594（候補 list の隣で見つけた）。paging の builder は同時に生きるので**配列ごと** park。
-
-★★ **⑶ 会計をファイルごとに割った**（Lab `attrib.txt`・和 204,940）。**census の行だけのファイル 5 本は 97.4〜99.96%**。
-外れたのは C だけ＝**57%**＝計器の builder の `obj` 56 B は本体 32 B＋長さ 0 の配列 24 B。census の外の 2 軒は帯の中。
-
-★★ **⑷ 毒 11 本、予測を外したのは 1 本**（Lab `poisons.txt`）。赤 75／8／136／132／148／1／33・緑 2 本は予測どおり。
-**毒 5（quant 格子を汚して返す）は返らない**＝格子が beam ごとに伸び、候補はその 2 乗（RULES §5.0 の宿主が 1 つ増えた）。
-**毒 7（profile の上下を入れ替える）は緑**＝読むのは memo の `RefSequenceEqual` だけで 2 列を対で比べる＝毒が恒等。
-毒 2 の 8 赤＝辞退は安全だが、fragment の*再利用*を数える網が居る。⚠️ 毒 7 の下の 1 赤 `Lsp.UsingExpansionCacheTests` は揺らぎ（毒の下で絞ると緑）。
-
-★ **⑸ 終了時**: commit 2 本（code＝Core 9 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。全文は Lab `sessions/p463/`（`README.txt`・`prediction.txt`・
-`attrib.txt`・`poisons.ps1`／`.txt`・`remaining.txt`・`Zz463*`）。**最終 full 8785 / 0 / 3 / 8788**（`run2.trx`＝`-End`）・§7.5（対 `519e778a`）
-**Core '+' 239 行／REF 1（既存行を `try` へ字下げ）／OWN 0**＝貸し器は LP に対応物が無い。**§7.6 コード中の新しい数は 0**。
-**§7.7 の匂い**＝⑴ `OneScorer` の method group が beam ごとに delegate を建てる／⑵ 候補の本体 `BeamConfiguration` は class で 1 beam 237 個（どちらも未測定）。
-台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p464` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
