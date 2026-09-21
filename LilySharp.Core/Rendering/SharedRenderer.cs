@@ -242,6 +242,7 @@ internal static partial class SharedRenderer
             }
             doc.EndPage();
         }
+        GiveBeamedItems(beamedItems);
     }
 
     // ---------- Header ----------
@@ -361,7 +362,9 @@ internal static partial class SharedRenderer
             if (g.Tuning is null && !g.ColumnItemIndices.IsDefaultOrEmpty)
                 keys += g.ColumnItemIndices.Length;
 
-        var set = new HashSet<(int, int, int, int)>(keys);
+        var set = t_beamedItems ?? new HashSet<(int, int, int, int)>(keys);
+        t_beamedItems = null;
+        set.EnsureCapacity(keys);
         foreach (var beam in layout.BeamLayouts)
         {
             int staff = beam.StaffIndex < 0 ? 0 : beam.StaffIndex;
@@ -393,6 +396,34 @@ internal static partial class SharedRenderer
         }
         return set;
     }
+
+    /// <summary>Puts a finished render's beamed-item set back, emptied, with its capacity.</summary>
+    private static void GiveBeamedItems(HashSet<(int Staff, int Voice, int Measure, int Item)> set)
+    {
+        set.Clear();
+        t_beamedItems = set;
+    }
+
+    /// <summary>
+    /// The set <see cref="BuildBeamedItemsSet"/> fills, lent from one the thread keeps between
+    /// renders.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 465's census of the containers whose type arguments hold a tuple —
+    /// neither earlier census walked past the paren): one set a render at 549 keys (max 2,176),
+    /// 16,974 B a keystroke, every one unreachable when the render returned. It is a local of
+    /// <see cref="RenderTo"/>, handed down the draw only to be asked <c>Contains</c>, so the
+    /// render is finished with it at its last line — where it is given back.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom): a nested render builds its own,
+    /// a render that throws loses the set rather than handing a stale one on. THE CLEARING IS
+    /// ON GIVE (session 456): a set parked dirty would suppress the stems and flags of notes
+    /// the next render does not beam. WHAT IT RETAINS is one emptied set of value tuples at the
+    /// thread's most-beamed score, pinning nothing.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static HashSet<(int Staff, int Voice, int Measure, int Item)>? t_beamedItems;
 
     private static void DrawSystem(
         MultiStaffScore score, ScoreLayout layout,

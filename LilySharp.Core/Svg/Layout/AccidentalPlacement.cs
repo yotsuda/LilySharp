@@ -164,19 +164,15 @@ internal sealed class AccidentalPlacement
         if (accidentalCount == 0)
             return ImmutableArray<AccidentalLayout>.Empty;
 
-        var accidentals = new List<(ChordNoteInfo Note, double HeadOffset)>(accidentalCount);
-        for (int i = 0; i < notes.Count; i++)
-        {
-            if (string.IsNullOrEmpty(notes[i].Accidental))
-                continue;
-            double off = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
-            accidentals.Add((notes[i], off));
-        }
-
         // Everything — a single accidental included — goes through the skyline packer:
         // LilyPond runs position_apes even for one accidental, so a lone accidental clears
         // the note by right-padding (0.15) PLUS padding (0.2) = 0.35, not 0.15 alone.
-        return CalculateMultipleAccidentals(accidentals, notes, headOffsets,
+        // ⚠️ THERE USED TO BE A LIST HERE of (note, head offset) for each accidental-carrying
+        // note, and the packer read only the note half of it: the head offsets reach the
+        // reference skyline through `headOffsets` itself. It cost 5,782 B a keystroke
+        // (session 465's census, the first to see a container whose type argument is a
+        // tuple); the packer now walks `notes` and skips the bare ones, in the same order.
+        return CalculateMultipleAccidentals(accidentalCount, notes, headOffsets,
             accidentalFont ?? GlyphMetrics.Design20, headFont ?? GlyphMetrics.Design20);
     }
 
@@ -329,13 +325,12 @@ internal sealed class AccidentalPlacement
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
-        List<(ChordNoteInfo Note, double HeadOffset)> accidentalsWithOffsets,
+        int accidentalCount,
         IReadOnlyList<ChordNoteInfo> allNotes,
         IReadOnlyList<double>? headOffsets,
         GlyphMetrics.DesignMetrics accidentalFont,
         GlyphMetrics.DesignMetrics headFont)
     {
-        var accidentals = accidentalsWithOffsets;
         // Lent, and given back cleared before the return (see t_placementScratch).
         var scratch = t_placementScratch ?? new PlacementScratch();
         t_placementScratch = null;
@@ -344,9 +339,13 @@ internal sealed class AccidentalPlacement
         // `accidentalFont` has already applied — but each stays centered on the note's real
         // (unscaled) staff position.
         var entries = scratch.Entries;
-        entries.EnsureCapacity(accidentals.Count);
-        foreach (var (n, _) in accidentals)
+        entries.EnsureCapacity(accidentalCount);
+        // Indexed, not foreach: `allNotes` is an interface (RULES §5.3).
+        for (int ni = 0; ni < allNotes.Count; ni++)
         {
+            var n = allNotes[ni];
+            if (string.IsNullOrEmpty(n.Accidental))
+                continue;
             var bbox = GlyphMetrics.GetAccidentalBBox(accidentalFont, n.Accidental!);
             // Staff position is in half-spaces; convert to staff spaces
             double yCenterSS = n.StaffPosition / 2.0;

@@ -2881,35 +2881,6 @@ internal sealed class MultiStaffLayouter
             return ImmutableArray<StaffSpring>.Empty;
 
         var sp = _options.StaffSpacing;
-        // (model staff, its layout, the group it belongs to) in global staff order — the
-        // order EnumerateStaves yields and the order the group layouts were built in.
-        // The size is the same pairing arithmetic the fill performs — group by group, the
-        // SHORTER of the model's staves and the layout's — so it is the fill's trip count and
-        // not a bound (measured before it was handed over: 51,436 calls, asked == Count every
-        // time). Both walks are over ImmutableArray, whose enumerator is a struct.
-        int flatCount = 0, countedGroup = 0;
-        foreach (var group in score.StaffGroups)
-        {
-            if (countedGroup >= groups.Length)
-                break;
-            int modelStaves = group.Staves.Length;
-            int laidStaves = groups[countedGroup].Staves.Length;
-            flatCount += modelStaves < laidStaves ? modelStaves : laidStaves;
-            countedGroup++;
-        }
-        var flat = new List<(Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex)>(
-            flatCount);
-        int gi = 0;
-        foreach (var group in score.StaffGroups)
-        {
-            if (gi >= groups.Length)
-                break;
-            var groupLayout = groups[gi];
-            for (int k = 0; k < group.Staves.Length && k < groupLayout.Staves.Length; k++)
-                flat.Add((group.Staves[k], groupLayout.Staves[k], group, gi));
-            gi++;
-        }
-
         // 27.83 of these a keystroke over the reader's corpus, and 76.6% of them end holding
         // ONE spring with a further 23.4% holding none — a system is usually one spaceable
         // pair or no pair at all. So the first spring lives in a local and the builder waits
@@ -2938,35 +2909,53 @@ internal sealed class MultiStaffLayouter
         // reader's corpus: 27.83 builds a keystroke and the capacity never left ZERO in 231
         // books (session 448's census; the Clear() below is why the finished Count could not
         // have said it and the CAPACITY had to). `NoRows` is the same answer as an empty list.
-        int upperEntry = -1;
+        //
+        // THE WALK is (model staff, its layout, the group it belongs to) in global staff
+        // order — the order EnumerateStaves yields and the order the group layouts were built
+        // in, pairing each group's model staves with its laid ones up to the SHORTER of the
+        // two. Only the last spaceable entry is ever looked back at, so it is held in a local.
+        // ⚠️ UNTIL SESSION 465 the walk was first copied into a list of those tuples (27.83 a
+        // keystroke, 3,132 B of one — no census had seen it, its type argument being a
+        // tuple) and then indexed; the order and the pairing are unchanged.
+        (Staff Staff, StaffLayout Layout, StaffGroup Group, int GroupIndex)? upper = null;
         List<(Staff Staff, StaffLayout Layout)>? between = null;
-        for (int i = 0; i < flat.Count; i++)
+        int gi = 0;
+        foreach (var group in score.StaffGroups)
         {
-            var entry = flat[i];
-            // Hara-kiri leaves a hidden staff at the current Y with zero height, so it neither
-            // draws nor takes room and is not an element of the alignment at all.
-            // LILYPOND-REF: lily/page-layout-problem.cc:589 filter_dead_elements, which runs
-            // BEFORE append_system's walk. ⚠️ THE SAME SELECTION ClassifySystem MAKES — a
-            // hidden staff used to break the pair here while it was skipped there, so the two
-            // views of one alignment disagreed about which staves are consecutive.
-            if (entry.Layout.IsHidden)
-                continue;
-            // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177 Page_layout_problem::is_spaceable
-            // — the property, not the kind of line that happens to carry it.
-            if (!StaffAffinity.IsSpaceable(entry.Staff.StaffAffinity))
+            if (gi >= groups.Length)
+                break;
+            var groupLayout = groups[gi];
+            for (int k = 0; k < group.Staves.Length && k < groupLayout.Staves.Length; k++)
             {
-                // A line ABOVE the first spaceable staff LEADS the system and belongs to the
-                // run the PREVIOUS system's chain closes, not to any pair here
-                // (:948-990, LayoutEngine.BuildLooseChainEnds).
-                if (upperEntry >= 0)
-                    (between ??= []).Add((entry.Staff, entry.Layout));
-                continue;
+                var entry = (Staff: group.Staves[k], Layout: groupLayout.Staves[k],
+                    Group: group, GroupIndex: gi);
+                // Hara-kiri leaves a hidden staff at the current Y with zero height, so it
+                // neither draws nor takes room and is not an element of the alignment at all.
+                // LILYPOND-REF: lily/page-layout-problem.cc:589 filter_dead_elements, which
+                // runs BEFORE append_system's walk. ⚠️ THE SAME SELECTION ClassifySystem MAKES
+                // — a hidden staff used to break the pair here while it was skipped there, so
+                // the two views of one alignment disagreed about which staves are consecutive.
+                if (entry.Layout.IsHidden)
+                    continue;
+                // LILYPOND-REF: lily/page-layout-problem.cc:1173-1177
+                // Page_layout_problem::is_spaceable — the property, not the kind of line that
+                // happens to carry it.
+                if (!StaffAffinity.IsSpaceable(entry.Staff.StaffAffinity))
+                {
+                    // A line ABOVE the first spaceable staff LEADS the system and belongs to
+                    // the run the PREVIOUS system's chain closes, not to any pair here
+                    // (:948-990, LayoutEngine.BuildLooseChainEnds).
+                    if (upper is not null)
+                        (between ??= []).Add((entry.Staff, entry.Layout));
+                    continue;
+                }
+                if (upper is { } up)
+                    AddSpring(up, entry,
+                        (IReadOnlyList<(Staff Staff, StaffLayout Layout)>?)between ?? NoRows);
+                upper = entry;
+                between?.Clear();
             }
-            if (upperEntry >= 0)
-                AddSpring(flat[upperEntry], entry,
-                    (IReadOnlyList<(Staff Staff, StaffLayout Layout)>?)between ?? NoRows);
-            upperEntry = i;
-            between?.Clear();
+            gi++;
         }
         if (moreSprings is not null)
             return moreSprings.ToImmutable();

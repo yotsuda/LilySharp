@@ -101,17 +101,26 @@ internal static class LineStartColumn
         if (prefatory.Count == 0 || firstNote.Count == 0)
             return 0.0;
 
-        var right = HorizontalSkyline.FromBoxes(ToTuples(prefatory), HorizontalDirection.Right);
-        var left = HorizontalSkyline.FromBoxes(ToTuples(firstNote), HorizontalDirection.Left);
+        var right = Skyline(prefatory, HorizontalDirection.Right);
+        var left = Skyline(firstNote, HorizontalDirection.Left);
         return Math.Max(0.0, right.Distance(left));
     }
 
+    private static HorizontalSkyline Skyline(IReadOnlyList<ColumnBox> boxes, HorizontalDirection direction)
+    {
+        var tuples = ToTuples(boxes);
+        var skyline = HorizontalSkyline.FromBoxes(tuples, direction);
+        HorizontalSkyline.GiveBoxList(tuples);
+        return skyline;
+    }
+
     // A list and not an iterator: the answer is as long as its input, and
-    // HorizontalSkyline.FromBoxes sizes its buildings from that length.
+    // HorizontalSkyline.FromBoxes sizes its buildings from that length. The list is lent
+    // (HorizontalSkyline.RentBoxList) — FromBoxes copies it, so Skyline gives it straight back.
     private static List<(double YBottom, double YTop, double XLeft, double XRight)>
         ToTuples(IReadOnlyList<ColumnBox> boxes)
     {
-        var tuples = new List<(double YBottom, double YTop, double XLeft, double XRight)>(boxes.Count);
+        var tuples = HorizontalSkyline.RentBoxList(boxes.Count);
         // Indexed, not foreach: `boxes` is an interface, so foreach would box an enumerator
         // on every line start (RULES §5.3).
         for (int i = 0; i < boxes.Count; i++)

@@ -193,7 +193,10 @@ internal static class ArticulationEngraver
             // One entry per distinct note, so the articulation count is the BOUND
             // (several scripts on one note share an entry) — and it is the tightest
             // one available here without walking the array twice.
-            var firstSeen = new Dictionary<(int, int, int), int>(articulations.Length);
+            // Lent, and given back cleared once the sort has read it (see t_firstSeen).
+            var firstSeen = t_firstSeen ?? new Dictionary<(int, int, int), int>(articulations.Length);
+            t_firstSeen = null;
+            firstSeen.EnsureCapacity(articulations.Length);
             for (int k = 0; k < articulations.Length; k++)
             {
                 var a = articulations[k];
@@ -205,9 +208,41 @@ internal static class ArticulationEngraver
                     articulations[i].MeasureIndex, articulations[i].ItemIndex)])
                 .ThenBy(i => ScriptPriority(articulations[i].Type))
                 .ToArray();
+            firstSeen.Clear();
+            t_firstSeen = firstSeen;
         }
         return order;
     }
+
+    /// <summary>
+    /// The three scratch containers of one <see cref="CalculateWithFingerings"/> call whose type
+    /// arguments are tuples — the first index of each note in the priority sort, the beam keys
+    /// the scripts can ask for, and the beamed-stem map narrowed to them — lent from ones the
+    /// thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 465's census of the containers whose type arguments hold a tuple —
+    /// neither earlier census walked past the paren): 3,171 + 2,517 + 6,164 B a keystroke, and
+    /// every one unreachable when the render returned. All three are read only inside the call
+    /// that fills them (the sort's key selector runs to completion at <c>ToArray</c>; the map
+    /// and the key set are asked by the script walk and by the tab branch's
+    /// <see cref="BuildBeamGroupMap"/>, which keeps neither), and what leaves is the layout
+    /// array. RENTING TAKES THEM OUT OF THE DRAWER (session 421's idiom); THE CLEARING IS ON
+    /// GIVE (session 456) — a stale beam key would narrow the next page's map to a note that
+    /// is not there, a stale tip would put a script on another page's beam. The tips map
+    /// holds <see cref="BeamLayout"/> references until it is cleared, which is why the give
+    /// clears it and does not merely forget it.
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int, int, int), int>? t_firstSeen;
+
+    /// <inheritdoc cref="t_firstSeen"/>
+    [ThreadStatic]
+    private static HashSet<(int, int, int, int)>? t_wantedBeamKeys;
+
+    /// <inheritdoc cref="t_firstSeen"/>
+    [ThreadStatic]
+    private static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)>? t_beamedTips;
 
     /// <param name="fonts">The SCORE's text metrics — the fingering digits' plan. Passed
     /// beside <paramref name="score"/> because callers hand this engraver a one-voice
@@ -478,12 +513,19 @@ internal static class ArticulationEngraver
         // ⚠️ THE OBSERVER WAS CHECKED, NOT ASSUMED (session 419, RULES §5.3): a poison that
         // lets the narrowed map answer NOTHING reddens the snapshots test/fermata-down,
         // test/scripts-stem-support and test/drum-groove.
-        var wantedBeamKeys = new HashSet<(int, int, int, int)>(
+        // Both lent, and given back cleared at the end (see t_firstSeen).
+        var wantedBeamKeys = t_wantedBeamKeys ?? new HashSet<(int, int, int, int)>(
             articulations.IsDefaultOrEmpty ? 0 : articulations.Length);
+        t_wantedBeamKeys = null;
         if (!articulations.IsDefaultOrEmpty)
+        {
+            wantedBeamKeys.EnsureCapacity(articulations.Length);
             foreach (var a in articulations)
                 wantedBeamKeys.Add((a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex));
-        var beamedTips = BuildBeamedStemTips(beamLayouts, wantedBeamKeys);
+        }
+        var beamedTips = t_beamedTips ?? new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
+        t_beamedTips = null;
+        FillBeamedStemTips(beamLayouts, wantedBeamKeys, beamedTips);
         // …AND THE TAB MAP IS BUILT ON THE FIRST TAB ASK, not on every call. Only the tab
         // branch below reads it, and a script on a NUMBERS-ONLY tab staff is dropped before
         // that branch (TabStaffStencils.BlanksScript), so the ask can be zero on a book full
@@ -1229,6 +1271,10 @@ internal static class ArticulationEngraver
         if (tiesAtBound != null)
             GiveTieBounds(tiesAtBound);
         GiveSupportScripts(supportScripts);
+        wantedBeamKeys.Clear();
+        t_wantedBeamKeys = wantedBeamKeys;
+        beamedTips.Clear();
+        t_beamedTips = beamedTips;
         return engraved;
     }
 
@@ -2259,8 +2305,20 @@ internal static class ArticulationEngraver
         BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts,
             HashSet<(int, int, int, int)>? wanted = null)
     {
+        var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
+        FillBeamedStemTips(beamLayouts, wanted, tips);
+        return tips;
+    }
+
+    /// <summary><see cref="BuildBeamedStemTips"/> into a map the caller holds — the script
+    /// walk's lent one (see <see cref="t_firstSeen"/>). <paramref name="tips"/> arrives
+    /// empty.</summary>
+    private static void FillBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts,
+        HashSet<(int, int, int, int)>? wanted,
+        Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)> tips)
+    {
         if (beamLayouts.IsDefaultOrEmpty)
-            return new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
+            return;
 
         // The bound the loop below cannot exceed: one entry per member it reaches,
         // and never more than the keys the caller asked for. It is a bound and not
@@ -2272,7 +2330,7 @@ internal static class ArticulationEngraver
         if (wanted != null && wanted.Count < bound)
             bound = wanted.Count;
 
-        var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>(bound);
+        tips.EnsureCapacity(bound);
         foreach (var beam in beamLayouts)
         {
             var group = beam.Group;
@@ -2294,7 +2352,6 @@ internal static class ArticulationEngraver
                 tips[key] = (beam, beam.MemberStemX(i), member.MemberStemUp);
             }
         }
-        return tips;
     }
 
     /// <summary>

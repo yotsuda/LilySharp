@@ -230,8 +230,12 @@ internal static class ItemSkylineFactory
     private static HorizontalSkyline Build(MusicItem item, double referenceX, double staffY,
                                            ColumnElements which, HorizontalDirection direction,
                                            double verticalPadding)
-        => HorizontalSkyline.FromBoxes(Boxes(item, referenceX, staffY, which), direction)
-            .PaddedCopy(verticalPadding);
+    {
+        var boxes = Boxes(item, referenceX, staffY, which);
+        var skyline = HorizontalSkyline.FromBoxes(boxes, direction);
+        HorizontalSkyline.GiveBoxList(boxes);
+        return skyline.PaddedCopy(verticalPadding);
+    }
 
     /// <summary>
     /// The WISH's view of a column's right side, origin at <paramref name="columnX"/>: the
@@ -388,9 +392,7 @@ internal static class ItemSkylineFactory
                 }
             }
         }
-        return HorizontalSkyline.FromBoxes(BoxesOf(parts, 0.0, ColumnElements.Elements),
-                                           HorizontalDirection.Right)
-            .PaddedCopy(SpacingRules.MusicalColumnSkylineVerticalPadding);
+        return GraceSkyline(parts, ColumnElements.Elements, HorizontalDirection.Right);
     }
 
     /// <summary>
@@ -426,18 +428,30 @@ internal static class ItemSkylineFactory
                 }
             }
         }
-        return HorizontalSkyline.FromBoxes(BoxesOf(parts, 0.0, ColumnElements.All),
-                                           HorizontalDirection.Left)
-            .PaddedCopy(SpacingRules.MusicalColumnSkylineVerticalPadding);
+        return GraceSkyline(parts, ColumnElements.All, HorizontalDirection.Left);
     }
 
+    /// <summary>A grace column's rod skyline out of its parts, in the grace column's own
+    /// frame (staff middle line at y = 0), padded as every rod view is.</summary>
+    private static HorizontalSkyline GraceSkyline(
+        List<ColumnPart> parts, ColumnElements which, HorizontalDirection direction)
+    {
+        var boxes = BoxesOf(parts, 0.0, which);
+        var skyline = HorizontalSkyline.FromBoxes(boxes, direction);
+        HorizontalSkyline.GiveBoxList(boxes);
+        return skyline.PaddedCopy(SpacingRules.MusicalColumnSkylineVerticalPadding);
+    }
+
+    /// <summary>The parts' boxes, in a list lent by
+    /// <see cref="HorizontalSkyline.RentBoxList"/> — every caller hands it to
+    /// <see cref="HorizontalSkyline.FromBoxes"/>, which copies it, and gives it back.</summary>
     private static List<(double YBottom, double YTop, double XLeft, double XRight)> BoxesOf(
         List<ColumnPart> parts, double staffY, ColumnElements which)
     {
         // At most one box per part — and all three callers hold the very list ColumnParts
-        // built — so the boxes are built at that length instead of grown to it, and the walk
+        // built — so the lent list is made to hold that many before the walk, and the walk
         // takes the list's own enumerator instead of boxing a sequence's.
-        var boxes = new List<(double, double, double, double)>(parts.Count);
+        var boxes = HorizontalSkyline.RentBoxList(parts.Count);
         foreach (var p in parts)
         {
             var set = p.Conditional ? ColumnElements.Conditional
@@ -482,7 +496,8 @@ internal static class ItemSkylineFactory
     /// WHY IT IS SAFE TO PARK: <see cref="ColumnParts"/> has exactly two callers and neither
     /// keeps the list. <see cref="ColumnYExtent"/> walks it for a Y band and drops it;
     /// <see cref="Boxes"/> hands it to <see cref="BoxesOf"/>, which reads it into a list of its
-    /// own and returns THAT. No Add* helper re-enters. Both callers give the buffer back where
+    /// own (lent too, since session 465 — <see cref="HorizontalSkyline.RentBoxList"/>) and
+    /// returns THAT. No Add* helper re-enters. Both callers give the buffer back where
     /// they are finished with it.
     /// </para>
     /// <para>

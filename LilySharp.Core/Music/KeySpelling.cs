@@ -199,6 +199,38 @@ public static class KeySpelling
     /// </para>
     /// </remarks>
     public static IReadOnlyList<(int Step, int Alter)> SignatureSteps(int sharps)
+        => sharps >= -StepsKeptReach && sharps <= StepsKeptReach
+            ? StepsByKey[sharps + StepsKeptReach]
+            : SpellSignatureSteps(sharps);
+
+    /// <summary>How far round the circle each way <see cref="StepsByKey"/> holds an answer:
+    /// fourteen, where every letter has doubled. A key further out is spelled on the call.</summary>
+    private const int StepsKeptReach = 14;
+
+    /// <summary>
+    /// <see cref="SignatureSteps"/>' answer for every key within <see cref="StepsKeptReach"/>,
+    /// spelled once. The answer is a function of <c>sharps</c> alone, and every reader only
+    /// walks it (the drawer, the reservation, and one copy into an array).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 465's census of the containers whose type arguments hold a tuple —
+    /// neither earlier census walked past the paren): 89.23 calls a keystroke, each building a
+    /// seven-slot list for three pairs, 9,994 B a keystroke — every list unreachable when the
+    /// render returned. ⚠️ Declared AFTER <see cref="SharpOrder"/> and
+    /// <see cref="FlatOrder"/>: static initializers run in text order, and the spelling reads
+    /// both.
+    /// </remarks>
+    private static readonly (int Step, int Alter)[][] StepsByKey = SpellEveryKeptKey();
+
+    private static (int Step, int Alter)[][] SpellEveryKeptKey()
+    {
+        var byKey = new (int Step, int Alter)[2 * StepsKeptReach + 1][];
+        for (int sharps = -StepsKeptReach; sharps <= StepsKeptReach; sharps++)
+            byKey[sharps + StepsKeptReach] = [.. SpellSignatureSteps(sharps)];
+        return byKey;
+    }
+
+    private static List<(int Step, int Alter)> SpellSignatureSteps(int sharps)
     {
         var list = new List<(int, int)>(7);
         if (sharps == 0) return list;

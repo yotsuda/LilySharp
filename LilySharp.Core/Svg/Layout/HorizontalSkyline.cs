@@ -175,6 +175,41 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
+    /// A list to gather <see cref="FromBoxes"/>'s boxes in, lent from one the thread keeps
+    /// between calls. Hand it back with <see cref="GiveBoxList"/> once the skyline is built.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 465's census of the containers whose type arguments hold a tuple —
+    /// neither earlier census walked past the paren): <c>ItemSkylineFactory.BoxesOf</c> built
+    /// one of these 287.33 times a keystroke at 2.05 boxes, and <c>LineStartColumn</c> 13.96,
+    /// 36,868 B a keystroke between them, and every one was unreachable when the render
+    /// returned — the caller hands the list to <see cref="FromBoxes"/>, which COPIES it into
+    /// the skyline's own buildings, and drops it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom): two lists alive at once are
+    /// two lists. THE CLEARING IS ON GIVE (session 456). A box tuple holds no reference, so a
+    /// parked list pins nothing; it keeps the capacity of the widest column the thread saw.
+    /// </para>
+    /// </remarks>
+    internal static List<(double YBottom, double YTop, double XLeft, double XRight)> RentBoxList(int capacity)
+    {
+        var list = t_boxList ?? new List<(double, double, double, double)>(capacity);
+        t_boxList = null;
+        list.EnsureCapacity(capacity);
+        return list;
+    }
+
+    /// <summary>Puts a list from <see cref="RentBoxList"/> back, emptied.</summary>
+    internal static void GiveBoxList(List<(double YBottom, double YTop, double XLeft, double XRight)> list)
+    {
+        list.Clear();
+        t_boxList = list;
+    }
+
+    [ThreadStatic]
+    private static List<(double YBottom, double YTop, double XLeft, double XRight)>? t_boxList;
+
+    /// <summary>
     /// Creates a skyline from a flat list of sign-framed buildings, four doubles apiece:
     /// start (horizon low), startValue (sky*x there), endValue (sky*x at horizon high),
     /// end (horizon high). This is the form the baked accidental skylines

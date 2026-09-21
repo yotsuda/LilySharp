@@ -61,8 +61,8 @@
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:620** that does not exist yet. Named, not silently approximated.
-- **:2420** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:662** that does not exist yet. Named, not silently approximated.
+- **:2477** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -89,7 +89,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:2816** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:2868** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3711** same approximation the scripts' own remark records for the movers; the books that
+- **:3700** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1120** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2015** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -159,11 +159,11 @@
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:277** hands the scorer the band it would have had without the digit. No book reaches that
-- **:1263** is a correctness property with NO observer in the suite — a
-- **:1734** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:1895** see the difference, and no fixture and no ledger point reaches it.
-- **:2532** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:312** hands the scorer the band it would have had without the digit. No book reaches that
+- **:1309** is a correctness property with NO observer in the suite — a
+- **:1780** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:1941** see the difference, and no fixture and no ledger point reaches it.
+- **:2589** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -180,8 +180,8 @@
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:121** clearing is right and unobserved: a forgotten Clear here would surface only when
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:622** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:892** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:637** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:907** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2194** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2216** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -196,7 +196,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4601** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4590** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:799** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1442** pinned there), no ledger point.
@@ -255,7 +255,7 @@
 - **:378** LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:65** LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
-- **:553** prefix — LILYSHARP-OWN, a decided divergence (user decision
+- **:584** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:237** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -359,9 +359,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:906** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:526** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:605** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:613** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:535** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
+- **:614** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:622** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:210** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:294** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is

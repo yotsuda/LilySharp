@@ -278,6 +278,52 @@ public class StaffLayoutFrameTests
     }
 
     /// <summary>
+    /// With three spaceable staves or more, each staff spring runs from the PREVIOUS spaceable
+    /// staff to the next one — a chain — and not from the system's first staff to every other.
+    /// A non-spaceable line between two of them is skipped and does not break the chain.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:660-672 append_system — one spring between
+    /// CONSECUTIVE spaceable elements. The page reads the list as a chain
+    /// (<c>PageLayouter.RespaceStaves</c> sums the solved positions k → k + 1 and reads each
+    /// spring's lower staff against the first spring's upper one).
+    /// <para>
+    /// ⚠️ NOTHING WATCHED THE UPPER END UNTIL SESSION 465 (measured by poison): a walk that
+    /// never advanced the upper staff past the first spaceable one — (0,1), (0,2), … — left
+    /// all 8,789 nets green AND moved 0 of the reader's 5,824 corpus pages, because every
+    /// corpus system holds exactly two staves (session 448's census) and a two-staff system
+    /// has one pair whichever way the walk is written. The existing nets count springs
+    /// (<c>InterSystemFloorTests</c>) or pin a single pair.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void ThreeSpaceableStaves_SpringAsAChain_AndASkippedLineDoesNotBreakIt()
+    {
+        var three = new LayoutEngine().Layout(ScoreOf(StaffGroup.CreateChoirStaff(
+            CreateStaff(ClefType.Treble), CreateStaff(ClefType.Treble),
+            CreateStaff(ClefType.Bass)))).Systems[0];
+        var staves = three.StaffGroups[0].Staves;
+        Assert.Equal(2, three.StaffSprings.Length);
+        Assert.Equal((staves[0].StaffIndex, staves[1].StaffIndex),
+            (three.StaffSprings[0].UpperStaffIndex, three.StaffSprings[0].LowerStaffIndex));
+        Assert.Equal((staves[1].StaffIndex, staves[2].StaffIndex),
+            (three.StaffSprings[1].UpperStaffIndex, three.StaffSprings[1].LowerStaffIndex));
+
+        // A line between the second and third spaceable staves: skipped, and the chain runs
+        // over it — (0,2), (2,3), never (0,3).
+        var skipped = new LayoutEngine().Layout(ScoreOf(StaffGroup.CreateChoirStaff(
+            CreateStaff(ClefType.Treble),
+            CreateStaff(ClefType.Treble) with { StaffAffinity = StaffAffinityDirection.Up },
+            CreateStaff(ClefType.Treble), CreateStaff(ClefType.Bass)))).Systems[0];
+        var four = skipped.StaffGroups[0].Staves;
+        Assert.Equal(2, skipped.StaffSprings.Length);
+        Assert.Equal((four[0].StaffIndex, four[2].StaffIndex),
+            (skipped.StaffSprings[0].UpperStaffIndex, skipped.StaffSprings[0].LowerStaffIndex));
+        Assert.Equal((four[2].StaffIndex, four[3].StaffIndex),
+            (skipped.StaffSprings[1].UpperStaffIndex, skipped.StaffSprings[1].LowerStaffIndex));
+    }
+
+    /// <summary>
     /// The two accessors must remain exact reflections of each other, and their composition
     /// with the system origin must be the plain SUM LilyPond performs.
     /// </summary>
