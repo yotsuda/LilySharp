@@ -107,7 +107,8 @@ internal sealed partial class LayoutEngine
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
         };
-        var prelimBeams = new List<BeamLayout>();
+        // Lent, and given back once the annotation context has copied it (see RentPrelimBeams).
+        var prelimBeams = RentPrelimBeams();
         var prelimBeamsByStaff = new Dictionary<int, ImmutableArray<BeamLayout>>();
         var prelimTies = new List<TieLayout>();
         var prelimSlurs = new List<SlurLayout>();
@@ -275,6 +276,7 @@ internal sealed partial class LayoutEngine
             VerseSkylines = systemCache?.PreliminaryVerseSkylines,
             LyricChains = systemCache?.PreliminaryLyricChains,
         });
+        GivePrelimBeams(prelimBeams);
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
             prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray(),
             rowsAboveFirstStaff, pedalLines);
@@ -292,6 +294,46 @@ internal sealed partial class LayoutEngine
             annotationBeamGroups,
             prelimTiesByStaff,
             prelimSlursByStaff);
+    }
+
+    /// <summary>
+    /// The list <see cref="RunPreliminaryAnnotationPass"/> gathers every staff's preliminary
+    /// beams into for the annotation context, lent from one list the thread keeps between
+    /// passes.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.17 passes a keystroke at 186.94 beams each (max 660), and all 2,170 lists
+    /// built were unreachable by the time the render that built them returned — its one
+    /// reader is the <c>ToImmutableArray()</c> in the context's initializer, which copies.
+    /// The lists and their growth ladders were at least 1,850 B a keystroke (the census could
+    /// not price 2,034 of its arrays exactly, so that is a lower bound).
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a list given back dirty would open the next pass's annotation context
+    /// with this score's beams, and their protrusions would join the next score's extents.
+    /// There is no exit between the rent and the give. <see cref="List{T}.Clear"/> nulls the
+    /// slots it drops, so the drawer pins no <see cref="BeamLayout"/>, only its capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<BeamLayout>? t_prelimBeams;
+
+    /// <summary>Takes the thread's preliminary beam list, or makes the thread's first.</summary>
+    private static List<BeamLayout> RentPrelimBeams()
+    {
+        var list = t_prelimBeams;
+        if (list is null)
+            return new List<BeamLayout>();
+        t_prelimBeams = null;
+        return list;
+    }
+
+    /// <summary>Puts a finished pass's beam list back, emptied, with its capacity.</summary>
+    private static void GivePrelimBeams(List<BeamLayout> list)
+    {
+        list.Clear();
+        t_prelimBeams = list;
     }
 
     /// <summary>
@@ -590,8 +632,9 @@ internal sealed partial class LayoutEngine
 
         // Columns in detection first-appearance order — the same bucketing the plain
         // call performs ((voice, start measure, start item) names ONE chord's ties).
-        var columnKeys = new List<(int Voice, int Measure, int Item)>();
-        // Lent, and given back at every exit below (see RentColumnTies).
+        // Lent, and given back at every exit below (see RentColumnTies). ⚠️ THE MAP IS ALSO
+        // THE KEY LIST: walking it yields the columns in first-appearance order (its remark
+        // says why), which is the order a separate list of keys used to carry.
         var columnTies = RentColumnTies();
         foreach (var tie in ties)
         {
@@ -603,20 +646,19 @@ internal sealed partial class LayoutEngine
                 // 2) over the reader's corpus, so the default four slots were three wasted.
                 // The poison run tests it (a capacity is not a correctness property).
                 columnTies[key] = list = new List<TieItem>(1);
-                columnKeys.Add(key);
             }
             list.Add(tie);
         }
 
         // Home system per column; any straddler (or unmapped measure) → fallback.
         // One entry per column key — the loop writes exactly one and there are no repeats
-        // (the keys came out of a dictionary), so the size is columnKeys.Count and not a
+        // (the keys came out of a dictionary), so the size is columnTies.Count and not a
         // bound (measured before it was handed over: 2,620 calls, asked == Count every time).
-        var columnSystem = new Dictionary<(int, int, int), int>(columnKeys.Count);
-        foreach (var key in columnKeys)
+        var columnSystem = new Dictionary<(int, int, int), int>(columnTies.Count);
+        foreach (var (key, columnList) in columnTies)
         {
             int home = -2;
-            foreach (var tie in columnTies[key])
+            foreach (var tie in columnList)
             {
                 if (!measureToSystem.TryGetValue(tie.StartMeasureIndex, out int ks)
                     || !measureToSystem.TryGetValue(tie.EndMeasureIndex, out int ke)
@@ -658,12 +700,12 @@ internal sealed partial class LayoutEngine
         // intra-system column has exactly one segment).
         var cursors = new Dictionary<int, int>(perSystem.Count);
         var result = ImmutableArray.CreateBuilder<TieLayout>(ties.Length);
-        foreach (var key in columnKeys)
+        foreach (var (key, columnList) in columnTies)
         {
             int k = columnSystem[key];
             var laid = perSystem[k];
             int c = cursors.GetValueOrDefault(k);
-            int count = columnTies[key].Count;
+            int count = columnList.Count;
             if (c + count > laid.Length
                 || laid[c].Tie.VoiceIndex != key.Voice
                 || laid[c].Tie.StartMeasureIndex != key.Measure
@@ -694,9 +736,19 @@ internal sealed partial class LayoutEngine
     /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
     /// (session 456) — a map given back dirty would find a previous staff's list under a
     /// column key this staff shares and append to it. ⚠️ THREE EXITS, three gives: the two
-    /// fallbacks return early, and the map is not read after either decision. The map is only
-    /// ever looked up, never walked (<c>columnKeys</c> carries the order), so its reuse cannot
-    /// reorder anything.
+    /// fallbacks return early, and the map is not read after either decision.
+    /// </para>
+    /// <para>
+    /// ⚠️ SINCE SESSION 462 THE MAP IS WALKED, AND ITS ORDER IS THE COLUMNS' ORDER: a list of
+    /// its keys in first-appearance order used to stand beside it (<c>columnKeys</c>, 1,716 B a
+    /// keystroke in the same census, 1.69 lists at 22.06 keys), and the map already held that
+    /// order. A cleared <see cref="Dictionary{TKey, TValue}"/> that is only ever added to
+    /// fills its entries from the front and enumerates them in insertion order — the reason
+    /// <see cref="LayoutPreliminaryStaffBeams"/>' own drawer gives for its walk. ⚠️ THE ORDER
+    /// IS LOAD-BEARING, AND ONLY HALF GUARDED: the reassembly checks each column against its
+    /// system's cursor, so two columns of ONE system swapped fall back to the whole-staff call
+    /// (a solve, not a picture) — but each system has its own cursor, so columns of DIFFERENT
+    /// systems swapped pass the check and come out in the swapped order.
     /// </para>
     /// <para>
     /// WHAT IT RETAINS is one map a thread at that thread's tie-richest staff — 142 columns,
@@ -704,20 +756,20 @@ internal sealed partial class LayoutEngine
     /// </para>
     /// </remarks>
     [ThreadStatic]
-    private static Dictionary<(int, int, int), List<TieItem>>? t_columnTies;
+    private static Dictionary<(int Voice, int Measure, int Item), List<TieItem>>? t_columnTies;
 
     /// <summary>Takes the thread's column map, or makes the thread's first.</summary>
-    private static Dictionary<(int, int, int), List<TieItem>> RentColumnTies()
+    private static Dictionary<(int Voice, int Measure, int Item), List<TieItem>> RentColumnTies()
     {
         var map = t_columnTies;
         if (map is null)
-            return new Dictionary<(int, int, int), List<TieItem>>();
+            return new Dictionary<(int Voice, int Measure, int Item), List<TieItem>>();
         t_columnTies = null;
         return map;
     }
 
     /// <summary>Puts a finished bucketing's column map back, emptied, with its capacity.</summary>
-    private static void GiveColumnTies(Dictionary<(int, int, int), List<TieItem>> map)
+    private static void GiveColumnTies(Dictionary<(int Voice, int Measure, int Item), List<TieItem>> map)
     {
         map.Clear();
         t_columnTies = map;

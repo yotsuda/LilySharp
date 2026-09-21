@@ -66,7 +66,8 @@ internal static partial class SharedRenderer
         // emitted as the segments between them. Deferring is what lets the gap be the drawn
         // digit's own span instead of a second computation of it — the "one house" rule that
         // the two spellings of the stem clearance had just broken.
-        var digitGaps = new List<(int StringIndex, double Left, double Right)>();
+        // Lent, and given back once the string lines are drawn (see RentDigitGaps).
+        var digitGaps = RentDigitGaps();
 
         // Per-measure barlines at the tab staff height.
         var primaryVoice = staff.PrimaryVoice;
@@ -255,10 +256,54 @@ internal static partial class SharedRenderer
         // One line per string, spaced stringSpace apart, starting at the system indent
         // (systemStartX) like the notation staff — not the page margin, or on the first
         // (indented) system they overrun to the left.
+        // ONE SORT FOR EVERY STRING, by (string, left): each line then walks its own run of
+        // the list (see DrawTabStringLine for why the sort need not be stable).
+        digitGaps.Sort(static (a, b) => a.StringIndex != b.StringIndex
+            ? a.StringIndex.CompareTo(b.StringIndex)
+            : a.Left.CompareTo(b.Left));
+        int run = 0;
         for (int i = 0; i < stringCount; i++)
             DrawTabStringLine(StaffLineInkLeft(systemStartX, EngravingDefaults.StaffLineThickness),
                 StaffLineInkRight(lineRight, EngravingDefaults.StaffLineThickness),
-                staffY - i * stringSpace, i, digitGaps, gc);
+                staffY - i * stringSpace, i, digitGaps, ref run, gc);
+        GiveDigitGaps(digitGaps);
+    }
+
+    /// <summary>
+    /// The fret digits' bites <see cref="DrawTabStaff"/> books before it draws the string
+    /// lines, lent from one list the thread keeps between tab staves.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.3 tab staves a keystroke at 21.06 bites each (max 42), and all 2,395 lists
+    /// built were unreachable by the time the render that built them returned. The lists and
+    /// their growth ladders were 1,830 B a keystroke, 0.05% of it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a list given back dirty would bite the next tab staff's string lines
+    /// wherever this staff's digits stood. The drawing has no exit before the give; a drawing
+    /// that threw would lose the list instead of mixing it. The bites are value tuples, so the
+    /// drawer pins nothing but its capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<(int StringIndex, double Left, double Right)>? t_digitGaps;
+
+    /// <summary>Takes the thread's bite list, or makes the thread's first.</summary>
+    private static List<(int StringIndex, double Left, double Right)> RentDigitGaps()
+    {
+        var list = t_digitGaps;
+        if (list is null)
+            return new List<(int StringIndex, double Left, double Right)>();
+        t_digitGaps = null;
+        return list;
+    }
+
+    /// <summary>Puts a drawn staff's bite list back, emptied, with its capacity.</summary>
+    private static void GiveDigitGaps(List<(int StringIndex, double Left, double Right)> list)
+    {
+        list.Clear();
+        t_digitGaps = list;
     }
 
     /// <summary>
@@ -272,15 +317,33 @@ internal static partial class SharedRenderer
     /// naturally: the cursor only ever moves right, so an overlap collapses into one hole
     /// instead of emitting a negative-width segment.
     /// </para>
+    /// <para>
+    /// The gaps arrive SORTED by (string, left), and <paramref name="run"/> is where this
+    /// string's run starts; the line leaves it at the next string's. Until session 462 each
+    /// line filtered and ordered the whole list itself (<c>Where</c> then <c>OrderBy</c>: a
+    /// closure, a delegate, two iterators and three buffers per string line). ⚠️ THE ONE SORT
+    /// IS NOT STABLE AND NEED NOT BE: of two gaps with the same left on one string, only the
+    /// first can draw (the second's left is no longer past the cursor), and the cursor leaves
+    /// them at the larger right in either order — so the segments drawn are the ones the
+    /// stable <c>OrderBy</c> drew.
+    /// </para>
     /// </remarks>
     private static void DrawTabStringLine(double left, double right, double y, int stringIndex,
-        List<(int StringIndex, double Left, double Right)> digitGaps, IDrawingContext gc)
+        List<(int StringIndex, double Left, double Right)> digitGaps, ref int run,
+        IDrawingContext gc)
     {
+        while (run < digitGaps.Count && digitGaps[run].StringIndex < stringIndex)
+            run++;
+        int end = run;
+        while (end < digitGaps.Count && digitGaps[end].StringIndex == stringIndex)
+            end++;
+        int from = run;
+        run = end;
+
         double x = left;
-        foreach (var gap in digitGaps
-                     .Where(g => g.StringIndex == stringIndex)
-                     .OrderBy(g => g.Left))
+        for (int k = from; k < end; k++)
         {
+            var gap = digitGaps[k];
             if (gap.Right <= x) continue;              // already behind the cursor
             if (gap.Left > x)
                 gc.DrawLine(x, y, Math.Min(gap.Left, right), y,

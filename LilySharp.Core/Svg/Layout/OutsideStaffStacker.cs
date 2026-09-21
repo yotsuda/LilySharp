@@ -870,12 +870,25 @@ internal static class OutsideStaffStacker
 
         // Geometry: the read set of the tracker seeds — staffYBySystem's Y per staff and
         // RefpointBelowTop's per-staff answer (the fallback halves are constants).
-        var staves = new List<(int StaffIndex, double Y, double? RefpointBelowTop)>();
+        // Written straight into the array the entry keeps: the size is the staves the groups
+        // hold, countable before the fill. Until session 462 a list gathered them and ToArray
+        // copied it — MEASURED (session 457's census, Release, the reader's corpus, eight
+        // forward keystrokes a book) 8.97 lists a keystroke at 1.76 staves each (max 2), none
+        // alive past its render, 1,650 B a keystroke for the list alone.
+        int staffCount = 0;
+        if (!sys.StaffGroups.IsDefaultOrEmpty)
+            foreach (var group in sys.StaffGroups)
+                if (!group.Staves.IsDefaultOrEmpty)
+                    staffCount += group.Staves.Length;
+        var staves = staffCount == 0
+            ? []
+            : new (int StaffIndex, double Y, double? RefpointBelowTop)[staffCount];
+        int filled = 0;
         if (!sys.StaffGroups.IsDefaultOrEmpty)
             foreach (var group in sys.StaffGroups)
                 if (!group.Staves.IsDefaultOrEmpty)
                     foreach (var st in group.Staves)
-                        staves.Add((st.StaffIndex, st.Y, st.RefpointBelowTop));
+                        staves[filled++] = (st.StaffIndex, st.Y, st.RefpointBelowTop);
 
         // The staves this system's below stacking PLACES on — the same predicate the
         // core's placedStaves uses, over this system's slice.
@@ -934,7 +947,7 @@ internal static class OutsideStaffStacker
         return new BelowStackMemo.SystemEntry
         {
             ApplyStaffOffsets = applyStaffOffsets,
-            Staves = staves.ToArray(),
+            Staves = staves,
             ProfileUps = profUps.ToArray(),
             ProfileDowns = profDowns.ToArray(),
             Dynamics = Gather(dynamics, part.Dynamics),
@@ -1417,13 +1430,20 @@ internal static class OutsideStaffStacker
             foreach (var group in sys.StaffGroups)
                 if (!group.Staves.IsDefaultOrEmpty)
                     staffCount += group.Staves.Length;
-        var staves =
-            new List<(int StaffIndex, double Y, bool IsHidden, ClefType Clef)>(staffCount);
+        // ⚠️ AND THE ARRAY IS FILLED DIRECTLY (session 462): the exact-capacity list that stood
+        // here was copied by ToArray into the entry, so every call built the array TWICE. A
+        // sized list is invisible to the container census (session 457 priced only the
+        // containers built without a size), which is why this twin of BuildBelowProgram's list
+        // was never on (s)10's list.
+        var staves = staffCount == 0
+            ? []
+            : new (int StaffIndex, double Y, bool IsHidden, ClefType Clef)[staffCount];
+        int filled = 0;
         if (!sys.StaffGroups.IsDefaultOrEmpty)
             foreach (var group in sys.StaffGroups)
                 if (!group.Staves.IsDefaultOrEmpty)
                     foreach (var st in group.Staves)
-                        staves.Add((st.StaffIndex, st.Y, st.IsHidden, st.Clef));
+                        staves[filled++] = (st.StaffIndex, st.Y, st.IsHidden, st.Clef);
 
         // The staves this system's stacking consumes a profile for: each grob's own
         // staff with the tracker's sentinel resolution (-1 → the top staff), plus the
@@ -1469,7 +1489,7 @@ internal static class OutsideStaffStacker
         {
             Indent = sys.Indent,
             TopStaff = topStaff[s],
-            Staves = staves.ToArray(),
+            Staves = staves,
             ProfileUps = profUps.ToArray(),
             ProfileDowns = profDowns.ToArray(),
             SilhouetteUp = silUp,

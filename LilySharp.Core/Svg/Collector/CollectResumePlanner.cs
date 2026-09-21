@@ -667,7 +667,7 @@ internal static class CollectResumePlanner
 
     /// <summary>A structure read holds (<see cref="HeaderRead.Structure"/>): the node
     /// standing at the baseline node's (shifted) start in the new tree has the same
-    /// kind and the same <see cref="Shape"/>. The width is NOT compared — an edit inside
+    /// kind and the same <see cref="ShapeWalk"/>. The width is NOT compared — an edit inside
     /// one of the section's blocks changes it and is the music walk's business.</summary>
     private static bool StructureStable(SyntaxNode old, SyntaxNode newRoot, in CollectTailShifter.Window w)
     {
@@ -689,30 +689,77 @@ internal static class CollectResumePlanner
                 return false;
             node = next;
         }
-        return Shape(old).SequenceEqual(Shape(node));
+        return SameShape(old, node);
+    }
+
+    /// <summary>Whether two nodes have the same <see cref="ShapeWalk"/>: the same kinds, in
+    /// the same order, and the same number of them.</summary>
+    /// <remarks>
+    /// The two shapes are walked side by side and nothing is built. Until session 462 each
+    /// side was gathered into a <see cref="List{T}"/> and the two lists compared — MEASURED
+    /// (session 457's census, Release, the reader's corpus, eight forward keystrokes a book):
+    /// 19.09 lists a keystroke at 5.18 kinds each (max 6), none alive past its render, 1,985 B
+    /// a keystroke for an answer that is one bool. The walk yields the lists' elements in the
+    /// lists' order, so the answer is the one <c>SequenceEqual</c> gave; it only stops at the
+    /// first difference, and <see cref="MeasureCollector.IsCollectableMusicNode"/> is a pure
+    /// type test, so stopping early skips nothing that had an effect.
+    /// </remarks>
+    private static bool SameShape(SyntaxNode a, SyntaxNode b)
+    {
+        var left = new ShapeWalk(a);
+        var right = new ShapeWalk(b);
+        while (true)
+        {
+            bool more = left.MoveNext();
+            if (more != right.MoveNext())
+                return false;
+            if (!more)
+                return true;
+            if (left.Current != right.Current)
+                return false;
+        }
     }
 
     /// <summary>The direct-child kinds of a node in order, every run of collectable
     /// music nodes collapsed to one <see cref="SyntaxKind.Note"/> — so a note or bar
     /// line added INSIDE an existing music run is not a shape change (the walk owns it),
     /// while one typed where the section had none is.</summary>
-    private static List<SyntaxKind> Shape(SyntaxNode node)
+    private struct ShapeWalk
     {
-        var kinds = new List<SyntaxKind>();
-        bool inMusic = false;
-        foreach (var child in node.ChildNodes())
+        private ChildNodeList.Enumerator _children;
+        private bool _inMusic;
+
+        public ShapeWalk(SyntaxNode node)
         {
-            if (MeasureCollector.IsCollectableMusicNode(child))
-            {
-                if (!inMusic)
-                    kinds.Add(SyntaxKind.Note);
-                inMusic = true;
-                continue;
-            }
-            inMusic = false;
-            kinds.Add(child.Kind);
+            _children = node.ChildNodes().GetEnumerator();
+            _inMusic = false;
+            Current = default;
         }
-        return kinds;
+
+        /// <summary>The kind the walk is standing on.</summary>
+        public SyntaxKind Current { get; private set; }
+
+        /// <summary>Advances to the next kind of the shape.</summary>
+        public bool MoveNext()
+        {
+            while (_children.MoveNext())
+            {
+                var child = _children.Current;
+                if (MeasureCollector.IsCollectableMusicNode(child))
+                {
+                    bool opensRun = !_inMusic;
+                    _inMusic = true;
+                    if (!opensRun)
+                        continue;
+                    Current = SyntaxKind.Note;
+                    return true;
+                }
+                _inMusic = false;
+                Current = child.Kind;
+                return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>

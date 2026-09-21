@@ -510,7 +510,8 @@ internal static class MusicMarkEngraver
         // F3/B: each entry carries its index into allMarks (SourceIndex) so the
         // emitted layout can re-derive its data-pos from the live score later,
         // even though GroupBy/OrderBy below reorders the entries.
-        var markEntries = new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
+        // Lent, and given back once the grouping below has copied it (see RentMarkEntries).
+        var markEntries = RentMarkEntries();
         for (int si = 0; si < allMarks.Length; si++)
         {
             var mark = allMarks[si];
@@ -540,6 +541,7 @@ internal static class MusicMarkEngraver
         var groups = markEntries
             .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position, e.Mark.AnchorTiming))
             .ToList();
+        GiveMarkEntries(markEntries);
 
         // BELOW-staff marks (pedal text etc.) hang under the LAST staff of
         // the measure's system, not under the top staff — in a grand staff
@@ -1330,6 +1332,48 @@ internal static class MusicMarkEngraver
     {
         builder.Clear();
         t_layoutBuilder = builder;
+    }
+
+    /// <summary>
+    /// The (mark, x, source index) list <see cref="Calculate"/> gathers a pass's marks into
+    /// before grouping them, lent from one list the thread keeps between passes.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.17 passes a keystroke at 11.51 marks each (max 23), and all 4,010 lists built
+    /// were unreachable by the time the render that built them returned — the one reader is
+    /// the <c>GroupBy(...).ToList()</c>, whose groupings hold copies of the entries. The lists
+    /// and their growth ladders were 1,678 B a keystroke, 0.05% of it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a list given back dirty would hand the next pass this pass's marks,
+    /// grouped and placed again beside its own. The pass's one early return (no marks at all)
+    /// stands BEFORE the rent, and there is none between the rent and the give.
+    /// </para>
+    /// <para>
+    /// ⚠️ <see cref="List{T}.Clear"/> nulls the slots it drops only for element types that hold
+    /// references, and these tuples hold a <see cref="MusicMarkItem"/> — so it does, and the
+    /// drawer pins no mark, only its capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<(MusicMarkItem Mark, double X, int SourceIndex)>? t_markEntries;
+
+    /// <summary>Takes the thread's mark list, or makes the thread's first.</summary>
+    private static List<(MusicMarkItem Mark, double X, int SourceIndex)> RentMarkEntries()
+    {
+        var list = t_markEntries;
+        if (list is null)
+            return new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
+        t_markEntries = null;
+        return list;
+    }
+
+    /// <summary>Puts a grouped pass's mark list back, emptied, with its capacity.</summary>
+    private static void GiveMarkEntries(List<(MusicMarkItem Mark, double X, int SourceIndex)> list)
+    {
+        list.Clear();
+        t_markEntries = list;
     }
 
     // (CoPlaceTempoWithLabels — the "[Chorus] ♩ = 132" chart pair that re-anchored a

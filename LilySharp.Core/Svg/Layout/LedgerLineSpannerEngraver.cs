@@ -81,7 +81,8 @@ internal static class LedgerLineSpannerEngraver
 
         // Per-system, per-staff-position list of (left, right, sortKey) ledger entries.
         // Indexed by (systemIndex, staffPosition) → list.
-        var perSystem = new Dictionary<(int sys, int pos), List<(double Left, double Right)>>();
+        // Lent, and given back after the merge loop below — its last reader (see RentPerSystem).
+        var perSystem = RentPerSystem();
 
         for (int mi = 0; mi < voice.Measures.Length; mi++)
         {
@@ -147,6 +148,7 @@ internal static class LedgerLineSpannerEngraver
             }
             EmitSpan(builder, systems, sysIdx, staffPos, mergedLeft, mergedRight, staffHeight, staffIndex);
         }
+        GivePerSystem(perSystem);
 
         // ToImmutable COPIES — it never hands out the builder's own array — so the builder is
         // finished with here and not at the caller's line. See the drawer's remark for the
@@ -214,6 +216,53 @@ internal static class LedgerLineSpannerEngraver
     {
         builder.Clear();
         t_spanBuilder = builder;
+    }
+
+    /// <summary>
+    /// The (system, staff position) → entries map <see cref="Calculate"/> gathers a score's
+    /// ledger entries into before merging them, lent from one map the thread keeps between
+    /// calculations.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.17 calculations a keystroke at 12.91 keys each (max 72), and all 4,010 maps
+    /// built were unreachable by the time the render that built them returned. The maps and
+    /// their growth ladders were 2,441 B a keystroke, 0.07% of it. The per-key LISTS are not
+    /// parked — only the map; clearing it drops them (they are a call that builds N, which a
+    /// drawer of one does not serve: HANDOFF (s)8).
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a map given back dirty would hand the next score this score's entries
+    /// under every (system, position) the two share, and merge them into its spans. There is
+    /// no early return between the rent and the give. Reuse keeps the walk order: a cleared
+    /// <see cref="Dictionary{TKey, TValue}"/> fills its entries from the front again, so the
+    /// merge loop visits the keys in insertion order exactly as a new map would — and that
+    /// order is the order of the returned spans.
+    /// </para>
+    /// <para>
+    /// ⚠️ NO RENDERER READS WHAT THIS MAP FEEDS: <see cref="ScoreLayout.LedgerLineSpans"/> is
+    /// read by <c>LedgerLineSpannerTests</c> alone (session 462, grep). The whole calculation
+    /// is a ticket of its own (HANDOFF); parking the map is what this session was asked for.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int sys, int pos), List<(double Left, double Right)>>? t_perSystem;
+
+    /// <summary>Takes the thread's entries map, or makes the thread's first.</summary>
+    private static Dictionary<(int sys, int pos), List<(double Left, double Right)>> RentPerSystem()
+    {
+        var map = t_perSystem;
+        if (map is null)
+            return new Dictionary<(int sys, int pos), List<(double Left, double Right)>>();
+        t_perSystem = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished calculation's map back, emptied, with its capacity.</summary>
+    private static void GivePerSystem(Dictionary<(int sys, int pos), List<(double Left, double Right)>> map)
+    {
+        map.Clear();
+        t_perSystem = map;
     }
 
     private static void AddEntry(

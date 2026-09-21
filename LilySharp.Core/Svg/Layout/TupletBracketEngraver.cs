@@ -777,18 +777,30 @@ internal static class TupletBracketEngraver
         // Every column this beam carries, however it carries it: a visible stem is a member,
         // a rest ridden over is one of the invisible stems. Together they are LilyPond's
         // `the column has a stem, and that stem's beam is this one'.
-        var carried = new HashSet<int>();
+        // ⚠️ ASKED OF TWO COLUMNS ONLY, so two flags and no set: until session 462 every
+        // carried column went into a HashSet<int> that was then asked about the first and the
+        // last — MEASURED (session 457's census, Release, the reader's corpus, eight forward
+        // keystrokes a book) 10.3 sets a keystroke at 2.69 columns each, none alive past its
+        // render, 1,797 B a keystroke. "Some carried column is firstCol" is exactly what the
+        // set's Contains(firstCol) answered.
+        bool firstCarried = false, lastCarried = false;
         foreach (var m in beam.Members)
             if (m.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex)
-                carried.Add(m.ItemIndex);
+            {
+                firstCarried |= m.ItemIndex == firstCol;
+                lastCarried |= m.ItemIndex == lastCol;
+            }
         foreach (var r in beam.RestStems)
             if ((r.MeasureIndex < 0 ? beam.MeasureIndex : r.MeasureIndex) == tuplet.MeasureIndex)
-                carried.Add(r.ItemIndex);
+            {
+                firstCarried |= r.ItemIndex == firstCol;
+                lastCarried |= r.ItemIndex == lastCol;
+            }
 
         // Both outer columns on THIS beam — the whole of
         // `(and left-stem right-stem left-beam right-beam (eq? left-beam right-beam))',
         // since a column can be on at most one beam.
-        return carried.Contains(firstCol) && carried.Contains(lastCol);
+        return firstCarried && lastCarried;
     }
 
     /// <summary>
