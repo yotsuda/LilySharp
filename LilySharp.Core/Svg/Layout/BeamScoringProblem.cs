@@ -90,7 +90,8 @@ internal sealed class BeamScoringProblem
     //   the quanter holds the beam's DRAWN segments, so it knows how many beam lines lie
     //   over a given x and where a beamlet stub stops. Sorted by left edge (:363
     //   beam_segment_less), which is what lets add_collision leave the walk early.
-    private readonly List<BeamSubdivision.Segment> _segments;
+    //   ⚠️ NOT A FIELD HERE: add_collision is its only reader and runs inside the constructor,
+    //   so the constructor holds a LENT list and hands it to AddCollision (session 460).
 
     // LILYPOND-REF: lily/include/beam-scoring-problem.hh:170 std::vector<Beam_collision>
     //   collisions_ — filled once by add_collision; each entry already carries the beam's
@@ -499,11 +500,14 @@ internal sealed class BeamScoringProblem
                         _isKnee ? _memberBeamDirs[i] : _beamDir, _stemXPositions[i]);
             }
         }
-        _segments = BeamSubdivision.CalcBeamSegments(
+        // Lent, and given back at the end of this constructor: the collision booking below is
+        // its only reader (see BeamSubdivision.RentSegments).
+        var segments = BeamSubdivision.RentSegments();
+        BeamSubdivision.CalcBeamSegments(
             beaming, BeamSubdivision.CalcBeaming(beaming),
             EngravingDefaults.BeamletLength, EngravingDefaults.BeamletMaxLengthProportion,
-            halfBeamOverhang);
-        _segments.Sort(static (a, b) => a.XLeft.CompareTo(b.XLeft));
+            halfBeamOverhang, segments);
+        segments.Sort(static (a, b) => a.XLeft.CompareTo(b.XLeft));
 
         // LILYPOND-REF: lily/beam-quanting.cc:386 init_instance_variables — the shift
         //   b[X_AXIS] += (x_span_ - x_pos[LEFT]):
@@ -517,8 +521,9 @@ internal sealed class BeamScoringProblem
         for (int i = 0; i < _collisions.Count; i++)
         {
             var c = _collisions[i];
-            AddCollision(c.X + halfBeamOverhang, c.MinY, c.MaxY, c.BasePenalty);
+            AddCollision(segments, c.X + halfBeamOverhang, c.MinY, c.MaxY, c.BasePenalty);
         }
+        BeamSubdivision.GiveSegments(segments);
     }
 
     /// <summary>
@@ -540,7 +545,8 @@ internal sealed class BeamScoringProblem
     /// at collect time instead, by X BOX overlap (:381).
     /// </para>
     /// </remarks>
-    private void AddCollision(double x, double yMin, double yMax, double scoreFactor)
+    private void AddCollision(
+        List<BeamSubdivision.Segment> segments, double x, double yMin, double yMax, double scoreFactor)
     {
         // LILYPOND-REF: lily/beam-quanting.cc:192 c.beam_y_.set_empty () —
         //   flower/include/interval.hh:173-177 set_empty is [+∞, −∞].
@@ -549,9 +555,9 @@ internal sealed class BeamScoringProblem
 
         // LILYPOND-REF: lily/beam-quanting.cc:194-200 add_collision — segments_ is sorted
         //   by left edge, so the walk stops at the first segment starting right of x.
-        for (int j = 0; j < _segments.Count; j++)
+        for (int j = 0; j < segments.Count; j++)
         {
-            var seg = _segments[j];
+            var seg = segments[j];
             if (seg.XLeft <= x && x <= seg.XRight)
             {
                 double y = seg.Rank * _beamTranslation;

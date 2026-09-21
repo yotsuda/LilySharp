@@ -86,6 +86,78 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
+    /// <see cref="FromBox"/> for a caller that reads the box once and drops it — lent from
+    /// one box skyline per direction that the thread keeps, and handed back with
+    /// <see cref="GiveBox"/> once the <see cref="Distance(HorizontalSkyline)"/> or
+    /// <see cref="Merge"/> that reads it has returned.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): the constructor <see cref="FromBox"/> builds through ran 22.67 times a
+    /// keystroke, ALWAYS at one building (max 1), and all 41,887 skylines built were
+    /// unreachable by the time the render that built them returned — every product caller
+    /// makes the box, measures a distance against it or merges it (<see cref="Merge"/>
+    /// COPIES the other side's buildings) and drops it. The lists and their four-slot arrays
+    /// were 4,170 B a keystroke, 0.11% of it, and the skyline objects themselves ride on top.
+    /// <para>
+    /// ⚠️ THIS IS WHY SESSION 447'S "HOLD THE ONE ITEM IN A LOCAL" WAS TURNED AWAY HERE and
+    /// parking is not: the list is the skyline's own, so it escapes <see cref="FromBox"/> to
+    /// its caller — but it does not escape the CALLER, which is all a lent box needs.
+    /// </para>
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom) — two boxes of one direction
+    /// alive at once get two skylines, never one. THE CLEARING IS ON GIVE (session 456): a box
+    /// given back dirty would carry its old building into the next distance, whose maximum
+    /// would then read it. A <see cref="SkylineBuilding"/> holds no reference.
+    /// </para>
+    /// <para>
+    /// ⚠️ NO NET WATCHES THAT CLEARING (session 460, measured). Giving the box back with its
+    /// previous building still in it is green over the whole suite AND moves 0 of 5,824 corpus
+    /// pages. A counter says why: of 44,356 distances measured against a lent box over the
+    /// corpus, the stale building changed 862 — every one of them in
+    /// <c>NoteColumnToBarlineFloorPair</c>, the bar-line floor HANDOFF ⒳⁷ found reaching no
+    /// output. The other callers' answers never moved (their boxes all span the staff at the
+    /// same reach) and the accidental fattening sits inside the glyph's own outline. So the
+    /// clearing is right and unobserved: a forgotten <c>Clear</c> here would surface only when
+    /// ⒳⁷'s floor starts to bind.
+    /// </para>
+    /// </remarks>
+    internal static HorizontalSkyline RentBox(
+        double yBottom, double yTop, double xLeft, double xRight, HorizontalDirection direction)
+    {
+        HorizontalSkyline? box;
+        if (direction == HorizontalDirection.Left)
+        {
+            box = t_leftBox;
+            t_leftBox = null;
+        }
+        else
+        {
+            box = t_rightBox;
+            t_rightBox = null;
+        }
+        box ??= new HorizontalSkyline(direction);
+        box._buildings.Add(BoxBuilding(yBottom, yTop, xLeft, xRight, direction));
+        return box;
+    }
+
+    /// <summary>Puts a box from <see cref="RentBox"/> back, emptied, in its direction's drawer.</summary>
+    internal static void GiveBox(HorizontalSkyline box)
+    {
+        box._buildings.Clear();
+        if (box._direction == HorizontalDirection.Left)
+            t_leftBox = box;
+        else
+            t_rightBox = box;
+    }
+
+    [ThreadStatic]
+    private static HorizontalSkyline? t_leftBox;
+
+    [ThreadStatic]
+    private static HorizontalSkyline? t_rightBox;
+
+    /// <summary>
     /// Creates a skyline from multiple bounding boxes — one building apiece, so the
     /// building list is built at that length rather than grown to it. The parameter is a
     /// list and not a sequence for the same reason: a caller that cannot say how many

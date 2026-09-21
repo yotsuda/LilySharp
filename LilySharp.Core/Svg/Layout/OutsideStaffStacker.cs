@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+﻿﻿﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1143,7 +1143,8 @@ internal static class OutsideStaffStacker
 
         // 1. Partition every family by system (grobs whose measure maps to none are the
         // core's untouched passthroughs and stay on the live path).
-        var parts = new Dictionary<int, SysPart>();
+        // Lent, and given back after step 6 — its last reader (see RentParts).
+        var parts = RentParts();
         SysPart PartOf(int s)
         {
             if (!parts.TryGetValue(s, out var p))
@@ -1320,9 +1321,54 @@ internal static class OutsideStaffStacker
             entry.OutArticulations = Gather(resArtics, part.Articulations);
             memo.Store(s, entry);
         }
+        GiveParts(parts);
 
         return (resTrills, resBarNumbers, resOttavas, resCustomTexts, resVoltas, resMarks,
             resDynamics, resTextSpanners, resArtics);
+    }
+
+    /// <summary>
+    /// The system → partition map <see cref="StackAboveStaffMemoized"/> sorts every family
+    /// into, lent from one map the thread keeps between passes.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 2.17 passes a keystroke at 23.69 systems each (max 48), and all 4,010 maps
+    /// built were unreachable by the time the render that built them returned. The maps and
+    /// their growth ladders were 4,275 B a keystroke, 0.11% of it. The <see cref="SysPart"/>
+    /// VALUES are not parked — a memo entry's program is built from them — only the map.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a map given back dirty would hand the next pass another score's
+    /// partitions for the systems it shares a number with. There is no early return and no
+    /// throw between the rent and the give. Reuse keeps the walk order: a cleared
+    /// <see cref="Dictionary{TKey, TValue}"/> fills its entries from the front again, so
+    /// <c>foreach (var (s, part) in parts)</c> — which orders the misses the memo stores —
+    /// sees insertion order exactly as a new map would.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one map a thread at that thread's longest score — 48 systems,
+    /// emptied, so it pins no partition.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<int, SysPart>? t_parts;
+
+    /// <summary>Takes the thread's partition map, or makes the thread's first.</summary>
+    private static Dictionary<int, SysPart> RentParts()
+    {
+        var parts = t_parts;
+        if (parts is null)
+            return new Dictionary<int, SysPart>();
+        t_parts = null;
+        return parts;
+    }
+
+    /// <summary>Puts a finished pass's partition map back, emptied, with its capacity.</summary>
+    private static void GiveParts(Dictionary<int, SysPart> parts)
+    {
+        parts.Clear();
+        t_parts = parts;
     }
 
     private static T[] Gather<T>(ImmutableArray<T> arr, List<int> idxs)

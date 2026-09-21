@@ -300,9 +300,11 @@ internal sealed class AccidentalPlacement
             // "a bit more padding for the right of the stem" — one box on the RIGHT
             // skyline at x = stencil-right * 0.375 over the stencil's Y-extent,
             // NOT applied to a parenthesized accidental.
-            right.Merge(HorizontalSkyline.FromBox(
+            var fattening = HorizontalSkyline.RentBox(
                 bbox.Bottom, bbox.Top, bbox.Left, bbox.Right * 0.375,
-                HorizontalDirection.Right));
+                HorizontalDirection.Right);
+            right.Merge(fattening); // copies the building, so the box goes straight back
+            HorizontalSkyline.GiveBox(fattening);
         }
         if (font.Magnification != 1.0)
         {

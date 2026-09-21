@@ -188,7 +188,8 @@ internal sealed class TieChordOutline
     public static TieChordOutline Build(TieColumnParts parts, bool isLeftBound, double skylinePadding)
     {
         int dir = isLeftBound ? -1 : +1;
-        var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        // Lent, and given back once FromBoxes has copied it (see RentBoxes).
+        var boxes = RentBoxes();
         var headBoxes = new List<TieOutlineBox>(parts.TiedHeads.Count);
 
         // The tied heads: a ONE-STAFF-SPACE box on the head's position, not the glyph's ink
@@ -284,6 +285,7 @@ internal sealed class TieChordOutline
         var skyline = HorizontalSkyline
             .FromBoxes(boxes, dir < 0 ? HorizontalDirection.Right : HorizontalDirection.Left)
             .PaddedCopy(skylinePadding);
+        GiveBoxes(boxes);
 
         // head_extents_ and the floor, both from the TIED heads' union.
         // LILYPOND-REF: :271-286. ⚠️ The break-status branch (:262-270, a piece reattached to a
@@ -324,6 +326,44 @@ internal sealed class TieChordOutline
         }
 
         return new TieChordOutline(skyline, (hxL, hxR), (hyD, hyU), stemBox, headPositions);
+    }
+
+    /// <summary>
+    /// The box list <see cref="Build"/> gathers a column's outline into, lent from one list
+    /// the thread keeps between outlines.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 14.29 outlines a keystroke at 4.25 boxes each (max 6), and all 26,404 lists
+    /// built were unreachable by the time the render that built them returned —
+    /// <see cref="HorizontalSkyline.FromBoxes"/> copies the boxes into buildings of its own.
+    /// The lists and their growth were 3,638 B a keystroke, 0.10% of it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a list given back dirty would put the previous column's heads and
+    /// stem into this column's outline, where the attachment reads their edge. There is no
+    /// early return and no throw between the rent and the give. The boxes are four doubles,
+    /// so the drawer pins nothing but its capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<(double YBottom, double YTop, double XLeft, double XRight)>? t_boxes;
+
+    /// <summary>Takes the thread's box list, or makes the thread's first.</summary>
+    private static List<(double YBottom, double YTop, double XLeft, double XRight)> RentBoxes()
+    {
+        var boxes = t_boxes;
+        if (boxes is null)
+            return new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        t_boxes = null;
+        return boxes;
+    }
+
+    /// <summary>Puts a finished outline's box list back, emptied, with its capacity.</summary>
+    private static void GiveBoxes(List<(double YBottom, double YTop, double XLeft, double XRight)> boxes)
+    {
+        boxes.Clear();
+        t_boxes = boxes;
     }
 
     private static void AddBoxes(

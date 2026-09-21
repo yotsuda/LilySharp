@@ -384,12 +384,14 @@ internal static partial class SpacingRules
         // StaffYTop (+2) — BoundaryColumn's box convention.
         double reachAbove = Math.Clamp(BoundaryColumn.StaffYBottom - yMin, 0, BarLineExtraSpacingHeightCap);
         double reachBelow = Math.Clamp(yMax - BoundaryColumn.StaffYTop, 0, BarLineExtraSpacingHeightCap);
-        var barLeft = HorizontalSkyline.FromBox(
+        var barLeft = HorizontalSkyline.RentBox(
             BoundaryColumn.StaffYBottom - reachAbove, BoundaryColumn.StaffYTop + reachBelow,
             -DefaultExtraSpacingWidth, DefaultExtraSpacingWidth, HorizontalDirection.Left);
 
         double distance = itemRight.Distance(barLeft);
-        return (Math.Max(0.0, wishRight.Distance(barLeft)),
+        double wishDistance = wishRight.Distance(barLeft);
+        HorizontalSkyline.GiveBox(barLeft);
+        return (Math.Max(0.0, wishDistance),
                 Math.Max(0.0, SeparationRodPadding + distance));
     }
 

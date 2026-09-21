@@ -543,7 +543,8 @@ internal sealed partial class LayoutEngine
         // Columns in detection first-appearance order — the same bucketing the plain
         // call performs ((voice, start measure, start item) names ONE chord's ties).
         var columnKeys = new List<(int Voice, int Measure, int Item)>();
-        var columnTies = new Dictionary<(int, int, int), List<TieItem>>();
+        // Lent, and given back at every exit below (see RentColumnTies).
+        var columnTies = RentColumnTies();
         foreach (var tie in ties)
         {
             var key = (tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex);
@@ -572,7 +573,10 @@ internal sealed partial class LayoutEngine
                 if (!measureToSystem.TryGetValue(tie.StartMeasureIndex, out int ks)
                     || !measureToSystem.TryGetValue(tie.EndMeasureIndex, out int ke)
                     || ks != ke || (home != -2 && home != ks))
+                {
+                    GiveColumnTies(columnTies);
                     return Fallback();
+                }
                 home = ks;
             }
             columnSystem[key] = home;
@@ -616,12 +620,59 @@ internal sealed partial class LayoutEngine
                 || laid[c].Tie.VoiceIndex != key.Voice
                 || laid[c].Tie.StartMeasureIndex != key.Measure
                 || laid[c].Tie.StartItemIndex != key.Item)
+            {
+                GiveColumnTies(columnTies);
                 return Fallback(); // structural drift — never guess, recompute whole
+            }
             for (int i = 0; i < count; i++)
                 result.Add(laid[c + i]);
             cursors[k] = c + count;
         }
+        GiveColumnTies(columnTies);
         return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// The column → ties map <see cref="LayoutPreliminaryStaffTies"/> buckets a staff's ties
+    /// into, lent from one map the thread keeps between staves.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 1.69 bucketings a keystroke at 22.06 columns each (max 142), and all 3,132
+    /// maps built were unreachable by the time the render that built them returned. The maps
+    /// and their growth ladders were 3,831 B a keystroke, 0.10% of it. The per-column LISTS
+    /// are not parked — only the map; clearing it drops them.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a map given back dirty would find a previous staff's list under a
+    /// column key this staff shares and append to it. ⚠️ THREE EXITS, three gives: the two
+    /// fallbacks return early, and the map is not read after either decision. The map is only
+    /// ever looked up, never walked (<c>columnKeys</c> carries the order), so its reuse cannot
+    /// reorder anything.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one map a thread at that thread's tie-richest staff — 142 columns,
+    /// emptied, so it pins no tie.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int, int, int), List<TieItem>>? t_columnTies;
+
+    /// <summary>Takes the thread's column map, or makes the thread's first.</summary>
+    private static Dictionary<(int, int, int), List<TieItem>> RentColumnTies()
+    {
+        var map = t_columnTies;
+        if (map is null)
+            return new Dictionary<(int, int, int), List<TieItem>>();
+        t_columnTies = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished bucketing's column map back, emptied, with its capacity.</summary>
+    private static void GiveColumnTies(Dictionary<(int, int, int), List<TieItem>> map)
+    {
+        map.Clear();
+        t_columnTies = map;
     }
 
     /// <summary>

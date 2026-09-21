@@ -288,10 +288,13 @@ internal static partial class SpacingRules
                     BoundaryColumn.DoublePercentBox(rightDoublePercentHalfWidth),
                 },
                 HorizontalDirection.Left)
-            : HorizontalSkyline.FromBox(
+            : HorizontalSkyline.RentBox(
                 StaffYBottom, StaffYTop, xLeft: -0.1, xRight: 0.1, HorizontalDirection.Left);
 
-        return Math.Max(0.0, leftColumnRight.Distance(rightColumnLeft));
+        double distance = leftColumnRight.Distance(rightColumnLeft);
+        if (rightDoublePercentHalfWidth <= 0)
+            HorizontalSkyline.GiveBox(rightColumnLeft); // the lent arm only
+        return Math.Max(0.0, distance);
     }
 
     /// <summary>

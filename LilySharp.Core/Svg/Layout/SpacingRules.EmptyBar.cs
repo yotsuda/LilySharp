@@ -300,7 +300,7 @@ internal static partial class SpacingRules
         for (int q = 0; q < firstItems.Count; q++)
             if (!IsChangeItem(firstItems[q]) && firstItems[q] is not RestItem { IsSpacer: true })
                 reach = Math.Max(reach, MusicalColumnLeftReach(firstItems[q]));
-        var noteColumnLeft = HorizontalSkyline.FromBox(
+        var noteColumnLeft = HorizontalSkyline.RentBox(
             BoundaryColumn.StaffYBottom, BoundaryColumn.StaffYTop,
             xLeft: -reach, xRight: 0.1, HorizontalDirection.Left);
         // RightSkylineFromBarLine's origin is the bar line's LEFT edge — the column origin
@@ -308,6 +308,7 @@ internal static partial class SpacingRules
         // stands, column origin to column origin, the bar line's drawn width inside it
         // (0.39 for a plain bar line and a plain note: 0.19 + 0.1 + 0.1).
         double minimumDistance = Math.Max(0.0, leftColumnRight.Distance(noteColumnLeft));
+        HorizontalSkyline.GiveBox(noteColumnLeft);
 
         // Lily#'s spring 0 starts at the bar line's ink right edge: the drawn width is the
         // layout's, exactly as EmptyBarSprings re-frames its pair.

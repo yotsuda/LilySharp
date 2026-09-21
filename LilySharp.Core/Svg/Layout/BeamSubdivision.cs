@@ -231,6 +231,46 @@ internal static class BeamSubdivision
     }
 
     /// <summary>
+    /// The list <see cref="CalcBeamSegments(IReadOnlyList{StemBeaming}, StemRanks[], double, double, double, List{Segment})"/>
+    /// fills for its two product callers, lent from one list the thread keeps between beams.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 28.81 segment lists a keystroke at 1.39 segments each (max 4), and all 53,243
+    /// built were unreachable by the time the render that built them returned. The lists and
+    /// their first growth were 4,379 B a keystroke, 0.12% of it. Session 460 split the 28.81
+    /// by caller: 19.12 are <see cref="BeamScoringProblem"/>'s and 9.69 the renderer's
+    /// (<c>SharedRenderer.DrawBeams</c>), and BOTH read the list to the end inside the one
+    /// method that asked for it — the quanter's field looks like it outlives its constructor,
+    /// but only the constructor's collision booking ever reads it.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a list given back dirty would open the next beam's segments with this
+    /// beam's, which the renderer draws and the quanter books collisions against. A
+    /// <see cref="Segment"/> holds no reference, so the drawer pins nothing but its capacity.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<Segment>? t_segments;
+
+    /// <summary>Takes the thread's segment list, or makes the thread's first.</summary>
+    internal static List<Segment> RentSegments()
+    {
+        var segs = t_segments;
+        if (segs is null)
+            return new List<Segment>();
+        t_segments = null;
+        return segs;
+    }
+
+    /// <summary>Puts a finished beam's segment list back, emptied, with its capacity.</summary>
+    internal static void GiveSegments(List<Segment> segs)
+    {
+        segs.Clear();
+        t_segments = segs;
+    }
+
+    /// <summary>
     /// Builds drawable beam segments from per-stem ranks, mirroring
     /// LILYPOND-REF: lily/beam.cc:457 Beam::calc_beam_segments — buckets stem beams by
     /// rank and merges neighbours that share the rank into one span; a rank with no
@@ -249,8 +289,21 @@ internal static class BeamSubdivision
         IReadOnlyList<StemBeaming> stems, StemRanks[] ranks,
         double beamletLength, double maxProportion, double halfStemWidth)
     {
-        int n = stems.Count;
         var segs = new List<Segment>();
+        CalcBeamSegments(stems, ranks, beamletLength, maxProportion, halfStemWidth, segs);
+        return segs;
+    }
+
+    /// <summary>
+    /// <see cref="CalcBeamSegments(IReadOnlyList{StemBeaming}, StemRanks[], double, double, double)"/>
+    /// into a caller's list, which it APPENDS to — the form both product callers use, each
+    /// with a list lent by <see cref="RentSegments"/>.
+    /// </summary>
+    public static void CalcBeamSegments(
+        IReadOnlyList<StemBeaming> stems, StemRanks[] ranks,
+        double beamletLength, double maxProportion, double halfStemWidth, List<Segment> segs)
+    {
+        int n = stems.Count;
 
         // Gather every distinct rank present. 28.81 of these a keystroke over the reader's
         // corpus, and 63.2% of them find exactly ONE rank — a beam whose stems all carry the
@@ -290,7 +343,7 @@ internal static class BeamSubdivision
                 EmitRank(rank);
         }
 
-        return segs;
+        return;
 
         void EmitRank(int rank)
         {

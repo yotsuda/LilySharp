@@ -317,10 +317,12 @@ internal static partial class SharedRenderer
                     ChordItem tgc => tgc.TremoloGapCount,
                     _ => 0,
                 });
-            var segments = BeamSubdivision.CalcBeamSegments(
+            // Lent, and given back after the draw loop below — its last reader.
+            var segments = BeamSubdivision.RentSegments();
+            BeamSubdivision.CalcBeamSegments(
                 beamingInput, beamRanks,
                 EngravingDefaults.BeamletLength,
-                EngravingDefaults.BeamletMaxLengthProportion, halfStem);
+                EngravingDefaults.BeamletMaxLengthProportion, halfStem, segments);
             int noteheadSideRank = 0;
             if (tremoloGapCount > 0 && segments.Count > 0)
                 noteheadSideRank = grp.StemUp
@@ -390,6 +392,7 @@ internal static partial class SharedRenderer
                     PrimaryBeamYAt(x) + beamTranslation * seg.Rank * FeatherFactorAt(x);
                 DrawBeamSegment(xl, YOfRankAt(xl), xr, YOfRankAt(xr), bgc);
             }
+            BeamSubdivision.GiveSegments(segments);
 
             // Stems for beam members (replace any individual stems). For knees
             // each stem runs from its OWN notehead (attachment side per member
