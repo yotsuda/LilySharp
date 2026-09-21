@@ -187,6 +187,31 @@ public class HaraKiriTests
         Assert.True(HaraKiri.ShouldHideStaff(staff, 0, 1, isFirstSystem: true));
     }
 
+    // --- DeadFilter: the side tables reach the filter through the staff's GLOBAL index ---
+
+    [Theory]
+    [InlineData(1, false)] // the dynamic hangs on the rest-only staff: it keeps the staff
+    [InlineData(0, true)]  // it hangs on the other staff: the rest-only staff still goes
+    public void DeadFilter_ResolvesTheGlobalIndex_TheSideTablesAreKeyedBy(int dynamicStaff, bool hidden)
+    {
+        // Session 395 made a dynamic (a chord name, a figure, a percent repeat) keep a
+        // rest-only staff alive, keyed by the global staff index — and DeadFilter is where
+        // the layouter's staff becomes that index. ⚠️ NOTHING WATCHED IT until this net:
+        // session 464 poisoned the lookup to answer −1 and all 8,785 tests stayed green.
+        var notes = CreateStaff([MakeNoteMeasure(), MakeNoteMeasure()]);
+        var rests = CreateStaff([MakeRestMeasure(), MakeRestMeasure()], removeEmpty: true);
+        var score = new MultiStaffScore(
+            ImmutableArray.Create(StaffGroup.CreateSingle(notes), StaffGroup.CreateSingle(rests)),
+            new TimeSignature(4, 4),
+            KeySignature.CMajor,
+            dynamics: ImmutableArray.Create(new DynamicItem(DynamicLevel.P, 1, 0, 0, dynamicStaff)));
+
+        var dead = HaraKiri.DeadFilter(score, 1, 2, isFirstSystem: false);
+
+        Assert.Equal(hidden, dead(rests));
+        Assert.False(dead(notes));
+    }
+
     // --- Layout integration tests ---
 
     [Fact]

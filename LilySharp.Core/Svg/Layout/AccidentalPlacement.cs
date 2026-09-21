@@ -336,11 +336,15 @@ internal sealed class AccidentalPlacement
         GlyphMetrics.DesignMetrics headFont)
     {
         var accidentals = accidentalsWithOffsets;
+        // Lent, and given back cleared before the return (see t_placementScratch).
+        var scratch = t_placementScratch ?? new PlacementScratch();
+        t_placementScratch = null;
         // Build entries with glyph Y-extents. A grace / cue accidental's glyph is smaller —
         // it comes out of a smaller design AND is read at a magstep, both of which
         // `accidentalFont` has already applied — but each stays centered on the note's real
         // (unscaled) staff position.
-        var entries = new List<PlacementEntry>(accidentals.Count);
+        var entries = scratch.Entries;
+        entries.EnsureCapacity(accidentals.Count);
         foreach (var (n, _) in accidentals)
         {
             var bbox = GlyphMetrics.GetAccidentalBBox(accidentalFont, n.Accidental!);
@@ -387,8 +391,8 @@ internal sealed class AccidentalPlacement
         // down-stem (seconds) shift their box. (LilyPond also adds the stems; for the LEFT
         // skyline they never protrude beyond the head boxes, so they are omitted here.)
         // Exactly one box per note of the column — the loop's own trip count.
-        var headBoxes =
-            new List<(double YBottom, double YTop, double XLeft, double XRight)>(allNotes.Count);
+        var headBoxes = scratch.HeadBoxes;
+        headBoxes.EnsureCapacity(allNotes.Count);
         for (int i = 0; i < allNotes.Count; i++)
         {
             double headOffset = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
@@ -495,7 +499,36 @@ internal sealed class AccidentalPlacement
                 InkLeft(offset, bbox.Left, entry.IsCourtesy, accidentalFont), entry.IsCourtesy);
         }
 
+        scratch.Entries.Clear();
+        scratch.HeadBoxes.Clear();
+        t_placementScratch = scratch;
         return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(layouts);
+    }
+
+    /// <summary>
+    /// The entry list and the head boxes <see cref="CalculateMultipleAccidentals"/> places a
+    /// column's accidentals from, lent from one pair the thread keeps between columns.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 464's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 40.11 columns a keystroke, the entry list told its exact size and dropped at
+    /// the return — 4,175 B a keystroke, every one unreachable when the render returned. The
+    /// head boxes beside it are a tuple list, which no census spelling sees;
+    /// <see cref="HorizontalSkyline.FromBoxes"/> builds its own buildings from them.
+    /// <para>
+    /// Renting takes the pair out of the drawer (session 421's idiom) and the clearing is on
+    /// give. A stagger of three or more hands back a NEW entry list, which is the one read
+    /// below it; the lent one is still the pair's. The method has no exit between the rent
+    /// and the give. WHAT IT RETAINS is two emptied lists at the thread's widest column.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static PlacementScratch? t_placementScratch;
+
+    private sealed class PlacementScratch
+    {
+        public readonly List<PlacementEntry> Entries = new();
+        public readonly List<(double YBottom, double YTop, double XLeft, double XRight)> HeadBoxes = new();
     }
 
     /// <summary>

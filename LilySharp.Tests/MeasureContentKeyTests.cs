@@ -304,6 +304,28 @@ public class MeasureContentKeyTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AKeyChange_ReachesTheKeysOfTheBarsAfterIt(bool multiStaff)
+    {
+        // Bars 3 and 4 are the same notes either way; only the context they ENTER differs —
+        // a key change opening bar 2 is still in force there. That context is what the
+        // per-system cache must not hand back a layout across, and the key folds it in as
+        // the entry context of each measure. ⚠️ NOTHING WATCHED IT until this net: session
+        // 464 replaced the MeasureContextChain the key used to build with a fold, poisoned
+        // the fold never to advance, and all 8,785 tests stayed green on both overloads —
+        // the multi-staff one being the one IncrementalCompiler feeds SystemLayoutCache.
+        ImmutableArray<MeasureContentKey> Of(string source) =>
+            multiStaff ? MultiStaffKeys(source) : CompleteKeys(source);
+        var plain = Of(FourBars("g4 a b c"));
+        var changed = Of(FourBars("key g major g4 a b c"));
+
+        Assert.Equal(4, changed.Length);
+        Assert.NotEqual(plain[2], changed[2]);
+        Assert.NotEqual(plain[3], changed[3]);
+    }
+
+    [Theory]
     [InlineData("test/notes")]
     [InlineData("test/keysig-change")]
     [InlineData("test/clef-change")]

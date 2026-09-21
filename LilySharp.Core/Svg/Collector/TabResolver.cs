@@ -307,8 +307,13 @@ internal sealed class TabResolver
         var changed = new bool[items.Length];
         int itemCount = 0;
         foreach (var bar in items) itemCount += bar.Length;
-        var events = new List<TabEvent>(itemCount);
-        var refs = new List<(int Measure, int Item)>(itemCount);
+        // Lent, and given back cleared once the plan has been read back (see t_plan).
+        var scratch = t_plan ?? new PlanScratch();
+        t_plan = null;
+        var events = scratch.Events;
+        var refs = scratch.Refs;
+        events.EnsureCapacity(itemCount);
+        refs.EnsureCapacity(itemCount);
 
         double time = 0, previousOnset = double.NaN;
         int? previousMidi = null;
@@ -420,10 +425,39 @@ internal sealed class TabResolver
                 changed[mi] = true;
             }
         }
+        events.Clear();
+        refs.Clear();
+        t_plan = scratch;
 
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
         for (int mi = 0; mi < items.Length; mi++)
             rebuilt.Add(changed[mi] ? voice.Measures[mi] with { Items = ImmutableArray.Create(items[mi]) } : voice.Measures[mi]);
         return voice with { Measures = rebuilt.MoveToImmutable() };
+    }
+
+    /// <summary>
+    /// The event list <see cref="ResolveTabStrings"/> hands the planner and the list of the
+    /// items those events came from — lent from one pair the thread keeps between voices.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 464's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 0.74 resolutions a keystroke at 469 events each (max 1,147), and every event
+    /// list was unreachable by the time the render returned — 12,775 B a keystroke for the
+    /// events alone. <see cref="TabFingeringPlanner.Plan"/> reads the events into its own
+    /// trellis and returns a fresh array, so neither list outlives the call.
+    /// <para>
+    /// Renting takes the pair out of the drawer (session 421's idiom) and the clearing is on
+    /// give, after the plan's strings have been written back. A call that throws loses the
+    /// pair rather than parking it dirty. WHAT IT RETAINS is two emptied lists at the thread's
+    /// longest tab voice; a <see cref="TabEvent"/> holds no references.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static PlanScratch? t_plan;
+
+    private sealed class PlanScratch
+    {
+        public readonly List<TabEvent> Events = new();
+        public readonly List<(int Measure, int Item)> Refs = new();
     }
 }

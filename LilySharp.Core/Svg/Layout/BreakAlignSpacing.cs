@@ -341,8 +341,11 @@ internal static class BreakAlignSpacing
     // parameter was the interface until session 446 measured it — 64.51 calls a keystroke,
     // 3,096 B/keystroke of boxed List enumerator — and both callers there already hold a
     // List of exactly this type, so narrowing costs nothing and the box goes.
-    public static List<PlacedColumn> SolveColumns(
-        List<(BreakAlignSymbol Symbol, double Width)> items, double startLeft)
+    // Fills the caller's list rather than returning one: both callers read the columns once
+    // and drop them, and hand in the list of a ColumnScratch (session 464).
+    public static void SolveColumns(
+        List<(BreakAlignSymbol Symbol, double Width)> items, double startLeft,
+        List<PlacedColumn> placed)
     {
         // One column per present item, so the caller's own count BOUNDS this. On the reader's
         // corpus the bound is also EXACT — measured before the size was handed over, 119,209
@@ -353,7 +356,7 @@ internal static class BreakAlignSpacing
         // The callers do offer zero-width items — a row score has no clef, and SolvePrefixColumns
         // adds (Clef, 0) unconditionally — so the skip is load-bearing and the bound is only a
         // bound. Over-reserving one slot is the right side to be wrong on.
-        var placed = new List<PlacedColumn>(items.Count);
+        placed.EnsureCapacity(items.Count);
         BreakAlignSymbol? prev = null;
         double prevLeft = 0.0, prevWidth = 0.0;
         foreach (var (symbol, width) in items)
@@ -382,7 +385,51 @@ internal static class BreakAlignSpacing
             prevWidth = width;
             prev = symbol;
         }
-        return placed;
+    }
+
+    /// <summary>
+    /// The item and column lists a break-align walk is built from and read out of — lent
+    /// from one set the thread keeps between walks, to <see cref="SolvePrefixColumns"/> and
+    /// <see cref="BoundaryColumn.Build"/>.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 464's census, Release, the reader's corpus, eight forward keystrokes
+    /// a book): 64.51 walks a keystroke at 2.05 columns, and the column list alone was
+    /// 6,784 B a keystroke, every one unreachable when the render returned. The item lists
+    /// beside it are tuple lists, which no census spelling sees. Both callers read the
+    /// columns once, copy out what they keep, and drop the lists.
+    /// <para>
+    /// Renting takes the set out of the drawer (session 421's idiom) and the clearing is on
+    /// give, so a walk that re-entered would build its own. Neither caller has an exit
+    /// between its rent and its give. WHAT IT RETAINS is a few emptied lists of value tuples,
+    /// pinning nothing.
+    /// </para>
+    /// </remarks>
+    internal sealed class ColumnScratch
+    {
+        public readonly List<(BreakAlignSymbol Symbol, double Width)> Items = new();
+        public readonly List<PlacedColumn> Placed = new();
+        public readonly List<(BreakAlignSymbol Symbol, double Width, double EswLeft, double EswRight)> Candidates = new();
+
+        [ThreadStatic]
+        private static ColumnScratch? t_scratch;
+
+        /// <summary>Takes the thread's set, or makes the thread's first.</summary>
+        public static ColumnScratch Rent()
+        {
+            var scratch = t_scratch ?? new ColumnScratch();
+            t_scratch = null;
+            return scratch;
+        }
+
+        /// <summary>Puts a finished walk's set back, emptied, with its capacities.</summary>
+        public void Give()
+        {
+            Items.Clear();
+            Placed.Clear();
+            Candidates.Clear();
+            t_scratch = this;
+        }
     }
 
     /// <summary>
@@ -468,10 +515,10 @@ internal static class BreakAlignSpacing
         // LeftEdge → Clef opens the prefix: break-alignment's origin (LeftEdge, extent 0) spaces
         // the clef in by extra-space 0.8 (LILYPOND-REF LeftEdge.space-alist (clef . (extra-space .
         // 0.8))), which is where the clef's LEFT starts (startLeft below).
-        var items = new List<(BreakAlignSymbol, double)>
-        {
-            (BreakAlignSymbol.Clef, clefWidth),   // Clef group extent RIGHT (LEFT = 0)
-        };
+        // Lent, and given back once the columns are read (see ColumnScratch).
+        var scratch = ColumnScratch.Rent();
+        var items = scratch.Items;
+        items.Add((BreakAlignSymbol.Clef, clefWidth));   // Clef group extent RIGHT (LEFT = 0)
         if (hasKey)
             items.Add((BreakAlignSymbol.KeySignature, keyInkWidth));
         if (includeTimeSignature)
@@ -490,8 +537,8 @@ internal static class BreakAlignSpacing
         // sits on the left edge — not the clef's 0.8:
         // LILYPOND-REF: scm/define-grobs.scm:2080-2104 LeftEdge, break-align-symbol left-edge,
         //   whose space-alist has (staff-bar . (extra-space . 0.0)) at :2094.
-        var placed = SolveColumns(items,
-            prefatory ? EngravingDefaults.ClefGlyphXOffset : 0.0);
+        var placed = scratch.Placed;
+        SolveColumns(items, prefatory ? EngravingDefaults.ClefGlyphXOffset : 0.0, placed);
 
         // An absent column's X is 0 (see PrefixColumns) — including the clef's, which a
         // system of chord / lyric rows does not have at all.
@@ -519,6 +566,7 @@ internal static class BreakAlignSpacing
                 case BreakAlignSymbol.StaffBar: barX = col.Left; barWidth = col.Right - col.Left; break;
             }
         }
+        scratch.Give();
 
         return new PrefixColumns(clefX, keyX, timeX, right, hasKey, includeTimeSignature,
             barX, barWidth);

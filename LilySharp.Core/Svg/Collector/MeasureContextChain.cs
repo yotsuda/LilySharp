@@ -101,7 +101,13 @@ internal sealed class MeasureContextChain
     /// other item leaves it untouched (accidentals reset at the barline and so
     /// never cross — only the key does).
     /// </summary>
-    private static MeasureContext Advance(MeasureContext ctx, Measure measure)
+    /// <remarks>
+    /// Internal and not private for <see cref="MeasureContentKey"/>, which reads the entries
+    /// once, in order, and so folds them as it goes instead of building the chain: the two
+    /// arrays and their builders were 16,900 B a keystroke, and <see cref="Exit"/> was read
+    /// by no one (session 464's census).
+    /// </remarks>
+    internal static MeasureContext Advance(MeasureContext ctx, Measure measure)
     {
         foreach (var item in measure.Items)
         {

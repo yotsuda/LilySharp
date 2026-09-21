@@ -397,8 +397,9 @@ internal static class ArticulationEngraver
                     // Capacity 1, from OBSERVATION and not from an argument: a chord's
                     // members can all land on the one item, but the price instrument read
                     // 1.01 ties a bound (max 2) over the reader's corpus, so the default four
-                    // slots were three wasted. The poison run tests it.
-                    tiesAtBound[key] = list = new List<TieLayout>(1);
+                    // slots were three wasted. The poison run tests it. Pooled since session
+                    // 464 (see RentTieList).
+                    tiesAtBound[key] = list = RentTieList();
                 list.Add(t);
             }
         }
@@ -493,7 +494,11 @@ internal static class ArticulationEngraver
         // test/tab-staccato-beam-side and test/tab-beam-slope. The corpus sweep says NOTHING
         // about this half — 0 asks — so the snapshots are the whole of its evidence.
         Dictionary<(int Staff, int Voice, int Measure, int Item), BeamLayout>? beamGroups = null;
-        var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
+        // Lent, and given back cleared after the copy at the end (see t_layouts).
+        var layouts = t_layouts ?? ImmutableArray.CreateBuilder<ArticulationLayout>();
+        t_layouts = null;
+        if (layouts.Capacity < articulations.Length)
+            layouts.Capacity = articulations.Length;
         // Per-note, per-side SUPPORT CHAIN so stacked scripts don't overprint: every
         // priority-less script already placed on the same (staff, measure, item, side)
         // becomes a side-position support of the scripts after it.
@@ -641,7 +646,7 @@ internal static class ArticulationEngraver
                 }
 
                 if (!supportScripts.TryGetValue(key, out var placedList))
-                    supportScripts[key] = placedList = new List<ArticulationLayout>();
+                    supportScripts[key] = placedList = RentScriptList();
                 placedList.Add(synth);
                 if (anyMover)
                     lastOnKey[key] = (null, null);
@@ -1197,9 +1202,10 @@ internal static class ArticulationEngraver
                 // 64,000-odd). A second same-side priority-less script on one note
                 // would regrow it, and a regrow from 1 is still cheaper than the
                 // empty list's first step to 4 — ArticulationLayout is 112 bytes, so
-                // the default builds four slots for the one that is used.
+                // the default builds four slots for the one that is used. Pooled since
+                // session 464 (see RentTieList).
                 if (!supportScripts.TryGetValue(stackKey, out var placed))
-                    supportScripts[stackKey] = placed = new List<ArticulationLayout>(1);
+                    supportScripts[stackKey] = placed = RentScriptList();
                 placed.Add(layout);
             }
 
@@ -1218,6 +1224,8 @@ internal static class ArticulationEngraver
         // Both scratch maps are finished with here — the fingering flush above is the last
         // read of either — and the builder's ToImmutable copies.
         var engraved = layouts.ToImmutable();
+        layouts.Clear();
+        t_layouts = layouts;
         if (tiesAtBound != null)
             GiveTieBounds(tiesAtBound);
         GiveSupportScripts(supportScripts);
@@ -1257,10 +1265,9 @@ internal static class ArticulationEngraver
     /// green as "this one does not matter"; the hole is HANDOFF §1.0 ⒮¹³.
     /// </para>
     /// <para>
-    /// ⚠️ WHAT IS NOT RECOVERED is the per-key <c>List</c> each map holds: clearing the map
-    /// drops them, so the 1.01-tie and 1-script lists are still built per call. They are
-    /// their own census rows (ArticulationEngraver.cs:401 and :644), a tenth the size of
-    /// their maps, and pooling a list per key is a different repair.
+    /// The per-key <c>List</c> each map holds is recovered separately: clearing a map used to
+    /// drop them, and since session 464 each give empties them into a pool instead (see
+    /// <see cref="RentTieList"/>).
     /// </para>
     /// <para>
     /// WHAT IT RETAINS is two dictionaries a thread at that thread's densest page, emptied,
@@ -1284,13 +1291,66 @@ internal static class ArticulationEngraver
         return map;
     }
 
-    /// <summary>Puts a finished call's tie-bound map back, emptied, with its capacity.</summary>
+    /// <summary>Puts a finished call's tie-bound map back, emptied, with its capacity — and
+    /// its per-bound lists into the pool, emptied.</summary>
     private static void GiveTieBounds(
         Dictionary<(int Staff, int Voice, int Measure, int Item), List<TieLayout>> map)
     {
+        var pool = t_tieLists ??= new Stack<List<TieLayout>>();
+        foreach (var list in map.Values)
+        {
+            list.Clear();
+            pool.Push(list);
+        }
         map.Clear();
         t_tieBounds = map;
     }
+
+    /// <summary>
+    /// A per-key list for one of the two scratch maps, out of the pool their gives fill.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 464's census): the two maps were parked by session 457, but clearing
+    /// a map dropped its lists, so every call still built one list a bound and one a
+    /// (note, side) — 61.46 and 34.77 a keystroke at one entry each, 3,959 + 5,842 B a
+    /// keystroke and all unreachable when the render returned. Each give now empties its
+    /// lists into a pool the thread keeps.
+    /// <para>
+    /// A list is exclusively its taker's from the pop to the give that pushes it back, so a
+    /// re-entrant call is safe without taking the pool out of the drawer: it pops lists
+    /// nobody holds. ⚠️ THE CLEARING IS ON GIVE, as for the maps: a list handed out dirty
+    /// would give a script the supports of a note it does not sit on. WHAT IT RETAINS is one
+    /// emptied list per key at the thread's densest page (359 at most, measured), pinning
+    /// no layout.
+    /// </para>
+    /// </remarks>
+    private static List<TieLayout> RentTieList()
+        => t_tieLists is { Count: > 0 } pool ? pool.Pop() : new List<TieLayout>(1);
+
+    /// <inheritdoc cref="RentTieList"/>
+    private static List<ArticulationLayout> RentScriptList()
+        => t_scriptLists is { Count: > 0 } pool ? pool.Pop() : new List<ArticulationLayout>(1);
+
+    [ThreadStatic]
+    private static Stack<List<TieLayout>>? t_tieLists;
+
+    [ThreadStatic]
+    private static Stack<List<ArticulationLayout>>? t_scriptLists;
+
+    /// <summary>
+    /// The builder <see cref="CalculateWithFingerings"/> collects its layouts into, lent from
+    /// one the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 464's census): 1.89 calls a keystroke at 21.73 layouts (max 365),
+    /// told the articulation count and ending at it only 51% of the time, then copied by
+    /// <c>ToImmutable</c> — 8,254 B a keystroke, every builder unreachable when the render
+    /// returned. <c>ToImmutable</c> copies (session 459's probe), so the builder is finished
+    /// with at the copy; the one exit after the rent is the method's last line. WHAT IT
+    /// RETAINS is one emptied builder at the thread's busiest page.
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<ArticulationLayout>.Builder? t_layouts;
 
     /// <summary>Takes the thread's support-chain map, or makes the thread's first.</summary>
     private static Dictionary<(int, int, int, bool), List<ArticulationLayout>> RentSupportScripts()
@@ -1305,6 +1365,12 @@ internal static class ArticulationEngraver
     /// <summary>Puts a finished call's support-chain map back, emptied, with its capacity.</summary>
     private static void GiveSupportScripts(Dictionary<(int, int, int, bool), List<ArticulationLayout>> map)
     {
+        var pool = t_scriptLists ??= new Stack<List<ArticulationLayout>>();
+        foreach (var list in map.Values)
+        {
+            list.Clear();
+            pool.Push(list);
+        }
         map.Clear();
         t_supportScripts = map;
     }

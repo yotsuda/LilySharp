@@ -60,17 +60,26 @@ internal static class HaraKiri
     /// <summary>
     /// The per-system suicide filter every <c>LayoutStaffGroups</c> overload hands down:
     /// <see cref="ShouldHideStaff(Staff, int, MultiStaffScore?, int, int, bool)"/> bound to
-    /// this score and system, with each staff's global index resolved once.
+    /// this score and system, with each staff's global index resolved on the ask.
     /// </summary>
     public static Func<Staff, bool> DeadFilter(
         MultiStaffScore score, int startMeasure, int endMeasure, bool isFirstSystem)
     {
-        var indexOf = new Dictionary<Staff, int>(ReferenceEqualityComparer.Instance);
-        foreach (var (_, staff, globalIndex) in score.EnumerateStaves())
-            indexOf.TryAdd(staff, globalIndex);
+        // The index is looked up by walking the staves on each ask, not out of a map built
+        // per system: the walk is a struct and allocates nothing, a score has 1.77 staves on
+        // the reader's corpus, and the map was 6,012 B a keystroke at 27.83 filters (session
+        // 464's census). The FIRST staff by reference wins, as the map's TryAdd kept it.
         return staff => ShouldHideStaff(
-            staff, indexOf.TryGetValue(staff, out int i) ? i : -1, score,
+            staff, GlobalIndexOf(score, staff), score,
             startMeasure, endMeasure, isFirstSystem);
+    }
+
+    private static int GlobalIndexOf(MultiStaffScore score, Staff staff)
+    {
+        foreach (var (_, s, globalIndex) in score.EnumerateStaves())
+            if (ReferenceEquals(s, staff))
+                return globalIndex;
+        return -1;
     }
 
     /// <summary>

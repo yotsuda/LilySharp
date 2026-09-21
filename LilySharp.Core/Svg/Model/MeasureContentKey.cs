@@ -128,7 +128,8 @@ public readonly record struct MeasureContentKey(long Hash)
     {
         var measures = score.Voice.Measures;
         int n = measures.Length;
-        var chain = MeasureContextChain.Compute(score);
+        // MeasureContextChain's entries, folded in step (see MeasureContextChain.Advance).
+        var entry = MeasureContextChain.InitialContextOf(score);
         var sideTables = BucketSideTables(score, n);
 
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
@@ -136,9 +137,10 @@ public readonly record struct MeasureContentKey(long Hash)
         {
             var hc = new Hash64();
             AddIntrinsic(ref hc, measures, i);
-            hc.Add(chain.Entry[i]);                  // line-start prefix identity
+            hc.Add(entry);                           // line-start prefix identity
             hc.Add(sideTables[i].ToHashCode());      // attached annotations (ordered)
             builder.Add(new MeasureContentKey(hc.ToHashCode()));
+            entry = MeasureContextChain.Advance(entry, measures[i]);
         }
         return builder.MoveToImmutable();
     }
@@ -166,8 +168,8 @@ public readonly record struct MeasureContentKey(long Hash)
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             var measures = staff.PrimaryVoice.Measures;
-            var chain = MeasureContextChain.Compute(
-                measures, new MeasureContext(score.KeySignature, score.TimeSignature, staff.Clef));
+            // MeasureContextChain's entries, folded in step (see MeasureContextChain.Advance).
+            var entry = new MeasureContext(score.KeySignature, score.TimeSignature, staff.Clef);
             int m = Math.Min(n, measures.Length);
             for (int i = 0; i < m; i++)
             {
@@ -175,7 +177,8 @@ public readonly record struct MeasureContentKey(long Hash)
                 AddStaffIdentity(ref acc[i], staff);    // per-staff (indent/name/tuning/…)
                 AddGroupIdentity(ref acc[i], group);    // ...and which brace/bracket it is in
                 AddIntrinsic(ref acc[i], measures, i);
-                acc[i].Add(chain.Entry[i]);
+                acc[i].Add(entry);
+                entry = MeasureContextChain.Advance(entry, measures[i]);
 
                 // A clef change opening measure i+1 is engraved BEFORE the bar line the
                 // two measures share, so its width is charged to measure i's CLOSING
@@ -202,8 +205,8 @@ public readonly record struct MeasureContentKey(long Hash)
             // unchanged and reuse hands back stale voice-2 geometry.
             //
             // The ENTRY CONTEXT is deliberately not recomputed per voice: clef / key /
-            // time are staff-level, established by the primary stream, and the chain
-            // above already folds them. Only the voice's own measure content is added,
+            // time are staff-level, established by the primary stream, and the entry
+            // fold above already carries them. Only the voice's own measure content is added,
             // discriminated by voice index so two voices holding identical measures
             // cannot cancel out.
             for (int v = 1; v < staff.Voices.Length; v++)

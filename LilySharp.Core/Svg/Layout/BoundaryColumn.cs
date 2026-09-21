@@ -122,7 +122,9 @@ internal sealed class BoundaryColumn
         // (LILYPOND-REF define-grobs.scm:650-664), each with its extra-spacing-width. A clef
         // change sits BEFORE the bar line and a key/time change AFTER it — the single fact that
         // moves the column ORIGIN without moving the bar line.
-        var candidates = new List<(BreakAlignSymbol Symbol, double Width, double EswLeft, double EswRight)>();
+        // Lent, and given back once the grobs are copied out (see BreakAlignSpacing.ColumnScratch).
+        var scratch = BreakAlignSpacing.ColumnScratch.Rent();
+        var candidates = scratch.Candidates;
         if (clef != null)
             candidates.Add((BreakAlignSymbol.Clef,
                 SpacingRules.GetClefChangeWidth(clef.NewClef), EswDefaultLeft, EswDefaultRight));
@@ -148,24 +150,30 @@ internal sealed class BoundaryColumn
         // The SAME break-align walk the line-start prefix uses (BreakAlignSpacing.SolveColumns):
         // each present grob is placed at the previous grob's ink right + the space-alist distance,
         // empty grobs skipped. startLeft 0 — a mid-line boundary's first grob IS the column origin.
-        var items = new List<(BreakAlignSymbol, double)>();
+        var items = scratch.Items;
         foreach (var c in candidates)
             items.Add((c.Symbol, c.Width));
-        var placed = BreakAlignSpacing.SolveColumns(items, startLeft: 0.0);
+        var placed = scratch.Placed;
+        BreakAlignSpacing.SolveColumns(items, startLeft: 0.0, placed);
 
-        var grobs = ImmutableArray.CreateBuilder<BoundaryColumnGrob>();
-        foreach (var pc in placed)
+        // Exactly one grob per placed column: every placed symbol came out of the candidates,
+        // so the join below always finds its row.
+        var grobs = new BoundaryColumnGrob[placed.Count];
+        for (int g = 0; g < placed.Count; g++)
         {
+            var pc = placed[g];
             // Symbols are unique on a boundary column, so the esw joins back by symbol.
             foreach (var c in candidates)
                 if (c.Symbol == pc.Symbol)
                 {
-                    grobs.Add(new BoundaryColumnGrob(pc.Symbol, pc.Left, pc.Right, c.EswLeft, c.EswRight));
+                    grobs[g] = new BoundaryColumnGrob(pc.Symbol, pc.Left, pc.Right, c.EswLeft, c.EswRight);
                     break;
                 }
         }
+        scratch.Give();
 
-        return new BoundaryColumn(grobs.ToImmutable());
+        return new BoundaryColumn(
+            System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(grobs));
     }
 
     /// <summary>
