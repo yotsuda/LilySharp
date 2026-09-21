@@ -1564,8 +1564,21 @@ internal sealed class MultiStaffLayouter
             totalBarlineWidth += barlineWidth;
         }
 
-        // Concatenate all springs and solve for a single force across the system
-        var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
+        // Concatenate all springs and solve for a single force across the system — into an
+        // array of exactly their count (session 468: the SelectMany builder paid 524 B a call
+        // for an answer of 256).
+        int springTotal = 0;
+        foreach (var ms in measureSprings)
+            springTotal += ms.Length;
+        var springBuffer = new Spring[springTotal];
+        int springAt = 0;
+        foreach (var ms in measureSprings)
+        {
+            ms.CopyTo(springBuffer, springAt);
+            springAt += ms.Length;
+        }
+        var allSprings = System.Runtime.InteropServices.ImmutableCollectionsMarshal
+            .AsImmutableArray(springBuffer);
 
         // The system's rods, all fed through the one Simple_spacer::add_rod port
         // (SpringSolver.ApplyRods, blocking-force propagation included).
@@ -1837,8 +1850,10 @@ internal sealed class MultiStaffLayouter
             for (int i = 0; i < measureSprings.Count; i++)
             {
                 int n = measureSprings[i].Length;
+                // One copy: Create(T[]) copies its argument, so the ToArray this used to
+                // hand it made two arrays of every slice (session 468).
                 if (n > 0)
-                    measureSprings[i] = ImmutableArray.Create(allSprings.AsSpan(offset, n).ToArray());
+                    measureSprings[i] = ImmutableArray.Create(allSprings, offset, n);
                 offset += n;
             }
         }

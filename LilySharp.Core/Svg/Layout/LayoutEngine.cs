@@ -216,7 +216,7 @@ internal sealed partial class LayoutEngine
         double systemHeight = pass.FirstSystemHeight;
 
         var (pages, systemsArray) = CreatePages(
-            score, systems.ToImmutableArray(), header, perSystemExtents, systemHeight,
+            score, prelim.Systems, header, perSystemExtents, systemHeight,
             prelim.PagingSkylines, perSystemHeights, perSystemBandUps, placed.CropDown,
             PagePermissionsAfterSystems(score, systems));
 
@@ -473,7 +473,7 @@ internal sealed partial class LayoutEngine
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
             LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf,
                 prelim.BeamsByStaff, prelim.AllBeams, prelim.TiesByStaff, prelim.SlursByStaff,
-                systems.ToImmutableArray());
+                prelim.Systems);
 
         // Resolve cross-staff layouts per voice
         var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
@@ -549,8 +549,8 @@ internal sealed partial class LayoutEngine
             // must be re-examined.
             BeamGroups = prelim.AnnotationBeamGroups,
             BeamLayouts = allBeamLayouts,
-            TieLayouts = allTieLayouts.ToImmutableArray(),
-            SlurLayouts = allSlurLayouts.ToImmutableArray(),
+            TieLayouts = allTieLayouts,
+            SlurLayouts = allSlurLayouts,
             SystemSkylines = perSystemSkylines,
             StaffSkylines = placed.StaffSkylines,
             RunSources = placed.RunSources,
@@ -606,8 +606,8 @@ internal sealed partial class LayoutEngine
                 restDotOffsetsBuilder[kv.Key] = kv.Value;
 
         var result = BuildScoreLayout(pages, systemsArray,
-            allBeamLayouts, allTieLayouts.ToImmutableArray(),
-            allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
+            allBeamLayouts, allTieLayouts,
+            allSlurLayouts, allGlissandoLayouts.ToImmutableArray(),
             annotations,
             voiceOffsets,
             headWipes,

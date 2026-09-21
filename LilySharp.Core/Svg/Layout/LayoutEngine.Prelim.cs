@@ -63,6 +63,11 @@ internal sealed partial class LayoutEngine
     /// ⚠️ <c>AllBeams</c> IS <c>BeamsByStaff</c> CONCATENATED in <c>EnumerateStaves</c> order
     /// (session 467) — the one copy the preliminary annotation context takes, carried so the
     /// final pass does not gather the same beams into a list of its own and copy that twice.
+    /// ⚠️ <c>Systems</c> IS THE ARRAY THE PASS RAN ON (session 468) — the placement's system list
+    /// copied once, which the page builder and the spanner pass read too. They used to copy the
+    /// same unchanged list twice more (213 B each, once a keystroke). Nothing between the
+    /// placement and the page writes to that list; the systems paging moves are new objects in
+    /// the array <c>CreatePages</c> returns.
     /// </remarks>
     private readonly record struct PreliminaryPass(
         List<(VerticalSkyline up, VerticalSkyline down)>? PagingSkylines,
@@ -70,7 +75,8 @@ internal sealed partial class LayoutEngine
         ImmutableArray<BeamLayout> AllBeams,
         ImmutableArray<BeamGroup> AnnotationBeamGroups,
         Dictionary<int, ImmutableArray<TieLayout>> TiesByStaff,
-        Dictionary<int, ImmutableArray<SlurLayout>> SlursByStaff);
+        Dictionary<int, ImmutableArray<SlurLayout>> SlursByStaff,
+        ImmutableArray<SystemLayout> Systems);
 
     /// <summary>
     /// The PRELIMINARY annotation pass: lays the annotations out against provisional system
@@ -114,8 +120,6 @@ internal sealed partial class LayoutEngine
         // Lent, and given back once the annotation context has copied it (see RentPrelimBeams).
         var prelimBeams = RentPrelimBeams();
         var prelimBeamsByStaff = new Dictionary<int, ImmutableArray<BeamLayout>>();
-        var prelimTies = new List<TieLayout>();
-        var prelimSlurs = new List<SlurLayout>();
         var prelimTiesByStaff = new Dictionary<int, ImmutableArray<TieLayout>>();
         var prelimSlursByStaff = new Dictionary<int, ImmutableArray<SlurLayout>>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
@@ -152,7 +156,6 @@ internal sealed partial class LayoutEngine
                 score.TextMetrics, staffBows.Ties, staffSpannerScore, prelimSystems, staffIndex, staff,
                 systemCache, commonShortestDuration);
             prelimTiesByStaff[staffIndex] = staffPrelimTies;
-            prelimTies.AddRange(staffPrelimTies);
             // The same 'inside script boxes the FINAL pass scores its bows against
             // (LayoutAllSpanners) — a prelim bow that ignored them would shape the
             // spacing extents for a curve the final pass then moves.
@@ -163,7 +166,6 @@ internal sealed partial class LayoutEngine
                 staffPrelimBeams, staffPrelimTies, prelimStaffScripts,
                 systemCache, commonShortestDuration);
             prelimSlursByStaff[staffIndex] = staffPrelimSlurs;
-            prelimSlurs.AddRange(staffPrelimSlurs);
         }
         // The SAME per-staff / per-voice lookups the final annotation pass gets. Without
         // them TupletBracketEngraver falls back to the PRIMARY staff's PRIMARY voice for
@@ -215,6 +217,13 @@ internal sealed partial class LayoutEngine
         // Every staff's beams in staff order — the context's copy, and the final pass's answer
         // too (see PreliminaryPass.AllBeams at LayoutAllSpanners, which used to gather it again).
         var allBeams = prelimBeams.ToImmutableArray();
+        // Every staff's ties and slurs in staff order, ONCE, for the three readers below (the
+        // context, the extents, the paging skylines). Each used to take a ToImmutableArray of
+        // its own from a list the loop grew — MEASURED (session 468, Release, the reader's
+        // corpus, 231 books × 8 forward keystrokes, 1.17 passes a keystroke): 578 B a keystroke
+        // of copies nobody needed and 428 B of list growth, for arrays of 19.6 ties and 7.0 slurs.
+        var allPrelimTies = ConcatInStaffOrder(score, prelimTiesByStaff);
+        var allPrelimSlurs = ConcatInStaffOrder(score, prelimSlursByStaff);
         var prelimAnn = CalculateAnnotationLayouts(new AnnotationLayoutContext
         {
             Score = prelimScore,
@@ -239,8 +248,8 @@ internal sealed partial class LayoutEngine
             TrillSpanners = score.TrillSpanners,
             BeamGroups = annotationBeamGroups,
             BeamLayouts = allBeams,
-            TieLayouts = prelimTies.ToImmutableArray(),
-            SlurLayouts = prelimSlurs.ToImmutableArray(),
+            TieLayouts = allPrelimTies,
+            SlurLayouts = allPrelimSlurs,
             SystemSkylines = perSystemSkylines,
             TupletForceStemUp = prelimStaff.IsMultiVoice,
             StaffVoices = prelimStaff.Voices,
@@ -285,7 +294,7 @@ internal sealed partial class LayoutEngine
         });
         GivePrelimBeams(prelimBeams);
         EnrichExtentsWithAnnotationProtrusions(score.TextMetrics, perSystemExtents, prelimSystems,
-            prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray(),
+            prelimAnn, allPrelimTies, allPrelimSlurs,
             rowsAboveFirstStaff, pedalLines);
         return new PreliminaryPass(
             AugmentSkylinesForPaging(
@@ -294,14 +303,40 @@ internal sealed partial class LayoutEngine
                 prelimAnn.VoltaBrackets, prelimSystems,
                 prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
                 prelimAnn.Dynamics,
-                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, prelimSlurs.ToImmutableArray(),
-                prelimTies.ToImmutableArray(), prelimAnn.TextSpanners,
+                prelimAnn.BarNumbers, prelimAnn.TupletBrackets, allPrelimSlurs,
+                allPrelimTies, prelimAnn.TextSpanners,
                 systemCache, lyricBands, pedalLines),
             prelimBeamsByStaff,
             allBeams,
             annotationBeamGroups,
             prelimTiesByStaff,
-            prelimSlursByStaff);
+            prelimSlursByStaff,
+            prelimSystems);
+    }
+
+    /// <summary>
+    /// One staff-keyed table's arrays laid end to end in <see cref="MultiStaffScore.EnumerateStaves"/>
+    /// order, into an array of exactly their total — the order the loops that fill these tables
+    /// walk, so it is the order the lists they replaced were grown in.
+    /// </summary>
+    private static ImmutableArray<T> ConcatInStaffOrder<T>(
+        MultiStaffScore score, Dictionary<int, ImmutableArray<T>> byStaff)
+    {
+        int count = 0;
+        foreach (var (_, _, staffIndex) in score.EnumerateStaves())
+            if (byStaff.TryGetValue(staffIndex, out var part))
+                count += part.Length;
+        if (count == 0)
+            return ImmutableArray<T>.Empty;
+        var all = new T[count];
+        int at = 0;
+        foreach (var (_, _, staffIndex) in score.EnumerateStaves())
+            if (byStaff.TryGetValue(staffIndex, out var part))
+            {
+                part.CopyTo(all, at);
+                at += part.Length;
+            }
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(all);
     }
 
     /// <summary>
@@ -1031,8 +1066,8 @@ internal sealed partial class LayoutEngine
     /// reader's corpus, eight forward keystrokes a book): the second gathering was a list of
     /// 184.67 beams (max 660) once a keystroke, at least 1,547 B with its growth ladder, and
     /// the caller then copied it twice.</param>
-    private (ImmutableArray<BeamLayout> Beams, List<TieLayout> Ties, List<SlurLayout> Slurs, List<GlissandoLayout> Glissandos,
-             ImmutableDictionary<RestShiftKey, double> RestShifts)
+    private (ImmutableArray<BeamLayout> Beams, ImmutableArray<TieLayout> Ties, ImmutableArray<SlurLayout> Slurs,
+             List<GlissandoLayout> Glissandos, ImmutableDictionary<RestShiftKey, double> RestShifts)
         LayoutAllSpanners(MultiStaffScore score, ImmutableArray<SystemLayout> systemsArray,
             Func<Staff, ImmutableDictionary<RestShiftKey, double>> restCollisionsOf,
             Dictionary<int, ImmutableArray<BeamLayout>> beamsByStaff,
@@ -1041,8 +1076,11 @@ internal sealed partial class LayoutEngine
             Dictionary<int, ImmutableArray<SlurLayout>> prelimSlursByStaff,
             ImmutableArray<SystemLayout> prelimSystems)
     {
-        var allTieLayouts = new List<TieLayout>();
-        var allSlurLayouts = new List<SlurLayout>();
+        // Lent, and given back cleared once copied below (see t_finalTies).
+        var allTieLayouts = t_finalTies ?? new List<TieLayout>();
+        t_finalTies = null;
+        var allSlurLayouts = t_finalSlurs ?? new List<SlurLayout>();
+        t_finalSlurs = null;
         var allGlissandoLayouts = new List<GlissandoLayout>();
         // Rest shifts are keyed by (measure, item) only, so they are computed for
         // each staff's PRIMARY voice — enough for the single-voice scores where
@@ -1090,7 +1128,7 @@ internal sealed partial class LayoutEngine
             // remark), which is what makes the memo sound and made the duplicate invisible.
             var staffCollisionShifts = restCollisionsOf(staff);
             var staffRestShifts = _elementCoordinator.CalculateRestShifts(
-                staffScore, systemsArray, staffFinalBeams.ToImmutableArray(),
+                staffScore, systemsArray, staffFinalBeams,
                 staffCollisionShifts);
             foreach (var kv in staffCollisionShifts.SetItems(staffRestShifts))
                 if (!restShiftsBuilder.TryGetValue(kv.Key, out var existing)
@@ -1139,9 +1177,37 @@ internal sealed partial class LayoutEngine
             allSlurLayouts.AddRange(staffSlurs);
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
-        return (allBeams, allTieLayouts, allSlurLayouts, allGlissandoLayouts,
-                restShiftsBuilder.ToImmutable());
+        var ties = allTieLayouts.ToImmutableArray();
+        var slurs = allSlurLayouts.ToImmutableArray();
+        allTieLayouts.Clear();
+        t_finalTies = allTieLayouts;
+        allSlurLayouts.Clear();
+        t_finalSlurs = allSlurLayouts;
+        return (allBeams, ties, slurs, allGlissandoLayouts, restShiftsBuilder.ToImmutable());
     }
+
+    /// <summary>
+    /// The list <see cref="LayoutAllSpanners"/> gathers every staff's final ties into, lent from
+    /// one list the thread keeps between layouts; <see cref="t_finalSlurs"/> is its slur twin.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 468, Release, the reader's corpus, 231 books × 8 forward keystrokes, once
+    /// a keystroke): the two lists grew 363 B a keystroke for 19.6 ties and 7.1 slurs, and the
+    /// caller then copied each twice — once for the final annotation context, once for the
+    /// <see cref="ScoreLayout"/> — 245 B for a copy nobody needed. The pass now copies each ONCE
+    /// and both readers take that array.
+    /// <para>
+    /// Same idiom as <see cref="t_prelimBeams"/>: renting takes the list out of the drawer and the
+    /// clearing is on give, so a list given back dirty cannot open the next layout with this
+    /// score's bows. An exception between the two loses the list, and the next layout builds one.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static List<TieLayout>? t_finalTies;
+
+    /// <summary>The slur twin of <see cref="t_finalTies"/>.</summary>
+    [ThreadStatic]
+    private static List<SlurLayout>? t_finalSlurs;
 
     /// <summary>
     /// How far, in the page Y-UP frame, each system's copy of ONE staff moved between the
