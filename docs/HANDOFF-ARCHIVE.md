@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第502セッションの経緯
+
+### 1.1 第502セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第501 のすぐ後）。ユーザー指示「続けて」＝第501 の地図の残り（`ArticulationLayout[]`・`MusicItem[]`）。
+★ **`-Start p502` の 1 コマンドで §0 が全部済んだ**（HEAD `baaea2ac`・full 8845 / 0 / 3 / 8848・`-Archive 500` も自動）。
+
+★★ **⑴ render ごとの data-pos の引き直しを copy-on-write に＝render 1,893,189 → 1,883,809（−9,380・−0.5%）**。`ArticulationLayout[]` を追って `ToBuilder()` の census を取った（全 46 軒を `Zz502.TB` で包む計器＝Lab `sessions/p502/instrument-tobuilder.ps1`・`tobuilder-price.txt`）。頭の `OutsideStaffStacker:1327/829` は `MoveToImmutable`＝結果の配列そのもので実仕事。3 番目の `SharedRenderer.Curves` の `ResolveArr` ほか（`ResolveDataPos` 全体で 10,827 B／打鍵）は**毎 render 全 family を写していた**が、引き直した offset は**ほぼいつも既に持っている値**（動くのは memo のレイアウトが編集の後に出されたときだけ）。⇒ `Put`（最初に値が違った要素で初めて写す）＋`Result`。class の family（Tie・Slur・Lyric）は `with` 自体が割り当てるので、**offset が動いたときだけ**建てる（bow は `pos != current(l)`、lyric は lambda が `l` を返す）。
+  毒 2 本（Lab `sessions/p502/poisons.ps1`）＝**`Put` が書かない→40 赤**（`IncrementalReuseSoundnessTests` ほか）・**bow の条件を反転→21 赤**。出力は同一（`Zz502Hash`＝0 差）。full 8845 / 0 / 3 / 8848。
+★ **⑵ 終了時**: コード 1 ファイル（SharedRenderer.Curves）。
+
 ## 以下は第501セッションの経緯
 
 ### 1.1 第501セッション（2026-09-22・YT-DELL2）
