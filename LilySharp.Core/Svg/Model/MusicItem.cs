@@ -523,7 +523,8 @@ public sealed record NoteItem : MusicItem
     /// different_directions_correction). Nothing else about the beam is needed there, so
     /// nothing else is carried here.
     /// </remarks>
-    public int? BeamId { get; init; }
+    public int? BeamId { get => _beamId; init => _beamId = value; }
+    private int? _beamId;
 
     /// <summary>
     /// The PURE tip of this note's beamed stem, in staff positions (+up): the extreme of
@@ -540,7 +541,8 @@ public sealed record NoteItem : MusicItem
     /// LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height — LilyPond itself
     ///   stores the answer on each stem, which is what baking it here mirrors.
     /// </remarks>
-    public double? PureBeamedStemTip { get; init; }
+    public double? PureBeamedStemTip { get => _pureBeamedStemTip; init => _pureBeamedStemTip = value; }
+    private double? _pureBeamedStemTip;
 
     /// <summary>Whether this note belongs to a beam group (set by BeamDetector once the
     /// group is resolved). Unlike <see cref="HasBeamStart"/>/<see cref="HasBeamEnd"/> this
@@ -679,7 +681,48 @@ public sealed record NoteItem : MusicItem
     /// LilyPond resolves directions in the engravers BEFORE spacing runs.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/beam.cc:182-246 Beam::calc_direction.</remarks>
-    public bool? StemUpOverride { get; init; }
+    public bool? StemUpOverride { get => _stemUpOverride; init => _stemUpOverride = value; }
+    private bool? _stemUpOverride;
+
+    /// <summary>
+    /// The beam bake's one door: <c>MeasureCollector.ResolveBeamStemDirections</c> writes the
+    /// three stamps IN PLACE, and clears them on every item before it stamps any.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ONLY MUTATION ON THIS MODEL, and it is confined to the collect phase, before
+    /// the item is handed to anything that measures or draws it. The bake used to spell the
+    /// same write as <c>n with { … }</c> — a whole 144-byte record per beamed note,
+    /// 563.18 times a keystroke (session 514 measured 121,637 B; session 516 made the record
+    /// itself smaller).
+    /// <para>
+    /// ⚠️ WHY <see cref="ClearBeamStamp"/> HAS TO EXIST. The collect resume's recording
+    /// (<c>CollectWalkProbe.PreFinalizeMeasures</c>) is snapshotted BEFORE the bake runs and
+    /// SHARES these item instances, so a stamp written here is visible to the prefix a later
+    /// keystroke adopts. While the bake copied, the recording kept the unstamped originals
+    /// and no stamped item ever reached the bake (MEASURED, session 514: zero). Writing in
+    /// place ends that, so every bake now starts by clearing — a note that stops being a beam
+    /// member must not keep the direction and tip of a beam it is no longer in.
+    /// <see cref="StemUpOverride"/> and <see cref="PureBeamedStemTip"/> enter
+    /// <c>MeasureContentKey</c> (only <see cref="BeamId"/> is excluded there, because its
+    /// VALUE is meaningless), so a stale one would be believed rather than noticed.
+    /// </para>
+    /// </remarks>
+    internal void StampBeam(bool stemUp, int beamId, double? pureTip)
+    {
+        _stemUpOverride = stemUp;
+        _beamId = beamId;
+        if (pureTip is not null)
+            _pureBeamedStemTip = pureTip;
+    }
+
+    /// <summary>Takes the bake's three stamps off, so a re-bake cannot inherit the last
+    /// one's answer. See <see cref="StampBeam"/>.</summary>
+    internal void ClearBeamStamp()
+    {
+        _stemUpOverride = null;
+        _beamId = null;
+        _pureBeamedStemTip = null;
+    }
 
     /// <summary>
     /// A stem direction the WRITER asked for — <c>@stemUp</c> / <c>@stemDown</c> — or null.
@@ -891,7 +934,16 @@ public sealed record RestItem : MusicItem
     /// the closest beam is guessed four staff positions past the neighbouring heads'
     /// average, never crossing the staff centre by more than two.
     /// </summary>
-    public double PureBeamShift { get; init; }
+    public double PureBeamShift { get => _pureBeamShift; init => _pureBeamShift = value; }
+    private double _pureBeamShift;
+
+    /// <summary>The bake's door for a rest a manual beam runs over; see
+    /// <see cref="NoteItem.StampBeam"/> for why it writes in place and why the clear
+    /// below has to run first.</summary>
+    internal void StampPureBeamShift(double shift) => _pureBeamShift = shift;
+
+    /// <inheritdoc cref="NoteItem.ClearBeamStamp"/>
+    internal void ClearBeamStamp() => _pureBeamShift = 0.0;
 
     /// <summary>
     /// The voice direction forced on this rest by a <c>voice { } { }</c> span
@@ -1100,10 +1152,12 @@ public sealed record ChordItem : MusicItem
     public bool HasBeamEnd { get; init; }
     /// <summary>Identity of the beam this chord's stem belongs to; see
     /// <see cref="NoteItem.BeamId"/>.</summary>
-    public int? BeamId { get; init; }
+    public int? BeamId { get => _beamId; init => _beamId = value; }
+    private int? _beamId;
     /// <summary>The PURE tip of this chord's beamed stem, in staff positions (+up); see
     /// <see cref="NoteItem.PureBeamedStemTip"/>.</summary>
-    public double? PureBeamedStemTip { get; init; }
+    public double? PureBeamedStemTip { get => _pureBeamedStemTip; init => _pureBeamedStemTip = value; }
+    private double? _pureBeamedStemTip;
     /// <summary>Whether this chord belongs to a beam group (set by BeamDetector; true for a
     /// mid-beam chord too). See <see cref="NoteItem.IsBeamed"/>.</summary>
     public bool IsBeamed => BeamId is not null;
@@ -1143,7 +1197,25 @@ public sealed record ChordItem : MusicItem
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
 
     /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
-    public bool? StemUpOverride { get; init; }
+    public bool? StemUpOverride { get => _stemUpOverride; init => _stemUpOverride = value; }
+    private bool? _stemUpOverride;
+
+    /// <inheritdoc cref="NoteItem.StampBeam"/>
+    internal void StampBeam(bool stemUp, int beamId, double? pureTip)
+    {
+        _stemUpOverride = stemUp;
+        _beamId = beamId;
+        if (pureTip is not null)
+            _pureBeamedStemTip = pureTip;
+    }
+
+    /// <inheritdoc cref="NoteItem.ClearBeamStamp"/>
+    internal void ClearBeamStamp()
+    {
+        _stemUpOverride = null;
+        _beamId = null;
+        _pureBeamedStemTip = null;
+    }
 
     /// <summary>A stem direction the writer asked for; see <see cref="NoteItem.ForcedStemUp"/>.</summary>
     public bool? ForcedStemUp { get; init; }

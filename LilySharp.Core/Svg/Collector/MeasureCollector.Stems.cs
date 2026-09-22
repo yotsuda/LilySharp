@@ -327,27 +327,54 @@ public sealed partial class MeasureCollector
         if (measures.Count == 0)
             return;
 
+        // ⚠️ CLEAR BEFORE STAMPING, AND OVER EVERY ITEM — the stamps below are written IN
+        // PLACE (NoteItem.StampBeam's remarks carry the account), so an item this bake has
+        // seen before arrives carrying the last bake's answer: the collect resume's recording
+        // shares these instances, and a resumed walk adopts them as its prefix. A note that
+        // has STOPPED being a beam member is the case that matters — the stamp loop would
+        // never reach it, and it would keep the direction and pure tip of a beam it is no
+        // longer in. StemUpOverride and PureBeamedStemTip are CONTENT (MeasureContentKey
+        // excludes only BeamId), so a stale one is believed, not noticed.
+        // ⚠️ Cheap on purpose: one walk, no allocation. The voice-forced directions
+        // (ResolveVoiceStemDirections) and the re-baked tips (RebakePureBeamedTips) are
+        // written AFTER this pass in every road, so clearing here cannot lose them.
+        // ⚠️ NOTHING OBSERVES IT YET, and that is stated rather than discovered. MEASURED
+        // (session 517, 232 books × 8 forward keystrokes): 340,977 of 3,683,264 items — 9.3%
+        // — DO arrive carrying a stamp, so this is not a walk over clean items; but the
+        // re-bake wrote back exactly what they arrived with every one of those times
+        // (RE-BAKE DIFFERED 0). Defeating the clear moved neither the 8,857-test suite nor
+        // one of the corpus's 1,856 keystrokes, and two books written to provoke it (a
+        // cross-measure manual beam gaining and losing its closing bracket) did not either.
+        // It is kept because the mechanism permits the break the corpus does not exhibit —
+        // an adopted prefix item whose group changed — and the price of keeping it is a walk
+        // that allocates nothing.
+        foreach (var measure in measures)
+            foreach (var item in measure.Items)
+            {
+                switch (item)
+                {
+                    case NoteItem n: n.ClearBeamStamp(); break;
+                    case ChordItem c: c.ClearBeamStamp(); break;
+                    case RestItem r: r.ClearBeamStamp(); break;
+                }
+            }
+
         var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
         var groups = new BeamDetector().DetectBeamGroups(
             voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
             ProbeTupletBrackets(),
             memo: BeamMemo);
 
-        // ⚠️ ONE REBUILD PER MEASURE, NOT ONE PER STAMP. Every bake below used to write
-        // through measure.Items.SetItem(...) and new Measure(...), so a measure with eight
-        // beamed notes was rebuilt eight times — a fresh item array and a fresh Measure per
-        // stamp — and then again for the pure-tip pass. MEASURED (session 191, keystroke
-        // allocation): this method was 5.8 MB of perf-plain1k's 8.5 MB collect, and plain1k
-        // is beamed eighths where perf-fingstack1k (unbeamed quarters) pays 0.
-        // The stamps now land in a per-measure working array and each touched measure is
-        // rebuilt once, after every group has had its say.
-        // ⚠️ READS MUST SEE THE STAMPS ALREADY MADE — the pure-tip pass reads the directions
-        // the first pass wrote — which is why reads go through ItemAt rather than through
-        // measures, and why the commit happens after the loop and not inside it.
-        var work = new MusicItem[]?[measures.Count];
-        MusicItem[] Work(int mi) => work[mi] ??= measures[mi].Items.ToArray();
-        int ItemCount(int mi) => work[mi]?.Length ?? measures[mi].Items.Length;
-        MusicItem ItemAt(int mi, int i) => work[mi] is { } w ? w[i] : measures[mi].Items[i];
+        // ⚠️ NO REBUILD AT ALL — the stamps are written into the items themselves. Sessions
+        // 191 and 192 got the copying down from one rebuilt Measure and one rebuilt item PER
+        // STAMP to one of each per measure and per note; session 517 took the last of it
+        // away, once the corpus had shown (session 515) that nothing caches an item by its
+        // identity and that the recording's shared instances can be handled by the clear
+        // above. MEASURED: 563.18 stamped notes a keystroke × 144 B (sessions 514 and 516).
+        // ⚠️ READS STILL SEE THE STAMPS ALREADY MADE — the pure-tip pass reads the directions
+        // the first pass wrote — which is now simply true of the live items.
+        int ItemCount(int mi) => measures[mi].Items.Length;
+        MusicItem ItemAt(int mi, int i) => measures[mi].Items[i];
 
         // ⚠️ ONE REBUILD PER NOTE, NOT ONE PER STAMP — the same rule as the measures above,
         // one level down. The direction/BeamId stamp and the pure-tip stamp used to be two
@@ -409,24 +436,11 @@ public sealed partial class MeasureCollector
                 double tip = stemUp ? upTip : downTip;
                 double? bakedTip = hasBand && !double.IsInfinity(tip) ? tip : null;
 
-                MusicItem? updated = ItemAt(mi, itemIndex) switch
+                switch (ItemAt(mi, itemIndex))
                 {
-                    NoteItem n => n with
-                    {
-                        StemUpOverride = stemUp, BeamId = beamId,
-                        PureBeamedStemTip = bakedTip ?? n.PureBeamedStemTip,
-                    },
-                    ChordItem c => c with
-                    {
-                        StemUpOverride = stemUp, BeamId = beamId,
-                        PureBeamedStemTip = bakedTip ?? c.PureBeamedStemTip,
-                    },
-                    _ => null,
-                };
-                if (updated == null)
-                    continue;
-
-                Work(mi)[itemIndex] = updated;
+                    case NoteItem n: n.StampBeam(stemUp, beamId, bakedTip); break;
+                    case ChordItem c: c.StampBeam(stemUp, beamId, bakedTip); break;
+                }
             }
             // Bake the PURE beam-push estimate into every rest this manual beam runs
             // over, so horizontal spacing sees the rest roughly where the beam will
@@ -475,22 +489,14 @@ public sealed partial class MeasureCollector
                 if (shiftSs == 0.0)
                     continue;
 
-                Work(mi)[restStem.ItemIndex] = restItem with { PureBeamShift = shiftSs * 2.0 };
+                restItem.StampPureBeamShift(shiftSs * 2.0);
             }
         }
 
-        // Commit: every measure a stamp landed in is rebuilt exactly once, with the whole
-        // set of stamps it accumulated. Untouched measures keep their original instance.
-        for (int mi = 0; mi < work.Length; mi++)
-        {
-            if (work[mi] is not { } items)
-                continue;
-            // A record COPY (see WithItems above): every beamed measure went through here
-            // AFTER FinalizeMeasures set its EndHighlightAliases, and lost them (session 395).
-            // The work array is this pass's own and never written again, so it is WRAPPED:
-            // ImmutableArray.Create(array) would copy it whole (session 503).
-            measures[mi] = measures[mi] with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) };
-        }
+        // No commit step: the stamps are already in the items the measures hold. (Until
+        // session 517 this rebuilt every touched Measure from a working array — see the
+        // remarks above, and session 395's EndHighlightAliases, which the record copy that
+        // used to stand here was written to preserve.)
     }
 
 }

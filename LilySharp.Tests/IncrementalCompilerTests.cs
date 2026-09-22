@@ -1626,6 +1626,81 @@ public class IncrementalCompilerTests
         Assert.Equal((1, 1), session.LastBeamMemo);
     }
 
+    /// <summary>
+    /// A cross-measure manual beam whose CLOSING bracket an edit takes away: the measure
+    /// holding the opener is the resume's adopted prefix, the closer is re-collected, and
+    /// the picture must still be a full recompile's.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN TO PROVOKE A STALE BEAM STAMP, AND IT DOES NOT. The bake writes its three
+    /// stamps into the items (<c>NoteItem.StampBeam</c>) and the resume's recording shares
+    /// those instances, so <c>ResolveBeamStemDirections</c> clears before it stamps. An open
+    /// manual beam is not a carry — <c>MeasureCollector.WalkCarriesNothing</c> lists graces,
+    /// tremolo pairs, cue depth, voice scope and phrase transposes, no beam — so a checkpoint
+    /// MAY stand between the two brackets, which is what this book arranges. It passes with
+    /// the clear defeated as well (session 517), as does the corpus; the clear's necessity is
+    /// still unobserved and said so at its site. What these two books DO pin is the
+    /// neighbouring behaviour: a manual beam gaining or losing its closer across a resume
+    /// still equals a full compile.
+    /// </remarks>
+    [Fact]
+    public void ManualBeamLosesItsCloser_AcrossAResume_MatchesFull()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c4 d e f |
+              c4 d e f |
+              g8[ a b c d c b a |
+              b8] a g f e f g a |
+              c4 d e f |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // The closer goes: the group the openers stand in is no longer the same group.
+        var change = Replace(src, "b8] a g f", "b8 a g f");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    /// <summary>The same book from the other side: the closer ARRIVES where there was none,
+    /// so notes that were auto-beamed join a manual group reaching back over the adopted
+    /// measure. See the remarks above.</summary>
+    [Fact]
+    public void ManualBeamGainsACloser_AcrossAResume_MatchesFull()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c4 d e f |
+              c4 d e f |
+              g8[ a b c d c b a |
+              b8 a g f e f g a |
+              c4 d e f |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "b8 a g f", "b8] a g f");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
     /// <summary>Within-collect dedup: a book of content-identical measures detects ONE
     /// measure and replays the rest even on the session's very first (full) compile — and
     /// that compile still equals a memo-free full generate.</summary>
