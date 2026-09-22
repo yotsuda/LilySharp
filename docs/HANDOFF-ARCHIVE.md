@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第490セッションの経緯
+
+### 1.1 第490セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第489 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒭′ の残り。
+★ **`-Start p490` の 1 コマンドで §0 が全部済んだ**（HEAD `bdbbf6ff`・full 8832 / 0 / 3 / 8835・`-Archive 488` も自動）。
+
+★★★ **⑴ 列の skyline を 1 段で建てた＝render 2,832,827 → 2,785,589（−47,238 B／打鍵・−1.67%）**。`ItemSkylineFactory.Build`／`GraceSkyline` と `TieChordOutline` は `FromBoxes(...)` で skyline を建て、**それを `PaddedCopy` に写して捨てていた**（padding 0 なら `Clone`＝誰も持っていない skyline の丸写し）。
+  新設 `HorizontalSkyline.FromBoxesPadded`＝答えの寸法（`n×(1+MaxPads)`）で list を建て、その場に pad を足す（`AppendPads`＝`Padded` と共有）。**同じ building・同じ順・同じ capacity**。網 `HorizontalSkylineEnvelopeTests.FromBoxesPadded_IsFromBoxesThenPaddedCopy`（3 例・pad を足さない毒で 2 本赤）。出力は同一（`Zz490Hash`＝5824 行・0 差）。`PaddedCopy` は呼び手 0 だが網の参照綴りとして残した。
+  ⚠️ **census の外だった**＝p488 の census は `FromBoxes` の `new List<…>(boxes.Count)`（括弧に中身がある綴り＝⒮¹⁵ の族）を数えない。**捨てられる中間物は「建てた直後に写す」形で探すと早い**。
+★ **⑵ ⒭′ の `LyricBindings.cs:148` は直す軒ではなかった**（計器で 9 回・158 KB／回→索引を先に建てると 547 B／回＝`DescendantIndex` の建設費。green の歩きに替えても 0 差だったので戻した）。
+  full 8835 / 0 / 3 / 8838（+3＝新しい網）。生成物 2 つ再生成（新しい `0.0` の比較 1 行に LILYPOND-REF を付けて Green）。
+★ **⑶ 終了時**: コード 3 ファイル（HorizontalSkyline・ItemSkylineFactory・TieChordOutline）＋テスト 1 本＋生成物 2 つ。
+
 ## 以下は第489セッションの経緯
 
 ### 1.1 第489セッション（2026-09-22・YT-DELL2）
