@@ -960,6 +960,7 @@ public sealed class IncrementalCompiler
                         WalkProbe = resumer,
                         BeamMemo = _beamMemo,
                         NestedResume = _nestedResume,
+                        RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
                     };
                     var resumed = SvgGenerator.CollectScore(resumedCollector, tree, spec);
                     int walks = 0, adopted = 0, splicedWalks = 0, spliced = 0;
@@ -1026,6 +1027,7 @@ public sealed class IncrementalCompiler
             WalkProbe = recorder,
             BeamMemo = _beamMemo,
             NestedResume = _nestedResume,
+            RecordsPitchTrace = false, // no reader (MeasureCollector.RecordsPitchTrace)
         };
         var score = SvgGenerator.CollectScore(source, tree, spec);
         _collectSource = source;

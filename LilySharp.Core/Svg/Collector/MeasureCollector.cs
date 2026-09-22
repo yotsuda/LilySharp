@@ -233,6 +233,19 @@ public sealed partial class MeasureCollector
     /// <summary>Resolved absolute pitch for each note/chord-member/grace, in
     /// source order (e.g. written <c>c''</c> → <c>C6</c>).</summary>
     public IReadOnlyList<PitchTraceEntry> PitchTrace => _pitchTrace;
+    /// <summary>Whether the walk writes <see cref="PitchTrace"/> — on by default; the
+    /// renderer's collectors (<see cref="IncrementalCompiler"/>) turn it off and their
+    /// nested collects inherit it.</summary>
+    /// <remarks>
+    /// Every reader of the trace (<c>check --pitches</c>, the LSP's facts, the probes)
+    /// collects with a collector of its own, so a render's trace had no reader: one entry
+    /// and one formatted string per pitch, rebuilt from empty on every keystroke (session
+    /// 500, the type map over the reader's corpus: PitchTraceEntry[] alone 36 KB a
+    /// keystroke). The trace is one of the resume side tables
+    /// (<see cref="CumulativeSideTables"/>); a recording and the resume that adopts it are
+    /// made by collectors of the same setting, so both hold it empty or both hold it.
+    /// </remarks>
+    internal bool RecordsPitchTrace { get; init; } = true;
     /// <summary>Lyric lines whose syllable count overflowed their bound notes
     /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
     public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricsCollector.Warnings;
@@ -1877,14 +1890,14 @@ public sealed partial class MeasureCollector
         var seeded = MidBarBreaks ?? MidBarBreakTable.Empty;
 
         if (NestedResume?.Begin(channelKey) is not { } begun)
-            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded }
+            return Finish(new MeasureCollector { BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace }
                 .CollectMultiStaff(tree, spec, harvestStructureMarks));
 
         if (begun.IsResume)
         {
             try
             {
-                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded }
+                return Finish(new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace }
                     .CollectMultiStaff(tree, spec, harvestStructureMarks));
             }
             catch (CollectResumeAbortException)
@@ -1895,7 +1908,7 @@ public sealed partial class MeasureCollector
             begun = (CollectWalkProbe.Recorder(), false);
         }
 
-        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded };
+        var sub = new MeasureCollector { WalkProbe = begun.Probe, BeamMemo = BeamMemo, SeededMidBarBreaks = seeded, RecordsPitchTrace = RecordsPitchTrace };
         var result = sub.CollectMultiStaff(tree, spec, harvestStructureMarks);
         // A nested collect cut under a settled table must not be resumed under a later one.
         if (!seeded.IsEmpty)

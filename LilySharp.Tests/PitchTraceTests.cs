@@ -100,6 +100,28 @@ public sealed class PitchTraceTests
         return collector.PitchTrace.Select(e => e.Pitch).OrderBy(p => p).ToList();
     }
 
+    /// <summary>
+    /// The renderer's collectors do not write the trace (session 500: it had no reader
+    /// there), and turning it off changes nothing else the walk makes — the trace is a
+    /// report beside the music, never an input to it.
+    /// </summary>
+    [Fact]
+    public void ACollectorWithoutTheTrace_CollectsTheSameMusic()
+    {
+        var tree = SyntaxTree.Parse(TwoParts);
+        var on = new MeasureCollector();
+        var onScore = on.Collect(tree);
+        var off = new MeasureCollector { RecordsPitchTrace = false };
+        var offScore = off.Collect(tree);
+
+        Assert.NotEmpty(on.PitchTrace);
+        Assert.Empty(off.PitchTrace);
+        static string Music(LilySharp.Core.Svg.Model.Score s) => string.Join(" | ",
+            s.Voice.Measures.Select(m => string.Join(" ", m.Items.Select(i =>
+                i is LilySharp.Core.Svg.Model.NoteItem n ? $"{n.StaffPosition}/{n.Duration}" : i.GetType().Name))));
+        Assert.Equal(Music(onScore), Music(offScore));
+    }
+
     [Fact]
     public void EachPart_ResolvesFromItsOwnAnchor()
     {

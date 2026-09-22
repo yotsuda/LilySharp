@@ -1052,7 +1052,8 @@ public sealed partial class MeasureCollector
         };
 
         // RelativeOctave keeps the ORIGINAL octave for the next note's chain.
-        _pitchTrace.Add(new PitchTraceEntry(position, FormatPitch(dStep, dAlt, dOctave)));
+        if (RecordsPitchTrace)
+            _pitchTrace.Add(new PitchTraceEntry(position, FormatPitch(dStep, dAlt, dOctave)));
         return new ResolvedPitch(basePosition, actualOctave, dStep, dAlt, dOctave);
     }
 
