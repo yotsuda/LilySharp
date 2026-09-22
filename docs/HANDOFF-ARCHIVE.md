@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第510セッションの経緯
+
+### 1.1 第510セッション（2026-09-23・YT-DELL2）
+
+新しい会話（第509 の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
+★ **`-Start p510` の 1 コマンドで §0 が全部済んだ**（HEAD `d4c529b8`・full 8849 / 0 / 3 / 8852・`-Archive 508` も自動）。
+
+★★ **⑴ ⒫′ の残り `VerticalSkyline.Padded` を値付けして頭を閉じた＝render 1,746,054 → 1,742,814（−3,240・−0.19%）**（`e6f60dfb`・出力は `Zz510Hash`＝5,824 行 0 差）。計器は `Padded` に呼び手の `[CallerFilePath]`／`[CallerLineNumber]` を足し、打鍵の窓だけ前後の割当を数える（Lab `sessions/p510/Zz510.cs.txt`＋`Zz510Ab.cs.txt`）＝**3.88 回 3,830 B／打鍵**・頭は `PageLayouter.cs:121` の系どうしの距離 1.79 回 × 1,836 B（入 30.5・出 53.7 棟）で**一度読んで捨てる**。⇒ `Distance(other, hPad)` は同じ pad と同じ resolve を**向きごとに thread が貸す skyline** に入れる＝ビット同一が構成で言える。⚠️ 全対の `SkylineMath.DistancePadded` に替える手は採らなかった（resolve 済みの封筒と ULP で食い違いうる・n×5m の歩き）。
+  **毒 3 本**（Lab `sessions/p510/poisons.ps1`）: 貸し出しの答えの古い棟を resolve に混ぜる 157 赤・両向きで 1 つの引き出し 81 赤・**緑＝引き出しから出さない**（入れ子が無い＝注釈どおり）。full 8849 / 0 / 3 / 8852。
+  ⚠️ **HANDOFF に語りを入れる置換を PowerShell の*二重引用符*で書くと、`` `e `` が ESC に化け（SHA の頭の `e` が消えて `DeadCitationsDoNotGrow` が 731/730 で赤）、ほかの backtick は黙って消える**＝文書の文字列は必ず `var1` で渡す（CLAUDE-OPERATIONS §1 の「`$`・backtick は var1〜var4」と同じ罠）。
+§7 7.5＝Core '+' 76 行・REF／OWN 0（割当の書き換えだけで LP の意味は動かさない＝`Distance` の LILYPOND-REF は既存）。`-End p510` の門は全部 OK（Lab `sessions/p510/end.txt`）。
+
 ## 以下は第509セッションの経緯
 
 ### 1.1 第509セッション（2026-09-22・YT-DELL2）

@@ -146,6 +146,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **`b.part` 3,616 B 0.045%**。呼び出しは両側とも **2.17 回／打鍵**で、above は **4,010 回のうち 4,009 回が
   hit>0**・hit した system は **90,781／打鍵 22.6**）。⚠️ **`prog` は「鍵を建てる」ので、*安くする*には
   鍵の形を変える＝土台の変更**
+  ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**残り＝`part`（system で仕分ける）と miss の建設**＝値段は未測定
 - ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・読みは先行 pad と同じ list を thread scratch に作る＝ビット同一・書きの前に実体化）。`VerticalSkyline.Padded` は**第510 が値付けした＝3,830 B／打鍵 3.88 回・0.22%**（Lab `sessions/p510/price.log`）。頭の `Distance(other, hPad)` 側（`PageLayouter.cs:121` 3,289＋`MusicMarkEngraver.cs:916` 11）は**貸し出しの答え skyline に resolve して閉じた**（−3,240）。**残り＝`OutsideStaffStacker.cs:3231` 530 B**（`Place` の padding ごとの cache＝置き場の間ずっと生きる＝尾）
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
@@ -198,6 +199,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第512セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第511 のすぐ後）。ユーザー指示「続けて」＝第511 の「建てた数と読まれた数」の計器を型の地図の次の頭へ。
+★ **`-Start p512` の 1 コマンドで §0 が全部済んだ**（HEAD `0dd3ab3a`・full 8850 / 0 / 3 / 8853・`-Archive 510` も自動）。
+
+★★★ **⑴ 段の上下の積み memo が hit で鍵を建てなくなった＝render 1,702,685 → 1,660,209（−42,476・−2.5%）**（`8b1830db`・`Zz512Hash`＝5,824 行 0 差）。HEAD の型の地図（Lab `sessions/p512/type-price-head.txt`・render 1,702,489）の土台でない頭 `ArticulationLayout[]` 34.5 KB を追うと ⒨ の program だった＝**`BuildProgram` の前後の割当を結果で分けた**（`Zz512`）: **above hit 48.92 回／打鍵 × 727 B＝35,600・below hit 8.65 回 6,534**（miss は 2.57 回）。⇒ 両 memo に lent な `Probe`＝program を list に集め、`TryMatch` は stored の配列と span で比べ、miss だけ `ToEntry`。`SortedSet` は lent list の sort＋重複除去（同じ昇順）。
+  **毒 5 本**（`poisons.ps1`）: probe を clear しない 6 網赤。⚠️ **above が articulation を比べない・below が群の構造を比べない＝全体緑＝既存の健全性の穴**（偽 hit は stored の出力を再生する。振る舞いの網は text／bar number／tuplet しか流さない）⇒ **網 `StackMemoKeyTests`＝両 `SystemEntry` の program の field を reflection で歩き、各 field 単独で decline し、各 field が `ToEntry` を生き残ることを言う**（その 2 毒で赤）。used の重複を残す毒は緑（probe と stored が一致＝同値）。
+  §7 7.5＝Core '+' 322 行・REF／OWN 0（鍵の集め方と比べ方の書き換えだけ＝LP の意味は動かさない）。`-End p512` の門は全部 OK・full 8854 / 0 / 3 / 8857（網 +4）。
+
+## 以下は第511セッションの経緯
+
 ### 1.1 第511セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き（第510 のすぐ後）。ユーザー指示「続けて」。
@@ -207,18 +219,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **毒 4 本**（`poisons.ps1`）: `ItemOf` が live を見ない→契約の網だけ赤（memo の鍵が読むものは一致＝頁は動かない）・位置で引く 30 赤・guard 抜き緑（不変条件）。⚠️ **shift の写しが live を落とす毒は全体緑**＝網 `ReplayWithLiveItems_TheShiftedCopyStillAnswersTheLiveVoice` を足した（その毒で赤）。`SkylineMergeTests.ABatchsResultList…` が 1 回だけ赤＝割当の閾値の犠牲者（梁と無関係）。
   ★ **効いた見方＝「建てた数」と「読まれた数」を同じ窓で数える**（⑴ 読み手のいない副産物の、個体ごとの版）。`Measure` は同じ計器で ⒮²³ を起票（§1.0）。
   §7 7.5＝Core '+' 128 行・REF／OWN 0（読み手の住所を群に移しただけ＝LP の意味は動かさない）。`-End p511` の門は全部 OK・full 8850 / 0 / 3 / 8853（網 +1）。
-
-## 以下は第510セッションの経緯
-
-### 1.1 第510セッション（2026-09-23・YT-DELL2）
-
-新しい会話（第509 の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
-★ **`-Start p510` の 1 コマンドで §0 が全部済んだ**（HEAD `d4c529b8`・full 8849 / 0 / 3 / 8852・`-Archive 508` も自動）。
-
-★★ **⑴ ⒫′ の残り `VerticalSkyline.Padded` を値付けして頭を閉じた＝render 1,746,054 → 1,742,814（−3,240・−0.19%）**（`e6f60dfb`・出力は `Zz510Hash`＝5,824 行 0 差）。計器は `Padded` に呼び手の `[CallerFilePath]`／`[CallerLineNumber]` を足し、打鍵の窓だけ前後の割当を数える（Lab `sessions/p510/Zz510.cs.txt`＋`Zz510Ab.cs.txt`）＝**3.88 回 3,830 B／打鍵**・頭は `PageLayouter.cs:121` の系どうしの距離 1.79 回 × 1,836 B（入 30.5・出 53.7 棟）で**一度読んで捨てる**。⇒ `Distance(other, hPad)` は同じ pad と同じ resolve を**向きごとに thread が貸す skyline** に入れる＝ビット同一が構成で言える。⚠️ 全対の `SkylineMath.DistancePadded` に替える手は採らなかった（resolve 済みの封筒と ULP で食い違いうる・n×5m の歩き）。
-  **毒 3 本**（Lab `sessions/p510/poisons.ps1`）: 貸し出しの答えの古い棟を resolve に混ぜる 157 赤・両向きで 1 つの引き出し 81 赤・**緑＝引き出しから出さない**（入れ子が無い＝注釈どおり）。full 8849 / 0 / 3 / 8852。
-  ⚠️ **HANDOFF に語りを入れる置換を PowerShell の*二重引用符*で書くと、`` `e `` が ESC に化け（SHA の頭の `e` が消えて `DeadCitationsDoNotGrow` が 731/730 で赤）、ほかの backtick は黙って消える**＝文書の文字列は必ず `var1` で渡す（CLAUDE-OPERATIONS §1 の「`$`・backtick は var1〜var4」と同じ罠）。
-§7 7.5＝Core '+' 76 行・REF／OWN 0（割当の書き換えだけで LP の意味は動かさない＝`Distance` の LILYPOND-REF は既存）。`-End p510` の門は全部 OK（Lab `sessions/p510/end.txt`）。
 
 ## 2. 開いている作業
 
