@@ -455,7 +455,9 @@ internal static partial class SharedRenderer
             // Lyrics carry the source offset on their nested LyricItem (the renderer draws
             // data-pos from Item.SourcePosition); re-derive that from the live Lyrics table.
             LyricLayouts = ResolveArr(layout.LyricLayouts, score.Lyrics,
-                static (l, it) => l with { Item = l.Item with { SourcePosition = it.SourcePosition } },
+                // LyricLayout and its item are classes: rebuilt only when the offset moved.
+                static (l, it) => l.Item.SourcePosition == it.SourcePosition
+                    ? l : l with { Item = l.Item with { SourcePosition = it.SourcePosition } },
                 static l => l.SourceIndex),
             // Glissando data-pos = its start note's source offset; re-read it from the live
             // score by the note locator the layout carries.
@@ -531,16 +533,16 @@ internal static partial class SharedRenderer
         if (layouts.IsDefaultOrEmpty)
             return layouts;
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
-        var b = layouts.ToBuilder();
+        TieVariantLayout[]? copy = null;
         int i = 0;
-        while (i < b.Count)
+        while (i < layouts.Length)
         {
-            var head = b[i];
+            var head = layouts[i];
             int run = 1;
-            while (i + run < b.Count
-                   && b[i + run].Kind == head.Kind
-                   && b[i + run].MeasureIndex == head.MeasureIndex
-                   && b[i + run].ItemIndex == head.ItemIndex)
+            while (i + run < layouts.Length
+                   && layouts[i + run].Kind == head.Kind
+                   && layouts[i + run].MeasureIndex == head.MeasureIndex
+                   && layouts[i + run].ItemIndex == head.ItemIndex)
                 run++;
 
             if ((uint)head.MeasureIndex < (uint)measures.Length)
@@ -557,13 +559,40 @@ internal static partial class SharedRenderer
                     if (live.Length == run)
                         for (int k = 0; k < run; k++)
                             if (live[k].SourcePosition >= 0)
-                                b[i + k] = b[i + k] with { SourcePosition = live[k].SourcePosition };
+                                Put(ref copy, layouts, i + k,
+                                    layouts[i + k] with { SourcePosition = live[k].SourcePosition });
                 }
             }
             i += run;
         }
-        return b.MoveToImmutable();
+        return Result(copy, layouts);
     }
+
+    /// <summary>
+    /// Writes <paramref name="value"/> at <paramref name="i"/> of a copy of
+    /// <paramref name="layouts"/>, made at the first value that differs from the one there.
+    /// </summary>
+    /// <remarks>
+    /// Copy-on-write, because a render almost always re-derives exactly the offsets the
+    /// layout already holds (they only move when a memoized layout is served after an edit
+    /// above it): every family used to be copied whole on every render — 10,827 B a
+    /// keystroke for the pass (session 502, the reader's corpus).
+    /// </remarks>
+    private static void Put<T>(ref T[]? copy, ImmutableArray<T> layouts, int i, T value)
+    {
+        if (copy is null)
+        {
+            if (System.Collections.Generic.EqualityComparer<T>.Default.Equals(value, layouts[i]))
+                return;
+            copy = layouts.ToArray();
+        }
+        copy[i] = value;
+    }
+
+    private static ImmutableArray<T> Result<T>(T[]? copy, ImmutableArray<T> layouts)
+        => copy is null
+            ? layouts
+            : System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(copy);
 
     // staff index -> that staff's VOICES, the host tables the note-locator annotations
     // resolve against. Same staff-index convention as the layout build path
@@ -616,22 +645,26 @@ internal static partial class SharedRenderer
     {
         if (layouts.IsDefaultOrEmpty || staffVoices == null)
             return layouts;
-        var b = layouts.ToBuilder();
-        for (int i = 0; i < b.Count; i++)
+        T[]? copy = null;
+        for (int i = 0; i < layouts.Length; i++)
         {
-            if (current(b[i]) < 0)
+            var l = layouts[i];
+            if (current(l) < 0)
                 continue;
-            var (s, v, m, it) = locator(b[i]);
+            var (s, v, m, it) = locator(l);
             if (staffVoices.TryGetValue(s, out var voices)
                 && (uint)v < (uint)voices.Length
                 && (uint)m < (uint)voices[v].Measures.Length)
             {
                 var items = voices[v].Measures[m].Items;
-                if ((uint)it < (uint)items.Length && field(b[i], items[it]) is var pos and >= 0)
-                    b[i] = resolve(b[i], pos);
+                // The bow is rebuilt only when its offset moved: TieLayout / SlurLayout are
+                // classes, so `resolve` allocates.
+                if ((uint)it < (uint)items.Length && field(l, items[it]) is var pos and >= 0
+                    && pos != current(l))
+                    Put(ref copy, layouts, i, resolve(l, pos));
             }
         }
-        return b.MoveToImmutable();
+        return Result(copy, layouts);
     }
 
     private static ImmutableArray<T> ResolveNoteArr<T>(
@@ -642,20 +675,20 @@ internal static partial class SharedRenderer
     {
         if (layouts.IsDefaultOrEmpty || staffVoices == null)
             return layouts;
-        var b = layouts.ToBuilder();
-        for (int i = 0; i < b.Count; i++)
+        T[]? copy = null;
+        for (int i = 0; i < layouts.Length; i++)
         {
-            var (s, v, m, it) = locator(b[i]);
+            var (s, v, m, it) = locator(layouts[i]);
             if (staffVoices.TryGetValue(s, out var voices)
                 && (uint)v < (uint)voices.Length
                 && (uint)m < (uint)voices[v].Measures.Length)
             {
                 var items = voices[v].Measures[m].Items;
                 if ((uint)it < (uint)items.Length)
-                    b[i] = resolve(b[i], items[it].SourcePosition);
+                    Put(ref copy, layouts, i, resolve(layouts[i], items[it].SourcePosition));
             }
         }
-        return b.MoveToImmutable();
+        return Result(copy, layouts);
     }
 
     // Refreshes each layout's resolved field from the side-table item it references
@@ -666,14 +699,14 @@ internal static partial class SharedRenderer
     {
         if (layouts.IsDefaultOrEmpty)
             return layouts;
-        var b = layouts.ToBuilder();
-        for (int i = 0; i < b.Count; i++)
+        T[]? copy = null;
+        for (int i = 0; i < layouts.Length; i++)
         {
-            int si = sourceIndex(b[i]);
+            int si = sourceIndex(layouts[i]);
             if ((uint)si < (uint)items.Length)
-                b[i] = resolve(b[i], items[si]);
+                Put(ref copy, layouts, i, resolve(layouts[i], items[si]));
         }
-        return b.MoveToImmutable();
+        return Result(copy, layouts);
     }
 
 }
