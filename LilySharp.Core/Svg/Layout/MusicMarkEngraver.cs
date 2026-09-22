@@ -475,33 +475,6 @@ internal static class MusicMarkEngraver
     /// Section labels from measures are merged with explicit music marks and
     /// stacked using outside-staff-priority when they overlap.
     /// </summary>
-    /// <summary>
-    /// Measure indices covered by an above-staff volta bracket, and the highest
-    /// (most negative) volta Y across all brackets.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: define-grobs.scm:4325 VoltaBracketSpanner outside-staff-priority=600</remarks>
-    private static (HashSet<int> Measures, double TopYUp) BuildVoltaCoverage(
-        ImmutableArray<VoltaBracketLayout> voltaBrackets)
-    {
-        var voltaMeasures = new HashSet<int>();
-        // Highest volta position in the mark frame (Y-up above the top-staff middle).
-        // vb.YUp is Y-up from the system top, so its mark-frame Y-up is 2.0 + vb.YUp.
-        // Start at the top-staff top line (Y-up 2.0) and keep the largest (highest).
-        double voltaTopYUp = 2.0;
-        if (!voltaBrackets.IsDefaultOrEmpty)
-        {
-            foreach (var vb in voltaBrackets)
-            {
-                for (int mi = vb.StartMeasureIndex; mi <= vb.EndMeasureIndex; mi++)
-                    voltaMeasures.Add(mi);
-                double vbYUp = 2.0 + vb.YUp;
-                if (vbYUp > voltaTopYUp)
-                    voltaTopYUp = vbYUp;
-            }
-        }
-        return (voltaMeasures, voltaTopYUp);
-    }
-
     public static ImmutableArray<MusicMarkLayout> Calculate(
         ScoreTextMetrics fonts,
         Score? score,
@@ -509,7 +482,6 @@ internal static class MusicMarkEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
-        ImmutableArray<VoltaBracketLayout> voltaBrackets = default,
         ImmutableArray<ChordNameLayout> chordNames = default,
         ImmutableArray<LyricLayout> lyrics = default,
         // Optional per-mark gate: a mark for which this returns false reserves its
@@ -588,9 +560,6 @@ internal static class MusicMarkEngraver
         // Group by (MeasureIndex, Position) for collision stacking.
         // Marks at the same measure+position are sorted by outside-staff-priority
         // and stacked outward from the staff.
-
-        // Build volta bracket coverage: measure indices that have a volta bracket above.
-        var (voltaMeasures, voltaTopYUp) = BuildVoltaCoverage(voltaBrackets);
 
         // Group by measure + position + ANCHOR TIMING so only marks that share a
         // horizontal column stack vertically. Without the timing, a mid-measure
@@ -777,16 +746,9 @@ internal static class MusicMarkEngraver
             SortByOutsideStaffPriority(aboveMarks);
             SortByOutsideStaffPriority(belowMarks);
 
-            // Check if any mark in this group overlaps with a volta bracket
-            // A loop: the lambda was a delegate per group over an environment built at the
-            // method's entry (session 470's allocation-tick price by type).
-            bool hasVoltaOverlap = false;
-            for (int k = 0; k < aboveMarks.Count && !hasVoltaOverlap; k++)
-                hasVoltaOverlap = voltaMeasures.Contains(aboveMarks[k].Mark.MeasureIndex);
-
-            // LILYPOND-REF: axis-group-interface.cc:652-681 avoid_outside_staff_collisions
-            // Marks with priority > 600 (VoltaBracketSpanner) must be placed above volta.
-            // Base Y for above-staff stacking: if volta present, start above volta top.
+            // (A volta bracket is cleared by the outside-staff pass, OutsideStaffStacker, not
+            // here: an arm that started the marks above the volta top was never reached -- its
+            // one caller passed no brackets -- and was removed in session 479.)
             // Base Y-up for above-staff stacking (from the top-staff middle, up+).
             // AboveStaffOffset is a device (down+) offset, so its Y-up value is 2 − it.
             double baseAboveYUp = 2.0 - AboveStaffOffset;
@@ -818,11 +780,6 @@ internal static class MusicMarkEngraver
             // sixth digit even when the row's ink grows by 1.023251 under it. Ledger
             // lyrics.chord-row.marked.empty-row.* carries the sweep and the LilyPond side.
             // The 0.440000 measured above stands; only the diagnosis under it was wrong.
-            if (hasVoltaOverlap)
-            {
-                // Place marks above the volta bracket with outside-staff padding.
-                baseAboveYUp = voltaTopYUp + OutsideStaffPadding;
-            }
 
             // Chord symbols are the line CLOSEST to the staff (LP: the marks'
             // outside-staff priority 1500 beats ChordNames), so a mark standing over a

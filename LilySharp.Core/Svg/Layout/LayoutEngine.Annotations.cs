@@ -1051,7 +1051,7 @@ internal sealed partial class LayoutEngine
                 return null;
             };
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
-            ctx.Fonts, score, musicMarks, systems, ml, measures, default,
+            ctx.Fonts, score, musicMarks, systems, ml, measures,
             chordNames: chordNameLayouts, lyrics: lyricLayouts, keepMarkText: keepMarkText,
             prefixTimeSignatureX: ctx.PrefixTimeSignatureX,
             lineStartBarlineX: ctx.LineStartBarlineX,
