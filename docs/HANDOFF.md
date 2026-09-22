@@ -98,9 +98,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
-  `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` 31.8 回 8,180 B（距離 1 つのために skyline 2 つ＝box から直接 `SkylineMath` で測れば消える）。
+  `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（**第494 が呼び手で数えた＝設計の値段**: 建てる 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976＝梁の刻印は collect ごとに新しい BeamId なので必ず写す・`TabResolver.ResolveTabStrings` 509,020＝弦番号の書き込み。消すなら刻印を item の外（側表）へ出す＝土台の変更）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）**。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・`new int[`／`new double[` 141 軒を書き換えて数える・`array-sites.txt`＝残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB）。⚠️ Dictionary／HashSet の bucket も Int32[] だがこの census には出ない。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
-  ⇒ 次の候補: `SpacingRules.MeasureSprings.cs:1282/1290`（`FromBoxes(…).Distance(CreateLeftSkyline(…))`＝距離だけ）・`AccidentalPlacement` の `reference` の head skyline・`Clone()` の他の呼び手。
+  ⇒ **第498 が `AccidentalPlacement` の参照 skyline を閉じた（−38,098）**。`SpacingRules.MeasureSprings.cs:1282/1290` は**コーパスで 0 回**＝値段が無い。次の候補: `Clone()` の他の呼び手・`VerticalSkyline.Padded`（⒫′ の残り）。
 - ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
@@ -197,6 +197,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第498セッション（2026-09-22・YT-DELL2）
+
+新しい会話（`/clear` の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
+★ **`-Start p498` の 1 コマンドで §0 が全部済んだ**（HEAD `e45fa35c`・full 8842 / 0 / 3 / 8845・`-Archive 496` も自動）。
+
+★★★ **⑴ 臨時記号の参照 skyline を建てない＝render 2,090,060 → 2,050,098（−39,962・−1.9%）**。計器（呼びの前後の `GC.GetAllocatedBytesForCurrentThread`・Lab `sessions/p498/probe.log`）で §1.0 の候補 4 軒を値付けした＝`AccidentalPlacement` の参照 **33.18 列・33.24 merge／打鍵で 38,098 B**・`LineStartColumn.MinimumDistance` **6.97 回 1,903 B**・`MeasureSprings.cs:1282/1290` **0 回**・`MmrRodMinimumDistance` の `FromBoxes` 側 0.02 回。
+  **列の臨時記号はほぼ必ず 1 つ**＝merge のほぼ全部が「最後の臨時記号の後」で、**それを読む者はいない**⇒ 最後の merge を建てない。残り（heads の skyline と中間の merge）は `PlacementScratch` の 2 本（`ReferenceA`／`B`）に交互に書く（`HorizontalSkyline.FromBoxesInto`／`ShiftedRaisedOverInto`＝入力と同じ target は投げる）。`LineStartColumn` の 2 本は thread の引き出し（取り出して使い、Clear して返す）。
+  網 `HorizontalSkylineEnvelopeTests.TheIntoSpellings_ReplaceWhatTheKeptSkylineHeld`。毒 3 本（Lab `sessions/p498/poisons.ps1`）＝**merge を 1 つ多く飛ばす→20 赤**（臨時記号・snapshot）／**`FromBoxesInto`・`ShiftedRaisedOverInto` の `Clear` を抜く→赤はこの unit だけ**（＋毒で行番号が動いた census 1 本）＝⚠️ 古い building を持ち越す害は**スイートの誰も見ない**（`PlacementScratch` は give で Clear するので二重の備え）。出力は同一（`Zz498Hash`＝5,824 ページ 0 差）。full 8843 / 0 / 3 / 8846。生成物 2 つ。
+★ **⑵ 終了時**: コード 3 ファイル（AccidentalPlacement・HorizontalSkyline・LineStartColumn）＋テスト 1 本＋生成物 2 つ。
+
+## 以下は第497セッションの経緯
+
 ### 1.1 第497セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第496 のすぐ後）。ユーザー指示「次便は、このセッションでやる方が有利なら着手して」＝⒫′（pad を保留したまま持つ skyline）。**この会話で有利と判断**＝第490〜第492 で `HorizontalSkyline`（`FromBoxesPadded`・`ShiftedRaisedOver`・render 内 memo の「共有物は触らない」契約）を触ったばかりで、その不変条件が手元にある。
@@ -208,22 +220,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   網 `HorizontalSkylineEnvelopeTests.APendingPadding_ReadsWritesAndMergesAsTheEagerCopy`（毒 3 本＝読みが pad を無視・`Raise` が実体化しない・`Merge` が相手の pad を落とす＝全部赤）。出力は同一（`Zz497Hash`＝0 差）。full 8842 / 0 / 3 / 8845。生成物 2 つ（census に `_pendingPad` の `0.0` 比較 6 行＝Yellow）。
   ⚠️ **予測（第443 の 120 KB）より小さい**＝その後の便で列の skyline 自体が減った（第490 の 1 段建て・第492 の render 内 memo）。`VerticalSkyline.Padded` は別の家（resolve する）で手付かず。
 ★ **⑵ 終了時**: コード 1 ファイル（HorizontalSkyline）＋テスト 1 本＋生成物 2 つ。
-
-## 以下は第496セッションの経緯
-
-### 1.1 第496セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第495 のすぐ後）。ユーザー指示「続けて」＝§1.0 を畳んでから、配列 census の残りの頭。
-★ **`-Start p496` の 1 コマンドで §0 が全部済んだ**（HEAD `a892b784`・full 8841 / 0 / 3 / 8844・`-Archive 494` も自動）。
-
-★ **⑴ §1.0 を畳んだ**（「掃き終わった島」の表 13 行 → 教訓 3 行・⒮⁶ 6 行 → 2 行）。
-★★ **⑵ 型の地図を HEAD で取り直した**（Lab `sessions/p496/type-price-head.txt`・render 2,130,454）＝**String 365 KB・NoteItem 251 KB・SkylineBuilding[] 209 KB・GreenNode[] 160 KB**・SystemDetails 80 KB・Int32[] 72 KB。
-  ⚠️ **GreenNode[] は render のものではない**＝Parser の constructor に計器（harness が render の間だけ旗）で **render 中の parse 0 回・外 2,328 回**。**型の地図は parse の割り当てが窓に滲む**（窓内の tick 合計 2,382,572 が実測 render 2,130,454 を 25 万上回る）＝**parser の型（GreenNode[]・SyntaxToken[]・SyntaxTokenNode …）は割り引いて読む**。
-  ⚠️ **配列 census の B/key は warm-up 込み**＝呼びの少ない軒（`LineBreakDpSession.cs:133-135` の 236 回＝冊ごとの初回だけ）は打鍵ではほぼ 0。呼びの数で読む。
-  ⇒ **残る頭は全部「土台」**：String（SVG の出力そのもの）・NoteItem（梁と弦の刻印＝側表へ）・SkylineBuilding[]（⒫′ の保留 pad）。尾は `BeamScoringProblem` の 1 梁 6 配列（約 12 KB）・`LedgerRods.cs:90-94`（5 配列 × 83,950 回）。
-★ **⑶ `LedgerColumnsOf` の 5 配列を最初の加線つき符頭まで建てない**＝render 2,130,636 → 2,127,511（−3,125）。出力同一（`Zz496Hash`＝0 差）。full 8841 / 0 / 3 / 8844。
-  ⚠️ **初期値（±∞）は網が無い**＝`upLeft` を 0 で始める毒はスイート緑（変更前から同じ・この便は値を変えていない）。観測するなら「右へずれた加線つき符頭 1 つ」の `LedgerColumnsOf` を直接読む unit を書く。
-★ **⑷ 終了時**: コード 1 ファイル（SpacingRules.LedgerRods）。
 
 ## 2. 開いている作業
 

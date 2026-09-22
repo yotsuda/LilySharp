@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第496セッションの経緯
+
+### 1.1 第496セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第495 のすぐ後）。ユーザー指示「続けて」＝§1.0 を畳んでから、配列 census の残りの頭。
+★ **`-Start p496` の 1 コマンドで §0 が全部済んだ**（HEAD `a892b784`・full 8841 / 0 / 3 / 8844・`-Archive 494` も自動）。
+
+★ **⑴ §1.0 を畳んだ**（「掃き終わった島」の表 13 行 → 教訓 3 行・⒮⁶ 6 行 → 2 行）。
+★★ **⑵ 型の地図を HEAD で取り直した**（Lab `sessions/p496/type-price-head.txt`・render 2,130,454）＝**String 365 KB・NoteItem 251 KB・SkylineBuilding[] 209 KB・GreenNode[] 160 KB**・SystemDetails 80 KB・Int32[] 72 KB。
+  ⚠️ **GreenNode[] は render のものではない**＝Parser の constructor に計器（harness が render の間だけ旗）で **render 中の parse 0 回・外 2,328 回**。**型の地図は parse の割り当てが窓に滲む**（窓内の tick 合計 2,382,572 が実測 render 2,130,454 を 25 万上回る）＝**parser の型（GreenNode[]・SyntaxToken[]・SyntaxTokenNode …）は割り引いて読む**。
+  ⚠️ **配列 census の B/key は warm-up 込み**＝呼びの少ない軒（`LineBreakDpSession.cs:133-135` の 236 回＝冊ごとの初回だけ）は打鍵ではほぼ 0。呼びの数で読む。
+  ⇒ **残る頭は全部「土台」**：String（SVG の出力そのもの）・NoteItem（梁と弦の刻印＝側表へ）・SkylineBuilding[]（⒫′ の保留 pad）。尾は `BeamScoringProblem` の 1 梁 6 配列（約 12 KB）・`LedgerRods.cs:90-94`（5 配列 × 83,950 回）。
+★ **⑶ `LedgerColumnsOf` の 5 配列を最初の加線つき符頭まで建てない**＝render 2,130,636 → 2,127,511（−3,125）。出力同一（`Zz496Hash`＝0 差）。full 8841 / 0 / 3 / 8844。
+  ⚠️ **初期値（±∞）は網が無い**＝`upLeft` を 0 で始める毒はスイート緑（変更前から同じ・この便は値を変えていない）。観測するなら「右へずれた加線つき符頭 1 つ」の `LedgerColumnsOf` を直接読む unit を書く。
+★ **⑷ 終了時**: コード 1 ファイル（SpacingRules.LedgerRods）。
+
 ## 以下は第495セッションの経緯
 
 ### 1.1 第495セッション（2026-09-22・YT-DELL2）
