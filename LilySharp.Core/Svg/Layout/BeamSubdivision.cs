@@ -150,6 +150,10 @@ internal static class BeamSubdivision
         return false;
     }
 
+    /// <summary><see cref="CalcBeaming"/>'s seed for the previous stem's right ranks — read,
+    /// never written, so one array serves every beam.</summary>
+    private static readonly int[] InitialLastRight = [0];
+
     /// <summary>
     /// LILYPOND-REF: lily/beam.cc:294 Beam::calc_beaming.
     /// Assigns each stem's left/right beams to aligned integer ranks (relative to the
@@ -168,7 +172,13 @@ internal static class BeamSubdivision
             for (int s = 0; s < stems[i].RightCount; s++) ranks[i].Right.Add(s);
         }
 
-        var lastRight = new List<int> { 0 };  // last_beaming = (() . (0))
+        // ⚠️ A REFERENCE, NOT A COPY: last_beaming is the previous stem's right ranks AFTER
+        // this loop rewrote them, and the loop writes only the CURRENT stem's lists — so the
+        // list it points at never changes again, and the copy it used to take (plus the
+        // seed's own list) was always equal to what it copied. MEASURED (session 506, the
+        // owner's corpus, 232 books × 8 forward keystrokes): 54.10 copies + 28.75 seeds a
+        // keystroke, the head of the List<int> census.
+        IReadOnlyList<int> lastRight = InitialLastRight;  // last_beaming = (() . (0))
         int lastDir = 0;
         int lastRightCount = 0;
         // first_slice_of_prev_dirs[0], [1] — both Slice(0) initially.
@@ -221,7 +231,7 @@ internal static class BeamSubdivision
 
             if (curRight.Count > 0)
             {
-                lastRight = new List<int>(curRight);
+                lastRight = curRight;
                 lastDir = thisDir;
                 lastRightCount = rightBeamCount;
             }
