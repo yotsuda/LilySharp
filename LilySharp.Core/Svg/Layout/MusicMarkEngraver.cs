@@ -566,9 +566,26 @@ internal static class MusicMarkEngraver
         // tempo (e.g. \tempo at beat 2) stacked onto the line-start tempo/section
         // label even though they sit at different X, stealing the bottom slot and
         // floating the opening marks far above the staff (grand-staff regression).
-        var groups = markEntries
-            .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position, e.Mark.AnchorTiming))
-            .ToList();
+        // The groups are GroupBy's, spelt with lent containers: a group per key in the order
+        // its key first appears, each group's marks in arrival order. MEASURED (session 508's
+        // census of every copy in Core, Release, the reader's corpus, eight forward keystrokes
+        // a book): the lookup, its groupings and the list of them were 3,721 B a keystroke,
+        // 2.17 passes. Every list is read by the placement loop below alone and given back at
+        // the method's one exit (see RentGroupOf).
+        var groups = ListPool<List<(MusicMarkItem Mark, double X, int SourceIndex)>>.Rent();
+        var groupOf = RentGroupOf();
+        foreach (var e in markEntries)
+        {
+            var key = (e.Mark.MeasureIndex, e.Mark.Position, e.Mark.AnchorTiming);
+            if (!groupOf.TryGetValue(key, out int gi))
+            {
+                gi = groups.Count;
+                groupOf[key] = gi;
+                groups.Add(ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Rent());
+            }
+            groups[gi].Add(e);
+        }
+        GiveGroupOf(groupOf);
         GiveMarkEntries(markEntries);
 
         // BELOW-staff marks (pedal text etc.) hang under the LAST staff of
@@ -1278,7 +1295,37 @@ internal static class MusicMarkEngraver
         // ToImmutable COPIES (see the drawer's remark), so the builder is finished with here.
         var placed = layouts.ToImmutable();
         GiveLayoutBuilder(layouts);
+        foreach (var group in groups)
+            ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Give(group);
+        ListPool<List<(MusicMarkItem Mark, double X, int SourceIndex)>>.Give(groups);
         return placed;
+    }
+
+    /// <summary>
+    /// The key → group index map <see cref="Calculate"/> groups a pass's marks with, lent from
+    /// one dictionary the thread keeps between passes.
+    /// </summary>
+    /// <remarks>
+    /// Read only by the grouping walk, and given back cleared the moment the walk is done — a
+    /// map parked dirty would send the next pass's first mark of a measure into a group this
+    /// pass made. RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom).
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int>? t_groupOf;
+
+    /// <summary>Takes the thread's group map, or makes the thread's first.</summary>
+    private static Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int> RentGroupOf()
+    {
+        var map = t_groupOf ?? new Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int>();
+        t_groupOf = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished grouping's map back, emptied, with its capacity.</summary>
+    private static void GiveGroupOf(Dictionary<(int, MusicMarkPosition, Semantics.Fraction), int> map)
+    {
+        map.Clear();
+        t_groupOf = map;
     }
 
     /// <summary>
@@ -1339,7 +1386,7 @@ internal static class MusicMarkEngraver
     /// MEASURED (session 457's census, Release, the reader's corpus, eight forward keystrokes
     /// a book): 2.17 passes a keystroke at 11.51 marks each (max 23), and all 4,010 lists built
     /// were unreachable by the time the render that built them returned — the one reader is
-    /// the <c>GroupBy(...).ToList()</c>, whose groupings hold copies of the entries. The lists
+    /// the grouping walk, whose groups hold copies of the entries. The lists
     /// and their growth ladders were 1,678 B a keystroke, 0.05% of it.
     /// <para>
     /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE

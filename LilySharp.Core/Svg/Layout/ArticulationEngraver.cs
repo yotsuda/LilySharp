@@ -180,15 +180,27 @@ internal static class ArticulationEngraver
     /// script-priority order (staccato innermost, then tenuto, then default
     /// scripts, then fermata), independent of the written order. Groups by note
     /// (first-occurrence index keeps notes in their original order) and sorts by
-    /// priority within each note; OrderBy is stable so equal priorities keep the
+    /// priority within each note; the sort is stable so equal priorities keep the
     /// written order. Reorders the ITERATION (not the array): SourceIndex must
     /// stay the articulation's original index for click-to-source mapping.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/script.scm script-priority.</remarks>
+    /// <remarks>LILYPOND-REF: scm/script.scm script-priority.
+    /// <para>
+    /// The sort is an insertion sort over the two keys read once into stack buffers, and it is
+    /// STABLE as the <c>OrderBy</c>/<c>ThenBy</c> chain it replaced was — the arrival order is
+    /// already note order nearly everywhere, so the walk is close to linear. MEASURED (session
+    /// 508's census of every copy in Core, Release, the reader's corpus, eight forward
+    /// keystrokes a book): the chain's key arrays, maps and result were 2,296 B a keystroke,
+    /// 1.74 sorts of 41 scripts.
+    /// </para>
+    /// </remarks>
     private static int[] OrderByScriptPriority(ImmutableArray<ArticulationItem> articulations)
     {
-        int[] order = Enumerable.Range(0, articulations.Length).ToArray();
-        if (articulations.Length > 1)
+        int n = articulations.Length;
+        int[] order = new int[n];
+        for (int i = 0; i < n; i++)
+            order[i] = i;
+        if (n > 1)
         {
             // One entry per distinct note, so the articulation count is the BOUND
             // (several scripts on one note share an entry) — and it is the tightest
@@ -203,13 +215,28 @@ internal static class ArticulationEngraver
                 var nk = (a.StaffIndex, a.MeasureIndex, a.ItemIndex);
                 if (!firstSeen.ContainsKey(nk)) firstSeen[nk] = k;
             }
-            order = order
-                .OrderBy(i => firstSeen[(articulations[i].StaffIndex,
-                    articulations[i].MeasureIndex, articulations[i].ItemIndex)])
-                .ThenBy(i => ScriptPriority(articulations[i].Type))
-                .ToArray();
+            Span<int> note = n <= 256 ? stackalloc int[n] : new int[n];
+            Span<int> priority = n <= 256 ? stackalloc int[n] : new int[n];
+            for (int k = 0; k < n; k++)
+            {
+                var a = articulations[k];
+                note[k] = firstSeen[(a.StaffIndex, a.MeasureIndex, a.ItemIndex)];
+                priority[k] = ScriptPriority(a.Type);
+            }
             firstSeen.Clear();
             t_firstSeen = firstSeen;
+            for (int k = 1; k < n; k++)
+            {
+                int x = order[k];
+                int j = k;
+                while (j > 0 && (note[order[j - 1]] > note[x]
+                                 || (note[order[j - 1]] == note[x] && priority[order[j - 1]] > priority[x])))
+                {
+                    order[j] = order[j - 1];
+                    j--;
+                }
+                order[j] = x;
+            }
         }
         return order;
     }

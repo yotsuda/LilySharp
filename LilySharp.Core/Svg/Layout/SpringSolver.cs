@@ -231,7 +231,7 @@ internal sealed class SpringSolver
             curForce = sp.BlockingForce;
         }
 
-        GiveSorted(sortedSprings);
+        ListPool<Spring>.Give(sortedSprings);
         // Couldn't fit: LP returns the last spring's blocking force with fits=false
         // (no clamp). LILYPOND-REF: lily/simple-spacer.cc:285-286.
         return (curForce, fits);
@@ -256,15 +256,13 @@ internal sealed class SpringSolver
     /// MEASURED (session 508, Release, the reader's corpus, eight forward keystrokes a book):
     /// the LINQ sort and its list were 7,577 B a keystroke, 7.12 compressions of 29.1 springs.
     /// The list is written here and read only by the compression walk, which gives it back
-    /// on its one exit; renting takes it out of the drawer (session 421's idiom), so a
-    /// re-entrant call builds its own. WHAT IT RETAINS is one emptied list at the thread's
-    /// longest compressed line.
+    /// to <see cref="ListPool{T}"/> on its one exit (session 509 moved it there from a drawer
+    /// of its own: the pool is the same idiom, one spelling of it).
     /// </para>
     /// </remarks>
     private static List<Spring> RentSortedByBlockingForce(IReadOnlyList<Spring> springs)
     {
-        var sorted = t_sorted ?? new List<Spring>(springs.Count);
-        t_sorted = null;
+        var sorted = ListPool<Spring>.Rent();
         for (int k = 0; k < springs.Count; k++)
         {
             var s = springs[k];
@@ -275,16 +273,6 @@ internal sealed class SpringSolver
         }
         return sorted;
     }
-
-    /// <summary>Puts a finished compression's list back, emptied, with its capacity.</summary>
-    private static void GiveSorted(List<Spring> sorted)
-    {
-        sorted.Clear();
-        t_sorted = sorted;
-    }
-
-    [ThreadStatic]
-    private static List<Spring>? t_sorted;
 
     // LILYPOND-REF: lily/simple-spacer.cc:295-305 Simple_spacer::spring_positions()
     /// <summary>

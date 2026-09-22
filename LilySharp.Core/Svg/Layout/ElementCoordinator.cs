@@ -2020,7 +2020,7 @@ internal sealed class ElementCoordinator
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         // The layouts, the columns and each column's list are lent (ListPool) and given back at
         // the one exit below: ToImmutableArray copies the layouts, and a column is read only by
-        // this loop (OrderBy builds its own list). MEASURED (session 475's census): 234 + 643 B a
+        // this loop (the sort takes a lent list of its own). MEASURED (session 475's census): 234 + 643 B a
         // keystroke for the two outer lists, none alive after a render; the per-column lists
         // (the `[]` below until session 476) are a collection expression no census counts.
         var tieLayouts = ListPool<TieLayout>.Rent();
@@ -2088,11 +2088,27 @@ internal sealed class ElementCoordinator
             // Bottom -> top, the order LilyPond's front()/back() and its monotonicity terms are
             // written in. TieDetector already emits a chord's ties that way; sorting here says
             // so rather than relying on it.
-            var ordered = column.OrderBy(t => t.StaffPosition).ToList();
+            // Stable, as the OrderBy it replaced was, and into a lent list like the column's
+            // own — both lists here are read by this iteration alone and given back at its end.
+            // MEASURED (session 508's census of every copy in Core, Release, the reader's
+            // corpus, eight forward keystrokes a book): the OrderBy and the Select/Distinct
+            // chain were 2,345 B a keystroke, 7.14 columns of one tie.
+            var ordered = ListPool<TieItem>.Rent();
+            foreach (var t in column)
+            {
+                int at = ordered.Count;
+                while (at > 0 && ordered[at - 1].StaffPosition > t.StaffPosition)
+                    at--;
+                ordered.Insert(at, t);
+            }
 
             // The whole COLUMN's bound heads, which is what each chord outline is built from —
-            // or a chord's upper tie recedes past a head that is there.
-            var tiedPositions = ordered.Select(t => t.StaffPosition).Distinct().ToList();
+            // or a chord's upper tie recedes past a head that is there. Distinct, in the order
+            // the positions first appear.
+            var tiedPositions = ListPool<int>.Rent();
+            foreach (var t in ordered)
+                if (!tiedPositions.Contains(t.StaffPosition))
+                    tiedPositions.Add(t.StaffPosition);
 
             // A TAB column's directions come from the STRING LINES, so they are decided here,
             // once for the column, and handed to every segment's specifications.
@@ -2141,6 +2157,8 @@ internal sealed class ElementCoordinator
                 for (int s = 0; s < segments.Length; s++)
                     tieLayouts.Add(solved[i, s]);
             }
+            ListPool<int>.Give(tiedPositions);
+            ListPool<TieItem>.Give(ordered);
         }
 
         var laidOut = tieLayouts.ToImmutableArray();

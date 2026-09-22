@@ -493,7 +493,15 @@ internal sealed partial class LayoutEngine
         var staffYByIndex = ctx.StaffYByIndex;
         var staffByIndex = ctx.StaffByIndex;
 
-        var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
+        // At its exact length: the SelectMany chain grew a buffer 4-8-16-… and copied it out,
+        // 3,269 B a keystroke for 2.17 passes of 98 measures (session 508's census).
+        int measureCount = 0;
+        foreach (var s in systems)
+            measureCount += s.Measures.Length;
+        var mlBuilder = ImmutableArray.CreateBuilder<MeasureLayout>(measureCount);
+        foreach (var s in systems)
+            mlBuilder.AddRange(s.Measures);
+        var ml = mlBuilder.MoveToImmutable();
 
         // Per-system staff-Y resolver. A staff's within-system offset can differ
         // between systems under hara-kiri (a hidden upper staff shifts the staves
