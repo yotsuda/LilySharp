@@ -149,21 +149,42 @@ public static class TabFingeringPlanner
         int n = events.Count;
         var result = new int[n];
         if (n == 0) return result;
-        new Trellis(n, weights ?? TabFingeringWeights.Default, handSpan).Solve(events, tuning, result);
+        // The thread's trellis, taken out of its drawer and put back only after a solve that
+        // finished (see t_trellis): a throw in between costs the next plan a new one.
+        var trellis = t_trellis ?? new Trellis();
+        t_trellis = null;
+        trellis.Reset(n, weights ?? TabFingeringWeights.Default, handSpan);
+        trellis.Solve(events, tuning, result);
+        t_trellis = trellis;
         return result;
     }
+
+    /// <summary>The trellis <see cref="Plan"/> solves in, kept by the thread between plans.</summary>
+    /// <remarks>
+    /// Its three state arrays are sized sixteen states an event and were new on every plan:
+    /// <c>State[]</c> 63,836 B a keystroke by the runtime's allocation ticks over the reader's
+    /// corpus (session 493), and the cost and back-pointer arrays beside it 74,873 B between
+    /// them by the array census (session 495, warm-ups included). Reuse is sound because
+    /// nothing is read that this plan has not written: the states, costs and back-pointers
+    /// only below <c>_count</c> (reset to 0), the event starts only below the event count,
+    /// the shift tables whole per event (PrepareShifts), and <c>_seenHand</c> is cleared
+    /// entry by entry after every use. WHAT IT RETAINS is the thread's largest plan at about
+    /// 24 B a state.
+    /// </remarks>
+    [System.ThreadStatic]
+    private static Trellis? t_trellis;
 
     /// <summary>Every event's states in one flat run: event i's are [start[i], start[i + 1]).</summary>
     private sealed class Trellis
     {
         private const int ShiftTableSize = 32;
 
-        private readonly TabFingeringWeights _w;
-        private readonly int _handSpan;
-        private readonly int[] _start;
-        private State[] _states;
-        private double[] _cost;
-        private int[] _back; // a state's cheapest predecessor, as an index into the run; -1 for none
+        private TabFingeringWeights _w = TabFingeringWeights.Default;
+        private int _handSpan;
+        private int[] _start = System.Array.Empty<int>();
+        private State[] _states = System.Array.Empty<State>();
+        private double[] _cost = System.Array.Empty<double>();
+        private int[] _back = System.Array.Empty<int>(); // a state's cheapest predecessor, as an index into the run; -1 for none
         private int _count;
 
         // The current event's shift cost by frets travelled, with the hand held and free.
@@ -175,15 +196,22 @@ public static class TabFingeringPlanner
         private readonly List<int> _openHands = new();
         private bool[] _seenHand = new bool[ShiftTableSize];
 
-        public Trellis(int events, TabFingeringWeights w, int handSpan)
+        /// <summary>Readies the trellis for a plan of <paramref name="events"/> events: at least
+        /// sixteen states an event of room (what a new one was given), and nothing counted.</summary>
+        public void Reset(int events, TabFingeringWeights w, int handSpan)
         {
             _w = w;
             _handSpan = handSpan;
-            _start = new int[events];
+            _count = 0;
+            if (_start.Length < events)
+                _start = new int[events];
             int capacity = events * 16;
-            _states = new State[capacity];
-            _cost = new double[capacity];
-            _back = new int[capacity];
+            if (_states.Length < capacity)
+            {
+                _states = new State[capacity];
+                _cost = new double[capacity];
+                _back = new int[capacity];
+            }
         }
 
         public void Solve(IReadOnlyList<TabEvent> events, int[] tuning, int[] result)
