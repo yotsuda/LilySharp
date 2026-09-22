@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第474セッションの経緯
+
+### 1.1 第474セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第473 のすぐ後）。ユーザー指示「着手して」＝第473 が起票した ⒳⁹。
+★ **`-Start p474` の 1 コマンドで §0 が全部済んだ**（HEAD `808ece99`・未 push 29・full `sessions/p474/run1.trx` 8794 / 0 / 3 / 8797・`-Archive 472` も自動＝moved 15 行 1,350 字）。
+★★★ **⑴ LP 双子を先に取った**（`audit/lp-geometry/probes/slur-shared-note-script.ly`・`lysc ly` の双子 4 冊）。中央線からの accent＝**共有の音 2.8160／始まりだけ 2.8160／終わりだけ 2.6700／スラー無し 2.6700**＝LP は走っているスラーを優先（`slur.cc:374-377`）。
+★★★ **⑵ 起票が名指した `CoveringSlurPiece` を直したら、予測 2.8139 に対して 3.5355 と外れた**。外れ方から読むと、**本当の原因は収集側にあった**: `SlurDetector` は 1 つの音の `(` を `)` より先に積むので、`c'4( d c)( d)` を「0→3 の 1 本＋2→2 の長さ 0」に組んでいた（ページもそう描く）。
+LP は閉じるイベントを先に処理する（`slur-engraver.cc:295-324`）。文法文書のハウススタイルも `d4)( e`（その音で終わるものが先）で、**4 人の読み手のうち `TabResolver`（hammer-on）と `PartCombiner` は既に閉じる→開くだった**＝`SlurDetector` と `SlurPairingScanner` の 2 人だけが逆。
+`MarkerRunLookaheadTests.SlurCloseThenOpenOnOneNoteDoesBoth` は「d が 1 本を閉じて次を開く」と書きながら**印が 2 つ付いたことしか主張していなかった**（RULES §5.0 の round trip の形）。
+⇒ **2 人を閉じる→開くに揃え**、`CoveringSlurPiece` にも「この音の後も続くスラーが先」の鍵を入れた（両方とも開始小節 0 なので、組み方を直しても開始小節だけでは終わった方が勝つ）。直した後は **2.8139 / 2.8139 / 2.67 / 2.67**。
+★★ **⑶ 射程**: 両方の印を持つ音は**実コーパス 330 冊・追跡 609 冊ともに 0**（`SlurDetector` の計数器・陽性対照は 1 と数えた・`slur-both-marks-census.txt`）。実コーパスは **5,824 ページ 0 差**（`Zz474Hash.cs.txt`・基準 p439）、snapshot も 0。
+★★ **⑷ 網 4 本・毒 3 本・外れ 0**（`poisons.txt`）: ページを開く→閉じるに戻す＝`…PairsAsTwoSlurs` と `ANoteThatEndsOneSlurAndStartsTheNext…` の 2 赤／警告の scan を戻す＝`BothSlurMarksOnANoteWithNothingOpen…` だけ赤／running の鍵を外す＝`ANoteThatEnds…` だけ赤。`…IsNotReportedUnpaired` は慣用の綴りに警告が出ないことを留める。
+★ **⑸ ユーザーの問い**＝「LP が受け入れない綴りは拒否すべきか／音楽的にあり得るなら独自文法か」⇒ 1 音スラーは記譜上意味を持たないので**綴りを作らない**と答えた。警告のままか、エラーにするかは ⒞ ⒳¹⁰。
+★ **⑹ 終了時**: code `979b3391`（Core 3＋網 4＋プローブ＋棚卸し 2 枚＋CHANGELOG）。最終 full **8798 / 0 / 3 / 8801**（`run2.trx`＝`-End`・+4＝網）。§7.5 Core '+' 38／REF 3／OWN 0＝3 本とも LP から導出（閉じる→開くは `process_music` の字面・running の鍵は ⒝＝LP の `slurs[0]` は*最初に始まった*走っているスラーで、Lily# は走っている中で開始が最も遅いもの＝入れ子のスラーでだけ食い違う・コードに ⚠️）。§7.6 新しい数は 0（2.8160 等は LP プローブの実測・註に出所）。§7.7＝その入れ子の差（どちらの母集団にも 0 冊）。**push はユーザー**（Lab も）。
+
 ## 以下は第473セッションの経緯
 
 ### 1.1 第473セッション（2026-09-22・YT-DELL2）

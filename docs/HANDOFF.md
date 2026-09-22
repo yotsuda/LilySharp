@@ -76,6 +76,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ⇒ **詰まったら語りを削るのではなく、まずここの ✅ と重複を落とす**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
+- ★★★★ **U9 ユーザー報告（2026-09-22・第476 の途中）＝`space.lys` の各小節の先頭に不要な横の余白が広い＝「最近の修正で回帰した」**
+  （本は `LilySharp-Lab\corpora\ベースタブLy\space.lys`＝ユーザーが 13:24 に作った未追跡の 1 冊・弦番号 `\2` 付きの単旋律 1 段・`break` 2 つ）。
+  **次の便はこれを見る（ユーザー指示）**。第476 は切り分けの 1 手だけ打った＝**作業ツリー（第476 の未 commit 変更）と HEAD `5ea7e374` は `space.lys` をバイト同一に描く**
+  （Lab `sessions/p476/space-work.svg`／`space-head.svg`）＝退行は第476 の変更ではなく、それより前。⇒ 1 手目は **どの commit で動いたかの二分**（第472〜第475 の code commit
+  `0487d57c`・`0e6ca180`・`41e9d2f2`・`979b3391`・`61a96bb4` と、それより前）と、**LP 双子で「余白が本当に余計か」**（RULES §5.0＝起票は直す前に実物で再現）
 - ★★ **⒮⁶ 「建てない」の島の残り＝手が動くのは約 20,400 B／打鍵 0.46%**（第455 の census＝Lab `sessions/p455/`・
   分母 4,520,635・**戻る便は回し直すこと**＝住所は census 時点）。うち 6,409 は下の ⒮⁸。単独で残るのは
   `MeasureLayouter.cs:466` **1,070**／`SvgSystemFragmentCache.cs:237` **781**（1 件 1,928 B＝`Entry` を class にするか鍵を減らす＝設計変更）／
@@ -100,11 +105,12 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **LP の旗が喋るのは*和音*の場合**（`set_column_chord_outline` は Stem の旗を無条件に入れる＝
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
-- ★★★ **⒮¹⁰ 「器ごと憶える」の島の残り＝scratch 270 軒 約 53,300 B／打鍵＝1.69%**（**第475 が HEAD で数え直した**＝Lab `sessions/p475/`・census `site-prices.txt`・liveness `site-liveness.txt`・join `joined.csv`・
+- ★★★ **⒮¹⁰ 「器ごと憶える」の島の残り＝scratch 約 263 軒 約 44,000 B／打鍵＝1.4%**（**第475 が HEAD で数え直した**＝Lab `sessions/p475/`・census `site-prices.txt`・liveness `site-liveness.txt`・join `joined.csv`・
   **分母 3,151,759**＝parse 317,050＋render 2,834,709・脚は `instrument.ps1`＋`Zz475.template.cs`＋`Zz475Leg.cs.txt` を `Zz475_MODE=price|live` で 2 回＝**値段と liveness は同じ run では訊けない**。値段 21 秒・liveness 33 秒）。
-  HEAD の census は scratch 277 軒 59,541・escape 18 軒 102,629（頭は `VerticalSkyline.cs:76` 94,888）。**第475 が 7 軒 −6,265 を閉じた**。
-  ⇒ **次の軒**（HEAD の住所＝第475 の census）: `MeasureLayouter.cs:499` **1,075**（1.00 件／回＝`StaffItemsAt` が list を*返す*＝呼び手を読む）／`OutsideStaffStacker.cs:645` **910** と `:704` 623（memo front の仕分け＝辞書の列挙順が memo の登録順に効く＝⒨ の家）／
-  `LayoutEngine.PagingSkylines.cs:908` **895**（system ごとの tie の list を `AddBowGroup` へ渡す＝持つかを読む）／`Parser.Music.cs:27` **859**／`SpacingRules.LedgerRods.cs:157` 738／`SharedRenderer.cs:812` 652／`ElementCoordinator.cs:2028` 643／`PageLayouter.cs:361` 622。
+  HEAD の census は scratch 277 軒 59,541・escape 18 軒 102,629（頭は `VerticalSkyline.cs:76` 94,888）。
+  そこから**第475 が 7 軒 −6,265・第476 が 7 軒 −9,214**（`ListPool<T>` を新設＝同じ種類の list を複数・入れ子で持つ軒の Stack pool）。
+  ⇒ **次の軒**（第475 の census の住所）: `OutsideStaffStacker.cs:645` **910**（memo front の仕分け＝辞書の列挙順が memo の登録順に効く＝⒨ の家）／`SpacingRules.LedgerRods.cs:157` 738（list を*返す*）／
+  それ以下は 1 軒 600 B 未満。⚠️ **1 軒 1,000 B 未満の尾に入った**＝回すなら census を回し直して頭を取り直す
   ⚠️ **`LayoutEngine.Prelim.cs:460` 6,192・`LedgerLineSpannerEngraver.cs:274` 5,797・`KnuthPlassBreaker.cs:781` 2,779 は*1 呼びで N 個*建てる軒**＝別の直し方（この島の数に混ぜない）。
   ⚠️⚠️ **直し方は 3 つ**＝⑴ park／⑵ 建てない／⑶ 寸法ちょうどの配列。**軒ごとに要るのは「自分のコードがどこで読み終えるか」を読むことだけ**——liveness は必要条件しか言わない（RULES §5.3）。
   ★ **会計の当たり**＝第458 99.97%・第459 98.57%・第460 104.2%・第461 102.1%・第462 99.7%・第467 98.0〜113.9%・**第475 和 100.7%**（軒ごと 87.5〜105.7%）。**`odd` 0 の行はほぼ exact**
@@ -233,6 +239,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第476セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第475 のすぐ後）。ユーザー指示「続けて」＝⒮¹⁰ の次の軒。途中でユーザー報告（§1.0 U9＝`space.lys` の小節頭の余白・「次の便はこれを見て」）。
+★ **`-Start p476` の 1 コマンドで §0 が全部済んだ**（HEAD `5ea7e374`・未 push 33・full 8798 / 0 / 3 / 8801・`-Archive 474` も自動）。ベンチの窓は第475 でもらった分の続き。
+★★★ **⑴ 7 軒（第475 の census の住所）**: A `StaffItemsAt` の 3 本（owners・外側・staff ごと）を貸す＝呼び手がばね（数値だけの record）を作り終えて返す／B paging の slur・tie の system ごとの list／C `ParseMusicBlock` の items（ブロックは入れ子になる）／E 描画の percent 集合／F `LayoutTies` の layouts・columns・column ごとの list（最後のものはどの census も数えない）／G memo の `hits`／H `systemDetails` に寸法。
+**`ListPool<T>` を新設**＝単一の引き出しの型（第421・第456）を「同じ種類の list を複数・入れ子で持つ軒」向けの型ごとの Stack に広げた（`VerticalSkyline.RentBatch` の形を 1 つに）。
+**A/B −9,214 B／打鍵＝0.29%**（parse −924＋render −8,290・予測の点 約 9,100 の 101.3%・帯内）・**5,824 ページ 0 差**。⚠️ コーパスは 232 冊（ユーザーの `space.lys`）＝before も after も 232 冊で取り、ハッシュ脚は p439 の基準に載る 231 冊だけを回すよう直した（`Zz476Hash.cs.txt`）。ファイルごとの会計は省いた（U9 を優先）。
+★★ **⑵ 毒 10 本、外れ 0**（`poisons.txt`）: `ListPool<T>.Give` の `Clear` を*要素型ごとに*抜く 7 本は全部赤（うち 3 本は古い list が膨らみ続けて返らない＝上限で止めるまでに赤）・汚した集合 2 本は赤・H の寸法 −1 は緑。
+★ **⑶ U9 の切り分けの 1 手**＝作業ツリーと HEAD は `space.lys` を**バイト同一**に描く＝第476 の変更は無罪。
+★ **⑷ 終了時**: code `fbe833c2`（Core 8 ファイル＋棚卸し 2 枚）。最終 full **8798 / 0 / 3 / 8801**（`-End`・網は足していない）。§7.5 Core '+' 170／REF 0／OWN 0＝器の持ち方だけで LP に対応物が無い。§7.6 コードに新しい数はコメントの census 値だけ。§7.7 の匂いなし。**push はユーザー**（Lab も・`space.lys` は未追跡のまま）。**次の便は U9**（ユーザー指示）。
+
+## 以下は第475セッションの経緯
+
 ### 1.1 第475セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第474 のすぐ後）。ユーザー指示「`c4()` は LP と同じように警告にして。(a) を続けて」。
@@ -245,22 +264,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠️ **会計の途中でコーパスが 231 → 232 冊になった**（ユーザーが `space.lys` を作った）＝E〜G は 232 冊の after を取り直して比べた。**脚の 1 行目の冊数を読む**。
 ★★ **⑶ 毒 7 本、外れ 0**（`poisons.txt`）: 汚して返す 4 本（A 5／D 630／E 14／F 22 赤）・寸法を 1 つずらす 3 本（B 1,328／C 182／G 867 赤）＝**どの軒にも観測者が居た**＝網は足していない。
 ★ **⑷ 終了時**: code `61a96bb4`（Core 6 ファイル＋棚卸し 2 枚）。最終 full **8798 / 0 / 3 / 8801**（`run2.trx`＝`-End`・網は足していない）。§7.5 Core '+' 192／REF 0／OWN 0＝器の持ち方と寸法だけで LP に対応物が無い。§7.6 コードに新しい数はコメントの census 値だけ（出所つき）。§7.7 の匂いなし。**push はユーザー**（Lab も・ユーザーの `space.lys` は未追跡のまま触っていない）。
-
-## 以下は第474セッションの経緯
-
-### 1.1 第474セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第473 のすぐ後）。ユーザー指示「着手して」＝第473 が起票した ⒳⁹。
-★ **`-Start p474` の 1 コマンドで §0 が全部済んだ**（HEAD `808ece99`・未 push 29・full `sessions/p474/run1.trx` 8794 / 0 / 3 / 8797・`-Archive 472` も自動＝moved 15 行 1,350 字）。
-★★★ **⑴ LP 双子を先に取った**（`audit/lp-geometry/probes/slur-shared-note-script.ly`・`lysc ly` の双子 4 冊）。中央線からの accent＝**共有の音 2.8160／始まりだけ 2.8160／終わりだけ 2.6700／スラー無し 2.6700**＝LP は走っているスラーを優先（`slur.cc:374-377`）。
-★★★ **⑵ 起票が名指した `CoveringSlurPiece` を直したら、予測 2.8139 に対して 3.5355 と外れた**。外れ方から読むと、**本当の原因は収集側にあった**: `SlurDetector` は 1 つの音の `(` を `)` より先に積むので、`c'4( d c)( d)` を「0→3 の 1 本＋2→2 の長さ 0」に組んでいた（ページもそう描く）。
-LP は閉じるイベントを先に処理する（`slur-engraver.cc:295-324`）。文法文書のハウススタイルも `d4)( e`（その音で終わるものが先）で、**4 人の読み手のうち `TabResolver`（hammer-on）と `PartCombiner` は既に閉じる→開くだった**＝`SlurDetector` と `SlurPairingScanner` の 2 人だけが逆。
-`MarkerRunLookaheadTests.SlurCloseThenOpenOnOneNoteDoesBoth` は「d が 1 本を閉じて次を開く」と書きながら**印が 2 つ付いたことしか主張していなかった**（RULES §5.0 の round trip の形）。
-⇒ **2 人を閉じる→開くに揃え**、`CoveringSlurPiece` にも「この音の後も続くスラーが先」の鍵を入れた（両方とも開始小節 0 なので、組み方を直しても開始小節だけでは終わった方が勝つ）。直した後は **2.8139 / 2.8139 / 2.67 / 2.67**。
-★★ **⑶ 射程**: 両方の印を持つ音は**実コーパス 330 冊・追跡 609 冊ともに 0**（`SlurDetector` の計数器・陽性対照は 1 と数えた・`slur-both-marks-census.txt`）。実コーパスは **5,824 ページ 0 差**（`Zz474Hash.cs.txt`・基準 p439）、snapshot も 0。
-★★ **⑷ 網 4 本・毒 3 本・外れ 0**（`poisons.txt`）: ページを開く→閉じるに戻す＝`…PairsAsTwoSlurs` と `ANoteThatEndsOneSlurAndStartsTheNext…` の 2 赤／警告の scan を戻す＝`BothSlurMarksOnANoteWithNothingOpen…` だけ赤／running の鍵を外す＝`ANoteThatEnds…` だけ赤。`…IsNotReportedUnpaired` は慣用の綴りに警告が出ないことを留める。
-★ **⑸ ユーザーの問い**＝「LP が受け入れない綴りは拒否すべきか／音楽的にあり得るなら独自文法か」⇒ 1 音スラーは記譜上意味を持たないので**綴りを作らない**と答えた。警告のままか、エラーにするかは ⒞ ⒳¹⁰。
-★ **⑹ 終了時**: code `979b3391`（Core 3＋網 4＋プローブ＋棚卸し 2 枚＋CHANGELOG）。最終 full **8798 / 0 / 3 / 8801**（`run2.trx`＝`-End`・+4＝網）。§7.5 Core '+' 38／REF 3／OWN 0＝3 本とも LP から導出（閉じる→開くは `process_music` の字面・running の鍵は ⒝＝LP の `slurs[0]` は*最初に始まった*走っているスラーで、Lily# は走っている中で開始が最も遅いもの＝入れ子のスラーでだけ食い違う・コードに ⚠️）。§7.6 新しい数は 0（2.8160 等は LP プローブの実測・註に出所）。§7.7＝その入れ子の差（どちらの母集団にも 0 冊）。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
