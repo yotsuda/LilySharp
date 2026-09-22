@@ -105,6 +105,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **分母 3,151,759**＝parse 317,050＋render 2,834,709・脚は `instrument.ps1`＋`Zz475.template.cs`＋`Zz475Leg.cs.txt` を `Zz475_MODE=price|live` で 2 回＝**値段と liveness は同じ run では訊けない**。値段 21 秒・liveness 33 秒）。
   HEAD の census は scratch 277 軒 59,541・escape 18 軒 102,629（頭は `VerticalSkyline.cs:76` 94,888）。
   そこから**第475 が 7 軒 −6,265・第476 が 7 軒 −9,214**（`ListPool<T>` を新設＝同じ種類の list を複数・入れ子で持つ軒の Stack pool）。
+  ★ **第488 が census を取り直して 12 軒 −4,864 を閉じた**（Lab `sessions/p488/`＝`joined.csv`・分母 **3,153,928**＝parse 315,060＋render 2,838,868 → **render 2,834,004**・parse は同じ木の 2 run で ±400 揺れる＝render だけで読む）。
+  **会計 100.2%**（予測＝park と「建てない」は price・寸法ちょうどは waste の和 4,853）。census は scratch 256 軒 45,591・escape 18 軒 102,369（頭は `VerticalSkyline.cs:76` 94,654）。
+  閉じた軒: park＝`KnuthPlassBreaker.cs:352`（`ListPool<Spring>`）・`ElementCoordinator.cs:306`・`PageLayouter.cs:503`・`SyntaxNode.cs:521`（`WalkDescendants` の Stack を ThreadStatic の引き出しに＝finally で返す）／
+  建てない＝`MusicMarkSyntax.MarkName`（1 語はトークンの文字列そのまま・複数語は `string.Create`）／寸法ちょうど＝`KnuthPlassBreaker.cs:776/781`・`LayoutEngine.cs:412`・`MultiStaffLayouter.cs:2410/2438`（`CountVoicesReaching`）・`:3776/4016`。
+  ⇒ **第488 の census で残る 500 B 以上**: `LayoutEngine.Prelim.cs:460` 6,166・`LedgerLineSpannerEngraver.cs:274` 5,775（下の ⚠️）・`OutsideStaffStacker.cs:645` 907・`DynamicEngraver.cs:565` 880（0.03 呼び・1 呼び 234 項目）・`SpacingRules.LedgerRods.cs:157` 734・`SharedRenderer.cs:703` 497・`ArticulationEngraver.cs:358` 522（Builder・max 77）。それ以外は 1 軒 480 B 未満＝**この島はほぼ尽きた**
   ⇒ **次の軒**（第475 の census の住所）: `OutsideStaffStacker.cs:645` **910**（memo front の仕分け＝辞書の列挙順が memo の登録順に効く＝⒨ の家）／`SpacingRules.LedgerRods.cs:157` 738（list を*返す*）／
   それ以下は 1 軒 600 B 未満。⚠️ **1 軒 1,000 B 未満の尾に入った**＝回すなら census を回し直して頭を取り直す
   ⚠️ **`LayoutEngine.Prelim.cs:460` 6,192・`LedgerLineSpannerEngraver.cs:274` 5,797・`KnuthPlassBreaker.cs:781` 2,779 は*1 呼びで N 個*建てる軒**＝別の直し方（この島の数に混ぜない）。
@@ -229,6 +234,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第488セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第487 のすぐ後）。ユーザー指示「メモリやって」＝§1.0 ⒜ の ⒮¹⁰（器ごと憶える島の続き・census の取り直しから）。
+★ **`-Start p488` の 1 コマンドで §0 が全部済んだ**（HEAD `feb22a6e`・full 8831 / 0 / 3 / 8834・`-Archive 486` も自動）。
+
+★★ **⑴ ⒮¹⁰ を 12 軒 −4,864 B／打鍵（render 2,838,868 → 2,834,004・会計 100.2%）**。census の取り直し（第475 の脚を p488 に写した＝`instrument.ps1`・`Zz488Leg.cs.txt` を price／live・`join.ps1`）→ 頭から「自分のコードがどこで読み終えるか」を読んで直せる軒だけ直した。
+  出力は同一（`Zz488Hash`＝baseline 5824 行・0 差）。full 8831 / 0 / 3 / 8834（行番号がずれた 2 つの生成物 APPROXIMATIONS.md・magic_constants.csv を再生成）。
+  ⚠️ **parse の数は同じ木の 2 run で 314,925 と 315,356**＝±400 の揺れ。render は 2 run で 9 B しか違わない＝**A/B は render で読む**。
+  ⚠️ `ElementCoordinator.cs:824`（BeamCollision の list）は `CalculateBeamLayout` の先で持たれ得るので読まずに見送った。
+★ **⑵ 終了時**: コードは 7 ファイル（KnuthPlassBreaker・LayoutEngine・MultiStaffLayouter・ElementCoordinator・PageLayouter・SyntaxNode・SyntaxNodes.FormRender）＋生成物 2 つ。
+
+## 以下は第487セッションの経緯
+
 ### 1.1 第487セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第486 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒝ の ⒳⁷（小節線の floor は誰にも届いていない）。
@@ -236,17 +254,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★★ **⑴ ⒳⁷ は進んだが閉じていない**＝網を書く形が見つからなかった（§1.0 ⒳⁷ に所見 3 点）。**Lily# ははみ出す段を LP と同じ幅まで圧縮する**ことを確かめ（rod が効く場面は在る）、それでも圧縮された 3 冊で毒は 0 差。理屈の上でも隣の頭が効く余地は skyline の余白の斜面だけ。毒の後の CLI 再ビルドは毎回確認（`default` への置換で初回はビルド失敗＝比較が無効だったのを exit で気づいた）。
 ★ **⑵ 終了時**: コードの変更なし（docs のみ）。
-
-## 以下は第486セッションの経緯
-
-### 1.1 第486セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第485 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒞ の ⒳¹⁵（弾けない弦番号を Lily# は黙って無視する）。
-★ **`-Start p486` の 1 コマンドで §0 が全部済んだ**（HEAD `a5ab775c`・full 8828 / 0 / 3 / 8831・`-Archive 484` も自動）。
-
-★★★ **⑴ ⒳¹⁵ を閉じた＝LYS5003**（code `cfd86098`）。書いた `\N` の弦で音が弾けない（フレット 0〜24 の外）とき、`TabResolver` が記録し `TabRangeValidator` が警告（単音・和音の member ごと・繰り返しは 1 回）。描画は変えない（Lily# は既に LP と同じく計算し直していた＝コーパス 0 差）。LP 2.26 の警告と件数も一致（`imp.ly` の 3 件＝和音 2 member＋1）。網 3 行。
-★★★ **⑵ ユーザーのコーパスで 473 件（39 冊）鳴った**＝§1.0 に **U10** として起票（本の側の判断はユーザー）。
-★ **⑶ 終了時**: full **8831 / 0 / 3 / 8834**（+3）。実コーパス 5,824 ページ 0 差（`Zz486Hash.cs.txt`）。Core 0 警告。CHANGELOG 0.8.0 Added に 1 項。`-End` の門は全部 OK。§7.5 Core '+' 59・LILYPOND-REF 1＝LP 由来の規則は「警告して計算し直す」1 つ（`translation-functions.scm:745-756`）。§7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
