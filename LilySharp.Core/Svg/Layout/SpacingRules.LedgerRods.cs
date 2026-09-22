@@ -87,15 +87,25 @@ internal static partial class SpacingRules
             return Array.Empty<LedgerColumn>();
 
         int n = timings.Count;
-        var upLeft = new double[n];
-        var upRight = new double[n];
-        var downLeft = new double[n];
-        var downRight = new double[n];
-        var headWidth = new double[n];
-        for (int t = 0; t < n; t++)
+        // The five per-column extents are made at the first LEDGERED head, not on entry:
+        // 87% of these calls meet none (see the remarks above), and each paid five arrays for
+        // it — 83,950 calls over the reader's corpus (session 495's array census). Made, they
+        // start exactly as the eager ones did.
+        double[]? upLeft = null, upRight = null, downLeft = null, downRight = null, headWidth = null;
+        void EnsureExtents()
         {
-            upLeft[t] = downLeft[t] = double.PositiveInfinity;
-            upRight[t] = downRight[t] = double.NegativeInfinity;
+            if (headWidth != null)
+                return;
+            upLeft = new double[n];
+            upRight = new double[n];
+            downLeft = new double[n];
+            downRight = new double[n];
+            headWidth = new double[n];
+            for (int t = 0; t < n; t++)
+            {
+                upLeft[t] = downLeft[t] = double.PositiveInfinity;
+                upRight[t] = downRight[t] = double.NegativeInfinity;
+            }
         }
 
         var voices = staff.Voices;
@@ -134,17 +144,18 @@ internal static partial class SpacingRules
                         {
                             if (Math.Abs(position) < 6)
                                 return;
+                            EnsureExtents();
                             if (position > 0)
                             {
-                                upLeft[col] = Math.Min(upLeft[col], x);
-                                upRight[col] = Math.Max(upRight[col], x + width);
+                                upLeft![col] = Math.Min(upLeft[col], x);
+                                upRight![col] = Math.Max(upRight[col], x + width);
                             }
                             else
                             {
-                                downLeft[col] = Math.Min(downLeft[col], x);
-                                downRight[col] = Math.Max(downRight[col], x + width);
+                                downLeft![col] = Math.Min(downLeft[col], x);
+                                downRight![col] = Math.Max(downRight[col], x + width);
                             }
-                            headWidth[col] = Math.Max(headWidth[col], width);
+                            headWidth![col] = Math.Max(headWidth[col], width);
                         }
                     }
                 }
@@ -152,10 +163,12 @@ internal static partial class SpacingRules
             }
         }
 
+        if (headWidth is null)
+            return Array.Empty<LedgerColumn>();
         for (int t = 0; t < n; t++)
             if (headWidth[t] > 0)
                 (result ??= new List<LedgerColumn>()).Add(
-                    new LedgerColumn(t, upLeft[t], upRight[t], downLeft[t], downRight[t], headWidth[t]));
+                    new LedgerColumn(t, upLeft![t], upRight![t], downLeft![t], downRight![t], headWidth[t]));
         return (IReadOnlyList<LedgerColumn>?)result ?? Array.Empty<LedgerColumn>();
     }
 
