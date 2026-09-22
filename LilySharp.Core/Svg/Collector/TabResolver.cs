@@ -321,10 +321,15 @@ internal sealed class TabResolver
         int lowestOpen = tun.Min();
         int handSpan = Tunings.HandSpanFor(tuning);
 
-        var items = voice.Measures.Select(m => m.Items.ToArray()).ToArray();
-        var changed = new bool[items.Length];
+        // A measure's items are copied only when a write lands in it (the idiom of
+        // MeasureCollector.ResolveBeamStemDirections): every read goes through ItemAt, so a
+        // write is seen by the reads after it, and an untouched measure is never copied.
+        var measures = voice.Measures;
+        var work = new MusicItem[]?[measures.Length];
+        MusicItem[] Work(int mi) => work[mi] ??= measures[mi].Items.ToArray();
+        MusicItem ItemAt(int mi, int ii) => work[mi] is { } w ? w[ii] : measures[mi].Items[ii];
         int itemCount = 0;
-        foreach (var bar in items) itemCount += bar.Length;
+        foreach (var bar in measures) itemCount += bar.Items.Length;
         // Lent, and given back cleared once the plan has been read back (see t_plan).
         var scratch = t_plan ?? new PlanScratch();
         t_plan = null;
@@ -338,12 +343,12 @@ internal sealed class TabResolver
         bool restSince = false, previousSlurStart = false, previousFall = false;
 
         var barWritten = new Dictionary<int, int>(); // written MIDI -> its written string, this bar
-        for (int mi = 0; mi < items.Length; mi++)
+        for (int mi = 0; mi < measures.Length; mi++)
         {
             barWritten.Clear();
-            for (int ii = 0; ii < items[mi].Length; ii++)
+            for (int ii = 0; ii < measures[mi].Items.Length; ii++)
             {
-                var item = items[mi][ii];
+                var item = ItemAt(mi, ii);
                 double onset = time;
                 time += item.Duration.ToDouble();
 
@@ -364,8 +369,7 @@ internal sealed class TabResolver
                         if (IsTabPlaceable(cn.Midi + shift, tun))
                             CheckWrittenString(chord.SourcePosition, cn.Midi + shift, cn.StringNumber, tun);
                     var newNotes = AssignChordStrings(chord.Notes, tun, shift);
-                    items[mi][ii] = chord with { Notes = newNotes };
-                    changed[mi] = true;
+                    Work(mi)[ii] = chord with { Notes = newNotes };
                     foreach (var cn in newNotes)
                         if (!IsTabPlaceable(cn.Midi + shift, tun))
                             _rangeWarnings.Add(new TabRangeWarning(chord.SourcePosition, cn.Midi + shift < lowestOpen));
@@ -396,8 +400,7 @@ internal sealed class TabResolver
                         // (fret 0) — hide it on the tab entirely instead (see NoteItem).
                         if (below && !note.TabBelowRange)
                         {
-                            items[mi][ii] = note with { TabBelowRange = true };
-                            changed[mi] = true;
+                            Work(mi)[ii] = note with { TabBelowRange = true };
                         }
                     }
                     else
@@ -442,19 +445,16 @@ internal sealed class TabResolver
         for (int k = 0; k < refs.Count; k++)
         {
             var (mi, ii) = refs[k];
-            if (items[mi][ii] is NoteItem note && !note.StringNumber.HasValue && strings[k] > 0)
-            {
-                items[mi][ii] = note with { StringNumber = strings[k] };
-                changed[mi] = true;
-            }
+            if (ItemAt(mi, ii) is NoteItem note && !note.StringNumber.HasValue && strings[k] > 0)
+                Work(mi)[ii] = note with { StringNumber = strings[k] };
         }
         events.Clear();
         refs.Clear();
         t_plan = scratch;
 
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
-        for (int mi = 0; mi < items.Length; mi++)
-            rebuilt.Add(changed[mi] ? voice.Measures[mi] with { Items = ImmutableArray.Create(items[mi]) } : voice.Measures[mi]);
+        for (int mi = 0; mi < measures.Length; mi++)
+            rebuilt.Add(work[mi] is { } w ? measures[mi] with { Items = ImmutableArray.Create(w) } : measures[mi]);
         return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 
