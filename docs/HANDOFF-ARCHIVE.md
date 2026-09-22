@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第508セッションの経緯
+
+### 1.1 第508セッション（2026-09-22・YT-DELL2）
+
+新しい会話（第507 の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
+★ **`-Start p508` の 1 コマンドで §0 が全部済んだ**（HEAD `d9ceafa9`・full 8847 / 0 / 3 / 8850・`-Archive 506` も自動）。
+
+★★★ **⑴ 写しの census＝3 軒で render 1,793,102 → 1,758,706（−34,396・−1.9%）**。型の地図（Lab `sessions/p508/type-price-head.txt`）の `ArticulationLayout[]` 38 KB は 1 冊 22 要素の約 15 回ぶん＝写しを疑い、**Core の `.ToArray()`／`.ToImmutable()`／`.ToImmutableArray()`／`.ToBuilder()`／`.ToList()` 651 軒を拡張メソッドで包んで呼びの前後の割当を軒×要素型で数えた**（`instrument-copies.ps1`・型推論できない 60 行は `fix-errors.ps1` が原文に戻す・`copy-price-head.txt`）。閉じた 3 軒（出力は `Zz508Hash`＝5,824 行 0 差）:
+  ① **paging augment の memo は hit でも毎回 program を建てて捨てていた**（27.73 回／打鍵・6 配列）⇒ 鍵の比較を `PagingAugmentProgram.Builder.Matches` に移し、miss だけ建てる。−10,671。
+  ② **`SpringSolver.CompressLine` の `OrderByDescending().ToList()`**（7.12 回／打鍵）⇒ 安定な挿入ソートで thread の list へ。−8,256。
+  ③ **`TabResolver` の 2 軒が変わらない小節も写していた**（タイのある声部の全小節・臨時記号を探すための全小節）⇒ 最初の書き込みで写す。−15,469。
+  **毒 6 本**（Lab `sessions/p508/poisons.ps1`）: 赤＝lent list を汚して返す 103+（太り続ける遅い毒＝6m47s で止めた）・strip の backfill 抜き 20・タイの書き込みを捨てる 7。⚠️ **緑が 3 本**＝⑴ **memo の鍵が数値（`_args`）を見なくても 8,850 緑**（変更前からの穴）⇒ 網 `PagingAugments_AStepMovedOverTheSameBaseline_Misses` を足した／⑵ **連続タイの中の音を「集めたまま」読むと tie-target の旗が落ちるが緑** ⇒ 網 `ChainedTie_TheMiddleNoteAdoptsTheString_AndStaysHidden`／⑶ **同じ力のばねの順序を崩してもスイート緑・コーパス 0 差**＝観測者なし（注釈に事実として書いた）。full 8849 / 0 / 3 / 8852。
+★ 途中でユーザーが push した＝`origin/master` は `d9ceafa9`（第507 の docs）。§7 7.5＝Core '+' 137 行・REF／OWN 0（割当の書き換えだけで LP の意味は動かさない）。`-End p508` の門は全部 OK（Lab `sessions/p508/end.txt`）。
+
 ## 以下は第507セッションの経緯
 
 ### 1.1 第507セッション（2026-09-22・YT-DELL2）
