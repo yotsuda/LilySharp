@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第506セッションの経緯
+
+### 1.1 第506セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第505 のすぐ後）。ユーザー指示「続けて」＝第505 の地図の `List<int>`。
+★ **`-Start p506` の 1 コマンドで §0 が全部済んだ**（HEAD `6ef4958c`・full 8847 / 0 / 3 / 8850・`-Archive 504` も自動）。
+
+★★★ **⑴ `List<int>` の census＝2 軒で render 1,829,029 → 1,796,532（−32,497・−1.8%）**。第505 の地図の `List<int>` 29 KB は持ち主が型からは分からない ⇒ **Core の `new List<int>` 58 綴りを数える helper に書き換える計器**（Lab `sessions/p506/instrument.ps1`＋`Zz506Probe.cs.txt`＝**`Zz506.On` で打鍵の窓だけ数える**＝warm-up を含めない）。数えた 309 本／打鍵（地図の約 900 の残りは `ToList()` など綴りの外）。頭 2 つ:
+  ① **`BeamSubdivision.CalcBeaming` の `lastRight = new List<int>(curRight)`＋種 `new List<int>{0}`＝54.10＋28.75／打鍵**。写すのは loop が書き直した*後*で、loop は*今の*stem の list にしか書かない＝**写しは常に元と等しい** ⇒ 参照に（種は static `[0]`）。−5,502。毒＝**種を `[1]` に→106 赤**。
+  ② **`OutsideStaffStacker.StackAboveStaffMemoized` の `SysPart`＝51.21／打鍵 × List 11 本**（計器は 1 行目の 3 本しか数えていなかった＝**複数行の field 宣言は census の綴りの外**）。map は第457 から貸し出し済みだが、「program は partition から建てる」と読んで値は貸さなかった＝**実際は program も保存出力も `Gather` で配列へ写す**＝list は pass の外へ出ない ⇒ `t_spareParts`（give で Clear）。−26,995。毒＝**Clear を抜く→88 赤**（`OutsideStaffStackMemoTests` ほか）。
+  出力は同一（`Zz506Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。★ 同じ形の残り＝**below 側 `BelowPart`（`OutsideStaffStacker.cs:645`＝map も貸していない・8.93／打鍵）**。
+
 ## 以下は第505セッションの経緯
 
 ### 1.1 第505セッション（2026-09-22・YT-DELL2）
