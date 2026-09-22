@@ -149,9 +149,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   鍵の形を変える＝土台の変更**
   ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**残り＝`part`（system で仕分ける）と miss の建設**＝値段は未測定
 - ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・ビット同一）。`VerticalSkyline.Padded` は第510 が値付けして閉じた（3,830 B／打鍵のうち頭を −3,240）。**残り＝`OutsideStaffStacker.cs:3231` 530 B**（padding ごとの cache＝尾）
-- ★★★ **⒩⁶ 梁の刻印の写し＝残り 81,098 B／打鍵 5.2%。次は ⑵（ユーザー決定済み「⑶ → ⑵ の順で両方」・第515）**。`MeasureCollector.ResolveBeamStemDirections` の bake は梁の音符 1 つにつき `n with { StemUpOverride, BeamId, PureBeamedStemTip }` を 1 回＝**563.18 回／打鍵 × 144 B**（第516 が 216 → 144 B に細らせた）。⚠️ **刻印済みの item が bake に来ることは 1 度も無い**＝**`BeamId` を決定的にしても写しは消えない**（第514 が反証）。
-  ✅ **⑶ 写しを*安くする*は第516 が入れた＝−105,668 B／打鍵（−6.37%）・出力同一**（`MusicItemRare` 10 field ＋ `NoteItemRare` 17 field。`NoteItem` 216→**144 B**・`RestItem` 96 B）。**⑴ 側表は畳んだ**＝⑵ が同じ賞金をずっと安く取る。
-  ⚠️ **⑵ が壊すものの機構**（第515 が特定）: `MeasureCollector.cs` の `PreFinalizeMeasures` の snapshot は bake より**前**に撮られ、**item 実体を共有している**＝その場で刻印すると前の打鍵の刻印が resume の prefix に残り、**今回 member でなくなった音が古い `BeamId` を持ち越す**（`MeasureContentKey` は `BeamId` を読む＝黙って古い絵を返しうる）。**第514 の「刻印済みが bake に来る回数 0」は*今の形*の帰結**で、⑵ を入れた瞬間に 0 ではなくなる。⇒ **要るのは ⑴ 採る前に刻印を落とす門（または snapshot 側の切り離し）と、⑵ それを見張る網**
+- ✅ **⒩⁶ 梁の刻印の写しは閉じた＝render 1,660,215 → 1,452,853（−207,362 B／打鍵・−12.5%）**（第516 が ⑶、第517 が ⑵。ユーザー決定「⑶ → ⑵ の順で両方」）。⑶ **写しを*安くする*** −105,668（`MusicItemRare` 10 field ＋ `NoteItemRare` 17 field＝**`NoteItem` 216→144 B・`RestItem` 96 B**）／⑵ **その場で刻印** −101,694（`StampBeam`／`ClearBeamStamp` の 1 つの扉。写しだけでなく **work 配列と Measure の建て直しも消えた**＝予測 81,098 を超えた理由）。**⑴ 側表は要らなくなった**。
+  ⚠️ **⑵ が残した 1 つ＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測。⒮¹² と同じ顔）。**刻印済みで bake に来る item は 340,977／3,683,264＝9.3%**（写していた頃は 0＝recording が item 実体を共有するため）だが、**再 bake は 340,977 件すべて*同じ値*を書き戻した**（RE-BAKE DIFFERED 0）。**毒（clear を殺す）はスイート 8,859 も コーパス 232 冊 × 8 打鍵の「増分＝フル」も 1 つも動かさない**。狙って書いた 2 冊（またぎの手動梁が `]` を得る／失う。`WalkCarriesNothing` は梁を carry に数えないので checkpoint は梁の途中に立てる）も緑＝**網としては成立せず、`ManualBeam*_AcrossAResume_MatchesFull` の 2 本は隣の振る舞いを留めるだけ**。⇒ **二択＝⑴ 破れる形を 1 冊見つけて網にする／⑵ 「効かない保険」として畳めるか**（値段は割当 0 の 1 歩き）。計器は Lab `sessions/p517/`
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 - ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測）。
@@ -203,6 +202,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第517セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第516 のすぐ後）。ユーザー決定「⑶ → ⑵ の順で両方」の **⑵**。
+★ **`-Start p517` の 1 コマンドで §0 が全部済んだ**（HEAD `4c115447`・full 8854 / 0 / 3 / 8857・`-Archive 515` も自動）。
+
+★★★★ **⑴ ⒩⁶ ⑵ を入れた＝bake がその場で刻む。render 1,554,547 → 1,452,853（−101,694 B／打鍵・−6.54%）・増分は 0 差**。`NoteItem`／`ChordItem` に `StampBeam`、`RestItem` に `StampPureBeamShift`、3 つとも `ClearBeamStamp` ＝**1 つの扉**（`internal`・モデルで唯一の書き換えで、collect 相に閉じている）。⚠️ **賞金が予測（81,098＝563.18 × 144 B）を超えたのは、写しだけでなく `work` 配列（`Items.ToArray()`）と touched Measure の `with { Items }` も一緒に消えたから**。
+★★ **⑵ 着手の前に「壊れないこと」を先に確かめた**（第515 の ⚠️ の続き）: ⑴ **item を鍵にした cache は 1 つも無い**（CWT はすべて `Staff`／`Voice`／`Voice[]`／`SystemLayout[]`／`MultiStaffScore`＝collect ごとに建て直る容器）。⑵ **`MeasureContentKey` は `BeamId` を除外済み**（値に意味が無いので）だが **`StemUpOverride`／`PureBeamedStemTip` は content**＝古い刻印は*信じられる*。⇒ **だから「消してから刻む」**。
+★★★ **⑶ その `ClearBeamStamp` に観測者が居ない**（⒩⁶ の ⚠️ に起票）。**刻印済みで bake に来る item は 9.3%（340,977／3,683,264）＝空振りではない**のに、**再 bake は全件*同じ値*を書き戻す**（RE-BAKE DIFFERED 0）。毒はスイートもコーパスも動かさず、狙って書いた 2 冊も緑。⚠️ **「毒が緑」を*網が書けた*と読まないこと**＝2 本のテストは名前も remarks も「隣の振る舞いを留めるだけ」に直した。
+★ **新しい観測者を 1 つ作った**＝**コーパスの「増分＝フル」を同じ扉どうしで突き合わせる脚**（Lab `sessions/p517/Zz517Equiv.cs.txt`・232 冊 × 8 打鍵で 0 差）。⚠️ **最初の版は `SvgGenerator.Generate`（1 枚）と増分の page 配列を比べて 1,856/1,856 差**＝**比較対象が不揃いなだけ**だった。毒を掛ける前に *clean 側が 0* であることを見るまでは、赤も緑も読めない。
+  §7 7.5＝**Core '+' は `MusicItem.cs` と `MeasureCollector.Stems.cs`**。LILYPOND-REF は 1 行も増減なし（LP の `stem.cc`／`beam.cc` への参照は動かしていない＝保管と書き込み時期だけの変更）。`-End p517` の門は全部 OK・full 8856 / 0 / 3 / 8859（網 2 本ぶん増えた）。
+
+## 以下は第516セッションの経緯
+
 ### 1.1 第516セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き（第515 のすぐ後）。**ユーザー決定「⑶ → ⑵ の順で両方」**＝⒩⁶ の第 3 の道を入れる便。
@@ -212,21 +224,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **綴り**: `MusicItemRare`（10 field・`VoiceContext`／`BeginsCueRegion`／`GraceSlash`／phrasingSlur 5 つ／laissezVibrer・repeatTie の位置）と `NoteItemRare`（17 field・`Notehead`／tremolo 3 つ／`Fingering`／`IsCue`／`IsCourtesy`／`EditorialAccidental`／`FeatherDirection`／`HasGlissando`／`AccidentalX`／`ForcedStemUp`／`TabBelowRange`／laissezVibrer・repeatTie の向きと有無）。**public property は転送で残る**ので読み手は 1 軒も変えていない。★★★ **勘所は 2 つ**: ⑴ **`init` は値が今と違うときだけ器を建て直す**（`if (value != X)`）＝既定を書く `with` が器を作らない／⑵ **20 引数の構築子は 9 つの cold を*先に検査*して、1 つでも既定でなければ 1 度だけ建てる**（`with` の連鎖にしない）。
 ★ **踏んだ網 1 本**＝`ModelEqualityKindTests`「model の record が等値に答えるのに誰も決めていない」＝新しい 2 つを **Values** に分類した（器は不変で、`with` は置き換えるまで原本と*共有する*＝二つの item が 1 つの器を持つのは正しい。item 自身は今までどおり Entity）。
   §7 7.5＝**Core '+' 202 行・全部 `MusicItem.cs`**（新 record 2 つと転送 property）。**LILYPOND-REF／LILYSHARP-OWN は 1 行も増えていない**＝移植でも発明でもなく*保管の形*だけの変更なので、新しい出所は要らない。`-End p516` の門は全部 OK・full 8854 / 0 / 3 / 8857。
-
-## 以下は第515セッションの経緯
-
-### 1.1 第515セッション（2026-09-23・YT-DELL2）
-
-新しい会話。ユーザー指示「次を読んで作業に着手して」＝§1.0 の筆頭 ⒩⁶（★★★★・7.3%）。
-★ **`-Start p515` の 1 コマンドで §0 が全部済んだ**（HEAD `419bd86b`・full 8854 / 0 / 3 / 8857・`-Archive 513` も自動）。
-
-★★★ **⑴ ⒩⁶ に第 3 の道を見つけて値付けした＝「写しを消す」のではなく*写しを安くする*・コード変更なし**（⒩⁶ ⑶ として §1.0 ⒝ に追記＝数字はそこ）。`NoteItem` の **216 B** のうち、**描かれた 123,067 音が 1 度も触らない 25 の field** を 1 つの参照の後ろへ出すと **216 → 144 B**＝**−72 B／写し × 1,153 回／打鍵＝−83,045 B／打鍵（render の 5.0%）**。★ **国勢調査は 2 点要った**（Lab `sessions/p515/field-census.txt`・326 冊 220,117 音／123,067 音）＝collect 直後だけでは `IsTieTarget`・`AccidentalX`・`VoiceContext` を書く後段の pass が見えず、cold と読み違える。模型は `Zz515Size.cs.txt`（実 field と型を 1 対 1 で写した record を 10,000 個建てて割る）。
-
-★★ **⑵ 第514 の「⑵ は門と網が要る」の*機構*を特定した**＝`PreFinalizeMeasures` の snapshot が bake より前で item 実体を共有している（全文は §1.0 ⒩⁶ の ⚠️）。
-
-⇒ **3 案は排他ではない**: ⑶ だけで **−83,045**、⑵ だけで −121,637、**両方で −164,178 B／打鍵（9.9%）**。⑵ を先に入れると ⑶ の残りは −42,480、⑶ を先に入れると ⑵ の残りは −81,072。
-⇒ ★★★ **⑶ はモデルの約束に一切触らない**（public property は転送で残る＝`CollectTailShifterTests`・`IncrementalReuseSoundnessTests`・`ModelDeepDiff` の反射 3 本は読む物が変わらない。等値は既に identity）＝**ユーザー決定が要るのは ⑴⑵ だけ**。⚠️ ⑶ の実装の勘所は **20 引数の構築子が cold を*既定のまま*なら器を建てないこと**（建てると全音が 88 B 払って逆ざやになる）。
-  §7 7.5＝**Core '+' 0 行**（この便も値付けだけ）。`-End p515` の門は全部 OK・full 8854 / 0 / 3 / 8857。
 
 ## 2. 開いている作業
 
