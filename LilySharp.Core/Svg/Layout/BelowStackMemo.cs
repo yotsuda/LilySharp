@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -115,7 +116,7 @@ internal sealed class BelowStackMemo
     /// <paramref name="probe"/>'s program exactly. A room served from the older slot is
     /// PROMOTED, so <see cref="Get"/> always reads the room that matched. Counts the
     /// hit/miss.</summary>
-    public bool TryMatch(int systemIndex, SystemEntry probe)
+    public bool TryMatch(int systemIndex, Probe probe)
     {
         _bySystem.TryGetValue(systemIndex, out var slot);
         if (slot.Recent is { } recent && Matches(recent, probe))
@@ -149,19 +150,88 @@ internal sealed class BelowStackMemo
     /// <summary>One system index's two rooms, the most recently served one first.</summary>
     private readonly record struct Slot(SystemEntry? Recent, SystemEntry? Older);
 
-    private static bool Matches(SystemEntry a, SystemEntry b)
-        => a.ApplyStaffOffsets == b.ApplyStaffOffsets
-            && a.Staves.AsSpan().SequenceEqual(b.Staves)
-            && RefSequenceEqual(a.ProfileUps, b.ProfileUps)
-            && RefSequenceEqual(a.ProfileDowns, b.ProfileDowns)
-            && a.Dynamics.AsSpan().SequenceEqual(b.Dynamics)
-            && a.Hairpins.AsSpan().SequenceEqual(b.Hairpins)
-            && a.Articulations.AsSpan().SequenceEqual(b.Articulations)
-            && a.Trills.AsSpan().SequenceEqual(b.Trills)
-            && JaggedEqual(a.GroupDynamics, b.GroupDynamics)
-            && JaggedEqual(a.GroupHairpins, b.GroupHairpins);
+    /// <summary>
+    /// One system's program as it is being gathered, in lists the thread lends — the
+    /// below-side twin of <see cref="AboveStackMemo.Probe"/>, for the same measured reason
+    /// (8.65 programs a keystroke built to hit and be dropped, 6,534 B, session 512). The
+    /// line groups' ordinals are held flat, each group's run length beside them.
+    /// </summary>
+    internal sealed class Probe
+    {
+        public bool ApplyStaffOffsets;
+        public readonly List<(int StaffIndex, double Y, double? RefpointBelowTop)> Staves = new();
+        public readonly List<object> ProfileUps = new();
+        public readonly List<object> ProfileDowns = new();
+        public readonly List<DynamicLayout> Dynamics = new();
+        public readonly List<HairpinLayout> Hairpins = new();
+        public readonly List<ArticulationLayout> Articulations = new();
+        public readonly List<TrillSpannerLayout> Trills = new();
+        public readonly List<int> GroupDynamics = new(), GroupDynamicLengths = new();
+        public readonly List<int> GroupHairpins = new(), GroupHairpinLengths = new();
 
-    private static bool RefSequenceEqual(object[] a, object[] b)
+        /// <summary>Scratch for the builder: the staves the system places on, before they
+        /// are sorted and made distinct. Not part of the program.</summary>
+        public readonly List<int> Used = new();
+
+        /// <summary>Forgets the last system's program and keeps every list's array.</summary>
+        public void Clear()
+        {
+            ApplyStaffOffsets = false;
+            Staves.Clear();
+            ProfileUps.Clear();
+            ProfileDowns.Clear();
+            Dynamics.Clear();
+            Hairpins.Clear();
+            Articulations.Clear();
+            Trills.Clear();
+            GroupDynamics.Clear();
+            GroupDynamicLengths.Clear();
+            GroupHairpins.Clear();
+            GroupHairpinLengths.Clear();
+            Used.Clear();
+        }
+
+        /// <summary>The program as an entry of its own arrays, to be stored.</summary>
+        public SystemEntry ToEntry() => new()
+        {
+            ApplyStaffOffsets = ApplyStaffOffsets,
+            Staves = Staves.ToArray(),
+            ProfileUps = ProfileUps.ToArray(),
+            ProfileDowns = ProfileDowns.ToArray(),
+            Dynamics = Dynamics.ToArray(),
+            Hairpins = Hairpins.ToArray(),
+            Articulations = Articulations.ToArray(),
+            Trills = Trills.ToArray(),
+            GroupDynamics = Unflatten(GroupDynamics, GroupDynamicLengths),
+            GroupHairpins = Unflatten(GroupHairpins, GroupHairpinLengths),
+        };
+
+        private static int[][] Unflatten(List<int> flat, List<int> lengths)
+        {
+            var result = new int[lengths.Count][];
+            int at = 0;
+            for (int k = 0; k < lengths.Count; k++)
+            {
+                result[k] = flat.GetRange(at, lengths[k]).ToArray();
+                at += lengths[k];
+            }
+            return result;
+        }
+    }
+
+    private static bool Matches(SystemEntry a, Probe b)
+        => a.ApplyStaffOffsets == b.ApplyStaffOffsets
+            && a.Staves.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Staves))
+            && RefSequenceEqual(a.ProfileUps, CollectionsMarshal.AsSpan(b.ProfileUps))
+            && RefSequenceEqual(a.ProfileDowns, CollectionsMarshal.AsSpan(b.ProfileDowns))
+            && a.Dynamics.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Dynamics))
+            && a.Hairpins.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Hairpins))
+            && a.Articulations.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Articulations))
+            && a.Trills.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Trills))
+            && JaggedEqual(a.GroupDynamics, b.GroupDynamics, b.GroupDynamicLengths)
+            && JaggedEqual(a.GroupHairpins, b.GroupHairpins, b.GroupHairpinLengths);
+
+    private static bool RefSequenceEqual(object[] a, ReadOnlySpan<object> b)
     {
         if (a.Length != b.Length)
             return false;
@@ -171,13 +241,20 @@ internal sealed class BelowStackMemo
         return true;
     }
 
-    private static bool JaggedEqual(int[][] a, int[][] b)
+    /// <summary>A stored group list against the probe's flat one: the same number of
+    /// groups, each the same run of ordinals.</summary>
+    private static bool JaggedEqual(int[][] a, List<int> flat, List<int> lengths)
     {
-        if (a.Length != b.Length)
+        if (a.Length != lengths.Count)
             return false;
+        var all = CollectionsMarshal.AsSpan(flat);
+        int at = 0;
         for (int i = 0; i < a.Length; i++)
-            if (!a[i].AsSpan().SequenceEqual(b[i]))
+        {
+            if (!a[i].AsSpan().SequenceEqual(all.Slice(at, lengths[i])))
                 return false;
+            at += lengths[i];
+        }
         return true;
     }
 }

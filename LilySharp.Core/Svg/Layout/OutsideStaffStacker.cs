@@ -766,19 +766,22 @@ internal static class OutsideStaffStacker
         var hits = t_hits ?? new HashSet<int>();
         t_hits = null;
         var toStore = new List<(int Sys, BelowStackMemo.SystemEntry Entry)>();
+        // One probe for the whole loop, lent from the thread (BelowStackMemo.Probe).
+        var probe = t_belowProbe ?? new BelowStackMemo.Probe();
+        t_belowProbe = null;
         foreach (var (s, part) in parts)
         {
             if (forcedLive.Contains(s))
                 continue;
-            var entry = BuildBelowProgram(systems, s, part, applyStaffOffsets,
-                profileIdentity, dynamics, hairpins, articulations, trills, lineGroups);
-            if (entry == null)
+            if (!FillBelowProgram(probe, systems, s, part, applyStaffOffsets,
+                    profileIdentity, dynamics, hairpins, articulations, trills, lineGroups))
                 continue; // a profile with no stable identity: never memoized
-            if (memo.TryMatch(s, entry))
+            if (memo.TryMatch(s, probe))
                 hits.Add(s);
             else
-                toStore.Add((s, entry));
+                toStore.Add((s, probe.ToEntry()));
         }
+        t_belowProbe = probe;
 
         // 3. The live subset: everything not in a hit system, original order preserved,
         // with an old→live index map, and — for the two families the line groups read
@@ -944,13 +947,19 @@ internal static class OutsideStaffStacker
     [ThreadStatic]
     private static HashSet<int>? t_hits;
 
+    /// <summary>The probe <see cref="FillBelowProgram"/> writes — <see cref="t_aboveProbe"/>'s
+    /// below-side twin, lent the same way.</summary>
+    [ThreadStatic]
+    private static BelowStackMemo.Probe? t_belowProbe;
+
     /// <summary>
     /// One system's below program: every input the pass reads for it (the inventory is
-    /// <see cref="BelowStackMemo"/>'s remarks). Null when any profile this system's
-    /// stacking would consume has no stable identity, or a group ordinal cannot be
-    /// resolved — that system stacks live rather than risking a false match.
+    /// <see cref="BelowStackMemo"/>'s remarks), written into <paramref name="probe"/> after
+    /// clearing it. False when any profile this system's stacking would consume has no
+    /// stable identity, or a group ordinal cannot be resolved — that system stacks live
+    /// rather than risking a false match.
     /// </summary>
-    private static BelowStackMemo.SystemEntry? BuildBelowProgram(
+    private static bool FillBelowProgram(BelowStackMemo.Probe probe,
         ImmutableArray<SystemLayout> systems, int s, BelowPart part, bool applyStaffOffsets,
         Func<int, int, (object Up, object Down)?> profileIdentity,
         ImmutableArray<DynamicLayout> dynamics,
@@ -959,103 +968,73 @@ internal static class OutsideStaffStacker
         ImmutableArray<TrillSpannerLayout> trills,
         ImmutableArray<DynamicAlignEngraver.AlignedLineGroup> lineGroups)
     {
+        probe.Clear();
         var sys = systems[s];
 
         // Geometry: the read set of the tracker seeds — staffYBySystem's Y per staff and
         // RefpointBelowTop's per-staff answer (the fallback halves are constants).
-        // Written straight into the array the entry keeps: the size is the staves the groups
-        // hold, countable before the fill. Until session 462 a list gathered them and ToArray
-        // copied it — MEASURED (session 457's census, Release, the reader's corpus, eight
-        // forward keystrokes a book) 8.97 lists a keystroke at 1.76 staves each (max 2), none
-        // alive past its render, 1,650 B a keystroke for the list alone.
-        int staffCount = 0;
-        if (!sys.StaffGroups.IsDefaultOrEmpty)
-            foreach (var group in sys.StaffGroups)
-                if (!group.Staves.IsDefaultOrEmpty)
-                    staffCount += group.Staves.Length;
-        var staves = staffCount == 0
-            ? []
-            : new (int StaffIndex, double Y, double? RefpointBelowTop)[staffCount];
-        int filled = 0;
         if (!sys.StaffGroups.IsDefaultOrEmpty)
             foreach (var group in sys.StaffGroups)
                 if (!group.Staves.IsDefaultOrEmpty)
                     foreach (var st in group.Staves)
-                        staves[filled++] = (st.StaffIndex, st.Y, st.RefpointBelowTop);
+                        probe.Staves.Add((st.StaffIndex, st.Y, st.RefpointBelowTop));
 
         // The staves this system's below stacking PLACES on — the same predicate the
-        // core's placedStaves uses, over this system's slice.
-        // Built on the first staff that wants it: 99.6% of these systems place NOTHING
-        // below (session 451's census), and an empty SortedSet is 432 B/keystroke of
-        // tree object that no walk ever enters.
-        SortedSet<int>? used = null;
+        // core's placedStaves uses, over this system's slice (99.6% of these systems place
+        // NOTHING below, session 451's census).
+        var used = probe.Used;
         foreach (int i in part.Dynamics)
             if (!dynamics[i].IsAbove)
-                (used ??= new SortedSet<int>()).Add(dynamics[i].StaffIndex);
+                used.Add(dynamics[i].StaffIndex);
         foreach (int i in part.Hairpins)
-            (used ??= new SortedSet<int>()).Add(hairpins[i].StaffIndex);
+            used.Add(hairpins[i].StaffIndex);
         foreach (int i in part.Articulations)
             if (!articulations[i].IsAbove && articulations[i].OutsideStaffPriority is not null)
-                (used ??= new SortedSet<int>()).Add(articulations[i].StaffIndex);
+                used.Add(articulations[i].StaffIndex);
         foreach (int i in part.Trills)
             if (trills[i].Direction < 0)
-                (used ??= new SortedSet<int>()).Add(trills[i].StaffIndex);
+                used.Add(trills[i].StaffIndex);
+        // Ascending and distinct, as the SortedSet that stood here enumerated them.
+        SortDistinct(used);
 
-        // Written straight into the entry's arrays: every staff in `used` fills one slot or
-        // the whole entry is declined (the same shape as BuildAboveProgram's staves).
-        object[] profUps = used is null ? [] : new object[used.Count];
-        object[] profDowns = used is null ? [] : new object[used.Count];
-        if (used != null)
+        // Every staff in `used` fills one slot or the whole program is declined.
+        foreach (int staff in used)
         {
-            int slot = 0;
-            foreach (int staff in used)
-            {
-                if (profileIdentity(s, staff) is not { } id)
-                    return null; // unstable identity: this system stacks live
-                profUps[slot] = id.Up;
-                profDowns[slot] = id.Down;
-                slot++;
-            }
+            if (profileIdentity(s, staff) is not { } id)
+                return false; // unstable identity: this system stacks live
+            probe.ProfileUps.Add(id.Up);
+            probe.ProfileDowns.Add(id.Down);
         }
 
         // Group structure as per-system ordinals: which of THIS system's dynamics /
         // hairpins each anchored group couples, immune to global index shifts.
-        var groupDyn = new int[part.Groups.Count][];
-        var groupHp = new int[part.Groups.Count][];
         for (int k = 0; k < part.Groups.Count; k++)
         {
             var g = lineGroups[part.Groups[k]];
-            var dyn = new int[g.DynamicIndices.Length];
             for (int j = 0; j < g.DynamicIndices.Length; j++)
             {
-                dyn[j] = part.Dynamics.IndexOf(g.DynamicIndices[j]);
-                if (dyn[j] < 0)
-                    return null; // a member outside this system's slice: stack live
+                int ordinal = part.Dynamics.IndexOf(g.DynamicIndices[j]);
+                if (ordinal < 0)
+                    return false; // a member outside this system's slice: stack live
+                probe.GroupDynamics.Add(ordinal);
             }
-            var hp = new int[g.HairpinIndices.Length];
+            probe.GroupDynamicLengths.Add(g.DynamicIndices.Length);
             for (int j = 0; j < g.HairpinIndices.Length; j++)
             {
-                hp[j] = part.Hairpins.IndexOf(g.HairpinIndices[j]);
-                if (hp[j] < 0)
-                    return null;
+                int ordinal = part.Hairpins.IndexOf(g.HairpinIndices[j]);
+                if (ordinal < 0)
+                    return false;
+                probe.GroupHairpins.Add(ordinal);
             }
-            groupDyn[k] = dyn;
-            groupHp[k] = hp;
+            probe.GroupHairpinLengths.Add(g.HairpinIndices.Length);
         }
 
-        return new BelowStackMemo.SystemEntry
-        {
-            ApplyStaffOffsets = applyStaffOffsets,
-            Staves = staves,
-            ProfileUps = profUps,
-            ProfileDowns = profDowns,
-            Dynamics = Gather(dynamics, part.Dynamics),
-            Hairpins = Gather(hairpins, part.Hairpins),
-            Articulations = Gather(articulations, part.Articulations),
-            Trills = Gather(trills, part.Trills),
-            GroupDynamics = groupDyn,
-            GroupHairpins = groupHp,
-        };
+        probe.ApplyStaffOffsets = applyStaffOffsets;
+        GatherInto(probe.Dynamics, dynamics, part.Dynamics);
+        GatherInto(probe.Hairpins, hairpins, part.Hairpins);
+        GatherInto(probe.Articulations, articulations, part.Articulations);
+        GatherInto(probe.Trills, trills, part.Trills);
+        return true;
     }
 
     /// <summary>
@@ -1301,19 +1280,23 @@ internal static class OutsideStaffStacker
         // far more than the ladder it replaced.
         var hits = new HashSet<int>(parts.Count);
         var toStore = new List<(int Sys, AboveStackMemo.SystemEntry Entry)>();
+        // One probe for the whole loop, lent from the thread: a hit compares it and drops
+        // nothing, and only a miss copies it into an entry (AboveStackMemo.Probe).
+        var probe = t_aboveProbe ?? new AboveStackMemo.Probe();
+        t_aboveProbe = null;
         foreach (var (s, part) in parts)
         {
-            var entry = BuildProgram(systems, systemSkylines, s, part, topStaff,
-                profileIdentity, tupletBrackets, trills, barNumbers, ottavas, customTexts,
-                voltas, musicMarks, articulations, aboveDynamics, textSpanners,
-                chordNames, chordItems);
-            if (entry == null)
+            if (!FillProgram(probe, systems, systemSkylines, s, part, topStaff,
+                    profileIdentity, tupletBrackets, trills, barNumbers, ottavas, customTexts,
+                    voltas, musicMarks, articulations, aboveDynamics, textSpanners,
+                    chordNames, chordItems))
                 continue; // a profile with no stable identity: never memoized
-            if (memo.TryMatch(s, entry))
+            if (memo.TryMatch(s, probe))
                 hits.Add(s);
             else
-                toStore.Add((s, entry));
+                toStore.Add((s, probe.ToEntry()));
         }
+        t_aboveProbe = probe;
 
         // 3. The live subset: everything not in a hit system, original order preserved.
         //
@@ -1538,12 +1521,22 @@ internal static class OutsideStaffStacker
     }
 
     /// <summary>
-    /// One system's program: every input the pass reads for it (the inventory is
-    /// <see cref="AboveStackMemo"/>'s remarks). Null when any profile this system's
-    /// stacking would consume has no stable identity — that system is stacked live
-    /// every keystroke rather than risking a false match.
+    /// The probe <see cref="FillProgram"/> writes, lent from the thread for one pass's loop
+    /// (see <see cref="AboveStackMemo.Probe"/> for what building an entry per system cost).
+    /// TAKEN OUT OF THE DRAWER while the loop runs, so a pass that re-entered would get a
+    /// probe of its own; the fill clears it per system, so it needs no emptying on give.
     /// </summary>
-    private static AboveStackMemo.SystemEntry? BuildProgram(
+    [ThreadStatic]
+    private static AboveStackMemo.Probe? t_aboveProbe;
+
+    /// <summary>
+    /// One system's program: every input the pass reads for it (the inventory is
+    /// <see cref="AboveStackMemo"/>'s remarks), written into <paramref name="probe"/> after
+    /// clearing it. False when any profile this system's stacking would consume has no
+    /// stable identity — that system is stacked live every keystroke rather than risking a
+    /// false match.
+    /// </summary>
+    private static bool FillProgram(AboveStackMemo.Probe probe,
         ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
         int s, SysPart part, int[] topStaff,
@@ -1561,37 +1554,22 @@ internal static class OutsideStaffStacker
         ImmutableArray<ChordNameLayout> chordNames,
         ImmutableArray<ChordNameItem> chordItems)
     {
+        probe.Clear();
         var sys = systems[s];
 
         // Geometry: the read set of TopStaffIndex / StaffOffsetInSystemUp / SeedClefInk.
-        // Every staff of every group enters — hidden ones too — so the size is the SUM of the
-        // groups' staff counts, exactly (measured before it was handed over: 95,008 calls,
-        // asked == Count every time). The counting pass walks ImmutableArray, whose
-        // enumerator is a struct, so it allocates nothing.
-        int staffCount = 0;
-        if (!sys.StaffGroups.IsDefaultOrEmpty)
-            foreach (var group in sys.StaffGroups)
-                if (!group.Staves.IsDefaultOrEmpty)
-                    staffCount += group.Staves.Length;
-        // ⚠️ AND THE ARRAY IS FILLED DIRECTLY (session 462): the exact-capacity list that stood
-        // here was copied by ToArray into the entry, so every call built the array TWICE. A
-        // sized list is invisible to the container census (session 457 priced only the
-        // containers built without a size), which is why this twin of BuildBelowProgram's list
-        // was never on (s)10's list.
-        var staves = staffCount == 0
-            ? []
-            : new (int StaffIndex, double Y, bool IsHidden, ClefType Clef)[staffCount];
-        int filled = 0;
+        // Every staff of every group enters — hidden ones too.
         if (!sys.StaffGroups.IsDefaultOrEmpty)
             foreach (var group in sys.StaffGroups)
                 if (!group.Staves.IsDefaultOrEmpty)
                     foreach (var st in group.Staves)
-                        staves[filled++] = (st.StaffIndex, st.Y, st.IsHidden, st.Clef);
+                        probe.Staves.Add((st.StaffIndex, st.Y, st.IsHidden, st.Clef));
 
         // The staves this system's stacking consumes a profile for: each grob's own
         // staff with the tracker's sentinel resolution (-1 → the top staff), plus the
         // top staff itself (bar numbers and voltas hang there).
-        var used = new SortedSet<int> { topStaff[s] };
+        var used = probe.Used;
+        used.Add(topStaff[s]);
         int Resolve(int rawStaff) => rawStaff < 0 ? topStaff[s] : rawStaff;
         foreach (int i in part.Trills) used.Add(Resolve(trills[i].StaffIndex));
         foreach (int i in part.Ottavas) used.Add(Resolve(ottavas[i].StaffIndex));
@@ -1610,49 +1588,58 @@ internal static class OutsideStaffStacker
             if (src >= 0 && src < chordItems.Length && !chordItems[src].IsChordRow)
                 used.Add(Resolve(chordItems[src].StaffIndex));
         }
+        // Ascending and distinct — the order the SortedSet that stood here enumerated in,
+        // which is the order the profile identities are stored and compared in.
+        SortDistinct(used);
 
-        // Written straight into the entry's arrays (HANDOFF (s)15: a list told this exact
-        // size and then copied by ToArray, 51.41 systems a keystroke, 6,616 B — session 463).
-        var profUps = new object[used.Count];
-        var profDowns = new object[used.Count];
-        int slot = 0;
         foreach (int staff in used)
         {
             if (profileIdentity(s, staff) is not { } id)
-                return null; // unstable identity: this system stacks live
-            profUps[slot] = id.Up;
-            profDowns[slot] = id.Down;
-            slot++;
+                return false; // unstable identity: this system stacks live
+            probe.ProfileUps.Add(id.Up);
+            probe.ProfileDowns.Add(id.Down);
         }
 
-        object? silUp = null, silDown = null;
+        probe.Indent = sys.Indent;
+        probe.TopStaff = topStaff[s];
         if (systemSkylines != null && s >= 0 && s < systemSkylines.Count)
         {
-            silUp = systemSkylines[s].up;
-            silDown = systemSkylines[s].down;
+            probe.SilhouetteUp = systemSkylines[s].up;
+            probe.SilhouetteDown = systemSkylines[s].down;
         }
 
-        return new AboveStackMemo.SystemEntry
-        {
-            Indent = sys.Indent,
-            TopStaff = topStaff[s],
-            Staves = staves,
-            ProfileUps = profUps,
-            ProfileDowns = profDowns,
-            SilhouetteUp = silUp,
-            SilhouetteDown = silDown,
-            Trills = Gather(trills, part.Trills),
-            BarNumbers = Gather(barNumbers, part.BarNumbers),
-            Ottavas = Gather(ottavas, part.Ottavas),
-            CustomTexts = Gather(customTexts, part.CustomTexts),
-            Voltas = Gather(voltas, part.Voltas),
-            MusicMarks = Gather(musicMarks, part.MusicMarks),
-            Articulations = Gather(articulations, part.Articulations),
-            Dynamics = Gather(aboveDynamics, part.Dynamics),
-            TextSpanners = Gather(textSpanners, part.TextSpanners),
-            TupletBrackets = Gather(tupletBrackets, part.TupletBrackets),
-            ChordNames = Gather(chordNames, part.ChordNames),
-        };
+        GatherInto(probe.Trills, trills, part.Trills);
+        GatherInto(probe.BarNumbers, barNumbers, part.BarNumbers);
+        GatherInto(probe.Ottavas, ottavas, part.Ottavas);
+        GatherInto(probe.CustomTexts, customTexts, part.CustomTexts);
+        GatherInto(probe.Voltas, voltas, part.Voltas);
+        GatherInto(probe.MusicMarks, musicMarks, part.MusicMarks);
+        GatherInto(probe.Articulations, articulations, part.Articulations);
+        GatherInto(probe.Dynamics, aboveDynamics, part.Dynamics);
+        GatherInto(probe.TextSpanners, textSpanners, part.TextSpanners);
+        GatherInto(probe.TupletBrackets, tupletBrackets, part.TupletBrackets);
+        GatherInto(probe.ChordNames, chordNames, part.ChordNames);
+        return true;
+    }
+
+    /// <summary><see cref="Gather"/> into a probe's list: appends
+    /// <paramref name="arr"/>'s elements at <paramref name="idxs"/>, in that order.</summary>
+    private static void GatherInto<T>(List<T> into, ImmutableArray<T> arr, List<int> idxs)
+    {
+        foreach (int i in idxs)
+            into.Add(arr[i]);
+    }
+
+    /// <summary>Sorts <paramref name="values"/> ascending and drops the repeats — what a
+    /// <see cref="SortedSet{T}"/> of the same values enumerates.</summary>
+    private static void SortDistinct(List<int> values)
+    {
+        values.Sort();
+        int kept = 0;
+        for (int i = 0; i < values.Count; i++)
+            if (kept == 0 || values[i] != values[kept - 1])
+                values[kept++] = values[i];
+        values.RemoveRange(kept, values.Count - kept);
     }
 
     private static (ImmutableArray<TrillSpannerLayout> Trills,

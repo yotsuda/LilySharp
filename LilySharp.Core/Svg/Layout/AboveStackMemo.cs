@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -142,11 +143,98 @@ internal sealed class AboveStackMemo
     /// <inheritdoc cref="Hits"/>
     public int Misses { get; private set; }
 
+    /// <summary>
+    /// One system's program as it is being gathered — the same inputs a
+    /// <see cref="SystemEntry"/> keeps, in lists the thread lends — so that a HIT compares
+    /// against the stored entry without building one. Only a miss copies it out
+    /// (<see cref="ToEntry"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE PROBE IS BUILT ON EVERY SYSTEM OF EVERY CALL AND ALMOST ALWAYS DROPPED.
+    /// MEASURED (2026-09-23, session 512, Release, the owner's corpus, 232 books × eight
+    /// forward keystrokes, allocated bytes around each program build, by outcome): the above
+    /// pass built 48.92 programs a keystroke that HIT and 2.29 that missed — 35,600 B a
+    /// keystroke for entries compared once and dropped, 727 B each (fourteen arrays and a
+    /// <see cref="SortedSet{T}"/>) — and the below pass 8.65 hits for 6,534 B. The shape is
+    /// session 508's paging-augment memo (<c>PagingAugmentProgram.Builder.Matches</c>): the
+    /// steps are compared, and the program is built from them only to be stored.
+    /// </remarks>
+    internal sealed class Probe
+    {
+        public double Indent;
+        public int TopStaff;
+        public readonly List<(int StaffIndex, double Y, bool IsHidden, ClefType Clef)> Staves = new();
+        public readonly List<object> ProfileUps = new();
+        public readonly List<object> ProfileDowns = new();
+        public object? SilhouetteUp, SilhouetteDown;
+        public readonly List<TrillSpannerLayout> Trills = new();
+        public readonly List<BarNumberLayout> BarNumbers = new();
+        public readonly List<OttavaBracketLayout> Ottavas = new();
+        public readonly List<CustomTextLayout> CustomTexts = new();
+        public readonly List<VoltaBracketLayout> Voltas = new();
+        public readonly List<MusicMarkLayout> MusicMarks = new();
+        public readonly List<ArticulationLayout> Articulations = new();
+        public readonly List<DynamicLayout> Dynamics = new();
+        public readonly List<TextSpannerLayout> TextSpanners = new();
+        public readonly List<TupletBracketLayout> TupletBrackets = new();
+        public readonly List<ChordNameLayout> ChordNames = new();
+
+        /// <summary>Scratch for the builder: the staves the system consumes a profile for,
+        /// before they are sorted and made distinct. Not part of the program.</summary>
+        public readonly List<int> Used = new();
+
+        /// <summary>Forgets the last system's program and keeps every list's array.</summary>
+        public void Clear()
+        {
+            Indent = 0;
+            TopStaff = 0;
+            Staves.Clear();
+            ProfileUps.Clear();
+            ProfileDowns.Clear();
+            SilhouetteUp = SilhouetteDown = null;
+            Trills.Clear();
+            BarNumbers.Clear();
+            Ottavas.Clear();
+            CustomTexts.Clear();
+            Voltas.Clear();
+            MusicMarks.Clear();
+            Articulations.Clear();
+            Dynamics.Clear();
+            TextSpanners.Clear();
+            TupletBrackets.Clear();
+            ChordNames.Clear();
+            Used.Clear();
+        }
+
+        /// <summary>The program as an entry of its own arrays, to be stored.</summary>
+        public SystemEntry ToEntry() => new()
+        {
+            Indent = Indent,
+            TopStaff = TopStaff,
+            Staves = Staves.ToArray(),
+            ProfileUps = ProfileUps.ToArray(),
+            ProfileDowns = ProfileDowns.ToArray(),
+            SilhouetteUp = SilhouetteUp,
+            SilhouetteDown = SilhouetteDown,
+            Trills = Trills.ToArray(),
+            BarNumbers = BarNumbers.ToArray(),
+            Ottavas = Ottavas.ToArray(),
+            CustomTexts = CustomTexts.ToArray(),
+            Voltas = Voltas.ToArray(),
+            MusicMarks = MusicMarks.ToArray(),
+            Articulations = Articulations.ToArray(),
+            Dynamics = Dynamics.ToArray(),
+            TextSpanners = TextSpanners.ToArray(),
+            TupletBrackets = TupletBrackets.ToArray(),
+            ChordNames = ChordNames.ToArray(),
+        };
+    }
+
     /// <summary>Whether either room stored for <paramref name="systemIndex"/> matches
     /// <paramref name="probe"/>'s program exactly. A room served from the older slot is
     /// PROMOTED, so <see cref="Get"/> always reads the room that matched. Counts the
     /// hit/miss.</summary>
-    public bool TryMatch(int systemIndex, SystemEntry probe)
+    public bool TryMatch(int systemIndex, Probe probe)
     {
         _bySystem.TryGetValue(systemIndex, out var slot);
         if (slot.Recent is { } recent && Matches(recent, probe))
@@ -180,27 +268,27 @@ internal sealed class AboveStackMemo
     /// <summary>One system index's two rooms, the most recently served one first.</summary>
     private readonly record struct Slot(SystemEntry? Recent, SystemEntry? Older);
 
-    private static bool Matches(SystemEntry a, SystemEntry b)
+    private static bool Matches(SystemEntry a, Probe b)
         => a.Indent == b.Indent
             && a.TopStaff == b.TopStaff
-            && a.Staves.AsSpan().SequenceEqual(b.Staves)
-            && RefSequenceEqual(a.ProfileUps, b.ProfileUps)
-            && RefSequenceEqual(a.ProfileDowns, b.ProfileDowns)
+            && a.Staves.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Staves))
+            && RefSequenceEqual(a.ProfileUps, CollectionsMarshal.AsSpan(b.ProfileUps))
+            && RefSequenceEqual(a.ProfileDowns, CollectionsMarshal.AsSpan(b.ProfileDowns))
             && ReferenceEquals(a.SilhouetteUp, b.SilhouetteUp)
             && ReferenceEquals(a.SilhouetteDown, b.SilhouetteDown)
-            && a.Trills.AsSpan().SequenceEqual(b.Trills)
-            && a.BarNumbers.AsSpan().SequenceEqual(b.BarNumbers)
-            && a.Ottavas.AsSpan().SequenceEqual(b.Ottavas)
-            && a.CustomTexts.AsSpan().SequenceEqual(b.CustomTexts)
-            && a.Voltas.AsSpan().SequenceEqual(b.Voltas)
-            && a.MusicMarks.AsSpan().SequenceEqual(b.MusicMarks)
-            && a.Articulations.AsSpan().SequenceEqual(b.Articulations)
-            && a.Dynamics.AsSpan().SequenceEqual(b.Dynamics)
-            && a.TextSpanners.AsSpan().SequenceEqual(b.TextSpanners)
-            && a.TupletBrackets.AsSpan().SequenceEqual(b.TupletBrackets)
-            && a.ChordNames.AsSpan().SequenceEqual(b.ChordNames);
+            && a.Trills.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Trills))
+            && a.BarNumbers.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.BarNumbers))
+            && a.Ottavas.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Ottavas))
+            && a.CustomTexts.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.CustomTexts))
+            && a.Voltas.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Voltas))
+            && a.MusicMarks.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.MusicMarks))
+            && a.Articulations.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Articulations))
+            && a.Dynamics.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.Dynamics))
+            && a.TextSpanners.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.TextSpanners))
+            && a.TupletBrackets.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.TupletBrackets))
+            && a.ChordNames.AsSpan().SequenceEqual(CollectionsMarshal.AsSpan(b.ChordNames));
 
-    private static bool RefSequenceEqual(object[] a, object[] b)
+    private static bool RefSequenceEqual(object[] a, ReadOnlySpan<object> b)
     {
         if (a.Length != b.Length)
             return false;
