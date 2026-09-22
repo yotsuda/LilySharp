@@ -209,6 +209,78 @@ public class PhrasingSlurTests
         Assert.Equal(endY, v[7] - v[1], tol);
     }
 
+    /// <summary>
+    /// A phrasing slur forced below stems pointing its way — LilyPond 2.26.0's own shape
+    /// (Lab sessions/p483/dir.ly), BOTH edges of the drawn bow compared as a pair.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ AS A PAIR, because the two engines write the bow's two edges in the OPPOSITE ORDER
+    /// on a down curve (LilyPond outer-first, Lily# inner-first) — the fill is the same.
+    /// Session 483 read only the first edge and ticketed a "0.118 flatter" down slur that
+    /// session 484 found to be exactly that order (the 0.12 is the slur's thickness).
+    /// </remarks>
+    [Fact]
+    public void ADownPhrasingSlur_IsLilyPondsShape()
+    {
+        string source = Book("c''4@phrasingSlur.down d'' e'' f''@!phrasingSlur |");
+        int at = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var m = Regex.Match(svg,
+            @"d=""M ([\d.-]+),([\d.-]+) C ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) C ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) Z""[^>]*data-pos=""" + at + @"""");
+        Assert.True(m.Success, "no bow cites the @ at " + at);
+        double G(int g) => double.Parse(m.Groups[g].Value, CultureInfo.InvariantCulture);
+        double x0 = G(1), y0 = G(2);
+        const double tol = 0.011;
+        Assert.Equal(8.277, G(7) - x0, tol);
+        Assert.Equal(1.601, G(3) - x0, tol);
+        // The two edges' control depths, whichever is written first: 1.509 and 1.389.
+        var depths = new[] { G(4) - y0, G(10) - y0 }.OrderBy(d => d).ToArray();
+        Assert.Equal(1.389, depths[0], tol);
+        Assert.Equal(1.509, depths[1], tol);
+    }
+
+    /// <summary>
+    /// On a tab the phrasing slur clears the slurs inside it too — TabVoice is a \Voice, so
+    /// LilyPond's phrasing engraver is there (ly/engraver-init.ly:1172-1190).
+    /// </summary>
+    [Fact]
+    public void OnATab_ThePhrasingSlurClearsItsSlurs()
+    {
+        // Found by rendering six books with and without the enclosed slurs (Lab
+        // sessions/p484/tc*.lys): here, withheld, the phrasing curve passes 0.013 over the
+        // first inner slur's crest — centre line on centre line, the two inks overlapping —
+        // and 0.27 over it with them.
+        string source = "octave absolute part gtr { instrument guitar } section A { gtr { "
+            + "e8@phrasingSlur g( c' g) e g c'( a)@!phrasingSlur | } } form main { A } "
+            + "score main { tab gtr }";
+        int phrasing = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
+        int inner = source.IndexOf("(", source.IndexOf("g(", StringComparison.Ordinal), StringComparison.Ordinal);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        double[] Bow(int at)
+        {
+            var m = Regex.Match(svg,
+                @"d=""M ([\d.-]+),([\d.-]+) C ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) C[^""]*""[^>]*data-pos=""" + at + @"""");
+            Assert.True(m.Success, "no bow cites " + at);
+            return Enumerable.Range(1, 8)
+                .Select(g => double.Parse(m.Groups[g].Value, CultureInfo.InvariantCulture)).ToArray();
+        }
+        static (double X, double Y) At(double[] b, double t)
+        {
+            double u = 1 - t, b0 = u * u * u, b1 = 3 * u * u * t, b2 = 3 * u * t * t, b3 = t * t * t;
+            return (b0 * b[0] + b1 * b[2] + b2 * b[4] + b3 * b[6], b0 * b[1] + b1 * b[3] + b2 * b[5] + b3 * b[7]);
+        }
+        var crest = At(Bow(inner), 0.5);
+        var outer = Bow(phrasing);
+        var over = Enumerable.Range(0, 2001).Select(i => At(outer, i / 2000.0))
+            .OrderBy(p => Math.Abs(p.X - crest.X)).First();
+        // Device Y: above the crest is a SMALLER y — by more than the two bows' ink, each
+        // Slur.thickness 1.2 × line-thickness 0.1 = 0.12 thick.
+        Assert.True(crest.Y - over.Y > 2 * 0.12,
+            $"phrasing {over.Y:F3} at the crest's x, crest {crest.Y:F3}");
+    }
+
     [Fact]
     public void TheCurveCitesBothOfItsAnnotations()
     {

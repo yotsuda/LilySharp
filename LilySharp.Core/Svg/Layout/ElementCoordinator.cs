@@ -3664,11 +3664,21 @@ internal sealed class ElementCoordinator
     /// small slur is the piece on the same line (Slur::get_curve of the broken spanner).
     /// </remarks>
     private static List<SlurLayout>? EnclosedSlurs(
-        SlurItem phrasing, int segmentStartMeasure, List<SlurLayout> laidOut,
+        SlurItem phrasing, int segmentStartMeasure, IReadOnlyList<SlurLayout> laidOut,
         IReadOnlyDictionary<int, int> measureToSystem)
     {
         if (!measureToSystem.TryGetValue(segmentStartMeasure, out int system))
             return null;
+        return EnclosedSlurs(phrasing, laidOut,
+            m => measureToSystem.TryGetValue(m, out int s) && s == system);
+    }
+
+    /// <summary>The same, with the system test given as a predicate on a piece's
+    /// <see cref="SlurLayout.RenderMeasureIndex"/> — the tab path's form, which holds its
+    /// segment's <see cref="SystemLayout"/> rather than the measure-to-system map.</summary>
+    private static List<SlurLayout>? EnclosedSlurs(
+        SlurItem phrasing, IReadOnlyList<SlurLayout> laidOut, Func<int, bool> onThisSystem)
+    {
         List<SlurLayout>? found = null;
         foreach (var sl in laidOut)
         {
@@ -3682,7 +3692,7 @@ internal sealed class ElementCoordinator
                     || (s.StartMeasureIndex == phrasing.EndMeasureIndex && s.StartItemIndex <= phrasing.EndItemIndex));
             if (!startsInside)
                 continue;
-            if (!measureToSystem.TryGetValue(sl.RenderMeasureIndex, out int pieceSystem) || pieceSystem != system)
+            if (!onThisSystem(sl.RenderMeasureIndex))
                 continue;
             (found ??= new List<SlurLayout>()).Add(sl);
         }
@@ -3814,6 +3824,11 @@ internal sealed class ElementCoordinator
                 break;
             }
         }
+        // ⚠️ LILYSHARP-OWN: a phrasing slur's WRITTEN side ('.up'/'.down') is NOT honoured here, a
+        // known gap (HANDOFF ⒳¹³ ⑹): LilyPond honours it on a TabVoice too, but this scorer keeps
+        // the tab STEMS out (remarks above) on the promise that the curve always stands on the
+        // side away from them — a forced side toward them would draw through the beams
+        // (MEASURED, Lab sessions/p484/tab.lys). Closing it means scoring the stems.
         int dir = curveUp ? 1 : -1;              // LilyPond's dir_, in the Y-UP frame
         double outward = curveUp ? -1.0 : 1.0;   // the same direction in DEVICE Y (down)
 
@@ -3879,6 +3894,16 @@ internal sealed class ElementCoordinator
         var solved = new SlurScoringProblem(
             tabSlur, startX, startY, endX, endY, staffMiddleDown,
             obstacles: obstacles,
+            // A phrasing slur clears the tab's slurs as it does the staff's. The pieces are
+            // the TRANSFORMED ones (control points already moved toward the digits below),
+            // which is what LilyPond reads: the grob's control-points, the tablature
+            // transformer's output (scm/lily/tablature.scm).
+            // LILYPOND-REF: lily/slur-scoring.cc:814-821 get_extra_encompass_infos —
+            //   Slur::get_curve (small_slur) of each enclosed slur.
+            enclosedSlurs: slur.IsPhrasing
+                ? EnclosedSlurs(slur, slurLayouts,
+                    m => segSystem.Measures.Any(ml => ml.MeasureIndex == m))
+                : null,
             isBrokenLeft: !isFirst,
             isBrokenRight: !isLast,
             leftEdge: leftEdge,
