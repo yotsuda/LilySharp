@@ -81,13 +81,30 @@ internal sealed class IndexBuckets<T>
             if (k > max) max = k;
         }
 
-        var builders = new ImmutableArray<T>.Builder?[max - min + 1];
+        // Counted per key first, so each bucket is ONE array of its own size filled in item
+        // order — the order the builders it replaces kept. MEASURED (session 475's census, the
+        // reader's corpus, eight forward keystrokes a book): a builder a key, grown and then
+        // copied by ToImmutable, was 773 B a keystroke at 1.35 score builds.
+        var counts = new int[max - min + 1];
         foreach (var item in items)
-            (builders[keyOf(item) - min] ??= ImmutableArray.CreateBuilder<T>()).Add(item);
+            counts[keyOf(item) - min]++;
 
-        var buckets = new ImmutableArray<T>[builders.Length];
-        for (int i = 0; i < builders.Length; i++)
-            buckets[i] = builders[i]?.ToImmutable() ?? ImmutableArray<T>.Empty;
+        var arrays = new T[]?[counts.Length];
+        for (int i = 0; i < counts.Length; i++)
+            if (counts[i] > 0)
+                arrays[i] = new T[counts[i]];
+        System.Array.Clear(counts);
+        foreach (var item in items)
+        {
+            int k = keyOf(item) - min;
+            arrays[k]![counts[k]++] = item;
+        }
+
+        var buckets = new ImmutableArray<T>[counts.Length];
+        for (int i = 0; i < counts.Length; i++)
+            buckets[i] = arrays[i] is { } a
+                ? System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(a)
+                : ImmutableArray<T>.Empty;
         return new IndexBuckets<T>(buckets, min);
     }
 }

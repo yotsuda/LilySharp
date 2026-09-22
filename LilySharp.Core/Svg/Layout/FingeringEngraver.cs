@@ -219,10 +219,10 @@ internal static class FingeringEngraver
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
-        var map = new Dictionary<int, MeasureLayout>();
-        foreach (var ml in measureLayouts)
-            map[ml.MeasureIndex] = ml;
-        return Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts.AsSpan());
+        var map = RentUnitMap(measureLayouts);
+        var fingerings = Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts.AsSpan());
+        GiveUnitMap(map);
+        return fingerings;
     }
 
     /// <summary>
@@ -250,11 +250,52 @@ internal static class FingeringEngraver
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
-        var map = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
+        var map = RentUnitMap(measureLayouts);
+        var fingerings = Calculate(fonts, score, map, _ => true, staffIndex,
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(unitBeams));
+        GiveUnitMap(map);
+        return fingerings;
+    }
+
+    /// <summary>
+    /// The measure-index map the two per-unit ways in hand the body — one unit's measure
+    /// layouts by their own index — lent from one map the thread keeps between calls, filled.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): the unsized one (<see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>)
+    /// was 1.77 builds a keystroke at 3.93 measures (max 8), 770 B a keystroke, none reachable
+    /// once the render returned; the sized one (<see cref="CalculateWithUnitBeams"/>) is the
+    /// same map the census does not price. The body walks the map's KEYS (the measures it
+    /// places) and reads each entry's layout, and what leaves is the fingering array.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom) — the body lends a second map
+    /// of its own (<see cref="t_tips"/>), not this one, so nothing nests here — and THE
+    /// CLEARING IS ON GIVE (session 456): a map given back dirty would walk the previous
+    /// unit's measures again. A throw between the rent and the give only costs the next call
+    /// a new map. WHAT IT RETAINS is one emptied map a thread at that thread's widest unit.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<int, MeasureLayout>? t_unitMap;
+
+    /// <summary>Takes the thread's unit map (or makes the first), filled with
+    /// <paramref name="measureLayouts"/> by their own index — the last entry for a repeated
+    /// index wins, as the two builds this replaces had it.</summary>
+    private static Dictionary<int, MeasureLayout> RentUnitMap(ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var map = t_unitMap ?? new Dictionary<int, MeasureLayout>(measureLayouts.Length);
+        t_unitMap = null;
         foreach (var ml in measureLayouts)
             map[ml.MeasureIndex] = ml;
-        return Calculate(fonts, score, map, _ => true, staffIndex,
-            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(unitBeams));
+        return map;
+    }
+
+    /// <summary>Puts a finished call's unit map back, emptied, with its capacity.</summary>
+    private static void GiveUnitMap(Dictionary<int, MeasureLayout> map)
+    {
+        map.Clear();
+        t_unitMap = map;
     }
 
     /// <summary>

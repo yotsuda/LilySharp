@@ -1668,7 +1668,25 @@ internal static class MusicMarkEngraver
         // SectionLabel engraves — no auto-suppression of "single distinct section"
         // or "repeated section" boxes. That heuristic fought the author's explicit
         // `~` control and silently hid deliberately named single sections.
-        var sectionLabels = new List<MusicMarkItem>();
+        //
+        // Counted first, so the answer — existing marks, then the labels in measure order — is
+        // written straight into one array of its own size. It used to go through a List of the
+        // labels, then a builder the two were copied into, then ToImmutable's copy of that:
+        // MEASURED (session 475's census, the reader's corpus, eight forward keystrokes a book)
+        // 687 + 705 B a keystroke for the two scratch containers alone.
+        int labelCount = 0;
+        for (int i = 0; i < measures.Length; i++)
+            if (measures[i].SectionLabel != null)
+                labelCount++;
+
+        if (labelCount == 0)
+            return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
+
+        int existing = musicMarks.IsDefaultOrEmpty ? 0 : musicMarks.Length;
+        var merged = new MusicMarkItem[existing + labelCount];
+        if (existing > 0)
+            musicMarks.CopyTo(merged);
+        int at = existing;
         for (int i = 0; i < measures.Length; i++)
         {
             var measure = measures[i];
@@ -1679,19 +1697,10 @@ internal static class MusicMarkEngraver
             int pos = measure.SectionLabelPosition > 0
                 ? measure.SectionLabelPosition
                 : measure.SourceStart;
-            sectionLabels.Add(new MusicMarkItem(
-                MusicMarkType.SectionLabel, measure.SectionLabel, i, pos));
+            merged[at++] = new MusicMarkItem(
+                MusicMarkType.SectionLabel, measure.SectionLabel, i, pos);
         }
-
-        if (sectionLabels.Count == 0)
-            return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
-
-        // Merge: existing marks + section labels
-        var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
-        if (!musicMarks.IsDefaultOrEmpty)
-            builder.AddRange(musicMarks);
-        builder.AddRange(sectionLabels);
-        return builder.ToImmutable();
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(merged);
     }
 
     /// <summary>
@@ -1722,31 +1731,38 @@ internal static class MusicMarkEngraver
             TempoDots = tempoDots,
         };
 
-        var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
+        // The INITIAL tempo is drawn from Score.Tempo (the mark added below).
+        // A top-level or part-header `tempo` ALSO gets injected into the music
+        // stream as a metronome mark at the opening moment (MeasureCollector),
+        // so without this filter the same starting tempo prints two or three
+        // times — and the stream copies, anchored to a note column rather than
+        // the line start, float at the wrong height. Drop those redundant
+        // opening-moment stream tempos (MeasureIndex 0, zero elapsed time,
+        // AnchorItemIndex >= 0 = stream-sourced). A genuine mid-piece change
+        // (AnchorTiming numerator != 0, or a later measure) is kept; an
+        // in-music tempo with no Score.Tempo never reaches this branch.
+        // Counted first and written into one array of the answer's size, as
+        // MergeSectionLabels is: the builder and its ToImmutable copy were 926 B a
+        // keystroke (session 475's census).
+        int kept = 0;
         if (!marks.IsDefaultOrEmpty)
-        {
-            // The INITIAL tempo is drawn from Score.Tempo (the mark added below).
-            // A top-level or part-header `tempo` ALSO gets injected into the music
-            // stream as a metronome mark at the opening moment (MeasureCollector),
-            // so without this filter the same starting tempo prints two or three
-            // times — and the stream copies, anchored to a note column rather than
-            // the line start, float at the wrong height. Drop those redundant
-            // opening-moment stream tempos (MeasureIndex 0, zero elapsed time,
-            // AnchorItemIndex >= 0 = stream-sourced). A genuine mid-piece change
-            // (AnchorTiming numerator != 0, or a later measure) is kept; an
-            // in-music tempo with no Score.Tempo never reaches this branch.
             foreach (var m in marks)
-            {
-                bool redundantOpeningTempo = m.Type == MusicMarkType.Tempo
-                    && m.MeasureIndex == 0
-                    && m.AnchorItemIndex >= 0
-                    && m.AnchorTiming.Numerator == 0;
-                if (!redundantOpeningTempo)
-                    builder.Add(m);
-            }
-        }
-        builder.Add(tempoMark);
-        return builder.ToImmutable();
+                if (!IsRedundantOpeningTempo(m))
+                    kept++;
+        var merged = new MusicMarkItem[kept + 1];
+        int at = 0;
+        if (!marks.IsDefaultOrEmpty)
+            foreach (var m in marks)
+                if (!IsRedundantOpeningTempo(m))
+                    merged[at++] = m;
+        merged[at] = tempoMark;
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(merged);
+
+        static bool IsRedundantOpeningTempo(MusicMarkItem m) =>
+            m.Type == MusicMarkType.Tempo
+            && m.MeasureIndex == 0
+            && m.AnchorItemIndex >= 0
+            && m.AnchorTiming.Numerator == 0;
     }
 
     /// <summary>

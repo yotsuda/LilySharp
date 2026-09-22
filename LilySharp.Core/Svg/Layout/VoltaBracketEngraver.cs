@@ -213,7 +213,9 @@ internal static class VoltaBracketEngraver
             return ImmutableArray<VoltaBracketLayout>.Empty;
 
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
-        var layouts = ImmutableArray.CreateBuilder<VoltaBracketLayout>();
+        // Lent (see t_layouts); ToImmutable copies, so the builder is finished with there.
+        var layouts = t_layouts ?? ImmutableArray.CreateBuilder<VoltaBracketLayout>();
+        t_layouts = null;
 
         for (int bi = 0; bi < voltaBrackets.Length; bi++)
         {
@@ -269,8 +271,27 @@ internal static class VoltaBracketEngraver
             }
         }
 
-        return layouts.ToImmutable();
+        var engraved = layouts.ToImmutable();
+        layouts.Clear();
+        t_layouts = layouts;
+        return engraved;
     }
+
+    /// <summary>
+    /// The builder <see cref="Calculate"/> collects the bracket pieces into, lent from one the
+    /// thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 0.62 builds a keystroke at 9.07 pieces (max 34), 743 B a keystroke,
+    /// none reachable once the render returned — <c>ToImmutable</c> copies (session 459's
+    /// probe) and the one exit after the rent is the last line. RENTING TAKES IT OUT OF THE
+    /// DRAWER (session 421's idiom), THE CLEARING IS ON GIVE (session 456): a builder given
+    /// back dirty would hand the next score this one's brackets. WHAT IT RETAINS is one emptied
+    /// builder a thread at that thread's most-bracketed score.
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<VoltaBracketLayout>.Builder? t_layouts;
 
     /// <summary>
     /// Gets the edge height for volta bracket hooks.

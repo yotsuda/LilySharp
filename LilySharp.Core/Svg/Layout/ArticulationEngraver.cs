@@ -277,13 +277,34 @@ internal static class ArticulationEngraver
     {
         if (articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationItem>.Empty;
-        var b = ImmutableArray.CreateBuilder<ArticulationItem>();
+        // Lent (see t_sideScripts); ToImmutable copies, so the builder is finished with here.
+        var b = t_sideScripts ?? ImmutableArray.CreateBuilder<ArticulationItem>();
+        t_sideScripts = null;
         foreach (var a in articulations)
             if (a.StaffIndex == staffIndex && IsSidePositionedScript(a.Type)
                 && (measures == null || measures.Contains(a.MeasureIndex)))
                 b.Add(a);
-        return b.ToImmutable();
+        var scripts = b.ToImmutable();
+        b.Clear();
+        t_sideScripts = b;
+        return scripts;
     }
+
+    /// <summary>
+    /// The builder <see cref="SidePositionedScriptsOf"/> filters one staff's scripts into, lent
+    /// from one the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 2.46 builds a keystroke at 14.21 scripts (max 359), 1,077 B a
+    /// keystroke, none reachable once the render returned — <c>ToImmutable</c> copies (session
+    /// 459's probe), and the method's one exit after the rent is its last line. RENTING TAKES IT
+    /// OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE (session 456): a builder
+    /// given back dirty would hand the next staff this staff's scripts. WHAT IT RETAINS is one
+    /// emptied builder a thread at that thread's most-scripted staff.
+    /// </remarks>
+    [ThreadStatic]
+    private static ImmutableArray<ArticulationItem>.Builder? t_sideScripts;
 
     /// <summary>
     /// The <c>avoid-slur = #'inside</c> marks of one staff, placed with NO slur — the boxes a

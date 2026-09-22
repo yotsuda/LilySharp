@@ -26,7 +26,9 @@ internal sealed class TieDetector
 {
     public ImmutableArray<TieItem> DetectTies(Score score)
     {
-        var ties = new List<TieItem>();
+        // Lent (see t_ties); the ToImmutableArray below copies, so the list is finished with there.
+        var ties = t_ties ?? new List<TieItem>();
+        t_ties = null;
 
         // Each voice runs its own tie engraver; VoiceScan walks them all so a
         // second voice's ties are not lost. LILYPOND-REF: ly/engraver-init.ly.
@@ -87,8 +89,28 @@ internal sealed class TieDetector
             }
         }
 
-        return ties.ToImmutableArray();
+        var detected = ties.ToImmutableArray();
+        ties.Clear();
+        t_ties = ties;
+        return detected;
     }
+
+    /// <summary>
+    /// The list <see cref="DetectTies"/> collects a score's ties into, lent from one the thread
+    /// keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 1.74 builds a keystroke at 18.32 ties (max 142), 820 B a keystroke,
+    /// none reachable once the render returned — the answer is the copied array, and
+    /// <see cref="DetectChordTies"/>, the one other writer, is handed the list and keeps
+    /// nothing. RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON
+    /// GIVE (session 456): a list given back dirty would hand the next score this one's ties.
+    /// A throw between the rent and the give only costs the next call a new list. WHAT IT
+    /// RETAINS is one emptied list a thread at that thread's most-tied score, pinning no item.
+    /// </remarks>
+    [ThreadStatic]
+    private static List<TieItem>? t_ties;
 
     /// <summary>
     /// Emits one <see cref="TieItem"/> per pitch in <paramref name="startChord"/>

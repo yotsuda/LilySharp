@@ -61,8 +61,8 @@
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:663** that does not exist yet. Named, not silently approximated.
-- **:2525** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:684** that does not exist yet. Named, not silently approximated.
+- **:2546** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -78,9 +78,9 @@
 - **:59** ⚠️ NOT PORTED HERE: LilyPond puts the alteration on the LEFT of the digit by default
 ### `LilySharp.Core/Svg/Layout/FingeringEngraver.cs`
 - **:83** ⚠️ avoid-slur #'around is NOT ported: a fingering does not dodge a slur here. It
-- **:481** ⚠️ THE ACCIDENTALS ARE SUPPORTS TOO on a chord (:329-332). Not ported: no point
-- **:504** ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
-- **:511** silently approximated.
+- **:522** ⚠️ THE ACCIDENTALS ARE SUPPORTS TOO on a chord (:329-332). Not ported: no point
+- **:545** ⚠️ DERIVATION, NOT A TRANSCRIPTION, and it is the shape of the code that differs:
+- **:552** silently approximated.
 ### `LilySharp.Core/Svg/Layout/FingScriptMemo.cs`
 - **:79** same order, with the same source indices). Stated rather than silently approximated:
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
@@ -92,7 +92,7 @@
 - **:3745** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1183** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2055** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:2071** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -159,10 +159,10 @@
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:312** hands the scorer the band it would have had without the digit. No book reaches that
-- **:1833** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:1994** see the difference, and no fixture and no ledger point reaches it.
-- **:2637** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:333** hands the scorer the band it would have had without the digit. No book reaches that
+- **:1854** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:2015** see the difference, and no fixture and no ledger point reaches it.
+- **:2658** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -171,9 +171,9 @@
 - **:63** moving output no observer can check.
 - **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
 ### `LilySharp.Core/Svg/Layout/FingeringEngraver.cs`
-- **:510** clears it. No point reaches that texture, and it is named here rather than
-- **:606** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
-- **:607** it was rather than being changed unobserved.
+- **:551** clears it. No point reaches that texture, and it is named here rather than
+- **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
+- **:648** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
@@ -390,12 +390,12 @@
 - **:648** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
 - **:1477** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **:1512** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
-- **:1955** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2222** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2411** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2506** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2517** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2563** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:1971** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:2238** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2427** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2522** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2533** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2579** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:75** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
