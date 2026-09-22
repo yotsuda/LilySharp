@@ -3152,7 +3152,16 @@ public sealed partial class MeasureCollector
     /// <c>_fingeringByPosition</c> (position-keyed; an item only ever reads its
     /// OWN position, so prefix entries have no reader in the resumed tail), and
     /// the collaborators that run strictly post-walk (lyrics, tab).</summary>
-    internal IList[] CumulativeSideTables() => new IList[]
+    /// <remarks>
+    /// ⚠️ ONE ARRAY PER COLLECTOR, built on first ask: every entry is a <c>readonly</c> field,
+    /// so the registry cannot change after construction, and the array is only ever READ
+    /// (indexed, counted, enumerated) — a caller that wrote into it would rewrite the
+    /// registry for every later caller. It used to be built on every call: once per walk
+    /// checkpoint and once per walk. MEASURED (session 505, the owner's corpus, 1,160 books
+    /// × 8 forward keystrokes, GCAllocationTick by type): <c>IList[]</c> 11,579 B a
+    /// keystroke, all of it this method.
+    /// </remarks>
+    internal IList[] CumulativeSideTables() => _cumulativeSideTables ??= new IList[]
     {
         _dynamics, _articulations, _graceNotes, _musicMarks, _customTexts,
         _voltaBrackets, _tupletBrackets, _arpeggios, _figuredBasses,
@@ -3169,6 +3178,8 @@ public sealed partial class MeasureCollector
         // from the measures it ends up with. Nothing to adopt, nothing to shift. Adding it
         // here without a CollectTailShifter arm would throw on the `default:`.
     };
+
+    private IList[]? _cumulativeSideTables;
 
     /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
     /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
