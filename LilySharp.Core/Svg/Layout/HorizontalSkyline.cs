@@ -231,6 +231,33 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
+    /// <see cref="FromBoxes"/> written into <paramref name="target"/>, whose buildings it
+    /// replaces — for a skyline its caller keeps and builds again for each question.
+    /// </summary>
+    internal static HorizontalSkyline FromBoxesInto(HorizontalSkyline target,
+        IReadOnlyList<(double YBottom, double YTop, double XLeft, double XRight)> boxes)
+    {
+        var buildings = target._buildings;
+        buildings.Clear();
+        target._pendingPad = 0.0;
+        buildings.EnsureCapacity(boxes.Count);
+        for (int i = 0; i < boxes.Count; i++)
+        {
+            var (yBottom, yTop, xLeft, xRight) = boxes[i];
+            buildings.Add(BoxBuilding(yBottom, yTop, xLeft, xRight, target._direction));
+        }
+        return target;
+    }
+
+    /// <summary>Empties a skyline its caller keeps (<see cref="FromBoxesInto"/>,
+    /// <see cref="ShiftedRaisedOverInto"/>), keeping its capacity.</summary>
+    internal void Clear()
+    {
+        _buildings.Clear();
+        _pendingPad = 0.0;
+    }
+
+    /// <summary>
     /// A list to gather <see cref="FromBoxes"/>'s boxes in, lent from one the thread keeps
     /// between calls. Hand it back with <see cref="GiveBoxList"/> once the skyline is built.
     /// </summary>
@@ -292,17 +319,31 @@ internal sealed class HorizontalSkyline
     /// </remarks>
     internal static HorizontalSkyline ShiftedRaisedOver(
         HorizontalSkyline glyph, double shift, double raise, HorizontalSkyline under)
+        => ShiftedRaisedOverInto(new HorizontalSkyline(glyph._direction), glyph, shift, raise, under);
+
+    /// <summary>
+    /// <see cref="ShiftedRaisedOver"/> written into <paramref name="target"/>, whose buildings
+    /// it replaces — for a caller that keeps its running skylines in a pair of its own and
+    /// alternates between them. <paramref name="target"/> must be neither input.
+    /// </summary>
+    internal static HorizontalSkyline ShiftedRaisedOverInto(HorizontalSkyline target,
+        HorizontalSkyline glyph, double shift, double raise, HorizontalSkyline under)
     {
-        if (glyph._direction != under._direction)
+        if (glyph._direction != under._direction || target._direction != glyph._direction)
             throw new ArgumentException("Cannot merge skylines with different directions");
+        if (ReferenceEquals(target, glyph) || ReferenceEquals(target, under))
+            throw new ArgumentException("The target is one of the inputs", nameof(target));
         int sky = (int)glyph._direction;
         var glyphBuildings = glyph.Effective(secondSlot: false);
         var underBuildings = under.Effective(secondSlot: true);
-        var buildings = new List<SkylineBuilding>(glyphBuildings.Count + underBuildings.Count);
+        var buildings = target._buildings;
+        buildings.Clear();
+        target._pendingPad = 0.0;
+        buildings.EnsureCapacity(glyphBuildings.Count + underBuildings.Count);
         foreach (var b in glyphBuildings)
             buildings.Add(b.ShiftedHorizon(shift).RaisedBy(sky * raise));
         buildings.AddRange(underBuildings);
-        return new HorizontalSkyline(buildings, glyph._direction);
+        return target;
     }
 
     /// <summary>

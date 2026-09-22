@@ -432,7 +432,8 @@ internal sealed class AccidentalPlacement
         }
         // LILYPOND-REF: accidental-placement.cc:398-400 — left_skyline = heads; raise by
         // -right-padding (0.15) so accidentals keep that much clear of the notes.
-        var reference = HorizontalSkyline.FromBoxes(headBoxes, HorizontalDirection.Left);
+        // The running reference lives in the scratch's pair of skylines (see PlacementScratch).
+        var reference = HorizontalSkyline.FromBoxesInto(scratch.ReferenceA, headBoxes);
         reference.Raise(-_params.RightPadding);
 
         // Position right-to-left with skyline-to-skyline nesting.
@@ -509,8 +510,12 @@ internal sealed class AccidentalPlacement
             }
 
             // LILYPOND-REF: accidental-placement.cc:418-421 — the new LEFT skyline is this
-            // accidental's LEFT skyline shifted into place, merged over the old one.
-            reference = HorizontalSkyline.ShiftedRaisedOver(glyphLeft, yCenterSS, offset, reference);
+            // accidental's LEFT skyline shifted into place, merged over the old one. After the
+            // LAST accidental nothing reads it, so it is not built.
+            if (placed + 1 < entries.Count)
+                reference = HorizontalSkyline.ShiftedRaisedOverInto(
+                    ReferenceEquals(reference, scratch.ReferenceA) ? scratch.ReferenceB : scratch.ReferenceA,
+                    glyphLeft, yCenterSS, offset, reference);
 
             // XOffset is the whole accidental's ink-left (what DrawAccidentalAtInkLeft and the
             // reservation boxes anchor to): the glyph origin lands at `offset`, so its LILC
@@ -525,6 +530,8 @@ internal sealed class AccidentalPlacement
 
         scratch.Entries.Clear();
         scratch.HeadBoxes.Clear();
+        scratch.ReferenceA.Clear();
+        scratch.ReferenceB.Clear();
         t_placementScratch = scratch;
         return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(layouts);
     }
@@ -545,6 +552,16 @@ internal sealed class AccidentalPlacement
     /// below it; the lent one is still the pair's. The method has no exit between the rent
     /// and the give. WHAT IT RETAINS is two emptied lists at the thread's widest column.
     /// </para>
+    /// <para>
+    /// The running reference skyline is the scratch's too (session 498): the heads' skyline is
+    /// built into <see cref="PlacementScratch.ReferenceA"/>, and each accidental's merge is
+    /// written into whichever of the pair the reference it reads is not. MEASURED (Release, the
+    /// reader's corpus, eight forward keystrokes a book): 33.18 columns and 33.24 merges a
+    /// keystroke, 38,098 B between them, every skyline dropped at the return — a column
+    /// almost always carries ONE accidental, so almost every merge was the one after the
+    /// last accidental, which nothing reads and which is therefore no longer built. The pair
+    /// is cleared on give with the lists, and retained as two emptied skylines beside them.
+    /// </para>
     /// </remarks>
     [ThreadStatic]
     private static PlacementScratch? t_placementScratch;
@@ -553,6 +570,8 @@ internal sealed class AccidentalPlacement
     {
         public readonly List<PlacementEntry> Entries = new();
         public readonly List<(double YBottom, double YTop, double XLeft, double XRight)> HeadBoxes = new();
+        public readonly HorizontalSkyline ReferenceA = new(HorizontalDirection.Left);
+        public readonly HorizontalSkyline ReferenceB = new(HorizontalDirection.Left);
     }
 
     /// <summary>

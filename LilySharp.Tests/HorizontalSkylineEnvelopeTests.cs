@@ -92,6 +92,41 @@ public class HorizontalSkylineEnvelopeTests
     }
 
     /// <summary>
+    /// The spellings that write into a skyline the caller keeps (session 498 — the accidental
+    /// placement's running reference, the line start's two skylines) REPLACE what it held: a
+    /// kept skyline that still carries an old building and a pending padding answers as a
+    /// fresh one would.
+    /// </summary>
+    [Fact]
+    public void TheIntoSpellings_ReplaceWhatTheKeptSkylineHeld()
+    {
+        var glyph = HorizontalSkyline.FromBoxes(new[]
+        {
+            (-0.75, 0.5, -0.3, 0.6),
+            (0.2, 1.25, -0.1, 0.9),
+        }, HorizontalDirection.Left);
+        var under = HorizontalSkyline.FromBoxes(new[] { (-1.0, 1.0, 0.0, 1.2) }, HorizontalDirection.Left);
+        HorizontalSkyline Stale() => HorizontalSkyline.FromBoxesPadded(
+            new[] { (-3.0, 3.0, -5.0, 5.0) }, HorizontalDirection.Left, 0.2);
+
+        Assert.Equal(HorizontalSkyline.ShiftedRaisedOver(glyph, 1.5, -0.85, under).Buildings,
+            HorizontalSkyline.ShiftedRaisedOverInto(Stale(), glyph, 1.5, -0.85, under).Buildings);
+
+        var boxes = new[] { (-1.0, 0.5, 0.0, 1.0), (0.25, 2.0, -0.5, 0.75) };
+        Assert.Equal(HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Left).Buildings,
+            HorizontalSkyline.FromBoxesInto(Stale(), boxes).Buildings);
+
+        var cleared = Stale();
+        cleared.Clear();
+        Assert.True(cleared.IsEmpty);
+        Assert.Empty(cleared.Buildings);
+
+        // Writing into the skyline being read would clear it before it is read.
+        Assert.Throws<ArgumentException>(
+            () => HorizontalSkyline.ShiftedRaisedOverInto(under, glyph, 1.5, -0.85, under));
+    }
+
+    /// <summary>
     /// A skyline built padded keeps its padding PENDING (session 497): every read must see the
     /// eager padded list, every write must pad first (a pad of a raised building is not the
     /// raised pad, bit for bit), and a pending skyline merged into another must bring its pads.

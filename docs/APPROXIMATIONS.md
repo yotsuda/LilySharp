@@ -191,7 +191,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:886** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:292** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
+- **:317** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:303** an unverified edge of this proxy (no point observes it).
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
@@ -362,9 +362,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:909** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:562** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:641** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:649** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:587** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
+- **:666** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:674** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:210** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:294** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is

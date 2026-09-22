@@ -101,22 +101,47 @@ internal static class LineStartColumn
         if (prefatory.Count == 0 || firstNote.Count == 0)
             return 0.0;
 
-        var right = Skyline(prefatory, HorizontalDirection.Right);
-        var left = Skyline(firstNote, HorizontalDirection.Left);
-        return Math.Max(0.0, right.Distance(left));
+        var right = Skyline(ref t_prefatorySkyline, prefatory, HorizontalDirection.Right);
+        var left = Skyline(ref t_firstNoteSkyline, firstNote, HorizontalDirection.Left);
+        double distance = right.Distance(left);
+        right.Clear();
+        left.Clear();
+        t_prefatorySkyline = right;
+        t_firstNoteSkyline = left;
+        return Math.Max(0.0, distance);
     }
 
-    private static HorizontalSkyline Skyline(IReadOnlyList<ColumnBox> boxes, HorizontalDirection direction)
+    // Lent from the drawer (taken out, so a nested call builds its own) and given back
+    // cleared by MinimumDistance, whose one distance is all that reads them.
+    private static HorizontalSkyline Skyline(
+        ref HorizontalSkyline? drawer, IReadOnlyList<ColumnBox> boxes, HorizontalDirection direction)
     {
+        var skyline = drawer ?? new HorizontalSkyline(direction);
+        drawer = null;
         var tuples = ToTuples(boxes);
-        var skyline = HorizontalSkyline.FromBoxes(tuples, direction);
+        HorizontalSkyline.FromBoxesInto(skyline, tuples);
         HorizontalSkyline.GiveBoxList(tuples);
         return skyline;
     }
 
+    /// <summary>
+    /// The two skylines <see cref="MinimumDistance"/> measures, kept by the thread between
+    /// line starts.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 498, Release, the reader's corpus, eight forward keystrokes a book):
+    /// 6.97 distances a keystroke, 1,903 B between the two skylines built for each, and
+    /// neither read again once the distance returned.
+    /// </remarks>
+    [ThreadStatic]
+    private static HorizontalSkyline? t_prefatorySkyline;
+
+    [ThreadStatic]
+    private static HorizontalSkyline? t_firstNoteSkyline;
+
     // A list and not an iterator: the answer is as long as its input, and
-    // HorizontalSkyline.FromBoxes sizes its buildings from that length. The list is lent
-    // (HorizontalSkyline.RentBoxList) — FromBoxes copies it, so Skyline gives it straight back.
+    // HorizontalSkyline.FromBoxesInto sizes its buildings from that length. The list is lent
+    // (HorizontalSkyline.RentBoxList) — FromBoxesInto copies it, so Skyline gives it straight back.
     private static List<(double YBottom, double YTop, double XLeft, double XRight)>
         ToTuples(IReadOnlyList<ColumnBox> boxes)
     {
@@ -285,7 +310,7 @@ internal static class LineStartColumn
     /// a book): 6.98 lists a keystroke at 1.54 boxes (max 3), 1,284 B with the growth ladder,
     /// and every one unreachable when the render returned. The list's one reader is
     /// <see cref="MinimumDistance"/>, which copies it into a skyline (<c>ToTuples</c> →
-    /// <c>HorizontalSkyline.FromBoxes</c>) and keeps nothing. RENTING TAKES IT OUT OF THE
+    /// <c>HorizontalSkyline.FromBoxesInto</c>) and keeps nothing. RENTING TAKES IT OUT OF THE
     /// DRAWER (session 421's idiom); THE CLEARING IS ON GIVE (session 456) and before each
     /// staff — a stale box would widen the next staff's <c>min_dist</c> with a grob it does
     /// not engrave. <see cref="ColumnBox"/> holds four doubles, so the drawer pins nothing.
