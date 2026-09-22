@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第509セッションの経緯
+
+### 1.1 第509セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第508 のすぐ後）。ユーザー指示「続けて」＝第508 の写しの census の残り。
+★ **`-Start p509` の 1 コマンドで §0 が全部済んだ**（HEAD `f95b5bd6`・full 8849 / 0 / 3 / 8852・`-Archive 507` も自動）。
+
+★★ **⑴ 写しの census の尾 4 軒＝render 1,758,694 → 1,746,114（−12,580・−0.7%）**（`9f7142ab`・出力は `Zz509Hash`＝5,824 行 0 差）。`MusicMarkEngraver` の `GroupBy().ToList()`（3,721）⇒ 貸し出しの key→index 地図＋`ListPool` の list／`ArticulationEngraver.OrderByScriptPriority` の `OrderBy.ThenBy.ToArray`（2,296）⇒ stack の 2 鍵で安定な挿入ソート／`ElementCoordinator` のタイ列の `OrderBy`＋`Select.Distinct`（2,345）⇒ `ListPool`／`LayoutEngine.Annotations` の `SelectMany().ToImmutableArray()`（3,269）⇒ 寸法ちょうど。ついでに第508 の `SpringSolver` の自前の引き出しを既存の **`ListPool<T>`** に寄せた（⚠️ **貸し出しの list は `Svg/Layout/ListPool.cs` が既にある＝自前の `[ThreadStatic]` を書く前に使う**）。
+  **毒 5 本**（Lab `sessions/p509/poisons.ps1`）: group 地図を汚す 1,425 赤・group しない 77 赤・priority 無視 2 赤。**緑＝タイ列の並べ替えを不安定に**（入れ替わりうるのは同音の値が等しい 2 本だけ）。重複を残す毒は棚卸し 2 本だけ赤（`Contains` しか読まない＝意味上同値）。full 8849 / 0 / 3 / 8852。
+
 ## 以下は第508セッションの経緯
 
 ### 1.1 第508セッション（2026-09-22・YT-DELL2）
