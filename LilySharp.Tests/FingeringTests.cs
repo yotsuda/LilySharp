@@ -127,6 +127,9 @@ public class FingeringTests
     {
         // A stem-DOWN beam (every head above the middle line), so the stale tip is far from
         // the head the unbeamed digit sits on: 17.59 against 5.045 staff spaces, measured.
+        // ⚠️ Pitches are RELATIVE, so this book climbs two octaves a note (staff positions
+        // 8/22/36/50/64, session 473) — that is what puts the tip so high. Five c'' in a row
+        // (`c''8@finger(1) c8 c8 c8 c2`) read 5.045 like the unbeamed note and would see nothing.
         BuildLayout("c''8@finger(1) c''8 c''8 c''8 c''2 |");
         var (_, next) = BuildLayout("c''4@finger(1) d''8 e''8 f''2 |");
         var (_, unbeamed) = BuildLayout("c''4@finger(1) d''4 e''4 f''4 |");

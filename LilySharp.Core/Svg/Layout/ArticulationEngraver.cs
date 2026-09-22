@@ -1311,10 +1311,10 @@ internal static class ArticulationEngraver
     /// Parking the SUPPORT map dirty reddens 104 nets — a stale chain stacks this page's
     /// scripts on the previous page's. Parking the TIE-BOUND map dirty leaves all 8,783 nets
     /// GREEN, and the reader's corpus disagrees with them: the same poison moves 2,760 of its
-    /// 5,824 page hashes and changes the page COUNT (5,824 → 5,832). So the clearing of
-    /// <see cref="t_tieBounds"/> is a correctness property with NO observer in the suite — a
-    /// stale bound hands a script the tie support of a note nothing tied. Do not read that
-    /// green as "this one does not matter"; the hole is HANDOFF §1.0 ⒮¹³.
+    /// 5,824 page hashes and changes the page COUNT (5,824 → 5,832) — a stale bound hands a script
+    /// the tie support of a note nothing tied. Since session 473 it is watched: under that poison the
+    /// only reds are ArticulationPlacementTests.ALentTieBoundMap_… and ALentTieList_…. Leaving
+    /// only the map uncleared, its lists still pooled, stays green there: the aliased bow is elsewhere.
     /// </para>
     /// <para>
     /// The per-key <c>List</c> each map holds is recovered separately: clearing a map used to
@@ -1392,9 +1392,9 @@ internal static class ArticulationEngraver
     /// A list is exclusively its taker's from the pop to the give that pushes it back, so a
     /// re-entrant call is safe without taking the pool out of the drawer: it pops lists
     /// nobody holds. ⚠️ THE CLEARING IS ON GIVE, as for the maps: a list handed out dirty
-    /// would give a script the supports of a note it does not sit on. WHAT IT RETAINS is one
-    /// emptied list per key at the thread's densest page (359 at most, measured), pinning
-    /// no layout.
+    /// would give a script the supports of a note it does not sit on (the tie half is watched by
+    /// ALentTieList_CarriesNoTieIntoTheNextBook since session 473). WHAT IT RETAINS is one
+    /// emptied list per key at the thread's densest page (359 at most, measured), pinning no layout.
     /// </para>
     /// </remarks>
     private static List<TieLayout> RentTieList()

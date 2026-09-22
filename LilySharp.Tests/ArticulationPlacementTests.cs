@@ -286,6 +286,71 @@ public class ArticulationPlacementTests
         Assert.Equal(7.32, middle - portato.Y, 2);    // chord3 member portato — chain (LP 7.31)
     }
 
+    /// <summary>The one accent's height over the middle line, in staff spaces.</summary>
+    private static double AccentYUp(string source)
+    {
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(source),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var accent = Assert.Single(MusicGlyphs(svg),
+            g => g.Glyph == EmmentalerGlyphs.ArticAccentAbove);
+        return MiddleLineY(svg) - accent.Y;
+    }
+
+    /// <summary>
+    /// The engraver's tie-bound map is LENT from a drawer the thread keeps between books
+    /// (<c>ArticulationEngraver.RentTieBounds</c>), so a map given back dirty would hand the
+    /// next book's script the previous book's tie as a support. The shape that shows it: the
+    /// first book ties its accented first note, the second has the same (staff, voice,
+    /// measure, item) UNTIED — with a tie elsewhere, so the map is rented and filled — and a
+    /// tie on the script's side lifts the accent over the bow where an untied note does not.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE SUITE HAD NO OBSERVER (session 458 measured it, session 473 wrote
+    /// this): parking the map without clearing it left every net green while the reader's
+    /// corpus moved 2,760 of its 5,824 pages. The answer is compared against the same note in
+    /// a book with NO tie at all, which never rents the map and so cannot be polluted by it;
+    /// the tied book is asserted to lift, or the comparison would say nothing.
+    /// </remarks>
+    [Fact]
+    public void ALentTieBoundMap_CarriesNoTieIntoTheNextBook()
+    {
+        // The three books are laid out alike — four measures, the same notes — so the stale
+        // bow would stand over the untied head at the same x. The tie's end is spelled `c`
+        // because pitches are RELATIVE: a second `c''` is two octaves up, and a tie between
+        // two pitches is not drawn. Measured: 5.42 tied, 5.17 untied (the Scripts_AvoidTies
+        // book above reads the same lift).
+        double tied = AccentYUp("r2. c''4@accent~ | c4 r2. | e1 | e1 |");
+        double next = AccentYUp("r2. c''4@accent | c4 r2. | e1~ | e1 |");
+        double untied = AccentYUp("r2. c''4@accent | c4 r2. | e1 | e1 |");
+
+        Assert.True(tied > untied + 0.1, $"the tie must lift its accent: {tied} vs {untied}");
+        Assert.Equal(untied, next, precision: 9);
+    }
+
+    /// <summary>
+    /// The per-bound LISTS of that map are pooled on their own (<c>RentTieList</c>), so a list
+    /// given back still holding its ties would hand them to whichever bound of the next book
+    /// rents it first. The shape that shows it: a book whose tie stands HIGH (over c''') and
+    /// then a book tied at the same place an octave lower — every list the second book rents
+    /// would carry the high bow, which lifts its accent far past its own tie's answer.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The net above does not see this: its books rent the stale list for the far-away `e`
+    /// tie, where no script stands (session 464's poison, green then; session 473 wrote this).
+    /// The answer is the tie-start lift LilyPond measures on the same note (5.43, see
+    /// Scripts_AvoidTies above) — a fresh book cannot be the control here, since a book that
+    /// rents nothing leaves the pool as it found it.
+    /// </remarks>
+    [Fact]
+    public void ALentTieList_CarriesNoTieIntoTheNextBook()
+    {
+        double high = AccentYUp("r2. c'''4@accent~ | c4 r2. |");
+        double low = AccentYUp("r2. c''4@accent~ | c4 r2. |");
+
+        Assert.True(high > low + 1, $"the high tie must stand over the low one: {high} vs {low}");
+        Assert.Equal(5.42, low, 2); // tie START lift (LP 5.43)
+    }
+
     [Fact]
     public void Scripts_RideOffASlur_InsideOnesStayPut()
     {

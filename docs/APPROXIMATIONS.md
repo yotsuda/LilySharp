@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 58 | 観測者がゼロだと自認しているもの |
+| `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
 | `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **261** | |
+| **計** | **260** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -24,11 +24,11 @@
 | `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 15 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 9 |
-| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
+| `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
@@ -132,7 +132,7 @@
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（58 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（57 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2471** container, and the value stops being unobserved with the line above.
@@ -160,7 +160,6 @@
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:312** hands the scorer the band it would have had without the digit. No book reaches that
-- **:1315** is a correctness property with NO observer in the suite — a
 - **:1820** them as markup — so there is no LP geometry to port and no ledger point can observe
 - **:1981** see the difference, and no fixture and no ledger point reaches it.
 - **:2624** box per duration, which Lily# does not read for this purpose. No ledger point observes
