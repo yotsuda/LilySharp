@@ -461,4 +461,31 @@ public sealed class TabStringNumberTests
         var d = Assert.Single(validator.Diagnostics);
         Assert.Equal(DiagnosticCodes.TabTieStringConflict, d.Code);
     }
+
+    /// <summary>
+    /// A chord member whose written string cannot fret it is placed as if unmarked, and the
+    /// unmarked members are placed HIGHEST PITCH FIRST, each on the highest free string —
+    /// LilyPond's answer: <c>&lt;c'\1 d'\1&gt;</c> on a guitar prints d' 3 on the second
+    /// string and c' 5 on the third, after "Requested string for pitch requires negative
+    /// fret … Ignoring string request and recalculating" (MEASURED, 2.26.0, Lab
+    /// sessions/p485/imp.ly). Lily# draws the same.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ONLY WAY INTO THAT BRANCH: TabResolver gives every chord member a string before
+    /// anything frets it, so a member reaches <see cref="Tunings.CalculateChordFrets"/>
+    /// unassigned only when its WRITTEN string is unplayable. Session 470's poison (place the
+    /// unassigned members lowest first) was green over the suite and the reader's corpus
+    /// because neither writes one; session 485's throw gate reached the branch with nothing
+    /// but this chord. Lowest-first puts c' 1 on the second string and leaves d' no string
+    /// within the stretch.
+    /// </remarks>
+    [Fact]
+    public void AnUnplayableWrittenString_IsRecalculated_HighestPitchFirst()
+    {
+        var frets = Tunings.CalculateChordFrets(
+            new List<(int Midi, int? StringNumber)> { (60, 1), (62, 1) },   // <c'\1 d'\1>
+            Tunings.GetTuning(TuningType.Guitar));
+        Assert.Equal((3, 5), frets[0]);   // c' — third string, fret 5
+        Assert.Equal((2, 3), frets[1]);   // d' — second string, fret 3
+    }
 }
