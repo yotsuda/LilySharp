@@ -103,6 +103,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` 31.8 回 8,180 B（距離 1 つのために skyline 2 つ＝box から直接 `SkylineMath` で測れば消える）。
+  ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（collect の post-pass の `with`？未調査）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）・Int32[] 120 KB・Double[] 101 KB・State[] 64 KB**。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
   ⇒ 次の候補: `SpacingRules.MeasureSprings.cs:1282/1290`（`FromBoxes(…).Distance(CreateLeftSkyline(…))`＝距離だけ）・`AccidentalPlacement` の `reference` の head skyline・`Clone()` の他の呼び手。
 - ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
@@ -215,6 +216,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第493セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第492 のすぐ後）。ユーザー指示「続けて」＝距離だけのために skyline を建てる軒と、臨時記号の reference。
+★ **`-Start p493` の 1 コマンドで §0 が全部済んだ**（HEAD `db857bde`・full 8839 / 0 / 3 / 8842・`-Archive 491` も自動）。
+
+★★★ **⑴ 型ごとの値段を取り直した**（第470 の `Zz470Price` を写した `Zz493Price`＝runtime の GCAllocationTick を render の窓で型ごとに集計・Lab `sessions/p493/type-price-head.txt`）。**頭＝String 354 KB・NoteItem 297 KB・SkylineBuilding[] 226 KB・BeamConfiguration 218 KB・SystemDetails 151 KB・Int32[] 120 KB・Double[] 101 KB／打鍵**（分母 2,593,767）。
+★★★ **⑵ `BeamConfiguration` を梁をまたいで使い回した＝render 2,593,947 → 2,375,919（−218,028・−8.4%・型の値段 218,022 と一致）**。候補は `Solve` の外へ出ない（返すのは勝者の 2 数）＝`t_spareConfigs` に返し、取る所で 4 項目全部を書く。**既存の網が厚い**＝Demerits を書き直さない毒で 199 本・NextScorerTodo で 170 本赤。
+★★★ **⑶ `SystemDetails` の写しを消した＝render → 2,301,528（−74,391・−3.1%）**。system 数を選ぶ loop（`ChooseSystemCount`）は候補の行数ごとに details を新しく建て、`CalcLineHeights` が 1 行ごとに `with { Tallness }` で写していた（26,646 回・791,040 行）。**`CalcLineHeightsInPlace`**（その場で書く・loop は前の行の tallness を読まない）を estimate の 2 軒にだけ。`Tallness` は `internal set`。網 `PageBreakerTests.CalcLineHeightsInPlace_WritesWhatTheCopyingStackerReturns`（引き算を抜く毒で赤）。
+  どちらも出力は同一（`Zz493Hash`＝5824 行・0 差）。full 8840 / 0 / 3 / 8843。生成物 2 つ（行番号と、1 行の本文だけ）。
+★ **⑷ 終了時**: コード 3 ファイル（BeamScoringProblem・PageBreaker・LayoutEngine.SystemCount）＋テスト 1 本＋生成物 2 つ。
+★ **この便の途中でユーザーが push した**＝`origin/master` は `db857bde`（第492 の docs）。Lab は push されていない（ahead 136）。
+
+## 以下は第492セッションの経緯
+
 ### 1.1 第492セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第491 のすぐ後）。ユーザー指示「続けて」＝列の skyline（672 KB／打鍵）と「距離だけのために skyline を建てる」軒。
@@ -225,19 +240,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   網 `ItemSkylineRenderMemoTests`（X・staff Y・scope の毒で赤。⚠️ **`Which` を鍵から抜く毒は緑＝恒等**：4 つの view では `Which` が向きと padding から決まる・比較器の remarks に明記）。出力は同一（`Zz492Hash`＝5824 行・0 差）。full 8839 / 0 / 3 / 8842。
   ⚠️ **予測より小さい理由**＝再建の大半は冊ごとの warm-up の全描画（打鍵の数に入らない）。
 ★ **⑵ 終了時**: コード 6 ファイル（ItemSkylineFactory・IncrementalCompiler・LayoutEngine・SpacingRules 3 つ）＋テスト 1 本＋生成物 1 つ（APPROXIMATIONS.md・行番号だけ）。
-
-## 以下は第491セッションの経緯
-
-### 1.1 第491セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第490 のすぐ後）。ユーザー指示「続けて」＝建てた直後に写して捨てる形の続き（`FromBoxes`／`Clone` の残りの呼び手）。
-★ **`-Start p491` の 1 コマンドで §0 が全部済んだ**（HEAD `88e93336`・full 8835 / 0 / 3 / 8838・`-Archive 489` も自動）。
-
-★★★ **⑴ 臨時記号の glyph の skyline 対を共有した＝render 2,785,589 → 2,657,678（−127,911 B／打鍵・−4.6%）**。先に計器（Lab `sessions/p491/`）で 3 軒を値付け＝**`GlyphSkylinePair` は 104 回／打鍵・2,183 B／回＝227 KB（render の 8.2%）**。答えは (glyph, courtesy, design, magnification) だけの関数なのに臨時記号 1 つごとに baked outline を Clone・Merge・Scale し直していた。
-  直し＝`AccidentalPlacement.SharedGlyphSkylinePair`（thread ごとの辞書・**共有物は触らない**）・右は `HorizontalSkyline.ShiftedScratch`（距離にだけ使う＝thread の scratch に写す・距離を測る分岐でだけ）・左は `ShiftedRaisedOver`（Shift→Raise→Merge を 1 本の list に・同じ順・同じ 2 段の算術）。残り 99 KB は新しい reference＝実物。
-  網 2 本＝`PlacingAColumn_LeavesTheSharedGlyphOutlinesAsBuilt`（共有物を Shift する毒で赤・既存 10 本も赤）・`ShiftedRaisedOver_AndShiftedScratch_AreTheInPlaceSteps`。出力は同一（`Zz491Hash`＝5824 行・0 差）。full 8837 / 0 / 3 / 8840。
-★ **⑵ §1.0 を畳んだ**（⒮¹⁰ と ⒭′ を 2 行ずつに・「建てた直後に写して捨てる」の項を新設＝計器の住所と次の候補）。
-★ **⑶ 終了時**: コード 2 ファイル（AccidentalPlacement・HorizontalSkyline）＋テスト 2 本＋生成物 1 つ（行番号だけ）。
 
 ## 2. 開いている作業
 

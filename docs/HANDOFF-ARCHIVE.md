@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第491セッションの経緯
+
+### 1.1 第491セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第490 のすぐ後）。ユーザー指示「続けて」＝建てた直後に写して捨てる形の続き（`FromBoxes`／`Clone` の残りの呼び手）。
+★ **`-Start p491` の 1 コマンドで §0 が全部済んだ**（HEAD `88e93336`・full 8835 / 0 / 3 / 8838・`-Archive 489` も自動）。
+
+★★★ **⑴ 臨時記号の glyph の skyline 対を共有した＝render 2,785,589 → 2,657,678（−127,911 B／打鍵・−4.6%）**。先に計器（Lab `sessions/p491/`）で 3 軒を値付け＝**`GlyphSkylinePair` は 104 回／打鍵・2,183 B／回＝227 KB（render の 8.2%）**。答えは (glyph, courtesy, design, magnification) だけの関数なのに臨時記号 1 つごとに baked outline を Clone・Merge・Scale し直していた。
+  直し＝`AccidentalPlacement.SharedGlyphSkylinePair`（thread ごとの辞書・**共有物は触らない**）・右は `HorizontalSkyline.ShiftedScratch`（距離にだけ使う＝thread の scratch に写す・距離を測る分岐でだけ）・左は `ShiftedRaisedOver`（Shift→Raise→Merge を 1 本の list に・同じ順・同じ 2 段の算術）。残り 99 KB は新しい reference＝実物。
+  網 2 本＝`PlacingAColumn_LeavesTheSharedGlyphOutlinesAsBuilt`（共有物を Shift する毒で赤・既存 10 本も赤）・`ShiftedRaisedOver_AndShiftedScratch_AreTheInPlaceSteps`。出力は同一（`Zz491Hash`＝5824 行・0 差）。full 8837 / 0 / 3 / 8840。
+★ **⑵ §1.0 を畳んだ**（⒮¹⁰ と ⒭′ を 2 行ずつに・「建てた直後に写して捨てる」の項を新設＝計器の住所と次の候補）。
+★ **⑶ 終了時**: コード 2 ファイル（AccidentalPlacement・HorizontalSkyline）＋テスト 2 本＋生成物 1 つ（行番号だけ）。
+
 ## 以下は第490セッションの経緯
 
 ### 1.1 第490セッション（2026-09-22・YT-DELL2）
