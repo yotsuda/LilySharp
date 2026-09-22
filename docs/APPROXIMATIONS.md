@@ -295,7 +295,7 @@
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
-- **:304** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
+- **:320** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:142** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
 - **:449** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's

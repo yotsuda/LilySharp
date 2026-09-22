@@ -77,19 +77,28 @@ internal sealed class TabResolver
         if (!anyTie)
             return voice;
 
-        var items = voice.Measures.Select(m => m.Items.ToArray()).ToArray();
+        // A measure's items are copied only when a write lands in it (the idiom of
+        // ResolveTabStrings below): every read goes through ItemAt, so a source the walk has
+        // rewritten is read rewritten, and a measure no tie touches keeps its items and its
+        // Measure. MEASURED (session 508, Release, the reader's corpus, eight forward
+        // keystrokes a book): copying every measure of a tied voice was 6,421 B a keystroke —
+        // 0.84 voices of 102 measures, most of them tie-free.
+        var measures = voice.Measures;
+        var work = new MusicItem[]?[measures.Length];
+        MusicItem[] Work(int mi) => work[mi] ??= measures[mi].Items.ToArray();
+        MusicItem ItemAt(int mi, int ii) => work[mi] is { } w ? w[ii] : measures[mi].Items[ii];
         int pendingMi = -1, pendingIi = -1; // the note awaiting its tie destination
 
-        for (int mi = 0; mi < items.Length; mi++)
+        for (int mi = 0; mi < measures.Length; mi++)
         {
-            for (int ii = 0; ii < items[mi].Length; ii++)
+            for (int ii = 0; ii < measures[mi].Items.Length; ii++)
             {
-                if (items[mi][ii] is not NoteItem note)
+                if (ItemAt(mi, ii) is not NoteItem note)
                     continue;
 
                 if (pendingMi >= 0)
                 {
-                    var src = (NoteItem)items[pendingMi][pendingIi];
+                    var src = (NoteItem)ItemAt(pendingMi, pendingIi);
                     int? srcStr = src.StringNumber;
                     int? dstStr = note.StringNumber;
 
@@ -98,14 +107,14 @@ internal sealed class TabResolver
                             note.SourcePosition, srcStr.Value, dstStr.Value));
                     else if (!srcStr.HasValue && dstStr.HasValue)
                     {
-                        items[pendingMi][pendingIi] = src with { StringNumber = dstStr };
+                        Work(pendingMi)[pendingIi] = src with { StringNumber = dstStr };
                         srcStr = dstStr;
                     }
 
                     // The destination keeps the held string (for chained ties) and
                     // is hidden on the tab staff.
                     note = note with { IsTieTarget = true, StringNumber = dstStr ?? srcStr };
-                    items[mi][ii] = note;
+                    Work(mi)[ii] = note;
                     pendingMi = -1;
                 }
 
@@ -114,10 +123,9 @@ internal sealed class TabResolver
             }
         }
 
-        var measures = voice.Measures;
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(measures.Length);
         for (int mi = 0; mi < measures.Length; mi++)
-            rebuilt.Add(measures[mi] with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items[mi]) });
+            rebuilt.Add(work[mi] is { } w ? measures[mi] with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(w) } : measures[mi]);
         return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 
@@ -208,27 +216,35 @@ internal sealed class TabResolver
     /// </remarks>
     public static Voice RemoveAccidentals(Voice voice)
     {
-        var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
-        bool anyMeasureChanged = false;
+        // Copied on the first strip only — the items of a measure, and the measure list of
+        // the voice: a tab voice spells few accidentals, and one that spells none comes back
+        // as the same instance without having built anything. MEASURED (session 508, Release,
+        // the reader's corpus, eight forward keystrokes a book): copying every measure's items
+        // to look for one was 4,945 B a keystroke, 73.96 measures.
+        var measures = voice.Measures;
+        ImmutableArray<Measure>.Builder? rebuilt = null;
 
-        foreach (var measure in voice.Measures)
+        for (int mi = 0; mi < measures.Length; mi++)
         {
-            var items = measure.Items.ToArray();
-            bool changed = false;
-            for (int i = 0; i < items.Length; i++)
+            var measure = measures[mi];
+            var source = measure.Items;
+            MusicItem[]? items = null;
+            for (int i = 0; i < source.Length; i++)
             {
-                var stripped = WithoutAccidentals(items[i]);
-                if (!ReferenceEquals(stripped, items[i]))
-                {
-                    items[i] = stripped;
-                    changed = true;
-                }
+                var stripped = WithoutAccidentals(source[i]);
+                if (!ReferenceEquals(stripped, source[i]))
+                    (items ??= source.ToArray())[i] = stripped;
             }
-            anyMeasureChanged |= changed;
-            rebuilt.Add(changed ? measure with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) } : measure);
+            if (items is not null && rebuilt is null)
+            {
+                rebuilt = ImmutableArray.CreateBuilder<Measure>(measures.Length);
+                for (int k = 0; k < mi; k++)
+                    rebuilt.Add(measures[k]);
+            }
+            rebuilt?.Add(items is not null ? measure with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) } : measure);
         }
 
-        return anyMeasureChanged ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
+        return rebuilt is not null ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
     }
 
     /// <summary>One item without its accidentals, or the SAME instance when it had none —

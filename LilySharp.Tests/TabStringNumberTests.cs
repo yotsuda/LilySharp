@@ -275,6 +275,27 @@ public sealed class TabStringNumberTests
         Assert.Equal(4, Notes(score)[0].StringNumber); // source string kept
     }
 
+    /// <summary>
+    /// A CHAINED tie: the middle note is the first tie's destination AND the second's
+    /// source, and when the last note names the string the middle one adopts it — as the
+    /// destination it already is, still hidden.
+    /// </summary>
+    /// <remarks>
+    /// The adoption rewrites a source the walk rewrote one step earlier, so it has to read
+    /// that rewrite. POISONED (session 508): reading the middle note as it was COLLECTED
+    /// instead dropped its tie-target flag — its fret came back on the tab — and left all
+    /// 8,850 tests green.
+    /// </remarks>
+    [Fact]
+    public void ChainedTie_TheMiddleNoteAdoptsTheString_AndStaysHidden()
+    {
+        var notes = Notes(CollectBody("a4~ a4~ a4\\3 b4 |").Score);
+        Assert.False(notes[0].IsTieTarget);
+        Assert.True(notes[1].IsTieTarget);
+        Assert.Equal(3, notes[1].StringNumber);
+        Assert.True(notes[2].IsTieTarget);
+    }
+
     // ---- Per-staff tab string resolution (inheritance + the fingering planner) ----
 
     private static List<NoteItem> TabNotes(string body)
