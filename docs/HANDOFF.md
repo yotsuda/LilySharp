@@ -142,7 +142,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⑴ **スラーが先の重なるスラーを避ける**（`LayoutSlurs` の `overlappingSlurs` を空にする＝`_existingSlurs` は採点の 2 か所が読む）／
   ~~⑵ volta~~（**第479 が閉じた＝毒が恒等写像**＝唯一の呼び手が `voltaBrackets` を `default` で渡していて腕は構造的に届かない＝削除。volta は outside-staff の段が避ける）／⑶ tab 和音の弦の無い音を*低い*音から割る（`Tunings.CalculateChordFrets`＝呼ぶ時点で全音に弦が付いているのかは未確認）／⑷ 小節線 spring の staff ごとの wish を列の先頭で建てる（`BarlineToFirstColumnSpring`）／⑸ grand staff の member が書いた clef（`RenderSpec.WrittenClefOf`）。
   ⇒ ⑴ は**読み手が居るのに絵を動かす形が無い**＝⒳⁷ と同じく「後の段が上書きしていないか」を先に読む（⑵ の答えは「届かない」だった＝**まず `throw` の門で走るかを訊く**）。**値段ではなく忠実度の網**
-- ★ **⒳¹¹ 双子の書き出しが segno／coda を `\mark` で出す＝同じ瞬間のリハーサル記号（ラベル）と衝突して LP が片方を捨てる**（第479 が見た・未着手）。`section C { m { segno e4 … } }` を 2 番括弧に置いた本の双子は `\mark \markup \box "C" \mark \markup { \musicglyph #"scripts.segno" }`＝LP は "conflict with event: ad-hoc-mark-event"／"discarding event" と言い、**双子の絵に segno・coda が無い**（Lab `sessions/p479/vs-lp.log`）。LP 2.26 には `\segnoMark`／`\codaMark`（SegnoMark／CodaMark grob）がある ⇒ 書き出しをそちらへ（双子の忠実度・Lily# の絵ではない）
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
@@ -200,6 +199,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
 **⒞ ユーザー決定が先・触らない**
+- ★★ **⒳¹² インラインの*文字の*navigation 記号が 1 小節遅れて描かれ、曲末の 1 つは黙って消える**（第480 起票・実測・**ユーザー判断が先**）。`docs/SYNTAX_REFERENCE.md`「Navigation Marks」は `c4 d e f | to coda`＝**直前の小節の終わり**と書くが、**その例をそのまま描くと To Coda・Fine・D.C.・D.S. al Fine が全部*次の*小節の終わりに出て、最後の `| ds al coda` は描かれない**（`check` は無言。Lab `sessions/p480/doc-example.lys`＋`-ls.png`）。segno・coda と form 側（`A fine B`）は正しい。**双子は文書どおりの時刻**に出す＝この本では絵と双子が 1 小節食い違う。⚠️ **fixture `navigation-marks.lys` は逆の読み（`fine g1 |`＝この小節の終わり）で書かれていて、絵はそれに合う**＝**どちらが仕様かはユーザー決定**（⑴ 絵を文書に合わせる＝fixture と snapshot も直す／⑵ 文書と双子を絵に合わせる）。**ユーザーの実コーパス 331 冊はインラインの文字記号を 1 度も使っていない**（全部 form 側）＝射程はテストと文書だけ
 - ★★ **⒮¹⁴ `LedgerLineSpannerEngraver.Calculate` の答えは製品の誰も読まない**（第462 起票・grep）。
   `ScoreLayout.LedgerLineSpans` を読むのは `LedgerLineSpannerTests` の 4 本だけ（コード自身も「no renderer draws」）＝
   **2.17 回／打鍵の全小節の歩きと器（:160 の値の list 5,797＝⒮⁸ ⑴ ほか）が丸ごと無駄**。第462 はユーザーの選択で
@@ -224,10 +224,24 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
   | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
   | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒳¹¹ ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第480セッション（2026-09-22・YT-DELL2）
+
+新しい会話。ユーザー指示「HANDOFF を読んで作業に着手して」。§1.0 ⒜ の ⒳¹¹。
+★ **`-Start p480` の 1 コマンドで §0 が全部済んだ**（HEAD `b92afcc5`・未 push 41・full 8801 / 0 / 3 / 8804・`-Archive 478` も自動）。
+
+★★★ **⑴ ⒳¹¹ を閉じた＝起票より広かった**。`\mark` で書くと LP は 1 瞬間に 1 つしか残さず、**section の境目＝ラベルと navigation 記号が同じ瞬間**なので、`form { segno A fine B to coda coda C }` の双子は **segno・coda と A・B・C の*ラベル 3 つ全部*を失っていた**（起票は segno／coda だけを見ていた。Lab `sessions/p480/nav-form-lp.log`）。
+⇒ 書き出しを**絵が模している grob** へ: segno→`\segnoMark 1`・coda→`\codaMark 1`（1400＝ラベルの内側）・文字→`\jump`（Fine／To Coda は `\tweak direction #UP`、D.S.／D.C. は JumpScript 既定の下＝絵と同じ）。**改行では文字は前の行の終わりへ（絵も同じ・`nav-break.lys`）、coda だけ `\tweak break-visibility` で新しい行に残す**（絵のオーナー決定）。`\default` でなく 1＝`\default` は数える（2 つ目が 𝄌𝄌）。
+LP 2.26 で 5 冊（`nav-form`・`nav-break`・p479 の `volta-segno`・fixture `navigation-marks`・文書の例）すべて警告 0 で、配置は Lily# の絵と同じ並び。**網 `LilyPondExporterTests.ANavigationMarkBesideASectionLabel_IsNotASecondRehearsalMark`**＝1 行に `\mark` 2 つを禁じる（segno を旧形に戻す毒で赤を確認）。
+⚠️ 毒の後に CLI だけ再ビルドしたら **Tests の bin に毒入り Core が残り**、full で自分の網が 1 赤＝Tests を build し直して緑（CLAUDE-OPERATIONS §1「`--no-build` の前段」と同じ病）。
+★ **⑵ 新しい起票 ⒳¹²**＝インラインの文字記号が 1 小節遅れ・曲末は消える（§1.0 ⒞・文書 vs fixture＝ユーザー決定）。
+★ **⑶ 終了時**: code `0d9f04fa`（Core 1・Tests 2・`APPROXIMATIONS.md` 再生成）。full **8802 / 0 / 3 / 8805**（+1＝網・`-End` の門は全部 OK）。§7.5 Core '+' 29＝`EmitNavMark` の書き換えと註・LILYPOND-REF 1 本（SegnoMark／CodaMark／JumpScript と 3 つの music function の行番号）。§7.6 出所＝grob の性質は `define-grobs.scm`、上下と改行の振る舞いは Lily# の絵を実測（`nav-form`・`nav-break`）。§7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第479セッションの経緯
 
 ### 1.1 第479セッション（2026-09-22・YT-DELL2）
 
@@ -238,19 +252,6 @@ volta を避けるのは outside-staff の段で、LP の双子とも絵が合�
 ⚠️ 最初の検証の本は**また相対音高で昇っていた**（第473 の RULES の罠を自分で踏んだ）＝volta が高く押し上げられ「記号が volta の下」に見えた。音を落ち着かせて LP と比べると同じ配置。
 ★ **⑵ 新しい起票 ⒳¹¹**＝双子の書き出しが segno／coda を `\mark` で出して LP に捨てられる（§1.0）。
 ★ **⑶ 終了時**: code `f4cd3174`（Core 2 ファイル・削除のみ）。最終 full **8801 / 0 / 3 / 8804**（`-End`）。§7.5 Core '+' 4＝註だけ（残りは削除）＝§7.6 ⒟「削除」＝許可した観測者は `throw` の門（スイート 0 回）と唯一の呼び手の `default`。§7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第478セッションの経緯
-
-### 1.1 第478セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第477 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒜ の ⒮¹⁷。毒は同じフォルダに戻した（ユーザー決定）。
-★ **`-Start p478` の 1 コマンドで §0 が全部済んだ**（HEAD `cb46e8ae`・未 push 37・full 8800 / 0 / 3 / 8803・`-Archive 476` も自動）。
-★★★ **⑴ ⒮¹⁷ を閉じた**＝`MinimumDistanceAtLineStart` の staff ごとの `Clear` に網。**形を見つけるまでに 3 度外した**（計器 Lab `sessions/p478/Zz478ProbeTests.cs.txt`＝staff ごとに「自分の箱」と「抱えた箱」で距離を測り食い違いを数える）:
-⒜ 五線＋タブ＝タブの箱は音によらず一定で、抱えても 15.87 < 五線自身の 17.00（最大に負ける）／⒝ パートごとの `key` は書けない（ヘッダーは構文エラー）／⒞ 移調楽器で調を分けても**1 段目は拍子記号が全 staff 共通の列で右端を占め**、差が隠れる。
-⇒ **形＝`pitch concert` のアルトサックス（C の曲でイ長調）の下に C のパート、その 2 段目（拍子記号なし）が `fis'` で始まる**＝ピアノの距離は自分の音部記号に 5.115、サックスの調号に 10.135、サックス自身は 8.585。
-**網 `LineStartColumnTests.ALineStartsMinDist_DoesNotDependOnTheStaffOrder`**＝毒は順序に依存する（前の staff の箱を抱える）ので、主張は**並び順の入れ替え**（sax→pno と pno→sax で 2 段目の最初の音の x が同じ 9.66・毒の下で 10.44）。
-⚠️ **最初の網は空虚だった**＝「x が戻った最初の音符頭」を 2 段目と読んだが、SVG は staff ごとに描かれるので 1 段目の下の staff だった＝**出荷前の毒で緑**になって気づいた（RULES §5.4「網は同じ毒で赤くしてから出荷」）。ページの音符頭 x の最小値に直して赤。
-★ **⑵ 終了時**: code `75c91290`（網 1 本＋Core の註を網の名前に・`APPROXIMATIONS.md` 再生成）。最終 full **8801 / 0 / 3 / 8804**（`-End`・+1＝網）。§7.5 Core '+' 5＝註だけ。§7.6・§7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
