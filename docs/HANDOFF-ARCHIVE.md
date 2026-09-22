@@ -129,6 +129,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第482セッションの経緯
+
+### 1.1 第482セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第481 のすぐ後）。ユーザー指示「続けて」、続けて「Lily# にもフレージングスラーを足してほしい」（第481 が「LP でスラーを避けるのは PhrasingSlur だけ・Lily# には無い」と書いたのを受けて）。
+★ **`-Start p482` の 1 コマンドで §0 が全部済んだ**（HEAD `dd952347`・未 push 45・full 8801 / 0 / 3 / 8804・`-Archive 480` も自動）。
+
+★★★ **⑴ フレージング・スラーを足した**（ユーザー指示「Lily# にもフレージングスラーを足してほしい」・綴りはユーザー決定＝§3）。code `eedf4197`。
+**経路**: walk の 2 つの入口（`ProcessMusicNode`・tuplet の `EmitScaledItem`）が音符自身の注釈から `@phrasingSlur`／`@!phrasingSlur` を拾って builder に預け（`PendingPhrasingSlur`）、builder の 2 つの入口（`AddItem` は `AddItemWithoutDuration` を通らない）が次の列に `with` で押す＝**item の構築箇所は 1 つも触っていない**。bool 2 つは `MeasureContentKey` の内容、`@` の位置 2 つは除外＋`CollectTailShifter`。grace 時間は保留に触らず押さない（grace の本体が主音の処理中に歩かれるため）。対は `SlurDetector`（声部ごとに 1 本・閉じてから開く・開いている間の開始は無視＝LP の `Slur_engraver` の規則）、警告は `SlurPairingScanner.ScanPhrasing` を `UnpairedSpanWarnings` が問い合わせ時に計算（蓄積しない＝resume の持ち越し不要）。
+**配置**: `ratio` 0.333（`SlurScoreParameters.PhrasingDefault`）と、同じ声部で範囲内に**始まる**スラーを `get_extra_encompass_infos` の Slur 枝どおり extra 集合へ＝曲線上の 3 点（端は bound を共有するときだけ・`inside`・端の音判定なし・X は `idx`）＋中点を `free_slur_distance` 持ち上げた避ける点。これが `additional_ys` にも入るので弧が内側のスラーの上へ上がる。フレージング・スラーは検出で通常スラーの**後ろ**に並べ、配置時に内側が解けている。
+**LP 2.26 と比べて**（Lab `sessions/p482/ps2.lys`・`ps2.ly`）: 3 本の制御点が SVG の 2 桁で一致。**内側スラーを渡さない毒で 3 本とも外れる**（2 本目の c1 の高さ −3.13 → −1.92）。網 `PhrasingSlurTests`（15 本・幾何 3 本と増分描画 3 本は毒で赤を確認）。
+**書き出し**: 双子は `\(` と後置の `\)`（前置すると 1 音早く閉じる＝最初の出力で踏んだ）、MusicXML は `<slur number="2">`。`data-pos` は 2 つの `@`（`ResolveBows` の選択子に layout を渡す形に広げた）。
+⚠️ 第481 で消した「スラー同士の腕」の器（`existingSlurs`）は復活させていない＝LP の経路（extra 集合）で入れ直した。
+★ **⑵ 終了時**: full **8817 / 0 / 3 / 8820**（+15＝新しい網）。実コーパス 5,824 ページ 0 差（`Zz482Hash.cs.txt`・Release）。LP 引用の「名前なし」を 4 件足しかけて名前を入れた。`-End` の門は全部 OK。§7.5 Core '+' 480・LILYPOND-REF 9・OWN 0＝新しい振る舞いはどれも LP の source の行に出所がある（対の規則＝`slur-engraver.cc`、曲線の点と避ける点＝`slur-scoring.cc`、ratio＝`define-grobs.scm`）。同じ系の断片だけを渡すのは LP の「同じ行の broken spanner」の言い換え。§7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第481セッションの経緯
 
 ### 1.1 第481セッション（2026-09-22・YT-DELL2）
