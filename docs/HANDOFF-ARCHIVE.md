@@ -129,6 +129,27 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第473セッションの経緯
+
+### 1.1 第473セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」。着手先は §1.0 ⒜ で「網が書ける」と書かれていた ★★★ の ⒮¹³ を選んだ。
+★ **`-Start p473` の 1 コマンドで §0 が全部済んだ**（HEAD `2c9bd51a`・未 push 26・full `sessions/p473/run1.trx`
+8791 / 0 / 3 / 8794・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 471` も自動＝moved 28 行 2,307 字）。
+★★★ **⑴ 骨＝Lily# の音高は*相対*。`c''4~ c''4` は 2 オクターブ離れた 2 音で、tie は描かれない**（Lab `sessions/p473/Zz473ProbeTests.cs.txt`）。
+⒮¹³ の網の最初の 2 版はこれで「tie が accent を持ち上げない（5.165 対 5.165）」と出た。**同じ罠が 2 つの起票の正体だった**:
+**⒳⁸ の 17.59** は `c''8 c''8 c''8 …`＝staff position 8/22/36/50/64 の本で、同じ c'' を並べた `c''8@finger(1) c8 c8 c8 c2` は単音と同じ **5.045**
+（`Zz473X8ProbeTests.cs.txt`）⇒ **忠実度の欠陥ではない＝閉じた**（第472 の網は*その本だから*毒を捕まえる＝註だけ直した）。
+**⒮⁹ で第455 が「計器が割れている」と取り下げた 2.67 と 8.665** も `c'4 d'4 c'4 d'4`＝2 つ目の図形が 2 オクターブ上だった ⇒ **計器は正しかった＝網が書けた**。
+⇒ RULES §5.4 末尾に 1 項（§5.0「対の両側が同じ音楽か」の*1 冊の中*版）。
+★★★ **⑵ 網 3 本（`ArticulationPlacementTests`）**: `ALentTieBoundMap_CarriesNoTieIntoTheNextBook`（⒮¹³＝tie の次の本で同じ bound が tie 無しの本と一致・tied 5.42／untied 5.17）／
+`ALentTieList_CarriesNoTieIntoTheNextBook`（第464 の list 段＝c''' の高い tie の次の本でも accent が LP の 5.43 に留まる）／
+`TwoSlursInOneMeasure_LiftTheirScriptsAlike`（⒮⁹＝同じ図形 2 つのスラーが 2 本とも 2.8139、スラー無しの対照は 2 つとも 2.67）。**3 本とも絶対の主張＋対照＋前提の assert**（RULES §5.4 第455 の 3 点）。
+★★ **⑶ 毒 4 本、外れ 0**（`poisons.txt`・フル・色は先に書いた）: 地図と list を両方汚す＝tie の網 2 本だけ赤／地図だけ `Clear` しない＝**緑**（stale な鍵の list は空にされ pool から別の bound に貸される＝x の遠い tie）／
+list だけ汚す（第464 の毒）＝list の網だけ赤／スラーの overflow を捨てる（第455 の毒）＝⒮⁹ の網だけ赤。
+★★ **⑷ 新しい起票 ⒳⁹**（§1.0 ⒝）＝同じ小節で 1 本目が終わり 2 本目が始まる音の accent は*終わった*スラーを読む（`CoveringSlurPiece` は開始小節しか比べない）。LP 双子が先。
+★ **⑸ 終了時**: commit 2 本（`0e6ca180`＝tie の網 2 本＋註＋`APPROXIMATIONS.md` 再生成＝`UNWATCHED` 58 → 57／`41e9d2f2`＝⒮⁹ の網＋註）。**Core は註だけ**（行数不変）。最終 full **8794 / 0 / 3 / 8797**（`run2.trx`＝`-End`・+3＝網）。§7.5 Core '+' 9／REF 0／OWN 0＝註の書き換えだけ。§7.6 コードに新しい数は 0（網の 5.42／5.17／2.81／2.67 はこの便の計器・5.43 は既存の `Scripts_AvoidTies` の LP 値）。§7.7 の匂い＝`CoveringSlurPiece` が開始小節だけで比べる（⒳⁹）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p474` から入る**。
+
 ## 以下は第472セッションの経緯
 
 ### 1.1 第472セッション（2026-09-22・YT-DELL2）

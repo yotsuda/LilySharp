@@ -100,34 +100,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **LP の旗が喋るのは*和音*の場合**（`set_column_chord_outline` は Stem の旗を無条件に入れる＝
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
-- ★★★ **⒮¹⁰ 「器ごと憶える」の島の残り＝336 軒 254,879 B／打鍵 6.37%・*全部が liveness を通っている***
-  （**第457 が数え直した**＝Lab `sessions/p457/`。census は `site-prices.txt`・**分母 3,999,225**、liveness は
-  `site-liveness.txt`、join は `joined.csv`＝356 軒。脚は `instrument.ps1`＋`Zz457.template.cs`＋
-  `Zz457Leg.cs.txt` を **`Zz457_MODE=price|live` で 2 回**＝**値段と liveness は同じ run では訊けない**）。
-  **生きている 356 軒の actual＋obj は 481,208＝打鍵の 12.03%**で、**escape はたった 16 軒 102,619**
-  （`VerticalSkyline.cs:76` 94,888 alive 11.2%／`BeamDetectionMemo.cs:108` 4,004 100%／
-  `SvgSystemFragmentCache.cs:237` 1,973 100%／`MeasureCollector.cs:3134` 612 66.0%＝⒮⁸ ⑵ が名指した軒／
-  `MultiStaffLayouter.cs:3239-3244` 100%）＝**memo と cache と layout ばかり＝計器の較正**。
-  そこから**第457 が閉じた 4 軒 123,703・第458 の 6 軒 98,901・第459 の Builder 6 軒 25,527・第460 の 5 軒 20,293・
-  第461 の 8 行 17,822・第462 の 8 軒 14,947・第467 の 8 軒 9 行 11,667**（A/B は −16,351）を引いた（残り 293 行 65,722＝**今の打鍵 約 2,966,500 B の 2.22%**）。
-  ★ **Builder は park してよいと実証済み**（第459・Lab `sessions/p459/builder-alias-probe.txt`）＝
-  `ToImmutable()` は**常に写す**（参照同一性で 4 形とも別配列。対照の `Move`／`Drain` は渡す）、しかも
-  **渡す 2 つは builder から外す**（容量 0）＝**park した builder が呼び手の配列を持つことは起こらない**。
-  ⚠️ 系＝**`Move`／`Drain` で終わる軒は park しても毎回空から**＝賞金が無い（出口の API を軒ごとに読む）。
-  ⇒ **次の軒**（**HEAD の住所**・第467 が census の行の文字列を HEAD で引き直した・**1 軒 1,200 B 未満＝⒮¹⁵ の残りのほうが高い**）:
-  `ArticulationEngraver.cs:280`
-  **1,077**（Builder＝出口の API を先に読む）／`MusicMarkEngraver.cs:1650` か `:1685` **926**（census の 1 行が 2 行に当たる＝どちらか先に確かめる）／
-  `OutsideStaffStacker.cs:645` **910**／`TieDetector.cs:29` **820**／`FingeringEngraver.cs:222` **770**＝約 4,500（Prelim の `tiesBySystem` は第472 が閉じた）。
-  ⚠️ **行の文字列で引くと偽の一致が出る**（`ItemSkylineFactory.cs:465`）＝**当たった行を目で読む**
-  ⚠️ **`LayoutEngine.Prelim.cs:374` 6,192・`LedgerLineSpannerEngraver.cs:160` 5,797・`KnuthPlassBreaker.cs:781` 2,779 は
-  *1 呼びで N 個*建てる軒**（計 14,768）＝引き出し 1 枚では足りない＝**別の直し方**（この島の数に混ぜない）。
-  ⚠️⚠️ **直し方は 3 つ**＝⑴ **park**（`VerticalSkyline.cs:985` の `[ThreadStatic]`＋「抜く」rent＋**Give** で `Clear`・第421）／
-  ⑵ **建てない**（答えが器を要しない＝第461 の点列・第462 の `Shape`・HashSet・鍵の list）／⑶ **寸法ちょうどの配列**（写すだけの List）。
-  **軒ごとに要るのは「自分のコードがどこで読み終えるか」を読むことだけ**——**liveness は必要条件しか言わない**（RULES §5.3）。
-  ★ **会計の当たり＝第458 99.97%・第459 98.57%・第460 104.2%・第461 102.1%・第462 は census の行だけのファイル 4 本で 99.7%**
-  （ファイルを 1 つずつ抜く A/B・Lab `sessions/p462/attrib.txt`）＝**give 点が同じメソッドにあり、行が `actual` の形で、
-  ⚠️ *その行の `odd` が 0 なら*、会計はほぼ exact**（上に外れた便は `odd` の行か、census に行の無い隣を持っていた＝**予測の前に `odd` 列を読む**）。
-  **第467 も同じ＝`odd` 0 の 7 軒は 98.0〜102.0%、`odd` 1,736 の 1 軒だけ 113.9%**（Lab `sessions/p467/attrib.txt`）
+- ★★★ **⒮¹⁰ 「器ごと憶える」の島の残り＝scratch 270 軒 約 53,300 B／打鍵＝1.69%**（**第475 が HEAD で数え直した**＝Lab `sessions/p475/`・census `site-prices.txt`・liveness `site-liveness.txt`・join `joined.csv`・
+  **分母 3,151,759**＝parse 317,050＋render 2,834,709・脚は `instrument.ps1`＋`Zz475.template.cs`＋`Zz475Leg.cs.txt` を `Zz475_MODE=price|live` で 2 回＝**値段と liveness は同じ run では訊けない**。値段 21 秒・liveness 33 秒）。
+  HEAD の census は scratch 277 軒 59,541・escape 18 軒 102,629（頭は `VerticalSkyline.cs:76` 94,888）。**第475 が 7 軒 −6,265 を閉じた**。
+  ⇒ **次の軒**（HEAD の住所＝第475 の census）: `MeasureLayouter.cs:499` **1,075**（1.00 件／回＝`StaffItemsAt` が list を*返す*＝呼び手を読む）／`OutsideStaffStacker.cs:645` **910** と `:704` 623（memo front の仕分け＝辞書の列挙順が memo の登録順に効く＝⒨ の家）／
+  `LayoutEngine.PagingSkylines.cs:908` **895**（system ごとの tie の list を `AddBowGroup` へ渡す＝持つかを読む）／`Parser.Music.cs:27` **859**／`SpacingRules.LedgerRods.cs:157` 738／`SharedRenderer.cs:812` 652／`ElementCoordinator.cs:2028` 643／`PageLayouter.cs:361` 622。
+  ⚠️ **`LayoutEngine.Prelim.cs:460` 6,192・`LedgerLineSpannerEngraver.cs:274` 5,797・`KnuthPlassBreaker.cs:781` 2,779 は*1 呼びで N 個*建てる軒**＝別の直し方（この島の数に混ぜない）。
+  ⚠️⚠️ **直し方は 3 つ**＝⑴ park／⑵ 建てない／⑶ 寸法ちょうどの配列。**軒ごとに要るのは「自分のコードがどこで読み終えるか」を読むことだけ**——liveness は必要条件しか言わない（RULES §5.3）。
+  ★ **会計の当たり**＝第458 99.97%・第459 98.57%・第460 104.2%・第461 102.1%・第462 99.7%・第467 98.0〜113.9%・**第475 和 100.7%**（軒ごと 87.5〜105.7%）。**`odd` 0 の行はほぼ exact**
+  ⚠️ **A/B の途中でコーパスが 1 冊増えることがある**（第475＝ユーザーが `space.lys` を作った）＝**脚の 1 行目の冊数を必ず読む**。231 と 232 の run を引き算しない
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
   `Zz463Leg.cs.txt` を price／live の 2 回・join は `joined.csv`・写しの候補は `copies.csv`。**分母 3,687,958**）。
@@ -223,7 +204,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
 **⒞ ユーザー決定が先・触らない**
-- ★★ **⒳¹⁰ 開いていない音の `c4()` を警告のままにするか、エラーで拒否するか**（第474 でユーザーが提起・ユーザー判断待ち）。第474 から Lily# は LP と同じく「閉じる→開く」で読むので、`c4()` は「対の無い `)`」と「開いたままの `(`」の警告 2 つになる（LP も "cannot end slur" と警告）。1 音だけのスラーは記譜上意味を持たない＝**1 音スラー用の綴りは作らない**のが第474 の提案。laissez vibrer 型の弧が要る日は `@lv` のような専用の綴りとして別に設計する。両母集団に該当する音は 0（Lab `sessions/p474/slur-both-marks-census.txt`）
 - ★★ **⒮¹⁴ `LedgerLineSpannerEngraver.Calculate` の答えは製品の誰も読まない**（第462 起票・grep）。
   `ScoreLayout.LedgerLineSpans` を読むのは `LedgerLineSpannerTests` の 4 本だけ（コード自身も「no renderer draws」）＝
   **2.17 回／打鍵の全小節の歩きと器（:160 の値の list 5,797＝⒮⁸ ⑴ ほか）が丸ごと無駄**。第462 はユーザーの選択で
@@ -248,10 +228,25 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
   | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
   | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒱ ⒲ ✅ 閉じた**
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第475セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第474 のすぐ後）。ユーザー指示「`c4()` は LP と同じように警告にして。(a) を続けて」。
+★ **`c4()` はユーザー決定＝警告のまま**（第474 の挙動＝LP と同じ 2 警告）⇒ §1.0 ⒞ の ⒳¹⁰ を閉じた。
+★ **`-Start p475` の 1 コマンドで §0 が全部済んだ**（HEAD `920e00af`・未 push 31・full 8798 / 0 / 3 / 8801・`-Archive 473` も自動＝moved 22 行 2,104 字）。
+★ **ベンチの静かな窓はユーザーにもらった**（この便の census・A/B・会計の脚をまとめて）。
+★★★ **⑴ ⒮¹⁰ の census を HEAD で回し直した**（第457 の計器を p475 に写しただけ・§1.0 ⒮¹⁰ に住所と値段）。scratch 277 軒 59,541＝1.89%・escape 18 軒 102,629。
+★★★ **⑵ 7 軒**: A `SidePositionedScriptsOf` の builder を貸す／B `MergeSectionLabels` と C `MergeTempoMark` は数えてから寸法ちょうどの配列 1 枚（list→builder→写しの 3 段が 1 枚に）／D `DetectTies` の list を貸す／E fingering の小節地図を貸す（2 つの入口とも）／F volta の builder を貸す／G `IndexBuckets.Build` は鍵ごとに数えて寸法ちょうど。
+**A/B −6,265 B／打鍵＝0.20%**（予測 6,501 の 96.4%・帯内・向きは下）・**5,824 ページ 0 差**。**会計**（1 ファイルずつ戻す）＝A 1,019／B＋C 2,228／D 853／E 814／F 717／G 676＝和 100.7%。
+⚠️ **会計の途中でコーパスが 231 → 232 冊になった**（ユーザーが `space.lys` を作った）＝E〜G は 232 冊の after を取り直して比べた。**脚の 1 行目の冊数を読む**。
+★★ **⑶ 毒 7 本、外れ 0**（`poisons.txt`）: 汚して返す 4 本（A 5／D 630／E 14／F 22 赤）・寸法を 1 つずらす 3 本（B 1,328／C 182／G 867 赤）＝**どの軒にも観測者が居た**＝網は足していない。
+★ **⑷ 終了時**: code `61a96bb4`（Core 6 ファイル＋棚卸し 2 枚）。最終 full **8798 / 0 / 3 / 8801**（`run2.trx`＝`-End`・網は足していない）。§7.5 Core '+' 192／REF 0／OWN 0＝器の持ち方と寸法だけで LP に対応物が無い。§7.6 コードに新しい数はコメントの census 値だけ（出所つき）。§7.7 の匂いなし。**push はユーザー**（Lab も・ユーザーの `space.lys` は未追跡のまま触っていない）。
+
+## 以下は第474セッションの経緯
 
 ### 1.1 第474セッション（2026-09-22・YT-DELL2）
 
@@ -266,27 +261,6 @@ LP は閉じるイベントを先に処理する（`slur-engraver.cc:295-324`）
 ★★ **⑷ 網 4 本・毒 3 本・外れ 0**（`poisons.txt`）: ページを開く→閉じるに戻す＝`…PairsAsTwoSlurs` と `ANoteThatEndsOneSlurAndStartsTheNext…` の 2 赤／警告の scan を戻す＝`BothSlurMarksOnANoteWithNothingOpen…` だけ赤／running の鍵を外す＝`ANoteThatEnds…` だけ赤。`…IsNotReportedUnpaired` は慣用の綴りに警告が出ないことを留める。
 ★ **⑸ ユーザーの問い**＝「LP が受け入れない綴りは拒否すべきか／音楽的にあり得るなら独自文法か」⇒ 1 音スラーは記譜上意味を持たないので**綴りを作らない**と答えた。警告のままか、エラーにするかは ⒞ ⒳¹⁰。
 ★ **⑹ 終了時**: code `979b3391`（Core 3＋網 4＋プローブ＋棚卸し 2 枚＋CHANGELOG）。最終 full **8798 / 0 / 3 / 8801**（`run2.trx`＝`-End`・+4＝網）。§7.5 Core '+' 38／REF 3／OWN 0＝3 本とも LP から導出（閉じる→開くは `process_music` の字面・running の鍵は ⒝＝LP の `slurs[0]` は*最初に始まった*走っているスラーで、Lily# は走っている中で開始が最も遅いもの＝入れ子のスラーでだけ食い違う・コードに ⚠️）。§7.6 新しい数は 0（2.8160 等は LP プローブの実測・註に出所）。§7.7＝その入れ子の差（どちらの母集団にも 0 冊）。**push はユーザー**（Lab も）。
-
-## 以下は第473セッションの経緯
-
-### 1.1 第473セッション（2026-09-22・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」。着手先は §1.0 ⒜ で「網が書ける」と書かれていた ★★★ の ⒮¹³ を選んだ。
-★ **`-Start p473` の 1 コマンドで §0 が全部済んだ**（HEAD `2c9bd51a`・未 push 26・full `sessions/p473/run1.trx`
-8791 / 0 / 3 / 8794・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 471` も自動＝moved 28 行 2,307 字）。
-★★★ **⑴ 骨＝Lily# の音高は*相対*。`c''4~ c''4` は 2 オクターブ離れた 2 音で、tie は描かれない**（Lab `sessions/p473/Zz473ProbeTests.cs.txt`）。
-⒮¹³ の網の最初の 2 版はこれで「tie が accent を持ち上げない（5.165 対 5.165）」と出た。**同じ罠が 2 つの起票の正体だった**:
-**⒳⁸ の 17.59** は `c''8 c''8 c''8 …`＝staff position 8/22/36/50/64 の本で、同じ c'' を並べた `c''8@finger(1) c8 c8 c8 c2` は単音と同じ **5.045**
-（`Zz473X8ProbeTests.cs.txt`）⇒ **忠実度の欠陥ではない＝閉じた**（第472 の網は*その本だから*毒を捕まえる＝註だけ直した）。
-**⒮⁹ で第455 が「計器が割れている」と取り下げた 2.67 と 8.665** も `c'4 d'4 c'4 d'4`＝2 つ目の図形が 2 オクターブ上だった ⇒ **計器は正しかった＝網が書けた**。
-⇒ RULES §5.4 末尾に 1 項（§5.0「対の両側が同じ音楽か」の*1 冊の中*版）。
-★★★ **⑵ 網 3 本（`ArticulationPlacementTests`）**: `ALentTieBoundMap_CarriesNoTieIntoTheNextBook`（⒮¹³＝tie の次の本で同じ bound が tie 無しの本と一致・tied 5.42／untied 5.17）／
-`ALentTieList_CarriesNoTieIntoTheNextBook`（第464 の list 段＝c''' の高い tie の次の本でも accent が LP の 5.43 に留まる）／
-`TwoSlursInOneMeasure_LiftTheirScriptsAlike`（⒮⁹＝同じ図形 2 つのスラーが 2 本とも 2.8139、スラー無しの対照は 2 つとも 2.67）。**3 本とも絶対の主張＋対照＋前提の assert**（RULES §5.4 第455 の 3 点）。
-★★ **⑶ 毒 4 本、外れ 0**（`poisons.txt`・フル・色は先に書いた）: 地図と list を両方汚す＝tie の網 2 本だけ赤／地図だけ `Clear` しない＝**緑**（stale な鍵の list は空にされ pool から別の bound に貸される＝x の遠い tie）／
-list だけ汚す（第464 の毒）＝list の網だけ赤／スラーの overflow を捨てる（第455 の毒）＝⒮⁹ の網だけ赤。
-★★ **⑷ 新しい起票 ⒳⁹**（§1.0 ⒝）＝同じ小節で 1 本目が終わり 2 本目が始まる音の accent は*終わった*スラーを読む（`CoveringSlurPiece` は開始小節しか比べない）。LP 双子が先。
-★ **⑸ 終了時**: commit 2 本（`0e6ca180`＝tie の網 2 本＋註＋`APPROXIMATIONS.md` 再生成＝`UNWATCHED` 58 → 57／`41e9d2f2`＝⒮⁹ の網＋註）。**Core は註だけ**（行数不変）。最終 full **8794 / 0 / 3 / 8797**（`run2.trx`＝`-End`・+3＝網）。§7.5 Core '+' 9／REF 0／OWN 0＝註の書き換えだけ。§7.6 コードに新しい数は 0（網の 5.42／5.17／2.81／2.67 はこの便の計器・5.43 は既存の `Scripts_AvoidTies` の LP 値）。§7.7 の匂い＝`CoveringSlurPiece` が開始小節だけで比べる（⒳⁹）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p474` から入る**。
 
 ## 2. 開いている作業
 
