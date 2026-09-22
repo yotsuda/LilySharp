@@ -132,6 +132,10 @@ score main ""test"" {
     [Theory]
     [InlineData("score main { staff bass melody }")]
     [InlineData("score main { staff treble other  staff bass melody }")]
+    // A grand staff's member (RenderSpec.WrittenClefOf walks into the group). Session 470's
+    // poison skipping that walk was green over the suite and the corpus, which wrote no
+    // clef on a member; this row is its observer (session 485).
+    [InlineData("score main { grandStaff { staff treble other  staff bass melody } }")]
     public void AClefWrittenOnTheStaffItem_IsTheStaffsClef_AndMovesNoPitch(string score)
     {
         var source = "section A {\n  melody { c1 }\n  other { c1 }\n}\nform main { A }\n" + score + "\n";
