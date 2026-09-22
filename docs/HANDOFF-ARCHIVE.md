@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第488セッションの経緯
+
+### 1.1 第488セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第487 のすぐ後）。ユーザー指示「メモリやって」＝§1.0 ⒜ の ⒮¹⁰（器ごと憶える島の続き・census の取り直しから）。
+★ **`-Start p488` の 1 コマンドで §0 が全部済んだ**（HEAD `feb22a6e`・full 8831 / 0 / 3 / 8834・`-Archive 486` も自動）。
+
+★★ **⑴ ⒮¹⁰ を 12 軒 −4,864 B／打鍵（render 2,838,868 → 2,834,004・会計 100.2%）**。census の取り直し（第475 の脚を p488 に写した＝`instrument.ps1`・`Zz488Leg.cs.txt` を price／live・`join.ps1`）→ 頭から「自分のコードがどこで読み終えるか」を読んで直せる軒だけ直した。
+  出力は同一（`Zz488Hash`＝baseline 5824 行・0 差）。full 8831 / 0 / 3 / 8834（行番号がずれた 2 つの生成物 APPROXIMATIONS.md・magic_constants.csv を再生成）。
+  ⚠️ **parse の数は同じ木の 2 run で 314,925 と 315,356**＝±400 の揺れ。render は 2 run で 9 B しか違わない＝**A/B は render で読む**。
+  ⚠️ `ElementCoordinator.cs:824`（BeamCollision の list）は `CalculateBeamLayout` の先で持たれ得るので読まずに見送った。
+★ **⑵ 終了時**: コードは 7 ファイル（KnuthPlassBreaker・LayoutEngine・MultiStaffLayouter・ElementCoordinator・PageLayouter・SyntaxNode・SyntaxNodes.FormRender）＋生成物 2 つ。
+
 ## 以下は第487セッションの経緯
 
 ### 1.1 第487セッション（2026-09-22・YT-DELL2）
