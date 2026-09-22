@@ -3318,7 +3318,9 @@ internal sealed class ElementCoordinator
             int memberCount = 0;
             foreach (var bl in beamLayouts)
                 memberCount += bl.Group.Members.Length;
-            beamByMember = new Dictionary<(int, int), BeamLayout>(memberCount);
+            // Lent, and given back at the method's one return (see t_beamByMember).
+            beamByMember = RentBeamByMember();
+            beamByMember.EnsureCapacity(memberCount);
             foreach (var bl in beamLayouts)
                 foreach (var m in bl.Group.Members)
                     // TryAdd, not indexer: (measure, item) is ambiguous across
@@ -3608,7 +3610,49 @@ internal sealed class ElementCoordinator
             }
         }
 
+        if (beamByMember != null)
+            GiveBeamByMember(beamByMember);
         return slurLayouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// The slur pass's (measure, item) → beam table, lent from one map the thread keeps
+    /// between passes.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 472's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 0.27 builds a keystroke at 156.98 entries (max 768), 1,354 B a
+    /// keystroke, and none reachable once the render that built it returned — the pass reads
+    /// it through <see cref="TryGetBeamedStemTipDeviceY"/> and the obstacle builder, and both
+    /// copy numbers out of the beam they find.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — and here a dirty map is WORSE than stale: the table is filled with
+    /// <c>TryAdd</c> (the first beam wins, see the fill), so a previous staff's entry under a
+    /// shared (measure, item) would win over this staff's own beam. A throw between the rent
+    /// and the give only costs the next pass a new map.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one map a thread at that thread's most-beamed staff — emptied, so
+    /// it pins no beam.
+    /// </para>
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int Measure, int Item), BeamLayout>? t_beamByMember;
+
+    /// <summary>Takes the thread's beam table, or makes the thread's first.</summary>
+    private static Dictionary<(int Measure, int Item), BeamLayout> RentBeamByMember()
+    {
+        var map = t_beamByMember ?? new Dictionary<(int Measure, int Item), BeamLayout>();
+        t_beamByMember = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished pass's beam table back, emptied, with its capacity.</summary>
+    private static void GiveBeamByMember(Dictionary<(int Measure, int Item), BeamLayout> map)
+    {
+        map.Clear();
+        t_beamByMember = map;
     }
 
     /// <summary>

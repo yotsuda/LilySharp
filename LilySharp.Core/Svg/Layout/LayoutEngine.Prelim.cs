@@ -690,12 +690,13 @@ internal sealed partial class LayoutEngine
             list.Add(tie);
         }
 
-        // Home system per column; any straddler (or unmapped measure) → fallback.
-        // One entry per column key — the loop writes exactly one and there are no repeats
-        // (the keys came out of a dictionary), so the size is columnTies.Count and not a
-        // bound (measured before it was handed over: 2,620 calls, asked == Count every time).
-        var columnSystem = new Dictionary<(int, int, int), int>(columnTies.Count);
-        foreach (var (key, columnList) in columnTies)
+        // Any straddler (or unmapped measure) → fallback.
+        // ⚠️ THE CHECK STORES NOTHING: a column's home IS measureToSystem[key.Measure]. Every
+        // tie of a column starts in the key's own measure (the key is the start), and a column
+        // gets past this loop only if all its ties start and end in ONE system — so the map of
+        // homes by column key that stood here (session 472's census: 1.69 a keystroke at 17.83
+        // entries, 1,754 B a keystroke) repeated a lookup the systems' own table answers.
+        foreach (var (_, columnList) in columnTies)
         {
             int home = -2;
             foreach (var tie in columnList)
@@ -709,59 +710,192 @@ internal sealed partial class LayoutEngine
                 }
                 home = ks;
             }
-            columnSystem[key] = home;
         }
 
-        // One memoized solve per system, over that system's ties in original order.
-        var tiesBySystem = new Dictionary<int, List<TieItem>>();
-        foreach (var tie in ties)
+        // One memoized solve per system, over that system's ties in original order, in the
+        // order the systems first appear (see SystemBuckets). Lent, and given back at both
+        // exits below.
+        var buckets = RentTieBuckets();
+        buckets.Open(prelimSystems.Length, ties.Length);
+        for (int i = 0; i < ties.Length; i++)
+            buckets.Note(i, measureToSystem[ties[i].StartMeasureIndex]);
+        buckets.Seal();
+        for (int i = 0; i < ties.Length; i++)
+            buckets.Place(i, ties[i]);
+        for (int o = 0; o < buckets.Occupied; o++)
         {
-            int k = columnSystem[(tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex)];
-            if (!tiesBySystem.TryGetValue(k, out var list))
-                tiesBySystem[k] = list = new List<TieItem>();
-            list.Add(tie);
-        }
-        // One entry per occupied system, as on the beam side above (2,620 calls, exact).
-        var perSystem = new Dictionary<int, ImmutableArray<TieLayout>>(tiesBySystem.Count);
-        foreach (var (k, sysTies) in tiesBySystem)
-        {
+            int k = buckets.Order[o];
             var sys = prelimSystems[k];
-            perSystem[k] = systemCache.GetOrComputeStaffSystemTies(
+            buckets.Laid[k] = systemCache.GetOrComputeStaffSystemTies(
                 staffIndex, sys.SystemIndex,
                 sys.Measures[0].MeasureIndex, sys.Measures.Length,
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
-                (Coordinator: _elementCoordinator, Fonts: fonts, Ties: sysTies,
+                (Coordinator: _elementCoordinator, Fonts: fonts, Ties: buckets.Flat,
+                    Start: buckets.Start[k], Count: buckets.Count[k],
                     Score: staffSpannerScore, Sys: sys, StaffIndex: staffIndex, Staff: staff),
                 static s => s.Coordinator.LayoutTies(
-                    s.Fonts, s.Ties.ToImmutableArray(), s.Score,
+                    s.Fonts, ImmutableArray.Create(s.Ties, s.Start, s.Count), s.Score,
                     ImmutableArray.Create(s.Sys), s.StaffIndex, s.Staff));
         }
 
         // Column-major reassembly in detection order, one layout per tie (an
         // intra-system column has exactly one segment).
-        var cursors = new Dictionary<int, int>(perSystem.Count);
+        buckets.ResetCursors();
         var result = ImmutableArray.CreateBuilder<TieLayout>(ties.Length);
         foreach (var (key, columnList) in columnTies)
         {
-            int k = columnSystem[key];
-            var laid = perSystem[k];
-            int c = cursors.GetValueOrDefault(k);
+            int k = measureToSystem[key.Measure];
+            var laid = buckets.Laid[k];
+            int c = buckets.Cursor[k];
             int count = columnList.Count;
             if (c + count > laid.Length
                 || laid[c].Tie.VoiceIndex != key.Voice
                 || laid[c].Tie.StartMeasureIndex != key.Measure
                 || laid[c].Tie.StartItemIndex != key.Item)
             {
+                GiveTieBuckets(buckets);
                 GiveColumnTies(columnTies);
                 return Fallback(); // structural drift — never guess, recompute whole
             }
             for (int i = 0; i < count; i++)
                 result.Add(laid[c + i]);
-            cursors[k] = c + count;
+            buckets.Cursor[k] = c + count;
         }
+        GiveTieBuckets(buckets);
         GiveColumnTies(columnTies);
         return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// A staff's bows bucketed by the system they are home in — the per-system inputs
+    /// <see cref="LayoutPreliminaryStaffTies"/> and <see cref="LayoutPreliminaryStaffSlurs"/>
+    /// hand their memos, and the per-system answers and cursors their reassemblies read.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ARRAYS BY SYSTEM INDEX, where there were three dictionaries and a list per system
+    /// (<c>tiesBySystem</c> / <c>slursBySystem</c>, <c>perSystem</c>, <c>cursors</c>): the key
+    /// was always an index into the systems array (<c>prelimSystems[k]</c>), so the map was an
+    /// array with hashing (session 455's "the key is always an index" lesson). The items live
+    /// in ONE flat array, each system's run contiguous and in the items' original order — the
+    /// order the per-system lists kept — and the memos are asked in the order the systems
+    /// FIRST APPEAR (<see cref="Order"/>), the order the old maps enumerated in, so the memo
+    /// sees the same sequence of asks.
+    /// <para>
+    /// LENT, one per thread per bow kind, RENTED BY TAKING and CLEARED ON GIVE (session 421 /
+    /// 456): a given-back bucket holds no item and no layout, so it pins nothing; a throw
+    /// between the rent and the give only costs the next call a new one. WHAT IT RETAINS is
+    /// arrays at the thread's largest staff (systems and bows).
+    /// </para>
+    /// </remarks>
+    private sealed class SystemBuckets<TItem, TLayout>
+    {
+        /// <summary>Items per system (by system index).</summary>
+        public int[] Count = [];
+        /// <summary>Where each system's run starts in <see cref="Flat"/>.</summary>
+        public int[] Start = [];
+        /// <summary>The fill position while placing; the reassembly's cursor after
+        /// <see cref="ResetCursors"/>.</summary>
+        public int[] Cursor = [];
+        /// <summary>The occupied systems, in the order they first appear.</summary>
+        public int[] Order = [];
+        public int Occupied;
+        /// <summary>Each item's system (by item index).</summary>
+        public int[] ItemSystem = [];
+        public TItem[] Flat = [];
+        /// <summary>Each occupied system's memo answer (by system index).</summary>
+        public ImmutableArray<TLayout>[] Laid = [];
+        private int _systems, _items;
+
+        public void Open(int systems, int items)
+        {
+            if (Count.Length < systems)
+            {
+                Count = new int[systems];
+                Start = new int[systems];
+                Cursor = new int[systems];
+                Order = new int[systems];
+                Laid = new ImmutableArray<TLayout>[systems];
+            }
+            if (ItemSystem.Length < items)
+            {
+                ItemSystem = new int[items];
+                Flat = new TItem[items];
+            }
+            _systems = systems;
+            _items = items;
+            Occupied = 0;
+        }
+
+        /// <summary>Item <paramref name="i"/> is home in system <paramref name="k"/>.</summary>
+        public void Note(int i, int k)
+        {
+            ItemSystem[i] = k;
+            if (Count[k]++ == 0)
+                Order[Occupied++] = k;
+        }
+
+        /// <summary>Every item noted: lay the runs out.</summary>
+        public void Seal()
+        {
+            int at = 0;
+            for (int k = 0; k < _systems; k++)
+            {
+                Start[k] = at;
+                Cursor[k] = at;
+                at += Count[k];
+            }
+        }
+
+        public void Place(int i, TItem item) => Flat[Cursor[ItemSystem[i]]++] = item;
+
+        public void ResetCursors() => Array.Clear(Cursor, 0, _systems);
+
+        /// <summary>Empties the bucket for the next staff: the counts it will add to, and
+        /// every reference it holds.</summary>
+        public void Clear()
+        {
+            Array.Clear(Count, 0, _systems);
+            Array.Clear(Laid, 0, _systems);
+            Array.Clear(Flat, 0, _items);
+            Occupied = 0;
+        }
+    }
+
+    [ThreadStatic]
+    private static SystemBuckets<TieItem, TieLayout>? t_tieBuckets;
+
+    [ThreadStatic]
+    private static SystemBuckets<SlurItem, SlurLayout>? t_slurBuckets;
+
+    /// <summary>Takes the thread's tie buckets, or makes the thread's first.</summary>
+    private static SystemBuckets<TieItem, TieLayout> RentTieBuckets()
+    {
+        var b = t_tieBuckets ?? new SystemBuckets<TieItem, TieLayout>();
+        t_tieBuckets = null;
+        return b;
+    }
+
+    /// <summary>Puts a finished staff's tie buckets back, emptied.</summary>
+    private static void GiveTieBuckets(SystemBuckets<TieItem, TieLayout> b)
+    {
+        b.Clear();
+        t_tieBuckets = b;
+    }
+
+    /// <summary>Takes the thread's slur buckets, or makes the thread's first.</summary>
+    private static SystemBuckets<SlurItem, SlurLayout> RentSlurBuckets()
+    {
+        var b = t_slurBuckets ?? new SystemBuckets<SlurItem, SlurLayout>();
+        t_slurBuckets = null;
+        return b;
+    }
+
+    /// <summary>Puts a finished staff's slur buckets back, emptied.</summary>
+    private static void GiveSlurBuckets(SystemBuckets<SlurItem, SlurLayout> b)
+    {
+        b.Clear();
+        t_slurBuckets = b;
     }
 
     /// <summary>
@@ -846,7 +980,8 @@ internal sealed partial class LayoutEngine
     /// memo was asked, so every HIT paid for a solve it did not run (session 469).
     /// </remarks>
     private readonly record struct SystemSlurSolve(
-        ElementCoordinator Coordinator, Rendering.ScoreTextMetrics Fonts, List<SlurItem> Slurs,
+        ElementCoordinator Coordinator, Rendering.ScoreTextMetrics Fonts,
+        SlurItem[] Slurs, int SlursStart, int SlurCount,
         Score Score, SystemLayout Sys, int SystemKey, int StaffIndex, Staff Staff,
         ImmutableArray<GraceNoteItem> GraceNotes, ImmutableArray<BeamLayout> StaffBeams,
         ImmutableArray<TieLayout> StaffTies, ImmutableArray<ArticulationItem> StaffScripts,
@@ -868,7 +1003,7 @@ internal sealed partial class LayoutEngine
                         && tk == k)
                     .ToImmutableArray();
             return Coordinator.LayoutSlurs(
-                Fonts, Slurs.ToImmutableArray(), Score, single, StaffIndex,
+                Fonts, ImmutableArray.Create(Slurs, SlursStart, SlurCount), Score, single, StaffIndex,
                 Staff, GraceNotes, sysBeams,
                 InsideScriptFactory(Fonts, Score, StaffIndex, Staff, StaffScripts,
                     single, sysBeams, sysTies));
@@ -904,33 +1039,36 @@ internal sealed partial class LayoutEngine
                 staffScripts, prelimSystems, staffBeams, staffTies));
 
         var measureToSystem = MeasureToSystemOf(prelimSystems);
-        var slurSystem = new int[slurs.Length];
+        // Bucketed by home system (see SystemBuckets) — lent, and given back at every exit
+        // below.
+        var buckets = RentSlurBuckets();
+        buckets.Open(prelimSystems.Length, slurs.Length);
         for (int i = 0; i < slurs.Length; i++)
         {
             if (!measureToSystem.TryGetValue(slurs[i].StartMeasureIndex, out int ks)
                 || !measureToSystem.TryGetValue(slurs[i].EndMeasureIndex, out int ke)
                 || ks != ke)
+            {
+                GiveSlurBuckets(buckets);
                 return Fallback();
-            slurSystem[i] = ks;
+            }
+            buckets.Note(i, ks);
         }
-
-        var slursBySystem = new Dictionary<int, List<SlurItem>>();
+        buckets.Seal();
         for (int i = 0; i < slurs.Length; i++)
+            buckets.Place(i, slurs[i]);
+
+        for (int o = 0; o < buckets.Occupied; o++)
         {
-            if (!slursBySystem.TryGetValue(slurSystem[i], out var list))
-                slursBySystem[slurSystem[i]] = list = new List<SlurItem>();
-            list.Add(slurs[i]);
-        }
-        var perSystem = new Dictionary<int, ImmutableArray<SlurLayout>>();
-        foreach (var (k, sysSlurs) in slursBySystem)
-        {
+            int k = buckets.Order[o];
             var sys = prelimSystems[k];
-            perSystem[k] = systemCache.GetOrComputeStaffSystemSlurs(
+            buckets.Laid[k] = systemCache.GetOrComputeStaffSystemSlurs(
                 staffIndex, sys.SystemIndex,
                 sys.Measures[0].MeasureIndex, sys.Measures.Length,
                 isFirstSystem: k == 0, isLastSystem: k == prelimSystems.Length - 1,
                 sys.Indent, commonShortestDuration,
-                new SystemSlurSolve(_elementCoordinator, fonts, sysSlurs, staffSpannerScore,
+                new SystemSlurSolve(_elementCoordinator, fonts,
+                    buckets.Flat, buckets.Start[k], buckets.Count[k], staffSpannerScore,
                     sys, k, staffIndex, staff, graceNotes, staffBeams, staffTies, staffScripts,
                     measureToSystem),
                 static s => s.Solve());
@@ -939,24 +1077,31 @@ internal sealed partial class LayoutEngine
         // Reassembly in detection order. A slur emits AT MOST one layout for its one
         // segment (a tab slur can emit none), so the cursor advances by identity match
         // and a mismatch means this slur emitted nothing.
-        var cursors = new Dictionary<int, int>();
+        buckets.ResetCursors();
         var result = ImmutableArray.CreateBuilder<SlurLayout>(slurs.Length);
         for (int i = 0; i < slurs.Length; i++)
         {
-            int k = slurSystem[i];
-            var laid = perSystem[k];
-            int c = cursors.GetValueOrDefault(k);
+            int k = buckets.ItemSystem[i];
+            var laid = buckets.Laid[k];
+            int c = buckets.Cursor[k];
             if (c < laid.Length && ReferenceOrIdentityMatch(laid[c].Slur, slurs[i]))
             {
                 result.Add(laid[c]);
-                cursors[k] = c + 1;
+                buckets.Cursor[k] = c + 1;
             }
         }
         // Every produced layout must have been claimed — an unclaimed one means the
         // identity match drifted; never guess.
-        foreach (var (k, laid) in perSystem)
-            if (cursors.GetValueOrDefault(k) != laid.Length)
+        for (int o = 0; o < buckets.Occupied; o++)
+        {
+            int k = buckets.Order[o];
+            if (buckets.Cursor[k] != buckets.Laid[k].Length)
+            {
+                GiveSlurBuckets(buckets);
                 return Fallback();
+            }
+        }
+        GiveSlurBuckets(buckets);
         return result.ToImmutable();
 
         static bool ReferenceOrIdentityMatch(SlurItem a, SlurItem b)

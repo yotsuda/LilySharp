@@ -192,7 +192,7 @@ internal static class FingeringEngraver
 
         var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
         var systemMap = LayoutUtilities.BuildMeasureMap(systems);
-        return Calculate(fonts, score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts);
+        return Calculate(fonts, score, measureMap, systemMap.ContainsKey, staffIndex, beamLayouts.AsSpan());
     }
 
     /// <summary>
@@ -222,37 +222,82 @@ internal static class FingeringEngraver
         var map = new Dictionary<int, MeasureLayout>();
         foreach (var ml in measureLayouts)
             map[ml.MeasureIndex] = ml;
-        return Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts);
+        return Calculate(fonts, score, map, _ => true, staffIndex, beamLayouts.AsSpan());
     }
 
     /// <summary>
     /// <see cref="Calculate(Rendering.ScoreTextMetrics, Score, ImmutableArray{MeasureLayout}, int, ImmutableArray{BeamLayout})"/>
     /// for a caller that runs this body per (staff, system) — the shape
-    /// <see cref="FingScriptMemo"/> runs in — and hands it the beamed-stem-tip map for THAT
-    /// unit's beams, built by the caller from the beams it already attributes to the unit.
+    /// <see cref="FingScriptMemo"/> runs in — and hands it THAT unit's beams, the ones the
+    /// caller already attributes to the unit.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THE MAP IS THE ONLY DIFFERENCE, and it is the whole point: the sibling overload
-    /// folds <c>beamLayouts</c> on every call, which is O(the score's beams) per SYSTEM once
-    /// a caller runs per system — the same O(score)-per-system shape
-    /// <c>MultiStaffLayouter.StaffArticulationLayouts</c> warns about, and the shape this
-    /// engraver's own measure-walk remark was written to avoid. Until session 406 the caller
-    /// built ONE whole-score map per pass and handed it to every miss; with a memo that hits
-    /// 199 of 200 units that fold was paid for one unit, so the map is now the unit's own.
+    /// ⚠️ THE BEAMS ARE THE ONLY DIFFERENCE, and they are the whole point: a caller that runs
+    /// per system and handed the score's beams would fold them all on every call — the same
+    /// O(score)-per-system shape <c>MultiStaffLayouter.StaffArticulationLayouts</c> warns
+    /// about, and the shape this engraver's own measure-walk remark was written to avoid.
+    /// Until session 406 the caller built ONE whole-score map per pass and handed it to every
+    /// miss; with a memo that hits 199 of 200 units that fold was paid for one unit, so the
+    /// map is now built from the unit's own beams. A list, read as a span: the map used to be
+    /// built by the caller from <c>beams.ToImmutableArray()</c>, a copy per miss (session 472).
     /// </remarks>
-    internal static ImmutableArray<FingeringLayout> CalculateWithTips(
+    internal static ImmutableArray<FingeringLayout> CalculateWithUnitBeams(
         Rendering.ScoreTextMetrics fonts,
         Score score,
         ImmutableArray<MeasureLayout> measureLayouts,
         int staffIndex,
-        Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? beamedTips)
+        List<BeamLayout> unitBeams)
     {
         if (score.Voices.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<FingeringLayout>.Empty;
         var map = new Dictionary<int, MeasureLayout>(measureLayouts.Length);
         foreach (var ml in measureLayouts)
             map[ml.MeasureIndex] = ml;
-        return Calculate(fonts, score, map, _ => true, staffIndex, default, beamedTips);
+        return Calculate(fonts, score, map, _ => true, staffIndex,
+            System.Runtime.InteropServices.CollectionsMarshal.AsSpan(unitBeams));
+    }
+
+    /// <summary>
+    /// The beamed-stem-tip map <see cref="Calculate(Rendering.ScoreTextMetrics, Score, Dictionary{int, MeasureLayout}, System.Func{int, bool}, int, ReadOnlySpan{BeamLayout})"/>
+    /// reads, lent from one map the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 472's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): the map's build — then <c>ArticulationEngraver.BuildBeamedStemTips</c>,
+    /// whose last two callers were this body's two ways in — was 1.57 builds a keystroke at
+    /// 17.48 entries (max 42), 2,558 B a keystroke, and none of them was reachable once the
+    /// render that built it returned: the body copies what it needs out of an entry
+    /// (<see cref="NoteColumnLayout.Of"/> takes the beam, the x and the direction) and drops
+    /// the map.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a map given back dirty would answer the next staff's (staff, voice,
+    /// measure, item) with this staff's beam wherever the keys meet. A throw between the rent
+    /// and the give only costs the next call a new map.
+    /// </para>
+    /// <para>
+    /// WHAT IT RETAINS is one map a thread at that thread's most-beamed unit — emptied, so
+    /// it pins no beam.
+    /// </para>
+    /// </remarks>
+    [System.ThreadStatic]
+    private static Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? t_tips;
+
+    /// <summary>Takes the thread's tip map, or makes the thread's first.</summary>
+    private static Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)> RentTips()
+    {
+        var map = t_tips;
+        if (map is null)
+            return new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
+        t_tips = null;
+        return map;
+    }
+
+    /// <summary>Puts a finished body's tip map back, emptied, with its capacity.</summary>
+    private static void GiveTips(Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)> map)
+    {
+        map.Clear();
+        t_tips = map;
     }
 
     /// <remarks>
@@ -271,9 +316,7 @@ internal static class FingeringEngraver
         Dictionary<int, MeasureLayout> measureMap,
         System.Func<int, bool> isPlaced,
         int staffIndex,
-        ImmutableArray<BeamLayout> beamLayouts = default,
-        Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>?
-            prebuiltTips = null)
+        ReadOnlySpan<BeamLayout> beamLayouts)
     {
         // ⚠️ IT WAITS FOR THE FIRST FINGERED NOTE. `ImmutableArray.CreateBuilder<T>()` lays
         // out its first block — 88 B for a reference element — before a single Add, and over
@@ -285,10 +328,12 @@ internal static class FingeringEngraver
         // Which beam each note belongs to — the STEM is a support of every fingering and a
         // beamed stem ends on the beam, so the gate below needs the same map the scripts use.
         // Empty (and free) for the unbeamed book, which is why the caller may omit the beams.
-        var beamedTips = prebuiltTips
-            ?? (beamLayouts.IsDefaultOrEmpty
-                ? null
-                : ArticulationEngraver.BuildBeamedStemTips(beamLayouts));
+        // ⚠️ IT TOO WAITS FOR THE FIRST FINGERED NOTE: only a fingered item reads it, and the
+        // per-staff skyline pass calls this body for every staff whether or not a digit is
+        // written — COUNTED (session 472, the reader's corpus, which writes none): 1.57 maps a
+        // keystroke at 17.48 entries, 2,558 B a keystroke, every one built and never asked.
+        // Lent, and given back at the one return below (see t_tips).
+        Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? beamedTips = null;
 
         var voice = score.Voice;
         var indices = new List<int>(measureMap.Count);
@@ -305,26 +350,19 @@ internal static class FingeringEngraver
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
                 var item = measure.Items[ii];
-                // The engraver serves the staff's PRIMARY voice (its callers build a score of
-                // that one voice), so the beam lookup asks for voice 0 — the same key
-                // ArticulationEngraver queries with the script's own voice index.
-                NoteColumnLayout? column = null;
-                if (beamedTips != null
-                    && beamedTips.TryGetValue((System.Math.Max(0, staffIndex), 0, mi, ii),
-                        out var beamTip))
-                    column = NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.StemX);
-
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
                     layouts ??= ImmutableArray.CreateBuilder<FingeringLayout>();
+                    var column = ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
                     BuildLayouts(fonts,
                         new[] { (note.StaffPosition, note.Fingering.Value) },
                         new[] { note.StaffPosition },
                         note.BaseDuration, note.SourcePosition,
                         mi, ii, measureLayout, staffIndex, layouts, voice.Measures, column);
                 }
-                else if (item is ChordItem chord)
+                else if (item is ChordItem chord && AnyFingered(chord))
                 {
+                    var column = ColumnOf(ref beamedTips, beamLayouts, item, staffIndex, mi, ii);
                     var fingered = chord.Notes
                         .Where(n => n.Fingering.HasValue)
                         .Select(n => (n.StaffPosition, n.Fingering!.Value))
@@ -341,7 +379,40 @@ internal static class FingeringEngraver
             }
         }
 
+        if (beamedTips != null)
+            GiveTips(beamedTips);
         return layouts?.ToImmutable() ?? [];
+    }
+
+    /// <summary>The beamed column a fingered item's digits clear, or null for an unbeamed
+    /// item — building the body's tip map on the first ask (see t_tips).</summary>
+    /// <remarks>The engraver serves the staff's PRIMARY voice (its callers build a score of
+    /// that one voice), so the lookup asks for voice 0 — the same key
+    /// <see cref="ArticulationEngraver"/> queries with the script's own voice index.</remarks>
+    private static NoteColumnLayout? ColumnOf(
+        ref Dictionary<(int, int, int, int), (BeamLayout Beam, double StemX, bool StemUp)>? beamedTips,
+        ReadOnlySpan<BeamLayout> beamLayouts, MusicItem item, int staffIndex, int mi, int ii)
+    {
+        if (beamLayouts.IsEmpty)
+            return null;
+        if (beamedTips is null)
+        {
+            beamedTips = RentTips();
+            ArticulationEngraver.FillBeamedStemTips(beamLayouts, wanted: null, beamedTips);
+        }
+        return beamedTips.TryGetValue((System.Math.Max(0, staffIndex), 0, mi, ii), out var beamTip)
+            ? NoteColumnLayout.Of(item, beamTip.StemUp, beamTip.Beam, beamTip.StemX)
+            : null;
+    }
+
+    /// <summary>Whether any head of <paramref name="chord"/> carries a digit — asked before
+    /// the chord's digits are gathered, so a chord without one builds nothing.</summary>
+    private static bool AnyFingered(ChordItem chord)
+    {
+        foreach (var n in chord.Notes)
+            if (n.Fingering.HasValue)
+                return true;
+        return false;
     }
 
     /// <summary>

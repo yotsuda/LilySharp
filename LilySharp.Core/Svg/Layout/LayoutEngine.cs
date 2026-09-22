@@ -410,7 +410,8 @@ internal sealed partial class LayoutEngine
 
         // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
         var perSystemBandUps = new List<double>();
-        var multiMeasureRanges = new List<(int startMeasure, int measureCount)>();
+        // One entry per system, added unconditionally below — the size is the trip count.
+        var multiMeasureRanges = new List<(int startMeasure, int measureCount)>(systemMeasures.Count);
         int multiMeasStart = 0;
         foreach (var sysMeasures in systemMeasures)
         {

@@ -576,7 +576,7 @@ internal static class DynamicEngraver
                     ? beam.MemberStaffIndices[i]
                     : Math.Max(0, beam.StaffIndex);
                 // The DRAWN stem's x — the frame the beam face is read in (see
-                // ArticulationEngraver.BuildBeamedStemTips, the same map for scripts).
+                // ArticulationEngraver.FillBeamedStemTips, the same map for scripts).
                 map[(staffIdx, group.VoiceIndex,
                      member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)]
                     = (beam, beam.MemberStemX(i), member.MemberStemUp);

@@ -581,7 +581,8 @@ internal sealed class SkylineBuilder
         // touched — so 42.4% of the sets (2,774 of 6,536 a keystroke over the reader's corpus,
         // carrying 43,096 of the 101,644 keys) were built and dropped on the next line. One
         // home is also one spelling of the same quantity.
-        var suppressStems = BeamedItemsToSuppress(beams);
+        // Lent, and given back at the end of the walk (see RentSuppressed).
+        var suppressStems = RentSuppressed(beams);
 
         // The rest-dot column memo, once per staff (a static CWT hit) — the per-item
         // read below is a plain dictionary lookup.
@@ -663,7 +664,8 @@ internal sealed class SkylineBuilder
 
                     // A beamed note whose beam is seeded (AddBeamsToSkyline) must NOT also
                     // reserve an unbeamed stem, or the stale over-reservation would win.
-                    bool reserveStem = !suppressStems.Contains((vi, measureIndex, itemIndex));
+                    bool reserveStem = suppressStems is null
+                        || !suppressStems.Contains((vi, measureIndex, itemIndex));
 
                     // ...and a rest that another voice pushed out of the staff is reserved
                     // WHERE IT WAS PUSHED TO. Without this the seed reads the rest's default
@@ -709,6 +711,7 @@ internal sealed class SkylineBuilder
                 }
             }
         }
+        GiveSuppressed(suppressStems);
     }
 
     /// <summary>
@@ -908,7 +911,8 @@ internal sealed class SkylineBuilder
         var geom = new TabStaffGeometry(_fonts, tuning, -tabHeight / 2.0, staff.TabSourceClef, staff.Transposition);
         double YUp(double deviceY) => staffMiddleUp - deviceY;
 
-        var beamed = BeamedItemsToSuppress(beams);
+        // Lent, and given back at the end of the walk (see RentSuppressed).
+        var beamed = RentSuppressed(beams);
         if (!beams.IsDefaultOrEmpty)
         {
             foreach (var b in beams)
@@ -943,7 +947,7 @@ internal sealed class SkylineBuilder
                     var item = measure.Items[itemIndex];
                     if (item.GraceTime || item is not (NoteItem or ChordItem))
                         continue;
-                    if (beamed.Contains((vi, measureIndex, itemIndex)))
+                    if (beamed is not null && beamed.Contains((vi, measureIndex, itemIndex)))
                         continue;
                     bool stemUp = geom.TabStemUp(item);
                     int headString = geom.StemHeadString(item, stemUp);
@@ -983,6 +987,7 @@ internal sealed class SkylineBuilder
                 }
             }
         }
+        GiveSuppressed(beamed);
     }
 
     /// <summary>How many fret digits an item draws — a note one, a chord its notes.</summary>
@@ -1337,12 +1342,25 @@ internal sealed class SkylineBuilder
         // costs no allocation and does not re-ask IsKnee. MEASURED over the reader's corpus
         // (231 books x 8 keystrokes): 17.45 keys a call at 1,411.78 B, of which everything
         // above ~31 B a key was regrowth; no call ever adds the same key twice.
-        int room = 0;
-        foreach (var b in beams)
-            room += b.Group.Members.Length;
+        int room = Room(beams);
         if (room == 0)
             return NothingSuppressed;
         var set = new HashSet<(int, int, int)>(room);
+        FillBeamedItemsToSuppress(beams, set);
+        return set;
+    }
+
+    private static int Room(ImmutableArray<BeamLayout> beams)
+    {
+        int room = 0;
+        foreach (var b in beams)
+            room += b.Group.Members.Length;
+        return room;
+    }
+
+    private static void FillBeamedItemsToSuppress(
+        ImmutableArray<BeamLayout> beams, HashSet<(int, int, int)> set)
+    {
         foreach (var b in beams)
         {
             var g = b.Group;
@@ -1351,8 +1369,52 @@ internal sealed class SkylineBuilder
             foreach (var m in g.Members)
                 set.Add((g.VoiceIndex, m.ResolveMeasureIndex(g.MeasureIndex), m.ItemIndex));
         }
+    }
+
+    /// <summary>
+    /// <see cref="BeamedItemsToSuppress"/> into a set lent from one the thread keeps between
+    /// staves — null for a staff with nothing to suppress. Given back with
+    /// <see cref="GiveSuppressed"/> once the staff's walk is done.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 472's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 1.81 sets a keystroke at 17.51 keys (max 42), 1,240 B a keystroke,
+    /// and none reachable once the render that built it returned — both callers only ask
+    /// <c>Contains</c> inside the staff walk they build it for.
+    /// <para>
+    /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
+    /// (session 456) — a set given back dirty would suppress the next staff's stems at every
+    /// (voice, measure, item) this staff's beams named. A throw between the rent and the give
+    /// only costs the next staff a new set. WHAT IT RETAINS is one set a thread at that
+    /// thread's most-beamed staff, emptied.
+    /// </para>
+    /// </remarks>
+    private static HashSet<(int Voice, int Measure, int Item)>? RentSuppressed(
+        ImmutableArray<BeamLayout> beams)
+    {
+        if (beams.IsDefaultOrEmpty)
+            return null;
+        int room = Room(beams);
+        if (room == 0)
+            return null;
+        var set = t_suppressed ?? new HashSet<(int Voice, int Measure, int Item)>(room);
+        t_suppressed = null;
+        set.EnsureCapacity(room);
+        FillBeamedItemsToSuppress(beams, set);
         return set;
     }
+
+    /// <summary>Puts a finished staff's suppression set back, emptied, with its capacity.</summary>
+    private static void GiveSuppressed(HashSet<(int Voice, int Measure, int Item)>? set)
+    {
+        if (set is null)
+            return;
+        set.Clear();
+        t_suppressed = set;
+    }
+
+    [ThreadStatic]
+    private static HashSet<(int Voice, int Measure, int Item)>? t_suppressed;
 
     /// <summary>
     /// The answer for a staff with nothing to suppress — one immutable instance for the whole

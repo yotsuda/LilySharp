@@ -108,6 +108,35 @@ public class FingeringTests
         Assert.True(layout.FingeringLayouts[0].IsAbove);
     }
 
+    /// <summary>
+    /// The engraver's beamed-stem-tip map is LENT from a drawer the thread keeps between books
+    /// (<c>FingeringEngraver.RentTips</c>), so a map given back dirty would carry the previous
+    /// book's beams into the next one. The shape that shows it: the first book beams its
+    /// fingered first note, the second has the same (staff, voice, measure, item) UNBEAMED —
+    /// with a beam elsewhere, so the map is rented and filled — and a beamed column moves the
+    /// digit where an unbeamed one does not.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE SUITE HAD NO OBSERVER (session 472): a poison that gave the map back
+    /// without clearing it turned nothing red but the line-number inventory. The answer is
+    /// compared against the same note in a book with NO beam at all, which never rents the map
+    /// and so cannot be polluted by it.
+    /// </remarks>
+    [Fact]
+    public void Layout_ALentTipMap_CarriesNoBeamIntoTheNextBook()
+    {
+        // A stem-DOWN beam (every head above the middle line), so the stale tip is far from
+        // the head the unbeamed digit sits on: 17.59 against 5.045 staff spaces, measured.
+        BuildLayout("c''8@finger(1) c''8 c''8 c''8 c''2 |");
+        var (_, next) = BuildLayout("c''4@finger(1) d''8 e''8 f''2 |");
+        var (_, unbeamed) = BuildLayout("c''4@finger(1) d''4 e''4 f''4 |");
+
+        var digit = Assert.Single(next.FingeringLayouts);
+        var control = Assert.Single(unbeamed.FingeringLayouts);
+        Assert.Equal((0, 0), (digit.MeasureIndex, digit.ItemIndex));
+        Assert.Equal(control.YUp, digit.YUp, precision: 9);
+    }
+
     [Fact]
     public void Layout_StemUpNote_StillPlacesFingeringAbove()
     {

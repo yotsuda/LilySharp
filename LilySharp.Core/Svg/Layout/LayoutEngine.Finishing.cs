@@ -137,7 +137,7 @@ internal sealed partial class LayoutEngine
         // …AND NO DIGIT, NO APPARATUS, even in a book full of scripts. The gate above fires
         // only when the book carries NEITHER, so a book with scripts and no digit still ran
         // the whole fingering half — the per-measure beam and slur maps, the unit plan, one
-        // probe per (staff, system), the memo's match and store, and a CalculateWithTips walk
+        // probe per (staff, system), the memo's match and store, and a CalculateWithUnitBeams walk
         // for every miss — to hand back an EMPTY array. COUNTED (session 419, Release,
         // TieredCompilation=0, the user's 231-book corpus, eight keystrokes each, both passes):
         // NOT ONE of those books carries a digit, 1,402 of 2,170 preliminary calls got past the
@@ -285,11 +285,8 @@ internal sealed partial class LayoutEngine
                     // staff a member of it names), so a map built from them answers every
                     // (staff, measure, item) lookup this unit's island can make with the
                     // value the whole-score map would give.
-                    var built = FingeringEngraver.CalculateWithTips(
-                        ctx.Fonts, staffScore, layouts, staffIndex,
-                        beams.Count == 0
-                            ? null
-                            : ArticulationEngraver.BuildBeamedStemTips(beams.ToImmutableArray()));
+                    var built = FingeringEngraver.CalculateWithUnitBeams(
+                        ctx.Fonts, staffScore, layouts, staffIndex, beams);
                     liveSpans.Add((units.Count, live.Count, built.Length));
                     live.AddRange(built);
                 }

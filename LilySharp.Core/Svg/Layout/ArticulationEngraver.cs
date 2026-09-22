@@ -527,7 +527,7 @@ internal static class ArticulationEngraver
         }
         var beamedTips = t_beamedTips ?? new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
         t_beamedTips = null;
-        FillBeamedStemTips(beamLayouts, wantedBeamKeys, beamedTips);
+        FillBeamedStemTips(beamLayouts.AsSpan(), wantedBeamKeys, beamedTips);
         // …AND THE TAB MAP IS BUILT ON THE FIRST TAB ASK, not on every call. Only the tab
         // branch below reads it, and a script on a NUMBERS-ONLY tab staff is dropped before
         // that branch (TabStaffStencils.BlanksScript), so the ask can be zero on a book full
@@ -2336,28 +2336,23 @@ internal static class ArticulationEngraver
     /// anchor <c>MemberXPositions[i]</c> it carried until 2026-09-07: the beam face is read at
     /// it (<see cref="NoteColumnLayout.OutwardTipDeviceY"/> →
     /// <see cref="BeamLayout.OuterEdgeStaffSpaceAtX"/>), and that face is in the stems' frame.
+    /// <para>
+    /// ⚠️ INTO A MAP THE CALLER HOLDS, and <paramref name="tips"/> arrives empty: every caller
+    /// reads the map inside its own body and keeps none of it, so each lends it from a drawer —
+    /// the script walk's (see <see cref="t_firstSeen"/>) and the fingering engraver's. A SPAN,
+    /// so a caller holding a list of its unit's beams hands it over without first copying it
+    /// into an array (the fingering island's miss did, once per unit).
+    /// </para>
     /// </remarks>
     /// <param name="wanted">The keys the caller can ask for, or null for every member — see
     /// <see cref="BuildBeamGroupMap"/>'s same parameter. The script walk knows its questions
     /// before the fold runs (one per script); the fingering island hands its own unit's beams
-    /// and wants all of them, so it omits this.</param>
-    internal static Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)>
-        BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts,
-            HashSet<(int, int, int, int)>? wanted = null)
-    {
-        var tips = new Dictionary<(int, int, int, int), (BeamLayout, double, bool)>();
-        FillBeamedStemTips(beamLayouts, wanted, tips);
-        return tips;
-    }
-
-    /// <summary><see cref="BuildBeamedStemTips"/> into a map the caller holds — the script
-    /// walk's lent one (see <see cref="t_firstSeen"/>). <paramref name="tips"/> arrives
-    /// empty.</summary>
-    private static void FillBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts,
+    /// and wants all of them, so it passes null.</param>
+    internal static void FillBeamedStemTips(ReadOnlySpan<BeamLayout> beamLayouts,
         HashSet<(int, int, int, int)>? wanted,
         Dictionary<(int Staff, int Voice, int Measure, int Item), (BeamLayout Beam, double StemX, bool StemUp)> tips)
     {
-        if (beamLayouts.IsDefaultOrEmpty)
+        if (beamLayouts.IsEmpty)
             return;
 
         // The bound the loop below cannot exceed: one entry per member it reaches,
