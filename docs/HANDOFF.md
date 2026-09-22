@@ -138,10 +138,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   頭＝`Comparison<int>` 797（和音の頭の並べ替え `ChordHeadPositioning.SortInStemDirection` ほか＝**並べる呼びは払い続ける**）／`Func<int,double>` 565（annotation pass の staff-Y 解決子と `Build*X`＝pass の入力）／
   `Func<int,int,(VS,VS)?>` 313／`GatherContainerSite` の method group 277（`MusicSiteList.Lazy` へ渡す）／`Func<StaffLayout,bool>` 277（`SystemStartBarStaves`・`SeedClefInk`）。
   ⚠️ **delegate 型の行の持ち主は `sessions/p470/delegate-sites.txt`（Roslyn・型→建てる式）で引く**。⚠️ **閉包の行は閉包だけ＝同じ式の iterator と `ToList` は別の行**（RULES §5.3 末尾）
-- ★★ **⒮²² 第470 の毒で*スイートにもコーパスにも*観測者が居なかった 5 本**（Lab `sessions/p470/poisons.txt`・`green-to-corpus.txt`＝5,824 ページ 0 差）。
-  ~~⑴ スラー同士~~（**第481 が閉じた＝LP の `Slur_engraver` はスラーを acknowledge しない**＝避けるのは PhrasingSlur だけ・Lily# には無い。腕は走るが絵を動かさない＝削除）／
-  ~~⑵ volta~~（**第479 が閉じた＝毒が恒等写像**＝唯一の呼び手が `voltaBrackets` を `default` で渡していて腕は構造的に届かない＝削除。volta は outside-staff の段が避ける）／⑶ tab 和音の弦の無い音を*低い*音から割る（`Tunings.CalculateChordFrets`＝呼ぶ時点で全音に弦が付いているのかは未確認）／⑷ 小節線 spring の staff ごとの wish を列の先頭で建てる（`BarlineToFirstColumnSpring`）／⑸ grand staff の member が書いた clef（`RenderSpec.WrittenClefOf`）。
-  ⇒ 残る ⑶⑷⑸ は**まず `throw` の門で走るかを訊き、次に LP の source で「その振る舞いが LP に在るか」を読む**（⑵ は届かない・⑴ は届くが LP に無い、の 2 通りだった）。**値段ではなく忠実度の網**
+- ★ **⒳¹⁵ 和音の member に*弾けない弦番号*を書いても Lily# は黙る**（第485 起票・実測）。`<c'\1 d'\1>`（ギター・第 1 弦では負のフレット）を LP 2.26 は「Requested string for pitch requires negative fret … Ignoring string request and recalculating」と警告して計算し直す。Lily# も同じ場所に置く（網 `TabStringNumberTests.AnUnplayableWrittenString_IsRecalculated_HighestPitchFirst`）が**何も言わない**＝書いた `\N` が黙って無視される。単音の `\N` は？（未確認）。直すなら `TabResolver` が validator 向けの警告を出す（`TabRangeWarning` の隣）
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
@@ -226,10 +223,25 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
   | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
   | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒳¹¹ ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒳¹¹ ⒳¹⁴ ⒮²² ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第485セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第484 のすぐ後）。ユーザー指示「続けて」＝§1.0 の ⒳¹³ ⑹（タブ譜の `.up`/`.down`）。
+★ **`-Start p485` の 1 コマンドで §0 が全部済んだ**（HEAD `a56ce05f`・未 push 51・full 8826 / 0 / 3 / 8829・`-Archive 483` も自動）。
+
+★★★ **⑴ ⒮²² を全部閉じた**（⑴ 第481・⑵ 第479・⑶⑷⑸ 第485）。3 本とも**切り分けの順が効いた**:
+⑶ `Tunings.CalculateChordFrets` の「弦の無い音を高い音から割る」＝`throw` の門で**スイートもコーパスも 0 回**。`TabResolver` が和音の全音に弦を付けるので、届くのは**書いた弦で弾けない音**だけ＝`<c'\1 d'\1>` で届く（CLI の bin が毒入りのまま「unassigned 2」と叫んで判明）。LP 2.26 はその和音を d' 2 弦 3・c' 3 弦 5 に置き Lily# も同じ＝網を書いた（低い順の毒で赤）。code `c559d9a9`。
+⑷ `BarlineToFirstColumnSpring` の staff ごとの wish＝**毒は恒等写像**（p479 の volta と同じ顔）＝局所関数 `Wish(items, own)` の `items` は**1 度も読まれていない**（符尾の補正は LP の設計どおり列全体を読む）→引数を削除・註。code `94d1a9ea`（同じ commit で第484 が残した Core の警告 CS1574＝`cref` の宣言型違いを直した。**`-End` の門は Core の警告数を見ていない**）。
+⑸ `RenderSpec.WrittenClefOf` の grand staff の member＝**コーパスに member へ clef を書いた本が無いだけ**＝`grandStaff { staff treble other  staff bass melody }` で毒が SVG を変える→既存の Theory に 1 行（毒で赤）。code `36ce9dfe`。
+⚠️ ⒳¹³ ⑹（タブ譜の `.up`/`.down`）は**見送った**＝§3 の決定で弦を書かないタブ本は LP と比べられず、比べるには `\N` で固定した本と符尾の採点の移植が要る（記譜の規則を丸ごと）。使う場面が狭いので起票のまま。
+★ **⑵ 新しい起票 ⒳¹⁵**＝弾けない弦番号を Lily# は黙って無視する（LP は警告）。
+★ **⑶ 終了時**: full **8828 / 0 / 3 / 8831**（+2＝網 2 本）。実コーパス 5,824 ページ 0 差（`Zz485Hash.cs.txt`・⑷ の後）。`-End` の門は全部 OK。§7.5 Core '+' 9＝引数の削除と註・`cref` の修正のみ（LILYPOND-REF 0 は妥当＝同じ規則を引く既存のタグが直上にある）。§7.6 ⒟「削除」の観測者＝`items` を読む行が無いこと（grep）。§7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第484セッションの経緯
 
 ### 1.1 第484セッション（2026-09-22・YT-DELL2）
 
@@ -240,21 +252,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **⑵ ⒳¹³ ⑸ を閉じた**（code `6617f183`）＝タブ譜の経路にも内側スラーを渡した（変形後の layout＝LP の `Slur::get_curve` が読む `control-points`）。**網を探す手順**: 最初の本は腕を切っても緑＝観測者が居ない→6 冊を腕あり・なしで描き比べて動く本を選び、主張を「内側スラーの頂点の X で、2 本のインク（0.12×2）より上」に（腕なしでは 0.013 上＝中心線どうし、腕ありで 0.27）。毒で赤を確認。
 ⚠️ **タブ譜で `.down` を守ると梁を突き抜けた**ので入れずに戻し、その場に註・§1.0 ⒳¹³ ⑹ に起票。
 ★ **⑶ 終了時**: full **8826 / 0 / 3 / 8829**（+2）。実コーパス 5,824 ページ 0 差（`Zz484Hash.cs.txt`）。`-End` の門は全部 OK。§7.5 Core '+' 27・LILYPOND-REF 1（受け渡し＝`get_extra_encompass_infos`）・LILYSHARP-OWN 1（タブ譜の向き＝⑹）＝最初の `-End` で 0/0 と言われて註をタグにし amend。§7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第483セッションの経緯
-
-### 1.1 第483セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第482 のすぐ後）。ユーザー指示「続けて」＝§1.0 の ⒳¹³（フレージング・スラーの残り）。
-★ **`-Start p483` の 1 コマンドで §0 が全部済んだ**（HEAD `26b9c9b7`・未 push 47・full 8817 / 0 / 3 / 8820・`-Archive 481` も自動）。
-
-★★★ **⑴ ⒳¹³ の ⑴⑵⑶ を閉じた**（code `478ff080`）。
-⑴ **`@phrasingSlur.down` は第482 では*受け付けて黙って捨てていた***（`check` も無言）＝向きを item に持たせ（`PhrasingSlurDirection`・鍵に入る内容）、検出で使い、双子は `_\(` `^\(`、MusicXML は `placement`。
-⑵ **combinedStaff で消えていた**＝`PartCombiner.MergeIntoChord` が 1 パート目の音を和音に建て直す時に基底の旗を落としていた→両パートの印を保つ。**LP の癖も写した**＝`part-combiner.scm:230` はフレージング・スラーを **`'tie` の鍵**で数え、その音自身の音符イベントが直後に `'tie` を消す（休符の上のものだけが残る）。LP の `\partCombine` でも同じ本が弧を描く（`pc.lys`）。
-⑶ **MusicXML の読み込みが番号を見ていなかった**＝番号 2 の曲線は普通のスラーに潰れて消えていた→「1 か無番号＝スラー、それ以外＝フレージング・スラー」（声部はスラーを入れ子にできない＝`can_create_slur`）。書き出し→読み込みで向きごと戻る。
-網は `PhrasingSlurTests` に 7 本（22 本）。combinedStaff の網は合わせる処理を外す毒で赤を確認。
-★ **⑵ 新しい起票 ⒳¹⁴**＝下向きスラーが LP より 0.118 平たい（普通のスラーでも同じ量＝基盤の差・§1.0）。
-★ **⑶ 終了時**: full **8824 / 0 / 3 / 8827**（+7）。実コーパス 5,824 ページ 0 差（`Zz483Hash.cs.txt`）。`-End` の門は全部 OK。§7.5 Core '+' 98・LILYPOND-REF 4（最初の `-End` で 1 本と言われ、散文の引用をタグにして amend）＝向き＝`create_slur`、`'tie` の鍵＝`part-combiner.scm:230`、読み込みの入れ子不可＝`can_create_slur`。番号 2 以上＝フレージングは LP に無い対応づけ（MusicXML に phrasing が無いので）。§7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
