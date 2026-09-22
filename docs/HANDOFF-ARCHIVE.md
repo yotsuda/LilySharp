@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第507セッションの経緯
+
+### 1.1 第507セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第506 のすぐ後）。ユーザー指示「続けて」＝below 側の `BelowPart`。
+★ **`-Start p507` の 1 コマンドで §0 が全部済んだ**（HEAD `230144ab`・full 8847 / 0 / 3 / 8850・`-Archive 505` も自動）。
+
+★ **⑴ below 側の memo front も partition と map を貸す＝render 1,796,562 → 1,793,086（−3,476・−0.2%）**。第506 の above（`SysPart`）と同じ形で、こちらは **map すら貸していなかった**（`BelowPart`＝8.93／打鍵 × List 5 本）。program・保存出力・group の序数はどれも配列へ写す＝list は pass の外へ出ない ⇒ `t_belowParts`／`t_spareBelowParts`（give で Clear）。
+  毒（Lab `sessions/p507/poisons.ps1`）＝**partition の Clear を抜く→12 赤**・**map の Clear を抜く→5 赤**（どちらも一緒に赤くなった inventory 2 本は毒が行をずらしただけ＝観測者ではない）。出力は同一（`Zz507Hash`＝0 差）。full 8847 / 0 / 3 / 8850。
+
 ## 以下は第506セッションの経緯
 
 ### 1.1 第506セッション（2026-09-22・YT-DELL2）
