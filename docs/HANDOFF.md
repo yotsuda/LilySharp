@@ -92,19 +92,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⑵ `MeasureCollector.cs:3134` **612**（one 99.8%＝一覧で最も純粋）だが、**6 軒で唯一*器が呼び手へ出る***
   ＝`_sectionState.AllStarts` が `IReadOnlyDictionary<string, List<int>>` で `LyricsCollector`（:79 :104
   :365 :378、読みは :192 :534）と `ChordNameCollector.SectionStarts` へ渡る＝3 ファイル
-- ★★★ **⒮⁹ スイートの穴＝1 つの小節に立つ*2 本目以降*のスラーを、8,780 本の誰も見ていない**（第455 起票・
-  **毒と計器とコーパスの 3 点で確定済み**）。`ArticulationEngraver` は `(staff, voice, measure)` ごとに
-  覆うスラーを全部溜め、`CoveringSlurPiece` が**開始が最も遅いもの**を選ぶ（LP の running > ended）。
-  **2 本目以降を捨てる毒はスイート全緑**。だが計器は生きていると答え（**コーパス overflow 4,682 回／run・
-  非先頭を選ぶのが 22 回／スイートは multi 36 回のうち 36 回が非先頭**）、**同じ毒を実コーパスに当てると
-  16 行動く**＝`Boogie Oogie Oogie.lys` の 8 ページ × 両側（Lab `green-to-corpus.txt`）。
-  ⇒ **絵は動く。網が無いだけ**＝⒳⁵ とは違い**書ける**。形はその本の 1 小節＝
-  `c, c4@accent f,8@accent( g,\2) bes,@accent( c4)`＝**離れた 2 本のスラーが同じ小節に立ち、
-  script が*後ろ*のスラーの下に居る**。⚠️ **第455 は網を 2 本書いて 2 本とも取り下げた**
-  （Lab `SlurBucketCoverageTests.cs.txt`）: ⑴「2 冊の差」は相対なので毒の下でも差が残る／
-  ⑵ 絶対に書き直したら**スラーを 1 本も置かない対照でも accent 2 つが 2.67 と 8.665 に開いた**＝
-  **`ScoreLayout.ArticulationLayouts` を 2 つ並べて読む計器のほうが割れている**。
-  ⇒ **次便はまず「同じ図形 2 つが同じ高さになる本」を 1 冊見つける**（そこが出発点）
 - ★★ **⒳⁵ tie の outline の*旗の箱*は和音に建っていない**（第452 起票）。
   **`TieColumnParts.Flag` を `[]` にしても 41 冊 0 差だが、同じ箱を `(-1000,1000,x,x+50)` にすると
   19 冊が動く**＝**箱は建っていて読まれている**。動かない理由は網ではなく形——`ElementCoordinator.cs:1890`
@@ -164,13 +151,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   5,824 ページ 0 差**。⇒ **門の正しさを支えているのは第366 の掃き（258 冊 × 30 edit クラスで 88 件の食い違い）
   だけ**で、それはスイートもこのコーパスも持っていない母集団。計器は Lab `sessions/p458/trivia-guard-counts.txt`。
   ⇒ 二択＝**⑴ 第366 の形で網を書く／⑵ 「常に decline」なら門ごと畳めるか**（値段は 891 walk／sweep）
-- ★★★ **⒮¹³ `ArticulationEngraver` の tie-bound 地図には*スイートに*観測者が居ない**（第458 起票・実測）。
-  貸し地図を `Clear` せず park する毒は **8,783 本すべて緑**なのに、**同じ毒で実コーパスは
-  5,824 ページ中 2,760 ページが動き、ページ数まで動く（5,824 → 5,832）**（Lab `green-to-corpus.txt`）。
-  ⇒ **第455 の ⒮⁹ と同じ形＝絵は動く、網が無いだけ＝書ける**。形は「tie が 1 本も無い音符の script に、
-  前の呼びの tie support が付く」。⚠️ **隣の support-chain 地図は 104 本が見ている**＝同じメソッドの
-  2 枚の地図で観測者の数が 104 対 0。**第464 が地図の*中の* list を pool にした**＝**汚した list を pool へ返す毒も緑**
-  （support 側の同じ毒は 10 赤）＝穴は list の段にも続く
 - ★★ **⒮²⁰′ 閉包の尾の残り＝10,632 B／打鍵 0.37%**（第470 が計器を*全 delegate 型*に広げて数え直した＝Lab `sessions/p470/closure-price-after.txt`・分母 2,862,439）。
   頭＝`Comparison<int>` 797（和音の頭の並べ替え `ChordHeadPositioning.SortInStemDirection` ほか＝**並べる呼びは払い続ける**）／`Func<int,double>` 565（annotation pass の staff-Y 解決子と `Build*X`＝pass の入力）／
   `Func<int,int,(VS,VS)?>` 313／`GatherContainerSite` の method group 277（`MusicSiteList.Lazy` へ渡す）／`Func<StaffLayout,bool>` 277（`SystemStartBarStaves`・`SeedClefInk`）。
@@ -237,7 +217,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **第460 が 2 人目の証人を足した**＝`HorizontalSkyline.GiveBox` の `Clear` を抜く毒はスイート緑・
   コーパス 0 差で、stale な箱が答えを変えたのは **862 回すべて `NoteColumnToBarlineFloorPair`**
   （Lab `sessions/p460/stale-box-counts.txt`）＝**この床を効かせる便は、あの `Clear` にも初めて観測者を付ける**
-- ★ **⒳⁸ 連桁の `c''8` の指番号が 17.59 sp に居る**（第472 が網を書く途中で見た・未調査）。`c''8@finger(1) c''8 c''8 c''8 c''2` の YUp **17.589914**、単音 `c''4` は **5.045**（HEAD でも同じ）。符尾下向きの連桁で、指番号は符頭側のはず ⇒ **LP 双子で確かめてから**（忠実度・値段ではない）
+- ★ **⒳⁹ 同じ小節で 1 本目のスラーが終わり 2 本目が始まる音の script は、*終わった*スラーを読む**（第473 起票・実測・LP 未確認）。`c'4( d c@accent)( d) |` の accent は **2.67**＝1 本目だけの本（`c'4( d c@accent) d`）と同じで、2 本目だけの本（`c'4 d c@accent( d)`）は **2.8139**。`ArticulationEngraver.CoveringSlurPiece` は**開始*小節*しか比べず**（`pieceStart > bestStart`）、同じ小節なら先に足したスラーが勝つ——その註は「LP は running を ended より優先（`slur.cc:388-402`）」と書いている ⇒ **LP 双子で確かめてから**（忠実度・値段ではない）。計器は Lab `sessions/p473/Zz473S9ProbeTests.cs.txt`
 - ★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり）
 - **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
@@ -268,10 +248,31 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
   | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
   | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒱ ⒲ ✅ 閉じた**
+- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
-- **`docs/RULES.md` は 244,685 / 250,000 B・1,876 / 2,000 行**（第470 が §5.3 に 1 本足した）。
+- **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第473セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」。着手先は §1.0 ⒜ で「網が書ける」と書かれていた ★★★ の ⒮¹³ を選んだ。
+★ **`-Start p473` の 1 コマンドで §0 が全部済んだ**（HEAD `2c9bd51a`・未 push 26・full `sessions/p473/run1.trx`
+8791 / 0 / 3 / 8794・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 471` も自動＝moved 28 行 2,307 字）。
+★★★ **⑴ 骨＝Lily# の音高は*相対*。`c''4~ c''4` は 2 オクターブ離れた 2 音で、tie は描かれない**（Lab `sessions/p473/Zz473ProbeTests.cs.txt`）。
+⒮¹³ の網の最初の 2 版はこれで「tie が accent を持ち上げない（5.165 対 5.165）」と出た。**同じ罠が 2 つの起票の正体だった**:
+**⒳⁸ の 17.59** は `c''8 c''8 c''8 …`＝staff position 8/22/36/50/64 の本で、同じ c'' を並べた `c''8@finger(1) c8 c8 c8 c2` は単音と同じ **5.045**
+（`Zz473X8ProbeTests.cs.txt`）⇒ **忠実度の欠陥ではない＝閉じた**（第472 の網は*その本だから*毒を捕まえる＝註だけ直した）。
+**⒮⁹ で第455 が「計器が割れている」と取り下げた 2.67 と 8.665** も `c'4 d'4 c'4 d'4`＝2 つ目の図形が 2 オクターブ上だった ⇒ **計器は正しかった＝網が書けた**。
+⇒ RULES §5.4 末尾に 1 項（§5.0「対の両側が同じ音楽か」の*1 冊の中*版）。
+★★★ **⑵ 網 3 本（`ArticulationPlacementTests`）**: `ALentTieBoundMap_CarriesNoTieIntoTheNextBook`（⒮¹³＝tie の次の本で同じ bound が tie 無しの本と一致・tied 5.42／untied 5.17）／
+`ALentTieList_CarriesNoTieIntoTheNextBook`（第464 の list 段＝c''' の高い tie の次の本でも accent が LP の 5.43 に留まる）／
+`TwoSlursInOneMeasure_LiftTheirScriptsAlike`（⒮⁹＝同じ図形 2 つのスラーが 2 本とも 2.8139、スラー無しの対照は 2 つとも 2.67）。**3 本とも絶対の主張＋対照＋前提の assert**（RULES §5.4 第455 の 3 点）。
+★★ **⑶ 毒 4 本、外れ 0**（`poisons.txt`・フル・色は先に書いた）: 地図と list を両方汚す＝tie の網 2 本だけ赤／地図だけ `Clear` しない＝**緑**（stale な鍵の list は空にされ pool から別の bound に貸される＝x の遠い tie）／
+list だけ汚す（第464 の毒）＝list の網だけ赤／スラーの overflow を捨てる（第455 の毒）＝⒮⁹ の網だけ赤。
+★★ **⑷ 新しい起票 ⒳⁹**（§1.0 ⒝）＝同じ小節で 1 本目が終わり 2 本目が始まる音の accent は*終わった*スラーを読む（`CoveringSlurPiece` は開始小節しか比べない）。LP 双子が先。
+★ **⑸ 終了時**: commit 2 本（`0e6ca180`＝tie の網 2 本＋註＋`APPROXIMATIONS.md` 再生成＝`UNWATCHED` 58 → 57／`41e9d2f2`＝⒮⁹ の網＋註）。**Core は註だけ**（行数不変）。最終 full **8794 / 0 / 3 / 8797**（`run2.trx`＝`-End`・+3＝網）。§7.5 Core '+' 9／REF 0／OWN 0＝註の書き換えだけ。§7.6 コードに新しい数は 0（網の 5.42／5.17／2.81／2.67 はこの便の計器・5.43 は既存の `Scripts_AvoidTies` の LP 値）。§7.7 の匂い＝`CoveringSlurPiece` が開始小節だけで比べる（⒳⁹）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p474` から入る**。
+
+## 以下は第472セッションの経緯
 
 ### 1.1 第472セッション（2026-09-22・YT-DELL2）
 
@@ -284,33 +285,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **⑶ 毒 6 本、外れ 1 本**（`poisons.txt`）: **貸した tip 地図を汚して返す毒 1 は棚卸し以外緑**＝観測者なし ⇒ **網 `FingeringTests.Layout_ALentTipMap_CarriesNoBeamIntoTheNextBook`**（毒で赤 1）。毒 6（tie の cursor 未 reset）は予測どおり緑＝fallback が同じ絵。
 ⚠️ **行を消す毒は `TheInventoryIsNotStale`／`TheCensusIsNotStale` を 1 赤にする**＝毒の色ではない。
 ★ **⑷ 終了時**: code `0487d57c`（Core 8＋網＋再生成 2 枚）。最終 full **8791 / 0 / 3 / 8794**（+1＝網）。§7.5 Core '+' 427／REF 0／OWN 0＝器の持ち方だけ。§7.6 新しい数はコメントの census 値だけ（出所つき）。§7.7＝⒳⁸。**push はユーザー**（Lab も）。**`-Start p473` から入る**。
-
-## 以下は第471セッションの経緯
-
-### 1.1 第471セッション（2026-09-22・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶′＝tuple 型の器の頭**（ユーザーが選んだ）。
-★ **`-Start p471` の 1 コマンドで §0 が全部済んだ**（HEAD `4edcff06`・未 push 22・full `sessions/p471/run1.trx`
-8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 469` も自動＝moved 29 行 2,102 字）。
-
-★★★ **⑴ 第466 が「未測定」と残した問い＝なぜ打鍵ごとに systems 配列が 7.6 枚あるのか、を直す前に計器で訊いた**（Lab `sessions/p471/`・`probe-apply.ps1`＋`Zz471Probe.cs.txt`）。
-答えは **pass ごとに 1 枚ではなく、staff ごとの solve と re-stamp が毎回自前の配列を渡す**（pair 表の呼び手＝`LayoutBeams` 6,110・`LayoutTies` 2,356・`LayoutSlurs` 1,967・
-`CalculateRestShifts` 1,808・`CalculateAnnotationLayouts` 1,802／1,848 打鍵）。前の配列と**同じ形で別の `SystemLayout`** が 4.33 枚／打鍵、**同じ `SystemLayout` の新しい配列**が 1.09 枚。
-**int 表を持つ配列は全部 pair 表も持つ**（和集合 7.60）。★ **そして 22,000 回の build が全部「配列順に連続」**（全 system が非空・`MeasureIndex` が 1 ずつ増える）＝**配列そのものが表**。
-
-★★★ **⑵ 直し方＝`ConsecutiveMeasureMap`**（新ファイル）: 連続な配列 1 枚に 1 個（CWT・連続でなければ null を憶える）で、**両方の `IReadOnlyDictionary` を 1 つの物が実装**し、
-答えは範囲の検査と systems の先頭 index の二分探索（平均 7.5 system）。**列挙は昇順＝旧 `Dictionary` の挿入順そのもの**。連続でない配列（重複 index）は旧 build のまま。
-**A/B −16,209 B／打鍵＝render の 0.57%**（2,862,648 → 2,846,439・予測の点 16,100 の 100.7%・帯 13,500〜17,000）。**出力は同一**（5,824 行・0 差）。
-⚠️ **parse が +116 動いて見えるのはこの変更ではない**＝第470 の after 3 脚も同じ binary で 317,164 と 317,280 を行き来していた（本ごとの差は 112 B 単位・201 冊）。
-**会計（片側ずつ戻す）**＝pair 側 +10,772（予測 10,690＝100.8%）／int 側 +5,650（5,577＝101.3%）・和は A/B の 101.3%。
-
-★★ **⑶ 毒 6 本、予測を外したのは 1 本**（`poisons.txt`）。赤 632（seam の off-by-one）／92（system の先頭小節を返す）／79（範囲を 1 つ超える）。緑は予測どおり 2 本＝
-**連続を常に否と答える毒（全部を旧 build に戻す＝等価の検算）**と `Keys` の降順（読む 2 人とも並べ直す）。**外れ＝毒 4**: 連続の検査を消す毒は「コーパスに 0 枚」から緑と予測して
-**赤 1**＝`MeasureToSystemHandoffTests.ThePassesTwoMaps_AgreeOnEveryMeasure_AndKeepTheLastSystemsEntry` が重複 index の配列を持っていた＝**fallback の枝には観測者が居る**。
-
-★ **⑷ 終了時**: commit 2 本（code `77b48d94`＝Core 3 ファイル＋再生成した `APPROXIMATIONS.md`、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run3.trx`＝`-End`）。
-§7.5（対 `4edcff06`）**Core '+' 212 行／REF 0／OWN 0**＝表の持ち方の組み替えだけで LP に対応物が無い。**§7.6 コード中の新しい数は 0**（コメントの数は第471 の計器と A/B・出所つき）。
-**§7.7 の匂い**＝同じ `SystemLayout` を包み直した配列が 1.09 枚／打鍵（今は 1 枚 32 B なので値段は無い）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p472` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 

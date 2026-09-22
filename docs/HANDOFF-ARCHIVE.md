@@ -129,6 +129,33 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第471セッションの経緯
+
+### 1.1 第471セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶′＝tuple 型の器の頭**（ユーザーが選んだ）。
+★ **`-Start p471` の 1 コマンドで §0 が全部済んだ**（HEAD `4edcff06`・未 push 22・full `sessions/p471/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 469` も自動＝moved 29 行 2,102 字）。
+
+★★★ **⑴ 第466 が「未測定」と残した問い＝なぜ打鍵ごとに systems 配列が 7.6 枚あるのか、を直す前に計器で訊いた**（Lab `sessions/p471/`・`probe-apply.ps1`＋`Zz471Probe.cs.txt`）。
+答えは **pass ごとに 1 枚ではなく、staff ごとの solve と re-stamp が毎回自前の配列を渡す**（pair 表の呼び手＝`LayoutBeams` 6,110・`LayoutTies` 2,356・`LayoutSlurs` 1,967・
+`CalculateRestShifts` 1,808・`CalculateAnnotationLayouts` 1,802／1,848 打鍵）。前の配列と**同じ形で別の `SystemLayout`** が 4.33 枚／打鍵、**同じ `SystemLayout` の新しい配列**が 1.09 枚。
+**int 表を持つ配列は全部 pair 表も持つ**（和集合 7.60）。★ **そして 22,000 回の build が全部「配列順に連続」**（全 system が非空・`MeasureIndex` が 1 ずつ増える）＝**配列そのものが表**。
+
+★★★ **⑵ 直し方＝`ConsecutiveMeasureMap`**（新ファイル）: 連続な配列 1 枚に 1 個（CWT・連続でなければ null を憶える）で、**両方の `IReadOnlyDictionary` を 1 つの物が実装**し、
+答えは範囲の検査と systems の先頭 index の二分探索（平均 7.5 system）。**列挙は昇順＝旧 `Dictionary` の挿入順そのもの**。連続でない配列（重複 index）は旧 build のまま。
+**A/B −16,209 B／打鍵＝render の 0.57%**（2,862,648 → 2,846,439・予測の点 16,100 の 100.7%・帯 13,500〜17,000）。**出力は同一**（5,824 行・0 差）。
+⚠️ **parse が +116 動いて見えるのはこの変更ではない**＝第470 の after 3 脚も同じ binary で 317,164 と 317,280 を行き来していた（本ごとの差は 112 B 単位・201 冊）。
+**会計（片側ずつ戻す）**＝pair 側 +10,772（予測 10,690＝100.8%）／int 側 +5,650（5,577＝101.3%）・和は A/B の 101.3%。
+
+★★ **⑶ 毒 6 本、予測を外したのは 1 本**（`poisons.txt`）。赤 632（seam の off-by-one）／92（system の先頭小節を返す）／79（範囲を 1 つ超える）。緑は予測どおり 2 本＝
+**連続を常に否と答える毒（全部を旧 build に戻す＝等価の検算）**と `Keys` の降順（読む 2 人とも並べ直す）。**外れ＝毒 4**: 連続の検査を消す毒は「コーパスに 0 枚」から緑と予測して
+**赤 1**＝`MeasureToSystemHandoffTests.ThePassesTwoMaps_AgreeOnEveryMeasure_AndKeepTheLastSystemsEntry` が重複 index の配列を持っていた＝**fallback の枝には観測者が居る**。
+
+★ **⑷ 終了時**: commit 2 本（code `77b48d94`＝Core 3 ファイル＋再生成した `APPROXIMATIONS.md`、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run3.trx`＝`-End`）。
+§7.5（対 `4edcff06`）**Core '+' 212 行／REF 0／OWN 0**＝表の持ち方の組み替えだけで LP に対応物が無い。**§7.6 コード中の新しい数は 0**（コメントの数は第471 の計器と A/B・出所つき）。
+**§7.7 の匂い**＝同じ `SystemLayout` を包み直した配列が 1.09 枚／打鍵（今は 1 枚 32 B なので値段は無い）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p472` の 1 コマンドから入る**。
+
 ## 以下は第470セッションの経緯
 
 ### 1.1 第470セッション（2026-09-22・YT-DELL2）
