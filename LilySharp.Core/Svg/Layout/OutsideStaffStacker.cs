@@ -606,6 +606,66 @@ internal static class OutsideStaffStacker
     {
         public readonly List<int> Dynamics = new(), Hairpins = new(), Articulations = new(),
             Trills = new(), Groups = new();
+
+        /// <summary>Empties all five lists, keeping their capacity (see
+        /// <see cref="t_belowParts"/>).</summary>
+        public void Clear()
+        {
+            Dynamics.Clear(); Hairpins.Clear(); Articulations.Clear(); Trills.Clear();
+            Groups.Clear();
+        }
+    }
+
+    /// <summary>
+    /// The below pass's system → partition map, and the partitions a finished pass gave back —
+    /// lent together, as <see cref="t_parts"/> and <see cref="t_spareParts"/> lend the above
+    /// pass's.
+    /// </summary>
+    /// <remarks>
+    /// Session 506 lent the above pass's partitions (its <see cref="SysPart"/>s were 51.21 a
+    /// keystroke, eleven lists each); this pass had the same shape and lent nothing, not even
+    /// the map: 8.93 partitions a keystroke, five lists each, all read only inside the pass —
+    /// the program and the stored outputs are <see cref="Gather"/>ed into arrays of their own
+    /// and the group ordinals into fresh <c>int[]</c>s. RENTING TAKES THE MAP OUT OF THE DRAWER
+    /// and THE CLEARING IS ON GIVE: a partition handed back holding a system's indices would
+    /// open the next pass's system with another's grobs. There is one exit and no throw
+    /// between the rent and the give.
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<int, BelowPart>? t_belowParts;
+
+    [ThreadStatic]
+    private static List<BelowPart>? t_spareBelowParts;
+
+    private static Dictionary<int, BelowPart> RentBelowParts()
+    {
+        var parts = t_belowParts;
+        if (parts is null)
+            return new Dictionary<int, BelowPart>();
+        t_belowParts = null;
+        return parts;
+    }
+
+    private static void GiveBelowParts(Dictionary<int, BelowPart> parts)
+    {
+        var spare = t_spareBelowParts ??= new List<BelowPart>();
+        foreach (var part in parts.Values)
+        {
+            part.Clear();
+            spare.Add(part);
+        }
+        parts.Clear();
+        t_belowParts = parts;
+    }
+
+    private static BelowPart TakeSpareBelowPart()
+    {
+        var spare = t_spareBelowParts;
+        if (spare is null || spare.Count == 0)
+            return new BelowPart();
+        var part = spare[^1];
+        spare.RemoveAt(spare.Count - 1);
+        return part;
     }
 
     /// <summary>
@@ -642,11 +702,12 @@ internal static class OutsideStaffStacker
 
         // 1. Partition every family by system (a grob whose measure maps to none is the
         // core's untouched passthrough and stays on the live path).
-        var parts = new Dictionary<int, BelowPart>();
+        // Lent, and given back at the one exit below, after step 6 — its last reader.
+        var parts = RentBelowParts();
         BelowPart PartOf(int s)
         {
             if (!parts.TryGetValue(s, out var p))
-                parts[s] = p = new BelowPart();
+                parts[s] = p = TakeSpareBelowPart();
             return p;
         }
         void Collect<T>(ImmutableArray<T> arr, Func<T, int> measureOf, Func<BelowPart, List<int>> sel)
@@ -861,6 +922,7 @@ internal static class OutsideStaffStacker
             memo.Store(s, entry);
         }
 
+        GiveBelowParts(parts);
         hits.Clear();
         t_hits = hits;
         return (resDynamics, resHairpins, resArtics, resTrills);
