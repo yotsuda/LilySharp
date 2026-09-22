@@ -189,7 +189,8 @@ internal sealed class SpringSolver
         double curLen = compressed ? neutralLength : maxBlockForceLen;
 
         // Sort springs by blocking force (descending)
-        var sortedSprings = _springs.OrderByDescending(s => s.BlockingForce).ToList();
+        var sortedSprings = RentSortedByBlockingForce(_springs);
+        bool fits = false;
 
         // inv_hooke is the total flexibility of currently-active springs
         double invHooke = 0;
@@ -220,7 +221,8 @@ internal sealed class SpringSolver
                 // LILYPOND-REF: lily/simple-spacer.cc:274-276 — reached the target; the
                 // line fits. Return the force unclamped (LP has no compression limit).
                 curForce += (targetLen - curLen) / invHooke;
-                return (curForce, true);
+                fits = true;
+                break;
             }
 
             // This spring blocks - update state
@@ -229,10 +231,60 @@ internal sealed class SpringSolver
             curForce = sp.BlockingForce;
         }
 
+        GiveSorted(sortedSprings);
         // Couldn't fit: LP returns the last spring's blocking force with fits=false
         // (no clamp). LILYPOND-REF: lily/simple-spacer.cc:285-286.
-        return (curForce, false);
+        return (curForce, fits);
     }
+
+    /// <summary>
+    /// <paramref name="springs"/> by blocking force, largest first, springs of equal force in
+    /// their line order — the order <c>OrderByDescending(s =&gt; s.BlockingForce)</c> gives —
+    /// in a list lent from the thread.
+    /// </summary>
+    /// <remarks>
+    /// THE ORDER AMONG EQUAL FORCES IS KEPT: <see cref="CompressLine"/> sums the springs'
+    /// flexibilities in this order, and a sum of doubles rounds by its order. So the sort is
+    /// a STABLE one, as the LINQ sort was, and compares with
+    /// <see cref="double.CompareTo(double)"/>, the comparer that sort used (NaN lowest,
+    /// −0.0 equal to +0.0). An insertion sort: a line holds tens of springs. ⚠️ Nothing
+    /// watches the tie order: POISONED (session 508), equal forces entering ahead of their
+    /// predecessors left all 8,850 tests green and every page of the reader's corpus
+    /// byte-identical — it stays stable because it is the order the answer was always summed
+    /// in, not because a net holds it.
+    /// <para>
+    /// MEASURED (session 508, Release, the reader's corpus, eight forward keystrokes a book):
+    /// the LINQ sort and its list were 7,577 B a keystroke, 7.12 compressions of 29.1 springs.
+    /// The list is written here and read only by the compression walk, which gives it back
+    /// on its one exit; renting takes it out of the drawer (session 421's idiom), so a
+    /// re-entrant call builds its own. WHAT IT RETAINS is one emptied list at the thread's
+    /// longest compressed line.
+    /// </para>
+    /// </remarks>
+    private static List<Spring> RentSortedByBlockingForce(IReadOnlyList<Spring> springs)
+    {
+        var sorted = t_sorted ?? new List<Spring>(springs.Count);
+        t_sorted = null;
+        for (int k = 0; k < springs.Count; k++)
+        {
+            var s = springs[k];
+            int j = sorted.Count;
+            while (j > 0 && sorted[j - 1].BlockingForce.CompareTo(s.BlockingForce) < 0)
+                j--;
+            sorted.Insert(j, s);
+        }
+        return sorted;
+    }
+
+    /// <summary>Puts a finished compression's list back, emptied, with its capacity.</summary>
+    private static void GiveSorted(List<Spring> sorted)
+    {
+        sorted.Clear();
+        t_sorted = sorted;
+    }
+
+    [ThreadStatic]
+    private static List<Spring>? t_sorted;
 
     // LILYPOND-REF: lily/simple-spacer.cc:295-305 Simple_spacer::spring_positions()
     /// <summary>
