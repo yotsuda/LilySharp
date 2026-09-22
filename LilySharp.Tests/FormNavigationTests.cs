@@ -63,6 +63,36 @@ public class FormNavigationTests
         return new MeasureCollector().Collect(SyntaxTree.Parse(source)).MusicMarks.ToArray();
     }
 
+    /// <summary>
+    /// A form's marks and free texts belong to the SCORE, but the form is walked once PER PART:
+    /// on a two-part score each must still be collected — and drawn — once.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE SUITE HAD NO OBSERVER (session 469 measured it, session 477 wrote
+    /// this): making <c>MeasureCollector.HasMusicMark</c> answer false left every net green and
+    /// the reader's corpus unmoved — neither holds a multi-part form with a navigation mark.
+    /// Under that poison this book collects Fine, D.C. al Fine and the text twice each and the
+    /// page prints them twice; the one-part control does not move, which is why it is here.
+    /// </remarks>
+    [Theory]
+    [InlineData("part rh { clef treble }\npart lh { clef bass }\n"
+        + "section A { rh { c'4 d' e' f' | } lh { c4 d e f | } }\n"
+        + "section B { rh { g'4 a' b' c'' | } lh { g4 a b c' | } }\n"
+        + "form main { A fine B dc al fine _\"rit.\" }\nscore main { staff rh staff lh }\n")]
+    [InlineData("part rh { clef treble }\n"
+        + "section A { rh { c'4 d' e' f' | } }\nsection B { rh { g'4 a' b' c'' | } }\n"
+        + "form main { A fine B dc al fine _\"rit.\" }\nscore main { staff rh }\n")]
+    public void AFormsMarksAndTexts_AreCollectedOncePerScore_HoweverManyParts(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+
+        Assert.Equal(new[] { MusicMarkType.Fine, MusicMarkType.DaCapoAlFine },
+            score.MusicMarks.Select(m => m.Type).ToArray());
+        Assert.Equal(new[] { "rit." }, score.CustomTexts.Select(t => t.Text).ToArray());
+    }
+
     [Fact]
     public void JumpInstructions_SitBelowStaff_TargetsAndToCodaAbove()
     {
