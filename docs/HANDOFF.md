@@ -139,9 +139,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   `Func<int,int,(VS,VS)?>` 313／`GatherContainerSite` の method group 277（`MusicSiteList.Lazy` へ渡す）／`Func<StaffLayout,bool>` 277（`SystemStartBarStaves`・`SeedClefInk`）。
   ⚠️ **delegate 型の行の持ち主は `sessions/p470/delegate-sites.txt`（Roslyn・型→建てる式）で引く**。⚠️ **閉包の行は閉包だけ＝同じ式の iterator と `ToList` は別の行**（RULES §5.3 末尾）
 - ★★ **⒮²² 第470 の毒で*スイートにもコーパスにも*観測者が居なかった 5 本**（Lab `sessions/p470/poisons.txt`・`green-to-corpus.txt`＝5,824 ページ 0 差）。
-  ⑴ **スラーが先の重なるスラーを避ける**（`LayoutSlurs` の `overlappingSlurs` を空にする＝`_existingSlurs` は採点の 2 か所が読む）／
+  ~~⑴ スラー同士~~（**第481 が閉じた＝LP の `Slur_engraver` はスラーを acknowledge しない**＝避けるのは PhrasingSlur だけ・Lily# には無い。腕は走るが絵を動かさない＝削除）／
   ~~⑵ volta~~（**第479 が閉じた＝毒が恒等写像**＝唯一の呼び手が `voltaBrackets` を `default` で渡していて腕は構造的に届かない＝削除。volta は outside-staff の段が避ける）／⑶ tab 和音の弦の無い音を*低い*音から割る（`Tunings.CalculateChordFrets`＝呼ぶ時点で全音に弦が付いているのかは未確認）／⑷ 小節線 spring の staff ごとの wish を列の先頭で建てる（`BarlineToFirstColumnSpring`）／⑸ grand staff の member が書いた clef（`RenderSpec.WrittenClefOf`）。
-  ⇒ ⑴ は**読み手が居るのに絵を動かす形が無い**＝⒳⁷ と同じく「後の段が上書きしていないか」を先に読む（⑵ の答えは「届かない」だった＝**まず `throw` の門で走るかを訊く**）。**値段ではなく忠実度の網**
+  ⇒ 残る ⑶⑷⑸ は**まず `throw` の門で走るかを訊き、次に LP の source で「その振る舞いが LP に在るか」を読む**（⑵ は届かない・⑴ は届くが LP に無い、の 2 通りだった）。**値段ではなく忠実度の網**
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
@@ -229,6 +229,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第481セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第480 のすぐ後）。ユーザー指示「続けて」（⒳¹² は未回答＝保留のまま）＝§1.0 ⒜ の ⒮²² ⑴。
+★ **`-Start p481` の 1 コマンドで §0 が全部済んだ**（HEAD `6ab3b395`・未 push 43・full 8802 / 0 / 3 / 8805・`-Archive 479` も自動）。
+
+★★★ **⑴ ⒮²² ⑴ を閉じた＝腕は走るが、LP に無い振る舞いだった**。`throw` の門でスイート **6 本が届く**（改行を跨ぐスラーの続きの断片が*自分の*前の断片を受け取る・1 つの音で終わって次が始まる 2 本）が、絵は動かない（`FitFactor` は曲線の X 範囲外の点を捨てる・採点の項は差を作らない）。
+⇒ LP の source を読むと、**スラーを acknowledge するのは `Phrasing_slur_engraver` だけ**（`phrasing-slur-engraver.cc:80`・`slur-engraver.cc:73-80` には無い）＝`slur-scoring.cc:679-682` の「small slur」は PhrasingSlur が内側のスラーを避ける話で、**Lily# は PhrasingSlur を描かない**。LP 2.26 の実測でも `c''4( b' a')( g' | f'1)` の 2 本目は単独の同じスラーとバイト同一（Lab `sessions/p481/two.ly`・`one.ly`）。
+⇒ **削除**（`existingSlurs` 引数・採点の 2 項・`SlurSpansOverlap`／`SpanBefore`・その項の単体テスト 1 本）。`FreeSlurDistance` は移植した alist の 1 行として残し「誰も読まない」と註。**スイート緑（snapshot 含む）・実コーパス 5,824 ページ 0 差**（`Zz481Hash.cs.txt`・Release）。
+★ **⑵ 終了時**: code `8301cfee`（Core 3・Tests 1・表 2 枚を再生成）。full **8801 / 0 / 3 / 8804**（−1＝削除した単体テスト）。`-End` の門は全部 OK。§7.5 Core '+' 17＝註だけ・LILYPOND-REF 2 本（最初の `-End` で 0 本と言われ、散文の引用をタグの形に直して amend）。§7.6 ⒟「削除」＝許可した観測者は LP の source と実測。§7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第480セッションの経緯
+
 ### 1.1 第480セッション（2026-09-22・YT-DELL2）
 
 新しい会話。ユーザー指示「HANDOFF を読んで作業に着手して」。§1.0 ⒜ の ⒳¹¹。
@@ -240,18 +252,6 @@ LP 2.26 で 5 冊（`nav-form`・`nav-break`・p479 の `volta-segno`・fixture 
 ⚠️ 毒の後に CLI だけ再ビルドしたら **Tests の bin に毒入り Core が残り**、full で自分の網が 1 赤＝Tests を build し直して緑（CLAUDE-OPERATIONS §1「`--no-build` の前段」と同じ病）。
 ★ **⑵ 新しい起票 ⒳¹²**＝インラインの文字記号が 1 小節遅れ・曲末は消える（§1.0 ⒞・文書 vs fixture＝ユーザー決定）。
 ★ **⑶ 終了時**: code `0d9f04fa`（Core 1・Tests 2・`APPROXIMATIONS.md` 再生成）。full **8802 / 0 / 3 / 8805**（+1＝網・`-End` の門は全部 OK）。§7.5 Core '+' 29＝`EmitNavMark` の書き換えと註・LILYPOND-REF 1 本（SegnoMark／CodaMark／JumpScript と 3 つの music function の行番号）。§7.6 出所＝grob の性質は `define-grobs.scm`、上下と改行の振る舞いは Lily# の絵を実測（`nav-form`・`nav-break`）。§7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第479セッションの経緯
-
-### 1.1 第479セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第478 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒜ の ⒮²²。
-★ **`-Start p479` の 1 コマンドで §0 が全部済んだ**（HEAD `cedc9c9e`・未 push 39・full 8801 / 0 / 3 / 8804・`-Archive 477` も自動）。
-★★★ **⑴ ⒮²² ⑵ を閉じた＝毒が恒等写像だった**（RULES §5.4 の緑の 3 つ目の顔）。切り分けの順＝「100 上げる毒」を volta の腕に当てて**描画 0 差**、同じ毒を腕の外の基準値に当てると動く ⇒ **腕は走っていない**を `throw` の門で確定（**スイート 8,801 本・volta に segno と coda を置いた本、どちらも 0 回**）⇒ 原因は**唯一の呼び手 `LayoutEngine.Annotations` が `voltaBrackets` を `default` で渡している**（テストも誰も渡さない）。
-volta を避けるのは outside-staff の段で、LP の双子とも絵が合う ⇒ **引数・`BuildVoltaCoverage`（呼びごとの HashSet）・腕を削除**、註に「volta は `OutsideStaffStacker`」と 1 文。**フル 8801 緑・実コーパス 5,824 ページ 0 差**（`Zz479Hash.cs.txt`）。
-⚠️ 最初の検証の本は**また相対音高で昇っていた**（第473 の RULES の罠を自分で踏んだ）＝volta が高く押し上げられ「記号が volta の下」に見えた。音を落ち着かせて LP と比べると同じ配置。
-★ **⑵ 新しい起票 ⒳¹¹**＝双子の書き出しが segno／coda を `\mark` で出して LP に捨てられる（§1.0）。
-★ **⑶ 終了時**: code `f4cd3174`（Core 2 ファイル・削除のみ）。最終 full **8801 / 0 / 3 / 8804**（`-End`）。§7.5 Core '+' 4＝註だけ（残りは削除）＝§7.6 ⒟「削除」＝許可した観測者は `throw` の門（スイート 0 回）と唯一の呼び手の `default`。§7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
