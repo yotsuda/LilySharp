@@ -2122,9 +2122,14 @@ internal sealed class ElementCoordinator
             // List.IndexOf hands both of them slot 0 and the column's upper tie is drawn as a
             // second copy of the lower one — the solver's up/down split (LP's
             // set_ties_config_standard_directions seeding) never reaches the page.
+            // A loop, not FindIndex(t => …): the lambda built an environment and a delegate for
+            // every tie — 138 + 507 B a keystroke over the reader's corpus (session 470's
+            // allocation-tick price by type).
             foreach (var tie in column)
             {
-                int i = ordered.FindIndex(t => ReferenceEquals(t, tie));
+                int i = 0;
+                while (!ReferenceEquals(ordered[i], tie))
+                    i++;
                 for (int s = 0; s < segments.Length; s++)
                     tieLayouts.Add(solved[i, s]);
             }
@@ -3582,9 +3587,13 @@ internal sealed class ElementCoordinator
                 //   adds e to `slurs`/`end_slurs` (the currently-OPEN slurs); read back in
                 //   scoring at lily/slur-scoring.cc:679-682. audit/lp-geometry
                 //   system.slur-{under,over}-notes.
-                var overlappingSlurs = slurLayouts
-                    .Where(sl => SlurSpansOverlap(slur, sl.Slur))
-                    .ToList();
+                // A loop: the lambda captured the slur, so an environment was built for every
+                // slur the walk entered (278 B a keystroke over the reader's corpus, and its
+                // delegate — session 470's allocation-tick price by type).
+                var overlappingSlurs = new List<SlurLayout>();
+                foreach (var sl in slurLayouts)
+                    if (SlurSpansOverlap(slur, sl.Slur))
+                        overlappingSlurs.Add(sl);
 
                 var problem = new SlurScoringProblem(
                     slur, segStartX, segStartY, segEndX, segEndY, staffMiddleDown,

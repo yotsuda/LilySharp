@@ -251,6 +251,65 @@ internal static class MusicMarkEngraver
         => type is MusicMarkType.SustainOn or MusicMarkType.SustainOff;
 
     /// <summary>
+    /// The row each pedal family occupies in one group's below marks, stacked outward from
+    /// the pedal baseline (<see cref="Calculate"/>'s legacy row stack).
+    /// </summary>
+    /// <remarks>
+    /// Its own method, with the chain it always had: its lambdas captured
+    /// <c>keepMarkText</c> and <c>fonts</c>, parameters of <see cref="Calculate"/>, so the
+    /// environment was built at that method's ENTRY on every call — 253 B a keystroke over
+    /// the reader's corpus (session 470's allocation-tick price by type) — though no book in
+    /// it writes a pedal mark.
+    /// </remarks>
+    private static Dictionary<int, double> PedalRowsYUp(
+        ScoreTextMetrics fonts, List<(MusicMarkItem Mark, double X, int SourceIndex)> belowMarks,
+        Func<MusicMarkItem, bool>? keepMarkText, double belowBaseUp,
+        Semantics.SectionLabelStyle sectionLabels)
+    {
+        bool BoxedOf(MusicMarkType t) => IsBoxDrawn(t, sectionLabels);
+        var pedalRowYUp = new Dictionary<int, double>();
+        double rowYUp = belowBaseUp - Padding;
+        double prevHalf = 0;
+        bool firstRow = true;
+        foreach (var rank in belowMarks
+            .Where(e => IsPedal(e.Mark.Type)
+                        && (keepMarkText == null || keepMarkText(e.Mark)))
+            .Select(e => PedalFamilyRank(e.Mark.Type))
+            .Distinct()
+            .OrderBy(r => r))
+        {
+            double half = belowMarks
+                .Where(e => IsPedal(e.Mark.Type) && PedalFamilyRank(e.Mark.Type) == rank)
+                .Max(e => GetMarkHalfExtent(fonts, e.Mark.Type, e.Mark.Text, BoxedOf(e.Mark.Type)));
+            if (!firstRow)
+                rowYUp -= prevHalf + StackGap + half;
+            pedalRowYUp[rank] = rowYUp;
+            prevHalf = half;
+            firstRow = false;
+        }
+        return pedalRowYUp;
+    }
+
+    /// <summary>A pedal release mark ("*").</summary>
+    private static bool IsPedalRelease(MusicMarkType t) =>
+        t is MusicMarkType.SustainOff or MusicMarkType.SostenutoOff
+          or MusicMarkType.UnaCordaOff;
+
+    /// <summary>A pedal mark of any family, engage or release.</summary>
+    private static bool IsPedal(MusicMarkType t) =>
+        t is MusicMarkType.SustainOn or MusicMarkType.SostenutoOn
+          or MusicMarkType.UnaCordaOn || IsPedalRelease(t);
+
+    /// <summary>The engage mark of a release's own pedal family in one group's below marks.</summary>
+    /// <remarks>Its own method: the lambda captured the loop's <c>mark</c>, whose environment
+    /// was then built for every below mark the loop visited.</remarks>
+    private static (MusicMarkItem Mark, double X, int SourceIndex) EngageOfFamily(
+        List<(MusicMarkItem Mark, double X, int SourceIndex)> belowMarks, MusicMarkType release) =>
+        belowMarks.First(
+            e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type)
+                 && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(release));
+
+    /// <summary>
     /// Which ROW a pedal family occupies below the staff, nearest first — the order
     /// pedal-three.ly measured on 2.26.0 (una corda 2.7775, sostenuto 4.7387, sustain
     /// 7.1813 below the bottom line; the guess it replaced had una corda outermost).
@@ -719,7 +778,11 @@ internal static class MusicMarkEngraver
             SortByOutsideStaffPriority(belowMarks);
 
             // Check if any mark in this group overlaps with a volta bracket
-            bool hasVoltaOverlap = aboveMarks.Any(e => voltaMeasures.Contains(e.Mark.MeasureIndex));
+            // A loop: the lambda was a delegate per group over an environment built at the
+            // method's entry (session 470's allocation-tick price by type).
+            bool hasVoltaOverlap = false;
+            for (int k = 0; k < aboveMarks.Count && !hasVoltaOverlap; k++)
+                hasVoltaOverlap = voltaMeasures.Contains(aboveMarks[k].Mark.MeasureIndex);
 
             // LILYPOND-REF: axis-group-interface.cc:652-681 avoid_outside_staff_collisions
             // Marks with priority > 600 (VoltaBracketSpanner) must be placed above volta.
@@ -1092,13 +1155,7 @@ internal static class MusicMarkEngraver
             // Pedal CHANGES put the previous release "*" and the next
             // "Ped." in the same group; classic notation writes them SIDE BY
             // SIDE on the one pedal baseline ("* Ped."), never stacked.
-            // Releases sharing a group with an on-mark shift left of it.
-            bool IsPedalRelease(MusicMarkType t) =>
-                t is MusicMarkType.SustainOff or MusicMarkType.SostenutoOff
-                  or MusicMarkType.UnaCordaOff;
-            bool IsPedal(MusicMarkType t) =>
-                t is MusicMarkType.SustainOn or MusicMarkType.SostenutoOn
-                  or MusicMarkType.UnaCordaOn || IsPedalRelease(t);
+            // Releases sharing a group with an on-mark shift left of it (IsPedalRelease).
             // ⚠️ A PEDAL FAMILY, NOT "PEDALS". Sustain, sostenuto and una corda are three
             // SEPARATE grobs in LilyPond — a PianoPedalLineSpanner each, all three declared
             // (outside-staff-priority . 1000) — so the outside-staff pass stacks them
@@ -1137,30 +1194,9 @@ internal static class MusicMarkEngraver
             // 420, the owner's corpus): this table came out EMPTY in ALL 42,328 groups —
             // not once did the chain produce a row — and building it cost 9.5% of this
             // engraver's allocation.
-            Dictionary<int, double>? pedalRowYUp = null;
-            if (belowMarks.Count > 0)
-            {
-                pedalRowYUp = new Dictionary<int, double>();
-                double rowYUp = belowBaseUp - Padding;
-                double prevHalf = 0;
-                bool firstRow = true;
-                foreach (var rank in belowMarks
-                    .Where(e => IsPedal(e.Mark.Type)
-                                && (keepMarkText == null || keepMarkText(e.Mark)))
-                    .Select(e => PedalFamilyRank(e.Mark.Type))
-                    .Distinct()
-                    .OrderBy(r => r))
-                {
-                    double half = belowMarks
-                        .Where(e => IsPedal(e.Mark.Type) && PedalFamilyRank(e.Mark.Type) == rank)
-                        .Max(e => GetMarkHalfExtent(fonts, e.Mark.Type, e.Mark.Text, BoxedOf(e.Mark.Type)));
-                    if (!firstRow)
-                        rowYUp -= prevHalf + StackGap + half;
-                    pedalRowYUp[rank] = rowYUp;
-                    prevHalf = half;
-                    firstRow = false;
-                }
-            }
+            Dictionary<int, double>? pedalRowYUp = belowMarks.Count > 0
+                ? PedalRowsYUp(fonts, belowMarks, keepMarkText, belowBaseUp, sectionLabels)
+                : null;
 
             // The side-by-side "* Ped." shift is a WITHIN-FAMILY affair: a sostenuto release
             // beside a sustain engage is two rows, not two words on one line.
@@ -1219,9 +1255,7 @@ internal static class MusicMarkEngraver
                         // established that this engage exists, which is what makes First safe.
                         // ⚠️ Both halves go through PlainMarkWidth, not TextFontMetrics: only
                         // that home knows which of the two a given pedal's word is.
-                        var follower = belowMarks.First(
-                            e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type)
-                                 && PedalFamilyRank(e.Mark.Type) == PedalFamilyRank(mark.Type));
+                        var follower = EngageOfFamily(belowMarks, mark.Type);
                         double pedHalf =
                             PlainMarkWidth(fonts, follower.Mark.Type, follower.Mark.Text) / 2;
                         double starHalf =

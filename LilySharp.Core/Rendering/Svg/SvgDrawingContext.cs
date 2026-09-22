@@ -470,10 +470,17 @@ internal sealed class SvgDrawingContext : IDrawingContext
             F4(transform.ScaleY);
             _sb.Append(")\">").AppendLine();
         }
-        return new ScopeAction(() =>
-        {
-            _sb.AppendLine("  </g>");
-        });
+        return _groupClose ??= new GroupClose(this);
+    }
+
+    // One closer per context, as the source and design scopes have (session 469): a group's
+    // close reads nothing of the scope, and `new ScopeAction(() => …)` was a delegate and a
+    // scope object per group (session 470's allocation-tick price by type).
+    private GroupClose? _groupClose;
+
+    private sealed class GroupClose(SvgDrawingContext owner) : IDisposable
+    {
+        public void Dispose() => owner._sb.AppendLine("  </g>");
     }
 
     /// <summary>Interactive preview only (see <see cref="IDrawingContext.BeginLabeledGroup"/>):
@@ -483,7 +490,7 @@ internal sealed class SvgDrawingContext : IDrawingContext
         if (!_interactive)
             return NullScope.Instance;
         _sb.Append("  <g class=\"").Append(label).Append("\">").AppendLine();
-        return new ScopeAction(() => _sb.AppendLine("  </g>"));
+        return _groupClose ??= new GroupClose(this);
     }
 
     /// <summary>

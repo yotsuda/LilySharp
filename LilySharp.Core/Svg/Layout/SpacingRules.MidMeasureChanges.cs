@@ -950,9 +950,22 @@ internal static partial class SpacingRules
         // first note off the bar line's ink right / ly:paper-column::print ideal): the lower
         // staff resting r1 or s1 12.22 / 12.90, the key change written on BOTH staves 12.77 /
         // 13.45 — the one-staff value. The page drew 12.77 in all three.
-        var spring = staffFirstItems is { Count: > 1 }
-            ? Spring.MergeSprings(staffFirstItems.Select(items => Wish(new ItemColumn(items), BoundaryChangePrefix(fonts, new ItemColumn(items)))).ToList())
-            : Wish(firstItems, boundary);
+        // A loop, not Select: the lambda made the environment Wish shares a class built on every
+        // bar line, one staff or many — 556 B a keystroke over the reader's corpus, plus its
+        // delegate 243 (session 470's allocation-tick price by type).
+        Spring spring;
+        if (staffFirstItems is { Count: > 1 })
+        {
+            var wishes = new List<Spring>(staffFirstItems.Count);
+            for (int s = 0; s < staffFirstItems.Count; s++)
+            {
+                var staffColumn = new ItemColumn(staffFirstItems[s]);
+                wishes.Add(Wish(staffColumn, BoundaryChangePrefix(fonts, staffColumn)));
+            }
+            spring = Spring.MergeSprings(wishes);
+        }
+        else
+            spring = Wish(firstItems, boundary);
 
         // A GRACE RUN OPENING THE BAR: the merged spring stops at the grace column, and when that
         // column has a grace part LilyPond scales the whole spring by 0.8 — column origin to

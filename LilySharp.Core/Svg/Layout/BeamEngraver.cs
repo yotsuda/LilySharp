@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -61,18 +62,28 @@ internal sealed class BeamEngraver
             throw new ArgumentException("Beam group must have at least 2 members");
 
         // Get X positions for each member
-        var memberXPositions = group.Members
-            .Select(m => itemXPositions[m.ItemIndex])
-            .ToImmutableArray();
+        // Loops, not Select: the two lambdas shared one environment (itemXPositions) built at
+        // method entry, plus a delegate each — 1,534 B a keystroke over the reader's corpus
+        // (session 470's allocation-tick price by type). The arrays are exactly sized.
+        var memberXs = new double[group.Members.Length];
+        for (int i = 0; i < memberXs.Length; i++)
+            memberXs[i] = itemXPositions[group.Members[i].ItemIndex];
+        var memberXPositions = ImmutableCollectionsMarshal.AsImmutableArray(memberXs);
 
         // …and for each invisible rest stem the beam runs over: the rest glyph's ink
         // CENTRE (LayoutUtilities.RestStemX), which is where LilyPond stands the stem it
         // gives a beamed rest.
-        var restXPositions = group.RestStems.IsDefaultOrEmpty
-            ? ImmutableArray<double>.Empty
-            : group.RestStems
-                .Select(r => LayoutUtilities.RestStemX(itemXPositions[r.ItemIndex], r.NoteValue))
-                .ToImmutableArray();
+        var restXPositions = ImmutableArray<double>.Empty;
+        if (!group.RestStems.IsDefaultOrEmpty)
+        {
+            var restXs = new double[group.RestStems.Length];
+            for (int i = 0; i < restXs.Length; i++)
+            {
+                var r = group.RestStems[i];
+                restXs[i] = LayoutUtilities.RestStemX(itemXPositions[r.ItemIndex], r.NoteValue);
+            }
+            restXPositions = ImmutableCollectionsMarshal.AsImmutableArray(restXs);
+        }
 
         double leftX = memberXPositions[0];
         double rightX = memberXPositions[^1];

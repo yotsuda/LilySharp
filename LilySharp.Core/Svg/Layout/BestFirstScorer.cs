@@ -49,6 +49,7 @@ internal static class BestFirstScorer
     /// the queue that is <see cref="IScorableConfig.IsDone"/>).
     /// </summary>
     /// <param name="candidates">All seed candidates, already given their initial demerit.</param>
+    /// <param name="problem">The problem the scorer stages read, handed to <paramref name="advanceScorer"/>.</param>
     /// <param name="advanceScorer">
     /// Applies the next scorer stage to a not-yet-done candidate, mutating its
     /// demerit and scorer progress in place. Must eventually make the candidate
@@ -65,7 +66,11 @@ internal static class BestFirstScorer
     // over the interface boxed its enumerator on every beam and every slur — 21.50 calls a
     // keystroke = 860 B/keystroke, measured session 446 (RULES §5.3). The queue is sized
     // from the same count, which the interface could not tell it either.
-    public static TConfig Solve<TConfig>(IReadOnlyList<TConfig> candidates, Action<TConfig> advanceScorer)
+    // The problem travels as state and the scorer is a static lambda: an instance method group
+    // (`OneScorer`) was a new 64 B delegate on every beam and every slur — 1,235 + 138 B a
+    // keystroke over the reader's corpus, session 470's allocation-tick price by type.
+    public static TConfig Solve<TConfig, TProblem>(
+        IReadOnlyList<TConfig> candidates, TProblem problem, Action<TProblem, TConfig> advanceScorer)
         where TConfig : class, IScorableConfig
     {
         // Lent, and given back cleared (see Drawer).
@@ -86,7 +91,7 @@ internal static class BestFirstScorer
                 if (best.IsDone)
                     return best;
 
-                advanceScorer(best);
+                advanceScorer(problem, best);
                 queue.Enqueue(best, best.Demerits);
             }
         }

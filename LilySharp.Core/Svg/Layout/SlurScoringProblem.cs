@@ -579,7 +579,7 @@ internal sealed class SlurScoringProblem
 
         // Priority queue: lazy evaluation of scorers
         // LILYPOND-REF: lily/slur-scoring.cc:438-459
-        var best = BestFirstScorer.Solve(candidates, RunNextScorer);
+        var best = BestFirstScorer.Solve(candidates, this, static (p, c) => p.RunNextScorer(c));
 
         return CreateLayout(best);
     }

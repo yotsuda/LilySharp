@@ -718,7 +718,7 @@ internal sealed class BeamScoringProblem
             // Phase 5: Score using priority queue (lazy evaluation)
             // LILYPOND-REF: lily/beam-quanting.cc:1050-1083 — the best-first queue inside
             //   Beam_scoring_problem::solve: configurations are scored lazily, cheapest first.
-            var best = BestFirstScorer.Solve(candidates, OneScorer);
+            var best = BestFirstScorer.Solve(candidates, this, static (p, c) => p.OneScorer(c));
 
             return AtOuterStems(best.LeftY, best.RightY);
         }

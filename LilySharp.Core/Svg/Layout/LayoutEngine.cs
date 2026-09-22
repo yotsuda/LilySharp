@@ -444,7 +444,7 @@ internal sealed partial class LayoutEngine
         // for what diverged while the preliminary pass rebuilt its own profiles.
         var prelim = RunPreliminaryAnnotationPass(
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
-            perSystemSkylines, multiStaffLayouter.RestCollisionsOf, systemCache,
+            perSystemSkylines, multiStaffLayouter.RestCollisionsOfDelegate, systemCache,
             commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
             rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines);
 
@@ -467,13 +467,13 @@ internal sealed partial class LayoutEngine
     {
         var looseChainEnd = BuildLooseChainEnds(
             score, pages, systemsArray, perSystemExtents,
-            multiStaffLayouter.RestCollisionsOf, placed.StaffSpanners, placed.StaffSkylines);
+            multiStaffLayouter.RestCollisionsOfDelegate, placed.StaffSpanners, placed.StaffSkylines);
         var trailingRowStaves = BuildTrailingRowStaves(systemsArray, textRowStaves);
         var betweenRowStaves = BuildBetweenRowStaves(systemsArray, textRowStaves);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var (allBeamLayouts, allTieLayouts, allSlurLayouts, allGlissandoLayouts, restShifts) =
-            LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOf,
+            LayoutAllSpanners(score, systemsArray, multiStaffLayouter.RestCollisionsOfDelegate,
                 prelim.BeamsByStaff, prelim.AllBeams, prelim.TiesByStaff, prelim.SlursByStaff,
                 prelim.Systems);
 
@@ -561,7 +561,7 @@ internal sealed partial class LayoutEngine
             PedalLines = placed.PedalLines,
             PedalRows = placed.PedalRows,
             // The room's own memo, not a second call: see AnnotationLayoutContext.RestCollisionsOf.
-            RestCollisionsOf = multiStaffLayouter.RestCollisionsOf,
+            RestCollisionsOf = multiStaffLayouter.RestCollisionsOfDelegate,
             TupletForceStemUp = primaryStaff.IsMultiVoice,
             StaffVoices = primaryStaff.Voices,
             VoicesByStaff = anchors.VoicesByStaff,

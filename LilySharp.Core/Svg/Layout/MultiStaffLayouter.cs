@@ -3628,12 +3628,7 @@ internal sealed class MultiStaffLayouter
         // equivalence argument.
         var beamGroups = StaffBeamGroupsOf(score, staff, staffIndex);
 
-        var staffBeams = beamLayouts.IsDefaultOrEmpty
-            ? beamLayouts
-            : beamLayouts.Select(b1 => new BeamLayout(
-                b1.Group, b1.LeftY, b1.RightY, b1.LeftX, b1.RightX, b1.LeftStemX, b1.RightStemX,
-                b1.MemberXPositions, staffIndex, b1.SystemIndex,
-                b1.MemberStaffIndices, b1.RestXPositions)).ToImmutableArray();
+        var staffBeams = RestampedToStaff(beamLayouts, staffIndex);
         return TupletBracketEngraver.Calculate(
             score.TextMetrics, staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
             beamGroups, beamLayouts: staffBeams,
@@ -3674,8 +3669,22 @@ internal sealed class MultiStaffLayouter
         Staff, ImmutableDictionary<RestShiftKey, double>> _restCollisions = new();
 
     internal ImmutableDictionary<RestShiftKey, double> RestCollisionsOf(Staff staff)
-        => _restCollisions.GetValue(
-            staff, s => _elementCoordinator.CalculateRestNoteCollisions(s));
+        => _restCollisions.TryGetValue(staff, out var hit)
+            ? hit
+            : _restCollisions.GetValue(staff,
+                _computeRestCollisions ??= s => _elementCoordinator.CalculateRestNoteCollisions(s));
+
+    // ONE callback and ONE delegate of the method, per layouter. The lambda read `this`, so it
+    // was a new delegate on every call, hit or miss; and LayoutEngine converted the method group
+    // four times a layout (Func<Staff, …> 255 B a keystroke over the reader's corpus, session
+    // 470's allocation-tick price by type — the callback's type is not a Func and was unpriced).
+    private System.Runtime.CompilerServices.ConditionalWeakTable<
+        Staff, ImmutableDictionary<RestShiftKey, double>>.CreateValueCallback? _computeRestCollisions;
+    private Func<Staff, ImmutableDictionary<RestShiftKey, double>>? _restCollisionsOf;
+
+    /// <summary><see cref="RestCollisionsOf"/> as the delegate its readers are handed.</summary>
+    internal Func<Staff, ImmutableDictionary<RestShiftKey, double>> RestCollisionsOfDelegate
+        => _restCollisionsOf ??= RestCollisionsOf;
 
     /// <summary>
     /// This staff's own Scripts, laid out in the staff's own frame so the skyline can reserve
@@ -3748,12 +3757,7 @@ internal sealed class MultiStaffLayouter
         // The beams arrive stamped with the trivial one-staff system's index 0 and the
         // engraver keys its stem tips by staff, so they are restamped to meet the score's
         // real index — the same restamp StaffArticulationLayouts makes, for the same reason.
-        var localBeams = beamLayouts.IsDefaultOrEmpty
-            ? beamLayouts
-            : beamLayouts.Select(b => new BeamLayout(
-                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
-                b.MemberXPositions, staffIndex, b.SystemIndex,
-                b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
+        var localBeams = RestampedToStaff(beamLayouts, staffIndex);
         // The plan is the SCORE's, not the one-voice staffScore's (which carries none).
         return FingeringEngraver.Calculate(score.TextMetrics, staffScore, measureLayouts, staffIndex, localBeams);
     }
@@ -3782,12 +3786,7 @@ internal sealed class MultiStaffLayouter
         if (staffArticulations.IsEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
 
-        var staffBeams = beamLayouts.IsDefaultOrEmpty
-            ? beamLayouts
-            : beamLayouts.Select(b => new BeamLayout(
-                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
-                b.MemberXPositions, staffIndex, b.SystemIndex,
-                b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
+        var staffBeams = RestampedToStaff(beamLayouts, staffIndex);
         // Restamped with this staff's index for the same reason the beams are:
         // StaffTieLayouts builds them on a trivial one-staff system (index 0), and
         // the engraver keys its tie supports by the script's staff.
@@ -3913,7 +3912,15 @@ internal sealed class MultiStaffLayouter
         return (items.Slurs, items.Ties);
     }
 
+    // The hit asks first: the factory captures `score`, so its environment and delegate were
+    // built on every call, hit or miss (139 B a keystroke for the environment alone over the
+    // reader's corpus — session 470's allocation-tick price by type).
     private StaffSpannerItems StaffSpannerItemsOf(MultiStaffScore score, Staff staff)
+        => _staffSpannerItems.TryGetValue(staff, out var hit)
+            ? hit
+            : ComputeStaffSpannerItems(score, staff);
+
+    private StaffSpannerItems ComputeStaffSpannerItems(MultiStaffScore score, Staff staff)
         => _staffSpannerItems.GetValue(staff, s =>
         {
             var local = StaffLocalScore(score, s);
@@ -3924,6 +3931,33 @@ internal sealed class MultiStaffLayouter
                 Ties = _elementCoordinator.DetectTies(local),
             };
         });
+
+    /// <summary>
+    /// The beams restamped with this staff's index — the one spelling of the restamp the
+    /// staff's tuplet, fingering, script and slur layouts each make.
+    /// </summary>
+    /// <remarks>
+    /// A loop into an array of the exact size: the four <c>Select(b =&gt; new BeamLayout(…,
+    /// staffIndex, …))</c> captured the parameter, which built each method's environment at
+    /// its ENTRY, empty beam list or not (Func&lt;BeamLayout, BeamLayout&gt; 184 B a keystroke
+    /// over the reader's corpus plus the four environments — session 470's allocation-tick
+    /// price by type).
+    /// </remarks>
+    private static ImmutableArray<BeamLayout> RestampedToStaff(ImmutableArray<BeamLayout> beamLayouts, int staffIndex)
+    {
+        if (beamLayouts.IsDefaultOrEmpty)
+            return beamLayouts;
+        var restamped = new BeamLayout[beamLayouts.Length];
+        for (int i = 0; i < restamped.Length; i++)
+        {
+            var b = beamLayouts[i];
+            restamped[i] = new BeamLayout(
+                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
+                b.MemberXPositions, staffIndex, b.SystemIndex,
+                b.MemberStaffIndices, b.RestXPositions);
+        }
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(restamped);
+    }
 
     private static Score StaffLocalScore(MultiStaffScore score, Staff staff)
         => staff.Voices.Length > 1
@@ -3991,12 +4025,7 @@ internal sealed class MultiStaffLayouter
         // The frame is unaffected: staffYAt null means every YUp comes back about the
         // script's own staff middle whatever that index reads, which is the origin the
         // trivial system's slur scorer measures against.
-        var localBeams = beamLayouts.IsDefaultOrEmpty
-            ? beamLayouts
-            : beamLayouts.Select(b => new BeamLayout(
-                b.Group, b.LeftY, b.RightY, b.LeftX, b.RightX, b.LeftStemX, b.RightStemX,
-                b.MemberXPositions, staffIndex, b.SystemIndex,
-                b.MemberStaffIndices, b.RestXPositions)).ToImmutableArray();
+        var localBeams = RestampedToStaff(beamLayouts, staffIndex);
         var localTies = tieLayouts.IsDefaultOrEmpty
             ? tieLayouts
             : tieLayouts.Select(t => t with { StaffIndex = staffIndex }).ToImmutableArray();

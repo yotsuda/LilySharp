@@ -247,7 +247,7 @@ public static class Tunings
         for (int i = 0; i < notes.Count; i++)
             if (result[i].stringNum == 0)
                 order.Add(i);
-        order.Sort((a, b) => notes[b].Midi.CompareTo(notes[a].Midi));
+        SortHighestFirst(order, notes);
 
         foreach (int i in order)
         {
@@ -275,6 +275,13 @@ public static class Tunings
         }
         return result;
     }
+
+    // Its own method: a lambda capturing `notes` made the environment the local functions of
+    // CalculateChordFrets share a class, built on every chord (session 470's allocation-tick price).
+    private static void SortHighestFirst(
+        System.Collections.Generic.List<int> order,
+        System.Collections.Generic.IReadOnlyList<(int Midi, int? StringNumber)> notes) =>
+        order.Sort((a, b) => notes[b].Midi.CompareTo(notes[a].Midi));
 
     /// <summary>
     /// How wide one comfortable position is on a BASS, in frets: index, middle and little

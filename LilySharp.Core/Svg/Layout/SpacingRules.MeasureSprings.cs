@@ -1030,7 +1030,12 @@ internal static partial class SpacingRules
         if (s_staffVoiceCollisions.TryGetValue(key, out var cached))
             return cached;
 
-        return s_staffVoiceCollisions.GetValue(key, _ => new VoiceCollisionTable(voices));
+        // Static, from the key: `_ => new VoiceCollisionTable(voices)` captured the parameter,
+        // so its environment was built at this method's ENTRY — on the one-voice return and on
+        // every hit, 346 B a keystroke over the reader's corpus (session 470's allocation-tick
+        // price by type). The key IS the voices' array.
+        return s_staffVoiceCollisions.GetValue(key, static k =>
+            new VoiceCollisionTable(System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(k)));
     }
 
     internal static ImmutableArray<Spring> ApplyCrossVoiceColumnSpacing(

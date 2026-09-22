@@ -591,8 +591,7 @@ internal static class ArticulationEngraver
             }
             if (pendingFingerings != null)
                 foreach (var queue in pendingFingerings.Values)
-                    queue.Sort((x, y) => fingerings[x].ColumnPriority
-                        .CompareTo(fingerings[y].ColumnPriority));
+                    SortByColumnPriority(queue, fingerings);
         }
 
         // Sit the note's queued fingerings below priority <paramref>upTo</paramref>
@@ -1448,6 +1447,19 @@ internal static class ArticulationEngraver
         map.Clear();
         t_supportScripts = map;
     }
+
+    /// <summary>
+    /// Sorts one note's queue of fingering indices by the fingerings' column priority.
+    /// </summary>
+    /// <remarks>
+    /// Its own method so the comparison's closure is built only where a queue is sorted: in
+    /// <see cref="CalculateWithFingerings"/> the lambda captured the <c>fingerings</c>
+    /// parameter, which made the whole body's environment (the one its local functions share)
+    /// a class built on every call — 219 B a keystroke over the reader's corpus, plus the
+    /// delegate (session 470's allocation-tick price by type).
+    /// </remarks>
+    private static void SortByColumnPriority(List<int> queue, ImmutableArray<FingeringLayout> fingerings) =>
+        queue.Sort((x, y) => fingerings[x].ColumnPriority.CompareTo(fingerings[y].ColumnPriority));
 
     /// <summary>
     /// The fingering as a script-column PARTICIPANT: its digit run's ink BOX at

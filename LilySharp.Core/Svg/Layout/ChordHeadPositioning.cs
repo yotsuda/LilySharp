@@ -72,6 +72,18 @@ public static class ChordHeadPositioning
         => OffsetsForEll(notes, stemUp, noteValue,
             GlyphMetrics.GetNoteheadBBox(headFont ?? GlyphMetrics.Design20, noteValue).Right);
 
+    /// <summary>
+    /// Sorts the head indices by staff position in the stem direction.
+    /// </summary>
+    /// <remarks>
+    /// Its own method because a lambda capturing a parameter builds its environment at the
+    /// ENTRY of the method that holds it: in <see cref="OffsetsForEll"/> every single-note
+    /// call paid it before the <c>Count &lt; 2</c> return (session 470's allocation-tick price).
+    /// </remarks>
+    private static void SortInStemDirection(int[] order, IReadOnlyList<ChordNoteInfo> notes, int dir) =>
+        Array.Sort(order, (a, b) =>
+            (dir * notes[a].StaffPosition).CompareTo(dir * notes[b].StaffPosition));
+
     /// <summary>The rule itself, over the head right extent its caller resolved.</summary>
     private static double[] OffsetsForEll(
         IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue, double ell)
@@ -87,8 +99,7 @@ public static class ChordHeadPositioning
         // so the walk always runs in the stem direction from the support head.
         var order = new int[notes.Count];
         for (int i = 0; i < notes.Count; i++) order[i] = i;
-        Array.Sort(order, (a, b) =>
-            (dir * notes[a].StaffPosition).CompareTo(dir * notes[b].StaffPosition));
+        SortInStemDirection(order, notes, dir);
 
         // LILYPOND-REF: stem.cc:667-760 — parity walk over adjacent intervals.
         bool parity = true;

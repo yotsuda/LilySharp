@@ -692,7 +692,20 @@ internal sealed partial class LayoutEngine
         // reader's corpus this one is built 2.17 times a keystroke and stays EMPTY in every
         // one of them: no book in the corpus has a bracketed pedal (session 448).
         ImmutableArray<PedalBracketLayout>.Builder? pedalBracketBuilder = null;
-        if (!musicMarks.IsDefaultOrEmpty && staffByIndex != null)
+        // Asked once: with no pedal mark there is no bracket to lay out and no text to
+        // suppress, and the pass was paying for both — the staff walk's Where/Select/Distinct
+        // and a keep-text delegate the mark engraver then called on every mark
+        // (Func<MusicMarkItem, bool> 519 B a keystroke over the reader's corpus, a row seven
+        // other sites share — session 470's allocation-tick price by type).
+        bool anyPedalMark = false;
+        if (!musicMarks.IsDefaultOrEmpty)
+            foreach (var m in musicMarks)
+                if (IsPedalMark(m.Type))
+                {
+                    anyPedalMark = true;
+                    break;
+                }
+        if (anyPedalMark && staffByIndex != null)
         {
             // measure -> system INDEX, to find the solved line of the system a bracket
             // starts on (the profile that reserved it) — the pass's one map, not a second
@@ -736,7 +749,10 @@ internal sealed partial class LayoutEngine
         // The predicate is applied when the mark LAYOUT is built (below), so the raw
         // mark list — and every mark's SourceIndex into it — stays intact for the
         // incremental-reuse data-pos path (SharedRenderer.ResolveDataPos).
-        Func<MusicMarkItem, bool> keepMarkText = m => KeepPedalTextMark(m, StaffPedalStyle(m.StaffIndex));
+        // Null keeps every mark, which is what the predicate answers when no mark is a pedal's.
+        Func<MusicMarkItem, bool>? keepMarkText = anyPedalMark
+            ? m => KeepPedalTextMark(m, StaffPedalStyle(m.StaffIndex))
+            : null;
 
         // Layout figured bass (drops below below-staff scripts via the
         // script-augmented DOWN skylines)

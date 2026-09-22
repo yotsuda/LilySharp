@@ -490,6 +490,26 @@ internal static class PedalEngraver
         if (musicMarks.IsDefaultOrEmpty)
             return ([], []);
 
+        // No pedal mark, nothing to pair — and nothing built. The pairing body below allocates
+        // at its ENTRY (Report's environment and three delegates of it) and then a Where, an
+        // OrderBy and a list per pedal type, and it ran 2.17 times a keystroke over the reader's
+        // corpus, where no book writes a pedal mark (session 448): Report's delegates alone were
+        // 507 B a keystroke and its environment 127 (session 470's allocation-tick price by type).
+        foreach (var m in musicMarks)
+            if (m.Type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+                or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+                or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
+                return PairPresentPedalBrackets(musicMarks);
+        return ([], []);
+    }
+
+    /// <summary>
+    /// <see cref="PairPedalBrackets"/> over marks that hold at least one pedal mark.
+    /// </summary>
+    private static (ImmutableArray<PedalBracketItem> Brackets,
+                    ImmutableArray<UnpairedSpanWarning> Unpaired)
+        PairPresentPedalBrackets(ImmutableArray<MusicMarkItem> musicMarks)
+    {
         // ⚠️ ALL THREE WAIT FOR THEIR FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays
         // out its first block — 88 B for a reference element — before a single Add, and over
         // the reader's corpus this method runs 2.17 times a keystroke with all three EMPTY in

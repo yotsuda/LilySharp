@@ -1294,12 +1294,24 @@ internal static partial class SharedRenderer
         const double gap = 0.1; // LedgerLineSpanner (gap . 0.1)
         const int accidentalRange = 3; // approximation of ledger_shortening_range
 
-        foreach (var direction in new[] { 1, -1 })
+        // One list, filled by a stable insertion in HeadLeft order — what Where + OrderBy gave,
+        // without an environment per direction (it captured the loop variable) and its
+        // delegate, the two iterators and a list each time (Func<LedgerRequest, bool> 195 B a
+        // keystroke over the reader's corpus plus the environment 58 — session 470's
+        // allocation-tick price by type).
+        var reqs = new List<LedgerRequest>(plan.Count);
+        for (int direction = 1; direction >= -1; direction -= 2)
         {
-            var reqs = plan
-                .Where(r => Math.Sign(r.ExtremePos) == direction)
-                .OrderBy(r => r.HeadLeft)
-                .ToList();
+            reqs.Clear();
+            foreach (var r in plan)
+            {
+                if (Math.Sign(r.ExtremePos) != direction)
+                    continue;
+                int at = reqs.Count;
+                while (at > 0 && reqs[at - 1].HeadLeft.CompareTo(r.HeadLeft) > 0)
+                    at--;
+                reqs.Insert(at, r);
+            }
 
             for (int i = 1; i < reqs.Count; i++)
             {

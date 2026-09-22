@@ -315,8 +315,8 @@ internal static partial class SharedRenderer
             {
                 var upper = o.Staves[i];
                 var lower = o.Staves[i + 1];
-                var upperLeaf = o.Leaves.First(l => l.Staves.Any(s => s.StaffIndex == upper.StaffIndex));
-                var lowerLeaf = o.Leaves.First(l => l.Staves.Any(s => s.StaffIndex == lower.StaffIndex));
+                var upperLeaf = LeafHolding(o.Leaves, upper.StaffIndex);
+                var lowerLeaf = LeafHolding(o.Leaves, lower.StaffIndex);
                 if (ReferenceEquals(upperLeaf, lowerLeaf) && upperLeaf.HasDelimiter)
                     continue;
                 var lowerChain = lowerLeaf.Outer!.SelfAndOuters().ToHashSet();
@@ -327,6 +327,22 @@ internal static partial class SharedRenderer
             if (gaps.Count > 0)
                 DrawSpanGaps(gaps);
         }
+    }
+
+    /// <summary>The first leaf group that holds the staff.</summary>
+    /// <remarks>
+    /// Loops where <c>First(l =&gt; l.Staves.Any(s =&gt; …))</c> built two environments and two
+    /// delegates per gap and one more of each per leaf it tried — 44 B a keystroke over the
+    /// reader's corpus (session 470, leave-one-file-out): nested groups are rare there, and
+    /// the <c>Func&lt;StaffLayout, bool&gt;</c> row's head is at other sites.
+    /// </remarks>
+    private static StaffGroupLayout LeafHolding(List<StaffGroupLayout> leaves, int staffIndex)
+    {
+        foreach (var leaf in leaves)
+            foreach (var s in leaf.Staves)
+                if (s.StaffIndex == staffIndex)
+                    return leaf;
+        throw new InvalidOperationException("Sequence contains no matching element");
     }
 
     /// <summary>Whether a group, or any group around it, draws bar lines through its gaps —

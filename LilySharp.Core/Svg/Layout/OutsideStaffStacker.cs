@@ -689,7 +689,9 @@ internal static class OutsideStaffStacker
                 }
                 if (touched.Count == 0)
                     continue;   // fully unmapped: its members are passthroughs on the live path
-                bool oneSystem = !unmapped && touched.TrueForAll(s => s == touched[0]);
+                bool oneSystem = !unmapped;
+                for (int k = 1; oneSystem && k < touched.Count; k++)
+                    oneSystem = touched[k] == touched[0];
                 if (oneSystem)
                     PartOf(touched[0]).Groups.Add(gi);
                 else
@@ -772,8 +774,19 @@ internal static class OutsideStaffStacker
         var liveGroups = lineGroups;
         if (!lineGroups.IsDefaultOrEmpty && hits.Count > 0)
         {
-            static int RemapIdx(Dictionary<int, int>? remap, int i) =>
-                remap is not null && remap.TryGetValue(i, out int v) ? v : i;
+            // Loops, not CreateRange(…, i => RemapIdx(remapDyn, i)): the two lambdas captured
+            // locals of the method body, which made the environment every local function here
+            // shares a class built on every call — 254 B a keystroke over the reader's corpus
+            // (session 470's allocation-tick price by type).
+            static ImmutableArray<int> RemapAll(ImmutableArray<int> indices, Dictionary<int, int>? remap)
+            {
+                if (indices.IsEmpty)
+                    return ImmutableArray<int>.Empty;   // as CreateRange answered
+                var remapped = new int[indices.Length];
+                for (int k = 0; k < remapped.Length; k++)
+                    remapped[k] = remap is not null && remap.TryGetValue(indices[k], out int v) ? v : indices[k];
+                return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(remapped);
+            }
             var gb = ImmutableArray.CreateBuilder<DynamicAlignEngraver.AlignedLineGroup>(
                 lineGroups.Length);
             for (int gi = 0; gi < lineGroups.Length; gi++)
@@ -792,10 +805,8 @@ internal static class OutsideStaffStacker
                     continue;   // replayed with its system
                 gb.Add(g with
                 {
-                    DynamicIndices = ImmutableArray.CreateRange(
-                        g.DynamicIndices, i => RemapIdx(remapDyn, i)),
-                    HairpinIndices = ImmutableArray.CreateRange(
-                        g.HairpinIndices, i => RemapIdx(remapHp, i)),
+                    DynamicIndices = RemapAll(g.DynamicIndices, remapDyn),
+                    HairpinIndices = RemapAll(g.HairpinIndices, remapHp),
                 });
             }
             liveGroups = gb.ToImmutable();

@@ -329,14 +329,29 @@ public sealed record RenderSpec(
     /// tab, ossia and shared staves do not carry this clef.</summary>
     public ClefType? WrittenClefOf(string voiceName)
     {
-        static ClefType? Find(RenderItemSpec item, string name) => item switch
+        // Loops, not Select(… Find(…, name)).FirstOrDefault(…): each lambda captured the name,
+        // an environment and a delegate on every call and every grand staff (Func<RenderItemSpec,
+        // ClefType?> 174 B a keystroke over the reader's corpus plus the environments 92 —
+        // session 470's allocation-tick price by type). The first non-null answer, as before.
+        static ClefType? Find(RenderItemSpec item, string name)
         {
-            SingleStaffSpec s when s.Staff.VoiceName == name => s.Staff.WrittenClef,
-            GrandStaffRenderSpec g => g.GrandStaff.Members
-                .Select(m => Find(m, name)).FirstOrDefault(c => c != null),
-            _ => null,
-        };
-        return Items.Select(i => Find(i, voiceName)).FirstOrDefault(c => c != null);
+            switch (item)
+            {
+                case SingleStaffSpec s when s.Staff.VoiceName == name:
+                    return s.Staff.WrittenClef;
+                case GrandStaffRenderSpec g:
+                    foreach (var m in g.GrandStaff.Members)
+                        if (Find(m, name) is { } clef)
+                            return clef;
+                    return null;
+                default:
+                    return null;
+            }
+        }
+        foreach (var i in Items)
+            if (Find(i, voiceName) is { } clef)
+                return clef;
+        return null;
     }
 
     /// <summary>Whether this render contains a grand staff.</summary>
