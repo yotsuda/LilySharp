@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第504セッションの経緯
+
+### 1.1 第504セッション（2026-09-22・YT-DELL2）
+
+新しい会話（第503 の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
+★ **`-Start p504` の 1 コマンドで §0 が全部済んだ**（HEAD `893a95da`・full 8845 / 0 / 3 / 8848・`-Archive 502` も自動）。
+
+★★ **⑴ content key の `ImmutableArray<T>` 性質を箱に入れずに畳む＝render 1,864,462 → 1,845,111（−19,351・−1.0%）**。型の地図を HEAD で取り直す（Lab `sessions/p504/type-price-head.txt`・**Release で取る**＝Debug は render 2.38 MB と太り型の並びも変わる）と、**箱に入った `ImmutableArray<GraceColumnInfo>` が 17,604 B／打鍵**。持ち主は `MeasureContentKey.HashContent`：値型の性質は第192 から箱なしで畳むが、**`ImmutableArray<T>` は `IEnumerable` なので object 経路**＝item を 1 つ畳むたびに箱 1 つ（`NoteItem`／`ChordItem.LeadingGrace`＝ほぼ全部の音符で空）＋空でなければ enumerator。⇒ `ArrayFold<T>`（その場で歩き、要素は `AddValue` と同じ数を畳む＝default 配列は −1・値型は `Hash64.Add<T>`・それ以外と `ChordNoteInfo` は `AddValue` のまま）。
+  網 2 本（`ContentKeyDirectFoldTests`＝grace と和音を持つ本で「箱の経路と同じ数」・default 配列の −1）。毒 4 本（Lab `sessions/p504/poisons.ps1`）＝**要素を定数に→新しい網だけ赤**・**`AddValue` を飛ばす→7 赤**・**何も畳まない→2 赤**（`ChordNoteSourcePositionTests`・`CollectEditResumeTests`）・**default の印を −2 に→*最初は観測者なし*→網を足して赤**。出力は同一（`Zz504Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。
+  ★ **効いた見方の 4 つ目**: ⑷ **地図に ``ImmutableArray`1[…]`` が*型として*出たら箱**（struct は箱に入らないと heap の型にならない）＝持ち主は reflection／`object` を取る経路。
+
 ## 以下は第503セッションの経緯
 
 ### 1.1 第503セッション（2026-09-22・YT-DELL2）
