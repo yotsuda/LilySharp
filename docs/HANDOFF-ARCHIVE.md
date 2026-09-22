@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第505セッションの経緯
+
+### 1.1 第505セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第504 のすぐ後）。ユーザー指示「続けて」＝第504 の地図の残り。
+★ **`-Start p505` の 1 コマンドで §0 が全部済んだ**（HEAD `b336c26e`・full 8847 / 0 / 3 / 8850・`-Archive 503` も自動）。
+
+★★ **⑴ collector の側表の登録簿を 1 collector に 1 本＝render 1,845,153 → 1,829,053（−16,100・−0.9%）**。第504 の地図の `System.Collections.IList[]` 11,579 B／打鍵は**全部 `MeasureCollector.CumulativeSideTables()`**＝21 本の表を並べた配列を**呼ぶたびに新しく建てていた**（walk の checkpoint ごと・walk ごと）。21 本とも `readonly` の field＝登録簿は構築後に変わらない ⇒ 最初の呼びで建てて持つ。呼び手は読むだけ（添字・Count・列挙）。
+  毒（Lab `sessions/p505/poisons.ps1`）＝**呼び手が配列に書く（checkpoint で slot 0 に slot 1）→12 赤**（`CollectEditResumeTests`・`IncrementalReuseSoundnessTests` の fuzz・`PreviewCollectSharingTests` ほか）。出力は同一（`Zz505Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。`APPROXIMATIONS.md` は行番号 1 つ。
+  ★ 新しい地図（Lab `sessions/p505/type-price-a.txt`・render 1,824,462）の 30 KB 級の残り＝`Measure` 39 KB・`ArticulationLayout[]` 38 KB（第502＝`MoveToImmutable` の実仕事）・`BeamMember` 36 KB・`List<int>` 29 KB（持ち主は未特定＝軒が多い・呼びの前後の wrapper で絞る）・`MusicItem[]` 25 KB。
+
 ## 以下は第504セッションの経緯
 
 ### 1.1 第504セッション（2026-09-22・YT-DELL2）

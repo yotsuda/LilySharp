@@ -100,7 +100,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（**第494 が呼び手で数えた＝設計の値段**: 建てる 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976＝梁の刻印は collect ごとに新しい BeamId なので必ず写す・`TabResolver.ResolveTabStrings` 509,020＝弦番号の書き込み。消すなら刻印を item の外（側表）へ出す＝土台の変更）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）**。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・`new int[`／`new double[` 141 軒を書き換えて数える・`array-sites.txt`＝残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB）。⚠️ Dictionary／HashSet の bucket も Int32[] だがこの census には出ない。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
-  ⇒ **第498〜第503（1 つの会話）で render 2,090,060 → 1,864,434（−225,626・−10.8%）**：臨時記号の参照 skyline（第498 −39,962）・bare duration の写し元の表（第499 −33,625）・render の `--pitches` trace（第500 −65,596）・系の数の候補の行の共有（第501 −56,414）・data-pos の copy-on-write（第502 −9,380）・`ImmutableArray.Create(配列)` の写し（第503 −19,286）。`MeasureSprings.cs:1282/1290` はコーパスで 0 回・`AccidentalPlacement` の `Clone()` は cache の中・`ToBuilder()` 46 軒の頭は `MoveToImmutable` の実仕事（Lab `sessions/p502/tobuilder-price.txt`）。**最新の地図は第505**（Lab `sessions/p505/type-price-a.txt`・Release・render 1,824,462 の時点）＝残る頭は**土台**：String 349 KB（SVG の出力）・NoteItem 236 KB（梁と弦の刻印＝側表へ）・SkylineBuilding[] 150 KB（skyline の中身）。次の候補（小）: below 側の `BelowPart` の貸し出し（第506 の above と同じ形・8.93／打鍵）・`VerticalSkyline.Padded`・地図を取り直して 30 KB 級の型を呼びの前後で絞る。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**（報告用の表・warning を render の collector が作っていないか）／⑵ **同じ値の作り直し**（候補ごと・render ごとに建て直すが値は前と同じ）／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
+  ⇒ **第498〜第503（1 つの会話）で render 2,090,060 → 1,864,434（−225,626・−10.8%）**：臨時記号の参照 skyline（第498 −39,962）・bare duration の写し元の表（第499 −33,625）・render の `--pitches` trace（第500 −65,596）・系の数の候補の行の共有（第501 −56,414）・data-pos の copy-on-write（第502 −9,380）・`ImmutableArray.Create(配列)` の写し（第503 −19,286）。`MeasureSprings.cs:1282/1290` はコーパスで 0 回・`AccidentalPlacement` の `Clone()` は cache の中・`ToBuilder()` 46 軒の頭は `MoveToImmutable` の実仕事（Lab `sessions/p502/tobuilder-price.txt`）。**最新の地図は第505**（Lab `sessions/p505/type-price-a.txt`・Release・render 1,824,462 の時点）＝残る頭は**土台**：String 349 KB（SVG の出力）・NoteItem 236 KB（梁と弦の刻印＝側表へ）・SkylineBuilding[] 150 KB（skyline の中身）。次の候補（小）: `VerticalSkyline.Padded`・第506 の census 計器（Lab `sessions/p506/instrument.ps1`＝型を差し替えれば他の型にも使える・**複数行の field 宣言は数えない**）で地図の残りの持ち主を絞る・地図を取り直して 30 KB 級の型を呼びの前後で絞る。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**（報告用の表・warning を render の collector が作っていないか）／⑵ **同じ値の作り直し**（候補ごと・render ごとに建て直すが値は前と同じ）／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
 - ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
@@ -197,6 +197,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第507セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第506 のすぐ後）。ユーザー指示「続けて」＝below 側の `BelowPart`。
+★ **`-Start p507` の 1 コマンドで §0 が全部済んだ**（HEAD `230144ab`・full 8847 / 0 / 3 / 8850・`-Archive 505` も自動）。
+
+★ **⑴ below 側の memo front も partition と map を貸す＝render 1,796,562 → 1,793,086（−3,476・−0.2%）**。第506 の above（`SysPart`）と同じ形で、こちらは **map すら貸していなかった**（`BelowPart`＝8.93／打鍵 × List 5 本）。program・保存出力・group の序数はどれも配列へ写す＝list は pass の外へ出ない ⇒ `t_belowParts`／`t_spareBelowParts`（give で Clear）。
+  毒（Lab `sessions/p507/poisons.ps1`）＝**partition の Clear を抜く→12 赤**・**map の Clear を抜く→5 赤**（どちらも一緒に赤くなった inventory 2 本は毒が行をずらしただけ＝観測者ではない）。出力は同一（`Zz507Hash`＝0 差）。full 8847 / 0 / 3 / 8850。
+
+## 以下は第506セッションの経緯
+
 ### 1.1 第506セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第505 のすぐ後）。ユーザー指示「続けて」＝第505 の地図の `List<int>`。
@@ -206,17 +216,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ① **`BeamSubdivision.CalcBeaming` の `lastRight = new List<int>(curRight)`＋種 `new List<int>{0}`＝54.10＋28.75／打鍵**。写すのは loop が書き直した*後*で、loop は*今の*stem の list にしか書かない＝**写しは常に元と等しい** ⇒ 参照に（種は static `[0]`）。−5,502。毒＝**種を `[1]` に→106 赤**。
   ② **`OutsideStaffStacker.StackAboveStaffMemoized` の `SysPart`＝51.21／打鍵 × List 11 本**（計器は 1 行目の 3 本しか数えていなかった＝**複数行の field 宣言は census の綴りの外**）。map は第457 から貸し出し済みだが、「program は partition から建てる」と読んで値は貸さなかった＝**実際は program も保存出力も `Gather` で配列へ写す**＝list は pass の外へ出ない ⇒ `t_spareParts`（give で Clear）。−26,995。毒＝**Clear を抜く→88 赤**（`OutsideStaffStackMemoTests` ほか）。
   出力は同一（`Zz506Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。★ 同じ形の残り＝**below 側 `BelowPart`（`OutsideStaffStacker.cs:645`＝map も貸していない・8.93／打鍵）**。
-
-## 以下は第505セッションの経緯
-
-### 1.1 第505セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第504 のすぐ後）。ユーザー指示「続けて」＝第504 の地図の残り。
-★ **`-Start p505` の 1 コマンドで §0 が全部済んだ**（HEAD `b336c26e`・full 8847 / 0 / 3 / 8850・`-Archive 503` も自動）。
-
-★★ **⑴ collector の側表の登録簿を 1 collector に 1 本＝render 1,845,153 → 1,829,053（−16,100・−0.9%）**。第504 の地図の `System.Collections.IList[]` 11,579 B／打鍵は**全部 `MeasureCollector.CumulativeSideTables()`**＝21 本の表を並べた配列を**呼ぶたびに新しく建てていた**（walk の checkpoint ごと・walk ごと）。21 本とも `readonly` の field＝登録簿は構築後に変わらない ⇒ 最初の呼びで建てて持つ。呼び手は読むだけ（添字・Count・列挙）。
-  毒（Lab `sessions/p505/poisons.ps1`）＝**呼び手が配列に書く（checkpoint で slot 0 に slot 1）→12 赤**（`CollectEditResumeTests`・`IncrementalReuseSoundnessTests` の fuzz・`PreviewCollectSharingTests` ほか）。出力は同一（`Zz505Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。`APPROXIMATIONS.md` は行番号 1 つ。
-  ★ 新しい地図（Lab `sessions/p505/type-price-a.txt`・render 1,824,462）の 30 KB 級の残り＝`Measure` 39 KB・`ArticulationLayout[]` 38 KB（第502＝`MoveToImmutable` の実仕事）・`BeamMember` 36 KB・`List<int>` 29 KB（持ち主は未特定＝軒が多い・呼びの前後の wrapper で絞る）・`MusicItem[]` 25 KB。
 
 ## 2. 開いている作業
 
