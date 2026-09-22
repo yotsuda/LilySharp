@@ -175,7 +175,6 @@ internal sealed class SlurScoringProblem
     // (they are reflected into the Y-up frame), and three scorers foreach them — over an
     // interface each of those walks would box an enumerator (RULES §5.3).
     private readonly List<SlurExtraObject>? _extraObjects;
-    private readonly IReadOnlyList<SlurLayout>? _existingSlurs;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
     private readonly SlurEdgeInfo _leftEdge;
@@ -220,7 +219,6 @@ internal sealed class SlurScoringProblem
         double staffMiddleDown,
         SlurScoreParameters? parameters = null,
         IReadOnlyList<SlurObstacle>? obstacles = null,
-        IReadOnlyList<SlurLayout>? existingSlurs = null,
         bool isBrokenLeft = false,
         bool isBrokenRight = false,
         SlurEdgeInfo leftEdge = default,
@@ -251,7 +249,6 @@ internal sealed class SlurScoringProblem
         _endX = endX;
         _endY = MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
         _parameters = parameters ?? SlurScoreParameters.Default;
-        _existingSlurs = existingSlurs;
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
         // A broken edge is an artificial break point — no real stem/beam there.
@@ -387,17 +384,9 @@ internal sealed class SlurScoringProblem
                 avoid.Add(((e.LeftX + e.RightX) / 2.0, dir > 0 ? e.TopY : e.BottomY));
             }
         }
-        if (_existingSlurs != null)
-        {
-            // LILYPOND-REF: lily/slur-scoring.cc:682-694 free_slur_distance —
-            // the small slur's curve midpoint plus that distance.
-            for (int i = 0; i < _existingSlurs.Count; i++)
-            {
-                double midX = (_existingSlurs[i].StartX + _existingSlurs[i].EndX) / 2.0;
-                double midY = (_existingSlurs[i].Control1.Y + _existingSlurs[i].Control2.Y) / 2.0;
-                avoid.Add((midX, midY + dir * _parameters.FreeSlurDistance));
-            }
-        }
+        // No slur is among them, and Lily# draws no PhrasingSlur (ScoreExtraEncompass's ⚠️).
+        // LILYPOND-REF: lily/slur-scoring.cc:682-694 lifts a "small slur" by
+        //   free_slur_distance only when one is in encompass-objects.
         return avoid;
     }
 
@@ -1081,41 +1070,15 @@ internal sealed class SlurScoringProblem
             }
         }
 
-        // Slur-slur collision. LilyPond scores a slur against the other slurs in its
-        // `encompass-objects` and pushes it clear of them (the same extra-encompass term that
-        // clears accidentals and scripts). The SET is populated at engrave time by
-        // Slur::auxiliary_acknowledge_extra_object, so it holds only slurs whose spans
-        // OVERLAP THIS ONE IN TIME -- the caller (ElementCoordinator.LayoutSlurs) supplies
-        // exactly that set, so no slur outside this one's musical span reaches here.
-        // LILYPOND-REF: lily/slur-scoring.cc:679-682 (Slur members of encompass-objects) and
-        //   lily/slur-configuration.cc:349 score_extra_encompass.
-        if (_existingSlurs != null)
-        {
-            // This config's apex, read off the real curve (its horizontal-tangent
-            // point; the curve midpoint when the tangent never levels).
-            Span<double> ts = stackalloc double[3];
-            int nTs = config.Curve.SolveHorizontalTangent(ts);
-            double peakY = config.Curve.CurveY(nTs > 0 ? ts[0] : 0.5);
-
-            for (int i = 0; i < _existingSlurs.Count; i++)
-            {
-                var existing = _existingSlurs[i];
-                bool xOverlap = !(config.EndX < existing.StartX || config.StartX > existing.EndX);
-                if (!xOverlap)
-                    continue;
-
-                // Existing slurs are now stored in the same page Y-up frame this
-                // scorer works in, so use their control Y directly (no reflection).
-                double existingPeakY = (existing.Control1.Y + existing.Control2.Y) / 2;
-                double dist = Math.Abs(peakY - existingPeakY);
-
-                demerit += _parameters.ExtraObjectCollisionPenalty
-                           * BezierBow.PeakAround(
-                               0.1 * _parameters.ExtraEncompassFreeDistance,
-                               _parameters.ExtraEncompassFreeDistance,
-                               dist);
-            }
-        }
+        // ⚠️ NO SLUR-SLUR TERM. A slur is never in another slur's encompass-objects:
+        // LILYPOND-REF: lily/phrasing-slur-engraver.cc:80 ADD_ACKNOWLEDGER_FOR
+        //   (acknowledge_extra_object, slur) — and lily/slur-engraver.cc:73-80 has no such
+        //   line, so the Slur members lily/slur-scoring.cc:679-682 reads are a PhrasingSlur's.
+        // MEASURED, session 481: in
+        // LilyPond 2.26 `c''4( b' a')( g' | f'1)` draws its second slur byte-identical to
+        // the same slur alone (Lab sessions/p481/two.ly, one.ly). The term this replaces
+        // scored every slur against the slurs overlapping it in time and moved no drawing:
+        // an empty set is 0 diffs over the suite and the corpus (session 470's poison).
 
         config.Demerits += demerit;
     }

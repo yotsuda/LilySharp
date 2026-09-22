@@ -3587,30 +3587,11 @@ internal sealed class ElementCoordinator
                     score.TextMetrics, score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
                     tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts);
 
-                // A slur avoids only other slurs whose SPAN OVERLAPS IT IN TIME. LilyPond
-                // populates a slur's encompass-objects at ENGRAVE time: an acknowledged slur
-                // (or tie, or avoid-slur=inside object) is added to every slur that is still
-                // OPEN at that moment, so a slur in a later bar -- closed before the next one
-                // opens -- never enters this one's set. Matching that by musical span, rather
-                // than by the drawn X the collision term itself uses, is what keeps a slur on
-                // one system from avoiding an identically-placed one on ANOTHER: after
-                // line-breaking their bars share a local X, but never a span.
-                // LILYPOND-REF: lily/slur.cc:364-387 Slur::auxiliary_acknowledge_extra_object
-                //   adds e to `slurs`/`end_slurs` (the currently-OPEN slurs); read back in
-                //   scoring at lily/slur-scoring.cc:679-682. audit/lp-geometry
-                //   system.slur-{under,over}-notes.
-                // A loop: the lambda captured the slur, so an environment was built for every
-                // slur the walk entered (278 B a keystroke over the reader's corpus, and its
-                // delegate — session 470's allocation-tick price by type).
-                var overlappingSlurs = new List<SlurLayout>();
-                foreach (var sl in slurLayouts)
-                    if (SlurSpansOverlap(slur, sl.Slur))
-                        overlappingSlurs.Add(sl);
-
+                // The slurs already laid out are NOT obstacles: a slur never avoids a slur in
+                // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️ — only a PhrasingSlur does).
                 var problem = new SlurScoringProblem(
                     slur, segStartX, segStartY, segEndX, segEndY, staffMiddleDown,
                     obstacles: obstacles,
-                    existingSlurs: overlappingSlurs,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast,
                     leftEdge: leftEdgeInfo,
@@ -3664,27 +3645,6 @@ internal sealed class ElementCoordinator
         map.Clear();
         t_beamByMember = map;
     }
-
-    /// <summary>
-    /// Whether two slur spans overlap in musical time — the condition under which LilyPond
-    /// makes them avoid one another.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/slur.cc:364-387 Slur::auxiliary_acknowledge_extra_object adds an
-    /// acknowledged slur to another's <c>encompass-objects</c> only while the other is still
-    /// OPEN, i.e. when their <c>[start, end]</c> spans overlap. Two disjoint spans (one bar's
-    /// slur closing before the next opens) never reference each other, which is exactly why a
-    /// slur repeated on a later system does not avoid the one above it.
-    /// </remarks>
-    private static bool SlurSpansOverlap(SlurItem a, SlurItem b) =>
-        !(SpanBefore(a.EndMeasureIndex, a.EndItemIndex, b.StartMeasureIndex, b.StartItemIndex)
-          || SpanBefore(b.EndMeasureIndex, b.EndItemIndex, a.StartMeasureIndex, a.StartItemIndex));
-
-    /// <summary>Whether position (<paramref name="m1"/>, <paramref name="i1"/>) strictly
-    /// precedes (<paramref name="m2"/>, <paramref name="i2"/>) — so a span touching another at
-    /// a shared column still counts as overlapping, as LilyPond's end_slurs branch does.</summary>
-    private static bool SpanBefore(int m1, int i1, int m2, int i2) =>
-        m1 < m2 || (m1 == m2 && i1 < i2);
 
     /// <summary>The voice item at (measure, index), or null if out of range.</summary>
     private static MusicItem? ItemAt(Voice voice, int measureIndex, int itemIndex)
@@ -3875,7 +3835,6 @@ internal sealed class ElementCoordinator
         var solved = new SlurScoringProblem(
             tabSlur, startX, startY, endX, endY, staffMiddleDown,
             obstacles: obstacles,
-            existingSlurs: slurLayouts.Where(sl => SlurSpansOverlap(slur, sl.Slur)).ToList(),
             isBrokenLeft: !isFirst,
             isBrokenRight: !isLast,
             leftEdge: leftEdge,

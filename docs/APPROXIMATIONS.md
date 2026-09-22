@@ -105,10 +105,10 @@
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:469** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:462** case of broken slur") — not ported; every slur this scorer sees lives on
-- **:637** column allows only 0.3 of movement) is not ported: every edge here
-- **:1024** approximation there); RIGHT wins when both edges match, as LP's
-- **:1027** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
+- **:451** case of broken slur") — not ported; every slur this scorer sees lives on
+- **:626** column allows only 0.3 of movement) is not ported: every edge here
+- **:1013** approximation there); RIGHT wins when both edges match, as LP's
+- **:1016** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:341** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
