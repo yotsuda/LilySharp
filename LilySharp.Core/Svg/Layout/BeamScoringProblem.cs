@@ -724,11 +724,31 @@ internal sealed class BeamScoringProblem
         }
         finally
         {
-            // The winner is read above; the list is not (see t_candidates).
+            // The winner is read above; the list is not (see t_candidates) — and neither are
+            // the configurations, which become the next beam's spares (see t_spareConfigs).
+            (t_spareConfigs ??= new List<BeamConfiguration>()).AddRange(candidates);
             candidates.Clear();
             t_candidates = candidates;
         }
     }
+
+    /// <summary>
+    /// The candidate configurations of finished beams, handed to the next beam's
+    /// <see cref="GenerateQuantCandidates"/> instead of new ones.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 493, the runtime's allocation ticks by type over the reader's corpus):
+    /// <see cref="BeamConfiguration"/> was 218,022 B a keystroke, 8.4% of the render — 237.66
+    /// candidates a beam, 19 beams a keystroke, each a 48 B object dead as soon as
+    /// <see cref="Solve"/> had read the winner's two numbers. Nothing outlives Solve: it returns
+    /// doubles, the queue is cleared in BestFirstScorer's finally, and the list here. A reused
+    /// configuration has every field set where it is taken (LeftY, RightY, Demerits,
+    /// NextScorerTodo — all four), and the queue orders by demerits alone, so the search runs
+    /// exactly as on new objects. WHAT IT RETAINS is the thread's largest candidate count
+    /// (1,024 measured) at 48 B.
+    /// </remarks>
+    [ThreadStatic]
+    private static List<BeamConfiguration>? t_spareConfigs;
 
     /// <summary>
     /// The candidate list <see cref="GenerateQuantCandidates"/> fills and
@@ -1338,6 +1358,7 @@ internal sealed class BeamScoringProblem
         var candidates = t_candidates ?? new List<BeamConfiguration>();
         t_candidates = null;
         candidates.EnsureCapacity(leftPasses * rightPasses);
+        var spares = t_spareConfigs ??= new List<BeamConfiguration>();
         for (int i = 0; i < unshiftedQuants.Count; i++)
         {
             double leftYSS = EdgeY(0, unshiftedQuants[i]);
@@ -1368,11 +1389,21 @@ internal sealed class BeamScoringProblem
                 double tieBreak = _normalStemCount == 0
                     ? (leftYSS + rightYSS) * 1e-9
                     : 0.0;
-                var config = new BeamConfiguration(leftY, rightY)
+                // A spare from an earlier beam (see t_spareConfigs), every field set here.
+                BeamConfiguration config;
+                if (spares.Count > 0)
                 {
-                    Demerits = startScore / 1000.0 + tieBreak,
-                    NextScorerTodo = (int)BeamScorer.SlopeIdeal
-                };
+                    config = spares[^1];
+                    spares.RemoveAt(spares.Count - 1);
+                    config.LeftY = leftY;
+                    config.RightY = rightY;
+                }
+                else
+                {
+                    config = new BeamConfiguration(leftY, rightY);
+                }
+                config.Demerits = startScore / 1000.0 + tieBreak;
+                config.NextScorerTodo = (int)BeamScorer.SlopeIdeal;
 
                 candidates.Add(config);
             }
