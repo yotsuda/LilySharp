@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第472セッションの経緯
+
+### 1.1 第472セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」＋「続けて」。
+★ **`-Start p472` の 1 コマンドで §0 が全部済んだ**（HEAD `5b59de74`・未 push 24・full `sessions/p472/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 470` も自動＝moved 30 行 2,378 字）。
+★★★ **⑴ census を HEAD で回し直した**（第465 の計器そのまま＝Lab `sessions/p472/`・272 軒・whole 27,564 B／打鍵・生きている行は全部 scratch）。
+★★★ **⑵ 5 軒**: A 指番号の beam-tip 地図は最初の指番号まで建てず貸す（**コーパスは指番号を 1 つも書かない**＝per-staff skyline pass が建てて誰も訊かなかった）／B tie の column→system 地図は冗長（家は `measureToSystem[key.Measure]`）＋tie と slur を system 添字の配列で仕分け（`SystemBuckets`）／C slur の beam 表を貸す／D stem 抑止の set を貸す／E 寸法。
+**A/B −11,695 B／打鍵＝0.41%**（予測 9,950 の 117.5%・帯内）・**5,824 ページ 0 差**。**会計**＝A 1,880（75%・`odd` 1,239 の行）／B 6,796（151%・値段の無い推測）／C 101%／D 101%／E 98%＝和 99.6%。
+★★ **⑶ 毒 6 本、外れ 1 本**（`poisons.txt`）: **貸した tip 地図を汚して返す毒 1 は棚卸し以外緑**＝観測者なし ⇒ **網 `FingeringTests.Layout_ALentTipMap_CarriesNoBeamIntoTheNextBook`**（毒で赤 1）。毒 6（tie の cursor 未 reset）は予測どおり緑＝fallback が同じ絵。
+⚠️ **行を消す毒は `TheInventoryIsNotStale`／`TheCensusIsNotStale` を 1 赤にする**＝毒の色ではない。
+★ **⑷ 終了時**: code `0487d57c`（Core 8＋網＋再生成 2 枚）。最終 full **8791 / 0 / 3 / 8794**（+1＝網）。§7.5 Core '+' 427／REF 0／OWN 0＝器の持ち方だけ。§7.6 新しい数はコメントの census 値だけ（出所つき）。§7.7＝⒳⁸。**push はユーザー**（Lab も）。**`-Start p473` から入る**。
+
 ## 以下は第471セッションの経緯
 
 ### 1.1 第471セッション（2026-09-22・YT-DELL2）
