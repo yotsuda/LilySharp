@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第493セッションの経緯
+
+### 1.1 第493セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第492 のすぐ後）。ユーザー指示「続けて」＝距離だけのために skyline を建てる軒と、臨時記号の reference。
+★ **`-Start p493` の 1 コマンドで §0 が全部済んだ**（HEAD `db857bde`・full 8839 / 0 / 3 / 8842・`-Archive 491` も自動）。
+
+★★★ **⑴ 型ごとの値段を取り直した**（第470 の `Zz470Price` を写した `Zz493Price`＝runtime の GCAllocationTick を render の窓で型ごとに集計・Lab `sessions/p493/type-price-head.txt`）。**頭＝String 354 KB・NoteItem 297 KB・SkylineBuilding[] 226 KB・BeamConfiguration 218 KB・SystemDetails 151 KB・Int32[] 120 KB・Double[] 101 KB／打鍵**（分母 2,593,767）。
+★★★ **⑵ `BeamConfiguration` を梁をまたいで使い回した＝render 2,593,947 → 2,375,919（−218,028・−8.4%・型の値段 218,022 と一致）**。候補は `Solve` の外へ出ない（返すのは勝者の 2 数）＝`t_spareConfigs` に返し、取る所で 4 項目全部を書く。**既存の網が厚い**＝Demerits を書き直さない毒で 199 本・NextScorerTodo で 170 本赤。
+★★★ **⑶ `SystemDetails` の写しを消した＝render → 2,301,528（−74,391・−3.1%）**。system 数を選ぶ loop（`ChooseSystemCount`）は候補の行数ごとに details を新しく建て、`CalcLineHeights` が 1 行ごとに `with { Tallness }` で写していた（26,646 回・791,040 行）。**`CalcLineHeightsInPlace`**（その場で書く・loop は前の行の tallness を読まない）を estimate の 2 軒にだけ。`Tallness` は `internal set`。網 `PageBreakerTests.CalcLineHeightsInPlace_WritesWhatTheCopyingStackerReturns`（引き算を抜く毒で赤）。
+  どちらも出力は同一（`Zz493Hash`＝5824 行・0 差）。full 8840 / 0 / 3 / 8843。生成物 2 つ（行番号と、1 行の本文だけ）。
+★ **⑷ 終了時**: コード 3 ファイル（BeamScoringProblem・PageBreaker・LayoutEngine.SystemCount）＋テスト 1 本＋生成物 2 つ。
+★ **この便の途中でユーザーが push した**＝`origin/master` は `db857bde`（第492 の docs）。Lab は push されていない（ahead 136）。
+
 ## 以下は第492セッションの経緯
 
 ### 1.1 第492セッション（2026-09-22・YT-DELL2）
