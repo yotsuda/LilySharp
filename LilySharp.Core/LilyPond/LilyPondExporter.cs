@@ -2871,6 +2871,12 @@ public sealed class LilyPondExporter
                           .Append(dir > 0 ? "RIGHT" : "LEFT")
                           .Append(' ');
                     break;
+                // '@!phrasingSlur' is a POST-event (`\)`), not a mark written before the note:
+                // before it, it would end the phrasing slur on the PREVIOUS note.
+                case MusicMarkSyntax { IsSpanEnd: true } pe
+                    when Semantics.AnnotationValues.IsPhrasingSlurName(pe.Name):
+                    suffix.Append("\\)");
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');
@@ -3088,6 +3094,9 @@ public sealed class LilyPondExporter
         // the music: the note is written bare here, the symbol stands in that context.
         if (mk.Name == "chord" && _currentPartName != null && _inlineChordVars.ContainsKey(_currentPartName))
             return "";
+        // '@!phrasingSlur' — LilyPond's `\)`, the PhrasingSlurEvent STOP.
+        if (mk.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mk.Name))
+            return "\\)";
         // Spelt as WRITTEN: MarkName steps over the '!' of a terminator, so a bare
         // "@rit dropped" for a '@!rit' would name a mark the reader did not write.
         _warnings.Add($"@{(mk.IsSpanEnd ? "!" : "")}{name} dropped (out of scope)");
@@ -3958,6 +3967,11 @@ public sealed class LilyPondExporter
             // LILYPOND-REF: ly/declarations-init.ly:103-104 laissezVibrer / repeatTie
             //   = #(make-music 'LaissezVibrerEvent / 'RepeatTieEvent)
             case "glissando": return "\\glissando";
+            // The phrasing slur's start; its end is a terminator (EmitMark). Bare, like
+            // `\glissando`: Lily# gives it no direction to carry.
+            // LILYPOND-REF: ly/declarations-init.ly:87-88 "\\(" / "\\)" = make-span-event
+            //   'PhrasingSlurEvent START / STOP.
+            case "phrasingslur": return "\\(";
             case "starttrillspan": return "\\startTrillSpan";
             case "stoptrillspan": return "\\stopTrillSpan";
             // The half-tie events DO carry a meaningful written direction — ^/_ is

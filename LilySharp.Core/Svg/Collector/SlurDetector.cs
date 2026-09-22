@@ -34,13 +34,43 @@ internal sealed class SlurDetector
         var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
         int currentVoice = -1;
 
+        // The phrasing slurs, paired on the same walk and appended AFTER every slur: the
+        // layout scores a phrasing slur against the slurs inside it, so those must be laid out
+        // first (LilyPond reads the small slur's finished curve — lily/slur-scoring.cc:817).
+        // ONE may be open per voice, not a stack: a second '@phrasingSlur' while one is open
+        // is ignored, as LilyPond ignores it ("already have phrasing slur",
+        // lily/slur-engraver.cc:228) — SlurPairingScanner.ScanPhrasing reports it.
+        List<SlurItem>? phrasingSlurs = null;
+        (int measureIdx, int itemIdx, MusicItem item)? openPhrasing = null;
+
         foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
         {
             if (v != currentVoice)
             {
                 openSlurs.Clear();
+                openPhrasing = null;
                 currentVoice = v;
             }
+
+            // Close before open, as for a slur below (lily/slur-engraver.cc:295-324 is the
+            // phrasing engraver's process_music too).
+            if (item.HasPhrasingSlurEnd && openPhrasing is { } op)
+            {
+                openPhrasing = null;
+                bool up = VoiceScan.SpanCurvesUp(score.Voices.Length, v,
+                    AnyCoveredStemDown(measures, op.measureIdx, op.itemIdx, measureIdx, itemIdx));
+                (phrasingSlurs ??= new List<SlurItem>()).Add(new SlurItem(
+                    MusicItem.EdgeStaffPosition(op.item, up) ?? 0,
+                    MusicItem.EdgeStaffPosition(item, up) ?? 0,
+                    up, op.measureIdx, measureIdx, op.itemIdx, itemIdx, voiceIndex: v)
+                {
+                    StartSourcePosition = op.item.PhrasingSlurStartSourcePosition,
+                    EndSourcePosition = item.PhrasingSlurEndSourcePosition,
+                    IsPhrasing = true,
+                });
+            }
+            if (item.HasPhrasingSlurStart && openPhrasing is null)
+                openPhrasing = (measureIdx, itemIdx, item);
 
             // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
             if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
@@ -92,6 +122,8 @@ internal sealed class SlurDetector
             }
         }
 
+        if (phrasingSlurs != null)
+            slurs.AddRange(phrasingSlurs);
         return slurs.ToImmutableArray();
     }
 

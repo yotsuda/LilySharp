@@ -142,6 +142,7 @@ public class VocabularyPerturbationTests
         "rit" or "accel" or "rall" or "textSpan" => "@!" + name,
         "8va" or "8vb" or "15ma" or "15mb" => "@!" + name,
         "sustain" or "sostenuto" or "unaCorda" => "@!" + name,
+        "phrasingSlur" => "@!" + name,
         "ottava" or "ottava(bassa)" or "quindicesima" or "quindicesima(bassa)" => "@!ottava",
         _ => "",
     };

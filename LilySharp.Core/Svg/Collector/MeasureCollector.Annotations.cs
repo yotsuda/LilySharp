@@ -570,7 +570,10 @@ public sealed partial class MeasureCollector
                         // marks (e.g. pedal "Ped.") sit at the note, not the
                         // measure start. BuildPlain resolves the text a text-span
                         // START prints (@rit → "rit."), which the type does not carry.
-                        if (MusicMarkItem.BuildPlain(nameText, isSpanEnd: false, measureIndex,
+                        // The phrasing slur is not a mark: the walk stamped it onto the item
+                        // (PhrasingSlurMarksOn) and the slur pass draws it.
+                        if (!Semantics.AnnotationValues.IsPhrasingSlurName(nameText)
+                            && MusicMarkItem.BuildPlain(nameText, isSpanEnd: false, measureIndex,
                                 articulationSyntax.SourceStart, itemIndex, anchorTiming) is { } mark)
                         {
                             _musicMarks.Add(mark with
@@ -595,7 +598,8 @@ public sealed partial class MeasureCollector
                     // a terminator today; any other name written this way was already
                     // reported by AnnotationNameValidator, and is dropped here rather than
                     // quietly turned into the mark '@X' would have made.
-                    if (MusicMarkItem.ParseSpanEndName(markSyntax.Name) is { } endType)
+                    if (MusicMarkItem.ParseSpanEndName(markSyntax.Name) is { } endType
+                        && endType != MusicMarkType.PhrasingSlurStop)
                         _musicMarks.Add(new MusicMarkItem(
                             endType, measureIndex, markSyntax.SourceStart, itemIndex, anchorTiming)
                         {

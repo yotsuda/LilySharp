@@ -3288,6 +3288,10 @@ public sealed class MusicXmlExporter
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)
                     ProcessDirectionName(articulation.NameToken.Text.ToLowerInvariant());
+                // MusicXML has no phrasing-slur element: a phrasing slur is a <slur> with a
+                // number of its own, so it can overlap the ordinary slurs (number 1).
+                if (Semantics.AnnotationValues.IsPhrasingSlurName(articulation.NameToken.Text))
+                    xmlNote.ExtraNotations.Add(PhrasingSlurNotation("start"));
 
                 // Guitar/TAB techniques → <technical> children. Hammer-on /
                 // pull-off are exported as text technicals (the paired
@@ -3358,6 +3362,8 @@ public sealed class MusicXmlExporter
                 // marks (pedal, ottava, chord symbol) go on to their own reader.
                 if (Semantics.AnnotationValues.Finger(mark) is { } finger)
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
+                if (mark.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name))
+                    xmlNote.ExtraNotations.Add(PhrasingSlurNotation("stop"));
                 ProcessDirectionMark(mark);
             }
             else if (artic is SlurSyntax slur)
@@ -3369,6 +3375,12 @@ public sealed class MusicXmlExporter
             }
         }
     }
+
+    /// <summary>A phrasing slur's <c>&lt;slur&gt;</c> end: number 2, the ordinary slurs
+    /// being number 1 (MusicXmlNote), so the two may overlap as they do on the page.</summary>
+    private static System.Xml.Linq.XElement PhrasingSlurNotation(string type)
+        => new("slur", new System.Xml.Linq.XAttribute("type", type),
+            new System.Xml.Linq.XAttribute("number", 2));
 
     /// <summary>Whether a crescendo/diminuendo wedge is open (closed by the
     /// next level dynamic).</summary>

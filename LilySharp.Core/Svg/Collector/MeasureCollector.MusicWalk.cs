@@ -170,6 +170,55 @@ public sealed partial class MeasureCollector
             ? m with { HasTieAfter = false, HasSlurStartAfter = false, HasSlurEndAfter = false }
             : m;
 
+    /// <summary>
+    /// The phrasing-slur marks written on <paramref name="node"/> itself — the source
+    /// positions of its <c>@phrasingSlur</c> and <c>@!phrasingSlur</c>, −1 for the one not
+    /// written — or null when it carries neither, or when the walk is where bows are dropped.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ DROPPED WHERE A SLUR IS: in grace time (LYS4020's drop list — the group is drawn
+    /// from its derived GraceNoteItem) and under a % sign (<see cref="WithoutBowsUnderPercent"/>),
+    /// so the two bows keep one rule. The marks are post-events of the note, so they are read
+    /// off its annotation list, the one <c>CollectArticulations</c> reads; a chord member's
+    /// own list is not read — a phrasing slur binds to the column, as LilyPond's does.
+    /// </remarks>
+    private (int Start, int End)? PhrasingSlurMarksOn(SyntaxNode node)
+    {
+        if (_percentCoveredDepth > 0)
+            return null;
+        int start = MusicItem.NoSourcePosition, end = MusicItem.NoSourcePosition;
+        foreach (var a in ArticulationsOf(node))
+        {
+            if (a is ArticulationSyntax art
+                && Semantics.AnnotationValues.IsPhrasingSlurName(art.NameToken.Text))
+                start = art.SourceStart;
+            else if (a is MusicMarkSyntax { IsSpanEnd: true } mark
+                && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name))
+                end = mark.SourceStart;
+        }
+        return start < 0 && end < 0 ? null : (start, end);
+    }
+
+    /// <summary>
+    /// Leaves <paramref name="node"/>'s phrasing-slur marks with the builder for the column
+    /// it is about to add (<c>MeasureBuilder.PendingPhrasingSlur</c>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ OVERWRITTEN AT EVERY NOTE-LIKE NODE, null included: a mark on something that adds
+    /// no column (a spacer) must not survive to the next note. ⚠️ AND NOT TOUCHED IN GRACE
+    /// TIME: a grace body can be walked while the note it precedes is being emitted, and its
+    /// notes must neither take the main note's mark nor wipe it (the builder refuses to stamp
+    /// in grace time for the same reason).
+    /// </remarks>
+    private void HandPhrasingSlurTo(MeasureBuilder builder, SyntaxNode node)
+    {
+        if (_graceDepth > 0)
+            return;
+        if (node is NoteSyntax or ChordSyntax or ChordRepetitionSyntax or SlashNoteSyntax
+                or BareDurationSyntax or RestSyntax)
+            builder.PendingPhrasingSlur = PhrasingSlurMarksOn(node);
+    }
+
     /// <summary>Adds one marker node to the flags.</summary>
     private static MarkerFlags FoldMarker(MarkerFlags m, SyntaxNode node) => node switch
     {
@@ -876,6 +925,9 @@ public sealed partial class MeasureCollector
         // Under a % sign the bows are dropped — AFTER the empty-chord take, so a pending
         // `<>(` is consumed here and not carried out past the repeat.
         m = WithoutBowsUnderPercent(m);
+
+        // The phrasing slur rides the builder, not the flags: see PhrasingSlurMarksOn.
+        HandPhrasingSlurTo(builder, node);
 
         // Unpacked AFTER the empty-chord take and the percent drop, which are the only
         // things that can still change them; the arms below read the locals exactly as
@@ -1869,6 +1921,7 @@ public sealed partial class MeasureCollector
         if ((_pendingEmptyChordSlurStart || _pendingEmptyChordSlurEnd) && BindsASlur(item))
             TakeEmptyChordSlurs(ref m);
         m = WithoutBowsUnderPercent(m);
+        HandPhrasingSlurTo(builder, item);
 
         bool hasTieAfter = m.HasTieAfter;
         bool hasSlurStartAfter = m.HasSlurStartAfter;

@@ -3588,10 +3588,14 @@ internal sealed class ElementCoordinator
                     tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts);
 
                 // The slurs already laid out are NOT obstacles: a slur never avoids a slur in
-                // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️ — only a PhrasingSlur does).
+                // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️) — only a PhrasingSlur
+                // does, and it is laid out after every slur (SlurDetector) so they are all here.
                 var problem = new SlurScoringProblem(
                     slur, segStartX, segStartY, segEndX, segEndY, staffMiddleDown,
                     obstacles: obstacles,
+                    enclosedSlurs: slur.IsPhrasing
+                        ? EnclosedSlurs(slur, segment.StartMeasureIndex, slurLayouts, measureToSystemIdx)
+                        : null,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast,
                     leftEdge: leftEdgeInfo,
@@ -3644,6 +3648,45 @@ internal sealed class ElementCoordinator
     {
         map.Clear();
         t_beamByMember = map;
+    }
+
+    /// <summary>
+    /// The slur pieces a phrasing slur's segment avoids: the slurs of ITS voice that START
+    /// inside it, on the system this segment is drawn on. Null when there are none.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur.cc:364-387 Slur::auxiliary_acknowledge_extra_object — a slur is
+    /// acknowledged when it is CREATED, and added to every phrasing slur still open
+    /// (<c>slurs</c>) or ending at that moment (<c>end_slurs</c>): so its START decides, from
+    /// the phrasing slur's own start to its end inclusive. The engraver lives in the Voice
+    /// (lily/phrasing-slur-engraver.cc), so another voice's slurs are never seen.
+    /// The system test is Lily#'s: a piece's curve is in its own system's X, and LilyPond's
+    /// small slur is the piece on the same line (Slur::get_curve of the broken spanner).
+    /// </remarks>
+    private static List<SlurLayout>? EnclosedSlurs(
+        SlurItem phrasing, int segmentStartMeasure, List<SlurLayout> laidOut,
+        IReadOnlyDictionary<int, int> measureToSystem)
+    {
+        if (!measureToSystem.TryGetValue(segmentStartMeasure, out int system))
+            return null;
+        List<SlurLayout>? found = null;
+        foreach (var sl in laidOut)
+        {
+            var s = sl.Slur;
+            if (s.IsPhrasing || s.VoiceIndex != phrasing.VoiceIndex)
+                continue;
+            bool startsInside =
+                (s.StartMeasureIndex > phrasing.StartMeasureIndex
+                 || (s.StartMeasureIndex == phrasing.StartMeasureIndex && s.StartItemIndex >= phrasing.StartItemIndex))
+                && (s.StartMeasureIndex < phrasing.EndMeasureIndex
+                    || (s.StartMeasureIndex == phrasing.EndMeasureIndex && s.StartItemIndex <= phrasing.EndItemIndex));
+            if (!startsInside)
+                continue;
+            if (!measureToSystem.TryGetValue(sl.RenderMeasureIndex, out int pieceSystem) || pieceSystem != system)
+                continue;
+            (found ??= new List<SlurLayout>()).Add(sl);
+        }
+        return found;
     }
 
     /// <summary>The voice item at (measure, index), or null if out of range.</summary>
@@ -3830,6 +3873,7 @@ internal sealed class ElementCoordinator
             // are and what the webview's clusterInstances already expects.
             StartSourcePosition = slur.StartSourcePosition,
             EndSourcePosition = slur.EndSourcePosition,
+            IsPhrasing = slur.IsPhrasing,
         };
 
         var solved = new SlurScoringProblem(

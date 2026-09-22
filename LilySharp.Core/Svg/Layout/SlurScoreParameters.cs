@@ -30,6 +30,12 @@ public sealed record SlurScoreParameters
     /// <summary>Default parameters matching LilyPond defaults.</summary>
     public static SlurScoreParameters Default { get; } = new();
 
+    /// <summary>A PhrasingSlur's parameters: the same details, its own ratio.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2832-2852 default-slur-details — the
+    /// PhrasingSlur's details, height-limit 2.0, ratio 0.333; every other shape property as
+    /// Slur's (:3166-3188).</remarks>
+    public static SlurScoreParameters PhrasingDefault { get; } = new() { Ratio = 0.333 };
+
     // --- Shape parameters (from Slur grob, not details) ---
 
     /// <summary>
@@ -41,7 +47,7 @@ public sealed record SlurScoreParameters
     /// <summary>
     /// Height ratio for slur shape.
     /// LILYPOND-REF: define-grobs.scm Slur.ratio = 0.25
-    /// Note: PhrasingSlur uses 0.333
+    /// Note: PhrasingSlur uses 0.333 (<see cref="PhrasingDefault"/>)
     /// </summary>
     public double Ratio { get; init; } = 0.25;
 

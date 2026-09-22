@@ -265,6 +265,9 @@ public sealed partial class MeasureCollector
     // ⚠️ The key is the VOICE name, not the staff: extra voices from a `<< \\ >>` span
     // are named after their part, so they are covered by the same guard.
     private readonly HashSet<string> _sanityScannedVoices = new();
+    // The voices behind that guard, in scan order — read by UnpairedSpanWarnings for the
+    // phrasing slur, which pairs on items. Not an accumulating output: cleared with the guard.
+    private readonly List<Voice> _sanityScannedVoiceList = new();
     // Ties whose next timed item repeats none of the tied pitches (or is a rest).
     // Scanned per finished voice by TieTargetScanner; surfaced by TieTargetValidator.
     private readonly List<TieTargetWarning> _tieTargetWarnings = new();
@@ -294,11 +297,19 @@ public sealed partial class MeasureCollector
         get
         {
             var marks = _musicMarks.ToImmutableArray();
+            // The phrasing slur is paired on the ITEMS (it is a bow, stamped on its columns),
+            // so its half reads the voices the sanity scan saw — once each, as that scan is.
+            var phrasing = new List<UnpairedSpanWarning>();
+            foreach (var voice in _sanityScannedVoiceList)
+                SlurPairingScanner.ScanPhrasing(voice, phrasing);
             return
             [
                 .. Layout.TextSpannerEngraver.PairTextSpanners(marks).Unpaired,
                 .. Layout.OttavaBracketEngraver.PairOttavaBrackets(marks).Unpaired,
                 .. Layout.PedalEngraver.PairPedalBrackets(marks).Unpaired,
+                // One per (position, fault): a repeated section plays the same mark twice
+                // (UnpairedSpanWarning's remark).
+                .. phrasing.Distinct(),
             ];
         }
     }
@@ -2214,6 +2225,7 @@ public sealed partial class MeasureCollector
     {
         if (!_sanityScannedVoices.Add(voice.Name))
             return;
+        _sanityScannedVoiceList.Add(voice);
         TieTargetScanner.Scan(voice, _tieTargetWarnings, _cueSpanBoundaryWarnings);
         SlurPairingScanner.Scan(voice, _unpairedSlurWarnings, _cueSpanBoundaryWarnings);
         BeamPairingScanner.Scan(voice, _unpairedBeamWarnings);
@@ -2558,6 +2570,7 @@ public sealed partial class MeasureCollector
         // a reused collector meeting a new tree has to scan that tree's voices, and a
         // stale name would silence every such complaint in the part sharing that name.
         _sanityScannedVoices.Clear();
+        _sanityScannedVoiceList.Clear();
         // The mark-position probe cache mirrors _musicMarks (registry-cleared above),
         // so it resets with it or IsCollectedMusicMark would answer from a stale set.
         _musicMarkPositions.Clear();

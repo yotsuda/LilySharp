@@ -78,6 +78,17 @@ public sealed record SlurItem
     /// <see cref="MusicItem.NoSourcePosition"/>. See <see cref="StartSourcePosition"/>.</summary>
     public int EndSourcePosition { get; init; } = MusicItem.NoSourcePosition;
 
+    /// <summary>A PhrasingSlur (<c>@phrasingSlur</c> … <c>@!phrasingSlur</c>) rather than a
+    /// Slur. The two are one curve engine with two differences, both LilyPond's: the curve's
+    /// <c>ratio</c> (0.333 against 0.25) and what it avoids — a phrasing slur scores the
+    /// slurs inside it, a slur scores none. Its two source positions are the <c>@</c>s of
+    /// the two annotations.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2832-2852 default-slur-details, the
+    /// PhrasingSlur's own (ratio 0.333), :3166-3188 the Slur's (ratio 0.25);
+    /// lily/phrasing-slur-engraver.cc:80 ADD_ACKNOWLEDGER_FOR (acknowledge_extra_object, slur)
+    /// — it alone acknowledges slurs.</remarks>
+    public bool IsPhrasing { get; init; }
+
     /// <summary>Creates a slur spanning from a start note to an end note.</summary>
     public SlurItem(
         int startStaffPosition,
@@ -106,5 +117,9 @@ public sealed record SlurItem
         => new(StartStaffPosition, EndStaffPosition, CurveUp,
             StartMeasureIndex + delta, EndMeasureIndex + delta, StartItemIndex, EndItemIndex,
             VoiceIndex)
-        { StartSourcePosition = StartSourcePosition, EndSourcePosition = EndSourcePosition };
+        {
+            StartSourcePosition = StartSourcePosition,
+            EndSourcePosition = EndSourcePosition,
+            IsPhrasing = IsPhrasing,
+        };
 }

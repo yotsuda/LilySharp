@@ -395,6 +395,22 @@ c4( d e f)        // Slur over four notes
 c4( d) e( f)      // Two separate slurs
 ```
 
+### Phrasing Slurs
+
+A phrasing slur — the long curve over a musical sentence, LilyPond's `\(` … `\)` — is a span,
+written like the other spans with a start and a `@!` end:
+
+```
+c4@phrasingSlur d( e) f | g( a) b c@!phrasingSlur |
+```
+
+It is drawn over the ordinary slurs inside it, and clears them the way LilyPond's does (it
+is the only curve that avoids a slur; a slur never avoids another slur). One phrasing slur is
+open per voice at a time — a second `@phrasingSlur` before the first is closed is ignored and
+warned about, and **the end is required**: an unclosed one draws nothing and is an error
+(LYS4018). A note that ends one phrase and begins the next carries both marks,
+`e@!phrasingSlur@phrasingSlur`, and closes before it opens.
+
 ## Barlines
 
 | Syntax | Type | Where |

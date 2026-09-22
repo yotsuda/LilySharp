@@ -1867,7 +1867,9 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
                      @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word]
                      (* a pedal CHANGE is both marks on one note, release first:
                         c4@!sustain@sustain — engraved the same as a second @sustain
-                        while the pedal is down *) *)
+                        while the pedal is down *)
+                     @phrasingSlur … @!phrasingSlur   [LilyPond's \( … \); an end is
+                     REQUIRED; one open per voice, ordinary slurs ( ) may sit inside] *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 

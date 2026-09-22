@@ -480,20 +480,23 @@ internal static partial class SharedRenderer
             TieLayouts = ResolveBows(layout.TieLayouts, noteHosts,
                 static l => (l.StaffIndex, l.Tie.VoiceIndex,
                              l.Tie.StartMeasureIndex, l.Tie.StartItemIndex),
-                static it => it.TieStartSourcePosition,
+                static (_, it) => it.TieStartSourcePosition,
                 static (l, pos) => l with { Tie = l.Tie with { SourcePosition = pos } },
                 static l => l.Tie.SourcePosition),
             SlurLayouts = ResolveBows(
                 ResolveBows(layout.SlurLayouts, noteHosts,
                     static l => (l.StaffIndex, l.Slur.VoiceIndex,
                                  l.Slur.StartMeasureIndex, l.Slur.StartItemIndex),
-                    static it => it.SlurStartSourcePosition,
+                    // A phrasing slur is written by its `@`s, not by `(` `)`, on the same items.
+                    static (l, it) => l.Slur.IsPhrasing
+                        ? it.PhrasingSlurStartSourcePosition : it.SlurStartSourcePosition,
                     static (l, pos) => l with { Slur = l.Slur with { StartSourcePosition = pos } },
                     static l => l.Slur.StartSourcePosition),
                 noteHosts,
                 static l => (l.StaffIndex, l.Slur.VoiceIndex,
                              l.Slur.EndMeasureIndex, l.Slur.EndItemIndex),
-                static it => it.SlurEndSourcePosition,
+                static (l, it) => l.Slur.IsPhrasing
+                    ? it.PhrasingSlurEndSourcePosition : it.SlurEndSourcePosition,
                 static (l, pos) => l with { Slur = l.Slur with { EndSourcePosition = pos } },
                 static l => l.Slur.EndSourcePosition),
             // The THIRD bow family. It resolves neither by side-table index nor by the
@@ -607,7 +610,7 @@ internal static partial class SharedRenderer
         ImmutableArray<T> layouts,
         System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? staffVoices,
         System.Func<T, (int Staff, int Voice, int Measure, int Item)> locator,
-        System.Func<MusicItem, int> field,
+        System.Func<T, MusicItem, int> field,
         System.Func<T, int, T> resolve,
         System.Func<T, int> current)
     {
@@ -624,7 +627,7 @@ internal static partial class SharedRenderer
                 && (uint)m < (uint)voices[v].Measures.Length)
             {
                 var items = voices[v].Measures[m].Items;
-                if ((uint)it < (uint)items.Length && field(items[it]) is var pos and >= 0)
+                if ((uint)it < (uint)items.Length && field(b[i], items[it]) is var pos and >= 0)
                     b[i] = resolve(b[i], pos);
             }
         }

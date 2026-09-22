@@ -561,6 +561,12 @@ what an unset part draws, or `mixed` = text at the start, bracket for the hold).
 ```
 d,4@sustain a, d a, | g,4@!sustain@sustain d g d | a,1@!sustain |
 ```
+Phrasing slur `@phrasingSlur` ... `@!phrasingSlur` (LilyPond's `\(` ... `\)`; **the end is REQUIRED**):
+the long curve over a musical sentence, drawn over the ordinary slurs `( )` inside it. One is open
+per voice at a time — they do not nest.
+```
+c'4@phrasingSlur d'( e') f' | g'( a') b' c''@!phrasingSlur |
+```
 An annotation's argument always goes in PARENTHESES — a dot after the name is the placement qualifier
 instead (`@fermata.up`), so `@notehead.x` does not work either.
 (The navigation marks above are the bare form — `ds al fine`, no `@` — in a form and in music alike.)

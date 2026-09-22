@@ -133,6 +133,12 @@ public enum SpanKind
     /// one is down is RE-PEDALLING, which is real notation ("Ped. … Ped."), so it opens a
     /// new bracket rather than being refused the way a nested span is.</summary>
     Pedal,
+    /// <summary>A phrasing slur (<c>@phrasingSlur</c> … <c>@!phrasingSlur</c>). All three
+    /// faults apply, and they are LilyPond's own three: "already have phrasing slur",
+    /// "cannot end phrasing slur", "unterminated phrasing slur" — lily/slur-engraver.cc:228,
+    /// :312, :174 with the object_name of lily/phrasing-slur-engraver.cc:57-60 (the phrasing
+    /// engraver IS a Slur_engraver).</summary>
+    PhrasingSlur,
 }
 
 /// <summary>Why a span mark drew nothing — the three situations a start/stop pairing can

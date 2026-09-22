@@ -461,6 +461,8 @@ public readonly record struct MeasureContentKey(long Hash)
         nameof(MusicItem.TieStartSourcePosition),
         nameof(MusicItem.SlurStartSourcePosition),
         nameof(MusicItem.SlurEndSourcePosition),
+        nameof(MusicItem.PhrasingSlurStartSourcePosition),
+        nameof(MusicItem.PhrasingSlurEndSourcePosition),
         nameof(MusicItem.LaissezVibrerSourcePosition),
         nameof(MusicItem.RepeatTieSourcePosition),
         // ...and the beam IDENTITY, which is a number the bake hands out in score order

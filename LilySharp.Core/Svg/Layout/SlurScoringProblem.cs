@@ -114,7 +114,15 @@ internal readonly record struct SlurExtraObject(
     double TopY,
     double BottomY,
     SlurAvoidType Type,
-    double Penalty);
+    double Penalty,
+    // A point on an ENCLOSED SLUR's curve (a phrasing slur's small slur) rather than a
+    // grob's box. LilyPond builds these in the slur branch of get_extra_encompass_infos
+    // (lily/slur-scoring.cc:814-849) and scores them differently in two ways: the slur is
+    // a Spanner, so the "object over an edge head" test is skipped (as_item is null,
+    // lily/slur-configuration.cc:413-416), and the X read is the box's
+    // linear_combination(Idx) — its left edge, centre or right edge — not its centre.
+    bool IsSlurPoint = false,
+    int Idx = 0);
 
 /// <summary>
 /// Solves the slur positioning problem using LilyPond's priority-queue
@@ -175,6 +183,8 @@ internal sealed class SlurScoringProblem
     // (they are reflected into the Y-up frame), and three scorers foreach them — over an
     // interface each of those walks would box an enumerator (RULES §5.3).
     private readonly List<SlurExtraObject>? _extraObjects;
+    // A phrasing slur's small slurs' curve midpoints (Y-up), lifted into avoid points.
+    private readonly List<(double X, double Y)>? _enclosedSlurMidpoints;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
     private readonly SlurEdgeInfo _leftEdge;
@@ -219,6 +229,7 @@ internal sealed class SlurScoringProblem
         double staffMiddleDown,
         SlurScoreParameters? parameters = null,
         IReadOnlyList<SlurObstacle>? obstacles = null,
+        IReadOnlyList<SlurLayout>? enclosedSlurs = null,
         bool isBrokenLeft = false,
         bool isBrokenRight = false,
         SlurEdgeInfo leftEdge = default,
@@ -248,7 +259,8 @@ internal sealed class SlurScoringProblem
         _startY = MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
         _endX = endX;
         _endY = MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
-        _parameters = parameters ?? SlurScoreParameters.Default;
+        _parameters = parameters
+            ?? (slur.IsPhrasing ? SlurScoreParameters.PhrasingDefault : SlurScoreParameters.Default);
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
         // A broken edge is an artificial break point — no real stem/beam there.
@@ -297,6 +309,15 @@ internal sealed class SlurScoringProblem
         else
         {
             _extraObjects = null;
+        }
+
+        // A phrasing slur's small slurs: three points on each curve join the extra set, and
+        // each curve's midpoint joins the avoid points (BuildAvoidOffsets).
+        if (enclosedSlurs is { Count: > 0 })
+        {
+            _extraObjects ??= new List<SlurExtraObject>();
+            _enclosedSlurMidpoints = new List<(double X, double Y)>(enclosedSlurs.Count);
+            AddEnclosedSlurPoints(enclosedSlurs, slurDir);
         }
 
         // Musical dy in the Y-up frame: higher pitch = larger Y.
@@ -348,6 +369,66 @@ internal sealed class SlurScoringProblem
     }
 
     /// <summary>
+    /// Turns a phrasing slur's small slurs into LilyPond's extra-encompass infos — three
+    /// points on each curve, the two end points only where the small slur shares this
+    /// slur's bound — and records each curve's midpoint for the avoid points.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:814-849 get_extra_encompass_infos, the Slur branch —
+    ///   z = curve_point(k / 2) for k = 0, 1, 2; hdir = k − 1; an end point (hdir ≠ 0) is
+    ///   skipped unless small_slur->get_bound(hdir) == slur_->get_bound(hdir);
+    ///   yext is FULL but for yext[dir_] = z[Y] + dir_ · thickness_;
+    ///   xext = (−1, 1) · 2 · thickness_ + z[X]; penalty extra-object-collision-penalty; and
+    ///   the type is the small slur's avoid-slur, 'inside (scm/define-grobs.scm:3168).
+    /// A BOUND is a column: the same note for an unbroken end, the line's edge column for a
+    /// broken one — so two pieces both broken on the left share that bound.
+    /// thickness_ is Slur.thickness 1.2 × line-thickness 0.1, the constant AvoidStaffLine
+    /// spells.
+    /// </remarks>
+    private void AddEnclosedSlurPoints(IReadOnlyList<SlurLayout> enclosed, int dir)
+    {
+        const double thickness = 1.2 * 0.1;
+        // A full side: far enough that no curve reaches it.
+        const double far = 1e6;
+        for (int i = 0; i < enclosed.Count; i++)
+        {
+            var small = enclosed[i];
+            bool sameLeft = small.IsBrokenLeft
+                ? _isBrokenLeft
+                : !_isBrokenLeft && small.Slur.StartMeasureIndex == _slur.StartMeasureIndex
+                  && small.Slur.StartItemIndex == _slur.StartItemIndex;
+            bool sameRight = small.IsBrokenRight
+                ? _isBrokenRight
+                : !_isBrokenRight && small.Slur.EndMeasureIndex == _slur.EndMeasureIndex
+                  && small.Slur.EndItemIndex == _slur.EndItemIndex;
+            for (int k = 0; k < 3; k++)
+            {
+                int hdir = k - 1;
+                if ((hdir < 0 && !sameLeft) || (hdir > 0 && !sameRight))
+                    continue;
+                var (zx, zy) = CurvePoint(small, k / 2.0);
+                double edge = zy + dir * thickness;
+                _extraObjects!.Add(new SlurExtraObject(
+                    zx - 2 * thickness, zx + 2 * thickness,
+                    TopY: dir > 0 ? edge : far, BottomY: dir > 0 ? -far : edge,
+                    SlurAvoidType.Inside, _parameters.ExtraObjectCollisionPenalty,
+                    IsSlurPoint: true, Idx: hdir));
+            }
+            _enclosedSlurMidpoints!.Add(CurvePoint(small, 0.5));
+        }
+    }
+
+    /// <summary>A bow's point at parameter <paramref name="t"/>, in the Y-up frame its
+    /// layout is stored in.</summary>
+    private static (double X, double Y) CurvePoint(BowLayout bow, double t)
+    {
+        double u = 1 - t;
+        double b0 = u * u * u, b1 = 3 * u * u * t, b2 = 3 * u * t * t, b3 = t * t * t;
+        return (b0 * bow.StartX + b1 * bow.Control1.X + b2 * bow.Control2.X + b3 * bow.EndX,
+                b0 * bow.StartYUp + b1 * bow.Control1.Y + b2 * bow.Control2.Y + b3 * bow.EndYUp);
+    }
+
+    /// <summary>
     /// The points a candidate's curve must clear, in the Y-up frame: interior
     /// note columns (their slurward edge plus free-head-distance) and 'inside
     /// extra objects (their slurward box edge), plus overlapping slurs' midpoints
@@ -384,9 +465,12 @@ internal sealed class SlurScoringProblem
                 avoid.Add(((e.LeftX + e.RightX) / 2.0, dir > 0 ? e.TopY : e.BottomY));
             }
         }
-        // No slur is among them, and Lily# draws no PhrasingSlur (ScoreExtraEncompass's ⚠️).
-        // LILYPOND-REF: lily/slur-scoring.cc:682-694 lifts a "small slur" by
-        //   free_slur_distance only when one is in encompass-objects.
+        // A phrasing slur's small slurs: the curve midpoint, lifted by free-slur-distance.
+        // LILYPOND-REF: lily/slur-scoring.cc:679-694 generate_avoid_offsets — b.curve_point
+        //   (0.5), z[Y] += dir_ * free_slur_distance_.
+        if (_enclosedSlurMidpoints != null)
+            foreach (var (x, y) in _enclosedSlurMidpoints)
+                avoid.Add((x, y + dir * _parameters.FreeSlurDistance));
         return avoid;
     }
 
@@ -1023,14 +1107,28 @@ internal sealed class SlurScoringProblem
             {
                 double y = 0.0;
                 bool found = false;
-                if (_leftEdge.HeadWidth > 0
+                if (info.IsSlurPoint)
+                {
+                    // A small slur is a Spanner: no edge-head test, and the X is the box's
+                    // linear_combination(idx).
+                    // LILYPOND-REF: lily/slur-configuration.cc:413-416 as_item is null for it,
+                    //   :429 info.extents_[X_AXIS].linear_combination (info.idx_).
+                    double sx = info.Idx < 0 ? info.LeftX
+                        : info.Idx > 0 ? info.RightX
+                        : (info.LeftX + info.RightX) / 2.0;
+                    if (sx < config.StartX || sx > config.EndX || slurWid < 0.001)
+                        continue;
+                    y = config.Curve.GetOtherCoordinate(sx);
+                    found = true;
+                }
+                else if (_leftEdge.HeadWidth > 0
                     && info.RightX >= _startX - _leftEdge.HeadWidth / 2.0
                     && info.LeftX <= _startX + _leftEdge.HeadWidth / 2.0)
                 {
                     y = config.StartY;
                     found = true;
                 }
-                if (_rightEdge.HeadWidth > 0
+                if (!info.IsSlurPoint && _rightEdge.HeadWidth > 0
                     && info.RightX >= _endX - _rightEdge.HeadWidth / 2.0
                     && info.LeftX <= _endX + _rightEdge.HeadWidth / 2.0)
                 {
@@ -1070,10 +1168,12 @@ internal sealed class SlurScoringProblem
             }
         }
 
-        // ⚠️ NO SLUR-SLUR TERM. A slur is never in another slur's encompass-objects:
+        // ⚠️ NO SLUR-SLUR TERM OF ITS OWN. A slur is never in another SLUR's encompass-objects:
         // LILYPOND-REF: lily/phrasing-slur-engraver.cc:80 ADD_ACKNOWLEDGER_FOR
         //   (acknowledge_extra_object, slur) — and lily/slur-engraver.cc:73-80 has no such
         //   line, so the Slur members lily/slur-scoring.cc:679-682 reads are a PhrasingSlur's.
+        // A PHRASING slur's small slurs are scored ABOVE, as IsSlurPoint entries of the extra
+        // set (AddEnclosedSlurPoints) — which is exactly LilyPond's route for them.
         // MEASURED, session 481: in
         // LilyPond 2.26 `c''4( b' a')( g' | f'1)` draws its second slur byte-identical to
         // the same slur alone (Lab sessions/p481/two.ly, one.ly). The term this replaces

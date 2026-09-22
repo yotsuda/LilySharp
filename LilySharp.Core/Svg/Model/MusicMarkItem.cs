@@ -114,6 +114,14 @@ public enum MusicMarkType
     UnaCordaOn,
     /// <summary>Una corda pedal off (tre corde)</summary>
     UnaCordaOff,
+    /// <summary>The START of a phrasing slur (<c>@phrasingSlur</c>). It prints nothing as a
+    /// mark: <c>Collector.PhrasingSlurDetector</c> pairs it with its
+    /// <see cref="PhrasingSlurStop"/> into a <see cref="SlurItem"/> the slur pass draws.</summary>
+    /// <remarks>LILYPOND-REF: lily/phrasing-slur-engraver.cc — PhrasingSlurEvent, the
+    /// <c>\(</c> of ly/declarations-init.ly.</remarks>
+    PhrasingSlurStart,
+    /// <summary>The END of a phrasing slur (<c>@!phrasingSlur</c>, LilyPond's <c>\)</c>).</summary>
+    PhrasingSlurStop,
 }
 
 /// <summary>
@@ -280,7 +288,9 @@ public sealed record MusicMarkItem
              or MusicMarkType.TextSpanStart or MusicMarkType.TextSpanStop
              or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
              or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
-             or MusicMarkType.OttavaStop;
+             or MusicMarkType.OttavaStop
+             // Drawn as a curve by the slur pass, never as a mark.
+             or MusicMarkType.PhrasingSlurStart or MusicMarkType.PhrasingSlurStop;
 
     /// <summary>
     /// The words that open a text spanner as SUGAR, mapped to the text each one prints —
@@ -375,6 +385,10 @@ public sealed record MusicMarkItem
             "sostenuto" => MusicMarkType.SostenutoOn,
             "unacorda" => MusicMarkType.UnaCordaOn,
             "trecorde" => MusicMarkType.UnaCordaOff,
+            // LilyPond's \( … \), spelled as this language spells every span: '@phrasingSlur'
+            // … '@!phrasingSlur' (user decision 2026-09-22, session 482 — the backslash stays
+            // tablature's). The name is the grob's, PhrasingSlur.
+            "phrasingslur" => MusicMarkType.PhrasingSlurStart,
             _ => null
         };
     }
@@ -411,6 +425,7 @@ public sealed record MusicMarkItem
             MusicMarkType.SustainOn => MusicMarkType.SustainOff,
             MusicMarkType.SostenutoOn => MusicMarkType.SostenutoOff,
             MusicMarkType.UnaCordaOn => MusicMarkType.UnaCordaOff,
+            MusicMarkType.PhrasingSlurStart => MusicMarkType.PhrasingSlurStop,
             _ => null
         };
 
@@ -476,6 +491,8 @@ public sealed record MusicMarkItem
         MusicMarkType.SostenutoOff => "*",
         MusicMarkType.UnaCordaOn => "una corda",
         MusicMarkType.UnaCordaOff => "tre corde",
+        // A phrasing slur is a curve, not a word (IsSpannerHandled keeps it off the mark pass).
+        MusicMarkType.PhrasingSlurStart or MusicMarkType.PhrasingSlurStop => "",
         _ => type.ToString()
     };
 

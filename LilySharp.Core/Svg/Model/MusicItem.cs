@@ -251,6 +251,32 @@ public abstract record MusicItem
     /// one slur is written at TWO places, and the caret must find it from either.</summary>
     public int SlurEndSourcePosition { get; init; } = NoSourcePosition;
 
+    /// <summary>Whether a phrasing slur (<c>@phrasingSlur</c>) opens on this item. Only a
+    /// note, a chord or a sounding rest is given one — the columns a PhrasingSlur binds to,
+    /// as a slur does (<c>SlurDetector</c>).</summary>
+    /// <remarks>
+    /// ⚠️ ON THE BASE, AND SET IN ONE PLACE: the walk leaves the item's annotations with the
+    /// builder, and the builder's two doors (<c>MeasureBuilder.TakePendingPhrasingSlur</c>)
+    /// stamp the first column that arrives. A flag per constructor would be
+    /// a dozen sites to keep in step. The bool is CONTENT (it enters
+    /// <c>MeasureContentKey</c>); the two positions below are excluded and shifted, exactly
+    /// like the slur trio above.
+    /// </remarks>
+    public bool HasPhrasingSlurStart { get; init; }
+
+    /// <summary>Whether a phrasing slur (<c>@!phrasingSlur</c>) closes on this item. See
+    /// <see cref="HasPhrasingSlurStart"/>.</summary>
+    public bool HasPhrasingSlurEnd { get; init; }
+
+    /// <summary>Source position of the <c>@</c> of the <c>@phrasingSlur</c> on this item, or
+    /// <see cref="NoSourcePosition"/>. The curve's click target, as
+    /// <see cref="SlurStartSourcePosition"/> is a slur's.</summary>
+    public int PhrasingSlurStartSourcePosition { get; init; } = NoSourcePosition;
+
+    /// <summary>Source position of the <c>@</c> of the <c>@!phrasingSlur</c> on this item,
+    /// or <see cref="NoSourcePosition"/> — the curve's <c>data-alt</c> alias.</summary>
+    public int PhrasingSlurEndSourcePosition { get; init; } = NoSourcePosition;
+
     /// <summary>Source position of the <c>@</c> that wrote the <c>@laissezVibrer</c> on this
     /// item, or <see cref="NoSourcePosition"/>. See <see cref="TieStartSourcePosition"/>.</summary>
     /// <remarks>

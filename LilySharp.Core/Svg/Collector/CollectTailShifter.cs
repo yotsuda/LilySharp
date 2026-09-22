@@ -124,6 +124,8 @@ internal static class CollectTailShifter
             || !w.TryShift(item.TieStartSourcePosition, out int tiePos)
             || !w.TryShift(item.SlurStartSourcePosition, out int slurOpen)
             || !w.TryShift(item.SlurEndSourcePosition, out int slurClose)
+            || !w.TryShift(item.PhrasingSlurStartSourcePosition, out int phrasingOpen)
+            || !w.TryShift(item.PhrasingSlurEndSourcePosition, out int phrasingClose)
             || !w.TryShift(item.LaissezVibrerSourcePosition, out int lvPos)
             || !w.TryShift(item.RepeatTieSourcePosition, out int rtPos))
             return null;
@@ -137,6 +139,8 @@ internal static class CollectTailShifter
             TieStartSourcePosition = tiePos,
             SlurStartSourcePosition = slurOpen,
             SlurEndSourcePosition = slurClose,
+            PhrasingSlurStartSourcePosition = phrasingOpen,
+            PhrasingSlurEndSourcePosition = phrasingClose,
             LaissezVibrerSourcePosition = lvPos,
             RepeatTieSourcePosition = rtPos,
         };

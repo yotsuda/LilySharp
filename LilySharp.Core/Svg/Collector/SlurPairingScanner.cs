@@ -116,6 +116,50 @@ internal static class SlurPairingScanner
             sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
     }
 
+    /// <summary>
+    /// Scans one voice for phrasing-slur marks that draw nothing — the three faults of
+    /// <see cref="SpanPairingFault"/>, which are LilyPond's three for a phrasing slur.
+    /// </summary>
+    /// <remarks>
+    /// THE RULES ARE <c>SlurDetector</c>'s phrasing pairing, read the same way: per voice,
+    /// close before open on one item, ONE open at a time — a second <c>@phrasingSlur</c> while
+    /// one is open is ignored (StartWhileOpen), not stacked.
+    /// LILYPOND-REF: lily/slur-engraver.cc:174 Slur_engraver::finalize "unterminated", :228
+    /// "already have", :312 "cannot end" — the phrasing engraver is a Slur_engraver
+    /// (lily/phrasing-slur-engraver.cc).
+    /// </remarks>
+    public static void ScanPhrasing(Voice voice, List<UnpairedSpanWarning> sink)
+    {
+        int open = MusicItem.NoSourcePosition;
+        var measures = voice.Measures;
+        for (int mi = 0; mi < measures.Length; mi++)
+        {
+            var items = measures[mi].Items;
+            for (int ii = 0; ii < items.Length; ii++)
+            {
+                var item = items[ii];
+                if (item.HasPhrasingSlurEnd)
+                {
+                    if (open >= 0)
+                        open = MusicItem.NoSourcePosition;
+                    else
+                        sink.Add(new UnpairedSpanWarning(item.PhrasingSlurEndSourcePosition,
+                            SpanKind.PhrasingSlur, SpanPairingFault.StopWithNoStart));
+                }
+                if (item.HasPhrasingSlurStart)
+                {
+                    if (open < 0)
+                        open = item.PhrasingSlurStartSourcePosition;
+                    else
+                        sink.Add(new UnpairedSpanWarning(item.PhrasingSlurStartSourcePosition,
+                            SpanKind.PhrasingSlur, SpanPairingFault.StartWhileOpen));
+                }
+            }
+        }
+        if (open >= 0)
+            sink.Add(new UnpairedSpanWarning(open, SpanKind.PhrasingSlur, SpanPairingFault.Unterminated));
+    }
+
     /// <summary>Which cue region an item sits in — 0 outside any, else a number counted from
     /// the collector's edge stamps, fresh at every region the walk enters.</summary>
     /// <remarks>

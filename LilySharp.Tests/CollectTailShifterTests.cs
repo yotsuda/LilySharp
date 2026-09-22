@@ -159,6 +159,9 @@ public class CollectTailShifterTests
                 "TieStartSourcePosition",
                 "SlurStartSourcePosition",
                 "SlurEndSourcePosition",
+                // The phrasing slur's two `@`s (session 482) — the same pair for its curve.
+                "PhrasingSlurStartSourcePosition",
+                "PhrasingSlurEndSourcePosition",
                 "LaissezVibrerSourcePosition",
                 "RepeatTieSourcePosition",
             }, failures);

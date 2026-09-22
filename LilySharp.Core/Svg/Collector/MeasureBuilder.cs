@@ -188,6 +188,45 @@ internal sealed class MeasureBuilder
     public int CurrentItemCount => _currentItems.Count;
 
     /// <summary>
+    /// The phrasing-slur marks written on the node the walk is emitting — the source
+    /// positions of its <c>@phrasingSlur</c> (<c>Start</c>) and <c>@!phrasingSlur</c>
+    /// (<c>End</c>), −1 where none was written — or null. The next note, chord or sounding
+    /// rest to enter (<see cref="TakePendingPhrasingSlur"/>) takes them and clears this; the
+    /// walk clears it too once the node is done, so a mark on something that made no column
+    /// cannot land on a later one.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A HAND-OFF, NOT A FLAG PER CONSTRUCTOR. A slur's bools go through every item
+    /// factory's parameters; this rides the one sink every item enters through instead
+    /// (<see cref="MusicItem.HasPhrasingSlurStart"/>).
+    /// </remarks>
+    public (int Start, int End)? PendingPhrasingSlur { get; set; }
+
+    /// <summary>The columns a phrasing slur binds to — the same three a slur does
+    /// (<c>SlurDetector.TryGetSlurFlags</c>): a note, a chord, a sounding rest.</summary>
+    private static bool BindsAPhrasingSlur(MusicItem item)
+        => item is NoteItem or ChordItem || item is RestItem { IsSpacer: false };
+
+    /// <summary>Stamps <see cref="PendingPhrasingSlur"/> onto <paramref name="item"/> when it
+    /// is a column one binds to, and clears it; returns the item unchanged otherwise. Both
+    /// doors call it — <see cref="AddItem"/> adds directly and does not pass through
+    /// <see cref="AddItemWithoutDuration"/>.</summary>
+    private MusicItem TakePendingPhrasingSlur(MusicItem item)
+    {
+        // Not in grace time: a grace column is not the note the mark was written on.
+        if (_graceDepth > 0 || PendingPhrasingSlur is not { } phrasing || !BindsAPhrasingSlur(item))
+            return item;
+        PendingPhrasingSlur = null;
+        return item with
+        {
+            HasPhrasingSlurStart = phrasing.Start >= 0,
+            PhrasingSlurStartSourcePosition = phrasing.Start,
+            HasPhrasingSlurEnd = phrasing.End >= 0,
+            PhrasingSlurEndSourcePosition = phrasing.End,
+        };
+    }
+
+    /// <summary>
     /// The items of the measure now under construction, oldest first — a READ-ONLY view, so
     /// a caller can look at what it just added without being able to reorder the measure.
     /// </summary>
@@ -525,7 +564,7 @@ internal sealed class MeasureBuilder
             return;
         }
 
-        _currentItems.Add(item);
+        _currentItems.Add(TakePendingPhrasingSlur(item));
 
         // Real content fills this span, so a following barline closes IT, not an empty
         // measure. A ZERO-duration directive (a clef change) does not fill anything — it
@@ -692,6 +731,7 @@ internal sealed class MeasureBuilder
     /// </remarks>
     public void AddItemWithoutDuration(MusicItem item)
     {
+        item = TakePendingPhrasingSlur(item);
         _currentItems.Add(_graceDepth > 0 ? NarrowToGraceTime(item) : item);
         _confirmableBoundary = false;
         // A tuplet's member is sounding music after a mid-bar `break` too (its duration

@@ -3656,6 +3656,7 @@ public sealed partial class LilySharpLanguageServer
         ["sostenuto"] = "pedal sost",
         ["unaCorda"] = "pedal soft",
         ["treCorde"] = "pedal soft release",
+        ["phrasingSlur"] = "phrase curve",
         // All-lowercase names cannot be split into words, so the part a user is
         // most likely to type has to be listed.
         ["shortfermata"] = "fermata short",
@@ -3887,6 +3888,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "sostenuto", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal down (Sost. Ped.) - ends at @!sostenuto", SortText = "5sostenuto" },
                 new CompletionItem { Label = "unaCorda", Kind = CompletionItemKind.Value, Detail = "Una corda (soft pedal down) - ends at @!unaCorda", SortText = "5unaCorda" },
                 new CompletionItem { Label = "treCorde", Kind = CompletionItemKind.Value, Detail = "Tre corde - the una corda release, same mark as @!unaCorda", SortText = "5treCorde" },
+
+                // The phrasing slur: LilyPond's \( … \), closed by '@!' like every span here.
+                new CompletionItem { Label = "phrasingSlur", Kind = CompletionItemKind.Value, Detail = "Phrasing slur - the long curve over a musical sentence, drawn over its slurs; ends at @!phrasingSlur", SortText = "6phrasingSlur" },
 
                 // Notation marks
                 new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },

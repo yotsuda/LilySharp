@@ -52,6 +52,12 @@ workflow attaches that section to the GitHub Release verbatim.
   the editor's preview plays its timbre from the same sound (which also stops it reading
   `piano-bass` as a bass guitar).
 
+- **Phrasing slurs: `@phrasingSlur` … `@!phrasingSlur`** — LilyPond's `\(` … `\)`, the long
+  curve over a musical sentence. It is drawn over the slurs inside it and clears them as
+  LilyPond does (its taller shape and its avoidance of the enclosed slurs measured against
+  LilyPond 2.26 to the SVG's two decimals). Like every span it must be closed (LYS4018). The
+  LilyPond twin writes `\(` `\)`, and MusicXML a `<slur>` numbered apart from the ordinary slurs.
+
 ### Editor
 
 - **The preview receives only the pages a keystroke changed.** The language server used to

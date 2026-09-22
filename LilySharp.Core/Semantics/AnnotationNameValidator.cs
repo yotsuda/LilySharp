@@ -100,6 +100,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // 'sostenutoOn' / 'sostenutoOff' are RETIRED and cannot be candidates: every entry
         // in this list must compile (EverySuggestionCandidate_CompilesAsWritten).
         "sustain", "sostenuto", "unaCorda", "treCorde",
+        // The phrasing slur, closed by '@!phrasingSlur' (session 482).
+        "phrasingSlur",
         // ⚠️ No feather.* candidate: the words a writer mistypes inside '@feather( )' are the
         // retired tempo synonyms, and edit distance points 'rit' at 'right' — the opposite
         // direction. An unknown '@feather(…)' gets the plain message.

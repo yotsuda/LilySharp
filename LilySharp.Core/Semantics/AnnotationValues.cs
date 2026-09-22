@@ -173,6 +173,15 @@ public static class AnnotationValues
     public static bool IsTextSpanAnnotation(MusicMarkSyntax mark) => Named(mark, "textSpan");
 
     /// <summary>
+    /// Whether an annotation NAME is the phrasing slur's — <c>@phrasingSlur</c> or, with the
+    /// terminator's <c>!</c> already stepped over, <c>@!phrasingSlur</c>. Matched as
+    /// <see cref="Svg.Model.MusicMarkItem.ParseMarkName"/> matches, which is what makes the
+    /// validator accept it.
+    /// </summary>
+    public static bool IsPhrasingSlurName(string name)
+        => Svg.Model.MusicMarkItem.ParseMarkName(name) == Svg.Model.MusicMarkType.PhrasingSlurStart;
+
+    /// <summary>
     /// The printed label of a rehearsal mark — <c>@mark("A")</c> → <c>A</c> — or null
     /// when the annotation is not one. <paramref name="quoted"/> reports whether the
     /// label was written as a quoted string, which is the only spelling the language

@@ -105,10 +105,10 @@
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:469** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:451** case of broken slur") — not ported; every slur this scorer sees lives on
-- **:626** column allows only 0.3 of movement) is not ported: every edge here
-- **:1013** approximation there); RIGHT wins when both edges match, as LP's
-- **:1016** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
+- **:535** case of broken slur") — not ported; every slur this scorer sees lives on
+- **:710** column allows only 0.3 of movement) is not ported: every edge here
+- **:1097** approximation there); RIGHT wins when both edges match, as LP's
+- **:1100** ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:341** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
@@ -236,8 +236,8 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2466** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4034** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5447** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4048** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5461** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -273,7 +273,7 @@
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:474** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:476** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
 - **:264** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:272** The range a size may take, in staff spaces. LILYSHARP-OWN, as
@@ -284,8 +284,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2432** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4553** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2444** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4566** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

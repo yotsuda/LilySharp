@@ -105,6 +105,20 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
     /// </remarks>
     private static string MessageFor(SpanKind kind, SpanPairingFault fault)
     {
+        if (kind == SpanKind.PhrasingSlur)
+            return fault switch
+            {
+                SpanPairingFault.Unterminated =>
+                    "a phrasing slur is never closed, so no curve is drawn; write "
+                    + "'@!phrasingSlur' on the note it should reach",
+                SpanPairingFault.StopWithNoStart =>
+                    "this '@!phrasingSlur' closes nothing, so nothing is drawn; no phrasing slur "
+                    + "is open in this voice - note that a slur does not carry into another voice",
+                _ =>
+                    "a phrasing slur is already open in this voice, so this one is ignored; "
+                    + "close the first with '@!phrasingSlur' before starting a second - phrasing "
+                    + "slurs do not nest (an ordinary slur '(' ')' may sit inside one)",
+            };
         bool ottava = kind == SpanKind.Ottava;
         string noun = ottava ? "an ottava bracket" : "a text spanner";
         string ends = ottava ? "'@!ottava'" : "'@!rit' (or '@!textSpan')";
