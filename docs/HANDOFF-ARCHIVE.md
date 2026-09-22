@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第494セッションの経緯
+
+### 1.1 第494セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第493 のすぐ後）。ユーザー指示「続けて」＝型の地図の次の頭 `NoteItem`（297 KB／打鍵）。
+★ **`-Start p494` の 1 コマンドで §0 が全部済んだ**（HEAD `505f264a`・full 8840 / 0 / 3 / 8843・`-Archive 492` も自動）。
+
+★★ **⑴ `NoteItem`（297 KB／打鍵）は設計の値段だった**。record の手書き copy constructor（`with` が通る）と constructor に呼び手ごとの計器（Lab `sessions/p494/`・`Zz494AbProbe.cs.txt`・warm-up 込み）＝**建てる `CreateNoteItem` 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976・`TabResolver.ResolveTabStrings` 509,020**・以下 `WithBowSources` 69,174 ほか。
+  梁の刻印（StemUpOverride・BeamId・PureBeamedStemTip）は collect ごとに新しい item に新しい id を書く＝**「同じ値なら写さない」を試して 0 回だった**（戻した）。消すなら刻印を item の外へ出す＝土台の変更（§1.0 に 1 行）。
+★ **⑵ `ResolveTabStrings` の小節ごとの item 配列の写しを「書く時だけ」にした**（`ResolveBeamStemDirections` の Work/ItemAt の形）＝render 2,301,528 → 2,300,448（−1,080）。出力同一（`Zz494Hash`＝0 差）。網は既存＝`ItemAt` が書き込みを見ない毒で `TabBelowRangeHideTests` と snapshot `test/tab-below-range` が赤。full 8840 / 0 / 3 / 8843。
+★ **⑶ 終了時**: コード 1 ファイル（TabResolver）。
+
 ## 以下は第493セッションの経緯
 
 ### 1.1 第493セッション（2026-09-22・YT-DELL2）

@@ -77,11 +77,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「毒入りのビルドを私が作ってしまったのかもしれない。一旦この件は忘れて」・第477）**。第477 は 4 通り（HEAD 全描画・1 文字ずつの増分・`2c9bd51a`・プレビューと同じ 0.7.0）すべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定「私が不注意だった。今後は私が注意する」）＝毒の最中のビルドはユーザー側で避ける。第476 の毒 1〜3 は `StaffItemsAt`＝小節頭のばねの入力を汚す形で、症状と合っていた
-- ★★ **⒮⁶ 「建てない」の島の残り＝手が動くのは約 20,400 B／打鍵 0.46%**（第455 の census＝Lab `sessions/p455/`・
-  分母 4,520,635・**戻る便は回し直すこと**＝住所は census 時点）。うち 6,409 は下の ⒮⁸。単独で残るのは
-  `MeasureLayouter.cs:466` **1,070**／`SvgSystemFragmentCache.cs:237` **781**（1 件 1,928 B＝`Entry` を class にするか鍵を減らす＝設計変更）／
-  `LineStartColumn.cs:254` **601**（`MinimumDistance` を span に）／`VerticalSkyline.cs:76` **511**／`LayoutEngine.Prelim.cs:534` **433**／
-  `SpacingRules.LedgerRods.cs:79` の hold1 半分 **238**。⚠️ 門前払いの 3 軒は*この欄*だけの話（⒮¹⁰ の欄では scratch・RULES §5.3）。
+- ★ **⒮⁶ 「建てない」の島の残り＝約 14,000 B／打鍵**（第455 の census＝Lab `sessions/p455/`・住所は census 時点＝戻る便は回し直す）。単独の頭は `MeasureLayouter.cs:466` 1,070・`SvgSystemFragmentCache.cs:237` 781（`Entry` を class に＝設計変更）ほか 600 B 未満。
   ⚠️ zero／one 欄は drain 時点の最終 `Count`＝**`actual` とコードの両方で読む**（RULES §5.3 末尾）
 - ★★ **⒮⁸ 器を消せない残り 2 軒＝6,409 B／打鍵 0.142%・どちらも*値段ではない理由*で残った**（第455）。
   ⑴ `LedgerLineSpannerEngraver.cs:160` **5,797**（actual 4,901＋obj 896・28.01 回／打鍵・4.12 件／回・max 37）
@@ -198,23 +194,29 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **⒜ と push は「後回し」＝催促しない**（第407 ⑺⑸）。**push はユーザー**（Lab も）
 - **R15 ✅**（残り＝「2 綴り」一族のみ・要承認）
 - ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
-- ⚠️ **掃き終わった島（第434〜第442）＝*ここには戻らない*。**（第442 が 9 便ぶんの宣言を 1 表に畳んだ。
-  前便までは 1 便 1 段落ずつ積んでいて、§1.0 の半分を占めていた。**根拠の全文は各便の §1＝ARCHIVE**）
-
-  | 島 | 便 | 残りと、なぜ戻らないか |
-  |---|---|---|
-  | 検出器・memo front・mark の group・`BeamedItemsToSuppress`・`ColumnParts`／`FromBox`・地図 7 軒・第441 の 9 軒 | 434〜441 | 残りは実仕事（0.013〜0.183%）か、寸法を言えない形か、上限の代償。**`GetOrAdd` の非 static factory はもう探さない**（第437）。第467 が 8 行を 1 行に畳んだ＝全文は各便の §1（ARCHIVE） |
-  | `MusicSiteList.cs:83`（0.563%） | 441 | **定数の hint では弁護できない**＝histogram は 1 件が 9.4%・32〜127 件に 55%・最大 885。直すなら「前回の同じ container の数を憶える」＝設計変更で値段が先 |
-  | 第442 の 25 軒 | 442 | 13 サイトは*直す前に*「頼んだ寸法＝最終 `Count`」を実測して UNDER 0・over 0。`hits` だけ bound（slack 1.05 件／回）で残り 0〜300 B／打鍵 |
-  | `OutsideStaffStacker:1171` の `toStore` | 442 ⑴ | **上限では直せないと実証済み**＝`parts.Count` 23.69 に対し最終 `Count` 1.05（maxslack 47）。`hits` と補集合なので、両方に渡すと partition を二重予約する |
-  | skyline の距離・⒬・⒬′・⒭・⒮・⒮′・⒮‴・⒮⁵ | 443〜449 | どれも閉じた（数と会計は各便の §1＝ARCHIVE）。残りは名前がある＝⒫′（`PaddedCopy`＝*建てた物が後で読まれる*）・⒬″・⒭′（`yield return` のアクセサ）・⒮⁶ 以降。⚠️ **struct walk を歩く*外側*の iterator は太る**＝直すなら鎖ごと（第445）。⚠️ **⒮′ の上位 4 軒 23,140 は器が呼び手へ出る**（第448）。第470 が 7 行を 1 行に畳んだ |
-  | ⒮⁶ の 20 軒 | 450・451・454 | 実測 −16,910／−14,689／−14,056（会計 99.7%／95.2%／108.5%）。**census の hold1 欄は*直し方を選べない***（寸法既知なら配列・`Annotations:531` は地図 → flat な `double[]` で値段 2,639 の実体が 11,105）。島は下限。残りは ⒮⁶ の一覧 |
-  | ⒮⁷ の 4 軒（配列への置換 2・inline 2 枠・器ごと廃止 2・struct 1） | 455 | 実測 **−13,286**（会計 13,411＝99.1%）。**起票が外したのは値段ではなく*直し方***＝「6 軒・直し方は 1 つ」に対し正解は 4 通りで、2 軒（⒮⁸）は触ると損。**最大の 8,408 は「鍵がいつも添字」＝地図ではなく配列**だった。残り＝⒮⁸ |
-  | ⒮″ の 1 軒（session が器ごと憶える） | 456 | 実測 **−508,076**（会計 100.43%）。**起票の `waste` 27,355 に対し同じ行の `actual` は 506,766**＝`SvgPageBuffers` が page ごとに park。残りは ⒮¹⁰（`actual` 欄で読み直す島） |
+- ⚠️ **掃き終わった島（第434〜第456）＝*ここには戻らない*。根拠の全文は各便の §1＝ARCHIVE**（第496 が表を 3 行に畳んだ）。
+  教訓だけ残す: **`GetOrAdd` の非 static factory はもう探さない**（第437）／`MusicSiteList.cs:83` は定数 hint で弁護できない（直すなら前回の数を憶える＝設計）／`OutsideStaffStacker:1171` の `toStore` は上限で直せない（第442）／
+  **struct walk を歩く外側の iterator は太る**＝直すなら鎖ごと（第445）／census の hold1 欄は直し方を選べない（第451）／起票が外すのは値段より*直し方*（第455＝鍵がいつも添字なら地図ではなく配列）
 - ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒳¹¹ ⒳¹⁴ ⒳¹⁵ ⒮²² ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第496セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第495 のすぐ後）。ユーザー指示「続けて」＝§1.0 を畳んでから、配列 census の残りの頭。
+★ **`-Start p496` の 1 コマンドで §0 が全部済んだ**（HEAD `a892b784`・full 8841 / 0 / 3 / 8844・`-Archive 494` も自動）。
+
+★ **⑴ §1.0 を畳んだ**（「掃き終わった島」の表 13 行 → 教訓 3 行・⒮⁶ 6 行 → 2 行）。
+★★ **⑵ 型の地図を HEAD で取り直した**（Lab `sessions/p496/type-price-head.txt`・render 2,130,454）＝**String 365 KB・NoteItem 251 KB・SkylineBuilding[] 209 KB・GreenNode[] 160 KB**・SystemDetails 80 KB・Int32[] 72 KB。
+  ⚠️ **GreenNode[] は render のものではない**＝Parser の constructor に計器（harness が render の間だけ旗）で **render 中の parse 0 回・外 2,328 回**。**型の地図は parse の割り当てが窓に滲む**（窓内の tick 合計 2,382,572 が実測 render 2,130,454 を 25 万上回る）＝**parser の型（GreenNode[]・SyntaxToken[]・SyntaxTokenNode …）は割り引いて読む**。
+  ⚠️ **配列 census の B/key は warm-up 込み**＝呼びの少ない軒（`LineBreakDpSession.cs:133-135` の 236 回＝冊ごとの初回だけ）は打鍵ではほぼ 0。呼びの数で読む。
+  ⇒ **残る頭は全部「土台」**：String（SVG の出力そのもの）・NoteItem（梁と弦の刻印＝側表へ）・SkylineBuilding[]（⒫′ の保留 pad）。尾は `BeamScoringProblem` の 1 梁 6 配列（約 12 KB）・`LedgerRods.cs:90-94`（5 配列 × 83,950 回）。
+★ **⑶ `LedgerColumnsOf` の 5 配列を最初の加線つき符頭まで建てない**＝render 2,130,636 → 2,127,511（−3,125）。出力同一（`Zz496Hash`＝0 差）。full 8841 / 0 / 3 / 8844。
+  ⚠️ **初期値（±∞）は網が無い**＝`upLeft` を 0 で始める毒はスイート緑（変更前から同じ・この便は値を変えていない）。観測するなら「右へずれた加線つき符頭 1 つ」の `LedgerColumnsOf` を直接読む unit を書く。
+★ **⑷ 終了時**: コード 1 ファイル（SpacingRules.LedgerRods）。
+
+## 以下は第495セッションの経緯
 
 ### 1.1 第495セッション（2026-09-22・YT-DELL2）
 
@@ -226,18 +228,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★★ **⑶ 小さい node は子位置表を建てない＝→ 2,130,636（−34,807・−1.6%）**。`GetChildPosition` は slot 8 以下なら前の兄弟の幅をその場で足す（表と同じ和・同じ順）。毒（1 つ手前で止める）で 495 本赤。
   どちらも出力は同一（`Zz495Hash`＝5824 行・0 差）。full 8841 / 0 / 3 / 8844。生成物は差分なし。
 ★ **⑷ 終了時**: コード 2 ファイル（TabFingeringPlanner・SyntaxNode）＋テスト 1 本。
-
-## 以下は第494セッションの経緯
-
-### 1.1 第494セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第493 のすぐ後）。ユーザー指示「続けて」＝型の地図の次の頭 `NoteItem`（297 KB／打鍵）。
-★ **`-Start p494` の 1 コマンドで §0 が全部済んだ**（HEAD `505f264a`・full 8840 / 0 / 3 / 8843・`-Archive 492` も自動）。
-
-★★ **⑴ `NoteItem`（297 KB／打鍵）は設計の値段だった**。record の手書き copy constructor（`with` が通る）と constructor に呼び手ごとの計器（Lab `sessions/p494/`・`Zz494AbProbe.cs.txt`・warm-up 込み）＝**建てる `CreateNoteItem` 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976・`TabResolver.ResolveTabStrings` 509,020**・以下 `WithBowSources` 69,174 ほか。
-  梁の刻印（StemUpOverride・BeamId・PureBeamedStemTip）は collect ごとに新しい item に新しい id を書く＝**「同じ値なら写さない」を試して 0 回だった**（戻した）。消すなら刻印を item の外へ出す＝土台の変更（§1.0 に 1 行）。
-★ **⑵ `ResolveTabStrings` の小節ごとの item 配列の写しを「書く時だけ」にした**（`ResolveBeamStemDirections` の Work/ItemAt の形）＝render 2,301,528 → 2,300,448（−1,080）。出力同一（`Zz494Hash`＝0 差）。網は既存＝`ItemAt` が書き込みを見ない毒で `TabBelowRangeHideTests` と snapshot `test/tab-below-range` が赤。full 8840 / 0 / 3 / 8843。
-★ **⑶ 終了時**: コード 1 ファイル（TabResolver）。
 
 ## 2. 開いている作業
 
