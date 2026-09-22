@@ -129,6 +129,35 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第470セッションの経緯
+
+### 1.1 第470セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮²⁰＝閉包の尾**（ユーザーが選んだ）。
+★ **`-Start p470` の 1 コマンドで §0 が全部済んだ**（HEAD `d146686d`・未 push 20・full `sessions/p470/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 468` も自動＝moved 29 行 2,081 字）。
+
+★★★ **⑴ delegate 型の行の持ち主は Roslyn で引いた**（Lab `sessions/p470/scan`＝Core の「delegate を建てる式」367 か所を delegate 型つきで並べ、
+第469 の型ごとの値段と結んだ＝`delegate-sites.txt`）。**型の行は 1〜4 か所に絞れた**: `Action<BeamConfiguration>` 1,235 は beam ごとの `OneScorer` の
+method group、`Predicate<TieItem>` 507 は tie ごとの `FindIndex`、`Action<int,SpanPairingFault>` 507 は pedal mark の無いコーパスで毎回建つ `Report` の 3 本。
+⚠️ **第469 の計器は `Func`／`Action`／`Predicate`／`Comparison` と display class しか数えていなかった**＝全 delegate 型に広げた（before 19,212 → after 10,632）。
+
+★★★ **⑵ 直し方は 4 つ**（`prediction.txt`）: **state 渡しの static lambda**（`BestFirstScorer.Solve<TConfig,TProblem>`）／**LINQ を loop に**（beam の X・staff ごとの
+restamp 4 本・tie の slot・重なるスラー・ledger の並べ替え＝安定な挿入・spring の wish・volta・`WrittenClefOf`）／**門を先に・閉包は自分のメソッドへ**（pedal の門 2 か所・
+並べ替え 3 軒・weak table は先に `TryGetValue`・voice collision は key から static に）／**context に 1 つ**（`GroupClose`・rest collision の delegate）。
+**A/B −12,593 B／打鍵＝render の 0.44%**（2,875,240 → 2,862,647・予測の点 11,000 の 114.5%・帯 8,500〜14,000）。parse は不動・**出力は同一**（5,824 行・0 差）。
+**会計（群を 1 つずつ抜く・和 12,783＝A/B の 101.5%）**＝beam X 2,591（予測 1,534）／pedal の門 2,289（726）／scorer 1,380（1,373）／spring 1,205／tie と slur 1,100／
+ledger 1,099（253）／restamp と memo 820／ほかは 500 未満。**上に外したのは LINQ の iterator と list が閉包の行に居ないから**、**下に外したのは並べ替え 245（予測 1,030）**
+＝閉包を別メソッドへ出しても並べる呼びは払う。`MeasureCollector` の delegate の集約は 12 B で**戻した**（RULES §5.3 末尾）。
+
+★★ **⑶ 毒 18 本、予測を外したのは 5 本**（`poisons.txt`）。赤 5／4／8／20／8／20／5／22／171／250／1。**緑と予測した 12・13 は 1 赤ずつ**（`OutsideStaffStackLiveSubsetTests`
+が両方を押さえていた）。**赤と予測した 4・9・14 は緑**、5・17 も緑＝**5 本ともコーパス 0 差**（`green-to-corpus.txt`）＝§1.0 ⒮²²。
+
+★ **⑷ 終了時**: commit 2 本（code `112988b1`＝Core 20 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run5.trx`＝`-End`）。
+§7.5（対 `d146686d`）****Core '+' 351 行／REF 0／OWN 0****＝閉包を消す組み替えだけで LP に対応物が無い。
+**§7.6 コード中の新しい数は 0**（コメントの数は第470 の計器と会計・出所つき）。**§7.7 の匂い**＝§1.0 ⒮²⁰′（使われる閉包の残り）・⒮²²（緑の毒 5 本）。台帳・snapshot 不変・未追跡 0。
+**push はユーザー**（Lab も）。**`-Start p471` の 1 コマンドから入る**。
+
 ## 以下は第469セッションの経緯
 
 ### 1.1 第469セッション（2026-09-22・YT-DELL2）

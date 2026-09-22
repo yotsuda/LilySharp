@@ -128,9 +128,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **渡す 2 つは builder から外す**（容量 0）＝**park した builder が呼び手の配列を持つことは起こらない**。
   ⚠️ 系＝**`Move`／`Drain` で終わる軒は park しても毎回空から**＝賞金が無い（出口の API を軒ごとに読む）。
   ⇒ **次の軒**（**HEAD の住所**・第467 が census の行の文字列を HEAD で引き直した・**1 軒 1,200 B 未満＝⒮¹⁵ の残りのほうが高い**）:
-  `LayoutEngine.Prelim.cs:679`＋`:684` **2,269**（`tiesBySystem` の地図と値の list＝後者は *1 呼びで N 個*）／`ArticulationEngraver.cs:280`
+  `ArticulationEngraver.cs:280`
   **1,077**（Builder＝出口の API を先に読む）／`MusicMarkEngraver.cs:1650` か `:1685` **926**（census の 1 行が 2 行に当たる＝どちらか先に確かめる）／
-  `OutsideStaffStacker.cs:645` **910**／`TieDetector.cs:29` **820**／`FingeringEngraver.cs:222` **770**＝約 6,770。
+  `OutsideStaffStacker.cs:645` **910**／`TieDetector.cs:29` **820**／`FingeringEngraver.cs:222` **770**＝約 4,500（Prelim の `tiesBySystem` は第472 が閉じた）。
   ⚠️ **行の文字列で引くと偽の一致が出る**（`ItemSkylineFactory.cs:465`）＝**当たった行を目で読む**
   ⚠️ **`LayoutEngine.Prelim.cs:374` 6,192・`LedgerLineSpannerEngraver.cs:160` 5,797・`KnuthPlassBreaker.cs:781` 2,779 は
   *1 呼びで N 個*建てる軒**（計 14,768）＝引き出し 1 枚では足りない＝**別の直し方**（この島の数に混ぜない）。
@@ -155,8 +155,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **読み方の罠 2 つ**: ⑴ **`zero 100%` の Builder 行は `MoveToImmutable` で終わる軒**（Move が builder を空にするので drain が 0 件と読む
   ＝配列は手渡し済みで waste ではない。賞金は builder 本体だけ・34 軒）／⑵ **`obj` 欄の builder 56 B は本体 32 B＋長さ 0 の配列 24 B**
   （計器の `CreateBuilder<T>(0)` が配列を建てる）＝**第463 の C が予測の 57% に外れた理由**
-- ★★ **⒮¹⁶′ tuple 型の器の残り 約 12,700 B／打鍵**（第465 が 6 軒 −82,765・**第471 が頭の memo 自身の build 10,794 を閉じた**＝int 版 5,577 も一緒に・一覧は Lab sessions/p465/README.txt 末尾）。
-  頭は BuildBeamedStemTips の残り 2 人の呼び手 約 1,800／`LayoutEngine.Prelim.cs:657` 1,754／`ElementCoordinator.cs:3311` 1,354／`SkylineBuilder.cs:1345` 1,240（**census 時点の住所**＝HEAD で行の文字列を引き直す）。⚠️ collection initializer と `new List<(…)>?[n]` はどの census も数えない
+- ★★ **⒮¹⁶′ tuple 型の器の残り 約 14,100 B／打鍵**（⒮¹⁴ の `LedgerLineSpannerEngraver.cs:274` 5,798 を除く。**第472 が HEAD で数え直した**＝Lab `sessions/p472/site-prices.txt`・生きている 127 行は全部 scratch・**脚の denominator 3,483,771 は第464 の定数**＝使わない。第472 が 5 軒 −11,695 を閉じた）。
+  頭は尾＝`DynamicEngraver.cs:565` 884／`SyntaxNode.cs:521` 744（Stack・zero 100%）／`LayoutEngine.Annotations.cs:937` 579／`MeasureCollector.cs:400` 572（zero 99.6%）。`LayoutEngine.cs:740` 系 6 本は寸法ちょうどの結果の list＝実仕事。⚠️ collection initializer と `new List<(…)>?[n]` はどの census も数えない
 - ★★★ **⒮¹² splice の「trivia だけの窓」の門は、どちらの母集団にも観測者が居ない**（第458 起票・実測）。
   `MeasureCollector.TrySpliceSuffix`（`Resume.cs:340`）は**コーパス 1 sweep で 7,016 回訊かれ、7,016 回とも
   decline**（`WindowIsTriviaOnly` が true を返したのは **0 回**・裏の token walk は 891 回＝打鍵ごとに memo）。
@@ -237,6 +237,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **第460 が 2 人目の証人を足した**＝`HorizontalSkyline.GiveBox` の `Clear` を抜く毒はスイート緑・
   コーパス 0 差で、stale な箱が答えを変えたのは **862 回すべて `NoteColumnToBarlineFloorPair`**
   （Lab `sessions/p460/stale-box-counts.txt`）＝**この床を効かせる便は、あの `Clear` にも初めて観測者を付ける**
+- ★ **⒳⁸ 連桁の `c''8` の指番号が 17.59 sp に居る**（第472 が網を書く途中で見た・未調査）。`c''8@finger(1) c''8 c''8 c''8 c''2` の YUp **17.589914**、単音 `c''4` は **5.045**（HEAD でも同じ）。符尾下向きの連桁で、指番号は符頭側のはず ⇒ **LP 双子で確かめてから**（忠実度・値段ではない）
 - ★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり）
 - **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
@@ -272,6 +273,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 244,685 / 250,000 B・1,876 / 2,000 行**（第470 が §5.3 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第472セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」＋「続けて」。
+★ **`-Start p472` の 1 コマンドで §0 が全部済んだ**（HEAD `5b59de74`・未 push 24・full `sessions/p472/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 470` も自動＝moved 30 行 2,378 字）。
+★★★ **⑴ census を HEAD で回し直した**（第465 の計器そのまま＝Lab `sessions/p472/`・272 軒・whole 27,564 B／打鍵・生きている行は全部 scratch）。
+★★★ **⑵ 5 軒**: A 指番号の beam-tip 地図は最初の指番号まで建てず貸す（**コーパスは指番号を 1 つも書かない**＝per-staff skyline pass が建てて誰も訊かなかった）／B tie の column→system 地図は冗長（家は `measureToSystem[key.Measure]`）＋tie と slur を system 添字の配列で仕分け（`SystemBuckets`）／C slur の beam 表を貸す／D stem 抑止の set を貸す／E 寸法。
+**A/B −11,695 B／打鍵＝0.41%**（予測 9,950 の 117.5%・帯内）・**5,824 ページ 0 差**。**会計**＝A 1,880（75%・`odd` 1,239 の行）／B 6,796（151%・値段の無い推測）／C 101%／D 101%／E 98%＝和 99.6%。
+★★ **⑶ 毒 6 本、外れ 1 本**（`poisons.txt`）: **貸した tip 地図を汚して返す毒 1 は棚卸し以外緑**＝観測者なし ⇒ **網 `FingeringTests.Layout_ALentTipMap_CarriesNoBeamIntoTheNextBook`**（毒で赤 1）。毒 6（tie の cursor 未 reset）は予測どおり緑＝fallback が同じ絵。
+⚠️ **行を消す毒は `TheInventoryIsNotStale`／`TheCensusIsNotStale` を 1 赤にする**＝毒の色ではない。
+★ **⑷ 終了時**: code `0487d57c`（Core 8＋網＋再生成 2 枚）。最終 full **8791 / 0 / 3 / 8794**（+1＝網）。§7.5 Core '+' 427／REF 0／OWN 0＝器の持ち方だけ。§7.6 新しい数はコメントの census 値だけ（出所つき）。§7.7＝⒳⁸。**push はユーザー**（Lab も）。**`-Start p473` から入る**。
+
+## 以下は第471セッションの経緯
+
 ### 1.1 第471セッション（2026-09-22・YT-DELL2）
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶′＝tuple 型の器の頭**（ユーザーが選んだ）。
@@ -296,35 +311,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑷ 終了時**: commit 2 本（code `77b48d94`＝Core 3 ファイル＋再生成した `APPROXIMATIONS.md`、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run3.trx`＝`-End`）。
 §7.5（対 `4edcff06`）**Core '+' 212 行／REF 0／OWN 0**＝表の持ち方の組み替えだけで LP に対応物が無い。**§7.6 コード中の新しい数は 0**（コメントの数は第471 の計器と A/B・出所つき）。
 **§7.7 の匂い**＝同じ `SystemLayout` を包み直した配列が 1.09 枚／打鍵（今は 1 枚 32 B なので値段は無い）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p472` の 1 コマンドから入る**。
-
-## 以下は第470セッションの経緯
-
-### 1.1 第470セッション（2026-09-22・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮²⁰＝閉包の尾**（ユーザーが選んだ）。
-★ **`-Start p470` の 1 コマンドで §0 が全部済んだ**（HEAD `d146686d`・未 push 20・full `sessions/p470/run1.trx`
-8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 468` も自動＝moved 29 行 2,081 字）。
-
-★★★ **⑴ delegate 型の行の持ち主は Roslyn で引いた**（Lab `sessions/p470/scan`＝Core の「delegate を建てる式」367 か所を delegate 型つきで並べ、
-第469 の型ごとの値段と結んだ＝`delegate-sites.txt`）。**型の行は 1〜4 か所に絞れた**: `Action<BeamConfiguration>` 1,235 は beam ごとの `OneScorer` の
-method group、`Predicate<TieItem>` 507 は tie ごとの `FindIndex`、`Action<int,SpanPairingFault>` 507 は pedal mark の無いコーパスで毎回建つ `Report` の 3 本。
-⚠️ **第469 の計器は `Func`／`Action`／`Predicate`／`Comparison` と display class しか数えていなかった**＝全 delegate 型に広げた（before 19,212 → after 10,632）。
-
-★★★ **⑵ 直し方は 4 つ**（`prediction.txt`）: **state 渡しの static lambda**（`BestFirstScorer.Solve<TConfig,TProblem>`）／**LINQ を loop に**（beam の X・staff ごとの
-restamp 4 本・tie の slot・重なるスラー・ledger の並べ替え＝安定な挿入・spring の wish・volta・`WrittenClefOf`）／**門を先に・閉包は自分のメソッドへ**（pedal の門 2 か所・
-並べ替え 3 軒・weak table は先に `TryGetValue`・voice collision は key から static に）／**context に 1 つ**（`GroupClose`・rest collision の delegate）。
-**A/B −12,593 B／打鍵＝render の 0.44%**（2,875,240 → 2,862,647・予測の点 11,000 の 114.5%・帯 8,500〜14,000）。parse は不動・**出力は同一**（5,824 行・0 差）。
-**会計（群を 1 つずつ抜く・和 12,783＝A/B の 101.5%）**＝beam X 2,591（予測 1,534）／pedal の門 2,289（726）／scorer 1,380（1,373）／spring 1,205／tie と slur 1,100／
-ledger 1,099（253）／restamp と memo 820／ほかは 500 未満。**上に外したのは LINQ の iterator と list が閉包の行に居ないから**、**下に外したのは並べ替え 245（予測 1,030）**
-＝閉包を別メソッドへ出しても並べる呼びは払う。`MeasureCollector` の delegate の集約は 12 B で**戻した**（RULES §5.3 末尾）。
-
-★★ **⑶ 毒 18 本、予測を外したのは 5 本**（`poisons.txt`）。赤 5／4／8／20／8／20／5／22／171／250／1。**緑と予測した 12・13 は 1 赤ずつ**（`OutsideStaffStackLiveSubsetTests`
-が両方を押さえていた）。**赤と予測した 4・9・14 は緑**、5・17 も緑＝**5 本ともコーパス 0 差**（`green-to-corpus.txt`）＝§1.0 ⒮²²。
-
-★ **⑷ 終了時**: commit 2 本（code `112988b1`＝Core 20 ファイル＋再生成した 2 枚、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run5.trx`＝`-End`）。
-§7.5（対 `d146686d`）****Core '+' 351 行／REF 0／OWN 0****＝閉包を消す組み替えだけで LP に対応物が無い。
-**§7.6 コード中の新しい数は 0**（コメントの数は第470 の計器と会計・出所つき）。**§7.7 の匂い**＝§1.0 ⒮²⁰′（使われる閉包の残り）・⒮²²（緑の毒 5 本）。台帳・snapshot 不変・未追跡 0。
-**push はユーザー**（Lab も）。**`-Start p471` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
