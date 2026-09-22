@@ -46,11 +46,13 @@ internal sealed class SlurDetector
             if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
                 continue;
 
-            if (hasStart)
-            {
-                openSlurs.Push((measureIdx, itemIdx, item));
-            }
-
+            // A note carrying both marks CLOSES before it OPENS, whatever order they were written
+            // in: the middle of `c( d)( e)` ends the first slur and starts the second. Until
+            // session 474 the open came first, so `)` popped the slur `(` had just pushed —
+            // `c'4( d c)( d)` drew one bow from the first note to the last and a zero-length
+            // one on the third, where LilyPond draws two (and where the tab's hammer-on pairing,
+            // TabResolver, and the part combiner's span state already read close-then-open).
+            // LILYPOND-REF: lily/slur-engraver.cc:295-324 process_music — stop_events_ before start_events_.
             if (hasEnd && openSlurs.Count > 0)
             {
                 var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
@@ -82,6 +84,11 @@ internal sealed class SlurDetector
                     StartSourcePosition = startItem.SlurStartSourcePosition,
                     EndSourcePosition = item.SlurEndSourcePosition,
                 });
+            }
+
+            if (hasStart)
+            {
+                openSlurs.Push((measureIdx, itemIdx, item));
             }
         }
 

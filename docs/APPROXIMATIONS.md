@@ -62,7 +62,7 @@
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:663** that does not exist yet. Named, not silently approximated.
-- **:2512** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:2525** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -160,9 +160,9 @@
 - **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:312** hands the scorer the band it would have had without the digit. No book reaches that
-- **:1820** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:1981** see the difference, and no fixture and no ledger point reaches it.
-- **:2624** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:1833** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:1994** see the difference, and no fixture and no ledger point reaches it.
+- **:2637** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`

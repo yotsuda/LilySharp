@@ -91,6 +91,49 @@ public class MarkerRunLookaheadTests
         Assert.True(notes[2].HasSlurEnd);
     }
 
+    /// <summary>
+    /// The flags above say only that both marks REACHED the note; this says what the page does
+    /// with them. The middle note closes the first slur before it opens the second, so the page
+    /// draws c→d and d→e — the LilyPond twin's two bows.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Until session 474 the page read the open first, and the ')' popped the slur the '(' had
+    /// just pushed: one bow c→e and a zero-length one on d, while the test above stayed green.
+    /// LILYPOND-REF: lily/slur-engraver.cc:295-324 process_music — stop_events_ before start_events_.
+    /// </remarks>
+    [Fact]
+    public void SlurCloseThenOpenOnOneNote_PairsAsTwoSlurs()
+    {
+        var slurs = new SlurDetector().DetectSlurs(Collect("c'4( d')( e') f' |"));
+
+        Assert.Equal(new[] { (0, 1), (1, 2) },
+            slurs.Select(s => (s.StartItemIndex, s.EndItemIndex)).OrderBy(p => p).ToArray());
+    }
+
+    [Fact]
+    public void SlurCloseThenOpenOnOneNote_IsNotReportedUnpaired()
+    {
+        var validator = new SlurPairingValidator();
+        validator.Validate(SyntaxTree.Parse(
+            "part m { section A { c4( d)( e) f } } form main { A } score main { staff m }"));
+        Assert.DoesNotContain(
+            validator.Diagnostics, d => d.Code == DiagnosticCodes.UnpairedSlur);
+    }
+
+    /// <summary>
+    /// Both marks on a note with no slur open is what LilyPond refuses — "cannot end slur" for
+    /// the ')' and "unterminated slur" for the '(' — and not a one-note slur, which is not a
+    /// thing in notation. Lily# reports the same two.
+    /// </summary>
+    [Fact]
+    public void BothSlurMarksOnANoteWithNothingOpen_AreReportedAsLilyPondDoes()
+    {
+        var validator = new SlurPairingValidator();
+        validator.Validate(SyntaxTree.Parse(
+            "part m { section A { c4() d e f } } form main { A } score main { staff m }"));
+        Assert.Equal(2, validator.Diagnostics.Count(d => d.Code == DiagnosticCodes.UnpairedSlur));
+    }
+
     [Fact]
     public void MarkerRunInsideATupletBodyBindsTheSameWay()
     {

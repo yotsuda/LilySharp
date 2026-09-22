@@ -388,6 +388,39 @@ public class ArticulationPlacementTests
         Assert.Equal(slurred[0], slurred[1], precision: 9);
     }
 
+    /// <summary>
+    /// On a note that ENDS one slur and STARTS the next in the same measure, a script reads the
+    /// STARTING slur: a slur still running past the note outranks one that ends on it. LilyPond
+    /// lifts the accent there exactly as with the starting slur alone (2.8160), while a slur's
+    /// LAST note keeps its script where no slur would (2.6700, the ended slur alone and no slur).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur.cc:374-377 auxiliary_acknowledge_extra_object — slurs[0] unless only end_slurs.
+    /// Measured on audit/lp-geometry/probes/slur-shared-note-script.ly (session 474). Until then
+    /// the pick compared start MEASURES only, so two slurs starting in the same measure tied and
+    /// the ended one — added first — won: the shared note read 2.67.
+    /// </remarks>
+    [Fact]
+    public void ANoteThatEndsOneSlurAndStartsTheNext_ReadsTheStartingSlur()
+    {
+        static double AccentOnThirdNote(string source)
+        {
+            var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
+            var layout = new LilySharp.Core.Svg.Layout.LayoutEngine(
+                new LilySharp.Core.Svg.Layout.LayoutOptions()).Layout(score);
+            return Assert.Single(layout.ArticulationLayouts,
+                a => (a.MeasureIndex, a.ItemIndex) == (0, 2)).YUp;
+        }
+
+        double shared = AccentOnThirdNote("c'4( d c@accent)( d) |");
+        double starting = AccentOnThirdNote("c'4 d c@accent( d) |");
+        double ended = AccentOnThirdNote("c'4( d c@accent) d |");
+
+        Assert.True(starting > ended + 0.1,
+            $"the starting slur must lift its accent: {starting} vs {ended}"); // LP 2.8160 / 2.6700
+        Assert.Equal(starting, shared, precision: 9);
+    }
+
     [Fact]
     public void Scripts_RideOffASlur_InsideOnesStayPut()
     {

@@ -245,6 +245,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A note that ends one slur and starts the next draws both.** In `c4( d)( e)`, the page paired
+  the `(` on `d` with the `)` right beside it, so it drew one bow from `c` to `e` and a zero-length
+  one on `d`, while the tab's hammer-ons already read `c`–`d` and `d`–`e`. A note carrying both
+  marks now closes before it opens, whatever order they are written in, as LilyPond does, and a
+  script on that note rides the slur that starts there (an accent 2.81 above the middle line, as
+  in LilyPond, instead of 2.67). The same note with no slur open, `c4()`, is no longer a one-note
+  slur: like LilyPond, the editor warns of a `)` that closes nothing and a `(` left open.
 - **A bar whose only rest or note shares it with a skip ending inside the bar is spaced as
   LilyPond spaces it.** `voice { r1 } { s2 }`, and a combined part's `voice { r1 } { s2 } { s4 }`,
   took the 1.0 staff space of extra room LilyPond gives a note or rest that fills its bar alone,

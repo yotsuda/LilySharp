@@ -33,8 +33,12 @@ namespace LilySharp.Core.Svg.Collector;
 /// <item>the scan is PER VOICE, because <c>SlurDetector</c> clears its stack at every
 /// voice change (LILYPOND-REF: ly/engraver-init.ly — Slur_engraver lives in the Voice
 /// context), so a <c>(</c> left open when a voice ends never pairs with anything;</item>
-/// <item>a note carrying BOTH marks (<c>c4()</c>, or the middle of <c>c( d) e)</c>) opens
-/// before it closes, which is the order <c>SlurDetector</c> reads them in.</item>
+/// <item>a note carrying BOTH marks CLOSES before it OPENS, in whatever order they were
+/// written — the middle of <c>c( d)( e)</c> ends one slur and starts the next — which is the
+/// order <c>SlurDetector</c> reads them in, and LilyPond's:
+/// LILYPOND-REF: lily/slur-engraver.cc:295-324 process_music — stop_events_ before start_events_. So
+/// <c>c4()</c> with nothing open is an unmatched close AND a new open, as LilyPond warns
+/// "cannot end slur"; until session 474 both read open-first and took it for a one-note slur.</item>
 /// </list>
 /// <para>
 /// A <c>(</c> written where no note precedes it — <c>(e c4 d)</c> — never becomes a mark at
@@ -85,8 +89,6 @@ internal static class SlurPairingScanner
                 if (!TryGetSlurFlags(items[ii], out bool hasStart, out bool hasEnd))
                     continue;
                 region = RegionOf(items[ii], region, ref regionsSeen);
-                if (hasStart)
-                    open.Push((items[ii].SourcePosition, region));
                 if (hasEnd)
                 {
                     if (open.Count > 0)
@@ -100,6 +102,8 @@ internal static class SlurPairingScanner
                     else
                         sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: false));
                 }
+                if (hasStart)
+                    open.Push((items[ii].SourcePosition, region));
             }
         }
 

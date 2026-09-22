@@ -1556,15 +1556,24 @@ internal static class ArticulationEngraver
     /// system answers, picked as the piece with the greatest start measure not
     /// past the note (a piece that lost its left bound starts at its own system's
     /// first measure = RenderMeasureIndex).
-    /// The same greatest-start rule makes a note that ENDS one slur and STARTS
-    /// another pick the starting slur — which is LilyPond's own preference
-    /// (auxiliary_acknowledge_extra_object takes a RUNNING slur over an ended one,
-    /// slurs[0] before end_slurs[0]).
+    /// A note that ENDS one slur and STARTS another picks the starting one: a slur
+    /// still RUNNING past the note outranks one that ends on it, before the start
+    /// measure is read — LilyPond's own preference, which the greatest-start rule
+    /// alone gave only when the two slurs started in different measures.
+    /// LILYPOND-REF: lily/slur.cc:374-377 auxiliary_acknowledge_extra_object — slurs[0] unless only end_slurs.
+    /// MEASURED (session 474, audit/lp-geometry/probes/slur-shared-note-script.ly): the
+    /// accent on `c'4( d c@accent)( d)` reads 2.8160 in LP, as with the starting slur
+    /// alone; a slur does not lift a script on its last note (LP 2.6700 with the ended slur
+    /// alone and with no slur). Both slurs start in measure 0 there, so without the running
+    /// rank the ended one — paired first (SlurDetector) — won and the accent read 2.67.
+    /// ⚠️ Two slurs both running past the note still pick the greater start, where LP's
+    /// slurs[0] is the one started first; no book here has nested slurs in one voice.
     /// </summary>
     private static SlurLayout? CoveringSlurPiece(in OneOrMany<SlurLayout> voiceSlurs, int m, int i)
     {
         SlurLayout? best = null;
         int bestStart = int.MinValue;
+        bool bestRunning = false;
         for (int k = 0; k < voiceSlurs.Count; k++)
         {
             var s = voiceSlurs[k];
@@ -1578,10 +1587,14 @@ internal static class ArticulationEngraver
             int pieceStart = s.IsBrokenLeft ? s.RenderMeasureIndex : sl.StartMeasureIndex;
             if (pieceStart > m)
                 continue;
-            if (best == null || pieceStart > bestStart)
+            bool running = m < sl.EndMeasureIndex
+                || (m == sl.EndMeasureIndex && i < sl.EndItemIndex);
+            if (best == null || (running && !bestRunning)
+                || (running == bestRunning && pieceStart > bestStart))
             {
                 best = s;
                 bestStart = pieceStart;
+                bestRunning = running;
             }
         }
         return best;
