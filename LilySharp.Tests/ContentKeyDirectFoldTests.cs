@@ -82,6 +82,68 @@ public class ContentKeyDirectFoldTests
     }
 
     /// <summary>
+    /// THE SAME EQUATION FOR SEQUENCES (session 504): an <c>ImmutableArray&lt;T&gt;</c> property
+    /// is walked where it stands instead of being boxed into <c>AddValue</c>, and the walk must
+    /// fold the number the box would have — empty arrays, grace columns, chord notes (which
+    /// keep their position-normalising arm) and all.
+    /// </summary>
+    /// <remarks>
+    /// The book reaches a non-empty grace array and a chord's notes, so both element arms of
+    /// the walk are exercised, not only the empty array every plain note carries.
+    /// </remarks>
+    [Fact]
+    public void EverySequencePropertyFoldsTheNumberTheBoxWouldHave()
+    {
+        var disagreed = new List<string>();
+        int taken = 0, nonEmptyGrace = 0, chords = 0;
+        foreach (var item in EveryItem(BookWithGrace))
+        {
+            if (item is NoteItem { LeadingGrace.Length: > 0 } or ChordItem { LeadingGrace.Length: > 0 })
+                nonEmptyGrace++;
+            if (item is ChordItem)
+                chords++;
+            foreach (var (property, agrees) in MeasureContentKey.SequenceFoldReport(item))
+            {
+                taken++;
+                if (!agrees) disagreed.Add($"{item.GetType().Name}.{property}");
+            }
+        }
+
+        Assert.True(taken > 10,$"only {taken} sequence properties reached — the net is vacuous");
+        Assert.True(nonEmptyGrace > 0, "no item carried a grace array — the element arm is untested");
+        Assert.True(chords > 0, "no chord reached — the ChordNoteInfo arm is untested");
+        Assert.Empty(disagreed.Distinct());
+    }
+
+    /// <summary>
+    /// A DEFAULT (uninitialised) array folds the boxed path's marker: the boxed walk throws on
+    /// it and <c>AddValue</c> folds −1 in its place. No book reaches this — a collected item
+    /// always carries a real array — so the item is built by hand, as the exporters' fixtures
+    /// build grace groups.
+    /// </summary>
+    [Fact]
+    public void ADefaultArrayFoldsTheMarkerTheBoxedWalkFolds()
+    {
+        var item = new GraceNoteItem(GraceNoteType.Grace, default, 0, 0, 0);
+        Assert.True(item.Columns.IsDefault, "the fixture must carry a default array");
+        var report = MeasureContentKey.SequenceFoldReport(item);
+        Assert.Contains(report, r => r.Property == nameof(GraceNoteItem.Columns));
+        Assert.All(report, r => Assert.True(r.Agrees, $"{r.Property} folds differently"));
+    }
+
+    private const string BookWithGrace = """
+        time 4/4
+        key c major
+        part melody { clef treble }
+        section Main { melody {
+          grace { d'16 } c'4 grace { e'16 f'16 } <c' e' g'>4 grace { <d' f'>8 } e'4 f'4 |
+          c'8( d') e'-. f'-> <c' e' g'>2 |
+        } }
+        form main { Main }
+        score main "x" { staff melody }
+        """;
+
+    /// <summary>
     /// The three kinds <c>AddValue</c> reads specially must NOT be taken directly: a string
     /// is folded char by char, a sequence element by element, and a ChordNoteInfo with its
     /// source position normalised away. Taking any of them by GetHashCode would change what
@@ -99,9 +161,9 @@ public class ContentKeyDirectFoldTests
             + "AddValue does with it");
     }
 
-    private static IEnumerable<object> EveryItem()
+    private static IEnumerable<object> EveryItem(string book = Book)
     {
-        var tree = SyntaxTree.Parse(Book);
+        var tree = SyntaxTree.Parse(book);
         var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
         foreach (var (_, staff, _) in score.EnumerateStaves())
             foreach (var voice in staff.Voices)

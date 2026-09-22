@@ -625,8 +625,18 @@ public readonly record struct MeasureContentKey(long Hash)
     // is the identity). Enums go through their UNDERLYING type, which is what Enum.GetHashCode
     // returns anyway; a struct is taken only when GetHashCode is declared on the struct
     // ITSELF, so no case falls through to ValueType.GetHashCode (which would box regardless).
+    // ⚠️ AND AN ImmutableArray<T> PROPERTY WAS BOXED TOO, only to be walked element by element
+    // through the non-generic IEnumerable — one box per property per item hashed, plus an
+    // enumerator object whenever the array was not empty. MEASURED (session 504, the owner's
+    // corpus, 1,160 books × 8 forward keystrokes, GCAllocationTick by type):
+    // ImmutableArray<GraceColumnInfo> was 17,604 B a keystroke on its own — NoteItem and
+    // ChordItem.LeadingGrace, empty on almost every note, boxed on every one. So a property of
+    // that type gets a Sequence fold that walks the array where it stands and folds each
+    // element exactly as AddValue would (see ArrayFold<T>).
     private readonly record struct PropertyFold(
-        Func<object, int>? Direct, Func<object, object?>? Boxed);
+        Func<object, int>? Direct, Func<object, object?>? Boxed, SequenceFold? Sequence = null);
+
+    private delegate void SequenceFold(object item, ref Hash64 hc);
 
     private static readonly ConcurrentDictionary<Type, PropertyFold[]> ItemGetters = new();
     private static readonly ConcurrentDictionary<Type, PropertyFold[]> SideGetters = new();
@@ -662,6 +672,8 @@ public readonly record struct MeasureContentKey(long Hash)
             {
                 if (fold.Direct is { } direct)
                     hc.Add(direct(item));
+                else if (fold.Sequence is { } sequence)
+                    sequence(item, ref hc);
                 else
                     AddValue(ref hc, fold.Boxed!(item));
             }
@@ -736,10 +748,96 @@ public readonly record struct MeasureContentKey(long Hash)
         return p != null && CompileDirectHash(p) == null;
     }
 
+    /// <summary>
+    /// Every <c>ImmutableArray&lt;T&gt;</c> property of this type, with whether the unboxed
+    /// sequence fold and the boxed <see cref="AddValue"/> fold arrive at the same hash on this
+    /// item — the equation <see cref="ArrayFold{T}"/> rests on, stated where a test can read it.
+    /// </summary>
+    internal static IReadOnlyList<(string Property, bool Agrees)> SequenceFoldReport(object item)
+    {
+        var report = new List<(string, bool)>();
+        foreach (var p in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                     .Where(p => p.CanRead && p.GetIndexParameters().Length == 0)
+                     .OrderBy(p => p.Name, StringComparer.Ordinal))
+        {
+            if (CompileSequenceFold(p) is not { } sequence) continue;
+            var viaSequence = new Hash64();
+            sequence(item, ref viaSequence);
+            var viaBox = new Hash64();
+            AddValue(ref viaBox, CompileGetter(p)(item));
+            report.Add((p.Name, viaSequence.ToHashCode() == viaBox.ToHashCode()));
+        }
+        return report;
+    }
+
     private static PropertyFold CompileFold(PropertyInfo p) =>
         CompileDirectHash(p) is { } direct
             ? new PropertyFold(direct, null)
-            : new PropertyFold(null, CompileGetter(p));
+            : CompileSequenceFold(p) is { } sequence
+                ? new PropertyFold(null, null, sequence)
+                : new PropertyFold(null, CompileGetter(p));
+
+    /// <summary>
+    /// The unboxed fold for an <c>ImmutableArray&lt;T&gt;</c> property, or null for any other
+    /// property type.
+    /// </summary>
+    private static SequenceFold? CompileSequenceFold(PropertyInfo p)
+    {
+        var t = p.PropertyType;
+        if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(ImmutableArray<>))
+            return null;
+        var element = t.GetGenericArguments()[0];
+        var o = Expression.Parameter(typeof(object), "o");
+        var get = Expression.Lambda(
+            typeof(Func<,>).MakeGenericType(typeof(object), t),
+            Expression.Property(Expression.Convert(o, p.DeclaringType!), p), o).Compile();
+        var fold = Activator.CreateInstance(typeof(ArrayFold<>).MakeGenericType(element), get)!;
+        return (SequenceFold)Delegate.CreateDelegate(typeof(SequenceFold), fold, "Fold");
+    }
+
+    /// <summary>
+    /// What <see cref="AddValue"/> does with a boxed <c>ImmutableArray&lt;T&gt;</c>, without the
+    /// box: a default array folds −1 (the boxed walk throws on it), and each element is folded
+    /// as <see cref="AddValue"/> folds it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE ELEMENT FOLD IS THE BOXED PATH'S NUMBER, not a new one: an element that
+    /// <see cref="AddValue"/> would send to its <c>default</c> arm (a value type that is not a
+    /// sequence and not a <c>ChordNoteInfo</c>) is folded by <c>Hash64.Add&lt;T&gt;</c>, which is
+    /// <c>(uint)value.GetHashCode()</c> — the same call the box would have made. Every other
+    /// element still goes through <see cref="AddValue"/> itself.
+    /// <c>ContentKeyDirectFoldTests.EverySequencePropertyFoldsTheNumberTheBoxWouldHave</c> is
+    /// the equation's net.
+    /// </remarks>
+    private sealed class ArrayFold<T>(Func<object, ImmutableArray<T>> get)
+    {
+        private static readonly bool ElementDirect = IsDirectElement(typeof(T));
+
+        private static bool IsDirectElement(Type t)
+        {
+            var u = Nullable.GetUnderlyingType(t) ?? t;
+            return u.IsValueType
+                && !typeof(IEnumerable).IsAssignableFrom(u)
+                && u != typeof(ChordNoteInfo);
+        }
+
+        public void Fold(object item, ref Hash64 hc)
+        {
+            var array = get(item);
+            if (array.IsDefault)
+            {
+                hc.Add(-1);
+                return;
+            }
+            foreach (var element in array)
+            {
+                if (ElementDirect)
+                    hc.Add(element);
+                else
+                    AddValue(ref hc, element);
+            }
+        }
+    }
 
     /// <summary>
     /// <c>o =&gt; ((TDeclaring)o).Prop.GetHashCode()</c> with no box, or null when the
