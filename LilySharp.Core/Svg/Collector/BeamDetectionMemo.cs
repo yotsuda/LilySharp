@@ -78,21 +78,22 @@ internal sealed class BeamDetectionMemo
     internal int Misses { get; private set; }
 
     /// <summary>
-    /// Whether a replayed group is handed back with its members RE-POINTED at the live
-    /// measure's items (<see cref="BeamGroup.WithLiveItems"/>) rather than carrying the
-    /// storing detection's. The collect-phase owner leaves this false — its bake addresses
-    /// the live measure by <c>ItemIndex</c> and never reads <c>Member.Item</c>, so the
-    /// re-pointing would be a copy per group for nobody. The layout-phase owner sets it: the
-    /// quanter, the skyline seed, the tuplet bracket and the script engravers all read
-    /// <c>Member.Item</c> (its note value, head style, tab string), and across a keystroke
-    /// the stored item is the PREVIOUS edit's instance of that note.
+    /// Whether a replayed group is handed back answering its members' items from the live
+    /// measure (<see cref="BeamGroup.WithLiveItems"/>, read through <see cref="BeamGroup.ItemOf"/>)
+    /// rather than from the storing detection's. The collect-phase owner leaves this false —
+    /// its bake addresses the live measure by <c>ItemIndex</c> and never asks a group for a
+    /// member's item, so a new group per replay would be built for nobody. The layout-phase
+    /// owner sets it: the quanter, the skyline seed, the tuplet bracket and the script
+    /// engravers all ask <see cref="BeamGroup.ItemOf"/> (its note value, head style, tab
+    /// string), and across a keystroke the stored item is the PREVIOUS edit's instance of
+    /// that note.
     /// </summary>
     /// <remarks>
     /// SOUNDNESS is the memo's own: the key folds every field the detection read
     /// (<c>BeamDetector.AddDetectionInputs</c>), so the live item agrees with the stored one
     /// on all of them and every detection-derived field of the group (counts, beamlets,
     /// directions, head range) is what a live detection of the live measure would produce;
-    /// what the re-pointing changes is only WHICH instance the readers see, and that is the
+    /// what the live items change is only WHICH instance the readers see, and that is the
     /// live one — exactly a live detection's. Members are addressed by <c>ItemIndex</c>, and
     /// the key folds <c>Items.Length</c> and every item's kind, so the index lands on an item
     /// of the same kind.

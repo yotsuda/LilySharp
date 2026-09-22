@@ -98,8 +98,8 @@ public class TupletNumberAlignmentTests
         var beam = Assert.Single(scripted.BeamLayouts);
         double StemX(int mi) => beam.MemberXPositions[mi]
             + LilySharp.Core.Svg.Layout.LayoutUtilities.StemAttachX(s.IsStemUp,
-                LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(beam.Group.Members[mi].Item),
-                LilySharp.Core.Svg.Layout.LayoutUtilities.NoteheadStyleOf(beam.Group.Members[mi].Item));
+                LilySharp.Core.Svg.Layout.GlyphMetrics.NoteValueOf(beam.Group.ItemOf(mi)),
+                LilySharp.Core.Svg.Layout.LayoutUtilities.NoteheadStyleOf(beam.Group.ItemOf(mi)));
         double stemMid = (StemX(0) + StemX(beam.Group.Members.Length - 1)) / 2.0;
         Assert.Equal(stemMid, s.NumberX, precision: 6);
     }

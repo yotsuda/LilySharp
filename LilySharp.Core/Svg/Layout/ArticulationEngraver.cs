@@ -955,7 +955,7 @@ internal static class ArticulationEngraver
                      articulation.MeasureIndex, articulation.ItemIndex),
                     out var tabBeam);
                 bool tabBeamUp = tabBeam is not null
-                    && geom.GroupStemUp(tabBeam.Group.Members.Select(m => m.Item));
+                    && geom.GroupStemUp(tabBeam.Group.MemberItems());
                 // A tab stem's direction is string-based (the tab head), not the notated
                 // pitch — so a bass note on the bottom strings has an UP stem, and a
                 // stem-coupled mark sits on the opposite (DOWN) side. A BEAMED note takes
@@ -2367,7 +2367,7 @@ internal static class ArticulationEngraver
     internal static double TabBeamOuterEdgeY(BeamLayout beam, TabStaffGeometry geom, double noteX)
     {
         // A tab beam's direction is string-based, not the notation pitch direction.
-        bool up = geom.GroupStemUp(beam.Group.Members.Select(m => m.Item));
+        bool up = geom.GroupStemUp(beam.Group.MemberItems());
         int n = beam.Group.Members.Length;
         var xs = new double[n];
         // Per MEMBER head shape, as the renderer's own DrawBeams does — a tremolo pair beams
@@ -2376,8 +2376,8 @@ internal static class ArticulationEngraver
         for (int i = 0; i < n; i++)
             xs[i] = (i < beam.MemberXPositions.Length ? beam.MemberXPositions[i] : 0)
                   + LayoutUtilities.StemAttachX(
-                        up, GlyphMetrics.NoteValueOf(beam.Group.Members[i].Item),
-                        beam.Group.Members[i].Item switch
+                        up, GlyphMetrics.NoteValueOf(beam.Group.ItemOf(i)),
+                        beam.Group.ItemOf(i) switch
                         {
                             NoteItem note => note.Notehead,
                             ChordItem chord => chord.Notehead,

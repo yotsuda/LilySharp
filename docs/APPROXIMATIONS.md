@@ -128,7 +128,7 @@
 - **:743** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
 - **:1398** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
-- **:199** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
+- **:233** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 ### `LilySharp.Core/Svg/Model/LyricItem.cs`
 - **:100** ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
 
@@ -189,7 +189,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:506** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:886** paging augment families. Unreachable today, so no observer CAN be built; the
+- **:887** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:317** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
@@ -308,8 +308,8 @@
 - **:284** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
 - **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
-- **:411** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1381** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:409** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
+- **:1379** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
 - **:91** LILYSHARP-OWN: the band is Lily#'s model of an independent row (HANDOFF 3); LilyPond
 - **:113** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
@@ -360,7 +360,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:909** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
+- **:910** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:587** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
 - **:666** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see

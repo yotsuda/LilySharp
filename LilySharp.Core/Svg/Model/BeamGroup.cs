@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace LilySharp.Core.Svg.Model;
@@ -130,38 +131,71 @@ public sealed record BeamGroup
                 rb.Add(r.MeasureIndex < 0 ? r : r with { MeasureIndex = r.MeasureIndex + delta });
             rests = rb.MoveToImmutable();
         }
+        // The live items travel with the members they index (WithLiveItems): shifting the
+        // measure NUMBERS moves no member to another bar.
         return new BeamGroup(members.MoveToImmutable(), MeasureIndex + delta, StartIndex,
-            StemUp, GrowDirection, VoiceIndex, rests);
+            StemUp, GrowDirection, VoiceIndex, rests) { LiveItems = LiveItems };
     }
 
     /// <summary>
-    /// The same group, at <paramref name="measureIndex"/>, with every member's
-    /// <see cref="BeamMember.Item"/> re-pointed at <paramref name="measure"/>'s item of the
-    /// member's own <see cref="BeamMember.ItemIndex"/>. What the per-measure detection memo
-    /// hands its LAYOUT owner (<c>BeamDetectionMemo.ReplayWithLiveItems</c>): a stored group
-    /// describes the previous edit's instance of this bar, and the layout's readers of the
-    /// member item must see the live one. Single-measure groups only — every member lives in
-    /// the group's own measure (the <c>-1</c> sentinel), which is what the memo's eligibility
-    /// gate guarantees; an explicit foreign measure index is a broken invariant and throws
-    /// rather than guessing.
+    /// The live items of the measure a replayed group was re-pointed at
+    /// (<see cref="WithLiveItems"/>), which <see cref="ItemOf"/> indexes by each member's
+    /// <see cref="BeamMember.ItemIndex"/>; default for a group whose members carry their
+    /// own (a freshly detected or rebuilt one).
     /// </summary>
+    private ImmutableArray<MusicItem> LiveItems { get; init; }
+
+    /// <summary>
+    /// The music item member <paramref name="memberIndex"/> stands for — the LIVE one. Every
+    /// reader of a member's item asks here, never <see cref="BeamMember.DetectedItem"/>: a
+    /// replayed group's members are the ones detected on the previous edit's instance of the
+    /// bar (<see cref="WithLiveItems"/>).
+    /// </summary>
+    public MusicItem ItemOf(int memberIndex)
+    {
+        var m = Members[memberIndex];
+        return LiveItems.IsDefault ? m.DetectedItem : LiveItems[m.ItemIndex];
+    }
+
+    /// <summary>Every member's live item, in member order (<see cref="ItemOf"/>).</summary>
+    public IEnumerable<MusicItem> MemberItems()
+    {
+        for (int i = 0; i < Members.Length; i++)
+            yield return ItemOf(i);
+    }
+
+    /// <summary>
+    /// The same group, at <paramref name="measureIndex"/>, answering <see cref="ItemOf"/>
+    /// from <paramref name="measure"/>'s items at each member's own
+    /// <see cref="BeamMember.ItemIndex"/>. What the per-measure detection memo hands its
+    /// LAYOUT owner (<c>BeamDetectionMemo.ReplayWithLiveItems</c>): a stored group describes
+    /// the previous edit's instance of this bar, and the layout's readers of the member item
+    /// must see the live one. Single-measure groups only — every member lives in the group's
+    /// own measure (the <c>-1</c> sentinel), which is what the memo's eligibility gate
+    /// guarantees; an explicit foreign measure index is a broken invariant and throws rather
+    /// than guessing.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE MEMBERS ARE SHARED, NOT RE-POINTED, and the live items are read on demand.
+    /// MEASURED (2026-09-23, session 511, Release, the owner's corpus, 232 books × eight
+    /// forward keystrokes, every <see cref="BeamMember"/> construction counted by caller inside
+    /// the render window): this method rebuilt <b>539.17 members a keystroke</b> over 181.74
+    /// replayed groups — 98% of all members built — and <b>22.58</b> of them ever had their
+    /// item read (4.2%, all of it stem x: <c>ElementCoordinator.BeamStemX</c> and
+    /// <c>LayoutUtilities.BeamMemberStemX</c>), while every replayed group had its
+    /// <see cref="Members"/> read. So the members stay the detected ones and the group
+    /// carries the measure's item array, which is a struct over the measure's own array.
+    /// </remarks>
     internal BeamGroup WithLiveItems(Measure measure, int measureIndex)
     {
-        // The array itself, not a builder moved into one: the length is Members.Length before
-        // the first write, so the builder object was all a builder added — 56 B at 182.50
-        // replays a keystroke = 10,220 B (session 463's census; a moved builder reads as
-        // "never filled" there, because Move empties it).
-        var members = new BeamMember[Members.Length];
-        for (int i = 0; i < members.Length; i++)
+        foreach (var m in Members)
         {
-            var m = Members[i];
             if (m.MeasureIndex >= 0 && m.MeasureIndex != measureIndex)
                 throw new InvalidOperationException(
                     "WithLiveItems: a replayed single-measure beam group carries a member of another measure");
-            members[i] = m.WithItem(measure.Items[m.ItemIndex]);
         }
-        return new BeamGroup(System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(members),
-            measureIndex, StartIndex, StemUp, GrowDirection, VoiceIndex, RestStems);
+        return new BeamGroup(Members, measureIndex, StartIndex, StemUp, GrowDirection,
+            VoiceIndex, RestStems) { LiveItems = measure.Items };
     }
 
     /// <summary>
@@ -238,8 +272,14 @@ public sealed record BeamRestStem(
 /// </summary>
 public sealed record BeamMember
 {
-    /// <summary>The underlying music item (NoteItem or ChordItem).</summary>
-    public MusicItem Item { get; }
+    /// <summary>The music item (NoteItem or ChordItem) this member was DETECTED on.</summary>
+    /// <remarks>
+    /// ⚠️ NOT NECESSARILY THE LIVE ONE: a group the detection memo replays shares its members
+    /// with the previous edit's group, so this is that edit's instance of the note. Readers ask
+    /// <see cref="BeamGroup.ItemOf"/>. Named apart from what it used to be (<c>Item</c>) so that
+    /// no reader can keep reading it by accident.
+    /// </remarks>
+    public MusicItem DetectedItem { get; }
 
     /// <summary>
     /// Number of beam lines at this stem.
@@ -336,7 +376,7 @@ public sealed record BeamMember
         int? headPositionMin = null,
         int? headPositionMax = null)
     {
-        Item = item;
+        DetectedItem = item;
         BeamCount = beamCount;
         BeamCountLeft = beamCountLeft;
         BeamCountRight = beamCountRight;
@@ -362,17 +402,8 @@ public sealed record BeamMember
     internal BeamMember WithMeasureIndexShifted(int delta)
         => MeasureIndex < 0
             ? this
-            : new BeamMember(Item, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
+            : new BeamMember(DetectedItem, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
                 ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex + delta,
-                HeadPositionMin, HeadPositionMax);
-
-    /// <summary>The same member describing <paramref name="item"/> — the live instance of
-    /// the note this member was detected on. See <see cref="BeamGroup.WithLiveItems"/>.</summary>
-    internal BeamMember WithItem(MusicItem item)
-        => ReferenceEquals(item, Item)
-            ? this
-            : new BeamMember(item, BeamCount, BeamCountLeft, BeamCountRight, StaffPosition,
-                ItemIndex, MemberStemUp, TargetStaffIndex, MeasureIndex,
                 HeadPositionMin, HeadPositionMax);
 }
 
@@ -541,7 +572,7 @@ public sealed record BeamLayout
     /// direction (<c>LayoutUtilities.BeamMemberStemX</c>, the renderer's recipe).
     /// </summary>
     public double MemberStemX(int memberIndex)
-        => Layout.LayoutUtilities.BeamMemberStemX(Group.Members[memberIndex], MemberXPositions[memberIndex]);
+        => Layout.LayoutUtilities.BeamMemberStemX(Group, memberIndex, MemberXPositions[memberIndex]);
 
     /// <summary>Slope of the beam line: staff POSITIONS per staff space of x, over the
     /// outer member stems (the frame of <see cref="LeftY"/>/<see cref="RightY"/>).</summary>

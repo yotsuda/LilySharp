@@ -116,12 +116,12 @@ internal sealed class BeamDetector
     /// direction forcing and the stored <c>VoiceIndex</c> would go stale) bypasses the memo
     /// entirely. Replayed groups are re-based to the live measure index; their members are
     /// index-addressed (<c>MeasureIndex</c> −1 = the group's), so nothing else in them is
-    /// positional. The stale <c>Member.Item</c> references a stored group carries are never
-    /// read by the bake (<c>ResolveBeamStemDirections</c> addresses the LIVE measure by
-    /// <c>ItemIndex</c>); the groups themselves are discarded after it. The LAYOUT's owner
-    /// of a memo reads them, so it asks for the members to be re-pointed at the live
-    /// measure's items on replay (<see cref="BeamDetectionMemo.ReplayWithLiveItems"/>,
-    /// <see cref="BeamGroup.WithLiveItems"/>).
+    /// positional. The stale <c>BeamMember.DetectedItem</c> references a stored group carries
+    /// are never read by the bake (<c>ResolveBeamStemDirections</c> addresses the LIVE measure
+    /// by <c>ItemIndex</c>); the groups themselves are discarded after it. The LAYOUT's owner
+    /// of a memo reads them, so it asks for a replayed group to answer
+    /// <see cref="BeamGroup.ItemOf"/> from the live measure's items
+    /// (<see cref="BeamDetectionMemo.ReplayWithLiveItems"/>, <see cref="BeamGroup.WithLiveItems"/>).
     /// </para>
     /// <para>
     /// ⚠️ BeamId stays OUT of the memo on purpose: identities are numbered by the bake, in
@@ -215,8 +215,8 @@ internal sealed class BeamDetector
 #endif
                     // Re-base to the live measure index; everything else in a stored
                     // per-measure group is measure-local (members carry the −1 sentinel).
-                    // The layout's owner also has the members re-pointed at the live items
-                    // (its readers read Member.Item; the bake does not — see the memo).
+                    // The layout's owner also has the group answer ItemOf from the live items
+                    // (its readers ask for them; the bake does not — see the memo).
                     foreach (var g in stored)
                         beamGroups.Add(memo.ReplayWithLiveItems
                             ? g.WithLiveItems(measure, measureIndex)

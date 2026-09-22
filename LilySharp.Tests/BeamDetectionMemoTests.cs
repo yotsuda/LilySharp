@@ -141,10 +141,10 @@ public class BeamDetectionMemoTests
         Assert.Equal(live.Select(Surface).ToArray(), replayed.Select(Surface).ToArray());
         Assert.Equal(voiceB.Measures.Length - 2, memo.Hits);   // liveness: the replay fired
         foreach (var g in replayed)
-            foreach (var m in g.Members)
+            for (int i = 0; i < g.Members.Length; i++)
                 Assert.Same(
-                    voiceB.Measures[m.ResolveMeasureIndex(g.MeasureIndex)].Items[m.ItemIndex],
-                    m.Item);
+                    voiceB.Measures[g.Members[i].ResolveMeasureIndex(g.MeasureIndex)].Items[g.Members[i].ItemIndex],
+                    g.ItemOf(i));
 
         // The default (collect owner) keeps the STORING detection's items on a replay.
         var plain = new BeamDetectionMemo();
@@ -152,8 +152,39 @@ public class BeamDetectionMemoTests
         new BeamDetector().DetectBeamGroups(voiceA, sigA, tupletsA, memo: plain);
         plain.BeginCollect();
         var kept = new BeamDetector().DetectBeamGroups(voiceB, sigB, tupletsB, memo: plain);
-        Assert.Contains(kept, g => g.Members.Any(m =>
-            ReferenceEquals(m.Item, voiceA.Measures[m.ResolveMeasureIndex(g.MeasureIndex)].Items[m.ItemIndex])));
+        Assert.Contains(kept, g => Enumerable.Range(0, g.Members.Length).Any(i =>
+            ReferenceEquals(g.ItemOf(i),
+                voiceA.Measures[g.Members[i].ResolveMeasureIndex(g.MeasureIndex)].Items[g.Members[i].ItemIndex])));
+    }
+
+    /// <summary>A replayed group's members are the STORING detection's, and the live items
+    /// ride on the group (session 511) — so every copy of the group has to carry them. The
+    /// system cache serves a laid-out beam found under other measure numbers as
+    /// <c>WithMeasureIndexShifted</c>, and a copy that dropped them would answer the previous
+    /// edit's instances. POISONED (session 511): dropping them there left the whole suite and
+    /// the owner's corpus green — the stored item agrees with the live one on everything the
+    /// page reads (the memo's key) — so nothing but this says it.</summary>
+    [Fact]
+    public void ReplayWithLiveItems_TheShiftedCopyStillAnswersTheLiveVoice()
+    {
+        var (voiceA, sigA, tupletsA) = FirstStaffDetectionInput(Book);
+        var (voiceB, sigB, tupletsB) = FirstStaffDetectionInput("\n" + Book);
+
+        var memo = new BeamDetectionMemo { ReplayWithLiveItems = true };
+        memo.BeginCollect();
+        new BeamDetector().DetectBeamGroups(voiceA, sigA, tupletsA, memo: memo);
+        memo.BeginCollect();
+        var replayed = new BeamDetector().DetectBeamGroups(voiceB, sigB, tupletsB, memo: memo);
+
+        Assert.True(memo.Hits > 0);   // liveness: the replay fired
+        foreach (var g in replayed)
+        {
+            var shifted = g.WithMeasureIndexShifted(3);
+            for (int i = 0; i < g.Members.Length; i++)
+                Assert.Same(
+                    voiceB.Measures[g.Members[i].ResolveMeasureIndex(g.MeasureIndex)].Items[g.Members[i].ItemIndex],
+                    shifted.ItemOf(i));
+        }
     }
 
     // ---------- helpers ----------

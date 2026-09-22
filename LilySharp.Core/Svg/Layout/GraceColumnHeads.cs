@@ -159,7 +159,7 @@ internal static class GraceColumnHeads
 
     /// <summary>
     /// The column as a full-size <see cref="MusicItem"/>, for the houses that take one and ask
-    /// it only about pitches and duration — the beam quanter's <c>BeamMember.Item</c> and the
+    /// it only about pitches and duration — the beam quanter's member item (<c>BeamGroup.ItemOf</c>) and the
     /// spacing's approach column.
     /// </summary>
     /// <remarks>

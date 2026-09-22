@@ -282,10 +282,8 @@ internal sealed class BeamScoringProblem
         // 2.58 against LilyPond's 3.6784, so the least squares fitted a different slope in
         // EITHER frame. The two are ONE claim and are committed together; splitting them
         // regresses both readings, which is how it is known that they are one claim.
-        var firstMember = group.Members[0];
-        var lastMember = group.Members[^1];
-        _leftX = StemXOf(firstMember);
-        _rightX = StemXOf(lastMember);
+        _leftX = StemXOf(0);
+        _rightX = StemXOf(group.Members.Length - 1);
         // The outer MEMBER stems — the frame Solve answers in (AtOuterStems), before a
         // bracketed rest widens the scored span below. BeamLayout carries them as
         // LeftStemX/RightStemX so every reader of the beam face interpolates in this frame.
@@ -315,8 +313,8 @@ internal sealed class BeamScoringProblem
         // head's — so this cannot be lifted out of the loop as one offset for the group.
         // A WHOLE-note display pair's stem is invisible and stands at the head's CENTRE,
         // not at an attachment edge (LayoutUtilities.InvisibleStemX).
-        double StemXOf(BeamMember m) =>
-            LayoutUtilities.BeamMemberStemX(m, itemXPositions[m.ItemIndex], headFont);
+        double StemXOf(int i) =>
+            LayoutUtilities.BeamMemberStemX(group, i, itemXPositions[group.Members[i].ItemIndex], headFont);
         double halfBeamOverhang = EngravingDefaults.StemThickness / 2.0;
         _xSpan = (_rightX - _leftX) + 2 * halfBeamOverhang; // spanner length
 
@@ -331,7 +329,7 @@ internal sealed class BeamScoringProblem
         for (int i = 0; i < group.Members.Length; i++)
         {
             var member = group.Members[i];
-            _stemXPositions[i] = (StemXOf(member) - _leftX) + halfBeamOverhang;
+            _stemXPositions[i] = (StemXOf(i) - _leftX) + halfBeamOverhang;
             if (stemPositions != null)
             {
                 // Tab: the note's STRING line is its stem position; a single digit
@@ -359,7 +357,7 @@ internal sealed class BeamScoringProblem
         _normalStemCount = 0;
         for (int i = 0; i < group.Members.Length; i++)
         {
-            _isNormal[i] = GlyphMetrics.NoteValueOf(group.Members[i].Item) >= 2;
+            _isNormal[i] = GlyphMetrics.NoteValueOf(group.ItemOf(i)) >= 2;
             if (_isNormal[i])
                 _normalStemCount++;
         }

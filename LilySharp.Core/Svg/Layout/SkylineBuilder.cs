@@ -924,7 +924,7 @@ internal sealed class SkylineBuilder
                 double xRight = Math.Max(b.LeftX, b.RightX);
                 if (xRight <= xLeft)
                     continue;
-                bool up = geom.GroupStemUp(System.Linq.Enumerable.Select(g.Members, m => m.Item));
+                bool up = geom.GroupStemUp(g.MemberItems());
                 double yLeft = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xLeft));
                 double yRight = YUp(ArticulationEngraver.TabBeamOuterEdgeY(b, geom, xRight));
                 var sky = up ? upSkyline : downSkyline;

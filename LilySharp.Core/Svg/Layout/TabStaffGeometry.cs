@@ -346,7 +346,7 @@ internal static class TabBeamQuant
         int maxIdx = 0;
         for (int i = 0; i < n; i++)
         {
-            int str = geom.StemHeadString(group.Members[i].Item, stemUp);
+            int str = geom.StemHeadString(group.ItemOf(i), stemUp);
             stemPos[i] = geom.StringCount + 1 - 2 * str;
             if (group.Members[i].ItemIndex > maxIdx) maxIdx = group.Members[i].ItemIndex;
         }
@@ -364,12 +364,15 @@ internal static class TabBeamQuant
         // the notated pitch's — a bass run on the low strings beams UP where the notation
         // staff beams DOWN — and the quanter asks the group, not the caller.
         var members = System.Collections.Immutable.ImmutableArray.CreateBuilder<BeamMember>(n);
-        foreach (var m in group.Members)
+        for (int i = 0; i < n; i++)
+        {
+            var m = group.Members[i];
             members.Add(new BeamMember(
-                m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight, m.StaffPosition,
+                group.ItemOf(i), m.BeamCount, m.BeamCountLeft, m.BeamCountRight, m.StaffPosition,
                 m.ItemIndex, memberStemUp: stemUp, targetStaffIndex: m.TargetStaffIndex,
                 measureIndex: m.MeasureIndex,
                 headPositionMin: m.HeadPositionMin, headPositionMax: m.HeadPositionMax));
+        }
         var tabGroup = new BeamGroup(members.ToImmutable(), group.MeasureIndex,
                                      group.StartIndex, stemUp, group.GrowDirection, group.VoiceIndex);
 

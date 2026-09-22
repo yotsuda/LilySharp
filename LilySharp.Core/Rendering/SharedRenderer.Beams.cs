@@ -86,7 +86,7 @@ internal static partial class SharedRenderer
         // A tab beam whose every member sounds below the lowest string is
         // hidden entirely (no beam line, no stems) — see NoteItem.TabBelowRange.
         if (grp.Members.Length > 0
-            && grp.Members.All(m => m.Item is NoteItem { TabBelowRange: true }))
+            && grp.MemberItems().All(item => item is NoteItem { TabBelowRange: true }))
             return;
 
         // The quanter's Y positions are staff positions relative to the
@@ -155,7 +155,7 @@ internal static partial class SharedRenderer
                 pageHeight - LayoutUtilities.FindStaffYInSystem(system, MemberStaffIdx(0)),
                 tabDirStaff.TabSourceClef, tabDirStaff.Transposition);
             tabDirGeom = g;
-            tabDir = g.GroupStemUp(grp.Members.Select(m => m.Item));
+            tabDir = g.GroupStemUp(grp.MemberItems());
         }
 
         // Per-member stem direction: kneed beams mix up- and down-stems
@@ -180,10 +180,10 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: lily/stem.cc:370-377 is_normal_stem (duration-log >= 1).
         // LILYPOND-REF: lily/stem.cc:1063-1064 internal_calc_stem_offset_from_head —
         //   an invisible stem centres on its support head.
-        bool InvisibleStem(int i) => GlyphMetrics.NoteValueOf(grp.Members[i].Item) <= 1;
+        bool InvisibleStem(int i) => GlyphMetrics.NoteValueOf(grp.ItemOf(i)) <= 1;
         // Per MEMBER head SHAPE as well as value: a styled head's stem stands at that
         // glyph's own attachment point (see LayoutUtilities.StemAttachX).
-        NoteheadStyle MemberStyle(int i) => grp.Members[i].Item switch
+        NoteheadStyle MemberStyle(int i) => grp.ItemOf(i) switch
         {
             NoteItem n => n.Notehead,
             ChordItem ch => ch.Notehead,
@@ -194,9 +194,9 @@ internal static partial class SharedRenderer
                 ? TabStemX(beam.MemberXPositions[i])
             : InvisibleStem(i)
                 ? LayoutUtilities.InvisibleStemX(beam.MemberXPositions[i],
-                    GlyphMetrics.NoteValueOf(grp.Members[i].Item))
+                    GlyphMetrics.NoteValueOf(grp.ItemOf(i)))
                 : LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
-                    GlyphMetrics.NoteValueOf(grp.Members[i].Item), MemberStyle(i));
+                    GlyphMetrics.NoteValueOf(grp.ItemOf(i)), MemberStyle(i));
 
         double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
         double rightBeamY = staffMiddleY + beam.RightY / 2.0;
@@ -342,8 +342,8 @@ internal static partial class SharedRenderer
         // the gapped ends then shrink by the gap length (get_gaps; Beam.gap
         // = 0.8, scm/define-grobs.scm Beam).
         int tremoloGapCount = 0;
-        foreach (var m in grp.Members)
-            tremoloGapCount = Math.Max(tremoloGapCount, m.Item switch
+        for (int mi = 0; mi < grp.Members.Length; mi++)
+            tremoloGapCount = Math.Max(tremoloGapCount, grp.ItemOf(mi) switch
             {
                 NoteItem tgn => tgn.TremoloGapCount,
                 ChordItem tgc => tgc.TremoloGapCount,
@@ -382,7 +382,7 @@ internal static partial class SharedRenderer
                     double gapRight = EngravingDefaults.TremoloBeamGap;
                     if (InvisibleStem(0))
                     {
-                        double accsLen = AccidentalGroupLength(grp.Members[^1].Item);
+                        double accsLen = AccidentalGroupLength(grp.ItemOf(grp.Members.Length - 1));
                         if (accsLen > 0)
                             gapRight += accsLen + 1.0;
                     }
@@ -400,12 +400,12 @@ internal static partial class SharedRenderer
                     if (InvisibleStem(0))
                         xl = Math.Max(xl, beam.MemberXPositions[0]
                             + GlyphMetrics.GetNoteheadBBox(
-                                GlyphMetrics.NoteValueOf(grp.Members[0].Item)).Right
+                                GlyphMetrics.NoteValueOf(grp.ItemOf(0))).Right
                             + gapLeft / 2);
                     if (InvisibleStem(grp.Members.Length - 1))
                         xr = Math.Min(xr, beam.MemberXPositions[^1]
                             + GlyphMetrics.GetNoteheadBBox(
-                                GlyphMetrics.NoteValueOf(grp.Members[^1].Item)).Left
+                                GlyphMetrics.NoteValueOf(grp.ItemOf(grp.Members.Length - 1))).Left
                             - gapRight / 2);
                     // LILYSHARP-OWN: LP shortens unconditionally (beam.cc has
                     // no clamp); this skip only fires when the pair is
@@ -434,9 +434,9 @@ internal static partial class SharedRenderer
             ? (rightBeamY - leftBeamY) / (rightStemX - leftStemX) : 0;
         for (int i = 0; i < grp.Members.Length; i++)
         {
-            var member = grp.Members[i];
+            var memberItem = grp.ItemOf(i);
             // A member hidden below the tab's lowest string draws no stem.
-            if (member.Item is NoteItem { TabBelowRange: true })
+            if (memberItem is NoteItem { TabBelowRange: true })
                 continue;
             // A whole-note display pair's stem has NO ink — the beam floats
             // between the heads and only the invisible stem's X survives (used
@@ -462,7 +462,7 @@ internal static partial class SharedRenderer
                 // never overlaps the number.
                 // TabStemHeadY returns device Y; lift to page Y-up (tab beams
                 // are never ossia).
-                headY = pageHeight - TabStemHeadY(score.TextMetrics, member.Item, up,
+                headY = pageHeight - TabStemHeadY(score.TextMetrics, memberItem, up,
                     pageHeight - LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx), memberStaff);
             }
             else
@@ -472,7 +472,7 @@ internal static partial class SharedRenderer
                 double memberStaffMiddleY = !ossiaBeam && memberStaffIdx >= 0
                     ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) - StaffHeight / 2
                     : staffMiddleY;
-                headY = memberStaffMiddleY + GetMemberStaffPosition(member, up) / 2.0
+                headY = memberStaffMiddleY + GetMemberStaffPosition(memberItem, up) / 2.0
                     // noteValue 8 = "a beamed head is filled" — true for ordinary
                     // beams, NOT for a two-note tremolo pair, which beams HALF
                     // heads (the same fact the X side already honours per member).
@@ -540,7 +540,7 @@ internal static partial class SharedRenderer
         return null;
     }
 
-    private static int GetMemberStaffPosition(BeamMember m, bool stemUp) => m.Item switch
+    private static int GetMemberStaffPosition(MusicItem item, bool stemUp) => item switch
     {
         NoteItem n => n.StaffPosition,
         ChordItem c => stemUp

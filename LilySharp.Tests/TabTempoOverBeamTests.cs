@@ -76,7 +76,7 @@ public sealed class TabTempoOverBeamTests
         double tabHeight = (strings - 1) * EngravingDefaults.TabStringSpace(strings);
         var geom = new TabStaffGeometry(score.TextMetrics, staff.Tuning.Value, -tabHeight / 2.0,
             staff.TabSourceClef, staff.Transposition);
-        Assert.True(geom.GroupStemUp(beam.Group.Members.Select(m => m.Item)),
+        Assert.True(geom.GroupStemUp(beam.Group.MemberItems()),
             "the fixture's first bar must beam UP (low strings) for the test to mean anything");
         double beamTopYUp = -ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, beam.LeftX);
         // The mark's baseline stands ABOVE the beam's top edge (Y-up about the middle).

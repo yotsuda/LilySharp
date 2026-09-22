@@ -388,11 +388,11 @@ internal static class TupletBracketEngraver
                         // Read it from the tuplet's tab notes (which carry the strings).
                         isStemUp = geom.GroupStemUp(TupletNoteItems(tuplet, tupMeasures));
                         startX = beam.LeftX + LayoutUtilities.StemAttachX(
-                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[0].Item),
-                            LayoutUtilities.NoteheadStyleOf(beam.Group.Members[0].Item));
+                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.ItemOf(0)),
+                            LayoutUtilities.NoteheadStyleOf(beam.Group.ItemOf(0)));
                         endX = beam.RightX + LayoutUtilities.StemAttachX(
-                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.Members[^1].Item),
-                            LayoutUtilities.NoteheadStyleOf(beam.Group.Members[^1].Item));
+                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.ItemOf(beam.Group.Members.Length - 1)),
+                            LayoutUtilities.NoteheadStyleOf(beam.Group.ItemOf(beam.Group.Members.Length - 1)));
                         const double tabClearance = 0.5; // baseline above beam edge
                         double sEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, startX);
                         double eEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, endX);

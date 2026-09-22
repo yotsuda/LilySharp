@@ -523,7 +523,7 @@ internal sealed class ElementCoordinator
             // Renumber member.ItemIndex to its index in the dense list so
             // BeamScoringProblem's itemXPositions[member.ItemIndex] resolves.
             renumbered.Add(new BeamMember(
-                m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                group.ItemOf(i), m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
                 m.StaffPosition, itemIndex: i,
                 memberStemUp: m.MemberStemUp,
                 targetStaffIndex: m.TargetStaffIndex,
@@ -847,8 +847,8 @@ internal sealed class ElementCoordinator
         // Per MEMBER head shape, not per beam: a two-note tremolo pair beams HALF notes
         // (BeamDetector.IsBeamable), whose stem stands 0.073200 further right.
         return LayoutUtilities.StemX(columnX, up,
-            GlyphMetrics.NoteValueOf(group.Members[memberIndex].Item),
-            LayoutUtilities.NoteheadStyleOf(group.Members[memberIndex].Item));
+            GlyphMetrics.NoteValueOf(group.ItemOf(memberIndex)),
+            LayoutUtilities.NoteheadStyleOf(group.ItemOf(memberIndex)));
     }
 
     /// <summary>Single-ape / chord accidental placement — the SAME instance path the

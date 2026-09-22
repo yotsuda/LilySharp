@@ -178,13 +178,14 @@ internal static class LayoutUtilities
     /// followed its beam sat slope × half a stem too deep because its tip was read at the
     /// column anchor and then "corrected" by the attach it had never been off by).
     /// </remarks>
-    public static double BeamMemberStemX(BeamMember member, double columnX,
+    public static double BeamMemberStemX(BeamGroup group, int memberIndex, double columnX,
         GlyphMetrics.DesignMetrics? font = null)
     {
-        int noteValue = GlyphMetrics.NoteValueOf(member.Item);
+        var item = group.ItemOf(memberIndex);
+        int noteValue = GlyphMetrics.NoteValueOf(item);
         return noteValue <= 1
             ? InvisibleStemX(columnX, noteValue)
-            : StemX(columnX, member.MemberStemUp, noteValue, NoteheadStyleOf(member.Item), font);
+            : StemX(columnX, group.Members[memberIndex].MemberStemUp, noteValue, NoteheadStyleOf(item), font);
     }
 
     /// <summary>
