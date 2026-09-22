@@ -487,7 +487,9 @@ public sealed partial class MeasureCollector
                 continue;
             // A record COPY (see WithItems above): every beamed measure went through here
             // AFTER FinalizeMeasures set its EndHighlightAliases, and lost them (session 395).
-            measures[mi] = measures[mi] with { Items = ImmutableArray.Create(items) };
+            // The work array is this pass's own and never written again, so it is WRAPPED:
+            // ImmutableArray.Create(array) would copy it whole (session 503).
+            measures[mi] = measures[mi] with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) };
         }
     }
 

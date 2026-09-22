@@ -122,7 +122,7 @@ internal static class GraceColumnHeads
                 }
             }
         }
-        return ImmutableArray.Create(result);
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(result);
     }
 
     /// <summary>

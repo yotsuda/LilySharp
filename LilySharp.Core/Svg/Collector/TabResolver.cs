@@ -117,7 +117,7 @@ internal sealed class TabResolver
         var measures = voice.Measures;
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(measures.Length);
         for (int mi = 0; mi < measures.Length; mi++)
-            rebuilt.Add(measures[mi] with { Items = ImmutableArray.Create(items[mi]) });
+            rebuilt.Add(measures[mi] with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items[mi]) });
         return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 
@@ -172,7 +172,7 @@ internal sealed class TabResolver
                 used[best] = true;
             result[i] = notes[i] with { StringNumber = best };
         }
-        return ImmutableArray.Create(result);
+        return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(result);
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ internal sealed class TabResolver
                 }
             }
             anyMeasureChanged |= changed;
-            rebuilt.Add(changed ? measure with { Items = ImmutableArray.Create(items) } : measure);
+            rebuilt.Add(changed ? measure with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) } : measure);
         }
 
         return anyMeasureChanged ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
@@ -452,9 +452,12 @@ internal sealed class TabResolver
         refs.Clear();
         t_plan = scratch;
 
+        // Each work array is this call's own and never written again, so it is WRAPPED —
+        // ImmutableArray.Create(array) copies it whole (session 503; the same in this file's
+        // other rebuilds).
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
         for (int mi = 0; mi < measures.Length; mi++)
-            rebuilt.Add(work[mi] is { } w ? measures[mi] with { Items = ImmutableArray.Create(w) } : measures[mi]);
+            rebuilt.Add(work[mi] is { } w ? measures[mi] with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(w) } : measures[mi]);
         return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 

@@ -100,7 +100,7 @@ internal static class OttavaTransposer
             var items = measure.Items.ToArray();
             for (int ii = 0; ii < items.Length; ii++)
                 items[ii] = Shift(items[ii], off);
-            rebuilt.Add(measure with { Items = ImmutableArray.Create(items) });
+            rebuilt.Add(measure with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) });
             changed = true;
         }
         return changed ? voice with { Measures = rebuilt.MoveToImmutable() } : voice;
