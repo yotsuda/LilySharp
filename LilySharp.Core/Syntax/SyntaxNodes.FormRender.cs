@@ -434,23 +434,49 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     {
         get
         {
-            var parts = new List<string>();
+            // Measured first, written once: most marks are one bare word ("segno", "fine"),
+            // which is returned as the token's own text with nothing built around it; a
+            // dotted name is sized before it is written, so no list of parts is ever made.
+            int count = 0, length = 0;
+            string first = "";
             for (int i = 0; i < SlotCount; i++)
             {
-                var child = GetChild(i);
-                if (child is SyntaxTokenNode token && token.Kind is not (
-                        SyntaxKind.At or SyntaxKind.Dot or SyntaxKind.OpenParen
-                        or SyntaxKind.CloseParen or SyntaxKind.Comma
-                        // The '!' of '@!X' is punctuation, exactly like the '@' beside it.
-                        // See IsSpanEnd for why it must not reach the name.
-                        or SyntaxKind.DashedBar))
+                if (NamePartAt(i) is { } part)
                 {
-                    parts.Add(token.Text);
+                    if (count++ == 0)
+                        first = part;
+                    length += part.Length;
                 }
             }
-            return string.Join(".", parts);
+            if (count <= 1)
+                return first;
+            return string.Create(length + count - 1, this, static (span, mark) =>
+            {
+                int at = 0;
+                for (int i = 0; i < mark.SlotCount; i++)
+                {
+                    if (mark.NamePartAt(i) is not { } part)
+                        continue;
+                    if (at > 0)
+                        span[at++] = '.';
+                    part.AsSpan().CopyTo(span[at..]);
+                    at += part.Length;
+                }
+            });
         }
     }
+
+    /// <summary>The text of slot <paramref name="i"/> when it is a part of
+    /// <see cref="MarkName"/>, else null.</summary>
+    private string? NamePartAt(int i) =>
+        GetChild(i) is SyntaxTokenNode token && token.Kind is not (
+            SyntaxKind.At or SyntaxKind.Dot or SyntaxKind.OpenParen
+            or SyntaxKind.CloseParen or SyntaxKind.Comma
+            // The '!' of '@!X' is punctuation, exactly like the '@' beside it.
+            // See IsSpanEnd for why it must not reach the name.
+            or SyntaxKind.DashedBar)
+            ? token.Text
+            : null;
 
     /// <summary>
     /// The annotation's NAME on its own — the word after the '@' (and after the '!' of a

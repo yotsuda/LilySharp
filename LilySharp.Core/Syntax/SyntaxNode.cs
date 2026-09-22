@@ -518,31 +518,48 @@ public abstract class SyntaxNode
     /// </remarks>
     internal IEnumerable<SyntaxNode> WalkDescendants()
     {
-        var stack = new Stack<(SyntaxNode Node, int Slot)>();
-        var current = (Node: this, Slot: 0);
-        while (true)
+        // The stack is lent from the thread's drawer and given back when the walk ends or is
+        // abandoned (foreach disposes the iterator, which runs the finally) — a walk nested in
+        // another finds the drawer empty and makes its own. It ends every walk EMPTY, so all
+        // it ever cost was its growth, paid again on each walk (session 488 census).
+        var stack = t_walkStack ?? new Stack<(SyntaxNode Node, int Slot)>();
+        t_walkStack = null;
+        try
         {
-            if (current.Slot >= current.Node.SlotCount)
+            var current = (Node: this, Slot: 0);
+            while (true)
             {
-                if (stack.Count == 0)
-                    yield break;
-                current = stack.Pop();
-                continue;
-            }
+                if (current.Slot >= current.Node.SlotCount)
+                {
+                    if (stack.Count == 0)
+                        yield break;
+                    current = stack.Pop();
+                    continue;
+                }
 
-            var child = current.Node.GetChild(current.Slot);
-            current.Slot++;
-            if (child == null)
-                continue;
+                var child = current.Node.GetChild(current.Slot);
+                current.Slot++;
+                if (child == null)
+                    continue;
 
-            yield return child;
-            if (child.SlotCount > 0)
-            {
-                stack.Push(current);
-                current = (child, 0);
+                yield return child;
+                if (child.SlotCount > 0)
+                {
+                    stack.Push(current);
+                    current = (child, 0);
+                }
             }
         }
+        finally
+        {
+            // Cleared on give: an abandoned walk leaves nodes on it.
+            stack.Clear();
+            t_walkStack = stack;
+        }
     }
+
+    [ThreadStatic]
+    private static Stack<(SyntaxNode Node, int Slot)>? t_walkStack;
 
     /// <summary>
     /// Returns all descendant nodes of a specific type (pre-order, as

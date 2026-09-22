@@ -349,7 +349,9 @@ internal sealed class KnuthPlassBreaker
         }
 
         // One buffer for every candidate line's springs (TryBuildLineSprings refills it).
-        var lineSprings = new List<Spring>();
+        // Lent, and given back when the table is filled: the solver below reads it and keeps
+        // nothing (its Solve returns two scalars).
+        var lineSprings = ListPool<Spring>.Rent();
 
         for (int j = startRow; j <= n; j++)
         {
@@ -523,6 +525,7 @@ internal sealed class KnuthPlassBreaker
                 }
             }
         }
+        ListPool<Spring>.Give(lineSprings);
 
         // The finished table becomes the next keystroke's baseline (the selection
         // below only reads it).
@@ -773,12 +776,14 @@ internal sealed class KnuthPlassBreaker
     /// </summary>
     internal static List<List<Measure>> CreateMeasureGroups(IReadOnlyList<Measure> measures, List<int> breakPoints)
     {
-        var result = new List<List<Measure>>();
+        // Both sizes are known before the first Add: one group per break, one entry per
+        // measure between two breaks.
+        var result = new List<List<Measure>>(breakPoints.Count);
         int start = 0;
 
         foreach (int end in breakPoints)
         {
-            var group = new List<Measure>();
+            var group = new List<Measure>(Math.Max(0, end - start));
             for (int i = start; i < end; i++)
             {
                 group.Add(measures[i]);

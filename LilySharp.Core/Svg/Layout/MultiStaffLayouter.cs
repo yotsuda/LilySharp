@@ -2407,7 +2407,7 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal static List<Measure> CollectAllMeasuresAtIndex(MultiStaffScore score, int measureIndex)
     {
-        var measures = new List<Measure>();
+        var measures = new List<Measure>(CountVoicesReaching(score, measureIndex));
 
         foreach (var staffGroup in score.StaffGroups)
         {
@@ -2435,7 +2435,7 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal static List<Staff> CollectStavesOfMeasuresAtIndex(MultiStaffScore score, int measureIndex)
     {
-        var staves = new List<Staff>();
+        var staves = new List<Staff>(CountVoicesReaching(score, measureIndex));
 
         foreach (var staffGroup in score.StaffGroups)
         {
@@ -2452,6 +2452,19 @@ internal sealed class MultiStaffLayouter
         }
 
         return staves;
+    }
+
+    /// <summary>How many entries the two collectors above add — the same walk and the same
+    /// test, counted first so each list is allocated once at its final size.</summary>
+    private static int CountVoicesReaching(MultiStaffScore score, int measureIndex)
+    {
+        int count = 0;
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+                foreach (var voice in staff.Voices)
+                    if (measureIndex < voice.Measures.Length)
+                        count++;
+        return count;
     }
 
     // --- Skyline-based staff spacing ---
@@ -3773,7 +3786,8 @@ internal sealed class MultiStaffLayouter
         // is not in the layouts it was handed, so the answer is the same either way — but the
         // WORK is not: this method runs once per system, so filtering by staff alone made a
         // rebuild cost O(marks in the whole score) where an edit only invalidates one system.
-        var systemMeasures = new HashSet<int>();
+        // One index per laid measure, each once — the size is the layouts' own count.
+        var systemMeasures = new HashSet<int>(measureLayouts.Length);
         foreach (var ml in measureLayouts)
             systemMeasures.Add(ml.MeasureIndex);
         // The staff filter reads the per-score bucket (ScoreSideTables) — cut once —
@@ -4013,7 +4027,8 @@ internal sealed class MultiStaffLayouter
         // This system's bars only — the same scoping StaffArticulationLayouts argues for:
         // the engraver drops a mark whose measure is not in the layouts it was handed, so
         // the answer is the same either way but the WORK is per system.
-        var systemMeasures = new HashSet<int>();
+        // One index per laid measure, each once — the size is the layouts' own count.
+        var systemMeasures = new HashSet<int>(measureLayouts.Length);
         foreach (var ml in measureLayouts)
             systemMeasures.Add(ml.MeasureIndex);
         var staffScripts = ArticulationEngraver.SidePositionedScriptsOf(

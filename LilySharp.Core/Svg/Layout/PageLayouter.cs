@@ -500,7 +500,8 @@ internal sealed class PageLayouter
         out double pageForce,
         out double headerTop)
     {
-        var pageSystems = new List<SystemLayout>();
+        // Lent, and given back once copied out at the end — this method's only return.
+        var pageSystems = ListPool<SystemLayout>.Rent();
 
         // THE CHAIN. LilyPond builds one Page_layout_problem per PAGE and pushes one
         // spring per boundary: top-system-spacing first (:511-518), then one spring per
@@ -829,7 +830,9 @@ internal sealed class PageLayouter
             });
         }
 
-        return pageSystems.ToImmutableArray();
+        var placed = pageSystems.ToImmutableArray();
+        ListPool<SystemLayout>.Give(pageSystems);
+        return placed;
     }
 
     /// <summary>

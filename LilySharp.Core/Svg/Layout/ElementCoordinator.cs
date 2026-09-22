@@ -303,7 +303,8 @@ internal sealed class ElementCoordinator
             return ImmutableArray<BeamLayout>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
-        var beamLayouts = new List<BeamLayout>();
+        // Lent, and given back once copied out below — the walk's only exit.
+        var beamLayouts = ListPool<BeamLayout>.Rent();
         var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
 
         foreach (var group in beamGroups)
@@ -385,7 +386,9 @@ internal sealed class ElementCoordinator
             beamLayouts.Add(beamLayout);
         }
 
-        return beamLayouts.ToImmutableArray();
+        var laid = beamLayouts.ToImmutableArray();
+        ListPool<BeamLayout>.Give(beamLayouts);
+        return laid;
     }
 
     /// <summary>

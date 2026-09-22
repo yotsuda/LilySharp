@@ -409,7 +409,8 @@ internal sealed partial class LayoutEngine
         var perSystemHeights = placed.Heights;
 
         // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
-        var perSystemBandUps = new List<double>();
+        // One entry per system AugmentExtentsWithLooseLines walks — its loop bound, exactly.
+        var perSystemBandUps = new List<double>(Math.Min(perSystemExtents.Count, systemMeasures.Count));
         // One entry per system, added unconditionally below — the size is the trip count.
         var multiMeasureRanges = new List<(int startMeasure, int measureCount)>(systemMeasures.Count);
         int multiMeasStart = 0;
