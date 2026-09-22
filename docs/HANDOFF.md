@@ -101,21 +101,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **LP の旗が喋るのは*和音*の場合**（`set_column_chord_outline` は Stem の旗を無条件に入れる＝
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
-- ★★★ **⒮¹⁰ 「器ごと憶える」の島の残り＝scratch 約 263 軒 約 44,000 B／打鍵＝1.4%**（**第475 が HEAD で数え直した**＝Lab `sessions/p475/`・census `site-prices.txt`・liveness `site-liveness.txt`・join `joined.csv`・
-  **分母 3,151,759**＝parse 317,050＋render 2,834,709・脚は `instrument.ps1`＋`Zz475.template.cs`＋`Zz475Leg.cs.txt` を `Zz475_MODE=price|live` で 2 回＝**値段と liveness は同じ run では訊けない**。値段 21 秒・liveness 33 秒）。
-  HEAD の census は scratch 277 軒 59,541・escape 18 軒 102,629（頭は `VerticalSkyline.cs:76` 94,888）。
-  そこから**第475 が 7 軒 −6,265・第476 が 7 軒 −9,214**（`ListPool<T>` を新設＝同じ種類の list を複数・入れ子で持つ軒の Stack pool）。
-  ★ **第488 が census を取り直して 12 軒 −4,864 を閉じた**（Lab `sessions/p488/`＝`joined.csv`・分母 **3,153,928**＝parse 315,060＋render 2,838,868 → **render 2,834,004**・parse は同じ木の 2 run で ±400 揺れる＝render だけで読む）。
-  **会計 100.2%**（予測＝park と「建てない」は price・寸法ちょうどは waste の和 4,853）。census は scratch 256 軒 45,591・escape 18 軒 102,369（頭は `VerticalSkyline.cs:76` 94,654）。
-  閉じた軒: park＝`KnuthPlassBreaker.cs:352`（`ListPool<Spring>`）・`ElementCoordinator.cs:306`・`PageLayouter.cs:503`・`SyntaxNode.cs:521`（`WalkDescendants` の Stack を ThreadStatic の引き出しに＝finally で返す）／
-  建てない＝`MusicMarkSyntax.MarkName`（1 語はトークンの文字列そのまま・複数語は `string.Create`）／寸法ちょうど＝`KnuthPlassBreaker.cs:776/781`・`LayoutEngine.cs:412`・`MultiStaffLayouter.cs:2410/2438`（`CountVoicesReaching`）・`:3776/4016`。
-  ⇒ **第488 の census で残る 500 B 以上**: `LayoutEngine.Prelim.cs:460` 6,166・`LedgerLineSpannerEngraver.cs:274` 5,775（下の ⚠️）・`OutsideStaffStacker.cs:645` 907・`DynamicEngraver.cs:565` 880（0.03 呼び・1 呼び 234 項目）・`SpacingRules.LedgerRods.cs:157` 734・`SharedRenderer.cs:703` 497・`ArticulationEngraver.cs:358` 522（Builder・max 77）。それ以外は 1 軒 480 B 未満＝**この島はほぼ尽きた**
-  ⇒ **次の軒**（第475 の census の住所）: `OutsideStaffStacker.cs:645` **910**（memo front の仕分け＝辞書の列挙順が memo の登録順に効く＝⒨ の家）／`SpacingRules.LedgerRods.cs:157` 738（list を*返す*）／
-  それ以下は 1 軒 600 B 未満。⚠️ **1 軒 1,000 B 未満の尾に入った**＝回すなら census を回し直して頭を取り直す
-  ⚠️ **`LayoutEngine.Prelim.cs:460` 6,192・`LedgerLineSpannerEngraver.cs:274` 5,797・`KnuthPlassBreaker.cs:781` 2,779 は*1 呼びで N 個*建てる軒**＝別の直し方（この島の数に混ぜない）。
-  ⚠️⚠️ **直し方は 3 つ**＝⑴ park／⑵ 建てない／⑶ 寸法ちょうどの配列。**軒ごとに要るのは「自分のコードがどこで読み終えるか」を読むことだけ**——liveness は必要条件しか言わない（RULES §5.3）。
-  ★ **会計の当たり**＝第458 99.97%・第459 98.57%・第460 104.2%・第461 102.1%・第462 99.7%・第467 98.0〜113.9%・**第475 和 100.7%**（軒ごと 87.5〜105.7%）。**`odd` 0 の行はほぼ exact**
-  ⚠️ **A/B の途中でコーパスが 1 冊増えることがある**（第475＝ユーザーが `space.lys` を作った）＝**脚の 1 行目の冊数を必ず読む**。231 と 232 の run を引き算しない
+- ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
+  第491 の実測（HEAD 2,785,580 の打鍵で）: `ItemSkylineFactory.Build` 1,103 回／打鍵 672 KB（**列の skyline そのもの＝出力**・同じ item の再建か memo の余地は未調査）／`LineStartColumn.MinimumDistance` 31.8 回 8,180 B（距離 1 つのために skyline 2 つ＝box から直接 `SkylineMath` で測れば消える）。
+  ⇒ 次の候補: `SpacingRules.MeasureSprings.cs:1282/1290`（`FromBoxes(…).Distance(CreateLeftSkyline(…))`＝距離だけ）・`AccidentalPlacement` の `reference` の head skyline・`Clone()` の他の呼び手。
+- ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
   `Zz463Leg.cs.txt` を price／live の 2 回・join は `joined.csv`・写しの候補は `copies.csv`。**分母 3,687,958**）。
@@ -147,15 +136,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
-- ★ **⒭′ 器の尾の残り＝81 軒 5,724 B／打鍵 0.133%**（第446 実測・分母 4,293,941。**第446 が 85.1% を
-  閉じた**＝全 `Core` に広げた島 38,527 → 5,724）。**残りは全部「`yield return` のアクセサを
-  struct walk にする」形**（1 軒 50 行級・第445 の `ChildNodeList` が手本）:
-  `Rendering/SharedRenderer.Noteheads.cs:54/:63` **796**＝`EnumerateStaffItems` の 216 B／
-  検出器 3 軒 **543**＝`VoiceScan.WalkVoiceItems` の 104 B／`Svg/Collector/RenderSpec.cs:401`＋`:509`
-  **484**＝`GetVoiceBindings`／`VoltaBracketEngraver.cs:225` **270**＝`BrokenPieces`。
-  ⚠️ **頭の 2 軒は器ではない**: ~~`HarvestOmittedStructure`~~ **第489 が閉じた**（コーパス 2,092 回・全部空・1,224 → 55 B／回・render −1,177／打鍵。2 か所の呼びは単音の道 `CollectPass` と多段の道 `CollectMultiStaffPass`＝打鍵あたり 1.13 回）／
-  ~~`Music/LyricBindings.cs:148`~~ **第490 が器ではないと実測**＝158 KB／回は根の `DescendantIndex` を*最初に訊いた者*が払う建設費（索引を先に建てると 547 B／回・中の歩きを green にしても 0 差）＝**直す軒ではない**。
-  脚は Lab `sessions/p446/`（`instrument.ps1` は `Core` 全体を包む）
+- ★ **⒭′ 器の尾の残り＝約 5,000 B／打鍵**（第446 の住所）。残りは「`yield return` のアクセサを struct walk に」形（`SharedRenderer.Noteheads.cs:54/:63` `EnumerateStaffItems`・`VoiceScan.WalkVoiceItems`・`RenderSpec.GetVoiceBindings`・`VoltaBracketEngraver.BrokenPieces`・1 軒 50 行級・手本は第445 の `ChildNodeList`）。
+  頭 2 軒は閉じた＝`HarvestOmittedStructure`（第489・−1,177）・`LyricBindings.cs:148` は直す軒ではない（第490＝158 KB は `DescendantIndex` の建設費）
 - **⒬″ ⒬ の尾＝`IReadOnlyList` 族の残り 34 軒 1,410 B／打鍵 0.028%**＝1 軒あたり 41 B＝実仕事
 - **⒴⁸ batch でない `Merge` 147,417 回／打鍵は未値付け**＝値段が先
 
@@ -233,6 +215,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第491セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第490 のすぐ後）。ユーザー指示「続けて」＝建てた直後に写して捨てる形の続き（`FromBoxes`／`Clone` の残りの呼び手）。
+★ **`-Start p491` の 1 コマンドで §0 が全部済んだ**（HEAD `88e93336`・full 8835 / 0 / 3 / 8838・`-Archive 489` も自動）。
+
+★★★ **⑴ 臨時記号の glyph の skyline 対を共有した＝render 2,785,589 → 2,657,678（−127,911 B／打鍵・−4.6%）**。先に計器（Lab `sessions/p491/`）で 3 軒を値付け＝**`GlyphSkylinePair` は 104 回／打鍵・2,183 B／回＝227 KB（render の 8.2%）**。答えは (glyph, courtesy, design, magnification) だけの関数なのに臨時記号 1 つごとに baked outline を Clone・Merge・Scale し直していた。
+  直し＝`AccidentalPlacement.SharedGlyphSkylinePair`（thread ごとの辞書・**共有物は触らない**）・右は `HorizontalSkyline.ShiftedScratch`（距離にだけ使う＝thread の scratch に写す・距離を測る分岐でだけ）・左は `ShiftedRaisedOver`（Shift→Raise→Merge を 1 本の list に・同じ順・同じ 2 段の算術）。残り 99 KB は新しい reference＝実物。
+  網 2 本＝`PlacingAColumn_LeavesTheSharedGlyphOutlinesAsBuilt`（共有物を Shift する毒で赤・既存 10 本も赤）・`ShiftedRaisedOver_AndShiftedScratch_AreTheInPlaceSteps`。出力は同一（`Zz491Hash`＝5824 行・0 差）。full 8837 / 0 / 3 / 8840。
+★ **⑵ §1.0 を畳んだ**（⒮¹⁰ と ⒭′ を 2 行ずつに・「建てた直後に写して捨てる」の項を新設＝計器の住所と次の候補）。
+★ **⑶ 終了時**: コード 2 ファイル（AccidentalPlacement・HorizontalSkyline）＋テスト 2 本＋生成物 1 つ（行番号だけ）。
+
+## 以下は第490セッションの経緯
+
 ### 1.1 第490セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第489 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒭′ の残り。
@@ -244,18 +239,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑵ ⒭′ の `LyricBindings.cs:148` は直す軒ではなかった**（計器で 9 回・158 KB／回→索引を先に建てると 547 B／回＝`DescendantIndex` の建設費。green の歩きに替えても 0 差だったので戻した）。
   full 8835 / 0 / 3 / 8838（+3＝新しい網）。生成物 2 つ再生成（新しい `0.0` の比較 1 行に LILYPOND-REF を付けて Green）。
 ★ **⑶ 終了時**: コード 3 ファイル（HorizontalSkyline・ItemSkylineFactory・TieChordOutline）＋テスト 1 本＋生成物 2 つ。
-
-## 以下は第489セッションの経緯
-
-### 1.1 第489セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第488 のすぐ後）。ユーザー指示「続けて」。
-★ **`-Start p489` の 1 コマンドで §0 が全部済んだ**（HEAD `1518e223`・full 8831 / 0 / 3 / 8834・`-Archive 487` も自動）。
-
-★★ **⑴ ⒭′ の頭 `HarvestOmittedStructure` を閉じた＝render 2,834,004 → 2,832,827（−1,177 B／打鍵）**。先に計器（呼びの前後で `GetAllocatedBytesForCurrentThread`・Lab `sessions/p489/`）で値段を取り直した＝**2,092 回・2,092 回とも空・1,224 B／回**。
-  直し＝LINQ の鎖を 1 本の loop に（空の間は何も建てない）・描かれる声部かどうかは新設の `RenderSpec.BindsVoice`（`BindingsOf` と同じ case の membership・網 `RenderSpecBindsVoiceTests`＝chord row の case を抜く毒で赤）・`PartHasStructure` の `refs` を最初の参照で建てる・`OfType`／`FirstOrDefault` を `ChildNodesOfKind` に。**55 B／回が残る**。
-  出力は同一（`Zz489Hash`＝5824 行・0 差）。full 8832 / 0 / 3 / 8835（+1＝新しい網・APPROXIMATIONS.md は行番号だけ再生成）。
-★ **⑵ 終了時**: コード 2 ファイル（MeasureCollector・RenderSpec）＋テスト 1 本＋生成物 1 つ。
 
 ## 2. 開いている作業
 

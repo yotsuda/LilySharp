@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第489セッションの経緯
+
+### 1.1 第489セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第488 のすぐ後）。ユーザー指示「続けて」。
+★ **`-Start p489` の 1 コマンドで §0 が全部済んだ**（HEAD `1518e223`・full 8831 / 0 / 3 / 8834・`-Archive 487` も自動）。
+
+★★ **⑴ ⒭′ の頭 `HarvestOmittedStructure` を閉じた＝render 2,834,004 → 2,832,827（−1,177 B／打鍵）**。先に計器（呼びの前後で `GetAllocatedBytesForCurrentThread`・Lab `sessions/p489/`）で値段を取り直した＝**2,092 回・2,092 回とも空・1,224 B／回**。
+  直し＝LINQ の鎖を 1 本の loop に（空の間は何も建てない）・描かれる声部かどうかは新設の `RenderSpec.BindsVoice`（`BindingsOf` と同じ case の membership・網 `RenderSpecBindsVoiceTests`＝chord row の case を抜く毒で赤）・`PartHasStructure` の `refs` を最初の参照で建てる・`OfType`／`FirstOrDefault` を `ChildNodesOfKind` に。**55 B／回が残る**。
+  出力は同一（`Zz489Hash`＝5824 行・0 差）。full 8832 / 0 / 3 / 8835（+1＝新しい網・APPROXIMATIONS.md は行番号だけ再生成）。
+★ **⑵ 終了時**: コード 2 ファイル（MeasureCollector・RenderSpec）＋テスト 1 本＋生成物 1 つ。
+
 ## 以下は第488セッションの経緯
 
 ### 1.1 第488セッション（2026-09-22・YT-DELL2）
