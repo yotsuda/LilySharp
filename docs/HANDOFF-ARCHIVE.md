@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第503セッションの経緯
+
+### 1.1 第503セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第502 のすぐ後）。ユーザー指示「MusicItem[] を詰めたら handoff を更新して締めて」＝この会話の最終便。
+★ **`-Start p503` の 1 コマンドで §0 が全部済んだ**（HEAD `55ff3cf0`・full 8845 / 0 / 3 / 8848・`-Archive 501` も自動）。
+
+★★ **⑴ `ImmutableArray.Create(配列)` の写しを包みに＝render 1,883,720 → 1,864,434（−19,286・−1.0%）**。地図の `MusicItem[]` 42 KB を追うと、`Stems`（梁の刻印）・`TabResolver`（弦番号・タイ・臨時記号）・`OttavaTransposer` が**自前の作業配列を `ImmutableArray.Create(items)` で包んでいた**＝`Create(T[])` は**配列を丸ごと写す**。どれも最後に 1 度包むだけで以後書かない配列なので `ImmutableCollectionsMarshal.AsImmutableArray` に（7 か所・`GraceColumnHeads` と `AssignChordStrings` を含む）。⚠️ 包んだ配列に後から書くと共有される＝**毒「包んだ後に 1 つ書く」→221 赤**（Lab `sessions/p503/poisons.ps1`）。出力は同一（`Zz503Hash`＝0 差）。full 8845 / 0 / 3 / 8848。
+★ **⑵ 終了時（この会話の最後）**: コード 4 ファイル（Stems・TabResolver・OttavaTransposer・GraceColumnHeads）。§1.0 の「建てた直後に写して捨てる」の項を第498〜第503 の総括に畳んだ。**次の会話は新しく始める**（残る頭は土台の設計＝NoteItem の刻印・SVG の文字列）。
+
 ## 以下は第502セッションの経緯
 
 ### 1.1 第502セッション（2026-09-22・YT-DELL2）

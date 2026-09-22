@@ -100,7 +100,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（**第494 が呼び手で数えた＝設計の値段**: 建てる 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976＝梁の刻印は collect ごとに新しい BeamId なので必ず写す・`TabResolver.ResolveTabStrings` 509,020＝弦番号の書き込み。消すなら刻印を item の外（側表）へ出す＝土台の変更）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）**。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・`new int[`／`new double[` 141 軒を書き換えて数える・`array-sites.txt`＝残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB）。⚠️ Dictionary／HashSet の bucket も Int32[] だがこの census には出ない。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
-  ⇒ **第498〜第503（1 つの会話）で render 2,090,060 → 1,864,434（−225,626・−10.8%）**：臨時記号の参照 skyline（第498 −39,962）・bare duration の写し元の表（第499 −33,625）・render の `--pitches` trace（第500 −65,596）・系の数の候補の行の共有（第501 −56,414）・data-pos の copy-on-write（第502 −9,380）・`ImmutableArray.Create(配列)` の写し（第503 −19,286）。`MeasureSprings.cs:1282/1290` はコーパスで 0 回・`AccidentalPlacement` の `Clone()` は cache の中・`ToBuilder()` 46 軒の頭は `MoveToImmutable` の実仕事（Lab `sessions/p502/tobuilder-price.txt`）。**最新の地図は第504**（Lab `sessions/p504/type-price-head.txt`・Release・render 1,859,914 の時点）＝残る頭は**土台**：String 349 KB（SVG の出力）・NoteItem 236 KB（梁と弦の刻印＝側表へ）・SkylineBuilding[] 150 KB（skyline の中身）。次の候補（小）: `VerticalSkyline.Padded`・地図を取り直して 30 KB 級の型を呼びの前後で絞る。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**（報告用の表・warning を render の collector が作っていないか）／⑵ **同じ値の作り直し**（候補ごと・render ごとに建て直すが値は前と同じ）／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
+  ⇒ **第498〜第503（1 つの会話）で render 2,090,060 → 1,864,434（−225,626・−10.8%）**：臨時記号の参照 skyline（第498 −39,962）・bare duration の写し元の表（第499 −33,625）・render の `--pitches` trace（第500 −65,596）・系の数の候補の行の共有（第501 −56,414）・data-pos の copy-on-write（第502 −9,380）・`ImmutableArray.Create(配列)` の写し（第503 −19,286）。`MeasureSprings.cs:1282/1290` はコーパスで 0 回・`AccidentalPlacement` の `Clone()` は cache の中・`ToBuilder()` 46 軒の頭は `MoveToImmutable` の実仕事（Lab `sessions/p502/tobuilder-price.txt`）。**最新の地図は第505**（Lab `sessions/p505/type-price-a.txt`・Release・render 1,824,462 の時点）＝残る頭は**土台**：String 349 KB（SVG の出力）・NoteItem 236 KB（梁と弦の刻印＝側表へ）・SkylineBuilding[] 150 KB（skyline の中身）。次の候補（小）: `VerticalSkyline.Padded`・地図を取り直して 30 KB 級の型を呼びの前後で絞る。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**（報告用の表・warning を render の collector が作っていないか）／⑵ **同じ値の作り直し**（候補ごと・render ごとに建て直すが値は前と同じ）／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
 - ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
@@ -197,6 +197,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第505セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第504 のすぐ後）。ユーザー指示「続けて」＝第504 の地図の残り。
+★ **`-Start p505` の 1 コマンドで §0 が全部済んだ**（HEAD `b336c26e`・full 8847 / 0 / 3 / 8850・`-Archive 503` も自動）。
+
+★★ **⑴ collector の側表の登録簿を 1 collector に 1 本＝render 1,845,153 → 1,829,053（−16,100・−0.9%）**。第504 の地図の `System.Collections.IList[]` 11,579 B／打鍵は**全部 `MeasureCollector.CumulativeSideTables()`**＝21 本の表を並べた配列を**呼ぶたびに新しく建てていた**（walk の checkpoint ごと・walk ごと）。21 本とも `readonly` の field＝登録簿は構築後に変わらない ⇒ 最初の呼びで建てて持つ。呼び手は読むだけ（添字・Count・列挙）。
+  毒（Lab `sessions/p505/poisons.ps1`）＝**呼び手が配列に書く（checkpoint で slot 0 に slot 1）→12 赤**（`CollectEditResumeTests`・`IncrementalReuseSoundnessTests` の fuzz・`PreviewCollectSharingTests` ほか）。出力は同一（`Zz505Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。`APPROXIMATIONS.md` は行番号 1 つ。
+  ★ 新しい地図（Lab `sessions/p505/type-price-a.txt`・render 1,824,462）の 30 KB 級の残り＝`Measure` 39 KB・`ArticulationLayout[]` 38 KB（第502＝`MoveToImmutable` の実仕事）・`BeamMember` 36 KB・`List<int>` 29 KB（持ち主は未特定＝軒が多い・呼びの前後の wrapper で絞る）・`MusicItem[]` 25 KB。
+
+## 以下は第504セッションの経緯
+
 ### 1.1 第504セッション（2026-09-22・YT-DELL2）
 
 新しい会話（第503 の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
@@ -205,16 +216,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **⑴ content key の `ImmutableArray<T>` 性質を箱に入れずに畳む＝render 1,864,462 → 1,845,111（−19,351・−1.0%）**。型の地図を HEAD で取り直す（Lab `sessions/p504/type-price-head.txt`・**Release で取る**＝Debug は render 2.38 MB と太り型の並びも変わる）と、**箱に入った `ImmutableArray<GraceColumnInfo>` が 17,604 B／打鍵**。持ち主は `MeasureContentKey.HashContent`：値型の性質は第192 から箱なしで畳むが、**`ImmutableArray<T>` は `IEnumerable` なので object 経路**＝item を 1 つ畳むたびに箱 1 つ（`NoteItem`／`ChordItem.LeadingGrace`＝ほぼ全部の音符で空）＋空でなければ enumerator。⇒ `ArrayFold<T>`（その場で歩き、要素は `AddValue` と同じ数を畳む＝default 配列は −1・値型は `Hash64.Add<T>`・それ以外と `ChordNoteInfo` は `AddValue` のまま）。
   網 2 本（`ContentKeyDirectFoldTests`＝grace と和音を持つ本で「箱の経路と同じ数」・default 配列の −1）。毒 4 本（Lab `sessions/p504/poisons.ps1`）＝**要素を定数に→新しい網だけ赤**・**`AddValue` を飛ばす→7 赤**・**何も畳まない→2 赤**（`ChordNoteSourcePositionTests`・`CollectEditResumeTests`）・**default の印を −2 に→*最初は観測者なし*→網を足して赤**。出力は同一（`Zz504Hash`＝5,824 行 0 差）。full 8847 / 0 / 3 / 8850。
   ★ **効いた見方の 4 つ目**: ⑷ **地図に ``ImmutableArray`1[…]`` が*型として*出たら箱**（struct は箱に入らないと heap の型にならない）＝持ち主は reflection／`object` を取る経路。
-
-## 以下は第503セッションの経緯
-
-### 1.1 第503セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第502 のすぐ後）。ユーザー指示「MusicItem[] を詰めたら handoff を更新して締めて」＝この会話の最終便。
-★ **`-Start p503` の 1 コマンドで §0 が全部済んだ**（HEAD `55ff3cf0`・full 8845 / 0 / 3 / 8848・`-Archive 501` も自動）。
-
-★★ **⑴ `ImmutableArray.Create(配列)` の写しを包みに＝render 1,883,720 → 1,864,434（−19,286・−1.0%）**。地図の `MusicItem[]` 42 KB を追うと、`Stems`（梁の刻印）・`TabResolver`（弦番号・タイ・臨時記号）・`OttavaTransposer` が**自前の作業配列を `ImmutableArray.Create(items)` で包んでいた**＝`Create(T[])` は**配列を丸ごと写す**。どれも最後に 1 度包むだけで以後書かない配列なので `ImmutableCollectionsMarshal.AsImmutableArray` に（7 か所・`GraceColumnHeads` と `AssignChordStrings` を含む）。⚠️ 包んだ配列に後から書くと共有される＝**毒「包んだ後に 1 つ書く」→221 赤**（Lab `sessions/p503/poisons.ps1`）。出力は同一（`Zz503Hash`＝0 差）。full 8845 / 0 / 3 / 8848。
-★ **⑵ 終了時（この会話の最後）**: コード 4 ファイル（Stems・TabResolver・OttavaTransposer・GraceColumnHeads）。§1.0 の「建てた直後に写して捨てる」の項を第498〜第503 の総括に畳んだ。**次の会話は新しく始める**（残る頭は土台の設計＝NoteItem の刻印・SVG の文字列）。
 
 ## 2. 開いている作業
 
