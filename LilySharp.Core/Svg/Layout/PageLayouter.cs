@@ -358,7 +358,9 @@ internal sealed class PageLayouter
 
         // Create SystemDetails for each system using per-system skyline extents
         // and context-dependent spacing specs
-        var systemDetails = new List<SystemDetails>();
+        // One entry a system, so the list is sized to them: its growth ladder was 382 B a
+        // keystroke (session 475's census, waste column).
+        var systemDetails = new List<SystemDetails>(systems.Length);
         for (int i = 0; i < systems.Length; i++)
         {
             // The system BODY height: a grand-staff/multi-staff system is far

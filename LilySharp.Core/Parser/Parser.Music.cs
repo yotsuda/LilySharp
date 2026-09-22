@@ -24,7 +24,13 @@ internal sealed partial class Parser
     private MusicBlockGreen ParseMusicBlock()
     {
         var openBrace = Expect(SyntaxKind.OpenBrace);
-        var items = new List<GreenNode?>();
+        // Lent from a stack, not one drawer: a block nests (`tuplet 3/2 { … }` inside a block),
+        // and each open block holds its own list. `[.. items]` COPIES, so the list is finished
+        // with at the node. MEASURED (session 475's census, the reader's corpus, eight forward
+        // keystrokes a book): 2.69 blocks a keystroke at 10.56 items (max 110), 859 B a
+        // keystroke, none reachable once the render returned. The same argument as
+        // RentSectionItems in Parser.Declarations, for a site that nests.
+        var items = Svg.Layout.ListPool<GreenNode?>.Rent();
 
         while (_pendingPostEventMarkers.Count > 0
                || (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile)))
@@ -37,7 +43,9 @@ internal sealed partial class Parser
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new MusicBlockGreen(openBrace, [.. items], closeBrace);
+        var block = new MusicBlockGreen(openBrace, [.. items], closeBrace);
+        Svg.Layout.ListPool<GreenNode?>.Give(items);
+        return block;
     }
 
     private bool IsMusicItemStart()

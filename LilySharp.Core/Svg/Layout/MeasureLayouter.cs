@@ -273,10 +273,12 @@ internal sealed class MeasureLayouter
 
         // Spring 0: barline → first column (see CreateBarlineToFirstSpring), one Staff_spacing
         // wish per staff when the caller says which staff each measure belongs to.
+        var staffFirstItems = StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0]);
         springs[0] = CreateBarlineToFirstSpring(
             fonts, timings, columns, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
-            droppedOnsetFollows, so, StaffItemsAt(measuresToScan, stavesOfMeasures, timings[0]));
+            droppedOnsetFollows, so, staffFirstItems);
+        GiveStaffItems(staffFirstItems);
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
@@ -477,14 +479,22 @@ internal sealed class MeasureLayouter
     /// MEASURED (2.26.0, scratch/p390/ks kse.ly): a lower staff holding only s1 pulls the upper
     /// staff's key-change bar to the same 26.11 as one holding r1.
     /// LILYPOND-REF: lily/spacing-spanner.cc:478-536 Spacing_spanner::breakable_column_spacing — the left column's spacing-wishes
+    /// <para>
+    /// THE LISTS ARE LENT (<see cref="ListPool{T}"/>, session 476) and the caller gives them back
+    /// with <see cref="GiveStaffItems"/> once the bar line's spring is built — the spring is
+    /// numbers (<see cref="Spring"/>), so nothing it returns has kept a list. MEASURED (session
+    /// 475's census, the reader's corpus, eight forward keystrokes a book): the owners, the
+    /// outer list and the per-staff lists were 619 + 619 + 1,075 B a keystroke, 7.03 calls a
+    /// keystroke at about one item a list, and none reachable once the render returned.
+    /// </para>
     /// </remarks>
     private static List<IReadOnlyList<MusicItem>>? StaffItemsAt(
         IReadOnlyList<Measure> measures, IReadOnlyList<Staff>? staves, Fraction t)
     {
         if (staves == null || staves.Count != measures.Count)
             return null;
-        var owners = new List<Staff>();
-        var lists = new List<IReadOnlyList<MusicItem>>();
+        var owners = ListPool<Staff>.Rent();
+        var lists = ListPool<IReadOnlyList<MusicItem>>.Rent();
         for (int i = 0; i < measures.Count; i++)
         {
             var staff = staves[i];
@@ -496,7 +506,7 @@ internal sealed class MeasureLayouter
             if (k < 0)
             {
                 owners.Add(staff);
-                lists.Add(new List<MusicItem>());
+                lists.Add(ListPool<MusicItem>.Rent());
                 k = owners.Count - 1;
             }
             var items = (List<MusicItem>)lists[k];
@@ -512,7 +522,22 @@ internal sealed class MeasureLayouter
                 onset += item.Duration;
             }
         }
-        return lists.Count > 1 ? lists : null;
+        ListPool<Staff>.Give(owners);
+        if (lists.Count > 1)
+            return lists;
+        GiveStaffItems(lists);
+        return null;
+    }
+
+    /// <summary>Gives back what <see cref="StaffItemsAt"/> lent: every per-staff list, then the
+    /// outer one. Null (no per-staff answer) gives nothing.</summary>
+    private static void GiveStaffItems(List<IReadOnlyList<MusicItem>>? lists)
+    {
+        if (lists is null)
+            return;
+        foreach (var list in lists)
+            ListPool<MusicItem>.Give((List<MusicItem>)list);
+        ListPool<IReadOnlyList<MusicItem>>.Give(lists);
     }
 
     /// <summary>

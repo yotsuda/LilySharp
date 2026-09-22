@@ -2015,7 +2015,12 @@ internal sealed class ElementCoordinator
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
-        var tieLayouts = new List<TieLayout>();
+        // The layouts, the columns and each column's list are lent (ListPool) and given back at
+        // the one exit below: ToImmutableArray copies the layouts, and a column is read only by
+        // this loop (OrderBy builds its own list). MEASURED (session 475's census): 234 + 643 B a
+        // keystroke for the two outer lists, none alive after a render; the per-column lists
+        // (the `[]` below until session 476) are a collection expression no census counts.
+        var tieLayouts = ListPool<TieLayout>.Rent();
 
         // A tie COLUMN is the ties of ONE chord: same voice, same start measure and item.
         // LilyPond builds one Tie_formatting_problem per Tie_column and feeds it that column's
@@ -2025,7 +2030,7 @@ internal sealed class ElementCoordinator
         // line-breaking, an identically-placed one on another system whose bars share a local X.
         // audit/lp-geometry system.tie-{under,over}-notes, and tie.y.{seconds,triad}.lower for
         // what solving them ONE AT A TIME cost.
-        var columns = new List<List<TieItem>>();
+        var columns = ListPool<List<TieItem>>.Rent();
         // Lent, and given back right after the bucketing — its only reader (see RentColumnOf).
         var columnOf = RentColumnOf();
         foreach (var tie in ties)
@@ -2035,7 +2040,7 @@ internal sealed class ElementCoordinator
             {
                 existing = columns.Count;
                 columnOf[key] = existing;
-                columns.Add([]);
+                columns.Add(ListPool<TieItem>.Rent());
             }
             columns[existing].Add(tie);
         }
@@ -2135,7 +2140,12 @@ internal sealed class ElementCoordinator
             }
         }
 
-        return tieLayouts.ToImmutableArray();
+        var laidOut = tieLayouts.ToImmutableArray();
+        ListPool<TieLayout>.Give(tieLayouts);
+        foreach (var column in columns)
+            ListPool<TieItem>.Give(column);
+        ListPool<List<TieItem>>.Give(columns);
+        return laidOut;
     }
 
     /// <summary>

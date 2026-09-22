@@ -878,11 +878,17 @@ internal sealed partial class LayoutEngine
             {
                 if (measureToSystem.TryGetValue(
                         sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex, out int s))
-                    (slursBySystem[s] ??= new List<SlurLayout>()).Add(sl);
+                    (slursBySystem[s] ??= ListPool<SlurLayout>.Rent()).Add(sl);
             }
+            // AddBowGroup copies each bow's numbers into the program, so a list is finished with
+            // once it is added — lent (ListPool) and given straight back. MEASURED (session 475's
+            // census): 304 B a keystroke here and 895 at the ties below, none alive after a render.
             for (int s = 0; s < systemCount; s++)
                 if (slursBySystem[s] is { } sysSlurs)
+                {
                     BuilderAt(s).AddBowGroup(sysSlurs);
+                    ListPool<SlurLayout>.Give(sysSlurs);
+                }
         }
 
         // A tie is the same inside-staff grob as the slur one line up -- vertical-skylines from
@@ -905,11 +911,14 @@ internal sealed partial class LayoutEngine
             {
                 if (measureToSystem.TryGetValue(
                         t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex, out int s))
-                    (tiesBySystem[s] ??= new List<TieLayout>()).Add(t);
+                    (tiesBySystem[s] ??= ListPool<TieLayout>.Rent()).Add(t);
             }
             for (int s = 0; s < systemCount; s++)
                 if (tiesBySystem[s] is { } sysTies)
+                {
                     BuilderAt(s).AddBowGroup(sysTies);
+                    ListPool<TieLayout>.Give(sysTies);
+                }
         }
 
         foreach (var fb in figuredBasses)

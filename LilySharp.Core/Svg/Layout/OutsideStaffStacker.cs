@@ -701,7 +701,9 @@ internal static class OutsideStaffStacker
         }
 
         // 2. Build each occupied system's program and consult the memo.
-        var hits = new HashSet<int>();
+        // Lent (see t_hits) and given back at the one exit below, after Rebuild's last read.
+        var hits = t_hits ?? new HashSet<int>();
+        t_hits = null;
         var toStore = new List<(int Sys, BelowStackMemo.SystemEntry Entry)>();
         foreach (var (s, part) in parts)
         {
@@ -859,8 +861,26 @@ internal static class OutsideStaffStacker
             memo.Store(s, entry);
         }
 
+        hits.Clear();
+        t_hits = hits;
         return (resDynamics, resHairpins, resArtics, resTrills);
     }
+
+    /// <summary>
+    /// The memo-hit systems <see cref="StackBelowStaffMemoized"/> skips and replays, lent from one
+    /// set the thread keeps between calls.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 2.17 builds a keystroke at 4 systems (max 25), 623 B a keystroke,
+    /// none reachable once the render returned — the set is read by the method's own local
+    /// functions (the skip counts, the live filter, the line-group remap and Rebuild) and by
+    /// nothing it returns; its order is never read either (the skips SUM, Rebuild writes
+    /// disjoint slots). RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING
+    /// IS ON GIVE (session 456): a set given back dirty would skip another call's live systems.
+    /// </remarks>
+    [ThreadStatic]
+    private static HashSet<int>? t_hits;
 
     /// <summary>
     /// One system's below program: every input the pass reads for it (the inventory is

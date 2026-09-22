@@ -53,6 +53,21 @@ namespace LilySharp.Core.Rendering;
 /// </remarks>
 internal static partial class SharedRenderer
 {
+    /// <summary>
+    /// The set of a staff's percent-covered measures the page draw fills and its voices read,
+    /// lent from one set the thread keeps between staves.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 475's census at HEAD, Release, the reader's corpus, eight forward
+    /// keystrokes a book): 1.84 builds a keystroke at 6 measures (max 82), 652 B a keystroke,
+    /// none reachable once the render returned — the voices only ask <c>Contains</c>. RENTING
+    /// TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE (session 456):
+    /// a set given back dirty would hide another staff's measures. A throw between the rent and
+    /// the give only costs the next staff a new set.
+    /// </remarks>
+    [ThreadStatic]
+    private static HashSet<int>? t_percentCovered;
+
     private const double StaffHeight = 4.0;
     // (A `|:` that opens a line stands in the line-start break-align group's staff-bar
     // column, after the meter — MultiStaffLayouter.LineStartBarGap; the 1.15 nudge that
@@ -809,7 +824,9 @@ internal static partial class SharedRenderer
                 // it); our unfold keeps the notes for playback, so the visual
                 // pass must skip them on the repeat's own staff.
                 // LILYPOND-REF: lily/percent-repeat-engraver.cc.
-                var percentCovered = new HashSet<int>();
+                // Lent (see t_percentCovered) and given back after the voices below, its only readers.
+                var percentCovered = t_percentCovered ?? new HashSet<int>();
+                t_percentCovered = null;
                 foreach (var prItem in score.PercentRepeats)
                     if (prItem.StaffIndex == globalIdx)
                         for (int m = prItem.FirstCoveredMeasure; m <= prItem.MeasureIndex; m++)
@@ -834,6 +851,8 @@ internal static partial class SharedRenderer
                         system, layout, globalIdx, localStaffY, clef, voiceResolver, beamedItems, sgc,
                         pageHeight, fragFrom, fragTo, percentCovered);
                 }
+                percentCovered.Clear();
+                t_percentCovered = percentCovered;
 
                 // Barlines (typed: single / double / final / repeat) per measure
                 DrawBarlines(score, system, staff, localStaffY, layout, sgc,
