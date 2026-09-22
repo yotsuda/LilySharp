@@ -552,6 +552,16 @@ internal static class LysWriter
             }
             foreach (var art in note.Articulations)
                 token += "@" + art;
+            // Close before open, the order both engines read them in.
+            if (note.PhrasingSlurStop)
+                token += "@!phrasingSlur";
+            if (note.PhrasingSlurStart)
+                token += "@phrasingSlur" + note.PhrasingSlurPlacement switch
+                {
+                    "above" => ".up",
+                    "below" => ".down",
+                    _ => "",
+                };
             if (note.SlurStop)
                 token += ")";
             if (note.SlurStart)

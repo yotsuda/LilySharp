@@ -268,6 +268,14 @@ public abstract record MusicItem
     /// <see cref="HasPhrasingSlurStart"/>.</summary>
     public bool HasPhrasingSlurEnd { get; init; }
 
+    /// <summary>The side the phrasing slur opening here was FORCED to — +1 for
+    /// <c>@phrasingSlur.up</c>, −1 for <c>.down</c>, 0 when the slur's own rule decides.
+    /// Content, like the two bools.</summary>
+    /// <remarks>LILYPOND-REF: lily/slur-engraver.cc:190-191 Slur_engraver::create_slur —
+    /// <c>if (dir) set_grob_direction (slur, dir)</c>, the direction of the event
+    /// (<c>^\(</c> / <c>_\(</c>).</remarks>
+    public int PhrasingSlurDirection { get; init; }
+
     /// <summary>Source position of the <c>@</c> of the <c>@phrasingSlur</c> on this item, or
     /// <see cref="NoSourcePosition"/>. The curve's click target, as
     /// <see cref="SlurStartSourcePosition"/> is a slur's.</summary>

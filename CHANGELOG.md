@@ -55,8 +55,11 @@ workflow attaches that section to the GitHub Release verbatim.
 - **Phrasing slurs: `@phrasingSlur` … `@!phrasingSlur`** — LilyPond's `\(` … `\)`, the long
   curve over a musical sentence. It is drawn over the slurs inside it and clears them as
   LilyPond does (its taller shape and its avoidance of the enclosed slurs measured against
-  LilyPond 2.26 to the SVG's two decimals). Like every span it must be closed (LYS4018). The
-  LilyPond twin writes `\(` `\)`, and MusicXML a `<slur>` numbered apart from the ordinary slurs.
+  LilyPond 2.26 to the SVG's two decimals). Like every span it must be closed (LYS4018);
+  `.up` / `.down` fixes its side. It survives a `combinedStaff`. The LilyPond twin writes `\(`
+  `\)`, and MusicXML a `<slur>` numbered apart from the ordinary slurs — and on import any
+  `<slur>` numbered other than 1 is read back as a phrasing slur, since a voice cannot hold two
+  ordinary slurs at once.
 
 ### Editor
 

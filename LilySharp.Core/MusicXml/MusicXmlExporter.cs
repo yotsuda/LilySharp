@@ -3291,7 +3291,12 @@ public sealed class MusicXmlExporter
                 // MusicXML has no phrasing-slur element: a phrasing slur is a <slur> with a
                 // number of its own, so it can overlap the ordinary slurs (number 1).
                 if (Semantics.AnnotationValues.IsPhrasingSlurName(articulation.NameToken.Text))
-                    xmlNote.ExtraNotations.Add(PhrasingSlurNotation("start"));
+                {
+                    var start = PhrasingSlurNotation("start");
+                    if (articulation.ForcedAbove is { } above)
+                        start.Add(new System.Xml.Linq.XAttribute("placement", above ? "above" : "below"));
+                    xmlNote.ExtraNotations.Add(start);
+                }
 
                 // Guitar/TAB techniques → <technical> children. Hammer-on /
                 // pull-off are exported as text technicals (the paired

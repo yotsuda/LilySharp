@@ -68,6 +68,52 @@ public class PhrasingSlurTests
         Assert.True(all[^1].IsPhrasing);
     }
 
+    /// <summary>
+    /// <c>.up</c> / <c>.down</c> is LilyPond's <c>^\(</c> / <c>_\(</c>: the written side wins
+    /// over the slur's own rule. Until session 483 the qualifier was accepted and DROPPED.
+    /// </summary>
+    [Theory]
+    [InlineData("c''4@phrasingSlur.down d'' e'' f''@!phrasingSlur |", false)]  // stems down: would go UP
+    [InlineData("g4@phrasingSlur.up a b c'@!phrasingSlur |", true)]
+    [InlineData("c''4@phrasingSlur d'' e'' f''@!phrasingSlur |", true)]         // the same notes unforced
+    public void AWrittenSide_DecidesTheCurve(string music, bool up) =>
+        Assert.Equal(up, Assert.Single(Phrasing(music)).CurveUp);
+
+    [Fact]
+    public void AWrittenSide_ReachesBothTwins()
+    {
+        var tree = SyntaxTree.Parse(Book("c''4@phrasingSlur.down d'' e'' f''@!phrasingSlur | g'4@phrasingSlur.up a' b' c''@!phrasingSlur |"));
+        string ly = new LilyPondExporter().Export(tree);
+        Assert.Contains("c''4_\\(", ly);
+        Assert.Contains("g'4^\\(", ly);
+        var xml = new MusicXmlExporter().Export(tree).ToXml();
+        var placements = xml.Descendants("slur")
+            .Where(s => (string)s.Attribute("type") == "start")
+            .Select(s => (string)s.Attribute("placement")).ToList();
+        Assert.Equal(new[] { "below", "above" }, placements);
+    }
+
+    /// <summary>
+    /// On a combinedStaff the two parts' notes merge into one column where they agree in
+    /// rhythm — and the phrasing slur of either part survives the merge, as LilyPond's
+    /// \partCombine keeps both events (it keys a phrasing slur as 'tie, which the note clears
+    /// at once, so the slur never blocks the 'chords decision). Until session 483 the merge
+    /// rebuilt part one's note as a chord and the marks were lost with it.
+    /// </summary>
+    [Theory]
+    [InlineData("c''4@phrasingSlur d'' e'' f''@!phrasingSlur", "a'4 b' c'' d''")]
+    [InlineData("c''4 d'' e'' f''", "a'4@phrasingSlur b' c'' d''@!phrasingSlur")]
+    public void ACombinedStaff_KeepsEitherPartsPhrasingSlur(string one, string two)
+    {
+        string source = "octave absolute part fl1 { clef treble } part fl2 { clef treble } "
+            + "section A { fl1 { " + one + " | } fl2 { " + two + " | } } form main { A } "
+            + "score main { combinedStaff { fl1 fl2 } }";
+        int at = source.IndexOf("@phrasingSlur", StringComparison.Ordinal);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(source),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        Assert.Matches(@"d=""M [^""]* C [^""]*""[^>]*data-pos=""" + at + @"""", svg);
+    }
+
     [Fact]
     public void OneNote_ClosesBeforeItOpens()
     {
@@ -208,6 +254,27 @@ public class PhrasingSlurTests
         // `\)` is a POST-event: written before f' it would end the phrasing slur on e'.
         Assert.Contains("c'4\\( (", ly);
         Assert.Contains("f')\\)", ly);
+    }
+
+    /// <summary>
+    /// A book's MusicXML read back is the same phrasing slur, side included: the importer
+    /// reads any <c>&lt;slur&gt;</c> numbered other than 1 as one (a voice cannot nest two
+    /// slurs), and until session 483 it folded it into the ordinary slur and lost it.
+    /// </summary>
+    [Fact]
+    public void MusicXmlRoundTrips_ThePhrasingSlurAndItsSide()
+    {
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(Book(
+            "c''4@phrasingSlur.down( d'' e'' f'')@!phrasingSlur | g'4@phrasingSlur a' b' c''@!phrasingSlur |")))
+            .ToXml().ToString();
+        var report = new LilySharp.Core.MusicXmlImport.ImportReport();
+        string lys = LilySharp.Core.MusicXmlImport.LysWriter.Write(
+            LilySharp.Core.MusicXmlImport.MusicXmlReader.Read(xml, report), report);
+        Assert.Contains("@phrasingSlur.down(", lys);
+        Assert.Equal(2, Regex.Matches(lys, "@!phrasingSlur").Count);
+        Assert.Equal(2, Regex.Matches(lys, @"@phrasingSlur\b").Count);
+        // …and the slur under it is still a slur.
+        Assert.Contains(")", lys);
     }
 
     [Fact]

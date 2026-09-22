@@ -3967,11 +3967,12 @@ public sealed class LilyPondExporter
             // LILYPOND-REF: ly/declarations-init.ly:103-104 laissezVibrer / repeatTie
             //   = #(make-music 'LaissezVibrerEvent / 'RepeatTieEvent)
             case "glissando": return "\\glissando";
-            // The phrasing slur's start; its end is a terminator (EmitMark). Bare, like
-            // `\glissando`: Lily# gives it no direction to carry.
+            // The phrasing slur's start; its end is a terminator (EmitMark). A forced side is
+            // the event's direction, as for the half-ties below; unforced stays bare.
             // LILYPOND-REF: ly/declarations-init.ly:87-88 "\\(" / "\\)" = make-span-event
             //   'PhrasingSlurEvent START / STOP.
-            case "phrasingslur": return "\\(";
+            case "phrasingslur":
+                return a.ForcedAbove switch { true => "^\\(", false => "_\\(", null => "\\(" };
             case "starttrillspan": return "\\startTrillSpan";
             case "stoptrillspan": return "\\stopTrillSpan";
             // The half-tie events DO carry a meaningful written direction — ^/_ is

@@ -746,6 +746,14 @@ internal static class PartCombiner
                 if (EndsBeam(item)) Remove(active, "beam");
                 if (StartsSlur(item)) active.Add(("slur", here));
                 if (StartsBeam(item)) active.Add(("beam", here));
+                // ⚠️ LilyPond keys the PHRASING slur as 'tie (:230), stop before start as the
+                // engraver reads them — and the note's own event then clears 'tie just below
+                // (analyze-tie-end), so only a phrasing slur on a REST outlives its moment.
+                // Ported as written, quirk included.
+                // LILYPOND-REF: scm/part-combiner.scm:227-242 analyze-span-event — :230
+                //   ((equal? name 'phrasing-slur-event) 'tie).
+                if (item.HasPhrasingSlurEnd) Remove(active, "tie");
+                if (item.HasPhrasingSlurStart) active.Add(("tie", here));
 
                 // analyze-tie-end then analyze-tie-start (:210-213, :204-208): any note
                 // closes the open tie, and a tie mark on this note opens a new one.
@@ -1640,7 +1648,7 @@ internal static class PartCombiner
             .OrderBy(n => n.StaffPosition)
             .ToImmutableArray();
 
-        return first switch
+        var merged = first switch
         {
             NoteItem n => new ChordItem(notes, n.BaseDuration, n.Dots, n.SourcePosition,
                 n.TremoloBeams, n.HasBeamStart, n.HasBeamEnd, false, n.IsCue,
@@ -1648,6 +1656,31 @@ internal static class PartCombiner
             { BeamId = n.BeamId, StemUpOverride = null },
             ChordItem c => c with { Notes = notes },
             _ => first,
+        };
+        return ReferenceEquals(merged, first) ? first : WithPhrasingSlursOf(merged, first, second);
+    }
+
+    /// <summary>
+    /// The merged column with the phrasing-slur marks of BOTH parts. Unlike a slur, a
+    /// phrasing slur can stand at a 'chords moment: LilyPond keys it as 'tie
+    /// (scm/part-combiner.scm:230 analyze-span-event) and the note event clears 'tie at once,
+    /// so it never keeps the span state non-empty — and both events reach the one Voice.
+    /// Part one's positions win where both parts wrote one.
+    /// </summary>
+    private static MusicItem WithPhrasingSlursOf(MusicItem merged, MusicItem first, MusicItem second)
+    {
+        if (!first.HasPhrasingSlurStart && !first.HasPhrasingSlurEnd
+            && !second.HasPhrasingSlurStart && !second.HasPhrasingSlurEnd)
+            return merged;
+        var start = first.HasPhrasingSlurStart ? first : second;
+        var end = first.HasPhrasingSlurEnd ? first : second;
+        return merged with
+        {
+            HasPhrasingSlurStart = start.HasPhrasingSlurStart,
+            PhrasingSlurStartSourcePosition = start.PhrasingSlurStartSourcePosition,
+            PhrasingSlurDirection = start.PhrasingSlurDirection,
+            HasPhrasingSlurEnd = end.HasPhrasingSlurEnd,
+            PhrasingSlurEndSourcePosition = end.PhrasingSlurEndSourcePosition,
         };
     }
 

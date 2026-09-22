@@ -152,7 +152,7 @@
 - **:362** itself is unobserved in this tree (HANDOFF §1.0 ⒮¹²).
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:456** this is unobserved rather than known-good; it closes when the labels travel with
-- **:1627** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
+- **:1635** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:149** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
 - **:743** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
@@ -236,8 +236,8 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2466** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4048** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5461** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4049** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5462** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`

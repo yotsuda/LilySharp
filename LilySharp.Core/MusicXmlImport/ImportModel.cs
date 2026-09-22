@@ -182,6 +182,14 @@ internal sealed class ImportNote : ImportItem
     public bool SlurStart { get; set; }
     /// <summary>A slur ends on this note (a <c>)</c> is emitted after it).</summary>
     public bool SlurStop { get; set; }
+    /// <summary>A phrasing slur starts here (<c>@phrasingSlur</c>) — a <c>&lt;slur&gt;</c>
+    /// numbered 2 or more. <see cref="PhrasingSlurPlacement"/> is its written side.</summary>
+    public bool PhrasingSlurStart { get; set; }
+    /// <summary>A phrasing slur ends here (<c>@!phrasingSlur</c>).</summary>
+    public bool PhrasingSlurStop { get; set; }
+    /// <summary><c>above</c> / <c>below</c> from the starting <c>&lt;slur placement&gt;</c>,
+    /// or null.</summary>
+    public string? PhrasingSlurPlacement { get; set; }
     /// <summary>Lily# articulation/ornament mark names (<c>staccato</c>, <c>accent</c>,
     /// <c>fermata</c>, <c>trill</c>, …), emitted as <c>@name</c> suffixes.</summary>
     public List<string> Articulations { get; } = new();

@@ -200,7 +200,7 @@ internal sealed class MeasureBuilder
     /// factory's parameters; this rides the one sink every item enters through instead
     /// (<see cref="MusicItem.HasPhrasingSlurStart"/>).
     /// </remarks>
-    public (int Start, int End)? PendingPhrasingSlur { get; set; }
+    public (int Start, int End, int Direction)? PendingPhrasingSlur { get; set; }
 
     /// <summary>The columns a phrasing slur binds to — the same three a slur does
     /// (<c>SlurDetector.TryGetSlurFlags</c>): a note, a chord, a sounding rest.</summary>
@@ -223,6 +223,7 @@ internal sealed class MeasureBuilder
             PhrasingSlurStartSourcePosition = phrasing.Start,
             HasPhrasingSlurEnd = phrasing.End >= 0,
             PhrasingSlurEndSourcePosition = phrasing.End,
+            PhrasingSlurDirection = phrasing.Direction,
         };
     }
 

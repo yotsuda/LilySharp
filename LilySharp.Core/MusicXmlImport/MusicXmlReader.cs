@@ -473,12 +473,24 @@ internal static class MusicXmlReader
         var notations = Local(el, "notations");
         if (notations != null)
         {
+            // A slur numbered 1 (or unnumbered) is a slur; any other number is a SECOND curve
+            // over the same notes, which a voice can only hold as a phrasing slur — slurs do
+            // not nest in LilyPond — and number 2 is what the exporter writes a phrasing slur as.
+            // LILYPOND-REF: lily/slur-engraver.cc:213-231 can_create_slur — "already have %s".
             foreach (var s in Els(notations, "slur"))
+            {
+                bool second = (string?)s.Attribute("number") is { } num && num != "1";
                 switch ((string?)s.Attribute("type"))
                 {
+                    case "start" when second:
+                        note.PhrasingSlurStart = true;
+                        note.PhrasingSlurPlacement = (string?)s.Attribute("placement");
+                        break;
+                    case "stop" when second: note.PhrasingSlurStop = true; break;
                     case "start": note.SlurStart = true; break;
                     case "stop": note.SlurStop = true; break;
                 }
+            }
             // Fermata is a direct <notations> child in real files, but the Lily#
             // exporter nests it under <articulations> (mapped below); handle both, once.
             if (Local(notations, "fermata") != null && !note.Articulations.Contains("fermata"))

@@ -57,8 +57,13 @@ internal sealed class SlurDetector
             if (item.HasPhrasingSlurEnd && openPhrasing is { } op)
             {
                 openPhrasing = null;
-                bool up = VoiceScan.SpanCurvesUp(score.Voices.Length, v,
-                    AnyCoveredStemDown(measures, op.measureIdx, op.itemIdx, measureIdx, itemIdx));
+                // A written side wins over the slur's own rule.
+                // LILYPOND-REF: lily/slur-engraver.cc:190-191 set_grob_direction in
+                //   Slur_engraver::create_slur.
+                bool up = op.item.PhrasingSlurDirection != 0
+                    ? op.item.PhrasingSlurDirection > 0
+                    : VoiceScan.SpanCurvesUp(score.Voices.Length, v,
+                        AnyCoveredStemDown(measures, op.measureIdx, op.itemIdx, measureIdx, itemIdx));
                 (phrasingSlurs ??= new List<SlurItem>()).Add(new SlurItem(
                     MusicItem.EdgeStaffPosition(op.item, up) ?? 0,
                     MusicItem.EdgeStaffPosition(item, up) ?? 0,

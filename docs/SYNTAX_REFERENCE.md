@@ -409,7 +409,9 @@ is the only curve that avoids a slur; a slur never avoids another slur). One phr
 open per voice at a time — a second `@phrasingSlur` before the first is closed is ignored and
 warned about, and **the end is required**: an unclosed one draws nothing and is an error
 (LYS4018). A note that ends one phrase and begins the next carries both marks,
-`e@!phrasingSlur@phrasingSlur`, and closes before it opens.
+`e@!phrasingSlur@phrasingSlur`, and closes before it opens. `@phrasingSlur.up` /
+`@phrasingSlur.down` fixes its side (LilyPond's `^\(` / `_\(`); otherwise it takes a slur's
+rule.
 
 ## Barlines
 

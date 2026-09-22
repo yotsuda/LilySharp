@@ -182,21 +182,25 @@ public sealed partial class MeasureCollector
     /// off its annotation list, the one <c>CollectArticulations</c> reads; a chord member's
     /// own list is not read — a phrasing slur binds to the column, as LilyPond's does.
     /// </remarks>
-    private (int Start, int End)? PhrasingSlurMarksOn(SyntaxNode node)
+    private (int Start, int End, int Direction)? PhrasingSlurMarksOn(SyntaxNode node)
     {
         if (_percentCoveredDepth > 0)
             return null;
-        int start = MusicItem.NoSourcePosition, end = MusicItem.NoSourcePosition;
+        int start = MusicItem.NoSourcePosition, end = MusicItem.NoSourcePosition, dir = 0;
         foreach (var a in ArticulationsOf(node))
         {
             if (a is ArticulationSyntax art
                 && Semantics.AnnotationValues.IsPhrasingSlurName(art.NameToken.Text))
+            {
                 start = art.SourceStart;
+                // '.up' / '.down' is LilyPond's ^\( / _\(.
+                dir = art.ForcedAbove switch { true => 1, false => -1, null => 0 };
+            }
             else if (a is MusicMarkSyntax { IsSpanEnd: true } mark
                 && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name))
                 end = mark.SourceStart;
         }
-        return start < 0 && end < 0 ? null : (start, end);
+        return start < 0 && end < 0 ? null : (start, end, dir);
     }
 
     /// <summary>
