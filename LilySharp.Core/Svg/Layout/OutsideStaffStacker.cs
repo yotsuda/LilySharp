@@ -1144,6 +1144,15 @@ internal static class OutsideStaffStacker
         public readonly List<int> Trills = new(), BarNumbers = new(), Ottavas = new(),
             CustomTexts = new(), Voltas = new(), MusicMarks = new(), Articulations = new(),
             Dynamics = new(), TextSpanners = new(), TupletBrackets = new(), ChordNames = new();
+
+        /// <summary>Empties all eleven lists, keeping their capacity (see
+        /// <see cref="t_spareParts"/>).</summary>
+        public void Clear()
+        {
+            Trills.Clear(); BarNumbers.Clear(); Ottavas.Clear(); CustomTexts.Clear();
+            Voltas.Clear(); MusicMarks.Clear(); Articulations.Clear(); Dynamics.Clear();
+            TextSpanners.Clear(); TupletBrackets.Clear(); ChordNames.Clear();
+        }
     }
 
     /// <summary>
@@ -1198,7 +1207,7 @@ internal static class OutsideStaffStacker
         SysPart PartOf(int s)
         {
             if (!parts.TryGetValue(s, out var p))
-                parts[s] = p = new SysPart();
+                parts[s] = p = TakeSparePart();
             return p;
         }
         void Collect<T>(ImmutableArray<T> arr, Func<T, int> measureOf, Func<SysPart, List<int>> sel)
@@ -1386,7 +1395,10 @@ internal static class OutsideStaffStacker
     /// a book): 2.17 passes a keystroke at 23.69 systems each (max 48), and all 4,010 maps
     /// built were unreachable by the time the render that built them returned. The maps and
     /// their growth ladders were 4,275 B a keystroke, 0.11% of it. The <see cref="SysPart"/>
-    /// VALUES are not parked — a memo entry's program is built from them — only the map.
+    /// VALUES were not parked then, on the reading that a memo entry's program is built from
+    /// them — but the program and the stored outputs are GATHERED out of the lists into
+    /// arrays of their own (<see cref="Gather"/>), so no list outlives the pass. Since
+    /// session 506 they go back with the map: see <see cref="t_spareParts"/>.
     /// <para>
     /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
     /// (session 456) — a map given back dirty would hand the next pass another score's
@@ -1417,8 +1429,40 @@ internal static class OutsideStaffStacker
     /// <summary>Puts a finished pass's partition map back, emptied, with its capacity.</summary>
     private static void GiveParts(Dictionary<int, SysPart> parts)
     {
+        var spare = t_spareParts ??= new List<SysPart>();
+        foreach (var part in parts.Values)
+        {
+            part.Clear();
+            spare.Add(part);
+        }
         parts.Clear();
         t_parts = parts;
+    }
+
+    /// <summary>
+    /// The partitions a finished pass gave back, EMPTIED, for the next pass's systems.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 506, the owner's corpus, 232 books × 8 forward keystrokes, a census
+    /// of every <c>new List&lt;int&gt;</c>): a <see cref="SysPart"/> was built 51.21 times a
+    /// keystroke, eleven lists each — the largest share of the <c>List&lt;int&gt;</c> row of
+    /// the type map — for index lists that are read only inside the pass that fills them.
+    /// ⚠️ THE CLEARING IS ON GIVE, like the map's: a partition handed back holding a
+    /// system's indices would open the next pass's system with another's grobs. What it
+    /// retains is one partition per system of the thread's longest score, emptied.
+    /// </remarks>
+    [ThreadStatic]
+    private static List<SysPart>? t_spareParts;
+
+    /// <summary>An empty partition: a spare one if a pass gave one back, else a new one.</summary>
+    private static SysPart TakeSparePart()
+    {
+        var spare = t_spareParts;
+        if (spare is null || spare.Count == 0)
+            return new SysPart();
+        var part = spare[^1];
+        spare.RemoveAt(spare.Count - 1);
+        return part;
     }
 
     private static T[] Gather<T>(ImmutableArray<T> arr, List<int> idxs)
