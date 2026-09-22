@@ -139,6 +139,23 @@ public abstract class SyntaxNode
         if (positions == null)
         {
             int n = Green.SlotCount;
+            // A SMALL node sums its preceding siblings on the spot — the same sum the table
+            // would hold, in the same order — instead of building the table: 2,128,518 tables
+            // over the reader's corpus, 42 KB a keystroke (session 495's array census), almost
+            // all of them for nodes of a handful of slots, where the walk is a few additions
+            // and the table outweighs the node it indexes. The O(n²) this table was built to
+            // kill needs many slots; from SmallNodeSlots up the table is kept.
+            if (n <= SmallNodeSlots)
+            {
+                int at = _position;
+                for (int i = 0; i < index; i++)
+                {
+                    var child = Green.GetSlot(i);
+                    if (child != null)
+                        at += child.FullWidth;
+                }
+                return at;
+            }
             positions = new int[n];
             int pos = _position;
             for (int i = 0; i < n; i++)
@@ -152,6 +169,10 @@ public abstract class SyntaxNode
         }
         return positions[index];
     }
+
+    /// <summary>The slot count up to which <see cref="GetChildPosition"/> walks instead of
+    /// keeping a table.</summary>
+    private const int SmallNodeSlots = 8;
 
     /// <summary>
     /// Creates a red node for a green node.
