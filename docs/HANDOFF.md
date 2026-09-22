@@ -149,9 +149,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   鍵の形を変える＝土台の変更**
   ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**残り＝`part`（system で仕分ける）と miss の建設**＝値段は未測定
 - ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・ビット同一）。`VerticalSkyline.Padded` は第510 が値付けして閉じた（3,830 B／打鍵のうち頭を −3,240）。**残り＝`OutsideStaffStacker.cs:3231` 530 B**（padding ごとの cache＝尾）
-- ★★★★ **⒩⁶ 梁の刻印の写し＝121,637 B／打鍵 7.3%＝*今いちばん大きい 1 軒*・直し方は 2 つともモデルの約束に触る**（第514 が値付け＝Lab `sessions/p514/copy-price.log`）。`MeasureCollector.ResolveBeamStemDirections` の bake は梁の音符 1 つにつき `n with { StemUpOverride, BeamId, PureBeamedStemTip }` を 1 回＝**563.18 回／打鍵 × 215 B**（NoteItem の写し）。⚠️ **刻印済みの item が bake に来ることは 1 度も無い**（同じ計器で `BeamId != null` を数えて 0＝splice の尾は bake を通らない）＝**`BeamId` を決定的にしても写しは消えない**（第514 が反証）。⇒ **⑴ 側表**（刻印を item の外へ。読み手は `BeamId` 48 軒／11 ファイル・`StemUpOverride` 27／6・`PureBeamedStemTip` 14／4・派生の `.StemUp` 115／25＝多便の土台変更）／**⑵ その場で刻印**（3 つの property を internal set にして bake が書き込む＝写し 0。**ただしモデルの不変性を崩す**: item は identity で cache の鍵になり、`PreFinalizeMeasures` は同じ instance を持つ＝`BeamId != null` なら写しに落ちる門と網が要る）。⚠️ **⑵ は「読み手に見える設計判断」＝ユーザー決定が先**（RULES §5.0 の soundness bias）
-  ⇒ ★★★ **⑶ 第 3 の道＝写しを*消す*のではなく*安くする*: −83,045 B／打鍵（5.0%）・モデルの約束に触らない**（第515 が値付け＝Lab `sessions/p515/field-census.txt`・`Zz515Size.cs.txt`）。`NoteItem` は **216 B** で、**描かれた 123,067 音のうち 25 の field が 1 度も既定値以外にならない**（一覧は census の 0 行＝`Notehead`・tremolo 3 つ・`Fingering`・`IsCue`・`EditorialAccidental`・laissezVibrer／repeatTie／phrasingSlur の一式ほか。`AccidentalX` 0.006%・`VoiceContext` 0.002%）。**1 つの参照の後ろへ出すと 216 → 144 B**（base と NoteItem で器 2 つ＝書ける綴り。1 つなら 136 B）＝**−72 B／写し × 1,153 回／打鍵**。器（base 48 B・note 88 B）を払うのは*使った音だけ*。**public property は転送で残る**ので反射の網 3 本（`CollectTailShifterTests`・`IncrementalReuseSoundnessTests`・`ModelDeepDiff`）は読む物が変わらず、等値は既に identity。⚠️ **勘所＝20 引数の構築子が cold を既定のまま置いたら器を建てない**（建てると全音が 88 B 払って逆ざや）。⚠️ **⑶ は ⑴⑵ と排他ではない**＝⑵ と両方で **−164,178 B／打鍵（9.9%）**、⑵ を先なら ⑶ の残り −42,480、⑶ を先なら ⑵ の残り −81,072。⚠️ **同じ手は `RestItem`（11,093 B／打鍵）と `ChordItem` にも効くが未測定**
-  ⚠️ **⑵ が壊すものの機構**（第515 が特定）: `MeasureCollector.cs:3130` が resume の採る `PreFinalizeMeasures` を撮るのは bake（`:869`）より**前**で、**item 実体を共有している**＝その場で刻印すると前の打鍵の刻印が resume の prefix に残り、今回 member でなくなった音が古い `BeamId` を持ち越す。**第514 の「刻印済みの item が bake に来る回数 0」は*今の形*の帰結**で、⑵ を入れた瞬間に 0 ではなくなる
+- ★★★ **⒩⁶ 梁の刻印の写し＝残り 81,098 B／打鍵 5.2%。次は ⑵（ユーザー決定済み「⑶ → ⑵ の順で両方」・第515）**。`MeasureCollector.ResolveBeamStemDirections` の bake は梁の音符 1 つにつき `n with { StemUpOverride, BeamId, PureBeamedStemTip }` を 1 回＝**563.18 回／打鍵 × 144 B**（第516 が 216 → 144 B に細らせた）。⚠️ **刻印済みの item が bake に来ることは 1 度も無い**＝**`BeamId` を決定的にしても写しは消えない**（第514 が反証）。
+  ✅ **⑶ 写しを*安くする*は第516 が入れた＝−105,668 B／打鍵（−6.37%）・出力同一**（`MusicItemRare` 10 field ＋ `NoteItemRare` 17 field。`NoteItem` 216→**144 B**・`RestItem` 96 B）。**⑴ 側表は畳んだ**＝⑵ が同じ賞金をずっと安く取る。
+  ⚠️ **⑵ が壊すものの機構**（第515 が特定）: `MeasureCollector.cs` の `PreFinalizeMeasures` の snapshot は bake より**前**に撮られ、**item 実体を共有している**＝その場で刻印すると前の打鍵の刻印が resume の prefix に残り、**今回 member でなくなった音が古い `BeamId` を持ち越す**（`MeasureContentKey` は `BeamId` を読む＝黙って古い絵を返しうる）。**第514 の「刻印済みが bake に来る回数 0」は*今の形*の帰結**で、⑵ を入れた瞬間に 0 ではなくなる。⇒ **要るのは ⑴ 採る前に刻印を落とす門（または snapshot 側の切り離し）と、⑵ それを見張る網**
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 - ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測）。
@@ -203,6 +203,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第516セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第515 のすぐ後）。**ユーザー決定「⑶ → ⑵ の順で両方」**＝⒩⁶ の第 3 の道を入れる便。
+★ **`-Start p516` の 1 コマンドで §0 が全部済んだ**（HEAD `01fa39f5`・full 8854 / 0 / 3 / 8857・`-Archive 514` も自動）。
+
+★★★★ **⑴ ⒩⁶ ⑶ を入れた＝`MusicItem` と `NoteItem` の*滅多に書かれない field* を 1 つずつの器へ出した。render 1,660,215 → 1,554,547（−105,668 B／打鍵・−6.37%）・出力は同一**（`8e0…` 後述の通り振る舞いの網は 1 本も動いていない）。`NoteItem` は **216 → 144 B**（第515 の模型の予測ちょうど）・`RestItem` は 96 B。⚠️ **賞金が予測（−83,045）を超えたのは base 側の器が `RestItem`・`ChordItem` にも効いたから**＝NoteItem 側だけの段階で −68,303、base 側を足して −105,668。
+★★ **綴り**: `MusicItemRare`（10 field・`VoiceContext`／`BeginsCueRegion`／`GraceSlash`／phrasingSlur 5 つ／laissezVibrer・repeatTie の位置）と `NoteItemRare`（17 field・`Notehead`／tremolo 3 つ／`Fingering`／`IsCue`／`IsCourtesy`／`EditorialAccidental`／`FeatherDirection`／`HasGlissando`／`AccidentalX`／`ForcedStemUp`／`TabBelowRange`／laissezVibrer・repeatTie の向きと有無）。**public property は転送で残る**ので読み手は 1 軒も変えていない。★★★ **勘所は 2 つ**: ⑴ **`init` は値が今と違うときだけ器を建て直す**（`if (value != X)`）＝既定を書く `with` が器を作らない／⑵ **20 引数の構築子は 9 つの cold を*先に検査*して、1 つでも既定でなければ 1 度だけ建てる**（`with` の連鎖にしない）。
+★ **踏んだ網 1 本**＝`ModelEqualityKindTests`「model の record が等値に答えるのに誰も決めていない」＝新しい 2 つを **Values** に分類した（器は不変で、`with` は置き換えるまで原本と*共有する*＝二つの item が 1 つの器を持つのは正しい。item 自身は今までどおり Entity）。
+  §7 7.5＝**Core '+' 202 行・全部 `MusicItem.cs`**（新 record 2 つと転送 property）。**LILYPOND-REF／LILYSHARP-OWN は 1 行も増えていない**＝移植でも発明でもなく*保管の形*だけの変更なので、新しい出所は要らない。`-End p516` の門は全部 OK・full 8854 / 0 / 3 / 8857。
+
+## 以下は第515セッションの経緯
+
 ### 1.1 第515セッション（2026-09-23・YT-DELL2）
 
 新しい会話。ユーザー指示「次を読んで作業に着手して」＝§1.0 の筆頭 ⒩⁶（★★★★・7.3%）。
@@ -215,16 +227,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⇒ **3 案は排他ではない**: ⑶ だけで **−83,045**、⑵ だけで −121,637、**両方で −164,178 B／打鍵（9.9%）**。⑵ を先に入れると ⑶ の残りは −42,480、⑶ を先に入れると ⑵ の残りは −81,072。
 ⇒ ★★★ **⑶ はモデルの約束に一切触らない**（public property は転送で残る＝`CollectTailShifterTests`・`IncrementalReuseSoundnessTests`・`ModelDeepDiff` の反射 3 本は読む物が変わらない。等値は既に identity）＝**ユーザー決定が要るのは ⑴⑵ だけ**。⚠️ ⑶ の実装の勘所は **20 引数の構築子が cold を*既定のまま*なら器を建てないこと**（建てると全音が 88 B 払って逆ざやになる）。
   §7 7.5＝**Core '+' 0 行**（この便も値付けだけ）。`-End p515` の門は全部 OK・full 8854 / 0 / 3 / 8857。
-
-## 以下は第514セッションの経緯
-
-### 1.1 第514セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き（第513 のすぐ後）。ユーザー指示「続けて」＝第513 が「次は土台」と書いた `NoteItem` の刻印。
-★ **`-Start p514` の 1 コマンドで §0 が全部済んだ**（HEAD `71f8dd0a`・full 8854 / 0 / 3 / 8857・`-Archive 512` も自動）。
-
-★★★ **⑴ 土台の 1 軒目を値付けした＝梁の刻印の写し 121,637 B／打鍵（7.3%）・コード変更なし**（⒩⁶ として §1.0 ⒝ に起票）。第513 が「次は土台」と書いた `NoteItem` 249 KB の中身を bake の呼びで数えた（`Zz514`・Lab `sessions/p514/`）＝**563.18 回／打鍵 × 215 B**。★ **安い直し方を 1 つ反証した**: 「`BeamId` が collect ごとに変わるから写す」なら**決定的な id にすれば同値で済む**はずだが、**刻印済みの item が bake に来る回数は 0**（splice の尾は bake を通らない）＝**どの item も刻印前**なので写しは避けられない。⇒ 残るのは ⑴ 側表（読み手 115 軒級の多便仕事）と ⑵ その場で刻印（写し 0・**モデルの不変性を崩すのでユーザー決定が先**）。
-  §7 7.5＝**Core '+' 0 行**（この便も値付けだけ）。`-End p514` の門は全部 OK・full 8854 / 0 / 3 / 8857。
 
 ## 2. 開いている作業
 
