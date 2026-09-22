@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第495セッションの経緯
+
+### 1.1 第495セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第494 のすぐ後）。ユーザー指示「続けて」＝型の地図の `Int32[]`／`Double[]` の軒を探す。
+★ **`-Start p495` の 1 コマンドで §0 が全部済んだ**（HEAD `eeecf6b8`・full 8840 / 0 / 3 / 8843・`-Archive 493` も自動）。
+
+★★★ **⑴ 配列の census**（`new int[E]`／`new double[E]` 141 軒を計器つきの helper に機械で書き換える・Lab `sessions/p495/instrument-arrays.ps1`・結果 `array-sites.txt`・warm-up 込み）＝頭は **`TabFingeringPlanner.cs:185/186`（1,541 回で 75 KB／打鍵＝1 回ごとに events×16 の表）と `SyntaxNode.cs:142`（2,128,518 回・42 KB＝red node ごとの子位置表）**。
+★★★ **⑵ タブの運指 trellis を thread に持たせた＝render 2,300,448 → 2,165,443（−135,005・−5.9%）**。`Plan` は drawer から取り、解き終えてから返す（throw なら失う）。`Reset` は数を 0 に・足りない時だけ配列を建て直す。**読むのは書いた所だけ**（states／costs／back は `_count` 未満・start は事象数未満・`_seenHand` は使うたびに戻す）。網 `TabFingeringPlannerReuseTests`（A→別の長い B→A が同じ・`_seenHand` を戻さない毒で赤）。⚠️ `_count` を 0 にしない毒は緑＝恒等（読みは全部 `_start[i]` 相対）。
+★★★ **⑶ 小さい node は子位置表を建てない＝→ 2,130,636（−34,807・−1.6%）**。`GetChildPosition` は slot 8 以下なら前の兄弟の幅をその場で足す（表と同じ和・同じ順）。毒（1 つ手前で止める）で 495 本赤。
+  どちらも出力は同一（`Zz495Hash`＝5824 行・0 差）。full 8841 / 0 / 3 / 8844。生成物は差分なし。
+★ **⑷ 終了時**: コード 2 ファイル（TabFingeringPlanner・SyntaxNode）＋テスト 1 本。
+
 ## 以下は第494セッションの経緯
 
 ### 1.1 第494セッション（2026-09-22・YT-DELL2）

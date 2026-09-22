@@ -145,12 +145,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **`b.part` 3,616 B 0.045%**。呼び出しは両側とも **2.17 回／打鍵**で、above は **4,010 回のうち 4,009 回が
   hit>0**・hit した system は **90,781／打鍵 22.6**）。⚠️ **`prog` は「鍵を建てる」ので、*安くする*には
   鍵の形を変える＝土台の変更**
-- ★★★ **⒫′ ⒫ の残り＝`PaddedCopy` の 5n の器 120,863 B／打鍵＝*新しい*打鍵の 2.36%**
-  （第443 実測・301.62 回／打鍵・2.15 件／回・max 7）。**距離を取る側（407,587）と歩き（918,863）は
-  第443 が閉じた**が、**この 301.62 回は建てた物が skyline になって後から読まれる**＝その場では消せない。
-  直すなら**「padding を*保留したまま*持つ skyline」**（`_pendingPad` を持ち、`Distance`／`X` は
-  `SkylineMath.Pads` で生成して歩き、`Merge`／`Raise`／`Buildings` で実体化する）＝**土台の変更**。
-  ⚠️ **`Raise`／`Shift`／`Scale` は pad と可換**（`Scale` は `_pendingPad` も倍する）**ことを先に毒で確かめる**
+- ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・読みは先行 pad と同じ list を thread scratch に作る＝ビット同一・書きの前に実体化）。**残り＝`VerticalSkyline.Padded`**（resolve する別の家＝同じ手は効かない・値段は未測定）
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 - ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測）。
@@ -202,6 +197,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第497セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第496 のすぐ後）。ユーザー指示「次便は、このセッションでやる方が有利なら着手して」＝⒫′（pad を保留したまま持つ skyline）。**この会話で有利と判断**＝第490〜第492 で `HorizontalSkyline`（`FromBoxesPadded`・`ShiftedRaisedOver`・render 内 memo の「共有物は触らない」契約）を触ったばかりで、その不変条件が手元にある。
+★ **`-Start p497` の 1 コマンドで §0 が全部済んだ**（HEAD `0d72f638`・full 8841 / 0 / 3 / 8844・`-Archive 495` も自動）。
+
+★★★ **⑴ ⒫′ を `HorizontalSkyline` で閉じた＝pad を保留したまま持つ＝render 2,127,511 → 2,090,071（−37,440・−1.8%）**。`FromBoxesPadded` は box の building だけを持ち `_pendingPad` を立てる。
+  **読み**（`X`・`MaxHeight`・`Distance` 両方・`ShiftedScratch`／`ShiftedRaisedOver`・`Padded`）は thread の読み scratch 2 本（距離は両側を同時に読む）に**先行 pad と同じ list**（building → 各 pad の順＝`AppendPads`）を作って歩く＝**入力の list が同一なので結果はビット同一**。
+  **書き**（`Raise`／`Shift`／`Scale`／`Merge`／`SetMinimumHeight`）と `Buildings` は先に `Materialize`＝**pad は必ず元の building から作る**（raise した building の pad と pad の raise はビットで一致しない＝HANDOFF の「可換を確かめる」は**可換を要らない形**で避けた）。`Clone` は保留ごと写す。保留の相手を `Merge` するときは相手を実体化せずに順どおり足す。
+  網 `HorizontalSkylineEnvelopeTests.APendingPadding_ReadsWritesAndMergesAsTheEagerCopy`（毒 3 本＝読みが pad を無視・`Raise` が実体化しない・`Merge` が相手の pad を落とす＝全部赤）。出力は同一（`Zz497Hash`＝0 差）。full 8842 / 0 / 3 / 8845。生成物 2 つ（census に `_pendingPad` の `0.0` 比較 6 行＝Yellow）。
+  ⚠️ **予測（第443 の 120 KB）より小さい**＝その後の便で列の skyline 自体が減った（第490 の 1 段建て・第492 の render 内 memo）。`VerticalSkyline.Padded` は別の家（resolve する）で手付かず。
+★ **⑵ 終了時**: コード 1 ファイル（HorizontalSkyline）＋テスト 1 本＋生成物 2 つ。
+
+## 以下は第496セッションの経緯
+
 ### 1.1 第496セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第495 のすぐ後）。ユーザー指示「続けて」＝§1.0 を畳んでから、配列 census の残りの頭。
@@ -215,19 +224,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑶ `LedgerColumnsOf` の 5 配列を最初の加線つき符頭まで建てない**＝render 2,130,636 → 2,127,511（−3,125）。出力同一（`Zz496Hash`＝0 差）。full 8841 / 0 / 3 / 8844。
   ⚠️ **初期値（±∞）は網が無い**＝`upLeft` を 0 で始める毒はスイート緑（変更前から同じ・この便は値を変えていない）。観測するなら「右へずれた加線つき符頭 1 つ」の `LedgerColumnsOf` を直接読む unit を書く。
 ★ **⑷ 終了時**: コード 1 ファイル（SpacingRules.LedgerRods）。
-
-## 以下は第495セッションの経緯
-
-### 1.1 第495セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第494 のすぐ後）。ユーザー指示「続けて」＝型の地図の `Int32[]`／`Double[]` の軒を探す。
-★ **`-Start p495` の 1 コマンドで §0 が全部済んだ**（HEAD `eeecf6b8`・full 8840 / 0 / 3 / 8843・`-Archive 493` も自動）。
-
-★★★ **⑴ 配列の census**（`new int[E]`／`new double[E]` 141 軒を計器つきの helper に機械で書き換える・Lab `sessions/p495/instrument-arrays.ps1`・結果 `array-sites.txt`・warm-up 込み）＝頭は **`TabFingeringPlanner.cs:185/186`（1,541 回で 75 KB／打鍵＝1 回ごとに events×16 の表）と `SyntaxNode.cs:142`（2,128,518 回・42 KB＝red node ごとの子位置表）**。
-★★★ **⑵ タブの運指 trellis を thread に持たせた＝render 2,300,448 → 2,165,443（−135,005・−5.9%）**。`Plan` は drawer から取り、解き終えてから返す（throw なら失う）。`Reset` は数を 0 に・足りない時だけ配列を建て直す。**読むのは書いた所だけ**（states／costs／back は `_count` 未満・start は事象数未満・`_seenHand` は使うたびに戻す）。網 `TabFingeringPlannerReuseTests`（A→別の長い B→A が同じ・`_seenHand` を戻さない毒で赤）。⚠️ `_count` を 0 にしない毒は緑＝恒等（読みは全部 `_start[i]` 相対）。
-★★★ **⑶ 小さい node は子位置表を建てない＝→ 2,130,636（−34,807・−1.6%）**。`GetChildPosition` は slot 8 以下なら前の兄弟の幅をその場で足す（表と同じ和・同じ順）。毒（1 つ手前で止める）で 495 本赤。
-  どちらも出力は同一（`Zz495Hash`＝5824 行・0 差）。full 8841 / 0 / 3 / 8844。生成物は差分なし。
-★ **⑷ 終了時**: コード 2 ファイル（TabFingeringPlanner・SyntaxNode）＋テスト 1 本。
 
 ## 2. 開いている作業
 
