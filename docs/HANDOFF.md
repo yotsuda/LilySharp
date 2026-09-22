@@ -153,8 +153,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   `Rendering/SharedRenderer.Noteheads.cs:54/:63` **796**＝`EnumerateStaffItems` の 216 B／
   検出器 3 軒 **543**＝`VoiceScan.WalkVoiceItems` の 104 B／`Svg/Collector/RenderSpec.cs:401`＋`:509`
   **484**＝`GetVoiceBindings`／`VoltaBracketEngraver.cs:225` **270**＝`BrokenPieces`。
-  ⚠️ **頭の 2 軒は器ではない**: `MeasureCollector.cs:1567` **898**＝`HarvestOmittedStructure` が
-  1,199 B／回 建てて**空を返す**（しかも `:861` と **2 か所で呼ぶ**＝同じ仕事を 2 度）／
+  ⚠️ **頭の 2 軒は器ではない**: ~~`HarvestOmittedStructure`~~ **第489 が閉じた**（コーパス 2,092 回・全部空・1,224 → 55 B／回・render −1,177／打鍵。2 か所の呼びは単音の道 `CollectPass` と多段の道 `CollectMultiStaffPass`＝打鍵あたり 1.13 回）／
   `Music/LyricBindings.cs:148` **682**＝`DescendantNodesOfKinds` が 1 回 157 KB（＝⒯ の島）。
   脚は Lab `sessions/p446/`（`instrument.ps1` は `Core` 全体を包む）
 - **⒬″ ⒬ の尾＝`IReadOnlyList` 族の残り 34 軒 1,410 B／打鍵 0.028%**＝1 軒あたり 41 B＝実仕事
@@ -234,6 +233,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第489セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第488 のすぐ後）。ユーザー指示「続けて」。
+★ **`-Start p489` の 1 コマンドで §0 が全部済んだ**（HEAD `1518e223`・full 8831 / 0 / 3 / 8834・`-Archive 487` も自動）。
+
+★★ **⑴ ⒭′ の頭 `HarvestOmittedStructure` を閉じた＝render 2,834,004 → 2,832,827（−1,177 B／打鍵）**。先に計器（呼びの前後で `GetAllocatedBytesForCurrentThread`・Lab `sessions/p489/`）で値段を取り直した＝**2,092 回・2,092 回とも空・1,224 B／回**。
+  直し＝LINQ の鎖を 1 本の loop に（空の間は何も建てない）・描かれる声部かどうかは新設の `RenderSpec.BindsVoice`（`BindingsOf` と同じ case の membership・網 `RenderSpecBindsVoiceTests`＝chord row の case を抜く毒で赤）・`PartHasStructure` の `refs` を最初の参照で建てる・`OfType`／`FirstOrDefault` を `ChildNodesOfKind` に。**55 B／回が残る**。
+  出力は同一（`Zz489Hash`＝5824 行・0 差）。full 8832 / 0 / 3 / 8835（+1＝新しい網・APPROXIMATIONS.md は行番号だけ再生成）。
+★ **⑵ 終了時**: コード 2 ファイル（MeasureCollector・RenderSpec）＋テスト 1 本＋生成物 1 つ。
+
+## 以下は第488セッションの経緯
+
 ### 1.1 第488セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第487 のすぐ後）。ユーザー指示「メモリやって」＝§1.0 ⒜ の ⒮¹⁰（器ごと憶える島の続き・census の取り直しから）。
@@ -244,16 +255,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **parse の数は同じ木の 2 run で 314,925 と 315,356**＝±400 の揺れ。render は 2 run で 9 B しか違わない＝**A/B は render で読む**。
   ⚠️ `ElementCoordinator.cs:824`（BeamCollision の list）は `CalculateBeamLayout` の先で持たれ得るので読まずに見送った。
 ★ **⑵ 終了時**: コードは 7 ファイル（KnuthPlassBreaker・LayoutEngine・MultiStaffLayouter・ElementCoordinator・PageLayouter・SyntaxNode・SyntaxNodes.FormRender）＋生成物 2 つ。
-
-## 以下は第487セッションの経緯
-
-### 1.1 第487セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第486 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒝ の ⒳⁷（小節線の floor は誰にも届いていない）。
-★ **`-Start p487` の 1 コマンドで §0 が全部済んだ**（HEAD `2d53e27a`・full 8831 / 0 / 3 / 8834・`-Archive 485` も自動）。
-
-★★ **⑴ ⒳⁷ は進んだが閉じていない**＝網を書く形が見つからなかった（§1.0 ⒳⁷ に所見 3 点）。**Lily# ははみ出す段を LP と同じ幅まで圧縮する**ことを確かめ（rod が効く場面は在る）、それでも圧縮された 3 冊で毒は 0 差。理屈の上でも隣の頭が効く余地は skyline の余白の斜面だけ。毒の後の CLI 再ビルドは毎回確認（`default` への置換で初回はビルド失敗＝比較が無効だったのを exit で気づいた）。
-★ **⑵ 終了時**: コードの変更なし（docs のみ）。
 
 ## 2. 開いている作業
 
