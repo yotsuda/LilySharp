@@ -55,6 +55,18 @@ internal sealed class HorizontalSkyline
     private readonly List<SkylineBuilding> _buildings;
     private readonly HorizontalDirection _direction;
 
+    // ⚠️ THE PADDING MAY BE PENDING (session 497, HANDOFF ⒫′). A skyline built padded
+    // (FromBoxesPadded) keeps its own buildings only, and this is the horizon padding their
+    // pad buildings would be made with; > 0 means they are not in _buildings yet.
+    // A READ sees exactly the list the eager padding held — the same buildings, then each
+    // one's pads in the same order (AppendPads) — made in a thread scratch (Effective).
+    // A WRITE (Raise, Shift, Scale, Merge, SetMinimumHeight) first makes them real
+    // (Materialize), because a pad of a raised building is not bit for bit the raised pad:
+    // the padding is taken where the eager code took it, before any change.
+    // Why: every rod and wish view of a column is built padded and only ever MEASURED, so
+    // four fifths of each one's list was built to be read by a distance and dropped.
+    private double _pendingPad;
+
     private const double NegativeInfinity = double.NegativeInfinity;
     private const double PositiveInfinity = double.PositiveInfinity;
 
@@ -64,15 +76,59 @@ internal sealed class HorizontalSkyline
         _direction = direction;
     }
 
-    private HorizontalSkyline(List<SkylineBuilding> buildings, HorizontalDirection direction)
+    private HorizontalSkyline(List<SkylineBuilding> buildings, HorizontalDirection direction,
+        double pendingPad = 0.0)
     {
         _buildings = buildings;
         _direction = direction;
+        _pendingPad = pendingPad;
     }
 
     public HorizontalDirection Direction => _direction;
+    // A pad is made only for a building, so pending pads never make an empty skyline full.
     public bool IsEmpty => _buildings.Count == 0;
-    public IReadOnlyList<SkylineBuilding> Buildings => _buildings;
+
+    /// <summary>The buildings, pads included — the padding is made real first.</summary>
+    public IReadOnlyList<SkylineBuilding> Buildings
+    {
+        get
+        {
+            Materialize();
+            return _buildings;
+        }
+    }
+
+    /// <summary>Makes a pending padding real, into this skyline's own list, as the eager
+    /// padding made it (and at the capacity it had).</summary>
+    private void Materialize()
+    {
+        if (_pendingPad <= 0.0)
+            return;
+        _buildings.EnsureCapacity(_buildings.Count * (1 + SkylineMath.MaxPads));
+        AppendPads(_buildings, _pendingPad, 0);
+        _pendingPad = 0.0;
+    }
+
+    /// <summary>The list a read walks: the buildings themselves, or — with a padding
+    /// pending — the eager list rebuilt in one of the thread's two read scratches (two,
+    /// because a distance reads both sides at once). Valid until the next read on the
+    /// same slot.</summary>
+    private List<SkylineBuilding> Effective(bool secondSlot)
+    {
+        if (_pendingPad <= 0.0)
+            return _buildings;
+        var scratch = secondSlot ? (t_readB ??= new()) : (t_readA ??= new());
+        scratch.Clear();
+        scratch.AddRange(_buildings);
+        AppendPads(scratch, _pendingPad, 0);
+        return scratch;
+    }
+
+    [ThreadStatic]
+    private static List<SkylineBuilding>? t_readA;
+
+    [ThreadStatic]
+    private static List<SkylineBuilding>? t_readB;
 
     /// <summary>
     /// Creates a skyline from a single bounding box.
@@ -240,10 +296,12 @@ internal sealed class HorizontalSkyline
         if (glyph._direction != under._direction)
             throw new ArgumentException("Cannot merge skylines with different directions");
         int sky = (int)glyph._direction;
-        var buildings = new List<SkylineBuilding>(glyph._buildings.Count + under._buildings.Count);
-        foreach (var b in glyph._buildings)
+        var glyphBuildings = glyph.Effective(secondSlot: false);
+        var underBuildings = under.Effective(secondSlot: true);
+        var buildings = new List<SkylineBuilding>(glyphBuildings.Count + underBuildings.Count);
+        foreach (var b in glyphBuildings)
             buildings.Add(b.ShiftedHorizon(shift).RaisedBy(sky * raise));
-        buildings.AddRange(under._buildings);
+        buildings.AddRange(underBuildings);
         return new HorizontalSkyline(buildings, glyph._direction);
     }
 
@@ -259,7 +317,7 @@ internal sealed class HorizontalSkyline
             ? ref t_shiftedLeft : ref t_shiftedRight;
         var scratch = slot ??= new HorizontalSkyline(source._direction);
         scratch._buildings.Clear();
-        foreach (var b in source._buildings)
+        foreach (var b in source.Effective(secondSlot: false))
             scratch._buildings.Add(b.ShiftedHorizon(shift));
         return scratch;
     }
@@ -273,12 +331,15 @@ internal sealed class HorizontalSkyline
     /// <summary>A deep copy (the building list is duplicated), so mutating operations
     /// (<see cref="Raise"/>/<see cref="Shift"/>/<see cref="Merge"/>) on the copy leave the
     /// original — e.g. a shared baked glyph skyline — untouched.</summary>
-    public HorizontalSkyline Clone() => new HorizontalSkyline(new List<SkylineBuilding>(_buildings), _direction);
+    // The copy carries the pending padding with it; whoever mutates it makes the pads from
+    // the same buildings, so they are the pads this one would have made.
+    public HorizontalSkyline Clone() => new HorizontalSkyline(new List<SkylineBuilding>(_buildings), _direction, _pendingPad);
 
     /// <summary>Raises every building's roof by <paramref name="r"/> in real X (mutates).
     /// LILYPOND-REF: lily/skyline.cc:512 Skyline::raise (y_intercept_ += sky*r).</summary>
     public void Raise(double r)
     {
+        Materialize();
         int sky = (int)_direction;
         for (int i = 0; i < _buildings.Count; i++)
             _buildings[i] = _buildings[i].RaisedBy(sky * r);
@@ -288,6 +349,7 @@ internal sealed class HorizontalSkyline
     /// LILYPOND-REF: lily/skyline.cc:519 Skyline::shift.</summary>
     public void Shift(double s)
     {
+        Materialize();
         for (int i = 0; i < _buildings.Count; i++)
             _buildings[i] = _buildings[i].ShiftedHorizon(s);
     }
@@ -297,6 +359,7 @@ internal sealed class HorizontalSkyline
     /// its (unscaled) staff position.</summary>
     public void Scale(double k)
     {
+        Materialize();
         for (int i = 0; i < _buildings.Count; i++)
             _buildings[i] = _buildings[i].ScaledBy(k);
     }
@@ -307,7 +370,7 @@ internal sealed class HorizontalSkyline
     public double MaxHeight()
     {
         double ret = NegativeInfinity;
-        foreach (var b in _buildings)
+        foreach (var b in Effective(secondSlot: false))
         {
             ret = Math.Max(ret, b.ValueAt(b.Start));
             ret = Math.Max(ret, b.ValueAt(b.End));
@@ -354,7 +417,13 @@ internal sealed class HorizontalSkyline
         if (other._direction != _direction)
             throw new ArgumentException("Cannot merge skylines with different directions");
 
+        Materialize();
+        // The other side's padding, if pending, is appended as its eager list would have been
+        // (its buildings, then their pads) without being made real in the other skyline.
+        int from = _buildings.Count;
         _buildings.AddRange(other._buildings);
+        if (other._pendingPad > 0.0)
+            AppendPads(_buildings, other._pendingPad, from);
     }
 
     /// <summary>
@@ -371,7 +440,7 @@ internal sealed class HorizontalSkyline
         if (_direction == other._direction)
             throw new ArgumentException("Distance requires skylines with opposite directions");
 
-        return SkylineMath.Distance(_buildings, other._buildings);
+        return SkylineMath.Distance(Effective(secondSlot: false), other.Effective(secondSlot: true));
     }
 
     /// <summary>
@@ -389,9 +458,10 @@ internal sealed class HorizontalSkyline
         if (_direction == other._direction)
             throw new ArgumentException("Distance requires skylines with opposite directions");
         if (horizonPadding <= 0.0)
-            return SkylineMath.Distance(_buildings, other._buildings);
+            return SkylineMath.Distance(Effective(secondSlot: false), other.Effective(secondSlot: true));
 
-        return SkylineMath.DistancePadded(_buildings, horizonPadding, other._buildings);
+        return SkylineMath.DistancePadded(
+            Effective(secondSlot: false), horizonPadding, other.Effective(secondSlot: true));
     }
 
     /// <summary>
@@ -419,6 +489,7 @@ internal sealed class HorizontalSkyline
     /// building the merge would have shadowed cannot win either way.</remarks>
     public void SetMinimumHeight(double h)
     {
+        Materialize();
         int sky = (int)_direction;
         _buildings.Add(new SkylineBuilding(NegativeInfinity, sky * h, sky * h, PositiveInfinity));
     }
@@ -441,19 +512,21 @@ internal sealed class HorizontalSkyline
         // The sibling says that bound out loud — <see cref="VerticalSkyline.Padded"/> asks
         // its lender for <c>_buildings.Count * 4</c> — while this list used to start at n and
         // regrow n → 2n → 4n → 8n to hold the same 5n.
-        var pad = new List<SkylineBuilding>(_buildings.Count * (1 + SkylineMath.MaxPads));
-        pad.AddRange(_buildings);
-        AppendPads(pad, horizonPadding);
+        var own = Effective(secondSlot: false);
+        var pad = new List<SkylineBuilding>(own.Count * (1 + SkylineMath.MaxPads));
+        pad.AddRange(own);
+        AppendPads(pad, horizonPadding, 0);
         return pad;
     }
 
-    /// <summary>Appends, for each building already in <paramref name="buildings"/>, its pad
-    /// buildings — the list becomes the padded skyline's, in <see cref="Padded"/>'s order.</summary>
-    private static void AppendPads(List<SkylineBuilding> buildings, double horizonPadding)
+    /// <summary>Appends, for each building already in <paramref name="buildings"/> from
+    /// <paramref name="from"/> on, its pad buildings — the range becomes the padded
+    /// skyline's, in <see cref="Padded"/>'s order.</summary>
+    private static void AppendPads(List<SkylineBuilding> buildings, double horizonPadding, int from)
     {
         Span<SkylineBuilding> pads = stackalloc SkylineBuilding[SkylineMath.MaxPads];
         int count = buildings.Count;
-        for (int b = 0; b < count; b++)
+        for (int b = from; b < count; b++)
         {
             int n = SkylineMath.Pads(buildings[b], horizonPadding, pads);
             for (int i = 0; i < n; i++)
@@ -478,15 +551,14 @@ internal sealed class HorizontalSkyline
     {
         // LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded — no padding, no pad buildings (as PaddedCopy).
         bool pad = horizonPadding > 0.0;
-        var buildings = new List<SkylineBuilding>(boxes.Count * (pad ? 1 + SkylineMath.MaxPads : 1));
+        // The pads are left PENDING (see _pendingPad): the list holds the boxes alone.
+        var buildings = new List<SkylineBuilding>(boxes.Count);
         for (int i = 0; i < boxes.Count; i++)
         {
             var (yBottom, yTop, xLeft, xRight) = boxes[i];
             buildings.Add(BoxBuilding(yBottom, yTop, xLeft, xRight, direction));
         }
-        if (pad)
-            AppendPads(buildings, horizonPadding);
-        return new HorizontalSkyline(buildings, direction);
+        return new HorizontalSkyline(buildings, direction, pad ? horizonPadding : 0.0);
     }
 
     /// <summary>
@@ -497,7 +569,7 @@ internal sealed class HorizontalSkyline
     public double X(double y)
     {
         double best = NegativeInfinity; // stored frame: larger = outer for both directions
-        foreach (var b in _buildings)
+        foreach (var b in Effective(secondSlot: false))
         {
             if (y >= b.Start && y <= b.End)
                 best = Math.Max(best, b.ValueAt(y));

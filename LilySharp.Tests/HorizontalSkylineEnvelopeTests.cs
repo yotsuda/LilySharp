@@ -91,6 +91,55 @@ public class HorizontalSkylineEnvelopeTests
         Assert.Equal(shifted.Buildings, HorizontalSkyline.ShiftedScratch(glyph, -2.5).Buildings);
     }
 
+    /// <summary>
+    /// A skyline built padded keeps its padding PENDING (session 497): every read must see the
+    /// eager padded list, every write must pad first (a pad of a raised building is not the
+    /// raised pad, bit for bit), and a pending skyline merged into another must bring its pads.
+    /// The eager copy — FromBoxes then PaddedCopy — is the reference throughout.
+    /// </summary>
+    [Fact]
+    public void APendingPadding_ReadsWritesAndMergesAsTheEagerCopy()
+    {
+        var boxes = new[]
+        {
+            (-2.0, 2.0, -0.5, 1.3),
+            (-0.25, 0.75, -1.2, 0.4),
+            (1.5, 3.5, 0.1, 0.9),
+        };
+        const double pad = 0.15;
+        HorizontalSkyline Eager() => HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right).PaddedCopy(pad);
+        HorizontalSkyline Pending() => HorizontalSkyline.FromBoxesPadded(boxes, HorizontalDirection.Right, pad);
+        var facing = HorizontalSkyline.FromBoxes(new[] { (-1.0, 3.8, 1.1, 2.0) }, HorizontalDirection.Left);
+
+        // Reads, the padding still pending: at a y only a pad covers, and a distance.
+        foreach (double y in new[] { -2.1, 0.0, 3.6, 3.75 })
+            Assert.Equal(Eager().X(y), Pending().X(y));
+        Assert.Equal(Eager().MaxHeight(), Pending().MaxHeight());
+        Assert.Equal(Eager().Distance(facing), Pending().Distance(facing));
+        Assert.Equal(Eager().Distance(facing, 0.1), Pending().Distance(facing, 0.1));
+        Assert.Equal(facing.Distance(Eager(), 0.1), facing.Distance(Pending(), 0.1));
+
+        // Writes: raise and shift a pending skyline, and a clone of one.
+        var eager = Eager();
+        eager.Raise(0.37);
+        eager.Shift(-1.13);
+        var pending = Pending();
+        pending.Raise(0.37);
+        pending.Shift(-1.13);
+        Assert.Equal(eager.Buildings, pending.Buildings);
+        var clone = Pending().Clone();
+        clone.Raise(0.37);
+        clone.Shift(-1.13);
+        Assert.Equal(eager.Buildings, clone.Buildings);
+
+        // A pending skyline merged INTO another brings its pads, in the eager order.
+        var intoEager = HorizontalSkyline.FromBoxes(new[] { (0.0, 1.0, 0.0, 0.5) }, HorizontalDirection.Right);
+        intoEager.Merge(Eager());
+        var intoPending = HorizontalSkyline.FromBoxes(new[] { (0.0, 1.0, 0.0, 0.5) }, HorizontalDirection.Right);
+        intoPending.Merge(Pending());
+        Assert.Equal(intoEager.Buildings, intoPending.Buildings);
+    }
+
     [Fact]
     public void Distance_IgnoresShadowedBuilding()
     {

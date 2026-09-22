@@ -177,7 +177,7 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
-- **:121** clearing is right and unobserved: a forgotten Clear here would surface only when
+- **:177** clearing is right and unobserved: a forgotten Clear here would surface only when
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:733** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1003** NOT MEASURED — no ledger point reads a flag's draw x, and the last
