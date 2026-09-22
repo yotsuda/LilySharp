@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第500セッションの経緯
+
+### 1.1 第500セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第499 のすぐ後）。ユーザー指示「続けて」＝第499 の型の地図の続き（`SystemDetails`・`ArticulationLayout[]`・`PitchTraceEntry[]`）。
+★ **`-Start p500` の 1 コマンドで §0 が全部済んだ**（HEAD `4c532a16`・full 8843 / 0 / 3 / 8846・`-Archive 498` も自動）。
+
+★★★ **⑴ render の collector は `--pitches` の trace を書かない＝render 2,016,345 → 1,950,749（−65,596・−3.3%）**。第499 の型の地図の `PitchTraceEntry[]` 36 KB を追うと、`ResolveAbsolutePitch` が**音高 1 つごとに entry と `FormatPitch` の文字列**を足していた。**読み手（`check --pitches`＝`ResolvedPitches.ForFile`・LSP の `factsForRange`・probe・テスト）は全部自分の collector を建てる**＝`IncrementalCompiler` の collector の trace は誰も読まない。⇒ `MeasureCollector.RecordsPitchTrace`（既定 true）を足し、`IncrementalCompiler` の 2 つの collector が false、入れ子の collect（`MeasureCollector.cs` の 3 か所）は親から継ぐ。
+  ⚠️ **trace は resume の副表**（`CumulativeSideTables`）＝記録する collector と adopt する collector が**同じ設定**なので両方とも空か両方とも在る（`IncrementalCompiler` の 2 つを同時に false にしたのはそのため）。
+  網 `PitchTraceTests.ACollectorWithoutTheTrace_CollectsTheSameMusic`。毒 2 本（Lab `sessions/p500/poisons.ps1`）＝**既定を false→85 赤**・**旗を無視→この unit だけ赤**。⚠️ **入れ子が旗を継がない毒には観測者がいない**（割り当てが戻るだけ）。出力は同一（`Zz500Hash`＝0 差）。full 8844 / 0 / 3 / 8847。生成物 1 つ（APPROXIMATIONS）。
+★ **⑵ 終了時**: コード 3 ファイル（MeasureCollector・同 ItemFactory・IncrementalCompiler）＋テスト 1 本＋生成物 1 つ。
+
 ## 以下は第499セッションの経緯
 
 ### 1.1 第499セッション（2026-09-22・YT-DELL2）
