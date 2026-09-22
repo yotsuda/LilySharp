@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第492セッションの経緯
+
+### 1.1 第492セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第491 のすぐ後）。ユーザー指示「続けて」＝列の skyline（672 KB／打鍵）と「距離だけのために skyline を建てる」軒。
+★ **`-Start p492` の 1 コマンドで §0 が全部済んだ**（HEAD `0cc5381d`・full 8837 / 0 / 3 / 8840・`-Archive 490` も自動）。
+
+★★★ **⑴ 列の skyline を render 内で共有した＝render 2,657,678 → 2,593,947（−63,731 B／打鍵・−2.4%）**。計器（Lab `sessions/p492/`＝`Build` の呼びを (item 参照, 引数, render 番号) で数える）で **2,048,398 回のうち 1,104,189 回が同じ (item, 引数) の再建・うち 1,099,297 回は同じ render の中**、呼び手は全部 spring の値付け（`CreateInterColumnSpring`／`CalculateSkylineDistance`／`CreateLastToBarlineSpring`）＝**gate（`ComputeMultiStaffSpringData`）と layout（`MultiStaffLayouter`）が同じ小節を 2 度値付けする**。
+  直し＝`ItemSkylineFactory.BeginRenderMemo`（thread の辞書・入れ子は合流・最外で空に）を `IncrementalCompiler.Compile` の gate の前と `LayoutEngine.Layout` の頭で開く。**読むだけの呼び手**（`SpacingRules.BarlineSkyline`／`MeasureSprings` の 2 軒／`Grace`）だけが `Shared*` で訊く＝public の `Create*` は今までどおり新品。鍵は item を**参照**で＋`Build` の引数全部（model に setter は無いことを grep で確認）。
+  網 `ItemSkylineRenderMemoTests`（X・staff Y・scope の毒で赤。⚠️ **`Which` を鍵から抜く毒は緑＝恒等**：4 つの view では `Which` が向きと padding から決まる・比較器の remarks に明記）。出力は同一（`Zz492Hash`＝5824 行・0 差）。full 8839 / 0 / 3 / 8842。
+  ⚠️ **予測より小さい理由**＝再建の大半は冊ごとの warm-up の全描画（打鍵の数に入らない）。
+★ **⑵ 終了時**: コード 6 ファイル（ItemSkylineFactory・IncrementalCompiler・LayoutEngine・SpacingRules 3 つ）＋テスト 1 本＋生成物 1 つ（APPROXIMATIONS.md・行番号だけ）。
+
 ## 以下は第491セッションの経緯
 
 ### 1.1 第491セッション（2026-09-22・YT-DELL2）

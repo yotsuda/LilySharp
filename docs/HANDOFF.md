@@ -103,7 +103,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` 31.8 回 8,180 B（距離 1 つのために skyline 2 つ＝box から直接 `SkylineMath` で測れば消える）。
-  ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（collect の post-pass の `with`？未調査）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）・Int32[] 120 KB・Double[] 101 KB・State[] 64 KB**。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
+  ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（**第494 が呼び手で数えた＝設計の値段**: 建てる 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976＝梁の刻印は collect ごとに新しい BeamId なので必ず写す・`TabResolver.ResolveTabStrings` 509,020＝弦番号の書き込み。消すなら刻印を item の外（側表）へ出す＝土台の変更）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）・Int32[] 120 KB・Double[] 101 KB・State[] 64 KB**。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
   ⇒ 次の候補: `SpacingRules.MeasureSprings.cs:1282/1290`（`FromBoxes(…).Distance(CreateLeftSkyline(…))`＝距離だけ）・`AccidentalPlacement` の `reference` の head skyline・`Clone()` の他の呼び手。
 - ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
@@ -216,6 +216,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第494セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第493 のすぐ後）。ユーザー指示「続けて」＝型の地図の次の頭 `NoteItem`（297 KB／打鍵）。
+★ **`-Start p494` の 1 コマンドで §0 が全部済んだ**（HEAD `505f264a`・full 8840 / 0 / 3 / 8843・`-Archive 492` も自動）。
+
+★★ **⑴ `NoteItem`（297 KB／打鍵）は設計の値段だった**。record の手書き copy constructor（`with` が通る）と constructor に呼び手ごとの計器（Lab `sessions/p494/`・`Zz494AbProbe.cs.txt`・warm-up 込み）＝**建てる `CreateNoteItem` 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976・`TabResolver.ResolveTabStrings` 509,020**・以下 `WithBowSources` 69,174 ほか。
+  梁の刻印（StemUpOverride・BeamId・PureBeamedStemTip）は collect ごとに新しい item に新しい id を書く＝**「同じ値なら写さない」を試して 0 回だった**（戻した）。消すなら刻印を item の外へ出す＝土台の変更（§1.0 に 1 行）。
+★ **⑵ `ResolveTabStrings` の小節ごとの item 配列の写しを「書く時だけ」にした**（`ResolveBeamStemDirections` の Work/ItemAt の形）＝render 2,301,528 → 2,300,448（−1,080）。出力同一（`Zz494Hash`＝0 差）。網は既存＝`ItemAt` が書き込みを見ない毒で `TabBelowRangeHideTests` と snapshot `test/tab-below-range` が赤。full 8840 / 0 / 3 / 8843。
+★ **⑶ 終了時**: コード 1 ファイル（TabResolver）。
+
+## 以下は第493セッションの経緯
+
 ### 1.1 第493セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第492 のすぐ後）。ユーザー指示「続けて」＝距離だけのために skyline を建てる軒と、臨時記号の reference。
@@ -227,19 +239,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   どちらも出力は同一（`Zz493Hash`＝5824 行・0 差）。full 8840 / 0 / 3 / 8843。生成物 2 つ（行番号と、1 行の本文だけ）。
 ★ **⑷ 終了時**: コード 3 ファイル（BeamScoringProblem・PageBreaker・LayoutEngine.SystemCount）＋テスト 1 本＋生成物 2 つ。
 ★ **この便の途中でユーザーが push した**＝`origin/master` は `db857bde`（第492 の docs）。Lab は push されていない（ahead 136）。
-
-## 以下は第492セッションの経緯
-
-### 1.1 第492セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第491 のすぐ後）。ユーザー指示「続けて」＝列の skyline（672 KB／打鍵）と「距離だけのために skyline を建てる」軒。
-★ **`-Start p492` の 1 コマンドで §0 が全部済んだ**（HEAD `0cc5381d`・full 8837 / 0 / 3 / 8840・`-Archive 490` も自動）。
-
-★★★ **⑴ 列の skyline を render 内で共有した＝render 2,657,678 → 2,593,947（−63,731 B／打鍵・−2.4%）**。計器（Lab `sessions/p492/`＝`Build` の呼びを (item 参照, 引数, render 番号) で数える）で **2,048,398 回のうち 1,104,189 回が同じ (item, 引数) の再建・うち 1,099,297 回は同じ render の中**、呼び手は全部 spring の値付け（`CreateInterColumnSpring`／`CalculateSkylineDistance`／`CreateLastToBarlineSpring`）＝**gate（`ComputeMultiStaffSpringData`）と layout（`MultiStaffLayouter`）が同じ小節を 2 度値付けする**。
-  直し＝`ItemSkylineFactory.BeginRenderMemo`（thread の辞書・入れ子は合流・最外で空に）を `IncrementalCompiler.Compile` の gate の前と `LayoutEngine.Layout` の頭で開く。**読むだけの呼び手**（`SpacingRules.BarlineSkyline`／`MeasureSprings` の 2 軒／`Grace`）だけが `Shared*` で訊く＝public の `Create*` は今までどおり新品。鍵は item を**参照**で＋`Build` の引数全部（model に setter は無いことを grep で確認）。
-  網 `ItemSkylineRenderMemoTests`（X・staff Y・scope の毒で赤。⚠️ **`Which` を鍵から抜く毒は緑＝恒等**：4 つの view では `Which` が向きと padding から決まる・比較器の remarks に明記）。出力は同一（`Zz492Hash`＝5824 行・0 差）。full 8839 / 0 / 3 / 8842。
-  ⚠️ **予測より小さい理由**＝再建の大半は冊ごとの warm-up の全描画（打鍵の数に入らない）。
-★ **⑵ 終了時**: コード 6 ファイル（ItemSkylineFactory・IncrementalCompiler・LayoutEngine・SpacingRules 3 つ）＋テスト 1 本＋生成物 1 つ（APPROXIMATIONS.md・行番号だけ）。
 
 ## 2. 開いている作業
 
