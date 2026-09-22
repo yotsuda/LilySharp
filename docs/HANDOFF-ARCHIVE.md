@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第481セッションの経緯
+
+### 1.1 第481セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第480 のすぐ後）。ユーザー指示「続けて」（⒳¹² は未回答＝保留のまま）＝§1.0 ⒜ の ⒮²² ⑴。
+★ **`-Start p481` の 1 コマンドで §0 が全部済んだ**（HEAD `6ab3b395`・未 push 43・full 8802 / 0 / 3 / 8805・`-Archive 479` も自動）。
+
+★★★ **⑴ ⒮²² ⑴ を閉じた＝腕は走るが、LP に無い振る舞いだった**。`throw` の門でスイート **6 本が届く**（改行を跨ぐスラーの続きの断片が*自分の*前の断片を受け取る・1 つの音で終わって次が始まる 2 本）が、絵は動かない（`FitFactor` は曲線の X 範囲外の点を捨てる・採点の項は差を作らない）。
+⇒ LP の source を読むと、**スラーを acknowledge するのは `Phrasing_slur_engraver` だけ**（`phrasing-slur-engraver.cc:80`・`slur-engraver.cc:73-80` には無い）＝`slur-scoring.cc:679-682` の「small slur」は PhrasingSlur が内側のスラーを避ける話で、**Lily# は PhrasingSlur を描かない**。LP 2.26 の実測でも `c''4( b' a')( g' | f'1)` の 2 本目は単独の同じスラーとバイト同一（Lab `sessions/p481/two.ly`・`one.ly`）。
+⇒ **削除**（`existingSlurs` 引数・採点の 2 項・`SlurSpansOverlap`／`SpanBefore`・その項の単体テスト 1 本）。`FreeSlurDistance` は移植した alist の 1 行として残し「誰も読まない」と註。**スイート緑（snapshot 含む）・実コーパス 5,824 ページ 0 差**（`Zz481Hash.cs.txt`・Release）。
+★ **⑵ 終了時**: code `8301cfee`（Core 3・Tests 1・表 2 枚を再生成）。full **8801 / 0 / 3 / 8804**（−1＝削除した単体テスト）。`-End` の門は全部 OK。§7.5 Core '+' 17＝註だけ・LILYPOND-REF 2 本（最初の `-End` で 0 本と言われ、散文の引用をタグの形に直して amend）。§7.6 ⒟「削除」＝許可した観測者は LP の source と実測。§7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第480セッションの経緯
 
 ### 1.1 第480セッション（2026-09-22・YT-DELL2）
