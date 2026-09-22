@@ -359,7 +359,11 @@ internal sealed partial class LayoutEngine
             if (lineBreaks.For(lineCount) is not { } candidate)
                 return null;
             var details = WithTitle(EstimatedSystemDetails(candidate.Breaks, estimate, measures));
-            var pages = breaker.BreakIntoPagesScored(details);
+            // Stacked in place: the list and its details are this call's own (the title
+            // excepted, which is always first — see PageBreaker.CalcLineHeightsInPlace).
+            var pages = details.Count == 0
+                ? breaker.BreakIntoPagesScored(details)
+                : breaker.BreakIntoPagesScoredOfLines(PageBreaker.CalcLineHeightsInPlace(details));
             double demerits = breaker.Demerits(pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum);
             return (demerits, pages, candidate.Breaks);
         }
@@ -438,7 +442,7 @@ internal sealed partial class LayoutEngine
             {
                 // The candidate's lines stacked ONCE (PageBreaker.CalcLineHeights) for both the
                 // page-count bound and the DP — each used to stack them again for itself.
-                var lines = PageBreaker.CalcLineHeights(
+                var lines = PageBreaker.CalcLineHeightsInPlace(
                     EstimatedSystemDetails(candidate.Breaks, estimate, measures));
                 // :207-211 — a count that cannot keep the ideal page count is not priced.
                 if (breaker.MinPageCountOfLines(lines) <= pageCount)

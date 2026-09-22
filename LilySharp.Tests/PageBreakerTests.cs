@@ -784,6 +784,33 @@ public class PageBreakerTests
         Assert.Equal(14.933176, withoutShape[1].Tallness, 6);
     }
 
+    /// <summary>
+    /// The system-count loop stacks the lists it has just built IN PLACE (session 493); the
+    /// tallness each line gets must be the copying stacker's, line for line — including a
+    /// first line whose shape differs from the rest and a line whose predecessor pads more.
+    /// </summary>
+    [Fact]
+    public void CalcLineHeightsInPlace_WritesWhatTheCopyingStackerReturns()
+    {
+        static List<SystemDetails> Lines() => new()
+        {
+            CreateSystem(height: 14, staffHeight: 4, topExtent: 3, bottomExtent: 7, padding: 1)
+                with { MinDistance = 8, RefpointExtentUp = -2, RefpointExtentDown = -2,
+                       Shape = new LineShape(3, 0.5, 1.25, 7) },
+            CreateSystem(height: 12, staffHeight: 4, topExtent: 5, bottomExtent: 3, padding: 2.5)
+                with { MinDistance = 9, RefpointExtentUp = -1.5, RefpointExtentDown = -2.5 },
+            CreateSystem(height: 10, staffHeight: 4, topExtent: 2, bottomExtent: 4, padding: 0.5)
+                with { MinDistance = 7, RefpointExtentUp = -2, RefpointExtentDown = -2,
+                       Shape = new LineShape(2, 4, 1, 3.5) },
+        };
+
+        var copied = PageBreaker.CalcLineHeights(Lines());
+        var inPlace = PageBreaker.CalcLineHeightsInPlace(Lines());
+
+        Assert.Equal(copied.Select(d => d.Tallness), inPlace.Select(d => d.Tallness));
+        Assert.All(copied.Skip(1), d => Assert.NotEqual(0.0, d.Tallness));
+    }
+
     private static SystemDetails CreateSystem(
         double height = 20,
         double staffHeight = 10,

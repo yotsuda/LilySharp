@@ -246,7 +246,11 @@ internal sealed record SystemDetails
     /// Only the FIRST system on a page contributes its full height; every one after it
     /// contributes this (lily/page-spacing.cc:53-62).
     /// </remarks>
-    public double Tallness { get; init; }
+    /// <para>
+    /// The setter is internal for <see cref="PageBreaker.CalcLineHeightsInPlace"/> alone: the
+    /// system-count loop stacks lists it has just built, whose details nothing else holds.
+    /// </para>
+    public double Tallness { get; internal set; }
 
     /// <summary>
     /// The refpoint of this system's FIRST spaceable staff, as an offset UP from the
@@ -1566,6 +1570,29 @@ internal sealed class PageBreaker
     /// </remarks>
     internal static IReadOnlyList<SystemDetails> CalcLineHeights(
         IReadOnlyList<SystemDetails> lines)
+        => Stack(lines, inPlace: false)!;
+
+    /// <summary>
+    /// <see cref="CalcLineHeights"/> written INTO <paramref name="owned"/>'s details rather than
+    /// into copies — for a caller that has just built both the list and every detail in it.
+    /// </summary>
+    /// <remarks>
+    /// The system-count loop prices each candidate line count from a fresh estimate and
+    /// stacked it through the copying spelling: 26,646 stackings of 791,040 lines over the
+    /// reader's corpus (warm-ups included), a new <see cref="SystemDetails"/> for every line
+    /// (session 493 — SystemDetails was 151,237 B a keystroke by the runtime's allocation
+    /// ticks). The loop reads a line's predecessor's padding, minimum distance and refpoints,
+    /// never its tallness, so writing each one in place as it goes computes the same numbers.
+    /// ⚠️ A detail shared between lists must be at the same place in each (the book title,
+    /// always first) — its tallness is then the same whichever list writes it.
+    /// </remarks>
+    internal static List<SystemDetails> CalcLineHeightsInPlace(List<SystemDetails> owned)
+    {
+        Stack(owned, inPlace: true);
+        return owned;
+    }
+
+    private static List<SystemDetails>? Stack(IReadOnlyList<SystemDetails> lines, bool inPlace)
     {
         double prevHanging = 0;
         double prevHangingBegin = 0;
@@ -1576,7 +1603,7 @@ internal sealed class PageBreaker
         // staff in this system. LILYPOND-REF: page-breaking.cc:1147-1149.
         double prevRefpointHanging = 0;
 
-        var result = new List<SystemDetails>(lines.Count);
+        var result = inPlace ? null : new List<SystemDetails>(lines.Count);
         for (int i = 0; i < lines.Count; i++)
         {
             var cur = lines[i];
@@ -1603,7 +1630,10 @@ internal sealed class PageBreaker
                 = refpointHanging + cur.StaffHeight + shape.RestDown;
             double hanging = Math.Max(hangingBegin, hangingRest);
 
-            result.Add(cur with { Tallness = hanging - prevHanging });
+            if (result is null)
+                cur.Tallness = hanging - prevHanging;
+            else
+                result.Add(cur with { Tallness = hanging - prevHanging });
 
             prevHanging = hanging;
             prevHangingBegin = hangingBegin;
