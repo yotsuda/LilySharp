@@ -3674,7 +3674,7 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>The same, with the system test given as a predicate on a piece's
-    /// <see cref="SlurLayout.RenderMeasureIndex"/> — the tab path's form, which holds its
+    /// <see cref="BowLayout.RenderMeasureIndex"/> — the tab path's form, which holds its
     /// segment's <see cref="SystemLayout"/> rather than the measure-to-system map.</summary>
     private static List<SlurLayout>? EnclosedSlurs(
         SlurItem phrasing, IReadOnlyList<SlurLayout> laidOut, Func<int, bool> onThisSystem)

@@ -959,13 +959,12 @@ internal static partial class SpacingRules
             var wishes = new List<Spring>(staffFirstItems.Count);
             for (int s = 0; s < staffFirstItems.Count; s++)
             {
-                var staffColumn = new ItemColumn(staffFirstItems[s]);
-                wishes.Add(Wish(staffColumn, BoundaryChangePrefix(fonts, staffColumn)));
+                wishes.Add(Wish(BoundaryChangePrefix(fonts, new ItemColumn(staffFirstItems[s]))));
             }
             spring = Spring.MergeSprings(wishes);
         }
         else
-            spring = Wish(firstItems, boundary);
+            spring = Wish(boundary);
 
         // A GRACE RUN OPENING THE BAR: the merged spring stops at the grace column, and when that
         // column has a grace part LilyPond scales the whole spring by 0.8 — column origin to
@@ -1021,7 +1020,12 @@ internal static partial class SpacingRules
 
         // One staff's Staff_spacing::get_spacing, against the column pair's min_dist.
         // LILYPOND-REF: lily/staff-spacing.cc:118-221 Staff_spacing::get_spacing
-        Spring Wish(ItemColumn items, (double Prefix, MusicItem LastChange)? own)
+        // ⚠️ A STAFF'S WISH TAKES ONLY ITS OWN LAST BREAK-ALIGNED GROB, not its items: the one
+        // term that reads note columns — the down-stem correction below — reads the WHOLE
+        // column by LilyPond's design (right-items is the musical PaperColumn). It took the
+        // staff's column until session 485 and never read it: session 470's poison handing it
+        // the whole column instead was an identity, green over the suite and the corpus.
+        Spring Wish((double Prefix, MusicItem LastChange)? own)
         {
             var (distance, fixedDistance, isStretchable) = SpaceFrom(own);
             // Every arm involved puts the IDEAL at last_ext[RIGHT] + distance; they differ only
