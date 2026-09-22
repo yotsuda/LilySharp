@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1801,15 +1801,23 @@ public sealed partial class MeasureCollector
     /// </summary>
     private IReadOnlyList<Voice> HarvestOmittedStructure(SyntaxTree tree, RenderSpec renderSpec)
     {
+        // ⚠️ THE ANSWER IS ALMOST ALWAYS "NOTHING": 2,092 calls over the reader's corpus
+        // (1.13 a keystroke), every one of them empty, at 1,224 B a call (measured session
+        // 489). So nothing is built until a part is found that is undrawn AND structured.
+        // Same parts, same order, same test as the LINQ chain this replaced: each name once,
+        // at its FIRST declaration (Distinct kept the first; PartHasStructure looks the part
+        // up by name and so always read the first).
         var root = tree.GetRoot();
-        var rendered = renderSpec.GetVoiceNames().ToHashSet(StringComparer.Ordinal);
-        var omitted = root.ChildNodes().OfType<PartDeclarationSyntax>()
-            .Select(p => p.Name.Text)
-            .Where(n => !rendered.Contains(n))
-            .Distinct(StringComparer.Ordinal)
-            .Where(n => PartHasStructure(root, n))
-            .ToList();
-        if (omitted.Count == 0)
+        List<string>? omitted = null;
+        foreach (var part in root.ChildNodesOfKind<PartDeclarationSyntax>())
+        {
+            var name = part.Name.Text;
+            if (renderSpec.BindsVoice(name) || !IsFirstPartNamed(root, part, name))
+                continue;
+            if (PartHasStructure(root, name))
+                (omitted ??= new List<string>()).Add(name);
+        }
+        if (omitted is null)
             return System.Array.Empty<Voice>();
 
         // Isolated pass: draw ONLY the omitted parts against the SAME form, so their structure
@@ -1922,7 +1930,8 @@ public sealed partial class MeasureCollector
         // materialized the part's whole subtree just to type-test it. One walk
         // answers both questions — written structure, and which phrases are
         // referenced (scanned after, so a direct hit never pays the phrase walk).
-        static bool ScanScope(SyntaxNode scope, List<string> refs)
+        // The reference list is made on the first reference: most parts reach none.
+        static bool ScanScope(SyntaxNode scope, ref List<string>? refs)
         {
             foreach (var n in scope.GreenSites(static g => (
                     g.Kind is SyntaxKind.NavigationMark or SyntaxKind.InlineVolta
@@ -1936,25 +1945,32 @@ public sealed partial class MeasureCollector
                     case BarlineSyntax bl when bl.BarToken.Text.Contains(':'):
                         return true;
                     case VariableReferenceSyntax vr:
-                        refs.Add(vr.Name.Text);
+                        (refs ??= new List<string>()).Add(vr.Name.Text);
                         break;
                 }
             }
             return false;
         }
 
-        var refs = new List<string>();
-        var part = root.ChildNodes().OfType<PartDeclarationSyntax>()
-            .FirstOrDefault(p => p.Name.Text == partName);
-        if (part != null && ScanScope(part, refs))
+        List<string>? refs = null;
+        PartDeclarationSyntax? part = null;
+        foreach (var p in root.ChildNodesOfKind<PartDeclarationSyntax>())
+        {
+            if (p.Name.Text == partName)
+            {
+                part = p;
+                break;
+            }
+        }
+        if (part != null && ScanScope(part, ref refs))
             return true;
         // The section-major cells: direct children of each section declaration, the
         // same discovery ProcessSectionBody's own loop uses (grammar guarantee there).
-        foreach (var section in root.ChildNodes().OfType<SectionDeclarationSyntax>())
+        foreach (var section in root.ChildNodesOfKind<SectionDeclarationSyntax>())
             foreach (var child in section.ChildNodes())
-                if (child is PartBlockSyntax pb && pb.Name == partName && ScanScope(pb, refs))
+                if (child is PartBlockSyntax pb && pb.Name == partName && ScanScope(pb, ref refs))
                     return true;
-        if (refs.Count == 0)
+        if (refs is null)
             return false;
 
         // Referenced phrase bodies, transitively. Each body is scanned at most once
@@ -1973,13 +1989,28 @@ public sealed partial class MeasureCollector
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
             if (!phrases.TryGetValue(name, out var decl))
                 continue;
-            var inner = new List<string>();
-            if (ScanScope(decl.Body, inner))
+            List<string>? inner = null;
+            if (ScanScope(decl.Body, ref inner))
                 return true;
-            foreach (var n in inner)
-                queue.Enqueue(n);
+            if (inner != null)
+                foreach (var n in inner)
+                    queue.Enqueue(n);
         }
         return false;
+    }
+
+    /// <summary>Whether <paramref name="part"/> is the first part declaration named
+    /// <paramref name="name"/> — a later duplicate was dropped by the harvest's Distinct.</summary>
+    private static bool IsFirstPartNamed(SyntaxNode root, PartDeclarationSyntax part, string name)
+    {
+        foreach (var p in root.ChildNodesOfKind<PartDeclarationSyntax>())
+        {
+            if (ReferenceEquals(p, part))
+                return true;
+            if (p.Name.Text == name)
+                return false;
+        }
+        return true;
     }
 
     /// <summary>The score-level mark types worth harvesting from an unrendered part: navigation

@@ -417,6 +417,50 @@ public sealed record RenderSpec(
                 yield return binding;
     }
 
+    /// <summary>Whether <paramref name="voiceName"/> is among <see cref="GetVoiceNames"/> — the
+    /// membership question alone, answered without building the bindings.</summary>
+    /// <remarks>
+    /// ⚠️ THE SAME CASES AS <see cref="BindingsOf"/>, NAME FOR NAME — a voice this said was
+    /// drawn and the bindings did not collect would silently lose its harvest (the one
+    /// caller, <c>MeasureCollector.HarvestOmittedStructure</c>). Order does not matter to
+    /// membership, so the ossia reordering is skipped. It exists because that caller asks
+    /// 1.13 times a keystroke and the enumeration built a list and a chain of iterators each
+    /// time (session 489). Pinned against GetVoiceNames by RenderSpecBindsVoiceTests.
+    /// </remarks>
+    public bool BindsVoice(string voiceName)
+    {
+        static bool In(ImmutableArray<string> names, string name)
+        {
+            foreach (var n in names)
+                if (n == name)
+                    return true;
+            return false;
+        }
+        static bool Binds(RenderItemSpec item, string name)
+        {
+            switch (item)
+            {
+                case SingleStaffSpec single: return single.Staff.VoiceName == name;
+                case GrandStaffRenderSpec grand:
+                    foreach (var member in grand.GrandStaff.Members)
+                        if (Binds(member, name))
+                            return true;
+                    return false;
+                case CondensedStaffSpec condensed: return In(condensed.PartNames, name);
+                case CombinedStaffSpec combined: return In(combined.PartNames, name);
+                case TabStaffSpec tab: return tab.Staff.VoiceName == name;
+                case OssiaStaffSpec ossia: return ossia.Staff.VoiceName == name;
+                case ChordRowSpec chordRow: return chordRow.PartName == name;
+                case LyricsRowSpec lyricsRow: return lyricsRow.PartName == name;
+                default: return false;
+            }
+        }
+        foreach (var item in Items)
+            if (Binds(item, voiceName))
+                return true;
+        return false;
+    }
+
     private static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
 
     /// <summary>One item's bindings, in the order its staves are built. A group yields its
