@@ -204,7 +204,7 @@ internal static partial class SpacingRules
         HorizontalSkyline? nextLeft = next is { } n
             ? ItemSkylineFactory.CreateGraceLeftSkyline(n)
             : mainItem is not null
-                ? ItemSkylineFactory.CreateLeftSkylineAtColumn(mainItem, 0.0, 0.0)
+                ? ItemSkylineFactory.SharedLeftSkylineAtColumn(mainItem, 0.0, 0.0)
                 : null;
         if (nextLeft is null)
             return double.NegativeInfinity;

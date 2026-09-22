@@ -107,6 +107,11 @@ internal sealed partial class LayoutEngine
         SystemLayoutCache? systemCache = null, MeasureSpringData[]? precomputedSprings = null,
         double? precomputedShortest = null)
     {
+        // The drivers that break inside this call (SvgGenerator, PngGenerator, …) price each
+        // measure's springs in the gate and again in the layout; one render-scoped memo
+        // serves both (ItemSkylineFactory.BeginRenderMemo — a scope already open is joined).
+        using var skylineMemo = ItemSkylineFactory.BeginRenderMemo();
+
         // The faces this score reserves against — see the field's remark for why the
         // builder cannot be given them in the constructor.
         _skylineBuilder = new SkylineBuilder(_options.StaffHeight, score.TextMetrics);

@@ -179,8 +179,8 @@
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:121** clearing is right and unobserved: a forgotten Clear here would surface only when
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:638** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:908** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:733** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:1003** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2242** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2264** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -346,7 +346,7 @@
 - **:1655** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **:1950** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:826** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:831** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:526** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
 - **:762** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only

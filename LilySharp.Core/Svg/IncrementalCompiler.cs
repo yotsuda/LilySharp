@@ -609,6 +609,10 @@ public sealed class IncrementalCompiler
             && !contentKeys.IsDefault && !_contentKeys.IsDefault
             && overridesUnchanged
             && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan());
+        // The gate below and the layout after it price the same measures' springs, and so
+        // ask for the same column skylines: one render-scoped memo serves both (see
+        // ItemSkylineFactory.BeginRenderMemo — 1,099,297 same-render rebuilds, session 492).
+        using var skylineMemo = ItemSkylineFactory.BeginRenderMemo();
         MeasureSpringData[] springs;
         // The shortest duration `springs` is built with. Committed with the vector at the
         // end (a compile given up between here and there must not leave a shortest that

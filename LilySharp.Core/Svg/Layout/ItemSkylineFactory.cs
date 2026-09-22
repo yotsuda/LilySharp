@@ -284,6 +284,101 @@ internal static class ItemSkylineFactory
     public static HorizontalSkyline CreateLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
         => CreateLeftSkyline(item, columnX + ColumnReferenceOffset(item), staffY);
 
+    // ── The render's shared column skylines ─────────────────────────────────────────────
+    // ⚠️ THE SAME SKYLINE WAS BUILT TWICE A RENDER, and more: the break gate prices every
+    // changed measure's springs (SystemBreaker.ComputeMultiStaffSpringData) and the layout
+    // then prices the same measures' springs again (MultiStaffLayouter), each pair asking
+    // for the same item's column views with the same arguments. MEASURED (session 492, the
+    // reader's corpus, 232 books x 8 forward keystrokes): 2,048,398 builds, 1,104,189 of them
+    // repeating an earlier (item, arguments) — 1,099,297 inside the SAME render — at 475 B a
+    // build; every repeat came from the spring passes (CreateInterColumnSpring /
+    // CalculateSkylineDistance / CreateLastToBarlineSpring).
+    // So inside a scope (BeginRenderMemo — one render: IncrementalCompiler's gate + layout,
+    // and LayoutEngine.Layout for the other drivers) the read-only askers below share one
+    // skyline per (item, arguments). OUTSIDE a scope they build, exactly as before.
+    // ⚠️ A SHARED SKYLINE IS NEVER MUTATED: only callers that measure a distance and drop the
+    // skyline ask through Shared*; the public Create* keep handing out fresh ones.
+
+    [ThreadStatic]
+    private static Dictionary<SkylineKey, HorizontalSkyline>? t_renderMemo;
+
+    [ThreadStatic]
+    private static int t_renderMemoDepth;
+
+    /// <summary>Opens (or joins) this thread's render-scoped skyline memo; disposing the
+    /// outermost scope empties it, so nothing it held outlives the render.</summary>
+    internal static RenderMemoScope BeginRenderMemo()
+    {
+        t_renderMemo ??= new Dictionary<SkylineKey, HorizontalSkyline>(SkylineKeyComparer.Instance);
+        t_renderMemoDepth++;
+        return default;
+    }
+
+    /// <summary>The handle <see cref="BeginRenderMemo"/> returns, for a <c>using</c>.</summary>
+    internal readonly struct RenderMemoScope : IDisposable
+    {
+        public void Dispose()
+        {
+            if (--t_renderMemoDepth == 0)
+                t_renderMemo!.Clear();
+        }
+    }
+
+    private readonly record struct SkylineKey(MusicItem Item, double ReferenceX, double StaffY,
+        ColumnElements Which, HorizontalDirection Direction, double Padding);
+
+    /// <summary>The item by REFERENCE (a record's value equality would hash its whole
+    /// content per ask), the numbers by value — the arguments Build reads, all of them.</summary>
+    /// <remarks>Through the four Shared* views `Which` is implied by the direction and the
+    /// padding (rod 0.08, wish 0.15), so a key without it would still be right today; it stays
+    /// because it is an argument, and the next view need not keep that coincidence. The
+    /// item, the X and the staff Y are observed by ItemSkylineRenderMemoTests.</remarks>
+    private sealed class SkylineKeyComparer : IEqualityComparer<SkylineKey>
+    {
+        public static readonly SkylineKeyComparer Instance = new();
+
+        public bool Equals(SkylineKey a, SkylineKey b)
+            => ReferenceEquals(a.Item, b.Item) && a.ReferenceX.Equals(b.ReferenceX)
+               && a.StaffY.Equals(b.StaffY) && a.Which == b.Which
+               && a.Direction == b.Direction && a.Padding.Equals(b.Padding);
+
+        public int GetHashCode(SkylineKey k)
+            => HashCode.Combine(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(k.Item),
+                k.ReferenceX, k.StaffY, k.Which, k.Direction, k.Padding);
+    }
+
+    private static HorizontalSkyline Shared(MusicItem item, double referenceX, double staffY,
+        ColumnElements which, HorizontalDirection direction, double verticalPadding)
+    {
+        if (t_renderMemoDepth == 0)
+            return Build(item, referenceX, staffY, which, direction, verticalPadding);
+        var key = new SkylineKey(item, referenceX, staffY, which, direction, verticalPadding);
+        var memo = t_renderMemo!;
+        if (!memo.TryGetValue(key, out var skyline))
+            memo[key] = skyline = Build(item, referenceX, staffY, which, direction, verticalPadding);
+        return skyline;
+    }
+
+    /// <summary><see cref="CreateRightSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
+    internal static HorizontalSkyline SharedRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.Elements,
+                  HorizontalDirection.Right, SpacingRules.MusicalColumnSkylineVerticalPadding);
+
+    /// <summary><see cref="CreateLeftSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
+    internal static HorizontalSkyline SharedLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.All,
+                  HorizontalDirection.Left, SpacingRules.MusicalColumnSkylineVerticalPadding);
+
+    /// <summary><see cref="CreateWishRightSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
+    internal static HorizontalSkyline SharedWishRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.NoteColumn,
+                  HorizontalDirection.Right, SpacingRules.NoteColumnSkylineVerticalPadding);
+
+    /// <summary><see cref="CreateWishLeftSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
+    internal static HorizontalSkyline SharedWishLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
+        => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.WishLeft,
+                  HorizontalDirection.Left, SpacingRules.NoteColumnSkylineVerticalPadding);
+
     /// <summary>What <see cref="ColumnParts"/> subtracts from its reference to find the
     /// head's left edge — so adding it puts that edge AT the reference.</summary>
     private static double ColumnReferenceOffset(MusicItem item)

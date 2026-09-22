@@ -223,8 +223,8 @@ internal static partial class SpacingRules
         // a half-tie is the paper column's and reaches the pair through the rod alone
         // (ItemSkylineFactory.ColumnElements carries the sources and the measurement).
         return SkylineFloorPair(
-            ItemSkylineFactory.CreateWishRightSkylineAtColumn(prevItem, prevShift, staffY),
-            ItemSkylineFactory.CreateWishLeftSkylineAtColumn(nextItem, nextShift, staffY)).SkyMin;
+            ItemSkylineFactory.SharedWishRightSkylineAtColumn(prevItem, prevShift, staffY),
+            ItemSkylineFactory.SharedWishLeftSkylineAtColumn(nextItem, nextShift, staffY)).SkyMin;
     }
 
     /// <summary>
@@ -291,8 +291,8 @@ internal static partial class SpacingRules
                    + SeparationRodPadding;
 
         return SkylineFloorPair(
-            ItemSkylineFactory.CreateRightSkylineAtColumn(prevItem, prevShift, staffY),
-            ItemSkylineFactory.CreateLeftSkylineAtColumn(nextItem, nextShift, staffY)).Rod;
+            ItemSkylineFactory.SharedRightSkylineAtColumn(prevItem, prevShift, staffY),
+            ItemSkylineFactory.SharedLeftSkylineAtColumn(nextItem, nextShift, staffY)).Rod;
     }
 
     /// <summary>
@@ -366,8 +366,8 @@ internal static partial class SpacingRules
         // The column's parts in the COLUMN's frame — its origin, the head's left edge, at 0:
         // the paper column's for the ROD, the note column's (no dots, no half-tie) for the
         // wish's minimum — ItemSkylineFactory.ColumnElements names the two separation items.
-        var itemRight = ItemSkylineFactory.CreateRightSkylineAtColumn(item, 0, staffY: 0);
-        var wishRight = ItemSkylineFactory.CreateWishRightSkylineAtColumn(item, 0, staffY: 0);
+        var itemRight = ItemSkylineFactory.SharedRightSkylineAtColumn(item, 0, staffY: 0);
+        var wishRight = ItemSkylineFactory.SharedWishRightSkylineAtColumn(item, 0, staffY: 0);
 
         var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
         for (int i = 0; i < rightNeighbours.Count; i++)
