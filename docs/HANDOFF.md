@@ -149,6 +149,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   鍵の形を変える＝土台の変更**
   ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**残り＝`part`（system で仕分ける）と miss の建設**＝値段は未測定
 - ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・読みは先行 pad と同じ list を thread scratch に作る＝ビット同一・書きの前に実体化）。`VerticalSkyline.Padded` は**第510 が値付けした＝3,830 B／打鍵 3.88 回・0.22%**（Lab `sessions/p510/price.log`）。頭の `Distance(other, hPad)` 側（`PageLayouter.cs:121` 3,289＋`MusicMarkEngraver.cs:916` 11）は**貸し出しの答え skyline に resolve して閉じた**（−3,240）。**残り＝`OutsideStaffStacker.cs:3231` 530 B**（`Place` の padding ごとの cache＝置き場の間ずっと生きる＝尾）
+- ★★★★ **⒩⁶ 梁の刻印の写し＝121,637 B／打鍵 7.3%＝*今いちばん大きい 1 軒*・直し方は 2 つともモデルの約束に触る**（第514 が値付け＝Lab `sessions/p514/copy-price.log`）。`MeasureCollector.ResolveBeamStemDirections` の bake は梁の音符 1 つにつき `n with { StemUpOverride, BeamId, PureBeamedStemTip }` を 1 回＝**563.18 回／打鍵 × 215 B**（NoteItem の写し）。⚠️ **刻印済みの item が bake に来ることは 1 度も無い**（同じ計器で `BeamId != null` を数えて 0＝splice の尾は bake を通らない）＝**`BeamId` を決定的にしても写しは消えない**（第514 が反証）。⇒ **⑴ 側表**（刻印を item の外へ。読み手は `BeamId` 48 軒／11 ファイル・`StemUpOverride` 27／6・`PureBeamedStemTip` 14／4・派生の `.StemUp` 115／25＝多便の土台変更）／**⑵ その場で刻印**（3 つの property を internal set にして bake が書き込む＝写し 0。**ただしモデルの不変性を崩す**: item は identity で cache の鍵になり、`PreFinalizeMeasures` は同じ instance を持つ＝`BeamId != null` なら写しに落ちる門と網が要る）。⚠️ **⑵ は「読み手に見える設計判断」＝ユーザー決定が先**（RULES §5.0 の soundness bias）
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 - ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測）。
@@ -200,6 +201,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第514セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第513 のすぐ後）。ユーザー指示「続けて」＝第513 が「次は土台」と書いた `NoteItem` の刻印。
+★ **`-Start p514` の 1 コマンドで §0 が全部済んだ**（HEAD `71f8dd0a`・full 8854 / 0 / 3 / 8857・`-Archive 512` も自動）。
+
+★★★ **⑴ 土台の 1 軒目を値付けした＝梁の刻印の写し 121,637 B／打鍵（7.3%）・コード変更なし**（⒩⁶ として §1.0 ⒝ に起票）。第513 が「次は土台」と書いた `NoteItem` 249 KB の中身を bake の呼びで数えた（`Zz514`・Lab `sessions/p514/`）＝**563.18 回／打鍵 × 215 B**。★ **安い直し方を 1 つ反証した**: 「`BeamId` が collect ごとに変わるから写す」なら**決定的な id にすれば同値で済む**はずだが、**刻印済みの item が bake に来る回数は 0**（splice の尾は bake を通らない）＝**どの item も刻印前**なので写しは避けられない。⇒ 残るのは ⑴ 側表（読み手 115 軒級の多便仕事）と ⑵ その場で刻印（写し 0・**モデルの不変性を崩すのでユーザー決定が先**）。
+  §7 7.5＝**Core '+' 0 行**（この便も値付けだけ）。`-End p514` の門は全部 OK・full 8854 / 0 / 3 / 8857。
+
+## 以下は第513セッションの経緯
+
 ### 1.1 第513セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き（第512 のすぐ後）。ユーザー指示「続けて」＝同じ形の memo（`FingScriptMemo`）と型の地図の次の頭。
@@ -208,17 +219,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **⑴ 第512 の続きで 4 つ値付け＝どれも直す軒ではなかった（コード変更なし）**。`FingScriptMemo` は同じ「probe を毎回建てる」形だが**このコーパスで 1 度も走らない**（運指の本が無い＝0 B）。`Spring`（22.7 KB）は 435 回／打鍵が 22 軒に散る実仕事、`SlurCandidate`（19.4 KB）は採点の候補、`SystemDetails`（18.5 KB）は第501 が候補間で共有済み。**⒮²⁴ として §1.0 に畳んだ**（計器は `Zz513Sites`＝構築子で stack を歩く第511 の型・Lab `sessions/p513/`）。
   ★ **HEAD の型の地図を取り直した**（`sessions/p513/type-price-head.txt`・render 1,660,009）＝第512 の効果で `AboveStackMemo+SystemEntry` は上位 25 から消え、`ArticulationLayout[]` は 34.5 → 26.7 KB。**残る頭は土台だけ**。
   §7 7.5＝**Core '+' 0 行**（この便はコードを 1 行も変えていない＝値付けだけ）。`-End p513` の門は全部 OK・full 8854 / 0 / 3 / 8857。
-
-## 以下は第512セッションの経緯
-
-### 1.1 第512セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き（第511 のすぐ後）。ユーザー指示「続けて」＝第511 の「建てた数と読まれた数」の計器を型の地図の次の頭へ。
-★ **`-Start p512` の 1 コマンドで §0 が全部済んだ**（HEAD `0dd3ab3a`・full 8850 / 0 / 3 / 8853・`-Archive 510` も自動）。
-
-★★★ **⑴ 段の上下の積み memo が hit で鍵を建てなくなった＝render 1,702,685 → 1,660,209（−42,476・−2.5%）**（`8b1830db`・`Zz512Hash`＝5,824 行 0 差）。HEAD の型の地図（Lab `sessions/p512/type-price-head.txt`・render 1,702,489）の土台でない頭 `ArticulationLayout[]` 34.5 KB を追うと ⒨ の program だった＝**`BuildProgram` の前後の割当を結果で分けた**（`Zz512`）: **above hit 48.92 回／打鍵 × 727 B＝35,600・below hit 8.65 回 6,534**（miss は 2.57 回）。⇒ 両 memo に lent な `Probe`＝program を list に集め、`TryMatch` は stored の配列と span で比べ、miss だけ `ToEntry`。`SortedSet` は lent list の sort＋重複除去（同じ昇順）。
-  **毒 5 本**（`poisons.ps1`）: probe を clear しない 6 網赤。⚠️ **above が articulation を比べない・below が群の構造を比べない＝全体緑＝既存の健全性の穴**（偽 hit は stored の出力を再生する。振る舞いの網は text／bar number／tuplet しか流さない）⇒ **網 `StackMemoKeyTests`＝両 `SystemEntry` の program の field を reflection で歩き、各 field 単独で decline し、各 field が `ToEntry` を生き残ることを言う**（その 2 毒で赤）。used の重複を残す毒は緑（probe と stored が一致＝同値）。
-  §7 7.5＝Core '+' 322 行・REF／OWN 0（鍵の集め方と比べ方の書き換えだけ＝LP の意味は動かさない）。`-End p512` の門は全部 OK・full 8854 / 0 / 3 / 8857（網 +4）。
 
 ## 2. 開いている作業
 

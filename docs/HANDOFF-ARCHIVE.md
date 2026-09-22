@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第512セッションの経緯
+
+### 1.1 第512セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第511 のすぐ後）。ユーザー指示「続けて」＝第511 の「建てた数と読まれた数」の計器を型の地図の次の頭へ。
+★ **`-Start p512` の 1 コマンドで §0 が全部済んだ**（HEAD `0dd3ab3a`・full 8850 / 0 / 3 / 8853・`-Archive 510` も自動）。
+
+★★★ **⑴ 段の上下の積み memo が hit で鍵を建てなくなった＝render 1,702,685 → 1,660,209（−42,476・−2.5%）**（`8b1830db`・`Zz512Hash`＝5,824 行 0 差）。HEAD の型の地図（Lab `sessions/p512/type-price-head.txt`・render 1,702,489）の土台でない頭 `ArticulationLayout[]` 34.5 KB を追うと ⒨ の program だった＝**`BuildProgram` の前後の割当を結果で分けた**（`Zz512`）: **above hit 48.92 回／打鍵 × 727 B＝35,600・below hit 8.65 回 6,534**（miss は 2.57 回）。⇒ 両 memo に lent な `Probe`＝program を list に集め、`TryMatch` は stored の配列と span で比べ、miss だけ `ToEntry`。`SortedSet` は lent list の sort＋重複除去（同じ昇順）。
+  **毒 5 本**（`poisons.ps1`）: probe を clear しない 6 網赤。⚠️ **above が articulation を比べない・below が群の構造を比べない＝全体緑＝既存の健全性の穴**（偽 hit は stored の出力を再生する。振る舞いの網は text／bar number／tuplet しか流さない）⇒ **網 `StackMemoKeyTests`＝両 `SystemEntry` の program の field を reflection で歩き、各 field 単独で decline し、各 field が `ToEntry` を生き残ることを言う**（その 2 毒で赤）。used の重複を残す毒は緑（probe と stored が一致＝同値）。
+  §7 7.5＝Core '+' 322 行・REF／OWN 0（鍵の集め方と比べ方の書き換えだけ＝LP の意味は動かさない）。`-End p512` の門は全部 OK・full 8854 / 0 / 3 / 8857（網 +4）。
+
 ## 以下は第511セッションの経緯
 
 ### 1.1 第511セッション（2026-09-23・YT-DELL2）
