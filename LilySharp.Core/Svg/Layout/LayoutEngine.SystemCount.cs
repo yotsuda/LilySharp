@@ -241,14 +241,34 @@ internal sealed partial class LayoutEngine
     /// column. Built through the same <see cref="PageLayouter.BuildSystemDetails"/> the
     /// paging path builds the placed systems' details with.
     /// </remarks>
+    /// <param name="built">The lines already built for other candidate breakings of the same
+    /// estimate, by (start, end) — reused rather than built again; null builds
+    /// every line fresh. A line's details are a function of that key alone except its
+    /// <see cref="SystemDetails.Tallness"/>, which every stacking of a list rewrites for
+    /// every line before it is read (<see cref="PageBreaker.CalcLineHeightsInPlace"/>), so a
+    /// line shared by two candidates is safe as long as the candidates are priced one after
+    /// the other.</param>
     private List<SystemDetails> EstimatedSystemDetails(
-        List<int> breaks, MeasureHeightEstimate estimate, ImmutableArray<Measure> measures)
+        List<int> breaks, MeasureHeightEstimate estimate, ImmutableArray<Measure> measures,
+        Dictionary<(int Start, int End), SystemDetails>? built = null)
     {
         var details = new List<SystemDetails>(breaks.Count);
         int start = 0;
         for (int i = 0; i < breaks.Count; i++)
         {
             int end = Math.Min(breaks[i], measures.Length);
+            // Only the FIRST line's spacing spec differs (PageLayouter.BuildSystemDetails), and it
+            // is the only line that starts at 0, so (start, end) names that too. An EMPTY line
+            // (breaks past the last measure) is never shared: two of them in one list would be
+            // one detail at two places, with one tallness between them.
+            var key = (start, end);
+            bool memo = built is not null && start < end;
+            if (memo && built!.TryGetValue(key, out var line))
+            {
+                details.Add(line);
+                start = end;
+                continue;
+            }
             double restUp = 0, restDown = 0, body = 0;
             // The frame travels with the body it belongs to: the bar whose placed system
             // is the tallest lends the line its body AND its refpoints, so the two never
@@ -276,11 +296,14 @@ internal sealed partial class LayoutEngine
             // this line's start rank), not one bucket for every line.
             double beginUp = start < estimate.BeginUpAt.Length ? estimate.BeginUpAt[start] : 0;
             double beginDown = start < estimate.BeginDownAt.Length ? estimate.BeginDownAt[start] : 0;
-            details.Add(_pageLayouter.BuildSystemDetails(
+            var fresh = _pageLayouter.BuildSystemDetails(
                 i, body,
                 Math.Max(beginUp, restUp), Math.Max(beginDown, restDown),
                 new LineShape(beginUp, beginDown, restUp, restDown),
-                permission, frame));
+                permission, frame);
+            details.Add(fresh);
+            if (memo)
+                built![key] = fresh;
             start = end;
         }
         return details;
@@ -335,6 +358,9 @@ internal sealed partial class LayoutEngine
             return null;
 
         var estimate = EstimateMeasureHeights(ideal, measures.Length, _options.StaffHeight);
+        // Every candidate breaking below is priced from this one estimate, and neighbouring
+        // counts share most of their lines, so a line is built once (EstimatedSystemDetails).
+        var built = new Dictionary<(int Start, int End), SystemDetails>();
         var breaker = _pageLayouter.CreateBreaker();
         // The book title is the page's first LINE (paper-book.cc:570-580), priced by the
         // same DP as the systems; the page loop below sees it in front of every candidate.
@@ -358,14 +384,31 @@ internal sealed partial class LayoutEngine
         {
             if (lineBreaks.For(lineCount) is not { } candidate)
                 return null;
-            var details = WithTitle(EstimatedSystemDetails(candidate.Breaks, estimate, measures));
-            // Stacked in place: the list and its details are this call's own (the title
-            // excepted, which is always first — see PageBreaker.CalcLineHeightsInPlace).
+            var details = WithTitle(EstimatedSystemDetails(candidate.Breaks, estimate, measures, built));
+            // Stacked in place: the list is this call's own, and its details are shared only
+            // with the other candidates' lists (the title always first, the lines through
+            // `built`), each stacked just before it is read — see
+            // PageBreaker.CalcLineHeightsInPlace.
             var pages = details.Count == 0
                 ? breaker.BreakIntoPagesScored(details)
                 : breaker.BreakIntoPagesScoredOfLines(PageBreaker.CalcLineHeightsInPlace(details));
             double demerits = breaker.Demerits(pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum);
             return (demerits, pages, candidate.Breaks);
+        }
+
+        // Debug only: the same count priced from lines built FRESH, printed beside the memo's
+        // score so a probe can hold the two equal (PageChainDebugTests) — the line memo's net.
+        string Fresh(int lineCount, bool withTitle)
+        {
+            if (lineBreaks.For(lineCount) is not { } candidate)
+                return "";
+            var fresh = EstimatedSystemDetails(candidate.Breaks, estimate, measures);
+            if (withTitle)
+                WithTitle(fresh);
+            var pages = fresh.Count == 0
+                ? breaker.BreakIntoPagesScored(fresh)
+                : breaker.BreakIntoPagesScoredOfLines(PageBreaker.CalcLineHeightsInPlace(fresh));
+            return $" fresh {breaker.Demerits(pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum):F6}";
         }
 
         // LILYPOND-REF: :48-59, :111 — the ideal configuration on its best pages.
@@ -417,6 +460,7 @@ internal sealed partial class LayoutEngine
             debug?.Invoke($"trying {count} systems: {demerits:F6}"
                 + (cur is { } d ? $" (pages {string.Join(",", d.pages.SystemsPerPage)} forces "
                     + $"{string.Join(",", d.pages.Forces.Select(f => f.ToString("F3")))}; lines {string.Join(",", LineSizes(d.breaks))})"
+                      + Fresh(count, withTitle: true)
                     : ""));
             if (demerits < bestDemerits)
             {
@@ -443,7 +487,7 @@ internal sealed partial class LayoutEngine
                 // The candidate's lines stacked ONCE (PageBreaker.CalcLineHeights) for both the
                 // page-count bound and the DP — each used to stack them again for itself.
                 var lines = PageBreaker.CalcLineHeightsInPlace(
-                    EstimatedSystemDetails(candidate.Breaks, estimate, measures));
+                    EstimatedSystemDetails(candidate.Breaks, estimate, measures, built));
                 // :207-211 — a count that cannot keep the ideal page count is not priced.
                 if (breaker.MinPageCountOfLines(lines) <= pageCount)
                 {
@@ -460,7 +504,8 @@ internal sealed partial class LayoutEngine
                     debug?.Invoke($"trying {count} systems: {demerits:F6} (pages "
                         + $"{string.Join(",", pages.SystemsPerPage)} forces "
                         + $"{string.Join(",", pages.Forces.Select(f => f.ToString("F3")))}; lines "
-                        + $"{string.Join(",", LineSizes(candidate.Breaks))})");
+                        + $"{string.Join(",", LineSizes(candidate.Breaks))})"
+                        + Fresh(count, withTitle: false));
                 }
                 else
                 {

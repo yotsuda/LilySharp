@@ -48,9 +48,12 @@ public class PageChainDebugTests
     /// for a page that opens with the title AND for pages that do not.
     /// </summary>
     private static string TwoStaffSource(int bars)
+        => TwoStaffSource(
+            string.Concat(Enumerable.Repeat("c'4 d' e' f' | g'4 a' b' c'' | ", bars / 2)),
+            string.Concat(Enumerable.Repeat("c4 d e f | g4 a b c' | ", bars / 2)));
+
+    private static string TwoStaffSource(string rh, string lh)
     {
-        string rh = string.Concat(Enumerable.Repeat("c'4 d' e' f' | g'4 a' b' c'' | ", bars / 2));
-        string lh = string.Concat(Enumerable.Repeat("c4 d e f | g4 a b c' | ", bars / 2));
         return $$"""
             title "Chain"
             octave absolute
@@ -75,8 +78,11 @@ public class PageChainDebugTests
     /// Only lines raised on the thread that drives THIS layout are kept.
     /// </remarks>
     private static List<string> Capture(double pageHeight, int bars, out ScoreLayout layout)
+        => Capture(pageHeight, TwoStaffSource(bars), out layout);
+
+    private static List<string> Capture(double pageHeight, string source, out ScoreLayout layout)
     {
-        var tree = SyntaxTree.Parse(TwoStaffSource(bars));
+        var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindAll(tree).First();
         var score = SvgGenerator.CollectScore(tree, spec);
         var options = score.Paper with
@@ -244,5 +250,34 @@ public class PageChainDebugTests
             Assert.Equal(chosen.Cost, entries.Min(e => e.Cost), 9);
             Assert.Equal(layout.Pages.Length, chosen.Count);
         }
+    }
+
+    /// <summary>
+    /// The system-count loop builds each candidate line ONCE and shares it between the
+    /// candidate breakings that contain it (session 501); every count must still score what
+    /// the same count scores from lines built fresh, which the debug hook prints beside it.
+    /// </summary>
+    /// <remarks>
+    /// The suite had no other observer: sharing a line under the wrong key (its start alone)
+    /// moved no page of the suite, because the loop's CHOICE survived the wrong scores.
+    /// </remarks>
+    [Fact]
+    public void EveryCountScores_AsItsLinesBuiltFreshWould()
+    {
+        // Plain bars but the NINTH, which towers: a first line of 8 bars leaves it out and one
+        // of 9 takes it in, so the two lines that start together are of different heights.
+        var rh = string.Concat(Enumerable.Range(0, 48).Select(i =>
+            i == 8 ? "c''''4 d'''' e'''' f'''' | " : "c'4 d' e' f' | "));
+        var lh = string.Concat(Enumerable.Repeat("c4 d e f | ", 48));
+        var log = Capture(pageHeight: 60, TwoStaffSource(rh, lh), out _);
+        var tried = log
+            .Select(l => Regex.Match(l, @"^trying (\d+) systems: (-?[\d.]+|∞|Infinity).* fresh (-?[\d.]+)$"))
+            .Where(m => m.Success)
+            .ToList();
+        // 6 lines of 8 bars and 5 of 9-10: the two first lines start together and end apart.
+        Assert.True(tried.Count >= 2, "the fixture must price several counts:\n" + string.Join("\n", log));
+        foreach (var m in tried)
+            Assert.True(m.Groups[2].Value == m.Groups[3].Value,
+                $"count {m.Groups[1].Value}: the loop scored {m.Groups[2].Value}, fresh lines score {m.Groups[3].Value}");
     }
 }

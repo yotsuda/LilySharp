@@ -1584,7 +1584,9 @@ internal sealed class PageBreaker
     /// ticks). The loop reads a line's predecessor's padding, minimum distance and refpoints,
     /// never its tallness, so writing each one in place as it goes computes the same numbers.
     /// ⚠️ A detail shared between lists must be at the same place in each (the book title,
-    /// always first) — its tallness is then the same whichever list writes it.
+    /// always first) — its tallness is then the same whichever list writes it — OR the lists
+    /// must be priced one at a time, each stacked just before it is read: the system-count
+    /// loop shares its candidates' LINES this way (session 501, EstimatedSystemDetails).
     /// </remarks>
     internal static List<SystemDetails> CalcLineHeightsInPlace(List<SystemDetails> owned)
     {
