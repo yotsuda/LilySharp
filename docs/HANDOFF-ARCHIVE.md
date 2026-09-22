@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第511セッションの経緯
+
+### 1.1 第511セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第510 のすぐ後）。ユーザー指示「続けて」。
+★ **`-Start p511` の 1 コマンドで §0 が全部済んだ**（HEAD `da40e83a`・full 8849 / 0 / 3 / 8852・`-Archive 509` も自動）。
+
+★★★ **⑴ 梁の memo の再生が members を写さなくなった＝render 1,742,843 → 1,702,718（−40,125・−2.3%）**（`b8ee67fb`・`Zz511Hash`＝5,824 行 0 差）。型の地図（第508）の頭のうち土台でない `BeamMember` 35 KB を**構築の呼び手で数えた**（`Zz511`＝構築子で stack を歩いて Measure／BeamMember の外の最初の frame・Lab `sessions/p511/`）＝**`BeamGroup.WithLiveItems` が 539.17 回／打鍵＝全体の 98%**、しかも **item が読まれたのは 22.58（4.2%）**（全部 stem x）・`Members` は 181.74 群すべてで読まれる。⇒ 群は検出時の members を共有し、live の小節の `Items`（struct）を持つ＝**`BeamGroup.ItemOf(i)`** が答える。**`BeamMember.Item` は `DetectedItem` に改名**＝コンパイラが読み手 30 軒（renderer・quanter・tab・tuplet・script・skyline）を全部名指した。
+  **毒 4 本**（`poisons.ps1`）: `ItemOf` が live を見ない→契約の網だけ赤（memo の鍵が読むものは一致＝頁は動かない）・位置で引く 30 赤・guard 抜き緑（不変条件）。⚠️ **shift の写しが live を落とす毒は全体緑**＝網 `ReplayWithLiveItems_TheShiftedCopyStillAnswersTheLiveVoice` を足した（その毒で赤）。`SkylineMergeTests.ABatchsResultList…` が 1 回だけ赤＝割当の閾値の犠牲者（梁と無関係）。
+  ★ **効いた見方＝「建てた数」と「読まれた数」を同じ窓で数える**（⑴ 読み手のいない副産物の、個体ごとの版）。`Measure` は同じ計器で ⒮²³ を起票（§1.0）。
+  §7 7.5＝Core '+' 128 行・REF／OWN 0（読み手の住所を群に移しただけ＝LP の意味は動かさない）。`-End p511` の門は全部 OK・full 8850 / 0 / 3 / 8853（網 +1）。
+
 ## 以下は第510セッションの経緯
 
 ### 1.1 第510セッション（2026-09-23・YT-DELL2）
