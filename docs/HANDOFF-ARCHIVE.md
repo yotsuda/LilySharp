@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第480セッションの経緯
+
+### 1.1 第480セッション（2026-09-22・YT-DELL2）
+
+新しい会話。ユーザー指示「HANDOFF を読んで作業に着手して」。§1.0 ⒜ の ⒳¹¹。
+★ **`-Start p480` の 1 コマンドで §0 が全部済んだ**（HEAD `b92afcc5`・未 push 41・full 8801 / 0 / 3 / 8804・`-Archive 478` も自動）。
+
+★★★ **⑴ ⒳¹¹ を閉じた＝起票より広かった**。`\mark` で書くと LP は 1 瞬間に 1 つしか残さず、**section の境目＝ラベルと navigation 記号が同じ瞬間**なので、`form { segno A fine B to coda coda C }` の双子は **segno・coda と A・B・C の*ラベル 3 つ全部*を失っていた**（起票は segno／coda だけを見ていた。Lab `sessions/p480/nav-form-lp.log`）。
+⇒ 書き出しを**絵が模している grob** へ: segno→`\segnoMark 1`・coda→`\codaMark 1`（1400＝ラベルの内側）・文字→`\jump`（Fine／To Coda は `\tweak direction #UP`、D.S.／D.C. は JumpScript 既定の下＝絵と同じ）。**改行では文字は前の行の終わりへ（絵も同じ・`nav-break.lys`）、coda だけ `\tweak break-visibility` で新しい行に残す**（絵のオーナー決定）。`\default` でなく 1＝`\default` は数える（2 つ目が 𝄌𝄌）。
+LP 2.26 で 5 冊（`nav-form`・`nav-break`・p479 の `volta-segno`・fixture `navigation-marks`・文書の例）すべて警告 0 で、配置は Lily# の絵と同じ並び。**網 `LilyPondExporterTests.ANavigationMarkBesideASectionLabel_IsNotASecondRehearsalMark`**＝1 行に `\mark` 2 つを禁じる（segno を旧形に戻す毒で赤を確認）。
+⚠️ 毒の後に CLI だけ再ビルドしたら **Tests の bin に毒入り Core が残り**、full で自分の網が 1 赤＝Tests を build し直して緑（CLAUDE-OPERATIONS §1「`--no-build` の前段」と同じ病）。
+★ **⑵ 新しい起票 ⒳¹²**＝インラインの文字記号が 1 小節遅れ・曲末は消える（§1.0 ⒞・文書 vs fixture＝ユーザー決定）。
+★ **⑶ 終了時**: code `0d9f04fa`（Core 1・Tests 2・`APPROXIMATIONS.md` 再生成）。full **8802 / 0 / 3 / 8805**（+1＝網・`-End` の門は全部 OK）。§7.5 Core '+' 29＝`EmitNavMark` の書き換えと註・LILYPOND-REF 1 本（SegnoMark／CodaMark／JumpScript と 3 つの music function の行番号）。§7.6 出所＝grob の性質は `define-grobs.scm`、上下と改行の振る舞いは Lily# の絵を実測（`nav-form`・`nav-break`）。§7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第479セッションの経緯
 
 ### 1.1 第479セッション（2026-09-22・YT-DELL2）

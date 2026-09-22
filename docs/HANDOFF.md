@@ -198,6 +198,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
+- ★★ **⒳¹³ フレージング・スラーの残り**（第482 が足した・未着手）: ⑴ `.up`／`.down`（LP の `^\(` `_\(`）が無い／⑵ part combiner（`PartCombiner` が item を建て直す箇所）で旗が落ちる／⑶ MusicXML の*読み込み*で `number="2"` のスラーがどう入るか未確認／⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑸ タブ譜の経路には内側スラーを渡していない
+
 **⒞ ユーザー決定が先・触らない**
 - ★★ **⒳¹² インラインの*文字の*navigation 記号が 1 小節遅れて描かれ、曲末の 1 つは黙って消える**（第480 起票・実測・**ユーザー判断が先**）。`docs/SYNTAX_REFERENCE.md`「Navigation Marks」は `c4 d e f | to coda`＝**直前の小節の終わり**と書くが、**その例をそのまま描くと To Coda・Fine・D.C.・D.S. al Fine が全部*次の*小節の終わりに出て、最後の `| ds al coda` は描かれない**（`check` は無言。Lab `sessions/p480/doc-example.lys`＋`-ls.png`）。segno・coda と form 側（`A fine B`）は正しい。**双子は文書どおりの時刻**に出す＝この本では絵と双子が 1 小節食い違う。⚠️ **fixture `navigation-marks.lys` は逆の読み（`fine g1 |`＝この小節の終わり）で書かれていて、絵はそれに合う**＝**どちらが仕様かはユーザー決定**（⑴ 絵を文書に合わせる＝fixture と snapshot も直す／⑵ 文書と双子を絵に合わせる）。**ユーザーの実コーパス 331 冊はインラインの文字記号を 1 度も使っていない**（全部 form 側）＝射程はテストと文書だけ
 - ★★ **⒮¹⁴ `LedgerLineSpannerEngraver.Calculate` の答えは製品の誰も読まない**（第462 起票・grep）。
@@ -229,6 +231,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第482セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第481 のすぐ後）。ユーザー指示「続けて」、続けて「Lily# にもフレージングスラーを足してほしい」（第481 が「LP でスラーを避けるのは PhrasingSlur だけ・Lily# には無い」と書いたのを受けて）。
+★ **`-Start p482` の 1 コマンドで §0 が全部済んだ**（HEAD `dd952347`・未 push 45・full 8801 / 0 / 3 / 8804・`-Archive 480` も自動）。
+
+★★★ **⑴ フレージング・スラーを足した**（ユーザー指示「Lily# にもフレージングスラーを足してほしい」・綴りはユーザー決定＝§3）。code `eedf4197`。
+**経路**: walk の 2 つの入口（`ProcessMusicNode`・tuplet の `EmitScaledItem`）が音符自身の注釈から `@phrasingSlur`／`@!phrasingSlur` を拾って builder に預け（`PendingPhrasingSlur`）、builder の 2 つの入口（`AddItem` は `AddItemWithoutDuration` を通らない）が次の列に `with` で押す＝**item の構築箇所は 1 つも触っていない**。bool 2 つは `MeasureContentKey` の内容、`@` の位置 2 つは除外＋`CollectTailShifter`。grace 時間は保留に触らず押さない（grace の本体が主音の処理中に歩かれるため）。対は `SlurDetector`（声部ごとに 1 本・閉じてから開く・開いている間の開始は無視＝LP の `Slur_engraver` の規則）、警告は `SlurPairingScanner.ScanPhrasing` を `UnpairedSpanWarnings` が問い合わせ時に計算（蓄積しない＝resume の持ち越し不要）。
+**配置**: `ratio` 0.333（`SlurScoreParameters.PhrasingDefault`）と、同じ声部で範囲内に**始まる**スラーを `get_extra_encompass_infos` の Slur 枝どおり extra 集合へ＝曲線上の 3 点（端は bound を共有するときだけ・`inside`・端の音判定なし・X は `idx`）＋中点を `free_slur_distance` 持ち上げた避ける点。これが `additional_ys` にも入るので弧が内側のスラーの上へ上がる。フレージング・スラーは検出で通常スラーの**後ろ**に並べ、配置時に内側が解けている。
+**LP 2.26 と比べて**（Lab `sessions/p482/ps2.lys`・`ps2.ly`）: 3 本の制御点が SVG の 2 桁で一致。**内側スラーを渡さない毒で 3 本とも外れる**（2 本目の c1 の高さ −3.13 → −1.92）。網 `PhrasingSlurTests`（15 本・幾何 3 本と増分描画 3 本は毒で赤を確認）。
+**書き出し**: 双子は `\(` と後置の `\)`（前置すると 1 音早く閉じる＝最初の出力で踏んだ）、MusicXML は `<slur number="2">`。`data-pos` は 2 つの `@`（`ResolveBows` の選択子に layout を渡す形に広げた）。
+⚠️ 第481 で消した「スラー同士の腕」の器（`existingSlurs`）は復活させていない＝LP の経路（extra 集合）で入れ直した。
+★ **⑵ 終了時**: full **8817 / 0 / 3 / 8820**（+15＝新しい網）。実コーパス 5,824 ページ 0 差（`Zz482Hash.cs.txt`・Release）。LP 引用の「名前なし」を 4 件足しかけて名前を入れた。`-End` の門は全部 OK。§7.5 Core '+' 480・LILYPOND-REF 9・OWN 0＝新しい振る舞いはどれも LP の source の行に出所がある（対の規則＝`slur-engraver.cc`、曲線の点と避ける点＝`slur-scoring.cc`、ratio＝`define-grobs.scm`）。同じ系の断片だけを渡すのは LP の「同じ行の broken spanner」の言い換え。§7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第481セッションの経緯
+
 ### 1.1 第481セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第480 のすぐ後）。ユーザー指示「続けて」（⒳¹² は未回答＝保留のまま）＝§1.0 ⒜ の ⒮²² ⑴。
@@ -238,20 +255,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⇒ LP の source を読むと、**スラーを acknowledge するのは `Phrasing_slur_engraver` だけ**（`phrasing-slur-engraver.cc:80`・`slur-engraver.cc:73-80` には無い）＝`slur-scoring.cc:679-682` の「small slur」は PhrasingSlur が内側のスラーを避ける話で、**Lily# は PhrasingSlur を描かない**。LP 2.26 の実測でも `c''4( b' a')( g' | f'1)` の 2 本目は単独の同じスラーとバイト同一（Lab `sessions/p481/two.ly`・`one.ly`）。
 ⇒ **削除**（`existingSlurs` 引数・採点の 2 項・`SlurSpansOverlap`／`SpanBefore`・その項の単体テスト 1 本）。`FreeSlurDistance` は移植した alist の 1 行として残し「誰も読まない」と註。**スイート緑（snapshot 含む）・実コーパス 5,824 ページ 0 差**（`Zz481Hash.cs.txt`・Release）。
 ★ **⑵ 終了時**: code `8301cfee`（Core 3・Tests 1・表 2 枚を再生成）。full **8801 / 0 / 3 / 8804**（−1＝削除した単体テスト）。`-End` の門は全部 OK。§7.5 Core '+' 17＝註だけ・LILYPOND-REF 2 本（最初の `-End` で 0 本と言われ、散文の引用をタグの形に直して amend）。§7.6 ⒟「削除」＝許可した観測者は LP の source と実測。§7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第480セッションの経緯
-
-### 1.1 第480セッション（2026-09-22・YT-DELL2）
-
-新しい会話。ユーザー指示「HANDOFF を読んで作業に着手して」。§1.0 ⒜ の ⒳¹¹。
-★ **`-Start p480` の 1 コマンドで §0 が全部済んだ**（HEAD `b92afcc5`・未 push 41・full 8801 / 0 / 3 / 8804・`-Archive 478` も自動）。
-
-★★★ **⑴ ⒳¹¹ を閉じた＝起票より広かった**。`\mark` で書くと LP は 1 瞬間に 1 つしか残さず、**section の境目＝ラベルと navigation 記号が同じ瞬間**なので、`form { segno A fine B to coda coda C }` の双子は **segno・coda と A・B・C の*ラベル 3 つ全部*を失っていた**（起票は segno／coda だけを見ていた。Lab `sessions/p480/nav-form-lp.log`）。
-⇒ 書き出しを**絵が模している grob** へ: segno→`\segnoMark 1`・coda→`\codaMark 1`（1400＝ラベルの内側）・文字→`\jump`（Fine／To Coda は `\tweak direction #UP`、D.S.／D.C. は JumpScript 既定の下＝絵と同じ）。**改行では文字は前の行の終わりへ（絵も同じ・`nav-break.lys`）、coda だけ `\tweak break-visibility` で新しい行に残す**（絵のオーナー決定）。`\default` でなく 1＝`\default` は数える（2 つ目が 𝄌𝄌）。
-LP 2.26 で 5 冊（`nav-form`・`nav-break`・p479 の `volta-segno`・fixture `navigation-marks`・文書の例）すべて警告 0 で、配置は Lily# の絵と同じ並び。**網 `LilyPondExporterTests.ANavigationMarkBesideASectionLabel_IsNotASecondRehearsalMark`**＝1 行に `\mark` 2 つを禁じる（segno を旧形に戻す毒で赤を確認）。
-⚠️ 毒の後に CLI だけ再ビルドしたら **Tests の bin に毒入り Core が残り**、full で自分の網が 1 赤＝Tests を build し直して緑（CLAUDE-OPERATIONS §1「`--no-build` の前段」と同じ病）。
-★ **⑵ 新しい起票 ⒳¹²**＝インラインの文字記号が 1 小節遅れ・曲末は消える（§1.0 ⒞・文書 vs fixture＝ユーザー決定）。
-★ **⑶ 終了時**: code `0d9f04fa`（Core 1・Tests 2・`APPROXIMATIONS.md` 再生成）。full **8802 / 0 / 3 / 8805**（+1＝網・`-End` の門は全部 OK）。§7.5 Core '+' 29＝`EmitNavMark` の書き換えと註・LILYPOND-REF 1 本（SegnoMark／CodaMark／JumpScript と 3 つの music function の行番号）。§7.6 出所＝grob の性質は `define-grobs.scm`、上下と改行の振る舞いは Lily# の絵を実測（`nav-form`・`nav-break`）。§7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
@@ -2460,6 +2463,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | 決定 | 根拠（要点） |
 |---|---|
+| ★★★ **フレージング・スラーの綴りは `@phrasingSlur` … `@!phrasingSlur`**（2026-09-22・第482・**ユーザー決定**＝3 択から選択・✅ `eedf4197`） | 既存の span（`@rit`…`@!rit`・`@ottava`…`@!ottava`・`@sustain`…`@!sustain`）と同じ型。名前は LP の grob 名 PhrasingSlur。LP の `\(` `\)` は「バックスラッシュはタブ譜専用・注釈は `@`」の方針に例外を作るので退けた。`@phrase` は `phrase` が予約語で使えない |
 | ★★★ **`voice { } { }` の span は音価の既定も動かさない＝全 branch は span が開いた時点の (Duration, Dots) から読み、span の*後ろ*の音楽もそこから読む。octave frame（2026-08-01）と同じ 1 つの規則**（2026-09-17・第398 第 3 便・私が octave の決定の延長として置き、**ユーザー確認「あなたの判断を残す方が、一貫して分かりやすいよね」**・✅ `0c25c5d2`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18 に落とした） |
 | ★★★ **`volta`・`alternative` は予約語ではない。LYS0006 は「`repeat volta` は LilyPond の綴りだ」と form へ案内するだけで、*撤去した*体の文面を取らない。LilyPond の `alternative { }` 節はパーサから消し、その語が受ける普通の文法エラーに落とす**（2026-09-17・第398 第 2 便・**ユーザー決定**「LYS0006 のメッセージは不正だ。削除したのではなく、最初からなかった体にすべきだ」「volta は予約語から外してもよい」「alternative の後方互換な警告も完全に削除して、普通の文法エラーを出すので十分」・✅ 同便実装） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
 | ★★★★ **和音・アルペジオは*枠を読むが書かない*。動かすのは `>`/`>>` の後のマークだけ・着地は「元の枠 ± マーク」（群のアンカーではない）**（2026-09-16・**ユーザー決定**・✅ 同便・詳細は GRAMMAR／SYNTAX_REFERENCE） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
