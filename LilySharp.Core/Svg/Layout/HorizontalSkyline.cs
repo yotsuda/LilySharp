@@ -396,14 +396,50 @@ internal sealed class HorizontalSkyline
         // regrow n → 2n → 4n → 8n to hold the same 5n.
         var pad = new List<SkylineBuilding>(_buildings.Count * (1 + SkylineMath.MaxPads));
         pad.AddRange(_buildings);
-        Span<SkylineBuilding> pads = stackalloc SkylineBuilding[SkylineMath.MaxPads];
-        foreach (var b in _buildings)
-        {
-            int n = SkylineMath.Pads(b, horizonPadding, pads);
-            for (int i = 0; i < n; i++)
-                pad.Add(pads[i]);
-        }
+        AppendPads(pad, horizonPadding);
         return pad;
+    }
+
+    /// <summary>Appends, for each building already in <paramref name="buildings"/>, its pad
+    /// buildings — the list becomes the padded skyline's, in <see cref="Padded"/>'s order.</summary>
+    private static void AppendPads(List<SkylineBuilding> buildings, double horizonPadding)
+    {
+        Span<SkylineBuilding> pads = stackalloc SkylineBuilding[SkylineMath.MaxPads];
+        int count = buildings.Count;
+        for (int b = 0; b < count; b++)
+        {
+            int n = SkylineMath.Pads(buildings[b], horizonPadding, pads);
+            for (int i = 0; i < n; i++)
+                buildings.Add(pads[i]);
+        }
+    }
+
+    /// <summary>
+    /// <c>FromBoxes(boxes, direction).PaddedCopy(horizonPadding)</c> — the same buildings in
+    /// the same order — without the unpadded skyline in between.
+    /// </summary>
+    /// <remarks>
+    /// Every rod and wish view of a column is built this way (ItemSkylineFactory), and the
+    /// skyline <see cref="FromBoxes"/> returned there was read by nothing but the copy: its
+    /// object and its list were garbage the moment <see cref="PaddedCopy"/> returned (or, at a
+    /// padding of 0, a <see cref="Clone"/> of a skyline nobody else held). Here the list is
+    /// sized for the padded answer up front and padded where it stands.
+    /// </remarks>
+    internal static HorizontalSkyline FromBoxesPadded(
+        IReadOnlyList<(double YBottom, double YTop, double XLeft, double XRight)> boxes,
+        HorizontalDirection direction, double horizonPadding)
+    {
+        // LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded — no padding, no pad buildings (as PaddedCopy).
+        bool pad = horizonPadding > 0.0;
+        var buildings = new List<SkylineBuilding>(boxes.Count * (pad ? 1 + SkylineMath.MaxPads : 1));
+        for (int i = 0; i < boxes.Count; i++)
+        {
+            var (yBottom, yTop, xLeft, xRight) = boxes[i];
+            buildings.Add(BoxBuilding(yBottom, yTop, xLeft, xRight, direction));
+        }
+        if (pad)
+            AppendPads(buildings, horizonPadding);
+        return new HorizontalSkyline(buildings, direction);
     }
 
     /// <summary>

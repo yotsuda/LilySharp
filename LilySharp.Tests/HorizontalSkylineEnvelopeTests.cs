@@ -40,6 +40,30 @@ public class HorizontalSkylineEnvelopeTests
         Assert.Equal(3.0, right.Distance(left), 6);
     }
 
+    /// <summary>
+    /// The column views are built padded in one step (session 490); the answer must be the
+    /// two-step one — the same buildings in the same order, at every padding including none —
+    /// because every later Merge and Distance reads the list as it stands.
+    /// </summary>
+    [Theory]
+    [InlineData(HorizontalDirection.Right, 0.08)]
+    [InlineData(HorizontalDirection.Left, 0.15)]
+    [InlineData(HorizontalDirection.Right, 0.0)]
+    public void FromBoxesPadded_IsFromBoxesThenPaddedCopy(HorizontalDirection direction, double padding)
+    {
+        var boxes = new[]
+        {
+            (-2.0, 2.0, -0.5, 1.3),
+            (-0.25, 0.75, -1.2, 0.4),
+            (1.5, 3.5, 0.1, 0.9),
+        };
+
+        var twoStep = HorizontalSkyline.FromBoxes(boxes, direction).PaddedCopy(padding);
+        var oneStep = HorizontalSkyline.FromBoxesPadded(boxes, direction, padding);
+
+        Assert.Equal(twoStep.Buildings, oneStep.Buildings);
+    }
+
     [Fact]
     public void Distance_IgnoresShadowedBuilding()
     {

@@ -232,9 +232,9 @@ internal static class ItemSkylineFactory
                                            double verticalPadding)
     {
         var boxes = Boxes(item, referenceX, staffY, which);
-        var skyline = HorizontalSkyline.FromBoxes(boxes, direction);
+        var skyline = HorizontalSkyline.FromBoxesPadded(boxes, direction, verticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);
-        return skyline.PaddedCopy(verticalPadding);
+        return skyline;
     }
 
     /// <summary>
@@ -437,9 +437,10 @@ internal static class ItemSkylineFactory
         List<ColumnPart> parts, ColumnElements which, HorizontalDirection direction)
     {
         var boxes = BoxesOf(parts, 0.0, which);
-        var skyline = HorizontalSkyline.FromBoxes(boxes, direction);
+        var skyline = HorizontalSkyline.FromBoxesPadded(
+            boxes, direction, SpacingRules.MusicalColumnSkylineVerticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);
-        return skyline.PaddedCopy(SpacingRules.MusicalColumnSkylineVerticalPadding);
+        return skyline;
     }
 
     /// <summary>The parts' boxes, in a list lent by

@@ -282,9 +282,8 @@ internal sealed class TieChordOutline
             boxes.Add((yDown, yUp, xLeft, xRight));
         }
 
-        var skyline = HorizontalSkyline
-            .FromBoxes(boxes, dir < 0 ? HorizontalDirection.Right : HorizontalDirection.Left)
-            .PaddedCopy(skylinePadding);
+        var skyline = HorizontalSkyline.FromBoxesPadded(
+            boxes, dir < 0 ? HorizontalDirection.Right : HorizontalDirection.Left, skylinePadding);
         GiveBoxes(boxes);
 
         // head_extents_ and the floor, both from the TIED heads' union.
