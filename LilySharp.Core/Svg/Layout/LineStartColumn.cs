@@ -289,11 +289,11 @@ internal static class LineStartColumn
     /// DRAWER (session 421's idiom); THE CLEARING IS ON GIVE (session 456) and before each
     /// staff — a stale box would widen the next staff's <c>min_dist</c> with a grob it does
     /// not engrave. <see cref="ColumnBox"/> holds four doubles, so the drawer pins nothing.
-    /// ⚠️ THE CLEAR BEFORE EACH STAFF HAS NO OBSERVER (session 467, by poison): dropping it
-    /// leaves the suite green and the reader's corpus 0 pages moved. The answer is a MAX over
-    /// staves, so a later staff that also sees the earlier staves' boxes changes it only when
-    /// an earlier staff reaches further right AND the later staff's first note further left —
-    /// a shape neither population holds. Do not read that green as "per-staff does not matter".
+    /// ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
+    /// the answer is a MAX over staves, so a later staff that also sees the earlier staves'
+    /// boxes changes it only when an earlier staff reaches further right AND the later staff's
+    /// first note further left — a shape neither population holds. The net builds one (a second
+    /// line, alto sax over C): LineStartColumnTests.ALineStartsMinDist_DoesNotDependOnTheStaffOrder.
     /// </remarks>
     [ThreadStatic]
     private static List<ColumnBox>? t_prefatoryBoxes;

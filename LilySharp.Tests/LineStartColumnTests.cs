@@ -750,4 +750,56 @@ public class LineStartColumnTests
             Prefatory(KeySignature.CMajor, 4, 4, StaffBottom, StaffTop), notes);
         Assert.NotEqual(7.485000, staffOnly, 6);
     }
+
+    /// <summary>
+    /// A line start's <c>min_dist</c> is the MAX of the per-staff answers — each staff's
+    /// prefatory boxes against ITS OWN first note — so it cannot depend on the order the
+    /// staves are listed in. The shape that tells: a second line (no meter) whose upper staff
+    /// engraves a key its first note does not need and whose lower staff engraves none but
+    /// opens on an accidental. Measured against another staff's key, the accidental would ask
+    /// 10.135; against its own clef it asks 5.115, under the upper staff's 8.585.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE SUITE HAD NO OBSERVER (session 467 measured it, session 478 wrote
+    /// this): dropping the clear between staves in <c>MinimumDistanceAtLineStart</c> left every
+    /// net green and the reader's corpus unmoved. That poison is ORDER-dependent (a staff sees
+    /// the boxes of the staves before it), which is why the claim is written as an order
+    /// swap: listed sax-first the pno staff inherits the sax key, listed pno-first it does not.
+    /// The key comes from `pitch concert` and an alto saxophone (A major over a C piece), the
+    /// one way two staves of a score carry different keys; the FIRST line would not do, since
+    /// every staff's meter stands in the one shared column right of every key.
+    /// </remarks>
+    [Fact]
+    public void ALineStartsMinDist_DoesNotDependOnTheStaffOrder()
+    {
+        static string Book(string staves) =>
+            "pitch concert\npart sax { instrument alto-sax }\npart pno { clef treble }\n"
+            + "section A { sax { c'4 d' e' f' | break c'4 d' e' f' | }"
+            + " pno { f'4 d' e' f' | break fis'4 d' e' f' | } }\n"
+            + "form main { A }\nscore main { " + staves + " }\n";
+
+        static double SecondLineFirstHeadX(string source)
+        {
+            var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+            Assert.False(tree.HasErrors);
+            string svg = SvgGenerator.Generate(tree,
+                new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+            // The second line opens with no meter, so its first column stands LEFT of the first
+            // line's: the smallest head x of the page is the second line's first head (both
+            // staves' heads share it). ⚠️ Not "the first head whose x falls back" — the page is
+            // drawn staff by staff, so that is the first line's LOWER staff (a vacuous first
+            // draft of this net read it and stayed green under the poison).
+            var xs = System.Text.RegularExpressions.Regex.Matches(svg,
+                    "<text class=\"music\"[^>]*? x=\"([-\\d.]+)\"[^>]*>(&#xE0FE;|"
+                    + EmmentalerGlyphs.NoteheadBlack + ")</text>")
+                .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+                .ToList();
+            Assert.Equal(16, xs.Count);
+            return xs.Min();
+        }
+
+        double saxFirst = SecondLineFirstHeadX(Book("staff sax staff pno"));
+        double pnoFirst = SecondLineFirstHeadX(Book("staff pno staff sax"));
+        Assert.Equal(pnoFirst, saxFirst, precision: 6);
+    }
 }

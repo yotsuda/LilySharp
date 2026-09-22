@@ -191,7 +191,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:886** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:292** ⚠️ THE CLEAR BEFORE EACH STAFF HAS NO OBSERVER (session 467, by poison): dropping it
+- **:292** ⚠️ THE CLEAR BEFORE EACH STAFF had no observer until session 478 (session 467, by poison):
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
 - **:303** an unverified edge of this proxy (no point observes it).
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
