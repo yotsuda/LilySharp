@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第501セッションの経緯
+
+### 1.1 第501セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第500 のすぐ後）。ユーザー指示「続けて」＝型の地図の残り（`SystemDetails`・`ArticulationLayout[]`）と「読み手のいない副産物」。
+★ **`-Start p501` の 1 コマンドで §0 が全部済んだ**（HEAD `a20ef7f2`・full 8844 / 0 / 3 / 8847・`-Archive 499` も自動）。
+
+★★★ **⑴ 系の数の選択で候補の行を 1 度だけ建てる＝render 1,950,630 → 1,894,216（−56,414・−2.9%）**。地図の `SystemDetails` 80 KB を計器で追うと **`EstimatedSystemDetails` が 11.80 list・354 行・74,826 B／打鍵**＝`ChooseSystemCount` が行の数の候補ごとに全行を建て直していた（隣り合う数の候補は行をほぼ共有する・ideal は 2 度値付けされる＝1 list／打鍵）。⇒ `ChooseSystemCount` の中で行を **(start, end) の辞書**で共有（先頭行は 0 から始まる唯一の行＝spec の違いも鍵が言う・**空行は共有しない**）。行の値は鍵の関数で、`Tallness` だけは積むたびに全行を書き直す＝**候補を 1 つずつ値付けする限り安全**（`PageBreaker.CalcLineHeightsInPlace` の注記を足した）。
+  ⚠️ **網がどこにも無かった**＝鍵から `end` を落とす毒も、先頭か否かを落とす毒も**スイート緑**（系の数の*選択*は間違った点数でも変わらない）。⇒ **debug の口に「同じ数を新しく建てた行で値付けした点数」（`fresh`）を並べて刷り**、`PageChainDebugTests.EveryCountScores_AsItsLinesBuiltFreshWould` がその等しさを見る（フィクスチャは**9 小節目だけが高い**＝8 小節の先頭行と 9 小節の先頭行の高さが違う。周期的に高い小節の本では共有しても値が同じで毒が緑だった）。毒（Lab `sessions/p501/poisons.ps1`）＝**`end` を落とす→この unit が赤**・**空行も共有→観測者なし**（空行は実際には出ない）。⚠️ **`SkylineMergeTests.ABatchsResultList_…` は flaky**（割り当てを数える unit・毒と無関係に 7,488 B と読んで赤・単独 3/3 緑）。出力は同一（`Zz501Hash`＝0 差）。full 8845 / 0 / 3 / 8848。
+★ **⑵ 終了時**: コード 2 ファイル（LayoutEngine.SystemCount・PageBreaker の注記）＋テスト 1 本。
+
 ## 以下は第500セッションの経緯
 
 ### 1.1 第500セッション（2026-09-22・YT-DELL2）
