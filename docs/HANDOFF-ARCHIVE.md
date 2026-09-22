@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第498セッションの経緯
+
+### 1.1 第498セッション（2026-09-22・YT-DELL2）
+
+新しい会話（`/clear` の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
+★ **`-Start p498` の 1 コマンドで §0 が全部済んだ**（HEAD `e45fa35c`・full 8842 / 0 / 3 / 8845・`-Archive 496` も自動）。
+
+★★★ **⑴ 臨時記号の参照 skyline を建てない＝render 2,090,060 → 2,050,098（−39,962・−1.9%）**。計器（呼びの前後の `GC.GetAllocatedBytesForCurrentThread`・Lab `sessions/p498/probe.log`）で §1.0 の候補 4 軒を値付けした＝`AccidentalPlacement` の参照 **33.18 列・33.24 merge／打鍵で 38,098 B**・`LineStartColumn.MinimumDistance` **6.97 回 1,903 B**・`MeasureSprings.cs:1282/1290` **0 回**・`MmrRodMinimumDistance` の `FromBoxes` 側 0.02 回。
+  **列の臨時記号はほぼ必ず 1 つ**＝merge のほぼ全部が「最後の臨時記号の後」で、**それを読む者はいない**⇒ 最後の merge を建てない。残り（heads の skyline と中間の merge）は `PlacementScratch` の 2 本（`ReferenceA`／`B`）に交互に書く（`HorizontalSkyline.FromBoxesInto`／`ShiftedRaisedOverInto`＝入力と同じ target は投げる）。`LineStartColumn` の 2 本は thread の引き出し（取り出して使い、Clear して返す）。
+  網 `HorizontalSkylineEnvelopeTests.TheIntoSpellings_ReplaceWhatTheKeptSkylineHeld`。毒 3 本（Lab `sessions/p498/poisons.ps1`）＝**merge を 1 つ多く飛ばす→20 赤**（臨時記号・snapshot）／**`FromBoxesInto`・`ShiftedRaisedOverInto` の `Clear` を抜く→赤はこの unit だけ**（＋毒で行番号が動いた census 1 本）＝⚠️ 古い building を持ち越す害は**スイートの誰も見ない**（`PlacementScratch` は give で Clear するので二重の備え）。出力は同一（`Zz498Hash`＝5,824 ページ 0 差）。full 8843 / 0 / 3 / 8846。生成物 2 つ。
+★ **⑵ 終了時**: コード 3 ファイル（AccidentalPlacement・HorizontalSkyline・LineStartColumn）＋テスト 1 本＋生成物 2 つ。
+
 ## 以下は第497セッションの経緯
 
 ### 1.1 第497セッション（2026-09-22・YT-DELL2）
