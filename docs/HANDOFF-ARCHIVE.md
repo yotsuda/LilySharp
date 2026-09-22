@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第499セッションの経緯
+
+### 1.1 第499セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第498 のすぐ後）。ユーザー指示「続けて」＝§1.0 の「建てた直後に写して捨てる」の次の候補（`Clone()` の呼び手・`VerticalSkyline.Padded`）。
+★ **`-Start p499` の 1 コマンドで §0 が全部済んだ**（HEAD `7be58087`・full 8843 / 0 / 3 / 8846・`-Archive 497` も自動）。
+
+★★★ **⑴ bare duration の写し元の表を「写し元」だけにした＝render 2,050,044 → 2,016,419（−33,625・−1.6%）**。型の地図（Zz499Price）で `Entry[NoteSyntax,ResolvedChordMember][]` が 45 KB／打鍵＝**打鍵ごとに新しい collector が `_resolvedNotes` を声部の長さまで育てていた**（全ての音符を書く）が、読み手は `CreateBareDurationItem` の `BareDurations.OriginalOf(bare)` だけ。⇒ 書くのを `BareDurations.IsOriginal(note)` のときだけにした（record の log がもともと使っていた篩＝`OriginalOf` の答えの集合そのもの）。
+  ⚠️ **和音の表 `_resolvedChordMembers` は同じ手で畳めない**＝`MeasureCollector.Annotations.cs:180`（和音名）が任意の和音を読む。⚠️ `IsOriginal` は木ごとに写し元の地図を 1 度建てる（打鍵ごとに新しい木）が、その分も込みで −33,625。
+  毒 2 本（Lab `sessions/p499/poisons.ps1`）＝**書かない→7 赤**・**写し元*以外*だけ書く→7 赤**（どちらも `BareDurationTests`）。出力は同一（`Zz499Hash`＝0 差）。full 8843 / 0 / 3 / 8846。生成物の差は無し。
+★ **⑵ 終了時**: コード 1 ファイル（MeasureCollector.ItemFactory）。
+
 ## 以下は第498セッションの経緯
 
 ### 1.1 第498セッション（2026-09-22・YT-DELL2）
