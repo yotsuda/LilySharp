@@ -190,7 +190,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:506** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:883** paging augment families. Unreachable today, so no observer CAN be built; the
+- **:886** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:292** ⚠️ THE CLEAR BEFORE EACH STAFF HAS NO OBSERVER (session 467, by poison): dropping it
 ### `LilySharp.Core/Svg/Layout/LyricHyphen.cs`
@@ -359,7 +359,7 @@
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
-- **:906** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
+- **:909** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
 - **:562** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
 - **:641** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see

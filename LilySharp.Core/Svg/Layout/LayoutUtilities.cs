@@ -337,7 +337,10 @@ internal static class LayoutUtilities
         var arr = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsArray(systems);
         if (arr is null || arr.Length == 0)
             return EmptyMeasureMap;
-        return MeasureMaps.GetValue(arr, BuildMeasureMapFor);
+        // A consecutive array answers from itself (ConsecutiveMeasureMap's remarks carry the
+        // account); the table below is for the arrays that are not.
+        return (IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>?)
+            ConsecutiveMeasureMap.Of(arr) ?? MeasureMaps.GetValue(arr, BuildMeasureMapFor);
     }
 
     private static readonly Dictionary<int, (SystemLayout System, MeasureLayout Measure)>

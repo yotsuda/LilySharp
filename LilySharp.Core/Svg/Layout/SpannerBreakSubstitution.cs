@@ -86,7 +86,10 @@ internal static class SpannerBreakSubstitution
         var arr = ImmutableCollectionsMarshal.AsArray(systems);
         if (arr is null || arr.Length == 0)
             return EmptyMeasureToSystem;
-        return MeasureToSystemMaps.GetValue(arr, BuildMeasureToSystemMapFor);
+        // A consecutive array answers from itself (ConsecutiveMeasureMap's remarks carry the
+        // account); the table below is for the arrays that are not.
+        return (IReadOnlyDictionary<int, int>?)ConsecutiveMeasureMap.Of(arr)
+            ?? MeasureToSystemMaps.GetValue(arr, BuildMeasureToSystemMapFor);
     }
 
     private static readonly Dictionary<int, int> EmptyMeasureToSystem = new();
