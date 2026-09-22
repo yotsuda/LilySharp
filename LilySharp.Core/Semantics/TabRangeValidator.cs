@@ -41,14 +41,17 @@ internal sealed class TabRangeValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var seen = new HashSet<int>();
+        var seenStrings = new HashSet<(int, int, int)>();
         foreach (var spec in RenderSpecParser.FindAll(tree).Where(s => s.HasTab))
         {
             IReadOnlyList<TabRangeWarning> warnings;
+            IReadOnlyList<TabStringUnplayableWarning> stringWarnings;
             try
             {
                 var collector = new MeasureCollector();
                 collector.CollectMultiStaff(tree, spec);
                 warnings = collector.TabRangeWarnings;
+                stringWarnings = collector.TabStringWarnings;
             }
             catch
             {
@@ -65,6 +68,20 @@ internal sealed class TabRangeValidator : ISemanticValidator
                         ? "note is below the tab's lowest string and was omitted from the tab " +
                           "(it shows only on the notation staff) — likely an octave too low"
                         : "note is above the tab's range (no fret 0-24 on any string) — likely an octave too high");
+            }
+
+            // LYS5003 — one per member: a chord can ask two members for a string that cannot
+            // play either (LilyPond warns once per pitch), and a repeated section plays the
+            // same note twice (one warning, as for LYS5002). The fret tells the members apart.
+            // ASCII only: these strings reach legacy-codepage consoles through the CLI.
+            foreach (var w in stringWarnings)
+            {
+                if (!seenStrings.Add((w.SourcePosition, w.StringNumber, w.Fret))) continue;
+                _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),
+                    DiagnosticCodes.TabStringUnplayable,
+                    $"string {w.StringNumber} cannot play this pitch (it would be fret {w.Fret}), "
+                    + "so the string request is ignored and the string chosen again - "
+                    + "check the \\" + w.StringNumber + " (LilyPond ignores it the same way)");
             }
         }
     }

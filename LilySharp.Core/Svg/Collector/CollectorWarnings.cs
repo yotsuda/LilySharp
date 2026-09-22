@@ -71,6 +71,17 @@ public record TabRangeWarning(
     bool BelowRange   // true = below the lowest string; false = above the top fret
 );
 
+/// <summary>
+/// A written string number (<c>\N</c>) that cannot fret its note's pitch: the fret on that
+/// string would be below 0 or above 24. The string request is ignored and the string chosen
+/// again (single notes by <c>Tunings.CalculateFret</c>, chord members by
+/// <c>Tunings.CalculateChordFrets</c>), as LilyPond does — and LilyPond says so.
+/// <see cref="SourcePosition"/> points at the note or chord.
+/// </summary>
+/// <remarks>LILYPOND-REF: scm/translation-functions.scm:745-756 determine-frets-and-strings —
+/// handle-negative 'recalculate, "Requested string for pitch requires negative fret".</remarks>
+public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, int Fret);
+
 /// <summary>A navigation mark (segno/coda/D.S./…) written mid-measure rather than at a
 /// barline boundary — an unusual placement worth flagging.</summary>
 public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText);

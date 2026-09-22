@@ -1167,6 +1167,12 @@ public static class DiagnosticCodes
     public const string TabTieStringConflict = "LYS5001";
     /// <summary>Tablature warning: a fret position is out of range for the instrument.</summary>
     public const string TabOutOfRange = "LYS5002";
+    /// <summary>Tablature warning: a written string number (<c>\N</c>) cannot fret its pitch
+    /// (the fret would be negative or above 24), so it is ignored and the string chosen
+    /// again — LilyPond's own answer, which it warns about too ("Requested string for pitch
+    /// requires negative fret … Ignoring string request and recalculating",
+    /// scm/translation-functions.scm:745-756).</summary>
+    public const string TabStringUnplayable = "LYS5003";
 
     // Render/score declaration errors (LYS6xxx)
 

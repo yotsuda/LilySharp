@@ -284,8 +284,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2444** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4566** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2446** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4568** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -295,7 +295,7 @@
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
-- **:286** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
+- **:304** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:142** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
 - **:449** ⚠️ LILYSHARP-OWN: A NOMINAL BOX, AND LILYPOND HAS NO COUNTERPART TO IT. A Flag's

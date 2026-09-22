@@ -52,6 +52,12 @@ workflow attaches that section to the GitHub Release verbatim.
   the editor's preview plays its timbre from the same sound (which also stops it reading
   `piano-bass` as a bass guitar).
 
+- **A string number that cannot fret its note is now reported (LYS5003).** `c'4\1` on a guitar
+  — the first string cannot play c' — was ignored and the string chosen again in silence; it
+  still is (LilyPond does the same), but Lily# now says so, once per note or chord member, as
+  LilyPond does ("Requested string for pitch requires negative fret"). A `\N` that stopped
+  fitting after a transposition or an octave change is the usual cause.
+
 - **Phrasing slurs: `@phrasingSlur` … `@!phrasingSlur`** — LilyPond's `\(` … `\)`, the long
   curve over a musical sentence. It is drawn over the slurs inside it and clears them as
   LilyPond does (its taller shape and its avoidance of the enclosed slurs measured against

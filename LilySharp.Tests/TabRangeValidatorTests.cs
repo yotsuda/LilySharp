@@ -61,4 +61,30 @@ public sealed class TabRangeValidatorTests
             "part bl { clef bass }\nsection A { bl { a,,4 r2. | } }\nform main { A }\nscore { staff bl }\n"));
         Assert.Empty(v.Diagnostics);
     }
+
+    private static System.Collections.Generic.List<Diagnostic> Strings(string body)
+    {
+        var v = new TabRangeValidator();
+        v.Validate(SyntaxTree.Parse(
+            "octave absolute part gtr { instrument guitar }\nsection A { gtr { " + body
+            + " } }\nform main { A }\nscore { tab gtr }\n"));
+        return v.Diagnostics.Where(x => x.Code == DiagnosticCodes.TabStringUnplayable).ToList();
+    }
+
+    /// <summary>
+    /// A written string that cannot fret its pitch is ignored and the string chosen again —
+    /// and, as LilyPond does, SAID: LilyPond 2.26 warns "Requested string for pitch requires
+    /// negative fret" once per pitch for exactly these (Lab sessions/p485/imp.ly,
+    /// sessions/p486/one.ly). Until session 486 Lily# drew the same frets in silence.
+    /// </summary>
+    [Theory]
+    [InlineData("c'4\\1 d'4\\1 e'4\\1 r4 |", 2)]              // e' is the open first string
+    [InlineData("<c'\\1 d'\\1>4 <c'\\1 e'\\2>4 <c' d'>4 r4 |", 3)]  // one per member, as LilyPond
+    [InlineData("c'4\\2 d'4\\2 e'4 r4 |", 0)]                  // playable requests say nothing
+    public void AnUnplayableWrittenString_Warns(string body, int count)
+    {
+        var d = Strings(body);
+        Assert.Equal(count, d.Count);
+        Assert.All(d, x => Assert.Equal(DiagnosticSeverity.Warning, x.Severity));
+    }
 }

@@ -37,6 +37,24 @@ internal sealed class TabResolver
     /// <summary>Tab notes pitched outside the fretboard's range.</summary>
     public IReadOnlyList<TabRangeWarning> RangeWarnings => _rangeWarnings;
 
+    private readonly List<TabStringUnplayableWarning> _stringWarnings = new();
+
+    /// <summary>Written string numbers that cannot fret their pitch (and are ignored).</summary>
+    public IReadOnlyList<TabStringUnplayableWarning> StringWarnings => _stringWarnings;
+
+    /// <summary>Records a written string that cannot fret <paramref name="sounding"/> —
+    /// the same 0..24 test <see cref="Tunings.CalculateFret"/> applies before it looks
+    /// elsewhere. A string number past the tuning is not this warning's (it names no
+    /// string at all).</summary>
+    private void CheckWrittenString(int sourcePosition, int sounding, int? written, int[] tun)
+    {
+        if (written is not int s || s < 1 || s > tun.Length)
+            return;
+        int fret = sounding - tun[tun.Length - s];
+        if (fret < 0 || fret > 24)
+            _stringWarnings.Add(new TabStringUnplayableWarning(sourcePosition, s, fret));
+    }
+
     /// <summary>Ties whose two ends carry conflicting explicit string numbers.</summary>
     public IReadOnlyList<TabTieStringWarning> TieWarnings => _tieWarnings;
 
@@ -342,6 +360,9 @@ internal sealed class TabResolver
                     // Each chord note needs its OWN string, else two fret numbers land on the
                     // same line and overlap into one; the chord's shape is then fixed, and the
                     // planner only places the hand around it.
+                    foreach (var cn in chord.Notes)
+                        if (IsTabPlaceable(cn.Midi + shift, tun))
+                            CheckWrittenString(chord.SourcePosition, cn.Midi + shift, cn.StringNumber, tun);
                     var newNotes = AssignChordStrings(chord.Notes, tun, shift);
                     items[mi][ii] = chord with { Notes = newNotes };
                     changed[mi] = true;
@@ -379,6 +400,8 @@ internal sealed class TabResolver
                             changed[mi] = true;
                         }
                     }
+                    else
+                        CheckWrittenString(note.SourcePosition, midi, note.StringNumber, tun);
                     if (note.StringNumber is int written)
                     {
                         fixedString = written;
