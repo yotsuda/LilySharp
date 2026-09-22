@@ -129,6 +129,34 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第469セッションの経緯
+
+### 1.1 第469セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁹＝閉包はスコープの入口で建つ**（ユーザーが選んだ）。
+★ **`-Start p469` の 1 コマンドで §0 が全部済んだ**（HEAD `bef2b05b`・未 push 18・full `sessions/p469/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 467` も自動＝moved 35 行 2,395 字）。
+
+★★★ **⑴ 起票は「grep で拾う」だったが、閉包には `new` が無いので*型で*数える計器を作った**（Lab `sessions/p469/Zz469Price.cs.txt`・
+RULES §5.3 末尾）。**閉包の島は 81,500 B／打鍵**で、**起票の形（`continue` の門の
+前で建つ）は少数派**。頭は ⑴ 描画 context の `Source()`／`MusicFace()` が返す `new ScopeAction(() => … = prev)`（1 回 3 物・168 回／打鍵）と
+⑵ **memo の hit でも建つ `Func<T>` の工場**（`LayoutSystems` の 4 本・prelim の beams／ties／slurs）だった。
+
+★★★ **⑵ 直し方は 3 つ**（`prediction.txt`）: **stack と restorer 1 個**（描画 scope）／**state 渡しの static lambda**（`TypedCache.GetOrCompute<TState>`＝
+slurs は hit でも払っていた `Where`＋写し 2 本も solve の中へ）／**閉包を持つ本体を門の後ろのメソッドへ出す・lambda を loop にする**（pair-run の supplier 3 本・
+`HaraKiri.DeadFilter`・chord-row の判定 2 か所・`ProcessForm` のガード 2 本・tab 和音の幅・`DrawBeam` の all-tab）。
+**A/B −55,892 B／打鍵＝render の 1.91%**（予測の点 52,634 の 106.2%・帯 45,000〜58,000）。parse は不動・**出力は同一**（5,824 行・0 差）。
+**会計（1 群ずつ抜く・和 56,066＝A/B の 100.3%）**＝描画 scope 20,643（予測の 101.8%）／memo 工場 18,026（104.5%）／supplier 6,688（102.6%）／
+hara-kiri 2,911／marks 2,884／`DrawBeam` 2,452／form 1,725／tab 737。**大きく外したのは `DrawBeam`（751→2,452）と form（1,065→1,725）だけ**（RULES §5.3 末尾）。直した後の閉包の残りは 18,700＝§1.0 ⒮²⁰。
+
+★★ **⑶ 毒 12 本、予測を外したのは 1 本**（`poisons.txt`）。赤 305／2／20／218／2／3／40／5／5／19、緑は予測どおりの毒 5（slur の solve に全 system の tie を
+渡す＝コーパスも 0 差）。**外れ＝毒 10**: `ProcessForm` の「パートごとに 1 回」ガードを殺す毒は赤と予測して**スイート緑・コーパス 0 差**＝§1.0 ⒮²¹。
+
+★ **⑷ 終了時**: commit 2 本（code `e7022268`＝Core 12 ファイル＋再生成した `APPROXIMATIONS.md`、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run4.trx`＝`-End`）。
+§7.5（対 `bef2b05b`）**Core '+' 362 行／REF 0／OWN 0**＝閉包を消す組み替えだけで LP に対応物が無い。
+**§7.6 コード中の新しい数は 0**（コメントの数は第469 の A/B と割当 tick・出所つき）。**§7.7 の匂い**＝§1.0 ⒮²⁰（使われる閉包の尾）・⒮²¹（ガードの観測者）。台帳・snapshot 不変・未追跡 0。
+**push はユーザー**（Lab も）。**`-Start p470` の 1 コマンドから入る**。
+
 ## 以下は第468セッションの経緯
 
 ### 1.1 第468セッション（2026-09-22・YT-DELL2）

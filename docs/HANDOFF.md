@@ -155,8 +155,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **読み方の罠 2 つ**: ⑴ **`zero 100%` の Builder 行は `MoveToImmutable` で終わる軒**（Move が builder を空にするので drain が 0 件と読む
   ＝配列は手渡し済みで waste ではない。賞金は builder 本体だけ・34 軒）／⑵ **`obj` 欄の builder 56 B は本体 32 B＋長さ 0 の配列 24 B**
   （計器の `CreateBuilder<T>(0)` が配列を建てる）＝**第463 の C が予測の 57% に外れた理由**
-- ★★ **⒮¹⁶′ tuple 型の器の残り 約 23,500 B／打鍵**（第465 が 6 軒 −82,765 を閉じた・Lab sessions/p465/README.txt 末尾に一覧）。頭は LayoutUtilities.cs:369 10,794（**memo 自身の build**＝7.6 回／打鍵・平均 31 小節。int 版 `SpannerBreakSubstitution.cs:131` も 4.29 回 5,577＝**打鍵ごとに別の systems 配列が何枚もある理由は未測定**・第466）と
-  BuildBeamedStemTips の残り 2 人の呼び手 約 1,800。⚠️ collection initializer と `new List<(…)>?[n]` はどの census も数えない
+- ★★ **⒮¹⁶′ tuple 型の器の残り 約 12,700 B／打鍵**（第465 が 6 軒 −82,765・**第471 が頭の memo 自身の build 10,794 を閉じた**＝int 版 5,577 も一緒に・一覧は Lab sessions/p465/README.txt 末尾）。
+  頭は BuildBeamedStemTips の残り 2 人の呼び手 約 1,800／`LayoutEngine.Prelim.cs:657` 1,754／`ElementCoordinator.cs:3311` 1,354／`SkylineBuilder.cs:1345` 1,240（**census 時点の住所**＝HEAD で行の文字列を引き直す）。⚠️ collection initializer と `new List<(…)>?[n]` はどの census も数えない
 - ★★★ **⒮¹² splice の「trivia だけの窓」の門は、どちらの母集団にも観測者が居ない**（第458 起票・実測）。
   `MeasureCollector.TrySpliceSuffix`（`Resume.cs:340`）は**コーパス 1 sweep で 7,016 回訊かれ、7,016 回とも
   decline**（`WindowIsTriviaOnly` が true を返したのは **0 回**・裏の token walk は 891 回＝打鍵ごとに memo）。
@@ -272,6 +272,33 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 244,685 / 250,000 B・1,876 / 2,000 行**（第470 が §5.3 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第471セッション（2026-09-22・YT-DELL2）
+
+`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁶′＝tuple 型の器の頭**（ユーザーが選んだ）。
+★ **`-Start p471` の 1 コマンドで §0 が全部済んだ**（HEAD `4edcff06`・未 push 22・full `sessions/p471/run1.trx`
+8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 469` も自動＝moved 29 行 2,102 字）。
+
+★★★ **⑴ 第466 が「未測定」と残した問い＝なぜ打鍵ごとに systems 配列が 7.6 枚あるのか、を直す前に計器で訊いた**（Lab `sessions/p471/`・`probe-apply.ps1`＋`Zz471Probe.cs.txt`）。
+答えは **pass ごとに 1 枚ではなく、staff ごとの solve と re-stamp が毎回自前の配列を渡す**（pair 表の呼び手＝`LayoutBeams` 6,110・`LayoutTies` 2,356・`LayoutSlurs` 1,967・
+`CalculateRestShifts` 1,808・`CalculateAnnotationLayouts` 1,802／1,848 打鍵）。前の配列と**同じ形で別の `SystemLayout`** が 4.33 枚／打鍵、**同じ `SystemLayout` の新しい配列**が 1.09 枚。
+**int 表を持つ配列は全部 pair 表も持つ**（和集合 7.60）。★ **そして 22,000 回の build が全部「配列順に連続」**（全 system が非空・`MeasureIndex` が 1 ずつ増える）＝**配列そのものが表**。
+
+★★★ **⑵ 直し方＝`ConsecutiveMeasureMap`**（新ファイル）: 連続な配列 1 枚に 1 個（CWT・連続でなければ null を憶える）で、**両方の `IReadOnlyDictionary` を 1 つの物が実装**し、
+答えは範囲の検査と systems の先頭 index の二分探索（平均 7.5 system）。**列挙は昇順＝旧 `Dictionary` の挿入順そのもの**。連続でない配列（重複 index）は旧 build のまま。
+**A/B −16,209 B／打鍵＝render の 0.57%**（2,862,648 → 2,846,439・予測の点 16,100 の 100.7%・帯 13,500〜17,000）。**出力は同一**（5,824 行・0 差）。
+⚠️ **parse が +116 動いて見えるのはこの変更ではない**＝第470 の after 3 脚も同じ binary で 317,164 と 317,280 を行き来していた（本ごとの差は 112 B 単位・201 冊）。
+**会計（片側ずつ戻す）**＝pair 側 +10,772（予測 10,690＝100.8%）／int 側 +5,650（5,577＝101.3%）・和は A/B の 101.3%。
+
+★★ **⑶ 毒 6 本、予測を外したのは 1 本**（`poisons.txt`）。赤 632（seam の off-by-one）／92（system の先頭小節を返す）／79（範囲を 1 つ超える）。緑は予測どおり 2 本＝
+**連続を常に否と答える毒（全部を旧 build に戻す＝等価の検算）**と `Keys` の降順（読む 2 人とも並べ直す）。**外れ＝毒 4**: 連続の検査を消す毒は「コーパスに 0 枚」から緑と予測して
+**赤 1**＝`MeasureToSystemHandoffTests.ThePassesTwoMaps_AgreeOnEveryMeasure_AndKeepTheLastSystemsEntry` が重複 index の配列を持っていた＝**fallback の枝には観測者が居る**。
+
+★ **⑷ 終了時**: commit 2 本（code `77b48d94`＝Core 3 ファイル＋再生成した `APPROXIMATIONS.md`、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run3.trx`＝`-End`）。
+§7.5（対 `4edcff06`）**Core '+' 212 行／REF 0／OWN 0**＝表の持ち方の組み替えだけで LP に対応物が無い。**§7.6 コード中の新しい数は 0**（コメントの数は第471 の計器と A/B・出所つき）。
+**§7.7 の匂い**＝同じ `SystemLayout` を包み直した配列が 1.09 枚／打鍵（今は 1 枚 32 B なので値段は無い）。台帳・snapshot 不変・未追跡 0。**push はユーザー**（Lab も）。**`-Start p472` の 1 コマンドから入る**。
+
+## 以下は第470セッションの経緯
+
 ### 1.1 第470セッション（2026-09-22・YT-DELL2）
 
 `/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮²⁰＝閉包の尾**（ユーザーが選んだ）。
@@ -298,34 +325,6 @@ ledger 1,099（253）／restamp と memo 820／ほかは 500 未満。**上に�
 §7.5（対 `d146686d`）****Core '+' 351 行／REF 0／OWN 0****＝閉包を消す組み替えだけで LP に対応物が無い。
 **§7.6 コード中の新しい数は 0**（コメントの数は第470 の計器と会計・出所つき）。**§7.7 の匂い**＝§1.0 ⒮²⁰′（使われる閉包の残り）・⒮²²（緑の毒 5 本）。台帳・snapshot 不変・未追跡 0。
 **push はユーザー**（Lab も）。**`-Start p471` の 1 コマンドから入る**。
-
-## 以下は第469セッションの経緯
-
-### 1.1 第469セッション（2026-09-22・YT-DELL2）
-
-`/clear` 直後の新セッション。指示は「**HANDOFF を読んで着手**」で、**着手先は §1.0 ⒜ の ⒮¹⁹＝閉包はスコープの入口で建つ**（ユーザーが選んだ）。
-★ **`-Start p469` の 1 コマンドで §0 が全部済んだ**（HEAD `bef2b05b`・未 push 18・full `sessions/p469/run1.trx`
-8790 / 0 / 3 / 8793・台帳 851 点／総和 22.584727806・snapshot 249・追跡 `.lys` 609・`-Archive 467` も自動＝moved 35 行 2,395 字）。
-
-★★★ **⑴ 起票は「grep で拾う」だったが、閉包には `new` が無いので*型で*数える計器を作った**（Lab `sessions/p469/Zz469Price.cs.txt`・
-RULES §5.3 末尾）。**閉包の島は 81,500 B／打鍵**で、**起票の形（`continue` の門の
-前で建つ）は少数派**。頭は ⑴ 描画 context の `Source()`／`MusicFace()` が返す `new ScopeAction(() => … = prev)`（1 回 3 物・168 回／打鍵）と
-⑵ **memo の hit でも建つ `Func<T>` の工場**（`LayoutSystems` の 4 本・prelim の beams／ties／slurs）だった。
-
-★★★ **⑵ 直し方は 3 つ**（`prediction.txt`）: **stack と restorer 1 個**（描画 scope）／**state 渡しの static lambda**（`TypedCache.GetOrCompute<TState>`＝
-slurs は hit でも払っていた `Where`＋写し 2 本も solve の中へ）／**閉包を持つ本体を門の後ろのメソッドへ出す・lambda を loop にする**（pair-run の supplier 3 本・
-`HaraKiri.DeadFilter`・chord-row の判定 2 か所・`ProcessForm` のガード 2 本・tab 和音の幅・`DrawBeam` の all-tab）。
-**A/B −55,892 B／打鍵＝render の 1.91%**（予測の点 52,634 の 106.2%・帯 45,000〜58,000）。parse は不動・**出力は同一**（5,824 行・0 差）。
-**会計（1 群ずつ抜く・和 56,066＝A/B の 100.3%）**＝描画 scope 20,643（予測の 101.8%）／memo 工場 18,026（104.5%）／supplier 6,688（102.6%）／
-hara-kiri 2,911／marks 2,884／`DrawBeam` 2,452／form 1,725／tab 737。**大きく外したのは `DrawBeam`（751→2,452）と form（1,065→1,725）だけ**（RULES §5.3 末尾）。直した後の閉包の残りは 18,700＝§1.0 ⒮²⁰。
-
-★★ **⑶ 毒 12 本、予測を外したのは 1 本**（`poisons.txt`）。赤 305／2／20／218／2／3／40／5／5／19、緑は予測どおりの毒 5（slur の solve に全 system の tie を
-渡す＝コーパスも 0 差）。**外れ＝毒 10**: `ProcessForm` の「パートごとに 1 回」ガードを殺す毒は赤と予測して**スイート緑・コーパス 0 差**＝§1.0 ⒮²¹。
-
-★ **⑷ 終了時**: commit 2 本（code `e7022268`＝Core 12 ファイル＋再生成した `APPROXIMATIONS.md`、**最後の docs は SHA を書かない**）。**最終 full 8790 / 0 / 3 / 8793**（`run4.trx`＝`-End`）。
-§7.5（対 `bef2b05b`）**Core '+' 362 行／REF 0／OWN 0**＝閉包を消す組み替えだけで LP に対応物が無い。
-**§7.6 コード中の新しい数は 0**（コメントの数は第469 の A/B と割当 tick・出所つき）。**§7.7 の匂い**＝§1.0 ⒮²⁰（使われる閉包の尾）・⒮²¹（ガードの観測者）。台帳・snapshot 不変・未追跡 0。
-**push はユーザー**（Lab も）。**`-Start p470` の 1 コマンドから入る**。
 
 ## 2. 開いている作業
 
