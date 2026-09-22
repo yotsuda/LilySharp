@@ -1348,8 +1348,8 @@ internal static class ArticulationEngraver
     /// this page's scripts another page's slurs, and a bucket holding two or more keeps its
     /// slurs in a list (<see cref="OneOrMany{T}"/>) that only the clearing lets go of.
     /// ⚠️ PARKING IT DIRTY REDDENS 2 NETS (session 467, by poison: test/percent-covered-bows and
-    /// fingering.slur.interior-note) — they see a foreign bucket's FIRST slur. A stale SECOND
-    /// slur of a bucket is the case nothing in the suite watches (HANDOFF §1.0 ⒮⁹).
+    /// fingering.slur.interior-note) — they see a foreign bucket's FIRST slur. The overflow (a SECOND
+    /// slur) is watched by TwoSlursInOneMeasure_LiftTheirScriptsAlike (473); a stale one is untried.
     /// </remarks>
     [ThreadStatic]
     private static Dictionary<(int, int, int), OneOrMany<SlurLayout>>? t_slursAtMeasure;

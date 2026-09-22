@@ -351,6 +351,43 @@ public class ArticulationPlacementTests
         Assert.Equal(5.42, low, 2); // tie START lift (LP 5.43)
     }
 
+    /// <summary>
+    /// A measure can hold MORE THAN ONE slur of a voice, and the engraver keeps every one in the
+    /// measure's bucket (<c>OneOrMany</c>) for <c>CoveringSlurPiece</c> to pick from. Two
+    /// identical figures, each slurred on its own, must lift their accents alike — the second
+    /// slur reaches its note only through the bucket's overflow.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ WRITTEN BECAUSE THE SUITE HAD NO OBSERVER (session 455 measured it, session 473 wrote
+    /// this): dropping the overflow left every net green while the reader's corpus moved 16
+    /// page hashes (Boogie Oogie Oogie.lys, "c, c4@accent f,8@accent( g,\2) bes,@accent( c4)").
+    /// Session 455's draft of this net read 2.67 against 8.665 WITHOUT any slur and was withdrawn
+    /// as a broken instrument; it was the music — pitches are RELATIVE, so "c'4 d'4 c'4" climbs,
+    /// and its second figure stood two octaves up. Here every note is within a step: the
+    /// unslurred control reads the two accents equal, and the slur is asserted to lift.
+    /// </remarks>
+    [Fact]
+    public void TwoSlursInOneMeasure_LiftTheirScriptsAlike()
+    {
+        static double[] AccentHeights(string source)
+        {
+            var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
+            var layout = new LilySharp.Core.Svg.Layout.LayoutEngine(
+                new LilySharp.Core.Svg.Layout.LayoutOptions()).Layout(score);
+            return layout.ArticulationLayouts.OrderBy(a => a.ItemIndex).Select(a => a.YUp).ToArray();
+        }
+
+        var slurred = AccentHeights("c'4@accent( d) c@accent( d) |");
+        var plain = AccentHeights("c'4@accent d c@accent d |");
+
+        Assert.Equal(2, slurred.Length);
+        Assert.Equal(2, plain.Length);
+        Assert.Equal(plain[0], plain[1], precision: 9); // the two figures are alike
+        Assert.True(slurred[0] > plain[0] + 0.1,
+            $"the slur must lift its accent: {slurred[0]} vs {plain[0]}"); // measured 2.81 / 2.67
+        Assert.Equal(slurred[0], slurred[1], precision: 9);
+    }
+
     [Fact]
     public void Scripts_RideOffASlur_InsideOnesStayPut()
     {
