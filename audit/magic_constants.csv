@@ -144,7 +144,7 @@
 "Svg/Layout/VerticalSkyline.cs","1173","0.0, 1.0","? (double.IsPositiveInfinity(right) ? 0.0 : right - 1.0)","(file-level) LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.","Yellow"
 "Svg/Layout/VerticalSkyline.cs","1174","1.0",": double.IsPositiveInfinity(right) ? left + 1.0","(file-level) LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.","Yellow"
 "Svg/Layout/VerticalSkyline.cs","1357","0.0","if (horizonPadding <= 0.0)","(file-level) LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.","Yellow"
-"Svg/Layout/VerticalSkyline.cs","1554","0.0","if (horizonPadding <= 0.0)","(file-level) LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.","Yellow"
+"Svg/Layout/VerticalSkyline.cs","1581","0.0","if (horizonPadding <= 0.0)","(file-level) LILYPOND-REF: flower/include/direction.hh — UP = +1, DOWN = -1.","Yellow"
 "Svg/Layout/AccidentalPlacement.cs","70","0.2","public double Padding { get; init; } = 0.2;","LILYPOND-REF: accidental-placement.cc:398,505 (hardcoded 0.2)</remarks>","Green"
 "Svg/Layout/AccidentalPlacement.cs","74","0.15","public double RightPadding { get; init; } = 0.15;","LILYPOND-REF: define-grobs.scm:85 AccidentalPlacement.right-padding</remarks>","Green"
 "Svg/Layout/AccidentalPlacement.cs","78","0.1","public double HorizonPadding { get; init; } = 0.1;","LILYPOND-REF: accidental-placement.cc:413 horizon_padding</remarks>","Green"

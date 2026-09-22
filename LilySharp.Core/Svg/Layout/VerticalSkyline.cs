@@ -1356,7 +1356,17 @@ internal sealed class VerticalSkyline
     {
         if (horizonPadding <= 0.0)
             return this;
+        return PaddedInto(horizonPadding, lent: null);
+    }
 
+    /// <summary>
+    /// <see cref="Padded"/>'s body, resolving the answer into <paramref name="lent"/> when
+    /// one is given — a skyline of this one's direction that nobody else reads — and into a
+    /// new skyline otherwise. Returns this skyline itself when there is nothing to pad, as
+    /// <see cref="Padded"/> always has.
+    /// </summary>
+    private VerticalSkyline PaddedInto(double horizonPadding, VerticalSkyline? lent)
+    {
         var padBuildings = RentPadding(_buildings.Count * 4);
 
         foreach (var b in _buildings)
@@ -1410,7 +1420,10 @@ internal sealed class VerticalSkyline
         all.AddRange(padBuildings);
         ReturnPadding(padBuildings);
 
-        var result = new VerticalSkyline(_direction);
+        // A lent answer arrives holding the last padding's buildings: the walk clears the list
+        // it writes before it copies the answer in (RebuildKeepingHighest), so what is left
+        // there is never read.
+        var result = lent ?? new VerticalSkyline(_direction);
         result.ResolveFrom(all);
         return result;
     }
@@ -1548,14 +1561,74 @@ internal sealed class VerticalSkyline
     /// Only this skyline is padded (not other). The comment in LilyPond states:
     /// "it is not necessary to build a padded version of other, because the same
     /// effect can be achieved just by doubling horizon_padding."
+    /// <para>
+    /// ⚠️ THE PADDED COPY IS READ ONCE, SO IT IS RESOLVED INTO A SKYLINE THE THREAD LENDS
+    /// (<see cref="t_paddedAnswerUp"/>): the same buildings through the same walk as
+    /// <see cref="Padded"/>, so the distance is the same number to the bit, and only the list
+    /// the answer lands in is kept between calls. MEASURED (2026-09-23, session 510, Release,
+    /// the owner's corpus, 232 books × eight forward keystrokes, allocated bytes around each
+    /// <see cref="Padded"/> call keyed by its caller): 3.88 calls a keystroke, 3,830 B a
+    /// keystroke, 0.22% of a render — <b>3,289 B of it this method called from
+    /// <c>PageLayouter</c>'s system-to-system distance</b> (1.79 calls, 30.5 buildings in and
+    /// 53.7 out, 1,836 B a call: the answer's object and its list) and 11 B from
+    /// <c>MusicMarkEngraver</c>'s. The rest, 530 B, is <c>OutsideStaffStacker.Place</c>'s
+    /// padded copies, which it keeps for the whole placement (one per distinct padding) and
+    /// so still takes from <see cref="Padded"/>.
+    /// </para>
     /// </remarks>
     public double Distance(VerticalSkyline other, double horizonPadding)
     {
         if (horizonPadding <= 0.0)
             return Distance(other);
 
-        var paddedThis = Padded(horizonPadding);
-        return paddedThis.Distance(other);
+        var lent = RentPaddedAnswer(_direction);
+        var paddedThis = PaddedInto(horizonPadding, lent);
+        double distance = paddedThis.Distance(other);
+        ReturnPaddedAnswer(lent);
+        return distance;
+    }
+
+    /// <summary>
+    /// The skyline <see cref="Distance(VerticalSkyline, double)"/> resolves its padded copy
+    /// into, one a thread for each direction — the answer has the padded skyline's direction,
+    /// and that method is asked of both.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ TAKEN OUT OF THE DRAWER, as with the other buffers in this file: a distance that
+    /// re-entered would get a skyline of its own rather than the one being read. None does —
+    /// the resolve and the distance walk measure no padded distance — and this is what keeps
+    /// that from having to stay true. A call that throws (two skylines of one direction)
+    /// leaves the drawer empty, and the next call makes a new one.
+    /// </remarks>
+    [ThreadStatic]
+    private static VerticalSkyline? t_paddedAnswerUp;
+
+    /// <summary>The <see cref="VerticalDirection.Down"/> half of <see cref="t_paddedAnswerUp"/>.</summary>
+    [ThreadStatic]
+    private static VerticalSkyline? t_paddedAnswerDown;
+
+    private static VerticalSkyline RentPaddedAnswer(VerticalDirection direction)
+    {
+        VerticalSkyline? lent;
+        if (direction == VerticalDirection.Up)
+        {
+            lent = t_paddedAnswerUp;
+            t_paddedAnswerUp = null;
+        }
+        else
+        {
+            lent = t_paddedAnswerDown;
+            t_paddedAnswerDown = null;
+        }
+        return lent ?? new VerticalSkyline(direction);
+    }
+
+    private static void ReturnPaddedAnswer(VerticalSkyline lent)
+    {
+        if (lent._direction == VerticalDirection.Up)
+            t_paddedAnswerUp = lent;
+        else
+            t_paddedAnswerDown = lent;
     }
 
     /// <summary>
