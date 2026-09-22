@@ -100,7 +100,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（**第494 が呼び手で数えた＝設計の値段**: 建てる 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976＝梁の刻印は collect ごとに新しい BeamId なので必ず写す・`TabResolver.ResolveTabStrings` 509,020＝弦番号の書き込み。消すなら刻印を item の外（側表）へ出す＝土台の変更）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）**。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・`new int[`／`new double[` 141 軒を書き換えて数える・`array-sites.txt`＝残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB）。⚠️ Dictionary／HashSet の bucket も Int32[] だがこの census には出ない。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
-  ⇒ **第498 が `AccidentalPlacement` の参照 skyline を閉じた（−38,098）**。`SpacingRules.MeasureSprings.cs:1282/1290` は**コーパスで 0 回**＝値段が無い。次の候補: `Clone()` の他の呼び手・`VerticalSkyline.Padded`（⒫′ の残り）。
+  ⇒ **第498 が `AccidentalPlacement` の参照 skyline を閉じた（−38,098）**。`SpacingRules.MeasureSprings.cs:1282/1290` は**コーパスで 0 回**＝値段が無い。**第499 が型の地図を取り直した**（Lab `sessions/p499/type-price-head.txt`・render 2,049,883）＝String 344 KB・NoteItem 299 KB・SkylineBuilding[] **150 KB**（第497・第498 で −59 KB）・SystemDetails 79 KB・`Dictionary<NoteSyntax,ResolvedChordMember>` 45 KB（**第499 が閉じた**）・ArticulationLayout[] 39 KB・PitchTraceEntry[] 36 KB・BeamMember 36 KB。`AccidentalPlacement` の `Clone()` 8 軒は per-thread cache の中＝冷たい。次の候補: `SystemDetails`・`ArticulationLayout[]`・`PitchTraceEntry[]`（呼びの前後で絞る）・`VerticalSkyline.Padded`。
 - ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`・scratch 256 軒 45,591・12 軒 −4,864・会計 100.2%）。残る 500 B 以上は `LayoutEngine.Prelim.cs:460` 6,166（1 呼びで N 個）・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴）・`OutsideStaffStacker.cs:645` 907（⒨ の家）ほか 4 軒。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
@@ -197,6 +197,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第499セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第498 のすぐ後）。ユーザー指示「続けて」＝§1.0 の「建てた直後に写して捨てる」の次の候補（`Clone()` の呼び手・`VerticalSkyline.Padded`）。
+★ **`-Start p499` の 1 コマンドで §0 が全部済んだ**（HEAD `7be58087`・full 8843 / 0 / 3 / 8846・`-Archive 497` も自動）。
+
+★★★ **⑴ bare duration の写し元の表を「写し元」だけにした＝render 2,050,044 → 2,016,419（−33,625・−1.6%）**。型の地図（Zz499Price）で `Entry[NoteSyntax,ResolvedChordMember][]` が 45 KB／打鍵＝**打鍵ごとに新しい collector が `_resolvedNotes` を声部の長さまで育てていた**（全ての音符を書く）が、読み手は `CreateBareDurationItem` の `BareDurations.OriginalOf(bare)` だけ。⇒ 書くのを `BareDurations.IsOriginal(note)` のときだけにした（record の log がもともと使っていた篩＝`OriginalOf` の答えの集合そのもの）。
+  ⚠️ **和音の表 `_resolvedChordMembers` は同じ手で畳めない**＝`MeasureCollector.Annotations.cs:180`（和音名）が任意の和音を読む。⚠️ `IsOriginal` は木ごとに写し元の地図を 1 度建てる（打鍵ごとに新しい木）が、その分も込みで −33,625。
+  毒 2 本（Lab `sessions/p499/poisons.ps1`）＝**書かない→7 赤**・**写し元*以外*だけ書く→7 赤**（どちらも `BareDurationTests`）。出力は同一（`Zz499Hash`＝0 差）。full 8843 / 0 / 3 / 8846。生成物の差は無し。
+★ **⑵ 終了時**: コード 1 ファイル（MeasureCollector.ItemFactory）。
+
+## 以下は第498セッションの経緯
+
 ### 1.1 第498セッション（2026-09-22・YT-DELL2）
 
 新しい会話（`/clear` の後）。ユーザー指示「HANDOFF を読んで作業に着手して」。
@@ -206,20 +218,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **列の臨時記号はほぼ必ず 1 つ**＝merge のほぼ全部が「最後の臨時記号の後」で、**それを読む者はいない**⇒ 最後の merge を建てない。残り（heads の skyline と中間の merge）は `PlacementScratch` の 2 本（`ReferenceA`／`B`）に交互に書く（`HorizontalSkyline.FromBoxesInto`／`ShiftedRaisedOverInto`＝入力と同じ target は投げる）。`LineStartColumn` の 2 本は thread の引き出し（取り出して使い、Clear して返す）。
   網 `HorizontalSkylineEnvelopeTests.TheIntoSpellings_ReplaceWhatTheKeptSkylineHeld`。毒 3 本（Lab `sessions/p498/poisons.ps1`）＝**merge を 1 つ多く飛ばす→20 赤**（臨時記号・snapshot）／**`FromBoxesInto`・`ShiftedRaisedOverInto` の `Clear` を抜く→赤はこの unit だけ**（＋毒で行番号が動いた census 1 本）＝⚠️ 古い building を持ち越す害は**スイートの誰も見ない**（`PlacementScratch` は give で Clear するので二重の備え）。出力は同一（`Zz498Hash`＝5,824 ページ 0 差）。full 8843 / 0 / 3 / 8846。生成物 2 つ。
 ★ **⑵ 終了時**: コード 3 ファイル（AccidentalPlacement・HorizontalSkyline・LineStartColumn）＋テスト 1 本＋生成物 2 つ。
-
-## 以下は第497セッションの経緯
-
-### 1.1 第497セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第496 のすぐ後）。ユーザー指示「次便は、このセッションでやる方が有利なら着手して」＝⒫′（pad を保留したまま持つ skyline）。**この会話で有利と判断**＝第490〜第492 で `HorizontalSkyline`（`FromBoxesPadded`・`ShiftedRaisedOver`・render 内 memo の「共有物は触らない」契約）を触ったばかりで、その不変条件が手元にある。
-★ **`-Start p497` の 1 コマンドで §0 が全部済んだ**（HEAD `0d72f638`・full 8841 / 0 / 3 / 8844・`-Archive 495` も自動）。
-
-★★★ **⑴ ⒫′ を `HorizontalSkyline` で閉じた＝pad を保留したまま持つ＝render 2,127,511 → 2,090,071（−37,440・−1.8%）**。`FromBoxesPadded` は box の building だけを持ち `_pendingPad` を立てる。
-  **読み**（`X`・`MaxHeight`・`Distance` 両方・`ShiftedScratch`／`ShiftedRaisedOver`・`Padded`）は thread の読み scratch 2 本（距離は両側を同時に読む）に**先行 pad と同じ list**（building → 各 pad の順＝`AppendPads`）を作って歩く＝**入力の list が同一なので結果はビット同一**。
-  **書き**（`Raise`／`Shift`／`Scale`／`Merge`／`SetMinimumHeight`）と `Buildings` は先に `Materialize`＝**pad は必ず元の building から作る**（raise した building の pad と pad の raise はビットで一致しない＝HANDOFF の「可換を確かめる」は**可換を要らない形**で避けた）。`Clone` は保留ごと写す。保留の相手を `Merge` するときは相手を実体化せずに順どおり足す。
-  網 `HorizontalSkylineEnvelopeTests.APendingPadding_ReadsWritesAndMergesAsTheEagerCopy`（毒 3 本＝読みが pad を無視・`Raise` が実体化しない・`Merge` が相手の pad を落とす＝全部赤）。出力は同一（`Zz497Hash`＝0 差）。full 8842 / 0 / 3 / 8845。生成物 2 つ（census に `_pendingPad` の `0.0` 比較 6 行＝Yellow）。
-  ⚠️ **予測（第443 の 120 KB）より小さい**＝その後の便で列の skyline 自体が減った（第490 の 1 段建て・第492 の render 内 memo）。`VerticalSkyline.Padded` は別の家（resolve する）で手付かず。
-★ **⑵ 終了時**: コード 1 ファイル（HorizontalSkyline）＋テスト 1 本＋生成物 2 つ。
 
 ## 2. 開いている作業
 

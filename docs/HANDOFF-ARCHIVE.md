@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第497セッションの経緯
+
+### 1.1 第497セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第496 のすぐ後）。ユーザー指示「次便は、このセッションでやる方が有利なら着手して」＝⒫′（pad を保留したまま持つ skyline）。**この会話で有利と判断**＝第490〜第492 で `HorizontalSkyline`（`FromBoxesPadded`・`ShiftedRaisedOver`・render 内 memo の「共有物は触らない」契約）を触ったばかりで、その不変条件が手元にある。
+★ **`-Start p497` の 1 コマンドで §0 が全部済んだ**（HEAD `0d72f638`・full 8841 / 0 / 3 / 8844・`-Archive 495` も自動）。
+
+★★★ **⑴ ⒫′ を `HorizontalSkyline` で閉じた＝pad を保留したまま持つ＝render 2,127,511 → 2,090,071（−37,440・−1.8%）**。`FromBoxesPadded` は box の building だけを持ち `_pendingPad` を立てる。
+  **読み**（`X`・`MaxHeight`・`Distance` 両方・`ShiftedScratch`／`ShiftedRaisedOver`・`Padded`）は thread の読み scratch 2 本（距離は両側を同時に読む）に**先行 pad と同じ list**（building → 各 pad の順＝`AppendPads`）を作って歩く＝**入力の list が同一なので結果はビット同一**。
+  **書き**（`Raise`／`Shift`／`Scale`／`Merge`／`SetMinimumHeight`）と `Buildings` は先に `Materialize`＝**pad は必ず元の building から作る**（raise した building の pad と pad の raise はビットで一致しない＝HANDOFF の「可換を確かめる」は**可換を要らない形**で避けた）。`Clone` は保留ごと写す。保留の相手を `Merge` するときは相手を実体化せずに順どおり足す。
+  網 `HorizontalSkylineEnvelopeTests.APendingPadding_ReadsWritesAndMergesAsTheEagerCopy`（毒 3 本＝読みが pad を無視・`Raise` が実体化しない・`Merge` が相手の pad を落とす＝全部赤）。出力は同一（`Zz497Hash`＝0 差）。full 8842 / 0 / 3 / 8845。生成物 2 つ（census に `_pendingPad` の `0.0` 比較 6 行＝Yellow）。
+  ⚠️ **予測（第443 の 120 KB）より小さい**＝その後の便で列の skyline 自体が減った（第490 の 1 段建て・第492 の render 内 memo）。`VerticalSkyline.Padded` は別の家（resolve する）で手付かず。
+★ **⑵ 終了時**: コード 1 ファイル（HorizontalSkyline）＋テスト 1 本＋生成物 2 つ。
+
 ## 以下は第496セッションの経緯
 
 ### 1.1 第496セッション（2026-09-22・YT-DELL2）
