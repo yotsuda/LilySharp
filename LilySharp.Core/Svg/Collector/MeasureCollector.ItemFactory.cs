@@ -38,16 +38,19 @@ public sealed partial class MeasureCollector
         // _resolvedChordMembers): the ABSOLUTE spelling, resolved by THIS walk —
         // a repetition must not re-run the written pitch through the relative
         // frame, whose anchor has moved on to this very note.
-        var resolvedSpelling = new ResolvedChordMember(
-            staffPosition, rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave,
-            NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave));
-        _resolvedNotes[note] = resolvedSpelling;
-        // Record mode (finding 3-4): log the write iff some bare duration copies this
-        // note, so a resume can restore the adopted prefix's entries. Order matters
-        // (a form replay's overwrite must land last); the filter keeps repetition-free
-        // books at zero log.
-        if (_probeRecording != null && Music.BareDurations.IsOriginal(note))
-            _resolvedSpellingLog.Add((note, ImmutableArray.Create(resolvedSpelling)));
+        // Written only for a note some bare duration copies: the one reader looks up
+        // BareDurations.OriginalOf, whose answers are exactly the IsOriginal set.
+        if (Music.BareDurations.IsOriginal(note))
+        {
+            var resolvedSpelling = new ResolvedChordMember(
+                staffPosition, rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave,
+                NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave));
+            _resolvedNotes[note] = resolvedSpelling;
+            // Record mode (finding 3-4): log the write, so a resume can restore the adopted
+            // prefix's entries. Order matters (a form replay's overwrite must land last).
+            if (_probeRecording != null)
+                _resolvedSpellingLog.Add((note, ImmutableArray.Create(resolvedSpelling)));
+        }
 
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
         // An undurated note takes the whole default — dots included (`c8. c` is two
@@ -313,9 +316,15 @@ public sealed partial class MeasureCollector
     /// <see cref="VoiceWalkRecording.ResolvedSpellings"/>).</summary>
     private readonly Dictionary<ChordSyntax, ImmutableArray<ResolvedChordMember>> _resolvedChordMembers = new();
 
-    /// <summary>The resolved spelling of every pitched note this walk has built,
-    /// keyed by node — what a following bare duration copies. Same refill-per-walk
-    /// contract (and same resume restore) as <see cref="_resolvedChordMembers"/>.
+    /// <summary>The resolved spelling of every pitched note this walk has built that a
+    /// bare duration copies (<c>Music.BareDurations.IsOriginal</c>), keyed by node — what
+    /// that bare duration reads. Same refill-per-walk contract (and same resume restore)
+    /// as <see cref="_resolvedChordMembers"/>, which cannot be narrowed the same way: the
+    /// chord-name annotation reads it for any chord.
+    /// MEASURED (session 499, the type map over the reader's corpus): writing EVERY
+    /// note grew a fresh collector's map to the voice's length on each keystroke —
+    /// 45 KB a keystroke of entry arrays, for the handful of notes a bare duration
+    /// repeats.
     /// (Chords and drum notes need no twin: chords are in
     /// <see cref="_resolvedChordMembers"/>, and a drum or slash resolves statelessly
     /// from its own syntax.)</summary>
