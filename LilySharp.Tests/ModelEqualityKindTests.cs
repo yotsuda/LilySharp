@@ -73,6 +73,11 @@ public class ModelEqualityKindTests
     [
         "BeamGroup", "BeamLayout", "BeamMember", "BeamRestStem",
         "GrobOverride", "GrobRevert", "VoiceColumn", "VoiceEntry",
+        // the rarely-written half of an item's storage (session 516). VALUES on purpose, and
+        // they must stay so: each box is immutable and a `with` on the item SHARES it with the
+        // original until an init replaces it, so two items legitimately hold one box. The item
+        // itself is still the entity — these are its storage, not occurrences.
+        "MusicItemRare", "NoteItemRare",
     ];
 
     [Fact]

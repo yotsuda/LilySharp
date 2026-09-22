@@ -85,10 +85,36 @@ public enum VoiceContextId
 }
 
 /// <summary>
+/// The <see cref="MusicItem"/> fields almost no item writes, held behind ONE reference so the
+/// ordinary item neither stores nor copies them — the base's half of the split
+/// <see cref="NoteItemRare"/> describes, under the same rules. Every item type pays for the
+/// base, so <c>RestItem</c> and <c>ChordItem</c> get thinner with it.
+/// </summary>
+internal sealed record MusicItemRare
+{
+    internal static readonly MusicItemRare Empty = new();
+
+    public VoiceContextId VoiceContext { get; init; }
+    public bool BeginsCueRegion { get; init; }
+    public bool GraceSlash { get; init; }
+    public bool HasPhrasingSlurStart { get; init; }
+    public bool HasPhrasingSlurEnd { get; init; }
+    public int PhrasingSlurDirection { get; init; }
+    public int PhrasingSlurStartSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+    public int PhrasingSlurEndSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+    public int LaissezVibrerSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+    public int RepeatTieSourcePosition { get; init; } = MusicItem.NoSourcePosition;
+}
+
+/// <summary>
 /// Base type for all music items that have duration.
 /// </summary>
 public abstract record MusicItem
 {
+    // The rarely-written base fields; null when the item writes none of them. See
+    // MusicItemRare — `with` shares the box until an init below replaces it.
+    private MusicItemRare? _rareBase;
+
     // Identity, not value equality: see ModelIdentity. One declaration here answers for the whole hierarchy.
     public virtual bool Equals(MusicItem? other) => ReferenceEquals(this, other);
 
@@ -127,7 +153,11 @@ public abstract record MusicItem
     /// <c>Collector.PartCombiner.InContext</c> and read only by horizontal spacing — see
     /// <see cref="VoiceContextId"/> for why the fact has to be on the item at all.
     /// </summary>
-    public VoiceContextId VoiceContext { get; init; }
+    public VoiceContextId VoiceContext
+    {
+        get => _rareBase?.VoiceContext ?? VoiceContextId.Default;
+        init { if (value != VoiceContext) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { VoiceContext = value }; }
+    }
 
     /// <summary>
     /// Whether this item is the FIRST note or chord of its <c>cue { … }</c> region — the stamp
@@ -163,7 +193,11 @@ public abstract record MusicItem
     /// asks only whether a region reaches back over the column pair.
     /// </para>
     /// </remarks>
-    public bool BeginsCueRegion { get; init; }
+    public bool BeginsCueRegion
+    {
+        get => _rareBase?.BeginsCueRegion ?? false;
+        init { if (value != BeginsCueRegion) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { BeginsCueRegion = value }; }
+    }
 
     /// <summary>
     /// True when this item was engraved in GRACE TIME — inside a <c>grace { }</c> body. It
@@ -210,7 +244,11 @@ public abstract record MusicItem
     /// case is the whole of what is drawn, here as before.
     /// </para>
     /// </remarks>
-    public bool GraceSlash { get; init; }
+    public bool GraceSlash
+    {
+        get => _rareBase?.GraceSlash ?? false;
+        init { if (value != GraceSlash) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { GraceSlash = value }; }
+    }
 
     /// <summary>Source position in the syntax tree for click-to-source mapping.
     /// <c>init</c> (and declared on the base, not per subtype) so the collect
@@ -262,11 +300,19 @@ public abstract record MusicItem
     /// <c>MeasureContentKey</c>); the two positions below are excluded and shifted, exactly
     /// like the slur trio above.
     /// </remarks>
-    public bool HasPhrasingSlurStart { get; init; }
+    public bool HasPhrasingSlurStart
+    {
+        get => _rareBase?.HasPhrasingSlurStart ?? false;
+        init { if (value != HasPhrasingSlurStart) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { HasPhrasingSlurStart = value }; }
+    }
 
     /// <summary>Whether a phrasing slur (<c>@!phrasingSlur</c>) closes on this item. See
     /// <see cref="HasPhrasingSlurStart"/>.</summary>
-    public bool HasPhrasingSlurEnd { get; init; }
+    public bool HasPhrasingSlurEnd
+    {
+        get => _rareBase?.HasPhrasingSlurEnd ?? false;
+        init { if (value != HasPhrasingSlurEnd) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { HasPhrasingSlurEnd = value }; }
+    }
 
     /// <summary>The side the phrasing slur opening here was FORCED to — +1 for
     /// <c>@phrasingSlur.up</c>, −1 for <c>.down</c>, 0 when the slur's own rule decides.
@@ -274,16 +320,28 @@ public abstract record MusicItem
     /// <remarks>LILYPOND-REF: lily/slur-engraver.cc:190-191 Slur_engraver::create_slur —
     /// <c>if (dir) set_grob_direction (slur, dir)</c>, the direction of the event
     /// (<c>^\(</c> / <c>_\(</c>).</remarks>
-    public int PhrasingSlurDirection { get; init; }
+    public int PhrasingSlurDirection
+    {
+        get => _rareBase?.PhrasingSlurDirection ?? 0;
+        init { if (value != PhrasingSlurDirection) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { PhrasingSlurDirection = value }; }
+    }
 
     /// <summary>Source position of the <c>@</c> of the <c>@phrasingSlur</c> on this item, or
     /// <see cref="NoSourcePosition"/>. The curve's click target, as
     /// <see cref="SlurStartSourcePosition"/> is a slur's.</summary>
-    public int PhrasingSlurStartSourcePosition { get; init; } = NoSourcePosition;
+    public int PhrasingSlurStartSourcePosition
+    {
+        get => _rareBase?.PhrasingSlurStartSourcePosition ?? NoSourcePosition;
+        init { if (value != PhrasingSlurStartSourcePosition) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { PhrasingSlurStartSourcePosition = value }; }
+    }
 
     /// <summary>Source position of the <c>@</c> of the <c>@!phrasingSlur</c> on this item,
     /// or <see cref="NoSourcePosition"/> — the curve's <c>data-alt</c> alias.</summary>
-    public int PhrasingSlurEndSourcePosition { get; init; } = NoSourcePosition;
+    public int PhrasingSlurEndSourcePosition
+    {
+        get => _rareBase?.PhrasingSlurEndSourcePosition ?? NoSourcePosition;
+        init { if (value != PhrasingSlurEndSourcePosition) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { PhrasingSlurEndSourcePosition = value }; }
+    }
 
     /// <summary>Source position of the <c>@</c> that wrote the <c>@laissezVibrer</c> on this
     /// item, or <see cref="NoSourcePosition"/>. See <see cref="TieStartSourcePosition"/>.</summary>
@@ -299,12 +357,20 @@ public abstract record MusicItem
     /// <c>@laissezVibrer</c> half-ties every head from ONE annotation, a member-level one
     /// half-ties just its head from its own.</para>
     /// </remarks>
-    public int LaissezVibrerSourcePosition { get; init; } = NoSourcePosition;
+    public int LaissezVibrerSourcePosition
+    {
+        get => _rareBase?.LaissezVibrerSourcePosition ?? NoSourcePosition;
+        init { if (value != LaissezVibrerSourcePosition) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { LaissezVibrerSourcePosition = value }; }
+    }
 
     /// <summary>Source position of the <c>@</c> that wrote the <c>@repeatTie</c> on this
     /// item, or <see cref="NoSourcePosition"/>. See
     /// <see cref="LaissezVibrerSourcePosition"/>.</summary>
-    public int RepeatTieSourcePosition { get; init; } = NoSourcePosition;
+    public int RepeatTieSourcePosition
+    {
+        get => _rareBase?.RepeatTieSourcePosition ?? NoSourcePosition;
+        init { if (value != RepeatTieSourcePosition) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { RepeatTieSourcePosition = value }; }
+    }
 
     /// <summary>
     /// Whether this item is a "loose" column that does not participate in spacing.
@@ -334,10 +400,60 @@ public abstract record MusicItem
 }
 
 /// <summary>
+/// The <see cref="NoteItem"/> fields almost no note writes, held behind ONE reference so the
+/// ordinary note neither stores nor copies them.
+/// </summary>
+/// <remarks>
+/// ⚠️ A STORAGE SPLIT, NOT A MODEL CHANGE. Every field below is still a public property of
+/// <see cref="NoteItem"/>, reads the same, takes the same <c>with</c>, and answers the same to
+/// the reflective nets (<c>CollectTailShifterTests</c>, <c>IncrementalReuseSoundnessTests</c>,
+/// <c>ModelDeepDiff</c>); item equality was already identity (<c>MusicItem.Equals</c>).
+/// Nothing about WHEN a value may be written has moved.
+/// <para>
+/// MEASURED (session 515, the user corpus: 326 books, 123,067 drawn notes): not one of these
+/// fields is ever non-default, and a NoteItem costs 216 B — of which they are 80. The bake in
+/// <c>MeasureCollector.ResolveBeamStemDirections</c> alone copies a NoteItem 563.18 times per
+/// keystroke, and the type as a whole allocates 249,138 B per keystroke (1,153 copies).
+/// </para>
+/// <para>
+/// ⚠️ THE BOX IS ONLY BUILT WHEN A VALUE IS ACTUALLY NON-DEFAULT — the constructor tests the
+/// nine it takes before building one, and every <c>init</c> below compares first. Building it
+/// unconditionally would make every note pay 88 B to save 72, which is the wrong way round.
+/// </para>
+/// </remarks>
+internal sealed record NoteItemRare
+{
+    internal static readonly NoteItemRare Empty = new();
+
+    public int TremoloBeams { get; init; }
+    public int TremoloPairBeams { get; init; }
+    public int TremoloGapCount { get; init; }
+    public NoteheadStyle Notehead { get; init; }
+    public bool HasGlissando { get; init; }
+    public int FeatherDirection { get; init; }
+    public bool IsCourtesy { get; init; }
+    public double? AccidentalX { get; init; }
+    public bool IsCue { get; init; }
+    public string? EditorialAccidental { get; init; }
+    public int? Fingering { get; init; }
+    public bool HasLaissezVibrer { get; init; }
+    public bool? LaissezVibrerUp { get; init; }
+    public bool HasRepeatTie { get; init; }
+    public bool? RepeatTieUp { get; init; }
+    public bool? ForcedStemUp { get; init; }
+    public bool TabBelowRange { get; init; }
+}
+
+/// <summary>
 /// A single note.
 /// </summary>
 public sealed record NoteItem : MusicItem
 {
+    // The rarely-written fields; null when the note writes none of them. See NoteItemRare —
+    // the record's synthesized copy constructor carries this reference, so `with` shares the
+    // box until an init below replaces it (the box is immutable, so sharing is safe).
+    private NoteItemRare? _rare;
+
     // init so a post-pass (e.g. OttavaTransposer) can shift the DISPLAY position
     // an octave without disturbing pitch/MIDI (which live in Midi/the syntax tree).
     /// <summary>The note's clef-relative vertical staff position, in diatonic steps from the middle staff line.</summary>
@@ -355,12 +471,16 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether the note needs ledger lines because it sits outside the staff.</summary>
     public bool NeedsLedgerLines { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
-    public int TremoloBeams { get; }
+    public int TremoloBeams => _rare?.TremoloBeams ?? 0;
     /// <summary>Two-note (chord) tremolo: the BETWEEN-stems beam count. The
     /// pair is written at the tremolo's total duration and sounds half of it
     /// each (TimeScale ½). 0 = not part of a pair.
     /// LILYPOND-REF: lily/chord-tremolo-engraver.cc.</summary>
-    public int TremoloPairBeams { get; init; }
+    public int TremoloPairBeams
+    {
+        get => _rare?.TremoloPairBeams ?? 0;
+        init { if (value != TremoloPairBeams) _rare = (_rare ?? NoteItemRare.Empty) with { TremoloPairBeams = value }; }
+    }
     /// <summary>How many of the pair's beams are GAPPED — drawn short of the
     /// stems so the repeat symbol can't be read as an ordinary beam. 0 for a
     /// half-note pair (halves can't appear in a regular beam, so their tremolo
@@ -368,9 +488,17 @@ public sealed record NoteItem : MusicItem
     /// LILYPOND-REF: lily/chord-tremolo-engraver.cc:117-140 acknowledge_stem —
     /// gap-count = min(flags, intlog2(repeat_count) + 1), set unless
     /// duration_log == 1.</summary>
-    public int TremoloGapCount { get; init; }
+    public int TremoloGapCount
+    {
+        get => _rare?.TremoloGapCount ?? 0;
+        init { if (value != TremoloGapCount) _rare = (_rare ?? NoteItemRare.Empty) with { TremoloGapCount = value }; }
+    }
     /// <summary>Notehead style (x / diamond / triangle / slash / xcircle).</summary>
-    public NoteheadStyle Notehead { get; init; }
+    public NoteheadStyle Notehead
+    {
+        get => _rare?.Notehead ?? NoteheadStyle.Default;
+        init { if (value != Notehead) _rare = (_rare ?? NoteItemRare.Empty) with { Notehead = value }; }
+    }
     /// <summary>Whether this note starts a tie to the next note.</summary>
     public bool HasTieStart { get; }
     /// <summary>Whether this note starts a slur.</summary>
@@ -420,13 +548,13 @@ public sealed record NoteItem : MusicItem
     /// It is exactly "<see cref="BeamId"/> is set" — one fact, one field.</summary>
     public bool IsBeamed => BeamId is not null;
     /// <summary>Whether this note has a glissando to the next note.</summary>
-    public bool HasGlissando { get; }
+    public bool HasGlissando => _rare?.HasGlissando ?? false;
     /// <summary>Feathered beam direction: 0=none, 1=right (accel), -1=left (rit).</summary>
     /// <remarks>LILYPOND-REF: beam.cc:1039-1082 grow-direction</remarks>
-    public int FeatherDirection { get; }
+    public int FeatherDirection => _rare?.FeatherDirection ?? 0;
     /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
     /// <remarks>LILYPOND-REF: lily/accidental.cc:147-148 parenthesized property</remarks>
-    public bool IsCourtesy { get; }
+    public bool IsCourtesy => _rare?.IsCourtesy ?? false;
 
     /// <summary>
     /// This note's accidental ink-left X, in staff spaces from the NOTE COLUMN's reference
@@ -441,10 +569,14 @@ public sealed record NoteItem : MusicItem
     /// Every reservation site already measures from the column, so they read this bare; the
     /// renderer draws at the shifted X and must subtract that shift back off.
     /// </remarks>
-    public double? AccidentalX { get; init; }
+    public double? AccidentalX
+    {
+        get => _rare?.AccidentalX;
+        init { if (value != AccidentalX) _rare = (_rare ?? NoteItemRare.Empty) with { AccidentalX = value }; }
+    }
     /// <summary>Whether this note is a cue note (drawn at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
-    public bool IsCue { get; }
+    public bool IsCue => _rare?.IsCue ?? false;
 
     /// <summary>
     /// Editorial (suggestion) accidental kind ("sharp", "flat", "natural", ...)
@@ -462,7 +594,11 @@ public sealed record NoteItem : MusicItem
     /// <remarks><c>init</c> for the same reason as <see cref="Accidental"/>: the
     /// Accidental_engraver makes AccidentalSuggestion grobs too, so removing it removes
     /// these as well.</remarks>
-    public string? EditorialAccidental { get; init; }
+    public string? EditorialAccidental
+    {
+        get => _rare?.EditorialAccidental;
+        init { if (value != EditorialAccidental) _rare = (_rare ?? NoteItemRare.Empty) with { EditorialAccidental = value }; }
+    }
 
     /// <summary>Whether this note carries an editorial (suggestion) accidental.</summary>
     public bool IsEditorial => EditorialAccidental != null;
@@ -474,7 +610,7 @@ public sealed record NoteItem : MusicItem
     /// LilyPond syntax: <c>c4-1</c>; LilySharp surface: <c>c4@finger.1</c> via the
     /// existing compound-mark parser (no parser change required).
     /// </remarks>
-    public int? Fingering { get; }
+    public int? Fingering => _rare?.Fingering;
 
     /// <summary>
     /// True when this note has a laissez-vibrer (l.v.) tie — a half-tie pointing
@@ -484,7 +620,7 @@ public sealed record NoteItem : MusicItem
     /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc — LaissezVibrerTie grob
     /// LilyPond syntax: <c>c4\laissezVibrer</c>; LilySharp surface: <c>c4@laissezVibrer</c>.
     /// </remarks>
-    public bool HasLaissezVibrer { get; }
+    public bool HasLaissezVibrer => _rare?.HasLaissezVibrer ?? false;
 
     /// <summary>
     /// Forced curve side of the l.v. tie from <c>@laissezVibrer.up/.down</c>
@@ -493,7 +629,11 @@ public sealed record NoteItem : MusicItem
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc:99-103 acknowledge_note_head
     /// — the event's direction property is copied onto the tie.</remarks>
-    public bool? LaissezVibrerUp { get; init; }
+    public bool? LaissezVibrerUp
+    {
+        get => _rare?.LaissezVibrerUp;
+        init { if (value != LaissezVibrerUp) _rare = (_rare ?? NoteItemRare.Empty) with { LaissezVibrerUp = value }; }
+    }
 
     /// <summary>
     /// True when this note has a repeat-tie — a half-tie pointing in from the LEFT,
@@ -504,7 +644,7 @@ public sealed record NoteItem : MusicItem
     /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
     /// LilyPond syntax: <c>c4\repeatTie</c>; LilySharp surface: <c>c4@repeatTie</c>.
     /// </remarks>
-    public bool HasRepeatTie { get; }
+    public bool HasRepeatTie => _rare?.HasRepeatTie ?? false;
 
     /// <summary>
     /// Forced curve side of the repeat tie from <c>@repeatTie.up/.down</c>
@@ -514,7 +654,11 @@ public sealed record NoteItem : MusicItem
     /// — the event's direction is copied onto the tie; Repeat_tie_engraver inherits
     /// this whole path (repeat-tie-engraver.cc:27-33, a Laissez_vibrer_engraver that
     /// only swaps the event class and grob names).</remarks>
-    public bool? RepeatTieUp { get; init; }
+    public bool? RepeatTieUp
+    {
+        get => _rare?.RepeatTieUp;
+        init { if (value != RepeatTieUp) _rare = (_rare ?? NoteItemRare.Empty) with { RepeatTieUp = value }; }
+    }
 
     /// <summary>
     /// Time scale applied by enclosing tuplets (base/ratio, compounded when
@@ -555,7 +699,11 @@ public sealed record NoteItem : MusicItem
     /// in one slot — the mirror of the trap HANDOFF 5.2 records about a bow's two heights.
     /// </para>
     /// </remarks>
-    public bool? ForcedStemUp { get; init; }
+    public bool? ForcedStemUp
+    {
+        get => _rare?.ForcedStemUp;
+        init { if (value != ForcedStemUp) _rare = (_rare ?? NoteItemRare.Empty) with { ForcedStemUp = value }; }
+    }
 
     /// <summary>
     /// Grace notes written immediately before this note, "hanging" to the left of
@@ -603,7 +751,11 @@ public sealed record NoteItem : MusicItem
     /// notation staves, which show the note at its true pitch. A TabOutOfRange
     /// warning still fires (TabRangeValidator).
     /// </summary>
-    public bool TabBelowRange { get; init; }
+    public bool TabBelowRange
+    {
+        get => _rare?.TabBelowRange ?? false;
+        init { if (value != TabBelowRange) _rare = (_rare ?? NoteItemRare.Empty) with { TabBelowRange = value }; }
+    }
 
     /// <summary>Stem direction: beam-resolved if beamed, else asked for, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? ForcedStemUp ?? StaffPosition < 0;
@@ -619,21 +771,35 @@ public sealed record NoteItem : MusicItem
         Dots = dots;
         Accidental = accidental;
         NeedsLedgerLines = needsLedgerLines;
-        TremoloBeams = Math.Clamp(tremoloBeams, 0, 3);
         HasTieStart = hasTieStart;
         HasSlurStart = hasSlurStart;
         HasSlurEnd = hasSlurEnd;
         HasBeamStart = hasBeamStart;
         HasBeamEnd = hasBeamEnd;
-        HasGlissando = hasGlissando;
-        FeatherDirection = Math.Clamp(featherDirection, -1, 1);
-        IsCourtesy = isCourtesy;
-        IsCue = isCue;
-        EditorialAccidental = editorialAccidental;
-        Fingering = fingering;
-        HasLaissezVibrer = hasLaissezVibrer;
-        HasRepeatTie = hasRepeatTie;
         SourcePosition = sourcePosition;
+
+        // The nine rarely-written parameters share one box, and the box is built ONLY when at
+        // least one of them is non-default — see NoteItemRare. Clamping happens here, as it
+        // always did, so the stored value is the clamped one and the getters stay bare.
+        int tremolo = Math.Clamp(tremoloBeams, 0, 3);
+        int feather = Math.Clamp(featherDirection, -1, 1);
+        if (tremolo != 0 || feather != 0 || hasGlissando || isCourtesy || isCue
+            || editorialAccidental != null || fingering != null
+            || hasLaissezVibrer || hasRepeatTie)
+        {
+            _rare = new NoteItemRare
+            {
+                TremoloBeams = tremolo,
+                FeatherDirection = feather,
+                HasGlissando = hasGlissando,
+                IsCourtesy = isCourtesy,
+                IsCue = isCue,
+                EditorialAccidental = editorialAccidental,
+                Fingering = fingering,
+                HasLaissezVibrer = hasLaissezVibrer,
+                HasRepeatTie = hasRepeatTie,
+            };
+        }
     }
 }
 
