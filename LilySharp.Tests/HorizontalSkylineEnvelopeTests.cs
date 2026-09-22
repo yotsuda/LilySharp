@@ -64,6 +64,33 @@ public class HorizontalSkylineEnvelopeTests
         Assert.Equal(twoStep.Buildings, oneStep.Buildings);
     }
 
+    /// <summary>
+    /// The accidental placement's one-step spellings (session 491) answer the in-place
+    /// sequence they replaced building for building: ShiftedRaisedOver is Clone, Shift, Raise,
+    /// Merge; ShiftedScratch is Clone, Shift.
+    /// </summary>
+    [Fact]
+    public void ShiftedRaisedOver_AndShiftedScratch_AreTheInPlaceSteps()
+    {
+        var glyph = HorizontalSkyline.FromBoxes(new[]
+        {
+            (-0.75, 0.5, -0.3, 0.6),
+            (0.2, 1.25, -0.1, 0.9),
+        }, HorizontalDirection.Left);
+        var under = HorizontalSkyline.FromBoxes(new[] { (-1.0, 1.0, 0.0, 1.2) }, HorizontalDirection.Left);
+
+        var inPlace = glyph.Clone();
+        inPlace.Shift(1.5);
+        inPlace.Raise(-0.85);
+        inPlace.Merge(under);
+        Assert.Equal(inPlace.Buildings,
+            HorizontalSkyline.ShiftedRaisedOver(glyph, 1.5, -0.85, under).Buildings);
+
+        var shifted = glyph.Clone();
+        shifted.Shift(-2.5);
+        Assert.Equal(shifted.Buildings, HorizontalSkyline.ShiftedScratch(glyph, -2.5).Buildings);
+    }
+
     [Fact]
     public void Distance_IgnoresShadowedBuilding()
     {

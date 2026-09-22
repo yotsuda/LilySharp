@@ -310,6 +310,30 @@ internal sealed class AccidentalPlacement
         return (left, right);
     }
 
+    /// <summary>
+    /// <see cref="GlyphSkylinePair"/>'s answer, built once per (glyph, courtesy, design,
+    /// magnification) on this thread and shared — callers must NOT mutate it.
+    /// </summary>
+    /// <remarks>
+    /// The pair is a function of those four alone (the design's baked outlines, the paren and
+    /// fattening composition and the one magnification), and it was being rebuilt for every
+    /// accidental placed: 193,426 builds over the reader's corpus, 104 a keystroke at
+    /// 2,183 B each — 227 KB a keystroke, 8.2% of the render (measured session 491).
+    /// </remarks>
+    internal static (HorizontalSkyline Left, HorizontalSkyline Right) SharedGlyphSkylinePair(
+        string accidental, bool isCourtesy, GlyphMetrics.DesignMetrics font)
+    {
+        var pairs = t_glyphPairs ??= new();
+        var key = (accidental, isCourtesy, font.Rounded, font.Magnification);
+        if (!pairs.TryGetValue(key, out var pair))
+            pairs[key] = pair = GlyphSkylinePair(accidental, isCourtesy, font);
+        return pair;
+    }
+
+    [ThreadStatic]
+    private static Dictionary<(string Accidental, bool IsCourtesy, int Design, double Magnification),
+        (HorizontalSkyline Left, HorizontalSkyline Right)>? t_glyphPairs;
+
     /// <summary>Merges one paren glyph's baked outline skylines, translated to
     /// <paramref name="dx"/> in the accidental's frame, into the accidental's pair.</summary>
     private static void MergeParen(
@@ -443,10 +467,12 @@ internal sealed class AccidentalPlacement
             // above and lifted onto the note's staff position (the Y centre does not scale —
             // a grace's head sits on the real staff lines).
             // LILYPOND-REF: accidental-placement.cc:292-295 set_ape_skylines.
+            // ⚠️ THE PAIR IS SHARED (SharedGlyphSkylinePair) AND NEVER MUTATED: the right one
+            // is shifted into a scratch copy only the distance below reads, and the left one is
+            // shifted, raised and merged into the new reference in one step — the buildings the
+            // in-place Shift / Raise / Merge on a fresh pair used to leave.
             var (glyphLeft, glyphRight) =
-                GlyphSkylinePair(entry.Accidental, entry.IsCourtesy, accidentalFont);
-            glyphLeft.Shift(yCenterSS);
-            glyphRight.Shift(yCenterSS);
+                SharedGlyphSkylinePair(entry.Accidental, entry.IsCourtesy, accidentalFont);
 
             double offset;
             if (firstApeOffset is { } firstShared && firstApeKey.Equals(apeKey))
@@ -463,7 +489,8 @@ internal sealed class AccidentalPlacement
                 // LILYPOND-REF: accidental-placement.cc:411-416 — nest the RIGHT skyline
                 // against the accumulated LEFT skyline (horizon padding 0.1), then back off
                 // by the inter-column padding (0.2).
-                offset = -glyphRight.Distance(reference, _params.HorizonPadding);
+                offset = -HorizontalSkyline.ShiftedScratch(glyphRight, yCenterSS)
+                    .Distance(reference, _params.HorizonPadding);
                 if (double.IsInfinity(offset))
                     offset = lastOffset;
                 else
@@ -483,9 +510,7 @@ internal sealed class AccidentalPlacement
 
             // LILYPOND-REF: accidental-placement.cc:418-421 — the new LEFT skyline is this
             // accidental's LEFT skyline shifted into place, merged over the old one.
-            glyphLeft.Raise(offset);
-            glyphLeft.Merge(reference);
-            reference = glyphLeft;
+            reference = HorizontalSkyline.ShiftedRaisedOver(glyphLeft, yCenterSS, offset, reference);
 
             // XOffset is the whole accidental's ink-left (what DrawAccidentalAtInkLeft and the
             // reservation boxes anchor to): the glyph origin lands at `offset`, so its LILC

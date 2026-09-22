@@ -173,6 +173,35 @@ public class AccidentalPlacementTests
         Assert.Equal(0.16581, right.X(1.3), 3);
     }
 
+    /// <summary>
+    /// The glyph outline pairs are built once and SHARED between columns (session 491), so
+    /// placing a column must leave them as built: a shift, raise or merge written into a shared
+    /// pair would move every later accidental of that glyph. Placing the same cluster twice
+    /// answers the same, and the shared pair still reads as a fresh one.
+    /// </summary>
+    [Fact]
+    public void PlacingAColumn_LeavesTheSharedGlyphOutlinesAsBuilt()
+    {
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "sharp", false),
+            new ChordNoteInfo(2, "flat", true),
+            new ChordNoteInfo(4, "sharp", false),
+            new ChordNoteInfo(5, "natural", false));
+
+        var first = placement.CalculatePositions(notes);
+        var second = placement.CalculatePositions(notes);
+
+        Assert.Equal(first.Select(l => l.XOffset), second.Select(l => l.XOffset));
+        foreach (var (glyph, courtesy) in new[] { ("sharp", false), ("flat", true), ("natural", false) })
+        {
+            var shared = AccidentalPlacement.SharedGlyphSkylinePair(glyph, courtesy, GlyphMetrics.Design20);
+            var fresh = AccidentalPlacement.GlyphSkylinePair(glyph, courtesy, GlyphMetrics.Design20);
+            Assert.Equal(fresh.Left.Buildings, shared.Left.Buildings);
+            Assert.Equal(fresh.Right.Buildings, shared.Right.Buildings);
+        }
+    }
+
     // --- New tests for LilyPond-faithful algorithm ---
 
     [Fact]

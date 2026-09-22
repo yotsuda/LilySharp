@@ -223,6 +223,53 @@ internal sealed class HorizontalSkyline
         return new HorizontalSkyline(buildings, direction);
     }
 
+    /// <summary>
+    /// <paramref name="glyph"/> shifted along the horizon by <paramref name="shift"/>, raised by
+    /// <paramref name="raise"/> and merged over <paramref name="under"/> — the building list
+    /// <c>glyph.Clone()</c> then <see cref="Shift"/>, <see cref="Raise"/>, <see cref="Merge"/>
+    /// would hold, per building in the same order and by the same two steps, built once at its
+    /// final length. Neither input is touched.
+    /// </summary>
+    /// <remarks>
+    /// For the accidental placement's running LEFT skyline (AccidentalPlacement), whose glyph
+    /// outlines are shared between columns and must therefore never be mutated in place.
+    /// </remarks>
+    internal static HorizontalSkyline ShiftedRaisedOver(
+        HorizontalSkyline glyph, double shift, double raise, HorizontalSkyline under)
+    {
+        if (glyph._direction != under._direction)
+            throw new ArgumentException("Cannot merge skylines with different directions");
+        int sky = (int)glyph._direction;
+        var buildings = new List<SkylineBuilding>(glyph._buildings.Count + under._buildings.Count);
+        foreach (var b in glyph._buildings)
+            buildings.Add(b.ShiftedHorizon(shift).RaisedBy(sky * raise));
+        buildings.AddRange(under._buildings);
+        return new HorizontalSkyline(buildings, glyph._direction);
+    }
+
+    /// <summary>
+    /// <paramref name="source"/> shifted along the horizon by <paramref name="shift"/>, in a
+    /// skyline the thread keeps for this — valid until the next call on the thread. For a
+    /// shifted outline that is only MEASURED against and then dropped; the same buildings
+    /// <c>Clone()</c> then <see cref="Shift"/> would hold.
+    /// </summary>
+    internal static HorizontalSkyline ShiftedScratch(HorizontalSkyline source, double shift)
+    {
+        ref var slot = ref source._direction == HorizontalDirection.Left
+            ? ref t_shiftedLeft : ref t_shiftedRight;
+        var scratch = slot ??= new HorizontalSkyline(source._direction);
+        scratch._buildings.Clear();
+        foreach (var b in source._buildings)
+            scratch._buildings.Add(b.ShiftedHorizon(shift));
+        return scratch;
+    }
+
+    [ThreadStatic]
+    private static HorizontalSkyline? t_shiftedLeft;
+
+    [ThreadStatic]
+    private static HorizontalSkyline? t_shiftedRight;
+
     /// <summary>A deep copy (the building list is duplicated), so mutating operations
     /// (<see cref="Raise"/>/<see cref="Shift"/>/<see cref="Merge"/>) on the copy leave the
     /// original — e.g. a shared baked glyph skyline — untouched.</summary>
