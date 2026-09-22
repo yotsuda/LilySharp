@@ -4018,15 +4018,33 @@ public sealed class LilyPondExporter
         return dir + glyph;
     }
 
-    // Navigation marks (segno/coda/fine/D.C./D.S. …) as standalone \mark commands.
+    // Navigation marks (segno/coda/fine/D.C./D.S. …), each as the grob the page models it on.
+    // ⚠️ NOT `\mark`: that is ONE RehearsalMark per moment, and a section boundary is exactly
+    // where a label and a navigation mark share one — LilyPond kept the first and discarded
+    // the other ("conflict with event: ad-hoc-mark-event"), so `form { A fine B }` lost the
+    // label B and `segno A` lost the segno (MEASURED, session 480: Lab sessions/p480/nav-form*).
+    // LILYPOND-REF: scm/define-grobs.scm:3083-3114 SegnoMark, :1001-1032 CodaMark (priority
+    //   1400, inside RehearsalMark — MusicMarkEngraver.GetOutsideStaffPriority),
+    //   :1898-1927 JumpScript (1350, italic, direction DOWN, self-alignment-X RIGHT);
+    //   ly/music-functions-init.ly:2178 \segnoMark, :442 \codaMark, :911 \jump.
+    // Label 1, not \default: the page draws one sign however many there are, and \default
+    // counts (the second \codaMark \default is the doubled 𝄌𝄌).
+    // ⚠️ CodaMark is begin-of-line-invisible where SegnoMark is not, so a coda at a break
+    // would move to the END of the previous line; the page keeps the sign on the new line
+    // (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+    // keeps the twin there. JumpScript's own begin-of-line-invisible is left alone: the page
+    // too ends the previous line with a boundary "Fine" / "To Coda" / "D.S." (MEASURED,
+    // Lab sessions/p480/nav-break.lys).
+    private const string OnTheNewLine = "\\tweak break-visibility #end-of-line-invisible ";
+
     private string EmitNavMark(NavigationMarkSyntax nav)
     {
         // The glyph marks are music-font stencils on both sides and do not follow the
         // navigation role's plan (the page draws them at the music em).
         switch (nav.MarkType)
         {
-            case NavigationMarkType.Segno: return "\\mark \\markup { \\musicglyph #\"scripts.segno\" }";
-            case NavigationMarkType.Coda: return "\\mark \\markup { \\musicglyph #\"scripts.coda\" }";
+            case NavigationMarkType.Segno: return "\\segnoMark 1";
+            case NavigationMarkType.Coda: return OnTheNewLine + "\\codaMark 1";
         }
         string? word = nav.MarkType switch
         {
@@ -4046,8 +4064,14 @@ public sealed class LilyPondExporter
         // (default: italic, JumpScript's font-shape), so a `fonts { navigation bold }`
         // reaches the twin without touching RehearsalMark, whose grob the boxed labels share.
         string body = "\"" + word + "\"";
-        return "\\mark " + (MarkupForRole(Rendering.TextRole.Navigation, body, "\\italic")
-                            ?? "\\markup { \\italic " + body + " }");
+        string markup = MarkupForRole(Rendering.TextRole.Navigation, body, "\\italic")
+                        ?? "\\markup { \\italic " + body + " }";
+        // JumpScript hangs BELOW by default, which is where the page puts the jump-FROM
+        // instructions (MusicMarkEngraver.IsJumpInstruction); "Fine" and "To Coda" it draws above.
+        bool below = nav.MarkType is NavigationMarkType.DaCapo or NavigationMarkType.DaCapoAlFine
+            or NavigationMarkType.DaCapoAlCoda or NavigationMarkType.DalSegno
+            or NavigationMarkType.DalSegnoAlFine or NavigationMarkType.DalSegnoAlCoda;
+        return (below ? "" : "\\tweak direction #UP ") + "\\jump " + markup;
     }
 
     private string Skip(SyntaxNode item)

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 143 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **260** | |
+| `OWN` | 144 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **261** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -232,11 +232,12 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（143 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（144 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2466** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:5423** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4034** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5447** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`

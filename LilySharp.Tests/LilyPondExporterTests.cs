@@ -1978,6 +1978,35 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A navigation mark that shares its moment with a section label does not cost the
+    /// twin either of them.
+    /// </summary>
+    /// <remarks>
+    /// Both used to be written as <c>\mark</c>, and LilyPond keeps ONE ad-hoc mark per
+    /// moment: <c>segno A fine B to coda coda C</c> printed neither the segno nor the
+    /// coda nor any of the three labels ("conflict with event: ad-hoc-mark-event" /
+    /// "discarding event", Lab sessions/p480/nav-form-lp.log). Each is now the grob the
+    /// page models it on — SegnoMark, CodaMark, JumpScript — so no line may hold two
+    /// <c>\mark</c>s.
+    /// </remarks>
+    [Fact]
+    public void ANavigationMarkBesideASectionLabel_IsNotASecondRehearsalMark()
+    {
+        string ly = Export(FormScore("segno A fine B to coda coda C ds al coda", """
+            section A { m { c'4 d' e' f' | } }
+            section B { m { g'4 a' b' c'' | } }
+            section C { m { e'4 d' c' d' | } }
+            """));
+        foreach (string line in ly.Split('\n'))
+            Assert.True(Occurrences(line, "\\mark ") <= 1, "two \\mark at one moment: " + line);
+        Assert.Contains("\\segnoMark 1 \\mark \\markup \\box \"A\"", ly);
+        Assert.Contains("\\tweak direction #UP \\jump \\markup { \\italic \"Fine\" } \\mark \\markup \\box \"B\"", ly);
+        Assert.Contains("\\tweak break-visibility #end-of-line-invisible \\codaMark 1", ly);
+        // The jump-FROM instruction keeps JumpScript's own DOWN, where the page draws it.
+        Assert.Contains("\n  \\jump \\markup { \\italic \"D.S. al Coda\" }", ly);
+    }
+
+    /// <summary>
     /// A form item the exporter still cannot write is WARNED about, not dropped in silence.
     /// </summary>
     /// <remarks>

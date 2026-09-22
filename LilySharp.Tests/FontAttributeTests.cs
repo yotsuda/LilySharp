@@ -590,9 +590,10 @@ public class FontAttributeTests
             "fonts { title step +2  composer italic  navigation bold }\n" + Book));
         Assert.Contains("title = \\markup { \\fontsize #2 \"Ttl\" }", ly, StringComparison.Ordinal);
         Assert.Contains("composer = \\markup { \\normal-text \\italic \"Cmp\" }", ly, StringComparison.Ordinal);
-        Assert.Contains("\\mark \\markup { \\normal-text \\bold \"Fine\" }", ly, StringComparison.Ordinal);
-        // Not as a RehearsalMark override, which the boxed labels share.
+        Assert.Contains("\\jump \\markup { \\normal-text \\bold \"Fine\" }", ly, StringComparison.Ordinal);
+        // Not as a grob override: JumpScript also carries the D.S./D.C. that no role step names.
         Assert.DoesNotContain("RehearsalMark.font", ly, StringComparison.Ordinal);
+        Assert.DoesNotContain("JumpScript.font", ly, StringComparison.Ordinal);
     }
 
     [Fact]
