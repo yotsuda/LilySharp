@@ -140,8 +140,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **delegate 型の行の持ち主は `sessions/p470/delegate-sites.txt`（Roslyn・型→建てる式）で引く**。⚠️ **閉包の行は閉包だけ＝同じ式の iterator と `ToList` は別の行**（RULES §5.3 末尾）
 - ★★ **⒮²² 第470 の毒で*スイートにもコーパスにも*観測者が居なかった 5 本**（Lab `sessions/p470/poisons.txt`・`green-to-corpus.txt`＝5,824 ページ 0 差）。
   ⑴ **スラーが先の重なるスラーを避ける**（`LayoutSlurs` の `overlappingSlurs` を空にする＝`_existingSlurs` は採点の 2 か所が読む）／
-  ⑵ **上の記号が volta の上に乗る**（`MusicMarkEngraver.Calculate` の `hasVoltaOverlap` を常に false）／⑶ tab 和音の弦の無い音を*低い*音から割る（`Tunings.CalculateChordFrets`＝呼ぶ時点で全音に弦が付いているのかは未確認）／⑷ 小節線 spring の staff ごとの wish を列の先頭で建てる（`BarlineToFirstColumnSpring`）／⑸ grand staff の member が書いた clef（`RenderSpec.WrittenClefOf`）。
-  ⇒ ⑴⑵ は**読み手が居るのに絵を動かす形が無い**＝⒳⁷ と同じく「後の段が上書きしていないか」を先に読む。**値段ではなく忠実度の網**
+  ~~⑵ volta~~（**第479 が閉じた＝毒が恒等写像**＝唯一の呼び手が `voltaBrackets` を `default` で渡していて腕は構造的に届かない＝削除。volta は outside-staff の段が避ける）／⑶ tab 和音の弦の無い音を*低い*音から割る（`Tunings.CalculateChordFrets`＝呼ぶ時点で全音に弦が付いているのかは未確認）／⑷ 小節線 spring の staff ごとの wish を列の先頭で建てる（`BarlineToFirstColumnSpring`）／⑸ grand staff の member が書いた clef（`RenderSpec.WrittenClefOf`）。
+  ⇒ ⑴ は**読み手が居るのに絵を動かす形が無い**＝⒳⁷ と同じく「後の段が上書きしていないか」を先に読む（⑵ の答えは「届かない」だった＝**まず `throw` の門で走るかを訊く**）。**値段ではなく忠実度の網**
+- ★ **⒳¹¹ 双子の書き出しが segno／coda を `\mark` で出す＝同じ瞬間のリハーサル記号（ラベル）と衝突して LP が片方を捨てる**（第479 が見た・未着手）。`section C { m { segno e4 … } }` を 2 番括弧に置いた本の双子は `\mark \markup \box "C" \mark \markup { \musicglyph #"scripts.segno" }`＝LP は "conflict with event: ad-hoc-mark-event"／"discarding event" と言い、**双子の絵に segno・coda が無い**（Lab `sessions/p479/vs-lp.log`）。LP 2.26 には `\segnoMark`／`\codaMark`（SegnoMark／CodaMark grob）がある ⇒ 書き出しをそちらへ（双子の忠実度・Lily# の絵ではない）
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
   4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
@@ -228,6 +229,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第479セッション（2026-09-22・YT-DELL2）
+
+同じ会話の続き（第478 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒜ の ⒮²²。
+★ **`-Start p479` の 1 コマンドで §0 が全部済んだ**（HEAD `cedc9c9e`・未 push 39・full 8801 / 0 / 3 / 8804・`-Archive 477` も自動）。
+★★★ **⑴ ⒮²² ⑵ を閉じた＝毒が恒等写像だった**（RULES §5.4 の緑の 3 つ目の顔）。切り分けの順＝「100 上げる毒」を volta の腕に当てて**描画 0 差**、同じ毒を腕の外の基準値に当てると動く ⇒ **腕は走っていない**を `throw` の門で確定（**スイート 8,801 本・volta に segno と coda を置いた本、どちらも 0 回**）⇒ 原因は**唯一の呼び手 `LayoutEngine.Annotations` が `voltaBrackets` を `default` で渡している**（テストも誰も渡さない）。
+volta を避けるのは outside-staff の段で、LP の双子とも絵が合う ⇒ **引数・`BuildVoltaCoverage`（呼びごとの HashSet）・腕を削除**、註に「volta は `OutsideStaffStacker`」と 1 文。**フル 8801 緑・実コーパス 5,824 ページ 0 差**（`Zz479Hash.cs.txt`）。
+⚠️ 最初の検証の本は**また相対音高で昇っていた**（第473 の RULES の罠を自分で踏んだ）＝volta が高く押し上げられ「記号が volta の下」に見えた。音を落ち着かせて LP と比べると同じ配置。
+★ **⑵ 新しい起票 ⒳¹¹**＝双子の書き出しが segno／coda を `\mark` で出して LP に捨てられる（§1.0）。
+★ **⑶ 終了時**: code `f4cd3174`（Core 2 ファイル・削除のみ）。最終 full **8801 / 0 / 3 / 8804**（`-End`）。§7.5 Core '+' 4＝註だけ（残りは削除）＝§7.6 ⒟「削除」＝許可した観測者は `throw` の門（スイート 0 回）と唯一の呼び手の `default`。§7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第478セッションの経緯
+
 ### 1.1 第478セッション（2026-09-22・YT-DELL2）
 
 同じ会話の続き（第477 のすぐ後）。ユーザー指示「続けて」＝§1.0 ⒜ の ⒮¹⁷。毒は同じフォルダに戻した（ユーザー決定）。
@@ -238,19 +251,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **網 `LineStartColumnTests.ALineStartsMinDist_DoesNotDependOnTheStaffOrder`**＝毒は順序に依存する（前の staff の箱を抱える）ので、主張は**並び順の入れ替え**（sax→pno と pno→sax で 2 段目の最初の音の x が同じ 9.66・毒の下で 10.44）。
 ⚠️ **最初の網は空虚だった**＝「x が戻った最初の音符頭」を 2 段目と読んだが、SVG は staff ごとに描かれるので 1 段目の下の staff だった＝**出荷前の毒で緑**になって気づいた（RULES §5.4「網は同じ毒で赤くしてから出荷」）。ページの音符頭 x の最小値に直して赤。
 ★ **⑵ 終了時**: code `75c91290`（網 1 本＋Core の註を網の名前に・`APPROXIMATIONS.md` 再生成）。最終 full **8801 / 0 / 3 / 8804**（`-End`・+1＝網）。§7.5 Core '+' 5＝註だけ。§7.6・§7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第477セッションの経緯
-
-### 1.1 第477セッション（2026-09-22・YT-DELL2）
-
-同じ会話の続き（第476 のすぐ後）。ユーザー指示「続けて」＝U9。
-★ **`-Start p477` の 1 コマンドで §0 が全部済んだ**（HEAD `58483593`・未 push 35・full 8798 / 0 / 3 / 8801・`-Archive 475` も自動）。
-★★ **⑴ U9 は再現しなかった**: `space.lys` を HEAD 全描画／1 文字ずつ打つ増分描画（最後の絵＝全描画）／`2c9bd51a`（この会話の前）／プレビューと同じリリース 0.7.0（拡張同梱の `LilySharp.Core.dll` は `0.7.0+7cc64cc4`）で描いて**全部バイト同一または同じ絵**、LP 双子とも同比率。プレビューの `Preview()` は組版を変えない。
-⇒ ユーザーが「毒入りのビルドを作ったかもしれない」として**保留**（§1.0 U9）。**毒は今後も同じフォルダで回してよい**（ユーザー決定）。
-★★★ **⑵ 別件＝⒮²¹ を閉じた**: `ProcessForm` の「パートごとに 1 回」のガード 2 つ（`HasMusicMark`・`HasCustomText`）は**生きていた**＝2 パートの form `A fine B dc al fine _"rit."` はガードを毒すると Fine・D.C.・rit. を 2 度ずつ集めて 2 度刷る（1 パートは動かない）＝観測者不在だっただけ。
-網 `FormNavigationTests.AFormsMarksAndTexts_AreCollectedOncePerScore_HoweverManyParts`（2 パート＋1 パートの対照）。**毒 2 本、外れ 0**（`poisons.txt`・この回だけ別 worktree）＝どちらも 2 パートの行だけ赤。
-⚠️ 毒 2 のフルで `UsingExpansionCacheTests.AMissingIncludeAppearing_…` が 1 度赤＝単独 5/5 緑＝負荷下の揺れ（毒とは無関係）。
-★ **⑶ 終了時**: code `46bd995e`（網 1 本・Core 不変）。最終 full **8800 / 0 / 3 / 8803**（`-End`・+2＝網の 2 行）。§7.5 Core '+' 0。§7.6・§7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
