@@ -1254,13 +1254,95 @@ internal sealed class VerticalSkyline
     {
         double delta = (int)_direction * amount;
         for (int i = 0; i < _buildings.Count; i++)
+            _buildings[i] = Raised(_buildings[i], delta);
+    }
+
+    /// <summary>
+    /// One building of <see cref="Raise"/>: the same roof <paramref name="delta"/> higher in
+    /// the sign frame. THE ONE SPELLING of that arithmetic — <see cref="Raise"/>,
+    /// <see cref="MergeRaised"/> and <see cref="RaisedCopy"/> all go through it, so a raised
+    /// building is the same bits whichever of them raised it.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOT <see cref="SkylineBuilding.RaisedBy"/>, which the PLACED-profile merge uses
+    /// after a horizon shift: that one rebuilds a sloped roof from its endpoint values, and a
+    /// rebuilt slope is not the stored slope to the last bit. Raise never rebuilt a flat
+    /// building's roof (it adds to the intercept), and this keeps that.
+    /// </remarks>
+    private static SkylineBuilding Raised(in SkylineBuilding b, double delta)
+        => b.Slope == 0
+            ? new SkylineBuilding(b.Start, b.End, b.Intercept + delta)
+            : new SkylineBuilding(b.Start, b.ValueAt(b.Start) + delta,
+                           b.ValueAt(b.End) + delta, b.End);
+
+    /// <summary>
+    /// <see cref="Merge(VerticalSkyline)"/> of <paramref name="other"/> as it would be after
+    /// <see cref="Raise"/>(<paramref name="amount"/>) — without raising it, and without the
+    /// copy that a caller who may not touch <paramref name="other"/> had to take in order to
+    /// raise it. <paramref name="other"/> is only read.
+    /// </summary>
+    /// <remarks>
+    /// Bit-identical to <c>var c = RaisedCopy(other, amount); Merge(c);</c> by construction:
+    /// the same buildings, raised by <see cref="Raised"/>, handed to the same resolve in the
+    /// same order (this skyline's buildings first, then the other's). The three arms are
+    /// <see cref="Merge(VerticalSkyline)"/>'s three arms.
+    /// <para>
+    /// MEASURED, and it is why this exists (session 518, Release, the owner's corpus, 232
+    /// books × eight forward keystrokes a book, allocated bytes): the above-staff stacker's
+    /// tracker took the staff's stored inside profile through TWO copies of both sides —
+    /// 7,989 B a build, 2.29 builds a keystroke, 1.26% of the render — to raise the UP side
+    /// once and merge it into a one-building flat base; the DOWN copies were never read.
+    /// </para>
+    /// </remarks>
+    public void MergeRaised(VerticalSkyline other, double amount)
+    {
+        if (other._direction != _direction)
+            throw new ArgumentException("Cannot merge skylines with different directions");
+
+        if (other.IsEmpty) return;
+        double delta = (int)_direction * amount;
+
+        if (_batch is { } batch)
         {
-            var b = _buildings[i];
-            _buildings[i] = b.Slope == 0
-                ? new SkylineBuilding(b.Start, b.End, b.Intercept + delta)
-                : new SkylineBuilding(b.Start, b.ValueAt(b.Start) + delta,
-                               b.ValueAt(b.End) + delta, b.End);
+            foreach (var b in other._buildings)
+            {
+                if (double.IsNegativeInfinity(b.ValueAt(b.Start))
+                    && double.IsNegativeInfinity(b.ValueAt(b.End)))
+                    continue;
+                batch.Add(Raised(b, delta));
+            }
+            return;
         }
+
+        if (IsEmpty)
+        {
+            for (int i = 0; i < other._buildings.Count; i++)
+                _buildings.Add(Raised(other._buildings[i], delta));
+            return;
+        }
+
+        // MergeInternal's sequence — ours, then the other's — with the other's raised on the
+        // way into the lent input.
+        var allBuildings = RentMergeInput(_buildings.Count + other._buildings.Count);
+        allBuildings.AddRange(_buildings);
+        for (int i = 0; i < other._buildings.Count; i++)
+            allBuildings.Add(Raised(other._buildings[i], delta));
+        ResolveFrom(allBuildings);
+    }
+
+    /// <summary>
+    /// An independent copy of a RESOLVED skyline, <see cref="Raise"/>d by
+    /// <paramref name="amount"/> — for a consumer that goes on to MUTATE its view of a shared
+    /// profile (merge seeds into it, raise it again) and so needs a copy of its own.
+    /// One copy, raised as it is taken.
+    /// </summary>
+    internal static VerticalSkyline RaisedCopy(VerticalSkyline sky, double amount)
+    {
+        double delta = (int)sky._direction * amount;
+        var raised = new List<SkylineBuilding>(sky._buildings.Count);
+        for (int i = 0; i < sky._buildings.Count; i++)
+            raised.Add(Raised(sky._buildings[i], delta));
+        return new(raised, sky._direction);
     }
 
     /// <summary>

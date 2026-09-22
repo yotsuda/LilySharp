@@ -182,10 +182,10 @@
 - **:733** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1003** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2250** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2272** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2263** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2285** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
-- **:910** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
+- **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:506** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
@@ -208,7 +208,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1897** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1908** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:482** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
@@ -341,16 +341,16 @@
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **:374** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:443** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
-- **:929** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1663** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:1958** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:445** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
+- **:934** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1676** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:1971** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:831** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
-- **:526** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
-- **:762** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
-- **:774** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
+- **:535** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
+- **:771** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
+- **:783** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
 - **:382** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
 - **:499** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
@@ -401,8 +401,8 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:75** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1165** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3244** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1171** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:3255** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's
@@ -440,7 +440,7 @@
 - **:164** ⚠️ LILYSHARP-OWN: FullSize — and it is the ANNOTATION ISLAND's debt, not
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
-- **:1278** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
+- **:1360** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`

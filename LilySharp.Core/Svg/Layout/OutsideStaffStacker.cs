@@ -288,9 +288,13 @@ internal static class OutsideStaffStacker
                     // that is the half staff this line folded before; for a tab staff, an
                     // ossia or a TEXT ROW it is not (RefpointBelowTop).
                     double toSystem = -(off + RefpointBelowTop(systems, sys, staff));
-                    p.Up.Raise(toSystem);
-                    p.Down.Raise(toSystem);
-                    t = new OutsideStaffSkylines(dir: -1, p.Up, p.Down);
+                    // The pair handed over is the room's STORED profile, read-only; this
+                    // tracker owns its support (seeds merge into it, movers raise onto it),
+                    // so it takes one raised copy of each side — where it used to raise two
+                    // copies made for it upstream, both sides twice (session 518).
+                    t = new OutsideStaffSkylines(dir: -1,
+                        VerticalSkyline.RaisedCopy(p.Up, toSystem),
+                        VerticalSkyline.RaisedCopy(p.Down, toSystem));
                 }
                 else
                 {
@@ -1123,9 +1127,11 @@ internal static class OutsideStaffStacker
     /// </remarks>
     /// <param name="staffProfile">That staff's real up/down profile, per (system, staff) —
     /// <c>MultiStaffLayouter</c>/<c>SkylineBuilder.BuildStaffSkylines</c>, the same delegate
-    /// (and the same arguments) <see cref="StackBelowStaff"/> takes. Fresh skylines per call:
-    /// the tracker raises them into its own frame. Without it the support falls back to the
-    /// system silhouette, which is what a harness that builds no staff has.</param>
+    /// (and the same arguments) <see cref="StackBelowStaff"/> takes. READ-ONLY: the pair may
+    /// be the room's stored instances (which are also the memo's identity key), so a tracker
+    /// merges a side raised or copies it raised, and never raises what it was handed. Without
+    /// it the support falls back to the system silhouette, which is what a harness that
+    /// builds no staff has.</param>
     /// <param name="partCombineTexts">A combined staff's "a2" / "Solo" / "Solo II" labels,
     /// placed at their own priority 475 (<see cref="PlacePartCombineTexts"/>).</param>
     public static (ImmutableArray<TrillSpannerLayout> Trills,
@@ -1733,8 +1739,9 @@ internal static class OutsideStaffStacker
     /// builds per render are 2 for showcase/08-chorale (one (system, staff)), 4 for test/notes
     /// and 4 for showcase/04-advanced (two each) — i.e. one per (system, staff) that places
     /// something, TWICE, because the annotation pass runs once for the extents and once final.
-    /// Halving that is the shared per-(system, staff) profile cache the handoff names; it needs
-    /// the cache to hand out COPIES, since the tracker raises the skyline it is given.
+    /// Halving that is the shared per-(system, staff) profile cache the handoff names. It used
+    /// to need the cache to hand out COPIES, since the tracker raised the skyline it was given;
+    /// since session 518 the tracker merges the given profile RAISED and never writes to it.
     /// </para>
     /// </remarks>
     private static Func<int, int, OutsideStaffSkylines> AboveTrackers(
@@ -1784,8 +1791,12 @@ internal static class OutsideStaffStacker
                 // pass placed marks and numbers against ink it thought was 0.6 lower than it
                 // is. HANDOFF 1 bone 9: the same nominal-half-staff fold, one layer down from
                 // the repeat dots and the grid meter.
-                p.Up.Raise(topUp - RefpointBelowTop(systems, sys, staff));
-                supportUp.Merge(p.Up);
+                // The pair is the room's STORED profile, read-only, and only its UP side is
+                // read here: merged into the flat base RAISED, with no copy of its own
+                // (VerticalSkyline.MergeRaised — the same bits as raising a copy and merging
+                // it). MEASURED (session 518): this build paid 7,989 B for two copies of both
+                // sides, 1.26% of a keystroke's render, and read one of the four.
+                supportUp.MergeRaised(p.Up, topUp - RefpointBelowTop(systems, sys, staff));
             }
             else if (systemSkylines != null && sys >= 0 && sys < systemSkylines.Count
                 && !systemSkylines[sys].up.IsEmpty)

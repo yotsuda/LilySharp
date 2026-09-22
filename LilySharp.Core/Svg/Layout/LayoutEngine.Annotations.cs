@@ -207,9 +207,10 @@ internal sealed partial class LayoutEngine
         public required IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>> StaffInside { get; init; }
 
         /// <summary>
-        /// One (system, staff)'s inside-staff skyline — a COPY, ready to be raised into the
-        /// caller's frame — or null when this pass has none (the preliminary pass), in which
-        /// case the caller builds its own.
+        /// One (system, staff)'s inside-staff skyline — THE STORED PAIR, read-only; a caller
+        /// that raises a side into its own frame copies that side as it raises it
+        /// (<see cref="VerticalSkyline.RaisedCopy"/>) — or null when this pass has none (the
+        /// preliminary pass), in which case the caller builds its own.
         /// </summary>
         /// <remarks>
         /// ★ THIS IS WHAT THE THREE REBUILD SITES NOW READ. They used to call
@@ -225,10 +226,11 @@ internal sealed partial class LayoutEngine
 
         /// <summary>
         /// The STORED profile instances behind <see cref="InsideOf"/> — the above-stack
-        /// memo's reference key. <see cref="InsideOf"/> hands out a fresh COPY per call
-        /// (its consumers raise the skylines into their own frame), so the copy can never
-        /// be an identity; the identity is the table entry itself, which an unchanged
-        /// system gets back from <see cref="SystemLayoutCache"/> as the same instances.
+        /// memo's reference key — as opaque objects. Since session 518 <see cref="InsideOf"/>
+        /// hands out the same instances (it used to copy), so the two agree by construction;
+        /// this stays the memo's spelling because the key must not be raisable. The identity
+        /// is the table entry itself, which an unchanged system gets back from
+        /// <see cref="SystemLayoutCache"/> as the same instances.
         /// Null when the table holds no such (system, staff) — the memo then stacks that
         /// system live rather than risking a false match (AboveStackMemo's remarks).
         /// </summary>
@@ -808,8 +810,11 @@ internal sealed partial class LayoutEngine
                     // ★ THE room's inside-staff skyline, not a rebuild: this list is exactly
                     // what the priority argument above describes, and the room already built
                     // it once for this (system, staff).
-                    var down = (ctx.InsideOf(sysIdx, staffIndex)
-                        ?? _skylineBuilder.BuildInsideStaffSkylines(
+                    // The room's pair is read-only and this raises its DOWN side, so that
+                    // side is copied — the one side, not both (session 518).
+                    var down = ctx.InsideOf(sysIdx, staffIndex) is { } stored
+                        ? SkylineBuilder.Copy(stored.Down)
+                        : _skylineBuilder.BuildInsideStaffSkylines(
                             staff, systems[sysIdx].Measures,
                             articulationLayouts: staffScripts,
                             tupletBrackets: fbSpanners.TupletBrackets,
@@ -819,7 +824,7 @@ internal sealed partial class LayoutEngine
                             systemLeft: systems[sysIdx].Indent,
                             // ...and a rest another voice pushed DOWN out of the staff is ink
                             // the figures drop below — see AnnotationLayoutContext.RestCollisionsOf.
-                            restShifts: ctx.RestCollisionsOf(staff))).Down;
+                            restShifts: ctx.RestCollisionsOf(staff)).Down;
                     // ⚠️ REFLECTED ONCE, HERE AT THE EDGE, into the system Y-up frame the drop
                     // works in — and by the SAME expression AugmentSkylinesWithScripts uses for
                     // "this staff's middle in the system's frame", so the two cannot drift.
@@ -978,15 +983,20 @@ internal sealed partial class LayoutEngine
                         : null;
                     profileCache[(sysIdx, staffIndex)] = built;
                 }
-                if (built is not { } p)
-                    return null;
-                return (VerticalSkyline.FromResolvedBuildings(VerticalDirection.Up, p.Up.Buildings),
-                        VerticalSkyline.FromResolvedBuildings(VerticalDirection.Down, p.Down.Buildings));
+                // The pair itself — the room's stored instances, or this pass's own build —
+                // READ-ONLY to the stackers: the above tracker merges the UP side raised
+                // (VerticalSkyline.MergeRaised) and the below tracker takes raised copies of
+                // its own (VerticalSkyline.RaisedCopy). Until session 518 this wrapped a copy
+                // of both sides around InsideOf's copy of both sides, for a reader of one:
+                // 7,989 B a tracker build, 1.26% of a keystroke's render (Lab
+                // sessions/p518/steps-head4.txt, tr.b.profile).
+                return built;
             };
         }
         // The passes' keystroke-crossing memos: reference identity of each staff's
-        // profile is the STORED table pair, not the copy staffProfile wraps per call
-        // (ctx.InsideIdentityOf). staffProfile's OWN fallback arm (the InsideOf-null
+        // profile is the STORED table pair as opaque objects (ctx.InsideIdentityOf) — the
+        // same instances staffProfile now hands out, spelled so that a key cannot be
+        // raised. staffProfile's OWN fallback arm (the InsideOf-null
         // rebuild) has no stable identity, and InsideIdentityOf answers null exactly
         // there, which makes both memos stack that system live — never a false match.
         Func<int, int, (object Up, object Down)?>? profileIdentity =
@@ -1243,8 +1253,11 @@ internal sealed partial class LayoutEngine
                         // that is merged into the room's FINISHED up-skyline, which is why
                         // this consumer cannot read that one — and it carries the scripts and
                         // beams this site used to be missing.
-                        var up = (ctx.InsideOf(sysIdx, staffIndex)
-                            ?? _skylineBuilder.BuildInsideStaffSkylines(
+                        // The room's pair is read-only and this raises its UP side, so that
+                        // side is copied — the one side, not both (session 518).
+                        var up = ctx.InsideOf(sysIdx, staffIndex) is { } stored
+                            ? SkylineBuilder.Copy(stored.Up)
+                            : _skylineBuilder.BuildInsideStaffSkylines(
                                 staff, systems[sysIdx].Measures,
                                 tupletBrackets: rowSpanners.TupletBrackets,
                                 slurs: rowSpanners.Slurs,
@@ -1252,7 +1265,7 @@ internal sealed partial class LayoutEngine
                                 systemLeft: systems[sysIdx].Indent,
                                 // ...including a rest another voice pushed UP out of the staff,
                                 // which is exactly the ink a row above this staff has to clear.
-                                restShifts: ctx.RestCollisionsOf(staff))).Up;
+                                restShifts: ctx.RestCollisionsOf(staff)).Up;
                         // ⚠️ REFLECTED ONCE, HERE AT THE EDGE. BuildStaffSkylines works about
                         // the staff's REFERENCE POINT, which is LilyPond's frame;
                         // ChordNameEngraver works in "above the staff's TOP line" throughout,

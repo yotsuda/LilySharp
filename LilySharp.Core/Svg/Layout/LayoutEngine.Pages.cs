@@ -93,13 +93,23 @@ internal sealed partial class LayoutEngine
     /// One (system, staff)'s INSIDE-STAFF SKYLINE out of the per-system lists the room
     /// produced — LilyPond's one <c>inside_staff_skylines</c> per VerticalAxisGroup, which
     /// every consumer of a staff's silhouette reads instead of building its own.
-    /// A COPY, because the consumers translate it into their own frame.
+    /// THE STORED PAIR, READ-ONLY: a consumer that translates a side into its own frame
+    /// copies THAT side as it raises it (<see cref="VerticalSkyline.RaisedCopy"/>), or merges
+    /// it raised without a copy (<see cref="VerticalSkyline.MergeRaised"/>).
     /// </summary>
     /// <remarks>
     /// The same two-passes-ask shape as <see cref="SpannersAt"/>, and the same two absent
     /// cases: null is the preliminary pass (no room yet, and the caller falls back to
     /// building its own); an out-of-range index is a bug in the indexing, not an absence.
     /// LILYPOND-REF: lily/axis-group-interface.cc:914-935 inside_staff_skylines.
+    /// <para>
+    /// ⚠️ IT HANDED OUT A COPY OF BOTH SIDES UNTIL SESSION 518, and every consumer read ONE
+    /// side: the above stacker copied the pair a second time on top and raised the up side,
+    /// the figured-bass drop raised the down side, the chord row the up side. On the
+    /// keystroke path that is the memoized stacker's whole live cost — 7,989 B a tracker
+    /// build, 1.26% of a render (Lab sessions/p518/steps-head4.txt). Now nothing here is
+    /// copied for a reader, and the writers of these tables are unchanged.
+    /// </para>
     /// </remarks>
     private static (VerticalSkyline Up, VerticalSkyline Down)? InsideAt(
         IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>>? bySystem,
@@ -109,8 +119,7 @@ internal sealed partial class LayoutEngine
             || systemIndex < 0 || systemIndex >= bySystem.Count
             || staffIndex < 0 || staffIndex >= bySystem[systemIndex].Count)
             return null;
-        var (up, down) = bySystem[systemIndex][staffIndex];
-        return (SkylineBuilder.Copy(up), SkylineBuilder.Copy(down));
+        return bySystem[systemIndex][staffIndex];
     }
 
     /// <summary>

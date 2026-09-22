@@ -65,9 +65,10 @@ public class OutsideStaffStackMemoTests
         return (texts, barNumbers, tuplets);
     }
 
-    /// <summary>A per-(system, staff) profile source: content the staffProfile delegate
-    /// copies fresh per call (the production delegate's shape) and a stable identity pair
-    /// per key (the stored-table instances the production key reads).</summary>
+    /// <summary>A per-(system, staff) profile source: content built fresh per call (the
+    /// delegate's contract is read-only, so fresh instances and the production delegate's
+    /// stored instances are both allowed) and a stable identity pair per key (the
+    /// stored-table instances the production key reads).</summary>
     private sealed class ProfileSource
     {
         public readonly Dictionary<(int Sys, int Staff), double> Height = new();
@@ -83,8 +84,8 @@ public class OutsideStaffStackMemoTests
         {
             if (!Height.TryGetValue((sys, staff), out double h))
                 return null;
-            // Fresh copies per call, like the production delegate; a bump over x 15..25
-            // that the text at X=20 must clear, so the placed YUp DEPENDS on h.
+            // Fresh instances per call; a bump over x 15..25 that the text at X=20 must
+            // clear, so the placed YUp DEPENDS on h.
             return (VerticalSkyline.FromBox(15, 25, h, h, VerticalDirection.Up),
                     VerticalSkyline.FromBox(15, 25, -2, -2, VerticalDirection.Down));
         }
