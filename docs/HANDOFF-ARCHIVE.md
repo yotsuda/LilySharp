@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第516セッションの経緯
+
+### 1.1 第516セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第515 のすぐ後）。**ユーザー決定「⑶ → ⑵ の順で両方」**＝⒩⁶ の第 3 の道を入れる便。
+★ **`-Start p516` の 1 コマンドで §0 が全部済んだ**（HEAD `01fa39f5`・full 8854 / 0 / 3 / 8857・`-Archive 514` も自動）。
+
+★★★★ **⑴ ⒩⁶ ⑶ を入れた＝`MusicItem` と `NoteItem` の*滅多に書かれない field* を 1 つずつの器へ出した。render 1,660,215 → 1,554,547（−105,668 B／打鍵・−6.37%）・出力は同一**（`8e0…` 後述の通り振る舞いの網は 1 本も動いていない）。`NoteItem` は **216 → 144 B**（第515 の模型の予測ちょうど）・`RestItem` は 96 B。⚠️ **賞金が予測（−83,045）を超えたのは base 側の器が `RestItem`・`ChordItem` にも効いたから**＝NoteItem 側だけの段階で −68,303、base 側を足して −105,668。
+★★ **綴り**: `MusicItemRare`（10 field・`VoiceContext`／`BeginsCueRegion`／`GraceSlash`／phrasingSlur 5 つ／laissezVibrer・repeatTie の位置）と `NoteItemRare`（17 field・`Notehead`／tremolo 3 つ／`Fingering`／`IsCue`／`IsCourtesy`／`EditorialAccidental`／`FeatherDirection`／`HasGlissando`／`AccidentalX`／`ForcedStemUp`／`TabBelowRange`／laissezVibrer・repeatTie の向きと有無）。**public property は転送で残る**ので読み手は 1 軒も変えていない。★★★ **勘所は 2 つ**: ⑴ **`init` は値が今と違うときだけ器を建て直す**（`if (value != X)`）＝既定を書く `with` が器を作らない／⑵ **20 引数の構築子は 9 つの cold を*先に検査*して、1 つでも既定でなければ 1 度だけ建てる**（`with` の連鎖にしない）。
+★ **踏んだ網 1 本**＝`ModelEqualityKindTests`「model の record が等値に答えるのに誰も決めていない」＝新しい 2 つを **Values** に分類した（器は不変で、`with` は置き換えるまで原本と*共有する*＝二つの item が 1 つの器を持つのは正しい。item 自身は今までどおり Entity）。
+  §7 7.5＝**Core '+' 202 行・全部 `MusicItem.cs`**（新 record 2 つと転送 property）。**LILYPOND-REF／LILYSHARP-OWN は 1 行も増えていない**＝移植でも発明でもなく*保管の形*だけの変更なので、新しい出所は要らない。`-End p516` の門は全部 OK・full 8854 / 0 / 3 / 8857。
+
 ## 以下は第515セッションの経緯
 
 ### 1.1 第515セッション（2026-09-23・YT-DELL2）

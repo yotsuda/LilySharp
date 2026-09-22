@@ -100,10 +100,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。**残りの頭＝String 354 KB（SVG の出力が主）・NoteItem 297 KB（**第494 が呼び手で数えた＝設計の値段**: 建てる 1,181,659・`ResolveBeamStemDirections` の `with` 1,173,976＝梁の刻印は collect ごとに新しい BeamId なので必ず写す・`TabResolver.ResolveTabStrings` 509,020＝弦番号の書き込み。消すなら刻印を item の外（側表）へ出す＝土台の変更）・SkylineBuilding[] 226 KB（skyline の中身＝⒫′／⒮¹⁵ ⑴）**。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・`new int[`／`new double[` 141 軒を書き換えて数える・`array-sites.txt`＝残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB）。⚠️ Dictionary／HashSet の bucket も Int32[] だがこの census には出ない。型が分かったら呼びの前後を数える wrapper で軒を絞る（第491〜第493 の手順）。
-  ⇒ **第498〜第503（1 つの会話）で render 2,090,060 → 1,864,434（−225,626・−10.8%）**：臨時記号の参照 skyline（第498 −39,962）・bare duration の写し元の表（第499 −33,625）・render の `--pitches` trace（第500 −65,596）・系の数の候補の行の共有（第501 −56,414）・data-pos の copy-on-write（第502 −9,380）・`ImmutableArray.Create(配列)` の写し（第503 −19,286）。`MeasureSprings.cs:1282/1290` はコーパスで 0 回・`AccidentalPlacement` の `Clone()` は cache の中・`ToBuilder()` 46 軒の頭は `MoveToImmutable` の実仕事（Lab `sessions/p502/tobuilder-price.txt`）。**最新の地図は第508**（Lab `sessions/p508/type-price-head.txt`・Release・render 1,792,885 の時点）＝残る頭は**土台**：String 349 KB（SVG の出力）・NoteItem 236 KB（梁と弦の刻印＝側表へ）・SkylineBuilding[] 150 KB（skyline の中身）。次の候補（小）: **第508 の写しの census の残り**（Lab `sessions/p508/copy-price-head.txt`＝`instrument-copies.ps1`＋`fix-errors.ps1`・Core の `.ToArray()`／`.ToImmutable()`／`.ToImmutableArray()`／`.ToBuilder()`／`.ToList()` 651 軒を拡張メソッドで包み、呼びの前後を軒×要素型で数える。⚠️ 遅延 LINQ は Select の中の実仕事ごと数え、入れ子は二重に数える＝頭の `MeasureCollector.cs:1761/1763` 78 KB は tab 解決）＝**第509 が尾の 4 軒を閉じた＝この島はほぼ尽きた**（残りは `BeamDetector.cs:243` 3,073＝結果の配列で実仕事・`LedgerLineSpannerEngraver.cs:156` 2,834＝⒮¹⁴ のユーザー判断待ち・ほかは 2 KB 未満の尾）／~~`VerticalSkyline.Padded`~~ **第510 が値付けして閉じた**（下の ⒫′）／第506 の census 計器（Lab `sessions/p506/instrument.ps1`・**複数行の field 宣言は数えない**）。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**（報告用の表・warning を render の collector が作っていないか）／⑵ **同じ値の作り直し**（候補ごと・render ごとに建て直すが値は前と同じ）／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
+  ⇒ **第498〜第503（1 つの会話）で render 2,090,060 → 1,864,434（−225,626・−10.8%）**：臨時記号の参照 skyline（第498 −39,962）・bare duration の写し元の表（第499 −33,625）・render の `--pitches` trace（第500 −65,596）・系の数の候補の行の共有（第501 −56,414）・data-pos の copy-on-write（第502 −9,380）・`ImmutableArray.Create(配列)` の写し（第503 −19,286）。`MeasureSprings.cs:1282/1290` はコーパスで 0 回・`AccidentalPlacement` の `Clone()` は cache の中・`ToBuilder()` 46 軒の頭は `MoveToImmutable` の実仕事（Lab `sessions/p502/tobuilder-price.txt`）。**最新の地図は第518**（Lab `sessions/p518/type-price-head.txt`・Release・render 1,452,649 の時点）＝残る頭は**土台**：String 333 KB（SVG の出力）・SkylineBuilding[] 148 KB（skyline の中身）・NoteItem 119 KB（第516・517 で半分）・GreenNode[] 85 KB／SyntaxTokenNode 54 KB／SyntaxToken[] 53 KB／SyntaxNode[] 37 KB（構文＝打鍵ごとの木）・Int32[] 53 KB・Double[] 49 KB・Measure 33 KB・ArticulationLayout[] 26 KB。次の候補（小）: **第508 の写しの census の残り**（Lab `sessions/p508/copy-price-head.txt`＝`instrument-copies.ps1`＋`fix-errors.ps1`・Core の `.ToArray()`／`.ToImmutable()`／`.ToImmutableArray()`／`.ToBuilder()`／`.ToList()` 651 軒を拡張メソッドで包み、呼びの前後を軒×要素型で数える。⚠️ 遅延 LINQ は Select の中の実仕事ごと数え、入れ子は二重に数える＝頭の `MeasureCollector.cs:1761/1763` 78 KB は tab 解決）＝**第509 が尾の 4 軒を閉じた＝この島はほぼ尽きた**（残りは `BeamDetector.cs:243` 3,073＝結果の配列で実仕事・`LedgerLineSpannerEngraver.cs:156` 2,834＝⒮¹⁴ のユーザー判断待ち・ほかは 2 KB 未満の尾）／~~`VerticalSkyline.Padded`~~ **第510 が値付けして閉じた**（下の ⒫′）／第506 の census 計器（Lab `sessions/p506/instrument.ps1`・**複数行の field 宣言は数えない**）。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**（報告用の表・warning を render の collector が作っていないか）／⑵ **同じ値の作り直し**（候補ごと・render ごとに建て直すが値は前と同じ）／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
 - ★★ **⒮²³ `Measure` の直後の写し＝約 129 回 ≈12 KB／打鍵 0.7%・*resume の読み手がいる*ので設計**（第511 起票・Lab `sessions/p511/measure-price.log`＝型の地図の `Measure` 41 KB を構築の呼び手で数えた）。425 回／打鍵＝`EmitMeasure` 107・`ResolveBeamStemDirections` 103（梁の刻印＝NoteItem の土台）・`TabResolver` 85・**emit 直後の `with`＝`AddEndBarlineSource:857` 96.8＋`SetBreak` 25.5＋`SetNoBreak` 5.3＋`HandleBarline` 1.1**（`c4 d e f |` の `|` が auto-fill した小節の `SourceEnd` を動かす）。⚠️ **その場で書き換えられない**: `BuilderCheckpoint.LastMeasure` が境界の `_measures[^1]` を pin し、`TrySpliceSuffix` は**参照の不一致**で「尾が書き換えた」を検出する（`Resume.cs:290`）＝書き換えると門が盲になる。直すなら emit を `|` まで遅らせるか pin を値にする
-- ✅ **⒮²⁴ 「hit で鍵を建てる」の島は尽きた**（第513 が 4 つ値付け＝Lab `sessions/p513/`。`FingScriptMemo` はこのコーパスで 0 回／`Spring` 435 回は 22 軒の実仕事／`SlurCandidate` は採点の候補そのもの／`SystemDetails` は第501 が共有済み）。**HEAD の型の地図の 18 KB 超は全部*土台*か実仕事**（`sessions/p513/type-price-head.txt`）
-- ✅ **⒮¹⁰ 「器ごと憶える」の島は尽きた**（第488 の census＝Lab `sessions/p488/joined.csv`）。残る頭は `LayoutEngine.Prelim.cs:460` 6,166・`LedgerLineSpannerEngraver.cs:274` 5,775（⒮¹⁴ 待ち）。直し方 3 つ（park／建てない／寸法ちょうど）と会計の読み方は RULES §5.3
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
   `Zz463Leg.cs.txt` を price／live の 2 回・join は `joined.csv`・写しの候補は `copies.csv`。**分母 3,687,958**）。
@@ -141,13 +139,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **⒴⁸ batch でない `Merge` 147,417 回／打鍵は未値付け**＝値段が先
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- ★★★ **⒨ memo の front の*program と partition*＝1.261%**＝**今この島で一番大きい**
+- ★★ **⒨ memo の front の*program と partition*＝1.261%**＝**第512・第518 で front は尽きた（下）**
   （第435 実測・実コーパス 231 冊 × 8 打鍵: **`a.prog` 54,842 B／打鍵 0.688%**＝`BuildProgram`（above の
   11 家族ぶんの鍵）・**`a.part` 31,361 B 0.393%**＝11 家族を system で仕分ける・**`b.prog` 10,727 B 0.135%**・
   **`b.part` 3,616 B 0.045%**。呼び出しは両側とも **2.17 回／打鍵**で、above は **4,010 回のうち 4,009 回が
   hit>0**・hit した system は **90,781／打鍵 22.6**）。⚠️ **`prog` は「鍵を建てる」ので、*安くする*には
   鍵の形を変える＝土台の変更**
-  ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**残り＝`part`（system で仕分ける）と miss の建設**＝値段は未測定
+  ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**第518 が front を 6 段に値付けした**（Lab `sessions/p518/steps-head4.txt`・above／below）: part 261／138・prog 2,852／385・filter 1,053／333・**core 31,379／25**・rebuild 8,734／4,393・store 574／219＝**front は尽きた**。core の 77% は `PlaceBarNumbers` の tracker の写しで**第518 が閉じた（−17,839）**。残る頭は **rebuild 8,734**（9 家族の `ToBuilder`＝出力の配列そのもの・struct の家族 55 個／呼び）と core の尾（bar number の outline の対 2,442＝tracker に格納される実仕事・seed 2,393・marks 2,163・voltas 1,253・tracker の merge 1,191）
 - ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・ビット同一）。`VerticalSkyline.Padded` は第510 が値付けして閉じた（3,830 B／打鍵のうち頭を −3,240）。**残り＝`OutsideStaffStacker.cs:3231` 530 B**（padding ごとの cache＝尾）
 - ✅ **⒩⁶ 梁の刻印の写しは閉じた＝render 1,660,215 → 1,452,853（−207,362 B／打鍵・−12.5%）**（第516 が ⑶、第517 が ⑵。ユーザー決定「⑶ → ⑵ の順で両方」）。⑶ **写しを*安くする*** −105,668（`MusicItemRare` 10 field ＋ `NoteItemRare` 17 field＝**`NoteItem` 216→144 B・`RestItem` 96 B**）／⑵ **その場で刻印** −101,694（`StampBeam`／`ClearBeamStamp` の 1 つの扉。写しだけでなく **work 配列と Measure の建て直しも消えた**＝予測 81,098 を超えた理由）。**⑴ 側表は要らなくなった**。
   ⚠️ **⑵ が残した 1 つ＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測。⒮¹² と同じ顔）。**刻印済みで bake に来る item は 340,977／3,683,264＝9.3%**（写していた頃は 0＝recording が item 実体を共有するため）だが、**再 bake は 340,977 件すべて*同じ値*を書き戻した**（RE-BAKE DIFFERED 0）。**毒（clear を殺す）はスイート 8,859 も コーパス 232 冊 × 8 打鍵の「増分＝フル」も 1 つも動かさない**。狙って書いた 2 冊（またぎの手動梁が `]` を得る／失う。`WalkCarriesNothing` は梁を carry に数えないので checkpoint は梁の途中に立てる）も緑＝**網としては成立せず、`ManualBeam*_AcrossAResume_MatchesFull` の 2 本は隣の振る舞いを留めるだけ**。⇒ **二択＝⑴ 破れる形を 1 冊見つけて網にする／⑵ 「効かない保険」として畳めるか**（値段は割当 0 の 1 歩き）。計器は Lab `sessions/p517/`
@@ -202,6 +200,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第518セッション（2026-09-23・YT-DELL2）
+
+新しい会話。⒝ ⒨ の「残り＝part と miss の建設＝値段は未測定」に着手＝**front を段ごとに値付けしたら、値段は front ではなく core の中の 1 軒だった**。
+★ **`-Start p518` の 1 コマンドで §0 が全部済んだ**（HEAD `60fda111`・full 8856 / 0 / 3 / 8859・`-Archive 516` も自動）。
+
+★★★★ **⑴ memo の front を 6 段に割った**（Lab `sessions/p518/steps-head4.txt`・計器 `Zz518*.cs.txt`・型の地図は `type-price-head.txt`）。**above 44,857 B／打鍵 3.09%**＝part 261・prog 2,852・filter 1,053・**core 31,379**・rebuild 8,734・store 574（和が total と一致＝入口に何も建っていない）。below 5,496（rebuild 4,393）。⇒ **⒨ の part は 261＋138 で尽きていた**。**core は生きている grob が 1 呼び 2.8 個で 14,466 B／呼び**——77% が `PlaceBarNumbers`（24,065／打鍵・2.28 本）、その 88% は**小節番号が lazily 建てる tracker**（9,332 B／建設＝base 664・**profile 7,989**・merge 1,191・clef 285）。
+★★★ **⑵ 7,989 は「両側を 2 度写して片側を 1 度読む」**: `staffProfile` delegate が `ctx.InsideOf` の写し（`InsideAt` が Up／Down を `Copy`）を `FromResolvedBuildings` でもう 1 度両方写し、above の tracker は `p.Up` だけ `Raise` して merge、`p.Down` は誰も読まない。**直し＝stored の対を read-only で渡す**。above は `VerticalSkyline.MergeRaised`（写さず raise して merge）、below と他 2 読み手（figured bass の Down・chord row の Up）は読む側だけ `RaisedCopy`／`Copy`。`Raise` の 1 棟の算術を `Raised` に出して 3 つが同じ綴りを通る＝bit 同一（`RaisedBy` は勾配を端点から建て直すので使わない）。
+★★★ **⑶ A/B render 1,452,853 → 1,435,014（−17,839 B／打鍵・−1.228%）**（Lab `ab-after.txt`・`prediction.txt`）。**予測 −17,370 の 102.7%＝上に外れ**——stacker の 2 軒だけで組み、`InsideOf` の他の 2 読み手が両側→片側になった分（約 470）を数えていなかった。5,824 ページ 0 差（`hash.log`）。
+★★ **⑷ 毒 3 本＝3 本とも赤・baseline 8,859 緑**（Lab `poisons.out`）: `MergeRaised` が raise を落とす **280 赤**（above の枠は観測されている）／`RaisedCopy` が raise を落とす **12 赤**（below）／**above の tracker が*共有された* stored の profile を in-place で `Raise` する（旧の手順を新しい共有実体に当てる）＝81 赤＋棚卸し 2**（次の読み手が動いた profile を読む＝**read-only の契約に観測者が居る**）。
+  §7 7.5＝**Core '+' は 4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（写しの数だけの変更・出所は動かしていない・Core '+' 152 行＝commit 前の `-End` は 0 と刷る）。`-End p518` の門は全部 OK・full 8856 / 0 / 3 / 8859・棚卸し 2 表は行番号だけ（新規 0／消滅 0）。
+
+## 以下は第517セッションの経緯
+
 ### 1.1 第517セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き（第516 のすぐ後）。ユーザー決定「⑶ → ⑵ の順で両方」の **⑵**。
@@ -212,18 +223,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★★ **⑶ その `ClearBeamStamp` に観測者が居ない**（⒩⁶ の ⚠️ に起票）。**刻印済みで bake に来る item は 9.3%（340,977／3,683,264）＝空振りではない**のに、**再 bake は全件*同じ値*を書き戻す**（RE-BAKE DIFFERED 0）。毒はスイートもコーパスも動かさず、狙って書いた 2 冊も緑。⚠️ **「毒が緑」を*網が書けた*と読まないこと**＝2 本のテストは名前も remarks も「隣の振る舞いを留めるだけ」に直した。
 ★ **新しい観測者を 1 つ作った**＝**コーパスの「増分＝フル」を同じ扉どうしで突き合わせる脚**（Lab `sessions/p517/Zz517Equiv.cs.txt`・232 冊 × 8 打鍵で 0 差）。⚠️ **最初の版は `SvgGenerator.Generate`（1 枚）と増分の page 配列を比べて 1,856/1,856 差**＝**比較対象が不揃いなだけ**だった。毒を掛ける前に *clean 側が 0* であることを見るまでは、赤も緑も読めない。
   §7 7.5＝**Core '+' は `MusicItem.cs` と `MeasureCollector.Stems.cs`**。LILYPOND-REF は 1 行も増減なし（LP の `stem.cc`／`beam.cc` への参照は動かしていない＝保管と書き込み時期だけの変更）。`-End p517` の門は全部 OK・full 8856 / 0 / 3 / 8859（網 2 本ぶん増えた）。
-
-## 以下は第516セッションの経緯
-
-### 1.1 第516セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き（第515 のすぐ後）。**ユーザー決定「⑶ → ⑵ の順で両方」**＝⒩⁶ の第 3 の道を入れる便。
-★ **`-Start p516` の 1 コマンドで §0 が全部済んだ**（HEAD `01fa39f5`・full 8854 / 0 / 3 / 8857・`-Archive 514` も自動）。
-
-★★★★ **⑴ ⒩⁶ ⑶ を入れた＝`MusicItem` と `NoteItem` の*滅多に書かれない field* を 1 つずつの器へ出した。render 1,660,215 → 1,554,547（−105,668 B／打鍵・−6.37%）・出力は同一**（`8e0…` 後述の通り振る舞いの網は 1 本も動いていない）。`NoteItem` は **216 → 144 B**（第515 の模型の予測ちょうど）・`RestItem` は 96 B。⚠️ **賞金が予測（−83,045）を超えたのは base 側の器が `RestItem`・`ChordItem` にも効いたから**＝NoteItem 側だけの段階で −68,303、base 側を足して −105,668。
-★★ **綴り**: `MusicItemRare`（10 field・`VoiceContext`／`BeginsCueRegion`／`GraceSlash`／phrasingSlur 5 つ／laissezVibrer・repeatTie の位置）と `NoteItemRare`（17 field・`Notehead`／tremolo 3 つ／`Fingering`／`IsCue`／`IsCourtesy`／`EditorialAccidental`／`FeatherDirection`／`HasGlissando`／`AccidentalX`／`ForcedStemUp`／`TabBelowRange`／laissezVibrer・repeatTie の向きと有無）。**public property は転送で残る**ので読み手は 1 軒も変えていない。★★★ **勘所は 2 つ**: ⑴ **`init` は値が今と違うときだけ器を建て直す**（`if (value != X)`）＝既定を書く `with` が器を作らない／⑵ **20 引数の構築子は 9 つの cold を*先に検査*して、1 つでも既定でなければ 1 度だけ建てる**（`with` の連鎖にしない）。
-★ **踏んだ網 1 本**＝`ModelEqualityKindTests`「model の record が等値に答えるのに誰も決めていない」＝新しい 2 つを **Values** に分類した（器は不変で、`with` は置き換えるまで原本と*共有する*＝二つの item が 1 つの器を持つのは正しい。item 自身は今までどおり Entity）。
-  §7 7.5＝**Core '+' 202 行・全部 `MusicItem.cs`**（新 record 2 つと転送 property）。**LILYPOND-REF／LILYSHARP-OWN は 1 行も増えていない**＝移植でも発明でもなく*保管の形*だけの変更なので、新しい出所は要らない。`-End p516` の門は全部 OK・full 8854 / 0 / 3 / 8857。
 
 ## 2. 開いている作業
 
