@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// ONE system's share of <c>LayoutEngine.AugmentSkylinesForPaging</c>, reified: the exact
 /// sequence of skyline merges that turns the system's base paging skyline into its augmented
 /// one, with every argument RESOLVED at build time. The same object is both the merge
-/// program (<see cref="Execute"/>) and the memo key (<see cref="Matches"/>): the program IS
+/// program (<see cref="Execute"/>) and the memo key (<see cref="Builder.Matches"/>): the program IS
 /// the function's input, so "equal program + same base skyline instance ⇒ identical output"
 /// needs no coverage argument over what the annotation layouts were computed FROM — staff
 /// offsets, fonts, neighbours, all of it is already baked into the resolved arguments,
@@ -95,27 +95,6 @@ internal sealed class PagingAugmentProgram
     }
 
     public bool IsEmpty => _kinds.Length == 0;
-
-    /// <summary>Exact key equality: opcodes, resolved numbers (bit-for-bit — a NaN would
-    /// compare unequal and merely cost a recompute) and texts. The payload structs are
-    /// deliberately NOT compared — their merge-read fields are all in the arrays.</summary>
-    public bool Matches(PagingAugmentProgram other)
-    {
-        if (_kinds.Length != other._kinds.Length
-            || _args.Length != other._args.Length
-            || _texts.Length != other._texts.Length)
-            return false;
-        for (int i = 0; i < _kinds.Length; i++)
-            if (_kinds[i] != other._kinds[i])
-                return false;
-        for (int i = 0; i < _args.Length; i++)
-            if (_args[i] != other._args[i])
-                return false;
-        for (int i = 0; i < _texts.Length; i++)
-            if (!string.Equals(_texts[i], other._texts[i], StringComparison.Ordinal))
-                return false;
-        return true;
-    }
 
     /// <summary>Replays the merges against <paramref name="baseline"/> and returns the
     /// augmented pair. The baseline instances are only read (merged FROM), never mutated —
@@ -383,6 +362,36 @@ internal sealed class PagingAugmentProgram
                 _args.Add(b.End);
             }
             _lyricBands.Add(profile);
+        }
+
+        /// <summary>Exact key equality between these steps and a program built earlier:
+        /// opcodes, resolved numbers (bit-for-bit — a NaN would compare unequal and merely
+        /// cost a recompute) and texts. The payload structs are deliberately NOT compared —
+        /// their merge-read fields are all in the arrays.</summary>
+        /// <remarks>
+        /// ⚠️ ASKED OF THE STEPS, NOT OF A PROGRAM BUILT FROM THEM. The lookup used to
+        /// <see cref="Build"/> first and compare two programs, so every system copied its six
+        /// lists out on every keystroke — and on a hit the copy was dropped at once, the stored
+        /// program being the one kept. MEASURED (session 508, Release, the reader's corpus,
+        /// eight forward keystrokes a book): 27.73 builds a keystroke, 9.4 KB of arrays among
+        /// them. Now only a miss builds (<c>SystemLayoutCache.GetOrComputePagingAugment</c>).
+        /// </remarks>
+        public bool Matches(PagingAugmentProgram program)
+        {
+            if (_kinds.Count != program._kinds.Length
+                || _args.Count != program._args.Length
+                || _texts.Count != program._texts.Length)
+                return false;
+            for (int i = 0; i < _kinds.Count; i++)
+                if (_kinds[i] != program._kinds[i])
+                    return false;
+            for (int i = 0; i < _args.Count; i++)
+                if (_args[i] != program._args[i])
+                    return false;
+            for (int i = 0; i < _texts.Count; i++)
+                if (!string.Equals(_texts[i], program._texts[i], StringComparison.Ordinal))
+                    return false;
+            return true;
         }
 
         /// <summary>Copies the steps out: the program owns arrays of its own, so the builder can

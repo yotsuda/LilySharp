@@ -463,13 +463,13 @@ public class SystemLayoutCacheTests
         => (VerticalSkyline.FromBox(0, end, 1, 1, VerticalDirection.Up),
             VerticalSkyline.FromBox(0, end, 1, 1, VerticalDirection.Down));
 
-    /// <summary>A one-step UP program — so the DOWN instance comes straight back and the
-    /// UP one is the identity the assertions read.</summary>
-    private static PagingAugmentProgram VoltaProgram(double start, double end)
+    /// <summary>A one-step UP program's steps — so the DOWN instance comes straight back and
+    /// the UP one is the identity the assertions read.</summary>
+    private static PagingAugmentProgram.Builder VoltaProgram(double start, double end)
     {
         var builder = new PagingAugmentProgram.Builder();
         builder.AddVoltaBox(start, end, 4, 4);
-        return builder.Build();
+        return builder;
     }
 
     private static List<(double Start, double End, double Value)> Shape(VerticalSkyline s)
@@ -539,6 +539,29 @@ public class SystemLayoutCacheTests
         Assert.Equal(Shape(va.up), Shape(again.up));
         Assert.Same(vb.up, cache.GetOrComputePagingAugment(0, b, VoltaProgram(10, 20)).up);
         Assert.Equal((3, 4), cache.PagingAugmentStats);
+    }
+
+    /// <summary>
+    /// The key reads the steps' resolved NUMBERS, not only their kinds: over the same
+    /// baseline instances, a volta moved along the line is a miss and its own silhouette.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ NOTHING ELSE WATCHED IT. POISONED (session 508): a key that skipped the numbers
+    /// (<c>PagingAugmentProgram.Builder.Matches</c> without its <c>_args</c> loop) left all
+    /// 8,850 tests green — the reference half of the key answered first in every book the
+    /// suite edits. The poison serves the first volta's silhouette for the second.
+    /// </remarks>
+    [Fact]
+    public void PagingAugments_AStepMovedOverTheSameBaseline_Misses()
+    {
+        var cache = new SystemLayoutCache();
+        var baseline = Pair(100);
+
+        var first = cache.GetOrComputePagingAugment(0, baseline, VoltaProgram(10, 20));
+        var moved = cache.GetOrComputePagingAugment(0, baseline, VoltaProgram(30, 40));
+
+        Assert.Equal((0, 2), cache.PagingAugmentStats);
+        Assert.NotEqual(Shape(first.up), Shape(moved.up));
     }
 
     private static string LoadFixture(string rel)

@@ -581,20 +581,23 @@ internal sealed class SystemLayoutCache
     /// </remarks>
     public (VerticalSkyline up, VerticalSkyline down) GetOrComputePagingAugment(
         int systemIndex, (VerticalSkyline up, VerticalSkyline down) baseline,
-        PagingAugmentProgram program)
+        PagingAugmentProgram.Builder steps)
     {
         _pagingAugments.TryGetValue(systemIndex, out var slot);
-        if (Serves(slot.Recent, baseline, program))
+        if (Serves(slot.Recent, baseline, steps))
         {
             PagingAugmentStats = (PagingAugmentStats.Hits + 1, PagingAugmentStats.Misses);
             return slot.Recent!.Value;
         }
-        if (Serves(slot.Older, baseline, program))
+        if (Serves(slot.Older, baseline, steps))
         {
             _pagingAugments[systemIndex] = new PagingAugmentSlot(slot.Older, slot.Recent);
             PagingAugmentStats = (PagingAugmentStats.Hits + 1, PagingAugmentStats.Misses);
             return slot.Older!.Value;
         }
+        // Only a miss owns a program: a hit compares the steps where they stand and keeps the
+        // stored one (see PagingAugmentProgram.Builder.Matches).
+        var program = steps.Build();
         var value = program.Execute(baseline);
         _pagingAugments[systemIndex] = new PagingAugmentSlot(
             new PagingAugmentEntry(baseline.up, baseline.down, program, value), slot.Recent);
@@ -604,11 +607,11 @@ internal sealed class SystemLayoutCache
         // The whole key, in one place: same baseline INSTANCES + equal program.
         static bool Serves(
             PagingAugmentEntry? e, (VerticalSkyline up, VerticalSkyline down) baseline,
-            PagingAugmentProgram program)
+            PagingAugmentProgram.Builder steps)
             => e is not null
                 && ReferenceEquals(e.BaseUp, baseline.up)
                 && ReferenceEquals(e.BaseDown, baseline.down)
-                && program.Matches(e.Program);
+                && steps.Matches(e.Program);
     }
 
     /// <summary>Lookups of the paging-augment store by outcome, since this cache was made

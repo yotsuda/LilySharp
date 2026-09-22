@@ -1341,13 +1341,12 @@ internal sealed partial class LayoutEngine
                 result.Add(skylines[s]);
                 continue;
             }
-            var program = builder.Build();
             result.Add(systemCache is null
-                ? program.Execute(skylines[s])
-                : systemCache.GetOrComputePagingAugment(s, skylines[s], program));
+                ? builder.Build().Execute(skylines[s])
+                : systemCache.GetOrComputePagingAugment(s, skylines[s], builder));
         }
 
-        // Every program owns copies of its steps now; give the builders back cleared.
+        // Every program built owns copies of its steps; give the builders back cleared.
         for (int s = 0; s < systemCount; s++)
             builders[s]?.Clear();
         t_pagingBuilders = builders;
