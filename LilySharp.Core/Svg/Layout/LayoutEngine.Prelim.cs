@@ -575,7 +575,7 @@ internal sealed partial class LayoutEngine
     /// staff's, and the renderer draws in list order, so the suite sees it. There is no early
     /// return and no throw between the rent and the give; the memo calls and the per-system
     /// sub-layouts all happen BEFORE the rent. <c>ToImmutable</c> copies, measured
-    /// (session 459) — see <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// (session 459) — see <see cref="BarNumberEngraver"/>'s drawer for the probe.
     /// </para>
     /// <para>
     /// WHAT IT RETAINS is one builder a thread at that thread's busiest staff — 330 layouts,

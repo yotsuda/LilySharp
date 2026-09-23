@@ -1351,7 +1351,7 @@ internal static class MusicMarkEngraver
     /// <c>return</c>s in this method's span belong to its local functions
     /// (<c>ChordBandUp</c> and the band-clearance helper), not to the pass.
     /// <c>ToImmutable</c> copies, measured (session 459) — see
-    /// <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// <see cref="BarNumberEngraver"/>'s drawer for the probe.
     /// </para>
     /// <para>
     /// WHAT IT RETAINS is one builder a thread at that thread's most-marked score — 23

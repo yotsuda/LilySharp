@@ -573,7 +573,6 @@ internal sealed partial class LayoutEngine
             a.Fingerings,
             a.TieVariants,
             a.MultiMeasureRests,
-            a.LedgerLineSpans,
             a.BarNumbers,
             a.StanzaNumbers,
             voiceOffsets, headWipeEntries, dotAdjustments, restShifts)
@@ -726,7 +725,6 @@ internal sealed partial class LayoutEngine
         ImmutableArray<FingeringLayout> Fingerings,
         ImmutableArray<TieVariantLayout> TieVariants,
         ImmutableArray<MultiMeasureRestLayout> MultiMeasureRests,
-        ImmutableArray<LedgerLineSpan> LedgerLineSpans,
         ImmutableArray<BarNumberLayout> BarNumbers,
         ImmutableArray<StanzaNumberLayout> StanzaNumbers,
         ImmutableArray<PartCombineLayout> PartCombineTexts);

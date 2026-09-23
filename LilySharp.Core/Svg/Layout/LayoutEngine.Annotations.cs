@@ -1180,11 +1180,10 @@ internal sealed partial class LayoutEngine
                 ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
                     voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap)
                 : ImmutableArray<MultiMeasureRestLayout>.Empty,
-            // LILYPOND-REF: lily/ledger-line-spanner.cc — LedgerLineSpanner grob.
-            LedgerLineSpans: score != null
-                ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight,
-                    prebuiltMeasureMap: tailMeasureMap)
-                : ImmutableArray<LedgerLineSpan>.Empty,
+            // (The ledger-line spans — lily/ledger-line-spanner.cc's LedgerLineSpanner — were
+            // computed here until session 523 and read by nobody: the notehead path draws its
+            // own ledger lines. Deleted on the owner's decision; a port of LP's spanner
+            // shortening would be a new engraver, not this one.)
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.

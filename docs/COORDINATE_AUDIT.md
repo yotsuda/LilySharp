@@ -348,13 +348,13 @@ note/annotation 幾何を Y-up 化（`YUp` 命名）したが、この staff/sys
 | HairpinEngraver | Height0.6666, broken 2/3・1/3 | Y | ± / frac | ss | :77,:182-184 |
 | DynamicEngraver / TextSpanner / Trill / Glissando / Arpeggio | padding/staff-padding/glyph, `pos·0.5±` | Y/X | up（frame B） | ss | 各所（define-grobs 検証） |
 | PedalEngraver | `PedalBracketLayout.Y`（BracketY6.5） | Y | **device down+** | ss | :60,:200-206（dead code） |
-| LedgerLineSpannerEngraver | `LedgerExtension0.25`, Y=`PositionToDevice` | X/Y | device | ss | :56,:63 |
+| ~~LedgerLineSpannerEngraver~~（第523 に削除＝答えを読む描画が無かった） | `LedgerExtension0.25`, Y=`PositionToDevice` | X/Y | device | ss | — |
 
 #### 忠実性所見
 - **[med] HairpinEngraver.cs:182-184** — LP `hairpin.cc:307-308`: decrescendo は broken で full→1/3 then 2/3→0。
   Lily# は full→2/3 then 1/3→0 と**内側 2 分数が入替**。単位・± 方向は正、分数選択のみ誤り
   → system 跨ぎ decrescendo の taper が逆。（crescendo :177-179 は faithful。）
-- **[low・wrong-unit] LedgerLineSpannerEngraver.cs:63** — LP `ledger-line-spanner.cc:230`
+- ~~**[low・wrong-unit] LedgerLineSpannerEngraver.cs:63**~~（第523 に engraver ごと削除・描く経路は `SkylineBuilder`／符頭経路の `LedgerLengthFraction * headWidth` で既に比率） — LP `ledger-line-spanner.cc:230`
   `widen(length_fraction * head_extent.length())` の 0.25 は**符頭幅の比率**（≈0.25×1.3≈0.33ss/側）。Lily# は
   `LedgerExtension=0.25` を**絶対 ss** として適用 → **無次元比率を ss として誤用**。加線が各側 ~0.08ss 短い。
   Y（`pos·0.5`）は faithful。
@@ -672,7 +672,7 @@ Lily# のレンダラも同形（`BeginGroup(scale)` ＋ `UnscaledXDrawingContex
 | 4 | med | TieFormattingProblem.cs:256,458-473 | wrong-const | center 係数 0.5/1.0 vs LP 0.375/0.75（0.75·h の取り違え） |
 | 5 | med | HairpinEngraver.cs:182-184 | wrong-value | decrescendo broken 分数入替（full→2/3→0 を full→1/3→0 に） |
 | 6 | med | BreakAlignSpacing.cs:182-236 | value-stale | KeyCancellation/TimeSig→StaffBar が旧値（0.3/1.15/2.0 vs 0.5/1.25/1.0） |
-| 7 | low | LedgerLineSpannerEngraver.cs:63 | wrong-unit | 0.25 を符頭幅比率でなく絶対 ss で適用（加線が各側 ~0.08ss 短い） |
+| 7 | low | ~~LedgerLineSpannerEngraver.cs:63~~ | wrong-unit | ~~0.25 を符頭幅比率でなく絶対 ss で適用（加線が各側 ~0.08ss 短い）~~ 第523 に engraver ごと削除（誰も読まない答えだった） |
 | 8 | low | ScoreLayout.cs:259-267 | unit-mix-flag | `GetRestShift` が唯一 half-space（consumer 検証要） |
 | 9 | **high** | `ColumnLayout`/`MeasureLayout`（§3.I） | **frame 欠落** | LP の `NonMusicalPaperColumn`（小節境界に立つ breakable 列）に対応する型が無い。境界が「左小節 EndBarline＋右小節先頭 items」に分割され、同じ列が4か所で部分再発明。**現行出力は正**だが境界の LP 移植は毎回フレーム変換を要する |
 | 10 | **high** | `SpacingRules` の extent ヘルパ3種（§4.7） | **frame-mixed** | 列原点の基準が「左端」と「中心」で混在。**同じ box の左右が別 frame**。0.8 という非 LP 定数が差を埋めていたため値の辻褄は合っており露見しなかった（2026-07-21 発見） |

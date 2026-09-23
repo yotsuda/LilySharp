@@ -848,7 +848,7 @@ internal sealed class PageLayouter
     /// ⚠️ THE GIVE IS AFTER THE DUMP, not after the solve, because the chain is read TWICE:
     /// once into the solver and once, when a probe has asked for the dump, to print spring by
     /// spring. Both are <c>ToImmutable</c>, which COPIES (measured, session 459 — see
-    /// <see cref="LedgerLineSpannerEngraver"/>'s drawer), so neither the solver nor the dump
+    /// <see cref="BarNumberEngraver"/>'s drawer), so neither the solver nor the dump
     /// holds the builder; the give simply has to stand after the later of them.
     /// </para>
     /// <para>

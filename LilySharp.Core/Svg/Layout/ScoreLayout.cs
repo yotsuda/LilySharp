@@ -273,7 +273,6 @@ internal sealed record ScoreLayout(
     ImmutableArray<FingeringLayout> FingeringLayouts,
     ImmutableArray<TieVariantLayout> TieVariantLayouts,
     ImmutableArray<MultiMeasureRestLayout> MultiMeasureRestLayouts,
-    ImmutableArray<LedgerLineSpan> LedgerLineSpans,
     ImmutableArray<BarNumberLayout> BarNumberLayouts,
     ImmutableArray<StanzaNumberLayout> StanzaNumberLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,

@@ -1029,7 +1029,7 @@ internal sealed class MeasureLayouter
     /// previous measure's, and <c>GetXForTiming</c> would read them. There is no early return
     /// and no throw between the rent and the give (the empty-timings guard is at the top of
     /// the method, before the rent). <c>ToImmutable</c> copies, measured (session 459) — see
-    /// <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// <see cref="BarNumberEngraver"/>'s drawer for the probe.
     /// </para>
     /// <para>
     /// WHAT IT RETAINS is one builder a thread at that thread's busiest measure — 16 columns,

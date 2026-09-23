@@ -36,9 +36,9 @@ namespace LilySharp.Core.Svg.Layout;
 /// 85.3% of 10.88 builds a keystroke, so 817 of the site's 962 B/keystroke sits on buckets
 /// of one. The dictionary's own entry grows 8 bytes a bucket against that (+279 B/keystroke,
 /// measured at :422 in the same run) — which is why this shape is only right where the
-/// one-item share is high. It is NOT right at
-/// <c>LedgerLineSpannerEngraver.cs:160</c> (one 27.1%), where the entry growth costs more
-/// than the buckets save: session 455's prediction.txt has that arithmetic.
+/// one-item share is high. It was NOT right at the ledger-line spanner's entry map (one
+/// 27.1%; that engraver was deleted in session 523), where the entry growth cost more than
+/// the buckets saved: session 455's prediction.txt has that arithmetic.
 /// </para>
 /// <para>
 /// ⚠️ <c>Add</c> mutates, so the value must be reached by reference —

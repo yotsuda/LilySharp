@@ -449,8 +449,25 @@ internal static class BarNumberEngraver
     /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
     /// (session 456) — a builder parked dirty would open the next score's numbers with this
     /// score's, which every snapshot of a numbered score sees. There is no early return and no
-    /// throw between the rent and the give. <c>ToImmutable</c> copies, measured (session 459)
-    /// — see <see cref="LedgerLineSpannerEngraver"/>'s drawer for the probe.
+    /// throw between the rent and the give.
+    /// </para>
+    /// <para>
+    /// WHY IT IS SAFE TO PARK, and this is the question the whole family of parked builders
+    /// turned on: <c>ImmutableArray&lt;T&gt;.Builder.ToImmutable</c> COPIES, so the array handed
+    /// to the caller is never the one the drawer keeps. MEASURED rather than read off the
+    /// documentation (session 459, .NET 10.0.12, reference identity through reflection on
+    /// <c>Builder._elements</c> and <c>ImmutableArray.array</c>): not aliased at
+    /// <c>Count == Capacity</c>, below capacity, at <c>Count == 0</c>, or after growing from
+    /// capacity 0 — while the same probe DID see <c>MoveToImmutable</c> and
+    /// <c>DrainToImmutable</c> hand their array over, which is what calibrates it. ⚠️ AND
+    /// THOSE TWO DETACH IT (they leave the builder at capacity 0), so no exit can leave a
+    /// parked builder owning a caller's array; what a Move/Drain site loses instead is the
+    /// POINT of parking, since the drawer would start from empty every time. That is why the
+    /// exact-sized siblings — <see cref="NumberMeasures"/>'s list above,
+    /// <c>LayoutEngine.Prelim</c>'s carried moves, <c>MeasureLayouter</c>'s item layouts — are
+    /// not parked: they already hand their array over. (This remark lived on the ledger-line
+    /// spanner's drawer until session 523 deleted that engraver; every other parked builder's
+    /// remark points here.)
     /// </para>
     /// <para>
     /// WHAT IT RETAINS is one builder a thread at that thread's longest score — 47 numbers,
