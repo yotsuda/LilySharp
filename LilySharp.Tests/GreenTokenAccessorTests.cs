@@ -51,7 +51,7 @@ public class GreenTokenAccessorTests
     public void EveryGreenTokenAccessor_AnswersWhatTheRedTokenDoes()
     {
         var failures = new List<string>();
-        int books = 0, pitches = 0, durations = 0, strings = 0, bars = 0, rests = 0, arts = 0, breaks = 0;
+        int books = 0, pitches = 0, durations = 0, strings = 0, bars = 0, rests = 0, arts = 0, breaks = 0, notes = 0;
 
         var sources = CollectResumeTests.NetBooks()
             .Select(p => (Label: Path.GetFileName(p), Text: TryRead(p)))
@@ -78,6 +78,13 @@ public class GreenTokenAccessorTests
                         durations++;
                         Check(failures, label, d, "Value", d.Value, int.TryParse(d.NumberToken.Text, out int v) ? v : 4);
                         break;
+                    // The readings a note hands out with no red pitch / duration behind them
+                    // (session 521) against the red children they stand in for.
+                    case NoteSyntax noteNode:
+                        notes++;
+                        CheckPitchReading(failures, label, noteNode, noteNode.PitchReading, noteNode.Pitch);
+                        CheckDurationReading(failures, label, noteNode, noteNode.DurationReading, noteNode.Duration);
+                        break;
                     case StringNumberAnnotationSyntax s:
                         strings++;
                         Check(failures, label, s, "StringNumber", s.StringNumber, int.Parse(s.StringNumberToken.Text.TrimStart('\\')));
@@ -92,6 +99,7 @@ public class GreenTokenAccessorTests
                         Check(failures, label, r, "RestText", r.RestText, r.RestToken.Text);
                         Check(failures, label, r, "MeasureCount", r.MeasureCount,
                             r.GetChild(3) is SyntaxTokenNode ct && int.TryParse(ct.Text, out int n) && n >= 1 ? n : 1);
+                        CheckDurationReading(failures, label, r, r.DurationReading, r.Duration);
                         break;
                     case ArticulationSyntax a:
                         arts++;
@@ -122,9 +130,30 @@ public class GreenTokenAccessorTests
         Assert.True(failures.Count == 0,
             $"{failures.Count} mismatch(es):\n" + string.Join("\n", failures.Take(20)));
         Assert.True(books >= 50 && pitches >= 1000 && durations >= 500 && strings >= 5
-            && bars >= 500 && rests >= 50 && arts >= 50 && breaks >= 3,
+            && bars >= 500 && rests >= 50 && arts >= 50 && breaks >= 3 && notes >= 1000,
             $"the net did not bite: {books} books, {pitches} pitches, {durations} durations, {strings} strings, "
-            + $"{bars} barlines, {rests} rests, {arts} articulations, {breaks} breaks");
+            + $"{bars} barlines, {rests} rests, {arts} articulations, {breaks} breaks, {notes} notes");
+    }
+
+    private static void CheckPitchReading(List<string> failures, string label, SyntaxNode owner,
+        PitchReading reading, PitchSyntax red)
+    {
+        Check(failures, label, owner, "PitchReading.PitchName", reading.PitchName, red.PitchName);
+        Check(failures, label, owner, "PitchReading.OctaveOffset", reading.OctaveOffset, red.OctaveOffset);
+        Check(failures, label, owner, "PitchReading.Accidental", reading.Accidental, red.Accidental);
+        Check(failures, label, owner, "PitchReading.AccidentalOffset", reading.AccidentalOffset, red.AccidentalOffset);
+        Check(failures, label, owner, "PitchReading.QuarterOffset", reading.QuarterOffset, red.QuarterOffset);
+        Check(failures, label, owner, "PitchReading.SourceStart", reading.SourceStart, red.SourceStart);
+    }
+
+    private static void CheckDurationReading(List<string> failures, string label, SyntaxNode owner,
+        DurationReading reading, DurationSyntax? red)
+    {
+        Check(failures, label, owner, "DurationReading.IsPresent", reading.IsPresent, red != null);
+        if (red == null)
+            return;
+        Check(failures, label, owner, "DurationReading.Value", reading.Value, red.Value);
+        Check(failures, label, owner, "DurationReading.DotCount", reading.DotCount, red.DotCount);
     }
 
     // SyntaxFacts.NetOctaveMarks as it was spelled on the red children until session 520.

@@ -49,7 +49,7 @@ internal static class SyntaxFacts
     /// their members held as NODES rather than tokens. A green whose slot 0 could be a mark
     /// would break the fold silently, so this is where the six are named. ⚠️ THE SEVENTH BROKE THAT: a volta ending's RANGE SEPARATOR
     /// (<c>[1,3. B]</c>) is a Comma token of its own, standing before the section name — so
-    /// that one reader passes a starting slot (<see cref="NetOctaveMarksFrom"/>) and the
+    /// that one reader passes a starting slot (<see cref="NetOctaveMarksFrom(SyntaxNode, int)"/>) and the
     /// exception is written down here rather than discovered by whoever adds the eighth.
     /// </remarks>
     public static int NetOctaveMarks(SyntaxNode node) => NetOctaveMarksFrom(node, 0);
@@ -68,8 +68,12 @@ internal static class SyntaxFacts
     /// corpus, all built to be looked at once).
     /// </remarks>
     public static int NetOctaveMarksFrom(SyntaxNode node, int firstSlot)
+        => NetOctaveMarksFrom(node.Green, firstSlot);
+
+    /// <summary>The fold itself, on a green node — what a <see cref="PitchReading"/> asks
+    /// with no red pitch at all (session 521).</summary>
+    internal static int NetOctaveMarksFrom(InternalSyntax.GreenNode green, int firstSlot)
     {
-        var green = node.Green;
         int offset = 0;
         for (int i = firstSlot; i < green.SlotCount; i++)
         {

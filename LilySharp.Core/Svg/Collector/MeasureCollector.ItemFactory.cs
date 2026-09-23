@@ -30,7 +30,12 @@ public sealed partial class MeasureCollector
 {
     private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0, bool isCue = false)
     {
-        var rp = CalculateStaffPosition(note.Pitch);
+        // The pitch and the duration are read off the green slots (PitchReading /
+        // DurationReading): nothing below wants the red child, and for a plain note the
+        // red pitch was the first child asked for — the one that made the note's children
+        // array come to exist (session 521).
+        var pitch = note.PitchReading;
+        var rp = CalculateStaffPosition(pitch);
         _octave.CurrentOctave = rp.RelativeOctave;
         int staffPosition = rp.StaffPosition;
 
@@ -52,11 +57,12 @@ public sealed partial class MeasureCollector
                 _resolvedSpellingLog.Add((note, ImmutableArray.Create(resolvedSpelling)));
         }
 
-        int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        var duration = note.DurationReading;
+        int noteValue = duration.IsPresent ? duration.Value : (int)_defaultDuration.Denominator;
         // An undurated note takes the whole default — dots included (`c8. c` is two
         // dotted eighths). LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration.
-        int dots = note.Duration?.DotCount ?? _defaultDots;
-        if (note.Duration != null)
+        int dots = duration.IsPresent ? duration.DotCount : _defaultDots;
+        if (duration.IsPresent)
         {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
             _defaultDots = dots;
@@ -92,8 +98,8 @@ public sealed partial class MeasureCollector
 
         // Quarter tones always print their own accidental (they are never in
         // the key). LILYPOND-REF: quarter-tone note names ih/eh/isih/eseh.
-        if (note.Pitch.QuarterOffset != 0)
-            accidental = QuarterToneAccidental(note.Pitch, accidental);
+        if (pitch.QuarterOffset != 0)
+            accidental = QuarterToneAccidental(pitch.AccidentalOffset, pitch.QuarterOffset, accidental);
 
         // Explicit @courtesy annotation: print the pitch's accidental in parentheses.
         if (_courtesySourcePositions.Contains(note.SourceStart))
@@ -223,12 +229,13 @@ public sealed partial class MeasureCollector
     /// </remarks>
     private RestItem CreatePitchedRestItem(NoteSyntax note)
     {
-        var rp = CalculateStaffPosition(note.Pitch);
+        var rp = CalculateStaffPosition(note.PitchReading);
         _octave.CurrentOctave = rp.RelativeOctave;
 
-        int noteValue = note.Duration?.Value ?? (int) _defaultDuration.Denominator;
-        int dots = note.Duration?.DotCount ?? _defaultDots;
-        if (note.Duration != null)
+        var duration = note.DurationReading;
+        int noteValue = duration.IsPresent ? duration.Value : (int)_defaultDuration.Denominator;
+        int dots = duration.IsPresent ? duration.DotCount : _defaultDots;
+        if (duration.IsPresent)
         {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
             _defaultDots = dots;
@@ -244,9 +251,10 @@ public sealed partial class MeasureCollector
     {
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
-        int noteValue = forcedDuration?.Value ?? rest.Duration?.Value ?? (int)_defaultDuration.Denominator;
-        int dots = forcedDuration?.Dots ?? rest.Duration?.DotCount ?? _defaultDots;
-        if (forcedDuration == null && rest.Duration != null)
+        var duration = rest.DurationReading;
+        int noteValue = forcedDuration?.Value ?? (duration.IsPresent ? duration.Value : (int)_defaultDuration.Denominator);
+        int dots = forcedDuration?.Dots ?? (duration.IsPresent ? duration.DotCount : _defaultDots);
+        if (forcedDuration == null && duration.IsPresent)
         {
             _defaultDuration = Fraction.FromNoteValue(noteValue);
             _defaultDots = dots;
@@ -1003,6 +1011,15 @@ public sealed partial class MeasureCollector
     /// shift, removed 2026-08-28, was equivariant in sevenths the same way).
     /// </param>
     private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch, int groupOctaves = 0)
+        => CalculateStaffPosition(pitch.Reading, groupOctaves);
+
+    /// <summary>
+    /// The resolution itself, on the pitch's readings — the spelling the note factory
+    /// calls with no red pitch behind it (session 521: 288 Pitch reds a keystroke came into
+    /// being for this one call, the first red child of most notes, and with them the
+    /// notes' children arrays). A caller holding a red pitch goes through the overload above.
+    /// </summary>
+    private ResolvedPitch CalculateStaffPosition(PitchReading pitch, int groupOctaves = 0)
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
         int step = GetPitchIndex(pitchName);

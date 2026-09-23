@@ -3970,7 +3970,12 @@ public sealed partial class MeasureCollector
     /// <summary>Display accidental kind for a quarter-tone pitch (ih/eh/isih/eseh).
     /// LILYPOND-REF: quarter-tone note names; glyphs = accidentals.*.slash*.</summary>
     private static string? QuarterToneAccidental(PitchSyntax pitch, string? fallback)
-        => (pitch.AccidentalOffset, pitch.QuarterOffset) switch
+        => QuarterToneAccidental(pitch.AccidentalOffset, pitch.QuarterOffset, fallback);
+
+    /// <summary>The rule itself, on the two offsets — what the note factory asks of a
+    /// <see cref="PitchReading"/> (session 521).</summary>
+    private static string? QuarterToneAccidental(int accidentalOffset, int quarterOffset, string? fallback)
+        => (accidentalOffset, quarterOffset) switch
         {
             (0, 1) => "quarterSharp",
             (1, 1) => "threeQuarterSharp",

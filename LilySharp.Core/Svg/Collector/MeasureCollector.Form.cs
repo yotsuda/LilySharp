@@ -336,15 +336,17 @@ public sealed partial class MeasureCollector
             // Direct children only — the old descendant walk re-read the section's whole
             // music body to apply a filter (`child.Parent == section`) that IS the
             // direct-child test, so the narrowing is an identity (session 145: that walk
-            // enumerated 234k nodes per keystroke per part on perf-fingbeam1k).
-            foreach (var child in section.ChildNodes())
+            // enumerated 234k nodes per keystroke per part on perf-fingbeam1k). The kind is
+            // read off the green slot, and only an override's red is built (session 521).
+            var green = section.Green;
+            for (int i = 0; i < green.SlotCount; i++)
             {
-                if (child is OverrideDeclarationSyntax secOv)
-                {
-                    CollectOverride(secOv, builder.CurrentMeasureIndex, builder.CurrentItemCount,
-                        isOnce: false, staffIndex: _cursor.StaffIndex);
-                    _sectionActiveGrobProps.Add((secOv.GrobName.Text, secOv.PropertyName.Text));
-                }
+                if (green.GetSlot(i)?.Kind != SyntaxKind.OverrideDeclaration)
+                    continue;
+                var secOv = (OverrideDeclarationSyntax)section.GetChild(i)!;
+                CollectOverride(secOv, builder.CurrentMeasureIndex, builder.CurrentItemCount,
+                    isOnce: false, staffIndex: _cursor.StaffIndex);
+                _sectionActiveGrobProps.Add((secOv.GrobName.Text, secOv.PropertyName.Text));
             }
         }
 
@@ -480,19 +482,26 @@ public sealed partial class MeasureCollector
         // so every part block is a DIRECT child of its section declaration. The old
         // descendant walk visited part v's entire music body before reaching sibling
         // part w — O(section) per part, per section, per keystroke.
-        foreach (var child in section.ChildNodes())
+        // The scan reads the KIND off each green slot and builds a red only for a part
+        // block: ChildNodes() built one for every direct child to type-test it, and in a
+        // single-part book (`section A { c d e }`) the direct children ARE the music —
+        // MEASURED (session 521, Release, the owner's corpus, 232 books × eight forward
+        // keystrokes): 512 reds a keystroke, 358 of them notes, built here to be asked
+        // "are you a part block?" and, for the bars the resume adopts, nothing else.
+        var sectionGreen = section.Green;
+        for (int i = 0; i < sectionGreen.SlotCount; i++)
         {
-            if (child is PartBlockSyntax partBlock)
+            if (sectionGreen.GetSlot(i)?.Kind != SyntaxKind.PartBlock)
+                continue;
+            var partBlock = (PartBlockSyntax)section.GetChild(i)!;
+            if (_voiceName == null || partBlock.Name == _voiceName)
             {
-                if (_voiceName == null || partBlock.Name == _voiceName)
-                {
-                    ProcessMusicContainer(partBlock, processNodes);
-                    matched = true;
+                ProcessMusicContainer(partBlock, processNodes);
+                matched = true;
 
-                    // One part block per voice name; stop looking. (A null voice
-                    // is single-staff and legitimately concatenates every block.)
-                    if (_voiceName != null) break;
-                }
+                // One part block per voice name; stop looking. (A null voice
+                // is single-staff and legitimately concatenates every block.)
+                if (_voiceName != null) break;
             }
         }
 
@@ -514,17 +523,28 @@ public sealed partial class MeasureCollector
         // part and its inline music is that part's alone, so other voices must spacer-fill it.
         if (!matched && section.Parent is CompilationUnitSyntax && SectionHasInlineMusic(section))
         {
-            // Direct children only, already materialized by GetChild — wrap preset.
-            var inline = new List<GreenSite>();
-            for (int i = 0; i < section.SlotCount; i++)
+            // The section's direct children as lazy sites — the same two shapes
+            // ProcessMusicContainer hands a part block's music in (a lazy list the resumed
+            // collect seeks into by slot path, an eager one for the recording collect), on
+            // a rule that collects the direct children and descends into nothing. Until
+            // session 521 this arm wrapped the children ALREADY RED ("preset"): every note
+            // of a single-part section was materialised on every keystroke, adopted prefix
+            // included, and a preset list has no gather root, so no checkpoint could seek.
+            if (WalkProbe is { IsRecording: false } resumer)
             {
-                var child = section.GetChild(i);
-                if (child is VariableReferenceSyntax varRef)
-                    ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, inline, varRef);
-                else if (child != null && IsCollectableMusicNode(child))
-                    inline.Add(new GreenSite(child));
+                var lazySites = RentGatherSites();
+                processNodes(MusicSiteList.Lazy(section, s_inlineSiteRule,
+                    InlineSectionSites(section), GatherContainerSite, resumer, lazySites));
+                GiveGatherSites(lazySites);
             }
-            processNodes(MusicSiteList.Preset(inline));
+            else
+            {
+                var inline = RentGatherSites();
+                foreach (var site in InlineSectionSites(section))
+                    GatherContainerSite(site, inline);
+                processNodes(MusicSiteList.Eager(inline, section));
+                GiveGatherSites(inline);
+            }
         }
 
         // Pad this voice up to the section's canonical bar count so every staff stays
@@ -661,21 +681,44 @@ public sealed partial class MeasureCollector
     /// </remarks>
     internal static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
     {
-        for (int i = 0; i < section.SlotCount; i++)
+        // Read on the green slots: the answer is a function of the children's KINDS
+        // (1:1 with the red types — SyntaxNode.CreateRed), and asking GetChild of every
+        // slot built a red for each — the keyword and brace tokens and, in a single-part
+        // book, the first note, three times a section a keystroke (session 521). The net
+        // is SectionDirectChildrenGreenTests, which holds this to the red spelling.
+        var green = section.Green;
+        for (int i = 0; i < green.SlotCount; i++)
         {
-            var child = section.GetChild(i);
-            if (child is null or SyntaxTokenNode)
+            var child = green.GetSlot(i);
+            if (child is null || child.IsToken)
                 continue;
-            if (child is PartBlockSyntax or ChordPartBlockSyntax or LyricsBlockSyntax)
-                continue;
-            if (child is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-                or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax
-                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax)
-                continue; // a directive — a section-level grob override doesn't make it inline
+            if (IsSectionBlockOrDirectiveKind(child.Kind))
+                continue; // a part / chord / lyrics block, or a directive — a section-level grob override doesn't make it inline
             return true; // a music node
         }
         return false;
     }
+
+    /// <summary>The direct-child kinds that do NOT make a section inline music: its part,
+    /// chord and lyrics blocks and its header directives.</summary>
+    private static bool IsSectionBlockOrDirectiveKind(SyntaxKind kind) => kind is
+        SyntaxKind.PartBlock or SyntaxKind.ChordPartBlock or SyntaxKind.LyricsBlock
+            or SyntaxKind.KeySignature or SyntaxKind.TimeSignature or SyntaxKind.TempoDeclaration
+            or SyntaxKind.PartialDeclaration or SyntaxKind.ClefDeclaration or SyntaxKind.OctaveDirective
+            or SyntaxKind.OverrideDeclaration or SyntaxKind.RevertDeclaration or SyntaxKind.OnceModifier;
+
+    /// <summary>The inline arm's gather rule: a section's DIRECT children that are music
+    /// candidates (collectable kinds and variable references — what
+    /// <see cref="GatherContainerSite"/> sorts), descending into none of them. The one rule
+    /// both shapes of the inline list and a checkpoint's seek (<see cref="MusicSiteList.TrySeek"/>)
+    /// walk by.</summary>
+    private static readonly GreenSiteRule s_inlineSiteRule = static g => (IsMusicCandidateKind(g.Kind), false);
+
+    /// <summary>A top-level section's inline music as lazy sites — its direct music
+    /// candidates in slot order, no red built until a site is consumed. Internal for the
+    /// net (SectionDirectChildrenGreenTests) that holds it to the red spelling it replaced.</summary>
+    internal static IEnumerable<GreenSite> InlineSectionSites(SectionDeclarationSyntax section)
+        => section.GreenSitesLazy(s_inlineSiteRule);
 
     /// <summary>
     /// The canonical bar count of a section: the greatest bar count among every part

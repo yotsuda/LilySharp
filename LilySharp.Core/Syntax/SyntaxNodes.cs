@@ -127,12 +127,7 @@ public sealed class PitchSyntax : SyntaxNode
     /// octave marks below, 31% of every red the render made, read once and never again.
     /// </para>
     /// </remarks>
-    public string PitchName => Green.GetSlot(0)!.Text switch
-    {
-        "es" => "ees",
-        "as" => "aes",
-        var t => t,
-    };
+    public string PitchName => NameOf(Green);
 
     /// <summary>
     /// Number of octave marks (' positive, , negative).
@@ -147,7 +142,46 @@ public sealed class PitchSyntax : SyntaxNode
     /// <summary>
     /// The accidental suffix (is, es, isis, eses, s, as) or empty string.
     /// </summary>
-    public string Accidental => PitchName.Length > 1 ? PitchName[1..] : string.Empty;
+    public string Accidental => AccidentalOf(PitchName);
+
+    /// <summary>The same readings with no red pitch behind them — what a reader holding
+    /// the NOTE asks through <see cref="NoteSyntax.PitchReading"/>; here for a reader that
+    /// already holds the pitch and wants one spelling of the arithmetic.</summary>
+    public PitchReading Reading => new(Green, Position);
+
+    /// <summary><see cref="PitchName"/> off a pitch green: the token's text with the Dutch
+    /// contractions normalised. The one spelling both the red and the reading use.</summary>
+    internal static string NameOf(InternalSyntax.GreenNode pitchGreen) => pitchGreen.GetSlot(0)!.Text switch
+    {
+        "es" => "ees",
+        "as" => "aes",
+        var t => t,
+    };
+
+    /// <summary><see cref="Accidental"/> of a pitch name.</summary>
+    internal static string AccidentalOf(string pitchName)
+        => pitchName.Length > 1 ? pitchName[1..] : string.Empty;
+
+    /// <summary><see cref="AccidentalOffset"/> of an accidental suffix.</summary>
+    internal static int AccidentalOffsetOf(string accidental) => accidental switch
+    {
+        "isis" => 2,
+        "isih" => 1,
+        "is" => 1,
+        "" => 0,
+        "es" => -1,
+        "eseh" => -1,
+        "eses" => -2,
+        _ => 0
+    };
+
+    /// <summary><see cref="QuarterOffset"/> of an accidental suffix.</summary>
+    internal static int QuarterOffsetOf(string accidental) => accidental switch
+    {
+        "ih" or "isih" => 1,
+        "eh" or "eseh" => -1,
+        _ => 0
+    };
 
     /// <summary>
     /// Per-pitch articulations attached inside a chord (e.g., <c>&lt;c@finger.1&gt;</c>).
@@ -166,27 +200,95 @@ public sealed class PitchSyntax : SyntaxNode
     /// <summary>
     /// Gets the accidental as semitone offset (-2 to +2).
     /// </summary>
-    public int AccidentalOffset => Accidental switch
-    {
-        "isis" => 2,
-        "isih" => 1,
-        "is" => 1,
-        "" => 0,
-        "es" => -1,
-        "eseh" => -1,
-        "eses" => -2,
-        _ => 0
-    };
+    public int AccidentalOffset => AccidentalOffsetOf(Accidental);
 
     /// <summary>Quarter-tone offset on top of <see cref="AccidentalOffset"/>:
     /// +1 = a quarter sharp higher (ih / isih), -1 = a quarter flat lower
     /// (eh / eseh), 0 otherwise. LILYPOND-REF: quarter-tone note names.</summary>
-    public int QuarterOffset => Accidental switch
+    public int QuarterOffset => QuarterOffsetOf(Accidental);
+}
+
+/// <summary>
+/// What a reader of a written pitch wants — its name, octave marks, accidental, quarter
+/// tone and source address — read off the pitch's GREEN node, with no red
+/// <see cref="PitchSyntax"/> built to be asked once.
+/// </summary>
+/// <remarks>
+/// <para>
+/// ⚠️⚠️ THIS TYPE EXISTS IN ORDER NOT TO BE ALLOCATED, the reason <see cref="ChildNodeList"/>
+/// is a struct. The collector resolves every note it re-collects through
+/// <c>CalculateStaffPosition</c>, once a keystroke, and until session 521 it reached the pitch
+/// through <see cref="NoteSyntax.Pitch"/> — a red node built for those five reads and never
+/// looked at again, and the FIRST red child of a plain note, so the note's own children array
+/// came to exist for it too. MEASURED (session 521, Release, the owner's corpus, 232 books ×
+/// eight forward keystrokes): 288 Pitch reds a keystroke, every one of them from that one
+/// call.
+/// </para>
+/// <para>
+/// Every reading is the same arithmetic the red accessor runs
+/// (<see cref="PitchSyntax.PitchName"/> and its siblings share the static spellings on
+/// <see cref="PitchSyntax"/>), and <see cref="SourceStart"/> is <see cref="SyntaxNode.Span"/>'s
+/// start computed from the same widths. GreenTokenAccessorTests holds each reading to the red
+/// on every net book.
+/// </para>
+/// </remarks>
+public readonly struct PitchReading
+{
+    private readonly InternalSyntax.GreenNode _green;
+    private readonly int _position;
+
+    internal PitchReading(InternalSyntax.GreenNode green, int position)
     {
-        "ih" or "isih" => 1,
-        "eh" or "eseh" => -1,
-        _ => 0
-    };
+        _green = green;
+        _position = position;
+    }
+
+    /// <summary><see cref="PitchSyntax.PitchName"/>.</summary>
+    public string PitchName => PitchSyntax.NameOf(_green);
+
+    /// <summary><see cref="PitchSyntax.OctaveOffset"/>.</summary>
+    public int OctaveOffset => SyntaxFacts.NetOctaveMarksFrom(_green, 0);
+
+    /// <summary><see cref="PitchSyntax.Accidental"/>.</summary>
+    public string Accidental => PitchSyntax.AccidentalOf(PitchName);
+
+    /// <summary><see cref="PitchSyntax.AccidentalOffset"/>.</summary>
+    public int AccidentalOffset => PitchSyntax.AccidentalOffsetOf(Accidental);
+
+    /// <summary><see cref="PitchSyntax.QuarterOffset"/>.</summary>
+    public int QuarterOffset => PitchSyntax.QuarterOffsetOf(Accidental);
+
+    /// <summary>The pitch's <see cref="SyntaxNode.SourceStart"/>: its full-span start plus
+    /// its first terminal's leading trivia.</summary>
+    public int SourceStart => _position + _green.GetLeadingTriviaWidth();
+}
+
+/// <summary>
+/// What a reader of a written duration wants — whether one was written, its number and its
+/// dots — read off the GREEN duration slot, with no red <see cref="DurationSyntax"/> built to
+/// be asked once. The default value is the ABSENT duration (an undurated note inherits).
+/// </summary>
+/// <remarks>
+/// A struct for the reason <see cref="PitchReading"/> is one: the collector asked
+/// <see cref="NoteSyntax.Duration"/> three times per note it re-collected (session 521:
+/// 107 + 23 Duration reds a keystroke over the owner's corpus, all from the item factory).
+/// <see cref="Value"/> and <see cref="DotCount"/> are the red accessors' own spellings.
+/// </remarks>
+public readonly struct DurationReading
+{
+    private readonly InternalSyntax.GreenNode? _green;
+
+    internal DurationReading(InternalSyntax.GreenNode? green) => _green = green;
+
+    /// <summary>True when a duration was written; the other readings are undefined when
+    /// it was not.</summary>
+    public bool IsPresent => _green != null;
+
+    /// <summary><see cref="DurationSyntax.Value"/>.</summary>
+    public int Value => DurationSyntax.ValueOf(_green!);
+
+    /// <summary><see cref="DurationSyntax.DotCount"/>.</summary>
+    public int DotCount => _green!.SlotCount - 1;
 }
 
 /// <summary>
@@ -208,12 +310,17 @@ public sealed class DurationSyntax : SyntaxNode
     /// broken input (e.g. <c>partial .</c>) must never throw here, or it takes the whole
     /// render / diagnostics pass down with it (that emptied the Problems panel).
     /// </summary>
-    public int Value => int.TryParse(Green.GetSlot(0)!.Text, out int v) ? v : 4;
+    public int Value => ValueOf(Green);
 
     /// <summary>
     /// Number of dots.
     /// </summary>
     public int DotCount => SlotCount - 1;
+
+    /// <summary><see cref="Value"/> off a duration green — the one spelling the red and a
+    /// <see cref="DurationReading"/> share.</summary>
+    internal static int ValueOf(InternalSyntax.GreenNode durationGreen)
+        => int.TryParse(durationGreen.GetSlot(0)!.Text, out int v) ? v : 4;
 
     /// <summary>
     /// Converts to a Fraction representing the duration.
@@ -235,6 +342,14 @@ public sealed class NoteSyntax : SyntaxNode
     public PitchSyntax Pitch => (PitchSyntax)GetChild(0)!;
     /// <summary>The note's duration, or null when unspecified (inherited from the previous note).</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+
+    /// <summary>The pitch's readings off the green (slot 0 stands at this note's own
+    /// position) — <see cref="Pitch"/> without the red; see <see cref="PitchReading"/>.</summary>
+    public PitchReading PitchReading => new(Green.GetSlot(0)!, Position);
+
+    /// <summary>The duration's readings off the green, absent when none was written —
+    /// <see cref="Duration"/> without the red; see <see cref="DurationReading"/>.</summary>
+    public DurationReading DurationReading => new(Green.GetSlot(1));
 
     /// <summary>
     /// Gets the tremolo suffix (:8, :16, :32) if present.
@@ -384,6 +499,10 @@ public sealed class RestSyntax : SyntaxNode
     public string RestText => Green.GetSlot(0)!.Text;
     /// <summary>The rest's duration, or null when unspecified.</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+
+    /// <summary>The duration's readings off the green, absent when none was written —
+    /// <see cref="Duration"/> without the red; see <see cref="DurationReading"/>.</summary>
+    public DurationReading DurationReading => new(Green.GetSlot(1));
 
     /// <summary>
     /// Multi-measure rest count (the N in <c>R1*N</c>). Returns 1 when no
