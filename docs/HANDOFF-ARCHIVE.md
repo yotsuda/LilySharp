@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第524セッションの経緯
+
+### 1.1 第524セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。⒳⁵ の 2 冊を LP 双子と突き合わせた（§1.0 ⒳⁵ に数）。
+★ `-Start p524`（HEAD `03eac94b`・full 8862 / 0 / 2 / 8864・`-Archive 522`）。
+
+★★★ **⑴ ⒳⁵ の LP 双子**: 2 冊の形を 1 小節に切り出し（Lab `sessions/p524/GT.lys`・`LST.lys`）、`lysc ly` で双子を出して `Tie.after-line-breaking` の dump（`chordflag.ly`・p452 の `tie-outline-boxes.ly` の型）で control point を読んだ。Lily# 側は `RecordingDocumentContext` の bow と符頭 glyph（`Zz524BowProbeTests.cs.txt`）。**結果は §1.0 ⒳⁵**＝箱を建てると下の tie が LP に寄る（GT 0.47→0.04・LST exact）。上の tie は元から exact。判断はユーザー。
+★★★ **⑵ ⒳⁵ 建てた**（ユーザー「建てて」）: `ElementCoordinator.cs:1898` の条件を `item is NoteItem { IsBeamed: false } or ChordItem { IsBeamed: false }` に（LP `tie-formatting-problem.cc:181-190` は Stem の旗を*符頭の数を問わず*入れる）。**台帳点 2 対を、予測を先に書いて起票**（RULES §5.0）＝`probes/tie-chord-flag.ly`（⑴ の 2 冊・bass・`\fixed c'`）・`tie.width.chord-flag`（TCFX＝GT の下の tie の幅・LP 0.844700・**予測 +0.04 → 実測 +0.040000000**）・`tie.y.chord-flag`（TCFY＝LST の下の tie の高さ・LP −0.350129・**予測 0 → −4.32e−07**）。`tie-outline-boxes.ly` の「旗に本は無い」注記と `TieColumnParts.Flag` の doc を書き直した。**hash: 5,816 頁のうち 24 行・2 冊**（GT 16・LST 8＝第523 の測定と同じ・Lab `sessions/p524/hashes-chordflag.txt`＝**次便からの baseline はこれ**）・**A/B render 1,257,698 → 1,257,679（−19＝±0）**・スイートは台帳 2 点のほか 0 本動く・棚卸しは行番号だけ。残りの 0.04 は **⒳¹⁶** として §1.0 に起票。
+  §7 7.5＝**Core '+' 15 行・LILYPOND-REF 1（旗の箱の条件の remark＝:181-190）／LILYSHARP-OWN 0**。`-End p524` OK・full 8864 / 0 / 2 / 8866（台帳 +2）・棚卸しは行番号だけ・commit `12c0a36a`（コード＋台帳＋probe＋表）。
+
 ## 以下は第523セッションの経緯
 
 ### 1.1 第523セッション（2026-09-23・YT-DELL2）

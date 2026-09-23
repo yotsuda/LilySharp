@@ -92,7 +92,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **LP の旗が喋るのは*和音*の場合**（`set_column_chord_outline` は Stem の旗を無条件に入れる＝
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**。**第523 が測った（ユーザー「測ってよい」）**: 和音にも旗の箱を建てる 1 行（Lab `sessions/p523/chord-flag-box.patch`）で **実コーパス 5,816 頁のうち 24 頁・2 冊が動く**（`Green-Tinted Sixties Mind.lys` 16 頁分・`Let's Stay Together.lys` 8 頁分）・**スイートは 0 本動く**（fixture に旗が tie に触る和音が無い）・割当 ±0。**第524 が LP 双子と突き合わせた**（Lab `sessions/p524/result.txt`・`chordflag.ly`）: `<e a>8~` の下の tie は HEAD（x0 0.852・幅 1.317）→ 箱あり（1.285・0.885）で LP（1.325・0.845）に 0.47 → **0.04** まで寄り、`<d, fis>8~` の下の tie の y は HEAD −0.315 → 箱あり **−0.350129＝LP と exact**。上の tie は両方とも元から exact。⇒ **第524 が建てた（ユーザー「建てて」）**＝経緯は §1.1 第524 ⑵。残った 0.04（⒳¹⁶）は**第525 が閉じた＝箱の Y（blot/2）**・台帳 `tie.width.chord-flag`／`tie.y.chord-flag` とも exact。
-- ✅ **⒳¹⁶ 旗の箱の 0.04 は第525 が閉じた＝箱の*Y*（旗は stem 端から blot/2 内側）で、左端ではなかった**（§1.1 第525 ⑴・次便で落とす）
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。NoteItem は**第494 が呼び手で数えた＝設計の値段**（建てる・`ResolveBeamStemDirections` の `with`＝collect ごとに新しい BeamId・`TabResolver.ResolveTabStrings`＝弦番号の書き込み。消すなら刻印を item の外へ＝土台）。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB。⚠️ Dictionary／HashSet の bucket はこの census に出ない）。型が分かったら呼びの前後を数える wrapper で軒を絞る。⚠️ **地図の窓は parse の tick も拾う**（第522: "ticks in windows" − render ≈ 270 KB＝GreenNode[]・SyntaxToken[]・NoteGreen…の和。render が建てる green は fabricated barline の 2 本／打鍵）＝**構文の行は引いて読む**。
@@ -104,7 +103,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   **445 軒・生きている 228 軒で actual＋obj 774,764 B／打鍵＝21.0%**（scratch 169 軒 650,950）。**第463 が 8 軒 −204,092 を閉じた**。残り（`remaining.txt`・census 時点の住所）:
   ⑴ **`HorizontalSkyline.cs:194`（`Clone`）164,310／`:168`（`FromBoxes`）42,582＝**第490 が閉じた**（列の view は `FromBoxesPadded` で 1 段に建てる・render −47,238／打鍵）／`:362` 120,862＝List が skyline の中身そのもの**
   ＝直すなら copy-on-write／保留の skyline＝**土台**（⒫′ と同じ家）／⑵ escape の頭＝`MeasureCollector.ItemFactory.cs:322` 51,103・
-  `MeasureCollector.cs:232` 39,235（alive 95.5%＝session が持つ）／⑶ `AugmentSkylinesWithScripts` の遅延経路の builder（返す点が無い・
+  `MeasureCollector.cs:232` 39,235 は**閉じていた**（第499 `_resolvedNotes`・第500 PitchTrace＝第526 が HEAD で確認）／⑶ `AugmentSkylinesWithScripts` の遅延経路の builder（返す点が無い・
   `PagingAugmentProgram.cs:278-280` 17,542）／⑷ scratch の尾＝**第464 が HEAD で数え直して 6 軒 −80,083 を閉じた**（Lab `sessions/p464/joined.csv`・
   分母 **3,483,771**・HorizontalSkyline を除く scratch は 155 軒 186,353 だった）。残りの頭（**measure→system の地図 5 軒は第466 が閉じた −20,951**）＝`SystemCount.cs:247` 4,482（details が page breaker へ渡る＝読み切っていない）／
   `PageBreaker.cs:1572` 3,754／⑸ **計器の外**＝
@@ -120,6 +119,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   `Func<int,int,(VS,VS)?>` 313／`GatherContainerSite` の method group 277（`MusicSiteList.Lazy` へ渡す）／`Func<StaffLayout,bool>` 277（`SystemStartBarStaves`・`SeedClefInk`）。
   ⚠️ **delegate 型の行の持ち主は `sessions/p470/delegate-sites.txt`（Roslyn・型→建てる式）で引く**。⚠️ **閉包の行は閉包だけ＝同じ式の iterator と `ToList` は別の行**（RULES §5.3 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486 が LYS5003 を足して見つけた・Lab `sessions/p486/lys5003-corpus.txt`）。書いた `\N` の弦ではその音が弾けない（負のフレット）ので、**Lily# はこれまで黙って別の弦に描いていた**（LP も同じく無視して計算し直す）。349 件は「You're the One That I Want (-1)／(-2)」＝移調版で `\N` が残ったもの、残りは 37 冊に少しずつ（若者のすべて 32・BOW AND ARROW 9 ほか）。例: 'Til They Take My Heart Away の `e,8\2`＝相対音高で E1 になり D 線では −10。**`clef bass` だけで `octave 3` の無い本は 0.8.0 の「clef は音高を動かさない」でオクターブが下がった可能性**がある。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**（一覧は Lab に残る）
+- ★ **⒮²⁵ 配列（`new int[]`／`new double[]`）の census の残り＝HEAD 第526 で 142 軒 59,575 B／打鍵のうち 25,091 を第526 が閉じた**（Lab `sessions/p526/arrays-head.txt`・道具は `Zz526Arr.cs.txt`＋第495 の `instrument-arrays.ps1`）。残りの頭: `SvgSystemFragmentCache.cs:638` `PositionFingerprint` 6,092（25.5 回／打鍵＝replay の live vector・hit なら entry に残る）／`LayoutEngine.SystemCount.cs:125-133` 4,015（返る estimate＝実仕事）／`BeamScoringProblem.cs:323-326,382,391` 4,189（18.9 回＝problem の入力）／`SyntaxNode.cs:159` 2,984・`:772` 1,212（red＝⒭⁸）／`TabFingeringPlanner.cs:150` 1,392／`SystemCount.cs:150-151` は閉じた。ほかは 1 軒 1,000 B 未満。⚠️ **同じ形（建てて埋めて読んで捨てる表）は `ScratchArray` で借りる**＝fill を軒で明示し、毒で観測者を確かめる（第526 の P1／P2）
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - ★ **⒭′ 器の尾の残り＝約 5,000 B／打鍵**（第446 の住所）。残りは「`yield return` のアクセサを struct walk に」形（`SharedRenderer.Noteheads.cs:54/:63` `EnumerateStaffItems`・`VoiceScan.WalkVoiceItems`・`RenderSpec.GetVoiceBindings`・`VoltaBracketEngraver.BrokenPieces`・1 軒 50 行級・手本は第445 の `ChildNodeList`）。
   頭 2 軒は閉じた＝`HarvestOmittedStructure`（第489・−1,177）・`LyricBindings.cs:148` は直す軒ではない（第490＝158 KB は `DescendantIndex` の建設費）
@@ -169,6 +169,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第526セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。★ `-Start p526`（HEAD `75597350`・full 8864 / 0 / 2 / 8866・`-Archive 524`）。
+
+★★ **⑴ 1 手目＝HEAD の地図 2 枚**（ユーザーに窓をもらって回した・Release・TC=0・232 冊 × 8 打鍵）: ⒜ 型の地図（Lab `sessions/p526/type-price-head.txt`・render 1,257,435）＝頭は String 348 KB・SkylineBuilding[] 126 KB・NoteItem 93 KB・Int32[] 50 KB・Double[] 47 KB・ArticulationLayout[] 27 KB・Measure 26 KB・Spring 22 KB・SlurCandidate 20 KB＝**第513 が値付けした土台ばかり**（GreenNode[] 157 KB・SyntaxToken[] 68 KB ほか約 290 KB は parse の tick＝引いて読む・第522）。⒝ **配列の census を HEAD で取り直した**（第495 の `instrument-arrays.ps1` をそのまま＋`Zz526Arr.cs.txt`＝Lab `arrays-head.txt`・142 軒 59,575 B／打鍵）。⚠️ **§1.0 ⒮¹⁵ ⑵ の escape 2 軒は既に閉じていた**（第499 が `_resolvedNotes` を狭め、第500 が render の PitchTrace を切った＝census の住所は当時の行番号で、今の :325 `_resolvedChordMembers` は型の地図の上位 120 に出ない）＝一覧を直した。
+
+★★★ **⑵ DP の使い捨て配列 4 家族＝25,112 B／打鍵（2.00%）を引き出しにした**: `PageBreaker.SolveUnconstrained` の 4 行（10.81 回／打鍵・10,034）・`FindOptimalBreaks` の (n+1)² 表と帯（0.95 回・8,869）・`KnuthPlassBreaker.Solve` の累積和 6 本（0.79 回・3,513）・`EstimateMeasureHeights` の系ごとの measureUp／Down（23.69 回・2,696）。どれも「建てて埋めて読んで捨てる」表で外へ出ない（:880-881 の答え・:125-133 の返る estimate・KnuthPlass の dp／prev／lineForce＝session に出る、は触らない）。**`ScratchArray.Take<T>(ref drawer, length)`**（`ListPool<T>` の配列版＝軒ごとに `[ThreadStatic]` 1 枚・clear しない）で借り、fresh が無料でくれていた fill を軒で明示（`Array.Fill(…, 0, n)`・累積和の `[0] = 0`・silhouette の無い系は `Array.Clear`）。**予測を先に書いた**（Lab `prediction.txt`＝−25,100±300・hash 0 差）→ **実測 render 1,257,673 → 1,232,582＝−25,091（予測の 99.96%）・hash 5,816 行 0 差**（Lab `ab-after.txt`・`hashes-after.txt`＝**次便からの baseline はこれ**）。
+  **毒 2 本で観測者を確かめた**（fill は load-bearing か）: **P1＝2 次元表の dp の fill を落とす → hash が 1,848 行に崩れて 5,816 差・suite 139 赤**（PageBreakerTests・台帳・snapshot…）／**P2＝1 次元の demerits の fill を落とす → hash 0 差だが suite 5 赤**（snapshot `test/chords`・`test/system-count-line-start-ink`・`test/lyrics-below-marcato`・`CollectResumeTests.ResumedCollect_RendersByteIdenticalSvg_OnSubset`・`FontAttributeTests.TheStyleReach_IsWhatThePageDoes(FiguredBass)`）。⚠️ 毒の run のベースライン赤＝HandoffArchive 3（見出しを立てる前）＋MagicConstant 1（行番号）＝引いて読んだ。⚠️ 累積和の `[0] = 0` は fresh でも 0・誰も [0] を書かないので**無観測**（消さずに註で言った＝将来 [0] を書く便への保険）。
+  §7 7.5＝**Core '+' 約 90 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟「何も足していない」（器の置き換え・LP の式は 1 つも触らない）**。棚卸しは行番号だけ（`magic_constants.csv` 1 行）。⚠️ **Write ツールの新規ファイルは LF**（`ScratchArray.cs`＝CRLF に入れ直した・CLAUDE-OPERATIONS §1）。`-End p526` OK・full 8864 / 0 / 2 / 8866・commit `c7ac0a57`。
+
+## 以下は第525セッションの経緯
+
 ### 1.1 第525セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き（ユーザー「このセッションでやる方が有利なら着手して」＝⒳¹⁶ は双子と数が温まっているので着手）。
@@ -176,17 +188,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 ★★★ **⑴ ⒳¹⁶ 閉じた＝残差の名前が違った**: LP の grob を直接読んだ（Lab `sessions/p525/flagbox.ly`＝tie の X 親（NoteHead）の枠で head・Stem・Flag の extent と details）。**旗の箱の X は元から LP と同じ**（stem 中心 0.065＋glyph の [0, 1.0668]）。違いは **Y**＝LP の Flag は stem 端から blot/2＝0.04 内側（`flag.cc:183-196`）で、描画・dot support・spacing band が `FlagPlacementY` で持っている項を **tie の outline の箱だけが落としていた**。**Y の 0.04 が X の 0.04 になる道**: 短い tie は attachment を 2 度読む（:565-579・close_by＝y − 1.25×0.25＝2.9375）。その y は両エンジンとも旗の箱の**padding の斜面**（`Skyline::padded` skyline.cc:558-610＝平 0.05＋45° 0.05）に乗り、LP 1.1318−0.0073＝1.1245 → x0 1.3245／Lily# 1.1318−0.0473＝1.0845 → x0 1.2845＝第524 の実測と 4 桁一致。**予測を先に書いて**（`prediction.txt`）`BuildTieColumn` の箱の Y を `FlagPlacementY(tipY, stemUp)` に（1 呼び・LILYPOND-REF flag.cc:183-196）＝**`tie.width.chord-flag` +0.040000000 → 0.000000000・`tie.y.chord-flag` 不変（−4.32e−07）・hash 16 行＝GT だけ（LST 8 行不変・予測どおり・Lab `hashes-flagy.txt`＝次便の baseline）・A/B 1,257,679 → 1,257,677（±0）**。台帳の why・probe の頭・`LpGeometryProbes` の remark の「左端／幅」を書き直した。⚠️ **教訓＝残差の名前は測ってから付ける**: 第524 は 0.04 を「X の項の差」と*推定*で起票した。grob を 1 度 dump すれば X は一致していた。
   §7 7.5＝**Core '+' 11 行・LILYPOND-REF 1（`flag.cc:183-196`）／LILYSHARP-OWN 0**。`-End p525` OK・full 8864 / 0 / 2 / 8866・台帳 exact 672 → 673（総和 22.6247 → 22.5847）・棚卸しは行番号だけ・commit `bd2db1ab`。
-
-## 以下は第524セッションの経緯
-
-### 1.1 第524セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き。⒳⁵ の 2 冊を LP 双子と突き合わせた（§1.0 ⒳⁵ に数）。
-★ `-Start p524`（HEAD `03eac94b`・full 8862 / 0 / 2 / 8864・`-Archive 522`）。
-
-★★★ **⑴ ⒳⁵ の LP 双子**: 2 冊の形を 1 小節に切り出し（Lab `sessions/p524/GT.lys`・`LST.lys`）、`lysc ly` で双子を出して `Tie.after-line-breaking` の dump（`chordflag.ly`・p452 の `tie-outline-boxes.ly` の型）で control point を読んだ。Lily# 側は `RecordingDocumentContext` の bow と符頭 glyph（`Zz524BowProbeTests.cs.txt`）。**結果は §1.0 ⒳⁵**＝箱を建てると下の tie が LP に寄る（GT 0.47→0.04・LST exact）。上の tie は元から exact。判断はユーザー。
-★★★ **⑵ ⒳⁵ 建てた**（ユーザー「建てて」）: `ElementCoordinator.cs:1898` の条件を `item is NoteItem { IsBeamed: false } or ChordItem { IsBeamed: false }` に（LP `tie-formatting-problem.cc:181-190` は Stem の旗を*符頭の数を問わず*入れる）。**台帳点 2 対を、予測を先に書いて起票**（RULES §5.0）＝`probes/tie-chord-flag.ly`（⑴ の 2 冊・bass・`\fixed c'`）・`tie.width.chord-flag`（TCFX＝GT の下の tie の幅・LP 0.844700・**予測 +0.04 → 実測 +0.040000000**）・`tie.y.chord-flag`（TCFY＝LST の下の tie の高さ・LP −0.350129・**予測 0 → −4.32e−07**）。`tie-outline-boxes.ly` の「旗に本は無い」注記と `TieColumnParts.Flag` の doc を書き直した。**hash: 5,816 頁のうち 24 行・2 冊**（GT 16・LST 8＝第523 の測定と同じ・Lab `sessions/p524/hashes-chordflag.txt`＝**次便からの baseline はこれ**）・**A/B render 1,257,698 → 1,257,679（−19＝±0）**・スイートは台帳 2 点のほか 0 本動く・棚卸しは行番号だけ。残りの 0.04 は **⒳¹⁶** として §1.0 に起票。
-  §7 7.5＝**Core '+' 15 行・LILYPOND-REF 1（旗の箱の条件の remark＝:181-190）／LILYSHARP-OWN 0**。`-End p524` OK・full 8864 / 0 / 2 / 8866（台帳 +2）・棚卸しは行番号だけ・commit `12c0a36a`（コード＋台帳＋probe＋表）。
 
 ## 2. 開いている作業
 
