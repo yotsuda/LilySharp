@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第519セッションの経緯
+
+### 1.1 第519セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。⒝ ⒯ を render 側で値付けしに行き、**値段は索引ではなく「打鍵ごとの red の全木 walk」2 本だった**。
+★ `-Start p519`（HEAD `6f2d6390`・full 8856 / 0 / 3 / 8859・`-Archive 517`）。
+
+★★★ **⑴ ⒯ の render 側は無い**: `DescendantIndex.Build` は 0.004 回／打鍵・1,297 B（0.09%）＝歌詞行の本の `FoldAdjacentRows` → `LyricBindings.VoicesOfPart` だけが建てる（診断 pass の費用であって render の費用ではない）。**代わりに red の実体化を数えた＝打鍵あたり node 1,277＋token 1,223（約 115 KB・8%）**（Lab `sessions/p519/steps-head5.txt`・地図 `steps-head3.txt`）。
+★★★★ **⑵ 頭 2 本はどちらも「木ごとの CWT＝打鍵ごと」の red 全木 walk**（RULES §5.3 の型）: `BareDurations.BuildMap` **1.00 回／打鍵・43,399 B（3.0%）で、建てる map は*空***（コーパスに bare duration は無い。`ItemFactory` の `IsOriginal(note)` が最初の音で強制）／`CollectResumePlanner.SameShape` **9.51 回・38,254 B（2.7%）**＝`ShapeWalk` が section の直下の子を token まで red で列挙。**直し＝両方 green を読む**: `ShapeWalk` は green の slot の kind（`IsCollectableMusicKind`＝`MusicSitesEquivalenceTests` が型の一覧に pin 済み）、`BareDurations` は green を full position つきで畳み、bare が見つかったときだけ `RedOf`（root から position で降りる＝parent-cached の同じ実体）で red を起こす。網 `BareDurationsGreenWalkTests`（旧 red walk を oracle に・全 net 冊＋全腕の 1 冊）。
+★★★ **⑶ A/B render 1,435,721 → 1,415,342（−20,379 B／打鍵・−1.42%）。予測 −47,000 ± 15,000 の 43%＝下に外れた**（Lab `prediction.txt`）。**外れの正体＝「先に触る walk」の会計**: 2 本の継ぎ目の和 81,650 に対し、消えた red は node 1,277→1,128・token 1,223→1,124＝**約 250 本だけ**。walk が先に起こしていた red の 3/4 は collector が後で読む（`steps-after-attr.txt`）。⇒ **red 系の賞金は継ぎ目の bytes ではなく「その walk しか読まない red の数」で組む**（RULES §5.3 へ）。5,824 ページ 0 差（`hash.log`）。
+★★ **⑷ 毒 4 本・baseline 8,860 緑（網 +1）**（Lab `poisons.out`）: `Barline` で crossed を立てない **4 赤**（網＋LYS1031 の 3 本）／pitched rest を event にする **1 赤**（網だけ）／scope を漏らす **1 赤**（網だけ）／⚠️ **`ShapeWalk` の music run の畳みを外す＝緑（0 赤）＝観測者なし**。run の中に音を足す編集で `StructureStable` が偽になる＝reuse が減るだけで出力は不変（旧 red 版も同じく無観測）。網にするなら resume の*回数*の計器。
+  §7 7.5＝**Core '+' は 3 ファイル（`BareDurations.cs`・`PitchedRest.cs`・`CollectResumePlanner.cs`）・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ畳みを green で綴っただけ・出所は動かしていない・Core '+' 187 行）。`-End p519` OK・full 8857 / 0 / 3 / 8860（網 +1）・棚卸し差分なし。
+
 ## 以下は第518セッションの経緯
 
 ### 1.1 第518セッション（2026-09-23・YT-DELL2）
