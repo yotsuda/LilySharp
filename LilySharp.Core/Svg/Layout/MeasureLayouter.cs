@@ -287,8 +287,7 @@ internal sealed class MeasureLayouter
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
-            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure),
-            SpacingRules.LeadingMusicalItems(nextMeasure));
+            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure));
 
         var chain = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(springs);
         return looseRods.Count > 0
@@ -829,14 +828,14 @@ internal sealed class MeasureLayouter
     /// End spring: last column → barline (remaining duration), with left-head-width
     /// refinement and the last-item → barline skyline rod.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/spacing-basic.cc:107-162; lily/note-spacing.cc:77.</remarks>
-    /// <param name="rightNeighbours">What opens the next measure, when known — the bar
-    /// line's other neighbours (SpacingRules.NoteColumnToBarlineFloorPair).</param>
+    /// <remarks>LILYPOND-REF: lily/spacing-basic.cc:107-162; lily/note-spacing.cc:77.
+    /// The next measure's opening column no longer reaches the bar line's box here — see the
+    /// OWN note on <see cref="SpacingRules.NoteColumnToBarlineFloorPair"/> (session 523).</remarks>
     private static Spring CreateLastToBarlineSpring(
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, SpacingOptions spacing,
-        double boundaryClefAllowance = 0, IReadOnlyList<MusicItem>? rightNeighbours = null)
+        double boundaryClefAllowance = 0)
     {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
@@ -875,8 +874,7 @@ internal sealed class MeasureLayouter
             for (int q = 0; q < lastItems.Count; q++)
             {
                 var item = lastItems[q];
-                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(
-                    fonts, item, new ItemColumn(rightNeighbours));
+                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(fonts, item);
                 maxSkyDist = Math.Max(maxSkyDist, skyDist);
                 maxRod = Math.Max(maxRod, rod);
             }

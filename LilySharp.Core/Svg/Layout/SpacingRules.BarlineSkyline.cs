@@ -316,9 +316,20 @@ internal static partial class SpacingRules
     /// frame the closing spring already stands in.
     /// </summary>
     /// <param name="item">The item at the measure's last column.</param>
-    /// <param name="rightNeighbours">What opens the NEXT measure, when known — the bar
-    /// line's other neighbours, whose reach past the staff also grows its box.</param>
     /// <remarks>
+    /// <para>
+    /// LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
+    /// toward both neighbours (scm/output-lib.scm:934-942
+    /// pure-from-neighbor-interface::extra-spacing-height reads the columns on either side),
+    /// and until session 523 this pair took the next measure's opening column too. MEASURED
+    /// (sessions 454, 460, 487; the owner's corpus, 5,824 pages, and the suite, 8,780 tests):
+    /// the right neighbour changed the rod 6,647 times of 102,397 and the minimum 24 times,
+    /// and NOT ONE page or test moved when it was withheld — the rod is a floor on the
+    /// compressed length that the headroom's minimum already stands above, and a compressed
+    /// line (session 487's cmp.lys) did not move either. The owner chose to stop computing
+    /// it (HANDOFF §1.0 ⒳⁷ ⑵). It comes back the day a book is found whose closing gap the
+    /// neighbour moves — that book is the net ⒳⁷ ⑴ never got. Observer today: none.
+    /// </para>
     /// <para>
     /// The column's skyline is EVERYTHING in it — head, stem, FLAG, dots, half-ties, a
     /// reversed head — exactly as <see cref="ItemSkylineFactory"/> walks it for a note →
@@ -338,8 +349,8 @@ internal static partial class SpacingRules
     /// spanning the staff and grown to reach its neighbours past it, at most
     /// <see cref="BarLineExtraSpacingHeightCap"/> each way — so a flag hanging from an
     /// in-staff stem always meets it, and a flag standing wholly above staff + 1.01 (a
-    /// forced-up stem on a high note) does not. The neighbours are this column and the
-    /// next measure's opening column; LilyPond takes every item of both.
+    /// forced-up stem on a high note) does not. LilyPond's neighbours are this column and
+    /// the next measure's opening column; only this column is read here (the OWN note above).
     /// </para>
     /// LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the spring
     ///   minimum is <c>skys[LEFT].distance (skys[RIGHT], skyline-vertical-padding)</c>,
@@ -352,7 +363,7 @@ internal static partial class SpacingRules
     ///   its neighbours, horizontal-skylines from its stencil.
     /// </remarks>
     internal static (double SkyMin, double Rod) NoteColumnToBarlineFloorPair(
-        Rendering.ScoreTextMetrics fonts, MusicItem item, ItemColumn rightNeighbours = default)
+        Rendering.ScoreTextMetrics fonts, MusicItem item)
     {
         // A change item shares no column with a bar line in LilyPond (a mid-measure change
         // is its own non-musical column); a spacer engraves nothing. Both keep the type
@@ -370,16 +381,6 @@ internal static partial class SpacingRules
         var wishRight = ItemSkylineFactory.SharedWishRightSkylineAtColumn(item, 0, staffY: 0);
 
         var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
-        for (int i = 0; i < rightNeighbours.Count; i++)
-        {
-            var n = rightNeighbours[i];
-            if (IsMusicalColumn(n))
-            {
-                var (nMin, nMax) = ItemSkylineFactory.ColumnYExtent(n, 0);
-                yMin = Math.Min(yMin, nMin);
-                yMax = Math.Max(yMax, nMax);
-            }
-        }
         // Device frame, y down: the staff's top line is StaffYBottom (-2), its bottom line
         // StaffYTop (+2) — BoundaryColumn's box convention.
         double reachAbove = Math.Clamp(BoundaryColumn.StaffYBottom - yMin, 0, BarLineExtraSpacingHeightCap);

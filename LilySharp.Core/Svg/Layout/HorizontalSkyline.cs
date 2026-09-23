@@ -172,10 +172,11 @@ internal sealed class HorizontalSkyline
     /// pages. A counter says why: of 44,356 distances measured against a lent box over the
     /// corpus, the stale building changed 862 — every one of them in
     /// <c>NoteColumnToBarlineFloorPair</c>, the bar-line floor HANDOFF ⒳⁷ found reaching no
-    /// output. The other callers' answers never moved (their boxes all span the staff at the
-    /// same reach) and the accidental fattening sits inside the glyph's own outline. So the
-    /// clearing is right and unobserved: a forgotten <c>Clear</c> here would surface only when
-    /// ⒳⁷'s floor starts to bind.
+    /// output (session 523 stopped growing that box toward the next measure; the pair
+    /// itself remains). The other callers' answers never moved (their boxes all span the
+    /// staff at the same reach) and the accidental fattening sits inside the glyph's own
+    /// outline. So the clearing is right and unobserved: a forgotten <c>Clear</c> here would
+    /// surface only when that floor starts to bind.
     /// </para>
     /// </remarks>
     internal static HorizontalSkyline RentBox(

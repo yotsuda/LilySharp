@@ -270,12 +270,11 @@ internal static partial class SpacingRules
         var lastSpring = CreateSpring(fonts, lastItem, null, totalDuration - lastOnset,
             spacing: spacing,
             shortestPlaying: lastItem.Duration);
-        // The column's skyline against the bar line's box, the bar line's box grown toward
-        // BOTH its neighbours — the same pair the timing-column system prices
-        // (MeasureLayouter.CreateLastToBarlineSpring). CreateSpring saw the left neighbour
-        // only; the rod is applied after the headroom below.
-        var barPair = NoteColumnToBarlineFloorPair(
-            fonts, lastItem, new ItemColumn(LeadingMusicalItems(nextMeasure)));
+        // The column's skyline against the bar line's box — the same pair the timing-column
+        // system prices (MeasureLayouter.CreateLastToBarlineSpring); the rod is applied
+        // after the headroom below. (The box grew toward the next measure's opening column
+        // too until session 523 — the OWN note on the pair.)
+        var barPair = NoteColumnToBarlineFloorPair(fonts, lastItem);
         lastSpring = lastSpring.EnsureMinDistance(barPair.SkyMin);
         lastSpring = ApplyLeftHeadWidth(lastSpring, One(lastItem), (spacing ?? SpacingOptions.Default).Increment);
 
@@ -317,39 +316,6 @@ internal static partial class SpacingRules
         springs.Add(lastSpring);
 
         return springs.ToImmutableArray();
-    }
-
-    /// <summary>
-    /// The musical item(s) a measure OPENS with — its first column's note, chord or drawn
-    /// rest, zero-duration changes and grace time stepped over — or null when it opens with
-    /// none (a spacer, an empty placeholder, no measure at all). The bar line closing the
-    /// previous measure has these as its right-hand neighbours.
-    /// </summary>
-    internal static IReadOnlyList<MusicItem>? LeadingMusicalItems(Measure? measure)
-    {
-        if (measure == null)
-            return null;
-        // The loop stops at the first item with duration, so a SECOND musical column can
-        // only come from a zero-duration one — which never happened in 12,720 non-null
-        // answers (session 451's census: `one 100.0%`). The single item goes back in a
-        // one-element array; the List is built only if that day ever comes.
-        MusicItem? only = null;
-        List<MusicItem>? items = null;
-        foreach (var item in measure.Items)
-        {
-            if (item.GraceTime || IsChangeItem(item))
-                continue;
-            if (IsMusicalColumn(item))
-            {
-                if (only == null)
-                    only = item;
-                else
-                    (items ??= new List<MusicItem> { only }).Add(item);
-            }
-            if (item.Duration > Fraction.Zero)
-                break;
-        }
-        return (IReadOnlyList<MusicItem>?)items ?? (only != null ? new[] { only } : null);
     }
 
     /// <summary>
