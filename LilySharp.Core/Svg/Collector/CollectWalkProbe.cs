@@ -440,7 +440,11 @@ internal sealed class WalkCheckpoint
 
     // --- collector value state ---
     public required OctaveCheckpoint Octave { get; init; }
-    public required MetadataState Meta { get; init; }          // a private clone
+    /// <summary>A clone the collector never writes to — SHARED with the previous checkpoint
+    /// of the recording when the metadata did not move (session 522), as
+    /// <see cref="TableCounts"/> and <see cref="SectionActiveGrobProps"/> are; every reader
+    /// copies out of it, compares it or iterates it.</summary>
+    public required MetadataState Meta { get; init; }
     public required Fraction DefaultDuration { get; init; }
     public required int DefaultDots { get; init; }
     public required int AmbientTonicStep { get; init; }

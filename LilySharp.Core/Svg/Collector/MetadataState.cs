@@ -119,6 +119,39 @@ internal sealed class MetadataState
         InitialClef = other.InitialClef;
     }
 
+    /// <summary>Field-for-field equality with a <see cref="Clone"/> snapshot — the same
+    /// fields <see cref="CopyFrom"/> restores, so a checkpoint whose metadata did not move
+    /// since the previous one can share that one's clone (session 522).</summary>
+    public bool SameAs(MetadataState other)
+        => Title == other.Title
+            && Composer == other.Composer
+            && ReferenceEquals(Fonts, other.Fonts)
+            && ReferenceEquals(Paper, other.Paper)
+            && ReferenceEquals(LayoutPlan, other.LayoutPlan)
+            && TitlePosition == other.TitlePosition
+            && ComposerPosition == other.ComposerPosition
+            && TimePosition == other.TimePosition
+            && KeyPosition == other.KeyPosition
+            && ClefPosition == other.ClefPosition
+            && TempoPosition == other.TempoPosition
+            && Tempo == other.Tempo
+            && TempoText == other.TempoText
+            && TempoBeatUnit == other.TempoBeatUnit
+            && TempoDots == other.TempoDots
+            && SwingSubdivision == other.SwingSubdivision
+            && TimeBeats == other.TimeBeats
+            && TimeBeatsText == other.TimeBeatsText
+            && TimeSenzaMisura == other.TimeSenzaMisura
+            && TimeBeatType == other.TimeBeatType
+            && KeySharps == other.KeySharps
+            && KeyCustom == other.KeyCustom
+            && InitialKeyCustom == other.InitialKeyCustom
+            && InitialKeySharps == other.InitialKeySharps
+            && KeyTonicStep == other.KeyTonicStep
+            && KeyTonicAlter == other.KeyTonicAlter
+            && Clef == other.Clef
+            && InitialClef == other.InitialClef;
+
     /// <summary>
     /// Resets to first-bar defaults for a fresh collection pass. NOTE:
     /// <see cref="KeyTonicStep"/> is intentionally NOT reset here — the original

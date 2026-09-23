@@ -49,7 +49,8 @@ public sealed partial class MeasureCollector
         if (_formRepeatDepth > 0)
             return;
         rec.Checkpoints.Add(BuildWalkCheckpoint(
-            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart, nodeKind, nodeIsPhraseEnd, gatherPath));
+            builder, _sectionVisit - 1, invocation, nodeIndex, nodeStart, nodeKind, nodeIsPhraseEnd, gatherPath,
+            previous: rec.Checkpoints.Count > 0 ? rec.Checkpoints[^1] : null));
     }
 
     /// <summary>True when no cross-measure carry is in flight — the shared
@@ -100,17 +101,40 @@ public sealed partial class MeasureCollector
             _measureAccidentals[(step, octave)] = (alter, _accidentalBar - barsBack, _accidentalOrder++);
     }
 
+    /// <summary>The empty grob-prop set every checkpoint taken outside a section-level
+    /// override shares (<see cref="WalkCheckpoint.SectionActiveGrobProps"/> is only ever
+    /// iterated, counted and set-compared, never written).</summary>
+    private static readonly HashSet<(string, string)> s_noSectionGrobProps = new();
+
     /// <summary>The checkpoint capture core (see <see cref="WalkCheckpoint"/>'s
     /// inventory remarks); the end-of-walk capture passes sentinel address
     /// fields (-2/-1) — a splice consumes its value state, never its address.</summary>
+    /// <remarks>
+    /// <paramref name="previous"/> is the recording's last checkpoint (null for its first):
+    /// the three members a checkpoint only ever READS — the metadata clone, the side-table
+    /// watermarks and the grob-prop set — are shared with it when nothing moved in between,
+    /// which is nearly always at a bar line. MEASURED (session 522, Release, the owner's
+    /// corpus, 232 books × eight forward keystrokes; a keystroke in eight re-records):
+    /// 33 checkpoints a keystroke at 687 B each, the metadata unchanged at 32 of them, the
+    /// grob-prop set empty at 33, the 21 watermarks equal at 30 — 10 KB a keystroke of
+    /// copies of the previous checkpoint's own values.
+    /// </remarks>
     private WalkCheckpoint BuildWalkCheckpoint(
         MeasureBuilder builder, int sectionVisit, int invocation, int nodeIndex, int nodeStart,
-        SyntaxKind nodeKind = SyntaxKind.None, bool nodeIsPhraseEnd = false, int[]? gatherPath = null)
+        SyntaxKind nodeKind = SyntaxKind.None, bool nodeIsPhraseEnd = false, int[]? gatherPath = null,
+        WalkCheckpoint? previous = null)
     {
         var tables = CumulativeSideTables();
-        var counts = new int[tables.Length];
+        Span<int> live = tables.Length <= 64 ? stackalloc int[tables.Length] : new int[tables.Length];
         for (int t = 0; t < tables.Length; t++)
-            counts[t] = tables[t].Count;
+            live[t] = tables[t].Count;
+        int[] counts = previous != null && live.SequenceEqual(previous.TableCounts)
+            ? previous.TableCounts
+            : live.ToArray();
+        var meta = previous != null && _meta.SameAs(previous.Meta) ? previous.Meta : _meta.Clone();
+        var props = _sectionActiveGrobProps.Count == 0
+            ? s_noSectionGrobProps
+            : new HashSet<(string, string)>(_sectionActiveGrobProps);
 
         return new WalkCheckpoint
         {
@@ -126,7 +150,7 @@ public sealed partial class MeasureCollector
             HeaderReadCount = _walkHeaderReads.Count,
             Builder = builder.Capture(),
             Octave = OctaveCheckpoint.Capture(_octave),
-            Meta = _meta.Clone(),
+            Meta = meta,
             DefaultDuration = _defaultDuration,
             DefaultDots = _defaultDots,
             AmbientTonicStep = _ambientTonicStep,
@@ -137,7 +161,7 @@ public sealed partial class MeasureCollector
             TremoloPairShape = _tremoloPairShape,
             TremoloPairFirst = _tremoloPairFirst,
             Accidentals = CaptureAccidentalMemory(),
-            SectionActiveGrobProps = new(_sectionActiveGrobProps),
+            SectionActiveGrobProps = props,
             KeyLogCount = _keyByMeasureLog.Count,
             SectionStartLogCount = _sectionStartLog.Count,
             TableCounts = counts,

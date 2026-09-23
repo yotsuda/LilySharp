@@ -720,6 +720,63 @@ public sealed partial class MeasureCollector
     private Dictionary<(int Visit, int Invocation, int NodeStart), WalkCheckpoint>? _suffixTargets;
     private CollectTailShifter.Window _suffixWindow;
     private bool _suffixSpliced;
+
+    /// <summary>
+    /// The one suffix-target table a thread keeps between walks — lent to the walk that
+    /// carries suffix candidates and given back, emptied, when the walk ends (or the
+    /// collector is reset), so the next resumed collect on this thread builds no table.
+    /// </summary>
+    /// <remarks>
+    /// WHY IT IS SAFE TO PARK: the table is read by <c>TryGetValue</c> inside one walk
+    /// (<c>ProcessNodes</c>'s splice gate) and by nothing that outlives the walk; the
+    /// checkpoints it holds belong to the recording the plan names, which the recording
+    /// itself keeps alive. THE CLEARING IS ON GIVE (session 456's idiom): a table parked
+    /// dirty would offer a stale checkpoint under a key a later walk can spell again
+    /// (visit, invocation, shifted start), and the state comparison — not the key — would
+    /// then be the only thing between that checkpoint and a spliced tail.
+    /// RENTING EMPTIES THE DRAWER, so a walk that aborts (CollectResumeAbortException)
+    /// between the rent and the give simply loses the table; the next rent builds a fresh one.
+    /// MEASURED (session 522, Release, the owner's corpus, 232 books × eight forward
+    /// keystrokes): 1.53 tables a keystroke of 159 entries, 6,460 B each — 9,909 B a keystroke,
+    /// 0.77%, every one unreachable once its walk returned.
+    /// <see cref="SuffixTargetStats"/> is the liveness half of the net.
+    /// </remarks>
+    [ThreadStatic]
+    private static Dictionary<(int Visit, int Invocation, int NodeStart), WalkCheckpoint>? t_suffixTargets;
+
+    /// <summary>How many suffix-target tables this thread served from the drawer and how many
+    /// it built — read by the net that pins the parking (a pool that silently stops parking
+    /// draws the same page).</summary>
+    [ThreadStatic]
+    private static (int Served, int Fresh) t_suffixTargetStats;
+
+    /// <inheritdoc cref="t_suffixTargetStats"/>
+    internal static (int Served, int Fresh) SuffixTargetStats => t_suffixTargetStats;
+
+    private static Dictionary<(int Visit, int Invocation, int NodeStart), WalkCheckpoint> RentSuffixTargets(int capacity)
+    {
+        var table = t_suffixTargets;
+        if (table is null)
+        {
+            t_suffixTargetStats.Fresh++;
+            return new(capacity);
+        }
+        t_suffixTargets = null;
+        t_suffixTargetStats.Served++;
+        table.EnsureCapacity(capacity);
+        return table;
+    }
+
+    /// <summary>Puts the walk's table back, emptied, with its capacity; nothing to do when the
+    /// walk carried no suffix candidates.</summary>
+    private void GiveSuffixTargets()
+    {
+        if (_suffixTargets is not { } table)
+            return;
+        _suffixTargets = null;
+        table.Clear();
+        t_suffixTargets = table;
+    }
     // Record mode only: the end of the furthest source text this walk has read
     // (WalkCheckpoint.MaxSourceRead — see its remarks for the fold sites).
     private int _walkMaxSourceRead;
@@ -2664,7 +2721,7 @@ public sealed partial class MeasureCollector
         _resumePending = null;
         _resumeRestoredSectionStart = null;
         _walkMaxSourceRead = 0;
-        _suffixTargets = null;
+        GiveSuffixTargets();
     }
 
     /// <summary>
@@ -2835,7 +2892,7 @@ public sealed partial class MeasureCollector
         _probeRecording = null;
         _resumePending = null;
         _suffixPlan = null;
-        _suffixTargets = null;
+        GiveSuffixTargets();
         _suffixSpliced = false;
         _walkMaxSourceRead = 0;
         _walkHeaderReads.Clear();
@@ -2912,7 +2969,7 @@ public sealed partial class MeasureCollector
                     // candidates whose node stands in the window. Indexer, not
                     // Add: two markers can share a start, and a lost pairing
                     // only costs reuse (the state comparison owns correctness).
-                    _suffixTargets = new(candidates.Count);
+                    _suffixTargets = RentSuffixTargets(candidates.Count);
                     foreach (var ck in candidates)
                         if (_suffixWindow.TryShift(ck.NodeStart, out int shifted))
                             _suffixTargets[(ck.SectionVisit, ck.Invocation, shifted)] = ck;
@@ -3122,7 +3179,8 @@ public sealed partial class MeasureCollector
             if (recording.IneligibleReason == null && builder.AtCleanBoundary
                 && WalkCarriesNothing())
                 recording.EndCheckpoint = BuildWalkCheckpoint(
-                    builder, sectionVisit: -2, invocation: -1, nodeIndex: -1, nodeStart: -1);
+                    builder, sectionVisit: -2, invocation: -1, nodeIndex: -1, nodeStart: -1,
+                    previous: recording.Checkpoints.Count > 0 ? recording.Checkpoints[^1] : null);
 
             // Harvest what a resume adopts: the measures BEFORE FinalizeMeasures
             // mutates them, and the walk-local lists (cleared per walk, so the
@@ -3135,6 +3193,9 @@ public sealed partial class MeasureCollector
             recording.RepetitionOriginalReads = new(_repetitionOriginalReads);
             _probeRecording = null;
         }
+        // The walk is done with its suffix-target table: park it for the next walk (this
+        // collector's or the next keystroke's).
+        GiveSuffixTargets();
 
         FinalizeInlineVoltas();
 
