@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 145 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **262** | |
+| `OWN` | 146 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **263** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -177,7 +177,7 @@
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
 - **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
-- **:177** clearing is right and unobserved: a forgotten Clear here would surface only when
+- **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
 - **:733** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1003** NOT MEASURED — no ledger point reads a flag's draw x, and the last
@@ -232,7 +232,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（145 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（146 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2466** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -412,12 +412,14 @@
 - **:126** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:272** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:335** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
+### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
+- **:321** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:539** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
 - **:242** LILYSHARP-OWN: LilyPond has no such spring because it has no such column — the
 ### `LilySharp.Core/Svg/Layout/SpacingRules.MeasureSprings.cs`
-- **:775** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
+- **:741** LILYSHARP-OWN: LilyPond has no such floor — a chords-only chart's bar width is
 ### `LilySharp.Core/Svg/Layout/StaffSize.cs`
 - **:62** ⚠️ LILYSHARP-OWN: THIS LINE IS A TYPE ENUMERATION, and it is the one part of this file
 ### `LilySharp.Core/Svg/Layout/TabChordColumns.cs`
