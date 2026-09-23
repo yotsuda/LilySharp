@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第518セッションの経緯
+
+### 1.1 第518セッション（2026-09-23・YT-DELL2）
+
+新しい会話。⒝ ⒨ の「残り＝part と miss の建設＝値段は未測定」に着手＝**front を段ごとに値付けしたら、値段は front ではなく core の中の 1 軒だった**。
+★ **`-Start p518` の 1 コマンドで §0 が全部済んだ**（HEAD `60fda111`・full 8856 / 0 / 3 / 8859・`-Archive 516` も自動）。
+
+★★★★ **⑴ memo の front を 6 段に割った**（Lab `sessions/p518/steps-head4.txt`・計器 `Zz518*.cs.txt`・型の地図は `type-price-head.txt`）。**above 44,857 B／打鍵 3.09%**＝part 261・prog 2,852・filter 1,053・**core 31,379**・rebuild 8,734・store 574（和が total と一致＝入口に何も建っていない）。below 5,496（rebuild 4,393）。⇒ **⒨ の part は 261＋138 で尽きていた**。**core は生きている grob が 1 呼び 2.8 個で 14,466 B／呼び**——77% が `PlaceBarNumbers`（24,065／打鍵・2.28 本）、その 88% は**小節番号が lazily 建てる tracker**（9,332 B／建設＝base 664・**profile 7,989**・merge 1,191・clef 285）。
+★★★ **⑵ 7,989 は「両側を 2 度写して片側を 1 度読む」**: `staffProfile` delegate が `ctx.InsideOf` の写し（`InsideAt` が Up／Down を `Copy`）を `FromResolvedBuildings` でもう 1 度両方写し、above の tracker は `p.Up` だけ `Raise` して merge、`p.Down` は誰も読まない。**直し＝stored の対を read-only で渡す**。above は `VerticalSkyline.MergeRaised`（写さず raise して merge）、below と他 2 読み手（figured bass の Down・chord row の Up）は読む側だけ `RaisedCopy`／`Copy`。`Raise` の 1 棟の算術を `Raised` に出して 3 つが同じ綴りを通る＝bit 同一（`RaisedBy` は勾配を端点から建て直すので使わない）。
+★★★ **⑶ A/B render 1,452,853 → 1,435,014（−17,839 B／打鍵・−1.228%）**（Lab `ab-after.txt`・`prediction.txt`）。**予測 −17,370 の 102.7%＝上に外れ**——stacker の 2 軒だけで組み、`InsideOf` の他の 2 読み手が両側→片側になった分（約 470）を数えていなかった。5,824 ページ 0 差（`hash.log`）。
+★★ **⑷ 毒 3 本＝3 本とも赤・baseline 8,859 緑**（Lab `poisons.out`）: `MergeRaised` が raise を落とす **280 赤**（above の枠は観測されている）／`RaisedCopy` が raise を落とす **12 赤**（below）／**above の tracker が*共有された* stored の profile を in-place で `Raise` する（旧の手順を新しい共有実体に当てる）＝81 赤＋棚卸し 2**（次の読み手が動いた profile を読む＝**read-only の契約に観測者が居る**）。
+  §7 7.5＝**Core '+' は 4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（写しの数だけの変更・出所は動かしていない・Core '+' 152 行＝commit 前の `-End` は 0 と刷る）。`-End p518` の門は全部 OK・full 8856 / 0 / 3 / 8859・棚卸し 2 表は行番号だけ（新規 0／消滅 0）。
+
 ## 以下は第517セッションの経緯
 
 ### 1.1 第517セッション（2026-09-23・YT-DELL2）
