@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第520セッションの経緯
+
+### 1.1 第520セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。⒜ ⒭⁸「token の red は accessor を green で読めば消える候補」に着手。
+★ `-Start p520`（HEAD `205d8bc2`・full 8857 / 0 / 3 / 8860・`-Archive 518`）。**ユーザーが便の途中で push した（origin/master＝`205d8bc2`）。**
+
+★★★ **⑴ token の red を kind で数えた**（Lab `sessions/p520/steps-head.txt`・`CreateRed` の sampling）: 打鍵あたり 1,124 本＝Comma 409＋音名 291（`PitchName`／`OctaveOffset`）・IntegerLiteral 123（`Duration.Value`）・StringNumber 81・Bar 53・RestR 36・Identifier 14（articulation 名）・BreakKeyword 13。**全部「文字列か kind を 1 度読むだけ」の red**。
+★★★★ **⑵ 葉の accessor を green で読む**: `PitchName`・`SyntaxFacts.NetOctaveMarks`（red 版も同じ 1 綴り）・`DurationSyntax.Value`・`StringNumber`・`RestText`／`MeasureCount`・`BarText`／`BarTokenStart`（`BarToken.Span.Start` と同じ算術）・`ArticulationSyntax.Name`／`Type`／`ForcedAbove`・`BreakSyntax.Directive`。token の red accessor は他の読み手のため残す。collector の `.NameToken.Text`／`BarToken.Text`／`RestToken.Text` を新しい綴りへ。網 `GreenTokenAccessorTests`（全 net 冊＋全形の 1 冊で green＝red・9 種）。
+★★★ **⑶ A/B render 1,415,342 → 1,331,985（−83,357 B／打鍵・−5.89%）**・token の red 1,124 → 124／打鍵。**予測 −55,000 ± 15,000 の 152%＝上に外れ**（Lab `prediction.txt`）: 消えたのは token 48 B × 1,000 だけでなく、**token しか読まれない親（Pitch・Duration・Barline・Rest）の `_children` 配列も建たなくなった**＝配列の分を 16 KB と見積もって 35 KB だった。
+★★ **⑷ hash で 1 冊 8 行の差＝ユーザーの編集だった**: `The Final Countdown.lys` が 09:25（p519 の hash 09:04 の後）に 3 頁 → 2 頁に変わっていた。**旧 build と新 build を*今の*コーパスで取り直して 5,816 行 0 差**（`hashes-oldbuild.txt`＝次便からの baseline・`Zz520Hash.cs.txt` はそこを指す）。⚠️ p439 の baseline はもう当たらない（RULES §5.3「baseline は比べる前に見出し行を読む」の顔）。
+★★ **⑸ 毒 4 本・baseline 8,861 緑（網 +1）**（Lab `poisons.out`）: Comma を数えない **261 赤**／rest の綴りを別 slot から **84 赤**／`ForcedAbove` を slot 2 から **26 赤**／`BarTokenStart` が trivia を落とす **1 赤（網だけ）**＝小節線の data-pos に他の観測者は無い。
+  §7 7.5＝**Core '+' は 11 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ文字列を green から読むだけ・Core '+' 70 行）。`-End p520` OK・full 8858 / 0 / 3 / 8861（網 +1）・棚卸しは行番号だけ。
+
 ## 以下は第519セッションの経緯
 
 ### 1.1 第519セッション（2026-09-23・YT-DELL2）

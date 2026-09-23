@@ -100,7 +100,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
-  ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。NoteItem は**第494 が呼び手で数えた＝設計の値段**（建てる・`ResolveBeamStemDirections` の `with`＝collect ごとに新しい BeamId・`TabResolver.ResolveTabStrings`＝弦番号の書き込み。消すなら刻印を item の外へ＝土台）。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB。⚠️ Dictionary／HashSet の bucket はこの census に出ない）。型が分かったら呼びの前後を数える wrapper で軒を絞る。
+  ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。NoteItem は**第494 が呼び手で数えた＝設計の値段**（建てる・`ResolveBeamStemDirections` の `with`＝collect ごとに新しい BeamId・`TabResolver.ResolveTabStrings`＝弦番号の書き込み。消すなら刻印を item の外へ＝土台）。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB。⚠️ Dictionary／HashSet の bucket はこの census に出ない）。型が分かったら呼びの前後を数える wrapper で軒を絞る。⚠️ **地図の窓は parse の tick も拾う**（第522: "ticks in windows" − render ≈ 270 KB＝GreenNode[]・SyntaxToken[]・NoteGreen…の和。render が建てる green は fabricated barline の 2 本／打鍵）＝**構文の行は引いて読む**。
   ⇒ **第498〜第503 で render 2,090,060 → 1,864,434（−10.8%）**（6 軒・経緯は ARCHIVE）。**最新の地図は第518**（Lab `sessions/p518/type-price-head.txt`・Release・render 1,452,649 の時点）＝残る頭は**土台**：String 333 KB（SVG の出力）・SkylineBuilding[] 148 KB（skyline の中身）・NoteItem 119 KB・GreenNode[] 85 KB／SyntaxTokenNode 54 KB／SyntaxToken[] 53 KB／SyntaxNode[] 37 KB（構文＝打鍵ごとの木）・Int32[] 53 KB・Double[] 49 KB・Measure 33 KB・ArticulationLayout[] 26 KB。**第508 の写しの census**（Lab `sessions/p508/`＝`.ToArray()`／`.ToImmutable*()`／`.ToBuilder()`／`.ToList()` 651 軒を包んで数える・遅延 LINQ は入れ子を二重に数える）**は第509 が尾を閉じた＝ほぼ尽きた**（残りは `BeamDetector.cs:243` 3,073＝実仕事・`LedgerLineSpannerEngraver.cs:156` 2,834＝⒮¹⁴ 待ち）／第506 の census 計器（Lab `sessions/p506/instrument.ps1`・**複数行の field 宣言は数えない**）。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**／⑵ **同じ値の作り直し**／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
 - ★★ **⒮²³ `Measure` の直後の写し＝約 129 回 ≈12 KB／打鍵 0.7%・*resume の読み手がいる*ので設計**（第511 起票・Lab `sessions/p511/measure-price.log`＝型の地図の `Measure` 41 KB を構築の呼び手で数えた）。425 回／打鍵＝`EmitMeasure` 107・`ResolveBeamStemDirections` 103（梁の刻印＝NoteItem の土台）・`TabResolver` 85・**emit 直後の `with`＝`AddEndBarlineSource:857` 96.8＋`SetBreak` 25.5＋`SetNoBreak` 5.3＋`HandleBarline` 1.1**（`c4 d e f |` の `|` が auto-fill した小節の `SourceEnd` を動かす）。⚠️ **その場で書き換えられない**: `BuilderCheckpoint.LastMeasure` が境界の `_measures[^1]` を pin し、`TrySpliceSuffix` は**参照の不一致**で「尾が書き換えた」を検出する（`Resume.cs:290`）＝書き換えると門が盲になる。直すなら emit を `|` まで遅らせるか pin を値にする
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
@@ -189,11 +189,25 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
 - ⚠️ **掃き終わった島（第434〜第456）＝*ここには戻らない*。根拠の全文は各便の §1＝ARCHIVE**（第496 が表を 3 行に畳んだ）。
   教訓だけ残す: **`GetOrAdd` の非 static factory はもう探さない**（第437）／`MusicSiteList.cs:83` は定数 hint で弁護できない（直すなら前回の数を憶える＝設計）／`OutsideStaffStacker:1171` の `toStore` は上限で直せない（第442）／
-  **struct walk を歩く外側の iterator は太る**＝直すなら鎖ごと（第445）／census の hold1 欄は直し方を選べない（第451）／起票が外すのは値段より*直し方*（第455＝鍵がいつも添字なら地図ではなく配列）
+  **struct walk を歩く外側の iterator は太る**＝直すなら鎖ごと（第445）／census の hold1 欄は直し方を選べない（第451）／起票が外すのは値段より*直し方*（第455＝鍵がいつも添字なら地図ではなく配列）／**checkpoint は前と同値なら共有・walk の器は drawer**（第522・残りは `WalkCheckpoint` 本体 33 × ~330 B と path＝実仕事）
 - ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒳¹¹ ⒳¹⁴ ⒳¹⁵ ⒮²² ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
   （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第522セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。第521 の報告で挙げた「render の窓の GreenNode[]／SyntaxToken[]」を確かめに行き外れ。代わりに checkpoint の島を閉じた。
+★ `-Start p522`（HEAD `5e1c6262`・full 8861 / 0 / 3 / 8864・`-Archive 520`）。
+
+★★★ **⑴ 型の地図の GreenNode[] 153 KB／SyntaxToken[] 68 KB は render のものではない**（Lab `sessions/p522/`）: `GreenNode` の 2 つの構築子に seam を置くと **render の窓で建つ green は 2 本／打鍵**（form の fabricated barline だけ・`steps-head-sampled.txt`）。**GCAllocationTick は窓の前の parse（315 KB／打鍵）の tick を窓の中の時刻で届ける**＝地図の "ticks in windows" 1,559 KB − render 1,288 KB ＝ 271 KB がそれ（GreenNode[]・SyntaxToken[]・List<GreenNode>・NoteGreen・PitchGreen…の和と一致）。⇒ 型の地図は構文の行を引いて読む（§1.0 に 1 行）。地図は HEAD で取り直した（`type-price-head.txt`・render 1,288,157）。
+★★★ **⑵ checkpoint の島を数えた**（seam＝`seams2.patch`・`steps-ckpt.txt`）: **re-record は 8 打鍵に 1 回**（collect.record 0.12／resume 0.93）で、その中で **33 本／打鍵の `WalkCheckpoint` を 687 B ずつ＝22,725 B（1.76%）**。うち `_meta.Clone()` 152 B は**前の checkpoint と同値 32/33**、`new HashSet(_sectionActiveGrobProps)` 64 B は**空 33/33**、`TableCounts` の `int[21]` 112 B は**前と同値 30/33**、Accidentals は既に `Empty` 共有、`GatherPath` は 33/33 実仕事。resume 側は **`_suffixTargets = new Dictionary(candidates.Count)` を walk 入口で 1.53 本／打鍵・159 entry・6,460 B＝9,909 B（0.77%）**建て、次の walk 入口で null にしていた。
+★★★★ **⑶ 直し**: `BuildWalkCheckpoint(previous:)` が**前の checkpoint の `Meta`（`MetadataState.SameAs`）・`TableCounts`（stack buffer で比べてから）を共有し、空の grob-prop は static 1 個**（3 つとも読み手は copy／compare／iterate だけ＝`CollectWalkProbe` に注記）。`_suffixTargets` は **[ThreadStatic] の drawer から rent／walk の終わりと Reset で Clear して give**（`RentSuffixTargets`／`GiveSuffixTargets`・第456 の型。abort で失うだけ）。liveness の網 `CollectSuffixTargetDrawerTests`（`SuffixTargetStats` served／fresh＝2 打鍵目以降 fresh 0・各打鍵の絵は fresh render と等しい）。
+★★★ **⑷ A/B render 1,288,157 → 1,267,144（−21,013 B／打鍵・−1.63%）**・**予測 −20,300 ± 4,000 の 104%**（Lab `prediction.txt`）。**5,816 頁 hash 0 差**——ただし **`The Final Countdown.lys` が 10:31 にまた編集されていた**（p521 の hash 10:13 の後）ので、旧 build と新 build を*今の*コーパスで取り直して 0 差（`hashes-oldbuild.txt`＝次便からの baseline・p520 との差 16 行はその 1 冊）。⚠️ **1 度目の取り直しは build が落ちて `--no-build` が新 binary を走らせ、「0 差」が自分対自分だった**（新しい網が stash した Core の記号を参照していた＝RULES §5.5 の顔。網を退避してやり直した）。
+★★ **⑸ 毒 6 本・baseline 8,866 緑（網 +2）**（Lab `poisons.out`）: Meta を常に共有 **3 赤**／counts を常に共有 **19 赤**／**空の grob-prop を常に渡す＝最初は 0 赤（観測者なし）→ 網 `CollectSectionOverrideResumeTests`（section 内の in-music override を挟んで resume し、次の section で revert する本）を書いて 1 赤**／`SameAs` が key を見ない **3 赤**／**park で Clear しない 5 赤（stale の entry は状態比較を抜けて出力に届く＝Clear は load-bearing）**／never park **1 赤（liveness の網だけ・出力同一）**。⚠️ 1 度目の毒は §1 の継ぎ目を立てる前に回して baseline が 3 赤（第456 と同じ顔）。
+  §7 7.5＝**Core '+' 133 行・4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（LP に対応物の無い resume の基盤）。`-End p522` OK・full 8863 / 0 / 3 / 8866（網 +2）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
+
+## 以下は第521セッションの経緯
 
 ### 1.1 第521セッション（2026-09-23・YT-DELL2）
 
@@ -206,20 +220,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **⑷ 残りの地図＝実仕事**（`steps-after-sampled.txt`）: 消費点 `PeekMarkers`（`site.Node`→`ProcessMusicNode(SyntaxNode)`）341（Note 242・Barline 43・Rest 29・Break 13・Tie 10・Slur 4）／post-event を node として読む `PhrasingSlurMarksOn` 90／`ProcessSection` の直接の Note 37・`ProcessRepeatExpression` 13／`CollectResumePlanner.WindowTouchesPhraseOrVariable` の窓の red walk 約 20（→ §1.0 ⒭⁸）。**5,816 頁 hash 0 差**（`hash.log`・baseline は p520 `hashes-oldbuild.txt`）。⚠️ **計器の罠**: `CreateRed` の seam に `"tok:" + green.Kind` を書くと Sample が返る前に文字列を建て、A/B が 3,526,772 に膨れる（p520 の `ab-after.txt` も同じ数）＝**seam の引数は flag の内側で評価する**。
 ★★ **⑸ 毒 6 本・baseline 8,864 緑（網 +3）**（Lab `poisons.out`）: dot を 1 つ落とす **78 赤**／`DurationReading` を tremolo の slot から **624 赤**／`PitchReading.SourceStart` が trivia を落とす **1 赤（網だけ）**＝pitch の住所は `--pitches` trace にしか届かない（data-pos は note の住所）／Note を directive に数える **4 赤**（網＋単一 part の本 3）／inline の rule が降りる **1 赤（網だけ）**＝fixture の inline section に容器が無い／**inline を常に eager（seek しない・出力同一）2 赤＝liveness の網＋`GatherSeekTests`**。
   §7 7.5＝**Core '+' 264 行・5 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ算術を green で読むだけ）。`-End p521`＝full 8860 / 1 / 3 / 8864（網 +3・赤 1 は `TheHandoffStaysReadable` 21,002 字＝§1.0 の ✅ と第498〜第509 の経緯を畳んで通した）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
-
-## 以下は第520セッションの経緯
-
-### 1.1 第520セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き。⒜ ⒭⁸「token の red は accessor を green で読めば消える候補」に着手。
-★ `-Start p520`（HEAD `205d8bc2`・full 8857 / 0 / 3 / 8860・`-Archive 518`）。**ユーザーが便の途中で push した（origin/master＝`205d8bc2`）。**
-
-★★★ **⑴ token の red を kind で数えた**（Lab `sessions/p520/steps-head.txt`・`CreateRed` の sampling）: 打鍵あたり 1,124 本＝Comma 409＋音名 291（`PitchName`／`OctaveOffset`）・IntegerLiteral 123（`Duration.Value`）・StringNumber 81・Bar 53・RestR 36・Identifier 14（articulation 名）・BreakKeyword 13。**全部「文字列か kind を 1 度読むだけ」の red**。
-★★★★ **⑵ 葉の accessor を green で読む**: `PitchName`・`SyntaxFacts.NetOctaveMarks`（red 版も同じ 1 綴り）・`DurationSyntax.Value`・`StringNumber`・`RestText`／`MeasureCount`・`BarText`／`BarTokenStart`（`BarToken.Span.Start` と同じ算術）・`ArticulationSyntax.Name`／`Type`／`ForcedAbove`・`BreakSyntax.Directive`。token の red accessor は他の読み手のため残す。collector の `.NameToken.Text`／`BarToken.Text`／`RestToken.Text` を新しい綴りへ。網 `GreenTokenAccessorTests`（全 net 冊＋全形の 1 冊で green＝red・9 種）。
-★★★ **⑶ A/B render 1,415,342 → 1,331,985（−83,357 B／打鍵・−5.89%）**・token の red 1,124 → 124／打鍵。**予測 −55,000 ± 15,000 の 152%＝上に外れ**（Lab `prediction.txt`）: 消えたのは token 48 B × 1,000 だけでなく、**token しか読まれない親（Pitch・Duration・Barline・Rest）の `_children` 配列も建たなくなった**＝配列の分を 16 KB と見積もって 35 KB だった。
-★★ **⑷ hash で 1 冊 8 行の差＝ユーザーの編集だった**: `The Final Countdown.lys` が 09:25（p519 の hash 09:04 の後）に 3 頁 → 2 頁に変わっていた。**旧 build と新 build を*今の*コーパスで取り直して 5,816 行 0 差**（`hashes-oldbuild.txt`＝次便からの baseline・`Zz520Hash.cs.txt` はそこを指す）。⚠️ p439 の baseline はもう当たらない（RULES §5.3「baseline は比べる前に見出し行を読む」の顔）。
-★★ **⑸ 毒 4 本・baseline 8,861 緑（網 +1）**（Lab `poisons.out`）: Comma を数えない **261 赤**／rest の綴りを別 slot から **84 赤**／`ForcedAbove` を slot 2 から **26 赤**／`BarTokenStart` が trivia を落とす **1 赤（網だけ）**＝小節線の data-pos に他の観測者は無い。
-  §7 7.5＝**Core '+' は 11 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ文字列を green から読むだけ・Core '+' 70 行）。`-End p520` OK・full 8858 / 0 / 3 / 8861（網 +1）・棚卸しは行番号だけ。
 
 ## 2. 開いている作業
 
