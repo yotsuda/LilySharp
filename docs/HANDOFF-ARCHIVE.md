@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第523セッションの経緯
+
+### 1.1 第523セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。§1.0 の「ユーザー判断待ち」7 件を並べて訊き、**ユーザー決定**: ⑴ ⒮¹⁴ 消す／⑵ ⒳⁷ 効かない床を計算しない／⑶ ⒮¹² 第366 の形で網を書く／⑷ ⒩⁶ ⑵ 後回し／⑸ U10 放置／⑹ ⒳¹² 起票のまま・あとで判断／⑺ ⒳⁵ 測ってよい。この便で ⑴⑵⑶⑺ に着手。
+★ `-Start p523`（HEAD `a720d03c`・full 8863 / 0 / 3 / 8866・`-Archive 521`）。
+
+★★★ **⑴ ⒮¹⁴ 削除**: `LedgerLineSpannerEngraver.cs`（`LedgerLineSpan`・drawer 2 つ）と `LedgerLineSpannerTests` 4 本（skip 1 含む）・`ScoreLayout.LedgerLineSpans`。他の drawer 5 つが cref で引いていた「`ToImmutable` は写す」の probe の注記は `BarNumberEngraver` の drawer へ移した。`COORDINATE_AUDIT.md` の 3 行と `OneOrMany.cs` の例示を「削除」に。**A/B render 1,267,148 → 1,258,496（−8,652 B／打鍵・−0.68%）・予測 −9,300 ± 3,000 の 93%**（Lab `sessions/p523/prediction.txt`）・**5,816 頁 hash 0 差**（baseline p522 `hashes-oldbuild.txt`）。毒は無し＝削除の観測者は「読み手 0」の grep と hash（RULES §7 7.6 ⒟）。
+★★ **⑵ ⒳⁷ 畳み**: `NoteColumnToBarlineFloorPair` の `rightNeighbours` と `SpacingRules.LeadingMusicalItems` を消し、両 spring 系の呼びを揃えた。`LILYSHARP-OWN` を対の注記に（LP は両隣を読む・戻る日を書いた）。**A/B 1,258,496 → 1,257,698（−798・予測 −1,800 ± 800 の 44%＝下に外れ**: 1 要素配列が値段の全部で、harness の編集は corpス の計器より隣を持たない）・**hash 0 差**・`SpacingInvariantTests`／`BarlineColumnRodTests` 緑。RULES §5.4 の第454 の項に「第523 が畳んだ」を 1 行。
+★★★★ **⑶ ⒮¹² 網**: 第366 の掃き（`Zz366SweepProbeTests`）を門を開けて回した。**net 259 冊 × 36 種＝0 乖離／実コーパス込み 590 冊＝3 乖離（2 冊）**、いずれも adopted 0・spliced 0 で小節数が 1 少ない＝**part-major cell の末尾に音符を打つと、窓より前の候補から旧の尾を継いでいた**。清の門では「the candidate stands before a content window」で decline（1 冊目）／2・3 冊目は walk 0 が live で走って pitch trace が 1 増え、walk 1 の入口の watermark で bail＝正しい結末。⇒ **`TrailingGapSpliceTests`**（2 冊の形を planner の経路で・絵＋decline 理由の 2 主張・`RecordSpliceDeclines`）＝清 3/3 緑・毒 3/3 赤。⚠️ 第458 の「両母集団に観測者なし」は**前向き打鍵の母集団**の話で、**容器の縁の編集**（第366 の掃き）は別の母集団——RULES §5.4「もう一方の母集団に訊く」の 3 つ目の母集団。
+★★ **⑷ ⒳⁵ 測定**: 上の §1.0 ⒳⁵（2 冊 24 頁・スイート 0・割当 ±0・patch は Lab）。コードは戻した。
+  §7 7.5＝**Core '+' 70 行・LILYPOND-REF 1（`CreateLastToBarlineSpring` の remark の既存 REF を書き直した行）／LILYSHARP-OWN +1**（⒳⁷ の対の注記＝LP に対応物は*在る*が計算をやめた出所の告知）。`-End p523` OK・full 8862 / 0 / 2 / 8864（網 +3・削除 −4・skip 3 → 2）・棚卸しは行番号だけ（APPROXIMATIONS.md・magic_constants.csv）。
+
 ## 以下は第522セッションの経緯
 
 ### 1.1 第522セッション（2026-09-23・YT-DELL2）
