@@ -91,7 +91,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （19 冊＝8/16/32/64 分・`@stemUp`／`@stemDown` 強制・高低を含めて実測）。
   ⚠️ **LP の旗が喋るのは*和音*の場合**（`set_column_chord_outline` は Stem の旗を無条件に入れる＝
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
-  ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**。**第523 が測った（ユーザー「測ってよい」）**: 和音にも旗の箱を建てる 1 行（Lab `sessions/p523/chord-flag-box.patch`）で **実コーパス 5,816 頁のうち 24 頁・2 冊が動く**（`Green-Tinted Sixties Mind.lys` 16 頁分・`Let's Stay Together.lys` 8 頁分）・**スイートは 0 本動く**（fixture に旗が tie に触る和音が無い）・割当 ±0。⇒ **次はその 2 冊の tie を LP 双子と突き合わせて忠実度を決める**（ユーザー判断）
+  ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**。**第523 が測った（ユーザー「測ってよい」）**: 和音にも旗の箱を建てる 1 行（Lab `sessions/p523/chord-flag-box.patch`）で **実コーパス 5,816 頁のうち 24 頁・2 冊が動く**（`Green-Tinted Sixties Mind.lys` 16 頁分・`Let's Stay Together.lys` 8 頁分）・**スイートは 0 本動く**（fixture に旗が tie に触る和音が無い）・割当 ±0。**第524 が LP 双子と突き合わせた**（Lab `sessions/p524/result.txt`・`chordflag.ly`）: `<e a>8~` の下の tie は HEAD（x0 0.852・幅 1.317）→ 箱あり（1.285・0.885）で LP（1.325・0.845）に 0.47 → **0.04** まで寄り、`<d, fis>8~` の下の tie の y は HEAD −0.315 → 箱あり **−0.350129＝LP と exact**。上の tie は両方とも元から exact。⇒ **第524 が建てた（ユーザー「建てて」）**＝台帳 `tie.width.chord-flag` +0.04／`tie.y.chord-flag` exact・経緯は §1.1 第524 ⑵。**残る 0.04 は ⒳¹⁶**。
+- ★ **⒳¹⁶ 旗の箱の*左端*が LP より 0.04 左**（第524 起票・台帳 `tie.width.chord-flag` +0.040000）。Lily# は箱を `LayoutUtilities.StemX` から glyph bbox の幅で建て、LP は Flag grob の X extent（`tie-formatting-problem.cc:186-188`）を入れる。TCFX の twin は x0 も刷る（LP 1.324500・Lily# 1.284500＝幅と逆符号の同じ 0.04）。**次の対＝旗の箱の左端を単独で読む点**（下の tie が旗の右で始まる形・上の tie は元から exact なので旗の箱の Y は既に合っている＝`tie.y.chord-flag`）。起票のみ・値段未測定（動く頁は同じ 2 冊の 24 頁の中）。
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。NoteItem は**第494 が呼び手で数えた＝設計の値段**（建てる・`ResolveBeamStemDirections` の `with`＝collect ごとに新しい BeamId・`TabResolver.ResolveTabStrings`＝弦番号の書き込み。消すなら刻印を item の外へ＝土台）。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB。⚠️ Dictionary／HashSet の bucket はこの census に出ない）。型が分かったら呼びの前後を数える wrapper で軒を絞る。⚠️ **地図の窓は parse の tick も拾う**（第522: "ticks in windows" − render ≈ 270 KB＝GreenNode[]・SyntaxToken[]・NoteGreen…の和。render が建てる green は fabricated barline の 2 本／打鍵）＝**構文の行は引いて読む**。
@@ -168,6 +169,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第524セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。⒳⁵ の 2 冊を LP 双子と突き合わせた（§1.0 ⒳⁵ に数）。
+★ `-Start p524`（HEAD `03eac94b`・full 8862 / 0 / 2 / 8864・`-Archive 522`）。
+
+★★★ **⑴ ⒳⁵ の LP 双子**: 2 冊の形を 1 小節に切り出し（Lab `sessions/p524/GT.lys`・`LST.lys`）、`lysc ly` で双子を出して `Tie.after-line-breaking` の dump（`chordflag.ly`・p452 の `tie-outline-boxes.ly` の型）で control point を読んだ。Lily# 側は `RecordingDocumentContext` の bow と符頭 glyph（`Zz524BowProbeTests.cs.txt`）。**結果は §1.0 ⒳⁵**＝箱を建てると下の tie が LP に寄る（GT 0.47→0.04・LST exact）。上の tie は元から exact。判断はユーザー。
+★★★ **⑵ ⒳⁵ 建てた**（ユーザー「建てて」）: `ElementCoordinator.cs:1898` の条件を `item is NoteItem { IsBeamed: false } or ChordItem { IsBeamed: false }` に（LP `tie-formatting-problem.cc:181-190` は Stem の旗を*符頭の数を問わず*入れる）。**台帳点 2 対を、予測を先に書いて起票**（RULES §5.0）＝`probes/tie-chord-flag.ly`（⑴ の 2 冊・bass・`\fixed c'`）・`tie.width.chord-flag`（TCFX＝GT の下の tie の幅・LP 0.844700・**予測 +0.04 → 実測 +0.040000000**）・`tie.y.chord-flag`（TCFY＝LST の下の tie の高さ・LP −0.350129・**予測 0 → −4.32e−07**）。`tie-outline-boxes.ly` の「旗に本は無い」注記と `TieColumnParts.Flag` の doc を書き直した。**hash: 5,816 頁のうち 24 行・2 冊**（GT 16・LST 8＝第523 の測定と同じ・Lab `sessions/p524/hashes-chordflag.txt`＝**次便からの baseline はこれ**）・**A/B render 1,257,698 → 1,257,679（−19＝±0）**・スイートは台帳 2 点のほか 0 本動く・棚卸しは行番号だけ。残りの 0.04 は **⒳¹⁶** として §1.0 に起票。
+  §7 7.5＝**Core '+' 15 行・LILYPOND-REF 1（旗の箱の条件の remark＝:181-190）／LILYSHARP-OWN 0**。`-End p524` OK・full 8864 / 0 / 2 / 8866（台帳 +2）・棚卸しは行番号だけ・commit `12c0a36a`（コード＋台帳＋probe＋表）。
+
+## 以下は第523セッションの経緯
+
 ### 1.1 第523セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き。§1.0 の「ユーザー判断待ち」7 件を並べて訊き、**ユーザー決定**: ⑴ ⒮¹⁴ 消す／⑵ ⒳⁷ 効かない床を計算しない／⑶ ⒮¹² 第366 の形で網を書く／⑷ ⒩⁶ ⑵ 後回し／⑸ U10 放置／⑹ ⒳¹² 起票のまま・あとで判断／⑺ ⒳⁵ 測ってよい。この便で ⑴⑵⑶⑺ に着手。
@@ -178,20 +190,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★★★ **⑶ ⒮¹² 網**: 第366 の掃き（`Zz366SweepProbeTests`）を門を開けて回した。**net 259 冊 × 36 種＝0 乖離／実コーパス込み 590 冊＝3 乖離（2 冊）**、いずれも adopted 0・spliced 0 で小節数が 1 少ない＝**part-major cell の末尾に音符を打つと、窓より前の候補から旧の尾を継いでいた**。清の門では「the candidate stands before a content window」で decline（1 冊目）／2・3 冊目は walk 0 が live で走って pitch trace が 1 増え、walk 1 の入口の watermark で bail＝正しい結末。⇒ **`TrailingGapSpliceTests`**（2 冊の形を planner の経路で・絵＋decline 理由の 2 主張・`RecordSpliceDeclines`）＝清 3/3 緑・毒 3/3 赤。⚠️ 第458 の「両母集団に観測者なし」は**前向き打鍵の母集団**の話で、**容器の縁の編集**（第366 の掃き）は別の母集団——RULES §5.4「もう一方の母集団に訊く」の 3 つ目の母集団。
 ★★ **⑷ ⒳⁵ 測定**: 上の §1.0 ⒳⁵（2 冊 24 頁・スイート 0・割当 ±0・patch は Lab）。コードは戻した。
   §7 7.5＝**Core '+' 70 行・LILYPOND-REF 1（`CreateLastToBarlineSpring` の remark の既存 REF を書き直した行）／LILYSHARP-OWN +1**（⒳⁷ の対の注記＝LP に対応物は*在る*が計算をやめた出所の告知）。`-End p523` OK・full 8862 / 0 / 2 / 8864（網 +3・削除 −4・skip 3 → 2）・棚卸しは行番号だけ（APPROXIMATIONS.md・magic_constants.csv）。
-
-## 以下は第522セッションの経緯
-
-### 1.1 第522セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き。第521 の報告で挙げた「render の窓の GreenNode[]／SyntaxToken[]」を確かめに行き外れ。代わりに checkpoint の島を閉じた。
-★ `-Start p522`（HEAD `5e1c6262`・full 8861 / 0 / 3 / 8864・`-Archive 520`）。
-
-★★★ **⑴ 型の地図の GreenNode[] 153 KB／SyntaxToken[] 68 KB は render のものではない**（Lab `sessions/p522/`）: `GreenNode` の 2 つの構築子に seam を置くと **render の窓で建つ green は 2 本／打鍵**（form の fabricated barline だけ・`steps-head-sampled.txt`）。**GCAllocationTick は窓の前の parse（315 KB／打鍵）の tick を窓の中の時刻で届ける**＝地図の "ticks in windows" 1,559 KB − render 1,288 KB ＝ 271 KB がそれ（GreenNode[]・SyntaxToken[]・List<GreenNode>・NoteGreen・PitchGreen…の和と一致）。⇒ 型の地図は構文の行を引いて読む（§1.0 に 1 行）。地図は HEAD で取り直した（`type-price-head.txt`・render 1,288,157）。
-★★★ **⑵ checkpoint の島を数えた**（seam＝`seams2.patch`・`steps-ckpt.txt`）: **re-record は 8 打鍵に 1 回**（collect.record 0.12／resume 0.93）で、その中で **33 本／打鍵の `WalkCheckpoint` を 687 B ずつ＝22,725 B（1.76%）**。うち `_meta.Clone()` 152 B は**前の checkpoint と同値 32/33**、`new HashSet(_sectionActiveGrobProps)` 64 B は**空 33/33**、`TableCounts` の `int[21]` 112 B は**前と同値 30/33**、Accidentals は既に `Empty` 共有、`GatherPath` は 33/33 実仕事。resume 側は **`_suffixTargets = new Dictionary(candidates.Count)` を walk 入口で 1.53 本／打鍵・159 entry・6,460 B＝9,909 B（0.77%）**建て、次の walk 入口で null にしていた。
-★★★★ **⑶ 直し**: `BuildWalkCheckpoint(previous:)` が**前の checkpoint の `Meta`（`MetadataState.SameAs`）・`TableCounts`（stack buffer で比べてから）を共有し、空の grob-prop は static 1 個**（3 つとも読み手は copy／compare／iterate だけ＝`CollectWalkProbe` に注記）。`_suffixTargets` は **[ThreadStatic] の drawer から rent／walk の終わりと Reset で Clear して give**（`RentSuffixTargets`／`GiveSuffixTargets`・第456 の型。abort で失うだけ）。liveness の網 `CollectSuffixTargetDrawerTests`（`SuffixTargetStats` served／fresh＝2 打鍵目以降 fresh 0・各打鍵の絵は fresh render と等しい）。
-★★★ **⑷ A/B render 1,288,157 → 1,267,144（−21,013 B／打鍵・−1.63%）**・**予測 −20,300 ± 4,000 の 104%**（Lab `prediction.txt`）。**5,816 頁 hash 0 差**——ただし **`The Final Countdown.lys` が 10:31 にまた編集されていた**（p521 の hash 10:13 の後）ので、旧 build と新 build を*今の*コーパスで取り直して 0 差（`hashes-oldbuild.txt`＝次便からの baseline・p520 との差 16 行はその 1 冊）。⚠️ **1 度目の取り直しは build が落ちて `--no-build` が新 binary を走らせ、「0 差」が自分対自分だった**（新しい網が stash した Core の記号を参照していた＝RULES §5.5 の顔。網を退避してやり直した）。
-★★ **⑸ 毒 6 本・baseline 8,866 緑（網 +2）**（Lab `poisons.out`）: Meta を常に共有 **3 赤**／counts を常に共有 **19 赤**／**空の grob-prop を常に渡す＝最初は 0 赤（観測者なし）→ 網 `CollectSectionOverrideResumeTests`（section 内の in-music override を挟んで resume し、次の section で revert する本）を書いて 1 赤**／`SameAs` が key を見ない **3 赤**／**park で Clear しない 5 赤（stale の entry は状態比較を抜けて出力に届く＝Clear は load-bearing）**／never park **1 赤（liveness の網だけ・出力同一）**。⚠️ 1 度目の毒は §1 の継ぎ目を立てる前に回して baseline が 3 赤（第456 と同じ顔）。
-  §7 7.5＝**Core '+' 133 行・4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（LP に対応物の無い resume の基盤）。`-End p522` OK・full 8863 / 0 / 3 / 8866（網 +2）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
 
 ## 2. 開いている作業
 
@@ -2400,6 +2398,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | 決定 | 根拠（要点） |
 |---|---|
+| ★★ **⒳⁵ 和音にも tie の outline の旗の箱を建てる（2026-09-23・第524・ユーザー決定「建てて」）** | 第524 が LP 双子で測った: 建てると 2 冊の下の tie が LP に寄る（GT の幅 +0.47 → +0.04・LST の高さ +0.035 → exact）、上の tie は不変、動く頁は実コーパス 24 頁・2 冊、割当 ±0。台帳 `tie.width.chord-flag`／`tie.y.chord-flag`。残差 0.04 は ⒳¹⁶ <!-- ledger: tie.width.chord-flag = 0.04 --> <!-- ledger: tie.y.chord-flag = -4.32e-07 --> |
 | ★★ **§1.0 の判断待ち 7 件（2026-09-23・第523・ユーザー決定）＝⒮¹⁴ `LedgerLineSpannerEngraver` は消す／⒳⁷ 小節線の床は「効かない床」として計算しない／⒮¹² は第366 の形で網を書く（門は畳まない）／⒩⁶ ⑵ `ClearBeamStamp` の観測者は後回し／U10 コーパスの効いていない弦番号は放置／⒳¹² navigation 記号の仕様は起票のまま・あとで判断／⒳⁵ 和音の旗の箱は測ってよい** | 私が 7 件を perf に効く順に並べて訊いた答え。⒮¹⁴ は読み手がテストだけ・⒳⁷ は 2 便かけて動かせる本が見つからず・⒮¹² は門を支える母集団（第366 の 88 件）をスイートが持っていない・U10 は描画が変わらない。着手と結果は §1 第523 |
 | ★★★ **フレージング・スラーの綴りは `@phrasingSlur` … `@!phrasingSlur`**（2026-09-22・第482・**ユーザー決定**＝3 択から選択・✅ `eedf4197`） | 既存の span（`@rit`…`@!rit`・`@ottava`…`@!ottava`・`@sustain`…`@!sustain`）と同じ型。名前は LP の grob 名 PhrasingSlur。LP の `\(` `\)` は「バックスラッシュはタブ譜専用・注釈は `@`」の方針に例外を作るので退けた。`@phrase` は `phrase` が予約語で使えない |
 | ★★★ **`voice { } { }` の span は音価の既定も動かさない＝全 branch は span が開いた時点の (Duration, Dots) から読み、span の*後ろ*の音楽もそこから読む。octave frame（2026-08-01）と同じ 1 つの規則**（2026-09-17・第398 第 3 便・私が octave の決定の延長として置き、**ユーザー確認「あなたの判断を残す方が、一貫して分かりやすいよね」**・✅ `0c25c5d2`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18 に落とした） |

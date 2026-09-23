@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第522セッションの経緯
+
+### 1.1 第522セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。第521 の報告で挙げた「render の窓の GreenNode[]／SyntaxToken[]」を確かめに行き外れ。代わりに checkpoint の島を閉じた。
+★ `-Start p522`（HEAD `5e1c6262`・full 8861 / 0 / 3 / 8864・`-Archive 520`）。
+
+★★★ **⑴ 型の地図の GreenNode[] 153 KB／SyntaxToken[] 68 KB は render のものではない**（Lab `sessions/p522/`）: `GreenNode` の 2 つの構築子に seam を置くと **render の窓で建つ green は 2 本／打鍵**（form の fabricated barline だけ・`steps-head-sampled.txt`）。**GCAllocationTick は窓の前の parse（315 KB／打鍵）の tick を窓の中の時刻で届ける**＝地図の "ticks in windows" 1,559 KB − render 1,288 KB ＝ 271 KB がそれ（GreenNode[]・SyntaxToken[]・List<GreenNode>・NoteGreen・PitchGreen…の和と一致）。⇒ 型の地図は構文の行を引いて読む（§1.0 に 1 行）。地図は HEAD で取り直した（`type-price-head.txt`・render 1,288,157）。
+★★★ **⑵ checkpoint の島を数えた**（seam＝`seams2.patch`・`steps-ckpt.txt`）: **re-record は 8 打鍵に 1 回**（collect.record 0.12／resume 0.93）で、その中で **33 本／打鍵の `WalkCheckpoint` を 687 B ずつ＝22,725 B（1.76%）**。うち `_meta.Clone()` 152 B は**前の checkpoint と同値 32/33**、`new HashSet(_sectionActiveGrobProps)` 64 B は**空 33/33**、`TableCounts` の `int[21]` 112 B は**前と同値 30/33**、Accidentals は既に `Empty` 共有、`GatherPath` は 33/33 実仕事。resume 側は **`_suffixTargets = new Dictionary(candidates.Count)` を walk 入口で 1.53 本／打鍵・159 entry・6,460 B＝9,909 B（0.77%）**建て、次の walk 入口で null にしていた。
+★★★★ **⑶ 直し**: `BuildWalkCheckpoint(previous:)` が**前の checkpoint の `Meta`（`MetadataState.SameAs`）・`TableCounts`（stack buffer で比べてから）を共有し、空の grob-prop は static 1 個**（3 つとも読み手は copy／compare／iterate だけ＝`CollectWalkProbe` に注記）。`_suffixTargets` は **[ThreadStatic] の drawer から rent／walk の終わりと Reset で Clear して give**（`RentSuffixTargets`／`GiveSuffixTargets`・第456 の型。abort で失うだけ）。liveness の網 `CollectSuffixTargetDrawerTests`（`SuffixTargetStats` served／fresh＝2 打鍵目以降 fresh 0・各打鍵の絵は fresh render と等しい）。
+★★★ **⑷ A/B render 1,288,157 → 1,267,144（−21,013 B／打鍵・−1.63%）**・**予測 −20,300 ± 4,000 の 104%**（Lab `prediction.txt`）。**5,816 頁 hash 0 差**——ただし **`The Final Countdown.lys` が 10:31 にまた編集されていた**（p521 の hash 10:13 の後）ので、旧 build と新 build を*今の*コーパスで取り直して 0 差（`hashes-oldbuild.txt`＝次便からの baseline・p520 との差 16 行はその 1 冊）。⚠️ **1 度目の取り直しは build が落ちて `--no-build` が新 binary を走らせ、「0 差」が自分対自分だった**（新しい網が stash した Core の記号を参照していた＝RULES §5.5 の顔。網を退避してやり直した）。
+★★ **⑸ 毒 6 本・baseline 8,866 緑（網 +2）**（Lab `poisons.out`）: Meta を常に共有 **3 赤**／counts を常に共有 **19 赤**／**空の grob-prop を常に渡す＝最初は 0 赤（観測者なし）→ 網 `CollectSectionOverrideResumeTests`（section 内の in-music override を挟んで resume し、次の section で revert する本）を書いて 1 赤**／`SameAs` が key を見ない **3 赤**／**park で Clear しない 5 赤（stale の entry は状態比較を抜けて出力に届く＝Clear は load-bearing）**／never park **1 赤（liveness の網だけ・出力同一）**。⚠️ 1 度目の毒は §1 の継ぎ目を立てる前に回して baseline が 3 赤（第456 と同じ顔）。
+  §7 7.5＝**Core '+' 133 行・4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（LP に対応物の無い resume の基盤）。`-End p522` OK・full 8863 / 0 / 3 / 8866（網 +2）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
+
 ## 以下は第521セッションの経緯
 
 ### 1.1 第521セッション（2026-09-23・YT-DELL2）
