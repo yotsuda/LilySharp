@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第517セッションの経緯
+
+### 1.1 第517セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（第516 のすぐ後）。ユーザー決定「⑶ → ⑵ の順で両方」の **⑵**。
+★ **`-Start p517` の 1 コマンドで §0 が全部済んだ**（HEAD `4c115447`・full 8854 / 0 / 3 / 8857・`-Archive 515` も自動）。
+
+★★★★ **⑴ ⒩⁶ ⑵ を入れた＝bake がその場で刻む。render 1,554,547 → 1,452,853（−101,694 B／打鍵・−6.54%）・増分は 0 差**。`NoteItem`／`ChordItem` に `StampBeam`、`RestItem` に `StampPureBeamShift`、3 つとも `ClearBeamStamp` ＝**1 つの扉**（`internal`・モデルで唯一の書き換えで、collect 相に閉じている）。⚠️ **賞金が予測（81,098＝563.18 × 144 B）を超えたのは、写しだけでなく `work` 配列（`Items.ToArray()`）と touched Measure の `with { Items }` も一緒に消えたから**。
+★★ **⑵ 着手の前に「壊れないこと」を先に確かめた**（第515 の ⚠️ の続き）: ⑴ **item を鍵にした cache は 1 つも無い**（CWT はすべて `Staff`／`Voice`／`Voice[]`／`SystemLayout[]`／`MultiStaffScore`＝collect ごとに建て直る容器）。⑵ **`MeasureContentKey` は `BeamId` を除外済み**（値に意味が無いので）だが **`StemUpOverride`／`PureBeamedStemTip` は content**＝古い刻印は*信じられる*。⇒ **だから「消してから刻む」**。
+★★★ **⑶ その `ClearBeamStamp` に観測者が居ない**（⒩⁶ の ⚠️ に起票）。**刻印済みで bake に来る item は 9.3%（340,977／3,683,264）＝空振りではない**のに、**再 bake は全件*同じ値*を書き戻す**（RE-BAKE DIFFERED 0）。毒はスイートもコーパスも動かさず、狙って書いた 2 冊も緑。⚠️ **「毒が緑」を*網が書けた*と読まないこと**＝2 本のテストは名前も remarks も「隣の振る舞いを留めるだけ」に直した。
+★ **新しい観測者を 1 つ作った**＝**コーパスの「増分＝フル」を同じ扉どうしで突き合わせる脚**（Lab `sessions/p517/Zz517Equiv.cs.txt`・232 冊 × 8 打鍵で 0 差）。⚠️ **最初の版は `SvgGenerator.Generate`（1 枚）と増分の page 配列を比べて 1,856/1,856 差**＝**比較対象が不揃いなだけ**だった。毒を掛ける前に *clean 側が 0* であることを見るまでは、赤も緑も読めない。
+  §7 7.5＝**Core '+' は `MusicItem.cs` と `MeasureCollector.Stems.cs`**。LILYPOND-REF は 1 行も増減なし（LP の `stem.cc`／`beam.cc` への参照は動かしていない＝保管と書き込み時期だけの変更）。`-End p517` の門は全部 OK・full 8856 / 0 / 3 / 8859（網 2 本ぶん増えた）。
+
 ## 以下は第516セッションの経緯
 
 ### 1.1 第516セッション（2026-09-23・YT-DELL2）

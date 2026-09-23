@@ -77,6 +77,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「毒入りのビルドを私が作ってしまったのかもしれない。一旦この件は忘れて」・第477）**。第477 は 4 通り（HEAD 全描画・1 文字ずつの増分・`2c9bd51a`・プレビューと同じ 0.7.0）すべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定「私が不注意だった。今後は私が注意する」）＝毒の最中のビルドはユーザー側で避ける。第476 の毒 1〜3 は `StaffItemsAt`＝小節頭のばねの入力を汚す形で、症状と合っていた
+- ★★★ **⒭⁸ red の島＝打鍵あたり node 1,128＋token 1,124（約 105 KB・7.4%）**（第519・Lab `sessions/p519/steps-after-attr.txt`）。**頭は token**: `CalculateStaffPosition(PitchSyntax)` **699／打鍵**（`PitchName`／`OctaveOffset` が pitch の token を red で読む）・`CreateNoteItem` 102・`ExtractStringNumber` 81・`ProcessMusicNode` 69・`CreateRestItem` 59＝**token の red は値の運び手＝accessor を green で読めば消える候補（約 54 KB・3.8%）**。node 側は suffix の再 collect の実仕事。⚠️ **賞金は継ぎ目の bytes ではなく「その walk しか読まない red の数」で組む**（第519 が 2.3 倍に外れた理由）
 - ★ **⒮⁶ 「建てない」の島の残り＝約 14,000 B／打鍵**（第455 の census＝Lab `sessions/p455/`・住所は census 時点＝戻る便は回し直す）。単独の頭は `MeasureLayouter.cs:466` 1,070・`SvgSystemFragmentCache.cs:237` 781（`Entry` を class に＝設計変更）ほか 600 B 未満。
   ⚠️ zero／one 欄は drain 時点の最終 `Count`＝**`actual` とコードの両方で読む**（RULES §5.3 末尾）
 - ★★ **⒮⁸ 器を消せない残り 2 軒＝6,409 B／打鍵 0.142%・どちらも*値段ではない理由*で残った**（第455）。
@@ -131,12 +132,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **delegate 型の行の持ち主は `sessions/p470/delegate-sites.txt`（Roslyn・型→建てる式）で引く**。⚠️ **閉包の行は閉包だけ＝同じ式の iterator と `ToList` は別の行**（RULES §5.3 末尾）
 - ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486 が LYS5003 を足して見つけた・Lab `sessions/p486/lys5003-corpus.txt`）。書いた `\N` の弦ではその音が弾けない（負のフレット）ので、**Lily# はこれまで黙って別の弦に描いていた**（LP も同じく無視して計算し直す）。349 件は「You're the One That I Want (-1)／(-2)」＝移調版で `\N` が残ったもの、残りは 37 冊に少しずつ（若者のすべて 32・BOW AND ARROW 9 ほか）。例: 'Til They Take My Heart Away の `e,8\2`＝相対音高で E1 になり D 線では −10。**`clef bass` だけで `octave 3` の無い本は 0.8.0 の「clef は音高を動かさない」でオクターブが下がった可能性**がある＝**本の側を直すかはユーザー判断**（描画は今までと同じ）
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
-- **⒴⁶ 残った包み＝`SeedClef` の `PlaceGlyphOutlineCached`**（天井 `ink.clef` 0.021% → **第437 が同じ計器で
-  4.05 回／打鍵・メソッド内の継ぎ目は 0 B と実測**＝閉包を数えても**上限 0.005%**＝天井の 1/4。着手は最後でよい）
 - ★ **⒭′ 器の尾の残り＝約 5,000 B／打鍵**（第446 の住所）。残りは「`yield return` のアクセサを struct walk に」形（`SharedRenderer.Noteheads.cs:54/:63` `EnumerateStaffItems`・`VoiceScan.WalkVoiceItems`・`RenderSpec.GetVoiceBindings`・`VoltaBracketEngraver.BrokenPieces`・1 軒 50 行級・手本は第445 の `ChildNodeList`）。
   頭 2 軒は閉じた＝`HarvestOmittedStructure`（第489・−1,177）・`LyricBindings.cs:148` は直す軒ではない（第490＝158 KB は `DescendantIndex` の建設費）
-- **⒬″ ⒬ の尾＝`IReadOnlyList` 族の残り 34 軒 1,410 B／打鍵 0.028%**＝1 軒あたり 41 B＝実仕事
-- **⒴⁸ batch でない `Merge` 147,417 回／打鍵は未値付け**＝値段が先
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
 - ★★ **⒨ memo の front の*program と partition*＝1.261%**＝**第512・第518 で front は尽きた（下）**
@@ -146,7 +143,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   hit>0**・hit した system は **90,781／打鍵 22.6**）。⚠️ **`prog` は「鍵を建てる」ので、*安くする*には
   鍵の形を変える＝土台の変更**
   ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**第518 が front を 6 段に値付けした**（Lab `sessions/p518/steps-head4.txt`・above／below）: part 261／138・prog 2,852／385・filter 1,053／333・**core 31,379／25**・rebuild 8,734／4,393・store 574／219＝**front は尽きた**。core の 77% は `PlaceBarNumbers` の tracker の写しで**第518 が閉じた（−17,839）**。残る頭は **rebuild 8,734**（9 家族の `ToBuilder`＝出力の配列そのもの・struct の家族 55 個／呼び）と core の尾（bar number の outline の対 2,442＝tracker に格納される実仕事・seed 2,393・marks 2,163・voltas 1,253・tracker の merge 1,191）
-- ✅ **⒫′ `HorizontalSkyline` の pad は保留で持つ**（第497・−37,440／打鍵・ビット同一）。`VerticalSkyline.Padded` は第510 が値付けして閉じた（3,830 B／打鍵のうち頭を −3,240）。**残り＝`OutsideStaffStacker.cs:3231` 530 B**（padding ごとの cache＝尾）
 - ✅ **⒩⁶ 梁の刻印の写しは閉じた＝render 1,660,215 → 1,452,853（−207,362 B／打鍵・−12.5%）**（第516 が ⑶、第517 が ⑵。ユーザー決定「⑶ → ⑵ の順で両方」）。⑶ **写しを*安くする*** −105,668（`MusicItemRare` 10 field ＋ `NoteItemRare` 17 field＝**`NoteItem` 216→144 B・`RestItem` 96 B**）／⑵ **その場で刻印** −101,694（`StampBeam`／`ClearBeamStamp` の 1 つの扉。写しだけでなく **work 配列と Measure の建て直しも消えた**＝予測 81,098 を超えた理由）。**⑴ 側表は要らなくなった**。
   ⚠️ **⑵ が残した 1 つ＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測。⒮¹² と同じ顔）。**刻印済みで bake に来る item は 340,977／3,683,264＝9.3%**（写していた頃は 0＝recording が item 実体を共有するため）だが、**再 bake は 340,977 件すべて*同じ値*を書き戻した**（RE-BAKE DIFFERED 0）。**毒（clear を殺す）はスイート 8,859 も コーパス 232 冊 × 8 打鍵の「増分＝フル」も 1 つも動かさない**。狙って書いた 2 冊（またぎの手動梁が `]` を得る／失う。`WalkCarriesNothing` は梁を carry に数えないので checkpoint は梁の途中に立てる）も緑＝**網としては成立せず、`ManualBeam*_AcrossAResume_MatchesFull` の 2 本は隣の振る舞いを留めるだけ**。⇒ **二択＝⑴ 破れる形を 1 冊見つけて網にする／⑵ 「効かない保険」として畳めるか**（値段は割当 0 の 1 歩き）。計器は Lab `sessions/p517/`
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
@@ -172,7 +168,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **第460 が 2 人目の証人を足した**＝`HorizontalSkyline.GiveBox` の `Clear` を抜く毒はスイート緑・
   コーパス 0 差で、stale な箱が答えを変えたのは **862 回すべて `NoteColumnToBarlineFloorPair`**
   （Lab `sessions/p460/stale-box-counts.txt`）＝**この床を効かせる便は、あの `Clear` にも初めて観測者を付ける**
-- ★ **⒯ 索引を*緑*にする**（`SyntaxNode.GreenSitesLazy` が既にその機械・未見積もり）
+- **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
@@ -200,6 +196,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第519セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。⒝ ⒯ を render 側で値付けしに行き、**値段は索引ではなく「打鍵ごとの red の全木 walk」2 本だった**。
+★ `-Start p519`（HEAD `6f2d6390`・full 8856 / 0 / 3 / 8859・`-Archive 517`）。
+
+★★★ **⑴ ⒯ の render 側は無い**: `DescendantIndex.Build` は 0.004 回／打鍵・1,297 B（0.09%）＝歌詞行の本の `FoldAdjacentRows` → `LyricBindings.VoicesOfPart` だけが建てる（診断 pass の費用であって render の費用ではない）。**代わりに red の実体化を数えた＝打鍵あたり node 1,277＋token 1,223（約 115 KB・8%）**（Lab `sessions/p519/steps-head5.txt`・地図 `steps-head3.txt`）。
+★★★★ **⑵ 頭 2 本はどちらも「木ごとの CWT＝打鍵ごと」の red 全木 walk**（RULES §5.3 の型）: `BareDurations.BuildMap` **1.00 回／打鍵・43,399 B（3.0%）で、建てる map は*空***（コーパスに bare duration は無い。`ItemFactory` の `IsOriginal(note)` が最初の音で強制）／`CollectResumePlanner.SameShape` **9.51 回・38,254 B（2.7%）**＝`ShapeWalk` が section の直下の子を token まで red で列挙。**直し＝両方 green を読む**: `ShapeWalk` は green の slot の kind（`IsCollectableMusicKind`＝`MusicSitesEquivalenceTests` が型の一覧に pin 済み）、`BareDurations` は green を full position つきで畳み、bare が見つかったときだけ `RedOf`（root から position で降りる＝parent-cached の同じ実体）で red を起こす。網 `BareDurationsGreenWalkTests`（旧 red walk を oracle に・全 net 冊＋全腕の 1 冊）。
+★★★ **⑶ A/B render 1,435,721 → 1,415,342（−20,379 B／打鍵・−1.42%）。予測 −47,000 ± 15,000 の 43%＝下に外れた**（Lab `prediction.txt`）。**外れの正体＝「先に触る walk」の会計**: 2 本の継ぎ目の和 81,650 に対し、消えた red は node 1,277→1,128・token 1,223→1,124＝**約 250 本だけ**。walk が先に起こしていた red の 3/4 は collector が後で読む（`steps-after-attr.txt`）。⇒ **red 系の賞金は継ぎ目の bytes ではなく「その walk しか読まない red の数」で組む**（RULES §5.3 へ）。5,824 ページ 0 差（`hash.log`）。
+★★ **⑷ 毒 4 本・baseline 8,860 緑（網 +1）**（Lab `poisons.out`）: `Barline` で crossed を立てない **4 赤**（網＋LYS1031 の 3 本）／pitched rest を event にする **1 赤**（網だけ）／scope を漏らす **1 赤**（網だけ）／⚠️ **`ShapeWalk` の music run の畳みを外す＝緑（0 赤）＝観測者なし**。run の中に音を足す編集で `StructureStable` が偽になる＝reuse が減るだけで出力は不変（旧 red 版も同じく無観測）。網にするなら resume の*回数*の計器。
+  §7 7.5＝**Core '+' は 3 ファイル（`BareDurations.cs`・`PitchedRest.cs`・`CollectResumePlanner.cs`）・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ畳みを green で綴っただけ・出所は動かしていない・Core '+' 187 行）。`-End p519` OK・full 8857 / 0 / 3 / 8860（網 +1）・棚卸し差分なし。
+
+## 以下は第518セッションの経緯
+
 ### 1.1 第518セッション（2026-09-23・YT-DELL2）
 
 新しい会話。⒝ ⒨ の「残り＝part と miss の建設＝値段は未測定」に着手＝**front を段ごとに値付けしたら、値段は front ではなく core の中の 1 軒だった**。
@@ -210,19 +219,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★★ **⑶ A/B render 1,452,853 → 1,435,014（−17,839 B／打鍵・−1.228%）**（Lab `ab-after.txt`・`prediction.txt`）。**予測 −17,370 の 102.7%＝上に外れ**——stacker の 2 軒だけで組み、`InsideOf` の他の 2 読み手が両側→片側になった分（約 470）を数えていなかった。5,824 ページ 0 差（`hash.log`）。
 ★★ **⑷ 毒 3 本＝3 本とも赤・baseline 8,859 緑**（Lab `poisons.out`）: `MergeRaised` が raise を落とす **280 赤**（above の枠は観測されている）／`RaisedCopy` が raise を落とす **12 赤**（below）／**above の tracker が*共有された* stored の profile を in-place で `Raise` する（旧の手順を新しい共有実体に当てる）＝81 赤＋棚卸し 2**（次の読み手が動いた profile を読む＝**read-only の契約に観測者が居る**）。
   §7 7.5＝**Core '+' は 4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（写しの数だけの変更・出所は動かしていない・Core '+' 152 行＝commit 前の `-End` は 0 と刷る）。`-End p518` の門は全部 OK・full 8856 / 0 / 3 / 8859・棚卸し 2 表は行番号だけ（新規 0／消滅 0）。
-
-## 以下は第517セッションの経緯
-
-### 1.1 第517セッション（2026-09-23・YT-DELL2）
-
-同じ会話の続き（第516 のすぐ後）。ユーザー決定「⑶ → ⑵ の順で両方」の **⑵**。
-★ **`-Start p517` の 1 コマンドで §0 が全部済んだ**（HEAD `4c115447`・full 8854 / 0 / 3 / 8857・`-Archive 515` も自動）。
-
-★★★★ **⑴ ⒩⁶ ⑵ を入れた＝bake がその場で刻む。render 1,554,547 → 1,452,853（−101,694 B／打鍵・−6.54%）・増分は 0 差**。`NoteItem`／`ChordItem` に `StampBeam`、`RestItem` に `StampPureBeamShift`、3 つとも `ClearBeamStamp` ＝**1 つの扉**（`internal`・モデルで唯一の書き換えで、collect 相に閉じている）。⚠️ **賞金が予測（81,098＝563.18 × 144 B）を超えたのは、写しだけでなく `work` 配列（`Items.ToArray()`）と touched Measure の `with { Items }` も一緒に消えたから**。
-★★ **⑵ 着手の前に「壊れないこと」を先に確かめた**（第515 の ⚠️ の続き）: ⑴ **item を鍵にした cache は 1 つも無い**（CWT はすべて `Staff`／`Voice`／`Voice[]`／`SystemLayout[]`／`MultiStaffScore`＝collect ごとに建て直る容器）。⑵ **`MeasureContentKey` は `BeamId` を除外済み**（値に意味が無いので）だが **`StemUpOverride`／`PureBeamedStemTip` は content**＝古い刻印は*信じられる*。⇒ **だから「消してから刻む」**。
-★★★ **⑶ その `ClearBeamStamp` に観測者が居ない**（⒩⁶ の ⚠️ に起票）。**刻印済みで bake に来る item は 9.3%（340,977／3,683,264）＝空振りではない**のに、**再 bake は全件*同じ値*を書き戻す**（RE-BAKE DIFFERED 0）。毒はスイートもコーパスも動かさず、狙って書いた 2 冊も緑。⚠️ **「毒が緑」を*網が書けた*と読まないこと**＝2 本のテストは名前も remarks も「隣の振る舞いを留めるだけ」に直した。
-★ **新しい観測者を 1 つ作った**＝**コーパスの「増分＝フル」を同じ扉どうしで突き合わせる脚**（Lab `sessions/p517/Zz517Equiv.cs.txt`・232 冊 × 8 打鍵で 0 差）。⚠️ **最初の版は `SvgGenerator.Generate`（1 枚）と増分の page 配列を比べて 1,856/1,856 差**＝**比較対象が不揃いなだけ**だった。毒を掛ける前に *clean 側が 0* であることを見るまでは、赤も緑も読めない。
-  §7 7.5＝**Core '+' は `MusicItem.cs` と `MeasureCollector.Stems.cs`**。LILYPOND-REF は 1 行も増減なし（LP の `stem.cc`／`beam.cc` への参照は動かしていない＝保管と書き込み時期だけの変更）。`-End p517` の門は全部 OK・full 8856 / 0 / 3 / 8859（網 2 本ぶん増えた）。
 
 ## 2. 開いている作業
 
