@@ -60,12 +60,20 @@ internal static class SyntaxFacts
     /// separator (<c>[1,3. B]</c>) is a Comma standing before the section name, so the
     /// whole-node scan would read it as an octave down.
     /// </summary>
+    /// <remarks>
+    /// Counted on the GREEN slots: a mark is a token, and a token's kind is its green's,
+    /// so no red token has to exist to be counted. Session 520 moved it here from the red
+    /// children — the collector counts every note's marks once a keystroke, and a bass
+    /// book spells most notes with <c>,</c> (409 Comma reds a keystroke over the owner's
+    /// corpus, all built to be looked at once).
+    /// </remarks>
     public static int NetOctaveMarksFrom(SyntaxNode node, int firstSlot)
     {
+        var green = node.Green;
         int offset = 0;
-        for (int i = firstSlot; i < node.SlotCount; i++)
+        for (int i = firstSlot; i < green.SlotCount; i++)
         {
-            if (node.GetChild(i) is not SyntaxTokenNode t)
+            if (green.GetSlot(i) is not { IsToken: true } t)
                 continue;
             if (t.Kind == SyntaxKind.Apostrophe)
                 offset++;

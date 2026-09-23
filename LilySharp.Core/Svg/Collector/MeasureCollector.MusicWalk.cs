@@ -190,7 +190,7 @@ public sealed partial class MeasureCollector
         foreach (var a in ArticulationsOf(node))
         {
             if (a is ArticulationSyntax art
-                && Semantics.AnnotationValues.IsPhrasingSlurName(art.NameToken.Text))
+                && Semantics.AnnotationValues.IsPhrasingSlurName(art.Name))
             {
                 start = art.SourceStart;
                 // '.up' / '.down' is LilyPond's ^\( / _\(.
@@ -870,7 +870,7 @@ public sealed partial class MeasureCollector
     {
         NoteSyntax => true,
         ChordSyntax chord => !chord.IsEmpty,
-        RestSyntax rest => rest.RestToken.Text != "R",
+        RestSyntax rest => rest.RestText != "R",
         TupletExpressionSyntax => true,
         _ => false,
     };
@@ -1331,11 +1331,13 @@ public sealed partial class MeasureCollector
                 break;
 
             case BarlineSyntax barline:
-                var barType = ParseBarlineType(barline.BarToken.Text);
+                var barType = ParseBarlineType(barline.BarText);
                 // Pass the '|' token's INK offset (not barline.SourceStart, which includes
                 // leading trivia) so the barline's click/highlight data-pos lands on the
-                // written bar, not the whitespace before it.
-                builder.HandleBarline(barType, barline.BarToken.Span.Start);
+                // written bar, not the whitespace before it. Both off the green (session 520):
+                // a barline is read once a keystroke per re-collected bar, and the token red
+                // it used to build for that carried nothing else.
+                builder.HandleBarline(barType, barline.BarTokenStart);
                 break;
 
             case InlineVoltaSyntax volta:

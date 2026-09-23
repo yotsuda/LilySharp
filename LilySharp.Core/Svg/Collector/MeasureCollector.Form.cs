@@ -1003,7 +1003,7 @@ public sealed partial class MeasureCollector
                         pendingMusic = false;
                         confirmable = false;
                     }
-                    else if (bar.BarToken.Text != "|")
+                    else if (bar.BarText != "|")
                     {
                         confirmable = false;
                     }

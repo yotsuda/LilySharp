@@ -448,7 +448,7 @@
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:278** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
-- **:775** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+- **:787** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **:120** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`

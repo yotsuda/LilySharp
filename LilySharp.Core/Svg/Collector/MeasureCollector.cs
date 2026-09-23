@@ -1955,7 +1955,7 @@ public sealed partial class MeasureCollector
                 {
                     case NavigationMarkSyntax or InlineVoltaSyntax:
                         return true;
-                    case BarlineSyntax bl when bl.BarToken.Text.Contains(':'):
+                    case BarlineSyntax bl when bl.BarText.Contains(':'):
                         return true;
                     case VariableReferenceSyntax vr:
                         (refs ??= new List<string>()).Add(vr.Name.Text);
@@ -3866,7 +3866,7 @@ public sealed partial class MeasureCollector
         foreach (var art in articulations)
         {
             if (art is ArticulationSyntax artSyntax &&
-                artSyntax.NameToken.Text == "arpeggio")
+                artSyntax.Name == "arpeggio")
                 return true;
         }
         return false;
@@ -3883,7 +3883,7 @@ public sealed partial class MeasureCollector
         {
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.Type == ArticulationType.None &&
-                artSyntax.NameToken.Text.Equals("courtesy", StringComparison.OrdinalIgnoreCase))
+                artSyntax.Name.Equals("courtesy", StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;
@@ -3906,7 +3906,7 @@ public sealed partial class MeasureCollector
     {
         foreach (var art in ArticulationsOf(node))
             if (art is ArticulationSyntax { Type: ArticulationType.None } a
-                && a.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                && a.Name.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
                 return a.ForcedAbove;
         return null;
     }
@@ -3929,7 +3929,7 @@ public sealed partial class MeasureCollector
     {
         foreach (var art in ArticulationsOf(node))
             if (art is ArticulationSyntax { Type: ArticulationType.None } a
-                && a.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
+                && a.Name.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
                 return a.ForcedAbove;
         return null;
     }
@@ -3951,7 +3951,7 @@ public sealed partial class MeasureCollector
     {
         foreach (var art in ArticulationsOf(node))
             if (art is ArticulationSyntax { Type: ArticulationType.None } a
-                && a.NameToken.Text.Equals(name, StringComparison.OrdinalIgnoreCase))
+                && a.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                 return a.SourceStart;
         return MusicItem.NoSourcePosition;
     }
@@ -4051,7 +4051,7 @@ public sealed partial class MeasureCollector
         {
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.Type == ArticulationType.None &&
-                artSyntax.NameToken.Text.Equals(lowerName, StringComparison.OrdinalIgnoreCase))
+                artSyntax.Name.Equals(lowerName, StringComparison.OrdinalIgnoreCase))
                 return true;
         }
         return false;
@@ -4118,7 +4118,7 @@ public sealed partial class MeasureCollector
         foreach (var art in articulations)
         {
             if (art is ArticulationSyntax artSyntax &&
-                artSyntax.NameToken.Text is "glissando" or "slide")
+                artSyntax.Name is "glissando" or "slide")
                 return true;
         }
         return false;

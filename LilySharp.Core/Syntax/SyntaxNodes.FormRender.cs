@@ -1110,7 +1110,7 @@ public sealed partial class BreakSyntax : SyntaxNode
     /// <summary>Which of the four directives this is, read off the keyword — the ONE
     /// reader every consumer (the collector, the exporter) dispatches on. (Not named
     /// <c>Kind</c>: that is the node's own <see cref="SyntaxNode.Kind"/>.)</summary>
-    public BreakKind Directive => BreakKeyword.Kind switch
+    public BreakKind Directive => Green.GetSlot(0)!.Kind switch
     {
         SyntaxKind.NoBreakKeyword => BreakKind.NoLine,
         SyntaxKind.PageBreakKeyword => BreakKind.Page,

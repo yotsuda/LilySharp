@@ -41,7 +41,12 @@ public sealed class ArticulationSyntax : SyntaxNode
     /// <see cref="ArticulationType.None"/> for non-articulation marks (e.g. a
     /// music mark), which are then resolved by name downstream.
     /// </summary>
-    public ArticulationType Type => ArticulationRegistry.Resolve(NameToken.Text);
+    public ArticulationType Type => ArticulationRegistry.Resolve(Name);
+
+    /// <summary>The articulation name (the text after <c>@</c>) off the green token — the same
+    /// string <see cref="NameToken"/>'s <c>Text</c> is, with no token red built for it
+    /// (session 520).</summary>
+    public string Name => Green.GetSlot(1)!.Text;
 
     /// <summary>
     /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier
@@ -53,7 +58,7 @@ public sealed class ArticulationSyntax : SyntaxNode
     /// has to keep or every position after it slides left by one character
     /// (see <c>ArticulationGreen</c>).
     /// </remarks>
-    public bool? ForcedAbove => GetChild(3) is SyntaxTokenNode dir
+    public bool? ForcedAbove => Green.GetSlot(3) is { IsToken: true } dir
         ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
         : null;
 }
@@ -78,7 +83,7 @@ public sealed class DynamicSyntax : SyntaxNode
     /// <c>true</c> = above, <c>false</c> = below, <c>null</c> = default (below).
     /// </summary>
     /// <remarks>Slot 3 — slot 2 is the qualifier's '.', see ArticulationSyntax.</remarks>
-    public bool? ForcedAbove => GetChild(3) is SyntaxTokenNode dir
+    public bool? ForcedAbove => Green.GetSlot(3) is { IsToken: true } dir
         ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
         : null;
 
@@ -127,5 +132,5 @@ public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
     /// Gets the string number (1-based). The token text is the full <c>\N</c>
     /// annotation (e.g. "\4"), so the leading backslash is stripped before parsing.
     /// </summary>
-    public int StringNumber => int.Parse(StringNumberToken.Text.TrimStart('\\'));
+    public int StringNumber => int.Parse(Green.GetSlot(0)!.Text.TrimStart('\\'));
 }

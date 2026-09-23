@@ -255,10 +255,10 @@ public sealed partial class MeasureCollector
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.SourceStart)
         {
-            IsSpacer = rest.RestToken.Text == "s",
+            IsSpacer = rest.RestText == "s",
             // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
             // rest at beat 1, even when it fills the measure.
-            IsMultiMeasure = rest.RestToken.Text == "R"
+            IsMultiMeasure = rest.RestText == "R"
         };
     }
 
@@ -449,7 +449,7 @@ public sealed partial class MeasureCollector
             // print — the "parenthesized" property wraps the stencil.
             bool memberCourtesy = pitch.Articulations.Any(a =>
                 a is ArticulationSyntax { Type: ArticulationType.None } ca
-                && ca.NameToken.Text.Equals("courtesy", StringComparison.OrdinalIgnoreCase));
+                && ca.Name.Equals("courtesy", StringComparison.OrdinalIgnoreCase));
             if (memberCourtesy && accidental == null)
                 accidental = KeySignatureAccidentalName(rp.DisplayStep);
 
@@ -470,10 +470,10 @@ public sealed partial class MeasureCollector
                 if (a is ArticulationSyntax { Type: ArticulationType.None } la)
                 {
                     if (memberLv == null
-                        && la.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                        && la.Name.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
                         memberLv = la;
                     else if (memberRt == null
-                        && la.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
+                        && la.Name.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
                         memberRt = la;
                 }
 

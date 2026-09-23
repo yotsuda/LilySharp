@@ -333,7 +333,7 @@ public sealed partial class MeasureCollector
         foreach (var child in articulations)
         {
             // @cross is parsed as ArticulationSyntax (single Identifier, no dot)
-            if (child is ArticulationSyntax artSyntax && artSyntax.NameToken.Text == "cross")
+            if (child is ArticulationSyntax artSyntax && artSyntax.Name == "cross")
             {
                 _crossStaffItems.Add(new CrossStaffItem(
                     measureIndex,
@@ -520,7 +520,7 @@ public sealed partial class MeasureCollector
                 {
                     // Check for trill spanner start/stop
                     // LILYPOND-REF: scm/scheme-engravers.scm — \startTrillSpan / \stopTrillSpan
-                    var nameText = articulationSyntax.NameToken.Text;
+                    var nameText = articulationSyntax.Name;
                     var nameLower = nameText.ToLowerInvariant();
                     if (nameLower == "starttrillspan")
                     {

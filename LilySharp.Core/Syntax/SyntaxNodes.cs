@@ -118,8 +118,16 @@ public sealed class PitchSyntax : SyntaxNode
     /// normalize them to the canonical flats <c>ees</c>/<c>aes</c> here so every
     /// decoder (BaseName / Accidental / AccidentalOffset / exporters) sees a known
     /// spelling. The raw token text is untouched, so source spans stay correct.
+    /// <para>
+    /// ⚠️ READ OFF THE GREEN TOKEN, not <see cref="PitchToken"/>: the text is the same string
+    /// (a token red's <c>Text</c> IS its green's), and a red token carries nothing a reader of
+    /// the NAME wants. The collector asks this of every note it re-collects, once a keystroke
+    /// — MEASURED (session 520, Release, the owner's corpus, 232 books × eight forward
+    /// keystrokes): 700 token reds a keystroke came into being for this property and the
+    /// octave marks below, 31% of every red the render made, read once and never again.
+    /// </para>
     /// </remarks>
-    public string PitchName => PitchToken.Text switch
+    public string PitchName => Green.GetSlot(0)!.Text switch
     {
         "es" => "ees",
         "as" => "aes",
@@ -200,7 +208,7 @@ public sealed class DurationSyntax : SyntaxNode
     /// broken input (e.g. <c>partial .</c>) must never throw here, or it takes the whole
     /// render / diagnostics pass down with it (that emptied the Problems panel).
     /// </summary>
-    public int Value => int.TryParse(NumberToken.Text, out int v) ? v : 4;
+    public int Value => int.TryParse(Green.GetSlot(0)!.Text, out int v) ? v : 4;
 
     /// <summary>
     /// Number of dots.
@@ -370,6 +378,10 @@ public sealed class RestSyntax : SyntaxNode
 
     /// <summary>The rest token (<c>r</c>, <c>s</c>, or <c>R</c>).</summary>
     public SyntaxTokenNode RestToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The rest token's text (<c>r</c>, <c>s</c> or <c>R</c>) off the green — what
+    /// a reader of the SPELLING wants, with no token red built for it (session 520).</summary>
+    public string RestText => Green.GetSlot(0)!.Text;
     /// <summary>The rest's duration, or null when unspecified.</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
 
@@ -381,7 +393,7 @@ public sealed class RestSyntax : SyntaxNode
     {
         get
         {
-            if (GetChild(3) is SyntaxTokenNode countToken &&
+            if (Green.GetSlot(3) is { IsToken: true } countToken &&
                 int.TryParse(countToken.Text, out int n) && n >= 1)
             {
                 return n;
@@ -852,6 +864,17 @@ public sealed class BarlineSyntax : SyntaxNode
 
     /// <summary>The barline token.</summary>
     public SyntaxTokenNode BarToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The barline token's text (<c>|</c>, <c>||</c>, <c>:|</c> …) off the green —
+    /// the spelling with no token red built for it (session 520).</summary>
+    public string BarText => Green.GetSlot(0)!.Text;
+
+    /// <summary>
+    /// Where the barline token's own INK starts — <c>BarToken.Span.Start</c>, computed the
+    /// way that span is (the token's full start plus its leading trivia) without the red:
+    /// the token is slot 0, so its full start is this node's.
+    /// </summary>
+    public int BarTokenStart => Position + (Green.GetSlot(0)?.LeadingTriviaWidth ?? 0);
 
     /// <summary>
     /// Explicit volta-repeat play count from a <c>:|*N</c> end-repeat barline.

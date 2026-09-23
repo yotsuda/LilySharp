@@ -552,7 +552,7 @@ internal sealed class ChordNameCollector
                     // the `partial 4` pickup, which carries no chord, and the row began at
                     // bar 1 anyway — G landed on the pickup note and the last bar got
                     // nothing (measured: the SVG was byte-identical with the '|' deleted).
-                    var t = MeasureCollector.ParseBarlineType(bar.BarToken.Text);
+                    var t = MeasureCollector.ParseBarlineType(bar.BarText);
                     if (t == BarlineType.RepeatStart)
                     {
                         // |: opens the NEXT measure; close anything pending first.
