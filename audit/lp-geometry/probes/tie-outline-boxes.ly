@@ -26,12 +26,13 @@
 %%                                         tied, and the down tie has to clear it, which
 %%                                         shows in the chosen POSITION rather than the width.
 %%
-%% ⚠️ THE FLAG HAS NO BOOK AND THAT IS THE FINDING, not an omission -- see the session 452
-%% entry in docs/HANDOFF.md. Lily# builds the flag box for SINGLE NOTES only, and a single
-%% note's tie is always on the opposite side of the head from its own flag, so the box it
-%% builds can never be met. Measured: emptying it moves 0 of 41 probe books, while making it
-%% enormous moves 19 -- so it is built and read, and its real geometry is simply never in
-%% the way.
+%% ⚠️ THE FLAG HAS NO BOOK HERE, and until session 524 that was the finding rather than an
+%% omission: Lily# built the flag box for SINGLE NOTES only, and a single note's tie is always
+%% on the opposite side of the head from its own flag, so the box it built could never be
+%% met. Measured (session 452): emptying it moved 0 of 41 probe books, while making it
+%% enormous moved 19 -- built and read, and its real geometry never in the way. LilyPond
+%% builds it for any normal stem, head count unasked, and it is a CHORD's stem-end tie that
+%% meets it; session 524 built it for chords too, and its two books are tie-chord-flag.ly.
 %%
 %% ⚠️ THE MUSIC CAME OUT OF `lysc ly` (RULES 6 -- hand-written twins have produced three
 %% false divergences in this repo). TWO edits were made by hand, both the ones every tie

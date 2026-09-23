@@ -8269,6 +8269,62 @@ internal static class LpGeometryProbes
     /// and its tie runs past a head the outer two never see.</summary>
     private static readonly string TW3S = TieWidthBook("<c d g>2~ <c d g>2 |", "TW3S");
 
+    // The two chord-flag books are bass-clef, keyed: the owner's corpus shapes cut to one bar.
+    private static string TieChordFlagBook(string key, string music, string name) => $$"""
+        octave absolute
+        key {{key}}
+        time 4/4
+
+        part bassline { clef bass }
+
+        section Main {
+          bassline { {{music}} }
+        }
+
+        form main { ~Main }
+
+        score main "{{name}}" {
+          staff bassline
+        }
+        """;
+
+    /// <summary>
+    /// A tied EIGHTH CHORD whose stem-end tie runs under the FLAG — the box LilyPond builds
+    /// for any normal stem (tie-formatting-problem.cc:181-190) and Lily# built for single
+    /// notes only until session 524, where it can never be met.
+    /// </summary>
+    /// <remarks>
+    /// The owner's corpus shape (Green-Tinted Sixties Mind, 16 pages moved when the box went
+    /// up for chords). Stem down, flag below; the LOWER head's tie leaves DOWN and has to start
+    /// to the RIGHT of the flag, so it comes out NARROWER: LilyPond 0.844700 wide. Without the
+    /// box Lily# started it under the head and drew it 1.317100 wide (+0.472400).
+    /// <para>
+    /// PREDICTION, written before the reading (Lab sessions/p524/result.txt measured the
+    /// patched engine against the twin): +0.040000 and not 0 — Lily# boxes the flag from
+    /// LayoutUtilities.StemX with the glyph bbox's width, LilyPond takes the Flag grob's X
+    /// extent, and the two disagree by 0.04 on the box's left edge. That remainder is the next
+    /// pair, not this one's.
+    /// </para>
+    /// <para>LilyPond twin: score TCFX of audit/lp-geometry/probes/tie-chord-flag.ly,
+    /// <c>\clef bass \key a \major \fixed c' { &lt;e gis&gt;4. &lt;e a&gt;8 ~ &lt;e a&gt;2 }</c>.</para>
+    /// </remarks>
+    private static readonly string TCFX = TieChordFlagBook("a major", "<e gis>4. <e a>8~ <e a>2 |", "TCFX");
+
+    /// <summary>
+    /// The same shape an octave lower, where the flag does not narrow the tie but pushes it
+    /// DOWN: the lower head sits on the middle line and its tie's height is the reading.
+    /// </summary>
+    /// <remarks>
+    /// The owner's other corpus shape (Let's Stay Together, 8 pages). LilyPond seats the tie
+    /// at −0.350129 below the middle line; without the flag box Lily# seated it at −0.315322,
+    /// 0.034807 too high, because nothing was in its way. The width (0.665000) is exact with
+    /// and without the box, which is why this book reads the HEIGHT and TCFX the width.
+    /// <para>PREDICTION, written before the reading: 0 (the patched engine read −0.350129).</para>
+    /// <para>LilyPond twin: score TCFY,
+    /// <c>\clef bass \key f \major \fixed c' { d,4. &lt;d, fis&gt;8 ~ &lt;d, fis&gt;4 e,,8 f,, }</c>.</para>
+    /// </remarks>
+    private static readonly string TCFY = TieChordFlagBook("f major", "d,4. <d, fis>8~ <d, fis>4 e,,8 f,, |", "TCFY");
+
     /// <summary>
     /// The slur pair (<see cref="SD"/>/<see cref="SU"/>) again with a TIE — the adjacent
     /// inside-staff grob, drooping DOWN into the staff gap from the upper staff.
@@ -15583,6 +15639,12 @@ internal static class LpGeometryProbes
         new("tie.y.triad.lower", TW3, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("tie.y.triad.middle", TW3, g => g.BowAttachmentAboveStaffMiddle(1)),
         new("tie.y.triad.upper", TW3, g => g.BowAttachmentAboveStaffMiddle(2)),
+
+        // ...and the FLAG box, which only a CHORD's tie can meet (a single note's tie leaves
+        // on the side away from its flag). One book reads the width the flag takes off the
+        // tie, the other the height it pushes the tie to. See probes TCFX / TCFY.
+        new("tie.width.chord-flag", TCFX, g => g.BowSpan(0)),
+        new("tie.y.chord-flag", TCFY, g => g.BowAttachmentAboveStaffMiddle(0)),
 
         // ...and the one quantity that tie's residual is made of, measured on its own. The
         // BLACK head is the control and the HALF head the divergence -- same bar, same pitch,

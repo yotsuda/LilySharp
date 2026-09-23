@@ -1892,10 +1892,17 @@ internal sealed class ElementCoordinator
             }
         }
 
-        // The flag, on the LEFT bound of an unbeamed short note. Its ink hangs off the stem
-        // end, so the glyph's own box is already in the stem's frame (:186-188).
+        // The flag, on the LEFT bound of an unbeamed short note OR CHORD. Its ink hangs off
+        // the stem end, so the glyph's own box is already in the stem's frame (:186-188).
+        // LILYPOND-REF: tie-formatting-problem.cc:181-190 asks the STEM for its flag and never
+        // how many heads it carries;
+        // until session 524 this built the box for single notes only, where it can never be
+        // met (a single note's tie leaves on the side away from its flag), and the two
+        // owner's-corpus chords whose tie runs under the flag stood 0.47 ss off LilyPond
+        // (ledger tie.width.chord-flag / tie.y.chord-flag, probe tie-chord-flag.ly).
         List<TieOutlineBox>? flag = null;
-        if (isLeftBound && stemInfo is not null && item is NoteItem fn && noteValue >= 8 && !fn.IsBeamed)
+        if (isLeftBound && stemInfo is not null && noteValue >= 8
+            && item is NoteItem { IsBeamed: false } or ChordItem { IsBeamed: false })
         {
             var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, stemUp);
             if (flagBBox != default)

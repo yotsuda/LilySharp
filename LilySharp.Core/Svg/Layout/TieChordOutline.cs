@@ -89,7 +89,11 @@ internal sealed record TieColumnParts
     /// <summary>Augmentation DOTS — LEFT bound only (:124).</summary>
     public IReadOnlyList<TieOutlineBox> Dots { get; init; } = [];
 
-    /// <summary>The FLAG — LEFT bound only, and only on a normal stem (:181-190).</summary>
+    /// <summary>
+    /// The FLAG — LEFT bound only, and only on a normal stem (:181-190). Built for a note
+    /// and for a CHORD alike (session 524): a single note's tie always leaves on the side
+    /// away from its flag, so it is the chord whose stem-end tie can meet this box.
+    /// </summary>
     public IReadOnlyList<TieOutlineBox> Flag { get; init; } = [];
 
     /// <summary>ACCIDENTALS — RIGHT bound only (:231-236).</summary>
