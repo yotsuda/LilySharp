@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -8300,10 +8300,13 @@ internal static class LpGeometryProbes
     /// box Lily# started it under the head and drew it 1.317100 wide (+0.472400).
     /// <para>
     /// PREDICTION, written before the reading (Lab sessions/p524/result.txt measured the
-    /// patched engine against the twin): +0.040000 and not 0 — Lily# boxes the flag from
-    /// LayoutUtilities.StemX with the glyph bbox's width, LilyPond takes the Flag grob's X
-    /// extent, and the two disagree by 0.04 on the box's left edge. That remainder is the next
-    /// pair, not this one's.
+    /// patched engine against the twin): +0.040000 and not 0, which session 524 named the
+    /// box's left edge. OUTCOME +0.040000000 — and the name was wrong. Session 525 read the
+    /// grobs (Lab sessions/p525/flagbox.ly): the box's X was already LilyPond's (stem centre
+    /// 0.065 + the glyph's [0, 1.0668]); its Y stood on the stem's tip where LilyPond's Flag
+    /// grob sits half a blot inside it (flag.cc:183-196, 0.04), and a short tie's close-by
+    /// reading at y − 0.3125 lands on the box's padding SLOPE (Skyline::padded), where 0.04 of
+    /// Y is 0.04 of X. Closed to 0 by giving the box LayoutUtilities.FlagPlacementY.
     /// </para>
     /// <para>LilyPond twin: score TCFX of audit/lp-geometry/probes/tie-chord-flag.ly,
     /// <c>\clef bass \key a \major \fixed c' { &lt;e gis&gt;4. &lt;e a&gt;8 ~ &lt;e a&gt;2 }</c>.</para>

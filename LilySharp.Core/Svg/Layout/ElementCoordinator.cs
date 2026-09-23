@@ -1908,10 +1908,20 @@ internal sealed class ElementCoordinator
             if (flagBBox != default)
             {
                 double tipY = (stemUp ? stemInfo.Value.StemMax : stemInfo.Value.StemMin) * 0.5;
+                // The glyph sits half a blot INSIDE the stem's end — LayoutUtilities.FlagPlacementY,
+                // the one house the drawn flag, its dot support and its spacing band already
+                // read. Until session 525 this box alone stood on the tip itself, 0.04 further
+                // out, and a short tie's close-by reading (:572-576) landed 0.04 lower on the
+                // box's padding slope (skyline.cc:558-610): the whole of ledger
+                // tie.width.chord-flag's +0.040000 (Lab sessions/p525/prediction.txt).
+                // LILYPOND-REF: lily/flag.cc:183-196 Flag::internal_calc_y_offset —
+                //   stem_extent[d] - d * blot / 2; the box at :187-188 is the grob's extent, so
+                //   it carries that offset.
+                double flagY = LayoutUtilities.FlagPlacementY(tipY, stemUp);
                 double flagX = LayoutUtilities.StemX(supportLeft, stemUp, noteValue,
                     LayoutUtilities.NoteheadStyleOf(item));
                 (flag ??= []).Add(new TieOutlineBox(
-                    tipY + flagBBox.Bottom, tipY + flagBBox.Top, flagX, flagX + flagBBox.Width));
+                    flagY + flagBBox.Bottom, flagY + flagBBox.Top, flagX, flagX + flagBBox.Width));
             }
         }
 

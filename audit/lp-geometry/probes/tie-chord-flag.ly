@@ -25,9 +25,11 @@
 %%                                        flag rather than narrowed. Read as the HEIGHT.
 %%
 %% x0 (the tie's left end, relative to the tied column's head left edge) is printed as well,
-%% for the record: on TCFX it is where the remaining 0.04 lives (Lily# boxes the flag from
-%% StemX with the glyph's bbox width; LilyPond takes the Flag grob's X extent), with the
-%% opposite sign of the width's residual and the same cause.
+%% for the record. TCFX opened at +0.04 in session 524, which named the flag box's LEFT EDGE;
+%% session 525 read the grobs (Lab sessions/p525/flagbox.ly) and the box's X was already
+%% LilyPond's -- its Y was 0.04 out (the flag sits half a blot inside the stem's end,
+%% flag.cc:183-196), and a short tie's close-by reading lands on the box's padding slope,
+%% where 0.04 of Y reads as 0.04 of X. Closed to 0 the same day.
 %%
 %% ⚠️ THE MUSIC CAME OUT OF `lysc ly` on the two .lys books (RULES 6). Edits by hand, the ones
 %% every tie probe here makes: `\bar "|."` and the \widths override.
