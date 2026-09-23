@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第521セッションの経緯
+
+### 1.1 第521セッション（2026-09-23・YT-DELL2）
+
+新しい会話。⒜ ⒭⁸ の node 側に着手。
+★ `-Start p521`（HEAD `ab901621`・full 8858 / 0 / 3 / 8861・`-Archive 519`）。
+
+★★★ **⑴ node の red 1,128／打鍵を creator で割った**（Lab `sessions/p521/steps-before-sampled.txt`）: **⒜ `ProcessSectionBody` が section の*直下の子*を 3 度 red にする**（part block を探す `ChildNodes()`・`SectionHasInlineMusic` の全 slot `GetChild`・inline 音楽の preset list）＝**512（Note 358・Barline 70・Rest 44・Break 19・Tie 15・Slur 7）＋token 15**。単一 part の本は音楽を section に直書きするので直下の子＝音符で、**preset list は gather root を持たず checkpoint が seek できなかった**／**⒝ `CreateNoteItem` の `note.Pitch` 288・`note.Duration` 107、`CreateRestItem` の 23**＝1 度読むだけの red で、素の音符では Pitch が*最初の red の子*＝音符の `_children` 配列（48 B）もそのために建っていた。
+★★★★ **⑵ 直し**: ⒝ **`PitchReading`／`DurationReading`（建てない struct）を green の slot から読む**（`NoteSyntax.PitchReading`／`DurationReading`・`RestSyntax.DurationReading`・`PitchSyntax.Reading`）。算術は 1 綴り（`PitchSyntax.NameOf`／`AccidentalOf`／`AccidentalOffsetOf`／`QuarterOffsetOf`・`DurationSyntax.ValueOf`・`SyntaxFacts.NetOctaveMarksFrom(green)`）で red accessor も同じ静的関数へ。⒜ **3 つの読みを slot の kind に**（`IsSectionBlockOrDirectiveKind`）、**inline の腕を part block と同じ 2 形（`MusicSiteList.Lazy`＝resume は slot path で seek／`Eager`＝recording）に**（`s_inlineSiteRule`＝直下の候補・降りない・`InlineSectionSites`）。網 `SectionDirectChildrenGreenTests`（kind 判定＝red の綴り・lazy site＝preset の red・**liveness＝単一 part 100 小節の本で最後の checkpoint から resume すると seek 1 回・gather < 50**）＋`GreenTokenAccessorTests` に reading 8 種。
+★★★ **⑶ A/B render 1,331,947 → 1,288,349（−43,598 B／打鍵・−3.27%）**・node の red **1,128 → 552**・token 123 → 113。**予測 −41,000 ± 12,000 の 106%＝上に外れ（帯の中）**（Lab `prediction.txt`）。会計: 消えた red 576 × 56 B ＝ 32,256、残り 11,342 ≈ 素の音符の `_children`（≈200 × 48）＋rest の 56 × 23＝**red 1 本 56 B（header 16＋parent 8＋position 4+4＋green 8＋`_children` 8＋`_childPositions` 8）で閉じる**。⒜ の賞金＝消費されなかった直下の子 164（Note 114＝28%・Barline 26・Rest 12…）＝予測 100〜130 の上。
+★★ **⑷ 残りの地図＝実仕事**（`steps-after-sampled.txt`）: 消費点 `PeekMarkers`（`site.Node`→`ProcessMusicNode(SyntaxNode)`）341（Note 242・Barline 43・Rest 29・Break 13・Tie 10・Slur 4）／post-event を node として読む `PhrasingSlurMarksOn` 90／`ProcessSection` の直接の Note 37・`ProcessRepeatExpression` 13／`CollectResumePlanner.WindowTouchesPhraseOrVariable` の窓の red walk 約 20（→ §1.0 ⒭⁸）。**5,816 頁 hash 0 差**（`hash.log`・baseline は p520 `hashes-oldbuild.txt`）。⚠️ **計器の罠**: `CreateRed` の seam に `"tok:" + green.Kind` を書くと Sample が返る前に文字列を建て、A/B が 3,526,772 に膨れる（p520 の `ab-after.txt` も同じ数）＝**seam の引数は flag の内側で評価する**。
+★★ **⑸ 毒 6 本・baseline 8,864 緑（網 +3）**（Lab `poisons.out`）: dot を 1 つ落とす **78 赤**／`DurationReading` を tremolo の slot から **624 赤**／`PitchReading.SourceStart` が trivia を落とす **1 赤（網だけ）**＝pitch の住所は `--pitches` trace にしか届かない（data-pos は note の住所）／Note を directive に数える **4 赤**（網＋単一 part の本 3）／inline の rule が降りる **1 赤（網だけ）**＝fixture の inline section に容器が無い／**inline を常に eager（seek しない・出力同一）2 赤＝liveness の網＋`GatherSeekTests`**。
+  §7 7.5＝**Core '+' 264 行・5 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ算術を green で読むだけ）。`-End p521`＝full 8860 / 1 / 3 / 8864（網 +3・赤 1 は `TheHandoffStaysReadable` 21,002 字＝§1.0 の ✅ と第498〜第509 の経緯を畳んで通した）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
+
 ## 以下は第520セッションの経緯
 
 ### 1.1 第520セッション（2026-09-23・YT-DELL2）

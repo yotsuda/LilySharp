@@ -80,13 +80,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ **⒭⁸ red の島＝第520 が token 側（1,124 → 124）、第521 が node 側（1,128 → 552・−43,598 B／打鍵）を閉じた。残り node 552／打鍵（約 31 KB・2.4%）＝実仕事**（地図は Lab `sessions/p521/steps-after-sampled.txt`）: 消費点 `PeekMarkers`→`ProcessMusicNode(SyntaxNode)` 341・post-event を node で読む `PhrasingSlurMarksOn` 90・`ProcessSection`／`ProcessRepeatExpression` の直接の Note 50・`CollectResumePlanner.WindowTouchesPhraseOrVariable` の窓の red walk 約 20。**消すなら `ProcessMusicNode` が `GreenSite` を受ける設計（item の生成が型で dispatch する＝土台）**。⚠️ 賞金＝「その walk しか読まない red の数」× 56 B ＋ 素の親の `_children` 配列（第521 で会計が閉じた）
 - ★ **⒮⁶ 「建てない」の島の残り＝約 14,000 B／打鍵**（第455 の census＝Lab `sessions/p455/`・住所は census 時点＝戻る便は回し直す）。単独の頭は `MeasureLayouter.cs:466` 1,070・`SvgSystemFragmentCache.cs:237` 781（`Entry` を class に＝設計変更）ほか 600 B 未満。
   ⚠️ zero／one 欄は drain 時点の最終 `Count`＝**`actual` とコードの両方で読む**（RULES §5.3 末尾）
-- ★★ **⒮⁸ 器を消せない残り 2 軒＝6,409 B／打鍵 0.142%・どちらも*値段ではない理由*で残った**（第455）。
-  ⑴ `LedgerLineSpannerEngraver.cs:160` **5,797**（actual 4,901＋obj 896・28.01 回／打鍵・4.12 件／回・max 37）
-  ⚠️ **⒮¹⁴ が先**（この軒の答えは製品の誰も読まない）＝**struct の値にすると損**: 鍵 `(int,int)` の辞書（同 `:84` actual 2,267）の entry が 24→40 になって
-  **+1,511** 払い、one 27.1% の賞金 **約 911** しか返らない。**効く直しは「1 本の flat な list を
-  (挿入順位, Left) で並べる」**だが、`foreach (var ((sysIdx,staffPos), entries) in perSystem)` が
-  **辞書の挿入順**で builder に足すので、**並べ替えると `LedgerLineSpan` の配列順＝SVG が動く**
-  ⇒ 順位を `Dictionary<(int,int),int>` で憶えてから安定ソートする形なら順序は保てる（未実装・未計測）。
+- ★ **⒮⁸ 器を消せない残り 1 軒＝612 B／打鍵**（第455。⑴ `LedgerLineSpannerEngraver.cs:160` 5,797 は**第523 が engraver ごと消した**＝⒮¹⁴）。
   ⑵ `MeasureCollector.cs:3134` **612**（one 99.8%＝一覧で最も純粋）だが、**6 軒で唯一*器が呼び手へ出る***
   ＝`_sectionState.AllStarts` が `IReadOnlyDictionary<string, List<int>>` で `LyricsCollector`（:79 :104
   :365 :378、読みは :192 :534）と `ChordNameCollector.SectionStarts` へ渡る＝3 ファイル
@@ -97,11 +91,11 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （19 冊＝8/16/32/64 分・`@stemUp`／`@stemDown` 強制・高低を含めて実測）。
   ⚠️ **LP の旗が喋るのは*和音*の場合**（`set_column_chord_outline` は Stem の旗を無条件に入れる＝
   符尾の先が結ばれた最上の符頭に近い背の高い和音）で、**その形を Lily# は作っていない**。
-  ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**
+  ⇒ 起票は「網を書く」ではなく **「和音にも旗の箱を建てるか」**＝**忠実度の判断で、値段も差分も未測定**。**第523 が測った（ユーザー「測ってよい」）**: 和音にも旗の箱を建てる 1 行（Lab `sessions/p523/chord-flag-box.patch`）で **実コーパス 5,816 頁のうち 24 頁・2 冊が動く**（`Green-Tinted Sixties Mind.lys` 16 頁分・`Let's Stay Together.lys` 8 頁分）・**スイートは 0 本動く**（fixture に旗が tie に触る和音が無い）・割当 ±0。⇒ **次はその 2 冊の tie を LP 双子と突き合わせて忠実度を決める**（ユーザー判断）
 - ★★★ **「建てた直後に写して捨てる」を探す＝census の外で一番効いた形**（第490 −47,238・第491 −127,911 B／打鍵）。**計器は呼びの前後の `GC.GetAllocatedBytesForCurrentThread` を数える wrapper**（Lab `sessions/p491/`＝`Zz491` の 4 枠・`Zz491AbProbe.cs.txt`）。
   `ItemSkylineFactory.Build` は**第492 が render 内 memo にした**（2,048,398 回のうち同じ render の再建 1,099,297＝gate と layout が同じ小節の spring を 2 度値付けする・−63,731／打鍵。**再建の大半は計らない warm-up の全描画**＝render 内 memo は打鍵の数では 1/4 しか見えない）／`LineStartColumn.MinimumDistance` は**第498 が閉じた**（打鍵では 6.97 回 1,903 B＝31.8 回は warm-up 込み）。
   ★ **型ごとの地図が一番早い**（第493＝`Zz493Price`・render の窓の GCAllocationTick を型で集計・5 周 × 232 冊で 95 秒）。NoteItem は**第494 が呼び手で数えた＝設計の値段**（建てる・`ResolveBeamStemDirections` の `with`＝collect ごとに新しい BeamId・`TabResolver.ResolveTabStrings`＝弦番号の書き込み。消すなら刻印を item の外へ＝土台）。Int32[]／Double[]／State[] の頭は**第495 が閉じた**（配列の census＝Lab `sessions/p495/instrument-arrays.ps1`・残りの頭は `LineBreakDpSession.cs:133-135`・`PageBreaker.cs:1058/793-795`・`LedgerRods.cs:90-94`・`BeamScoringProblem.cs:325-328`＝各 2〜11 KB。⚠️ Dictionary／HashSet の bucket はこの census に出ない）。型が分かったら呼びの前後を数える wrapper で軒を絞る。⚠️ **地図の窓は parse の tick も拾う**（第522: "ticks in windows" − render ≈ 270 KB＝GreenNode[]・SyntaxToken[]・NoteGreen…の和。render が建てる green は fabricated barline の 2 本／打鍵）＝**構文の行は引いて読む**。
-  ⇒ **第498〜第503 で render 2,090,060 → 1,864,434（−10.8%）**（6 軒・経緯は ARCHIVE）。**最新の地図は第518**（Lab `sessions/p518/type-price-head.txt`・Release・render 1,452,649 の時点）＝残る頭は**土台**：String 333 KB（SVG の出力）・SkylineBuilding[] 148 KB（skyline の中身）・NoteItem 119 KB・GreenNode[] 85 KB／SyntaxTokenNode 54 KB／SyntaxToken[] 53 KB／SyntaxNode[] 37 KB（構文＝打鍵ごとの木）・Int32[] 53 KB・Double[] 49 KB・Measure 33 KB・ArticulationLayout[] 26 KB。**第508 の写しの census**（Lab `sessions/p508/`＝`.ToArray()`／`.ToImmutable*()`／`.ToBuilder()`／`.ToList()` 651 軒を包んで数える・遅延 LINQ は入れ子を二重に数える）**は第509 が尾を閉じた＝ほぼ尽きた**（残りは `BeamDetector.cs:243` 3,073＝実仕事・`LedgerLineSpannerEngraver.cs:156` 2,834＝⒮¹⁴ 待ち）／第506 の census 計器（Lab `sessions/p506/instrument.ps1`・**複数行の field 宣言は数えない**）。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**／⑵ **同じ値の作り直し**／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
+  ⇒ **第498〜第503 で render 2,090,060 → 1,864,434（−10.8%）**（6 軒・経緯は ARCHIVE）。**最新の地図は第518**（Lab `sessions/p518/type-price-head.txt`・Release・render 1,452,649 の時点）＝残る頭は**土台**：String 333 KB（SVG の出力）・SkylineBuilding[] 148 KB（skyline の中身）・NoteItem 119 KB・GreenNode[] 85 KB／SyntaxTokenNode 54 KB／SyntaxToken[] 53 KB／SyntaxNode[] 37 KB（構文＝打鍵ごとの木）・Int32[] 53 KB・Double[] 49 KB・Measure 33 KB・ArticulationLayout[] 26 KB。**第508 の写しの census**（Lab `sessions/p508/`＝`.ToArray()`／`.ToImmutable*()`／`.ToBuilder()`／`.ToList()` 651 軒を包んで数える・遅延 LINQ は入れ子を二重に数える）**は第509 が尾を閉じた＝ほぼ尽きた**（残りは `BeamDetector.cs:243` 3,073＝実仕事・`LedgerLineSpannerEngraver.cs:156` は第523 が engraver ごと消した）／第506 の census 計器（Lab `sessions/p506/instrument.ps1`・**複数行の field 宣言は数えない**）。★ **効いた 3 つの見方**: ⑴ **読み手のいない副産物**／⑵ **同じ値の作り直し**／⑶ **`ImmutableArray.Create(T[])` は写す**（自前の作業配列は `ImmutableCollectionsMarshal.AsImmutableArray` で包む）。
 - ★★ **⒮²³ `Measure` の直後の写し＝約 129 回 ≈12 KB／打鍵 0.7%・*resume の読み手がいる*ので設計**（第511 起票・Lab `sessions/p511/measure-price.log`＝型の地図の `Measure` 41 KB を構築の呼び手で数えた）。425 回／打鍵＝`EmitMeasure` 107・`ResolveBeamStemDirections` 103（梁の刻印＝NoteItem の土台）・`TabResolver` 85・**emit 直後の `with`＝`AddEndBarlineSource:857` 96.8＋`SetBreak` 25.5＋`SetNoBreak` 5.3＋`HandleBarline` 1.1**（`c4 d e f |` の `|` が auto-fill した小節の `SourceEnd` を動かす）。⚠️ **その場で書き換えられない**: `BuilderCheckpoint.LastMeasure` が境界の `_measures[^1]` を pin し、`TrySpliceSuffix` は**参照の不一致**で「尾が書き換えた」を検出する（`Resume.cs:290`）＝書き換えると門が盲になる。直すなら emit を `|` まで遅らせるか pin を値にする
 - ★★★ **⒮¹⁵ 第457 の census が*見ない*族＝括弧に何かある `new X<T>(…)`・`CreateBuilder<T>(…)`・`new StringBuilder(…)`
   と、型を宣言した target-typed の `= new(…)`**（**第463 が数えた**＝Lab `sessions/p463/`・`instrument.ps1`＋`Zz463.template.cs`＋
@@ -117,20 +111,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ⚠️ **読み方の罠 2 つ**: ⑴ **`zero 100%` の Builder 行は `MoveToImmutable` で終わる軒**（Move が builder を空にするので drain が 0 件と読む
   ＝配列は手渡し済みで waste ではない。賞金は builder 本体だけ・34 軒）／⑵ **`obj` 欄の builder 56 B は本体 32 B＋長さ 0 の配列 24 B**
   （計器の `CreateBuilder<T>(0)` が配列を建てる）＝**第463 の C が予測の 57% に外れた理由**
-- ★★ **⒮¹⁶′ tuple 型の器の残り 約 14,100 B／打鍵**（⒮¹⁴ の `LedgerLineSpannerEngraver.cs:274` 5,798 を除く。**第472 が HEAD で数え直した**＝Lab `sessions/p472/site-prices.txt`・生きている 127 行は全部 scratch・**脚の denominator 3,483,771 は第464 の定数**＝使わない。第472 が 5 軒 −11,695 を閉じた）。
+- ★★ **⒮¹⁶′ tuple 型の器の残り 約 14,100 B／打鍵**（`LedgerLineSpannerEngraver.cs:274` 5,798 は第523 が engraver ごと消した。**第472 が HEAD で数え直した**＝Lab `sessions/p472/site-prices.txt`・生きている 127 行は全部 scratch・**脚の denominator 3,483,771 は第464 の定数**＝使わない。第472 が 5 軒 −11,695 を閉じた）。
   頭は尾＝`DynamicEngraver.cs:565` 884／`SyntaxNode.cs:521` 744（Stack・zero 100%）／`LayoutEngine.Annotations.cs:937` 579／`MeasureCollector.cs:400` 572（zero 99.6%）。`LayoutEngine.cs:740` 系 6 本は寸法ちょうどの結果の list＝実仕事。⚠️ collection initializer と `new List<(…)>?[n]` はどの census も数えない
-- ★★★ **⒮¹² splice の「trivia だけの窓」の門は、どちらの母集団にも観測者が居ない**（第458 起票・実測）。
-  `MeasureCollector.TrySpliceSuffix`（`Resume.cs:340`）は**コーパス 1 sweep で 7,016 回訊かれ、7,016 回とも
-  decline**（`WindowIsTriviaOnly` が true を返したのは **0 回**・裏の token walk は 891 回＝打鍵ごとに memo）。
-  **その答えを常に true にする毒＝7,016 本の splice を全部通す毒は、スイート 8,783 緑・コーパス
-  5,824 ページ 0 差**。⇒ **門の正しさを支えているのは第366 の掃き（258 冊 × 30 edit クラスで 88 件の食い違い）
-  だけ**で、それはスイートもこのコーパスも持っていない母集団。計器は Lab `sessions/p458/trivia-guard-counts.txt`。
-  ⇒ 二択＝**⑴ 第366 の形で網を書く／⑵ 「常に decline」なら門ごと畳めるか**（値段は 891 walk／sweep）
+- ✅ **⒮¹² splice の「content window」の門に観測者が付いた＝`TrailingGapSpliceTests`**（第523・ユーザー決定 ⑴）。第366 の掃き（Lab `sessions/p367/Zz366SweepProbeTests.cs.txt`＝36 edit 種 × 全 net 本・増分 parse・`ModelDeepDiff`）を門を開けて回すと **net 259 冊は 0 差、実コーパスで 3 編集／2 冊が乖離**（`tab-chord.lys`×2・`想い人.lys`＝**part-major cell の末尾に音符を打つ**形）。スイートの双子 `NoteTypedAfterABodysLastItem_…` は section-major で `IncrementalCompiler` 経由＝門を開けても緑。網は planner の経路で「絵が等しい（か bail）」＋「decline がこの門」の 2 つを主張（毒で 3/3 赤）。掃きの道具は Lab `sessions/p523/Zz523SweepProbeTests.cs.txt`（net だけ 30 秒・コーパス込み 11 分）
 - ★★ **⒮²⁰′ 閉包の尾の残り＝10,632 B／打鍵 0.37%**（第470 が計器を*全 delegate 型*に広げて数え直した＝Lab `sessions/p470/closure-price-after.txt`・分母 2,862,439）。
   頭＝`Comparison<int>` 797（和音の頭の並べ替え `ChordHeadPositioning.SortInStemDirection` ほか＝**並べる呼びは払い続ける**）／`Func<int,double>` 565（annotation pass の staff-Y 解決子と `Build*X`＝pass の入力）／
   `Func<int,int,(VS,VS)?>` 313／`GatherContainerSite` の method group 277（`MusicSiteList.Lazy` へ渡す）／`Func<StaffLayout,bool>` 277（`SystemStartBarStaves`・`SeedClefInk`）。
   ⚠️ **delegate 型の行の持ち主は `sessions/p470/delegate-sites.txt`（Roslyn・型→建てる式）で引く**。⚠️ **閉包の行は閉包だけ＝同じ式の iterator と `ToList` は別の行**（RULES §5.3 末尾）
-- ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486 が LYS5003 を足して見つけた・Lab `sessions/p486/lys5003-corpus.txt`）。書いた `\N` の弦ではその音が弾けない（負のフレット）ので、**Lily# はこれまで黙って別の弦に描いていた**（LP も同じく無視して計算し直す）。349 件は「You're the One That I Want (-1)／(-2)」＝移調版で `\N` が残ったもの、残りは 37 冊に少しずつ（若者のすべて 32・BOW AND ARROW 9 ほか）。例: 'Til They Take My Heart Away の `e,8\2`＝相対音高で E1 になり D 線では −10。**`clef bass` だけで `octave 3` の無い本は 0.8.0 の「clef は音高を動かさない」でオクターブが下がった可能性**がある＝**本の側を直すかはユーザー判断**（描画は今までと同じ）
+- ★★ **U10 ユーザーのコーパスに*効いていない弦番号*が 473 件（39 冊）**（第486 が LYS5003 を足して見つけた・Lab `sessions/p486/lys5003-corpus.txt`）。書いた `\N` の弦ではその音が弾けない（負のフレット）ので、**Lily# はこれまで黙って別の弦に描いていた**（LP も同じく無視して計算し直す）。349 件は「You're the One That I Want (-1)／(-2)」＝移調版で `\N` が残ったもの、残りは 37 冊に少しずつ（若者のすべて 32・BOW AND ARROW 9 ほか）。例: 'Til They Take My Heart Away の `e,8\2`＝相対音高で E1 になり D 線では −10。**`clef bass` だけで `octave 3` の無い本は 0.8.0 の「clef は音高を動かさない」でオクターブが下がった可能性**がある。**ユーザー決定「放置」（第523）＝本は直さない・描画は今までと同じ**（一覧は Lab に残る）
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 - ★ **⒭′ 器の尾の残り＝約 5,000 B／打鍵**（第446 の住所）。残りは「`yield return` のアクセサを struct walk に」形（`SharedRenderer.Noteheads.cs:54/:63` `EnumerateStaffItems`・`VoiceScan.WalkVoiceItems`・`RenderSpec.GetVoiceBindings`・`VoltaBracketEngraver.BrokenPieces`・1 軒 50 行級・手本は第445 の `ChildNodeList`）。
   頭 2 軒は閉じた＝`HarvestOmittedStructure`（第489・−1,177）・`LyricBindings.cs:148` は直す軒ではない（第490＝158 KB は `DescendantIndex` の建設費）
@@ -144,7 +132,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   鍵の形を変える＝土台の変更**
   ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**第518 が front を 6 段に値付けした**（Lab `sessions/p518/steps-head4.txt`・above／below）: part 261／138・prog 2,852／385・filter 1,053／333・**core 31,379／25**・rebuild 8,734／4,393・store 574／219＝**front は尽きた**。core の 77% は `PlaceBarNumbers` の tracker の写しで**第518 が閉じた（−17,839）**。残る頭は **rebuild 8,734**（9 家族の `ToBuilder`＝出力の配列そのもの・struct の家族 55 個／呼び）と core の尾（bar number の outline の対 2,442＝tracker に格納される実仕事・seed 2,393・marks 2,163・voltas 1,253・tracker の merge 1,191）
 - ✅ **⒩⁶ 梁の刻印の写しは閉じた＝render 1,660,215 → 1,452,853（−12.5%）**（第516 ⑶ `MusicItemRare`／`NoteItemRare`＝`NoteItem` 216→144 B・第517 ⑵ `StampBeam`／`ClearBeamStamp` のその場刻印＝work 配列と Measure の建て直しも消えた。⑴ 側表は要らなくなった）。
-  ⚠️ **⑵ が残した 1 つ＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測。⒮¹² と同じ顔）。刻印済みで bake に来る item 9.3% は**すべて同じ値を書き戻し**（RE-BAKE DIFFERED 0）、**毒（clear を殺す）はスイートもコーパス 232 冊 × 8 打鍵も 1 つも動かさない**。狙って書いた 2 冊（またぎの手動梁が `]` を得る／失う）も緑＝`ManualBeam*_AcrossAResume_MatchesFull` の 2 本は隣の振る舞いを留めるだけ。⇒ **二択＝⑴ 破れる形を 1 冊見つけて網にする／⑵ 「効かない保険」として畳めるか**（値段は割当 0 の 1 歩き）。計器は Lab `sessions/p517/`
+  ⚠️ **⑵ が残した 1 つ＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測。⒮¹² と同じ顔）。刻印済みで bake に来る item 9.3% は**すべて同じ値を書き戻し**（RE-BAKE DIFFERED 0）、**毒（clear を殺す）はスイートもコーパス 232 冊 × 8 打鍵も 1 つも動かさない**。狙って書いた 2 冊（またぎの手動梁が `]` を得る／失う）も緑＝`ManualBeam*_AcrossAResume_MatchesFull` の 2 本は隣の振る舞いを留めるだけ。⇒ **二択＝⑴ 破れる形を 1 冊見つけて網にする／⑵ 「効かない保険」として畳めるか**（値段は割当 0 の 1 歩き）。計器は Lab `sessions/p517/`。**ユーザー「後回し」（第523）＝提案しない**
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
 - ★★ **⒳⁶ span の fold が*跨がれた全小節*に入る＝健全側への過剰無効化**（第453 起票・実測）。
@@ -155,19 +143,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   ＝`role` が 0／1／3 の小節だけ。⚠️ **cache の健全性に触る**（RULES §5.0 の soundness bias）ので、
   **値段（1 打鍵あたりの系の再計算数）を測る前にまず判断**。網は `MeasureContentKeySpanTests`＝
   **端だけにすると赤になる**ので、直すときは網も一緒に書き換える
-- ★★ **⒳⁷ 小節線の floor は*誰にも届いていない*＝`LeadingMusicalItems` の答え**（第454 起票・実測）。
-  `MeasureLayouter.CreateLastToBarlineSpring` は次小節の先頭の音を `NoteColumnToBarlineFloorPair` に渡し、
-  `EnsureMinDistance` と rod にする。**計器（Lab `sessions/p454/counts.txt`）＝102,397 回／コーパス
-  ＝55.4 回／打鍵・90.8% が非 null・答えが sky を変えるのは 24 回（0.023%）だが rod は 6,647 回（6.5%）
-  変える**。それでも **その答えを常に null にする毒は、スイート 8,780 本も実コーパス 5,824 ページも
-  1 つも動かさない**（Lab `green-to-corpus.txt`）。⇒ **rod は圧縮長の床で、headroom の答えより下にあれば
-  force ≥ 0 では効かない**——`CreateInterColumnSpring` の ⚠️ が 2026-08-02 に同じことを書いている。
-  ⇒ 二択＝**⑴ 網を書く／⑵ 効かない床を計算しない**（55.4 回／打鍵ぶんの歩き）。**値段は未測定**。
-  ⚠️ **もう一方の caller `SpacingRules.MeasureSprings:278` はコーパスで 0 回**＝計器は両方に置くこと
-  ⚠️ **第487 の所見（網は書けなかった）**: ⑴ **Lily# ははみ出す段を LP と同じ幅まで圧縮する**（`noBreak` で 6 小節の 16 分を 1 段に＝小節幅 LP 31.44／Lily# ≈31.46・Lab `sessions/p487/cmp.lys`）＝rod が効く場面はある。⑵ それでも**圧縮された段で毒（`rightNeighbours` を渡さない）は 3 冊とも 0 差**（`cmp`・最後が c''' で次の頭が a''' の `fa`・c'' の `fb`）。⑶ 理屈: 箱が隣で伸びるのは**今の列にインクが無い高さ**だけ（列自身の `ColumnYExtent` は全パーツ）＝距離が変わりうるのは skyline の余白の斜面が箱の縁に掛かる形だけ。⇒ 次に来る便は**①計器で「rod が変わった呼び」の (列, 次の頭) を刷って形を拾う**（総当たりの本 `grid.lys` は組み方を誤った＝22 小節・圧縮されず）か、**②ユーザー判断で「効かない床」として畳む**
-  ⚠️ **第460 が 2 人目の証人を足した**＝`HorizontalSkyline.GiveBox` の `Clear` を抜く毒はスイート緑・
-  コーパス 0 差で、stale な箱が答えを変えたのは **862 回すべて `NoteColumnToBarlineFloorPair`**
-  （Lab `sessions/p460/stale-box-counts.txt`）＝**この床を効かせる便は、あの `Clear` にも初めて観測者を付ける**
+- ✅ **⒳⁷ 小節線の箱を次小節の先頭へ伸ばす床は第523 がユーザー決定 ⑵「計算しない」で畳んだ**（第454 起票: 55.4 回／打鍵走り・rod を 6.5% 変えるのに 5,824 頁も 8,780 本も動かなかった・第487 も網を書けなかった）。`NoteColumnToBarlineFloorPair` の `rightNeighbours`・`LeadingMusicalItems` を消し、`LILYSHARP-OWN` の注記（LP `output-lib.scm:934-942` は両隣を読む・戻る日＝隣で閉じの隙が動く本が見つかった日）を対に置いた。−798 B／打鍵・hash 0 差。⚠️ `HorizontalSkyline.GiveBox` の `Clear`（第460）は今も無観測（その注記に第523 を足した）
 - **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
@@ -176,11 +152,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ **タブ譜は `.up`/`.down` を守らない**＝タブの採点は符尾を入れていない（弧は常に符尾の反対側という約束）ので、符尾側へ強制すると梁を突き抜ける（Lab `sessions/p484/tab.lys`）。直すなら符尾を採点に入れる
 
 **⒞ ユーザー決定が先・触らない**
-- ★★ **⒳¹² インラインの*文字の*navigation 記号が 1 小節遅れて描かれ、曲末の 1 つは黙って消える**（第480 起票・実測・**ユーザー判断が先**）。`docs/SYNTAX_REFERENCE.md`「Navigation Marks」は `c4 d e f | to coda`＝**直前の小節の終わり**と書くが、**その例をそのまま描くと To Coda・Fine・D.C.・D.S. al Fine が全部*次の*小節の終わりに出て、最後の `| ds al coda` は描かれない**（`check` は無言。Lab `sessions/p480/doc-example.lys`＋`-ls.png`）。segno・coda と form 側（`A fine B`）は正しい。**双子は文書どおりの時刻**に出す＝この本では絵と双子が 1 小節食い違う。⚠️ **fixture `navigation-marks.lys` は逆の読み（`fine g1 |`＝この小節の終わり）で書かれていて、絵はそれに合う**＝**どちらが仕様かはユーザー決定**（⑴ 絵を文書に合わせる＝fixture と snapshot も直す／⑵ 文書と双子を絵に合わせる）。**ユーザーの実コーパス 331 冊はインラインの文字記号を 1 度も使っていない**（全部 form 側）＝射程はテストと文書だけ
-- ★★ **⒮¹⁴ `LedgerLineSpannerEngraver.Calculate` の答えは製品の誰も読まない**（第462 起票・grep）。
-  `ScoreLayout.LedgerLineSpans` を読むのは `LedgerLineSpannerTests` の 4 本だけ（コード自身も「no renderer draws」）＝
-  **2.17 回／打鍵の全小節の歩きと器（:160 の値の list 5,797＝⒮⁸ ⑴ ほか）が丸ごと無駄**。第462 はユーザーの選択で
-  地図 :84 の park だけにした。⇒ **ユーザー判断＝消す／遅延計算にする／今のまま**（LP の LedgerLineSpanner に当たる家）
+- ★★ **⒳¹² インラインの*文字の*navigation 記号が 1 小節遅れて描かれ、曲末の 1 つは黙って消える**（第480 起票・実測・**ユーザー判断が先**）。`docs/SYNTAX_REFERENCE.md`「Navigation Marks」は `c4 d e f | to coda`＝**直前の小節の終わり**と書くが、**その例をそのまま描くと To Coda・Fine・D.C.・D.S. al Fine が全部*次の*小節の終わりに出て、最後の `| ds al coda` は描かれない**（`check` は無言。Lab `sessions/p480/doc-example.lys`＋`-ls.png`）。segno・coda と form 側（`A fine B`）は正しい。**双子は文書どおりの時刻**に出す＝この本では絵と双子が 1 小節食い違う。⚠️ **fixture `navigation-marks.lys` は逆の読み（`fine g1 |`＝この小節の終わり）で書かれていて、絵はそれに合う**＝**どちらが仕様かはユーザー決定**（⑴ 絵を文書に合わせる＝fixture と snapshot も直す／⑵ 文書と双子を絵に合わせる）。**ユーザーの実コーパス 331 冊はインラインの文字記号を 1 度も使っていない**（全部 form 側）＝射程はテストと文書だけ。**ユーザー「起票のまま。あとで判断」（第523）＝催促しない**
+- ✅ **⒮¹⁴ `LedgerLineSpannerEngraver` は第523 がユーザー決定「消す」で削除**（答えを読むのは `LedgerLineSpannerTests` 4 本だけだった・−8,652 B／打鍵・hash 0 差）。LP の LedgerLineSpanner の短縮を移植する人は新しい engraver を書く（読み手は符頭経路の加線）
 - ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
 - ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
@@ -195,6 +168,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第523セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き。§1.0 の「ユーザー判断待ち」7 件を並べて訊き、**ユーザー決定**: ⑴ ⒮¹⁴ 消す／⑵ ⒳⁷ 効かない床を計算しない／⑶ ⒮¹² 第366 の形で網を書く／⑷ ⒩⁶ ⑵ 後回し／⑸ U10 放置／⑹ ⒳¹² 起票のまま・あとで判断／⑺ ⒳⁵ 測ってよい。この便で ⑴⑵⑶⑺ に着手。
+★ `-Start p523`（HEAD `a720d03c`・full 8863 / 0 / 3 / 8866・`-Archive 521`）。
+
+★★★ **⑴ ⒮¹⁴ 削除**: `LedgerLineSpannerEngraver.cs`（`LedgerLineSpan`・drawer 2 つ）と `LedgerLineSpannerTests` 4 本（skip 1 含む）・`ScoreLayout.LedgerLineSpans`。他の drawer 5 つが cref で引いていた「`ToImmutable` は写す」の probe の注記は `BarNumberEngraver` の drawer へ移した。`COORDINATE_AUDIT.md` の 3 行と `OneOrMany.cs` の例示を「削除」に。**A/B render 1,267,148 → 1,258,496（−8,652 B／打鍵・−0.68%）・予測 −9,300 ± 3,000 の 93%**（Lab `sessions/p523/prediction.txt`）・**5,816 頁 hash 0 差**（baseline p522 `hashes-oldbuild.txt`）。毒は無し＝削除の観測者は「読み手 0」の grep と hash（RULES §7 7.6 ⒟）。
+★★ **⑵ ⒳⁷ 畳み**: `NoteColumnToBarlineFloorPair` の `rightNeighbours` と `SpacingRules.LeadingMusicalItems` を消し、両 spring 系の呼びを揃えた。`LILYSHARP-OWN` を対の注記に（LP は両隣を読む・戻る日を書いた）。**A/B 1,258,496 → 1,257,698（−798・予測 −1,800 ± 800 の 44%＝下に外れ**: 1 要素配列が値段の全部で、harness の編集は corpス の計器より隣を持たない）・**hash 0 差**・`SpacingInvariantTests`／`BarlineColumnRodTests` 緑。RULES §5.4 の第454 の項に「第523 が畳んだ」を 1 行。
+★★★★ **⑶ ⒮¹² 網**: 第366 の掃き（`Zz366SweepProbeTests`）を門を開けて回した。**net 259 冊 × 36 種＝0 乖離／実コーパス込み 590 冊＝3 乖離（2 冊）**、いずれも adopted 0・spliced 0 で小節数が 1 少ない＝**part-major cell の末尾に音符を打つと、窓より前の候補から旧の尾を継いでいた**。清の門では「the candidate stands before a content window」で decline（1 冊目）／2・3 冊目は walk 0 が live で走って pitch trace が 1 増え、walk 1 の入口の watermark で bail＝正しい結末。⇒ **`TrailingGapSpliceTests`**（2 冊の形を planner の経路で・絵＋decline 理由の 2 主張・`RecordSpliceDeclines`）＝清 3/3 緑・毒 3/3 赤。⚠️ 第458 の「両母集団に観測者なし」は**前向き打鍵の母集団**の話で、**容器の縁の編集**（第366 の掃き）は別の母集団——RULES §5.4「もう一方の母集団に訊く」の 3 つ目の母集団。
+★★ **⑷ ⒳⁵ 測定**: 上の §1.0 ⒳⁵（2 冊 24 頁・スイート 0・割当 ±0・patch は Lab）。コードは戻した。
+  §7 7.5＝**Core '+' 70 行・LILYPOND-REF 1（`CreateLastToBarlineSpring` の remark の既存 REF を書き直した行）／LILYSHARP-OWN +1**（⒳⁷ の対の注記＝LP に対応物は*在る*が計算をやめた出所の告知）。`-End p523` OK・full 8862 / 0 / 2 / 8864（網 +3・削除 −4・skip 3 → 2）・棚卸しは行番号だけ（APPROXIMATIONS.md・magic_constants.csv）。
+
+## 以下は第522セッションの経緯
+
 ### 1.1 第522セッション（2026-09-23・YT-DELL2）
 
 同じ会話の続き。第521 の報告で挙げた「render の窓の GreenNode[]／SyntaxToken[]」を確かめに行き外れ。代わりに checkpoint の島を閉じた。
@@ -206,20 +192,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★★ **⑷ A/B render 1,288,157 → 1,267,144（−21,013 B／打鍵・−1.63%）**・**予測 −20,300 ± 4,000 の 104%**（Lab `prediction.txt`）。**5,816 頁 hash 0 差**——ただし **`The Final Countdown.lys` が 10:31 にまた編集されていた**（p521 の hash 10:13 の後）ので、旧 build と新 build を*今の*コーパスで取り直して 0 差（`hashes-oldbuild.txt`＝次便からの baseline・p520 との差 16 行はその 1 冊）。⚠️ **1 度目の取り直しは build が落ちて `--no-build` が新 binary を走らせ、「0 差」が自分対自分だった**（新しい網が stash した Core の記号を参照していた＝RULES §5.5 の顔。網を退避してやり直した）。
 ★★ **⑸ 毒 6 本・baseline 8,866 緑（網 +2）**（Lab `poisons.out`）: Meta を常に共有 **3 赤**／counts を常に共有 **19 赤**／**空の grob-prop を常に渡す＝最初は 0 赤（観測者なし）→ 網 `CollectSectionOverrideResumeTests`（section 内の in-music override を挟んで resume し、次の section で revert する本）を書いて 1 赤**／`SameAs` が key を見ない **3 赤**／**park で Clear しない 5 赤（stale の entry は状態比較を抜けて出力に届く＝Clear は load-bearing）**／never park **1 赤（liveness の網だけ・出力同一）**。⚠️ 1 度目の毒は §1 の継ぎ目を立てる前に回して baseline が 3 赤（第456 と同じ顔）。
   §7 7.5＝**Core '+' 133 行・4 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（LP に対応物の無い resume の基盤）。`-End p522` OK・full 8863 / 0 / 3 / 8866（網 +2）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
-
-## 以下は第521セッションの経緯
-
-### 1.1 第521セッション（2026-09-23・YT-DELL2）
-
-新しい会話。⒜ ⒭⁸ の node 側に着手。
-★ `-Start p521`（HEAD `ab901621`・full 8858 / 0 / 3 / 8861・`-Archive 519`）。
-
-★★★ **⑴ node の red 1,128／打鍵を creator で割った**（Lab `sessions/p521/steps-before-sampled.txt`）: **⒜ `ProcessSectionBody` が section の*直下の子*を 3 度 red にする**（part block を探す `ChildNodes()`・`SectionHasInlineMusic` の全 slot `GetChild`・inline 音楽の preset list）＝**512（Note 358・Barline 70・Rest 44・Break 19・Tie 15・Slur 7）＋token 15**。単一 part の本は音楽を section に直書きするので直下の子＝音符で、**preset list は gather root を持たず checkpoint が seek できなかった**／**⒝ `CreateNoteItem` の `note.Pitch` 288・`note.Duration` 107、`CreateRestItem` の 23**＝1 度読むだけの red で、素の音符では Pitch が*最初の red の子*＝音符の `_children` 配列（48 B）もそのために建っていた。
-★★★★ **⑵ 直し**: ⒝ **`PitchReading`／`DurationReading`（建てない struct）を green の slot から読む**（`NoteSyntax.PitchReading`／`DurationReading`・`RestSyntax.DurationReading`・`PitchSyntax.Reading`）。算術は 1 綴り（`PitchSyntax.NameOf`／`AccidentalOf`／`AccidentalOffsetOf`／`QuarterOffsetOf`・`DurationSyntax.ValueOf`・`SyntaxFacts.NetOctaveMarksFrom(green)`）で red accessor も同じ静的関数へ。⒜ **3 つの読みを slot の kind に**（`IsSectionBlockOrDirectiveKind`）、**inline の腕を part block と同じ 2 形（`MusicSiteList.Lazy`＝resume は slot path で seek／`Eager`＝recording）に**（`s_inlineSiteRule`＝直下の候補・降りない・`InlineSectionSites`）。網 `SectionDirectChildrenGreenTests`（kind 判定＝red の綴り・lazy site＝preset の red・**liveness＝単一 part 100 小節の本で最後の checkpoint から resume すると seek 1 回・gather < 50**）＋`GreenTokenAccessorTests` に reading 8 種。
-★★★ **⑶ A/B render 1,331,947 → 1,288,349（−43,598 B／打鍵・−3.27%）**・node の red **1,128 → 552**・token 123 → 113。**予測 −41,000 ± 12,000 の 106%＝上に外れ（帯の中）**（Lab `prediction.txt`）。会計: 消えた red 576 × 56 B ＝ 32,256、残り 11,342 ≈ 素の音符の `_children`（≈200 × 48）＋rest の 56 × 23＝**red 1 本 56 B（header 16＋parent 8＋position 4+4＋green 8＋`_children` 8＋`_childPositions` 8）で閉じる**。⒜ の賞金＝消費されなかった直下の子 164（Note 114＝28%・Barline 26・Rest 12…）＝予測 100〜130 の上。
-★★ **⑷ 残りの地図＝実仕事**（`steps-after-sampled.txt`）: 消費点 `PeekMarkers`（`site.Node`→`ProcessMusicNode(SyntaxNode)`）341（Note 242・Barline 43・Rest 29・Break 13・Tie 10・Slur 4）／post-event を node として読む `PhrasingSlurMarksOn` 90／`ProcessSection` の直接の Note 37・`ProcessRepeatExpression` 13／`CollectResumePlanner.WindowTouchesPhraseOrVariable` の窓の red walk 約 20（→ §1.0 ⒭⁸）。**5,816 頁 hash 0 差**（`hash.log`・baseline は p520 `hashes-oldbuild.txt`）。⚠️ **計器の罠**: `CreateRed` の seam に `"tok:" + green.Kind` を書くと Sample が返る前に文字列を建て、A/B が 3,526,772 に膨れる（p520 の `ab-after.txt` も同じ数）＝**seam の引数は flag の内側で評価する**。
-★★ **⑸ 毒 6 本・baseline 8,864 緑（網 +3）**（Lab `poisons.out`）: dot を 1 つ落とす **78 赤**／`DurationReading` を tremolo の slot から **624 赤**／`PitchReading.SourceStart` が trivia を落とす **1 赤（網だけ）**＝pitch の住所は `--pitches` trace にしか届かない（data-pos は note の住所）／Note を directive に数える **4 赤**（網＋単一 part の本 3）／inline の rule が降りる **1 赤（網だけ）**＝fixture の inline section に容器が無い／**inline を常に eager（seek しない・出力同一）2 赤＝liveness の網＋`GatherSeekTests`**。
-  §7 7.5＝**Core '+' 264 行・5 ファイル・LILYPOND-REF／LILYSHARP-OWN は増減なし**（同じ算術を green で読むだけ）。`-End p521`＝full 8860 / 1 / 3 / 8864（網 +3・赤 1 は `TheHandoffStaysReadable` 21,002 字＝§1.0 の ✅ と第498〜第509 の経緯を畳んで通した）・棚卸しは行番号だけ（APPROXIMATIONS.md 2 行）。
 
 ## 2. 開いている作業
 
@@ -1399,8 +1371,8 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
   `max_ledger_extent` 短縮と `ledger_shortening_range`（`ledger-line-spanner.cc:279-330`）、
   `Staff_symbol::ledger_positions`（線位置を変えた譜）。⚠️ そして
   **`LedgerLineSpannerEngraver` の出力（`LedgerLineSpan`）は `ScoreLayout` に載るだけで
-  誰も描かない**（描くのは符頭経路）＝**加算メタデータのまま**。その engraver は
-  `MergeThreshold 1.5` という独自装置を持つので、**短縮を移植する人はそこが家**。
+  誰も描かない**（描くのは符頭経路）＝**加算メタデータのまま**だった。**第523 がユーザー決定で engraver ごと削除**
+  （`MergeThreshold 1.5` の独自装置も消えた）＝**短縮を移植する人は新しい engraver を書く**（符頭経路の加線が読み手）。
 - ✅ **閉じた（第379 第 4 便・ユーザー承認・commit `c6f716e8`・§1 ⑽）＝加線の spacing rod（`Ledger_line_spanner::set_spacing_rods`）を移植**＝`SpacingRules.LedgerRods`・台帳 `ledger.rod.thirty-second`／`.no-ledger` が EXACT・追跡 599 冊中 9 冊が動き LP に近づいた（`multivoice-tuplet-beams` の残る +0.65 は 3 連符列の別の差）。⚠️ **残した範囲外**: 改行 gate は小節線をまたぐ対を値付けしない・grace の頭は rod に入らない・5 線譜の前提（LP の `ledger_positions` は譜の線位置に従う）。以下は起票時の記録: **加線の spacing rod（`Ledger_line_spanner::set_spacing_rods`）が未移植＝要ユーザー判断・未着手**（第379 第 3 便起票・§1 ⑼）。**LP**（`lily/ledger-line-spanner.cc:39-140`）: Staff の LedgerLineSpanner の頭を右から左へ歩き、**同じ側（UP／DOWN）に加線付きの頭を持つ隣接 2 列**の間に rod **`2 × head_width × minimum-length-fraction(0.25) − 右列 head extent[LEFT] + 左列 head extent[RIGHT]`**＝黒符頭で **1.9563**。**実測**（`scratch/p380/incr/cols.ps1`・`floor2.lys`＝32 分 a''〜d''' の加線付きの並び）: **LP 1.9563／Lily# 1.80**（skyline min 1.5042＋0.3）・increment 1.0〜1.5 で不変・加線の無い g''→a'' は一致。**Lily# は `LedgerLineSpannerEngraver` が annotation pass で span を作るだけ**（:48 はこの関数を REF で名指すが spacing に rod は出ない）。**射程は未数**: 動くのは「加線付きの短い音価が隣り合い、duration の ideal と skyline+0.3 が 1.9563 を割る」所（32 分、common shortest が八分なら 16 分、和音・加線 2 本の大きい頭幅）。**実装するなら**: ⒜ rod は Staff 単位の「加線付きの頭を持つ列」の隣接対＝**他の譜の列を挟めば複数 spring をまたぐ**（`MeasureLayouter` の `looseRods` → `SpringSolver.ApplyRods` の形）⒝ **小節線をまたぐ対**にも立つ（LP の spanner は小節で切れない）⒞ item 側 estimate（`SpacingRules.CreateSpringsForMeasure`）と改行 gate にも同じ量（`SpacingInvariantTests` の 2 系統一致）⒟ 網＝`floor2.lys` の 3 間隔を LP の 1.9563 で・射程は patch を当てて追跡 599 冊を `scratch/p380/incr/sweep-floor.ps1`（base＝worktree）で数える。 → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-15 に落とした）<!-- ledger: ledger.rod.thirty-second = 0 -->
 - ✅ **閉じた（第379 第 6 便・ユーザー承認・commit `6ccbd3e8`・§1 ⑿）＝rod の view だけ縦 padding 0.08**＝台帳 `cross-voice.rod.paper-column-padding` が EXACT（0.80）・追跡 599 冊中 3 冊が動き悪化 0（`multivoice-tuplet-beams` +0.64 → 0.00）。以下は起票時の記録: **rod を読む paper column の skyline の縦 padding が NoteColumn の 0.15 で組まれている（LP は PaperColumn の 0.08）＝要ユーザー判断・未着手**（第379 第 5 便起票・§1 ⑾）。**LP**: `scm/define-grobs.scm:2577` NoteColumn `skyline-vertical-padding` 0.15／`:2747` PaperColumn 0.08・`lily/separation-item.cc:94-110 calc_skylines` が各 grob の値で intrinsic に padded。**rod（`Separation_item::set_distance`）は PaperColumn の skyline**、**wish の min（`note-spacing.cc:78-83`）は NoteColumn の skyline**。**Lily#**: `ItemSkylineFactory.Build`（:213）が view を問わず `NoteColumnSkylineVerticalPadding` で padded＝**rod の view（`ColumnElements.Elements`／`All`＝`CreateRightSkylineAtColumn`／`CreateLeftSkylineAtColumn`／`CreateRightSkyline`／`CreateLeftSkyline`）も 0.15**。**実測**（`test/multivoice-tuplet-beams` 1 小節目・voice 2 の f'' → voice 1 の 3 連符 c'''）: **LP 0.80／Lily# 1.45**＝声部をまたぐ rod 1.4492。捨て計器（`scratch/p380/incr/Zz379ProbeTests.cs.txt`）で同じ箱を組み直すと **0.15 で 1.4492（再現）・0.08 で rod 0**。**直すと動くもの**（rod の view を読む所・grep 2026-09-14）: `MeasureLayouter.cs:509`（同じ voice の列対の rod＝`SeparationRodDistance`）・`SpacingRules.BarlineSkyline.cs:278-295`（`SeparationRodDistance` 本体）・`:369`（音符列 → 小節線の floor pair）・`SpacingRules.MeasureSprings.cs:1114-1118`（声部をまたぐ rod）・`:1282`／`:1288`（articulation spacing の距離）。⚠️ **rod は圧縮時と wish の無い対でしか効かない**（wish の対は 0.15 の skyline の min＋0.3 が勝つ）＝**動くのは主に多声の声部またぎと詰めた行**・**射程は未数**。**実装するなら**: `Build` に padding を渡し、rod の view だけ `MusicalColumnSkylineVerticalPadding`（0.08）で組む（wish の view は 0.15 のまま）⇒ 網＝この本の 1/8 → 1/6 を LP の 0.80 で・射程は追跡 599 冊を `sweep-floor.ps1`（base＝worktree）で数え、動いた本を `verify-moved.ps1` で LP と突き合わせる（第 4 便の型）。 → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-15 に落とした）<!-- ledger: cross-voice.rod.paper-column-padding = 0 -->
 - ✅✅ ★★★ **閉じた（2026-08-03）。タイの列アウトラインは移植済み＝`TieChordOutline`。** → **本文は HANDOFF-ARCHIVE.md「閉じた §2 の本文」の同じ見出し**（第351 が落とした）
@@ -2428,6 +2400,7 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | 決定 | 根拠（要点） |
 |---|---|
+| ★★ **§1.0 の判断待ち 7 件（2026-09-23・第523・ユーザー決定）＝⒮¹⁴ `LedgerLineSpannerEngraver` は消す／⒳⁷ 小節線の床は「効かない床」として計算しない／⒮¹² は第366 の形で網を書く（門は畳まない）／⒩⁶ ⑵ `ClearBeamStamp` の観測者は後回し／U10 コーパスの効いていない弦番号は放置／⒳¹² navigation 記号の仕様は起票のまま・あとで判断／⒳⁵ 和音の旗の箱は測ってよい** | 私が 7 件を perf に効く順に並べて訊いた答え。⒮¹⁴ は読み手がテストだけ・⒳⁷ は 2 便かけて動かせる本が見つからず・⒮¹² は門を支える母集団（第366 の 88 件）をスイートが持っていない・U10 は描画が変わらない。着手と結果は §1 第523 |
 | ★★★ **フレージング・スラーの綴りは `@phrasingSlur` … `@!phrasingSlur`**（2026-09-22・第482・**ユーザー決定**＝3 択から選択・✅ `eedf4197`） | 既存の span（`@rit`…`@!rit`・`@ottava`…`@!ottava`・`@sustain`…`@!sustain`）と同じ型。名前は LP の grob 名 PhrasingSlur。LP の `\(` `\)` は「バックスラッシュはタブ譜専用・注釈は `@`」の方針に例外を作るので退けた。`@phrase` は `phrase` が予約語で使えない |
 | ★★★ **`voice { } { }` の span は音価の既定も動かさない＝全 branch は span が開いた時点の (Duration, Dots) から読み、span の*後ろ*の音楽もそこから読む。octave frame（2026-08-01）と同じ 1 つの規則**（2026-09-17・第398 第 3 便・私が octave の決定の延長として置き、**ユーザー確認「あなたの判断を残す方が、一貫して分かりやすいよね」**・✅ `0c25c5d2`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18 に落とした） |
 | ★★★ **`volta`・`alternative` は予約語ではない。LYS0006 は「`repeat volta` は LilyPond の綴りだ」と form へ案内するだけで、*撤去した*体の文面を取らない。LilyPond の `alternative { }` 節はパーサから消し、その語が受ける普通の文法エラーに落とす**（2026-09-17・第398 第 2 便・**ユーザー決定**「LYS0006 のメッセージは不正だ。削除したのではなく、最初からなかった体にすべきだ」「volta は予約語から外してもよい」「alternative の後方互換な警告も完全に削除して、普通の文法エラーを出すので十分」・✅ 同便実装） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
