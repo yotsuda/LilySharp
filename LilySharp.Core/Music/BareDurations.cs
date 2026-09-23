@@ -110,69 +110,108 @@ public static class BareDurations
         return Maps.GetValue(top, BuildMap);
     }
 
+    /// <summary>
+    /// The map, from ONE walk of the tree's GREEN nodes: a red is materialised only for a
+    /// bare duration that is found and for the event it repeats — by position, from the
+    /// root, the same parent-cached instances every other reader of the tree holds.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS WALKED THE RED TREE UNTIL SESSION 519, and it is asked on every keystroke
+    /// (<see cref="Maps"/> is keyed by the root, and the preview's root is new every
+    /// keystroke — RULES §5.3's per-tree-is-per-keystroke shape), for every book, by
+    /// <see cref="IsOriginal"/> from the collector's first note. MEASURED (Release, the
+    /// owner's corpus, 232 books × eight forward keystrokes, allocated bytes around this
+    /// build): 1.00 builds a keystroke, 43,399 B a keystroke, 3.0% of the render — and the
+    /// map came out EMPTY, because the corpus writes no bare duration: a whole-tree red
+    /// materialisation (every note, its duration, every articulation
+    /// <see cref="Semantics.PitchedRest"/> looked at, every token skipped) for nothing. The
+    /// resumed collect never touches the adopted prefix's reds, so nobody read them after.
+    /// <para>
+    /// The threading is the same fold in the same order — a green slot carries its kind, its
+    /// full width and its children, which is everything the fold reads except the identity
+    /// of the resolved nodes, and those are recovered by <see cref="RedOf"/>.
+    /// <c>BareDurationsGreenWalkTests</c> holds this walk to the former red one, node for
+    /// node, on every net book and on a book that spells every arm.
+    /// </para>
+    /// </remarks>
     private static Dictionary<BareDurationSyntax, Resolution> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<BareDurationSyntax, Resolution>();
-        SyntaxNode? last = null;
-        bool crossed = false;
-        int octave = 0;
-        Thread(root, map, ref last, ref crossed, ref octave);
+        var run = new Running();
+        Thread(root.Green, root.Position, root, map, ref run);
         return map;
+    }
+
+    /// <summary>The fold's running state: the event in force (as its green node and its
+    /// full start, so its red can be found only when a bare duration needs it), the
+    /// barline-crossed flag and the q chain's displacement.</summary>
+    private struct Running
+    {
+        public Syntax.InternalSyntax.GreenNode? Last;
+        public int LastPosition;
+        public bool Crossed;
+        public int Octave;
     }
 
     /// <summary>Document-order threading, mirroring
     /// <see cref="ChordRepetitions"/>. Every repeatable event replaces the
     /// running one; a repetition spelling (<c>q</c>, a bare duration) threads
     /// as what IT resolves to, never as itself, so chains stay flat and a later
-    /// bare duration copies the true original. <paramref name="crossed"/>
+    /// bare duration copies the true original. <c>Crossed</c>
     /// tracks the OTHER distance — barlines since the last WRITTEN repeatable
     /// spelling (every written event clears it, a bare duration included, even
     /// though the map threads flat past it) — so the crossing warning fires on
     /// the bare duration that opens a measure's run, once.</summary>
-    private static void Thread(SyntaxNode node, Dictionary<BareDurationSyntax, Resolution> map,
-        ref SyntaxNode? last, ref bool crossed, ref int octave)
+    private static void Thread(Syntax.InternalSyntax.GreenNode node, int position, SyntaxNode root,
+        Dictionary<BareDurationSyntax, Resolution> map, ref Running run)
     {
-        switch (node)
+        switch (node.Kind)
         {
-            case BarlineSyntax:
-                crossed = true;
+            case SyntaxKind.Barline:
+                run.Crossed = true;
                 return;
             // A pitched rest (`a4@rest`) is a REST that borrows a pitch for its
             // height — transparent like `r4`, never a repeat target (nothing
             // records a spelling for it; nothing sounds).
-            case NoteSyntax n:
-                if (!Semantics.PitchedRest.Is(n))
+            case SyntaxKind.Note:
+                if (!Semantics.PitchedRest.Is(node))
                 {
-                    last = n;
-                    crossed = false;
-                    octave = 0;   // a WRITTEN event is at its own octave
+                    run.Last = node;
+                    run.LastPosition = position;
+                    run.Crossed = false;
+                    run.Octave = 0;   // a WRITTEN event is at its own octave
                 }
                 return;
             // The empty chord <> is a post-event carrier occupying no time —
             // transparent here for the same reason it is transparent to the bar.
-            case ChordSyntax c:
-                if (!c.IsEmpty)
+            case SyntaxKind.Chord:
+                if (!ChordIsEmpty(node))
                 {
-                    last = c;
-                    crossed = false;
-                    octave = 0;
+                    run.Last = node;
+                    run.LastPosition = position;
+                    run.Crossed = false;
+                    run.Octave = 0;
                 }
                 return;
-            case SlashNoteSyntax or DrumNoteSyntax:
-                last = node;
-                crossed = false;
-                octave = 0;
+            case SyntaxKind.SlashNote or SyntaxKind.DrumNote:
+                run.Last = node;
+                run.LastPosition = position;
+                run.Crossed = false;
+                run.Octave = 0;
                 return; // an event holds no further events
-            case ChordRepetitionSyntax q:
-                if (ChordRepetitions.OriginalOf(q) is { } chord)
+            case SyntaxKind.ChordRepetition:
+                if (ChordRepetitions.OriginalOf((ChordRepetitionSyntax)RedOf(root, node, position))
+                    is { } chord)
                 {
-                    last = chord;
+                    run.Last = chord.Green;
+                    run.LastPosition = chord.Position;
                     // The q threads flat to the written chord, so the displacement it
                     // resolved to has to travel with it or a following bare duration
                     // would repeat the chord back at its written octave.
-                    octave = ChordRepetitions.DisplacementOf(q);
+                    run.Octave = ChordRepetitions.DisplacementOf(
+                        (ChordRepetitionSyntax)RedOf(root, node, position));
                 }
-                crossed = false; // written either way; an unresolved q errors on its own
+                run.Crossed = false; // written either way; an unresolved q errors on its own
                 return;
             // An arpeggio BREAKS the run rather than becoming its target: its
             // members play in sequence and subdivide a group total, so "repeat
@@ -180,36 +219,88 @@ public static class BareDurations
             // running event makes a bare duration after one a LOUD error
             // (LYS0016) instead of a silent repeat of an inner member the
             // document-order descent would otherwise pick up.
-            case ArpeggioSyntax:
-                last = null;
-                crossed = false;
-                octave = 0;
+            case SyntaxKind.Arpeggio:
+                run.Last = null;
+                run.Crossed = false;
+                run.Octave = 0;
                 return;
-            case BareDurationSyntax bare:
-                if (last != null)
-                    map[bare] = new Resolution(last, crossed, octave);
-                crossed = false;
+            case SyntaxKind.BareDuration:
+                if (run.Last != null)
+                    map[(BareDurationSyntax)RedOf(root, node, position)] = new Resolution(
+                        RedOf(root, run.Last, run.LastPosition), run.Crossed, run.Octave);
+                run.Crossed = false;
                 return;
         }
+        int at = position;
         for (int i = 0; i < node.SlotCount; i++)
         {
-            if (node.GetChild(i) is not { } child || child is SyntaxTokenNode)
+            var child = node.GetSlot(i);
+            if (child is null)
                 continue;
-            if (IsScopeBoundary(child))
+            int childPosition = at;
+            at += child.FullWidth;
+            if (child.IsToken)
+                continue;
+            if (IsScopeBoundary(child.Kind))
             {
-                SyntaxNode? inner = null;
-                bool innerCrossed = false;
-                int innerOctave = 0;
-                Thread(child, map, ref inner, ref innerCrossed, ref innerOctave);
+                var inner = new Running();
+                Thread(child, childPosition, root, map, ref inner);
             }
             else
             {
-                Thread(child, map, ref last, ref crossed, ref octave);
+                Thread(child, childPosition, root, map, ref run);
             }
         }
     }
 
-    private static bool IsScopeBoundary(SyntaxNode n) => n is
-        PartDeclarationSyntax or SectionDeclarationSyntax or PhraseDeclarationSyntax
-        or PartBlockSyntax or ChordPartBlockSyntax;
+    /// <summary><see cref="ChordSyntax.IsEmpty"/> on the green: no pitch, degree or drum
+    /// member among the slots.</summary>
+    private static bool ChordIsEmpty(Syntax.InternalSyntax.GreenNode chord)
+    {
+        for (int i = 0; i < chord.SlotCount; i++)
+            if (chord.GetSlot(i) is { Kind: SyntaxKind.Pitch or SyntaxKind.ChordDegree or SyntaxKind.DrumNote })
+                return false;
+        return true;
+    }
+
+    /// <summary>
+    /// The red node of <paramref name="green"/>, which starts at full position
+    /// <paramref name="position"/> under <paramref name="root"/>: the descent from the root
+    /// through the one child slot whose full span holds the position, materialising only
+    /// that spine — the parent-cached instances, so the answer is the same object every
+    /// other reader of the tree holds.
+    /// </summary>
+    private static SyntaxNode RedOf(SyntaxNode root, Syntax.InternalSyntax.GreenNode green, int position)
+    {
+        var node = root;
+        int nodePosition = root.Position;
+        while (!ReferenceEquals(node.Green, green))
+        {
+            SyntaxNode? next = null;
+            int at = nodePosition;
+            var parent = node.Green;
+            for (int i = 0; i < parent.SlotCount; i++)
+            {
+                var slot = parent.GetSlot(i);
+                if (slot is null)
+                    continue;
+                if (position >= at && position < at + slot.FullWidth)
+                {
+                    next = node.GetChild(i);
+                    nodePosition = at;
+                    break;
+                }
+                at += slot.FullWidth;
+            }
+            if (next is null)
+                throw new InvalidOperationException(
+                    "BareDurations: a green site of the walk is not under the root it was walked from");
+            node = next;
+        }
+        return node;
+    }
+
+    private static bool IsScopeBoundary(SyntaxKind kind) => kind is
+        SyntaxKind.PartDeclaration or SyntaxKind.SectionDeclaration or SyntaxKind.PhraseDeclaration
+        or SyntaxKind.PartBlock or SyntaxKind.ChordPartBlock;
 }

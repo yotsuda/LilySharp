@@ -55,4 +55,32 @@ public static class PitchedRest
                 return true;
         return false;
     }
+
+    /// <summary>
+    /// <see cref="Is(NoteSyntax)"/> asked of the note's GREEN node — the same answer with no
+    /// red materialised, for a walk that reads the whole tree every keystroke
+    /// (<see cref="Music.BareDurations"/>). The same slots and the same test, spelled on the
+    /// green: a note's post-events start at slot 3 (<see cref="NoteSyntax.Articulations"/>),
+    /// an articulation's name is its slot 1 (<see cref="ArticulationSyntax.NameToken"/>), and
+    /// the marker is a name the registry does not know that reads "rest".
+    /// <c>BareDurationsGreenWalkTests</c> holds the two spellings to the same answer on every
+    /// note of every net book.
+    /// </summary>
+    internal static bool Is(Syntax.InternalSyntax.GreenNode note)
+    {
+        for (int i = 3; i < note.SlotCount; i++)
+            if (note.GetSlot(i) is { } art && IsMarker(art))
+                return true;
+        return false;
+    }
+
+    /// <summary><see cref="IsMarker(SyntaxNode)"/> on the green.</summary>
+    internal static bool IsMarker(Syntax.InternalSyntax.GreenNode articulation)
+    {
+        if (articulation.Kind != SyntaxKind.Articulation)
+            return false;
+        var name = articulation.GetSlot(1)?.Text ?? string.Empty;
+        return ArticulationRegistry.Resolve(name) == ArticulationType.None
+            && name.Equals("rest", StringComparison.OrdinalIgnoreCase);
+    }
 }

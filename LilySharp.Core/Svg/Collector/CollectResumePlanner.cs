@@ -724,14 +724,27 @@ internal static class CollectResumePlanner
     /// music nodes collapsed to one <see cref="SyntaxKind.Note"/> — so a note or bar
     /// line added INSIDE an existing music run is not a shape change (the walk owns it),
     /// while one typed where the section had none is.</summary>
+    /// <remarks>
+    /// ⚠️ WALKS THE GREEN SLOTS, NOT <see cref="SyntaxNode.ChildNodes"/>: the shape is a
+    /// sequence of KINDS, and a green slot carries its kind, so no red has to exist for the
+    /// question to be answered. Until session 519 this enumerated the red children — every
+    /// direct child of every structure-read section, tokens included — and MEASURED (Release,
+    /// the owner's corpus, 232 books × eight forward keystrokes, allocated bytes around
+    /// <see cref="SameShape"/>): 9.51 compares a keystroke, 38,254 B a keystroke, 2.7% of the
+    /// render, for reds the resumed collect never reads in the prefix. The kind test is
+    /// <see cref="MeasureCollector.IsCollectableMusicKind"/>, which
+    /// <c>MusicSitesEquivalenceTests</c> pins to the type test this used to make.
+    /// </remarks>
     private struct ShapeWalk
     {
-        private ChildNodeList.Enumerator _children;
+        private readonly Syntax.InternalSyntax.GreenNode _green;
+        private int _slot;
         private bool _inMusic;
 
         public ShapeWalk(SyntaxNode node)
         {
-            _children = node.ChildNodes().GetEnumerator();
+            _green = node.Green;
+            _slot = 0;
             _inMusic = false;
             Current = default;
         }
@@ -742,10 +755,13 @@ internal static class CollectResumePlanner
         /// <summary>Advances to the next kind of the shape.</summary>
         public bool MoveNext()
         {
-            while (_children.MoveNext())
+            int count = _green.SlotCount;
+            while (_slot < count)
             {
-                var child = _children.Current;
-                if (MeasureCollector.IsCollectableMusicNode(child))
+                var child = _green.GetSlot(_slot++);
+                if (child is null)
+                    continue;
+                if (MeasureCollector.IsCollectableMusicKind(child.Kind))
                 {
                     bool opensRun = !_inMusic;
                     _inMusic = true;
