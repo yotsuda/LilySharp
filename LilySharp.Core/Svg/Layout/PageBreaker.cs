@@ -656,6 +656,18 @@ internal sealed class PageBreaker
     /// </remarks>
     private readonly VerticalSpacingParameters _vs;
 
+    // The two DPs' scratch tables (see ScratchArray): the unconstrained solve's four rows of
+    // n, and the page-count table's (n + 1)² cells with its two bands of n + 1. Neither solve
+    // nests or calls the other, so one drawer each; every taker fills what it reads.
+    [ThreadStatic] private static double[]? t_demerits;
+    [ThreadStatic] private static double[]? t_force;
+    [ThreadStatic] private static double[]? t_penalty;
+    [ThreadStatic] private static int[]? t_prev;
+    [ThreadStatic] private static double[]? t_dp;
+    [ThreadStatic] private static int[]? t_dpPrev;
+    [ThreadStatic] private static int[]? t_minPageCount;
+    [ThreadStatic] private static int[]? t_maxPageCount;
+
     /// <summary>
     /// Penalty for bad spacing (overflow or extreme stretch).
     /// </summary>
@@ -790,14 +802,18 @@ internal sealed class PageBreaker
     private PageBreakResult SolveUnconstrained(IReadOnlyList<SystemDetails> lines)
     {
         int n = lines.Count;
-        var demerits = new double[n];
-        var force = new double[n];
-        var penalty = new double[n];
-        var prev = new int[n];
-        Array.Fill(demerits, double.PositiveInfinity);
-        Array.Fill(force, double.PositiveInfinity);
-        Array.Fill(penalty, double.PositiveInfinity);
-        Array.Fill(prev, -1);
+        // The DP's four rows, lent from the thread's drawer (ScratchArray) and filled here
+        // exactly as a fresh table was: the count loop runs this solve 10.8 times a
+        // keystroke, and the rows were 10,034 B of it (session 526's census). ⚠️ The fills
+        // are load-bearing — the drawer holds the previous solve's rows.
+        var demerits = ScratchArray.Take(ref t_demerits, n);
+        var force = ScratchArray.Take(ref t_force, n);
+        var penalty = ScratchArray.Take(ref t_penalty, n);
+        var prev = ScratchArray.Take(ref t_prev, n);
+        Array.Fill(demerits, double.PositiveInfinity, 0, n);
+        Array.Fill(force, double.PositiveInfinity, 0, n);
+        Array.Fill(penalty, double.PositiveInfinity, 0, n);
+        Array.Fill(prev, -1, 0, n);
 
         // ONE accumulator for every line, cleared per line — LilyPond constructs a fresh
         // Page_spacing per line (page-spacing.cc:311), and Clear puts this one back in the
@@ -1055,10 +1071,15 @@ internal sealed class PageBreaker
 
         // 2D DP: dp[j * (maxPages+1) + p] = min demerits for systems 0..j-1 on p pages
         int cols = maxPages + 1;
-        var dp = new double[(n + 1) * cols];
-        var prev = new int[(n + 1) * cols];
-        Array.Fill(dp, double.MaxValue);
-        Array.Fill(prev, -1);
+        // The table and its bands, lent from the thread's drawer (ScratchArray) and filled
+        // here exactly as a fresh table was — once a keystroke, (n + 1)² cells: 8,869 B of
+        // it (session 526's census). ⚠️ The fills are load-bearing — the drawer holds the
+        // previous paging's table, and it may be the larger one.
+        int cells = (n + 1) * cols;
+        var dp = ScratchArray.Take(ref t_dp, cells);
+        var prev = ScratchArray.Take(ref t_dpPrev, cells);
+        Array.Fill(dp, double.MaxValue, 0, cells);
+        Array.Fill(prev, -1, 0, cells);
         dp[0] = 0; // 0 systems on 0 pages
 
         // The REACHABLE page-count band per break index — the page DP's copy of the line
@@ -1069,10 +1090,10 @@ internal sealed class PageBreaker
         // has no other effect (the two lazy penalty memos fire only on reachable p).
         // MEASURED (session 136, before this): 652,800 p-iterations per 200-system break,
         // 55% of them that empty `continue`.
-        var minPageCount = new int[n + 1];
-        var maxPageCount = new int[n + 1];
-        Array.Fill(minPageCount, int.MaxValue);
-        Array.Fill(maxPageCount, int.MinValue);
+        var minPageCount = ScratchArray.Take(ref t_minPageCount, n + 1);
+        var maxPageCount = ScratchArray.Take(ref t_maxPageCount, n + 1);
+        Array.Fill(minPageCount, int.MaxValue, 0, n + 1);
+        Array.Fill(maxPageCount, int.MinValue, 0, n + 1);
         minPageCount[0] = 0;
         maxPageCount[0] = 0;
 

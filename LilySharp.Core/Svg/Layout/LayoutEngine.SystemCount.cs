@@ -119,6 +119,9 @@ internal sealed partial class LayoutEngine
     /// scalar extents to each of its bars.
     /// </para>
     /// </remarks>
+    [ThreadStatic] private static double[]? t_measureUp;
+    [ThreadStatic] private static double[]? t_measureDown;
+
     private MeasureHeightEstimate EstimateMeasureHeights(
         SystemPass pass, int measureCount, double fallbackBody)
     {
@@ -147,11 +150,21 @@ internal sealed partial class LayoutEngine
             double h = s < pass.Heights.Count ? pass.Heights[s] : fallbackBody;
             var ext = pass.Extents[s];
             int count = sys.Measures.Length;
-            var measureUp = new double[count];
-            var measureDown = new double[count];
+            // This system's per-bar heights, lent from the thread's drawer (ScratchArray) —
+            // read only by the copy into upRest/downRest below, 23.7 systems a keystroke
+            // (session 526's census: 2,696 B of fresh pairs). ⚠️ The silhouette arm writes
+            // every bar; a system with no silhouette reads the ZEROS a fresh array gave it,
+            // so that arm clears them.
+            var measureUp = ScratchArray.Take(ref t_measureUp, count);
+            var measureDown = ScratchArray.Take(ref t_measureDown, count);
             double sysBeginUp = 0, sysBeginDown = 0, sysRestUp = 0, sysRestDown = 0;
 
-            if (skylines != null && s < skylines.Count)
+            if (skylines == null || s >= skylines.Count)
+            {
+                Array.Clear(measureUp, 0, count);
+                Array.Clear(measureDown, 0, count);
+            }
+            else
             {
                 var (up, down) = skylines[s];
                 // Where the line's first bar begins in the silhouette's own X frame; left of

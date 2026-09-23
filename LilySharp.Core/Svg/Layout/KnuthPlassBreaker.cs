@@ -134,6 +134,14 @@ internal readonly record struct MeasureSpringData(
 /// </remarks>
 internal sealed class KnuthPlassBreaker
 {
+    // Solve's six prefix sums (see ScratchArray): one drawer each, refilled per solve.
+    [ThreadStatic] private static double[]? t_cumIdeal;
+    [ThreadStatic] private static double[]? t_cumInvStretch;
+    [ThreadStatic] private static double[]? t_cumInvCompress;
+    [ThreadStatic] private static double[]? t_cumMin;
+    [ThreadStatic] private static int[]? t_cumForce;
+    [ThreadStatic] private static double[]? t_cumPairMin;
+
     private readonly double _lineWidth;
     private readonly double _firstPrefixWidth;
     private readonly double _continuationPrefixWidth;
@@ -259,11 +267,16 @@ internal sealed class KnuthPlassBreaker
     {
         int n = springData.Length;
 
-        // Precompute cumulative sums for fast range queries
-        var cumIdeal = new double[n + 1];
-        var cumInvStretch = new double[n + 1];
-        var cumInvCompress = new double[n + 1];
-        var cumMin = new double[n + 1];
+        // Precompute cumulative sums for fast range queries. The six prefix sums are lent
+        // from the thread's drawer (ScratchArray): the loop below writes [1..n] and the
+        // solve reads nothing past n, so only [0] — zero in a fresh array — is set by hand.
+        // Read by this solve alone (GreedyBreak reads cumMin and keeps nothing); the table
+        // (dp, prev, lineForce) escapes into LineBreakSolutions and is NOT lent.
+        // MEASURED (session 526's census): 3,513 B a keystroke of fresh sums.
+        var cumIdeal = ScratchArray.Take(ref t_cumIdeal, n + 1);
+        var cumInvStretch = ScratchArray.Take(ref t_cumInvStretch, n + 1);
+        var cumInvCompress = ScratchArray.Take(ref t_cumInvCompress, n + 1);
+        var cumMin = ScratchArray.Take(ref t_cumMin, n + 1);
         // ...and the same idiom for the FORCED-BREAK question below, which is a range query
         // like the others and was being answered by re-scanning the range: "is there a Force
         // permission strictly inside this candidate line". That scan costs O(j - i) per pair
@@ -271,13 +284,15 @@ internal sealed class KnuthPlassBreaker
         // 1000-bar book, 4,499,950 for a 300-bar one). A prefix count answers it in O(1) and
         // is the same predicate: the scan covered k in [i, j-2], which is nonempty exactly
         // when the count over that range is positive.
-        var cumForce = new int[n + 1];
+        var cumForce = ScratchArray.Take(ref t_cumForce, n + 1);
         // Cross-bar lyric pair minima: entry i is the extra MINIMUM paid when measures i
         // and i+1 share a line — the two halves each entry carries, joined here (this is
         // the only place the halves meet, so no stored entry ever reads a neighbour's
         // springs). A line i..j−1 collects the pairs strictly inside it:
         // cumPairMin[j−1] − cumPairMin[i]. All zero on an unsung score.
-        var cumPairMin = new double[n + 1];
+        var cumPairMin = ScratchArray.Take(ref t_cumPairMin, n + 1);
+        cumIdeal[0] = cumInvStretch[0] = cumInvCompress[0] = cumMin[0] = cumPairMin[0] = 0;
+        cumForce[0] = 0;
         for (int i = 0; i < n; i++)
         {
             cumIdeal[i + 1] = cumIdeal[i] + springData[i].IdealWidth;

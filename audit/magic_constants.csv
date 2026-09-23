@@ -617,7 +617,7 @@
 "Svg/Layout/GraceSpacingParameters.cs","36","0.8","public double SpacingIncrement { get; init; } = 0.8;","LILYPOND-REF: define-grobs.scm:1725 (spacing-increment . 0.8)","Green"
 "Svg/Layout/GraceSpacingParameters.cs","42","1.6","public double ShortestDurationSpace { get; init; } = 1.6;","LILYPOND-REF: define-grobs.scm:1724 (shortest-duration-space . 1.6)","Green"
 "Svg/Layout/GraceSpacingParameters.cs","48","0.125","public double BaseShortestDuration { get; init; } = 0.125;","(file-level) LILYPOND-REF: scm/define-grobs.scm:1721-1732 GraceSpacing","Yellow"
-"Svg/Layout/KnuthPlassBreaker.cs","471","200000","penalizedForce = -200000;","(file-level) LILYPOND-REF: lily/simple-spacer.cc — each column's spring contributes to line force","Yellow"
+"Svg/Layout/KnuthPlassBreaker.cs","486","200000","penalizedForce = -200000;","(file-level) LILYPOND-REF: lily/simple-spacer.cc — each column's spring contributes to line force","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","49","0.0","double FontSizeStep = 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","58","0.0","double SkylineHorizontalPadding = 0.0,","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","106","0.25","private const double StaffPadding = 0.25;","LILYPOND-REF: define-grobs.scm:3004 staff-padding = 0.25","Green"
