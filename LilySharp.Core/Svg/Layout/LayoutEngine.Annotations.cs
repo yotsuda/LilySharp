@@ -745,13 +745,21 @@ internal sealed partial class LayoutEngine
                                 return line.LineYUp;
                         return null;
                     };
-                double? staffTopDown =
-                    staffYByIndex != null && staffYByIndex.TryGetValue(staffIndex, out var td)
-                        ? td : null;
+                // The staff's top line on the system a bracket STARTS on — the same
+                // per-system resolver every other per-staff annotation reads (staffYAt),
+                // because the room can open a gap on one system and not another (the
+                // nocturne's m6 decrescendo, 2026-09-23: the second system's left hand
+                // stood 1.22 lower, and one score-wide value drew its brackets 1.22 into
+                // the beam). The single map is the fallback when the pass has no resolver.
+                Func<int, double?>? staffTopDownOf = null;
+                if (staffYAt is { } yAt)
+                    staffTopDownOf = startMeasure => yAt(startMeasure, sIdx);
+                else if (staffYByIndex != null && staffYByIndex.TryGetValue(staffIndex, out var td))
+                    staffTopDownOf = _ => td;
                 (pedalBracketBuilder ??= ImmutableArray.CreateBuilder<PedalBracketLayout>())
                     .AddRange(
                         PedalEngraver.Calculate(brackets, systems, ml,
-                            isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDown));
+                            isMixed: style == PedalStyle.Mixed, solvedLineUpOf, staffTopDownOf));
             }
         }
         var pedalBracketLayouts = pedalBracketBuilder?.ToImmutable() ?? [];

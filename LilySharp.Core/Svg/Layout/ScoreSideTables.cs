@@ -197,6 +197,31 @@ internal static class ScoreSideTables
             : _articulationsByScore.GetValue(score,
                 s => IndexBuckets<ArticulationItem>.Build(s.Articulations, a => a.StaffIndex));
 
+    private static readonly System.Runtime.CompilerServices
+        .ConditionalWeakTable<MultiStaffScore, IndexBuckets<HairpinItem>> _hairpinsByScore = new();
+
+    /// <summary>
+    /// The score's HAIRPINS — derived from the cresc/decresc marks and the dynamics that
+    /// terminate them, not stored on the score — bucketed by global staff index (memoized
+    /// per score), a tab staff's bucket empty as <see cref="DynamicsByStaff"/>'s is.
+    /// </summary>
+    /// <remarks>
+    /// Derived and memoised for the reason <see cref="TextSpannersByStaff"/> gives: the
+    /// staff-skyline pass asks once per (system, staff) and
+    /// <c>HairpinEngraver.DetectHairpins</c> walks the whole mark table. It is the SAME
+    /// detection the annotation pass draws from (<c>LayoutEngine.Annotations</c>), so the
+    /// wedge the room reserves is the wedge the page draws.
+    /// </remarks>
+    internal static IndexBuckets<HairpinItem> HairpinsByStaff(MultiStaffScore score)
+        => score.MusicMarks.IsDefaultOrEmpty
+            ? IndexBuckets<HairpinItem>.Empty
+            : _hairpinsByScore.GetValue(score,
+                s => IndexBuckets<HairpinItem>.Build(
+                    TabStaffStencils.Blank(
+                        s, HairpinEngraver.DetectHairpins(s.MusicMarks, s.Dynamics),
+                        static h => h.StaffIndex),
+                    h => h.StaffIndex));
+
     /// <summary>
     /// The score's accel./rit. SPANNERS — derived from the marks, not stored on the score —
     /// bucketed by global staff index (memoized per score).

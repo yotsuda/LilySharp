@@ -3422,6 +3422,20 @@ internal sealed class MultiStaffLayouter
                 var sky = skylineBuilder.PlaceDynamicsOn(
                     insideSky, staff, dynamics, measureLayouts, beams,
                     articulationLayouts: articulations);
+                // ...and this staff's HAIRPINS, which ride the same DynamicLineSpanner as
+                // the texts just placed (priority 250): outside-staff ink that LilyPond
+                // leaves IN the axis group's skyline once it is placed, so the staff below
+                // is spaced off the wedge exactly as it is off a text. Nothing reserved a
+                // wedge here until 2026-09-23: samples/nocturne.lys's m6 decrescendo ran
+                // through the left hand's beam as soon as the phantom tuplet box
+                // (StaffTupletBracketLayouts) stopped holding the staves apart by accident
+                // — LilyPond opens that system's gap from 5.00 to 6.22 for this wedge, and
+                // the room saw nothing to open it for.
+                // LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority
+                //   — a placed outside-staff grob's skyline is merged into the group's.
+                var hairpins = StaffHairpinLayouts(
+                    score, staff, thisStaff, measureLayouts, beams, dynamics);
+                SkylineBuilder.AddHairpinsToSkyline(hairpins, StaffSize.Of(staff), sky.Down);
 
                 // The staff's own accel./rit. spanner is OUTSIDE-STAFF INK ABOVE IT, and a
                 // row standing above the staff has to clear it exactly as the staff below a
@@ -3661,8 +3675,36 @@ internal sealed class MultiStaffLayouter
         var beamGroups = StaffBeamGroupsOf(score, staff, staffIndex);
 
         var staffBeams = RestampedToStaff(beamLayouts, staffIndex);
+
+        // ⚠️ THE ENGRAVER'S measureLayouts IS KEYED BY MEASURE INDEX — its other two callers
+        // hand it the whole score's measures in index order — while this room holds ONE
+        // SYSTEM's measures in system order. Handed over bare, the engraver read
+        // tuplet.MeasureIndex as "the n-th measure of this system": on every system but the
+        // first, a tuplet of an EARLIER system whose index fell inside this system's count
+        // was laid out again here on the wrong measure's columns, and its number was seeded
+        // into this staff's inside profile as a phantom box. samples/nocturne.lys
+        // (2026-09-23): the m3 triplet's "3" reserved 2.5 ss under m8 on system 2, and the
+        // pp there — and the dynamic line it shares with the m6 decrescendo — sat 1.5 ss
+        // lower than LilyPond's, through the left hand's beam. The array is re-keyed by
+        // measure index, with holes where this system has no such measure, and the tuplets
+        // are cut to this system's measures — the scoping StaffSlurLayouts already applies.
+        int maxMeasureIndex = -1;
+        foreach (var ml in measureLayouts)
+            maxMeasureIndex = Math.Max(maxMeasureIndex, ml.MeasureIndex);
+        var byMeasureIndex = new MeasureLayout[maxMeasureIndex + 1];
+        foreach (var ml in measureLayouts)
+            byMeasureIndex[ml.MeasureIndex] = ml;
+        var systemTuplets = ImmutableArray.CreateBuilder<TupletBracketItem>(staffTuplets.Length);
+        foreach (var tuplet in staffTuplets)
+            if (tuplet.MeasureIndex <= maxMeasureIndex && byMeasureIndex[tuplet.MeasureIndex] != null)
+                systemTuplets.Add(tuplet);
+        if (systemTuplets.Count == 0)
+            return ImmutableArray<TupletBracketLayout>.Empty;
+
         return TupletBracketEngraver.Calculate(
-            score.TextMetrics, staffTuplets, measureLayouts, staff.PrimaryVoice.Measures,
+            score.TextMetrics, systemTuplets.ToImmutable(),
+            System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(byMeasureIndex),
+            staff.PrimaryVoice.Measures,
             beamGroups, beamLayouts: staffBeams,
             forceStemUp: staff.IsMultiVoice,
             measuresByStaff: new Dictionary<int, ImmutableArray<Measure>>
@@ -3674,6 +3716,72 @@ internal sealed class MultiStaffLayouter
             // A rest column is an encompass point, read where Rest_collision put the rest
             // — the room's memo, the same table the skyline seed and the renderer read.
             restShiftsOf: _ => RestCollisionsOf(staff));
+    }
+
+    /// <summary>
+    /// This staff's hairpin PIECES on one system, laid out in the staff's own frame so the
+    /// skyline can reserve the wedges — the hairpin analogue of
+    /// <see cref="StaffSlurLayouts"/>, on the same trivial one-staff-at-offset-0 system,
+    /// reusing <see cref="HairpinEngraver.CalculateOnSystem"/> — the engraver's own per-piece
+    /// arithmetic, entered from one system instead of the whole score.
+    /// </summary>
+    /// <remarks>
+    /// The engraver reads measures BY INDEX, so the system's measures are re-keyed exactly
+    /// as <see cref="StaffTupletBracketLayouts"/> re-keys them (and for the reason written
+    /// there). The texts a bound stands against are this system's own dynamics laid out
+    /// as the seed lays them (<see cref="DynamicEngraver.Calculate"/>'s quiet position) —
+    /// the bound reads only their X and text. The beams are re-stamped to this staff's
+    /// global index for the reason the tuplet seed gives: the engraver keys stem tips by
+    /// (staff, voice, measure, item) and the hairpin carries the score's real staff index.
+    /// </remarks>
+    private ImmutableArray<HairpinLayout> StaffHairpinLayouts(
+        MultiStaffScore score, Staff staff, int staffIndex,
+        ImmutableArray<MeasureLayout> measureLayouts, ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<DynamicItem> staffDynamics)
+    {
+        var staffHairpins = ScoreSideTables.HairpinsByStaff(score).At(staffIndex);
+        if (staffHairpins.IsEmpty || measureLayouts.IsDefaultOrEmpty)
+            return ImmutableArray<HairpinLayout>.Empty;
+
+        int maxMeasureIndex = -1;
+        foreach (var ml in measureLayouts)
+            maxMeasureIndex = Math.Max(maxMeasureIndex, ml.MeasureIndex);
+        var byMeasureIndex = new MeasureLayout[maxMeasureIndex + 1];
+        foreach (var ml in measureLayouts)
+            byMeasureIndex[ml.MeasureIndex] = ml;
+        var keyed = System.Runtime.InteropServices.ImmutableCollectionsMarshal
+            .AsImmutableArray(byMeasureIndex);
+
+        var staffLayout = new StaffLayout(
+            0, staff.Clef, Y: 0, Height: _options.StaffHeight,
+            StaffAffinity: staff.StaffAffinity);
+        var group = StaffGroupLayout.CreateSingle(staffLayout, 0, _options.StaffHeight);
+        var system = new SystemLayout(
+            SystemIndex: 0, Y: 0,
+            Width: _options.ContentWidth,
+            PrefixWidth: 0,
+            Measures: measureLayouts,
+            StaffGroups: ImmutableArray.Create(group),
+            Indent: 0);
+
+        var staffBeams = RestampedToStaff(beamLayouts, staffIndex);
+        var voicesByStaff = new Dictionary<int, ImmutableArray<Voice>> { [staffIndex] = staff.Voices };
+        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>
+            { [staffIndex] = staff.PrimaryVoice.Measures };
+
+        var systemDynamics = ImmutableArray.CreateBuilder<DynamicItem>();
+        foreach (var d in staffDynamics)
+            if (d.MeasureIndex <= maxMeasureIndex && byMeasureIndex[d.MeasureIndex] != null)
+                systemDynamics.Add(d);
+        var dynamicLayouts = systemDynamics.Count == 0
+            ? ImmutableArray<DynamicLayout>.Empty
+            : DynamicEngraver.Calculate(
+                StaffSpannerItemsOf(score, staff).LocalScore, systemDynamics.ToImmutable(),
+                keyed, staff.Voices, voicesByStaff, measuresByStaff, staffBeams);
+
+        return HairpinEngraver.CalculateOnSystem(
+            staffHairpins, system, staff.PrimaryVoice.Measures.Length, keyed,
+            staff.Voices, staff.PrimaryVoice.Measures, staffBeams, dynamicLayouts);
     }
 
     /// <summary>

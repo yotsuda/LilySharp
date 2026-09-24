@@ -1600,6 +1600,46 @@ internal sealed class SkylineBuilder
     }
 
     /// <summary>
+    /// Seeds the drawn WEDGES into the staff's DOWN profile — the hairpin half of
+    /// <see cref="AddDynamicsToSkyline"/>, run after it: each wedge's real sloped outline
+    /// (<see cref="HairpinEngraver.WedgeSkylines"/>) at the level its engraver gave it, pushed
+    /// by the collision pass over everything accumulated before it, then merged — so the
+    /// staff below is spaced off the arm where the arm actually is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:952-972 add_grobs_of_one_priority — the
+    ///   DynamicLineSpanner (priority 250) is placed against the inside skyline and its
+    ///   skyline merged into the group's; :648-676 avoid_outside_staff_collisions — the
+    ///   push, at outside-staff padding.
+    /// LILYPOND-REF: scm/define-grobs.scm Hairpin vertical-skylines =
+    ///   grob::unpure-vertical-skylines-from-stencil — the profile is the drawn wedge.
+    /// A wedge's level arrives Y-up from the top of the trivial system it was laid out on,
+    /// whose top IS the staff's top line; this skyline's origin is the staff middle, half a
+    /// staff below — the one conversion <c>HairpinEngraver</c> itself makes the other way.
+    /// ⚠️ Full size only, as the dynamics' pointwise arm is: an ossia's mixed scale has no
+    ///   measured regime, and it reserved no wedge before this either.
+    /// </remarks>
+    internal static void AddHairpinsToSkyline(
+        ImmutableArray<HairpinLayout> hairpins, StaffSize size, VerticalSkyline downSkyline)
+    {
+        if (hairpins.IsDefaultOrEmpty || size.Span(1.0) != 1.0)
+            return;
+        foreach (var hp in hairpins)
+        {
+            var my = HairpinEngraver.WedgeSkylines(
+                hp.StartX, hp.EndX, hp.StartOpening, hp.EndOpening,
+                hp.YUp + EngravingDefaults.StaffMiddle);
+            double move = DynamicEngraver.BelowCollisionMove(downSkyline, my.Up, OutsideStaffPadding);
+            if (move != 0)
+            {
+                my.Up.Raise(move);
+                my.Down.Raise(move);
+            }
+            downSkyline.Merge(my.Down);
+        }
+    }
+
+    /// <summary>
     /// Seeds the drawn slur bows into the per-staff skylines so the inter-staff gap
     /// reserves the room they occupy — the analogue of <see cref="AddTupletBracketsToSkyline"/>
     /// for slurs.

@@ -113,7 +113,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// the tab, not off the staff above — and <c>test/tab-technique-letters</c> is a
 /// NUMBERS-ONLY tab written for exactly them, after a reader reported one drawn into its
 /// own notehead (2026-08-28). Blanking Scripts wholesale would have deleted that fixture's
-/// entire subject. <see cref="ArticulationEngraver.TabTechniqueLetterOf"/> is already the
+/// entire subject. <see cref="ArticulationEngraver.TabTechniqueLetterOf(Model.ArticulationItem)"/> is already the
 /// one home for "is this a technique letter", so this reads it rather than spelling the
 /// four types again.</item>
 /// <item><b>A NOTE-ATTACHED <c>@chord</c> IS BLANKED ON A NUMBERS-ONLY TAB</b> (reader

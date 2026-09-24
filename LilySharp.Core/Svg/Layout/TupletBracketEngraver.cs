@@ -242,8 +242,14 @@ internal static class TupletBracketEngraver
         for (int ti = 0; ti < tuplets.Length; ti++)
         {
             var tuplet = tuplets[ti];
-            // Find measure layout
-            if (tuplet.MeasureIndex >= measureLayouts.Length)
+            // Find measure layout — BY MEASURE INDEX: the array is keyed by it (its callers
+            // hand over the score's measures in index order), and a caller scoped to one
+            // system leaves the other systems' slots empty
+            // (MultiStaffLayouter.StaffTupletBracketLayouts). A tuplet whose measure is not
+            // here is not on this system's page and is dropped, as the slur engraver drops
+            // a mark whose measure is not in the layouts it was handed.
+            if (tuplet.MeasureIndex >= measureLayouts.Length
+                || measureLayouts[tuplet.MeasureIndex] is null)
                 continue;
 
             // A numbers-only tab (`tab … as numbers`) draws no tuplet bracket or

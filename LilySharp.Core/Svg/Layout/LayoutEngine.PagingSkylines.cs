@@ -290,11 +290,43 @@ internal sealed partial class LayoutEngine
         foreach (var t in ann.TupletBrackets)
         {
             // t.*YUp is Y-up from the system top; this pass is system-relative device.
+            // THE DRAWN INK, not an envelope: the bracket LINE's outward edge (half the rule's
+            // thickness past its Y, and only when a line is drawn — a fully beamed tuplet has
+            // none) and the NUMBER, centred on the bracket's midpoint on both axes and so
+            // standing half its own ink height past the line — the same two seeds
+            // SkylineBuilder.AddTupletBracketsToSkyline merges into the staff's profile, read
+            // from the same font. The flat [1.6 / 0.1 / 0.7 / 1.7] envelope that stood here
+            // until 2026-09-23 priced a tuplet system's top about 1 ss over the drawn "3"
+            // (Hold the Line: this scalar 3.75 against the paging skyline's own 2.78, which is
+            // what LilyPond's System extent reads too), and BuildLineShapes hands the scalar's
+            // excess over the skyline to BOTH buckets of the page breaker's line, so the
+            // envelope was paid once per system: a page LilyPond fills with eight staff+tab
+            // systems held seven (rod 163.35 against 155.63 available).
+            // LILYPOND-REF: lily/tuplet-number.cc:333-342 Tuplet_number::calc_y_offset — the number
+            //   takes the bracket's own midpoint (to_bracket).
+            // LILYPOND-REF: lily/tuplet-number.cc:225-228 Text_interface::print, then align_to CENTER
+            //   on both axes — half the number's height stands proud of the line.
+            // LILYPOND-REF: scm/define-grobs.scm:4114 TupletBracket grob::unpure-vertical-skylines-from-stencil
+            //   — the page's pure height reads the drawn line and number, no envelope.
+            double half = EngravingDefaults.TupletBracketThickness / 2.0;
             double startY = -t.StartYUp;
             double endY = -t.EndYUp;
-            double hi = Math.Min(startY, endY);
-            double lo = Math.Max(startY, endY);
-            Add(t.MeasureIndex, hi - (t.IsStemUp ? 1.6 : 0.1), lo + (t.IsStemUp ? 0.7 : 1.7));
+            double top = -t.NumberYUp;
+            double bottom = -t.NumberYUp;
+            if (t.ShowBracket)
+            {
+                top = Math.Min(top, Math.Min(startY, endY) - half);
+                bottom = Math.Max(bottom, Math.Max(startY, endY) + half);
+            }
+            if (!string.IsNullOrEmpty(t.NumberText))
+            {
+                double halfH = fonts.InkHeight(
+                    t.NumberText, TupletBracketEngraver.NumberEm(fonts),
+                    TextRole.Tuplet, TupletBracketEngraver.NumberStyle(fonts)) / 2;
+                top = Math.Min(top, -t.NumberYUp - halfH);
+                bottom = Math.Max(bottom, -t.NumberYUp + halfH);
+            }
+            Add(t.MeasureIndex, top, bottom);
         }
         foreach (var v in ann.VoltaBrackets)
         {

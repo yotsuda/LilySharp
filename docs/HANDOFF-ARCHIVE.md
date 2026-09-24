@@ -129,6 +129,43 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第544セッションの経緯
+
+### 1.1 第544セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「U11 に着手して」）。★ `-Start p544`（HEAD `b9e3869a`・full 8912 / 0 / 2 / 8914・`-Archive 542`）。作業ツリーの `samples/nocturne.lys` の未 commit 変更は第543 と同じ（ユーザーの手・触らない）。
+
+★★★ **⑴ U11 の前提が違った＝素の段間隔は LP と同じ**: `Hold the Line` を Lily# `paper { raggedBottom }`／LP `\paper { ragged-bottom = ##t }` で描く（Lab `sessions/p543/nocturne/gaps.ps1`）と、LP の*詰めていない* 3 ページ目は段と段 7.75・staff→tab 4.75 で Lily# と同じ。第543 が測った 5.77／6.68 は LP が 1〜2 ページ目を*ページ埋めで詰めた*値。⇒ 8 段が入らない理由は間隔ではなく**ページ割りの入力**（系の高さ）。
+★★★ **⑵ 正体＝scalar 上端の連符の封筒（commit `8015a9b2`・snapshot 6 枚＝ページの切り抜き高さだけ −1.0〜−1.7・最初の五線は不動）**: `EnrichExtentsWithAnnotationProtrusions` の連符の腕は `hi − (stemUp ? 1.6 : 0.1)`／`lo + (stemUp ? 0.7 : 1.7)` の平らな封筒で、`Hold the Line` の連符の系は scalar 3.75 対 paging skyline 2.78（LP の System extent も 2.78）。`BuildLineShapes` は scalar の超過を line の*両* bucket に足すので連符の系ごとに約 1 ss 払い、rod 163.35 > 155.63 で 7 段。腕を描いた線（端 ± 太さ/2）と数字（中心 ± インク高/2）にした＝`SkylineBuilder.AddTupletBracketsToSkyline` と同じ 2 つの種。**LP 実測**（Lab `sessions/p544/bottoms.ps1`・`dump-sys.ily`＝System の Y-extent と staff の offset）: 6 fixture の最下線より下＝tuplets 3.80→2.38（LP 2.378）・tuplets-beamed 5.04→3.38（3.38）・tuplet-articulations 3.23→1.57（1.576）・tuplet-lower-staff 3.11→2.03（2.028）・multivoice-voice2-tuplet 2.85→1.54（1.55）・multivoice-tuplet-beams は下 1.54 のまま上が −0.97（数字の上端＝LP の「最上線の 6.228 上」と 0.01 差）。**実コーパス 941 冊 sweep**（Lab `sessions/p544/sweep/`・base は `b9e3869a` の worktree・`compare.txt`）: **35 冊が縦だけ動く**（全部連符持ち・小節線は 941 冊同じ）。段割りが変わるのは `Baby It's Cold Outside` 12/7 → 13/6 の 1 冊＝**LP の双子も 13/6**（`baby-lp/`）。**ユーザー「回してよい・rebase も承認」**。
+  ⇒ **残件は §1.0 U11**（`Hold the Line` 7/8/6 のまま・DP の紙一重・"Solo" 2 重・休符段の TAB clef・staff→tab 4.518）。ZZ544 プローブは全部消した（grep 0・`Zz544Probe.cs` 削除）。
+  full 8909 / 3 / 2 / 8914（赤 3＝HANDOFF の継続性・この語りで緑）。REF 3／OWN 0（名無し 1 本＝`define-grobs.scm:4114` は `grob::unpure-vertical-skylines-from-stencil` を名指しに）。棚卸し: `APPROXIMATIONS.md` 行番号だけ・`magic_constants.csv` 差分なし。`-End p544` OK・**full 8912 / 0 / 2 / 8914**（±0）・§7 7.5＝Core '+' 35 行・REF 3／OWN 0・天井 HANDOFF 439,502 B（残り 10,498）。
+
+## 以下は第543セッションの経緯
+
+### 1.1 第543セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」→ 第542 末尾の「最も安い次の 1 つ＝`@text`」から）。★ `-Start p543`（HEAD `38b6317b`・full 8906 / 0 / 2 / 8908・`-Archive 541`）。作業ツリーに `samples/nocturne.lys` の未 commit 変更（`octave absolute` を外して相対に書き直したもの・第542 の開始時から在る＝ユーザーの手・触らない）。
+
+★★★ **⑴ 双子の穴 2 族を閉じた（`LilyPondExporter`・網 +2＝155 緑・Core 描画は無変更＝hash 不要・commit `183ad224`）**: ⒜ **`@text("…")` → 音符の post-event `-\markup { \italic "…" }`（`.up` は `^`・`.down` は `_`）＝TextScriptEvent**。⚠️ **dynamic ではない**: page は hairpin を `@text` の上を通して次の本物の dynamic まで引く（`HairpinEngraver` が `IsExpressiveText` を飛ばす）が、LP の単語の dynamic（`#(make-dynamic-script (markup …))`＝AbsoluteDynamicEvent）は hairpin をそこで終える＝通るが別の音楽。TextScript は Dynamic_engraver が聴かない。**LP 実測**（Lab `sessions/p543/lp/dump.log`）: fixture の m2 の hairpin は 1 → 7/4（`\f`）で "poco"（5/4）を跨ぐ・TextScript 4 本の dir は −1 −1 −1 +1（`.up`）＝page と同じ側。自認: LP は TextScript を side-position（padding 0.3・staff-padding 0.5・priority 450）で置き、page は dynamic の行に乗せる＝Y は違いうる（PNG は同じ絵）。`@text()`（引数なし）は page も描かず warning のまま。／⒝ **`@pluck(p|i|m|a)` → `\rightHandFinger #1..#4`**（digit は StrokeFinger の `digit-names` #("p" "i" "m" "a" "x") の添字＝page と同じ字）**＋ pluck する part の*記譜* staff に `\set Staff.strokeFingerOrientations = #'(down)`**（LP 既定 `'(right)`＝符頭の横・page には無い側）。⚠️ **page の側は stem の反対**（`ArticulationEngraver` の `forceAbove || !stemUp` が collector の初期値 below を上書き）で、orientation の語には無い＝`'(down)` は低音側の半分だけ合う（fixture の b・e' は page が上・LP が下＝自認）。**tab staff には書かない**: LP の TabVoice は `New_fingering_engraver` を `\remove`（engraver-init.ly:1172-1182）＝StrokeFinger は建たない（実測 0 本）・page は tab にも字を描く（自認）。LP 実測: StrokeFinger 4 本 p/i/m/a・dir 全部 −1（`dump-pluck.log`・PNG は `lp-*.png`／`ls-*.png`）。
+  掃き直し（Lab `sessions/p543/sweep-twins.ps1` → `warnings-after.tsv`）**41 → 33 行**。棚卸し: `APPROXIMATIONS.md` 行番号だけ（Exporter の 2 行）・`magic_constants.csv` 差分なし。
+  ⇒ **残る 33 行＝`@fig.*` 15（`\figuremode` の別 context＝設計）／inline `@chord.X` 9（`_inlineChordVars` の無い part）／tab の `@tap` 5・`@hammeron` 2・`@pulloff` 1（LP に grob 無し＝`ArticulationEngraver` 自身が「奏者は markup で書く」と注記。**最も安い次の 1 つ**: `-\markup { \italic "H" }` の TextScript＝⒜ と同じ形・側は ⒝ と同じ自認）／custom key・CustomText・3 forms・phrase 後の音高＝既知の自認 4。**⒜⒝ とも「通る双子」が「同じ音楽」かを LP の grob dump で読んだ**（第541 の教訓）。
+  1 回目の `-End`＝full 8908 / 0 / 2 / 8910・Core '+' 129 行・REF 9／OWN 0（REF の名無し 3 本＋`.ly` の範囲外 2 本で赤＝`engraver-init.ly:909` は「(line 909)」の綴りに・StrokeFinger は `stroke-finger-interface` を名指し・amend で SHA が変わり dead citation 1 本）。
+★★★ **⑵ ユーザー報告: `samples/nocturne.lys` L25 の `@decresc` が L36 の左手の梁と重なる → 2 つの欠陥（commit `518d5178`・網 +4＝8914 緑・snapshot 0 枚）**。A/B（Lab `sessions/p543/nocturne/ab.ps1`・`min.ps1`・`bisect.ps1`・`sys2.ps1`）で「`pp` が 2 段目に在るときだけ 1.5 ss 深い」まで絞り、計器で支柱の Down に x≈85 の針（3.08 ss）を見つけた。⒜ **部屋の連符の種が*幻*だった**: `StaffTupletBracketLayouts` はその段の measureLayouts を段順で渡すが `TupletBracketEngraver` は**測度番号で添字**（他 2 呼び手は全体を番号順で渡す）＝2 段目以降で「前の段の連符（番号 3）」が「この段の 4 番目の小節（m8）」の列で建ち、数字の箱が m8 の下に種まき→`pp` と線を −2.94／−1.51。番号添字の配列（穴あり）＋連符を段で切る＋engraver は穴を落とす。⒝ **幻が消えると譜間 5.00 で梁が wedge を貫く＝部屋の silhouette にヘアピンが 1 本も無かった**（LP は置いた DynamicLineSpanner を axis group の skyline に残す）。`HairpinEngraver.LayoutPiece`／`CalculateOnSystem`（1 段用・to-barline は段の端で答える）・`StaffHairpinLayouts`（スラーと同じ trivial system）・`AddHairpinsToSkyline`（衝突 pass の後に wedge の実輪郭）・`HairpinsByStaff`（memo）・`MeasureContentKey` に span の畳み。**LP 実測**: 線の中心 2.65（LP 2.65）・2 段目の譜間 6.22（LP 6.22）・梁と wedge の空き 1.06（LP 1.09）。自認: 部屋の trivial system は span bar の半 padding と線の group 化を再現しない（両方とも高さは動かさない）。**実コーパス 941 冊 sweep（Lab `sessions/p543/sweep/`）: 7 冊が縦に動く**＝nocturne・feature-tour（−0.06）・tab 本 5 冊（今まで飛ばしていた 2 段目以降の連符の数字を種まき・深さは LP の "3" と 0.02 差）。⚠️ `Hold the Line` は 1 ページ目が 8 段 → 7 段＝**U11**（Lily# の素の段間隔が LP より広い）で、修正の副作用ではなく露出。
+  `-End p543` OK・**full 8912 / 0 / 2 / 8914**（+6）。§7 7.5＝Core '+' 469 行・REF 18／OWN 0。棚卸し: 行番号だけ。天井は下の表。
+
+## 以下は第542セッションの経緯
+
+### 1.1 第542セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」→ 第541 末尾の「残る双子の穴は `lysc ly` の warning 一覧が出典」を実行）。★ `-Start p542`（HEAD `f1d3d151`・full 8902 / 0 / 2 / 8904・`-Archive 540`）。
+
+★★ **⑴ 棚卸し**: fixture 252 冊の双子を全部作って warning を集めた（Lab `sessions/p542/warnings.tsv`＝65 行）。**LP に対応物が明確で 1 便で閉じられる穴**だけ選び、残りは下に起票。
+
+★★★ **⑵ 閉じた穴 5 族（`LilyPondExporter`・網 +4＝153 緑・Core 描画は無変更＝hash 不要・commit `cd15fb8d`）**: ⒜ **ottava 一族 → `\ottava #n` を音符の*前*に**（`@ottava` #1／`@ottava(bassa)` #−1／`@quindicesima` ±2／終端 `@!ottava` #0＝`OttavaCommand`・名は page と同じ `ParseMarkName`）。⚠️ 開始 `@ottava` は一語＝`ArticulationSyntax`、`@ottava(bassa)`・`@!ottava` は `MusicMarkSyntax`（第541 のペダルと同じ顔）。**括弧の右端は 1 列違う**: Lily# は終端の*前の小節の終わり*（`BracketFrom`）、LP は `\ottava #0` の前の最後の音符列＝括弧の下の音符は同じ・鉤の位置だけ違う（自認）／⒝ **`@breath`→`\breathe`・`@caesura`→`\caesura`＝post-event ではない**（music-functions-init.ly:421／:432 の define-music-function＝音符の*後ろに立つ*音楽）。⚠️ 1 回目は suffix に付けて `c4 \breathe ~` と tie が離れた（LP は unattached）＝**tie／slur／beam／dynamic は音符の*兄弟 node***（`EmitItem`）なので、`_trailingMusic` に預けて `EmitMusicStream` が次の非 post-event の前に吐く／⒞ **script 3 つ**＝`@reverseturn`→`\reverseturn`・`@pralltriller`→`\prallprall`・`@snappizz`→`\snappizzicato`（page の glyph 名＝script.scm の名）・`@doit`→`\bendAfter #+4`／⒟ **`@courtesy`→音高の `?`（`cis?4`）・`@editorial`→`\once \set suggestAccidentals = ##t` ＋ 音高の `!`**（parser.yy:3767-3770＝`?` は cautionary＋force、`!` は force＝「規則が刷らない時も刷る」＝Lily# の `KeySignatureAccidentalName` と同じ規則。accidental-engraver.cc:262-267＝suggest なら AccidentalSuggestion）。和音 member の `@courtesy` も `<cis? e g>`。
+  **LP 照合**: 10 冊（multi-staff-ottava・03-piano・breath-marks・bend・editorial-accidental・courtesy-accidentals・ornaments・snappizzicato・grammar-tour・feature-tour）の双子が 2.26.0 で **warning 0**・PNG で 8va/8vb の括弧と移高・提案臨時記号 ♮♯♭ と (♮)・コンマと caesura・reverseturn／prallprall・doit を目視（Lab `sessions/p542/lp/`）。掃き直し **65 → 41 行**（`warnings-after.tsv`・`twins-after/`）。
+  ⇒ **残る双子の穴（41 行の内訳）＝どれも LP 側の綴りが*まだ決まらない*か Lily# 固有**: `@fig.*` 15（figured bass＝LP は `\figuremode` の別 context）／inline `@chord.X` 9（`_inlineChordVars` の無い part）／tab の `@tap` 5・`@hammeron` 2・`@pulloff` 1・`@pluck.pima` 4（LP のタブに対応物なし＝Lily# 固有）／**`@text("…")` 4＝page は DynamicText の経路で italic**（LP なら `-\markup \italic "…"` か `make-dynamic-script`＝**要 LP 照合**・最も安い次の 1 つ）／custom key・CustomText・3 forms・phrase 後の音高は既知の自認。
+  `-End p542` OK・**full 8906 / 0 / 2 / 8908**（+4）。§7 7.5＝Core '+' 171 行・LILYPOND-REF 10／OWN 0。棚卸し: `APPROXIMATIONS.md` 行番号だけ（4 行）・`magic_constants.csv` 差分なし。⚠️ **HANDOFF 439,465 / 450,000 B・§1 現在便 19,7xx / 20,000**＝次便は §1.0 の ✅ 2 本（⒮²⁵・⒩⁶）を落としてから語る。
+
 ## 以下は第541セッションの経緯
 
 ### 1.1 第541セッション（2026-09-23・YT-DELL2）

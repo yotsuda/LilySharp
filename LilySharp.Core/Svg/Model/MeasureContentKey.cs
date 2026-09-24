@@ -539,6 +539,11 @@ public readonly record struct MeasureContentKey(long Hash)
         // deterministic function of the marks — the same argument
         // PedalBracketLayout.SourceIndex makes for whole-layout reuse.
         BucketSpan(Svg.Layout.PedalEngraver.DetectPedalBrackets(score.MusicMarks), buckets);
+        // The hairpin SPANS, for the same reason: the room reserves each wedge in its
+        // staff's silhouette on every system it crosses (SkylineBuilder.AddHairpinsToSkyline)
+        // while the cresc mark sits in the first measure and the terminating dynamic in the
+        // last, so deleting the terminator must re-derive the systems between.
+        BucketSpan(Svg.Layout.HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics), buckets);
 
         return buckets;
     }
@@ -574,6 +579,8 @@ public readonly record struct MeasureContentKey(long Hash)
         BucketSpan(score.TrillSpanners, buckets);
         // The pedal SPANS, for the reason the Score overload gives above.
         BucketSpan(Svg.Layout.PedalEngraver.DetectPedalBrackets(score.MusicMarks), buckets);
+        // ...and the hairpin spans, for the reason the Score overload gives above.
+        BucketSpan(Svg.Layout.HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics), buckets);
 
         return buckets;
     }

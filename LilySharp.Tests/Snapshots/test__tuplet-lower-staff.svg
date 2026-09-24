@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="388.6" viewBox="0 0 119.50 38.86" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="377.8" viewBox="0 0 119.50 37.78" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="38.86" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="37.78" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="286">Lower-staff tuplet</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="6.47" y="19.06" font-size="3.00" text-anchor="end" dominant-baseline="central">Top</text>

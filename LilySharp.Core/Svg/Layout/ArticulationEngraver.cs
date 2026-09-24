@@ -1916,12 +1916,18 @@ internal static class ArticulationEngraver
 
     /// <summary>The letter this script prints, or null when it is not one of the TAB
     /// technique marks.</summary>
-    internal static string? TabTechniqueLetterOf(ArticulationItem a) => a.Type switch
+    internal static string? TabTechniqueLetterOf(ArticulationItem a)
+        => a.Type == ArticulationType.Pluck ? a.PluckLetter : TabTechniqueLetterOf(a.Type);
+
+    /// <summary>The letter a technique TYPE prints — H, P, T — or null for any other type
+    /// (a pluck's letter is on the item, not the type). ONE home for the letters: the page
+    /// draws them from here and the LilyPond twin writes them from here
+    /// (<c>LilyPondExporter.MapArticulation</c>).</summary>
+    internal static string? TabTechniqueLetterOf(ArticulationType type) => type switch
     {
         ArticulationType.HammerOn => "H",
         ArticulationType.PullOff => "P",
         ArticulationType.Tap => "T",
-        ArticulationType.Pluck => a.PluckLetter,
         _ => null
     };
 

@@ -616,13 +616,20 @@ internal static class PedalEngraver
     /// In grand staff context, the pedal bracket is placed below the bass (lower) staff,
     /// not below the treble (upper) staff.
     /// </remarks>
+    /// <param name="staffTopDownOf">The staff's top line, device-down from the top of the
+    /// system a START MEASURE falls on. ⚠️ PER SYSTEM, not one value for the score: a staff's
+    /// offset within its system differs between systems whenever the room opened a gap on
+    /// one of them (a hairpin, a dynamic, a hidden staff). Until 2026-09-23 this was one
+    /// number — the first system's — and samples/nocturne.lys's second-system brackets were
+    /// drawn 1.22 higher than the room solved them, into the left hand's beam, because that
+    /// system's staves stood 1.22 further apart for the m6 decrescendo.</param>
     public static ImmutableArray<PedalBracketLayout> Calculate(
         ImmutableArray<PedalBracketItem> brackets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         bool isMixed = false,
         Func<int, PedalType, double?>? solvedLineUpOf = null,
-        double? staffTopDown = null)
+        Func<int, double?>? staffTopDownOf = null)
     {
         if (brackets.IsDefaultOrEmpty)
             return ImmutableArray<PedalBracketLayout>.Empty;
@@ -661,12 +668,13 @@ internal static class PedalEngraver
 
             // The SOLVED line, when the room solved one: the same Y the staff's down
             // profile reserved at skyline-build time (SolveAndSeed), converted from
-            // Y-up-about-the-middle-line to device-down from the system top. The
+            // Y-up-about-the-middle-line to device-down from the system top — the top
+            // of the SYSTEM THIS BRACKET STARTS ON, read through staffTopDownOf. The
             // below-the-whole-system baseline above stays as the fallback -- a staff the
             // seed declined (ossia scale, text/mixed style) keeps the legacy row.
             double y = bracketY;
             if (solvedLineUpOf?.Invoke(bracket.StartMeasureIndex, bracket.Type) is { } lineYUp
-                && staffTopDown is { } topDown)
+                && staffTopDownOf?.Invoke(bracket.StartMeasureIndex) is { } topDown)
                 y = topDown + 2.0 - lineYUp;
 
             var startMeasure = measureLayouts[bracket.StartMeasureIndex];

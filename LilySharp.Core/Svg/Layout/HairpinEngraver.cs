@@ -96,6 +96,17 @@ internal static class HairpinEngraver
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:1780 (bound-padding . 1.0)</remarks>
     private const double BoundPadding = 1.0;
 
+    // Height IS the wedge's half-opening (LP's `height` property): the two
+    // arms sit at ±fullOpening, so the open end's full mouth is 2·Height,
+    // matching LilyPond. (A stray /2 here made every hairpin half-height,
+    // so the flat wedge read as "not closing" at a broken continuation.)
+    // LILYPOND-REF: lily/hairpin.cc — Line(x, ±starth) … (width, ±endh).
+    private const double fullOpening = Height;
+    // LILYPOND-REF: lily/hairpin.cc:300-313 — broken hairpin height fractions
+    // (crescendo: first piece 0→2·height/3, continuation height/3→height).
+    private const double continuedOpening = fullOpening * ContinuedFraction;
+    private const double continuingOpening = fullOpening * ContinuingFraction;
+
     /// <summary>
     /// The staff middle's own place in the frame a <see cref="HairpinLayout"/> stores:
     /// Y-up from the SYSTEM TOP, and the staff's top line is the system top, so its middle
@@ -149,17 +160,6 @@ internal static class HairpinEngraver
         // 3.8s → 4.5s). First entry per key wins, like the scan it replaces.
         var dynamicAt = BuildDynamicIndex(dynamicLayouts);
 
-        // Height IS the wedge's half-opening (LP's `height` property): the two
-        // arms sit at ±fullOpening, so the open end's full mouth is 2·Height,
-        // matching LilyPond. (A stray /2 here made every hairpin half-height,
-        // so the flat wedge read as "not closing" at a broken continuation.)
-        // LILYPOND-REF: lily/hairpin.cc — Line(x, ±starth) … (width, ±endh).
-        double fullOpening = Height;
-        // LILYPOND-REF: lily/hairpin.cc:300-313 — broken hairpin height fractions
-        // (crescendo: first piece 0→2·height/3, continuation height/3→height).
-        double continuedOpening = fullOpening * ContinuedFraction;
-        double continuingOpening = fullOpening * ContinuingFraction;
-
         foreach (var hairpin in hairpins)
         {
             // An end of (lastMeasure+1, 0) is the moment PAST the music — the FINAL
@@ -188,7 +188,6 @@ internal static class HairpinEngraver
             var hpMeasures = LayoutUtilities.ResolveStaffMeasures(
                 measuresByStaff, hairpin.StaffIndex,
                 hpVoices.IsDefaultOrEmpty ? ImmutableArray<Measure>.Empty : hpVoices[0].Measures);
-            int staffIdx = hairpin.StaffIndex;
 
             // The RIGHT bound under to-barline: a terminator on a measure START binds
             // the hairpin to the BAR LINE before it — Hairpin has to-barline = #t, so
@@ -207,7 +206,6 @@ internal static class HairpinEngraver
             // LILYPOND-REF: lily/hairpin.cc:283-284 — Item::is_non_musical → −padding
             // LILYPOND-REF: scm/define-grobs.scm Hairpin — (to-barline . #t) (bound-padding . 1.0)
             int endMeasureIdx = hairpin.EndMeasureIndex;
-            double ownEndX;
             if (hairpin.EndItemIndex == 0 && hairpin.EndMeasureIndex > 0)
             {
                 bool opensSystem =
@@ -216,11 +214,133 @@ internal static class HairpinEngraver
                     && measureToSystemIdx.TryGetValue(hairpin.EndMeasureIndex - 1, out int prevSys)
                     && endSys != prevSys;
                 if (opensSystem || endsAtFinalBar)
-                {
-                    // The bar the bound rewrites to is drawn INSIDE the previous
-                    // measure's width (a system-opening measure's previous line-end
-                    // bar, or the final barline).
                     endMeasureIdx = hairpin.EndMeasureIndex - 1;
+            }
+
+            // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
+            // reattached to the system edges. LilyPond breaks the DynamicLineSpanner with
+            // it and side-positions EACH piece against the supports that fall inside it
+            // (break-substitution.cc:67-153 substitute_grob / do_break_substitution
+            // rewrites the support list per piece), so the level is resolved here and not
+            // once for the whole span.
+            foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
+                hairpin.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
+                layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, measureLayouts,
+                    staffOffset, hpVoices, hpMeasures, beamMembers, dynamicAt));
+        }
+
+        return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The pieces of these hairpins that fall on ONE system, laid out on that system alone.
+    /// For the room (<c>MultiStaffLayouter.BuildAllStaffSkylines</c>), which reserves each
+    /// staff's wedges in its silhouette before the systems are placed: it hands over a
+    /// trivial one-staff system holding this system's measures, an array keyed by MEASURE
+    /// INDEX (empty where this system has no such measure), and the score's measure count.
+    /// A hairpin that reaches into this system from an earlier one, or out of it into a later
+    /// one, gets the same continuing / continued piece <see cref="Calculate"/> gives it.
+    /// </summary>
+    /// <remarks>
+    /// The one system-shaped question <see cref="Calculate"/> asks of the real systems — does
+    /// the terminator's measure OPEN a system, so that the to-barline bound is the previous
+    /// line's end bar — is answered here from this system's own bounds: the terminator opens
+    /// THIS system (the wedge never enters it) or the NEXT (it ends at this line's end bar).
+    /// LILYPOND-REF: lily/bar-engraver.cc:548-558 process_acknowledged — set_bound (RIGHT,
+    ///   bar_), the same rewrite the whole-score path reads.
+    /// ⚠️ Two things the trivial system cannot say, both disclosed: it has no delimiter, so
+    ///   a piece broken at the line end does not back off the span bar's half padding
+    ///   (<see cref="SpanBarBelowOnSystem"/>) — 0.5 of length, never of height; and the
+    ///   DynamicLineSpanner GROUPING (a text seated on its wedge's line,
+    ///   <see cref="DynamicAlignEngraver"/>) is not replayed, so the room reserves each
+    ///   text where its own column puts it. Both under-reserve by construction and neither
+    ///   moves a wedge's height.
+    /// </remarks>
+    internal static ImmutableArray<HairpinLayout> CalculateOnSystem(
+        ImmutableArray<HairpinItem> hairpins,
+        SystemLayout system,
+        int scoreMeasureCount,
+        ImmutableArray<MeasureLayout> byMeasureIndex,
+        ImmutableArray<Voice> staffVoices,
+        ImmutableArray<Measure> staffMeasures,
+        ImmutableArray<BeamLayout> beamLayouts,
+        ImmutableArray<DynamicLayout> dynamicLayouts)
+    {
+        if (hairpins.IsDefaultOrEmpty || system.Measures.IsDefaultOrEmpty)
+            return ImmutableArray<HairpinLayout>.Empty;
+
+        int first = system.Measures[0].MeasureIndex;
+        int last = system.Measures[^1].MeasureIndex;
+        var beamMembers = DynamicEngraver.BuildBeamMembers(beamLayouts);
+        var dynamicAt = BuildDynamicIndex(dynamicLayouts);
+        var layouts = ImmutableArray.CreateBuilder<HairpinLayout>();
+
+        foreach (var hairpin in hairpins)
+        {
+            bool endsAtFinalBar = hairpin.EndItemIndex == 0
+                && hairpin.EndMeasureIndex == scoreMeasureCount;
+            if (hairpin.StartMeasureIndex >= scoreMeasureCount ||
+                (hairpin.EndMeasureIndex >= scoreMeasureCount && !endsAtFinalBar))
+                continue;
+
+            int endMeasureIdx = hairpin.EndMeasureIndex;
+            if (hairpin.EndItemIndex == 0 && hairpin.EndMeasureIndex > 0
+                && (endsAtFinalBar
+                    || hairpin.EndMeasureIndex == first
+                    || hairpin.EndMeasureIndex == last + 1))
+                endMeasureIdx = hairpin.EndMeasureIndex - 1;
+
+            if (hairpin.StartMeasureIndex > last || endMeasureIdx < first)
+                continue;
+
+            bool isFirst = hairpin.StartMeasureIndex >= first;
+            bool isLast = endMeasureIdx <= last;
+            var segment = new SpannerBreakSegment(
+                SystemIndex: 0,
+                StartMeasureIndex: Math.Max(hairpin.StartMeasureIndex, first),
+                EndMeasureIndex: Math.Min(endMeasureIdx, last),
+                IsFirst: isFirst, IsLast: isLast, IsMiddle: !isFirst && !isLast);
+            layouts.Add(LayoutPiece(hairpin, segment, system, endMeasureIdx, byMeasureIndex,
+                staffOffset: 0.0, staffVoices, staffMeasures, beamMembers, dynamicAt));
+        }
+
+        return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// One broken piece of one hairpin: its bounds on <paramref name="system"/>, its openings
+    /// and its level. <paramref name="endMeasureIdx"/> is the measure the RIGHT bound stands
+    /// in — the terminator's own measure, or the one before it when the bound was rewritten
+    /// to a bar (the caller's to-barline answer). <paramref name="measureLayouts"/> is keyed
+    /// by measure index; only the measures of the piece's own segment, and the bound
+    /// measures of a FIRST / LAST piece, are read from it.
+    /// </summary>
+    private static HairpinLayout LayoutPiece(
+        HairpinItem hairpin, SpannerBreakSegment segment, SystemLayout system,
+        int endMeasureIdx, ImmutableArray<MeasureLayout> measureLayouts, double staffOffset,
+        ImmutableArray<Voice> hpVoices, ImmutableArray<Measure> hpMeasures,
+        Dictionary<(int Staff, int Voice, int Measure, int Item),
+            (BeamLayout Beam, double StemX, bool StemUp)> beamMembers,
+        Dictionary<(int Measure, int Item, int Staff), DynamicLayout> dynamicAt)
+    {
+        int staffIdx = hairpin.StaffIndex;
+
+        // The RIGHT bound, read only for the piece that carries it (a cut right edge is the
+        // system's, ReattachSpanX): under to-barline the bound is the bar the terminator's
+        // measure start rewrote to — drawn INSIDE the previous measure's width when that
+        // measure opens a system or is the final bar (endMeasureIdx is then one less), and
+        // at the measure's own X otherwise; at a mid-measure terminator with a dynamic text
+        // the bound is the TEXT, and the wedge stops a full bound-padding left of its ink.
+        // LILYPOND-REF: lily/hairpin.cc:214-218 — Text_interface bound,
+        //   x_points[d] = e[-d] − d·padding. Measured: probe-hairpin-bounds
+        //   line 3, end = f-left − 1.0 = 9.132.
+        double ownEndX = 0.0;
+        if (segment.IsLast)
+        {
+            if (hairpin.EndItemIndex == 0 && hairpin.EndMeasureIndex > 0)
+            {
+                if (endMeasureIdx != hairpin.EndMeasureIndex)
+                {
                     var prevM = measureLayouts[endMeasureIdx];
                     ownEndX = prevM.X + prevM.Width - BoundPadding;
                 }
@@ -234,25 +354,24 @@ internal static class HairpinEngraver
                          out var endDyn)
                      && DynamicOutline.AdvanceWidth(endDyn.Text) is { } endW)
             {
-                // A MID-MEASURE terminator with a dynamic text: the bound is the TEXT,
-                // and the wedge stops a full bound-padding left of its ink.
-                // LILYPOND-REF: lily/hairpin.cc:214-218 — Text_interface bound,
-                //   x_points[d] = e[-d] − d·padding. Measured: probe-hairpin-bounds
-                //   line 3, end = f-left − 1.0 = 9.132.
                 ownEndX = endDyn.X - endW / 2.0 - BoundPadding;
             }
             else
             {
                 ownEndX = CalculateEndX(hairpin, measureLayouts);
             }
+        }
 
-            // The LEFT bound at a concurrent dynamic text: the wedge opens a full
-            // bound-padding right of the text's ink — LilyPond's dynamic engraver
-            // hands the hairpin the DynamicText item as its start bound. Without a
-            // text the bound is the note column itself (CalculateStartX).
-            // LILYPOND-REF: lily/hairpin.cc:214-218 — Text_interface bound.
-            //   Measured: probe-hairpin-bounds line 2, start = p-right + 1.0 = 8.186.
-            double ownStartX =
+        // The LEFT bound at a concurrent dynamic text: the wedge opens a full
+        // bound-padding right of the text's ink — LilyPond's dynamic engraver
+        // hands the hairpin the DynamicText item as its start bound. Without a
+        // text the bound is the note column itself (CalculateStartX). Read only for
+        // the FIRST piece, for the same reason as the right bound above.
+        // LILYPOND-REF: lily/hairpin.cc:214-218 — Text_interface bound.
+        //   Measured: probe-hairpin-bounds line 2, start = p-right + 1.0 = 8.186.
+        double ownStartX = 0.0;
+        if (segment.IsFirst)
+            ownStartX =
                 dynamicAt.TryGetValue(
                     (hairpin.StartMeasureIndex, hairpin.StartItemIndex, hairpin.StaffIndex),
                     out var startDyn)
@@ -260,14 +379,7 @@ internal static class HairpinEngraver
                 ? startDyn.X + startW / 2.0 + BoundPadding
                 : CalculateStartX(hairpin, measureLayouts);
 
-            // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
-            // reattached to the system edges. LilyPond breaks the DynamicLineSpanner with
-            // it and side-positions EACH piece against the supports that fall inside it
-            // (break-substitution.cc:67-153 substitute_grob / do_break_substitution
-            // rewrites the support list per piece), so the level is resolved here and not
-            // once for the whole span.
-            foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
-                hairpin.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
+        {
             {
                 var (segStartX, segEndX) = SpannerBreakSubstitution.ReattachSpanX(
                     segment, system, ownStartX, ownEndX);
@@ -360,14 +472,12 @@ internal static class HairpinEngraver
                 // the SYSTEM top, and staffOffset is a within-system downward offset.
                 double hairpinYUp = spannerY - StaffMiddleBelowSystemTop - staffOffset;
 
-                layouts.Add(new HairpinLayout(
+                return new HairpinLayout(
                     segment.StartMeasureIndex, segStartX, segEndX, hairpinYUp,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
-                    hairpin.SourceIndex, hairpin.StaffIndex));
+                    hairpin.SourceIndex, hairpin.StaffIndex);
             }
         }
-
-        return layouts.ToImmutable();
     }
 
     /// <summary>

@@ -628,6 +628,32 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// The TAB technique letters — <c>@hammeron</c> H, <c>@pulloff</c> P, <c>@tap</c> T — are
+    /// text scripts on their notes, <c>-\markup { \italic "H" }</c>, the letter the page prints
+    /// (<c>ArticulationEngraver.TabTechniqueLetterOf</c>, the page's one home), a forced
+    /// <c>.up</c>/<c>.down</c> as <c>^</c>/<c>_</c>. LilyPond has no grob for them, so the twin
+    /// writes what a player writes. All eight in test/tab-technique-letters.lys were "not
+    /// mapped, dropped". The side of an unforced letter is LilyPond's own default and not the
+    /// page's stem-opposite one — the exporter's remark carries that self-acknowledgement.
+    /// LILYPOND-REF: lily/parser.yy:3435-3440 gen_text_def — full_markup → TextScriptEvent.
+    /// </summary>
+    [Fact]
+    public void TabTechniqueLetters_AreTextScriptsOnTheirNotes()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score(
+            "c,4@tap d,4@hammeron e,4@pulloff f,4@staccato | g,4@tap.up a,4@pulloff.down b,4@hammeron c,4"));
+        Assert.Contains("c,4-\\markup { \\italic \"T\" }", ly);
+        Assert.Contains("d,4-\\markup { \\italic \"H\" }", ly);
+        Assert.Contains("e,4-\\markup { \\italic \"P\" }", ly);
+        Assert.Contains("g,4^\\markup { \\italic \"T\" }", ly);
+        Assert.Contains("a,4_\\markup { \\italic \"P\" }", ly);
+        Assert.Contains("b,4-\\markup { \\italic \"H\" }", ly);
+        Assert.Contains("f,4-\\staccato", ly);
+        Assert.Equal(6, Occurrences(ly, "\\markup { \\italic"));
+        Assert.DoesNotContain(warnings, w => w.Contains("not mapped"));
+    }
+
+    /// <summary>
     /// <c>@pluck(p|i|m|a)</c> is <c>\rightHandFinger #1..#4</c> on its note — the digit indexes
     /// LilyPond's own digit-names, so the twin prints the page's letter — and a plucking
     /// part's notation staff <c>\set strokeFingerOrientations = #'(down)</c>, because

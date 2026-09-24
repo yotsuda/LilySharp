@@ -4459,6 +4459,36 @@ public sealed class LilyPondExporter
                 };
         }
 
+        // The TAB technique letters — `@hammeron` H, `@pulloff` P, `@tap` T. LilyPond has no
+        // grob for them (ArticulationEngraver's remark: a player writes them as markup), so
+        // the twin writes what a player writes: a TEXT SCRIPT on the note,
+        // `-\markup { \italic "H" }` — the post-event FreeText writes for `@text`, with the
+        // letter the page prints (ArticulationEngraver.TabTechniqueLetterOf, the one home).
+        // Until 2026-09-23 all three were "not mapped, dropped" (8 warning lines over the
+        // fixtures, all in test/tab-technique-letters.lys).
+        // ⚠️ THE SIDE IS THE PAGE'S OWN AND CANNOT BE WRITTEN: the page sets a letter opposite
+        // the stem (ArticulationEngraver: forceAbove || !stemUp), while a TextScript has ONE
+        // default side, DOWN, and a written ^/_ is a forced side. So an unforced letter is
+        // `-`, LilyPond's own default, and a stem-down note prints it BELOW where the page
+        // prints it above — self-acknowledged, as @text's Y and @pluck's side are. The size
+        // too: the page sets the letter at TabTechniqueFontSize (1.5 ss, italic), LilyPond's
+        // \italic at the markup's default size. Both engines print it on the TabStaff as well:
+        // TabVoice keeps Text_engraver (it removes the fingering, trill and accidental
+        // engravers, not the text one) — MEASURED on 2.26.0 (LilySharp-Lab sessions/p546/lp):
+        // the fixture's twin engraves 16 TextScripts, 8 on the 5-line Staff and 8 on the
+        // 6-line TabStaff, every one direction −1, where the page draws the first bar's
+        // three T and the H below (stems up) and the second bar's four above (stems down).
+        // LILYPOND-REF: lily/parser.yy:3435-3440 gen_text_def — a full_markup becomes a
+        //   TextScriptEvent carrying `text`; :3269-3278 post_event_nofinger — script_dir.
+        // LILYPOND-REF: scm/define-grobs.scm:3800-3807 TextScript outside-staff-priority 450,
+        //   direction DOWN.
+        // LILYPOND-REF: ly/engraver-init.ly:408 Text_engraver — consisted in \Voice.
+        // LILYPOND-REF: ly/engraver-init.ly:1172-1190 TabVoice \remove Fingering_engraver,
+        //   New_fingering_engraver, Pitched_trill_engraver, Accidental_engraver — and no other.
+        if (Svg.Layout.ArticulationEngraver.TabTechniqueLetterOf(a.Type) is { } letter)
+            return (a.ForcedAbove switch { true => "^", false => "_", null => "-" })
+                   + "\\markup { \\italic \"" + letter + "\" }";
+
         // Common LilyPond articulations. `@name.up/.down` → -^ / _^ direction.
         string glyph = a.Type switch
         {
