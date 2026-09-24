@@ -259,7 +259,7 @@ static void ShowSvgHelp()
           lysc svg score.lys sheet.svg
           lysc svg -o sheet.svg score.lys
           lysc svg score.lys --no-embed-font
-          lysc svg --score greensleeves-grid greensleeves.lys
+          lysc svg --score grid greensleeves.lys
           lysc svg --all multi-movement.lys
         """);
 }

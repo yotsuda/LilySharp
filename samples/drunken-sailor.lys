@@ -1,8 +1,8 @@
 // Drunken Sailor — sea shanty, traditional (public domain).
 //
 // A staff-less SONG SHEET: the same named parts feed two scores —
-//   "drunken-sailor-sheet"  — chord grid + lyrics (verses stack as 1. / 2.)
-//   "drunken-sailor-lyrics" — the words alone, as a text sheet
+//   (unnamed)  — chord grid + lyrics (verses stack as 1. / 2.)
+//   "lyrics"   — the words alone, as a text sheet
 // Writing the same lyrics name in one section twice stacks the verses.
 title "Drunken Sailor"
 composer "Traditional"
@@ -29,11 +29,11 @@ section Verse {
 
 form main { Verse }
 
-score main "drunken-sailor-sheet" {
+score main {
   chords prog
   lyrics words
 }
 
-score main "drunken-sailor-lyrics" {
+score main "lyrics" {
   lyrics words
 }

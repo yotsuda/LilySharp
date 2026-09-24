@@ -1,9 +1,9 @@
 // Greensleeves — English traditional (16th century), public domain.
 //
 // ONE progression (`chords prog`), used TWICE without duplication:
-//   "greensleeves"      — melody staff with the chord symbols aligned above it
-//                         (`chords prog` above the melody’s staff) and verse lyrics
-//   "greensleeves-grid" — the same progression as a staff-less chord grid
+//   (unnamed) — melody staff with the chord symbols aligned above it
+//               (`chords prog` above the melody’s staff) and verse lyrics
+//   "grid"    — the same progression as a staff-less chord grid
 title "Greensleeves"
 composer "Traditional"
 tempo 60
@@ -65,12 +65,12 @@ section Chorus {
 
 form main { Verse Chorus }
 
-score main "greensleeves" {
+score main {
   chords prog
   staff melody
   lyrics words
 }
 
-score main "greensleeves-grid" {
+score main "grid" {
   chords prog
 }

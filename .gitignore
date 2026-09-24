@@ -33,6 +33,7 @@ TestResults/
 # OS files
 .DS_Store
 Thumbs.db
+*.lnk
 
 # Generated MIDI files
 *.mid

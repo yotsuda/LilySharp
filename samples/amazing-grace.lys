@@ -40,12 +40,12 @@ section Verse {
 
 form main { Verse }
 
-score main "amazing-grace" {
+score main {
   chords prog
   staff melody
   lyrics words
 }
 
-score main "amazing-grace-grid" {
+score main "grid" {
   chords prog
 }

@@ -124,7 +124,7 @@ lysc svg score.lys                    # Creates score.svg
 lysc svg score.lys output.svg         # Specify output name
 lysc svg -o sheet.svg score.lys       # With -o flag
 lysc svg --no-embed-font score.lys    # Without embedded font
-lysc svg --score greensleeves-grid greensleeves.lys
+lysc svg --score grid greensleeves.lys
 lysc svg --all multi-movement.lys     # One .svg per score block
 lysc svg --combined multi-movement.lys # All of them stacked into one
 ```

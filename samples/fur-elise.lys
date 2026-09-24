@@ -62,7 +62,7 @@ section Main {
 
 form main { Main }
 
-score main "fur-elise" {
+score main {
   grandStaff {
     staff rh
     staff lh

@@ -76,7 +76,7 @@ section Canon {
 
 form main { Canon }
 
-score main "canon-in-d" {
+score main {
   grandStaff {
     staff violin
     staff continuo
