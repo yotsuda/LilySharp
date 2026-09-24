@@ -884,20 +884,17 @@ PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
 (* Musical sections bind music to each part by name. At least one is required. *)
 
-SectionDecl    = 'section' , [ '~' ] , Identifier , '{' , { SectionItem } , '}' ;
+SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
 
-(* THE '~' FLIPS THIS SECTION'S LABEL DEFAULT (2026-08-31). A section carries a
-   rehearsal letter by default and a form reference's '~' hides it; a section declared
-   'section ~A { … }' carries none by default, and there the reference's '~' SHOWS it.
-   The tilde keeps ONE meaning at both sites - "the other one than the default" - and
-   the fact it states ("this section is structure, not a rehearsal letter") is a
-   property of the section, so it is written once on the declaration rather than at
-   every reference. It is what makes a section cut only to carry a repeat edge silent.
-     section ~Bridge { … }                 -- prints no label
-     form main { A ~Bridge C }             -- …unless the reference asks: this one shows it
-   The rule is one equality: shown = (declaration hides by default) == (reference has '~').
-   An empty quoted label still suppresses the mark on either default, and a label
-   written on a play that prints none is LYS0012. *)
+(* A SECTION'S LABEL IS HIDDEN AT THE FORM REFERENCE, NOWHERE ELSE (2026-09-24). Every
+   play of a section prints its rehearsal label unless that reference carries '~':
+     form main { A |: B [1. ~B1] :| [2. ~B2] C }   -- B1 and B2 play without a label
+   A declaration takes no tilde: 'section ~A { … }' is LYS0033 (an error that names the
+   form spelling). The label is a property of the PLAY, so it is read off the form line
+   alone - and in part-major layout, where every part declares its own 'section A', there
+   is no second place for it to disagree. A section with no form plays in declaration
+   order and labels itself. An empty quoted label ('A ""') also suppresses the mark, and a
+   label written on a '~' play is LYS0012. *)
 
 SectionItem    = SectionSetting
                | OverrideDecl                     (* section-scoped: a default for this section on every staff *)
@@ -977,7 +974,12 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                       DETACHED  "la -- la" / "la - la" is a separate connector syllable.
                     Both spellings put the same hyphen on the same syllable — Classify
                     folds them — so the difference is only which node holds the text.
-                    '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma. *)
+                    '~' GLUED on both sides ("va~ga") is an elision, otherwise a melisma.
+                    WHICH NOTE A SYLLABLE TAKES is LilyPond's \lyricsto (2026-09-24): a
+                    note the voice reaches inside a SLUR (after its first note, up to the
+                    closing one) or at the end of a TIE takes no syllable — the melisma is
+                    the slur's. '__' is the extender LINE and takes no note; '_' and a
+                    detached '~' take one note each, holding the previous syllable. *)
 
 ChordsBlock    = 'chords' , Identifier , '{' , { ChordEntry | ChordExtend | Rest | Barline } , '}' ;
                  (* A named chord part; a score places it as a 'chords NAME' row —

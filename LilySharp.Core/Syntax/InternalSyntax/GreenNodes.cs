@@ -749,11 +749,10 @@ internal sealed class StringNumberAnnotationGreen : GreenSyntaxNode
 internal sealed class SectionDeclarationGreen : GreenSyntaxNode
 {
     /// <param name="tilde">
-    /// The <c>~</c> of <c>section ~A { … }</c>, or null. It marks a section that carries
-    /// STRUCTURE rather than a rehearsal letter, and it FLIPS that section's label default
-    /// (owner's decision, 2026-08-31): a reference's own <c>~</c> stops meaning "hide" and
-    /// starts meaning "the other one". The slot is always present so the items keep a fixed
-    /// offset; the NAME is found by kind, because it is no longer at a fixed index.
+    /// The <c>~</c> of <c>section ~A { … }</c>, or null. It means nothing: a declaration takes
+    /// no tilde (LYS0033 — the label is hidden at a form reference, <c>form { ~A }</c>), and
+    /// the stray token is kept here only so its width stays in the tree. The slot is always
+    /// present so the name and the items keep fixed offsets.
     /// </param>
     public SectionDeclarationGreen(
         SyntaxToken sectionKeyword,

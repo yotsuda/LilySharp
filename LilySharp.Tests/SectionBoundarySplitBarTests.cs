@@ -114,16 +114,16 @@ public class SectionBoundarySplitBarTests
     {
         // `| break` leaves a chunk holding the break alone after A's half bar; the half bar
         // is still the section's LAST sounding bar, and the endings complete it. Disco
-        // Inferno's exact shape, with the structural `~` on the endings' declarations.
+        // Inferno's exact shape, with the structural `~` on the endings' references.
         string book = """
             time 4/4
             part m {
               clef bass
               section A { c4 d e f | g4 a | break }
-              section ~E1 { b4 c' | d'4 e' f' g' | break }
-              section ~E2 { c'4 d' | e'1 | }
+              section E1 { b4 c' | d'4 e' f' g' | break }
+              section E2 { c'4 d' | e'1 | }
             }
-            form main { |: A [1. E1] :| [2. E2] }
+            form main { |: A [1. ~E1] :| [2. ~E2] }
             score main { staff m }
             """;
         Assert.Empty(BarCodes(Diagnose(book)));
@@ -146,10 +146,10 @@ public class SectionBoundarySplitBarTests
             part m {
               clef bass
               section A { c4 d e f | g4 a | break }
-              section ~E1 { b4 c' | d'4 e' f' g' | break }
-              section ~E2 { c'4 d' | e'1 | }
+              section E1 { b4 c' | d'4 e' f' g' | break }
+              section E2 { c'4 d' | e'1 | }
             }
-            form main { |: A [1. E1] :| [2. E2] }
+            form main { |: A [1. ~E1] :| [2. ~E2] }
             score main { staff m }
             """;
         var tree = SyntaxTree.Parse(book);
@@ -184,7 +184,7 @@ public class SectionBoundarySplitBarTests
         Assert.Contains("system 3: bars 4-5     (2 bars)", report);
 
         // Positive control: an ending that does not complete the bar is its own bar.
-        string plain = book.Replace("section ~E2 { c'4 d' | e'1 | }", "section ~E2 { c'4 d' e' | f'1 | }");
+        string plain = book.Replace("section E2 { c'4 d' | e'1 | }", "section E2 { c'4 d' e' | f'1 | }");
         var control = SvgGenerator.CollectScore(SyntaxTree.Parse(plain), RenderSpecParser.FindFirst(SyntaxTree.Parse(plain)))
             .PrimaryContentStaff.PrimaryVoice.Measures;
         Assert.True(control[2].ContinuesBar);

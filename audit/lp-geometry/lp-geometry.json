@@ -124,6 +124,13 @@
       "residual": 0.0,
       "why": "CLOSED (island 2) -- the IDENTICAL 0.964561 its mirror now reads. Vertical reflection of chord.accidental.flat-column-gap-below (des''/fes'' above the middle line, stems down); direction-independence held through the port. Full account on chord.accidental.flat-column-gap-below."
     },
+    "chord.accidental.flat-stagger-span": {
+      "probe": "barline-spacing.ly",
+      "score": "CF3",
+      "lilypond": 1.666588,
+      "residual": 0.0,
+      "why": "CLOSED TO EXACT the same session (+0.262535 -> 0, residual 2.4e-7): StaggerEntries now forms LilyPond's apes by NOTE NAME, orders them by ape_less (size, then top) and zigzags each size run (stagger_apes), so bes'' is placed first, ees'' second (tucked under it) and ges'' last. The history, as opened: Opened with no code change (session 569), from the chordnames fixture: its chord row stood 1.0 under LilyPond's because the last chord's accidental column pushed the chord 1.5 right, out from under the symbol the row is spaced against. NAMED DEFECT: AccidentalPlacement.StaggerEntries groups accidentals by VERTICAL PROXIMITY (within 1 staff space), which accidental-placement.cc does not contain. LilyPond's APE is the accidentals of one NOTE NAME (add_accidental keys on notename), sorted by ape_less (size, then the ape's top) and staggered highest, lowest, next highest (stagger_apes :192-235), so here bes'' is placed first, ees'' second (tucking under it, 0.570 right of ges''), ges'' last. Lily# put all three in one proximity group, left them in pitch order (bes, ges, ees) and so stepped every flat a full column left of the one before."
+    },
     "crossvoice.accidental.shifted-voice-to-head": {
       "probe": "cross-voice-accidental.ly",
       "score": "XCA",
@@ -1661,15 +1668,15 @@
       "probe": "beam-tab.ly",
       "score": "A",
       "lilypond": 1.500000,
-      "residual": 0.0,
-      "why": "EXACT. A flat group on the LOWEST string, stems up: LilyPond lands on the outer string line exactly, and this is the reading that was 0.297 past it before the port. Flat groups are where the staff's own LINE GRID decides (the quant is 1 + inter), sloped ones where its translation does, so the two kinds are kept as separate points. ⚠️ It is also the point that caught the third staff constant: the horizontal-inter-quant scorer charges 500 only INSIDE the staff (lily/beam-quanting.cc:1248 score_horizontal_inter_quants), and a four-line staff's radius is 1.5, so 1.5 is not inside it. With the notation staff's 2.0 left in place Lily# refused this quant."
+      "residual": 0.373333333,
+      "why": "DECLARED DEVIATION (owner's decision, 2026-09-24, session 569 — LILYSHARP-OWN BeamScoringProblem uniformBeamedLength): on a tab an EIGHTH group's stems take a sixteenth group's ideal length (beamed-lengths 3.5 for 3.26), so the eighth pair and the sixteenth group over one string share a height. On a notation staff they line up over low notes because calc_stem_info extends both to the middle line (lily/stem.cc:1235-1239); a tab digit always reaches past the middle, so under LilyPond's \\tabFullNotation that clamp never binds and the two groups of one bar stand a quant apart. This flat eighth group is the one point it moves: one quant, 0.373333, to where a sixteenth group over the same string sits. The sloped group in the same probe is eighths too, and still quants to LilyPond's exact answer (its ideal rises, its quant does not). LilyPond's own reading, which Lily# matched EXACTLY until then — . A flat group on the LOWEST string, stems up: LilyPond lands on the outer string line exactly, and this is the reading that was 0.297 past it before the port. Flat groups are where the staff's own LINE GRID decides (the quant is 1 + inter), sloped ones where its translation does, so the two kinds are kept as separate points. ⚠️ It is also the point that caught the third staff constant: the horizontal-inter-quant scorer charges 500 only INSIDE the staff (lily/beam-quanting.cc:1248 score_horizontal_inter_quants), and a four-line staff's radius is 1.5, so 1.5 is not inside it. With the notation staff's 2.0 left in place Lily# refused this quant."
     },
     "beam.quant.tab.flat-highest-string": {
       "probe": "beam-tab.ly",
       "score": "A",
       "lilypond": -1.500000,
-      "residual": 0.0,
-      "why": "EXACT. The same flat group on the HIGHEST string with stems DOWN, which LilyPond answers as the exact negative. The pair is the up/down control: a reading that had absorbed a constant on one side would break the symmetry."
+      "residual": -0.373333333,
+      "why": "DECLARED DEVIATION (owner's decision, 2026-09-24, session 569 — LILYSHARP-OWN BeamScoringProblem uniformBeamedLength): on a tab an EIGHTH group's stems take a sixteenth group's ideal length (beamed-lengths 3.5 for 3.26), so the eighth pair and the sixteenth group over one string share a height. On a notation staff they line up over low notes because calc_stem_info extends both to the middle line (lily/stem.cc:1235-1239); a tab digit always reaches past the middle, so under LilyPond's \\tabFullNotation that clamp never binds and the two groups of one bar stand a quant apart. This flat eighth group is the one point it moves: one quant, 0.373333, to where a sixteenth group over the same string sits. The sloped group in the same probe is eighths too, and still quants to LilyPond's exact answer (its ideal rises, its quant does not). LilyPond's own reading, which Lily# matched EXACTLY until then — . The same flat group on the HIGHEST string with stems DOWN, which LilyPond answers as the exact negative. The pair is the up/down control: a reading that had absorbed a constant on one side would break the symmetry."
     },
     "slur.tab.up.string-to-attachment": {
       "probe": "tab-slur.ly",

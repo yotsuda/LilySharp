@@ -1017,20 +1017,16 @@ string suppresses the mark (like `~Name`):
 form main { Intro Main Main "Main (reprise)" Coda }
 ```
 
-**Label defaults.** A section prints its name as a rehearsal label, and a reference's
-`~` hides it. A section that only carries STRUCTURE — one cut to hold a repeat edge, say
-— declares itself with the tilde instead, and its default flips:
+**Hiding a label.** A section prints its name as a rehearsal label, and a `~` on the
+form reference hides it for that play. A section that only carries STRUCTURE — one cut
+to hold a repeat edge, say — is referenced with the tilde:
 
 ```
-section ~Bridge { melody { c4 d e f | } }
-form main { A ~Bridge C }
+form main { A |: B [1. ~B1] :| [2. ~B2] C }
 ```
 
-`Bridge` prints no label wherever it is referenced plainly; the `~` on the reference asks
-for the other default, so the line above is the one that DOES print it. The tilde means
-the same thing at both sites — "the other one than the default" — and an empty quoted
-label (`A ""`) still suppresses the mark under either. A label written on a play that
-prints none is reported (LYS0012).
+The tilde belongs to the reference, never to the declaration: `section ~B1 { … }` is an
+error (LYS0033). A label written on a `~` play is reported (LYS0012).
 
 **Octave marks on a reference.** A section boundary reopens the relative frame at the
 part's anchor (and reverts the octave mode), so a section written for one register plays
@@ -1240,6 +1236,25 @@ Barlines in a lyrics block follow the music rule: every written `|` closes one
 bar, the one that OPENS the run included — so `| きら | ひかる |` is one bar
 longer than `きら | ひかる`, its first bar carrying no syllables. That leading
 `|` is how a verse skips the rest bar the melody opens with.
+
+**Melismas** follow LilyPond's `\lyricsto`. A **slur** or a **tie** makes one on its own:
+the syllable on the slur's first note is sung over every note up to the one that closes
+it (and a tied note takes no syllable), so the next syllable lands after the slur.
+`__` draws the extender line and takes **no** note; `_` takes one note without a
+syllable, holding the previous one over it.
+
+```
+part melody
+section Main {
+  melody { c4( d e) f | c4 d e f | }
+  lyrics words sings melody {
+    la __ lu |       // lu on f
+    la _ lu li |     // la on c, d held, lu on e, li on f
+  }
+}
+form main { Main }
+score main { staff melody  lyrics words }
+```
 
 ## Music Marks
 

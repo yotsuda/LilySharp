@@ -3577,10 +3577,6 @@ public sealed partial class MeasureCollector
     private int SectionDeclPos(string sectionName)
         => _sectionState.Sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
 
-    /// <summary>The declaration this name resolves to, or null.</summary>
-    private SectionDeclarationSyntax? SectionDecl(string name)
-        => _sectionState.Sections.TryGetValue(name, out var s) ? s : null;
-
     // ===== the four shapes a play's label can arrive in, all answered by ONE rule =====
     //
     // Semantics.SectionLabelRule holds the sentence; these four only pull its arguments out
@@ -3591,30 +3587,27 @@ public sealed partial class MeasureCollector
     // been taught `IsSilent` while the twin's comment claimed to mirror it.
 
     /// <summary>`form { A }` / `form { A "label" }`.</summary>
-    private string? LabelForReference(SectionReferenceSyntax reference)
+    private static string? LabelForReference(SectionReferenceSyntax reference)
         => Semantics.SectionLabelRule.LabelFor(
-            SectionDecl(reference.SectionName), referenceIsSilent: false,
-            reference.DisplayLabel, reference.SectionName);
+            referenceIsSilent: false, reference.DisplayLabel, reference.SectionName);
 
-    /// <summary>`form { ~A }` / `form { ~A "label" }` — the tilde asks for the OTHER
-    /// default, not for "hidden", so the parked label can be the one that prints.</summary>
-    private string? LabelForSilentReference(SyntaxNode silent, string name)
+    /// <summary>`form { ~A }` / `form { ~A "label" }` — hidden, parked label and all
+    /// (LYS0012 warns about the parked one).</summary>
+    private static string? LabelForSilentReference(SyntaxNode silent, string name)
         => Semantics.SectionLabelRule.LabelFor(
-            SectionDecl(name), referenceIsSilent: true,
-            SyntaxFacts.UnquotedLabel(silent), name);
+            referenceIsSilent: true, SyntaxFacts.UnquotedLabel(silent), name);
 
     /// <summary>`[1. A]` / `[1. ~A]` — the tilde binds to the section NAME, so an ending
     /// asks the same question a bare reference does.</summary>
-    private string? LabelForEnding(FormAlternativeSyntax alt)
+    private static string? LabelForEnding(FormAlternativeSyntax alt)
         => Semantics.SectionLabelRule.LabelFor(
-            SectionDecl(alt.SectionName.Text), alt.IsSilent,
-            alt.DisplayLabel, alt.SectionName.Text);
+            alt.IsSilent, alt.DisplayLabel, alt.SectionName.Text);
 
     /// <summary>No form: sections play in declaration order, each labelled with its own name
-    /// — and a `section ~A` declaration silences its own.</summary>
+    /// (a form is the only place a label can be hidden).</summary>
     private static string? LabelForDeclarationOrder(SectionDeclarationSyntax section)
         => Semantics.SectionLabelRule.LabelFor(
-            section, referenceIsSilent: false, displayLabel: null, sectionName: section.SectionName);
+            referenceIsSilent: false, displayLabel: null, sectionName: section.SectionName);
 
     /// <summary>
     /// The name of the <c>part</c> a node lives inside, or null if it is not inside

@@ -570,6 +570,28 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string NamelessChordsRemoved = "LYS0032";
 
+    /// <summary>Syntax error: a <c>~</c> between <c>section</c> and the name
+    /// (<c>section ~A { … }</c>). A section's rehearsal label is hidden at a form reference,
+    /// <c>form { ~A }</c>; the declaration takes no tilde.</summary>
+    /// <remarks>
+    /// <para>
+    /// Earns its place in the present tense, the way <see cref="NamelessChordsRemoved"/>
+    /// does: <c>form { ~A }</c> is the analogy that makes <c>section ~A</c> look writable, so
+    /// a writer who never saw an older Lily# reaches for it — and without this the parser's
+    /// answer is "expected a name, found '~'", which is true and says nothing about where the
+    /// tilde goes. Reported and KEPT (like <see cref="StrayItemToken"/>): the name after it
+    /// parses and every later offset stays true.
+    /// </para>
+    /// <para>
+    /// The history, kept as history: from 2026-08-31 the tilde flipped the section's label
+    /// default and a reference's <c>~</c> then SHOWED. It was removed by owner's decision on
+    /// 2026-09-24 because in part-major layout the one property had one home per part
+    /// (<c>part p1 { section ~A }</c> beside <c>part p2 { section A }</c>), and a form line
+    /// could not be read without the declarations.
+    /// </para>
+    /// </remarks>
+    public const string SectionDeclarationTilde = "LYS0033";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

@@ -231,7 +231,7 @@ internal static class LooseLineSpacer
     /// which layouts they select; note-bound and lyric-row verse ink has TWO builders
     /// — the geometry engraver's lists (pair walk, reservation) and
     /// <c>BuildVerseSkylines</c>' dictionaries (the solve) — both through the one X
-    /// model (<c>CalculateSyllableLayout</c> + <c>ResolveOverlaps</c>), and "the two
+    /// model (<c>CalculateSyllableLayout</c>), and "the two
     /// builders answer alike" is BOUND by <c>VerseInkBuilderAgreementTests</c> (exact
     /// functional equality per (system, line, verse); it fires on a 0.01 X drift) —
     /// the net that keeps the named readers honest.

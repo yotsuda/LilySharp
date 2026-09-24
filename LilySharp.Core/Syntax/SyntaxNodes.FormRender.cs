@@ -40,32 +40,13 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
 
     /// <summary>The section name token.</summary>
     /// <remarks>
-    /// Slot 2, not 1: slot 1 is the optional <c>~</c> (see <see cref="LabelHiddenByDefault"/>)
-    /// and an ABSENT tilde still occupies it as a null, the way every optional slot in this
-    /// tree does. ⚠️ Written first as "1 or 2, whichever is not a tilde", which threw on every
-    /// section without one — a null is not a tilde, and it is not the name either.
+    /// Slot 2, not 1: slot 1 holds a stray <c>~</c> (<c>section ~A</c>, reported LYS0033 and
+    /// kept so every later offset stays true) and an ABSENT one still occupies it as a null,
+    /// the way every optional slot in this tree does. ⚠️ Written first as "1 or 2, whichever
+    /// is not a tilde", which threw on every section without one — a null is not a tilde, and
+    /// it is not the name either.
     /// </remarks>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(2)!;
-
-    /// <summary>
-    /// True for <c>section ~A { … }</c>: this section carries STRUCTURE rather than a
-    /// rehearsal letter, so its label default is FLIPPED — a plain reference prints nothing
-    /// and a <c>~</c> reference prints the label.
-    /// </summary>
-    /// <remarks>
-    /// Owner's decision, 2026-08-31. The point is that "this is structure" is a property of
-    /// the SECTION, so it is written once on the declaration instead of being repeated at
-    /// every reference — the author's books hold 2309 bare references against 260 tilde ones,
-    /// and a section cut only to carry a repeat edge wants none of the 2309.
-    /// ⚠️ The consequence, named on purpose: in a book that declares <c>section ~A</c>,
-    /// <c>form { ~A }</c> is the line that SHOWS. The tilde keeps one meaning — "the other
-    /// one than the default" — rather than gaining a second.
-    /// ⚠️ One reading of the rule this does NOT make: <c>~</c> is not "never label". A
-    /// structural section can still be labelled at one occurrence, which is why the flip was
-    /// chosen over an absolute suppression (that would force splitting the section in two).
-    /// </remarks>
-    public bool LabelHiddenByDefault =>
-        GetChild(1) is SyntaxTokenNode { Kind: SyntaxKind.Tilde };
 
     /// <summary>
     /// Gets the section name as a string.

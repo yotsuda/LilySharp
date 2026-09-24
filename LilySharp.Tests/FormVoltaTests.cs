@@ -133,9 +133,8 @@ public sealed class FormVoltaTests
         Assert.DoesNotContain(measures, m => m.SectionLabel == "alt"); // label stays hidden
     }
 
-    /// <summary>The diagnostics LYS0012 lives in since 2026-08-31 — SEMANTIC, not parse-time,
-    /// because whether a parked label prints now depends on the section's DECLARATION
-    /// (<c>section ~A</c>), which a parser cannot see.</summary>
+    /// <summary>The diagnostics LYS0012 lives in since 2026-08-31 — SEMANTIC, not parse-time
+    /// (it asks the label rule, SectionLabelRule, rather than the surface).</summary>
     private static bool WarnsHiddenLabel(SyntaxTree tree) =>
         LilySharp.Core.Semantics.SemanticValidation.Run(tree)
             .Any(d => d.Code == DiagnosticCodes.HiddenSectionLabel);

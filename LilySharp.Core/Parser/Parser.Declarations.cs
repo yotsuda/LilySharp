@@ -127,9 +127,7 @@ internal sealed partial class Parser
     private SectionDeclarationGreen ParsePartInnerSection()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
-        // `part m { section ~A { … } }` — the part-major spelling of the same declaration,
-        // so it takes the same label-default flip as the top-level one.
-        var tilde = Check(SyntaxKind.Tilde) ? Advance() : null;
+        var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 

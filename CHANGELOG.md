@@ -36,6 +36,21 @@ workflow attaches that section to the GitHub Release verbatim.
   part's register, write `clef bass octave 3` (or use an `instrument` preset). A score's
   `staff bass x` also draws the bass clef it names; it was silently ignored before.
 
+- **A section's label is hidden only at the form reference.** `section ~A { … }` is an error
+  (LYS0033) that names the spelling to use instead: write the `~` on the reference,
+  `form main { |: B [1. ~A] :| [2. C] }`. Until now the declaration's tilde flipped the
+  section's label default, so a `~A` reference to it SHOWED the label; in part-major layout
+  every part declared its own copy of the section, and one of them could flip it alone. A `~`
+  on a reference now always hides, and a form line says on its own which plays are labelled.
+
+- **A slur or a tie holds its lyric syllable, as in LilyPond.** Under `lyrics … sings`, the
+  notes inside a slur (after its first) and a note a tie arrives at take no syllable of their
+  own: the syllable on the first note is sung over them, left-aligned, with its extender to
+  the last one. `c4( d e) f` with `la __ lu` now puts `lu` on f; it used to go on e. `__` is
+  the extender line only and takes no note (it used to take one); `_` still takes one. A book
+  that spelled a slur's notes out with markers (`la __ ~ ~ lu`) now writes them the
+  LilyPond way (`la __ lu`).
+
 ### Added
 
 - **The `.mid` gives every part its own track, channel and General MIDI sound.** Until now
@@ -259,6 +274,35 @@ workflow attaches that section to the GitHub Release verbatim.
   order. What the panel says does not change (760 books, identical).
 
 ### Engraving
+
+- **On a full-notation tab, an eighth pair and a sixteenth group over one string line up.** An
+  eighth group's stems now take a sixteenth group's length, so a bar of `8 16 16` and `8 8`
+  over the same string beams at one height, the way the same rhythm over low notes does on a
+  notation staff. LilyPond's `\tabFullNotation` gives the two groups their own lengths, and
+  what lines them up on a notation staff — every beamed stem is extended to the middle line —
+  never happens on a tab, whose digits all reach past the middle already; so its eighth pair
+  stood a step below the sixteenth group beside it. Nothing else moves: each stem is measured
+  from its own digit, so a beam over another string stands at that string's height and a run
+  across the strings still slopes. A deliberate difference from LilyPond, recorded against its
+  tab beam measurements.
+
+- **A chord's accidentals stack in LilyPond's order.** Accidentals on different letters are
+  placed the way LilyPond places them: the highest nearest the notes, then the lowest, then the
+  next highest, so a lower one tucks under the one above it — `<c'' ees'' ges'' bes''>` now
+  spans 1.67 staff spaces, as in LilyPond, instead of 1.93 with every flat a full column left
+  of the one before. Octaves of one letter still share one column. A natural is no longer put
+  nearest the notes ahead of a higher accidental on another letter. The chord moves left to
+  match, and a chord-name row above it now clears the flats at LilyPond's height.
+
+- **A resized dynamic keeps its place on its line.** With `fonts { dynamics step … }` a
+  dynamic's baseline now hangs below the line of dynamics and hairpins by LilyPond's 0.6 scaled
+  with the letters (0.424 at step −3, 0.756 at +2, measured), not by 0.6 at every size.
+
+- **A bass figure takes the room its digits take.** The box a figure offers the spacing — the
+  row stacking, its drop under the staff, the gap to the next staff and the next system — is now
+  the drawn figure, from the note rightward by its own width (LilyPond's measured 0.921869 for a
+  digit), instead of a 0.8-wide box centred on the note (1.6 wide between systems), which sat
+  left of the ink and stopped short of it.
 
 - **A rolled chord's wiggle is the column's leftmost ink.** An arpeggio (and a non-arpeggiated
   chord's bracket) now stands `padding` clear of whichever of the chord's own ink reaches

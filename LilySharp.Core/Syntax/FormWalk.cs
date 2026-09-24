@@ -231,11 +231,11 @@ internal static class FormWalk
                 // The silent spelling has no red class of its own, so the marks and the
                 // parked label are read here off the SAME functions the plain one's
                 // properties call.
-                // ⚠️ THE LABEL USED TO BE DROPPED HERE (`null`), and that was harmless only
-                // while `~` always meant HIDE: a label nobody would print need not travel.
-                // Since 2026-08-31 a `~` reference to a `section ~A` SHOWS, so the label it
-                // parked is the one to print — measured, `form { ~A "shown" }` printed the
-                // section's NAME until this line carried it.
+                // The parked label travels although `~` always hides it: the label rule is
+                // asked with it (SectionLabelRule), so the reader never decides on its own
+                // that a silent play's label does not matter. (From 2026-08-31 to 2026-09-24 a
+                // `~` reference to a `section ~A` SHOWED, and dropping it here printed the
+                // section's NAME.)
                 items.Add(new SectionRef(name.Text, SyntaxFacts.UnquotedLabel(child),
                     Silent: true, child, SyntaxFacts.NetOctaveMarks(child)));
                 break;

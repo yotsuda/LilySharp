@@ -476,6 +476,10 @@ spaces; `-` joins syllables of one word; `|` mirrors the music's barlines. Barli
 follow the music rule: every written `|` closes one bar, the one that OPENS the run
 included, so `| きら | ひかる |` is one bar longer than `きら | ひかる` — that leading
 `|` is how a verse skips the rest bar the melody opens with.
+**Melismas are LilyPond's**: a SLUR or a TIE holds its first syllable over every note it
+covers by itself (`c4( d e) f` with `la lu` puts `lu` on f — do NOT add markers for the
+slurred notes). `__` only draws the extender line and takes NO note; `_` takes ONE note
+with no syllable (a melisma without a slur: `c4 d e f` with `la _ lu li`).
 
 ```
 part melody
@@ -629,13 +633,12 @@ quarter. Same in a tempo — `tempo 4. = 116` is dotted, `tempo 4.5 = 116` is LY
   or E♭ instrument you normally write NO `transpose` at all: name the `instrument` and
   either write what the player reads (the default) or write what sounds under a top-level
   `pitch concert` — the part is transposed for you (see Pitches).
-- **`section ~A { … }` flips that section's label default.** A section prints a rehearsal
-  letter by default and a reference's `~` hides it; declare it `section ~A` and it prints
-  none by default, so there `~A` is the spelling that SHOWS. One meaning for the tilde at
-  both sites — "the other one than the default" — and the rule is one equality:
-  `shown = (declaration hides) == (reference has ~)`. Write it on a section cut only to
-  carry a repeat edge. An empty label `""` still suppresses either way, and a label on a
-  play that prints none is LYS0012.
+- **A section's label is hidden at the FORM reference only**: `form main { A |: B [1. ~B1]
+  :| [2. ~B2] }` plays B1 and B2 without a rehearsal letter. ⚠️ **Never write
+  `section ~A { … }`** — a declaration takes no tilde (LYS0033). Write the `~` on every
+  reference that should be silent (a section cut only to carry a repeat edge is usually
+  referenced once). With no form, every section labels itself. An empty label `A ""` also
+  suppresses, and a label written on a `~` play is LYS0012.
 - **A SECTION reference takes the same marks**: `form main { ~A ~B' }` opens B's play an
   octave up, `~B,` an octave down, `~B''` two. They belong to the PLAY, so one section can
   be quoted at two octaves (`~B ~B'`) while the declaration never moves, and the next

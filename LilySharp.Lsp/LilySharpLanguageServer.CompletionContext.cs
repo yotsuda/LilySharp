@@ -302,18 +302,6 @@ public sealed partial class LilySharpLanguageServer
         string name = text.Substring(j + 1, end1 - (j + 1));   // word before '{' (or before the display name)
         int k = j;
         while (k >= 0 && char.IsWhiteSpace(text[k])) k--;
-        // Step over a SILENT section's tilde (`section ~B {`, GRAMMAR SectionDeclaration:
-        // the form plays it without printing its label). It is not a word character, so
-        // without this the keyword is unreachable and the frame reads (Prefix="", Name="B")
-        // — every reader asking FrameKeyword for "section" missed the silent spelling, and a
-        // top-level `section ~B { |` offered the MUSIC list (98 items) where `section B { |`
-        // offers the header directives. Measured 2026-09-12; same family as the `sings`
-        // clause two spellings up.
-        if (k >= 0 && text[k] == '~')
-        {
-            k--;
-            while (k >= 0 && char.IsWhiteSpace(text[k])) k--;
-        }
         int end2 = k + 1;
         while (k >= 0 && IsWordChar(text[k])) k--;
         string prefix = text.Substring(k + 1, end2 - (k + 1));  // and the one before it

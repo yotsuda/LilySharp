@@ -22,14 +22,12 @@ namespace LilySharp.Core.Parser;
 internal sealed partial class Parser
 {
     /// <summary>
-    /// Parse section declaration: <c>section Name { ... }</c> — or <c>section ~Name { ... }</c>,
-    /// which flips this section's label default
-    /// (<see cref="SectionDeclarationSyntax.LabelHiddenByDefault"/>).
+    /// Parse section declaration: <c>section Name { ... }</c>.
     /// </summary>
     private SectionDeclarationGreen ParseSectionDeclaration()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
-        var tilde = Check(SyntaxKind.Tilde) ? Advance() : null;
+        var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -37,6 +35,28 @@ internal sealed partial class Parser
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>
+    /// A <c>~</c> between <c>section</c> and its name: REPORTED (LYS0033) and kept, so the
+    /// name parses and every later offset stays true. Null when there is none.
+    /// </summary>
+    /// <remarks>
+    /// Asked by all four section parsers (top level, part-major, lyric and chord tracks), so
+    /// the answer does not depend on where the declaration stands. The message names where the
+    /// tilde does belong — the form reference — because <c>form { ~A }</c> is the analogy
+    /// that makes <c>section ~A</c> look writable.
+    /// </remarks>
+    private SyntaxToken? ReportDeclarationTilde()
+    {
+        if (!Check(SyntaxKind.Tilde))
+            return null;
+        var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
+        var name = IsPartNameKind(Peek(1).Kind) ? Peek(1).Text : "A";
+        _diagnostics.Error(span, DiagnosticCodes.SectionDeclarationTilde,
+            $"A section declaration takes no '~'. To play a section without its rehearsal "
+            + $"label, write the '~' on the form reference: form {{ ~{name} }}.");
+        return Advance();
     }
 
     private GreenNode? ParseSectionItem()
@@ -184,6 +204,7 @@ internal sealed partial class Parser
     private SectionDeclarationGreen ParseLyricInnerSection()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
+        var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var measures = new List<GreenNode?>();
@@ -204,11 +225,7 @@ internal sealed partial class Parser
                 break; // no syllable/barline consumed → at the section's close
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        // No tilde slot content here on purpose: a lyric track's inner section is a CELL of
-        // words, never a structure section, so it has no label to hide or show. Writing
-        // `lyrics ja { section ~A { … } }` still reaches ExpectPartName's error, which is the
-        // answer — the flip is a form-level idea.
-        return new SectionDeclarationGreen(keyword, null, name, openBrace, [.. measures], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. measures], closeBrace);
     }
 
 
@@ -261,6 +278,7 @@ internal sealed partial class Parser
     private SectionDeclarationGreen ParseChordInnerSection()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
+        var tilde = ReportDeclarationTilde();
         var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
@@ -270,9 +288,7 @@ internal sealed partial class Parser
             items.Add(item ?? SkipStrayChordToken());
         }
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        // No tilde, for the same reason as the lyric cell above: a chord track's inner
-        // section is a cell of symbols, not a structure section with a label.
-        return new SectionDeclarationGreen(keyword, null, name, openBrace, [.. items], closeBrace);
+        return new SectionDeclarationGreen(keyword, tilde, name, openBrace, [.. items], closeBrace);
     }
 
     /// <summary>

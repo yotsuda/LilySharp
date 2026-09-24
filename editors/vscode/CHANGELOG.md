@@ -12,6 +12,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   `voice-alto`, `voice-tenor`. Write `ukulele`, `guitar`, `bass`, `bass5`, `bass6`,
   `contrabass`, `horn`, `piano-right`, `piano-left`, `soprano`, `alto`, `tenor`, and name the
   sound with `midiInstrument`.
+- **A section's label is hidden only at the form reference** — `section ~A { … }` is refused
+  (LYS0033); write `form main { … ~A … }`. A `~` on a reference always hides.
 
 ### Added
 

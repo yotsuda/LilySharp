@@ -973,7 +973,9 @@ internal sealed partial class LayoutEngine
         {
             if (!measureToSystem.TryGetValue(fb.MeasureIndex, out int s))
                 continue;
-            double half = FiguredBassEngraver.MinFigureBoxWidth;
+            // The column's own X span (FiguredBassEngraver.FigureXExtent) — until 2026-09-24
+            // this seed read the engraver's 0.8 box width as a HALF-width, 1.6 wide.
+            var (left, right) = FiguredBassEngraver.ColumnXExtent(fonts, fb.X, fb.FigureTexts);
             // YUp is Y-up; this inter-system skyline is Y-up too (system-top origin), so
             // take the figure's own staff offset in that frame as well and the line adds.
             // The staff middle is half a staff below the staff top, hence the StaffMiddle
@@ -983,7 +985,7 @@ internal sealed partial class LayoutEngine
             double top = fbY + FiguredBassEngraver.FigureInkTop(fonts,
                 fb.FigureTexts.Length > 0 ? fb.FigureTexts[0] : string.Empty);
             double bottom = fbY - BassFigureAlignment.ColumnDepth(fonts, fb.RowOffsets, fb.FigureTexts);
-            BuilderAt(s).AddFiguredBassBox(fb.X - half, fb.X + half, bottom, top);
+            BuilderAt(s).AddFiguredBassBox(left, right, bottom, top);
         }
 
         // Volta brackets and their "End1"-style label boxes rise above the

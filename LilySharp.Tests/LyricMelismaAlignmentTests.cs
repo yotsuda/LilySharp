@@ -42,7 +42,7 @@ public class LyricMelismaAlignmentTests
     private const string Source = @"
 time 4/4
 part v { section A { c4 c c16( d e f) g4 | } }
-lyrics w sings v { section A { ha ha looong __ ~ ~ ho | } }
+lyrics w sings v { section A { ha ha looong __ ho | } }
 form main { A }
 score main { staff v  lyrics w }
 ";
@@ -56,7 +56,7 @@ score main { staff v  lyrics w }
         var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
 
         Assert.True(score.Lyrics.Single(l => l.Text == "looong").MelismaAlignLeft,
-            "the syllable held by __ / ~ markers is the melisma syllable");
+            "the syllable the slur holds is the melisma syllable");
         Assert.All(score.Lyrics.Where(l => l.Text != "looong"),
             l => Assert.False(l.MelismaAlignLeft));
     }

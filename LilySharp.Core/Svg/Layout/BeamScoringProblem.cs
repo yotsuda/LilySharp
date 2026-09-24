@@ -241,6 +241,24 @@ internal sealed class BeamScoringProblem
     /// SEPARATE property from <paramref name="lengthFraction"/> and which a cue does not
     /// state. See <see cref="StemDetails.NoStemExtend"/>.
     /// </param>
+    /// <param name="uniformBeamedLength">
+    /// False for every staff LilyPond draws. A TAB beam passes true, and a one-beam group's
+    /// stems take the TWO-beam group's ideal length (<c>beamed-lengths</c> 3.5 for 3.26), so
+    /// an eighth pair and a sixteenth group over the same strings share one height.
+    /// </param>
+    /// <remarks>
+    /// LILYSHARP-OWN, owner's decision 2026-09-24 (session 569, The Final Countdown's tab). On
+    /// a notation staff the eighth pair and the sixteenth group over the same LOW notes line
+    /// up because calc_stem_info extends both to the middle line (lily/stem.cc:1235-1239), and
+    /// that clamp, not the lengths, is what the eye reads as "the beams line up". A tab's
+    /// digits never stand far from the middle — a stem from any string already reaches past
+    /// it — so the clamp never binds and the lengths' own difference shows: in LilyPond's
+    /// <c>\tabFullNotation</c> the two groups of one bar on one string stand a quant apart.
+    /// Only the length is evened: the stems keep their own heads, so a beam still slopes
+    /// across the strings and its stems keep their natural length. (A first attempt raised
+    /// every beam of a direction to one floor measured from the string nearest the middle;
+    /// the owner found its stems too long and its beams all flat.)
+    /// </remarks>
     public BeamScoringProblem(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
@@ -254,12 +272,13 @@ internal sealed class BeamScoringProblem
         int staffLineCount = 5,
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
-        bool noStemExtend = false)
+        bool noStemExtend = false,
+        bool uniformBeamedLength = false)
         : this()
     {
         Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
             beamThickness, headFont, lineThickness, staffLineCount, beamLengthFraction,
-            restXPositions, noStemExtend);
+            restXPositions, noStemExtend, uniformBeamedLength);
     }
 
     private BeamScoringProblem()
@@ -295,6 +314,21 @@ internal sealed class BeamScoringProblem
     [ThreadStatic]
     private static BeamScoringProblem? t_problem;
 
+    /// <summary>The default stem details with the one-beam length raised to the two-beam one —
+    /// every tab beam's, built once (the constructor's <c>uniformBeamedLength</c>).</summary>
+    private static readonly StemDetails s_uniformBeamedDetails =
+        StemDetails.Default with { BeamedLengths = OneBeamAtTwoBeams(StemDetails.Default.BeamedLengths) };
+
+    /// <summary><c>beamed-lengths</c> with its first entry (one beam) replaced by its second
+    /// (two beams).</summary>
+    private static double[] OneBeamAtTwoBeams(double[] lengths)
+    {
+        var copy = (double[])lengths.Clone();
+        if (copy.Length > 1)
+            copy[0] = copy[1];
+        return copy;
+    }
+
     /// <summary>
     /// <c>new BeamScoringProblem(…).Solve()</c> on the thread's lent problem — the production
     /// entry: the quanted line at the outer member stems and those stems' x
@@ -313,13 +347,14 @@ internal sealed class BeamScoringProblem
         int staffLineCount = 5,
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
-        bool noStemExtend = false)
+        bool noStemExtend = false,
+        bool uniformBeamedLength = false)
     {
         var problem = t_problem ?? new BeamScoringProblem();
         t_problem = null;
         problem.Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
             beamThickness, headFont, lineThickness, staffLineCount, beamLengthFraction,
-            restXPositions, noStemExtend);
+            restXPositions, noStemExtend, uniformBeamedLength);
         var (leftY, rightY) = problem.Solve();
         var outer = problem.OuterMemberStemXs;
         problem.Release();
@@ -351,7 +386,8 @@ internal sealed class BeamScoringProblem
         int staffLineCount,
         double? beamLengthFraction,
         IReadOnlyList<double>? restXPositions,
-        bool noStemExtend)
+        bool noStemExtend,
+        bool uniformBeamedLength)
     {
         _group = group;
         _memberCount = group.Members.Length;
@@ -570,6 +606,11 @@ internal sealed class BeamScoringProblem
                   LengthFraction = lengthFraction,
                   NoStemExtend = noStemExtend,
               };
+        // A tab beam's one-beam stems take the two-beam length (see the parameter's remark).
+        if (uniformBeamedLength)
+            _stemDetails = ReferenceEquals(_stemDetails, StemDetails.Default)
+                ? s_uniformBeamedDetails
+                : _stemDetails with { BeamedLengths = OneBeamAtTwoBeams(_stemDetails.BeamedLengths) };
         // LILYPOND-REF: lily/beam-quanting.cc:301-303 stem_infos_.push_back — one
         //   Stem::get_stem_info per stem, before any configuration is scored; every
         //   input (head, direction, direction beam count, thickness, translation, the

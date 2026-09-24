@@ -4397,6 +4397,20 @@ internal sealed class RenderedGeometry
     /// bar line are that column's.
     /// </para>
     /// </remarks>
+    public double AccidentalColumnSpan(int barIndex)
+    {
+        // The whole accidental column of the chord opening the measure after bar line
+        // `barIndex`: the first accidental anchor to the last. With three or more accidentals
+        // it is the ORDER the packer placed them in that decides it (stagger_apes).
+        double bar = BarlineRight(barIndex);
+        var accs = Accidentals.Where(a => a.X > bar + 1e-9).OrderBy(a => a.X).ToList();
+        if (accs.Count < 3)
+            throw new InvalidOperationException(
+                $"expected at least three accidentals after bar line {barIndex} but found "
+                + $"{accs.Count}.\nDrawn geometry:\n" + Describe());
+        return accs[^1].X - accs[0].X;
+    }
+
     public double AccidentalColumnGap(int barIndex)
     {
         double bar = BarlineRight(barIndex);

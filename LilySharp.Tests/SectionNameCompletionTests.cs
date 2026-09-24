@@ -387,23 +387,6 @@ public class SectionNameCompletionTests
         }
     }
 
-    /// <summary>
-    /// A SILENT section (<c>section ~B { }</c> — the form plays it without printing its
-    /// label) is the same declaration as a loud one, so its body completes the same way.
-    /// The tilde is not a word character, so the frame reader had to be taught to step over
-    /// it: until 2026-09-12 <c>section ~B { |</c> reached the MUSIC list (98 items, opening
-    /// <c>c d e f g a b</c>) while <c>section B { |</c> offered the header directives.
-    /// </summary>
-    [Theory]
-    [InlineData("section B { ")]
-    [InlineData("section ~B { ")]
-    public void ASilentSectionBodyCompletesLikeALoudOne(string header)
-    {
-        var text = "part melody { section A { c } }\npart bass { section A { d } }\n" + header;
-        Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
-            LilySharpLanguageServer.GetCompletionContext(text, text.Length));
-    }
-
     [Fact]
     public void InsideTopLevelSectionBody_PartMajor_OffersHeaderDirectives_NotPartNames()
     {

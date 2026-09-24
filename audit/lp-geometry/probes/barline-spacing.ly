@@ -233,6 +233,16 @@ lay =
 %% CFA — the mirror ABOVE the middle line (des'' +2, fes'' +4), stems down. Must equal CFB.
 \score { \new Staff { \time 4/4 c'4 d' e' f' | <des'' fes''>4 a' b' c'' } \lay "CFA" }
 
+%% CF3 — THREE flats in one chord, each on its own note name (ees'' ges'' bes'' over c''), stems
+%%     down: three APES of one grob each, so their ORDER is stagger_apes' alone
+%%     (accidental-placement.cc:192-235 — sorted by the ape's top, then taken highest, lowest,
+%%     next highest), and the lowest flat (ees'') tucks under the highest (bes'') where it
+%%     interlocks. The measured quantity is the column's whole span, the first accidental
+%%     anchor after the bar line to the last (AccidentalColumnSpan) — same glyph, so the
+%%     flat's 0.12 bearing cancels. Session 569: the chordnames fixture's chord row stood 1.0
+%%     under LilyPond's because this column was 1.5 wider.
+\score { \new Staff { \time 4/4 c'4 d' e' f' | <c'' ees'' ges'' bes''>4 a' b' c'' } \lay "CF3" }
+
 %% K — mid-line key change (break-aligned into the boundary column by LilyPond).
 \score { \new Staff { \time 4/4 c'4 d' e' f' \key a \major c'4 d' e' f' } \lay "K" }
 

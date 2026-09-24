@@ -382,7 +382,7 @@ internal sealed class LyricHyphenEngraver
         MusicItem? end = null;
         int endMeasure = -1;
         Fraction endTiming = Fraction.Zero;
-        bool started = false, chainOpen = false;
+        bool started = false, chainOpen = false, slurOpen = false;
 
         for (int mi = current.Item.MeasureIndex; mi < measures.Length; mi++)
         {
@@ -396,7 +396,7 @@ internal sealed class LyricHyphenEngraver
                     {
                         started = true;
                         (end, endMeasure, endTiming) = (item, mi, onset);
-                        chainOpen = MelismaContinues(item);
+                        chainOpen = MelismaContinues(item, ref slurOpen);
                     }
                 }
                 else if (item.Duration > Fraction.Zero)
@@ -406,7 +406,7 @@ internal sealed class LyricHyphenEngraver
                     if (!chainOpen || !isNote)
                         goto done;
                     (end, endMeasure, endTiming) = (item, mi, onset);
-                    chainOpen = MelismaContinues(item);
+                    chainOpen = MelismaContinues(item, ref slurOpen);
                 }
                 onset += item.Duration;
             }
@@ -437,14 +437,25 @@ internal sealed class LyricHyphenEngraver
         return inkRight;
     }
 
-    /// <summary>True when the melisma keeps running past this note — it opens a
-    /// slur or a tie onto the next one.</summary>
-    private static bool MelismaContinues(MusicItem item) => item switch
+    /// <summary>True when the melisma keeps running past this note — a slur is still open
+    /// after it (it opens one, or one it did not close runs on) or it ties onto the next.</summary>
+    /// <remarks>
+    /// ⚠️ Until 2026-09-24 this asked only whether THIS note opened a slur, so a slur over
+    /// three notes (<c>c( d e)</c>) ended the chain at d. The slur state is the one
+    /// <c>LyricsCollector.BuildNoteIndices</c> keeps for the syllables (session 569).
+    /// </remarks>
+    private static bool MelismaContinues(MusicItem item, ref bool slurOpen)
     {
-        NoteItem n => n.HasSlurStart || n.HasTieStart,
-        ChordItem c => c.HasSlurStart || c.HasTieStart,
-        _ => false,
-    };
+        var (slurStart, slurEnd, tieStart) = item switch
+        {
+            NoteItem n => (n.HasSlurStart, n.HasSlurEnd, n.HasTieStart),
+            ChordItem c => (c.HasSlurStart, c.HasSlurEnd, c.HasTieStart),
+            _ => (false, false, false),
+        };
+        if (slurEnd) slurOpen = false;
+        if (slurStart) slurOpen = true;
+        return slurOpen || tieStart;
+    }
 
     /// <summary>
     /// Calculate hyphen layout: dashes repeat on a fixed period across the span

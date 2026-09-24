@@ -394,7 +394,10 @@ internal static class TabBeamQuant
             beamThickness: EngravingDefaults.BeamThickness / space,
             lineThickness: EngravingDefaults.StaffLineThickness / space,
             staffLineCount: geom.StringCount,
-            beamLengthFraction: TabConstants.BeamLengthFraction);
+            beamLengthFraction: TabConstants.BeamLengthFraction,
+            // LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
+            // group's stem length, so the two line up over one string (see the parameter).
+            uniformBeamedLength: true);
 
         // Quanter Y is in staff POSITIONS (half-spaces) above the staff's MIDDLE; the tab
         // staff's middle is halfway down its strings, and one position is half a string gap.

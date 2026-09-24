@@ -69,12 +69,27 @@ internal static class DynamicEngraver
     private const double StaffPadding = EngravingDefaults.DynamicLineSpannerStaffPadding;
     private const double MinimumSpace = EngravingDefaults.DynamicLineSpannerMinimumSpace;
 
-    // LILYPOND-REF: define-grobs.scm:1450 DynamicText (Y-offset . (scale-by-font-size
-    //   -0.6)) — "center on an 'm'". side-position places the SPANNER, and the text hangs
-    //   this far below the spanner's own origin, so the two frames differ by 0.6.
-    //   (internal: DynamicAlignEngraver spends the same child offset when it re-seats a
-    //   grouped text on its line spanner.)
-    internal const double TextOffsetInSpanner = 0.6;
+    /// <summary>
+    /// How far a dynamic's baseline hangs below its line spanner's origin — 0.6 at the
+    /// engraving's own size, scaled with the letters when a score's <c>fonts { }</c> resizes
+    /// <c>dynamics</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1450 DynamicText <c>(Y-offset . ,(scale-by-font-size
+    ///   -0.6))</c> — "center on an 'm'". side-position places the SPANNER, and the text hangs
+    ///   this far below the spanner's own origin. <c>scale-by-font-size</c> multiplies by the
+    ///   grob's <c>magstep (font-size)</c>, and a resized dynamic IS a DynamicText font-size in
+    ///   the twin (LilyPondExporter maps the role there), so the offset is the em's ratio to the
+    ///   default em.
+    /// <para>
+    /// ⚠️ IT WAS A CONSTANT 0.6 until 2026-09-24 (HANDOFF §2 R10⒣): exact at the default size,
+    /// and 0.6 × (1 − magstep) off wherever a score stepped its dynamics — the letters moved
+    /// and the spanner-to-baseline gap did not. DynamicAlignEngraver spends the same child
+    /// offset when it re-seats a grouped text on its line spanner.
+    /// </para>
+    /// </remarks>
+    internal static double TextOffsetInSpanner(Rendering.ScoreTextMetrics fonts)
+        => 0.6 * LabelEm(fonts) / DynamicFontSize;
 
     // Staff geometry (5 lines = 4 staff spaces)
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // staff bottom (4.0) / 2
@@ -350,10 +365,11 @@ internal static class DynamicEngraver
     {
         var support = ColumnSupportSkylines(
             voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
-        var my = LabelSkylines(fonts, text, expressive, xLabel, -TextOffsetInSpanner);
+        double textOffset = TextOffsetInSpanner(fonts);
+        var my = LabelSkylines(fonts, text, expressive, xLabel, -textOffset);
         // total_off positions the SPANNER; the text's baseline sits TextOffsetInSpanner
         // below it (define-grobs.scm:1450 DynamicText Y-offset, "center on an 'm'").
-        return SpannerOffsetY(above ? 1.0 : -1.0, support, my) - TextOffsetInSpanner;
+        return SpannerOffsetY(above ? 1.0 : -1.0, support, my) - textOffset;
     }
 
     /// <summary>

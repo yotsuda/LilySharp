@@ -91,18 +91,16 @@ public sealed record LyricItem(
     // verses still get their numbers.
     bool HideStanza = false,
 
-    // True when this syllable holds over following notes (a melisma marker
-    // `~`/`__`/`_` follows it): it is then LEFT-aligned on its column instead of
+    // True when this syllable holds over following notes — a slur or tie runs on from
+    // its note (LyricsCollector.BuildNoteIndices' busy notes: slurMelismaBusy /
+    // tieMelismaBusy, ported 2026-09-24, session 569) or a note-taking marker (`_` /
+    // detached `~`) follows it: it is then LEFT-aligned on its column instead of
     // centred — its ink left lands on the alignment extent's left edge.
     // LILYPOND-REF: lily/lyric-engraver.cc:180-183 stop_translation_timestep —
     //   a syllable on a melisma_busy voice takes self-alignment-X =
     //   lyricMelismaAlignment (default LEFT).
-    // ⚠️ NOT PORTED — the voice's melismaBusy state: the trigger here is the
-    // LYRIC-side marker, so a syllable written under a slurred note WITHOUT a
-    // marker stays centred (LP would left-align it), and the alignment is fixed
-    // LEFT (LP's lyricMelismaAlignment is a settable context property). LP has
-    // the trigger, so this is a divergent stand-in and not a Lily#-own quantity
-    // (§5.2 audit, session 158).
+    // ⚠️ The alignment is fixed LEFT (LP's lyricMelismaAlignment is a settable context
+    // property Lily# does not expose).
     bool MelismaAlignLeft = false,
 
     // The LAST note this syllable's melisma markers consumed (-1 = none): where

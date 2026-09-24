@@ -151,7 +151,7 @@ internal sealed class LyricsCollector
                 int verseNumber = forcedVerse
                     ?? (nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1);
 
-                IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing)> aligned = startMeasure <= 0
+                IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy)> aligned = startMeasure <= 0
                     ? indices
                     : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
@@ -664,22 +664,54 @@ internal sealed class LyricsCollector
         return result;
     }
 
-    /// <summary>(measureIndex, itemIndex, timing) of every note/chord (not rests) in a
-    /// voice's measures — the slots a lyric line's syllables map onto. The timing
+    /// <summary>(measureIndex, itemIndex, timing, busy) of every note/chord (not rests) in a
+    /// voice's measures — the notes a lyric line's syllables map onto. The timing
     /// (musical moment in the measure) lets a bound voice's syllable land over its real
-    /// column even when that voice's rhythm differs.</summary>
-    private static List<(int MeasureIndex, int ItemIndex, Fraction Timing)> BuildNoteIndices(List<Measure> measures)
+    /// column even when that voice's rhythm differs. <c>Busy</c> marks a note the voice
+    /// reaches IN a melisma: it takes no syllable of its own.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc — a syllable is taken for a note
+    ///   only when the voice is not <c>melisma_busy</c>; ly/engraver-init.ly
+    ///   <c>melismaBusyProperties</c> lists <c>slurMelismaBusy</c> and <c>tieMelismaBusy</c>
+    ///   (set by the Slur and Tie engravers while a slur or tie runs).
+    /// So a slur's FIRST note takes a syllable and every note after it, up to and including
+    /// the one that closes it, is busy; a note a tie arrives at is busy. A rest never is — it
+    /// is no slot at all — but a slur runs on across it. Owner's decision 2026-09-24
+    /// (session 569): Lily# used to hand every note a syllable and let only the lyric-side
+    /// markers hold one, so <c>c'4( d e) f</c> with <c>la __ la</c> put the second syllable on
+    /// e where LilyPond puts it on f.
+    /// </remarks>
+    internal static List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy)> BuildNoteIndices(
+        IReadOnlyList<Measure> measures)
     {
-        var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing)>();
+        var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy)>();
+        bool slurOpen = false, tiedIn = false;
         for (int m = 0; m < measures.Count; m++)
         {
             var timing = Fraction.Zero;
             var items = measures[m].Items;
             for (int i = 0; i < items.Length; i++)
             {
-                if (items[i] is NoteItem or ChordItem)
-                    noteIndices.Add((m, i, timing));
-                timing += items[i].Duration;
+                var item = items[i];
+                var (isNote, slurStart, slurEnd, tieStart) = item switch
+                {
+                    NoteItem n => (true, n.HasSlurStart, n.HasSlurEnd, n.HasTieStart),
+                    ChordItem c => (true, c.HasSlurStart, c.HasSlurEnd, c.HasTieStart),
+                    RestItem r => (false, r.HasSlurStart, r.HasSlurEnd, false),
+                    _ => (false, false, false, false),
+                };
+                if (isNote)
+                {
+                    noteIndices.Add((m, i, timing, slurOpen || tiedIn));
+                    tiedIn = tieStart;
+                }
+                else if (item.Duration > Fraction.Zero)
+                    tiedIn = false;   // a tie does not reach across a rest
+                // The slur state AFTER this item: a closing note is still inside (busy
+                // above), and a note that closes one slur and opens the next keeps it open.
+                if (slurEnd) slurOpen = false;
+                if (slurStart) slurOpen = true;
+                timing += item.Duration;
             }
         }
         return noteIndices;

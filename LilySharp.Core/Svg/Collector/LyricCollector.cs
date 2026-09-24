@@ -27,9 +27,10 @@ namespace LilySharp.Core.Svg.Collector;
 /// LILYPOND-REF: lily/lyric-engraver.cc:60-88 Lyric_engraver::process_music
 /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:1-200
 ///
-/// Lyrics are associated with notes by position. Each syllable corresponds
-/// to one note in the melody. Hyphens (--) indicate word continuation,
-/// extenders (__) indicate melisma (single syllable over multiple notes).
+/// Lyrics are associated with notes by position. Each syllable takes one note the voice
+/// is not in a melisma at (a slur or tie holds the previous syllable — see
+/// LyricsCollector.BuildNoteIndices). Hyphens (--) indicate word continuation, extenders
+/// (__) draw the melisma's line and take no note, `_` / detached `~` take one note.
 /// </remarks>
 /// <summary>
 /// A lyric line's overflow: how many syllables ran past the notes, and where
@@ -41,6 +42,21 @@ public readonly record struct LyricOverflow(
 
 internal sealed class LyricCollector
 {
+    /// <summary>One note a syllable can take, and the last note of the melisma that runs on
+    /// from it (a slur or tie — the busy notes after it), or null when none does.</summary>
+    private sealed class Slot(int measureIndex, int itemIndex, LilySharp.Core.Semantics.Fraction timing)
+    {
+        public int MeasureIndex { get; } = measureIndex;
+        public int ItemIndex { get; } = itemIndex;
+        public LilySharp.Core.Semantics.Fraction Timing { get; } = timing;
+        public (int MeasureIndex, LilySharp.Core.Semantics.Fraction Timing)? HeldEnd { get; set; }
+
+        /// <summary>The last note a syllable on this slot holds: the melisma's end, else
+        /// the slot's own note.</summary>
+        public (int MeasureIndex, LilySharp.Core.Semantics.Fraction Timing) End
+            => HeldEnd ?? (MeasureIndex, Timing);
+    }
+
     /// <summary>
     /// Collects lyrics from a LyricsBlockSyntax.
     /// </summary>
@@ -62,7 +78,7 @@ internal sealed class LyricCollector
     /// <returns>List of LyricItem objects.</returns>
     public ImmutableArray<LyricItem> Collect(
         LyricsBlockSyntax lyricsBlock,
-        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
+        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy)> noteItemIndices,
         out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1,
@@ -73,7 +89,7 @@ internal sealed class LyricCollector
     /// whole block, or one part-major inner section's measures).</summary>
     public ImmutableArray<LyricItem> Collect(
         IEnumerable<SyntaxNode> syllableMeasures,
-        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
+        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy)> noteItemIndices,
         out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1,
@@ -94,15 +110,26 @@ internal sealed class LyricCollector
         // the count, so a leading "| " lines a verse up right after an r1 pickup; grouping
         // by change used to COLLAPSE that bar and shift the whole verse over. Syllables that
         // run PAST the last bar WRAP into the next stacked verse (1番, 2番, … in one block).
-        var measures = new List<List<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)>>();
+        // ⚠️ A BUSY note (inside a slur or at the end of a tie — LyricsCollector.
+        // BuildNoteIndices) is no slot: it joins the melisma of the slot before it, whose
+        // HeldEnd it becomes — across a bar line too, where a slur or tie crosses one.
+        var measures = new List<List<Slot>>();
+        Slot? lastSlot = null;
         foreach (var n in noteItemIndices)
         {
             int local = n.MeasureIndex - baseMeasureIndex;
             if (local < 0)
                 continue;
             while (measures.Count <= local)
-                measures.Add(new List<(int, int, LilySharp.Core.Semantics.Fraction)>());
-            measures[local].Add(n);
+                measures.Add(new List<Slot>());
+            if (n.Busy)
+            {
+                if (lastSlot is not null)
+                    lastSlot.HeldEnd = (n.MeasureIndex, n.Timing);
+                continue;
+            }
+            lastSlot = new Slot(n.MeasureIndex, n.ItemIndex, n.Timing);
+            measures[local].Add(lastSlot);
         }
         int measureCount = measures.Count;
         if (measureCount == 0)
@@ -130,10 +157,11 @@ internal sealed class LyricCollector
                 continue;
             }
 
-            // A melisma (~ / __ / _) holds the previous syllable over one more note
-            // in THIS bar — consume a note position without placing a syllable.
-            // The held syllable is LEFT-aligned on its column, and remembers the
-            // LAST note it holds (where its extender, if any, ends) — see
+            // A melisma marker (~ / _) holds the previous syllable over one more note
+            // in THIS bar — consume a note slot without placing a syllable. The held
+            // syllable is LEFT-aligned on its column, and remembers the LAST note it holds
+            // (where its extender, if any, ends): the consumed slot's own melisma end when
+            // a slur or tie runs on from it, else the slot's note — see
             // LyricItem.MelismaAlignLeft / MelismaEndMeasureIndex.
             if (isMelisma)
             {
@@ -144,7 +172,7 @@ internal sealed class LyricCollector
                     // recorded only when there is one.
                     if (lm < measureCount && pos < measures[lm].Count)
                     {
-                        var (heldMeasure, _, heldTiming) = measures[lm][pos];
+                        var (heldMeasure, heldTiming) = measures[lm][pos].End;
                         lyrics[lastPlaced] = lyrics[lastPlaced] with
                         {
                             MelismaAlignLeft = true,
@@ -167,19 +195,30 @@ internal sealed class LyricCollector
 
             if (lm < measureCount && pos < measures[lm].Count)
             {
-                var (measureIndex, itemIndex, timing) = measures[lm][pos];
+                var slot = measures[lm][pos];
                 lastPlaced = lyrics.Count;
-                lyrics.Add(new LyricItem(
+                var item = new LyricItem(
                     Text: text,
-                    MeasureIndex: measureIndex,
-                    ItemIndex: itemIndex,
+                    MeasureIndex: slot.MeasureIndex,
+                    ItemIndex: slot.ItemIndex,
                     ConnectorType: connectorType,
                     VoiceId: voiceId,
                     VerseNumber: verse,
-                    Timing: timing,
+                    Timing: slot.Timing,
                     SourcePosition: position,
                     HideStanza: hideStanza
-                ));
+                );
+                // A slur or tie runs on from this note: the syllable is sung over the
+                // whole melisma — LEFT-aligned (lily/lyric-engraver.cc:180-183, a
+                // melisma-busy voice takes lyricMelismaAlignment) and held to its last note.
+                if (slot.HeldEnd is { } held)
+                    item = item with
+                    {
+                        MelismaAlignLeft = true,
+                        MelismaEndMeasureIndex = held.MeasureIndex,
+                        MelismaEndTiming = held.Timing,
+                    };
+                lyrics.Add(item);
             }
             else
             {
@@ -266,7 +305,13 @@ internal sealed class LyricCollector
                     break;
                 case LyricSyllableReader.Marker.Extender:
                     SetPreviousConnector(result, LyricConnectorType.Extender);
-                    result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (with line)
+                    // `__` is LilyPond's extender: a LINE, and nothing else — it takes no
+                    // note (the melisma it draws over is the slur's or tie's, or `_`'s).
+                    // `_` is LilyPond's skip: it takes one note, holding the previous
+                    // syllable over it (and Lily# draws the line with it). Owner's
+                    // decision 2026-09-24 (session 569): `__` used to take a note too.
+                    if (text != "__")
+                        result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (with line)
                     break;
                 case LyricSyllableReader.Marker.Melisma:
                     result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (no line)

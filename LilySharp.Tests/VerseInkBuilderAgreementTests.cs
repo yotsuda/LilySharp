@@ -38,7 +38,7 @@ namespace LilySharp.Tests;
 /// This is the seam <c>LooseLineSpacer.RunSlots</c>' remark names in its ink paragraph
 /// — HANDOFF 5.2.1②'s "two spellings of one quantity", bound here BEFORE the
 /// unification's second stage moves any supplier. Both builders go through ONE X model
-/// (<c>CalculateSyllableLayout</c> + <c>ResolveOverlaps</c>) and ONE profile builder
+/// (<c>CalculateSyllableLayout</c>) and ONE profile builder
 /// (<c>MergeSyllableInto</c>), so what this net actually watches is the residue: the
 /// engraver instances differ (<c>ForGeometry</c> against the annotation pass's, whose
 /// <c>parentAlignmentEdge</c> comes from the live context), and a divergence there is a

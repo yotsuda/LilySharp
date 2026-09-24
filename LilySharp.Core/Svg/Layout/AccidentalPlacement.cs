@@ -98,8 +98,8 @@ internal sealed record AccidentalPlacementParameters
 ///
 /// IMPLEMENTED — skyline-based collision (accidental-placement.cc:338-390)
 /// IMPLEMENTED — octave-first priority sorting (accidental-placement.cc:164-184)
-/// IMPLEMENTED — stagger_apes (accidental-placement.cc:261-336):
-///   group accidentals by vertical proximity, reorder by group size, zigzag within size groups
+/// IMPLEMENTED — stagger_apes (accidental-placement.cc:192-235): apes by note name, sorted
+///   by size then top, zigzag within each size run (see StaggerEntries)
 /// IMPLEMENTED — same-note-name overstrike (accidental-placement.cc set_ape_skylines):
 ///   overstrike when same note name + same octave + same alteration
 /// NOTE — editorial (AccidentalSuggestion) accidentals do NOT pass through this
@@ -387,14 +387,13 @@ internal sealed class AccidentalPlacement
                 n.IsCourtesy));
         }
 
-        // Processing order = rightmost (closest to the notes) placed FIRST. Naturals sort
-        // rightmost (priority 0), so they are never mistaken for cancellation naturals; among
-        // equal alterations the HIGHER accidental is placed first, so the pair interlocks into
-        // LilyPond's C-shape (the lower one, placed to its left, tucks under). Processing the
-        // lower one first instead leaves the skylines box-far apart — the whole point of the
-        // real-outline nesting. LILYPOND-REF: accidental-placement.cc:130-146 ape_priority /
-        // ape_less (higher skyline is placed nearer the notes); :164-181 acc_less (naturals
-        // largest, i.e. rightmost).
+        // Processing order = rightmost (closest to the notes) placed FIRST. This sort decides
+        // only the order WITHIN one ape (one note name): naturals first, then the higher
+        // octave — LILYPOND-REF: accidental-placement.cc:164-181 acc_less (naturals largest),
+        // walked from its end by set_ape_skylines (:268). The order ACROSS apes is
+        // StaggerEntries' (ape_less + stagger_apes): until 2026-09-24 this sort ran across
+        // apes too, and put a natural nearest the notes where LilyPond puts the higher
+        // accidental (session 569).
         entries.Sort((a, b) =>
         {
             if (a.Priority != b.Priority)
@@ -402,10 +401,10 @@ internal sealed class AccidentalPlacement
             return b.StaffPosition.CompareTo(a.StaffPosition);
         });
 
-        // LILYPOND-REF: accidental-placement.cc:192-235 stagger_apes
-        // Reorder entries: group by vertical proximity, sort groups by size (larger first),
-        // zigzag within same-size groups. This ensures dense clusters stay close to noteheads.
-        if (entries.Count > 2)
+        // LILYPOND-REF: accidental-placement.cc:192-235 stagger_apes — the placing order is
+        // LilyPond's: apes by note name, the larger first, each size run zigzagged from its
+        // highest (StaggerEntries).
+        if (entries.Count > 1)
             entries = StaggerEntries(entries);
 
         // LILYPOND-REF: accidental-placement.cc:375-385 build_heads_skyline — the reference
@@ -575,100 +574,78 @@ internal sealed class AccidentalPlacement
     }
 
     /// <summary>
-    /// Reorders accidental entries using the stagger algorithm.
-    /// Groups accidentals by vertical proximity, orders groups by size (larger first),
-    /// and applies zigzag within same-size groups.
+    /// Puts the accidentals in the order <c>position_apes</c> places them — nearest the notes
+    /// first: grouped into APES by note name, the apes sorted and staggered as LilyPond does.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/accidental-placement.cc:192-235 stagger_apes
-    ///
-    /// The algorithm ensures that:
-    /// - Clusters of close accidentals (e.g., seconds in a chord) are placed as one group
-    /// - Larger groups are placed first (rightmost, closest to noteheads)
-    /// - Within same-size groups, zigzag alternation avoids linear alignment
+    /// LILYPOND-REF: lily/accidental-placement.cc:55-81 add_accidental — an ape is keyed on the
+    ///   pitch's NOTENAME (the default accidentalGrouping), so every octave of one letter is one
+    ///   ape, placed as one column.
+    /// LILYPOND-REF: lily/accidental-placement.cc:129-146 ape_priority / ape_less — the ape with
+    ///   MORE accidentals first, then the one whose ink TOP is lower ("right is up because
+    ///   we're horizontal").
+    /// LILYPOND-REF: lily/accidental-placement.cc:192-235 stagger_apes — within each run of
+    ///   one size, taken alternately from the back (the highest) and the front (the lowest),
+    ///   then the whole list reversed; lily/accidental-placement.cc:407 position_apes iterates
+    ///   it from the END, so the placing order is the zigzag itself: highest, lowest, next
+    ///   highest …
+    /// <para>
+    /// ⚠️ IT WAS AN INVENTION until 2026-09-24 (session 569, ledger
+    /// <c>chord.accidental.flat-stagger-span</c>): accidentals were grouped by VERTICAL
+    /// PROXIMITY (within one staff space), which accidental-placement.cc does not contain, so a
+    /// chord whose accidentals all stood within reach of each other — <c>ees'' ges'' bes''</c> —
+    /// was one group, kept in pitch order, and stepped every flat a full column left of the one
+    /// before. LilyPond places bes'', then ees'' (which tucks under it), then ges''.
+    /// </para>
+    /// <para>
+    /// The members of an ape keep their incoming order (the caller's sort: octave-descending
+    /// within an alteration), and <see cref="CalculateMultipleAccidentals"/>' column sharing
+    /// seats them — the same seat LilyPond's <c>set_ape_skylines</c> gives octaves of one ape.
+    /// </para>
     /// </remarks>
     private static List<PlacementEntry> StaggerEntries(List<PlacementEntry> entries)
     {
-        // Step 1: Group entries by vertical proximity
-        // Two entries are in the same group if their Y extents overlap or are within 1 staff space
-        const double proximityThreshold = 1.0; // staff spaces
-
-        var groups = new List<List<PlacementEntry>>();
-        var currentGroup = new List<PlacementEntry> { entries[0] };
-
-        for (int i = 1; i < entries.Count; i++)
+        var apes = new List<(int NoteName, List<PlacementEntry> Members, double Top)>();
+        foreach (var entry in entries)
         {
-            // Check if this entry is close to any entry in the current group
-            bool closeToGroup = false;
-            foreach (var member in currentGroup)
-            {
-                if (entries[i].YBottom - proximityThreshold <= member.YTop &&
-                    member.YBottom - proximityThreshold <= entries[i].YTop)
-                {
-                    closeToGroup = true;
-                    break;
-                }
-            }
-
-            if (closeToGroup)
-            {
-                currentGroup.Add(entries[i]);
-            }
+            int noteName = ((entry.StaffPosition % 7) + 7) % 7;
+            int k = apes.FindIndex(a => a.NoteName == noteName);
+            if (k < 0)
+                apes.Add((noteName, new List<PlacementEntry> { entry }, entry.YTop));
             else
             {
-                groups.Add(currentGroup);
-                currentGroup = new List<PlacementEntry> { entries[i] };
+                var ape = apes[k];
+                ape.Members.Add(entry);
+                apes[k] = (ape.NoteName, ape.Members, Math.Max(ape.Top, entry.YTop));
             }
         }
-        groups.Add(currentGroup);
+        if (apes.Count < 2)
+            return entries;
 
-        if (groups.Count <= 1)
-            return entries; // Single group, no staggering needed
-
-        // Step 2: Sort groups by size descending (larger groups first = closer to noteheads)
-        // Within same size, maintain original order
-        groups = groups
-            .Select((g, idx) => (Group: g, OriginalIndex: idx))
-            .OrderByDescending(x => x.Group.Count)
-            .ThenBy(x => x.OriginalIndex)
-            .Select(x => x.Group)
+        // ape_less: more grobs first, then the lower top first.
+        var sorted = apes
+            .OrderByDescending(a => a.Members.Count)
+            .ThenBy(a => a.Top)
             .ToList();
 
-        // Step 3: Zigzag within same-size categories
-        var result = new List<PlacementEntry>();
-        int gi = 0;
-        while (gi < groups.Count)
+        var result = new List<PlacementEntry>(entries.Count);
+        for (int i = 0; i < sorted.Count;)
         {
-            int currentSize = groups[gi].Count;
-            var sameSize = new List<List<PlacementEntry>>();
-
-            while (gi < groups.Count && groups[gi].Count == currentSize)
-            {
-                sameSize.Add(groups[gi]);
-                gi++;
-            }
-
-            // Zigzag: alternate between back and front of same-size groups
+            int size = sorted[i].Members.Count;
+            int end = i;
+            while (end < sorted.Count && sorted[end].Members.Count == size)
+                end++;
+            // stagger_apes' zigzag over this run: back (highest), front (lowest), back, …
+            int front = i, back = end - 1;
             bool parity = true;
-            int front = 0;
-            int back = sameSize.Count - 1;
-
             while (front <= back)
             {
-                if (parity)
-                {
-                    result.AddRange(sameSize[back]);
-                    back--;
-                }
-                else
-                {
-                    result.AddRange(sameSize[front]);
-                    front++;
-                }
+                var ape = parity ? sorted[back--] : sorted[front++];
+                result.AddRange(ape.Members);
                 parity = !parity;
             }
+            i = end;
         }
-
         return result;
     }
 

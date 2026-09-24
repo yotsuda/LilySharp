@@ -14,8 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using LilySharp.Core.Syntax;
-
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
@@ -38,9 +36,19 @@ namespace LilySharp.Core.Semantics;
 /// that arm — so the citation carried the defect across the output boundary, twice.
 /// </para>
 /// <para>
-/// Folding them was not tidiness: the label default became SETTABLE on the declaration
-/// (<c>section ~A { … }</c>, owner's decision 2026-08-31), and a rule with eleven homes
-/// cannot gain a term. With one home it is one line.
+/// Folding them was not tidiness: the fold is what let the rule gain a term — the
+/// declaration's own label default (<c>section ~A { … }</c>, 2026-08-31) — and lose it
+/// again in one line.
+/// </para>
+/// <para>
+/// ⚠️ THE DECLARATION HAS NO SAY (owner's decision, 2026-09-24). From 2026-08-31 a
+/// <c>section ~A</c> declaration flipped the default and a reference's <c>~</c> then SHOWED
+/// the label, so the rule was an equality and no form line could be read on its own. It went
+/// because the property had many homes in part-major layout — <c>part p1 { section ~A }</c>
+/// beside <c>part p2 { section A }</c> is one section declared twice, once hidden — and the
+/// author's books never used the flip (342 tilde declarations, every one referenced once,
+/// none by a showing <c>~</c>). A declaration's tilde is now LYS0033 and the label is a
+/// property of the PLAY alone.
 /// </para>
 /// </remarks>
 internal static class SectionLabelRule
@@ -48,45 +56,29 @@ internal static class SectionLabelRule
     /// <summary>
     /// The label this play engraves, or null for none.
     /// </summary>
-    /// <param name="declaration">
-    /// The section being played, or null when the caller cannot resolve it. A null
-    /// declaration reads as the ordinary default (labels shown), which is what every caller
-    /// did before the declaration had a say.
-    /// </param>
     /// <param name="referenceIsSilent">True when the REFERENCE carries <c>~</c>.</param>
     /// <param name="displayLabel">The occurrence's quoted label, or null for the name.</param>
     /// <param name="sectionName">The section's own name — the label when none is quoted.</param>
     public static string? LabelFor(
-        SectionDeclarationSyntax? declaration,
         bool referenceIsSilent,
         string? displayLabel,
         string sectionName)
-        => IsShown(declaration, referenceIsSilent)
+        => IsShown(referenceIsSilent)
             ? Text(displayLabel, sectionName)
             : null;
 
     /// <summary>
-    /// Whether this play shows a label at all: the declaration sets the DEFAULT and the
-    /// reference's <c>~</c> asks for the other one.
+    /// Whether this play shows a label at all: a <c>~</c> on the reference hides it.
     /// </summary>
-    /// <remarks>
-    /// The whole rule is one equality, and it is worth reading as one. With an ordinary
-    /// declaration (default = shown) a tilde hides, exactly as it always did; with
-    /// <c>section ~A</c> (default = hidden) a tilde shows. Writing it as
-    /// <c>hidesByDefault == referenceIsSilent</c> rather than as two branches is deliberate:
-    /// there is ONE question here, not two cases, and the two-branch spelling is what would
-    /// invite a third.
-    /// </remarks>
-    public static bool IsShown(SectionDeclarationSyntax? declaration, bool referenceIsSilent)
-        => (declaration?.LabelHiddenByDefault ?? false) == referenceIsSilent;
+    public static bool IsShown(bool referenceIsSilent) => !referenceIsSilent;
 
     /// <summary>
     /// The label TEXT of a shown play: the quoted label wins over the section name, and an
     /// EMPTY quoted label suppresses the mark.
     /// </summary>
     /// <remarks>
-    /// ⚠️ The empty string is the THIRD way to say "no label" (the others being the two
-    /// tildes), and it stays: it is the occurrence-level spelling, needs no declaration, and
+    /// ⚠️ The empty string is the SECOND way to say "no label" (the other being the
+    /// reference's tilde), and it stays: it is the occurrence-level spelling, needs no declaration, and
     /// books in the tree use it. It is applied after <see cref="IsShown"/> rather than folded
     /// into it, so that "does this play show a label" and "what does it say" remain separable
     /// — the diagnostic for a label that will not be printed (LYS0012) has to ask the first

@@ -217,11 +217,21 @@ public class AccidentalPlacementTests
         Assert.Equal(0.1, p.HorizonPadding);
     }
 
+    /// <summary>
+    /// Two accidentals on two NOTE NAMES are two apes, and the higher one is placed nearest the
+    /// notes — whatever the alterations. LilyPond's "naturals are the largest" (acc_less) orders
+    /// accidentals WITHIN one ape (one note name), not across apes.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED on 2.26.0 (LilySharp-Lab sessions/p569/acc-nat-sharp.ly, <c>&lt;b'! dis''&gt;</c>):
+    /// the d'' sharp stands at 8.760 and the b' natural at 7.885, left of it. Until 2026-09-24
+    /// this test asserted the reverse — the natural nearest — which was Lily#'s cross-ape use of
+    /// acc_less (session 569).
+    /// </remarks>
     [Fact]
-    public void AlterationPriority_NaturalClosestToNote()
+    public void TwoNoteNames_TheHigherAccidentalIsPlacedNearest_WhateverTheAlteration()
     {
         var placement = new AccidentalPlacement();
-        // Natural and sharp at same Y-overlap distance → natural should be closer to notes
         var notes = ImmutableArray.Create(
             new ChordNoteInfo(0, "natural", false),
             new ChordNoteInfo(2, "sharp", false)
@@ -232,9 +242,8 @@ public class AccidentalPlacementTests
         Assert.Equal(2, layouts.Length);
         var naturalLayout = layouts.First(l => l.Accidental == "natural");
         var sharpLayout = layouts.First(l => l.Accidental == "sharp");
-        // Natural should be closer to note (less negative XOffset)
-        Assert.True(naturalLayout.XOffset > sharpLayout.XOffset,
-            $"Natural ({naturalLayout.XOffset:F3}) should be closer to notes than sharp ({sharpLayout.XOffset:F3})");
+        Assert.True(sharpLayout.XOffset > naturalLayout.XOffset,
+            $"the higher sharp ({sharpLayout.XOffset:F3}) should stand nearer the notes than the natural ({naturalLayout.XOffset:F3})");
     }
 
     [Fact]

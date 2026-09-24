@@ -115,20 +115,49 @@ internal static class FiguredBassEngraver
     internal static double FigureInkTop(Rendering.ScoreTextMetrics fonts, string topFigureText)
         => FiguredBassGlyphRun.InkTop(fonts, topFigureText);
 
-    // LILYSHARP-OWN: the WIDTH of the box a figure offers the skyline. LilyPond has no such
-    // number — a BassFigure's X-extent is its stencil's, i.e. the same run
-    // FiguredBassGlyphRun.Width now measures (1.6 design-ss per digit at this em = 0.898 ss,
-    // where this box is 0.8). ⚠️ THE VERTICAL HALF OF THIS BOX WENT LITERAL on 2026-07-30 and
-    // the horizontal half did not, deliberately: the width moves the page's system spacing
-    // through LayoutEngine's inter-system seed, and no figured-bass point observes X at all.
-    // It closes with the pair that opens X — the same shape as every other box-vs-ink debt.
-    // ⚠️ IT GAINED A CONSUMER with the stacking port: BassFigureAlignment.RowOffsets takes a
-    // SKYLINE distance between rows, so this width decides which columns of one row see which
-    // columns of the next. It is inert for the ledger's texture (the minimum-distance branch
-    // wins for digits whatever the overlap) and it is not inert in general — a row whose only
-    // tall figure is far to the left of the next row's would step by the minimum here and by
-    // the ink in LilyPond, or the reverse.
-    internal const double MinFigureBoxWidth = 0.8;
+    /// <summary>
+    /// The X span one figure's ink takes: from the note's anchor rightward by the run's own
+    /// advance width — where the figure is drawn (left-aligned on the head,
+    /// <c>SharedRenderer.DrawFiguredBass</c>) and what a BassFigure's X-extent is.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:352-356 BassFigure — <c>ly:text-interface::print</c>
+    ///   with no X-offset and no X-extent of its own, so the grob sits at its column's X and its
+    ///   extent is the text stencil's, which is the advance run.
+    /// <para>
+    /// MEASURED on 2.26.0 (LilySharp-Lab sessions/p569/figbass-xext.ly, -dbackend=null): every
+    /// one-digit figure reports X-extent (0 . 0.921869) from the NoteHead's left, and
+    /// <see cref="FiguredBassGlyphRun.Width"/> answers 0.921869 for each digit.
+    /// </para>
+    /// <para>
+    /// ⚠️ IT WAS A LILYSHARP-OWN 0.8-WIDE BOX CENTRED ON THE ANCHOR until 2026-09-24 (HANDOFF §2
+    /// R10⒠): 0.4 left of the drawn ink, 0.52 short of its right edge — and the inter-system
+    /// seed read the same constant as a HALF-width, 1.6 wide. All four readers (the row stack,
+    /// the drop, the staff reservation, the inter-system seed) now ask this.
+    /// </para>
+    /// <para>
+    /// ⚠️ A COMPOUND FIGURE IS Lily#'s DRAWN RUN, not LilyPond's: LilyPond puts an alteration on
+    /// the digit's LEFT (<c>6♯</c> is (−0.8146 . 0.9219)) and centres a lone alteration on a "1"
+    /// (scm/translation-functions.scm:423-455), where <c>FiguredBassFigure.DisplayText</c>
+    /// spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
+    /// follows what is drawn, so it and the ink cannot disagree.
+    /// </para>
+    /// </remarks>
+    internal static (double Left, double Right) FigureXExtent(
+        Rendering.ScoreTextMetrics fonts, double x, string text)
+        => (x, x + FiguredBassGlyphRun.Width(fonts, text));
+
+    /// <summary>The widest <see cref="FigureXExtent"/> of a column's rows — what the column
+    /// offers as ONE box (the staff reservation, the inter-system seed).</summary>
+    internal static (double Left, double Right) ColumnXExtent(
+        Rendering.ScoreTextMetrics fonts, double x, ImmutableArray<string> texts)
+    {
+        double right = x;
+        if (!texts.IsDefault)
+            foreach (var t in texts)
+                right = System.Math.Max(right, FigureXExtent(fonts, x, t).Right);
+        return (x, right);
+    }
     // The grob's own padding and the distance→drop arithmetic live in SkylineDrop; the padding
     // is passed IN (EngravingDefaults.BassFigurePadding), so the figure row spends its own
     // declaration and not the lyric line's.
@@ -139,26 +168,15 @@ internal static class FiguredBassEngraver
     /// <remarks>
     /// ⚠️ ONE HOME, because the same box is asked for twice: by the placement
     /// (<see cref="ApplySkylineDrop"/>) and by the reservation
-    /// (<see cref="RowInkBelowStaff"/>). ⚠️ AND THERE IS A THIRD SPELLING that this does NOT
-    /// yet cover: <c>LayoutEngine</c>'s inter-SYSTEM seed uses <see cref="MinFigureBoxWidth"/>
-    /// as a HALF-width where these two use it as a full one — a box 1.6 wide against a glyph
-    /// run of 0.898.
-    /// <para>
-    /// ⚠️ ITS "changing it moves the page's system spacing" IS FALSIFIED, and by measurement
-    /// rather than by reading (2026-07-30, session 46): halving that seed to the same
-    /// full-width these two use leaves ALL 3566 tests and all 237 ledger points untouched —
-    /// including figbass.page.deep.systems-on-first-page, the first point that DOES watch a
-    /// figured-bass page's system spacing and which stands at -2 for a reason this width is
-    /// not. So the seed is inert on everything committed, and the confusion is a spelling
-    /// debt, not a live defect. It closes with the X pair (HANDOFF's figured-bass ⒝), because
-    /// the literal answer is neither number: LilyPond's BassFigure has its stencil's X-extent,
-    /// which is <see cref="FiguredBassGlyphRun.Width"/>, left-aligned in its line.
-    /// </para>
+    /// (<see cref="RowInkBelowStaff"/>). The X span is the figure's own
+    /// (<see cref="FigureXExtent"/>).
     /// </remarks>
     internal static VerticalSkyline ColumnUpSkyline(Rendering.ScoreTextMetrics fonts, double x, string topFigureText)
-        => VerticalSkyline.FromBox(
-            x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
+    {
+        var (left, right) = FigureXExtent(fonts, x, topFigureText);
+        return VerticalSkyline.FromBox(left, right,
             0, FigureInkTop(fonts, topFigureText), VerticalDirection.Up);
+    }
 
     /// <summary>
     /// The down-skyline one figure offers the row BELOW it, about its own baseline — the
@@ -172,9 +190,11 @@ internal static class FiguredBassEngraver
     /// <see cref="FiguredBassGlyphRun.InkBottom"/>).
     /// </remarks>
     internal static VerticalSkyline ColumnDownSkyline(Rendering.ScoreTextMetrics fonts, double x, string figureText)
-        => VerticalSkyline.FromBox(
-            x - MinFigureBoxWidth / 2.0, x + MinFigureBoxWidth / 2.0,
+    {
+        var (left, right) = FigureXExtent(fonts, x, figureText);
+        return VerticalSkyline.FromBox(left, right,
             FiguredBassGlyphRun.InkBottom(fonts, figureText), 0, VerticalDirection.Down);
+    }
 
     /// <summary>
     /// The ink a staff's figure row occupies, as a DOWN skyline about that staff's MIDDLE
@@ -262,8 +282,9 @@ internal static class FiguredBassEngraver
         foreach (var col in columns)
         {
             string topText = col.Texts.Length > 0 ? col.Texts[0] : string.Empty;
+            var (left, right) = ColumnXExtent(fonts, col.X, col.Texts);
             ink.MergeBox(
-                col.X - MinFigureBoxWidth / 2.0, col.X + MinFigureBoxWidth / 2.0,
+                left, right,
                 placedYUp - BassFigureAlignment.ColumnDepth(fonts, rowOffsets, col.Texts),
                 placedYUp + FigureInkTop(fonts, topText));
         }

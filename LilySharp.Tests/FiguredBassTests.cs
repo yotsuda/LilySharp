@@ -477,4 +477,53 @@ public class FiguredBassTests
             "the figures must drop below the rest pushed out of the staff: "
             + $"printed rests {moved.Baseline:F6}, spacer control {spacer.Baseline:F6}");
     }
+
+    // --- the X a figure offers its skylines (HANDOFF §2 R10⒠, session 569) ---
+
+    /// <summary>
+    /// A one-digit figure's skyline box runs from the note's anchor rightward by the digit's
+    /// advance — LilyPond's BassFigure X-extent, (0 . 0.921869) from the NoteHead's left for
+    /// every digit (MEASURED 2.26.0, LilySharp-Lab sessions/p569/figbass-xext.ly). It was a
+    /// 0.8-wide box CENTRED on the anchor: 0.4 left of the ink and short of its right edge.
+    /// </summary>
+    [Theory]
+    [InlineData("1")]
+    [InlineData("5")]
+    [InlineData("7")]
+    public void AFiguresSkylineBox_IsItsInk_FromTheAnchorRightward(string digit)
+    {
+        const double lpWidth = 0.9218692913385826;
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        const double x = 10.0;
+
+        var (left, right) = FiguredBassEngraver.FigureXExtent(fonts, x, digit);
+        Assert.Equal(x, left, 6);
+        Assert.Equal(x + lpWidth, right, 6);
+
+        var up = FiguredBassEngraver.ColumnUpSkyline(fonts, x, digit);
+        var down = FiguredBassEngraver.ColumnDownSkyline(fonts, x, digit);
+        foreach (var inside in new[] { x + 0.01, x + lpWidth - 0.01 })
+        {
+            Assert.False(double.IsInfinity(up.Height(inside)), $"up box must cover {inside}");
+            Assert.False(double.IsInfinity(down.Height(inside)), $"down box must cover {inside}");
+        }
+        foreach (var outside in new[] { x - 0.05, x + lpWidth + 0.05 })
+        {
+            Assert.True(double.IsNegativeInfinity(up.Height(outside)), $"up box must not reach {outside}");
+            Assert.True(double.IsPositiveInfinity(down.Height(outside)), $"down box must not reach {outside}");
+        }
+    }
+
+    /// <summary>A column offered as one box (the staff reservation, the inter-system seed)
+    /// is as wide as its widest row.</summary>
+    [Fact]
+    public void AColumnBox_IsAsWideAsItsWidestRow()
+    {
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        var texts = ImmutableArray.Create("6", "4♯", "3");
+        var (left, right) = FiguredBassEngraver.ColumnXExtent(fonts, 2.0, texts);
+        Assert.Equal(2.0, left, 6);
+        Assert.Equal(FiguredBassEngraver.FigureXExtent(fonts, 2.0, "4♯").Right, right, 6);
+        Assert.True(right > FiguredBassEngraver.FigureXExtent(fonts, 2.0, "6").Right);
+    }
 }

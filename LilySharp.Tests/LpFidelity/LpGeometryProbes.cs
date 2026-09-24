@@ -192,6 +192,9 @@ internal static class LpGeometryProbes
     private static readonly string CFB = Score("c4 d e f | <ees ges>4 a b c |", "CFB");
     // LilyPond twin: c'4 d' e' f' | <des'' fes''>4 a' b' c''  (Db5/Fb5, stems down) — mirror of CFB
     private static readonly string CFA = Score("c4 d e f | <des' fes'>4 a b c |", "CFA");
+    // LilyPond twin: c'4 d' e' f' | <c'' ees'' ges'' bes''>4 a' b' c''  — three flats on three
+    // note names, three one-grob APES whose order is stagger_apes' alone (session 569).
+    private static readonly string CF3 = Score("c4 d e f | <c' ees' ges' bes'>4 a b c |", "CF3");
 
     // --- two voices on ONE column: the accidental packing and the collision it stands on ---
     // Twins of probes/cross-voice-accidental.ly XCA..XCH. The rest of each second measure is
@@ -1155,12 +1158,12 @@ internal static class LpGeometryProbes
 
     /// <summary>A wide syllable held over two columns, then a word — the span book
     /// (mirror of LMS): the reservation binds on both engines and the two models fork.</summary>
-    private static readonly string LMS = MelismaSpanScore("LMS", "mumum ~ ~ mum |");
+    private static readonly string LMS = MelismaSpanScore("LMS", "mumum mum |");
 
     /// <summary>The same span, too narrow to bind — the no-bind control (mirror of LMN):
     /// need ~2.1 under the natural 9.007, so the lyric terms (and the slur) must leave
     /// no trace.</summary>
-    private static readonly string LMN = MelismaSpanScore("LMN", "u ~ ~ u |");
+    private static readonly string LMN = MelismaSpanScore("LMN", "u u |");
 
     /// <summary>
     /// TWO STAVES over several pages — the mirror of books JSS (justified) and JSSC
@@ -13305,6 +13308,10 @@ internal static class LpGeometryProbes
         new("chord.accidental.sharp-column-gap-above", CSA, g => g.AccidentalColumnGap(MidLineBarline)),
         new("chord.accidental.flat-column-gap-below", CFB, g => g.AccidentalColumnGap(MidLineBarline)),
         new("chord.accidental.flat-column-gap-above", CFA, g => g.AccidentalColumnGap(MidLineBarline)),
+        // Three accidentals on three note names: the ORDER the packer places them in is
+        // stagger_apes' (highest, lowest, next highest — the lowest tucking under the highest),
+        // so the column's whole span is what the order decides.
+        new("chord.accidental.flat-stagger-span", CF3, g => g.AccidentalColumnSpan(MidLineBarline)),
 
         // The same stacking reached through TWO VOICES rather than one chord, plus the
         // collision the packing stands on. LilyPond has one AccidentalPlacement per staff
@@ -15561,7 +15568,7 @@ internal static class LpGeometryProbes
         new("figbass.alone.staff-to-baseline", FBA,
             g => g.FigureBaselineBelowStaff(staffIndex: 0, staffCount: 1), RaggedBottomPaper),
         // ...and the X the whole figured-bass block has been missing. Three remarks in three
-        // files (SharedRenderer.DrawFiguredBass, FiguredBassEngraver.MinFigureBoxWidth,
+        // files (SharedRenderer.DrawFiguredBass, FiguredBassEngraver's box width — FigureXExtent since 2026-09-24,
         // FiguredBassGlyphRun) each say "no figured-bass point measures X yet" and defer to
         // the pair that would; this is that point, and it needed no new book — only NoteHead
         // added to the probe's dump, which showed the figure's box left sitting ON its

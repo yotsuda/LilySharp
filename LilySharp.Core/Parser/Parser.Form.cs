@@ -172,13 +172,8 @@ internal sealed partial class Parser
         var marks = ParsePhraseOctaveMarks();
 
         // '~B "alt"' — a label parked on a tilde reference. Kept, never dropped.
-        // ⚠️ THE WARNING THAT USED TO LIVE HERE (LYS0012) MOVED OUT on 2026-08-31, and it had
-        // to: it said "hidden by '~'", and since a section can declare its own label default
-        // (`section ~A { … }`) whether THIS label prints depends on the DECLARATION — which a
-        // parser cannot see. Asking the question here would have shipped an instrument that
-        // says "hidden" over a label the page prints. It is FormDeclarationValidator's now,
-        // where the declarations are, and it asks the real question (is this play shown?)
-        // instead of the surface one (is there a tilde?).
+        // Its warning (LYS0012) is FormDeclarationValidator's, which asks the label rule
+        // (is this play shown?) rather than the surface (is there a tilde?).
         SyntaxToken? label = Check(SyntaxKind.StringLiteral) ? Advance() : null;
 
         return new SilentSectionReferenceGreen(tilde, name, marks, label);

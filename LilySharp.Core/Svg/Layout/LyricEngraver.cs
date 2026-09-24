@@ -79,9 +79,6 @@ internal sealed record LyricParameters
     /// </summary>
     public double BasicDistanceBelowBottomLine => RelatedStaffBasicDistance - StaffHalf;
 
-    /// <summary>Minimum distance between syllables in staff spaces.</summary>
-    public double MinSyllableSpacing { get; init; } = 0.5;
-
     /// <summary>Padding between syllable and hyphen (in staff spaces).</summary>
     public double HyphenPadding { get; init; } = 0.2;
 
@@ -490,9 +487,6 @@ internal sealed class LyricEngraver
                     verseLayouts.Add(layout with { SourceIndex = srcIndex });
             }
 
-            // Apply collision avoidance for this verse
-            // LILYPOND-REF: lily/lyric-engraver.cc:120-140 collision handling
-            verseLayouts = ResolveOverlaps(verseLayouts);
             layouts.AddRange(verseLayouts);
         }
 
@@ -1286,8 +1280,7 @@ internal sealed class LyricEngraver
     /// </para>
     /// <para>
     /// ⚠️ IT GOES THROUGH <c>CalculateSyllableLayout</c> (either overload — the list one
-    /// delegates to the single-measure one) AND
-    /// <see cref="ResolveOverlaps"/> rather than re-deriving X, so the ink the room is
+    /// delegates to the single-measure one) rather than re-deriving X, so the ink the room is
     /// measured from is the ink that gets drawn. A second X model here would be
     /// HANDOFF 5.2.1② one more time, in the place that just cost this island a session.
     /// </para>
@@ -1327,8 +1320,8 @@ internal sealed class LyricEngraver
     /// consumers, which is the shape HANDOFF 5.2.1② asks for.
     /// </para>
     /// <para>
-    /// ⚠️ ONE X MODEL. It goes through the same <c>CalculateSyllableLayout</c> and
-    /// <see cref="ResolveOverlaps"/> as every other reading of syllable ink, for the reason
+    /// ⚠️ ONE X MODEL. It goes through the same <c>CalculateSyllableLayout</c> as every other
+    /// reading of syllable ink, for the reason
     /// spelled out on <see cref="NoteBoundBlockSkylines"/>: a second X model here would be
     /// HANDOFF 5.2.1② in the place that has already cost this island a session.
     /// </para>
@@ -1560,7 +1553,6 @@ internal sealed class LyricEngraver
                 if (lay != null) laid.Add(lay);
             }
             if (laid.Count == 0) continue;
-            laid = ResolveOverlaps(laid);
 
             var up = new VerticalSkyline(VerticalDirection.Up);
             var down = new VerticalSkyline(VerticalDirection.Down);
@@ -1806,69 +1798,6 @@ internal sealed class LyricEngraver
     /// </summary>
     internal static VerticalSkyline SyllableDownBox(Rendering.ScoreTextMetrics fonts, LyricLayout lay)
         => SyllableProfile(fonts, lay, VerticalDirection.Down);
-
-    /// <summary>
-    /// Resolves overlapping syllables by shifting them apart.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/lyric-engraver.cc:150-180 horizontal spacing
-    ///
-    /// Strategy: Limit shifts to prevent lyrics from drifting too far from their notes.
-    /// If a large shift would be needed, reduce the effective width estimate instead.
-    /// </remarks>
-    private List<LyricLayout> ResolveOverlaps(List<LyricLayout> layouts)
-    {
-        if (layouts.Count < 2)
-            return layouts;
-
-        // Maximum shift allowed (prevents lyrics from drifting too far from notes)
-        const double maxShift = 2.0;
-
-        var result = new List<LyricLayout>(layouts.Count);
-
-        for (int i = 0; i < layouts.Count; i++)
-        {
-            var current = layouts[i];
-
-            if (i == 0)
-            {
-                result.Add(current);
-                continue;
-            }
-
-            var previous = result[i - 1];
-
-            // A new SYSTEM starts here (X rewinds to the left margin): the
-            // previous syllable belongs to the prior line and cannot collide —
-            // treating the rewind as an overlap used to shove the new line's
-            // first syllable right by maxShift, into its neighbour.
-            if (current.X < previous.X)
-            {
-                result.Add(current);
-                continue;
-            }
-
-            // Use reduced width for collision detection (allows some overlap)
-            // This keeps lyrics closer to their notes while still readable
-            double effectiveWidth = 0.6; // Use a smaller effective width for collision
-
-            double prevRight = previous.X + effectiveWidth;
-            double currLeft = current.X - effectiveWidth;
-            double gap = currLeft - prevRight;
-
-            // If there's not enough gap, shift current syllable to the right
-            if (gap < _params.MinSyllableSpacing)
-            {
-                double neededShift = _params.MinSyllableSpacing - gap;
-                double shift = Math.Min(neededShift, maxShift);
-                current = current with { X = current.X + shift };
-            }
-
-            result.Add(current);
-        }
-
-        return result;
-    }
 
     /// <summary>
     /// Calculate layout for a single syllable.

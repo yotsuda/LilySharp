@@ -36,11 +36,11 @@ part bassline {
   // One section per ending, because a volta takes one section: LilyPond's first bracket
   // holds two bars AND the whole Intro2 strain (Automatic.ly:87-91), so the Intro2 letter
   // is a mark inside this ending rather than a section of its own.
-  section ~Intro2_1 {
+  section Intro2_1 {
     des,1 | r1 | break
     des,4@mark("Intro2") r8. c,16 c,8 c, r4 | bes,,4\4 r8. ees,16\3 ees,8\3 ees,\3 ees,,4 | f,,4\5 r8. c,16 c,8 c, r bes,,\4~ | bes,,2\4 r | break
   }
-  section ~Intro2_2 {
+  section Intro2_2 {
     des,4 r8. des,16 des,8 des, r4 | c, r8. c,,16 c,,8 c,, ees,, e,, | break
   }
   section C3 {
@@ -61,7 +61,7 @@ part bassline {
   }
 }
 
-form main { Intro A1 |: A2 B C1 C2 [1. Intro2_1] :| [2. Intro2_2] C3 C4 C5 C6 }
+form main { Intro A1 |: A2 B C1 C2 [1. ~Intro2_1] :| [2. ~Intro2_2] C3 C4 C5 C6 }
 
 score main {
   staff bassline

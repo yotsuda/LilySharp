@@ -2591,7 +2591,7 @@ public class LilyPondExporterTests
     {
         var ly = Export(LyricBook(
             "c'4 d' e' f' | g'2 g' |",
-            "lyrics words sings melody { Twin- kle twin- kle | star __ | }",
+            "lyrics words sings melody { Twin- kle twin- kle | star _ | }",
             "staff melody  lyrics words sings melody"));
         Assert.Contains("Twin4 -- kle4 twin4 -- kle4 |", ly);
         // `star` holds over the second half: one whole-bar syllable, then the extender —

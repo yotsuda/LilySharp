@@ -44,8 +44,8 @@ namespace LilySharp.Core.Svg.Layout;
 ///   members ("a vertical baseline to align successive dynamic grobs"); DynamicText
 ///   hangs <see cref="DynamicEngraver.TextOffsetInSpanner"/> below the spanner
 ///   (define-grobs.scm:1450 Y-offset, "center on an 'm'") and the Hairpin centres on
-///   it (self-alignment-Y . CENTER), which is why the text spends −0.6 inside the
-///   group profile and the wedge spends nothing.
+///   it (self-alignment-Y . CENTER), which is why the text spends −0.6 (scaled with the
+///   letters' size) inside the group profile and the wedge spends nothing.
 /// ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ///   grouping does not reproduce, not Lily#-own quantities (§5.2 audit, session 158):
 ///   ⑴ LilyPond BREAKS the line when a new dynamic carries an explicit direction
@@ -199,7 +199,7 @@ internal static class DynamicAlignEngraver
                         continue;
                     sysTexts.Add(di);
                     Fold(DynamicEngraver.LabelSkylines(fonts, d.Text, d.IsExpressiveText, d.X,
-                        -DynamicEngraver.TextOffsetInSpanner));
+                        -DynamicEngraver.TextOffsetInSpanner(fonts)));
                 }
                 var sysWedges = new List<(int LayoutIdx, int HairpinItemIdx)>();
                 foreach (var (pi, hi) in wedgePieces)
@@ -225,7 +225,7 @@ internal static class DynamicAlignEngraver
                 foreach (int di in sysTexts)
                     dynBuilder![di] = dynBuilder[di] with
                     {
-                        YUp = spannerY - DynamicEngraver.TextOffsetInSpanner,
+                        YUp = spannerY - DynamicEngraver.TextOffsetInSpanner(fonts),
                     };
                 foreach (var (pi, hi) in sysWedges)
                 {
