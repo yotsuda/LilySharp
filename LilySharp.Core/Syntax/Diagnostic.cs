@@ -1115,6 +1115,26 @@ public static class DiagnosticCodes
     /// <c>MeasureCollector.CollectGraceBarLevelMarks</c>.
     /// </para></summary>
     public const string UnengravedGraceContent = "LYS4020";
+    /// <summary>Warning: a rehearsal mark (<c>@mark("A")</c>) written at a bar that a
+    /// section label opens. One mark is engraved at a moment and it is the LABEL; the
+    /// <c>@mark</c> is not printed, and this says so at the mark.
+    /// <para>
+    /// LILYPOND-REF: lily/mark-tracking-translator.cc:185-192 Mark_tracking_translator::listen_ad_hoc_mark
+    /// — every <c>\mark \markup</c> is an ad-hoc mark event and the first one a timestep
+    /// hears is kept; lily/stream-event.cc:103-117 warn_reassign_event_ptr — the second is
+    /// dropped with "conflict with event" at the kept one and "discarding event" at the
+    /// dropped one. The twin writes the label's <c>\mark</c> first, so LilyPond keeps the
+    /// label; the page keeps the same one (<c>Svg.Layout.MusicMarkEngraver.ShadowedBySectionLabel</c>),
+    /// and this is LilyPond's second warning in Lily#'s words. Owner's decision, session 558.
+    /// </para>
+    /// <para>
+    /// ⚠️ Until session 558 the page drew BOTH, stacked (the reader's `Hold the Line`: a
+    /// boxed "Solo" over a boxed "Solo"), which is a picture LilyPond cannot make. Under
+    /// <c>layout { sectionLabels none }</c> no label is engraved, the <c>@mark</c> is, and
+    /// nothing is reported; the silent reference (<c>~Name</c> in the form) does the same
+    /// for one section.
+    /// </para></summary>
+    public const string RehearsalMarkShadowedBySectionLabel = "LYS4021";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

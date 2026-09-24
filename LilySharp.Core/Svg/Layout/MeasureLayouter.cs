@@ -294,7 +294,7 @@ internal sealed class MeasureLayouter
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
         for (int i = 1; i < timings.Count; i++)
             springs[i] = CreateInterColumnSpring(fonts, i, timings, columns, measuresToScan,
-                so, looseRods);
+                so, looseRods, stavesOfMeasures);
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
@@ -568,7 +568,8 @@ internal sealed class MeasureLayouter
         int i, List<Fraction> timings,
         ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, SpacingOptions spacing,
-        List<(int Left, int Right, double Distance)> looseRods)
+        List<(int Left, int Right, double Distance)> looseRods,
+        IReadOnlyList<Staff>? stavesOfMeasures = null)
     {
         // This spring connects timings[i-1] → timings[i]; its duration is
         // THAT segment. (A previous off-by-one used the FOLLOWING segment's
@@ -649,16 +650,22 @@ internal sealed class MeasureLayouter
             else if (wish0 is null) wish0 = prev;
             else if (wish1 is null) wish1 = prev;
             else wishMany = [wish0, wish1, prev];
+            // The staff this pair stands on, for a rest's box (session 557): the staves list
+            // is aligned with measuresToScan when the caller hands one (StaffItemsAt reads it
+            // the same way); a single-measure caller has no staff and prices five lines.
+            int staffLines = stavesOfMeasures is { } staves && staves.Count == measuresToScan.Count
+                ? staves[vi].Lines
+                : EngravingDefaults.DefaultStaffLines;
             // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the
             //   spring's own minimum, taken with the right column's skyline-vertical-padding
             //   and with NO spanner padding.
             maxSkyDist = Math.Max(maxSkyDist,
-                SpacingRules.CalculateSkylineDistance(fonts, prev, next, staffY: 0));
+                SpacingRules.CalculateSkylineDistance(fonts, prev, next, staffY: 0, staffLines: staffLines));
             // LILYPOND-REF: lily/spacing-spanner.cc:229-296 Spacing_spanner::set_column_rods
             //   raises a rod over every pair of columns that can reach each other, via
             //   lily/separation-item.cc:47-68 Separation_item::set_distance.
             maxRod = Math.Max(maxRod,
-                SpacingRules.SeparationRodDistance(fonts, prev, next, staffY: 0));
+                SpacingRules.SeparationRodDistance(fonts, prev, next, staffY: 0, staffLines: staffLines));
             // A whole-display tremolo pair with accidentals on its right half spans
             // the Beam's minimum-length as a rod (6.0) — the spacing side of the
             // gapped floating beam. Same house as the measure-estimate system's.

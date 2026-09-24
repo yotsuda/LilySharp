@@ -260,6 +260,24 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **`to coda` is drawn as the coda sign, not the words "To Coda".** The departure and the
+  arrival are one mark in LilyPond (`\codaMark` at both), so the page now draws the sign at
+  both ends of the jump: centred on the barline `to coda` stands at, at the music size, and
+  stacked closest to the staff like the arrival. The LilyPond twin writes `\codaMark`, the
+  MusicXML a `<coda/>` with the `tocoda` jump attribute.
+- **A navigation mark in a section's music stands at the barline it is written at, whichever
+  side of the `|` it is on.** `c4 d e f | fine` drew Fine one measure late (at the end of the
+  NEXT bar) and a `| ds al coda` after the last bar was dropped without a word; both now stand
+  at the bar they are written at, as `c4 d e f fine |` always did — a text (`fine`, `dc`, `ds`,
+  `to coda`) to the bar's left, a sign (`segno`, `coda`) to its right, the way LilyPond aligns
+  `JumpScript` and `SegnoMark`. Mid-measure placement still engraves and warns (LYS4003).
+- **One mark at a bar: a `@mark` written at the bar a section label opens is not printed, and
+  says so (LYS4021).** `section Solo { c4@mark("Solo") … }` under `form main { … Solo … }` drew
+  two boxes stacked over the bar — the section's label and the rehearsal mark — which LilyPond
+  never draws: its `Mark_engraver` keeps the first mark of a moment and discards the second with
+  a warning, and the label is the first. The page now keeps the label alone and the mark warns at
+  its `@mark`. Drop the mark, or hide the label with `~Solo` in the form or
+  `layout { sectionLabels none }`. Eight of the reader's books, one page count.
 - **A note that ends one slur and starts the next draws both.** In `c4( d)( e)`, the page paired
   the `(` on `d` with the `)` right beside it, so it drew one bow from `c` to `e` and a zero-length
   one on `d`, while the tab's hammer-ons already read `c`–`d` and `d`–`e`. A note carrying both

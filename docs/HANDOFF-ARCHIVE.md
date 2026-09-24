@@ -129,6 +129,56 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第558セッションの経緯
+
+### 1.1 第558セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き。ユーザーが §1.0 ⒞ の 3 件に答えた: ⑴ ⒳¹² は「文法そのものが妥当か」の問い（評価を §1.0 ⒳¹² に置いた・決定待ち）、⑵ 重複 mark は「LP に合わせて。非表示にした方のマークには警告を出して」（決定）、⑶「先に LP 忠実度を上げて。完了してから perf」（方針＝§1.0 冒頭）。★ `-Start p558`（HEAD `ba4b77a1`・full 8925 / 0 / 2 / 8927・`-Archive 556`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ 重複 mark を畳んだ＝section label が開く小節の `@mark` は描かず、label を残し、`@mark` に LYS4021**（commit `e64c1654`）。**規則は 1 か所** `MusicMarkEngraver.ShadowedBySectionLabel`（Rehearsal で、その小節の primary 譜表の `Measure.SectionLabel != null`）＝`MergeSectionLabels` が数えて外す（配列は自分の寸法で 1 度）。「同じ時刻」＝同じ*小節*: `@mark` は anchor 無しで建つ（MusicWalk:1454＝score の grob・小節線に立つ）ので拍は無い。**警告の出どころは layout と同じ入力**: `SvgGenerator.CollectScore` の唯一の出口 `WithShadowedMarksRecorded` が完成した `MultiStaffScore`（marks・`PrimaryContentStaff.PrimaryVoice.Measures`・`LayoutPlan.SectionLabels`）に同じ述語を訊いて `MeasureCollector.ShadowedRehearsalMarks` に記録し、`ShadowedRehearsalMarkValidator`（shared collect・位置で dedup）が刷る。full・resume・`TryCollect` の 3 路とも同じ出口＝lent collect（LSP）も同じ答え。LYS4019 とは二重にならない（item は `_musicMarks` に在る＝「作らなかった」ではない）。`sectionLabels none`・`~Name` は label が無いので畳まず警告も無し。
+  LP の根拠: `mark-tracking-translator.cc:185-192 listen_ad_hoc_mark`＝`\mark \markup` は全部 ad-hoc で*最初の 1 つ*を採る／`stream-event.cc:103-117 warn_reassign_event_ptr`＝2 つ目を "discarding event" で捨てる。双子は label の `\mark` を音符より先に書くので LP が残すのは label（`sessions/p547/hold-lp.log` の実測どおり）。⚠️ LP 自身の語彙（`\sectionLabel`＋`\mark`）なら track が別で両方描く＝Lily# は双子の絵に合わせた（ユーザー決定）。
+  **射程は起票の「1 冊」ではなく 8 冊**（`lysc check` を実コーパス 236 冊に回した＝Lab `sessions/p558/lys4021-corpus.txt`: Can't Get You Out Of My Head・Freedom・Hold the Line・Livin' La Vida Loca・Sugar・What A Feeling ×2・さくらんぼ・残酷な天使のテーゼ）。**hash A/B（baseline＝p557 の after 5,816 行）: 動いた本 7 冊＝LYS4021 の 8 冊から harness に無い Freedom を引いた集合と一致・What A Feeling は 4→3 ページ・Hold the Line は 3 ページのまま**。⚠️ 8 冊目の差分 `That's The Way (I Like It)` は**ユーザーが 07:32 に編集した本**（baseline 07:22 の後）＝この変更と無関係（`~Body` で label 無し・警告 0）。
+  **網 `ShadowedRehearsalMarkTests` 5 本**（畳む・警告 1 回で位置は `@mark`・LYS4019 は出ない／対照: `sectionLabels none`・`~Solo`・繰り返し section は 1 回）＝**毒 1（`MergeSectionLabels` の述語を落とす）で 2 本赤・毒 2（`RecordShadowedRehearsalMarks` を呼ばない）で別の 2 本赤・対照 3 本は両方緑**（Lab `net-poison1.log`／`net-poison2.log`）。
+  full で赤 6 → 全部この規則の帰結: `MeasureCollectorResetTests`（新 list の clear 漏れ→Reset の尾に足した）・`FontAttributeTests` 3 本（sample "Q" を label の小節に置いていた→Z の 2 小節目へ）・`VocabularyPerturbationTests` の `@mark` 行（1 小節目＝label の小節→2 小節目へ・註）・snapshot `showcase/01-expressions`（`d4@mark("A")` が `Main` の小節＝"A" の箱が消えて高さ 43.76→40.55・`Approve-Snapshots -Name` で承認＝出力変更はユーザー承認済み）。
+  文書: SYNTAX_REFERENCE「Rehearsal Marks」・GRAMMAR_FOR_LLM（`Main` の段落）・CHANGELOG 0.8.0 Engraving・`Diagnostic.cs` の LYS4021。表 2 枚は再生成（行番号のみ・`APPROXIMATIONS.md` 9 行）。棚卸し: Core +124／−9（`MusicMarkEngraver` +43・`MeasureCollector` +36・`Diagnostic` +20・`SvgGenerator` +18・`CollectorWarnings` +6・`SemanticValidation` +1・validator 新規 77 行）・REF 2（`mark-tracking-translator.cc:185-192`・`stream-event.cc:103-117`）／OWN 0・網 +5。**full 8930 / 0 / 2 / 8932**（`-End p558` の run3 は生成表が 1 行古くて赤 1＝Reset の 1 行を足した後に再生成し直して run4 で 0）・7.7 匂いなし（畳む側と警告側が同じ述語・同じ入力＝註に明記）。
+  ⚠️ 起票の射程（1 冊）が外れた理由＝第547 は Hold the Line しか LP に通していない＝**「射程」は grep か check で数えてから書く**。
+
+★ **⑵ ⒳¹² の評価**（§1.0 ⒞ に全文）: `to coda` の空白は残す（句の形が言語の型）・置き場所は LP の時刻モデル（`|` の前後は同じ時刻・描く側は種類で決まる）を勧める＝ユーザー決定待ち。**⑶ 方針**（忠実度が先）は §1.0 冒頭に置いた。
+  ⇒ 判定: 次は ⒳¹² の決定が出ればその実装（fixture・snapshot・engraver の付け替え）、無ければ忠実度の項目（R7〜R11 の LP 双子・⒳⁶）。この便の文脈に依らない＝(c)。
+
+## 以下は第557セッションの経緯
+
+### 1.1 第557セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」・perf の島は尽きたので §1.0 ⒝ の ⒳¹⁷ へ）。★ `-Start p557`（HEAD `82b1d227`・full 8922 / 0 / 2 / 8924・`-Archive 555`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ ⒳¹⁷（列の横 skyline が 5 線固定・第536 の NOT PORTED 2 件）を閉じた（commit `0eb8e336`・hash 5,816 行 0 差＝コーパスに 1・2 線譜は無い・render 不変・full **8925 / 0 / 2 / 8927**・網 +3）**。線数の出どころは `RenderSpec`（score 側の `staff … lines`）＝collect 時の item には刻印できない（同じ part を別の score が別の線数で見せうる）ので、**設計は呼び手からの配管**: `ItemSkylineFactory` の `Shared*`／`Build`／`Boxes`／`ColumnParts`／`ColumnYExtent` に `staffLines`（memo の鍵 `SkylineKey` にも）、休符 2 枝は `NeutralRestPosition`／`RestStaffPosition` を線数で読む（第536 の 1 軒＝字は 1 つ）。staff を知る呼び手 2 つ＝`CreateInterColumnSpring`（`stavesOfMeasures` を `measuresToScan` と揃えて）と `ApplyCrossVoiceColumnSpacing`（`staff.Lines`）が渡し、`CalculateSkylineDistance`／`SeparationRodDistance` が通す。staff の無い呼び手（単譜表の `CreateSpring`・bar line 対）は `EngravingDefaults.DefaultStaffLines`＝5（`define-grobs.scm:3396` の `line-count`）＝従来どおり・註に明記。**網 `ColumnRestBoxStaffLinesTests` 3 本**（1 線の全休符・2 線の二分休符は 5 線より 1 空き下＝絶対のオフセット・4 分は全譜表で同じ＝対照）＝**5 線固定の毒で 2 本赤・対照は緑**。
+  ⚠️ 引用の網 `CitationsThatNameNothing_DoNotGrow` に 2 度噛まれた: **symbol は address と*同じ行*に**（次の行では数えない）、**scm の名は 3 部のハイフン名か `_` 名**（`line-count` は 2 部＝数えない→ `staff-symbol-interface`）。`LpProvenanceTests` は定数の直上のブロック（空行まで）に REF が要る＝`DefaultStaffLines` に `define-grobs.scm:3396`。
+  棚卸し: Core `ItemSkylineFactory` +47／−33・`MeasureLayouter` +11／−4・`BarlineSkyline` +12／−7・`MeasureSprings` 4／4・`EngravingDefaults` +6・REF 2（`define-grobs.scm:3396`・`separation-item.cc:163` は網側）／OWN 0・表 2 枚は行番号（`magic_constants.csv` 80 行＝`EngravingDefaults` と `ItemSkylineFactory` の行ずれ）。`-End p557` OK・7.7 匂いなし（default 5 は「staff を知らない呼び手」の契約＝註）。
+  ⇒ 判定: 残る ⒝ は設計級（⒮²⁰′ 閉包・⒡′・⒵⁴・⒳⁶）、⒞ はユーザー判断待ち。この便の文脈に依らない＝(c)。**次に着手先の指定が無ければ ⒳⁶（span の fold の過剰無効化＝値段を測るのが先）から**。
+
+## 以下は第556セッションの経緯
+
+### 1.1 第556セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p556`（HEAD `49d214fb`・full 8922 / 0 / 2 / 8924・`-Archive 554`）。作業ツリーの `samples/*` はユーザーの手（触らない）。**計測のみ・コード変更なし**。
+
+★★ **⑴ 地図を HEAD で取り直した**（Lab `sessions/p556/type-price-head.txt`・render 1,074,259）: 頭は String 331 KB・GreenNode[] 163 KB＋SyntaxToken[] 67 KB（parse の bleed）・SkylineBuilding[] 122 KB・NoteItem 103 KB（第494＝刻印の `with`＝設計）・Int32[] 37 KB・ArticulationLayout[] 26.6 KB（第553＝出力）・**`Spring` 22.3 KB**・Measure 19.4 KB・Double[] 18 KB・BeamGroup 17 KB・WalkCheckpoint 15.6 KB（第522＝実仕事）・`SystemDetails` 5.1 KB（13.4 → 第554 で）。**起票の無い頭は無い**。
+★★ **⑵ `Spring` の struct 化（`sealed record` → `readonly record struct`）を試して反証した＝戻した（patch は Lab `p556-spring-struct.patch`）**: 予測 −9,600±3,000 に対し **render 1,074,557 → 1,074,122＝−435 B／打鍵**（hash 0 差）＝**配列の育ち（8 → 40 B／slot）がオブジェクトの消滅と相殺**＝springs は配列に平均 1.7 回住む（`ToBuilder` の写し・`ImmutableArray<Spring>` の家族）。しかも **identity の観測者がいた**: `SpringRodModelTests.EnsureMinDistance_NeverLowersTheMinimum` が `Assert.Same`（下げない場合は同じ instance を返す契約）で赤。⇒ **Spring は class のまま・この直し方は閉じた**（RULES §5.0 12例目の型＝「直すなら X」の反証）。コンパイルが名指した class 依存は 2 軒だけ（`Spring?` の `.Value` 無し読み・`?: null`）。
+  棚卸し: Core 変更なし・REF／OWN 0・`-End p556` OK・**full 8922 / 0 / 2 / 8924**（±0）。
+  ⇒ **第548〜556 の 9 便で render 1,120,570 → 1,074,557（−46,013・−4.1%）**。判定: perf の地図は土台だけになった＝次は別の島＝§1.0 ⒝ の設計項目（⒮²⁰′ 閉包 5 KB・⒳¹⁷ 列 skyline の線数）か perf 以外（⒳¹² のユーザー判断・R7〜R11 の LP 双子）＝この便の文脈に依らない (c)＝**同じ会話でも新しい会話でも差は小さい**。
+
+## 以下は第555セッションの経緯
+
+### 1.1 第555セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p555`（HEAD `08393b03`・full 8922 / 0 / 2 / 8924・`-Archive 553`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ ⒮²⁸ の `MeasureSpringData[]` 11,318 B／打鍵＝line-break gate の vector を打鍵ごとに新しい配列に建てていたのを spare 1 本に閉じた（commit `fe40734f`・render **1,084,078 → 1,074,592＝−9,486 B／打鍵（0.88%）**・予測 −11,000±3,000 の帯内・hash 5,816 行 0 差・Lab `sessions/p555/`）**。**所有権を先に読んだ**: vector を持つのは `IncrementalCompiler._springs` と、gate が skip しなかった打鍵（＝line DP が走った）だけ `LineBreakDpSession`（`Store`）と `_lineBreaks` の `LineBreakSolutions`＝どちらもそのとき `_springs` になる配列。⇒ 打鍵を越えて生きる vector は「解いた」ものだけ＝置き換えられた旧 `_springs` は自由、gate が等しいと判定した buffer（Layout には前の table が渡り vector は渡らない＝`LayoutEngine.Layout` は `precomputedLineBreaks != null` なら `precomputedSprings` を読まない）は即自由。`ComputeMultiStaffSpringData(…, into)` は全 slot を書く（memo 腕・MMR 腕・通常腕）。skip した打鍵は保持 vector を据え置いて buffer を spare へ、解いた打鍵は buffer を `_springs` に・旧を spare へ。font／paper の reset で spare も捨てる。
+  **毒 P1（解いた vector も spare に戻す＝DP が保持する配列を次の打鍵が上書き）→ hash 3 行差・スイート 2 赤（`IncrementalReuseSoundnessTests.SessionFuzz_RandomizedEdits_AlwaysMatchFull`・第554 の `SystemCountLineMemoTests`）**＝所有権の規則は両方の母集団に観測者がいる（網は足していない）。
+  棚卸し: Core `IncrementalCompiler` +27／−2・`SystemBreaker` +9／−2・REF 0／OWN 0（7.6 ⒟）・表 2 枚は差なし・Core 警告 0。`-End p555` OK・**full 8922 / 0 / 2 / 8924**（±0）・7.7 匂いなし（spare は契約＝「解いた vector は保持される」を註に書いた）。
+  ⇒ **第552〜555 の 4 便で render 1,098,933 → 1,074,592（−24,341・−2.2%）**。⒮²⁸ の残り＝`Spring` 24 KB（sealed record・struct 化は設計）・`Int32[]`／`Double[]`（第495 の残り）・`WalkCheckpoint`（実仕事）＝**地図の起票の無い頭は尽きた**。判定: 次は地図を取り直すか、§1.0 ⒝ の設計項目（⒮²⁰′ 閉包・⒳¹⁷）か、perf 以外の島（⒳¹² のユーザー判断）＝この便の文脈に依らない＝(c) 差は小さい・**既定どおり同じ会話で続けられるが、perf の島は次の一手を選び直す時点**。
+
 ## 以下は第554セッションの経緯
 
 ### 1.1 第554セッション（2026-09-24・YT-DELL2）

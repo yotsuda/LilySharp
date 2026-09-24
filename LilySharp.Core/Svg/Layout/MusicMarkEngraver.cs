@@ -1603,28 +1603,16 @@ internal static class MusicMarkEngraver
         return (labelFs + 2 * 0.2) / 2;
     }
 
-    /// <summary>
-    /// The two advances of a drawn boundary "To Coda" — the "To " prefix in the
-    /// navigation face and the coda GLYPH (not the word "Coda") — the composition
-    /// <c>SharedRenderer</c> draws, centred as a group on the mark's anchor. ONE
-    /// HOME, deliberately: the union placement (<c>OutsideStaffStacker.
-    /// PlaceMusicMarks</c>) prices the co-placed sign by this so the reservation
-    /// cannot outreach the ink — pricing it by <c>Advance("To Coda")</c> reached
-    /// ~1 staff space further left than anything drawn and made the pair clear a
-    /// neighbouring label the ink never touches (session 227, measured on
-    /// scratch/p206/v4.lys: the pair floated 3 ss over the line every other label
-    /// shared).
-    /// </summary>
-    internal static (double TextW, double GlyphW) ToCodaStencilWidths(ScoreTextMetrics fonts)
-    {
-        double textW = fonts.Advance("To ", PlainMarkEm(fonts, MusicMarkType.ToCoda),
-            TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
-        double glyphW = 4.0 * 0.8 * 0.42; // approx advance of scripts.coda at the draw's size
-        return (textW, glyphW);
-    }
+    // (ToCodaStencilWidths — the "To " advance plus an approximate coda glyph width, the
+    // composition the departure used to draw — went with the words in session 560: the
+    // departure is the coda SIGN now, priced by the glyph's own box like the arrival
+    // (OutsideStaffStacker.MusicMarkExtents), so the union placement reads that.)
 
-    // Centre-to-centre gap between a boundary "To Coda" and the section label it
-    // shares the rehearsal line with, so the sign sits clear to the label's left.
+    // Centre-to-centre gap between a boundary coda sign (`to coda`) and the section label
+    // it shares the rehearsal line with, so the sign sits clear to the label's left.
+    // ⚠️ The sign was "To 𝄌" (about 3 ss of ink) until session 560 and is the bare glyph
+    // (about 1.2) since; the gap is unchanged, so the air between the two grew by the
+    // width the words had. LILYSHARP-OWN with the arrangement itself (CoPlaceToCodaWithLabels).
     private const double ToCodaLabelGap = 4.0;
 
     /// <summary>
@@ -1692,11 +1680,18 @@ internal static class MusicMarkEngraver
         if (labelCount == 0)
             return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
 
+        // A `@mark` at the bar a label opens is the label's shadow (ShadowedBySectionLabel):
+        // counted out here so the array is still built once at its own size.
         int existing = musicMarks.IsDefaultOrEmpty ? 0 : musicMarks.Length;
-        var merged = new MusicMarkItem[existing + labelCount];
-        if (existing > 0)
-            musicMarks.CopyTo(merged);
-        int at = existing;
+        int kept = 0;
+        for (int i = 0; i < existing; i++)
+            if (!ShadowedBySectionLabel(musicMarks[i], measures))
+                kept++;
+        var merged = new MusicMarkItem[kept + labelCount];
+        int at = 0;
+        for (int i = 0; i < existing; i++)
+            if (!ShadowedBySectionLabel(musicMarks[i], measures))
+                merged[at++] = musicMarks[i];
         for (int i = 0; i < measures.Length; i++)
         {
             var measure = measures[i];
@@ -1712,6 +1707,34 @@ internal static class MusicMarkEngraver
         }
         return System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(merged);
     }
+
+    /// <summary>
+    /// True for a rehearsal mark (<c>@mark("A")</c>) standing at a bar that a section label
+    /// opens: the label is engraved and the mark is not. One moment, one mark, and the label
+    /// is the one kept (owner's decision, session 558: "LP に合わせて").
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/mark-tracking-translator.cc:185-192 Mark_tracking_translator::listen_ad_hoc_mark
+    /// — every <c>\mark \markup</c> is an ad-hoc mark event, and the translator keeps the
+    /// FIRST one a timestep hears (<c>set_rehearsal_event_once</c>); the twin writes the
+    /// section label's <c>\mark</c> before the note that carries the <c>@mark</c>, so the
+    /// label is the one LilyPond keeps.
+    /// LILYPOND-REF: lily/stream-event.cc:103-117 warn_reassign_event_ptr — the second event
+    /// is dropped with "discarding event", which is the warning
+    /// <c>Semantics.ShadowedRehearsalMarkValidator</c> raises (LYS4021).
+    /// <para>
+    /// ⚠️ A <c>@mark</c> is built with no anchor (MeasureCollector.MusicWalk: the mark is the
+    /// SCORE's, and stands at the bar whichever note carries it), so "the same moment" is the
+    /// same MEASURE; and the measures asked are the primary staff's, which is where every
+    /// reader of <see cref="BuildAllMarks"/> takes the labels from. Under
+    /// <c>layout { sectionLabels none }</c> no label is engraved, and the caller does not
+    /// come here at all.
+    /// </para>
+    /// </remarks>
+    internal static bool ShadowedBySectionLabel(MusicMarkItem mark, ImmutableArray<Measure> measures)
+        => mark.Type == MusicMarkType.Rehearsal
+           && (uint)mark.MeasureIndex < (uint)measures.Length
+           && measures[mark.MeasureIndex].SectionLabel != null;
 
     /// <summary>
     /// Adds a tempo marking to the mark list if the score has a tempo.
@@ -1790,8 +1813,9 @@ internal static class MusicMarkEngraver
         // LILYPOND-REF: scm/define-grobs.scm:2346 MetronomeMark outside-staff-priority = 1300
         MusicMarkType.Tempo => 1300,
         // Segno/Coda sit CLOSEST to the staff (below SectionLabel 1450 < RehearsalMark 1500).
+        // The departure coda sign (`to coda`) is a CodaMark too (scm/define-grobs.scm:1014).
         MusicMarkType.Segno => 1400,
-        MusicMarkType.Coda => 1400,
+        MusicMarkType.Coda or MusicMarkType.ToCoda => 1400,
         MusicMarkType.SectionLabel => 1450,
         MusicMarkType.Rehearsal => 1500,
         _ => 1500
@@ -1901,6 +1925,7 @@ internal static class MusicMarkEngraver
             }
             case MusicMarkType.Segno:
             case MusicMarkType.Coda:
+            case MusicMarkType.ToCoda:   // the departure sign: the same glyph, centred
                 return (x - 1.2, x + 1.2);
             default:
             {
@@ -2369,7 +2394,7 @@ internal static class MusicMarkEngraver
         MusicMarkType.Tempo => 1.8,
         MusicMarkType.Rehearsal or MusicMarkType.SectionLabel
             => LabelBoxHalfHeight(fonts, type, text, boxed),
-        MusicMarkType.Segno or MusicMarkType.Coda => 2.0,
+        MusicMarkType.Segno or MusicMarkType.Coda or MusicMarkType.ToCoda => 2.0,
         _ => 1.0
     };
 
@@ -2416,7 +2441,20 @@ internal static class MusicMarkEngraver
         bool boxed = true)
     {
         if (mark.Position == MusicMarkPosition.End)
+        {
+            // The departure coda SIGN (`to coda`) is a CodaMark like the arrival's: centred
+            // on the bar it stands at (self-alignment-X opposite-of-anchor, and a BarLine's
+            // break-align-anchor-alignment is CENTER), not hung to the bar's left like the
+            // jump TEXTS below it.
+            // LILYPOND-REF: scm/define-grobs.scm:1001-1032 coda-mark-interface — CodaMark's
+            //   self-alignment-X break-alignable-interface::self-alignment-opposite-of-anchor
+            //   (:1016-1017); scm/define-grobs.scm:1222-1226 bar-line-interface —
+            //   break-align-anchor-alignment CENTER (:1225); scm/output-lib.scm:484-488
+            //   self-alignment-opposite-of-anchor.
+            if (mark.IsSymbol)
+                return measureLayout.X + measureLayout.Width;   // On the end barline
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
+        }
 
         // A mid-measure tempo change attaches to the musical column of the note
         // that follows it (LilyPond's MetronomeMark moment), not the measure's

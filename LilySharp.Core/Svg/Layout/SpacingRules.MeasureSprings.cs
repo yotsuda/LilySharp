@@ -1150,10 +1150,10 @@ internal static partial class SpacingRules
                     // the same frame CalculateSkylineDistance / SeparationRodDistance use.
                     if (!rightSkyOf.TryGetValue((t - 1, li), out var rs))
                         rightSkyOf[(t - 1, li)] = rs =
-                            ItemSkylineFactory.SharedRightSkylineAtColumn(l.Item, l.Shift, 0);
+                            ItemSkylineFactory.SharedRightSkylineAtColumn(l.Item, l.Shift, 0, staff.Lines);
                     if (!leftSkyOf.TryGetValue((t, ri), out var ls))
                         leftSkyOf[(t, ri)] = ls =
-                            ItemSkylineFactory.SharedLeftSkylineAtColumn(r.Item, r.Shift, 0);
+                            ItemSkylineFactory.SharedLeftSkylineAtColumn(r.Item, r.Shift, 0, staff.Lines);
                     var (_, rod) = SkylineFloorPair(rs, ls);
                     // A SAME-voice pair is spanned by that voice's wish, and the wish's
                     // skyline minimum is measured between the voice's OWN note columns in
@@ -1166,10 +1166,10 @@ internal static partial class SpacingRules
                     {
                         if (!wishRightOf.TryGetValue((t - 1, li), out var wrs))
                             wishRightOf[(t - 1, li)] = wrs =
-                                ItemSkylineFactory.SharedWishRightSkylineAtColumn(l.Item, l.Shift, 0);
+                                ItemSkylineFactory.SharedWishRightSkylineAtColumn(l.Item, l.Shift, 0, staff.Lines);
                         if (!wishLeftOf.TryGetValue((t, ri), out var wls))
                             wishLeftOf[(t, ri)] = wls =
-                                ItemSkylineFactory.SharedWishLeftSkylineAtColumn(r.Item, r.Shift, 0);
+                                ItemSkylineFactory.SharedWishLeftSkylineAtColumn(r.Item, r.Shift, 0, staff.Lines);
                         maxSky = Math.Max(maxSky, SkylineFloorPair(wrs, wls).SkyMin);
                     }
                     maxRod = Math.Max(maxRod, rod);

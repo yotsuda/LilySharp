@@ -346,6 +346,41 @@ public sealed partial class MeasureCollector
             .Where(m => m.Type == MusicMarkType.Rehearsal)
             .Select(m => m.SourcePosition)
             .ToHashSet();
+    private readonly List<ShadowedRehearsalMarkWarning> _shadowedRehearsalMarks = new();
+    /// <summary>Rehearsal marks this score collects but does not engrave, because a section
+    /// label opens the same bar (LYS4021). Recorded by <see cref="RecordShadowedRehearsalMarks"/>
+    /// on the finished score; surfaced by <c>ShadowedRehearsalMarkValidator</c>.</summary>
+    /// <remarks>
+    /// ⚠️ Not a hole in <see cref="EngravedRehearsalMarkPositions"/>: the mark IS in
+    /// <see cref="_musicMarks"/> (the collect produced it), and it is the LAYOUT that keeps
+    /// the label instead. So LYS4019 stays silent about it and this list says what happened.
+    /// </remarks>
+    public IReadOnlyList<ShadowedRehearsalMarkWarning> ShadowedRehearsalMarks => _shadowedRehearsalMarks;
+
+    /// <summary>
+    /// Records, from the score this collect produced, every rehearsal mark that
+    /// <c>Layout.MusicMarkEngraver.MergeSectionLabels</c> will leave out for a section label
+    /// at the same bar — asked of the SAME inputs every reader of <c>BuildAllMarks</c> passes
+    /// it (the score's marks, the primary staff's measures, the layout plan), so the
+    /// diagnostic and the page cannot disagree about which mark is missing.
+    /// </summary>
+    /// <remarks>
+    /// Called by <c>SvgGenerator.CollectScore</c>, the funnel every collect goes through —
+    /// the full compile, the resumed one and the validators' <c>TryCollect</c> — so the lent
+    /// collect (<c>IncrementalCompiler.CollectFor</c>) carries the same list a fresh one does.
+    /// </remarks>
+    internal void RecordShadowedRehearsalMarks(MultiStaffScore score)
+    {
+        _shadowedRehearsalMarks.Clear();
+        if (score.LayoutPlan.SectionLabels == Semantics.SectionLabelStyle.None
+            || score.MusicMarks.IsDefaultOrEmpty || score.StaffGroups.IsDefaultOrEmpty)
+            return;
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        foreach (var mark in score.MusicMarks)
+            if (Layout.MusicMarkEngraver.ShadowedBySectionLabel(mark, measures))
+                _shadowedRehearsalMarks.Add(new ShadowedRehearsalMarkWarning(
+                    mark.SourcePosition, mark.Text, measures[mark.MeasureIndex].SectionLabel!));
+    }
     // Slurs and ties with one end inside a cue region and the other outside it — a span
     // LilyPond cannot make. Recorded by the SAME two scanners that pair them (one IsCue
     // comparison on the pair each already holds); surfaced by CueSpanBoundaryValidator.
@@ -2655,6 +2690,7 @@ public sealed partial class MeasureCollector
         _keyByMeasureLog.Clear();
         _sectionStartLog.Clear();
         _voiceMeasuresByName.Clear();
+        _shadowedRehearsalMarks.Clear(); // refilled from the finished score (RecordShadowedRehearsalMarks)
         _canonicalSectionBars.Clear();
         _canonicalByName = null;
         // The definitions walk's own gatherings (its fields say what for): cleared here as
@@ -3622,6 +3658,47 @@ public sealed partial class MeasureCollector
             if (p is ChordPartBlockSyntax or LyricsBlockSyntax)
                 return true;
         return false;
+    }
+
+    /// <summary>
+    /// The measure an INLINE navigation mark (a bare <c>fine</c> / <c>segno</c> … in a
+    /// section's music) is engraved in. The mark is an event at a MOMENT, and a barline
+    /// takes no time: written after the bar (<c>… f | fine</c>, the head of a measure with
+    /// no music yet) or before it (<c>… f fine |</c>, a full measure) it stands at the same
+    /// barline. Which measure carries it is the side its kind draws on — a text (fine, D.C.,
+    /// D.S., To Coda) is right-aligned to the bar, so it is the END of the measure before;
+    /// a sign (segno, coda) is left-aligned, so it is the START of the measure after.
+    /// Mid-measure the mark stays in its measure and warns (LYS4003).
+    /// Owner's decision, session 559 (HANDOFF ⒳¹²): the doc's <c>c4 d e f | to coda</c> and
+    /// the form's <c>A to coda B</c> read this way already; the picture read "the measure the
+    /// builder stands in", which drew a text one measure late from EITHER side of the bar and
+    /// dropped the one after the last bar.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1898-1925 jump-script-interface — JumpScript's
+    /// self-alignment-X is RIGHT (:1912): the text hangs to the LEFT of its column, which at a
+    /// bar is the bar. scm/define-grobs.scm:3083-3111 segno-mark-interface — SegnoMark's
+    /// self-alignment-X is break-alignable-interface::self-alignment-opposite-of-anchor
+    /// (:3097; CodaMark the same at :1017): the sign sits on the far side of the bar it is
+    /// aligned to. Both are Items at the event's moment, so `\fine |` and `| \fine` are one
+    /// moment in LilyPond too.
+    /// <para>
+    /// ⚠️ ONE STATE FOR BOTH SPELLINGS: a full measure is emitted the moment it fills
+    /// (<see cref="MeasureBuilder.AutoCompleteMeasure"/>), so a mark written before the bar
+    /// reaches here with the builder already standing at the head of the next, empty
+    /// measure — exactly where a mark written after the bar finds it. That is why there is
+    /// no "full measure" arm: MEASURED (session 559's net under the old rule), <c>segno |</c>
+    /// and <c>| segno</c> gave the same measure before this change, and <c>fine |</c> was as
+    /// late as <c>| fine</c>. A text at the piece's opening (bar 0, nothing before it) stays
+    /// in bar 0.
+    /// </para>
+    /// </remarks>
+    internal static int NavigationMarkMeasure(MusicMarkType navType, MeasureBuilder builder)
+    {
+        int measure = builder.CurrentMeasureIndex;
+        bool sign = MusicMarkItem.PositionOf(navType) == MusicMarkPosition.Beginning;
+        bool atTheBar = builder.CurrentDuration == Fraction.Zero;
+        return atTheBar && !sign && measure > 0 ? measure - 1 : measure;
     }
 
     private static MusicMarkType NavigationToMusicMark(NavigationMarkType t) => t switch

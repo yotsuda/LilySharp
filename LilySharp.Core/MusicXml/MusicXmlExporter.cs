@@ -668,7 +668,9 @@ public sealed class MusicXmlExporter
             NavigationMarkType.Segno => (Wrap(new("segno"), Sound("segno", "segno")), true),
             NavigationMarkType.Coda => (Wrap(new("coda"), Sound("coda", "coda")), true),
             NavigationMarkType.Fine => (Wrap(Words("Fine"), Sound("fine", "yes")), false),
-            NavigationMarkType.ToCoda => (Wrap(Words("To Coda"), Sound("tocoda", "coda")), false),
+            // The departure is the coda SIGN (session 560), with the jump attribute that
+            // tells an importer it is the departure and not the arrival.
+            NavigationMarkType.ToCoda => (Wrap(new("coda"), Sound("tocoda", "coda")), false),
             NavigationMarkType.DaCapo => (Wrap(Words("D.C."), Sound("dacapo", "yes")), false),
             NavigationMarkType.DaCapoAlFine => (Wrap(Words("D.C. al Fine"), Sound("dacapo", "yes")), false),
             NavigationMarkType.DaCapoAlCoda => (Wrap(Words("D.C. al Coda"), Sound("dacapo", "yes")), false),

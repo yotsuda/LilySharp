@@ -279,34 +279,38 @@ public class MarkReserveVersusDrawTests
     }
 
     /// <summary>
-    /// The To-Coda prefix centres the pair on the width it is about to draw. It measured
-    /// upright bold against a bold-italic draw until 2026-08-18, which put the group
-    /// 0.068286614 staff spaces left of its anchor.
+    /// The departure `to coda` is the coda SIGN — one glyph at the music size, no word —
+    /// exactly what the arrival `coda` draws (owner's decision, session 560; until then it
+    /// was "To " in the navigation face beside a smaller glyph). Its ink is priced by the
+    /// glyph's box, the same arm as the arrival's.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly:442-450 define-music-function codaMark — one
+    /// CodaMark grob at the departure and the arrival; scm/translation-functions.scm:270
+    /// format-coda-mark.
+    /// </remarks>
     [Fact]
-    public void ToCodaPrefix_IsCentredOnTheStyleItDraws()
+    public void ToCoda_IsTheCodaSign_LikeTheArrival()
     {
-        string svg = Svg("to coda g4 a b c' |");
-        var (size, style) = DrawnTextAttributes(svg, "To ");
-        Assert.Equal(MusicMarkEngraver.PlainTextFontSize, size, 2);
-        Assert.Equal(MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda), style);
+        string departure = Svg("g4 a b c' to coda | g1 |");
+        string arrival = Svg("g4 a b c' | coda g1 |");
+        Assert.DoesNotMatch(@">To ?</text>", departure);
+        Assert.DoesNotContain(">To Coda</text>", departure);
+        var glyphs = Regex.Matches(departure,
+            @"<text class=""music"" x=""[\d.]+""[^>]*font-size=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
+        var one = Assert.Single(glyphs.Cast<Match>());
+        // The same glyph at the same size as the arrival's.
+        var arrivalGlyph = Regex.Match(arrival,
+            @"<text class=""music"" x=""[\d.]+""[^>]*font-size=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
+        Assert.True(arrivalGlyph.Success, "the arrival drew no coda glyph");
+        Assert.Equal(arrivalGlyph.Groups[1].Value, one.Groups[1].Value);
 
-        // The coda glyph starts exactly one measured "To " past the text's pen origin —
-        // which is only true if the centring measured the face it drew.
-        double textX = double.Parse(
-            Regex.Match(svg, @"<text x=""([\d.]+)""[^>]*>To </text>").Groups[1].Value,
-            System.Globalization.CultureInfo.InvariantCulture);
-        var glyph = Regex.Match(svg,
-            @"<text class=""music"" x=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
-        Assert.True(glyph.Success, "the To-Coda pair drew no coda glyph");
-        double glyphX = double.Parse(glyph.Groups[1].Value,
-            System.Globalization.CultureInfo.InvariantCulture);
-        double prefix = Fonts.Advance("To ", MusicMarkEngraver.PlainTextFontSize,
-            TextRole.Navigation, MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda));
-        // ⚠️ Tolerance 0.02, not a decimal count: the SVG prints coordinates to 2 places, so
-        // a difference of two printed numbers carries two roundings. The gap this separates
-        // is 0.136573228 — the Bold/BoldItalic advance difference — an order above the noise.
-        Assert.InRange(glyphX - textX, prefix - 0.02, prefix + 0.02);
+        // Reserved as a symbol: the glyph's box, centred — not a word's advance.
+        var mark = new MusicMarkItem(MusicMarkType.ToCoda, measureIndex: 0, sourcePosition: 0);
+        Assert.True(mark.IsSymbol);
+        var (x0, x1) = MusicMarkEngraver.MarkXExtent(Fonts, mark, x: 0.0, boxed: true);
+        var coda = new MusicMarkItem(MusicMarkType.Coda, measureIndex: 0, sourcePosition: 0);
+        Assert.Equal(MusicMarkEngraver.MarkXExtent(Fonts, coda, x: 0.0, boxed: true), (x0, x1));
     }
 
     // ---- dynamics and text scripts: the same claim, their own homes ----

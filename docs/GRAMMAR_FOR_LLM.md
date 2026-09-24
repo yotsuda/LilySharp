@@ -162,7 +162,9 @@ score main "out" { staff melody }
 
 ⚠️ That document prints a boxed **"Main"** over its first bar: every section reference prints
 its name as a section label by default. A piece with one section rarely wants that — write
-`form main { ~Main }` (the `~` hides the label; see "Rules and gotchas").
+`form main { ~Main }` (the `~` hides the label; see "Rules and gotchas"). A `@mark("A")` on a
+note in that first bar is NOT printed while the label is (one mark a bar; LYS4021 says so) —
+put the rehearsal letter on a later bar, or hide the label.
 
 **Music always lives inside a part.** A file is a set of declarations; a note stream at the
 top level is an error (LYS0020), as are a top-level `{ … }` block, `grace`/`tuplet` group,
@@ -532,7 +534,8 @@ form main { Intro Main ~Main' Coda }
 
 Navigation marks sit between section names. Signs `segno` / `coda` engrave at the start
 of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc al fine`,
-`ds al coda`) engrave at the end of the section just played.
+`ds al coda`) engrave at the end of the section just played (`to coda` is drawn as the coda
+sign on that barline, not as words).
 
 ```
 form main { A segno  B to coda  C ds al coda  coda D }
@@ -540,7 +543,10 @@ form main { A segno  B to coda  C ds al coda  coda D }
 
 The same bare words are also written in a section's music, at a barline boundary
 (`segno c4 d e f |`, `c4 d e f | ds al fine`) — they are landmarks, never note
-modifiers, so `c4@segno` is an error (LYS1022) and mid-measure warns (LYS4003).
+modifiers, so `c4@segno` is an error (LYS1022) and mid-measure warns (LYS4003). A mark is
+an event at a moment and `|` takes no time: `c4 d e f | fine` and `c4 d e f fine |` are the
+same mark at the same barline (a text to the bar's left, a sign — `segno`, `coda` — to its
+right).
 
 In-note marks: `c4@mark("A")` (rehearsal mark),
 text spanners `@textSpan("poco rit.")` ... `@!textSpan` (sugar: `@rit` / `@accel` / `@rall`,

@@ -1066,7 +1066,9 @@ form main { イントロ イントロ "イントロ(再現)" }
 The form may carry repeat-navigation marks between sections. The *signs*
 `segno` and `coda` engrave at the start of the following section (the jump
 target); the *text* directives `fine`, `to coda`, `dc`/`ds` (optionally
-`dc al fine`, `ds al coda`, …) engrave at the end of the section just played:
+`dc al fine`, `ds al coda`, …) engrave at the end of the section just played.
+`to coda` is drawn as the coda **sign** centred on that barline, not as words — the
+departure and the arrival are the same mark, as LilyPond's `\codaMark` draws both:
 
 ```
 form main {
@@ -1247,11 +1249,24 @@ longer than `きら | ひかる`, its first bar carrying no syllables. That lead
 c4@mark("A") d e f |
 ```
 
+A `@mark` is the score's, not the note's: it stands at the bar its note is in, whichever
+note carries it. One mark is engraved at a bar, so a `@mark` written at the bar a `form`
+section's label opens is not printed — the label is — and the mark warns (LYS4021), as
+LilyPond keeps the first `\mark` of a moment and discards the second. Drop the `@mark`, or
+hide the label with `~Name` in the form (or `layout { sectionLabels none }`).
+
 ### Navigation Marks
 
 A navigation mark is **bare** — it is a landmark in the music, not a note modifier, so it
 takes no `@` (writing `c4@segno` is LYS1022). Place it at a barline boundary; mid-measure
-it engraves but warns (LYS4003).
+it engraves but warns (LYS4003). The mark is an event at a **moment**, and `|` takes no
+time: `c4 d e f | fine` and `c4 d e f fine |` are the same mark at the same barline. Which
+side of that barline it is drawn on is the mark's kind — a text (`fine`, `dc`, `ds`,
+`to coda`, the `al` forms) hangs to the bar's left, at the end of the measure just played;
+a sign (`segno`, `coda`) sits to its right, at the start of the next — as LilyPond aligns
+`JumpScript` and `SegnoMark`/`CodaMark`. A text after the last bar is drawn at that bar.
+`to coda` itself is drawn as the coda sign centred on its barline (LilyPond's `\codaMark`),
+not as the words "To Coda".
 
 ```
 segno c4 d e f |

@@ -86,6 +86,12 @@ public record TabStringUnplayableWarning(int SourcePosition, int StringNumber, i
 /// barline boundary — an unusual placement worth flagging.</summary>
 public record NavigationMarkPlacementWarning(int SourcePosition, string MarkText);
 
+/// <summary>A rehearsal mark (<c>@mark("A")</c>) written at a bar a section label opens:
+/// the label is engraved and the mark is not (one mark a moment —
+/// <c>Layout.MusicMarkEngraver.ShadowedBySectionLabel</c>). <see cref="SourcePosition"/>
+/// points at the mark; <see cref="Label"/> is the section label that stands in its place.</summary>
+public record ShadowedRehearsalMarkWarning(int SourcePosition, string MarkText, string Label);
+
 /// <summary>
 /// A tie (<c>~</c>) whose immediately following timed item cannot receive it — a
 /// note/chord repeating none of the tied pitches, or an audible rest. A tie joins

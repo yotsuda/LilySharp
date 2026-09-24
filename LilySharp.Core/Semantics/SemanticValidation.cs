@@ -87,6 +87,7 @@ public static class SemanticValidation
         new BeamPairingValidator(),         // a manual beam bracket that pairs with nothing
         new SpanPairingValidator(),         // a span mark ('@rit', '@ottava', '@!') that pairs with nothing
         new RehearsalMarkEngravedValidator(),// a written '@mark("A")' this score does not print
+        new ShadowedRehearsalMarkValidator(),// a '@mark' at a bar a section label opens (the label is printed)
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half

@@ -2,7 +2,11 @@
 // bare tokens: `to coda`, `ds al coda`, `dc al fine`. Segno/Coda targets and
 // "To Coda" sit above; the jump-FROM instructions ("D.S. al Coda", "D.C. al
 // Fine", "Fine") sit below the staff, right-aligned at the barline (Gould,
-// Behind Bars). LILYPOND-REF: lily/mark-engraver.cc; scm/output-lib.scm.
+// Behind Bars). A mark is an event at a MOMENT, and `|` takes no time: written
+// before the bar (`… c' to coda |`) or after it (`… g1 | ds al coda`) it stands at
+// the same barline — a text to the bar's left, a sign to its right — so both
+// spellings are exercised here and the one after the LAST bar is drawn too.
+// LILYPOND-REF: lily/mark-engraver.cc; scm/output-lib.scm.
 title "Navigation marks"
 time 4/4
 
@@ -11,11 +15,11 @@ part rh { clef treble }
 section Main {
   rh {
     segno g4 a b c' |
-    to coda g4 a b c' |
-    ds al coda g1 |
+    g4 a b c' to coda |
+    g1 | ds al coda
     coda g4 a b c' |
-    dc al fine g1 |
-    fine g1 |
+    g1 dc al fine |
+    g1 | fine
   }
 }
 

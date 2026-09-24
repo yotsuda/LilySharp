@@ -165,10 +165,14 @@ internal static partial class SpacingRules
     /// COLUMN's frame, so a shifted voice's ink (and its dots) reaches further right; the
     /// default 0 keeps every existing caller on the unshifted frame.</param>
     /// <param name="nextShift">Same for the RIGHT item.</param>
+    /// <param name="staffLines">The staff's drawn line count, which a REST's column box reads
+    /// (ItemSkylineFactory's remark at its Shared* views, session 557); the default is the
+    /// five-line letter for a caller with no staff.</param>
     public static double CalculateSkylineDistance(Rendering.ScoreTextMetrics fonts, MusicItem? prevItem, MusicItem? nextItem,
                                                    double staffY,
                                                    NoteSpacingParameters? noteParams = null,
-                                                   double prevShift = 0, double nextShift = 0)
+                                                   double prevShift = 0, double nextShift = 0,
+                                                   int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         // LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding (LP default 0.1).
         // LilySharp historically used GlyphMetrics.MinItemGap (0.4) as the static
@@ -223,8 +227,8 @@ internal static partial class SpacingRules
         // a half-tie is the paper column's and reaches the pair through the rod alone
         // (ItemSkylineFactory.ColumnElements carries the sources and the measurement).
         return SkylineFloorPair(
-            ItemSkylineFactory.SharedWishRightSkylineAtColumn(prevItem, prevShift, staffY),
-            ItemSkylineFactory.SharedWishLeftSkylineAtColumn(nextItem, nextShift, staffY)).SkyMin;
+            ItemSkylineFactory.SharedWishRightSkylineAtColumn(prevItem, prevShift, staffY, staffLines),
+            ItemSkylineFactory.SharedWishLeftSkylineAtColumn(nextItem, nextShift, staffY, staffLines)).SkyMin;
     }
 
     /// <summary>
@@ -279,7 +283,8 @@ internal static partial class SpacingRules
                                                MusicItem? prevItem, MusicItem? nextItem,
                                                double staffY,
                                                NoteSpacingParameters? noteParams = null,
-                                               double prevShift = 0, double nextShift = 0)
+                                               double prevShift = 0, double nextShift = 0,
+                                               int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         // A boundary (bar line) pair carries a rod too: set_column_rods walks EVERY adjacent
         // column pair, breakable columns included, and the rod is the spanner's padding over
@@ -287,12 +292,12 @@ internal static partial class SpacingRules
         if (prevItem != null && nextItem == null)
             return NoteColumnToBarlineFloorPair(fonts, prevItem).Rod;
         if (prevItem == null || nextItem == null)
-            return CalculateSkylineDistance(fonts, prevItem, nextItem, staffY, noteParams)
+            return CalculateSkylineDistance(fonts, prevItem, nextItem, staffY, noteParams, staffLines: staffLines)
                    + SeparationRodPadding;
 
         return SkylineFloorPair(
-            ItemSkylineFactory.SharedRightSkylineAtColumn(prevItem, prevShift, staffY),
-            ItemSkylineFactory.SharedLeftSkylineAtColumn(nextItem, nextShift, staffY)).Rod;
+            ItemSkylineFactory.SharedRightSkylineAtColumn(prevItem, prevShift, staffY, staffLines),
+            ItemSkylineFactory.SharedLeftSkylineAtColumn(nextItem, nextShift, staffY, staffLines)).Rod;
     }
 
     /// <summary>

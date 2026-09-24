@@ -79,7 +79,7 @@ public class FontAttributeTests
         part melody "Vln." { pedal text }
         section A {
           chords prog { D | }
-          melody { c'4@mf d@sostenuto@finger(3) e@mark("Q") f@!sostenuto | }
+          melody { c'4@mf d@sostenuto@finger(3) e f@!sostenuto | }
           lyrics words { lyr la la la | }
         }
         section B {
@@ -93,15 +93,18 @@ public class FontAttributeTests
           lyrics words { la la la la | }
         }
         section Z {
-          chords prog { D | }
-          melody { fine c'4 d e f | }
-          lyrics words { la la la la | }
+          chords prog { D | D | }
+          melody { fine c'4 d e f | g4@mark("Q") a b c' | }
+          lyrics words { la la la la | la la la la | }
         }
         form main { |: A [1. B] :| [2. C] Z _"rit." }
         score main { chords prog  staff melody  lyrics words }
         """;
     // (The last section is Z, not D: a section outside the repeat is labelled with its
-    // name in a boxed mark, and a "D" label would be read as the chord symbol's "D".)
+    // name in a boxed mark, and a "D" label would be read as the chord symbol's "D".
+    // The rehearsal mark "Q" stands on Z's SECOND bar: every section here opens with its
+    // label, and a `@mark` at the bar a label opens is the label's shadow — not drawn,
+    // LYS4021 (session 558) — so the sample would not be on the page at all.)
 
     /// <summary>A second book for the one role the main book cannot hold: a part-combine
     /// label ("a2") needs two parts on one combined staff.</summary>

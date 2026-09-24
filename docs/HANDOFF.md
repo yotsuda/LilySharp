@@ -75,6 +75,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > 「20,000 −（この節）」で先に読める**＝**第454 末で約 11,800 字＝語りに使えるのは約 8,200 字**。
 > ⇒ **詰まったら語りを削るのではなく、まずここの ✅ と重複を落とす**。
 
+> ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。
+
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「毒入りのビルドを私が作ってしまったのかもしれない。一旦この件は忘れて」・第477）**。第477 は 4 通り（HEAD 全描画・1 文字ずつの増分・`2c9bd51a`・プレビューと同じ 0.7.0）すべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定「私が不注意だった。今後は私が注意する」）＝毒の最中のビルドはユーザー側で避ける。第476 の毒 1〜3 は `StaffItemsAt`＝小節頭のばねの入力を汚す形で、症状と合っていた
 - ★ **⒭⁸ red の島＝第520 が token 側（1,124 → 124）、第521 が node 側（1,128 → 552・−43,598 B／打鍵）を閉じた。残り node 552／打鍵（約 31 KB・2.4%）＝実仕事**（地図は Lab `sessions/p521/steps-after-sampled.txt`）: 消費点 `PeekMarkers`→`ProcessMusicNode(SyntaxNode)` 341・post-event を node で読む `PhrasingSlurMarksOn` 90・`ProcessSection`／`ProcessRepeatExpression` の直接の Note 50・`CollectResumePlanner.WindowTouchesPhraseOrVariable` の窓の red walk 約 20。**消すなら `ProcessMusicNode` が `GreenSite` を受ける設計（item の生成が型で dispatch する＝土台）**。⚠️ 賞金＝「その walk しか読まない red の数」× 56 B ＋ 素の親の `_children` 配列（第521 で会計が閉じた）
@@ -96,7 +98,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ **⒩⁴（寸法を言う）は尾だけ＝着手は最後**（311 軒 2.341%・Lab sessions/p442/site-prices-after.txt。頭は「寸法を言えない」2 軒と、第457・第458 が器ごと park した 4 軒）
 
 **⒝ 土台の変更・要設計（1 便では閉じない）**
-- ★ **⒳¹⁷ 列の横 skyline（`ItemSkylineFactory`）は 5 線固定**（第536 起票・NOT PORTED 2 件）: 列の view は item × shift × Y で memo され staff を持たない。1 線の全休符・2 線の二分休符の箱が描画より 1 空き上に建つ＝効くのは隣の列の*その Y* のインク（臨時記号・旗）だけ。直すなら view の鍵に線数を足す（memo の鍵と `Boxes` の 3 軒）
 - ★★ **⒨ memo の front の*program と partition*＝1.261%**＝**第512・第518 で front は尽きた（下）**
   （第435 実測・実コーパス 231 冊 × 8 打鍵: **`a.prog` 54,842 B／打鍵 0.688%**＝`BuildProgram`（above の
   11 家族ぶんの鍵）・**`a.part` 31,361 B 0.393%**＝11 家族を system で仕分ける・**`b.prog` 10,727 B 0.135%**・
@@ -104,7 +105,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   hit>0**・hit した system は **90,781／打鍵 22.6**）。⚠️ **`prog` は「鍵を建てる」ので、*安くする*には
   鍵の形を変える＝土台の変更**
   ⇒ **第512 が「鍵を建てる」の hit 側を閉じた＝土台の変更は要らなかった**（−42,476・`8b1830db`）: program は lent な `Probe`（list）に集め、hit は stored の配列と span で比べ、**miss だけ `ToEntry`**（第508 の `PagingAugmentProgram.Builder.Matches` と同じ形）。HEAD の値段は above hit 48.92 回 35,600・below hit 8.65 回 6,534・miss 2.57 回 2,078 B／打鍵（Lab `sessions/p512/memo-price.log`）。**第518 が front を 6 段に値付けした**（Lab `sessions/p518/steps-head4.txt`・above／below）: part 261／138・prog 2,852／385・filter 1,053／333・**core 31,379／25**・rebuild 8,734／4,393・store 574／219＝**front は尽きた**。core の 77% は `PlaceBarNumbers` の tracker の写しで**第518 が閉じた（−17,839）**。残る頭は **rebuild 8,734**（9 家族の `ToBuilder`＝出力の配列そのもの・struct の家族 55 個／呼び）と core の尾（bar number の outline の対 2,442＝tracker に格納される実仕事・seed 2,393・marks 2,163・voltas 1,253・tracker の merge 1,191）
-- ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定＝提案しない**（ユーザー承認は済だが着手先が無い・全文は §1.1 第547・Lab `sessions/p547/`）。**mark の高さは LP と exact（0.85）・系の高さは LP と同じか短い**（短ければ*多く*入るはずなのに 7 系＝原因は系高でなくページ帯）。⚠️ **戻る便の唯一の lead＝title→first-system の rod 12.646**（`ls-page.log` page1 spring 2＝題 depth 6.105＋up 4.041＋toFirst 2.0）が LP と同じか。⚠️ **Solo の二重（+3.78）は page2 の先頭に居て page1 の容量に触れない**（第544「外しても 7/8/6」）＝**重複 mark を畳むかは U11 と無関係の綴りの判断**（section label と `@mark` の同時刻＝LP は `Mark_engraver` の conflict で 1 つ捨てる・Lily# は 2 つ描く。射程は実コーパス 1 冊・出力が動く＝ユーザー決定）
+- ⚠️ **U11（`Hold the Line` の page1 が LP 8 系・Lily# 7 系）＝第547 が「移植できる欠陥は無い」と確定＝提案しない**（ユーザー承認は済だが着手先が無い・全文は §1.1 第547・Lab `sessions/p547/`）。**mark の高さは LP と exact（0.85）・系の高さは LP と同じか短い**（短ければ*多く*入るはずなのに 7 系＝原因は系高でなくページ帯）。⚠️ **戻る便の唯一の lead＝title→first-system の rod 12.646**（`ls-page.log` page1 spring 2＝題 depth 6.105＋up 4.041＋toFirst 2.0）が LP と同じか。⚠️ **Solo の二重（+3.78）は page2 の先頭に居て page1 の容量に触れない**（第544「外しても 7/8/6」）。**重複 mark は第558 が畳んだ（ユーザー決定「LP に合わせて」・LYS4021・射程は実コーパス 8 冊＝起票の「1 冊」は外れ）**＝U11 の page 割りは動かない（Hold the Line は 3 ページのまま）
 - ★ **双子の穴の残り 25 行（第546 の掃き＝Lab `sessions/p546/warnings-after.tsv`。tab の T/H/P 8 行は第546 が閉じた）**: `@fig.*` 13（`\figuremode` の別 context＝設計）／inline `@chord.X` 8（`_inlineChordVars` の無い part＝設計）／既知の自認 4（custom key・CustomText・3 forms・phrase 後の音高）＝**安い残りは無い**
 - ★★★ **⒡′ bow を*staff 自身の枠*で採点して offset は描画時に足す**（0.074% ＋ 1 ULP の尾）
 - ★★ **⒵⁴ `prefixMarkAnchorX` の解き直し 0.338%**＝**memo は反証済み**（hit 率 0.53%）
@@ -127,7 +128,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ **タブ譜は `.up`/`.down` を守らない**＝タブの採点は符尾を入れていない（弧は常に符尾の反対側という約束）ので、符尾側へ強制すると梁を突き抜ける（Lab `sessions/p484/tab.lys`）。直すなら符尾を採点に入れる
 
 **⒞ ユーザー決定が先・触らない**
-- ★★ **⒳¹² インラインの*文字の*navigation 記号が 1 小節遅れて描かれ、曲末の 1 つは黙って消える**（第480 起票・実測・**ユーザー判断が先**）。`docs/SYNTAX_REFERENCE.md`「Navigation Marks」は `c4 d e f | to coda`＝**直前の小節の終わり**と書くが、**その例をそのまま描くと To Coda・Fine・D.C.・D.S. al Fine が全部*次の*小節の終わりに出て、最後の `| ds al coda` は描かれない**（`check` は無言。Lab `sessions/p480/doc-example.lys`＋`-ls.png`）。segno・coda と form 側（`A fine B`）は正しい。**双子は文書どおりの時刻**に出す＝この本では絵と双子が 1 小節食い違う。⚠️ **fixture `navigation-marks.lys` は逆の読み（`fine g1 |`＝この小節の終わり）で書かれていて、絵はそれに合う**＝**どちらが仕様かはユーザー決定**（⑴ 絵を文書に合わせる＝fixture と snapshot も直す／⑵ 文書と双子を絵に合わせる）。**ユーザーの実コーパス 331 冊はインラインの文字記号を 1 度も使っていない**（全部 form 側）＝射程はテストと文書だけ。**ユーザー「起票のまま。あとで判断」（第523）＝催促しない**
+- ✅ **⒳¹² は第559 が閉じた（ユーザー決定「あなたの提案通りで」＝綴り `to coda` は残す・置き場所は LP の時刻モデル）**＝経緯と根拠は §1.1 第559
 
 - ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
@@ -144,25 +145,28 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第556セッション（2026-09-24・YT-DELL2）
+### 1.1 第560セッション（2026-09-24・YT-DELL2）
 
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p556`（HEAD `49d214fb`・full 8922 / 0 / 2 / 8924・`-Archive 554`）。作業ツリーの `samples/*` はユーザーの手（触らない）。**計測のみ・コード変更なし**。
+同じ会話の続き。ユーザー「To coda は記号で描いて」（第559 が残した忠実度の判断 1 つ＝決定）。★ `-Start p560`（HEAD `dc5b99e3`・full 8935 / 0 / 2 / 8937・`-Archive 558`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
 
-★★ **⑴ 地図を HEAD で取り直した**（Lab `sessions/p556/type-price-head.txt`・render 1,074,259）: 頭は String 331 KB・GreenNode[] 163 KB＋SyntaxToken[] 67 KB（parse の bleed）・SkylineBuilding[] 122 KB・NoteItem 103 KB（第494＝刻印の `with`＝設計）・Int32[] 37 KB・ArticulationLayout[] 26.6 KB（第553＝出力）・**`Spring` 22.3 KB**・Measure 19.4 KB・Double[] 18 KB・BeamGroup 17 KB・WalkCheckpoint 15.6 KB（第522＝実仕事）・`SystemDetails` 5.1 KB（13.4 → 第554 で）。**起票の無い頭は無い**。
-★★ **⑵ `Spring` の struct 化（`sealed record` → `readonly record struct`）を試して反証した＝戻した（patch は Lab `p556-spring-struct.patch`）**: 予測 −9,600±3,000 に対し **render 1,074,557 → 1,074,122＝−435 B／打鍵**（hash 0 差）＝**配列の育ち（8 → 40 B／slot）がオブジェクトの消滅と相殺**＝springs は配列に平均 1.7 回住む（`ToBuilder` の写し・`ImmutableArray<Spring>` の家族）。しかも **identity の観測者がいた**: `SpringRodModelTests.EnsureMinDistance_NeverLowersTheMinimum` が `Assert.Same`（下げない場合は同じ instance を返す契約）で赤。⇒ **Spring は class のまま・この直し方は閉じた**（RULES §5.0 12例目の型＝「直すなら X」の反証）。コンパイルが名指した class 依存は 2 軒だけ（`Spring?` の `.Value` 無し読み・`?: null`）。
-  棚卸し: Core 変更なし・REF／OWN 0・`-End p556` OK・**full 8922 / 0 / 2 / 8924**（±0）。
-  ⇒ **第548〜556 の 9 便で render 1,120,570 → 1,074,557（−46,013・−4.1%）**。判定: perf の地図は土台だけになった＝次は別の島＝§1.0 ⒝ の設計項目（⒮²⁰′ 閉包 5 KB・⒳¹⁷ 列 skyline の線数）か perf 以外（⒳¹² のユーザー判断・R7〜R11 の LP 双子）＝この便の文脈に依らない (c)＝**同じ会話でも新しい会話でも差は小さい**。
+★★ **⑴ `to coda` を coda 記号で描く＝出発点と到達点は LP の同じ `CodaMark`**（commit `9becd908`・`-End p560` OK・7.7 匂いなし）。LP の根拠: `ly/music-functions-init.ly:442-450 codaMark` は出発点にも到達点にも同じ `CodaMarkEvent`＝同じ grob・`scm/translation-functions.scm:270 format-coda-mark`＝markup は coda 記号。置き場所: `CodaMark` の `self-alignment-X` は opposite-of-anchor（`define-grobs.scm:1016-1017`）で、`BarLine` の `break-align-anchor-alignment` は CENTER（`:1225`）＝**記号は小節線の中心に立つ**（文字の「小節線の左 −0.5」ではない）。
+  **実装**: `MusicMarkItem.IsSymbol` に ToCoda を足し、`GetMarkText` は 𝄌（描画は IsSymbol 枝＝到達点の `coda` と同じ glyph・同じ大きさ 4.0）／`CalculateXPosition` の End 枝＝IsSymbol なら `X + Width`（小節線上）／優先度 1400（CodaMark）／`GetMarkHalfExtent`・`MarkXExtent` は Segno・Coda と同じ枝／renderer の "To ＋小 glyph" の合成枝と `ToCodaStencilWidths`（近似 `4.0*0.8*0.42`＝表から 1 行減）を消し、union 配置は `MusicMarkExtents` の記号枝で値付け／双子 `\codaMark 1`（tweak 無し＝CodaMark 自身の begin-of-line-invisible が「行末の境界記号」と同じ）／MusicXML は `<coda/>`＋`<sound tocoda="coda"/>`。**Lily#-own のまま残したもの**: 境界の記号と次の section label を横並びにする `CoPlaceToCodaWithLabels`（HANDOFF §3 のユーザー決定・LP は label を記号の上に積む）＝gap 4.0 は不変なので記号が細くなった分だけ空きが増えた（註に明記）。
+  **網**: `MarkReserveVersusDrawTests.ToCoda_IsTheCodaSign_LikeTheArrival`（"To" の文字が無い・glyph は到達点と同じ大きさ・`MarkXExtent` は Coda と同値）＝**毒（IsSymbol から ToCoda を外す）で赤**（Lab `sessions/p560/net-poison.log`）。旧 `ToCodaPrefix_IsCentredOnTheStyleItDraws` は描かない合成を測っていたので置き換え。**snapshot 3 枚**（`navigation-marks`・`tocoda-volta-clearance`・`tocoda-label-mirror`）＝差分は各 3 行＝「To の文字＋3.2 の glyph → 4.0 の glyph 1 つ」だけ・高さ不変（masked で数えた）・承認。**hash A/B（baseline＝p559 の after 5,800 行）: 動いたのは `blogger.lys` 1 冊 8 行＝コーパスで form に `to coda` を持つ唯一の本**（grep 1 件）。full **8935 / 0 / 2 / 8937**。
+  文書: SYNTAX_REFERENCE（form の Navigation marks・音楽側の Navigation Marks）・GRAMMAR（form の註）・GRAMMAR_FOR_LLM・CHANGELOG 0.8.0 Engraving。表 2 枚は再生成（近似 1 行減＋行番号）。引用の網に 1 度噛まれた（`codaMark` は複合名ではない→ `define-music-function codaMark`）。
+  ⇒ 判定: navigation 記号の族（⒳¹²・To Coda の記号）は閉じた。次は忠実度の項目＝R7〜R11 の LP 双子か ⒳⁶。この便の文脈に依らない＝(c)。
 
-## 以下は第555セッションの経緯
+## 以下は第559セッションの経緯
 
-### 1.1 第555セッション（2026-09-24・YT-DELL2）
+### 1.1 第559セッション（2026-09-24・YT-DELL2）
 
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p555`（HEAD `08393b03`・full 8922 / 0 / 2 / 8924・`-Archive 553`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+同じ会話の続き。ユーザー「あなたの提案通りで実装して」＝⒳¹² の決定: **綴り `to coda` は残す・置き場所は LP の時刻モデル**。★ `-Start p559`（HEAD `56b0940f`・full 8930 / 0 / 2 / 8932・`-Archive 557`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
 
-★★ **⑴ ⒮²⁸ の `MeasureSpringData[]` 11,318 B／打鍵＝line-break gate の vector を打鍵ごとに新しい配列に建てていたのを spare 1 本に閉じた（commit `fe40734f`・render **1,084,078 → 1,074,592＝−9,486 B／打鍵（0.88%）**・予測 −11,000±3,000 の帯内・hash 5,816 行 0 差・Lab `sessions/p555/`）**。**所有権を先に読んだ**: vector を持つのは `IncrementalCompiler._springs` と、gate が skip しなかった打鍵（＝line DP が走った）だけ `LineBreakDpSession`（`Store`）と `_lineBreaks` の `LineBreakSolutions`＝どちらもそのとき `_springs` になる配列。⇒ 打鍵を越えて生きる vector は「解いた」ものだけ＝置き換えられた旧 `_springs` は自由、gate が等しいと判定した buffer（Layout には前の table が渡り vector は渡らない＝`LayoutEngine.Layout` は `precomputedLineBreaks != null` なら `precomputedSprings` を読まない）は即自由。`ComputeMultiStaffSpringData(…, into)` は全 slot を書く（memo 腕・MMR 腕・通常腕）。skip した打鍵は保持 vector を据え置いて buffer を spare へ、解いた打鍵は buffer を `_springs` に・旧を spare へ。font／paper の reset で spare も捨てる。
-  **毒 P1（解いた vector も spare に戻す＝DP が保持する配列を次の打鍵が上書き）→ hash 3 行差・スイート 2 赤（`IncrementalReuseSoundnessTests.SessionFuzz_RandomizedEdits_AlwaysMatchFull`・第554 の `SystemCountLineMemoTests`）**＝所有権の規則は両方の母集団に観測者がいる（網は足していない）。
-  棚卸し: Core `IncrementalCompiler` +27／−2・`SystemBreaker` +9／−2・REF 0／OWN 0（7.6 ⒟）・表 2 枚は差なし・Core 警告 0。`-End p555` OK・**full 8922 / 0 / 2 / 8924**（±0）・7.7 匂いなし（spare は契約＝「解いた vector は保持される」を註に書いた）。
-  ⇒ **第552〜555 の 4 便で render 1,098,933 → 1,074,592（−24,341・−2.2%）**。⒮²⁸ の残り＝`Spring` 24 KB（sealed record・struct 化は設計）・`Int32[]`／`Double[]`（第495 の残り）・`WalkCheckpoint`（実仕事）＝**地図の起票の無い頭は尽きた**。判定: 次は地図を取り直すか、§1.0 ⒝ の設計項目（⒮²⁰′ 閉包・⒳¹⁷）か、perf 以外の島（⒳¹² のユーザー判断）＝この便の文脈に依らない＝(c) 差は小さい・**既定どおり同じ会話で続けられるが、perf の島は次の一手を選び直す時点**。
+★★ **⑴ ⒳¹² を閉じた＝インラインの navigation 記号は「書かれた小節線」に立つ**（commit `fe9df786`）。根拠（第558 の評価・ユーザー承認）: ⒜ 綴り＝この言語の複語は句の形（`key g major`・`dc al fine`）で、`toCoda` は 10 綴りのうち 1 つだけ camelCase になり、全部一語にすると LP にも無い語になる。`to` は予約語＝`coda` との取り違えは文法エラーになる。⒝ 置き場所＝記号は*時刻*の事象で `|` は時間を持たない＝`… f | fine` と `… f fine |` は同じ小節線。描く側は種類: 文字（fine・dc・ds・to coda）は左（`JumpScript` の `self-alignment-X RIGHT`＝`define-grobs.scm:1912`）、記号（segno・coda）は右（`SegnoMark`／`CodaMark` の opposite-of-anchor＝`:3097`／`:1017`）。
+  **実装は 1 関数** `MeasureCollector.NavigationMarkMeasure(navType, builder)`（MusicWalk の inline 枝だけ・form 側は前から時刻モデル）: builder が小節頭（`CurrentDuration == 0`）に立ち、文字で、`measure > 0` なら `measure − 1`。それ以外は `CurrentMeasureIndex`（記号は次小節の頭＝従来どおり・小節途中は従来どおり＋LYS4003・曲頭の文字は 0）。⚠️ **「小節線の前」の枝は無い＝測って消した**: 満ちた小節は `AutoCompleteMeasure` がその場で emit するので `fine |` も `| fine` も builder は*次の空の小節頭*に居る＝**旧規則では両綴りとも 1 小節遅れ**（起票の「fixture `fine g1 |` は逆の読み」は違った＝fixture の絵は「書かれた小節の終わり」ではなく「次の小節頭に立つ builder の小節の終わり」で、偶然 1 小節ずれて見えていただけ）。`segno |` と `| segno` は前から同じ小節（記号は Beginning）。
+  **網 `NavigationMarkMomentTests` 5 本**（文字は `|` の前後で同じ小節・同じ絵（data-pos を除く）／最後の `|` の後の `ds al coda` が描かれる／記号は前後で同じ＝対照／小節途中は据え置き＋LYS4003／曲頭の文字は 0）＝**毒（`CurrentMeasureIndex` をそのまま返す）で文字の 2 本が赤・対照 3 本は緑**（Lab `sessions/p559/net-poison.log`）。**fixture `navigation-marks.lys` は両綴りと曲末の 1 つを持つ形に書き直した**（`g4 a b c' to coda |`・`g1 | ds al coda`・`g1 | fine`）＝**絵は旧 snapshot と data-pos 以外バイト同一**（masked equal・`Approve-Snapshots -Name` で承認＝差分 33 行は全部 data-pos）。**文書の例 `sessions/p480/doc-example.lys` を Release CLI で描き直した**（Lab `sessions/p559/doc-example.svg`）: To (coda) x=30.8・Fine 46.04・D.C. 59.03・D.S. al Fine 72.03・**D.S. al Coda 85.02（曲末＝以前は消えていた）**＝各小節の終わり（小節幅 13）。**hash A/B（baseline＝p558 の after 5,800 行）: 0 差**＝コーパスはインラインの文字記号を使わない（起票どおり）。full **8935 / 0 / 2 / 8937**・`-End p559` OK・7.7 匂いなし。
+  文書: SYNTAX_REFERENCE「Navigation Marks」・GRAMMAR（NavMark の註）・GRAMMAR_FOR_LLM・CHANGELOG 0.8.0 Engraving。引用の網に 1 度噛まれた（`JumpScript self-alignment-X` は 3 部名ではない→ `jump-script-interface`／`segno-mark-interface` の範囲で引く）。棚卸し: Core `MeasureCollector` +40（関数＋註）・`MusicWalk` 1／1・REF 2（`define-grobs.scm:1898-1925`・`:3083-3111`）／OWN 0・網 +5・表は `APPROXIMATIONS.md` 1 行（行番号）。
+  ⚠️ 残る忠実度の判断 1 つ（起票せず）: LP は出発点の "To Coda" を語でなく coda 記号（`\codaMark`）で描く＝Lily# の語は Gould 流。
+  ⇒ 判定: ⒞ の判断待ちは無くなった。次は忠実度の項目＝R7〜R11 の LP 双子か ⒳⁶（§1.0 冒頭の方針）。この便の文脈に依らない＝(c)。
 
 ## 2. 開いている作業
 

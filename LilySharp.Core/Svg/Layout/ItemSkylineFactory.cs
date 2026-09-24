@@ -229,9 +229,10 @@ internal static class ItemSkylineFactory
     /// </remarks>
     private static HorizontalSkyline Build(MusicItem item, double referenceX, double staffY,
                                            ColumnElements which, HorizontalDirection direction,
-                                           double verticalPadding)
+                                           double verticalPadding,
+                                           int staffLines = EngravingDefaults.DefaultStaffLines)
     {
-        var boxes = Boxes(item, referenceX, staffY, which);
+        var boxes = Boxes(item, referenceX, staffY, which, staffLines);
         var skyline = HorizontalSkyline.FromBoxesPadded(boxes, direction, verticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);
         return skyline;
@@ -325,7 +326,7 @@ internal static class ItemSkylineFactory
     }
 
     private readonly record struct SkylineKey(MusicItem Item, double ReferenceX, double StaffY,
-        ColumnElements Which, HorizontalDirection Direction, double Padding);
+        ColumnElements Which, HorizontalDirection Direction, double Padding, int StaffLines);
 
     /// <summary>The item by REFERENCE (a record's value equality would hash its whole
     /// content per ask), the numbers by value — the arguments Build reads, all of them.</summary>
@@ -340,44 +341,57 @@ internal static class ItemSkylineFactory
         public bool Equals(SkylineKey a, SkylineKey b)
             => ReferenceEquals(a.Item, b.Item) && a.ReferenceX.Equals(b.ReferenceX)
                && a.StaffY.Equals(b.StaffY) && a.Which == b.Which
-               && a.Direction == b.Direction && a.Padding.Equals(b.Padding);
+               && a.Direction == b.Direction && a.Padding.Equals(b.Padding)
+               && a.StaffLines == b.StaffLines;
 
         public int GetHashCode(SkylineKey k)
             => HashCode.Combine(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(k.Item),
-                k.ReferenceX, k.StaffY, k.Which, k.Direction, k.Padding);
+                k.ReferenceX, k.StaffY, k.Which, k.Direction, k.Padding, k.StaffLines);
     }
 
     private static HorizontalSkyline Shared(MusicItem item, double referenceX, double staffY,
-        ColumnElements which, HorizontalDirection direction, double verticalPadding)
+        ColumnElements which, HorizontalDirection direction, double verticalPadding, int staffLines)
     {
         if (t_renderMemoDepth == 0)
-            return Build(item, referenceX, staffY, which, direction, verticalPadding);
-        var key = new SkylineKey(item, referenceX, staffY, which, direction, verticalPadding);
+            return Build(item, referenceX, staffY, which, direction, verticalPadding, staffLines);
+        var key = new SkylineKey(item, referenceX, staffY, which, direction, verticalPadding, staffLines);
         var memo = t_renderMemo!;
         if (!memo.TryGetValue(key, out var skyline))
-            memo[key] = skyline = Build(item, referenceX, staffY, which, direction, verticalPadding);
+            memo[key] = skyline = Build(item, referenceX, staffY, which, direction, verticalPadding, staffLines);
         return skyline;
     }
 
+    // ⚠️ `staffLines` (session 557, HANDOFF ⒳¹⁷): the staff's drawn line count, which only a
+    // REST's box reads — its neutral letter is the staff's (ElementCoordinator.NeutralRestPosition:
+    // a whole rest hangs from the first line above the middle, which on one line is the line
+    // itself), and until session 557 this view priced every staff as five lines. The two
+    // callers that know the staff pass it (the multi-staff timing springs, the cross-voice
+    // column pass); the default keeps a caller that has no staff at the five-line letter,
+    // which is what it always was — the page's rest is drawn by the staff either way.
+
     /// <summary><see cref="CreateRightSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
-    internal static HorizontalSkyline SharedRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
+    internal static HorizontalSkyline SharedRightSkylineAtColumn(MusicItem item, double columnX, double staffY,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
         => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.Elements,
-                  HorizontalDirection.Right, SpacingRules.MusicalColumnSkylineVerticalPadding);
+                  HorizontalDirection.Right, SpacingRules.MusicalColumnSkylineVerticalPadding, staffLines);
 
     /// <summary><see cref="CreateLeftSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
-    internal static HorizontalSkyline SharedLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
+    internal static HorizontalSkyline SharedLeftSkylineAtColumn(MusicItem item, double columnX, double staffY,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
         => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.All,
-                  HorizontalDirection.Left, SpacingRules.MusicalColumnSkylineVerticalPadding);
+                  HorizontalDirection.Left, SpacingRules.MusicalColumnSkylineVerticalPadding, staffLines);
 
     /// <summary><see cref="CreateWishRightSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
-    internal static HorizontalSkyline SharedWishRightSkylineAtColumn(MusicItem item, double columnX, double staffY)
+    internal static HorizontalSkyline SharedWishRightSkylineAtColumn(MusicItem item, double columnX, double staffY,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
         => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.NoteColumn,
-                  HorizontalDirection.Right, SpacingRules.NoteColumnSkylineVerticalPadding);
+                  HorizontalDirection.Right, SpacingRules.NoteColumnSkylineVerticalPadding, staffLines);
 
     /// <summary><see cref="CreateWishLeftSkylineAtColumn"/>, shared within a render — READ ONLY.</summary>
-    internal static HorizontalSkyline SharedWishLeftSkylineAtColumn(MusicItem item, double columnX, double staffY)
+    internal static HorizontalSkyline SharedWishLeftSkylineAtColumn(MusicItem item, double columnX, double staffY,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
         => Shared(item, columnX + ColumnReferenceOffset(item), staffY, ColumnElements.WishLeft,
-                  HorizontalDirection.Left, SpacingRules.NoteColumnSkylineVerticalPadding);
+                  HorizontalDirection.Left, SpacingRules.NoteColumnSkylineVerticalPadding, staffLines);
 
     /// <summary>What <see cref="ColumnParts"/> subtracts from its reference to find the
     /// head's left edge — so adding it puts that edge AT the reference.</summary>
@@ -421,10 +435,11 @@ internal static class ItemSkylineFactory
     ///   — the union of the neighbours' pure heights, less the grob's own height.
     /// The Y ranges here are the same pure ones the boxes carry, so the two readings agree.
     /// </remarks>
-    internal static (double YMin, double YMax) ColumnYExtent(MusicItem item, double staffY)
+    internal static (double YMin, double YMax) ColumnYExtent(MusicItem item, double staffY,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         double yMin = double.PositiveInfinity, yMax = double.NegativeInfinity;
-        var parts = ColumnParts(item, 0, staffY);
+        var parts = ColumnParts(item, 0, staffY, staffLines);
         foreach (var p in parts)
         {
             yMin = Math.Min(yMin, p.YBottom);
@@ -443,9 +458,10 @@ internal static class ItemSkylineFactory
     ///   empty-extent guard at :185.
     /// </remarks>
     private static List<(double YBottom, double YTop, double XLeft, double XRight)> Boxes(
-        MusicItem item, double referenceX, double staffY, ColumnElements which)
+        MusicItem item, double referenceX, double staffY, ColumnElements which,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
-        var parts = ColumnParts(item, referenceX, staffY);
+        var parts = ColumnParts(item, referenceX, staffY, staffLines);
         var boxes = BoxesOf(parts, staffY, which);
         GiveParts(parts);
         return boxes;
@@ -630,7 +646,8 @@ internal static class ItemSkylineFactory
         t_parts = parts;
     }
 
-    private static List<ColumnPart> ColumnParts(MusicItem item, double referenceX, double staffY)
+    private static List<ColumnPart> ColumnParts(MusicItem item, double referenceX, double staffY,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         var parts = RentParts();
 
@@ -706,15 +723,12 @@ internal static class ItemSkylineFactory
             // is chained past this box never moves it. It is admitted by the branch
             // above even when no voice { } span stamped it a direction.
             // `noteValue` is the NOTATED value (see the beamed branch's note on NoteValueOf).
-            // ⚠️ FIVE LINES, NOT PORTED: this column view has no staff to ask (it is keyed by
-            // item, shift and Y, and memoised so per render — SharedRightSkylineAtColumn),
-            // so every staff is priced as five lines here. A whole rest on a one-line staff,
-            // a half on the timbales pair, is drawn and vertically seeded a space lower
-            // (ElementCoordinator.NeutralRestPosition) than this horizontal box says; the
-            // difference reaches only what a neighbour's ink at that Y prices against it.
+            // The staff's own line count (session 557 — until then five lines whatever the
+            // staff, see the remark at the Shared* views): the box stands where the page draws
+            // and vertically seeds the rest (ElementCoordinator.NeutralRestPosition).
             var restBox = GlyphMetrics.GetRestBBox(noteValue);
             double restY = staffY
-                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, noteValue, 5)
+                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, noteValue, staffLines)
                     / 2.0;
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,
@@ -767,11 +781,11 @@ internal static class ItemSkylineFactory
             // GlyphMetrics.NoteValueOf(item), which answers 4 for every headless item — an
             // eighth rest boxed as a QUARTER rest read 0.95 wide here where LilyPond's rod
             // says 1.0 (the same 1.30 rod above).
-            // ⚠️ THE FIVE-LINE LETTER, NOT PORTED — see the voiced branch above: no staff to
-            // ask in this view, so the whole rest is boxed a space above the middle on every
-            // staff, where a one-line staff draws it hanging from the line itself.
+            // The staff's neutral letter (session 557; five lines: a whole rest a space above
+            // the middle, everything shorter on it — the same numbers this branch spelled
+            // inline until then): on one line the whole rest hangs from the line itself.
             var restBox = GlyphMetrics.GetRestBBox(noteValue);
-            double restY = staffY - (noteValue == 1 ? 1.0 : 0.0);
+            double restY = staffY - ElementCoordinator.NeutralRestPosition(staffLines, noteValue) / 2.0;
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,
                 noteheadLeftX + restBox.Left, noteheadLeftX + restBox.Right));

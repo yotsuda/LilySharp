@@ -4567,11 +4567,14 @@ public sealed class LilyPondExporter
         {
             case NavigationMarkType.Segno: return "\\segnoMark 1";
             case NavigationMarkType.Coda: return OnTheNewLine + "\\codaMark 1";
+            // The departure is the coda SIGN too (session 560, the owner's decision): the
+            // same grob, and CodaMark's own begin-of-line-invisible is what the page does
+            // with a boundary mark that ends a line — so no tweak here.
+            case NavigationMarkType.ToCoda: return "\\codaMark 1";
         }
         string? word = nav.MarkType switch
         {
             NavigationMarkType.Fine => "Fine",
-            NavigationMarkType.ToCoda => "To Coda",
             NavigationMarkType.DaCapo => "D.C.",
             NavigationMarkType.DaCapoAlFine => "D.C. al Fine",
             NavigationMarkType.DaCapoAlCoda => "D.C. al Coda",

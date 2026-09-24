@@ -185,9 +185,16 @@ public class VocabularyPerturbationTests
     public void EveryAnnotationOperandReachesThePage(string written, string other)
         => AssertMoves(OnFirstNote(written), OnFirstNote(other), written + " vs " + other);
 
+    /// <summary>The annotation on the first note — of bar TWO for a rehearsal mark: bar one
+    /// is the bar the section label "A" opens, and a <c>@mark</c> there is the label's shadow
+    /// (not drawn, LYS4021; session 558), so both operands would draw the same page and the
+    /// row would read as a dead word for a reason that is not the operand's.</summary>
     private static string OnFirstNote(string annotation) =>
-        Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |",
-                      $"c'4{annotation} d' e' f' | c'4 d' e' f' |");
+        annotation.StartsWith("@mark", StringComparison.Ordinal)
+            ? Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |",
+                            $"c'4 d' e' f' | c'4{annotation} d' e' f' |")
+            : Plain.Replace("c'4 d' e' f' | c'4 d' e' f' |",
+                            $"c'4{annotation} d' e' f' | c'4 d' e' f' |");
 
     /// <summary>Sixteenths under one beam — what a feathered beam needs to be a beam.</summary>
     private static string BeamedBook(string annotation) =>

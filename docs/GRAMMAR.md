@@ -1125,7 +1125,7 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 
 (* Navigation: signs (segno/coda) engrave at the START of the following section; text
    directives (fine, to coda, dc/ds, dc al fine, ds al coda) engrave at the END of the
-   section just played:
+   section just played — `to coda` as the coda SIGN on that barline, not as words:
    form main { A segno  B to coda  C ds al coda  coda D } *)
 
 ================================================================================
@@ -1490,7 +1490,9 @@ MusicItem      = Note | Rest | Chord | Arpeggio | Barline | PhraseRef
 (* NavMark (see §6) is the SAME bare token in a section's music as in a form — it is a
    landmark, never a note modifier, so it takes no '@' (c4@segno is LYS1022 and
    `segno c4` is the spelling). Written mid-measure it engraves but warns (LYS4003);
-   put it at a barline boundary. *)
+   put it at a barline boundary. It is an event at a MOMENT and '|' takes no time, so
+   `c4 d e f | fine` and `c4 d e f fine |` are one mark at one barline: a text (fine,
+   dc, ds, to coda) is drawn to that bar's left, a sign (segno, coda) to its right. *)
 
 (* Mid-music commands change context here. clef/key/time use the bare COMMAND form
    (no colon) — distinct from a part header which uses the same bare form to set the

@@ -67,6 +67,12 @@ internal static class EngravingDefaults
         => System.Math.Abs(roundedPosition) <= lineCount - 1
            && ((roundedPosition - (lineCount - 1)) % 2 == 0);
 
+    /// <summary>The line count a reader prices with when it has no staff to ask — the ordinary
+    /// five-line staff (<c>StaffSpec.MaxLines</c>): ItemSkylineFactory's column views without a
+    /// staff, session 557 (HANDOFF ⒳¹⁷).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3396 StaffSymbol line-count 5, the staff-symbol-interface default.</remarks>
+    public const int DefaultStaffLines = 5;
+
     /// <summary>
     /// The staff positions (half spaces about the middle line, up-positive, ascending) of
     /// the lines a NOTATION staff of <paramref name="lineCount"/> lines DRAWS — the one

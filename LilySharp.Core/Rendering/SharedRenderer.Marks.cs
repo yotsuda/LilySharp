@@ -815,28 +815,9 @@ internal static partial class SharedRenderer
                 MusicMarkEngraver.TextStyleOf(fonts, m.MarkType), TextAnchor.Middle, Color.Black);
             return;
         }
-        if (m.MarkType == MusicMarkType.ToCoda)
-        {
-            // "To" followed by the coda SIGN (not the word "Coda"), centered as a
-            // group. LILYPOND-REF: the al-coda text is set with the coda glyph.
-            double ts = MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType);
-            double gs = FontSize * 0.8;
-            const string prefix = "To ";
-            // The centring measures what the next line draws — one composition, read
-            // from the one home (ToCodaStencilWidths), which the union placement's
-            // reservation reads too, so the box and the ink cannot drift apart. (It
-            // measured Bold against a BoldItalic draw until 2026-08-18, which put the
-            // pair 0.068286614 staff spaces left of centre.)
-            var style = MusicMarkEngraver.TextStyleOf(fonts, MusicMarkType.ToCoda);
-            var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
-            double left = m.X - (textW + glyphW) / 2;
-            gc.DrawText(prefix, left, absY, ts, TextRole.Navigation,
-                style, TextAnchor.Start, Color.Black);
-            // The coda glyph's baseline sits low; lift it (up = larger Y-up) so its
-            // centre aligns with the cap height of "To".
-            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, absY + gs * 0.30, gs, Color.Black);
-            return;
-        }
+        // (The departure "To 𝄌" composition — the word in the navigation face and a smaller
+        // glyph — was drawn here until session 560. The departure is the coda SIGN now, the
+        // IsSymbol arm above, exactly as the arrival is: LilyPond's CodaMark at both ends.)
         // Default text marks (D.S./D.C./Fine/etc.) — size and style from the one home the
         // reservations read, so the box and the ink cannot drift apart again.
         gc.DrawText(m.Text, m.X, absY, MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType), TextRole.Navigation,

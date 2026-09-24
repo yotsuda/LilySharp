@@ -1501,7 +1501,7 @@ public sealed partial class MeasureCollector
                         };
                         _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.SourceStart, term));
                     }
-                    _musicMarks.Add(new MusicMarkItem(navType, builder.CurrentMeasureIndex, nav.SourceStart));
+                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder), nav.SourceStart));
                 }
                 break;
 
