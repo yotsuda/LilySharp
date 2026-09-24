@@ -28,10 +28,11 @@ internal static partial class SpacingRules
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-basic.cc:108-111 Spacing_spanner::note_spacing
     /// LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction()
-    /// - ideal_distance = get_duration_space(duration)
-    /// - min_distance = max(increment, skyline_collision_distance)
-    /// - inverse_stretch_strength = max(0.1, ideal - min)
-    /// - stem direction optical correction applied to ideal
+    /// - the duration spring: ideal fraction * get_duration_space(controlling), minimum
+    ///   fraction * increment, stretch fraction * max(0.1, len - increment)
+    /// - min_distance REPLACED by the skyline distance (set_min_distance) for a note pair
+    /// - stem direction optical correction applied to ideal (set_ideal_distance —
+    ///   the strengths stay the duration spring's)
     /// </remarks>
     /// <param name="prevItem">The left item.</param>
     /// <param name="nextItem">The right item, or null for the bar line.</param>
@@ -63,29 +64,41 @@ internal static partial class SpacingRules
         var np = noteParams ?? NoteSpacingParameters.Default;
         var so = spacing ?? SpacingOptions.Default;
 
-        // LILYPOND-REF: lily/spacing-basic.cc:152 note_spacing() - min = options->increment_
-        double defaultMin = so.Increment;
-
-        // Skyline-based collision distance (rod)
-        double skylineDistance = CalculateSkylineDistance(fonts, prevItem, nextItem, staffY: 0);
-
         // The controlling duration and the share of its spring this leg takes.
         // LILYPOND-REF: lily/spacing-basic.cc:151-157 note_spacing — len from the
         //   shortest playing duration, fraction = delta_t / shortest_playing.
         Fraction controlling = shortestPlaying is { } sp && sp > Fraction.Zero && sp < prevDuration
             ? sp : prevDuration;
-        double fraction = controlling > Fraction.Zero
-            ? prevDuration.ToDouble() / controlling.ToDouble() : 1.0;
 
-        // min_distance = max(defaultMin, skylineDistance) - ensures no collision
-        double minDistance = Math.Max(fraction * defaultMin, skylineDistance);
+        // LilyPond builds a note spring in ONE ORDER, and this is it — the same order the
+        // timing-column system (MeasureLayouter.CreateInterColumnSpring) takes, so the two
+        // spring systems cannot drift on anything but their inputs:
+        //   ⑴ the duration spring Spring (fraction * len, fraction * increment), whose
+        //     strengths are fixed HERE — stretch fraction * max (0.1, len − increment),
+        //     compress fraction * (len − increment) — and never recomputed by what follows;
+        //   ⑵ set_min_distance (skyline distance) — the minimum is REPLACED, not maxed with
+        //     the increment, so merge_springs' +0.3 headroom stands on the skyline;
+        //   ⑶ set_ideal_distance (ideal + stem correction) — the strengths stay ⑴'s.
+        // Until session 572 this builder took max (fraction * increment, skyline) for the
+        // minimum and ideal + correction − increment (without the fraction) for the stretch,
+        // a second spelling of a spring the column system already built LilyPond's way.
+        // LILYPOND-REF: lily/spacing-basic.cc:147-162 Spacing_spanner::note_spacing;
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 and :111-113 Note_spacing::get_spacing;
+        // LILYPOND-REF: lily/spring.cc:131-153 set_ideal_distance / set_min_distance.
+        var spring = CreateTimingSpringMultiVoice(prevDuration, controlling, so, np);
 
-        // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
-        double idealDistance = fraction * CalculateDurationSpace(controlling, so);
+        // Skyline-based collision distance (the wish's minimum). A leg into the bar line
+        // (no right item) keeps the increment under it: the caller raises it to the bar
+        // pair's skyline with ensure, exactly as MeasureLayouter.CreateLastToBarlineSpring does.
+        double skylineDistance = CalculateSkylineDistance(fonts, prevItem, nextItem, staffY: 0);
+        spring = nextItem is not null
+            ? spring.WithMinDistance(Math.Max(0.0, skylineDistance))
+            : spring.EnsureMinDistance(skylineDistance);
 
         // --- Stem direction optical correction ---
         // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
-        idealDistance += CalculateStemCorrection(prevItem, nextItem, np, so.Increment);
+        spring = spring.WithIdealDistance(
+            spring.IdealDistance + CalculateStemCorrection(prevItem, nextItem, np, so.Increment));
 
         // A whole-display tremolo pair whose RIGHT half carries accidentals gets the
         // Beam's minimum-length as a spacing rod between its two columns, so the
@@ -97,17 +110,7 @@ internal static partial class SpacingRules
         //   the accidentals and on duration_log <= 0, it calls set_spacing_rods;
         //   the distance is the Beam grob's minimum-length 6.0
         //   (scm/define-grobs.scm Beam) via lily/spanner.cc:429-473 set_spacing_rods.
-        minDistance = Math.Max(minDistance, TremoloPairRod(prevItem, nextItem));
-
-        // LILYPOND-REF: lily/spacing-basic.cc note_spacing()
-        //   ret.set_inverse_stretch_strength(fraction * std::max(0.1, (len - min)));
-        // where min = increment_ (NOT skyline min_distance).
-        // Skyline min_distance is set later via set_min_distance() but does NOT
-        // affect inverse_stretch_strength. This ensures accidentals (which increase
-        // skyline min_distance) don't make springs stiffer — they stretch equally.
-        double inverseStretchStrength = Math.Max(0.1, idealDistance - defaultMin);
-
-        return new Spring(idealDistance, minDistance, inverseStretchStrength);
+        return spring.EnsureMinDistance(TremoloPairRod(prevItem, nextItem));
     }
 
     /// <summary>The Beam grob's minimum-length (scm/define-grobs.scm Beam), the rod a

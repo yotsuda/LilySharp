@@ -59,6 +59,54 @@ public class TieFormattingProblemTests
         return Assert.Single(layouts);
     }
 
+    /// <summary>
+    /// The dot collision reads the DRAWN BOW at the centre of the column's dots, against each
+    /// dot's own row (HANDOFF R9(c), session 572). Until then the term was a flat rule that could
+    /// never fire (it wanted a dot strictly dirwards of the tie within 0.25 staff space, and dot
+    /// rows are half-space integers), so every expectation below read 0 on it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:794-813 score_configuration —
+    /// <c>peak_around (0.1 * clearance, clearance, |dot_pos * ss / 2 - y|)</c> per dot row,
+    /// <c>y = b.get_other_coordinate (X_AXIS, dot_x_.center ())</c>, only when the bow's
+    /// control-point X extent contains that centre; :123-139 for where dot_positions_ and
+    /// dot_x_ come from (the Dots grob, not the head).
+    /// </remarks>
+    [Fact]
+    public void ScoreDotCollision_ReadsTheBowAtTheDotsCentre_AgainstTheDotsOwnRow()
+    {
+        // A head on the middle line with a SYNTHETIC dot row 0 — a row the head's parity rule
+        // (+1) does not name, and the row a bow read outside its span would report — at X [1.5, 1.7].
+        var note = new NoteItem(0, Fraction.Quarter, 1, null, false, 0);
+        var column = new TieColumnParts
+        {
+            TiedHeads = [new TieOutlineHead(0, 0.0, 1.3)],
+            Dots = [new TieOutlineBox(-0.1, 0.1, 1.5, 1.7)],
+            HeadPositions = [0],
+        };
+        var problem = new TieFormattingProblem([new TieSpecification
+        {
+            Tie = new TieItem(note, note, 0, null, 0, 0, 0, 1),
+            StartX = 0, EndX = 4, Y = 2,
+            StartDots = 1,
+            StartColumn = column,
+        }]);
+
+        TieCandidate Flat(int position, double startX) => new()
+        {
+            SpecIndex = 0, StartX = startX, EndX = 4, Position = position, Dir = -1,
+            DeltaY = 0, Height = 0, ControlHeight = 0,
+        };
+
+        // A flat bow through the dot's own row, over the dots' centre (1.6): the full penalty,
+        // peak_around at distance 0 = 1.
+        Assert.Equal(TieDetails.Default.DotCollisionPenalty, problem.ScoreDotCollision(Flat(0, 0.0)), 9);
+        // The same bow at the row the head's parity rule names (+1) is half a space away: 0.
+        Assert.Equal(0.0, problem.ScoreDotCollision(Flat(1, 0.0)), 9);
+        // And a bow that starts past the dots never reaches their centre: 0, even on their row.
+        Assert.Equal(0.0, problem.ScoreDotCollision(Flat(0, 1.8)), 9);
+    }
+
     [Fact]
     public void Solve_BasicTie_ReturnsValidLayout()
     {

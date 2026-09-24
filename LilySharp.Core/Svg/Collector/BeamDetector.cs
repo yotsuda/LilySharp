@@ -386,6 +386,8 @@ internal sealed class BeamDetector
         hc.Add(measure.Items.Length);
         foreach (var item in measure.Items)
         {
+            // The engraving voice ends an auto-beam run when it changes (see the walk).
+            hc.Add((int)item.VoiceContext);
             switch (item)
             {
                 case NoteItem n:
@@ -951,6 +953,20 @@ internal sealed class BeamDetector
                 shortest = duration;
                 recheckNeeded = true;
             }
+
+            // A stem the part combiner routed to ANOTHER engraving voice than the run's ends the
+            // run: LilyPond auto-beams in each Voice context on its own (Auto_beam_engraver is
+            // consisted in Voice), and \partCombine moves a part between "one", "shared" and
+            // "solo" with context changes, so a solo eighth and the apart eighth after it are
+            // never offered to the same beam. Lily# keeps those three in one output stream
+            // (PartCombiner's slot 0) and tells them apart by the stamp. Default everywhere
+            // else, so an uncombined staff is untouched.
+            // MEASURED (2.26.0, part-combine-text.ly PCV: `c8 d8` against `r8 g'8`): every
+            // stem flagged, no Beam grob — Lily# drew one beam over the solo c and the apart d.
+            // LILYPOND-REF: ly/music-functions-init.ly:1643-1651 make-directed-part-combine-music;
+            // LILYPOND-REF: ly/engraver-init.ly:359,396 Voice — \consists Auto_beam_engraver.
+            if (stems.Count > 0 && item.VoiceContext != stems[0].item.VoiceContext)
+                EndBeam();
 
             // LILYPOND-REF: lily/auto-beam-engraver.cc:392-395 consider_end / consider_begin —
             // "end should be based on shortest_dur_, begin should be based on current duration".

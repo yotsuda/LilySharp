@@ -301,6 +301,56 @@ public class SpacingInvariantTests
     }
 
     [Fact]
+    public void BothSpringSystems_BuildANoteSpringInLilyPondsOrder()
+    {
+        // R7(a), session 572. The measure above never lets the order show: its quarters'
+        // ideals stand far above any floor, and nothing there reads a strength. Here each
+        // thirty-second runs over its skip to the next kept column (fraction 2) under a WHOLE
+        // common shortest, and that is where the two builders used to part. LilyPond builds the
+        // duration spring Spring (fraction * len, fraction * increment) with its strengths fixed
+        // (spacing-basic.cc:157-161), then REPLACES the minimum with the skyline distance
+        // (note-spacing.cc:82-83 set_min_distance) and the ideal (:113 set_ideal_distance) —
+        // neither setter recomputes a strength. The item builder maxed the minimum with
+        // fraction * increment instead, and priced the stretch as ideal − increment without the
+        // fraction; the column builder already did it LilyPond's way.
+        // LILYPOND-REF: lily/spacing-basic.cc:147-162 Spacing_spanner::note_spacing;
+        // LILYPOND-REF: lily/note-spacing.cc:78-83 and :111-113 Note_spacing::get_spacing.
+        var (timings, allMeasures, primary, _) = Collect("""
+            time 4/4
+            octave absolute
+            part melody
+            section Main { melody { c'4 c'32 s32 d'32 s32 e'32 s32 f'32 s32 c'4 c'4 | } }
+            form main { Main }
+            score main "x" { staff melody }
+            """);
+        var spacing = SpacingOptions.Default.WithShortest(1.0);
+        var columnSprings = new MeasureLayouter()
+            .CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, spacing, allMeasures);
+        var itemSprings = SpacingRules.CreateSpringsForMeasure(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, spacing);
+
+        Assert.Equal(columnSprings.Length, itemSprings.Length);
+        for (int i = 0; i < itemSprings.Length; i++)
+        {
+            Assert.Equal(columnSprings[i].IdealDistance, itemSprings[i].IdealDistance, 9);
+            Assert.Equal(columnSprings[i].InverseStretchStrength, itemSprings[i].InverseStretchStrength, 9);
+        }
+
+        // Live, not two builders agreeing on numbers nothing decides. ⑴ The thirty-seconds'
+        // legs (springs 2..4) ask for 2 × len + the head refinement, which is UNDER the
+        // 2.4 + 0.3 the increment floor lifted them to, and stretch at 2 × max (0.1, len − 1.2),
+        // not at ideal − 1.2. ⑵ The quarters' legs (1 and 6) sit on merge_springs' headroom,
+        // which stands on the skyline minimum.
+        for (int i = 2; i <= 4; i++)
+        {
+            Assert.True(itemSprings[i].IdealDistance < 2.4 + 0.3,
+                $"spring {i}: {itemSprings[i].IdealDistance} is the increment floor's headroom");
+            Assert.Equal(0.2, itemSprings[i].InverseStretchStrength, 9);
+        }
+        foreach (int i in new[] { 1, 6 })
+            Assert.Equal(itemSprings[i].MinDistance + 0.3, itemSprings[i].IdealDistance, 9);
+    }
+
+    [Fact]
     public void BothSpringSystems_AgreeAcrossAMidMeasureChangeColumn()
     {
         // The measure in BothSpringSystems_AgreeOnEveryMusicalSpring has no change item, so

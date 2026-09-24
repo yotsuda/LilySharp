@@ -1181,7 +1181,8 @@ internal sealed partial class LayoutEngine
             Fingerings: fingeringLayouts,
             // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
             TieVariants: score != null
-                ? TieVariantEngraver.Calculate(score, systems, measureMap: tailMeasureMap)
+                ? TieVariantEngraver.Calculate(score, systems, measureMap: tailMeasureMap,
+                    onTab: ctx.MultiScore?.PrimaryContentStaff.IsTab ?? false)
                 : ImmutableArray<TieVariantLayout>.Empty,
             // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
             MultiMeasureRests: score != null

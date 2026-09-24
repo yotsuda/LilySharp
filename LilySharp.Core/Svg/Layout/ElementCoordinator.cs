@@ -1804,7 +1804,7 @@ internal sealed class ElementCoordinator
     /// <remarks>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:96-287 set_column_chord_outline.
     /// </remarks>
-    private static TieColumnParts? BuildTieColumn(
+    internal static TieColumnParts? BuildTieColumn(
         Voice voice, int measureIndex, int itemIndex, double columnX,
         IReadOnlyList<int> tiedPositions, bool isLeftBound)
     {
@@ -2594,7 +2594,7 @@ internal sealed class ElementCoordinator
     /// takes the stem off each bound head and keeps it only if <c>Stem::is_normal_stem</c>,
     /// which a whole note's is not. Null therefore means "this bound casts no vote", not "down".
     /// </remarks>
-    private static bool? BoundStemUp(Voice voice, int measureIndex, int itemIndex)
+    internal static bool? BoundStemUp(Voice voice, int measureIndex, int itemIndex)
     {
         if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
             return null;

@@ -134,7 +134,10 @@ internal sealed class SkylineBuilder
         int staffCount = 0;
         foreach (var g in score.StaffGroups)
             staffCount += g.StaffCount;
-        bool twoEnds = lastStaff is not null && staffCount > 1 && systemHeight > 0;
+        // A system on which hara-kiri left ONE staff standing has one end, not two — the two
+        // edges then name the same placed element, and it is seeded once.
+        bool twoEnds = lastStaff is not null && staffCount > 1 && systemHeight > 0
+            && !(firstLayout is { } fl && lastLayout is { } ll && fl.StaffIndex == ll.StaffIndex);
         if (twoEnds)
             AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
                 systemLeft, upSkyline, downSkyline,
@@ -321,26 +324,49 @@ internal sealed class SkylineBuilder
     private static (Staff? Staff, StaffLayout? Layout) OuterStaff(
         MultiStaffScore score, ImmutableArray<StaffGroupLayout> placed, bool fromTop)
     {
-        var staff = fromTop
-            ? score.StaffGroups[0].PrimaryStaff
-            : score.StaffGroups[^1].Staves[^1];
-        if (staff.IsTextRow)
+        if (placed.IsDefaultOrEmpty)
+        {
+            // No layout (the skyline-less overloads): the model's own end, as before.
+            var end = fromTop
+                ? score.StaffGroups[0].PrimaryStaff
+                : score.StaffGroups[^1].Staves[^1];
+            return end.IsTextRow ? (null, null) : (end, null);
+        }
+
+        // ★ THE OUTERMOST ELEMENT THIS SYSTEM ACTUALLY PLACED — a staff hara-kiri removed is
+        // not one. It used to be the model's end staff paired with the last layout by
+        // position, and on a system where that staff was removed the pair still seeded it:
+        // its clef, its rests and its five lines, at a middle derived from the SYSTEM height
+        // because the hidden layout has none — i.e. at the system's bottom, under the lyric
+        // row that really ends it. MEASURED (audit/lp-geometry book ROWH, systems 1..19: the
+        // melody, a lyrics row, and the removed lower staff): the down profile reached 10.440
+        // below the origin, the removed staff's treble clef, and floored every system gap at
+        // 13.220 (17.820 with a second verse) where LilyPond puts 12.000; the lyric
+        // reservation under the same systems reaches 5.775.
+        // LILYPOND-REF: lily/page-layout-problem.cc:1093-1108 build_system_skyline — the
+        //   elements merged are the alignment's LIVE ones; lily/hara-kiri-group-spanner.cc
+        //   consider_suicide takes a removed staff out of the alignment altogether.
+        // ⚠️ A text row at the edge still returns none: the rows below the last spaceable
+        // staff reach the page through LyricReservationBelowSystem (see BuildSystemSkylines).
+        StaffLayout? layout = null;
+        foreach (var group in placed)
+        {
+            if (group.Staves.IsDefaultOrEmpty) continue;
+            foreach (var lay in group.Staves)
+            {
+                if (lay.IsHidden) continue;
+                layout = lay;
+                if (fromTop) break;
+            }
+            if (fromTop && layout is not null) break;
+        }
+        if (layout is null)
             return (null, null);
 
-        // BY POSITION, the same pairing the span used to be read with: the seeds are about
-        // StaffGroups[0].Staves[0] and StaffGroups[^1].Staves[^1], and the layouts are yielded
-        // in that order, so the layout has to be taken at the SAME end.
-        StaffLayout? layout = null;
-        if (!placed.IsDefaultOrEmpty)
-        {
-            foreach (var group in placed)
-            {
-                if (group.Staves.IsDefaultOrEmpty) continue;
-                if (fromTop) { layout = group.Staves[0]; break; }
-                layout = group.Staves[^1];
-            }
-        }
-        return (staff, layout);
+        foreach (var (_, st, idx) in score.EnumerateStaves())
+            if (idx == layout.StaffIndex)
+                return st.IsTextRow ? (null, null) : (st, layout);
+        return (null, null);
     }
 
     /// <summary>Y-up from the system origin down to a placed staff's MIDDLE line.</summary>

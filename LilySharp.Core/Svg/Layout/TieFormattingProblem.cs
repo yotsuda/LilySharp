@@ -80,6 +80,21 @@ internal sealed class TieSpecification
     /// <inheritdoc cref="StartStemUp"/>
     public bool? EndStemUp { get; init; }
 
+    /// <summary>
+    /// A laissez-vibrer or repeat tie: ONE head, on the side LilyPond calls its
+    /// <c>head-direction</c>, and a fixed open end (<see cref="StartX"/> / <see cref="EndX"/>)
+    /// on the other. Both of LilyPond's column ranks are the host column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:386-442 from_semi_ties — the head side's
+    /// outline is the host's, the open side a flat outline at <c>extremal − head_dir · 1.5</c>,
+    /// and <c>column_ranks_</c> are both the host's rank, so the column span is 0 and the
+    /// stem avoidance of generate_configuration (:583-609) never runs. The head-edge hug
+    /// (:496-504) cannot fire either: <c>head_extents_</c> holds only the host's side, so the
+    /// open side's extent is empty and the test's max is infinite.
+    /// </remarks>
+    public bool IsSemiTie { get; init; }
+
     /// <summary>The tied head's staff position — LilyPond's <c>Tie_specification::position_</c>.</summary>
     public int Position => Tie.StaffPosition;
 
@@ -183,6 +198,11 @@ internal sealed class TieFormattingProblem
     // chord, so for a column of one this set holds exactly the tie's own dot and the reading
     // is unchanged; for a chord it is what generate_collision_variations asks.
     private readonly HashSet<int> _dotPositions = [];
+
+    // The column's dots' X extent, united over every LEFT bound — LilyPond's dot_x_ (:133).
+    // Empty (+inf, -inf) when no bound carries a dot box; the dot-collision term reads it.
+    private double _dotXLeft = double.PositiveInfinity;
+    private double _dotXRight = double.NegativeInfinity;
 
     private TieDetails _details;
 
@@ -306,7 +326,21 @@ internal sealed class TieFormattingProblem
                 ? TieChordOutline.Build(ec, isLeftBound: false, _details.SkylinePadding)
                 : null;
 
-            if (specs[i].StartDots > 0)
+            // The dots, as set_column_chord_outline collects them (:123-139): each dot's own row
+            // into dot_positions_, its X into dot_x_ — read off the LEFT bound's dot boxes, which
+            // stand on the rows the renderer draws (DotColumn.Reserved). A column-less bound (a
+            // test fixture) has no dot grob to read and falls back to the specification's
+            // position rule, with no X — so it offers the collision variation and charges nothing.
+            if (specs[i].StartColumn is { Dots.Count: > 0 } dotted)
+            {
+                foreach (var dot in dotted.Dots)
+                {
+                    _dotPositions.Add((int)Math.Round(dot.YDown + dot.YUp));
+                    _dotXLeft = Math.Min(_dotXLeft, dot.XLeft);
+                    _dotXRight = Math.Max(_dotXRight, dot.XRight);
+                }
+            }
+            else if (specs[i].StartDots > 0)
             {
                 int pos = specs[i].Position;
                 _dotPositions.Add(pos % 2 == 0 ? pos + 1 : pos);
@@ -324,6 +358,8 @@ internal sealed class TieFormattingProblem
         Array.Clear(_endOutlines, 0, _specs.Count);
         _specs = [];
         _dotPositions.Clear();
+        _dotXLeft = double.PositiveInfinity;
+        _dotXRight = double.NegativeInfinity;
         _possibilities.Clear();
         _candidatesUsed = 0;
         RewindVariations();
@@ -489,9 +525,11 @@ internal sealed class TieFormattingProblem
         // ranks are the same one (column_span_length () == 0); the counterpart here is a bound
         // that is not a column at all, which has no stem extent to read either.
         // :583-609, stem-gap 0.35.
-        if (_startOutlines[specIdx]?.StemBox is { } ls && ls.Down <= curveYFromMiddle && curveYFromMiddle <= ls.Up)
+        if (!_specs[specIdx].IsSemiTie
+            && _startOutlines[specIdx]?.StemBox is { } ls && ls.Down <= curveYFromMiddle && curveYFromMiddle <= ls.Up)
             att.Left = Math.Max(att.Left, ls.Right + _details.StemGap);
-        if (_endOutlines[specIdx]?.StemBox is { } rs && rs.Down <= curveYFromMiddle && curveYFromMiddle <= rs.Up)
+        if (!_specs[specIdx].IsSemiTie
+            && _endOutlines[specIdx]?.StemBox is { } rs && rs.Down <= curveYFromMiddle && curveYFromMiddle <= rs.Up)
             att.Right = Math.Min(att.Right, rs.Left - _details.StemGap);
 
         return att;
@@ -1222,10 +1260,18 @@ internal sealed class TieFormattingProblem
         double tipPos = config.Position + config.DeltaY / 0.5;
         double topPos = tipPos + dir * config.Height / 0.5;
 
-        // Curve top vs a REAL staff line, only when the top is below the
+        // Curve top vs a line — a staff line OR A LEDGER LINE — only when the top is below the
         // staff's top line (:762-774).
+        // ⚠️ LEDGERS COUNT HERE (session 572, R9(c)). :764 asks Staff_symbol_referencer::on_line, whose
+        // allow_ledger defaults to true (lily/staff-symbol.cc:372-396 Staff_symbol::on_line walks
+        // ledger_positions (pos) too), so on a five-line staff every EVEN position is a line:
+        // the staff's five, and below the staff the ledger a head there would carry. Only the
+        // generate_configuration nudge at :553 asks on_staff_line (allow_ledger false). This
+        // used to read the five-line OnStaffLine (|pos| <= 4), so the top of a low tie — a down
+        // tie under the staff, the only ties this gate lets through outside it — never paid
+        // for sitting on a ledger's position.
         int roundTopPos = (int)Math.Round(topPos);
-        if (EngravingDefaults.OnStaffLine(roundTopPos)
+        if (roundTopPos % 2 == 0
             && topPos * 0.5 < 2.0)
         {
             double clearanceHs = _details.CenterStaffLineClearance * 2;
@@ -1263,53 +1309,57 @@ internal sealed class TieFormattingProblem
     }
 
     /// <summary>
-    /// Penalizes tie configurations that conflict with augmentation dots.
-    /// A dot conflicts with the tie when it lies in the direction of the tie's curve
-    /// from the tie's attachment position, within the clearance threshold.
+    /// The dot collision: the drawn bow, evaluated at the centre of the column's dots, against
+    /// every dot row in the column.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc:794-813 dot_x_ / dot_positions_ collision
-    /// LILYPOND-REF: lily/dots-engraver.cc:62-80 dot position avoids staff lines
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:794-813 score_configuration — <c>x =
+    /// dot_x_.center ()</c>; when the transformed bezier's control-point X extent contains it,
+    /// <c>y = b.get_other_coordinate (X_AXIS, x)</c> and each dot position adds
+    /// <c>dot_collision_penalty * peak_around (0.1 * clearance, clearance, |dot_pos * ss / 2 - y|)</c>.
+    /// The bezier is the one <see cref="CreateLayout"/> draws, in the staff frame
+    /// (tie-configuration.cc:46-56 get_transformed_bezier): the candidate's attachment, the
+    /// slur_shape control height, translated to <c>delta_y + position / 2</c>.
     /// <para>
-    /// ⚠️ NOT PORTED — THE ARITHMETIC; THE CITATION IS THE RULE'S SHAPE ONLY. LP has the
-    /// quantity (the bow evaluation below), so the flat penalty is an unported
-    /// simplification and not a Lily#-own one (§5.2 audit, session 158).
-    /// LilyPond evaluates the DRAWN BOW over the dots' X and charges <c>peak_around</c> on the
-    /// distance from EVERY dot position in the column to that height (:794-813: <c>dot_x_
-    /// .center ()</c>, <c>b.get_other_coordinate (X_AXIS, x)</c>). This asks only whether the
-    /// dot lies dirwards of the tie's POSITION within the clearance, and charges a flat
-    /// penalty — no bow is evaluated and the dots' X is never read.
-    ///   departs from: :796-813, the transformed-bezier reading.
-    ///   goes away when: the problem carries the dots' X extent, which
-    ///     <see cref="TieColumnParts"/> already boxes for the outline, and evaluates the
-    ///     candidate's bow at it.
-    ///   observed by: NOTHING. No ledger point measures a dotted tie
-    ///     (tie.direction.beam-opposes-stem's dot is on the tie's END note), and no fixture or
-    ///     sample in the repo ties a dotted note at all — grepped, 0 hits. The unit fixtures in
-    ///     TieFormattingProblemTests reach the branch but assert a valid layout, not a number.
+    /// ✔ PORTED IN SESSION 572 (HANDOFF R9(c)). Until then this asked whether the tie's own dot lay
+    /// dirwards of the tie's POSITION within the clearance and charged a flat penalty: no bow
+    /// was evaluated and the dots' X was never read. A tie leaves from the dot column's right
+    /// edge whenever it runs through the dots' rows (the dots are in the outline, :123-139), so
+    /// the bow usually does not reach the dots' centre at all — and then LilyPond charges
+    /// nothing where the flat rule charged the full penalty.
     /// </para>
     /// </remarks>
-    private double ScoreDotCollision(TieCandidate config)
+    internal double ScoreDotCollision(TieCandidate config)
     {
-        var spec = _specs[config.SpecIndex];
-        if (spec.StartDots <= 0)
+        if (_dotXLeft > _dotXRight)
             return 0;
 
-        // Dot position in half-staff-positions
-        // If note is on a staff line (even staff position), dot shifts up by 1 half-space
-        int dotPosition = spec.Position;
-        if (spec.Position % 2 == 0)
-            dotPosition += 1;
+        // LILYPOND-REF: :797 "use left edge?" — the centre, as LilyPond takes it.
+        double x = (_dotXLeft + _dotXRight) / 2;
 
-        // Check if the dot is in the curve's direction from the tie position
-        // CurveUp (dir=+1): collision if dot is above (dotPosition > config.Position)
-        // CurveDown (dir=-1): collision if dot is below (dotPosition < config.Position)
-        int diff = dotPosition - config.Position;
+        // The control points' X extent is [StartX, EndX]: the inner two stand an indent inside.
+        if (x < config.StartX || x > config.EndX)
+            return 0;
 
-        if (config.Dir * diff > 0 && Math.Abs(diff) * 0.5 <= _details.DotCollisionClearance)
-            return _details.DotCollisionPenalty;
+        double width = config.EndX - config.StartX;
+        double indent = CalculateIndent(width);
+        double edge = config.Position * 0.5 + config.DeltaY;
+        double control = edge + config.Dir * config.ControlHeight;
+        var bow = new Bezier(
+            config.StartX, edge,
+            config.StartX + indent, control,
+            config.EndX - indent, control,
+            config.EndX, edge);
+        double y = bow.GetOtherCoordinate(x);
 
-        return 0;
+        double demerits = 0;
+        foreach (int dotPos in _dotPositions)
+        {
+            demerits += _details.DotCollisionPenalty
+                * BezierBow.PeakAround(0.1 * _details.DotCollisionClearance,
+                    _details.DotCollisionClearance, Math.Abs(dotPos * 0.5 - y));
+        }
+        return demerits;
     }
 
     /// <summary>

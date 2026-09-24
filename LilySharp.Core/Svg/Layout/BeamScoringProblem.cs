@@ -1359,13 +1359,29 @@ internal sealed class BeamScoringProblem
     // ========================================
 
     /// <summary>
-    /// Shifts the beam position to avoid large collision objects.
+    /// Moves the unquanted beam so that the quants generated around it have a chance of
+    /// satisfying every stem's length floor, and of clearing large collision objects.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:777-890 shift_region_to_valid()
-    ///
-    /// Ensures all stems can reach minimum length, and avoids
-    /// overlapping with large objects like key/time signatures.
+    /// LILYPOND-REF: lily/beam-quanting.cc:777-890 shift_region_to_valid(), line for line:
+    /// <list type="number">
+    /// <item>the FEASIBLE LEFT POINT — every stem's <c>shortest_y_</c> brought to the left end
+    ///   along the beam's slope bounds the left Y from the stem's side (:790-808);</item>
+    /// <item>the FORBIDDEN INTERVALS — a collision inside the beam's span that is at least 2.0
+    ///   tall takes its Y extent, brought to the left end the same way, out of play
+    ///   (:821-844); <c>Interval_minefield</c> pushes the seed point just past each one it
+    ///   touches, downward and upward separately, until nothing moves (lily/interval-minefield.cc
+    ///   :52-86, bulk 0);</item>
+    /// <item>a side whose placement leaves the feasible left point goes to infinity (:859-863);
+    ///   if both did, the beam takes <c>point_in_interval (feasible, 2.0)</c> — two spaces
+    ///   inside a one-sided interval, the centre of a two-sided one (:440-450, :865-872);
+    ///   otherwise the nearer of the two placements, down on a tie (:873-881).</item>
+    /// </list>
+    /// ✔ PORTED IN SESSION 572 (HANDOFF R9(a)). Until then this CLAMPED the seed onto the
+    /// floor of the beam's own direction and never read the collisions: a seed under the floor
+    /// sat ON it where LilyPond puts it 2.0 past it, a knee's two-sided interval was read from
+    /// one side only, and a tall collision (a clef, a key or a time signature under the beam)
+    /// never moved the region.
     /// </remarks>
     private void ShiftRegionToValid()
     {
@@ -1377,34 +1393,95 @@ internal sealed class BeamScoringProblem
         double beamDy = _unquantedRightY - _unquantedLeftY;
         double slope = _xSpan > 0.001 ? beamDy / _xSpan : 0;
 
-        // Calculate feasible left point based on stem length constraints
-        // LILYPOND-REF: lily/beam-quanting.cc:794-812
+        // LILYPOND-REF: lily/beam-quanting.cc:790-808 — feasible_left_point, full then
+        // intersected with each stem's half-line flp[-dir] = left_y.
         double feasibleMin = double.NegativeInfinity;
         double feasibleMax = double.PositiveInfinity;
-
         for (int i = 0; i < _memberCount; i++)
         {
-            // The minimum beam Y at this stem comes from the per-stem shortest_y of
-            // calc_stem_info — NOT a flat 2.5-space length. The flat constant over-
-            // constrained the tip note (shortest stem), pushing the whole beam up.
-            // LILYPOND-REF: lily/beam-quanting.cc:794-805 (stem_infos_[i].shortest_y_).
-            int dir = StemDirOf(i);
-            double minBeamY = _stemInfos[i].ShortestY; // staff-spaces (native quanter frame)
-            // Convert to left Y: leftY = beamAtStem - slope * stemX
-            double leftYForMin = minBeamY - slope * _stemXPositions[i];
-
-            if (dir > 0) // stem up: beam must be above minimum
-                feasibleMin = Math.Max(feasibleMin, leftYForMin);
-            else // stem down: beam must be below minimum
-                feasibleMax = Math.Min(feasibleMax, leftYForMin);
+            // The per-stem shortest_y of calc_stem_info — NOT a flat 2.5-space length.
+            // LILYPOND-REF: lily/beam-quanting.cc:796 (stem_infos_[i].shortest_y_).
+            double leftY = _stemInfos[i].ShortestY - slope * _stemXPositions[i];
+            if (StemDirOf(i) > 0)
+                feasibleMin = Math.Max(feasibleMin, leftY);
+            else
+                feasibleMax = Math.Min(feasibleMax, leftY);
         }
 
-        // Clamp to feasible region
+        // LILYPOND-REF: lily/beam-quanting.cc:821-854 — the forbidden intervals of the tall
+        // collisions within the span, sorted by lower edge, fed to a bulk-0 minefield that
+        // starts as the seed point.
+        const double minYSize = 2.0;
         double beamLeftY = _unquantedLeftY;
-        if (_beamDir > 0 && beamLeftY < feasibleMin)
-            beamLeftY = feasibleMin;
-        else if (_beamDir < 0 && beamLeftY > feasibleMax)
-            beamLeftY = feasibleMax;
+        double placeDown = beamLeftY, placeUp = beamLeftY;
+        var forbidden = ListPool<(double Lo, double Hi)>.Rent();
+        foreach (var c in _collisionPoints)
+        {
+            if (c.X < 0 || c.X > _xSpan)
+                continue;
+            if (c.MaxY - c.MinY < minYSize)
+                continue;
+            double dy = slope * c.X;
+            forbidden.Add((c.MinY - dy, c.MaxY - dy));
+        }
+        if (forbidden.Count > 0)
+        {
+            forbidden.Sort(static (a, b) => a.Lo.CompareTo(b.Lo));
+            // LILYPOND-REF: lily/interval-minefield.cc:52-86 Interval_minefield::solve — with
+            // bulk 0 the widened placement is the point itself, so "touches" is containment.
+            const double epsilon = 1.0e-10;
+            bool dirty;
+            do
+            {
+                dirty = false;
+                for (int i = 0; i < forbidden.Count; i++)
+                {
+                    var (lo, hi) = forbidden[i];
+                    // :68-69 — an edge at infinity sends that side's placement there, and
+                    // does NOT mark the loop dirty (without this branch a -inf edge keeps
+                    // "containing" the placement it just sent to -inf, and the loop never ends).
+                    if (double.IsNegativeInfinity(lo))
+                        placeDown = double.NegativeInfinity;
+                    else if (lo <= placeDown && placeDown <= hi)
+                    {
+                        placeDown = lo - epsilon;
+                        dirty = true;
+                    }
+                    if (double.IsPositiveInfinity(hi))
+                        placeUp = double.PositiveInfinity;
+                    else if (lo <= placeUp && placeUp <= hi)
+                    {
+                        placeUp = hi + epsilon;
+                        dirty = true;
+                    }
+                }
+            }
+            while (dirty);
+        }
+        ListPool<(double Lo, double Hi)>.Give(forbidden);
+
+        // LILYPOND-REF: lily/beam-quanting.cc:859-863 — a placement outside the feasible left
+        // point can never be a candidate.
+        if (!(feasibleMin <= placeDown && placeDown <= feasibleMax))
+            placeDown = double.NegativeInfinity;
+        if (!(feasibleMin <= placeUp && placeUp <= feasibleMax))
+            placeUp = double.PositiveInfinity;
+
+        bool feasibleEmpty = feasibleMin > feasibleMax;
+        if (double.IsPositiveInfinity(placeUp) && double.IsNegativeInfinity(placeDown) && !feasibleEmpty)
+        {
+            // LILYPOND-REF: lily/beam-quanting.cc:865-872 + :440-450 point_in_interval (v, 2.0).
+            beamLeftY = double.IsNegativeInfinity(feasibleMin) ? feasibleMax - 2.0
+                : double.IsPositiveInfinity(feasibleMax) ? feasibleMin + 2.0
+                : (feasibleMin + feasibleMax) / 2;
+        }
+        else if (!feasibleEmpty)
+        {
+            // LILYPOND-REF: lily/beam-quanting.cc:873-881 — the nearer one, DOWN on a tie.
+            beamLeftY = Math.Abs(beamLeftY - placeDown) > Math.Abs(beamLeftY - placeUp)
+                ? placeUp : placeDown;
+        }
+        // else: LilyPond warns "no viable initial configuration" and keeps the seed (:882-887).
 
         _unquantedLeftY = beamLeftY;
         _unquantedRightY = beamLeftY + beamDy;

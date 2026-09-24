@@ -31,6 +31,48 @@ public sealed record TieDetails
     /// <summary>Default parameters matching LilyPond effective defaults.</summary>
     public static TieDetails Default { get; } = new();
 
+    /// <summary>
+    /// A LaissezVibrerTie's / RepeatTie's details: the grob declares only <c>height-limit</c>
+    /// 1.0 and <c>ratio</c> 0.333, so every other detail is Tie_details' own C++ fallback —
+    /// not the Tie grob's list this record's defaults copy. Clearances are halved into staff
+    /// spaces as above; <c>neutral-direction</c> is unset on the grob, so DOWN.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm LaissezVibrerTie / RepeatTie
+    ///   (details . ((height-limit . 1.0) (ratio . 0.333)));
+    /// LILYPOND-REF: lily/tie-details.cc:37-93 Tie_details::from_grob — the fallbacks;
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:386-396 from_semi_ties — details_.from_grob (semi_ties[0]).
+    /// </remarks>
+    public static TieDetails SemiTie { get; } = new()
+    {
+        HeightLimit = 1.0,
+        Ratio = 0.333,
+        XGap = 0.2,
+        StemGap = 0.3,
+        MinLength = 1.0,
+        TipStaffLineClearance = 0.4 / 2,
+        CenterStaffLineClearance = 0.4 / 2,
+        StaffLineCollisionPenalty = 5.0,
+        DotCollisionClearance = 0.25,
+        DotCollisionPenalty = 0.25,
+        WrongDirectionOffsetPenalty = 10.0,
+        SameDirAsStemPenalty = 20.0,
+        NeutralDirectionUp = false,
+        MinLengthPenaltyFactor = 1.0,
+        SkylinePadding = 0.05,
+        TieTieCollisionPenalty = 30.0,
+        TieTieCollisionDistance = 0.25,
+        HorizontalDistancePenaltyFactor = 5.0,
+        VerticalDistancePenaltyFactor = 5.0,
+        IntraSpaceThreshold = 1.0,
+        SingleTieRegionSize = 3,
+        MultiTieRegionSize = 1,
+        TieColumnMonotonicityPenalty = 100.0,
+        OuterTieVerticalGap = 0.15,
+        OuterTieLengthSymmetryPenaltyFactor = 3.0,
+        OuterTieVerticalDistanceSymmetryPenaltyFactor = 3.0,
+    };
+
     // --- Shape parameters ---
 
     /// <summary>

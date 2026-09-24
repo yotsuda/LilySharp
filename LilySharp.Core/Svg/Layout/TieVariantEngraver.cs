@@ -165,7 +165,7 @@ internal static class TieVariantEngraver
     /// caret on the annotation lights the tie. <c>MusicItem.NoSourcePosition</c> when the
     /// item was built without one (a tab's rebuilt column, a hand-made test item), and the
     /// drawer then opens no <c>Source</c> scope at all.</param>
-    internal readonly record struct SemiTie(int StaffPosition, bool CurveUp, int SourcePosition);
+    internal readonly record struct SemiTie(int StaffPosition, bool CurveUp, int SourcePosition, bool? Forced = null);
 
     /// <summary>
     /// The half-ties of one <paramref name="kind"/> on one item — the COLUMN LilyPond
@@ -206,7 +206,7 @@ internal static class TieVariantEngraver
                 // belongs to the head, and citing it would light the head when the caret
                 // sits on the annotation (the side the slur decision rejected).
                 return ImmutableArray.Create(new SemiTie(n.StaffPosition, curveUp,
-                    lv ? n.LaissezVibrerSourcePosition : n.RepeatTieSourcePosition));
+                    lv ? n.LaissezVibrerSourcePosition : n.RepeatTieSourcePosition, forced));
             }
 
             case ChordItem c:
@@ -219,7 +219,7 @@ internal static class TieVariantEngraver
                     return ImmutableArray<SemiTie>.Empty;
 
                 // Sorted by head position, bottom first (Semi_tie::less).
-                var ties = new (int Pos, bool? Dir, int Src)[count];
+                var ties = new (int Pos, bool? Dir, int Src, bool? Forced)[count];
                 int k = 0;
                 // The CHORD's annotation is read first, not the member's: a chord-level
                 // @laissezVibrer half-ties every head, so its one `@` is the character
@@ -234,7 +234,8 @@ internal static class TieVariantEngraver
                             lv ? m.LaissezVibrerUp : m.RepeatTieUp,
                             chordSrc >= 0
                                 ? chordSrc
-                                : lv ? m.LaissezVibrerSourcePosition : m.RepeatTieSourcePosition);
+                                : lv ? m.LaissezVibrerSourcePosition : m.RepeatTieSourcePosition,
+                            lv ? m.LaissezVibrerUp : m.RepeatTieUp);
                 Array.Sort(ties, static (a, b) => a.Pos.CompareTo(b.Pos));
 
                 // set_ties_config_standard_directions, on the sorted column.
@@ -259,7 +260,7 @@ internal static class TieVariantEngraver
                     }
                 var builder = ImmutableArray.CreateBuilder<SemiTie>(count);
                 foreach (var t in ties)
-                    builder.Add(new SemiTie(t.Pos, t.Dir ?? t.Pos > 0, t.Src));
+                    builder.Add(new SemiTie(t.Pos, t.Dir ?? t.Pos > 0, t.Src, t.Forced));
                 return builder.MoveToImmutable();
             }
 
@@ -274,11 +275,13 @@ internal static class TieVariantEngraver
     /// <param name="measureMap">The caller's measure → (system, layout) map, when it has one
     /// (<c>LayoutEngine.CalculateAnnotationLayouts</c> builds it once for the tail's three
     /// engravers). Null ⇒ build it here, which is what every non-keystroke caller does.</param>
+    /// <param name="onTab">The staff is a TAB (the Score's clef string folds tab into "treble").</param>
     public static ImmutableArray<TieVariantLayout> Calculate(
         Score score,
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
-        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null,
+        bool onTab = false)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<TieVariantLayout>.Empty;
@@ -324,15 +327,156 @@ internal static class TieVariantEngraver
                         _ => default,
                     });
                     builder ??= ImmutableArray.CreateBuilder<TieVariantLayout>();
-                    foreach (var tie in ties)
-                        builder.Add(BuildLayout(
-                            tie.StaffPosition, tie.CurveUp, tie.SourcePosition,
-                            noteValue, mi, ii, measureLayout, system, staffIndex, kind));
+                    if (onTab || !SolveSemiTieColumn(builder, voice, mi, ii, item, ties, kind,
+                            measureLayout, system, staffIndex))
+                    {
+                        // Not a note column the tie outline can be built from: the drawn
+                        // approximation (SemiTieGeometry) is all there is. ⚠️ A TAB is
+                        // Lily#-own either way — LilyPond's TabStaff does not engrave a half-tie
+                        // at all (a repeat tie parenthesises the fret, audit/lpreg/tabtie-probe2),
+                        // and a fret digit has no chord outline to score against.
+                        foreach (var tie in ties)
+                            builder.Add(BuildLayout(
+                                tie.StaffPosition, tie.CurveUp, tie.SourcePosition,
+                                noteValue, mi, ii, measureLayout, system, staffIndex, kind));
+                    }
                 }
             }
         }
 
         return builder?.ToImmutable() ?? [];
+    }
+
+    /// <summary>
+    /// Lays out one item's half-ties of one kind as LilyPond does: a whole
+    /// <see cref="TieFormattingProblem"/> over the column, the head side read off the host's own
+    /// chord outline and the open side a fixed end 1.5 past the outline's extreme.
+    /// </summary>
+    /// <returns>False when the item is not a note column the outline can be built from.</returns>
+    /// <remarks>
+    /// LILYPOND-REF: lily/semi-tie-column.cc:51-86 calc_positioning_done — the column's ties
+    ///   sorted, <c>problem.from_semi_ties</c>, <c>generate_optimal_configuration</c>, and each
+    ///   tie's control points and direction from the winner;
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:386-442 from_semi_ties — the host heads are
+    ///   the bound on the tie's <c>head-direction</c> side (LEFT for an l.v., RIGHT for a repeat
+    ///   tie), and the open side is <c>extremal − head_dir · 1.5</c> with <c>extremal</c> the host
+    ///   outline's <c>max_height</c>.
+    /// ✔ PORTED IN SESSION 573 (HANDOFF R9(f)). Until then the bow sat a fixed 0.4 ss off the
+    /// head centre with a Lily#-own bow shape (0.3 indent), and the X span never read the head:
+    /// MEASURED (2.26.0, Lab sessions/p573/lv) LilyPond's l.v. on a half note one step over the
+    /// middle line stands at position 2 + 0.20 and leaves from the head's CENTRE (it clears the
+    /// head, so the outline recedes there), and every l.v. clear of the staff at (pos + 1) / 2.
+    /// ⚠️ The SPACING box (<see cref="SemiTieGeometry"/>, read by ItemSkylineFactory) keeps the
+    /// old fixed span and baseline: LilyPond boxes the tie at its stencil after positioning,
+    /// which a column's spacing box cannot ask for before layout.
+    /// </remarks>
+    private static bool SolveSemiTieColumn(
+        ImmutableArray<TieVariantLayout>.Builder builder, Voice voice, int measureIndex,
+        int itemIndex, MusicItem item, ImmutableArray<SemiTie> ties, TieVariantKind kind,
+        MeasureLayout measureLayout, SystemLayout system, int staffIndex)
+    {
+        bool lv = kind == TieVariantKind.LaissezVibrer;
+        double columnX = measureLayout.X
+            + LayoutUtilities.GetItemXOffset(voice.Measures, measureIndex, itemIndex, measureLayout);
+        var positions = new List<int>(ties.Length);
+        foreach (var tie in ties)
+            if (!positions.Contains(tie.StaffPosition))
+                positions.Add(tie.StaffPosition);
+        var parts = ElementCoordinator.BuildTieColumn(
+            voice, measureIndex, itemIndex, columnX, positions, isLeftBound: lv);
+        if (parts is null)
+            return false;
+
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 — the open outline, set_minimum_height (extremal − head_dir · 1.5).
+        double openX = lv ? OutlineExtreme(parts, right: true) + OpenReach
+                          : OutlineExtreme(parts, right: false) - OpenReach;
+        const double StaffHeight = 4.0;
+        double staffMiddleDown = LayoutUtilities.StaffOffsetInSystemDown(system, staffIndex)
+            + StaffHeight / 2.0;
+        bool? stemUp = ElementCoordinator.BoundStemUp(voice, measureIndex, itemIndex);
+        int dots = SpacingRules.GetDots(item);
+        var baseDuration = item switch
+        {
+            NoteItem n => n.BaseDuration,
+            ChordItem c => c.BaseDuration,
+            _ => default,
+        };
+
+        var specs = new List<TieSpecification>(ties.Length);
+        foreach (var tie in ties)
+        {
+            var head = item as NoteItem
+                       ?? new NoteItem(tie.StaffPosition, baseDuration, dots, null, false, tie.SourcePosition);
+            specs.Add(new TieSpecification
+            {
+                Tie = new TieItem(head, head, tie.StaffPosition, tie.Forced,
+                    measureIndex, measureIndex, itemIndex, itemIndex),
+                StartX = lv ? columnX : openX,
+                EndX = lv ? openX : columnX,
+                Y = staffMiddleDown - tie.StaffPosition / 2.0,
+                StartDots = lv ? dots : 0,
+                StartColumn = lv ? parts : null,
+                EndColumn = lv ? null : parts,
+                StartStemUp = lv ? stemUp : null,
+                EndStemUp = lv ? null : stemUp,
+                IsSemiTie = true,
+            });
+        }
+
+        var layouts = TieFormattingProblem.SolveColumn(specs, TieDetails.SemiTie);
+        for (int i = 0; i < ties.Length; i++)
+        {
+            var l = layouts[i];
+            // The problem answers page Y-up (the negated device frame the specification's Y
+            // is in); the half-tie layout keeps the device frame DrawTieVariants reads.
+            builder.Add(new TieVariantLayout(
+                Kind: kind,
+                MeasureIndex: measureIndex,
+                ItemIndex: itemIndex,
+                StartX: l.StartX,
+                EndX: l.EndX,
+                Y: -l.StartYUp,
+                Control1: (l.Control1.X, -l.Control1.Y),
+                Control2: (l.Control2.X, -l.Control2.Y),
+                CurveUp: l.CurveUp,
+                SourcePosition: ties[i].SourcePosition,
+                StaffIndex: staffIndex));
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The host outline's reach on the open side — <c>chord_outlines_[head_key].max_height ()</c>:
+    /// the furthest right (l.v.) or left (repeat tie) edge of every box
+    /// <see cref="TieChordOutline.Build"/> walks for that bound.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/tie-formatting-problem.cc:438 extremal; the boxes are :96-287
+    /// set_column_chord_outline's (dots and flag on the LEFT bound, accidentals on the RIGHT).</remarks>
+    private static double OutlineExtreme(TieColumnParts parts, bool right)
+    {
+        double v = right ? double.NegativeInfinity : double.PositiveInfinity;
+        void Take(double l, double r) => v = right ? Math.Max(v, r) : Math.Min(v, l);
+        foreach (var h in parts.TiedHeads)
+            Take(h.XLeft, h.XRight);
+        if (right)
+            foreach (var d in parts.Dots)
+                Take(d.XLeft, d.XRight);
+        if (parts.Stem is { } stem)
+        {
+            if (stem.IsNormal)
+            {
+                Take(stem.CentreX - 1.0 / 20, stem.CentreX + 1.0 / 20);
+                if (right)
+                    foreach (var f in parts.Flag)
+                        Take(f.XLeft, f.XRight);
+            }
+            foreach (var o in parts.OtherHeads)
+                Take(o.XLeft, o.XRight);
+            if (!right)
+                foreach (var a in parts.Accidentals)
+                    Take(a.XLeft, a.XRight);
+        }
+        return v;
     }
 
     internal static readonly TieVariantKind[] KindPair =

@@ -267,6 +267,34 @@ public class SpringRodModelTests
     /// what make the new blocking force come out as <c>f</c>, so restating them would undo
     /// the rod. LILYPOND-REF: lily/spring.cc:183-195; lily/simple-spacer.cc:124-126.
     /// </summary>
+    /// <summary>
+    /// A rod's force is solved FROM the blocking forces the earlier rods left in its range, so
+    /// it lands the range exactly on its distance — not on a closed form that assumes none.
+    /// </summary>
+    /// <remarks>
+    /// Rod one holds A alone at 5 (A blocks at force 3). Rod two spans A and B at 7.5: A cannot
+    /// go below 5, so B must give exactly 2.5, which it does at force 0.5 — range_solve starts
+    /// from A's block (max_block_force 3, length 10) and compresses B alone. The closed form
+    /// that stood here, (7.5 − 4) / 2 = 1.75, pretended A was still free and left B at 3.75:
+    /// the rod satisfied by 1.25 too much, which its ten-pass convergence loop could not see.
+    /// LILYPOND-REF: lily/simple-spacer.cc:76-87 rod_force, :180-204 range_solve, :89-127
+    /// add_rod (HANDOFF R7(c), session 573).
+    /// </remarks>
+    [Fact]
+    public void ApplyRods_SolvesFromTheBlockingForcesEarlierRodsLeft()
+    {
+        var springs = ImmutableArray.Create(
+            new Spring(2.0, 1.0, 1.0, 1.0),
+            new Spring(2.0, 1.0, 1.0, 1.0));
+
+        var rodded = SpringSolver.ApplyRods(
+            springs, new (int Left, int Right, double Distance)[] { (0, 1, 5.0), (0, 2, 7.5) });
+
+        Assert.Equal(5.0, rodded[0].MinDistance, 9);
+        Assert.Equal(2.5, rodded[1].MinDistance, 9);
+        Assert.Equal(0.5, rodded[1].BlockingForce, 9);
+    }
+
     [Fact]
     public void ApplyRods_RaisesTheMinimum_WithoutRestatingTheCompressibility()
     {

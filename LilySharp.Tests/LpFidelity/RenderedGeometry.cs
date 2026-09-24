@@ -2320,6 +2320,24 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// How far bow <paramref name="index"/>'s first centre-line control point stands above its
+    /// start, in staff spaces (negative for a bow curving down) — LilyPond's
+    /// <c>control-points</c> [1].y − [0].y, the slur_shape height the stencil is built from.
+    /// </summary>
+    public double BowControlLift(int index, int page = 0)
+    {
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        // Device y is down.
+        return bows[index].P0.Y - bows[index].Centreline1.Y;
+    }
+
+    /// <summary>
     /// One reading per beam GROUP: the group's OUTERMOST beam line, which is what LilyPond's
     /// <c>positions</c> describes. Shared by the five-line and the tab readers.
     /// </summary>
