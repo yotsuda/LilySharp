@@ -476,16 +476,20 @@ internal static partial class SharedRenderer
                     // from the upper). Shorter rests never carry a ledger at any position.
                     // LILYPOND-REF: lily/rest.cc:170-185 Rest::glyph_name is_ledgered.
                     const double onATabLine = 0.0;
+                    // The synthetic origins below are built for DrawRest's FIVE-LINE letter
+                    // (−1 / −2 off the frame's top), so that is the line count handed in —
+                    // the tab's own lines are the strings, seated here by construction.
+                    const int fiveLineFrame = 5;
                     if (restValue == 2)      // half: DrawRest origin (its bottom) at staffY−2
-                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, null, gc, onATabLine);
+                        DrawRest(rest, itemX, lowerCentralLineY + 2.0, fiveLineFrame, null, gc, onATabLine);
                     else if (restValue == 1) // whole: DrawRest origin (its top) at staffY−1
-                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, null, gc, onATabLine);
+                        DrawRest(rest, itemX, lowerCentralLineY + stringSpace + 1.0, fiveLineFrame, null, gc, onATabLine);
                     else
                     {
                         var restBBox = LilySharp.Core.Svg.Layout.GlyphMetrics.GetRestBBox(restValue);
                         double tabMiddle = staffY - (stringCount - 1) * stringSpace / 2.0;
                         double restOriginY = tabMiddle - (restBBox.Top + restBBox.Bottom) / 2.0;
-                        DrawRest(rest, itemX, restOriginY + 2.0, null, gc, onATabLine);
+                        DrawRest(rest, itemX, restOriginY + 2.0, fiveLineFrame, null, gc, onATabLine);
                     }
                     break;
             }

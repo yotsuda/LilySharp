@@ -987,7 +987,8 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
     /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
     /// </remarks>
-    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysTopYUp, IDrawingContext gc)
+    private static void DrawMultiMeasureRests(MultiStaffScore score, ScoreLayout layout,
+        Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
@@ -999,13 +1000,25 @@ internal static partial class SharedRenderer
             // the offset (byte-identical to the former pageHeight - absoluteMiddle).
             double cy = syUp - mmr.Y;
             if (mmr.UseChurchRest)
-                DrawChurchRest(mmr, cy, gc);
+                DrawChurchRest(mmr, cy, StaffLinesAt(score, mmr.StaffIndex), gc);
             else
                 DrawBigRest(mmr, cy, gc);
         }
     }
 
-    private static void DrawChurchRest(MultiMeasureRestLayout mmr, double cy, IDrawingContext gc)
+    /// <summary>The line count of the staff at a GLOBAL staff index (the index
+    /// <see cref="MultiStaffScore.EnumerateStaves"/> hands out); five when the layout
+    /// carries no staff (a legacy single-staff run).</summary>
+    private static int StaffLinesAt(MultiStaffScore score, int staffIndex)
+    {
+        foreach (var (_, staff, index) in score.EnumerateStaves())
+            if (index == staffIndex)
+                return staff.Lines;
+        return 5;
+    }
+
+    private static void DrawChurchRest(MultiMeasureRestLayout mmr, double cy, int staffLines,
+        IDrawingContext gc)
     {
         double cx = (mmr.StartX + mmr.EndX) / 2.0;
 
@@ -1048,17 +1061,29 @@ internal static partial class SharedRenderer
         // a fresh voiced position would have put both at 13.69. The count stays at the staff.
         // LILYPOND-REF: lily/multi-measure-rest.cc:254-266 church_rest — staff-position set first;
         // LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override.
+        // ONE LINE (fewer than two line-positions): church_rest skips the −2 that puts a
+        // five-line semibreve's grob on the middle line, and lowers the semibreve — and,
+        // in the neutral direction, every longer symbol — by two positions, so the
+        // semibreve hangs from THE line rather than the space above it (the owner's
+        // oneline-rest.lys: a whole-bar r1 on `as lines 1` floated a space up). The
+        // voiced position itself is seated on the staff's own lines (VoicedRestPosition).
+        // LILYPOND-REF: lily/multi-measure-rest.cc:241-252 church_rest — `oneline`;
+        //   :256-260 the semibreve's pos minus (oneline ? 0 : 2); :282-292 spi −= 2 for
+        //   dl == 0, and for dl < 0 when !dir, on one line.
         int dir = mmr.VoiceDirection;
+        bool oneline = EngravingDefaults.StaffLinePositions(staffLines).Length < 2;
         double pos = mmr.MeasureCount == 1
-            ? ElementCoordinator.VoicedRestPosition(dir, 1) - 2.0
-            : ElementCoordinator.VoicedRestPosition(dir, 2);
+            ? ElementCoordinator.VoicedRestPosition(dir, 1, staffLines) - (oneline ? 0.0 : 2.0)
+            : ElementCoordinator.VoicedRestPosition(dir, 2, staffLines);
+        double wholeSpi = pos + 2.0 - (oneline ? 2.0 : 0.0);
+        double longSpi = pos - (oneline && dir == 0 ? 2.0 : 0.0);
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
-            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, -0.5 * pos),           // neutral spi 0  → dy 0
-            (4, EmmentalerGlyphs.RestLonga, LongWidth, -0.5 * pos),             // neutral spi 0  → dy 0
-            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, -0.5 * pos),      // neutral spi 0  → dy 0
-            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -0.5 * (pos + 2.0)),    // neutral spi +2 → dy -1.0
+            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, -0.5 * longSpi),       // neutral spi 0  → dy 0
+            (4, EmmentalerGlyphs.RestLonga, LongWidth, -0.5 * longSpi),         // neutral spi 0  → dy 0
+            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, -0.5 * longSpi),  // neutral spi 0  → dy 0
+            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -0.5 * wholeSpi),       // neutral spi +2 → dy -1.0
         })
         {
             while (remaining >= span)

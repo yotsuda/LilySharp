@@ -1263,6 +1263,7 @@ LILC インクに移っており、`NoteheadHeight` は **5 つのシグネチ�
 - ★ ⚠️ **`PublishReadyToRun` の R2R 中間物が腐ると、publish は古い依存を配りながら
   deps.json では新しい版を名乗る**。（→CASES 5.5-031・続）
 - **LilyPond は Guile デッドロックする** → `cmd /c "... < NUL"` でデタッチ必須。（→CASES 5.5-032）
+- ★★ **LP の slur の点数表は候補単位に取れる＝どの scorer が違うかを当てずに読める**（2026-09-23・第538）: `\layout { debug-slur-scoring = ##t }` が各 slur の勝者の card（`L edge=1.60 TOTAL=1.60 idx=36`）を注釈として描き、`\once \override Slur.inspect-quants = #'(左 . 右)` がその両端に最も近い候補を*強制*してその card を出す（`-ddebug-slurs` という option は無い＝warning）。Lily# 側は `SlurScoringProblem.RunNextScorer` の前後で `Demerits` の差を候補に貼る使い捨て計器（Lab `sessions/p538/nograce/`）。⚠️ **SVG の bow の path はサンドイッチの*外側*の曲線＝制御点は中心線より 0.06（厚み 1.2×0.1 の半分）高い。両エンジンとも**＝高さを比べるときは引く（第538 はこれを fit_factor と読み違えた）。⚠️ **path の 1 本目は LP では常に*外側*、Lily# では常に *+Y 側*（上向き bow は外側・下向き bow は内側）＝下向き bow は 1 本目同士を比べると 0.12 ずれて見える。2 本の対で比べる**（第540＝第537 が「0.11 低い」と起票したのはこれ）。
 - ★ **「LP はどうするか」はインストール先のテキストを読んで答える**（2026-08-14）。（→CASES 5.5-033・続）
 - ★★★ ⚠️ **LP をバッチで回すと「きれいな数字のまま嘘になる」経路が 5 つある**（第64・第81・第84・第97）。（→CASES 5.5-034・続）
 - ★ **`Measure-LilyPondPageGeometry.ps1` は 20 分以上かかる**（2026-07-27 実測・**book は 62 冊**

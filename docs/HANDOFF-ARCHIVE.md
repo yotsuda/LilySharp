@@ -129,6 +129,63 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第538セッションの経緯
+
+### 1.1 第538セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝§1.0 ⒳¹⁸ ⑴）。★ `-Start p538`（HEAD `cd880f31`・full 8896 / 0 / 2 / 8898・`-Archive 536`）。
+
+★★★ **⑴ ⒳¹⁸ ⑴ の左端 0.5 低い＝閉じた。ついでに ⑵ の第 1〜3 小節の制御点 0.07 も閉じた**。切り分け（Lab `sessions/p538/nograce/`）: ⒜ 装飾音符を外した fixture でも差が残る＝装飾音符は無関係／⒝ **LP の `\layout { debug-slur-scoring = ##t }`**（`-ddebug-slurs` は無い）で勝者の点数表＝`L edge=1.60 idx=36`（左右 2.545）、**`\once \override Slur.inspect-quants = #'(2.0 . 2.5)`** で Lily# の答えを強制すると `L edge=1.10, variance=0.64 TOTAL=1.74`＝**勝負は variance 0.64**／⒞ Lily# に使い捨ての計器（`ZZ538`＝候補ごとの scorer 別の点を stderr へ・`git checkout` で戻した）: 同じ候補が `2:1.10 4:0.26`＝scorer 4 が 0.38 足りない／⒟ 曲線は同一（**LP の SVG の path はサンドイッチの*外側*＝制御点が中心線より 0.06 高い**。それを引くと LP の高さ 1.3956＝基本高さ＝Lily# と同じ。この 0.06 を「fit_factor 1.043」と読み違えて 1 時間溶かした）／⒠ 残る入力は**符頭の箱**: `BuildSlurObstacles` は公称 0.5、LP の `get_encompass_info` は極端符頭の extent＝0.545（slur-scoring.cc:137-144）。0.045 で g''・fis'' への距離が縮み min_dist が下がって variance が上がる。
+  **直し**: 箱を `GlyphMetrics.GetNoteheadBBox(value)` の Top／Bottom に（4 行）。**結果**: 第 4 小節（`a4( … e)`）左端 2.045 → **2.545・制御点 3.9909＝LP exact**、第 1〜3 小節の制御点 3.90/4.01 → **3.97/4.08＝LP exact**。**hash 5,816 行 0 差・snapshot 247 緑・台帳緑**（コーパスの notation staff にこの形の slur が無い）。網 `SlurOverTieTests` に 2 本目（両 bow の LP の数を pin・outer 同士）。
+  §7 7.5＝**Core '+' 22 行・LILYPOND-REF 2／LILYSHARP-OWN 0**。棚卸し: `magic_constants.csv` −3／+2 行（消えた 0.5 の箱）、`APPROXIMATIONS.md` 行番号だけ。commit `bae0629d`。`-End p538` OK・**full 8897 / 0 / 2 / 8899**（+1）＝1 回目で全緑。
+  ⇒ **教訓 2 つ**: ⑴ **LP の点数表は `debug-slur-scoring`＋`inspect-quants` で候補単位に取れる**＝どの scorer が違うかを当てずに読める（RULES §5.5 に足した）。⑵ **bow の SVG path は外側の曲線**＝中心線の高さは −0.06（両エンジンとも）。残りは ⒳¹⁸ ⑵＝第 8 小節の下向き slur の制御点 0.11。
+## 以下は第537セッションの経緯
+
+### 1.1 第537セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー報告 `samples/nocturne.lys` L22「タイとスラーが重なっている」→ 双子比較 → 「着手して」）。★ `-Start p537`（HEAD `5e7e7b60`・full 8895 / 0 / 2 / 8897・`-Archive 535`）。
+
+★★★ **⑴ U12 スラーがタイを避けない＝閉じた**。**双子比較（第536 の末尾・Lab `sessions/p536/nocturne/`）**: 第 4 小節 `tuplet 3/2 { b8( cis d } e4~ e8 d cis b)` で**タイは LP と同一（両端 2.00・頂点 2.54）、スラーだけ丸ごと 0.5 ss 低い**（両端 1.19 対 1.695・頂点 2.48 対 2.98）。**`~` を外した双子を LP で描くとスラーが 1.195／2.9106＝Lily# の旧曲線と小数第 2 位まで一致**＝差は全部タイ。病名: `SlurScoringProblem.cs:1214` の自認「ties are not in the extra set yet」。LP は `Slur_engraver` がタイを acknowledge し（slur-engraver.cc:79）、`auxiliary_acknowledge_extra_object` が `has_interface<Tie>` を無条件に encompass 集合へ（slur.cc:365-387）、`get_extra_encompass_infos` がタイの stencil extent を箱に（:850-884・Tie の avoid-slur は inside）、`score_extra_encompass` が free-distance 0.3 で罰 50、両端が tie 端から 0.2 未満なら罰 2（slur-configuration.cc:351-458・既定値は scm/layout-slur.scm:27-42）。
+  **移植**: ⒜ `Bezier.Extent`（bezier.cc:290-304＝導関数の根＋両端）と `SolveVerticalTangent`／⒝ `ElementCoordinator.TieStencilBox`＝lookup.cc:403-410 の sandwich 2 本の extent の和＋pen 半分（bezier_sandwich :508-514）／⒞ `BuildSlurExtraObjects` にタイの箱（thickness の広げ・Inside・罰 50・**`IsSpanner`**＝LP の `as_item` null＝edge head 判定を飛ばす :413-416）と両端（`tieEnds`）。門は**タイの*終点*がスラーの span 内・同じ voice・同じ系**（Tie grob は 2 音目の timestep で作られる＝tie-engraver.cc:312）／⒟ `SlurScoringProblem`: `_tieEnds`・forbidden-attachment 項（:351-388）・`IsSpanner` の分岐／⒠ `LayoutSlurs` に `tieLayouts`＝Prelim の 3 呼び手が既に持っていた `sysTies`／`staffTies` を渡すだけ（タイはスラーより先に解かれている）。
+  **結果**: nocturne 第 4 小節のスラー両端 **1.69・制御点 3.41＝LP 1.695／3.4106**（Lab `sessions/p537/nocturne-after.svg`・`.png`）。**網 `SlurOverTieTests`**＝rh だけの fixture（Lab `sessions/p537/fixture/`）の LP 双子の数を pin（スラー 2.195／3.7694・タイ 2.5／3.062・頂点間 ≥0.3）。**毒（タイ block を殺す）で赤＝旧コードは両端 1.20**（`ls-poison.svg`）。**hash 5,816 行 0 差・snapshot 247 緑＝コーパスに notation staff のスラーがタイを覆う本が無い**（tab のスラーは extras を建てない経路）＝観測者は新網と nocturne だけ。⚠️ 2 本の pwsh が別コンソールで並走して Release のハッシュが毒入りを拾いかけた＝取り直した（同じ数）。
+  §7 7.5＝**Core '+' 233 行・LILYPOND-REF 12／LILYSHARP-OWN 0**。棚卸し: `magic_constants.csv` は行番号のほか **+5 行**（`TieStencilBox` の 0.5 × 4 と単位ベクトルの 1.0/0.0＝Yellow・file-level REF）、`APPROXIMATIONS.md` **−1**（消えた自認＝266→265）。commit `b9df597f`。`-End p537` OK・**full 8896 / 0 / 2 / 8898**（+1）。1〜3 回目は名指し無しの引用 5 本（`_` の無い `Tie::print`・`Lookup::slur` 等）と表の腐りで赤。
+  ⇒ **教訓: 「NOT PORTED」の自認は、双子比較で*その本*に当たるまで値段が分からない**。第 4 小節だけで 0.5 ss。fixture で見えた残りは §1.0 ⒳¹⁸。
+## 以下は第536セッションの経緯
+
+### 1.1 第536セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー報告 `corpora/ベースタブLy/oneline-rest.lys`）。★ `-Start p536`（HEAD `b8508841`・full 8864 / 0 / 2 / 8866・`-Archive 534`）。
+
+★★★ **⑴ U11 ユーザー報告＝1 線譜の全休符が線の 1 空き*上*に浮き、2 線譜の二分休符が下の線の 1 空き上に浮く（3〜5 線は正しい）＝閉じた**。病名: **休符の中立位置「全休符は +2・他は 0」が 5 線前提のまま 8 か所に別々に綴られていた**（`DrawRest`・`DrawChurchRest`・`SkylineBuilder` の seed・`ItemSkylineFactory` 3 軒・`ElementCoordinator` の pitched／voiced／dot column／beam push・`TupletBracketEngraver.RestReachUp`・`MeasureCollector.Stems`）。3〜5 線で正しかったのは、5 線の字が*たまたま*描かれる線に乗るから（1 線は {0}・2 線は {±2}＝+2 と 0 がどちらも線でない）。
+  **直し＝表 1 枚と字 1 つ**: ⒜ **描かれる線の位置の表を 1 か所に**（`EngravingDefaults.StaffLinePositions`＝`DrawStaffLines` が描く行そのもの。**2 線 ±2・4 線 −2..4 は LP の `line-count` N（N−1, N−3, …）と違う＝LILYSHARP-OWN 明記**・`OnDrawnStaffLine`）／⒝ **中立の字＝`ElementCoordinator.NeutralRestPosition(lines, restValue)`＝rest.cc:76-133 の CENTER 腕**（全休符は `upper_bound` else `back()`・それより長いのは `upper_bound` の 1 つ前・1 線の breve は −2＝:96-97）。`VoicedRestPosition`／`RestStaffPosition` に `staffLines`・並べる腕は `AlignRestToLine` 1 本・**dir 0 は Neutral そのもの**（:131-133）／⒞ 読み手を全部その字に: `DrawRest`（`DrawStaffMeasures` が `staff.Lines` を運ぶ・5 線の答えは `staffY − (2 − neutral/2)` で bit 同一）・`DrawChurchRest`（**multi-measure-rest.cc:241-292 の oneline 腕**＝pos の −2 を省き、semibreve と dir 0 の長い記号を −2＝ユーザーの `r1` は全小節休符なので*こちら*を通る）・`SkylineBuilder` の seed・`RestReachUp`・衝突 pass の pitched／voiced の shift（Neutral からの距離）・dot column の pure・`GetRest` の ledger 判定（描かれる線で）。
+  **残した 5 軒（名指し）**: `ItemSkylineFactory` 3 軒＝**列の横 skyline は staff を持たず memo が item × Y で鍵**＝5 線固定（NOT PORTED 2 件を記入・効くのは隣の列のその Y のインクだけ）／beam の rest push 2 軒（`CalculateRestShifts`・`Stems`）＝押すのは 4 分以下＝どの staff でも 0（注記のみ）。
+  **LP 照合**（Lab `sessions/p536/lp/`・2.26.0・`line-positions #'(0)`／`#'(2 -2)`）: **同じ形**＝1 線は全休符が線の直下・二分休符が線上、2 線は上の線から垂れ・下の線上。church rest（`r1`）と plain（`r1*1/2`）も一致。Lily# の絵は `sessions/p536/lines1.png`・`lines2.png`。
+  **網＝`ReducedStaffRestTests` 31 本**（絵 5 線数 × 全／二分・Neutral 16・Voiced 10・dir 0 ＝ Neutral）。**毒（Neutral を 5 線固定）で 9 赤（絵 2 本を含む）**＝観測あり。**hash 5,816 行 0 差**（`Zz536Hash`＝p535 baseline・`hashes-after.txt`＝**次便からの baseline**）。
+  §7 7.5＝**Core '+' 295 行・LILYPOND-REF 7／LILYSHARP-OWN 1**（`StaffLinePositions` の 2・4 線の行）。棚卸し: `magic_constants.csv` は行番号のほか **−8／+11 行**（消えた 5 線の字 8 軒・新表 5 本と `AlignRestToLine` 系）、`APPROXIMATIONS.md` **+3**（NOT PORTED 2・OWN 1＝263→266）。commit `3f0a7c05`。`-End p536` OK・**full 8895 / 0 / 2 / 8897**（+31＝新網）。1 回目の `-End` は 2 赤＝§1 現在便 20,640 字（✅ ⒮¹⁶′ を落として 19,751・全文は Lab `sessions/p536/removed-s16.txt`）と **`CitationsThatNameNothing`（`multi-measure-rest.cc:241-252 oneline`＝`_` の無い語は名指しにならない → `church_rest` を添えた）**。
+  ⇒ **教訓: 「同じ量が 2 か所以上」の 8 軒版**。5 線の字はどこでも同じ数（2 と 0）なので、census では「定数」に見えて「同じ量」に見えない。**線数を持つ staff が来て初めて 8 軒が同じ量だと分かった**＝直すなら字を 1 つにしてから読み手を通す（読み手ごとに線数を足すと 9 軒目が生まれる）。
+## 以下は第535セッションの経緯
+
+### 1.1 第535セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p535`（HEAD `d0385aba`・full 8864 / 0 / 2 / 8866・`-Archive 533`）。
+
+★★★ **⑴ 閉包の尾の頭を閉じた＝−2,578 B／打鍵（0.23%）**（第532 の型の地図の閉包行＝約 7,600 B を第470 の `delegate-sites.txt` で持ち主に引き、形が単純な 12 軒）: ⒜ 和音の並べ替え 3 本（`Tunings.SortHighestFirst`・`ChordHeadPositioning.SortInStemDirection`・`ArticulationEngraver.SortByColumnPriority`）＝**comparison を key の span に**（`stackalloc int[16]` → `MemoryExtensions.Sort(keys, items)`。両綴りとも runtime の introspective sort＝16 未満は insertion sort で同じ対を同じ順に比べる＝順序不変・第470 が「並べる呼びは払い続ける」と書いた 413 B）／⒝ 捕まえる LINQ を loop に（`SeedClefInk` の FirstOrDefault・`SystemStartBarStaves` の Where・`StafflessLabelLineStartReach` の Any と Where・`ProcessSectionPrologue` の Any・`PlaceVoltas` の Range.Where.GroupBy と OrderBy＝GroupBy の初出順と stable な挿入ソートで同じ順）／⒞ **lambda が method の変数を捕まえると、その method の env は入口で class として建つ（lambda が走らなくても）**＝`LayoutChordNames` の supplier 2 本と blanking の predicate、`ChooseSystemCount` の debug 用 `Select` を method に出した／⒟ method group を collector の field に（`GatherContainerSite`・`AdvanceAccidentalBar`）。**予測 −2,300±700 → 実測 render 1,121,120 → 1,118,542＝−2,578（112%・帯の中）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。
+  **毒 3 本のうち観測ありは 1 本**: P3＝和音の頭の key から `dir` を落とす → コーパス 0 差・**snapshot 2 赤**／P1＝tab の弦の並べ替えを昇順に → 0 差・snapshot 247 緑（**greedy の弦割当は 2〜3 音では順で変わらない**）／P2＝volta の系内ソートを落とす → 0 差（**volta は index 順で既に整列**）。
+  §7 7.5＝**Core '+' 約 266 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**。棚卸し: `magic_constants.csv` は行番号のほか **+1 行**（`stackalloc int[16]` の 16＝Yellow・3 軒のうち census が拾うのは ArticulationEngraver だけ）、`APPROXIMATIONS.md` は行番号だけ。commit `d5f45179`。`-End p535` OK・**full 8864 / 0 / 2 / 8866**。
+  ⇒ **閉包の残り約 5,000 B は pass の入力の Func と annotation pass の env**（§1.0 ⒮²⁰′）＝閉じるなら pass の lambda を全部 supplier の method に出す設計級。**第529〜第535 の 7 便で render 1,197,120 → 1,118,542（−6.6%）**。残る起票は土台だけ（String 320 KB・SkylineBuilding[] 132 KB・NoteItem 109 KB・⒮²³・⒭⁸）。
+
+## 以下は第534セッションの経緯
+
+### 1.1 第534セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p534`（HEAD `367d50e5`・full 8864 / 0 / 2 / 8866・`-Archive 532`）。
+
+★★ **⑴ tuple 型の器の census を HEAD で取り直した**（第472 の `instrument.ps1`＋template＋Leg を Zz534 に写し、`Zz534_DENOM=1127707`・278 軒・Lab `sessions/p534/site-prices.txt`）: **生きている 121 軒 17,336 B／打鍵（1.54%）**。頭は `ChooseSystemCount` の行の memo 3,827（第472 には無かった＝第485 が足した辞書）、あとは 900 B 未満の尾。zero% と読み手を軒ごとに確かめ、11 軒を選んだ（§1.0 ⒮¹⁶′ に残りと理由）。
+★★★ **⑵ 11 軒＝−6,587 B／打鍵（0.58%）**: ⒜ `SystemCount.cs:400` の行 memo → thread の drawer（2 つの出口で `Clear` して返す）3,827／⒝ `MeasureLayouter` の looseRods・`BeamDetector` の stems・`MusicMarkEngraver` の 3 buffer・`OutsideStaffStacker` の toStore 上下 → `ListPool`／⒞ `BeamDetector` の consumed set → drawer／⒟ `LyricEngraver` の alignment-edge cache と `SolvedRowBaselines`（field を lazy に・property は `IReadOnlyDictionary` で共有の空を返す）・chord-row の ink cache・`ArticulationEngraver` の lastOnKey → 最初の書き込みで建てる／⒠ `ChordRowSupport` の和音名の無い本の答え → 共有の空辞書（読み手 2 人とも `TryGetValue` だけ）。**予測 −6,400±1,000 → 実測 render 1,127,707 → 1,121,120＝−6,587（103%・帯の中）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。cref 1 本を語に（`CS0419`）。
+  **毒 2 本とも緑＝出力に届かない量**（`poisons.ps1`）: P1＝行 memo を消さずに返す → 0 差・snapshot 247 緑（**同じ本の 8 打鍵で行の見積りは動かない**＝音高の編集は高さの見積りに触らない）／P2＝consumed set を消さずに返す → 0 差（**コーパスのどの本も set が空**＝小節またぎの手動梁が無い）。**第533 と合わせて drawer の毒 5 本が緑**＝このコーパス（単声のベースタブ × 音高の編集）は「打鍵をまたぐ残骸」の観測者として弱い。網は足さず、記録だけ。
+  §7 7.5＝**Core '+' 約 98 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**。棚卸しは 2 枚とも行番号だけ。commit `6630a193`。`-End p534` OK・**full 8864 / 0 / 2 / 8866**。
+  ⇒ **census の島（配列 ⒮²⁵・tuple ⒮¹⁶′・problem の貸し出し）は全部尽きた**。残る起票は ⒮²⁰′（閉包 10,632・第470 の住所）と土台（String・SkylineBuilding[]・NoteItem・Measure の写し ⒮²³・red ⒭⁸）。
+
 ## 以下は第533セッションの経緯
 
 ### 1.1 第533セッション（2026-09-23・YT-DELL2）

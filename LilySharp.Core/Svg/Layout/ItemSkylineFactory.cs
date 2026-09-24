@@ -706,9 +706,15 @@ internal static class ItemSkylineFactory
             // is chained past this box never moves it. It is admitted by the branch
             // above even when no voice { } span stamped it a direction.
             // `noteValue` is the NOTATED value (see the beamed branch's note on NoteValueOf).
+            // ⚠️ FIVE LINES, NOT PORTED: this column view has no staff to ask (it is keyed by
+            // item, shift and Y, and memoised so per render — SharedRightSkylineAtColumn),
+            // so every staff is priced as five lines here. A whole rest on a one-line staff,
+            // a half on the timbales pair, is drawn and vertically seeded a space lower
+            // (ElementCoordinator.NeutralRestPosition) than this horizontal box says; the
+            // difference reaches only what a neighbour's ink at that Y prices against it.
             var restBox = GlyphMetrics.GetRestBBox(noteValue);
             double restY = staffY
-                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, noteValue)
+                - ElementCoordinator.RestStaffPosition(voicedRest, voicedRest.VoiceDirection, noteValue, 5)
                     / 2.0;
             parts.Add(ColumnPart.Ink(
                 restY - restBox.Top, restY - restBox.Bottom,
@@ -761,6 +767,9 @@ internal static class ItemSkylineFactory
             // GlyphMetrics.NoteValueOf(item), which answers 4 for every headless item — an
             // eighth rest boxed as a QUARTER rest read 0.95 wide here where LilyPond's rod
             // says 1.0 (the same 1.30 rod above).
+            // ⚠️ THE FIVE-LINE LETTER, NOT PORTED — see the voiced branch above: no staff to
+            // ask in this view, so the whole rest is boxed a space above the middle on every
+            // staff, where a one-line staff draws it hanging from the line itself.
             var restBox = GlyphMetrics.GetRestBBox(noteValue);
             double restY = staffY - (noteValue == 1 ? 1.0 : 0.0);
             parts.Add(ColumnPart.Ink(

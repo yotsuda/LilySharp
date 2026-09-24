@@ -67,6 +67,58 @@ internal static class EngravingDefaults
         => System.Math.Abs(roundedPosition) <= lineCount - 1
            && ((roundedPosition - (lineCount - 1)) % 2 == 0);
 
+    /// <summary>
+    /// The staff positions (half spaces about the middle line, up-positive, ascending) of
+    /// the lines a NOTATION staff of <paramref name="lineCount"/> lines DRAWS — the one
+    /// table <c>SharedRenderer.DrawStaffLines</c> draws from, and the one every reader of
+    /// "is there a line here" consults: the line a whole rest hangs from, the line a half
+    /// rest sits on, the ledgered cut of either (<c>ElementCoordinator.NeutralRestPosition</c>,
+    /// <c>EmmentalerGlyphs.GetRest</c>). A reduced staff keeps the five-line frame: one line
+    /// is the middle, two are the timbales pair (±2), three and four run contiguously up
+    /// from the second space below the middle.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN in the two- and four-line rows. LilyPond's own <c>line-count</c> N
+    /// puts the lines at N−1, N−3, … (<see cref="OnStaffLine(int, int)"/>, the tab staff's
+    /// odd positions): ±1 for two lines, ±1 and ±3 for four. Lily#'s <c>as lines N</c> has
+    /// drawn on the five-line frame from the start (the percussion / timbales
+    /// <c>line-positions</c> style, SharedRenderer.DrawStaffLines), and this table is that
+    /// DRAWING's — one spelling for the lines and for everything that must land on them.
+    /// Until 2026-09-23 the rests did not read it: a whole rest on a one-line staff hung a
+    /// space above the line (the five-line +2) and a half rest on the timbales pair sat a
+    /// space above its lower line (the five-line 0) — the owner's oneline-rest.lys report.
+    /// LILYPOND-REF: lily/staff-symbol.cc:372-382 Staff_symbol::on_line — a position is on
+    ///   a line when it equals one of <c>line-positions</c>; lily/rest.cc:90-129
+    ///   staff_position_internal reads the same list to seat a rest.
+    /// </remarks>
+    public static System.ReadOnlySpan<double> StaffLinePositions(int lineCount) => lineCount switch
+    {
+        1 => OneLinePositions,
+        2 => TwoLinePositions,
+        3 => ThreeLinePositions,
+        4 => FourLinePositions,
+        _ => FiveLinePositions,
+    };
+
+    private static readonly double[] OneLinePositions = { 0.0 };
+    private static readonly double[] TwoLinePositions = { -2.0, 2.0 };
+    private static readonly double[] ThreeLinePositions = { -2.0, 0.0, 2.0 };
+    private static readonly double[] FourLinePositions = { -2.0, 0.0, 2.0, 4.0 };
+    private static readonly double[] FiveLinePositions = { -4.0, -2.0, 0.0, 2.0, 4.0 };
+
+    /// <summary>Whether a rounded staff position is one of the lines a notation staff of
+    /// <paramref name="lineCount"/> lines DRAWS (<see cref="StaffLinePositions"/>) — the
+    /// five-line <see cref="OnStaffLine(int)"/> answer at five, the drawn pair's at two.</summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol.cc:372-382 Staff_symbol::on_line, the
+    /// staff-lines walk (<c>allow_ledger</c> false, as <c>on_staff_line</c> passes it).</remarks>
+    public static bool OnDrawnStaffLine(int roundedPosition, int lineCount)
+    {
+        foreach (double line in StaffLinePositions(lineCount))
+            if (line == roundedPosition)
+                return true;
+        return false;
+    }
+
     /// <summary>Staff line thickness: 1.0 × line-thickness.</summary>
     /// <remarks>
     /// LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0

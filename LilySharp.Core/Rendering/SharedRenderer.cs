@@ -246,7 +246,7 @@ internal static partial class SharedRenderer
                 DrawCustomTexts(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawTextSpanners(score.TextMetrics, layout, measureToSystemTopYUp, os, gc);
                 DrawPedalBrackets(layout, measureToSystemTopYUp, gc);
-                DrawMultiMeasureRests(layout, measureToSystemTopYUp, gc);
+                DrawMultiMeasureRests(score, layout, measureToSystemTopYUp, gc);
                 DrawTieVariants(layout, measureToSystemTopYUp, os, gc);
                 DrawLyricHyphens(layout, measureToSystemTopYUp, gc);
                 DrawPartCombine(score.TextMetrics, layout, measureToSystemTopYUp, gc);
@@ -848,8 +848,8 @@ internal static partial class SharedRenderer
                             score.GrobOverrides, score.GrobReverts, globalIdx, voiceNumber)
                         : resolver;
                     DrawStaffMeasures(score.TextMetrics, voices[vi], voiceNumber, voices,
-                        system, layout, globalIdx, localStaffY, clef, voiceResolver, beamedItems, sgc,
-                        pageHeight, fragFrom, fragTo, percentCovered);
+                        system, layout, globalIdx, localStaffY, staff.Lines, clef, voiceResolver,
+                        beamedItems, sgc, pageHeight, fragFrom, fragTo, percentCovered);
                 }
                 percentCovered.Clear();
                 t_percentCovered = percentCovered;
@@ -983,22 +983,19 @@ internal static partial class SharedRenderer
         int lines = 5)
     {
         // Reduced staves draw centered on the 5-line frame: 1 line = the
-        // middle, 2 lines = the timbales pair (rows 1 and 3), 3-4 contiguous
-        // centered. Geometry (positions, barlines, stems) stays 5-line.
+        // middle, 2 lines = the timbales pair, 3-4 contiguous. Geometry (positions,
+        // barlines, stems) stays 5-line. The positions are the ONE table every reader
+        // of "where are the lines" consults (EngravingDefaults.StaffLinePositions —
+        // the rest's hanging line, the ledgered rest cut), so the drawing and its
+        // readers cannot disagree about a line.
         // LILYPOND-REF: StaffSymbol line-positions — percussion/timbales styles.
-        IEnumerable<int> rows = lines switch
+        var positions = EngravingDefaults.StaffLinePositions(lines);
+        // Top line first, as the rows were always emitted (the table ascends).
+        for (int i = positions.Length - 1; i >= 0; i--)
         {
-            1 => [2],
-            2 => [1, 3],
-            3 => [1, 2, 3],
-            4 => [0, 1, 2, 3],
-            _ => [0, 1, 2, 3, 4],
-        };
-        foreach (int i in rows)
-        {
-            // staffY is the top line's Y-up; successive lines run downward (device),
-            // i.e. toward smaller Y-up.
-            double y = staffY - i;
+            // staffY is the top line's Y-up (position +4 of the frame); a line at
+            // position p is (4 − p)/2 staff spaces below it (device down = smaller Y-up).
+            double y = staffY - (StaffHeight - positions[i]) / 2.0;
             gc.DrawLine(startX, y, width, y, Color.Black, EngravingDefaults.StaffLineThickness);
         }
     }

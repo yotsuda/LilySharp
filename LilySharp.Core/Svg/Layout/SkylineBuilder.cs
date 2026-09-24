@@ -707,7 +707,7 @@ internal sealed class SkylineBuilder
 
                     AddMusicItemToSkylines(item, seedX, staffMiddleUp, StaffSize.Of(staff),
                         upSkyline, downSkyline, forcedStemUp, reserveStem, restShiftUp,
-                        restDotRel, staff.Clef);
+                        restDotRel, staff.Clef, staff.Lines);
                 }
             }
         }
@@ -2047,7 +2047,8 @@ internal sealed class SkylineBuilder
         bool reserveStem = true,
         double restShiftUp = 0.0,
         int? restDotRel = null,
-        ClefType clef = ClefType.Treble)
+        ClefType clef = ClefType.Treble,
+        int staffLines = 5)
     {
         switch (item)
         {
@@ -2202,23 +2203,24 @@ internal sealed class SkylineBuilder
                 //   lily/rest.cc:229-257 brew_internal_stencil takes the stencil from
                 //   `find_by_name` on the glyph the duration-log selects, so the extent IS
                 //   the glyph's.
-                // ⚠️ THE ORIGIN RULE IS SHARED WITH THE DRAWING, deliberately spelled the same
-                // way SharedRenderer.DrawRest spells it: a whole rest hangs from the fourth
-                // line (one space below the top line) and everything else sits about the
-                // middle. Until 2026-08-04 this seeded a 1.0 x 1.0 square centred on the
-                // middle line for every duration alike, which is the two-spellings shape
-                // HANDOFF 7.7 names — and a square the staff symbol's own 2.05 swallowed
-                // whole, so the seed could not bind anything at all (audit/lp-geometry
-                // staff.staff.rest-under-notes).
+                // ⚠️ THE ORIGIN RULE IS SHARED WITH THE DRAWING — one home, not a second
+                // spelling: ElementCoordinator.NeutralRestPosition, the letter
+                // SharedRenderer.DrawRest draws unshifted on THIS staff's lines (a whole
+                // rest hangs from the line above the middle, everything else sits on the
+                // line at or below it). Until 2026-08-04 this seeded a 1.0 x 1.0 square
+                // centred on the middle line for every duration alike, which is the
+                // two-spellings shape HANDOFF 7.7 names — and a square the staff symbol's
+                // own 2.05 swallowed whole, so the seed could not bind anything at all
+                // (audit/lp-geometry staff.staff.rest-under-notes).
                 int restValue = GlyphMetrics.NoteValueOf(restItem.BaseDuration);
                 // The SKYLINE box, not the LILC one: LilyPond's vertical-skylines are the
                 // traced outline and its extent is the metric box, and for a quarter rest
                 // they differ by 0.030000 at the bottom. See GetRestSkylineBBox.
                 var restBox = size.Ink(GlyphMetrics.GetRestSkylineBBox(restValue));
                 // Y-up of the glyph's own origin, in this skyline's frame: the middle line is
-                // this frame's zero, and a whole rest's origin is one space above it.
+                // this frame's zero, and the neutral letter is so many half spaces above it.
                 double restOriginUp = staffMiddleUp
-                    + (restValue == 1 ? size.Span(1.0) : 0.0)
+                    + size.Span(ElementCoordinator.NeutralRestPosition(staffLines, restValue) / 2.0)
                     + size.Span(restShiftUp);
                 double restTop = restOriginUp + restBox.Top;
                 double restBottom = restOriginUp + restBox.Bottom;

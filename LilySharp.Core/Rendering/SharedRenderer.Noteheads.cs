@@ -32,7 +32,7 @@ internal static partial class SharedRenderer
         ScoreTextMetrics fonts,
         Voice voice, int voiceNumber, ImmutableArray<Voice> staffVoices,
         SystemLayout system, ScoreLayout layout, int staffIndex,
-        double staffY, ClefType clef, GrobPropertyResolver resolver,
+        double staffY, int staffLines, ClefType clef, GrobPropertyResolver resolver,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
         double pageHeight,
         int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue,
@@ -120,14 +120,16 @@ internal static partial class SharedRenderer
                             layout.GetRestShift(ml.MeasureIndex, voiceNumber - 1, itemIdx);
                         // The position the rest's ORIGIN ends up at, which is what
                         // decides its ledger: the neutral letter DrawRest draws
-                        // unshifted (a whole rest hangs from +2, everything else sits
-                        // on the middle line) plus the shift the voiced position and
-                        // the collisions asked for.
+                        // unshifted — THIS staff's (ElementCoordinator.NeutralRestPosition:
+                        // a whole rest hangs from the line above the middle, everything
+                        // else sits on the line at or below it) — plus the shift the
+                        // voiced position and the collisions asked for.
                         // LILYPOND-REF: lily/rest.cc:166-185 Rest::glyph_name — the
                         // ledgered cut is chosen from get_position.
                         double restPosition = restShift
-                            + (GlyphMetrics.NoteValueOf(rest.BaseDuration) == 1 ? 2 : 0);
-                        DrawRest(rest, itemX, staffY + restShift * 0.5,
+                            + ElementCoordinator.NeutralRestPosition(
+                                staffLines, GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                        DrawRest(rest, itemX, staffY + restShift * 0.5, staffLines,
                             layout.GetRestDotOffset(ml.MeasureIndex, voiceNumber - 1, itemIdx),
                             gc, restPosition);
                     }
@@ -1349,17 +1351,25 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawRest(RestItem rest, double x, double staffY, int? dotOffset,
-        IDrawingContext gc, double staffPosition)
+    /// <param name="staffLines">The staff's line count — the neutral letter is seated on
+    /// ITS lines (a caller with a synthetic five-line frame, the tab's, passes 5).</param>
+    private static void DrawRest(RestItem rest, double x, double staffY, int staffLines,
+        int? dotOffset, IDrawingContext gc, double staffPosition)
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-        // staffY is the top-line Y-up; rest origins sit below it (device down =
-        // smaller Y-up).
-        // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal — the semibreve
-        // (whole) rest is raised one staff line (duration_log==0 returns pos+2)
-        // relative to half-note and shorter rests.
-        double y = noteValue == 1 ? staffY - 1 : staffY - 2;  // whole rests hang from 4th line
-        DrawRestAtOrigin(rest, x, y, dotOffset, gc, staffPosition);
+        // staffY is the top-line Y-up (position +4 of the five-line frame); the origin
+        // is the neutral letter's position below it — staff_position_internal at CENTER
+        // over THIS staff's drawn lines (ElementCoordinator.NeutralRestPosition): on five
+        // lines the whole rest hangs from the fourth line (+2, one space below the top)
+        // and every other rest sits on the middle (0, two spaces below); on one line the
+        // whole rest hangs from THAT line; on the timbales pair the half rest sits on
+        // the lower one. Spelled as one subtraction so the five-line answer is the
+        // former `staffY - 1` / `staffY - 2` to the bit.
+        // LILYPOND-REF: lily/rest.cc:33-45 Rest::y_offset_callback — the Y is
+        //   staff_position_internal × half a staff space; :47-133 staff_position_internal.
+        double y = staffY
+            - (StaffHeight / 2 - ElementCoordinator.NeutralRestPosition(staffLines, noteValue) / 2.0);
+        DrawRestAtOrigin(rest, x, y, dotOffset, gc, staffPosition, staffLines);
     }
 
     /// <summary>The rest glyph and its dots, at the ORIGIN the caller already resolved.</summary>
@@ -1381,10 +1391,10 @@ internal static partial class SharedRenderer
     /// </para>
     /// </remarks>
     private static void DrawRestAtOrigin(RestItem rest, double x, double y, int? dotOffset,
-        IDrawingContext gc, double staffPosition)
+        IDrawingContext gc, double staffPosition, int staffLines = 5)
     {
         int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-        char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition);
+        char glyph = EmmentalerGlyphs.GetRest(noteValue, staffPosition, staffLines);
         using (gc.Source(rest.SourcePosition))
             gc.DrawGlyph(glyph, x, y, FontSize);
 

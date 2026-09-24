@@ -479,6 +479,9 @@ public sealed partial class MeasureCollector
                 // beam.cc:1480-1491 offset = beam_pos·ss/2 − minimum_distance·dir −
                 // extent[dir], floored to whole staff spaces, only ever away from the
                 // beam (a semibreve's default origin hangs one space up, rest.cc:101-121).
+                // ⚠️ The FIVE-LINE letter: the collector builds the part, which every score
+                // may draw on its own line count, and a beam pushes rests of a quarter or
+                // shorter — 0 on every staff (ElementCoordinator.NeutralRestPosition).
                 var restBox = Layout.GlyphMetrics.GetRestBBox(restStem.NoteValue);
                 double restExtentAtDir = beamDir > 0 ? restBox.Top : restBox.Bottom;
                 double offsetSs = beamPos / 2.0

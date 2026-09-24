@@ -327,7 +327,10 @@ internal static class TupletBracketEngraver
             var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp, endX - startX,
                 isTabStaff ? default : beamLayouts, measureLayout, useRealExtents: !isTabStaff,
                 bracketStartX: startX, scripts: scripts,
-                restShifts: restShiftsOf?.Invoke(tuplet.StaffIndex));
+                restShifts: restShiftsOf?.Invoke(tuplet.StaffIndex),
+                staffLines: staffByIndex != null
+                    && staffByIndex.TryGetValue(tuplet.StaffIndex, out var linesStaff)
+                    ? linesStaff.Lines : 5);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -894,7 +897,8 @@ internal static class TupletBracketEngraver
         ImmutableArray<BeamLayout> beamLayouts = default, MeasureLayout? measureLayout = null,
         bool useRealExtents = false, double bracketStartX = double.NaN,
         ImmutableArray<ArticulationLayout> scripts = default,
-        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
+        int staffLines = 5)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
         // Fallback only — when no note positions are found the bracket
@@ -975,30 +979,35 @@ internal static class TupletBracketEngraver
 
         // A rest column's reach on the bracket's side, Y-up in staff-middle spaces: the
         // glyph the renderer draws (GlyphMetrics.GetRestBBox — LilyPond's Rest extent is
-        // its stencil's, the LILC box) at the origin it draws it at (the middle line, a
-        // semibreve hanging one space above, plus the shift the rest-collision pass gave
-        // it — the SAME memo the renderer's GetRestShift and the skyline seed read), united
+        // its stencil's, the LILC box) at the origin it draws it at (the staff's neutral
+        // letter, ElementCoordinator.NeutralRestPosition — the middle line, a semibreve
+        // hanging from the line above — plus the shift the rest-collision pass gave it,
+        // the SAME memo the renderer's GetRestShift and the skyline seed read), united
         // with the beam face where a beam carries the rest as an invisible stem.
         // ⚠️ With no memo handed in (the slur pass rebuilding tuplet numbers), the PURE
-        // position stands: the written pitch of `a4@rest', the voiced base, or the middle
-        // line — LilyPond's own pure-chain reading, the collision push left out.
+        // position stands: the written pitch of `a4@rest', the voiced base, or the neutral
+        // letter — LilyPond's own pure-chain reading, the collision push left out.
         // LILYPOND-REF: lily/rest.cc:33-45 y_offset_callback, :47-145 staff_position_internal;
         //   lily/rest.cc:229-257 brew_internal_stencil — the extent is the glyph's;
         //   lily/note-column.cc:251-258 cross_staff_extent — `iv.unite (stem extent)'.
         double RestReachUp(RestItem rest, int itemIndex)
         {
             int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+            double neutral = ElementCoordinator.NeutralRestPosition(staffLines, restValue);
             double shift;   // staff positions from the glyph's default origin, up-positive
             if (restShifts is not null)
                 shift = restShifts.TryGetValue(
                     new RestShiftKey(tuplet.MeasureIndex, tuplet.VoiceIndex, itemIndex), out var rs)
                     ? rs : 0.0;
             else
-                shift = rest.StaffPosition ?? (rest.VoiceDirection != 0
-                    ? ElementCoordinator.RestStaffPosition(rest, rest.VoiceDirection, restValue)
-                        - (restValue == 1 ? 2.0 : 0.0)
-                    : 0.0);
-            double originUp = (restValue == 1 ? 1.0 : 0.0) + shift * 0.5;
+                // The pitched and the voiced arm both come through RestStaffPosition, as
+                // the collision pass spells the memo (a written pitch carries the
+                // semibreve's +2 whatever the staff; on five lines it cancels the letter's).
+                shift = rest.StaffPosition is not null || rest.VoiceDirection != 0
+                    ? ElementCoordinator.RestStaffPosition(rest, rest.VoiceDirection, restValue, staffLines)
+                        - neutral
+                    : 0.0;
+            double originUp = neutral / 2.0 + shift * 0.5;
             var box = GlyphMetrics.GetRestBBox(restValue);
             double lo = originUp + box.Bottom, hi = originUp + box.Top;
             // The invisible stem of a rest a beam runs over ends on the beam's face at the

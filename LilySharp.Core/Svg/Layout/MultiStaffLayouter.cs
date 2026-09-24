@@ -4014,7 +4014,7 @@ internal sealed class MultiStaffLayouter
     /// own origin — the same frame <see cref="StaffTupletBracketLayouts"/> produces. This
     /// reuses <see cref="ElementCoordinator.LayoutSlurs(Rendering.ScoreTextMetrics, ImmutableArray{Model.SlurItem},
     /// Model.Score, ImmutableArray{SystemLayout}, int, Model.Staff, ImmutableArray{Model.GraceNoteItem},
-    /// ImmutableArray{Model.BeamLayout}, System.Func{ImmutableArray{InsideSlurScript}})"/>
+    /// ImmutableArray{Model.BeamLayout}, System.Func{ImmutableArray{InsideSlurScript}}, ImmutableArray{TieLayout})"/>
     /// whole rather than a second copy
     /// of its scoring. Slur geometry is independent of inter-staff spacing (it is fixed by
     /// note X and pitch), so computing it before the spacing is decided is sound.

@@ -87,16 +87,18 @@ internal static partial class EmmentalerGlyphs
     /// position −11 reports <c>(0 . 0.625)</c>, the same as <c>rests.1</c>). So spacing,
     /// skylines and the dot column all keep reading the unledgered box.</para>
     /// </remarks>
-    public static char GetRest(int noteValue, double staffPosition)
+    /// <param name="staffLines">The staff's line count — the lines the ledger question is
+    /// asked of (<see cref="EngravingDefaults.StaffLinePositions"/>); five by default.</param>
+    public static char GetRest(int noteValue, double staffPosition, int staffLines = 5)
     {
         // LILYPOND-REF: lily/rest.cc:173-174 — int (get_position (me) + offset).
         // C++ truncates toward zero; so does this cast.
         int pos = (int) staffPosition;
         return noteValue switch
         {
-            0 => IsLedgered(0, pos) ? RestDoubleWholeLedgered : RestDoubleWhole,
-            1 => IsLedgered(1, pos) ? RestWholeLedgered : RestWhole,
-            2 => IsLedgered(2, pos) ? RestHalfLedgered : RestHalf,
+            0 => IsLedgered(0, pos, staffLines) ? RestDoubleWholeLedgered : RestDoubleWhole,
+            1 => IsLedgered(1, pos, staffLines) ? RestWholeLedgered : RestWhole,
+            2 => IsLedgered(2, pos, staffLines) ? RestHalfLedgered : RestHalf,
             4 => RestQuarter, 8 => Rest8th,
             16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,
             _ => RestQuarter
@@ -112,18 +114,20 @@ internal static partial class EmmentalerGlyphs
     /// needs a ledger if it is not LYING on a staff line, a whole rest if it is not
     /// HANGING from one, a breve if neither (its own line, or the one two positions
     /// above it, being a staff line spares it).
-    /// <para>The staff's <c>line-positions</c> are {−4, −2, 0, 2, 4}: the five lines of
-    /// the notation staff, which is the only staff symbol Lily# engraves in positions.
-    /// LILYPOND-REF: scm/define-grobs.scm StaffSymbol — line-count 5.</para>
+    /// <para>The staff's <c>line-positions</c> are the ones it DRAWS
+    /// (<see cref="EngravingDefaults.StaffLinePositions"/>): {−4, −2, 0, 2, 4} on the
+    /// five-line staff, the single middle line on <c>as lines 1</c>, the pair ±2 on
+    /// <c>as lines 2</c>. LILYPOND-REF: scm/define-grobs.scm StaffSymbol — line-count 5.</para>
     /// </remarks>
-    private static bool IsLedgered(int noteValue, int pos) =>
-        !OnStaffLine(pos)
-        && !(noteValue == 0 && OnStaffLine(pos + 2));
+    private static bool IsLedgered(int noteValue, int pos, int staffLines) =>
+        !OnStaffLine(pos, staffLines)
+        && !(noteValue == 0 && OnStaffLine(pos + 2, staffLines));
 
-    /// <summary>Whether a staff position is one of the five staff lines.</summary>
+    /// <summary>Whether a staff position is one of the staff's drawn lines.</summary>
     /// <remarks>LILYPOND-REF: lily/staff-symbol.cc:372-382 Staff_symbol::on_line —
     /// the position equals one of <c>line-positions</c>.</remarks>
-    private static bool OnStaffLine(int pos) => EngravingDefaults.OnStaffLine(pos);
+    private static bool OnStaffLine(int pos, int staffLines)
+        => EngravingDefaults.OnDrawnStaffLine(pos, staffLines);
 
     /// <summary>Notehead glyph for a style + note value; whole-note variants
     /// serve breve too (styled breves are not in the font).</summary>

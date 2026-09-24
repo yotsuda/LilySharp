@@ -1149,6 +1149,11 @@ internal sealed class ElementCoordinator
                 // (a semibreve hangs from the line above the middle, rest.cc:101-121;
                 // every shorter rest sits at 0). The key is the beam's OWN voice: the rest
                 // this pass moves is a member of the beam, and the beam knows whose it is.
+                // ⚠️ The FIVE-LINE neutral letter, spelled here rather than asked of
+                // NeutralRestPosition: this pass has the Score, not the staff, and a beam
+                // pushes rests of a quarter or shorter — whose letter is 0 on every
+                // staff. Only a whole or half rest bracketed INTO a beam reads the 2, and
+                // no book puts one on a staff of fewer than five lines.
                 var key = new RestShiftKey(measureIndex, group.VoiceIndex, rest.ItemIndex);
                 priorShifts.TryGetValue(key, out double prior);
                 var restBox = GlyphMetrics.GetRestBBox(rest.NoteValue);
@@ -1275,12 +1280,15 @@ internal sealed class ElementCoordinator
                         continue;
                     int pitchedValue = GlyphMetrics.NoteValueOf(pitched.BaseDuration);
                     // The renderer draws the neutral letter unshifted, so the shift is
-                    // the distance from it — and both the +2 a semibreve gets from its
-                    // written position and the +2 in the neutral letter cancel, leaving
-                    // the written position itself for every duration.
+                    // the distance from it — on five lines the +2 a semibreve gets from
+                    // its written position and the +2 in the neutral letter cancel,
+                    // leaving the written position itself for every duration; on a staff
+                    // whose neutral letter is elsewhere (NeutralRestPosition) the
+                    // difference carries the semibreve's +2 through, as LilyPond's
+                    // position_override arm hands it out whatever the staff.
                     shifts[new RestShiftKey(m, v, i)] =
-                        RestStaffPosition(pitched, pitched.VoiceDirection, pitchedValue)
-                        - (pitchedValue == 1 ? 2.0 : 0.0);
+                        RestStaffPosition(pitched, pitched.VoiceDirection, pitchedValue, staff.Lines)
+                        - NeutralRestPosition(staff.Lines, pitchedValue);
                 }
             }
         }
@@ -1339,13 +1347,14 @@ internal sealed class ElementCoordinator
                     bool voiceUp = dir > 0;
 
                     // The rest STARTS at its voiced position (dir × 4, line-aligned per
-                    // duration) — rest.cc's staff_position_internal — and everything
-                    // below translates from there. The renderer's default is the
-                    // NEUTRAL letter (middle; whole hangs at +2), so the emitted shift
-                    // carries the base displacement too.
+                    // duration over THIS staff's lines) — rest.cc's
+                    // staff_position_internal — and everything below translates from
+                    // there. The renderer's default is the NEUTRAL letter
+                    // (NeutralRestPosition: the middle, a whole hanging from the line
+                    // above it), so the emitted shift carries the base displacement too.
                     int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
-                    double basePos = RestStaffPosition(rest, dir, restValue);
-                    double defaultPos = restValue == 1 ? 2.0 : 0.0;
+                    double basePos = RestStaffPosition(rest, dir, restValue, staff.Lines);
+                    double defaultPos = NeutralRestPosition(staff.Lines, restValue);
 
                     // The rest's own ink, in staff POSITIONS about the middle line, at
                     // its voiced place (a whole rest's glyph hangs from basePos).
@@ -1437,18 +1446,72 @@ internal sealed class ElementCoordinator
     /// rest is placed once and the spacing, the dot column and the print all see it.
     /// LILYPOND-REF: lily/rest.cc:53-74 staff_position_internal — position_override.
     /// </remarks>
-    internal static double RestStaffPosition(RestItem rest, int dir, int restValue) =>
+    internal static double RestStaffPosition(RestItem rest, int dir, int restValue, int staffLines) =>
         rest.StaffPosition is { } written
             ? (restValue == 1 ? written + 2.0 : written)
-            : VoicedRestPosition(dir, restValue);
+            : VoicedRestPosition(dir, restValue, staffLines);
 
     /// <summary>
-    /// The staff position a voiced rest STARTS at, for the standard five-line staff:
-    /// <c>dir × voiced-position</c> (4); a quarter or shorter takes it as-is; a half
+    /// Where a rest RESTS when nothing voices or pitches it — the NEUTRAL letter every
+    /// rest shift in this class is measured from and the renderer draws unshifted:
+    /// <c>staff_position_internal</c> at direction CENTER, from voiced position 0. A
+    /// quarter or shorter stays on the middle line; a half (or breve) sits on the last
+    /// staff line at or below it, else the lowest line; a whole hangs from the first
+    /// line above it, else the top line; a breve on a ONE-line staff hangs two below it.
+    /// </summary>
+    /// <remarks>
+    /// The lines are THE STAFF'S DRAWN ONES (<see cref="EngravingDefaults.StaffLinePositions"/>).
+    /// On five lines this is the "+2 for a whole, 0 otherwise" that used to be spelled
+    /// inline at every reader; on one line the whole rest hangs from THE line (the space
+    /// above it is no line), and on the timbales pair (±2) the half rest sits on the LOWER
+    /// line, the middle being no line. Until 2026-09-23 every reader assumed five lines
+    /// (the owner's oneline-rest.lys: the whole rest floated a space above the single
+    /// line, the half rest a space above the pair's lower line — the same music on three,
+    /// four and five lines was right, because there the five-line letter happens to land
+    /// on a drawn line).
+    /// LILYPOND-REF: lily/rest.cc:76-81 staff_position_internal — vpos 0 at CENTER, and no
+    ///   line alignment past a quarter; :90-97 the staff's line-positions and the one-line
+    ///   breve arm; :101-121 the semibreve (upper_bound, else back()); :122-129 every
+    ///   longer rest (upper_bound, then one back); :131-133 "Finished for neutral position".
+    /// </remarks>
+    internal static double NeutralRestPosition(int staffLines, int restValue)
+    {
+        if (restValue >= 4)   // duration_log > 1: no line alignment
+            return 0.0;
+        var lines = EngravingDefaults.StaffLinePositions(staffLines);
+        // rest.cc:96-97 — a breve (duration_log < 0) on a single line, neutral direction.
+        if (lines.Length == 1 && restValue == 0)
+            return lines[0] - 2.0;
+        return AlignRestToLine(lines, 0.0, restValue);
+    }
+
+    /// <summary>
+    /// rest.cc:101-129 — the line a rest longer than a quarter takes from a position:
+    /// a whole hangs from the first line strictly above <paramref name="pos"/> (the top
+    /// line when there is none); anything else sits on the last line at or below it (the
+    /// bottom line when there is none).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/rest.cc:115-120 <c>std::upper_bound</c>, else
+    /// <c>linepos.back()</c>; :124-128 <c>upper_bound</c> then <c>--it</c> unless at
+    /// <c>begin()</c>. The list is ascending, as LilyPond sorts it (:99).</remarks>
+    private static double AlignRestToLine(ReadOnlySpan<double> lines, double pos, int restValue)
+    {
+        int it = 0;   // std::upper_bound: the first line strictly above pos
+        while (it < lines.Length && lines[it] <= pos)
+            it++;
+        if (restValue == 1)
+            return it < lines.Length ? lines[it] : lines[^1];
+        return lines[it > 0 ? it - 1 : 0];
+    }
+
+    /// <summary>
+    /// The staff position a voiced rest STARTS at, on a staff of <paramref name="staffLines"/>
+    /// lines: <c>dir × voiced-position</c> (4); a quarter or shorter takes it as-is; a half
     /// aligns down to the nearest line at or below; a whole first drops one line in a
     /// lower voice, then hangs from the next line above (the top line when there is
-    /// none). The proper-side check against the neutral letter is the tail of the
-    /// same function.
+    /// none). The proper-side check against the neutral letter
+    /// (<see cref="NeutralRestPosition"/>) is the tail of the same function, and direction
+    /// CENTER IS the neutral letter.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal (the
     /// unpitched arm); LILYPOND-REF: scm/define-grobs.scm Rest — voiced-position 4.
@@ -1457,37 +1520,26 @@ internal sealed class ElementCoordinator
     /// position (the PURE side of the offset chain — the collision push is unpure).
     /// </para>
     /// </remarks>
-    internal static double VoicedRestPosition(int dir, int restValue)
+    internal static double VoicedRestPosition(int dir, int restValue, int staffLines)
     {
         const double VoicedPosition = 4.0;
         double pos = dir * VoicedPosition;
         if (restValue >= 4)   // duration_log > 1: no line alignment
             return pos;
+        // rest.cc:131-133 — the neutral direction is finished at the aligned position,
+        // which is the neutral letter itself (and the one-line breve arm lives there).
+        if (dir == 0)
+            return NeutralRestPosition(staffLines, restValue);
 
-        double[] lines = { -4.0, -2.0, 0.0, 2.0, 4.0 };
-        if (restValue == 1)
-        {
-            // Whole: "lower voice semibreve rests generally hang a line lower",
-            // then from the next available line.
-            if (dir < 0)
-                pos -= 2;
-            double hang = lines[^1];
-            foreach (var l in lines)
-                if (l > pos) { hang = l; break; }
-            pos = hang;
-        }
-        else
-        {
-            // Half (and breve): the line at or below, clamped to the bottom line.
-            double aligned = lines[0];
-            foreach (var l in lines)
-                if (l <= pos) aligned = l;
-            pos = aligned;
-        }
+        var lines = EngravingDefaults.StaffLinePositions(staffLines);
+        // Whole: "lower voice semibreve rests generally hang a line lower" (:107-108),
+        // then from the next available line; half (and breve): the line at or below.
+        if (restValue == 1 && dir < 0)
+            pos -= 2;
+        pos = AlignRestToLine(lines, pos, restValue);
 
-        // Keep the voiced position only on the proper side of the neutral one
-        // (+2 for a hanging whole, 0 otherwise on this staff).
-        double neutral = restValue == 1 ? 2.0 : 0.0;
+        // Keep the voiced position only on the proper side of the neutral one (:139-144).
+        double neutral = NeutralRestPosition(staffLines, restValue);
         return dir * (pos - neutral) > 0 ? pos : neutral + dir * VoicedPosition;
     }
 
@@ -1612,8 +1664,8 @@ internal sealed class ElementCoordinator
                             // ItemSkylineFactory prices — not a re-derived voice default.
                             int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
                             int pure = rest.VoiceDirection == 0 && rest.StaffPosition is null
-                                ? (restValue == 1 ? 2 : 0)
-                                : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue);
+                                ? (int) NeutralRestPosition(staff.Lines, restValue)
+                                : (int) RestStaffPosition(rest, rest.VoiceDirection, restValue, staff.Lines);
                             restSlots.Add((positions.Count, v, i, pure));
                             positions.Add(pure);
                             dirs.Add(0);   // a rest's dot declares no direction (dp.dir_
@@ -2820,7 +2872,6 @@ internal sealed class ElementCoordinator
         Dictionary<int, List<int>>? graceByMeasure,
         GraceObstacleGeom?[]? graceGeomCache)
     {
-        const double headHalfHeight = 0.5; // staff spaces, half a notehead
         const double eps = 0.001;
         var obstacles = new List<SlurObstacle>();
 
@@ -2896,10 +2947,27 @@ internal sealed class ElementCoordinator
                     continue;
                 double obstacleX = x + EndpointHeadHalfWidth(voice, mi, i);
 
-                // Visual top edge = highest pitch (smallest device Y) minus half a
-                // head; visual bottom edge = lowest pitch plus half a head.
-                double topY = (staffMiddleDown - topPos.Value / 2.0) - headHalfHeight;
-                double bottomY = (staffMiddleDown - bottomPos.Value / 2.0) + headHalfHeight;
+                // Visual top edge = the highest head's GLYPH top (smallest device Y);
+                // visual bottom edge = the lowest head's glyph bottom. The glyph's own
+                // box, not a nominal half space: LilyPond reads the extremal head's
+                // extent, and the black and half heads reach 0.545 ss from their centre
+                // where a nominal 0.5 leaves 0.045 — enough to change which candidate
+                // wins. MEASURED (samples/nocturne.lys's right hand, bar 4
+                // `a4( cis8 e g4 fis8 e)`, Lab sessions/p538/nograce): LilyPond's winner
+                // is the flat (2.545, 2.545), scored "L edge=1.60"; the candidate this
+                // engine chose with 0.5-boxes, (2.045, 2.545), scores "L edge=1.10,
+                // variance=0.64 = 1.74" in LilyPond — the same curve, the variance term
+                // read 0.045 closer to the g'' and fis'' heads.
+                // LILYPOND-REF: lily/slur-scoring.cc:137-144 get_encompass_info —
+                //   h = Stem::extremal_heads (stem)[dir_]; ei.head_ = h->extent (Y)[dir_];
+                // LILYPOND-REF: lily/slur-configuration.cc:257-291 score_encompass — head_dy
+                //   and the convex head distances read that extent.
+                int headValue = NoteColumnLayout.Of(items[i]) is { } headCol
+                    ? headCol.NoteValue
+                    : GlyphMetrics.NoteValueOf(items[i]);
+                var headBox = GlyphMetrics.GetNoteheadBBox(headValue);
+                double topY = (staffMiddleDown - topPos.Value / 2.0) - headBox.Top;
+                double bottomY = (staffMiddleDown - bottomPos.Value / 2.0) - headBox.Bottom;
 
                 // stem_ / the stem-x_ move, only when the stem points WITH the slur.
                 // LILYPOND-REF: slur-scoring.cc:146-158.
@@ -3071,18 +3139,27 @@ internal sealed class ElementCoordinator
     /// DotConfiguration.Resolve. The collision DotAdjustment is not read here
     /// either (the same simplification the skyline seed discloses).
     /// ⚠️ Two further simplifications against that seed: geometry is read at
-    /// scale 1 (the same choice BuildSlurObstacles makes with its 0.5 head box),
+    /// scale 1 (the same choice BuildSlurObstacles makes with its head boxes),
     /// and DotConfiguration.Resolve runs with NO direction where the seed feeds
     /// the voice-forced one — a forced-voice score could seat the scored dot row
     /// one position off the drawn one.
     /// </remarks>
+    /// <param name="tieLayouts">This staff's ties, already laid out (the tie pass runs
+    /// before the slur pass — LayoutEngine.Prelim). A tie whose END note the slur covers
+    /// joins the set as a spanner box, and its two ends go to
+    /// <paramref name="tieEnds"/> for the scorer's forbidden-attachment term.</param>
+    /// <param name="tieEnds">The covered ties' end points, device Y down — null when the
+    /// slur covers no tie.</param>
     private static IReadOnlyList<SlurExtraObject> BuildSlurExtraObjects(
         Rendering.ScoreTextMetrics fonts,
         Voice voice, SystemLayout segSystem, SlurItem slur,
         double staffMiddleDown, double segStartX, double segEndX,
+        out List<(double X, double Y)>? tieEnds,
         ImmutableArray<TupletBracketLayout> tupletNumbers = default,
         ImmutableArray<TupletBracketItem> tupletItems = default,
-        ImmutableArray<InsideSlurScript> insideScripts = default)
+        ImmutableArray<InsideSlurScript> insideScripts = default,
+        ImmutableArray<TieLayout> tieLayouts = default,
+        IReadOnlyDictionary<int, int>? measureToSystemIdx = null)
     {
         // thickness_ = Slur.thickness (1.2, define-grobs.scm) * the layout
         // line-thickness dimension (0.1 ss at default staff size) = 0.12 ss.
@@ -3090,6 +3167,7 @@ internal sealed class ElementCoordinator
         const double slurThickness = 1.2 * 0.1;
         const double eps = 0.001;
         var extras = new List<SlurExtraObject>();
+        tieEnds = null;
 
         void AddDotRow(int dotCount, double dotStartX, double dotCenterDeviceY)
         {
@@ -3097,13 +3175,17 @@ internal sealed class ElementCoordinator
             double advance = 2 * dotBox.Width;
             double left = dotStartX + dotBox.Left - slurThickness;
             double right = dotStartX + (dotCount - 1) * advance + dotBox.Right + slurThickness;
-            // Device Y down: top edge = centre - (half height + widens).
+            // Device Y down: top edge = centre - (half height + widens). The bare
+            // extent (the glyph's own, no 0.2, no thickness) rides along for the avoid
+            // point, as generate_avoid_offsets reads the Dots grob.
             double halfH = dotBox.Top + 0.2 + slurThickness * 0.5;
             extras.Add(new SlurExtraObject(
                 left, right,
                 dotCenterDeviceY - halfH, dotCenterDeviceY + halfH,
                 SlurAvoidType.Inside,
-                SlurScoreParameters.Default.ExtraObjectCollisionPenalty));
+                SlurScoreParameters.Default.ExtraObjectCollisionPenalty,
+                AvoidTopY: dotCenterDeviceY - dotBox.Top,
+                AvoidBottomY: dotCenterDeviceY - dotBox.Bottom));
         }
 
         foreach (var ml in segSystem.Measures)
@@ -3221,7 +3303,9 @@ internal sealed class ElementCoordinator
                     cy - halfH - slurThickness * 0.5,
                     cy + halfH + slurThickness * 0.5,
                     SlurAvoidType.Inside,
-                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty));
+                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty,
+                    AvoidTopY: cy - halfH,
+                    AvoidBottomY: cy + halfH));
             }
         }
 
@@ -3238,11 +3322,9 @@ internal sealed class ElementCoordinator
         //   non-slur branch: ye.widen(th*0.5), xe.widen(th*1.0), extra-object penalty;
         //   lily/slur-scoring.cc:695-704 generate_avoid_offsets puts the box's dir edge in
         //   the curve's avoid list too (SlurScoringProblem.BuildAvoidOffsets).
-        // ⚠️ The gate is the SLUR's span, item-level at the boundary measures, because LP's
-        //   is engraver timing: a script is acknowledged at a timestep where the slur is
-        //   open, and a slur is open at both of its own bound notes (slurs[] at the start,
-        //   end_slurs[] at the end). The same rule CoveringSlurPiece uses for the other
-        //   direction.
+        // The gate is the engraver's TIMESTEP rule, SlurOpenAt: a script is acknowledged
+        //   at the timestep of its note, and joins every slur open or ending there. The
+        //   same rule CoveringSlurPiece uses for the other direction.
         // ⚠️ The script boxes arrive from a walk run WITHOUT slurs
         //   (ArticulationEngraver.InsideSlurScriptLayouts) — sound because an 'inside mark's
         //   placement does not depend on the bow; see that method's remark.
@@ -3260,12 +3342,7 @@ internal sealed class ElementCoordinator
                 // voice's script (the key the 'around direction looks slurs up by too).
                 if (voiceIndex != slur.VoiceIndex)
                     continue;
-                if (s.MeasureIndex < slur.StartMeasureIndex
-                    || s.MeasureIndex > slur.EndMeasureIndex)
-                    continue;
-                if (s.MeasureIndex == slur.StartMeasureIndex && s.ItemIndex < slur.StartItemIndex)
-                    continue;
-                if (s.MeasureIndex == slur.EndMeasureIndex && s.ItemIndex > slur.EndItemIndex)
+                if (!SlurOpenAt(slur, s.MeasureIndex, s.ItemIndex))
                     continue;
                 // This SEGMENT only (a broken slur's other piece keeps its own).
                 bool onThisSystem = false;
@@ -3289,19 +3366,157 @@ internal sealed class ElementCoordinator
                     topDown - slurThickness * 0.5,
                     bottomDown + slurThickness * 0.5,
                     SlurAvoidType.Inside,
-                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty));
+                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty,
+                    AvoidTopY: topDown,
+                    AvoidBottomY: bottomDown));
             }
         }
 
+        // The TIES the slur covers. LilyPond's Slur_engraver acknowledges every Tie, and a
+        // Tie goes to the open slurs' encompass-objects UNCONDITIONALLY (before any
+        // avoid-slur is read); its box is the tie STENCIL's — the bezier sandwich's true
+        // extent — with the standard thickness widens, 'inside (Tie's avoid-slur), the
+        // extra-object penalty; and, being a Spanner, it never takes the "over an edge
+        // head" attachment read. Its two ends are the forbidden attachments. Until
+        // 2026-09-23 no tie entered the set, so a slur over `e4~ e8` ran through the tie's
+        // apex (samples/nocturne.lys bar 4): LilyPond lifts that slur one whole 0.5 ss
+        // — its curve WITHOUT the tie is Lily#'s old one to the hundredth (Lab
+        // sessions/p536/nocturne/notie.ly).
+        // LILYPOND-REF: lily/slur-engraver.cc:79 acknowledge_extra_object (tie), the
+        //   ADD_END_ACKNOWLEDGER_FOR line;
+        // LILYPOND-REF: lily/slur.cc:365-387 auxiliary_acknowledge_extra_object —
+        //   has_interface<Tie> (e) → add_extra_encompass on slurs[] and end_slurs[];
+        // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos — the
+        //   non-slur branch: g->extent (X/Y), ye.widen (th*0.5), xe.widen (th*1.0);
+        // LILYPOND-REF: lily/tie.cc:249-253 Tie::print — Lookup::slur (b, get_grob_direction
+        //   × base_thick, line_thick, dash_definition); lily/lookup.cc:508-514
+        //   bezier_sandwich — the box is both curves' extents united, widened by half the pen;
+        // LILYPOND-REF: lily/tie-engraver.cc:312 make_spanner ("Tie") in process_acknowledged
+        //   — the Tie spanner is made at the timestep of its SECOND head, so the slur that
+        //   sees it is one open, or ending, at the tie's END note (SlurOpenAt), in the
+        //   tie's own VOICE (Slur_engraver lives in the Voice). A broken tie counts on the
+        //   system its piece is drawn on.
+        if (!tieLayouts.IsDefaultOrEmpty)
+        {
+            foreach (var t in tieLayouts)
+            {
+                var tie = t.Tie;
+                if (tie.VoiceIndex != slur.VoiceIndex)
+                    continue;
+                if (!SlurOpenAt(slur, tie.EndMeasureIndex, tie.EndItemIndex))
+                    continue;
+                // This SEGMENT only: the piece's own system.
+                int pieceMeasure = t.RenderMeasureIndex >= 0 ? t.RenderMeasureIndex : tie.StartMeasureIndex;
+                if (measureToSystemIdx != null
+                    && measureToSystemIdx.TryGetValue(pieceMeasure, out int pieceSystem)
+                    && pieceSystem != segSystem.SystemIndex)
+                    continue;
+
+                var (left, right, topDown, bottomDown) = TieStencilBox(t);
+                extras.Add(new SlurExtraObject(
+                    left - slurThickness,
+                    right + slurThickness,
+                    topDown - slurThickness * 0.5,
+                    bottomDown + slurThickness * 0.5,
+                    SlurAvoidType.Inside,
+                    SlurScoreParameters.Default.ExtraObjectCollisionPenalty,
+                    IsSpanner: true,
+                    AvoidTopY: topDown,
+                    AvoidBottomY: bottomDown));
+                // control_[0] and control_[3]: the bow's own ends, device Y down.
+                (tieEnds ??= new List<(double X, double Y)>(2)).Add((t.StartX, -t.StartYUp));
+                tieEnds.Add((t.EndX, -t.EndYUp));
+            }
+        }
+
+        // ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+        //   Slur_engraver::stop_translation_timestep adds the timestep's currentCommandColumn
+        //   (the non-musical PaperColumn — bar line, clef change, key change) to every slur
+        //   ending there, and to every open slur at a timestep with no start event
+        //   (lily/slur-engraver.cc:332-340). Its extent is the column's grobs'; a bare bar
+        //   line's column has no Y extent and contributes nothing, so no fixture has yet
+        //   shown the difference. A mid-slur clef or key change is where it would.
         return extras;
+    }
+
+    /// <summary>
+    /// The engraver's TIMESTEP rule for what a slur acknowledges: a grob engraved at the
+    /// timestep of (<paramref name="measureIndex"/>, <paramref name="itemIndex"/>) in the
+    /// slur's own voice joins the slur when the slur is OPEN there — started at that
+    /// timestep or before and not yet ended — or ENDING there. The item order of a voice
+    /// IS its timestep order (a grace column is an earlier item than the note it
+    /// precedes, as LilyPond's grace moments are earlier timesteps), so the rule is the
+    /// closed interval from the slur's start note to its end note.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-engraver.cc:295-327 process_music — the stop events move a
+    ///   slur from slurs_ to end_slurs_ (try_to_end, :273-292) and the start events create
+    ///   the new ones into slurs_ (create_slur, :181-210), BEFORE the timestep's grobs are
+    ///   acknowledged; :354-356 stop_translation_timestep hands objects_to_acknowledge_ to
+    ///   auxiliary_acknowledge_extra_object over slurs_ AND end_slurs_; :361 end_slurs_ is
+    ///   cleared at the end of the timestep, so a slur sees exactly the timesteps from its
+    ///   start note to its end note, both included.
+    /// ⚠️ One voice only — the caller compares voices first; Slur_engraver lives in the
+    ///   Voice context and never sees another voice's grobs.
+    /// </remarks>
+    private static bool SlurOpenAt(SlurItem slur, int measureIndex, int itemIndex)
+    {
+        if (measureIndex < slur.StartMeasureIndex || measureIndex > slur.EndMeasureIndex)
+            return false;
+        if (measureIndex == slur.StartMeasureIndex && itemIndex < slur.StartItemIndex)
+            return false;
+        if (measureIndex == slur.EndMeasureIndex && itemIndex > slur.EndItemIndex)
+            return false;
+        return true;
+    }
+
+    /// <summary>
+    /// A drawn tie's STENCIL box, device Y down: the bezier sandwich's two curves — the
+    /// centreline's interior controls pushed out and in by half the mid thickness, normal
+    /// to the chord — each taken at its TRUE extent and united, then widened by half the
+    /// round pen. The same sandwich the renderer strokes and the staff skyline flattens
+    /// (SkylineBuilder.SeedBowInk), read here as the box LilyPond's <c>g->extent</c>
+    /// answers for a Tie.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lookup.cc:395-410 Lookup::slur (…, dash_details) — perp =
+    ///   0.5·curvethick·(−dir.y, dir.x); back.control_[1,2] += perp; curve.control_[1,2]
+    ///   −= perp;
+    /// LILYPOND-REF: lily/lookup.cc:508-514 bezier_sandwich — x/y extents of both curves
+    ///   united (Bezier::extent), b.widen (0.5·thickness) with the LINE thickness;
+    /// LILYPOND-REF: lily/tie.cc:231-235 Tie::print — base_thick = staff_thick × thickness
+    ///   (1.2), line_thick = staff_thick × line-thickness (0.8); :252 the direction sign on
+    ///   base_thick only swaps which curve is "back", and the union is the same.
+    /// </remarks>
+    private static (double Left, double Right, double TopDown, double BottomDown) TieStencilBox(TieLayout t)
+    {
+        double dx = t.EndX - t.StartX, dy = t.EndYUp - t.StartYUp;
+        double len = Math.Sqrt(dx * dx + dy * dy);
+        double ux = len > 0 ? dx / len : 1.0, uy = len > 0 ? dy / len : 0.0;
+        double half = 0.5 * EngravingDefaults.TieMidThickness;
+        double px = -uy * half, py = ux * half;
+        var back = new Bezier(t.StartX, t.StartYUp,
+            t.Control1.X + px, t.Control1.Y + py, t.Control2.X + px, t.Control2.Y + py,
+            t.EndX, t.EndYUp);
+        var front = new Bezier(t.StartX, t.StartYUp,
+            t.Control1.X - px, t.Control1.Y - py, t.Control2.X - px, t.Control2.Y - py,
+            t.EndX, t.EndYUp);
+        var (bx0, bx1) = back.Extent(yAxis: false);
+        var (fx0, fx1) = front.Extent(yAxis: false);
+        var (by0, by1) = back.Extent(yAxis: true);
+        var (fy0, fy1) = front.Extent(yAxis: true);
+        double pen = 0.5 * EngravingDefaults.BowEndRounding;
+        double left = Math.Min(bx0, fx0) - pen, right = Math.Max(bx1, fx1) + pen;
+        double topUp = Math.Max(by1, fy1) + pen, bottomUp = Math.Min(by0, fy0) - pen;
+        return (left, right, -topUp, -bottomUp);
     }
 
     /// <param name="fonts">The SCORE's text metrics — a tab slur clears fret digits whose em
     /// is the plan's; a per-staff <c>Score</c> carries no plan, so the caller passes the
     /// enclosing score's.</param>
-    public ImmutableArray<SlurLayout> LayoutSlurs(Rendering.ScoreTextMetrics fonts, Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default, Func<ImmutableArray<InsideSlurScript>>? insideScripts = null)
+    public ImmutableArray<SlurLayout> LayoutSlurs(Rendering.ScoreTextMetrics fonts, Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null, ImmutableArray<GraceNoteItem> graceNotes = default, ImmutableArray<BeamLayout> beamLayouts = default, Func<ImmutableArray<InsideSlurScript>>? insideScripts = null, ImmutableArray<TieLayout> tieLayouts = default)
         => LayoutSlurs(fonts, _slurDetector.DetectSlurs(score), score, systems, staffIndex, staff,
-            graceNotes, beamLayouts, insideScripts);
+            graceNotes, beamLayouts, insideScripts, tieLayouts);
 
     /// <summary>The same, on slurs the caller has ALREADY detected — the slur twin of
     /// <see cref="LayoutTies(Rendering.ScoreTextMetrics, ImmutableArray{TieItem}, Score, ImmutableArray{SystemLayout}, int, Model.Staff?)"/>,
@@ -3311,13 +3526,17 @@ internal sealed class ElementCoordinator
     /// <see cref="ArticulationEngraver.InsideSlurScriptLayouts"/>. A FACTORY, not an array,
     /// so that the extra script walk is paid only by a staff that has slurs at all: a
     /// script-heavy but slur-free book must not buy it once per staff per system.</param>
+    /// <param name="tieLayouts">This staff's ties, laid out BEFORE the slurs (the order
+    /// LayoutEngine.Prelim keeps): the slur is scored around the ties it covers, as
+    /// LilyPond's Slur_engraver acknowledges them (BuildSlurExtraObjects).</param>
     internal ImmutableArray<SlurLayout> LayoutSlurs(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<SlurItem> slurs, Score score, ImmutableArray<SystemLayout> systems,
         int staffIndex = -1, Model.Staff? staff = null,
         ImmutableArray<GraceNoteItem> graceNotes = default,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        Func<ImmutableArray<InsideSlurScript>>? insideScripts = null)
+        Func<ImmutableArray<InsideSlurScript>>? insideScripts = null,
+        ImmutableArray<TieLayout> tieLayouts = default)
     {
         if (slurs.Length == 0)
             return ImmutableArray<SlurLayout>.Empty;
@@ -3626,7 +3845,9 @@ internal sealed class ElementCoordinator
 
                 var extraObjects = BuildSlurExtraObjects(
                     score.TextMetrics, score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
-                    tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts);
+                    out var tieEnds,
+                    tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts,
+                    tieLayouts, measureToSystemIdx);
 
                 // The slurs already laid out are NOT obstacles: a slur never avoids a slur in
                 // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️) — only a PhrasingSlur
@@ -3641,7 +3862,8 @@ internal sealed class ElementCoordinator
                     isBrokenRight: !segment.IsLast,
                     leftEdge: leftEdgeInfo,
                     rightEdge: rightEdgeInfo,
-                    extraObjects: extraObjects);
+                    extraObjects: extraObjects,
+                    tieEnds: tieEnds);
                 slurLayouts.Add(solved with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }

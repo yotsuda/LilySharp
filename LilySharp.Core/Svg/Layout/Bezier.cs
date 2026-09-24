@@ -116,6 +116,42 @@ internal struct Bezier
         return SolveInUnitInterval(a1, 2 * a2, 3 * a3, 0.0, roots);
     }
 
+    /// <summary>
+    /// All t in [0,1] where the tangent is vertical (x'(t) = 0) — LilyPond's
+    /// <c>solve_derivative (Offset (0, 1))</c>, whose combine polynomial reduces to x'.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/bezier.cc:214-224 solve_derivative.</remarks>
+    public readonly int SolveVerticalTangent(Span<double> roots)
+    {
+        var (_, a1, a2, a3) = PowerCoefs(X0, X1, X2, X3);
+        return SolveInUnitInterval(a1, 2 * a2, 3 * a3, 0.0, roots);
+    }
+
+    /// <summary>
+    /// The curve's true extent along one axis — the ends and every point where the
+    /// tangent is perpendicular to that axis, united. What a bow's STENCIL box is made
+    /// of (lily/lookup.cc:508-511 bezier_sandwich), so the box a tie or slur presents to
+    /// another spanner's scorer is the curve's, not its control polygon's.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/bezier.cc:290-304 Bezier::extent — solve_derivative
+    /// along the other axis, plus t = 1 and t = 0, each curve_point united.</remarks>
+    public readonly (double Min, double Max) Extent(bool yAxis)
+    {
+        Span<double> roots = stackalloc double[3];
+        int n = yAxis ? SolveHorizontalTangent(roots) : SolveVerticalTangent(roots);
+        double min = double.PositiveInfinity, max = double.NegativeInfinity;
+        void Unite(double v, ref double lo, ref double hi)
+        {
+            if (v < lo) lo = v;
+            if (v > hi) hi = v;
+        }
+        for (int i = 0; i < n; i++)
+            Unite(yAxis ? CurveY(roots[i]) : CurveX(roots[i]), ref min, ref max);
+        Unite(yAxis ? Y3 : X3, ref min, ref max);
+        Unite(yAxis ? Y0 : X0, ref min, ref max);
+        return (min, max);
+    }
+
     public void Translate(double dx, double dy)
     {
         X0 += dx; Y0 += dy; X1 += dx; Y1 += dy;

@@ -1009,7 +1009,8 @@ internal sealed partial class LayoutEngine
                 Fonts, ImmutableArray.Create(Slurs, SlursStart, SlurCount), Score, single, StaffIndex,
                 Staff, GraceNotes, sysBeams,
                 InsideScriptFactory(Fonts, Score, StaffIndex, Staff, StaffScripts,
-                    single, sysBeams, sysTies));
+                    single, sysBeams, sysTies),
+                tieLayouts: sysTies);
         }
     }
 
@@ -1032,14 +1033,16 @@ internal sealed partial class LayoutEngine
             return _elementCoordinator.LayoutSlurs(
                 fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
                 staffBeams, InsideScriptFactory(fonts, staffSpannerScore, staffIndex, staff,
-                    staffScripts, prelimSystems, staffBeams, staffTies));
+                    staffScripts, prelimSystems, staffBeams, staffTies),
+                tieLayouts: staffTies);
         if (slurs.IsEmpty)
             return ImmutableArray<SlurLayout>.Empty;
 
         ImmutableArray<SlurLayout> Fallback() => _elementCoordinator.LayoutSlurs(
             fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,
             staffBeams, InsideScriptFactory(fonts, staffSpannerScore, staffIndex, staff,
-                staffScripts, prelimSystems, staffBeams, staffTies));
+                staffScripts, prelimSystems, staffBeams, staffTies),
+            tieLayouts: staffTies);
 
         var measureToSystem = MeasureToSystemOf(prelimSystems);
         // Bucketed by home system (see SystemBuckets) — lent, and given back at every exit
@@ -1361,7 +1364,8 @@ internal sealed partial class LayoutEngine
                             staffYAt: null,
                             staffByIndex: new Dictionary<int, Staff> { [staffIndex] = staff },
                             beamLayouts: staffFinalBeams,
-                            tieLayouts: staffTies));
+                            tieLayouts: staffTies),
+                    tieLayouts: staffTies);
             }
             allSlurLayouts.AddRange(staffSlurs);
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));

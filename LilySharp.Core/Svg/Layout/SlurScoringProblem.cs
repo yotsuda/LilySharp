@@ -97,8 +97,9 @@ internal enum SlurAvoidType
 }
 
 /// <summary>
-/// One extra-encompass object (augmentation dots, ...) the slur scores its curve
-/// against, as its extent box in DEVICE coordinates (Y down; TopY &lt; BottomY).
+/// One extra-encompass object (augmentation dots, a tuplet number, an 'inside script, a
+/// TIE, ...) the slur scores its curve against, as its extent box in DEVICE coordinates
+/// (Y down; TopY &lt; BottomY).
 /// The box arrives already widened the way LilyPond widens it at collection time
 /// (dots +0.2 vertically, then thickness*0.5 vertically / thickness*1.0
 /// horizontally) so the scorer stays shape-agnostic.
@@ -122,7 +123,19 @@ internal readonly record struct SlurExtraObject(
     // lily/slur-configuration.cc:413-416), and the X read is the box's
     // linear_combination(Idx) — its left edge, centre or right edge — not its centre.
     bool IsSlurPoint = false,
-    int Idx = 0);
+    int Idx = 0,
+    // A SPANNER's box (a Tie): LilyPond's "object over an edge head" test casts the grob
+    // to an Item and skips it for a spanner (lily/slur-configuration.cc:413-416), so the
+    // box is read at its centre X like any other and never at the attachment Y.
+    bool IsSpanner = false,
+    // The grob's BARE Y extent (device Y down), before the dots-0.2 and thickness widens
+    // the scorer's box above carries: what LilyPond's generate_avoid_offsets reads for the
+    // avoid point (`g->extent (common_[Y_AXIS], Y_AXIS)`, lily/slur-scoring.cc:699-703),
+    // where the widened extent is get_extra_encompass_infos' own (:880-881). NaN falls
+    // back to the widened edge — the older reading, kept for a caller that builds no bare
+    // box (the direct unit tests).
+    double AvoidTopY = double.NaN,
+    double AvoidBottomY = double.NaN);
 
 /// <summary>
 /// Solves the slur positioning problem using LilyPond's priority-queue
@@ -213,6 +226,13 @@ internal sealed class SlurScoringProblem
     private readonly List<(double X, double Y)> _avoid = [];
     private readonly List<double> _convexHeadDistances = [];
 
+    // The ends of every TIE in the extra set, in the Y-up frame — the "forbidden
+    // attachments" a candidate's own ends must keep slur-tie-extrema-min-distance from
+    // (ScoreExtraEncompass). Emptied on Release.
+    // LILYPOND-REF: lily/slur-configuration.cc:351-374 score_extra_encompass —
+    //   control_[0] and control_[3] of each Tie's control-points, plus its X.
+    private readonly List<(double X, double Y)> _tieEnds = [];
+
     // Musical dy: pitch difference in staff spaces
     private double _musicalDy;
 
@@ -282,13 +302,14 @@ internal sealed class SlurScoringProblem
         IReadOnlyList<SlurExtraObject>? extraObjects = null,
         double staffSpace = 1.0,
         int staffLineCount = 5,
-        double? musicalDy = null)
+        double? musicalDy = null,
+        IReadOnlyList<(double X, double Y)>? tieEnds = null)
     {
         var problem = t_problem ?? new SlurScoringProblem();
         t_problem = null;
         problem.Bind(slur, startX, startY, endX, endY, staffMiddleDown, parameters, obstacles,
             enclosedSlurs, isBrokenLeft, isBrokenRight, leftEdge, rightEdge, extraObjects,
-            staffSpace, staffLineCount, musicalDy);
+            staffSpace, staffLineCount, musicalDy, tieEnds);
         var layout = problem.Solve();
         problem.Release();
         t_problem = problem;
@@ -318,12 +339,13 @@ internal sealed class SlurScoringProblem
         IReadOnlyList<SlurExtraObject>? extraObjects = null,
         double staffSpace = 1.0,
         int staffLineCount = 5,
-        double? musicalDy = null)
+        double? musicalDy = null,
+        IReadOnlyList<(double X, double Y)>? tieEnds = null)
         : this()
     {
         Bind(slur, startX, startY, endX, endY, staffMiddleDown, parameters, obstacles,
             enclosedSlurs, isBrokenLeft, isBrokenRight, leftEdge, rightEdge, extraObjects,
-            staffSpace, staffLineCount, musicalDy);
+            staffSpace, staffLineCount, musicalDy, tieEnds);
     }
 
     /// <summary>Forgets the slur: the lists emptied (their capacity kept), the candidate pool
@@ -339,6 +361,7 @@ internal sealed class SlurScoringProblem
         _candidates.Clear();
         _candidatesUsed = 0;
         _avoid.Clear();
+        _tieEnds.Clear();
     }
 
     /// <summary>A candidate from the pool, or a new one when the pool is spent. Every field
@@ -373,7 +396,8 @@ internal sealed class SlurScoringProblem
         IReadOnlyList<SlurExtraObject>? extraObjects,
         double staffSpace,
         int staffLineCount,
-        double? musicalDy)
+        double? musicalDy,
+        IReadOnlyList<(double X, double Y)>? tieEnds)
     {
         _staffSpace = staffSpace;
         _staffLineCount = staffLineCount;
@@ -431,8 +455,19 @@ internal sealed class SlurScoringProblem
             for (int i = 0; i < extraObjects.Count; i++)
             {
                 var e = extraObjects[i];
-                _extraObjects.Add(e with { TopY = -e.TopY, BottomY = -e.BottomY });
+                _extraObjects.Add(e with
+                {
+                    TopY = -e.TopY, BottomY = -e.BottomY,
+                    AvoidTopY = -e.AvoidTopY, AvoidBottomY = -e.AvoidBottomY,
+                });
             }
+        }
+
+        // The ties' ends into the same Y-up frame (device Y negated).
+        if (tieEnds != null)
+        {
+            for (int i = 0; i < tieEnds.Count; i++)
+                _tieEnds.Add((tieEnds[i].X, -tieEnds[i].Y));
         }
 
         // A phrasing slur's small slurs: three points on each curve join the extra set, and
@@ -574,11 +609,23 @@ internal sealed class SlurScoringProblem
                 edge = dir > 0 ? Math.Max(edge, o.StemY) : Math.Min(edge, o.StemY);
             avoid.Add((o.X, edge + dir * _parameters.FreeHeadDistance));
         }
+        // The 'inside grobs' BARE extents — centre X, the dir edge — not the widened box
+        // the scorer prices against (the two are different reads of one grob in LilyPond,
+        // and until 2026-09-24 this list took the widened one, 0.06 ss further out, 0.26 for
+        // a dot row). A phrasing slur's small slurs are NOT in this branch: LilyPond's Slur
+        // arm of the same loop contributes their midpoint only (the list below), so the
+        // three curve points AddEnclosedSlurPoints enters for the SCORER stay out of it.
+        // LILYPOND-REF: lily/slur-scoring.cc:679-705 generate_avoid_offsets — the Slur
+        //   branch (:682-694) pushes b.curve_point (0.5) + free_slur_distance; the 'inside
+        //   branch (:695-704) pushes Offset (xe.center (), ye[dir_]) of g->extent (X/Y).
         foreach (var e in _extraObjects)
         {
-            if (e.Type != SlurAvoidType.Inside)
+            if (e.Type != SlurAvoidType.Inside || e.IsSlurPoint)
                 continue;
-            avoid.Add(((e.LeftX + e.RightX) / 2.0, dir > 0 ? e.TopY : e.BottomY));
+            double edge = dir > 0
+                ? (double.IsNaN(e.AvoidTopY) ? e.TopY : e.AvoidTopY)
+                : (double.IsNaN(e.AvoidBottomY) ? e.BottomY : e.AvoidBottomY);
+            avoid.Add(((e.LeftX + e.RightX) / 2.0, edge));
         }
         // A phrasing slur's small slurs: the curve midpoint, lifted by free-slur-distance.
         // LILYPOND-REF: lily/slur-scoring.cc:679-694 generate_avoid_offsets — b.curve_point
@@ -1211,12 +1258,37 @@ internal sealed class SlurScoringProblem
         // approximation there); RIGHT wins when both edges match, as LP's
         // unbroken {LEFT, RIGHT} loop leaves the last match in y.
         // LILYPOND-REF: lily/slur-configuration.cc:390-458 score_extra_encompass.
-        // ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
-        // not in the extra set yet (their own shelf).
         // (No gate on the extra set: an empty one scores 0.0.)
         {
             int dir = config.CurveUp ? 1 : -1;
             double slurWid = config.EndX - config.StartX;
+
+            // The Tie forbidden-attachment term: a candidate whose end lands within
+            // slur-tie-extrema-min-distance of EITHER end of a tie in the set pays the
+            // penalty once, however many ends are near. The ties themselves are in the
+            // set since 2026-09-23 (ElementCoordinator.BuildSlurExtraObjects) — until then
+            // nothing lifted a slur off the tie it covered (samples/nocturne.lys bar 4).
+            // LILYPOND-REF: lily/slur-configuration.cc:351-388 score_extra_encompass —
+            //   forbidden_attachments from each Tie's control_[0] / control_[3] (+ its X),
+            //   (forbidden − attachment_[side]).length () < slur_tie_extrema_min_distance_,
+            //   one add_score of slur_tie_extrema_min_distance_penalty_.
+            if (_tieEnds.Count > 0)
+            {
+                bool tooClose = false;
+                double minDist = _parameters.SlurTieExtremaMinDistance;
+                for (int k = 0; k < _tieEnds.Count && !tooClose; k++)
+                {
+                    var (fx, fy) = _tieEnds[k];
+                    double dl = Math.Sqrt((fx - config.StartX) * (fx - config.StartX)
+                                          + (fy - config.StartY) * (fy - config.StartY));
+                    double dr = Math.Sqrt((fx - config.EndX) * (fx - config.EndX)
+                                          + (fy - config.EndY) * (fy - config.EndY));
+                    if (dl < minDist || dr < minDist)
+                        tooClose = true;
+                }
+                if (tooClose)
+                    demerit += _parameters.SlurTieExtremaMinDistancePenalty;
+            }
             foreach (var info in _extraObjects)
             {
                 double y = 0.0;
@@ -1235,14 +1307,16 @@ internal sealed class SlurScoringProblem
                     y = config.Curve.GetOtherCoordinate(sx);
                     found = true;
                 }
-                else if (_leftEdge.HeadWidth > 0
+                // A spanner (a tie) is never "over an edge head": LP's as_item cast is
+                // null for it and both sides are skipped (:413-416).
+                else if (!info.IsSpanner && _leftEdge.HeadWidth > 0
                     && info.RightX >= _startX - _leftEdge.HeadWidth / 2.0
                     && info.LeftX <= _startX + _leftEdge.HeadWidth / 2.0)
                 {
                     y = config.StartY;
                     found = true;
                 }
-                if (!info.IsSlurPoint && _rightEdge.HeadWidth > 0
+                if (!info.IsSlurPoint && !info.IsSpanner && _rightEdge.HeadWidth > 0
                     && info.RightX >= _endX - _rightEdge.HeadWidth / 2.0
                     && info.LeftX <= _endX + _rightEdge.HeadWidth / 2.0)
                 {
