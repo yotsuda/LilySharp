@@ -202,6 +202,7 @@ public static class Methods
     public const string TextDocumentRenameName = "textDocument/rename";
     public const string TextDocumentCodeActionName = "textDocument/codeAction";
     public const string TextDocumentSemanticTokensFullName = "textDocument/semanticTokens/full";
+    public const string TextDocumentCodeLensName = "textDocument/codeLens";
 }
 
 [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
@@ -266,6 +267,9 @@ public class ServerCapabilities
 
     [JsonProperty("codeActionProvider")]
     public CodeActionOptions? CodeActionProvider { get; set; }
+
+    [JsonProperty("codeLensProvider")]
+    public CodeLensOptions? CodeLensProvider { get; set; }
 
     [JsonProperty("documentFormattingProvider")]
     public bool? DocumentFormattingProvider { get; set; }
@@ -397,6 +401,20 @@ public class Diagnostic
 
     [JsonProperty("source")]
     public string? Source { get; set; }
+
+    [JsonProperty("message")]
+    public string Message { get; set; } = "";
+
+    /// <summary>The other places the diagnostic is about (LSP 3.x
+    /// <c>DiagnosticRelatedInformation</c>); null when there are none.</summary>
+    [JsonProperty("relatedInformation")]
+    public DiagnosticRelatedInformation[]? RelatedInformation { get; set; }
+}
+
+public class DiagnosticRelatedInformation
+{
+    [JsonProperty("location")]
+    public Location Location { get; set; } = new();
 
     [JsonProperty("message")]
     public string Message { get; set; } = "";
@@ -796,6 +814,29 @@ public class CodeAction
 }
 
 [JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
+public class CodeLensOptions
+{
+    [JsonProperty("resolveProvider")]
+    public bool ResolveProvider { get; set; }
+}
+
+public class CodeLensParams
+{
+    [JsonProperty("textDocument")]
+    public TextDocumentIdentifier TextDocument { get; set; } = new();
+}
+
+/// <summary>A line of text over a range of the source, with the command a click runs.</summary>
+[JsonObject(ItemNullValueHandling = NullValueHandling.Ignore)]
+public class CodeLens
+{
+    [JsonProperty("range")]
+    public Range Range { get; set; } = new();
+
+    [JsonProperty("command")]
+    public Command? Command { get; set; }
+}
+
 public class CodeActionOptions
 {
     [JsonProperty("codeActionKinds")]

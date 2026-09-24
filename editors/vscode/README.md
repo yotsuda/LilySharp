@@ -33,6 +33,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 | **Code Actions** | Quick fixes and refactoring suggestions |
 | **Signature Help** | Parameter hints while typing keywords |
 | **Document Highlight** | Highlight all occurrences of selected variable |
+| **Section CodeLens** | Over a section's first declaration: its length, who writes it (parts, chord rows, lyrics tracks — by name, or counted when many) — or each length with who writes it when they disagree — and how often each form names it. A later declaration shows a line only when its length differs from what most of the others write. Click to list everything that writes it |
 
 ### Semantic Token Colors
 

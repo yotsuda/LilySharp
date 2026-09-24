@@ -69,6 +69,53 @@ public class LyricSyllableValidatorTests
         Assert.Contains("it and the 1 after it will not be shown", warning.Message);
     }
 
+    /// <summary>
+    /// A bar whose notes a slur held names the slur as the cause and offers the phrasing
+    /// slur — since 0.8.0 a note inside a slur takes no syllable, and a slur written only as
+    /// a legato mark over a lyric line swallowed 22 syllables of an AI-written book with
+    /// nothing but "has no note to align with" to say why.
+    /// </summary>
+    [Fact]
+    public void ABarASlurHeld_NamesTheSlurAndThePhrasingSlur()
+    {
+        var warning = Overflow(Validate(Scored("c4( d e f)", "one two three four")));
+        Assert.NotNull(warning);
+        Assert.Contains("lyric syllable 'two'", warning!.Message);
+        Assert.Contains("3 note(s) of that bar are inside a slur", warning.Message);
+        Assert.Contains("@phrasingSlur ... @!phrasingSlur", warning.Message);
+        Assert.DoesNotContain("tie", warning.Message);
+    }
+
+    /// <summary>
+    /// A tie holds its syllable by itself since 0.8.0, so a lyric `~` written for the tied note
+    /// takes the NEXT one and the bar runs out (the Lab corpus's amazing-grace.lys). The advice
+    /// is to drop the marker — not the phrasing slur, which has nothing to do with it.
+    /// </summary>
+    [Fact]
+    public void ABarATieHeld_SaysToDropTheMarker_NotToUseAPhrasingSlur()
+    {
+        var warning = Overflow(Validate(Scored("c2.~ | c2 d4 |", "me | ~ I |")));
+        Assert.NotNull(warning);
+        Assert.Contains("lyric syllable 'I'", warning!.Message);
+        Assert.Contains("1 note(s) of that bar are reached by a tie", warning.Message);
+        Assert.Contains("drop it", warning.Message);
+        Assert.DoesNotContain("phrasingSlur", warning.Message);
+    }
+
+    [Fact]
+    public void ThePhrasingSlurItOffers_HoldsNoSyllable()
+    {
+        Assert.Null(Overflow(Validate(Scored("c4@phrasingSlur d e f@!phrasingSlur", "one two three four"))));
+    }
+
+    [Fact]
+    public void APlainMiscount_SaysNothingAboutSlurs()
+    {
+        var warning = Overflow(Validate(Scored("c4 d e f", "one two three four five")));
+        Assert.NotNull(warning);
+        Assert.DoesNotContain("slur", warning!.Message);
+    }
+
     [Fact]
     public void ExactMatch_NoWarning()
     {

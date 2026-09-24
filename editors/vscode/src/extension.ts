@@ -443,6 +443,22 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('openPreviewToSide command triggered');
             openPreview(context, vscode.ViewColumn.Beside);
         }),
+        // The section CodeLens's click (the server's LilySharpLanguageServer.CodeLens.cs): its
+        // arguments arrive as plain JSON, so they are turned into VS Code's own types here and
+        // every layer of the section opens in the references peek. Not in package.json's
+        // `commands`: it is the lens's, not the palette's.
+        vscode.commands.registerCommand('lilysharp.showSectionLayers',
+            (uri: string, position: { line: number; character: number },
+             locations: Array<{ uri: string; range: { start: { line: number; character: number }; end: { line: number; character: number } } }>) => {
+                if (!uri || !position || !locations || locations.length === 0) {
+                    return;
+                }
+                const pos = (p: { line: number; character: number }) => new vscode.Position(p.line, p.character);
+                const locs = locations.map(l => new vscode.Location(
+                    vscode.Uri.parse(l.uri), new vscode.Range(pos(l.range.start), pos(l.range.end))));
+                return vscode.commands.executeCommand(
+                    'editor.action.showReferences', vscode.Uri.parse(uri), pos(position), locs);
+            }),
         vscode.commands.registerCommand('lilysharp.convertLayout', () => {
             outputChannel.appendLine('convertLayout command triggered');
             convertLayout();

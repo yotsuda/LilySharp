@@ -199,9 +199,41 @@ public class CrossPartMeasureValidationTests
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
-        Assert.Contains("Section 'A' spans 1 bar(s) in part 'melody' but 2 in chords 'prog'", m[0].Message);
+        Assert.Contains("Section 'A' is not the same length everywhere it is written: 2 bar(s) in chords 'prog'; 1 bar(s) in part 'melody'", m[0].Message);
         // Anchored on the melody's `A` (the first `section A` in the source), not the track's.
         Assert.Equal(source.IndexOf("section A") + "section ".Length, m[0].Span.Start);
+    }
+
+    /// <summary>
+    /// One extra bar in ONE layer of a many-layer section is ONE warning, not one per layer:
+    /// it groups the layers by length, says what the page does with the shortfall, does not
+    /// call either length right, stands on the odd one out, and lists every layer as a
+    /// related location. It used to put a warning on each of the layers that were RIGHT and
+    /// none on the one that was not (an AI-written 12-layer stress test, flute's A one bar
+    /// long: 11 warnings, scratch/SongsByChatGPT/…fluteA_9bars…lys).
+    /// </summary>
+    [Fact]
+    public void ManyLayers_OneLongOutlier_IsOneWarningOnTheOutlier_WithEveryLayerRelated()
+    {
+        const string source = """
+            part flute { section A { c1 | c1 | c1 | } }
+            part oboe { section A { c1 | c1 | } }
+            part horn { section A { c1 | c1 | } }
+            chords harmony { section A { C | F | } }
+            form main { A }
+            score main { chords harmony  staff flute  staff oboe  staff horn }
+            """;
+        var m = Validate(source).Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
+        var w = Assert.Single(m);
+        Assert.Equal(source.IndexOf("section A") + "section ".Length, w.Span.Start); // flute's A
+        Assert.Contains("3 bar(s) in part 'flute'; 2 bar(s) in part 'oboe', part 'horn' and chords 'harmony'", w.Message);
+        Assert.Contains("laid out at 3 bar(s)", w.Message);
+        Assert.Contains("a shorter part is padded with rests", w.Message);
+        Assert.Contains("a shorter chord row writes no chord", w.Message);
+        Assert.DoesNotContain("wrong", w.Message);
+        Assert.Equal(4, w.Related.Count);
+        Assert.Contains(w.Related, r => r.Message == "part 'oboe': 2 bar(s) - padded with 1 bar(s) of rests");
+        Assert.Contains(w.Related, r => r.Message == "chords 'harmony': 2 bar(s) - no chord over the last 1");
     }
 
     [Fact]
@@ -241,7 +273,7 @@ public class CrossPartMeasureValidationTests
             """);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
-        Assert.Contains("in chords 'prog' but 2 in part 'melody'", m[0].Message);
+        Assert.Contains("2 bar(s) in part 'melody'; 1 bar(s) in chords 'prog'", m[0].Message);
         Assert.Contains("no chord", m[0].Message);
     }
 
@@ -258,7 +290,7 @@ public class CrossPartMeasureValidationTests
             """);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
-        Assert.Contains("Section 'A' spans 1 bar(s) in part 'melody' but 2 in chords 'prog'", m[0].Message);
+        Assert.Contains("Section 'A' is not the same length everywhere it is written: 2 bar(s) in chords 'prog'; 1 bar(s) in part 'melody'", m[0].Message);
     }
 
     [Fact]
@@ -280,7 +312,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
-        Assert.Contains("Section 'A' spans 1 bar(s) in lyrics 'words' but 2 in part 'melody'", m[0].Message);
+        Assert.Contains("Section 'A' is not the same length everywhere it is written: 2 bar(s) in part 'melody'; 1 bar(s) in lyrics 'words'", m[0].Message);
         Assert.Contains("sings nothing", m[0].Message);
         Assert.Equal(source.LastIndexOf("section A") + "section ".Length, m[0].Span.Start);
     }
@@ -335,7 +367,7 @@ public class CrossPartMeasureValidationTests
         var diags = Validate(source);
         var m = diags.Where(d => d.Code == DiagnosticCodes.SectionBarCountMismatch).ToList();
         Assert.Single(m);
-        Assert.Contains("Section 'A' spans 1 bar(s) in lyrics 'words' but 2 in part 'vocal'", m[0].Message);
+        Assert.Contains("Section 'A' is not the same length everywhere it is written: 2 bar(s) in part 'vocal'; 1 bar(s) in lyrics 'words'", m[0].Message);
         Assert.Equal(source.IndexOf("lyrics words") + "lyrics ".Length, m[0].Span.Start);
     }
 

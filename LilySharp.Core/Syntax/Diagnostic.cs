@@ -32,6 +32,15 @@ public enum DiagnosticSeverity
 }
 
 /// <summary>
+/// Another place in the source that one diagnostic is about — LSP's
+/// <c>DiagnosticRelatedInformation</c>: the editor lists it under the diagnostic and each
+/// entry jumps to its span.
+/// </summary>
+/// <param name="Span">Where it is.</param>
+/// <param name="Message">What it is, in one line (e.g. <c>part 'oboe': 8 bars</c>).</param>
+public readonly record struct DiagnosticRelated(TextSpan Span, string Message);
+
+/// <summary>
 /// Represents a diagnostic message (error, warning, etc.)
 /// </summary>
 public sealed class Diagnostic
@@ -39,13 +48,22 @@ public sealed class Diagnostic
     /// <summary>
     /// Initializes a new diagnostic with the given severity, source location, code, and message.
     /// </summary>
-    public Diagnostic(DiagnosticSeverity severity, TextSpan span, string code, string message)
+    public Diagnostic(DiagnosticSeverity severity, TextSpan span, string code, string message,
+        IReadOnlyList<DiagnosticRelated>? related = null)
     {
         Severity = severity;
         Span = span;
         Code = code;
         Message = message;
+        Related = related ?? [];
     }
+
+    /// <summary>
+    /// The other places this diagnostic is about — empty for most. One diagnostic that names
+    /// several places (a section whose layers disagree in length) lists them here rather
+    /// than being reported once per place.
+    /// </summary>
+    public IReadOnlyList<DiagnosticRelated> Related { get; }
 
     /// <summary>
     /// The severity of this diagnostic.
@@ -131,6 +149,12 @@ public sealed class DiagnosticBag
     /// </summary>
     public void Warning(TextSpan span, string code, string message)
         => Add(Diagnostic.Warning(span, code, message));
+
+    /// <summary>
+    /// Adds a warning that names other places too (see <see cref="Diagnostic.Related"/>).
+    /// </summary>
+    public void Warning(TextSpan span, string code, string message, IReadOnlyList<DiagnosticRelated> related)
+        => Add(new Diagnostic(DiagnosticSeverity.Warning, span, code, message, related));
 
     /// <summary>
     /// Returns the diagnostics as a read-only list.

@@ -140,14 +140,27 @@ internal sealed class CrossPartMeasureValidator
     }
 
     /// <summary>
-    /// The bar-count comparison shared by both layouts: every voice that writes fewer bars
-    /// than the section's longest voice is reported on its own span. The tail of the message
-    /// says what the page does with the shortfall — a part is padded with spacer rests, a
-    /// chord row simply has no chord over the bars it does not write, a lyrics cell sings
-    /// nothing over them. The section's length is the longest VOICE (part or chord row); a
-    /// lyrics cell is only ever the short side of the comparison — a longer one is a stacked
-    /// verse, and lyrics cells alone (no voice) have nothing to be short of.
+    /// The bar-count comparison shared by both layouts: ONE warning per section whose layers
+    /// disagree, grouping them by the number of bars each writes, with every layer attached as
+    /// a related location. The section's length on the page is its longest VOICE (part or
+    /// chord row) — that is what the collector pads to — and the message says what the page
+    /// does with each kind of shortfall: a part is padded with spacer rests, a chord row has
+    /// no chord over the bars it does not write, a lyrics cell sings nothing over them. A
+    /// lyrics cell is only ever the short side — a longer one is a stacked verse, and lyrics
+    /// cells alone (no voice) have nothing to be short of.
     /// </summary>
+    /// <remarks>
+    /// ⚠️ IT DOES NOT SAY WHICH LENGTH IS RIGHT. This used to be one warning per short voice,
+    /// each reading "spans 8 bar(s) in part 'oboe' but 9 in part 'flute' — the shorter part is
+    /// padded", so one extra bar written in ONE part of a twelve-layer section put eleven
+    /// warnings on the eleven layers that were right and none on the one that was wrong
+    /// (an AI-written stress test, scratch/SongsByChatGPT/…fluteA_9bars…lys, and its author's
+    /// feedback: "the longest layer is not necessarily correct; in testing, the outlier was
+    /// itself the mistake"). The warning is now anchored on the ODD ONE OUT — the layer whose
+    /// length the fewest layers share, the shorter on a tie (where the old warning stood) — as
+    /// a place to start looking, not a verdict; every layer is one click away in the related
+    /// locations.
+    /// </remarks>
     private void ReportBarCountMismatch(string sectionName, List<SectionVoice> voices)
     {
         if (voices.Count < 2)
@@ -158,21 +171,54 @@ internal sealed class CrossPartMeasureValidator
         int maxBars = counted.Max(v => v.Bars);
         if (voices.All(v => v.Bars >= maxBars))
             return; // all voices agree (a lyrics cell may run longer: stacked verses)
-        var reference = counted.First(v => v.Bars == maxBars);
-        foreach (var voice in voices)
-        {
-            if (voice.Bars >= maxBars)
-                continue;
-            string tail = voice.IsLyrics
-                ? "the track sings nothing over the remaining bar(s)"
-                : voice.IsChords
-                ? "the row writes no chord over the remaining bar(s)"
-                : "the shorter part is padded with rests to align";
-            _diagnostics.Warning(voice.Span, DiagnosticCodes.SectionBarCountMismatch,
-                $"Section '{sectionName}' spans {voice.Bars} bar(s) in {voice.Label} but {maxBars} in "
-                + $"{reference.Label} — {tail}");
-        }
+
+        // The layers the warning is about: every voice, and a lyrics cell only when it is short.
+        var layers = voices.Where(v => !v.IsLyrics || v.Bars < maxBars).ToList();
+        var groups = layers.GroupBy(v => v.Bars)
+            .OrderByDescending(g => g.Key)
+            .Select(g => g.ToList())
+            .ToList();
+        // The odd one out is looked for among the VOICES (parts, chord rows) — a lyrics cell
+        // never sets the section's length, so when the voices agree it is the short lyrics
+        // that are the news, and the first of them carries the warning.
+        var voiceGroups = counted.GroupBy(v => v.Bars).Select(g => g.ToList()).ToList();
+        var anchor = voiceGroups.Count > 1
+            ? voiceGroups.OrderBy(g => g.Count).ThenBy(g => g[0].Bars).First()[0]
+            : layers.First(v => v.IsLyrics && v.Bars < maxBars);
+
+        var lengths = string.Join("; ", groups.Select(g =>
+            $"{g[0].Bars} bar(s) in {NameList(g.Select(v => v.Label).ToList())}"));
+        var recovery = new List<string>();
+        if (layers.Any(v => v.Bars < maxBars && !v.IsLyrics && !v.IsChords))
+            recovery.Add("a shorter part is padded with rests");
+        if (layers.Any(v => v.Bars < maxBars && v.IsChords))
+            recovery.Add("a shorter chord row writes no chord over the missing bars");
+        if (layers.Any(v => v.Bars < maxBars && v.IsLyrics))
+            recovery.Add("a shorter lyrics track sings nothing over them");
+
+        var related = layers.Select(v => new DiagnosticRelated(v.Span,
+            $"{v.Label}: {v.Bars} bar(s)" + (v.Bars >= maxBars ? ""
+                : v.IsLyrics ? $" - sings nothing over the last {maxBars - v.Bars}"
+                : v.IsChords ? $" - no chord over the last {maxBars - v.Bars}"
+                : $" - padded with {maxBars - v.Bars} bar(s) of rests"))).ToList();
+
+        // ASCII punctuation only: the CLI prints this to legacy-codepage consoles.
+        _diagnostics.Warning(anchor.Span, DiagnosticCodes.SectionBarCountMismatch,
+            // "Everywhere it is written", not "in every layer": the parts, chord rows and lyrics
+            // tracks it lists are named by what the book calls them (the owner asked what
+            // "layer" meant — a word Lily#'s own documents never use in that sense).
+            $"Section '{sectionName}' is not the same length everywhere it is written: {lengths}. "
+            + $"It is laid out at {maxBars} bar(s): {string.Join("; ", recovery)}",
+            related);
     }
+
+    /// <summary><c>a</c>, <c>a and b</c>, <c>a, b and c</c>.</summary>
+    private static string NameList(List<string> names) => names.Count switch
+    {
+        1 => names[0],
+        2 => $"{names[0]} and {names[1]}",
+        _ => $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}",
+    };
 
     private void WalkForSections(SyntaxNode node, ref Fraction time)
     {

@@ -130,6 +130,57 @@ score main {
 form main { Main }
 ```
 
+## One Section Name, One Span of Time
+
+A section's name names a **span of time** in the piece, not a block of text. Every
+place that writes a section with the same name — a part, a chord row, a lyrics track —
+is writing the same bars, and they sound together. The examples so far list the parts
+inside each section; you can equally list the sections inside each part, and the result
+is the same:
+
+```
+part melody {
+  section A { c4 d e f | g1 | }
+  section B { a4 g f e | d1 | }
+}
+
+chords harmony {
+  section A { C | G | }   // the same two bars as the melody's A
+  section B { F | G | }
+}
+
+form main { A B }
+
+score main { chords harmony  staff melody }
+```
+
+The form plays `A` then `B`, and during `A` the melody's `c d e f | g` and the chords
+`C | G` sound at once. The easy mistake is to give the accompaniment a name of its own:
+
+```
+part melody {
+  section A { c4 d e f | g1 | }
+}
+
+chords harmony {
+  section AChords { C | G | }   // ✗ a different name is a different time
+}
+
+form main { A AChords }
+
+score main { chords harmony  staff melody }
+```
+
+This is valid, but `AChords` is a separate section that comes *after* `A`: two bars of
+melody with no chords, then two bars of chords over a silent staff. The rule:
+
+> **Same section name = same time. Different name = different time.**
+
+Because everything sharing a name shares its bars, they should all be the same length.
+When they are not, the compiler warns (LYS2007), naming the length each part, chord row
+and lyrics track writes, and how many bars the section is laid out at. In VS Code, the line above every
+`section` shows its length and who writes it; click it to list them all.
+
 ## Reusing Phrases
 
 Define reusable musical phrases:

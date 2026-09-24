@@ -344,8 +344,8 @@ public sealed partial class LilySharpLanguageServer
             {
                 if (diagnostic.Span.Start > endOffset || diagnostic.Span.End < startOffset)
                     continue;
-                if (BarCountPadding(doc.Tree, doc.Text, diagnostic) is { } pad)
-                    actions.Add(PadBarsAction(doc, uri, diagnostic, pad));
+                if (BarCountPadding(doc.Tree, doc.Text, diagnostic) is { } pads)
+                    actions.Add(PadBarsAction(doc, uri, diagnostic, pads));
             }
         }
         catch
@@ -365,29 +365,41 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>The quick fix for one LYS2007: insert the bare bar lines
-    /// <see cref="BarCountPadding"/> settled on, at the end of the short voice's body.</summary>
+    /// <see cref="BarCountPadding"/> settled on, at the end of each short layer's body — one
+    /// action, one edit per layer.</summary>
     private static CodeAction PadBarsAction(
-        Document doc, Uri uri, CoreDiagnostic diagnostic, (int Offset, string Text, int Bars, string Voice) pad)
+        Document doc, Uri uri, CoreDiagnostic diagnostic, IReadOnlyList<BarPad> pads)
     {
-        var (line, character) = GetLineAndCharacter(doc.Text, pad.Offset);
-        var at = new Position { Line = line, Character = character };
+        TextEdit EditOf(BarPad pad)
+        {
+            var (line, character) = GetLineAndCharacter(doc.Text, pad.Offset);
+            var at = new Position { Line = line, Character = character };
+            return new TextEdit { Range = new LspRange { Start = at, End = at }, NewText = pad.Text };
+        }
+
+        // Counted in BAR LINES, not bars: over an open last bar the first `|` only closes it,
+        // and the title must say what the edit writes. One short part or track keeps the old
+        // title; several are named while they are few, and counted when they are many (the
+        // warning's related list names every one).
+        var one = pads[0];
+        var voices = pads.OrderBy(p => p.Offset).Select(p => p.Voice).ToList();
+        string title = pads.Count > 3
+            ? $"Add bar lines to the {pads.Count} shorter parts and tracks"
+            : pads.Count > 1
+            ? $"Add bar lines to {string.Join(", ", voices.Take(voices.Count - 1))} and {voices[^1]}"
+            : one.Bars == 1
+                ? $"Add 1 bar line to {one.Voice} (|)"
+                : $"Add {one.Bars} bar lines to {one.Voice} ({string.Join(" ", Enumerable.Repeat("|", one.Bars))})";
         return new CodeAction
         {
-            // Counted in BAR LINES, not bars: over an open last bar the first `|` only
-            // closes it, and the title must say what the edit writes.
-            Title = pad.Bars == 1
-                ? $"Add 1 bar line to {pad.Voice} (|)"
-                : $"Add {pad.Bars} bar lines to {pad.Voice} ({string.Join(" ", Enumerable.Repeat("|", pad.Bars))})",
+            Title = title,
             Kind = CodeActionKind.QuickFix,
-            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text)],
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
             Edit = new WorkspaceEdit
             {
                 Changes = new Dictionary<string, TextEdit[]>
                 {
-                    [uri.ToString()] =
-                    [
-                        new TextEdit { Range = new LspRange { Start = at, End = at }, NewText = pad.Text },
-                    ],
+                    [uri.ToString()] = pads.Select(EditOf).ToArray(),
                 },
             },
         };

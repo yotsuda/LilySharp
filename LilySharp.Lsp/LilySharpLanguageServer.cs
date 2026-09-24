@@ -173,6 +173,9 @@ public sealed partial class LilySharpLanguageServer
                         CodeActionKind.Refactor
                     }
                 },
+                // A lens over every `section` declaration: the section's length, its layers
+                // and where the forms name it (LilySharpLanguageServer.CodeLens.cs).
+                CodeLensProvider = new CodeLensOptions { ResolveProvider = false },
                 SemanticTokensOptions = new SemanticTokensOptions
                 {
                     Full = true,
@@ -456,7 +459,7 @@ public sealed partial class LilySharpLanguageServer
         {
             foreach (var d in DocumentDiagnostics(doc, token, out _))
             {
-                diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+                diagnostics.Add(ConvertDiagnostic(d, doc.Text, doc.Uri));
             }
         }
         catch (OperationCanceledException)
@@ -486,20 +489,34 @@ public sealed partial class LilySharpLanguageServer
         });
     }
 
-    private static LilySharp.Lsp.Protocol.Diagnostic ConvertDiagnostic(
-        LilySharp.Core.Syntax.Diagnostic d, string text)
+    internal static LilySharp.Lsp.Protocol.Diagnostic ConvertDiagnostic(
+        LilySharp.Core.Syntax.Diagnostic d, string text, Uri? uri = null)
     {
-        var (start, end) = TrimSpanToInk(text, d.Span.Start, d.Span.Start + d.Span.Length);
-        var (startLine, startCol) = GetLineAndColumn(text, start);
-        var (endLine, endCol) = GetLineAndColumn(text, end);
-
-        return new LilySharp.Lsp.Protocol.Diagnostic
+        LspRange RangeOf(LilySharp.Core.Syntax.TextSpan span)
         {
-            Range = new LspRange
+            var (start, end) = TrimSpanToInk(text, span.Start, span.Start + span.Length);
+            var (startLine, startCol) = GetLineAndColumn(text, start);
+            var (endLine, endCol) = GetLineAndColumn(text, end);
+            return new LspRange
             {
                 Start = new Position(startLine, startCol),
                 End = new Position(endLine, endCol)
-            },
+            };
+        }
+
+        return new LilySharp.Lsp.Protocol.Diagnostic
+        {
+            Range = RangeOf(d.Span),
+            // The places the diagnostic is about besides its own — the Problems panel lists
+            // them under it, each a link (a section's layers, for LYS2007). Needs the
+            // document's URI, which only the publish path hands in.
+            RelatedInformation = uri == null || d.Related.Count == 0
+                ? null
+                : d.Related.Select(r => new LilySharp.Lsp.Protocol.DiagnosticRelatedInformation
+                {
+                    Location = new LilySharp.Lsp.Protocol.Location { Uri = uri, Range = RangeOf(r.Span) },
+                    Message = r.Message,
+                }).ToArray(),
             Severity = d.Severity switch
             {
                 CoreDiagnosticSeverity.Error => LspDiagnosticSeverity.Error,

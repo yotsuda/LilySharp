@@ -921,6 +921,10 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
             };
             if (diag.Severity == DiagnosticSeverity.Error) hasErrors = true;
             Console.WriteLine($"{inputPath}({LineCol(source, diag.Span.Start)}): {severity}: {diag.Message}");
+            // The places the diagnostic is about besides its own (Diagnostic.Related), as
+            // `note:` lines under it — indented, and never counted as a warning of their own.
+            foreach (var related in diag.Related)
+                Console.WriteLine($"  {inputPath}({LineCol(source, related.Span.Start)}): note: {related.Message}");
         }
 
         return hasErrors ? 1 : 0;

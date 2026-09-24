@@ -97,6 +97,21 @@ bare letters an octave down now needs `octave 3`), and **a slur or tie holds its
 
 ### Editor
 
+- **A CodeLens over a section's first declaration shows the section as a whole.** A section is
+  one span of time however many parts, chord rows and lyrics tracks write it; its first
+  declaration now carries a line saying so and naming who writes it —
+  `Section A · 2 bars · melody, chords 'harmony' · 2× in form main`, counted by kind when there
+  are many (`8 bars · 11 parts, 1 chord row`), each length with who writes it when they disagree
+  (`⚠ 9 bars in flute, 8 bars in the other 11`), and `in no form` for a section nothing plays. A
+  later declaration gets a line only when it is the odd one out — measured against the length
+  most of the section's parts and chord rows write, so ten parts at 10 bars and one at 11 mark
+  the one (`⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts`), not the ten; on
+  a tie, the shorter. A part-major book is not lined with copies of the same line. A click lists everything that writes it in the references peek. The
+  counts are the bar checker's own, so the lens and LYS2007 agree.
+- **The tutorial says what a section name means.** A new "One Section Name, One Span of Time"
+  section shows parts and chord rows each listing their sections, and the mistake of giving
+  the accompaniment a name of its own (`section AChords`), which plays it *after* `A` instead
+  of with it.
 - **The preview receives only the pages a keystroke changed.** The language server used to
   answer every preview request with the whole SVG document — on a 1000-bar book 3.6–12 MB of
   JSON per keystroke, serialized, parsed, keyed, cloned into the preview page and split there
@@ -483,6 +498,25 @@ bare letters an octave down now needs `octave 3`), and **a slur or tie holds its
 
 ### Diagnostics
 
+- **A section written at different lengths is one warning, not one per part.** One extra bar
+  in one part of a section that eleven parts and a chord row write used to raise eleven
+  warnings — one on each part that was right, and none on the one that was not. It is now a
+  single LYS2007 per section — "Section 'A' is not the same length everywhere it is written:
+  9 bar(s) in part 'flute'; 8 bar(s) in part 'oboe', … and chords 'harmony'" — that says what
+  the page does with each kind of shortfall and does not claim either length is correct. It
+  stands on the odd one out — the part or chord row whose length the fewest share — and lists
+  every part and track as a related location: a link in the editor's Problems panel, a `note:`
+  line under the warning in `lysc check`. The quick fix pads every shorter one in one action.
+- **A lyric line that runs out of notes says when a slur or a tie is why.** Since a slur or tie
+  now holds its syllable (above), a slur written only as a legato mark over a lyric line swallows
+  the syllables of the notes inside it, and a lyric `~` written for a tied note takes the next
+  note instead. The "has no note to align with" warning now counts the notes of that bar a slur
+  or a tie held and says what to do: write a phrasing-only slur as `@phrasingSlur` …
+  `@!phrasingSlur`, which holds no syllable, and drop a `~` or `_` written for a tied note.
+- **A section's pickup is checked against its own first bar.** `section A { partial 2 }` over a
+  first bar that fills the whole meter drew no warning — a full first bar was taken for some
+  later section's — and now reports "Pickup measure duration 1 exceeds the declared partial
+  1/2". A section without a `partial` is no longer measured against another section's.
 - **A phrase reference counts its beats in the bar check.** With `phrase riff { c4 d }`, the bar
   `riff e f |` was reported short, because the checker counted the reference as taking no time;
   it now plays the phrase in place as the page does.

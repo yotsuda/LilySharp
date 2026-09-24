@@ -41,6 +41,11 @@ internal sealed class MeasureValidator : ISemanticValidator
     // Set by a top-level `partial N` — the declared pickup length for every
     // voice's first measure (mirrors MeasureCollector._filePartial).
     private Fraction? _filePartial;
+    // A SECTION HEADER's `partial N`, by section name — the pickup of THAT section's opening
+    // bar, the only place a structured file can declare one since 2026-09-15. Kept apart from
+    // _filePartial because it names its section: its first bar is checked strictly, where the
+    // file-wide value has to guess which section opens the piece (see ValidateMeasures).
+    private Dictionary<string, Fraction> _sectionPartials = new();
     // True once the file has any part/section/form: a `partial` then belongs to a section
     // directive; a bare note stream takes a leading `partial` instead. Drives the pickup hint.
     private bool _structured;
@@ -65,6 +70,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         _structured = TopLevelNodes.IsStructured(root);
         _phraseBodies = CollectPhraseBodies(root);
         _boundaries = new SectionBoundaryBars(root, _phraseBodies);
+        _sectionPartials = CollectSectionPartials(root);
         // The nodes the walk does something at, in document order — asked of the tree's
         // descendant index rather than found by walking the book. The recursion this
         // replaces entered every non-token node (65,009 of them on perf-fingbeam1k, each
@@ -276,6 +282,11 @@ internal sealed class MeasureValidator : ISemanticValidator
                 SetTimeSignature(timeSig.Beats, timeSig.BeatType);
                 break;
 
+            case PartialDeclarationSyntax headerPartial when HeaderSectionOf(headerPartial) is not null:
+                // A section header's pickup — already in _sectionPartials, and only for its
+                // own section (not the file-wide value below).
+                break;
+
             case PartialDeclarationSyntax filePartial when !IsInsideMusicBlock(filePartial):
                 // A top-level `partial N` (a GlobalSetting) arms EVERY voice's
                 // first measure; the first bar of each block is then strictly
@@ -329,9 +340,12 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// music, and if that bar comes out overfull the mistake is usually in the enclosing
     /// music rather than in the body — so the diagnostic has to be able to reach back to
     /// it. Null when the lead-in has no written home to point at.</param>
+    /// <param name="inheritedPickup">The declared pickup of the bar this stream starts inside,
+    /// when that bar is its section's opening bar — for a span's later voice or a repeat body
+    /// that opens there, which is the same rendered bar and so the same pickup.</param>
     private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos,
         Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
-        TextSpan? leadInSpan = null)
+        TextSpan? leadInSpan = null, Fraction? inheritedPickup = null)
     {
         // A mid-music `time` re-arms the meter for the rest of THIS block/section
         // only — the state must not leak into the next part's block (each part
@@ -344,7 +358,8 @@ internal sealed class MeasureValidator : ISemanticValidator
         var savedSenza = _senzaMisura;
         try
         {
-            ValidateMeasures(items, startPos, leadIn, initialDefault, openTail, leadInSpan);
+            ValidateMeasures(items, startPos, leadIn, initialDefault, openTail, leadInSpan,
+                inheritedPickup);
         }
         finally
         {
@@ -356,7 +371,7 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos,
         Fraction? leadIn = null, Fraction? initialDefault = null, bool openTail = false,
-        TextSpan? leadInSpan = null)
+        TextSpan? leadInSpan = null, Fraction? inheritedPickup = null)
     {
         var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
             out var phraseSpans, out bool tailUnclosed);
@@ -367,6 +382,18 @@ internal sealed class MeasureValidator : ISemanticValidator
         var cell = leadIn is null && !openTail && _boundaries != null
             ? SectionBoundaryBars.CellOf(items.FirstOrDefault())
             : null;
+
+        // The declared pickup of this stream's FIRST bar: its section header's `partial`
+        // when the stream is a section's own music, else the one the enclosing bar hands
+        // down (a span voice / repeat body opening in the section's first bar).
+        // A SECTION HEADER's `partial` names the section whose opening bar it shortens, so
+        // that bar is checked against it strictly — a full first bar under
+        // `section A { partial 2 }` is an overfull pickup. (It was read as the file-wide
+        // value until 2026-09-24, whose full-bar exemption below hid exactly that mistake.)
+        Fraction? streamPickup = cell is { } headerCell
+            && _sectionPartials.TryGetValue(headerCell.Section, out var sectionPartial)
+                ? sectionPartial
+                : inheritedPickup;
 
         // ONE forward pass: each bar adopts its meter, then its duration is counted in
         // segments around the voice-span / repeat addresses, then it is checked. (This
@@ -379,7 +406,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // running default note value there. Voices 2..N sound from that instant, so this
         // is the lead-in their own first bar is validated with. Collected during the
         // pass, validated after it (they are simultaneous with the music counted here).
-        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default)>();
+        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup)>();
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -419,6 +446,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                             + "returning 'time N/M', or drop it.");
                 }
             }
+            if (partialLength == null && i == 0 && streamPickup is { } pickup)
+                partialLength = pickup;
             // ⚠️ The meter is adopted IN ITEM ORDER, segment by segment around the repeat
             // cuts below — not for the whole written bar up front. A `repeat percent`
             // body closes its own rendered bars, so the enclosing written bar can hold
@@ -476,7 +505,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 from = itemIndex;
                 if (span != null)
                 {
-                    spanEntry.Add((span, total, defaultDuration));
+                    spanEntry.Add((span, total, defaultDuration, i == 0 ? partialLength : null));
                     continue;
                 }
 
@@ -528,7 +557,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                     : (TextSpan?)null;
                 ValidateItemsScoped(rep!.Body.Items, rep.Body.Position,
                     total == Fraction.Zero ? null : total, defaultDuration, openTail: true,
-                    leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, frontSpan));
+                    leadInSpan: UnionSpans(i == 0 ? leadInSpan : null, frontSpan),
+                    inheritedPickup: i == 0 ? partialLength : null);
 
                 // ⚠️ LYS2014 STOOD HERE and is retired (session 286). It warned that a
                 // `repeat percent` body of three or more WHOLE measures earned a sign that
@@ -689,15 +719,16 @@ internal sealed class MeasureValidator : ISemanticValidator
         // still has voices to check; they simply start on the boundary.
         foreach (var vs in voiceSpans)
             if (vs.MeasureIndex >= measures.Count)
-                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration));
+                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration, null));
 
         // Voices 2..N of each span, once this stream's own bars are counted: they are
         // simultaneous with the music just validated, so each is its own bar stream that
         // begins with the span's lead-in already elapsed (and inherits the running note
         // value at that instant, as a bare note does anywhere else).
-        foreach (var (span, spanLeadIn, spanDefault) in spanEntry)
+        foreach (var (span, spanLeadIn, spanDefault, spanPickup) in spanEntry)
             foreach (var voice in span.Voices.Skip(1))
-                ValidateItemsScoped(ItemsOf(voice), voice.Position, spanLeadIn, spanDefault);
+                ValidateItemsScoped(ItemsOf(voice), voice.Position, spanLeadIn, spanDefault,
+                    inheritedPickup: spanPickup);
     }
 
     /// <summary>True when the repeat's played content can flow through the enclosing
@@ -860,6 +891,37 @@ internal sealed class MeasureValidator : ISemanticValidator
             partialLength != null
                 ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
                 : $"Measure duration {duration} exceeds time signature {_meterText}");
+    }
+
+    /// <summary>
+    /// The section whose HEADER holds <paramref name="partial"/> — `section A { partial 2 }`
+    /// standalone, or before the part blocks of a section-major section — or null when the
+    /// `partial` is written in music (a part-major section's inline music, a part block) or
+    /// at the top level.
+    /// </summary>
+    private static string? HeaderSectionOf(PartialDeclarationSyntax partial)
+    {
+        for (var p = partial.Parent; p != null; p = p.Parent)
+        {
+            if (p is MusicBlockSyntax)
+                return null;
+            if (p is SectionDeclarationSyntax s)
+                return s.Parent is PartDeclarationSyntax || SectionHasInlineMusic(s)
+                    ? null
+                    : s.SectionName;
+        }
+        return null;
+    }
+
+    /// <summary>Every section header's pickup, by section name (see <see cref="_sectionPartials"/>).</summary>
+    private static Dictionary<string, Fraction> CollectSectionPartials(SyntaxNode root)
+    {
+        var map = new Dictionary<string, Fraction>(StringComparer.Ordinal);
+        // Asked of the descendant index, as the walk in Validate is — not a book walk.
+        foreach (var node in root.DescendantNodesOfKinds(SyntaxKind.PartialDeclaration))
+            if (node is PartialDeclarationSyntax pd && HeaderSectionOf(pd) is { } name)
+                map[name] = pd.ToFraction();
+        return map;
     }
 
     /// <summary>True when the node sits inside a music block (an in-music

@@ -74,6 +74,58 @@ public class BarCountQuickFixTests
         => SemanticValidation.Run(SyntaxTree.Parse(text))
             .Count(d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
 
+    /// <summary>
+    /// Since the warning is one per section, its fix is one action for every short layer:
+    /// one edit per layer, and the section agrees once they are applied. The lightbulb is on
+    /// the odd one out (the long flute), where the warning stands.
+    /// </summary>
+    [Fact]
+    public void ManyShortLayers_AreAllPaddedByOneAction()
+    {
+        const string text = """
+            part flute { section A { c1 | c1 | c1 | } }
+            part oboe { section A { c1 | c1 | } }
+            chords harmony { section A { C | F | } }
+            form main { A }
+            score main { chords harmony  staff flute  staff oboe }
+            """;
+        var action = PadAction(text, text.IndexOf("section A") + "section ".Length + 1);
+        Assert.NotNull(action);
+        Assert.Equal("Add bar lines to section A of oboe and section A of chords harmony", action!.Title);
+        var edits = action.Edit!.Changes!.Values.Single();
+        Assert.Equal(2, edits.Length);
+        // Applied back to front, as a client applies non-overlapping edits.
+        string fixedText = text;
+        foreach (var e in edits.OrderByDescending(e => OffsetOf(text, e.Range.Start)))
+        {
+            int at = OffsetOf(fixedText, e.Range.Start);
+            fixedText = fixedText.Substring(0, at) + e.NewText + fixedText.Substring(at);
+        }
+        Assert.Equal(0, Lys2007Count(fixedText));
+    }
+
+    /// <summary>The Problems panel gets every layer as a link: the warning's related locations
+    /// travel as LSP relatedInformation, each on its layer's section name.</summary>
+    [Fact]
+    public void TheWarningsLayers_ReachTheEditorAsRelatedInformation()
+    {
+        const string text = """
+            part flute { section A { c1 | c1 | c1 | } }
+            part oboe { section A { c1 | c1 | } }
+            form main { A }
+            score main { staff flute  staff oboe }
+            """;
+        var core = SemanticValidation.Run(SyntaxTree.Parse(text))
+            .Single(d => d.Code == DiagnosticCodes.SectionBarCountMismatch);
+        var uri = new System.Uri("file:///pad.lys");
+        var lsp = LilySharpLanguageServer.ConvertDiagnostic(core, text, uri);
+        Assert.NotNull(lsp.RelatedInformation);
+        Assert.Equal(2, lsp.RelatedInformation!.Length);
+        Assert.All(lsp.RelatedInformation, r => Assert.Equal(uri, r.Location.Uri));
+        var oboe = lsp.RelatedInformation.Single(r => r.Message.StartsWith("part 'oboe'"));
+        Assert.Equal(1, oboe.Location.Range.Start.Line);
+    }
+
     [Fact]
     public void PartMajor_ShortMelody_GetsOneBarAndTheWarningGoes()
     {
@@ -94,7 +146,7 @@ public class BarCountQuickFixTests
         // Caret on the second letter of the name — inside the squiggle, not at its start.
         var action = PadAction(text, text.IndexOf("section A") + "section ".Length);
         Assert.NotNull(action);
-        Assert.Equal("Add 1 bar line to section A (|)", action!.Title);
+        Assert.Equal("Add 1 bar line to section A of melody (|)", action!.Title);
         Assert.Equal(CodeActionKind.QuickFix, action.Kind);
         var fixedText = Apply(text, action);
         Assert.Contains("section A { g2 g | | }", fixedText);
@@ -140,7 +192,7 @@ public class BarCountQuickFixTests
         int anchor = text.LastIndexOf("section A") + "section ".Length;
         var action = PadAction(text, anchor);
         Assert.NotNull(action);
-        Assert.Equal("Add 2 bar lines to section A (| |)", action!.Title);
+        Assert.Equal("Add 2 bar lines to section A of chords prog (| |)", action!.Title);
         var fixedText = Apply(text, action);
         Assert.Contains("section A { Dm7 | | | }", fixedText);
         Assert.Equal(0, Lys2007Count(fixedText));
@@ -205,7 +257,7 @@ public class BarCountQuickFixTests
         Assert.Equal(1, Lys2007Count(text));
         var action = PadAction(text, text.LastIndexOf("section A") + "section ".Length);
         Assert.NotNull(action);
-        Assert.Equal("Add 1 bar line to section A (|)", action!.Title);
+        Assert.Equal("Add 1 bar line to section A of lyrics words (|)", action!.Title);
         var fixedText = Apply(text, action);
         Assert.Contains("section A { la la | | }", fixedText);
         Assert.Equal(0, Lys2007Count(fixedText));

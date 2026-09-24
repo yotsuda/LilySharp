@@ -35,10 +35,12 @@ namespace LilySharp.Core.Svg.Collector;
 /// <summary>
 /// A lyric line's overflow: how many syllables ran past the notes, and where
 /// the FIRST of them sits — its text, source offset, and 1-based bar number
-/// within the lyric line.
+/// within the lyric line — plus how many notes of that bar a slur and a tie held
+/// (they take no syllable), which is usually WHY the bar ran out.
 /// </summary>
 public readonly record struct LyricOverflow(
-    int Count, string FirstText, int FirstPosition, int FirstBar);
+    int Count, string FirstText, int FirstPosition, int FirstBar,
+    int SlurHeldInFirstBar = 0, int TieHeldInFirstBar = 0);
 
 internal sealed class LyricCollector
 {
@@ -78,7 +80,7 @@ internal sealed class LyricCollector
     /// <returns>List of LyricItem objects.</returns>
     public ImmutableArray<LyricItem> Collect(
         LyricsBlockSyntax lyricsBlock,
-        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy)> noteItemIndices,
+        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy, bool TieHeld)> noteItemIndices,
         out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1,
@@ -89,7 +91,7 @@ internal sealed class LyricCollector
     /// whole block, or one part-major inner section's measures).</summary>
     public ImmutableArray<LyricItem> Collect(
         IEnumerable<SyntaxNode> syllableMeasures,
-        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy)> noteItemIndices,
+        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy, bool TieHeld)> noteItemIndices,
         out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1,
@@ -102,6 +104,7 @@ internal sealed class LyricCollector
         int unplacedSyllableCount = 0;
         string firstDroppedText = "";
         int firstDroppedPosition = 0, firstDroppedBar = 0;
+        int firstDroppedSlurHeld = 0, firstDroppedTieHeld = 0;
 
         // Group the verse's notes by measure INDEX (relative to the run's first bar). A
         // written "|" advances by exactly ONE bar, so a measure with NO notes — a whole-bar
@@ -114,6 +117,11 @@ internal sealed class LyricCollector
         // BuildNoteIndices) is no slot: it joins the melisma of the slot before it, whose
         // HeldEnd it becomes — across a bar line too, where a slur or tie crosses one.
         var measures = new List<List<Slot>>();
+        // How many notes of each bar a slur / a tie held (they are no slot) — reported with an
+        // overflow, since a long slur, or a tied note still given a syllable by a `~`, is the
+        // usual reason the bar ran out.
+        var slurHeldPerMeasure = new List<int>();
+        var tieHeldPerMeasure = new List<int>();
         Slot? lastSlot = null;
         foreach (var n in noteItemIndices)
         {
@@ -121,9 +129,17 @@ internal sealed class LyricCollector
             if (local < 0)
                 continue;
             while (measures.Count <= local)
+            {
                 measures.Add(new List<Slot>());
+                slurHeldPerMeasure.Add(0);
+                tieHeldPerMeasure.Add(0);
+            }
             if (n.Busy)
             {
+                if (n.TieHeld)
+                    tieHeldPerMeasure[local]++;
+                else
+                    slurHeldPerMeasure[local]++;
                 if (lastSlot is not null)
                     lastSlot.HeldEnd = (n.MeasureIndex, n.Timing);
                 continue;
@@ -229,6 +245,8 @@ internal sealed class LyricCollector
                     firstDroppedText = text;
                     firstDroppedPosition = position;
                     firstDroppedBar = lm + 1;
+                    firstDroppedSlurHeld = lm < slurHeldPerMeasure.Count ? slurHeldPerMeasure[lm] : 0;
+                    firstDroppedTieHeld = lm < tieHeldPerMeasure.Count ? tieHeldPerMeasure[lm] : 0;
                 }
                 unplacedSyllableCount++;
             }
@@ -237,7 +255,8 @@ internal sealed class LyricCollector
 
         if (unplacedSyllableCount > 0)
             overflow = new LyricOverflow(
-                unplacedSyllableCount, firstDroppedText, firstDroppedPosition, firstDroppedBar);
+                unplacedSyllableCount, firstDroppedText, firstDroppedPosition, firstDroppedBar,
+                firstDroppedSlurHeld, firstDroppedTieHeld);
 
         return lyrics.ToImmutable();
     }

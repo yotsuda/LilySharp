@@ -151,7 +151,7 @@ internal sealed class LyricsCollector
                 int verseNumber = forcedVerse
                     ?? (nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1);
 
-                IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy)> aligned = startMeasure <= 0
+                IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)> aligned = startMeasure <= 0
                     ? indices
                     : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
@@ -181,7 +181,8 @@ internal sealed class LyricsCollector
                 if (overflow is { } of)
                     _warnings.Add(new LyricSyllableWarning(
                         new LilySharp.Core.Syntax.TextSpan(of.FirstPosition, Math.Max(1, of.FirstText.Length)),
-                        of.Count, of.FirstText, of.FirstBar));
+                        of.Count, of.FirstText, of.FirstBar,
+                        of.SlurHeldInFirstBar, of.TieHeldInFirstBar));
             }
 
             // Part-major lyric track: each inner section's verse aligns under its own
@@ -681,10 +682,10 @@ internal sealed class LyricsCollector
     /// markers hold one, so <c>c'4( d e) f</c> with <c>la __ la</c> put the second syllable on
     /// e where LilyPond puts it on f.
     /// </remarks>
-    internal static List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy)> BuildNoteIndices(
+    internal static List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)> BuildNoteIndices(
         IReadOnlyList<Measure> measures)
     {
-        var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy)>();
+        var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing, bool Busy, bool TieHeld)>();
         bool slurOpen = false, tiedIn = false;
         for (int m = 0; m < measures.Count; m++)
         {
@@ -702,7 +703,9 @@ internal sealed class LyricsCollector
                 };
                 if (isNote)
                 {
-                    noteIndices.Add((m, i, timing, slurOpen || tiedIn));
+                    // TieHeld says WHICH hold it is, for the overflow warning's advice: a tied
+                    // note is held whatever slur it also sits in.
+                    noteIndices.Add((m, i, timing, slurOpen || tiedIn, tiedIn));
                     tiedIn = tieStart;
                 }
                 else if (item.Duration > Fraction.Zero)

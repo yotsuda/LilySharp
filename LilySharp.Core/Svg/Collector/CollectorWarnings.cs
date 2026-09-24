@@ -31,11 +31,16 @@ namespace LilySharp.Core.Svg.Collector;
 /// bar within the lyric line, so the author lands on the exact word where the
 /// miscount starts.
 /// </summary>
+/// <param name="SlurHeldInFirstBar">How many notes of that bar a slur held, and
+/// <paramref name="TieHeldInFirstBar"/> how many a tie arrived at — notes that take no syllable
+/// of their own (LyricsCollector.BuildNoteIndices), which is usually why the bar ran out.</param>
 public record LyricSyllableWarning(
     LilySharp.Core.Syntax.TextSpan Span,
     int UnplacedSyllables,
     string FirstSyllable,
-    int FirstBar
+    int FirstBar,
+    int SlurHeldInFirstBar = 0,
+    int TieHeldInFirstBar = 0
 );
 
 /// <summary>

@@ -57,9 +57,26 @@ internal sealed class LyricSyllableValidator : ISharedCollectValidator
                 : $"it and the {w.UnplacedSyllables - 1} after it will not be shown";
             // ASCII punctuation only: this exact string reaches legacy-codepage
             // consoles through the CLI.
+            // WHY the bar ran out, when a slur or a tie held some of its notes: since 0.8.0 a
+            // note inside a slur (after its first) or reached by a tie takes no syllable, as in
+            // LilyPond. Two habits hit it, and each gets its own advice:
+            //  * a slur written only as a legato/phrasing mark over a lyric line swallows the
+            //    syllables (ChatGPT's 01_evening_song.lys lost 22) — a phrasing slur is not
+            //    melisma-busy, so it is the spelling to offer;
+            //  * a lyric `~` / `_` written to hold a syllable over a TIED note, which the tie now
+            //    holds by itself, takes the next note instead (the Lab corpus's amazing-grace.lys).
+            string cause = "";
+            if (w.SlurHeldInFirstBar > 0)
+                cause += $". {w.SlurHeldInFirstBar} note(s) of that bar are inside a slur and take no " +
+                         "syllable (a slur holds its syllable, as in LilyPond); if the slur only marks " +
+                         "phrasing, write it as @phrasingSlur ... @!phrasingSlur, which holds none";
+            if (w.TieHeldInFirstBar > 0)
+                cause += $". {w.TieHeldInFirstBar} note(s) of that bar are reached by a tie and take no " +
+                         "syllable (the tie already holds the one before); a lyric '~' or '_' written " +
+                         "for a tied note now takes the next note - drop it";
             _diagnostics.Warning(w.Span, DiagnosticCodes.LyricSyllableOverflow,
                 $"lyric syllable '{w.FirstSyllable}' (bar {w.FirstBar} of its lyrics line) " +
-                $"has no note to align with; {tail}");
+                $"has no note to align with; {tail}{cause}");
         }
     }
 }

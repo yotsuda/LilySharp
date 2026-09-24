@@ -18,6 +18,8 @@ for them by eye. The repository's
 - **A slur or a tie holds its lyric syllable, as in LilyPond** — under `lyrics … sings`, the notes
   inside a slur (after its first) and a note a tie arrives at take no syllable: `c4( d e) f` with
   `la __ lu` puts `lu` on f. `__` is the extender line and takes no note; `_` still takes one.
+  When a lyric line then runs out of notes, the warning says which slur or tie held them and what
+  to write instead (`@phrasingSlur` for a phrasing-only slur; drop a `~` written for a tied note).
 - **An instrument preset has one name** — fourteen second names are gone: `uke`,
   `acoustic-guitar`, `electric-guitar`, `bass-guitar`, `electric-bass`, `5-string-bass`,
   `6-string-bass`, `double-bass`, `french-horn`, `piano-treble`, `piano-bass`, `voice-soprano`,
@@ -49,6 +51,15 @@ for them by eye. The repository's
 - **The preview re-engraves only what a keystroke changed** and receives only the pages that
   changed; the Problems panel shares the preview's work instead of compiling the book again.
 - **The language server starts in about half the time.**
+- **A CodeLens over each section's first declaration** — `Section A · 2 bars · melody, chords 'harmony'
+  · 2× in form main` (counted by kind when many write it: `11 parts, 1 chord row`), or
+  `Section A · ⚠ 9 bars in flute, 8 bars in the other 11 · …` when they disagree, and `in no form`
+  for a section nothing plays. A section is one span of time however many parts write it; a
+  later declaration of it gets a line only when its length differs from what most of the
+  others write (`⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts`). A click lists everything that writes it.
+- **A section written at different lengths is one problem, not one per part** — grouped by bar
+  count, placed on the odd one out, and with every part and track listed under it as a link. Its
+  quick fix pads all the shorter ones at once.
 
 ### Engraving
 
