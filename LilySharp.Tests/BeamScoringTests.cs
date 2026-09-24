@@ -173,6 +173,44 @@ public class BeamScoringTests
             $"Beam should adjust position due to collision. Without: {leftYWithout}, With: {leftYWith}");
     }
 
+    /// <summary>
+    /// The collision padding a beam scores with is the detail (0.35) times the BEAM's
+    /// length-fraction squared — 0.224 for a grace beam's 0.8 — so an object 0.25 over the
+    /// beam's top edge charges a full-size beam and not a grace one (HANDOFF §2 R9⒝).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/beam-quanting.cc:110-117 Beam_quant_parameters::fill —
+    /// COLLISION_PADDING × sqr (length-fraction).</remarks>
+    [Fact]
+    public void BeamScoringProblem_CollisionPadding_ShrinksWithTheBeamsLengthFractionSquared()
+    {
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(0), 1, 0, 1, 0, 0),
+            new BeamMember(CreateNote(0), 1, 1, 1, 0, 1),
+            new BeamMember(CreateNote(0), 1, 1, 0, 0, 2));
+        var group = new BeamGroup(members, 0, 0, stemUp: true);
+        var xPositions = new List<double> { 50.0, 75.0, 100.0 };
+
+        (double Left, double Right) Solve(double fraction, double thickness, bool withObject)
+        {
+            var bare = new BeamScoringProblem(group, xPositions,
+                lengthFraction: fraction, beamThickness: thickness).Solve();
+            if (!withObject)
+                return bare;
+            // 0.25 above the drawn top edge (Solve answers in positions, the object speaks
+            // spaces): inside a full-size beam's 0.35, outside a grace beam's 0.224.
+            double top = bare.Item1 / 2 + thickness / 2;
+            var collisions = new List<BeamCollision>
+            {
+                new BeamCollision(X: 25.0, MinY: top + 0.25, MaxY: top + 1.25, BasePenalty: 100.0)
+            };
+            return new BeamScoringProblem(group, xPositions, collisions: collisions,
+                lengthFraction: fraction, beamThickness: thickness).Solve();
+        }
+
+        Assert.NotEqual(Solve(1.0, 0.48, false), Solve(1.0, 0.48, true));
+        Assert.Equal(Solve(0.8, 0.384, false), Solve(0.8, 0.384, true));
+    }
+
     [Fact]
     public void BeamScoringProblem_CrossStaff_AppliesPenaltyMultiplier()
     {

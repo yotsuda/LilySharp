@@ -176,7 +176,6 @@ public class SlurScoringProblemTests
         Assert.Equal(0.2, p.GapToStafflineInside);
         Assert.Equal(0.1, p.GapToStafflineOutside);
         Assert.Equal(0.3, p.ExtraEncompassFreeDistance);
-        Assert.Equal(0.8, p.ExtraEncompassCollisionDistance);
         Assert.Equal(3.0, p.HeadSlurDistanceMaxRatio);
         Assert.Equal(10.0, p.HeadSlurDistanceFactor);
         Assert.Equal(0.3, p.AbsoluteClosenessMeasure);

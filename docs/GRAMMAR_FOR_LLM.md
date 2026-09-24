@@ -178,7 +178,7 @@ one, put it where `c4 d e f |` sits in the minimal document.
 
 ## Pitches
 
-- Names: `c d e f g a b`. Sharp `is`, flat `es`: `cis`=C#, `ees`=Eb, `cisis`=C##, `eses`=Dbb.
+- Names: `c d e f g a b`. Sharp `is`, flat `es`: `cis`=C#, `ees`=Eb, `cisis`=C##, `deses`=Dbb. E/A flats also contract: `es`=`ees`, `as`=`aes`, `eses`=`eeses`, `ases`=`aeses`.
 - Octave: `'` up one, `,` down one (repeatable: `''`, `,,`).
 - Default octave is C4. Each bare pitch takes the octave nearest the previous note
   (an interval of a fourth or less); `'`/`,` shift from there.

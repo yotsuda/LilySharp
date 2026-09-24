@@ -53,6 +53,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Added
 
+- **`eses` and `ases` are E double flat and A double flat**, as in LilyPond, alongside
+  `eeses` / `aeses` — the double-flat forms of the `es` / `as` contractions already accepted.
+  They used to be read as undefined names; `key ases major` works too.
+
 - **The `.mid` gives every part its own track, channel and General MIDI sound.** Until now
   every part of every book went into one track on channel 1 with no program change, so any MIDI
   player sounded the whole score as a piano. A part's sound comes from its `instrument` preset

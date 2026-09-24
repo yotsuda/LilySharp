@@ -87,14 +87,6 @@ internal static partial class SpacingRules
         // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
         idealDistance += CalculateStemCorrection(prevItem, nextItem, np, so.Increment);
 
-        // LILYPOND-REF: lily/note-spacing.cc:229-264 strict_note_spacing
-        // In strict mode, enforce minimum distance = duration-based ideal distance.
-        // This prevents compression below proportional spacing.
-        if (np.StrictNoteSpacing)
-        {
-            minDistance = Math.Max(minDistance, idealDistance);
-        }
-
         // A whole-display tremolo pair whose RIGHT half carries accidentals gets the
         // Beam's minimum-length as a spacing rod between its two columns, so the
         // gapped beam keeps printable width past the accidentals. MEASURED: the

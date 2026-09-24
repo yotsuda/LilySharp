@@ -114,8 +114,8 @@ public sealed class PitchSyntax : SyntaxNode
     /// The base pitch name (c, d, e, f, g, a, b) with accidentals.
     /// </summary>
     /// <remarks>
-    /// The lexer emits LilyPond's Dutch contractions <c>es</c>/<c>as</c> verbatim;
-    /// normalize them to the canonical flats <c>ees</c>/<c>aes</c> here so every
+    /// The lexer emits LilyPond's Dutch contractions <c>es</c>/<c>as</c>/<c>eses</c>/<c>ases</c>
+    /// verbatim; normalize them to the canonical <c>ees</c>/<c>aes</c>/<c>eeses</c>/<c>aeses</c> here so every
     /// decoder (BaseName / Accidental / AccidentalOffset / exporters) sees a known
     /// spelling. The raw token text is untouched, so source spans stay correct.
     /// <para>
@@ -155,6 +155,8 @@ public sealed class PitchSyntax : SyntaxNode
     {
         "es" => "ees",
         "as" => "aes",
+        "eses" => "eeses",
+        "ases" => "aeses",
         var t => t,
     };
 

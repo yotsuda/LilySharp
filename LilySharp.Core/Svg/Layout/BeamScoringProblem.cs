@@ -120,6 +120,9 @@ internal sealed class BeamScoringProblem
     // above — see the note where it is assigned. Buys the beam translation and the
     // forbidden-quant weighting.
     private double _beamLengthFraction;
+    // The collision padding this beam scores with — the detail scaled by its own
+    // length-fraction squared (see Bind).
+    private double _collisionPadding;
 
     // …carried as the details record the three calc_stem_info readers share. THREE, counted
     // by grep: CalculateInitialPosition, ScoreStemLengths and the knee seed. The maximum-count
@@ -591,6 +594,13 @@ internal sealed class BeamScoringProblem
         // ly/engraver-init.ly:1238 overrides the Beam's alone (0.62) and \tabFullNotation
         // hands the Stem its ordinary details back.
         _beamLengthFraction = beamLengthFraction ?? lengthFraction;
+        // LILYPOND-REF: lily/beam-quanting.cc:110-117 Beam_quant_parameters::fill —
+        //   COLLISION_PADDING = the collision-padding detail × sqr (the BEAM's length-fraction):
+        //   "for grace notes, beams get scaled down to 80%, but glyphs go down to 63% … we take
+        //   the square of the length fraction". It reads the beam grob's property, so a TAB
+        //   beam (0.62, ly/engraver-init.ly) is scaled too, not only a grace one. Until
+        //   2026-09-24 Lily# scored every beam at the bare 0.35 (HANDOFF §2 R9⒝).
+        _collisionPadding = _parameters.CollisionPadding * _beamLengthFraction * _beamLengthFraction;
         _beamTranslation = EngravingDefaults.BeamTranslationOf(
             beamThickness, _beamLengthFraction, _maxBeamCount, lineThickness);
         _lengthFraction = lengthFraction;
@@ -1967,7 +1977,7 @@ internal sealed class BeamScoringProblem
 
             // LILYPOND-REF: lily/beam-quanting.cc:1388-1397 scale_free, collision_demerit
             double scaleFree =
-                Math.Max(_parameters.CollisionPadding - dist, 0.0) / _parameters.CollisionPadding;
+                Math.Max(_collisionPadding - dist, 0.0) / _collisionPadding;
             double collisionDemerit = collision.BasePenalty
                                      * Math.Pow(scaleFree, 3)
                                      * _parameters.CollisionPenalty;

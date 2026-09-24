@@ -288,8 +288,14 @@ internal sealed partial class Parser
             // tokens without running ParseMusicItem, so it would strand them. The
             // music-block loops already drain the queue first in their while-condition;
             // do the same here so the top level is not the one place that skips it.
+            //
+            // Nor while LYS0020 is still unreported and the item is top-level music: it is
+            // reported ONCE per file, at the first such item, so every later one is
+            // diagnostic-free and adoptable — delete the first and the adopted second would
+            // carry the file's only music with no error (HANDOFF §2 R12⒜, session 571).
             if (_pendingPostEventMarkers.Count == 0
                 && _reuse != null && _reuse.TryGet(_textPosition, out var reused)
+                && (_topLevelMusicReported || !IsTopLevelMusicStart())
                 && TryAdoptTokens(reused))
             {
                 members.Add(reused);

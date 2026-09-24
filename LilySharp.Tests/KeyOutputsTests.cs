@@ -108,6 +108,8 @@ public class KeyOutputsTests
     [Theory]
     [InlineData("es major", "ees major")]
     [InlineData("as major", "aes major")]
+    [InlineData("eses major", "eeses major")]
+    [InlineData("ases minor", "aeses minor")]
     [InlineData("ees, major", "ees major")]
     public void ADutchContractionIsItsLongSpellingInEveryOutput(string shortForm, string longForm)
     {

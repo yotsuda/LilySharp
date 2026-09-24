@@ -149,22 +149,7 @@ internal sealed record PageBreakingParameters
     /// <remarks>LILYPOND-REF: lily/page-breaking.cc:1561-1562 page_weighting = paper's "page-spacing-weight", default 10</remarks>
     public double PageSpacingWeight { get; init; } = 10;
 
-    /// <summary>
-    /// Whether to use tight spacing (emergency compression when pages overflow).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/include/constrained-breaking.hh tight_spacing_
-    /// When enabled, spacing between systems is reduced to fit more content
-    /// on each page, preventing overflow at the cost of tighter layout.
-    /// </remarks>
-    public bool TightSpacing { get; init; } = false;
-
-    /// <summary>
-    /// Compression factor for tight spacing mode (0..1, where 1 = no compression).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc — tight spacing multiplier
-    /// Applied to basic-distance and padding when TightSpacing is active.
-    /// </remarks>
-    public double TightSpacingFactor { get; init; } = 0.7;
+    // (TightSpacing and TightSpacingFactor stood here until session 570: nothing set them, and
+    // what they did — scale the inter-system basic-distance and padding by 0.7 — is not what
+    // LilyPond's tight_spacing_ is. HANDOFF §2 R8⒠.)
 }

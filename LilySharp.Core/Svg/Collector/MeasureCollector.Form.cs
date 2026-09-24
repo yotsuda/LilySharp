@@ -1296,7 +1296,7 @@ public sealed partial class MeasureCollector
         musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset,
             Music.PhraseAnchor.AnchorStep(expression,
                 n => _variables.TryGetValue(n, out var nested) ? nested : null),
-            callSite?.Span)));
+            callSite?.Span, name)));
 
         // A phrase body may itself reference other phrases (phrase x { y }): expand a
         // nested reference IN PLACE — recursing into its own fresh frame — instead of
@@ -1327,7 +1327,7 @@ public sealed partial class MeasureCollector
         // The reference's SPAN (trivia excluded), so the end marker and the next
         // reference's reset marker never share a position — two zero-width markers at
         // one address would satisfy the resume's address check for each other.
-        musicNodes.Add(new GreenSite(PhraseEndMarker.At(callSite?.Span.End ?? 0)));
+        musicNodes.Add(new GreenSite(PhraseEndMarker.At(callSite?.Span.End ?? 0, name)));
         activeRefs.Remove(name);
     }
 

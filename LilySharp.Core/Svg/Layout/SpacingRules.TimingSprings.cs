@@ -48,14 +48,6 @@ internal static partial class SpacingRules
         // min_distance for timing springs (no skyline collision)
         double minDistance = defaultMin;
 
-        // LILYPOND-REF: lily/note-spacing.cc:229-264 strict_note_spacing
-        // In strict mode, enforce minimum distance = ideal distance for proportional spacing
-        var np = noteParams ?? NoteSpacingParameters.Default;
-        if (np.StrictNoteSpacing)
-        {
-            minDistance = Math.Max(minDistance, idealDistance);
-        }
-
         // LILYPOND-REF: lily/spacing-basic.cc:115 note_spacing() - inverse_stretch
         double inverseStretchStrength = Math.Max(0.1, idealDistance - defaultMin);
 
@@ -128,10 +120,6 @@ internal static partial class SpacingRules
         // skyline rod computed in CreateInterColumnSpring — the ideal need not reserve a full head.
         double idealDistance = fraction * len;
         double minDistance = fraction * defaultMin;
-
-        var np = noteParams ?? NoteSpacingParameters.Default;
-        if (np.StrictNoteSpacing)
-            minDistance = Math.Max(minDistance, idealDistance);
 
         // LILYPOND-REF: lily/spacing-basic.cc:160-161 — inverse_stretch_strength = fraction * max(0.1, len - min)
         double inverseStretchStrength = Math.Max(0.1, fraction * Math.Max(0.1, len - defaultMin));

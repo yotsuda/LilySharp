@@ -115,7 +115,7 @@
 - **:871** column allows only 0.3 of movement) is not ported: every edge here
 - **:1258** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
-- **:341** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
+- **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
 - **:124** order, so the warning has nothing to fire on and is not ported.
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
@@ -138,7 +138,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（57 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2577** container, and the value stops being unobserved with the line above.
+- **:2612** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:628** no observer; add the paren widths when a book brings one. The unpacked
 - **:630** bare glyph width, which is exact for one and unobserved for many.
@@ -221,7 +221,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:275** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
-- **:425** rest. No point observes it — see the branch below.
+- **:413** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:513** so removing the floor here would be an unobserved change to degenerate ties rather
 - **:1286** observed by: NOTHING. No ledger point measures a dotted tie
@@ -238,9 +238,9 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（160 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2572** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4546** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5969** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2607** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:4585** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:6008** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -290,8 +290,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2585** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4777** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2589** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4788** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -320,9 +320,9 @@
 - **:284** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
 - **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
-- **:250** LILYSHARP-OWN, owner's decision 2026-09-24 (session 569, The Final Countdown's tab). On
-- **:556** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1550** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:253** LILYSHARP-OWN, owner's decision 2026-09-24 (session 569, The Final Countdown's tab). On
+- **:559** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
+- **:1560** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/BendAfterGeometry.cs`
 - **:50** The interval a fall drops and a doit rises, in staff POSITIONS. LILYSHARP-OWN:
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
@@ -414,7 +414,7 @@
 - **:2596** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
 - **:2642** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
-- **:75** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
+- **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1174** system would hand back marks placed without the labels under them. LILYSHARP-OWN
 - **:3308** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
@@ -469,7 +469,7 @@
 ### `LilySharp.Core/Svg/Model/Measure.cs`
 - **:278** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
-- **:927** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+- **:929** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **:120** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`

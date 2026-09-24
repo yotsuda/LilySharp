@@ -55,7 +55,7 @@ public static class ScoreHomeKey
     {
         var home = KeyTonic.CMajor;
         foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
-            if (!IsInsideMusicContent(key))
+            if (!IsInsideMusicContent(key, excludePartHeader: true))
                 home = KeyTonic.Of(key);
         return home;
     }
@@ -70,7 +70,7 @@ public static class ScoreHomeKey
     {
         int sharps = 0;
         foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
-            if (!IsInsideMusicContent(key) && !key.IsCustom)
+            if (!IsInsideMusicContent(key, excludePartHeader: false) && !key.IsCustom)
                 sharps = KeySpelling.SharpsFor(
                     key.Pitch.ToFullString().Trim().ToLowerInvariant(),
                     key.Mode.Text.ToLowerInvariant()) ?? 0;
@@ -87,19 +87,50 @@ public static class ScoreHomeKey
     {
         KeySignatureSyntax? home = null;
         foreach (var key in root.DescendantNodes<KeySignatureSyntax>())
-            if (!IsInsideMusicContent(key))
+            if (!IsInsideMusicContent(key, excludePartHeader: true))
                 home = key;
         return home;
     }
 
-    // A key inside a section/phrase/part is a modulation, not the score home.
-    // Mirrors MeasureCollector / MusicXmlExporter IsInsideMusicContent.
-    private static bool IsInsideMusicContent(SyntaxNode node)
+    /// <summary>
+    /// The key a part's HEADER states (<c>part p { key bes major … }</c>, outside its sections),
+    /// or null — that part's own home, which the page opens it in and restores it to at a section
+    /// boundary (MeasureCollector.GetPartDefaults), ahead of the file-level one.
+    /// </summary>
+    public static KeySignatureSyntax? PartHeaderDeclaration(PartDeclarationSyntax? part)
+    {
+        if (part == null) return null;
+        KeySignatureSyntax? home = null;
+        foreach (var key in part.DescendantNodes<KeySignatureSyntax>())
+            if (NearestContainer(key) == part)
+                home = key;
+        return home;
+    }
+
+    // A key inside a section/phrase/part cell is a modulation, not the score home.
+    // ⚠️ A PART HEADER'S key is that part's default, not the file's (MeasureCollector's own
+    // IsInsideMusicContent excludes PartDeclarationSyntax for exactly this reason): Read and
+    // Declaration exclude it, so the phrase auto-transpose home is the page's (HANDOFF §2 R12⒞,
+    // session 570 — a part's header key used to become EVERY part's home, the last part's
+    // winning). Sharps still counts it: the MIDI exporter's scale-degree reset reads that, and
+    // moving it is a separate question.
+    private static bool IsInsideMusicContent(SyntaxNode node, bool excludePartHeader)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
             if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
-                or VariableDeclarationSyntax or PartBlockSyntax)
+                or VariableDeclarationSyntax or PartBlockSyntax
+                || (excludePartHeader && p is PartDeclarationSyntax))
                 return true;
         return false;
+    }
+
+    /// <summary>The nearest enclosing declaration or cell of <paramref name="node"/>.</summary>
+    internal static SyntaxNode? NearestContainer(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
+                or VariableDeclarationSyntax or PartBlockSyntax or PartDeclarationSyntax)
+                return p;
+        return null;
     }
 }

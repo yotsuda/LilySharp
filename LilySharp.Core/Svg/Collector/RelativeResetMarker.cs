@@ -49,6 +49,11 @@ internal sealed class RelativeResetMarker : SyntaxNode
     /// or after the expanded body is invalidated by an edit at the reference itself.</summary>
     public int CallSiteEnd { get; }
 
+    /// <summary>The phrase this marker opens, or null (a parallel span's fresh frame, a grace
+    /// body's expansion). The walk keeps the names of the phrases it is inside, so a cue region
+    /// gathered LATER inside one cannot expand it again (see MeasureCollector._openPhrases).</summary>
+    public string? PhraseName { get; }
+
     /// <summary>A phrase reference's reset marker, positioned AT the reference (its full
     /// span start): the flattened node stream then carries the call site's address —
     /// the checkpoint captured before it, and the address a resume revalidates, name
@@ -58,17 +63,20 @@ internal sealed class RelativeResetMarker : SyntaxNode
     /// one and the address check could not tell; the walk resumed one node late and a
     /// measure was lost.) Reuses <see cref="Instance"/> for a bare anchorless marker
     /// without a call site.</summary>
-    public static RelativeResetMarker For(int octaveOffset, int? anchorStep = null, TextSpan? callSite = null)
-        => callSite == null && octaveOffset == 0 && anchorStep == null
+    public static RelativeResetMarker For(int octaveOffset, int? anchorStep = null, TextSpan? callSite = null,
+        string? phraseName = null)
+        => callSite == null && octaveOffset == 0 && anchorStep == null && phraseName == null
             ? Instance
-            : new RelativeResetMarker(octaveOffset, anchorStep, callSite);
+            : new RelativeResetMarker(octaveOffset, anchorStep, callSite, phraseName);
 
-    private RelativeResetMarker(int octaveOffset, int? anchorStep, TextSpan? callSite = null)
+    private RelativeResetMarker(int octaveOffset, int? anchorStep, TextSpan? callSite = null,
+        string? phraseName = null)
         : base(MarkerGreen.Shared, parent: null, position: callSite?.Start ?? 0)
     {
         OctaveOffset = octaveOffset;
         AnchorStep = anchorStep;
         CallSiteEnd = callSite?.End ?? 0;
+        PhraseName = phraseName;
     }
 
     private sealed class MarkerGreen : GreenNode
@@ -91,11 +99,16 @@ internal sealed class PhraseEndMarker : SyntaxNode
     /// <summary>An end marker positioned at the END of the reference's text (see
     /// <see cref="RelativeResetMarker.For"/>): the boundary after an expansion carries
     /// the call site's end as its address. <see cref="Instance"/> for none.</summary>
-    public static PhraseEndMarker At(int position) => position <= 0 ? Instance : new(position);
+    public static PhraseEndMarker At(int position, string? phraseName = null)
+        => position <= 0 && phraseName == null ? Instance : new(position, phraseName);
 
-    private PhraseEndMarker(int position)
-        : base(MarkerGreen.Shared, parent: null, position: position)
+    /// <summary>The phrase this marker closes — the paired reset marker's name.</summary>
+    public string? PhraseName { get; }
+
+    private PhraseEndMarker(int position, string? phraseName = null)
+        : base(MarkerGreen.Shared, parent: null, position: Math.Max(0, position))
     {
+        PhraseName = phraseName;
     }
 
     private sealed class MarkerGreen : GreenNode

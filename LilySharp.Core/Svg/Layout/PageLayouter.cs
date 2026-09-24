@@ -713,17 +713,6 @@ internal sealed class PageLayouter
                     // with HalfFirst; the single-page path's with ToFirst.
                     emptySilhouetteHalfFirstFallback: true);
 
-                // LILYPOND-REF: lily/include/constrained-breaking.hh tight_spacing_
-                // In tight spacing mode, compress basic distance and padding
-                double basicDist = spec.BasicDistance;
-                double padding = spec.Padding;
-                if (_options.PageBreaking.TightSpacing)
-                {
-                    double factor = _options.PageBreaking.TightSpacingFactor;
-                    basicDist *= factor;
-                    padding *= factor;
-                }
-
                 // LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system —
                 // the inter-system minimum distance is the skyline distance plus
                 // the spec's padding, and it reaches the spring as a FLOOR through
@@ -731,16 +720,14 @@ internal sealed class PageLayouter
                 // (LP's in-note-system-padding folds into the skyline only when a
                 // system carries an in-note stencil, which Lily# never renders, so
                 // it can never contribute to a plain system-to-system spring.)
-                springs.Add(LayoutUtilities.CreateSpring(
-                    spec with { BasicDistance = basicDist, Padding = padding },
-                    skylineDistance + padding));
+                springs.Add(LayoutUtilities.CreateSpring(spec, skylineDistance + spec.Padding));
                 // The raw pair minimum is named here because it is the one term of the rod
                 // the Spring cannot be asked for afterwards: what reaches it is
                 // skylineDistance + padding, already maxed against the spec's own minimum.
                 springLabels?.Add($"system-system sys {sysIdx + 1}→{sysIdx + 2} "
                     + $"(pair min {skylineDistance:F3}"
                     + (hasSkylines ? $", skyline raw {rawDist:F3}" : ", no skylines")
-                    + $" + padding {padding:F3})");
+                    + $" + padding {spec.Padding:F3})");
             }
         }
 

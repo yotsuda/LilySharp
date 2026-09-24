@@ -359,7 +359,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         TextSpan? leadInSpan = null)
     {
         var measures = SplitIntoMeasures(items, startPos, out var voiceSpans, out var repeatSpans,
-            out bool tailUnclosed);
+            out var phraseSpans, out bool tailUnclosed);
 
         // The (section, part) cell this stream IS — only a section's own top-level stream
         // (not a repeat body, not a span's later voice) has neighbours in the form whose
@@ -456,16 +456,19 @@ internal sealed class MeasureValidator : ISemanticValidator
             // Voice spans and repeats, merged in item order: count up to each address,
             // snapshot, then carry on — one spelling of the beat count
             // (MeasureDurations), just read in segments.
-            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep)>();
+            var cuts = new List<(int ItemIndex, ParallelExpressionSyntax? Span, RepeatExpressionSyntax? Rep, List<SyntaxNode>? Phrase)>();
             foreach (var vs in voiceSpans)
                 if (vs.MeasureIndex == i)
-                    cuts.Add((vs.ItemIndex, vs.Span, null));
+                    cuts.Add((vs.ItemIndex, vs.Span, null, null));
             foreach (var rs in repeatSpans)
                 if (rs.MeasureIndex == i)
-                    cuts.Add((rs.ItemIndex, null, rs.Rep));
+                    cuts.Add((rs.ItemIndex, null, rs.Rep, null));
+            foreach (var ps in phraseSpans)
+                if (ps.MeasureIndex == i)
+                    cuts.Add((ps.ItemIndex, null, null, ps.Body));
             cuts.Sort((a, b) => a.ItemIndex.CompareTo(b.ItemIndex));
             int from = 0;
-            foreach (var (itemIndex, span, rep) in cuts)
+            foreach (var (itemIndex, span, rep, phrase) in cuts)
             {
                 AdoptMeters(from, itemIndex);
                 total += MeasureDurations.CalculateMeasureDuration(
@@ -474,6 +477,33 @@ internal sealed class MeasureValidator : ISemanticValidator
                 if (span != null)
                 {
                     spanEntry.Add((span, total, defaultDuration));
+                    continue;
+                }
+
+                // A phrase reference whose body is plain music plays IN PLACE, as the
+                // collector walks it (MeasureModel.Flatten expands it the same way): the
+                // body's beats join this bar's tally, a body barline closes the bar where the
+                // tally stands, and the body's trailing chunk is the start of the bar the
+                // enclosing music goes on to fill. The note value restarts at a quarter (the
+                // collector's EnterDefaultFrame) and the body's exit value carries on after it.
+                // As an opaque zero-duration item 'riff e f |' with riff = 'c4 d' read as a
+                // half bar (HANDOFF §2 R12⒝, session 571). The bar a body barline closes is not
+                // re-judged here — the phrase's own block is validated where it is declared.
+                if (phrase != null)
+                {
+                    var phraseDefault = Fraction.Quarter;
+                    foreach (var bodyItem in phrase)
+                    {
+                        if (bodyItem is BarlineSyntax)
+                        {
+                            if (total != Fraction.Zero)
+                                renderedBarsClosed++;
+                            total = Fraction.Zero;
+                            continue;
+                        }
+                        total += MeasureDurations.ItemDuration(bodyItem, ref phraseDefault);
+                    }
+                    defaultDuration = phraseDefault;
                     continue;
                 }
 
@@ -885,15 +915,55 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// <see cref="MeasureDurations.ItemDuration"/>).</summary>
     private readonly record struct RepeatSpan(int MeasureIndex, int ItemIndex, RepeatExpressionSyntax Rep);
 
+    /// <summary>A phrase reference whose body flows through the bar accounting (see
+    /// <see cref="FlowingPhraseBody"/>) — same address scheme as <see cref="VoiceSpan"/>.</summary>
+    private readonly record struct PhraseSpan(int MeasureIndex, int ItemIndex, List<SyntaxNode> Body);
+
+    /// <summary>The body items of the phrase <paramref name="reference"/> names, when every one
+    /// is priced exactly by <see cref="MeasureDurations.ItemDuration"/> or occupies no time
+    /// (a marker, a key or clef change, a break); else null, and the reference stays an opaque
+    /// zero-duration item. A meter change, a nested reference, a repeat, a voice span or a
+    /// multi-bar rest keeps it opaque — pricing only part of such a body would invent misfills.</summary>
+    private List<SyntaxNode>? FlowingPhraseBody(VariableReferenceSyntax reference)
+    {
+        if (!_phraseBodies.TryGetValue(reference.Name.Text, out var body) || body is not MusicBlockSyntax block)
+            return null;
+        var items = new List<SyntaxNode>();
+        foreach (var item in block.Items)
+        {
+            switch (item)
+            {
+                case NoteSyntax or DrumNoteSyntax or ChordSyntax or ChordRepetitionSyntax
+                    or SlashNoteSyntax or BareDurationSyntax
+                    or TupletExpressionSyntax or ArpeggioSyntax or GraceExpressionSyntax
+                    or CueExpressionSyntax or BarlineSyntax
+                    or TieSyntax or SlurSyntax or BeamMarkerSyntax
+                    or KeySignatureSyntax or ClefDeclarationSyntax or BreakSyntax:
+                    break;
+                case RestSyntax rest when rest.MeasureCount <= 1:
+                    break;
+                case RepeatExpressionSyntax trem when trem.RepeatType.Text == "tremolo"
+                    && int.TryParse(trem.Count.Text, out _):
+                    break;
+                default:
+                    return null;
+            }
+            items.Add(item);
+        }
+        return items;
+    }
+
     /// <param name="tailUnclosed">True when the stream ended with music after its last
     /// barline — the final measure is then an OPEN chunk, not a bar anyone closed.</param>
     private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos,
-        out List<VoiceSpan> voiceSpans, out List<RepeatSpan> repeatSpans, out bool tailUnclosed)
+        out List<VoiceSpan> voiceSpans, out List<RepeatSpan> repeatSpans, out List<PhraseSpan> phraseSpans,
+        out bool tailUnclosed)
     {
         var measures = new List<MeasureContent>();
         var currentItems = new List<SyntaxNode>();
         var spans = new List<VoiceSpan>();
         var repeats = new List<RepeatSpan>();
+        var phrases = new List<PhraseSpan>();
         int startPos = blockStartPos;
 
         void AddItems(IEnumerable<SyntaxNode> items)
@@ -940,6 +1010,14 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // invisible because they were written inside an ending.
                     AddItems(volta.Items);
                 }
+                else if (item is CueExpressionSyntax cue && cue.Body.Items.Any(c => c is VariableReferenceSyntax))
+                {
+                    // A cue region is priced IN PLACE (MeasureDurations.ItemDuration sums its body
+                    // with the running note value), so walking into it changes no tally — and a
+                    // phrase reference inside it then flows exactly as a bare one does. Only a cue
+                    // that holds one is opened, so every other cue keeps its one-item address.
+                    AddItems(cue.Body.Items);
+                }
                 else if (item is ParallelExpressionSyntax par)
                 {
                     // A voice span is SIMULTANEOUS music, not a sequence. The collector
@@ -962,6 +1040,8 @@ internal sealed class MeasureValidator : ISemanticValidator
                     // repeat opens in.
                     if (item is RepeatExpressionSyntax rep && rep.RepeatType.Text != "tremolo")
                         repeats.Add(new RepeatSpan(measures.Count, currentItems.Count, rep));
+                    else if (item is VariableReferenceSyntax reference && FlowingPhraseBody(reference) is { } body)
+                        phrases.Add(new PhraseSpan(measures.Count, currentItems.Count, body));
                     currentItems.Add(item);
                 }
             }
@@ -977,6 +1057,7 @@ internal sealed class MeasureValidator : ISemanticValidator
 
         voiceSpans = spans;
         repeatSpans = repeats;
+        phraseSpans = phrases;
         return measures;
     }
 }

@@ -54,17 +54,11 @@ internal sealed record NoteSpacingParameters
     // it still defaulted to true, which no drawing depends on. A parameter naming a feature
     // the engine does not implement reads as a ported knob and is worse than its absence.)
 
-    /// <summary>
-    /// When true, enforces strictly proportional spacing based on duration.
-    /// In strict mode, the minimum distance equals the duration-based ideal distance,
-    /// preventing compression below proportional spacing.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/note-spacing.cc:229-264 strict_note_spacing
-    /// Used with \set SpacingSpanner.strict-note-spacing = ##t
-    /// Commonly used in multi-voice scores for uniform column alignment.
-    /// </remarks>
-    public bool StrictNoteSpacing { get; init; } = false;
+    // (strict-note-spacing stood here until session 570. Nothing set it — only its own tests — and
+    // what it did was Lily#'s: it raised every note spring's minimum to its ideal, under a citation
+    // (note-spacing.cc:229-264) that holds no such rule. LilyPond's property is read once, by
+    // lily/spacing-options.cc:39, into float_nonmusical_columns_ — non-musical columns floated
+    // out of the note spacing — which is a different feature altogether. HANDOFF §2 R7⒠.)
 
     // (base-note-space stood here until session 407. No production reader; its only observer
     // asserted that ShortestDurationSpace * SpacingIncrement is still 2.4, which is a product

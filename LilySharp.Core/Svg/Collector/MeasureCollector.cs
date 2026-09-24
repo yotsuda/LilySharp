@@ -536,6 +536,10 @@ public sealed partial class MeasureCollector
     /// See docs/cue-context-design.md.
     /// </summary>
     private int _cueDepth = 0;
+    // The phrases the walk is inside, pushed and popped by the named reset/end markers
+    // (ProcessMusicNodeSequence). A cue region gathers its body when it is walked, after the
+    // enclosing expansion's cycle guard is gone, so it seeds its own guard from this list.
+    private readonly List<string> _openPhrases = new();
 
     /// <summary>
     /// How deep into <c>grace { }</c> bodies this walk currently is. Non-zero means the items
@@ -2652,6 +2656,9 @@ public sealed partial class MeasureCollector
     {
         _expansionBudget = ExpansionBudgetCap;
         _expansionBudgetExceededAtField = -1;
+        // Balanced by the marker pairs within a walk; cleared per pass so a walk cut short
+        // cannot leave a name that would stop a later cue from expanding it.
+        _openPhrases.Clear();
 
         // The cumulative output tables clear FROM THE REGISTRY that names them
         // (CumulativeSideTables) — a table added there is reset here by construction,
@@ -3130,13 +3137,17 @@ public sealed partial class MeasureCollector
                         if (_probeRecording != null && reset.CallSiteEnd > site.Position)
                             _walkHeaderReads.Add(new HeaderRead(
                                 new TextSpan(site.Position, reset.CallSiteEnd - site.Position), ValueOnly: true));
+                        if (reset.PhraseName is { } opened)
+                            _openPhrases.Add(opened);
                         EnterDefaultFrame(reset.OctaveOffset);
                         EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
                         continue;
                     }
 
-                    if (site.Node is PhraseEndMarker)
+                    if (site.Node is PhraseEndMarker end)
                     {
+                        if (end.PhraseName is { } closed && _openPhrases.LastIndexOf(closed) is var at and >= 0)
+                            _openPhrases.RemoveAt(at);
                         ExitPhraseTranspose();
                         builder.ResetMeasureBoundary(retargetableClose: true);
                         continue;

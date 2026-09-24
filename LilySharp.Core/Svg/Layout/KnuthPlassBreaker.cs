@@ -141,6 +141,7 @@ internal sealed class KnuthPlassBreaker
     [ThreadStatic] private static double[]? t_cumMin;
     [ThreadStatic] private static int[]? t_cumForce;
     [ThreadStatic] private static double[]? t_cumPairMin;
+    [ThreadStatic] private static double[]? t_cumNatural;
 
     private readonly double _lineWidth;
     private readonly double _firstPrefixWidth;
@@ -291,7 +292,10 @@ internal sealed class KnuthPlassBreaker
         // springs). A line i..j−1 collects the pairs strictly inside it:
         // cumPairMin[j−1] − cumPairMin[i]. All zero on an unsung score.
         var cumPairMin = ScratchArray.Take(ref t_cumPairMin, n + 1);
-        cumIdeal[0] = cumInvStretch[0] = cumInvCompress[0] = cumMin[0] = cumPairMin[0] = 0;
+        // Each measure's length at force 0 — LilyPond's configuration_length (0.0), summed:
+        // see NaturalWidthOf.
+        var cumNatural = ScratchArray.Take(ref t_cumNatural, n + 1);
+        cumIdeal[0] = cumInvStretch[0] = cumInvCompress[0] = cumMin[0] = cumPairMin[0] = cumNatural[0] = 0;
         cumForce[0] = 0;
         for (int i = 0; i < n; i++)
         {
@@ -299,6 +303,7 @@ internal sealed class KnuthPlassBreaker
             cumInvStretch[i + 1] = cumInvStretch[i] + springData[i].InverseStretchStrength;
             cumInvCompress[i + 1] = cumInvCompress[i] + springData[i].InverseCompressStrength;
             cumMin[i + 1] = cumMin[i] + springData[i].MinWidth;
+            cumNatural[i + 1] = cumNatural[i] + NaturalWidthOf(springData[i]);
             cumPairMin[i + 1] = cumPairMin[i] + (i + 1 < n
                 ? LyricSpacing.CrossBarPairMinExcess(
                     springData[i].CrossBarLyricPricing, springData[i + 1].CrossBarLyricPricing)
@@ -408,6 +413,8 @@ internal sealed class KnuthPlassBreaker
                 // a mid-line measure. See the constructor's remarks.
                 ApplyLineStartSpring(springData[i],
                     ref idealSum, ref minSum, ref invStretchSum, ref invCompressSum);
+                double naturalSum = cumNatural[j] - cumNatural[i]
+                    + LineStartNaturalDelta(springData[i]);
 
                 // ⚠️ There is deliberately NO "this line is too underfull to consider" rule
                 // here. LilyPond has none: an underfull line is PRICED — a big positive
@@ -419,7 +426,15 @@ internal sealed class KnuthPlassBreaker
                 // availableWidth / (tolerance * 2). It was removed 2026-07-25 with no
                 // observable effect at all: 3286 tests and 87 ledger points unmoved, no
                 // snapshot touched.
-                double effectiveWidth = Math.Max(idealSum, minSum);
+                // The line's length at force 0 — what the ragged penalty measures its
+                // whitespace from and the linear estimate expands or compresses from — is
+                // LilyPond's configuration_length (0.0): every spring at max(min, ideal),
+                // summed, with the lyric rods' extra minimum on top (a rod lengthens the
+                // springs it spans, lily/simple-spacer.cc:92-128 add_rod).
+                // ⚠️ IT WAS max(Σideal, Σmin) until 2026-09-24 (HANDOFF §2 R7⒝): short
+                // wherever a spring whose minimum exceeds its ideal (a blocking spring —
+                // dense accidentals, a wide column) shares a line with ordinary ones.
+                double effectiveWidth = Math.Max(naturalSum, minSum);
 
                 // The line's force: SOLVED over its springs when the measures carry them —
                 // LilyPond fills every candidate line's Line_details by spacing that line
@@ -683,6 +698,38 @@ internal sealed class KnuthPlassBreaker
         invStretchSum += lineStart.InverseStretchStrength - first.Spring0Stretch;
         invCompressSum += lineStart.InverseCompressStrength - first.Spring0Compress;
     }
+
+    /// <summary>
+    /// A measure's length at force 0: its bar lines plus every spring at
+    /// <c>max(min, ideal)</c> — or, for a measure that hands over no springs, the larger of
+    /// its two sums, the finest answer its data allows.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:158-162 configuration_length — the springs'
+    ///   range_len at the force asked; lily/spring.cc:218-228 Spring::length — each spring at
+    ///   <c>max (f, blocking_force_)</c>, which at f = 0 is its minimum when that exceeds its
+    ///   ideal and its ideal otherwise: <c>max (min, ideal)</c>, per spring.
+    /// LILYPOND-REF: lily/spring.cc:62-73 Spring::update_blocking_force — a spring may carry a
+    ///   minimum above its ideal (a positive blocking force), which is why the SUMS' max is
+    ///   not the answer.
+    /// </remarks>
+    internal static double NaturalWidthOf(in MeasureSpringData d)
+    {
+        if (d.Springs.IsDefault)
+            return Math.Max(d.IdealWidth, d.MinWidth);
+        double natural = d.RigidWidth;
+        foreach (var s in d.Springs)
+            natural += Math.Max(s.MinDistance, s.IdealDistance);
+        return natural;
+    }
+
+    /// <summary>What swapping a line's first measure onto its line-start spring does to the
+    /// natural length — the same swap <see cref="ApplyLineStartSpring"/> makes in the sums.</summary>
+    private static double LineStartNaturalDelta(in MeasureSpringData first)
+        => first.LineStartSpring is { } lineStart
+            ? Math.Max(lineStart.MinDistance, lineStart.IdealDistance)
+              - Math.Max(first.Spring0Min, first.Spring0Ideal)
+            : 0;
 
     /// <summary>Break points of the best solution that uses exactly
     /// <paramref name="lines"/> lines, or null if the path is broken.</summary>

@@ -155,7 +155,6 @@ public sealed class LpReferenceCitationTests
         "max_pages|lily/page-spacing.cc",
         "min_pages|lily/page-spacing.cc",
         "Slur_scoring|lily/slur-scoring.cc",
-        "strict_note_spacing|lily/note-spacing.cc",
         "Tuplet_bracket_interface|lily/tuplet-bracket.cc",
     };
 

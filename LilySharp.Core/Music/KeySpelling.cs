@@ -95,10 +95,12 @@ public static class KeySpelling
         // the rest of the word.
         t = t.TrimEnd('\'', ',');
         if (t.Length == 0) return null;
-        // The two contractions PitchSyntax.PitchName normalizes, applied to the same two
-        // letters and no others: `bes` is B flat but `bs` is not a note.
+        // The contractions PitchSyntax.PitchName normalizes, applied to the same two letters
+        // and no others: `bes` is B flat but `bs` is not a note.
         if (t == "es") t = "ees";
         else if (t == "as") t = "aes";
+        else if (t == "eses") t = "eeses";
+        else if (t == "ases") t = "aeses";
         if (!LetterFifths.TryGetValue(t[0], out int fifths)) return null;
         // A sharp is seven fifths up and a flat seven down, so a double is fourteen. The
         // suffixes are exactly the ones the language lexes on a NOTE (PitchSyntax.Accidental);

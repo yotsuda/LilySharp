@@ -25,7 +25,7 @@ Complete reference for the `.lys` music notation language.
 | `isis` | Double sharp | `cisis` = C## |
 | `eses` | Double flat | `deses` = Dbb |
 
-Special forms: `ees` (Eb), `aes` (Ab), `bes` (Bb).
+Special forms: `ees` (Eb), `aes` (Ab), `bes` (Bb). LilyPond's contractions are accepted too: `es` = `ees`, `as` = `aes`, `eses` = `eeses`, `ases` = `aeses`.
 
 Annotations:
 

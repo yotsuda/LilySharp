@@ -1297,13 +1297,18 @@ theme");
         Assert.Equal(-1, pitch.AccidentalOffset);
     }
 
-    // LilyPond's Dutch contractions `es` (E flat) and `as` (A flat) are accepted
-    // alongside `ees`/`aes` and normalize to the same pitch.
+    // LilyPond's Dutch contractions `es`/`as` (E/A flat) and `eses`/`ases` (double flat)
+    // are accepted alongside `ees`/`aes`/`eeses`/`aeses` and normalize to the same pitch
+    // (scm/lily/define-note-names.scm, nederlands — HANDOFF §2 R12⒟).
     [Theory]
     [InlineData("es", 'e', -1)]
     [InlineData("as", 'a', -1)]
     [InlineData("ees", 'e', -1)]
     [InlineData("aes", 'a', -1)]
+    [InlineData("eses", 'e', -2)]
+    [InlineData("ases", 'a', -2)]
+    [InlineData("eeses", 'e', -2)]
+    [InlineData("aeses", 'a', -2)]
     public void PitchSyntax_DutchFlatContractions(string source, char baseName, int offset)
     {
         var tree = MusicSource.Parse(source);

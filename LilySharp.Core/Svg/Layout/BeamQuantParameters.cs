@@ -74,7 +74,7 @@ public sealed record BeamQuantParameters
     /// LILYPOND-REF: scm/define-grobs.scm:508 Beam details — the (collision-padding . 0.35)
     ///   that get_detail actually finds, and so the value that is used.
     /// LILYPOND-REF: lily/beam-quanting.cc:115-117 get_detail (details, collision-padding,
-    ///   0.5) — scaled by length-fraction² for grace beams (which Lily# does not have yet).
+    ///   0.5) — scaled by the beam's length-fraction² (BeamScoringProblem.Bind applies it).
     /// ⚠️ THE 0.5 THERE IS THE FALLBACK FOR A GROB THAT DOES NOT DECLARE THE DETAIL, and
     /// Beam always declares it — so 0.5 is a number LilyPond never uses. Reading it was
     /// worth a whole quant step: with 0.35 a beam clears a covered head at 4.19 and with

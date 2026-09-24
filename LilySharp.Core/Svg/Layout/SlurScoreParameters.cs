@@ -145,11 +145,9 @@ public sealed record SlurScoreParameters
     /// </summary>
     public double ExtraEncompassFreeDistance { get; init; } = 0.3;
 
-    /// <summary>
-    /// Collision distance for extra encompass objects.
-    /// LILYPOND-REF: layout-slur.scm: extra-encompass-collision-distance = 0.8
-    /// </summary>
-    public double ExtraEncompassCollisionDistance { get; init; } = 0.8;
+    // (extra-encompass-collision-distance stood here until session 570, read by nothing — and
+    // LilyPond reads it by nothing either: lily/slur-score-parameters.cc:67 stores it into
+    // extra_encompass_collision_distance_, which no scorer uses. HANDOFF §2 R9⒠.)
 
     // --- Distance parameters ---
 

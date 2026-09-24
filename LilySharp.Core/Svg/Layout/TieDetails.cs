@@ -63,11 +63,9 @@ public sealed record TieDetails
     /// </summary>
     public double MinLength { get; init; } = 1.0;
 
-    /// <summary>
-    /// Length limit for ties between notes (staff spaces).
-    /// LILYPOND-REF: define-grobs.scm: between-length-limit = 1.0
-    /// </summary>
-    public double BetweenLengthLimit { get; init; } = 1.0;
+    // (between-length-limit stood here until session 570, read by nothing — and LilyPond reads
+    // it by nothing either: lily/tie-details.cc:52 stores it into between_length_limit_, which no
+    // tie code uses. HANDOFF §2 R9⒠.)
 
     // --- Staff line collision ---
 

@@ -125,9 +125,8 @@ public class CueRegionTests
 
     /// <summary>
     /// …and the bar that holds <c>cue { ph }</c> validates exactly as the bar holding a bare
-    /// <c>ph</c> does. ⚠️ NOT "as the inline body does": the validator reads a phrase reference
-    /// as an opaque item wherever it stands (HANDOFF §2 R12⒝, open), and the cue must not add a
-    /// second answer to that question — this pins only that the region changes nothing.
+    /// <c>ph</c> does — and, since session 571 (HANDOFF §2 R12⒝), both as the inline body does:
+    /// a phrase reference whose body is plain music flows through the bar tally.
     /// </summary>
     [Fact]
     public void APhraseReferencedInsideACue_ValidatesLikeTheBareReference()
@@ -137,6 +136,26 @@ public class CueRegionTests
         var bare = SemanticValidation.Run(SyntaxTree.Parse(Book("phrase ph { e'4 f' }", "c'4 d' ph |")))
             .Select(d => d.Code).OrderBy(c => c).ToList();
         Assert.Equal(bare, inCue);
+        var inline = SemanticValidation.Run(SyntaxTree.Parse(Book("phrase ph { e'4 f' }", "c'4 d' e'4 f' |")))
+            .Select(d => d.Code).OrderBy(c => c).ToList();
+        Assert.Equal(inline, bare);
+    }
+
+    /// <summary>
+    /// A phrase that reaches ITSELF through a cue region renders its acyclic prefix, as any
+    /// other cycle does — the cycle is PhraseCycleValidator's to report. The cue gathers its body
+    /// when it is walked, after the enclosing expansion's cycle guard is gone, and until session
+    /// 571 it expanded the phrase again inside every cue it met: the stack ran out and took
+    /// lysc check (and this test host) with it.
+    /// </summary>
+    [Fact]
+    public void APhraseReachingItselfThroughACue_RendersItsAcyclicPrefix()
+    {
+        var tree = SyntaxTree.Parse(Book("phrase t { c'4 cue { t } }", "t"));
+        var multi = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var notes = multi.StaffGroups[0].Staves[0].PrimaryVoice.Measures
+            .SelectMany(m => m.Items).OfType<NoteItem>().ToList();
+        Assert.Single(notes);
     }
 
     /// <summary>A full document: the exporter walks parts and sections, not a bare block.</summary>

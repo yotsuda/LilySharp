@@ -146,6 +146,13 @@ public sealed class LilyPondExporter
     private int _homeTimeBeats = 4;
     private int _homeTimeBeatType = 4;
     private TimeSignatureSyntax? _homeTimeNode;
+    // The part header's own key (part p { key bes major … } outside its sections), null when it
+    // writes none, and the key sharps a section boundary restores — the part header's, else the
+    // file's (HANDOFF §2 R12⒞; the page: MeasureCollector.GetPartDefaults). A part header cannot
+    // state a meter (LYS1026), so the meter needs no twin of this. Set per part by ArmPartHome
+    // and after EmitScoreSettings.
+    private KeySignatureSyntax? _partHeaderKeyNode;
+    private int _restoreKeySharps;
     // `time none` in force — LilyPond's \cadenzaOn (Timing.timing = ##f). The running flag
     // decides two spellings: a metered `time` after it writes \cadenzaOff first (or LilyPond
     // keeps not counting, draws no bar and numbers nothing), and a written `|` inside it is
@@ -488,6 +495,7 @@ public sealed class LilyPondExporter
                         + " span in it is written with \\\\ (separate voices), while the combined staff"
                         + " reads it as one voice's simultaneous music");
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
+                ArmPartHome(part);
                 string varName = VarName(name);
                 partVars[name] = varName;
                 // An undeclared part has no `octave` or `instrument` to anchor to, so it takes
@@ -545,6 +553,7 @@ public sealed class LilyPondExporter
             // No part at all — neither declared nor named by a score: treat the whole
             // file's music stream as one voice.
             partVars["music"] = "music";
+            ArmPartHome(null);
             _lysClef = ClefType.Treble;
             _partTranspose = EffectiveTranspose(root, "music", render);
             EmitPartVariable("music", TopLevelMusic(root), root);
@@ -1304,11 +1313,20 @@ public sealed class LilyPondExporter
         _lysStep = _lyStep = 0;
         _lysOctave = _lyOctave = _anchorOctave;
         _frameTracked = true;
-        _keySharps = _homeKeySharps;
+        // The running key starts at LilyPond's C major; EmitScoreSettings then writes the file's
+        // key and the part header's (R12⒞: _homeKeySharps counts the part header, so it is not
+        // the file-level start).
+        _keySharps = 0;
         _tonic = _homeTonic;
+        _timeBeats = _homeTimeBeats;
+        _timeBeatType = _homeTimeBeatType;
+        _timeSenza = _homeTimeSenza;
 
-        // Score-level settings (tempo/key/time live at file scope in Lily#).
+        // Score-level settings (tempo/key/time live at file scope in Lily#), then the part
+        // header's own key.
         EmitScoreSettings(root);
+        // What a section boundary restores: the part header's key, else the file's.
+        _restoreKeySharps = _keySharps;
 
         EmitMusicStream(music, indent: "  ");
         _sb.Append("}\n\n");
@@ -1348,6 +1366,13 @@ public sealed class LilyPondExporter
             ? SpellPitch(t.step, t.alt) + OctaveMarks(t.oct)
             : null;
 
+    /// <summary>Arms the part header's key for the part about to be emitted (null part = the
+    /// file's one music stream, which has no header).</summary>
+    private void ArmPartHome(PartDeclarationSyntax? part)
+    {
+        _partHeaderKeyNode = ScoreHomeKey.PartHeaderDeclaration(part);
+    }
+
     private void EmitScoreSettings(CompilationUnitSyntax root)
     {
         // The accidental style, when the score asks for one that is not LilyPond's own
@@ -1379,6 +1404,16 @@ public sealed class LilyPondExporter
                 case TimeSignatureSyntax ts: _sb.Append("  ").Append(EmitTime(ts)).Append('\n'); break;
                 case PartialDeclarationSyntax p: _sb.Append("  ").Append(ArmPartial(p)).Append('\n'); break;
             }
+        }
+
+        // The part header's key (part p { key bes major … }): the page opens the part in it
+        // (MeasureCollector.GetPartDefaults). It is DISPLAY only —
+        // the phrase auto-transpose ambient stays at the file's home, as the page's does
+        // (ResetAmbientTonicToHome reads the file-level key).
+        if (_partHeaderKeyNode is { } partKey)
+        {
+            _sb.Append("  ").Append(EmitKey(partKey)).Append('\n');
+            _tonic = _homeTonic;
         }
     }
 
@@ -2599,6 +2634,8 @@ public sealed class LilyPondExporter
         buf._homeTimeBeatType = _homeTimeBeatType;
         buf._homeTimeSenza = _homeTimeSenza;
         buf._homeTimeNode = _homeTimeNode;
+        buf._partHeaderKeyNode = _partHeaderKeyNode;
+        buf._restoreKeySharps = _restoreKeySharps;
         // The note-value memory goes in with the frame (session 398): a tuplet, cue or repeat
         // body is sequential music on both sides, so its first bare note reads what the
         // stream last wrote — and reads it the same way on both sides only if the buffer
@@ -3291,11 +3328,13 @@ public sealed class LilyPondExporter
                 _timeSenza = false;
             }
         }
-        if (!sp.HasHeaderKey && (_keySharps != _homeKeySharps || _tonic != _homeTonic))
+        if (!sp.HasHeaderKey && (_keySharps != _restoreKeySharps || _tonic != _homeTonic))
         {
-            if (_homeKeyNode != null)
+            if ((_partHeaderKeyNode ?? _homeKeyNode) is { } restoreKey)
             {
-                parts.Add(EmitKey(_homeKeyNode)); // EmitKey advances _keySharps/_tonic
+                parts.Add(EmitKey(restoreKey)); // EmitKey advances _keySharps/_tonic
+                // …but the ambient (phrase auto-transpose) key is the file's home on the page.
+                _tonic = _homeTonic;
             }
             else
             {

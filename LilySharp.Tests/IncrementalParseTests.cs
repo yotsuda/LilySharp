@@ -183,6 +183,21 @@ public class IncrementalParseTests
     }
 
     [Fact]
+    public void WithChange_TopLevelMusicReportedOnce_SurvivesRemovingTheFirst()
+    {
+        // LYS0020 is reported ONCE per file, at the first top-level music item, so the second
+        // one carries no diagnostic and is adoptable. Delete the first and the adopted second
+        // must still be reported — adoption emits nothing (HANDOFF §2 R12⒜, session 571).
+        var src = "{ c4 }\nphrase zz { e4 }\nphrase yy { f4 }\n{ d4 }\n";
+        var old = SyntaxTree.Parse(src);
+        Assert.Single(old.Diagnostics, d => d.Code == DiagnosticCodes.TopLevelMusic);
+
+        var incremental = Edit(old, 0, "{ c4 }\n".Length, "", out var full);
+        Assert.Single(full.Diagnostics, d => d.Code == DiagnosticCodes.TopLevelMusic);
+        AssertTreesEquivalent(full, incremental);
+    }
+
+    [Fact]
     public void WithChanges_MultipleEdits_MatchesFullParse()
     {
         var old = SyntaxTree.Parse(Source);

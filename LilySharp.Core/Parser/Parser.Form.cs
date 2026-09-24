@@ -225,29 +225,32 @@ internal sealed partial class Parser
     /// </summary>
     private SyntaxToken ExpectMarkName()
     {
-        // Navigation keywords are the live case here: this function is reached ONLY from
-        // the form-level `@` item (the single caller is ParseFormItem), where the marks
-        // are @ds.al.fine and friends.
-        //
-        // ⚠️ The integer / RestS / PitchF arms below say they are for figured bass, and
-        // that is the wrong island: figured bass is note-attached (Parser.Music.cs), not
-        // form-level, and its written form is `@fig(6 s)` — the dotted `@fig.6.s` the old
-        // comment showed does not parse anywhere (measured 2026-08-15: LYS0016). They are
-        // kept rather than deleted because "unreachable" is a claim and nothing measures
-        // it; NO corpus book or fixture reaches them. Deleting them is a job for whoever
-        // can show a form-level `@6` is meaningless. (A LILYPOND-REF to
-        // figured-bass-engraver.cc sat on this line and pointed at that wrong island.)
+        // Two callers: the form-level '@' item (ParseMusicMark — @ds.al.fine and friends, and
+        // every part after a '.') and the music stream's terminator '@!X' (ParseArticulations).
         if (Current.Kind is SyntaxKind.Identifier
             or SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
-            or SyntaxKind.AlKeyword
-            or SyntaxKind.IntegerLiteral  // unobserved — see the note above
-            or SyntaxKind.RestS           // unobserved — 's' lexes as a rest
-            or SyntaxKind.PitchF)         // unobserved — 'f' lexes as a pitch
+            or SyntaxKind.AlKeyword)
         {
             return Advance();
         }
+        // Any other WORD glued to the '@' / '@!' / '.' is a mark name too — a letter the lexer
+        // reads as a pitch ('f') or a rest ('s', 'r'), a dynamic ('mf', 'p'), a number ('6') —
+        // so the annotation validator names it ("unknown annotation" / "nothing of that name
+        // can be ended") instead of the parser reporting a token kind. Until session 571 this
+        // was a list of three kinds (IntegerLiteral, RestS, PitchF): '@!f' drew the validator's
+        // warning while '@!mf', '@!p' and '@!r' drew "Expected 'Identifier', found 'DynamicMF'".
+        if (CurrentGluedToPrevious && IsWordText(Current.Text))
+            return Advance();
         return Expect(SyntaxKind.Identifier);
+    }
+
+    private static bool IsWordText(string text)
+    {
+        if (text.Length == 0) return false;
+        foreach (char c in text)
+            if (!char.IsLetterOrDigit(c) && c != '_') return false;
+        return true;
     }
 
     /// <summary>

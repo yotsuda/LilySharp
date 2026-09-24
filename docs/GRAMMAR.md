@@ -70,7 +70,8 @@ Accidental     = 'is' | 'es' | 'isis' | 'eses' ;   (* sharp / flat / double *)
 OctaveUp       = { '\'' }+ ;
 OctaveDown     = { ',' }+ ;
 Octave         = OctaveUp | OctaveDown | ε ;
-PitchToken     = PitchBase , [ Accidental ] , Octave ;
+PitchToken     = ( PitchBase , [ Accidental ] | Contraction ) , Octave ;
+Contraction    = 'es' | 'as' | 'eses' | 'ases' ;   (* = ees / aes / eeses / aeses, as LilyPond's nederlands *)
 
 (* Octaves default to RELATIVE: each bare pitch lands in the octave nearest the
    previous pitch (an interval of a fourth or less), then any '/',' marks shift it;

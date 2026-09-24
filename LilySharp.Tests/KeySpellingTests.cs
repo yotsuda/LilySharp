@@ -123,6 +123,8 @@ public class KeySpellingTests
     [Theory]
     [InlineData("es", -3)] [InlineData("ees", -3)]
     [InlineData("as", -4)] [InlineData("aes", -4)]
+    [InlineData("eses", -10)] [InlineData("eeses", -10)]
+    [InlineData("ases", -11)] [InlineData("aeses", -11)]
     public void TheDutchContractions_AreTheirLongSpellings(string tonic, int expected) =>
         Assert.Equal(expected, KeySpelling.SharpsFor(tonic, "major"));
 

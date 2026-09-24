@@ -33,12 +33,15 @@ public sealed partial class MeasureCollector
     /// variable references in place. Kind reads only — no red is materialized
     /// except for a reference (rare; its name/marks live on the red).
     /// </summary>
-    private void GatherMusicSite(GreenSite site, List<GreenSite> musicNodes)
+    private void GatherMusicSite(GreenSite site, List<GreenSite> musicNodes, HashSet<string>? activeRefs = null)
     {
         if (site.Kind == SyntaxKind.VariableReference)
         {
             var varRef = (VariableReferenceSyntax)site.Node;
-            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef);
+            if (activeRefs is null)
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, varRef);
+            else
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes, activeRefs, varRef);
         }
         // NOTE: unlike the other walks, the per-voice path does NOT treat a
         // << \\ >> span as one wrapper. Its caller does not skip parallel
@@ -72,6 +75,8 @@ public sealed partial class MeasureCollector
                 // score's home key to the ambient key here.
                 if (site.Node is RelativeResetMarker reset)
                 {
+                    if (reset.PhraseName is { } opened)
+                        _openPhrases.Add(opened);
                     EnterDefaultFrame(reset.OctaveOffset);
                     EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
                     // ⚠️ ENTERING A PHRASE BODY TOUCHES THE BOUNDARY NOT AT ALL (owner's
@@ -88,8 +93,10 @@ public sealed partial class MeasureCollector
                 // notes stay at their written pitch. A phrase that ended with a closed
                 // bar hands that bar over as retargetable, so an OUTER `|` (section {
                 // x | x }) owns the barline the phrase's trailing `|` drew.
-                if (site.Node is PhraseEndMarker)
+                if (site.Node is PhraseEndMarker end)
                 {
+                    if (end.PhraseName is { } closed && _openPhrases.LastIndexOf(closed) is var at and >= 0)
+                        _openPhrases.RemoveAt(at);
                     ExitPhraseTranspose();
                     builder.ResetMeasureBoundary(retargetableClose: true);
                     continue;
@@ -1704,9 +1711,15 @@ public sealed partial class MeasureCollector
         // reference was listed as a site of its own kind, which no arm of the walk reads, so
         // the phrase was dropped without a word (HANDOFF §2 R5) — the grace region's walk
         // had made the same repair in session 300.
+        // ⚠️ AND WITH THE PHRASES THIS REGION IS INSIDE ALREADY OPEN. The body is gathered
+        // HERE, after the enclosing expansion's own cycle guard is gone, so phrase t { c4
+        // cue { t } } expanded t again inside every cue it met, until the stack ran out
+        // (session 571: lysc check died on a Lab probe whose parse recovery put the phrase's
+        // own reference inside a cue). The cycle is PhraseCycleValidator's to report.
         var cueSites = new List<GreenSite>();
+        var openHere = new HashSet<string>(_openPhrases, StringComparer.Ordinal);
         foreach (var item in cue.Body.Items)
-            GatherMusicSite(new GreenSite(item), cueSites);
+            GatherMusicSite(new GreenSite(item), cueSites, openHere);
         ProcessMusicNodeSequence(cueSites, builder);
         // Cleared here too, for the region that emits no note or chord at all (`cue { r4 }`):
         // the stamp belongs to this region, not to the next item that happens to be cued.
