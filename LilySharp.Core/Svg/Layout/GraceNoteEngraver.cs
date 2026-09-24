@@ -381,7 +381,7 @@ internal static class GraceNoteEngraver
         }
 
         var group = new BeamGroup(members.ToImmutable(), grace.MeasureIndex, 0, stemUp: true);
-        var (leftY, rightY) = new BeamScoringProblem(
+        var (leftY, rightY, _) = BeamScoringProblem.SolveLent(
             group, xs,
             lengthFraction: EngravingDefaults.GraceBeamLengthFraction,
             beamThickness: EngravingDefaults.GraceBeamThickness,
@@ -389,7 +389,7 @@ internal static class GraceNoteEngraver
             // The other half of what general-grace-settings states about a grace Stem —
             // LilyPond guards calc_stem_info's staff-boundary clamps with it, so a grace beam
             // far from the staff is not dragged back toward it (StemDetails.NoStemExtend).
-            noStemExtend: true).Solve();
+            noStemExtend: true);
         return (leftY, rightY);
     }
 

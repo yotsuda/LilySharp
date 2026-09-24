@@ -185,6 +185,16 @@ internal sealed partial class LayoutEngine
         return (upExtent, bandUp);
     }
 
+    /// <summary><see cref="EnrichExtentsWithAnnotationProtrusions"/>'s per-system up / down /
+    /// bottoms, lent from the thread between passes; see <see cref="ScratchArray"/> for the
+    /// fill rule.</summary>
+    [ThreadStatic]
+    private static double[]? t_protrusionUp;
+    [ThreadStatic]
+    private static double[]? t_protrusionDown;
+    [ThreadStatic]
+    private static double[]? t_protrusionBottoms;
+
     /// <summary>
     /// Measures each system's REAL vertical protrusions from a preliminary
     /// annotation pass and max-merges them into the spacing extents. The
@@ -226,12 +236,18 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: lily/page-layout-problem.cc:1120-1122 up->raise(-first_spaceable_dy).
         double MiddleAt(int s) =>
             2.0 + (s < rowsAboveFirstStaff.Count ? rowsAboveFirstStaff[s] : 0);
-        var up = new double[n];
-        Array.Fill(up, upSeed);
-        var down = new double[n];
+        // Three drawer arrays (ScratchArray): up is seeded and down cleared over [0, n) here,
+        // bottoms is written for every system below, and every read is by system index —
+        // the merge at the end walks i < n. MEASURED (session 533's array census at HEAD,
+        // Release, the reader's corpus, eight forward keystrokes a book): 1.17 passes a
+        // keystroke, 744 B of fresh arrays each keystroke.
+        var up = ScratchArray.Take(ref t_protrusionUp, n);
+        Array.Fill(up, upSeed, 0, n);
+        var down = ScratchArray.Take(ref t_protrusionDown, n);
+        Array.Clear(down, 0, n);
 
         var measureToSystem = MeasureToSystemOfFirst(systems, n);
-        var bottoms = new double[n];
+        var bottoms = ScratchArray.Take(ref t_protrusionBottoms, n);
         for (int i = 0; i < n; i++)
         {
             // System bottom relative to its top: last visible staff's bottom

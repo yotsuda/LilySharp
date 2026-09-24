@@ -158,10 +158,16 @@ public readonly record struct MeasureContentKey(long Hash)
     /// staff — sound, and it is what couples the per-system spring solve, which spans
     /// all staves' columns).
     /// </remarks>
+    [ThreadStatic] private static Hash64[]? t_acc;
+    [ThreadStatic] private static Hash64[]? t_buckets;
+
     public static ImmutableArray<MeasureContentKey> Compute(MultiStaffScore score)
     {
         int n = score.MeasureCount;
-        var acc = new Hash64[n];
+        // Lent from the thread's drawer (Layout.ScratchArray) — once a keystroke, read into
+        // the keys below and dropped (session 527's census: 810 B a keystroke, and as much
+        // again for the side-table buckets). Seeded cell by cell, so nothing stale is read.
+        var acc = Layout.ScratchArray.Take(ref t_acc, n);
         for (int i = 0; i < n; i++)
             acc[i] = new Hash64();                    // seed the FNV basis (array init is zero)
 
@@ -540,7 +546,12 @@ public readonly record struct MeasureContentKey(long Hash)
     // No bucket, for the reason the Score overload above gives.
     private static Hash64[] BucketSideTables(MultiStaffScore score, int measureCount)
     {
-        var buckets = new Hash64[measureCount];
+        // Lent (see Compute's acc) and cleared: the folds below add into the zero a fresh
+        // table gave them. ⚠️ The drawer may be longer than measureCount, and BucketSingle /
+        // BucketSpan bound their fold by the table's Length — a cell past measureCount can be
+        // written, and is read by nothing (Compute reads [0, n)).
+        var buckets = Layout.ScratchArray.Take(ref t_buckets, measureCount);
+        Array.Clear(buckets, 0, measureCount);
 
         // Same tables as the Score overload, by MeasureIndex across all staves.
         // (Tremolo has no side table anywhere — it lives on the note item as

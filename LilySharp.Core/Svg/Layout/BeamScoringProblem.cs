@@ -64,14 +64,20 @@ internal sealed class BeamScoringProblem
         double X, double MinY, double MaxY,
         double BeamYMin, double BeamYMax, double BasePenalty);
 
-    private readonly BeamGroup _group;
-    private readonly BeamQuantParameters _parameters;
+    private BeamGroup _group;
+    private BeamQuantParameters _parameters;
+
+    // The members this problem is bound to — THE bound of every per-member table below. The
+    // tables may be LONGER than the group (the lent problem grows them to the widest beam it
+    // has seen, see SolveLent), so no reader walks a table's Length; Bind writes every cell
+    // in [0, n).
+    private int _memberCount;
 
     // Computed values
-    private readonly double _xSpan;
-    private readonly double _leftX;
-    private readonly double _rightX;
-    private readonly double[] _stemXPositions;
+    private double _xSpan;
+    private double _leftX;
+    private double _rightX;
+    private double[] _stemXPositions;
 
     /// <summary>
     /// The x of the first and last MEMBER's stem (staff spaces, absolute) — the frame
@@ -80,11 +86,11 @@ internal sealed class BeamScoringProblem
     /// the scored span may reach past them. <see cref="BeamLayout.LeftStemX"/> /
     /// <see cref="BeamLayout.RightStemX"/> carry them to every reader of the beam face.
     /// </summary>
-    public (double Left, double Right) OuterMemberStemXs { get; }
-    private readonly int[] _headMin;
-    private readonly int[] _headMax;
-    private readonly int _maxBeamCount;
-    private readonly IReadOnlyList<BeamCollision> _collisions;
+    public (double Left, double Right) OuterMemberStemXs { get; private set; }
+    private int[] _headMin;
+    private int[] _headMax;
+    private int _maxBeamCount;
+    private IReadOnlyList<BeamCollision> _collisions;
 
     // LILYPOND-REF: lily/beam-quanting.cc:362 segments_ = Beam::get_beam_segments (beams[i]) —
     //   the quanter holds the beam's DRAWN segments, so it knows how many beam lines lie
@@ -96,63 +102,64 @@ internal sealed class BeamScoringProblem
     // LILYPOND-REF: lily/include/beam-scoring-problem.hh:170 std::vector<Beam_collision>
     //   collisions_ — filled once by add_collision; each entry already carries the beam's
     //   own y extent at its x.
-    private readonly List<BeamCollisionPoint> _collisionPoints;
+    private readonly List<BeamCollisionPoint> _collisionPoints = new();
 
     // LILYPOND-REF: lily/beam-quanting.cc:232-234 beam_thickness_, line_thickness_
     // All calculations are in staff-space units (not staff positions)
-    private readonly double _beamThickness;
-    private readonly double _lineThickness;
-    private readonly double _beamTranslation;
+    private double _beamThickness;
+    private double _lineThickness;
+    private double _beamTranslation;
 
     // This beam's length-fraction, which buys every stem's ideal and floor lengths.
     // LILYPOND-REF: lily/stem.cc:1164-1259 calc_stem_info — beamed-lengths,
     //   beamed-minimum-free-lengths and beamed-extreme-minimum-free-lengths are each
     //   multiplied by staff_space AND length_fraction. 1.0 for an ordinary beam.
-    private readonly double _lengthFraction;
+    private double _lengthFraction;
 
     // The BEAM's own length-fraction, which is a different grob's property from the one
     // above — see the note where it is assigned. Buys the beam translation and the
     // forbidden-quant weighting.
-    private readonly double _beamLengthFraction;
+    private double _beamLengthFraction;
 
     // …carried as the details record the three calc_stem_info readers share. THREE, counted
     // by grep: CalculateInitialPosition, ScoreStemLengths and the knee seed. The maximum-count
     // port of 2026-08-01 missed one of exactly these and the miss had no failing point,
     // because it only bites when the floor binds (HANDOFF 5.0).
-    private readonly StemDetails _stemDetails;
+    private StemDetails _stemDetails;
 
     // Per-member: is this a NORMAL stem (drawn ink, feeds stem scoring)? False for a
     // whole-note display pair's invisible stems. LILYPOND-REF: beam-quanting.cc:299 is_normal_.
-    private readonly bool[] _isNormal;
-    private readonly int _normalStemCount;
+    private bool[] _isNormal;
+    private int _normalStemCount;
 
     // Direction
-    private readonly int _beamDir; // +1 for stem up, -1 for stem down
+    private int _beamDir; // +1 for stem up, -1 for stem down
 
     // LILYPOND-REF: beam-quanting.cc:333 is_knee_
-    private readonly bool _isKnee;
+    private bool _isKnee;
 
     // Per-member stem directions (needed for kneed beams)
-    private readonly int[] _memberBeamDirs;
+    private int[] _memberBeamDirs;
 
     // Per-member beam count (1 = eighth, 2 = sixteenth, ...). This is the stem's OWN
     // multiplicity, and it is what the beam ENDS are checked with (_edgeBeamCounts).
-    private readonly int[] _memberBeamCounts;
+    private int[] _memberBeamCounts;
 
     // …and the count a stem's ideal LENGTH is bought with, which is a different number.
     // LILYPOND-REF: lily/stem.cc:1158 beam_count = Beam::get_direction_beam_count (beam, my_dir)
     //   → lily/beam.cc:1517-1532 get_direction_beam_count: the MAXIMUM multiplicity over every
     //   stem pointing that way, not the stem's own. LilyPond says why at stem.cc:1196-1202 —
     //   "\score { \relative c'' { a8[ a32] } } must be horizontal".
-    // Indexed [0] = stems down, [1] = stems up, because a knee has both.
-    private readonly int[] _directionBeamCounts;
+    // Indexed [0] = stems down, [1] = stems up, because a knee has both. Two cells for the
+    // problem's life, zeroed by Bind (a fresh array's zero is what the max below starts from).
+    private readonly int[] _directionBeamCounts = new int[2];
 
     // Beam-level stem shortening applied to every stem's IDEAL beam Y (not its
     // shortest_y_). LilyPond shortens stems forced into their unnatural direction;
     // the amount is a single beam property. See <see cref="ComputeBeamShorten"/>.
     // LILYPOND-REF: lily/beam.cc:1059-1090 Beam::calc_stem_shorten (the beam 'shorten);
     //               lily/stem.cc:1245 ideal_y -= shorten (applied to the ideal only).
-    private readonly double _beamShorten;
+    private double _beamShorten;
 
     // Per-member Stem_info (ideal and shortest beam Y), computed ONCE in the constructor —
     // LilyPond fills stem_infos_ once (lily/beam-quanting.cc:301-303) and its header says why:
@@ -162,12 +169,17 @@ internal sealed class BeamScoringProblem
     // StemCalculator.CalculateBeamedStemInfo afresh — the last one per CANDIDATE per stem,
     // 256–2304 candidates a beam. The arguments were identical at all three sites, so this
     // is the same value read three times, not a third spelling.
-    private readonly StemInfo[] _stemInfos;
+    private StemInfo[] _stemInfos;
 
-    // Edge (first/last member) beam counts and stem directions.
+    // Edge (first/last member) beam counts and stem directions — two cells each for the
+    // problem's life, both written by Bind.
     // LILYPOND-REF: beam-quanting.cc edge_beam_counts_, edge_dirs_
-    private readonly int[] _edgeBeamCounts; // [0]=left, [1]=right
-    private readonly int[] _edgeDirs;       // [0]=left, [1]=right
+    private readonly int[] _edgeBeamCounts = new int[2]; // [0]=left, [1]=right
+    private readonly int[] _edgeDirs = new int[2];       // [0]=left, [1]=right
+
+    // The two head tables CalculateConcaveness reads, grown like the member tables.
+    private int[] _closeHeads = [];
+    private int[] _farHeads = [];
 
     // How far the outermost staff line lies from the middle, in this staff's own SPACES:
     // (line-count − 1)/2, so 2.0 for a five-line staff and 1.5 for a four-string tab. Two
@@ -176,7 +188,7 @@ internal sealed class BeamScoringProblem
     // LILYPOND-REF: lily/beam-quanting.cc:1248 (score_horizontal_inter_quants),
     //   :1300 (score_forbidden_quants' line walk), :1349 — all staff_radius_, which
     //   lily/staff-symbol-referencer.cc reads off the staff symbol.
-    private readonly double _staffRadius;
+    private double _staffRadius;
 
     // Staff-line gap scoring tuning. LILYPOND-REF: lily/beam-quanting.cc:1280-1322
     /// score_forbidden_quants — the fudge_factor leniency for borderline gap cases.
@@ -243,8 +255,106 @@ internal sealed class BeamScoringProblem
         double? beamLengthFraction = null,
         IReadOnlyList<double>? restXPositions = null,
         bool noStemExtend = false)
+        : this()
+    {
+        Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
+            beamThickness, headFont, lineThickness, staffLineCount, beamLengthFraction,
+            restXPositions, noStemExtend);
+    }
+
+    private BeamScoringProblem()
+    {
+        _group = null!;                     // Bind runs before any read (both constructors call it)
+        _parameters = BeamQuantParameters.Default;
+        _collisions = Array.Empty<BeamCollision>();
+        _stemDetails = StemDetails.Default;
+        _stemXPositions = [];
+        _headMin = [];
+        _headMax = [];
+        _isNormal = [];
+        _memberBeamDirs = [];
+        _memberBeamCounts = [];
+        _stemInfos = [];
+    }
+
+    /// <summary>
+    /// The thread's one problem, taken out of this drawer while <see cref="SolveLent"/> runs
+    /// (session 421's idiom) and put back released. WHAT IT RETAINS: the per-member tables at
+    /// the widest beam's length, the collision list at its largest capacity — numbers, and
+    /// one BeamGroup reference until the next beam (Release drops the collisions).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 530: session 527's array census and the p526 type map, Release, the
+    /// reader's corpus, 232 books × eight forward keystrokes): 18.94 beams a keystroke, each a
+    /// fresh problem — the object 5,261 B, the seven per-member tables ~5,900 B, the two-cell
+    /// edge and direction arrays ~1,800 B, the beaming walk's table 1,766 B, the concaveness
+    /// heads 770 B: 1.4% of the render, dropped as soon as Solve's two numbers were read. The
+    /// public constructor stays fresh (BeamScoringTests holds two problems at once); only
+    /// this entry lends.
+    /// </remarks>
+    [ThreadStatic]
+    private static BeamScoringProblem? t_problem;
+
+    /// <summary>
+    /// <c>new BeamScoringProblem(…).Solve()</c> on the thread's lent problem — the production
+    /// entry: the quanted line at the outer member stems and those stems' x
+    /// (<see cref="OuterMemberStemXs"/>). Same arithmetic in the same order.
+    /// </summary>
+    internal static (double LeftY, double RightY, (double Left, double Right) OuterMemberStemXs) SolveLent(
+        BeamGroup group,
+        IReadOnlyList<double> itemXPositions,
+        BeamQuantParameters? parameters = null,
+        IReadOnlyList<BeamCollision>? collisions = null,
+        IReadOnlyList<int>? stemPositions = null,
+        double lengthFraction = 1.0,
+        double beamThickness = EngravingDefaults.BeamThickness,
+        GlyphMetrics.DesignMetrics? headFont = null,
+        double lineThickness = EngravingDefaults.StaffLineThickness,
+        int staffLineCount = 5,
+        double? beamLengthFraction = null,
+        IReadOnlyList<double>? restXPositions = null,
+        bool noStemExtend = false)
+    {
+        var problem = t_problem ?? new BeamScoringProblem();
+        t_problem = null;
+        problem.Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
+            beamThickness, headFont, lineThickness, staffLineCount, beamLengthFraction,
+            restXPositions, noStemExtend);
+        var (leftY, rightY) = problem.Solve();
+        var outer = problem.OuterMemberStemXs;
+        problem.Release();
+        t_problem = problem;
+        return (leftY, rightY, outer);
+    }
+
+    /// <summary>Forgets the beam: the references dropped, the numbers left to be overwritten
+    /// by the next Bind, which writes every cell it reads.</summary>
+    private void Release()
+    {
+        _collisions = Array.Empty<BeamCollision>();
+        _collisionPoints.Clear();
+    }
+
+    /// <summary>The constructor's body: binds the problem to one beam. Every per-member table
+    /// is grown to the group (ScratchArray) and written in full; the two-cell arrays and the
+    /// collision list are reused.</summary>
+    private void Bind(
+        BeamGroup group,
+        IReadOnlyList<double> itemXPositions,
+        BeamQuantParameters? parameters,
+        IReadOnlyList<BeamCollision>? collisions,
+        IReadOnlyList<int>? stemPositions,
+        double lengthFraction,
+        double beamThickness,
+        GlyphMetrics.DesignMetrics? headFont,
+        double lineThickness,
+        int staffLineCount,
+        double? beamLengthFraction,
+        IReadOnlyList<double>? restXPositions,
+        bool noStemExtend)
     {
         _group = group;
+        _memberCount = group.Members.Length;
         _parameters = parameters ?? BeamQuantParameters.Default;
         var suppliedCollisions = collisions ?? Array.Empty<BeamCollision>();
 
@@ -320,10 +430,10 @@ internal sealed class BeamScoringProblem
 
         // Extract stem positions (in staff positions), inset half the overhang from each
         // beam edge so the outer stems sit at [halfOverhang, _xSpan - halfOverhang].
-        _stemXPositions = new double[group.Members.Length];
-        _headMin = new int[group.Members.Length];
-        _headMax = new int[group.Members.Length];
-        _memberBeamCounts = new int[group.Members.Length];
+        _stemXPositions = ScratchArray.Grow(_stemXPositions, _memberCount);
+        _headMin = ScratchArray.Grow(_headMin, _memberCount);
+        _headMax = ScratchArray.Grow(_headMax, _memberCount);
+        _memberBeamCounts = ScratchArray.Grow(_memberBeamCounts, _memberCount);
         _maxBeamCount = 0;
 
         for (int i = 0; i < group.Members.Length; i++)
@@ -353,7 +463,7 @@ internal sealed class BeamScoringProblem
         // notes carry the pair's one display value).
         // LILYPOND-REF: lily/stem.cc:370-377 is_normal_stem — head_count () &&
         //   duration-log >= 1; lily/beam-quanting.cc:299 is_normal_.push_back.
-        _isNormal = new bool[group.Members.Length];
+        _isNormal = ScratchArray.Grow(_isNormal, _memberCount);
         _normalStemCount = 0;
         for (int i = 0; i < group.Members.Length; i++)
         {
@@ -379,7 +489,7 @@ internal sealed class BeamScoringProblem
         _isKnee = group.IsKnee;
 
         // Per-member beam directions for kneed beams
-        _memberBeamDirs = new int[group.Members.Length];
+        _memberBeamDirs = ScratchArray.Grow(_memberBeamDirs, _memberCount);
         for (int i = 0; i < group.Members.Length; i++)
         {
             _memberBeamDirs[i] = group.Members[i].MemberStemUp ? 1 : -1;
@@ -388,7 +498,8 @@ internal sealed class BeamScoringProblem
         // LILYPOND-REF: lily/beam.cc:1517-1532 Beam::get_direction_beam_count — one pass over
         //   the stems, taking the maximum multiplicity within each direction. Held rather than
         //   recomputed per call: both readers below already walk the members once.
-        _directionBeamCounts = new int[2];
+        _directionBeamCounts[0] = 0;
+        _directionBeamCounts[1] = 0;
         for (int i = 0; i < group.Members.Length; i++)
         {
             int stemDir = StemDirOf(i);
@@ -411,12 +522,23 @@ internal sealed class BeamScoringProblem
         // its heap ordering; Lily#'s existing max(gapLength, eps) guard makes the
         // same charge FINITE (0.39×extra). Same losers on every measured case, but
         // the NaN pathway itself is deliberately not reproduced.
-        _edgeBeamCounts = new[] { _memberBeamCounts[0], _memberBeamCounts[^1] };
-        _edgeDirs = _normalStemCount == 0
-            ? new[] { 0, 0 }
-            : _isKnee
-                ? new[] { _memberBeamDirs[0], _memberBeamDirs[^1] }
-                : new[] { _beamDir, _beamDir };
+        _edgeBeamCounts[0] = _memberBeamCounts[0];
+        _edgeBeamCounts[1] = _memberBeamCounts[_memberCount - 1];
+        if (_normalStemCount == 0)
+        {
+            _edgeDirs[0] = 0;
+            _edgeDirs[1] = 0;
+        }
+        else if (_isKnee)
+        {
+            _edgeDirs[0] = _memberBeamDirs[0];
+            _edgeDirs[1] = _memberBeamDirs[_memberCount - 1];
+        }
+        else
+        {
+            _edgeDirs[0] = _beamDir;
+            _edgeDirs[1] = _beamDir;
+        }
 
         // LILYPOND-REF: lily/beam-quanting.cc:232-234
         // Calculations are in staff-space units
@@ -452,8 +574,8 @@ internal sealed class BeamScoringProblem
         //   Stem::get_stem_info per stem, before any configuration is scored; every
         //   input (head, direction, direction beam count, thickness, translation, the
         //   stem details, knee, shorten) is settled above.
-        _stemInfos = new StemInfo[group.Members.Length];
-        for (int i = 0; i < _stemInfos.Length; i++)
+        _stemInfos = ScratchArray.Grow(_stemInfos, _memberCount);
+        for (int i = 0; i < _memberCount; i++)
         {
             int dir = StemDirOf(i);
             _stemInfos[i] = StemCalculator.CalculateBeamedStemInfo(
@@ -476,26 +598,28 @@ internal sealed class BeamScoringProblem
         var quantRests = group.RestStems;
         if (restXPositions == null || restXPositions.Count != quantRests.Length)
             quantRests = ImmutableArray<BeamRestStem>.Empty; // a caller without rest x
-        var beaming = new BeamSubdivision.StemBeaming[group.Members.Length + quantRests.Length];
+        // Lent (ListPool), and given back after the segments are built: CalcBeaming and
+        // CalcBeamSegments read it as an IReadOnlyList, whose Count is the walk's own.
+        var beaming = ListPool<BeamSubdivision.StemBeaming>.Rent();
         {
-            int w = 0, r = 0;
+            int r = 0;
             for (int i = 0; i <= group.Members.Length; i++)
             {
                 while (r < quantRests.Length && quantRests[r].BeforeMember == i)
                 {
-                    beaming[w++] = new BeamSubdivision.StemBeaming(
+                    beaming.Add(new BeamSubdivision.StemBeaming(
                         quantRests[r].CountLeft, quantRests[r].CountRight, _beamDir,
-                        (restXPositions![r] - _leftX) + halfBeamOverhang);
+                        (restXPositions![r] - _leftX) + halfBeamOverhang));
                     r++;
                 }
                 if (i < group.Members.Length)
-                    beaming[w++] = new BeamSubdivision.StemBeaming(
+                    beaming.Add(new BeamSubdivision.StemBeaming(
                         group.Members[i].BeamCountLeft, group.Members[i].BeamCountRight,
                         // The direction SharedRenderer.DrawBeams feeds the same call with. LilyPond
                         // asks every stem for its own (lily/beam.cc:524 get_grob_direction), which is
                         // the same answer off a knee; taking the renderer's spelling is what keeps
                         // the segments scored identical to the segments drawn.
-                        _isKnee ? _memberBeamDirs[i] : _beamDir, _stemXPositions[i]);
+                        _isKnee ? _memberBeamDirs[i] : _beamDir, _stemXPositions[i]));
             }
         }
         // Lent, and given back at the end of this constructor: the collision booking below is
@@ -513,7 +637,7 @@ internal sealed class BeamScoringProblem
         //   left of the first stem (lily/beam.cc:631 horizontal_[dir] += dir*stem_width/2).
         //   The supply hands it over relative to that first STEM, so shift it here — the
         //   one place both frames are in view.
-        _collisionPoints = new List<BeamCollisionPoint>(_collisions.Count);
+        _collisionPoints.Clear();
         // Indexed, not foreach: _collisions is an interface, so foreach would box an
         // enumerator on every beam — usually to walk an empty list (RULES §5.3).
         for (int i = 0; i < _collisions.Count; i++)
@@ -522,6 +646,7 @@ internal sealed class BeamScoringProblem
             AddCollision(segments, c.X + halfBeamOverhang, c.MinY, c.MaxY, c.BasePenalty);
         }
         BeamSubdivision.GiveSegments(segments);
+        ListPool<BeamSubdivision.StemBeaming>.Give(beaming);
     }
 
     /// <summary>
@@ -609,7 +734,7 @@ internal sealed class BeamScoringProblem
         int idx = Math.Clamp(_maxBeamCount - 1, 0, beamedStemShorten.Length - 1);
 
         int forced = 0;
-        for (int i = 0; i < _headMin.Length; i++)
+        for (int i = 0; i < _memberCount; i++)
         {
             // |chord_start_y| > 0.1 excludes a head ON the middle line; chord_start_y is
             // the beam-side head in half-spaces, so that is exactly != 0.
@@ -626,7 +751,7 @@ internal sealed class BeamScoringProblem
                 forced++;
         }
 
-        double forcedFraction = forced / (double)_headMin.Length;
+        double forcedFraction = forced / (double)_memberCount;
         return beamedStemShorten[idx] * forcedFraction;
     }
 
@@ -782,7 +907,8 @@ internal sealed class BeamScoringProblem
     {
         double dy = rightEdgeY - leftEdgeY;
         double leftY = leftEdgeY + _stemXPositions[0] / _xSpan * dy;
-        double rightY = leftEdgeY + _stemXPositions[^1] / _xSpan * dy;
+        // By the member count, not [^1]: the table is the lent problem's and may be longer.
+        double rightY = leftEdgeY + _stemXPositions[_memberCount - 1] / _xSpan * dy;
         // Staff-spaces (internal) → staff positions (caller contract: renderer beam.LeftY/2).
         return (leftY * 2.0, rightY * 2.0);
     }
@@ -803,7 +929,7 @@ internal sealed class BeamScoringProblem
     /// </remarks>
     private (double leftY, double rightY) CalculateInitialPosition()
     {
-        if (_headMin.Length < 1)
+        if (_memberCount < 1)
             return (0, 0);
 
         // A beam with NO normal stems — a whole-note tremolo pair — has no stem
@@ -827,7 +953,7 @@ internal sealed class BeamScoringProblem
         // native quanter frame — and are READ where they are, not copied into a list first.
         // MEASURED (session 457's census): that list was 19.12 a keystroke at 2.88 points each,
         // 2,296 B a keystroke, and nothing read it but this method and MinimiseLeastSquares.
-        int idealCount = _headMin.Length;
+        int idealCount = _memberCount;
         double firstIdealY = _stemInfos[0].IdealY;
         double lastIdealY = _stemInfos[idealCount - 1].IdealY;
 
@@ -924,7 +1050,7 @@ internal sealed class BeamScoringProblem
     {
         int minPos = int.MaxValue, maxPos = int.MinValue;
         int multiplicity = 0;
-        for (int i = 0; i < _headMin.Length; i++)
+        for (int i = 0; i < _memberCount; i++)
         {
             minPos = Math.Min(minPos, _headMin[i]);
             maxPos = Math.Max(maxPos, _headMax[i]);
@@ -1012,7 +1138,7 @@ internal sealed class BeamScoringProblem
     {
         // LILYPOND-REF: lily/beam-quanting.cc:747-748 slope_damping — fewer than two
         // NORMAL stems (a whole-note pair has zero) means no slope to damp.
-        if (_headMin.Length <= 1 || _normalStemCount <= 1)
+        if (_memberCount <= 1 || _normalStemCount <= 1)
             return;
 
         double damping = _parameters.Damping;
@@ -1070,7 +1196,7 @@ internal sealed class BeamScoringProblem
         if (_isKnee || _group.IsCrossStaff)
             return 0;
 
-        if (_headMin.Length <= 2)
+        if (_memberCount <= 2)
             return 0;
 
         // LILYPOND-REF: lily/beam-quanting.cc:709-725 calc_concaveness — for chords the close
@@ -1079,9 +1205,13 @@ internal sealed class BeamScoringProblem
         // ⚠️ Deliberately NOT BeamSideHead: LilyPond indexes these with the ONE
         // beam_dir it derives at :700-702, not with each stem's own direction, so
         // a knee's members do not each pick their own side here.
-        var close = new int[_group.Members.Length];
-        var far = new int[_group.Members.Length];
-        for (int i = 0; i < _group.Members.Length; i++)
+        // The two tables are the problem's own (grown, not fresh); the walks below read the
+        // exact length as spans.
+        _closeHeads = ScratchArray.Grow(_closeHeads, _memberCount);
+        _farHeads = ScratchArray.Grow(_farHeads, _memberCount);
+        var close = _closeHeads.AsSpan(0, _memberCount);
+        var far = _farHeads.AsSpan(0, _memberCount);
+        for (int i = 0; i < _memberCount; i++)
         {
             close[i] = _beamDir > 0 ? _headMax[i] : _headMin[i];
             far[i] = _beamDir > 0 ? _headMin[i] : _headMax[i];
@@ -1102,7 +1232,7 @@ internal sealed class BeamScoringProblem
     /// Determines whether notes form a concave pattern (bowl shape).
     /// </summary>
     // LILYPOND-REF: lily/beam-quanting.cc:618-663
-    private static bool IsConcaveSingleNotes(int[] positions, int beamDir)
+    private static bool IsConcaveSingleNotes(ReadOnlySpan<int> positions, int beamDir)
     {
         int first = positions[0];
         int last = positions[^1];
@@ -1153,7 +1283,7 @@ internal sealed class BeamScoringProblem
     /// Calculates numerical concaveness for a set of positions.
     /// </summary>
     // LILYPOND-REF: lily/beam-quanting.cc:665-687
-    private static double CalcPositionsConcaveness(int[] positions, int beamDir)
+    private static double CalcPositionsConcaveness(ReadOnlySpan<int> positions, int beamDir)
     {
         double dy = positions[^1] - positions[0];
         double slope = dy / (positions.Length - 1);
@@ -1190,7 +1320,7 @@ internal sealed class BeamScoringProblem
     {
         // LILYPOND-REF: lily/beam-quanting.cc:780-781 shift_region_to_valid — no
         // normal stems, nothing to keep reachable.
-        if (_headMin.Length == 0 || _normalStemCount == 0)
+        if (_memberCount == 0 || _normalStemCount == 0)
             return;
 
         double beamDy = _unquantedRightY - _unquantedLeftY;
@@ -1201,7 +1331,7 @@ internal sealed class BeamScoringProblem
         double feasibleMin = double.NegativeInfinity;
         double feasibleMax = double.PositiveInfinity;
 
-        for (int i = 0; i < _headMin.Length; i++)
+        for (int i = 0; i < _memberCount; i++)
         {
             // The minimum beam Y at this stem comes from the per-stem shortest_y of
             // calc_stem_info — NOT a flat 2.5-space length. The flat constant over-
@@ -1290,7 +1420,7 @@ internal sealed class BeamScoringProblem
         // all-or-nothing, so per-edge first/last-normal never diverges from this.)
         for (int e = 0; e < 2 && _normalStemCount > 0; e++)
         {
-            double headSS = BeamSideHead(e == 0 ? 0 : _headMin.Length - 1) / 2.0;
+            double headSS = BeamSideHead(e == 0 ? 0 : _memberCount - 1) / 2.0;
             double widen = 0.5
                 + (_edgeBeamCounts[e] - 1) * _beamTranslation
                 + _beamThickness * 0.5;
@@ -1685,7 +1815,7 @@ internal sealed class BeamScoringProblem
         double[] score = { 0, 0 }; // [DOWN=0, UP=1]
         int[] count = { 0, 0 };
 
-        for (int i = 0; i < _stemXPositions.Length; i++)
+        for (int i = 0; i < _memberCount; i++)
         {
             // LILYPOND-REF: lily/beam-quanting.cc:1122-1123 score_stem_lengths — an
             // invisible stem (whole-note pair) has no length to score.

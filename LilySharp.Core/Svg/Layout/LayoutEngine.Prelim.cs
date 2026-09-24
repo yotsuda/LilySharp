@@ -413,6 +413,8 @@ internal sealed partial class LayoutEngine
     /// measures this partition's groups live in, so its per-group answers are the ones the
     /// full call computes.
     /// </remarks>
+    [ThreadStatic] private static int[]? t_groupSystem;
+
     private ImmutableArray<BeamLayout> LayoutPreliminaryStaffBeams(
         Score staffBeamScore, ImmutableArray<BeamGroup> groups,
         ImmutableArray<SystemLayout> prelimSystems, int staffIndex,
@@ -430,8 +432,9 @@ internal sealed partial class LayoutEngine
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(prelimSystems);
 
         // Which single system each group lives in; -1 = spans systems or reaches an
-        // unmapped measure (either way: not memoizable).
-        var groupSystem = new int[groups.Length];
+        // unmapped measure (either way: not memoizable). Lent from the thread's drawer
+        // (ScratchArray): every cell [0, groups.Length) is written before it is read.
+        var groupSystem = ScratchArray.Take(ref t_groupSystem, groups.Length);
         for (int i = 0; i < groups.Length; i++)
         {
             int home = -2;

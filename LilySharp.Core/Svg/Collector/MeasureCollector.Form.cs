@@ -412,10 +412,18 @@ public sealed partial class MeasureCollector
             // ProcessSection runs once PER PART; a section tempo is a score-level mark
             // that must engrave ONCE — without this guard a grand staff printed the
             // metronome mark twice, stacked (mirrors the navigation-mark guard).
-            bool tempoAlready = _musicMarks.Any(m =>
-                m.Type == MusicMarkType.Tempo
-                && m.MeasureIndex == builder.CurrentMeasureIndex
-                && m.SourcePosition == sectionPos);
+            // A loop, not Any: the predicate captured builder and sectionPos, which made this
+            // method's environment a class built on every section, plus a delegate
+            // (session 535).
+            bool tempoAlready = false;
+            foreach (var m in _musicMarks)
+                if (m.Type == MusicMarkType.Tempo
+                    && m.MeasureIndex == builder.CurrentMeasureIndex
+                    && m.SourcePosition == sectionPos)
+                {
+                    tempoAlready = true;
+                    break;
+                }
             if (builder.AtPieceOpening)
                 CollectTempo(sectionTempo);
             else if (tempoAlready)
@@ -534,7 +542,7 @@ public sealed partial class MeasureCollector
             {
                 var lazySites = RentGatherSites();
                 processNodes(MusicSiteList.Lazy(section, s_inlineSiteRule,
-                    InlineSectionSites(section), GatherContainerSite, resumer, lazySites));
+                    InlineSectionSites(section), GatherContainerSiteDelegate, resumer, lazySites));
                 GiveGatherSites(lazySites);
             }
             else
@@ -1138,7 +1146,7 @@ public sealed partial class MeasureCollector
         {
             var lazySites = RentGatherSites();
             processNodes(MusicSiteList.Lazy(container, MusicSiteRule(includeParallel: true),
-                MusicSitesLazy(container, includeParallel: true), GatherContainerSite, resumer, lazySites));
+                MusicSitesLazy(container, includeParallel: true), GatherContainerSiteDelegate, resumer, lazySites));
             GiveGatherSites(lazySites);
             return;
         }
@@ -1220,6 +1228,13 @@ public sealed partial class MeasureCollector
         sites.Clear();
         t_gatherSites = sites;
     }
+
+    /// <summary><see cref="GatherContainerSite"/> as the delegate the lazy site lists take,
+    /// made once per collector: the method group was a fresh delegate per container
+    /// (session 535: Action&lt;GreenSite, List&lt;GreenSite&gt;&gt;, 276 B a keystroke).</summary>
+    private Action<GreenSite, List<GreenSite>> GatherContainerSiteDelegate
+        => _gatherContainerSite ??= GatherContainerSite;
+    private Action<GreenSite, List<GreenSite>>? _gatherContainerSite;
 
     /// <summary>One gathered site of a container into the flat list: a reference expands
     /// in place (its red is materialized — the name and marks live on it), a collectable

@@ -129,6 +129,111 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第533セッションの経緯
+
+### 1.1 第533セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「配列の尾に着手」）。★ `-Start p533`（HEAD `08fceebf`・full 8864 / 0 / 2 / 8866・`-Archive 531`）。
+
+★★ **⑴ 配列の census を HEAD で取り直した**（第527 の `instrument-arrays-any.ps1` を Zz533 に写す・209 軒・`SfntExtractor.cs:109` は長さが long なので 1 軒だけ手で戻す・Lab `sessions/p533/arrays-head.txt`）: **SUM 58,358 B／打鍵（5.1%・render 1,134,241）**。うち設計・実仕事・答えが約 32 KB。残りの「建てて埋めて読んで捨てる」形を読み手ごとに確かめて 8 家族を選んだ（§1.0 ⒮²⁵ に残りと触らなかった 3 軒）。
+★★★ **⑵ 8 家族を貸した＝−6,518 B／打鍵（0.57%）**: ⒜ `ParentAlignmentEdgesPerColumn` の left／right／seen（drawer 2 枚を span に）726／⒝ `MultiStaffLayouter` の小節 loop が 1 度読んで捨てる列ごとの 5 枚（lyric の reach 2・chord の幅・musical の overhang 2＝**1 drawer の 5 span**。3 つの helper に span の core を足し、`LineStartColumnTests` が使う配列を返す綴りはそれに委譲）1,490／⒞ `ApplyTabChordSpacing` の 3 枚（span＝**`right[^1]` は span を歩く**）1,146／⒟ render の梁の beaming input（`ListPool`）と member walk index（drawer）1,243／⒠ `BeamDetector` の stem candidates（drawer・読み手は exact span `visible`）と beaming-pattern の elements（`ListPool`）903／⒡ `LayoutItemsFromColumns` の xs 298／⒢ `EnrichExtentsWithAnnotationProtrusions` の up／down／bottoms（drawer 3 枚・closure が捕まえるので配列のまま・`Array.Fill(up, seed, 0, n)`）744／⒣ `DotConfiguration.Resolve` の長さ 0 → `Array.Empty`。**予測 −6,600±900 → 実測 render 1,134,225 → 1,127,707＝−6,518（98.8%・帯の中）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。cref 2 本を overload つきに、drawer の doc を method の doc の前へ（`CS1572`＝Core 0 警告の門）。
+  **毒 4 本のうち観測ありは 1 本**（`poisons.ps1`・hits≠1 の門つき）: P1＝tab の `right` span を Clear しない → hash 2,661 差（5,824 行＝頁数まで動く）・snapshot 4 赤。**緑 3 本＝出力に届かない量**（RULES §5.0「網の穴とは限らない」の顔）: P2＝walk index を書かない／P3＝1 slot ずらす → 0 差・snapshot 247 緑＝**stem の外側の rank が primary と同じ梁しか無い**（knee がコーパスにも snapshot にも無い＝`beamRanks[walk].Multiplicity(dir)` は常に 0）／P4＝`MusicalInkOverhangsPerColumn` の left を Clear しない → 0 差・**Release の full 8866 も緑**（`full-poison4.log`＝赤は棚卸しの行番号・§1 の継ぎ目・Zz の 6 本だけ）＝**keep-inside-line の rod の左 reach は行頭の prefix に負けて 1 冊も bind しない**。⇒ 3 つとも fill は書いたが**観測者は無い**と記録する（網は足していない）。
+  §7 7.5＝**Core '+' 約 176 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**。棚卸しは 2 枚とも行番号だけ。commit `3f6a8684`。`-End p533` OK・**full 8864 / 0 / 2 / 8866**。
+  ⇒ **配列の島は尽きた**（⒮²⁵ ✅）。次は ⒮¹⁶′（tuple の器・14,100・第472 の住所）か ⒮²⁰′（閉包 10,632）の尾、または土台（String 320 KB＝⒮²⁶ の sampling・SkylineBuilding[]・NoteItem）。
+
+## 以下は第532セッションの経緯
+
+### 1.1 第532セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p532`（HEAD `5b6c2b01`・full 8864 / 0 / 2 / 8866・`-Archive 530`）。
+
+★★ **⑴ 型の地図を HEAD で取り直した**（Lab `sessions/p532/type-price-head.txt`・render 1,138,225・第518 の `Zz518Price` の型）: 頭は String 320,711・SkylineBuilding[] 132,359・NoteItem 109,316・GreenNode[] 102,132／SyntaxToken[] 55,078（構文＝引いて読む）・Int32[] 36,035・Measure 28,697・ArticulationLayout[] 25,621（第502＝実仕事）・Spring 23,989（第513＝実仕事）・Double[] 23,505・SystemDetails 19,571（第501 が共有済み）・BeamGroup 17,808（第494＝設計）・MeasureSpringData[] 10,909・RestItem 10,382・WalkCheckpoint 10,253（第522＝実仕事）。**`SlurCandidate` は上位 80 から消えた。**土台と実仕事だけが残る。
+★★ **⑵ §1.0 ⒮²⁷ の「grep に残る 2 軒」を値付けした＝直す軒ではない**（Lab `Zz532Lyric.cs.txt`＋`Zz532.cs.txt`＝呼びの前後の割当を static counter で・`lyric-price.txt`）: `LyricEngraver` ctor 727＋`CalculateLayouts` 445・`LyricHyphenEngraver` 168＝**1,340 B／打鍵 0.12%**、しかも **`lyric.in` 0＝ユーザーのコーパスに歌詞行が無い**。
+★★★ **⑶ tie の家族の残りを閉じた＝−4,250 B／打鍵（0.37%）**: `FindBestVariation` の per-variation `Clone()`（約 7／column × 7.82 column）→ **problem が持つ寸法ちょうどの配置配列 3 枚**（base は 1 枚目・scratch に `Array.Copy` して variation を当てて採点・厳密に良ければ scratch を best にし、前の best（初回は spare）を次の scratch に＝base は書かれず、best と scratch は常に別配列）。**寸法ちょうどにした理由＝読み手が全部 `.Length`・`[^1]` で歩く**（第530 の罠）ので column の大きさが変わった時だけ作り直す。方向の規則は span の core 1 本（`StandardDirections(ReadOnlySpan…, Span<int?> dirs, Span<int> result)`）に畳み、配列を返す overload（tab の呼び手・網）はそれに委譲（綴りは 1 つ）。`TieChordOutline.Build` の headBoxes は `ListPool<TieOutlineBox>`、`new[] { -1, +1 }` は for に。**予測 −4,500±700 → 実測 render 1,138,475 → 1,134,225＝−4,250（94%・帯の中）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。**毒 2 本とも観測あり**: P1＝scratch に base を写さない → hash 5,664 差（5,752 行＝頁数まで動く）・snapshot 4 赤・`TieFormattingProblemTests` 1 赤／P2＝方向の scratch を消さない → hash 1,525 差・snapshot 2 赤。
+  §7 7.5＝**Core '+' 約 90 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**。棚卸しは 2 枚とも行番号だけ。cref 1 本を overload つきの綴りに（`CS0419`＝Core 0 警告の門）。commit `46aefe7c`。`-End p532` OK・**full 8864 / 0 / 2 / 8866**（門は全 OK）。
+  ⇒ **問題／engraver の貸し出しの島は尽きた**（§1.0 ⒮²⁷ に畳んだ）。次は地図の残り＝土台（String 320 KB・SkylineBuilding[] 132 KB・NoteItem 109 KB）か、⒮²⁵／⒮¹⁶′／⒮²⁰′ の尾（各 1 万 B 級・軒が多い）。
+
+## 以下は第531セッションの経緯
+
+### 1.1 第531セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー「次を読んで作業に着手して」）。★ `-Start p531`（HEAD `fb5f5765`・full 8864 / 0 / 2 / 8866・`-Archive 529`）。
+
+★★★ **⑴ slur の scorer を第529・第530 の型で貸した＝−22,325 B／打鍵（1.92%）**: §1.0 ⒮²⁷ の「呼び手 1〜3 か所の problem を grep」を当てると `SlurScoringProblem` が 3 軒（`ElementCoordinator.LayoutSlurs`・同 tab slur・`SharedRenderer.GraceNotes`）。**先に計器で値付けした**（Lab `sessions/p531/Zz531Price.cs.txt`＝ctor の 1 行目から `Solve` の末尾までの割当と、候補・ENCOMPASS・障害物の数を static counter で刷る・`slur-price.txt`）: **2.37 solve／打鍵（staff 1.35・tab 1.01・grace 0.01）・1 solve 61.89 候補・9,289 B＝22,052 B／打鍵 1.90%**。会計は `SlurCandidate` 136 B × 61.89 ＝ 8,417（第518 の型の地図の 20,116 B／打鍵と一致）＋候補 list 551＋反射 list ほか 220＋答えの `SlurLayout` 112 で締まる（9,297 対 9,289）。**予測を先に書いた**（`prediction.txt`＝−22,300±1,500）→ **実測 render 1,160,800 → 1,138,475＝−22,325（100.1%）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。
+  形: **`SlurScoringProblem.SolveLent(...)`**（constructor と同じ引数・`[ThreadStatic]` の 1 台を `Bind`→`Solve`→`Release`）。constructor の本体を `Bind` に移し（readonly を外す）、反射した obstacles／extras／enclosed midpoints・候補の grid・avoid・convex distance の list は problem が持つ（`Release` で `Clear`＝容量は残る）、`SlurCandidate` は problem 内の pool から `TakeCandidate`（grid の 7 field ＋ `GenerateCurve` の `Curve`・`Height`＝全 field 代入）。**null の list と空の list は全読み手で同じ**（loop が空・`EndYFor` の Count 判定・additional_ys が 0.0 を足す）ので null 分岐を落とした。public constructor は網のため fresh のまま（`SlurScoringProblemTests` は problem を 2 つ同時に持つ）。priority queue は第463 が既に貸している。
+  **毒 2 本とも観測あり**（`poisons.ps1`・hits≠1 の門つき）: P1＝grid が `Demerits` を 0 に戻さない → hash 178 差・snapshot 5 赤／P2＝`Release` が `_obstacles` を Clear しない → hash 4,712 差（5,840 行＝頁数まで動く）・snapshot 12 赤。
+  §7 7.5＝**Core '+' 約 206 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**（器の貸し出し・LP の式に触らない）。棚卸し: `APPROXIMATIONS.md` は行番号だけ、`magic_constants.csv` は行番号のほか **+1 行**（`SolveLent` の既定引数 `staffSpace = 1.0`＝第530 の `lengthFraction` と同じ顔・Yellow）と `!` を外した 1 行の字面。⚠️ **full の最初の 1 回は Zz 2 本を混ぜたまま回して 8868／5 赤**（Zz 2 本＝設計どおり赤・Debug では 1 本 4 分／`HandoffArchiveContinuityTests` 3 本＝この節を書く前）＝CLAUDE-OPERATIONS §1 の罠そのもの。Zz を外して `-End p531` で取り直した＝**OK・full 8864 / 0 / 2 / 8866**（門は全 OK・§1 の天井で ✅ ⒮¹² を落とした）。commit `e8a8516a`。
+  **触らなかった**: staff site の `solved with { StaffIndex … }`（record の写し 1.35 回 × 約 112 B／打鍵＝0.01%）／呼び手が建てる `obstacles`・`extras` の list（`BuildSlurObstacles`・`BuildSlurExtraObjects`＝`new List` 各 1／slur・約 100 B）／同じ grep の残り＝`LyricEngraver`・`LyricHyphenEngraver`（§1.0 ⒮²⁷）。
+
+## 以下は第530セッションの経緯
+
+### 1.1 第530セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p530`（HEAD `09b082d9`・full 8864 / 0 / 2 / 8866・`-Archive 528`）。
+
+★★★ **⑴ 梁の quanter を第529 の型で貸した＝−16,344 B／打鍵（1.39%）**: `BeamScoringProblem` は 18.94 梁／打鍵ごとに fresh（object 5,261・member ごとの表 7 本 約 5,900・2 cell の配列 約 1,800・beaming の表 1,766・concaveness の head 770＝第527 の census と第526 の地図）。呼び手 3 か所（`BeamEngraver`・`GraceNoteEngraver`・`TabStaffGeometry`）を **`BeamScoringProblem.SolveLent(...)`**（constructor と同じ引数・`[ThreadStatic]` の 1 台を `Bind`→`Solve`→`OuterMemberStemXs` を読む→`Release`）に。constructor の本体を `Bind` に移し（readonly を外す・`.Length` で歩く読み手 12 か所を `_memberCount` に・concaveness の 2 walk は `ReadOnlySpan<int>`・beaming は `ListPool<StemBeaming>`・2 cell の配列は readonly `new int[2]` を書き直す）、public constructor は網のため fresh のまま。**予測 −15,500±1,500 → 実測 render 1,177,144 → 1,160,800＝−16,344（105%・帯の中）・hash 5,816 行 0 差**（Lab `sessions/p530/`・`hashes-after.txt`＝**次便からの baseline**）。
+  ⚠️ **最初の版は hash が 5,746 行動いて捕まえた＝`_stemXPositions[^1]`**（`AtOuterStems`）。引き出しは長いので `[^1]` は*前の梁*の末尾 cell を読む＝**`.Length` と同じ罠の 2 つ目の顔**（`ScratchArray.Grow` の doc に書いた・grep `\[\^\d\]` を貸す前に）。null 警告 24 本は `Take(ref 非 null field)` が原因＝非 null の **`ScratchArray.Grow(table, n)`** を足して 0 に。
+  **毒 2 本とも観測あり**: P1＝`_directionBeamCounts` を 0 に戻さない → hash 5,784 差・suite 67 赤／P2＝`_collisionPoints` を Clear しない → **コーパスの hash は返らない**（衝突点が打鍵をまたいで溜まり採点が 2 乗＝RULES §5.0「返らない毒」の顔・cancel して testhost を殺した）→ 網 1 本に絞って `SvgSnapshotTests` 247 本中 42 赤。
+  §7 7.5＝**Core '+' 約 225 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**。棚卸し: `APPROXIMATIONS.md` は行番号だけ（`**:N**` の形）、`magic_constants.csv` は行番号のほか **+1 行**（`SolveLent` の既定引数 `lengthFraction = 1.0` が constructor と同じ既定を 2 度綴る＝census が数えた・Yellow）と 2 行の式の字面（`_headMin.Length` → `_memberCount`）。`-End p530` OK・full 8864 / 0 / 2 / 8866・commit `06b9e106`。
+
+## 以下は第529セッションの経緯
+
+### 1.1 第529セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p529`（HEAD `25560c79`・full 8864 / 0 / 2 / 8866・`-Archive 527`）。
+
+★★★ **⑴ tie の column solver を thread の 1 台に貸した＝−19,976 B／打鍵（1.67%）**: 型の地図の tie の家族（`Entry[(int,int,int),TieCandidate][]` 7,166・`TieCandidate` 4,769・variation の list と配列 3,908・dot の HashSet・outline の表 2 本・problem 本体）は **7.82 column／打鍵ごとに `new TieFormattingProblem(specs).Solve()` が建てて捨てていた**。production の呼び手は `ElementCoordinator.LayoutTies` の 1 か所だけなので、**`TieFormattingProblem.SolveColumn(specs)`**（`[ThreadStatic]` の 1 台を取り出し→`Bind`→`Solve`→`Release`→戻す）を足し、`_possibilities`・`_dotPositions` は `Clear`（容量は残る）、outline の表は column に合わせて伸ばす（読み手は全部 spec を添字にする）、`TieCandidate` は problem 内の pool から `TakeCandidate`（**全 field を代入**・`init` を `set` に）、variation の 1〜2 要素 list は `Variation(a[, b])` で pool から（pass ごとに `RewindVariations`）。**public の constructor は網のため fresh のまま**（`TieFormattingProblemTests` は problem を 2 つ同時に持つ）。**予測を先に書いた**（Lab `sessions/p529/prediction.txt`＝−19,000±1,500）→ **実測 render 1,197,120 → 1,177,144＝−19,976（105%・帯の中）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。
+  **毒 2 本とも観測あり**: P1＝take した candidate の `IsScored`／`Demerits` を戻さない → hash 1,647 差・suite 9 赤（台帳 6・snapshot 1…）／P2＝`Release` が `_possibilities` を Clear しない → hash 10,812 差（頁数まで動く）・suite 33 赤。
+  **触らなかった**（起票 ⒮²⁷）: `FindBestVariation` の `(TieCandidate[])Clone()` 1,723（base／best／variant の 3 枚の scratch が要る＝aliasing の罠と引き換え）・`TieChordOutline` 1,643＋skyline＋`TieOutlineBox[]` 1,126（bound column ごとに建てる）・`TieColumnParts` 1,504（呼び手が建てる）・方向の小配列 4 本 約 900（`StandardDirections` は tab の呼び手も居る）・`TieLayout[]` 250（答え）。
+  §7 7.5＝**Core '+' 約 170 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**（器の貸し出し・LP の式に触らない）。棚卸しは行番号だけ（`magic_constants.csv` 85 行・`APPROXIMATIONS.md` 9 行＝TieFormattingProblem の定数の住所が動いた・下の検算で増減 0）。`-End p529` OK・full 8864 / 0 / 2 / 8866・commit `237c014a`（§1 の天井 20,025 字→ ✅ ⒮¹⁴・⒳⁷ を落とした）。
+
+## 以下は第528セッションの経緯
+
+### 1.1 第528セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p528`（HEAD `bea1c57f`・full 8864 / 0 / 2 / 8866・`-Archive 526`）。
+
+★★ **⑴ 1 手目＝型の地図の頭 String 348 KB／打鍵を軒で割った**（既知の 30 軒に `Zz528.S(key, s)` の継ぎ目・Lab `sessions/p528/strings-head2.txt`・`Zz528Str.cs.txt`）: `page.materialize` 174 KB（変わった頁の実体化＝出力）・`frag.capture` 37 KB（描き直した系の text＝memo の状態）・**`PitchSyntax.AccidentalOf` 12.9 KB（402 回／打鍵＝`Accidental`／`AccidentalOffset`／`QuarterOffset` の読みごとに `pitchName[1..]`）**・**`Color.ToHex` 6.7 KB（167 回＝stroke と黒以外の fill ごと）**・decline の連鎖 2.7 KB・capture の scalars 1.5 KB・ほか 1 KB 未満。**既知 238 KB／348 KB＝残り約 110 KB は未特定**（Rendering・Syntax・Collector の `$"`／`ToString`／`Substring` を当たった範囲には無い）。
+
+★★★ **⑵ 2 家族＝−19,437 B／打鍵（1.60%）**: ⑴ `AccidentalOf` は 8 つの接尾辞を `pitchName.AsSpan(1)` の switch で定数のまま返す（値は同じ・参照で比べる読み手は grep で無し）／⑵ 色の hex は `Color.WriteHex(Span<char>)` の 1 綴りから `ToHex()` と `AppendHex(StringBuilder)` の 2 出口＝SVG writer は builder へ直書き（§7.7 の「2 つ目の綴り」を作らない形）。**予測は 4 家族 −24,600±800 で外れ（実測 79%）**: ⑶ タブのフレット `int.ToString()` は **.NET が 0〜299 を cache するので元から割り当てが無い**（計器が「作った」と数えた・型の地図に無いことが検算）／⑷ decline の「entry N: why」連鎖は **decline 時にも組む**ので賞金は success 側だけ＝0。**⑶⑷ を外して測り直し 1,197,122＝4 家族 1,197,104 と 18 B 差**で反証成立→⑶⑷ は変更から落とした（下書きは Lab `Tab.cs.family3.txt`・`family4.patch`）。最終 **render 1,216,557 → 1,197,120・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。
+  **毒**: P1＝hex を小文字 → hash 5,472 差・suite 258 赤／P2＝"es" に "is" → hash 4,237 差・suite 51 赤＝**両方観測あり**。⚠️ **教訓＝`x.ToString()` の周りの計器は runtime の cache を「新しい文字列」と数える**（小さい int・bool・enum）。型の地図と突き合わせてから値付けする。
+  §7 7.5＝**Core '+' 約 70 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**（綴りは同じ・LP の式に触らない）。棚卸しは行番号だけ（`APPROXIMATIONS.md` 1 行）。`-End p528` OK・full 8864 / 0 / 2 / 8866・commit `3b29462c`。
+
+## 以下は第527セッションの経緯
+
+### 1.1 第527セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p527`（HEAD `939f6f27`・full 8864 / 0 / 2 / 8866・`-Archive 525`）。
+
+★★ **⑴ 1 手目＝配列の census を*すべての要素型*に広げた**（ユーザーに窓をもらった。第495 の道具を `new T[n]` 全部に＝Lab `sessions/p527/instrument-arrays-any.ps1`・`Zz527Arr.cs.txt`・**221 軒 84,978 B／打鍵＝6.9%**・`arrays-head.txt`）。頭: `SyntaxNode.cs:120` `_children` 13,335（152 回／打鍵＝⒭⁸ の red・設計）／`SystemBreaker.cs:189` spring の vector 10,978（session が持つ）／`PrevailingMeters` 5,178（6.38 回）／`EstimateMeasureHeights` の 6 表 7,158／`BeamScoringProblem` の field 配列 約 8,900（18.9 problem／打鍵）／`ActiveKeyTableOf` 2,407（CWT）ほか。
+
+★★★ **⑵ 使い捨て表の第 2 陣＝6 家族 15,211 B／打鍵（1.23%）を `ScratchArray` の引き出しに**: 高さ見積りの 6 表（`MeasureHeightEstimate` に `Count` を足して `.Length` の境界を置き換えた＝引き出しは長い）・`PrevailingMeters` に `into` を足して読み捨ての 3 呼び手（outside-run walk・`FindRuns`・`CommonShortestDuration`）が引き出しを渡す（`ScoreSideTables` の memo だけ fresh のまま）・`ApplyArticulationSpacing` の colItem／colBoxes（Clear＝`??=` が null を読む）・`MeasureContentKey.Compute` の acc と buckets・`LayoutPreliminaryStaffBeams` の groupSystem。**予測を先に書き、測る前に 1 度改訂した**（Lab `prediction.txt`＝close／far は `positions.Length` で歩くので外した・−15,100±400）→ **実測 render 1,232,582 → 1,216,557＝−16,025（予測の 106%・帯の外）・hash 5,816 行 0 差**（`ab-after.txt`・`hashes-after.txt`＝**次便からの baseline**）。⚠️ **外れ 925 の説明候補＝「kept な 1 回」が無かった**（`ScoreSideTables.PrevailingMeters` は score を鍵にした CWT で、resume が score を保つ打鍵では hit＝6.38 回すべてが賞金なら 6.38×811＝5,178 で合計 16,022＝実測と 3 B 差）。**算術で、計器では確かめていない**。
+  **毒 2 本**: **P1＝colItem／colBoxes の Clear を落とす → hash 0 差だが snapshot `test/fermata-note-spacing` 1 本赤**（観測者あり）／**P2＝beginUpAt／beginDownAt の NaN fill を落とす → hash 0 差・suite も動かない＝無観測**（前の打鍵の同じ本の bare prefix が残るだけ。註に「OBSERVED BY NOTHING」と書いた）。ベースライン赤＝HandoffArchive 3＋ApproximationInventory 1。
+  **触らなかった**: `BeamScoringProblem` の field 配列 約 8,900（**`BeamScoringTests` 203-207 行が problem を 2 つ同時に生かす**＝instance field の引き出しは 2 つ目に 1 つ目の配列を渡す。やるなら problem ごとの pool）／`CalculateConcaveness` の close／far 770（`positions.Length` で歩く 2 本＝長さの引数が要る）／`Annotations.cs:554` staffYFlat（pass が持つ closure に捕まる）。
+  §7 7.5＝**Core '+' 約 70 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟ 何も足していない**（器の置き換え）。棚卸しは行番号だけ（`APPROXIMATIONS.md` 1 行）。`-End p527` OK・full 8864 / 0 / 2 / 8866・commit `59da7f12`。
+
+## 以下は第526セッションの経緯
+
+### 1.1 第526セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」）。★ `-Start p526`（HEAD `75597350`・full 8864 / 0 / 2 / 8866・`-Archive 524`）。
+
+★★ **⑴ 1 手目＝HEAD の地図 2 枚**（ユーザーに窓をもらって回した・Release・TC=0・232 冊 × 8 打鍵）: ⒜ 型の地図（Lab `sessions/p526/type-price-head.txt`・render 1,257,435）＝頭は String 348 KB・SkylineBuilding[] 126 KB・NoteItem 93 KB・Int32[] 50 KB・Double[] 47 KB・ArticulationLayout[] 27 KB・Measure 26 KB・Spring 22 KB・SlurCandidate 20 KB＝**第513 が値付けした土台ばかり**（GreenNode[] 157 KB・SyntaxToken[] 68 KB ほか約 290 KB は parse の tick＝引いて読む・第522）。⒝ **配列の census を HEAD で取り直した**（第495 の `instrument-arrays.ps1` をそのまま＋`Zz526Arr.cs.txt`＝Lab `arrays-head.txt`・142 軒 59,575 B／打鍵）。⚠️ **§1.0 ⒮¹⁵ ⑵ の escape 2 軒は既に閉じていた**（第499 が `_resolvedNotes` を狭め、第500 が render の PitchTrace を切った＝census の住所は当時の行番号で、今の :325 `_resolvedChordMembers` は型の地図の上位 120 に出ない）＝一覧を直した。
+
+★★★ **⑵ DP の使い捨て配列 4 家族＝25,112 B／打鍵（2.00%）を引き出しにした**: `PageBreaker.SolveUnconstrained` の 4 行（10.81 回／打鍵・10,034）・`FindOptimalBreaks` の (n+1)² 表と帯（0.95 回・8,869）・`KnuthPlassBreaker.Solve` の累積和 6 本（0.79 回・3,513）・`EstimateMeasureHeights` の系ごとの measureUp／Down（23.69 回・2,696）。どれも「建てて埋めて読んで捨てる」表で外へ出ない（:880-881 の答え・:125-133 の返る estimate・KnuthPlass の dp／prev／lineForce＝session に出る、は触らない）。**`ScratchArray.Take<T>(ref drawer, length)`**（`ListPool<T>` の配列版＝軒ごとに `[ThreadStatic]` 1 枚・clear しない）で借り、fresh が無料でくれていた fill を軒で明示（`Array.Fill(…, 0, n)`・累積和の `[0] = 0`・silhouette の無い系は `Array.Clear`）。**予測を先に書いた**（Lab `prediction.txt`＝−25,100±300・hash 0 差）→ **実測 render 1,257,673 → 1,232,582＝−25,091（予測の 99.96%）・hash 5,816 行 0 差**（Lab `ab-after.txt`・`hashes-after.txt`＝**次便からの baseline はこれ**）。
+  **毒 2 本で観測者を確かめた**（fill は load-bearing か）: **P1＝2 次元表の dp の fill を落とす → hash が 1,848 行に崩れて 5,816 差・suite 139 赤**（PageBreakerTests・台帳・snapshot…）／**P2＝1 次元の demerits の fill を落とす → hash 0 差だが suite 5 赤**（snapshot `test/chords`・`test/system-count-line-start-ink`・`test/lyrics-below-marcato`・`CollectResumeTests.ResumedCollect_RendersByteIdenticalSvg_OnSubset`・`FontAttributeTests.TheStyleReach_IsWhatThePageDoes(FiguredBass)`）。⚠️ 毒の run のベースライン赤＝HandoffArchive 3（見出しを立てる前）＋MagicConstant 1（行番号）＝引いて読んだ。⚠️ 累積和の `[0] = 0` は fresh でも 0・誰も [0] を書かないので**無観測**（消さずに註で言った＝将来 [0] を書く便への保険）。
+  §7 7.5＝**Core '+' 約 90 行・LILYPOND-REF 0／LILYSHARP-OWN 0＝7.6 ⒟「何も足していない」（器の置き換え・LP の式は 1 つも触らない）**。棚卸しは行番号だけ（`magic_constants.csv` 1 行）。⚠️ **Write ツールの新規ファイルは LF**（`ScratchArray.cs`＝CRLF に入れ直した・CLAUDE-OPERATIONS §1）。`-End p526` OK・full 8864 / 0 / 2 / 8866・commit `c7ac0a57`。
+
+## 以下は第525セッションの経緯
+
+### 1.1 第525セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「このセッションでやる方が有利なら着手して」＝⒳¹⁶ は双子と数が温まっているので着手）。
+★ `-Start p525`（HEAD `60bc38ac`・full 8864 / 0 / 2 / 8866・`-Archive 523`）。
+
+★★★ **⑴ ⒳¹⁶ 閉じた＝残差の名前が違った**: LP の grob を直接読んだ（Lab `sessions/p525/flagbox.ly`＝tie の X 親（NoteHead）の枠で head・Stem・Flag の extent と details）。**旗の箱の X は元から LP と同じ**（stem 中心 0.065＋glyph の [0, 1.0668]）。違いは **Y**＝LP の Flag は stem 端から blot/2＝0.04 内側（`flag.cc:183-196`）で、描画・dot support・spacing band が `FlagPlacementY` で持っている項を **tie の outline の箱だけが落としていた**。**Y の 0.04 が X の 0.04 になる道**: 短い tie は attachment を 2 度読む（:565-579・close_by＝y − 1.25×0.25＝2.9375）。その y は両エンジンとも旗の箱の**padding の斜面**（`Skyline::padded` skyline.cc:558-610＝平 0.05＋45° 0.05）に乗り、LP 1.1318−0.0073＝1.1245 → x0 1.3245／Lily# 1.1318−0.0473＝1.0845 → x0 1.2845＝第524 の実測と 4 桁一致。**予測を先に書いて**（`prediction.txt`）`BuildTieColumn` の箱の Y を `FlagPlacementY(tipY, stemUp)` に（1 呼び・LILYPOND-REF flag.cc:183-196）＝**`tie.width.chord-flag` +0.040000000 → 0.000000000・`tie.y.chord-flag` 不変（−4.32e−07）・hash 16 行＝GT だけ（LST 8 行不変・予測どおり・Lab `hashes-flagy.txt`＝次便の baseline）・A/B 1,257,679 → 1,257,677（±0）**。台帳の why・probe の頭・`LpGeometryProbes` の remark の「左端／幅」を書き直した。⚠️ **教訓＝残差の名前は測ってから付ける**: 第524 は 0.04 を「X の項の差」と*推定*で起票した。grob を 1 度 dump すれば X は一致していた。
+  §7 7.5＝**Core '+' 11 行・LILYPOND-REF 1（`flag.cc:183-196`）／LILYSHARP-OWN 0**。`-End p525` OK・full 8864 / 0 / 2 / 8866・台帳 exact 672 → 673（総和 22.6247 → 22.5847）・棚卸しは行番号だけ・commit `bd2db1ab`。
+
 ## 以下は第524セッションの経緯
 
 ### 1.1 第524セッション（2026-09-23・YT-DELL2）

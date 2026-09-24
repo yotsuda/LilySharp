@@ -62,9 +62,12 @@ internal sealed partial class LayoutEngine
     /// placed in (<c>LayoutEngine.BreakerFrame</c>): the outer staves' refpoints and the
     /// squeeze that takes the body back to its alignment minimum. Null where no placed
     /// system holds the bar.</param>
+    /// <param name="Count">The measures the six tables are filled for. ⚠️ THE BOUND, not any
+    /// table's <c>Length</c>: the tables are lent from the thread's drawer (ScratchArray) and
+    /// may be longer than this estimate, holding the previous estimate's numbers past it.</param>
     private readonly record struct MeasureHeightEstimate(
         double[] UpRest, double[] DownRest, double[] Body, double[] BeginUpAt, double[] BeginDownAt,
-        BreakerRefpointFrame?[] Frame);
+        BreakerRefpointFrame?[] Frame, int Count);
 
     /// <summary>
     /// Slices the ideal placement's paging silhouettes by bar, so that any candidate line —
@@ -121,21 +124,46 @@ internal sealed partial class LayoutEngine
     /// </remarks>
     [ThreadStatic] private static double[]? t_measureUp;
     [ThreadStatic] private static double[]? t_measureDown;
+    // The estimate's six tables (see ScratchArray): ChooseSystemCount's local for one
+    // keystroke, read by EstimatedSystemDetails (which copies values out, the frame by value)
+    // and dropped — 7,158 B a keystroke of fresh tables (session 527's census). ⚠️ Every
+    // fill below is load-bearing: a bar no placed system holds reads the zero / null a fresh
+    // table gave it, and a bar no system starts at reads the NaN.
+    [ThreadStatic] private static double[]? t_upRest;
+    [ThreadStatic] private static double[]? t_downRest;
+    [ThreadStatic] private static double[]? t_body;
+    [ThreadStatic] private static double[]? t_beginUpAt;
+    [ThreadStatic] private static double[]? t_beginDownAt;
+    [ThreadStatic] private static BreakerRefpointFrame?[]? t_frame;
+    // ChooseSystemCount's (start, end) → line memo, lent from the thread and given back
+    // CLEARED at both of the method's exits — it holds one keystroke's SystemDetails, which
+    // the clear drops. MEASURED (session 534's tuple-container census at HEAD, Release, the
+    // reader's corpus, eight forward keystrokes a book): 0.99 builds a keystroke at 45.84
+    // lines (max 100), 3,827 B of dictionary and buckets each keystroke.
+    [ThreadStatic] private static Dictionary<(int Start, int End), SystemDetails>? t_builtLines;
 
     private MeasureHeightEstimate EstimateMeasureHeights(
         SystemPass pass, int measureCount, double fallbackBody)
     {
-        var upRest = new double[measureCount];
-        var downRest = new double[measureCount];
-        var body = new double[measureCount];
-        Array.Fill(body, fallbackBody);
-        var frame = new BreakerRefpointFrame?[measureCount];
+        var upRest = ScratchArray.Take(ref t_upRest, measureCount);
+        var downRest = ScratchArray.Take(ref t_downRest, measureCount);
+        var body = ScratchArray.Take(ref t_body, measureCount);
+        Array.Clear(upRest, 0, measureCount);
+        Array.Clear(downRest, 0, measureCount);
+        Array.Fill(body, fallbackBody, 0, measureCount);
+        var frame = ScratchArray.Take(ref t_frame, measureCount);
+        Array.Clear(frame, 0, measureCount);
         // The begin bucket per line start: NaN until a placed system starting there fills
         // it; the rest take the bare continuation prefix below.
-        var beginUpAt = new double[measureCount];
-        var beginDownAt = new double[measureCount];
-        Array.Fill(beginUpAt, double.NaN);
-        Array.Fill(beginDownAt, double.NaN);
+        var beginUpAt = ScratchArray.Take(ref t_beginUpAt, measureCount);
+        var beginDownAt = ScratchArray.Take(ref t_beginDownAt, measureCount);
+        // ⚠️ OBSERVED BY NOTHING (session 527's poison: dropping these two fills moved no
+        // page of the reader's corpus and no test): a bar no system starts at then keeps
+        // the previous estimate's number — the same bare prefix, on the next keystroke of
+        // the same book — instead of taking it afresh below. Kept because it is the
+        // construction, not because a net holds it.
+        Array.Fill(beginUpAt, double.NaN, 0, measureCount);
+        Array.Fill(beginDownAt, double.NaN, 0, measureCount);
         // The bare continuation prefix: the smallest begin bucket a continuation system
         // showed. A book of one system has no continuation and lends that system's.
         double bareUp = double.PositiveInfinity, bareDown = double.PositiveInfinity;
@@ -240,7 +268,8 @@ internal sealed partial class LayoutEngine
             if (double.IsNaN(beginDownAt[m]))
                 beginDownAt[m] = bareDown;
         }
-        return new MeasureHeightEstimate(upRest, downRest, body, beginUpAt, beginDownAt, frame);
+        return new MeasureHeightEstimate(upRest, downRest, body, beginUpAt, beginDownAt, frame,
+            measureCount);
     }
 
     /// <summary>
@@ -307,8 +336,9 @@ internal sealed partial class LayoutEngine
                 : BreakPermission.Allow;
             // The begin bucket of a line starting HERE (LilyPond's begin_line_heights at
             // this line's start rank), not one bucket for every line.
-            double beginUp = start < estimate.BeginUpAt.Length ? estimate.BeginUpAt[start] : 0;
-            double beginDown = start < estimate.BeginDownAt.Length ? estimate.BeginDownAt[start] : 0;
+            // Bounded by the estimate's Count, not the table's Length (see MeasureHeightEstimate).
+            double beginUp = start < estimate.Count ? estimate.BeginUpAt[start] : 0;
+            double beginDown = start < estimate.Count ? estimate.BeginDownAt[start] : 0;
             var fresh = _pageLayouter.BuildSystemDetails(
                 i, body,
                 Math.Max(beginUp, restUp), Math.Max(beginDown, restDown),
@@ -373,7 +403,15 @@ internal sealed partial class LayoutEngine
         var estimate = EstimateMeasureHeights(ideal, measures.Length, _options.StaffHeight);
         // Every candidate breaking below is priced from this one estimate, and neighbouring
         // counts share most of their lines, so a line is built once (EstimatedSystemDetails).
-        var built = new Dictionary<(int Start, int End), SystemDetails>();
+        var built = t_builtLines ?? new Dictionary<(int Start, int End), SystemDetails>();
+        t_builtLines = null;
+        // Both exits give it back emptied (see t_builtLines); a throw only costs the next
+        // keystroke a new map.
+        void GiveBuilt()
+        {
+            built.Clear();
+            t_builtLines = built;
+        }
         var breaker = _pageLayouter.CreateBreaker();
         // The book title is the page's first LINE (paper-book.cc:570-580), priced by the
         // same DP as the systems; the page loop below sees it in front of every candidate.
@@ -427,15 +465,16 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: :48-59, :111 — the ideal configuration on its best pages.
         int idealCount = lineBreaks.IdealLineCount;
         if (Score(idealCount) is not { } best)
+        {
+            GiveBuilt();
             return null;
+        }
         var debug = DebugPageBreakingScoring;
         if (debug != null)
         {
             // What each candidate line is priced at — LilyPond's line_details per chunk,
             // laid beside the placed systems' own details (CreatePages prints those).
-            debug("estimate: begin up/down per line start "
-                + string.Join(" ", lineBreaks.IdealBreaks.Prepend(0).Take(lineBreaks.IdealBreaks.Count)
-                    .Select(m => $"{m + 1}:{estimate.BeginUpAt[m]:F3}/{estimate.BeginDownAt[m]:F3}")));
+            debug("estimate: begin up/down per line start " + DescribeLineStarts(lineBreaks, estimate));
             var idealDetails = PageBreaker.CalcLineHeights(
                 WithTitle(EstimatedSystemDetails(lineBreaks.IdealBreaks, estimate, measures)));
             for (int i = 0; i < idealDetails.Count; i++)
@@ -543,8 +582,17 @@ internal sealed partial class LayoutEngine
 
         debug?.Invoke($"chosen {bestBreaks.Count} systems: {bestDemerits:F6}"
             + (changed ? "" : " (the ideal)"));
+        GiveBuilt();
         return changed ? bestBreaks : null;
     }
+
+    /// <summary>The scoring report's line-start estimates. Its own method: the Select lambda
+    /// captured <c>estimate</c>, which made <see cref="ChooseSystemCount"/>'s whole environment
+    /// (the one its local functions share) a class built on every call, debug or not
+    /// (session 535).</summary>
+    private static string DescribeLineStarts(LineBreakSolutions lineBreaks, MeasureHeightEstimate estimate)
+        => string.Join(" ", lineBreaks.IdealBreaks.Prepend(0).Take(lineBreaks.IdealBreaks.Count)
+            .Select(m => $"{m + 1}:{estimate.BeginUpAt[m]:F3}/{estimate.BeginDownAt[m]:F3}"));
 
     /// <summary>One line's page-breaking details, for the scoring report: the three heights,
     /// the two silhouette buckets and the tallness the breaker stacks it at.</summary>

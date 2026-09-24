@@ -251,9 +251,9 @@ internal static class DotConfiguration
     public static int[] Resolve(IReadOnlyList<int> notePositions, IReadOnlyList<int>? directions = null)
     {
         int n = notePositions.Count;
-        var result = new int[n];
         if (n == 0)
-            return result;
+            return Array.Empty<int>();
+        var result = new int[n];
 
         // ⚠️ THE ONE HOME, not a fast path beside a slow one (RULES §5.2.1②). Only the SOURCE
         // of the scratch forks on size; every line below runs for a chord of one dot and for a

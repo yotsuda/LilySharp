@@ -101,7 +101,10 @@ internal sealed class TieSpecification
 internal sealed class TieCandidate
 {
     /// <summary>Which <see cref="TieSpecification"/> of the column this is a configuration OF.</summary>
-    public int SpecIndex { get; init; }
+    /// <remarks>Settable, like <see cref="Dir"/> and <see cref="Position"/>, because the
+    /// thread's lent problem (<see cref="TieFormattingProblem.SolveColumn"/>) reuses its
+    /// candidates across columns and assigns every field on take.</remarks>
+    public int SpecIndex { get; set; }
 
     public double StartX { get; set; }
     public double EndX { get; set; }
@@ -120,12 +123,12 @@ internal sealed class TieCandidate
     public double ControlHeight { get; set; }
 
     /// <summary>+1 = curve up, -1 = curve down. LilyPond's <c>dir_</c>.</summary>
-    public int Dir { get; init; }
+    public int Dir { get; set; }
 
     public bool CurveUp => Dir > 0;
 
     /// <summary>Staff position (half-space integer) for quantized placement.</summary>
-    public int Position { get; init; }
+    public int Position { get; set; }
 
     /// <summary>Small delta offset from quantized position (staff spaces).</summary>
     public double DeltaY { get; set; }
@@ -163,14 +166,17 @@ internal sealed class TieCandidate
 /// </remarks>
 internal sealed class TieFormattingProblem
 {
-    private readonly IReadOnlyList<TieSpecification> _specs;
+    private IReadOnlyList<TieSpecification> _specs;
 
     // Each bound column's CHORD OUTLINE — the skyline every attachment is read off (see
     // TieChordOutline). Null on a side that is not a note column at all: a piece broken at a
     // system edge, or a tab digit. Those fall back to the specification's fixed anchor, which
     // is where the caller reattached the bound.
-    private readonly TieChordOutline?[] _startOutlines;
-    private readonly TieChordOutline?[] _endOutlines;
+    // ⚠️ The tables may be LONGER than the column (the lent problem grows them to the largest
+    // column it has seen); every reader indexes a specification, so [0, _specs.Count) is all
+    // that is ever read, and Bind writes every one of those cells.
+    private TieChordOutline?[] _startOutlines;
+    private TieChordOutline?[] _endOutlines;
 
     // Every dot position in the COLUMN, not just each tie's own — LilyPond's dot_positions_
     // (:242-247, filled from every Dots grob it is handed). A chord's dots all belong to one
@@ -178,24 +184,116 @@ internal sealed class TieFormattingProblem
     // is unchanged; for a chord it is what generate_collision_variations asks.
     private readonly HashSet<int> _dotPositions = [];
 
-    private readonly TieDetails _details;
+    private TieDetails _details;
 
     // LilyPond's possibilities_: one Tie_configuration per (tie, position, direction), built
     // on demand and REUSED, so its own score is charged once however many Ties_configurations
     // it turns up in. :455-472 get_configuration.
     private readonly Dictionary<(int Spec, int Pos, int Dir), TieCandidate> _possibilities = [];
 
+    // The candidates this problem has built, kept between the lent problem's columns and
+    // handed out again from the front (TakeCandidate); every field is assigned on take.
+    private readonly List<TieCandidate> _candidatePool = [];
+    private int _candidatesUsed;
+
+    // The one- and two-element variation lists, likewise kept and handed out cleared
+    // (Variation); Solve puts them back after each pass, since FindBestVariation is their
+    // only reader and keeps none.
+    private readonly List<List<(int Index, TieCandidate Config)>> _variationPool = [];
+    private int _variationsUsed;
+
+    // Three column-sized configuration arrays: the base (GenerateBaseChordConfiguration fills
+    // the first) and the two FindBestVariation writes into in turn. ⚠️ EXACT LENGTH, not grown:
+    // every reader of a configuration walks its .Length (ScoreTies, the variation generators,
+    // `ties[^1]`), so the three are re-made only when the column's size changes — a column of
+    // one, which is nearly every column, re-makes nothing. The direction rule's four arrays
+    // (positions, imposed directions, its scratch, its answer) are sized the same way.
+    private TieCandidate[] _configA = [];
+    private TieCandidate[] _configB = [];
+    private TieCandidate[] _configC = [];
+    private int[] _positions = [];
+    private bool?[] _manual = [];
+    private int?[] _dirsScratch = [];
+    private int[] _dirs = [];
+
+    /// <summary>The column-sized arrays at the column's size — new ones when it changed.</summary>
+    private void SizeColumnArrays(int n)
+    {
+        if (_configA.Length == n)
+            return;
+        _configA = new TieCandidate[n];
+        _configB = new TieCandidate[n];
+        _configC = new TieCandidate[n];
+        _positions = new int[n];
+        _manual = new bool?[n];
+        _dirsScratch = new int?[n];
+        _dirs = new int[n];
+    }
+
+    /// <summary>
+    /// The thread's one problem, taken out of this drawer while <see cref="SolveColumn"/> runs
+    /// (session 421's idiom) and put back released. WHAT IT RETAINS: the largest column's
+    /// outline tables, the possibilities dictionary and dot set at their largest capacity,
+    /// and the candidates and variation lists of the busiest column — all of them numbers
+    /// and empty containers, pinning no chord (Release clears the outlines).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 529, the p526 type map, Release, the reader's corpus, 232 books × eight
+    /// forward keystrokes): 7.82 columns a keystroke, each a fresh problem — its dictionary's
+    /// entries 7,166 B, its candidates 4,769 B, its variation lists 3,908 B, its dot set and
+    /// outline tables ~1,500 B, the object ~560 B: 1.5% of the render, dropped as soon as the
+    /// layouts were copied out. The test constructors below stay fresh (the tests hold two
+    /// problems at once); only this entry lends.
+    /// </remarks>
+    [ThreadStatic]
+    private static TieFormattingProblem? t_problem;
+
+    /// <summary>
+    /// Solves one tie COLUMN on the thread's lent problem — the production entry, in place of
+    /// <c>new TieFormattingProblem(specs).Solve()</c>. Same arithmetic in the same order.
+    /// </summary>
+    internal static IReadOnlyList<TieLayout> SolveColumn(
+        IReadOnlyList<TieSpecification> specs, TieDetails? details = null)
+    {
+        var problem = t_problem ?? new TieFormattingProblem();
+        t_problem = null;
+        problem.Bind(specs, details);
+        var layouts = problem.Solve();
+        problem.Release();
+        t_problem = problem;
+        return layouts;
+    }
+
+    private TieFormattingProblem()
+    {
+        _specs = [];
+        _details = TieDetails.Default;
+        _startOutlines = [];
+        _endOutlines = [];
+    }
+
     /// <summary>
     /// Builds the problem for one tie COLUMN, bottom tie first — the order LilyPond's
     /// <c>front ()</c>/<c>back ()</c> and its monotonicity terms are written in.
     /// </summary>
     public TieFormattingProblem(IReadOnlyList<TieSpecification> specs, TieDetails? details = null)
+        : this()
+    {
+        Bind(specs, details);
+    }
+
+    /// <summary>Points the problem at a column: the outlines are built, the dot set filled.
+    /// On a lent problem this follows a <see cref="Release"/>, so every container is empty.</summary>
+    private void Bind(IReadOnlyList<TieSpecification> specs, TieDetails? details)
     {
         _specs = specs;
         _details = details ?? TieDetails.Default;
 
-        _startOutlines = new TieChordOutline?[specs.Count];
-        _endOutlines = new TieChordOutline?[specs.Count];
+        if (_startOutlines.Length < specs.Count)
+        {
+            _startOutlines = new TieChordOutline?[specs.Count];
+            _endOutlines = new TieChordOutline?[specs.Count];
+        }
         for (int i = 0; i < specs.Count; i++)
         {
             // set_column_chord_outline runs here, as it does in LilyPond's own constructor path
@@ -214,6 +312,75 @@ internal sealed class TieFormattingProblem
                 _dotPositions.Add(pos % 2 == 0 ? pos + 1 : pos);
             }
         }
+    }
+
+    /// <summary>Forgets the column: the containers are emptied (their capacity kept), the
+    /// outline cells dropped, the pools rewound. ⚠️ THE CLEARING IS LOAD-BEARING — a
+    /// possibility left behind would answer the next column's (spec, pos, dir) with this
+    /// column's attachments.</summary>
+    private void Release()
+    {
+        Array.Clear(_startOutlines, 0, _specs.Count);
+        Array.Clear(_endOutlines, 0, _specs.Count);
+        _specs = [];
+        _dotPositions.Clear();
+        _possibilities.Clear();
+        _candidatesUsed = 0;
+        RewindVariations();
+    }
+
+    /// <summary>A candidate from the pool, or a new one when the pool is spent. Every field
+    /// is assigned by the one caller (<see cref="GenerateConfiguration"/>).</summary>
+    private TieCandidate TakeCandidate()
+    {
+        if (_candidatesUsed < _candidatePool.Count)
+            return _candidatePool[_candidatesUsed++];
+        var c = new TieCandidate();
+        _candidatePool.Add(c);
+        _candidatesUsed++;
+        return c;
+    }
+
+    /// <summary>A cleared variation list from the pool holding <paramref name="a"/>.</summary>
+    private List<(int Index, TieCandidate Config)> Variation((int Index, TieCandidate Config) a)
+    {
+        var list = TakeVariation();
+        list.Add(a);
+        return list;
+    }
+
+    /// <summary>A cleared variation list from the pool holding <paramref name="a"/> then
+    /// <paramref name="b"/>.</summary>
+    private List<(int Index, TieCandidate Config)> Variation(
+        (int Index, TieCandidate Config) a, (int Index, TieCandidate Config) b)
+    {
+        var list = TakeVariation();
+        list.Add(a);
+        list.Add(b);
+        return list;
+    }
+
+    private List<(int Index, TieCandidate Config)> TakeVariation()
+    {
+        if (_variationsUsed < _variationPool.Count)
+        {
+            var list = _variationPool[_variationsUsed++];
+            list.Clear();
+            return list;
+        }
+        var fresh = new List<(int Index, TieCandidate Config)>(2);
+        _variationPool.Add(fresh);
+        _variationsUsed++;
+        return fresh;
+    }
+
+    /// <summary>Puts every variation list back — after a pass has read them
+    /// (<see cref="FindBestVariation"/> keeps none) and on release.</summary>
+    private void RewindVariations()
+    {
+        for (int i = 0; i < _variationsUsed; i++)
+            _variationPool[i].Clear();
+        _variationsUsed = 0;
     }
 
     /// <summary>A column of ONE, which is every tie that is not a chord's.</summary>
@@ -434,12 +601,14 @@ internal sealed class TieFormattingProblem
         else
             GenerateSingleTieVariations(baseConfig, vars);
         var (best, bestScore) = FindBestVariation(baseConfig, baseScore, vars);
+        RewindVariations();
 
         if (_specs.Count > 1)
         {
             vars.Clear();
             GenerateExtremalTieVariations(best, vars);
             (best, _) = FindBestVariation(best, bestScore, vars);
+            RewindVariations();
         }
         vars.Clear();
         t_variations = vars;
@@ -484,16 +653,31 @@ internal sealed class TieFormattingProblem
         var best = baseConfig;
         double bestScore = baseScore;
 
+        // The two configuration arrays that are not the base: one is written and scored, and
+        // on a strict improvement it becomes `best` and the previous best (the spare, the first
+        // time) is written next. The base is never written; `best` and the scratch are always
+        // distinct arrays distinct from the base — which is what the Clone gave, without the
+        // 7 copies a column (session 529's account: 1,723 B a keystroke).
+        TieCandidate[] variant, spare;
+        if (ReferenceEquals(baseConfig, _configA))
+            (variant, spare) = (_configB, _configC);
+        else if (ReferenceEquals(baseConfig, _configB))
+            (variant, spare) = (_configA, _configC);
+        else
+            (variant, spare) = (_configA, _configB);
+
         foreach (var variation in vars)
         {
-            var variant = (TieCandidate[])baseConfig.Clone();
+            Array.Copy(baseConfig, variant, baseConfig.Length);
             foreach (var (index, config) in variation)
                 variant[index] = config;
 
             double score = ScoreTies(variant);
             if (score < bestScore)
             {
+                var previousBest = best;
                 best = variant;
+                variant = ReferenceEquals(previousBest, baseConfig) ? spare : previousBest;
                 bestScore = score;
             }
         }
@@ -524,9 +708,11 @@ internal sealed class TieFormattingProblem
     /// </remarks>
     private TieCandidate[] GenerateBaseChordConfiguration()
     {
+        SizeColumnArrays(_specs.Count);
         var dirs = SetTiesConfigStandardDirections();
 
-        var config = new TieCandidate[_specs.Count];
+        // The problem's own array, every cell written.
+        var config = _configA;
         for (int i = 0; i < _specs.Count; i++)
             config[i] = GetConfiguration(i, _specs[i].Position + dirs[i], dirs[i]);
         return config;
@@ -566,15 +752,17 @@ internal sealed class TieFormattingProblem
     /// </remarks>
     private int[] SetTiesConfigStandardDirections()
     {
+        // The problem's own column-sized arrays (SizeColumnArrays ran first), every cell written.
         int n = _specs.Count;
-        var positions = new int[n];
-        var manual = new bool?[n];
+        var positions = _positions;
+        var manual = _manual;
         for (int i = 0; i < n; i++)
         {
             positions[i] = _specs[i].Position;
             manual[i] = _specs[i].ManualDir;
         }
-        return StandardDirections(positions, manual, _details.NeutralDirectionUp);
+        StandardDirections(positions, manual, _details.NeutralDirectionUp, _dirsScratch, _dirs);
+        return _dirs;
     }
 
     /// <summary>
@@ -594,13 +782,32 @@ internal sealed class TieFormattingProblem
         IReadOnlyList<int> positions, IReadOnlyList<bool?> manual, bool neutralUp)
     {
         int n = positions.Count;
-        var dirs = new int?[n];
+        var p = new int[n];
+        var m = new bool?[n];
         for (int i = 0; i < n; i++)
-            if (manual[i] is { } m)
-                dirs[i] = m ? +1 : -1;
+        {
+            p[i] = positions[i];
+            m[i] = manual[i];
+        }
+        var result = new int[n];
+        StandardDirections(p, m, neutralUp, new int?[n], result);
+        return result;
+    }
+
+    /// <summary>The rule on spans — the one body both entries run: the problem's, on its own
+    /// column-sized arrays, and the array-returning one above. <paramref name="dirs"/> is a
+    /// scratch of the column's length, written in full before it is read; <paramref name="result"/>
+    /// is the answer, every cell written.</summary>
+    internal static void StandardDirections(
+        ReadOnlySpan<int> positions, ReadOnlySpan<bool?> manual, bool neutralUp,
+        Span<int?> dirs, Span<int> result)
+    {
+        int n = positions.Length;
+        for (int i = 0; i < n; i++)
+            dirs[i] = manual[i] is { } m ? (m ? +1 : -1) : null;
 
         if (n == 0)
-            return [];
+            return;
 
         if (dirs[0] is null)
         {
@@ -626,13 +833,11 @@ internal sealed class TieFormattingProblem
         }
 
         // Whatever is left: the sign of its own position, the middle line counting as DOWN.
-        var result = new int[n];
         for (int i = 0; i < n; i++)
         {
             int d = dirs[i] ?? Math.Sign(positions[i]);
             result[i] = d != 0 ? d : -1;
         }
-        return result;
     }
 
     /// <summary>
@@ -771,19 +976,20 @@ internal sealed class TieFormattingProblem
         var (attachStartX, attachEndX) = FinalAttachment(specIdx, curveYFromMiddle, dir);
         double finalWidth = Math.Max(attachEndX - attachStartX, _details.MinLength);
 
-        return new TieCandidate
-        {
-            SpecIndex = specIdx,
-            StartX = attachStartX,
-            EndX = attachEndX,
-            Height = CalculateTieHeight(finalWidth),
-            ControlHeight = CalculateControlHeight(finalWidth),
-            Dir = dir,
-            Position = pos,
-            DeltaY = deltaY,
-            Demerits = 0,
-            IsScored = false
-        };
+        // From the pool (TakeCandidate): EVERY field is assigned here, the scoring flags
+        // included, since the object may have been another column's configuration.
+        var conf = TakeCandidate();
+        conf.SpecIndex = specIdx;
+        conf.StartX = attachStartX;
+        conf.EndX = attachEndX;
+        conf.Height = CalculateTieHeight(finalWidth);
+        conf.ControlHeight = CalculateControlHeight(finalWidth);
+        conf.Dir = dir;
+        conf.Position = pos;
+        conf.DeltaY = deltaY;
+        conf.Demerits = 0;
+        conf.IsScored = false;
+        return conf;
     }
 
     /// <summary>
@@ -811,7 +1017,7 @@ internal sealed class TieFormattingProblem
                 if (_specs[0].ManualDir is { } forced && d != (forced ? +1 : -1))
                     continue;
 
-                vars.Add([(0, GetConfiguration(0, ties[0].Position + i * d, d))]);
+                vars.Add(Variation((0, GetConfiguration(0, ties[0].Position + i * d, d))));
             }
         }
     }
@@ -847,17 +1053,17 @@ internal sealed class TieFormattingProblem
                 if (center <= lastCenter + centerDistanceTolerance)
                 {
                     if (_specs[i].ManualDir is null)
-                        vars.Add([(i, GetConfiguration(i, _specs[i].Position - ties[i].Dir, -ties[i].Dir))]);
+                        vars.Add(Variation((i, GetConfiguration(i, _specs[i].Position - ties[i].Dir, -ties[i].Dir))));
 
                     if (_specs[i - 1].ManualDir is null)
-                        vars.Add([(i - 1, GetConfiguration(i - 1, _specs[i - 1].Position - ties[i - 1].Dir, -ties[i - 1].Dir))]);
+                        vars.Add(Variation((i - 1, GetConfiguration(i - 1, _specs[i - 1].Position - ties[i - 1].Dir, -ties[i - 1].Dir))));
 
                     if (i == 1 && ties[i - 1].Dir < 0)
-                        vars.Add([(i - 1, GetConfiguration(i - 1, _specs[i - 1].Position - 1, -1))]);
+                        vars.Add(Variation((i - 1, GetConfiguration(i - 1, _specs[i - 1].Position - 1, -1))));
                 }
                 else if (_dotPositions.Contains(ties[i].Position))
                 {
-                    vars.Add([(i, GetConfiguration(i, ties[i].Position + ties[i].Dir, ties[i].Dir))]);
+                    vars.Add(Variation((i, GetConfiguration(i, ties[i].Position + ties[i].Dir, ties[i].Dir))));
                 }
             }
 
@@ -900,11 +1106,11 @@ internal sealed class TieFormattingProblem
                     down = moved;
                 else
                     up = moved;
-                vars.Add([(index, moved)]);
+                vars.Add(Variation((index, moved)));
             }
 
             if (down is not null && up is not null)
-                vars.Add([(0, down), (ties.Length - 1, up)]);
+                vars.Add(Variation((0, down), (ties.Length - 1, up)));
         }
     }
 

@@ -300,25 +300,30 @@ internal static partial class SharedRenderer
         // lets through; the leftovers end as beamlets on the visible neighbours.
         // LilyPond's "stems" holds its invisible ones the same way.
         var restStems = restStemsForSpan;   // same guard, hoisted above for the span
-        var beamingInput = new BeamSubdivision.StemBeaming[grp.Members.Length + restStems.Length];
-        var memberWalkIndex = new int[grp.Members.Length];
+        // The beaming input is a list lent from the thread (its two readers take an
+        // IReadOnlyList), given back once the segments are cut; the member walk index is a
+        // drawer array written for every member below and read by member index only.
+        // MEASURED (session 533's array census at HEAD, Release, the reader's corpus, eight
+        // forward keystrokes a book): 9.68 beams a keystroke, 1,243 B of fresh arrays each.
+        var beamingInput = ListPool<BeamSubdivision.StemBeaming>.Rent();
+        var memberWalkIndex = ScratchArray.Take(ref t_memberWalkIndex, grp.Members.Length);
         {
-            int w = 0, r = 0;
+            int r = 0;
             for (int i = 0; i <= grp.Members.Length; i++)
             {
                 while (r < restStems.Length && restStems[r].BeforeMember == i)
                 {
-                    beamingInput[w++] = new BeamSubdivision.StemBeaming(
+                    beamingInput.Add(new BeamSubdivision.StemBeaming(
                         restStems[r].CountLeft, restStems[r].CountRight,
-                        grp.StemUp ? 1 : -1, beam.RestXPositions[r]);
+                        grp.StemUp ? 1 : -1, beam.RestXPositions[r]));
                     r++;
                 }
                 if (i < grp.Members.Length)
                 {
-                    memberWalkIndex[i] = w;
-                    beamingInput[w++] = new BeamSubdivision.StemBeaming(
+                    memberWalkIndex[i] = beamingInput.Count;
+                    beamingInput.Add(new BeamSubdivision.StemBeaming(
                         grp.Members[i].BeamCountLeft, grp.Members[i].BeamCountRight,
-                        MemberUp(i) ? 1 : -1, StemAttachX(i));
+                        MemberUp(i) ? 1 : -1, StemAttachX(i)));
                 }
             }
         }
@@ -355,6 +360,7 @@ internal static partial class SharedRenderer
             beamingInput, beamRanks,
             EngravingDefaults.BeamletLength,
             EngravingDefaults.BeamletMaxLengthProportion, halfStem, segments);
+        ListPool<BeamSubdivision.StemBeaming>.Give(beamingInput);
         int noteheadSideRank = 0;
         if (tremoloGapCount > 0 && segments.Count > 0)
             noteheadSideRank = grp.StemUp
@@ -507,6 +513,12 @@ internal static partial class SharedRenderer
             ossiaScope?.Dispose();
         }
     }
+
+    /// <summary>The member → beaming-walk index of the beam being drawn, lent from the thread
+    /// between beams; see <see cref="ScratchArray"/> for the fill rule (every member's slot is
+    /// written before the stem loop reads it).</summary>
+    [ThreadStatic]
+    private static int[]? t_memberWalkIndex;
 
     /// <summary>
     /// The (staff, measure) pairs a percent sign hides, for one <see cref="DrawBeams"/> call,

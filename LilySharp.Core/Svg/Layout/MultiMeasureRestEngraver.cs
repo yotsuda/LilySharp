@@ -141,6 +141,13 @@ internal sealed class MmrRunMap
 /// </remarks>
 internal static class MultiMeasureRestEngraver
 {
+    // The meter tables two readers here fill and drop (see ScratchArray and
+    // PrevailingMeters' `into`): one drawer a reader, since FindRuns can run while the
+    // outside-run walk's table is live. MEASURED (session 527's census): PrevailingMeters
+    // built 6.38 tables a keystroke, 811 B each, one of them kept (ScoreSideTables).
+    [ThreadStatic] private static Fraction[]? t_metersOutsideRuns;
+    [ThreadStatic] private static Fraction[]? t_metersFindRuns;
+
     /// <summary>
     /// Threshold above which the church_rest combination is replaced by an H-bar.
     /// </summary>
@@ -316,7 +323,8 @@ internal static class MultiMeasureRestEngraver
             for (int m = run.StartMeasureIndex; m < run.StartMeasureIndex + run.Count; m++)
                 inRun.Add(m);
         var meters = PrevailingMeters(new[] { voice.Measures }, voice.Measures.Length,
-            score.TimeSignature.MeasureDuration);
+            score.TimeSignature.MeasureDuration,
+            into: ScratchArray.Take(ref t_metersOutsideRuns, voice.Measures.Length));
         foreach (int m in measureMap.Keys.OrderBy(k => k))
         {
             if (inRun.Contains(m) || m >= voice.Measures.Length)
@@ -507,7 +515,8 @@ internal static class MultiMeasureRestEngraver
             return ImmutableArray<MmrRun>.Empty;
 
         var meters = PrevailingMeters(new[] { primaryMeasures }, primaryMeasures.Length,
-            initialMeasureDuration);
+            initialMeasureDuration,
+            into: ScratchArray.Take(ref t_metersFindRuns, primaryMeasures.Length));
 
         // A measure collapses into a multi-measure rest only when EVERY staff
         // rests it. LilyPond keeps the measures (and their barlines) separate when
@@ -756,10 +765,15 @@ internal static class MultiMeasureRestEngraver
     /// updated by any time change a bar itself holds (a change at the head of a bar
     /// governs that bar). A change may sit in any voice, so all of them are scanned.
     /// </summary>
+    /// <param name="into">A table to fill instead of a new one — a caller that reads the meters
+    /// in its own loop and drops them hands its thread's drawer (ScratchArray); the one
+    /// caller that KEEPS the table (ScoreSideTables' memo) leaves it null. Every cell below
+    /// <paramref name="barCount"/> is written, so nothing stale is read.</param>
     internal static Fraction[] PrevailingMeters(
-        IReadOnlyList<ImmutableArray<Measure>> voices, int barCount, Fraction initial)
+        IReadOnlyList<ImmutableArray<Measure>> voices, int barCount, Fraction initial,
+        Fraction[]? into = null)
     {
-        var meters = new Fraction[barCount];
+        var meters = into ?? new Fraction[barCount];
         var meter = initial;
         for (int m = 0; m < barCount; m++)
         {

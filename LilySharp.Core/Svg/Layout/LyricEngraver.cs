@@ -157,7 +157,13 @@ internal sealed class LyricEngraver
     /// renderer's grid barlines, off <c>systemsArray</c>). Publishing the answer and letting
     /// the engine apply it keeps ONE order of operations instead of two.
     /// </remarks>
-    public Dictionary<(int System, int StaffIndex), double> SolvedRowBaselines { get; } = new();
+    public IReadOnlyDictionary<(int System, int StaffIndex), double> SolvedRowBaselines
+        => _solvedRowBaselines ?? s_noRowBaselines;
+
+    // Built on the first solved row — MEASURED (session 534's tuple-container census at HEAD):
+    // 2.19 engravers a keystroke, 100% of them publishing nothing, 175 B each keystroke.
+    private Dictionary<(int System, int StaffIndex), double>? _solvedRowBaselines;
+    private static readonly Dictionary<(int System, int StaffIndex), double> s_noRowBaselines = new();
 
     /// <summary>
     /// The faces this score's syllables are measured against — a FIELD because an engraver
@@ -1215,7 +1221,7 @@ internal sealed class LyricEngraver
                 {
                     double rowAnchorPageY = systems[system].Y - (sysAnchorBase + anchorRefpoint);
                     foreach (var (rowStaff, index) in rowFirstElement)
-                        SolvedRowBaselines[(system, rowStaff)] =
+                        (_solvedRowBaselines ??= new())[(system, rowStaff)] =
                             rowAnchorPageY - positions[index + 1];
                 }
 
@@ -1231,7 +1237,7 @@ internal sealed class LyricEngraver
                     // system from the block that solved it and the two only meet on the page.
                     double anchorPageY = systems[system].Y - (sysAnchorBase + anchorRefpoint);
                     for (int k = 0; k < solved.Lines.Length; k++)
-                        SolvedRowBaselines[(system + 1, solved.Lines[k].StaffIndex)] =
+                        (_solvedRowBaselines ??= new())[(system + 1, solved.Lines[k].StaffIndex)] =
                             anchorPageY - positions[firstLeadingPosition + k];
                 }
             }
@@ -1457,7 +1463,10 @@ internal sealed class LyricEngraver
         IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
     {
         const double placeholderCentre = EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2;
-        var alignmentEdgeCache = new Dictionary<int, Dictionary<Fraction, (double Left, double Centre)>>();
+        // Built on the first question: an unsung book asks this closure nothing at all.
+        // MEASURED (session 534's tuple-container census at HEAD): 2.19 closures a keystroke,
+        // 100% of their caches empty at drain, 175 B each keystroke.
+        Dictionary<int, Dictionary<Fraction, (double Left, double Centre)>>? alignmentEdgeCache = null;
         return lyric =>
         {
             // The edge a lyric aligns on is its OWN VOICE's head — MEASURED (probe
@@ -1481,7 +1490,8 @@ internal sealed class LyricEngraver
 
         (double Left, double Centre) Edge(int measureIndex, Fraction timing)
         {
-            if (!alignmentEdgeCache.TryGetValue(measureIndex, out var byTiming))
+            Dictionary<Fraction, (double Left, double Centre)>? byTiming = null;
+            if (alignmentEdgeCache is null || !alignmentEdgeCache.TryGetValue(measureIndex, out byTiming))
             {
                 byTiming = new Dictionary<Fraction, (double Left, double Centre)>();
                 // EVERY staff's bar at this index — a paper column is shared by all of them,
@@ -1512,7 +1522,7 @@ internal sealed class LyricEngraver
                 var edges = SpacingRules.ParentAlignmentEdgesPerColumn(barMeasures, barTimings);
                 for (int c = 0; c < barTimings.Count; c++)
                     byTiming[barTimings[c]] = edges[c];
-                alignmentEdgeCache[measureIndex] = byTiming;
+                (alignmentEdgeCache ??= new())[measureIndex] = byTiming;
             }
             // A moment no staff plays on — a lyric row's own finer grid — has an empty
             // note-column extent, which is exactly when LilyPond takes the placeholder.

@@ -604,9 +604,9 @@ internal static partial class SharedRenderer
             new(startX, graceY - graceHalf, graceY + graceHalf),
             new(endX, mainY - mainHalf, mainY + mainHalf),
         };
-        var solved = new SlurScoringProblem(
+        var solved = SlurScoringProblem.SolveLent(
             slurItem, startX, startY, endX, endY, staffMiddleYDevice,
-            obstacles: obstacles).Solve();
+            obstacles: obstacles);
 
         // For a short grace→main span (a beamed grace run sits right against the main
         // note) the scorer's free-head inset can drop every candidate, collapsing the

@@ -158,9 +158,30 @@ public sealed class PitchSyntax : SyntaxNode
         var t => t,
     };
 
-    /// <summary><see cref="Accidental"/> of a pitch name.</summary>
+    /// <summary><see cref="Accidental"/> of a pitch name: the suffix after the letter, as the
+    /// interned spelling when it is one of the eight the language lexes, and a fresh slice
+    /// otherwise. The same string VALUE either way; only the eight are read in numbers.
+    /// MEASURED (session 528, Release, the reader's corpus, 232 books × eight forward
+    /// keystrokes): the collector asked this 402 times a keystroke — once per
+    /// <see cref="Accidental"/>, <see cref="AccidentalOffset"/> and <see cref="QuarterOffset"/>
+    /// read — and every ask sliced a new 2–4 character string, 12.9 KB a keystroke of "is".</summary>
     internal static string AccidentalOf(string pitchName)
-        => pitchName.Length > 1 ? pitchName[1..] : string.Empty;
+    {
+        if (pitchName.Length <= 1)
+            return string.Empty;
+        return pitchName.AsSpan(1) switch
+        {
+            "is" => "is",
+            "es" => "es",
+            "isis" => "isis",
+            "eses" => "eses",
+            "ih" => "ih",
+            "eh" => "eh",
+            "isih" => "isih",
+            "eseh" => "eseh",
+            _ => pitchName[1..],
+        };
+    }
 
     /// <summary><see cref="AccidentalOffset"/> of an accidental suffix.</summary>
     internal static int AccidentalOffsetOf(string accidental) => accidental switch

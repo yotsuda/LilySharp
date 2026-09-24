@@ -17,6 +17,7 @@
 using System;
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Collector;
@@ -38,6 +39,12 @@ namespace LilySharp.Core.Svg.Collector;
 /// </remarks>
 internal sealed class BeamDetector
 {
+    /// <summary><see cref="CreateBeamGroup"/>'s stem candidates, lent from the thread between
+    /// groups; see <see cref="ScratchArray"/> for the fill rule (only [0, stemCount) is
+    /// written, and every reader takes that exact span).</summary>
+    [ThreadStatic]
+    private static StemCandidate[]? t_stemCandidates;
+
     /// <summary>
     /// Detects all beam groups in a score, across every voice.
     /// </summary>
@@ -139,7 +146,12 @@ internal sealed class BeamDetector
         BeamDetectionMemo? memo = null)
     {
         var beamGroups = RentGroupBuffer();
-        var consumed = new HashSet<(int measureIndex, int itemIndex)>();
+        // Lent from the thread (t_consumed) and given back cleared at the one exit below —
+        // a set parked dirty would keep a previous voice's cross-measure items consumed.
+        // MEASURED (session 534's tuple-container census at HEAD): 3.52 sets a keystroke,
+        // every one empty at drain, 225 B of set objects each keystroke.
+        var consumed = t_consumed ?? new HashSet<(int measureIndex, int itemIndex)>();
+        t_consumed = null;
 
         // Every tuplet bracket resolved to its TIME SPAN — what LilyPond's beam engraver
         // hands the pattern as Tuplet_description. A beam that runs through one keeps the
@@ -242,8 +254,15 @@ internal sealed class BeamDetector
         // caller's line.
         var detected = beamGroups.ToImmutableArray();
         GiveGroupBuffer(beamGroups);
+        consumed.Clear();
+        t_consumed = consumed;
         return detected;
     }
+
+    /// <summary>The per-voice detection's consumed set, lent from the thread between voices;
+    /// given back cleared (see the rent).</summary>
+    [ThreadStatic]
+    private static HashSet<(int measureIndex, int itemIndex)>? t_consumed;
 
     /// <summary>
     /// The accumulator
@@ -788,7 +807,11 @@ internal sealed class BeamDetector
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamOptions, beamGroups,
             tupletSpans, voiceIndex, forceStemUpAt);
 
-        var stems = new List<(MusicItem item, int index, Fraction startPos)>();
+        // Lent (ListPool) and given back after the bar's last EndBeam: CreateBeamGroup reads
+        // it by index and keeps nothing, and RecheckBeam's head / tail are lists of their own.
+        // MEASURED (session 534's tuple-container census at HEAD): 2.12 lists a keystroke,
+        // 306 B of list and ladder each keystroke.
+        var stems = ListPool<(MusicItem item, int index, Fraction startPos)>.Rent();
         // LILYPOND-REF: lily/auto-beam-engraver.cc:241 junk_beam / :278 end_beam — shortest_dur_
         // is a quarter whenever no beam is being built, which is why the first stem of a beam
         // never sets it: nothing beamable is that long, so the SECOND stem is what makes the
@@ -955,6 +978,7 @@ internal sealed class BeamDetector
         // LILYPOND-REF: lily/auto-beam-engraver.cc:462-485 process_acknowledged — currentBarLine
         // forces the beam to end. Lily# builds one measure at a time, so the bar line is here.
         EndBeam();
+        ListPool<(MusicItem item, int index, Fraction startPos)>.Give(stems);
     }
 
     private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex,
@@ -967,7 +991,11 @@ internal sealed class BeamDetector
             moments[i] = (group[i].item, group[i].startPos, measureIndex, group[i].index);
         var beamlets = BeamletCounts(moments, beamOptions, tupletSpans);
 
-        var stems = new StemCandidate[group.Count];
+        // A drawer array (ScratchArray): only [0, stemCount) is written, and every reader
+        // takes the exact span `visible` below. MEASURED (session 533's array census at HEAD,
+        // Release, the reader's corpus, eight forward keystrokes a book): 3.36 groups a
+        // keystroke, 493 B of fresh arrays each keystroke.
+        var stems = ScratchArray.Take(ref t_stemCandidates, group.Count);
         int stemCount = 0;
         List<BeamRestStem>? restStems = null;
         for (int i = 0; i < group.Count; i++)
@@ -1157,17 +1185,22 @@ internal sealed class BeamDetector
             return best;
         }
 
-        var infos = new BeamingPattern.Element[members.Count];
+        // Lent from the thread (Beamify and its helpers read an IReadOnlyList and keep
+        // nothing), given back once the counts are out. MEASURED (session 533's array census
+        // at HEAD): 3.36 patterns a keystroke, 410 B of fresh arrays each keystroke.
+        var infos = ListPool<BeamingPattern.Element>.Rent();
         for (int i = 0; i < members.Count; i++)
         {
             var m = members[i];
             var span = InnermostSpan(m.Measure, m.Index);
-            infos[i] = new BeamingPattern.Element(
+            infos.Add(new BeamingPattern.Element(
                 m.Moment, GetDuration(m.Item), GetBeamCount(m.Item),
                 Tuplet: span is null ? null : Describe(span),
-                Invisible: m.Item is RestItem);
+                Invisible: m.Item is RestItem));
         }
-        return BeamingPattern.Beamify(infos, options);
+        var counts = BeamingPattern.Beamify(infos, options);
+        ListPool<BeamingPattern.Element>.Give(infos);
+        return counts;
     }
 
     /// <summary>

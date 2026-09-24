@@ -101,15 +101,23 @@ internal sealed class SvgDrawingContext : IDrawingContext
     /// across thousands of glyphs, beams and rests per score). Non-black colours emit
     /// normally; a null fill also defaults to black here (callers that need an UNFILLED
     /// shape use the <c>fill="none"</c> paths, not this helper).</summary>
+    // The colour is written straight into the builder (Color.AppendHex — ToHex's spelling,
+    // with no string in between; the count that motivated it is on that method).
     private void AppendFill(Color? fill)
     {
         if (fill is { } f && f != Color.Black)
-            _sb.Append(" fill=\"").Append(f.ToHex()).Append('"');
+        {
+            _sb.Append(" fill=\"");
+            f.AppendHex(_sb);
+            _sb.Append('"');
+        }
     }
 
     private void AppendStroke(Color stroke, double strokeWidth)
     {
-        _sb.Append(" stroke=\"").Append(stroke.ToHex()).Append("\" stroke-width=\"");
+        _sb.Append(" stroke=\"");
+        stroke.AppendHex(_sb);
+        _sb.Append("\" stroke-width=\"");
         F3(strokeWidth);
         _sb.Append('"');
     }
@@ -235,7 +243,9 @@ internal sealed class SvgDrawingContext : IDrawingContext
         // matching LilyPond's slur/tie stencil (fill + round stroke).
         if (strokeWidth > 0)
         {
-            _sb.Append(" stroke=\"").Append((fill ?? Color.Black).ToHex()).Append("\" stroke-width=\"");
+            _sb.Append(" stroke=\"");
+            (fill ?? Color.Black).AppendHex(_sb);
+            _sb.Append("\" stroke-width=\"");
             F2(strokeWidth);
             _sb.Append("\" stroke-linecap=\"round\" stroke-linejoin=\"round\"");
         }

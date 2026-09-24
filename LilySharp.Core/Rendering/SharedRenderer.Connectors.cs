@@ -524,11 +524,14 @@ internal static partial class SharedRenderer
         var textRowIndices = new HashSet<int>(
             score.EnumerateStaves().Where(t => t.Staff.IsTextRow)
                 .Select(t => t.GlobalStaffIndex));
-        return system.StaffGroups
-            .SelectMany(g => g.Staves)
-            .Where(s => !s.IsHidden && !s.IsOssia && !textRowIndices.Contains(s.StaffIndex))
-            .OrderByDescending(s => s.Y)
-            .ToList();
+        // The filter by loops: its predicate captured textRowIndices, a delegate and an
+        // environment per system (session 535). The stable OrderByDescending stays.
+        var kept = new List<StaffLayout>();
+        foreach (var g in system.StaffGroups)
+            foreach (var s in g.Staves)
+                if (!s.IsHidden && !s.IsOssia && !textRowIndices.Contains(s.StaffIndex))
+                    kept.Add(s);
+        return kept.OrderByDescending(s => s.Y).ToList();
     }
 
     /// <summary>Below this span a system-start delimiter is not drawn at all.</summary>

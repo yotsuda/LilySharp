@@ -410,6 +410,9 @@ internal static partial class SpacingRules
             score.Voices.Select(v => (v.Measures, IsTextRow: false, IsLyricsRow: false)),
             score.TimeSignature.MeasureDuration);
 
+    // The meter table the vote below reads and drops (see ScratchArray).
+    [ThreadStatic] private static Fraction[]? t_metersShortest;
+
     private static double CommonShortestDuration(
         IEnumerable<(ImmutableArray<Model.Measure> Measures, bool IsTextRow, bool IsLyricsRow)> voiceMeasures,
         Fraction initialMeasureDuration)
@@ -433,7 +436,8 @@ internal static partial class SpacingRules
         // A full-measure rest is measured against the PREVAILING meter, so a 2/4 bar's
         // half rest is dropped from the vote just like a 4/4 bar's whole rest.
         var meters = MultiMeasureRestEngraver.PrevailingMeters(
-            voices.Select(v => v.Measures).ToList(), measureCount, initialMeasureDuration);
+            voices.Select(v => v.Measures).ToList(), measureCount, initialMeasureDuration,
+            into: ScratchArray.Take(ref t_metersShortest, measureCount));
 
         // Per-measure shortest across all voices, then count occurrences.
         var counts = new Dictionary<double, int>();

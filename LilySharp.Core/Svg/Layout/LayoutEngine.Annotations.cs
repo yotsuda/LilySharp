@@ -1226,12 +1226,34 @@ internal sealed partial class LayoutEngine
             && staffYByIndex.Count > 0)
         {
             double topStaffY = staffYByIndex.Values.Min();
-            bool anyLowerStaffChords = cn.Any(c => !c.IsChordRow
-                && staffYByIndex.TryGetValue(c.StaffIndex, out var sy) && sy > topStaffY + 1e-6);
+            // A loop, not Any: its predicate captured staffYByIndex and topStaffY, which with
+            // the lambda below made this method's environment a class built on every pass;
+            // the lambda now lives in a method of its own, built only on a book that needs it
+            // (session 535).
+            bool anyLowerStaffChords = false;
+            foreach (var c in cn)
+                if (!c.IsChordRow && staffYByIndex.TryGetValue(c.StaffIndex, out var sy)
+                    && sy > topStaffY + 1e-6)
+                {
+                    anyLowerStaffChords = true;
+                    break;
+                }
             if (anyLowerStaffChords)
-            {
-                var skyCache = new Dictionary<(int, int), VerticalSkyline?>();
-                lowerStaffUpSkyline = (sysIdx, staffIndex) =>
+                lowerStaffUpSkyline = LowerStaffUpSkylineSupplier(ctx, systems, staffByIndex);
+        }
+
+        return LayoutChordNamesCore(ctx, ml, scriptedSkylines, staffYAt, minStaffYAt,
+            chordGridSheet, lowerStaffUpSkyline);
+    }
+
+    /// <summary>The per-(system, staff) up-skyline of a staff hosting a chord row below the
+    /// top — see the remark at its one caller in <see cref="LayoutChordNames"/>.</summary>
+    private Func<int, int, VerticalSkyline?> LowerStaffUpSkylineSupplier(
+        AnnotationLayoutContext ctx, ImmutableArray<SystemLayout> systems,
+        Dictionary<int, Staff> staffByIndex)
+    {
+        var skyCache = new Dictionary<(int, int), VerticalSkyline?>();
+        return (sysIdx, staffIndex) =>
                 {
                     if (sysIdx < 0 || sysIdx >= systems.Length
                         || !staffByIndex.TryGetValue(staffIndex, out var staff))
@@ -1294,8 +1316,17 @@ internal sealed partial class LayoutEngine
                     }
                     return sky;
                 };
-            }
-        }
+    }
+
+    private ImmutableArray<ChordNameLayout> LayoutChordNamesCore(
+        AnnotationLayoutContext ctx, ImmutableArray<MeasureLayout> ml,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? scriptedSkylines,
+        Func<int, int, double>? staffYAt, Func<int, double>? minStaffYAt,
+        bool chordGridSheet, Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline)
+    {
+        var systems = ctx.Systems;
+        var staffByIndex = ctx.StaffByIndex;
+        var cn = ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty;
 
         // The boxed section labels that will share this row's LINE — on a staffless sheet the
         // label is set ON the chord line (MusicMarkEngraver.StafflessAnchorRefpointBelowTop),
@@ -1321,69 +1352,15 @@ internal sealed partial class LayoutEngine
         // (ctx.StaffSkylines are the room's lists) and the same run parts.
         // Null in the preliminary pass, which runs before the per-staff skylines exist;
         // that pass estimates with the 0.6+protrusion arm, exactly as it did for the band.
+        // The supplier lives in a method of its own (session 535): a lambda here captured
+        // this method's variables and made its environment a class built on every pass.
         Func<int, int, double?>? attachedBaselineAboveTop = null;
         if (ctx.MultiScore is { } multiScore
             && ctx.StaffSkylines is { } roomSkylines
             && staffByIndex != null
             && !cn.IsDefaultOrEmpty && cn.Any(c => !c.IsChordRow && c.UseTiming))
-        {
-            var baseCache = new Dictionary<(int, int), double?>();
-            var sourceCache = new Dictionary<int, MultiStaffLayouter.PairRunSources>();
-            attachedBaselineAboveTop = (sysIdx, staffIndex) =>
-            {
-                var key = (sysIdx, staffIndex);
-                if (baseCache.TryGetValue(key, out var hit))
-                    return hit;
-                double? result = null;
-                if (sysIdx >= 0 && sysIdx < systems.Length && sysIdx < roomSkylines.Count)
-                {
-                    var system = systems[sysIdx];
-                    if (!sourceCache.TryGetValue(sysIdx, out var runSources))
-                    {
-                        // The per-system pass carried its own suppliers out (finding
-                        // 4-4) — same score, same measure layouts, same range, so the
-                        // rebuild below is the identical value paid a second time.
-                        // The rebuild stays as the arm for a context that carried none.
-                        if (ctx.RunSources != null && sysIdx < ctx.RunSources.Count)
-                        {
-                            runSources = ctx.RunSources[sysIdx];
-                        }
-                        else
-                        {
-                            int start = int.MaxValue, end = int.MinValue;
-                            foreach (var m in system.Measures)
-                            {
-                                start = Math.Min(start, m.MeasureIndex);
-                                end = Math.Max(end, m.MeasureIndex + 1);
-                            }
-                            runSources = end > start
-                                ? BuildPairRunSources(multiScore, system.Measures, start, end)
-                                : default;
-                        }
-                        sourceCache[sysIdx] = runSources;
-                    }
-                    IReadOnlyList<(Staff Staff, StaffLayout Layout)> RowsBelow(int upper)
-                    {
-                        var rowIdxs = ctx.BetweenRowStaves?.Invoke(sysIdx, upper);
-                        if (rowIdxs is not { Count: > 0 })
-                            return Array.Empty<(Staff, StaffLayout)>();
-                        var rows = new List<(Staff, StaffLayout)>(rowIdxs.Count);
-                        foreach (int idx in rowIdxs)
-                            if (staffByIndex.TryGetValue(idx, out var rowStaff))
-                                foreach (var g in system.StaffGroups)
-                                    foreach (var st in g.Staves)
-                                        if (st.StaffIndex == idx)
-                                            rows.Add((rowStaff, st));
-                        return rows;
-                    }
-                    result = MultiStaffLayouter.AttachedChordBaselineAboveTop(
-                        system, roomSkylines[sysIdx], staffIndex, runSources, RowsBelow,
-                        _options.StaffSpacing);
-                }
-                baseCache[key] = result;
-                return result;
-            };
-        }
+            attachedBaselineAboveTop = AttachedBaselineAboveTopSupplier(
+                ctx, multiScore, roomSkylines, staffByIndex, systems);
 
         // Which chord ROW (if any) stands over each staff — the line a note-attached @chord
         // on that staff prints on. ⚠️ THE SAME ANSWER THE BAND GATE READS: the reservation
@@ -1399,7 +1376,7 @@ internal sealed partial class LayoutEngine
         // over the same note. The RESERVATION half is ScoreSideTables.ChordNames and the
         // band gate in MultiStaffLayouter.BuildAllStaffSkylines; both ask TabStaffStencils.
         Func<ChordNameItem, bool>? blanked = ctx.MultiScore is { } blankScore
-            ? c => TabStaffStencils.BlanksNoteAttachedChord(blankScore, c)
+            ? BlankedBy(blankScore)
             : null;
 
         return ChordNameEngraver.Calculate(ctx.Fonts,
@@ -1410,6 +1387,76 @@ internal sealed partial class LayoutEngine
             attachedBaselineAboveTop: attachedBaselineAboveTop,
             chordRowAboveStaff: rowAbove,
             blanked: blanked);
+    }
+
+    /// <summary>The numbers-only tab's blanking predicate — its own method so the lambda's
+    /// environment is built only for a multi-staff book (session 535).</summary>
+    private static Func<ChordNameItem, bool> BlankedBy(MultiStaffScore blankScore)
+        => c => TabStaffStencils.BlanksNoteAttachedChord(blankScore, c);
+
+    /// <summary>The attached chord line's baseline above its staff's top, per (system, staff),
+    /// memoized — see the remark at its one caller in <see cref="LayoutChordNamesCore"/>.</summary>
+    private Func<int, int, double?> AttachedBaselineAboveTopSupplier(
+        AnnotationLayoutContext ctx, MultiStaffScore multiScore,
+        IReadOnlyList<List<(VerticalSkyline Up, VerticalSkyline Down)>> roomSkylines,
+        Dictionary<int, Staff> staffByIndex, ImmutableArray<SystemLayout> systems)
+    {
+        var baseCache = new Dictionary<(int, int), double?>();
+        var sourceCache = new Dictionary<int, MultiStaffLayouter.PairRunSources>();
+        return (sysIdx, staffIndex) =>
+        {
+            var key = (sysIdx, staffIndex);
+            if (baseCache.TryGetValue(key, out var hit))
+                return hit;
+            double? result = null;
+            if (sysIdx >= 0 && sysIdx < systems.Length && sysIdx < roomSkylines.Count)
+            {
+                var system = systems[sysIdx];
+                if (!sourceCache.TryGetValue(sysIdx, out var runSources))
+                {
+                    // The per-system pass carried its own suppliers out (finding
+                    // 4-4) — same score, same measure layouts, same range, so the
+                    // rebuild below is the identical value paid a second time.
+                    // The rebuild stays as the arm for a context that carried none.
+                    if (ctx.RunSources != null && sysIdx < ctx.RunSources.Count)
+                    {
+                        runSources = ctx.RunSources[sysIdx];
+                    }
+                    else
+                    {
+                        int start = int.MaxValue, end = int.MinValue;
+                        foreach (var m in system.Measures)
+                        {
+                            start = Math.Min(start, m.MeasureIndex);
+                            end = Math.Max(end, m.MeasureIndex + 1);
+                        }
+                        runSources = end > start
+                            ? BuildPairRunSources(multiScore, system.Measures, start, end)
+                            : default;
+                    }
+                    sourceCache[sysIdx] = runSources;
+                }
+                IReadOnlyList<(Staff Staff, StaffLayout Layout)> RowsBelow(int upper)
+                {
+                    var rowIdxs = ctx.BetweenRowStaves?.Invoke(sysIdx, upper);
+                    if (rowIdxs is not { Count: > 0 })
+                        return Array.Empty<(Staff, StaffLayout)>();
+                    var rows = new List<(Staff, StaffLayout)>(rowIdxs.Count);
+                    foreach (int idx in rowIdxs)
+                        if (staffByIndex.TryGetValue(idx, out var rowStaff))
+                            foreach (var g in system.StaffGroups)
+                                foreach (var st in g.Staves)
+                                    if (st.StaffIndex == idx)
+                                        rows.Add((rowStaff, st));
+                    return rows;
+                }
+                result = MultiStaffLayouter.AttachedChordBaselineAboveTop(
+                    system, roomSkylines[sysIdx], staffIndex, runSources, RowsBelow,
+                    _options.StaffSpacing);
+            }
+            baseCache[key] = result;
+            return result;
+        };
     }
 
     /// <summary>
@@ -1570,11 +1617,13 @@ internal sealed partial class LayoutEngine
         {
             runLineOf = idx => staffByIndex.TryGetValue(idx, out var st)
                 ? RunLineOf(st, sp) : LooseLineSpacer.NoteBoundLyricLine(sp);
-            var inkCache = new Dictionary<(int, int), (VerticalSkyline, VerticalSkyline)?>();
+            // Built on the first question (session 534: 2.16 caches a keystroke, all empty
+            // at drain on the reader's corpus, 173 B each keystroke).
+            Dictionary<(int, int), (VerticalSkyline, VerticalSkyline)?>? inkCache = null;
             chordRowInk = (sysIdx, idx) =>
             {
                 var key = (sysIdx, idx);
-                if (inkCache.TryGetValue(key, out var hit)) return hit;
+                if (inkCache is not null && inkCache.TryGetValue(key, out var hit)) return hit;
                 (VerticalSkyline, VerticalSkyline)? built = null;
                 if (staffByIndex.TryGetValue(idx, out var row)
                     && row.IsTextRow && !row.IsLyricsTextRow
@@ -1582,7 +1631,7 @@ internal sealed partial class LayoutEngine
                     built = ChordNameEngraver.RowSkylines(
                         ctx.Fonts, ctx.ChordNames ?? ImmutableArray<ChordNameItem>.Empty,
                         systems[sysIdx].Measures, idx, row.PrimaryVoice.Measures);
-                inkCache[key] = built;
+                (inkCache ??= new())[key] = built;
                 return built;
             };
         }

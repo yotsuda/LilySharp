@@ -278,10 +278,23 @@ public static class Tunings
 
     // Its own method: a lambda capturing `notes` made the environment the local functions of
     // CalculateChordFrets share a class, built on every chord (session 470's allocation-tick price).
+    // KEYED, NOT COMPARED (session 535): the comparison's delegate and environment were still
+    // built on every chord. The keys are the NEGATED MIDI numbers, so the ascending keyed sort
+    // makes exactly the decisions the descending comparison made — both are the runtime's
+    // introspective sort, whose insertion sort below sixteen items compares the same pairs
+    // in the same order, and a chord never has sixteen heads — so the order is unchanged.
     private static void SortHighestFirst(
         System.Collections.Generic.List<int> order,
-        System.Collections.Generic.IReadOnlyList<(int Midi, int? StringNumber)> notes) =>
-        order.Sort((a, b) => notes[b].Midi.CompareTo(notes[a].Midi));
+        System.Collections.Generic.IReadOnlyList<(int Midi, int? StringNumber)> notes)
+    {
+        int n = order.Count;
+        System.Span<int> keys = n <= 16 ? stackalloc int[16] : new int[n];
+        keys = keys[..n];
+        var items = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(order);
+        for (int i = 0; i < n; i++)
+            keys[i] = -notes[items[i]].Midi;
+        System.MemoryExtensions.Sort(keys, items);
+    }
 
     /// <summary>
     /// How wide one comfortable position is on a BASS, in frets: index, middle and little

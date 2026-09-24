@@ -104,15 +104,13 @@ internal sealed class BeamEngraver
                 rightX = Math.Max(rightX, restXPositions[r]);
         }
 
-        // Use BeamScoringProblem to find optimal beam positions
-        var problem = new BeamScoringProblem(
-            group, itemXPositions, _parameters, collisions,
-            restXPositions: restXPositions);
-        var (leftY, rightY) = problem.Solve();
-
+        // Use BeamScoringProblem to find optimal beam positions — on the thread's lent problem
+        // (BeamScoringProblem.SolveLent: one beam a problem, no fresh tables).
         // leftY/rightY are the line AT THE OUTER MEMBER STEMS (BeamScoringProblem.AtOuterStems);
         // the layout carries those stems' x as the frame the Y are read in.
-        var (leftStemX, rightStemX) = problem.OuterMemberStemXs;
+        var (leftY, rightY, (leftStemX, rightStemX)) = BeamScoringProblem.SolveLent(
+            group, itemXPositions, _parameters, collisions,
+            restXPositions: restXPositions);
         return new BeamLayout(
             group, leftY, rightY, leftX, rightX, leftStemX, rightStemX,
             memberXPositions, staffIndex, systemIndex,

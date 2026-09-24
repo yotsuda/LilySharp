@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -769,7 +769,8 @@ internal static class OutsideStaffStacker
         // Lent (see t_hits) and given back at the one exit below, after Rebuild's last read.
         var hits = t_hits ?? new HashSet<int>();
         t_hits = null;
-        var toStore = new List<(int Sys, BelowStackMemo.SystemEntry Entry)>();
+        // Lent (ListPool) and given back after the store loop at the exit (session 534).
+        var toStore = ListPool<(int Sys, BelowStackMemo.SystemEntry Entry)>.Rent();
         // One probe for the whole loop, lent from the thread (BelowStackMemo.Probe).
         var probe = t_belowProbe ?? new BelowStackMemo.Probe();
         t_belowProbe = null;
@@ -928,6 +929,7 @@ internal static class OutsideStaffStacker
             entry.OutTrills = Gather(resTrills, part.Trills);
             memo.Store(s, entry);
         }
+        ListPool<(int Sys, BelowStackMemo.SystemEntry Entry)>.Give(toStore);
 
         GiveBelowParts(parts);
         hits.Clear();
@@ -1285,7 +1287,10 @@ internal static class OutsideStaffStacker
         // measurement read 1.05 of 23.69 there, so reserving the partition twice would cost
         // far more than the ladder it replaced.
         var hits = new HashSet<int>(parts.Count);
-        var toStore = new List<(int Sys, AboveStackMemo.SystemEntry Entry)>();
+        // Lent (ListPool) and given back after the store loop at the exit. MEASURED (session
+        // 534's tuple-container census at HEAD): 2.16 lists a keystroke at 1.06 entries, 261 B
+        // of list and ladder each keystroke.
+        var toStore = ListPool<(int Sys, AboveStackMemo.SystemEntry Entry)>.Rent();
         // One probe for the whole loop, lent from the thread: a hit compares it and drops
         // nothing, and only a miss copies it into an entry (AboveStackMemo.Probe).
         var probe = t_aboveProbe ?? new AboveStackMemo.Probe();
@@ -1431,6 +1436,7 @@ internal static class OutsideStaffStacker
             entry.OutArticulations = Gather(resArtics, part.Articulations);
             memo.Store(s, entry);
         }
+        ListPool<(int Sys, AboveStackMemo.SystemEntry Entry)>.Give(toStore);
         GiveParts(parts);
 
         return (resTrills, resBarNumbers, resOttavas, resCustomTexts, resVoltas, resMarks,
@@ -1913,9 +1919,20 @@ internal static class OutsideStaffStacker
     {
         if (sys < 0 || sys >= systems.Length || systems[sys].StaffGroups.IsDefaultOrEmpty)
             return;
-        var staff = systems[sys].StaffGroups
-            .SelectMany(g => g.Staves)
-            .FirstOrDefault(s => !s.IsHidden && s.StaffIndex == staffIndex);
+        // A loop, not SelectMany + FirstOrDefault: the predicate captured staffIndex, a delegate
+        // and an environment per seeded tracker (session 535).
+        StaffLayout? staff = null;
+        foreach (var g in systems[sys].StaffGroups)
+        {
+            foreach (var s in g.Staves)
+                if (!s.IsHidden && s.StaffIndex == staffIndex)
+                {
+                    staff = s;
+                    break;
+                }
+            if (staff != null)
+                break;
+        }
         if (staff == null)
             return;
         // ⚠️ A TEXT ROW DRAWS NO CLEF, and this seeded one anyway until session 243.
@@ -2157,6 +2174,10 @@ internal static class OutsideStaffStacker
     /// (MusicMarkEngraver.StafflessAnchorRefpointBelowTop).
     /// </para>
     /// </remarks>
+    /// <summary><see cref="ChordRowSupport"/>'s answer for a book with no chord names — read
+    /// only, never written (its readers TryGetValue).</summary>
+    private static readonly Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)> s_noRowSupport = new();
+
     private static Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)> ChordRowSupport(
         ScoreTextMetrics fonts,
         ImmutableArray<SystemLayout> systems,
@@ -2164,9 +2185,12 @@ internal static class OutsideStaffStacker
         ImmutableArray<ChordNameItem> chordItems,
         IReadOnlyDictionary<int, int> measureToSystem)
     {
-        var support = new Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>();
+        // A book with no chord names takes the one shared empty answer: both readers
+        // (PlaceVoltas, PlaceMusicMarks) only TryGetValue it. MEASURED (session 534's
+        // tuple-container census at HEAD): 2.16 a keystroke, 99.6% empty, 175 B each keystroke.
         if (chordNames.IsDefaultOrEmpty || chordItems.IsDefaultOrEmpty)
-            return support;
+            return s_noRowSupport;
+        var support = new Dictionary<int, (VerticalSkyline Up, VerticalSkyline Down)>();
         foreach (var cn in chordNames)
         {
             if (cn.SourceIndex < 0 || cn.SourceIndex >= chordItems.Length)
@@ -2632,11 +2656,38 @@ internal static class OutsideStaffStacker
         if (voltas.IsDefaultOrEmpty)
             return voltas;
         var b = voltas.ToBuilder();
-        foreach (var sysGroup in Enumerable.Range(0, b.Count)
-            .Where(i => measureToSystem.ContainsKey(b[i].StartMeasureIndex))
-            .GroupBy(i => measureToSystem[b[i].StartMeasureIndex]))
+        // Loops in place of Range.Where.GroupBy and OrderBy: their lambdas captured `b` and
+        // measureToSystem — an environment and three delegates per pass (session 535). The
+        // grouping keeps GroupBy's order (systems in first-appearance order, brackets in index
+        // order) and the per-system sort is the stable ascending one OrderBy was.
+        var systemsInOrder = ListPool<int>.Rent();
+        var bySystem = ListPool<(int Sys, int Index)>.Rent();
+        for (int i = 0; i < b.Count; i++)
+            if (measureToSystem.TryGetValue(b[i].StartMeasureIndex, out int s))
+            {
+                bySystem.Add((s, i));
+                if (!systemsInOrder.Contains(s))
+                    systemsInOrder.Add(s);
+            }
+        var ordered = ListPool<int>.Rent();
+        foreach (int sysIdx in systemsInOrder)
         {
-            int sysIdx = sysGroup.Key;
+            ordered.Clear();
+            foreach (var (s, i) in bySystem)
+                if (s == sysIdx)
+                    ordered.Add(i);
+            for (int k = 1; k < ordered.Count; k++)
+            {
+                int v = ordered[k];
+                int key = b[v].StartMeasureIndex;
+                int j = k - 1;
+                while (j >= 0 && b[ordered[j]].StartMeasureIndex > key)
+                {
+                    ordered[j + 1] = ordered[j];
+                    j--;
+                }
+                ordered[j + 1] = v;
+            }
 
             // ONE spanner per CHAIN of consecutive endings, not per system: the
             // engraver closes the spanner when a bracket ends with no new one
@@ -2652,7 +2703,6 @@ internal static class OutsideStaffStacker
             // spanner being a single axis group.
             // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner —
             //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
-            var ordered = sysGroup.OrderBy(i => b[i].StartMeasureIndex).ToList();
             var chains = new List<List<int>>();
             foreach (int i in ordered)
             {
@@ -2735,6 +2785,9 @@ internal static class OutsideStaffStacker
                     b[i] = b[i] with { YUp = anchor };
             }
         }
+        ListPool<int>.Give(ordered);
+        ListPool<(int Sys, int Index)>.Give(bySystem);
+        ListPool<int>.Give(systemsInOrder);
         return b.ToImmutable();
     }
 

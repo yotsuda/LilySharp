@@ -470,8 +470,24 @@ internal static partial class SpacingRules
         bool includeAttached)
     {
         var width = new double[timings.Count];
+        ChordInkRightReachPerColumn(fonts, timings, measureIndex, chordNames, includeAttached, width);
+        return width;
+    }
+
+    /// <summary>The same, written into <paramref name="width"/> (one cell a column, cleared
+    /// first) — the layout's spelling, on a span of the loop's scratch drawer
+    /// (<c>MultiStaffLayouter.LayoutSystemMeasures</c>).</summary>
+    internal static void ChordInkRightReachPerColumn(
+        Rendering.ScoreTextMetrics fonts,
+        IReadOnlyList<Fraction> timings,
+        int measureIndex,
+        ImmutableArray<ChordNameItem> chordNames,
+        bool includeAttached,
+        Span<double> width)
+    {
+        width.Clear();
         if (chordNames.IsDefaultOrEmpty || timings.Count == 0)
-            return width;
+            return;
 
         foreach (var cn in chordNames)
         {
@@ -488,7 +504,6 @@ internal static partial class SpacingRules
                     break;
                 }
         }
-        return width;
     }
 
     /// <summary>
@@ -521,6 +536,20 @@ internal static partial class SpacingRules
     {
         var left = new double[timings.Count];
         var right = new double[timings.Count];
+        MusicalInkOverhangsPerColumn(fonts, measures, timings, left, right);
+        return (left, right);
+    }
+
+    /// <summary>The same, written into <paramref name="left"/> and <paramref name="right"/>
+    /// (one cell a column each, cleared first) — the layout's spelling, on spans of the
+    /// loop's scratch drawer.</summary>
+    internal static void MusicalInkOverhangsPerColumn(
+        Rendering.ScoreTextMetrics fonts,
+        IReadOnlyList<Model.Measure> measures, IReadOnlyList<Fraction> timings,
+        Span<double> left, Span<double> right)
+    {
+        left.Clear();
+        right.Clear();
         for (int mi = 0; mi < measures.Count; mi++)
         {
             var measure = measures[mi];
@@ -538,7 +567,6 @@ internal static partial class SpacingRules
                 onset += item.Duration;
             }
         }
-        return (left, right);
     }
 
     /// <summary>
@@ -553,7 +581,7 @@ internal static partial class SpacingRules
     /// that is empty on X it falls back to the column's <c>X-alignment-extent</c>
     /// (<see cref="EngravingDefaults.PaperColumnXAlignmentExtentWidth"/>). The extent here is
     /// unioned over EVERY note column on the paper column, the same walk
-    /// <see cref="MusicalInkOverhangsPerColumn"/> makes.
+    /// <see cref="MusicalInkOverhangsPerColumn(Rendering.ScoreTextMetrics, IReadOnlyList{Model.Measure}, IReadOnlyList{Fraction})"/> makes.
     /// ⚠️ FOR A LYRIC THE UNION IS THE WRONG SET — MEASURED (probe
     /// lyric-bound-voice-mapping.ly, 2.26.0): a syllable centres on its OWN voice's head
     /// (LBIP's on the primary quarter's 0.6521, LBI/LBIC's on the bound half's 0.6887 —
@@ -576,7 +604,7 @@ internal static partial class SpacingRules
     /// contrary were written down first and both were wrong. That is consistent with LilyPond's
     /// structure — a Dots grob hangs off its note head and the accidentals off an
     /// Accidental_placement, so neither is among the note column's <c>elements</c> — and it is
-    /// why this does NOT reuse <see cref="MusicalInkOverhangsPerColumn"/>, which deliberately
+    /// why this does NOT reuse <see cref="MusicalInkOverhangsPerColumn(Rendering.ScoreTextMetrics, IReadOnlyList{Model.Measure}, IReadOnlyList{Fraction})"/>, which deliberately
     /// includes an accidental's leftward reach because the keep-inside-line rod does take it.
     /// </para>
     /// <para>
@@ -586,9 +614,17 @@ internal static partial class SpacingRules
     internal static (double Left, double Centre)[] ParentAlignmentEdgesPerColumn(
         IReadOnlyList<Model.Measure> measures, IReadOnlyList<Fraction> timings)
     {
-        var left = new double[timings.Count];
-        var right = new double[timings.Count];
-        var seen = new bool[timings.Count];
+        // The three per-column tables the walk fills and the edges below read once, lent
+        // from the thread's drawers (ScratchArray): left / right are read only where seen is
+        // set, and seen is cleared over the column count before the walk. MEASURED (session
+        // 533's array census at HEAD, Release, the reader's corpus, eight forward keystrokes
+        // a book): 4.05 calls a keystroke, 726 B of fresh arrays each keystroke.
+        int n = timings.Count;
+        var edgeScratch = ScratchArray.Take(ref t_alignmentEdgeScratch, 2 * n);
+        var left = edgeScratch.AsSpan(0, n);
+        var right = edgeScratch.AsSpan(n, n);
+        var seen = ScratchArray.Take(ref t_alignmentEdgeSeen, n).AsSpan(0, n);
+        seen.Clear();
 
         for (int mi = 0; mi < measures.Count; mi++)
         {
@@ -619,6 +655,19 @@ internal static partial class SpacingRules
                 : (0.0, EngravingDefaults.PaperColumnXAlignmentExtentWidth / 2);
         return edges;
     }
+
+    /// <summary><see cref="ParentAlignmentEdgesPerColumn"/>'s left / right tables (2 × the
+    /// column count) and its seen flags, lent from the thread between calls; see
+    /// <see cref="ScratchArray"/> for the fill rule.</summary>
+    [ThreadStatic]
+    private static double[]? t_alignmentEdgeScratch;
+    [ThreadStatic]
+    private static bool[]? t_alignmentEdgeSeen;
+
+    /// <summary><see cref="ApplyTabChordSpacing"/>'s left / right / slash tables (3 × the
+    /// column count), lent from the thread between calls.</summary>
+    [ThreadStatic]
+    private static double[]? t_tabReachScratch;
 
     /// <summary>
     /// The alignment edge pair on ONE VOICE's bar at a moment — the per-voice reading a
@@ -793,8 +842,17 @@ internal static partial class SpacingRules
         if (springs.Length != timings.Count + 1)
             return springs;
 
-        var left = new double[timings.Count];
-        var right = new double[timings.Count];
+        // The three per-column reach tables, lent from the thread's drawer (ScratchArray) as
+        // spans of the column count — every reader below, `right[^1]` included, walks the
+        // span, not the drawer — and cleared, since every cell is a Math.Max over 0 or a
+        // "> 0" test. MEASURED (session 533's array census at HEAD): 5.02 calls a keystroke,
+        // 1,146 B of fresh arrays each keystroke.
+        int columnCount = timings.Count;
+        var reachScratch = ScratchArray.Take(ref t_tabReachScratch, 3 * columnCount);
+        var left = reachScratch.AsSpan(0, columnCount);
+        var right = reachScratch.AsSpan(columnCount, columnCount);
+        left.Clear();
+        right.Clear();
         // A BEAT SLASH's group on the tab staff: one-and-a-half-sized (the TabStaff's
         // staff-space is 1.5), hung off its column to the right, an ordinary element of the
         // column's separation box like its notation-staff twin — so the rod out of the slash
@@ -811,7 +869,8 @@ internal static partial class SpacingRules
         //   extent widened by the default extra-spacing-width, per staff, on one column;
         // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the rod over a column
         //   pair is the widest of the staves' separation items.
-        var slashRight = new double[timings.Count];
+        var slashRight = reachScratch.AsSpan(2 * columnCount, columnCount);
+        slashRight.Clear();
         bool any = false;
         bool anySlash = false;
         double tabSpace = EngravingDefaults.TabStringSpace(tuning.Length);
@@ -1172,6 +1231,9 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/separation-item.cc set_distance() — every grob in the
     ///   note column (Script included) feeds the column's horizontal skyline.
     /// </summary>
+    [ThreadStatic] private static MusicItem?[]? t_colItem;
+    [ThreadStatic] private static List<(double YBottom, double YTop, double XLeft, double XRight)>?[]? t_colBoxes;
+
     public static ImmutableArray<Spring> ApplyArticulationSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
@@ -1184,9 +1246,13 @@ internal static partial class SpacingRules
             return springs;
 
         // Per column: the note/chord starting at that onset, and any wide-script
-        // ink boxes it carries (skyline frame: column at X=0, middle line Y=0).
-        var colItem = new MusicItem?[timings.Count];
-        var colBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>?[timings.Count];
+        // ink boxes it carries (skyline frame: column at X=0, middle line Y=0). Lent from
+        // the thread's drawer (ScratchArray) and CLEARED: the `??=` below reads the null a
+        // fresh table gave it. 7.58 measures a keystroke (session 527's census).
+        var colItem = ScratchArray.Take(ref t_colItem, timings.Count);
+        var colBoxes = ScratchArray.Take(ref t_colBoxes, timings.Count);
+        Array.Clear(colItem, 0, timings.Count);
+        Array.Clear(colBoxes, 0, timings.Count);
         bool any = false;
         Fraction onset = Fraction.Zero;
         for (int oi = 0; oi < measure.Items.Length; oi++)

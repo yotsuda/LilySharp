@@ -80,9 +80,19 @@ public static class ChordHeadPositioning
     /// ENTRY of the method that holds it: in <see cref="OffsetsForEll"/> every single-note
     /// call paid it before the <c>Count &lt; 2</c> return (session 470's allocation-tick price).
     /// </remarks>
-    private static void SortInStemDirection(int[] order, IReadOnlyList<ChordNoteInfo> notes, int dir) =>
-        Array.Sort(order, (a, b) =>
-            (dir * notes[a].StaffPosition).CompareTo(dir * notes[b].StaffPosition));
+    private static void SortInStemDirection(int[] order, IReadOnlyList<ChordNoteInfo> notes, int dir)
+    {
+        // Keyed, not compared (session 535): the comparison's delegate and environment were
+        // still built on every chord. The key is dir × position, the very number the
+        // comparison compared; same introspective sort on the same keys, so the order is
+        // unchanged (see Tunings.SortHighestFirst).
+        int n = order.Length;
+        Span<int> keys = n <= 16 ? stackalloc int[16] : new int[n];
+        keys = keys[..n];
+        for (int i = 0; i < n; i++)
+            keys[i] = dir * notes[order[i]].StaffPosition;
+        keys.Sort(order.AsSpan());
+    }
 
     /// <summary>The rule itself, over the head right extent its caller resolved.</summary>
     private static double[] OffsetsForEll(

@@ -603,8 +603,9 @@ internal static class ArticulationEngraver
         // DECLARED priority and its CURRENT one (they differ once a script is bumped).
         // LILYPOND-REF: lily/script-column.cc:147-156 order_grobs — last /
         //   last_initial_outside_staff carried across the sorted loop.
-        var lastOnKey = new Dictionary<(int, int, int, bool),
-            (double? InitialOsp, double? CurrentOsp)>();
+        // Built on the first write, which only a mover-carrying page makes (session 534: 1.88
+        // a keystroke, 99.5% empty at drain, 152 B each keystroke).
+        Dictionary<(int, int, int, bool), (double? InitialOsp, double? CurrentOsp)>? lastOnKey = null;
         // The bump can only ever fire when SOME script declares a priority (a mover is
         // what converts its followers), so a mover-less page — the common one — skips
         // the last-script bookkeeping entirely: one flag test per script instead of
@@ -740,7 +741,7 @@ internal static class ArticulationEngraver
                     supportScripts[key] = placedList = RentScriptList();
                 placedList.Add(synth);
                 if (anyMover)
-                    lastOnKey[key] = (null, null);
+                    (lastOnKey ??= new())[key] = (null, null);
             }
         }
 
@@ -1209,7 +1210,7 @@ internal static class ArticulationEngraver
             if (effArt.IsAbove)
                 FlushFingerings(stackKey, ScriptPriority(effArt.Type));
             double? declaredOsp = layout.OutsideStaffPriority;
-            if (anyMover && lastOnKey.TryGetValue(stackKey, out var lastScript)
+            if (anyMover && lastOnKey is not null && lastOnKey.TryGetValue(stackKey, out var lastScript)
                 && lastScript.CurrentOsp is { } moverOsp)
             {
                 // The previous script of this note & side (in priority order) is a
@@ -1284,7 +1285,7 @@ internal static class ArticulationEngraver
             }
 
             if (anyMover)
-                lastOnKey[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
+                (lastOnKey ??= new())[stackKey] = (declaredOsp, layout.OutsideStaffPriority);
             if (layout.OutsideStaffPriority is null)
             {
                 // ONE. Not a bound read off the shape of the loop — a measurement:
@@ -1506,8 +1507,19 @@ internal static class ArticulationEngraver
     /// a class built on every call — 219 B a keystroke over the reader's corpus, plus the
     /// delegate (session 470's allocation-tick price by type).
     /// </remarks>
-    private static void SortByColumnPriority(List<int> queue, ImmutableArray<FingeringLayout> fingerings) =>
-        queue.Sort((x, y) => fingerings[x].ColumnPriority.CompareTo(fingerings[y].ColumnPriority));
+    private static void SortByColumnPriority(List<int> queue, ImmutableArray<FingeringLayout> fingerings)
+    {
+        // Keyed, not compared (session 535): the comparison's delegate and environment were
+        // still built on every queue. Same introspective sort on the same keys, so the order
+        // is unchanged (see Tunings.SortHighestFirst).
+        int n = queue.Count;
+        Span<int> keys = n <= 16 ? stackalloc int[16] : new int[n];
+        keys = keys[..n];
+        var items = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(queue);
+        for (int i = 0; i < n; i++)
+            keys[i] = fingerings[items[i]].ColumnPriority;
+        keys.Sort(items);
+    }
 
     /// <summary>
     /// The fingering as a script-column PARTICIPANT: its digit run's ink BOX at

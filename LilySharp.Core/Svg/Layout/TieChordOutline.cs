@@ -194,7 +194,9 @@ internal sealed class TieChordOutline
         int dir = isLeftBound ? -1 : +1;
         // Lent, and given back once FromBoxes has copied it (see RentBoxes).
         var boxes = RentBoxes();
-        var headBoxes = new List<TieOutlineBox>(parts.TiedHeads.Count);
+        // Lent too, and given back once the extents below have read it: the list never leaves
+        // this method (session 532 — 14.29 outlines a keystroke built one each).
+        var headBoxes = ListPool<TieOutlineBox>.Rent();
 
         // The tied heads: a ONE-STAFF-SPACE box on the head's position, not the glyph's ink
         // height. LILYPOND-REF: :116-121.
@@ -270,7 +272,9 @@ internal sealed class TieChordOutline
         // LILYPOND-REF: flower/include/interval.hh:303-316 linear_combination — its own comment
         // at :303 says the midpoint is "iv.linear_combination (0)"; the caller is
         // lily/tie-formatting-problem.cc:243-258 set_column_chord_outline.
-        foreach (int updowndir in new[] { -1, +1 })
+        // -1 then +1 — a loop, not `new[] { -1, +1 }`, which built a two-slot array on every
+        // outline (the order is unchanged).
+        for (int updowndir = -1; updowndir <= 1; updowndir += 2)
         {
             if (headBoxes.Count == 0)
                 break;
@@ -306,6 +310,7 @@ internal sealed class TieChordOutline
         }
         if (headBoxes.Count > 0)
             skyline.SetMinimumHeight(dir < 0 ? hxL : hxR);
+        ListPool<TieOutlineBox>.Give(headBoxes);
 
         (double, double, double, double)? stemBox = null;
         if (parts.Stem is { IsNormal: true } s)

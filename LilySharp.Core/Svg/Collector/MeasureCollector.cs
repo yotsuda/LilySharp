@@ -425,6 +425,9 @@ public sealed partial class MeasureCollector
     // `noReset` satisfied after its first note: those books never resumed (session 396).
     private readonly Dictionary<(int step, int octave), (int Alter, int Bar, int Order)>
         _measureAccidentals = new();
+    // AdvanceAccidentalBar as the builder's MeasureCompleted delegate, made once per
+    // collector (the method group was a fresh delegate per collect — session 535).
+    private Action? _advanceAccidentalBar;
 
     // The bar the walk is in, counted from its start, and the order counter above. Only
     // DIFFERENCES of the bar number are read (AccidentalRule.RecentEnough), so counting
@@ -2511,7 +2514,7 @@ public sealed partial class MeasureCollector
         if (leadingOffset is { } offset && offset != Fraction.Zero)
             builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true });
         ResetAccidentalMemory();
-        builder.MeasureCompleted = AdvanceAccidentalBar;
+        builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
 
         _pendingInlineVoltas.Clear();
 
@@ -2876,7 +2879,7 @@ public sealed partial class MeasureCollector
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
         ResetAccidentalMemory();
-        builder.MeasureCompleted = AdvanceAccidentalBar;
+        builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
 
         _pendingInlineVoltas.Clear();
 

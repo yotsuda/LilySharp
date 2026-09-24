@@ -454,7 +454,7 @@ internal static class LyricSpacing
     /// unlike the neighbour reservations above, which carry
     /// <see cref="GlyphMetrics.MinItemGap"/>.
     /// </remarks>
-    internal static (double[] Left, double[] Right) InkReachPerColumn(
+    internal static void InkReachPerColumn(
         Rendering.ScoreTextMetrics fonts,
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> columnTimings,
@@ -462,13 +462,18 @@ internal static class LyricSpacing
         IndexBuckets<LyricItem> lyrics,
         bool isLeadSheet,
         IReadOnlyList<(double Left, double Centre)> parentAlignmentEdges,
+        Span<double> leftReach,
+        Span<double> rightReach,
         System.Func<LyricItem, (double Left, double Centre)?>? ownEdge = null)
     {
-        var leftReach = new double[columnTimings.Count];
-        var rightReach = new double[columnTimings.Count];
+        // Written into the caller's spans (one cell a column each, cleared first — every
+        // reach is a Math.Max over 0): the one caller reads them once in its loop and drops
+        // them, so they are slices of its scratch drawer (session 533).
+        leftReach.Clear();
+        rightReach.Clear();
         var measureLyrics = lyrics.At(measureIndex);
         if (measureLyrics.IsEmpty || columnTimings.Count == 0)
-            return (leftReach, rightReach);
+            return;
 
         // Every syllable sits on its TIMING COLUMN — the one map the reservations, the
         // rod edges and the engraver share (a lead sheet reserves its row only, the same
@@ -501,7 +506,6 @@ internal static class LyricSpacing
                 rightReach[c] = Math.Max(rightReach[c], LyricRightExtent(fonts, ly, edge));
             }
         }
-        return (leftReach, rightReach);
     }
 
     /// <summary>

@@ -172,32 +172,54 @@ internal readonly record struct SlurEdgeInfo(
 
 internal sealed class SlurScoringProblem
 {
-    private readonly SlurItem _slur;
-    private readonly double _startX;
-    private readonly double _startY;
-    private readonly double _endX;
-    private readonly double _endY;
-    private readonly SlurScoreParameters _parameters;
-    private readonly IReadOnlyList<SlurObstacle>? _obstacles;
-    // The concrete type, not the interface: the constructor already builds these as a List
-    // (they are reflected into the Y-up frame), and three scorers foreach them — over an
-    // interface each of those walks would box an enumerator (RULES §5.3).
-    private readonly List<SlurExtraObject>? _extraObjects;
+    // Not readonly: a lent problem is re-bound to every slur (Bind), like the beam quanter
+    // (session 530) and the tie column's solver (session 529).
+    private SlurItem _slur;
+    private double _startX;
+    private double _startY;
+    private double _endX;
+    private double _endY;
+    private SlurScoreParameters _parameters;
+    // The problem's OWN lists, the caller's obstacles / extras reflected into the Y-up frame
+    // on Bind and emptied on Release. The concrete type, not the interface: three scorers
+    // foreach them — over an interface each of those walks would box an enumerator (RULES
+    // §5.3). A caller passing null and a caller passing an empty list read the same in every
+    // reader below (the loops are empty, EndYFor's Count test is false, the additional_ys
+    // extension adds 0.0), so "no obstacles" is an empty list here.
+    private readonly List<SlurObstacle> _obstacles = [];
+    private readonly List<SlurExtraObject> _extraObjects = [];
     // A phrasing slur's small slurs' curve midpoints (Y-up), lifted into avoid points.
-    private readonly List<(double X, double Y)>? _enclosedSlurMidpoints;
-    private readonly bool _isBrokenLeft;
-    private readonly bool _isBrokenRight;
-    private readonly SlurEdgeInfo _leftEdge;
-    private readonly SlurEdgeInfo _rightEdge;
-    private readonly bool _edgeHasBeams;
+    private readonly List<(double X, double Y)> _enclosedSlurMidpoints = [];
+    private bool _isBrokenLeft;
+    private bool _isBrokenRight;
+    private SlurEdgeInfo _leftEdge;
+    private SlurEdgeInfo _rightEdge;
+    private bool _edgeHasBeams;
+
+    // The grid GenerateCandidates fills and BestFirstScorer searches, kept between solves
+    // (Release clears it); its candidates come from the pool below.
+    private readonly List<SlurCandidate> _candidates = [];
+
+    // The candidates this problem has built, handed out again from the front (TakeCandidate)
+    // — every field is assigned on take (the seven of the grid, then Curve and Height by
+    // GenerateCurve) — and rewound on Release. They hold numbers only, so a parked problem
+    // pins no slur.
+    private readonly List<SlurCandidate> _candidatePool = [];
+    private int _candidatesUsed;
+
+    // The avoid points every candidate's curve is amplified over (BuildAvoidOffsets), and the
+    // convex head distances one ENCOMPASS run gathers (ScoreEncompass) — one list each, emptied
+    // before every fill.
+    private readonly List<(double X, double Y)> _avoid = [];
+    private readonly List<double> _convexHeadDistances = [];
 
     // Musical dy: pitch difference in staff spaces
-    private readonly double _musicalDy;
+    private double _musicalDy;
 
     // The staff middle's device-Y offset — the anchor for every staff-line
     // position this scorer reasons about (move_away_from_staffline on the base
     // attachments, avoid_staff_line on the generated curves).
-    private readonly double _staffMiddleDown;
+    private double _staffMiddleDown;
 
     /// <summary>
     /// The staff this slur lives on, measured in the page's own unit — LilyPond's
@@ -213,12 +235,71 @@ internal sealed class SlurScoringProblem
     /// (the demerit weights in <c>slur-details</c>, the note-column extents, the line
     /// thickness) is already absolute and comes through untouched.
     /// </remarks>
-    private readonly double _staffSpace;
+    private double _staffSpace;
 
     /// <summary>How many lines the staff has — 5 for notation, the string count for a tab.
     /// Only the two staff-line avoidances read it, and they must: a four-line tab's lines
     /// are at ODD positions (3, 1, −1, −3).</summary>
-    private readonly int _staffLineCount;
+    private int _staffLineCount;
+
+    /// <summary>
+    /// The thread's one problem, taken out of this drawer while <see cref="SolveLent"/> runs
+    /// (session 421's idiom) and put back released. WHAT IT RETAINS: the candidate pool and
+    /// the grid list at the busiest slur's size, the obstacle / extra / avoid / distance lists
+    /// at their largest capacity — numbers and empty containers, pinning no slur (Release
+    /// drops the SlurItem).
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 531, Release, the reader's corpus, 232 books × eight forward
+    /// keystrokes): 2.37 solves a keystroke (1.35 staff, 1.01 tab, 0.01 grace), each a fresh
+    /// problem of 61.89 candidates — the SlurCandidate objects 8,417 B a solve, the grid list
+    /// 551 B, the reflected lists and the avoid / distance lists ~220 B, the object ~230 B:
+    /// 22,052 B a keystroke, 1.9% of the render, dropped as soon as the layout was copied
+    /// out. The public constructor below stays fresh (SlurScoringProblemTests holds two
+    /// problems at once); only this entry lends.
+    /// </remarks>
+    [ThreadStatic]
+    private static SlurScoringProblem? t_problem;
+
+    /// <summary>
+    /// <c>new SlurScoringProblem(…).Solve()</c> on the thread's lent problem — the production
+    /// entry. Same arithmetic in the same order.
+    /// </summary>
+    internal static SlurLayout SolveLent(
+        SlurItem slur,
+        double startX,
+        double startY,
+        double endX,
+        double endY,
+        double staffMiddleDown,
+        SlurScoreParameters? parameters = null,
+        IReadOnlyList<SlurObstacle>? obstacles = null,
+        IReadOnlyList<SlurLayout>? enclosedSlurs = null,
+        bool isBrokenLeft = false,
+        bool isBrokenRight = false,
+        SlurEdgeInfo leftEdge = default,
+        SlurEdgeInfo rightEdge = default,
+        IReadOnlyList<SlurExtraObject>? extraObjects = null,
+        double staffSpace = 1.0,
+        int staffLineCount = 5,
+        double? musicalDy = null)
+    {
+        var problem = t_problem ?? new SlurScoringProblem();
+        t_problem = null;
+        problem.Bind(slur, startX, startY, endX, endY, staffMiddleDown, parameters, obstacles,
+            enclosedSlurs, isBrokenLeft, isBrokenRight, leftEdge, rightEdge, extraObjects,
+            staffSpace, staffLineCount, musicalDy);
+        var layout = problem.Solve();
+        problem.Release();
+        t_problem = problem;
+        return layout;
+    }
+
+    private SlurScoringProblem()
+    {
+        _slur = null!;
+        _parameters = SlurScoreParameters.Default;
+    }
 
     public SlurScoringProblem(
         SlurItem slur,
@@ -238,6 +319,61 @@ internal sealed class SlurScoringProblem
         double staffSpace = 1.0,
         int staffLineCount = 5,
         double? musicalDy = null)
+        : this()
+    {
+        Bind(slur, startX, startY, endX, endY, staffMiddleDown, parameters, obstacles,
+            enclosedSlurs, isBrokenLeft, isBrokenRight, leftEdge, rightEdge, extraObjects,
+            staffSpace, staffLineCount, musicalDy);
+    }
+
+    /// <summary>Forgets the slur: the lists emptied (their capacity kept), the candidate pool
+    /// rewound, the SlurItem dropped. ⚠️ THE CLEARING IS LOAD-BEARING — an obstacle left
+    /// behind would be scored under the next slur, and a candidate handed out again keeps
+    /// whatever TakeCandidate's caller does not overwrite (it overwrites every field).</summary>
+    private void Release()
+    {
+        _slur = null!;
+        _obstacles.Clear();
+        _extraObjects.Clear();
+        _enclosedSlurMidpoints.Clear();
+        _candidates.Clear();
+        _candidatesUsed = 0;
+        _avoid.Clear();
+    }
+
+    /// <summary>A candidate from the pool, or a new one when the pool is spent. Every field
+    /// is assigned by the one caller (<see cref="GenerateCandidates"/> and its
+    /// <see cref="GenerateCurve"/>).</summary>
+    private SlurCandidate TakeCandidate()
+    {
+        if (_candidatesUsed < _candidatePool.Count)
+            return _candidatePool[_candidatesUsed++];
+        var candidate = new SlurCandidate();
+        _candidatePool.Add(candidate);
+        _candidatesUsed++;
+        return candidate;
+    }
+
+    /// <summary>The constructor's body: binds the problem to one slur. On a lent problem this
+    /// follows a <see cref="Release"/>, so every list is empty.</summary>
+    private void Bind(
+        SlurItem slur,
+        double startX,
+        double startY,
+        double endX,
+        double endY,
+        double staffMiddleDown,
+        SlurScoreParameters? parameters,
+        IReadOnlyList<SlurObstacle>? obstacles,
+        IReadOnlyList<SlurLayout>? enclosedSlurs,
+        bool isBrokenLeft,
+        bool isBrokenRight,
+        SlurEdgeInfo leftEdge,
+        SlurEdgeInfo rightEdge,
+        IReadOnlyList<SlurExtraObject>? extraObjects,
+        double staffSpace,
+        int staffLineCount,
+        double? musicalDy)
     {
         _staffSpace = staffSpace;
         _staffLineCount = staffLineCount;
@@ -280,45 +416,29 @@ internal sealed class SlurScoringProblem
         // TopY field stays the visual top edge, now the numerically larger one).
         if (obstacles != null)
         {
-            var reflected = new List<SlurObstacle>(obstacles.Count);
             for (int i = 0; i < obstacles.Count; i++)
             {
                 var o = obstacles[i];
                 // -NaN is still NaN, so the no-stem marker survives the flip.
-                reflected.Add(new SlurObstacle(o.X, -o.TopY, -o.BottomY, -o.StemY));
+                _obstacles.Add(new SlurObstacle(o.X, -o.TopY, -o.BottomY, -o.StemY));
             }
-            _obstacles = reflected;
-        }
-        else
-        {
-            _obstacles = null;
         }
 
         // Extra-encompass objects into the same Y-up frame (negate both edges;
         // TopY stays the visual top, now the numerically larger one).
         if (extraObjects != null)
         {
-            var reflected = new List<SlurExtraObject>(extraObjects.Count);
             for (int i = 0; i < extraObjects.Count; i++)
             {
                 var e = extraObjects[i];
-                reflected.Add(e with { TopY = -e.TopY, BottomY = -e.BottomY });
+                _extraObjects.Add(e with { TopY = -e.TopY, BottomY = -e.BottomY });
             }
-            _extraObjects = reflected;
-        }
-        else
-        {
-            _extraObjects = null;
         }
 
         // A phrasing slur's small slurs: three points on each curve join the extra set, and
         // each curve's midpoint joins the avoid points (BuildAvoidOffsets).
         if (enclosedSlurs is { Count: > 0 })
-        {
-            _extraObjects ??= new List<SlurExtraObject>();
-            _enclosedSlurMidpoints = new List<(double X, double Y)>(enclosedSlurs.Count);
             AddEnclosedSlurPoints(enclosedSlurs, slurDir);
-        }
 
         // Musical dy in the Y-up frame: higher pitch = larger Y.
         // LILYPOND-REF: lily/slur-scoring.cc:334-341 — the difference of the two edge
@@ -408,13 +528,13 @@ internal sealed class SlurScoringProblem
                     continue;
                 var (zx, zy) = CurvePoint(small, k / 2.0);
                 double edge = zy + dir * thickness;
-                _extraObjects!.Add(new SlurExtraObject(
+                _extraObjects.Add(new SlurExtraObject(
                     zx - 2 * thickness, zx + 2 * thickness,
                     TopY: dir > 0 ? edge : far, BottomY: dir > 0 ? -far : edge,
                     SlurAvoidType.Inside, _parameters.ExtraObjectCollisionPenalty,
                     IsSlurPoint: true, Idx: hdir));
             }
-            _enclosedSlurMidpoints!.Add(CurvePoint(small, 0.5));
+            _enclosedSlurMidpoints.Add(CurvePoint(small, 0.5));
         }
     }
 
@@ -444,33 +564,27 @@ internal sealed class SlurScoringProblem
     /// </remarks>
     private List<(double X, double Y)> BuildAvoidOffsets(int dir)
     {
-        var avoid = new List<(double X, double Y)>();
-        if (_obstacles != null)
+        var avoid = _avoid;
+        avoid.Clear();
+        for (int i = 1; i + 1 < _obstacles.Count; i++)
         {
-            for (int i = 1; i + 1 < _obstacles.Count; i++)
-            {
-                var o = _obstacles[i];
-                double edge = dir > 0 ? o.TopY : o.BottomY;
-                if (!double.IsNaN(o.StemY))
-                    edge = dir > 0 ? Math.Max(edge, o.StemY) : Math.Min(edge, o.StemY);
-                avoid.Add((o.X, edge + dir * _parameters.FreeHeadDistance));
-            }
+            var o = _obstacles[i];
+            double edge = dir > 0 ? o.TopY : o.BottomY;
+            if (!double.IsNaN(o.StemY))
+                edge = dir > 0 ? Math.Max(edge, o.StemY) : Math.Min(edge, o.StemY);
+            avoid.Add((o.X, edge + dir * _parameters.FreeHeadDistance));
         }
-        if (_extraObjects != null)
+        foreach (var e in _extraObjects)
         {
-            foreach (var e in _extraObjects)
-            {
-                if (e.Type != SlurAvoidType.Inside)
-                    continue;
-                avoid.Add(((e.LeftX + e.RightX) / 2.0, dir > 0 ? e.TopY : e.BottomY));
-            }
+            if (e.Type != SlurAvoidType.Inside)
+                continue;
+            avoid.Add(((e.LeftX + e.RightX) / 2.0, dir > 0 ? e.TopY : e.BottomY));
         }
         // A phrasing slur's small slurs: the curve midpoint, lifted by free-slur-distance.
         // LILYPOND-REF: lily/slur-scoring.cc:679-694 generate_avoid_offsets — b.curve_point
         //   (0.5), z[Y] += dir_ * free_slur_distance_.
-        if (_enclosedSlurMidpoints != null)
-            foreach (var (x, y) in _enclosedSlurMidpoints)
-                avoid.Add((x, y + dir * _parameters.FreeSlurDistance));
+        foreach (var (x, y) in _enclosedSlurMidpoints)
+            avoid.Add((x, y + dir * _parameters.FreeSlurDistance));
         return avoid;
     }
 
@@ -716,7 +830,7 @@ internal sealed class SlurScoringProblem
         double baseOwn = left ? _startY : _endY;
         double baseOther = left ? _endY : _startY;
         double range = dir * (baseOwn + _parameters.RegionSize * dir);
-        if (_obstacles is { Count: > 0 })
+        if (_obstacles.Count > 0)
         {
             var edge = left ? _obstacles[0] : _obstacles[^1];
             double ncEdge = dir > 0 ? edge.TopY : edge.BottomY;
@@ -812,7 +926,7 @@ internal sealed class SlurScoringProblem
         // 'inside extra objects (dots, ...) sticking out beyond the straight
         // base-to-range line extend the range so the grid can climb over them.
         // LILYPOND-REF: lily/slur-scoring.cc:290-326 — additional_ys.
-        if (_extraObjects != null)
+        // (No gate on the extra set: an empty one leaves `additional` at 0.0.)
         {
             // ONE extension applied to BOTH sides: LP's inner expression does not
             // depend on the loop's d, and its `(dir_ == LEFT ? 0 : -1)` compares
@@ -864,7 +978,10 @@ internal sealed class SlurScoringProblem
         int nRight = 0;
         for (double y = baseEndY; dir * y <= dir * endYRight + eps; y += dir * step)
             nRight++;
-        var candidates = new List<SlurCandidate>(nLeft * nRight);
+        var candidates = _candidates;
+        candidates.Clear();
+        _candidatesUsed = 0;
+        candidates.EnsureCapacity(nLeft * nRight);
 
         // The avoid points every candidate's curve is amplified over.
         // LILYPOND-REF: lily/slur-scoring.cc:709-719 generate_curves.
@@ -923,16 +1040,15 @@ internal sealed class SlurScoringProblem
                         endX -= dir * _rightEdge.HeadWidth * unitDy / 3.0;
                 }
 
-                var candidate = new SlurCandidate
-                {
-                    StartX = startX,
-                    StartY = leftY,
-                    EndX = endX,
-                    EndY = rightY,
-                    CurveUp = preferUp,
-                    Demerits = 0,
-                    NextScorerTodo = 1
-                };
+                // From the pool: every field written here or in GenerateCurve (Curve, Height).
+                var candidate = TakeCandidate();
+                candidate.StartX = startX;
+                candidate.StartY = leftY;
+                candidate.EndX = endX;
+                candidate.EndY = rightY;
+                candidate.CurveUp = preferUp;
+                candidate.Demerits = 0;
+                candidate.NextScorerTodo = 1;
                 GenerateCurve(candidate, avoid);
                 candidates.Add(candidate);
             }
@@ -942,16 +1058,14 @@ internal sealed class SlurScoringProblem
         // kept as a defensive floor.
         if (candidates.Count == 0)
         {
-            var candidate = new SlurCandidate
-            {
-                StartX = _startX,
-                StartY = baseStartY,
-                EndX = _endX,
-                EndY = baseEndY,
-                CurveUp = preferUp,
-                Demerits = 0,
-                NextScorerTodo = 1
-            };
+            var candidate = TakeCandidate();
+            candidate.StartX = _startX;
+            candidate.StartY = baseStartY;
+            candidate.EndX = _endX;
+            candidate.EndY = baseEndY;
+            candidate.CurveUp = preferUp;
+            candidate.Demerits = 0;
+            candidate.NextScorerTodo = 1;
             GenerateCurve(candidate, avoid);
             candidates.Add(candidate);
         }
@@ -1099,7 +1213,7 @@ internal sealed class SlurScoringProblem
         // LILYPOND-REF: lily/slur-configuration.cc:390-458 score_extra_encompass.
         // ⚠️ The Tie forbidden-attachment term (:352-388) is not ported: ties are
         // not in the extra set yet (their own shelf).
-        if (_extraObjects != null)
+        // (No gate on the extra set: an empty one scores 0.0.)
         {
             int dir = config.CurveUp ? 1 : -1;
             double slurWid = config.EndX - config.StartX;
@@ -1196,7 +1310,7 @@ internal sealed class SlurScoringProblem
     /// </remarks>
     private void ScoreEncompass(SlurCandidate config)
     {
-        if (_obstacles == null || _obstacles.Count == 0)
+        if (_obstacles.Count == 0)
             return;
 
         double width = config.EndX - config.StartX;
@@ -1204,7 +1318,8 @@ internal sealed class SlurScoringProblem
             return;
 
         double demerit = 0.0;
-        var convexHeadDistances = new List<double>();
+        var convexHeadDistances = _convexHeadDistances;
+        convexHeadDistances.Clear();
         int dir = config.CurveUp ? 1 : -1;
 
         for (int j = 0; j < _obstacles.Count; j++)

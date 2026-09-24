@@ -742,9 +742,12 @@ internal static class MusicMarkEngraver
         // inside the iteration that fills them (the one closure over belowMarks,
         // GroupHasPedalChange, is a local function called from that same iteration). Anything
         // that kept one past the `foreach` would read the NEXT group's marks.
-        var aboveMarks = new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
-        var belowMarks = new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
-        var placedAbove = new List<(double X0, double X1, double TopYUp)>();
+        // …and lent from the thread (ListPool), given back at the one exit below: the three
+        // never leave this pass. MEASURED (session 534's tuple-container census at HEAD):
+        // 2.16 passes a keystroke, ~700 B of lists and ladders each keystroke.
+        var aboveMarks = ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Rent();
+        var belowMarks = ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Rent();
+        var placedAbove = ListPool<(double X0, double X1, double TopYUp)>.Rent();
 
         foreach (var group in groups)
         {
@@ -1298,6 +1301,9 @@ internal static class MusicMarkEngraver
         foreach (var group in groups)
             ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Give(group);
         ListPool<List<(MusicMarkItem Mark, double X, int SourceIndex)>>.Give(groups);
+        ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Give(aboveMarks);
+        ListPool<(MusicMarkItem Mark, double X, int SourceIndex)>.Give(belowMarks);
+        ListPool<(double X0, double X1, double TopYUp)>.Give(placedAbove);
         return placed;
     }
 
@@ -2262,7 +2268,19 @@ internal static class MusicMarkEngraver
         // carry chord-row symbols — the placement's one condition, spelled the same way.
         int topRow = -1;
         foreach (var (_, _, index) in score.EnumerateStaves()) { topRow = index; break; }
-        if (topRow < 0 || !score.ChordNames.Any(c => c.IsChordRow && c.StaffIndex == topRow))
+        if (topRow < 0)
+            return 0.0;
+        // Loops, not Any / Where: their predicates captured topRow and measureIndex, which
+        // made this method's environment a class built on every call, plus a delegate each
+        // (session 535).
+        bool topRowHasChords = false;
+        foreach (var c in score.ChordNames)
+            if (c.IsChordRow && c.StaffIndex == topRow)
+            {
+                topRowHasChords = true;
+                break;
+            }
+        if (!topRowHasChords)
             return 0.0;
 
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
@@ -2276,10 +2294,12 @@ internal static class MusicMarkEngraver
             score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo,
             labelStyle);
         double reach = 0.0;
-        foreach (var group in marks
-                     .Where(m => m.MeasureIndex == measureIndex && m.Vertical == MusicMarkVertical.Above
-                                 && m.Position == MusicMarkPosition.Beginning)
-                     .GroupBy(m => m.AnchorTiming))
+        var atLineStart = ListPool<MusicMarkItem>.Rent();
+        foreach (var m in marks)
+            if (m.MeasureIndex == measureIndex && m.Vertical == MusicMarkVertical.Above
+                && m.Position == MusicMarkPosition.Beginning)
+                atLineStart.Add(m);
+        foreach (var group in atLineStart.GroupBy(m => m.AnchorTiming))
         {
             var byPriority = group.OrderBy(m => GetOutsideStaffPriority(m.Type)).ToList();
             var pair = score.MarksBeside ? BesidePair(byPriority) : null;
@@ -2297,6 +2317,7 @@ internal static class MusicMarkEngraver
                 reach = Math.Max(reach, right);
             }
         }
+        ListPool<MusicMarkItem>.Give(atLineStart);
         return reach > 0.0 ? reach + ChordNameEngraver.SymbolGap : 0.0;
     }
 

@@ -388,13 +388,13 @@ internal static class TabBeamQuant
         // length-fraction stays 1, because \tabFullNotation reverts Stem.details and
         // Stem.no-stem-extend but leaves the two Beam overrides standing.
         double space = geom.StringSpace;
-        var (leftPos, rightPos) = new BeamScoringProblem(
+        var (leftPos, rightPos, _) = BeamScoringProblem.SolveLent(
             tabGroup, xById,
             stemPositions: stemPos,
             beamThickness: EngravingDefaults.BeamThickness / space,
             lineThickness: EngravingDefaults.StaffLineThickness / space,
             staffLineCount: geom.StringCount,
-            beamLengthFraction: TabConstants.BeamLengthFraction).Solve();
+            beamLengthFraction: TabConstants.BeamLengthFraction);
 
         // Quanter Y is in staff POSITIONS (half-spaces) above the staff's MIDDLE; the tab
         // staff's middle is halfway down its strings, and one position is half a string gap.

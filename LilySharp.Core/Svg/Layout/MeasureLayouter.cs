@@ -138,7 +138,10 @@ internal sealed class MeasureLayouter
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
         double contentRightX = totalWidth - endBarlineWidth;
 
-        var xs = new double[measure.Items.Length];
+        // A drawer array (ScratchArray): every cell [0, Items.Length) is written here and the
+        // loop below reads xs[i] and xs[i + 1] under that bound. MEASURED (session 533's array
+        // census at HEAD): 3.99 bars a keystroke, 298 B of fresh arrays each keystroke.
+        var xs = ScratchArray.Take(ref t_columnXs, measure.Items.Length);
         var timing = Fraction.Zero;
         for (int i = 0; i < measure.Items.Length; i++)
         {
@@ -154,6 +157,11 @@ internal sealed class MeasureLayouter
         }
         return layouts.MoveToImmutable();
     }
+
+    /// <summary><see cref="LayoutItemsFromColumns"/>'s item Xs, lent from the thread between
+    /// bars; see <see cref="ScratchArray"/> for the fill rule.</summary>
+    [ThreadStatic]
+    private static double[]? t_columnXs;
 
     /// <summary>
     /// Creates timing-based springs for a measure, considering items from all voices.
@@ -239,7 +247,10 @@ internal sealed class MeasureLayouter
         // or more springs, so they go through the blocking-force machinery, not a
         // single spring's minimum. LILYPOND-REF: lily/spacing-determine-loose-columns.cc:180-184
         //   set_distances_for_loose_col — r.item_drul_ = next_door; r.add_to_cols ().
-        var looseRods = new List<(int Left, int Right, double Distance)>();
+        // Lent (ListPool) and given back after ApplyRods, its one reader, has returned.
+        // MEASURED (session 534's tuple-container census at HEAD): 7.03 lists a keystroke,
+        // every one empty at drain, 225 B of list objects each keystroke.
+        var looseRods = ListPool<(int Left, int Right, double Distance)>.Rent();
 
         // Whether a column AFTER the first kept one was dropped as unused: the union of every
         // voice's moments against the kept list. A skip's onset is one such column, and so is
@@ -290,9 +301,11 @@ internal sealed class MeasureLayouter
             so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure));
 
         var chain = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(springs);
-        return looseRods.Count > 0
+        var rodded = looseRods.Count > 0
             ? SpringSolver.ApplyRods(chain, looseRods)
             : chain;
+        ListPool<(int Left, int Right, double Distance)>.Give(looseRods);
+        return rodded;
     }
 
     /// <summary>

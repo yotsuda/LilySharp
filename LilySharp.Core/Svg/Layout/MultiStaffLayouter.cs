@@ -64,6 +64,12 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal double CurrentIndent { get; set; }
 
+    /// <summary>The per-column scratch of the measure loop in <c>LayoutSystemMeasures</c>
+    /// (five tables of the column count), lent from the thread between bars; see
+    /// <see cref="ScratchArray"/> for the fill rule.</summary>
+    [ThreadStatic]
+    private static double[]? t_columnScratch;
+
     /// <summary>
     /// The session's per-measure beam-detection memo for THIS layout's detections
     /// (<see cref="BeamGroupsOf"/>), or null outside an incremental session — set by
@@ -1508,9 +1514,22 @@ internal sealed class MultiStaffLayouter
             // memoized per score, and not asked for at all on an unsung book.
             var ownEdge = score.Lyrics.IsDefaultOrEmpty
                 ? null : LyricSpacing.OwnVoiceEdgeProvider(score);
-            var (lyricLeft, lyricRight) = LyricSpacing.InkReachPerColumn(
+            // The five per-column tables this loop reads once and drops — the lyric reaches,
+            // the chord widths and the musical overhangs — are slices of one drawer the
+            // thread keeps (ScratchArray); the overhang pair below is the answer and stays.
+            // MEASURED (session 533's array census at HEAD, Release, the reader's corpus,
+            // eight forward keystrokes a book): 3.99 bars a keystroke, 1,490 B of fresh
+            // arrays each keystroke.
+            int columnCount = allTimings.Count;
+            var columnScratch = ScratchArray.Take(ref t_columnScratch, 5 * columnCount);
+            var lyricLeft = columnScratch.AsSpan(0, columnCount);
+            var lyricRight = columnScratch.AsSpan(columnCount, columnCount);
+            var chordWidth = columnScratch.AsSpan(2 * columnCount, columnCount);
+            var musicalLeft = columnScratch.AsSpan(3 * columnCount, columnCount);
+            var musicalRight = columnScratch.AsSpan(4 * columnCount, columnCount);
+            LyricSpacing.InkReachPerColumn(
                 score.TextMetrics, springs, allTimings, i, lyricsByMeasure, score.IsLeadSheet,
-                alignmentEdges, ownEdge);
+                alignmentEdges, lyricLeft, lyricRight, ownEdge);
             // The measure's lyric line edges, for the cross-bar rods below and the
             // line-start lyric floor — read off the FINAL reserved springs, the same
             // chain ApplyRods will span.
@@ -1519,8 +1538,8 @@ internal sealed class MultiStaffLayouter
                 : LyricSpacing.MeasureLineEdges(
                     score.TextMetrics, springs, allTimings, i, lyricsByMeasure,
                     score.IsLeadSheet, alignmentEdges, ownEdge));
-            var chordWidth = SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics,
-                allTimings, i, chordsByMeasure.At(i), includeAttached: !score.IsLeadSheet);
+            SpacingRules.ChordInkRightReachPerColumn(score.TextMetrics,
+                allTimings, i, chordsByMeasure.At(i), includeAttached: !score.IsLeadSheet, chordWidth);
             var leftOverhangs = new double[allTimings.Count];
             var rightOverhangs = new double[allTimings.Count];
             for (int c = 0; c < leftOverhangs.Length; c++)
@@ -1536,8 +1555,8 @@ internal sealed class MultiStaffLayouter
             }
             // …and so does the MUSICAL ink on the column, which is the rest of
             // col->extent (col, X_AXIS).
-            var (musicalLeft, musicalRight) =
-                SpacingRules.MusicalInkOverhangsPerColumn(score.TextMetrics, allMeasures, allTimings);
+            SpacingRules.MusicalInkOverhangsPerColumn(
+                score.TextMetrics, allMeasures, allTimings, musicalLeft, musicalRight);
             for (int c = 0; c < leftOverhangs.Length; c++)
             {
                 leftOverhangs[c] = Math.Max(leftOverhangs[c], musicalLeft[c]);

@@ -2145,7 +2145,9 @@ internal sealed class ElementCoordinator
                         startMeasure, endMeasure, tiedPositions, tabCurveUp?[i]));
                 }
 
-                var layouts = new TieFormattingProblem(specs).Solve();
+                // The thread's lent problem (TieFormattingProblem.SolveColumn) — one column a
+                // problem, the same arithmetic, and no fresh dictionary / candidates / lists.
+                var layouts = TieFormattingProblem.SolveColumn(specs);
                 for (int i = 0; i < ordered.Count; i++)
                 {
                     solved[i, s] = layouts[i] with
@@ -2240,7 +2242,8 @@ internal sealed class ElementCoordinator
     /// <para>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:1025-1084 set_ties_config_standard_directions
     ///   — the rule itself, reached through
-    ///   <see cref="TieFormattingProblem.StandardDirections"/> so there is one copy of it.
+    ///   <see cref="TieFormattingProblem.StandardDirections(IReadOnlyList{int}, IReadOnlyList{bool?}, bool)"/>
+    ///   so there is one copy of it.
     /// </para>
     /// <para>
     /// MEASURED on 2.26.0 (test/tab-chord-tie's twin, dumping every Tie's <c>direction</c>):
@@ -3628,7 +3631,7 @@ internal sealed class ElementCoordinator
                 // The slurs already laid out are NOT obstacles: a slur never avoids a slur in
                 // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️) — only a PhrasingSlur
                 // does, and it is laid out after every slur (SlurDetector) so they are all here.
-                var problem = new SlurScoringProblem(
+                var solved = SlurScoringProblem.SolveLent(
                     slur, segStartX, segStartY, segEndX, segEndY, staffMiddleDown,
                     obstacles: obstacles,
                     enclosedSlurs: slur.IsPhrasing
@@ -3639,7 +3642,7 @@ internal sealed class ElementCoordinator
                     leftEdge: leftEdgeInfo,
                     rightEdge: rightEdgeInfo,
                     extraObjects: extraObjects);
-                slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
+                slurLayouts.Add(solved with { StaffIndex = staffIndex, RenderMeasureIndex = segment.StartMeasureIndex });
             }
         }
 
@@ -3929,7 +3932,7 @@ internal sealed class ElementCoordinator
             IsPhrasing = slur.IsPhrasing,
         };
 
-        var solved = new SlurScoringProblem(
+        var solved = SlurScoringProblem.SolveLent(
             tabSlur, startX, startY, endX, endY, staffMiddleDown,
             obstacles: obstacles,
             // A phrasing slur clears the tab's slurs as it does the staff's. The pieces are
@@ -3950,7 +3953,7 @@ internal sealed class ElementCoordinator
             staffLineCount: geom.StringCount,
             // LILYPOND-REF: lily/slur-scoring.cc:334-341 musical_dy_ — the two edge HEADS'
             //   reference coordinates, which on a tab are their STRING lines (Y-up = −device).
-            musicalDy: startDigitY - endDigitY).Solve();
+            musicalDy: startDigitY - endDigitY);
 
         // ⑵ The transformer: every control point down toward the numbers by
         // staff-space × direction × 0.35 (0.525 on a 1.5-space tab). BowLayout's Ys are

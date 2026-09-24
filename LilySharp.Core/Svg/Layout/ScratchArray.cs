@@ -57,4 +57,19 @@ internal static class ScratchArray
             drawer = array = new T[length];
         return array;
     }
+
+    /// <summary>
+    /// <see cref="Take"/> for a table an object OWNS (a non-null field): the same table when it
+    /// holds <paramref name="length"/> cells, a new one otherwise. NOT cleared, like Take — and
+    /// ⚠️ a grown table is LONGER than the count, so its owner reads it by the count, never by
+    /// its Length and never with <c>[^1]</c> (session 530 read a previous beam's last stem that
+    /// way, and every page of the corpus moved).
+    /// </summary>
+    public static T[] Grow<T>(T[] table, int length)
+    {
+        var array = table;
+        if (array.Length < length)
+            array = new T[length];
+        return array;
+    }
 }
