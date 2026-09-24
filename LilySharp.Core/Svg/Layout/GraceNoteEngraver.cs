@@ -175,36 +175,12 @@ internal static class GraceNoteEngraver
             if (grace.MeasureIndex >= graceMeasures.Length)
                 continue;
 
-            double mainNoteX = LayoutUtilities.GetItemXOffset(
-                graceMeasures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
-
-            // Where the run's columns sit — ONE computation, read here for the placement,
-            // below for the quanter's x frame, and by the renderer for the drawn heads.
-            // LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing, its
-            //   grace branch; see SpacingRules.GraceColumns for the whole law.
+            // Where the run stands — ONE computation (RunPlacement), read here for the
+            // placement, below for the quanter's x frame, by the renderer for the drawn
+            // heads, and by the inside-staff profile for the room they take.
+            var (x, mainNoteAbsX, columns) = RunPlacement(
+                grace, measureLayout, graceMeasures, articulations);
             var measure = graceMeasures[grace.MeasureIndex];
-            var mainItem = grace.MainNoteItemIndex < measure.Items.Length
-                ? measure.Items[grace.MainNoteItemIndex]
-                : null;
-            var columns = SpacingRules.GraceColumns(grace.Columns, mainItem);
-            // The main note's own leftward accidental reach is already inside the run's LAST
-            // gap (it is that column's left separation skyline), so it is no longer added
-            // here — doing both reserved it twice.
-            double graceGroupWidth = columns.Span;
-
-            // A wide above-script on the main note (fermata / ornament) overhangs
-            // its notehead to the LEFT; a leading grace's flag collides with it
-            // unless the grace is pushed further left. Reserve that overhang (plus
-            // the grace's own flag reach) so the grace clears the script, the way
-            // LilyPond keeps a grace and a fermata apart. Y-gated to a grace sitting
-            // at/above the main note, whose flag actually reaches the script's band.
-            // LILYPOND-REF: lily/grace-spacing-engraver.cc + the Script joining the
-            //   main column's outside-staff skyline.
-            double scriptOverhang = ScriptOverhangForGrace(
-                articulations, grace, measure, graceGroupWidth);
-
-            // Position the run's FIRST column that far in front of the main note's.
-            double x = measureLayout.X + mainNoteX - graceGroupWidth - scriptOverhang;
 
             // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
             int mainStaffPosition = grace.MainNoteItemIndex < measure.Items.Length
@@ -228,7 +204,7 @@ internal static class GraceNoteEngraver
                 grace.Type,
                 GraceScale,
                 grace.SourcePosition,
-                MainNoteX: measureLayout.X + mainNoteX,
+                MainNoteX: mainNoteAbsX,
                 MainNoteStaffPosition: mainStaffPosition,
                 StaffYOffset: staffOffset,
                 Tuning: tabTuning,
@@ -246,6 +222,52 @@ internal static class GraceNoteEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Where a grace run STANDS: the absolute X of its FIRST column, the absolute X of its
+    /// main note, and the run's column chain (each column's offset from the first, and the
+    /// span to the main note).
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME, and it has three readers: <see cref="Calculate"/> places the drawn run by it
+    /// and frames the beam quanter in its offsets; <c>SkylineBuilder.GraceSeedsFor</c> seeds
+    /// the staff's inside profile at the same X, so a grace is reserved where it is drawn and
+    /// nowhere else. A second spelling of this arithmetic is the drift docs/RULES.md §7.7
+    /// names as this repository's most repeated defect.
+    /// <para>
+    /// LILYPOND-REF: lily/spacing-basic.cc:163-180 Spacing_spanner::note_spacing, its grace
+    ///   branch — the run is a chain of springs ending at the main note's column; see
+    ///   <see cref="SpacingRules.GraceColumns"/> for the whole law. The main note's own
+    ///   leftward accidental reach is already inside the run's LAST gap (it is that column's
+    ///   left separation skyline), so it is not added again here — doing both reserved it twice.
+    /// </para>
+    /// <para>
+    /// A wide above-script on the main note (fermata / ornament) overhangs its notehead to
+    /// the LEFT; a leading grace's flag collides with it unless the run is pushed further
+    /// left, so that overhang (plus the grace's own flag reach) is reserved too, the way
+    /// LilyPond keeps a grace and a fermata apart — Y-gated to a grace sitting at/above the
+    /// main note, whose flag actually reaches the script's band (<see cref="ScriptOverhangForGrace"/>).
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc + the Script joining the main column's
+    ///   outside-staff skyline.
+    /// </para>
+    /// </remarks>
+    internal static (double X, double MainNoteX, SpacingRules.GraceColumnLayout Columns) RunPlacement(
+        GraceNoteItem grace, MeasureLayout measureLayout, ImmutableArray<Measure> graceMeasures,
+        ImmutableArray<ArticulationItem> articulations)
+    {
+        double mainNoteX = LayoutUtilities.GetItemXOffset(
+            graceMeasures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
+        var measure = graceMeasures[grace.MeasureIndex];
+        var mainItem = grace.MainNoteItemIndex < measure.Items.Length
+            ? measure.Items[grace.MainNoteItemIndex]
+            : null;
+        var columns = SpacingRules.GraceColumns(grace.Columns, mainItem);
+        double scriptOverhang = ScriptOverhangForGrace(
+            articulations, grace, measure, columns.Span);
+        // The run's FIRST column stands that far in front of the main note's.
+        double x = measureLayout.X + mainNoteX - columns.Span - scriptOverhang;
+        return (x, measureLayout.X + mainNoteX, columns);
     }
 
     /// <summary>

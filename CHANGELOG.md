@@ -260,6 +260,18 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A rolled chord's wiggle is the column's leftmost ink.** An arpeggio (and a non-arpeggiated
+  chord's bracket) now stands `padding` clear of whichever of the chord's own ink reaches
+  furthest left — a head reversed to the far side of a down stem, or the leftmost accidental —
+  and the column's leftward reach runs to the wiggle's own left edge, so the bar line, the line
+  start and the keep-inside-line rod all keep room for it. A wiggle opening a bar used to print
+  through the bar line, and one beside a sharp used to print over it.
+
+- **A grace note's ink is inside-staff ink.** A grace's head, stem, flag and accidental now join
+  the staff's vertical profile at the fonts each grob states, where the run is drawn, so the
+  things placed above a staff (a rehearsal mark, a section label, a text) clear them and two
+  staves are spaced off them. A section label over a grace used to print through its flag.
+
 - **A chord symbol attached to a note stands where LilyPond's spacing puts it.** It stood a
   flat 0.6 above the staff's top line plus whatever rose under it; now its own ink clears the
   staff's skyline by 0.5, the padding LilyPond's ChordNames context declares — so a round "C"

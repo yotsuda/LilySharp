@@ -77,6 +77,24 @@
 %%   ABK  <c e g>4\nonArpeggiato    AQ's chord as a BRACKET
 %%   ABW  <c e g>1\nonArpeggiato    the same bracket over WHOLE heads (head-blindness falsifier)
 %%   ABR  <c e g>4 <c e g>4\nonArpeggiato   the room the column BEFORE a bracket is given
+%%   ABL  <c e g>4 r4 r2 | <c e g>4\arpeggio r4 r2   the wiggle OPENING A BAR: the bar line → column
+%%                                   minimum must hold it
+%%   AAC  <cis e g>4\arpeggio        the wiggle beside an ACCIDENTAL, which is one of its supports
+%%
+%% ⚠️ ABL IS THE BAR LINE'S READING. LilyPond's minimum between a bar line's column and the
+%% next is Paper_column::minimum_distance (lily/paper-column.cc:145-164), which merges the right
+%% column's CONDITIONAL skyline — the arpeggio's box, since lily/paper-column-engraver.cc:246-261
+%% diverts an Arpeggio to conditional-elements — so the wiggle's own width and padding stand
+%% inside min_dist, and Staff_spacing::get_spacing (lily/staff-spacing.cc:210-215) then opens
+%% `fixed` to 0.3 past it. Read as the bar line's ink right → the wiggle's left, the same reading
+%% every barline.* point takes; a spacing that reserves the heads alone lets the wiggle print
+%% THROUGH the bar line (session 568's showcase, petite-valse's closing chord).
+%%
+%% ⚠️ AAC IS THE ACCIDENTAL'S. The Accidental_engraver adds every accidental it makes to the
+%% support of the arpeggio it acknowledged (lily/accidental-engraver.cc:298-307, "so it is put
+%% left of the accidentals"), and side-position then clears the accidental's ink by the same
+%% 0.5 it clears a head by. Read as the accidental's ink left → the wiggle's right. An engine
+%% that clears the HEADS alone draws the wiggle over the sharp.
 %%
 %% ⚠️ ABR IS THE READING THE OTHER BRACKET BOOKS CANNOT TAKE, and it is here for the same
 %% reason AR is: a grob measured only by its distance from its OWN support cannot show an
@@ -108,9 +126,33 @@
              (car ext) (cdr ext)))
    '())
 
+#(define ((dump-bar tag) g)
+   (let* ((sys (ly:grob-system g))
+          (ext (ly:grob-extent g sys X)))
+     (format #t "PROBE ~a BAR x=(~,6f . ~,6f)\n" tag (car ext) (cdr ext)))
+   '())
+
+#(define ((dump-accidental tag) g)
+   (let* ((sys (ly:grob-system g))
+          (ext (ly:grob-extent g sys X)))
+     (format #t "PROBE ~a ACCIDENTAL x=(~,6f . ~,6f)\n" tag (car ext) (cdr ext)))
+   '())
+
 probe = #(define-music-function (tag) (string?)
            #{ \override Arpeggio.after-line-breaking = #(dump-arpeggio tag "ARPEGGIO")
               \override NoteHead.after-line-breaking = #(dump-head tag) #})
+
+%% ABL reads the BAR LINE beside the wiggle, and AAC the ACCIDENTAL — each its own grob, so
+%% each its own override, for the reason probeBracket gives below.
+probeBar = #(define-music-function (tag) (string?)
+           #{ \override Arpeggio.after-line-breaking = #(dump-arpeggio tag "ARPEGGIO")
+              \override NoteHead.after-line-breaking = #(dump-head tag)
+              \override Staff.BarLine.after-line-breaking = #(dump-bar tag) #})
+
+probeAccidental = #(define-music-function (tag) (string?)
+           #{ \override Arpeggio.after-line-breaking = #(dump-arpeggio tag "ARPEGGIO")
+              \override NoteHead.after-line-breaking = #(dump-head tag)
+              \override Accidental.after-line-breaking = #(dump-accidental tag) #})
 
 %% The bracket is a DIFFERENT GROB, so it needs its own override — a book with
 %% \nonArpeggiato has no Arpeggio in it at all, and `\probe` would print nothing rather
@@ -144,3 +186,9 @@ probeBracket = #(define-music-function (tag) (string?)
 
 \score { \new Staff { \clef treble \time 4/4 \key c \major \probeBracket "ABT"
   \fixed c' { <c e g>8 <c e g>8\nonArpeggiato r4 r2 \bar "|." } } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \probeBar "ABL"
+  \fixed c' { <c e g>4 r4 r2 | <c e g>4\arpeggio r4 r2 \bar "|." } } }
+
+\score { \new Staff { \clef treble \time 4/4 \key c \major \probeAccidental "AAC"
+  \fixed c' { <cis e g>4\arpeggio r4 r2 \bar "|." } } }

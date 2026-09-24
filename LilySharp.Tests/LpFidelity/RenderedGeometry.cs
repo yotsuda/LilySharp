@@ -985,12 +985,35 @@ internal sealed class RenderedGeometry
             throw new InvalidOperationException(
                 $"page {page}: the probe drew no section label.\nDrawn geometry:\n" + Describe());
         }
-        double y = marks[0].Y;
+        return MarkBaselineAboveStaffBelow(marks[0].Y, page, "the first mark");
+    }
+
+    /// <summary>
+    /// The boxed mark reading <paramref name="label"/>: its BASELINE above the staff
+    /// reference point it rides over — <see cref="FirstMusicMarkBaselineAboveStaff"/> asked
+    /// of a NAMED mark, for a book whose reading is on a later system's mark (probe
+    /// mark-grace.ly reads the second system's "B", the one a grace stands under).
+    /// </summary>
+    public double MusicMarkBaselineAboveStaff(string label, int page = 0)
+    {
+        var marks = _pages[page].Texts
+            .Where(t => t.Role == TextRole.Mark && t.Text == label).ToList();
+        if (marks.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected ONE mark reading \"{label}\", found {marks.Count}."
+                + "\nDrawn geometry:\n" + Describe());
+        }
+        return MarkBaselineAboveStaffBelow(marks[0].Y, page, $"the mark \"{label}\"");
+    }
+
+    private double MarkBaselineAboveStaffBelow(double y, int page, string what)
+    {
         var below = StaffRefpoints(page).Where(r => r > y).ToList();
         if (below.Count == 0)
         {
             throw new InvalidOperationException(
-                $"page {page}: the first mark at {y:F6} has no staff below it, so it is not "
+                $"page {page}: {what} at {y:F6} has no staff below it, so it is not "
                 + "riding over one.\nDrawn geometry:\n" + Describe());
         }
         return below.Min() - y;
@@ -3006,6 +3029,69 @@ internal sealed class RenderedGeometry
                 "the probe drew no notehead for the arpeggio to stand left of."
                 + "\nDrawn geometry:\n" + Describe());
         return heads.Min(h => h.X) - ArpeggioExtent().Right;
+    }
+
+    /// <summary>
+    /// The arpeggio wiggle's ink RIGHT edge → the ink LEFT edge of the chord's leftmost
+    /// ACCIDENTAL: the Arpeggio's <c>padding</c> again, off the accidental this time, because
+    /// the Accidental_engraver adds every accidental it makes to the support of the arpeggio
+    /// it acknowledged (lily/accidental-engraver.cc:298-307, "so it is put left of the
+    /// accidentals") and side-position clears a support's extent whichever grob it is.
+    /// </summary>
+    /// <remarks>
+    /// Ink, not anchor, on both sides — LilyPond's ACC dump is the grob's extent and its
+    /// wiggle's is the glyph box — so the accidental's own left bearing is taken off its
+    /// draw origin (the renderer places the origin so the ink lands at
+    /// <c>DrawAccidentalAtInkLeft</c>'s inkLeftX). The books this reads carry ONE accidental,
+    /// so the leftmost is the only one.
+    /// </remarks>
+    public double ArpeggioRightToAccidentalLeft()
+    {
+        var accs = Accidentals;
+        if (accs.Count == 0)
+            throw new InvalidOperationException(
+                "the probe drew no accidental for the arpeggio to stand left of."
+                + "\nDrawn geometry:\n" + Describe());
+        return accs.Min(AccidentalInkLeft) - ArpeggioExtent().Right;
+    }
+
+    /// <summary>An accidental glyph's ink LEFT edge: its draw origin plus the glyph's own
+    /// left bearing at the size it was drawn.</summary>
+    private static double AccidentalInkLeft(DrawnGlyph g)
+    {
+        string kind = g.Glyph switch
+        {
+            LilySharp.Core.Svg.EmmentalerGlyphs.AccidentalSharp => "sharp",
+            LilySharp.Core.Svg.EmmentalerGlyphs.AccidentalFlat => "flat",
+            LilySharp.Core.Svg.EmmentalerGlyphs.AccidentalDoubleSharp => "doubleSharp",
+            LilySharp.Core.Svg.EmmentalerGlyphs.AccidentalDoubleFlat => "doubleFlat",
+            _ => "natural",
+        };
+        double scale = g.FontSize / LilySharp.Core.Rendering.SharedRenderer.FontSize;
+        return g.X + LilySharp.Core.Svg.Layout.GlyphMetrics.GetAccidentalBBox(kind).Left * scale;
+    }
+
+    /// <summary>
+    /// Bar line <paramref name="barIndex"/>'s ink right edge → the LEFT edge of the arpeggio
+    /// wiggle standing in the column it opens: the quantity Paper_column::minimum_distance
+    /// governs when the column's leftmost box is a conditional element.
+    /// </summary>
+    /// <remarks>
+    /// The wiggle is looked for by its INK reaching past the bar line's LEFT edge rather
+    /// than by "the first glyph after the bar": the defect this reads is a wiggle printed
+    /// THROUGH the bar line, whose left edge is then left of the bar — a first-glyph-after
+    /// search would pass over it and report the head instead.
+    /// </remarks>
+    public double BarlineRightToArpeggio(int barIndex)
+    {
+        var bar = Barline(barIndex);
+        double right = bar.X + bar.Width;
+        foreach (var s in ArpeggioStacks())
+            if (s.Right > bar.X + 1e-9)
+                return s.Left - right;
+        throw new InvalidOperationException(
+            $"no arpeggio wiggle reaches past bar line {barIndex}'s left edge.\n"
+            + "Drawn geometry:\n" + Describe());
     }
 
     /// <summary>

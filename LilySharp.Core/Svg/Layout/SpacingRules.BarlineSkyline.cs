@@ -114,12 +114,10 @@ internal static partial class SpacingRules
             TimeSignatureChangeItem => 0.75,
             // Bar line's own extra-spacing-width (the default 0.1) plus the LEFTmost grob's.
             // That grob is an accidental whenever the column carries one, and an accidental
-            // declares 0.2 rather than the default — see AccidentalExtraSpacingWidthLeft.
-            // A head reversed left of the stem is still an ordinary NoteHead and keeps 0.1.
-            _ => DefaultExtraSpacingWidth
-                 + (HasAccidental(nextItem)
-                        ? AccidentalExtraSpacingWidthLeft
-                        : DefaultExtraSpacingWidth)
+            // declares 0.2 rather than the default — see AccidentalExtraSpacingWidthLeft;
+            // an ARPEGGIO stands further left still and takes the default. A head reversed
+            // left of the stem is still an ordinary NoteHead and keeps 0.1.
+            _ => DefaultExtraSpacingWidth + LeftmostGrobExtraSpacingWidth(nextItem)
         };
     }
 

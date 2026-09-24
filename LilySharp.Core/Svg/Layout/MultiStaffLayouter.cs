@@ -3413,9 +3413,15 @@ internal sealed class MultiStaffLayouter
                 // 2026-08-10 — see SkylineBuilder.AddFingeringsToSkyline for the measurement
                 // and ledger fingering.chord.dynamic-* for the books.
                 var fingerings = StaffFingeringLayouts(staff, thisStaff, measureLayouts, score, beams);
+                // ...and this staff's GRACE columns, placed where the drawn run stands: a
+                // grace's head, stem, flag and accidental are inside-staff ink like any
+                // other note's, and a mover above the staff clears them (SkylineBuilder's
+                // grace seed says why, and ledger mark.over-grace.staff-to-baseline measures it).
+                var graceSeeds = SkylineBuilder.GraceSeedsFor(
+                    staff, thisStaff, score.GraceNotes, score.Articulations, measureLayouts);
                 var insideSky = skylineBuilder.BuildInsideStaffSkylines(
                     staff, measureLayouts, articulations, tupletBrackets, slurs, ties, beams,
-                    CurrentIndent, restShifts, fingerings);
+                    CurrentIndent, restShifts, fingerings, graceSeeds);
                 inside.Add(insideSky);
                 // ...and the room's own view: the same profile with the priority-250 movers
                 // placed on a COPY, so the shared one stays the inside profile.

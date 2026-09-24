@@ -904,6 +904,33 @@ internal static partial class SpacingRules
         };
     }
 
+    /// <summary>True when the chord rolls (an Arpeggio) or is bracketed (a ChordBracket) —
+    /// either way a conditional part standing LEFT of the column's other ink.</summary>
+    private static bool HasArpeggio(MusicItem? item)
+        => item is ChordItem { HasArpeggio: true } or ChordItem { HasArpeggioBracket: true };
+
+    /// <summary>
+    /// The LEFTward <c>extra-spacing-width</c> of the column's LEFTMOST grob — the box a bar
+    /// line's minimum, and the keep-inside-line rod, are measured against. An Accidental
+    /// declares 0.2; a head, a reversed head and an Arpeggio take the default 0.1 — and the
+    /// arpeggio stands left of the accidentals, so when there is one the column's leftmost
+    /// box is its.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:40 Accidental (extra-spacing-width . (-0.2 . 0.0));
+    ///   :205-227 Arpeggio and :811-835 ChordBracket declare none, so
+    ///   lily/separation-item.cc:166-167 Separation_item::boxes — its default
+    ///   <c>Interval (-0.1, 0.1)</c> — applies.
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/arpeggio.ly ABL): the wiggle opening a bar
+    /// stands 0.500000 off the bar line's ink = the two default 0.1s and the 0.3 headroom of
+    /// lily/staff-spacing.cc:212-215 Staff_spacing::get_spacing, where an accidental's 0.2
+    /// would read 0.600000.
+    /// </remarks>
+    internal static double LeftmostGrobExtraSpacingWidth(MusicItem? item)
+        => HasArpeggio(item) ? DefaultExtraSpacingWidth
+         : HasAccidental(item) ? AccidentalExtraSpacingWidthLeft
+         : DefaultExtraSpacingWidth;
+
     internal static int GetDots(MusicItem item)
     {
         return item switch
@@ -1244,40 +1271,32 @@ internal static partial class SpacingRules
             return -GlyphMetrics.GetRestBBox(noteValue).Left;
         }
 
-        // Handle accidentals
+        // A chord's own ink to the left — its reversed heads and its accidentals — is the
+        // arpeggio's SUPPORT, and one home answers for both (ChordSupportLeftReach).
         if (item is ChordItem chord)
         {
-            // Within-chord seconds: a head reversed to the LEFT of the stem
-            // (stem down) extends the column's left ink even without
-            // accidentals. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
-            double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-                chord.Notes, chord.StemUp, noteValue);
-            double minHeadOffset = headOffsets.Min();
-            // The reversed head sits `minHeadOffset` (negative) from the column, so its
-            // leftward reach is that offset's magnitude — measured from the column, not
-            // from the head's centre (see the base-extent note above).
-            if (minHeadOffset < 0)
-                extent = Math.Max(extent, -minHeadOffset);
+            extent = Math.Max(extent, ChordSupportLeftReach(chord));
 
-            // For chords, use AccidentalPlacement to calculate staggered positions —
-            // unless the staff column packed them together with another voice's, in which
-            // case that answer is already in THIS frame (the column's) and is the one drawn.
-            double leftmost = 0;
-            if (chord.HasPackedAccidentals)
-            {
-                leftmost = chord.Notes.Min(n => n.AccidentalX ?? 0);
-            }
-            else
-            {
-                var placement = new AccidentalPlacement();
-                var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
-                if (layouts.Length > 0)
-                    // XOffset is negative, representing distance to the left of notehead
-                    leftmost = layouts.Min(l => l.XOffset);
-            }
-            // The leftmost extent is the absolute value of the offset
-            if (leftmost < 0)
-                extent = Math.Max(extent, -leftmost);
+            // ...and the ARPEGGIO (or chord bracket) standing `padding` left of that support.
+            // It is a conditional element of the paper column, so it is in the column's
+            // separation boxes AND in the column's own X extent: the bar line → column
+            // minimum reads it (Paper_column::minimum_distance merges the right column's
+            // conditional skyline) and so does keep-inside-line (the column's extent). Until
+            // session 568 this reach stopped at the heads and the accidentals, and a wiggle
+            // opening a bar printed THROUGH the bar line (the showcase petite-valse's closing
+            // chord; ledger arpeggio.x.barline-to-wiggle).
+            // LILYPOND-REF: lily/paper-column-engraver.cc:246-261 stop_translation_timestep —
+            //   an Arpeggio (and a ChordBracket) is added to the column's conditional-elements;
+            // LILYPOND-REF: lily/paper-column.cc:145-164 Paper_column::minimum_distance —
+            //   skys[RIGHT].merge (Separation_item::conditional_skyline (right, left));
+            // LILYPOND-REF: lily/separation-item.cc:120-148 Separation_item::boxes — the
+            //   conditional walk ("other_elts; for now only arpeggios");
+            // LILYPOND-REF: scm/define-grobs.scm:205-227 Arpeggio — its X-offset is
+            //   ly:side-position-interface::x-aligned-side, with (side-axis . X)
+            //   (direction . LEFT) (padding . 0.5) (X-extent . ly:arpeggio::width);
+            //   :811-835 ChordBracket likewise.
+            if (chord.HasArpeggio || chord.HasArpeggioBracket)
+                extent += ArpeggioEngraver.ReachPastSupport(chord.HasArpeggioBracket);
         }
         else if (item is NoteItem note && note.Accidental != null)
         {
@@ -1299,6 +1318,62 @@ internal static partial class SpacingRules
         }
 
         return extent;
+    }
+
+    /// <summary>
+    /// How far a CHORD's own ink reaches LEFT of its column origin, as a positive number: a
+    /// head reversed to the left of a down stem (a second), and the leftmost of its packed
+    /// accidentals — 0 for a plain chord. This is the ink an arpeggio stands <c>padding</c>
+    /// clear of, so the arpeggio's placement (<see cref="ArpeggioEngraver"/>), its
+    /// reservation (<c>ItemSkylineFactory.AddArpeggio</c>) and the column's own reach
+    /// (<see cref="CalculateLeftExtent"/>) all read it here and nowhere else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio-engraver.cc:112-122 acknowledge_rhythmic_head — every
+    ///   head is a side-position support of the arpeggio;
+    /// LILYPOND-REF: lily/accidental-engraver.cc:298-307 make_standard_accidental — every
+    ///   accidental it makes is added to the support of each arpeggio it acknowledged,
+    ///   "so it is put left of the accidentals";
+    /// LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done (the reversed head);
+    ///   lily/accidental-placement.cc position_apes (the accidentals' X).
+    /// MEASURED (2.26.0, audit/lp-geometry/probes/arpeggio.ly AAC, <c>&lt;cis e g&gt;4\arpeggio</c>):
+    /// the wiggle's right edge 8.585000 against the sharp's ink left 9.085000 — the padding,
+    /// off the ACCIDENTAL; the heads start 1.45 further right.
+    /// </remarks>
+    internal static double ChordSupportLeftReach(ChordItem chord)
+    {
+        int noteValue = GetNoteValue(chord);
+        // Within-chord seconds: a head reversed to the LEFT of the stem (stem down)
+        // extends the column's left ink even without accidentals.
+        double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
+            chord.Notes, chord.StemUp, noteValue);
+        double reach = 0;
+        // The reversed head sits `minHeadOffset` (negative) from the column, so its
+        // leftward reach is that offset's magnitude — measured from the column, not from
+        // the head's centre (see CalculateLeftExtent's base-extent note).
+        double minHeadOffset = headOffsets.Min();
+        if (minHeadOffset < 0)
+            reach = Math.Max(reach, -minHeadOffset);
+
+        // The accidentals' staggered positions — unless the staff column packed them
+        // together with another voice's, in which case that answer is already in THIS
+        // frame (the column's) and is the one drawn.
+        double leftmost = 0;
+        if (chord.HasPackedAccidentals)
+        {
+            leftmost = chord.Notes.Min(n => n.AccidentalX ?? 0);
+        }
+        else
+        {
+            var placement = new AccidentalPlacement();
+            var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
+            if (layouts.Length > 0)
+                // XOffset is negative, representing distance to the left of notehead
+                leftmost = layouts.Min(l => l.XOffset);
+        }
+        if (leftmost < 0)
+            reach = Math.Max(reach, -leftmost);
+        return reach;
     }
 
     /// <summary>

@@ -324,8 +324,7 @@ internal static partial class SpacingRules
     /// <c>Paper_column::minimum_distance</c>.
     /// </summary>
     internal static double MusicalColumnLeftReach(MusicItem item) =>
-        CalculateLeftExtent(item)
-        + (HasAccidental(item) ? AccidentalExtraSpacingWidthLeft : DefaultExtraSpacingWidth);
+        CalculateLeftExtent(item) + LeftmostGrobExtraSpacingWidth(item);
 
     /// <summary>
     /// Prices a mid-measure clef / key / time change the way LilyPond does: as its own

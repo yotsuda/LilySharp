@@ -94,8 +94,11 @@ internal sealed class SkylineBuilder
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline —
         //   the system stencil the page spaces by carries the real Beam ink, not a
         //   fixed-length stem model.
+        // ...with the edge staff's GRACE columns, seeded where the drawn run stands — the
+        // page's silhouette carries a grace's flag exactly as the staff's own profile does.
         AddEdgeStaffInk(firstStaff, measureLayouts, firstStaffMiddleUp, firstStaffBeams,
-            systemLeft, upSkyline, downSkyline);
+            systemLeft, upSkyline, downSkyline,
+            EdgeGraceSeeds(score, firstStaff, measureLayouts));
 
         // Process bottommost staff for DOWN skyline (elements below the system)
         // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
@@ -134,7 +137,8 @@ internal sealed class SkylineBuilder
         bool twoEnds = lastStaff is not null && staffCount > 1 && systemHeight > 0;
         if (twoEnds)
             AddEdgeStaffInk(lastStaff, measureLayouts, lastStaffMiddleUp, lastStaffBeams,
-                systemLeft, upSkyline, downSkyline);
+                systemLeft, upSkyline, downSkyline,
+                EdgeGraceSeeds(score, lastStaff, measureLayouts));
 
         // ★ EACH EDGE STAFF SEEDS ITS OWN STAFF SYMBOL — BOTH its lines, not one each
         // (2026-07-28). It used to seed the outer pair, the first staff's TOP and the last
@@ -241,7 +245,8 @@ internal sealed class SkylineBuilder
     private void AddEdgeStaffInk(
         Staff? staff, ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleUp,
         ImmutableArray<BeamLayout> beams, double systemLeft,
-        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline,
+        GraceSeeds? graceSeeds = null)
     {
         // ★ THE STAFF'S OWN SIZE, asked for once and carried into the seeds, so that every
         // quantity BELONGING to this staff arrives already at its size and no seed multiplies
@@ -252,7 +257,7 @@ internal sealed class SkylineBuilder
         if (staff is not null)
         {
             AddStaffToSkylines(staff, measureLayouts, staffMiddleUp, upSkyline, downSkyline,
-                beams);
+                beams, graceSeeds: graceSeeds);
             SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
         }
         // The same fork as BuildInsideStaffSkylines: a tab's stems and beams are seeded from
@@ -262,6 +267,23 @@ internal sealed class SkylineBuilder
                 upSkyline, downSkyline);
         else
             AddBeamsToSkyline(beams, staffMiddleUp, size, upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// The grace seeds of an EDGE staff of the system silhouette: the staff's global index is
+    /// found by identity among the score's staves (the same element, not an equal one — see
+    /// the twoEnds remark in <see cref="BuildSystemSkylines"/>), and null when the staff is
+    /// not one of them.
+    /// </summary>
+    private static GraceSeeds? EdgeGraceSeeds(
+        MultiStaffScore score, Staff? staff, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (staff is null || score.GraceNotes.IsDefaultOrEmpty)
+            return null;
+        foreach (var (_, st, gi) in score.EnumerateStaves())
+            if (ReferenceEquals(st, staff))
+                return GraceSeedsFor(staff, gi, score.GraceNotes, score.Articulations, measureLayouts);
+        return null;
     }
 
     /// <summary>
@@ -550,7 +572,8 @@ internal sealed class SkylineBuilder
         double staffMiddleUp,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline,
         ImmutableArray<BeamLayout> beams,
-        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null)
+        IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
+        GraceSeeds? graceSeeds = null)
     {
         if (staff.IsTextRow)
             return;
@@ -636,15 +659,48 @@ internal sealed class SkylineBuilder
                         continue;
 
                     var item = measure.Items[itemIndex];
-                    // Grace time is not in THIS silhouette: GraceNoteEngraver builds the
-                    // group's own boxes at the grace font, and reading a grace column here as
-                    // an ordinary full-size note reserved a head and a stem the page never
-                    // draws — MEASURED, `acciaccatura { a16 } b4 r2 r4` grew 0.500000 taller
-                    // with identical ink, which is the signature of a silhouette that has
-                    // stopped describing the page. See SharedRenderer.CollectStaffItems for
-                    // why the skip exists and when it goes (HANDOFF §2 U8 ⒝2).
+                    // GRACE TIME IS SEEDED HERE, by the ordinary seeds at the fonts its grobs
+                    // state — LilyPond's own shape: a grace body is an ordinary stretch of an
+                    // ordinary Voice, its NoteHead / Stem / Flag / Accidental are inside-staff
+                    // grobs of the staff's VerticalAxisGroup like any other note's, and the
+                    // outside-staff movers (a rehearsal mark, a text, a dynamic) clear them.
+                    // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing —
+                    //   inside_staff_skylines collects every element with no
+                    //   outside-staff-priority, and a grace's grobs declare none;
+                    //   scm/music-functions.scm:636-650 general-grace-settings states only
+                    //   their font-size.
+                    // Until session 568 a grace was in NO vertical skyline at all, and the
+                    // showcase petite-valse's section label B printed through the flag of its
+                    // `grace { gis''16 }` (ledger mark.over-grace.staff-to-baseline). The X is
+                    // the run's own placement — GraceNoteEngraver.RunPlacement, the same
+                    // computation the drawn heads and the beam quanter read — keyed by the
+                    // column's item address (GraceSeedsFor); a column the layout did not place
+                    // is left unseeded, exactly as the renderer leaves it undrawn
+                    // (SharedRenderer.CollectStaffItems). ⚠️ AT THE GRACE'S FONTS: reading a
+                    // grace column as a full-size note reserved a head and a stem the page
+                    // never draws — MEASURED, `acciaccatura { a16 } b4 r2 r4` grew 0.500000
+                    // taller with identical ink — which is why every box below is asked of
+                    // the grob's own font (GrobFontSize) and never of the twenty times a scale.
                     if (item.GraceTime)
+                    {
+                        if (graceSeeds is null
+                            || !graceSeeds.Columns.TryGetValue(
+                                (vi, measureIndex, itemIndex), out var seed))
+                            continue;
+                        AddMusicItemToSkylines(item, seed.X, staffMiddleUp, StaffSize.Of(staff),
+                            upSkyline, downSkyline,
+                            // LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings
+                            //   — (Voice Stem direction UP): a grace stem points up whatever
+                            //   the pitch would ask, and the renderer is told the same at the
+                            //   item (SharedRenderer.DrawStaffMeasures).
+                            forcedStemUp: GraceColumnHeads.StemUp,
+                            // A column the run's beam covers ends its stem ON the beam, so the
+                            // beam and those stems are seeded together (AddGraceBeamsToSkyline)
+                            // — the same split the full-size walk makes with suppressStems.
+                            reserveStem: !seed.Beamed,
+                            clef: staff.Clef, staffLines: staff.Lines);
                         continue;
+                    }
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
@@ -712,6 +768,227 @@ internal sealed class SkylineBuilder
             }
         }
         GiveSuppressed(suppressStems);
+        // ...and the beams of this staff's grace runs, with the stems that end on them — the
+        // grace counterpart of AddBeamsToSkyline, run after the columns because it seeds
+        // the drawn geometry the withheld stems above were left to.
+        if (graceSeeds is not null)
+            AddGraceBeamsToSkyline(graceSeeds, staffMiddleUp, StaffSize.Of(staff), upSkyline);
+    }
+
+    /// <summary>
+    /// One GRACE column as the inside-staff profile seeds it: the absolute X the run's
+    /// placement gave it, and whether the run's beam covers it (its stem then ends ON the
+    /// beam and is seeded with it).
+    /// </summary>
+    internal readonly record struct GraceColumnSeed(double X, bool Beamed);
+
+    /// <summary>
+    /// One GRACE run as the profile seeds its beam: where its first column stands, its
+    /// column chain, how many leading columns the beam covers, and the quanted beam's Y at
+    /// the outer stems (staff positions, up from the middle line) — null when the layout
+    /// could not quant it.
+    /// </summary>
+    internal readonly record struct GraceRunSeed(
+        GraceNoteItem Run, double X, SpacingRules.GraceColumnLayout Columns, int BeamedPrefix,
+        double? BeamLeftY, double? BeamRightY);
+
+    /// <summary>
+    /// A staff's grace columns keyed the way the walk finds them — (voice, measure, item), the
+    /// address <c>GraceNoteItem.ColumnItemIndices</c> publishes — and its beamed runs.
+    /// </summary>
+    /// <remarks>
+    /// Built ONCE per (system, staff) by <see cref="GraceSeedsFor"/> and handed to the walk, so
+    /// the per-item read is a dictionary lookup and the run's placement is computed once.
+    /// </remarks>
+    internal sealed class GraceSeeds
+    {
+        internal readonly Dictionary<(int Voice, int Measure, int Item), GraceColumnSeed> Columns = new();
+        internal readonly List<GraceRunSeed> BeamedRuns = new();
+    }
+
+    /// <summary>
+    /// Where this staff's grace columns stand on THIS system, from the runs the score carries
+    /// — null when the staff has none here, so the walk pays nothing for a book without graces.
+    /// </summary>
+    /// <remarks>
+    /// The X is <see cref="GraceNoteEngraver.RunPlacement"/>'s, the one computation the drawn
+    /// run reads (its heads through <c>ScoreLayout.GraceColumnXs</c>, its beam through
+    /// <c>QuantGraceBeam</c>), so the profile cannot reserve a grace anywhere but where it is
+    /// drawn. The run's measures are its own VOICE's — <c>MainNoteItemIndex</c> and
+    /// <c>ColumnItemIndices</c> count in that voice's item list (GraceNoteItem's remarks) —
+    /// which is the same two-step resolution the engraver makes.
+    /// <para>
+    /// A run whose measure is not on this system, or that published no column addresses (a
+    /// hand-built group), contributes nothing. A TAB staff's graces are fret digits drawn by
+    /// their own arm and are not seeded here either (AddTabStaffToSkylines).
+    /// </para>
+    /// </remarks>
+    internal static GraceSeeds? GraceSeedsFor(
+        Staff staff, int staffIndex, ImmutableArray<GraceNoteItem> graceNotes,
+        ImmutableArray<ArticulationItem> articulations,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (graceNotes.IsDefaultOrEmpty || staff.IsTab || staff.IsTextRow)
+            return null;
+        GraceSeeds? seeds = null;
+        foreach (var grace in graceNotes)
+        {
+            if (grace.StaffIndex != staffIndex || grace.ColumnItemIndices.IsDefaultOrEmpty)
+                continue;
+            MeasureLayout? ml = null;
+            foreach (var m in measureLayouts)
+                if (m.MeasureIndex == grace.MeasureIndex) { ml = m; break; }
+            if (ml is not { } measureLayout)
+                continue;
+            if (grace.VoiceIndex < 0 || grace.VoiceIndex >= staff.Voices.Length)
+                continue;
+            var graceMeasures = staff.Voices[grace.VoiceIndex].Measures;
+            if (grace.MeasureIndex >= graceMeasures.Length)
+                continue;
+            var (x, _, columns) = GraceNoteEngraver.RunPlacement(
+                grace, measureLayout, graceMeasures, articulations);
+            if (columns.Offsets.IsDefaultOrEmpty)
+                continue;
+            int beamedPrefix = GraceNoteEngraver.BeamedPrefix(grace.Columns);
+            seeds ??= new GraceSeeds();
+            int n = Math.Min(grace.ColumnItemIndices.Length, columns.Offsets.Length);
+            for (int i = 0; i < n; i++)
+                seeds.Columns[(grace.VoiceIndex, grace.MeasureIndex, grace.ColumnItemIndices[i])]
+                    = new GraceColumnSeed(x + columns.Offsets[i], i < beamedPrefix);
+            if (beamedPrefix >= 2)
+            {
+                var (beamLeftY, beamRightY) = GraceNoteEngraver.QuantGraceBeam(grace, columns.Offsets);
+                seeds.BeamedRuns.Add(new GraceRunSeed(
+                    grace, x, columns, beamedPrefix, beamLeftY, beamRightY));
+            }
+        }
+        return seeds;
+    }
+
+    /// <summary>
+    /// Seeds each beamed grace run's BEAM and the stems that end on it — the drawn geometry
+    /// <c>SharedRenderer.DrawGraceBeam</c> draws, into the UP skyline (a grace stem is forced
+    /// up, so its beam is the run's top edge).
+    /// </summary>
+    /// <remarks>
+    /// The same frame the renderer draws in: each stem stands at <c>LayoutUtilities.StemX</c>
+    /// off the grace head font, the beam's Y at the two OUTER stems is the quanter's answer
+    /// (staff positions from the middle line — <c>QuantGraceBeam</c>, read as
+    /// <c>middle + y / 2</c> exactly as the renderer reads it), the line between them is
+    /// evaluated at each stem, and the outer edge is that line plus half the grace beam's
+    /// declared thickness. Secondary beams stack TOWARD the heads, so the primary's top is the
+    /// extreme. A run the layout could not quant takes the renderer's own fallback length.
+    /// LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings —
+    ///   (Voice Beam beam-thickness 0.384), (Voice Stem direction UP);
+    /// LILYPOND-REF: lily/beam.cc:631 Beam::calc_beam_segments — <c>current.horizontal_[event_dir]
+    ///   += event_dir * seg.width_ / 2</c>, the beam's ends reaching half a stem past the
+    ///   outer stems.
+    /// </remarks>
+    private static void AddGraceBeamsToSkyline(
+        GraceSeeds seeds, double staffMiddleUp, StaffSize size, VerticalSkyline upSkyline)
+    {
+        if (seeds.BeamedRuns.Count == 0)
+            return;
+        var headFont = GraceNoteItem.Font;
+        double halfStem = size.Span(EngravingDefaults.StemThickness / 2);
+        double beamHalf = size.Span(EngravingDefaults.GraceBeamThickness / 2);
+        foreach (var run in seeds.BeamedRuns)
+        {
+            int last = run.BeamedPrefix - 1;
+            if (last < 1 || run.Columns.Offsets.Length <= last)
+                continue;
+            // ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
+            // constant DrawGraceBeam spells for the same reason (a beam needs two columns of
+            // an eighth or shorter, so every column here draws a black head).
+            const int graceHeadNoteValue = 4;
+            double StemX(int i) => run.X + run.Columns.Offsets[i]
+                + size.Span(LayoutUtilities.StemX(0.0, up: true, graceHeadNoteValue,
+                    NoteheadStyle.Default, headFont));
+            double TopHeadUp(int i)
+                => staffMiddleUp + size.Span(run.Run.Columns[i].Highest.StaffPosition * 0.5);
+            double edgeL = StemX(0), edgeR = StemX(last);
+            double beamLeftY = run.BeamLeftY is { } bl
+                ? staffMiddleUp + size.Span(bl / 2.0)
+                : TopHeadUp(0) + size.Span(GraceNoteEngraver.StemLength(GraceNoteItem.ScaleFactor));
+            double beamRightY = run.BeamRightY is { } br
+                ? staffMiddleUp + size.Span(br / 2.0)
+                : TopHeadUp(last) + size.Span(GraceNoteEngraver.StemLength(GraceNoteItem.ScaleFactor));
+            double span = edgeR - edgeL;
+            double slope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
+            double BeamY(double x) => beamLeftY + slope * (x - edgeL);
+
+            for (int i = 0; i <= last; i++)
+            {
+                double sx = StemX(i);
+                double foot = TopHeadUp(i);
+                double tip = BeamY(sx);
+                if (tip > foot)
+                    upSkyline.MergeBox(sx - halfStem, sx + halfStem, foot, tip);
+            }
+            double xL = edgeL - halfStem, xR = edgeR + halfStem;
+            upSkyline.MergeSlope(xL, BeamY(xL) + beamHalf, xR, BeamY(xR) + beamHalf, thickness: 0);
+        }
+    }
+
+    /// <summary>
+    /// The fonts a note's boxes are read from when it stands in GRACE TIME — the head's, the
+    /// stem's length rule and the flag's, each asked of the grob (GrobFontSize) — and nothing
+    /// for a full-size or a cue note, whose seeds keep the staff's own font.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A CUE IS DELIBERATELY NOT HERE. Its profile is seeded at full size today, a
+    /// pre-existing simplification of its own (HANDOFF §2 U8c, "a reduced column's skyline is
+    /// a separate island"); folding it in would move every cue book for a reason unrelated
+    /// to the grace, and it wants its own measurement.
+    /// </remarks>
+    private static (GlyphMetrics.DesignMetrics? Head, StemDetails? Stem, GlyphMetrics.DesignMetrics? Flag)
+        GraceFontsOf(MusicItem item)
+        => item.GraceTime
+            ? (GrobFontSize.FontOf(item, SizedGrob.NoteHead), GrobFontSize.GraceStemDetails,
+               GrobFontSize.FontOf(item, SizedGrob.Flag))
+            : (null, null, null);
+
+    /// <summary>
+    /// Merges a GRACE-TIME accidental's own outline — the glyph out of the design its
+    /// <c>font-size</c> selects (−4, one step below the head's −3), at that magnification —
+    /// with its ink starting at <paramref name="inkLeft"/> on the origin line
+    /// <paramref name="headY"/> (Y-up). The reduced twin of <see cref="MergeAccidentalInk"/>.
+    /// </summary>
+    /// <remarks>
+    /// The same pairing the renderer draws with (<c>DrawAccidentalAtInkLeft</c> inside
+    /// <c>gc.MusicFace(GrobFontSize.DesignOf(…))</c> at <c>FontSize × ScaleOf(…)</c>), and
+    /// the same rule <see cref="MergeAccidentalInk"/> states for the full-size glyph: the
+    /// outline, not a box, because a mover clears it pointwise. The origin sits one bearing
+    /// left of the ink, read off the reduced font's own box.
+    /// LILYPOND-REF: scm/music-functions.scm:645-646 general-grace-settings —
+    ///   (Voice Accidental font-size -4);
+    /// LILYPOND-REF: scm/define-grobs.scm:35 Accidental grob::unpure-vertical-skylines-from-stencil.
+    /// ⚠️ A restore-first composite (♮♯ / ♮♭) is merged as its main glyph alone here; no
+    /// corpus book writes one in grace time.
+    /// </remarks>
+    private static void MergeReducedAccidentalInk(
+        MusicItem item, string accidental, double inkLeft, double headY, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        var font = GrobFontSize.FontOf(item, SizedGrob.Accidental);
+        string kind = GlyphMetrics.RestoreMainOf(accidental) ?? accidental;
+        var bbox = GlyphMetrics.GetAccidentalBBox(font, kind);
+        var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
+            EmmentalerGlyphs.AccidentalGlyph(kind),
+            size.Span(Rendering.SharedRenderer.FontSize
+                      * GrobFontSize.ScaleOf(item, SizedGrob.Accidental)),
+            GrobFontSize.DesignOf(item, SizedGrob.Accidental));
+        double originX = inkLeft - size.Span(bbox.Left);
+        if (up.Count > 0 || down.Count > 0)
+        {
+            upSkyline.Merge(up, originX, headY);
+            downSkyline.Merge(down, originX, headY);
+            return;
+        }
+        upSkyline.MergeBox(inkLeft, inkLeft + size.Span(bbox.Width),
+            headY + size.Span(bbox.Bottom), headY + size.Span(bbox.Top));
+        downSkyline.MergeBox(inkLeft, inkLeft + size.Span(bbox.Width),
+            headY + size.Span(bbox.Bottom), headY + size.Span(bbox.Top));
     }
 
     /// <summary>
@@ -1117,7 +1394,8 @@ internal sealed class SkylineBuilder
         ImmutableArray<BeamLayout> beams = default,
         double systemLeft = double.NaN,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
-        ImmutableArray<FingeringLayout> fingerings = default)
+        ImmutableArray<FingeringLayout> fingerings = default,
+        GraceSeeds? graceSeeds = null)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -1183,7 +1461,7 @@ internal sealed class SkylineBuilder
         SeedClef(staff, staffMiddleUp, systemLeft, size, upSkyline, downSkyline);
 
         AddStaffToSkylines(staff, measureLayouts, staffMiddleUp,
-            upSkyline, downSkyline, beams, restShifts);
+            upSkyline, downSkyline, beams, restShifts, graceSeeds);
 
         // A tab staff's above/below Scripts (fermata, flageolet, accent, …) are
         // engraved only after spacing, so they were absent from this skyline and a
@@ -2142,7 +2420,17 @@ internal sealed class SkylineBuilder
                 //   sentence the notehead seed above cites).
                 // LILYPOND-REF: lily/axis-group-interface.cc:914-935 skyline_spacing —
                 //   Dots is an inside-staff grob, so it is in what the movers clear.
-                if (note.Dots > 0)
+                // ⚠️ A GRACE'S DOTS ARE NOT SEEDED YET. Their X is the dot column's grace
+                // answer (DotColumn.ReservedForGrace, off the shortened stem's flag) and not
+                // this full-size arithmetic; seeding them here at the twenty's box would be
+                // the "reserved what the page never draws" shape the head seed just avoided.
+                //   departs from: lily/axis-group-interface.cc:914-935 inside_staff_skylines —
+                //     a grace's Dots is an inside-staff grob like any other and is in the
+                //     profile the movers clear.
+                //   goes away when: the dot seed asks DotColumn for the grace column's answer,
+                //     as SharedRenderer.DrawNote does.
+                //   observed by: NOTHING — no corpus book puts a dotted grace under a mover.
+                if (note.Dots > 0 && !note.GraceTime)
                 {
                     // The renderer's own column X and Dot_configuration position
                     // (SharedRenderer.Noteheads, single-note branch): base X = head INK
@@ -2165,9 +2453,26 @@ internal sealed class SkylineBuilder
                 if (note.Accidental != null)
                 {
                     double accY = size.Span(note.StaffPosition * 0.5) + staffMiddleUp;
+                    // A grace's accidental: placed by the same position_apes the renderer
+                    // places it with (DrawNote → AccidentalPlacement.CalculateSinglePosition
+                    // at the −4 accidental font against the −3 head), its outline out of the
+                    // reduced design.
+                    if (note.GraceTime)
+                    {
+                        double? graceInkLeft = note.AccidentalX is { } graceX
+                            ? x + size.Span(graceX)
+                            : AccidentalStagger.CalculateSinglePosition(note,
+                                GrobFontSize.FontOf(note, SizedGrob.Accidental),
+                                GrobFontSize.FontOf(note, SizedGrob.NoteHead)) is { } al
+                                ? x + size.Span(al.XOffset)
+                                : null;
+                        if (graceInkLeft is { } inkLeft)
+                            MergeReducedAccidentalInk(note, note.Accidental, inkLeft, accY, size,
+                                upSkyline, downSkyline);
+                    }
                     // Packed with the rest of the staff column when another voice stands on
                     // it, and `x` IS that column (Collector.StaffAccidentalColumns).
-                    if (note.AccidentalX is { } packedX)
+                    else if (note.AccidentalX is { } packedX)
                         MergeAccidentalInk(note.Accidental, x + size.Span(packedX), accY, size,
                             upSkyline, downSkyline);
                     else
@@ -2185,16 +2490,21 @@ internal sealed class SkylineBuilder
                 // Writer's @stemUp/@stemDown outranks the voice default, as the
                 // renderer draws it (SharedRenderer.DrawNote).
                 bool chordStemUp = chord.ForcedStemUp ?? forcedStemUp ?? chord.StemUp;
+                // A grace chord's boxes come out of the grace fonts (GraceFontsOf); a
+                // full-size chord's keep the staff's own.
                 foreach (var chordNote in chord.Notes)
                 {
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleUp, size,
                         chordStemUp, chordNoteValue,
-                        upSkyline, downSkyline, reserveStem, chord.Notehead);
+                        upSkyline, downSkyline, reserveStem, chord.Notehead,
+                        graceItem: chord.GraceTime ? chord : null);
                 }
                 // Chord accidentals go through the REAL placement machinery
                 // (stagger columns, reversed-head offsets) so the skyline
                 // carries each glyph at its true X — the same call the
-                // renderer draws with.
+                // renderer draws with. A grace chord's go through it at the grace's two
+                // fonts (GraceColumnHeads.AccidentalOffsets' pairing) and merge the reduced
+                // outline.
                 // LILYPOND-REF: lily/accidental-placement.cc position_apes.
                 foreach (var (acc, accPos, accOffset) in ChordAccidentalXs(chord, chordStemUp, chordNoteValue))
                 {
@@ -2204,15 +2514,20 @@ internal sealed class SkylineBuilder
                     // The stagger's offset is a distance in staff-spaces from the column, so
                     // it belongs to this staff too; `x` alone is the column.
                     double accX = x + size.Span(accOffset);
-                    MergeAccidentalInk(acc, accX, accHeadY, size,
-                        upSkyline, downSkyline);
+                    if (chord.GraceTime)
+                        MergeReducedAccidentalInk(chord, acc, accX, accHeadY, size,
+                            upSkyline, downSkyline);
+                    else
+                        MergeAccidentalInk(acc, accX, accHeadY, size,
+                            upSkyline, downSkyline);
                 }
                 // The chord's dot rows, as the renderer draws them (see the NoteItem case
                 // for why a drawn dot belongs in this profile): one row per member, all in
                 // one column right of the heads — reversed heads push the column right, so
                 // the same offsets solve feeds it. The collision DotAdjustment is not read
-                // here either (NoteItem case's remark).
-                if (chord.Dots > 0 && chord.Notes.Length > 0)
+                // here either (NoteItem case's remark). A grace chord's dots are not seeded
+                // (the NoteItem case says why).
+                if (chord.Dots > 0 && chord.Notes.Length > 0 && !chord.GraceTime)
                 {
                     // The staff's own font, like every other box this profile reads — a
                     // reduced column's skyline is a separate island (docs/HANDOFF.md §2 U8c).
@@ -2352,7 +2667,7 @@ internal sealed class SkylineBuilder
     /// the packing the whole staff column got when another voice stands on it
     /// (<see cref="Collector.StaffAccidentalColumns"/>), else this chord's own solve.
     /// </summary>
-    private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
+    private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXsFullSize(
         ChordItem chord, bool stemUp, int noteValue)
     {
         if (chord.HasPackedAccidentals)
@@ -2367,6 +2682,26 @@ internal sealed class SkylineBuilder
             chord.Notes,
             ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue)))
             yield return (al.Accidental, al.StaffPosition, al.XOffset);
+    }
+
+    /// <summary>
+    /// <see cref="ChordAccidentalXsFullSize"/> for a full-size chord; for a chord in GRACE
+    /// TIME the same solve at the grace's two fonts — the accidental's −4 against the head's
+    /// −3, the pairing <see cref="GraceColumnHeads.AccidentalOffsets"/> states — unless the
+    /// staff column packed them, in which case the packed X is the one drawn either way.
+    /// </summary>
+    private static IEnumerable<(string Accidental, int StaffPosition, double X)> ChordAccidentalXs(
+        ChordItem chord, bool stemUp, int noteValue)
+    {
+        if (!chord.GraceTime || chord.HasPackedAccidentals)
+            return ChordAccidentalXsFullSize(chord, stemUp, noteValue);
+        var headFont = GrobFontSize.FontOf(chord, SizedGrob.NoteHead);
+        var accFont = GrobFontSize.FontOf(chord, SizedGrob.Accidental);
+        return AccidentalStagger.CalculatePositions(
+                chord.Notes,
+                ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue, headFont),
+                accFont, headFont)
+            .Select(al => (al.Accidental, al.StaffPosition, al.XOffset));
     }
 
     /// <summary>
@@ -2454,8 +2789,43 @@ internal sealed class SkylineBuilder
         // renderer draws it (SharedRenderer.DrawNote).
         bool stemUp = note.ForcedStemUp ?? forcedStemUp ?? note.StemUp;
 
+        // A grace note's boxes come out of the grace fonts (GraceFontsOf); a full-size
+        // note's keep the staff's own.
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleUp, size,
-            stemUp, noteValue, upSkyline, downSkyline, reserveStem, note.Notehead);
+            stemUp, noteValue, upSkyline, downSkyline, reserveStem, note.Notehead,
+            graceItem: note.GraceTime ? note : null);
+    }
+
+    /// <summary>
+    /// Merges a GRACE flag's own outline — the glyph out of the design its <c>font-size</c>
+    /// selects, at that magnification — with its origin at (<paramref name="originX"/>,
+    /// <paramref name="originUp"/>), the point the renderer draws it at. Falls back to the
+    /// glyph's box out of <paramref name="flagFont"/> when the music font cannot be walked.
+    /// </summary>
+    private static void MergeGraceFlagInk(
+        MusicItem item, int noteValue, bool stemUp, double originX, double originUp,
+        StaffSize size, VerticalSkyline upSkyline, VerticalSkyline downSkyline,
+        GlyphMetrics.DesignMetrics? flagFont)
+    {
+        if (EmmentalerGlyphs.GetFlag(noteValue, stemUp) is not { } glyph)
+            return;
+        var (up, down) = TextOutlineSkylines.MusicGlyphProfile(
+            glyph,
+            size.Span(Rendering.SharedRenderer.FontSize * GrobFontSize.ScaleOf(item, SizedGrob.Flag)),
+            GrobFontSize.DesignOf(item, SizedGrob.Flag));
+        if (up.Count > 0 || down.Count > 0)
+        {
+            upSkyline.Merge(up, originX, originUp);
+            downSkyline.Merge(down, originX, originUp);
+            return;
+        }
+        if (flagFont is not { } font)
+            return;
+        var fb = size.Ink(GlyphMetrics.GetFlagBBox(font, noteValue, stemUp));
+        if (fb == default)
+            return;
+        (stemUp ? upSkyline : downSkyline).MergeBox(
+            originX + fb.Left, originX + fb.Right, originUp + fb.Bottom, originUp + fb.Top);
     }
 
     /// <summary>
@@ -2486,8 +2856,15 @@ internal sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline,
         bool reserveStem = true,
-        NoteheadStyle headStyle = NoteheadStyle.Default)
+        NoteheadStyle headStyle = NoteheadStyle.Default,
+        // GRACE TIME: the item itself, so the head's font, the stem's length rule and the
+        // flag's outline are each asked of the grob (GraceFontsOf / GrobFontSize). Null keeps
+        // every full-size seed byte for byte.
+        MusicItem? graceItem = null)
     {
+        var (headFont, stemDetails, flagFont) = graceItem is { } sizedItem
+            ? GraceFontsOf(sizedItem)
+            : (null, null, null);
         // Translate a Y-up coordinate (staff-spaces above THIS staff's middle line)
         // into the shared skyline Y-up frame (whose origin is the system/staff top).
         // No reflection — the skyline now stores Y-up sign-for-sign with skyline.cc.
@@ -2525,7 +2902,11 @@ internal sealed class SkylineBuilder
         // (audit/lp-geometry/probes/glyph-skyline.ly): the notehead reports 0.545 for its
         // extent AND its skyline, while its outline stops at 0.544 — so seeding the outline
         // here would be an invention that happens to land 0.001 away.
-        var headBox = size.Ink(GlyphMetrics.GetNoteheadBBox(noteValue));
+        // ...and OUT OF THE HEAD'S OWN FONT when it states one: a grace head is the
+        // fourteen design's outline at magstep(−3), not the twenty's shrunk (GrobFontSize).
+        var headBox = size.Ink(headFont is { } hf
+            ? GlyphMetrics.GetNoteheadBBox(hf, noteValue)
+            : GlyphMetrics.GetNoteheadBBox(noteValue));
 
         // Notehead bounding box (head spans noteUp + the glyph's ink in the up frame).
         // ⚠️ X IS THE COLUMN, AND THE GLYPH STARTS THERE (2026-07-29): the renderer
@@ -2619,8 +3000,12 @@ internal sealed class SkylineBuilder
         // The length rule is a named read in the single house of a column's reach
         // (NoteColumnLayout — HANDOFF §5.2.1②); this seed applies it per HEAD of a chord.
         // LILYPOND-REF: lily/stem.cc:506-557 internal_calc_stem_end_position.
-        double stemLength = size.Span(
-            NoteColumnLayout.RendererStemLength(stemUp, noteValue, staffPosition));
+        // A GRACE stem takes its own details — length-fraction 0.8 and no-stem-extend —
+        // through the same calculator the renderer draws it with (StemDetailsOf).
+        double stemLength = size.Span(stemDetails is { } sd
+            ? StemCalculator.CalculateStemLength(
+                stemUp, StemCalculator.GetDurationLog(noteValue), staffPosition, sd)
+            : NoteColumnLayout.RendererStemLength(stemUp, noteValue, staffPosition));
 
         // The stem's REAL drawn span: the renderer attaches an up stem at THIS head's right
         // edge (per shape — a half head's is 0.073200 wider) and a down stem at the head's
@@ -2632,7 +3017,11 @@ internal sealed class SkylineBuilder
         // Per head SHAPE too: a styled head's stem stands at that glyph's own
         // attachment point (the head BOX above stays the default head's — a separate
         // pre-existing simplification, out of this seed's stem claim).
-        double stemCentre = x + size.Span(LayoutUtilities.StemAttachX(stemUp, noteValue, headStyle));
+        // ...standing at the head's own font's attachment point when it states one (the
+        // renderer's DrawNote reads the same overload for a reduced head).
+        double stemCentre = x + size.Span(headFont is { } attachFont
+            ? LayoutUtilities.StemAttachX(stemUp, noteValue, headStyle, attachFont)
+            : LayoutUtilities.StemAttachX(stemUp, noteValue, headStyle));
         double stemHalfWidth = size.Span(EngravingDefaults.StemThickness / 2);
         double flagWidth = size.Span(EngravingDefaults.FlagWidth);
 
@@ -2644,10 +3033,31 @@ internal sealed class SkylineBuilder
             upSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
                 ToSystemUp(stemBaseUp), ToSystemUp(stemTipUp));
 
+            // A GRACE flag is its own glyph's OUTLINE out of the grace design, hung where the
+            // renderer hangs it — on the stem's right edge (FlagDrawX), half a blot inside
+            // the stem's end (FlagPlacementY) — because the nominal FlagWidth/height below
+            // are the twenty's and a grace's flag is the fourteen's at magstep(−3).
+            // ⚠️ THE OUTLINE, NOT THE BOX, and the difference is measured: the sixteenth
+            // flag's box tops its origin by 0.058, but that ink is not at the stem, and
+            // LilyPond's mark over `grace { gis'16 }` stands off the STEM's top (5.100000,
+            // ledger mark.over-grace.staff-to-baseline) — a box seed read 0.018409 too high.
+            // LILYPOND-REF: scm/music-functions.scm:636-650 general-grace-settings —
+            //   (Voice Flag font-size -3); lily/flag.cc:183-196 Flag::internal_calc_y_offset;
+            //   scm/define-grobs.scm:1633 Flag grob::always-vertical-skylines-from-stencil
+            //   (its vertical-skylines entry), walked by
+            //   lily/stencil-integral.cc:535-563 add_named_glyph_segments
+            //   (TextOutlineSkylines.MusicGlyphProfile is that walk).
+            if (noteValue >= 8 && graceItem is { } graceFlagItem)
+            {
+                double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);
+                double flagOriginUp = stemTipUp - size.Span(EngravingDefaults.BlotDiameter / 2);
+                MergeGraceFlagInk(graceFlagItem, noteValue, stemUp, flagOriginX,
+                    ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont);
+            }
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
             // Flag for eighth notes and shorter (noteValue >= 8), hanging DOWN
             // from the stem tip — drawn AT the stem, running right of it.
-            if (noteValue >= 8)
+            else if (noteValue >= 8)
             {
                 double flagHeight = size.Span(LayoutUtilities.CalculateFlagHeight(noteValue));
                 double flagLeft = stemCentre - stemHalfWidth;
@@ -2666,9 +3076,18 @@ internal sealed class SkylineBuilder
             downSkyline.MergeBox(stemCentre - stemHalfWidth, stemCentre + stemHalfWidth,
                 ToSystemUp(stemTipUp), ToSystemUp(stemBaseUp));
 
+            // The grace flag's own outline, as in the up arm (a grace stem is forced up, so
+            // this arm is reached only by a hand-forced one).
+            if (noteValue >= 8 && graceItem is { } graceFlagItem)
+            {
+                double flagOriginX = stemCentre + size.Span(EngravingDefaults.StemThickness / 2);
+                double flagOriginUp = stemTipUp + size.Span(EngravingDefaults.BlotDiameter / 2);
+                MergeGraceFlagInk(graceFlagItem, noteValue, stemUp, flagOriginX,
+                    ToSystemUp(flagOriginUp), size, upSkyline, downSkyline, flagFont);
+            }
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
             // Flag rises UP from the stem bottom.
-            if (noteValue >= 8)
+            else if (noteValue >= 8)
             {
                 double flagHeight = size.Span(LayoutUtilities.CalculateFlagHeight(noteValue));
                 double flagLeft = stemCentre - stemHalfWidth;

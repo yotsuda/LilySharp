@@ -679,7 +679,7 @@ internal static class ItemSkylineFactory
             }
 
             AddAccidentals(parts, chord, noteheadLeftX, staffY, headOffsets, noteValue);
-            AddArpeggio(parts, chord, noteheadLeftX, staffY, headOffsets);
+            AddArpeggio(parts, chord, noteheadLeftX, staffY);
         }
         else if (item is RestItem { PureBeamShift: not 0.0 } beamedRest)
         {
@@ -1235,7 +1235,7 @@ internal static class ItemSkylineFactory
     ///   (X-extent . ly:arpeggio::width) — the grob participates in spacing.
     /// </remarks>
     private static void AddArpeggio(List<ColumnPart> parts, ChordItem chord,
-                                    double noteheadLeftX, double staffY, double[] headOffsets)
+                                    double noteheadLeftX, double staffY)
     {
         // ⚠️ A BRACKET RESERVES TOO, and until 2026-08-03 this read only HasArpeggio — which
         // MeasureCollector.HasArpeggioArticulation sets for a plain @arpeggio and not for
@@ -1252,14 +1252,19 @@ internal static class ItemSkylineFactory
         // ArpeggioEngraver drew from the head's centre, and the wiggle stood most of a
         // head width left of the space kept for it.
         //
-        // ⚠️ AND THE COLUMN'S LEFT INCLUDES A REVERSED HEAD. A second in a STEM-DOWN chord
-        // puts a head a full width LEFT of the column, the wiggle clears THAT head
-        // (ArpeggioEngraver reads the same offsets as minHeadOffset), and a reservation
-        // taken from the un-displaced column left would sit a head width right of the ink:
-        // measured on test/arpeggio-second, whose last chord is the only stem-down one, the
-        // wiggle was drawn ON the previous chord's notehead.
-        double minHeadOffset = headOffsets.Length == 0 ? 0 : Math.Min(0, headOffsets.Min());
-        double arpRight = noteheadLeftX + minHeadOffset - ArpeggioEngraver.Padding;
+        // ⚠️ AND THE COLUMN'S LEFT INCLUDES A REVERSED HEAD AND THE ACCIDENTALS. A second in
+        // a STEM-DOWN chord puts a head a full width LEFT of the column, an accidental stands
+        // further left still, and the wiggle clears whichever reaches furthest — LilyPond
+        // makes every head and every accidental a support of the arpeggio
+        // (lily/arpeggio-engraver.cc:112-122 acknowledge_rhythmic_head,
+        // lily/accidental-engraver.cc:298-307 make_standard_accidental). A
+        // reservation taken from the un-displaced column left would sit a head width right
+        // of the ink: measured on test/arpeggio-second, whose last chord is the only
+        // stem-down one, the wiggle was drawn ON the previous chord's notehead. The one home
+        // for that reach is SpacingRules.ChordSupportLeftReach, which ArpeggioEngraver
+        // places by and CalculateLeftExtent prices by.
+        double arpRight = noteheadLeftX - SpacingRules.ChordSupportLeftReach(chord)
+                          - ArpeggioEngraver.Padding;
         int minPosition = chord.Notes.Min(n => n.StaffPosition);
         int maxPosition = chord.Notes.Max(n => n.StaffPosition);
 

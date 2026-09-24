@@ -133,6 +133,25 @@ internal static class ArpeggioEngraver
         => columnLeftX - Padding - WiggleWidth;
 
     /// <summary>
+    /// How far the grob's ink reaches LEFT past the support it clears: the padding, then its
+    /// own width — the wiggle glyph's, or the bracket's spine-plus-tick.
+    /// </summary>
+    /// <remarks>
+    /// ONE HOME for the column's leftward reach past its heads and accidentals
+    /// (<c>SpacingRules.CalculateLeftExtent</c>), so the bar line → column minimum and the
+    /// keep-inside-line rod price the same ink the placement draws. LilyPond has no such
+    /// number of its own: the arpeggio is a box in the column's conditional skyline and the
+    /// distance falls out of the skylines (lily/paper-column.cc:145-164
+    /// Paper_column::minimum_distance); Lily#'s scalar reach is that box's left edge.
+    /// LILYPOND-REF: scm/define-grobs.scm:210 Arpeggio — ly:side-position-interface::x-aligned-side
+    ///   as its X-offset, with (padding . 0.5), and :218
+    ///   (X-extent . ly:arpeggio::width); :811-835 ChordBracket (padding . 0.5) and its
+    ///   ly:chord-bracket::width.
+    /// </remarks>
+    internal static double ReachPastSupport(bool bracket)
+        => Padding + (bracket ? BracketWidth : WiggleWidth);
+
+    /// <summary>
     /// The pile a chord spanning <paramref name="minPosition"/>..<paramref name="maxPosition"/>
     /// (staff positions) gets: where its bottom sits in the staff's Y-up frame, and how many
     /// whole glyphs stand on it.
@@ -282,25 +301,31 @@ internal static class ArpeggioEngraver
             double itemX = measure.X + LayoutUtilities.GetItemXOffset(
                 arpMeasures, arp.MeasureIndex, arp.ItemIndex, measure);
 
-            // Most-negative within-chord head displacement. A head reversed to the
-            // LEFT of the stem (a second in a stem-down chord) extends the column's
-            // left ink past the un-displaced column, so the arpeggio must clear
-            // THAT head, not the column. LILYPOND-REF: lily/stem.cc:606-760
-            // calc_positioning_done (reversed heads); the arpeggio's side-position
-            // (LEFT) clears the real head extents. Mirrors SpacingRules' left-extent.
-            double minHeadOffset = 0;
+            // The chord's leftmost SUPPORT: a head reversed to the LEFT of a down stem (a
+            // second) extends the column's ink past the un-displaced column, and so does an
+            // ACCIDENTAL — LilyPond adds every head and every accidental of the chord to the
+            // arpeggio's side-position supports, so the wiggle clears whichever reaches
+            // further. ONE HOME with the reservation (ItemSkylineFactory.AddArpeggio) and the
+            // column's own reach (SpacingRules.CalculateLeftExtent):
+            // SpacingRules.ChordSupportLeftReach.
+            // LILYPOND-REF: lily/arpeggio-engraver.cc:112-122 acknowledge_rhythmic_head —
+            //   Side_position_interface::add_support (arpeggio_, head);
+            // LILYPOND-REF: lily/accidental-engraver.cc:298-307 make_standard_accidental —
+            //   each accidental made is added
+            //   to the support of every arpeggio acknowledged, "so it is put left of the
+            //   accidentals". Until session 568 only the heads were cleared, and the wiggle
+            //   printed straight over a sharp (Lab sessions/p568/arp-bar.lys, m3; ledger
+            //   arpeggio.x.right-edge-to-accidental).
+            // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done (the reversed head).
+            double supportReach = 0;
             if (!arpMeasures.IsDefaultOrEmpty
                 && arp.MeasureIndex < arpMeasures.Length
                 && arp.ItemIndex < arpMeasures[arp.MeasureIndex].Items.Length
                 && arpMeasures[arp.MeasureIndex].Items[arp.ItemIndex] is ChordItem arpChord)
             {
-                int nv = arpChord.BaseDuration.Denominator <= 1 ? 1
-                       : arpChord.BaseDuration.Denominator <= 2 ? 2 : 4;
-                foreach (var off in ChordHeadPositioning.CalculateOffsets(
-                             arpChord.Notes, arpChord.StemUp, nv))
-                    minHeadOffset = Math.Min(minHeadOffset, off);
+                supportReach = SpacingRules.ChordSupportLeftReach(arpChord);
             }
-            double columnLeftX = itemX + minHeadOffset;
+            double columnLeftX = itemX - supportReach;
 
             // Y-up staff-space from the staff middle line (frame B): a head at
             // staff-position p sits p/2 spaces above the middle. This reads

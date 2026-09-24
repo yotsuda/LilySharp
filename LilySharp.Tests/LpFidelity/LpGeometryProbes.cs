@@ -4726,6 +4726,95 @@ internal static class LpGeometryProbes
     private static readonly string MKN = MarkScore("MKN", withChords: false);
 
     /// <summary>
+    /// A REHEARSAL MARK OVER A GRACE NOTE'S FLAG — the showcase's shape (petite-valse, session
+    /// 568): the second system opens with <c>grace { gis'16 }</c> under its <c>@mark("B")</c>,
+    /// and with no meter on that system the grace's column stands right after the clef, in
+    /// the mark's own X window. The mirror of book MGF (mark-grace.ly).
+    /// </summary>
+    /// <remarks>
+    /// LilyPond: a grace body is an ordinary stretch of an ordinary Voice, so its head, stem,
+    /// flag and accidental are inside-staff grobs of the staff's VerticalAxisGroup
+    /// (lily/axis-group-interface.cc:914-935 inside_staff_skylines) and the RehearsalMark
+    /// (priority 1500) clears the flag by outside-staff-padding 0.46 as it clears any stem.
+    /// Lily#'s SkylineBuilder skipped every grace-time item until session 568, so the label
+    /// printed through the flag. Boxed on BOTH sides (the probe's header says why), read as
+    /// the mark's baseline over the staff refpoint like the mark.plain.* entries.
+    /// <para>LilyPond twin: score MGF of audit/lp-geometry/probes/mark-grace.ly.</para>
+    /// </remarks>
+    private static readonly string MGF = MarkGraceScore("MGF", withGrace: true);
+
+    /// <summary>The control — MGF with NO grace; the second system's mark then reads the
+    /// plain padding over the staff. Mirror of book MGN.</summary>
+    private static readonly string MGN = MarkGraceScore("MGN", withGrace: false);
+
+    /// <summary>
+    /// THE PROFILE'S OTHER READER: the STAFF-TO-STAFF gap over a grace. A mark is placed
+    /// against the inside silhouette from above; the staff alignment reads it from the side,
+    /// so a repair can reach one and miss the other. A treble staff over a bass staff whose
+    /// second bar opens with a grace ABOVE its own staff — the repo fixture
+    /// test/grace-lower-staff's shape, which is the snapshot that moved. Mirror of book GSL.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND BAR'S GRACE IS THE ONE THAT BINDS, and it has to stand above the bass
+    /// staff: written an octave down, its beam stays inside the staff and LilyPond answers
+    /// the control's number on both books (measured — the probe header keeps the note).
+    /// <para>LilyPond twin: score GCL of audit/lp-geometry/probes/mark-grace.ly, 9.384000
+    /// against the control's 9.000000.</para>
+    /// </remarks>
+    private static readonly string GCL = GraceStaffGapScore("GCL", withGrace: true);
+
+    /// <summary>The control — GCL with NO grace, so the gap rests on the notes alone.
+    /// Mirror of book GCN.</summary>
+    private static readonly string GCN = GraceStaffGapScore("GCN", withGrace: false);
+
+    private static string GraceStaffGapScore(string name, bool withGrace)
+    {
+        string g1 = withGrace ? "grace { e16 f } " : "";
+        string g2 = withGrace ? "grace { d'16 e' } " : "";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part top { clef treble }
+            part bot { clef bass octave 3 }
+
+            section Main {
+              top { c'4 d' e' f' | g'1 | }
+              bot { {{g1}}g4 a b c' | {{g2}}f'2 g'2 | }
+            }
+
+            form main { ~Main }
+
+            score main "{{name}}" {
+              staff top
+              staff bot
+            }
+            """;
+    }
+
+    private static string MarkGraceScore(string name, bool withGrace)
+    {
+        string grace = withGrace ? "grace { gis'16 } " : "";
+        return $$"""
+            octave absolute
+            time 4/4
+            key c major
+
+            part melody {
+              section A { c'4@mark("A") d' e' f' | g' a' b' c'' | c''4 b' a' g' | f' e' d' c' | break }
+              section B { {{grace}}a'4@mark("B") b' a' g' | f'4 e' d' c' | }
+            }
+
+            form main { ~A ~B }
+
+            score main "{{name}}" {
+              staff melody
+            }
+            """;
+    }
+
+    /// <summary>
     /// THE REHEARSAL MARK'S X AT A LINE START — the mirror of book MKQ
     /// (mark-chord-row.ly): a plain staff, <c>@mark("A")</c> on bar 1 and
     /// <c>@mark("B")</c> on the second system's first bar. LilyPond break-aligns a
@@ -8209,6 +8298,43 @@ internal static class LpGeometryProbes
     /// </remarks>
     private static readonly string ABT =
         ArpeggioBook("<c e g>8 <c e g>8@arpeggio(bracket) r4 r2 |", "ABT");
+
+    /// <summary>
+    /// A plain bar and then the SAME chord rolled at the head of the next — the room the BAR
+    /// LINE gives a wiggle, which none of the books above can see: every one of them opens
+    /// the line with its chord, and a line start is priced by another spring.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's minimum between the bar line's column and the next is
+    /// <c>Paper_column::minimum_distance</c> (lily/paper-column.cc:145-164), which merges the
+    /// right column's CONDITIONAL skyline — and an Arpeggio is a conditional element of its
+    /// column (lily/paper-column-engraver.cc:246-261) — so the wiggle's width and padding
+    /// stand inside min_dist; <c>Staff_spacing::get_spacing</c> then opens <c>fixed</c> to 0.3
+    /// past it (lily/staff-spacing.cc:212-215). MEASURED: the bar line's ink ends at
+    /// 18.823335 and the wiggle begins at 19.323335 — 0.500000, the two default
+    /// <c>extra-spacing-width</c>s and the headroom, exactly as an accidental's would read
+    /// 0.600000. An engine whose bar line → column minimum stops at the heads lets the wiggle
+    /// print THROUGH the bar line, which is how session 568's showcase found it.
+    /// <para>LilyPond twin: score ABL of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;c e g&gt;4 r4 r2 | &lt;c e g&gt;4\arpeggio r4 r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string ABL =
+        ArpeggioBook("<c e g>4 r4 r2 | <c e g>4@arpeggio r4 r2 |", "ABL");
+
+    /// <summary>
+    /// AQ's chord with a SHARP on its lowest head: the wiggle's second kind of support. The
+    /// Accidental_engraver adds every accidental it makes to the support of the arpeggio it
+    /// acknowledged (lily/accidental-engraver.cc:298-307, "so it is put left of the
+    /// accidentals"), and side-position clears that support by the same 0.5.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED: the sharp's ink runs (9.085000 . 10.185000) and the wiggle's
+    /// (7.785000 . 8.585000) — 0.500000 off the ACCIDENTAL, with the heads 1.45 further
+    /// right. An engine that clears the heads alone draws the wiggle over the sharp.
+    /// <para>LilyPond twin: score AAC of audit/lp-geometry/probes/arpeggio.ly,
+    /// <c>\fixed c' { &lt;cis e g&gt;4\arpeggio r4 r2 }</c>.</para>
+    /// </remarks>
+    private static readonly string AAC = ArpeggioBook("<cis e g>4@arpeggio r4 r2 |", "AAC");
 
     /// <summary>
     /// A single tie whose scored endpoint CLEARS its own head box, so both ends recede to the
@@ -14875,6 +15001,20 @@ internal static class LpGeometryProbes
         new("mark.plain.staff-to-baseline", MKN,
             g => g.FirstMusicMarkBaselineAboveStaff(), RaggedBottomPaper),
 
+        // ...and the mark over a GRACE NOTE's flag, the showcase's shape: the second system's
+        // "B" with `grace { gis'16 }` under it (MGF) against the same book without the grace
+        // (MGN). LilyPond's grace grobs are inside-staff ink the mark clears; Lily#'s profile
+        // had no grace in it at all. See probes MGF / MGN (mark-grace.ly).
+        new("mark.over-grace.staff-to-baseline", MGF,
+            g => g.MusicMarkBaselineAboveStaff("B"), RaggedBottomPaper),
+        new("mark.over-grace.control.staff-to-baseline", MGN,
+            g => g.MusicMarkBaselineAboveStaff("B"), RaggedBottomPaper),
+
+        // ...and the same profile read from the SIDE: the staff-to-staff gap over a grace
+        // standing above its own staff (GSL) against the same book without it (GSN).
+        new("staff.staff.grace-over-notes", GCL, g => g.StaffGap()),
+        new("staff.staff.grace-over-notes.control", GCN, g => g.StaffGap()),
+
         // THE MARK'S X AT A LINE START (session 270, books RXQ/RXK/RXB in
         // mark-chord-row.ly as MKQ/MKK/MKB). A RehearsalMark break-aligns on
         // (staff-bar key-signature clef): its box left lands on the clef ink's right
@@ -15675,6 +15815,16 @@ internal static class LpGeometryProbes
         // a reading taken from the previous column notices when the spacing did not follow.
         // See probe AR.
         new("arpeggio.x.previous-head-to-wiggle", AR, g => g.PreviousHeadToArpeggio(1)),
+
+        // ...and the two supports the wiggle's OWN clearance cannot show either. A bar line
+        // prices the column it opens by Paper_column::minimum_distance, whose right side is
+        // the column's conditional skyline — the wiggle included — so the bar line's reading
+        // says whether the spacing reserved for a wiggle opening a bar (AQ..AR all open the
+        // LINE). And an accidental is a support of the arpeggio like a head is, so the
+        // accidental's reading says whether the wiggle cleared it. See probes ABL and AAC.
+        new("arpeggio.x.barline-to-wiggle", ABL, g => g.BarlineRightToArpeggio(0)),
+        new("arpeggio.x.right-edge-to-accidental", AAC,
+            g => g.ArpeggioRightToAccidentalLeft()),
 
         // ...and the SAME CHORD NOT ROLLED. A bracket is one drawn shape rather than a stack
         // of glyphs, so LilyPond gives it neither the wiggle's half-space drop nor its

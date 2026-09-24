@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第566セッションの経緯
+
+### 1.1 第566セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（§2 R11 の残り ⒠⒡⒢）。★ `-Start p566`（HEAD `3eeb6f82`・full 8952 / 0 / 2 / 8954・`-Archive 564`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ R11⒠ fall／doit を LP の `bend::print`（BendAfter）に合わせた**。起票は「REF 付きで移植なし＝OWN に」だったが、fall／doit には LP の対応物が*ある*（`\bendAfter`）ので OWN 札は RULES §7.6 ⒞ に反する＝移植した。旧＝発明の 2 次曲線（reach 1.25・drop 1.7・太さ 0.13・符頭から 0.15）を 8 本の折れ線で。新＝⒜ 左端＝左 bound（符頭）の ink 右端 ＋ padding 0.5、符点は*符頭と同じ行にある時だけ*（空間の音）数える／⒝ 右端＝次の column の ink 左端 − 0.5、ただし左端 ＋ minimum-length 0.5 を下回らない（小節末は小節線の ink 左端）／⒞ Δ＝0.5 × delta-position、`@fall`／`@doit` は量を持たないので exporter の `#∓4` と同じ ±2（`BendAfterGeometry.DeltaStep`＝1 か所・exporter もそこを読む）／⒟ 1 本の 3 次 Bézier（制御点 (dx/3, 0)・(dx, 0.66Δ)・終点 (dx, Δ)）・round cap・太さ 2.0 lt = 0.2。**双子で実測**（Lab `sessions/p566/`・`bend.ly`＝fixture の twin ＋ `dump-bend.ily`・手書き `bend-dots.ly`）: `e\bendAfter #-4 g`＝**13.107 … 13.892**（e の ink 右 12.607 + 0.5 … g の ink 左 14.392 − 0.5）／小節線の前の doit＝**18.784 … 19.284**（min-length・小節線 19.717 − 0.5 は届かない）／符点（空間の d4.）＝符点右 17.818 + 0.5・線上の c4. は符頭右 + 0.5（持ち上がった符点は読まない）／箱 2.0・太さ 0.2。**after の Lily#**（`bend-ls-after.svg`）＝同じ規則で 2 桁一致（e: 11.51 + 1.3042 + 0.5 = 13.32・次の g 14.76 − 0.5 = 14.26／min-length の腕／c2 の符頭幅 1.38 対 LP 1.377／休符の前 28.47 − 0.5 = 27.97／tab は数字の ink 右 + 0.5・同じ column を共有する五線の符頭左 − 0.5）。絶対値の差は Lily# の column 間隔＝この島の外。
+  **実装**: `BendAfterGeometry`（定数 5 ＋ OWN の `DeltaStep`）／`IDrawingContext.DrawBezier`（open cubic・round cap/join・既定実装は 8 折れ線・SVG/PDF/PNG と 2 decorator が曲線で上書き）／`ArticulationEngraver` の fall 腕（`Ink`＝stencil の箱＝paging skyline が読む・tab は数字の advance/2・tab-only 譜は次の数字の左端）／`SharedRenderer.Overlays.DrawBendAfter`／exporter は `DeltaStep` を読む。scoop／plop（LP に無い＝lilypond-src に grep 0）と bend-up（`bend-spanner::print` 未移植）は **OWN 札**（departs from／goes away when／observed by）。**網 `BendAfterGeometryTests` 5 本**（padding・次の符頭 − 0.5・小節線と min-length・符点の行・Δ と太さ）＝**毒（旧 4 定数）で 5/5 赤**（`poison.ps1`）。⚠️ **毒の罠**: `Copy-Item` の復元は mtime が古いまま＝次の増分ビルドが*毒入り dll を残す*（full が 5 赤で気づいた・RULES §5.5 の「戻した後の古い dll」の別の顔）＝スクリプトに touch を足した。**snapshot 2 枚**（`bend`・`system-count-line-start-ink`）＝差分は bend の `<line>`×8 → `<path>` だけ（機械で数えた・non-bend 0）・承認。**hash A/B（baseline＝p565 の after 5,800 行・Lab `Zz566Hash.cs.txt`）: 87 冊 1,368 行＝`@fall|@doit` を持つ 87 冊ちょうど（持たない冊 0・持って動かない冊 0）・ページ数の動いた本 0**。⚠️ 出力が動く変更＝方針「LP 忠実度を先に」の下。
+★ **⑵ R11⒡** `DrawTimeSignature` の戻り値は読み手 0＝void に畳み `+0.4` を撤去（出力不変・⒟）。
+★ **⑶ R11⒢** PDF の縦 anchor（central 0.35 em・hanging 0.8 em の推測）を face の実 metrics（HarfBuzz の hhea ascender／descender＝`TextFontMetrics.FontExtents`）に＝PNG の SKFontMetrics と同じ量・SVG の `dominant-baseline` を viewer が解く量。SVG は動かない（読み手は楽器名と連符の数字）。
+  full **8957 / 0 / 2 / 8959**（+5・`-End` の run3.trx）。表: `APPROXIMATIONS.md`・`magic_constants.csv` 再生成。文書: CHANGELOG 0.8.0 Engraving 2 項・§2 R11 ⒠⒡⒢ ✅（**R11 は全項 ✅**）。
+  ⇒ 判定: R11 は閉じた。次は R10 の残り＝⒟ `CustomTextEngraver` の TextScript Y 固定（padding 0.3／staff-padding 0.5）・⒡ `StanzaNumberEngraver` の X（LP は padding 1.0 で LEFT）・⒢ `ChordNameEngraver.StaffPadding 0.6`（LP 0.5 ＋ skyline）＝小さい 3 つを 1 便で（双子で測れる）、または ⒜ aligned_side の 3 綴り（大きい）。この便の文脈に依らない＝(c)。
+
 ## 以下は第565セッションの経緯
 
 ### 1.1 第565セッション（2026-09-24・YT-DELL2）

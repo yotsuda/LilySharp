@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
 | `OWN` | 159 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **277** | |
+| **計** | **278** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:339** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -91,7 +91,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:2884** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:2936** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3885** same approximation the scripts' own remark records for the movers; the books that
+- **:3891** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1160** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2106** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -106,6 +106,8 @@
 - **:489** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:469** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
+### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
+- **:900** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:696** case of broken slur") — not ported; every slur this scorer sees lives on
 - **:871** column allows only 0.3 of movement) is not ported: every edge here
@@ -158,7 +160,7 @@
 - **:207** snapshot and no ledger point. What remains is the BEAM quanter's use below, which is a
 - **:801** would be fitting inside a formula that is not yet LilyPond's. No point observes it.
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
-- **:186** fixture carries one, so there is no ledger point and no twin — it is ported literally
+- **:205** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:367** hands the scorer the band it would have had without the digit. No book reaches that
 - **:2026** them as markup — so there is no LP geometry to port and no ledger point can observe
@@ -176,7 +178,7 @@
 - **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
 - **:648** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
-- **:499** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
+- **:521** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
@@ -198,7 +200,7 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:4801** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4807** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:840** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1492** pinned there), no ledger point.
@@ -398,7 +400,7 @@
 - **:1201** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
 - **:1640** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
 - **:2241** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4493** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
+- **:4499** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:149** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:175** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
@@ -423,11 +425,11 @@
 ### `LilySharp.Core/Svg/Layout/PageLayouter.cs`
 - **:629** ⚠️ LILYSHARP-OWN: THE CHAIN'S LAST NODE, WHICH IS NOT ALWAYS THE LAST STAFF.
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
-- **:126** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
-- **:272** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
-- **:335** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
+- **:129** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
+- **:294** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
+- **:357** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
-- **:326** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
+- **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:539** LILYSHARP-OWN, a DECIDED divergence (user decision 2026-08-20, HANDOFF §3):
 ### `LilySharp.Core/Svg/Layout/SpacingRules.EmptyBar.cs`
