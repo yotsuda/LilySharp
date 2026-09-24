@@ -248,7 +248,8 @@ internal sealed record SystemDetails
     /// </remarks>
     /// <para>
     /// The setter is internal for <see cref="PageBreaker.CalcLineHeightsInPlace"/> alone: the
-    /// system-count loop stacks lists it has just built, whose details nothing else holds.
+    /// system-count loop and the paging path stack lists they have just built, whose details
+    /// nothing else holds.
     /// </para>
     public double Tallness { get; internal set; }
 
@@ -417,6 +418,18 @@ internal sealed class PageSpacing
     {
         _topMargin = topMargin;
         CalcForce();
+    }
+
+    /// <summary>
+    /// The constructor's state again, for a breaker that keeps ONE accumulator a site instead
+    /// of constructing one per call (session 552: 64 constructions a keystroke, 0.61% of it,
+    /// where the page height, margins and specs are the breaker's own constants and only
+    /// the top margin varies with the page): the top margin re-seated, the accumulator cleared.
+    /// </summary>
+    internal void Reset(double topMargin)
+    {
+        _topMargin = topMargin;
+        Clear();
     }
 
     /// <summary>
@@ -680,6 +693,22 @@ internal sealed class PageBreaker
     /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:46</remarks>
     private const double TerribleSpacingPenalty = 1e8;
 
+    // ONE PageSpacing a site, kept across calls (session 552): the scored DP's, the paging
+    // DP's (per line), the first-page penalty's and the min-page-count's whitespace reader.
+    // ⚠️ A DRAWER PER SITE, NOT ONE SHARED: CalculatePagePenalty runs inside FindOptimalBreaks'
+    // walk, so a shared accumulator would price the penalty's page on top of the walk's.
+    private PageSpacing? _scoredSpacing, _pagingSpacing, _penaltySpacing, _whitespace;
+
+    /// <summary>The site's accumulator, in the constructor's state for <paramref name="topMargin"/>.</summary>
+    private PageSpacing Take(ref PageSpacing? drawer, double topMargin)
+    {
+        if (drawer is null)
+            return drawer = new PageSpacing(_pageHeight, topMargin, _bottomMargin,
+                _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
+        drawer.Reset(topMargin);
+        return drawer;
+    }
+
     public PageBreaker(double pageHeight, double topMargin, double bottomMargin, double headerHeight,
         PageBreakingParameters? parameters = null, VerticalSpacingParameters? verticalSpacing = null)
     {
@@ -698,22 +727,34 @@ internal sealed class PageBreaker
     /// <returns>Indices where page breaks occur.</returns>
     public List<int> BreakIntoPages(IReadOnlyList<SystemDetails> systems)
     {
-        if (systems.Count == 0)
-            return new List<int>();
-
-        // Single system always fits on one page
-        if (systems.Count == 1)
-            return new List<int> { 1 };
+        if (systems.Count <= 1)
+            return BreakIntoPagesOfLines(systems);
 
         // LILYPOND-REF: lily/page-breaking.cc:1044-1081 cache_line_details — it ends by
         // calling calc_line_heights (:1079), so every line's tallness is known before any
         // page is priced.
         // Doing it here rather than in the caller keeps that ordering, and means no caller
         // can hand the breaker details whose tallness was never computed.
-        systems = CalcLineHeights(systems);
+        return BreakIntoPagesOfLines(CalcLineHeights(systems));
+    }
+
+    /// <summary>
+    /// <see cref="BreakIntoPages"/> for lines whose tallness <see cref="CalcLineHeights"/> has
+    /// already stacked — the paging path stacks the list it has just built in place
+    /// (<see cref="CalcLineHeightsInPlace"/>) rather than paying a copy of every detail once a
+    /// keystroke (session 548; the same seam as <see cref="BreakIntoPagesScoredOfLines"/>).
+    /// </summary>
+    internal List<int> BreakIntoPagesOfLines(IReadOnlyList<SystemDetails> lines)
+    {
+        if (lines.Count == 0)
+            return new List<int>();
+
+        // Single system always fits on one page
+        if (lines.Count == 1)
+            return new List<int> { 1 };
 
         // Use dynamic programming to find optimal breaks
-        return FindOptimalBreaks(systems);
+        return FindOptimalBreaks(lines);
     }
 
     /// <summary>
@@ -820,8 +861,7 @@ internal sealed class PageBreaker
         // constructor's state (the page band is re-seated by Resize before every prepend).
         // The count loop runs this DP some 70 times a keystroke on a 200-system book, so a
         // per-line construction was ~17,000 of them per keystroke (session 403).
-        var space = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
-            _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
+        var space = Take(ref _scoredSpacing, _topMargin);
         for (int line = 0; line < n; line++)
         {
             bool last = line == n - 1;
@@ -984,7 +1024,8 @@ internal sealed class PageBreaker
     {
         if (lines.Count == 0)
             return 0;
-        var whitespace = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
+        // Only its two whitespace readers are used here — nothing accumulates, so no reset.
+        var whitespace = _whitespace ??= new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
             _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
         double FirstBand() => _pageHeight - (_topMargin + _headerHeight) - _bottomMargin;
         double RestBand() => _pageHeight - _topMargin - _bottomMargin;
@@ -1110,8 +1151,7 @@ internal sealed class PageBreaker
             // reaches the minimum (strict <), so reversing the walk changes which i wins a
             // TIE — toward LilyPond's, which keeps the largest page_start (:386 keeps the
             // earlier candidate too). Ties are what the corpus run has to answer for.
-            var pageSpacing = new PageSpacing(_pageHeight, _topMargin, _bottomMargin,
-                _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
+            var pageSpacing = Take(ref _pagingSpacing, _topMargin);
             for (int i = j - 1; i >= 0; i--)
             {
                 // The lines on this candidate page, and the MUSIC systems among them: the
@@ -1364,8 +1404,7 @@ internal sealed class PageBreaker
     {
         // Calculate available height
         double topMargin = isFirstPage ? _topMargin + _headerHeight : _topMargin;
-        var spacing = new PageSpacing(_pageHeight, topMargin, _bottomMargin,
-            _vs.TopSystem, _vs.LastBottom, _vs.TopMarkup);
+        var spacing = Take(ref _penaltySpacing, topMargin);
 
         // Add systems to page
         for (int i = startIdx; i < endIdx; i++)

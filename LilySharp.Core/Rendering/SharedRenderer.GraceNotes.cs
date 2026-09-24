@@ -114,7 +114,7 @@ internal static partial class SharedRenderer
                     // layout handed down are per COLUMN.
                     // ⚠️ AND IT IS NO LONGER DRAWN HERE. The ordinary note pass draws it, off
                     // the item it actually is, at the address the layout published
-                    // (SharedRenderer.EnumerateStaffItems / ScoreLayout.GraceColumnXs) — the
+                    // (SharedRenderer.CollectStaffItems / ScoreLayout.GraceColumnXs) — the
                     // first grob family to come home under HANDOFF §2 U8 ⒝2, chosen first
                     // because general-grace-settings never names Rest, so it was already
                     // drawn at the staff's own size and moving it changes no size and no

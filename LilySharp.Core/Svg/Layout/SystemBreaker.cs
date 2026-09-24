@@ -180,13 +180,20 @@ internal sealed class SystemBreaker
     /// KnuthPlassBreaker) so that no stored entry ever reads a neighbour's SPRINGS —
     /// a combined excess would read i+1's springs and through their halves a
     /// neighbour-of-neighbour's lyrics, outside this 3-key window.</param>
+    /// <param name="into">An array to write the vector INTO when its length is the measure
+    /// count — the incremental driver's spare (session 555: the vector was a fresh ~11 KB
+    /// array every content-changing keystroke, 112 B a slot). Every slot is written below,
+    /// so a stale buffer carries nothing over. Null, or the wrong length, builds a new one.</param>
     internal static MeasureSpringData[] ComputeMultiStaffSpringData(MultiStaffScore score,
                                                                     double? baseShortestDuration,
-                                                                    Func<int, MeasureSpringData?>? memo = null)
+                                                                    Func<int, MeasureSpringData?>? memo = null,
+                                                                    MeasureSpringData[]? into = null)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
         var layouter = new MeasureLayouter();
-        var springData = new MeasureSpringData[measures.Length];
+        var springData = into is { } buffer && buffer.Length == measures.Length
+            ? buffer
+            : new MeasureSpringData[measures.Length];
         // The shortest and the paper's increment travel as one value below (SpacingOptions).
         var spacing = SpacingOptions.For(score, baseShortestDuration);
 

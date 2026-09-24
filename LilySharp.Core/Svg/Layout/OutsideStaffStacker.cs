@@ -401,7 +401,7 @@ internal static class OutsideStaffStacker
                 if (move != 0)
                     tb[i] = t with { YUp = t.YUp + move };
             }
-            adjTrills = tb.ToImmutable();
+            adjTrills = tb.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // --- Priority 75: the fermata family, BELOW the staff ---
@@ -427,7 +427,7 @@ internal static class OutsideStaffStacker
                 if (move != 0)
                     artBuilder[i] = a with { YUp = a.YUp + move };
             }
-            adjArticulations = artBuilder.ToImmutable();
+            adjArticulations = artBuilder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
@@ -522,9 +522,9 @@ internal static class OutsideStaffStacker
                 }
             }
             if (dynB != null)
-                adjDynamics = dynB.ToImmutable();
+                adjDynamics = dynB.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
             if (hpB != null)
-                adjHairpins = hpB.ToImmutable();
+                adjHairpins = hpB.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // Dynamics: push below anything already occupying their X range
@@ -565,7 +565,7 @@ internal static class OutsideStaffStacker
                     dynBuilder[i] = dyn with
                     { YUp = dynYup + move + off + EngravingDefaults.StaffMiddle };
             }
-            adjDynamics = dynBuilder.ToImmutable();
+            adjDynamics = dynBuilder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // Adjust hairpins: avoid overlapping with dynamics in the same X range
@@ -596,7 +596,7 @@ internal static class OutsideStaffStacker
                 if (move != 0)
                     builder[i] = hp with { YUp = hp.YUp + move };
             }
-            adjHairpins = builder.ToImmutable();
+            adjHairpins = builder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
@@ -2298,7 +2298,7 @@ internal static class OutsideStaffStacker
             double move = trackers(sysIdx, t.StaffIndex).Place(qUp, qDown, OutsideStaffPadding, 0);
             b[i] = t with { YUp = t.YUp + move };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 75: Script, but ONLY the family that declares a priority (fermatas) ----
@@ -2349,7 +2349,7 @@ internal static class OutsideStaffStacker
             if (move != 0)
                 b[i] = a with { YUp = a.YUp + move };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 100: BarNumber (absolute page Y) ----
@@ -2412,7 +2412,7 @@ internal static class OutsideStaffStacker
                 .Place(bnUp, bnDown, OutsideStaffPadding);
             b[i] = bn with { YUp = bn.YUp + move };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 250: DynamicText forced ABOVE (@f.up) ----
@@ -2444,7 +2444,7 @@ internal static class OutsideStaffStacker
             double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             b[i] = dyn with { YUp = dyn.YUp + move };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 350: TextSpanner (accel./rit. — LilyPond TextSpanner direction=UP) ----
@@ -2504,7 +2504,7 @@ internal static class OutsideStaffStacker
                 topOffset: top, bottomOffset: bottom);
             b[i] = ts with { YUp = newRel };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 400: OttavaBracket (above-staff only) ----
@@ -2546,7 +2546,7 @@ internal static class OutsideStaffStacker
             double move = trackers(sysIdx, o.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
             b[i] = o with { YUp = o.YUp + move };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 450: TextScript (^"...") ----
@@ -2590,7 +2590,7 @@ internal static class OutsideStaffStacker
                 OutsideStaffHorizontalPadding);
             b[i] = ct with { YUp = anchor + move - midUp };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 475: CombineTextScript ("a2" / "Solo" / "Solo II") ----
@@ -2633,7 +2633,7 @@ internal static class OutsideStaffStacker
             double move = trackers(sysIdx, pc.StaffIndex).Place(up, down, OutsideStaffPadding);
             b[i] = pc with { YUp = anchor + move };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 600: VoltaBracketSpanner ----
@@ -2788,7 +2788,7 @@ internal static class OutsideStaffStacker
         ListPool<int>.Give(ordered);
         ListPool<(int Sys, int Index)>.Give(bySystem);
         ListPool<int>.Give(systemsInOrder);
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     // ---- 1500: MusicMark (rehearsal/section labels) ----
@@ -3051,7 +3051,7 @@ internal static class OutsideStaffStacker
             if (besideTempoOfLabel.TryGetValue(i, out int ti2))
                 b[ti2] = b[ti2] with { YUp = b[ti2].YUp + (newRel - midUp - m.YUp) };
         }
-        return b.ToImmutable();
+        return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
     }
 
     /// <summary>

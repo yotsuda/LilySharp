@@ -385,13 +385,37 @@ internal sealed class PageLayouter
         // points come back as line indices; with a title in front, each is one more than
         // the system index it ends at.
         var breaker = CreateBreaker();
-        IReadOnlyList<SystemDetails> lines = header is null
-            ? systemDetails
-            : new[] { BuildTitleDetails(header) }.Concat(systemDetails).ToList();
+        List<SystemDetails> lines;
+        if (header is null)
+        {
+            lines = systemDetails;
+        }
+        else
+        {
+            lines = new List<SystemDetails>(systems.Length + 1);
+            lines.Add(BuildTitleDetails(header));
+            lines.AddRange(systemDetails);
+        }
 
-        var breakPoints = breaker.BreakIntoPages(lines);
+        // Stacked IN PLACE (session 548): every detail in `lines` was built by this call and is
+        // held by nothing else — PositionSystemsOnPage reads `systemDetails` for its specs and
+        // IsTitle, never a tallness — so the breaker's copy of every detail (one a system, once a
+        // keystroke) said the same numbers. The title is line 0 here as in the count loop's
+        // lists, so its tallness is the same whichever list writes it.
+        var breakPoints = breaker.BreakIntoPagesOfLines(PageBreaker.CalcLineHeightsInPlace(lines));
         if (header is not null)
-            breakPoints = breakPoints.Select(b => b - 1).Where(b => b > 0).ToList();
+        {
+            // Each break point is one more than the system index it ends at; a break at the
+            // title alone (0 after the shift) is no page of systems.
+            int kept = 0;
+            for (int i = 0; i < breakPoints.Count; i++)
+            {
+                int b = breakPoints[i] - 1;
+                if (b > 0)
+                    breakPoints[kept++] = b;
+            }
+            breakPoints.RemoveRange(kept, breakPoints.Count - kept);
+        }
 
         // Create pages from break points with context-aware Y positioning
         var pages = new List<PageLayout>();

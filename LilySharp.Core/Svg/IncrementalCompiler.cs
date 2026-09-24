@@ -107,6 +107,14 @@ public sealed class IncrementalCompiler
     // (LayoutEngine.ChooseSystemCount). _lineBreaks != null marks a warm cache.
     // _springs is internal MeasureSpringData (this type lives in Core).
     private MeasureSpringData[]? _springs;
+    // The one array the next gate vector is built INTO (session 555). WHO HOLDS A VECTOR:
+    // this field's _springs, and — on a keystroke the gate did not skip, so the line DP ran —
+    // LineBreakDpSession (Store) and the LineBreakSolutions in _lineBreaks; both then hold
+    // the same array _springs does. So a vector outlives its keystroke only when it was
+    // solved, and it is then _springs; the array _springs USED to be is free once replaced,
+    // and a buffer the gate found equal (Layout was handed the previous table and never the
+    // vector) is free at once. Those two are what this field takes. Dropped with _springs.
+    private MeasureSpringData[]? _springsSpare;
     private double _firstPrefix;
     private double _contPrefix;
     private Layout.LineBreakSolutions? _lineBreaks;
@@ -533,6 +541,7 @@ public sealed class IncrementalCompiler
             _paper = score.Paper;
             _layout = score.LayoutPlan;
             _springs = null;
+            _springsSpare = null;
             _lineBreaks = null;
             _shortest = null;
             _systemCache = null;
@@ -668,7 +677,11 @@ public sealed class IncrementalCompiler
                     return null;
                 };
             }
-            springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest, memo);
+            // Built into the spare (see _springsSpare); taken out of the field first, so a
+            // compile given up mid-way loses the buffer and never aliases it.
+            var spare = _springsSpare;
+            _springsSpare = null;
+            springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest, memo, spare);
             shortestOfSprings = shortest;
             LastSpringMemo = (reusedCount, recomputedCount);
         }
@@ -752,7 +765,19 @@ public sealed class IncrementalCompiler
         // against the tree the previous render drew (_tree, not the collect baseline:
         // fragments are refreshed EVERY render, the collect recording is not).
         string oldText = _tree.Text;
-        _springs = springs;
+        if (skip && !ReferenceEquals(springs, _springs))
+        {
+            // The gate found the vector equal and the DP did not run: the held vector stays
+            // the baseline (the DP session and _lineBreaks hold that one), and the buffer just
+            // built is free again (see _springsSpare).
+            _springsSpare = springs;
+        }
+        else
+        {
+            if (_springs != null && !ReferenceEquals(springs, _springs))
+                _springsSpare = _springs;
+            _springs = springs;
+        }
         _shortest = shortestOfSprings;
         _firstPrefix = firstPrefix;
         _contPrefix = contPrefix;

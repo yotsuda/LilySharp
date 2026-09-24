@@ -164,7 +164,7 @@ public class BeamStemFrameTests
     /// LILYPOND-REF: lily/note-collision.cc:467-468 <c>done[i]-&gt;translate_axis</c> — LilyPond
     /// shifts the whole <c>Note_column</c>, and the stem is IN that column, so no LilyPond
     /// stem can be left behind by its head. Lily# applies the shift at render time
-    /// (<c>SharedRenderer.EnumerateStaffItems</c>), which the UNBEAMED stem rides because it
+    /// (<c>SharedRenderer.CollectStaffItems</c>), which the UNBEAMED stem rides because it
     /// is drawn from that same already-shifted x — but the beamed stem is drawn from
     /// <c>BeamLayout.MemberXPositions</c>, built in <c>ElementCoordinator.LayoutBeams</c>
     /// from the measure layout alone.

@@ -129,6 +129,119 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第554セッションの経緯
+
+### 1.1 第554セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p554`（HEAD `bbfbb737`・full 8921 / 0 / 2 / 8923・`-Archive 552`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ ⒮²⁸ の `SystemDetails` 13,442 B／打鍵＝count ループの候補 line の memo（`t_builtLines`）を*値で*打鍵をまたぐ形にして閉じた（commit `3e36acda`・render **1,092,867 → 1,084,058＝−8,809 B／打鍵（0.81%）**・予測 −6,900±2,500 の帯内・hash 5,816 行 0 差・Lab `sessions/p554/`）**: memo は打鍵ごとに `Clear` されていた（第534 の census＝46 line／打鍵を毎回建てる）。entry に line の入力（body・up・down・shape 4 数・permission・frame＝`EstimatedLineInputs`）を並べて持ち、同じ (start,end) で入力が等しければ前の打鍵の object を使う（入力は lookup の前に計算＝割当の無い max ループ）。打鍵をまたいで `SystemDetails` を共有する契約は候補間の共有と同じ（各 list は読む直前に in-place で積む）。上限 4×measures+64 で Clear。
+  **毒 P1（値の比較を外す）→ コーパス hash で `アゲハ蝶.lys` 1 冊 16 行（頁数 2→3 が動く・第423 の 天井 2.03% の本）・スイートは緑**＝網の穴 → **網 `SystemCountLineMemoTests` を足した**（RULES §5.4 の 3 条件）: 120 小節の本で bar 15 を 3 オクターブ上げる編集＝(start,end) は変わらず入力だけ変わる line を「鍵で見つけて値で拒む」ことを計数器 `t_estimatedLineValueMisses ≥ 1` で主張（liveness の半分）、譜内の音高替えは `builds == 0`（lookups > 0 で「ループが走った」を確かめる）、頁は full と同一（等値の半分）。⚠️ 初版は `builds ≥ 1` で書いて P1 でも緑だった＝上げた bar が新しい (start,end) を生むので鍵の miss が build を数えた→ **主張は「値の miss」に絞って初めて赤**（第451「列ごとに毒を当てる」の同型）。
+  棚卸し: Core `LayoutEngine.SystemCount` +64／−24・REF 0／OWN 0（7.6 ⒟）・網 +1・表 2 枚は差なし・Core 警告 0。`-End p554` OK・**full 8922 / 0 / 2 / 8924**（+1）・7.7 匂いなし（上限の Clear は契約＝stale 鍵は値の一致無しに読まれない）。
+  ⇒ 判定: ⒮²⁸ の残り＝`Spring` 24 KB（sealed record・建て場所 30 軒超＝struct 化は設計）・`MeasureSpringData[]` 11 KB（line breaker の入力）。地図の頭は土台に近い（1 便 0.05〜0.8%）。次は `MeasureSpringData[]` を呼び手で数える（同じ計器）＝**同じ会話が有利**（(a)）。
+
+## 以下は第553セッションの経緯
+
+### 1.1 第553セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p553`（HEAD `b6887a5a`・full 8921 / 0 / 2 / 8923・`-Archive 551`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ ⒮²⁸ の頭 `ArticulationLayout[]`（地図 26,376 B／打鍵）を呼び手で数えた＝大半が出力＝土台**（計器 Lab `sessions/p553/Zz553.cs.txt`＋`zz553-instrument{,2}.patch`・`count{,2,3}.log`・1 slot 112 B）: engraver の出力 `layouts.ToImmutable()` 3.29 回 **5,549**／`Rebuild` の `original.ToBuilder()`（family 全体＝出力の配列そのもの）above 1.40 回 **4,466**＋below 1.39 回 **4,445**／memo entry の `ToArray` above 844＋below 770／`Gather` above 844＋below 770／paging program 4.52 回 465／tuplet の filter 598／live 部分配列 249＋343＝**約 19.9 KB（75%）を特定・残りは sampling の揺れ**。⇒ ⒮²⁸ の 1 軒目は閉じる（設計）。
+★ **⑵ 数える途中で見えた「写して捨てる」16 軒を閉じた（commit `2d606327`・render 1,093,431 → 1,092,858＝−573 B／打鍵 0.05%・hash 0 差）**: `OutsideStaffStacker` の Place*／adjust が `family.ToBuilder()`→添字書き→`ToImmutable()`（2 度目の写し）だったのを `MoveToImmutable()`（`Rebuild` と同じ契約・Add/Remove 無しは grep で確認・破れば throw）に。**予測 −7,500±4,000 を大きく下に外れた**＝予測文が名指した「memo が replay するので core の live family は小さい」側（live 部分配列は 249＋343 B／打鍵＝core は 1〜3 系分しか扱わない）。
+  棚卸し: Core `OutsideStaffStacker` 16／16 行・REF 0／OWN 0（7.6 ⒟）・表 2 枚は差なし。`-End p553` OK・**full 8921 / 0 / 2 / 8923**（±0）・7.7 匂いなし。⚠️ 毒は回していない＝`MoveToImmutable` の契約違反は throw が網（Count≠Capacity で即例外）＝毒の形が「例外」しか無く、poison の予測どおり赤になるのは自明なので省いた（RULES §5.4 ⑶ 恒等ではないが、網は言語の側にある）。
+  ⇒ 判定: ⒮²⁸ の残り（`Spring` 24 KB・`SystemDetails` 13 KB・`MeasureSpringData[]` 11 KB）を同じ計器で数える＝この便の型の上に立つ＝**同じ会話が有利**（(a)）。ただし地図の頭は土台に近づいており、1 便 0.05〜0.5% の帯に入っている＝**perf の島はそろそろ収穫逓減**。
+
+## 以下は第552セッションの経緯
+
+### 1.1 第552セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p552`（HEAD `0658729e`・full 8921 / 0 / 2 / 8923・`-Archive 550`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ 型の地図を HEAD で取り直した**（第518 の計器そのまま＝Lab `sessions/p552/Zz552Price.cs.txt`・`type-price-head.txt`・5 周 × 236 冊・render 1,098,623）: 頭は土台のまま＝String 323 KB・SkylineBuilding[] 131 KB・GreenNode[] 128 KB＋SyntaxToken[] 59 KB（構文＝parse の bleed・合計は第518 と同じ ~260 KB で組成だけ移った）・NoteItem 97 KB・Int32[] 35 KB。**起票の無い頭を ⒮²⁸ として §1.0 ⒜ に立てた**（ArticulationLayout[] 26 KB・Spring 24 KB・SystemDetails 13 KB・MeasureSpringData[] 11 KB・Measure 18.7 KB＝第550〜551 で 33 → 18.7）。
+★★ **⑵ `PageSpacing`（地図で 6,707 B／打鍵）を閉じた（commit `4a6bde21`・render **1,098,933 → 1,093,455＝−5,478 B／打鍵（0.50%）**・予測 −6,000±1,200 の帯内・hash 5,816 行 0 差）**: `PageBreaker` の 4 軒の `new PageSpacing`（scored DP 1／呼び・`MinPageCountOfLines` 1／呼び・paging DP 1／*line*・`CalculatePagePenalty` 1／first-page 候補＝64／打鍵）を breaker の drawer 4 つ（site ごと＝`CalculatePagePenalty` は paging DP の中で走るので共有できない）と `PageSpacing.Reset(topMargin)`（ctor と同じ状態）に。**毒 1 本＝Reset を抜く → hash 39,468 行（全頁が動く）・スイート 97 赤**。
+  棚卸し: Core `PageBreaker` +33／−7・REF 0／OWN 0（7.6 ⒟）・`magic_constants.csv` 1 行。`-End p552` OK・**full 8921 / 0 / 2 / 8923**（±0）・7.7 匂いなし（drawer は契約＝Reset が ctor 状態）。
+  ⇒ 判定: 次は ⒮²⁸ の頭を呼び手で数える（第491 の wrapper の型＝`ArticulationLayout[]` 26 KB が engraver の出力か memo の写しか）＝この便の地図の上に立つ＝**同じ会話が有利**（(a)）。
+
+## 以下は第551セッションの経緯
+
+### 1.1 第551セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p551`（HEAD `44487ab4`・full 8917 / 0 / 2 / 8919・`-Archive 549`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ ⒮²³ の次の 1 枚＝`| break` の boundary-time 書き換え（`SetBreak` 25.5＋`SetNoBreak` 5.3／打鍵）を閉じた（commit `1089b339`・render **1,101,226 → 1,098,815＝−2,411 B／打鍵（0.22%）**・予測 −2,950±800 の帯内・hash 5,816 行 0 差・Lab `sessions/p551/`）**。コーパスの綴りを先に数えた: **`| break` 6,106 対 `break |` 3**＝先読みは bar の*次の 1 site* が break directive なら keyword を green から読み（`BreakSyntax.DirectiveOf`）、emit がその setter の書く permission で建てる。4 つの setter は比べてから書く（書いたら `t_boundaryRewrites`）。
+  ⚠️ **設計の穴を網が捕まえた＝directive は 1 つだけ**: `| break noBreak` のように並ぶと emit は最終値を畳むが setter は順に走るので 1 つ目が不一致を見て書く（網の初版が Actual 2 で赤）→ 最初の 1 つだけ先読みし 2 つ目は従来どおり書く（`ARunOfTwoDirectives_…` が主張）。
+  **fold（先読みした break の span を watermark に畳む）は今は inert**: P2（fold を外す）で網が緑 → 計器（Lab `Zz551Probe.cs.txt`）で planner の plan を刷ると **prefix 側の checkpoint は none・suffix splice が 3／5 小節**＝break を消す編集は section の shape を変え、`CollectResumePlanner.StructureStable` が prefix 側を先に切る。keyword だけ変える編集は setter が live 値を書く。⇒ **fold は契約として残し、註に inert の理由を書いた**（RULES §5.4「Clear は残す」の型）。網は `DeletingTheBreakAfterTheBar_IncrementalMatchesFull` と改名し、fold に届かないことを註に明記。**P1′（keyword を無視して常に break）→ liveness の腕 1 本だけ赤**＝網は主張している。
+  棚卸し: Core `MeasureBuilder` +83／−18・`MusicWalk` +27／−14・`MeasureCollector` +13／−3・`FormRender` +5／−1・REF 0／OWN 0（7.6 ⒟）・網 +4（合計 7 本）・`APPROXIMATIONS.md` 1 行。Core の警告 1（cref の名残）を直して 0。`-End p551` OK・**full 8921 / 0 / 2 / 8923**（+4）・7.7 匂いなし。⚠️ parse の B／打鍵が before 315,659 → after 316,039 と揺れた（Core の変更は parse に触れない＝計器の揺れ・render だけ読む）。
+  ⇒ **⒮²³ の残り＝bar の retarget 約 4／打鍵（非 leaf の後の bar）と `break |` 3 site・あとは構築そのもの 296／打鍵（設計）**＝先読みで届く分は尽きた。判定: 次は §1.0 ⒜ の別の島（⒮⁶ の census 回し直し・⒮²⁰′・⒮²⁷）＝(c) 差は小さい・**既定どおり同じ会話で続ける**。
+
+## 以下は第550セッションの経緯
+
+### 1.1 第550セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p550`（HEAD `acfa4b37`・full 8914 / 0 / 2 / 8916・`-Archive 548`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★★ **⑴ ⒮²³ の頭＝emit 直後の `with` 写し（`AddEndBarlineSource` 96.8＋typed retro-apply 1.1／打鍵）を閉じた（commit `af3ce446`・render **1,110,266 → 1,101,249＝−9,017 B／打鍵（0.81%）**・予測 −8,700±2,500 の帯内・hash 5,816 行 0 差・Release・236 冊 × 8 打鍵・Lab `sessions/p550/`）**。§1.0 の「emit を `|` まで遅らせる」を*先読み*で実装: 2 つの music walk（`ProcessNodes`・`ProcessMusicNodeSequence`）が 1 item の site（note／drum／rest／chord／`q`／slash／bare duration）の*次の site が書かれた barline なら*その token start と型を green から読んで builder に渡し（`SetFollowingBarline`・`|:` は渡さない）、`AutoCompleteMeasure` が最初からその `SourceEnd`／`EndBarline` で emit する。`HandleBarline` は従来の腕を全部走り、2 つの書き換えは**同値なら書かない**＝先読みが外れた bar は従来どおり書き換える（早書きであって意味は変えない）。resume は新しい依存を持たない（note と bar の間の checkpoint は marker peek の terminator＝bar の span を read watermark に畳んでいる・`ProcessNodes`）。
+  ⚠️ **穴 1 つ＝`R1*N`**: 1 site が N 回 auto-complete するので先読みが全 copy に乗り、**コーパス hash は 0 差のままスイートの snapshot `test/multi-measure-rest-grandstaff` が赤**（もう一方の母集団・RULES §5.4 ⑶）→ 最後の copy にだけ渡す形に直した。
+  **毒 2 本**（`full-poison{1,2}.log`・`hashes-poison{1,2}.txt`）: **P1 先読み +1 → hash 0 差・スイート緑・render は 1,110,248＝before に戻る**＝同値スキップが誤った先読みを直すので*出力に映らず賞金だけ消える*＝RULES §5.4「出力に映らない最適化には liveness の網」の形 → **`MeasureBuilder.t_boundaryRewrites`（thread-static の計数器）＋網 `MeasureBuilderLookAheadTests` 3 本**（等値の半分＝`SourceEnd` は bar の token の絶対位置・liveness の半分＝rewrites 0・陽性対照＝`c4 d e f break |` は 1 回書き換える・`R1*2 |` は内側が placeholder）を足し、**P1 で 3 本とも赤を確かめた**／**P2 leaf 制限を外す → hash 176 行差・スイート緑**＝制限は load-bearing（phrase／volta／grace の後の bar）。
+  棚卸し: Core +79／−5（`MeasureBuilder`）+40（`MusicWalk`）+5（`MeasureCollector`）・REF 0／OWN 0（LP のものは何も足していない＝7.6 ⒟）・網 +3・`APPROXIMATIONS.md` 1 行（行番号）。`-End p550` OK・**full 8917 / 0 / 2 / 8919**（+3）・7.7 匂いなし（guard・sentinel・fallback なし＝同値スキップは契約であり保険ではない・註に理由）。
+  ⇒ **⒮²³ の残り＝`SetBreak`／`SetNoBreak` 30.8（`break` node は bar ではない＝先読みの外）と構築そのもの 296（`EmitMeasure`・梁の刻印・tab＝設計）**。判定: 次は §1.0 ⒜ の残り（⒮⁶ の census 回し直し・⒮²⁰′ 閉包・⒮²⁷ tie）＝この便の文脈は要らない島なので (c)＝差は小さい・**既定どおり同じ会話で続ける**。
+
+## 以下は第549セッションの経緯
+
+### 1.1 第549セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p549`（HEAD `54880e83`・full 8914 / 0 / 2 / 8916・`-Archive 547`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★★ **⑴ ⒳¹⁸（第548 起票）＝測って、ユーザー承認のうえ LP どおりに移植した（commit `5e4a50b7`・Core +26／−14・REF 2／OWN 0）**: LP の `Optimal_page_breaking::solve` は fewer／more の両ループが同じ `cache_line_details`（題は `compress_lines` で第 1 系の line に圧縮済み）を値付けする＝more 腕だけ題を落とす Lily# は機構の逸脱。**射程を先に測った**（p548 の `ab.ps1 -Side poison3`＝more 腕に題を入れる変種）: hash **5,816 行 0 差**・スイート 8914 緑。RULES §5.4 の順番で計数器を当てると（Lab `sessions/p549/`・p548 の `ab-poison3.log`）**`ChooseSystemCount` 2,107 回・more 腕 18,751 候補（題つき 18,490）・値付け 16,662・勝ち 3（すべて題つきの本）**＝腕は生きていて値も変わるが「ideal に勝つか」の比較に飲まれる（第454 の 4 つ目の顔）＝出力を動かさない機構の移植。ユーザー「入れる」。`withTitle` 引数は消し、候補の list は常に題から始まる（註に射程の測定と LILYPOND-REF）。移植後も hash 0 差・full 8914 緑。⚠️ `LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` が 1 度赤＝REF 行の*同じ行*に symbol が要る（`Optimal_page_breaking::solve` を同じ行へ・第546 と同じ形）。
+  ⒮⁶ の頭 `MeasureLayouter.cs:466`（第455 の census）は p454 の木では `return SpacingRules.BarlineToFirstColumnSpring(…)` の行＝`new` の無い行で、census の住所は呼び手側＝正体は `BarlineToFirstColumnSpring` の中の List と読める（未確認・回し直しが要る）。⒮²³ は `Measure.Equals` が ReferenceEquals（`ModelIdentity`）＝splice の門（`Resume.cs:315`）は参照で「尾が書き換えた」を検出し、`Restore` は pin の値を `_measures[^1]` に戻す＝in-place にすると門と復元の両方が壊れる＝§1.0 の「設計」の裏取り。
+  棚卸し: 行番号の表 2 枚は再生成で差なし。`-End p549` OK・**full 8914 / 0 / 2 / 8916**（±0）・7.5＝Core '+' 26 行・REF 2（`optimal-page-breaking.cc:139-190`／`:192-248`＝両ループの出典）・7.6 ⒜ LP の式（題の有無）／7.7 匂いなし。
+  ⇒ 判定: 次は §1.0 ⒜ の残り＝⒮²³ は設計（emit を `|` まで遅らせる形の検討から）、⒮⁶ は census の回し直し（Lab `sessions/p455/` の計器）が先。どちらもこの便の文脈（builder／resume の読み）の上に立つ＝**同じ会話が有利**（(a)）だが、⒮²³ に着手するなら resume の設計を読み直す 1 便になる。
+
+## 以下は第548セッションの経緯
+
+### 1.1 第548セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」→ §1.0 ⒜ の残りから ⒮¹⁵ の尾 2 軒）。★ `-Start p548`（HEAD `59ad0a11`・full 8914 / 0 / 2 / 8916・`-Archive 546`）。作業ツリーの `samples/*.lys` 5 冊と `samples.lnk` の未 commit 変更はユーザーの手（触らない）。
+
+★★★ **⑴ ⒮¹⁵ の尾 2 軒を閉じた（ユーザー「今から回してよい」・commit `a054fa33`・render **1,120,570 → 1,110,754＝−9,816 B／打鍵（0.88%）**・hash 5,816 行 0 差・Release・236 冊 × 8 打鍵）**: ⒜ `LayoutEngine.SystemCount.EstimatedSystemDetails` は呼び手の list に足す形（題は先頭に置いてから＝`Insert(0)` の regrow が消える）、count ループの `Score`／more-systems 腕は `ListPool<SystemDetails>` から借りて頁を値付けしたら返す（`PageBreakResult` は数＝list を持たない）／⒝ paging 経路 `PageLayouter.CreatePagesWithOptimalBreaking` は題＋系の list を 1 枚だけ建てて **in-place で積み**（`CalcLineHeightsInPlace`）新しい `PageBreaker.BreakIntoPagesOfLines` へ渡す＝系ごとの `with` の写しが消えた（`PositionSystemsOnPage` は tallness を読まない＝grep で確認）。`BreakIntoPages`（写す方）はテストのため残置。break point の `Select/Where/ToList` も in-place。**予測 −6,500±2,500 の帯の上に外れた**（Lab `sessions/p548/prediction.txt`）＝外れは予測文が名指した「本が長い」側: hash の行数 5,816 頁／1,888 打鍵＝3.1 頁／打鍵＝1 冊 20 系超で、⒝ の写しは系の数に比例する。**毒 2 本＝両方赤**（`ab.ps1`・`Zz548{Ab,Hash}.cs.txt`・`full-poison{1,2}.log`・`p548-core.patch`）: P1 借りた list を空にせず次の候補に渡す → hash **34 行差**＋`PageChainDebugTests.EveryCountScores_AsItsLinesBuiltFreshWould` 赤（memo の網が候補の list の中身を見ている）／P2 paging 経路を積まずに渡す → hash **5,664 行差**（頁数 5,816 → 5,776＝詰め込み）＋`HaraKiriVisualTests.PagedRendering_MatchesTheProgrammaticBaseline`・台帳点 `page.bracketed-pair.staves-on-first-page` 赤。⚠️ 毒の色は行番号の表 2 本（`TheInventoryIsNotStale`・`TheCensusIsNotStale`＝自分の Core 変更で動く既知の赤・CLAUDE-OPERATIONS §1）を引いて読んだ。
+  ⚠️ **見えた別件＝⒳¹⁸（§1.0 ⒝ に起票・触っていない）**: count ループの *fewer* 腕（`Score`）は題を line 0 に入れて値付けし、*more* 腕（`for (int count = idealCount + 1 …`）は**題を入れずに**値付けしている（`Fresh(count, withTitle: false)` も同じ＝意図か欠陥か docs に根拠なし）。LP は題を第 1 系の line に圧縮するので両ループとも同じ lines を見る（`page-breaking.cc:155-190 compress_lines`）。出力が動く＝ユーザー判断が先。
+  棚卸し: Core +85／−29 行（3 ファイル）・REF 0／OWN 0（LP のものは何も足していない＝7.6 ⒟）・`magic_constants.csv` 5 行＋`APPROXIMATIONS.md` 1 行＝行番号だけ。`-End p548` OK・**full 8914 / 0 / 2 / 8916**（±0）・7.7 匂いなし（guard・sentinel・fallback を足していない）・天井 HANDOFF 430,589 B・§1 現在便 14,024 字（語りの前）。
+  ⇒ 判定: 次の一手は §1.0 ⒜ の残り（⒮²³ `Measure` の写し 0.7%＝resume の pin の設計、または ⒮⁶ の頭）か ⒳¹⁸ のユーザー判断＝どれもこの便の計器（`ab.ps1`・hash 基線 `hashes-before.txt`＝HEAD の絵）の上に立つ＝**続けるなら同じ会話が有利**（(a)）。
+
+## 以下は第547セッションの経緯
+
+### 1.1 第547セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」→ 第546 の U11 の「ページごとの force を LP から逆算する計器」）。★ `-Start p547`（HEAD `888f6c16`・full 8914 / 0 / 2 / 8916・`-Archive 545`）。作業ツリーの `samples/*.lys` の未 commit 変更はユーザーの手（触らない）。
+
+★★ **⑴ U11＝*移植できる欠陥は無い*と確定＝計測のみ・コード変更なし（Lab `sessions/p547/`）**。LP と Lily# の `Hold the Line` を全ページ突き合わせた:
+  ⒜ **箱つき mark（section label・rehearsal）の譜上端からの高さは LP と exact 一致**。計器は Lily# 側 `Zz547Marks`（`MusicMarkLayout.YUp − halfH − 2`）と LP 側 `lp-marks.ps1`（svg の入れ子 translate を stack で畳んで箱の最下辺を絶対 y に）。両者とも **0.85**（section label）で、A1 だけ 0.96、A2 は連符の上で 2.4＝LP も 2.4。LP の grob は `move-to-extremal-staff`＋`side-position y-aligned-side`（padding 0.8）で `define-grobs.scm:2876/3065`＝Lily# の `LabelFrameBottomAboveStaffMiddle = 2＋blot/2＋0.8` と同源。⚠️ **第380 の罠**（dump の after-line-breaking は既定 callback を置換してページを動かす）を避けて `move-to-extremal-staff` を先に呼ぶ include で読んだ。
+  ⒝ **Lily# の系の全高は LP と同じか*短い*（LP 8 系のうち Lily# が短い方が多い）**＝短ければ*多く*入るはずなのに Lily# は page1 に **7 系しか入れない**（LP 8 系＝`lp-staves.ps1` で確定）。⇒ **原因は系の高さではなく*ページ帯の入力***。`ls-page.log` の page1 の spring 2＝`markup-system → sys1（title depth 6.105 ＋ up 4.041 ＋ toFirst 2.0）ideal 5.0 → rod 12.646 ROD`＝**題から第 1 系までが 12.646 の rod で page1 を食う**。⇒ **次に戻る便の唯一の lead＝この title→first-system の rod が LP と同じか**（LP の題は別 markup で、Lily# の `toFirst 2.0` と `up 4.041` の和が LP より大きいか）。
+  ⒞ **唯一の大差＝Solo の二重（+3.78）は page 割りに効かない**＝二重 mark の高い系は *page2 の先頭*（`placed sys 8` tallness 21.5）で page1 の容量に触れない・第544 が「外しても 7/8/6」を実証済み。⇒ **綴りの判断（重複 mark を畳むか）は U11 の page 割りとは無関係**＝独立にユーザー決定（§1.0 ⒞ に残す）。
+  ⇒ **U11 は「掃き終わった島」扱いにする**（§1.0 から落とし §1.0 ⒞ に lead 1 行だけ残す）＝移植できる LP 機構が無く、DP の margin は intrinsic（第544 の demerit 紙一重）。棚卸し: 行番号だけ。
+
+## 以下は第546セッションの経緯
+
+### 1.1 第546セッション（2026-09-23・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手して」→ 第545 の自認の測定と、§1.0 ⒝ の「最も安い次の 1 つ」＝双子の tab の T/H/P）。★ `-Start p546`（HEAD `1c442fa5`・full 8913 / 0 / 2 / 8915・`-Archive 544`）。作業ツリーの `samples/*.lys` 5 冊と `samples/samples.lnk` の未 commit 変更はユーザーの手（便の途中で増えた＝ユーザーが並走している・触らない）。
+
+★★ **⑴ 第545 の自認を測った＝text／mixed 様式のペダル語も*自分の段*の譜に従う・欠陥なし・コード変更なし**（Lab `sessions/p546/pedal-styles-result.txt`・`pedal-{bracket,text,mixed}.lys`・`p545/below.ps1` で読んだ）: 第545 の網の 2 段の本（同じ左手・2 段目だけ wedge・下段の最下線 23.29／45.51・譜間 5.60 → 6.22）を 3 様式で描き、最下線からの深さは bracket の線 **2.30／2.30**・text の "Ped." **3.25／3.25**・"*" 2.80／2.81（F2 丸め）・mixed の語と線 **3.25／3.25**＝2 段で同じ。語は `MusicMarkLayout.YUp` が*自分の譜の中心線*基準で、描画 `DrawMusicMarks` が `ScoreGrobStaffMiddleYUp(staff, measure)` で段ごとの枠を引く＝第545 の欠陥は bracket の枠 1 軒だけだった。
+★★★ **⑵ 双子の穴＝tab の技法文字 T/H/P を閉じた（`LilyPondExporter.MapArticulation`・網 +1＝exporter 156 緑・Core 描画は無変更＝hash 不要・commit `6db84058`）**: `@hammeron`／`@pulloff`／`@tap` → 音符の post-event `-\markup { \italic "H" }`（`.up` は `^`・`.down` は `_`）＝第543 ⒜ の `@text` と同じ TextScript。字は `ArticulationEngraver.TabTechniqueLetterOf(ArticulationType)` の 1 軒（item 版はそれを呼ぶ＝双子が page から離れられない）。**LP 実測**（Lab `sessions/p546/lp/`・`dump.ily`・2.26.0）: fixture `test/tab-technique-letters.lys` の双子は **TextScript 16 本＝5 線の Staff 8 ＋ 6 線の TabStaff 8**（TabVoice は `Text_engraver` を remove しない）・**dir 全部 −1**・StrokeFinger 4 本は Staff だけ（第543 のまま）。自認 2 つ（exporter の註に）: ⒜ **側**＝page は符尾の反対（fixture の 1 小節目 4 つは下・2 小節目 4 つは上）・LP は既定 DOWN で全部下＝unforced は `-` で LP の既定に任せる（`@text` と同じ）／⒝ **大きさ**＝page は 1.5 ss italic・LP は markup 既定。掃き直し（`sweep-twins.ps1` → `warnings-after.tsv`）**33 → 25 行**。⚠️ 第543 の内訳「`@fig` 15／inline `@chord` 9」は数え違い＝tsv を数えると **`@fig.*` 13・`@chord.X` 8・既知の自認 4**（25）。⚠️ 双子の絵で見えた別件＝tab の弦割当が LP と違う（`c4` を page は G 線 5・LP は B 線 1）は **§2 T の既知**（`determine-frets-and-strings` は開放弦優先・Lily# は `nearFret`）＝触っていない。
+★★★ **⑶ perf＝§1.0 ⒭′ の 4 軒を閉じた（ユーザー「今静かなので perf をとって良い」・commit `d250dbe4`・render **1,122,296 → 1,120,580＝−1,716 B／打鍵（0.15%）**・予測 −1,900±600 の帯の中・hash 5,816 行 0 差・Release・236 冊 × 8 打鍵）**: `EnumerateStaffItems`→`CollectStaffItems` が `ListPool` の list を 1 回埋めて ledger／draw／tab meter の 3 読み手が読む（iterator 216 B × 2 本／staff pass）／`VoiceScan.WalkVoiceItems` は struct `VoiceItemWalk`／`RenderSpec.GetVoiceBindings` は再帰 `AddBindingsOf` の List 1 枚／`SpannerBreakSubstitution.BrokenPieces` は struct `BrokenPieceList`。**毒 3 本＝順序の観測者**（yield→struct の安全は順序同一・RULES §5.4）: piece を逆順 → **456 行差**・draw を逆順 → **5,776 行差**・**voice を逆順 → 0 差＋suite 緑＝detector の voice 順に観測者なし**（記録のみ・網は足さず）。計器は Lab `sessions/p546/`（`ab.ps1`・`Zz546Ab/Hash.cs.txt`・`prediction.txt`・**基線 `hashes-before.txt`＝第540〜545 で絵が動いたので HEAD で取り直し＝次便からの baseline**）。
+★★ **⑷ U11（ユーザー承認）＝測ったが移植できる機構は出なかった**（内訳は §1.0 ⒝ U11 に書き直した・Lab `sessions/p546/hold/`＝`dump-marks.ily`・`ls-page.log`・`Zz546Page.cs.txt`＝1 冊の DP を刷る計器）: mark の高さは LP と同じ 0.85・第544 の ⒝（TAB clef 未予約）は誤り（第336 が種にしている）・1 ページ目の系は Lily# が短い方が多く、**唯一の大差は Solo の二重（+3.78）＝綴りの判断**。
+  棚卸し: 行番号だけ（`ArticulationEngraver` +6 行＝`magic_constants.csv` 22 行・`APPROXIMATIONS.md` 5 行、perf で `APPROXIMATIONS.md` 2 行）。1 回目の `-End`＝full 8913 / 1 / 2 / 8916・赤 1＝`CitationsThatNameNothing_DoNotGrow`（`define-grobs.scm:3800-3807` の REF 行が `TextScript` だけで `_`／`-` の語を持たなかった → `outside-staff-priority` を同じ行に・amend で SHA は `6db84058`）。`-End p546` OK・**full 8914 / 0 / 2 / 8916**（+1）・§7 7.5＝Core '+' 239 行（exporter 39 ＋ perf 200）・REF 4／OWN 0（exporter は 7.6 ⒜・perf は ⒟＝LP のものは何も足していない）・7.7 匂いなし（guard・sentinel・fallback を足していない）・天井 HANDOFF 435,943 B（残り 14,057）・§1 現在便 17,568 字（残り 2,432）。
+  ⇒ 判定: 次の一手は ⒝ U11 の計器（LP の System の Y からページごとの force を逆算）か §1.0 ⒜ の残り＝どちらもこの便の Lab の計器の上に立つ＝**続けるなら同じ会話が有利**（(a)）。§1 の残り 2,432 字は*便*を区切る合図＝次は同じ会話で `-Start p547`。
+
+## 以下は第545セッションの経緯
+
+### 1.1 第545セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー報告「`samples/nocturne.lys` L36 小節の先頭の sustain が g8 の beam と接触・1 段目の sustain は五線と十分空いているのに 2 段目は狭い」→「文脈が役に立つならそのまま着手して」）。★ `-Start p545`（HEAD `c2d0a138`・full 8912 / 0 / 2 / 8914・`-Archive 543`）。`samples/nocturne.lys` の未 commit 変更はユーザーの手（触らない）。
+
+★★★ **⑴ 正体＝描画が「譜の上端 Y」を全段共通の 1 値で読んでいた（commit `0064dcf3`・網 +1＝8915・snapshot 0 枚）**: 計器（`SolveAndSeed` に ZZ545 の一時プローブ・削除済み）で部屋は 2 段目も 1 段目と同じ −6.99（中心線基準＝最下線の 4.99 下・LP 4.98）に解いていた＝部屋は正しい。`PedalEngraver.Calculate` が `y = topDown + 2 − lineYUp` の `topDown` を `staffYByIndex`（1 段目の値）で読むため、第543 のヘアピンで譜間が 5.00 → 6.22 に開いた 2 段目では線が 1.22 高く（最下線の 3.77 下）に描かれ、m6 `g8` の梁の下端 62.43 と鉤の上端 62.46 が 0.03 しか空かなかった。直し＝`Calculate` は開始小節ごとの `staffTopDownOf` を受け、annotation pass は既存の段ごとの resolver `staffYAt` を渡す（無い pass は従来の map）。**LP 実測**（Lab `sessions/p545/`・`nocturne-lp.svg`・`below.ps1`）: 2 段目のペダル線 63.46 → **64.68＝最下線の 4.99 下**（LP 64.59＝4.98）・1 段目は 4.99 のまま（LP 4.97）・鉤と梁の空き 0.03 → **1.25**（LP 1.28＝padding 1.2 ＋ edge 1.0）。**実コーパス 941 冊 sweep**（`sweep/`・base は第544 の head＝`8015a9b2` の Core）: **動くのは nocturne 1 冊だけ**（bracket 様式で段ごとに譜間が違う本が他に無い）。網は `StaffSilhouetteSeedTests.APedalBracketOnTheSecondSystem_FollowsItsStaffDown`＝同じ左手を 2 段に置き 2 段目だけ wedge・描いた bracket の譜からの深さが 2 段で等しい（修正前は 1.22 差で赤）。
+  自認: text／mixed 様式の語（`SolveAndSeedText`→`MusicMarkEngraver`）は layout が `StaffIndex` を持ち描画側が段の枠を引く形＝同じ欠陥の証拠は無いが未測定。棚卸し: 行番号だけ。`-End p545` OK・**full 8913 / 0 / 2 / 8915**（+1）・§7 7.5＝Core '+' 23 行・REF 0／OWN 0（LP の数値を新しく写した行は無い＝段ごとの枠の受け渡しという Lily# 側の配管だけ）・天井 HANDOFF 435,993 B（残り 14,007）。
+
 ## 以下は第544セッションの経緯
 
 ### 1.1 第544セッション（2026-09-23・YT-DELL2）

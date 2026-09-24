@@ -96,8 +96,53 @@ public sealed partial class MeasureCollector
                 }
             }
 
+            SetFollowingBoundary(nodes, i, in site, builder);
             ProcessMusicNode(site.Node, builder, PeekMarkers(nodes, i, out _));
+            builder.ClearFollowingBarline();
         }
+    }
+
+    /// <summary>
+    /// Hands the builder the written bar line that immediately follows a note, rest or chord
+    /// site — the bar an auto-fill at that site is confirmed by — and the break directives
+    /// written right after that bar, so the measure is emitted with the bar's source end (a
+    /// typed bar's type, the directives' permissions) from the start instead of being
+    /// rewritten when they are walked (<see cref="MeasureBuilder.SetFollowingBarline"/>,
+    /// <see cref="MeasureBuilder.SetFollowingBreak"/>). Spine reads only: the sites' kinds,
+    /// the bar token's text and leading trivia and the break keyword off the green — no red
+    /// is built here. A `|:` is never handed over (its arm anchors the NEXT measure and
+    /// retargets nothing).
+    /// </summary>
+    /// <returns>The full-span end of the furthest site read PAST the bar (a break), or -1:
+    /// the top-level walk folds it into the checkpoint read watermark, as it folds the marker
+    /// peek's terminator — the bar itself is that terminator and already covered.</returns>
+    private static int SetFollowingBoundary(
+        MusicSiteList nodes, int i, in GreenSite site, MeasureBuilder builder)
+    {
+        // The one-item sites (IsAttachedMark's list): everything an auto-fill can close on
+        // without a nested walk of its own between the item and the bar.
+        if (site.Kind is not (SyntaxKind.Note or SyntaxKind.DrumNote or SyntaxKind.Rest
+            or SyntaxKind.Chord or SyntaxKind.ChordRepetition or SyntaxKind.SlashNote
+            or SyntaxKind.BareDuration))
+            return -1;
+        if (!nodes.TryGet(i + 1, out var next) || next.Kind != SyntaxKind.Barline)
+            return -1;
+        var token = next.Green.GetSlot(0);
+        if (token is null)
+            return -1;
+        var type = ParseBarlineType(token.Text);
+        if (type == BarlineType.RepeatStart)
+            return -1;
+        // BarlineSyntax.BarTokenStart, computed the same way.
+        builder.SetFollowingBarline(next.Position + token.LeadingTriviaWidth, type);
+        // `| break` — the ONE directive standing right after the bar. Only the first: the
+        // boundary-time setters run in order and each writes its own value, so an emit
+        // holding the FINAL value of `| break noBreak` would still be rewritten by the
+        // first setter (it finds Forbid, writes Force) — a second directive writes as before.
+        if (!nodes.TryGet(i + 2, out var after) || after.Kind != SyntaxKind.Break)
+            return -1;
+        builder.SetFollowingBreak(BreakSyntax.DirectiveOf(after.Green));
+        return after.Position + after.Green.FullWidth;
     }
 
     /// <summary>
@@ -1132,6 +1177,12 @@ public sealed partial class MeasureCollector
                         // cloning inside the loop would allocate N-1 records per written
                         // rest (99 of them for `R1*100`) to no purpose.
                         var interior = restItem with { OpensWrittenRun = false };
+                        // The bar read ahead (SetFollowingBarline) confirms the LAST of the N
+                        // closes, not the first: the interior measures end at the rest's own
+                        // placeholder as before (session 550 — the grand-staff MMR fixture
+                        // moved when every copy took the bar's position).
+                        var following = builder.FollowingBoundary;
+                        builder.ClearFollowingBarline();
                         builder.AddItem(restItem);
                         // Each interior copy is a site like any other: `R1*2000000000`
                         // parses (int.TryParse, no clamp) and used to emit that many
@@ -1140,6 +1191,8 @@ public sealed partial class MeasureCollector
                         {
                             if (!ChargeExpansion(1, rest.SourceStart))
                                 break;
+                            if (i == count - 1 && following.Start >= 0)
+                                builder.RestoreFollowingBoundary(following);
                             builder.AddItem(interior);
                         }
                     }

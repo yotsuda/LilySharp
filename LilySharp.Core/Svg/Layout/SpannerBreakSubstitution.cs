@@ -25,6 +25,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -216,23 +218,72 @@ internal static class SpannerBreakSubstitution
 
     /// <summary>
     /// Iterates a spanner's broken pieces: <see cref="Split"/>s [start, end] into
-    /// per-system segments and yields each paired with its <see cref="SystemLayout"/>.
+    /// per-system segments and pairs each with its <see cref="SystemLayout"/>.
     /// Centralizes the split + empty-guard + system lookup that every spanner engraver
-    /// repeats, so each one keeps only its own per-piece geometry. Yields nothing when
+    /// repeats, so each one keeps only its own per-piece geometry. Walks nothing when
     /// the span can't be split (defensive no-op), so a <c>foreach</c> over it skips the
     /// body just like the old <c>if (segments.IsEmpty) continue;</c>.
     /// </summary>
     /// <remarks>
+    /// A struct (<see cref="BrokenPieceList"/>) over Split's array rather than a <c>yield</c>
+    /// wrapper: the wrapper was a 112 B iterator per spanner (session 446's census, 270 B a
+    /// keystroke for the voltas alone over the reader's corpus) and paired nothing the
+    /// array and an index cannot pair. Same segments, same order.
     /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing (one piece per system).
     /// </remarks>
-    public static IEnumerable<(SpannerBreakSegment Segment, SystemLayout System)> BrokenPieces(
+    public static BrokenPieceList BrokenPieces(
         int spannerStartMeasure,
         int spannerEndMeasure,
         ImmutableArray<SystemLayout> systems,
         IReadOnlyDictionary<int, int> measureToSystemIdx)
+        => new(Split(spannerStartMeasure, spannerEndMeasure, systems, measureToSystemIdx), systems);
+
+    /// <summary>A spanner's pieces, each with the system it lies on — the value
+    /// <see cref="BrokenPieces"/> hands out. <c>foreach</c> binds to <see cref="GetEnumerator"/>
+    /// and allocates nothing.</summary>
+    public readonly struct BrokenPieceList : IEnumerable<(SpannerBreakSegment Segment, SystemLayout System)>
     {
-        foreach (var segment in Split(spannerStartMeasure, spannerEndMeasure, systems, measureToSystemIdx))
-            yield return (segment, systems[segment.SystemIndex]);
+        private readonly ImmutableArray<SpannerBreakSegment> _segments;
+        private readonly ImmutableArray<SystemLayout> _systems;
+
+        internal BrokenPieceList(ImmutableArray<SpannerBreakSegment> segments, ImmutableArray<SystemLayout> systems)
+        {
+            _segments = segments;
+            _systems = systems;
+        }
+
+        public Enumerator GetEnumerator() => new(_segments, _systems);
+
+        IEnumerator<(SpannerBreakSegment Segment, SystemLayout System)>
+            IEnumerable<(SpannerBreakSegment Segment, SystemLayout System)>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>First piece to last, each with <c>systems[segment.SystemIndex]</c>.</summary>
+        public struct Enumerator : IEnumerator<(SpannerBreakSegment Segment, SystemLayout System)>
+        {
+            private readonly ImmutableArray<SpannerBreakSegment> _segments;
+            private readonly ImmutableArray<SystemLayout> _systems;
+            private int _i;
+
+            internal Enumerator(ImmutableArray<SpannerBreakSegment> segments, ImmutableArray<SystemLayout> systems)
+            {
+                _segments = segments;
+                _systems = systems;
+                _i = -1;
+            }
+
+            public readonly (SpannerBreakSegment Segment, SystemLayout System) Current
+                => (_segments[_i], _systems[_segments[_i].SystemIndex]);
+
+            readonly object IEnumerator.Current => Current;
+
+            public bool MoveNext() => ++_i < _segments.Length;
+
+            public void Reset() => _i = -1;
+
+            public readonly void Dispose() { }
+        }
     }
 
     /// <summary>

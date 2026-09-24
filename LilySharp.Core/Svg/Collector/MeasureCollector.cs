@@ -3124,7 +3124,22 @@ public sealed partial class MeasureCollector
                 if (_probeRecording != null && furthestPeeked != null
                     && furthestPeeked.Kind != SyntaxKind.None)
                     _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, furthestPeeked.FullSpan.End);
+                // The bar that follows a one-item site, read ahead for the builder's auto-fill
+                // (SetFollowingBoundary). The fold above already covers the bar (it is the
+                // peek's terminator); the break directive read PAST it is folded here, so the
+                // checkpoint before the bar depends on its text too — a `break` deleted after
+                // the bar must not leave a pinned Force behind. ⚠️ INERT TODAY, KEPT AS THE
+                // CONTRACT (session 551's poison: dropping it moves nothing): an edit that
+                // removes or inserts the break changes the section's shape, and the planner's
+                // structure guard (CollectResumePlanner.StructureStable) already turns the
+                // prefix side off for it; an edit that only swaps the keyword keeps the site,
+                // and the directive's own setter writes the live value over the pin. The read
+                // is a read all the same, and the fold is what says so if that guard changes.
+                int readTo = SetFollowingBoundary(nodeList, i, in site, builder);
+                if (_probeRecording != null && readTo > _walkMaxSourceRead)
+                    _walkMaxSourceRead = readTo;
                 ProcessMusicNode(site.Node, builder, flags);
+                builder.ClearFollowingBarline();
             }
         }
 

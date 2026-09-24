@@ -409,18 +409,25 @@ public sealed record RenderSpec(
     /// addressed the FIRST part's stream. See <see cref="VoiceSlotting"/> for why the three
     /// cases cannot be a bool.
     /// </para>
+    /// <para>
+    /// ONE list, filled by <see cref="AddBindingsOf"/> — not a chain of <c>yield</c>
+    /// iterators (the outer one plus one per item, 120 B a build and 3.33 builds a keystroke
+    /// over the reader's corpus, session 446's census). The order is the iterators' exactly:
+    /// <see cref="OrderedItems"/>, each item's bindings in turn.
+    /// </para>
     /// </remarks>
-    public IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> GetVoiceBindings()
+    public List<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> GetVoiceBindings()
     {
+        var bindings = new List<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)>();
         foreach (var item in OrderedItems())
-            foreach (var binding in BindingsOf(item))
-                yield return binding;
+            AddBindingsOf(item, bindings);
+        return bindings;
     }
 
     /// <summary>Whether <paramref name="voiceName"/> is among <see cref="GetVoiceNames"/> — the
     /// membership question alone, answered without building the bindings.</summary>
     /// <remarks>
-    /// ⚠️ THE SAME CASES AS <see cref="BindingsOf"/>, NAME FOR NAME — a voice this said was
+    /// ⚠️ THE SAME CASES AS <see cref="AddBindingsOf"/>, NAME FOR NAME — a voice this said was
     /// drawn and the bindings did not collect would silently lose its harvest (the one
     /// caller, <c>MeasureCollector.HarvestOmittedStructure</c>). Order does not matter to
     /// membership, so the ossia reordering is skipped. It exists because that caller asks
@@ -463,21 +470,21 @@ public sealed record RenderSpec(
 
     private static ImmutableArray<string> Ly(ImmutableArray<string> a) => a.IsDefault ? ImmutableArray<string>.Empty : a;
 
-    /// <summary>One item's bindings, in the order its staves are built. A group yields its
+    /// <summary>Adds one item's bindings, in the order its staves are built. A group adds its
     /// members' bindings through this same switch, so a condensed staff inside a bracket is
     /// bound exactly as one at the top level (and <c>BuildStaffGroups</c> builds it with the
     /// same code).</summary>
-    private static IEnumerable<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> BindingsOf(RenderItemSpec item)
+    private static void AddBindingsOf(RenderItemSpec item,
+        List<(string VoiceName, string? WithChords, ChordDisplayMode ChordDisplay, ImmutableArray<string> WithLyrics, VoiceSlotting Slotting)> into)
     {
             switch (item)
             {
                 case SingleStaffSpec single:
-                    yield return (single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics), VoiceSlotting.OwnStaff);
+                    into.Add((single.Staff.VoiceName, single.Staff.WithChords, single.Staff.ChordDisplay, Ly(single.Staff.WithLyrics), VoiceSlotting.OwnStaff));
                     break;
                 case GrandStaffRenderSpec grand:
                     foreach (var member in grand.GrandStaff.Members)
-                        foreach (var binding in BindingsOf(member))
-                            yield return binding;
+                        AddBindingsOf(member, into);
                     break;
                 // Every condensed part is COLLECTED even though they share one staff — the
                 // binding list is what tells the collector whose music to gather — but only
@@ -486,9 +493,9 @@ public sealed record RenderSpec(
                 // SelectMany), so each part's slots start after the ones before it.
                 case CondensedStaffSpec condensed:
                     for (int i = 0; i < condensed.PartNames.Length; i++)
-                        yield return (condensed.PartNames[i], null, ChordDisplayMode.Names,
+                        into.Add((condensed.PartNames[i], null, ChordDisplayMode.Names,
                             ImmutableArray<string>.Empty,
-                            i == 0 ? VoiceSlotting.OwnStaff : VoiceSlotting.AppendedToStaff);
+                            i == 0 ? VoiceSlotting.OwnStaff : VoiceSlotting.AppendedToStaff));
                     break;
                 // Same STAFF bookkeeping as a condensed staff: both parts are collected, one
                 // staff index is opened. The VOICE bookkeeping is where the two part ways —
@@ -496,21 +503,21 @@ public sealed record RenderSpec(
                 // and by the combiner rewriting both streams (see VoiceSlotting).
                 case CombinedStaffSpec combined:
                     for (int i = 0; i < combined.PartNames.Length; i++)
-                        yield return (combined.PartNames[i], null, ChordDisplayMode.Names,
+                        into.Add((combined.PartNames[i], null, ChordDisplayMode.Names,
                             ImmutableArray<string>.Empty,
-                            i == 0 ? VoiceSlotting.OwnStaff : VoiceSlotting.CombinedIntoStaff);
+                            i == 0 ? VoiceSlotting.OwnStaff : VoiceSlotting.CombinedIntoStaff));
                     break;
                 case TabStaffSpec tab:
-                    yield return (tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics), VoiceSlotting.OwnStaff);
+                    into.Add((tab.Staff.VoiceName, tab.WithChords, tab.ChordDisplay, Ly(tab.Staff.WithLyrics), VoiceSlotting.OwnStaff));
                     break;
                 case OssiaStaffSpec ossia:
-                    yield return (ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
+                    into.Add((ossia.Staff.VoiceName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff));
                     break;
                 case ChordRowSpec chordRow:
-                    yield return (chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
+                    into.Add((chordRow.PartName, null, chordRow.DisplayMode, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff));
                     break;
                 case LyricsRowSpec lyricsRow:
-                    yield return (lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff);
+                    into.Add((lyricsRow.PartName, null, ChordDisplayMode.Names, ImmutableArray<string>.Empty, VoiceSlotting.OwnStaff));
                     break;
             }
     }

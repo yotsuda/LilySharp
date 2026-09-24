@@ -113,7 +113,7 @@ internal sealed class MeasureLayouter
     /// <summary>
     /// Derives item slots from the already-solved timing COLUMNS so each item's X
     /// equals the column-grid X the renderer draws its notehead at (see
-    /// SharedRenderer.EnumerateStaffItems / MeasureLayout.GetXForTiming). This makes
+    /// SharedRenderer.CollectStaffItems / MeasureLayout.GetXForTiming). This makes
     /// <c>MeasureLayout.Items[i].X == GetXForTiming(itemTiming)</c> by construction, so
     /// every consumer that reads the raw item slot (Hairpin / TextSpanner /
     /// TrillSpanner / TieVariant) stays on the notehead grid instead of drifting when a

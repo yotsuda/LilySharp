@@ -136,11 +136,38 @@ internal sealed partial class LayoutEngine
     [ThreadStatic] private static double[]? t_beginDownAt;
     [ThreadStatic] private static BreakerRefpointFrame?[]? t_frame;
     // ChooseSystemCount's (start, end) → line memo, lent from the thread and given back
-    // CLEARED at both of the method's exits — it holds one keystroke's SystemDetails, which
-    // the clear drops. MEASURED (session 534's tuple-container census at HEAD, Release, the
-    // reader's corpus, eight forward keystrokes a book): 0.99 builds a keystroke at 45.84
-    // lines (max 100), 3,827 B of dictionary and buckets each keystroke.
-    [ThreadStatic] private static Dictionary<(int Start, int End), SystemDetails>? t_builtLines;
+    // FULL (session 554): an entry keeps the line's inputs beside the SystemDetails it built,
+    // and a later keystroke that finds the same (start, end) with EQUAL inputs reuses the
+    // object — a line whose measures did not change reads bit-identical numbers off the
+    // re-placed systems. Until session 554 it was given back cleared and every keystroke
+    // rebuilt its ~46 lines (session 534's census: 0.99 builds a keystroke at 45.84 lines,
+    // max 100; SystemDetails 13,442 B a keystroke on session 552's type map). Sharing a
+    // SystemDetails across keystrokes is the contract sharing it across candidates already
+    // is: every list is stacked in place just before it is read
+    // (PageBreaker.CalcLineHeightsInPlace), and only the breaker's numbers leave the loop.
+    // Bounded by ChooseSystemCount (cleared past 4 × measures + 64 entries); a stale key is
+    // overwritten on its next miss and never read without the value match.
+    [ThreadStatic] private static Dictionary<(int Start, int End), (EstimatedLineInputs Inputs, SystemDetails Line)>? t_builtLines;
+
+    /// <summary>Everything <see cref="PageLayouter.BuildSystemDetails"/> reads for an estimated
+    /// line but its index (the first line is the only one starting at 0, so the memo's key
+    /// carries that) — the value half of <see cref="t_builtLines"/>'s entries.</summary>
+    private readonly record struct EstimatedLineInputs(
+        double Body, double Up, double Down, LineShape Shape,
+        BreakPermission Permission, BreakerRefpointFrame? Frame);
+
+    /// <summary>How many estimated lines this thread's count loops have BUILT through the memo
+    /// (a miss by key or by value) — the liveness meter of <see cref="t_builtLines"/>, for
+    /// <c>SystemCountLineMemoTests</c> alone: a keystroke that changes nothing must build 0, a
+    /// keystroke that raises a bar must build the lines holding it. The pages cannot say
+    /// which (session 554: the memo answering by key alone moved one corpus book and no test).</summary>
+    [ThreadStatic] internal static int t_estimatedLineBuilds;
+    /// <summary>...and how many it LOOKED UP, so a keystroke that never ran the loop reads
+    /// as 0 lookups rather than as "0 builds".</summary>
+    [ThreadStatic] internal static int t_estimatedLineLookups;
+    /// <summary>...and how many of those found the key with OTHER inputs — the value half
+    /// doing its work (0 when the memo answers by key alone).</summary>
+    [ThreadStatic] internal static int t_estimatedLineValueMisses;
 
     private MeasureHeightEstimate EstimateMeasureHeights(
         SystemPass pass, int measureCount, double fallbackBody)
@@ -290,11 +317,16 @@ internal sealed partial class LayoutEngine
     /// every line before it is read (<see cref="PageBreaker.CalcLineHeightsInPlace"/>), so a
     /// line shared by two candidates is safe as long as the candidates are priced one after
     /// the other.</param>
+    /// <param name="details">The list the lines are appended to — the caller's, holding the
+    /// book title already when the candidate is priced with one, so no line is inserted in
+    /// front of a list sized to the lines (session 548: the count loop rents it from
+    /// <see cref="ListPool{T}"/> and gives it back once the pages are priced; a
+    /// <see cref="PageBreakResult"/> is numbers and keeps no line).</param>
     private List<SystemDetails> EstimatedSystemDetails(
+        List<SystemDetails> details,
         List<int> breaks, MeasureHeightEstimate estimate, ImmutableArray<Measure> measures,
-        Dictionary<(int Start, int End), SystemDetails>? built = null)
+        Dictionary<(int Start, int End), (EstimatedLineInputs Inputs, SystemDetails Line)>? built = null)
     {
-        var details = new List<SystemDetails>(breaks.Count);
         int start = 0;
         for (int i = 0; i < breaks.Count; i++)
         {
@@ -305,12 +337,6 @@ internal sealed partial class LayoutEngine
             // one detail at two places, with one tallness between them.
             var key = (start, end);
             bool memo = built is not null && start < end;
-            if (memo && built!.TryGetValue(key, out var line))
-            {
-                details.Add(line);
-                start = end;
-                continue;
-            }
             double restUp = 0, restDown = 0, body = 0;
             // The frame travels with the body it belongs to: the bar whose placed system
             // is the tallest lends the line its body AND its refpoints, so the two never
@@ -339,14 +365,34 @@ internal sealed partial class LayoutEngine
             // Bounded by the estimate's Count, not the table's Length (see MeasureHeightEstimate).
             double beginUp = start < estimate.Count ? estimate.BeginUpAt[start] : 0;
             double beginDown = start < estimate.Count ? estimate.BeginDownAt[start] : 0;
+            // The memo answers by VALUE (see t_builtLines): the same line with the same
+            // inputs — this keystroke's other candidates, or the last keystroke's when the
+            // line's measures did not change — is the same object.
+            var inputs = new EstimatedLineInputs(
+                body, Math.Max(beginUp, restUp), Math.Max(beginDown, restDown),
+                new LineShape(beginUp, beginDown, restUp, restDown), permission, frame);
+            if (memo)
+            {
+                t_estimatedLineLookups++;
+                if (built!.TryGetValue(key, out var kept))
+                {
+                    if (kept.Inputs == inputs)
+                    {
+                        details.Add(kept.Line);
+                        start = end;
+                        continue;
+                    }
+                    t_estimatedLineValueMisses++;
+                }
+            }
             var fresh = _pageLayouter.BuildSystemDetails(
-                i, body,
-                Math.Max(beginUp, restUp), Math.Max(beginDown, restDown),
-                new LineShape(beginUp, beginDown, restUp, restDown),
-                permission, frame);
+                i, inputs.Body, inputs.Up, inputs.Down, inputs.Shape, permission, frame);
             details.Add(fresh);
             if (memo)
-                built![key] = fresh;
+            {
+                t_estimatedLineBuilds++;
+                built![key] = (inputs, fresh);
+            }
             start = end;
         }
         return details;
@@ -403,24 +449,47 @@ internal sealed partial class LayoutEngine
         var estimate = EstimateMeasureHeights(ideal, measures.Length, _options.StaffHeight);
         // Every candidate breaking below is priced from this one estimate, and neighbouring
         // counts share most of their lines, so a line is built once (EstimatedSystemDetails).
-        var built = t_builtLines ?? new Dictionary<(int Start, int End), SystemDetails>();
+        var built = t_builtLines ?? new Dictionary<(int Start, int End), (EstimatedLineInputs, SystemDetails)>();
         t_builtLines = null;
-        // Both exits give it back emptied (see t_builtLines); a throw only costs the next
-        // keystroke a new map.
-        void GiveBuilt()
-        {
+        // The memo crosses keystrokes (see t_builtLines); the bound keeps a long session's
+        // stale keys from growing without limit. Both exits give it back; a throw only costs
+        // the next keystroke a new map.
+        if (built.Count > 4 * measures.Length + 64)
             built.Clear();
-            t_builtLines = built;
-        }
+        void GiveBuilt() => t_builtLines = built;
         var breaker = _pageLayouter.CreateBreaker();
         // The book title is the page's first LINE (paper-book.cc:570-580), priced by the
         // same DP as the systems; the page loop below sees it in front of every candidate.
         var title = header is null ? null : _pageLayouter.BuildTitleDetails(header);
-        List<SystemDetails> WithTitle(List<SystemDetails> details)
+        // A candidate's list: lent, the title first. Every list below is given back as soon
+        // as its pages are priced (the result is numbers), so the loop holds one at a time
+        // and the pool keeps one.
+        // ⚠️ THE TITLE IS LINE 0 OF EVERY CANDIDATE, in BOTH count loops. LilyPond's two loops
+        // price the same cached line details, in which the title is compressed into the
+        // first system's line (page-breaking.cc:155-190 compress_lines, run by
+        // cache_line_details for every configuration), so a candidate with more systems
+        // than the ideal is priced against the same first-page band as one with fewer.
+        // Until session 549 the more-systems arm below priced its candidates WITHOUT the
+        // title (HANDOFF ⒳¹⁸): measured on the reader's corpus (236 books × 8 keystrokes,
+        // every page hashed) and the suite, the title changed no page — that arm won 3 of
+        // its 18,751 candidates either way — so this is a mechanism port, not a fix.
+        // LILYPOND-REF: lily/optimal-page-breaking.cc:139-190 Optimal_page_breaking::solve, the fewer-systems loop
+        // LILYPOND-REF: lily/optimal-page-breaking.cc:192-248 Optimal_page_breaking::solve, the more-systems loop —
+        // both call space_systems_on_best_pages on the same line details.
+        List<SystemDetails> RentLines()
         {
+            var lines = ListPool<SystemDetails>.Rent();
             if (title is not null)
-                details.Insert(0, title);
-            return details;
+                lines.Add(title);
+            return lines;
+        }
+        // Debug only: a fresh list of the same shape, for the paths that print it.
+        List<SystemDetails> FreshLines()
+        {
+            var lines = new List<SystemDetails>();
+            if (title is not null)
+                lines.Add(title);
+            return lines;
         }
         // The MUSIC systems a page holds: LilyPond's systems_per_page_ counts compressed
         // lines, and its title is compressed INTO the first system's line
@@ -435,7 +504,8 @@ internal sealed partial class LayoutEngine
         {
             if (lineBreaks.For(lineCount) is not { } candidate)
                 return null;
-            var details = WithTitle(EstimatedSystemDetails(candidate.Breaks, estimate, measures, built));
+            var details = EstimatedSystemDetails(
+                RentLines(), candidate.Breaks, estimate, measures, built);
             // Stacked in place: the list is this call's own, and its details are shared only
             // with the other candidates' lists (the title always first, the lines through
             // `built`), each stacked just before it is read — see
@@ -443,19 +513,18 @@ internal sealed partial class LayoutEngine
             var pages = details.Count == 0
                 ? breaker.BreakIntoPagesScored(details)
                 : breaker.BreakIntoPagesScoredOfLines(PageBreaker.CalcLineHeightsInPlace(details));
+            ListPool<SystemDetails>.Give(details);
             double demerits = breaker.Demerits(pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum);
             return (demerits, pages, candidate.Breaks);
         }
 
         // Debug only: the same count priced from lines built FRESH, printed beside the memo's
         // score so a probe can hold the two equal (PageChainDebugTests) — the line memo's net.
-        string Fresh(int lineCount, bool withTitle)
+        string Fresh(int lineCount)
         {
             if (lineBreaks.For(lineCount) is not { } candidate)
                 return "";
-            var fresh = EstimatedSystemDetails(candidate.Breaks, estimate, measures);
-            if (withTitle)
-                WithTitle(fresh);
+            var fresh = EstimatedSystemDetails(FreshLines(), candidate.Breaks, estimate, measures);
             var pages = fresh.Count == 0
                 ? breaker.BreakIntoPagesScored(fresh)
                 : breaker.BreakIntoPagesScoredOfLines(PageBreaker.CalcLineHeightsInPlace(fresh));
@@ -475,8 +544,8 @@ internal sealed partial class LayoutEngine
             // What each candidate line is priced at — LilyPond's line_details per chunk,
             // laid beside the placed systems' own details (CreatePages prints those).
             debug("estimate: begin up/down per line start " + DescribeLineStarts(lineBreaks, estimate));
-            var idealDetails = PageBreaker.CalcLineHeights(
-                WithTitle(EstimatedSystemDetails(lineBreaks.IdealBreaks, estimate, measures)));
+            var idealDetails = PageBreaker.CalcLineHeights(EstimatedSystemDetails(
+                FreshLines(), lineBreaks.IdealBreaks, estimate, measures));
             for (int i = 0; i < idealDetails.Count; i++)
                 debug($"  est line {i + 1}: {DescribeDetails(idealDetails[i])}");
         }
@@ -512,7 +581,7 @@ internal sealed partial class LayoutEngine
             debug?.Invoke($"trying {count} systems: {demerits:F6}"
                 + (cur is { } d ? $" (pages {string.Join(",", d.pages.SystemsPerPage)} forces "
                     + $"{string.Join(",", d.pages.Forces.Select(f => f.ToString("F3")))}; lines {string.Join(",", LineSizes(d.breaks))})"
-                      + Fresh(count, withTitle: true)
+                      + Fresh(count)
                     : ""));
             if (demerits < bestDemerits)
             {
@@ -538,12 +607,14 @@ internal sealed partial class LayoutEngine
             {
                 // The candidate's lines stacked ONCE (PageBreaker.CalcLineHeights) for both the
                 // page-count bound and the DP — each used to stack them again for itself.
-                var lines = PageBreaker.CalcLineHeightsInPlace(
-                    EstimatedSystemDetails(candidate.Breaks, estimate, measures, built));
+                var lines = PageBreaker.CalcLineHeightsInPlace(EstimatedSystemDetails(
+                    RentLines(), candidate.Breaks, estimate, measures, built));
                 // :207-211 — a count that cannot keep the ideal page count is not priced.
-                if (breaker.MinPageCountOfLines(lines) <= pageCount)
+                bool keepsPageCount = breaker.MinPageCountOfLines(lines) <= pageCount;
+                var pages = keepsPageCount ? breaker.BreakIntoPagesScoredOfLines(lines) : null;
+                ListPool<SystemDetails>.Give(lines);
+                if (pages is not null)
                 {
-                    var pages = breaker.BreakIntoPagesScoredOfLines(lines);
                     double demerits = breaker.Demerits(
                         pages, candidate.ForceSquaredSum, candidate.BreakPenaltySum);
                     if (demerits < bestDemerits)
@@ -557,7 +628,7 @@ internal sealed partial class LayoutEngine
                         + $"{string.Join(",", pages.SystemsPerPage)} forces "
                         + $"{string.Join(",", pages.Forces.Select(f => f.ToString("F3")))}; lines "
                         + $"{string.Join(",", LineSizes(candidate.Breaks))})"
-                        + Fresh(count, withTitle: false));
+                        + Fresh(count));
                 }
                 else
                 {

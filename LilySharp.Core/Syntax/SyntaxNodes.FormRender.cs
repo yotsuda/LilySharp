@@ -1110,7 +1110,11 @@ public sealed partial class BreakSyntax : SyntaxNode
     /// <summary>Which of the four directives this is, read off the keyword — the ONE
     /// reader every consumer (the collector, the exporter) dispatches on. (Not named
     /// <c>Kind</c>: that is the node's own <see cref="SyntaxNode.Kind"/>.)</summary>
-    public BreakKind Directive => Green.GetSlot(0)!.Kind switch
+    public BreakKind Directive => DirectiveOf(Green);
+
+    /// <summary><see cref="Directive"/> off the green alone — for a reader that has the
+    /// site and not the red (the collector's look-ahead, session 551).</summary>
+    internal static BreakKind DirectiveOf(InternalSyntax.GreenNode green) => green.GetSlot(0)!.Kind switch
     {
         SyntaxKind.NoBreakKeyword => BreakKind.NoLine,
         SyntaxKind.PageBreakKeyword => BreakKind.Page,

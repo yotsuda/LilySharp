@@ -641,7 +641,7 @@ internal sealed class SkylineBuilder
                     // an ordinary full-size note reserved a head and a stem the page never
                     // draws — MEASURED, `acciaccatura { a16 } b4 r2 r4` grew 0.500000 taller
                     // with identical ink, which is the signature of a silhouette that has
-                    // stopped describing the page. See SharedRenderer.EnumerateStaffItems for
+                    // stopped describing the page. See SharedRenderer.CollectStaffItems for
                     // why the skip exists and when it goes (HANDOFF §2 U8 ⒝2).
                     if (item.GraceTime)
                         continue;
@@ -694,7 +694,7 @@ internal sealed class SkylineBuilder
                     // A mid-measure key change shares the NEXT note's timing column, but it
                     // is DRAWN at the change column — hung back from the note, or anchored
                     // just after the barline when it opens the measure (the renderer's
-                    // EnumerateStaffItems change branches). Re-anchor the seed the same way,
+                    // CollectStaffItems change branches). Re-anchor the seed the same way,
                     // through the same SpacingRules/ChangeColumnItems homes, so the seeded
                     // ink stands where the glyphs print — seeded at the raw column x it sat
                     // a whole spring right of the sharps and the section label never met it.
@@ -716,7 +716,7 @@ internal sealed class SkylineBuilder
 
     /// <summary>
     /// The x a mid-measure key change is DRAWN at — the renderer's change-column rules
-    /// (SharedRenderer.EnumerateStaffItems), re-anchored from the raw timing-column
+    /// (SharedRenderer.CollectStaffItems), re-anchored from the raw timing-column
     /// <paramref name="itemX"/>: a change OPENING the measure anchors just after the
     /// barline (sequenced past earlier opening changes); a mid-measure one hangs back
     /// from the note column by the reserved gap. NaN = the change opens the LINE and is

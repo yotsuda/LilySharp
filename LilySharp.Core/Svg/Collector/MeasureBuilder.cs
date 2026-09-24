@@ -68,6 +68,78 @@ internal sealed class MeasureBuilder
     // than being added alongside as an alias (there is no written bar there to keep).
     private bool _lastEndAutoFill;
 
+    // ---- the collector's look-ahead (session 550, HANDOFF ⒮²³) ----
+    // The WRITTEN bar line that immediately follows the site being processed — its token
+    // start, or -1 — and its type. An auto-fill that closes the bar while this is set emits
+    // the measure with THAT source end (and a typed bar's type) from the start, so the bar's
+    // own confirmation (AddEndBarlineSource's auto-fill arm, the typed retro-apply in
+    // HandleBarline) finds the value already there and writes nothing: the emit-then-rewrite
+    // `with` copy was 96.8 + 1.1 Measure objects a keystroke on the reader's corpus (session
+    // 511's construction census), each 96 B.
+    // ⚠️ AN EARLY WRITE OF THE SAME VALUE, NOTHING MORE. HandleBarline still runs every arm it
+    // ran; the two rewrites now compare first, so a bar the walk does not reach the way the
+    // hint expected rewrites the value exactly as before. The collector sets it only for a
+    // note / rest / chord site whose NEXT site is the bar (never `|:`, whose arm does not
+    // retarget), and clears it after the site. A resume sees no new dependency: the
+    // checkpoint captured between the note and its bar already has the bar's span in its
+    // read watermark (ProcessNodes folds the marker peek's terminator — the bar).
+    private int _followingBarlineStart = -1;
+    private BarlineType _followingBarlineType;
+    // ...and the ONE break directive read ahead right AFTER that bar (`| break`, the corpus's
+    // spelling: 6,106 sites to 3 of `break |`), or null (session 551). The emit writes the
+    // measure's permissions as that directive's boundary-time setter (SetBreak / SetNoBreak /
+    // SetPageBreak / SetNoPageBreak) would write them; the setter then finds the value there.
+    // ⚠️ ONE DIRECTIVE, NOT THE RUN: the setters run in order and each writes its own value,
+    // so an emit holding the FINAL value of `| break noBreak` is still rewritten by the first
+    // setter (it finds Forbid and writes Force). A second directive writes as it always did.
+    private BreakKind? _followingBreak;
+
+    /// <summary>The bar line the collector has read ahead — see the field.</summary>
+    internal void SetFollowingBarline(int tokenStart, BarlineType type)
+    {
+        _followingBarlineStart = tokenStart;
+        _followingBarlineType = type;
+        _followingBreak = null;
+    }
+
+    /// <summary>The break directive the collector has read ahead right after that bar.</summary>
+    internal void SetFollowingBreak(BreakKind kind) => _followingBreak = kind;
+
+    /// <summary>The site is done: no bar is read ahead any more.</summary>
+    internal void ClearFollowingBarline()
+    {
+        _followingBarlineStart = -1;
+        _followingBreak = null;
+    }
+
+    /// <summary>The boundary read ahead, for a site that adds SEVERAL bar-closing items
+    /// (<c>R1*N</c>) and must hand it to the LAST one only — the start is -1 when none.</summary>
+    internal (int Start, BarlineType Type, BreakKind? Break) FollowingBoundary
+        => (_followingBarlineStart, _followingBarlineType, _followingBreak);
+
+    /// <summary>Puts back what <see cref="FollowingBoundary"/> read, for that last item.</summary>
+    internal void RestoreFollowingBoundary((int Start, BarlineType Type, BreakKind? Break) boundary)
+    {
+        _followingBarlineStart = boundary.Start;
+        _followingBarlineType = boundary.Type;
+        _followingBreak = boundary.Break;
+    }
+
+    /// <summary>
+    /// How many emitted measures this thread's builders have REWRITTEN at their boundary
+    /// (a `with` copy of <c>_measures[^1]</c> for a bar's source end or type) — the liveness
+    /// meter of the look-ahead above, for <c>MeasureBuilderLookAheadTests</c> alone.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE LOOK-AHEAD IS INVISIBLE IN EVERY OUTPUT BY DESIGN — a wrong hint is rewritten to
+    /// the right value and the page is the same (session 550's off-by-one poison: 0 pages
+    /// moved, 8,913 tests green, and the whole saving gone). The pages cannot say whether
+    /// the saving is still there; this count can (RULES §5.4, the page-buffer pool's lesson:
+    /// an equality half and a liveness half).
+    /// </remarks>
+    [System.ThreadStatic]
+    internal static int t_boundaryRewrites;
+
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
     // True while a note, rest or chord (or a tuplet's reported duration) has entered the
@@ -792,7 +864,20 @@ internal sealed class MeasureBuilder
     /// boundary is non-explicit.
     /// </summary>
     private void AutoCompleteMeasure(int sourceEnd)
-        => EmitMeasure(sourceEnd, BarlineType.Single, explicitBar: false);
+    {
+        // The bar the collector read ahead confirms this close: its token start is the
+        // source end the confirmation would retarget to, and a typed bar is the end type
+        // its retro-apply would write (overriding a pending type, as the retro-apply does).
+        if (_followingBarlineStart >= 0)
+        {
+            bool typed = _followingBarlineType != BarlineType.Single;
+            EmitMeasure(_followingBarlineStart,
+                typed ? _followingBarlineType : BarlineType.Single,
+                explicitBar: false, forceEndType: typed, followingBreak: _followingBreak);
+            return;
+        }
+        EmitMeasure(sourceEnd, BarlineType.Single, explicitBar: false);
+    }
 
     /// <summary>
     /// Emits the current measure and resets per-measure state. Shared by the
@@ -801,7 +886,13 @@ internal sealed class MeasureBuilder
     /// A no-op when no items are pending (so <c>_pendingBreak</c> survives to the
     /// next real measure).
     /// </summary>
-    private void EmitMeasure(int sourceEnd, BarlineType endType, bool explicitBar)
+    /// <param name="forceEndType"><paramref name="endType"/> wins over a pending end type —
+    /// the read-ahead typed bar's retro-apply, written at the emit (AutoCompleteMeasure).</param>
+    /// <param name="followingBreak">The break directive read ahead right after the bar
+    /// (<see cref="SetFollowingBreak"/>), applied to the permissions as its boundary-time
+    /// setter would apply it.</param>
+    private void EmitMeasure(int sourceEnd, BarlineType endType, bool explicitBar,
+        bool forceEndType = false, BreakKind? followingBreak = null)
     {
         if (_currentItems.Count == 0)
             return;
@@ -812,17 +903,29 @@ internal sealed class MeasureBuilder
         _pendingBreak = false;
         _pendingNoBreak = false;
 
+        // A mid-bar `break` forces, a mid-bar `noBreak` forbids (Force wins if both) — then
+        // the directive read ahead at the boundary, as SetBreak / SetNoBreak / SetPageBreak /
+        // SetNoPageBreak writes it there.
+        var line = hasBreak ? Layout.BreakPermission.Force
+            : noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow;
+        var page = pagePermission;
+        switch (followingBreak)
+        {
+            case BreakKind.Line: line = Layout.BreakPermission.Force; break;
+            case BreakKind.NoLine: line = Layout.BreakPermission.Forbid; break;
+            case BreakKind.Page: line = Layout.BreakPermission.Force; page = Layout.BreakPermission.Force; break;
+            case BreakKind.NoPage: page = Layout.BreakPermission.Forbid; break;
+        }
+
         _measures.Add(new Measure(
             _currentItems.ToImmutableArray(),
             _pendingStartBarline,
-            _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
+            !forceEndType && _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
             _sectionLabel,
             _measureSourceStart,
             sourceEnd,
-            hasBreakAfter: hasBreak,
-            // `noBreak` forbids a break after this measure (Force wins if both).
-            lineBreakPermission: noBreak ? Layout.BreakPermission.Forbid : Layout.BreakPermission.Allow,
-            pageBreakPermission: pagePermission,
+            lineBreakPermission: line,
+            pageBreakPermission: page,
             sectionLabelPosition: _sectionLabelPosition,
             isPickup: _partialRestore != null,
             unmetered: _senzaMisura,
@@ -854,13 +957,19 @@ internal sealed class MeasureBuilder
         var m = _measures[^1];
         if (_lastEndAutoFill)
         {
-            _measures[^1] = m with { SourceEnd = position };
+            // Already the bar's when the emit read the bar ahead (_followingBarlineStart).
+            if (m.SourceEnd != position)
+            {
+                t_boundaryRewrites++;
+                _measures[^1] = m with { SourceEnd = position };
+            }
             _lastEndAutoFill = false;
         }
         else
         {
             var all = m.EndHighlightAliases.Append(m.SourceEnd).Append(position).Distinct().ToList();
             int click = all.Max();
+            t_boundaryRewrites++;
             _measures[^1] = m with
             {
                 SourceEnd = click,
@@ -920,9 +1029,14 @@ internal sealed class MeasureBuilder
         {
             // At measure boundary - apply break to previous measure. `with`
             // preserves break penalty and page/turn permissions; the old
-            // full rebuild silently reset them to defaults.
+            // full rebuild silently reset them to defaults. Already Force when the emit
+            // read this directive ahead (_followingBreaks).
             var last = _measures[^1];
-            _measures[^1] = last with { LineBreakPermission = Layout.BreakPermission.Force };
+            if (last.LineBreakPermission != Layout.BreakPermission.Force)
+            {
+                t_boundaryRewrites++;
+                _measures[^1] = last with { LineBreakPermission = Layout.BreakPermission.Force };
+            }
         }
         else
         {
@@ -938,7 +1052,13 @@ internal sealed class MeasureBuilder
     public void SetNoBreak()
     {
         if (_currentItems.Count == 0 && _measures.Count > 0)
-            _measures[^1] = _measures[^1] with { LineBreakPermission = Layout.BreakPermission.Forbid };
+        {
+            if (_measures[^1].LineBreakPermission != Layout.BreakPermission.Forbid)
+            {
+                t_boundaryRewrites++;
+                _measures[^1] = _measures[^1] with { LineBreakPermission = Layout.BreakPermission.Forbid };
+            }
+        }
         else
             _pendingNoBreak = true;
     }
@@ -952,11 +1072,19 @@ internal sealed class MeasureBuilder
     public void SetPageBreak(int sourcePosition = -1)
     {
         if (_currentItems.Count == 0 && _measures.Count > 0)
-            _measures[^1] = _measures[^1] with
+        {
+            var last = _measures[^1];
+            if (last.LineBreakPermission != Layout.BreakPermission.Force
+                || last.PageBreakPermission != Layout.BreakPermission.Force)
             {
-                LineBreakPermission = Layout.BreakPermission.Force,
-                PageBreakPermission = Layout.BreakPermission.Force,
-            };
+                t_boundaryRewrites++;
+                _measures[^1] = last with
+                {
+                    LineBreakPermission = Layout.BreakPermission.Force,
+                    PageBreakPermission = Layout.BreakPermission.Force,
+                };
+            }
+        }
         else
         {
             _pendingBreak = true;
@@ -973,7 +1101,13 @@ internal sealed class MeasureBuilder
     public void SetNoPageBreak()
     {
         if (_currentItems.Count == 0 && _measures.Count > 0)
-            _measures[^1] = _measures[^1] with { PageBreakPermission = Layout.BreakPermission.Forbid };
+        {
+            if (_measures[^1].PageBreakPermission != Layout.BreakPermission.Forbid)
+            {
+                t_boundaryRewrites++;
+                _measures[^1] = _measures[^1] with { PageBreakPermission = Layout.BreakPermission.Forbid };
+            }
+        }
         else
             _pendingNoPageBreak = true;
     }
@@ -1082,7 +1216,12 @@ internal sealed class MeasureBuilder
             // stream just closed that bar, record the typed bar as an end SOURCE: it takes
             // the click target (the outer section repeat) while the bar's own close stays a
             // highlight alias — so a phrase's `:|` still lights at every call site.
-            _measures[^1] = _measures[^1] with { EndBarline = endType };
+            // Already typed when the emit read the bar ahead (_followingBarlineType).
+            if (_measures[^1].EndBarline != endType)
+            {
+                t_boundaryRewrites++;
+                _measures[^1] = _measures[^1] with { EndBarline = endType };
+            }
             if (_boundaryRetargetable)
                 AddEndBarlineSource(position);
             _confirmableBoundary = false;

@@ -21,6 +21,8 @@ using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
+using StaffItemPlacement = (LilySharp.Core.Svg.Model.MusicItem Item, LilySharp.Core.Svg.Layout.MeasureLayout Ml,
+    int ItemIdx, double ItemX, double VoiceX);
 
 namespace LilySharp.Core.Rendering;
 
@@ -51,7 +53,14 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
         // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
-        foreach (var (item, ledgerMl, _, itemX, _) in EnumerateStaffItems(fonts, voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
+        // ONE walk of the staff's items serves both passes below. Lent from the thread's
+        // pool and given back after the draw pass: the walk used to be a `yield` iterator
+        // built once per pass — two 216 B state machines per staff pass, 796 B a keystroke
+        // over the reader's corpus (session 446's census) — and a lent list amortises to
+        // nothing.
+        var staffItems = ListPool<StaffItemPlacement>.Rent();
+        CollectStaffItems(fonts, voice, voiceNumber, system, layout, staffIndex, staffItems, fragmentFrom, fragmentTo);
+        foreach (var (item, ledgerMl, _, itemX, _) in staffItems)
         {
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
@@ -60,7 +69,7 @@ internal static partial class SharedRenderer
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
-        foreach (var (item, ml, itemIdx, itemX, voiceX) in EnumerateStaffItems(fonts, voice, voiceNumber, system, layout, staffIndex, fragmentFrom, fragmentTo))
+        foreach (var (item, ml, itemIdx, itemX, voiceX) in staffItems)
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
@@ -165,17 +174,17 @@ internal static partial class SharedRenderer
                     break;
             }
         }
+        ListPool<StaffItemPlacement>.Give(staffItems);
     }
 
     /// <summary>
-    /// Resolves each drawable item's X position for one staff pass — shared by
-    /// the ledger pre-pass and the note drawing pass so both see identical
-    /// positions.
+    /// Resolves each drawable item's X position for one staff pass, in drawing order, into
+    /// <paramref name="into"/> — shared by the ledger pre-pass, the note drawing pass and the
+    /// tab staff's meter pass so all of them see identical positions.
     /// </summary>
-    private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX,
-                                double VoiceX)>
-        EnumerateStaffItems(ScoreTextMetrics fonts, Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
-            int staffIndex,
+    private static void
+        CollectStaffItems(ScoreTextMetrics fonts, Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
+            int staffIndex, List<StaffItemPlacement> into,
             int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
     {
         foreach (var ml in system.Measures)
@@ -220,7 +229,7 @@ internal static partial class SharedRenderer
                     if (layout.GetGraceColumnX(
                             staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx) is { } graceX)
                     {
-                        yield return (item, ml, itemIdx, graceX, 0);
+                        into.Add((item, ml, itemIdx, graceX, 0));
                     }
                     // No timing advance: grace time takes no measure time at all
                     // (MusicItem.Duration is zero in it), so the column grid is untouched.
@@ -346,7 +355,7 @@ internal static partial class SharedRenderer
                 // Collector.StaffAccidentalColumns's remark).
                 double voiceX = layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
                 itemX += voiceX;
-                yield return (item, ml, itemIdx, itemX, voiceX);
+                into.Add((item, ml, itemIdx, itemX, voiceX));
             }
         }
     }

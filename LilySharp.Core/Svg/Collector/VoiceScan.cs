@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
@@ -35,17 +36,77 @@ internal static class VoiceScan
     /// indices. A detector with per-voice state resets it when
     /// <c>VoiceIndex</c> changes.
     /// </summary>
-    public static IEnumerable<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>
-        WalkVoiceItems(Score score)
+    /// <remarks>
+    /// A struct walk (<see cref="VoiceItemWalk"/>), not a <c>yield</c> iterator: the three
+    /// detectors each built a 104 B state machine per collect (session 446's census, 181 B a
+    /// keystroke apiece over the reader's corpus), and <c>foreach</c> over the struct builds
+    /// nothing. The order — voice, measure, item — and the grace skip are the iterator's
+    /// (RULES §5.4: the safety of this rewrite is order identity).
+    /// </remarks>
+    public static VoiceItemWalk WalkVoiceItems(Score score) => new(score);
+
+    /// <summary>The walk <see cref="WalkVoiceItems"/> hands out; <c>foreach</c> binds to
+    /// <see cref="GetEnumerator"/> and allocates nothing.</summary>
+    public readonly struct VoiceItemWalk
+        : IEnumerable<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>
     {
-        for (int v = 0; v < score.Voices.Length; v++)
+        private readonly Score _score;
+
+        internal VoiceItemWalk(Score score) => _score = score;
+
+        public Enumerator GetEnumerator() => new(_score.Voices);
+
+        IEnumerator<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>
+            IEnumerable<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>.GetEnumerator()
+            => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>Voice by voice, measure by measure, item by item — grace time skipped.</summary>
+        public struct Enumerator
+            : IEnumerator<(int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item)>
         {
-            var measures = score.Voices[v].Measures;
-            for (int m = 0; m < measures.Length; m++)
+            private readonly ImmutableArray<Voice> _voices;
+            private ImmutableArray<Measure> _measures;
+            private ImmutableArray<MusicItem> _items;
+            private int _v, _m, _i;
+
+            internal Enumerator(ImmutableArray<Voice> voices)
             {
-                var items = measures[m].Items;
-                for (int i = 0; i < items.Length; i++)
+                _voices = voices;
+                _measures = ImmutableArray<Measure>.Empty;
+                _items = ImmutableArray<MusicItem>.Empty;
+                _v = -1;
+                _m = 0;
+                _i = -1;
+                Current = default;
+            }
+
+            public (int VoiceIndex, ImmutableArray<Measure> Measures, int MeasureIndex, int ItemIndex, MusicItem Item) Current
+            { get; private set; }
+
+            readonly object IEnumerator.Current => Current;
+
+            public bool MoveNext()
+            {
+                while (true)
                 {
+                    _i++;
+                    while (_i >= _items.Length)
+                    {
+                        // The measure is spent: the next one, or the next voice's first.
+                        _m++;
+                        while (_m >= _measures.Length)
+                        {
+                            _v++;
+                            if (_v >= _voices.Length)
+                                return false;
+                            _measures = _voices[_v].Measures;
+                            _m = 0;
+                        }
+                        _items = _measures[_m].Items;
+                        _i = 0;
+                    }
                     // GRACE TIME IS NOT YET IN THE SPAN DETECTORS' STREAM. All three pair an
                     // opening flag with THE NEXT item, and a grace takes no measure time, so
                     // it stands between a note and the note that note reaches to — MEASURED,
@@ -56,11 +117,24 @@ internal static class VoiceScan
                     // Deleting it is what HANDOFF §2 U8 ⒞ means, and it can only go once ⒝2
                     // lets the ordinary engravers draw grace time — until then the detectors
                     // would pair spans that nothing would draw.
-                    if (items[i].GraceTime)
+                    if (_items[_i].GraceTime)
                         continue;
-                    yield return (v, measures, m, i, items[i]);
+                    Current = (_v, _measures, _m, _i, _items[_i]);
+                    return true;
                 }
             }
+
+            public void Reset()
+            {
+                _measures = ImmutableArray<Measure>.Empty;
+                _items = ImmutableArray<MusicItem>.Empty;
+                _v = -1;
+                _m = 0;
+                _i = -1;
+                Current = default;
+            }
+
+            public readonly void Dispose() { }
         }
     }
 

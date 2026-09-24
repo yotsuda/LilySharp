@@ -320,7 +320,7 @@ internal static partial class SharedRenderer
     // The drawn extent and the reserved spacing width are the same quantity;
     // both come from EngravingDefaults.BarlineDrawnWidth so they cannot drift.
     // internal: SkylineBuilder's key-change seed mirrors the opening-change anchor
-    // (EnumerateStaffItems), which starts past the measure's start barline.
+    // (CollectStaffItems), which starts past the measure's start barline.
     internal static double GetVisualBarlineWidth(BarlineType type)
         => EngravingDefaults.BarlineDrawnWidth(type);
 

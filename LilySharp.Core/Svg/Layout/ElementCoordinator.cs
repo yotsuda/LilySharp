@@ -245,7 +245,7 @@ internal sealed class ElementCoordinator
     /// left_most, X_AXIS)</c> — LilyPond moves the whole <c>Note_column</c>, and
     /// <c>Note_column::get_stem</c> is a member of that column, so a LilyPond stem cannot be
     /// left behind by its head and no separate step exists to port. Lily# resolves the shift
-    /// at render time instead (<c>SharedRenderer.EnumerateStaffItems</c>), which the UNBEAMED
+    /// at render time instead (<c>SharedRenderer.CollectStaffItems</c>), which the UNBEAMED
     /// stem rides for free because it is drawn from that already-shifted x — the beamed one is
     /// drawn from <c>BeamLayout.MemberXPositions</c>, so the shift has to reach the table
     /// those are built from.

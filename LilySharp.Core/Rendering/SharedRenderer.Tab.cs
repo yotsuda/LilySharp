@@ -21,6 +21,8 @@ using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
+using StaffItemPlacement = (LilySharp.Core.Svg.Model.MusicItem Item, LilySharp.Core.Svg.Layout.MeasureLayout Ml,
+    int ItemIdx, double ItemX, double VoiceX);
 
 namespace LilySharp.Core.Rendering;
 
@@ -201,7 +203,7 @@ internal static partial class SharedRenderer
         }
 
         // Mid-piece meter changes. Read off the SAME item walk the notation staff uses
-        // (EnumerateStaffItems) rather than the fret loop above: a change's X is a break
+        // (CollectStaffItems) rather than the fret loop above: a change's X is a break
         // alignment inside the boundary column — after the bar line by the bar line's own
         // space-alist entry, or hung back from the musical column by the gap the layouter
         // reserved — and none of that is the note column the digits sit on. That walk also
@@ -210,11 +212,15 @@ internal static partial class SharedRenderer
         // The PRIMARY voice alone: the meter belongs to the staff, and a change stored in
         // every voice would otherwise be overprinted once per voice.
         if (engravesMeter)
-            foreach (var (item, _, _, itemX, _) in
-                     EnumerateStaffItems(fonts, primaryVoice, 1, system, layout, staffIndex))
+        {
+            var staffItems = ListPool<StaffItemPlacement>.Rent();
+            CollectStaffItems(fonts, primaryVoice, 1, system, layout, staffIndex, staffItems);
+            foreach (var (item, _, _, itemX, _) in staffItems)
                 if (item is TimeSignatureChangeItem timeChange
                     && !timeChange.NewTime.SenzaMisura)
                     DrawTimeSignatureChange(fonts, timeChange, itemX, meterStaffY, gc);
+            ListPool<StaffItemPlacement>.Give(staffItems);
+        }
 
         // ⚠️ GRACE DIGITS ARE DRAWN IN A LATER PASS (SharedRenderer.cs, DrawGraceNotes), so
         // their bites have to be booked here or the line would run straight through them.
@@ -390,7 +396,7 @@ internal static partial class SharedRenderer
             var item = measure.Items[i];
             // Grace time is drawn by GraceNoteEngraver, which knows to draw a tab grace as a
             // SMALL fret number (GraceNoteLayout.Tuning) — see the notation staff's skip in
-            // SharedRenderer.EnumerateStaffItems for why this one exists and when it goes.
+            // SharedRenderer.CollectStaffItems for why this one exists and when it goes.
             if (item.GraceTime)
                 continue;
             double columnX = useColumnTiming

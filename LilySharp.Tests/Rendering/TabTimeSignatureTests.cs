@@ -159,7 +159,7 @@ public sealed class TabTimeSignatureTests
         //      staff can never have (no Key_engraver in either mode).
         //   ⒝ and again in the next system's PREFIX.
         // A THIRD would mean the in-measure copy printed too. The tab takes its mid-piece
-        // changes from EnumerateStaffItems — the same walk the notation staff uses — and that
+        // changes from CollectStaffItems — the same walk the notation staff uses — and that
         // walk owns the skip, so the two cannot come apart.
         var rec = Render(Src("tab melody", music: "c1 | c1 | break time 2/4 c2 | c2"));
         Assert.Equal(2, rec.Glyphs.Count(g => g.Glyph == '2'));
