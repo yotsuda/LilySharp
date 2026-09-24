@@ -56,7 +56,12 @@ for them by eye. The repository's
   `Section A · ⚠ 9 bars in flute, 8 bars in the other 11 · …` when they disagree, and `in no form`
   for a section nothing plays. A section is one span of time however many parts write it; a
   later declaration of it gets a line only when its length differs from what most of the
-  others write (`⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts`). A click lists everything that writes it.
+  others write (`⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts`); in a
+  section-major book that line stands over the odd block itself. A click lists everything that writes it.
+- **Convert Layout no longer drops a cell written twice.** When a part, chord row or lyrics track
+  writes the same section in two declarations, the other layout has room for only one of them;
+  the command now leaves the file unchanged and names the cell instead of silently keeping the
+  later one.
 - **A section written at different lengths is one problem, not one per part** — grouped by bar
   count, placed on the odd one out, and with every part and track listed under it as a link. Its
   quick fix pads all the shorter ones at once.

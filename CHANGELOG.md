@@ -106,8 +106,16 @@ bare letters an octave down now needs `octave 3`), and **a slur or tie holds its
   later declaration gets a line only when it is the odd one out — measured against the length
   most of the section's parts and chord rows write, so ten parts at 10 bars and one at 11 mark
   the one (`⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts`), not the ten; on
-  a tie, the shorter. A part-major book is not lined with copies of the same line. A click lists everything that writes it in the references peek. The
+  a tie, the shorter. A part-major book is not lined with copies of the same line. In a
+  section-major book the odd one's line stands over its own block (`chords prog { … }`) rather
+  than over the section's name. A click lists everything that writes it in the references peek. The
   counts are the bar checker's own, so the lens and LYS2007 agree.
+- **Convert Layout no longer drops a cell written twice.** The other layout has room for one
+  text per part and section, so a part (or chord row, or lyrics track) that writes the same
+  section in two declarations — or two declarations of a section stating different directives
+  (`key g major` in one, `key d major` in the other) — came out with the later text only and the earlier gone without a word. The command
+  now leaves the file unchanged and says which cell is written twice. A section spread over
+  several declarations whose cells do not collide still merges into one.
 - **The tutorial says what a section name means.** A new "One Section Name, One Span of Time"
   section shows parts and chord rows each listing their sections, and the mistake of giving
   the accompaniment a name of its own (`section AChords`), which plays it *after* `A` instead

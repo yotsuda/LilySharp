@@ -335,8 +335,22 @@ public class HistoryCitationTests
     /// paragraphs above give: the sentences are the record of what those sessions committed.
     /// The LIVE ratchet did not fall (858, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 730 → 834, THE SAME WAY, ON 2026-09-25 (before the 0.8.0 tag). The 154 commits
+    /// after <c>939f6f27</c> were regrouped into fourteen and pushed, outside any session's
+    /// view: the session that followed met the ceiling already red, on origin/master's CI and
+    /// locally alike, so the census was read FIRST again. A backup tag holds the old commits
+    /// (<c>pre-squash-2026-09-24</c>, local only), so both checks the paragraphs above describe
+    /// were made: the pre-regroup tip and the new one (<c>c6765359</c>) name the SAME tree
+    /// object, and of the 1762 citation-shaped tokens in the tree exactly 104 name one of the
+    /// 154 folded commits — the whole rise, nothing else. 115 of the folded commits are cited
+    /// by some token of any shape; what the census does not read among those is the same
+    /// honest miss of <c>LooksLikeCitation</c> the paragraphs above declare. Not re-pointed, for the reason the paragraphs above
+    /// give: the sentences are the record of what those sessions committed. The LIVE ratchet
+    /// did not fall (1065, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 730;
+    private const int DeadCitationsWhenWritten = 834;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
