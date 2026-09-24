@@ -416,6 +416,248 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A tempo with BOTH a marking and a metronome mark keeps both: <c>\tempo "Andante" 4 = 66</c>.
+    /// Until 2026-09-23 the text was dropped whenever a BPM was written (the nocturne
+    /// sample's "Andante espressivo" was absent from its twin).
+    /// LILYPOND-REF: ly/music-functions-init.ly tempo — <c>\tempo [text] [duration = count]</c>.
+    /// </summary>
+    [Fact]
+    public void Tempo_WithMarkingAndBpm_WritesBoth()
+    {
+        var ly = Export(Score("c4", headers: "octave absolute\ntempo \"Andante espressivo\" 4 = 66"));
+        Assert.Contains("\\tempo \"Andante espressivo\" 4 = 66", ly);
+    }
+
+    /// <summary>
+    /// <c>@cresc</c> / <c>@decresc</c> / <c>@dim</c> are hairpins on the page, so the twin
+    /// writes LilyPond's WEDGE events <c>\&lt;</c> / <c>\&gt;</c>. It used to write
+    /// <c>\cresc</c>, which LilyPond engraves as the TEXT "cresc." with a dashed line
+    /// (ly/spanners-init.ly:56-60, span-type 'text) — a twin that compiled and drew
+    /// different music.
+    /// LILYPOND-REF: ly/declarations-init.ly:89-90 "\\&gt;" / "\\&lt;" = make-span-event
+    ///   'DecrescendoEvent / 'CrescendoEvent START.
+    /// </summary>
+    [Fact]
+    public void Hairpins_AreWrittenAsWedgeEvents()
+    {
+        var ly = Export(Score("c,4@p @cresc d,4 e,4 f,4@f | c,4@decresc d,4 e,4 f,4@p | c,4@dim d,4 e,4 f,4@pp"));
+        Assert.Contains("c,4\\p\\<", ly);
+        Assert.Contains("c,4\\>", ly);
+        Assert.Equal(2, Occurrences(ly, "\\>"));
+        Assert.DoesNotContain("\\cresc", ly);
+        Assert.DoesNotContain("\\decresc", ly);
+        Assert.DoesNotContain("\\dim", ly);
+    }
+
+    private static string PedalScore(string music, string pedalProperty = "") => $$"""
+        octave absolute
+        part piano { clef bass {{pedalProperty}} }
+        section S { piano { {{music}} } }
+        form main { ~S }
+        score main { staff piano }
+        """;
+
+    /// <summary>
+    /// The pedals are LilyPond's span events on the note — <c>\sustainOn</c> / <c>\sustainOff</c>
+    /// and their sostenuto and una corda siblings — and a pedalling part's staff states its
+    /// <c>pedal</c> style for ALL THREE pedals, because LilyPond's defaults ('text, 'mixed,
+    /// 'text) are not Lily#'s (bracket for every pedal). Until 2026-09-23 every pedal was
+    /// "dropped (out of scope)" and the twin of a piano book had no pedal line.
+    /// LILYPOND-REF: ly/spanners-init.ly:94-101 make-span-event — sustainOn/Off,
+    ///   unaCorda/treCorde, sostenutoOn/Off; ly/engraver-init.ly, the Staff context
+    ///   (lines 895-904) — the three pedal*Style defaults.
+    /// </summary>
+    [Fact]
+    public void Pedals_AreWrittenAsSpanEvents_AndTheStaffStatesTheStyle()
+    {
+        var (ly, warnings) = ExportWithWarnings(PedalScore(
+            "c,4@sustain d,4 e,4 f,4@!sustain | c,4@!sustain@sustain d,4@sostenuto e,4@!sostenuto f,4@unaCorda | c,1@treCorde"));
+        Assert.Contains("c,4\\sustainOn", ly);
+        Assert.Contains("f,4\\sustainOff", ly);
+        // A pedal change on one note, release first, as written.
+        Assert.Contains("c,4\\sustainOff\\sustainOn", ly);
+        Assert.Contains("d,4\\sostenutoOn", ly);
+        Assert.Contains("e,4\\sostenutoOff", ly);
+        Assert.Contains("f,4\\unaCorda", ly);
+        Assert.Contains("c,1\\treCorde", ly);
+        Assert.Contains("\\set Staff.pedalSustainStyle = #'bracket", ly);
+        Assert.Contains("\\set Staff.pedalSostenutoStyle = #'bracket", ly);
+        Assert.Contains("\\set Staff.pedalUnaCordaStyle = #'bracket", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("sustain") || w.Contains("sostenuto") || w.Contains("unaCorda") || w.Contains("treCorde"));
+
+        var text = Export(PedalScore("c,4@sustain d,4@!sustain", "pedal text"));
+        Assert.Contains("\\set Staff.pedalSustainStyle = #'text", text);
+
+        // A part that never pedals says nothing about pedals.
+        Assert.DoesNotContain("pedalSustainStyle", Export(PedalScore("c,4 d,4")));
+    }
+
+    /// <summary>
+    /// A text spanner is <c>\startTextSpan</c> … <c>\stopTextSpan</c> on its notes, with the
+    /// word it prints set on the grob before the opening note — <c>@rit</c> prints "rit.",
+    /// <c>@textSpan("poco rit.")</c> its argument, a bare <c>@textSpan</c> nothing (LilyPond's
+    /// own bare dashed rule). Until 2026-09-23 all of them were "dropped (out of scope)".
+    /// LILYPOND-REF: ly/spanners-init.ly:44-45 startTextSpan / stopTextSpan = make-span-event;
+    ///   scm/define-grobs.scm TextSpanner bound-details.left.text.
+    /// </summary>
+    [Fact]
+    public void TextSpanners_AreWrittenWithTheirWord()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score(
+            "c,4@rit d,4 e,4 f,4@!rit | c,4@textSpan(\"poco rit.\") d,4 e,4@!textSpan f,4 | c,4@textSpan d,4@!textSpan e,2"));
+        Assert.Contains("\\once \\override TextSpanner.bound-details.left.text = \"rit.\" c,4\\startTextSpan", ly);
+        Assert.Contains("f,4\\stopTextSpan", ly);
+        Assert.Contains("\\once \\override TextSpanner.bound-details.left.text = \"poco rit.\" c,4\\startTextSpan", ly);
+        Assert.Contains("e,4\\stopTextSpan", ly);
+        // The bare spanner: no word, so no override.
+        Assert.Equal(2, Occurrences(ly, "bound-details.left.text"));
+        Assert.Equal(3, Occurrences(ly, "\\startTextSpan"));
+        Assert.Equal(3, Occurrences(ly, "\\stopTextSpan"));
+        Assert.DoesNotContain(warnings, w => w.Contains("rit") || w.Contains("textSpan"));
+    }
+
+    /// <summary>
+    /// An ottava is <c>\ottava #n</c> BEFORE the note it starts on — <c>#1</c> for
+    /// <c>@ottava</c>, <c>#-1</c> for <c>@ottava(bassa)</c>, <c>#±2</c> for the quindicesima —
+    /// and <c>\ottava #0</c> before the terminator's note, which is the first note back at
+    /// written pitch. Until 2026-09-23 every one was dropped and the twin drew the 8va at
+    /// written pitch.
+    /// LILYPOND-REF: ly/music-functions-init.ly:1342-1349 ottava = define-music-function
+    ///   → make-music 'OttavaEvent 'ottava-number; lily/ottava-engraver.cc:123-136
+    ///   process_music — any ottava event ends the open bracket, a non-zero one starts the next.
+    /// </summary>
+    [Fact]
+    public void Ottavas_AreWrittenBeforeTheirNotes()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score(
+            "c,4@ottava d,4 e,4 f,4@!ottava | c,4@ottava(bassa) d,4 e,4@!ottava f,4 | "
+            + "c,4@quindicesima d,4@quindicesima(bassa) e,4@!quindicesima f,4"));
+        Assert.Contains("\\ottava #1 c,4", ly);
+        Assert.Contains("\\ottava #0 f,4", ly);
+        Assert.Contains("\\ottava #-1 c,4", ly);
+        Assert.Contains("\\ottava #0 e,4", ly);
+        Assert.Contains("\\ottava #2 c,4", ly);
+        Assert.Contains("\\ottava #-2 d,4", ly);
+        Assert.Equal(3, Occurrences(ly, "\\ottava #0"));
+        Assert.DoesNotContain(warnings, w => w.Contains("ottava") || w.Contains("quindicesima"));
+    }
+
+    /// <summary>
+    /// <c>@breath</c> and <c>@caesura</c> are LilyPond's <c>\breathe</c> / <c>\caesura</c>:
+    /// standalone music AFTER the note, not post-events — and after every post-event the
+    /// note carries, so a tie written after <c>@breath</c> still ties.
+    /// LILYPOND-REF: ly/music-functions-init.ly:421-424 breathe = define-music-function
+    ///   → make-music 'BreathingEvent; :432-435 caesura, the same define-music-function shape.
+    /// </summary>
+    [Fact]
+    public void BreathingSigns_FollowTheirNote()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score("c,4@breath~ c,4 d,4@caesura e,2"));
+        Assert.Contains("c,4 ~ \\breathe c,4", ly);
+        Assert.Contains("d,4 \\caesura e,2", ly);
+        Assert.DoesNotContain("-\\breathe", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("breath") || w.Contains("caesura"));
+    }
+
+    /// <summary>
+    /// The remaining scripts the page draws from LilyPond's own glyphs: <c>@doit</c> is the
+    /// rising <c>\bendAfter</c>, <c>@reverseturn</c> / <c>@pralltriller</c> / <c>@snappizz</c>
+    /// the scripts of the same glyph names (reverseturn, prallprall, snappizzicato) with
+    /// the neutral <c>-</c> an unforced side takes. All four were "not mapped, dropped".
+    /// LILYPOND-REF: ly/music-functions-init.ly:357-361 bendAfter = define-event-function;
+    ///   scm/script.scm:300-302 default-script-alist prallprall, :316-318 reverseturn,
+    ///   :379-381 snappizzicato.
+    /// </summary>
+    [Fact]
+    public void RemainingScripts_AreWrittenByTheirGlyphNames()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score("c,4@doit d,4@reverseturn e,4@pralltriller f,4@snappizz"));
+        Assert.Contains("c,4\\bendAfter #+4", ly);
+        Assert.Contains("d,4-\\reverseturn", ly);
+        Assert.Contains("e,4-\\prallprall", ly);
+        Assert.Contains("f,4-\\snappizzicato", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("not mapped"));
+    }
+
+    /// <summary>
+    /// <c>@courtesy</c> is LilyPond's <c>?</c> on the pitch (a parenthesized accidental, forced
+    /// when the rules would print none) and <c>@editorial</c> is <c>!</c> (forced) under
+    /// <c>suggestAccidentals</c> set for that one timestep — the AccidentalSuggestion above
+    /// the head. A chord member's <c>@courtesy</c> is spelt on its own pitch.
+    /// LILYPOND-REF: lily/parser.yy:3767-3770 set_property — `?` sets cautionary and
+    ///   force-accidental, `!` force-accidental; lily/accidental-engraver.cc:262-267
+    ///   create_accidental — suggestAccidentals picks make_suggested_accidental.
+    /// </summary>
+    [Fact]
+    public void AccidentalAnnotations_AreSpeltOnThePitch()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score(
+            "cis,4@courtesy d,4@courtesy e,4@editorial fis,4@editorial | <cis,@courtesy e, g,>4 c,2."));
+        Assert.Contains("cis,?4", ly);
+        Assert.Contains("d,?4", ly);
+        Assert.Contains("\\once \\set suggestAccidentals = ##t e,!4", ly);
+        Assert.Contains("\\once \\set suggestAccidentals = ##t fis,!4", ly);
+        Assert.Contains("<cis,? e, g,>4", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("courtesy") || w.Contains("editorial"));
+    }
+
+    /// <summary>
+    /// <c>@text("dolce")</c> is a text script on its note, <c>-\markup { \italic "dolce" }</c>,
+    /// <c>.up</c> as <c>^</c> — a TextScriptEvent and NOT a dynamic: on the page a hairpin runs
+    /// through it to the real closing dynamic, and LilyPond's Dynamic_engraver does not listen
+    /// to text scripts, where the dynamic spelling would end the hairpin on the word. All four
+    /// in test/text-annotation.lys were "dropped (out of scope)". A <c>@text</c> with no quoted
+    /// string draws nothing on the page and stays dropped, with its warning.
+    /// LILYPOND-REF: lily/parser.yy:3435-3440 gen_text_def — full_markup → TextScriptEvent;
+    ///   scm/define-grobs.scm:3800-3807 TextScript — direction DOWN, outside-staff-priority 450.
+    /// </summary>
+    [Fact]
+    public void FreeText_IsATextScriptOnItsNote()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score(
+            "c,4@text(\"dolce\") d,4@p@cresc e,4@text(\"poco\") f,4@f | g,4@text(\"sub.\").up a,4@text(\"molto\").down b,4@text() c,4"));
+        Assert.Contains("c,4-\\markup { \\italic \"dolce\" }", ly);
+        Assert.Contains("e,4-\\markup { \\italic \"poco\" }", ly);
+        Assert.Contains("g,4^\\markup { \\italic \"sub.\" }", ly);
+        Assert.Contains("a,4_\\markup { \\italic \"molto\" }", ly);
+        Assert.Equal(4, Occurrences(ly, "\\markup { \\italic"));
+        Assert.Equal(1, Occurrences(ly, "\\<"));
+        Assert.Contains("f,4\\f", ly);
+        Assert.Contains(warnings, w => w == "@text dropped (out of scope)");
+        Assert.Equal(1, warnings.Count(w => w.Contains("@text")));
+    }
+
+    /// <summary>
+    /// <c>@pluck(p|i|m|a)</c> is <c>\rightHandFinger #1..#4</c> on its note — the digit indexes
+    /// LilyPond's own digit-names, so the twin prints the page's letter — and a plucking
+    /// part's notation staff <c>\set strokeFingerOrientations = #'(down)</c>, because
+    /// LilyPond's default <c>'(right)</c> is beside the head, a side the page never draws.
+    /// The tab staff gets no <c>\set</c> (LilyPond's TabVoice makes no StrokeFinger at all),
+    /// and a part that never plucks gets none. All four in test/tab-technique-letters.lys
+    /// were "dropped (out of scope)".
+    /// LILYPOND-REF: ly/music-functions-init.ly:2154-2161 rightHandFinger = define-event-function;
+    ///   scm/define-grobs.scm:3544-3568 StrokeFinger (stroke-finger-interface) digit-names.
+    /// LILYPOND-REF: ly/engraver-init.ly, the Staff context (line 909) — strokeFingerOrientations
+    ///   = #'(right), the default.
+    /// LILYPOND-REF: ly/engraver-init.ly:1172-1182 TabVoice — \remove New_fingering_engraver.
+    /// </summary>
+    [Fact]
+    public void RightHandFingers_AreStrokeFingersBelowTheirNotes()
+    {
+        var (ly, warnings) = ExportWithWarnings(Score(
+            "e,4@pluck(p) a,4@pluck(i) b,4@pluck(m) e4@pluck(a)", render: "staff bassline\n  tab bassline"));
+        Assert.Contains("e,4\\rightHandFinger #1", ly);
+        Assert.Contains("a,4\\rightHandFinger #2", ly);
+        Assert.Contains("b,4\\rightHandFinger #3", ly);
+        Assert.Contains("e4\\rightHandFinger #4", ly);
+        Assert.Equal(1, Occurrences(ly, "\\set Staff.strokeFingerOrientations = #'(down)"));
+        Assert.Contains("\\new Staff { \\clef \"bass\" \\set Staff.strokeFingerOrientations = #'(down) \\", ly);
+        Assert.Contains("\\new TabStaff", ly);
+        Assert.DoesNotContain(warnings, w => w.Contains("@pluck"));
+        Assert.DoesNotContain("strokeFingerOrientations", Export(Score("e,4 a,4 b,4 e4")));
+    }
+
+    /// <summary>
     /// The clef name reaches LilyPond as ONE string, which is the whole of why it is quoted.
     /// </summary>
     /// <remarks>

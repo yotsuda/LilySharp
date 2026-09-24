@@ -171,6 +171,9 @@ public sealed class LilyPondExporter
     // EmitMusicStream's clock for the `| |` rule — has music sounded since the last bar line?
     // A field rather than a local so EmitTime can read it when `time none` arrives.
     private bool _timeSinceBoundary;
+    // Standalone music a note leaves for AFTER its sibling post-events — `\breathe`,
+    // `\caesura` (SplitAttachments) — written by EmitMusicStream before the next event.
+    private readonly StringBuilder _trailingMusic = new();
     // The pickup in force — a `partial` read and not yet closed by a bar — for the one
     // reader that needs it here: the spacer an empty `| |` bar stands for
     // (EmitMusicStream). MeasureBuilder._partialRestore's twin, spent the way
@@ -256,6 +259,35 @@ public sealed class LilyPondExporter
     /// (6 + 10 against 4 + 12, at the same system count).
     /// </remarks>
     private readonly HashSet<string> _stringNumberParts = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The parts that write a right-hand finger (<c>@pluck(p|i|m|a)</c>), whose staves must
+    /// <c>\set strokeFingerOrientations = #'(down)</c>: LilyPond's default puts the letter to
+    /// the RIGHT of the head, a side the page never draws. The page's own side is the
+    /// stem-opposite one, like a Script's (ArticulationEngraver: <c>forceAbove || !stemUp</c>
+    /// over the collector's initial below), which no orientation list can say — <c>'(down)</c>
+    /// is the collector's initial and the low-note half of what the page draws; the twin's
+    /// letter over a stem-down note sits below where the page's sits above (self-acknowledged,
+    /// measured on test/tab-technique-letters: b and e' take m and a above on the page).
+    /// Written only for a part that plucks at all, so every other twin is unchanged — the
+    /// same shape as <see cref="_pedalParts"/>.
+    /// LILYPOND-REF: ly/engraver-init.ly, the Staff context (line 909) — strokeFingerOrientations
+    ///   = #'(right), the default.
+    /// LILYPOND-REF: lily/new-fingering-engraver.cc:372-375 position_scripts — the orientations
+    ///   list read for the StrokeFinger grobs.
+    /// </summary>
+    private readonly HashSet<string> _strokeFingerParts = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The parts that use a piano pedal, each with the <c>pedalSustainStyle</c> its staff
+    /// must be given — LilyPond's default is <c>'text</c> ("Ped. *") where Lily#'s
+    /// <see cref="Svg.Model.PedalStyle"/> defaults to Bracket, so a twin that says nothing
+    /// draws different pedal music. Written only for a part that pedals at all, so every
+    /// other twin is unchanged.
+    /// LILYPOND-REF: ly/engraver-init.ly, the Staff context (line 895) — pedalSustainStyle =
+    ///   #'text; lily/piano-pedal-engraver.cc — the style read per pedal type.
+    /// </summary>
+    private readonly Dictionary<string, string> _pedalParts = new(StringComparer.Ordinal);
 
     /// <summary>Whether the twin currently has <c>\improvisationOn</c> open — the
     /// LilyPond spelling of a slash-note run. Opened by the first slash, closed
@@ -493,6 +525,15 @@ public sealed class LilyPondExporter
                 }
                 if (HasStringNumbers(music))
                     _stringNumberParts.Add(name);
+                if (HasStrokeFingers(music))
+                    _strokeFingerParts.Add(name);
+                if (HasPedalMarks(music))
+                    _pedalParts[name] = (part != null ? PartProperty(part, "pedal") : null)?.ToLowerInvariant() switch
+                    {
+                        "text" => "text",
+                        "mixed" => "mixed",
+                        _ => "bracket",   // Staff.ParsePedalStyle's default
+                    };
                 _drumMode = _drumParts.Contains(name);
                 _partTranspose = EffectiveTranspose(root, name, render);
                 EmitPartVariable(varName, music, root);
@@ -1136,6 +1177,60 @@ public sealed class LilyPondExporter
                     return true;
         return false;
     }
+
+    /// <summary>Whether the part's music writes any right-hand finger (<see cref="StrokeFinger"/>).</summary>
+    private static bool HasStrokeFingers(List<SyntaxNode> music)
+    {
+        foreach (var item in music)
+            foreach (var n in item.DescendantNodes().Prepend(item))
+                if (n is MusicMarkSyntax mk && StrokeFinger(mk) != null)
+                    return true;
+        return false;
+    }
+
+    /// <summary>Whether the part's music writes any piano pedal (<see cref="PedalPostEvent"/>).</summary>
+    private static bool HasPedalMarks(List<SyntaxNode> music)
+    {
+        foreach (var item in music)
+            foreach (var n in item.DescendantNodes().Prepend(item))
+            {
+                // A START is a bare word (an articulation), a terminator a MusicMarkSyntax.
+                if (n is MusicMarkSyntax mk && PedalPostEvent(mk) != null)
+                    return true;
+                if (n is ArticulationSyntax art
+                    && art.NameToken.Text.ToLowerInvariant() is "sustain" or "sostenuto" or "unacorda" or "trecorde")
+                    return true;
+            }
+        return false;
+    }
+
+    /// <summary>
+    /// The pedal-style <c>\set</c>s a pedalling part's staff opens with, or "" for a part that
+    /// never pedals. ALL THREE pedals take the part's one style: Lily#'s <c>pedal</c> property
+    /// is one value for sustain, sostenuto and una corda alike, where LilyPond defaults each
+    /// separately — sustain and una corda to <c>'text</c>, sostenuto to <c>'mixed</c>.
+    /// LILYPOND-REF: ly/engraver-init.ly, the Staff context — pedalSustainStyle (line 895),
+    ///   pedalUnaCordaStyle (897), pedalSostenutoStyle (904): the defaults.
+    /// </summary>
+    private string PedalStyleSet(string? partName)
+        => partName != null && _pedalParts.TryGetValue(partName, out var style)
+            ? "\\set Staff.pedalSustainStyle = #'" + style
+              + " \\set Staff.pedalSostenutoStyle = #'" + style
+              + " \\set Staff.pedalUnaCordaStyle = #'" + style + " "
+            : "";
+
+    /// <summary>
+    /// The <c>\set</c> a plucking part's notation staff opens with, or "" for a part that
+    /// never plucks (<see cref="_strokeFingerParts"/>). Not written on a TabStaff: LilyPond's
+    /// TabVoice removes New_fingering_engraver, so no StrokeFinger is ever made there
+    /// (measured on 2.26.0 — the tab of test/tab-technique-letters prints no letter) where
+    /// the page letters its tab too. Self-acknowledged.
+    /// LILYPOND-REF: ly/engraver-init.ly:1172-1182 TabVoice — \remove New_fingering_engraver.
+    /// </summary>
+    private string StrokeFingerSet(string? partName)
+        => partName != null && _strokeFingerParts.Contains(partName)
+            ? "\\set Staff.strokeFingerOrientations = #'(down) "
+            : "";
 
     private bool IsDrumPart(string partName, List<SyntaxNode> music)
     {
@@ -1866,6 +1961,15 @@ public sealed class LilyPondExporter
         {
             var item = items[i];
 
+            // Standalone music a note left behind (`\breathe`, see SplitAttachments) goes
+            // out once every post-event written as a SIBLING of that note — the tie, slur,
+            // beam marker, dynamic, string number — has been written, so `c4@breath~ c4`
+            // is `c4 ~ \breathe c4` and the tie is still attached.
+            if (_trailingMusic.Length > 0
+                && item is not (TieSyntax or SlurSyntax or BeamMarkerSyntax or DynamicSyntax
+                    or StringNumberAnnotationSyntax or ArticulationSyntax or MusicMarkSyntax))
+                FlushTrailingMusic(line, indent);
+
             if (item is { Green: SectionPlayGreen })
             {
                 // A section boundary: the next section's music opens a fresh scope, as the
@@ -1935,7 +2039,18 @@ public sealed class LilyPondExporter
 
             i++;
         }
+        FlushTrailingMusic(line, indent);
         FlushLine(line, indent);
+    }
+
+    /// <summary>Standalone music that trails the last note written (<see cref="_trailingMusic"/>),
+    /// written out and forgotten.</summary>
+    private void FlushTrailingMusic(StringBuilder line, string indent)
+    {
+        if (_trailingMusic.Length == 0)
+            return;
+        AppendToken(line, _trailingMusic.ToString(), indent);
+        _trailingMusic.Clear();
     }
 
     /// <summary>
@@ -2190,7 +2305,7 @@ public sealed class LilyPondExporter
         TieSyntax => "~",
         SlurSyntax s => s.IsOpen ? "(" : ")",
         BeamMarkerSyntax bm => bm.IsStart ? "[" : "]",
-        DynamicSyntax d => "\\" + d.DynamicToken.Text,
+        DynamicSyntax d => EmitDynamic(d),
         KeySignatureSyntax k => EmitKey(k),
         TimeSignatureSyntax ts => EmitTime(ts),
         TempoDeclarationSyntax t => EmitTempo(t),
@@ -2281,7 +2396,9 @@ public sealed class LilyPondExporter
     {
         var (prefix, suffix) = SplitAttachments(n.Articulations);
         string trem = n.Tremolo is { } t ? t.Text : "";
-        return prefix + EmitMusicPitch(n.Pitch) + EmitEventDuration(n.Duration) + trem + suffix;
+        // `cis?4` / `cis!4`: the accidental marks stand between the pitch and the duration.
+        return prefix + EmitMusicPitch(n.Pitch) + AccidentalMarks(n.Articulations)
+            + EmitEventDuration(n.Duration) + trem + suffix;
     }
 
     /// <summary>
@@ -2699,6 +2816,15 @@ public sealed class LilyPondExporter
             // is visible the way the last one was.
             // LILYPOND-REF: lily/parser.yy:3165-3166 chord_body_element — a chord member takes
             //   post-events (`<g-1 b-3 d'-5>`), the same spelling as a note's.
+            // `<f? a>`: a member's @courtesy is spelt on its pitch, before the post-events.
+            // (The page gives a MEMBER no @editorial — ItemFactory reads only the courtesy —
+            // so a member's @editorial is left to the warning below, as before.)
+            foreach (var art in p.Articulations)
+                if (art is ArticulationSyntax ca && AccidentalMark(ca) == '?')
+                {
+                    sb.Append('?');
+                    break;
+                }
             foreach (var art in p.Articulations)
                 switch (art)
                 {
@@ -2710,6 +2836,8 @@ public sealed class LilyPondExporter
                             sb.Append('-');
                         sb.Append(ev);
                         break;
+                    case ArticulationSyntax ca when AccidentalMark(ca) == '?':
+                        break; // written on the pitch above
                     case MusicMarkSyntax mk when Fingering(mk) is { } fg:
                         sb.Append(fg);
                         break;
@@ -2877,9 +3005,76 @@ public sealed class LilyPondExporter
                     when Semantics.AnnotationValues.IsPhrasingSlurName(pe.Name):
                     suffix.Append("\\)");
                     break;
+                // A pedal is a SPAN EVENT on its note — a post-event, so it trails the note
+                // as \sustainOn does. Until 2026-09-23 every pedal was "dropped (out of
+                // scope)" and the twin of a piano book had no pedal line at all.
+                case MusicMarkSyntax mk when PedalPostEvent(mk) is { } pedal:
+                    suffix.Append(pedal);
+                    break;
+                // Free expressive text (`@text("dolce")`) is a TEXT SCRIPT on its note — a
+                // post-event, so it trails the note, the written side as the event's direction
+                // and the neutral `-` otherwise (TextScript's own default is DOWN, the page's
+                // too). Until 2026-09-23 every one was "dropped (out of scope)"; see FreeText
+                // for why it is not written as a dynamic.
+                case MusicMarkSyntax mk when FreeText(mk) is { } freeText:
+                    suffix.Append(freeText);
+                    break;
+                // A right-hand finger (`@pluck(p)`) is LilyPond's \rightHandFinger, an event
+                // function that makes a post-event, so it trails the note; the side is the
+                // staff's strokeFingerOrientations (StrokeFingerSet), not a sign on the event.
+                case MusicMarkSyntax mk when StrokeFinger(mk) is { } strokeFinger:
+                    suffix.Append(strokeFinger);
+                    break;
+                // The text spanner: the word it prints is a property of the grob, written
+                // BEFORE the note that opens it, and the span events trail their notes.
+                case MusicMarkSyntax mk when TextSpanEvents(mk) is { } ts:
+                    if (ts.Prefix is { } tsPrefix) prefix.Append(tsPrefix).Append(' ');
+                    suffix.Append(ts.Suffix);
+                    break;
+                // An ottava is standalone music BEFORE the note it starts (or stops) on — the
+                // argument forms (`@ottava(bassa)`) and the terminator (`@!ottava`) here, the
+                // bare word (`@ottava`) three cases down. Until 2026-09-23 all of them were
+                // "dropped (out of scope)" and the twin drew every 8va at written pitch.
+                case MusicMarkSyntax mk when OttavaCommand(mk.MarkName, mk.IsSpanEnd) is { } ott:
+                    prefix.Append(ott).Append(' ');
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');
+                    break;
+                // The same spanner opened by a WORD (`@rit`, `@accel`, `@rall`, a bare
+                // `@textSpan`), which the parser hands over as an articulation.
+                case ArticulationSyntax art when TextSpanEvents(art.NameToken.Text) is { } tsw:
+                    if (tsw.Prefix is { } tswPrefix) prefix.Append(tswPrefix).Append(' ');
+                    suffix.Append(tsw.Suffix);
+                    break;
+                case ArticulationSyntax art when OttavaCommand(art.NameToken.Text, spanEnd: false) is { } ottw:
+                    prefix.Append(ottw).Append(' ');
+                    break;
+                // `@breath` / `@caesura`: NOT post-events. LilyPond's \breathe and \caesura
+                // are music functions standing in the stream after the note (the syntax
+                // scm/define-music-types.scm gives is `note \breathe`), so they trail
+                // everything attached to the note — the suffix AND the post-events the parser
+                // hands over as the note's siblings (`~`, `(`, `[`), which is why they are
+                // held back for EmitMusicStream (_trailingMusic) rather than appended here.
+                // LILYPOND-REF: ly/music-functions-init.ly:421-424 breathe = define-music-function
+                //   → make-music 'BreathingEvent; :432-435 caesura, the same define-music-function
+                //   shape → make-music 'CaesuraEvent.
+                // LILYPOND-REF: scm/define-music-types.scm BreathingEvent (lines 145-150) — types
+                //   (event breathing-event), no post-event: it cannot be written `c4-\breathe`.
+                case ArticulationSyntax art when BreathingSign(art) is { } sign:
+                    if (_trailingMusic.Length > 0) _trailingMusic.Append(' ');
+                    _trailingMusic.Append(sign);
+                    break;
+                // `@courtesy` / `@editorial` are spelt ON THE PITCH (`cis?4`, `cis!4`) — see
+                // AccidentalMarks, read by the note and chord-member emitters — so nothing is
+                // written here for the courtesy, and the editorial's suggestion switch is set
+                // before the note. `\once` is one timestep, which is the note's.
+                // LILYPOND-REF: lily/accidental-engraver.cc:262-267 create_accidental — with
+                //   suggestAccidentals true the accidental is make_suggested_accidental, an
+                //   AccidentalSuggestion above the head instead of an Accidental at its left.
+                case ArticulationSyntax art when AccidentalMark(art) is { } acc:
+                    if (acc == '!') prefix.Append("\\once \\set suggestAccidentals = ##t ");
                     break;
                 case ArticulationSyntax art when IsDeadNote(art):
                     prefix.Append("\\deadNote ");
@@ -2906,6 +3101,86 @@ public sealed class LilyPondExporter
 
     private static bool IsDeadNote(ArticulationSyntax a)
         => a.NameToken.Text.Equals("dead", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// An ottava annotation as LilyPond's <c>\ottava #n</c>, or null for any other name:
+    /// <c>@ottava</c> → <c>#1</c>, <c>@ottava(bassa)</c> → <c>#-1</c>, <c>@quindicesima</c>
+    /// → <c>#2</c>, its bassa → <c>#-2</c>, and any terminator of the family
+    /// (<c>@!ottava</c>, <c>@!quindicesima</c>) → <c>#0</c>. The names are read by the same
+    /// table the page reads (<see cref="Svg.Model.MusicMarkItem.ParseMarkName"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/music-functions-init.ly:1342-1349 ottava = define-music-function
+    ///   (octave) → make-music 'OttavaEvent 'ottava-number octave — positive n is n octaves
+    ///   up, negative down, 0 no octavation; standalone music, written BEFORE the note.
+    /// LILYPOND-REF: lily/ottava-engraver.cc:81-88 listen_ottava — middleCOffset = −7 × n,
+    ///   the display transposition Lily# applies in OttavaTransposer; :123-136 process_music
+    ///   — ANY ottava event finishes the open bracket, and a non-zero one starts the next,
+    ///   which is the pairing OttavaBracketEngraver.PairOttavaBrackets ports.
+    /// ⚠️ WHERE THE BRACKET ENDS is one column apart: Lily#'s bracket runs to the END OF THE
+    /// MEASURE before the terminator's (OttavaBracketEngraver.BracketFrom, whole measures);
+    /// LilyPond's ends at the last note column before <c>\ottava #0</c>. Same notes under
+    /// the bracket in both; the twin's hook sits at that note where the page's sits at the
+    /// bar line.
+    /// </remarks>
+    private static string? OttavaCommand(string name, bool spanEnd)
+        => Svg.Model.MusicMarkItem.ParseMarkName(name) switch
+        {
+            Svg.Model.MusicMarkType.OttavaUp => spanEnd ? "\\ottava #0" : "\\ottava #1",
+            Svg.Model.MusicMarkType.OttavaDown => spanEnd ? "\\ottava #0" : "\\ottava #-1",
+            Svg.Model.MusicMarkType.QuindicesUp => spanEnd ? "\\ottava #0" : "\\ottava #2",
+            Svg.Model.MusicMarkType.QuindicesDown => spanEnd ? "\\ottava #0" : "\\ottava #-2",
+            _ => null,
+        };
+
+    /// <summary><c>@breath</c> → <c>\breathe</c>, <c>@caesura</c> → <c>\caesura</c>, else
+    /// null. Standalone music after the note; see the SplitAttachments case.</summary>
+    private static string? BreathingSign(ArticulationSyntax a)
+        => a.Type switch
+        {
+            ArticulationType.Breath => "\\breathe",
+            ArticulationType.Caesura => "\\caesura",
+            _ => null,
+        };
+
+    /// <summary>
+    /// The character LilyPond writes after the pitch for <c>@courtesy</c> (<c>?</c>) or
+    /// <c>@editorial</c> (<c>!</c>), or null for any other articulation.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/parser.yy:3718 pitch_or_music — `pitch exclamations questions …`;
+    ///   :3767-3770 set_property — `?` sets cautionary AND force-accidental, `!` only the latter.
+    /// LILYPOND-REF: lily/accidental-engraver.cc:233-236 process_acknowledged — a forced
+    ///   accidental is printed when the rules would not print one, which is Lily#'s own rule
+    ///   for both annotations (MeasureCollector.ItemFactory: KeySignatureAccidentalName when
+    ///   nothing would print);
+    ///   :293-296 make_standard_accidental — cautionary makes an AccidentalCautionary, the
+    ///   parenthesized one the page draws for @courtesy.
+    /// The `!` alone prints nothing new: with suggestAccidentals set before the note (the
+    /// SplitAttachments case) the forced accidental is the SUGGESTION above the head.
+    /// </remarks>
+    private static char? AccidentalMark(ArticulationSyntax a)
+        => a.Type == ArticulationType.None
+            ? a.NameToken.Text.ToLowerInvariant() switch
+            {
+                "courtesy" => '?',
+                "editorial" => '!',
+                _ => null,
+            }
+            : null;
+
+    /// <summary>Every accidental mark among <paramref name="arts"/>, in LilyPond's order
+    /// (<c>!</c> before <c>?</c>), as the string that follows the pitch.</summary>
+    private static string AccidentalMarks(IEnumerable<SyntaxNode> arts)
+    {
+        bool forced = false, cautionary = false;
+        foreach (var a in arts)
+            if (a is ArticulationSyntax art && AccidentalMark(art) is { } c)
+            {
+                if (c == '!') forced = true; else cautionary = true;
+            }
+        return (forced ? "!" : "") + (cautionary ? "?" : "");
+    }
 
     // One house for the spelling (Semantics.PitchedRest), because there are four readers of
     // it and two of them did not have one: MusicXML exported a sounding note and MIDI played
@@ -3180,13 +3455,151 @@ public sealed class LilyPondExporter
             ? "-" + finger.ToString(System.Globalization.CultureInfo.InvariantCulture)
             : null;
 
+    /// <summary>
+    /// A pedal annotation as LilyPond's span event, or null for any other mark:
+    /// <c>@sustain</c> / <c>@!sustain</c> → <c>\sustainOn</c> / <c>\sustainOff</c>, the
+    /// sostenuto pair likewise, <c>@unaCorda</c> → <c>\unaCorda</c> and its release —
+    /// <c>@!unaCorda</c> or the word <c>@treCorde</c> — <c>\treCorde</c>. The names are
+    /// read by the same table the page reads (<see cref="Svg.Model.MusicMarkItem.ParseMarkName"/>),
+    /// so a spelling the page accepts is one the twin writes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/spanners-init.ly:94-101 make-span-event 'SustainEvent / 'UnaCordaEvent /
+    ///   'SostenutoEvent START|STOP — sustainOn / sustainOff, unaCorda / treCorde,
+    ///   sostenutoOn / sostenutoOff, each a post-event on the note.
+    /// </remarks>
+    private static string? PedalPostEvent(MusicMarkSyntax mk)
+    {
+        var type = Svg.Model.MusicMarkItem.ParseMarkName(mk.Name);
+        bool end = mk.IsSpanEnd;
+        return type switch
+        {
+            Svg.Model.MusicMarkType.SustainOn => end ? "\\sustainOff" : "\\sustainOn",
+            Svg.Model.MusicMarkType.SostenutoOn => end ? "\\sostenutoOff" : "\\sostenutoOn",
+            Svg.Model.MusicMarkType.UnaCordaOn => end ? "\\treCorde" : "\\unaCorda",
+            Svg.Model.MusicMarkType.UnaCordaOff => "\\treCorde",
+            _ => null,
+        };
+    }
+
+    /// <summary>
+    /// <c>@text("dolce")</c> as LilyPond's text script on the note —
+    /// <c>-\markup { \italic "dolce" }</c>, <c>^</c> for <c>.up</c>, <c>_</c> for
+    /// <c>.down</c> — or null for any other mark, and for a <c>@text</c> that wrote no
+    /// quoted string (the page draws nothing for those either, and they keep their warning).
+    /// The string is the one the page reads (<see cref="Semantics.AnnotationValues.Text"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A TEXT SCRIPT, NOT A DYNAMIC. The page hangs this on the DynamicText line but it is
+    /// not a dynamic level: a hairpin runs THROUGH it to the real closing dynamic
+    /// (HairpinEngraver skips <see cref="Svg.Model.DynamicItem.IsExpressiveText"/>). LilyPond's
+    /// dynamic spelling for a word — <c>#(make-dynamic-script (markup …))</c>, an
+    /// AbsoluteDynamicEvent — would END the hairpin on the word: a twin that compiles and is
+    /// different music. The TextScriptEvent is what Dynamic_engraver does not listen to, so
+    /// the hairpin reaches the same dynamic in both engines (measured on 2.26.0: the
+    /// fixture's m2 hairpin runs from 1 to the 7/4 column, the <c>\f</c>, past "poco" at 5/4).
+    /// The braces make the markup's end unambiguous whatever post-event follows.
+    /// <para>
+    /// Self-acknowledged difference that remains: LilyPond places a TextScript by
+    /// side-position against the staff (padding 0.3, staff-padding 0.5, outside-staff-priority
+    /// 450) where the page rides the dynamic line's placement; both print plain italic.
+    /// </para>
+    /// LILYPOND-REF: lily/parser.yy:3435-3440 gen_text_def — a full_markup becomes a
+    ///   TextScriptEvent carrying <c>text</c>; :3269-3278 post_event_nofinger — script_dir
+    ///   direction_reqd_event, the written <c>^</c>/<c>_</c> set as the event's direction.
+    /// LILYPOND-REF: scm/define-grobs.scm:3800-3807 TextScript outside-staff-priority 450, direction
+    ///   DOWN (the page's default side for @text).
+    /// LILYPOND-REF: scm/define-markup-commands.scm:4237-4251 define-markup-command (italic …)
+    ///   — font-shape italic, the face the page draws (DynamicEngraver.LabelStyle, expressive).
+    /// </remarks>
+    private static string? FreeText(MusicMarkSyntax mk)
+        => Semantics.AnnotationValues.Text(mk) is { } text
+            ? (mk.ForcedAbove switch { true => "^", false => "_", null => "-" })
+              + "\\markup { \\italic \"" + Escape(text) + "\" }"
+            : null;
+
+    /// <summary>
+    /// <c>@pluck(p|i|m|a)</c> as LilyPond's right-hand fingering <c>\rightHandFinger #1..#4</c>,
+    /// or null for any other mark. The letter is the one the page reads
+    /// (<see cref="Semantics.AnnotationValues.Pluck"/>); the digit is LilyPond's index into the
+    /// StrokeFinger grob's own <c>digit-names</c> ("p" "i" "m" "a" "x"), so the twin prints the
+    /// letter the page prints. Until 2026-09-23 every one was "dropped (out of scope)".
+    /// </summary>
+    /// <remarks>
+    /// The SIDE is not on the event: LilyPond positions stroke fingers by the staff's
+    /// <c>strokeFingerOrientations</c>, which <see cref="StrokeFingerSet"/> sets to <c>'(down)</c>
+    /// for a plucking part (the default <c>'(right)</c> is beside the head, which the page never
+    /// draws; the page's stem-opposite side is written there). Self-acknowledged difference
+    /// that remains: LilyPond's StrokeFinger is italic at font-size -4, the page's letter is
+    /// its own TabTechnique face and em.
+    /// LILYPOND-REF: ly/music-functions-init.ly:2154-2161 rightHandFinger = define-event-function
+    ///   (finger) → make-music 'StrokeFingerEvent 'stroke-finger-digit, a post-event.
+    /// LILYPOND-REF: scm/define-grobs.scm:3544-3568 StrokeFinger (stroke-finger-interface) —
+    ///   digit-names #("p" "i" "m" "a" "x"), font-shape italic, font-size -4.
+    /// LILYPOND-REF: scm/output-lib.scm:1440-1448 stroke-finger::calc-text — the event's stroke-finger-digit
+    ///   indexes digit-names (a stroke-finger-text wins when given).
+    /// </remarks>
+    private static string? StrokeFinger(MusicMarkSyntax mk)
+        => Semantics.AnnotationValues.Pluck(mk) switch
+        {
+            "p" => "\\rightHandFinger #1",
+            "i" => "\\rightHandFinger #2",
+            "m" => "\\rightHandFinger #3",
+            "a" => "\\rightHandFinger #4",
+            _ => null,
+        };
+
+    /// <summary>
+    /// A text-spanner annotation as LilyPond writes one, or null for any other mark. The
+    /// START (<c>@rit</c>, <c>@accel</c>, <c>@rall</c>, <c>@textSpan("…")</c>, bare
+    /// <c>@textSpan</c>) is <c>\startTextSpan</c> on the note, preceded — when the spanner
+    /// prints a word — by a <c>\once \override</c> of the grob's left bound text, which is
+    /// what LilyPond's own <c>\startTextSpan</c> leaves for the writer to set; the
+    /// terminator (<c>@!rit</c>, <c>@!textSpan</c>, …) is <c>\stopTextSpan</c>. The word is
+    /// the page's own (<see cref="Semantics.AnnotationValues.TextSpan"/> for the argument,
+    /// <see cref="Svg.Model.MusicMarkItem.TextSpanSugarText"/> for the three sugar words).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/spanners-init.ly:44-45 startTextSpan / stopTextSpan = make-span-event
+    ///   'TextSpanEvent START / STOP;
+    /// LILYPOND-REF: scm/define-grobs.scm TextSpanner — bound-details.left.text is the
+    ///   printed word and font-shape is italic, which is the face the page draws, so the
+    ///   word goes in as a plain string (no \upright).
+    /// ⚠️ <c>\once</c> is sound for a spanner: a grob copies the context's property alist
+    ///   when it is created, and Text_spanner_engraver creates the TextSpanner at the
+    ///   start note's own timestep (lily/text-spanner-engraver.cc process_music), the one
+    ///   timestep the \once covers.
+    /// </remarks>
+    private static (string? Prefix, string Suffix)? TextSpanEvents(MusicMarkSyntax mk)
+    {
+        if (Svg.Model.MusicMarkItem.ParseMarkName(mk.Name) != Svg.Model.MusicMarkType.TextSpanStart)
+            return null;
+        if (mk.IsSpanEnd)
+            return (null, "\\stopTextSpan");
+        return TextSpanStart(Semantics.AnnotationValues.TextSpan(mk)
+            ?? Svg.Model.MusicMarkItem.TextSpanSugarText(mk.Name));
+    }
+
+    /// <summary>The START by its bare word — an articulation's name — or null when the word
+    /// opens no text spanner.</summary>
+    private static (string? Prefix, string Suffix)? TextSpanEvents(string word)
+        => Svg.Model.MusicMarkItem.ParseMarkName(word) == Svg.Model.MusicMarkType.TextSpanStart
+            ? TextSpanStart(Svg.Model.MusicMarkItem.TextSpanSugarText(word))
+            : null;
+
+    private static (string? Prefix, string Suffix) TextSpanStart(string? printed)
+        => (printed is null
+                ? null
+                : "\\once \\override TextSpanner.bound-details.left.text = \"" + Escape(printed) + "\"",
+            "\\startTextSpan");
+
     private string EmitAttachment(SyntaxNode a) => a switch
     {
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text, // "\4" — LilyPond-valid
         TieSyntax => "~",
         SlurSyntax s => s.IsOpen ? "(" : ")",
         BeamMarkerSyntax bm => bm.IsStart ? "[" : "]",
-        DynamicSyntax d => "\\" + d.DynamicToken.Text,
+        DynamicSyntax d => EmitDynamic(d),
         ArticulationSyntax art => MapArticulation(art),
         MusicMarkSyntax mk => EmitMark(mk),
         _ => "",
@@ -3310,18 +3723,49 @@ public sealed class LilyPondExporter
         return "\\time " + beats + "/" + ts.BeatType;
     }
 
+    /// <summary>
+    /// <c>\tempo "Andante" 4 = 66</c> — the marking AND the metronome mark when the book
+    /// writes both; until 2026-09-23 a tempo with both lost its text in the twin (the
+    /// nocturne sample's "Andante espressivo").
+    /// LILYPOND-REF: ly/music-functions-init.ly tempo = define-music-function
+    ///   ((text) duration tempo) — <c>\tempo [text] [duration = count]</c>, either part optional.
+    /// </summary>
     private static string EmitTempo(TempoDeclarationSyntax t)
     {
+        string text = !string.IsNullOrEmpty(t.Marking) ? " \"" + Escape(t.Marking!) + "\"" : "";
         if (t.Bpm is int bpm)
         {
             int unit = t.BeatUnit is int u ? u : 4;
             string dots = new string('.', t.BeatDots);
-            return $"\\tempo {unit}{dots} = {bpm}";
+            return $"\\tempo{text} {unit}{dots} = {bpm}";
         }
-        if (!string.IsNullOrEmpty(t.Marking))
-            return "\\tempo \"" + Escape(t.Marking!) + "\"";
+        if (text.Length > 0)
+            return "\\tempo" + text;
         return "";
     }
+
+    /// <summary>
+    /// A dynamic as LilyPond spells it: the hairpin triggers are the WEDGE events
+    /// <c>\&lt;</c> / <c>\&gt;</c>, every level its own command. Until 2026-09-23 the twin
+    /// wrote <c>\cresc</c>, which in LilyPond is the TEXT spanner "cresc." with a dashed
+    /// line (span-type 'text), where <c>@cresc</c> draws a hairpin (HairpinEngraver) — the
+    /// twin printed different music and compiled without a word.
+    /// LILYPOND-REF: ly/declarations-init.ly:89-90 "\\&gt;" / "\\&lt;" = make-span-event
+    ///   'DecrescendoEvent / 'CrescendoEvent START;
+    /// LILYPOND-REF: ly/spanners-init.ly:56-60 endcresc = make-span-event STOP, and cresc /
+    ///   dim / decresc = make-music … 'span-type 'text.
+    /// ⚠️ No <c>\!</c> is synthesised: Lily#'s hairpin ends at the next dynamic or hairpin on
+    ///   its staff (HairpinEngraver.DetectHairpins) exactly as LilyPond's does, and where
+    ///   neither follows Lily# runs the wedge to the next bar (that engraver's own rule,
+    ///   declared there) while LilyPond warns "unterminated crescendo" and draws none —
+    ///   that book's twin is not the page, and the warning is LilyPond's to give.
+    /// </summary>
+    private static string EmitDynamic(DynamicSyntax d) => d.DynamicToken.Text switch
+    {
+        "cresc" => "\\<",
+        "decresc" or "dim" => "\\>",
+        var level => "\\" + level,
+    };
 
     private static string EmitPartial(PartialDeclarationSyntax p)
     {
@@ -3940,6 +4384,11 @@ public sealed class LilyPondExporter
         switch (a.NameToken.Text.ToLowerInvariant())
         {
             case "fall": return "\\bendAfter #-4"; // a fall/drop off the note
+            // The doit is the same event with the interval rising; ±4 is the page's own
+            // gesture size (ArticulationType.Doit / Fall draw one curve each way).
+            // LILYPOND-REF: ly/music-functions-init.ly:357-361 bendAfter = define-event-function
+            //   (delta) → make-music 'BendAfterEvent 'delta-step delta, a post-event.
+            case "doit": return "\\bendAfter #+4";
             case "dead": return "\\deadNote";      // normally intercepted as a prefix
             // ⚠️ NOT A SCRIPT, so it must answer here and never reach the `dir + glyph` tail
             // below: LilyPond's arpeggio is an EVENT on the chord (`<c e g>1\arpeggio`), and
@@ -3967,6 +4416,20 @@ public sealed class LilyPondExporter
             // LILYPOND-REF: ly/declarations-init.ly:103-104 laissezVibrer / repeatTie
             //   = #(make-music 'LaissezVibrerEvent / 'RepeatTieEvent)
             case "glissando": return "\\glissando";
+            // The pedals' STARTS. A start is one word with no argument, so it arrives here as
+            // an articulation while its terminator (`@!sustain`) is a MusicMarkSyntax that
+            // SplitAttachments answers through PedalPostEvent — the same table, both ends.
+            // Not scripts: no direction sign, so they answer here and never reach the tail.
+            // LILYPOND-REF: ly/spanners-init.ly:94-101 make-span-event — sustainOn, sostenutoOn,
+            //   unaCorda, treCorde are span events, post-events on the note.
+            case "sustain": return "\\sustainOn";
+            case "sostenuto": return "\\sostenutoOn";
+            case "unacorda": return "\\unaCorda";
+            case "trecorde": return "\\treCorde";
+            // A text spanner's START written as a word (`@rit`, a bare `@textSpan`): the span
+            // event; the word it prints is set before the note by SplitAttachments
+            // (TextSpanEvents), which catches these before they reach here.
+            case "rit" or "accel" or "rall" or "textspan": return "\\startTextSpan";
             // The phrasing slur's start; its end is a terminator (EmitMark). A forced side is
             // the event's direction, as for the half-ties below; unforced stays bare.
             // LILYPOND-REF: ly/declarations-init.ly:87-88 "\\(" / "\\)" = make-span-event
@@ -4022,6 +4485,20 @@ public sealed class LilyPondExporter
             ArticulationType.DownBow => "\\downbow",
             ArticulationType.Flageolet => "\\flageolet",
             ArticulationType.Portato => "\\portato",
+            // Three more true scripts (added 2026-09-23): the page draws each from the SAME
+            // Emmentaler glyph LilyPond's script table names, so the twin's word is the
+            // table's — `@reverseturn` is scripts.reverseturn, `@pralltriller` is
+            // scripts.prallprall (ArticulationItem: OrnPrallPrall), `@snappizz` is
+            // scripts.snappizzicato. Until then all three were "not mapped, dropped".
+            // LILYPOND-REF: ly/script-init.ly, lines 53, 55 and 60 — prallprall / reverseturn /
+            //   snappizzicato, each `name = #(make-articulation 'name)`, a post-event a
+            //   direction sign may precede.
+            // LILYPOND-REF: scm/script.scm:300-302 default-script-alist (prallprall …
+            //   script-stencil feta "prallprall"); :316-318 default-script-alist (reverseturn);
+            //   :379-381 default-script-alist (snappizzicato) — the glyph each script draws.
+            ArticulationType.InvertedTurn => "\\reverseturn",
+            ArticulationType.PrallTriller => "\\prallprall",
+            ArticulationType.SnapPizz => "\\snappizzicato",
             _ => "",
         };
         if (glyph.Length == 0)
@@ -5153,6 +5630,8 @@ public sealed class LilyPondExporter
         var part = parts.FirstOrDefault(p => p.Name.Text == names[0]);
         if (PartClefWord(part) is { } clef)
             sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
+        sb.Append(PedalStyleSet(names[0]));
+        sb.Append(StrokeFingerSet(names[0]));
         if (combined)
             sb.Append("\\partCombine \\").Append(vars[0]).Append(" \\").Append(vars[1]);
         else
@@ -5236,6 +5715,9 @@ public sealed class LilyPondExporter
             // 17 0 17 5 5 17 0 17 against the page's 5 3 5 3 3 5 3 5, because A2 written is
             // A1 sounding. The shift is asked of the same table the page uses, so the two
             // cannot drift.
+            // No StrokeFingerSet here: LilyPond's TabVoice removes New_fingering_engraver
+            // (ly/engraver-init.ly, TabVoice), so a tab staff prints no right-hand finger
+            // whatever the orientation says; the page letters its tab (self-acknowledged).
             AppendTabTranspose(sb, part, partName);
             sb.Append('\\').Append(varName).Append(" }\n");
         }
@@ -5266,6 +5748,8 @@ public sealed class LilyPondExporter
                 sb.Append(" \\with { ").Append(string.Join(" ", staffWith)).Append(" }");
             sb.Append(" { ");
             if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
+            sb.Append(PedalStyleSet(partName));
+            sb.Append(StrokeFingerSet(partName));
             sb.Append('\\').Append(varName).Append(" }\n");
         }
         return sb.ToString();

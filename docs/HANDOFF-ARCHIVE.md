@@ -129,6 +129,35 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第541セッションの経緯
+
+### 1.1 第541セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて。着手する島は任せる」→ 第536 の nocturne 双子で見えた exporter の穴を選んだ）。★ `-Start p541`（HEAD `f907c144`・full 8898 / 0 / 2 / 8900・`-Archive 539`）。
+
+★★★ **⑴ 双子の穴 4 つを閉じた（`LilyPondExporter`）**。双子は LP 照合の計器そのもので、穴は以後の全照合に効く: ⒜ **`tempo "Andante espressivo" 4 = 66` の文字が BPM があると落ちていた**（`EmitTempo`）→ `\tempo "…" 4 = 66`／⒝ **`@cresc`／`@decresc`／`@dim` を `\cresc` 等と書いていた＝LP では*文字*の spanner "cresc."（ly/spanners-init.ly:56-60 `'span-type 'text`）で、Lily# のヘアピンと違う音楽が黙って通っていた** → wedge event `\<`／`\>`（declarations-init.ly:89-90）。終端は Lily# も LP も次の dynamic／次のヘアピン。無終端は Lily# が次小節まで描き LP は warning で描かない＝双子はその本を表さない（自認）／⒞ **ペダルは全部「dropped (out of scope)」**＝piano 本の双子にペダル無し → `\sustainOn`／`\sustainOff`・`\sostenutoOn`／`Off`・`\unaCorda`／`\treCorde`（spanners-init.ly:94-101）。⚠️ **開始 `@sustain` は引数無しの一語＝`ArticulationSyntax`、終端 `@!sustain` は `MusicMarkSyntax`**＝1 回目は終端だけが出て LP が「cannot find start of piano pedal bracket」を 9 本吐いた（`MapArticulation` にも開始を足した）。**ペダルを使う part の staff にだけ `\set Staff.pedalSustainStyle/pedalSostenutoStyle/pedalUnaCordaStyle = #'<part の pedal 属性>`**（LP の既定は 'text／'mixed／'text＝engraver-init.ly:895-904、Lily# は 3 つとも bracket）／⒟ **text spanner（`@rit`／`@accel`／`@rall`／`@textSpan("…")`）も落ちていた** → `\once \override TextSpanner.bound-details.left.text = "rit."` を音符の前、`\startTextSpan`／`\stopTextSpan` を post-event に（word は page と同じ表 `TextSpanSugarText`／`AnnotationValues.TextSpan`・LP の TextSpanner は italic 既定＝page と同じ）。
+  **結果**: nocturne の双子が warning 0 で通り、LP のページに tempo 文字・ヘアピン 2 本・"rit." の点線・ペダルの括弧 8 本（Lab `sessions/p541/nocturne/lp.png`）。網 `LilyPondExporterTests` +4（tempo・wedge・pedal 3 style・text spanner 3 形）＝149 緑。Core（描画）は無変更＝hash 不要。
+  §7 7.5＝**Core '+' 190 行・LILYPOND-REF 9／LILYSHARP-OWN 0**。棚卸し: `APPROXIMATIONS.md` 行番号だけ（1 回目は注記の語が OWN に数えられた＝言い換えた）、`magic_constants.csv` 差分なし。commit `d1f52880`。`-End p541` OK・**full 8902 / 0 / 2 / 8904**（+4）。1〜2 回目は名指し無しの引用で赤（`.ly` の引用は 3 節のハイフン名か `_` 名が*同じ行*に要る＝`make-span-event` を行頭側へ）。
+  ⇒ **残る双子の穴（`lysc ly` の warning 一覧が出典）**: `@rit` 以外の articulation で "not mapped" が出るものは `MapArticulation` の表に無い＝次に双子を作る本で拾う。**教訓: 双子が「通る」ことと「同じ音楽」は別**（`\cresc` は 1 度も warning を出さなかった）。
+## 以下は第540セッションの経緯
+
+### 1.1 第540セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝⒳¹⁸ ⑵）。★ `-Start p540`（HEAD `d298f356`・full 8897 / 0 / 2 / 8899・`-Archive 538`）。
+
+★★ **⑴ ⒳¹⁸ ⑵（第 8 小節の下向き slur の制御点 0.11）＝欠陥ではなかった。閉じた**。LP の `debug-slur-scoring` は勝者 idx=0 TOTAL=0（両端の base そのもの）、Lily# の `ZZ540` 計器も同じ候補で ff 0.40（増幅なし）・**中心線の制御点 −3.295／−4.322＝LP の外側曲線 −3.3551／−4.3826 から 0.06 を引いた値と一致**。差に見えたのは **path の 1 本目の曲線が LP では常に*外側*、Lily# の `DrawBow` では常に *+Y 側*（上向き bow は外側・下向き bow は内側）**で、第537 が 1 本目同士を比べたため。2 本の対で比べると外側 3.3551/4.3826・内側 3.2359/4.2634 の両方が LP と exact。**ink（塗り）は同じ**＝出力差なし・直すなら path の点順だけで snapshot が全部動く＝触らない。網 `SlurOverTieTests` に 3 本目（両曲線の対で pin）。RULES §5.5 の第538 の項に「対で比べる」を追記。Core の変更なし（test のみ）。commit `886a00bf`。`-End p540` OK・**full 8898 / 0 / 2 / 8900**（+1）。1 回目は `Lookup::slur` の引用が名指し無しで赤（`_` の無い名前＝第537 と同じ罠・`dash_details` を添えた）。
+  ⇒ **⒳¹⁸ は全部閉じた**（⑴ 符頭の箱＝第538・第 1〜3 小節＝同・⑵＝読み違い）。nocturne rh fixture の 7 本の bow は全部 LP と exact。
+## 以下は第539セッションの経緯
+
+### 1.1 第539セッション（2026-09-23・YT-DELL2）
+
+同じ会話の続き（ユーザー「出力に基づいた発明ではなく LP のコードを字面で移植できた？」→ 字面でない 2 点を申告 → 「直して。timestep も追加できる？」）。★ `-Start p539`（HEAD `ab39c602`・full 8897 / 0 / 2 / 8899・`-Archive 537`）。
+
+★★ **⑴ avoid 点を LP の字面に**: `generate_avoid_offsets`（slur-scoring.cc:695-704）は 'inside grob の*広げる前の* `g->extent` の中心 X と dir 端を avoid に押すが、Lily# の `BuildAvoidOffsets` は scorer 用に広げた箱（thickness・付点は +0.2）を使っていた＝0.06〜0.26 ss 外。**`SlurExtraObject.AvoidTopY/AvoidBottomY`**（bare の extent）を足し、付点・連符番号・script・タイの 4 builder が埋める（NaN は旧読み＝直接の単体テスト用）。ついでに **phrasing slur の小 slur の 3 点（IsSlurPoint）を avoid から外した**＝LP の Slur 腕は midpoint だけ（:682-694・`_enclosedSlurMidpoints` が既にそれ）。
+  **観測者は無い**: hash 5,816 行 0 差・snapshot 247 緑・台帳緑、付点が山を決めそうな fixture 9 本（Lab `sessions/p539/fixture/`・`f1`〜`f9`）は**全部 LP と exact だが毒（広げた箱に戻す）でも同じ**＝勝つ候補は両端を上げて fit_factor ≤ 1 になる形ばかりで、差が効くのは「低い候補が勝つ」ときだけ。RULES §5.4 の「毒が緑」＝出力に届かない量として記録。
+★★ **⑵ timestep**: LP の門は engraver の timestep（slur-engraver.cc:295-327 `process_music` が stop → `end_slurs_`・start → `slurs_` を*acknowledge の前に*済ませ、:354-356 `stop_translation_timestep` が `objects_to_acknowledge_` を `slurs_ ∪ end_slurs_` に渡し、:361 で `end_slurs_` を空にする）＝**開始音から終止音までの閉区間**。Lily# では voice の item 順が timestep 順（装飾音符は前の item＝LP でも前の timestep）なので、(measure, item) の閉区間がその翻訳。**`SlurOpenAt` として 1 綴りにし、script と tie の門を同じ関数に**（tuplet 番号の門は既存の時間重なりのまま＝stand-in と自認済み）。⚠️ **`currentCommandColumn` の encompass（:332-340）は NOT PORTED と記入**（bar line だけの列は Y extent が無く効かない・slur 途中の clef／key 変更で効く形）。
+  §7 7.5＝**Core '+' 89 行・LILYPOND-REF 2／LILYSHARP-OWN 0**。棚卸し: `magic_constants.csv` 行番号のほか 2 行（付点の bare 箱の式）、`APPROXIMATIONS.md` **+1**（command column の NOT PORTED＝265→266）。commit `d17fea6d`。`-End p539` OK・**full 8897 / 0 / 2 / 8899**（±0）＝1 回目で全緑。
+  ⇒ **教訓: 「字面でない」を申告したら、直したあとの観測者の有無まで測って書く**（今回は 9 本の fixture が「LP と一致・毒も一致」＝直したのは読みであって出力ではない）。残りは ⒳¹⁸ ⑵（第 8 小節の下向き slur 0.11）。
 ## 以下は第538セッションの経緯
 
 ### 1.1 第538セッション（2026-09-23・YT-DELL2）
