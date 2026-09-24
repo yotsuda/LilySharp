@@ -286,6 +286,39 @@ public class PartSectionLayoutConverterTests
         Assert.Null(PartSectionLayoutConverter.Convert(broken));
     }
 
+    [Theory]
+    // section-major: the same part twice in section A
+    [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } ob { c1 | } }\nsection A { ob { d1 | } }\nform main { A }\n", "part 'ob' in section A")]
+    // part-major: one part writing section A twice
+    [InlineData("part fl { section A { c1 | } section A { d1 | } }\nform main { A }\n", "part 'fl' in section A")]
+    // section-major chord rows and lyrics
+    [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } chords harm { C | } }\nsection A { ob { c1 | } chords harm { D | } }\nform main { A }\n", "chords 'harm' in section A")]
+    [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } lyrics words { la } }\nsection A { ob { c1 | } lyrics words { lu } }\nform main { A }\n", "lyrics 'words' in section A")]
+    // differing directives of one section
+    [InlineData("part fl { }\npart ob { }\nsection A { key g major  fl { c1 | } }\nsection A { key d major  ob { c1 | } }\nform main { A }\n", "the directives of section A")]
+    public void Convert_ACellWrittenTwice_IsRefused_NotSilentlyDropped(string src, string expected)
+    {
+        // The other layout has room for one text per cell: converting kept the later and
+        // dropped the earlier without a word. Refused, naming the cell.
+        Assert.Null(PartSectionLayoutConverter.Convert(src, out var collision));
+        Assert.Equal(expected, collision);
+    }
+
+    [Fact]
+    public void Convert_ASectionSpreadOverDeclarations_Merges()
+    {
+        // Legal — a section is open — and nothing collides: one declaration comes back.
+        var src = "part fl { }\npart ob { }\nsection A { key g major  fl { c1 | } }\nsection A { key g major  ob { d1 | } }\nform main { A }\n";
+        var pm = PartSectionLayoutConverter.Convert(src, out var collision);
+        Assert.Null(collision);
+        Assert.NotNull(pm);
+        var sm = PartSectionLayoutConverter.Convert(pm!);
+        Assert.NotNull(sm);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(sm!, @"section A \{"));
+        Assert.Contains("fl { c1 | }", sm);
+        Assert.Contains("ob { d1 | }", sm);
+    }
+
     [Fact]
     public void Convert_CellEndingInLineComment_DoesNotSwallowBrace()
     {

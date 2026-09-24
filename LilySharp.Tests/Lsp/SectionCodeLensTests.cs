@@ -88,6 +88,49 @@ public class SectionCodeLensTests
     }
 
     [Fact]
+    public void ASectionMajorBlock_SpeaksOverItsOwnLine()
+    {
+        // Every layer is written inside the one declaration, so the declaration's name has no
+        // line to point at the short one — the block itself carries it.
+        const string text = """
+            part melody { clef treble }
+            part X { }
+            section A {
+              partial 2
+              melody { c'4 d | e2 f | g2 g | }
+              X { | | | }
+              chords prog { | | }
+            }
+            form main { A A }
+            score main { staff melody }
+            """;
+        var lenses = LensesOf(text);
+        Assert.Equal(2, lenses.Length);
+        Assert.Equal(2, lenses[0].Range.Start.Line);
+        Assert.StartsWith("Section A · ⚠", lenses[0].Command!.Title);
+        Assert.Equal(6, lenses[1].Range.Start.Line);   // `chords prog`
+        Assert.Equal("⚠ Section A · 2 bars here (1 bar shorter) · 3 bars in melody and X", lenses[1].Command!.Title);
+        Assert.Equal("lilysharp.showSectionLayers", lenses[1].Command!.CommandIdentifier);
+
+        // A later section-major declaration (a section is open: it may gather parts from
+        // several declarations): still over the block, not the declaration's name.
+        const string twice = """
+            part flute
+            part oboe
+            part horn
+            section A { flute { c1 | c1 | } oboe { c1 | c1 | } }
+            section A { horn { c1 | } }
+            form main { A }
+            score main { staff flute  staff oboe  staff horn }
+            """;
+        var later = LensesOf(twice);
+        Assert.Equal(2, later.Length);
+        Assert.Equal(4, later[1].Range.Start.Line);
+        Assert.Equal(12, later[1].Range.Start.Character);   // on `horn`, not on `A`
+        Assert.Equal("⚠ Section A · 1 bar here (1 bar shorter) · 2 bars in flute and oboe", later[1].Command!.Title);
+    }
+
+    [Fact]
     public void TheOddOneOut_IsMeasuredAgainstTheMajority_NotTheLongest()
     {
         // Three parts at 2 bars and one at 3: the one is most likely a bar written twice, so it

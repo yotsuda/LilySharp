@@ -63,8 +63,24 @@ public static class PartSectionLayoutConverter
     /// Converts <paramref name="source"/> to the OTHER layout. Returns null when the
     /// layout can't be determined (nothing to transpose).
     /// </summary>
-    public static string? Convert(string source)
+    public static string? Convert(string source) => Convert(source, out _);
+
+    /// <summary>
+    /// <see cref="Convert(string)"/>, saying why when it refuses because two declarations
+    /// fill the same cell: <paramref name="collision"/> names it (<c>part 'oboe' in section
+    /// A</c>), null for every other refusal.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The transposed layout has room for ONE text per cell, so a cell written twice
+    /// (LYS DuplicateCell / DuplicateTrackSection — errors, but not syntax errors) would come
+    /// out with the later text only and the earlier one silently gone. Refused instead: the
+    /// caller overwrites the whole document. A section written in several declarations whose
+    /// cells do not collide (<c>section A { flute { … } } section A { oboe { … } }</c>) is
+    /// legal and merges into one.
+    /// </remarks>
+    public static string? Convert(string source, out string? collision)
     {
+        collision = null;
         var tree = SyntaxTree.Parse(source);
         // Never transpose a malformed file: the cell extraction relies on a clean,
         // balanced tree, and the caller overwrites the whole document with the
@@ -85,7 +101,9 @@ public static class PartSectionLayoutConverter
         if (target == LayoutForm.PartMajor && HasUntransposableSectionContent(root))
             return null;
 
-        var result = Emit(source, root, target);
+        var result = Emit(source, root, target, out collision);
+        if (result == null)
+            return null;
         // Safety net: only return a result that round-trips to a clean parse, so a
         // surprising cell (e.g. one with embedded braces) can never corrupt the
         // document in place. If it wouldn't parse, report "no change" instead.
@@ -110,8 +128,15 @@ public static class PartSectionLayoutConverter
 
     // --- model extraction -----------------------------------------------------
 
-    private static string Emit(string source, CompilationUnitSyntax root, LayoutForm target)
+    private static string? Emit(string source, CompilationUnitSyntax root, LayoutForm target, out string? collision)
     {
+        // The first cell written twice, which the maps below would keep only the later of.
+        string? firstCollision = null;
+        void Put<TKey>(Dictionary<TKey, string> map, TKey key, string text, string what) where TKey : notnull
+        {
+            if (!map.TryAdd(key, text))
+                firstCollision ??= what;
+        }
         // Part order + attributes (the part body items that are NOT inner sections).
         var parts = new List<(string Name, string Attrs)>();
         // (part, section) -> music cell text (verbatim, between the braces).
@@ -130,6 +155,15 @@ public static class PartSectionLayoutConverter
         // section -> its own directive text (`key g major` …): a standalone part-major
         // header, or the directives folded into a section-major section.
         var sectionHeaders = new Dictionary<string, string>();
+        // Two declarations restating the same directives lose nothing; differing ones would.
+        void PutHeader(string section, string directives)
+        {
+            if (directives.Length == 0)
+                return;
+            if (sectionHeaders.TryGetValue(section, out var had) && had != directives)
+                firstCollision ??= $"the directives of section {section}";
+            sectionHeaders[section] = directives;
+        }
         var sectionOrder = new List<string>();
         void AddSection(string name)
         {
@@ -155,7 +189,8 @@ public static class PartSectionLayoutConverter
                         if (child is SectionDeclarationSyntax inner) // part-major cell
                         {
                             AddSection(inner.SectionName);
-                            cells[(part.Name.Text, inner.SectionName)] = BetweenBraces(Verbatim(source, inner));
+                            Put(cells, (part.Name.Text, inner.SectionName), BetweenBraces(Verbatim(source, inner)),
+                                $"part '{part.Name.Text}' in section {inner.SectionName}");
                         }
                         else
                         {
@@ -171,7 +206,8 @@ public static class PartSectionLayoutConverter
                     foreach (var cs in topChords.Sections)
                     {
                         AddSection(cs.SectionName);
-                        chordCells[(topChords.PartName, cs.SectionName)] = BetweenBraces(Verbatim(source, cs));
+                        Put(chordCells, (topChords.PartName, cs.SectionName), BetweenBraces(Verbatim(source, cs)),
+                            $"{ChordsLabel(topChords.PartName)} in section {cs.SectionName}");
                     }
                     break;
 
@@ -186,7 +222,8 @@ public static class PartSectionLayoutConverter
                     foreach (var ls in topLyrics.Sections)
                     {
                         AddSection(ls.SectionName);
-                        lyricCells[(topLyrics.VoiceName, ord, ls.SectionName)] = BetweenBraces(Verbatim(source, ls));
+                        Put(lyricCells, (topLyrics.VoiceName, ord, ls.SectionName), BetweenBraces(Verbatim(source, ls)),
+                            $"{LyricsLabel(topLyrics.VoiceName)} in section {ls.SectionName}");
                     }
                     break;
                 }
@@ -195,7 +232,7 @@ public static class PartSectionLayoutConverter
                 // section's directives stated once, parallel to the parts.
                 case SectionDeclarationSyntax header when IsSectionHeader(header):
                     AddSection(header.SectionName);
-                    sectionHeaders[header.SectionName] = SectionDirectiveText(source, header);
+                    PutHeader(header.SectionName, SectionDirectiveText(source, header));
                     break;
 
                 case SectionDeclarationSyntax section
@@ -203,16 +240,16 @@ public static class PartSectionLayoutConverter
                     AddSection(section.SectionName);
                     // Section-level directives (`key g major`) fold out to a standalone
                     // header in part-major.
-                    var directives = SectionDirectiveText(source, section);
-                    if (directives.Length > 0)
-                        sectionHeaders[section.SectionName] = directives;
+                    PutHeader(section.SectionName, SectionDirectiveText(source, section));
                     foreach (var pb in DirectChildrenOfType<PartBlockSyntax>(section))
-                        cells[(pb.Name, section.SectionName)] = BetweenBraces(Verbatim(source, pb));
+                        Put(cells, (pb.Name, section.SectionName), BetweenBraces(Verbatim(source, pb)),
+                            $"part '{pb.Name}' in section {section.SectionName}");
                     // In-section chord tracks become part-major chord tracks and back.
                     foreach (var cb in DirectChildrenOfType<ChordPartBlockSyntax>(section))
                     {
                         AddChordPart(cb.PartName);
-                        chordCells[(cb.PartName, section.SectionName)] = BetweenBraces(Verbatim(source, cb));
+                        Put(chordCells, (cb.PartName, section.SectionName), BetweenBraces(Verbatim(source, cb)),
+                            $"{ChordsLabel(cb.PartName)} in section {section.SectionName}");
                     }
                     // In-section lyric verses: the Nth same-named block per section is
                     // the Nth verse of that track (so stacked verses stay distinct).
@@ -228,11 +265,16 @@ public static class PartSectionLayoutConverter
                         if (lb is { VoiceName: { } ln, SingsTarget: { } lt }
                             && !lyricSings.ContainsKey(ln))
                             lyricSings[ln] = lt;
-                        lyricCells[(lb.VoiceName, ord, section.SectionName)] = BetweenBraces(Verbatim(source, lb));
+                        Put(lyricCells, (lb.VoiceName, ord, section.SectionName), BetweenBraces(Verbatim(source, lb)),
+                            $"{LyricsLabel(lb.VoiceName)} in section {section.SectionName}");
                     }
                     break;
             }
         }
+
+        collision = firstCollision;
+        if (collision != null)
+            return null;
 
         // Ensure every (part) appears even if it only shows up as a cell owner.
         foreach (var (p, _) in cells.Keys.ToList())
@@ -255,6 +297,12 @@ public static class PartSectionLayoutConverter
         List<(string? Name, int Ordinal)> LyricTracks,
         Dictionary<(string? Name, int Ordinal, string Section), string> LyricCells,
         Dictionary<string, string> LyricSings);
+
+    /// <summary>A chord track as a refusal names it: <c>chords 'harmony'</c>.</summary>
+    private static string ChordsLabel(string? name) => name == null ? "chords" : $"chords '{name}'";
+
+    /// <summary>A lyrics track as a refusal names it: <c>lyrics 'words'</c>.</summary>
+    private static string LyricsLabel(string? name) => name == null ? "lyrics" : $"lyrics '{name}'";
 
     /// <summary>Writes the <c>chords</c> keyword with its optional name.</summary>
     private static void AppendChordsKeyword(StringBuilder sb, string? name)

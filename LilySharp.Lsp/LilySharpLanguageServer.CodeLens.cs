@@ -39,7 +39,8 @@ public sealed partial class LilySharpLanguageServer
     /// length it is laid out at and who writes it (the parts, chord rows and lyrics tracks),
     /// or, when they disagree, each length with who writes it — and how many times each form
     /// names it. A click lists everything that writes it. A later declaration gets a lens only
-    /// when it writes a different length from most of the section's writers.
+    /// when it writes a different length from most of the section's writers; in a
+    /// section-major book the block that does (<c>chords prog { … }</c>) gets it on its own line.
     /// </summary>
     /// <remarks>
     /// The section is a shared span of time, not a block (the point an AI author's feedback on
@@ -63,16 +64,9 @@ public sealed partial class LilySharpLanguageServer
             var locations = section.Layers
                 .Select(l => new Location { Uri = uri, Range = RangeOfSpan(doc.Text, l.Anchor) })
                 .ToArray();
-            for (int i = 0; i < section.Declarations.Count; i++)
+            void AddLens(Core.Syntax.TextSpan at, string title)
             {
-                // The whole section's line stands once, over its first declaration; a later
-                // declaration speaks only when it is the odd one out.
-                string? title = i == 0
-                    ? SectionLensTitle(section)
-                    : ShortDeclarationTitle(section, section.Declarations[i]);
-                if (title == null)
-                    continue;
-                var range = RangeOfSpan(doc.Text, section.Declarations[i].Name);
+                var range = RangeOfSpan(doc.Text, at);
                 lenses.Add(new CodeLens
                 {
                     Range = range,
@@ -87,9 +81,34 @@ public sealed partial class LilySharpLanguageServer
                     },
                 });
             }
+
+            for (int i = 0; i < section.Declarations.Count; i++)
+            {
+                var declaration = section.Declarations[i];
+                // The whole section's line stands once, over its first declaration; a later
+                // declaration speaks only when it is the odd one out.
+                string? title = i == 0
+                    ? SectionLensTitle(section)
+                    : ShortDeclarationTitle(section, section.Declarations[i]);
+                if (title != null)
+                    AddLens(declaration.Name, title);
+                // A section-major block (`melody { … }` inside `section A { … }`) is its own
+                // line, so the odd one speaks there — over the first declaration too, whose
+                // own line speaks for the whole section.
+                foreach (var layer in section.Layers)
+                    if (declaration.Writes(layer) && !IsAnchoredOn(declaration, layer)
+                        && OddLayersTitle(section, [layer]) is { } own)
+                        AddLens(layer.Anchor, own);
+            }
         }
         return lenses.ToArray();
     }
+
+    /// <summary>True when <paramref name="layer"/> stands on the declaration's own name — a
+    /// part-major cell (<c>part melody { section A { … } }</c>) or the single-part shorthand —
+    /// rather than on a block of its own inside a section-major declaration.</summary>
+    private static bool IsAnchoredOn(SectionDeclaration declaration, SectionLayer layer)
+        => layer.Anchor.Start == declaration.Name.Start;
 
     /// <summary>The lens's line: <c>Section A · 2 bars · melody, chords 'harmony' · 2× in form
     /// main</c> — WHO writes the section, by name while they are few and counted by kind when
@@ -134,8 +153,8 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>The line over a later declaration of a section, or null when it has nothing of
     /// its own to say: <c>⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts</c>
     /// when what it writes differs from what most of the section's writers write
-    /// (<see cref="SectionSummary.CommonBars"/>). A declaration writing several odd layers (a
-    /// section-major block repeated) names them: <c>2 bars in oboe and horn (1 bar shorter)</c>.</summary>
+    /// (<see cref="SectionSummary.CommonBars"/>). Only the layers standing on its name speak
+    /// here; a section-major block speaks over its own line (<see cref="GetCodeLens"/>).</summary>
     /// <remarks>
     /// Measured against the MAJORITY, not the longest: ten parts at 10 bars and one at 11 is
     /// most likely one bar written twice, and a line on each of the ten would point at every
@@ -143,11 +162,17 @@ public sealed partial class LilySharpLanguageServer
     /// declaration's line says so.
     /// </remarks>
     internal static string? ShortDeclarationTitle(SectionSummary section, SectionDeclaration declaration)
+        => OddLayersTitle(section, section.Layers
+            .Where(l => declaration.Writes(l) && IsAnchoredOn(declaration, l)).ToList());
+
+    /// <summary>The line over <paramref name="mine"/> — one declaration's cells or one
+    /// section-major block — or null when none of them is odd. Several odd ones are named:
+    /// <c>2 bars in oboe and horn (1 bar shorter)</c>; a lone one is <c>here</c>.</summary>
+    internal static string? OddLayersTitle(SectionSummary section, IReadOnlyList<SectionLayer> mine)
     {
         static string Bars(int n) => n == 1 ? "1 bar" : $"{n} bars";
 
         int common = section.CommonBars;
-        var mine = section.Layers.Where(declaration.Writes).ToList();
         var oddGroups = mine.Where(section.IsOdd)
             .GroupBy(l => l.Bars)
             .OrderByDescending(g => g.Key)

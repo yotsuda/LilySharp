@@ -1062,7 +1062,16 @@ public sealed partial class LilySharpLanguageServer
 
         // Convert self-guards: it returns null unless the result round-trips to a
         // clean parse, so this can never produce a corrupt document.
-        var newText = LilySharp.Core.Editing.PartSectionLayoutConverter.Convert(doc.Text);
+        var newText = LilySharp.Core.Editing.PartSectionLayoutConverter.Convert(doc.Text, out var collision);
+        // A cell written twice: the other layout has room for one, so converting would
+        // silently keep the later and drop the earlier.
+        if (collision != null)
+            return new ConvertLayoutResponse
+            {
+                Success = false,
+                Error = $"{char.ToUpperInvariant(collision[0])}{collision[1..]} is written twice. "
+                    + "Converting would keep only the later one, so the file was left unchanged."
+            };
         if (newText == null)
             return new ConvertLayoutResponse
             {
