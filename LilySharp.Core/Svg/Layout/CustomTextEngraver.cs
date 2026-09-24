@@ -126,10 +126,7 @@ internal static class CustomTextEngraver
             //     its model, so "the measure's first column" (Items[0] / Columns[0],
             //     measure start when empty) is this engraver's own bridge — chosen to
             //     mirror the fidelity pair's construction, not read from LP source.
-            double x = measureLayout.X
-                + (!measureLayout.Items.IsDefaultOrEmpty ? measureLayout.Items[0].X
-                    : !measureLayout.Columns.IsDefaultOrEmpty ? measureLayout.Columns[0].X
-                    : 0.0);
+            double x = PenX(measureLayout);
 
             // Y: aligned_side's floor above the staff, in the Y-up frame (staff-spaces above
             // the staff middle). No staff offset — the draw resolves the staff middle.
@@ -146,5 +143,63 @@ internal static class CustomTextEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>The text's pen origin in <paramref name="measureLayout"/> — see the bridge
+    /// remarks in <see cref="Calculate"/>. One spelling for the draw and the reservation.</summary>
+    private static double PenX(MeasureLayout measureLayout)
+        => measureLayout.X
+           + (!measureLayout.Items.IsDefaultOrEmpty ? measureLayout.Items[0].X
+               : !measureLayout.Columns.IsDefaultOrEmpty ? measureLayout.Columns[0].X
+               : 0.0);
+
+    /// <summary>
+    /// THE FORM-LEVEL TEXTS OF THIS SYSTEM AS INK ABOVE THE STAFF THEY STAND ON, in the
+    /// per-staff skyline's frame (origin = the staff's MIDDLE line, up-positive) — so that a
+    /// line standing above that staff (a chord or lyric row) makes room for them.
+    /// </summary>
+    /// <remarks>
+    /// The same move <see cref="TextSpannerEngraver.InkAboveStaff"/> makes for the rit.
+    /// spanner, for the same reason: LilyPond leaves a placed outside-staff grob IN its
+    /// VerticalAxisGroup's skyline, and that profile is what the loose lines above are
+    /// distributed against.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:860-985 skyline_spacing;
+    ///   lily/page-layout-problem.cc:948-990 distribute_loose_lines.
+    /// MEASURED (audit/lp-geometry/probes/custom-text-page.ly, CTW): with a chord row leading
+    /// the system, LilyPond's ChordNames line rises from 1.121485 to 2.648530 over the text
+    /// and the pair gap opens from 12.0 to 12.570929; Lily# stood the text on the row's
+    /// symbol instead (ledger page.custom-text.leading-row.gap-first, session 573).
+    /// The two terms are <c>OutsideStaffStacker.PlaceCustomTexts</c>'s — the aligned_side floor
+    /// <see cref="AlignedSideBaselineYUp"/> and the string's OUTLINE pair cleared against the
+    /// accumulated profile at outside-staff-padding 0.46 with TextScript's horizontal padding
+    /// 0.2 — spelt here because this pass runs before the systems exist. Against ONE merged
+    /// support the stacker's forbidden-interval walk is exactly this single distance.
+    /// </remarks>
+    internal static VerticalSkyline InkAboveStaff(
+        Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<CustomTextItem> customTexts,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        VerticalSkyline accumulatedUp)
+    {
+        var ink = new VerticalSkyline(VerticalDirection.Up);
+        if (customTexts.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
+            return ink;
+        double em = Em(fonts);
+        var face = fonts.Face(Rendering.TextRole.Text, Style(fonts));
+        foreach (var ct in customTexts)
+        {
+            MeasureLayout? ml = null;
+            foreach (var m in measureLayouts)
+                if (m.MeasureIndex == ct.MeasureIndex) { ml = m; break; }
+            if (ml is null)
+                continue;   // another system's text
+            var (up, down) = TextOutlineSkylines.Place(
+                ct.Text, em, face, PenX(ml), AlignedSideBaselineYUp);
+            double move = Math.Max(0.0,
+                down.Distance(accumulatedUp, OutsideStaffStacker.OutsideStaffHorizontalPadding)
+                    + OutsideStaffStacker.OutsideStaffPadding);
+            ink.MergeRaised(up, move);
+        }
+        return ink;
     }
 }

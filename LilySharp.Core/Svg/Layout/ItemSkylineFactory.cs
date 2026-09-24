@@ -489,7 +489,7 @@ internal static class ItemSkylineFactory
         if (column.Dots > 0 && !column.IsRest)
         {
             var (offset, _) = DotColumn.ReservedForGrace(column, beamed);
-            var dot = GraceNoteItem.Font.AugmentationDot;
+            var dot = column.Font.AugmentationDot;
             double reach = dot.Height / 2 + SpacingRules.DotsExtraSpacingHeight;
             foreach (var head in column.Heads)
             {
@@ -522,7 +522,7 @@ internal static class ItemSkylineFactory
         if (!column.IsRest)
         {
             var head = GlyphMetrics.GetNoteheadBBox(
-                GraceNoteItem.Font, GlyphMetrics.NoteValueOf(column.BaseDuration));
+                column.Font, GlyphMetrics.NoteValueOf(column.BaseDuration));
             var headOffsets = GraceColumnHeads.HeadOffsets(column);
             var accidentalXs = GraceColumnHeads.AccidentalOffsets(column);
             for (int i = 0; i < column.Heads.Length; i++)
@@ -534,7 +534,7 @@ internal static class ItemSkylineFactory
                 if (i < accidentalXs.Length && accidentalXs[i] is { } ax
                     && column.Heads[i].Accidental is { } accidental)
                 {
-                    var box = GlyphMetrics.GetAccidentalBBox(GraceNoteItem.AccidentalFont, accidental);
+                    var box = GlyphMetrics.GetAccidentalBBox(column.AccidentalFont, accidental);
                     parts.Add(Accidental(y - box.Top, y - box.Bottom, ax, ax + box.Width));
                 }
             }

@@ -24,6 +24,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg.Model;
+
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
@@ -372,7 +374,8 @@ public static class StemCalculator
         double beamTranslation = 0.81,
         StemDetails? details = null,
         bool isKnee = false,
-        double beamShorten = 0.0)
+        double beamShorten = 0.0,
+        int tremoloFlags = 0)
     {
         var d = details ?? StemDetails.Default;
         int dir = stemUp ? 1 : -1; // staff positions: positive = up
@@ -391,7 +394,15 @@ public static class StemCalculator
         // --- Height of beams ---
         // LILYPOND-REF: stem.cc:1203-1211
         double heightOfMyBeams = beamThickness + (beamCount - 1) * beamTranslation;
-        double idealMinimumLength = idealMinimumFree + heightOfMyBeams - 0.5 * beamThickness;
+        // LILYPOND-REF: lily/stem.cc:1187-1194 Stem::calc_stem_info — a stem carrying a StemTremolo reserves the
+        //   tremolo's own vertical length plus one beam translation ("hack a bit of space
+        //   around the trem"), in the ideal minimum here and as a floor on the extreme
+        //   minimum below (:1256).
+        double heightOfMyTrem = tremoloFlags > 0
+            ? BeamedTremoloVerticalLength(tremoloFlags, beamTranslation) + beamTranslation
+            : 0.0;
+        double idealMinimumLength = idealMinimumFree + heightOfMyBeams + heightOfMyTrem
+                                    - 0.5 * beamThickness;
         idealLength = Math.Max(idealLength, idealMinimumLength);
 
         // --- Note start position (in staff spaces) ---
@@ -430,7 +441,8 @@ public static class StemCalculator
         // and the minimum-free above. Invisible while the fraction is 1; a grace beam is
         // where it starts to matter.
         double minimumFree = d.BeamedExtremeMinimumFreeLengths[extremeMinIdx] * d.LengthFraction;
-        double minimumLength = minimumFree + heightOfMyBeams - 0.5 * beamThickness;
+        double minimumLength = Math.Max(minimumFree, heightOfMyTrem) + heightOfMyBeams
+                               - 0.5 * beamThickness;
         double shortestY = (noteStart + minimumLength) * dir;
 
         // Return absolute beam Y in staff-spaces (Y-up). idealY/shortestY above are
@@ -438,6 +450,58 @@ public static class StemCalculator
         // measured up from the staff middle line (higher = larger). Already ss — no
         // half-space conversion.
         return new StemInfo(idealY * dir, shortestY, stemUp);
+    }
+
+    /// <summary>
+    /// How many slashes a single-note tremolo draws on <paramref name="item"/>'s stem: the
+    /// requested subdivision's levels less the ones the note's own flags or beams already
+    /// show. 0 for no tremolo (or one the note value swallows whole).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem-engraver.cc:63-104 make_stem — tremolo_flags =
+    ///   intlog2 (requested_type) - 2 - (duration_log > 2 ? duration_log - 2 : 0); the
+    ///   StemTremolo is made only when that is positive. <see cref="NoteItem.TremoloBeams"/>
+    ///   is the first two terms.
+    /// </remarks>
+    internal static int TremoloFlagCount(MusicItem item)
+    {
+        int requested = item switch
+        {
+            NoteItem n => n.TremoloBeams,
+            ChordItem c => c.TremoloBeams,
+            _ => 0,
+        };
+        if (requested <= 0)
+            return 0;
+        int durationLog = GetDurationLog(GlyphMetrics.NoteValueOf(item));
+        return Math.Max(requested - Math.Max(durationLog - 2, 0), 0);
+    }
+
+    /// <summary>StemTremolo's <c>beam-thickness</c>.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3492-3494 StemTremolo (beam-thickness . 0.48).</remarks>
+    internal const double TremoloSlashThickness = 0.48;
+
+    /// <summary>
+    /// A BEAMED stem's tremolo stack measured the way <c>Stem_tremolo::vertical_length</c>
+    /// measures it: <paramref name="flags"/> rotated boxes 1.0 wide and 0.48 thick at the
+    /// fixed slope 0.35, one beam translation apart.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem-tremolo.cc:225-229 vertical_length — the untranslated stencil at
+    ///   slope 0.35 (the real slope reads the beam, which is being solved).
+    /// LILYPOND-REF: lily/stem-tremolo.cc:84-112 calc_width / calc_shape — a beamed stem's
+    ///   tremolo is 1.0 wide and a "rectangle".
+    /// LILYPOND-REF: lily/lookup.cc:79-89 Lookup::rotated_box — the width×thickness box turned
+    ///   by atan(slope), so one box stands width·sinθ + thick·cosθ tall.
+    /// LILYPOND-REF: lily/stem-tremolo.cc:159-167 raw_stencil — the stack steps by the BEAM's
+    ///   translation (get_beam_translation, :114-125).
+    /// </remarks>
+    internal static double BeamedTremoloVerticalLength(int flags, double beamTranslation)
+    {
+        const double slope = 0.35, width = 1.0;
+        double norm = Math.Sqrt(1 + slope * slope);
+        double one = width * slope / norm + TremoloSlashThickness / norm;
+        return one + (flags - 1) * beamTranslation;
     }
 
     /// <summary>

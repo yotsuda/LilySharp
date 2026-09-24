@@ -129,6 +129,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第572セッションの経緯
+
+### 1.1 第572セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続きではなく新しい会話。★ `-Start p572`（HEAD `901882aa`・full 9013 / 0 / 2 / 9015・第570 を ARCHIVE へ）。作業ツリーの `samples/*` はユーザーの手。
+
+★ **⑴ R7⒜（`472d9ac8`）**: 起票の「順序の違い」の実体は 2 つ＝min を `max(fraction×increment, skyline)` と*ensure* していた（LP は `set_min_distance` で置き換え）・stretch を `max(0.1, ideal+補正−increment)` と fraction 抜きで作っていた（LP は `fraction×max(0.1, len−increment)`）。`CreateSpring` を column builder と同じ `CreateTimingSpringMultiVoice` から始め、note 対は `WithMinDistance(skyline)`、bar 行きは従来どおり ensure（`CreateLastToBarlineSpring` と同じ）、補正は `WithIdealDistance`。**item 系の読み手は `CalculateMeasureIdealWidth`→greedy 改行（`UseOptimalLineBreaking` を false にする製品経路は無い）と `LayoutItems` の退化 fallback だけ＝描画は不変**（修正後もスイートは 1 本も動かなかった）。網は差の出る形を探して書いた: 32 分の後ろに skip（fraction 2）・common shortest 全音符で、LP の ideal 2.5792 が旧 floor 2.7 の下・stretch 0.2（旧 1.275）。毒（旧 `CreateSpring`）で 1 本赤。full **9014 / 0 / 2 / 9016**・Core 0 警告。
+  ⚠️ 見かけた未検証の lead: column 系の bar 行き（`MeasureLayouter.CreateLastToBarlineSpring`）は skyline を `EnsureMinDistance` で入れる（註は `spring.cc:155-159 ensure_min_distance`）が、LP の note→bar の wish も `Note_spacing::get_spacing` の `set_min_distance` を通るはず＝差が出るのは skyline < fraction×1.2 の bar 行きだけ。測らずに直さない。
+
+★★ **⑵ R9⒞（`e8c830bb`・`b826435f`）**: 起票の 4 読みのうち 3 つ（:553 の nudge は `on_staff_line`・tip の判定と nudge は偶奇）は既に合っていて、ずれは `score_configuration` の line center だけ＝LP は `on_line`（`allow_ledger` 既定 true）なので譜表の下の偶数位置は ledger として線。Lily# は五線の `OnStaffLine`（|pos|≤4）で、譜表の下の下向きタイの頂点が ledger 位置に来ても罰を払わなかった。**短いタイで効く**: 4 小節を `noBreak` で 1 行に詰めた pos −4 のタイ（幅 1.180300＝LP と 6 桁一致）で LP は base（−5, −0.25）ではなく（−6, 0.00）を取る＝新 Lily# と一致・旧は −2.75。網 `TieLedgerLineCenterTests`（毒で −2.75 の赤）・probe `audit/lp-geometry/probes/tie-ledger-line-center.ly`（曲の小節は使わず汎用の小節で再現）。**掃き 942 冊中 11 冊が動いた（全部ユーザーのベース譜・ink だけ）**。後半の dot collision は LP の bow 評価に移植（`dot_x_.center` での `get_other_coordinate`・dot 行は左 bound の dot 箱から）。旧 flat 規則は `Dir·diff>0` と `|diff|·0.5≤0.25` を同時に要し整数 diff では*発火し得なかった*＝掃き 0 冊・LP の 20 和音形 48 本の勝者カードにも dot collision は出ない＝網は `ScoreDotCollision` を直に（毒 2 種で赤）。full **9016 / 0 / 2 / 9018**。
+  ⚠️ **新しい lead（himawari 第 77 小節）**: 動いた 11 冊の 1 冊で、Lily# のタイは幅 1.30、LP の双子は 1.43。LP はその幅で（−5, −0.25）4.42 対（−6, 0）4.51 の 0.09 差で base を取る（強制した `TieColumn.tie-configuration` のカードで実測・Lab `sessions/p572/r9c/himfull-*.log`）＝**採点は LP どおりで、差はタイ幅**。⇒ **同じ便で閉じた＝原因は §3 既決の「タブのフレット数字を LP より大きく描く」**: tab 無しの双子では全符頭が LP と 0.01 以内・tab 有りで Lily# の 16 分は 2.00（LP 1.83）＝`ApplyTabChordSpacing` の数字 rod（註が「LP に対応物なし」と自認）。直す対象ではない。
+
+★★ **⑶ R9⒜（`f09b9770`）**: `shift_region_to_valid` を逐語で（stem の feasible left point・高さ 2.0 以上の衝突の禁止区間を `Interval_minefield` で・外れた側は ±∞・どちらも無ければ `point_in_interval(feasible, 2.0)`＝片側なら床＋2.0、knee は中心）。旧は梁の向きの床へ clamp するだけで衝突を読まなかった。slurdot（knee）が LP の（−3.5, −5.5）と一致（旧 −3.00/−5.19）。⚠️ **途中の 2 つの罠**: ⑴ minefield の無限端の枝（:68-69）を落とすと、半無限で積まれる衝突 stem（`y[-dir] = chord_start`）で*ループが終わらない*＝full が testhost ごと回り続けた／⑵ ledger `part-combine.text.own-voice-support` が +1.005 動いた＝**原因は移植ではなく、combinedStaff が solo の c8 と apart の d8 を梁で結んでいたこと**（LP は Voice ごとに auto-beam＝PCV は全部旗）。`BeamDetector` が `VoiceContext` の変わり目で run を切る（memo の read set にも）＝ledger は exact に戻った。掃き 942 冊中 11 冊（slurdot 2・ユーザーのベース tab 譜 9＝全部 tab で広がった間隔の上。Sweet Memories 第 56 小節は tab 無しの双子で base／head とも LP と一致）。網 `BeamShiftRegionTests` 2 本（毒は各 1 本だけ赤）。full **9018 / 0 / 2 / 9020**。
+  ⇒ R9 の残りは ⒟（slur 対 slur）⒡（`TieVariantEngraver`）⒢（tremolo の `height_of_my_trem`）。⚠️ Lily# の beam の `ShortestY`/`IdealY` は LP の Stem `stem-info` と*ちょうど 0.5* ずれた値を持つ（Sweet Memories の triplet・3 stem とも）＝frame の違いか要確認（最終位置は tab 無しで LP と一致）。
+
 ## 以下は第571セッションの経緯
 
 ### 1.1 第571セッション（2026-09-24・YT-DELL2）

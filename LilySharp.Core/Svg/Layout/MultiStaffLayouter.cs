@@ -3339,6 +3339,23 @@ internal sealed class MultiStaffLayouter
     /// Builds UP/DOWN skylines for every staff in the score.
     /// Returns a list indexed by global staff index.
     /// </summary>
+    /// <summary>The score-order index of the first staff that is neither a text row nor
+    /// non-spaceable — the staff a score-context grob's <c>-1</c> resolves to
+    /// (<see cref="StaffAffinity.TopSpaceableStaff"/>), asked before any system exists.
+    /// -1 on a staffless sheet.</summary>
+    private static int TopSpaceableStaffIndex(MultiStaffScore score)
+    {
+        int i = 0;
+        foreach (var group in score.StaffGroups)
+            foreach (var staff in group.Staves)
+            {
+                if (!staff.IsTextRow && StaffAffinity.IsSpaceable(staff.StaffAffinity))
+                    return i;
+                i++;
+            }
+        return -1;
+    }
+
     private StaffSkylineSet BuildAllStaffSkylines(
         MultiStaffScore score, SkylineBuilder skylineBuilder,
         ImmutableArray<MeasureLayout> measureLayouts, int systemIndex)
@@ -3465,6 +3482,20 @@ internal sealed class MultiStaffLayouter
                         score.TextMetrics, staffSpanners, measureLayouts, sky.Up);
                     if (!spannerInk.IsEmpty)
                         sky.Up.Merge(spannerInk);
+                }
+                // …and the form-level texts (TextScript, priority 450), on the staff they
+                // resolve to — the TOP SPACEABLE one, which is what their -1 means
+                // (LayoutUtilities.ResolveScoreGrobStaff) — so a leading chord row clears
+                // them rather than printing on them (CustomTextEngraver.InkAboveStaff).
+                // ⚠️ Resolved from the score's staff order, because the systems do not exist
+                // yet: a system whose top staff hara-kiri hides hangs the text on the next
+                // staff down, and this reserves it on the hidden one. No book reaches that.
+                if (!score.CustomTexts.IsDefaultOrEmpty && thisStaff == TopSpaceableStaffIndex(score))
+                {
+                    var textInk = CustomTextEngraver.InkAboveStaff(
+                        score.TextMetrics, score.CustomTexts, measureLayouts, sky.Up);
+                    if (!textInk.IsEmpty)
+                        sky.Up.Merge(textInk);
                 }
                 // …and a combined staff's "a2" / "Solo" labels (priority 475, after the
                 // spanner's 350), for the same reason: a chord row above the staff has to

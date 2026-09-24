@@ -570,16 +570,26 @@ internal sealed partial class LayoutEngine
             ties: spanners.Ties,
             restShifts: restCollisionsOf(closingStaff)).Up;
 
-        var closingSpanners = ScoreSideTables.TextSpannersByStaff(score).At(firstSpaceableIndex);
-        if (closingSpanners.IsEmpty)
-            return up;
-        var spannerInk = TextSpannerEngraver.InkAboveStaff(
-            score.TextMetrics, closingSpanners, measures, up);
-        if (spannerInk.IsEmpty)
-            return up;
         // This profile is built here and read here, so it can be merged into directly —
         // unlike the room's, which is shared.
-        up.Merge(spannerInk);
+        var closingSpanners = ScoreSideTables.TextSpannersByStaff(score).At(firstSpaceableIndex);
+        if (!closingSpanners.IsEmpty)
+        {
+            var spannerInk = TextSpannerEngraver.InkAboveStaff(
+                score.TextMetrics, closingSpanners, measures, up);
+            if (!spannerInk.IsEmpty)
+                up.Merge(spannerInk);
+        }
+        // …and the form-level texts, which hang on this very staff: the closing staff IS the
+        // system's first spaceable one, the staff their -1 resolves to (the room's arm in
+        // MultiStaffLayouter.BuildAllStaffSkylines says why they are ink here at all).
+        if (!score.CustomTexts.IsDefaultOrEmpty)
+        {
+            var textInk = CustomTextEngraver.InkAboveStaff(
+                score.TextMetrics, score.CustomTexts, measures, up);
+            if (!textInk.IsEmpty)
+                up.Merge(textInk);
+        }
         return up;
     }
 

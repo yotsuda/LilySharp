@@ -102,9 +102,43 @@ public readonly record struct GraceColumnInfo(
     int Dots = 0,
     // An invisible time-filler (`s`), as RestItem.IsSpacer is: it holds a column open and
     // draws nothing. Only meaningful on a column with no head.
-    bool IsSpacer = false
+    bool IsSpacer = false,
+    // The ENCLOSING CONTEXT's fontSize, which LilyPond ADDS to every grob's own font-size —
+    // CueVoice's −4 for a grace written inside `cue { }`, 0 everywhere else. See Font.
+    // LILYPOND-REF: lily/font-size-engraver.cc:47-62 Font_size_engraver::acknowledge_font —
+    //   font_size = size + the grob's own font-size.
+    double ContextFontSizeStep = 0
 )
 {
+    /// <summary>
+    /// The FONT this column's head, stem, flag and dots read: the design
+    /// <see cref="GraceNoteItem.FontSizeStep"/> plus <see cref="ContextFontSizeStep"/> selects,
+    /// already magnified. <see cref="GraceNoteItem.Font"/> for a grace outside a cue.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/cue-span.ly, C-GRACE): a grace inside a cue answers
+    /// font-size −7 and its head box is 0.574399405; the −7 font's (the ELEVEN design at
+    /// magstep −7) is 0.574397149 — the compounding is the addition, and the design follows.
+    /// </remarks>
+    internal Svg.Layout.GlyphMetrics.DesignMetrics Font
+        => ContextFontSizeStep == 0
+            ? GraceNoteItem.Font
+            : Svg.Layout.GlyphMetrics.AtFontSize(GraceNoteItem.FontSizeStep + ContextFontSizeStep);
+
+    /// <summary>This column's ACCIDENTAL font — <see cref="GraceNoteItem.AccidentalFont"/>
+    /// shifted by <see cref="ContextFontSizeStep"/> the same way <see cref="Font"/> is.</summary>
+    internal Svg.Layout.GlyphMetrics.DesignMetrics AccidentalFont
+        => ContextFontSizeStep == 0
+            ? GraceNoteItem.AccidentalFont
+            : Svg.Layout.GlyphMetrics.AtFontSize(GraceNoteItem.AccidentalFontSizeStep + ContextFontSizeStep);
+
+    /// <summary>The magnification <see cref="Font"/> was read at — <see cref="GraceNoteItem.ScaleFactor"/>
+    /// outside a cue.</summary>
+    internal double Scale
+        => ContextFontSizeStep == 0
+            ? GraceNoteItem.ScaleFactor
+            : Svg.Layout.EmmentalerDesignSize.Magstep(GraceNoteItem.FontSizeStep + ContextFontSizeStep);
+
     /// <summary>
     /// The column a single pitch makes — the shape every grace was until session 308, kept
     /// because a one-head column IS what an ordinary grace note is, and spelling the array
@@ -156,7 +190,8 @@ public readonly record struct GraceColumnInfo(
     /// </remarks>
     public bool Equals(GraceColumnInfo other)
     {
-        if (BaseDuration != other.BaseDuration || Dots != other.Dots)
+        if (BaseDuration != other.BaseDuration || Dots != other.Dots
+            || ContextFontSizeStep != other.ContextFontSizeStep)
             return false;
         if (Heads.IsDefaultOrEmpty || other.Heads.IsDefaultOrEmpty)
             return Heads.IsDefaultOrEmpty && other.Heads.IsDefaultOrEmpty;
@@ -174,6 +209,7 @@ public readonly record struct GraceColumnInfo(
         var hc = new HashCode();
         hc.Add(BaseDuration);
         hc.Add(Dots);
+        hc.Add(ContextFontSizeStep);
         if (!Heads.IsDefaultOrEmpty)
             foreach (var head in Heads)
                 hc.Add(head);
@@ -455,4 +491,35 @@ public sealed record GraceNoteItem
     /// </remarks>
     internal static int DesignSize
         => Svg.Layout.EmmentalerDesignSize.ForFontSizeStep(FontSizeStep).Rounded;
+
+    /// <summary>
+    /// The head FONT the run's group-level geometry reads (its beam, its slur obstacles, its
+    /// stem-length stand-in): the first sounding column's <see cref="GraceColumnInfo.Font"/>,
+    /// <see cref="Font"/> for a run of rests. A run is written inside a cue or outside it,
+    /// so its columns agree.
+    /// </summary>
+    internal static Svg.Layout.GlyphMetrics.DesignMetrics HeadFontOf(ImmutableArray<GraceColumnInfo> columns)
+    {
+        if (!columns.IsDefaultOrEmpty)
+            foreach (var c in columns)
+                if (!c.IsRest)
+                    return c.Font;
+        return Font;
+    }
+
+    /// <summary>The magnification <see cref="HeadFontOf"/> was read at.</summary>
+    internal static double HeadScaleOf(ImmutableArray<GraceColumnInfo> columns)
+    {
+        if (!columns.IsDefaultOrEmpty)
+            foreach (var c in columns)
+                if (!c.IsRest)
+                    return c.Scale;
+        return ScaleFactor;
+    }
+
+    /// <summary><see cref="HeadFontOf"/> for this run.</summary>
+    internal Svg.Layout.GlyphMetrics.DesignMetrics HeadFont => HeadFontOf(Columns);
+
+    /// <summary><see cref="HeadScaleOf"/> for this run.</summary>
+    internal double HeadScale => HeadScaleOf(Columns);
 }

@@ -632,7 +632,9 @@ internal sealed class BeamScoringProblem
             _stemInfos[i] = StemCalculator.CalculateBeamedStemInfo(
                 BeamSideHead(i), dir > 0, DirectionBeamCount(dir),
                 _beamThickness, _beamTranslation, _stemDetails,
-                isKnee: _isKnee, beamShorten: _beamShorten);
+                isKnee: _isKnee, beamShorten: _beamShorten,
+                // LILYPOND-REF: lily/stem.cc:1187-1194 height_of_my_trem (HANDOFF §2 R9⒢).
+                tremoloFlags: StemCalculator.TremoloFlagCount(group.ItemOf(i)));
         }
 
         // The beam's own segments — the SAME maths the renderer draws with, so the ink a

@@ -915,11 +915,12 @@ internal sealed class SkylineBuilder
     {
         if (seeds.BeamedRuns.Count == 0)
             return;
-        var headFont = GraceNoteItem.Font;
         double halfStem = size.Span(EngravingDefaults.StemThickness / 2);
         double beamHalf = size.Span(EngravingDefaults.GraceBeamThickness / 2);
         foreach (var run in seeds.BeamedRuns)
         {
+            // The run's own head font — a grace inside a cue reads the −7 one.
+            var headFont = run.Run.HeadFont;
             int last = run.BeamedPrefix - 1;
             if (last < 1 || run.Columns.Offsets.Length <= last)
                 continue;
@@ -935,10 +936,10 @@ internal sealed class SkylineBuilder
             double edgeL = StemX(0), edgeR = StemX(last);
             double beamLeftY = run.BeamLeftY is { } bl
                 ? staffMiddleUp + size.Span(bl / 2.0)
-                : TopHeadUp(0) + size.Span(GraceNoteEngraver.StemLength(GraceNoteItem.ScaleFactor));
+                : TopHeadUp(0) + size.Span(GraceNoteEngraver.StemLength(run.Run.HeadScale));
             double beamRightY = run.BeamRightY is { } br
                 ? staffMiddleUp + size.Span(br / 2.0)
-                : TopHeadUp(last) + size.Span(GraceNoteEngraver.StemLength(GraceNoteItem.ScaleFactor));
+                : TopHeadUp(last) + size.Span(GraceNoteEngraver.StemLength(run.Run.HeadScale));
             double span = edgeR - edgeL;
             double slope = span > 0.001 ? (beamRightY - beamLeftY) / span : 0.0;
             double BeamY(double x) => beamLeftY + slope * (x - edgeL);

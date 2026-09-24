@@ -8619,6 +8619,63 @@ internal static class LpGeometryProbes
     /// ⚠️ Lily#'s <c>octave absolute</c> sits an octave above LilyPond's, hence the extra
     /// commas here.
     /// </remarks>
+    /// <summary>
+    /// A single-note tremolo on a BEAMED stem (audit/lp-geometry/probes/beamed-tremolo.ly,
+    /// HANDOFF §2 R9⒢): the stem reserves the tremolo's height (lily/stem.cc:1187-1211,
+    /// :1256), which moves the beam, and the slash stack hangs beam_count translations inside
+    /// the beam line (lily/stem-tremolo.cc:313-369). Lily# pitches are LilyPond's an octave
+    /// down (`a` = LilyPond a').
+    /// </summary>
+    private static string BeamedTremoloScore(string name, string music) => $$"""
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main { m { {{music}} r4 r2 | } }
+
+        form main { ~Main }
+
+        score main "{{name}}" { staff m }
+        """;
+
+    private static readonly string TRB0 = BeamedTremoloScore("TRB0", "a8:32[ a8:32]");
+    private static readonly string TRBC = BeamedTremoloScore("TRBC", "a8[ a8]");
+    private static readonly string TRB1 = BeamedTremoloScore("TRB1", "c8:32[ e8:32]");
+    private static readonly string TRB2 = BeamedTremoloScore("TRB2", "a'8:64[ g'8:64]");
+    private static readonly string TRB3 = BeamedTremoloScore("TRB3", "c8:32[ g8:32]");
+    private static readonly string TRB4 = BeamedTremoloScore("TRB4", "c16:64[ d16:64 e16:64 f16:64]");
+
+    /// <summary>
+    /// Where a staccato / tenuto stands at each position (audit/lp-geometry/probes/script-positions.ly,
+    /// HANDOFF §2 R10⒜): session 574 read all 77 scripts of these four books against LilyPond
+    /// and every one agreed exactly, so the points below pin one reading per REGIME — the
+    /// outside-staff clearance past a ledger, the inside-staff line avoidance, the stem-side
+    /// script and a script under a slur — for whoever unifies the three aligned_side spellings.
+    /// </summary>
+    private static string ScriptPositionScore(string name, string script, string music) =>
+        $$"""
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main { m { {{music.Replace("@S", script)}} } }
+
+        form main { ~Main }
+
+        score main "{{name}}" { staff m }
+        """;
+
+    private const string ScriptRun =
+        "g,4@S a,@S b,@S c@S | d@S e@S f@S g@S | a@S b@S c'@S d'@S | e'@S f'@S g'@S a'@S | b'@S c''@S d''@S r |";
+
+    private static readonly string SCSPS = ScriptPositionScore("SPS", "@staccato", ScriptRun);
+    private static readonly string SCSPT = ScriptPositionScore("SPT", "@tenuto", ScriptRun);
+    private static readonly string SCSPU = ScriptPositionScore("SPU", "@staccato.up", ScriptRun);
+    private static readonly string SCSPL = ScriptPositionScore("SPL", "@staccato",
+        "c8@S( d@S e@S f@S) g@S( a@S b@S c'@S) | c'4@S( b@S a@S g@S) |");
+
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -15938,6 +15995,35 @@ internal static class LpGeometryProbes
         // init_instance_variables, :186-209 add_collision), and until 2026-07-31 Lily# fed it
         // one nominal POINT per note column, in a frame a notehead width away from the beam
         // it was compared with. Both ends of the sloped book, because positions is a pair.
+        // A beamed stem's single-note tremolo: the beam it lifts, and where its slashes hang
+        // (beamed-tremolo.ly; TRBC is TRB0 without the tremolo).
+        new("beam.tremolo.flat.left", TRB0, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.tremolo.flat.control", TRBC, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.tremolo.flat.first-slash", TRB0, g => g.TremoloSlashes()[0].CentreAboveMiddle),
+        new("beam.tremolo.flat.second-slash", TRB0, g => g.TremoloSlashes()[1].CentreAboveMiddle),
+        new("beam.tremolo.up.left", TRB1, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.tremolo.up.right", TRB1, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.tremolo.up.first-slash", TRB1, g => g.TremoloSlashes()[0].CentreAboveMiddle),
+        new("beam.tremolo.up.slope", TRB1, g => g.TremoloSlashes()[0].Slope),
+        new("beam.tremolo.down-three.left", TRB2, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.tremolo.down-three.right", TRB2, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        // Down stems: the slash nearest the beam is the LOWEST of the first stem's three.
+        new("beam.tremolo.down-three.first-slash", TRB2, g => g.TremoloSlashes()[2].CentreAboveMiddle),
+        new("beam.tremolo.down-three.slash-count", TRB2, g => g.TremoloSlashes().Count),
+        new("beam.tremolo.sloped.left", TRB3, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.tremolo.sloped.right", TRB3, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.tremolo.sixteenths.left", TRB4, g => g.BeamPositionAboveStaffMiddle(0, false)),
+        new("beam.tremolo.sixteenths.right", TRB4, g => g.BeamPositionAboveStaffMiddle(0, true)),
+        new("beam.tremolo.sixteenths.first-slash", TRB4, g => g.TremoloSlashes()[0].CentreAboveMiddle),
+        // One reading per script regime (script-positions.ly; U+E04A staccato, U+E04D tenuto).
+        new("script.staccato.below-ledger", SCSPS, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
+        new("script.staccato.inside-staff-line", SCSPS, g => g.GlyphAboveStaffMiddle('\uE04A', 7)),
+        new("script.staccato.above-ledger", SCSPS, g => g.GlyphAboveStaffMiddle('\uE04A', 18)),
+        new("script.tenuto.below-ledger", SCSPT, g => g.GlyphAboveStaffMiddle('\uE04D', 0)),
+        new("script.tenuto.above-staff", SCSPT, g => g.GlyphAboveStaffMiddle('\uE04D', 13)),
+        new("script.staccato.stem-side.low", SCSPU, g => g.GlyphAboveStaffMiddle('\uE04A', 0)),
+        new("script.staccato.stem-side.mid", SCSPU, g => g.GlyphAboveStaffMiddle('\uE04A', 8)),
+        new("script.staccato.under-slur", SCSPL, g => g.GlyphAboveStaffMiddle('\uE04A', 7)),
         new("beam.quant.over-accidental.left", BQA, g => g.BeamPositionAboveStaffMiddle(0, false)),
         new("beam.quant.over-accidental.right", BQA, g => g.BeamPositionAboveStaffMiddle(0, true)),
         // The cross-voice pair in one book: group one is covered by the other voice's head,

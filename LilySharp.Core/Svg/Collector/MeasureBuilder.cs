@@ -509,9 +509,13 @@ internal sealed class MeasureBuilder
         bool slash = _graceSlashDepth > 0;
         return item switch
         {
+            // ⚠️ THE CUE FLAG SURVIVES: a grace inside `cue { }` is in BOTH, and LilyPond adds
+            // the two sizes (GrobFontSize.StepOf) — dropping it here is what made
+            // `cue { grace { … } }` an ordinary full-context grace (ledger
+            // cue.grace.column.to-main, session 573).
             NoteItem n => new NoteItem(
                 n.StaffPosition, n.BaseDuration, n.Dots, n.Accidental, n.NeedsLedgerLines,
-                n.SourcePosition)
+                n.SourcePosition, isCue: n.IsCue)
             {
                 GraceTime = true,
                 GraceSlash = slash,
@@ -526,7 +530,7 @@ internal sealed class MeasureBuilder
                     m.StaffPosition, m.Accidental, m.NeedsLedgerLines,
                     StringNumber: m.StringNumber, Midi: m.Midi,
                     SourcePosition: m.SourcePosition)).ToImmutableArray(),
-                c.BaseDuration, c.Dots, c.SourcePosition)
+                c.BaseDuration, c.Dots, c.SourcePosition, isCue: c.IsCue)
             {
                 GraceTime = true,
                 GraceSlash = slash,

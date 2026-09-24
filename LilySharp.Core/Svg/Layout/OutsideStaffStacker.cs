@@ -93,7 +93,7 @@ internal static class OutsideStaffStacker
     // textscript.stacked.box-step): the padding covers the m-arch's slope under the
     // descender. Grobs that do NOT declare it (BarNumber, TrillSpanner, TextSpanner,
     // OttavaBracket, DynamicText, VoltaBracketSpanner) take the 0.0 default.
-    private const double OutsideStaffHorizontalPadding = 0.2;
+    internal const double OutsideStaffHorizontalPadding = 0.2;
 
     // The per-grob side-position declarations (padding / staff-padding / the trill's
     // stencil-offset reach) live in ONE home, EngravingDefaults' outside-staff
@@ -2575,7 +2575,14 @@ internal static class OutsideStaffStacker
             var ctStyle = CustomTextEngraver.Style(fonts);
             // Stack in system-relative Y-up: ct.YUp relative to this staff's WITHIN-
             // SYSTEM middle is ct.YUp + midUp; place, then shift back.
-            double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], ct.StaffIndex);
+            // ⚠️ THE SENTINEL IS RESOLVED, as the mark arm's has been since session 243: a
+            // form-level text carries StaffIndex -1, and the raw -1 falls through
+            // StaffOffsetInSystemUp's guard to the SYSTEM TOP — which is a chord row's band
+            // when the row leads the system, so the text was stacked ABOVE the row where
+            // LilyPond's TextScript (a Staff grob) stands under it (ledger
+            // page.custom-text.leading-row.*, session 573).
+            double midUp = LayoutUtilities.StaffMiddleUpInSystem(
+                systems[sysIdx], LayoutUtilities.ResolveScoreGrobStaff(systems[sysIdx], ct.StaffIndex));
             // The staff-padding refpoint floor, applied to the anchor BEFORE the
             // collision pass — aligned_side runs before the outside-staff pass, so the
             // 0.46 raise starts FROM the floored baseline and the entries register the

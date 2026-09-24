@@ -828,7 +828,10 @@ public sealed record NoteItem : MusicItem
         // The nine rarely-written parameters share one box, and the box is built ONLY when at
         // least one of them is non-default — see NoteItemRare. Clamping happens here, as it
         // always did, so the stored value is the clamped one and the getters stay bare.
-        int tremolo = Math.Clamp(tremoloBeams, 0, 3);
+        // ⚠️ NO UPPER BOUND: LilyPond's flag-count is plain arithmetic
+        // (lily/stem-engraver.cc:63-104), so `a8:64` has three slashes. The cap at 3 that
+        // stood here dropped one (ledger beam.tremolo.down-three.slash-count, session 574).
+        int tremolo = Math.Max(tremoloBeams, 0);
         int feather = Math.Clamp(featherDirection, -1, 1);
         if (tremolo != 0 || feather != 0 || hasGlissando || isCourtesy || isCue
             || editorialAccidental != null || fingering != null
@@ -1259,7 +1262,7 @@ public sealed record ChordItem : MusicItem
         Notes = notes;
         BaseDuration = baseDuration;
         Dots = dots;
-        TremoloBeams = Math.Clamp(tremoloBeams, 0, 3);
+        TremoloBeams = Math.Max(tremoloBeams, 0);   // no cap — see NoteItem's constructor
         HasBeamStart = hasBeamStart;
         HasBeamEnd = hasBeamEnd;
         HasArpeggio = hasArpeggio;

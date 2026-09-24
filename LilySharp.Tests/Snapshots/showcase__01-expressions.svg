@@ -123,9 +123,9 @@
   <text x="9.31" y="23.08" font-size="2.20" data-pos="156">= 120</text>
   <rect x="6.38" y="16.72" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="778"/>
   <text x="10.42" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="778">Main</text>
-  <text x="62.29" y="22.95" font-size="2.00" font-style="italic" data-pos="642">rit.</text>
-  <line x1="64.99" y1="22.95" x2="71.23" y2="22.95" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="642"/>
-  <text x="79.55" y="22.95" font-size="2.00" font-style="italic" data-pos="728">accel.</text>
-  <line x1="83.35" y1="22.95" x2="91.23" y2="22.95" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="728"/>
+  <text x="62.29" y="22.95" font-size="2.20" font-style="italic" data-pos="642">rit.</text>
+  <line x1="65.40" y1="22.95" x2="71.23" y2="22.95" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="642"/>
+  <text x="79.55" y="22.95" font-size="2.20" font-style="italic" data-pos="728">accel.</text>
+  <line x1="85.12" y1="22.95" x2="91.23" y2="22.95" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="728"/>
   </g>
 </svg>

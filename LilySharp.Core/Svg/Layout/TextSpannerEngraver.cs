@@ -101,14 +101,24 @@ internal static class TextSpannerEngraver
     private const double BoundPadding = 0.25;
 
     /// <summary>
-    /// Estimated text width per character for italic text (staff spaces).
+    /// Where the dashed line starts: at the label's ADVANCE past its pen origin, with no
+    /// gap. The one spelling the draw and the row reservation share.
     /// </summary>
-    private const double CharWidth = 0.55;
-
-    /// <summary>
-    /// Padding between text and line start.
-    /// </summary>
-    private const double TextLinePadding = 0.5;
+    /// <remarks>
+    /// LILYPOND-REF: lily/line-spanner.cc:621-626 Line_spanner::print — <c>span_points[d]
+    /// += dz_dir * (stencils[d]->extent (X_AXIS)[-d] / dz_dir[X_AXIS])</c>: the LEFT point
+    /// moves to the text stencil's X-extent right edge, and a text stencil's X extent is
+    /// Pango's LOGICAL box, i.e. the advance (see <c>OttavaBracketEngraver.LineStartX</c>
+    /// for the pango-font.cc address; the ottava's extra 0.3 is ottava-bracket.cc's own and
+    /// Line_spanner has none).
+    /// ⚠️ IT WAS <c>text.Length * 0.55 + 0.5</c>, an estimate that fell SHORT of the italic
+    /// advance on every word longer than "rit." ("accel." 3.8 against 5.05 at em 2.0), so
+    /// the dash was drawn through the label's last letters (session 573).
+    /// </remarks>
+    internal static double LineStartX(ScoreTextMetrics fonts, string text, double startX)
+        => string.IsNullOrEmpty(text)
+            ? startX
+            : startX + fonts.Advance(text, TextEm(fonts), TextRole.Text, TextStyle(fonts));
 
     /// <summary>
     /// Minimum line length to be drawn.
@@ -138,7 +148,15 @@ internal static class TextSpannerEngraver
     /// wherever it is read: every consumer measures this text's INK, and an ink measured at
     /// another size reserves a band the page does not draw.
     /// </summary>
-    internal const double TextFontSize = 4.0 * 0.5;
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm TextSpanner declares no <c>font-size</c>, so its
+    /// bound text is set at the paper's text size — the same unstepped 2.2 as
+    /// <see cref="EngravingDefaults.TextScriptFontSize"/>, which is read rather than spelt.
+    /// ⚠️ IT WAS <c>4.0 * 0.5</c> = 2.0, a Lily#-own em 9.1% small — the fifth instance of
+    /// the em mislabel the ottava / TextScript / lyrics / chords ports each closed (ledger
+    /// textspanner.{chord,lyric}-row.row-to-staff, session 573).
+    /// </remarks>
+    internal static readonly double TextFontSize = EngravingDefaults.TextScriptFontSize;
 
     /// <summary>The label's em for THIS score: <see cref="TextFontSize"/> unless the score's
     /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>text</c> (the spanner's label
@@ -178,7 +196,8 @@ internal static class TextSpannerEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<DynamicLayout> dynamicLayouts,
-        Func<int, int, double>? staffYAt = null)
+        Func<int, int, double>? staffYAt = null,
+        ScoreTextMetrics? fonts = null)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TextSpannerLayout>.Empty;
@@ -257,10 +276,7 @@ internal static class TextSpannerEngraver
 
                 // First segment shows the text; continuation segments draw line only.
                 string segText = segment.IsFirst ? spanner.Text : "";
-                double textWidth = segText.Length * CharWidth;
-                double lineStartX = segText.Length > 0
-                    ? startX + textWidth + TextLinePadding
-                    : startX;
+                double lineStartX = LineStartX(fonts ?? ScoreTextMetrics.Bundled, segText, startX);
 
                 if (lineStartX > endX - MinimumLineLength)
                     lineStartX = endX;
@@ -492,7 +508,7 @@ internal static class TextSpannerEngraver
 
     /// <summary>
     /// THIS STAFF'S accel./rit. SPANNERS AS INK ABOVE THE STAFF, in the staff-local frame
-    /// the per-staff skyline is built in (origin = the staff's TOP LINE, up-positive) — so
+    /// the per-staff skyline is built in (origin = the staff's MIDDLE line, up-positive) — so
     /// that a LINE STANDING ABOVE the staff makes room for them.
     /// </summary>
     /// <remarks>
@@ -511,7 +527,7 @@ internal static class TextSpannerEngraver
     /// because this pass runs BEFORE the systems exist and the stacker's answer is not
     /// available yet — the same reason <c>StaffTupletBracketLayouts</c> re-runs its engraver
     /// staff-locally. They are: aligned_side's staff-padding FLOOR
-    /// (<c>StaffLineThickness/2 + 0.8</c> over the top line), and the collision pass's
+    /// (0.8 over the staff's own extent, <c>DynamicEngraver.StaffExtent</c>), and the collision pass's
     /// outside-staff-padding 0.46 over whatever this staff's profile already holds.
     /// ⚠️ WHAT THIS DOES NOT SEE, named rather than hidden: a mover the STACKER adds after
     /// the dynamics — an inline `@chord` seed, a volta — can lift the DRAWN spanner above
@@ -556,7 +572,7 @@ internal static class TextSpannerEngraver
                 continue;
 
             double startX = startsHere && spanner.StartItemIndex < startLayout.Items.Length
-                ? startLayout.X + startLayout.Items[spanner.StartItemIndex].X
+                ? startLayout.X + startLayout.Items[spanner.StartItemIndex].X + BoundPadding
                 : startLayout.X + BoundPadding;
             double endX = endsHere && spanner.EndItemIndex < endLayout.Items.Length
                 ? endLayout.X + endLayout.Items[spanner.EndItemIndex].X - BoundPadding
@@ -575,8 +591,13 @@ internal static class TextSpannerEngraver
                 bottom = Math.Max(bottom, -textInk.Bottom);
             }
 
+            // ⚠️ THE FLOOR IS OVER THE STAFF'S OWN EXTENT IN THE PROFILE'S FRAME — the middle
+            // line, where the profile's own staff ink reads 2.05. It was spelt lineHalf + 0.8,
+            // a top-line-frame number, so on a quiet staff the 0.46 term (2.56) won over the
+            // 0.85 the floor read and the band stood 0.29 under the line the stacker draws
+            // (ledger textspanner.{chord,lyric}-row.row-to-staff, session 573).
             double y = Math.Max(
-                lineHalf + StaffPadding,
+                DynamicEngraver.StaffExtent + StaffPadding,
                 accumulatedUp.MaxProtrusionInRange(startX, endX)
                     + OutsideStaffStacker.OutsideStaffPadding + bottom);
 
@@ -587,7 +608,7 @@ internal static class TextSpannerEngraver
             ink.MergeBox(startX, endX, y - lineHalf, y + lineHalf);
             if (!string.IsNullOrEmpty(text))
                 ink.MergeBox(
-                    startX, Math.Min(startX + text.Length * CharWidth + TextLinePadding, endX),
+                    startX, Math.Min(LineStartX(fonts, text, startX), endX),
                     y - bottom, y + top);
         }
 

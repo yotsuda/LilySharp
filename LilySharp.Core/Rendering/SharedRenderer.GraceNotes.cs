@@ -81,8 +81,8 @@ internal static partial class SharedRenderer
             // LilyPond too). It is the same table the LAYOUT reserved with and the same one
             // the QUANTER measured its x frame in, so the beam cannot land off its stems.
             var graceFont = unit == 1.0
-                ? GraceNoteItem.Font
-                : GraceNoteItem.Font.Scaled(unit);
+                ? GraceNoteItem.HeadFontOf(g.Columns)
+                : GraceNoteItem.HeadFontOf(g.Columns).Scaled(unit);
             var colX = g.ColumnOffsets;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;

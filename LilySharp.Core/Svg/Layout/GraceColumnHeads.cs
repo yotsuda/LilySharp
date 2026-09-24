@@ -82,7 +82,7 @@ internal static class GraceColumnHeads
         var offsets = ChordHeadPositioning.CalculateOffsets(
             AsChordNotes(column), StemUp,
             GlyphMetrics.NoteValueOf(column.BaseDuration),
-            GraceNoteItem.Font);
+            column.Font);
         return ImmutableArray.Create(offsets);
     }
 
@@ -106,8 +106,8 @@ internal static class GraceColumnHeads
         var layouts = new AccidentalPlacement().CalculatePositions(
             notes,
             headOffsets: HeadOffsetsOrNull(column),
-            accidentalFont: GraceNoteItem.AccidentalFont,
-            GraceNoteItem.Font);
+            accidentalFont: column.AccidentalFont,
+            column.Font);
         // position_apes answers per ACCIDENTAL, keyed on the staff position it belongs to;
         // the heads of one column are distinct positions (a unison writes one head), so the
         // position is the key back.
@@ -132,7 +132,7 @@ internal static class GraceColumnHeads
     internal static double HeadInkRight(GraceColumnInfo column)
     {
         double ell = GlyphMetrics.GetNoteheadBBox(
-            GraceNoteItem.Font, GlyphMetrics.NoteValueOf(column.BaseDuration)).Right;
+            column.Font, GlyphMetrics.NoteValueOf(column.BaseDuration)).Right;
         var offsets = HeadOffsets(column);
         if (offsets.IsDefaultOrEmpty)
             return ell;

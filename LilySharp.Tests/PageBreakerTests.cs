@@ -23,6 +23,21 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class PageBreakerTests
 {
+    /// <summary>
+    /// The page walk's early exit is LilyPond's: rods past the PAPER height (or rods plus
+    /// springs, on a ragged-bottom page) — not past the printable band, which the walk does
+    /// not know yet (lily/page-spacing.cc:302-342 Page_spacer::calc_subproblem, HANDOFF §2
+    /// R8⒝). A page whose rods overflow the band but not the sheet is still PRICED.
+    /// </summary>
+    [Theory]
+    [InlineData(95.0, 0.0, false, false)]   // past a 90 band, inside the 100 sheet: priced
+    [InlineData(101.0, 0.0, false, true)]   // past the sheet: the walk ends
+    [InlineData(95.0, 6.0, false, false)]   // springs do not count on a justified page…
+    [InlineData(95.0, 6.0, true, true)]     // …and do on a ragged-bottom one
+    public void TheWalkEndsPastThePaper_NotPastThePrintableBand(
+        double rod, double spring, bool ragged, bool overfull)
+        => Assert.Equal(overfull, PageBreaker.IsOverfull(rod, spring, paperHeight: 100.0, ragged));
+
     [Fact]
     public void BreakIntoPages_EmptySystems_ReturnsEmpty()
     {

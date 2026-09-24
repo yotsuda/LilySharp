@@ -163,26 +163,18 @@ internal static class GrobFontSize
     /// LilyPond's sixths of an octave — 0 at the staff's own size.
     /// </summary>
     /// <remarks>
-    /// ⚠️ GRACE TIME OUTRANKS THE CUE FLAG when an item is inside both
-    /// (<c>cue { grace { … } }</c>). That is what Lily# has always drawn — the grace side
-    /// model never read <see cref="NoteItem.IsCue"/> — and it is NOT what LilyPond does. The
-    /// two sizes are two properties of one grob and LilyPond ADDS them, which the source states
-    /// in one line —
+    /// ⚠️ THE TWO SIZES ADD when an item is inside both (<c>cue { grace { … } }</c>): they are
+    /// two properties of one grob, and LilyPond states the addition in one line —
     /// LILYPOND-REF: lily/font-size-engraver.cc:47-62 <c>Font_size_engraver::acknowledge_font</c>
     /// is <c>font_size = size +</c> the grob's own <c>font-size</c>, where <c>size</c> is the
-    /// context's <c>fontSize</c>. So a grace inside a cue is −4 + −3 = −7 there and −3 here.
-    ///   departs from: lily/font-size-engraver.cc:47-62 <c>Font_size_engraver::acknowledge_font</c>
-    ///     — addition, not precedence.
-    ///   goes away when: the cue becomes a region on the item the way grace time is, so the
-    ///     two can compose instead of one winning.
-    ///   observed by: NOTHING — no book in the corpus nests a grace inside a cue.
+    /// context's <c>fontSize</c>. So a grace inside a cue is −4 + −3 = −7. Until session 573
+    /// grace time OUTRANKED the cue here, and the narrowing into grace time dropped the cue
+    /// flag besides (MeasureBuilder.NarrowToGraceTime); ledger cue.grace.column.to-main
+    /// measures the −7 head and flag ink to 3.4e-6.
     /// </remarks>
     internal static double StepOf(MusicItem item, SizedGrob grob)
-    {
-        if (item.GraceTime)
-            return GraceStep(grob);
-        return IsCue(item) ? EngravingDefaults.CueFontSizeStep : 0;
-    }
+        => (item.GraceTime ? GraceStep(grob) : 0)
+           + (IsCue(item) ? EngravingDefaults.CueFontSizeStep : 0);
 
     /// <summary>
     /// The FONT <paramref name="grob"/> reads its glyph dimensions from — the design its

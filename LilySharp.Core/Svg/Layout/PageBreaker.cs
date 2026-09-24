@@ -699,6 +699,34 @@ internal sealed class PageBreaker
     // walk, so a shared accumulator would price the penalty's page on top of the walk's.
     private PageSpacing? _scoredSpacing, _pagingSpacing, _penaltySpacing, _whitespace;
 
+    /// <summary>
+    /// The page walk's early exit: the systems on the candidate page no longer fit the PAPER.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-spacing.cc:339-342 Page_spacer::calc_subproblem —
+    ///   <c>overfull = (space.rod_height_ &gt; paper_height || (ragged_ &amp;&amp;
+    ///   (space.rod_height_ + space.spring_len_ &gt; paper_height)))</c>, with paper_height the
+    ///   whole sheet (:311 breaker_->paper_height ()), NOT the page's printable band: the
+    ///   comment at :302-309 says so on purpose — the page number, hence the band, is not known
+    ///   yet, and exiting on the band would make the DP miss a better page under a tall header.
+    /// ⚠️ IT WAS "the force is −∞", i.e. the rods overflow the printable band less the top and
+    ///   bottom whitespace — an earlier exit that dropped candidates LilyPond still prices
+    ///   (HANDOFF §2 R8⒝, session 574).
+    /// </remarks>
+    private bool Overfull(PageSpacing space)
+        => IsOverfull(space.RodHeight, space.SpringLength, _pageHeight, _params.RaggedBottom);
+
+    /// <summary><see cref="Overfull"/>'s rule on its four numbers.</summary>
+    /// <remarks>
+    /// ⚠️ NO CORPUS BOOK CAN SEE THIS, measured: the sweep moved 0 of 942, because a candidate
+    /// the old band-based exit dropped is an overfull page, priced at BAD_SPACING_PENALTY,
+    /// and splitting it is always cheaper under Lily#'s parameters (no page/turn penalties,
+    /// no page-count). The rule is pinned by PageBreakerTests instead of by a book.
+    /// </remarks>
+    internal static bool IsOverfull(double rodHeight, double springLength, double paperHeight,
+        bool raggedBottom)
+        => rodHeight > paperHeight || (raggedBottom && rodHeight + springLength > paperHeight);
+
     /// <summary>The site's accumulator, in the constructor's state for <paramref name="topMargin"/>.</summary>
     private PageSpacing Take(ref PageSpacing? drawer, double topMargin)
     {
@@ -876,7 +904,7 @@ internal sealed class PageBreaker
                 space.Resize(pageStart == 0 ? _topMargin + _headerHeight : _topMargin);
                 space.PrependSystem(lines[pageStart]);
 
-                bool overfull = double.IsNegativeInfinity(space.Force);
+                bool overfull = Overfull(space);
                 bool tooFewLines = _params.MinSystemsPerPage > 0 && lineCount < _params.MinSystemsPerPage;
                 if (!tooFewLines && pageStart < line && overfull)
                     break;
@@ -1204,7 +1232,7 @@ internal sealed class PageBreaker
                 // min-systems-per-page is 0 and `line_count < 0` is already false.
                 bool tooFewLines = _params.MinSystemsPerPage > 0
                     && systemCount - 1 < _params.MinSystemsPerPage;
-                if (!tooFewLines && lineSpan > 1 && double.IsNegativeInfinity(pageSpacing.Force))
+                if (!tooFewLines && lineSpan > 1 && Overfull(pageSpacing))
                     break;
 
                 // A start no page count reaches prices to nothing — every p below would

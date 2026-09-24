@@ -506,11 +506,70 @@ internal static partial class SharedRenderer
                 + beamTranslation * stemRank * FeatherFactorAt(stemX);
             bgc.DrawLine(stemX, headY, stemX, beamY,
                 Color.Black, EngravingDefaults.StemThickness);
+
+            // A single-note tremolo on a BEAMED stem — drawn here, because the unbeamed
+            // DrawTremolo is never reached for a stem the beam owns (HANDOFF §2 R9⒢).
+            int tremoloFlags = StemCalculator.TremoloFlagCount(memberItem);
+            if (tremoloFlags > 0)
+            {
+                var member = grp.Members[i];
+                int stemBeams = Math.Max(1, Math.Max(member.BeamCountLeft, member.BeamCountRight));
+                // ⚠️ NOT THE BEAM'S DRAWN SLOPE: calc_slope divides the quantized
+                // positions' dy by the distance between the outer STEMS, but the positions
+                // stand at the beam's drawn ends, half a stem thickness outside them
+                // (lily/beam.cc:631) — so LilyPond's slash is steeper than its own beam by
+                // (dx + stem thickness) / dx. MEASURED (beamed-tremolo.ly TRB1): slash 0.225111,
+                // beam through the stems 0.214964, = 0.62 / 2.7542 and 0.592 / 2.7542.
+                double stemSpan = rightStemX - leftStemX;
+                double tremoloSlope = stemSpan > 0.001
+                    ? slope * (stemSpan + EngravingDefaults.StemThickness) / stemSpan
+                    : slope;
+                DrawBeamedTremolo(stemX, beamY, up ? 1 : -1, stemBeams, tremoloFlags,
+                    tremoloSlope, beamTranslation, bgc);
+            }
         }
         }
         finally
         {
             ossiaScope?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// The StemTremolo of a BEAMED stem: <paramref name="flags"/> rectangles 1.0 wide and 0.48
+    /// thick, turned to the beam's own slope and centred on the stem, the first one
+    /// <paramref name="stemBeams"/> beam translations inside the stem's end and each further
+    /// one a translation nearer the heads.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem-tremolo.cc:313-369 y_offset — end_y = stem extent[dir]
+    ///   − dir·max(beam_count, 1)·beam_translation − beam_end_corrective; the stem's extent
+    ///   reaches half a beam thickness past the beam line (lily/stem.cc:142
+    ///   Stem::set_stem_positions) and the corrective takes the same half back
+    ///   (:830-844 Stem::beam_end_corrective), so the anchor is the beam line at this stem less
+    ///   dir·beam_count·translation. beam_count is the stem's own beam_multiplicity + 1.
+    /// LILYPOND-REF: lily/stem-tremolo.cc:45-71 calc_slope — the BEAM's slope (quantized
+    ///   positions over the first and last normal stems); :84-112 calc_width / calc_shape —
+    ///   1.0 wide, a "rectangle" (lily/lookup.cc:79-89 rotated_box); :127-169 raw_stencil —
+    ///   each box centred, the stack stepping by the beam's translation toward −dir.
+    /// </remarks>
+    private static void DrawBeamedTremolo(double stemX, double beamLineY, int dir, int stemBeams,
+        int flags, double slope, double beamTranslation, IDrawingContext gc)
+    {
+        const double width = 1.0;
+        double norm = Math.Sqrt(1 + slope * slope);
+        double c = 1 / norm, s = slope / norm;
+        double hw = width / 2, ht = StemCalculator.TremoloSlashThickness / 2;
+        (double, double) Corner(double cx, double cy, double x, double y)
+            => (cx + x * c - y * s, cy + x * s + y * c);
+        double firstY = beamLineY - dir * stemBeams * beamTranslation;
+        for (int k = 0; k < flags; k++)
+        {
+            double cy = firstY - dir * k * beamTranslation;
+            gc.DrawFilledQuad(
+                Corner(stemX, cy, -hw, -ht), Corner(stemX, cy, hw, -ht),
+                Corner(stemX, cy, hw, ht), Corner(stemX, cy, -hw, ht),
+                Color.Black);
         }
     }
 

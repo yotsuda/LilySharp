@@ -3059,7 +3059,7 @@ internal sealed class ElementCoordinator
                 + GetItemXOffset(voice, mi, g.MainNoteItemIndex, ml)
                 - geom.Span;
 
-            var font = GraceNoteItem.Font;
+            var font = g.HeadFont;
             double headHalf = font.NoteheadBlack.Top;
             // The quanted grace beam (null for a lone / unbeamable run): the
             // scored line's staff-position pair at the two OUTER STEMS, exactly
@@ -3107,7 +3107,7 @@ internal sealed class ElementCoordinator
                         // Lone / flagged grace: the drawn stem end — head centre
                         // plus the renderer's fixed grace stem length.
                         stemY = headCenterY
-                            - EngravingDefaults.DefaultStemLength * GraceNoteItem.ScaleFactor;
+                            - EngravingDefaults.DefaultStemLength * g.HeadScale;
                     }
                     obstacleX = stemX;
                 }

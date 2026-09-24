@@ -833,6 +833,36 @@ public class LpGeometryLedgerTests
     }
 
     /// <summary>
+    /// A form-level text on a system a chord row leads is DRAWN on its staff, under the row —
+    /// where its no-row twin draws it — and the row stands over it.
+    /// </summary>
+    /// <remarks>
+    /// The ledger point (page.custom-text.leading-row.gap-first) reads only the pair gap, which
+    /// the room's reservation decides; the stacker and the draw each resolved the text's
+    /// <c>-1</c> staff to the SYSTEM TOP (the row's band) until session 573, so the text was
+    /// stacked and drawn a whole row higher, over the chord symbol, and the gap could not
+    /// see either. This reads the drawn baseline over the staff middle against CTWN's and
+    /// the chord baseline against the text's.
+    /// </remarks>
+    [Fact]
+    public void AFormTextUnderALeadingRow_IsDrawnOnItsStaff_AndTheRowClearsIt()
+    {
+        var withRow = LpGeometryProbes.All.Single(p => p.Id == "page.custom-text.leading-row.gap-first");
+        var noRow = LpGeometryProbes.All.Single(p => p.Id == "page.custom-text.leading-row.no-row.gap-first");
+        var g = RenderedGeometry.Render(withRow.Source, withRow.Options);
+        var n = RenderedGeometry.Render(noRow.Source, noRow.Options);
+
+        double TextAboveStaff2(RenderedGeometry geo)
+            => geo.StaffRefpoints(0)[1] - geo.Texts.Single(t => t.Text == "meno mosso").Y;
+
+        Assert.Equal(TextAboveStaff2(n), TextAboveStaff2(g), 6);
+        double textY = g.Texts.Single(t => t.Text == "meno mosso").Y;
+        var chord = g.ChordSymbols.Single(t => Math.Abs(t.X - g.Texts.Single(u => u.Text == "meno mosso").X) < 1e-6);
+        Assert.True(chord.Y < textY - 1.0,
+            $"the chord baseline (y {chord.Y:F6}) must stand clear above the text's (y {textY:F6})");
+    }
+
+    /// <summary>
     /// The distance between two staves of a system is decided by the PAGE's spring chain,
     /// not fixed at the alignment minimum — asserted as a mechanism, on the two probes the
     /// ledger measures it with.

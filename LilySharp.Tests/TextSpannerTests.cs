@@ -484,14 +484,19 @@ public class TextSpannerTests
         var measures = CreateMeasureLayouts(4);
         var systems = CreateSingleSystem(4);
         var spanners = ImmutableArray.Create(new TextSpannerItem(
-            "rit.", 0, 0, 3, 0, TextSpannerStyle.DashedLine, 0));
+            "accel.", 0, 0, 3, 0, TextSpannerStyle.DashedLine, 0));
 
         var result = TextSpannerEngraver.Calculate(spanners, systems, measures, ImmutableArray<DynamicLayout>.Empty);
 
         Assert.Single(result);
-        // LineStartX should be after the text ("rit." = 4 chars * 0.55 + 0.5 padding)
-        double expectedLineStart = result[0].StartX + 4 * 0.55 + 0.5;
-        Assert.Equal(expectedLineStart, result[0].LineStartX, 2);
+        // The line starts at the label's ADVANCE, no gap (line-spanner.cc:621-626) — the
+        // italic advance at the drawn em, which the old 6 * 0.55 + 0.5 = 3.8 fell short of,
+        // drawing the dash through "el.".
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
+        double advance = fonts.Advance("accel.", TextSpannerEngraver.TextEm(fonts),
+            LilySharp.Core.Rendering.TextRole.Text, TextSpannerEngraver.TextStyle(fonts));
+        Assert.True(advance > 3.8 + 1.0, $"advance {advance}");
+        Assert.Equal(result[0].StartX + advance, result[0].LineStartX, 9);
         Assert.True(result[0].LineStartX < result[0].EndX,
             "Line should have space to be drawn");
     }

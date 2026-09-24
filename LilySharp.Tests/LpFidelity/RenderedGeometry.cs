@@ -2346,7 +2346,7 @@ internal sealed class RenderedGeometry
     {
         // Group the drawn quads into beams by x span: a stub, and every further line of a
         // STACK, spans no wider than the group's widest quad.
-        var quads = _pages[page].Quads
+        var quads = BeamQuads(page)
             .Select(q => (Left: Math.Min(q.X0, q.X3), Right: Math.Max(q.X1, q.X2),
                           LeftY: (q.Y0 + q.Y3) / 2, RightY: (q.Y1 + q.Y2) / 2))
             .OrderBy(q => q.Left).ThenByDescending(q => q.Right - q.Left)
@@ -2612,7 +2612,7 @@ internal sealed class RenderedGeometry
         }
 
         double probe = stems[stemIndex] + (rightSide ? BeamletProbeOffset : -BeamletProbeOffset);
-        return _pages[page].Quads.Count(q =>
+        return BeamQuads(page).Count(q =>
             Math.Min(q.X0, q.X3) <= probe && probe <= Math.Max(q.X1, q.X2));
     }
 
@@ -2640,9 +2640,77 @@ internal sealed class RenderedGeometry
     /// A beamlet stub lies strictly inside its group's primary, so containment is what tells
     /// the two apart — no assumption about how long a stub is.
     /// </remarks>
+    /// <summary>
+    /// The drawn quads that are BEAM segments — every quad except a beamed stem's tremolo
+    /// slash, which is also a filled quad (<c>SharedRenderer.DrawBeamedTremolo</c>).
+    /// </summary>
+    /// <remarks>
+    /// A slash is told apart by where it stands: StemTremolo is centred on its stem
+    /// (define-grobs.scm StemTremolo parent-alignment-X CENTER), while a beam segment runs
+    /// between stems and a beamlet stub hangs to one side of one — neither is centred on a
+    /// stem's x. Shape cannot tell them: a slash on a flat beam is an axis-aligned box too.
+    /// </remarks>
+    private List<DrawnQuad> BeamQuads(int page)
+    {
+        var stems = StemXs(page);
+        return _pages[page].Quads.Where(q => !IsCentredOnStem(q, stems)).ToList();
+    }
+
+    private List<double> StemXs(int page)
+        => _pages[page].Lines
+            .Where(l => Math.Abs(l.X1 - l.X2) < 1e-9 && Math.Abs(l.Y1 - l.Y2) > 1e-9)
+            .Select(l => l.X1).ToList();
+
+    private static bool IsCentredOnStem(DrawnQuad q, List<double> stems)
+    {
+        // ⚠️ NARROW TOO: a beam over THREE evenly spaced stems is centred on the middle one.
+        // A slash is 1.0 wide turned to the beam's slope (≤ 1.2 for any printable slope);
+        // no beam segment between two note columns is that narrow.
+        double left = Math.Min(Math.Min(q.X0, q.X1), Math.Min(q.X2, q.X3));
+        double right = Math.Max(Math.Max(q.X0, q.X1), Math.Max(q.X2, q.X3));
+        if (right - left > 1.25)
+            return false;
+        double cx = (q.X0 + q.X1 + q.X2 + q.X3) / 4;
+        return stems.Any(x => Math.Abs(x - cx) < 1e-6);
+    }
+
+    /// <summary>
+    /// The tremolo slashes of beamed stems, left to right then top to bottom: each slash's
+    /// centre height above the ONE staff's middle line (up-positive), and its slope.
+    /// </summary>
+    public IReadOnlyList<(double X, double CentreAboveMiddle, double Slope)> TremoloSlashes(int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        var stems = StemXs(page);
+        return _pages[page].Quads
+            .Where(q => IsCentredOnStem(q, stems))
+            .Select(q => (X: (q.X0 + q.X1 + q.X2 + q.X3) / 4,
+                          CentreAboveMiddle: refs[0] - (q.Y0 + q.Y1 + q.Y2 + q.Y3) / 4,
+                          // device y is down: a slash rising to the right has Y1 < Y0.
+                          Slope: -(q.Y1 - q.Y0) / (q.X1 - q.X0)))
+            .OrderBy(s => s.X).ThenByDescending(s => s.CentreAboveMiddle)
+            .ToList();
+    }
+
+    /// <summary>
+    /// The <paramref name="index"/>-th drawn <paramref name="glyph"/> (left to right), as its
+    /// origin's height above the ONE staff's middle line — for a Script, LilyPond's
+    /// <c>Y-offset</c> over the staff (the script glyphs are drawn at their reference point).
+    /// </summary>
+    public double GlyphAboveStaffMiddle(char glyph, int index, int page = 0)
+    {
+        var refs = StaffRefpoints(page);
+        var found = _pages[page].Glyphs.Where(g => g.Glyph == glyph).OrderBy(g => g.X).ToList();
+        if (index < 0 || index >= found.Count)
+            throw new InvalidOperationException(
+                $"wanted glyph U+{(int)glyph:X4} #{index} but {found.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        return refs[0] - found[index].Y;
+    }
+
     private List<(double Left, double Right)> PrimaryBeams(int page)
     {
-        var quads = _pages[page].Quads
+        var quads = BeamQuads(page)
             .Select(q => (Left: Math.Min(q.X0, q.X3), Right: Math.Max(q.X1, q.X2)))
             .OrderBy(q => q.Left).ThenByDescending(q => q.Right - q.Left)
             .ToList();
@@ -2851,7 +2919,7 @@ internal sealed class RenderedGeometry
         FullWidthBeamQuads(int beamIndex, int page)
     {
         var span = PrimaryBeamSpan(beamIndex, page);
-        var lines = _pages[page].Quads
+        var lines = BeamQuads(page)
             .Where(q => Math.Abs(Math.Min(q.X0, q.X3) - span.Left) < 1e-9
                         && Math.Abs(Math.Max(q.X1, q.X2) - span.Right) < 1e-9)
             .Select(q => (TopLeftY: q.Y0, TopRightY: q.Y1, BottomRightY: q.Y2, BottomLeftY: q.Y3))

@@ -101,8 +101,9 @@ internal static class GraceNoteEngraver
 {
     // LILYPOND-REF: scm/music-functions.scm:635-648 general-grace-settings — NoteHead/Stem/
     //   Flag font-size -3 (the list is PER-GROB: the Accidental is -4), i.e.
-    //   scm/lily-library.scm magstep(-3) = 2^(-3/6). See GraceNoteItem.ScaleFactor.
-    private static readonly double GraceScale = GraceNoteItem.ScaleFactor;
+    //   scm/lily-library.scm magstep(-3) = 2^(-3/6); inside a cue the CueVoice's -4 is added
+    //   to it (GraceColumnInfo.ContextFontSizeStep), so the scale is the run's own
+    //   (GraceNoteItem.HeadScale).
 
     // The grace column step, the space between graces and the grace-to-main junction all
     // used to be constants here (1.2 / 0.3 / 0.4). LilyPond has none of them: the run is a
@@ -202,7 +203,7 @@ internal static class GraceNoteEngraver
                 x,
                 grace.Columns,
                 grace.Type,
-                GraceScale,
+                grace.HeadScale,
                 grace.SourcePosition,
                 MainNoteX: mainNoteAbsX,
                 MainNoteStaffPosition: mainStaffPosition,
@@ -407,7 +408,7 @@ internal static class GraceNoteEngraver
             group, xs,
             lengthFraction: EngravingDefaults.GraceBeamLengthFraction,
             beamThickness: EngravingDefaults.GraceBeamThickness,
-            headFont: GraceNoteItem.Font,
+            headFont: grace.HeadFont,
             // The other half of what general-grace-settings states about a grace Stem —
             // LilyPond guards calc_stem_info's staff-boundary clamps with it, so a grace beam
             // far from the staff is not dragged back toward it (StemDetails.NoStemExtend).
@@ -604,7 +605,7 @@ internal static class GraceNoteEngraver
             {
                 // Read from the grace's own font, exactly as SpacingRules.GraceColumnRightReach
                 // does — this is the same ink, measured for a different caller.
-                var font = GraceNoteItem.Font;
+                var font = grace.Columns[0].Font;
                 var flag = GlyphMetrics.GetFlagBBox(font, d.Denominator, stemUp: true);
                 if (flag != default)
                     return LayoutUtilities.StemAttachX(

@@ -218,7 +218,7 @@ internal static partial class SpacingRules
     {
         var baseSpring = CreateGraceSpring(left.Length, gp, dtMin);
         // LILYPOND-REF: lily/note-spacing.cc:77 — ideal = base.ideal - increment + left_head_end.
-        double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd;
+        double ideal = baseSpring.IdealDistance - gp.SpacingIncrement + GraceHeadEnd(left);
         // LILYPOND-REF: lily/note-spacing.cc:78-83 set_min_distance, then lily/spring.cc:122.
         return Math.Max(ideal, minDistance + SpringHeadroom);
     }
@@ -234,10 +234,10 @@ internal static partial class SpacingRules
     /// black one. The grace one is NOT the full-size one scaled (that is 0.922205): Emmentaler
     /// is optically sized, so a font-size −3 grob reads the FOURTEEN design's head, 1.298161
     /// in its own staff spaces, and magstep(−3) of that is 0.917939 — LilyPond's own number to
-    /// six places. <see cref="GraceNoteItem.Font"/> is that font, so this reads a width and
-    /// multiplies nothing.
+    /// six places. <see cref="GraceColumnInfo.Font"/> is that font (the −7 one inside a cue),
+    /// so this reads a width and multiplies nothing.
     /// </remarks>
-    private static double GraceHeadEnd => GraceNoteItem.Font.NoteheadBlack.Width;
+    private static double GraceHeadEnd(GraceColumnInfo column) => column.Font.NoteheadBlack.Width;
 
     /// <summary>
     /// How far a grace column's ink reaches RIGHT of its origin, in the separation-skyline
@@ -282,7 +282,7 @@ internal static partial class SpacingRules
                        ? 0
                        : GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(note.BaseDuration)).Right)
                    + DefaultExtraSpacingWidth;
-        double ink = GraceHeadEnd;
+        double ink = GraceHeadEnd(note);
         // A CHORD widens the head half of this: a reversed second is drawn on the far side of
         // the stem, so the column's head ink ends at that head's right edge instead of the
         // support head's. A column with one head, or with no seconds, answers GraceHeadEnd
@@ -301,7 +301,7 @@ internal static partial class SpacingRules
             // MEASURED: 0.852939 + 0.585689 = 1.438627 is LilyPond's own reading to nine
             // places (ledger grace.column.single.to-main). It hung off the head's ADVANCE
             // until 2026-08-02, 0.063472 too far right.
-            var font = GraceNoteItem.Font;
+            var font = note.Font;
             var flag = GlyphMetrics.GetFlagBBox(font, note.BaseDuration.Denominator, stemUp: true);
             if (flag != default)
                 ink = Math.Max(ink,

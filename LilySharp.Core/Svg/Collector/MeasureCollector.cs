@@ -4907,10 +4907,15 @@ public sealed partial class MeasureCollector
             int before = columns.Count;
             switch (items[i])
             {
+                // A grace written inside `cue { }` carries the cue's fontSize on its column
+                // (GraceColumnInfo.ContextFontSizeStep) — read off the item's own IsCue, the one
+                // place the walk already recorded the region. A REST carries no such flag
+                // (GrobFontSize's remarks name that gap), so a rest column stays at 0.
                 case NoteItem note:
                     columns.Add(new GraceColumnInfo(
                         note.StaffPosition, note.Accidental, note.NeedsLedgerLines,
-                        note.BaseDuration, note.Midi, note.StringNumber, note.Dots));
+                        note.BaseDuration, note.Midi, note.StringNumber, note.Dots)
+                    { ContextFontSizeStep = note.IsCue ? EngravingDefaults.CueFontSizeStep : 0 });
                     break;
 
                 case ChordItem chord when chord.Notes.Length > 0:
@@ -4926,7 +4931,8 @@ public sealed partial class MeasureCollector
                                 member.Midi, member.StringNumber));
                         heads.Sort(static (a, b) => a.StaffPosition.CompareTo(b.StaffPosition));
                         columns.Add(new GraceColumnInfo(
-                            heads.ToImmutable(), chord.BaseDuration, chord.Dots));
+                            heads.ToImmutable(), chord.BaseDuration, chord.Dots,
+                            ContextFontSizeStep: chord.IsCue ? EngravingDefaults.CueFontSizeStep : 0));
                     }
                     break;
 

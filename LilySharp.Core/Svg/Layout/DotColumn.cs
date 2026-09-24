@@ -359,7 +359,7 @@ internal static class DotColumn
     {
         if (column.IsRest || column.Heads.IsDefaultOrEmpty)
             return (0, Array.Empty<int>());
-        var font = GraceNoteItem.Font;
+        var font = column.Font;
         int noteValue = GlyphMetrics.NoteValueOf(column.BaseDuration);
         int[] headPositions = column.Heads.Select(h => h.StaffPosition).ToArray();
         Span<Support> supports = stackalloc Support[2];

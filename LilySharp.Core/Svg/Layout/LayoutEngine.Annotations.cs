@@ -673,7 +673,7 @@ internal sealed partial class LayoutEngine
         var textSpannerItems = TabStaffStencils.Blank(
             ctx.MultiScore, TextSpannerEngraver.DetectTextSpanners(musicMarks),
             static t => t.StaffIndex);
-        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt);
+        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt, ctx.Fonts);
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);

@@ -848,8 +848,11 @@ internal static partial class SharedRenderer
         foreach (var t in layout.CustomTextLayouts)
         {
             if (!sysTopYUp.ContainsKey(t.MeasureIndex)) continue; // other page
-            // Page Y-up against the (top) staff middle this text resolves.
-            double y = os.StaffMiddleYUp(t.StaffIndex, t.MeasureIndex, StaffHeight) + t.YUp;
+            // Page Y-up against the (top) staff middle this text resolves — through the
+            // SCORE-GROB resolution, as the stacker prices it: the raw -1 read the system
+            // top, which is a leading chord row's band, and drew the text a row above where
+            // it was placed (ledger page.custom-text.leading-row.*, session 573).
+            double y = os.ScoreGrobStaffMiddleYUp(t.StaffIndex, t.MeasureIndex, StaffHeight) + t.YUp;
             // TextScript declares no font-size, so the em is the paper's own text size —
             // 2.2 ss, one home with the stacker's reservation (was a Lily#-own 2.4).
             // LILYPOND-REF: scm/paper.scm:69-77 text-font-size (via EngravingDefaults).
