@@ -101,9 +101,10 @@ public class LyricExtenderCompletionTests
             score main { staff ~v  lyrics w }
             """);
 
-        // Extender segments: thin (0.100) horizontal lines below the first staff.
+        // Extender segments: thin (0.080 = the LyricExtender's 0.8 line-thicknesses; a flat
+        // 0.100 until session 565) horizontal lines below the first staff.
         var segments = new List<(double X1, double X2, double Y)>();
-        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.100\"[^>]*)/>"))
+        foreach (Match m in Regex.Matches(svg, "<line ([^>]*stroke-width=\"0.080\"[^>]*)/>"))
         {
             var a = m.Groups[1].Value;
             double y1 = Attr2(a, "y1"), y2 = Attr2(a, "y2");
@@ -116,13 +117,14 @@ public class LyricExtenderCompletionTests
         var second = segments.OrderBy(s => s.Y).Last();
 
         // The second piece sits ~one system further down, on the LINE-2 "e"
-        // syllable's row (its baseline + the extender offset), not on line 1's.
+        // syllable's row (its baseline, the line's box sitting ON it: centre half a
+        // thickness above — it sat 0.7 below until session 565), not on line 1's.
         var eNext = Regex.Matches(svg, "<text ([^>]*)>e</text>")
             .Select(m => (Y: Attr2(m.Groups[1].Value, "y"), X: Attr2(m.Groups[1].Value, "x")))
             .OrderBy(t => t.Y).Last();
         Assert.True(second.Y > first.Y + 5,
             $"second segment must be on the next system (got {first.Y} and {second.Y})");
-        Assert.Equal(eNext.Y + 0.7, second.Y, 1);
+        Assert.Equal(eNext.Y - 0.04, second.Y, 1);
         // And it ends before the "e" syllable it leads into.
         Assert.True(second.X2 < eNext.X,
             "the stub must stop before the syllable it leads into");

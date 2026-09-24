@@ -116,13 +116,20 @@ internal static class ArticulationEngraver
     //   with accidentals").
     private const double ScriptHorizonPadding = 0.1;
 
-    // Bend/fall glyph X placement (staff-spaces; Lily#'s own tuning, no direct
-    // LP grob — LP renders bends via a different mechanism).
-    /// <summary>X offset of a bend glyph from the note on a TAB staff.</summary>
+    // The guitar bend-up's and the scoop's / plop's X placement (staff spaces). The fall and
+    // the doit are NOT here: they are LilyPond's BendAfter, placed by bend::print's rule
+    // (BendAfterGeometry) in the fall branch below.
+    // LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
+    //   bend is the BendSpanner of scm/output-lib.scm:2844 bend-spanner::print, unported —
+    //   and LilyPond has no scoop or plop at all (no grob and no event spells either).
+    //   departs from: bend-spanner::print's bend::calc-bend-x-begin (the bend-up); nothing (scoop/plop).
+    //   goes away when: the bend spanner is ported; never for the scoop and plop.
+    //   observed by: none against LilyPond.
+    /// <summary>X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).</summary>
     private const double BendTabXOffset = 0.5;
-    /// <summary>X gap between a bend glyph and the notehead's right edge.</summary>
+    /// <summary>X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).</summary>
     private const double BendHeadPadding = 0.15;
-    /// <summary>X offset for a bend that arrives FROM THE LEFT (scoop/plop).</summary>
+    /// <summary>X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).</summary>
     private const double BendApproachXOffset = 1.55;
 
     // Notehead half-extent and stem length: the canonical values live in
@@ -805,11 +812,105 @@ internal static class ArticulationEngraver
                 continue;
             var item = measure.Items[articulation.ItemIndex];
 
-            // Fall / Doit (bend-after): a short curve trailing off the RIGHT of the
-            // note at the note's own height — on a tab staff, off the fret digit's
-            // string row. Positioned independently of the Script side machinery.
-            if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit
-                or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop)
+            // Fall / doit — LilyPond's BendAfter spanner, printed by bend::print: the curve
+            // leaves the note head's ink right (or its dots', when the dots sit on the head's
+            // own row) by BendAfterGeometry.Padding, ends Padding short of the next column's
+            // ink but at least MinimumLength on, and drops or rises DeltaY. Positioned
+            // independently of the Script side machinery, at the note's own height; on a tab
+            // staff off the fret digit's string row. The Ink stored is the stencil's own box
+            // (0 … dx, 0 … ±Δ about the anchor, Y-up), which is what the paging skyline reads.
+            // LILYPOND-REF: scm/output-lib.scm:1343-1397 bend::print — left-x, right-x against each bound's generic-bound-extent, delta-y
+            // LILYPOND-REF: scm/scheme-engravers.scm:2147-2159 Bend_engraver — the LEFT bound is
+            //   the note head (the spanner's Y parent), the RIGHT the next musical column, or
+            //   the command column when a bar line stands there (currentBarLine).
+            if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit)
+            {
+                double bendItemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                    artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
+                Staff? bendTab = null;
+                if (staffByIndex != null
+                    && staffByIndex.TryGetValue(articulation.StaffIndex, out var bts)
+                    && bts.IsTab && bts.Tuning.HasValue)
+                    bendTab = bts;
+                double leftInk, bendYUp;
+                if (bendTab is { Tuning: { } btt })
+                {
+                    // The TabNoteHead's ink: the digit centred TabHeadCenterOffset right of the
+                    // column, its advance wide — the width the tab reservation reads
+                    // (SkylineBuilder.AddTabStaffToSkylines).
+                    int[] tuning = Tunings.GetTuning(btt);
+                    var (strNum, fret) = TabFretOf(bendTab, tuning, item);
+                    leftInk = bendItemX + EngravingDefaults.TabHeadCenterOffset
+                        + TabFretHalfWidth(fonts, fret);
+                    // Y-up: the string row sits (strNum−1)·space below the (notation)
+                    // staff middle. No staff offset — resolved at draw time.
+                    bendYUp = StaffMiddle
+                        - (strNum - 1) * EngravingDefaults.TabStringSpace(tuning.Length);
+                }
+                else
+                {
+                    int noteValue = GlyphMetrics.NoteValueOf(item);
+                    double headRight = GlyphMetrics.GetNoteheadBBox(noteValue).Right;
+                    leftInk = bendItemX + headRight;
+                    // The dots join the left bound only when they sit at the spanner's own Y,
+                    // the head's — a note in a space; a line note's dot lifts a row and is not
+                    // read. The dot column stands where DotColumn.Reserved puts it, the
+                    // reservation's house (the renderer's DotColumn.OffsetX is the same rule).
+                    // LILYPOND-REF: scm/output-lib.scm:1365-1376 bend::print — left-x takes the
+                    //   dot's grob-robust-relative-extent end when (close dots-y spanner-y)
+                    if (item is NoteItem { Dots: > 0 } dotted)
+                    {
+                        var (dotOffset, rows) = DotColumn.Reserved(item, noteValue, headRight);
+                        if (rows.Length > 0 && rows[0] == dotted.StaffPosition)
+                            leftInk = Math.Max(leftInk, bendItemX + dotOffset
+                                + (2 * dotted.Dots - 1) * GlyphMetrics.AugmentationDot.Width);
+                    }
+                    // Y-up: the gesture hangs at the note's own staff position (pos/2).
+                    bendYUp = GetStaffPosition(item) * 0.5;
+                }
+                double leftX = leftInk + BendAfterGeometry.Padding;
+                // The RIGHT bound's ink left: the next column's — LilyPond unites the note
+                // columns of every staff at that paper column, so a notation staff's head
+                // stands AT the column and only a tab-only score's next digit stands
+                // TabHeadCenterOffset − w/2 right of it — or, past the measure's last item,
+                // the end bar line's ink left as SharedRenderer.Barlines draws it (a thin
+                // bar; a heavier end bar stands its extra width further left, unread here).
+                double nextInkLeft;
+                if (articulation.ItemIndex + 1 < measure.Items.Length)
+                {
+                    nextInkLeft = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                        artMeasures, articulation.MeasureIndex, articulation.ItemIndex + 1, measureLayout);
+                    if (bendTab is { Tuning: { } ntt } && !AnyNotationStaff(staffByIndex))
+                    {
+                        var (_, nextFret) = TabFretOf(bendTab, Tunings.GetTuning(ntt),
+                            measure.Items[articulation.ItemIndex + 1]);
+                        nextInkLeft += EngravingDefaults.TabHeadCenterOffset
+                            - TabFretHalfWidth(fonts, nextFret);
+                    }
+                }
+                else
+                {
+                    nextInkLeft = measureLayout.X + measureLayout.Width
+                        - EngravingDefaults.ThinBarlineThickness;
+                }
+                double rightX = Math.Max(nextInkLeft - BendAfterGeometry.Padding,
+                    leftX + BendAfterGeometry.MinimumLength);
+                bool doit = articulation.Type == ArticulationType.Doit;
+                double delta = doit ? BendAfterGeometry.DeltaY : -BendAfterGeometry.DeltaY;
+                layouts.Add(new ArticulationLayout(
+                    articulation.MeasureIndex, articulation.ItemIndex, leftX, bendYUp,
+                    doit ? "bendDoit" : "bendFall", true, articulation.SourcePosition,
+                    FontSizeStep: 0.0,
+                    new GlyphMetrics.BBox(0, Math.Min(0, delta), rightX - leftX, Math.Max(0, delta)),
+                    SourceIndex: arti, StaffIndex: articulation.StaffIndex));
+                continue;
+            }
+
+            // Guitar bend-up, scoop and plop: Lily#'s own devices (the constants above say
+            // what LilyPond has instead), positioned independently of the Script side
+            // machinery — off the note's right at the note's own height (a bend-up; on a tab
+            // staff off the fret digit's string row), or arriving from its left.
+            if (articulation.Type is ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop)
             {
                 double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
@@ -851,8 +952,6 @@ internal static class ArticulationEngraver
                 {
                     ArticulationType.Scoop => "bendScoop",
                     ArticulationType.Plop => "bendPlop",
-                    ArticulationType.Fall => "bendFall",
-                    ArticulationType.Doit => "bendDoit",
                     // Guitar bend-up: the renderer parses the amount off the
                     // sentinel and draws arrow + label.
                     _ => $"bendUp:{articulation.BendSemitones}",
@@ -1848,6 +1947,40 @@ internal static class ArticulationEngraver
     /// once, the same residual on three different glyphs, which is what said it was not the
     /// accidental's own box but this one.
     /// </remarks>
+    /// <summary>The string and fret a tab staff draws <paramref name="item"/> on — the same
+    /// call the renderer makes, with the same sounding shift (a chord's first note).</summary>
+    private static (int StringNumber, int Fret) TabFretOf(Staff tab, int[] tuning, MusicItem item)
+    {
+        int midi = item switch
+        {
+            NoteItem n => n.Midi,
+            ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi,
+            _ => 0,
+        };
+        int? preferred = item is NoteItem ni ? ni.StringNumber : null;
+        return Tunings.CalculateFret(
+            midi + Tunings.SoundingShift(tab.TabSourceClef, tab.Transposition), tuning, preferred ?? 0);
+    }
+
+    /// <summary>Half the advance of a fret digit at the score's fret em — half the box the tab
+    /// reservation gives it (SkylineBuilder.AddTabStaffToSkylines).</summary>
+    private static double TabFretHalfWidth(ScoreTextMetrics fonts, int fret)
+        => TabConstants.FretGlyphWidth(fonts,
+            fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            TabConstants.FretEm(fonts)) / 2;
+
+    /// <summary>Whether any staff of the score is a notation staff — one whose note heads
+    /// stand AT the column, so the column's united ink left is the column itself.</summary>
+    private static bool AnyNotationStaff(Dictionary<int, Staff>? staffByIndex)
+    {
+        if (staffByIndex == null)
+            return false;
+        foreach (var s in staffByIndex.Values)
+            if (!s.IsTab)
+                return true;
+        return false;
+    }
+
     private static double NoteheadHalfWidth(MusicItem item)
     {
         int noteValue = item switch

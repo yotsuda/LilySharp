@@ -15,9 +15,9 @@
   <line x1="0.05" y1="20.52" x2="38.57" y2="20.52" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.80" y="19.52" font-size="4.00"></text>
   <text class="music" x="4.88" y="18.52" font-size="4.00" data-pos="499"></text>
-  <line x1="10.22" y1="21.52" x2="12.03" y2="21.52" stroke="#000000" stroke-width="0.200"/>
+  <line x1="10.07" y1="21.52" x2="12.03" y2="21.52" stroke="#000000" stroke-width="0.200"/>
   <line x1="13.09" y1="21.52" x2="14.32" y2="21.52" stroke="#000000" stroke-width="0.200"/>
-  <line x1="20.94" y1="21.52" x2="22.13" y2="21.52" stroke="#000000" stroke-width="0.200"/>
+  <line x1="20.91" y1="21.52" x2="22.13" y2="21.52" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.95" y="19.52" font-size="4.00" data-pos="552"></text>
   <text class="music" x="7.89" y="21.52" font-size="4.00" data-pos="546"></text>
   <text class="music" x="10.40" y="21.52" font-size="4.00" data-pos="546"></text>

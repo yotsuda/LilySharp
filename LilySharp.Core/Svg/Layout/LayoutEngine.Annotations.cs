@@ -1195,7 +1195,7 @@ internal sealed partial class LayoutEngine
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
-            StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems,
+            StanzaNumbers: StanzaNumberEngraver.Calculate(ctx.Fonts, lyricLayouts, systems,
                 leadSheet: ctx.IsLeadSheet),
             // LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript grob.
             PartCombineTexts: stackedPartCombine);

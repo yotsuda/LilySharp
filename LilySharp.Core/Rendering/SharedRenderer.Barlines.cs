@@ -226,7 +226,11 @@ internal static partial class SharedRenderer
     /// <remarks>LILYPOND-REF: scm/bar-line.scm — bar-line glyph composition.</remarks>
     private static void DrawBarline(BarlineType type, double x, double staffY, double height,
         IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null,
-        int staffLines = 5)
+        int staffLines = 5,
+        // The dashed bar's dash pitch (DrawDashedBarline): the staff's own line spacing,
+        // derived from <paramref name="height"/> and <paramref name="staffLines"/> when
+        // null. A span bar (the gap between two staves) and a tab staff pass their own.
+        double? dashSpace = null)
     {
         if (type == BarlineType.None) return;
 
@@ -248,16 +252,9 @@ internal static partial class SharedRenderer
                 break;
 
             case BarlineType.Dashed:
-            {
-                // LILYPOND-REF: scm/bar-line.scm (dashed bar glyph) — dash
-                // length tuned so segments straddle the staff lines evenly
-                // (~⅔ dash, ⅓ gap per staff space).
-                const double dash = 0.67, gap = 0.33;
-                for (double dy = 0; dy < height; dy += dash + gap)
-                    gc.DrawRectangle(x, staffY - dy, thin,
-                        Math.Min(dash, height - dy), fill: Color.Black);
+                DrawDashedBarline(x, staffY, height, thin,
+                    dashSpace ?? (staffLines > 1 ? height / (staffLines - 1) : 1.0), gc);
                 break;
-            }
 
             case BarlineType.Final:
                 gc.DrawRectangle(x, staffY, thin, height, fill: Color.Black);
@@ -285,6 +282,50 @@ internal static partial class SharedRenderer
                 gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
                 if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, height, gc, tabDots, staffLines);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// The dashed bar line (<c>!</c>, LilyPond's <c>\bar "!"</c>): one dash CENTRED on every
+    /// staff line — <c>1 − gap</c> (0.7) of a staff space tall, dashes one staff space apart,
+    /// the pattern centred on the bar's extent — with the outermost dashes cut at the
+    /// extent's edge plus half a line thickness. Until session 561 the dashes ran from the
+    /// TOP of the bar (0.67 on, 0.33 off), so the first straddled the top line while the
+    /// last fell wherever the height left it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/bar-line.scm:512-553 make-dashed-bar-line — <c>dash-size = 1 −
+    /// gap</c>, <c>amount-of-dashes = height / staff-space</c>, one round-filled box per
+    /// <c>i</c> from <c>round(amount)</c> down by 2 to <c>−round(amount)</c> spanning
+    /// <c>(i ± dash-size) × half-space</c> clamped to <c>±(amount × half-space + half
+    /// line-thickness)</c>, the whole translated to the extent's centre. The box's blot (the
+    /// rounded corners) is not drawn, as on the other bar lines here.
+    /// LILYPOND-REF: scm/define-grobs.scm:268-276 BarLine allow-span-bar … gap — <c>(gap .
+    /// 0.4)</c>, so a dash is 0.6 of a staff space.
+    /// MEASURED (2.26.0, Lab sessions/p561/dashed-lp.svg, the fixture's twin): on a five-line
+    /// staff the three inner dashes span ±0.30 about their lines and the two outer ones run
+    /// from 0.05 outside the staff to 0.30 inside — 0.60 and 0.35 tall.
+    /// </remarks>
+    /// <param name="space">The dash pitch: the staff's line spacing (a span bar between two
+    /// staves takes the layout's 1.0, <c>is-span</c> in the source).</param>
+    private static void DrawDashedBarline(double x, double top, double height, double thickness,
+        double space, IDrawingContext gc)
+    {
+        const double gap = 0.4;   // BarLine's `gap` (scm/define-grobs.scm:276)
+        double dashSize = 1.0 - gap;
+        double halfSpace = space / 2.0;
+        double halfThick = EngravingDefaults.LineThickness / 2.0;
+        double amount = space > 0 ? height / space : 0.0;
+        int rounded = (int)Math.Round(amount, MidpointRounding.ToEven);
+        double centre = top - height / 2.0;
+        double limit = amount * halfSpace + halfThick;
+        for (int i = rounded; i >= -rounded; i -= 2)
+        {
+            double dashTop = Math.Min((i + dashSize) * halfSpace, limit);
+            double dashBottom = Math.Max((i - dashSize) * halfSpace, -limit);
+            if (dashTop <= dashBottom)
+                continue;
+            gc.DrawRectangle(x, centre + dashTop, thickness, dashTop - dashBottom, fill: Color.Black);
         }
     }
 

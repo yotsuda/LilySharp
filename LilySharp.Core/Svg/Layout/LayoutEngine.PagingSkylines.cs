@@ -1164,37 +1164,32 @@ internal sealed partial class LayoutEngine
                     ctY + ctTop, ctY + ctBottom);
             }
         }
-        // Inline chord symbols: their scalar height joins the up-extents, but
-        // the X-aware inter-system Distance() never saw them — on a ragged
-        // (natural-gap) page a below-staff jump text ("D.S. al Coda") printed
-        // straight onto the next system's chord letters. Same envelope the
-        // scalar extents use (cap ascent 1.9, descent 0.3).
-        // ⚠️ THE LAST FLAT BOX ON A CHORD NAME, and the arm beside it (the per-measure
-        // annotation extents, :338-344) reads real ink through ChordNameEngraver.SymbolInk.
-        // Second spelling of one quantity, HANDOFF §5.2.1② — it has an observer since
-        // 2026-08-28 (audit/lp-geometry page.inline-chord.gap-first, whose whole residual
-        // +0.001116000 is this box plus the face term; poison 1.9 → 1.95 moves that reading
-        // one for one and reddens it alone out of 6359 tests).
-        // ★★★ ⚠️ BUT THE PORT MAKES THE NUMBER WORSE, AND THAT IS MEASURED, NOT FEARED
-        // (session 273, before any port was attempted — §5.0's "measure before building").
-        // Swapping this box for SymbolInk lands the entry on +0.008366371, i.e. 0.00725
-        // FURTHER FROM LilyPond than the flat 1.9 sits today: Lily#'s TeX Gyre Heros inks
-        // a capital taller than LilyPond's Nimbus Sans, so the scalar is nearer only by
-        // accident of the face. ⇒ THE WHOLE OF THAT +0.008366371 WOULD BE THE FACE TERM,
-        // the same island as page.chord-row.staff-to-chord-baseline and the same decision
-        // (shipping Nimbus Sans). So this is NOT a free structural repair to hang on the
-        // next act: it trades a headline fidelity number for one spelling, and RULES §5.2's
-        // "do not fit a constant to the output" argues for taking that trade — but it is
-        // the USER'S trade to take. Do not port this arm silently. Blast radius, measured
-        // the same day: a +0.05 poison moves 1 of 572 tracked books (samples/greensleeves,
-        // guarded by neither a snapshot nor the 81-book rerender corpus).
+        // Inline chord symbols: their height joins the up-extents, but the X-aware
+        // inter-system Distance() never saw them — on a ragged (natural-gap) page a
+        // below-staff jump text ("D.S. al Coda") printed straight onto the next system's
+        // chord letters. THE BOX IS THE SYMBOL'S OWN INK about its baseline — the same
+        // SymbolInk the per-measure annotation extents (:338-344), the draw and the chord
+        // line's own placement read: one house (HANDOFF §5.2.1②).
+        // It was a flat [cnY + 1.9, cnY − 0.3] until session 567. That scalar had an
+        // observer since 2026-08-28 (audit/lp-geometry page.inline-chord.gap-first) and was
+        // kept because it read NEARER to LilyPond than the ink would (+0.001116 against
+        // +0.008366, session 273) — by accident of the face: TeX Gyre Heros inks a capital
+        // taller than LilyPond's Nimbus Sans, and the 1.9 stood 0.05 short of the drawn
+        // capital while the chord line stood 0.05 too HIGH (a flat 0.6 over the top line
+        // where LilyPond keeps the symbol's ink 0.5 off the staff's edge). Session 567
+        // ported the line's placement (ChordNameEngraver.RelatedStaffPadding), which took
+        // the accident away — the scalar box then read 0.052 UNDER LilyPond — so the box
+        // became the ink it always stood for. What remains on that entry is the face term
+        // alone, the island of page.chord-row.staff-to-chord-baseline (the decision to ship
+        // Heros, HANDOFF §3).
         if (!chordNames.IsDefaultOrEmpty)
         {
             foreach (var cn in chordNames)
             {
                 double halfW = ChordNameEngraver.SymbolInkWidth(fonts, cn) / 2 + 0.3;
                 double cnY = cn.YUp; // cn.YUp is Y-up from the system top (skyline frame)
-                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + 1.9, cnY - 0.3);
+                var (cnBottom, cnTop) = ChordNameEngraver.SymbolInk(fonts, cn);
+                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cnY + cnTop, cnY + cnBottom);
             }
         }
         // Dynamics and free expressive text (@text) — the SAME shape as the chord names one

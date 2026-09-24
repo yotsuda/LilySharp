@@ -4487,9 +4487,12 @@ internal sealed class MultiStaffLayouter
     /// cap height ≈ 0.72 × 2.6.</summary>
     private const double ChordSymbolCapHeight = 1.9;
 
-    /// <summary>Chord-name baseline distance above the staff top line — mirrors
-    /// <c>ChordNameEngraver.StaffPadding</c>.</summary>
-    private const double ChordRowStaffPadding = 0.6;
+    /// <summary>Chord-name baseline distance above the staff's skyline — the ChordNames
+    /// line's padding, ONE home with <see cref="ChordNameEngraver.RelatedStaffPadding"/>.
+    /// The engraver adds each symbol's own ink bottom to it (a few hundredths); this
+    /// band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
+    /// Lily#'s model of a row LilyPond walks as a loose line (see AttachedChordLineInRun).</summary>
+    private const double ChordRowStaffPadding = ChordNameEngraver.RelatedStaffPadding;
 
     /// <summary>
     /// Extends a staff's UP skyline to cover its associated chord-name row, so the
@@ -4531,7 +4534,7 @@ internal sealed class MultiStaffLayouter
     /// Whether the attached chord line of <paramref name="staffIndex"/> is an ELEMENT of a
     /// pair's run — the LilyPond model — rather than a reserved band
     /// (<see cref="ReserveChordRowBand"/>) plus a fixed offset
-    /// (<c>ChordNameEngraver.StaffPadding</c>) — the Lily# model it replaces.
+    /// (<c>ChordNameEngraver.RelatedStaffPadding</c>) — the Lily# model it replaces.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:919-925 loose_lines — a ChordNames context
@@ -4552,8 +4555,9 @@ internal sealed class MultiStaffLayouter
     /// no LilyPond line to model, so a staff carrying only those keeps the band.</item>
     /// <item>A SPACEABLE STAFF ABOVE IT in score order: with nothing above, the line leads
     /// the system and its spacing is the previous system's / the page top's business —
-    /// that regime keeps the measured 0.6+protrusion placement
-    /// (<c>ChordNameEngraver.StaffPadding</c>, LilyPond-measured for top-of-system rows).
+    /// that regime keeps the skyline-plus-padding placement
+    /// (<c>ChordNameEngraver.RelatedStaffPadding</c>, LilyPond's own minimum translation
+    /// of the line against the staff under it).
     /// ⚠️ SCORE ORDER, NOT THE SYSTEM'S SURVIVORS: hara-kiri hiding every staff above
     /// would leave this true while no pair exists to walk the line — named divergence, no
     /// corpus book reaches it (attached chords + removeEmpty above).</item>

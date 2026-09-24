@@ -260,6 +260,56 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A chord symbol attached to a note stands where LilyPond's spacing puts it.** It stood a
+  flat 0.6 above the staff's top line plus whatever rose under it; now its own ink clears the
+  staff's skyline by 0.5, the padding LilyPond's ChordNames context declares — so a round "C"
+  and a flat-footed "F" no longer share a baseline by accident, and a symbol over a high note
+  rides that note's head by the same margin. The room a lower staff reserves for its chord row
+  reads the same padding, 0.1 tighter than before.
+- **Stanza numbers end together, one space left of the leftmost first syllable.** Every
+  verse's "1.", "2." used to start a flat four spaces before the first measure; now, as
+  LilyPond's stanza-number alignment does, they all end 1.0 left of whichever verse's first
+  syllable starts furthest left.
+- **A fall or doit (`@fall`, `@doit`) is LilyPond's BendAfter.** It was a short invented
+  curve: eight straight segments 1.25 long and 1.7 deep, 0.13 thick, leaving the head by 0.15.
+  Now it is one stroked curve, 0.2 thick, that leaves the head's ink (or its dot's, when the dot
+  sits on the head's own row) by 0.5, ends 0.5 short of the next note, rest or bar line but
+  reaches at least 0.5, and drops or rises 2 staff spaces — `\bendAfter #-4` / `#+4`, which is
+  what the LilyPond twin has always written.
+- **A PDF's vertically centred text sits where the SVG's does.** Instrument names and tuplet
+  numbers were placed from a guessed cap height; the PDF now reads the face's own ascender and
+  descender, as the PNG does.
+- **The lyric extender (`__`) is LilyPond's.** It sat 0.7 below the syllable's baseline, 0.1
+  thick, left the syllable by 0.2 and ran only to the last held note. Now it sits on the
+  baseline, 0.08 thick, leaves the syllable by that thickness, reaches at least 1.5 past the
+  syllable (capped at the line's end) and at least to the melisma's last note, stops 0.08 short
+  of the next syllable, and disappears only when shorter than 0.12.
+- **An accidental shortens its note's ledger lines as LilyPond's font says, and a chord's
+  shared ledger is the union of its heads'.** Every accidental shortened the three positions
+  around its head, to a fixed distance from the head. Now only the lines within the glyph's
+  own range are shortened (a sharp 0.8 below to 1 above, a flat 0 to 0.8, a natural 1.8
+  below to 1 above, a courtesy's parenthesis 1 either way), to midway between the drawn
+  accidental's right edge and the head — so a D♭ above the staff shortens nothing below it,
+  a C♯ its own line but not the one beneath — and each head of a chord asks for its own
+  lines, a line two heads share keeping the longer of the two.
+- **The octavation digit of `treble_8`, `bass_8` and `treble^8` is LilyPond's ClefModifier.**
+  The "8" was drawn at 3.2 staff spaces of em — 2.3 times LilyPond's — at fixed offsets from
+  the clef. It is now italic text at the paper's size stepped by −4 (em 1.39), its centre on the
+  clef's own alignment point (a fifth of the half-width left of centre under a G clef, three
+  tenths under an F clef, a tenth right above a G clef), and its near edge on the clef's ink or
+  0.7 outside the staff, whichever is further; a mid-music change clef and a cue clef damp it
+  as LilyPond does.
+- **A dead note (`@dead`) is drawn with the font's cross head.** The staff drew two strokes of
+  its own across the head's box and the tab a bold "×" of the fret face; LilyPond's `\deadNote`
+  is the cross note-head style and nothing else, so the page now draws `noteheads.s2cross` (the
+  half and whole crosses for those values) at the head size on the staff, and the same glyph at
+  the tab head's size in place of the fret number. The MusicXML gains `<notehead>x</notehead>`
+  on the note.
+- **The dashed bar line (`!`) is drawn as LilyPond draws it: one dash centred on every staff
+  line.** The dashes ran from the top of the bar in a fixed 0.67-on / 0.33-off rhythm, so only
+  the first straddled a line and the last ended wherever the height left it. Now each dash is
+  0.6 of a staff space about its line and the outer two are cut at the staff's edge — on a tab
+  staff at the strings' own spacing, between the staves of a group at the layout's.
 - **`to coda` is drawn as the coda sign, not the words "To Coda".** The departure and the
   arrival are one mark in LilyPond (`\codaMark` at both), so the page now draws the sign at
   both ends of the jump: centred on the barline `to coda` stands at, at the music size, and

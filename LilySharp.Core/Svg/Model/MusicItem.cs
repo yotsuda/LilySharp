@@ -780,10 +780,14 @@ public sealed record NoteItem : MusicItem
     public bool IsTieTarget { get; init; }
 
     /// <summary>
-    /// True when this is a dead (muted / ghost) note — a cross "×" notehead in
-    /// notation and an "×" in place of the fret number in tab.
+    /// True when this is a dead (muted / ghost) note — a cross notehead
+    /// (<see cref="Notehead"/> is <see cref="NoteheadStyle.Cross"/>, set with this) in
+    /// notation and the same cross glyph in place of the fret number in tab. Read by the
+    /// tab renderer and the exporters; the staff's head reads the STYLE.
     /// </summary>
-    /// <remarks>LILYPOND-REF: ly/property-init.ly \deadNote — cross notehead, muted.</remarks>
+    /// <remarks>LILYPOND-REF: ly/property-init.ly xNote / deadNote — <c>\tweak style #cross-style</c>
+    /// on the note, nothing else; scm/output-lib.scm:782-786 note-head::calc-glyph-name — the
+    /// style picks the glyph (select-head-glyph), so the cross is the head's own.</remarks>
     public bool IsDead { get; init; }
 
     /// <summary>

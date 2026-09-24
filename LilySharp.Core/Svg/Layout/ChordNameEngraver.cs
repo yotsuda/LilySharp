@@ -64,26 +64,31 @@ public readonly record struct ChordNameLayout(
 /// </remarks>
 internal static class ChordNameEngraver
 {
-    /// <summary>Distance from the associated staff's top line up to the chord-name baseline.</summary>
+    /// <summary>The ChordNames line's padding over the staff it hangs on — the distance its
+    /// symbols' INK keeps from the staff's skyline.</summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/engraver-init.ly:703-723 - ChordNames context:
-    ///   staff-affinity = DOWN, nonstaff-relatedstaff-spacing.padding = 0.5
+    /// LILYPOND-REF: ly/engraver-init.ly:703-723 ChordNames context — staff-affinity DOWN and
+    ///   VerticalAxisGroup.nonstaff-relatedstaff-spacing padding 0.5 (:722).
+    /// LILYPOND-REF: lily/align-interface.cc:228-238 internal_get_minimum_translations — the
+    ///   line's down skyline against the staff's up skyline, plus this padding.
     /// The ChordNames context has staff-affinity = DOWN, so it is spaced relative to the
-    /// staff BELOW it (i.e. it sits just above its associated staff), NOT floated high above.
-    /// LilyPond places the chord-name baseline ~0.6 staff-spaces above that staff's top line
-    /// (relatedstaff-spacing padding 0.5 plus the glyph's skyline clearance; measured 0.587
-    /// against LilyPond 2.24.4 for both solo and top-of-system lead sheets).
+    /// staff BELOW it (it sits just above its associated staff), NOT floated high above. The
+    /// baseline lands where the deepest symbol's ink bottom clears the staff's skyline under
+    /// it by this much — see the line-floor pass in <see cref="Calculate"/>. MEASURED on
+    /// 2.26.0 (Lab sessions/p567/chord-bare-lp.log): over a staff with nothing above its top
+    /// line the baseline sits 0.537 above the top line's ink = 0.5 + the G7's ink bottom
+    /// 0.037; over an a'' it sits 0.537 above that head's top. Until session 567 this was a
+    /// flat 0.6 over the top line's centre, "measured 0.587 against 2.24.4" and fitted: the
+    /// 0.087 is the line's half thickness plus the symbol's overshoot, both now read.
     ///
     /// NOTE: an earlier value of 5.5 was the basic-distance of the LYRICS/DYNAMICS contexts
     /// (engraver-init.ly:650/692), mis-attributed to ChordNames. It floated single-staff chords
     /// far too high and, on a lower staff, shoved the chord up into the staff above it.
     ///
-    /// This is the padding FLOOR: the row is then raised further by the per-(system, staff)
-    /// note protrusion so it skyline-clears notes/ledger lines poking above the staff (see
-    /// the linePeak pass below). On a lower staff, MultiStaffLayouter.ReserveChordRowBand
-    /// feeds the same band into the inter-staff gap so the staff above clears the row too.
+    /// On a lower staff, MultiStaffLayouter.ReserveChordRowBand feeds the same band into the
+    /// inter-staff gap so the staff above clears the row too.
     /// </remarks>
-    private const double StaffPadding = 0.6;
+    internal const double RelatedStaffPadding = 0.5;
 
     /// <summary>For an independent chord ROW, the chord text baseline below the
     /// row band's top, so a ~1.5 ss symbol sits inside the reserved band.</summary>
@@ -520,25 +525,36 @@ internal static class ChordNameEngraver
             fonts, prepared, measureLayouts, measureToSystem, measuresByStaff, measures,
             staffYAt, chordRowAboveStaff);
 
-        // Per system, the peak protrusion of staff content above the staff top,
-        // sampled UNDER EACH SYMBOL (its own X window), then maxed over the
-        // system's symbols — the chord line shares one baseline per system.
-        // Sampling the whole line instead (first symbol → end) floated every
-        // system's chords above its single tallest stem tip: an ordinary
-        // up-stem note pokes ~1 ss above the top line, so chord names ended up
-        // ~3 ss high even over quiet bars. LilyPond's spacing is the per-X
-        // skyline DISTANCE between the ChordNames line (texts at their own Xs)
-        // and the staff — content between the symbols does not push the line.
-        // LILYPOND-REF: lily/axis-group-interface.cc — VerticalAxisGroup
-        // skyline spacing; lily/skyline.cc Skyline::distance (per-X minimum).
+        // Per (system, staff), the chord line's BASELINE above the staff's top line: for
+        // each symbol, the staff's skyline under it (its own X window) plus the padding,
+        // less the symbol's own ink bottom — the height at which THAT symbol's ink clears
+        // the staff by the padding — then maxed over the line's symbols, since the line
+        // shares one baseline. This is LilyPond's minimum translation of the ChordNames
+        // line against the staff below it: the line's down skyline (each symbol's ink
+        // bottom, over its own X) at Skyline::distance from the staff's up skyline, plus
+        // nonstaff-relatedstaff-spacing's padding. Sampling the whole line instead (first
+        // symbol → end) floated every system's chords above its single tallest stem tip:
+        // content between the symbols does not push the line.
+        // LILYPOND-REF: lily/align-interface.cc:228-238 internal_get_minimum_translations —
+        //   dy = down_skyline.distance(next_up_skyline) + padding
+        // LILYPOND-REF: lily/skyline.cc:717-745 Skyline::distance — the per-X maximum over
+        //   the two skylines' overlap, −inf where the upper one has no ink.
+        // LILYPOND-REF: scm/define-grobs.scm:837-855 ChordName — Y-extent from the stencil
+        //   (chord-name-interface): the line's skyline IS the symbols' ink.
         // The topmost staff's chord line skyline-spaces above the SYSTEM up-skyline
         // (script-augmented). A LOWER staff's chord line clears THAT staff's own
         // notes instead — the system skyline carries only the top staff, so without
         // a per-staff skyline a `staff bass with chords` row overprints the bass's
-        // high/ledger noteheads. The peak is keyed per (system, staff): each staff's
+        // high/ledger noteheads. The floor is keyed per (system, staff): each staff's
         // chord row is its own baseline. For the common lead sheet (chords on the top
         // staff only) the key collapses to the top staff and the result is unchanged.
-        var linePeak = new Dictionary<(int sys, int staff), double>();
+        // ⚠️ THE STAFF'S OWN LINE IS INK TOO: where nothing rises above the top line the
+        // skyline stands at the line's ink edge, half a line thickness above its centre.
+        // MaxProtrusionInRange answers above the line's CENTRE and reads 0 over a bare
+        // staff, so the edge is floored in here — a bare staff then lands the baseline
+        // 0.5 + 0.05 − inkBottom above the centre, LilyPond's 0.537 above the ink
+        // (chord-bare-lp.log).
+        var lineFloor = new Dictionary<(int sys, int staff), double>();
         foreach (var p in prepared)
         {
             if (p.sysIdx < 0 || p.chord.IsChordRow)
@@ -554,10 +570,15 @@ internal static class ChordNameEngraver
             // The symbol's footprint (see SymbolWidth): the text runs RIGHT from its
             // column. Measured, not guessed — a wide "Gm7♭5" reaches over the NEXT beat's
             // tall chord, which a narrow per-character estimate missed.
-            double peak = up.MaxProtrusionInRange(p.x, p.x + SymbolWidth(fonts, p.chord));
+            double peak = Math.Max(
+                up.MaxProtrusionInRange(p.x, p.x + SymbolWidth(fonts, p.chord)),
+                EngravingDefaults.StaffLineThickness / 2.0);
+            var symbol = DisplaySymbol(p.chord);
+            double floor = peak + RelatedStaffPadding
+                - SymbolInk(fonts, symbol.Text, symbol.SuperFrom).Bottom;
             var key = (p.sysIdx, p.chord.StaffIndex);
-            if (!linePeak.TryGetValue(key, out var cur) || peak > cur)
-                linePeak[key] = peak;
+            if (!lineFloor.TryGetValue(key, out var cur) || floor > cur)
+                lineFloor[key] = floor;
         }
 
         var results = ImmutableArray.CreateBuilder<ChordNameLayout>(prepared.Count);
@@ -596,24 +617,26 @@ internal static class ChordNameEngraver
                 continue;
             }
 
-            // Y position: above the staff (negative = upward), offset to own staff.
-            // Raise by this (system, staff) chord line's peak note protrusion so the
-            // line clears high notes/ledger lines; the StaffPadding floor reproduces the
-            // measured no-protrusion distance (lead sheet without notes above the staff).
-            // The skyline carries the real ink of noteheads, stems, ledgers,
-            // accidentals (SkylineBuilder) and — for the top staff — above-staff
-            // scripts (LayoutEngine.AugmentSkylinesWithScripts), so the sampled peak
-            // needs no allowances — it IS the content under the symbol.
+            // Y position: above the staff (negative = upward), offset to own staff — this
+            // (system, staff) chord line's floor: where its deepest symbol's ink clears the
+            // staff's skyline under it by the padding (the pass above). The skyline carries
+            // the real ink of noteheads, stems, ledgers, accidentals (SkylineBuilder) and —
+            // for the top staff — above-staff scripts (LayoutEngine.AugmentSkylinesWithScripts),
+            // so the sampled peak needs no allowances — it IS the content under the symbol.
             // ★ A LINE THAT IS A RUN ELEMENT IS PLACED AT THE RUN'S ANSWER instead
             // (2026-08-26): attachedBaselineAboveTop is the alignment walk's closing step
             // re-framed to "above the staff's top line" — where LilyPond's solve puts a
             // ChordNames line under a spaceable pair (see
             // MultiStaffLayouter.AttachedChordClosingStep for why the closing floor IS the
-            // solved position). The 0.6+protrusion arm remains the placement for every line
-            // no pair walks: the system's top staff, and @chord-only staves.
+            // solved position). The floor arm remains the placement for every line no pair
+            // walks: the system's top staff, and @chord-only staves. A line with no skyline
+            // to read (none in the pass above) keeps the bare-staff answer.
             double? solvedAboveTop = attachedBaselineAboveTop?.Invoke(p.sysIdx, p.chord.StaffIndex);
-            double protrusion = linePeak.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var pk) ? pk : 0;
-            double y = -(solvedAboveTop ?? (StaffPadding + protrusion)) + p.staffOffset;
+            double floorAboveTop = lineFloor.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var lineFloorAboveTop)
+                ? lineFloorAboveTop
+                : EngravingDefaults.StaffLineThickness / 2.0 + RelatedStaffPadding
+                    - SymbolInk(fonts, DisplaySymbol(p.chord).Text, DisplaySymbol(p.chord).SuperFrom).Bottom;
+            double y = -(solvedAboveTop ?? floorAboveTop) + p.staffOffset;
 
             string text = DisplayText(p.chord);
             // Store Y-up from the system top (= -y); no staff offset is baked.

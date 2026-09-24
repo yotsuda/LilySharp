@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using Xunit;
@@ -53,7 +54,7 @@ public class StanzaNumberTests
         // LP default: single-verse scores skip the "1." prefix.
         var systems = ImmutableArray.Create(MakeSystem(0, (0, 5)));
         var lyrics = ImmutableArray.Create(MakeLyricLayout("la", measure: 0, verse: 1, x: 5, y: 20));
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
         Assert.Empty(stanza);
     }
 
@@ -65,7 +66,7 @@ public class StanzaNumberTests
             MakeLyricLayout("la", measure: 0, verse: 1, x: 5, y: 20),
             MakeLyricLayout("li", measure: 0, verse: 2, x: 5, y: 25));
 
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
         Assert.Equal(2, stanza.Length);
         Assert.Contains(stanza, s => s.VerseNumber == 1 && s.Text == "1.");
         Assert.Contains(stanza, s => s.VerseNumber == 2 && s.Text == "2.");
@@ -83,7 +84,7 @@ public class StanzaNumberTests
             MakeLyricLayout("lo", measure: 1, verse: 1, x: 5, y: 20),
             MakeLyricLayout("lu", measure: 1, verse: 2, x: 5, y: 25));
 
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
         Assert.Equal(4, stanza.Length);
     }
 
@@ -100,7 +101,7 @@ public class StanzaNumberTests
             MakeLyricLayout("twinkle", measure: 0, verse: 1, x: 8, y: 20, hideStanza: false),
             MakeLyricLayout("like", measure: 0, verse: 2, x: 5, y: 25));
 
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
         Assert.DoesNotContain(stanza, s => s.VerseNumber == 1);
         Assert.Contains(stanza, s => s.VerseNumber == 2 && s.Text == "2.");
     }
@@ -113,7 +114,7 @@ public class StanzaNumberTests
             MakeLyricLayout("up", measure: 0, verse: 1, x: 5, y: 20),
             MakeLyricLayout("like", measure: 0, verse: 2, x: 5, y: 25, hideStanza: true));
 
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
         Assert.Contains(stanza, s => s.VerseNumber == 1 && s.Text == "1.");
         Assert.DoesNotContain(stanza, s => s.VerseNumber == 2);
     }
@@ -126,9 +127,16 @@ public class StanzaNumberTests
             MakeLyricLayout("la", measure: 0, verse: 1, x: 12, y: 20),
             MakeLyricLayout("li", measure: 0, verse: 2, x: 12, y: 25));
 
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
-        // X anchored at system measure[0].X - 4
-        Assert.All(stanza, s => Assert.Equal(10 - 4, s.X, precision: 4));
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
+        // The number ENDS padding 1.0 left of the leftmost first syllable's ink (centre 12,
+        // width 1.0 → ink left 11.5): its start is that edge less its own advance (session
+        // 567; it used to start a flat 4.0 left of measure[0].X).
+        Assert.Equal(2, stanza.Length);
+        Assert.All(stanza, s => Assert.Equal(
+            11.5 - StanzaNumberEngraver.Padding - TextFontMetrics.Advance(
+                s.Text, StanzaNumberEngraver.Em(ScoreTextMetrics.Bundled), sans: false,
+                StanzaNumberEngraver.Style(ScoreTextMetrics.Bundled)),
+            s.X, precision: 6));
     }
 
     [Fact]
@@ -139,7 +147,7 @@ public class StanzaNumberTests
             MakeLyricLayout("la", measure: 0, verse: 1, x: 12, y: 20),
             MakeLyricLayout("li", measure: 0, verse: 2, x: 12, y: 25));
 
-        var stanza = StanzaNumberEngraver.Calculate(lyrics, systems);
+        var stanza = StanzaNumberEngraver.Calculate(ScoreTextMetrics.Bundled, lyrics, systems);
         // Stanza YUp matches its verse's lyric YUp (Y-up from the system top = -device).
         Assert.Equal(-20, stanza.First(s => s.VerseNumber == 1).YUp, precision: 4);
         Assert.Equal(-25, stanza.First(s => s.VerseNumber == 2).YUp, precision: 4);

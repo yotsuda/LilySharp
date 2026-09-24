@@ -378,10 +378,8 @@ internal static partial class SharedRenderer
         // clef's ink at 1.470 (probe CGP) where the per-clef rule dragged it to 0.8.
         double glyphX = x + EngravingDefaults.ClefGlyphXOffset - clefGroupInkLeft;
         gc.DrawGlyph(glyph, glyphX, clefY, FontSize);
-        if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
-            DrawClefModifier8(fonts, glyphX, staffY, change: false, gc);
-        else if (clef == ClefType.Treble8Above)
-            DrawClefModifier8(fonts, glyphX, staffY, change: false, gc, above: true);
+        if (clef is ClefType.Treble8Below or ClefType.Bass8Below or ClefType.Treble8Above)
+            DrawClefModifier8(fonts, clef, glyphX, clefY, staffY, ClefModifierKind.Full, gc);
         // Where the NEXT prefix item (key/time) starts: the LeftEdge->Clef offset plus the
         // SHARED clef-column width (the widest clef in the system, GlyphMetrics.MaxClefWidth),
         // so every staff's key/time break-aligns to one column and a grand staff's signatures
@@ -394,47 +392,104 @@ internal static partial class SharedRenderer
         return x + EngravingDefaults.ClefGlyphXOffset + clefColumnWidth;
     }
 
+    /// <summary>Which clef the octavation digit hangs from: the line-start (or first) clef at
+    /// full size, a mid-music <c>_change</c> clef, or a cue clef.</summary>
+    internal enum ClefModifierKind { Full, Change, Cue }
+
     /// <summary>
-    /// Draws the octavation modifier digit "8" beneath a <c>treble_8</c> clef.
+    /// Draws the octavation digit "8" of a <c>treble_8</c> / <c>bass_8</c> / <c>treble^8</c>
+    /// clef — LilyPond's ClefModifier: italic text at font-size −4, its centre on the clef's
+    /// <c>clef-alignments</c> point, its near edge on the clef's ink (or 0.7 outside the
+    /// staff, whichever is further).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob) +
-    /// scm/output-lib.scm:3972-3989 (clef-modifier::print). LilyPond draws the
-    /// modifier as italic text centred on the clef (self-alignment CENTER, with a
-    /// small leftward nudge from clef-alignments <c>(G . (-0.2 . 0.1))</c>) and
-    /// placed below the staff (direction DOWN, staff-padding 0.7). Lily# has no
-    /// glyph-metric measurement, so the horizontal centre and vertical drop are
-    /// constants calibrated to LilyPond 2.24 output (staff-space pixel probe of a
-    /// treble_8 render): the digit is ~2 ss tall, its top ~0.3 ss below the bottom
-    /// staff line, centred ~0.1 ss left of the clef's vertical axis. The mid-music
-    /// _change clef uses a smaller glyph, so the digit and its offset shrink to
-    /// match (LP applies a font-size dampening for change clefs).
+    /// LILYPOND-REF: scm/define-grobs.scm:944-975 ClefModifier clef-modifier-interface —
+    ///   <c>font-size −4</c>, <c>font-shape italic</c>, <c>self-alignment-X CENTER</c>,
+    ///   <c>parent-alignment-X ly:clef-modifier::calc-parent-alignment</c>,
+    ///   <c>clef-alignments ((G . (-0.2 . 0.1)) (F . (-0.3 . -0.2)) (C . (0 . 0)))</c>,
+    ///   <c>staff-padding 0.7</c>, <c>Y-offset side-position-interface::y-aligned-side</c>.
+    /// LILYPOND-REF: lily/clef-modifier.cc:27-57 Clef_modifier::calc_parent_alignment — the
+    ///   pair's car for a modifier BELOW, its cdr ABOVE: the digit's centre goes to the clef's
+    ///   centre plus that fraction of its half-width.
+    /// LILYPOND-REF: lily/clef-engraver.cc:93-110 Clef_engraver::create_clef — the modifier's
+    ///   support is the Clef itself (<c>Side_position_interface::add_support</c>), and with no
+    ///   <c>padding</c> declared its near edge sits ON the clef's ink; <c>staff-padding</c>
+    ///   keeps it at least 0.7 outside the staff.
+    /// LILYPOND-REF: scm/output-lib.scm:3983-4000 clef-modifier::print — make-fontsize-markup at
+    ///   0.6 × the clef's font-size, 1.7 taken off first for a <c>_change</c> clef, on top of
+    ///   the grob's own −4.
+    /// MEASURED (2.26.0, Lab sessions/p563/treble8-lp.log, the fixture's twin): the "8" at
+    ///   fs −4 spans 0.683 × 0.953 (em 2.2 × magstep(−4) = 1.386); its centre stands 1.026
+    ///   from the G clef's left = 1.2825 − 0.2 × 1.2825; its top 3.526 below the staff's
+    ///   middle against the clef's box bottom at −3.55 (the 0.024 is the clef's skyline
+    ///   against its box). Until session 563 the page drew the digit at em 3.2 — 2.3 times
+    ///   LilyPond's — with its centre at fixed offsets (1.1 right, 5.6 below the top line).
     /// </remarks>
-    private static void DrawClefModifier8(ScoreTextMetrics fonts, double clefGlyphX, double staffY, bool change, IDrawingContext gc, bool above = false)
+    private static void DrawClefModifier8(ScoreTextMetrics fonts, ClefType clef, double clefGlyphX,
+        double clefY, double staffY, ClefModifierKind kind, IDrawingContext gc, int staffLines = 5)
     {
-        double scale = change ? 0.85 : 1.0;
-        double centerX = clefGlyphX + 1.1 * scale; // under the clef's descender (slightly left of the stem)
-        // Below: clears the clef's lower curl. Above (treble^8): clears the
-        // G clef's upper hook symmetrically.
-        double centerY = above ? staffY + 3.2 : staffY - 5.6;
-        gc.DrawText("8", centerX, centerY, ClefModifierEm(fonts, change), TextRole.ClefOctave,
-            ClefModifierStyle(fonts), TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
+        bool above = clef == ClefType.Treble8Above;
+        bool fClef = clef == ClefType.Bass8Below;
+        // The clef's ink box, the glyph that was drawn (change clefs have their own; a cue
+        // clef is the full glyph at the cue scale).
+        var box = (fClef, kind) switch
+        {
+            (true, ClefModifierKind.Change) => GlyphMetrics.ClefFChange,
+            (false, ClefModifierKind.Change) => GlyphMetrics.ClefGChange,
+            (true, _) => GlyphMetrics.ClefF,
+            (false, _) => GlyphMetrics.ClefG,
+        };
+        double glyphScale = kind == ClefModifierKind.Cue ? EngravingDefaults.CueScale : 1.0;
+        // clef-alignments: the fraction of the clef's half-width the digit's centre sits
+        // from the clef's centre — the car below, the cdr above.
+        double align = (fClef, above) switch
+        {
+            (false, false) => -0.2, (false, true) => 0.1,
+            (true, false) => -0.3, (true, true) => -0.2,
+        };
+        double halfWidth = box.Width / 2 * glyphScale;
+        double centreX = clefGlyphX + box.Left * glyphScale + halfWidth + align * halfWidth;
+
+        double em = ClefModifierEm(fonts, kind);
+        var style = ClefModifierStyle(fonts);
+        var ink = fonts.Ink("8", em, TextRole.ClefOctave, style);   // about the baseline, up-positive
+        double staffTop = staffY, staffBottom = staffY - (staffLines - 1);
+        const double staffPadding = 0.7;
+        double baseline = above
+            ? Math.Max(clefY + box.Top * glyphScale, staffTop + staffPadding) - ink.Bottom
+            : Math.Min(clefY + box.Bottom * glyphScale, staffBottom - staffPadding) - ink.Top;
+        gc.DrawText("8", centreX, baseline, em, TextRole.ClefOctave, style,
+            TextAnchor.Middle, Color.Black);
     }
 
-    /// <summary>The em the octavation digit is drawn at — 0.8 of the staff height (a digit
-    /// ~2 ss tall, matching LilyPond's ClefModifier), damped for a mid-piece change clef —
-    /// stepped by what the score's <c>fonts { }</c> wrote for <c>clefOctave</c>.</summary>
+    /// <summary>The em the octavation digit is drawn at: the paper's text size stepped by
+    /// the ClefModifier's −4, then by <c>clef-modifier::print</c>'s 0.6 × the clef's own
+    /// font-size (−1.7 for a change clef, the cue clef's step for a cue clef) — and by what
+    /// the score's <c>fonts { }</c> wrote for <c>clefOctave</c>.</summary>
     /// <remarks>
     /// The one reader of this size is the pen: the digit is reserved nowhere (its column is
     /// the clef's, and the clef seeds the skyline — <c>SkylineBuilder.SeedClef</c>), so
     /// following the plan here is the whole reach. USER DECISION 2026-09-09: the notation
     /// roles follow a written size and style when named (<c>clefOctave</c> / <c>notation</c>).
-    /// LILYPOND-REF: scm/define-grobs.scm:944-975 ClefModifier (clef-modifier-interface) — a
-    ///   text grob with its own <c>font-size</c> and <c>font-shape italic</c>, so a step on it
-    ///   is what a <c>\override ClefModifier.font-size</c> is in the twin (TwinGrobsOf).
+    /// LILYPOND-REF: scm/define-grobs.scm:944-975 ClefModifier clef-modifier-interface — a
+    ///   text grob with its own <c>font-size −4</c> and <c>font-shape italic</c>, so a step on
+    ///   it is what a <c>\override ClefModifier.font-size</c> is in the twin (TwinGrobsOf);
+    ///   scm/paper.scm:69-77 text-font-size — the 2.2 (EngravingDefaults.TextScriptFontSize).
+    /// LILYPOND-REF: scm/output-lib.scm:3983-4000 clef-modifier::print — make-fontsize-markup at
+    ///   <c>size-factor 0.6</c> times the clef's font-size, less 1.7 for a <c>_change</c> glyph.
     /// </remarks>
-    internal static double ClefModifierEm(ScoreTextMetrics fonts, bool change)
-        => fonts.Size(TextRole.ClefOctave, FontSize * 0.80) * (change ? 0.85 : 1.0);
+    internal static double ClefModifierEm(ScoreTextMetrics fonts, ClefModifierKind kind)
+    {
+        const double grobStep = -4.0;
+        double clefStep = kind switch
+        {
+            ClefModifierKind.Change => -1.7,
+            ClefModifierKind.Cue => EngravingDefaults.CueFontSizeStep,
+            _ => 0.0,
+        };
+        double em = EngravingDefaults.TextScriptFontSize * EmmentalerDesignSize.Magstep(grobStep);
+        return fonts.Size(TextRole.ClefOctave, em) * EmmentalerDesignSize.Magstep(0.6 * clefStep);
+    }
 
     /// <summary>The style of the octavation digit — italic, as LilyPond's, unless the plan
     /// wrote one.</summary>
@@ -457,26 +512,28 @@ internal static partial class SharedRenderer
     /// </remarks>
     internal const double StaffMiddleLineDrop = StaffHeight / 2;
 
-    private static double DrawTimeSignature(ScoreTextMetrics fonts, TimeSignature ts, double x, double staffY, IDrawingContext gc)
+    // Draws only. The meter's WIDTH is the reservation's (GlyphMetrics.GetTimeSigWidth, read by
+    // the prefix and column spacing); until session 566 this returned a right edge too — the
+    // glyph's ink for C / cut-C, the rows' advance plus an invented 0.4 for the digits — and
+    // no caller ever read it (HANDOFF R11⒡).
+    private static void DrawTimeSignature(ScoreTextMetrics fonts, TimeSignature ts, double x, double staffY, IDrawingContext gc)
     {
         // Senza misura: unmeasured music prints NO signature.
         if (ts.SenzaMisura)
-            return x;
+            return;
         // 4/4 and 2/2 print the C / cut-C GLYPH — LilyPond's default style takes the
         // glyph (LILC) path for exactly these two fractions and the numbered markup
-        // path for everything else. The returned right edge is the glyph's LILC ink,
-        // the same width GlyphMetrics.GetTimeSigWidth reserves (one model; the old
-        // return was an invented flat 2.0).
+        // path for everything else.
         // LILYPOND-REF: scm/time-signature-settings.scm:954-964,981-982.
         if (ts.Beats == 4 && ts.BeatType == 4)
         {
             gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY - StaffMiddleLineDrop, FontSize);
-            return x + GlyphMetrics.TimeSigCommon.Width;
+            return;
         }
         if (ts.Beats == 2 && ts.BeatType == 2)
         {
             gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY - StaffMiddleLineDrop, FontSize);
-            return x + GlyphMetrics.TimeSigCutCommon.Width;
+            return;
         }
         // Stack numerator over denominator, each centered on the staff like
         // LilyPond: numerator centered at staff position +2 (device staffY+1),
@@ -531,7 +588,6 @@ internal static partial class SharedRenderer
             if (p.IsGlyph)
                 gc.DrawGlyph(p.Ch, dnx + p.X, staffY - 3 - digitHalfHeight, FontSize);
         }
-        return x + total + 0.4;
     }
 
     // ---------- Key signature ----------

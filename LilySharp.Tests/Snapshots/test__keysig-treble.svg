@@ -17,7 +17,7 @@
   <text class="music" x="4.19" y="24.48" font-size="4.00"></text>
   <text class="music" x="5.29" y="25.98" font-size="4.00"></text>
   <text class="music" x="7.54" y="26.48" font-size="4.00" data-pos="143"></text>
-  <line x1="30.78" y1="23.48" x2="32.59" y2="23.48" stroke="#000000" stroke-width="0.200"/>
+  <line x1="30.63" y1="23.48" x2="32.59" y2="23.48" stroke="#000000" stroke-width="0.200"/>
   <line x1="30.78" y1="22.48" x2="32.59" y2="22.48" stroke="#000000" stroke-width="0.200"/>
   <line x1="33.64" y1="23.48" x2="35.59" y2="23.48" stroke="#000000" stroke-width="0.200"/>
   <line x1="33.64" y1="22.48" x2="35.59" y2="22.48" stroke="#000000" stroke-width="0.200"/>

@@ -408,7 +408,8 @@ public class SvgSnapshotTests
         // Bend-after gestures (@fall / @doit) render as trailing curves on both
         // the notation staff and the tab.
         yield return new object[] { "test/bend" };
-        // Dead (muted) notes (@dead) render as "×" noteheads / tab "×".
+        // Dead (muted) notes (@dead) are cross-style heads: noteheads.s2cross on the staff
+        // and the same glyph at the tab head's size in place of the fret (session 562).
         yield return new object[] { "test/dead-note" };
         yield return new object[] { "test/tuplets" };
         yield return new object[] { "test/tuplets-beamed" };

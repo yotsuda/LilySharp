@@ -4383,12 +4383,13 @@ public sealed class LilyPondExporter
         // Name-based marks whose Type is None (resolved downstream in Lily#).
         switch (a.NameToken.Text.ToLowerInvariant())
         {
-            case "fall": return "\\bendAfter #-4"; // a fall/drop off the note
-            // The doit is the same event with the interval rising; ±4 is the page's own
-            // gesture size (ArticulationType.Doit / Fall draw one curve each way).
+            // A fall drops off the note, a doit is the same event with the interval rising;
+            // the amount is the page's own (BendAfterGeometry.DeltaStep — the ONE home, so
+            // the twin measures what the page draws).
             // LILYPOND-REF: ly/music-functions-init.ly:357-361 bendAfter = define-event-function
             //   (delta) → make-music 'BendAfterEvent 'delta-step delta, a post-event.
-            case "doit": return "\\bendAfter #+4";
+            case "fall": return "\\bendAfter #-" + LilySharp.Core.Svg.Layout.BendAfterGeometry.DeltaStep;
+            case "doit": return "\\bendAfter #+" + LilySharp.Core.Svg.Layout.BendAfterGeometry.DeltaStep;
             case "dead": return "\\deadNote";      // normally intercepted as a prefix
             // ⚠️ NOT A SCRIPT, so it must answer here and never reach the `dir + glyph` tail
             // below: LilyPond's arpeggio is an EVENT on the chord (`<c e g>1\arpeggio`), and

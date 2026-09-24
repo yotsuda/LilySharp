@@ -142,6 +142,25 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
         _canvas.DrawCircle(X(cx), X(cy), T(r), paint);
     }
 
+    public void DrawBezier(
+        (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
+        (double X, double Y) p1, Color? stroke = null, double strokeWidth = 0.1)
+    {
+        using var path = new SKPath();
+        path.MoveTo(X(p0.X), X(p0.Y));
+        path.CubicTo(X(c1.X), X(c1.Y), X(c2.X), X(c2.Y), X(p1.X), X(p1.Y));
+        using var paint = new SKPaint
+        {
+            Color = ToSKColor(stroke),
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = T(strokeWidth),
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round,
+            IsAntialias = true,
+        };
+        _canvas.DrawPath(path, paint);
+    }
+
     public void DrawClosedBezier(
         (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
         (double X, double Y) p1, (double X, double Y) c2Back, (double X, double Y) c1Back,

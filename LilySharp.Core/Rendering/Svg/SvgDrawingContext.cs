@@ -253,6 +253,25 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.Append("/>").AppendLine();
     }
 
+    public void DrawBezier(
+        (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
+        (double X, double Y) p1, Color? stroke = null, double strokeWidth = 0.1)
+    {
+        _sb.Append("  <path d=\"M ");
+        AppendPoint(p0);
+        _sb.Append(" C ");
+        AppendPoint(c1);
+        _sb.Append(' ');
+        AppendPoint(c2);
+        _sb.Append(' ');
+        AppendPoint(p1);
+        _sb.Append("\" fill=\"none\"");
+        AppendStroke(stroke ?? Color.Black, strokeWidth);
+        _sb.Append(" stroke-linecap=\"round\" stroke-linejoin=\"round\"");
+        AppendSource();
+        _sb.Append("/>").AppendLine();
+    }
+
     /// <summary>
     /// The face attribute a music glyph carries: nothing at the score's own size (the
     /// <c>.music</c> CSS class already names that family), and an explicit

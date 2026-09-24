@@ -100,6 +100,13 @@ internal sealed class YFlipDrawingContext : IDrawingContext
             (p0.X, F(p0.Y)), (c1.X, F(c1.Y)), (c2.X, F(c2.Y)),
             (p1.X, F(p1.Y)), (c2Back.X, F(c2Back.Y)), (c1Back.X, F(c1Back.Y)), fill, strokeWidth);
 
+    public void DrawBezier(
+        (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
+        (double X, double Y) p1, Color? stroke = null, double strokeWidth = 0.1)
+        => _inner.DrawBezier(
+            (p0.X, F(p0.Y)), (c1.X, F(c1.Y)), (c2.X, F(c2.Y)), (p1.X, F(p1.Y)),
+            stroke, strokeWidth);
+
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _inner.DrawGlyph(glyph, x, F(y), fontSize, fill);
 

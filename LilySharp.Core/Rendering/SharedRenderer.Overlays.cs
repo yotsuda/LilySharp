@@ -105,11 +105,15 @@ internal static partial class SharedRenderer
             // accidental), composed with the ossia its staff may carry.
             double scale = os.Size(
                 EmmentalerDesignSize.Magstep(a.FontSizeStep), a.StaffIndex);
-            // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
+            // Fall / doit sentinels ("bendFall"/"bendDoit"): LilyPond's BendAfter, one stroked
+            // cubic. The layout stored the stencil's box in Ink — its reach dx in Right, its
+            // drop or rise in Bottom / Top (Y-up) — and put the anchor at the curve's start.
             if (a.Glyph is "bendFall" or "bendDoit")
             {
+                double delta = a.Glyph == "bendFall" ? a.Ink.Bottom : a.Ink.Top;
+                double yEnd = os.YUp(midYup + a.YUp + delta, a.StaffIndex, a.MeasureIndex);
                 using (gc.Source(a.SourcePosition))
-                    DrawBendAfter(a.X, y, fall: a.Glyph == "bendFall", gc);
+                    DrawBendAfter(a.X, y, a.Ink.Right, yEnd - y, gc);
                 continue;
             }
             // Approach curves INTO the note from the left: scoop rises, plop falls.
@@ -166,30 +170,20 @@ internal static partial class SharedRenderer
         }
     }
 
-    /// <summary>
-    /// Draws a dead-note "×" notehead (two crossing strokes) sized like a normal
-    /// black head, anchored at the head's left edge / vertical centre.
-    /// LILYPOND-REF: cross notehead style for \deadNote.
-    /// </summary>
-    private static void DrawDeadNotehead(double x, double noteY, Color? color, IDrawingContext gc)
-    {
-        double w = EngravingDefaults.NoteheadBlackWidth;
-        const double h = 0.55;                 // half-height of the cross
-        double t = EngravingDefaults.StemThickness * 1.4;
-        var c = color ?? Color.Black;
-        gc.DrawLine(x, noteY + h, x + w, noteY - h, c, t, cap: LineCap.Round);
-        gc.DrawLine(x, noteY - h, x + w, noteY + h, c, t, cap: LineCap.Round);
-    }
+    // (DrawDeadNotehead — two strokes across a black head's box for a `@dead` note — went in
+    // session 562: the dead note is a cross-STYLE head (NoteItem.Notehead), drawn as the
+    // noteheads.s2cross glyph by the ordinary head path, as LilyPond's \deadNote is.)
 
     /// <summary>
-    /// Draws a jazz "fall" (drops away) or "doit" (rises away) — a short curved
-    /// line trailing off to the right of a note, approximated by a polyline along
-    /// a quadratic Bézier. LILYPOND-REF: scm/output-lib.scm:1343 bend::print + BendAfter grob in scm/define-grobs.scm:551 (curved fall).
-    /// </summary>
-    /// <summary>
-    /// Draws a jazz scoop (rises into the note) or plop (falls into it) — the
-    /// mirror of <see cref="DrawBendAfter"/>: the curve starts away-and-left
-    /// and arrives at the notehead nearly horizontal.
+    /// Draws a jazz scoop (rises into the note) or plop (falls into it): the curve starts
+    /// away-and-left and arrives at the notehead nearly horizontal, a polyline along a
+    /// quadratic Bézier 1.25 long and 1.7 deep, 0.13 thick.
+    /// LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
+    /// lily/ or scm/ (2.26.0) — so this is Lily#'s own gesture, the mirror of the fall's old
+    /// shape (the fall itself is LilyPond's BendAfter since session 566, <see cref="DrawBendAfter"/>).
+    ///   departs from: nothing — there is no LilyPond counterpart to depart from.
+    ///   goes away when: LilyPond grows one.
+    ///   observed by: none against LilyPond.
     /// </summary>
     private static void DrawBendBefore(double x1, double y1, bool rise, IDrawingContext gc)
     {
@@ -210,23 +204,24 @@ internal static partial class SharedRenderer
         }
     }
 
-    private static void DrawBendAfter(double x0, double y0, bool fall, IDrawingContext gc)
-    {
-        const double len = 1.25;                 // horizontal reach
-        double drop = fall ? 1.7 : -1.7;          // vertical reach (down for fall = down device)
-        // Control point: leaves the note nearly horizontal, then curves away.
-        double cx = x0 + len * 0.62, cy = y0 - drop * 0.08;
-        double px = x0, py = y0;
-        const int seg = 8;
-        for (int s = 1; s <= seg; s++)
-        {
-            double t = s / (double)seg, u = 1 - t;
-            double nx = u * u * x0 + 2 * u * t * cx + t * t * (x0 + len);
-            double ny = u * u * y0 + 2 * u * t * cy + t * t * (y0 - drop);
-            gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
-            px = nx; py = ny;
-        }
-    }
+    /// <summary>
+    /// Draws a fall or a doit — LilyPond's BendAfter stencil: ONE stroked cubic from the
+    /// anchor (<paramref name="x0"/>, <paramref name="y0"/>: the left bound's ink plus the
+    /// padding, placed by ArticulationEngraver), its first control point a third of the
+    /// reach along at the start's height, its second at the far end 0.66 of the drop down,
+    /// ending <paramref name="dx"/> on and <paramref name="dy"/> down (a fall) or up (a
+    /// doit); round caps and joins, <see cref="BendAfterGeometry.Thickness"/> thick. Until
+    /// session 566 this was eight straight segments along an invented quadratic, 1.25 long
+    /// and 1.7 deep, 0.13 thick, leaving the head by 0.15.
+    /// LILYPOND-REF: scm/output-lib.scm:1343-1397 bend::print — rcurveto (dx/3, 0) (dx, 0.66 delta-y) (dx, delta-y) at :1387-1391, off a note-head-interface bound (:1349)
+    /// </summary>
+    private static void DrawBendAfter(double x0, double y0, double dx, double dy, IDrawingContext gc)
+        => gc.DrawBezier(
+            (x0, y0),
+            (x0 + dx * BendAfterGeometry.FirstControlFraction, y0),
+            (x0 + dx, y0 + BendAfterGeometry.SecondControlRise * dy),
+            (x0 + dx, y0 + dy),
+            Color.Black, BendAfterGeometry.Thickness);
 
     /// <summary>
     /// Draws a chord diagram (fret frame): string grid, finger dots, o/x
@@ -304,9 +299,14 @@ internal static partial class SharedRenderer
     /// <summary>
     /// Draws a guitar bend-up: a curve leaving the note/fret nearly
     /// horizontally then rising steeply, an arrowhead at the top, and the
-    /// bend amount ("½", "full", "1½", …) above the arrowhead.
-    /// LILYPOND-REF: TAB bend convention (bend-alter in MusicXML terms);
-    /// curve idiom follows DrawBendAfter.
+    /// bend amount ("½", "full", "1½", …) above the arrowhead — the TAB convention
+    /// (MusicXML's bend-alter), a polyline along a quadratic 1.6 long and 2.6 high.
+    /// LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
+    /// the target fret, an arrow head and the amount as text, sized by its details — which
+    /// Lily# has not ported; this arrow is its own device.
+    ///   departs from: scm/output-lib.scm:2844 bend-spanner::print (its geometry is not read here).
+    ///   goes away when: the bend spanner is ported (with the layout's BendTabXOffset / BendHeadPadding).
+    ///   observed by: none against LilyPond.
     /// </summary>
     private static void DrawGuitarBend(ScoreTextMetrics fonts, double x0, double y0, int semitones, IDrawingContext gc)
     {

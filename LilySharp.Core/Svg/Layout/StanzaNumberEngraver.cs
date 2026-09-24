@@ -59,6 +59,10 @@ internal static class StanzaNumberEngraver
     /// </summary>
     internal const double EngravingEm = 2.4;
 
+    /// <summary>The number's padding to the syllables it stands left of.
+    /// LILYPOND-REF: scm/define-grobs.scm:3412-3427 StanzaNumber — padding 1.0 (stanza-number-interface).</summary>
+    internal const double Padding = 1.0;
+
     /// <summary>The number's em for THIS score: <see cref="EngravingEm"/> unless the score's
     /// <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>stanza</c> (or <c>lyrics</c>).
     /// The draw is its only reader — the number reserves no space of its own.</summary>
@@ -79,6 +83,7 @@ internal static class StanzaNumberEngraver
     /// don't get a "1." prefix. When multiple verses exist, all verses (including 1)
     /// are numbered.</param>
     public static ImmutableArray<StanzaNumberLayout> Calculate(
+        Rendering.ScoreTextMetrics fonts,
         ImmutableArray<LyricLayout> lyrics,
         ImmutableArray<SystemLayout> systems,
         bool emitForFirstVerse = false,
@@ -140,29 +145,60 @@ internal static class StanzaNumberEngraver
                 firstLyricBySystem[key] = l;
         }
 
+        // The numbers' shared RIGHT edge per (system, staff): LilyPond's x-aligned-side
+        // with direction LEFT and padding 1.0 off the number's supports — the syllables of
+        // the timestep that made it, which Stanza_number_align_engraver widens to EVERY
+        // verse's syllable of that timestep, so all the numbers of a line end together,
+        // 1.0 left of the leftmost first syllable's ink. A syllable's ink left is its
+        // centre less half its advance (LyricLayout.X, Width) — LilyPond reads the ink
+        // extent, the residual HANDOFF R10⒝ names. Until session 567 the number STARTED a
+        // flat 4.0 left of the first measure, whatever the syllables did (HANDOFF R10⒡).
+        // MEASURED on 2.26.0 (Lab sessions/p567/stanza-lp.log, a hand twin of
+        // test/lyrics-verses with \set stanza): "1." and "2." both end at 5.659 = the
+        // leftmost first syllable "Twas" 6.659 − 1.0, though verse 1's "A" starts at 8.349.
+        // LILYPOND-REF: scm/define-grobs.scm:3412-3427 StanzaNumber — direction LEFT, padding 1.0, X-offset x-aligned-side (stanza-number-interface)
+        // LILYPOND-REF: lily/stanza-number-align-engraver.cc:62-71 Stanza_number_align_engraver — add_support of every syllable to every number of the timestep
+        // LILYPOND-REF: lily/stanza-number-engraver.cc:70-75 Stanza_number_engraver — acknowledge_lyric_syllable adds the support
+        // LILYPOND-REF: lily/side-position-interface.cc:189-260 aligned_side — direction LEFT puts the grob's RIGHT edge padding off the supports' left
+        // LILYSHARP-OWN: LilyPond makes ONE number, where \set stanza changed; Lily# labels
+        //   the verse on EVERY system (the per-(system, staff) key above), anchored to that
+        //   system's first syllables.
+        //   departs from: lily/stanza-number-engraver.cc:57-68 process_music (once per change).
+        //   goes away when: never — the page's own reading convention.
+        //   observed by: StanzaNumberAlignmentTests (two verses, one system).
+        var leftmostFirstSyllable = new Dictionary<(int sys, int staff), double>();
+        foreach (var ((sysIdx, staff, _), lyric) in firstLyricBySystem)
+        {
+            double inkLeft = lyric.X - lyric.Width / 2.0;
+            if (!leftmostFirstSyllable.TryGetValue((sysIdx, staff), out var cur) || inkLeft < cur)
+                leftmostFirstSyllable[(sysIdx, staff)] = inkLeft;
+        }
+        double em = Em(fonts);
+        var style = Style(fonts);
+
         // ⚠️ IT WAITS FOR ITS FIRST LABEL, for the reason the other eight builders of session
         // 448 carry: `CreateBuilder<T>()` lays out its first block before a single Add, and
         // this one was empty in every build over the reader's corpus.
         ImmutableArray<StanzaNumberLayout>.Builder? builder = null;
-        foreach (var ((sysIdx, _, verseNumber), lyric) in firstLyricBySystem)
+        foreach (var ((sysIdx, staff, verseNumber), lyric) in firstLyricBySystem)
         {
             if (sysIdx >= systems.Length) continue;
             var system = systems[sysIdx];
-            // Position at the system's left margin (where staff lines begin).
-            // LP places StanzaNumber to the LEFT of the lyric, anchored to the system start.
-            // Use (system.Y + first measure X) less a small offset.
+            string text = $"{verseNumber}.";
             // ⚠️ On a LEAD SHEET the anchor is the LINE START (the indent), not the
-            // first measure's X: the grid opens every line with a bar line and the
-            // first line's measures start past the bar + meter prefix, so hanging the
-            // label off measures[0].X put the "1."'s DOT on the line-start bar (user
-            // report 2026-08-20) — and only on the first line, tearing the labels out
-            // of their column. One anchor per sheet keeps every verse number in the
-            // same column, clear of the bar (the label ends ~2 ss left of it).
+            // syllables: the grid opens every line with a bar line and the first line's
+            // syllables start past the bar + meter prefix, so a label hung off them put the
+            // "1."'s DOT on the line-start bar (user report 2026-08-20) — and only on the
+            // first line, tearing the labels out of their column. One anchor per sheet keeps
+            // every verse number in the same column, clear of the bar. LILYSHARP-OWN: the
+            // chord-grid row prints bar lines LilyPond's Lyrics context has nothing of.
+            //   departs from: the x-aligned-side rule above.
+            //   goes away when: the grid's bar line becomes a support the number clears.
+            //   observed by: the lead-sheet snapshots.
             double x = leadSheet
                 ? system.Indent - 4.0
-                : system.Measures.IsDefaultOrEmpty
-                    ? lyric.X - 4.0
-                    : system.Measures[0].X - 4.0;
+                : leftmostFirstSyllable[(sysIdx, staff)] - Padding
+                    - Rendering.TextFontMetrics.Advance(text, em, sans: false, style);
             (builder ??= ImmutableArray.CreateBuilder<StanzaNumberLayout>()).Add(
                 new StanzaNumberLayout(
                 VerseNumber: verseNumber,
@@ -170,7 +206,7 @@ internal static class StanzaNumberEngraver
                 MeasureIndex: lyric.Item.MeasureIndex,
                 X: x,
                 YUp: lyric.YUp,
-                Text: $"{verseNumber}."));
+                Text: text));
         }
 
         return builder?.ToImmutable() ?? [];

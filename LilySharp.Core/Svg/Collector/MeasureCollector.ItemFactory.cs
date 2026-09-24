@@ -165,6 +165,12 @@ public sealed partial class MeasureCollector
             // transpose that pushes a pitch across an octave boundary frets correctly.
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
             IsDead = HasNamedArticulation(note, "dead"),
+            // A dead note IS a cross-style head — LilyPond's \deadNote is a tweak of the
+            // style alone (ly/property-init.ly:1046-1051 xNote: `\tweak style #cross-style`) — so the
+            // style rides the item and every reader (the head glyph, the stem attachment,
+            // the MusicXML notehead) answers as for any cross head. Session 562; the page
+            // drew two strokes of its own until then.
+            Notehead = HasNamedArticulation(note, "dead") ? NoteheadStyle.Cross : NoteheadStyle.Default,
             ForcedStemUp = GetStemDirectionOverride(note),
             LaissezVibrerUp = hasLv ? LaissezVibrerUpOf(note) : null,
             RepeatTieUp = hasRepeatTie ? RepeatTieUpOf(note) : null,

@@ -625,6 +625,42 @@ internal static partial class GlyphMetrics
     public static BBox GetAccidentalBBox(string? accidental)
         => GetAccidentalBBox(Design20, accidental);
 
+    /// <summary>
+    /// The vertical range, in staff spaces about the note head, over which an accidental
+    /// shortens the ledger lines of its note — the font's own per-glyph
+    /// <c>ledger-shortening-range</c>, which a parenthesized (courtesy) accidental takes
+    /// from the right parenthesis instead. Empty (0, 0) for a glyph that carries none.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scripts/build/mf-to-table.py:108-110 character_lisp_table — every
+    ///   <c>accidentals.*</c> glyph carries <c>(ledger-shortening-range . (accbot . acctop))</c>
+    ///   from the Metafont source; lily/ledger-line-spanner.cc:245-270
+    ///   Ledger_line_spanner::print — read for the head's accidental glyph,
+    ///   <c>accidentals.rightparen</c> when parenthesized, scaled to staff positions and
+    ///   widened by 1e-3.
+    /// LILYPOND-REF: mf/feta-sharps.mf:206-211 fet_beginchar sharp — accbot −0.8, acctop 1;
+    ///   :544-549 doublesharp — −0.8, 0.8; mf/feta-flats.mf:255-264 flat — 0, 0.8;
+    ///   :603-627 flatflat — 0, 0.8; mf/feta-naturals.mf:201-206 natural — −1.8, 1;
+    ///   mf/feta-parenthesis.mf:31-32 rightparen — −1, 1.
+    /// A restore-first composite (♮♯ / ♮♭) is printed by LilyPond as the natural added at
+    /// the main glyph's edge, its <c>glyph-name</c> the main's, so the main's range answers.
+    /// </remarks>
+    public static (double Bottom, double Top) AccidentalLedgerShorteningRange(
+        string? accidental, bool parenthesized)
+    {
+        if (parenthesized)
+            return (-1.0, 1.0);
+        return (RestoreMainOf(accidental) ?? accidental) switch
+        {
+            "sharp" => (-0.8, 1.0),
+            "flat" => (0.0, 0.8),
+            "natural" => (-1.8, 1.0),
+            "doubleSharp" => (-0.8, 0.8),
+            "doubleFlat" => (0.0, 0.8),
+            _ => (0.0, 0.0),
+        };
+    }
+
     /// <summary>The same lookup asked of ONE font — see
     /// <see cref="GetNoteheadBBox(DesignMetrics, int)"/>.</summary>
     public static BBox GetAccidentalBBox(DesignMetrics font, string? accidental)

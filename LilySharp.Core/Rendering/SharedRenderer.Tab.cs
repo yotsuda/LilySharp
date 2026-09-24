@@ -158,7 +158,8 @@ internal static partial class SharedRenderer
                 double sx = atLineStart ? ml.X + lineStartBarGap : ml.X;
                 using (gc.Source(measure.SourceStart))
                 {
-                    DrawBarline(startType, sx, staffY, tabHeight, gc, tabDots: tabDots);
+                    DrawBarline(startType, sx, staffY, tabHeight, gc, tabDots: tabDots,
+                        dashSpace: stringSpace);
                     gc.DrawHitRect(sx - BarlineHitPad, staffY,
                         GetVisualBarlineWidth(startType) + 2 * BarlineHitPad, tabHeight);
                 }
@@ -174,7 +175,8 @@ internal static partial class SharedRenderer
             {
                 using (gc.Source(measure.SourceEnd))
                 {
-                    DrawBarline(endType, endX - width, staffY, tabHeight, gc, tabDots: tabDots);
+                    DrawBarline(endType, endX - width, staffY, tabHeight, gc, tabDots: tabDots,
+                        dashSpace: stringSpace);
                     gc.DrawHitRect(endX - width - BarlineHitPad, staffY,
                         width + 2 * BarlineHitPad, tabHeight);
                 }
@@ -673,11 +675,34 @@ internal static partial class SharedRenderer
         DrawTabFret(fonts, fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, digitGaps, isDead,
             parenthesized);
         double noteY = staffY - (stringNum - 1) * stringSpace;
-        double digitWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
-            isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            TabFretEm(fonts));
+        double digitWidth = isDead
+            ? TabDeadHeadWidth
+            : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
+                fret.ToString(System.Globalization.CultureInfo.InvariantCulture), TabFretEm(fonts));
         DrawTabAugmentationDots(dots, x, digitWidth, noteY, stringSpace, sourcePosition, gc);
     }
+
+    /// <summary>
+    /// The tab's dead note is the coda of the notation staff's: LilyPond's TabNoteHead with
+    /// style <c>cross</c> prints the <c>noteheads.s2cross</c> glyph (whatever the duration)
+    /// at the grob's own font-size, −2, whited out of the string. Session 562; the page drew
+    /// a bold "×" of the fret face until then.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/tablature.scm:22-28 tab-note-head::calc-glyph-name — <c>cross</c>
+    ///   → "2cross"; :32-38 tab-note-head::whiteout-if-style-set — the glyph is printed by
+    ///   ly:note-head::print inside a whiteout box.
+    /// LILYPOND-REF: scm/define-grobs.scm:3717-3746 TabNoteHead tab-note-head-interface —
+    ///   <c>(font-size . -2)</c> (:3739), <c>(whiteout . #t)</c> (:3743).
+    /// MEASURED (2.26.0, Lab sessions/p562/dead-lp.log, the fixture's twin): the tab's
+    ///   cross head extends 0 … 1.0325 in X and ±0.4387 in Y — the s2cross box (0 … 1.3042,
+    ///   ±0.545, the same as the black head's) at magstep(−2) = 0.7937.
+    /// </remarks>
+    private const int TabDeadHeadFontSizeStep = -2;
+    private static readonly double TabDeadHeadScale =
+        LilySharp.Core.Svg.Layout.EmmentalerDesignSize.Magstep(TabDeadHeadFontSizeStep);
+    private static readonly double TabDeadHeadWidth =
+        LilySharp.Core.Svg.Layout.GlyphMetrics.GetNoteheadBBox(4).Width * TabDeadHeadScale;
 
     /// <summary>
     /// Draws a note/chord-row's augmentation dots to the RIGHT of its fret digit,
@@ -718,12 +743,14 @@ internal static partial class SharedRenderer
         // String 1 (highest pitch) is the TOP tab line; string N the bottom
         // (device down = smaller Y-up).
         double noteY = staffY - (stringNum - 1) * stringSpace;
-        // A dead (muted) note shows an "×" in place of the fret number.
-        string fretText = isDead ? "×" : fret.ToString();
+        // A dead (muted) note shows the cross head in place of the fret number
+        // (TabDeadHeadWidth's remarks); its string gap is the glyph's own box.
+        string fretText = fret.ToString();
         double fretEm = TabFretEm(fonts);
-        double bgWidth = LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
-            isDead ? "×" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            fretEm);
+        double bgWidth = isDead
+            ? TabDeadHeadWidth
+            : LilySharp.Core.Svg.Layout.TabConstants.FretGlyphWidth(fonts,
+                fret.ToString(System.Globalization.CultureInfo.InvariantCulture), fretEm);
 
         // The string line is BROKEN around the digit rather than painted over: the span is
         // booked here and DrawTabStringLines emits the segments either side of it.
@@ -740,9 +767,19 @@ internal static partial class SharedRenderer
 
         using (gc.Source(sourcePosition))
         {
+            if (isDead)
+            {
+                // The s2cross glyph, its box centred on the column like the digit is: the
+                // glyph's origin is its left edge and its Y extent is symmetric about the
+                // string (the box measured in TabDeadHeadWidth's remarks).
+                gc.DrawGlyph(EmmentalerGlyphs.NoteheadCrossBlack, x - TabDeadHeadWidth / 2, noteY,
+                    FontSize * TabDeadHeadScale, Color.Black);
+                if (parenthesized)
+                    DrawTabFretParens(fonts, x, noteY, bgWidth, gc);
+                return;
+            }
             // Bold so the fret numbers read clearly over the string lines. The baseline is
-            // asked of the FACE so the glyph's ink lands centred on the line — a digit and a
-            // dead note's × are different shapes and a shared fraction cannot centre both.
+            // asked of the FACE so the glyph's ink lands centred on the line.
             gc.DrawText(fretText, x,
                 noteY - LilySharp.Core.Svg.Layout.TabConstants.FretBaselineDrop(
                     fonts, fretText, fretEm),

@@ -221,6 +221,13 @@ internal sealed class RecordingDrawingContext : IDrawingContext
             (Tx(p1.X), Ty(p1.Y)), (Tx(c2Back.X), Ty(c2Back.Y)), (Tx(c1Back.X), Ty(c1Back.Y))));
     }
 
+    // An open stroked curve (a fall / doit) as the line between its ends, which is what a
+    // probe reading "where does the gesture start and end" wants.
+    public void DrawBezier((double X, double Y) p0, (double X, double Y) c1,
+                           (double X, double Y) c2, (double X, double Y) p1,
+                           Color? stroke = null, double strokeWidth = 0.1)
+        => _lines.Add(new DrawnLine(Tx(p0.X), Ty(p0.Y), Tx(p1.X), Ty(p1.Y), Sx(strokeWidth)));
+
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
         => _glyphs.Add(new DrawnGlyph(glyph, Tx(x), Ty(y), Sy(fontSize)));
 

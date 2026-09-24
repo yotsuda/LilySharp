@@ -259,12 +259,14 @@ internal static partial class SharedRenderer
                     if (gapHeight <= 0)
                         continue;
 
+                    // A span bar's dashes step by the LAYOUT's staff space (is-span in
+                    // scm/bar-line.scm:519-522 make-dashed-bar-line), not a staff's own.
                     if (startType != BarlineType.None)
                         DrawBarline(startType, startX, gapTop, gapHeight,
-                            gc, withDots: false);
+                            gc, withDots: false, dashSpace: 1.0);
                     if (!suppressEnd)
                         DrawBarline(endType, ml.X + ml.Width - endWidth,
-                            gapTop, gapHeight, gc, withDots: false);
+                            gapTop, gapHeight, gc, withDots: false, dashSpace: 1.0);
                 }
             }
         }
@@ -774,10 +776,9 @@ internal static partial class SharedRenderer
         {
             gc.DrawGlyph(glyph, x, clefY,
                 clefChange.IsCue ? FontSize * EngravingDefaults.CueScale : FontSize);
-            if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below)
-                DrawClefModifier8(fonts, x, staffY, change: true, gc);
-            else if (clefChange.NewClef == ClefType.Treble8Above)
-                DrawClefModifier8(fonts, x, staffY, change: true, gc, above: true);
+            if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below or ClefType.Treble8Above)
+                DrawClefModifier8(fonts, clefChange.NewClef, x, clefY, staffY,
+                    clefChange.IsCue ? ClefModifierKind.Cue : ClefModifierKind.Change, gc);
         }
     }
 

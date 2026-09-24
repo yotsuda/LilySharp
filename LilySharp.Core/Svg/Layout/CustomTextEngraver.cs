@@ -46,13 +46,28 @@ public readonly record struct CustomTextLayout(
 /// LILYPOND-REF: text-interface.cc:36-89 Text positioning
 /// LILYPOND-REF: side-position-interface.cc:92-111 axis_aligned_side_helper
 ///
-/// Custom text is placed at the end of measures, typically below the staff
-/// for expression indications like "molto rit.", "a tempo", etc.
+/// A form-level <c>_"text"</c> engraves at the section boundary it stands at, as a
+/// TextScript ABOVE the staff — the <c>^\markup</c> placement the ledger pair
+/// textscript.no-descender.staff-to-baseline measures (2.05 + 0.5): its baseline starts at
+/// aligned_side's staff-padding floor here and OutsideStaffStacker.PlaceCustomTexts then
+/// clears the staff's accumulated ink at outside-staff-padding, in priority order (450).
 /// </remarks>
 internal static class CustomTextEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:3925 padding = 0.5
-    private const double Padding = 0.5;
+    /// <summary>
+    /// The baseline aligned_side gives a TextScript over a staff with no support under it,
+    /// Y-up from the staff middle: the staff's ink edge (2.0 + half a line) plus
+    /// staff-padding 0.5. A TextScript's <c>padding</c> 0.3 is spent against its supports —
+    /// the note it hangs on — and this form-level text has none in the model (see the X
+    /// bridge in <see cref="Calculate"/>), so the floor IS the answer; the stacker re-applies
+    /// the same floor before its collision pass. Until session 567 the seed here was an
+    /// invented "5.5 below the staff top less 0.5" (a padding cited to a TimeSignature line)
+    /// that the stacker's floor always overrode — dead, and saying "below" (HANDOFF R10⒟).
+    /// LILYPOND-REF: lily/side-position-interface.cc:401-453 aligned_side — staff_padding floors total_off at staff_extent[dir] + staff_padding
+    /// LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript — padding 0.3 against its side-position-interface supports, staff-padding 0.5, outside-staff-priority 450
+    /// </summary>
+    internal const double AlignedSideBaselineYUp =
+        2.0 + EngravingDefaults.StaffLineThickness / 2.0 + EngravingDefaults.TextScriptStaffPadding;
 
     /// <summary>
     /// The text's em for THIS score: TextScript declares no font-size, so the paper's own
@@ -67,10 +82,6 @@ internal static class CustomTextEngraver
     /// score wrote a style for <c>text</c>.</summary>
     internal static Rendering.FontStyle Style(Rendering.ScoreTextMetrics fonts)
         => fonts.Style(Rendering.TextRole.Text, Rendering.FontStyle.Italic);
-
-    // Below-staff custom-text baseline, Y-up from the staff middle: 5.5 below the
-    // staff top is 3.5 below the middle (the staff top sits 2 above the middle).
-    private const double BelowStaffBaselineYUp = 2.0 - 5.5;
 
     /// <summary>
     /// Calculates layout for all custom text items in a score.
@@ -120,10 +131,9 @@ internal static class CustomTextEngraver
                     : !measureLayout.Columns.IsDefaultOrEmpty ? measureLayout.Columns[0].X
                     : 0.0);
 
-            // Y position below the staff, in the Y-up frame (staff-spaces above the
-            // top-staff middle). No staff offset — the draw resolves the (top) staff
-            // middle.
-            double yUp = BelowStaffBaselineYUp - Padding;
+            // Y: aligned_side's floor above the staff, in the Y-up frame (staff-spaces above
+            // the staff middle). No staff offset — the draw resolves the staff middle.
+            double yUp = AlignedSideBaselineYUp;
 
             layouts.Add(new CustomTextLayout(
                 customText.MeasureIndex,

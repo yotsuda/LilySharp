@@ -1229,6 +1229,10 @@ internal static partial class SharedRenderer
         // session 158). The whiteout branch (:135-153, default OFF at
         // whiteout −1) is not ported.
         const double thickness = 1.3 * EngravingDefaults.LineThickness;
+        // The extender's line is the LyricExtender's own thickness (0.8 line-thicknesses),
+        // read from the one home the layout placed it with; it was a flat 0.1 until session
+        // 565. LILYPOND-REF: lily/lyric-extender.cc:86 Lyric_extender::print — h = sl × thickness.
+        double extenderThickness = LyricHyphenParameters.Default.ExtenderThickness;
         foreach (var h in layout.LyricHyphenLayouts)
         {
             // A system-crossing connector's SECOND piece lives on the NEXT
@@ -1266,16 +1270,16 @@ internal static partial class SharedRenderer
                 if (h.CrossesSystemBreak)
                 {
                     gc.DrawLine(h.ExtenderStartX, extY,
-                        h.FirstSegmentEndX, extY, Color.Black, 0.1);
+                        h.FirstSegmentEndX, extY, Color.Black, extenderThickness);
                     double ext2Y = NextSystemTop() is { } nextTop
                         ? nextTop - h.SecondSegmentY : extY;
                     gc.DrawLine(h.SecondSegmentStartX, ext2Y,
-                        h.ExtenderEndX, ext2Y, Color.Black, 0.1);
+                        h.ExtenderEndX, ext2Y, Color.Black, extenderThickness);
                 }
                 else
                 {
                     gc.DrawLine(h.ExtenderStartX, extY,
-                        h.ExtenderEndX, extY, Color.Black, 0.1);
+                        h.ExtenderEndX, extY, Color.Black, extenderThickness);
                 }
             }
         }

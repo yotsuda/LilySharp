@@ -60,12 +60,13 @@ internal static partial class SharedRenderer
         // nothing.
         var staffItems = ListPool<StaffItemPlacement>.Rent();
         CollectStaffItems(fonts, voice, voiceNumber, system, layout, staffIndex, staffItems, fragmentFrom, fragmentTo);
-        foreach (var (item, ledgerMl, _, itemX, _) in staffItems)
+        int ledgerColumn = 0;
+        foreach (var (item, ledgerMl, _, itemX, ledgerVoiceX) in staffItems)
         {
             // Percent-covered measures draw no notes — and no ledgers either.
             if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
                 continue;
-            CollectItemLedgers(item, itemX, staffMiddleY, ledgerPlan);
+            CollectItemLedgers(item, itemX, ledgerVoiceX, staffMiddleY, ledgerColumn++, ledgerPlan);
         }
         DrawPlannedLedgers(ledgerPlan, gc);
 
@@ -442,17 +443,31 @@ internal static partial class SharedRenderer
 
 
     /// <summary>
-    /// Registers the ledger requests one item (note or chord) needs. Chords
-    /// contribute at most one request per outside-staff direction; the extreme
-    /// head drives the ledger run (inner heads share its lines).
+    /// Registers the ledger requests one item (note or chord) needs — ONE PER HEAD that
+    /// stands outside the staff, as LilyPond's Ledger_line_spanner keeps one Head_data per
+    /// head: each carries its own accidental, and a ledger two heads share is the UNION of
+    /// what each asks for (an inner head without an accidental keeps a line at full length
+    /// that the extreme head's accidental would have shortened). The heads of one item share
+    /// a column, which is what the neighbour shortening reasons between.
     /// </summary>
-    private static void CollectItemLedgers(MusicItem item, double x, double staffMiddleY,
-        List<LedgerRequest> ledgerPlan)
+    /// <remarks>
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:216-274 Ledger_line_spanner::print — one
+    ///   Head_data per head (its position, ledger positions, head extent, accidental extent
+    ///   and shortening range), grouped by the head's column rank and direction.
+    /// Until session 564 a chord made one request per direction from its extreme head, and
+    /// an accidental was noted as a flag — its edge was then guessed from the head (the
+    /// nominal AccidentalNoteGap) rather than read from where the accidental was drawn, and
+    /// its shortening range was a flat ±3 positions for every glyph.
+    /// </remarks>
+    private static void CollectItemLedgers(MusicItem item, double x, double voiceX,
+        double staffMiddleY, int column, List<LedgerRequest> ledgerPlan)
     {
         switch (item)
         {
             case NoteItem note:
             {
+                if (Math.Abs(note.StaffPosition) < 5)
+                    break;
                 int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
                 // The head's INK width, not its advance: LilyPond's ledger takes the head's
                 // grob EXTENT as both the base interval and the basis of length-fraction.
@@ -463,8 +478,24 @@ internal static partial class SharedRenderer
                 // Asked of the HEAD'S OWN font, not the twenty's box scaled — see DrawNote.
                 double headWidth =
                     GlyphMetrics.GetNoteheadBBox(HeadFontOf(note), noteValue).Width;
-                CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
-                    staffMiddleY, note.Accidental != null);
+                // The accidental's DRAWN ink — the same placement DrawNote makes (a packed
+                // column's X, else the single-ape solve), and the same fonts.
+                double? accRight = null;
+                if (note.Accidental != null)
+                {
+                    bool reduced = GrobFontSize.IsReduced(note);
+                    var accFont = reduced ? GrobFontSize.FontOf(note, SizedGrob.Accidental) : null;
+                    var accHeadFont = reduced ? GrobFontSize.FontOf(note, SizedGrob.NoteHead) : null;
+                    double? inkLeft = note.AccidentalX is { } packedX
+                        ? x - voiceX + packedX
+                        : AccidentalColumn.CalculateSinglePosition(note, accFont, accHeadFont)
+                            is { } al ? x + al.XOffset : null;
+                    if (inkLeft is { } left)
+                        accRight = left + AccidentalInkWidth(note.Accidental, note.IsCourtesy,
+                            accFont ?? GlyphMetrics.Design20);
+                }
+                CollectLedgerRequest(ledgerPlan, column, note.StaffPosition, x, headWidth,
+                    staffMiddleY, accRight, note.Accidental, note.IsCourtesy);
                 break;
             }
             case ChordItem chord when chord.Notes.Length > 0:
@@ -473,27 +504,64 @@ internal static partial class SharedRenderer
                 var chordHeadFont = HeadFontOf(chord);
                 // The ink width — see the note branch above.
                 double headWidth = GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Width;
-                // Seconds shift reversed heads sideways — the ledger run
-                // follows the extreme head's real X.
+                // Seconds shift reversed heads sideways — each head's ledger follows its
+                // own real X.
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(
                     chord.Notes, chord.StemUp, noteValue, chordHeadFont);
-                int maxIdx = -1, minIdx = -1;
+                bool anyOutside = false;
+                foreach (var n in chord.Notes)
+                    if (Math.Abs(n.StaffPosition) >= 5) { anyOutside = true; break; }
+                if (!anyOutside)
+                    break;
+                // The chord's accidentals, placed as DrawChord places them (a packed column's
+                // X's, else the chord's own stagger), so each head reads its own edge.
+                var chordAccFont = GrobFontSize.IsReduced(chord)
+                    ? GrobFontSize.FontOf(chord, SizedGrob.Accidental) : null;
+                double accOriginX = chord.HasPackedAccidentals ? x - voiceX : x;
+                var accLayouts = chord.HasPackedAccidentals
+                    ? chord.Notes
+                        .Where(n => n.Accidental is not null && n.AccidentalX is not null)
+                        .Select(n => new AccidentalLayout(
+                            n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
+                        .ToImmutableArray()
+                    : AccidentalColumn.CalculatePositions(
+                        chord.Notes, offsets, chordAccFont, chordHeadFont);
                 for (int i = 0; i < chord.Notes.Length; i++)
                 {
-                    if (maxIdx < 0 || chord.Notes[i].StaffPosition > chord.Notes[maxIdx].StaffPosition) maxIdx = i;
-                    if (minIdx < 0 || chord.Notes[i].StaffPosition < chord.Notes[minIdx].StaffPosition) minIdx = i;
+                    var n = chord.Notes[i];
+                    if (Math.Abs(n.StaffPosition) < 5)
+                        continue;
+                    double? accRight = null;
+                    if (n.Accidental != null)
+                        foreach (var al in accLayouts)
+                            if (al.StaffPosition == n.StaffPosition)
+                            {
+                                accRight = accOriginX + al.XOffset + AccidentalInkWidth(
+                                    n.Accidental, n.IsCourtesy, chordAccFont ?? GlyphMetrics.Design20);
+                                break;
+                            }
+                    CollectLedgerRequest(ledgerPlan, column, n.StaffPosition, x + offsets[i],
+                        headWidth, staffMiddleY, accRight, n.Accidental, n.IsCourtesy);
                 }
-                if (chord.Notes[maxIdx].StaffPosition >= 5)
-                    CollectLedgerRequest(ledgerPlan, chord.Notes[maxIdx].StaffPosition,
-                        x + offsets[maxIdx], headWidth,
-                        staffMiddleY, chord.Notes[maxIdx].Accidental != null);
-                if (chord.Notes[minIdx].StaffPosition <= -5)
-                    CollectLedgerRequest(ledgerPlan, chord.Notes[minIdx].StaffPosition,
-                        x + offsets[minIdx], headWidth,
-                        staffMiddleY, chord.Notes[minIdx].Accidental != null);
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// The drawn width of an accidental from its ink left: the glyph's box, wrapped in the
+    /// two parentheses when it is a courtesy — exactly what DrawAccidentalAtInkLeft puts on
+    /// the page (the parens at the box's LILC edges, padding 0).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/accidental.cc:33-43 parenthesize — add_at_edge X LEFT /
+    /// RIGHT with padding 0.</remarks>
+    private static double AccidentalInkWidth(string accidental, bool isCourtesy,
+        GlyphMetrics.DesignMetrics font)
+    {
+        double width = GlyphMetrics.GetAccidentalBBox(font, accidental).Width;
+        if (isCourtesy)
+            width += font.AccidentalLeftParen.Width + font.AccidentalRightParen.Width;
+        return width;
     }
 
     /// <summary>Stem start offset from the head CENTER, in the renderer's Y-up frame
@@ -665,19 +733,17 @@ internal static partial class SharedRenderer
                    ? gc.MusicFace(GrobFontSize.DesignOf(note, SizedGrob.NoteHead))
                    : NullScope.Instance)
             {
-                if (note.IsDead)
-                    DrawDeadNotehead(x, noteY, noteheadColor, gc);
-                else
-                {
-                    // Interactive preview gets a tight click target the size of the
-                    // head ink, centred on noteY — see DrawNotehead. Both axes from the
-                    // ink box, as the remark above says: the width read the ADVANCE until
-                    // 2026-08-05 (session 95) while the height beside it read the ink.
-                    // The box is THIS head's font's, so it is the box the glyph fills.
-                    gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
-                        GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Width,
-                        GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Height);
-                }
+                // Interactive preview gets a tight click target the size of the
+                // head ink, centred on noteY — see DrawNotehead. Both axes from the
+                // ink box, as the remark above says: the width read the ADVANCE until
+                // 2026-08-05 (session 95) while the height beside it read the ink.
+                // The box is THIS head's font's, so it is the box the glyph fills.
+                // (A dead note is a cross-style head — `head` above is noteheads.s2cross —
+                // and until session 562 took a branch here that drew two strokes of its
+                // own instead of the glyph; LilyPond's \deadNote is the style tweak alone.)
+                gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
+                    GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Width,
+                    GlyphMetrics.GetNoteheadBBox(headFont, noteValue).Height);
             }
 
         // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
@@ -1249,53 +1315,84 @@ internal static partial class SharedRenderer
     /// </summary>
     private sealed class LedgerRequest
     {
+        public int Column;                     // the item's rank: a chord's heads share one
         public double HeadLeft, HeadRight;
-        public double LedgerLeft, LedgerRight; // clamped by the shortening pass
-        public int ExtremePos;                 // signed staff position of the far head
+        public double LedgerLeft, LedgerRight; // the head's own extent, clamped by the column's
+        public int Position;                   // this head's signed staff position
         public double StaffMiddleY;
-        public bool HasAccidental;
+        public double? AccidentalRight;        // the drawn accidental's ink right, page X
+        public double ShortenBottom, ShortenTop; // the accidental's range, in positions about the head
+    }
+
+    /// <summary>The per-column bounds the neighbour pass reasons with: the union of the
+    /// column's heads and their ledgers, and the position furthest from the staff.</summary>
+    private sealed class LedgerColumn
+    {
+        public int Column;
+        public double HeadLeft = double.MaxValue, HeadRight = double.MinValue;
+        public double LedgerLeft = double.MaxValue, LedgerRight = double.MinValue;
+        public int MaxPosition;
     }
 
     /// <summary>
-    /// Registers a column's ledger request. Columns at the FIRST position
-    /// outside the staff (|pos| == 5) carry no ledgers themselves but still
-    /// participate, shortening their neighbours' ledgers.
+    /// Registers one head's ledger request. Heads at the FIRST position outside the
+    /// staff (|pos| == 5) carry no ledgers themselves but still participate, shortening
+    /// their neighbours' ledgers.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:223-226.</remarks>
-    private static void CollectLedgerRequest(List<LedgerRequest> plan, int extremePos,
-        double x, double headWidth, double staffMiddleY, bool hasAccidental)
+    /// <remarks>
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:223-230 — a head with ledgers, or outside
+    ///   the staff without any, makes a request; its ledger extent is the head's widened by
+    ///   length-fraction.
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:245-270 — the accidental's extent and its
+    ///   glyph's ledger-shortening-range, in positions (× 1 / halfspace), widened by 1e-3.
+    /// </remarks>
+    private static void CollectLedgerRequest(List<LedgerRequest> plan, int column, int position,
+        double x, double headWidth, double staffMiddleY, double? accidentalRight,
+        string? accidental, bool isCourtesy)
     {
-        if (Math.Abs(extremePos) < 5)
+        if (Math.Abs(position) < 5)
             return;
 
         double ext = EngravingDefaults.LedgerLengthFraction * headWidth;
+        var (bottom, top) = accidentalRight is null
+            ? (0.0, 0.0)
+            : GlyphMetrics.AccidentalLedgerShorteningRange(accidental, isCourtesy);
         plan.Add(new LedgerRequest
         {
+            Column = column,
             HeadLeft = x,
             HeadRight = x + headWidth,
             LedgerLeft = x - ext,
             LedgerRight = x + headWidth + ext,
-            ExtremePos = extremePos,
+            Position = position,
             StaffMiddleY = staffMiddleY,
-            HasAccidental = hasAccidental,
+            AccidentalRight = accidentalRight,
+            ShortenBottom = bottom * 2 - 1e-3,
+            ShortenTop = top * 2 + 1e-3,
         });
     }
 
     /// <summary>
-    /// Shortens neighbouring ledger extents against each other, then draws.
+    /// Shortens neighbouring columns' ledger extents against each other, then each head's
+    /// ledgers against its accidental, unites what heads of one column share, and draws.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/ledger-line-spanner.cc:279-326 — for adjacent
-    /// out-of-staff columns in the same direction, each side's ledger is
-    /// clamped to the midpoint between the facing head edges; when BOTH
-    /// columns are beyond the first space outside the staff (|pos| ≥ 6, i.e.
-    /// both actually carry ledgers) a gap of 0.1 staff spaces is kept between
-    /// them so the ledgers never read as one line.
-    /// LILYPOND-REF: lily/ledger-line-spanner.cc:359-369 — ledgers of a note
-    /// with an accidental are shortened on the LEFT to midway between the
-    /// accidental's right edge and the head's left edge. (LilyPond limits
-    /// this to the glyph's font-provided vertical shortening range; we
-    /// approximate that range as ±3 staff positions around the head.)
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:279-326 — for adjacent out-of-staff
+    ///   columns in the same direction, each side's ledger is clamped to the midpoint
+    ///   between the facing head edges (the columns' UNITED head extents); when BOTH columns
+    ///   are beyond the first space outside the staff (|pos| ≥ 6, i.e. both actually carry
+    ///   ledgers) a gap of 0.1 staff spaces is kept between them so the ledgers never read as
+    ///   one line.
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:331-377 — each head's ledger extent is
+    ///   intersected with its column's clamped maximum, then every ledger within the
+    ///   accidental glyph's shortening range of the head is shortened on the LEFT to midway
+    ///   between the accidental's right edge and the head's left edge; :386-408 — the
+    ///   extents heads of one column ask for at one position are united into one line.
+    /// MEASURED (2.26.0, Lab sessions/p564/ledger-acc-lp.svg against the page's
+    ///   ledger-acc-ls-after.svg): a C♯6's own line is 1.805 wide and the one below it 1.956
+    ///   (the sharp's range reaches 0.8 down, not 2 positions); a D♭6 shortens neither (the
+    ///   flat's range starts at 0); a ♮ shortens to 1.814, the sharp to 1.805 — the edge is
+    ///   the glyph's own.
     /// </remarks>
     private static void DrawPlannedLedgers(List<LedgerRequest> plan, IDrawingContext gc)
     {
@@ -1303,61 +1400,95 @@ internal static partial class SharedRenderer
             return;
 
         const double gap = 0.1; // LedgerLineSpanner (gap . 0.1)
-        const int accidentalRange = 3; // approximation of ledger_shortening_range
 
         // One list, filled by a stable insertion in HeadLeft order — what Where + OrderBy gave,
         // without an environment per direction (it captured the loop variable) and its
         // delegate, the two iterators and a list each time (Func<LedgerRequest, bool> 195 B a
         // keystroke over the reader's corpus plus the environment 58 — session 470's
         // allocation-tick price by type).
-        var reqs = new List<LedgerRequest>(plan.Count);
+        var columns = new List<LedgerColumn>(plan.Count);
         for (int direction = 1; direction >= -1; direction -= 2)
         {
-            reqs.Clear();
+            // The column bounds, in HeadLeft order.
+            columns.Clear();
             foreach (var r in plan)
             {
-                if (Math.Sign(r.ExtremePos) != direction)
+                if (Math.Sign(r.Position) != direction)
                     continue;
-                int at = reqs.Count;
-                while (at > 0 && reqs[at - 1].HeadLeft.CompareTo(r.HeadLeft) > 0)
-                    at--;
-                reqs.Insert(at, r);
+                LedgerColumn? col = null;
+                foreach (var c in columns)
+                    if (c.Column == r.Column) { col = c; break; }
+                if (col == null)
+                {
+                    col = new LedgerColumn { Column = r.Column, MaxPosition = r.Position };
+                    int at = columns.Count;
+                    while (at > 0 && columns[at - 1].HeadLeft.CompareTo(r.HeadLeft) > 0)
+                        at--;
+                    columns.Insert(at, col);
+                }
+                col.HeadLeft = Math.Min(col.HeadLeft, r.HeadLeft);
+                col.HeadRight = Math.Max(col.HeadRight, r.HeadRight);
+                col.LedgerLeft = Math.Min(col.LedgerLeft, r.LedgerLeft);
+                col.LedgerRight = Math.Max(col.LedgerRight, r.LedgerRight);
+                if (Math.Abs(r.Position) > Math.Abs(col.MaxPosition))
+                    col.MaxPosition = r.Position;
             }
 
-            for (int i = 1; i < reqs.Count; i++)
+            for (int i = 1; i < columns.Count; i++)
             {
-                var prev = reqs[i - 1];
-                var cur = reqs[i];
+                var prev = columns[i - 1];
+                var cur = columns[i];
                 double center = (prev.HeadRight + cur.HeadLeft) / 2.0;
-                bool both = Math.Abs(prev.ExtremePos) >= 6 && Math.Abs(cur.ExtremePos) >= 6;
+                bool both = Math.Abs(prev.MaxPosition) >= 6 && Math.Abs(cur.MaxPosition) >= 6;
                 double half = both ? gap / 2.0 : 0.0;
                 prev.LedgerRight = Math.Min(prev.LedgerRight, center - half);
                 cur.LedgerLeft = Math.Max(cur.LedgerLeft, center + half);
             }
+
+            // Each head's extent intersected with its column's clamped maximum.
+            foreach (var r in plan)
+            {
+                if (Math.Sign(r.Position) != direction)
+                    continue;
+                foreach (var c in columns)
+                    if (c.Column == r.Column)
+                    {
+                        r.LedgerLeft = Math.Max(r.LedgerLeft, c.LedgerLeft);
+                        r.LedgerRight = Math.Min(r.LedgerRight, c.LedgerRight);
+                        break;
+                    }
+            }
         }
 
-        double thickness = EngravingDefaults.LegerLineThickness;
+        // Per (column, position): the union of what its heads ask for.
+        var lines = new Dictionary<(int Column, int Pos), (double Left, double Right, double Y)>();
         foreach (var req in plan)
         {
-            int extreme = req.ExtremePos;
+            int extreme = req.Position;
             int step = extreme > 0 ? 2 : -2;
             for (int pos = extreme > 0 ? 6 : -6;
                  extreme > 0 ? pos <= extreme : pos >= extreme;
                  pos += step)
             {
                 double left = req.LedgerLeft;
-                if (req.HasAccidental && Math.Abs(pos - extreme) <= accidentalRange)
-                {
-                    double accRight = req.HeadLeft - GlyphMetrics.AccidentalNoteGap;
+                double rel = pos - extreme;
+                if (req.AccidentalRight is { } accRight
+                    && rel >= req.ShortenBottom && rel <= req.ShortenTop)
                     left = Math.Max(left, (accRight + req.HeadLeft) / 2.0);
-                }
                 if (left >= req.LedgerRight)
                     continue;
 
                 double y = req.StaffMiddleY + pos / 2.0;
-                gc.DrawLine(left, y, req.LedgerRight, y, Color.Black, thickness);
+                var key = (req.Column, pos);
+                lines[key] = lines.TryGetValue(key, out var have)
+                    ? (Math.Min(have.Left, left), Math.Max(have.Right, req.LedgerRight), y)
+                    : (left, req.LedgerRight, y);
             }
         }
+
+        double thickness = EngravingDefaults.LegerLineThickness;
+        foreach (var (_, line) in lines)
+            gc.DrawLine(line.Left, line.Y, line.Right, line.Y, Color.Black, thickness);
     }
 
     /// <param name="staffLines">The staff's line count — the neutral letter is seated on

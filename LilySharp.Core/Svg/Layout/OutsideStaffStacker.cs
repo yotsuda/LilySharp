@@ -104,8 +104,9 @@ internal static class OutsideStaffStacker
     // pass — see PlaceCustomTexts / PlaceTextSpanners), and declaring staff-padding
     // also puts the STAFF EXTENT into the support (include_staff, :219-222 and
     // :323-330), over which a grob pays its OWN padding where it declares one
-    // (PlaceTrills; the trill engraver's quiet height is the staff-extent case).
-    private const double TextScriptStaffPadding = EngravingDefaults.TextScriptStaffPadding;
+    // (PlaceTrills; the trill engraver's quiet height is the staff-extent case). The
+    // TextScript floor is read as CustomTextEngraver.AlignedSideBaselineYUp, the engraver's
+    // own seed (session 567: one home, not two).
 
     // (DynamicLineSpanner's side-position padding 0.6 is the ENGRAVER's quiet-position
     // business — DynamicEngraver.PointwiseBaselineY spends it against the supports. The stacker
@@ -2580,9 +2581,10 @@ internal static class OutsideStaffStacker
             // 0.46 raise starts FROM the floored baseline and the entries register the
             // ink where it lands. The floor is against the STAFF's own ink edge
             // (2.0 + half a line), not the accumulated skylines — that is what "on a
-            // row" in aligned_side's comment means. See TextScriptStaffPadding.
-            double staffPaddingFloor = midUp
-                + (2.0 + EngravingDefaults.StaffLineThickness / 2.0) + TextScriptStaffPadding;
+            // row" in aligned_side's comment means. ONE home with the engraver's own seed
+            // (CustomTextEngraver.AlignedSideBaselineYUp), which is this same floor — so
+            // the Max below binds only when a caller hands in something higher.
+            double staffPaddingFloor = midUp + CustomTextEngraver.AlignedSideBaselineYUp;
             double anchor = Math.Max(ct.YUp + midUp, staffPaddingFloor);
             var (ctUp, ctDown) = TextOutlineSkylines.Place(
                 ct.Text, ctFs, fonts.Face(TextRole.Text, ctStyle), ct.X, anchor);

@@ -616,12 +616,15 @@ score main {{ chords prog  staff m }}
         var staves = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves)
             .ToDictionary(s => s.StaffIndex);
         // Y is the staff's TOP LINE and YUp the symbol's baseline, both up-positive from the
-        // system origin, so the difference is "above this staff's own top line".
+        // system origin, so the difference is "above this staff's own top line" — read at the
+        // symbol's INK BOTTOM, since the line stands where that clears the staff by the
+        // padding (session 567): a "C" dips under its baseline, a "D" does not.
         double OverItsTopLine(string text)
         {
             var chord = layout.ChordNameLayouts.Single(c => c.ChordText == text);
             var owner = score.ChordNames.Single(c => c.ChordText == text);
-            return chord.YUp - staves[owner.StaffIndex].Y;
+            return chord.YUp + ChordNameEngraver.SymbolInk(score.TextMetrics, chord).Bottom
+                - staves[owner.StaffIndex].Y;
         }
         double onNotation = OverItsTopLine("Dm7");      // staff back, the control
         double onTab = OverItsTopLine(DrawnCmaj7);      // tab melody

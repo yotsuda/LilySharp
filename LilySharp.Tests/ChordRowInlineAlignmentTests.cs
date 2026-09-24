@@ -226,6 +226,11 @@ public class ChordRowInlineAlignmentTests
         Assert.Equal(-1, inline.RowStaffIndex);   // on no row's line
 
         double staffY = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves).Single().Y;
-        Assert.Equal(0.65, inline.YUp - staffY, precision: 6);   // the measured no-protrusion distance
+        // The no-protrusion distance: the line's padding 0.5 over the top line's ink edge
+        // (half a line above its centre), less the symbol's own ink bottom ("Am7" has a flat
+        // foot: 0). It read 0.65 = a flat 0.6 + the edge until session 567.
+        double expected = ChordNameEngraver.RelatedStaffPadding + EngravingDefaults.StaffLineThickness / 2.0
+            - ChordNameEngraver.SymbolInk(score.TextMetrics, inline).Bottom;
+        Assert.Equal(expected, inline.YUp - staffY, precision: 6);
     }
 }

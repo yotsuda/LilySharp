@@ -651,6 +651,33 @@ public static class TextFontMetrics
         return top - bottom;
     }
 
+    /// <summary>
+    /// The FACE's own ascender and descender per em (its hhea metrics, through the shaper),
+    /// up-positive — <c>Descender</c> is negative. What a viewer resolves an SVG
+    /// <c>dominant-baseline</c> of <c>central</c> (their midpoint) and <c>hanging</c> (the
+    /// ascender) against, and what the PDF backend shifts its baseline by for the same
+    /// anchors; the PNG backend reads the same numbers out of SKFontMetrics.
+    /// </summary>
+    public static (double Ascender, double Descender) FontExtents(TextFace face)
+        => Extents.GetOrAdd(face, static key =>
+        {
+            var (font, upem) = ShapingFont(key);
+            lock (font)
+            {
+                if (font.TryGetHorizontalFontExtents(out var e))
+                    return (e.Ascender / (double)upem, e.Descender / (double)upem);
+            }
+            // LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
+            // that an anchor still lands somewhere — a serif's usual proportions.
+            //   departs from: nothing; LilyPond never asks a face for these.
+            //   goes away when: never (a stand-in for a broken font program).
+            //   observed by: none.
+            return (0.8, -0.2);
+        });
+
+    private static readonly ConcurrentDictionary<TextFace, (double Ascender, double Descender)>
+        Extents = new();
+
     // (There is no horizontal-ink accessor, and that absence is deliberate. An `InkX` lived
     // here for one day, 2026-08-02, put in to serve the ottava's
     // `text_size = text.extent (X_AXIS)[RIGHT] + 0.3` — but a text stencil's box takes X

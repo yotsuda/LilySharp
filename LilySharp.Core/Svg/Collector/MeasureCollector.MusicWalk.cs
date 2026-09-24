@@ -734,6 +734,8 @@ public sealed partial class MeasureCollector
                 Midi = midi,
                 StringNumber = stringNumber,
                 IsDead = isDead,
+                // The dead note's cross head (ItemFactory's note arm says why).
+                Notehead = isDead ? NoteheadStyle.Cross : NoteheadStyle.Default,
                 TieStartSourcePosition = tieStart ? (last ? marks.TieSource : pitch.SourceStart) : MusicItem.NoSourcePosition,
                 SlurStartSourcePosition = first && marks.SlurStart ? marks.SlurStartSource : MusicItem.NoSourcePosition,
                 SlurEndSourcePosition = last && marks.SlurEnd ? marks.SlurEndSource : MusicItem.NoSourcePosition,
@@ -1915,7 +1917,11 @@ public sealed partial class MeasureCollector
             {
                 if (isCue && TakeCueRegionStart())
                     n = n with { BeginsCueRegion = true };
-                if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default)
+                // A dead note keeps its cross: \deadNote is a TWEAK, which wins over the
+                // context's NoteHead.style override (lily/grob.cc: tweaks are applied after
+                // the context properties — ItemFactory's note arm).
+                if (ExtractNoteheadStyle(node) is var style && style != NoteheadStyle.Default
+                    && !n.IsDead)
                     n = n with { Notehead = style };
                 if (_tremoloPairShape is { } pair)
                 {

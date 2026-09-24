@@ -129,6 +129,88 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第565セッションの経緯
+
+### 1.1 第565セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」・§2 R10 の ⒝ 歌詞 extender）。★ `-Start p565`（HEAD `0d56e3fb`・full 8947 / 0 / 2 / 8949）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ R10⒝ 歌詞 extender（`__`）を LP の `Lyric_extender::print` に合わせた**。起票は「定数 4 つ」だったが、hyphen 側の定数は既に LP のもので、違うのは extender だけ＝⒜ 太さ 0.1（描画が直書き・`LyricHyphenParameters.ExtenderThickness` 0.04 は誰も読んでいなかった）→ `0.8 × lt = 0.08`／⒝ 音節からの padding 0.2 → h（`left-padding`／`right-padding` は未設定なら h）／⒞ Y が baseline の 0.7 下 → baseline の上に高さ h の箱（中心＝baseline − h/2）／⒟ 右端が「保持した最後の符頭の右端」だけ → `left + minimum-length 1.5` を系の右端で切り、最後の符頭の右端まで上げ、次の音節の ink 左端 − h で切る／⒠ 消す条件 `w < 0.5` → `w < 1.5h`。**双子で実測**（Lab `sessions/p565/`）: ⚠️ **twin の穴**＝exporter の twin は `\new Lyrics \lyricmode` に音価を書くだけで `\lyricsto`／associatedVoice が無く、**LP は extender を 1 本も描かない**（`Lyric_extender` は符頭が無いと消える）。手書き `extender-hand.ly`（`\new Voice = "m"` ＋ `\lyricsto "m"`）＋ `dump-ext.ily`（`after-line-breaking` で extent を書く）で測った: `lo __ lo`（`g2( a4) b`）＝**23.611 … 27.198**（左＝音節右 23.531 + 0.08・右＝a の符頭右端）／`mi __`（`c'1( d1)`）＝**36.521 … 43.958**（d の符頭右端）／箱は baseline 上 h 0.08。**after の Lily#**（`extender-after.svg`）＝右端 27.20・43.96・Y＝baseline − 0.04＝**2 桁で一致**。左端は 23.71 対 23.611＝0.1 ずれ＝**音節 `lo` の幅が Lily# 2.00・LP 1.912**（ink 幅の差＝extender の外・§2 R10 に註）。`la __ la`（`c'4( d e) f`）は Lily# が 2 つ目の `la` を e に置き LP は f に置く（melisma 割当の差・同じく §2 に註）＝extender の式はどちらも「最後の符頭まで」で一致している。
+  **実装**: `LyricHyphenParameters`（`ExtenderPadding`＝h・`ExtenderMinimumLength` 1.5・`ExtenderDropBelowThicknesses` 1.5・`ExtenderCentreBelowBaseline` = −h/2・`ExtenderYOffset`／`MinExtenderLength` は撤去）／`CalculateExtenderLayout` と final-extender 腕は `SystemRightOf` で系の右端を読む／`SharedRenderer.Marks.cs` の描画 3 箇所は `LyricHyphenParameters.Default.ExtenderThickness` を読む（直書き 0.1 を撤去）。**網 `LyricExtenderGeometryTests` 5 本**（左端＝音節右 + h・右端＝左 + 1.5／次の音節 − h で切る／baseline の上／`w < 1.5h` で消す／系の右端で切る）＋ `LyricExtenderCompletionTests` の regex（0.100 → 0.080）と Y（+0.7 → −0.04）。**毒**: 旧 4 定数（0.2／0.7／最小長 0／太さ 0.1）で 6 本赤・drop 係数 0 で drop の 1 本だけ赤（合成毒では padding 0.2 が drop を隠すので別に回した）。**snapshot 0 枚**＝fixture に `__` を持つ本が 1 冊も無い／**hash A/B（baseline＝p564 の after 5,800 行）: 0 行**＝コーパス（ベースタブ）にも `__` は 0 冊。⚠️ 出力が動く変更＝方針「LP 忠実度を先に」の下（動く本は extender を持つ本だけ）。full **8952 / 0 / 2 / 8954**。表: `APPROXIMATIONS.md` 行番号 6 行・`magic_constants.csv` 不変。文書: CHANGELOG 0.8.0 Engraving・§2 R10 の ⒝ を ✅（残差 2 つを註）。
+  ⚠️ 引用 ratchet: `print —` だけの LILYPOND-REF 行は数えられない（7 行を `Lyric_extender::print` にした）。
+  ⇒ 判定: 次は R11 の ⒡⒠（小さい・1 便）、または R10 の残差＝音節の ink 幅（`LyricLayout.Width` の出所＝advance か ink か・LP は `Text_interface` の ink extent）と melisma 割当（`la __ la` の 2 つ目の置き場）。この便の文脈に依らない＝(c)。
+
+## 以下は第564セッションの経緯
+
+### 1.1 第564セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」・§2 R11 の残りから ⒝ 加線短縮）。★ `-Start p564`（HEAD `719b4a4a`・full 8943 / 0 / 2 / 8945・`-Archive 562`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ R11⒝ 臨時記号による加線短縮を LP の `Ledger_line_spanner::print` に合わせた**（commit `3b3aa45b`）。起票は「描いた `accInkLeft` を運ぶ」だったが、読むと違いは 3 つ: ⒜ 短縮の縦範囲が全 glyph ±3 位置の固定（LP は font の glyph ごとの `ledger-shortening-range`＝mf の `accbot`／`acctop`: sharp −0.8…1・flat 0…0.8・natural −1.8…1・doublesharp −0.8…0.8・flatflat 0…0.8・括弧付きは rightparen −1…1（staff space）を 1/halfspace 倍・1e-3 広げ）／⒝ 臨時記号の右端が名目（`HeadLeft − AccidentalNoteGap`）で、LP は*描いた* accidental の extent の右端（natural と sharp で違う）／⒞ 和音は極端な符頭 1 つの request で、LP は符頭ごとに `Head_data`（各自の accidental）を持ち、同じ列・同じ位置の extent を*和*にする（accidental の無い内側の符頭が共有する線を全長に戻す）。**双子で実測**（Lab `sessions/p564/ledger-acc-lp.svg`＝probe `ledger-acc.lys` の twin・ledger は rect で幅を読んだ）: C♯6 は自分の線 1.805・下の線 1.956／D♭6 は両方 1.956／A♯3 は 2 本とも 1.805／B♭3 1.805／♮ は 1.814（sharp と違う）＝**after の Lily#（`ledger-acc-ls-after.svg`）は 2 桁で全部一致**（旧は C♯6 の 2 本とも 1.81・D♭6 も 1.81・♮ も 1.81）。
+  **実装**（`SharedRenderer.Noteheads.cs`）: `LedgerRequest` は符頭ごと（`Column`＝item の順番・`Position`・`AccidentalRight`＝描いた ink 右端・`ShortenBottom/Top`＝位置単位の範囲）／`CollectItemLedgers(item, x, voiceX, …, column)` は note なら `DrawNote` と同じ配置（packed の `AccidentalX` か `CalculateSinglePosition`・同じ font）で右端＝ink 左 ＋ `AccidentalInkWidth`（箱の幅・courtesy は両括弧を足す）、chord なら `DrawChord` と同じ `accLayouts` から各符頭の右端／`DrawPlannedLedgers` は列ごとの最大 extent で隣接列を clamp → 各符頭の extent を列の最大で intersect → 範囲内の線だけ `max(left, (accRight + headLeft)/2)` → `(Column, pos)` で和 → 描く。範囲表は `GlyphMetrics.AccidentalLedgerShorteningRange(accidental, parenthesized)`（mf の行を REF）。
+  **網 `LedgerAccidentalShorteningTests` 4 本**（C♯6 は自分の線だけ短い／D♭6 はどれも短くない／A♯3 と A♮3 の短さが違う／`<c'' dis''>` の共有線は和＝全長以上）＝**毒（固定 ±3 ＋名目の右端 ＋ 極端な符頭だけ）で 4 本とも赤**（Lab `net-poison.log`）。**snapshot 19 枚**＝差分は ledger の `<line>` だけ（機械で数えた・non-ledger 0・高さ不変）・承認。**hash A/B（baseline＝p563 の after 5,800 行）: 90 冊 1,196 行が動いた・ページ数の動いた本 0**（加線＋臨時記号はコーパスの日常）。⚠️ 出力が動く変更＝方針「LP 忠実度を先に」の下。full **8947 / 0 / 2 / 8949**。表: `magic_constants.csv` +7（範囲表の定数）・`APPROXIMATIONS.md` 1 行。文書: CHANGELOG 0.8.0 Engraving・§2 R11 の ⒝ を ✅。
+  ⚠️ 相対音高の罠を 2 度踏んだ: probe の `cis'' des'' e'' fis''` は各音が 2 オクターブずつ上がる（`''` は相対に足される）＝LP と Lily# は*同じに*読むので比較は壊れないが、意図した音高ではない。書くなら `cis''4 des e fis`。
+  ⇒ 判定: R11 の残り＝⒠ bend/scoop の OWN 化（描画は変わらない・宣言だけ）・⒡ `DrawTimeSignature` の戻り値 `+0.4` 未読・⒢ PDF の縦 anchor（`0.35em`/`0.8em`＝推測）。次は ⒡⒠（小さい）を 1 便で、または R10 の ⒝ `LyricHyphen`（双子で測れる）。この便の文脈に依らない＝(c)。
+
+## 以下は第563セッションの経緯
+
+### 1.1 第563セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」・§2 R11 の残りから ⒞ clef の "8"）。★ `-Start p563`（HEAD `6606aee5`・full 8940 / 0 / 2 / 8942・`-Archive 561`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ R11⒞ 八度記号の "8"（`treble_8`・`bass_8`・`treble^8`）を LP の `ClefModifier` に移植した**（commit `b493195d`）。**双子で実測**（Lab `sessions/p563/treble8-lp.log`＝fixture `treble8.lys` の twin に `dump-clef.ily`＝Clef／ClefModifier の glyph・fs・X・extent・Y を刷った。⚠️ `ly:grob-relative-coordinate` の refpoint に StaffSymbol は使えない＝system 基準で刷って引き算）: "8" は fs −4・X 0.683・Y ±0.476（**em 2.2 × magstep(−4) = 1.386**）・中心は G clef の左から 1.026＝clef の中心 1.2825 − 0.2 × 1.2825（`clef-alignments (G . (-0.2 . 0.1))`・`calc_parent_alignment` は下なら car）・上端は譜表中央の 3.526 下＝clef の箱の底 −3.55（0.024 は clef の skyline と箱の差・LP の support は Clef 自身で padding 無宣言＝0・`staff-padding 0.7` は「譜表から 0.7 以上」の下限）。**旧 Lily# は em 3.2（2.3 倍）を固定位置（右 1.1・上線から 5.6 下）に描いていた**＝註の「LP 2.24 の pixel probe で ~2 ss」は誤り。
+  **実装** `DrawClefModifier8(fonts, clef, glyphX, clefY, staffY, kind, gc)`: em＝`TextScriptFontSize 2.2 × magstep(−4)`（plan の `clefOctave` を経由）× `clef-modifier::print` の `0.6 × clef の fs`（change なら −1.7・cue なら `CueFontSizeStep`）／X＝clef の箱の中心 ＋ align × 半幅（G 下 −0.2・上 +0.1・F 下 −0.3・上 −0.2・箱は `ClefG`／`ClefF`／`*Change`・cue は `CueScale` 倍）／Y＝下なら ink の上端を `min(clef の箱の底, 譜表下線 − 0.7)`、上なら ink の下端を `max(clef の箱の上, 上線 + 0.7)`（`fonts.Ink("8")` で baseline に戻す）。`ClefModifierKind { Full, Change, Cue }`＝`Connectors.cs` の change clef は Change／cue は Cue。
+  **網 `ClefModifierTests` 3 本**（G 下＝em 1.39・中心 +1.026・ink 上端＝箱の底 −2.55 で譜表 +0.7 より遠い／F 下＝align −0.3・箱が浅いので staff-padding が勝つ＝下線 + 0.7／G 上＝align +0.1・ink 下端＝箱の上 +4.8）＝**毒（旧 em と固定位置）で 3 本とも赤**（Lab `net-poison.log`）。⚠️ SVG は 2 桁なので Y の主張は ±0.011。**after の絵**（`treble8-ls-after.svg`）: "8" x=10.36 で clef x=9.34（＝+1.02）・fs 1.39・baseline 26.59 で clef y 23.06（箱の底 25.61＝ink 上端）＝LP の数と一致。**snapshot 5 枚**（`treble8`・`instrument-defaults`・`tab-chord-tie`・`tab-chord-spacing`・`tab-dotted-values`）＝差分は "8" の text 行だけ・高さ不変・承認。**hash A/B（baseline＝p562 の after 5,800 行）: 0 差**＝コーパスに八度記号付きの clef は無い。full **8943 / 0 / 2 / 8945**。表は `APPROXIMATIONS.md` 1 行（行番号）。文書: CHANGELOG 0.8.0 Engraving・§2 R11 の ⒞ を ✅。
+  ⇒ 判定: R11 の残り＝⒝ 加線短縮の臨時記号右端・⒠ bend/scoop の OWN 化・⒡ `DrawTimeSignature` の戻り値・⒢ PDF の縦 anchor。次は ⒝（`Noteheads.cs` の `accInkLeft` を `LedgerRequest` へ運ぶ＝双子で測れる）。この便の文脈に依らない＝(c)。
+
+## 以下は第562セッションの経緯
+
+### 1.1 第562セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」・§2 R11 の残りから ⒟ dead note）。★ `-Start p562`（HEAD `1e94c393`・full 8937 / 0 / 2 / 8939・`-Archive 560`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ R11⒟ dead note（`@dead`）を font の cross 記号で描く**（commit `905ae1fe`）。LP の `\deadNote` は `\tweak style #cross-style` だけ（`ly/property-init.ly:1046-1059`）＝style が glyph を選ぶ（`note-head::calc-glyph-name`＝`noteheads.s<log>cross`・log は 2 で頭打ち）。tab は `tab-note-head::calc-glyph-name` が style cross で常に "2cross"（`scm/tablature.scm:22-28`）を TabNoteHead の `font-size −2`（`define-grobs.scm:3739`）・whiteout で描く。**双子で実測**（Lab `sessions/p562/dead-lp.log`＝fixture の twin に `dump-heads.ily` を当てて NoteHead／TabNoteHead の glyph・extent を刷った）: 譜表の dead は glyph "2cross"・箱 0…1.3042 × ±0.545（黒符頭と同じ箱）／tab は "2cross" を fs −2 で 0…1.0325 × ±0.4387（＝magstep(−2) 0.7937 倍）。
+  **実装は「dead ＝ cross style」**: collector の NoteItem 2 軒（`ItemFactory` の note 腕・`MusicWalk` の分割 tie 腕）が `IsDead` と一緒に `Notehead = Cross` を刻む＝符頭 glyph・符尾の attachment（`GlyphMetrics` の Cross 腕は前から在った）・MusicXML の `<notehead>x</notehead>` が全部この 1 語から出る。`DecorateSoundingItem` の style override は dead なら上書きしない（LP の tweak は override に勝つ）。renderer の `DrawDeadNotehead`（黒符頭の箱に 2 本の線）は消し、tab は `DrawTabFret` が dead なら `NoteheadCrossBlack` を `FontSize × magstep(−2)` で列の中心に置く（弦線の切れ目と付点の幅も glyph の箱＝`TabDeadHeadWidth`）。
+  **網 `DeadNoteGlyphTests` 3 本**（item が Cross／譜表は 4 分 2 つが s2cross・2 分 2 つが s1cross を 4.0 で描き round-cap の線が無い／tab は 4 つとも s2cross を 3.17 で描き "×" の文字が無い）＝**毒 A（collector が Cross を刻まない）＋毒 B（tab が "×" を描く）で 3 本とも赤**（Lab `net-poison.log`）。**snapshot 2 枚**（`dead-note`・`system-count-line-start-ink`）＝差分は線 12／8 本（旧 2 本×dead）と "×" の文字 → 4.0 と 3.17 の glyph・弦線の切れ目の幅・高さ不変・承認。**hash A/B（baseline＝p561 の after 5,800 行）: 30 冊 360 行が動いた＝`@dead` を書く 35 冊の部分集合（動いた本で `@dead` の無い本は 0・ページ数が動いた本は 0）**。⚠️ 出力が動く変更＝ユーザー方針「LP 忠実度を先に」の下で入れた（起票 R11⒟ の逐語どおり）。full **8940 / 0 / 2 / 8942**。表は `APPROXIMATIONS.md` 5 行（行番号）。文書: CHANGELOG 0.8.0 Engraving・fixture と `SvgSnapshotTests` の註・§2 R11 の ⒟ を ✅。
+  ⚠️ 引用の網: **`LILYPOND-REF` を含む行だけ数える・ハイフン名は 3 部以上（`cross-style`・`font-size` は数えない）・アンダースコア名は 2 部でよい**（第557 の「3 部」の正体はこれ）＝`tab-note-head-interface`／`note-head::calc-glyph-name` を同じ行に。
+  ⇒ 判定: R11 の残り＝⒝ 加線短縮の臨時記号右端・⒞ clef "8" の em と位置（要双子）・⒠ bend/scoop の OWN 化・⒡ `DrawTimeSignature` の戻り値・⒢ PDF の縦 anchor。次は ⒞（双子で測れる）。この便の文脈に依らない＝(c)。
+
+## 以下は第561セッションの経緯
+
+### 1.1 第561セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」・方針どおり忠実度の項目＝§2 R11 から一番小さく双子で測れる ⒜ 破線小節線）。★ `-Start p561`（HEAD `61ee94f5`・full 8935 / 0 / 2 / 8937・`-Archive 559`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ R11⒜ 破線小節線（`!`）を LP の `make-dashed-bar-line` に移植した**（commit `1c5d21de`）。旧: 上端から 0.67 描き 0.33 空ける固定リズム＝最初の 1 本だけ線に跨り、最後は高さ次第で切れる（5 線譜で 4 本）。LP（`scm/bar-line.scm:512-553`）: `dash-size = 1 − gap`・`amount = height / staff-space`・`i = round(amount) … −round(amount)` を 2 刻みで各線に中心合わせ・外側は `±(amount·half-space + line-thickness/2)` で切る・全体を extent の中心に置く。**`gap` は 0.4**（`define-grobs.scm:276`・BarLine が宣言＝dash 0.6）。**双子で実測**（Lab `sessions/p561/dashed-lp.svg`＝fixture `dashed-barline.lys` の twin を 2.26.0 で描いた）: 5 線譜の dash は 0.35／0.60／0.60／0.60／0.35・内側 3 本は線の ±0.30・外側は縁の 0.05 外から 0.30 内側＝**Lily# の after（`dashed-ls.svg`）と同じ数**。最初の移植は gap 0.3（`make-dashed-bar-line` の既定値）で書いて 0.7／0.40 になり、双子の 0.60／0.35 と食い違って BarLine の宣言を読み直した＝**既定値は grob の宣言に負ける**（RULES §5.5 の「新しい計器の最初の食い違い」の形）。
+  **実装**: `SharedRenderer.DrawDashedBarline(x, top, height, thickness, space, gc)`＋`DrawBarline` の `dashSpace` 引数（null＝`height/(staffLines−1)`）。**tab は弦間隔**（`Tab.cs` の 2 呼び出しが `stringSpace` を渡す＝6 弦で 0.9 の dash 6 本・外側 0.5）、**staff 群の間の span bar は layout の 1.0**（`Connectors.cs`＝LP の `is-span`）。blot（角丸）は他の小節線と同じく描かない。
+  **網 `DashedBarlineTests` 2 本**（5 線譜＝各線に中心・外側 0.35／tab＝内側 0.9 が 1.5 間隔・外側 0.5 は線の 0.05 外から）＝**毒（旧の上端からのループ）で 2 本とも赤**（Lab `net-poison.log`）。⚠️ tab の網は `LiveRender.Svg` では書けない（render spec を無視して普通の譜表を描く）＝`SvgGenerator.Generate` で描く。**snapshot `test/dashed-barline`**＝差分は dash の rect だけ（旧 4 本×2 → 新 5 本×2・高さ不変）・承認。**hash A/B（baseline＝p560 の after 5,800 行）: 0 差**＝コーパスに `!` の小節線は無い。full **8937 / 0 / 2 / 8939**。表は `APPROXIMATIONS.md` 1 行（行番号）。文書: CHANGELOG 0.8.0 Engraving・§2 R11 の ⒜ を ✅。
+  ⇒ 判定: R11 の残り＝⒝ 加線短縮の臨時記号右端・⒞ clef "8" の em と位置（要双子）・⒟ dead note を `noteheads.s2cross` で・⒠ bend/scoop の OWN 化・⒡⒢。次は ⒟（glyph 1 つ・双子で測れる）か ⒞。この便の文脈に依らない＝(c)。
+
+## 以下は第560セッションの経緯
+
+### 1.1 第560セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き。ユーザー「To coda は記号で描いて」（第559 が残した忠実度の判断 1 つ＝決定）。★ `-Start p560`（HEAD `dc5b99e3`・full 8935 / 0 / 2 / 8937・`-Archive 558`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ `to coda` を coda 記号で描く＝出発点と到達点は LP の同じ `CodaMark`**（commit `9becd908`・`-End p560` OK・7.7 匂いなし）。LP の根拠: `ly/music-functions-init.ly:442-450 codaMark` は出発点にも到達点にも同じ `CodaMarkEvent`＝同じ grob・`scm/translation-functions.scm:270 format-coda-mark`＝markup は coda 記号。置き場所: `CodaMark` の `self-alignment-X` は opposite-of-anchor（`define-grobs.scm:1016-1017`）で、`BarLine` の `break-align-anchor-alignment` は CENTER（`:1225`）＝**記号は小節線の中心に立つ**（文字の「小節線の左 −0.5」ではない）。
+  **実装**: `MusicMarkItem.IsSymbol` に ToCoda を足し、`GetMarkText` は 𝄌（描画は IsSymbol 枝＝到達点の `coda` と同じ glyph・同じ大きさ 4.0）／`CalculateXPosition` の End 枝＝IsSymbol なら `X + Width`（小節線上）／優先度 1400（CodaMark）／`GetMarkHalfExtent`・`MarkXExtent` は Segno・Coda と同じ枝／renderer の "To ＋小 glyph" の合成枝と `ToCodaStencilWidths`（近似 `4.0*0.8*0.42`＝表から 1 行減）を消し、union 配置は `MusicMarkExtents` の記号枝で値付け／双子 `\codaMark 1`（tweak 無し＝CodaMark 自身の begin-of-line-invisible が「行末の境界記号」と同じ）／MusicXML は `<coda/>`＋`<sound tocoda="coda"/>`。**Lily#-own のまま残したもの**: 境界の記号と次の section label を横並びにする `CoPlaceToCodaWithLabels`（HANDOFF §3 のユーザー決定・LP は label を記号の上に積む）＝gap 4.0 は不変なので記号が細くなった分だけ空きが増えた（註に明記）。
+  **網**: `MarkReserveVersusDrawTests.ToCoda_IsTheCodaSign_LikeTheArrival`（"To" の文字が無い・glyph は到達点と同じ大きさ・`MarkXExtent` は Coda と同値）＝**毒（IsSymbol から ToCoda を外す）で赤**（Lab `sessions/p560/net-poison.log`）。旧 `ToCodaPrefix_IsCentredOnTheStyleItDraws` は描かない合成を測っていたので置き換え。**snapshot 3 枚**（`navigation-marks`・`tocoda-volta-clearance`・`tocoda-label-mirror`）＝差分は各 3 行＝「To の文字＋3.2 の glyph → 4.0 の glyph 1 つ」だけ・高さ不変（masked で数えた）・承認。**hash A/B（baseline＝p559 の after 5,800 行）: 動いたのは `blogger.lys` 1 冊 8 行＝コーパスで form に `to coda` を持つ唯一の本**（grep 1 件）。full **8935 / 0 / 2 / 8937**。
+  文書: SYNTAX_REFERENCE（form の Navigation marks・音楽側の Navigation Marks）・GRAMMAR（form の註）・GRAMMAR_FOR_LLM・CHANGELOG 0.8.0 Engraving。表 2 枚は再生成（近似 1 行減＋行番号）。引用の網に 1 度噛まれた（`codaMark` は複合名ではない→ `define-music-function codaMark`）。
+  ⇒ 判定: navigation 記号の族（⒳¹²・To Coda の記号）は閉じた。次は忠実度の項目＝R7〜R11 の LP 双子か ⒳⁶。この便の文脈に依らない＝(c)。
+
+## 以下は第559セッションの経緯
+
+### 1.1 第559セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き。ユーザー「あなたの提案通りで実装して」＝⒳¹² の決定: **綴り `to coda` は残す・置き場所は LP の時刻モデル**。★ `-Start p559`（HEAD `56b0940f`・full 8930 / 0 / 2 / 8932・`-Archive 557`）。作業ツリーの `samples/*` はユーザーの手（触らない）。
+
+★★ **⑴ ⒳¹² を閉じた＝インラインの navigation 記号は「書かれた小節線」に立つ**（commit `fe9df786`）。根拠（第558 の評価・ユーザー承認）: ⒜ 綴り＝この言語の複語は句の形（`key g major`・`dc al fine`）で、`toCoda` は 10 綴りのうち 1 つだけ camelCase になり、全部一語にすると LP にも無い語になる。`to` は予約語＝`coda` との取り違えは文法エラーになる。⒝ 置き場所＝記号は*時刻*の事象で `|` は時間を持たない＝`… f | fine` と `… f fine |` は同じ小節線。描く側は種類: 文字（fine・dc・ds・to coda）は左（`JumpScript` の `self-alignment-X RIGHT`＝`define-grobs.scm:1912`）、記号（segno・coda）は右（`SegnoMark`／`CodaMark` の opposite-of-anchor＝`:3097`／`:1017`）。
+  **実装は 1 関数** `MeasureCollector.NavigationMarkMeasure(navType, builder)`（MusicWalk の inline 枝だけ・form 側は前から時刻モデル）: builder が小節頭（`CurrentDuration == 0`）に立ち、文字で、`measure > 0` なら `measure − 1`。それ以外は `CurrentMeasureIndex`（記号は次小節の頭＝従来どおり・小節途中は従来どおり＋LYS4003・曲頭の文字は 0）。⚠️ **「小節線の前」の枝は無い＝測って消した**: 満ちた小節は `AutoCompleteMeasure` がその場で emit するので `fine |` も `| fine` も builder は*次の空の小節頭*に居る＝**旧規則では両綴りとも 1 小節遅れ**（起票の「fixture `fine g1 |` は逆の読み」は違った＝fixture の絵は「書かれた小節の終わり」ではなく「次の小節頭に立つ builder の小節の終わり」で、偶然 1 小節ずれて見えていただけ）。`segno |` と `| segno` は前から同じ小節（記号は Beginning）。
+  **網 `NavigationMarkMomentTests` 5 本**（文字は `|` の前後で同じ小節・同じ絵（data-pos を除く）／最後の `|` の後の `ds al coda` が描かれる／記号は前後で同じ＝対照／小節途中は据え置き＋LYS4003／曲頭の文字は 0）＝**毒（`CurrentMeasureIndex` をそのまま返す）で文字の 2 本が赤・対照 3 本は緑**（Lab `sessions/p559/net-poison.log`）。**fixture `navigation-marks.lys` は両綴りと曲末の 1 つを持つ形に書き直した**（`g4 a b c' to coda |`・`g1 | ds al coda`・`g1 | fine`）＝**絵は旧 snapshot と data-pos 以外バイト同一**（masked equal・`Approve-Snapshots -Name` で承認＝差分 33 行は全部 data-pos）。**文書の例 `sessions/p480/doc-example.lys` を Release CLI で描き直した**（Lab `sessions/p559/doc-example.svg`）: To (coda) x=30.8・Fine 46.04・D.C. 59.03・D.S. al Fine 72.03・**D.S. al Coda 85.02（曲末＝以前は消えていた）**＝各小節の終わり（小節幅 13）。**hash A/B（baseline＝p558 の after 5,800 行）: 0 差**＝コーパスはインラインの文字記号を使わない（起票どおり）。full **8935 / 0 / 2 / 8937**・`-End p559` OK・7.7 匂いなし。
+  文書: SYNTAX_REFERENCE「Navigation Marks」・GRAMMAR（NavMark の註）・GRAMMAR_FOR_LLM・CHANGELOG 0.8.0 Engraving。引用の網に 1 度噛まれた（`JumpScript self-alignment-X` は 3 部名ではない→ `jump-script-interface`／`segno-mark-interface` の範囲で引く）。棚卸し: Core `MeasureCollector` +40（関数＋註）・`MusicWalk` 1／1・REF 2（`define-grobs.scm:1898-1925`・`:3083-3111`）／OWN 0・網 +5・表は `APPROXIMATIONS.md` 1 行（行番号）。
+  ⚠️ 残る忠実度の判断 1 つ（起票せず）: LP は出発点の "To Coda" を語でなく coda 記号（`\codaMark`）で描く＝Lily# の語は Gould 流。
+  ⇒ 判定: ⒞ の判断待ちは無くなった。次は忠実度の項目＝R7〜R11 の LP 双子か ⒳⁶（§1.0 冒頭の方針）。この便の文脈に依らない＝(c)。
+
 ## 以下は第558セッションの経緯
 
 ### 1.1 第558セッション（2026-09-24・YT-DELL2）

@@ -81,17 +81,42 @@ internal sealed record LyricHyphenParameters
     /// value 0.3 is the LyricHyphen minimum-length in scm/define-grobs.scm.</remarks>
     public double HyphenMinimumLength { get; init; } = 0.3;
 
-    /// <summary>Extender line thickness (in staff spaces).</summary>
-    public double ExtenderThickness { get; init; } = 0.08;
+    /// <summary>Extender line thickness, in staff spaces: the LyricExtender's
+    /// <c>thickness</c> 0.8 in line-thickness units.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-extender.cc:86 Lyric_extender::print — <c>h = sl × thickness</c>;
+    /// scm/define-grobs.scm:2138-2147 LyricExtender lyric-extender-interface —
+    /// <c>(thickness . 0.8)</c>. Until session 565 the draw used 0.1 and this 0.08 had no
+    /// reader.</remarks>
+    public double ExtenderThickness { get; init; } = 0.8 * EngravingDefaults.LineThickness;
 
-    /// <summary>Vertical offset from text baseline for extender (in staff spaces).</summary>
-    public double ExtenderYOffset { get; init; } = 0.7;
+    /// <summary>The extender's padding from the syllable it leaves and the syllable it
+    /// meets, in staff spaces — LilyPond's <c>left-padding</c> / <c>right-padding</c>, which
+    /// default to the line's own thickness.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-extender.cc:87-89 Lyric_extender::print — the paddings read
+    /// <c>h</c> when unset. It was a Lily#-own 0.2 until session 565.</remarks>
+    public double ExtenderPadding { get; init; } = 0.8 * EngravingDefaults.LineThickness;
 
-    /// <summary>Padding between syllable and extender start (in staff spaces).</summary>
-    public double ExtenderPadding { get; init; } = 0.2;
+    /// <summary>How far past the syllable the extender reaches at least, in staff spaces —
+    /// LilyPond's <c>minimum-length</c>: the right point starts at the left point plus this
+    /// (capped by the system's right edge) before the melisma's last head and the next
+    /// syllable have their say.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-extender.cc:71-78 Lyric_extender::print — <c>right_point =
+    /// left_point + minimum-length</c>, then <c>min</c> with the system bound;
+    /// scm/define-grobs.scm:2140 <c>(minimum-length . 1.5)</c>.</remarks>
+    public double ExtenderMinimumLength { get; init; } = 1.5;
 
-    /// <summary>Minimum extender length to be drawn (in staff spaces).</summary>
-    public double MinExtenderLength { get; init; } = 0.5;
+    /// <summary>An extender narrower than this many times its thickness is not drawn.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-extender.cc:110-113 Lyric_extender::print — <c>if (w &lt; 1.5 * h)
+    /// return SCM_EOL</c>. It was a Lily#-own 0.5 staff spaces until session 565.</remarks>
+    public double ExtenderDropBelowThicknesses { get; init; } = 1.5;
+
+    /// <summary>The extender's centre line as a device offset from the text baseline (down
+    /// positive): the box spans 0 … <see cref="ExtenderThickness"/> ABOVE the baseline, so
+    /// its centre is half a thickness above.</summary>
+    /// <remarks>LILYPOND-REF: lily/lyric-extender.cc:128-129 Lyric_extender::print — <c>Box (Interval (0, w),
+    /// Interval (0, h))</c>, the line sitting ON the baseline. It was drawn 0.7 BELOW the
+    /// baseline until session 565 (a Lily#-own offset).</remarks>
+    public double ExtenderCentreBelowBaseline => -ExtenderThickness / 2;
 
     public static LyricHyphenParameters Default { get; } = new();
 }
@@ -258,15 +283,22 @@ internal sealed class LyricHyphenEngraver
                 if (current.Item.ConnectorType == LyricConnectorType.Extender
                     && MelismaEndInkRight(current, measuresByStaff, systems) is { } melismaEnd)
                 {
-                    double sx = current.X + current.Width / 2 + _params.ExtenderPadding;
-                    if (melismaEnd - sx >= _params.MinExtenderLength)
+                    // Lyric_extender::print's right point, with no syllable after it:
+                    // minimum-length past the left point (capped at the system's right),
+                    // raised to the last head's ink right.
+                    double leftPoint = current.X + current.Width / 2 + _params.ExtenderPadding;
+                    double systemRight = SystemRightOf(current, measureToSystem);
+                    double rightPoint = Math.Max(
+                        Math.Min(current.X + current.Width / 2 + _params.ExtenderMinimumLength, systemRight),
+                        melismaEnd);
+                    if (rightPoint - leftPoint >= _params.ExtenderDropBelowThicknesses * _params.ExtenderThickness)
                         layouts.Add(new LyricHyphenLayout(
                             i,
                             LyricConnectorType.Extender,
                             ImmutableArray<HyphenDash>.Empty,
-                            ExtenderStartX: sx,
-                            ExtenderEndX: melismaEnd,
-                            ExtenderY: -current.YUp + _params.ExtenderYOffset));
+                            ExtenderStartX: leftPoint,
+                            ExtenderEndX: rightPoint,
+                            ExtenderY: -current.YUp + _params.ExtenderCentreBelowBaseline));
                 }
                 continue;
             }
@@ -310,7 +342,7 @@ internal sealed class LyricHyphenEngraver
             var layout = current.Item.ConnectorType switch
             {
                 LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX, nextAtSystemStart),
-                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX, measuresByStaff, systems),
+                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, nextIndex, crossesSystem, systemEndX, nextSystemStartX, measuresByStaff, systems, measureToSystem),
                 _ => null
             };
 
@@ -550,11 +582,28 @@ internal sealed class LyricHyphenEngraver
         }
     }
 
+    /// <summary>The right edge of the system the syllable stands on (the last measure's
+    /// right), or +∞ when its measure is not in the map.</summary>
+    private static double SystemRightOf(
+        LyricLayout syllable,
+        Dictionary<int, (int systemIndex, double systemEndX, double systemStartX)> measureToSystem)
+        => measureToSystem.TryGetValue(syllable.Item.MeasureIndex, out var sys)
+            ? sys.systemEndX : double.PositiveInfinity;
+
     /// <summary>
-    /// Calculate extender layout with system break support.
+    /// Calculate extender layout with system break support — Lyric_extender::print's
+    /// right point: minimum-length past the syllable's ink right (capped at the system's
+    /// right edge), raised to the melisma's last head's ink right, then capped by the next
+    /// syllable's ink left less the padding.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/extender-engraver.cc:50-100
+    /// LILYPOND-REF: lily/lyric-extender.cc:57-96 Lyric_extender::print — left_point = the syllable's
+    ///   extent RIGHT (:60) plus left-padding (:109); right_point = left_point +
+    ///   minimum-length (:71-72), min the system's right bound (:74-78), max the last
+    ///   head's extent RIGHT (:80-84), min the next syllable's extent LEFT less
+    ///   right-padding (:91-96).
+    /// Until session 565 the end was the held note's ink right alone (or the next
+    /// syllable less a Lily#-own 0.2), with no minimum-length and no system cap.
     /// </remarks>
     private LyricHyphenLayout? CalculateExtenderLayout(
         int index,
@@ -565,13 +614,18 @@ internal sealed class LyricHyphenEngraver
         double systemEndX,
         double nextSystemStartX,
         IReadOnlyDictionary<int, ImmutableArray<Measure>>? measuresByStaff,
-        IReadOnlyList<SystemLayout> systems)
+        IReadOnlyList<SystemLayout> systems,
+        Dictionary<int, (int systemIndex, double systemEndX, double systemStartX)> measureToSystem)
     {
-        double startX = current.X + current.Width / 2 + _params.ExtenderPadding;
+        double inkRight = current.X + current.Width / 2;
+        double startX = inkRight + _params.ExtenderPadding;
         // The extender ends at the LAST HELD note's ink right — the melisma's end —
         // not at the next syllable: the line must not run on under notes the NEXT
-        // syllable owns. Fall back to the next syllable's ink left only when the
-        // held notes are unknown (no markers, or no score measures — unit tests).
+        // syllable owns; LilyPond's minimum-length lifts a short one past that head, and
+        // the next syllable's ink left (less the padding) caps it either way. The held
+        // notes are unknown (no markers, or no score measures — unit tests) only in the
+        // fallback, where the minimum-length and the cap alone place the end, as they do
+        // in LilyPond for an extender with no heads.
         // A CROSSING extender keeps the segment bounds below unchanged — its
         // held-end may sit on either side of the break, and the broken-piece
         // geometry (segment ends, per-system Y) is pinned by
@@ -581,13 +635,20 @@ internal sealed class LyricHyphenEngraver
         // stands at 29.07.
         // LILYPOND-REF: lily/lyric-extender.cc:80-84 print — right_point is
         //   raised to the last head's extent RIGHT.
-        double endX = !crossesSystem
-            && HeldEndInkRight(current.Item, measuresByStaff, systems) is { } heldEnd
-                ? heldEnd
-                : next.X - next.Width / 2 - _params.ExtenderPadding;
+        double endX;
+        if (crossesSystem)
+            endX = next.X - next.Width / 2 - _params.ExtenderPadding;
+        else
+        {
+            double rightPoint = Math.Min(inkRight + _params.ExtenderMinimumLength,
+                SystemRightOf(current, measureToSystem));
+            if (HeldEndInkRight(current.Item, measuresByStaff, systems) is { } heldEnd)
+                rightPoint = Math.Max(rightPoint, heldEnd);
+            endX = Math.Min(rightPoint, next.X - next.Width / 2 - _params.ExtenderPadding);
+        }
         // Lyric baseline is stored Y-up from the system top; reflect back for the
         // still-device extender layout.
-        double y = -current.YUp + _params.ExtenderYOffset;
+        double y = -current.YUp + _params.ExtenderCentreBelowBaseline;
 
         if (crossesSystem)
         {
@@ -608,12 +669,12 @@ internal sealed class LyricHyphenEngraver
                 FirstSegmentEndX: systemEndX - 0.5,
                 SecondSegmentStartX: nextSystemStartX + 0.5,
                 NextLyricIndex: nextIndex,
-                SecondSegmentY: -next.YUp + _params.ExtenderYOffset
+                SecondSegmentY: -next.YUp + _params.ExtenderCentreBelowBaseline
             );
         }
 
         double length = endX - startX;
-        if (length < _params.MinExtenderLength)
+        if (length < _params.ExtenderDropBelowThicknesses * _params.ExtenderThickness)
             return null;
 
         return new LyricHyphenLayout(

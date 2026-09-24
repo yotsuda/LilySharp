@@ -188,6 +188,24 @@ internal sealed class PdfDrawingContext : IDrawingContext
         }
     }
 
+    public void DrawBezier(
+        (double X, double Y) p0, (double X, double Y) c1, (double X, double Y) c2,
+        (double X, double Y) p1, Color? stroke = null, double strokeWidth = 0.1)
+    {
+        var path = new XGraphicsPath();
+        path.AddBezier(
+            X(p0.X), X(p0.Y),
+            X(c1.X), X(c1.Y),
+            X(c2.X), X(c2.Y),
+            X(p1.X), X(p1.Y));
+        var pen = new XPen(ToXColor(stroke), T(strokeWidth))
+        {
+            LineCap = XLineCap.Round,
+            LineJoin = XLineJoin.Round,
+        };
+        _gfx.DrawPath(pen, path);
+    }
+
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
         // The FACE follows the music-face scope; the SIZE does not change with it — every
@@ -257,15 +275,20 @@ internal sealed class PdfDrawingContext : IDrawingContext
             _ => XFontStyle.Regular,
         };
         var font = GetFont(fontFamily, T(fontSize), pdfStyle);
-        // SVG dominant-baseline parity: shift Y so the baseline sits where the
-        // requested anchor would visually land. cap-height ≈ 0.7 × em, so
-        // central baseline ≈ 0.35 × em below central, hanging ≈ 0.8 × em below top.
-        double drawY = verticalAnchor switch
+        // SVG dominant-baseline parity: shift Y so the baseline sits where the requested
+        // anchor visually lands — where a viewer resolves `central` (midway between the
+        // face's ascender and descender) and `hanging` (the ascender), and where the PNG's
+        // SKFontMetrics land them: the FACE's own extents (TextFontMetrics.FontExtents), per
+        // em. Until session 566 this guessed 0.35 em and 0.8 em from "cap-height ≈ 0.7 em"
+        // (HANDOFF R11⒢).
+        double drawY = y;
+        if (verticalAnchor != VerticalAnchor.Baseline)
         {
-            VerticalAnchor.Middle => y + fontSize * 0.35,
-            VerticalAnchor.Hanging => y + fontSize * 0.8,
-            _ => y,
-        };
+            var (ascender, descender) = TextFontMetrics.FontExtents(face);
+            drawY = y + fontSize * (verticalAnchor == VerticalAnchor.Middle
+                ? (ascender + descender) / 2
+                : ascender);
+        }
         var brush = new XSolidBrush(ToXColor(fill));
 
         // The measured face is drawn at the positions the reservation computed (DrawShaped);

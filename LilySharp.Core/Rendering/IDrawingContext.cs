@@ -114,6 +114,38 @@ public interface IDrawingContext
         double strokeWidth = 0);
 
     /// <summary>
+    /// Open cubic Bézier from <paramref name="p0"/> through control points
+    /// <paramref name="c1"/>, <paramref name="c2"/> to <paramref name="p1"/>, STROKED with a
+    /// round-cap, round-join pen of <paramref name="strokeWidth"/> and not filled — LilyPond's
+    /// <c>path</c> stencil command (a fall's <c>rcurveto</c>), whose cap and join styles are
+    /// round unless told otherwise.
+    /// LILYPOND-REF: scm/output-svg.scm:537-554 path — line-cap-styles and line-join-styles, round by default.
+    /// The default walks the curve as eight round-capped <see cref="DrawLine"/> segments, for
+    /// a recorder that only wants "there is ink here"; every backend and decorator overrides
+    /// it with the curve itself.
+    /// </summary>
+    void DrawBezier(
+        (double X, double Y) p0,
+        (double X, double Y) c1,
+        (double X, double Y) c2,
+        (double X, double Y) p1,
+        Color? stroke = null,
+        double strokeWidth = 0.1)
+    {
+        const int segments = 8;
+        var (px, py) = p0;
+        for (int s = 1; s <= segments; s++)
+        {
+            double t = s / (double)segments, u = 1 - t;
+            double b0 = u * u * u, b1 = 3 * u * u * t, b2 = 3 * u * t * t, b3 = t * t * t;
+            double nx = b0 * p0.X + b1 * c1.X + b2 * c2.X + b3 * p1.X;
+            double ny = b0 * p0.Y + b1 * c1.Y + b2 * c2.Y + b3 * p1.Y;
+            DrawLine(px, py, nx, ny, stroke, strokeWidth, cap: LineCap.Round);
+            (px, py) = (nx, ny);
+        }
+    }
+
+    /// <summary>
     /// Draws a music-font glyph (Emmentaler) at the given baseline anchor.
     /// </summary>
     /// <param name="glyph">SMuFL Unicode codepoint (e.g.
