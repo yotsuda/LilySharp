@@ -6,6 +6,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## 0.8.0
 
+Every part gets its own MIDI track and sound, phrasing slurs arrive, and a long run of engraving
+work brings ties, beams, lyrics, marks and spacing onto LilyPond's own arithmetic, each change
+measured against LilyPond 2.26.0. The editor's preview now re-engraves only what a keystroke
+changed. Five things a 0.7.0 book could write now read or print differently or are refused;
+they come first. Three are refused with a message; **two change a book without one**, so check
+for them by eye: **a clef no longer moves pitch** (a bass part that relied on `clef bass` to read
+bare letters an octave down now needs `octave 3`), and **a slur or tie holds its lyric syllable**
+(a lyrics line that gave the notes inside a slur syllables of their own now shifts).
+
 ### Breaking changes
 
 - **`volta` and `alternative` are ordinary words.** Neither is reserved any more, so a part,
@@ -445,6 +454,43 @@ workflow attaches that section to the GitHub Release verbatim.
   bar line there is the grace note's, which always points up. The grace note now sits 0.68 staff
   space after the bar line as in LilyPond, and the main note and the rest of the bar follow
   0.12 closer.
+- **Laissez-vibrer and repeat ties (`@laissezVibrer`, `@repeatTie`) are shaped and placed as LilyPond's.**
+  They stood a fixed 0.4 staff space off the head's centre with a bow of their own; they now go
+  through the same tie arithmetic as ordinary ties (the head they hang from, the dots, the staff
+  lines), and their position, width and curvature agree with LilyPond's to the drawn digit. On a
+  tab staff they are drawn as before.
+- **A tremolo on a beamed note is drawn, and the beam makes room for it.** `a8:32[ a8:32]`
+  drew no slashes at all, and the beam sat where it would without them. The slashes now hang
+  inside the beam at LilyPond's slope and spacing, and the stems lengthen so they fit — a flat
+  pair's beam rises from 2.81 to 4.0 staff spaces, as in LilyPond. `:64` on an eighth now draws
+  three slashes, not two.
+- **`rit.`, `accel.` and `rall.` are set at LilyPond's size, and their dashed line starts after the
+  word.** The word was 10% small, and the dashes began at an estimated width that fell short of
+  longer words, so the line ran through the end of "accel.". A chord or lyric row above the staff
+  now also clears the word at the height it is actually drawn.
+- **A form text (`~A _"meno mosso"`) under a chord row stays on its staff.** On a system that a
+  chord row leads, the text was stacked above the row and drawn on top of the chord symbol; it now
+  stands over its staff, and the chord row rises to clear it, as in LilyPond.
+- **A grace note inside a cue is cue-sized.** The two reductions add (LilyPond's font size −4 plus
+  −3); a grace in `cue { }` was drawn at an ordinary grace's size.
+- **A lyrics row whose staff below is removed (`as removeEmpty`) no longer leaves that staff's room.**
+  On a system where the staff under a lyrics row was hidden, the page still reserved the space of
+  its clef and lines under the words, so the next system stood several staff spaces too low.
+- **Smaller engraving repairs.** A short tie under the staff avoids a ledger line's position, and a
+  tie over dotted notes clears the dots by the bow it actually draws. A kneed beam over colliding
+  notes finds LilyPond's position. On a `combinedStaff`, a beam no longer joins notes across a
+  change of the voice that engraves them.
+
+### Diagnostics
+
+- **A phrase reference counts its beats in the bar check.** With `phrase riff { c4 d }`, the bar
+  `riff e f |` was reported short, because the checker counted the reference as taking no time;
+  it now plays the phrase in place as the page does.
+- **`@!mf`, `@!p` and every other word glued to `@!` or `@` read as a mark name.** Some were
+  refused as "Expected Identifier" before the name was even looked up.
+- **The "music at the top level" error (LYS0020) survives an edit in the editor.** Deleting the
+  first stray line could make the error vanish while later ones remained.
+- **A phrase that refers to itself inside a `cue { }` is reported as a cycle, not a crash.**
 
 ### MIDI, MusicXML and the LilyPond twin
 

@@ -232,7 +232,7 @@ Named music is declared with `phrase` and referenced by its bare name:
 phrase motif { c4 d e f }
 
 part melody { clef treble }
-section Main { melody { motif g2 g | } }
+section Main { melody { motif | g2 g | } }
 form main { Main }
 score main "out" { staff melody }
 ```
@@ -270,7 +270,7 @@ on its own:
 ```lilysharp
 part gt { clef treble_8 tuning guitar }
 
-section Main { gt { c'4 e' g' e' | } }
+section Main { gt { c4 e g e | } }
 form main { Main }
 
 score main "guitar" {

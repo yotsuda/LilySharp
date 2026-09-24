@@ -6,6 +6,18 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Breaking changes
 
+The extension bundles the compiler, so these change what a `.lys` file means. Three are refused
+with the spelling to write instead; **the first two change a book without any message**, so check
+for them by eye. The repository's
+[CHANGELOG](https://github.com/yotsuda/LilySharp/blob/master/CHANGELOG.md) carries the reasoning.
+
+- **A clef no longer moves pitch** — a part's bare letters start from its `octave N`, else its
+  `instrument` preset's octave, else 4, never its clef. A bass part that relied on `clef bass` to
+  read `c` as C3 now writes `clef bass octave 3`. A score's `staff bass x` now draws the bass clef
+  it names.
+- **A slur or a tie holds its lyric syllable, as in LilyPond** — under `lyrics … sings`, the notes
+  inside a slur (after its first) and a note a tie arrives at take no syllable: `c4( d e) f` with
+  `la __ lu` puts `lu` on f. `__` is the extender line and takes no note; `_` still takes one.
 - **An instrument preset has one name** — fourteen second names are gone: `uke`,
   `acoustic-guitar`, `electric-guitar`, `bass-guitar`, `electric-bass`, `5-string-bass`,
   `6-string-bass`, `double-bass`, `french-horn`, `piano-treble`, `piano-bass`, `voice-soprano`,
@@ -14,12 +26,37 @@ All notable changes to the Lily# VS Code extension are documented here.
   sound with `midiInstrument`.
 - **A section's label is hidden only at the form reference** — `section ~A { … }` is refused
   (LYS0033); write `form main { … ~A … }`. A `~` on a reference always hides.
+- **`volta` and `alternative` are ordinary words** — a part, section or phrase may carry either
+  name. LilyPond's `\alternative { … }` after a `repeat` is now an error (an undefined name),
+  where it used to be accepted and dropped by everything but the `.mid`.
+
+### Language
+
+- **Phrasing slurs: `@phrasingSlur` … `@!phrasingSlur`** — LilyPond's `\(` … `\)`, drawn over
+  and clear of the slurs inside, with `.up` / `.down`.
+- **`eses` and `ases` are E double flat and A double flat**, as in LilyPond.
 
 ### Added
 
 - **`midiInstrument "…"`** in a part header names the part's General MIDI sound (LilyPond's 128
   names, completed and checked); the `.mid` now gives every part its own track, channel and
   sound, and the preview plays the same timbre.
+- **A string number that cannot fret its note is reported (LYS5003)**, where it used to be
+  ignored in silence.
+
+### Editor
+
+- **The preview re-engraves only what a keystroke changed** and receives only the pages that
+  changed; the Problems panel shares the preview's work instead of compiling the book again.
+- **The language server starts in about half the time.**
+
+### Engraving
+
+Ties, laissez-vibrer and repeat ties, beams, tremolos, lyric extenders, accidental stacking,
+ledger lines, clef octave digits, marks, `rit.`/`accel.` spanners, grace notes and the start of a
+bar are now drawn and spaced by LilyPond's own arithmetic, each measured against LilyPond 2.26.0.
+A tremolo on a beamed note is drawn at last, and `to coda` is drawn as the coda sign. The full
+list is in the repository's CHANGELOG.
 
 ## 0.7.0
 
