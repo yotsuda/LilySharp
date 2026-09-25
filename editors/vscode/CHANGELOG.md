@@ -34,6 +34,18 @@ All notable changes to the Lily# VS Code extension are documented here.
   compiles but ADDS warnings (a bar that no longer fills its meter is a warning in Lily#) is
   sent back for repair like a broken one; if the repairs run out it is still shown, with the
   new warnings named above the score.
+- **Transform Selection can change the file around the selection.** A harmony in a new part
+  needs a `part` line, a block in the section and a score row — none of it inside the
+  selection — so the model could only answer with `voice { }` or with the music unchanged.
+  It may now return the whole file (`<file>…</file>`); the edit applied is the span where it
+  differs, and the before/after score lights that span. A reply that changes nothing is sent
+  back instead of being offered for acceptance.
+- **Transform Selection checks the octaves.** An octave slip is valid Lily# and draws no
+  diagnostic, so a harmony line an octave or two off compiled cleanly. The candidate's notes
+  are now resolved by the compiler; any that land more than an octave outside the register of
+  the notes they replace are named back to the model with the pitch they actually are. The
+  model fixes them, or confirms the register by returning the same candidate; a candidate
+  still questioned says so above the score.
 - **Ghost Completion logs what happened** to each suggestion in the *Lily# Extension* output
   (asked, shown, refused as not compiling, cancelled) with the model and the time taken — its
   ghost text and Copilot's look the same in the editor. A suggestion that opens with a

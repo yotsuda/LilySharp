@@ -1252,17 +1252,38 @@ public sealed partial class LilySharpLanguageServer
         if (doc == null)
             return new FactsForRangeResponse { Error = "Document not found" };
 
-        var text = doc.Text;
+        return ResolvePitches(doc.Text, doc.Tree, @params.Start, @params.End);
+    }
+
+    /// <summary>
+    /// The resolved pitches of a range of an arbitrary source — a candidate the AI transform
+    /// has not applied yet. The transform checks the OCTAVES of its candidate with it: the
+    /// first answer to "harmonize a third above" put its harmony line in the wrong octave and
+    /// compiled cleanly (owner report, 2026-09-26), since a relative-octave slip is not an
+    /// error. Read-only; nothing is opened.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/pitchesForText", UseSingleObjectParameterDeserialization = true)]
+    public Task<FactsForRangeResponse> PitchesForTextAsync(PitchesForTextParams @params, CancellationToken token)
+        => OffDispatch(() => PitchesForText(@params), token);
+
+    public FactsForRangeResponse PitchesForText(PitchesForTextParams @params)
+    {
+        var text = @params.Text ?? "";
+        return ResolvePitches(text, SyntaxTree.Parse(text), @params.Start, @params.End);
+    }
+
+    private static FactsForRangeResponse ResolvePitches(string text, SyntaxTree tree, int start, int end)
+    {
         try
         {
             var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            collector.Collect(doc.Tree);
+            collector.Collect(tree);
             var trace = collector.PitchTrace;
 
             var facts = new List<ResolvedPitchFact>();
             foreach (var e in trace)
             {
-                if (e.Position < @params.Start || e.Position >= @params.End)
+                if (e.Position < start || e.Position >= end)
                     continue;
                 // The trace position starts at the token's leading trivia; advance
                 // to the pitch so the "written" token lines up (as `check --pitches`

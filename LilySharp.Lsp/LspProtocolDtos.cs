@@ -409,6 +409,17 @@ public class FactsForRangeParams
     public int End { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/pitchesForText: the same facts as factsForRange, for a
+/// source that is not an open document (an AI candidate before it is applied).</summary>
+public class PitchesForTextParams
+{
+    public string? Text { get; set; }
+    /// <summary>Inclusive start offset of the range whose pitches are wanted.</summary>
+    public int Start { get; set; }
+    /// <summary>Exclusive end offset.</summary>
+    public int End { get; set; }
+}
+
 /// <summary>One note's resolved absolute pitch within the selection: the written
 /// token (e.g. <c>c''</c>), its resolved absolute pitch (e.g. <c>C6</c>), and its
 /// source offset. Mirrors <c>check --pitches</c>.</summary>

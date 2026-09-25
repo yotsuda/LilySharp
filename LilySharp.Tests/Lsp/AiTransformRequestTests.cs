@@ -170,4 +170,39 @@ public class AiTransformRequestTests
 
         Assert.NotNull(response.Error);
     }
+
+    // ---- pitchesForText ----
+
+    [Fact]
+    public void PitchesForText_ResolvesACandidateThatIsNotOpen()
+    {
+        // The same fixture, never opened: the candidate the transform checks is text only.
+        int gStart = ValidDoc.IndexOf("g'1", StringComparison.Ordinal);
+        var response = Server().PitchesForText(new PitchesForTextParams
+        {
+            Text = ValidDoc,
+            Start = gStart,
+            End = ValidDoc.Length,
+        });
+
+        Assert.Null(response.Error);
+        Assert.Single(response.Pitches);
+        Assert.Equal("g'", response.Pitches[0].Written);
+        Assert.Equal("G5", response.Pitches[0].Resolved);
+    }
+
+    [Fact]
+    public void PitchesForText_ARelativeSlip_ShowsInTheResolvedOctave()
+    {
+        // The slip the octave check exists for: a harmony line whose first note jumps the
+        // wrong way. Relative mode: c'' is C6, and `e,` after it is a sixth DOWN, E5 — valid
+        // Lily#, no diagnostic, and only the resolved octave shows it.
+        string doc = MusicSource.Wrap("c''4 e,4 f g |", "time 4/4\nkey c major");
+        int e = doc.IndexOf("e,4", StringComparison.Ordinal);
+        var response = Server().PitchesForText(new PitchesForTextParams { Text = doc, Start = e, End = doc.Length });
+
+        Assert.Null(response.Error);
+        Assert.Equal("C6", Server().PitchesForText(new PitchesForTextParams { Text = doc, Start = 0, End = e }).Pitches[^1].Resolved);
+        Assert.Equal("E5", response.Pitches[0].Resolved);
+    }
 }
