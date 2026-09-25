@@ -1537,6 +1537,14 @@ in a part-major file is an error** (LYS2011 for chords, LYS4002 for lyrics): it 
 section to anchor to, so its bars would run from bar 0 across whatever the form plays,
 and every section after the first would get nothing.
 
+**In the MIDI**, a row the score places (`chords NAME` in the score, or `staff … with chords
+NAME`) sounds on a track of its own, `NAME (chords)`, at 70% of the velocity in force; a row
+no score places is silent. Each symbol sounds over exactly the span it prints over — `.`
+holds it, `r` is silence, and every written symbol strikes again. A symbol names a chord
+but voices none, so Lily# picks one voicing, the same everywhere: every tone takes its one
+pitch from G3 up to (not including) G4, and a slash bass its pitch an octave below that —
+`G7/B` sounds B2 G3 B3 D4 F4. Hovering the symbol in the editor lists those pitches.
+
 ## Comments
 
 ```

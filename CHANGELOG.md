@@ -73,6 +73,24 @@ workflow attaches that section to the GitHub Release verbatim.
   `.xml`, which take the form's music and no staves, are unchanged. Of 942 books, 86 write a
   different twin for a second or later score; no first score's twin changes.
 
+- **A `chords { }` row sounds in the MIDI.** A row the score places (`chords NAME`, or
+  `staff … with chords NAME`) plays on a track of its own, `NAME (chords)`, after every part's
+  track (so no part changes channel) and at 70% of the velocity in force; a row no score places
+  stays silent. Each symbol sounds over exactly the span the page prints it over — `.` holds
+  it, `r` (N.C.) is silence, every written symbol strikes again — and a section's pickup
+  shortens the row's first bar as it does the parts'. A symbol voices no octave, so Lily# uses
+  one voicing everywhere: every tone from G3 up to G4, a slash bass an octave below
+  (`G7/B` = B2 G3 B3 D4 F4; a quality Lily# does not know sounds its root). A chords-only
+  section now takes its bars. **A chord row no longer delays the parts:** the rows' bar lines
+  used to count as empty bars, so a section with a chord row could run long — *Greensleeves*
+  played 13,200 ticks of silence between its verse and chorus. Of 942 books, 24 gain a chord
+  track; the parts' notes change in 2 (those two delays), and nothing else moves.
+
+- **A section's pickup shortens every part's first bar in the MIDI.** The first part played
+  spent the `partial`, so every other part opened with a full bar and could run the section
+  long: *partial.lys* (`partial 2`, a melody and an empty second part) played its second
+  section 960 ticks late. Of 942 books, that one changes.
+
 ### Editor
 
 - **Hovering a chord shows its chord symbol, its degree and its pitches.** A chord, a `<< >>`
@@ -82,8 +100,8 @@ workflow attaches that section to the GitHub Release verbatim.
   first and an arpeggio's in the order they play. In C major `<d f a>` is `Dm (IIm) D4 F4 A4`,
   and `<f d a>` is `Dm/F (IIm/IV) F4 A4 D5`, which shows that the first member written is the
   bass. A chord whose notes name no chord still lists its pitches. A `chords { }` entry hovers
-  the same way, its tones as letters, since a symbol voices no octave — `G7/B` is
-  `G7/B (V7/VII) B G D F`, the slash bass first.
+  the same way, with the pitches the MIDI plays for it (below) — `G7/B` is
+  `G7/B (V7/VII) B2 G3 B3 D4 F4`, the slash bass first.
 
 - **The completion popup in the music is narrow again.** VS Code widens it to its widest
   row's detail, and a handful of long explanations (`<< >>`, `cue`, `partial`, the page

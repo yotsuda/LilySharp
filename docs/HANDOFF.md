@@ -122,8 +122,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - ★ **⒮²⁷ tie の家族の残り＝約 2,700 B／打鍵**（第529 が solver の貸し出しで 19,976、**第532 が scratch で 4,250 を閉じた**。Lab `sessions/p529/`・`p532/`）: 残りは `TieChordOutline` 1,643（object＋中の `HorizontalSkyline`＝bound column ごと・problem に貸すなら outline も `Bind` で建て直す形＝skyline は ⒫′ の土台）／`TieColumnParts` 1,504（`BuildTieSpecification` が建てる record・呼び手側）。⚠️ **problem／engraver の貸し出しの島は第532 で尽きた**: `BeamScoringProblem`（第530 −16,344）・`SlurScoringProblem`（第531 −22,325）・tie（第529・第532）。grep（`new \w+Problem\(`・`new \w+Engraver\(`）に残る `LyricEngraver`／`LyricHyphenEngraver` は**第532 が値付けした＝合わせて 1,340 B／打鍵 0.12%（ctor 727・calc 445・hyphen 168）で、しかもコーパスに歌詞が 0 冊**（`lyric.in` 0）＝直す軒ではない（Lab `sessions/p532/lyric-price.txt`）。**貸す前に `.Length`・`[^1]`・`foreach` で表を歩く読み手を数える**（第530 は `[^1]` で 1 度 hash を割った・第532 は tie の配列を*寸法ちょうど*で持った理由）
-- ✅ **⒮²⁶ は第588 が stack sampling で閉じた**（render 内の String の残りは出力と状態・Lab `sessions/p588/stralloc/`）。⚠️ **型地図の順位は stack で見るまで信じない**（GreenNode[] 139 KB は parse）
-- ★★ **⒵ 時間の地図（第590・Release・235 冊 × 8 打鍵・3,760 打鍵・HEAD `4d0753cc` で約 12,030 ms＝3.2 ms／打鍵）**＝計器は Lab `sessions/p590/cpuhost/`（`StageProbe`＋一時の `Zz590T` 計時表＝`sessions/p590/Zz590T.cs.txt`・Lap を段の境に差す）。**残りの値段（render 比）**: ⑴ ✅ **collect の声部の walk は第591 が大半を閉じた**（accidental の文字替えで splice が全部断られていた）。**第594 が prefix 側の遠い読みを畳んだ**（§1.1 第594・長さの変わる編集で採用 0.07 → 64.23 小節／打鍵）。**残り**: 容れ物の中の編集（checkpoint は外側のリストだけ）＝設計級／form 行の小節線は位置の読み＝Δ≠0 の編集では form より後ろの checkpoint が使えない（直すなら prefix の採用を位置シフト付きに）／⑦ ✅ **incremental ≠ 全面描画（`SvgGenerator.Generate`）は第595〜第597 で閉じた**（§1.1 第597＝6 通りの照合 19,560 打鍵で不一致 0）。⚠️ **照合の基準は `SvgGenerator.Generate`**（計器は Lab `sessions/p597/verify-all.ps1`・Release の `p594/cpuhost`。Debug だと 1 通り 10 分超）。⚠️ splice 側の疑い（尾の bare duration の元が窓の中に移る）は未調査／⑵ ✅ **gate のばねは第593 が近傍を射影に細くした**（`SystemBreaker.SpringEdgeKey`・作り直し 3.04 → 1.05 小節／打鍵＝§1.1 第593。`LineEndCourtesyWidth(i−1, i)` は i しか読まない＝射影に要らなかった）／⑶ **content key 4.1%**（`MeasureContentKey.Compute`＝毎打鍵全小節・約 920 item／打鍵）＝**item の参照で memo しても当たりは 28%（音高）／11%（fuzz）**（第598 census・Lab `sessions/p598/Zz598Census.cs.txt`）＝**第601 が作り直しの 2 大軒を閉じた（同じ item 28% → 62%）**。⚠️ **内容鍵の item 参照 memo は第602 が反証**（`ConditionalWeakTable`＋刻印の検証・Lab `sessions/p602/cwt-item-hash.diff.txt`）: 鍵＋ばね −40 ms だが GC の停止 +260 ms・割当 +20 KB／打鍵＝render +3%＝**弱参照の表で全 item を持つ形は負ける**（持つなら item 自身のフィールド＝`with` の写しで古い値が移る＝要設計）。残りの写し（第601 の棚卸し＝§1.1 第601）: resume の基準が*最後の全面 collect*（前の打鍵ではない）＝長さの変わる編集が溜まると後側は毎回位置がずれて写しが要る（delta workload は 28%）・`voice { }` の 2 声目以降は毎回 live・多声の stem 方向・ottava・combine・和音行／歌詞行／⑷ **prelim 注釈 pass は第599 が割った**（§1.1 第599・計器 Lab `sessions/p599/prelim-laps.diff.txt`＝`Zz599T.cs.txt` を Core に戻して p590 の host）: 計 約 10.9%＝注釈 layout 4.9%（段の上の積み上げ 1.4・スクリプト 1.2・組み立て 1.0→第599 で削った・リハーサル記号 0.5…＝散らばる）・梁 1.8（段またぎ 0＝編集した段の分だけ）・タイ 1.6（第600 が段またぎの丸ごとを閉じた）・頁割り skyline 1.8・スラー 0.7（段またぎで staff 丸ごと 0.10／打鍵＝タイと同じ形・未着手）／最終 pass の注釈 layout は 約 3.4%（同じ内訳）・**SVG 出力 18% は第598 が割った**（§1.1 第598・計器 Lab `sessions/p598/svg-laps.diff.txt`＋`Zz598T.cs.txt`＝p590 の host が読む）: 段の live 描画は第598 で 1.35 段／打鍵 6.2%（残りは編集した段＋幾何の変わった段 0.31）・再生 21.9 段 1.7%・overlay は全頁を毎打鍵 live＝タイ 1.7%・リハーサル記号 0.9%・`%` 反復 0.9%・スラー 0.7%・小節番号 0.5%・アーティキュレーション 0.4%（overlay の断片 memo は指使いにしか無い）・`RenderTo` の外（頁への切り出し）約 4%／⑸ beam を**状態**で鍵にする memo＝残る Solve 9.39 のうち 2.94（同じ render・別の群で同じ形）＋1.39（前の打鍵）＝約 3.7%・鍵が 30 フィールド＝要設計／⑹ `ResolveTabStrings` の plan 以外 約 1.9%。⚠️ **EventPipe の CPU sampler は信じない**（§1.1 第589 ⑴）。⚠️ gen2 GC 289 回／run（未調査）
+- ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render 約 12,030 → 9,200 ms（3,760 打鍵・−24%）・割当 −31%（第598〜第615・経緯は ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`・Release の `p594/cpuhost`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎ（第615 の地図・script の段ごと memo が 1 歩目）と collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）／⚠️ EventPipe の CPU sampler の PollGC は水増し（第589・第615）
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
@@ -146,22 +145,26 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第624セッション（2026-09-25・YT-DELL2）
+### 1.1 第626セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p624`（HEAD `90b4a26c`・full **9162 / 0 / 2 / 9164**）。第623 ⚠️ の確認＝`LyricEngraver.CalculateLayouts` の `verseY` は score 全体で 1 つの `staffYByIndex`／`noteBoundAnchorY` から出るが、**誤りは無い**: 3 staff で真ん中の staff の深さを段ごとに変えた本（Lab `sessions/p624/lyr3.lys`＝note-bound・`lyr4.lys`＝他の staff を歌う独立行）で、どちらも各段の staff の直下に並ぶ（段ごとの chain＝`DistributeLooseLines`／skyline drop が最終位置を決め、初期値は響かない）。コードの変更なし。
+同じ会話の続き。★ `-Start p626`（HEAD `5fa2326e`・full **9168 / 0 / 2 / 9170**）。第625 ⚠️ の弱起の残り。
 
-終了: HEAD `90b4a26c`＋docs・full **9162 / 0 / 2 / 9164**。
+★ **⑴ MIDI: section の弱起を全パートの最初の小節へ**: `_partial` は最初のレーンが最初の小節線で使い切る＝2 番目以降のパートは 1 小節目を満の小節で数え、section を延ばしていた（partial.lys＝`partial 2`・melody と空の `X { | | | }`＝紙面 4,800 tick に対し 5,760）。section-major の各パートの最初のブロックで `_partial` を張り直す（`PlaySectionCore` の `sectionPickup`）。網 `SectionVoicePaddingExportTests.Midi_ASectionPickup_ShortensEveryPartsFirstBar`（毒＝旧で 2 回目の A が 12 拍目）。942 冊で動いたのは partial.lys 1 冊（10,560 → 9,600）。
+★ **⑵ §1.0 の ⒵（第590 の時間の地図 2,440 字）と ✅ ⒮²⁶ を 1 行に畳んだ**（照合の基準・計器の場所・反証 2 つ・残る設計級 2 つだけ残す）。
 
-## 以下は第623セッションの経緯
+終了: HEAD `1bd5eb5d`＋docs・full **9169 / 0 / 2 / 9171**。
 
-### 1.1 第623セッション（2026-09-25・YT-DELL2）
+## 以下は第625セッションの経緯
 
-同じ会話の続き。★ `-Start p623`（HEAD `59593374`・full **9161 / 0 / 2 / 9163**）。ユーザー報告: `scratch/SongsByChatGPT/01_glass_harbor_suite.lys` の PDF 6 頁で grace の符尾が符頭から離れ、頁の下ほどひどい（L65・L269・L303）。
+### 1.1 第625セッション（2026-09-25・YT-DELL2）
 
-★ **⑴ 原因＝grace の staff 位置が score 全体で 1 つ**: `GraceNoteEngraver.Calculate` は `staffYByIndex`（staff → 段の上端からの深さ、最後に書いた段の値）を読み、描画（`SharedRenderer.GraceNotes`）は連桁と符尾をその値から、符頭は通常の pass が段自身の staff から描く。段ごとに skyline で間隔が決まるので、下の staff の深さは段ごとに違う＝連桁が差の分だけ上下へ浮く。注釈 pass の `staffYAt`（段ごとの resolver・ペダル括弧は 2026-09-23 に移行済み）を渡して直した。網 `GraceStaffOffsetTests`（2 段で深さ 11.59 と 9.384・毒＝旧で赤）。掃き 942 冊で動いたのは 1 冊（Something That I Want・墨だけ）・pitch verify 1,880 打鍵 0 mismatch。
-⚠️ 同じ形の残り候補: `LyricEngraver`（:454 の行 anchor が `staffYByIndex`）＝未確認。
+同じ会話の続き。★ `-Start p625`（HEAD `a0d3116a`・full **9162 / 0 / 2 / 9164**）。ユーザー決定「提案通りで」＝`chords { }` を MIDI で鳴らす（窓ボイシング・既定で鳴らす・専用トラックのピアノ・ベロシティ 70%・記号ごとに打ち直し・`r`＝無音・音符の `@chord` は鳴らさない）。
 
-終了: HEAD `7509d4b1`＋docs・full **9162 / 0 / 2 / 9164**。
+★ **⑴ 実装**: `Music.ChordVoicing.Window`（各音を G3〜F#4 の窓へ・分数のバスは 1 オクターブ下・未登録の質は根音だけ）を MIDI とホバーが共有。`MidiExporter.PlayChordRow`＝`ChordNameCollector.SlotGroups`（紙面・LP 双子と同じ小節の割り方）で打ち、`ChordNameCollector.StructureOf`（紙面から切り出した記号→構造・度数は `_ambientTonic`／`_keySharps`）で読む。鳴るのは score が置く行だけ（`ChordRowSpec`＋`WithChords`・`SoundingChordRows`）。section 内のセル（`PlaySectionChordRows`＝どの経路より先に section の頭から）と part-major の section。弱起は最初の小節を `_partial` の長さに・`|:` は紙面の `CollectPart` と同じく空の小節を作らない。トラック名「NAME (chords)」は `SplitIntoPartTracks` でパートの後ろへ（チャンネル不変）。ホバーの `chords { }` もオクターブ付き（`G7/B (V7/VII)  B2  G3  B3  D4  F4`）。網 `ChordRowMidiTests` 5 本＋`SectionVoicePaddingExportTests` 1 本。
+★ **⑵ 942 冊**（Lab `sessions/p625/midihost`）: コード行が鳴る 24 冊・パートの音が変わった 2 冊＝**既存のずれが直った**（旧はコード行の小節線が空の小節として時間を進めていた＝greensleeves の Verse と Chorus の間に 13,200 tick の無音・partial.lys の 2 回目の A が 6 小節遅れ）。長くなった 6 冊＝コード行だけの 5 冊（旧は長さ 0）と Lambada（最後のコードが 1 拍長い）。
+⚠️ 残り: `PaddingTicks` は弱起を知らない（partial.lys で 960 tick・既存）／平らなトップレベルのコード行と part 内の無名ブロックは未対応（0 冊）。
+
+終了: HEAD `71f54444`＋docs・full **9168 / 0 / 2 / 9170**。
 
 ## 2. 開いている作業
 

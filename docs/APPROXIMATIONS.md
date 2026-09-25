@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 160 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **279** | |
+| `OWN` | 162 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **281** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（160 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（162 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2643** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -244,10 +244,13 @@
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
-- **:420** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
-- **:2390** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:421** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
+- **:1154** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **:2552** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
+### `LilySharp.Core/Music/ChordVoicing.cs`
+- **:29** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): the WINDOW voicing. Every
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:448** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`

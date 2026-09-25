@@ -374,6 +374,7 @@ public sealed class MidiExporter
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
+        _soundingChordRows = SoundingChordRows(tree, Score, Form);
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -446,6 +447,12 @@ public sealed class MidiExporter
             }
             list.Add(note);
         }
+
+        // The chord rows' tracks (PlayChordRow) come AFTER every part's, whenever they first
+        // sound, so a placed row never moves a part off the channel it had before rows sounded.
+        order = order.Where(p => p is null || !p.EndsWith(" (chords)", StringComparison.Ordinal))
+            .Concat(order.Where(p => p is not null && p.EndsWith(" (chords)", StringComparison.Ordinal)))
+            .ToList();
 
         var channelByProgram = new Dictionary<int, int>();
         int nextChannel = 0;
@@ -939,6 +946,24 @@ public sealed class MidiExporter
             ? headerPartial.ToFraction()
             : null;
 
+        // A part-major CHORD TRACK's section (`chords harmony { section A { … } }`): its
+        // entries sound when the score places the row (PlayChordRow), and take their bars'
+        // time; a row the score does not place sounds nothing and takes none, as before.
+        if (section.Parent is ChordPartBlockSyntax chordTrack)
+        {
+            if (chordTrack.PartName is { } row && _soundingChordRows.Contains(row))
+                _currentTick = PlayChordRow(Svg.Collector.ChordNameCollector.SectionItems(section),
+                    row, _currentTick, track);
+            return;
+        }
+
+        // The section's own chord-track cells (`section A { … chords harmony { C | F | } }`)
+        // sound from its start, before any lane is played — whichever of the paths below
+        // plays the music (a bare section's owner walks the children and never meets them
+        // as cells) — and a row longer than every part (a chords-only section) still takes
+        // its bars.
+        int rowsEnd = PlaySectionChordRows(section, track);
+
         // Part-major layout: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.
         for (var p = section.Parent; p != null; p = p.Parent)
@@ -958,12 +983,19 @@ public sealed class MidiExporter
         {
             PlayInPart(bareOwner, () => ProcessChildren(section, track, conductorTrack),
                 octaveOffset);
+            _currentTick = Math.Max(_currentTick, rowsEnd);
             return;
         }
 
         int sectionStart = _currentTick;
-        int sectionEnd = _currentTick;
+        int sectionEnd = rowsEnd;
         var tickLanes = new Dictionary<string, int>();
+        // The section's pickup belongs to EVERY part's first bar, as on the page (each part's
+        // MeasureBuilder is armed at the boundary). One lane spends it at its first bar line,
+        // so it is re-armed per lane: a second part used to open with a FULL bar — partial.lys
+        // (`partial 2`, a melody and an empty `X { | | | }`) ran its section a bar and a half
+        // past the page's 4,800 ticks.
+        var sectionPickup = _partial;
         for (int i = 0; i < section.SlotCount; i++)
         {
             var child = section.GetChild(i);
@@ -997,6 +1029,8 @@ public sealed class MidiExporter
                 // grace's steal is simply dropped — the note it would have shortened is in
                 // another voice, or does not exist.
                 _pendingGraceSteal = 0;
+                if (!tickLanes.ContainsKey(pname))
+                    _partial = sectionPickup;
                 ProcessNode(sectionPart, track, conductorTrack);
                 _pendingGraceSteal = 0;
                 _currentPart = outerPart;
@@ -1005,6 +1039,10 @@ public sealed class MidiExporter
                 tickLanes[pname] = _currentTick;
                 sectionEnd = Math.Max(sectionEnd, _currentTick);
                 (_partOctaveAnchor, _partAbsoluteBase) = (4, 4);
+            }
+            else if (child is ChordPartBlockSyntax)
+            {
+                // Played above, from the section's start (PlaySectionChordRows).
             }
             else
             {
@@ -1059,6 +1097,130 @@ public sealed class MidiExporter
     /// </summary>
     private int PaddingTicks(SyntaxNode voice)
         => _sectionBars.Missing(voice, out _) * FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+
+    /// <summary>Sounds every chord-track cell written directly in <paramref name="section"/>
+    /// whose row the score places, each from the current tick (the section's start), and
+    /// returns where the longest ends — the current tick when there is none. The tick is
+    /// left where it was: the lanes start from it.</summary>
+    private int PlaySectionChordRows(SectionDeclarationSyntax section, MidiTrack track)
+    {
+        int start = _currentTick, end = _currentTick;
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } row } cell
+                && _soundingChordRows.Contains(row))
+                end = Math.Max(end, PlayChordRow(cell.Items, row, start, track));
+        return end;
+    }
+
+    // The chord rows the exported score PLACES, read once per Export (SoundingChordRows).
+    private HashSet<string> _soundingChordRows = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The chord tracks the score being exported places — its <c>chords NAME</c> rows and
+    /// the <c>staff … with chords NAME</c> attachments. Only these sound (owner decision
+    /// 2026-09-25): a chord track no score shows is a sketch, not part of the piece. The
+    /// score is <see cref="Score"/>, else the one engraving <see cref="Form"/>, else the
+    /// file's first — the one the page draws by default.
+    /// </summary>
+    private static HashSet<string> SoundingChordRows(SyntaxTree tree, RenderSpec? score,
+        FormDeclarationSyntax? form)
+    {
+        var spec = score
+            ?? (form != null ? RenderSpecParser.FindAll(tree).FirstOrDefault(s => s.Form == form) : null)
+            ?? RenderSpecParser.FindFirst(tree);
+        var rows = new HashSet<string>(StringComparer.Ordinal);
+        if (spec == null)
+            return rows;
+        foreach (var item in spec.Items)
+            if (item is ChordRowSpec chordRow)
+                rows.Add(chordRow.PartName);
+        foreach (var binding in spec.GetVoiceBindings())
+            if (binding.WithChords is { } attached)
+                rows.Add(attached);
+        return rows;
+    }
+
+    /// <summary>
+    /// Sounds one chord row's bars from <paramref name="startTick"/> and returns where they
+    /// end. Each bar is split by the SAME grouping the page and the LilyPond twin read
+    /// (<see cref="Svg.Collector.ChordNameCollector.SlotGroups"/>), so a symbol sounds exactly
+    /// the span the page prints it over; a `.` holds it, a rest (N.C.) is silence, and every
+    /// written symbol strikes again — a chord repeated across a bar line sounds twice. The
+    /// pitches are the WINDOW voicing (<see cref="Music.ChordVoicing"/>), the one the hover
+    /// lists, on a track of the row's own ("NAME (chords)", the default sound) at 70% of the
+    /// velocity in force so the row accompanies rather than leads.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+    /// ChordNames context and performs nothing for it. A pickup bar keeps the full meter's
+    /// grid and cuts what runs past its end. Not handled: a chord track written flat at the
+    /// top level (no book on disk does it).
+    /// </remarks>
+    private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track)
+    {
+        string part = rowName + " (chords)";
+        int timbre = PartTimbre(part);
+        int velocity = Math.Max(1, _velocity * 7 / 10);
+        int barTicks = FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
+        // A section's pickup shortens the row's FIRST bar as it shortens every part's (the
+        // page's pickup measure): amazing-grace's row opens with an empty `|` over the
+        // one-beat pickup, and a full bar there played every later bar a bar late and ran the
+        // section past its parts.
+        int thisBarTicks = _partial is { } pickup ? FractionToTicks(pickup) : barTicks;
+        int tonicStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+        int barStart = startTick;
+        var bar = new List<SyntaxNode>();
+
+        void Sound()
+        {
+            if (bar.Count == 0)
+                return;
+            foreach (var (node, timing, duration) in
+                     Svg.Collector.ChordNameCollector.SlotGroups(bar, _timeNumerator, _timeDenominator, out _))
+            {
+                if (node is not ChordEntrySyntax entry
+                    || Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, tonicStep, _keySharps)
+                        is not { } chord)
+                    continue;
+                int onset = barStart + FractionToTicks(timing);
+                int length = Math.Min(FractionToTicks(duration), barStart + thisBarTicks - onset);
+                if (length < 1)
+                    continue;
+                int position = entry.SourceStart;
+                int ordinal = NextOrdinal(position);
+                foreach (var tone in Music.ChordVoicing.Window(chord))
+                    track.Notes.Add(new MidiNote(track.Channel, SoundKey(tone.Midi, position), velocity,
+                        onset, length, position, SourceOrdinal: ordinal, Timbre: timbre, Part: part));
+            }
+            bar.Clear();
+        }
+
+        void Close()
+        {
+            Sound();
+            barStart += thisBarTicks;
+            thisBarTicks = barTicks;
+        }
+
+        // The page's walk of a placed row (ChordNameCollector.CollectPart): every bar line
+        // closes a bar — a `|` opening the run closes an EMPTY one — except `|:`, which only
+        // closes what is pending and opens the next.
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax barline)
+            {
+                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart
+                    || bar.Count > 0)
+                    Close();
+                continue;
+            }
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                bar.Add(item);
+        }
+        if (bar.Count > 0)
+            Close();
+        return barStart;
+    }
 
     /// <summary>
     /// Plays sections in structure order. `|: … :|` bodies play twice (or

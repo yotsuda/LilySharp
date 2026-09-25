@@ -157,7 +157,7 @@ public sealed partial class MeasureCollector
     /// bare <c>@chord</c> on it would print, whether or not it carries one, and the pitches
     /// it sounds. Off for every render: the facts are paid only by the request that asks.
     /// A <c>chords { }</c> entry records too (<see cref="ChordNameCollector"/>): its printed
-    /// symbol, its degree, and its tones as letters — a symbol voices no octave.
+    /// symbol, its degree, and the tones its window voicing sounds (ChordVoicing).
     /// </summary>
     public bool RecordsChordFacts
     {

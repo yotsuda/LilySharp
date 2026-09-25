@@ -696,30 +696,22 @@ internal sealed class ChordNameCollector
     internal Dictionary<int, MeasureCollector.ChordHoverFacts>? Facts { get; set; }
 
     /// <summary>
-    /// A symbol's tones as letters without octaves — a chord row names a chord but voices
-    /// none, so there is no octave to give: the slash bass first, then the chord's tones
-    /// from its root up (the bass's own letter dropped from them), e.g. C/E → E C G.
-    /// An unregistered quality (a raw suffix) has no interval set and lists nothing.
+    /// A symbol's tones as the chord row SOUNDS them — the window voicing the MIDI plays
+    /// (<see cref="LilySharp.Core.Music.ChordVoicing"/>), lowest first, each with its octave:
+    /// G7/B → B2 G3 B3 D4 F4. A symbol voices no octave of its own; this one is Lily#'s, and
+    /// the hover shows it so the ear and the eye agree.
     /// </summary>
     private static System.Collections.Immutable.ImmutableArray<string> TonesOf(
         LilySharp.Core.Music.ChordStructure? structure)
     {
         var tones = System.Collections.Immutable.ImmutableArray.CreateBuilder<string>();
-        if (structure == null || structure.RawSuffix != null)
+        if (structure == null)
             return tones.ToImmutable();
-        static string Letter(int step, int alter) => "CDEFGAB"[((step % 7) + 7) % 7] + alter switch
-        {
-            >= 2 => "x", 1 => "#", -1 => "b", <= -2 => "bb", _ => "",
-        };
-        string? bass = structure.BassStep is { } bs ? Letter(bs, structure.BassAlter ?? 0) : null;
-        if (bass != null)
-            tones.Add(bass);
-        foreach (var tone in structure.Tones)
-        {
-            string letter = Letter(tone.Step, tone.Alter);
-            if (letter != bass)
-                tones.Add(letter);
-        }
+        foreach (var t in LilySharp.Core.Music.ChordVoicing.Window(structure))
+            tones.Add("CDEFGAB"[((t.Step % 7) + 7) % 7] + t.Alter switch
+            {
+                >= 2 => "x", 1 => "#", -1 => "b", <= -2 => "bb", _ => "",
+            } + t.Octave);
         return tones.ToImmutable();
     }
 
@@ -727,8 +719,24 @@ internal sealed class ChordNameCollector
         ChordEntrySyntax entry, int measure)
     {
         string symbol = entry.SymbolText;
+        var (tonicStep, sharps) = KeyAt(measure);
+        return StructureOf(symbol, tonicStep, sharps) is { } structure
+            ? (structure.PrintedSymbol(Spelling), structure)
+            // Unparseable root — show the raw run with no structure at all.
+            : (LilySharp.Core.Music.ChordSymbolText.Flat(symbol), null);
+    }
+
+    /// <summary>
+    /// What a chord-row entry's symbol MEANS, in the key <paramref name="tonicStep"/> /
+    /// <paramref name="sharps"/> in force at its bar — the one reading the page and the MIDI
+    /// share (MidiExporter plays <c>chords { }</c> rows through it): an absolute symbol, a
+    /// Roman degree of the key, or a root with an unregistered quality (a raw suffix, whose
+    /// intervals are unknown). Null when not even the root parses.
+    /// </summary>
+    internal static LilySharp.Core.Music.ChordStructure? StructureOf(string symbol, int tonicStep, int sharps)
+    {
         if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
-            return (parsed.PrintedSymbol(Spelling), parsed);
+            return parsed;
 
         // A ROMAN degree of the key in force at this bar (Imaj7, V7, bVII, V7/VII). It
         // resolves to the SAME structure an absolute symbol would give, so everything
@@ -738,35 +746,28 @@ internal sealed class ChordNameCollector
         // default, and one written in names prints degrees under `as roman`.
         // ⚠️ Tried AFTER the absolute parse, and the two cannot both match: an absolute
         // root is A-G, a numeral is I or V.
-        var (tonicStep, sharps) = KeyAt(measure);
         if (LilySharp.Core.Music.ChordStructure.TryParseRomanEntry(symbol, tonicStep, sharps, out var degree))
-            return (degree.PrintedSymbol(Spelling), degree);
+            return degree;
 
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol[..slash] : symbol;
         string? bassText = slash >= 0 ? symbol[(slash + 1)..] : null;
-        if (LilySharp.Core.Music.ChordStructure.TryParseSymbolPitch(main, out int step, out int alter, out string qual))
+        if (!LilySharp.Core.Music.ChordStructure.TryParseSymbolPitch(main, out int step, out int alter, out string qual))
+            return null;
+        int? bassStep = null, bassAlter = null;
+        if (bassText != null
+            && LilySharp.Core.Music.ChordStructure.TryParseSymbolPitch(
+                bassText, out int bs, out int ba, out string bassRest)
+            && bassRest.Length == 0)
         {
-            int? bassStep = null, bassAlter = null;
-            if (bassText != null
-                && LilySharp.Core.Music.ChordStructure.TryParseSymbolPitch(
-                    bassText, out int bs, out int ba, out string bassRest)
-                && bassRest.Length == 0)
-            {
-                bassStep = bs;
-                bassAlter = ba;
-            }
-            var raw = new LilySharp.Core.Music.ChordStructure(
-                step, alter, LilySharp.Core.Music.ChordQuality.Major,
-                bassStep, bassAlter, RawSuffix: qual);
-            return (raw.PrintedSymbol(Spelling), raw);
+            bassStep = bs;
+            bassAlter = ba;
         }
-
-        // Unparseable root — show the raw run with no structure at all.
-        return (LilySharp.Core.Music.ChordSymbolText.Flat(symbol), null);
+        return new LilySharp.Core.Music.ChordStructure(
+            step, alter, LilySharp.Core.Music.ChordQuality.Major,
+            bassStep, bassAlter, RawSuffix: qual);
     }
 }
-
 /// <summary>One grid fault a chord-row walk recorded, surfaced by
 /// <c>ChordRowGridValidator</c>: a bar whose slot count fits no beat-grid shape
 /// (the bar fell back to equal division, LYS2009). A '.' at a bar's head used to be

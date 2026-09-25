@@ -76,18 +76,18 @@ public class ChordHoverTests
 
     [Fact]
     public void AChordRowEntry_HoversAsItsSymbolDegreeAndTones() =>
-        Assert.Equal("`Dm (IIm)` \u00A0D \u00A0F \u00A0A", HoverAt("Dm", doc: ChordRowDoc));
+        Assert.Equal("`Dm (IIm)` \u00A0A3 \u00A0D4 \u00A0F4", HoverAt("Dm", doc: ChordRowDoc));
 
     [Fact]
-    public void AChordRowSlash_ListsTheBassFirst()
+    public void AChordRowSlash_ListsTheBassAnOctaveBelowTheWindow()
     {
-        Assert.Equal("`G7/B (V7/VII)` \u00A0B \u00A0G \u00A0D \u00A0F", HoverAt("G7/B", doc: ChordRowDoc));
-        Assert.Equal("`C/E (I/III)` \u00A0E \u00A0C \u00A0G", HoverAt("C/E", doc: ChordRowDoc));
+        Assert.Equal("`G7/B (V7/VII)` \u00A0B2 \u00A0G3 \u00A0B3 \u00A0D4 \u00A0F4", HoverAt("G7/B", doc: ChordRowDoc));
+        Assert.Equal("`C/E (I/III)` \u00A0E3 \u00A0G3 \u00A0C4 \u00A0E4", HoverAt("C/E", doc: ChordRowDoc));
     }
 
     [Fact]
-    public void AnUnregisteredQuality_KeepsItsNameAndDegree_ButListsNoTones() =>
-        Assert.Equal("`Cx (Ix)`", HoverAt("Cx", doc: ChordRowDoc));
+    public void AnUnregisteredQuality_SoundsItsRootAlone() =>
+        Assert.Equal("`Cx (Ix)` \u00A0C4", HoverAt("Cx", doc: ChordRowDoc));
 
     [Fact]
     public void TheDegree_ReadsTheKeyInForce() =>

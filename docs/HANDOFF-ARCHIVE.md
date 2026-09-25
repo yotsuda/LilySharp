@@ -129,6 +129,25 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第624セッションの経緯
+
+### 1.1 第624セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p624`（HEAD `90b4a26c`・full **9162 / 0 / 2 / 9164**）。第623 ⚠️ の確認＝`LyricEngraver.CalculateLayouts` の `verseY` は score 全体で 1 つの `staffYByIndex`／`noteBoundAnchorY` から出るが、**誤りは無い**: 3 staff で真ん中の staff の深さを段ごとに変えた本（Lab `sessions/p624/lyr3.lys`＝note-bound・`lyr4.lys`＝他の staff を歌う独立行）で、どちらも各段の staff の直下に並ぶ（段ごとの chain＝`DistributeLooseLines`／skyline drop が最終位置を決め、初期値は響かない）。コードの変更なし。
+
+終了: HEAD `90b4a26c`＋docs・full **9162 / 0 / 2 / 9164**。
+
+## 以下は第623セッションの経緯
+
+### 1.1 第623セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p623`（HEAD `59593374`・full **9161 / 0 / 2 / 9163**）。ユーザー報告: `scratch/SongsByChatGPT/01_glass_harbor_suite.lys` の PDF 6 頁で grace の符尾が符頭から離れ、頁の下ほどひどい（L65・L269・L303）。
+
+★ **⑴ 原因＝grace の staff 位置が score 全体で 1 つ**: `GraceNoteEngraver.Calculate` は `staffYByIndex`（staff → 段の上端からの深さ、最後に書いた段の値）を読み、描画（`SharedRenderer.GraceNotes`）は連桁と符尾をその値から、符頭は通常の pass が段自身の staff から描く。段ごとに skyline で間隔が決まるので、下の staff の深さは段ごとに違う＝連桁が差の分だけ上下へ浮く。注釈 pass の `staffYAt`（段ごとの resolver・ペダル括弧は 2026-09-23 に移行済み）を渡して直した。網 `GraceStaffOffsetTests`（2 段で深さ 11.59 と 9.384・毒＝旧で赤）。掃き 942 冊で動いたのは 1 冊（Something That I Want・墨だけ）・pitch verify 1,880 打鍵 0 mismatch。
+⚠️ 同じ形の残り候補: `LyricEngraver`（:454 の行 anchor が `staffYByIndex`）＝未確認。
+
+終了: HEAD `7509d4b1`＋docs・full **9162 / 0 / 2 / 9164**。
+
 ## 以下は第622セッションの経緯
 
 ### 1.1 第622セッション（2026-09-25・YT-DELL2）

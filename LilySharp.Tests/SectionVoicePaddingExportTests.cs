@@ -66,10 +66,13 @@ public class SectionVoicePaddingExportTests
 
     private static MusicXmlDocument Xml(string source) => new MusicXmlExporter().Export(SyntaxTree.Parse(source));
 
+    // The PARTS' notes: a placed chord row sounds on a track of its own since 2026-09-25
+    // (ChordRowMidiTests), and what these cases measure is where the parts land.
     private static (int Tick, int Pitch)[] Notes(string source)
     {
         var file = new MidiExporter().Export(SyntaxTree.Parse(source));
-        return file.Tracks.SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ThenBy(n => n.Pitch)
+        return file.Tracks.Where(t => !t.Name.EndsWith(" (chords)", System.StringComparison.Ordinal))
+            .SelectMany(t => t.Notes).OrderBy(n => n.StartTick).ThenBy(n => n.Pitch)
             .Select(n => (n.StartTick / file.TicksPerQuarterNote, n.Pitch)).ToArray();
     }
 
@@ -342,6 +345,33 @@ public class SectionVoicePaddingExportTests
         // Page: A = 2 bars, B starts at bar 3 = tick 8 (quarters). Before: B at tick 4.
         var notes = Notes(ChordRowLonger);
         Assert.Equal(new[] { 0, 2, 8, 10 }, notes.Select(n => n.Tick).ToArray());
+    }
+
+    [Fact]
+    public void Midi_ASectionPickup_ShortensEveryPartsFirstBar()
+    {
+        // `partial 2`: the section is 2 + 4 + 4 = 10 quarters on the page, whichever part
+        // is played first. The empty second part used to open with a FULL bar (the first
+        // lane had spent the pickup) and pushed the second A to quarter 12.
+        var notes = Notes("""
+            time 4/4
+            part melody
+            part X
+            section A { partial 2  melody { c'4 d' | e'2 f' | g'2 g' | }  X { | | | } }
+            form main { A A }
+            score main { staff melody }
+            """);
+        Assert.Equal(new[] { 0, 1, 2, 4, 6, 8, 10, 11, 12, 14, 16, 18 }, notes.Select(n => n.Tick).ToArray());
+    }
+
+    [Fact]
+    public void Midi_TheLongerChordRow_SoundsOnThePagesBars()
+    {
+        // The row itself: Dm7 on A's bar 1, G7 on its bar 2, Cmaj7 where B starts (tick 8).
+        var file = new MidiExporter().Export(SyntaxTree.Parse(ChordRowLonger));
+        var onsets = file.Tracks.Single(t => t.Name == "prog (chords)").Notes
+            .Select(n => n.StartTick / file.TicksPerQuarterNote).Distinct().OrderBy(t => t).ToArray();
+        Assert.Equal(new[] { 0, 4, 8 }, onsets);
     }
 
     [Fact]
