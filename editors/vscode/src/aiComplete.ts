@@ -226,6 +226,9 @@ async function computeSuggestion(
 
     // First line only (one measure per line), cleaned of fences/commentary.
     let measure = cleanCandidate(raw).split('\n')[0].trim();
+    // The caret is just after a barline, so a bar the model opens with one of its own
+    // would leave an empty bar behind it (`… | | g2 g |`, owner's log, 2026-09-26).
+    measure = measure.replace(/^\|\s*/, '');
     if (measure.length === 0) {
         outcome('the model returned nothing usable');
         return undefined;

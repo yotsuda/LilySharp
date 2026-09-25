@@ -207,6 +207,11 @@
           "default": false,
           "description": "When importing MusicXML, emit compact relative-octave notes (c d e) instead of explicit absolute octaves (c' d' e'). Both render identically."
         },
+        "lilysharp.ai.model": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The language model Lily#'s AI features use (*Transform Selection with AI* and Ghost Completion): a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#."
+        },
         "lilysharp.ai.ghostCompletion": {
           "type": "boolean",
           "default": false,
@@ -259,6 +264,11 @@
         "category": "Lily#",
         "icon": "$(sparkle)",
         "title": "Transform Selection with AI…"
+      },
+      {
+        "command": "lilysharp.selectAiModel",
+        "category": "Lily#",
+        "title": "Select AI Model…"
       },
       {
         "command": "lilysharp.playNoteAtCursor",

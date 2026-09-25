@@ -53,18 +53,87 @@ export async function resolveChatClient(quiet: boolean): Promise<ChatClient | un
 }
 
 async function selectLmModel(): Promise<vscode.LanguageModelChat | undefined> {
-    if (!vscode.lm || typeof vscode.lm.selectChatModels !== 'function') {
+    const models = await availableModels();
+    if (models.length === 0) {
         return undefined;
+    }
+    // The user's pick (`lilysharp.ai.model`, written by "Lily#: Select AI Model") wins,
+    // matched by id and then by family, so a pick survives a model's version bump.
+    const wanted = vscode.workspace.getConfiguration('lilysharp').get<string>('ai.model', '').trim();
+    if (wanted) {
+        const hit = models.find(m => m.id === wanted) ?? models.find(m => m.family === wanted);
+        if (hit) {
+            return hit;
+        }
+    }
+    return autoPick(models);
+}
+
+/** Every chat model VS Code offers, Copilot's first. */
+export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
+    if (!vscode.lm || typeof vscode.lm.selectChatModels !== 'function') {
+        return [];
     }
     try {
-        let models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
-        if (!models || models.length === 0) {
-            models = await vscode.lm.selectChatModels();
-        }
-        return models && models.length > 0 ? models[0] : undefined;
+        const copilot = await vscode.lm.selectChatModels({ vendor: 'copilot' });
+        const all = await vscode.lm.selectChatModels();
+        const rest = all.filter(m => !copilot.some(c => c.id === m.id));
+        return [...copilot, ...rest];
     } catch {
-        return undefined;
+        return [];
     }
+}
+
+/**
+ * The model to use when the user has not picked one. It used to be `models[0]`, which on a
+ * Copilot account is `gpt-4o-mini` (owner's log, 2026-09-26): the smallest model on offer,
+ * asked to write a language it has never seen from a 52 KB spec. A small model's family name
+ * says so (mini, nano, lite, haiku, flash), so those are passed over while anything else is
+ * on offer, and the rest are ordered by how much input they take. This is a guess about
+ * quality; "Lily#: Select AI Model" is the way to be sure.
+ */
+export function autoPick(models: readonly vscode.LanguageModelChat[]): vscode.LanguageModelChat | undefined {
+    const small = (m: vscode.LanguageModelChat) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);
+    const pool = models.some(m => !small(m)) ? models.filter(m => !small(m)) : [...models];
+    return pool.sort((a, b) => (b.maxInputTokens ?? 0) - (a.maxInputTokens ?? 0))[0];
+}
+
+/** "Lily#: Select AI Model" — the models VS Code offers, the pick saved to `lilysharp.ai.model`. */
+export async function pickAiModel(): Promise<void> {
+    const models = await availableModels();
+    if (models.length === 0) {
+        vscode.window.showErrorMessage(
+            'Lily#: no language model available. Enable GitHub Copilot (or another VS Code '
+            + 'language-model provider).');
+        return;
+    }
+    const current = vscode.workspace.getConfiguration('lilysharp').get<string>('ai.model', '').trim();
+    const auto = autoPick(models);
+    type Item = vscode.QuickPickItem & { value: string };
+    const items: Item[] = [
+        {
+            label: 'Automatic',
+            description: auto ? `now ${auto.name}` : undefined,
+            detail: 'Lily# chooses: the largest model on offer, passing over the small ones (mini, nano, lite, …).',
+            value: '',
+            picked: current === '',
+        },
+        ...models.map(m => ({
+            label: m.name,
+            description: `${m.vendor}/${m.family}${m.id === current || m.family === current ? '  (current)' : ''}`,
+            detail: m.maxInputTokens ? `${Math.round(m.maxInputTokens / 1000)}K input tokens` : undefined,
+            value: m.id,
+        })),
+    ];
+    const chosen = await vscode.window.showQuickPick(items, {
+        title: 'Lily# — AI model for Transform Selection and Ghost Completion',
+        placeHolder: current ? `current: ${current}` : 'current: Automatic',
+    });
+    if (!chosen) {
+        return;
+    }
+    await vscode.workspace.getConfiguration('lilysharp')
+        .update('ai.model', chosen.value, vscode.ConfigurationTarget.Global);
 }
 
 function lmClient(model: vscode.LanguageModelChat): ChatClient {

@@ -19,6 +19,15 @@ All notable changes to the Lily# VS Code extension are documented here.
   inline suggestions on for `.lys` files only and to keep Copilot's own completions off there
   (`github.copilot.enable`), so the stall does not come back. Nothing is written without the
   click.
+- **The AI features no longer take whichever model comes first.** That was `gpt-4o-mini` on a
+  Copilot account — the smallest model on offer, writing a language it has never seen. With
+  no choice made, Lily# now passes over the small models (mini, nano, lite, haiku, flash) and
+  takes the one with the largest input; **Lily#: Select AI Model…** picks one for good
+  (`lilysharp.ai.model`). Both Transform Selection and Ghost Completion use it.
+- **Ghost Completion logs what happened** to each suggestion in the *Lily# Extension* output
+  (asked, shown, refused as not compiling, cancelled) with the model and the time taken — its
+  ghost text and Copilot's look the same in the editor. A suggestion that opens with a
+  barline no longer leaves an empty bar.
 
 ## 0.8.0
 

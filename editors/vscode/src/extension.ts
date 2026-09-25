@@ -27,6 +27,7 @@ import {
 } from 'vscode-languageclient/node';
 import { registerAiTransform } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
+import { pickAiModel } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
 import { registerExportBatch } from './exportBatch';
 import { markdownItExtensionApi } from './markdownFence';
@@ -535,6 +536,7 @@ export function activate(context: vscode.ExtensionContext) {
     registerAiTransform(context, aiDeps);
     // Second mode: validated ghost-text "next measure" completion (opt-in).
     registerAiComplete(context, aiDeps);
+    context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format
     // submenu → a folder → every score of every file, named as `lysc --all` names
