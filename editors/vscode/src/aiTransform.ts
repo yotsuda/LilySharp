@@ -213,9 +213,13 @@ async function drive(
     progress.report({ message: 'reading resolved facts…' });
     const facts = await getFacts(client, snapshot, token);
 
-    // Baseline error count of the untouched document, so we only reject a candidate
-    // that makes things WORSE (a pre-existing error elsewhere isn't the model's fault).
-    const baselineErrors = await countErrors(client, snapshot.origFullText, token);
+    // The compiler's verdict on the untouched document: shown to the model up front (what is
+    // wrong NOW is often exactly what the instruction is about — "fix the bar lengths"), and
+    // the baseline a candidate is judged against, so only what it makes WORSE counts (a
+    // pre-existing problem elsewhere isn't the model's fault).
+    const baseline = await checkText(client, snapshot.origFullText);
+    const baselineErrors = count(baseline, 'error');
+    const baselineWarnings = baseline.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message)).length;
 
     // Render the untouched score once for the before/after comparison (§M5).
     const renderBefore = await client.sendRequest<SvgResponse>('lilysharp/renderText', { Text: snapshot.origFullText });
@@ -223,7 +227,7 @@ async function drive(
     // Conversation seed.
     const messages: ChatMessage[] = [
         { role: 'system', content: systemPrompt(grammar) },
-        { role: 'user', content: taskPrompt(snapshot.origSelectedText, facts, instruction) },
+        { role: 'user', content: taskPrompt(snapshot, facts, baseline, instruction) },
     ];
 
     let iterate = true;
@@ -233,6 +237,12 @@ async function drive(
         // ----- Generate + validate-and-self-repair (§4 AwaitingModel → Validating → Repairing) -----
         let candidate: string | null = null;
         let repairs = 0;
+        // A candidate that compiles but adds WARNINGS (a bar that no longer fills its meter
+        // is a warning in Lily#, not an error) is repaired like a broken one; if the repairs
+        // run out, the best such candidate is still shown, with its warnings named, rather
+        // than nothing — it is valid Lily#, and the user can see on the score whether it is
+        // what they asked for.
+        let warned: { text: string; warnings: CandidateDiagnostic[] } | null = null;
         for (let attempt = 0; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
             if (token.isCancellationRequested) return;
             progress.report({ message: attempt === 0 ? 'generating…' : `repairing (${attempt}/${MAX_REPAIR_ATTEMPTS})…` });
@@ -250,18 +260,40 @@ async function drive(
             const reconstructed = spliceCandidate(snapshot, cleaned);
             const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: reconstructed });
             const badness = candidateBadness(check, snapshot, cleaned, baselineErrors);
+            const newWarnings = badness.length === 0
+                ? addedWarnings(check, snapshot, cleaned, baselineWarnings)
+                : [];
 
-            if (badness.length === 0) {
+            if (badness.length === 0 && newWarnings.length === 0) {
                 candidate = cleaned; // valid — never showed a broken candidate
+                warned = null;
                 break;
             }
             repairs = attempt + 1;
 
             // Self-repair: feed the diagnostics back and try again.
             messages.push({ role: 'assistant', content: cleaned });
-            messages.push({ role: 'user', content:
-                `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
-                `Return a corrected replacement for the selection only — same output rules.` });
+            if (badness.length > 0) {
+                messages.push({ role: 'user', content:
+                    `That candidate does not compile. The Lily# compiler reported:\n${formatDiags(badness)}\n` +
+                    `Return a corrected replacement for the selection only — same output rules.` });
+            } else {
+                if (!warned || newWarnings.length < warned.warnings.length) {
+                    warned = { text: cleaned, warnings: newWarnings };
+                }
+                messages.push({ role: 'user', content:
+                    `That candidate compiles, but it adds warnings the file did not have:\n${formatDiags(newWarnings)}\n` +
+                    `Return a corrected replacement for the selection only that adds no warnings — same output rules.` });
+            }
+        }
+
+        let caption = instruction;
+        if (candidate === null && warned) {
+            candidate = warned.text;
+            caption = `${instruction} — ⚠ ${warned.warnings.length} new warning(s): `
+                + warned.warnings.map(w => w.Message).join(' / ');
+            deps.log(`AI transform: shown with ${warned.warnings.length} new warning(s) after ${MAX_REPAIR_ATTEMPTS} repairs: `
+                + warned.warnings.map(w => w.Message).join(' | '));
         }
 
         if (candidate === null) {
@@ -271,7 +303,7 @@ async function drive(
                 'Lily#: the AI could not produce a valid transform after several tries. Nothing was changed.');
             return;
         }
-        if (repairs > 0) {
+        if (repairs > 0 && caption === instruction) {
             deps.log(`AI transform: candidate valid after ${repairs} self-repair round(s).`);
         }
 
@@ -290,7 +322,7 @@ async function drive(
             beforeLo: snapshot.startOffset,
             beforeHi: snapshot.endOffset,
         };
-        const decision = await reviewOnScore(deps, renderBefore, renderAfter, instruction, candidate, changed);
+        const decision = await reviewOnScore(deps, renderBefore, renderAfter, caption, candidate, changed);
 
         if (decision === 'reject') {
             deps.log('AI transform: rejected on the score.');
@@ -343,12 +375,79 @@ function systemPrompt(grammar: string): string {
     ].join('\n');
 }
 
-function taskPrompt(selectedText: string, facts: ResolvedPitchFact[], instruction: string): string {
+/** Characters of the document shown around the selection (the whole file when it fits). */
+const DOC_CONTEXT_CHARS = 12000;
+const DOC_HEAD_CHARS = 2500;
+const MAX_DIAGNOSTICS = 20;
+const SEL_OPEN = '⟦SELECTION⟧';
+const SEL_CLOSE = '⟦/SELECTION⟧';
+
+/**
+ * The file the selection sits in, with the selection marked. The model used to see the
+ * selected text alone — no key, no meter, no part, no clef, no bars around it — and so
+ * "harmonize a third above" or "make the bar fill its meter" was answered blind. A score is
+ * short enough to send whole; a long one is sent as its head (where the key, meter and
+ * parts are declared) and a window around the selection.
+ */
+function documentContext(snapshot: Snapshot): string {
+    const t = snapshot.origFullText;
+    const marked = t.slice(0, snapshot.startOffset) + SEL_OPEN
+        + t.slice(snapshot.startOffset, snapshot.endOffset) + SEL_CLOSE + t.slice(snapshot.endOffset);
+    if (marked.length <= DOC_CONTEXT_CHARS) {
+        return marked;
+    }
+    const selStart = snapshot.startOffset;
+    const selEnd = snapshot.endOffset + SEL_OPEN.length + SEL_CLOSE.length;
+    const half = Math.max(0, Math.floor((DOC_CONTEXT_CHARS - DOC_HEAD_CHARS - (selEnd - selStart)) / 2));
+    const from = Math.max(DOC_HEAD_CHARS, selStart - half);
+    const to = Math.min(marked.length, selEnd + half);
+    return marked.slice(0, DOC_HEAD_CHARS)
+        + (from > DOC_HEAD_CHARS ? '\n… (lines omitted) …\n' : '')
+        + marked.slice(from, to)
+        + (to < marked.length ? '\n… (rest of the file omitted) …' : '');
+}
+
+/**
+ * What the compiler says about the file as it stands — errors and warnings, those inside or
+ * touching the selection first. The instruction is often about one of them ("fix this bar")
+ * and the model could not see any.
+ */
+function diagnosticsContext(snapshot: Snapshot, baseline: CandidateDiagnostic[]): string | null {
+    const shown = baseline.filter(d => d.Severity === 'error' || d.Severity === 'warning');
+    if (shown.length === 0) {
+        return null;
+    }
+    const inSel = (d: CandidateDiagnostic) =>
+        d.Offset < snapshot.endOffset && d.Offset + Math.max(1, d.Length) > snapshot.startOffset;
+    const ordered = [...shown.filter(inSel), ...shown.filter(d => !inSel(d))];
+    const lines = ordered.slice(0, MAX_DIAGNOSTICS).map(d =>
+        `  - line ${d.Line + 1}${inSel(d) ? ' (in the selection)' : ''}: ${d.Severity}`
+        + `${d.Code ? ` ${d.Code}` : ''}: ${d.Message}`);
+    if (ordered.length > MAX_DIAGNOSTICS) {
+        lines.push(`  - … and ${ordered.length - MAX_DIAGNOSTICS} more`);
+    }
+    return lines.join('\n');
+}
+
+function taskPrompt(snapshot: Snapshot, facts: ResolvedPitchFact[], baseline: CandidateDiagnostic[], instruction: string): string {
     const parts: string[] = [];
+    parts.push(`The file being edited, with the selection marked ${SEL_OPEN} … ${SEL_CLOSE} `
+        + '(read the key, meter, parts and neighbouring bars from it; the markers are not part of the file):');
+    parts.push('<document>');
+    parts.push(documentContext(snapshot));
+    parts.push('</document>');
+    parts.push('');
     parts.push('Selected fragment to transform:');
     parts.push('<selection>');
-    parts.push(selectedText);
+    parts.push(snapshot.origSelectedText);
     parts.push('</selection>');
+    const diags = diagnosticsContext(snapshot, baseline);
+    if (diags) {
+        parts.push('');
+        parts.push('What the Lily# compiler reports about the file as it stands (before your change):');
+        parts.push(diags);
+        parts.push('If the instruction is about one of these, fix it. Either way, add no new errors or warnings.');
+    }
     if (facts.length > 0) {
         parts.push('');
         parts.push('Resolved absolute pitches of the selection (written -> resolved), from the compiler:');
@@ -386,13 +485,42 @@ function spliceCandidate(snapshot: Snapshot, candidate: string): string {
         + snapshot.origFullText.slice(snapshot.endOffset);
 }
 
-async function countErrors(client: LanguageClient, text: string, token: vscode.CancellationToken): Promise<number> {
+async function checkText(client: LanguageClient, text: string): Promise<CandidateDiagnostic[]> {
     try {
         const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: text });
-        return check.Diagnostics.filter(d => d.Severity === 'error').length;
+        return check.Diagnostics ?? [];
     } catch {
-        return 0;
+        return [];
     }
+}
+
+function count(diags: CandidateDiagnostic[], severity: string): number {
+    return diags.filter(d => d.Severity === severity).length;
+}
+
+/** A warning about the machine (a font the host lacks), not about the source. */
+const MACHINE_WARNING = /is not installed on this system/;
+
+/**
+ * The warnings a candidate ADDS, judged the way errors are: the file with the candidate has
+ * more warnings in all than the untouched file had. Returned are the ones to show the model —
+ * those in the replaced span, else those at or after it. Machine warnings are not counted.
+ */
+function addedWarnings(
+    check: CheckCandidateResponse,
+    snapshot: Snapshot,
+    candidate: string,
+    baselineWarnings: number,
+): CandidateDiagnostic[] {
+    const warnings = check.Diagnostics.filter(d => d.Severity === 'warning' && !MACHINE_WARNING.test(d.Message));
+    const candStart = snapshot.startOffset;
+    const candEnd = snapshot.startOffset + candidate.length;
+    if (warnings.length <= baselineWarnings) {
+        return [];
+    }
+    const inRange = warnings.filter(d => d.Offset >= candStart && d.Offset < candEnd);
+    const relevant = inRange.length > 0 ? inRange : warnings.filter(d => d.Offset >= candStart);
+    return relevant.length > 0 ? relevant : warnings;
 }
 
 /**

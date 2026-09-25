@@ -26,6 +26,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   (`lilysharp.ai.model`). Ghost Completion has its own model, `lilysharp.ai.ghostModel`, and
   its automatic choice is the other way round — a SMALL model: it answers as you type, and a
   large one (2–3 s a bar) was cancelled by VS Code every time before it could show.
+- **Transform Selection tells the model what the compiler knows.** The model saw the selected
+  text alone — no key, meter, part or neighbouring bars, and none of the file's problems. It
+  now also gets the file with the selection marked (the whole file when it fits, else its head
+  and a window around the selection) and the compiler's current errors and warnings, those in
+  the selection first — so "fix this bar" knows what is wrong with it. A candidate that
+  compiles but ADDS warnings (a bar that no longer fills its meter is a warning in Lily#) is
+  sent back for repair like a broken one; if the repairs run out it is still shown, with the
+  new warnings named above the score.
 - **Ghost Completion logs what happened** to each suggestion in the *Lily# Extension* output
   (asked, shown, refused as not compiling, cancelled) with the model and the time taken — its
   ghost text and Copilot's look the same in the editor. A suggestion that opens with a
