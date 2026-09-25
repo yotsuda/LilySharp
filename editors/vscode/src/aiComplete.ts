@@ -85,6 +85,7 @@ export function registerAiComplete(context: vscode.ExtensionContext, deps: AiTra
             }
 
             inflightKey = key;
+            deps.log(`Ghost completion: asked at ${position.line + 1}:${position.character + 1}`);
             inflightPromise = computeSuggestion(deps, client, document, position, offset, token);
             const text = await inflightPromise;
             if (inflightKey === key) {
@@ -192,8 +193,13 @@ async function computeSuggestion(
     // Quiet resolution: never prompt or pop errors mid-typing.
     const chat = await resolveChatClient(true);
     if (!chat) {
+        deps.log('Ghost completion: no language model available');
         return undefined;
     }
+    // Every outcome is logged: ghost text from Lily# and from another provider (Copilot's
+    // own completions) look the same in the editor, and this line is how to tell them apart.
+    const started = Date.now();
+    const outcome = (what: string) => deps.log(`Ghost completion: ${what} (${chat.label}, ${Date.now() - started} ms)`);
 
     const grammar = await loadGrammar(deps);
     const docText = document.getText();
@@ -208,16 +214,20 @@ async function computeSuggestion(
                 `Here is the music so far (the cursor is at the very end):\n<music>\n${contextText}\n</music>\n` +
                 `Write ONLY the next measure.` },
         ], token);
-    } catch {
-        return undefined; // no consent / offline / quota — silently offer nothing
+    } catch (err: any) {
+        // no consent / offline / quota — offer nothing, but say so in the log
+        outcome(token.isCancellationRequested ? 'cancelled while the model answered' : `model failed: ${err?.message ?? err}`);
+        return undefined;
     }
     if (token.isCancellationRequested) {
+        outcome('cancelled (the caret moved or the text changed while the model answered)');
         return undefined;
     }
 
     // First line only (one measure per line), cleaned of fences/commentary.
     let measure = cleanCandidate(raw).split('\n')[0].trim();
     if (measure.length === 0) {
+        outcome('the model returned nothing usable');
         return undefined;
     }
     if (!measure.endsWith('|')) {
@@ -234,18 +244,22 @@ async function computeSuggestion(
     try {
         const check = await client.sendRequest<CheckCandidateResponse>('lilysharp/checkCandidate', { Text: spliced });
         if (token.isCancellationRequested) {
+            outcome('cancelled while the candidate compiled');
             return undefined;
         }
         const end = offset + insertText.length;
         const brokeItself = check.Diagnostics.some(
             d => d.Severity === 'error' && d.Offset >= offset && d.Offset < end);
         if (brokeItself) {
+            outcome(`refused "${insertText.trim()}" (it does not compile)`);
             return undefined;
         }
     } catch {
+        outcome('the compile check failed');
         return undefined;
     }
 
+    outcome(`shown "${insertText.trim()}"`);
     return insertText;
 }
 
