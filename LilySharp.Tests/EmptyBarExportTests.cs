@@ -89,6 +89,43 @@ public class EmptyBarExportTests
     public void TheTwin_InventsNoSpacer(string music)
         => Assert.DoesNotContain("s1", Twin(string.Format(OneStaff, music)));
 
+    private static int Spacers(string twin) =>
+        System.Text.RegularExpressions.Regex.Matches(twin, @"\bs1\b").Count;
+
+    /// <summary>
+    /// Section padding after a part written as phrase references: the page pads the short
+    /// part with as many empty bars as it lacks, and so must the twin. The stream reads a
+    /// phrase reference as time taken, so the first padding `|` used to go out as a bare bar
+    /// CHECK — `rh { mel mel }` beside a four-bar left hand drew three bars in the twin, and
+    /// the fixture grammar-tour's right hand ran a bar early from section B on (Lab
+    /// sessions/p585).
+    /// </summary>
+    [Fact]
+    public void TheTwin_PadsAPartOfPhraseReferences_ToTheSectionsLength()
+    {
+        const string source =
+            "time 4/4\npart up { clef treble }\npart dn { clef bass }\n"
+            + "phrase mel { c4 d e f | }\nphrase low { c2 d | e2 f | g2 a | b2 c | }\n"
+            + "section A { up { mel mel } dn { low } }\nsection B { up { g4 a b c | } dn { g1 | } }\n"
+            + "form main { A B }\nscore main { staff up staff dn }";
+        Assert.Equal(2, Spacers(Twin(source)));
+    }
+
+    /// <summary>
+    /// …while a bare `|` the AUTHOR writes after such a reference still closes the bar and
+    /// opens none, as on the page (`mel | e'1 |` is two bars with <c>mel = { c'1 | }</c>).
+    /// </summary>
+    [Theory]
+    [InlineData("c'1 |")]
+    [InlineData("c'1")]
+    public void TheTwin_ABarLineAfterAPhraseReference_OpensNoEmptyBar(string body)
+    {
+        string source =
+            $"octave absolute\ntime 4/4\nphrase mel {{ {body} }}\npart m {{ }}\n"
+            + "section A { m { mel | e'1 | } }\nform main { ~A }\nscore main { staff m }";
+        Assert.Equal(0, Spacers(Twin(source)));
+    }
+
     [Fact]
     public void TheTwin_ARepeatOpenerAfterAWrittenBar_IsAnEmptyBarToo()
         // The page's LeadingBareThenRepeatOpener / RepeatOpenerAfterAWrittenBar rules.

@@ -441,7 +441,7 @@ public class PedalTests
     [Fact]
     public void TheThreePedalFamilies_StackInLilyPondsOrder()
     {
-        string svg = LiveRender.SvgFromRenderSpec(ThreePedalsAtOnce);
+        string svg = TestPaper.SvgFromRenderSpec(ThreePedalsAtOnce);
         double staffBottom = System.Text.RegularExpressions.Regex
             .Matches(svg, @"<line x1=""0\.05"" y1=""([\d.]+)"" x2=""[\d.]+"" y2=""\1""")
             .Select(m => double.Parse(m.Groups[1].Value)).Distinct().Max();

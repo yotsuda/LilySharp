@@ -51,7 +51,7 @@ public class LedgerHeadSpacingTests
 
     private static List<double> BarXs(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         string svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
         var rows = Regex.Matches(svg, "<rect x=\"([0-9.-]+)\" y=\"([0-9.-]+)\" width=\"([0-9.-]+)\" height=\"([0-9.-]+)\"")

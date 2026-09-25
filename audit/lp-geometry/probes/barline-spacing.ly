@@ -190,6 +190,12 @@ lay =
 %%     exactly 0.35 (box), so only the natural's skyline term (0.017672) shows.
 \score { \new Staff { \key d \major c'1 } \lay "NAT" }
 
+%% NATD — NAT's natural on a STEM-DOWN quarter. The stem joins the heads in the skyline the
+%%     accidentals clear (accidental-placement.cc extract_heads_and_stems), and a down stem
+%%     reaches below the head, where the natural's lower-right stroke meets it: the natural
+%%     stands 0.0117 further left than NAT's.
+\score { \new Staff { \key d \major c''4 } \lay "NATD" }
+
 %% FLAT — the flat's ink starts 0.12 LEFT of its origin (LILC bbox left -0.12), so a single-note
 %%     draw that seats the glyph at `head - width - gap` over-counts the overhang and places the
 %%     flat at gap 0.47, not LilyPond's 0.35. Rendered on 2.26.0: HEAD anchor 9.155 (ext 0 . 1.962),

@@ -196,15 +196,28 @@ internal sealed record LayoutOptions
     // === Indent (in staff spaces) ===
 
     /// <summary>
-    /// Indentation for the first system in staff spaces.
-    /// Creates space for instrument names to the left of staff lines.
-    /// Default 0 = auto-calculate from instrument names if present.
+    /// Indentation for the first system in staff spaces — LilyPond's 15mm unless the paper
+    /// says otherwise, whether or not the score names an instrument.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/paper-defaults-init.ly — indent default 15\mm
+    /// LILYPOND-REF: ly/paper-defaults-init.ly indent-default — 15\mm, read in staff
+    /// spaces as LilyPond reads it (<see cref="LilyPondDefaultIndent"/>).
     /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset uses indent
+    /// <para>
+    /// ⚠️ UNTIL 2026-09-25 THE DEFAULT WAS 0, and a score got LilyPond's indent only when a
+    /// staff carried an instrument name — Lily#'s own choice, and a different first line from
+    /// LilyPond's on every nameless book (owner's decision, session 586: match LilyPond).
+    /// A written <c>indent</c> in the paper block, 0 included, is used as written.
+    /// </para>
     /// </remarks>
-    public double Indent { get; init; } = 0;
+    public double Indent { get; init; } = LilyPondDefaultIndent;
+
+    /// <summary>LilyPond's <c>indent-default</c>, 15mm, in staff spaces.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly indent-default — read back in staff spaces
+    /// through <c>(ly:output-def-lookup layout 'indent)</c> (instrument-name-x.ly).
+    /// </remarks>
+    public const double LilyPondDefaultIndent = 8.535826771653543;
 
     /// <summary>
     /// Indentation for subsequent systems in staff spaces.

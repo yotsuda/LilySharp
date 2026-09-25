@@ -51,10 +51,10 @@ public class GrandStaffRenderTests
             }
             """;
 
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
-        var svg = LiveRender.SvgFromRenderSpec(source);
+        var svg = TestPaper.SvgFromRenderSpec(source);
 
         // Should contain brace (rendered using Emmentaler-Brace font)
         Assert.Contains("<text", svg);
@@ -95,13 +95,13 @@ public class GrandStaffRenderTests
             }
             """;
 
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var renderSpec = RenderSpecParser.FindFirst(tree)!;
 
         var collector = new MeasureCollector();
         var score = collector.CollectMultiStaff(tree, renderSpec);
 
-        var layoutEngine = new LayoutEngine();
+        var layoutEngine = new LayoutEngine(TestPaper.IndentZero);
         var layout = layoutEngine.Layout(score);
 
         // Verify staff groups exist
@@ -141,7 +141,7 @@ public class GrandStaffRenderTests
             }
             """;
 
-        var svg = LiveRender.SvgFromRenderSpec(source);
+        var svg = TestPaper.SvgFromRenderSpec(source);
 
         // Should have a SpanBar: a barline rect taller than one staff (4.0 spaces)
         // bridging the gap between the two staves.

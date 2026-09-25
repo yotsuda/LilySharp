@@ -45,35 +45,35 @@ public class TablatureTests
     [Fact]
     public void ParseTabStaff_NoTuning()
     {
-        var tree = SyntaxTree.Parse(TabDoc("", "e4 a d'"));
+        var tree = TestPaper.ParseAtIndentZero(TabDoc("", "e4 a d'"));
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithGuitarTuning()
     {
-        var tree = SyntaxTree.Parse(TabDoc("guitar", "e4 a d'"));
+        var tree = TestPaper.ParseAtIndentZero(TabDoc("guitar", "e4 a d'"));
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithBassTuning()
     {
-        var tree = SyntaxTree.Parse(TabDoc("bass", "e,4 a, d g"));
+        var tree = TestPaper.ParseAtIndentZero(TabDoc("bass", "e,4 a, d g"));
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithBass5Tuning()
     {
-        var tree = SyntaxTree.Parse(TabDoc("bass5", "b,,4 e, a, d g"));
+        var tree = TestPaper.ParseAtIndentZero(TabDoc("bass5", "b,,4 e, a, d g"));
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
     [Fact]
     public void ParseTabStaff_WithUkuleleTuning()
     {
-        var tree = SyntaxTree.Parse(TabDoc("ukulele", "g c' e' a'"));
+        var tree = TestPaper.ParseAtIndentZero(TabDoc("ukulele", "g c' e' a'"));
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
     }
 
@@ -138,10 +138,10 @@ public class TablatureTests
             }
             """;
 
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
-        var svg = LiveRender.SvgFromRenderSpec(source);
+        var svg = TestPaper.SvgFromRenderSpec(source);
 
         // Should contain TAB clef glyph (Emmentaler clefs.tab = U+E08F)
         Assert.Contains(EmmentalerGlyphs.TabClef.ToString(), svg);
@@ -175,7 +175,7 @@ public class TablatureTests
             }
             """;
 
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
         var renderSpec = RenderSpecParser.FindFirst(tree);
@@ -214,14 +214,14 @@ public class TablatureTests
             }
             """;
 
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
         var renderSpec = RenderSpecParser.FindByName(tree, "guitar-tab");
         Assert.NotNull(renderSpec);
         Assert.Equal(2, renderSpec.Items.Length); // staff + tab
 
-        var svg = LiveRender.SvgFromRenderSpec(source);
+        var svg = TestPaper.SvgFromRenderSpec(source);
 
         // Basic SVG structure
         Assert.Contains("<svg", svg);

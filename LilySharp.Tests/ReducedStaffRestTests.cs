@@ -58,7 +58,7 @@ public class ReducedStaffRestTests
     [InlineData(5, 1, 2)]   // five lines: the classic fourth-line hang, middle-line seat
     public void WholeAndHalfRests_SeatOnTheLinesTheStaffDraws(int lines, int wholeLine, int halfLine)
     {
-        var svg = LiveRender.SvgFromRenderSpec(Music + $"\nscore main {{ staff melody as lines {lines} }}\n");
+        var svg = TestPaper.SvgFromRenderSpec(Music + $"\nscore main {{ staff melody as lines {lines} }}\n");
 
         // The drawn staff lines, top first (SVG y grows downward).
         var lineYs = Regex.Matches(svg,

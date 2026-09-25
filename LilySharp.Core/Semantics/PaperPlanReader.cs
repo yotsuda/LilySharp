@@ -396,6 +396,14 @@ internal static class PaperPlanReader
             MarginRight = MmToSs(sideMm),
             MarginTop = MmToSs(verticalMm),
             MarginBottom = MmToSs(verticalMm),
+            // indent-default is 15mm like the side margins, and scaled and rounded the same
+            // way; short-indent-default is 0mm, which scales to 0.
+            // LILYPOND-REF: scm/paper.scm:315-323 set-paper-dimensions (scalable-values).
+            // (a4 lands on the default itself, which is LilyPond's own reading and not the
+            // six-place conversion — `size a4` stays the identity.)
+            Indent = sideMm == SideMarginDefaultMm
+                ? LayoutOptions.LilyPondDefaultIndent : MmToSs(sideMm),
+            ShortIndent = 0,
         };
     }
 

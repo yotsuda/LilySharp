@@ -55,7 +55,7 @@ public class SpacingIncrementTests
         """;
 
     private static string Svg(string paper) =>
-        SvgGenerator.Generate(SyntaxTree.Parse(paper + "\n" + Music), new SvgRenderOptions { EmbedFont = false });
+        SvgGenerator.Generate(TestPaper.ParseAtIndentZero(paper + "\n" + Music), new SvgRenderOptions { EmbedFont = false });
 
     /// <summary>(staff length per system summed, system count) — staff lines are the horizontal
     /// lines of stroke 0.100 (ledger lines are 0.200).</summary>
@@ -108,7 +108,7 @@ public class SpacingIncrementTests
             form main { A }
             score main { staff m }
             """;
-        var (length, systems) = Staff(SvgGenerator.Generate(SyntaxTree.Parse(book), new SvgRenderOptions { EmbedFont = false }));
+        var (length, systems) = Staff(SvgGenerator.Generate(TestPaper.ParseAtIndentZero(book), new SvgRenderOptions { EmbedFont = false }));
         Assert.Equal(2, systems);
         Assert.Equal(157.85, length, 2);
     }

@@ -112,6 +112,9 @@ internal static class StaffAccidentalColumns
             var notes = new List<ChordNoteInfo>();
             var headOffsets = new List<double>();
             var slots = new List<(int Voice, int Item, int Note)>();
+            // Each voice's stem, at its collision shift — extract_heads_and_stems takes the
+            // stems of all the heads it gathered (see AccidentalStem).
+            var stems = new List<AccidentalStem>();
 
             foreach (var entry in column.Entries)
             {
@@ -131,6 +134,9 @@ internal static class StaffAccidentalColumns
                             note.NeedsLedgerLines, note.IsCourtesy));
                         headOffsets.Add(voiceX);
                         slots.Add((entry.VoiceId, entry.ItemIndex, 0));
+                        stems.Add(AccidentalStem.Of(entry.ForcedStemUp ?? note.StemUp,
+                            GlyphMetrics.NoteValueOf(note.BaseDuration), note.Notehead,
+                            note.StaffPosition, note.StaffPosition, voiceX, font));
                         break;
 
                     case ChordItem chord:
@@ -144,6 +150,8 @@ internal static class StaffAccidentalColumns
                             headOffsets.Add(voiceX + within[i]);
                             slots.Add((entry.VoiceId, entry.ItemIndex, i));
                         }
+                        stems.Add(AccidentalStem.Of(stemUp, noteValue, chord.Notehead,
+                            chord.Notes, voiceX, font));
                         break;
                 }
             }
@@ -151,7 +159,8 @@ internal static class StaffAccidentalColumns
             if (notes.Count == 0)
                 continue;
 
-            var layouts = placement.CalculatePositions(notes, headOffsets, font, font);
+            var layouts = placement.CalculatePositions(notes, headOffsets, font, font,
+                stems: stems);
             if (layouts.Length == 0)
                 continue;
 

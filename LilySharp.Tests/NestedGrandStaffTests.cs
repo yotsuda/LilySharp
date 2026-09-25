@@ -66,13 +66,13 @@ public class NestedGrandStaffTests
     private const string InBracket = "staffGroup { staff vln  grandStaff { staff pr  staff pl }  staff vc }";
     private const string InChoir = "choirStaff { staff vln  grandStaff { staff pr  staff pl }  staff vc }";
 
-    private static RenderSpec Spec(string render) => RenderSpecParser.FindFirst(SyntaxTree.Parse(Book(render)))!;
+    private static RenderSpec Spec(string render) => RenderSpecParser.FindFirst(TestPaper.ParseAtIndentZero(Book(render)))!;
 
     private static ImmutableArray<Voice> OneVoice(string name) =>
         ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty));
 
     private static string Svg(string render) => SvgGenerator.Generate(
-        SyntaxTree.Parse(Book(render)),
+        TestPaper.ParseAtIndentZero(Book(render)),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>The top line of each five-line staff, top to bottom (device Y, downward).</summary>
@@ -101,7 +101,7 @@ public class NestedGrandStaffTests
     [Fact]
     public void TheNestedGroupIsAMember_AndNotAlsoALooseItem()
     {
-        var tree = SyntaxTree.Parse(Book(InBracket));
+        var tree = TestPaper.ParseAtIndentZero(Book(InBracket));
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
 
         var spec = RenderSpecParser.FindFirst(tree)!;
@@ -213,7 +213,7 @@ public class NestedGrandStaffTests
     [Fact]
     public void TheTwinWritesTheGrandStaffOnce_InsideTheStaffGroup()
     {
-        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(InBracket)));
+        string ly = new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(Book(InBracket)));
 
         Assert.Equal(1, Regex.Matches(ly, @"\\new GrandStaff").Count);
         Assert.Equal(1, Regex.Matches(ly, @"\\new StaffGroup").Count);
@@ -225,7 +225,7 @@ public class NestedGrandStaffTests
     [Fact]
     public void ARowAfterTheNestedGroup_IsRefused()
     {
-        var diags = SemanticValidation.Run(SyntaxTree.Parse(Book(
+        var diags = SemanticValidation.Run(TestPaper.ParseAtIndentZero(Book(
             "staffGroup { staff vln  grandStaff { staff pr  staff pl }  lyrics words  staff vc }")));
 
         var d = Assert.Single(diags, d => d.Code == DiagnosticCodes.GroupRowNotBoundToStaffAbove);

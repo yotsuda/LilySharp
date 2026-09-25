@@ -165,7 +165,7 @@ public class LineEdgeLyricReservationTests
 
     private static string Svg(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }

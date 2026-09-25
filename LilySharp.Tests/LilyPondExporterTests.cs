@@ -987,9 +987,9 @@ public class LilyPondExporterTests
     /// with the bare number it reproduced nothing.
     /// </para>
     /// <para>
-    /// ⚠️ A NAMELESS SCORE WRITES <c>0\mm</c> ON PURPOSE. Lily# does not indent a score with
-    /// no names and LilyPond indents by 15\mm regardless, so an unwritten indent makes every
-    /// nameless twin a different page.
+    /// A NAMELESS SCORE WRITES <c>15\mm</c> TOO: the page indents every first system as
+    /// LilyPond does (owner's decision, session 586). Until then a nameless page had no indent
+    /// and its twin wrote <c>0\mm</c> to match.
     /// </para>
     /// </remarks>
     [Fact]
@@ -1018,7 +1018,7 @@ public class LilyPondExporterTests
             score main { staff ~vln }
             """);
         Assert.DoesNotContain("instrumentName", bare);
-        Assert.Contains("\\layout { indent = 0\\mm \\context { \\Score printInitialRepeatBar = ##t } }", bare);
+        Assert.Contains("\\layout { indent = 15\\mm \\context { \\Score printInitialRepeatBar = ##t } }", bare);
     }
 
     [Fact]

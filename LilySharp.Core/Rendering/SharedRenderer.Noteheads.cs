@@ -525,7 +525,8 @@ internal static partial class SharedRenderer
                             n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
                         .ToImmutableArray()
                     : AccidentalColumn.CalculatePositions(
-                        chord.Notes, offsets, chordAccFont, chordHeadFont);
+                        chord.Notes, offsets, chordAccFont, chordHeadFont,
+                        AccidentalStem.Of(chord, chord.StemUp, chordHeadFont));
                 for (int i = 0; i < chord.Notes.Length; i++)
                 {
                     var n = chord.Notes[i];
@@ -1050,7 +1051,8 @@ internal static partial class SharedRenderer
                     n.StaffPosition, n.Accidental!, n.AccidentalX!.Value, n.IsCourtesy))
                 .ToImmutableArray()
             : AccidentalColumn.CalculatePositions(
-                chord.Notes, headOffsets, chordAccFont, chordHeadFont);
+                chord.Notes, headOffsets, chordAccFont, chordHeadFont,
+                AccidentalStem.Of(chord, stemUp, chordHeadFont));
         foreach (var al in accLayouts)
         {
             double ay = staffMiddleY + al.StaffPosition / 2.0;

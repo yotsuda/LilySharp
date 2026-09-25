@@ -51,7 +51,7 @@ public sealed class ClefModifierTests
            + "form main { ~A }\nscore main { staff m }\n";
 
     private static string Svg(string book)
-        => SvgGenerator.Generate(SyntaxTree.Parse(book), new SvgRenderOptions { EmbedFont = false });
+        => SvgGenerator.Generate(TestPaper.ParseAtIndentZero(book), new SvgRenderOptions { EmbedFont = false });
 
     private static double D(string s) => double.Parse(s, CultureInfo.InvariantCulture);
 

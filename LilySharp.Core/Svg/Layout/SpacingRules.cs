@@ -1366,7 +1366,8 @@ internal static partial class SpacingRules
         else
         {
             var placement = new AccidentalPlacement();
-            var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
+            var layouts = placement.CalculatePositions(chord.Notes, headOffsets,
+                stem: AccidentalStem.Of(chord, chord.StemUp));
             if (layouts.Length > 0)
                 // XOffset is negative, representing distance to the left of notehead
                 leftmost = layouts.Min(l => l.XOffset);

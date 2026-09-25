@@ -108,20 +108,20 @@ public sealed class TabStaffStencilTests
 
     private static (MultiStaffScore Score, ScoreLayout Layout) LayoutOf(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree);
         var score = SvgGenerator.CollectScore(tree, spec);
-        return (score, new LayoutEngine().Layout(score));
+        return (score, new LayoutEngine(TestPaper.IndentZero).Layout(score));
     }
 
     private static RecordingDrawingContext RenderFirstPage(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree);
         var score = SvgGenerator.CollectScore(tree, spec);
-        var layout = new LayoutEngine().Layout(score);
+        var layout = new LayoutEngine(TestPaper.IndentZero).Layout(score);
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(score, layout, doc);
         return doc.Page;

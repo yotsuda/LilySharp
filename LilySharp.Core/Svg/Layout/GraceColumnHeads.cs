@@ -107,7 +107,9 @@ internal static class GraceColumnHeads
             notes,
             headOffsets: HeadOffsetsOrNull(column),
             accidentalFont: column.AccidentalFont,
-            column.Font);
+            column.Font,
+            AccidentalStem.Of(StemUp, GlyphMetrics.NoteValueOf(column.BaseDuration),
+                NoteheadStyle.Default, notes, 0, column.Font));
         // position_apes answers per ACCIDENTAL, keyed on the staff position it belongs to;
         // the heads of one column are distinct positions (a unison writes one head), so the
         // position is the key back.

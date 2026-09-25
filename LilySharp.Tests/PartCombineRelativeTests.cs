@@ -59,7 +59,7 @@ public class PartCombineRelativeTests
         """ + "\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
-        SyntaxTree.Parse(source),
+        TestPaper.ParseAtIndentZero(source),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>Note columns as (x, staff spaces above the centre line), clef and metre dropped.</summary>

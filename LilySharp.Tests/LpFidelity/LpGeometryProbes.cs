@@ -162,6 +162,11 @@ internal static class LpGeometryProbes
     // the head at 0.367672, not the fixed AccidentalNoteGap 0.35, so HEAD - ACC anchor is 1.034272.
     private static readonly string NAT = Score("c1 |", "NAT", "d major");
 
+    // LilyPond twin: \key d \major c''4  (NAT's natural on a STEM-DOWN quarter). The down stem
+    // joins the head in the skyline the natural clears, and reaches below it where the
+    // natural's lower-right stroke is: HEAD - ACC anchor is 1.046000, not NAT's 1.034272.
+    private static readonly string NATD = Score("c'4 |", "NATD", "d major");
+
     // LilyPond twin: \key c \major ces'1  (a single note carrying a FLAT). The flat's ink starts
     // 0.12 LEFT of its origin, so the fixed-gap draw over-counted the overhang and placed it at
     // gap 0.47 instead of LilyPond's 0.35; HEAD - ACC anchor is 1.150000.
@@ -13353,6 +13358,7 @@ internal static class LpGeometryProbes
         // right skyline, not 0.35); a flat's ink starts 0.12 left of its origin, so the fixed-gap
         // draw over-placed it. Sharps (Left 0, box) are unaffected. See NAT / FLAT.
         new("accidental.single-natural-to-notehead", NAT, g => g.NaturalToNoteheadAnchor()),
+        new("accidental.single-natural-stem-down-to-notehead", NATD, g => g.NaturalToNoteheadAnchor()),
         new("accidental.single-flat-to-notehead", FLAT, g => g.FlatToNoteheadAnchor()),
 
         // The first points to reach Accidental_placement's stacking (two accidentals forced

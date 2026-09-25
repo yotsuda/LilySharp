@@ -7,24 +7,24 @@
   <rect x="0" y="0" width="119.50" height="29.21" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="1384">Accidental octave straddle</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="17.02" x2="16.82" y2="17.02" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="18.02" x2="16.82" y2="18.02" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="19.02" x2="16.82" y2="19.02" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="20.02" x2="16.82" y2="20.02" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="21.02" x2="16.82" y2="21.02" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="20.02" font-size="4.00" data-pos="1443"></text>
-  <text class="music" x="4.88" y="19.02" font-size="4.00"></text>
-  <line x1="10.13" y1="22.02" x2="13.07" y2="22.02" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="9.17" y="17.52" font-size="4.00" data-pos="1478"></text>
-  <text class="music" x="9.17" y="21.02" font-size="4.00" data-pos="1474"></text>
-  <text class="music" x="7.89" y="18.52" font-size="4.00" data-pos="1487"></text>
-  <text class="music" x="7.89" y="22.02" font-size="4.00" data-pos="1483"></text>
-  <text class="music" x="10.62" y="21.02" font-size="4.00" data-pos="1474"></text>
-  <text class="music" x="10.62" y="17.52" font-size="4.00" data-pos="1478"></text>
-  <text class="music" x="10.62" y="22.02" font-size="4.00" data-pos="1483"></text>
-  <text class="music" x="10.62" y="18.52" font-size="4.00" data-pos="1487"></text>
-  <rect x="16.68" y="17.02" width="0.19" height="4.00" data-pos="1494"/>
-  <rect x="3.37" y="12.82" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1452"/>
-  <text x="7.40" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1452">Main</text>
+  <line x1="8.59" y1="17.02" x2="25.35" y2="17.02" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="18.02" x2="25.35" y2="18.02" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="19.02" x2="25.35" y2="19.02" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="20.02" x2="25.35" y2="20.02" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="21.02" x2="25.35" y2="21.02" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="9.34" y="20.02" font-size="4.00" data-pos="1443"></text>
+  <text class="music" x="13.42" y="19.02" font-size="4.00"></text>
+  <line x1="18.66" y1="22.02" x2="21.61" y2="22.02" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="17.70" y="17.52" font-size="4.00" data-pos="1478"></text>
+  <text class="music" x="17.70" y="21.02" font-size="4.00" data-pos="1474"></text>
+  <text class="music" x="16.42" y="18.52" font-size="4.00" data-pos="1487"></text>
+  <text class="music" x="16.42" y="22.02" font-size="4.00" data-pos="1483"></text>
+  <text class="music" x="19.15" y="21.02" font-size="4.00" data-pos="1474"></text>
+  <text class="music" x="19.15" y="17.52" font-size="4.00" data-pos="1478"></text>
+  <text class="music" x="19.15" y="22.02" font-size="4.00" data-pos="1483"></text>
+  <text class="music" x="19.15" y="18.52" font-size="4.00" data-pos="1487"></text>
+  <rect x="25.21" y="17.02" width="0.19" height="4.00" data-pos="1494"/>
+  <rect x="11.90" y="12.82" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1452"/>
+  <text x="15.94" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1452">Main</text>
   </g>
 </svg>

@@ -66,7 +66,7 @@ public class PartCombineTupletEndTests
     private const double GapTolerance = 0.011;
 
     private static string Svg(string source) => SvgGenerator.Generate(
-        SyntaxTree.Parse(source),
+        TestPaper.ParseAtIndentZero(source),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>

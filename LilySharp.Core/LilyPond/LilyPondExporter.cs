@@ -1838,6 +1838,16 @@ public sealed class LilyPondExporter
             }
             yield break;
         }
+        // A voice whose last bar is CLOSED gets `missing` empty bars, each a bare `|` the
+        // stream writes as a spacer — which the stream only does when nothing took time
+        // since the last boundary. A phrase reference counts as time there (a bare `|` after
+        // one closes a bar on the page too: `mel | e'1 |` is two bars with `mel = { c'1 | }`),
+        // so a part written as phrase references wrote its first padding bar as a bare bar
+        // CHECK and lost it: `rh { p1 p1 }` padded to four bars drew three in the twin, and
+        // the fixture grammar-tour's right hand ran a bar early from section B on (Lab
+        // sessions/p585). The marker states the index's answer to the stream.
+        if (!open)
+            yield return new ClosedBarMarker();
         for (int i = 0; i < missing + (open ? 1 : 0); i++)
             yield return CreateBarline(SyntaxKind.Bar, "|", position, 0);
     }
@@ -2016,6 +2026,13 @@ public sealed class LilyPondExporter
                 // MIDI walk's per-section sequence does.
                 _timeSinceBoundary = false;
                 atScopeStart = true;
+            }
+            else if (item is { Green: ClosedBarGreen })
+            {
+                // The voice's last bar is closed, whatever this stream last wrote — a phrase
+                // reference counts as time here, even when its body ended on its own `|`
+                // (see PaddingBars).
+                _timeSinceBoundary = false;
             }
             else if (item is BarlineSyntax gapBar && !_chordTrack)
             {
@@ -2218,6 +2235,7 @@ public sealed class LilyPondExporter
             or SectionDeclarationSyntax or FormDeclarationSyntax
             or PartDeclarationSyntax or RenderDeclarationSyntax => false,
         { Green: SectionPlayGreen } => false,
+        { Green: ClosedBarGreen } => false,
         _ => true,
     };
 
@@ -2365,6 +2383,8 @@ public sealed class LilyPondExporter
         // A chord track's bar, pre-spelled (ChordBars): matched by its green for the same
         // reason as the play sentinel above.
         { Green: ChordBarGreen cb } => cb.Entries,
+        // Writes nothing: it only tells the `| |` rule a bar has closed (PaddingBars).
+        { Green: ClosedBarGreen } => "",
         NavigationMarkSyntax nav => EmitNavMark(nav),
         StringNumberAnnotationSyntax sn => sn.StringNumberToken.Text,
         ArticulationSyntax a => MapArticulation(a),
@@ -4764,14 +4784,12 @@ public sealed class LilyPondExporter
             foreach (var s in rows) _sb.Append(s);
             _sb.Append("  >>\n");
         }
-        // ⚠️ THE INDENT IS WRITTEN, ALWAYS, and 0 is the interesting case. Lily# indents the
-        // first system only when the score carries an instrument name, and then by exactly
-        // LilyPond's paper default; LilyPond indents by that default whether or not anything
-        // is written in it. So a NAMELESS twin left to the default is a different page from
-        // its .lys by 8.535827 staff spaces on every horizontal measurement — which is the
-        // kind of divergence that gets read as a spacing defect. See
-        // LayoutEngine.CalculateIndentFromInstrumentNames, which records the same gap from
-        // the other side.
+        // THE INDENT IS WRITTEN, ALWAYS, as LilyPond's own default. Until 2026-09-25 a nameless
+        // book's twin wrote 0\mm, because Lily# indented only a score that named an
+        // instrument; the page now indents as LilyPond does (owner's decision, session 586 —
+        // LayoutEngine.EffectiveIndent), so the twin says LilyPond's default in its own words.
+        // A paper block's own indent is not carried — no paper{} reaches the twin (the
+        // warning at EmitHeader).
         // ⚠️ `\mm`, NOT A BARE NUMBER. A bare number in \layout is read in MILLIMETRES, so
         // writing the staff-space figure silently produced a DIFFERENT page: measured on the
         // four-name twin, `indent = #8.535826771653543` engraved an effective indent of
@@ -4802,8 +4820,7 @@ public sealed class LilyPondExporter
         // page's do. `lines` is LilyPond's default and writes nothing.
         string overrides = BarNumberContextLines() + FontOverrideLines();
         string initialRepeatBar = _rewindOpensThePiece ? "##f" : "##t";
-        _sb.Append("  \\layout { indent = ")
-           .Append(_instrumentNames.Count > 0 ? "15\\mm" : "0\\mm");
+        _sb.Append("  \\layout { indent = 15\\mm");
         if (overrides.Length == 0)
             _sb.Append(" \\context { \\Score printInitialRepeatBar = ").Append(initialRepeatBar)
                .Append(" } }\n}\n");
@@ -6168,6 +6185,28 @@ internal sealed class ChordBarMarker : SyntaxNode
 {
     public ChordBarMarker(string text)
         : base(new ChordBarGreen(text), parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>
+/// "The voice's last bar is closed here" — a stream item that writes nothing and resets the
+/// empty-bar rule's clock (<c>LilyPondExporter.PaddingBars</c>). Matched by its green, like
+/// <see cref="SectionPlayMarker"/>, so it survives a form ending's green rebuild.
+/// </summary>
+internal sealed class ClosedBarMarker : SyntaxNode
+{
+    public ClosedBarMarker()
+        : base(new ClosedBarGreen(), parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>The closed-bar marker's green (see <see cref="ClosedBarMarker"/>).</summary>
+internal sealed class ClosedBarGreen : InternalSyntax.GreenNode
+{
+    public ClosedBarGreen()
+        : base(SyntaxKind.None, fullWidth: 0)
     {
     }
 }

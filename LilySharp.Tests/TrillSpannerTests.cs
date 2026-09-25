@@ -57,7 +57,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
 
@@ -87,7 +87,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
 
         Assert.Single(singleScore.TrillSpanners);
@@ -107,7 +107,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
 
         _output.WriteLine($"TrillSpanners count: {singleScore.TrillSpanners.Length}");
@@ -132,7 +132,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var options = new SvgRenderOptions { EmbedFont = false };
         var svg = SvgGenerator.Generate(tree, options);
 
@@ -164,7 +164,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
 
         Assert.Empty(singleScore.TrillSpanners);
@@ -216,7 +216,7 @@ score main ""test"" { staff melody }
 
     private static string Render(string source) =>
         LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse(source),
+            TestPaper.ParseAtIndentZero(source),
             new SvgRenderOptions { EmbedFont = false });
 
     /// <summary>The middle staff line's device Y: the 3rd of the five long horizontals.</summary>
@@ -258,7 +258,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
 
         var spanner = Assert.Single(singleScore.TrillSpanners);

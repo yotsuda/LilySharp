@@ -1284,6 +1284,48 @@ internal sealed class MultiStaffLayouter
     /// (<c>MusicMarkEngraver</c>), so the reserved, drawn and annotated prefix cannot
     /// drift apart (three hand-rolled copies is how they would).
     /// </summary>
+    /// <summary>
+    /// The width a line reserves after its final bar line when the NEXT line opens with a key
+    /// and/or time change: the cancellation + new signature, and the new meter after it.
+    /// 0 when <paramref name="nextMeasureIndex"/> is past the end or opens with no change.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ BOTH CAN OPEN THE SAME MEASURE, so this walk must not stop at the first one it
+    /// recognises — it reads the leading zero-duration items until real music starts.
+    /// The layout subtracts this from the line it sets, and the line breaker from every
+    /// candidate line that ends before <paramref name="nextMeasureIndex"/>
+    /// (<see cref="MeasureSpringData.LineEndCourtesyWidth"/>) — one model, so the breaker
+    /// does not pack a line the layout then has to squeeze harder than it priced.
+    /// LILYPOND-REF: explicitKeySignatureVisibility default all-visible;
+    ///   scm/define-grobs.scm:3922-3953 TimeSignature break-visibility all-visible.
+    /// </remarks>
+    /// <param name="startMeasureIndex">The line's first measure — where the key courtesy
+    /// resolves the clef it is drawn with (<see cref="SpacingRules.KeyCourtesySuffixWidth"/>).</param>
+    internal static double LineEndCourtesyWidth(
+        MultiStaffScore score, int startMeasureIndex, int nextMeasureIndex)
+    {
+        var primaryVoice = score.PrimaryContentStaff.PrimaryVoice;
+        if (nextMeasureIndex >= primaryVoice.Measures.Length)
+            return 0.0;
+        KeySignatureChangeItem? leadKey = null;
+        TimeSignatureChangeItem? leadTime = null;
+        foreach (var lead in primaryVoice.Measures[nextMeasureIndex].Items)
+        {
+            if (lead is KeySignatureChangeItem kcNext) leadKey ??= kcNext;
+            else if (lead is TimeSignatureChangeItem tcNext) leadTime ??= tcNext;
+            if (lead.Duration > Fraction.Zero)
+                break;
+        }
+        double width = 0.0;
+        if (leadKey is not null)
+            width += SpacingRules.KeyCourtesySuffixWidth(
+                score, startMeasureIndex, nextMeasureIndex, meterFollows: leadTime is not null);
+        if (leadTime is { } t)
+            width += SpacingRules.TimeCourtesySuffixWidth(
+                score.TextMetrics, t, afterCourtesyKey: leadKey is not null);
+        return width;
+    }
+
     internal static LineStartPrefix SolveLineStartPrefix(
         MultiStaffScore score, int startMeasureIndex, bool isFirstSystem)
     {
@@ -1378,31 +1420,8 @@ internal sealed class MultiStaffLayouter
         double startX = CurrentIndent + prefixWidth;
         double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - CurrentIndent - prefixWidth;
 
-        // End-of-line courtesy: the NEXT measure (first of the next system) opening with a
-        // key and/or time change reserves room after this line's final barline for the
-        // cancellation + new signature, and for the new meter after it.
-        // ⚠️ BOTH CAN OPEN THE SAME MEASURE, so this walk must not stop at the first one it
-        // recognises — it reads the leading zero-duration items until real music starts.
-        // LILYPOND-REF: explicitKeySignatureVisibility default all-visible;
-        //   scm/define-grobs.scm:3922-3953 TimeSignature break-visibility all-visible.
-        if (endMeasureIndex < primaryVoice.Measures.Length)
-        {
-            KeySignatureChangeItem? leadKey = null;
-            TimeSignatureChangeItem? leadTime = null;
-            foreach (var lead in primaryVoice.Measures[endMeasureIndex].Items)
-            {
-                if (lead is KeySignatureChangeItem kcNext) leadKey ??= kcNext;
-                else if (lead is TimeSignatureChangeItem tcNext) leadTime ??= tcNext;
-                if (lead.Duration > Fraction.Zero)
-                    break;
-            }
-            if (leadKey is not null)
-                availableWidth -= SpacingRules.KeyCourtesySuffixWidth(
-                    score, startMeasureIndex, endMeasureIndex, meterFollows: leadTime is not null);
-            if (leadTime is { } t)
-                availableWidth -= SpacingRules.TimeCourtesySuffixWidth(
-                    score.TextMetrics, t, afterCourtesyKey: leadKey is not null);
-        }
+        // End-of-line courtesy: see LineEndCourtesyWidth, which the line breaker prices too.
+        availableWidth -= LineEndCourtesyWidth(score, startMeasureIndex, endMeasureIndex);
 
         // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across
         // the entire system, then solve with a single SpringSolver for uniform force.

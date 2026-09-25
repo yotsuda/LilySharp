@@ -57,7 +57,7 @@ public class CondensedStaffTests
         """ + "\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
-        SyntaxTree.Parse(source),
+        TestPaper.ParseAtIndentZero(source),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>Everything the compiler says about this source — PARSE diagnostics as well
@@ -65,7 +65,7 @@ public class CondensedStaffTests
     /// offending tokens are), so a semantics-only sweep would miss it.</summary>
     private static IReadOnlyList<Diagnostic> Diagnose(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var all = new List<Diagnostic>(tree.Diagnostics);
         foreach (var v in SemanticValidation.CreateAll())
         {

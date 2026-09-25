@@ -129,6 +129,65 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第585セッションの経緯
+
+### 1.1 第585セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p585`（HEAD `94350180`・full **9094 / 0 / 2 / 9096**・第583 を ARCHIVE へ）。着手＝fixture `grammar-tour`／`feature-tour` の 2 段目以降の段割れ（双子と違う）。
+
+★★★ **⑴ 2 段目以降の「差」は段組みではなく双子の側の欠陥＝`lysc ly` の section padding が 1 小節欠けていた**（Lab `sessions/p585/`）: `grammar-tour` の LP の列を Lily# のばねと並べると bar 12 から列の数がずれる（LP は 0・1/2・3/4、Lily# は 0・1/2）。この本は section ごとに rh と lh の小節数が違い（A: rh 10・lh 12）、ページは短い rh を 2 小節の空小節で埋めるが、双子は `s1` を 1 つしか書いていなかった＝**LP では rh の B が 1 小節早く始まり、違う音楽を比べていた**。原因: `PaddingBars` は欠けた小節の数だけ裸の `|` を出し、`EmitMusicStream` の `| |` 規則が「最後の区切りから時間が経っていなければ空小節」と読む。**phrase 参照は時間を取ったと数えられる**ので、本体が自分の `|` で閉じていても最初の `|` は小節チェックになり 1 小節消えた（`rh { mel mel }` を 4 小節に埋めると双子は 3 小節）。⚠️ 最初の直し（phrase 本体の終わりの状態を呼び手へ渡す）は**誤り**だった＝ページでは `mel | e'1 |`（`mel = { c'1 | }`）は 2 小節で、作者が書いた `|` は空小節にならない。**直し**: padding の側が「この声部の最後の小節は閉じている」を `ClosedBarMarker` で stream に告げる（index の `TrailingOpen` の答え）。**結果**: `grammar-tour`・`feature-tour` の双子が Lily# と 7 段すべて一致（Lily# の段割れは不変＝製品の絵は 0 変化）／実コーパスの双子 0 変化（423 のまま）／網 `EmptyBarExportTests` 3 本（padding 1・作者の `|` 2＝毒で padding の 1 本が赤）／full **9097 / 0 / 2 / 9099**。
+
+## 以下は第584セッションの経緯
+
+### 1.1 第584セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p584`（HEAD `a78933fe`・full **9093 / 0 / 2 / 9095**・第582 を ARCHIVE へ）。着手＝§1.0 T7 ⒢ 奏 の 1 段目の力（LP −0.106・Lily# +0.026）。
+
+★★★ **⑴ 段の DP は楽器名の indent を知らなかった＝一本化**: 奏 の 1 段目を列ごとに LP と並べると、自然幅（ideal）は全列一致（小節線→音のばねは Lily# の計器が小節線 0.19 を外すだけ）。LP の自然長 100.85 は使える幅 93.89（102.43 − indent 8.54）を 6.96 超えるのに、Lily# の DP は +0.026（伸ばす側）と値付けしていた＝差 ≈ indent。**原因**: `LayoutEngine` は `indent` を楽器名から決める（`CalculateIndentFromInstrumentNames`＝15mm）が、`SystemBreaker` は紙の `_options.Indent`（0）だけを足していた。直し: `LayoutEngine.EffectiveIndent` を唯一の家にしてレイアウトと DP の両方が読む／incremental の skip の変化検出（`IncrementalCompiler` の `firstPrefix`）にも同じ indent を足した。**結果**: 奏 staff の頁の得点が段数ごとに LP と一致（31 段 6.795931 対 LP 6.796438・30 段 7.189058 対 7.189391・29 段 7.019488 対 7.018639）／双子の段署名は 0 score 変化（423 のまま・楽器名のある実コーパス 18 冊）／全木 942 冊で動いたのは 2 冊＝fixture `showcase/grammar-tour`（1 段目 7 → 6 小節）・`test/feature-tour`（8 → 7）で、**どちらも 1 段目が LP の双子と一致**（2 段目以降はまだ違う・snapshot 無し）／網 `LineEdgePricingTests.Breaker_PricesTheInstrumentNameIndent`（毒＝紙の indent に戻すと赤）／full **9094 / 0 / 2 / 9096**。⚠️ 残る自認（`CalculateIndentFromInstrumentNames` の remarks）: **名前の無い score の indent 0 は LP ではない**（LP は常に 15mm）＝全冊が動くので別判断。
+
+## 以下は第583セッションの経緯
+
+### 1.1 第583セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p583`（HEAD `da2480d4`・full **9091 / 0 / 2 / 9093**・第581 を ARCHIVE へ）。着手＝§1.0 T7 残り⒜ staff＋tab で Lily# が段を増やす 12 score。
+
+★★ **⑴ ⒜ の「4 → 2,2」は F9 の帰結＝製品の欠陥ではない**（Lab `sessions/p583/`）: everybody goes の B3 1 段目（2 桁フレット 12・14 が並ぶ）を抜粋すると Lily# は 1 段を ∞（最小幅 ＞ 行幅）。列ごとの最小を LP と並べると理想は全列一致、最小は 1 桁の列 2.007（LP 既定 1.604・font-size 2 で 1.905・3 で 2.075）、2 桁の列 3.71（LP 2.28・3.51・3.85）＝**Lily# の数字は LP の font-size 2〜3 の大きさ**（§3 既決「フレット数字を LP より大きく描く」）。LP に font-size 2 を与えると LP 自身も 2,2 に割る（絵で確認・`eg-free-fs2.png`）。
+
+★★★ **⑵ 行の端（拍子・調の変わり目）を段の DP が値付けしていなかった＝移植**: 奏（かなで）の staff score は A2（4/4 × 8 ＋ 2/4）を LP 5|4・Lily# 4|5 に割る。Lily# の DP の目的関数では LP の割り方の方が安い（11.717 対 11.763）のに、状態（bar 41 まで 9 段）で LP の経路を捨てる＝第581 と同じ形。LP の完成形の列から各段の力を逆算（ばねの (Δx − ideal)/icmp の最頻値・Lily# の penalty `f − 2f⁴` を掛けて比較）すると、**違うのは 2/4 の小節で終わる段（次の段頭が 4/4 に戻る＝行末に courtesy 拍子）と 4/4 に戻った段頭だけ**（18–22: LP −0.2694／Lily# −0.2199・23–25: −0.0575／−0.0090・38–41: −0.0716／−0.0225・42–44: −0.1222／−0.0733）。原因は `KnuthPlassBreaker` が全段に**1 つの続き prefix**（小節 0 の調・拍子なし）を課し、**段頭に hoist される拍子・調の変更も、行末の courtesy も値付けしていなかった**（`SystemBreaker` のコメントが自認していた「per-line prefix が構造的な直し」）。直し: `MeasureSpringData` に `LineStartPrefixExtra`（`SolveLineStartPrefix` の幅 − 続き prefix）と `LineEndCourtesyWidth`（レイアウトの courtesy を `MultiStaffLayouter.LineEndCourtesyWidth` に切り出して共有）を持たせ、DP が段の両端で差し引く。後の Lily# の力は LP と 4 桁で一致（38–41 −0.0716・23–25 −0.0575）し A2 は 5|4。**結果**: 双子一致 422 → **423**（奏 staff・崩れ 0）／全木 942 冊で動いたのは **2 冊**（奏・`audit/lp-regression/lys/beam-auto.lys`＝終わりの 5 段が 1 小節ずつになり **LP の双子と 20 段すべて一致**）／snapshot 0／網 `LineEdgePricingTests` 2 本（毒 2 つがそれぞれ 1 本ずつ赤）／full **9093 / 0 / 2 / 9095**。⚠️ 近似: 行末の courtesy の調の clef は「終わる段の頭」ではなく直前の小節で読む（途中で clef が変わる段だけ違う）。⚠️ 残り: 奏 1 段目の力（LP −0.106・Lily# +0.026）は未読。
+
+## 以下は第582セッションの経緯
+
+### 1.1 第582セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き（/clear 後）。★ `-Start p582`（HEAD `5a9a54d0`・full **9090 / 0 / 2 / 9092**・第580 を ARCHIVE へ）。着手＝§1.0 T7 残り⒝ Universe の ♮ の文脈依存（`Accidental_placement`）。
+
+★★★ **⑴ 「文脈」は下向きの符尾だった＝移植して Universe が双子と一致**: 第581 の `accx.ly` の `\stemDown` は*持続する* override で、−1.0460 の音はちょうど下向き符尾の音だった。LP の `extract_heads_and_stems`（accidental-placement.cc:348-351）は**符頭に加えて符尾も**基準の skyline に入れる。下向きの符尾は X では符頭の左端（0〜0.13）に収まるが、**符頭より下へ伸び、skyline の距離は Y ごとに取る**ので、♮ の右下の縦棒が符尾に当たる。Lily# は「符尾は符頭の箱から左へ出ない」（X だけ正しい）として外していた。LP で測った（Lab `sessions/p582/stemy.ly`）: **♮ だけが 0.0117 動き、♭・♯・𝄫・𝄪 は同じ位置**。直し: `AccidentalStem`＝基準の skyline に 1 箱足す。`AccidentalPlacement` の全呼び手（単音は `CalculateSinglePosition(NoteItem)` が自分で建てる・和音 7 軒・`StaffAccidentalColumns` は声部ごと・装飾音）。符尾の遠い端は `MinStemLength`（届く範囲だけが距離に効く・`NOT PORTED:` で棚卸しに 1 件）。**結果**: 抜粋 `gh.lys` の 3 段 5.754816 → **5.879853（LP 5.8799）**／双子の段割れ一致 419 → **422／459**（Universe が 33 段で一致・既存の score で崩れたもの 0。残る +2 は ABC に増えた score）／全木 942 冊の掃きで**動いたのは 160 冊、段割れが変わったのは Universe だけ**（ほかは ≤0.05 の ♮ の移動）／台帳に点を 1 つ足した `accidental.single-natural-stem-down-to-notehead`（LP 1.046000・probe `NATD`・毒なら NAT の 1.034272 に戻る）／snapshot 2 枚（♮ が 0.01 左へ）。full **9091 / 0 / 2 / 9093**。
+
+## 以下は第581セッションの経緯
+
+### 1.1 第581セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p581`（HEAD `558631e5`・full **9090 / 0 / 2 / 9092**・第579 を ARCHIVE へ）。着手＝§1.0 T7 残り⒝ Universe の行の DP の探索。
+
+★★ **⑴ Universe の DP を表で追った（製品 0・一時計器は `KnuthPlassBreaker` に差して外した＝Lab `sessions/p581/Zz581DpProbe.cs.txt`）**: 行の DP は 1 回だけ走り、LP の 33 段の割れ方は Lily# 自身の力で目的関数（力²＋差²）60.76、Lily# の選んだ割れ方は 62.47＝**全体では LP の方が安いのに、DP は状態（小節 107 まで 31 段）で LP の経路（58.98）を Lily# の経路（58.62）に負けさせて捨てる**。状態ごとに最良の 1 本だけを残す作りは LP も同じ＝LP との違いはその状態に入る行の力。**分かれ目は bar 104〜107 を 1 段に押し込んだ行（Lily# の力 −2.068）**: 続きの段として同じ条件の 3 段の抜粋（`gh.lys`）で LP 5.8799・Lily# 5.7548（差 0.125＝この行の力が LP で約 −2.098 なら合う）。この小節は本位記号が多く、**LP は小節の文脈で ♮ を符頭から 0.0117 遠くに置く**（Universe の小節 3 で −1.046、同じ音形を単独で置くと −1.0343＝Lily# と同じ・弦番号／スラー／直前の音では再現せず・`\stemUp`／`\stemDown` の後の音でだけ再現＝`accx*.ly`）。⇒ 強く圧縮した行では最小幅の小さな差が力に効く＝**原因は臨時記号の横の位置の文脈依存（未特定）**。追うなら LP の `Accidental_placement` がその小節で何を見ているか（`accidental-placement.cc` の skyline に入る grob）を刷る。
+
+## 以下は第580セッションの経緯
+
+### 1.1 第580セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p580`（HEAD `cf0d64ed`・full **9089 / 0 / 2 / 9091**・第578 を ARCHIVE へ）。着手＝§1.0 ⒠ `set_column_rods` の届く rod。
+
+★★ **⑴ `set_column_rods` の届く rod を移植した**: `MeasureLayouter.AddAccidentalReachRods`＝臨時記号を持つ音から、同じ声部の 2〜4 列前の音へ `SeparationRodDistance`（LP の `set_distance`）の rod を区間の rod として足す。要らない rod は `SpringSolver.ApplyRods` が捨てる（`range_len(-∞)` で満たされていれば drop＝LP の届く判定 overhang の代わり）。LP で確かめた形（Lab `sessions/p580/reach3`）: `f,16 ges,, a,16` で LP の `f,` の列は `a,` へ 2.750200 の rod・Lily# 2.738472（−0.0117＝第579 と同じ斜面の残差）。網 `AccidentalReachRodTests`（隣だけにする毒で赤）。**LP でも効く（2 本のばねの合計を上回る）形は作れず、掃き 942 冊で動いた本 0・snapshot 0**＝重なりを防ぐ安全網。⚠️ 近似: 小節をまたぐ届き（LP は行全体・小節線の列も）と他の声部への届き（LP の paper column は全声部）は未移植。棚卸し: 表は行番号の移動だけ。full **9090 / 0 / 2 / 9092**（Lab `sessions/p580/run3.trx`）。
+
+## 以下は第579セッションの経緯
+
+### 1.1 第579セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p579`（HEAD `d3be88ed`・full **9088 / 0 / 2 / 9090**・第577 を ARCHIVE へ）。着手＝第578 ⑴ の臨時記号の spacing（最小幅から外す＋`set_column_rods` の届く rod）。
+
+★★★ **⑴ 読み直しで方針が変わった**: LP の wish（`Spacing_interface::skylines`・`spacing-interface.cc:85-89`）も右の列の `conditional_skyline` を**含める**＝第578 の「最小幅から臨時記号を外す」は誤読（`CreateLeftSkyline` の保留コメントも同じ誤り＝書き直した）。本当の差は**太らせ方**: LP は `horizontal-skylines` を `calc_skylines` で上下に太らせて保存し、臨時記号は `conditional_skyline` の**素の箱**で後から足す。Lily# は臨時記号も一緒に太らせていた（計器 Lab `sessions/p579/Zz579AccProbe.cs.txt` で skyline の建物を刷った: `c,` の符頭の太り −0.345 と ♮ の太り −0.2 が重なっていた・素の隙間 0.455）。
+★★★ **⑵ 移植**: `ItemSkylineFactory.Build` が条件つきの部品（臨時記号・アルペジオ）を太らせずに作って重ねる（wish と rod の両方）。Universe の `c, → a,` は 2.5635 → **2.4135**（LP 2.425200・残差 −0.0117＝太った符頭の斜面と素の ♮）。網 `AccidentalSpacingPaddingTests`（±0.015・毒で赤）。snapshot 2 枚（accidentals・chordnames）・台帳 0 点・掃き 942 冊中 42 冊。LP の 33 段の割れ方を強制した値付けは 29.525 → **28.619**（LP 28.682）＝値付けのずれはほぼ解消。**双子基準の T7 は 419 のまま**＝制約なしの行の DP が 33 段で LP の割れ方を見つけず 34 段（28.875）を選ぶ（33 段の候補は 31.89＝bar 17〜20 を 2,2 にしたまま）＝残りは DP の探索（力の差² 込みの目的関数で LP と倒れ方が違う）。⒝ の届く rod は未移植（⚠️ 危ない側＝§1.0 ⒠）。full **9089 / 0 / 2 / 9091**（Lab `sessions/p579/run4.trx`）。棚卸し: `APPROXIMATIONS.md` は行番号の移動だけ。CHANGELOG 記入。
+
 ## 以下は第578セッションの経緯
 
 ### 1.1 第578セッション（2026-09-25・YT-DELL2）

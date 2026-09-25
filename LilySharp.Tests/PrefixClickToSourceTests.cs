@@ -41,7 +41,7 @@ namespace LilySharp.Tests;
 public class PrefixClickToSourceTests
 {
     private static string Render(string source) =>
-        SvgGenerator.Generate(SyntaxTree.Parse(source), new SvgRenderOptions { EmbedFont = false });
+        SvgGenerator.Generate(TestPaper.ParseAtIndentZero(source), new SvgRenderOptions { EmbedFont = false });
 
 
     /// <summary>How many SYSTEM-PREFIX glyphs carry an offset inside <paramref name="token"/>.

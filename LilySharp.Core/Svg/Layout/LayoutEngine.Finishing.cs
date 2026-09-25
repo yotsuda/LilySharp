@@ -585,44 +585,26 @@ internal sealed partial class LayoutEngine
     }
 
     /// <summary>
-    /// The indent a score with instrument names gets: LilyPond's paper default, or 0 when
-    /// the score carries no name at all.
+    /// The first system's indent — the paper's (<see cref="LayoutOptions.Indent"/>, LilyPond's
+    /// 15mm unless the book writes one). The ONE home the layout sets the first system with
+    /// and the line breaker prices it with.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/paper-defaults-init.ly — <c>indent = 15\mm</c>. The value is
-    /// LilyPond's own reading of it in staff spaces, taken from
-    /// <c>(ly:output-def-lookup layout 'indent)</c> in
-    /// audit/lp-geometry/probes/instrument-name-x.ly rather than converted here, because the
-    /// millimetre-to-staff-space conversion is LilyPond's and reproducing it is one more thing
-    /// to get subtly wrong (a derivation through 25.4/72.27 lands 3e-5 away).
-    /// <para>
     /// ⚠️ IT IS NOT SIZED FROM THE NAMES, and until 2026-08-04 it was:
     /// <c>max (8.5, estimatedWidth + 1.5)</c> where <c>estimatedWidth</c> was a flat half em
-    /// per Latin character and a full em per CJK one. That made the name's width a quantity
-    /// with TWO spellings — this estimate, and the real metrics the text was drawn with —
-    /// and the estimate erred both ways (WWWWWWW estimated 10.5 against 20.55 real; iiiiiii
-    /// 10.5 against 6.69), so ordinary names were drawn over the brace. LilyPond's indent is
-    /// a paper constant and a name too wide for it simply overflows to the LEFT
-    /// (SharedRenderer.InstrumentNameRightEdge), which is the behaviour this restores.
-    /// </para>
+    /// per Latin character and a full em per CJK one — the estimate erred both ways (WWWWWWW
+    /// estimated 10.5 against 20.55 real; iiiiiii 10.5 against 6.69), so ordinary names were
+    /// drawn over the brace. LilyPond's indent is a paper constant and a name too wide for it
+    /// simply overflows to the LEFT (SharedRenderer.InstrumentNameRightEdge).
     /// <para>
-    /// ⚠️ A SCORE WITH NO NAMES STILL GETS 0, WHICH IS NOT LILYPOND. LilyPond indents the
-    /// first system by 15\mm whether or not anything is written in it. Keeping 0 is Lily#'s
-    /// own choice and is left alone here on purpose: changing it moves every book in the
-    /// corpus rather than the ones this island is about. Not measured against LilyPond.
+    /// ⚠️ NOR BY WHETHER THERE ARE NAMES. Until 2026-09-25 a nameless score got 0 — Lily#'s own
+    /// choice, a different first line from LilyPond's on every such book — and the line breaker
+    /// read the paper's value alone while the layout added the names' indent, so a named
+    /// score's first line was priced 8.54 wider than it was set (Lab sessions/p584). Owner's
+    /// decision, session 586: the first system is indented as LilyPond indents it.
     /// </para>
     /// </remarks>
-    private static double CalculateIndentFromInstrumentNames(MultiStaffScore score)
-    {
-        const double DefaultIndent = 8.535826771653543;
-
-        foreach (var group in score.StaffGroups)
-            foreach (var staff in group.Staves)
-                if (!string.IsNullOrEmpty(staff.InstrumentName))
-                    return DefaultIndent;
-
-        return 0;
-    }
+    internal static double EffectiveIndent(LayoutOptions options) => options.Indent;
 
     internal static string ClefToString(ClefType clef) => clef switch
     {

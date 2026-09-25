@@ -63,14 +63,14 @@ public class CombinedStaffTests
         """ + "\nscore main { " + render + " }\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
-        SyntaxTree.Parse(source),
+        TestPaper.ParseAtIndentZero(source),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>Everything the compiler says about this source — PARSE diagnostics as well
     /// as semantic ones, since the bad-member rule is the parser's.</summary>
     private static IReadOnlyList<Diagnostic> Diagnose(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var all = new List<Diagnostic>(tree.Diagnostics);
         foreach (var v in SemanticValidation.CreateAll())
         {
@@ -254,7 +254,7 @@ public class CombinedStaffTests
     /// <summary>The multi-measure-rest runs of a combined staff, as the engraver groups them.</summary>
     private static ImmutableArray<MmrRun> CombinedRuns(string parts, string render)
     {
-        var tree = SyntaxTree.Parse(Defaults + parts + "\nform main { ~A }\nscore main { " + render + " }\n");
+        var tree = TestPaper.ParseAtIndentZero(Defaults + parts + "\nform main { ~A }\nscore main { " + render + " }\n");
         var spec = RenderSpecParser.FindFirst(tree);
         return MultiMeasureRestEngraver.FindRuns(new MeasureCollector().CollectMultiStaff(tree, spec!));
     }

@@ -58,7 +58,7 @@ public class PartCombineSilenceTests
         """ + "\n";
 
     private static string Svg(string source) => SvgGenerator.Generate(
-        SyntaxTree.Parse(source),
+        TestPaper.ParseAtIndentZero(source),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>

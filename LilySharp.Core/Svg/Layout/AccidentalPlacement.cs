@@ -45,6 +45,78 @@ public readonly record struct AccidentalLayout(
 );
 
 /// <summary>
+/// A stem as the accidental placement sees it: one more box in the heads' reference skyline,
+/// in the same frame as the heads (staff spaces, Y up from the middle line, X from the note
+/// column). <see cref="Exists"/> is false for a stemless head (a whole note, a breve) and for
+/// "no stem given".
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/accidental-placement.cc:348-351 extract_heads_and_stems — "Now that we
+///   have all of the heads, grab all of the stems"; :375-385 build_heads_skyline boxes each at
+///   its X extent and its pure Y extent. An invisible stem's X extent is empty
+///   (lily/stem.cc Stem::width), so a stemless head adds nothing.
+/// <para>
+/// ⚠️ A DOWN STEM IS NOT INSIDE THE HEAD'S BOX. Its X extent starts at the head's left edge,
+/// but it reaches below the head, and the skyline distance is taken over Y: a natural's
+/// lower-right stroke, which the head's own box does not meet, meets the stem. MEASURED
+/// (LilyPond 2.26.0, Lab sessions/p582/stemy.ly): a natural on a stem-down quarter is
+/// 1.0460 left of the column, on a stem-up one 1.0343; a flat, sharp, double flat and double
+/// sharp stand at the same X either way.
+/// </para>
+/// <para>
+/// NOT PORTED: the stem's real end (its pure height). The far end is taken at
+/// <see cref="EngravingDefaults.MinStemLength"/> from the outermost head instead. Only the stretch within an accidental's reach
+/// of the heads (its half height plus the 0.1 horizon padding) can enter the distance, and
+/// every stem reaches that far; the stem's near end is inside the head's box.
+/// </para>
+/// </remarks>
+internal readonly record struct AccidentalStem(
+    bool Exists, double YBottom, double YTop, double XLeft, double XRight)
+{
+    /// <summary>
+    /// The stem of a head column whose heads run from <paramref name="lowestPosition"/> to
+    /// <paramref name="highestPosition"/> (staff positions, half spaces), standing
+    /// <paramref name="xOffset"/> from the column, read from <paramref name="headFont"/>
+    /// (null is the plain 20).
+    /// </summary>
+    public static AccidentalStem Of(
+        bool up, int noteValue, NoteheadStyle style, int lowestPosition, int highestPosition,
+        double xOffset = 0, GlyphMetrics.DesignMetrics? headFont = null)
+    {
+        if (noteValue < 2)
+            return default;
+        double x = xOffset + LayoutUtilities.StemAttachX(up, noteValue, style, headFont);
+        double half = EngravingDefaults.StemThickness / 2;
+        double length = EngravingDefaults.MinStemLength * (headFont?.Magnification ?? 1.0);
+        return up
+            ? new(true, lowestPosition / 2.0, highestPosition / 2.0 + length, x - half, x + half)
+            : new(true, lowestPosition / 2.0 - length, highestPosition / 2.0, x - half, x + half);
+    }
+
+    /// <summary>The stem of a chord whose heads are <paramref name="notes"/>.</summary>
+    public static AccidentalStem Of(
+        bool up, int noteValue, NoteheadStyle style, IReadOnlyList<ChordNoteInfo> notes,
+        double xOffset = 0, GlyphMetrics.DesignMetrics? headFont = null)
+    {
+        if (notes.Count == 0)
+            return default;
+        int low = int.MaxValue, high = int.MinValue;
+        for (int i = 0; i < notes.Count; i++)
+        {
+            low = Math.Min(low, notes[i].StaffPosition);
+            high = Math.Max(high, notes[i].StaffPosition);
+        }
+        return Of(up, noteValue, style, low, high, xOffset, headFont);
+    }
+
+    /// <summary>A chord's own stem, in the direction <paramref name="up"/> it is drawn.</summary>
+    public static AccidentalStem Of(
+        ChordItem chord, bool up, GlyphMetrics.DesignMetrics? headFont = null) =>
+        Of(up, GlyphMetrics.NoteValueOf(chord.BaseDuration), chord.Notehead, chord.Notes,
+            0, headFont);
+}
+
+/// <summary>
 /// Parameters for accidental placement. All dimensions in staff spaces.
 /// </summary>
 /// <remarks>
@@ -147,10 +219,15 @@ internal sealed class AccidentalPlacement
     /// <remarks>⚠️ THE PADDINGS ARE NOT PART OF EITHER FONT — see
     /// <see cref="AccidentalPlacementParameters"/>. A smaller accidental sits at the same 0.35
     /// from its head as a full-size one.</remarks>
+    /// <param name="stem">The column's stem (<see cref="AccidentalStem"/>), which joins the
+    /// heads in the reference skyline. Default is no stem.</param>
+    /// <param name="stems">More stems — a staff column holding several voices has one each.</param>
     public ImmutableArray<AccidentalLayout> CalculatePositions(
         IReadOnlyList<ChordNoteInfo> notes, IReadOnlyList<double>? headOffsets = null,
         GlyphMetrics.DesignMetrics? accidentalFont = null,
-        GlyphMetrics.DesignMetrics? headFont = null)
+        GlyphMetrics.DesignMetrics? headFont = null,
+        AccidentalStem stem = default,
+        IReadOnlyList<AccidentalStem>? stems = null)
     {
         // Counted before it is filled: the list's size is the number of accidental-
         // carrying notes, which one pass over the chord already knows. The count also
@@ -173,7 +250,8 @@ internal sealed class AccidentalPlacement
         // (session 465's census, the first to see a container whose type argument is a
         // tuple); the packer now walks `notes` and skips the bare ones, in the same order.
         return CalculateMultipleAccidentals(accidentalCount, notes, headOffsets,
-            accidentalFont ?? GlyphMetrics.Design20, headFont ?? GlyphMetrics.Design20);
+            accidentalFont ?? GlyphMetrics.Design20, headFont ?? GlyphMetrics.Design20,
+            stem, stems);
     }
 
     /// <summary>
@@ -183,7 +261,9 @@ internal sealed class AccidentalPlacement
         NoteItem note, GlyphMetrics.DesignMetrics? accidentalFont = null,
         GlyphMetrics.DesignMetrics? headFont = null)
         => CalculateSinglePosition(note.StaffPosition, note.Accidental, note.IsCourtesy,
-            accidentalFont, headFont);
+            accidentalFont, headFont,
+            AccidentalStem.Of(note.StemUp, GlyphMetrics.NoteValueOf(note.BaseDuration),
+                note.Notehead, note.StaffPosition, note.StaffPosition, 0, headFont));
 
     /// <summary>
     /// The placement of ONE note's accidental (a full <see cref="NoteItem"/> or a grace
@@ -197,14 +277,15 @@ internal sealed class AccidentalPlacement
     public AccidentalLayout? CalculateSinglePosition(
         int staffPosition, string? accidental, bool isCourtesy,
         GlyphMetrics.DesignMetrics? accidentalFont = null,
-        GlyphMetrics.DesignMetrics? headFont = null)
+        GlyphMetrics.DesignMetrics? headFont = null,
+        AccidentalStem stem = default)
     {
         if (string.IsNullOrEmpty(accidental))
             return null;
         var note = new ChordNoteInfo(
             staffPosition, accidental, NeedsLedgerLines: false, IsCourtesy: isCourtesy);
         var layouts = CalculatePositions(
-            new[] { note }, headOffsets: null, accidentalFont, headFont);
+            new[] { note }, headOffsets: null, accidentalFont, headFont, stem);
         return layouts.Length > 0 ? layouts[0] : (AccidentalLayout?)null;
     }
 
@@ -353,7 +434,9 @@ internal sealed class AccidentalPlacement
         IReadOnlyList<ChordNoteInfo> allNotes,
         IReadOnlyList<double>? headOffsets,
         GlyphMetrics.DesignMetrics accidentalFont,
-        GlyphMetrics.DesignMetrics headFont)
+        GlyphMetrics.DesignMetrics headFont,
+        AccidentalStem stem,
+        IReadOnlyList<AccidentalStem>? stems)
     {
         // Lent, and given back cleared before the return (see t_placementScratch).
         var scratch = t_placementScratch ?? new PlacementScratch();
@@ -410,11 +493,17 @@ internal sealed class AccidentalPlacement
         // LILYPOND-REF: accidental-placement.cc:375-385 build_heads_skyline — the reference
         // LEFT skyline is built from ALL noteheads of the column (not only the
         // accidental-carrying ones), at their real X extents; heads reversed to the LEFT of a
-        // down-stem (seconds) shift their box. (LilyPond also adds the stems; for the LEFT
-        // skyline they never protrude beyond the head boxes, so they are omitted here.)
-        // Exactly one box per note of the column — the loop's own trip count.
+        // down-stem (seconds) shift their box. The stems join them (AccidentalStem): a down
+        // stem reaches below the heads, where a natural's lower-right stroke meets it.
+        // One box per note of the column, then one per stem.
         var headBoxes = scratch.HeadBoxes;
-        headBoxes.EnsureCapacity(allNotes.Count);
+        headBoxes.EnsureCapacity(allNotes.Count + 1 + (stems?.Count ?? 0));
+        if (stem.Exists)
+            headBoxes.Add((stem.YBottom, stem.YTop, stem.XLeft, stem.XRight));
+        if (stems is not null)
+            for (int i = 0; i < stems.Count; i++)
+                if (stems[i].Exists)
+                    headBoxes.Add((stems[i].YBottom, stems[i].YTop, stems[i].XLeft, stems[i].XRight));
         for (int i = 0; i < allNotes.Count; i++)
         {
             double headOffset = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;

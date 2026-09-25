@@ -8,6 +8,26 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **The first system is indented as LilyPond indents it — 15 mm — whether or not a staff
+  names an instrument.** Lily# used to indent only a score whose staves carried names and
+  set every other first system flush left, so every nameless book's first line differed from
+  LilyPond's. A `paper { indent … }` is honoured as written (0 included), and `size` scales
+  the indent with the side margins, as LilyPond's `set-paper-size` does. Every nameless book
+  moves its first system right by 8.54 staff spaces (213 snapshots; no snapshot changes its
+  number of systems).
+
+- **A natural clears a down stem.** LilyPond places accidentals against the note heads AND
+  their stems; a down stem reaches below its head, where a natural's lower-right stroke meets
+  it, so a natural on a stem-down note stands 0.0117 staff space further left. Flats, sharps
+  and the doubles are unaffected. Among the LilyPond twins, *Universe* now breaks into the
+  same 33 systems.
+
+- **Line breaking prices a line's edges.** A line that opens on a meter or key change
+  engraves it in its prefix, and the line before it prints the courtesy signatures after its
+  last bar line; a score's first line is indented for its instrument names. The line breaker
+  now reserves all three, as the layout does, so it no longer packs a line the layout must
+  squeeze harder than it priced.
+
 - **A tab staff's notes are spaced as LilyPond spaces them.** LilyPond takes one spacing
   wish per voice and averages them, a TabVoice's included, and a tab voice's wish reads its
   fret digit where a staff's reads a notehead — with no stem correction when the tab prints

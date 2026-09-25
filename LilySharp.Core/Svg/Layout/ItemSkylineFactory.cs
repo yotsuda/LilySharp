@@ -1227,7 +1227,8 @@ internal static class ItemSkylineFactory
         }
 
         var placement = new AccidentalPlacement();
-        foreach (var layout in placement.CalculatePositions(chord.Notes, headOffsets))
+        foreach (var layout in placement.CalculatePositions(chord.Notes, headOffsets,
+                     stem: AccidentalStem.Of(chord, chord.StemUp)))
             yield return (layout.Accidental, layout.StaffPosition, layout.XOffset);
     }
 

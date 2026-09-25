@@ -78,8 +78,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ✅ **T7 の staff＋tab の wish の merge は第576 が移植した**（§1.1 第576 ⑵）＝双子基準で一致 413 → 419。**残り（双子と段割れが違う 24 score）**: ⒜ staff＋tab で Lily# が段を増やす 12（Amanda・Butterfly・全力少年・星になれたら…＝別の要因。2 桁フレットの rod は F9 の帰結＝第370 ⑼⒜）／⒝ **Universe の staff＝行の DP の探索**（第579: 臨時記号を直すと LP の割れ方の値付けは LP と 0.063 差まで一致したが、制約なしの DP が 33 段でその割れ方を見つけず 34 段を選ぶ＝Lab `sessions/p579/`）／⒠ ✅ **`set_column_rods` の届く rod は第580 が移植した**（臨時記号の列から同じ声部の 2〜4 列前へ・掃き 942 冊で効いた本 0＝安全網。小節をまたぐ届きと他の声部への届きは未移植）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。⚠️ 小節線へのばねの残差 −0.020（staff＋tab・`TabSpacingWishTests` が ±0.03 で持つ）と、和音の `first_head` の近似（最も桁の多い数字）は未解明のまま
-- ★★ **Universe の staff score＝圧縮行の値段**（F12 の族の新しい実例・Lab `sessions/p575/twin/universe/`）: 抜粋では LP も Lily# も bar 17〜20 を `2,2` に割る（局所の幅は合う）が、全曲では LP が 33 段（28.68）、Lily# が 37 段（29.08）を選ぶ。**Lily# の 33 段候補は 30.53＝bar 17〜32 の 4 小節の圧縮行を LP より高く値付けている**。次は 4 小節 1 行の力を両側で測る（第323 の `compress_line`／`Simple_spacer` の型）
+- ✅ **T7 の staff＋tab の wish の merge は第576 が移植した**（§1.1 第576 ⑵）＝双子基準で一致 413 → 419（第582 で 422／459＝Universe ＋ ABC に増えた 2 score・第583 で 423）。**残り（双子と段割れが違う 22 score）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly・everybody goes・全力少年・星になれたら…）＝**第583 が F9 の帰結と確定**（everybody goes の 4→2,2 は LP も `TabNoteHead.font-size = 2` で 2,2 に割る・Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）＝**双子の既定の数字と比べる限り残る差**／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（§1.1 第587 ⑵・LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒤ ✅ **That's The Way の tab score は第569 のユーザー決定の帰結**（§1.1 第587 ⑴）／⒡ **小節の合計が合わない score（Disco Inferno・More Than A Woman・Honesty…＝上の 22 の外）は計器**（LP の小節番号の数え方）／⒢ ✅ **奏 の 1 段目の力は第584 が閉じた**（楽器名の indent を段の DP が値付けしていなかった＝§1.1 第584）／⒝ ✅ **Universe は第582 が閉じた**（♮ が下向きの符尾を避ける＝§1.1 第582）／⒠ ✅ **`set_column_rods` の届く rod は第580 が移植した**（臨時記号の列から同じ声部の 2〜4 列前へ・掃き 942 冊で効いた本 0＝安全網。小節をまたぐ届きと他の声部への届きは未移植）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。⚠️ 小節線へのばねの残差 −0.020（staff＋tab・`TabSpacingWishTests` が ±0.03 で持つ）と、和音の `first_head` の近似（最も桁の多い数字）は未解明のまま
 - ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝未読。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「毒入りのビルドを私が作ってしまったのかもしれない。一旦この件は忘れて」・第477）**。第477 は 4 通り（HEAD 全描画・1 文字ずつの増分・`2c9bd51a`・プレビューと同じ 0.7.0）すべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定「私が不注意だった。今後は私が注意する」）＝毒の最中のビルドはユーザー側で避ける。第476 の毒 1〜3 は `StaffItemsAt`＝小節頭のばねの入力を汚す形で、症状と合っていた
 - ★ **⒭⁸ red の島＝第520 が token 側（1,124 → 124）、第521 が node 側（1,128 → 552・−43,598 B／打鍵）を閉じた。残り node 552／打鍵（約 31 KB・2.4%）＝実仕事**（地図は Lab `sessions/p521/steps-after-sampled.txt`）: 消費点 `PeekMarkers`→`ProcessMusicNode(SyntaxNode)` 341・post-event を node で読む `PhrasingSlurMarksOn` 90・`ProcessSection`／`ProcessRepeatExpression` の直接の Note 50・`CollectResumePlanner.WindowTouchesPhraseOrVariable` の窓の red walk 約 20。**消すなら `ProcessMusicNode` が `GreenSite` を受ける設計（item の生成が型で dispatch する＝土台）**。⚠️ 賞金＝「その walk しか読まない red の数」× 56 B ＋ 素の親の `_children` 配列（第521 で会計が閉じた）
@@ -148,20 +147,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第580セッション（2026-09-25・YT-DELL2）
+### 1.1 第587セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p580`（HEAD `cf0d64ed`・full **9089 / 0 / 2 / 9091**・第578 を ARCHIVE へ）。着手＝§1.0 ⒠ `set_column_rods` の届く rod。
+同じ会話の続き。★ `-Start p587`（HEAD `fe906f97`・full **9097 / 0 / 2 / 9099**・第585 を ARCHIVE へ）。着手＝§1.0 T7 ⒤ That's The Way の tab score の percent 反復（LP 2,6・Lily# 8）。
 
-★★ **⑴ `set_column_rods` の届く rod を移植した**: `MeasureLayouter.AddAccidentalReachRods`＝臨時記号を持つ音から、同じ声部の 2〜4 列前の音へ `SeparationRodDistance`（LP の `set_distance`）の rod を区間の rod として足す。要らない rod は `SpringSolver.ApplyRods` が捨てる（`range_len(-∞)` で満たされていれば drop＝LP の届く判定 overhang の代わり）。LP で確かめた形（Lab `sessions/p580/reach3`）: `f,16 ges,, a,16` で LP の `f,` の列は `a,` へ 2.750200 の rod・Lily# 2.738472（−0.0117＝第579 と同じ斜面の残差）。網 `AccidentalReachRodTests`（隣だけにする毒で赤）。**LP でも効く（2 本のばねの合計を上回る）形は作れず、掃き 942 冊で動いた本 0・snapshot 0**＝重なりを防ぐ安全網。⚠️ 近似: 小節をまたぐ届き（LP は行全体・小節線の列も）と他の声部への届き（LP の paper column は全声部）は未移植。棚卸し: 表は行番号の移動だけ。full **9090 / 0 / 2 / 9092**（Lab `sessions/p580/run3.trx`）。
+★★ **⑴ That's The Way の tab score の差は第569 のユーザー決定の帰結＝製品の欠陥ではない**（Lab `sessions/p587/`）: 抜粋では LP も Lily# も 4,4,8,4,4＝段割れの差は全曲の**頁数の選択**（LP 24 段 3 頁・Lily# 21 段 2 頁）。LP の段数ループは下る途中で「頁が減って平均の頁の力が正」なら打ち切る（`optimal-page-breaking.cc:181-189`）＝22 段で止まり 21 段を試さない。Lily# の 22 段の頁の力は −0.003／0.000（平均が負）で打ち切らず、21 段（7.525）が 24 段（8.184）より安い。頁の力の差は系の高さ: 12 段のうち percent 反復 B を持つ 3 段だけ Lily# が 0.56 高い（下に 2.49・LP 1.93）＝**tab の 8 分の連桁が LP より 0.56 外**（抜粋 1 小節 `b9*.lys`・4 弦でも同じ）＝**台帳 `beam.quant.tab.flat-*` の宣言済み乖離（第569・ユーザー決定: tab の 8 分の組は 16 分の理想長 3.5）**。
 
-## 以下は第579セッションの経緯
+★ **⑵ カムフラージュ 1 段目（LP 6,7・Lily# 7,6）を値付けした＝未解決**: 最初の 13 小節は `repeat percent 3 { r1 } repeat percent 10 { r1 }`。LP の完成形の列から: 1–6 +0.0493（Lily# 0.0493＝一致）・7–13 −0.133（Lily# −0.139）・次の 14–18 0.4451（Lily# 0.4498）。Lily# の DP は 7,6 を 0.155 安いと値付けし、LP の力で置き換えても 7,6 が約 0.14 安い＝**LP が 6,7 を選ぶ理由は 1–7／8–13 の LP の力（未測）か、percent 反復の内側での割り方の扱い**。測るには LP を percent 反復の内側で割らせる必要がある（反復を割ると小節の中身が変わる）＝保留。計器（一時 hook `ZZ587`＝外した）は Lab `sessions/p587/Zz587DpProbe.cs.txt`。
 
-### 1.1 第579セッション（2026-09-25・YT-DELL2）
+## 以下は第586セッションの経緯
 
-同じ会話の続き。★ `-Start p579`（HEAD `d3be88ed`・full **9088 / 0 / 2 / 9090**・第577 を ARCHIVE へ）。着手＝第578 ⑴ の臨時記号の spacing（最小幅から外す＋`set_column_rods` の届く rod）。
+### 1.1 第586セッション（2026-09-25・YT-DELL2）
 
-★★★ **⑴ 読み直しで方針が変わった**: LP の wish（`Spacing_interface::skylines`・`spacing-interface.cc:85-89`）も右の列の `conditional_skyline` を**含める**＝第578 の「最小幅から臨時記号を外す」は誤読（`CreateLeftSkyline` の保留コメントも同じ誤り＝書き直した）。本当の差は**太らせ方**: LP は `horizontal-skylines` を `calc_skylines` で上下に太らせて保存し、臨時記号は `conditional_skyline` の**素の箱**で後から足す。Lily# は臨時記号も一緒に太らせていた（計器 Lab `sessions/p579/Zz579AccProbe.cs.txt` で skyline の建物を刷った: `c,` の符頭の太り −0.345 と ♮ の太り −0.2 が重なっていた・素の隙間 0.455）。
-★★★ **⑵ 移植**: `ItemSkylineFactory.Build` が条件つきの部品（臨時記号・アルペジオ）を太らせずに作って重ねる（wish と rod の両方）。Universe の `c, → a,` は 2.5635 → **2.4135**（LP 2.425200・残差 −0.0117＝太った符頭の斜面と素の ♮）。網 `AccidentalSpacingPaddingTests`（±0.015・毒で赤）。snapshot 2 枚（accidentals・chordnames）・台帳 0 点・掃き 942 冊中 42 冊。LP の 33 段の割れ方を強制した値付けは 29.525 → **28.619**（LP 28.682）＝値付けのずれはほぼ解消。**双子基準の T7 は 419 のまま**＝制約なしの行の DP が 33 段で LP の割れ方を見つけず 34 段（28.875）を選ぶ（33 段の候補は 31.89＝bar 17〜20 を 2,2 にしたまま）＝残りは DP の探索（力の差² 込みの目的関数で LP と倒れ方が違う）。⒝ の届く rod は未移植（⚠️ 危ない側＝§1.0 ⒠）。full **9089 / 0 / 2 / 9091**（Lab `sessions/p579/run4.trx`）。棚卸し: `APPROXIMATIONS.md` は行番号の移動だけ。CHANGELOG 記入。
+同じ会話の続き。★ `-Start p586`（HEAD `87b65ebe`・full **9097 / 0 / 2 / 9099**・第584 を ARCHIVE へ）。着手＝§1.0 T7 ⒞ tab だけの score の段割れ（双子と違う 5）。
+
+★★★ **⑴ ユーザー決定「楽器名の無い score の 1 段目の字下げを LP と合わせて」＝移植**（§3 に行を足した）: `LayoutOptions.Indent` の既定を LP の 15mm（`LilyPondDefaultIndent` 8.535827）にし、楽器名で決める `CalculateIndentFromInstrumentNames` を消した（`EffectiveIndent(options)` は紙の値そのもの）。紙の `indent` は 0 も負もそのまま（旧規則は `> 0` でなければ無視していた）。`size` は LP の `set-paper-dimensions` と同じく indent も側余白と同じ比で拡縮（b5＝13mm）。双子は常に `indent = 15\mm`。**網の側**: 台帳（886 点）の LP probe はほぼ全部 `\layout { indent = 0 }` で測ってある＝`RenderedGeometry.ProbePaper` が名前の無い probe を indent 0 で描く（13 点が「LP から離れた」と赤になったのはこれ）。単体テスト 35 ファイルも同じ事情＝`TestPaper.ParseAtIndentZero`／`SvgFromRenderSpec` が本に `paper { indent 0 }` を足す（既存の `paper` ブロックがあればそこへ入れる＝2 つ目のブロックは 1 つ目を置き換えるため）。snapshot 213 枚（1 段目が 8.54 右へ・段数の変わった snapshot 0）＋programmatic 2 枚。**双子**: 一致 423 → 422。1 段目が両側とも同じく動いた score が 9、**崩れたのはカムフラージュ（staff＋tab）の 1 段目 7,6 → LP 6,7**（得点 LP 4.61・Lily# 4.75・両側 23 段＝僅差・未読）。full **9097 / 0 / 2 / 9099**。⚠️ 中断した ⒞: That's The Way の tab score は percent 反復 2 小節 ×4 を LP 2,6・Lily# 8（staff score は一致・抜粋 `sessions/p586/tw.lys` で再現）＝未読。
 
 ## 2. 開いている作業
 
@@ -2473,6 +2473,7 @@ system の最後の spaceable 譜の下に立つ行は **verse ごとに鎖の�
 | ★ **占有（不透明な箱）ではなく除去（インクを切る）で重なりを解く**（第180 で再確認・元は `digitGaps` の実装時） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
 | ★ **タブの弦は小節の中で継承する。明示 `\N` も継承する**（ユーザー判断・2026-08-16 明示） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
 | ★ **タブのフレット数字を LP より大きく描くのは意図的乖離**（ユーザー判断・2026-07-24 明示） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-16 に落とした） |
+| ★★ **1 段目の indent は LP の 15mm＝楽器名の有無にかかわらず**（2026-09-25・第586・**ユーザー決定**「楽器名の無い score の 1 段目の字下げを LP と合わせて」） | `LayoutOptions.Indent` の既定が `LilyPondDefaultIndent`（8.535827）。紙の `indent`（0 も）はそのまま、`size` は側余白と同じく拡縮（`scm/paper.scm` の scalable-values）。双子は常に `indent = 15\mm`。**LP 実測の網は測った紙を言う**: 台帳は `RenderedGeometry.ProbePaper`（名前の無い probe は indent 0＝probe の `.ly` と同じ）、単体テストは `TestPaper`（`paper { indent 0 }` を本に足す） |
 
 ---
 

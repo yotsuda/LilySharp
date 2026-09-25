@@ -207,7 +207,7 @@ public sealed class TabTimeSignatureTests
 
     private static Staff CollectStaff(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
         return new MeasureCollector().CollectMultiStaff(tree, spec)
@@ -216,11 +216,11 @@ public sealed class TabTimeSignatureTests
 
     private static GlyphRecorder Render(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
         var score = new MeasureCollector().CollectMultiStaff(tree, spec);
-        var layout = new LayoutEngine().Layout(score);
+        var layout = new LayoutEngine(TestPaper.IndentZero).Layout(score);
         var rec = new GlyphRecorder();
         SharedRenderer.RenderTo(score, layout, rec);
         return rec;

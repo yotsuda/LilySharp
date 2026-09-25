@@ -110,7 +110,7 @@ public sealed class SharedRendererKeySignatureTests
 
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree);
         MultiStaffScore score;
@@ -125,7 +125,7 @@ public sealed class SharedRendererKeySignatureTests
                 voice = single.Staff.VoiceName;
             score = MultiStaffScore.FromScore(new MeasureCollector().Collect(tree, voice));
         }
-        return (score, new LayoutEngine().Layout(score));
+        return (score, new LayoutEngine(TestPaper.IndentZero).Layout(score));
     }
 
     private sealed class GlyphRecorder : IDocumentContext, IDrawingContext

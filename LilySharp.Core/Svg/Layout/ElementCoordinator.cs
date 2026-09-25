@@ -926,7 +926,8 @@ internal sealed class ElementCoordinator
         var offsets = ChordHeadPositioning.CalculateOffsets(
             chord.Notes, chord.StemUp,
             LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration));
-        foreach (var al in BeamAccidentalColumn.CalculatePositions(chord.Notes, offsets))
+        foreach (var al in BeamAccidentalColumn.CalculatePositions(chord.Notes, offsets,
+                     stem: AccidentalStem.Of(chord, chord.StemUp)))
             yield return al;
     }
 
@@ -1987,7 +1988,8 @@ internal sealed class ElementCoordinator
             {
                 ChordItem ch when ch.HasPackedAccidentals
                     => ChordAccidentalLayouts(ch),
-                ChordItem ch => placement.CalculatePositions(ch.Notes, offsets.ToArray()),
+                ChordItem ch => placement.CalculatePositions(ch.Notes, offsets.ToArray(),
+                    stem: AccidentalStem.Of(ch, stemUp)),
                 // Packed with the rest of its staff column, in the column's frame — which is
                 // the frame columnX names below (Collector.StaffAccidentalColumns).
                 NoteItem pn when pn is { Accidental: { } acc, AccidentalX: { } px }

@@ -86,7 +86,7 @@ public sealed class SystemCountPageScoreTests
 
     private static MultiStaffScore ScoreOf(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
         return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
     }

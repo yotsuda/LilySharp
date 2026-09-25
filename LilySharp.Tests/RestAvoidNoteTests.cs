@@ -43,7 +43,7 @@ public class RestAvoidNoteTests
     [Fact]
     public void FourVoiceRests_TakeVoicedPositionsAndCollisionShifts()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             octave absolute
             time 4/4
             part v { }
@@ -125,7 +125,7 @@ public class RestAvoidNoteTests
     [Fact]
     public void PitchedRests_TakeTheWrittenPitchAndNoCollisionShift()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             octave absolute
             time 4/4
             part v { }

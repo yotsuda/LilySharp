@@ -20,6 +20,7 @@ using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Tests.LpFidelity;
@@ -84,6 +85,30 @@ internal sealed class RenderedGeometry
     /// (Lily# <c>c</c> = LilyPond <c>c'</c>), and it keeps the corpus able to reach paper
     /// regimes the default page never enters.
     /// </remarks>
+    /// <summary>
+    /// The paper a probe is engraved on: <paramref name="options"/>, with the first system's
+    /// indent zeroed unless a staff names an instrument — the indent the probe corpus's
+    /// LilyPond twins were MEASURED on.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-25 that was Lily#'s own default (indent only for named staves), and the
+    /// twins say so in LilyPond's words: <c>\layout { indent = 0 }</c> on every nameless probe,
+    /// LilyPond's 15mm on the named ones (instrument-name-x.ly, brace-name-clear.ly…). The
+    /// product now indents every first system as LilyPond does (owner's decision, session 586);
+    /// the corpus keeps the paper it was measured on, as it keeps its other <c>\paper</c>
+    /// settings here. A probe that states its own indent is left alone.
+    /// </remarks>
+    internal static LayoutOptions ProbePaper(LayoutOptions options, MultiStaffScore score)
+    {
+        if (options.Indent != LayoutOptions.LilyPondDefaultIndent)
+            return options;
+        foreach (var group in score.StaffGroups)
+            foreach (var staff in group.Staves)
+                if (!string.IsNullOrEmpty(staff.InstrumentName))
+                    return options;
+        return options with { Indent = 0 };
+    }
+
     public static RenderedGeometry Render(string source, LayoutOptions? options = null)
     {
         var tree = SyntaxTree.Parse(source);
@@ -100,9 +125,7 @@ internal sealed class RenderedGeometry
         // beside it.
         var spec = RenderSpecParser.FindFirst(tree);
         var score = SvgGenerator.CollectScore(tree, spec);
-        var layout = options is null
-            ? new LayoutEngine().Layout(score)
-            : new LayoutEngine(options).Layout(score);
+        var layout = new LayoutEngine(ProbePaper(options ?? LayoutOptions.Default, score)).Layout(score);
 
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(score, layout, doc);

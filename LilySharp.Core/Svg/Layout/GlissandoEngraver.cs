@@ -317,7 +317,7 @@ internal static class GlissandoEngraver
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(
                     c.Notes, c.StemUp, noteValue, cueFont);
                 foreach (var al in AccidentalColumn.CalculatePositions(
-                    c.Notes, offsets, cueFont, cueFont))
+                    c.Notes, offsets, cueFont, cueFont, AccidentalStem.Of(c, c.StemUp, cueFont)))
                     if (best is not { } b || al.XOffset < b)
                         best = al.XOffset;
                 return best;

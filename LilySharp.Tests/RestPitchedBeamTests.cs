@@ -75,7 +75,7 @@ public class RestPitchedBeamTests
     [Fact]
     public void TheBook_PutsBothPitchedRestsAtTheWrittenPitch()
     {
-        var rests = Rests(LiveRender.SvgFromRenderSpec("""
+        var rests = Rests(TestPaper.SvgFromRenderSpec("""
             octave absolute
             time 4/4
             part v { }
@@ -116,7 +116,7 @@ public class RestPitchedBeamTests
     [Fact]
     public void WhereABeamDoesPushARest_ThePitchedOneIsStillNotPushed()
     {
-        var rests = Rests(LiveRender.SvgFromRenderSpec("""
+        var rests = Rests(TestPaper.SvgFromRenderSpec("""
             octave absolute
             time 4/4
             part v { }

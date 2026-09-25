@@ -84,7 +84,7 @@ public class LooseChangeColumnTests
 
     private static string Render(string source) =>
         LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse(source),
+            TestPaper.ParseAtIndentZero(source),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>All music glyphs of one codepoint: (X, Y) in document order, X-sorted.</summary>

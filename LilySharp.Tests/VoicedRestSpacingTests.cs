@@ -88,7 +88,7 @@ public class VoicedRestSpacingTests
 
     private static string Render(string source) =>
         LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse(source),
+            TestPaper.ParseAtIndentZero(source),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     /// <summary>The middle staff line's device Y: the 3rd of the five long horizontals.</summary>

@@ -89,6 +89,13 @@
       "residual": 0.0,
       "why": "CLOSED TO EXACT THIS SESSION (-0.017672 -> 0). The single-note / grace accidental DRAW was a SECOND placement model: chords place accidentals through AccidentalColumn.CalculatePositions (position_apes, the REAL glyph right skyline) then DrawAccidentalAtInkLeft, but a single NoteItem (SharedRenderer.Noteheads.cs) and grace (GraceNotes.cs) drew via DrawAccidental at a FIXED AccidentalNoteGap 0.35. Measured on 2.26.0 (barline-spacing.ly score NAT, a c-natural in D major): HEAD anchor 11.569272 (ext 0 . 1.962), natural ACC anchor 10.535000 (ext 0 . 0.6666), so the natural's ink clears the head at 0.367672 -- NOT 0.35 -- and HEAD - ACC anchor = 1.034272. OPENED at residual -0.017672 (predicted to the digit): Lily# drew the natural at head - natWidth(0.6666) - 0.35 = head - 1.0166, so HEAD - ACC read 1.016600. THE FIX: route the single-note / grace accidental DRAW through AccidentalPlacement.CalculateSinglePosition (the real skyline, the SAME path the spacing reservation already uses -- so draw = reserve) then DrawAccidentalAtInkLeft. MEASURED after: Lily# 1.034272 (residual -0.00000007, within tolerance) EXACT. Sharps (Left 0, box) are byte-unchanged; naturals move 0.017672 LEFT onto LilyPond's position. This ALSO fixed a flat draw bug the same fix exposed -- see accidental.single-flat-to-notehead."
     },
+    "accidental.single-natural-stem-down-to-notehead": {
+      "probe": "barline-spacing.ly",
+      "score": "NATD",
+      "lilypond": 1.046000,
+      "residual": 0.0,
+      "why": "OPENED AND CLOSED IN SESSION 582 (-0.011728 -> 0). NAT's natural on a STEM-DOWN quarter (c'' in D major). Measured on 2.26.0: HEAD anchor 11.581000, natural ACC anchor 10.535000, HEAD - ACC = 1.046000 -- 0.011728 more than NAT's stemless whole note. LilyPond's accidental placement clears the heads AND their stems (accidental-placement.cc:348-351 extract_heads_and_stems, :375-385 build_heads_skyline); a down stem starts at the head's left edge but reaches below it, and the skyline distance is taken over Y, so the natural's lower-right stroke meets the stem where it cleared the head. Flat, sharp, double flat and double sharp stand at the same X either way (Lab sessions/p582/stemy.ly). Lily# left the stems out ('they never protrude beyond the head boxes' -- true in X only) and read 1.034272. THE FIX: AccidentalStem, one more box in the reference skyline, passed by every caller of AccidentalPlacement. It was the whole of the Universe staff score's line-breaking gap to its LilyPond twin (session 581: a squeezed line of naturals priced 0.125 cheaper)."
+    },
     "accidental.single-flat-to-notehead": {
       "probe": "barline-spacing.ly",
       "score": "FLAT",

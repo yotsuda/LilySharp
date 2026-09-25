@@ -2707,7 +2707,8 @@ internal sealed class SkylineBuilder
 
         foreach (var al in AccidentalStagger.CalculatePositions(
             chord.Notes,
-            ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue)))
+            ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue),
+            stem: AccidentalStem.Of(chord, stemUp)))
             yield return (al.Accidental, al.StaffPosition, al.XOffset);
     }
 
@@ -2727,7 +2728,7 @@ internal sealed class SkylineBuilder
         return AccidentalStagger.CalculatePositions(
                 chord.Notes,
                 ChordHeadPositioning.CalculateOffsets(chord.Notes, stemUp, noteValue, headFont),
-                accFont, headFont)
+                accFont, headFont, AccidentalStem.Of(chord, stemUp, headFont))
             .Select(al => (al.Accidental, al.StaffPosition, al.XOffset));
     }
 

@@ -77,7 +77,16 @@ internal readonly record struct MeasureSpringData(
     ImmutableArray<Spring> Springs = default,
     // The rigid width beside those springs: the measure's two bar lines. The line's
     // springs are solved for the available width less this.
-    double RigidWidth = 0)
+    double RigidWidth = 0,
+    // What a line OPENING at this measure engraves in its prefix beyond the breaker's one
+    // continuation prefix: a meter or key change hoisted into the prefix, and a key in force
+    // here that is wider than measure 0's (MultiStaffLayouter.SolveLineStartPrefix). 0 on
+    // measure 0, whose line is the first and prices the first-line prefix.
+    double LineStartPrefixExtra = 0,
+    // What a line ENDING just before this measure reserves after its final bar line: the
+    // courtesy key and meter when this measure opens with a change
+    // (MultiStaffLayouter.LineEndCourtesyWidth).
+    double LineEndCourtesyWidth = 0)
 {
     /// <summary>Value equality, the spring vector included element by element — an
     /// ImmutableArray compares by reference on its own, which would make every
@@ -96,6 +105,8 @@ internal readonly record struct MeasureSpringData(
            && Equals(LineStartSpring, other.LineStartSpring)
            && Equals(CrossBarLyricPricing, other.CrossBarLyricPricing)
            && RigidWidth == other.RigidWidth
+           && LineStartPrefixExtra == other.LineStartPrefixExtra
+           && LineEndCourtesyWidth == other.LineEndCourtesyWidth
            && SpringsEqual(Springs, other.Springs);
 
     public override int GetHashCode()
@@ -395,7 +406,8 @@ internal sealed class KnuthPlassBreaker
 
                 bool isFirstLine = i == 0;
                 double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
-                double availableWidth = _lineWidth - prefixWidth;
+                double availableWidth = _lineWidth - prefixWidth
+                    - LineEdgeWidths(springData, i, j, n, isFirstLine);
 
                 // Compute line spring totals via cumulative sums. The minimum also pays
                 // the cross-bar lyric rods this line's interior bars carry — the same
@@ -673,6 +685,28 @@ internal sealed class KnuthPlassBreaker
     }
 
     /// <summary>
+    /// The width a candidate line i..j−1 gives up at its two edges beyond the breaker's one
+    /// continuation prefix: a change hoisted into its prefix
+    /// (<see cref="MeasureSpringData.LineStartPrefixExtra"/>) and the courtesy signatures
+    /// after its final bar line when the next line opens with a change
+    /// (<see cref="MeasureSpringData.LineEndCourtesyWidth"/>) — both what the layout will
+    /// take from that line's width.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond prices every candidate line from its real columns, the prefatory ones at both
+    /// ends included (lily/constrained-breaking.cc:388-482 → get_line_forces over the line's
+    /// columns). MEASURED (Lab sessions/p583): in 奏（かなで）, whose A sections end on a 2/4
+    /// bar, LilyPond's line before the return to 4/4 compresses to −0.0716 where the same
+    /// line ending the book stands at −0.0225, and the line opening in 4/4 to −0.0575 against
+    /// −0.0090 — Lily# priced both lines with neither signature and split A2 4|5 where
+    /// LilyPond splits it 5|4.
+    /// </remarks>
+    private static double LineEdgeWidths(
+        MeasureSpringData[] springData, int i, int j, int n, bool isFirstLine)
+        => (isFirstLine ? 0.0 : springData[i].LineStartPrefixExtra)
+           + (j < n ? springData[j].LineEndCourtesyWidth : 0.0);
+
+    /// <summary>
     /// Swaps a line's first measure from its mid-line spring 0 to the line-start spring the
     /// layout gives it, floored at LilyPond's 0.3 + min_dist. No-op when the spring data
     /// carries none — the single-staff gate path leaves it null, keeping those callers on
@@ -794,7 +828,10 @@ internal sealed class KnuthPlassBreaker
         {
             bool isFirstLine = lineStart == 0;
             double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
-            double availableWidth = _lineWidth - prefixWidth;
+            // The line's own prefix extra; its end courtesy depends on where it ends, which
+            // this fill has not decided yet, so the fallback leaves it out.
+            double availableWidth = _lineWidth - prefixWidth
+                - (isFirstLine ? 0.0 : springData[lineStart].LineStartPrefixExtra);
 
             // Fill while width allows, stopping hard at a forced break.
             int lineEnd = lineStart + 1; // At least one measure per line

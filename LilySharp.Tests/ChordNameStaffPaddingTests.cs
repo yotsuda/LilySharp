@@ -48,7 +48,7 @@ public sealed class ChordNameStaffPaddingTests
     // Note-attached @chord symbols: the ATTACHED chord line, placed by the engraver's own
     // floor (a `chords` track above the staff is an independent ROW, placed by the loose-line
     // walk — LilyPond's alignment — which already reads the same padding and ink).
-    private static string Render(string melody) => LiveRender.SvgFromRenderSpec($$"""
+    private static string Render(string melody) => TestPaper.SvgFromRenderSpec($$"""
         key c major
         part m { clef treble }
         section Main {

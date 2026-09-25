@@ -89,7 +89,7 @@ public class SlurOverTieTests
     [Fact]
     public void ASlurOverATie_ClearsTheTie_AsLilyPondScoresIt()
     {
-        var svg = LiveRender.SvgFromRenderSpec(Source);
+        var svg = TestPaper.SvgFromRenderSpec(Source);
         var (bows, _) = Bows(svg);
 
         // The tie is the narrowest bow; bar 4's slur is the narrowest bow that spans it.
@@ -137,7 +137,7 @@ public class SlurOverTieTests
     [Fact]
     public void TheEncompassedHeads_AreTheirGlyphBoxes_AsLilyPondScoresThem()
     {
-        var svg = LiveRender.SvgFromRenderSpec(Source);
+        var svg = TestPaper.SvgFromRenderSpec(Source);
         var (bows, _) = Bows(svg);
         var ordered = bows.OrderBy(b => b.X0).ToList();
         const double eps = 0.011;
@@ -175,7 +175,7 @@ public class SlurOverTieTests
     [Fact]
     public void TheDownSlur_MatchesLilyPond_OnBothCurvesOfItsSandwich()
     {
-        var svg = LiveRender.SvgFromRenderSpec(Source);
+        var svg = TestPaper.SvgFromRenderSpec(Source);
         var lineYs = Regex.Matches(svg,
                 "<line x1=\"0\\.05\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\"")
             .Select(m => double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture))

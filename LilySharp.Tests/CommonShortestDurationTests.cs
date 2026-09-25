@@ -40,7 +40,7 @@ public class CommonShortestDurationTests
         // min(base-shortest-duration (3/16), mode of per-measure shortests), so a
         // quarters-only score spaces on the 3/16 basis (NOT 1/8) like LilyPond.
         var source = "c4 d e f |";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
@@ -55,7 +55,7 @@ public class CommonShortestDurationTests
         // the basis is the MOST COMMON per-measure shortest, so a single 32nd-note
         // measure must not loosen a whole piece of eighths.
         var source = "c8 d e f g a b c' | c8 d e f g a b c' | c8 d e f g a b c' | c32 d e f c d e f c d e f c d e f c d e f c d e f c d e f c d e f |";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
@@ -69,7 +69,7 @@ public class CommonShortestDurationTests
         // Full-measure rests create no musical columns in LilyPond; the basis
         // comes from the sounding measures only (here: quarters → capped 3/16).
         var source = "R1*2 c4 d e f |";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
@@ -97,7 +97,7 @@ public class CommonShortestDurationTests
             form main { Main }
             score main "x" { staff melody }
             """;
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
         var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
 
@@ -109,7 +109,7 @@ public class CommonShortestDurationTests
     /// <summary>The multi-staff collect of a whole book, the way the page reads it.</summary>
     private static double ShortestOf(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindFirst(tree);
         var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
@@ -175,7 +175,7 @@ public class CommonShortestDurationTests
     /// its barlines (the thin, tall rects), in staff spaces.</summary>
     private static double[] TopStaffBarWidths(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         string svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
         var bars = Regex.Matches(svg,
@@ -258,7 +258,7 @@ public class CommonShortestDurationTests
     {
         // Score with half, quarter, and eighth notes → shortest is eighth (0.125)
         var source = "c2 d4 e8 f |";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
@@ -270,7 +270,7 @@ public class CommonShortestDurationTests
     public void SixteenthNotes_ShortestIsSixteenth()
     {
         var source = "c16 d e f g a b c' d' e' f' g' a' b' c'' d'' |";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
@@ -335,7 +335,7 @@ public class CommonShortestDurationTests
     {
         // A measure's ideal width should differ based on the score's common shortest duration
         var source = "c4 d e f |";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var score = new MeasureCollector().Collect(tree);
         var measure = score.Voice.Measures[0];
 

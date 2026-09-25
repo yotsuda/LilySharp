@@ -46,7 +46,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
 
@@ -87,7 +87,7 @@ section A { melody { m } }
 form main { A }
 score main ""x"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors);
 
         var spec = RenderSpecParser.FindFirst(tree);
@@ -111,7 +111,7 @@ section A { gtr { m } }
 form main { A }
 score main ""x"" { staff gtr }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
         _output.WriteLine(svg);
 
@@ -132,7 +132,7 @@ section A { melody { m } }
 form main { A }
 score main ""x"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
         _output.WriteLine(svg);
 
@@ -158,7 +158,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
 
@@ -205,7 +205,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var options = new SvgRenderOptions { EmbedFont = false };
         var svg = SvgGenerator.Generate(tree, options);
 
@@ -231,7 +231,7 @@ section A { melody { m } }
 form main { A }
 score main ""test"" { staff melody }
 ";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var options = new SvgRenderOptions { EmbedFont = false };
         var svg = SvgGenerator.Generate(tree, options);
 
@@ -377,7 +377,7 @@ score main ""test"" { staff melody }
         // redundant `\clef "treble"` between them.
         // LILYPOND-REF: lily/clef-engraver.cc:139-166 inspect_clef_properties
         string svg = SvgGenerator.Generate(
-            SyntaxTree.Parse("c1 | clef treble c1 | clef treble c1"),
+            TestPaper.ParseAtIndentZero("c1 | clef treble c1 | clef treble c1"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
         var glyphs = System.Text.RegularExpressions.Regex.Matches(svg,

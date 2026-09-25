@@ -135,10 +135,12 @@ public class PaperBlockTests
         string justified = Svg(book);
         string ragged = Svg("paper { raggedBottom }\n" + book);
         // The first staff line of the first page: the pages are written in order, and a
-        // staff line is the one <line> that starts at x 0.
+        // staff line is a <line> at the staff-line thickness. (Not "the one at x 0": the
+        // first system is indented by LilyPond's 15mm since session 586.)
         static double FirstStaffLineY(string svg)
         {
-            var m = System.Text.RegularExpressions.Regex.Match(svg, "<line x1=\"0\\.05\" y1=\"([0-9.]+)\"");
+            var m = System.Text.RegularExpressions.Regex.Match(svg,
+                "<line x1=\"[0-9.]+\" y1=\"([0-9.]+)\"[^>]*stroke-width=\"0\\.100\"");
             Assert.True(m.Success, "no staff line found");
             return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         }
@@ -217,9 +219,11 @@ public class PaperBlockTests
         Assert.Equal(7.397717, p.MarginRight);
         Assert.Equal(4.552441, p.MarginTop);    // 8mm
         Assert.Equal(4.552441, p.MarginBottom);
+        // The indent is scaled with them: indent-default is 15mm like the sides, so 13mm
+        // (scm/paper.scm set-paper-dimensions lists "indent" among its scalable values).
+        Assert.Equal(7.397717, p.Indent);
         // …and nothing else moves.
         Assert.Equal(LayoutOptions.Default.VerticalSpacing, p.VerticalSpacing);
-        Assert.Equal(LayoutOptions.Default.Indent, p.Indent);
     }
 
     [Fact]

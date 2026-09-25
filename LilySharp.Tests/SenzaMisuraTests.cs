@@ -172,7 +172,7 @@ public class SenzaMisuraTests
         Assert.All(score.Voice.Measures, m => Assert.True(m.Unmetered));
         Assert.Equal(8, score.Voice.Measures[0].Items.Count(i => i is NoteItem));
         // The whole piece is one bar number: LayoutReport spells the meter `none`.
-        Assert.Contains("time none  |  1 system, 2 bars", LayoutReport.Generate(SyntaxTree.Parse(source)));
+        Assert.Contains("time none  |  1 system, 2 bars", LayoutReport.Generate(TestPaper.ParseAtIndentZero(source)));
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class SenzaMisuraTests
             .Count(r => r.W < 0.5 && r.H > 3);
         Assert.Equal(5, bars);
 
-        var report = LayoutReport.Generate(SyntaxTree.Parse(Fixture));
+        var report = LayoutReport.Generate(TestPaper.ParseAtIndentZero(Fixture));
         Assert.Contains("time 4/4 -> none (bar 2) -> 4/4 (bar 4)  |  2 systems, 5 bars", report);
         Assert.Contains("system 1: bars 1-3", report);
         Assert.Contains("system 2: bars 4-5", report);
@@ -251,7 +251,7 @@ public class SenzaMisuraTests
     [Fact]
     public void TheTwin_WritesCadenzaOnAndOff_AndAWrittenBarAsTheGlyph()
     {
-        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Fixture));
+        string ly = new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(Fixture));
         Assert.Contains("\\cadenzaOn g8 a b c d c b a g4 f e2 \\bar \"|\"", ly);
         Assert.Contains("f e \\bar \"|\"", ly);
         Assert.Contains("\\cadenzaOff \\time 4/4 c1 |", ly);
@@ -262,7 +262,7 @@ public class SenzaMisuraTests
     [Fact]
     public void TheMeasureValidator_IsSilentUnderTimeNone()
     {
-        var tree = SyntaxTree.Parse(Fixture);
+        var tree = TestPaper.ParseAtIndentZero(Fixture);
         Assert.False(tree.HasErrors);
         var validator = new MeasureValidator();
         validator.Validate(tree);
@@ -287,7 +287,7 @@ public class SenzaMisuraTests
             form main { A B }
             score main { staff melody }
             """;
-        var midi = new LilySharp.Core.Midi.MidiExporter().Export(SyntaxTree.Parse(source));
+        var midi = new LilySharp.Core.Midi.MidiExporter().Export(TestPaper.ParseAtIndentZero(source));
         var meters = midi.Tracks[0].TimeSignatures;
         Assert.DoesNotContain(meters, ts => ts.Numerator == 4 && ts.Denominator == 4);
         Assert.All(meters, ts => Assert.Equal((3, 4), (ts.Numerator, ts.Denominator)));
@@ -398,7 +398,7 @@ public class SenzaMisuraTests
     public void TheTwin_ReturnsFromAMidBarCadenza_WithAPartialOfTheWholeBar()
     {
         Assert.Contains("\\cadenzaOff \\time 4/4 \\partial 1 c1 |",
-            new LilyPondExporter().Export(SyntaxTree.Parse(MidBarEighths)));
+            new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(MidBarEighths)));
 
         const string threeFour = """
             time 4/4
@@ -408,9 +408,9 @@ public class SenzaMisuraTests
             score main { staff melody }
             """;
         Assert.Contains("\\cadenzaOff \\time 3/4 \\partial 2. c2. |",
-            new LilyPondExporter().Export(SyntaxTree.Parse(threeFour)));
+            new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(threeFour)));
 
-        string atBar = new LilyPondExporter().Export(SyntaxTree.Parse(Fixture));
+        string atBar = new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(Fixture));
         Assert.Contains("\\cadenzaOff \\time 4/4 c1 |", atBar);
         Assert.DoesNotContain("\\partial", atBar);
     }
@@ -431,7 +431,7 @@ public class SenzaMisuraTests
             form main { Main }
             score main { staff melody }
             """;
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors);
         var validator = new MeasureValidator();
         validator.Validate(tree);
@@ -454,14 +454,14 @@ public class SenzaMisuraTests
             score main { staff melody }
             """;
         var v2 = new MeasureValidator();
-        v2.Validate(SyntaxTree.Parse(metered));
+        v2.Validate(TestPaper.ParseAtIndentZero(metered));
         Assert.DoesNotContain(v2.Diagnostics, d => d.Code == DiagnosticCodes.PartialUnderTimeNone);
-        Assert.Contains("\\partial 4", new LilyPondExporter().Export(SyntaxTree.Parse(metered)));
+        Assert.Contains("\\partial 4", new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(metered)));
     }
 
     private static Score Collect(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         var spec = RenderSpecParser.FindFirst(tree);
         string? voiceName = spec is { Items.Length: 1 } && spec.Items[0] is SingleStaffSpec single
@@ -473,7 +473,7 @@ public class SenzaMisuraTests
 
     private static string Render(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
     }

@@ -8,33 +8,33 @@
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="317">Slurs on chords</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="344">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="0.05" y1="20.31" x2="27.06" y2="20.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="21.31" x2="27.06" y2="21.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="22.31" x2="27.06" y2="22.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="23.31" x2="27.06" y2="23.31" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.05" y1="24.31" x2="27.06" y2="24.31" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.80" y="23.31" font-size="4.00" data-pos="396"></text>
-  <text class="music" x="4.88" y="22.31" font-size="4.00" data-pos="358"></text>
-  <line x1="8.24" y1="25.31" x2="10.31" y2="25.31" stroke="#000000" stroke-width="0.200"/>
-  <line x1="22.16" y1="25.31" x2="25.54" y2="25.31" stroke="#000000" stroke-width="0.200"/>
-  <line x1="22.16" y1="26.31" x2="25.54" y2="26.31" stroke="#000000" stroke-width="0.200"/>
-  <text class="music" x="8.59" y="25.31" font-size="4.00" data-pos="497"></text>
-  <text class="music" x="8.59" y="24.31" font-size="4.00" data-pos="499"></text>
-  <line x1="9.90" y1="25.31" x2="9.90" y2="20.81" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.86" y="24.81" font-size="4.00" data-pos="506"></text>
-  <text class="music" x="12.86" y="23.81" font-size="4.00" data-pos="508"></text>
-  <line x1="14.17" y1="24.81" x2="14.17" y2="20.31" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="18.48" y="24.31" font-size="4.00" data-pos="517"></text>
-  <text class="music" x="19.79" y="23.81" font-size="4.00" data-pos="519"></text>
-  <line x1="19.79" y1="24.31" x2="19.79" y2="20.31" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.50" y="26.81" font-size="4.00" data-pos="526"></text>
-  <text class="music" x="23.81" y="26.31" font-size="4.00" data-pos="528"></text>
-  <line x1="23.81" y1="26.81" x2="23.81" y2="22.31" stroke="#000000" stroke-width="0.130"/>
-  <rect x="17.39" y="20.31" width="0.19" height="4.00" data-pos="514"/>
-  <rect x="26.92" y="20.31" width="0.19" height="4.00" data-pos="534"/>
-  <path d="M 9.33,26.36 C 10.45,27.07 12.68,26.81 13.60,25.86 C 12.69,26.92 10.46,27.18 9.33,26.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="503"/>
-  <path d="M 18.92,25.36 C 19.39,26.70 21.54,28.03 22.95,27.86 C 21.47,28.14 19.33,26.80 18.92,25.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="523"/>
-  <rect x="3.37" y="16.72" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="481"/>
-  <text x="7.40" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="481">Main</text>
+  <line x1="8.59" y1="20.31" x2="35.60" y2="20.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="21.31" x2="35.60" y2="21.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="22.31" x2="35.60" y2="22.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="23.31" x2="35.60" y2="23.31" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="24.31" x2="35.60" y2="24.31" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="9.34" y="23.31" font-size="4.00" data-pos="396"></text>
+  <text class="music" x="13.42" y="22.31" font-size="4.00" data-pos="358"></text>
+  <line x1="16.78" y1="25.31" x2="18.84" y2="25.31" stroke="#000000" stroke-width="0.200"/>
+  <line x1="30.69" y1="25.31" x2="34.07" y2="25.31" stroke="#000000" stroke-width="0.200"/>
+  <line x1="30.69" y1="26.31" x2="34.07" y2="26.31" stroke="#000000" stroke-width="0.200"/>
+  <text class="music" x="17.12" y="25.31" font-size="4.00" data-pos="497"></text>
+  <text class="music" x="17.12" y="24.31" font-size="4.00" data-pos="499"></text>
+  <line x1="18.43" y1="25.31" x2="18.43" y2="20.81" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="21.40" y="24.81" font-size="4.00" data-pos="506"></text>
+  <text class="music" x="21.40" y="23.81" font-size="4.00" data-pos="508"></text>
+  <line x1="22.71" y1="24.81" x2="22.71" y2="20.31" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="27.01" y="24.31" font-size="4.00" data-pos="517"></text>
+  <text class="music" x="28.32" y="23.81" font-size="4.00" data-pos="519"></text>
+  <line x1="28.32" y1="24.31" x2="28.32" y2="20.31" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="31.04" y="26.81" font-size="4.00" data-pos="526"></text>
+  <text class="music" x="32.35" y="26.31" font-size="4.00" data-pos="528"></text>
+  <line x1="32.35" y1="26.81" x2="32.35" y2="22.31" stroke="#000000" stroke-width="0.130"/>
+  <rect x="25.92" y="20.31" width="0.19" height="4.00" data-pos="514"/>
+  <rect x="35.46" y="20.31" width="0.19" height="4.00" data-pos="534"/>
+  <path d="M 17.86,26.36 C 18.98,27.07 21.21,26.81 22.14,25.86 C 21.23,26.92 19.00,27.18 17.86,26.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="503"/>
+  <path d="M 27.46,25.36 C 27.93,26.70 30.07,28.03 31.48,27.86 C 30.01,28.14 27.86,26.80 27.46,25.36 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="523"/>
+  <rect x="11.90" y="16.72" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="481"/>
+  <text x="15.94" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="481">Main</text>
   </g>
 </svg>

@@ -51,6 +51,25 @@ internal sealed class SystemBreaker
             includeTimeSignature: SpacingRules.AnyStaffEngravesTime(score),
             score.TimeSignature.NumeratorText, score.TimeSignature.DenominatorText);
 
+    /// <summary>
+    /// How much wider the prefix of a line OPENING at measure <paramref name="i"/> is than
+    /// the breaker's one continuation prefix (<paramref name="continuationGate"/>): a meter or
+    /// key change hoisted into it, or a key in force there wider than measure 0's. The same
+    /// derivation the layout sets that line's prefix with (MultiStaffLayouter.SolveLineStartPrefix).
+    /// 0 for measure 0, whose line prices the first-line prefix.
+    /// </summary>
+    internal static double LineStartPrefixExtra(MultiStaffScore score, int i, double continuationGate)
+    {
+        if (i == 0)
+            return 0.0;
+        double extra = MultiStaffLayouter.SolveLineStartPrefix(score, i, isFirstSystem: false)
+            .Columns.Right - continuationGate;
+        // The two derivations agree to the last digit on a plain continuation line
+        // (SpacingInvariantTests.BreakGateAndLayout_PriceTheSameLineStart); a stray ULP must
+        // not become a price.
+        return Math.Abs(extra) < 1e-9 ? 0.0 : extra;
+    }
+
     /// <summary>The same for a CONTINUATION line, which carries clef and key but no meter.</summary>
     internal static double GateContinuationPrefixWidth(MultiStaffScore score, double maxClefWidth) =>
         SpacingRules.CalculatePrefixWidth(
@@ -92,13 +111,16 @@ internal sealed class SystemBreaker
         // The all-tab case needs no special key handling any more: a TabStaff engraves no
         // signature, so the union is 0 for it by construction, exactly as LilyPond books
         // nothing for a staff with no Key_engraver (ly/engraver-init.ly:1214).
-        // ⚠️ Measure 0, both here and for continuation lines, because the breaker prices ONE
-        // continuation prefix for the whole score and does not yet know where lines start.
-        // A mid-piece key change therefore still books its OLD width on the lines after it —
-        // a separate, pre-existing narrowing of the same shape, and the structural fix is a
-        // per-line prefix (MeasureSpringData already carries a per-measure LineStartSpring).
+        // Measure 0, both here and for continuation lines: the breaker charges ONE
+        // continuation prefix, and what a line opening at a later measure engraves beyond it
+        // (a hoisted meter or key change, a wider key in force) rides on that measure's
+        // MeasureSpringData.LineStartPrefixExtra — with the courtesy at the previous line's
+        // end on LineEndCourtesyWidth (session 583).
         double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        double firstPrefixWidth = GateFirstPrefixWidth(score, maxClefWidth) + _options.Indent;
+        // The indent the layout sets the first system with (LayoutEngine.EffectiveIndent,
+        // the one home).
+        double firstPrefixWidth = GateFirstPrefixWidth(score, maxClefWidth)
+            + LayoutEngine.EffectiveIndent(_options);
         double continuationPrefixWidth =
             GateContinuationPrefixWidth(score, maxClefWidth) + _options.ShortIndent;
 
@@ -205,6 +227,9 @@ internal sealed class SystemBreaker
         var runMap = MmrRunMap.ForScore(score);
 
         bool sung = !score.Lyrics.IsDefaultOrEmpty;
+        // The one continuation prefix the breaker charges every line after the first; a
+        // line's own prefix beyond it is carried per measure (LineStartPrefixExtra below).
+        double continuationGate = GateContinuationPrefixWidth(score, SpacingRules.MaxClefWidth(score));
 
         for (int i = 0; i < measures.Length; i++)
         {
@@ -335,7 +360,12 @@ internal sealed class SystemBreaker
                 // candidate line instead of estimating its force from the sums; and the
                 // rigid width beside them (the two bar lines).
                 runRod ? default : springs,
-                barlines);
+                barlines,
+                LineStartPrefixExtra(score, i, continuationGate),
+                // The courtesy is drawn with the clef in force at the ending line's START;
+                // the breaker does not know that start, so the clef of the measure before
+                // this one stands in for it (they differ only across a mid-line clef change).
+                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i));
         }
         return springData;
     }

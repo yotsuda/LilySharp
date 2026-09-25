@@ -61,7 +61,7 @@ public class NestedGroupDepthTests
     private static string Book(string render) => Body + "\nscore main { " + render + " }\n";
 
     private static string Svg(string render) => SvgGenerator.Generate(
-        SyntaxTree.Parse(Book(render)),
+        TestPaper.ParseAtIndentZero(Book(render)),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
     private static List<double> StaffTops(string svg)
@@ -122,7 +122,7 @@ public class NestedGroupDepthTests
     [InlineData("staffGroup { grandStaff { staff pa staff pd} }")]
     public void EveryNesting_ParsesAndValidatesClean(string render)
     {
-        var tree = SyntaxTree.Parse(Book(render));
+        var tree = TestPaper.ParseAtIndentZero(Book(render));
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
         Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
     }
@@ -243,7 +243,7 @@ public class NestedGroupDepthTests
     [Fact]
     public void TheTwinNestsTheContextsAsWritten()
     {
-        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(Book(
+        string ly = new LilyPondExporter().Export(TestPaper.ParseAtIndentZero(Book(
             "grandStaff { staffGroup { staff pa staff pb}  staff pd}")));
 
         Assert.Equal(1, Regex.Matches(ly, @"\\new GrandStaff").Count);

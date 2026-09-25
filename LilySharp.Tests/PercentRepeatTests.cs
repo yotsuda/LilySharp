@@ -89,7 +89,7 @@ public class PercentRepeatTests
     {
         // repeat percent 2 { c4 d e f } → 2 measures total, measure 1 is percent repeat
         var source = "repeat percent 2 { c4 d e f }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -106,7 +106,7 @@ public class PercentRepeatTests
     {
         // repeat percent 4 { c4 d e f } → 4 measures, measures 1-3 are percent repeats
         var source = "repeat percent 4 { c4 d e f }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -122,7 +122,7 @@ public class PercentRepeatTests
     {
         // The first measure should have actual notes
         var source = "repeat percent 2 { c4 d e f }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -134,7 +134,7 @@ public class PercentRepeatTests
     public void Collector_PercentRepeat_NoPercentForFirst()
     {
         var source = "repeat percent 3 { c4 d e f }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -147,7 +147,7 @@ public class PercentRepeatTests
     {
         // Symbolic volta repeats should not create percent markers
         var source = "{ |: c4 d e f :| }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -158,7 +158,7 @@ public class PercentRepeatTests
     public void Collector_UnfoldRepeat_NoPercentMarkers()
     {
         var source = "repeat unfold 2 { c4 d e f }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -169,7 +169,7 @@ public class PercentRepeatTests
     public void Collector_NoRepeat_NoPercentMarkers()
     {
         var source = "c4 d e f | g a b c'";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -202,7 +202,7 @@ public class PercentRepeatTests
         // repeat slash, which is how the broken book came to light: the assertions below are
         // pinned to LilyPond 2.26 output for a ONE-MEASURE body, and that is what they now
         // actually measure.
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             octave absolute
             part mel { }
             section A { mel { repeat percent 2 { c4 c c c | } } }
@@ -304,7 +304,7 @@ public class PercentRepeatTests
     {
         // Measures before the repeat should not be affected
         var source = "c4 d e f | repeat percent 2 { g4 a b c' }";
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
 
@@ -325,7 +325,7 @@ public class PercentRepeatTests
         // symbol at bar 0 and none under the seven signs. This pins BOTH halves of
         // the repair — the engraver's percent filter AND the multi-staff path's
         // synthetic annotation Score carrying PercentRepeats at all.
-        var tree = SyntaxTree.Parse("""
+        var tree = TestPaper.ParseAtIndentZero("""
             part melody {
               section A { repeat percent 8 { R1 } }
             }
@@ -334,7 +334,7 @@ public class PercentRepeatTests
             """);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
-        var layout = new LayoutEngine().Layout(
+        var layout = new LayoutEngine(TestPaper.IndentZero).Layout(
             LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec));
 
         var mmr = Assert.Single(layout.MultiMeasureRestLayouts);
@@ -356,7 +356,7 @@ public class PercentRepeatTests
     public void Collector_TwoMeasureBody_IsOneDoubleSignPerRepetition()
     {
         var score = new MeasureCollector().Collect(
-            SyntaxTree.Parse("repeat percent 4 { c1 | d1 }"));
+            TestPaper.ParseAtIndentZero("repeat percent 4 { c1 | d1 }"));
 
         Assert.Equal(8, score.Voice.Measures.Length);
         Assert.Equal(3, score.PercentRepeats.Length);
@@ -381,7 +381,7 @@ public class PercentRepeatTests
     [InlineData("repeat percent 3 { c4 d e f | }")]
     public void Collector_OneMeasureBody_StaysSingle(string source)
     {
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
+        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero(source));
 
         Assert.Equal(2, score.PercentRepeats.Length);
         Assert.All(score.PercentRepeats, pr => Assert.False(pr.IsDouble));
@@ -426,7 +426,7 @@ public class PercentRepeatTests
     [Fact]
     public void Renderer_DoubleSign_DrawsTwoOverlappingSlashesAndHidesBothMeasures()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c1 | d1 } } }
             form main { ~A }
@@ -488,7 +488,7 @@ public class PercentRepeatTests
         // walk reaching the FIRST measure of the pair and not only the anchored second one.
         // The control is the written pair alone: the sign is lines and circles, never a music
         // glyph, so an unhidden repeat would show up as extra <text class="music"> entries.
-        var control = LiveRender.SvgFromRenderSpec("""
+        var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { c1 | d1 } }
             form main { ~A }
@@ -509,13 +509,13 @@ public class PercentRepeatTests
     [Fact]
     public void Renderer_DoubleSign_HidesTheFirstMeasuresBeamsAndStemsToo()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c8 d e f g a b c' | d'8 c' b a g f e d | } } }
             form main { ~A }
             score main { staff mel }
             """);
-        var control = LiveRender.SvgFromRenderSpec("""
+        var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { c8 d e f g a b c' | d'8 c' b a g f e d | } }
             form main { ~A }
@@ -545,7 +545,7 @@ public class PercentRepeatTests
     public void Collector_SubMeasureBody_IsOneBeatSlashPerRepetitionAndNoRepeatedNotes()
     {
         var score = new MeasureCollector().Collect(
-            SyntaxTree.Parse("repeat percent 4 { c16 d e f }"));
+            TestPaper.ParseAtIndentZero("repeat percent 4 { c16 d e f }"));
 
         var measure = Assert.Single(score.Voice.Measures);
         // Four written sixteenths, then one spacer for each of the three repetitions.
@@ -572,7 +572,7 @@ public class PercentRepeatTests
     public void Collector_BeatSlash_CoversNoMeasure()
     {
         var score = new MeasureCollector().Collect(
-            SyntaxTree.Parse("repeat percent 2 { c16 d e f }"));
+            TestPaper.ParseAtIndentZero("repeat percent 2 { c16 d e f }"));
 
         var pr = Assert.Single(score.PercentRepeats);
         Assert.True(pr.FirstCoveredMeasure > pr.MeasureIndex);
@@ -590,7 +590,7 @@ public class PercentRepeatTests
     public void Collector_BeatSlashSpacer_CarriesTheSlashCountOnItsOpeningPiece()
     {
         var score = new MeasureCollector().Collect(
-            SyntaxTree.Parse("repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } |"));
+            TestPaper.ParseAtIndentZero("repeat percent 2 { c16 d e f } repeat percent 2 { g8. c16 } |"));
 
         var measure = Assert.Single(score.Voice.Measures);
         var spacers = measure.Items.OfType<RestItem>().Where(r => r.IsSpacer).ToList();
@@ -603,7 +603,7 @@ public class PercentRepeatTests
         // its repeat runs from beat 4 into the next bar): the slash's column is the FIRST
         // piece, the rest of the event is plain spacers.
         var crossing = new MeasureCollector().Collect(
-            SyntaxTree.Parse("r4 repeat percent 2 { c4 d } e2. |"));
+            TestPaper.ParseAtIndentZero("r4 repeat percent 2 { c4 d } e2. |"));
         Assert.Equal(2, crossing.Voice.Measures.Length);
         var pieces = crossing.Voice.Measures
             .SelectMany(m => m.Items).OfType<RestItem>().Where(r => r.IsSpacer).ToList();
@@ -635,7 +635,7 @@ public class PercentRepeatTests
             form main { A }
             score main { staff melody }
             """;
-        var tree = SyntaxTree.Parse(src);
+        var tree = TestPaper.ParseAtIndentZero(src);
         var spec = RenderSpecParser.FindFirst(tree);
         var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
         var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
@@ -703,7 +703,7 @@ public class PercentRepeatTests
             form main { A }
             score main { {{staves}} }
             """;
-        var tree = SyntaxTree.Parse(src);
+        var tree = TestPaper.ParseAtIndentZero(src);
         var spec = RenderSpecParser.FindFirst(tree);
         var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
         var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
@@ -743,7 +743,7 @@ public class PercentRepeatTests
     [InlineData("repeat percent 2 { c8 d16 e }", 0)]    // mixed → DoubleRepeatSlash
     public void Collector_BeatSlashCount_FollowsTheWrittenDurations(string source, int expected)
     {
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
+        var score = new MeasureCollector().Collect(TestPaper.ParseAtIndentZero(source));
 
         var pr = Assert.Single(score.PercentRepeats);
         Assert.True(pr.IsBeatSlash);
@@ -766,7 +766,7 @@ public class PercentRepeatTests
     public void Collector_ThreeMeasureBody_IsOneSlashCoveringThreeMeasures()
     {
         var score = new MeasureCollector().Collect(
-            SyntaxTree.Parse("repeat percent 2 { c1 | d1 | e1 | }"));
+            TestPaper.ParseAtIndentZero("repeat percent 2 { c1 | d1 | e1 | }"));
 
         var pr = Assert.Single(score.PercentRepeats);
         Assert.True(pr.IsBeatSlash);
@@ -793,7 +793,7 @@ public class PercentRepeatTests
     [Fact]
     public void Renderer_EqualDurationBeatSlash_IsSteeperUnkernedAndUndotted()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c16 d e f } g2 } }
             form main { ~A }
@@ -836,7 +836,7 @@ public class PercentRepeatTests
     [Fact]
     public void Renderer_MixedDurationBeatSlash_IsTheDottedDoubleAtABeat()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { g8. c16 } g2 } }
             form main { ~A }
@@ -865,7 +865,7 @@ public class PercentRepeatTests
     [Fact]
     public void Renderer_BeatSlash_LeavesTheWrittenBeatBeamed()
     {
-        var svg = LiveRender.SvgFromRenderSpec("""
+        var svg = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { repeat percent 2 { c16 d e f } g2 } }
             form main { ~A }
@@ -874,7 +874,7 @@ public class PercentRepeatTests
 
         // The sixteenths are beamed (two beam levels) and stemmed, exactly as when written
         // out on their own.
-        var control = LiveRender.SvgFromRenderSpec("""
+        var control = TestPaper.SvgFromRenderSpec("""
             part mel { }
             section A { mel { c16 d e f g2. } }
             form main { ~A }
@@ -978,10 +978,10 @@ public class PercentRepeatTests
 
     private static ScoreLayout LayoutOf(string source)
     {
-        var tree = SyntaxTree.Parse(source);
+        var tree = TestPaper.ParseAtIndentZero(source);
         var spec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(spec);
-        return new LayoutEngine().Layout(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec));
+        return new LayoutEngine(TestPaper.IndentZero).Layout(LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, spec));
     }
 
     /// <summary>Beam ribbons — the same discriminator <see cref="Slashes"/> excludes by, read
