@@ -917,9 +917,17 @@ public sealed partial class LilySharpLanguageServer
                 new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);
                 return [outputPath];
             case "ly":
+            {
+                // Export-all names each score (form + selector): the twin engraves THAT
+                // score's staves, not the file's first score's (LilyPondExporter.Score).
+                // The single export keeps its primary-form contract above.
+                var score = form != null && renderName != null
+                    ? RenderSpecParser.FindDeclaredByName(tree, renderName)?.Declaration
+                    : null;
                 File.WriteAllText(outputPath,
-                    new LilySharp.Core.LilyPond.LilyPondExporter { Form = form }.Export(tree));
+                    new LilySharp.Core.LilyPond.LilyPondExporter { Form = form, Score = score }.Export(tree));
                 return [outputPath];
+            }
             default:
                 throw new ArgumentException($"Unknown format: {format}");
         }

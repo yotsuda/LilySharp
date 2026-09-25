@@ -129,6 +129,27 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第573セッションの経緯
+
+### 1.1 第573セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き。★ `-Start p573`（HEAD `795e08b3`・full 9018 / 0 / 2 / 9020・第571 を ARCHIVE へ）＝§1 と HANDOFF の天井で便を切った。§2 の R7〜R12 の行を開いた項＋ポインタに畳んだ（閉じた項の本文は ARCHIVE「R7〜R12 の行」）。作業ツリーの `samples/*` はユーザーの手。
+
+★★ **⑴ R9⒟ は起票が古かった＝閉じた**: `SlurScoringProblem` の slur 対 slur 項は第470/481 が「LP では slur は他の slur の encompass-objects に入らない（phrasing-slur-engraver だけ）」と実測して撤去済みで、phrasing slur の内側の slur は `AddEnclosedSlurPoints` が LP の 3 点（端は bound を共有するときだけ・±2×thickness・slurward に半無限）と midpoint＋free-slur-distance で既に積んでいた（PhrasingSlur の thickness も 1.2＝ハードコードで合う）。
+
+★★★ **⑵ R9⒡（`7bd06d71`）＝laissez-vibrer／repeat tie を tie の scorer で置く**: LP の `Semi_tie_column` は `from_semi_ties` で同じ `Tie_formatting_problem` を解く（宿主の head が `head-direction` 側の bound・開いた側は `extremal ∓ 1.5` の平らな outline・column rank は両側とも宿主・details は grob の height-limit/ratio の上に C++ の既定値＝Tie の define-grobs とは別の数）。旧 `TieVariantEngraver` は head 中心から固定 0.4・Lily# 独自の弓（indent 0.3）だった。移植＝`BuildTieColumn` の宿主 outline＋開いた側の固定 anchor＋`TieDetails.SemiTie`＋`TieSpecification.IsSemiTie`（stem 回避なし＝column span 0）。⚠️ 途中の誤り 1 つ: 「両 rank が同じ column なら head-edge hug も宿主を両側で読む」と書いたら線上の音が +0.15 hug した＝LP の `head_extents_` は宿主側の key しか無いので開いた側は空＝hug は*発火しない*（直した）。**LP 実測で全部一致**（probe `semi-tie-scoring.ly`＝15 本の l.v.・14 本の repeat tie・臨時記号つき・和音、lpreg の lvchords/rtchords/lvarp/lv-meterchange: [0].y・幅・control lift が 4〜6 桁）。tab 譜は旧描画のまま（LP の TabStaff は半タイを描かない・fret digit に outline が無い＝`Calculate(onTab:)`）。網 `SemiTieScoringTests` 2 本（旧 engraver で 2 本赤）・`RenderedGeometry.BowControlLift` 新設。掃き 942 冊中 9 冊（半タイを持つ repo の本すべて）・snapshot lv-meterchange 更新。full **9020 / 0 / 2 / 9022**。
+  ⚠️ 残差: spacing の箱（`SemiTieGeometry`→`ItemSkylineFactory`）は旧の固定 span/baseline のまま＝LP は位置決め後の stencil で箱を取る。⇒ R9 の残りは ⒢ だけ。
+
+★ **⑶ U11 の lead と R8⒜ の値付け（コード変更なし）**: Hold the Line page1 の題は LP より 2.2 下だが、LP 側は 8 系を詰めて題の上の spring を 4.0→約 1.8 に縮めた結果で、Lily# の題の spring と題→系の rod（12.646・LP 実測 12.66）は合っている。割れの実体は頁 DP の*僅差*＝§2 U11 に記した（見積りと最終の食い違いという最初の読みは誤読＝見積りの「8,8,6」は題の行を含む行数）。R8⒜ は `PagePenalty`/`BreakPenalty`/`TurnPenalty` が常に 0 で射程ほぼ 0。
+
+★★ **⑷ R7⒞（`998a01fd`）**: `ApplyRods` を LP の `add_rod`（rod ごとに 1 回・`range_len(-∞)` が*厳密に*長ければ捨てる・力は範囲の `range_solve`＝先の rod が残した blocking force から解く）に。旧は「範囲に答えより大きい blocking force が無い」前提の閉形式＋最大 10 回の収束ループ。掃き 942 冊 0 冊＝実楽譜では同じ答え。網 `SpringRodModelTests.ApplyRods_SolvesFromTheBlockingForcesEarlierRodsLeft`（先の rod が A を 5 に止めた範囲に 7.5 の rod＝B は 2.5／旧 3.75）。full **9021 / 0 / 2 / 9023**。R7 は全項 ✅。
+
+★★★ **⑸ 歌詞行＋hara-kiri の段間（`11056652`・ユーザー選択「1＝構造の大物へ」）**: 台帳で最大の残差（ROWVH system-gap +5.82・ROWH +1.22・ROWVH mid-system +1.76 ×2）を閉じた。計器で追うと、帯の予約（`LyricReservationBelowSystem`＝LP どおりの alignment minimum・5.775）は正しく、**system の down 輪郭を −10.44 まで押していたのは hara-kiri で消えた下の譜**だった: `SkylineBuilder.OuterStaff` がモデルの末尾の譜を最後の layout と*位置で*組み、消えた譜の clef・休符・線を system 高から導いた中線＝歌詞行の下に種付けしていた。直し＝外側の要素は*見えている*最後の placed 要素（LP の `build_system_skyline` は alignment の生きた要素だけ）・端が行なら何も種付けしない・1 譜だけ残る系は 1 回。**4 点とも LP へ**: system gap 12.000000 ×2（exact）・verse 1 が ink floor 3.737789（LP 3.737890・残り −0.00010066＝予言どおりの字形の項）。毒で丁度 4 点赤。掃き 942 冊 0 冊。台帳の注記にあった「帯を spring の外に予約」「部屋の読みが解く前」という 2 つの仮説は*どちらも原因ではなかった*。full **9021 / 0 / 2 / 9023**。
+★★ **⑹ rit. の行間（`ce47fb7c`）**: 台帳の注記「残りは rit. の ink 1.028」は誤読＝計器で ink は 1.318、帯が床に立っていなかった。`InkAboveStaff` の床が上線の枠の数（0.85）で、受ける輪郭は*中線*の枠（自譜の ink 2.05）＝0.46 の項がいつも勝ち 0.29 低かった。床＝`StaffExtent`＋0.8。ついで em を LP の 2.2（TextSpanner は font-size を持たない）・破線の始点を字の advance に（`line-spanner.cc:621-626`・旧 0.55／字＋0.5 は "accel." の "el." を貫いていた）。−0.543 → −0.121（残り＝書体）。掃き 6 冊（rit. を持つ本だけ）・snapshot 5。
+★★ **⑺ 行が先頭の系の form 文字（`2fb5b3bc`）**: stacker と描画の両方が `-1` を*系の頂*（＝行の帯）で解いていた＝字は行の上に積まれコードの上に描かれていた（mark は第243 で直済み）。`ResolveScoreGrobStaff` で解き、`CustomTextEngraver.InkAboveStaff` で最上の譜の UP 輪郭に入れた＝行が字を越えて上がる。−0.571 → +0.0025（注記の「欠けた再配分の仕組み」は誤り＝鎖は既にある）。網 `AFormTextUnderALeadingRow_…`（片方ずつ戻して赤）。掃き 0 冊。
+★★ **⑻ cue の中の装飾音＝−4＋−3＝−7（`3e224f2d`）**: `NarrowToGraceTime` が `IsCue` を落としていた 1 行が全部。`GrobFontSize.StepOf` を加算に・`GraceColumnInfo.ContextFontSizeStep`＋列ごとの `Font`＝固定の grace font を読む 25 か所を列／run の font に。−7 は 11 番の design（head 0.574397・LP 0.574399）。+0.561 → −3.4e-6。掃き 0 冊。full **9022 / 0 / 2 / 9024**。
+  ⇒ **台帳の上位は全部ユーザー決定か Lily# 独自**（ottava "8va" +2.71・行だけの bar number の帯 +2.60・mark の枠 +0.35 ×4・tab の slur／beam＝LP に双子が無い）。次の構造の候補は R10⒜（aligned_side の 3 綴り）と R9⒢（tremolo）。
+
 ## 以下は第572セッションの経緯
 
 ### 1.1 第572セッション（2026-09-24・YT-DELL2）

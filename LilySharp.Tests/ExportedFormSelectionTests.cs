@@ -113,6 +113,51 @@ public class ExportedFormSelectionTests
     }
 
     /// <summary>
+    /// Two scores on ONE form — the tab corpus's shape, <c>score main</c> beside
+    /// <c>score main "tab"</c> — are told apart by their staves, and the twin engraves the
+    /// score it is handed.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The form cannot tell them apart, and until 2026-09-25 the twin read the file's first
+    /// <c>score</c> whatever it was asked for: <c>lysc ly --all</c> wrote the staff-only
+    /// twin under the tab score's name too (HANDOFF §2 T7). The falsifier is the OTHER
+    /// score's staff: the tab twin must have no <c>\new Staff</c>, the default no TabStaff.
+    /// </remarks>
+    [Fact]
+    public void LilyPondTwin_EngravesTheStavesOfTheScoreItIsHanded()
+    {
+        var tree = SyntaxTree.Parse("""
+            part b { clef bass tuning bass }
+            section A { b { e,4 a, d g | } }
+            form main { A }
+            score main { staff b }
+            score main "tab" { tab b }
+            """);
+        var tab = Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, "tab")!.Value;
+
+        string staffTwin = new LilyPondExporter().Export(tree);
+        string tabTwin = new LilyPondExporter { Form = tab.Spec.Form, Score = tab.Declaration }.Export(tree);
+
+        Assert.Contains(@"\new Staff", staffTwin);
+        Assert.DoesNotContain("TabStaff", staffTwin);
+        Assert.Contains("TabStaff", tabTwin);
+        Assert.DoesNotContain(@"\new Staff", tabTwin);
+    }
+
+    /// <summary>A score handed without a form writes its OWN form, not the primary one.</summary>
+    [Fact]
+    public void LilyPondTwin_AScoreHandedAloneWritesItsOwnForm()
+    {
+        var tree = SyntaxTree.Parse(TwoMovements);
+        var encore = Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, "second")!.Value;
+
+        string twin = new LilyPondExporter { Score = encore.Declaration }.Export(tree);
+
+        Assert.Contains("g2 g", twin);
+        Assert.DoesNotContain("c4 c c c", twin);
+    }
+
+    /// <summary>
     /// The default is one reading for all three, so a file whose only form is not named
     /// <c>main</c> is still the one they write.
     /// </summary>

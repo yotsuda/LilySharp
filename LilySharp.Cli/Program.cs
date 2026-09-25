@@ -535,7 +535,7 @@ static int RunMidi(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "midi", ".mid", WriteMidi);
+    return RunFormOutput(args, "midi", ".mid", (tree, form, _, path) => WriteMidi(tree, form, path));
 }
 
 static void ShowMidiHelp()
@@ -626,7 +626,7 @@ static int RunXml(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "xml", ".xml", WriteXml);
+    return RunFormOutput(args, "xml", ".xml", (tree, form, _, path) => WriteXml(tree, form, path));
 }
 
 static void ShowXmlHelp()
@@ -685,7 +685,7 @@ static int RunLy(string[] args)
     bool pinFonts = args.Contains("--pin-fonts");
     var rest = pinFonts ? args.Where(a => a != "--pin-fonts").ToArray() : args;
     return RunFormOutput(rest, "ly", ".ly",
-        (tree, form, path) => WriteLy(tree, form, path, pinFonts));
+        (tree, form, score, path) => WriteLy(tree, form, score, path, pinFonts));
 }
 
 static void ShowLyHelp()
@@ -734,9 +734,13 @@ static void ShowLyHelp()
 }
 
 static int WriteLy(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
+                   LilySharp.Core.Syntax.RenderDeclarationSyntax? score,
                    string outputPath, bool pinFonts)
 {
-    var exporter = new LilySharp.Core.LilyPond.LilyPondExporter { Form = form, PinFonts = pinFonts };
+    var exporter = new LilySharp.Core.LilyPond.LilyPondExporter
+    {
+        Form = form, Score = score, PinFonts = pinFonts,
+    };
     var ly = exporter.Export(tree);
     File.WriteAllText(outputPath, ly);
     Console.WriteLine($"Created: {outputPath}");
@@ -1158,9 +1162,13 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
 // ⚠️ The selector is a SCORE name and the unit written is its FORM, because that is what
 // `--score` already means for svg/pdf/png — one word, one meaning. Two scores naming one
 // form therefore write the same music to two names under `--all`, exactly as svg does.
+// The score's DECLARATION goes along too: its staves are not the form's (a book's
+// `score main`, `score main "both"` and `score main "tab"` share one form), and the ly
+// twin engraves them. midi and xml write the form's music and take no staves from it.
 static int RunFormOutput(
     string[] args, string verb, string defaultExt,
-    Func<SyntaxTree, LilySharp.Core.Syntax.FormDeclarationSyntax?, string, int> write)
+    Func<SyntaxTree, LilySharp.Core.Syntax.FormDeclarationSyntax?,
+         LilySharp.Core.Syntax.RenderDeclarationSyntax?, string, int> write)
 {
     var r = new CliParser(maxPositionals: 2)
         .Value("output", "-o requires a file path", "-o", "--output")
@@ -1177,20 +1185,20 @@ static int RunFormOutput(
     if (r.Has("all"))
         return RunOutputCommand(inputPath!, null, tree =>
         {
-            var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
+            var scores = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAllDeclared(tree);
             // A file with no `score` block has exactly one thing to write, and the
             // requested output path is where it goes.
-            if (specs.Count == 0)
-                return write(tree, null, outputPath!);
+            if (scores.Count == 0)
+                return write(tree, null, null, outputPath!);
 
             string stem = Path.GetFileNameWithoutExtension(inputPath!);
             string dir = Path.GetDirectoryName(inputPath!) ?? ".";
-            Console.WriteLine($"Writing {specs.Count} score(s):");
-            foreach (var spec in specs)
+            Console.WriteLine($"Writing {scores.Count} score(s):");
+            foreach (var (declaration, spec) in scores)
             {
                 // The same naming rule `svg --all` uses: the main score keeps the input
                 // stem, every other appends its own name (RenderSpec.ResolveOutputStem).
-                int rc = write(tree, spec.Form,
+                int rc = write(tree, spec.Form, declaration,
                     Path.Combine(dir, spec.ResolveOutputStem(stem) + defaultExt));
                 if (rc != 0) return rc;
             }
@@ -1200,10 +1208,11 @@ static int RunFormOutput(
     string? scoreName = r.Get("score");
     return RunOutputCommand(inputPath!, scoreName, tree =>
     {
-        var form = scoreName == null
+        var chosen = scoreName == null
             ? null
-            : LilySharp.Core.Svg.Collector.RenderSpecParser.FindByName(tree, scoreName)?.Form;
-        int rc = write(tree, form, outputPath!);
+            : LilySharp.Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, scoreName);
+        var form = chosen?.Spec.Form;
+        int rc = write(tree, form, chosen?.Declaration, outputPath!);
         if (rc == 0) WarnFormsLeftOut(tree, form);
         return rc;
     });

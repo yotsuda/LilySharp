@@ -439,6 +439,34 @@ public static class RenderSpecParser
         return specs;
     }
 
+    /// <summary>
+    /// <see cref="FindAll"/> with each spec's declaration beside it — for a caller that
+    /// hands the score itself on (the LilyPond twin reads its staves and plans from the
+    /// declaration), where the spec's <c>Form</c> cannot tell apart two scores of one form.
+    /// </summary>
+    public static IReadOnlyList<(RenderDeclarationSyntax Declaration, RenderSpec Spec)> FindAllDeclared(SyntaxTree tree)
+    {
+        var scores = new List<(RenderDeclarationSyntax, RenderSpec)>();
+        foreach (var node in tree.GetRoot().ChildNodes())
+        {
+            if (node is RenderDeclarationSyntax render && Parse(render) is { } spec)
+                scores.Add((render, spec));
+        }
+        return scores;
+    }
+
+    /// <summary><see cref="FindByName"/> with the spec's declaration beside it
+    /// (<see cref="FindAllDeclared"/> says why).</summary>
+    public static (RenderDeclarationSyntax Declaration, RenderSpec Spec)? FindDeclaredByName(SyntaxTree tree, string name)
+    {
+        foreach (var node in tree.GetRoot().ChildNodes())
+        {
+            if (node is RenderDeclarationSyntax render && Parse(render) is { } spec && MatchesName(spec, name))
+                return (render, spec);
+        }
+        return null;
+    }
+
     /// <summary>The single part the score being played engraves, or null when it names
     /// none or several (two parts means the page draws the same music in two registers,
     /// and a single stream cannot be both).</summary>

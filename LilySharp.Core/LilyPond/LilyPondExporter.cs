@@ -389,6 +389,21 @@ public sealed class LilyPondExporter
     public FormDeclarationSyntax? Form { get; init; }
 
     /// <summary>
+    /// The <c>score</c> declaration this twin writes — its staves, its <c>fonts</c> and
+    /// <c>layout</c> plans, its instrument names, and (when <see cref="Form"/> is null) its
+    /// form. Null for the default: the file's first <c>score</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ <see cref="Form"/> alone cannot say which score: a book of <c>score main</c>,
+    /// <c>score main "both" { staff … tab … }</c> and <c>score main "tab" { tab … }</c>
+    /// names ONE form three times. Until 2026-09-25 the twin read the file's first
+    /// <c>score</c> whatever it was asked for, so <c>lysc ly --all</c> wrote that book's
+    /// staff-only score three times over — the tab score's twin had no TabStaff (found
+    /// while comparing the tab corpus with its twins, HANDOFF §2 T7).
+    /// </remarks>
+    public RenderDeclarationSyntax? Score { get; init; }
+
+    /// <summary>
     /// Write a <c>\paper</c> block pinning the twin's serif and sans faces to LilyPond's
     /// bundled ones (<c>lysc ly --pin-fonts</c>). Off by default: the twin is a control
     /// laid out on LilyPond's own paper, and the corpus's twins must not all move for a
@@ -437,7 +452,8 @@ public sealed class LilyPondExporter
 
         CollectPhrases(root);
 
-        var render = root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
+        var render = Score ?? root.DescendantNodes<RenderDeclarationSyntax>().FirstOrDefault();
+        _scoreForm = Score is { } score ? Svg.Collector.RenderSpecParser.Parse(score)?.Form : null;
         // The score's resolved fonts plan — for the SIZE and STYLE attributes the twin
         // writes as overrides (EmitFontOverrides); the faces stay unwritten (EmitHeader).
         _fontPlan = ResolveFontPlan(tree, root, render);
@@ -5610,7 +5626,7 @@ public sealed class LilyPondExporter
     private void CollectInstrumentNames(SyntaxTree tree)
     {
         _instrumentNames.Clear();
-        var spec = RenderSpecParser.FindFirst(tree);
+        var spec = Score is { } score ? RenderSpecParser.Parse(score) : RenderSpecParser.FindFirst(tree);
         if (spec is null) return;
 
         int staffItems = spec.Items.Count(
@@ -5980,7 +5996,11 @@ public sealed class LilyPondExporter
     // itself moved to ScoreForms — this used to match `main` case-INSENSITIVELY while the
     // MIDI and MusicXML exporters matched it exactly, which is two answers to one question.
     private FormDeclarationSyntax? PrimaryForm(CompilationUnitSyntax root)
-        => Form ?? LilySharp.Core.Semantics.ScoreForms.Primary(root);
+        => Form ?? _scoreForm ?? LilySharp.Core.Semantics.ScoreForms.Primary(root);
+
+    /// <summary>The form <see cref="Score"/> renders, read once per export; null when no
+    /// score was named or its form is unknown.</summary>
+    private FormDeclarationSyntax? _scoreForm;
 
     // The music items directly inside a container (section/part/block): every
     // non-token child (notes, rests, barlines, breaks, key/time/tempo, …).

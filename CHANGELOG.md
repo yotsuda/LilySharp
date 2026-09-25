@@ -4,6 +4,20 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### MIDI, MusicXML and the LilyPond twin
+
+- **The twin of a named score engraves that score's staves.** `lysc ly --score NAME` and
+  `lysc ly --all` wrote every score's twin with the file's FIRST `score` — its staves, its
+  `fonts` and `layout` plans, its instrument names — and only the form followed the name. Two
+  scores on one form therefore came out the same: a tab book's `score main "tab" { tab … }`
+  twin had no TabStaff, and a chords-only `score main "grid"` carried the melody and the
+  lyrics of the first. Each twin now reads its own score, and so does the preview's
+  export-all. The single export from the preview still writes the primary form; `.mid` and
+  `.xml`, which take the form's music and no staves, are unchanged. Of 942 books, 86 write a
+  different twin for a second or later score; no first score's twin changes.
+
 ## 0.8.0
 
 Every part gets its own MIDI track and sound, phrasing slurs arrive, and a long run of engraving
