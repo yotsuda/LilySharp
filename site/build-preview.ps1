@@ -154,10 +154,11 @@ $template = @'
   <ol class="steps">
     <li><b><a href="https://code.visualstudio.com/">Install Visual Studio Code</a></b>
       <span>Version 1.90 or newer.</span></li>
-    <li><b>Search the Extensions pane for “Lily#”</b>
-      <span>Open it with <code>Ctrl+Shift+X</code> (<code>Cmd+Shift+X</code> on macOS) and
-      install
-      <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp"><code>yotsuda.lilysharp</code></a>.</span></li>
+    <li><b>Install the Lily# extension</b>
+      <span>In VS Code, press <code>Ctrl+Shift+X</code> (<code>Cmd+Shift+X</code> on macOS),
+      search for “Lily#” and click <b>Install</b> on the one by <i>yotsuda</i>. (Or install it
+      from its <a href="https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp">Marketplace
+      page</a>.)</span></li>
     <li><b>Open any <code>.lys</code> file</b>
       <span>The score opens beside the source, with diagnostics and completion as you
       type. For batch work there is also a <code>lysc</code> command-line build.</span></li>
