@@ -153,6 +153,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑵ ヒーロー動画の受け口**: `hero-vscode.mp4`（任意で `.webm`）があれば muted・loop・playsinline の `<video>`、poster＝`hero-vscode.png`、`prefers-reduced-motion` では再生せず controls。偽 mp4 で経路を確認して消した。
 ★ **⑶ 動画のシナリオ案**: Lab `sessions/p632/hero-stages.ps1`＝Morning Light の 4 小節版で 6 段階（開始→旋律を打つ→chords→lyrics→`bass { walk }`＋`staff bass`→`tab bass`）。全段階で診断 0（bass は `phrase walk` に置き、途中の小節数不一致 LYS2007 を避けた）。各段階の PNG も同所。
 
+★ **⑷ 追補（同じ会話）**: ユーザーが ScreenToGif（winget・MSIX）と ffmpeg 9.0.2（winget `Gyan.FFmpeg`・user PATH）を入れ、ヒーロー動画を 4 回撮った。4 回目を採用＝commit `site: the hero is a clip …`（`site/hero-vscode.mp4` 1.0 MB・`.webm` 1.0 MB・poster＝最終コマの PNG・1280×720・30fps・29.2 秒・`ffmpeg -vf fps=30,format=yuv420p` x264 crf22／VP9 crf34）。元 GIF は Lab `sessions/p632/hero-take4.gif`。残る粗: 小節 1〜2 のコード行（`G Cmaj7 | Am`）と Keys（G・C）の不一致、終盤の横スクロールで行頭が切れる（撮り直すなら `editor.wordWrap`）。完成版の譜は Lab `hero2/morning-light-hero.lys`。
+
 終了: docs のみ追加。
 
 ## 以下は第631セッションの経緯
