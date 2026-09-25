@@ -282,6 +282,18 @@ public readonly record struct MeasureContentKey(long Hash)
     /// spelling the per-measure side-table buckets use.</summary>
     internal static long HashSideContent(object item) => HashContent(item, SideExclusions);
 
+    /// <summary>Content fold of one measure item under the item exclusion set (source
+    /// offsets and the beam identity stripped) — the fold <see cref="AddIntrinsic(ref Hash64, Measure)"/>
+    /// gives each item, exposed for the SVG fragment memo's neighbour read.</summary>
+    internal static long HashItemContent(MusicItem item) => HashContent(item, ItemExclusions);
+
+    /// <summary>The per-property walk under each exclusion set — the oracle
+    /// <c>ContentKeyCompiledFoldTests</c> holds the compiled fold to.</summary>
+    internal static long HashItemContentSlow(object item) => HashContentSlow(item, ItemExclusions);
+
+    /// <inheritdoc cref="HashItemContentSlow"/>
+    internal static long HashSideContentSlow(object item) => HashContentSlow(item, SideExclusions);
+
     // --- intrinsic (items + structural fields) ---
 
     private static void AddIntrinsic(ref Hash64 hc, Measure measure)
@@ -702,7 +714,77 @@ public readonly record struct MeasureContentKey(long Hash)
         OutOfMemoryException or StackOverflowException
         or ThreadInterruptedException or OperationCanceledException);
 
+    /// <summary>
+    /// The content fold of <paramref name="item"/>: the type's compiled fold
+    /// (<see cref="CompiledFold"/>) — or, when one of its getters throws, the per-property walk
+    /// <see cref="HashContentSlow"/>, which poisons that property alone.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 609, Release, the reader's corpus, 3,760 pitch keystrokes): the key
+    /// vector was 6.0% of the render, 920 items a keystroke at ~160 ns each — a delegate call
+    /// and a branch per property of an item with some fifty. The compiled fold reads the same
+    /// properties in the same order and folds the same numbers
+    /// (<c>ContentKeyCompiledFoldTests</c> holds it to the walk on every item of the net books);
+    /// a getter that throws sends the item back to the walk, which is where the poisoning lives
+    /// — the getters are pure, so reading them twice changes nothing.
+    /// </remarks>
     private static long HashContent(object item, HashSet<string> excluded)
+    {
+        var fold = CompiledFold(item.GetType(), excluded);
+        try
+        {
+            return fold(item);
+        }
+        catch (Exception ex) when (IsPoisonable(ex))
+        {
+            return HashContentSlow(item, excluded);
+        }
+    }
+
+    private static readonly ConcurrentDictionary<Type, Func<object, long>> ItemCompiled = new();
+    private static readonly ConcurrentDictionary<Type, Func<object, long>> SideCompiled = new();
+
+    /// <summary>One method per (type, exclusion set) that does what <see cref="HashContentSlow"/>
+    /// does for a getter that does not throw: the type folded first, then every property of
+    /// <see cref="Getters"/>' list, in its order, by its arm — direct, sequence, or boxed.</summary>
+    private static Func<object, long> CompiledFold(Type type, HashSet<string> excluded)
+    {
+        var cache = ReferenceEquals(excluded, ItemExclusions) ? ItemCompiled : SideCompiled;
+        return cache.GetOrAdd(type, static (t, excluded) =>
+        {
+            var o = Expression.Parameter(typeof(object), "o");
+            var hc = Expression.Variable(typeof(Hash64), "hc");
+            var addGeneric = typeof(Hash64).GetMethods()
+                .Single(m => m.Name == nameof(Hash64.Add) && m.IsGenericMethodDefinition);
+            var body = new List<Expression>
+            {
+                Expression.Assign(hc, Expression.New(typeof(Hash64))),
+                Expression.Call(hc, addGeneric.MakeGenericMethod(typeof(Type)), Expression.Constant(t, typeof(Type))),
+            };
+            var addValue = typeof(MeasureContentKey).GetMethod(nameof(AddValue),
+                BindingFlags.NonPublic | BindingFlags.Static)!;
+            foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                         .Where(p => p.CanRead
+                                     && p.GetIndexParameters().Length == 0
+                                     && !excluded.Contains(p.Name))
+                         .OrderBy(p => p.Name, StringComparer.Ordinal))
+            {
+                if (DirectHashBody(p, o) is { } direct)
+                    body.Add(Expression.Call(hc, addGeneric.MakeGenericMethod(typeof(int)), direct));
+                else if (SequenceFoldOf(p) is { } sequence)
+                    body.Add(Expression.Call(Expression.Constant(sequence.Instance), sequence.Fold, o, hc));
+                else
+                    body.Add(Expression.Call(addValue, hc, Expression.Convert(
+                        Expression.Property(Expression.Convert(o, p.DeclaringType!), p), typeof(object))));
+            }
+            body.Add(Expression.Call(hc, typeof(Hash64).GetMethod(nameof(Hash64.ToHashCode))!));
+            return Expression.Lambda<Func<object, long>>(Expression.Block(new[] { hc }, body), o).Compile();
+        }, excluded);
+    }
+
+    /// <summary>The per-property walk: every getter in its own try, a throwing one poisoned
+    /// (see <see cref="_getterPoison"/>). The fold <see cref="CompiledFold"/> matches.</summary>
+    internal static long HashContentSlow(object item, HashSet<string> excluded)
     {
         var hc = new Hash64();
         hc.Add(item.GetType());                       // discriminate kinds
@@ -822,6 +904,14 @@ public readonly record struct MeasureContentKey(long Hash)
     /// property type.
     /// </summary>
     private static SequenceFold? CompileSequenceFold(PropertyInfo p)
+        => SequenceFoldOf(p) is { } sequence
+            ? (SequenceFold)Delegate.CreateDelegate(typeof(SequenceFold), sequence.Instance, sequence.Fold)
+            : null;
+
+    /// <summary>The <see cref="ArrayFold{T}"/> of an <c>ImmutableArray&lt;T&gt;</c> property and
+    /// its <c>Fold</c> method, or null for any other property type — what
+    /// <see cref="CompileSequenceFold"/> wraps and <see cref="CompiledFold"/> calls.</summary>
+    private static (object Instance, MethodInfo Fold)? SequenceFoldOf(PropertyInfo p)
     {
         var t = p.PropertyType;
         if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(ImmutableArray<>))
@@ -832,7 +922,7 @@ public readonly record struct MeasureContentKey(long Hash)
             typeof(Func<,>).MakeGenericType(typeof(object), t),
             Expression.Property(Expression.Convert(o, p.DeclaringType!), p), o).Compile();
         var fold = Activator.CreateInstance(typeof(ArrayFold<>).MakeGenericType(element), get)!;
-        return (SequenceFold)Delegate.CreateDelegate(typeof(SequenceFold), fold, "Fold");
+        return (fold, fold.GetType().GetMethod(nameof(ArrayFold<int>.Fold))!);
     }
 
     /// <summary>
@@ -892,6 +982,16 @@ public readonly record struct MeasureContentKey(long Hash)
     /// </remarks>
     private static Func<object, int>? CompileDirectHash(PropertyInfo p)
     {
+        var o = Expression.Parameter(typeof(object), "o");
+        return DirectHashBody(p, o) is { } body
+            ? Expression.Lambda<Func<object, int>>(body, o).Compile()
+            : null;
+    }
+
+    /// <summary>The body of <see cref="CompileDirectHash"/> over the item parameter
+    /// <paramref name="o"/> — also inlined, as is, by <see cref="CompiledFold"/>.</summary>
+    private static Expression? DirectHashBody(PropertyInfo p, ParameterExpression o)
+    {
         var t = p.PropertyType;
         if (!t.IsValueType
             || typeof(IEnumerable).IsAssignableFrom(t)
@@ -899,7 +999,6 @@ public readonly record struct MeasureContentKey(long Hash)
             || Nullable.GetUnderlyingType(t) == typeof(ChordNoteInfo))
             return null;
 
-        var o = Expression.Parameter(typeof(object), "o");
         Expression value = Expression.Property(Expression.Convert(o, p.DeclaringType!), p);
 
         // A Nullable folds its value's hash when it has one and Hash64.NullFold when it does
@@ -928,7 +1027,7 @@ public readonly record struct MeasureContentKey(long Hash)
         if (nullable != null)
             body = Expression.Condition(Expression.Property(nullable, "HasValue"), body,
                 Expression.Constant(unchecked((int)Hash64.NullFold)));
-        return Expression.Lambda<Func<object, int>>(body, o).Compile();
+        return body;
     }
 
     // o => (object)((TDeclaring)o).Prop

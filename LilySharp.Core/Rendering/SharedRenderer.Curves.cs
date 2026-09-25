@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering.Svg;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
@@ -28,7 +29,73 @@ internal static partial class SharedRenderer
 {
     // ---------- Ties & slurs ----------
 
+    /// <summary>
+    /// The bows of one page through the ⒭ overlay fragment memo (the fingerings' wiring,
+    /// SharedRenderer.Marks): a page whose bows fold to the same values replays its recorded
+    /// text. MEASURED (session 598, the reader's corpus, 3,760 pitch keystrokes): the ties were
+    /// 1.7% and the slurs 0.7% of the render, drawn live on every page of every keystroke.
+    /// </summary>
+    /// <remarks>
+    /// THE FOLD IS WHAT THE DRAW READS: per bow on the page, the measure it is keyed by, that
+    /// measure's system top (the page frame the stored Y-up offsets are raised by), its six
+    /// coordinates, its staff, and whether it cites a source (the scope's shape) — plus the
+    /// page height the Y-flip bakes in. The thickness is a constant, and an ossia staff (the
+    /// only thing <see cref="OssiaShrink"/> changes) turns the whole memo off
+    /// (SvgSystemFragmentCache.PrepareRender). The cited offsets are the anchors.
+    /// ⚠️ The fold has an isolating net (OverlayFragments_BowsReplayOnUntouchedPages_AndMatchFull
+    /// goes red with the coordinates left out); the anchors do not — emptied, the suite stays
+    /// green, because the slots re-map the same numbers. They are kept for the reason the
+    /// system fragments keep theirs (SvgSystemFragmentCache.TryReplay's load-bearing remark:
+    /// an error-recovery edit whose content converges to the same bows anchored elsewhere).
+    /// </remarks>
     private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
+        in OssiaShrink os, IDrawingContext gc, SvgDocumentContext? fragHost,
+        SvgSystemFragmentCache? fragments, int pageIndex, PageLayout page)
+    {
+        if (layout.TieLayouts.IsDefaultOrEmpty)
+            return;
+        if (fragHost == null)
+        {
+            DrawTiesLive(layout, sysTopYUp, os, gc);
+            return;
+        }
+        var hc = new MeasureContentKey.Hash64();
+        hc.Add(page.Height);
+        var anchors = new List<int>();
+        foreach (var tie in layout.TieLayouts)
+        {
+            int mi = tie.RenderMeasureIndex >= 0 ? tie.RenderMeasureIndex : tie.Tie.StartMeasureIndex;
+            if (!sysTopYUp.TryGetValue(mi, out double syUp))
+                continue;
+            hc.Add(mi);
+            hc.Add(syUp);
+            FoldBow(ref hc, tie.StartX, tie.StartYUp, tie.EndX, tie.EndYUp, tie.Control1, tie.Control2, tie.StaffIndex);
+            hc.Add(tie.Tie.SourcePosition >= 0);
+            anchors.Add(tie.Tie.SourcePosition);
+        }
+        long hash = hc.ToHashCode();
+        var anchorArray = anchors.ToArray();
+        if (fragments!.TryReplayOverlay(OverlayDrawerId.Ties, pageIndex, hash, anchorArray, fragHost))
+            return;
+        using (fragments.BeginOverlayCapture(OverlayDrawerId.Ties, pageIndex, hash, anchorArray, fragHost))
+            DrawTiesLive(layout, sysTopYUp, os, gc);
+    }
+
+    private static void FoldBow(ref MeasureContentKey.Hash64 hc, double startX, double startYUp,
+        double endX, double endYUp, (double X, double Y) c1, (double X, double Y) c2, int staffIndex)
+    {
+        hc.Add(startX);
+        hc.Add(startYUp);
+        hc.Add(endX);
+        hc.Add(endYUp);
+        hc.Add(c1.X);
+        hc.Add(c1.Y);
+        hc.Add(c2.X);
+        hc.Add(c2.Y);
+        hc.Add(staffIndex);
+    }
+
+    private static void DrawTiesLive(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         foreach (var tie in layout.TieLayouts)
@@ -61,7 +128,46 @@ internal static partial class SharedRenderer
         }
     }
 
+    /// <summary>The slurs of one page through the overlay fragment memo — see
+    /// <see cref="DrawTies(ScoreLayout, Dictionary{int, double}, in OssiaShrink, IDrawingContext, SvgDocumentContext?, SvgSystemFragmentCache?, int, PageLayout)"/>;
+    /// a slur cites two offsets, the `(` and the `)`, and which of them it cites is the
+    /// scope's shape.</summary>
     private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
+        in OssiaShrink os, IDrawingContext gc, SvgDocumentContext? fragHost,
+        SvgSystemFragmentCache? fragments, int pageIndex, PageLayout page)
+    {
+        if (layout.SlurLayouts.IsDefaultOrEmpty)
+            return;
+        if (fragHost == null)
+        {
+            DrawSlursLive(layout, sysTopYUp, os, gc);
+            return;
+        }
+        var hc = new MeasureContentKey.Hash64();
+        hc.Add(page.Height);
+        var anchors = new List<int>();
+        foreach (var slur in layout.SlurLayouts)
+        {
+            int mi = slur.RenderMeasureIndex >= 0 ? slur.RenderMeasureIndex : slur.Slur.StartMeasureIndex;
+            if (!sysTopYUp.TryGetValue(mi, out double syUp))
+                continue;
+            hc.Add(mi);
+            hc.Add(syUp);
+            FoldBow(ref hc, slur.StartX, slur.StartYUp, slur.EndX, slur.EndYUp, slur.Control1, slur.Control2, slur.StaffIndex);
+            hc.Add(slur.Slur.StartSourcePosition >= 0);
+            hc.Add(slur.Slur.EndSourcePosition >= 0);
+            anchors.Add(slur.Slur.StartSourcePosition);
+            anchors.Add(slur.Slur.EndSourcePosition);
+        }
+        long hash = hc.ToHashCode();
+        var anchorArray = anchors.ToArray();
+        if (fragments!.TryReplayOverlay(OverlayDrawerId.Slurs, pageIndex, hash, anchorArray, fragHost))
+            return;
+        using (fragments.BeginOverlayCapture(OverlayDrawerId.Slurs, pageIndex, hash, anchorArray, fragHost))
+            DrawSlursLive(layout, sysTopYUp, os, gc);
+    }
+
+    private static void DrawSlursLive(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         foreach (var slur in layout.SlurLayouts)

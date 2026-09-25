@@ -1063,6 +1063,17 @@ internal sealed class BeamScoringProblem
             if (candidates.Count == 0)
                 return AtOuterStems(_unquantedLeftY, _unquantedRightY);
 
+            // The first scorer, applied to every candidate before the queue sees them: the
+            // seeds' demerits are the start score / 1000, below any scored candidate, so the
+            // lazy search pulled every one of them for this stage anyway — MEASURED (session
+            // 608, the reader's corpus, 3,760 pitch keystrokes): 251 of 254 candidates a beam,
+            // two thirds of the search's 376 steps each a dequeue and a re-enqueue. The winner
+            // is the same: every scorer ADDS demerits (none is negative), so the first done
+            // candidate the queue hands back has the least total either way; only candidates
+            // tied at that total could come out in another order.
+            for (int i = 0; i < candidates.Count; i++)
+                OneScorer(candidates[i]);
+
             // Phase 5: Score using priority queue (lazy evaluation)
             // LILYPOND-REF: lily/beam-quanting.cc:1050-1083 — the best-first queue inside
             //   Beam_scoring_problem::solve: configurations are scored lazily, cheapest first.

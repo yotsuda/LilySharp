@@ -87,7 +87,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:2992 Script grob
     /// LILYPOND-REF: lily/script-engraver.cc:235 acknowledge_rhythmic_head / :253 acknowledge_note_column
     /// </remarks>
-    private static void DrawArticulations(ScoreTextMetrics fonts, ScoreLayout layout,
+    private static void DrawArticulationsLive(ScoreTextMetrics fonts, ScoreLayout layout,
         Dictionary<int, double> sysTopYUp, in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;

@@ -129,6 +129,201 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第610セッションの経緯
+
+### 1.1 第610セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p610`（HEAD `cfafb298`・full **9144 / 0 / 2 / 9146**・第608 を ARCHIVE へ）。着手＝内容鍵の畳み込みを型ごとに 1 本の式へ（第609 ⑵）。
+
+★★ **⑴ 実装（`e6e55135`）**: `MeasureContentKey.HashContent`＝(型, 除外集合) ごとに 1 本コンパイルした fold（`CompiledFold`＝型→全プロパティを `Getters` と同じ順・同じ 3 つの arm＝direct／sequence／boxed で `Hash64` に足す）。getter が投げたら従来のプロパティごとの walk（`HashContentSlow`＝毒はそこ）へ戻る（getter は純粋＝2 度読んでも同じ）。`DirectHashBody`・`SequenceFoldOf` を旧 builder と共有。
+
+⑵ **結果**: 鍵とばねの段 1,147／1,142 → 1,048／1,009 ms（約 −115 ms＝render の約 1.2%・render 全体は揺れの範囲・同じ窓の A/B）。網 `ContentKeyCompiledFoldTests`（net 本の全 item 6,401・side-table 1,165 件で速い経路＝遅い経路）＝毒 2 本（型の fold を抜く・boxed の arm を落とす）で赤。
+
+終了: HEAD `e6e55135`＋docs・full **9145 / 0 / 2 / 9147**（+1）。
+
+## 以下は第609セッションの経緯
+
+### 1.1 第609セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p609`（HEAD `a3e4d033`・full **9144 / 0 / 2 / 9146**・第607 を ARCHIVE へ）。着手＝スラーの探索に第608 の形が効くか。
+
+⑴ **スラーは見送り**: 同じ形（初期点 0 の候補に第 1 段階を先に掛ける・Lab `sessions/p609/slur-eager.diff.txt`）＝render 9,224／9,201 対 9,147／9,208 ms＝差なし（このコーパスはスラーが少ない）＝同点の危険だけ入るので戻した。⚠️ 静かな窓の HEAD＝render 約 9,200 ms（第598 前の 12,030 から **−24%**）。
+
+★ **⑵ 鍵とばね（12.3%）を割った**（Lab `sessions/p609/keys-laps.diff.txt`）: **内容鍵 6.0%**（1 打鍵 約 920 item × 約 160 ns＝item ごとに約 50 個の getter delegate）・ばね 4.9%（memo の当たる小節は安い・作り直す 1.05 小節が 1 回 約 0.12 ms＝本当の計算）・最短音価 0.8%・隣接鍵 0.4%。⇒ 次: 内容鍵の畳み込みを型ごとに 1 本の式へコンパイル（畳む値と順序は今と同じ・旧い経路を oracle にした網）＝見込み 約 3%。
+
+終了: HEAD `a3e4d033`＋docs（コードの変更なし）・full **9144 / 0 / 2 / 9146**。
+
+## 以下は第608セッションの経緯
+
+### 1.1 第608セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p608`（HEAD `33d1bd47`・full **9144 / 0 / 2 / 9146**・第606 を ARCHIVE へ）。着手＝ユーザー「忠実度をほんの少し諦めたら、パフォーマンスが大きく改善するようなら検討して」＝梁の位置の選択（13.9%）の中を割る。⚠️ 打鍵ごとの近似（前回の答えの流用）は incremental ≠ 全面描画（書き出し）になる＝諦めるなら両方に効く「計算の簡略化」に限る、とユーザーに伝えた。
+
+★★ **⑴ 割った**（一時の Stopwatch・Lab `sessions/p608/`）: 梁の解の 11.9% のうち遅延採点が 11.1%。1 回の解で候補 254・探索 376 歩、**第 1 段階（傾きの理想）が 251 候補に掛かる**＝種の点数は開始点 /1000 で採点済みより必ず小さい＝遅延探索でも全候補が 1 度取り出され、1 段階だけ採点されて戻る＝探索の 2/3 が出し入れ。
+
+★★★ **⑵ 第 1 段階を候補の生成直後に全部へ掛けてから積む（`b6b3209d`）**: どの段階も非負の加算＝最初に取り出される完了候補は合計最小のまま（同点だけ順が変わりうる）。**render 10,653／10,630 → 9,919／9,967 ms（約 −6.6%）・layout −13%**（同じ窓の A/B）。**忠実度の損失なし**: 前後の描画ハッシュ 8,968 打鍵全一致・全木 942 冊の静的描画 変化 0・台帳とスナップショット不変。⚠️ 第604 の「ヒープは費用でない」は誤り＝あの形（最小のままなら戻さない）が第 1 段階ではほぼ発動していなかった。次: スラーの `SlurScoringProblem` も同じ `BestFirstScorer`（スラー 0.7%）。
+
+終了: HEAD `b6b3209d`＋docs・full **9144 / 0 / 2 / 9146**（±0）。
+
+## 以下は第607セッションの経緯
+
+### 1.1 第607セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p607`（HEAD `9c2c579b`・full **9142 / 0 / 2 / 9144**・第605 を ARCHIVE へ）。着手＝頁の overlay 断片 memo をタイ・スラーへ広げる（第598 の地図で 1.7%＋0.7%）。
+
+★★ **⑴ 配線した（`d9e1e7d8`）**: 指使いと同じ形（`TryReplayOverlay`／`BeginOverlayCapture`・`OverlayDrawerId.Ties`／`Slurs`）。頁の指紋＝頁の高さ＋弧ごとに小節・その段の上端 Y・座標 6 つ・staff・位置を持つか（scope の形）。anchor＝`~`・`(`・`)` の位置。ossia は memo ごと無効（`PrepareRender`）なので `OssiaShrink` は恒等。
+
+⑵ **結果**: 機械全体が遅くなった時間帯だったので同じ窓で A/B（変更前 10,795／10,712 ms）＝SVG の段 2,049／2,018 → 1,847／1,866 ms・**render 約 −1.8%**。照合 6 通り 19,560 打鍵で不一致 0。網 `OverlayFragments_BowsReplayOnUntouchedPages_AndMatchFull`・`…_TriviaInsertion_ShiftsTheBowsDataPos`＝毒「座標を指紋から外す」で赤／**「anchor を空に」は緑**（slot が同じ数字を写し直す＝段の断片と同じく構文回復のための保険・コメントに記載）。次の候補: 同じ形でリハーサル記号 0.9%・`%` 反復 0.9%・小節番号 0.5%・アーティキュレーション 0.4%（第598 の地図）。
+
+終了: HEAD `d9e1e7d8`＋docs・full **9144 / 0 / 2 / 9146**（+2）。
+
+## 以下は第606セッションの経緯
+
+### 1.1 第606セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p606`（HEAD `6e47cea8`・full **9142 / 0 / 2 / 9144**・第604 を ARCHIVE へ）。着手＝段数の選び直しと頁割り（第604 の地図で 3.8%＋3.9%）。
+
+⑴ **値付けして見送り**（一時の指紋・Lab `sessions/p606/count-probe.diff.txt`）: `ChooseSystemCount` の入力（小節の高さの見積り・改行の候補表）が前の打鍵と両方同じだったのは **22%**（見積り 44%・候補表 35%＝ばねが少しでも動けば力の和が変わる）＝結果の丸ごと memo は 3.8% の 1/5 ≈ 0.8%。頁割り（`CreatePages` 3.9%）も実際の系に対する頁の DP＝同じ性質。どちらも LP の頁割りの移植そのもの。
+
+⇒ **第598〜第605 で render 約 12,030 → 9,890 ms（−18%）・割当 1,103 → 761 KB／打鍵（−31%）**。残る頭は LP の計算そのもの（梁の位置の選択 13.9%・頁割り 7.7%）か設計級（§1.0 ⒵）。
+
+終了: HEAD `6e47cea8`＋docs（コードの変更なし）・full **9142 / 0 / 2 / 9144**。
+
+## 以下は第605セッションの経緯
+
+### 1.1 第605セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p605`（HEAD `73ee24fc`・full **9141 / 0 / 2 / 9143**・第603 を ARCHIVE へ）。着手＝SVG の段の `RenderTo` の外（第598 で約 4%・未分解）。
+
+★★ **⑴ 割った**（一時の Stopwatch・Lab `sessions/p605/svg-laps.diff.txt`）: `RenderIncrementalPages` の `ToPages` 4.0%＝**「位置だけずれた頁か」の判定 `SvgPageSet.SameModuloWindow` 2.1%**（1.01 頁／打鍵＝編集した頁・ほぼ必ず Changed）・文字列化 1.0%・前回との比較 0.6%。判定は最初の違いまで 1 文字ずつ歩いていた。
+
+★★ **⑵ 直した（`4e57729e`）**: 次の `data-pos="`／`data-alt="` までを 1 つの span として一括比較（数字は今までどおり開き手の直後だけ読む）。SVG の段 2,086／2,047 → 1,872／1,864 ms・**render 約 −1.5%（10,017 → 9,890 ms）**。網 `SameModuloWindow_AnswersAsTheCharacterWalkDid_OnRenderedPages`（旧い 1 文字の歩きを oracle に・net 本 60 冊の実際の頁で「空白の挿入」と「音高の変更」）＝毒 2 本（`data-alt` を開き手にしない・数字の対応を見ない）で赤。
+
+終了: HEAD `4e57729e`＋docs・full **9142 / 0 / 2 / 9144**（+1）。
+
+## 以下は第604セッションの経緯
+
+### 1.1 第604セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p604`（HEAD `efffa3af`・full **9141 / 0 / 2 / 9143**・第602 を ARCHIVE へ）。着手＝根ごとの表を赤で作る他の軒（第603 の続き）。
+
+⑴ **他の軒は無い**: 根ごとの表は `LyricBindings` の 2 つだけ（歌詞の本だけ・索引を使う）、描画経路の `DescendantNodes()` は form／score ブロックの小さな部分木だけ。⚠️ `q` の表の赤の歩きは**第594 の `NewOriginalFloor` から全ての本で毎打鍵**になった退行だった。
+
+★★ **⑵ layout の地図を HEAD で取り直した**（render 約 10,050 ms・計器 Lab `sessions/p604/layout-laps.diff.txt`）: layout 45%＝配置 30%（段ごとの layout 22%・仮の注釈 pass 9.4%）・段数の選び直し 3.8%・頁 3.9%・仕上げ 4.2%・改行 1.4%。段ごとの 22% の中は **staff の skyline 17.7%（外れは 1.01 段／打鍵＝編集した段だけ）→ その中の梁の layout 13.9%**（1 打鍵 12 回の解・候補 214・探索 302 歩・1 回約 31 µs）。梁の入力は段の間隔で全部動く＝memo は効かない＝LP の beam-quanting の移植そのもの。
+
+⑶ **反証**: 探索で進めた候補が最小のままならキューに戻さない形（Lab `sessions/p604/held-best.diff.txt`）＝render 10,029／10,005 ms 対 10,011／10,150＝差なし＝ヒープは費用でなかった（第589 の「ヒープが採点より重い」はサンプリングの歪み）＝同点の崩し方が変わる危険だけ残るので戻した。
+
+⇒ **残りの頭は LP の計算そのもの（梁 13.9%）か設計級（§1.0 ⒵）**。
+
+終了: HEAD `efffa3af`＋docs（コードの変更なし）・full **9141 / 0 / 2 / 9143**。
+
+## 以下は第603セッションの経緯
+
+### 1.1 第603セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p603`（HEAD `882f5613`・full **9140 / 0 / 2 / 9142**・第601 を ARCHIVE へ）。着手＝collect の resume の基準を前の打鍵へ進める（第601 の棚卸しの残り）。
+
+⑴ **基準を進める案は見送り**: item は data-pos を持つ＝Δ≠0 の打鍵では編集より後ろの item は基準を進めても新しいオブジェクト。効くのは「最後の全面 collect から今の編集までを live で歩き直す分」だけ（打鍵は近くに固まる）で、再開した collect に次の記録を作らせる仕組み（splice 規模）が要る。
+
+★★★ **⑵ collect を割った**（一時の Stopwatch・Lab `sessions/p603/collect-laps.diff.txt`）: 声部の walk 10.3%・タブ 4.6%・**再開の計画 `CollectResumePlanner.Plan` 6.8%**、その中の **`NewOriginalFloor` 4.8%＝`ChordRepetitions.OriginalsOf` 4.7%**（bare duration 側は 0.3%）。3,680 回中 16 回しか空でない表を、**赤ノードで木全体を実体化して**毎打鍵作っていた（第519 が bare duration 側だけ緑にした）。
+
+★★★ **⑶ 緑の歩きに移植（`8899e56e`）**＝`q` とその和音だけ `BareDurations.RedOf`（internal に）で実体化。**render 10,836／11,045 → 10,011／10,150 ms（約 −8%）・collect −19%・割当 990 → 761 KB／打鍵（−23%）・GC の停止 1,280 → 1,000 ms**。前後の描画ハッシュ 8,968 打鍵全一致・照合 6 通り 19,560 打鍵で不一致 0。網 `ChordRepetitionsGreenWalkTests`（旧い赤の歩きを oracle に・参照で比較）＝毒 2 本（スコープで持ち越す・和音で変位を戻さない）で赤。⚠️ 次: 根ごとの表を赤で作る他の軒（`LyricBindings` の 2 表など）を同じ目で見る。
+
+終了: HEAD `8899e56e`＋docs・full **9141 / 0 / 2 / 9143**（+1）。
+
+## 以下は第602セッションの経緯
+
+### 1.1 第602セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p602`（HEAD `0c0aab88`・full **9140 / 0 / 2 / 9142**・第600 を ARCHIVE へ）。着手＝内容鍵を item の参照で memo（第601 の続き）。
+
+⑴ **反証**: `MeasureContentKey.AddIntrinsic` の item の hash を item をキーの `ConditionalWeakTable` に（刻印 3 つ＝`StemUpOverride`・`PureBeamedStemTip`・rest の `PureBeamShift` を控えて検証・毒の値は持たない）。鍵＋ばねの段 1,152／1,184 → 1,126／1,126 ms だが **GC の停止 1,280 → 1,540 ms・割当 990 → 1,010 KB／打鍵・render 10,836／11,045 → 11,240／11,317 ms（+3%）**＝戻した（差分は Lab `sessions/p602/cwt-item-hash.diff.txt`）。全 item を弱参照の表で持つと dependent handle の GC の費用が勝つ。第601 のタブの写しの表は差し引きで勝っている（割当 −76 KB・GC 停止 1,402 → 1,280 ms）。
+
+終了: HEAD `0c0aab88`＋docs（コードの変更なし）・full **9140 / 0 / 2 / 9142**。
+
+## 以下は第601セッションの経緯
+
+### 1.1 第601セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p601`（HEAD `64961038`・full **9138 / 0 / 2 / 9140**・第599 を ARCHIVE へ）。着手＝ユーザー決定「item を作り直さない」（§1.0 ⒵ ⑶ の土台）。
+
+★★ **⑴ 実測**（一時計器 Lab `sessions/p601/Zz601Census.cs.txt`＝最終 score の各 item を前の打鍵の同じ位置と比べる）: 同じオブジェクト 28%・**別オブジェクトで内容（位置を除く）が同じ 61%**・違う 6%。写す軒の棚卸し（Explore エージェント・10 軒）の頭 2 つ: ⒜ 後側の splice（`CollectTailShifter.ShiftMeasure`／`ShiftItem`）が位置の動かない小節・item も**必ず** `with` で写す ⒝ `TabResolver.ResolveTabStrings` が弦を書いていない音を毎打鍵 `with { StringNumber }`（`staff bl tab bl` は譜表と同じ item＝タブ側が丸ごと写し）。
+
+★★★ **⑵ 直した（`402f8548`）**: ⒜ 位置が 1 つも動かなければ同じインスタンスを返す（prefix の採用は既に共有＝`NoteItem.StampBeam` の「刻印の前に消す」の上に立つ）／⒝ 入力の音を弱参照のキーに前回の写しを持ち、弦と入力の刻印 3 つ（`StemUpOverride`・`BeamId`・`PureBeamedStemTip`＝このモデルの唯一の書き換え）が一致すれば返す。同じオブジェクト **28% → 62%**（音高）・21.6% → 28%（長さの変わる編集）。**render 約 −6%（11,660 → 10,940 ms）・collect −14%・割当 −76 KB／打鍵**（2 回ずつ）。前後の描画ハッシュ 8,968 打鍵で全一致・照合 6 通り 19,560 打鍵で不一致 0。網 `ItemReuseTests` 2 本＝毒 3 本（splice が常に写す／タブが常に新しく作る／刻印を比べない）がそれぞれ赤。
+
+終了: HEAD `402f8548`＋docs・full **9140 / 0 / 2 / 9142**（+2）。
+
+## 以下は第600セッションの経緯
+
+### 1.1 第600セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p600`（HEAD `6db02240`・full **9137 / 0 / 2 / 9139**・第598 を ARCHIVE へ）。着手＝仮の pass の梁・タイ・スラーの memo の当たり方。
+
+★★ **⑴ 数えた**（一時計数・Lab `sessions/p600/counts*.log`）: タイは staff の呼び 1.69／打鍵のうち **0.88 が staff 丸ごと memo なし**＝数字だけのタブ譜 0.60（普通の計算は空を返すのに、memo の空を組み直しの不一致と読んで丸ごとへ）＋段をまたぐタイ 1 本で全列を解き直す 0.17（＋タブ 0.10）。梁は段またぎ 0。スラーは段またぎで丸ごと 0.10。
+
+★★ **⑵ 直した（`0a3bf338`）**: 数字だけのタブ譜は入口で空／段をまたぐ列だけ普通の計算で解き、他は段ごとの memo、検出順に組み直す（列は独立＝既存の memo と同じ前提）。変更前後の描画ハッシュ 3 通り 8,968 打鍵で全一致。layout 段 約 −2.5%（5,160 → 5,010 ms）・割当 −16.5 KB／打鍵、render 全体は揺れの範囲。網 `PrelimTies_ATieAcrossALineBreak_ReassemblesWithTheMemoizedOnes`（2 staff・`octave absolute`＝相対音高だと `c'2~ c'2` がタイにならず網が空振りした）＝段またぎの配置を捨てる毒で赤。⚠️ 例外を投げる毒は緑（例外時に丸ごと再計算へ逃がす仕組みがある）。
+
+終了: HEAD `0a3bf338`＋docs・full **9138 / 0 / 2 / 9140**（+1）。
+
+## 以下は第599セッションの経緯
+
+### 1.1 第599セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p599`（HEAD `c8341372`・full **9137 / 0 / 2 / 9139**・第597 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑷ の SVG の overlay と仮の注釈 pass。
+
+⑴ **overlay は値付けだけ**: 各 drawer に無駄は無く費用は SVG の書き出し。指使いの overlay memo を広げても再生できるのは編集の無い頁（約 2/3）だけ＝上限 約 3%、drawer ごとに「読む入力の全部」を畳む必要＝着手せず。
+
+★★ **⑵ 仮の注釈 pass を割った**（一時の Stopwatch 25 か所・Lab `sessions/p599/prelim-laps.diff.txt`）: 計 約 10.9%。注釈 layout 4.9% の中は散らばる（上の積み上げ 1.4・スクリプト 1.2・組み立て 1.0・…）。**組み立ての 1.0% は仮の pass が読まない結果**＝仮の pass が注釈から読むのは `EnrichExtentsWithAnnotationProtrusions`・`AugmentSkylinesForPaging` の 14 種だけで、装飾音・歌詞ハイフン・半タイ・全休符・歌詞番号・`%` 反復は作って捨てていた。
+
+★★ **⑶ `AnnotationLayoutContext.ExtentsOnly`（`25929a2c`）**＝仮の pass ではその 6 種を空に。render 約 11,711 → 11,580 ms（−1.1%・2 回ずつ）・割当 −19.5 KB／打鍵。**変更前後の描画ハッシュ**（音高 1,880・長さの変わる編集 1,824・repo の fuzz 5,264 打鍵）**が全一致**＝出力は変わらない（照合＝incremental 対 全面描画では確かめられない＝両側が同じ変更を通る）。網は無い（読まれない仕事を消しただけ）＝読む側（`EnrichExtentsWithAnnotationProtrusions`）に「この 6 種は空」の注意書き。
+
+終了: HEAD `25929a2c`＋docs・full **9137 / 0 / 2 / 9139**（±0）。
+
+## 以下は第598セッションの経緯
+
+### 1.1 第598セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p598`（HEAD `2e927caf`・full **9134 / 0 / 2 / 9136**・第596 を ARCHIVE へ）。着手＝§1.0 ⒵ の時間の地図の残り（content key・SVG 出力）。
+
+★ **⑴ content key は参照の memo では効かない**（一時計器 Lab `sessions/p598/Zz598Census.cs.txt`・Release の `p594/cpuhost`）: 打鍵ごとに約 920 item を畳むが、前の打鍵と同じ item オブジェクトは 28%（音高 1,880 打鍵）／11%（fuzz）。resume が 130 小節／打鍵を採用しても、仕上げが item を作り直す＝着手せず（§1.0 ⒵ ⑶）。
+
+★★ **⑵ SVG 出力（render の 19.8%）を割った**（一時の Stopwatch＝`SharedRenderer.RenderTo` の 36 か所・Lab `sessions/p598/svg-laps.diff.txt`・ユーザーに静かな窓をもらって 2 回ずつ）: 段の live 描画 8.2%（**1.85 段／打鍵**）・再生 1.7%（21.9 段）・overlay 計 約 5%・`RenderTo` の外 約 4%。live の断りの理由を数えると **段の内容鍵の違い 1.53・幾何 0.31**／打鍵、鍵の変わった小節は **1.05／打鍵（97% が 1 小節）**。
+
+★★★ **⑶ 原因＝断片の鍵が左右の隣の小節の内容鍵を丸ごと畳んでいた**（第151 のコメント自身が「左は読みが見つかっていないが畳む・過敏は 1 編集に 1 段」）＝段の端の小節の音符を変えると隣の段まで live。**描画が隣から読むもの**を `Rendering/` の `Measures[…]` の添字読み全部で棚卸しした: 左＝前の小節の `EndBarline`（`:|:` → 行頭の `.|:`・`DrawnLineStartBarline`＝第151 より後に足された読み）／右＝次の小節の頭の長さ 0 の item（行末 courtesy の調・拍子と譜線の延長）。他は slice の中・entry context の歩き・data-pos だけ。⇒ `SliceFor` の両端を `LeftEdgeRead`／`RightEdgeRead`（全 staff・全声部）に（`a44a69a8`）。**live 1.85 → 1.35 段／打鍵・描画 約 980 → 720 ms・render 12,030 → 約 11,710 ms（−2.7%）**。
+
+⑷ **照合**: 6 通り 19,560 打鍵で不一致 0・resume の採用量は第597 と同じ。網 `RenderFragments_ANoteBesideASystem_DoesNotRedrawIt`（2 例＝段 1 の最後の小節／段 2 の最初の小節の音符）・`RenderFragments_ARepeatBarBeforeASystem_RedrawsItsOpening`。毒（Lab `sessions/p598/poisons.log`）: 丸ごとの鍵に戻す＝新しい網 2 本が赤／**左・右の読みを定数に＝全部緑**＝`:|:` は行頭の小節線の幅（幾何）、courtesy は item の data-pos（slot）が先に捕まえる＝単独の観測者は無い（第151 の右の窓と同じ・コメントに記載）。⚠️ PowerShell の置換の組を `@( ,@(a,b) ,@(c,d) )` と書くと組が崩れて一致 0（`hits -ne 1` の門が止めた）＝`List[object]` に 1 組ずつ `Add`。
+
+終了: HEAD `a44a69a8`＋docs・full **9137 / 0 / 2 / 9139**（+3）。
+
+## 以下は第597セッションの経緯
+
+### 1.1 第597セッション（2026-09-25・YT-DELL2）
+
+★ `-Start p597`（HEAD `ed38ef68`・full **9133 / 0 / 2 / 9135**・第595 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ の残り 1 件（collision.lys・fuzz seed 1 の 8 打鍵目）。
+
+★★★ **⑴ 原因＝prefix の restore が `_parallelSpans` を記録から*そのまま*写していた**（`637e21f1`）。記録の span は**古い木の** `ParallelExpressionSyntax` を指す。`voice { } { }` の 2 声目以降は walk の後に span から live で歩かれるので、古い木の音符を歩く。2 声目の頭が bare duration（fuzz が `{ d2 e` の `d` を消した＝`{ 2 e`）だと `OriginalOf` は**古い木の** `a` を返し、新しい木へ re-key 済みの `_resolvedNotes` に当たらず休符になった（full は音符）。**suffix の splice は同じ壁を知っていて span を `ResolveShifted` で解き直していた**（`Resume.cs` の「The wall」）＝prefix 側だけ漏れていた。⇒ prefix も spelling と同じ恒等窓で re-key（解けなければ abort）。
+⚠️ 第596 が記した「`{` が欠けた構文回復」は**この件の原因ではなかった**＝旧も新も `{` 欠けで同形・壊れていたのは span の木。切り分けは Lab `sessions/p597/Zz597Collision.cs.txt`（old/full/resumed の item 列を並べる）。
+
+⑵ **網** `CollectEditResumeTests.PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree`（手書き 1 声部の本・`{ 2 e` を持つ span の後ろを編集）＝直しを外すと fuzz と同じ `NoteItem vs RestItem` で赤。
+
+⑶ **照合（Release・`SvgGenerator.Generate` 基準）**: repo の追跡本 fuzz seed 1／2 各 5,264・ベースタブ本の音高 1,880・長さの変わる編集 1,824・fuzz seed 1／2 各 2,664 ＝**6 通りすべて不一致 0**（第596 は repo seed 1 で 1）。resume の採用量は 6 通りとも第596 と同じ（例: repo seed 1 26.12／3.24 小節／打鍵）＝直しは再利用を削らない。
+
+終了: HEAD `637e21f1`＋docs・full **9134 / 0 / 2 / 9136**（+1）。
+
+## 以下は第596セッションの経緯
+
+### 1.1 第596セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p596`（HEAD `5e08f351`・full **9128 / 0 / 2 / 9130**・第594 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ の残り 12 件（repo の追跡本 fuzz seed 1・`SvgGenerator.Generate` 基準）。
+
+★★ **⑴ 切り分けの自動化**（Lab `sessions/p596/Zz596Triage.cs.txt`＝fuzz の列を同じ乱数で再現し、最初の不一致の打鍵で `IncrementalCompiler` と段キャッシュのフィールドを 1 つずつ空にする）: 7 冊 8 件が 3 群＝collect の resume／内容鍵の穴で丸ごと再利用／段キャッシュの staff skyline。
+
+★★★ **⑵ 直した 6 つ**（`eb6a411f`・`1e646fa9`）: ⒜ **splice の空の尾**＝境界が walk の最後の小節線だと採用 0 小節なのに、記録の終わりの builder の `LastMeasure`（編集前の記録の小節）で live の最後の小節を上書きしていた（key-signature-space の `@stemUpp`）／⒝ **構文回復で補われた token**（幅 0 の `{`）を `ShapeWalk` が同じ形と見ていた（collision の `section Main` の `{` 削除）／⒞ **内容鍵が null と 0 を区別しない**＝`Nullable.GetHashCode` は null も 0（scriptstack1 の `@ffinger(0)`＝`Fingering` 0 → null で鍵が同じ）＝`Hash64.NullFold`／⒟ **小節を持たない行が鍵に入らない**（lyrics の score ブロックの `lyrics wwords` → `lyric wwords`）＝staff の形（番号・同一性・声部数）を全鍵に。⚠️ 小節数を入れると小節の挿入で全鍵が動き、ずらし再利用の網 6 本が赤（入れない）／⒠ **ペダル記号の解をソース位置で名指し**していた＝段キャッシュは位置に依らないので、上の編集（`title` の崩れ）で解が引けず既定の置き方に落ちた（pedal-text）＝小節・アンカー・種類で名指し、流用時は小節番号を振り直す。
+
+⑶ **照合（`SvgGenerator.Generate` 基準）**: ベースタブ本の音高・長さの変わる編集・fuzz 2 seed で不一致 0、repo の追跡本 fuzz seed 1 で 1 件（collision・§1.0 ⑦）・seed 2 で 0（第595 前は 31 件）。resume の採用量は変わらず。網 5 本（`CollectEditResumeTests` 2・`IncrementalFullAgreementTests` 3）がそれぞれ、直しを外すと赤。
+
+終了: HEAD `1e646fa9`＋docs・full **9133 / 0 / 2 / 9135**（+5）。
+
 ## 以下は第595セッションの経緯
 
 ### 1.1 第595セッション（2026-09-25・YT-DELL2）

@@ -241,7 +241,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/percent-repeat-interface.cc — x_percent() rendering
     /// LILYPOND-REF: scm/define-grobs.scm:2788-2807 — slope=1.0, thickness=0.48
     /// </remarks>
-    private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
+    private static void DrawPercentRepeatsLive(ScoreLayout layout, Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
@@ -337,7 +337,7 @@ internal static partial class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
     /// </remarks>
-    private static void DrawBarNumbers(ScoreTextMetrics fonts, ScoreLayout layout,
+    private static void DrawBarNumbersLive(ScoreTextMetrics fonts, ScoreLayout layout,
         Dictionary<int, double> sysTopYUp, IDrawingContext gc)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
@@ -577,7 +577,7 @@ internal static partial class SharedRenderer
     /// LILYPOND-REF: lily/mark-engraver.cc:90-140 Mark types
     /// LILYPOND-REF: scm/define-grobs.scm SegnoMark:3083, CodaMark:1001
     /// </remarks>
-    private static void DrawMusicMarks(ScoreTextMetrics fonts, ScoreLayout layout,
+    private static void DrawMusicMarksLive(ScoreTextMetrics fonts, ScoreLayout layout,
         Dictionary<int, double> sysTopYUp,
         in OssiaShrink os, IDrawingContext gc)
     {

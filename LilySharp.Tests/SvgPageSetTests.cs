@@ -277,5 +277,103 @@ public sealed class SvgPageSetTests
     {
         var w = new SvgEditWindow(Prefix: 10, SuffixStart: 14, Delta: 3);
         Assert.Equal(expected, SvgPageSet.SameModuloWindow(previous, current, w));
+        Assert.Equal(expected, CharWalk(previous, current, w));
+    }
+
+    /// <summary>
+    /// The span compare (session 605) answers what the character walk it replaced answered, on
+    /// real pages: every net book's pages before and after a trivia insertion in the middle
+    /// (whose later pages are Shifted) and a pitch change (whose page is Changed).
+    /// </summary>
+    [Fact]
+    public void SameModuloWindow_AnswersAsTheCharacterWalkDid_OnRenderedPages()
+    {
+        int pairs = 0, same = 0;
+        var failures = new List<string>();
+        foreach (var path in CollectResumeTests.NetBooks().Take(60))
+        {
+            string src;
+            try { src = File.ReadAllText(path); } catch { continue; }
+            int mid = src.IndexOf('\n', src.Length / 2);
+            if (mid < 0) continue;
+            var edits = new List<string> { src.Insert(mid + 1, " ") };
+            int note = src.IndexOf(" c4", src.Length / 2, StringComparison.Ordinal);
+            if (note >= 0) edits.Add(src.Remove(note, 3).Insert(note, " d4"));
+            foreach (var edited in edits)
+            {
+                SvgPageSet before, after;
+                try
+                {
+                    var session = new IncrementalCompiler(SyntaxTree.Parse(src), Interactive);
+                    before = session.RenderIncrementalPages(SyntaxTree.Parse(src), default);
+                    after = session.RenderIncrementalPages(SyntaxTree.Parse(edited), default);
+                }
+                catch { continue; }
+                var (prefix, suffixStart, delta) = LilySharp.Core.Svg.Collector.CollectResumePlanner.ComputeWindow(src, edited);
+                var w = new SvgEditWindow(prefix, suffixStart, delta);
+                for (int i = 0; i < Math.Min(before.Pages.Length, after.Pages.Length); i++)
+                {
+                    bool want = CharWalk(before.Pages[i], after.Pages[i], w);
+                    bool got = SvgPageSet.SameModuloWindow(before.Pages[i], after.Pages[i], w);
+                    pairs++;
+                    if (want) same++;
+                    if (want != got)
+                        failures.Add($"{Path.GetFileName(path)} page {i}: span {got} != walk {want}");
+                }
+            }
+        }
+        Assert.True(failures.Count == 0, string.Join("\n", failures.Take(20)));
+        Assert.True(pairs >= 60 && same >= 10 && pairs - same >= 10,
+            $"the net did not bite: {pairs} pairs, {same} shifted-or-same");
+    }
+
+    // The character walk SameModuloWindow was until session 605 — verbatim, the oracle.
+    private static bool CharWalk(string previous, string current, SvgEditWindow window)
+    {
+        const string Pos = " data-pos=\"";
+        const string Alt = " data-alt=\"";
+        int i = 0, j = 0;
+        while (i < previous.Length && j < current.Length)
+        {
+            char c = previous[i];
+            if (c != current[j])
+                return false;
+            i++;
+            j++;
+            if (c != '"' || i < Pos.Length)
+                continue;
+            var opener = previous.AsSpan(i - Pos.Length, Pos.Length);
+            bool isAlt = opener.SequenceEqual(Alt);
+            if (!isAlt && !opener.SequenceEqual(Pos))
+                continue;
+            while (true)
+            {
+                if (!ReadInt(previous, ref i, out int was) || !ReadInt(current, ref j, out int now))
+                    return false;
+                if (!window.TryMap(was, out int mapped) || mapped != now)
+                    return false;
+                if (!isAlt || i >= previous.Length || previous[i] != ' ' || j >= current.Length || current[j] != ' ')
+                    break;
+                i++;
+                j++;
+            }
+        }
+        return i == previous.Length && j == current.Length;
+    }
+
+    private static bool ReadInt(string s, ref int i, out int value)
+    {
+        int start = i;
+        bool negative = i < s.Length && s[i] == '-';
+        if (negative)
+            i++;
+        long acc = 0;
+        while (i < s.Length && s[i] is >= '0' and <= '9')
+        {
+            acc = acc * 10 + (s[i] - '0');
+            i++;
+        }
+        value = (int)(negative ? -acc : acc);
+        return i > start + (negative ? 1 : 0);
     }
 }

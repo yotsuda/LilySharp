@@ -230,6 +230,7 @@ internal sealed partial class LayoutEngine
             MultiScore = score,
             IsLeadSheet = score.IsLeadSheet,
             GridBarlineRowIndex = score.GridBarlineRowIndex,
+            ExtentsOnly = true,
             Fonts = score.TextMetrics,
             Systems = prelimSystems,
             Dynamics = score.Dynamics,
@@ -667,6 +668,13 @@ internal sealed partial class LayoutEngine
                 fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff);
         if (ties.IsEmpty)
             return ImmutableArray<TieLayout>.Empty;
+        // A numbers-only tab draws no tie — the plain call's own first answer
+        // (ElementCoordinator.LayoutTies). Asked here, before the bucketing: each system's
+        // memo answered empty, the reassembly read that as drift and fell back to the plain
+        // call, which answered empty again — MEASURED (session 600, the reader's corpus,
+        // 3,760 pitch keystrokes): 0.60 of the 0.88 whole-staff fallbacks a keystroke.
+        if (staff is { IsTab: true, TabNumbersOnly: true })
+            return ImmutableArray<TieLayout>.Empty;
 
         ImmutableArray<TieLayout> Fallback() => _elementCoordinator.LayoutTies(
             fonts, ties, staffSpannerScore, prelimSystems, staffIndex, staff);
@@ -693,26 +701,47 @@ internal sealed partial class LayoutEngine
             list.Add(tie);
         }
 
-        // Any straddler (or unmapped measure) → fallback.
-        // ⚠️ THE CHECK STORES NOTHING: a column's home IS measureToSystem[key.Measure]. Every
-        // tie of a column starts in the key's own measure (the key is the start), and a column
-        // gets past this loop only if all its ties start and end in ONE system — so the map of
+        // An unmapped measure → fallback. A STRADDLER — a column whose ties end in another
+        // system — is solved live, by the plain call over its own ties (below); the rest are
+        // memoized per system. Each column is its own problem (ElementCoordinator.LayoutTies
+        // solves them one by one, and the per-system memo already stands on that), so a
+        // straddler's answer does not depend on which other columns the call was handed.
+        // ⚠️ A STRADDLER USED TO SEND THE WHOLE STAFF TO THE PLAIN CALL: one tie across a line
+        // break and every column of the staff was solved again — MEASURED (session 600, the
+        // reader's corpus, 3,760 pitch keystrokes): 0.17 staves a keystroke.
+        // ⚠️ THE CHECK STORES NO HOME: a column's home IS measureToSystem[key.Measure]. Every
+        // tie of a column starts in the key's own measure (the key is the start) — so the map of
         // homes by column key that stood here (session 472's census: 1.69 a keystroke at 17.83
         // entries, 1,754 B a keystroke) repeated a lookup the systems' own table answers.
-        foreach (var (_, columnList) in columnTies)
+        HashSet<(int, int, int)>? straddlers = null;
+        foreach (var (key, columnList) in columnTies)
         {
-            int home = -2;
             foreach (var tie in columnList)
             {
                 if (!measureToSystem.TryGetValue(tie.StartMeasureIndex, out int ks)
-                    || !measureToSystem.TryGetValue(tie.EndMeasureIndex, out int ke)
-                    || ks != ke || (home != -2 && home != ks))
+                    || !measureToSystem.TryGetValue(tie.EndMeasureIndex, out int ke))
                 {
                     GiveColumnTies(columnTies);
                     return Fallback();
                 }
-                home = ks;
+                if (ks != ke)
+                    (straddlers ??= new()).Add(key);
             }
+        }
+        bool Straddles(TieItem tie) => straddlers != null
+            && straddlers.Contains((tie.VoiceIndex, tie.StartMeasureIndex, tie.StartItemIndex));
+
+        // The straddlers' layouts, in the plain call's order: its columns in first-appearance
+        // order over the ties it is handed, which is their order among all the staff's columns.
+        var straddled = ImmutableArray<TieLayout>.Empty;
+        if (straddlers != null)
+        {
+            var straddlerTies = ImmutableArray.CreateBuilder<TieItem>();
+            foreach (var tie in ties)
+                if (Straddles(tie))
+                    straddlerTies.Add(tie);
+            straddled = _elementCoordinator.LayoutTies(
+                fonts, straddlerTies.ToImmutable(), staffSpannerScore, prelimSystems, staffIndex, staff);
         }
 
         // One memoized solve per system, over that system's ties in original order, in the
@@ -721,10 +750,12 @@ internal sealed partial class LayoutEngine
         var buckets = RentTieBuckets();
         buckets.Open(prelimSystems.Length, ties.Length);
         for (int i = 0; i < ties.Length; i++)
-            buckets.Note(i, measureToSystem[ties[i].StartMeasureIndex]);
+            if (!Straddles(ties[i]))
+                buckets.Note(i, measureToSystem[ties[i].StartMeasureIndex]);
         buckets.Seal();
         for (int i = 0; i < ties.Length; i++)
-            buckets.Place(i, ties[i]);
+            if (!Straddles(ties[i]))
+                buckets.Place(i, ties[i]);
         for (int o = 0; o < buckets.Occupied; o++)
         {
             int k = buckets.Order[o];
@@ -743,11 +774,23 @@ internal sealed partial class LayoutEngine
         }
 
         // Column-major reassembly in detection order, one layout per tie (an
-        // intra-system column has exactly one segment).
+        // intra-system column has exactly one segment); a straddler's layouts — one per tie
+        // per segment — are taken from the live call's run for its key.
         buckets.ResetCursors();
-        var result = ImmutableArray.CreateBuilder<TieLayout>(ties.Length);
+        var result = ImmutableArray.CreateBuilder<TieLayout>(ties.Length + straddled.Length);
+        int sc = 0;
         foreach (var (key, columnList) in columnTies)
         {
+            if (straddlers != null && straddlers.Contains(key))
+            {
+                // A column the plain call skipped emits nothing here either.
+                while (sc < straddled.Length
+                       && straddled[sc].Tie.VoiceIndex == key.Voice
+                       && straddled[sc].Tie.StartMeasureIndex == key.Measure
+                       && straddled[sc].Tie.StartItemIndex == key.Item)
+                    result.Add(straddled[sc++]);
+                continue;
+            }
             int k = measureToSystem[key.Measure];
             var laid = buckets.Laid[k];
             int c = buckets.Cursor[k];
@@ -767,6 +810,8 @@ internal sealed partial class LayoutEngine
         }
         GiveTieBuckets(buckets);
         GiveColumnTies(columnTies);
+        if (sc != straddled.Length)
+            return Fallback(); // a live layout no column claimed — drift, recompute whole
         return result.ToImmutable();
     }
 

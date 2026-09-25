@@ -30,6 +30,12 @@ namespace LilySharp.Core.Rendering.Svg;
 internal enum OverlayDrawerId
 {
     Fingerings = 0,
+    Ties = 1,
+    Slurs = 2,
+    BarNumbers = 3,
+    PercentRepeats = 4,
+    MusicMarks = 5,
+    Articulations = 6,
 }
 
 /// <summary>
@@ -55,12 +61,20 @@ internal enum OverlayDrawerId
 /// quantities the draw derives (MaxClefWidth, ClefGroupInkLeft, sharedKeyX/TimeX,
 /// lead-sheet-ness, lyric-row structure) are functions of staff structure + entry
 /// context, folded into EVERY key (the ⒟⁗ inventory).</item>
-/// <item>NEIGHBOUR reads: GetSystemEndKeyChange / GetSystemEndTimeChange read the
-/// OPENING items of the measure after the system's last (the end-of-line courtesy) —
-/// key[last+1]. The left neighbour (key[first−1]) has no read found in the walk and is
-/// folded anyway, matching <c>IncrementalCompiler.SpringReusable</c>'s window shape:
-/// over-sensitivity only costs one extra live system per edit. Neighbour EXISTENCE
+/// <item>NEIGHBOUR reads, folded as what is read (SliceFor's LeftEdgeRead /
+/// RightEdgeRead), not as the neighbours' whole keys: GetSystemEndKeyChange /
+/// GetSystemEndTimeChange (and KeyCourtesySuffixWidth, for the staff lines' extent) read
+/// the OPENING items of the measure after the system's last — the end-of-line courtesy;
+/// DrawnLineStartBarline reads the END bar line of the measure before the system's first —
+/// a `:|:` there opens the line with `.|:`. Nothing else of either neighbour reaches the
+/// draw (session 598's inventory of every `Measures[…]` read in SharedRenderer: the rest
+/// are inside the slice, the entry-context walks, or data-pos). Neighbour EXISTENCE
 /// must match on both sides (last system's edge pins the window).
+/// ⚠️ A NEW NEIGHBOUR READ IN THE DRAW MUST BE FOLDED THERE. ⚠️ And neither read has an
+/// isolating net (session 598's poisons: either one folded as a constant leaves the suite
+/// green) — a `:|:` before the system also widens its opening bar column (geometry), and a
+/// courtesy change also lands its item's data-pos inside the edit window (the slot check);
+/// the whole-key form they replaced IS caught (RenderFragments_ANoteBesideASystem_DoesNotRedrawIt).
 /// ⚠️ The window has no isolating positive control yet (measured, session 151): every
 /// edit that changes the courtesy also lands a slot inside the edit window (the
 /// courtesy carries the neighbour item's data-pos) or moves the reservation geometry,
@@ -204,6 +218,7 @@ internal sealed class SvgSystemFragmentCache
     private int _windowPrefix, _windowSuffixStart, _windowDelta;
 
     // Per-render state set by PrepareRender.
+    private MultiStaffScore? _score;   // what SliceFor reads the neighbours' edges from
     private bool _enabled;
     private HashSet<int>? _declinedSystems;
 
@@ -244,6 +259,7 @@ internal sealed class SvgSystemFragmentCache
     /// </summary>
     public void PrepareRender(MultiStaffScore score, ScoreLayout layout)
     {
+        _score = score;
         LastPass = (0, 0);
         LastOverlayPass = (0, 0);
         LastPassDeclines.Clear();
@@ -814,9 +830,63 @@ internal sealed class SvgSystemFragmentCache
         int from = hasLeft ? first - 1 : first;
         int to = hasRight ? last + 1 : last;
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(to - from + 1);
-        for (int i = from; i <= to; i++)
+        // The neighbours enter as what the draw READS of them, not as their whole keys
+        // (see the class remarks' NEIGHBOUR reads): an edit to the music of the bar beside
+        // a system used to draw that system live as well — MEASURED (session 598, the
+        // reader's corpus, 3,760 pitch keystrokes): 1.53 systems a keystroke declined on a
+        // slice key while 1.05 measures' keys moved, the draw 8% of the render.
+        if (hasLeft)
+            builder.Add(new MeasureContentKey(LeftEdgeRead(first - 1)));
+        for (int i = first; i <= last; i++)
             builder.Add(i < _keys.Length ? _keys[i] : default);
+        if (hasRight)
+            builder.Add(new MeasureContentKey(RightEdgeRead(last + 1)));
         return builder.MoveToImmutable();
+    }
+
+    /// <summary>What a system opening at <c>m + 1</c> draws from measure <paramref name="m"/>:
+    /// each staff's end bar line there (a <c>:|:</c> hands the line its <c>.|:</c> —
+    /// <c>MultiStaffLayouter.DrawnLineStartBarline</c>). Every voice's, which is more than the
+    /// draw reads (the primary's) and costs nothing.</summary>
+    private long LeftEdgeRead(int m)
+    {
+        var h = new MeasureContentKey.Hash64();
+        h.Add(1);
+        if (_score == null)
+            return h.ToHashCode();
+        foreach (var group in _score.StaffGroups)
+            foreach (var staff in group.Staves)
+                foreach (var voice in staff.Voices)
+                    h.Add(m < voice.Measures.Length ? (int)voice.Measures[m].EndBarline : -1);
+        return h.ToHashCode();
+    }
+
+    /// <summary>What a system ending at <c>m − 1</c> draws from measure <paramref name="m"/>:
+    /// the items that OPEN it, up to its first sounding one — where the end-of-line courtesy
+    /// key and meter come from (<c>SharedRenderer.GetSystemEndKeyChange</c> /
+    /// <c>GetSystemEndTimeChange</c>, and <c>SpacingRules.KeyCourtesySuffixWidth</c> for how
+    /// far the staff lines run past the bar). Each item by content, its source offset out:
+    /// the courtesy's data-pos is an anchor-and-slot matter like every other offset.</summary>
+    private long RightEdgeRead(int m)
+    {
+        var h = new MeasureContentKey.Hash64();
+        h.Add(2);
+        if (_score == null)
+            return h.ToHashCode();
+        foreach (var group in _score.StaffGroups)
+            foreach (var staff in group.Staves)
+                foreach (var voice in staff.Voices)
+                {
+                    if (m < voice.Measures.Length)
+                        foreach (var item in voice.Measures[m].Items)
+                        {
+                            if (item.Duration > LilySharp.Core.Semantics.Fraction.Zero)
+                                break;
+                            h.Add(MeasureContentKey.HashItemContent(item));
+                        }
+                    h.Add(-1);
+                }
+        return h.ToHashCode();
     }
 
     // Folds every geometry value DrawSystem reads (see the class remarks' inventory).

@@ -100,19 +100,36 @@ public static class ChordRepetitions
         => Originals.GetValue(root,
             r => new HashSet<ChordSyntax>(Maps.GetValue(r, BuildMap).Values.Select(v => v.Chord)));
 
+    /// <summary>
+    /// The map, from ONE walk of the tree's GREEN nodes — the shape
+    /// <c>BareDurations.BuildMap</c> took in session 519: a red is materialised only for a
+    /// <c>q</c> that has a chord to repeat and for that chord, by position from the root
+    /// (<c>BareDurations.RedOf</c>), the same parent-cached instances every other reader holds.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THIS WALKED THE RED TREE UNTIL SESSION 603, and it is asked of every new tree —
+    /// the preview's root is new on every keystroke — by the collect resume's planner
+    /// (<c>CollectResumePlanner.NewOriginalFloor</c>) and by the collector's first chord.
+    /// MEASURED (Release, the reader's corpus, 3,760 pitch keystrokes): 4.7% of the render,
+    /// and the map came out empty on all but 16 of 3,680 asks — a whole-tree red
+    /// materialisation for a book that writes no <c>q</c>.
+    /// <c>ChordRepetitionsGreenWalkTests</c> holds this walk to the former red one.
+    /// </remarks>
     private static Dictionary<ChordRepetitionSyntax, Resolved> BuildMap(SyntaxNode root)
     {
         var map = new Dictionary<ChordRepetitionSyntax, Resolved>();
         var running = new Running();
-        Thread(root, map, running);
+        Thread(root.Green, root.Position, root, map, ref running);
         return map;
     }
 
-    /// <summary>The chord in force and how far the q chain has displaced it. One
-    /// object rather than two refs, so a scope boundary resets both or neither.</summary>
-    private sealed class Running
+    /// <summary>The chord in force — as its green node and its full start, so its red is
+    /// found only when a <c>q</c> repeats it — and how far the q chain has displaced it. A
+    /// scope boundary resets both.</summary>
+    private struct Running
     {
-        public ChordSyntax? Chord;
+        public Syntax.InternalSyntax.GreenNode? Chord;
+        public int ChordPosition;
         public int Octave;
     }
 
@@ -121,38 +138,51 @@ public static class ChordRepetitions
     /// declaration (part / section / phrase / part cell) opens its OWN scope:
     /// the running chord does not leak across bodies, so a structural replay
     /// (~Main entered twice) resolves the same way on every walk.</summary>
-    private static void Thread(SyntaxNode node, Dictionary<ChordRepetitionSyntax, Resolved> map,
-        Running running)
+    private static void Thread(Syntax.InternalSyntax.GreenNode node, int position, SyntaxNode root,
+        Dictionary<ChordRepetitionSyntax, Resolved> map, ref Running running)
     {
-        switch (node)
+        switch (node.Kind)
         {
-            case ChordSyntax chord:
+            case SyntaxKind.Chord:
                 // A written chord is the new origin, at its own octave.
-                running.Chord = chord;
+                running.Chord = node;
+                running.ChordPosition = position;
                 running.Octave = 0;
                 return; // a chord holds no chords
-            case ChordRepetitionSyntax q:
+            case SyntaxKind.ChordRepetition:
                 if (running.Chord != null)
                 {
+                    var q = (ChordRepetitionSyntax)BareDurations.RedOf(root, node, position);
                     // Displacement ACCUMULATES: each q repeats the chord as the last q
                     // left it, so q' q sounds up an octave twice.
                     running.Octave += q.OctaveOffset;
-                    map[q] = new Resolved(running.Chord, running.Octave);
+                    map[q] = new Resolved(
+                        (ChordSyntax)BareDurations.RedOf(root, running.Chord, running.ChordPosition),
+                        running.Octave);
                 }
                 return;
         }
+        int at = position;
         for (int i = 0; i < node.SlotCount; i++)
         {
-            if (node.GetChild(i) is not { } child || child is SyntaxTokenNode)
+            var child = node.GetSlot(i);
+            if (child is null)
                 continue;
-            if (IsScopeBoundary(child))
-                Thread(child, map, new Running());
+            int childPosition = at;
+            at += child.FullWidth;
+            if (child.IsToken)
+                continue;
+            if (IsScopeBoundary(child.Kind))
+            {
+                var inner = new Running();
+                Thread(child, childPosition, root, map, ref inner);
+            }
             else
-                Thread(child, map, running);
+                Thread(child, childPosition, root, map, ref running);
         }
     }
 
-    private static bool IsScopeBoundary(SyntaxNode n) => n is
-        PartDeclarationSyntax or SectionDeclarationSyntax or PhraseDeclarationSyntax
-        or PartBlockSyntax or ChordPartBlockSyntax;
+    private static bool IsScopeBoundary(SyntaxKind kind) => kind is
+        SyntaxKind.PartDeclaration or SyntaxKind.SectionDeclaration or SyntaxKind.PhraseDeclaration
+        or SyntaxKind.PartBlock or SyntaxKind.ChordPartBlock;
 }

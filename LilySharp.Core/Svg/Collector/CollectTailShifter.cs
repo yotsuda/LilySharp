@@ -83,31 +83,53 @@ internal static class CollectTailShifter
             || !w.TryShift(m.SectionLabelPosition, out int label))
             return null;
 
+        // ⚠️ NOTHING MOVED ⇒ THE SAME INSTANCES. A Δ=0 edit, or a tail whose positions all sit
+        // before the window, re-homes nothing, and the splice used to hand back a copy of every
+        // measure and item anyway — MEASURED (session 601, the reader's corpus, 1,880 pitch
+        // keystrokes): 61% of the final score's items were a new object with the old content,
+        // the splice's copies among them. The adopted prefix already shares the recording's
+        // instances (NoteItem.StampBeam's remarks: the bake clears before it stamps), so the
+        // spliced tail sharing them stands on the same argument.
+        bool moved = start != m.SourceStart || end != m.SourceEnd || label != m.SectionLabelPosition;
+
         var aliases = m.EndHighlightAliases;
         if (!aliases.IsDefaultOrEmpty)
         {
-            var shifted = new int[aliases.Length];
+            int[]? shifted = null;
             for (int i = 0; i < aliases.Length; i++)
             {
-                if (!w.TryShift(aliases[i], out shifted[i]))
+                if (!w.TryShift(aliases[i], out int a))
                     return null;
+                if (a != aliases[i])
+                    (shifted ??= aliases.ToArray())[i] = a;
             }
-            aliases = ImmutableArray.Create(shifted);
+            if (shifted != null)
+            {
+                aliases = ImmutableArray.Create(shifted);
+                moved = true;
+            }
         }
 
         var items = m.Items;
         if (!items.IsDefaultOrEmpty)
         {
-            var shifted = new MusicItem[items.Length];
+            MusicItem[]? shifted = null;
             for (int i = 0; i < items.Length; i++)
             {
                 if (ShiftItem(items[i], w) is not { } item)
                     return null;
-                shifted[i] = item;
+                if (!ReferenceEquals(item, items[i]))
+                    (shifted ??= items.ToArray())[i] = item;
             }
-            items = ImmutableArray.Create(shifted);
+            if (shifted != null)
+            {
+                items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(shifted);
+                moved = true;
+            }
         }
 
+        if (!moved)
+            return m;
         return m with
         {
             Items = items,
@@ -133,38 +155,48 @@ internal static class CollectTailShifter
         // and `)` written ON this item — and, for the half-ties, the `@` of the
         // `@laissezVibrer` / `@repeatTie` written on it. The -1 "nothing wrote it"
         // sentinel passes through TryShift's non-positive branch untouched.
-        item = item with
-        {
-            SourcePosition = pos,
-            TieStartSourcePosition = tiePos,
-            SlurStartSourcePosition = slurOpen,
-            SlurEndSourcePosition = slurClose,
-            PhrasingSlurStartSourcePosition = phrasingOpen,
-            PhrasingSlurEndSourcePosition = phrasingClose,
-            LaissezVibrerSourcePosition = lvPos,
-            RepeatTieSourcePosition = rtPos,
-        };
+        // Unmoved, the item is handed back as it is (see ShiftMeasure).
+        if (pos != item.SourcePosition || tiePos != item.TieStartSourcePosition
+            || slurOpen != item.SlurStartSourcePosition || slurClose != item.SlurEndSourcePosition
+            || phrasingOpen != item.PhrasingSlurStartSourcePosition
+            || phrasingClose != item.PhrasingSlurEndSourcePosition
+            || lvPos != item.LaissezVibrerSourcePosition || rtPos != item.RepeatTieSourcePosition)
+            item = item with
+            {
+                SourcePosition = pos,
+                TieStartSourcePosition = tiePos,
+                SlurStartSourcePosition = slurOpen,
+                SlurEndSourcePosition = slurClose,
+                PhrasingSlurStartSourcePosition = phrasingOpen,
+                PhrasingSlurEndSourcePosition = phrasingClose,
+                LaissezVibrerSourcePosition = lvPos,
+                RepeatTieSourcePosition = rtPos,
+            };
 
         // The nested positions: a chord member's own pitch token, and the `@` of a
         // member-level half-tie annotation (the same fields
         // MeasureContentKey.AddValue special-cases for the same reason).
         if (item is ChordItem chord && !chord.Notes.IsDefaultOrEmpty)
         {
-            var notes = new ChordNoteInfo[chord.Notes.Length];
+            ChordNoteInfo[]? notes = null;
             for (int i = 0; i < chord.Notes.Length; i++)
             {
-                if (!w.TryShift(chord.Notes[i].SourcePosition, out int np)
-                    || !w.TryShift(chord.Notes[i].LaissezVibrerSourcePosition, out int nlv)
-                    || !w.TryShift(chord.Notes[i].RepeatTieSourcePosition, out int nrt))
+                var n = chord.Notes[i];
+                if (!w.TryShift(n.SourcePosition, out int np)
+                    || !w.TryShift(n.LaissezVibrerSourcePosition, out int nlv)
+                    || !w.TryShift(n.RepeatTieSourcePosition, out int nrt))
                     return null;
-                notes[i] = chord.Notes[i] with
-                {
-                    SourcePosition = np,
-                    LaissezVibrerSourcePosition = nlv,
-                    RepeatTieSourcePosition = nrt,
-                };
+                if (np != n.SourcePosition || nlv != n.LaissezVibrerSourcePosition
+                    || nrt != n.RepeatTieSourcePosition)
+                    (notes ??= chord.Notes.ToArray())[i] = n with
+                    {
+                        SourcePosition = np,
+                        LaissezVibrerSourcePosition = nlv,
+                        RepeatTieSourcePosition = nrt,
+                    };
             }
-            item = chord with { Notes = ImmutableArray.Create(notes) };
+            if (notes != null)
+                item = chord with { Notes = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(notes) };
         }
         return item;
     }

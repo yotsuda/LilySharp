@@ -462,7 +462,7 @@ internal sealed class TabResolver
         {
             var (mi, ii) = refs[k];
             if (ItemAt(mi, ii) is NoteItem note && !note.StringNumber.HasValue && strings[k] > 0)
-                Work(mi)[ii] = note with { StringNumber = strings[k] };
+                Work(mi)[ii] = WithString(note, strings[k]);
         }
         events.Clear();
         refs.Clear();
@@ -496,6 +496,37 @@ internal sealed class TabResolver
     /// </remarks>
     [ThreadStatic]
     private static PlanScratch? t_plan;
+
+    /// <summary>
+    /// <c>note with { StringNumber = stringNumber }</c> — or the copy an earlier resolution made
+    /// of this very note on this string, when that copy is still what the <c>with</c> would build.
+    /// </summary>
+    /// <remarks>
+    /// The collect resume adopts the previous keystroke's item instances, and every tab note
+    /// without a written string was copied here again on each keystroke: MEASURED (session 601,
+    /// the reader's corpus, 1,880 pitch keystrokes) the copies were most of the final score's
+    /// items that were a new object with the old content (42% of all items, after the splice's
+    /// own copies went). A copy is the input's init-only fields plus the string, so for the SAME
+    /// input instance it differs from a new one only in what has changed on the input since:
+    /// its three beam stamps, the one mutation on this model (<see cref="NoteItem.StampBeam"/> —
+    /// the bake clears and re-stamps the adopted instances in place). They are compared, and a
+    /// copy whose stamps no longer match is not handed out.
+    /// Keyed weakly by the input: an entry lives as long as the note a recording still holds.
+    /// </remarks>
+    private static NoteItem WithString(NoteItem note, int stringNumber)
+    {
+        if (s_stringCopies.TryGetValue(note, out var copy)
+            && copy.StringNumber == stringNumber
+            && copy.StemUpOverride == note.StemUpOverride
+            && copy.BeamId == note.BeamId
+            && copy.PureBeamedStemTip == note.PureBeamedStemTip)
+            return copy;
+        copy = note with { StringNumber = stringNumber };
+        s_stringCopies.AddOrUpdate(note, copy);
+        return copy;
+    }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<NoteItem, NoteItem> s_stringCopies = new();
 
     private sealed class PlanScratch
     {

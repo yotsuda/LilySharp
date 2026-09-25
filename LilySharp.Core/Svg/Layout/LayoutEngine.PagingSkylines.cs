@@ -207,6 +207,10 @@ internal sealed partial class LayoutEngine
     /// LILYPOND-REF: lily/page-layout-problem.cc:1070-1127
     /// build_system_skyline — page spacing reads COMPLETE system stencils
     /// (slurs, brackets, scripts included), not just note skylines.
+    /// ⚠️ <paramref name="ann"/> comes from a pass that lays out only the families read here
+    /// and by AugmentSkylinesForPaging (AnnotationLayoutContext.ExtentsOnly): grace notes,
+    /// lyric hyphens, half-ties, multi-measure rests, stanza numbers and percent repeats are
+    /// EMPTY in it. A new reader of one of them must take it out of that list.
     /// </remarks>
     /// <param name="rowsAboveFirstStaff">
     /// Per system, <see cref="RowsAboveFirstStaff"/>. The grobs below are anchored on the

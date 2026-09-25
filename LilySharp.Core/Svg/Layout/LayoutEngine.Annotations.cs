@@ -55,6 +55,17 @@ internal sealed partial class LayoutEngine
         /// number's column.</summary>
         public int GridBarlineRowIndex { get; init; } = -1;
 
+        /// <summary>The PRELIMINARY pass: only the families its extents and paging skylines
+        /// read are laid out (<c>EnrichExtentsWithAnnotationProtrusions</c> /
+        /// <c>AugmentSkylinesForPaging</c>), and the six nothing reads — grace notes, lyric
+        /// hyphens, half-ties, multi-measure rests, stanza numbers, percent repeats — come back
+        /// empty. None of them is read inside the pass either: each is built from inputs the
+        /// other families do not take from it.</summary>
+        /// <remarks>MEASURED (session 599, Release, the reader's corpus, 3,760 pitch
+        /// keystrokes): the pass's tail, where five of the six are built, was 1.0% of the render
+        /// on the preliminary side — work whose result the pass dropped on return.</remarks>
+        public bool ExtentsOnly { get; init; }
+
         /// <summary>
         /// The faces this score's text is measured against — the whole-score answer, not
         /// the primary staff's.
@@ -853,8 +864,10 @@ internal sealed partial class LayoutEngine
             ctx, ml, scriptedSkylines, staffYAt, minStaffYAt);
 
         // Layout percent repeats
-        var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
-            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml, measures);
+        var percentRepeatLayouts = ctx.ExtentsOnly
+            ? ImmutableArray<PercentRepeatLayout>.Empty
+            : PercentRepeatEngraver.Calculate(
+                percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml, measures);
 
         // Layout trill spanners (tr + wavy line). The drawn beams ride along so a
         // beamed support column's stem ends at the quanted face (ledger
@@ -1155,14 +1168,17 @@ internal sealed partial class LayoutEngine
         // not an equivalent one. (Session 407 hoisted the build to the top of the pass, where
         // the script walk reads the same map; the tail's three walkers are unchanged.)
         var tailMeasureMap = passMeasureMap;
+        // What the preliminary pass does not read (see AnnotationLayoutContext.ExtentsOnly).
+        bool drawn = !ctx.ExtentsOnly;
 
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
             Articulations: stackedArticulations,
-            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations, voicesByStaff) : ImmutableArray<GraceNoteLayout>.Empty,
+            GraceNotes: score != null && drawn ? GraceNoteEngraver.Calculate(score, graceNotes, ml, measuresByStaff, staffYByIndex, staffByIndex, articulations, voicesByStaff) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
-            LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(
-                lyricLayouts, systems, measuresByStaff),
+            LyricHyphens: drawn
+                ? new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems, measuresByStaff)
+                : [],
             MusicMarks: stackedMarks,
             CustomTexts: stackedCustomTexts,
             VoltaBrackets: stackedVoltas,
@@ -1180,12 +1196,12 @@ internal sealed partial class LayoutEngine
             // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
             Fingerings: fingeringLayouts,
             // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
-            TieVariants: score != null
+            TieVariants: score != null && drawn
                 ? TieVariantEngraver.Calculate(score, systems, measureMap: tailMeasureMap,
                     onTab: ctx.MultiScore?.PrimaryContentStaff.IsTab ?? false)
                 : ImmutableArray<TieVariantLayout>.Empty,
             // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
-            MultiMeasureRests: score != null
+            MultiMeasureRests: score != null && drawn
                 ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
                     voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap)
                 : ImmutableArray<MultiMeasureRestLayout>.Empty,
@@ -1196,8 +1212,9 @@ internal sealed partial class LayoutEngine
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
-            StanzaNumbers: StanzaNumberEngraver.Calculate(ctx.Fonts, lyricLayouts, systems,
-                leadSheet: ctx.IsLeadSheet),
+            StanzaNumbers: drawn
+                ? StanzaNumberEngraver.Calculate(ctx.Fonts, lyricLayouts, systems, leadSheet: ctx.IsLeadSheet)
+                : [],
             // LILYPOND-REF: lily/part-combine-engraver.cc — CombineTextScript grob.
             PartCombineTexts: stackedPartCombine);
     }

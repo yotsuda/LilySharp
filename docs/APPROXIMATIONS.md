@@ -185,12 +185,12 @@
 - **:766** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1039** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2320** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2342** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2337** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2359** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:554** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
+- **:558** ⚠️ NO POINT OBSERVES THE FOLD: audit/lp-geometry hairpin.page.quiet reads the
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:887** paging augment families. Unreachable today, so no observer CAN be built; the
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
@@ -322,7 +322,7 @@
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:253** LILYSHARP-OWN, owner's decision 2026-09-24 (session 569, The Final Countdown's tab). On
 - **:731** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1811** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:1822** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/BendAfterGeometry.cs`
 - **:50** The interval a fall drops and a doit rises, in staff POSITIONS. LILYSHARP-OWN:
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
@@ -354,10 +354,10 @@
 ### `LilySharp.Core/Svg/Layout/HairpinEngraver.cs`
 - **:484** ⚠️ LILYSHARP-OWN, DECLARED: the voice a hairpin supports off. LilyPond's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:445** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
-- **:942** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1733** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2028** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
+- **:955** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1750** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2045** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:835** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
@@ -365,11 +365,11 @@
 - **:771** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
 - **:783** ⚠️ LILYSHARP-OWN: THE SECOND PAIR HAS NO LILYPOND COUNTERPART, and it exists because a
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
-- **:430** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
-- **:547** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
-- **:1009** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
+- **:434** ⚠️ A LYRICS ROW KEEPS ITS DRAWN EXTENT, AND THAT IS LILYSHARP-OWN, not a second
+- **:551** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
+- **:1013** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
-- **:1437** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+- **:1482** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`

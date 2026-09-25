@@ -1967,6 +1967,122 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// A system's neighbours enter its fragment key as what the draw reads of them — the
+    /// previous bar's end bar line, the next bar's opening items — not as their whole content
+    /// keys, so a note edited in the bar beside a system leaves that system to replay
+    /// (session 598: with the whole keys, an edit in a system's first or last bar drew two
+    /// systems live — 1.53 a keystroke on the reader's corpus for 1.05 bars changed).
+    /// </summary>
+    [Theory]
+    [InlineData("g4 a b c' |", "g4 a b d' |")]   // the last bar of system 1: system 2 replays
+    [InlineData("e4 f g a |", "e4 f g b |")]     // the first bar of system 2: system 1 replays
+    public void RenderFragments_ANoteBesideASystem_DoesNotRedrawIt(string find, string replacement)
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              c4 d e f | d4 e f g | g4 a b c' |
+              break
+              e4 f g a | c4 d e f | d4 e f g |
+              break
+              c4 d e f | d4 e f g | c4 d e f |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, find, replacement);
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        var (replayed, drawn) = session.LastRenderFragments;
+        Assert.True(replayed + drawn == 3, $"fixture is not three systems: {replayed + drawn}");
+        Assert.True(drawn == 1,
+            $"{drawn} systems drew live: "
+            + string.Join("; ", session.FragmentsForTest!.LastPassDeclines.Select(d => $"system {d.SystemIndex}: {d.Reason}")));
+    }
+
+    /// <summary>
+    /// A tie across a line break is solved live while the staff's other ties come from the
+    /// per-system memo (session 600: one such tie used to send every tie of the staff to the
+    /// plain solve). The preliminary pass's ties are the ones drawn, so a reassembly that
+    /// dropped or misplaced the broken tie's two pieces would show here.
+    /// </summary>
+    [Fact]
+    public void PrelimTies_ATieAcrossALineBreak_ReassemblesWithTheMemoizedOnes()
+    {
+        // Two staves: the preliminary bows are laid per staff on the multi-staff path.
+        const string src = """
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            part bass { clef bass }
+            section Main {
+              melody {
+                c'2~ c'2 | d'4 e' f' g'~ |
+                break
+                g'1 | e'2~ e'2 |
+                break
+                c'4 d' e' f' | g'1 |
+              }
+              bass {
+                c2~ c2 | g,1~ |
+                g,1 | c2~ c2 |
+                c1 | g,1 |
+              }
+            }
+            form main { Main }
+            score main "x" { staff melody staff bass }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        Assert.Equal(Full(src), Norm(session.Render()));
+
+        var change = Replace(src, "c'4 d' e' f' |", "c'4 d' e' a' |");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    /// <summary>
+    /// ...and what IS read still declines: a `:|:` ending the bar before a system hands that
+    /// system a `.|:` to open with (MultiStaffLayouter.DrawnLineStartBarline), so turning the
+    /// plain bar line into one must redraw the system after it — byte-identical to a full render.
+    /// </summary>
+    [Fact]
+    public void RenderFragments_ARepeatBarBeforeASystem_RedrawsItsOpening()
+    {
+        const string src = """
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody {
+              |: c4 d e f | d4 e f g | g4 a b c' |
+              break
+              e4 f g a | c4 d e f | d4 e f g :|
+              break
+              c4 d e f | d4 e f g | c4 d e f |
+            } }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "g4 a b c' |", "g4 a b c' :|:");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    /// <summary>
     /// Interactive (preview) output replays too: the hit rectangles and data-alt alias
     /// lists are extra baked offsets, and a Δ≠0 edit must shift every one of them. Byte
     /// equality against a cache-free interactive render is the whole claim.
@@ -2060,6 +2176,106 @@ public class IncrementalCompilerTests
         Assert.True(replayed >= 1, $"overlay replay did not fire: replayed {replayed} / drawn {drawn}");
         Assert.True(drawn >= 1 && drawn <= 2,
             $"the edited page must draw its overlay live: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>Ties and slurs on every bar, enough of them to spill onto 2+ pages — the
+    /// bows' overlay fragments (session 607).</summary>
+    private static string BowedBook() =>
+        "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
+        + "section Main { melody { "
+        + string.Join(" ", Enumerable.Repeat("c'2~ c'2 | d'4( e' f' g') |", 80))
+        + " } }\n";
+
+    /// <summary>A pitch edit on the first page redraws that page's bows live and replays every
+    /// other page's tie and slur overlay — byte-identical to a full render.</summary>
+    [Fact]
+    public void OverlayFragments_BowsReplayOnUntouchedPages_AndMatchFull()
+    {
+        string source = BowedBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var (_, overlays) = session.LastRenderOverlays;
+        Assert.True(overlays >= 4, $"fixture must span 2+ pages of ties and slurs; captured {overlays}");
+
+        var change = Replace(source, "d'4( e' f'", "d'4( g' f'");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "d'4( e' f'", "d'4( g' f'")), incremental);
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(drawn >= 1 && drawn <= 4, $"the edited page's bows: replayed {replayed} / drawn {drawn}");
+        Assert.True(replayed >= 2, $"bow overlay replay did not fire: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>A mid-book trivia insertion (Δ=+1): every page's bows replay while the `~`,
+    /// `(` and `)` each cites shift — byte equality proves the anchors and the slots carry
+    /// the bows' offsets, and the counts that nothing drew live.</summary>
+    [Fact]
+    public void OverlayFragments_TriviaInsertion_ShiftsTheBowsDataPos()
+    {
+        string source = BowedBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+        int mid = source.IndexOf("| d'4(", source.Length / 2, StringComparison.Ordinal);
+        Assert.True(mid >= 0);
+        var change = new TextChange(new TextSpan(mid + 1, 0), " ");
+        var incremental = Norm(session.Edit(change));
+
+        string editedText = source[..(mid + 1)] + " " + source[(mid + 1)..];
+        Assert.Equal(Full(editedText), incremental);
+        Assert.NotEqual(before, incremental);
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(replayed >= 4 && drawn == 0, $"expected every bow overlay to replay: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>Scripts, rehearsal marks, percent repeats and bar numbers on every page — the
+    /// four drawers session 611 put on the overlay memo.</summary>
+    private static string MarkedBook() =>
+        "octave absolute\ntime 4/4\nkey c major\npart melody { clef treble }\n"
+        + "section Main { melody { "
+        + string.Join(" ", Enumerable.Range(0, 160).Select(i =>
+            $"c'4@staccato d'4@accent e'4 f'4@mark(\"{(char)('A' + i % 26)}\") | repeat percent 2 {{ g'4 a' b' c'' | }}"))
+        + " } }\n";
+
+    /// <summary>A same-length script edit on the first page (an accent turned tenuto: Δ=0, so no
+    /// offset moves and only the value fold can decline the page) redraws that page's
+    /// scripts live and replays the other overlays and pages —
+    /// byte-identical to a full render.</summary>
+    [Fact]
+    public void OverlayFragments_MarksReplayOnUntouchedPages_AndMatchFull()
+    {
+        string source = MarkedBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        session.Render();
+        var (_, overlays) = session.LastRenderOverlays;
+        Assert.True(overlays >= 8, $"fixture must span 2+ pages of the four overlays; captured {overlays}");
+
+        var change = Replace(source, "d'4@accent", "d'4@tenuto");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(ApplyFirst(source, "d'4@accent", "d'4@tenuto")), incremental);
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(drawn >= 1 && drawn <= 8, $"the edited page's overlays: replayed {replayed} / drawn {drawn}");
+        Assert.True(replayed >= 4, $"overlay replay did not fire: replayed {replayed} / drawn {drawn}");
+    }
+
+    /// <summary>A mid-book trivia insertion (Δ=+1): every page's four overlays replay while the
+    /// data-pos they cite shift.</summary>
+    [Fact]
+    public void OverlayFragments_TriviaInsertion_ShiftsTheMarksDataPos()
+    {
+        string source = MarkedBook();
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source), Opt);
+        string before = Norm(session.Render());
+        int mid = source.IndexOf("| repeat", source.Length / 2, StringComparison.Ordinal);
+        Assert.True(mid >= 0);
+        var change = new TextChange(new TextSpan(mid + 1, 0), " ");
+        var incremental = Norm(session.Edit(change));
+
+        string editedText = source[..(mid + 1)] + " " + source[(mid + 1)..];
+        Assert.Equal(Full(editedText), incremental);
+        Assert.NotEqual(before, incremental);
+        var (replayed, drawn) = session.LastRenderOverlays;
+        Assert.True(replayed >= 8 && drawn == 0, $"expected every overlay to replay: replayed {replayed} / drawn {drawn}");
     }
 
     /// <summary>A mid-book trivia insertion (Δ=+1, no content or geometry change): every

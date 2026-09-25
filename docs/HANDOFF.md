@@ -123,7 +123,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - ★ **⒮²⁷ tie の家族の残り＝約 2,700 B／打鍵**（第529 が solver の貸し出しで 19,976、**第532 が scratch で 4,250 を閉じた**。Lab `sessions/p529/`・`p532/`）: 残りは `TieChordOutline` 1,643（object＋中の `HorizontalSkyline`＝bound column ごと・problem に貸すなら outline も `Bind` で建て直す形＝skyline は ⒫′ の土台）／`TieColumnParts` 1,504（`BuildTieSpecification` が建てる record・呼び手側）。⚠️ **problem／engraver の貸し出しの島は第532 で尽きた**: `BeamScoringProblem`（第530 −16,344）・`SlurScoringProblem`（第531 −22,325）・tie（第529・第532）。grep（`new \w+Problem\(`・`new \w+Engraver\(`）に残る `LyricEngraver`／`LyricHyphenEngraver` は**第532 が値付けした＝合わせて 1,340 B／打鍵 0.12%（ctor 727・calc 445・hyphen 168）で、しかもコーパスに歌詞が 0 冊**（`lyric.in` 0）＝直す軒ではない（Lab `sessions/p532/lyric-price.txt`）。**貸す前に `.Length`・`[^1]`・`foreach` で表を歩く読み手を数える**（第530 は `[^1]` で 1 度 hash を割った・第532 は tie の配列を*寸法ちょうど*で持った理由）
 - ✅ **⒮²⁶ は第588 が stack sampling で閉じた**（render 内の String の残りは出力と状態・Lab `sessions/p588/stralloc/`）。⚠️ **型地図の順位は stack で見るまで信じない**（GreenNode[] 139 KB は parse）
-- ★★ **⒵ 時間の地図（第590・Release・235 冊 × 8 打鍵・3,760 打鍵・HEAD `4d0753cc` で約 12,030 ms＝3.2 ms／打鍵）**＝計器は Lab `sessions/p590/cpuhost/`（`StageProbe`＋一時の `Zz590T` 計時表＝`sessions/p590/Zz590T.cs.txt`・Lap を段の境に差す）。**残りの値段（render 比）**: ⑴ ✅ **collect の声部の walk は第591 が大半を閉じた**（accidental の文字替えで splice が全部断られていた）。**第594 が prefix 側の遠い読みを畳んだ**（§1.1 第594・長さの変わる編集で採用 0.07 → 64.23 小節／打鍵）。**残り**: 容れ物の中の編集（checkpoint は外側のリストだけ）＝設計級／form 行の小節線は位置の読み＝Δ≠0 の編集では form より後ろの checkpoint が使えない（直すなら prefix の採用を位置シフト付きに）／⑦ ✅ **incremental ≠ 全面描画（`SvgGenerator.Generate`）は第595〜第597 で閉じた**（§1.1 第597＝6 通りの照合 19,560 打鍵で不一致 0）。⚠️ **照合の基準は `SvgGenerator.Generate`**（計器は Lab `sessions/p597/verify-all.ps1`・Release の `p594/cpuhost`。Debug だと 1 通り 10 分超）。⚠️ splice 側の疑い（尾の bare duration の元が窓の中に移る）は未調査／⑵ ✅ **gate のばねは第593 が近傍を射影に細くした**（`SystemBreaker.SpringEdgeKey`・作り直し 3.04 → 1.05 小節／打鍵＝§1.1 第593。`LineEndCourtesyWidth(i−1, i)` は i しか読まない＝射影に要らなかった）／⑶ **content key 4.1%**（`MeasureContentKey.Compute`＝毎打鍵全小節）／⑷ **prelim 注釈 pass 8.5%**・**SVG 出力 18%**（未分解）／⑸ beam を**状態**で鍵にする memo＝残る Solve 9.39 のうち 2.94（同じ render・別の群で同じ形）＋1.39（前の打鍵）＝約 3.7%・鍵が 30 フィールド＝要設計／⑹ `ResolveTabStrings` の plan 以外 約 1.9%。⚠️ **EventPipe の CPU sampler は信じない**（§1.1 第589 ⑴）。⚠️ gen2 GC 289 回／run（未調査）
+- ★★ **⒵ 時間の地図（第590・Release・235 冊 × 8 打鍵・3,760 打鍵・HEAD `4d0753cc` で約 12,030 ms＝3.2 ms／打鍵）**＝計器は Lab `sessions/p590/cpuhost/`（`StageProbe`＋一時の `Zz590T` 計時表＝`sessions/p590/Zz590T.cs.txt`・Lap を段の境に差す）。**残りの値段（render 比）**: ⑴ ✅ **collect の声部の walk は第591 が大半を閉じた**（accidental の文字替えで splice が全部断られていた）。**第594 が prefix 側の遠い読みを畳んだ**（§1.1 第594・長さの変わる編集で採用 0.07 → 64.23 小節／打鍵）。**残り**: 容れ物の中の編集（checkpoint は外側のリストだけ）＝設計級／form 行の小節線は位置の読み＝Δ≠0 の編集では form より後ろの checkpoint が使えない（直すなら prefix の採用を位置シフト付きに）／⑦ ✅ **incremental ≠ 全面描画（`SvgGenerator.Generate`）は第595〜第597 で閉じた**（§1.1 第597＝6 通りの照合 19,560 打鍵で不一致 0）。⚠️ **照合の基準は `SvgGenerator.Generate`**（計器は Lab `sessions/p597/verify-all.ps1`・Release の `p594/cpuhost`。Debug だと 1 通り 10 分超）。⚠️ splice 側の疑い（尾の bare duration の元が窓の中に移る）は未調査／⑵ ✅ **gate のばねは第593 が近傍を射影に細くした**（`SystemBreaker.SpringEdgeKey`・作り直し 3.04 → 1.05 小節／打鍵＝§1.1 第593。`LineEndCourtesyWidth(i−1, i)` は i しか読まない＝射影に要らなかった）／⑶ **content key 4.1%**（`MeasureContentKey.Compute`＝毎打鍵全小節・約 920 item／打鍵）＝**item の参照で memo しても当たりは 28%（音高）／11%（fuzz）**（第598 census・Lab `sessions/p598/Zz598Census.cs.txt`）＝**第601 が作り直しの 2 大軒を閉じた（同じ item 28% → 62%）**。⚠️ **内容鍵の item 参照 memo は第602 が反証**（`ConditionalWeakTable`＋刻印の検証・Lab `sessions/p602/cwt-item-hash.diff.txt`）: 鍵＋ばね −40 ms だが GC の停止 +260 ms・割当 +20 KB／打鍵＝render +3%＝**弱参照の表で全 item を持つ形は負ける**（持つなら item 自身のフィールド＝`with` の写しで古い値が移る＝要設計）。残りの写し（第601 の棚卸し＝§1.1 第601）: resume の基準が*最後の全面 collect*（前の打鍵ではない）＝長さの変わる編集が溜まると後側は毎回位置がずれて写しが要る（delta workload は 28%）・`voice { }` の 2 声目以降は毎回 live・多声の stem 方向・ottava・combine・和音行／歌詞行／⑷ **prelim 注釈 pass は第599 が割った**（§1.1 第599・計器 Lab `sessions/p599/prelim-laps.diff.txt`＝`Zz599T.cs.txt` を Core に戻して p590 の host）: 計 約 10.9%＝注釈 layout 4.9%（段の上の積み上げ 1.4・スクリプト 1.2・組み立て 1.0→第599 で削った・リハーサル記号 0.5…＝散らばる）・梁 1.8（段またぎ 0＝編集した段の分だけ）・タイ 1.6（第600 が段またぎの丸ごとを閉じた）・頁割り skyline 1.8・スラー 0.7（段またぎで staff 丸ごと 0.10／打鍵＝タイと同じ形・未着手）／最終 pass の注釈 layout は 約 3.4%（同じ内訳）・**SVG 出力 18% は第598 が割った**（§1.1 第598・計器 Lab `sessions/p598/svg-laps.diff.txt`＋`Zz598T.cs.txt`＝p590 の host が読む）: 段の live 描画は第598 で 1.35 段／打鍵 6.2%（残りは編集した段＋幾何の変わった段 0.31）・再生 21.9 段 1.7%・overlay は全頁を毎打鍵 live＝タイ 1.7%・リハーサル記号 0.9%・`%` 反復 0.9%・スラー 0.7%・小節番号 0.5%・アーティキュレーション 0.4%（overlay の断片 memo は指使いにしか無い）・`RenderTo` の外（頁への切り出し）約 4%／⑸ beam を**状態**で鍵にする memo＝残る Solve 9.39 のうち 2.94（同じ render・別の群で同じ形）＋1.39（前の打鍵）＝約 3.7%・鍵が 30 フィールド＝要設計／⑹ `ResolveTabStrings` の plan 以外 約 1.9%。⚠️ **EventPipe の CPU sampler は信じない**（§1.1 第589 ⑴）。⚠️ gen2 GC 289 回／run（未調査）
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
@@ -147,32 +147,27 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第597セッション（2026-09-25・YT-DELL2）
+### 1.1 第612セッション（2026-09-25・YT-DELL2）
 
-★ `-Start p597`（HEAD `ed38ef68`・full **9133 / 0 / 2 / 9135**・第595 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ の残り 1 件（collision.lys・fuzz seed 1 の 8 打鍵目）。
+同じ会話の続き。★ `-Start p612`（HEAD `f9dea8a7`・full **9147 / 0 / 2 / 9149**・第610 を ARCHIVE へ）。着手＝編集した 1 段の中身（staff の skyline と描画）を HEAD で割り直す。
 
-★★★ **⑴ 原因＝prefix の restore が `_parallelSpans` を記録から*そのまま*写していた**（`637e21f1`）。記録の span は**古い木の** `ParallelExpressionSyntax` を指す。`voice { } { }` の 2 声目以降は walk の後に span から live で歩かれるので、古い木の音符を歩く。2 声目の頭が bare duration（fuzz が `{ d2 e` の `d` を消した＝`{ 2 e`）だと `OriginalOf` は**古い木の** `a` を返し、新しい木へ re-key 済みの `_resolvedNotes` に当たらず休符になった（full は音符）。**suffix の splice は同じ壁を知っていて span を `ResolveShifted` で解き直していた**（`Resume.cs` の「The wall」）＝prefix 側だけ漏れていた。⇒ prefix も spelling と同じ恒等窓で re-key（解けなければ abort）。
-⚠️ 第596 が記した「`{` が欠けた構文回復」は**この件の原因ではなかった**＝旧も新も `{` 欠けで同形・壊れていたのは span の木。切り分けは Lab `sessions/p597/Zz597Collision.cs.txt`（old/full/resumed の item 列を並べる）。
+★ **⑴ HEAD の地図**（render 約 9,600 ms・計器は第604 の差分 Lab `sessions/p604/layout-laps.diff.txt` を当て直し）: collect 28.3%・layout 44.8%（段ごとの layout 18.0%＝staff の skyline 12.7%＝**梁 8.8%**（第608 前 13.9%）・仮の注釈 pass 11.2%・段数 4.1%・頁 4.0%・仕上げ 4.9%・改行 1.7%）・SVG 15.5%。**残る頭はどれも編集した部分の本当の計算か LP の移植そのもの**（梁の候補生成と遅延採点・声部の walk・頁の DP）。
 
-⑵ **網** `CollectEditResumeTests.PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree`（手書き 1 声部の本・`{ 2 e` を持つ span の後ろを編集）＝直しを外すと fuzz と同じ `NoteItem vs RestItem` で赤。
+⇒ **perf の区切り**: 第598〜第611 で render 約 12,030 → 9,350 ms（−22%〜−24%）・割当 1,103 → 761 KB／打鍵（−31%）。次に大きく効くのは設計級（§1.0 ⒵）か LP の計算の簡略化（忠実度とセットでユーザー判断）。
 
-⑶ **照合（Release・`SvgGenerator.Generate` 基準）**: repo の追跡本 fuzz seed 1／2 各 5,264・ベースタブ本の音高 1,880・長さの変わる編集 1,824・fuzz seed 1／2 各 2,664 ＝**6 通りすべて不一致 0**（第596 は repo seed 1 で 1）。resume の採用量は 6 通りとも第596 と同じ（例: repo seed 1 26.12／3.24 小節／打鍵）＝直しは再利用を削らない。
+終了: HEAD `f9dea8a7`＋docs（コードの変更なし）・full **9147 / 0 / 2 / 9149**。
 
-終了: HEAD `637e21f1`＋docs・full **9134 / 0 / 2 / 9136**（+1）。
+## 以下は第611セッションの経緯
 
-## 以下は第596セッションの経緯
+### 1.1 第611セッション（2026-09-25・YT-DELL2）
 
-### 1.1 第596セッション（2026-09-25・YT-DELL2）
+同じ会話の続き。★ `-Start p611`（HEAD `3b110d98`・full **9145 / 0 / 2 / 9147**・第609 を ARCHIVE へ）。着手＝overlay 断片 memo をリハーサル記号・`%` 反復・小節番号・アーティキュレーションへ。
 
-同じ会話の続き。★ `-Start p596`（HEAD `5e08f351`・full **9128 / 0 / 2 / 9130**・第594 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ の残り 12 件（repo の追跡本 fuzz seed 1・`SvgGenerator.Generate` 基準）。
+★★ **⑴ 配線（`21848764`）**: 共通の `ThroughOverlayMemo`（`SharedRenderer.OverlayMemo.cs`）。item の指紋＝layout の record 自身の値 hash（位置を 0 にした写し＝将来のフィールドも自動で入る）＋描画が record の外から読む値（段の上端／staff 中央・`%` の staff の調弦と高さ・頁の高さ・書体の計画の署名）。anchor＝各 item の位置。
 
-★★ **⑴ 切り分けの自動化**（Lab `sessions/p596/Zz596Triage.cs.txt`＝fuzz の列を同じ乱数で再現し、最初の不一致の打鍵で `IncrementalCompiler` と段キャッシュのフィールドを 1 つずつ空にする）: 7 冊 8 件が 3 群＝collect の resume／内容鍵の穴で丸ごと再利用／段キャッシュの staff skyline。
+⑵ **結果**: 同じ窓の A/B＝SVG の段 1,791／1,812 → 1,568／1,477 ms・**render 9,669／9,556 → 9,375／9,332 ms（約 −2.7%）**。照合 6 通り 19,560 打鍵で不一致 0。網 `OverlayFragments_MarksReplayOnUntouchedPages_AndMatchFull`・`…_TriviaInsertion_ShiftsTheMarksDataPos`。⚠️ **record の指紋を 4 つとも外す毒は網では緑**（同じ長さの記号の編集でも staff が動いて staff 中央の Y が捕まえる）が、**打鍵の照合では repo fuzz 211／5,264・音高 447／1,880 が不一致**＝観測者は照合（コメントに記載）。⚠️ 網づくりの落とし穴: `@mark("A")` の文字を変えても描画は変わらない（連番で描かれる）・`@accent`→`@marcato` は長さが変わり位置の検査が先に断る。
 
-★★★ **⑵ 直した 6 つ**（`eb6a411f`・`1e646fa9`）: ⒜ **splice の空の尾**＝境界が walk の最後の小節線だと採用 0 小節なのに、記録の終わりの builder の `LastMeasure`（編集前の記録の小節）で live の最後の小節を上書きしていた（key-signature-space の `@stemUpp`）／⒝ **構文回復で補われた token**（幅 0 の `{`）を `ShapeWalk` が同じ形と見ていた（collision の `section Main` の `{` 削除）／⒞ **内容鍵が null と 0 を区別しない**＝`Nullable.GetHashCode` は null も 0（scriptstack1 の `@ffinger(0)`＝`Fingering` 0 → null で鍵が同じ）＝`Hash64.NullFold`／⒟ **小節を持たない行が鍵に入らない**（lyrics の score ブロックの `lyrics wwords` → `lyric wwords`）＝staff の形（番号・同一性・声部数）を全鍵に。⚠️ 小節数を入れると小節の挿入で全鍵が動き、ずらし再利用の網 6 本が赤（入れない）／⒠ **ペダル記号の解をソース位置で名指し**していた＝段キャッシュは位置に依らないので、上の編集（`title` の崩れ）で解が引けず既定の置き方に落ちた（pedal-text）＝小節・アンカー・種類で名指し、流用時は小節番号を振り直す。
-
-⑶ **照合（`SvgGenerator.Generate` 基準）**: ベースタブ本の音高・長さの変わる編集・fuzz 2 seed で不一致 0、repo の追跡本 fuzz seed 1 で 1 件（collision・§1.0 ⑦）・seed 2 で 0（第595 前は 31 件）。resume の採用量は変わらず。網 5 本（`CollectEditResumeTests` 2・`IncrementalFullAgreementTests` 3）がそれぞれ、直しを外すと赤。
-
-終了: HEAD `1e646fa9`＋docs・full **9133 / 0 / 2 / 9135**（+5）。
+終了: HEAD `21848764`＋docs・full **9147 / 0 / 2 / 9149**（+2）。
 
 ## 2. 開いている作業
 

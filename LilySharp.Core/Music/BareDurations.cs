@@ -275,7 +275,7 @@ public static class BareDurations
     /// that spine — the parent-cached instances, so the answer is the same object every
     /// other reader of the tree holds.
     /// </summary>
-    private static SyntaxNode RedOf(SyntaxNode root, Syntax.InternalSyntax.GreenNode green, int position)
+    internal static SyntaxNode RedOf(SyntaxNode root, Syntax.InternalSyntax.GreenNode green, int position)
     {
         var node = root;
         int nodePosition = root.Position;
