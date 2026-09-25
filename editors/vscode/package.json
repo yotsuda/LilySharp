@@ -210,7 +210,7 @@
         "lilysharp.ai.ghostCompletion": {
           "type": "boolean",
           "default": false,
-          "description": "Suggest the next measure as ghost text while you type (just after a barline), using your language model (GitHub Copilot). Each suggestion is compiled first and only shown if it is valid. Off by default because it calls the model as you type."
+          "markdownDescription": "Suggest the next measure as ghost text while you type (just after a barline), using your language model (GitHub Copilot). Each suggestion is compiled first and only shown if it is valid. Off by default because it calls the model as you type.\n\nIt is an inline suggestion, and Lily# turns inline suggestions off in `.lys` files by default (`editor.inlineSuggest.enabled`), because GitHub Copilot's own completion slowed every keystroke there. When you switch this on, Lily# offers to turn inline suggestions on for `.lys` files and to keep Copilot's completions off there (`github.copilot.enable`)."
         }
       }
     },

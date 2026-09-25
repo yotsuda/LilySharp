@@ -103,6 +103,72 @@ export function registerAiComplete(context: vscode.ExtensionContext, deps: AiTra
     context.subscriptions.push(
         vscode.languages.registerInlineCompletionItemProvider({ language: 'lilysharp' }, provider)
     );
+
+    // Turning the setting on must not be a switch that does nothing: offer the settings it
+    // depends on when it is switched on, and once at start-up if it was on already.
+    void offerInlineSuggest(context, false);
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('lilysharp.ai.ghostCompletion')) {
+            void offerInlineSuggest(context, true);
+        }
+    }));
+}
+
+const DECLINED_KEY = 'lilysharp.ghostCompletion.inlineSuggestDeclined';
+
+/**
+ * Ghost completion is an inline suggestion, and the extension's own default turns inline
+ * suggestions off in Lily# files — `"[lilysharp]": { "editor.inlineSuggest.enabled": false }`,
+ * because GitHub Copilot's inline completion stalled every keystroke in a score for one to
+ * two seconds (see CHANGELOG). With that default in force VS Code never asks this provider,
+ * so the setting was on and nothing ever appeared (owner report, 2026-09-26).
+ *
+ * The fix is the user's to consent to, and it is two settings, not one: inline suggestions
+ * back on for Lily# files only, AND Copilot's own completions off for them, so the stall the
+ * default was there for does not come back with the ghost text. Nothing is written without
+ * the click. A "Not now" is remembered until the setting is switched on again.
+ */
+async function offerInlineSuggest(context: vscode.ExtensionContext, switchedNow: boolean): Promise<void> {
+    if (!vscode.workspace.getConfiguration('lilysharp').get<boolean>('ai.ghostCompletion', false)) {
+        return;
+    }
+    const editorCfg = vscode.workspace.getConfiguration('editor', { languageId: 'lilysharp' });
+    if (editorCfg.get<boolean>('inlineSuggest.enabled', true)) {
+        return; // already on for Lily# files — nothing is in the way
+    }
+    if (!switchedNow && context.globalState.get<boolean>(DECLINED_KEY, false)) {
+        return;
+    }
+    const copilot = vscode.extensions.all.some(x => x.id.toLowerCase().startsWith('github.copilot'));
+    const turnOn = 'Turn on for Lily# files';
+    const answer = await vscode.window.showInformationMessage(
+        'Lily#: Ghost Completion needs inline suggestions, which are off in Lily# files. '
+        + (copilot
+            ? 'Turn them on for Lily# files, and keep GitHub Copilot\'s own completions off there so typing stays fast?'
+            : 'Turn them on for Lily# files?'),
+        turnOn, 'Not now');
+    if (answer !== turnOn) {
+        await context.globalState.update(DECLINED_KEY, true);
+        return;
+    }
+    await context.globalState.update(DECLINED_KEY, false);
+    try {
+        // overrideInLanguage = true: written under "[lilysharp]", nowhere else.
+        await editorCfg.update('inlineSuggest.enabled', true, vscode.ConfigurationTarget.Global, true);
+        if (copilot) {
+            const copilotCfg = vscode.workspace.getConfiguration('github.copilot');
+            const seen = copilotCfg.inspect<Record<string, boolean>>('enable');
+            // The whole map is written back, the user's own entries kept, so no other
+            // language's setting changes.
+            const map = { ...(seen?.defaultValue ?? {}), ...(seen?.globalValue ?? {}), lilysharp: false };
+            await copilotCfg.update('enable', map, vscode.ConfigurationTarget.Global);
+        }
+        vscode.window.showInformationMessage(copilot
+            ? 'Lily#: inline suggestions are on in Lily# files, GitHub Copilot\'s are off there. Ghost Completion appears after a barline.'
+            : 'Lily#: inline suggestions are on in Lily# files. Ghost Completion appears after a barline.');
+    } catch (err: any) {
+        vscode.window.showErrorMessage(`Lily#: could not change the settings: ${err?.message ?? err}`);
+    }
 }
 
 function makeItem(text: string, position: vscode.Position): vscode.InlineCompletionItem {

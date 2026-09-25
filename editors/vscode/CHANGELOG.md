@@ -12,6 +12,13 @@ All notable changes to the Lily# VS Code extension are documented here.
   *Transform Selection with AI* and ghost completion already sent it. Copilot's as-you-type
   inline suggestions still do not read instructions files — that is Copilot's rule, not
   something an extension can change.
+- **Ghost Completion no longer does nothing when switched on.** It is an inline suggestion,
+  and the extension's own default `"[lilysharp]": { "editor.inlineSuggest.enabled": false }`
+  (there because Copilot's completion stalled every keystroke in a score) kept VS Code from
+  ever asking for it. Switching `lilysharp.ai.ghostCompletion` on now offers, once, to turn
+  inline suggestions on for `.lys` files only and to keep Copilot's own completions off there
+  (`github.copilot.enable`), so the stall does not come back. Nothing is written without the
+  click.
 
 ## 0.8.0
 
