@@ -34,6 +34,22 @@ function copyGrammar() {
         fs.mkdirSync(outDir, { recursive: true });
         fs.copyFileSync(src, path.join(outDir, 'GRAMMAR_FOR_LLM.md'));
         console.log('esbuild: bundled GRAMMAR_FOR_LLM.md');
+        // The SAME canon, as a Copilot instructions file (package.json
+        // contributes.chatInstructions). Only Lily#'s own AI features read the copy above;
+        // Copilot's chat, agent and inline chat never did, so asked about a .lys file they
+        // answered from LilyPond (owner report, 2026-09-26). The `applyTo` glob attaches it
+        // to requests that touch a .lys file and to no others.
+        const instructions = [
+            '---',
+            'name: Lily# grammar',
+            "description: 'The Lily# (.lys) language: its syntax, the canonical form of every construct, and what is NOT LilyPond.'",
+            "applyTo: '**/*.lys'",
+            '---',
+            '',
+            fs.readFileSync(src, 'utf8'),
+        ].join('\n');
+        fs.writeFileSync(path.join(outDir, 'lilysharp.instructions.md'), instructions);
+        console.log('esbuild: wrote lilysharp.instructions.md');
     } catch (e) {
         console.warn('esbuild: could not copy GRAMMAR_FOR_LLM.md (extension will use the compact fallback):', e.message);
     }

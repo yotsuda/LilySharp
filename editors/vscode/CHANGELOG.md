@@ -2,6 +2,17 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+### AI
+
+- **Copilot now knows the Lily# grammar.** The extension contributes the language spec as a
+  Copilot instructions file for `.lys` files, so Copilot Chat, agent mode and inline chat
+  (`Ctrl+I` from Copilot's own menus) answer in Lily# instead of guessing LilyPond. Lily#'s own
+  *Transform Selection with AI* and ghost completion already sent it. Copilot's as-you-type
+  inline suggestions still do not read instructions files — that is Copilot's rule, not
+  something an extension can change.
+
 ## 0.8.0
 
 ### Breaking changes

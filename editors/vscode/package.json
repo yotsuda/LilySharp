@@ -29,6 +29,11 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "chatInstructions": [
+      {
+        "path": "./out/lilysharp.instructions.md"
+      }
+    ],
     "languages": [
       {
         "id": "lilysharp",
