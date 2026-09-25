@@ -195,6 +195,37 @@ public class CollectEditResumeTests
     }
 
     [Fact]
+    public void Splice_ThePitchThatOpensAnIndentedLine_StillSplicesTheTail()
+    {
+        // Session 614: the note that opens an indented line owns the line break and
+        // indent in front of it, so its node straddles the edit window's prefix P, and
+        // the prefix half of the parse agreements compared its kind (PitchC against
+        // PitchD) and declined every suffix splice — the whole tail re-collected per
+        // keystroke. The same edit later on the line spliced. Held both ways: the
+        // output is the full compile's on both alternation sides, and the tail splices.
+        var lines = new System.Text.StringBuilder();
+        for (int i = 0; i < 120; i++)
+            lines.Append("    c'4 e'4 g'4 b'4 |\n");
+        var baseText = "octave absolute\n\npart melody {\n  section A {\n" + lines
+            + "  }\n}\n\nform main { A }\n\nscore main {\n  staff melody\n}\n";
+        int idx = baseText.IndexOf("\n    c'4", baseText.Length / 2, StringComparison.Ordinal) + 5;
+        var edited = baseText.Remove(idx, 1).Insert(idx, "d");
+
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var compiler = new IncrementalCompiler(SyntaxTree.Parse(baseText), options);
+        compiler.Render();
+        for (int i = 0; i < 2; i++)
+        {
+            string text = i % 2 == 0 ? edited : baseText;
+            var incremental = compiler.RenderIncremental(SyntaxTree.Parse(text));
+            Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(text), options), incremental);
+            if (i == 0)
+                Assert.True(compiler.LastCollectResume.SplicedMeasures > 40,
+                    $"spliced only {compiler.LastCollectResume.SplicedMeasures} measures — the line-opening pitch declines the splice again");
+        }
+    }
+
+    [Fact]
     public void V2bowWholeBookSpan_PrimaryVoiceEdit_DeclinesTheSplice()
     {
         // The boundary of the same discovery: an edit inside the PRIMARY voice's

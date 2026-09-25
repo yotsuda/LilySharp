@@ -587,8 +587,10 @@ internal static class CollectResumePlanner
         GreenNode a, int aStart,
         GreenNode b, int bStart, int limit)
     {
-        if (a.Kind != b.Kind || aStart != bStart)
+        if (aStart != bStart)
             return false;
+        if (a.Kind != b.Kind)
+            return OnlyTriviaBelow(a, aStart, limit) && OnlyTriviaBelow(b, bStart, limit);
         // Same green at the same position = identical subtree (greens are
         // position-free); this is what the Edit path's reuse map hits.
         if (ReferenceEquals(a, b))
@@ -613,6 +615,17 @@ internal static class CollectResumePlanner
             if (!GreenPrefixAgrees(ca, caStart, cb!, cbStart, limit))
                 return false;
         }
+
+        // A node whose first real character stands at/past the limit holds nothing
+        // below it but the leading trivia of its first token — which, the prefix
+        // bytes being equal, is the same whitespace on both sides. Structurally it
+        // starts AT the limit, where the loop below would never have compared it:
+        // the note that opens an indented line owns the line break and indent in
+        // front of it, so it straddles P while the same note later on the line
+        // does not (session 614: editing it declined every suffix splice on the
+        // prefix half, and a 39-page book re-collected its whole tail per keystroke).
+        static bool OnlyTriviaBelow(GreenNode g, int start, int limit)
+            => g.FullWidth > 0 && start + g.GetLeadingTriviaWidth() >= limit;
 
         static GreenNode? NextBelow(
             GreenNode parent, ref int slot, ref int pos, int limit,

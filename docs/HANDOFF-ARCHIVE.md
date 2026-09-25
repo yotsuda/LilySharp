@@ -129,6 +129,45 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第613セッションの経緯
+
+### 1.1 第613セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p613`（HEAD `0693f9a9`・full **9147 / 0 / 2 / 9149**）。ユーザー「カーソルの頁を先に出す」を調べて。計器＝Lab `sessions/p613/lathost`（打鍵ごとの ms・頁・collect の結末）＋ `zz613-probe.diff.txt`（戻した）。
+
+★ **⑴ 頁を先に出す旨みは無い**: 1,880 打鍵の 98% は変わる頁が 1 枚（＝カーソルの頁）・render p50 2.0／p99 15 ms・preview の debounce 既定 100 ms。
+★ **⑵ 長い score は O(n)**（Lovely Day の本文を 12 回写した `big12.lys` 39 頁）: 4 → 13 → 39 頁で 3.1 → 17.5 → 54 ms／打鍵・collect 27 ms（50%）＋layout 20 ms。
+★ **⑶ 原因は collect の尾の splice 漏れ 2 つ**（コーパスで 84% は splice 済み）:
+⒜ 行頭の音を直すと、改行＋字下げの trivia がその音に付くので node が P を跨ぎ、`GreenPrefixAgrees` が Kind（PitchC→PitchD）の違いで prefix 不一致にする（`ParseAgreementsHold`）＝尾の全部を再 collect（4.4%）。
+⒝ Reelin' In the Years ほか: 2 打鍵目から `side table 16 has 0 entries at walk entry, recorded 1` で abort し全 collect（5.1%＝resume を試す分も損）。
+⇒ 次＝⒜ 跨ぐ node は Kind を問わず「P より前で終わる子」だけ比べてよいかの健全性（fuzz 網）と ⒝ の table 16 の読み手。長い score の layout 20 ms の地図も未。
+
+終了: HEAD `0693f9a9`＋docs（コードの変更なし）・full **9147 / 0 / 2 / 9149**。
+
+## 以下は第612セッションの経緯
+
+### 1.1 第612セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p612`（HEAD `f9dea8a7`・full **9147 / 0 / 2 / 9149**・第610 を ARCHIVE へ）。着手＝編集した 1 段の中身（staff の skyline と描画）を HEAD で割り直す。
+
+★ **⑴ HEAD の地図**（render 約 9,600 ms・計器は第604 の差分 Lab `sessions/p604/layout-laps.diff.txt` を当て直し）: collect 28.3%・layout 44.8%（段ごとの layout 18.0%＝staff の skyline 12.7%＝**梁 8.8%**（第608 前 13.9%）・仮の注釈 pass 11.2%・段数 4.1%・頁 4.0%・仕上げ 4.9%・改行 1.7%）・SVG 15.5%。**残る頭はどれも編集した部分の本当の計算か LP の移植そのもの**（梁の候補生成と遅延採点・声部の walk・頁の DP）。
+
+⇒ **perf の区切り**: 第598〜第611 で render 約 12,030 → 9,350 ms（−22%〜−24%）・割当 1,103 → 761 KB／打鍵（−31%）。次に大きく効くのは設計級（§1.0 ⒵）か LP の計算の簡略化（忠実度とセットでユーザー判断）。
+
+終了: HEAD `f9dea8a7`＋docs（コードの変更なし）・full **9147 / 0 / 2 / 9149**。
+
+## 以下は第611セッションの経緯
+
+### 1.1 第611セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p611`（HEAD `3b110d98`・full **9145 / 0 / 2 / 9147**・第609 を ARCHIVE へ）。着手＝overlay 断片 memo をリハーサル記号・`%` 反復・小節番号・アーティキュレーションへ。
+
+★★ **⑴ 配線（`21848764`）**: 共通の `ThroughOverlayMemo`（`SharedRenderer.OverlayMemo.cs`）。item の指紋＝layout の record 自身の値 hash（位置を 0 にした写し＝将来のフィールドも自動で入る）＋描画が record の外から読む値（段の上端／staff 中央・`%` の staff の調弦と高さ・頁の高さ・書体の計画の署名）。anchor＝各 item の位置。
+
+⑵ **結果**: 同じ窓の A/B＝SVG の段 1,791／1,812 → 1,568／1,477 ms・**render 9,669／9,556 → 9,375／9,332 ms（約 −2.7%）**。照合 6 通り 19,560 打鍵で不一致 0。網 `OverlayFragments_MarksReplayOnUntouchedPages_AndMatchFull`・`…_TriviaInsertion_ShiftsTheMarksDataPos`。⚠️ **record の指紋を 4 つとも外す毒は網では緑**（同じ長さの記号の編集でも staff が動いて staff 中央の Y が捕まえる）が、**打鍵の照合では repo fuzz 211／5,264・音高 447／1,880 が不一致**＝観測者は照合（コメントに記載）。⚠️ 網づくりの落とし穴: `@mark("A")` の文字を変えても描画は変わらない（連番で描かれる）・`@accent`→`@marcato` は長さが変わり位置の検査が先に断る。
+
+終了: HEAD `21848764`＋docs・full **9147 / 0 / 2 / 9149**（+2）。
+
 ## 以下は第610セッションの経緯
 
 ### 1.1 第610セッション（2026-09-25・YT-DELL2）
