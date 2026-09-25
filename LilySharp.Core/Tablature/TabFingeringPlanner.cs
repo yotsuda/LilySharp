@@ -153,11 +153,17 @@ public static class TabFingeringPlanner
         // finished (see t_trellis): a throw in between costs the next plan a new one.
         var trellis = t_trellis ?? new Trellis();
         t_trellis = null;
-        trellis.Reset(n, weights ?? TabFingeringWeights.Default, handSpan);
-        trellis.Solve(events, tuning, result);
+        int from = trellis.Reset(events, tuning, weights ?? TabFingeringWeights.Default, handSpan);
+        t_resumedEvents += from;
+        trellis.Solve(events, tuning, result, from);
         t_trellis = trellis;
         return result;
     }
+
+    /// <summary>How many events on this thread a plan took from the previous plan's trellis
+    /// instead of solving them again — the liveness counter of the shared prefix (tests).</summary>
+    [System.ThreadStatic]
+    internal static long t_resumedEvents;
 
     /// <summary>The trellis <see cref="Plan"/> solves in, kept by the thread between plans.</summary>
     /// <remarks>
@@ -196,29 +202,63 @@ public static class TabFingeringPlanner
         private readonly List<int> _openHands = new();
         private bool[] _seenHand = new bool[ShiftTableSize];
 
-        /// <summary>Readies the trellis for a plan of <paramref name="events"/> events: at least
-        /// sixteen states an event of room (what a new one was given), and nothing counted.</summary>
-        public void Reset(int events, TabFingeringWeights w, int handSpan)
+        // The last FINISHED plan's input and its state count (see Reset): -1 when there is
+        // none, which is also what a plan in progress leaves behind.
+        private TabEvent[] _solvedEvents = System.Array.Empty<TabEvent>();
+        private int _solvedEventCount = -1;
+        private int[] _solvedTuning = System.Array.Empty<int>();
+        private int _solvedCount;
+
+        /// <summary>Readies the trellis for a plan of <paramref name="events"/>: at least sixteen
+        /// states an event of room, and the events the previous plan shares with this one kept.
+        /// Returns the first event to solve.</summary>
+        /// <remarks>
+        /// THE SHARED PREFIX. An event's states, costs and back-pointers are a function of that
+        /// event, the previous event's states and costs, the tuning, the weights and the hand
+        /// span — nothing later (Solve walks forward and only the walk back reads the end). So
+        /// when the previous plan was over the same tuning, weights and span, its first k events
+        /// equal to this plan's (the whole <see cref="TabEvent"/> by value) left the states of
+        /// those k events exactly as solving them again would, and the solve starts at k; the
+        /// walk back is redone from the new end, since a later event may change what the
+        /// earlier ones should be. MEASURED (session 590, Release, the reader's corpus, 235
+        /// books × eight forward keystrokes): plans are 3.8% of the render at 472 events, and
+        /// 53% of the events of a keystroke's plan equal the previous plan's.
+        /// <c>TabFingeringPrefixTests</c> holds the answers equal to a fresh plan's.
+        /// </remarks>
+        public int Reset(IReadOnlyList<TabEvent> events, int[] tuning, TabFingeringWeights w, int handSpan)
         {
+            int n = events.Count;
+            int from = 0;
+            if (_solvedEventCount > 0 && handSpan == _handSpan && w.Equals(_w)
+                && System.MemoryExtensions.SequenceEqual<int>(tuning, _solvedTuning))
+            {
+                int limit = System.Math.Min(n, _solvedEventCount);
+                while (from < limit && events[from].Equals(_solvedEvents[from]))
+                    from++;
+            }
+            int solvedEvents = _solvedEventCount;
+            _solvedEventCount = -1;
             _w = w;
             _handSpan = handSpan;
-            _count = 0;
-            if (_start.Length < events)
-                _start = new int[events];
-            int capacity = events * 16;
+            // Grown by copying: the states below the shared prefix are kept.
+            if (_start.Length < n)
+                System.Array.Resize(ref _start, n);
+            int capacity = n * 16;
             if (_states.Length < capacity)
             {
-                _states = new State[capacity];
-                _cost = new double[capacity];
-                _back = new int[capacity];
+                System.Array.Resize(ref _states, capacity);
+                System.Array.Resize(ref _cost, capacity);
+                System.Array.Resize(ref _back, capacity);
             }
+            _count = from == 0 ? 0 : from < solvedEvents ? _start[from] : _solvedCount;
+            return from;
         }
 
-        public void Solve(IReadOnlyList<TabEvent> events, int[] tuning, int[] result)
+        public void Solve(IReadOnlyList<TabEvent> events, int[] tuning, int[] result, int from)
         {
             int n = events.Count;
             int stringCount = tuning.Length;
-            for (int i = 0; i < n; i++)
+            for (int i = from; i < n; i++)
             {
                 var ev = events[i];
                 _start[i] = _count;
@@ -260,6 +300,16 @@ public static class TabFingeringPlanner
                 if (back < 0) break;
                 best = back - _start[i - 1];
             }
+
+            // This plan finished: the next one may share its prefix.
+            if (_solvedEvents.Length < n)
+                _solvedEvents = new TabEvent[n];
+            for (int i = 0; i < n; i++)
+                _solvedEvents[i] = events[i];
+            if (!System.MemoryExtensions.SequenceEqual<int>(tuning, _solvedTuning))
+                _solvedTuning = (int[])tuning.Clone();
+            _solvedCount = _count;
+            _solvedEventCount = n;
         }
 
         private void AddCandidate(int i, int str, int fret, in TabEvent ev, ref bool openHandsReady)

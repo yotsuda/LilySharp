@@ -194,7 +194,9 @@ internal sealed class SystemBreaker
     /// cross-bar lyric rod port, 2026-08-20 — both neighbours' lyric content: the halves
     /// ReserveLyricLine drops read whether a line continues into i±1, and the pair excess
     /// below reads measure i+1's springs outright), and the score-global common shortest
-    /// duration. There is deliberately NO second per-measure implementation: the memo
+    /// duration — the neighbours compared by what this loop reads of them
+    /// (<see cref="SpringEdgeKey"/>), not by their whole keys. There is deliberately NO
+    /// second per-measure implementation: the memo
     /// short-circuits THIS loop body, so a reused and a computed entry come from the one
     /// implementation (§2 A — no second spelling of the same quantity). The cross-bar
     /// PAIR quantity is deliberately carried SPLIT (each measure its own
@@ -368,6 +370,91 @@ internal sealed class SystemBreaker
                 i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i));
         }
         return springData;
+    }
+
+    /// <summary>
+    /// What a NEIGHBOUR's springs read of a measure, folded apart from its content key: the
+    /// part of measure <c>m</c> that <c>springs[m + 1]</c> reads (<see cref="ReadByNext"/>)
+    /// and the part that <c>springs[m − 1]</c> reads (<see cref="ReadByPrevious"/>).
+    /// </summary>
+    /// <remarks>
+    /// The per-measure spring memo (<c>IncrementalCompiler.SpringReusable</c>) used to ask the
+    /// neighbours' WHOLE content keys to be unchanged, so a keystroke in measure j rebuilt
+    /// j − 1 and j + 1 as well — three measures for one (MEASURED session 590: 3.04 a
+    /// keystroke, 7.3% of the render). Their springs read only these few facts of j, so the
+    /// memo compares these instead. The inventory, every read of the loop body in
+    /// <see cref="ComputeMultiStaffSpringData"/> that reaches past measure i:
+    /// <list type="bullet">
+    /// <item>i − 1: the primary voice's <c>EndBarline</c> (the left bound of the bar —
+    /// <see cref="SpacingRules.RunLeftBoundBarline"/> for every measure's spring 0, and
+    /// <c>MultiStaffLayouter.DrawnLineStartBarline</c>'s <c>:|:</c> piece for the line-start
+    /// spring); its <c>LineBreakPermission</c> (an empty bar's left bar line,
+    /// <c>ApplySharedColumnReservations</c>); which lyric lines have a syllable there (the
+    /// lyric reservation and <c>LyricSpacing.MeasureLineEdges</c> drop the opening half of a
+    /// line that continues); and the meter in force there, which the meter of bar i is
+    /// carried from (<c>ScoreSideTables.PrevailingMeters</c> — a time change in a
+    /// secondary voice is in no entry context).</item>
+    /// <item>i + 1: whether it is swallowed by a multi-measure-rest run
+    /// (<see cref="MmrRunMap.ForbidsBreakAfter"/> of i is exactly that); which lyric lines
+    /// have a syllable there (the closing half); and the double-percent sign on its opening
+    /// bar line (<c>ScoreSideTables.DoublePercentHalfWidths</c>, which reaches into an empty
+    /// bar i).</item>
+    /// </list>
+    /// Everything else a neighbour contributes is already folded into key i itself: the
+    /// entry context (clef, key, time carried in from the bars before), the clef change
+    /// opening i + 1 (<c>SpacingRules.BoundaryClefAllowance</c>), a beam continuing across
+    /// either bar line, the run membership and count. <c>LineEndCourtesyWidth(i − 1, i)</c>
+    /// passes i − 1 but reads only measure i (the courtesy walks i's leading items; the clef
+    /// argument is not read by <c>SpacingRules.KeyCourtesySuffixWidth</c>).
+    /// ⚠️ A NEW NEIGHBOUR READ IN THE LOOP BODY MUST BE FOLDED HERE, or the memo serves a
+    /// stale entry. <c>SpringEdgeKeyTests</c> changes each fact above alone in a neighbour
+    /// and asserts the measure beside it is rebuilt.
+    /// </remarks>
+    internal readonly record struct SpringEdgeKey(long ReadByNext, long ReadByPrevious);
+
+    [ThreadStatic] private static List<(int Voice, int Verse, int Staff, bool Row)>? t_lyricLines;
+
+    /// <summary>The <see cref="SpringEdgeKey"/> of every measure, index-aligned with the
+    /// content keys (<see cref="MeasureContentKey.Compute(MultiStaffScore)"/>).</summary>
+    internal static ImmutableArray<SpringEdgeKey> ComputeSpringEdgeKeys(MultiStaffScore score)
+    {
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        int n = score.MeasureCount;
+        var runMap = MmrRunMap.ForScore(score);
+        var lyrics = ScoreSideTables.Lyrics(score);
+        var signHalf = ScoreSideTables.DoublePercentHalfWidths(score);
+        var meters = ScoreSideTables.PrevailingMeters(score);
+        var lines = t_lyricLines ??= new List<(int, int, int, bool)>();
+        var builder = ImmutableArray.CreateBuilder<SpringEdgeKey>(n);
+        for (int i = 0; i < n; i++)
+        {
+            // The SET of lines with a syllable here — what CollectLineKeys reads of a
+            // neighbour. Distinct and sorted, so another syllable of a line already present
+            // (the usual lyric edit) leaves the neighbours alone.
+            lines.Clear();
+            foreach (var lyric in lyrics.At(i))
+                lines.Add((lyric.VoiceId, lyric.VerseNumber, lyric.StaffIndex, lyric.IsLyricsRow));
+            lines.Sort();
+            var lineHash = new MeasureContentKey.Hash64();
+            for (int k = 0; k < lines.Count; k++)
+                if (k == 0 || lines[k] != lines[k - 1])
+                    lineHash.Add(lines[k]);
+
+            var next = new MeasureContentKey.Hash64();
+            var previous = new MeasureContentKey.Hash64();
+            if (i < measures.Length)
+            {
+                next.Add(measures[i].EndBarline);
+                next.Add(measures[i].LineBreakPermission);
+            }
+            next.Add(lineHash.ToHashCode());
+            next.Add(i < meters.Count ? meters[i] : default);
+            previous.Add(runMap.IsInterior(i));
+            previous.Add(lineHash.ToHashCode());
+            previous.Add(i < signHalf.Count ? signHalf[i] : 0.0);
+            builder.Add(new SpringEdgeKey(next.ToHashCode(), previous.ToHashCode()));
+        }
+        return builder.MoveToImmutable();
     }
 
     /// <summary>

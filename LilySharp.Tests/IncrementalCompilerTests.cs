@@ -904,9 +904,12 @@ public class IncrementalCompilerTests
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
         AssertSpringsMatchFromScratch(session);
-        // 8 measures; key 5 moved -> measures 4 (right-neighbour window), 5 and 6
-        // (left-neighbour window) recomputed, the other 5 reused.
-        Assert.Equal((5, 3), session.LastSpringMemo);
+        // 8 measures; key 5 moved -> measure 5 alone recomputed, the other 7 reused. The
+        // neighbours 4 and 6 read of measure 5 only its edge key (SystemBreaker.SpringEdgeKey:
+        // bar line, break permission, lyric lines, meter, run membership, double-percent
+        // sign), and an accidental moves none of it. Until session 593 they compared its
+        // whole key and were rebuilt too — (5, 3).
+        Assert.Equal((7, 1), session.LastSpringMemo);
     }
 
     /// <summary>
@@ -940,10 +943,45 @@ public class IncrementalCompilerTests
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
         AssertSpringsMatchFromScratch(session);
-        // 9 measures now; measure 4 (its right neighbour is new), the inserted 5, and
-        // measure 6 (its left neighbour is new) recomputed; the other 6 — three before,
-        // three after, the latter shifted by one — reused.
-        Assert.Equal((6, 3), session.LastSpringMemo);
+        // 9 measures now; only the inserted 5 recomputed. Its neighbours 4 and 6 face a
+        // new bar, but one whose edge key (a plain bar line, no lyrics, no run) is the one
+        // they faced before; the other 8 — the tail shifted by one — reused.
+        Assert.Equal((8, 1), session.LastSpringMemo);
+    }
+
+    /// <summary>
+    /// Every entry's <c>LineStartPrefixExtra</c> is measured from the CONTINUATION prefix, a
+    /// score-global width (the key in force at measure 0), so an edit that moves it moves
+    /// every entry while their content keys stand — the key a bar is ENTERED with is carried
+    /// from the change before it, not from the score's opening key. Found by session 593's
+    /// shadow audit (every reused entry rebuilt and compared, random one-character edits of
+    /// the tracked books): on this book the memo served bars 2-3 a stale −1.1 under the
+    /// whole-key neighbour rule as well.
+    /// </summary>
+    [Fact]
+    public void SpringMemo_TheContinuationPrefixMoved_RebuildsTheEntriesMeasuredFromIt()
+    {
+        const string src = """
+            time 4/4
+            part melody { clef treble }
+            phrase dMajor { d4 e fis g | a4 b cis' d | }
+            phrase gMajor { g4 a b c' | d4 e fis g | }
+            phrase fMajor { f4 g a bes | c4 d e f | }
+            section DMajor { key d major  melody { dMajor } }
+            section GMajor { key g major  melody { gMajor } }
+            section FMajor { key f major  melody { fMajor } }
+            form main { DMajor GMajor FMajor }
+            score main "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "key d major", "key dmajor");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+        AssertSpringsMatchFromScratch(session);
     }
 
     /// <summary>The mirror: a bar DELETED mid-score, the tail shifted the other way.</summary>
@@ -969,9 +1007,9 @@ public class IncrementalCompilerTests
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
         AssertSpringsMatchFromScratch(session);
-        // 7 measures now; measure 4 (new right neighbour) and measure 5 (new left
-        // neighbour) recomputed, the other 5 reused.
-        Assert.Equal((5, 2), session.LastSpringMemo);
+        // 7 measures now; none recomputed. Measures 4 and 5 have new neighbours, but ones
+        // whose edge keys equal the neighbours they had.
+        Assert.Equal((7, 0), session.LastSpringMemo);
     }
 
     // --- the per-system layout memos across a bar inserted or deleted mid-score ------
@@ -1380,8 +1418,8 @@ public class IncrementalCompilerTests
         // The hazard is real, not vacuous: the run-opening measure's springs DID change
         // even though its own content key did not (the rod reaches the left bar line).
         Assert.NotEqual(before, session.SpringsForTest![1]);
-        // 5 measures; key 0 moved -> measure 0 (its own key) and 1 (left-neighbour
-        // window) recomputed, measures 2..4 reused.
+        // 5 measures; key 0 moved -> measure 0 (its own key) and 1 (the bar line it reads
+        // of measure 0 is in 0's edge key) recomputed, measures 2..4 reused.
         Assert.Equal((3, 2), session.LastSpringMemo);
     }
 
@@ -1456,8 +1494,9 @@ public class IncrementalCompilerTests
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
         AssertSpringsMatchFromScratch(session);
-        // 4 measures; key 1 moved -> measures 0..2 recomputed, measure 3 reused.
-        Assert.Equal((1, 3), session.LastSpringMemo);
+        // 4 measures; key 1 moved -> measure 1 recomputed, 0, 2 and 3 reused (the
+        // neighbours read only its edge key, which an accidental does not move).
+        Assert.Equal((3, 1), session.LastSpringMemo);
     }
 
     /// <summary>
@@ -1500,8 +1539,10 @@ public class IncrementalCompilerTests
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
         AssertSpringsMatchFromScratch(session);
-        // 4 measures; key 1 moved -> measures 0..2 recomputed, measure 3 reused.
-        Assert.Equal((1, 3), session.LastSpringMemo);
+        // 4 measures; key 1 moved -> measure 1 recomputed, 0, 2 and 3 reused: the lyric
+        // LINES present in measure 1 (what the neighbours' cross-bar halves read) did not
+        // change, only a pitch under them.
+        Assert.Equal((3, 1), session.LastSpringMemo);
         // The reused entry is a SUNG measure whose pricing half came back from the
         // previous vector — the from-scratch equality above compared it deeply.
         Assert.NotNull(session.SpringsForTest![3].CrossBarLyricPricing);

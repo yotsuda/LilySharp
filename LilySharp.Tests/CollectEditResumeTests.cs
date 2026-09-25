@@ -1287,6 +1287,29 @@ score main { staff m }
         AssertSameModel(full, resumed);
     }
 
+    [Fact]
+    public void LetterSwapBeforeAnAccidental_StillSplicesTheSuffix()
+    {
+        // The window of `cis`→`dis` is the one letter, and the token `cis` crosses it with
+        // `is`: a PitchC against a PitchD, a token whose text STARTS in the window and runs
+        // past it. The suffix parse agreement compared its kind and declined every splice
+        // of the walk — measured at 466 of 470 accidental-letter edits of the reader's
+        // corpus (session 591), because an accidental's letter is the edit its workload
+        // makes first. The token ends at the same place on both sides, so the suffix text is
+        // consumed the same way.
+        string oldText = "octave absolute\ntime 4/4\npart m { clef treble }\n"
+            + "section A { m { " + Bars("g4 fis a b", 8) + " | } }\n"
+            + "form main { A }\nscore main { staff m }\n";
+        int at = oldText.IndexOf("fis", oldText.Length / 2, StringComparison.Ordinal);
+        Assert.True(at > 0);
+        var newText = oldText.Remove(at, 1).Insert(at, "g");
+
+        var (full, resumed, plan) = ResumeAcross(oldText, newText);
+        Assert.True(SplicedMeasures(plan) > 0,
+            "the accidental's letter swap spliced nothing: " + LastDecline(plan));
+        AssertSameModel(full, resumed);
+    }
+
     /// <summary>Deterministic mechanical edits: a duplicated space (pure position
     /// shift, Δ=+1) late and mid-file, a deleted space late (Δ=-1), a pitch
     /// letter swap late (Δ=0 content change), and a deleted MID-FILE barline
@@ -1330,6 +1353,20 @@ score main { staff m }
         {
             char c = text[i];
             if (c is >= 'a' and <= 'g' && text[i + 1] == ' ' && text[i - 1] == ' ')
+            {
+                yield return text.Remove(i, 1).Insert(i, c == 'g' ? "a" : ((char)(c + 1)).ToString());
+                break;
+            }
+        }
+
+        // Last "<pitch letter>is" / "<pitch letter>es" — an accidental's letter — swapped the
+        // same way (session 591): the token runs on past the one-letter window, so the
+        // suffix agreement meets a straddling token of another kind.
+        for (int i = text.Length - 3; i > 0; i--)
+        {
+            char c = text[i];
+            if (c is >= 'a' and <= 'g' && !char.IsLetter(text[i - 1])
+                && (text[i + 1] is 'i' or 'e') && text[i + 2] == 's')
             {
                 yield return text.Remove(i, 1).Insert(i, c == 'g' ? "a" : ((char)(c + 1)).ToString());
                 break;

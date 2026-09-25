@@ -481,10 +481,27 @@ internal static class CollectResumePlanner
         // token ends exactly at the limit and is never compared.) Both sides must
         // agree that the text is below their limit; a text that crosses it on one
         // side falls through to the kind check as before.
-        if (a.IsToken && b.IsToken
-            && aStart + a.LeadingTriviaWidth + a.Width <= oldLimit
-            && bStart + b.LeadingTriviaWidth + b.Width <= oldLimit + delta)
-            return true;
+        if (a.IsToken && b.IsToken)
+        {
+            if (aStart + a.LeadingTriviaWidth + a.Width <= oldLimit
+                && bStart + b.LeadingTriviaWidth + b.Width <= oldLimit + delta)
+                return true;
+            // …and so is a token whose text STARTS before the limit and runs past it: the
+            // window lies inside its text. `cis`→`dis` is a one-letter window, and the
+            // token `cis` (a PitchC, now a PitchD) crosses it with `is`. Until session 591
+            // this compared the kinds and declined every splice of such a walk — 95% of the
+            // keystrokes of the reader's corpus (session 591: an accidental's letter is the
+            // edit the workload makes first, and of 470 such edits 466 declined here, every
+            // one a pitch letter). What the suffix needs is that its text is consumed the
+            // same way, and it is: the token ends at the same shifted place on both sides,
+            // so the suffix characters inside it are that token's on both, and every node
+            // after it is still compared below (a changed grouping of what follows fails
+            // there). CollectEditResumeTests' LetterSwapBeforeAnAccidental pins it.
+            if (aStart + a.LeadingTriviaWidth < oldLimit
+                && bStart + b.LeadingTriviaWidth < oldLimit + delta
+                && aStart + a.FullWidth + delta == bStart + b.FullWidth)
+                return true;
+        }
         if (a.Kind != b.Kind)
             return false;
         bool aAbove = aStart >= oldLimit;

@@ -353,6 +353,21 @@ internal sealed class BeamScoringProblem
         bool noStemExtend = false,
         bool uniformBeamedLength = false)
     {
+        s_solved.TryGetValue(group, out var solved);
+        if (solved != null)
+        {
+            foreach (var entry in solved)
+            {
+                if (entry.Matches(group, itemXPositions, parameters, collisions, stemPositions,
+                        lengthFraction, beamThickness, headFont, lineThickness, staffLineCount,
+                        beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength))
+                {
+                    t_solvedHits++;
+                    return entry.Answer;
+                }
+            }
+        }
+
         var problem = t_problem ?? new BeamScoringProblem();
         t_problem = null;
         problem.Bind(group, itemXPositions, parameters, collisions, stemPositions, lengthFraction,
@@ -362,7 +377,164 @@ internal sealed class BeamScoringProblem
         var outer = problem.OuterMemberStemXs;
         problem.Release();
         t_problem = problem;
-        return (leftY, rightY, outer);
+
+        var answer = (leftY, rightY, outer);
+        var solvedEntry = new SolvedBeam(group, itemXPositions, parameters, collisions, stemPositions,
+            lengthFraction, beamThickness, headFont, lineThickness, staffLineCount,
+            beamLengthFraction, restXPositions, noStemExtend, uniformBeamedLength, answer);
+        // The newest two inputs of this group: the prelim pass and the staff skylines ask
+        // the same one, and a third input evicts the oldest. A new array each time, so a
+        // reader on another thread only ever sees a whole one.
+        s_solved.AddOrUpdate(group, solved switch
+        {
+            null => [solvedEntry],
+            [var only] => [only, solvedEntry],
+            _ => [solved[^1], solvedEntry],
+        });
+        return answer;
+    }
+
+    /// <summary>
+    /// The answers <see cref="SolveLent"/> has given, per beam group, with the inputs they
+    /// were given for — so a second caller asking the SAME question of the same group reads
+    /// the answer instead of quanting the beam again.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 589, Release, the reader's corpus, 235 books × eight forward
+    /// keystrokes, 3,760 keystrokes): 18.9 solves a keystroke, 2,155 ms of the 14,419 ms of
+    /// render (15%), and 35,298 of the 70,980 solves (49.7%) repeated a solve of the SAME
+    /// render with the same inputs. Every repeat was one pair: the staff skylines
+    /// (<c>MultiStaffLayouter.StaffBeamLayouts</c>, in LayoutSystems) solve a system's beams,
+    /// and the preliminary annotation pass (<c>LayoutEngine.LayoutPreliminaryStaffBeams</c>)
+    /// solves them again. The two keep separate per-system memos because their
+    /// <see cref="BeamLayout"/>s are stamped differently (staff 0 of a one-staff system
+    /// against the real staff); the quanting under the stamps is the same, so it is shared
+    /// here, below both.
+    /// <para>
+    /// SOUNDNESS: <see cref="Solve"/> is a function of what <see cref="Bind"/> is handed and
+    /// nothing else — no configuration, no cache, no thread state reaches it (the lent
+    /// tables are written in full before they are read). The key is therefore the whole of
+    /// that input: the group by REFERENCE (a <see cref="BeamGroup"/> and the items it holds
+    /// are immutable records, and a table keyed on it dies with it), and every other argument
+    /// by value — the item X of each MEMBER (the only cells Bind reads of that list), the rest
+    /// Xs, the collisions and the stem positions element by element, the doubles by their
+    /// bits (so a −0 is not taken for a 0), the parameters and the head font by reference.
+    /// A question that differs anywhere is a miss, never a wrong answer.
+    /// <c>BeamSolveMemoTests</c> holds both halves: an equal question is served (liveness),
+    /// and a question differing in one collision is solved afresh.
+    /// </para>
+    /// </remarks>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<BeamGroup, SolvedBeam[]> s_solved = new();
+
+    /// <summary>How many <see cref="SolveLent"/> calls on this thread were answered from
+    /// <see cref="s_solved"/> — the memo's liveness counter (tests).</summary>
+    [ThreadStatic]
+    internal static long t_solvedHits;
+
+    /// <summary>One answered question of <see cref="s_solved"/>: <see cref="SolveLent"/>'s
+    /// arguments as Bind reads them, copied, and the answer.</summary>
+    private sealed class SolvedBeam
+    {
+        private readonly double[] _memberXs;
+        private readonly double[]? _restXs;
+        private readonly BeamCollision[] _collisions;
+        private readonly int[]? _stemPositions;
+        private readonly BeamQuantParameters? _parameters;
+        private readonly GlyphMetrics.DesignMetrics? _headFont;
+        private readonly double _lengthFraction;
+        private readonly double _beamThickness;
+        private readonly double _lineThickness;
+        private readonly int _staffLineCount;
+        private readonly double? _beamLengthFraction;
+        private readonly bool _noStemExtend;
+        private readonly bool _uniformBeamedLength;
+
+        public (double LeftY, double RightY, (double Left, double Right) OuterMemberStemXs) Answer { get; }
+
+        public SolvedBeam(
+            BeamGroup group, IReadOnlyList<double> itemXPositions, BeamQuantParameters? parameters,
+            IReadOnlyList<BeamCollision>? collisions, IReadOnlyList<int>? stemPositions,
+            double lengthFraction, double beamThickness, GlyphMetrics.DesignMetrics? headFont,
+            double lineThickness, int staffLineCount, double? beamLengthFraction,
+            IReadOnlyList<double>? restXPositions, bool noStemExtend, bool uniformBeamedLength,
+            (double, double, (double, double)) answer)
+        {
+            _memberXs = new double[group.Members.Length];
+            for (int i = 0; i < _memberXs.Length; i++)
+                _memberXs[i] = itemXPositions[group.Members[i].ItemIndex];
+            _restXs = restXPositions?.ToArray();
+            _collisions = collisions?.ToArray() ?? [];
+            _stemPositions = stemPositions?.ToArray();
+            _parameters = parameters;
+            _headFont = headFont;
+            _lengthFraction = lengthFraction;
+            _beamThickness = beamThickness;
+            _lineThickness = lineThickness;
+            _staffLineCount = staffLineCount;
+            _beamLengthFraction = beamLengthFraction;
+            _noStemExtend = noStemExtend;
+            _uniformBeamedLength = uniformBeamedLength;
+            Answer = answer;
+        }
+
+        public bool Matches(
+            BeamGroup group, IReadOnlyList<double> itemXPositions, BeamQuantParameters? parameters,
+            IReadOnlyList<BeamCollision>? collisions, IReadOnlyList<int>? stemPositions,
+            double lengthFraction, double beamThickness, GlyphMetrics.DesignMetrics? headFont,
+            double lineThickness, int staffLineCount, double? beamLengthFraction,
+            IReadOnlyList<double>? restXPositions, bool noStemExtend, bool uniformBeamedLength)
+        {
+            if (!ReferenceEquals(parameters, _parameters) || !ReferenceEquals(headFont, _headFont)
+                || !Same(lengthFraction, _lengthFraction) || !Same(beamThickness, _beamThickness)
+                || !Same(lineThickness, _lineThickness) || staffLineCount != _staffLineCount
+                || beamLengthFraction.HasValue != _beamLengthFraction.HasValue
+                || (beamLengthFraction.HasValue && !Same(beamLengthFraction.Value, _beamLengthFraction!.Value))
+                || noStemExtend != _noStemExtend || uniformBeamedLength != _uniformBeamedLength)
+                return false;
+
+            for (int i = 0; i < _memberXs.Length; i++)
+                if (!Same(itemXPositions[group.Members[i].ItemIndex], _memberXs[i]))
+                    return false;
+
+            if ((restXPositions == null) != (_restXs == null))
+                return false;
+            if (restXPositions != null)
+            {
+                if (restXPositions.Count != _restXs!.Length)
+                    return false;
+                for (int i = 0; i < _restXs.Length; i++)
+                    if (!Same(restXPositions[i], _restXs[i]))
+                        return false;
+            }
+
+            // Bind reads a null collision list as an empty one.
+            int collisionCount = collisions?.Count ?? 0;
+            if (collisionCount != _collisions.Length)
+                return false;
+            for (int i = 0; i < collisionCount; i++)
+            {
+                var a = collisions![i];
+                var b = _collisions[i];
+                if (!Same(a.X, b.X) || !Same(a.MinY, b.MinY) || !Same(a.MaxY, b.MaxY)
+                    || !Same(a.BasePenalty, b.BasePenalty))
+                    return false;
+            }
+
+            if ((stemPositions == null) != (_stemPositions == null))
+                return false;
+            if (stemPositions != null)
+            {
+                if (stemPositions.Count != _stemPositions!.Length)
+                    return false;
+                for (int i = 0; i < _stemPositions.Length; i++)
+                    if (stemPositions[i] != _stemPositions[i])
+                        return false;
+            }
+            return true;
+        }
+
+        private static bool Same(double a, double b) =>
+            BitConverter.DoubleToInt64Bits(a) == BitConverter.DoubleToInt64Bits(b);
     }
 
     /// <summary>Forgets the beam: the references dropped, the numbers left to be overwritten

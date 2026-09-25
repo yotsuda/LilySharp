@@ -537,7 +537,7 @@ internal sealed class SvgSystemFragmentCache
     }
 
     private void StoreOverlay(OverlayDrawerId drawer, int pageIndex, long valueHash,
-        int[] anchors, string fragment, List<int> log, HashSet<int> designs)
+        int[] anchors, ReadOnlySpan<char> fragment, List<int> log, HashSet<int> designs)
     {
         if (!TrySplit(fragment, log, out var text, out var insertAt, out var values))
             return; // decline: the next edit runs this drawer live on this page
@@ -554,9 +554,13 @@ internal sealed class SvgSystemFragmentCache
         };
     }
 
+    /// <summary>What a capture hands its store: the captured fragment, read in place out of the
+    /// page's builder (see <see cref="CaptureScope.Dispose"/>).</summary>
+    private delegate void StoreFragment(ReadOnlySpan<char> fragment, List<int> log, HashSet<int> designs);
+
     private sealed class CaptureScope : IDisposable
     {
-        private readonly Action<string, List<int>, HashSet<int>> _store;
+        private readonly StoreFragment _store;
         private readonly SvgDrawingContext _page;
         private readonly StringBuilder _sb;
         private readonly int _start;
@@ -566,7 +570,7 @@ internal sealed class SvgSystemFragmentCache
         private readonly HashSet<int>? _prevDesigns;
 
         public CaptureScope(SvgDrawingContext page, StringBuilder sb,
-            Action<string, List<int>, HashSet<int>> store)
+            StoreFragment store)
         {
             _store = store;
             _page = page;
@@ -582,12 +586,27 @@ internal sealed class SvgSystemFragmentCache
         {
             _page.SourceLog = _prevLog;
             _page.DesignLog = _prevDesigns;
-            _store(_sb.ToString(_start, _sb.Length - _start), _log, _designs);
+            // The fragment is read in place, not copied out as a string: the split copies it
+            // once into the text it stores, and a string of it first was a second copy nobody
+            // kept — 37,418 B a keystroke over the reader's corpus, sampled with stacks (Lab
+            // sessions/p588, dotnet-trace GCAllocationTick). The chars are borrowed for the
+            // store's duration only; nothing it keeps may point into them.
+            int length = _sb.Length - _start;
+            char[] chars = System.Buffers.ArrayPool<char>.Shared.Rent(length);
+            try
+            {
+                _sb.CopyTo(_start, chars, 0, length);
+                _store(chars.AsSpan(0, length), _log, _designs);
+            }
+            finally
+            {
+                System.Buffers.ArrayPool<char>.Shared.Return(chars);
+            }
         }
     }
 
     private void Store(MultiStaffScore score, SystemLayout system, SvgDocumentContext host,
-        double pageHeight, string fragment, List<int> log, HashSet<int> designs)
+        double pageHeight, ReadOnlySpan<char> fragment, List<int> log, HashSet<int> designs)
     {
         // Split the fragment into segments around the data-pos/data-alt numbers and
         // verify the scan against the emission log — an exact match certifies every
@@ -910,7 +929,7 @@ internal sealed class SvgSystemFragmentCache
     // Splits `fragment` into text-with-numbers-removed + (insert position, value)
     // pairs for every data-pos / data-alt number, verifying the values reproduce the
     // emission log exactly (count AND values, in order).
-    private static bool TrySplit(string fragment, List<int> log,
+    private static bool TrySplit(ReadOnlySpan<char> fragment, List<int> log,
         out string text, out int[] insertAt, out int[] values)
     {
         // Lent, and given back cleared on every way out (see t_split).
@@ -933,7 +952,7 @@ internal sealed class SvgSystemFragmentCache
         }
     }
 
-    /// <summary>The three scratch containers <see cref="TrySplit(string, List{int}, out string,
+    /// <summary>The three scratch containers <see cref="TrySplit(ReadOnlySpan{char}, List{int}, out string,
     /// out int[], out int[])"/> fills and copies out of, lent from one set the thread keeps
     /// between captures.</summary>
     /// <remarks>
@@ -959,7 +978,7 @@ internal sealed class SvgSystemFragmentCache
         public readonly List<int> Found = new();
     }
 
-    private static bool TrySplit(string fragment, List<int> log,
+    private static bool TrySplit(ReadOnlySpan<char> fragment, List<int> log,
         StringBuilder sb, List<int> offsets, List<int> found,
         out string text, out int[] insertAt, out int[] values)
     {
@@ -973,19 +992,19 @@ internal sealed class SvgSystemFragmentCache
         while (i < fragment.Length)
         {
             if (p != -1 && p < i)
-                p = fragment.IndexOf(PosToken, i, StringComparison.Ordinal);
+                p = At(fragment, PosToken, i);
             if (a != -1 && a < i)
-                a = fragment.IndexOf(AltToken, i, StringComparison.Ordinal);
+                a = At(fragment, AltToken, i);
             int next = p < 0 ? a : a < 0 ? p : Math.Min(p, a);
             if (next < 0)
             {
-                sb.Append(fragment, i, fragment.Length - i);
+                sb.Append(fragment[i..]);
                 break;
             }
             bool isAlt = next == a && (p < 0 || a <= p);
             int tokenLen = PosToken.Length; // both tokens are the same length
             int copyTo = next + tokenLen;
-            sb.Append(fragment, i, copyTo - i);
+            sb.Append(fragment[i..copyTo]);
             i = copyTo;
             // Parse one int (data-pos) or a space-separated list (data-alt), removing
             // the digits from the text and recording each number's insert position.
@@ -1012,7 +1031,7 @@ internal sealed class SvgSystemFragmentCache
                     return false;
                 }
                 offsets.Add(sb.Length);
-                found.Add(int.Parse(fragment.AsSpan(numStart, i - numStart),
+                found.Add(int.Parse(fragment[numStart..i],
                     provider: System.Globalization.CultureInfo.InvariantCulture));
                 first = false;
                 if (!isAlt)
@@ -1039,5 +1058,12 @@ internal sealed class SvgSystemFragmentCache
         insertAt = [.. offsets];
         values = [.. found];
         return true;
+
+        // String.IndexOf(value, startIndex) on a span: the absolute index, −1 when none.
+        static int At(ReadOnlySpan<char> s, string token, int from)
+        {
+            int k = s[from..].IndexOf(token, StringComparison.Ordinal);
+            return k < 0 ? -1 : from + k;
+        }
     }
 }

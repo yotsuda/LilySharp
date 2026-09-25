@@ -89,6 +89,42 @@ internal sealed class MultiStaffLayouter
     /// </remarks>
     internal BeamDetectionMemo? BeamDetectionMemo { get; set; }
 
+    /// <summary>
+    /// The break gate's per-measure spring vector for the score being laid out, when the
+    /// driver built it for this very score and shortest duration (set per layout by
+    /// <c>LayoutEngine.Layout</c>; null otherwise). <see cref="LayoutMeasures"/> reads a
+    /// measure's springs from it instead of building them a second time.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (session 590, Release, the reader's corpus, 235 books × eight forward
+    /// keystrokes, 3,760 keystrokes): the edited system's <see cref="LayoutMeasures"/> ran
+    /// 1.01 times a keystroke at 0.28 ms, 86% of it the two calls below —
+    /// <c>CreateTimingSprings</c> then <see cref="ApplySharedColumnReservations"/>, 3.98
+    /// measures a keystroke, 6.8% of the render — for springs the gate
+    /// (<c>SystemBreaker.ComputeMultiStaffSpringData</c>) had built a moment before from the
+    /// same two calls on the same arguments, or carried from the previous keystroke under
+    /// its neighbourhood proof (<c>IncrementalCompiler.SpringReusable</c>).
+    /// <para>
+    /// SOUNDNESS: the gate's loop body and this one make the same two calls with the same
+    /// arguments — the score, the measure and its neighbour, the timings and measures at the
+    /// index, the staves, and <c>SpacingOptions.For(score, shortest)</c> with the shortest the
+    /// vector was built with (the engine sets this only when the driver handed over that
+    /// shortest too). <see cref="MeasureLayouter"/> keeps no instance state, and a
+    /// <see cref="Spring"/> is an init-only record in an immutable array, so the shared
+    /// vector cannot be written through. The vector travels with the score and the shortest it
+    /// was built for, and is read only when both are the ones asked about. A measure the gate carries no vector for (a
+    /// multi-measure-rest run's rod) and an empty placeholder (whose rigid slot this method
+    /// inserts BEFORE the reservations) are built here as before.
+    /// <c>GateSpringReuseTests</c> holds the equality and the liveness.
+    /// </para>
+    /// </remarks>
+    internal (MultiStaffScore Score, double Shortest, MeasureSpringData[] Springs)? GateSprings { get; set; }
+
+    /// <summary>How many measure spring vectors <see cref="LayoutMeasures"/> read from
+    /// <see cref="GateSprings"/> on this thread — the liveness counter (tests).</summary>
+    [ThreadStatic]
+    internal static long t_gateSpringReads;
+
     public MultiStaffLayouter(LayoutOptions options, MeasureLayouter measureLayouter)
     {
         _options = options;
@@ -1486,34 +1522,47 @@ internal sealed class MultiStaffLayouter
                 continue;
             }
 
-            // The next measure is passed so a clef change opening it can be charged to
-            // THIS measure's closing spring — LilyPond draws it before the shared bar
-            // line. SystemBreaker mirrors this; the two must agree (SpacingInvariantTests).
-            var nextMeasure = i + 1 < primaryVoice.Measures.Length
-                ? primaryVoice.Measures[i + 1] : null;
-            var springs = _measureLayouter.CreateTimingSprings(
-                score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
-                SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i),
-                CollectStavesOfMeasuresAtIndex(score, i));
-
-            // An empty placeholder measure (`| |`) has no timing springs at all —
-            // without a floor it collapses to its barlines and reads as a double
-            // barline. Give it one RIGID spring at the empty-bar slot width, so it
-            // renders as a visible measure (matching the ideal-width floor the line
-            // breaker uses — see SpacingRules.EmptyPlaceholderContentWidth).
-            if (springs.Length == 0 && primaryMeasure.IsEmptyPlaceholder)
+            // The break gate built these very springs (GateSprings' remarks) — read them.
+            ImmutableArray<Spring> springs;
+            if (GateSprings is var (gateScore, gateShortest, gate)
+                && ReferenceEquals(gateScore, score) && baseShortestDuration == gateShortest
+                && gate.Length == primaryVoice.Measures.Length
+                && !gate[i].Springs.IsDefaultOrEmpty && !primaryMeasure.IsEmptyPlaceholder)
             {
-                double slot = SpacingRules.EmptyPlaceholderContentWidth();
-                springs = ImmutableArray.Create(new Spring(slot, slot, 0));
+                springs = gate[i].Springs;
+                t_gateSpringReads++;
             }
+            else
+            {
+                // The next measure is passed so a clef change opening it can be charged to
+                // THIS measure's closing spring — LilyPond draws it before the shared bar
+                // line. SystemBreaker mirrors this; the two must agree (SpacingInvariantTests).
+                var nextMeasure = i + 1 < primaryVoice.Measures.Length
+                    ? primaryVoice.Measures[i + 1] : null;
+                springs = _measureLayouter.CreateTimingSprings(
+                    score.TextMetrics, primaryMeasure, allTimings, spacing, allMeasures, nextMeasure,
+                    SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, i),
+                    CollectStavesOfMeasuresAtIndex(score, i));
 
-            // Lyric, chord, tab-digit and wide-script widths land on the SHARED
-            // columns through the one reservation list the break gate reads too
-            // (ApplySharedColumnReservations) — a bar must be priced for breaking
-            // exactly as it will be laid out. Applied before the FirstNoteSpring
-            // tweak below, which Math.Max-preserves any widened minimum.
-            springs = ApplySharedColumnReservations(
-                score, i, springs, primaryMeasure, allTimings, allMeasures, spacing);
+                // An empty placeholder measure (`| |`) has no timing springs at all —
+                // without a floor it collapses to its barlines and reads as a double
+                // barline. Give it one RIGID spring at the empty-bar slot width, so it
+                // renders as a visible measure (matching the ideal-width floor the line
+                // breaker uses — see SpacingRules.EmptyPlaceholderContentWidth).
+                if (springs.Length == 0 && primaryMeasure.IsEmptyPlaceholder)
+                {
+                    double slot = SpacingRules.EmptyPlaceholderContentWidth();
+                    springs = ImmutableArray.Create(new Spring(slot, slot, 0));
+                }
+
+                // Lyric, chord, tab-digit and wide-script widths land on the SHARED
+                // columns through the one reservation list the break gate reads too
+                // (ApplySharedColumnReservations) — a bar must be priced for breaking
+                // exactly as it will be laid out. Applied before the FirstNoteSpring
+                // tweak below, which Math.Max-preserves any widened minimum.
+                springs = ApplySharedColumnReservations(
+                    score, i, springs, primaryMeasure, allTimings, allMeasures, spacing);
+            }
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
@@ -4917,14 +4966,19 @@ internal sealed class MultiStaffLayouter
         // ink, 2.320115015 on book CHL1).
         // LILYPOND-REF: lily/page-layout-problem.cc:1266-1342 get_spacing_spec — see
         // StaffAffinity.GetSpacingSpec, the one home of the selection.
-        bool hasLooseLines = looseLines is { Count: > 0 };
+        if (looseLines is not { Count: > 0 })
+        {
+            // One step: the walk would only copy upperDown to read it back.
+            closingStep = AlignmentWalk.OneStep(upperDown, lowerUp, spec.Padding);
+            return Math.Max(closingStep, spec.MinimumDistance);
+        }
         var walk = new AlignmentWalk();
         walk.Seed(upperDown);
         int? prevAffinity = null;
         StaffSpacingParameters.NonStaffSpacing prevSpecs = default;
-        for (int k = 0; k < (looseLines?.Count ?? 0); k++)
+        for (int k = 0; k < looseLines.Count; k++)
         {
-            var line = looseLines![k];
+            var line = looseLines[k];
             // ⚠️ THE MINIMUM-DISTANCE BELONGS IN THE WALK: align-interface.cc:231-233
             // raises dy by it BEFORE the raise and merge, so it changes the accumulation
             // every later line is measured against. The chain passes the same two
@@ -4938,11 +4992,10 @@ internal sealed class MultiStaffLayouter
         // ...and the last element to the staff below — the LINE's own spec again
         // (get_spacing_spec :1299-1312: an affinity-UP line closes on its
         // nonstaff-unrelatedstaff-spacing, any other on its nonstaff-relatedstaff-spacing).
-        // Same closing step LyricEngraver's chain takes, so the block fits the room. With
-        // no loose lines it is the staff pair's own spec.
-        double closingPadding = hasLooseLines
-            ? StaffAffinity.GetSpacingSpec(prevAffinity, prevSpecs, null, default, spec).Padding
-            : spec.Padding;
+        // Same closing step LyricEngraver's chain takes, so the block fits the room. (With
+        // no loose lines it is the staff pair's own spec — the early return above.)
+        double closingPadding =
+            StaffAffinity.GetSpacingSpec(prevAffinity, prevSpecs, null, default, spec).Padding;
         closingStep = walk.Distance(lowerUp, closingPadding);
         double total = walk.Where + closingStep;
 

@@ -161,6 +161,9 @@ public sealed class IncrementalCompiler
     // so the reused layout renders byte-identical to a full recompile.
     private ScoreLayout? _cachedLayout;
     private ImmutableArray<MeasureContentKey> _contentKeys;
+    // Beside the keys, committed and shed with them: what each measure's neighbours'
+    // springs read of it (SpringReusable's neighbour test).
+    private ImmutableArray<Layout.SystemBreaker.SpringEdgeKey> _springEdges;
     private (string? Title, string? Composer, int? Tempo, int SwingSubdivision,
         string? TempoText, int TempoBeatUnit, int TempoDots) _globalKey;
 
@@ -547,6 +550,7 @@ public sealed class IncrementalCompiler
             _systemCache = null;
             _cachedLayout = null;
             _contentKeys = default;
+            _springEdges = default;
             _overrides = default;
             _reverts = default;
             _fragments = null;
@@ -579,6 +583,9 @@ public sealed class IncrementalCompiler
         // instead of that book paying the cold pipeline on every keystroke. Only the
         // per-system machinery (cacheForEdit / fragments) stays override-free-gated.
         var contentKeys = MeasureContentKey.Compute(score);
+        // What each measure's NEIGHBOURS' springs read of it — the spring memo's neighbour
+        // test (SpringReusable), narrower than the neighbour's whole key.
+        var springEdges = Layout.SystemBreaker.ComputeSpringEdgeKeys(score);
         bool overridesUnchanged = !_overrides.IsDefault && !_reverts.IsDefault
             && score.GrobOverrides.AsSpan().SequenceEqual(_overrides.AsSpan())
             && score.GrobReverts.AsSpan().SequenceEqual(_reverts.AsSpan());
@@ -614,6 +621,18 @@ public sealed class IncrementalCompiler
         // what stands guard instead is the incremental==full net
         // (IncrementalCompilerTests, incl. the beamed multi-system chained-edit net) plus
         // the memo==full deep-compare nets beside it.
+        // The break gate's OWN key model — the union of the signatures the staves engrave
+        // (SpacingRules.WidestActiveKeyInk), which is what SystemBreaker now prices a line
+        // start from. This pair is a CHANGE DETECTOR, not the gate's number (it carries no
+        // indent), so what matters is that it reads the same INPUTS: reading score.KeySignature
+        // here left an edit that changed only a transposed part's own signature — and so
+        // changed the gate — looking unchanged to the skip.
+        // Computed BEFORE the springs because the spring memo reads the continuation one too
+        // (see its eligibility below).
+        double maxClefWidth = SpacingRules.MaxClefWidth(score);
+        double firstPrefix = SystemBreaker.GateFirstPrefixWidth(score, maxClefWidth);
+        double contPrefix = SystemBreaker.GateContinuationPrefixWidth(score, maxClefWidth);
+
         bool sameContentAsLastEdit = allowSkip
             && !contentKeys.IsDefault && !_contentKeys.IsDefault
             && overridesUnchanged
@@ -640,9 +659,10 @@ public sealed class IncrementalCompiler
             // staves/voices/side-tables/entry context — folded into key i), the previous
             // measure's end bar line (SpacingRules.RunLeftBoundBarline), the next measure's
             // run membership (MmrRunMap.ForbidsBreakAfter) and the score-global shortest
-            // duration — nothing else (inventoried session 150); so keys i−1..i+1 unchanged
-            // plus an unchanged shortest make springs[i] the same function of the same
-            // inputs. The previous vector is read through an INDEX MAP (KeyAlignment): a
+            // duration — nothing else (inventoried session 150); so key i unchanged, the
+            // neighbours unchanged in what springs[i] reads of them (their edge keys —
+            // SpringReusable, session 593), and an unchanged shortest make springs[i] the
+            // same function of the same inputs. The previous vector is read through an INDEX MAP (KeyAlignment): a
             // measure inserted or deleted mid-score shifts every later key by one, and
             // read index-aligned the whole tail missed — MEASURED (session 329, a 3-page
             // bass book, a bar inserted at bar 4): 3 of 112 measures reused against 110
@@ -657,18 +677,31 @@ public sealed class IncrementalCompiler
             // overridesUnchanged joins the memo's eligibility: an override's reach is
             // global, so springs[i] may read it without key i knowing — an unchanged
             // neighbourhood is only sufficient while the override collections stand.
+            // ...and so does the continuation prefix: every entry's LineStartPrefixExtra is
+            // measured FROM it (SystemBreaker.LineStartPrefixExtra), and it is score-global —
+            // the key in force at measure 0 — so it moves while every later key stands.
+            // MEASURED (session 593, a shadow audit that rebuilt every reused entry under
+            // random one-character edits of the tracked books): keysig-treble.lys, edited in
+            // the header of its first section (`sectio DMajor`, `key dmajor`), served bars
+            // 2-3 a stale LineStartPrefixExtra (−1.1 against 0) under the whole-key rule
+            // too — the only mismatch in 183,859 rebuilt entries, and gone with this line.
             if (allowSkip && _springs != null && _shortest == shortest
+                && contPrefix == _contPrefix
                 && overridesUnchanged
-                && !contentKeys.IsDefault && !_contentKeys.IsDefault)
+                && !contentKeys.IsDefault && !_contentKeys.IsDefault
+                && !_springEdges.IsDefault && _springEdges.Length == _contentKeys.Length)
             {
                 var prevSprings = _springs;
                 var prevKeys = _contentKeys;
                 var newKeys = contentKeys;
+                var prevEdges = _springEdges;
+                var newEdges = springEdges;
                 var alignment = KeyAlignment.Between(prevKeys, newKeys);
                 memo = i =>
                 {
                     int previous = alignment.PreviousIndexOf(i);
-                    if (previous >= 0 && SpringReusable(i, previous, newKeys, prevKeys))
+                    if (previous >= 0
+                        && SpringReusable(i, previous, newKeys, prevKeys, newEdges, prevEdges))
                     {
                         reusedCount++;
                         return prevSprings[previous];
@@ -685,15 +718,6 @@ public sealed class IncrementalCompiler
             shortestOfSprings = shortest;
             LastSpringMemo = (reusedCount, recomputedCount);
         }
-        // The break gate's OWN key model — the union of the signatures the staves engrave
-        // (SpacingRules.WidestActiveKeyInk), which is what SystemBreaker now prices a line
-        // start from. This pair is a CHANGE DETECTOR, not the gate's number (it carries no
-        // indent), so what matters is that it reads the same INPUTS: reading score.KeySignature
-        // here left an edit that changed only a transposed part's own signature — and so
-        // changed the gate — looking unchanged to the skip.
-        double maxClefWidth = SpacingRules.MaxClefWidth(score);
-        double firstPrefix = SystemBreaker.GateFirstPrefixWidth(score, maxClefWidth);
-        double contPrefix = SystemBreaker.GateContinuationPrefixWidth(score, maxClefWidth);
 
         bool skip = allowSkip
             && _lineBreaks != null
@@ -782,6 +806,7 @@ public sealed class IncrementalCompiler
         _firstPrefix = firstPrefix;
         _contPrefix = contPrefix;
         _contentKeys = contentKeys;
+        _springEdges = springEdges;
         _overrides = score.GrobOverrides;
         _reverts = score.GrobReverts;
         _globalKey = globalKey;
@@ -893,14 +918,20 @@ public sealed class IncrementalCompiler
     /// <summary>
     /// Whether measure <paramref name="i"/>'s springs can be taken from the previous
     /// edit's vector at index <paramref name="previous"/> — provably identical to what a
-    /// from-scratch build would produce, the ⒟⁗ per-measure memo's key test: keys i−1, i
-    /// and i+1 must equal the previous keys previous−1, previous and previous+1, with the
-    /// same edges (a first measure against a first, a last against a last).
+    /// from-scratch build would produce, the ⒟⁗ per-measure memo's key test: key i must
+    /// equal previous key <c>previous</c>, and each neighbour must agree on what springs[i]
+    /// READS of it (<see cref="Layout.SystemBreaker.SpringEdgeKey"/>), with the same edges
+    /// (a first measure against a first, a last against a last).
     /// </summary>
     /// <remarks>
+    /// ⚠️ THE NEIGHBOURS ARE COMPARED BY THEIR EDGE KEYS, NOT THEIR CONTENT KEYS (session
+    /// 593). Comparing the whole neighbour key rebuilt three measures for an edit to one:
+    /// j − 1 and j + 1 read a handful of facts of j (the edge key's remarks carry the
+    /// inventory), and a note changed inside j moves none of them.
     /// The neighbourhood window is not caution, it is the inventory (session 150 — every
     /// read of SystemBreaker.ComputeMultiStaffSpringData's loop body traced to its fold;
-    /// the cross-bar lyric reads added 2026-08-20 land inside the same window):
+    /// the cross-bar lyric reads added 2026-08-20 land inside the same window; the edge
+    /// key narrowed what is compared inside it, not the window):
     /// <list type="bullet">
     /// <item>LEFT (i−1): a multi-measure-rest run OPENING at i whose measure declares no
     /// start bar line reads the previous measure's <c>EndBarline</c> for the run rod
@@ -926,7 +957,9 @@ public sealed class IncrementalCompiler
     /// </list>
     /// </remarks>
     private static bool SpringReusable(
-        int i, int previous, ImmutableArray<MeasureContentKey> newKeys, ImmutableArray<MeasureContentKey> prevKeys)
+        int i, int previous, ImmutableArray<MeasureContentKey> newKeys, ImmutableArray<MeasureContentKey> prevKeys,
+        ImmutableArray<Layout.SystemBreaker.SpringEdgeKey> newEdges,
+        ImmutableArray<Layout.SystemBreaker.SpringEdgeKey> prevEdges)
     {
         if (previous < 0 || previous >= prevKeys.Length || newKeys[i] != prevKeys[previous])
             return false;
@@ -934,13 +967,13 @@ public sealed class IncrementalCompiler
         // input (no left neighbour to read), and so is the right edge below.
         if ((i > 0) != (previous > 0))
             return false;
-        if (i > 0 && newKeys[i - 1] != prevKeys[previous - 1])
+        if (i > 0 && newEdges[i - 1].ReadByNext != prevEdges[previous - 1].ReadByNext)
             return false;
         bool hasRight = i + 1 < newKeys.Length;
         bool hadRight = previous + 1 < prevKeys.Length;
         if (hasRight != hadRight)
             return false;
-        return !hasRight || newKeys[i + 1] == prevKeys[previous + 1];
+        return !hasRight || newEdges[i + 1].ReadByPrevious == prevEdges[previous + 1].ReadByPrevious;
     }
 
     /// <summary>The tree's render-block sequence folded to what <see cref="RenderSpecParser.Choose"/>

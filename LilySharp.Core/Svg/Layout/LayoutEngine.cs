@@ -140,6 +140,12 @@ internal sealed partial class LayoutEngine
         // this is what keeps their one fill from walking the whole book — see
         // MultiStaffLayouter.BeamDetectionMemo.
         multiStaffLayouter.BeamDetectionMemo = systemCache?.BeamDetection;
+        // The gate's springs, when the driver built them for this score and handed over the
+        // shortest they were built with — the measure layouts read them instead of building
+        // them again (MultiStaffLayouter.GateSprings). Set every layout: the layouter outlives
+        // one score.
+        multiStaffLayouter.GateSprings = precomputedShortest is { } gateShortest && precomputedSprings != null
+            ? (score, gateShortest, precomputedSprings) : null;
 
         // LILYPOND-REF: lily/spacing-spanner.cc
         // Calculate the common shortest duration across all voices for Gourlay spacing

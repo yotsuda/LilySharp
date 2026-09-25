@@ -75,7 +75,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > 「20,000 −（この節）」で先に読める**＝**第454 末で約 11,800 字＝語りに使えるのは約 8,200 字**。
 > ⇒ **詰まったら語りを削るのではなく、まずここの ✅ と重複を落とす**。
 
-> ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。
+> ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。 ⇒ ★★★★ **第588（2026-09-25・ユーザー決定「1」）: 忠実度の項目は尽きた（R7〜R11 閉じ・T7 は F9／tab 連桁／計器／僅差・台帳の非ゼロは宣言済みか書体の差）＝perf に移る**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ✅ **T7 の staff＋tab の wish の merge は第576 が移植した**（§1.1 第576 ⑵）＝双子基準で一致 413 → 419（第582 で 422／459＝Universe ＋ ABC に増えた 2 score・第583 で 423）。**残り（双子と段割れが違う 22 score）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly・everybody goes・全力少年・星になれたら…）＝**第583 が F9 の帰結と確定**（everybody goes の 4→2,2 は LP も `TabNoteHead.font-size = 2` で 2,2 に割る・Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）＝**双子の既定の数字と比べる限り残る差**／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（§1.1 第587 ⑵・LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒤ ✅ **That's The Way の tab score は第569 のユーザー決定の帰結**（§1.1 第587 ⑴）／⒡ **小節の合計が合わない score（Disco Inferno・More Than A Woman・Honesty…＝上の 22 の外）は計器**（LP の小節番号の数え方）／⒢ ✅ **奏 の 1 段目の力は第584 が閉じた**（楽器名の indent を段の DP が値付けしていなかった＝§1.1 第584）／⒝ ✅ **Universe は第582 が閉じた**（♮ が下向きの符尾を避ける＝§1.1 第582）／⒠ ✅ **`set_column_rods` の届く rod は第580 が移植した**（臨時記号の列から同じ声部の 2〜4 列前へ・掃き 942 冊で効いた本 0＝安全網。小節をまたぐ届きと他の声部への届きは未移植）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。⚠️ 小節線へのばねの残差 −0.020（staff＋tab・`TabSpacingWishTests` が ±0.03 で持つ）と、和音の `first_head` の近似（最も桁の多い数字）は未解明のまま
@@ -122,8 +122,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - ★ **⒮²⁷ tie の家族の残り＝約 2,700 B／打鍵**（第529 が solver の貸し出しで 19,976、**第532 が scratch で 4,250 を閉じた**。Lab `sessions/p529/`・`p532/`）: 残りは `TieChordOutline` 1,643（object＋中の `HorizontalSkyline`＝bound column ごと・problem に貸すなら outline も `Bind` で建て直す形＝skyline は ⒫′ の土台）／`TieColumnParts` 1,504（`BuildTieSpecification` が建てる record・呼び手側）。⚠️ **problem／engraver の貸し出しの島は第532 で尽きた**: `BeamScoringProblem`（第530 −16,344）・`SlurScoringProblem`（第531 −22,325）・tie（第529・第532）。grep（`new \w+Problem\(`・`new \w+Engraver\(`）に残る `LyricEngraver`／`LyricHyphenEngraver` は**第532 が値付けした＝合わせて 1,340 B／打鍵 0.12%（ctor 727・calc 445・hyphen 168）で、しかもコーパスに歌詞が 0 冊**（`lyric.in` 0）＝直す軒ではない（Lab `sessions/p532/lyric-price.txt`）。**貸す前に `.Length`・`[^1]`・`foreach` で表を歩く読み手を数える**（第530 は `[^1]` で 1 度 hash を割った・第532 は tie の配列を*寸法ちょうど*で持った理由）
-- ★ **⒮²⁶ String の残り約 110 KB／打鍵＝未特定**（第528・Lab `sessions/p528/strings-head2.txt`＝既知 238 KB のうち出力・状態が 211 KB・第528 が 19.4 KB を閉じた）。**探すなら継ぎ目ではなく sampling**（第521 の `CreateRed` の型＝String の割当を stack で拾う計器は無い・GCAllocationTick は型しか言わない）。候補で当たって無かった所: Rendering の `$"`／`ToString`／`Substring`・Syntax の accessor（`ValueText`・`BeatsText`・`SymbolText`・歌詞の unquote＝どれも 1 回／打鍵未満）・`SpecIdentity`。⚠️ **`int.ToString()`（0〜299）・`bool`・enum の `ToString` は cache＝計器が数えても割当ではない**（第528 の ⑶）
-- **⒵ collect 17.8% と `S1.prelim` 17.0%**／⒞′ prelim の残り＝`fs.walk` 0.41 ms・`fs.assemble` 0.29 ms
+- ✅ **⒮²⁶ は第588 が stack sampling で閉じた**（render 内の String の残りは出力と状態・Lab `sessions/p588/stralloc/`）。⚠️ **型地図の順位は stack で見るまで信じない**（GreenNode[] 139 KB は parse）
+- ★★ **⒵ 時間の地図（第590・Release・235 冊 × 8 打鍵・3,760 打鍵・HEAD `4d0753cc` で約 12,030 ms＝3.2 ms／打鍵）**＝計器は Lab `sessions/p590/cpuhost/`（`StageProbe`＋一時の `Zz590T` 計時表＝`sessions/p590/Zz590T.cs.txt`・Lap を段の境に差す）。**残りの値段（render 比）**: ⑴ ✅ **collect の声部の walk は第591 が大半を閉じた**（accidental の文字替えで splice が全部断られていた）。**残り＝第592 が値付け**（§1.1 第592）: live 363 ノード／打鍵のうち**窓の手前 133**＝再開点が遠い（容れ物の中の編集＝checkpoint は外側のリストだけ／section 末尾の小節数の fold が他 part のセルまで読む）＝設計級／⑵ ✅ **gate のばねは第593 が近傍を射影に細くした**（`SystemBreaker.SpringEdgeKey`・作り直し 3.04 → 1.05 小節／打鍵＝§1.1 第593。`LineEndCourtesyWidth(i−1, i)` は i しか読まない＝射影に要らなかった）／⑶ **content key 4.1%**（`MeasureContentKey.Compute`＝毎打鍵全小節）／⑷ **prelim 注釈 pass 8.5%**・**SVG 出力 18%**（未分解）／⑸ beam を**状態**で鍵にする memo＝残る Solve 9.39 のうち 2.94（同じ render・別の群で同じ形）＋1.39（前の打鍵）＝約 3.7%・鍵が 30 フィールド＝要設計／⑹ `ResolveTabStrings` の plan 以外 約 1.9%。⚠️ **EventPipe の CPU sampler は信じない**（§1.1 第589 ⑴）。⚠️ gen2 GC 289 回／run（未調査）
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
@@ -136,7 +136,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
 - ⚠️ **`RestCollisionsOf`／`RestDotOffsetsOf` は「今はやらない。着手はずっと後だ」**（第407 ⑺⑴）＝**提案しない**
 - ⚠️ **⒩⁶ の残り＝`ClearBeamStamp`（刻んで良いのは*消したあと*）に観測者が居ない**（第517 実測・毒はスイートもコーパス 232 冊 × 8 打鍵も動かさない・計器は Lab `sessions/p517/`）。二択＝破れる 1 冊を見つけて網にする／「効かない保険」として畳む。**ユーザー「後回し」（第523）＝提案しない**
-- ⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らない**
+- ⚠️ **`g4.core` 1.21% と `p1.s1.beams` 5.538% は*もう実仕事*＝この 2 島には戻らない**（割当の話。**時間では第589 が beam の二度解きを閉じた**＝§1.1 第589 ⑵）
 - ⚠️ **⒜ と push は「後回し」＝催促しない**（第407 ⑺⑸）。**push はユーザー**（Lab も）
 - ⒜ **R13⒝ の実機確認**（第404 ⑵）／⒝ 群単位の item／⒝′ frame 変更の `applyFrame`（実機の 2 行を見てから）
 - ⚠️ **掃き終わった島（第434〜第456）＝*ここには戻らない*。根拠の全文は各便の §1＝ARCHIVE**（第496 が表を 3 行に畳んだ）。
@@ -147,21 +147,33 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第587セッション（2026-09-25・YT-DELL2）
+### 1.1 第593セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p587`（HEAD `fe906f97`・full **9097 / 0 / 2 / 9099**・第585 を ARCHIVE へ）。着手＝§1.0 T7 ⒤ That's The Way の tab score の percent 反復（LP 2,6・Lily# 8）。
+新しい会話。★ `-Start p593`（HEAD `56b4780d`・full **9107 / 0 / 2 / 9109**・第591 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑵ gate のばねの近傍を「読む性質の射影」に細くする設計。
 
-★★ **⑴ That's The Way の tab score の差は第569 のユーザー決定の帰結＝製品の欠陥ではない**（Lab `sessions/p587/`）: 抜粋では LP も Lily# も 4,4,8,4,4＝段割れの差は全曲の**頁数の選択**（LP 24 段 3 頁・Lily# 21 段 2 頁）。LP の段数ループは下る途中で「頁が減って平均の頁の力が正」なら打ち切る（`optimal-page-breaking.cc:181-189`）＝22 段で止まり 21 段を試さない。Lily# の 22 段の頁の力は −0.003／0.000（平均が負）で打ち切らず、21 段（7.525）が 24 段（8.184）より安い。頁の力の差は系の高さ: 12 段のうち percent 反復 B を持つ 3 段だけ Lily# が 0.56 高い（下に 2.49・LP 1.93）＝**tab の 8 分の連桁が LP より 0.56 外**（抜粋 1 小節 `b9*.lys`・4 弦でも同じ）＝**台帳 `beam.quant.tab.flat-*` の宣言済み乖離（第569・ユーザー決定: tab の 8 分の組は 16 分の理想長 3.5）**。
+★★ **⑴ 近傍を射影に細くした（`88f7a72d`）**: ばね i が i±1 から読む性質を棚卸しした（全文は `SystemBreaker.SpringEdgeKey` の remarks）＝**i−1 から**主声部の `EndBarline`（全小節の spring 0 の左端・`DrawnLineStartBarline` の `:|:`）・`LineBreakPermission`（空小節）・歌詞の行の集合・その小節で効いている拍子（2 声目の拍子変更は entry context に無い）／**i+1 から** mmr の内側か・歌詞の行の集合・`%%` の半幅。`LineEndCourtesyWidth(i−1, i)` は i−1 を渡すが読まない。`SpringReusable` は隣を鍵全体ではなくこの 2 つの hash（`ReadByNext`／`ReadByPrevious`）で比べる。作り直し **3.04 → 1.05 小節／打鍵**（音高 workload 235 冊 × 8 打鍵）・fuzz（ランダムな 1 文字の削除・複製）では 1.8〜3.3 → 1.6〜2.5。⚠️ 時間の A/B は取っていない（回数だけ・ベンチの窓をもらっていない）。
 
-★ **⑵ カムフラージュ 1 段目（LP 6,7・Lily# 7,6）を値付けした＝未解決**: 最初の 13 小節は `repeat percent 3 { r1 } repeat percent 10 { r1 }`。LP の完成形の列から: 1–6 +0.0493（Lily# 0.0493＝一致）・7–13 −0.133（Lily# −0.139）・次の 14–18 0.4451（Lily# 0.4498）。Lily# の DP は 7,6 を 0.155 安いと値付けし、LP の力で置き換えても 7,6 が約 0.14 安い＝**LP が 6,7 を選ぶ理由は 1–7／8–13 の LP の力（未測）か、percent 反復の内側での割り方の扱い**。測るには LP を percent 反復の内側で割らせる必要がある（反復を割ると小節の中身が変わる）＝保留。計器（一時 hook `ZZ587`＝外した）は Lab `sessions/p587/Zz587DpProbe.cs.txt`。
+★★★ **⑵ 影の監査が既存の不健全を 1 つ見つけた**: 一時計器（Lab `sessions/p593/Zz593.cs.txt`＋host `cpuhost/`・`audit fuzz all`）で、memo が再利用する小節を*全部*作り直して前の値と比べた＝2 コーパス × 3 seed で約 66 万件。不一致は `keysig-treble.lys` の 3 件だけで、**旧規則でも m2・m3 に古い `LineStartPrefixExtra`（−1.1 対 0）を配っていた**。原因＝`LineStartPrefixExtra` は score 全体の `continuationGate`（小節 0 で効いている調）から測るのに、memo の適格条件がそれを比べていなかった（その小節の entry context は前の変更から来るので鍵は動かない）。⇒ `contPrefix == _contPrefix` を適格条件に足した。修正後は約 66 万件で不一致 0。
 
-## 以下は第586セッションの経緯
+⑶ 網: `SpringEdgeKeyTests` 7 本（各性質を 1 つだけ変えると該当の側が動く・音符だけでは動かない・前提も assert＝`R1 | R1` は run にならないのを前提 assert が捕まえた）＋`SpringMemo_TheContinuationPrefixMoved_…`。毒 8 本（射影の各項目 7＋`contPrefix` の比較）がそれぞれ網を赤くする（Lab `sessions/p593/poisons.log`）。既存の数を固定したテスト 5 本は新しい数へ（例 (5,3) → (7,1)）。
 
-### 1.1 第586セッション（2026-09-25・YT-DELL2）
+⑷ **ユーザーの問い「lys の文法改善で perf が上がる余地」**: 文法を変えて効く箇所は見つからなかった。⒜ 文法が collect の resume を丸ごと断る本は実コーパス 235 冊中 2 冊（La Isla Bonita・銀河鉄道999）／⒝ 遠い再開点（§1.0 ⒵ ⑴）の半分の原因である part-major（`part X { section A {…} }`）は 333 冊中 327 冊だが、原因は collector が小節数の fold を*本文の範囲の読み*として記録すること＝実装で直せる（文法を変えると 327 冊を書き換えることになる）／⒞ render の大半（layout・注釈・SVG）は解決済みのモデルの上で走る＝文法に依らない。
 
-同じ会話の続き。★ `-Start p586`（HEAD `87b65ebe`・full **9097 / 0 / 2 / 9099**・第584 を ARCHIVE へ）。着手＝§1.0 T7 ⒞ tab だけの score の段割れ（双子と違う 5）。
+終了: HEAD `88f7a72d`＋docs・full **9115 / 0 / 2 / 9117**（+8）。
 
-★★★ **⑴ ユーザー決定「楽器名の無い score の 1 段目の字下げを LP と合わせて」＝移植**（§3 に行を足した）: `LayoutOptions.Indent` の既定を LP の 15mm（`LilyPondDefaultIndent` 8.535827）にし、楽器名で決める `CalculateIndentFromInstrumentNames` を消した（`EffectiveIndent(options)` は紙の値そのもの）。紙の `indent` は 0 も負もそのまま（旧規則は `> 0` でなければ無視していた）。`size` は LP の `set-paper-dimensions` と同じく indent も側余白と同じ比で拡縮（b5＝13mm）。双子は常に `indent = 15\mm`。**網の側**: 台帳（886 点）の LP probe はほぼ全部 `\layout { indent = 0 }` で測ってある＝`RenderedGeometry.ProbePaper` が名前の無い probe を indent 0 で描く（13 点が「LP から離れた」と赤になったのはこれ）。単体テスト 35 ファイルも同じ事情＝`TestPaper.ParseAtIndentZero`／`SvgFromRenderSpec` が本に `paper { indent 0 }` を足す（既存の `paper` ブロックがあればそこへ入れる＝2 つ目のブロックは 1 つ目を置き換えるため）。snapshot 213 枚（1 段目が 8.54 右へ・段数の変わった snapshot 0）＋programmatic 2 枚。**双子**: 一致 423 → 422。1 段目が両側とも同じく動いた score が 9、**崩れたのはカムフラージュ（staff＋tab）の 1 段目 7,6 → LP 6,7**（得点 LP 4.61・Lily# 4.75・両側 23 段＝僅差・未読）。full **9097 / 0 / 2 / 9099**。⚠️ 中断した ⒞: That's The Way の tab score は percent 反復 2 小節 ×4 を LP 2,6・Lily# 8（staff score は一致・抜粋 `sessions/p586/tw.lys` で再現）＝未読。
+## 以下は第592セッションの経緯
+
+### 1.1 第592セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p592`（HEAD `7765ec54`・full **9107 / 0 / 2 / 9109**・第590 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑴ の splice の残りの断りを値付けする。
+
+★ **⑴ 第591 の後の collect の live の歩き**（一時計器・host は Lab `sessions/p592/cpuhost/`＝第2 引数 `plain` で accidental を使わない編集＝該当 7 冊だけ）: live 363 ノード／打鍵（第591 前 724）＋全面 collect 111。live を窓で分けると **窓の手前 133（restore の後）**・窓の中 57・窓の後 47・前半の再開なしの手前 15（うち反復ブロックの中 10）。断りの残り: 窓の前の候補 7.9（安い）・記録の尾が境の小節を書き換え 1.4・後半の一致 1.8・section 開始 1.2・octave 0.6。⚠️ **workload の窓は累積する**（baseline は全面 collect のときだけ取り直す＝8 打鍵目の窓は 1 打鍵目の編集から今の編集まで）＝「窓の中」57 は workload の形。
+
+★ **⑵ 再開点が遠い理由を値付けした**: 選ばれた再開点は 3,062 計画のうち 1,828 が窓の 40 文字以内。遠い 1,064 は ⒜ 533＝再開点と窓の間に checkpoint が無い（**容れ物の中の編集**：checkpoint は `ProcessNodes` の外側のリストにしか取らない＝`repeat volta { … }` の中を編集すると容れ物の頭から live／記録時の境の 26% は form の反復ブロックの中で取らない）⒝ 429＝間の checkpoint が窓の先を読んでいた（多くは 1,000 文字以上＝**`ProcessSectionBody` 末尾の小節数の fold（`MeasureCollector.Form.cs:584-590`）が同じ section の他 part のセルの末尾まで `MaxSourceRead` に入れる**＝part-major の本では以後の checkpoint が全部使えない）。どちらも設計級（容れ物の中に checkpoint を取るか、小節数の読みを値の読みとして別に持つ）＝**着手せず**。
+
+⑶ gate のばね（§1.0 ⒵ ⑵）の近傍の読みを確認した: ばね i が i±1 から読むのは run の開きの左の小節線・run の続き・歌詞の行の続き（第150 の棚卸し）と、**その後に足された `LineEndCourtesyWidth(i−1, i)`（第583）**。射影に細くする設計は次便へ。
+
+終了: HEAD `7765ec54`＋docs（コードの変更なし）・full **9107 / 0 / 2 / 9109**。
 
 ## 2. 開いている作業
 

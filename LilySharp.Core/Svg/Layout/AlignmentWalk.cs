@@ -212,13 +212,31 @@ internal sealed class AlignmentWalk
     /// <c>where</c> by nothing, so 0 IS that branch rather than an approximation of it.
     /// </para>
     /// </remarks>
-    public double Distance(VerticalSkyline? lineUp, double padding)
+    public double Distance(VerticalSkyline? lineUp, double padding) =>
+        Step(_downSkyline, lineUp, padding);
+
+    /// <summary>
+    /// The whole walk when it is ONE step — <see cref="Seed"/> with
+    /// <paramref name="anchorDown"/>, then <see cref="Distance"/> to
+    /// <paramref name="lineUp"/> — without building the accumulation.
+    /// </summary>
+    /// <remarks>
+    /// Seeding an empty accumulation copies the anchor's buildings verbatim
+    /// (<c>VerticalSkyline.Merge</c>'s empty branch), so reading the anchor itself is the
+    /// same number. ⚠️ MEASURED session 588: the copy was 74 KB a keystroke of
+    /// <c>SkylineBuilding[]</c> growth, almost all of it adjacent staff pairs, which never
+    /// advance.
+    /// </remarks>
+    public static double OneStep(VerticalSkyline? anchorDown, VerticalSkyline? lineUp, double padding) =>
+        Step(anchorDown, lineUp, padding);
+
+    private static double Step(VerticalSkyline? accumulated, VerticalSkyline? lineUp, double padding)
     {
-        if (_downSkyline.IsEmpty || lineUp is not { IsEmpty: false } up)
+        if (accumulated is not { IsEmpty: false } acc || lineUp is not { IsEmpty: false } up)
             return 0;
 
         // LILYPOND-REF: lily/align-interface.cc:228 — plain Skyline::distance, no padding.
-        double dist = _downSkyline.Distance(up);
+        double dist = acc.Distance(up);
         if (double.IsInfinity(dist) || double.IsNaN(dist))
             return 0;
         return dist + padding;

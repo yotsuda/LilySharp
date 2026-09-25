@@ -93,9 +93,9 @@
 - **:503** ⚠️ NOT PORTED — the bound extent: the barline's ink width is taken
 - **:519** ⚠️ NOT PORTED — the boundary-column regime: the left bound is the
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:2903** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
-- **:2955** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:3941** same approximation the scripts' own remark records for the movers; the books that
+- **:2952** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
+- **:3004** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
+- **:3990** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1160** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2106** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -200,8 +200,8 @@
 ### `LilySharp.Core/Svg/Layout/LyricSpacing.cs`
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:3511** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:4857** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:3560** staff down, and this reserves it on the hidden one. No book reaches that.
+- **:4906** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:840** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1492** pinned there), no ledger point.
@@ -321,8 +321,8 @@
 - **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.
 ### `LilySharp.Core/Svg/Layout/BeamScoringProblem.cs`
 - **:253** LILYSHARP-OWN, owner's decision 2026-09-24 (session 569, The Final Countdown's tab). On
-- **:559** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
-- **:1639** LILYSHARP-OWN: with no normal stems every flat off-line candidate
+- **:731** LILYSHARP-OWN: LilyPond's charge there is 0/0 = NaN (dist/gap.length()
+- **:1811** LILYSHARP-OWN: with no normal stems every flat off-line candidate
 ### `LilySharp.Core/Svg/Layout/BendAfterGeometry.cs`
 - **:50** The interval a fall drops and a doit rises, in staff POSITIONS. LILYSHARP-OWN:
 ### `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs`
@@ -359,7 +359,7 @@
 - **:1733** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
 - **:2028** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
-- **:829** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
+- **:835** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:535** LILYSHARP-OWN, DECLARED: the CROP. LilyPond always engraves onto the paper; a
 - **:771** ⚠️ LILYSHARP-OWN: THE FALLBACK. A system with no spaceable staff at all — a chords-only
@@ -394,12 +394,12 @@
 ### `LilySharp.Core/Svg/Layout/MetronomeMarkGeometry.cs`
 - **:201** the drawn pairs). LILYSHARP-OWN: the shuffle equation is Lily#'s own device with
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
-- **:360** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
-- **:461** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
-- **:1201** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
-- **:1659** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
-- **:2260** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4549** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
+- **:396** ⚠️ LILYSHARP-OWN, AND IT HAS ONE HOME ON PURPOSE. LilyPond has no band: a Lyrics or
+- **:497** ⚠️ LILYSHARP-OWN, AND IT IS NOW THE LAST FLAT VERSE STEP LEFT. Where the row is an
+- **:1237** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
+- **:1708** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
+- **:2309** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
+- **:4598** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:149** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:175** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

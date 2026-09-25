@@ -129,6 +129,78 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第591セッションの経緯
+
+### 1.1 第591セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p591`（HEAD `2fab1075`・full **9106 / 0 / 2 / 9108**・第589 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑴ collect の声部の walk（13.5%）を割る。
+
+★ **⑴ 割った**（一時計器 `Zz590T`＝Lab `sessions/p590/Zz590T.cs.txt` を戻して・host は Lab `sessions/p591/cpuhost/`）: resume した walk が 1 打鍵に **724 ノードを live で歩いていた**。出力 156 小節／打鍵のうち、前半の採用 67・**後半の splice 0.69**。splice の試行 116／打鍵の断りは **96 が「the parse agreements do not hold for the suffix」**、他は窓の前の候補 7.7・記録の尾が境の小節を書き換え 10.2・section 開始 1.2・octave 0.6。後半の一致だけが 95% の計画で落ちていた（Δ=0 なのに）。
+
+★★★ **⑵ 原因＝accidental の文字替え（`eb71f6b8`・−4.2%）**: 一時の再現器（Lab `sessions/p591/Zz591Dbg.cs.txt`＝`GreenSuffixAgrees` の写しに理由を刷らせた）で 470 編集中 466 が落ち、**全部がピッチ文字の token の kind**（PitchC 対 PitchD …）。`cis`→`dis` の窓は先頭の 1 文字で、token `cis` が `is` を連れて窓の端をまたぐ＝第396 の「文字＋空白」（本文が窓の*中で終わる* token）の*またぐ*版。⇒ 本文が窓の前から始まり、終わりの位置がずれ量どおりに一致する token は窓側の変更として扱う（後ろのノードは今までどおり構造で比べる）。splice 0.69 → **51.88 小節／打鍵**・collect 3,275 → 2,649 ms・render 11,987 → 11,488 ms・hash 0 差（同じ編集を incremental に描いて）。網は `CollectEditResumeTests.LetterSwapBeforeAnAccidental_StillSplicesTheSuffix`＋`SyntheticEdits` に同じ形（規則を外すと赤）。⚠️ **この token 規則そのものに網の観測者は無い**（「token なら何でも一致」の毒も 202 本緑＝第458・第523 の splice の門の記録と同じ）＝正しさの証拠は hash A/B。⚠️ **workload は編集の並び順で accidental の文字替えに偏る**（`Forward` の表の先頭が `des`→`ees` …）＝実際の打鍵での効き目はこれより小さい。
+
+終了: HEAD `eb71f6b8`＋docs・full **9107 / 0 / 2 / 9109**（+1）。
+
+## 以下は第590セッションの経緯
+
+### 1.1 第590セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p590`（HEAD `4043db64`・full **9101 / 0 / 2 / 9103**・第588 を ARCHIVE へ）。着手＝§1.0 ⒵ の「layout の中を Stopwatch で割る」。
+
+★ **⑴ 地図を段ごとに割った**（`Zz590T`＝名前つきの Stopwatch 表・host が窓の中だけ `On`）: layout 44% の中は `PlaceSystems` 31%→`LayoutSystems` 24%→系ごと 27.8 回／打鍵のうち memo の miss は **1.01 回（編集した系）**で、その 1 回が `BuildStaffSkylines` 0.49 ms（beam 11%）と `LayoutMeasures` 0.28 ms。鍵＋ばね 12.6% は gate のばね 7.7%＋content key 4.1%。collect 26% は resume した collect 22%（声部の walk 13.5%・弦の計画 5.8%）＋全面 collect 4.2%（0.11 回／打鍵）。
+
+★★ **⑵ layout が gate のばねを読む −6.3%（`2d1722ca`）**: 編集した系の `LayoutMeasures` の 86% が `CreateTimingSprings`＋`ApplySharedColumnReservations`（3.98 小節／打鍵＝render の 6.8%）で、gate（`ComputeMultiStaffSpringData`）が同じ 2 呼びを同じ引数で直前に済ませていた（または近傍の証明で前の打鍵から持ち越していた）。⇒ `MultiStaffLayouter.GateSprings`＝(score, shortest, vector) を engine が置き、両方が一致するときだけ読む。fallback は run rod（gate が vector を持たない）と空の placeholder（rigid の枠を予約の*前*に足す）。`Spring` は init-only record・入れ物は immutable＝共有で書き換わらない。網 `GateSpringReuseTests` 3 本（毒 2 本とも赤・毒の vector で layout が動く＝等式が空でない）。読んだ 3.98／打鍵・13,050 → 12,222 ms・割当 −26 KB／打鍵・hash 0 差。
+
+★ **⑶ 弦の計画が前の計画の前半から始める −0.9%（`4d0753cc`）**: `TabFingeringPlanner` の trellis（Viterbi）は毎回 事象 0 から解いていた（render の 3.8%・472 事象／計画）。事象 i の状態は事象 0..i と調律・重み・hand span だけで決まる＝前の*完走した*計画と一致する前半はそのまま使い、後ろからの辿りは新しい末尾からやり直す。共有 204.65 事象／打鍵（341 のうち）・12,138 → 12,030 ms・hash 0 差。⚠️ **網の最初の形は毒「1 事象多く共有」を通した**＝⑴ 乱数の音高は同じ弦に落ちやすい（45 と 55 はどちらも G 線）ので、共有の直後を*前の事象では使えない弦*（28＝E 線だけ・66＝G 線だけ）に置き換えた ⑵ それでも緑＝テストの順 `fresh(b)→plan(a)→plan(b)` で、plan(a) が b の状態を誤って引き継ぎ、plan(b) がそれを引き継ぎ返して**誤りが相殺**していた＝plan(a) の前にも履歴を切った。毒 3 本とも赤。
+
+⑷ 見て直さなかった所: `ItemSkylineFactory` の辞書（実測 0.6%）・`EmitMeasure`（1%）・slur／tie（包含 3% 未満）。終了: HEAD `4d0753cc`＋docs・full **9106 / 0 / 2 / 9108**（+5＝網）。
+
+## 以下は第589セッションの経緯
+
+### 1.1 第589セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き（/clear 後）。★ `-Start p589`（HEAD `b044c92d`・full **9097 / 0 / 2 / 9099**・第587 を ARCHIVE へ）。着手＝§1.1 第588 ⑷ の「次に掘るなら時間」＝CPU sampling（計器は Lab `sessions/p589/`: `cpuhost`＝第588 の打鍵 workload に Stopwatch と `StageProbe` を足したもの・`cpuan`＝SampleProfiler の解析器）。
+
+★★ **⑴ dotnet-trace の SampleProfiler は帰属が歪む＝Stopwatch で裏を取るまで信じない**: render 内サンプルの 43.8% が `Thread.PollGC`（`Array.Copy`＝`BulkMoveWithWriteBarrier` の明示の GC poll）に落ち、`BeamScoringProblem.Solve` の中では `finally` の `AddRange`（約 240 参照）が採点本体の 2 倍に見えた。Stopwatch では `AddRange` は全体 26.6 ms・Solve は 6.5 s＝**safepoint への skid**。同じ形で `RuntimeHelpers.GetHashCode`（包含 9%）は実測 0.6%、`EmitMeasure`（10%）は実測 1%。**使えるのは大きな部分木の包含だけ**（Solve 17% 対 実測 15%）。
+
+★★★ **⑵ beam の二度解き −8.7%（`3fd4fa09`）**: 打鍵の窓の beam の Solve は 18.9 回／打鍵・render の 15%（1 回 254 候補・best-first 377 歩）。入力の指紋を render ごとに数えると **70,980 回のうち 35,298 回（49.7%）が同じ render の同じ入力**で、組は全部 skyline（`StaffBeamLayouts`・LayoutSystems）→ prelim（`LayoutPreliminaryStaffBeams`）。両者は `BeamLayout` の刻印（staff 0 の 1 段 system 対 実 staff）が違うので別々の per-system memo を持つが、下の量子化は同じ問い。⇒ `SolveLent` に群の参照を鍵にした `ConditionalWeakTable`（入力は Bind が読む全部を値で・double はビット）。網 `BeamSolveMemoTests` 4 本（毒 2 本とも赤）。**当たり 9.39／打鍵＝数えた重複と一致**・render 14,604 → 13,334 ms（交互 2 回ずつ）・割当 965,147 → 961,745 B／打鍵・hash A/B 5,888 行 0 差・full **9101 / 0 / 2 / 9103**。
+
+⑶ 見て直さなかった所: best-first のヒープ（採点より重い）は同値の崩し方＝LP 忠実度に触る／slur・tie の二度解きはこのコーパスでは包含 3% 未満。
+
+終了: HEAD `3fd4fa09`＋この docs・full **9101 / 0 / 2 / 9103**（+4＝網）。§7.5: Core の +173 行は memo の器だけ＝LP の計算を変えない（REF/OWN 0 で正しい・出力は hash A/B で 0 差）。
+
+## 以下は第588セッションの経緯
+
+### 1.1 第588セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p588`（HEAD `2ed5a480`・full **9097 / 0 / 2 / 9099**・第586 を ARCHIVE へ）。**ユーザー決定「1」＝忠実度から perf へ移る**（§1.0 の方針に追記）。着手＝§1.0 の perf の島の値付けの取り直し。
+
+★ **⑴ 計器を取り直した（Release 必須）**: 基準は `2ed5a480` の Release で **render 1,079,771 B／打鍵**（実コーパス 235 冊 × 8 打鍵・Lab `sessions/p588/quick-headrel.txt`）。⚠️ **Debug で測ると +36% に見える＝退行ではない**（第556 は Release）。`measure.ps1 -Commit <hash>`（worktree `C:\MyProj\LilySharp-bisect`・**HEAD と書くと worktree 自身の HEAD**）・`-N 235` を忘れると 40 冊で比べられない。型地図（`Zz588Price`）→ 頭の型を dotnet-trace の stack で割当元へ（`strhost`＝`Zz588Keystroke.Render` を NoInlining で包んだ workload・`stralloc <trace> <type> 1880`）。
+
+★★ **⑵ String: fragment capture の写し −37,300（`264d5bea`）**: `CaptureScope.Dispose` が `StringBuilder.ToString(start, len)` で作った string を `TrySplit` が読んで捨てていた＝`ArrayPool<char>` に `CopyTo` して span で渡す。1,079,771 → **1,042,471**。hash A/B（`Zz588Hash`・5,888 行）0 差。
+
+★★ **⑶ SkylineBuilding[]: 隣接 staff の最小距離が上の skyline を写していた −77,227（`d41eec8f`）**: `AlignmentMinimumWithSkylines` は loose line が無くても `AlignmentWalk` を建て、`Seed` が上 staff の down-skyline を空の蓄積へ `AddRange`（List の伸長＝74 KB／打鍵）してから読むだけだった。一歩の walk は `AlignmentWalk.OneStep`（同じ `Step` を読む）。1,042,471 → **965,244**（計 −114,527＝−10.6%）。hash A/B 0 差・full 9097 / 0 / 2。
+
+⑷ 見て直さなかった所（stack 済み・Lab `sessions/p588/rep-*.txt`）: NoteItem 120 KB（`CreateNoteItem` 74 KB＝collect の再実行・`ResolveTabStrings` 32 KB＝弦を書いた出力の record）／SkylineBuilding[] の残り（`FromBoxesPadded` 16 KB＝pad は既に pending・`Materialize` 13 KB・`RebuildKeepingHighest` 13 KB）／Int32[] 40 KB（頭 5 KB 以下の散らばり）＝**安い残りは見えない**。次に掘るなら**割当ではなく時間**（⒵ collect 17.8%・`S1.prelim` 17.0%）を CPU sampling で。
+
+## 以下は第587セッションの経緯
+
+### 1.1 第587セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p587`（HEAD `fe906f97`・full **9097 / 0 / 2 / 9099**・第585 を ARCHIVE へ）。着手＝§1.0 T7 ⒤ That's The Way の tab score の percent 反復（LP 2,6・Lily# 8）。
+
+★★ **⑴ That's The Way の tab score の差は第569 のユーザー決定の帰結＝製品の欠陥ではない**（Lab `sessions/p587/`）: 抜粋では LP も Lily# も 4,4,8,4,4＝段割れの差は全曲の**頁数の選択**（LP 24 段 3 頁・Lily# 21 段 2 頁）。LP の段数ループは下る途中で「頁が減って平均の頁の力が正」なら打ち切る（`optimal-page-breaking.cc:181-189`）＝22 段で止まり 21 段を試さない。Lily# の 22 段の頁の力は −0.003／0.000（平均が負）で打ち切らず、21 段（7.525）が 24 段（8.184）より安い。頁の力の差は系の高さ: 12 段のうち percent 反復 B を持つ 3 段だけ Lily# が 0.56 高い（下に 2.49・LP 1.93）＝**tab の 8 分の連桁が LP より 0.56 外**（抜粋 1 小節 `b9*.lys`・4 弦でも同じ）＝**台帳 `beam.quant.tab.flat-*` の宣言済み乖離（第569・ユーザー決定: tab の 8 分の組は 16 分の理想長 3.5）**。
+
+★ **⑵ カムフラージュ 1 段目（LP 6,7・Lily# 7,6）を値付けした＝未解決**: 最初の 13 小節は `repeat percent 3 { r1 } repeat percent 10 { r1 }`。LP の完成形の列から: 1–6 +0.0493（Lily# 0.0493＝一致）・7–13 −0.133（Lily# −0.139）・次の 14–18 0.4451（Lily# 0.4498）。Lily# の DP は 7,6 を 0.155 安いと値付けし、LP の力で置き換えても 7,6 が約 0.14 安い＝**LP が 6,7 を選ぶ理由は 1–7／8–13 の LP の力（未測）か、percent 反復の内側での割り方の扱い**。測るには LP を percent 反復の内側で割らせる必要がある（反復を割ると小節の中身が変わる）＝保留。計器（一時 hook `ZZ587`＝外した）は Lab `sessions/p587/Zz587DpProbe.cs.txt`。
+
+## 以下は第586セッションの経緯
+
+### 1.1 第586セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p586`（HEAD `87b65ebe`・full **9097 / 0 / 2 / 9099**・第584 を ARCHIVE へ）。着手＝§1.0 T7 ⒞ tab だけの score の段割れ（双子と違う 5）。
+
+★★★ **⑴ ユーザー決定「楽器名の無い score の 1 段目の字下げを LP と合わせて」＝移植**（§3 に行を足した）: `LayoutOptions.Indent` の既定を LP の 15mm（`LilyPondDefaultIndent` 8.535827）にし、楽器名で決める `CalculateIndentFromInstrumentNames` を消した（`EffectiveIndent(options)` は紙の値そのもの）。紙の `indent` は 0 も負もそのまま（旧規則は `> 0` でなければ無視していた）。`size` は LP の `set-paper-dimensions` と同じく indent も側余白と同じ比で拡縮（b5＝13mm）。双子は常に `indent = 15\mm`。**網の側**: 台帳（886 点）の LP probe はほぼ全部 `\layout { indent = 0 }` で測ってある＝`RenderedGeometry.ProbePaper` が名前の無い probe を indent 0 で描く（13 点が「LP から離れた」と赤になったのはこれ）。単体テスト 35 ファイルも同じ事情＝`TestPaper.ParseAtIndentZero`／`SvgFromRenderSpec` が本に `paper { indent 0 }` を足す（既存の `paper` ブロックがあればそこへ入れる＝2 つ目のブロックは 1 つ目を置き換えるため）。snapshot 213 枚（1 段目が 8.54 右へ・段数の変わった snapshot 0）＋programmatic 2 枚。**双子**: 一致 423 → 422。1 段目が両側とも同じく動いた score が 9、**崩れたのはカムフラージュ（staff＋tab）の 1 段目 7,6 → LP 6,7**（得点 LP 4.61・Lily# 4.75・両側 23 段＝僅差・未読）。full **9097 / 0 / 2 / 9099**。⚠️ 中断した ⒞: That's The Way の tab score は percent 反復 2 小節 ×4 を LP 2,6・Lily# 8（staff score は一致・抜粋 `sessions/p586/tw.lys` で再現）＝未読。
+
 ## 以下は第585セッションの経緯
 
 ### 1.1 第585セッション（2026-09-25・YT-DELL2）
