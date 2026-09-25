@@ -191,7 +191,7 @@ async function computeSuggestion(
     }
 
     // Quiet resolution: never prompt or pop errors mid-typing.
-    const chat = await resolveChatClient(true);
+    const chat = await resolveChatClient(true, 'ghost');
     if (!chat) {
         deps.log('Ghost completion: no language model available');
         return undefined;

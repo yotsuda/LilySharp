@@ -210,7 +210,12 @@
         "lilysharp.ai.model": {
           "type": "string",
           "default": "",
-          "markdownDescription": "The language model Lily#'s AI features use (*Transform Selection with AI* and Ghost Completion): a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#."
+          "markdownDescription": "The language model *Transform Selection with AI* uses: a model id or family from **Lily#: Select AI Model…**. Empty chooses automatically — the largest model on offer, passing over the small ones (mini, nano, lite, …), which write poor Lily#. Ghost Completion has its own: `#lilysharp.ai.ghostModel#`."
+        },
+        "lilysharp.ai.ghostModel": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "The language model Ghost Completion uses: a model id or family from **Lily#: Select AI Model…**. It answers as you type, and VS Code drops a suggestion the moment the caret moves, so it needs a FAST model — a large one is cancelled before it shows. Empty chooses automatically: a small model (mini, nano, lite, …)."
         },
         "lilysharp.ai.ghostCompletion": {
           "type": "boolean",

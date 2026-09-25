@@ -39,8 +39,8 @@ export interface ChatClient {
  * model is available (Copilot not enabled / no provider registered). When `quiet` (ghost
  * completion), never shows an error.
  */
-export async function resolveChatClient(quiet: boolean): Promise<ChatClient | undefined> {
-    const model = await selectLmModel();
+export async function resolveChatClient(quiet: boolean, use: ModelUse = 'transform'): Promise<ChatClient | undefined> {
+    const model = await selectLmModel(use);
     if (model) {
         return lmClient(model);
     }
@@ -52,21 +52,33 @@ export async function resolveChatClient(quiet: boolean): Promise<ChatClient | un
     return undefined;
 }
 
-async function selectLmModel(): Promise<vscode.LanguageModelChat | undefined> {
+/**
+ * What the model is for. The two want opposite things: Transform Selection is one deliberate
+ * request, where a strong model is worth a few seconds; Ghost Completion answers as you type,
+ * and VS Code cancels an inline suggestion the moment the caret moves — the automatic pick of
+ * the strongest model (claude-fable-5.1) took 1.9–3.2 s a bar and every one was cancelled
+ * before it could show (owner's log, 2026-09-26). So each has its own setting and its own
+ * automatic choice.
+ */
+export type ModelUse = 'transform' | 'ghost';
+
+const SETTING: Record<ModelUse, string> = { transform: 'ai.model', ghost: 'ai.ghostModel' };
+
+async function selectLmModel(use: ModelUse): Promise<vscode.LanguageModelChat | undefined> {
     const models = await availableModels();
     if (models.length === 0) {
         return undefined;
     }
-    // The user's pick (`lilysharp.ai.model`, written by "Lily#: Select AI Model") wins,
-    // matched by id and then by family, so a pick survives a model's version bump.
-    const wanted = vscode.workspace.getConfiguration('lilysharp').get<string>('ai.model', '').trim();
+    // The user's pick (written by "Lily#: Select AI Model") wins, matched by id and then by
+    // family, so a pick survives a model's version bump.
+    const wanted = vscode.workspace.getConfiguration('lilysharp').get<string>(SETTING[use], '').trim();
     if (wanted) {
         const hit = models.find(m => m.id === wanted) ?? models.find(m => m.family === wanted);
         if (hit) {
             return hit;
         }
     }
-    return autoPick(models);
+    return autoPick(models, use);
 }
 
 /** Every chat model VS Code offers, Copilot's first. */
@@ -89,16 +101,22 @@ export async function availableModels(): Promise<vscode.LanguageModelChat[]> {
  * Copilot account is `gpt-4o-mini` (owner's log, 2026-09-26): the smallest model on offer,
  * asked to write a language it has never seen from a 52 KB spec. A small model's family name
  * says so (mini, nano, lite, haiku, flash), so those are passed over while anything else is
- * on offer, and the rest are ordered by how much input they take. This is a guess about
- * quality; "Lily#: Select AI Model" is the way to be sure.
+ * on offer, and the rest are ordered by how much input they take. For Ghost Completion it is
+ * the other way round: the small ones are the ones that answer before VS Code gives up on
+ * the suggestion. Both are guesses from the name; "Lily#: Select AI Model" is the way to be sure.
  */
-export function autoPick(models: readonly vscode.LanguageModelChat[]): vscode.LanguageModelChat | undefined {
+export function autoPick(models: readonly vscode.LanguageModelChat[], use: ModelUse = 'transform'): vscode.LanguageModelChat | undefined {
     const small = (m: vscode.LanguageModelChat) => /mini|nano|lite|haiku|flash|small/i.test(`${m.family} ${m.id}`);
-    const pool = models.some(m => !small(m)) ? models.filter(m => !small(m)) : [...models];
+    const wantSmall = use === 'ghost';
+    const pool = models.some(m => small(m) === wantSmall) ? models.filter(m => small(m) === wantSmall) : [...models];
     return pool.sort((a, b) => (b.maxInputTokens ?? 0) - (a.maxInputTokens ?? 0))[0];
 }
 
-/** "Lily#: Select AI Model" — the models VS Code offers, the pick saved to `lilysharp.ai.model`. */
+/**
+ * "Lily#: Select AI Model" — first which feature, then the models VS Code offers; the pick is
+ * saved to `lilysharp.ai.model` (Transform Selection) or `lilysharp.ai.ghostModel` (Ghost
+ * Completion).
+ */
 export async function pickAiModel(): Promise<void> {
     const models = await availableModels();
     if (models.length === 0) {
@@ -107,14 +125,27 @@ export async function pickAiModel(): Promise<void> {
             + 'language-model provider).');
         return;
     }
-    const current = vscode.workspace.getConfiguration('lilysharp').get<string>('ai.model', '').trim();
-    const auto = autoPick(models);
+    const cfg = vscode.workspace.getConfiguration('lilysharp');
+    const shown = (use: ModelUse) => cfg.get<string>(SETTING[use], '').trim() || `Automatic (${autoPick(models, use)?.name ?? 'none'})`;
+    type UseItem = vscode.QuickPickItem & { use: ModelUse };
+    const which = await vscode.window.showQuickPick<UseItem>([
+        { label: 'Transform Selection with AI', description: shown('transform'), detail: 'One request at a time: a strong model is worth waiting for.', use: 'transform' },
+        { label: 'Ghost Completion', description: shown('ghost'), detail: 'Answers as you type: a fast model, or the suggestion is cancelled before it shows.', use: 'ghost' },
+    ], { title: 'Lily# — choose the AI model for…' });
+    if (!which) {
+        return;
+    }
+    const use = which.use;
+    const current = cfg.get<string>(SETTING[use], '').trim();
+    const auto = autoPick(models, use);
     type Item = vscode.QuickPickItem & { value: string };
     const items: Item[] = [
         {
             label: 'Automatic',
             description: auto ? `now ${auto.name}` : undefined,
-            detail: 'Lily# chooses: the largest model on offer, passing over the small ones (mini, nano, lite, …).',
+            detail: use === 'ghost'
+                ? 'Lily# chooses a fast model: the small ones (mini, nano, lite, …) first.'
+                : 'Lily# chooses: the largest model on offer, passing over the small ones (mini, nano, lite, …).',
             value: '',
             picked: current === '',
         },
@@ -126,14 +157,13 @@ export async function pickAiModel(): Promise<void> {
         })),
     ];
     const chosen = await vscode.window.showQuickPick(items, {
-        title: 'Lily# — AI model for Transform Selection and Ghost Completion',
+        title: `Lily# — AI model for ${which.label}`,
         placeHolder: current ? `current: ${current}` : 'current: Automatic',
     });
     if (!chosen) {
         return;
     }
-    await vscode.workspace.getConfiguration('lilysharp')
-        .update('ai.model', chosen.value, vscode.ConfigurationTarget.Global);
+    await cfg.update(SETTING[use], chosen.value, vscode.ConfigurationTarget.Global);
 }
 
 function lmClient(model: vscode.LanguageModelChat): ChatClient {
