@@ -349,8 +349,21 @@ public class HistoryCitationTests
     /// give: the sentences are the record of what those sessions committed. The LIVE ratchet
     /// did not fall (1065, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 834 → 912, THE SAME WAY, ON 2026-09-25 (session 631). The 105 commits of
+    /// sessions 614-630 after <c>4f831bcc</c> were regrouped into thirteen and pushed; the
+    /// session that followed met this test red at its end. The old commits are still in the
+    /// local reflog (no backup tag), so the check was made: the pre-regroup tip (session
+    /// 630's handoff commit, not named here because naming it would add one more dead token)
+    /// and the new one (<c>746123f1</c>) name the SAME tree object, <c>060aae9e</c>. With the
+    /// tree unchanged the census reads the same tokens as before, so the rise of 78 is exactly
+    /// the citations that lost reachability: 95 distinct hex tokens in the tree name one of
+    /// the 105 folded commits, and the difference is the honest miss of
+    /// <c>LooksLikeCitation</c> declared above. Not re-pointed, for the reason the paragraphs
+    /// above give. The LIVE ratchet did not fall (1071, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 834;
+    private const int DeadCitationsWhenWritten = 912;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually
