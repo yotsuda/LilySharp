@@ -25,6 +25,12 @@ if (-not $ver) { throw 'No <Version> found in Directory.Build.props' }
 function Test-Lys([string]$path) {
     $out = & $Lysc check $path 2>&1 | Out-String
     if ($out -match 'No errors found') { return $null }
+    # A warning is refused like an error — a site example should be clean — except the one
+    # that is about the MACHINE, not the source: a `fonts` example naming a face the build
+    # host lacks (Georgia on the Pages runner). The page shows the source, not that render.
+    $lines = $out -split "`r?`n" | Where-Object { $_ -match ': (error|warning):' }
+    $real = @($lines | Where-Object { $_ -notmatch 'is not installed on this system' })
+    if ($lines -and -not $real -and $LASTEXITCODE -eq 0) { return $null }
     return (($out -split "`r?`n" | Where-Object { $_ -match '\S' }) | Select-Object -First 3) -join ' / '
 }
 
