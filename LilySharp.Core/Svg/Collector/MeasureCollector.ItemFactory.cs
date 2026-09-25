@@ -989,6 +989,13 @@ public sealed partial class MeasureCollector
     /// written pitch and its resolved absolute spelling (e.g. "C6").</summary>
     public readonly record struct PitchTraceEntry(int Position, string Pitch);
 
+    /// <summary>What the editor's hover shows of a chord, a <c>&lt;&lt; &gt;&gt;</c> arpeggio or a <c>q</c>
+    /// (<see cref="RecordsChordFacts"/>): the symbol a bare <c>@chord</c> on it would print and its
+    /// Roman-numeral degree in the key in force (what <c>as roman</c> prints) — both null
+    /// when its notes name no chord — and the pitches it sounds, formatted as the trace formats
+    /// them (<c>F#4</c>): a chord's and a <c>q</c>'s lowest first, an arpeggio's in played order.</summary>
+    public readonly record struct ChordHoverFacts(string? Symbol, string? Roman, ImmutableArray<string> Pitches);
+
     /// <summary>
     /// Ottava spans (measure range + type) for one staff, derived from the
     /// collected @ottava/@loco marks. Reuses the SAME detector the bracket uses

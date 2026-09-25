@@ -112,6 +112,8 @@ public sealed partial class MeasureCollector
     private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex,
         Fraction anchorTiming)
     {
+        if (RecordsChordFacts && node is ChordSyntax or ArpeggioSyntax or ChordRepetitionSyntax)
+            RecordChordFacts(node, measureIndex);
         // Grace time has no column for it to hang off — see CollectArticulations.
         if (_graceDepth > 0)
             return;
@@ -135,18 +137,7 @@ public sealed partial class MeasureCollector
             // shows nothing.
             if (chordText.Length == 0)
             {
-                structure = node switch
-                {
-                    ChordSyntax autoChord when TryNameChord(autoChord, out var s) => s,
-                    ArpeggioSyntax arp when TryNameArpeggio(arp, out var s) => s,
-                    // A `q` names what it repeats — derive from the original chord.
-                    ChordRepetitionSyntax rep when ChordRepetitions.OriginalOf(rep) is { } orig
-                        && TryNameChord(orig, out var s) => s,
-                    // A bare duration likewise, when what it repeats is a chord.
-                    BareDurationSyntax bd when BareDurations.OriginalOf(bd) is ChordSyntax bdOrig
-                        && TryNameChord(bdOrig, out var s) => s,
-                    _ => null,
-                };
+                structure = NameFromNotes(node);
                 if (structure == null)
                     continue;
                 var derived = structure.PrintedSymbol(_chordSpelling);
@@ -159,6 +150,98 @@ public sealed partial class MeasureCollector
                 _cursor.StaffIndex, structure, superFrom);
         }
     }
+
+    /// <summary>
+    /// When set, every chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio and <c>q</c> this collect walks
+    /// records what the editor's hover shows of it (<see cref="ChordFacts"/>): the symbol a
+    /// bare <c>@chord</c> on it would print, whether or not it carries one, and the pitches
+    /// it sounds. Off for every render: the facts are paid only by the request that asks.
+    /// A <c>chords { }</c> entry records too (<see cref="ChordNameCollector"/>): its printed
+    /// symbol, its degree, and its tones as letters — a symbol voices no octave.
+    /// </summary>
+    public bool RecordsChordFacts
+    {
+        get => _chordFacts != null;
+        init
+        {
+            _chordFacts = value ? new() : null;
+            _chordNameCollector.Facts = _chordFacts;
+        }
+    }
+
+    /// <summary>What <see cref="RecordsChordFacts"/> recorded, keyed by the node's span start
+    /// (trivia excluded). A chord walked more than once (a repeated phrase) keeps its last
+    /// walk's facts.</summary>
+    public IReadOnlyDictionary<int, ChordHoverFacts> ChordFacts =>
+        _chordFacts ?? (IReadOnlyDictionary<int, ChordHoverFacts>)ImmutableDictionary<int, ChordHoverFacts>.Empty;
+
+    private Dictionary<int, ChordHoverFacts>? _chordFacts;
+
+    private void RecordChordFacts(SyntaxNode node, int measureIndex)
+    {
+        var pitches = ImmutableArray.CreateBuilder<string>();
+        // A chord sounds its members at once: they list lowest first. A `q` resolves
+        // nothing of its own — it copies the original's members, displaced by the octaves
+        // its chain of marks adds (CreateChordRepetitionItem).
+        var (chord, displacement) = node switch
+        {
+            ChordSyntax c => (c, 0),
+            ChordRepetitionSyntax rep when ChordRepetitions.OriginalOf(rep) is { } original
+                => (original, ChordRepetitions.DisplacementOf(rep)),
+            _ => ((ChordSyntax?)null, 0),
+        };
+        if (chord != null)
+        {
+            if (_resolvedChordMembers.TryGetValue(chord, out var members))
+                foreach (var member in members.OrderBy(m => m.Midi))
+                    if (member.DisplacedBy(displacement) is { Step: { } s, Alter: { } a, Octave: { } o })
+                        pitches.Add(FormatPitch(s, a, o));
+        }
+        else if (node is ArpeggioSyntax && RecordsPitchTrace)
+        {
+            // An arpeggio sounds its members in turn: they list in played order — the
+            // trace entries its members wrote as they resolved, just before this call.
+            int start = node.Span.Start, end = node.Span.End, first = _pitchTrace.Count;
+            while (first > 0 && _pitchTrace[first - 1].Position >= start)
+                first--;
+            for (int i = first; i < _pitchTrace.Count; i++)
+                if (_pitchTrace[i].Position < end)
+                    pitches.Add(_pitchTrace[i].Pitch);
+        }
+        var structure = NameFromNotes(node);
+        string? symbol = structure?.PrintedSymbol(_chordSpelling).Text;
+        // The degree in the key in force at this bar — the timeline `as roman` reads
+        // (BuildKeyTimeline, ChordNameCollector.KeyAt), up to this bar of the walk.
+        string? roman = null;
+        if (structure != null)
+        {
+            (int tonic, int sharps) = (_meta.KeyTonicStep, _meta.InitialKeySharps);
+            foreach (var (m, key) in _keyByMeasure)
+            {
+                if (m > measureIndex) break;
+                if (m > 0) (tonic, sharps) = (key.TonicStep, key.Sharps);
+            }
+            roman = structure.ToRomanNumeral(tonic, sharps);
+        }
+        if (symbol != null || pitches.Count > 0)
+            _chordFacts![node.Span.Start] = new ChordHoverFacts(symbol, roman, pitches.ToImmutable());
+    }
+
+    /// <summary>The chord a bare <c>@chord</c> on <paramref name="node"/> names from its
+    /// notes, or null: a chord or arpeggio names itself, and a <c>q</c> or a bare duration
+    /// names what it repeats.</summary>
+    private ChordStructure? NameFromNotes(SyntaxNode node) => node switch
+    {
+        ChordSyntax autoChord when TryNameChord(autoChord, out var s) => s,
+        ArpeggioSyntax arp when TryNameArpeggio(arp, out var s) => s,
+        // A `q` names what it repeats — derive from the original chord.
+        ChordRepetitionSyntax rep when ChordRepetitions.OriginalOf(rep) is { } orig
+            && TryNameChord(orig, out var s) => s,
+        // A bare duration likewise, when what it repeats is a chord.
+        BareDurationSyntax bd when BareDurations.OriginalOf(bd) is ChordSyntax bdOrig
+            && TryNameChord(bdOrig, out var s) => s,
+        _ => null,
+    };
 
     /// <summary>
     /// Derives a chord symbol from a chord's notes (root = first member; the

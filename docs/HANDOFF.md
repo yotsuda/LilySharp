@@ -130,7 +130,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ **タブ譜は `.up`/`.down` を守らない**＝タブの採点は符尾を入れていない（弧は常に符尾の反対側という約束）ので、符尾側へ強制すると梁を突き抜ける（Lab `sessions/p484/tab.lys`）。直すなら符尾を採点に入れる
 
 **⒞ ユーザー決定が先・触らない**
-- ✅ **⒳¹² は第559 が閉じた（ユーザー決定「あなたの提案通りで」＝綴り `to coda` は残す・置き場所は LP の時刻モデル）**＝経緯と根拠は §1.1 第559
 
 - ★★ **⒴⁗ 天井 2.03%**＝安くすると `アゲハ蝶.lys` 1 冊が 24→26 系になる＝perf ではなく*忠実度の判断*
   （実装は Lab `sessions/p423/zz423-deferred-prelim.diff.txt`）・**先に LP 双子**
@@ -147,28 +146,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第615セッション（2026-09-25・YT-DELL2）
+### 1.1 第621セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p615`（HEAD `a91eff68`・full **9148 / 0 / 2 / 9150**）。着手＝長い score（`big12.lys` 39 頁）の残り collect 9.3＋layout 20 ms の地図。計器＝第604 の laps＋Lab `sessions/p613/lathost`（`ZZ_PASSES`・`ZZ_GC`）＋ dotnet-trace と `sessions/p589/cpuan`（報告 Lab `sessions/p615/`）。
+同じ会話の続き。★ `-Start p621`（HEAD `e4606bf4`・full **9160 / 0 / 2 / 9162**）。ユーザー実機: `Dm7  (IIm7)  D4 F4 A4 C5`→`Dm7 (IIm7)  D4  F4  A4  C5`＝名前と度数を 1 つのコード span に（2 つの span は二重の隙間）・音と音の間も「空白＋U+00A0」（網の期待値 12 本）。
 
-★ **⑴ layout 20 ms の内訳**（打鍵あたり）: 仮の注釈 pass 5.4・仕上げ 4.9・段数 4.2・段ごと 2.6・改行 2.3・頁 0.9＝編集した段の本当の仕事（梁・skyline）は約 3 ms。**残りは全 104 段を毎打鍵なめる pass の和**。
-★ **⑵ 抽出の頭**（render 内の inclusive）: `ArticulationEngraver.CalculateWithFingerings` 12.5%（script は全 score を毎回・運指は `FingScriptMemo` で段ごと memo 済み）／`ChooseSystemCount`＋`PageBreaker.SolveUnconstrained` 11.3%／collect の live walk 約 10%／`MeasureContentKey.Compute` 7.5%（`AddIntrinsic` が 58%）／`SvgSystemFragmentCache.AppendFragment` 5.8%（変わらない頁の文字列も組み直す）／`TabResolver.ResolveTabStrings` 4.3%。**どれも単独 2〜7%**＝長い score だけの話（コーパスでは各 0.1〜0.4%）。
-★ **⑶ GC の設定は効かない**: `DOTNET_GCgen0size` 64／256 MB・`gcConcurrent=0` で render 平均 2.38〜2.55 ms（既定 2.46）。trace の `PollGC` 48% は trace 自身の水増し。
-⇒ 長い score を大きく縮めるのは「変わらない段の注釈・頁の結果を丸ごと引き継ぐ」設計（script の段ごと memo が最初の 1 歩）＝ユーザー判断。
+終了: HEAD `842a2a8f`＋docs・full **9160 / 0 / 2 / 9162**。
 
-終了: HEAD `a91eff68`＋docs（コードの変更なし）・full **9148 / 0 / 2 / 9150**。
+## 以下は第620セッションの経緯
 
-## 以下は第614セッションの経緯
+### 1.1 第620セッション（2026-09-25・YT-DELL2）
 
-### 1.1 第614セッション（2026-09-25・YT-DELL2）
+同じ会話の続き。★ `-Start p620`（HEAD `1998e05d`・full **9160 / 0 / 2 / 9162**）。ユーザー実機: `G/D ( V/II ) D4 G4 B4`＝括弧がコード span の内側余白の分だけ離れる→括弧を span の中へ＝`` `G/D` `(V/II)` ``（網の期待値 10 本）。
 
-同じ会話の続き。★ `-Start p614`（HEAD `e8348001`・full **9147 / 0 / 2 / 9149**）。着手＝第613 ⑶⒜（行頭の音の編集で尾の splice が落ちる）。
-
-★ **⑴ 直した**（`CollectResumePlanner.GreenPrefixAgrees`）: Kind の違う node でも、両側とも最初の実字が P 以後（P より前は先頭 token の leading trivia だけ＝prefix の bytes が等しいので同じ空白）なら一致とみなす＝P ちょうどで始まる node と同じ扱い。網 `CollectEditResumeTests.Splice_ThePitchThatOpensAnIndentedLine_StillSplicesTheTail`（120 小節・行頭の c→d・full と一致＋spliced > 40・毒＝旧の `return false` で赤）。keystroke verify 6 種 19,560 打鍵 **0 mismatch**（pitch の spliced 50.91 → 52.37 bars/key・他は不変）。
-★ **⑵ 効果**（GC を打鍵の外で回した同窓 A/B・Lab `sessions/p613/lathost` `ZZ_GC=1`）: `big12.lys`（39 頁）45.1 → 36.6 ms／打鍵（−19%・collect 15.9 → 9.3）。コーパス（6 頁まで）は collect 0.66 → 0.62 ms で誤差並み。⚠️ GC を回さない測りでは layout が 20 → 29 ms に見えた＝GC の着地の揺れ（8 打鍵では読めない）。
-⇒ 長い score の残り: collect 9.3 ms（adopted 1,250＋spliced 1,040 小節でも O(n)＝walk の後の pass か写し）と layout 20 ms（O(n)）の地図。⒝ `_tieTargetWarnings`（side table 16）の件数ずれで walk 入口 abort＝前の walk が数を変えても尾を採れる設計（watermark を相対に）＝重い。
-
-終了: HEAD `04912360`＋docs・full **9148 / 0 / 2 / 9150**。
+終了: HEAD `d801e4e1`＋docs・full **9160 / 0 / 2 / 9162**。
 
 ## 2. 開いている作業
 

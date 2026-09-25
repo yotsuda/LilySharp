@@ -129,6 +129,72 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第619セッションの経緯
+
+### 1.1 第619セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p619`（HEAD `60250928`・full **9160 / 0 / 2 / 9162**）。ユーザー: 空白 1 つでは詰まる→2 つ分。⚠️ Markdown は空白の連続を 1 つに畳む＝区切りは「空白＋U+00A0」（`ChordHover` の join・網 9 本の期待値）。
+
+終了: HEAD `b66a54d1`＋docs・full **9160 / 0 / 2 / 9162**。
+
+## 以下は第618セッションの経緯
+
+### 1.1 第618セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p618`（HEAD `143d91b2`・full **9160 / 0 / 2 / 9162**）。ユーザー実機確認:「—」が長く、前後が詰まって見にくい→区切りは空白 1 つ＝`` `C` (`I`) C5 E5 G5 ``（`ChordHover` の join・網 12 本の期待値・CHANGELOG の例）。
+
+終了: HEAD `ba05f913`＋docs・full **9160 / 0 / 2 / 9162**。
+
+## 以下は第617セッションの経緯
+
+### 1.1 第617セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p617`（HEAD `822f6719`・full **9156 / 0 / 2 / 9158**）。第616 の和音 hover の続き（ユーザー指示の連続）。
+
+★ **⑴ 和音 hover の形＝`` `Dm/F` (`IIm/IV`) — F4 A4 D5 ``**（ユーザー指示 4 つ）: ⒜ VS Code の hover は最小幅 150 px（`contentHoverWidget.ts` の `minimumWidth = 150`）＝名前だけだと右が空く→鳴る音で埋める／⒝ `< >` と `q` は低い順（`_resolvedChordMembers` を Midi で整列・`q` は `DisplacedBy`）、`<< >>` は鳴る順（その node の範囲にある pitch trace の尾）／⒞ ローマ数字を併記（`ToRomanNumeral`・その小節で効いている調＝`BuildKeyTimeline` と同じ規則を walk 中に）／⒟ 見出し「Chord:」は外す（名前も音も無いときだけ従来の **Chord**）。記録は `MeasureCollector.RecordsChordFacts` → `ChordFacts`（`ChordHoverFacts(Symbol, Roman, Pitches)`）。網 `ChordHoverTests` 9 本（調 G で `<d fis a>`＝V も）。
+⚠️ 第616 の会話で私が書いた「`<< g' e c >>` = G5 E5 C5」は枠次第（枠 C4 なら G4 E4 C4）＝下行になることだけが規則の帰結。
+
+★ **⑵ `chords { }` の項目も hover**（ユーザー指示）: `ChordNameCollector.ResolveChordEntry`（紙面の 2 つの呼び手が通る 1 か所）が `Facts` へ記録＝刷る名前・`Roman(structure, measure)`・構成音を**文字だけ**（記号はオクターブを持たない）＝slash のバスを先に、根音から上へ（バスと同じ文字は落とす）＝`G7/B`＝`` `G7/B` (`V7/VII`) — B G D F ``。登録外の質（raw suffix）は名前と度数だけ。LSP は score ごとに `CollectMultiStaff` して探す（無名の part 内ブロックは part の collect へ）。網 +3（計 12）。
+⇒ ⚠️ **未着手＝`chords { }` を MIDI で鳴らす**（ユーザーの着想: 鳴らせば hover にもオクターブ付きの音を出せる）。今は MIDI 側に chord row の経路が無い（`Midi/` に `ChordEntry`／`ChordNameItem` の参照 0）。要る決定＝ボイシング（根音の高さ・転回・楽器／チャンネル・音価はコード行の拍グリッド）。LP は `\chordmode` を ChordNames と別に Staff／Voice で鳴らす。
+
+終了: HEAD `df513739`・`e4952381`＋docs・full **9160 / 0 / 2 / 9162**。
+
+## 以下は第616セッションの経緯
+
+### 1.1 第616セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p616`（HEAD `033d06c0`・full **9148 / 0 / 2 / 9150**）。perf はユーザー判断で区切り。
+
+★★ **⑴ 和音のオクターブ規則は今のまま（ユーザーと合意・第616）**: 問い＝「先頭をアンカーに上へ積む」より「アンカーから 4 度以内の近い方」が一貫しないか。答え＝近い方の規則は三和音の 5 度（完全 5 度＝4 度超）を必ず下へ落とす＝`<c e g>` が G3 C4 E4・`<c g>`・`<c f g>`（sus4）も転回形になり、`<< c e g >>` が下がる。今の規則は「横＝アンカーは直前に最も近い（単音と同じ）／縦＝残りはバスの上に積む」の 2 本で、`<< >>` は同じ中身の `< >` を順に鳴らすだけ。アルペジオも最初の音が最低音のことが多い（伴奏形・ベース・練習形）ので合う。例外は 1 字（下へは `,`・上からの下行は先頭に `'`）。
+★ **⑵ 和音の hover にコード名**（ユーザー提案）: `MeasureCollector.RecordsChordSymbols`（既定 off）＝その collect が歩く和音・`<< >>`・`q` ごとに、裸の `@chord` が刷る名前を `ChordSymbols`（span 開始 → 文字列）へ。`@chord` の分岐は `NameFromNotes` に括り出して共有＝hover と紙面は同じ読み手。LSP の hover は構成音の上でも和音へ上がり、その part だけ collect（`Collect(tree, part)`）。`<d f a>`＝`Dm`・`<f d a>`＝`Dm/F`（書いた先頭がバスだと見える）・名前の無い和音は従来の **Chord**。網 `ChordHoverTests` 7 本。CHANGELOG Unreleased／Editor。
+
+終了: HEAD `a70dd6c7`＋docs・full **9155 / 0 / 2 / 9157**。
+
+## 以下は第615セッションの経緯
+
+### 1.1 第615セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p615`（HEAD `a91eff68`・full **9148 / 0 / 2 / 9150**）。着手＝長い score（`big12.lys` 39 頁）の残り collect 9.3＋layout 20 ms の地図。計器＝第604 の laps＋Lab `sessions/p613/lathost`（`ZZ_PASSES`・`ZZ_GC`）＋ dotnet-trace と `sessions/p589/cpuan`（報告 Lab `sessions/p615/`）。
+
+★ **⑴ layout 20 ms の内訳**（打鍵あたり）: 仮の注釈 pass 5.4・仕上げ 4.9・段数 4.2・段ごと 2.6・改行 2.3・頁 0.9＝編集した段の本当の仕事（梁・skyline）は約 3 ms。**残りは全 104 段を毎打鍵なめる pass の和**。
+★ **⑵ 抽出の頭**（render 内の inclusive）: `ArticulationEngraver.CalculateWithFingerings` 12.5%（script は全 score を毎回・運指は `FingScriptMemo` で段ごと memo 済み）／`ChooseSystemCount`＋`PageBreaker.SolveUnconstrained` 11.3%／collect の live walk 約 10%／`MeasureContentKey.Compute` 7.5%（`AddIntrinsic` が 58%）／`SvgSystemFragmentCache.AppendFragment` 5.8%（変わらない頁の文字列も組み直す）／`TabResolver.ResolveTabStrings` 4.3%。**どれも単独 2〜7%**＝長い score だけの話（コーパスでは各 0.1〜0.4%）。
+★ **⑶ GC の設定は効かない**: `DOTNET_GCgen0size` 64／256 MB・`gcConcurrent=0` で render 平均 2.38〜2.55 ms（既定 2.46）。trace の `PollGC` 48% は trace 自身の水増し。
+⇒ 長い score を大きく縮めるのは「変わらない段の注釈・頁の結果を丸ごと引き継ぐ」設計（script の段ごと memo が最初の 1 歩）＝ユーザー判断。
+
+終了: HEAD `a91eff68`＋docs（コードの変更なし）・full **9148 / 0 / 2 / 9150**。
+
+## 以下は第614セッションの経緯
+
+### 1.1 第614セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p614`（HEAD `e8348001`・full **9147 / 0 / 2 / 9149**）。着手＝第613 ⑶⒜（行頭の音の編集で尾の splice が落ちる）。
+
+★ **⑴ 直した**（`CollectResumePlanner.GreenPrefixAgrees`）: Kind の違う node でも、両側とも最初の実字が P 以後（P より前は先頭 token の leading trivia だけ＝prefix の bytes が等しいので同じ空白）なら一致とみなす＝P ちょうどで始まる node と同じ扱い。網 `CollectEditResumeTests.Splice_ThePitchThatOpensAnIndentedLine_StillSplicesTheTail`（120 小節・行頭の c→d・full と一致＋spliced > 40・毒＝旧の `return false` で赤）。keystroke verify 6 種 19,560 打鍵 **0 mismatch**（pitch の spliced 50.91 → 52.37 bars/key・他は不変）。
+★ **⑵ 効果**（GC を打鍵の外で回した同窓 A/B・Lab `sessions/p613/lathost` `ZZ_GC=1`）: `big12.lys`（39 頁）45.1 → 36.6 ms／打鍵（−19%・collect 15.9 → 9.3）。コーパス（6 頁まで）は collect 0.66 → 0.62 ms で誤差並み。⚠️ GC を回さない測りでは layout が 20 → 29 ms に見えた＝GC の着地の揺れ（8 打鍵では読めない）。
+⇒ 長い score の残り: collect 9.3 ms（adopted 1,250＋spliced 1,040 小節でも O(n)＝walk の後の pass か写し）と layout 20 ms（O(n)）の地図。⒝ `_tieTargetWarnings`（side table 16）の件数ずれで walk 入口 abort＝前の walk が数を変えても尾を採れる設計（watermark を相対に）＝重い。
+
+終了: HEAD `04912360`＋docs・full **9148 / 0 / 2 / 9150**。
+
 ## 以下は第613セッションの経緯
 
 ### 1.1 第613セッション（2026-09-25・YT-DELL2）

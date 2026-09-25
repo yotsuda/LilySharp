@@ -684,6 +684,48 @@ internal sealed class ChordNameCollector
     private (LilySharp.Core.Music.ChordSymbolText Symbol, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(
         ChordEntrySyntax entry, int measure)
     {
+        var resolved = ResolveChordEntryText(entry, measure);
+        if (Facts != null)
+            Facts[entry.Span.Start] = new MeasureCollector.ChordHoverFacts(
+                resolved.Symbol.Text, Roman(resolved.Structure, measure), TonesOf(resolved.Structure));
+        return resolved;
+    }
+
+    /// <summary>Where the editor's hover facts go (<see cref="MeasureCollector.RecordsChordFacts"/>):
+    /// null for every render, so a chord row records nothing it is not asked for.</summary>
+    internal Dictionary<int, MeasureCollector.ChordHoverFacts>? Facts { get; set; }
+
+    /// <summary>
+    /// A symbol's tones as letters without octaves — a chord row names a chord but voices
+    /// none, so there is no octave to give: the slash bass first, then the chord's tones
+    /// from its root up (the bass's own letter dropped from them), e.g. C/E → E C G.
+    /// An unregistered quality (a raw suffix) has no interval set and lists nothing.
+    /// </summary>
+    private static System.Collections.Immutable.ImmutableArray<string> TonesOf(
+        LilySharp.Core.Music.ChordStructure? structure)
+    {
+        var tones = System.Collections.Immutable.ImmutableArray.CreateBuilder<string>();
+        if (structure == null || structure.RawSuffix != null)
+            return tones.ToImmutable();
+        static string Letter(int step, int alter) => "CDEFGAB"[((step % 7) + 7) % 7] + alter switch
+        {
+            >= 2 => "x", 1 => "#", -1 => "b", <= -2 => "bb", _ => "",
+        };
+        string? bass = structure.BassStep is { } bs ? Letter(bs, structure.BassAlter ?? 0) : null;
+        if (bass != null)
+            tones.Add(bass);
+        foreach (var tone in structure.Tones)
+        {
+            string letter = Letter(tone.Step, tone.Alter);
+            if (letter != bass)
+                tones.Add(letter);
+        }
+        return tones.ToImmutable();
+    }
+
+    private (LilySharp.Core.Music.ChordSymbolText Symbol, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntryText(
+        ChordEntrySyntax entry, int measure)
+    {
         string symbol = entry.SymbolText;
         if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
             return (parsed.PrintedSymbol(Spelling), parsed);

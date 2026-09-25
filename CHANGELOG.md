@@ -66,6 +66,18 @@ workflow attaches that section to the GitHub Release verbatim.
   `.xml`, which take the form's music and no staves, are unchanged. Of 942 books, 86 write a
   different twin for a second or later score; no first score's twin changes.
 
+### Editor
+
+- **Hovering a chord shows its chord symbol, its degree and its pitches.** A chord, a `<< >>`
+  arpeggio or a `q` — or any note inside one — hovers as the symbol a bare `@chord` on it would
+  print, read by the same code, so the hover and the page agree; then its Roman-numeral degree
+  in the key in force (what `as roman` prints); then the pitches it sounds, a chord's lowest
+  first and an arpeggio's in the order they play. In C major `<d f a>` is `Dm (IIm) D4 F4 A4`,
+  and `<f d a>` is `Dm/F (IIm/IV) F4 A4 D5`, which shows that the first member written is the
+  bass. A chord whose notes name no chord still lists its pitches. A `chords { }` entry hovers
+  the same way, its tones as letters, since a symbol voices no octave — `G7/B` is
+  `G7/B (V7/VII) B G D F`, the slash bass first.
+
 ## 0.8.0
 
 Every part gets its own MIDI track and sound, phrasing slurs arrive, and a long run of engraving

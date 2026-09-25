@@ -52,7 +52,10 @@ public sealed partial class LilySharpLanguageServer
         if (node == null)
             return null;
 
-        var content = GetHoverContent(node);
+        var chordLike = ChordLikeAt(node);
+        if (chordLike != null)
+            node = chordLike;
+        var content = chordLike != null ? ChordHover(doc.Tree, chordLike) : GetHoverContent(node);
         if (content == null)
             return null;
 
@@ -78,6 +81,105 @@ public sealed partial class LilySharpLanguageServer
     // table, so the two features cannot drift apart on the same construct).
     private static string? GetHoverContent(SyntaxNode node)
         => LanguageReference.Hover(node);
+
+    /// <summary>The chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio, <c>q</c> or <c>chords { }</c> entry the
+    /// hovered node is (or sits inside — a member pitch hovers as its chord), or null.</summary>
+    private static SyntaxNode? ChordLikeAt(SyntaxNode node)
+    {
+        for (var n = node; n != null; n = n.Parent)
+            if (n is ChordSyntax or ArpeggioSyntax or ChordRepetitionSyntax or ChordEntrySyntax)
+                return n;
+        return null;
+    }
+
+    /// <summary>
+    /// A chord's hover: the symbol a bare <c>@chord</c> on it would print — the same
+    /// reader (MeasureCollector.RecordsChordFacts), so the hover and the page cannot
+    /// disagree — its Roman-numeral degree in the key in force, and the pitches it sounds, a
+    /// chord's lowest first and an arpeggio's in played order: <c>`Dm/F (IIm/IV)`  F4  A4  D5</c>.
+    /// A <c>chords { }</c> entry hovers the same way, with its tones as letters (a symbol
+    /// voices no octave): <c>`Dm (IIm)`  D  F  A</c>. No "Chord:" head and no dash (VS Code drew it long and tight against its neighbours) — the symbol says what
+    /// it is. The pitches also fill the line: VS Code sizes a hover to at least 150 px, and
+    /// the symbol alone left most of it empty. A chord no collect reaches (a phrase no part
+    /// plays) keeps the plain construct hover.
+    /// </summary>
+    private static string? ChordHover(SyntaxTree tree, SyntaxNode chordLike)
+    {
+        string head = chordLike switch
+        {
+            ArpeggioSyntax => "**Arpeggio**",
+            ChordEntrySyntax => "**Chord symbol**",
+            _ => "**Chord**",
+        };
+        try
+        {
+            if (FindChordFacts(tree, chordLike) is { } facts)
+            {
+                var parts = new List<string>();
+                if (facts.Symbol != null)
+                    // Symbol and degree in ONE code span: outside it the parentheses stood off the
+                    // numeral by the span's own padding — "( V/II )" — and two spans set a double
+                    // gap between symbol and degree.
+                    parts.Add(facts.Roman != null ? $"`{facts.Symbol} ({facts.Roman})`" : $"`{facts.Symbol}`");
+                if (facts.Pitches.Length > 0)
+                    parts.Add(string.Join(" \u00A0", facts.Pitches.Select(PitchGlyphs)));
+                // A space and a no-break space, before the pitches and between them: Markdown
+                // folds a run of plain spaces into one, and one alone set them too tight.
+                if (parts.Count > 0)
+                    return string.Join(" \u00A0", parts);
+            }
+        }
+        catch (Exception)
+        {
+            // A document the collector cannot walk still hovers as the construct.
+        }
+        return head;
+    }
+
+    /// <summary>The facts a collect records for <paramref name="chordLike"/>. A chord in the
+    /// music is collected with only the part it is written in; a <c>chords { }</c> entry is a
+    /// row a SCORE places, so each score is collected until one holds it (an unnamed block
+    /// inside a part then falls back to that part's collect).</summary>
+    private static LilySharp.Core.Svg.Collector.MeasureCollector.ChordHoverFacts? FindChordFacts(
+        SyntaxTree tree, SyntaxNode chordLike)
+    {
+        int key = chordLike.Span.Start;
+        if (chordLike is ChordEntrySyntax)
+            foreach (var spec in LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree))
+            {
+                var scoreCollector = new LilySharp.Core.Svg.Collector.MeasureCollector { RecordsChordFacts = true };
+                scoreCollector.CollectMultiStaff(tree, spec);
+                if (scoreCollector.ChordFacts.TryGetValue(key, out var found))
+                    return found;
+            }
+        string? part = null;
+        for (var n = chordLike.Parent; n != null && part == null; n = n.Parent)
+            part = n switch
+            {
+                PartDeclarationSyntax p => p.Name.Text,
+                PartBlockSyntax b => b.Name,
+                _ => null,
+            };
+        var collector = new LilySharp.Core.Svg.Collector.MeasureCollector { RecordsChordFacts = true };
+        collector.Collect(tree, part);
+        return collector.ChordFacts.TryGetValue(key, out var facts) ? facts : null;
+    }
+
+    /// <summary>A trace pitch (<c>F#4</c>, <c>Bb3</c>, <c>Cx4</c>, <c>Dbb4</c>) with the
+    /// accidental as its sign: F♯4, B♭3, C𝄪4, D𝄫4.</summary>
+    private static string PitchGlyphs(string pitch)
+    {
+        if (pitch.Length < 2)
+            return pitch;
+        string rest = pitch.Substring(1);
+        string sign = rest.StartsWith("bb", StringComparison.Ordinal) ? "𝄫"
+            : rest.StartsWith('b') ? "♭"
+            : rest.StartsWith('#') ? "♯"
+            : rest.StartsWith('x') ? "𝄪"
+            : "";
+        int skip = sign switch { "𝄫" => 2, "" => 0, _ => 1 };
+        return pitch[0] + sign + rest.Substring(skip);
+    }
 
     // Delegate to the single, correct line/character -> offset conversion in
     // DocumentManager: it handles \n, \r\n AND lone \r line breaks and clamps the
