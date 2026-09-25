@@ -78,6 +78,12 @@ workflow attaches that section to the GitHub Release verbatim.
   the same way, its tones as letters, since a symbol voices no octave — `G7/B` is
   `G7/B (V7/VII) B G D F`, the slash bass first.
 
+- **The completion popup in the music is narrow again.** VS Code widens it to its widest
+  row's detail, and a handful of long explanations (`<< >>`, `cue`, `partial`, the page
+  breaks, the diatonic chord rows) stretched it over the preview beside the editor — over
+  the bars being typed. Each row's detail is now a short label (a chord row shows the notes
+  it inserts); the explanation moved to the row's documentation, shown in the details panel.
+
 ## 0.8.0
 
 Every part gets its own MIDI track and sound, phrasing slurs arrive, and a long run of engraving

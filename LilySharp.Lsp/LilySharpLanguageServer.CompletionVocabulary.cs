@@ -3332,13 +3332,13 @@ public sealed partial class LilySharpLanguageServer
             new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "2R" },
             // The kind is chosen from the popup this re-opens (GetRepeatKindCompletions), not
             // committed to here — this item used to insert `repeat percent 2 { }` outright.
-            new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = $"Repeat block — {string.Join(" | ", LanguageVocabulary.RepeatKinds)}", SortText = "3repeat", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
+            new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = "Repeat block", Documentation = string.Join(" | ", LanguageVocabulary.RepeatKinds), SortText = "3repeat", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "3tuplet" },
             new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "4time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
             new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "4break" },
-            new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "4nobreak" },
-            new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break here (LilyPond \\pageBreak; breaks the line too)", SortText = "4pagebreak" },
-            new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break here (LilyPond \\noPageBreak)", SortText = "4nopagebreak" },
+            new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break", Documentation = "LilyPond \\noBreak", SortText = "4nobreak" },
+            new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break", Documentation = "LilyPond \\pageBreak; breaks the line too", SortText = "4pagebreak" },
+            new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break", Documentation = "LilyPond \\noPageBreak", SortText = "4nopagebreak" },
         });
         // The navigation marks are music items in drum music as in pitched music.
         items.AddRange(NavigationMarkItems("5"));
@@ -3346,7 +3346,7 @@ public sealed partial class LilySharpLanguageServer
         // NESTED voice blocks silently become parallel siblings (verified),
         // so the snippet is withheld inside a voice wrapper.
         if (!insideVoice)
-            items.Add(new CompletionItem { Label = "voice", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "voice { $0 }", Detail = "Voice (hats up / kick+snare down)", SortText = "3voice" });
+            items.Add(new CompletionItem { Label = "voice", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "voice { $0 }", Detail = "Voice", Documentation = "Hats up / kick+snare down", SortText = "3voice" });
         return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }
 
@@ -3429,13 +3429,14 @@ public sealed partial class LilySharpLanguageServer
         // ⚠️ THIS ROW EXISTED ONCE AND WENT MISSING (owner, 2026-09-02: "実装したのに回帰して
         // なくなってしまった"); MusicChordCompletionTests is the net that was not there.
         static CompletionItem ChordItem(
-            string label, string notes, string detail, string group, int degree, int rank) => new()
+            string label, string notes, string detail, string documentation, string group, int degree, int rank) => new()
         {
             Label = label,
             Kind = CompletionItemKind.Value,
             FilterText = label,
             InsertText = notes,
             Detail = detail,
+            Documentation = documentation,
             SortText = $"{group}{degree:D2}{rank}",
         };
         // Two passes, not one: the emit order has to BE the sort order (all names, then all
@@ -3456,8 +3457,11 @@ public sealed partial class LilySharpLanguageServer
                 if (!ChordStructure.TryParseChordEntry(symbol, out var structure))
                     continue;
                 string chordNotes = Contract(structure.ToNoteChord(), contracted);
-                items.Add(ChordItem(symbol, chordNotes, $"{detail} ({c.Roman})  {chordNotes}", "0zc", c.Degree, rank));
-                degreeRows.Add(ChordItem(roman, chordNotes, $"Degree of the key — {symbol}  {chordNotes}", "0zd", c.Degree, rank));
+                // The detail is what the row inserts, and no more (MusicCompletionWidthTests: the
+                // popup is as wide as its widest detail); what the row IS goes to the
+                // documentation, which only the details panel shows.
+                items.Add(ChordItem(symbol, chordNotes, chordNotes, $"{detail} ({c.Roman})", "0zc", c.Degree, rank));
+                degreeRows.Add(ChordItem(roman, chordNotes, $"{symbol}  {chordNotes}", $"Degree of the key — {detail}", "0zd", c.Degree, rank));
             }
         }
         items.AddRange(degreeRows);
@@ -3473,7 +3477,8 @@ public sealed partial class LilySharpLanguageServer
                 {
                     Label = name,
                     Kind = CompletionItemKind.Reference,
-                    Detail = "Phrase reference — plays the phrase here (' / , shift it an octave)",
+                    Detail = "Phrase reference",
+                    Documentation = "Plays the phrase here (' / , shift it an octave)",
                     SortText = "0zp" + (p++).ToString("D2"),
                 });
         }
@@ -3486,7 +3491,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "1R" },
                 // `q` repeats the previous chord (Parser.Music ParseChordRepetition; LilyPond's
                 // q). Offered beside the rests as the other pitchless item a bar is built of.
-                new CompletionItem { Label = "q", Kind = CompletionItemKind.Value, Detail = "Repeat the previous chord (q4; q' an octave up)", SortText = "1q" },
+                new CompletionItem { Label = "q", Kind = CompletionItemKind.Value, Detail = "Repeat the previous chord", Documentation = "q4; q' an octave up", SortText = "1q" },
 
                 // Structures. ⚠️ NO `|: :|` and NO `[1. …]` here: repeat structure is written
                 // in a `form { … }` and nowhere else since 2026-08-31 (LYS1034 — a `|:` in
@@ -3496,32 +3501,32 @@ public sealed partial class LilySharpLanguageServer
                 // abbreviate notes rather than change the playing order.
                 // The kind is chosen from the popup this re-opens (GetRepeatKindCompletions),
                 // not committed to here — this item used to insert `repeat unfold 2 { }` outright.
-                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = $"Repeat block — {string.Join(" | ", LanguageVocabulary.RepeatKinds)}", SortText = "2repeatkw", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
+                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat $0", Detail = "Repeat block", Documentation = string.Join(" | ", LanguageVocabulary.RepeatKinds), SortText = "2repeatkw", Command = new Command { Title = "Suggest repeat kind", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
-                new CompletionItem { Label = "<< >>", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "<< $0 >>", Detail = "Arpeggio: sequential notes, octaves stacked above the first (like a chord). Add a duration after >> for an auto-tuplet.", SortText = "2arpeggio" },
+                new CompletionItem { Label = "<< >>", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "<< $0 >>", Detail = "Arpeggio", Documentation = "Sequential notes, octaves stacked above the first (like a chord). Add a duration after >> for an auto-tuplet.", SortText = "2arpeggio" },
                 new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
                 new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
                 new CompletionItem { Label = "appoggiatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "appoggiatura { $0 }", Detail = "Unslashed grace note", SortText = "2appoggiatura" },
                 // A cue is a REGION (GRAMMAR Cue: `cue [CLEF] { … }`), not a note
                 // annotation — the popup had no row for it until 2026-09-10.
-                new CompletionItem { Label = "cue", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "cue { $0 }", Detail = "Cue notes (small; LilyPond CueVoice) — `cue bass { … }` writes them in the quoted instrument's clef", SortText = "2cue" },
+                new CompletionItem { Label = "cue", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "cue { $0 }", Detail = "Cue notes", Documentation = "Small notes (LilyPond CueVoice) — `cue bass { … }` writes them in the quoted instrument's clef", SortText = "2cue" },
                 new CompletionItem { Label = "break", Kind = CompletionItemKind.Keyword, InsertText = "break", Detail = "Force a line/system break here", SortText = "2break" },
-                new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break here (LilyPond \\noBreak)", SortText = "2nobreak" },
-                new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break here (LilyPond \\pageBreak; breaks the line too)", SortText = "2pagebreak" },
-                new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break here (LilyPond \\noPageBreak)", SortText = "2nopagebreak" },
+                new CompletionItem { Label = "noBreak", Kind = CompletionItemKind.Keyword, InsertText = "noBreak", Detail = "Forbid a line break", Documentation = "LilyPond \\noBreak", SortText = "2nobreak" },
+                new CompletionItem { Label = "pageBreak", Kind = CompletionItemKind.Keyword, InsertText = "pageBreak", Detail = "Force a page break", Documentation = "LilyPond \\pageBreak; breaks the line too", SortText = "2pagebreak" },
+                new CompletionItem { Label = "noPageBreak", Kind = CompletionItemKind.Keyword, InsertText = "noPageBreak", Detail = "Forbid a page break", Documentation = "LilyPond \\noPageBreak", SortText = "2nopagebreak" },
 
                 // Mid-measure declarations
                 new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef", Command = new Command { Title = "Suggest clef", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Change key signature", SortText = "3key", Command = new Command { Title = "Suggest key tonic", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time", Command = new Command { Title = "Suggest time signature", CommandIdentifier = "editor.action.triggerSuggest" } },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Change tempo (BPM)", SortText = "3tempo", Command = new Command { Title = "Suggest tempo", CommandIdentifier = "editor.action.triggerSuggest" } },
-                new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode (absolute / relative)", SortText = "3octave", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
+                new CompletionItem { Label = "octave", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "octave $0", Detail = "Octave mode", Documentation = "absolute / relative", SortText = "3octave", Command = new Command { Title = "Suggest octave mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // `partial` in the music: refused (LYS1024) from 2026-09-02, when this row taught a
                 // spelling the validator rejected (owner report), and offered again since
                 // 2026-09-08, when the owner decided a mid-piece pickup is written in the music
                 // at the bar's start, per part (PartialScopeValidator). The section-header list
                 // (SectionHeaderDirectiveItems) still offers the opening pickup.
-                new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup: the bar this stands in is this long (write it at the bar's start, in every part sharing the bar)", SortText = "3partial" },
+                new CompletionItem { Label = "partial", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "partial $0", Detail = "Pickup", Documentation = "The bar this stands in is this long (write it at the bar's start, in every part sharing the bar)", SortText = "3partial" },
 
                 // Grob overrides
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $0", Detail = "Override grob property", SortText = "4override", Command = new Command { Title = "Suggest grob property", CommandIdentifier = "editor.action.triggerSuggest" } },
@@ -4128,7 +4133,7 @@ public sealed partial class LilySharpLanguageServer
         ["to coda"] = "Jump to the coda",
         ["fine"] = "End here",
         ["dc"] = "Da Capo — repeat from the top",
-        ["ds"] = "Dal Segno — repeat from the segno",
+        ["ds"] = "Dal Segno — from the segno",
         ["dc al fine"] = "Da Capo al Fine",
         ["dc al coda"] = "Da Capo al Coda",
         ["ds al fine"] = "Dal Segno al Fine",
