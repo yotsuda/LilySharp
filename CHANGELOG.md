@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A beamed grace group on a lower staff stays on its heads.** Every system is spaced against
+  its own staves, so a lower staff stands at a different depth below the system top from one
+  system to the next; the grace's beam and its stems were drawn at ONE score-wide depth while
+  the heads followed their system, so on the other systems the beam floated above or below the
+  heads, further the more that system's spacing differed. The grace now reads its own system's
+  staff. Of 942 books, 1 changes (its grace beams only).
+
 - **The first system is indented as LilyPond indents it — 15 mm — whether or not a staff
   names an instrument.** Lily# used to indent only a score whose staves carried names and
   set every other first system flush left, so every nameless book's first line differed from

@@ -178,7 +178,7 @@
 - **:647** own widths of one x. No ledger point measures a chord fingering's X, so this stays as
 - **:648** it was rather than being changed unobserved.
 ### `LilySharp.Core/Svg/Layout/GraceNoteEngraver.cs`
-- **:522** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
+- **:533** observed by: NO OBSERVER — every book in the corpus quants, so nothing reaches the
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`

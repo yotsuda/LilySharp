@@ -121,7 +121,8 @@ internal static class GraceNoteEngraver
         Dictionary<int, double>? staffYByIndex = null,
         Dictionary<int, Staff>? staffByIndex = null,
         ImmutableArray<ArticulationItem> articulations = default,
-        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null)
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        Func<int, int, double>? staffYAt = null)
     {
         if (graceNotes.IsDefaultOrEmpty)
             return ImmutableArray<GraceNoteLayout>.Empty;
@@ -160,8 +161,18 @@ internal static class GraceNoteEngraver
                 graceVoices, grace.VoiceIndex,
                 LayoutUtilities.ResolveStaffMeasures(
                     measuresByStaff, grace.StaffIndex, score.Voice.Measures));
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
+            // THE OFFSET ON THE GRACE'S OWN SYSTEM (staffYAt, the pass's per-system resolver),
+            // not one score-wide value: every system is spaced against its own staves'
+            // skylines, so a staff's offset below the system top differs from system to
+            // system, and the renderer draws the BEAM and its stems from this number while the
+            // ordinary pass draws the heads from the system's own staff — a lower staff's beam
+            // stood off its heads by the difference (scratch/SongsByChatGPT/
+            // 01_glass_harbor_suite.lys page 6, owner report 2026-09-25). The single map is
+            // the fallback for a pass without the resolver.
+            double staffOffset = staffYAt != null
+                ? staffYAt(grace.MeasureIndex, grace.StaffIndex)
+                : staffYByIndex != null
+                    && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
             // Tab staves render grace notes as small fret numbers, not noteheads.
             TuningType? tabTuning = null;
             var tabClef = ClefType.Treble;

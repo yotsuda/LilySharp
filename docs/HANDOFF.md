@@ -146,19 +146,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第622セッション（2026-09-25・YT-DELL2）
+### 1.1 第624セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p622`（HEAD `c2b7fa4f`・full **9161 / 0 / 2 / 9163**）。ユーザー: section の中で出る補完が横に長く、プレビューの入力中の小節に被る。原因＝VS Code は suggest の幅を最も広い行の label＋inline detail に合わせる（`suggestWidget.ts` の `fitWidthToDetails`）。**音楽の補完の detail を 32 字以内に**（和音の行は挿入する音だけ・度数の行は `Dm7  <d f a c>`・説明は `Documentation` へ＝details パネルだけに出る）。68 行が超えていた。網 `MusicCompletionWidthTests`。⚠️ 他の文脈（`@` の後など）は未測定。
+同じ会話の続き。★ `-Start p624`（HEAD `90b4a26c`・full **9162 / 0 / 2 / 9164**）。第623 ⚠️ の確認＝`LyricEngraver.CalculateLayouts` の `verseY` は score 全体で 1 つの `staffYByIndex`／`noteBoundAnchorY` から出るが、**誤りは無い**: 3 staff で真ん中の staff の深さを段ごとに変えた本（Lab `sessions/p624/lyr3.lys`＝note-bound・`lyr4.lys`＝他の staff を歌う独立行）で、どちらも各段の staff の直下に並ぶ（段ごとの chain＝`DistributeLooseLines`／skyline drop が最終位置を決め、初期値は響かない）。コードの変更なし。
 
-終了: HEAD `0e1577c1`＋docs・full **9161 / 0 / 2 / 9163**。
+終了: HEAD `90b4a26c`＋docs・full **9162 / 0 / 2 / 9164**。
 
-## 以下は第621セッションの経緯
+## 以下は第623セッションの経緯
 
-### 1.1 第621セッション（2026-09-25・YT-DELL2）
+### 1.1 第623セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p621`（HEAD `e4606bf4`・full **9160 / 0 / 2 / 9162**）。ユーザー実機: `Dm7  (IIm7)  D4 F4 A4 C5`→`Dm7 (IIm7)  D4  F4  A4  C5`＝名前と度数を 1 つのコード span に（2 つの span は二重の隙間）・音と音の間も「空白＋U+00A0」（網の期待値 12 本）。
+同じ会話の続き。★ `-Start p623`（HEAD `59593374`・full **9161 / 0 / 2 / 9163**）。ユーザー報告: `scratch/SongsByChatGPT/01_glass_harbor_suite.lys` の PDF 6 頁で grace の符尾が符頭から離れ、頁の下ほどひどい（L65・L269・L303）。
 
-終了: HEAD `842a2a8f`＋docs・full **9160 / 0 / 2 / 9162**。
+★ **⑴ 原因＝grace の staff 位置が score 全体で 1 つ**: `GraceNoteEngraver.Calculate` は `staffYByIndex`（staff → 段の上端からの深さ、最後に書いた段の値）を読み、描画（`SharedRenderer.GraceNotes`）は連桁と符尾をその値から、符頭は通常の pass が段自身の staff から描く。段ごとに skyline で間隔が決まるので、下の staff の深さは段ごとに違う＝連桁が差の分だけ上下へ浮く。注釈 pass の `staffYAt`（段ごとの resolver・ペダル括弧は 2026-09-23 に移行済み）を渡して直した。網 `GraceStaffOffsetTests`（2 段で深さ 11.59 と 9.384・毒＝旧で赤）。掃き 942 冊で動いたのは 1 冊（Something That I Want・墨だけ）・pitch verify 1,880 打鍵 0 mismatch。
+⚠️ 同じ形の残り候補: `LyricEngraver`（:454 の行 anchor が `staffYByIndex`）＝未確認。
+
+終了: HEAD `7509d4b1`＋docs・full **9162 / 0 / 2 / 9164**。
 
 ## 2. 開いている作業
 
