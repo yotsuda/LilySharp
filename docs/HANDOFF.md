@@ -145,6 +145,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第632セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p632`（full **9173 / 0 / 2 / 9175**）。ユーザー:「gh Pages を準備して」＋途中で「index.html の最初の画像を、リアルタイムでプレビューが更新される動画に差し替えたい。適切な .lys とシナリオを提案して」。
+
+★ **⑴ Pages（commit `site: …`）**: `scratch/site-showcase`（git 管理外）のソースだけを **`site/`** に移した（.lys・examples/*.lys・build-*.ps1・manual-body.html・hero-vscode.png）。生成物（2 頁・全 SVG・`_site/`）は `site/.gitignore`＝毎回ソースから描く。スクリプトは Linux でも動く（`/` 区切り・`$IsWindows` で lysc/lysc.exe・`../` が repo 根）。`build-site.ps1` は検査の後に **2 頁と頁が参照するファイルだけ**を `site/_site/`（＋`.nojekyll`）へ集める。`<video>` の poster／`<source>` の欠けも検査する。**`.github/workflows/pages.yml`**＝master への push（site/・Core・Cli・props・README・自身）と手動で、ubuntu で lysc を Release ビルド→`build-site.ps1`→upload-pages-artifact→deploy-pages。⚠️ **ユーザーが一度だけ Settings → Pages → Source を「GitHub Actions」にする**。Linux 上の実走は未確認（push 後の初回 run が最初）。`scratch/site-showcase` は古い写し＝編集は `site/` で。
+★ **⑵ ヒーロー動画の受け口**: `hero-vscode.mp4`（任意で `.webm`）があれば muted・loop・playsinline の `<video>`、poster＝`hero-vscode.png`、`prefers-reduced-motion` では再生せず controls。偽 mp4 で経路を確認して消した。
+★ **⑶ 動画のシナリオ案**: Lab `sessions/p632/hero-stages.ps1`＝Morning Light の 4 小節版で 6 段階（開始→旋律を打つ→chords→lyrics→`bass { walk }`＋`staff bass`→`tab bass`）。全段階で診断 0（bass は `phrase walk` に置き、途中の小節数不一致 LYS2007 を避けた）。各段階の PNG も同所。
+
+終了: docs のみ追加。
+
+## 以下は第631セッションの経緯
+
 ### 1.1 第631セッション（2026-09-25・YT-DELL2）
 
 同じ会話の続き。ユーザーが p630 までを push。★ `-Start p631`（HEAD `746123f1`）。ユーザー:「まず readme.md から直して。morning-light.lys を readme.md に掲示して」。
@@ -154,18 +166,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑵ 終了時の full で `DeadCitationsDoNotGrow` が赤**（912＞834）＝ユーザーが push 前に 614〜630 の 105 commit を 13 本に regroup したため。前例どおり検算（旧 tip と新 tip `746123f1` の tree が同一 `060aae9e`＝上昇 78 は到達性を失った引用だけ）して上限を 912 に上げ、段落を足した（re-point しない）。⚠️ origin の CI もこの赤のはず＝次の push で緑に戻る。
 
 終了: HEAD＝その guard commit＋docs。
-
-## 以下は第630セッションの経緯
-
-### 1.1 第630セッション（2026-09-25・YT-DELL2）
-
-同じ会話の続き。★ `-Start p630`（HEAD `27856853`・full **9171 / 0 / 2 / 9173**）。ユーザー: GitHub Pages 用の `scratch/site-showcase`（git 管理外）をレビュー→「性能表は外して、2 の仕組みを入れて直して」。
-
-★ **⑴ レビュー**（3 エージェント並行＋私の裏付け）: 生成物（`index.html`←`build-preview.ps1`、`grammar.html`←`manual-body.html`＋`build-manual.ps1`、例←`build-examples.ps1`）が 0.5.0 のまま。例の `bass-guitar`・`french-horn`・`section ~A`・`@invertedturn`・part の `time`、`F#m7b5`（登録外＝構成音なし・**警告も出ない**）、SVG 欠け（ギャラリー 5・例 14・chord-axes）、開発メモ、版数の手書き。
-★ **⑵ 直した**（約 80 か所・手順は Lab `sessions/p630/fix-*.ps1`・元は `site-showcase-before/`）: 仕様の古い記述を SYNTAX_REFERENCE／コンパイラに合わせ（本当の診断文をコンパイラから取得）、性能表を削除、版数は `Directory.Build.props` から読む。**`build-site.ps1`＝例・ギャラリー・図を `lysc check` してから描き、2 頁を生成し、画像の欠け・他の版数・置換残り／開発メモ・頁に載る完全な例のコンパイル失敗が 1 つでもあれば失敗**（毒 3 種で赤を確認）。今は全部通る（例 14・図 7・頁内の完全例 23）。
-⚠️ 提案: `F#m7b5` のような `b`／`#` のテンションは黙って登録外になる＝コンパイラが `m7-5` を示す警告を出すべき（未着手）。
-
-終了: HEAD `27856853`＋docs（コードの変更なし）・full **9171 / 0 / 2 / 9173**。
 
 ## 2. 開いている作業
 
