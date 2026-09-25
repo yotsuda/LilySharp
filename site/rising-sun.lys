@@ -1,0 +1,34 @@
+// The House of the Rising Sun — traditional (American folk, public domain).
+// Fingerstyle arrangement written for this showcase: 6/8 arpeggios in open position.
+// One part, two rows: `staff gt` engraves the notation and `tab gt` the tablature.
+title "The House of the Rising Sun"
+composer "Traditional"
+tempo "Andante" 4. = 56
+time 6/8  key a minor
+
+part gt { clef treble_8 tuning guitar }
+
+phrase Amchord { a8 e' a c\2 a e | }
+phrase Cchord  { c8 e g c g e | }
+phrase Dchord  { d8 a' d fis d a | }
+phrase Fchord  { f,8 c' f a f c | }
+phrase E7chord { e,8 b' e gis d' gis, | }
+
+section Verse {
+  chords prog { Am | C | D | F | Am | C | E7 | E7 | }
+  gt { a8@p e' a c\2 a e | Cchord Dchord Fchord Amchord Cchord E7chord E7chord | }
+}
+
+section Close {
+  chords prog { Am | C | D | F | Am | E7 | Am | Am | }
+  gt { Amchord Cchord Dchord Fchord Amchord
+       e8@rit b' e gis d' gis, | a,8 e' a c\2 a e | a,8 e' a c\2@!rit a e | }
+}
+
+form main { Verse Close }
+
+score main "rising-sun" {
+  chords prog     // the symbols, above ...
+  staff gt        // ... the notation ...
+  tab gt          // ... and the tablature under it
+}

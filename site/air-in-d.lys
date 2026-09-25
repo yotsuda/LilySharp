@@ -1,0 +1,25 @@
+// Air in D — an original binary-form dance written for this showcase.
+// Two voices share ONE staff (stems up and down), and the repeat with its
+// first and second endings is written in the `form`, not in the music.
+title "Air in D"
+composer "A Lily# demonstration"
+tempo "Grazioso" 4 = 112
+time 3/4
+key d major
+
+part kb { clef treble }
+
+section Body {
+  kb { voice { d'4@mordent e fis | g2 fis4 | e4 d@turn cis | d2. |
+               fis4 g a | b2 a4 | g4 fis e | fis2. | }
+             { fis4 g a | b2 a4 | g4 fis e | fis2. |
+               a4 b cis | d2 cis4 | b4 a g | a2. | } }
+}
+section First  { kb { voice { a'2.@trill | } { cis'2. | } } }
+section Second { kb { voice { d'2.@fermata | } { fis2. | } } }
+
+form main { |: ~Body [1. ~First] :| [2. ~Second] }
+
+score main "air-in-d" {
+  staff kb  // one staff — both voices live on it
+}

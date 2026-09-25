@@ -1,0 +1,14 @@
+// Rests, spacers, a full-measure rest, a pitched rest, chords by letter and by
+// scale degree, and the pitchless slash note.
+octave absolute
+time 4/4
+key c major
+part melody { clef treble }
+section A {
+  melody {
+    c4 r4 s4 g4 | R1 | c4 a,4@rest d4 r4 |
+    <c e g>4 <c 3 5>4 <1 3 5>2 | /4 4 8 8 4 |
+  }
+}
+form main { ~A }
+score main { staff melody }

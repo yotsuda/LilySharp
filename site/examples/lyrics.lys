@@ -1,0 +1,15 @@
+// A lyric track sings a part. '-' joins syllables of one word, '~' holds the previous
+// syllable over one more note, and '|' mirrors the music's barlines.
+octave absolute
+time 4/4
+key f major
+part melody { clef treble }
+section A {
+  melody { f4 g a bes | c'2 a4 f4 | g4 a bes a | f1 | }
+  lyrics words sings melody {
+    Sing- ing all the | day ~ long, |
+    ev- ery word a | song |
+  }
+}
+form main { ~A }
+score main { staff melody  lyrics words }

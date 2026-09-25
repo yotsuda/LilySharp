@@ -1,0 +1,20 @@
+// `sings` is a property of the lyric TRACK, and it can be spelled at either site:
+// on the definition, on the score row, or both. Spelling it on the ROW is what lets
+// ONE set of words serve several staves — here the same track is placed twice.
+octave absolute
+time 4/4
+key c major
+part sop { clef treble }
+part alt { clef treble }
+section A {
+  sop { c'4 c' b a | g1 | }
+  alt { e4 e g f | e1 | }
+  lyrics verse { Sing- ing a song | now | }
+}
+form main { ~A }
+score main {
+  staff sop "Soprano"
+  lyrics verse sings sop
+  staff alt "Alto"
+  lyrics verse sings alt
+}

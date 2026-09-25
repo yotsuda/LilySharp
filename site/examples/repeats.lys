@@ -1,0 +1,11 @@
+// A repeat changes the playing ORDER, so it lives in the form, never in the music.
+// The endings name sections; the bracket and the repeat dots are drawn from this.
+octave absolute
+time 3/4
+key g major
+part melody { clef treble }
+section Body   { melody { d'4 g' fis' | g'2. | } }
+section First  { melody { a'2. | } }
+section Second { melody { g'2.@fermata | } }
+form main { |: ~Body [1. ~First] :| [2. ~Second] }
+score main { staff melody }

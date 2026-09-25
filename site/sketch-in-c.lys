@@ -1,0 +1,27 @@
+// Sketch in C — a twelve-bar jazz chord chart written for this showcase.
+// Chord symbols are typed the way they print (F#m7-5, not LilyPond's fis:m7.5-).
+// An altered tension takes '+' or '-': '#' and 'b' belong to the ROOT, which is
+// what keeps Bb9 from being ambiguous. Rhythm is `/`, and only the hits that
+// matter are written. One `break` splits the chart into two six-bar lines.
+title "Sketch in C"
+composer "A Lily# demonstration"
+tempo "Medium Swing" 4 = 138 swing
+time 4/4
+key c major
+
+part comp { clef treble }
+
+section Chorus {
+  chords prog { Cmaj7 | Am7 | Dm7 | G7 | Cmaj7 | F#m7-5 B7-9 |
+                Em7 | A7+5 | Dm7 | G7 | Bb7/D | Cmaj7 | }
+  comp {
+     | | | s2.. /8~ | /4 s2. | | break
+     | | | | | | }  // one kick, on the "and" of 4
+}
+
+form main { ~Chorus }
+
+score main "sketch-in-c" {
+  chords prog                     // symbols across the top
+  staff comp "Rhythm" as lines 1  // one-line slash staff under them
+}

@@ -1,0 +1,16 @@
+// One word sets several things at once: each part's clef, the octave its bare letters
+// anchor to, its tuning (so its frets), what it sounds, and its printed name. Neither
+// part below says `clef`, `octave` or `tuning` — the preset already did, which is why the
+// same letters land at C4 on the guitar and at C3 on the bass.
+time 4/4
+part gt { instrument guitar }
+part bs { instrument bass "Bass" }
+section A {
+  gt { c4 e g e | }
+  bs { c4 e g e | }
+}
+form main { ~A }
+score main {
+  staff gt  tab gt
+  staff bs  tab bs
+}

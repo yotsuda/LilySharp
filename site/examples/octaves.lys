@@ -1,0 +1,10 @@
+// Relative is the DEFAULT: each bare pitch takes the octave nearest the note before
+// it. `octave absolute` switches that off and anchors a bare c to C4 (or to the part's
+// `octave N`), so a wrong octave never cascades — worth it when a generator is writing,
+// not by hand.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A { melody { c4 c' c'' c, | e g e' g, | } }
+form main { ~A }
+score main { staff melody }

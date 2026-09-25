@@ -1,0 +1,6 @@
+# Build output of build-site.ps1: the pages and pictures are drawn from the sources here on
+# every build (locally and in .github/workflows/pages.yml), never committed.
+/index.html
+/grammar.html
+*.svg
+/_site/

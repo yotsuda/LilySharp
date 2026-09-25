@@ -1,0 +1,10 @@
+// A tie joins the SAME pitch, a slur joins different ones, and square brackets
+// beam by hand where the meter's own beaming is not what you want.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody { c4~ c4 d4( e4) | <c e>4( <d f>4) c8[ d e f] | }
+}
+form main { ~A }
+score main { staff melody }

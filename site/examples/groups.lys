@@ -1,0 +1,14 @@
+// Tuplets nest, grace notes come in three flavours, and `voice { } { }` opens a
+// span of simultaneous voices on ONE staff.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody {
+    tuplet 3/2 { c8 d e } tuplet 3/2 { f8 g a } c'2 |
+    grace { d16 e } f4 acciaccatura { a16 } b4 appoggiatura { c'8 } d'4 r4 |
+    voice { g'2 a'2 } { c'2 c'2 } |
+  }
+}
+form main { ~A }
+score main { staff melody }

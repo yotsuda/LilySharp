@@ -1,0 +1,9 @@
+// A duration standing alone repeats the previous event at the new length, and `q`
+// repeats the previous CHORD. Only `q` can be displaced: q' is an octave up.
+time 4/4
+part melody { clef treble }
+section A {
+  melody { c8 8 8 8 c4 4 | <c e g>4 q q' q | }
+}
+form main { ~A }
+score main { staff melody }

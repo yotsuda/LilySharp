@@ -1,0 +1,24 @@
+// What you WRITE and what it PRINTS are independent axes.
+// Row 1 and row 2 are the SAME chord part, printed two ways.
+// Row 3 is written in degrees and prints as names — the default.
+// The staff derives its symbols from the notes: <c e g>@chord prints "C".
+title "One progression, four spellings"
+time 4/4
+key c major
+
+part m { clef treble }
+
+section A {
+  m { <c e g>1@chord | <d f a>1@chord | <g b d>1@chord | <c e g>1@chord | }
+  chords byName  { Cmaj7 | Dm7 | G7 | Cmaj7 | }
+  chords byRoman { Imaj7 | IIm7 | V7 | Imaj7 | }
+}
+
+form main { ~A }
+
+score main {
+  chords byName             // written as names, printed as names
+  chords byName as roman    // the SAME row, printed as degrees
+  chords byRoman            // written as degrees, printed as names
+  staff m                   // the symbol derived from the notes
+}

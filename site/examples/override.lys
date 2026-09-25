@@ -1,0 +1,16 @@
+// The override vocabulary is four properties. `once` applies to the next note only,
+// and `revert` puts the default back.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody {
+    override NoteHead.color = red
+    c4 d e f |
+    revert NoteHead.color
+    once override Stem.transparent = true
+    g4 a b c' |
+  }
+}
+form main { ~A }
+score main { staff melody }

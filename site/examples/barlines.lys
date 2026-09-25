@@ -1,0 +1,10 @@
+// Every written '|' closes exactly one measure, so a bar with nothing in it is an
+// empty bar. '||' and '|.' decorate the bar behind them; '!' is dashed.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody { c1 | | d1 || e1 ! f1 |. }
+}
+form main { ~A }
+score main { staff melody }

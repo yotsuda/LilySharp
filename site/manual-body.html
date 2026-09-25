@@ -1,0 +1,953 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Orientation</p>
+  <ol>
+    <li><a href="#read">How to read this</a></li>
+    <li><a href="#glance">A file at a glance</a></li>
+    <li><a href="#lexical">Lexical rules</a></li>
+  </ol>
+  <p class="grp">Writing music</p>
+  <ol>
+    <li><a href="#pitch">Pitches and octaves</a></li>
+    <li><a href="#duration">Durations</a></li>
+    <li><a href="#events">Notes, rests, chords</a></li>
+    <li><a href="#connect">Ties, slurs, beams</a></li>
+    <li><a href="#anno">Annotations</a></li>
+    <li><a href="#groups">Tuplets, grace notes, voices, cues</a></li>
+    <li><a href="#bars">Barlines and breaks</a></li>
+  </ol>
+  <p class="grp">Structure</p>
+  <ol>
+    <li><a href="#parts">Parts</a></li>
+    <li><a href="#phrases">Phrases</a></li>
+    <li><a href="#sections">Sections</a></li>
+    <li><a href="#lyrics">Lyrics</a></li>
+    <li><a href="#chordrows">Chords and chord rows</a></li>
+    <li><a href="#forms">Forms</a></li>
+  </ol>
+  <p class="grp">Output</p>
+  <ol>
+    <li><a href="#scores">Scores</a></li>
+    <li><a href="#tab">Tablature</a></li>
+    <li><a href="#paper">Paper and fonts</a></li>
+    <li><a href="#override">Override / revert</a></li>
+  </ol>
+  <p class="grp">Reference</p>
+  <ol>
+    <li><a href="#reserved">Reserved words</a></li>
+    <li><a href="#diagnostics">Diagnostics</a></li>
+    <li><a href="#lilypond">Coming from LilyPond</a></li>
+    <li><a href="#rough">Rough edges</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="read">
+  <p class="eyebrow">01</p>
+  <h2>How to read this</h2>
+  <p>This is a reference to the <code>.lys</code> language as Lily# {{VER}} accepts it.
+  Every example here is run through <code>lysc check</code> when the page is built — the
+  build fails if one does not compile. Where a claim is about something subtle, the page
+  says how it was measured.</p>
+  <p>Three ideas run through the whole language, and most surprises dissolve once you have
+  them:</p>
+  <ul>
+    <li><b>Music lives inside a part.</b> A file is a set of declarations. A bare note at
+    the top level is an error, and that is what lets a top-level <code>key</code> or
+    <code>time</code> always mean “the file's default” with no ambiguity.</li>
+    <li><b>Order carries meaning; clauses do not.</b> A <code>score</code> is a vertical
+    stack of bands. A lyric row under a staff is that staff's verse because it is
+    <i>under</i> it — not because a clause says so.</li>
+    <li><b>Anything that changes the playing order lives in the <code>form</code>.</b>
+    Repeats and endings are written there, never among the notes.</li>
+  </ul>
+  <p>There is one canonical way to write each idea. Where the language could have been
+  clever it is usually explicit instead.</p>
+</section>
+
+<section id="glance">
+  <p class="eyebrow">02</p>
+  <h2>A file at a glance</h2>
+  <p>The smallest complete document is four lines:</p>
+<pre>part melody { clef treble }
+section Main { melody { c4 d e f | g2 g | } }
+form main { Main }
+score main { staff melody }</pre>
+  <p>Everything else is optional, and top-level settings come first:</p>
+<pre>// comments are // to end of line, or /* … */
+title    "Song"
+composer "Composer"
+tempo    120                 // also: tempo "Allegro" 4 = 96, tempo 120 swing
+time     4/4                 // default 4/4; engraves as C, and 2/2 as cut-C
+key      c major             // default c major; all church modes work
+octave   absolute            // optional; relative is the default — see Pitches
+pitch    written             // optional; concert = the letters are what SOUNDS — see Transposing instruments
+
+fonts { serif "Georgia" }    // optional, a face per kind of text
+paper { size a4 }            // optional, page geometry
+
+part rightHand { clef treble }
+part leftHand  { clef bass octave 3 }
+
+phrase motif { c4 d e f | }  // optional reusable music
+
+section Main {
+  rightHand { motif g2 g | }   // a section binds music to each part by name
+  leftHand  { c2 c | g2 g | }
+}
+
+form main { Main }           // the playing order
+
+score main "out" {           // one or more render blocks
+  grandStaff { staff rightHand  staff leftHand }
+}</pre>
+  <p>The declaration order above is the conventional one. Parts must be declared before the
+  sections that use them, and a <code>score</code> names a <code>form</code>.</p>
+</section>
+
+<section id="lexical">
+  <p class="eyebrow">03</p>
+  <h2>Lexical rules</h2>
+  <table class="g">
+    <tr><th>Thing</th><th>Rule</th></tr>
+    <tr><td>Comments</td><td><code>// to end of line</code> and <code>/* block */</code></td></tr>
+    <tr><td>Case</td><td><b>Everything is case-sensitive.</b> <code>Treble</code> is not <code>treble</code>; it is an unknown symbol and an error, never a silent fallback.</td></tr>
+    <tr><td>Identifiers</td><td>Any Unicode letters. <code>phrase 動機 { … }</code> is fine.</td></tr>
+    <tr><td>Strings</td><td>Double quotes: <code>"Für Elise"</code></td></tr>
+    <tr><td>Numbers</td><td>Integers, and decimals as <i>values</i> (<code>3.5</code>). A decimal is never a duration — <code>c4.5</code> is an error, <code>c4.</code> is a dotted quarter.</td></tr>
+    <tr><td>Units</td><td>Glued to the number: <code>210mm</code>, <code>8.5in</code>. A space (<code>210 mm</code>) is an error that names the glued spelling.</td></tr>
+    <tr><td>Annotation prefix</td><td><code>@</code>. The backslash is used for one thing only: a string number (<code>c'\3</code>).</td></tr>
+  </table>
+  <p>Whitespace and newlines are not significant. You can put a whole part on one line or
+  one bar per line; the samples on the <a href="index.html">showcase page</a> do both.</p>
+</section>
+
+<section id="pitch">
+  <p class="eyebrow">04</p>
+  <h2>Pitches and octaves</h2>
+  <p>Note names are Dutch: <code>c d e f g a b</code>, sharp <code>is</code>, flat
+  <code>es</code>.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td><code>cis</code> <code>fis</code></td><td>C♯, F♯</td></tr>
+    <tr><td><code>ees</code> <code>bes</code></td><td>E♭, B♭</td></tr>
+    <tr><td><code>cisis</code> <code>deses</code></td><td>C𝄪, D𝄫</td></tr>
+    <tr><td><code>'</code> <code>,</code></td><td>octave up / down, repeatable (<code>c''</code>, <code>c,,</code>)</td></tr>
+  </table>
+
+  <h3>Two octave modes</h3>
+  <p><b>Relative (the default).</b> Each bare pitch takes the octave nearest the previous
+  note — an interval of a fourth or less — and <code>'</code>/<code>,</code> shift from
+  there. Compact, but one wrong mark moves everything after it.</p>
+  <p><b>Absolute.</b> Write <code>octave absolute</code> at the top level, in a part header,
+  or mid-music. Bare <code>c</code> is then C4 (or C<i>N</i> in a part that says
+  <code>octave N</code>) and the marks are absolute offsets from it: <code>c'</code> is C5,
+  <code>c,</code> is C3, resolved independently per note. A wrong octave stays one wrong
+  note instead of cascading.</p>
+  <p class="note"><b>Write relative.</b> It is the default, it is shorter, and it is how a
+  person reads music anyway — each note against the one before it. Reach for absolute when
+  something other than a person is doing the writing: a generator, an importer, or an AI
+  producing a score it cannot hear back. There the guarantee that a mistake stays local is
+  worth the extra marks; at the keyboard it usually is not.
+  <code>part bass { octave 3 }</code> re-anchors a low part so its commas do not pile up.</p>
+  <p>Sections restore the file-level mode, so a mid-music switch does not leak.</p>
+  <!--EXAMPLE:octaves-->
+</section>
+
+<section id="duration">
+  <p class="eyebrow">05</p>
+  <h2>Durations</h2>
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td><code>1 2 4 8 16 32 64 128</code></td><td>whole, half, quarter, …</td></tr>
+    <tr><td><code>4.</code> <code>4..</code></td><td>dotted, double-dotted</td></tr>
+    <tr><td>(omitted)</td><td>reuse the previous note's duration</td></tr>
+    <tr><td><code>c4:8</code></td><td>tremolo — repeat the note in eighths for its length</td></tr>
+  </table>
+  <p>A duration is <b>glued</b> to what it lengthens: <code>c4</code>,
+  <code>&lt;c e g&gt;4</code>. It never sits on a chord member —
+  <code>&lt;c e g2&gt;</code> is an error.</p>
+  <h3>The bare duration</h3>
+  <p>A duration standing alone repeats the previous note, chord or slash at the new length,
+  and sets the running default:</p>
+<pre>bes8 8 8 8        // four B♭ eighths, written once
+&lt;c e g&gt;4 4        // the chord again
+/4 4 4 4          // four beats of slash comping</pre>
+  <p>Rests are transparent to it. With nothing before it to repeat, it is an error. Reaching
+  back <b>across a barline</b> only warns — because that shape is also what a dropped pitch
+  letter looks like (<code>4 g f e</code> meant as <code>a4 g f e</code>), so open a measure
+  with the event itself.</p>
+</section>
+
+<section id="events">
+  <p class="eyebrow">06</p>
+  <h2>Notes, rests, chords</h2>
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td><code>fis8</code></td><td>F♯ eighth</td></tr>
+    <tr><td><code>r4</code></td><td>quarter rest</td></tr>
+    <tr><td><code>s4</code></td><td>invisible spacer rest</td></tr>
+    <tr><td><code>R1</code></td><td>full-measure rest</td></tr>
+    <tr><td><code>a,4@rest</code></td><td>a rest printed where the note <code>a,</code> would sit</td></tr>
+    <tr><td><code>&lt;c e g&gt;4</code></td><td>chord</td></tr>
+    <tr><td><code>&lt;c 3 5&gt;4</code></td><td>the same triad by scale degree</td></tr>
+    <tr><td><code>&lt;1 3 5&gt;2</code></td><td>degrees only — anchored on the key's tonic</td></tr>
+    <tr><td><code>/4</code></td><td>slash note — pitchless rhythm, silent, on the middle line</td></tr>
+    <tr><td><code>q</code></td><td>the previous chord again</td></tr>
+    <tr><td><code>q'</code></td><td>…an octave up (<code>q,,</code> two down)</td></tr>
+  </table>
+
+  <h3>Repeating a chord — and why there are two ways</h3>
+  <p>A bare duration and a <code>q</code> both repeat what came before, and for the
+  plain case they are the same music — <code>&lt;c e g&gt;4 4</code> and
+  <code>&lt;c e g&gt;4 q4</code> engrave and play identically. They differ in what they
+  <i>are</i>, and that is what decides which one you can modify:</p>
+  <ul>
+    <li><b>A bare duration is a LENGTH.</b> “The previous event again, this long.” It
+    cannot be displaced, because a length has nothing to move — <code>4'</code> is not a
+    spelling.</li>
+    <li><b><code>q</code> is an EVENT.</b> “This chord again.” It takes its own duration,
+    its own post-events (<code>q@staccato</code> — the original's are never copied), and
+    octave marks.</li>
+  </ul>
+  <p>The displacement <b>accumulates along the chain</b>: <code>q' q</code> plays the
+  chord an octave up both times, <code>q' q'</code> climbs by one and then two, and a bare
+  duration in the run repeats the chord where the last <code>q</code> left it. A
+  <code>q</code> with no chord before it warns and occupies its time silently; notes and
+  rests are transparent to it, and the run does not leak across a part, section or phrase
+  body.</p>
+  <p class="note">Octave marks on <code>q</code> are Lily#'s own — LilyPond's <code>q</code>
+  takes none.</p>
+  <!--EXAMPLE:durations-->
+  <!--EXAMPLE:events-->
+  <p>A rest normally places itself: middle line, voiced position inside a
+  <code>voice</code> span, clear of what sounds with it. <code>@rest</code> on a
+  <b>note</b> overrides that — the rest sits where that pitch would and nothing moves it
+  again, which is how two voices' colliding rests get pulled apart. The pitch never sounds
+  and prints no accidental. On anything but a note it is an error.</p>
+
+  <h3>Chord octaves — the anchor model</h3>
+  <p>One rule: <b>a mark moves only what it is attached to.</b> The anchor is the first
+  member's bare letter (or the key tonic for a degrees-only chord), resolved nearest the
+  running frame; members sit at or above it, so order is free except the first slot. The
+  chord never moves the frame itself — only a mark after the <code>&gt;</code> does.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Sounds</th><th>Next bare <code>c</code></th></tr>
+    <tr><td><code>&lt;c e g&gt;</code> = <code>&lt;c g e&gt;</code></td><td>C4 E4 G4</td><td>C4</td></tr>
+    <tr><td><code>&lt;c' e g&gt;</code></td><td>C5 E4 G4 — the mark moved that note only</td><td>C4</td></tr>
+    <tr><td><code>&lt;c e g&gt;'4</code></td><td>C5 E5 G5 — after the <code>&gt;</code>, it moves the chord <i>and</i> the frame</td><td>C5</td></tr>
+  </table>
+
+  <h3>Arpeggios — written-out broken chords</h3>
+  <p><code>&lt;&lt; … &gt;&gt;</code> plays its members in sequence, equally subdividing the
+  group's total. Members take no durations of their own — a bare number inside is always a
+  scale degree.</p>
+<pre>&lt;&lt; c e g &gt;&gt;      // c, then e and g stacked above it — a triplet of eighths after c4
+&lt;&lt; 8 5 3 1 &gt;&gt;    // degrees only: descending from the octave
+&lt;&lt; c r e &gt;&gt;      // a rest is a gap — an equal share
+&lt;&lt; c e g &gt;&gt;2     // a duration after &gt;&gt; is the group's TOTAL
+&lt;&lt; c e g &gt;&gt;'     // marks after &gt;&gt; shift the group and propagate
+&lt;&lt; c . d &gt;&gt;4     // a SPACED dot holds the member before it one more share: 2:1, the swing figure
+&lt;&lt; c . . d &gt;&gt;4   // 3:1 — c8. d16 (never glued: c. would be a duration dot, 3. a decimal)
+&lt;&lt; c@accent e\3 g( a) &gt;&gt;   // a member carries scripts, string numbers, fingering, dynamics, slur marks
+&lt;&lt; c e g &gt;&gt;4\2   // on the group: a dynamic, a chord name, a string number (every member's);
+                 //   a ~ or ( written after &gt;&gt; hangs on the last member</pre>
+  <p>The tuplet is spelled the way engraving convention spells it — the member count against
+  the power of two below it (3:2, 5:4, 7:4), a dotted total against 3 (2:3, 4:3) — from the
+  total number of shares.</p>
+  <p class="note">This is <b>not</b> LilyPond's <code>&lt;&lt; &gt;&gt;</code>. Parallel
+  voices are <code>voice { } { }</code> in Lily#, and a <code>\\</code> inside is an error.</p>
+  <!--EXAMPLE:arpeggio-->
+</section>
+
+<section id="connect">
+  <p class="eyebrow">07</p>
+  <h2>Ties, slurs, beams</h2>
+<pre>c4~ | c4 d e f       // tie — same pitch, with ~
+c4( d e f)           // slur — different pitches, with ( )
+&lt;c e&gt;4( &lt;d f&gt;)       // a slur may bind chords too
+c8[ d e f]           // manual beam; beaming is automatic otherwise
+c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase; ordinary slurs may sit inside</pre>
+  <p>A tie whose next note is a different pitch warns and tells you to use a slur instead.
+  Beaming follows the meter unless you bracket it yourself. A phrasing slur is a spanner:
+  its end is required, and one may be open per voice.</p>
+  <!--EXAMPLE:connectors-->
+</section>
+
+<section id="anno">
+  <p class="eyebrow">08</p>
+  <h2>Annotations</h2>
+  <p>Attach with <code>@</code>; one note may take several
+  (<code>c4@staccato@p</code>). Two suffixes force a side: <code>.up</code> and
+  <code>.down</code> (<code>c4@staccato.up</code>, <code>@f.up</code>). An annotation that
+  takes a value puts it in parentheses: <code>@finger(3)</code>, <code>@fig(6 4)</code>,
+  <code>@text("dolce")</code>.</p>
+  <table class="g">
+    <tr><th>Family</th><th>Names</th></tr>
+    <tr><td>Articulations</td><td><code>@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato</code></td></tr>
+    <tr><td>String technique</td><td><code>@upbow @downbow @flageolet</code> — always above</td></tr>
+    <tr><td>Ornaments</td><td><code>@trill @mordent @prall @turn @reverseturn</code></td></tr>
+    <tr><td>Dynamics</td><td><code>@ppp @pp @p @mp @mf @f @ff @fff</code>, and <code>@sfz @sf @fp @rfz @fz</code></td></tr>
+    <tr><td>Hairpins</td><td><code>@cresc @decresc @dim</code> — placed on the starting note, running to the next dynamic. No <code>.up</code>/<code>.down</code>: a hairpin is always below.</td></tr>
+    <tr><td>Stems</td><td><code>@stemUp @stemDown</code> — on a beamed note the beam's shared direction wins</td></tr>
+    <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
+    <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @fall @doit @breath @caesura</code></td></tr>
+    <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
+    <tr><td>With a value</td><td><code>@finger(3) @fig(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @frame(032010) @pluck(i) @ottava(bassa)</code></td></tr>
+  </table>
+
+  <h3>Spanners — the end is required</h3>
+  <p>These open on one note and must be closed on another. A spanner nobody closes draws
+  <i>nothing at all</i>, its word included, and says so:</p>
+  <table class="g">
+    <tr><th>Opens</th><th>Closes</th></tr>
+    <tr><td><code>@textSpan("poco rit.")</code>, or the sugar <code>@rit @accel @rall</code></td><td><code>@!textSpan</code> / <code>@!rit</code> …</td></tr>
+    <tr><td><code>@ottava</code>, <code>@ottava(bassa)</code>, <code>@quindicesima</code></td><td><code>@!ottava</code> closes any of them</td></tr>
+    <tr><td><code>@startTrillSpan</code></td><td><code>@stopTrillSpan</code></td></tr>
+    <tr><td><code>@sustain</code>, <code>@sostenuto</code>, <code>@unaCorda</code></td><td><code>@!sustain</code>, <code>@!sostenuto</code>, <code>@!unaCorda</code> (<code>@treCorde</code> is the last one's release, spelled as the printed word)</td></tr>
+  </table>
+  <p>These take no argument. <code>@ped</code>, <code>@ped(off)</code>,
+  <code>@una(corda)</code> do not exist. A <b>pedal change</b> — release and press again on
+  the same note — is the pedal's name again while it is down: in
+  <code>c4@sustain d e f | g4@sustain a b c@!sustain</code> the second <code>@sustain</code>
+  re-pedals, and the bracket draws its notch there (<code>@!sustain@sustain</code> on one
+  note means the same).</p>
+
+  <h3>The dot after a name is placement, not an argument</h3>
+  <p><code>@fermata.up</code> is a fermata forced above. It follows that
+  <code>@notehead.x</code> does not work — an argument always goes in parentheses:
+  <code>@notehead(cross)</code>.</p>
+  <!--EXAMPLE:annotations-->
+  <!--EXAMPLE:spanners-->
+</section>
+
+<section id="groups">
+  <p class="eyebrow">09</p>
+  <h2>Tuplets, grace notes, voices, cues</h2>
+<pre>tuplet 3/2 { c8 d e }                          // 3 in the time of 2
+tuplet 3/2 { c8 d tuplet 3/2 { e16 f g } }     // nesting is allowed
+
+grace        { d16 e } f4     // grace notes before f
+acciaccatura { a16 }    b4    // slashed
+appoggiatura { c8 }     d4    // unslashed
+
+voice { c'2 d } { e2 f }      // `voice` opens the span ONCE; each further { } is another voice
+
+repeat unfold 8 { ground }        // write the body out 8 times
+repeat percent 2 { c4 d e f | }   // repeat the previous measure
+repeat tremolo 8 { c16 e } |      // N x the pair: 8 x two 16ths fills a 4/4 bar</pre>
+  <p><code>repeat</code> is only for <code>unfold</code> / <code>percent</code> /
+  <code>tremolo</code> — things that abbreviate notes. It is <b>not</b> how a repeat sign is
+  written; see <a href="#forms">Forms</a>.</p>
+  <h3>Cue notes</h3>
+  <p>A cue is a <b>region</b>, not an annotation, so there is no <code>@cue</code>:</p>
+<pre>c4 cue { e4 f } g4 |            // small notes, a voice of their own
+c4 cue bass { e4 f } g4 |       // drawn in another instrument's clef; the staff's clef returns</pre>
+  <p>A slur or tie may not cross the region's edge — close it inside the cue, or keep both
+  ends outside. Two adjacent <code>cue</code> blocks are two voices, so a span cannot run
+  from one into the next either.</p>
+  <!--EXAMPLE:groups-->
+</section>
+
+<section id="bars">
+  <p class="eyebrow">10</p>
+  <h2>Barlines and breaks</h2>
+  <table class="g">
+    <tr><th>In the music</th><th>Draws</th></tr>
+    <tr><td><code>|</code></td><td>single</td></tr>
+    <tr><td><code>||</code></td><td>double</td></tr>
+    <tr><td><code>|.</code></td><td>final</td></tr>
+    <tr><td><code>!</code></td><td>dashed</td></tr>
+  </table>
+  <p><b>A written <code>|</code> closes exactly one measure, and a measure with nothing in
+  it is an empty one.</b> So <code>{ | | | | }</code> is four empty bars and
+  <code>{ | c1 }</code> is an empty bar then <code>c1</code>. An empty bar fills itself with
+  a full-measure spacer, on the page and in playback, so it is never diagnosed — which is
+  what lets a rhythm staff say nothing for pages at a time.</p>
+  <p>Typed barlines close nothing: <code>||</code> and <code>|.</code> decorate the bar
+  behind them, and a <code>|</code> landing where the meter just auto-filled a bar merely
+  confirms it. That is why a trailing <code>c1 |</code> is one bar, not two.</p>
+  <p class="note"><b>The repeat barlines <code>|:</code> <code>:|</code> <code>:|:</code> are
+  not music items.</b> Writing one among the notes is refused, with a message naming the
+  form to write instead.</p>
+
+  <h3>Forcing where a line or page turns</h3>
+  <p>Four bare words, written in the music (or in the form). At a bar line they end the
+  system there; inside a bar, <code>break</code> splits that bar across two systems. They
+  are spelled in camelCase and, like everything else, are case-sensitive —
+  <code>nobreak</code> is not a word.</p>
+  <table class="g">
+    <tr><th>Word</th><th>Means</th></tr>
+    <tr><td><code>break</code></td><td>end the system here</td></tr>
+    <tr><td><code>noBreak</code></td><td>do not end the system here</td></tr>
+    <tr><td><code>pageBreak</code></td><td>end the page here</td></tr>
+    <tr><td><code>noPageBreak</code></td><td>do not end the page here</td></tr>
+  </table>
+  <p>Line and page breaking are otherwise automatic — Lily# uses LilyPond's Knuth-Plass line
+  breaking and its page-breaking search — so these are for the places where you disagree with
+  the result, not for laying a score out by hand.</p>
+  <!--EXAMPLE:barlines-->
+</section>
+
+<section id="parts">
+  <p class="eyebrow">11</p>
+  <h2>Parts</h2>
+  <p>A part is declared once and carries what stays true for it. Attributes are written
+  bare, with no <code>=</code>.</p>
+<pre>part melody { clef treble }
+part bass   { clef bass octave 3 }
+part gtr    { clef treble_8 tuning guitar }
+part fl     { clef treble instrument flute }
+part cl     { instrument clarinet "Clarinet in Bb" }
+part sing   { clef treble transpose d }</pre>
+  <table class="g">
+    <tr><th>Attribute</th><th>Takes</th></tr>
+    <tr><td><code>clef</code></td><td><code>treble bass alto tenor treble_8 treble^8 bass_8 soprano mezzosoprano baritone percussion</code>. A clef only draws the staff — it never changes which octave a bare letter means; that is <code>octave</code>'s job, or the <code>instrument</code> preset's.</td></tr>
+    <tr><td><code>octave</code></td><td><code>absolute</code>, or a number that re-anchors the base (<code>octave 3</code> for a low part)</td></tr>
+    <tr><td><code>key</code></td><td>this part's own key signature (<code>time</code> and <code>tempo</code> are shared by every part, so they are written at the top level or in a section header)</td></tr>
+    <tr><td><code>instrument</code></td><td>a preset name, a quoted display label, or both — see below</td></tr>
+    <tr><td><code>transpose</code></td><td>a <b>pitch</b>, not a number of steps: it renames <code>c</code> to that pitch and moves every written note with it. This moves the PAGE — for a transposing instrument, name the preset instead. Writing a number is an error that says so.</td></tr>
+    <tr><td><code>transposition</code></td><td>an octave marker — <code>8va 8vb 15ma 15mb</code>. A different thing from <code>transpose</code>, and it does not take a pitch.</td></tr>
+    <tr><td><code>pitch</code></td><td><code>concert</code> or <code>written</code> — this part's convention for a transposing instrument, overriding the top-level <code>pitch</code>. Without a transposing <code>instrument</code> it changes nothing. See <a href="#transposing">Transposing instruments</a>.</td></tr>
+    <tr><td><code>tuning</code></td><td>a tuning name; makes the part tablature-capable</td></tr>
+    <tr><td><code>midiInstrument</code></td><td>a quoted General MIDI sound, <code>midiInstrument "acoustic bass"</code> — what playback sounds like, overriding the preset's</td></tr>
+    <tr><td><code>pedal</code></td><td><code>text</code> ("Ped. … *"), <code>bracket</code> (the default) or <code>mixed</code> — how this part's pedal marks are drawn</td></tr>
+  </table>
+  <p>Part names are ordinary identifiers and may not be reserved words — except the four
+  clef words <code>treble bass alto tenor</code>, which are allowed, so a part called
+  <code>bass</code> is fine.</p>
+
+  <h3><code>instrument</code> — one word, several answers</h3>
+  <p>Naming an instrument is not just a label. The preset settles everything a part needs
+  to know about itself, and each of those can still be overridden by writing it explicitly:</p>
+  <table class="g">
+    <tr><th>It sets</th><th>Which shows up as</th></tr>
+    <tr><td>the <b>clef</b></td><td>viola reads alto, cello and bass read bass, guitar reads <code>treble_8</code></td></tr>
+    <tr><td>the <b>octave anchor</b></td><td>where a relative part's bare letters land</td></tr>
+    <tr><td>the <b>tuning</b></td><td>which strings a <code>tab</code> row has — hence the fret numbers</td></tr>
+    <tr><td>the <b>MIDI program</b></td><td>what playback sounds like</td></tr>
+    <tr><td>the <b>sounding octave</b></td><td>the bass family sounds an octave below its notation, a piccolo an octave above</td></tr>
+    <tr><td>the <b>printed name</b></td><td>the label beside the staff</td></tr>
+  </table>
+<pre>part gt { instrument guitar }                  // preset: clef, tuning, sound, label
+part bs { instrument bass "Bass" }             // preset, with the label overridden
+part v1 { clef treble instrument "1st Violin" } // label only — no preset behaviour</pre>
+  <p>A bare word is the preset; a quoted string is the display label; both together set the
+  preset and rename it. A quoted string <i>alone</i> is a free-text name and carries no
+  preset behaviour — the clef and the rest come from whatever else the header says.</p>
+
+  <h3 id="transposing">Transposing instruments</h3>
+  <p><b>Write what the player reads, and the preset makes it sound right.</b> Naming a
+  transposing instrument is enough — the part prints exactly the notes you typed, and
+  playback (and a tab's frets, which read the same one value) shifts to where the
+  instrument really is. A part cannot print at one pitch and play at an unrelated one.</p>
+  <table class="g">
+    <tr><th>Preset</th><th>Written C sounds</th></tr>
+    <tr><td><code>clarinet</code> <code>trumpet</code> <code>soprano-sax</code></td><td>B♭ — a major 2nd down</td></tr>
+    <tr><td><code>clarinet-a</code></td><td>A — a minor 3rd down</td></tr>
+    <tr><td><code>horn</code></td><td>F — a perfect 5th down</td></tr>
+    <tr><td><code>alto-sax</code></td><td>E♭ — a major 6th down</td></tr>
+    <tr><td><code>tenor-sax</code></td><td>B♭ — a major 9th down</td></tr>
+    <tr><td><code>baritone-sax</code></td><td>E♭ — an octave and a major 6th down</td></tr>
+    <tr><td><code>bass</code> and its family</td><td>an octave down</td></tr>
+    <tr><td><code>piccolo</code></td><td>an octave up</td></tr>
+    <tr><td><code>trumpet-c</code> <code>flute</code> <code>oboe</code> <code>trombone</code> …</td><td>as written</td></tr>
+  </table>
+  <p>A bare name takes the common member of its family — <code>clarinet</code> and
+  <code>trumpet</code> are the B♭ ones, <code>horn</code> is in F — because that is the
+  instrument someone means when they say no more. The others have their own spellings.
+  Every saxophone needs one (<code>alto-sax</code>, not <code>alto</code>): the plain
+  voice-range words are already the choral presets. Guitar and vocal tenor carry their
+  octave on the <code>treble_8</code> clef instead of here, which is why their parts print
+  the little 8 under the clef and this table does not list them.</p>
+  <p><b>Or write what sounds, and let the part be transposed for you.</b> A top-level
+  <code>pitch concert</code> says the letters are concert pitch: every chromatically
+  transposing part is then printed the way its player reads it, pitches and key signature
+  together — an <code>alto-sax</code> part of a piece in C major prints its <code>c'</code>
+  as <code>a'</code>, in A major, and still plays C. The default, <code>pitch written</code>,
+  is the first convention above. Octave-only instruments (<code>bass</code>,
+  <code>piccolo</code>, a <code>transposition 8vb</code>) keep their notation under both, as
+  a printed concert score keeps them. To print one score at concert pitch whichever way the
+  file is written — the conductor's score — put the same words on that score:
+  <code>score main "full" pitch concert { … }</code>.</p>
+  <p class="note">An explicit <code>transpose</code> is a different thing: it moves the
+  written notes by hand. Its argument is a PITCH, not a number of steps — it renames
+  <code>c</code> to that pitch and shifts every note by the same interval, so
+  <code>part cl { clef treble transpose bes }</code> prints <code>c d e f</code> as
+  B♭ C D E♭ — and it composes with the instrument's own shift. Do not confuse it with
+  <code>transposition</code>, which takes an octave marker
+  (<code>8va</code> / <code>8vb</code> / <code>15ma</code> / <code>15mb</code>) and overrides
+  the preset's written-to-sounding octave.</p>
+  <!--EXAMPLE:instrument-->
+</section>
+
+<section id="phrases">
+  <p class="eyebrow">12</p>
+  <h2>Phrases</h2>
+  <p>Named music, declared with <code>phrase</code> and used by its bare name:</p>
+<pre>phrase motif { c4 d e f | }
+section Main { melody { motif g2 g | } }</pre>
+  <p>Each phrase body evaluates in a <b>fresh frame</b> — default octave, pitch and duration
+  are reset — so a phrase means the same notes at every call. A reference is <i>one item</i>
+  to the relative chain, exactly like a chord: the next note is relative to the phrase's
+  anchor (its first note's bare letter, shifted by the reference's marks), never to how the
+  body happens to end.</p>
+  <p>A trailing <code>'</code> or <code>,</code> on a reference shifts that play's octave.
+  There is no per-reference transposition: a motif quoted at another interval is written
+  out, because <code>transpose</code> is a property of a part, not of a quotation.</p>
+</section>
+
+<section id="sections">
+  <p class="eyebrow">13</p>
+  <h2>Sections</h2>
+  <p>A section binds music to each part by name, and is the unit the <code>form</code>
+  orders. Section boundaries reset the relative frame.</p>
+<pre>section Verse {
+  partial 8                       // optional pickup, for every part at once
+  melody { a'8 | c4 d8 e8. f16 e8 |  }
+  bass   { r8  | a4 e8 a4. |  }
+  chords prog  { | Am | }         // a chord row lives here too (the pickup holds none)
+  lyrics words sings melody { A- | las my love you do | }
+}</pre>
+  <p>A section prints a rehearsal label by default. <code>~</code> on a form reference hides
+  it for that play (<code>form main { ~Verse Chorus }</code>). The tilde belongs to the
+  reference only — <code>section ~A { … }</code> is an error.</p>
+</section>
+
+<section id="lyrics">
+  <p class="eyebrow">14</p>
+  <h2>Lyrics</h2>
+  <p><code>sings</code> binds a lyric track to the part it sings. It is a property of the
+  <b>track</b>, not of one place in the file, so it may be spelled at the definition, on the
+  <b>score row</b>, or both — the same one property, written wherever it reads best.</p>
+<pre>// on the definition
+lyrics words sings melody { Hap- py birth- day | to you | }
+score main { staff melody  lyrics words }
+
+// or on the score row, leaving the definition bare
+lyrics words { Hap- py birth- day | to you | }
+score main { staff melody  lyrics words sings melody }</pre>
+  <p><b>Spelling it on the row is what lets ONE track serve several staves.</b> Place the
+  same <code>lyrics</code> row under each staff and bind it there — the words are written
+  once and appear under every voice that sings them, which is what a homophonic chorale
+  wants:</p>
+<pre>score main {
+  staff sop "Soprano"
+  lyrics verse sings sop
+  staff alt "Alto"
+  lyrics verse sings alt
+}</pre>
+  <!--EXAMPLE:sings-->
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td>space</td><td>next syllable</td></tr>
+    <tr><td><code>-</code></td><td>joins syllables of one word</td></tr>
+    <tr><td><code>~</code> or <code>_</code></td><td>hold the previous syllable over one more note (a <code>~</code> glued on both sides, <code>va~ga</code>, puts two syllables on one note)</td></tr>
+    <tr><td><code>__</code></td><td>draw the extender line; takes no note</td></tr>
+    <tr><td><code>|</code></td><td>mirrors the music's barlines</td></tr>
+  </table>
+  <p><b>A slur or a tie holds its syllable, as in LilyPond.</b> The notes inside a slur
+  (after its first) and a note a tie arrives at take no syllable of their own, so
+  <code>c4( d e) f</code> sung to <code>la __ lu</code> puts <code>lu</code> on
+  <code>f</code>. A slur written only to mark phrasing over a lyric line would swallow its
+  syllables — write that one as <code>@phrasingSlur … @!phrasingSlur</code>, which holds
+  none; the warning says so when it happens.</p>
+  <p>Barlines follow the same rule as music: every written <code>|</code> closes one bar,
+  the one that <i>opens</i> the run included. That leading <code>|</code> is how a verse
+  skips the rest bar its melody opens with.</p>
+  <p>The score places the row by <b>order</b>. A bound <code>lyrics NAME</code> row directly
+  below the staff engraving its part is that staff's verse, and a run of rows stacks as
+  verses. Elsewhere it shows only the words, at the melody's rhythm, without engraving the
+  melody. Several tracks may sing one part — two languages, two names. Inside a staff group
+  a row must sing the staff directly above it; write the binding at the row to say which.</p>
+  <!--EXAMPLE:lyrics-->
+</section>
+
+<section id="chordrows">
+  <p class="eyebrow">15</p>
+  <h2>Chords and chord rows</h2>
+  <p>A <code>chords NAME { … }</code> row holds chord <b>symbols as they print</b>. Placed
+  directly above a staff, they align over it by timing; placed on their own, they draw a
+  staff-less grid of barlines.</p>
+<pre>chords prog { Cmaj7 | Am7 | Dm7 | G7 | F#m7-5 B7-9 | }</pre>
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td>one entry in a bar</td><td>takes the bar</td></tr>
+    <tr><td>two entries in 4/4</td><td>halves; four, beats — entries divide the bar on the meter's beat grid</td></tr>
+    <tr><td><code>.</code></td><td>hold the previous chord one more beat (never across a barline)</td></tr>
+    <tr><td><code>r</code> <code>R</code></td><td>print “N.C.” in that slot</td></tr>
+    <tr><td><code>s</code></td><td>print nothing</td></tr>
+  </table>
+  <h3>How a symbol is spelled</h3>
+  <p>You type the symbol, not an encoding: <code>Cmaj7</code>, <code>Am7</code>,
+  <code>G7sus4</code>, <code>C/G</code>, <code>Bb7/D</code>, <code>F#7</code>. One rule is
+  worth knowing before it surprises you:</p>
+  <p class="k">an altered tension takes <b>+</b> or <b>−</b>, never <b>#</b> or <b>b</b></p>
+  <p>So a half-diminished chord is <code>F#m7-5</code>, a flat ninth is <code>C7-9</code>,
+  a sharp five is <code>A7+5</code>. The reason is that <code>#</code> and <code>b</code>
+  belong to the <i>root</i> and the bass — without that split, <code>Bb9</code> could not
+  say whether it means B♭ with a ninth or B with a flat ninth. Written the other way
+  (<code>F#m7b5</code>) the suffix is not a quality Lily# knows: it prints as typed, but
+  carries no chord.</p>
+  <p>The registered qualities: <code>m min dim aug 7 maj7 maj m7 min7 mmaj7 dim7 m7-5 +
+  6 m6 min6 9 maj9 m9 min9 sus2 sus4 sus 7sus4 7-5 7+5 7-9 7+9 7+11 add9 11 13 m11 min11
+  m13 min13 maj13</code>. A quality outside that list still <i>prints</i> in a chord row —
+  the row keeps whatever suffix you wrote — but it has no interval set, so playback sounds
+  only its root and <code>@chord</code> on a note refuses it.</p>
+
+  <p>Entries carry no durations — the grid does the arithmetic. Barlines in the source are
+  drawn and follow the same bare-barline rule as music and lyrics. A <code>|:</code> in a
+  chord row is a repeat like any other and belongs in the form; the repeat barlines the form
+  composes still reach the row and draw there.</p>
+  <p>The same named row can be used twice — above a staff in one score, and as a
+  standalone chart in another — so a progression is written once.</p>
+  <p><b>A row the score places also sounds.</b> In the MIDI (and in the editor's playback)
+  it plays on a track of its own, <code>NAME (chords)</code>, softer than the melody, each
+  symbol over exactly the span it prints over: <code>.</code> holds it, <code>r</code> is
+  silence. A symbol names a chord but voices none, so Lily# uses one voicing everywhere —
+  every tone between G3 and G4, a slash bass an octave below (<code>G7/B</code> sounds B2 G3
+  B3 D4 F4). A row no score places is silent.</p>
+
+  <h3>What you write and what it prints are two different choices</h3>
+  <p>A chord has three representations in Lily# — a <b>symbol</b> (<code>Cmaj7</code>), a
+  <b>degree</b> of the key (<code>Imaj7</code>), and the <b>notes</b>
+  (<code>&lt;c e g b&gt;</code>) — and the language keeps the one you <i>type</i> separate
+  from the one that <i>prints</i>. Both spellings resolve to the same structure, so
+  everything downstream — the printed name, the degree, playback, transposition — is one
+  road.</p>
+  <table class="g">
+    <tr><th>You write</th><th>Score item</th><th>It prints</th></tr>
+    <tr><td><code>chords p { Cmaj7 }</code></td><td><code>chords p</code></td><td>Cmaj7</td></tr>
+    <tr><td><code>chords p { Cmaj7 }</code></td><td><code>chords p as roman</code></td><td>Imaj7</td></tr>
+    <tr><td><code>chords p { Imaj7 }</code></td><td><code>chords p</code></td><td>Cmaj7</td></tr>
+    <tr><td><code>chords p { Imaj7 }</code></td><td><code>chords p as roman</code></td><td>Imaj7</td></tr>
+    <tr><td><code>&lt;c e g&gt;4@chord</code></td><td><code>staff …</code></td><td>C — derived from the notes</td></tr>
+    <tr><td><code>c4@chord(Dm)</code></td><td><code>staff …</code></td><td>Dm — stated on the note</td></tr>
+  </table>
+  <p>So a chart written in degrees prints absolute names by default, and one written in
+  names prints degrees under <code>as roman</code>. A degree is read against the key in
+  force at that bar, which is why a modulation re-reads them rather than freezing them.</p>
+  <div class="paper" style="margin-top:16px"><img src="chord-axes.svg" alt="One progression printed four ways"></div>
+  <p class="note">Rows one and two above are <b>the same <code>chords</code> part</b>,
+  placed twice in one score with different display. Row three is written in degrees. The
+  staff underneath carries no chord symbols of its own — each is derived from the notes by
+  a bare <code>@chord</code>.</p>
+
+  <h3>The name a bare <code>@chord</code> derives</h3>
+  <p>A bare <code>@chord</code> reads the symbol off the notes. <b>The root comes from the
+  pitches, not from whichever member you typed first</b> — the members are tried as the
+  root from the bass upward, and the first that names a registered quality wins. If that
+  root is not the lowest
+  sounding note, the chord is an inversion and the lowest note prints as the slash bass.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Sounds</th><th>Prints</th></tr>
+    <tr><td><code>&lt;c e g&gt;</code></td><td>C4 E4 G4</td><td>C</td></tr>
+    <tr><td><code>&lt;e g c&gt;</code> (absolute)</td><td>E4 G4 <b>C4</b></td><td>C — c is still the lowest</td></tr>
+    <tr><td><code>&lt;e g c&gt;</code> (relative)</td><td><b>E4</b> G4 C5</td><td>C/E</td></tr>
+    <tr><td><code>&lt;e, g, c&gt;</code> (relative)</td><td><b>E3</b> G3 C5</td><td>C/E</td></tr>
+  </table>
+  <p class="note"><b>The bass is tried first, and that is what keeps this safe.</b> Some
+  sets read as more than one chord: <code>&lt;c e g a&gt;</code> is C6 from C and Am7 from A.
+  Preferring the bass settles it the way the voicing already suggests — C6 when c is at the
+  bottom, Am7 when a is — and it is why <code>&lt;c e g b&gt;</code> is Cmaj7 rather than
+  something rooted higher up. Another root is only ever consulted when the bass names
+  nothing at all.</p>
+  <p>Where the notes are genuinely ambiguous, say which you mean:
+  <code>&lt;e g, b d&gt;@chord</code> prints G6 (g is the bass), and
+  <code>&lt;e g, b d&gt;@chord(Em7/G)</code> prints Em7/G. Watch the octaves rather than the
+  written order — under <code>octave absolute</code>, <code>&lt;e g b d&gt;</code> puts d
+  <i>below</i> e and so reads Em7/D.</p>
+
+  <h3>What completion offers</h3>
+  <p>Inside a <code>chords { }</code> block, and inside a <code>@chord(…)</code> argument,
+  completion offers the current key's diatonic chords — each degree's triad and seventh (and,
+  among the names, the suspended forms) — read against the key in force at that point.
+  Hovering a chord symbol, or a chord or <code>&lt;&lt; &gt;&gt;</code> in the music, shows
+  its name, its degree and its pitches (<code>Dm (IIm)  D4  F4  A4</code>).</p>
+  <ul>
+    <li>In a <code>chords { }</code> block you get <b>both vocabularies</b>: all seven
+    degrees as names first (<code>C D E F G A B …</code>), then all seven as degrees
+    (<code>I II III …</code>), so each list can be scanned on its own.</li>
+    <li>In a <code>@chord(…)</code> argument you get <b>the names only</b>. The annotation
+    reads the absolute-symbol grammar alone, so <code>@chord(V7)</code> is refused — the
+    completion offers nothing it would then reject.</li>
+    <li>What it inserts is <b>the symbol</b> — <code>Dm7</code>, <code>Imaj7</code> — not the
+    notes. The entry format is the printed form, for a row and an annotation alike.</li>
+  </ul>
+</section>
+
+<section id="forms">
+  <p class="eyebrow">16</p>
+  <h2>Forms — the playing order</h2>
+  <p>A <code>form</code> lists sections in the order they are played and printed. This is
+  where repeats live, because a repeat is a change to the order.</p>
+<pre>form main { Intro Main Main "Main (reprise)" Coda }
+form main { |: Body [1. ~First] :| [2. ~Second] }
+form main { |: A :|*3 }
+form practice { Verse }        // a second form = a second output</pre>
+  <table class="g">
+    <tr><th>Written</th><th>Means</th></tr>
+    <tr><td><code>|: … :|</code></td><td>repeat; count defaults to the number of endings, or 2</td></tr>
+    <tr><td><code>:|*N</code></td><td>an explicit play count</td></tr>
+    <tr><td><code>[1. Name]</code></td><td>a volta ending. The opening <code>[</code> is required; the closing <code>]</code> is optional and draws the right-hand cap</td></tr>
+    <tr><td><code>~Name</code></td><td>hide that play's rehearsal label</td></tr>
+    <tr><td><code>Name'</code> <code>Name,</code></td><td>shift that play's octave — one section quoted at two octaves is <code>~B ~B'</code></td></tr>
+    <tr><td><code>"Label"</code></td><td>a custom printed label for that play</td></tr>
+  </table>
+  <p>An ending needs a repeat to be an ending <i>of</i>: written without one, no bracket is
+  drawn and a warning says the <code>1.</code> prints nothing.</p>
+  <h3>Navigation marks</h3>
+  <p>Signs (<code>segno</code>, <code>coda</code>) engrave at the start of the following
+  section; text directives (<code>fine</code>, <code>to coda</code>, <code>dc</code>,
+  <code>ds</code>, and <code>dc al fine</code>, <code>ds al coda</code>) engrave at the end
+  of the section just played.</p>
+<pre>form main { A segno  B to coda  C ds al coda  coda D }</pre>
+  <p>The same bare words may also be written in a section's music at a barline boundary.
+  They are landmarks, never note modifiers, so <code>c4@segno</code> is an error and putting
+  one mid-measure warns.</p>
+  <p>The reserved form name <code>main</code> writes to the input file's name; any other
+  form name becomes the output file name unless a <code>"basename"</code> overrides it.</p>
+  <!--EXAMPLE:repeats-->
+</section>
+
+<section id="scores">
+  <p class="eyebrow">17</p>
+  <h2>Scores</h2>
+  <p>A <code>score</code> binds a form to a set of rows. <b>It is a vertical stack of
+  bands</b>: what a row means comes from where it sits.</p>
+<pre>score main "out" {
+  chords prog                     // a chord row above ...
+  staff melody "Melody"           // ... the staff it belongs to
+  lyrics words                    // ... and that staff's verse below it
+}</pre>
+  <table class="g">
+    <tr><th>Item</th><th>Row it draws</th></tr>
+    <tr><td><code>staff NAME</code></td><td>a notation staff for that part</td></tr>
+    <tr><td><code>staff NAME "Label"</code></td><td>…with a printed name</td></tr>
+    <tr><td><code>staff NAME as lines N</code></td><td>…with N staff lines (1–5). <code>as lines 1</code> is a rhythm staff</td></tr>
+    <tr><td><code>staff NAME as removeEmpty true</code></td><td>…hidden in systems where it only rests (<code>all</code>: in the first system too)</td></tr>
+    <tr><td><code>tab NAME</code></td><td>tablature — see below</td></tr>
+    <tr><td><code>chords NAME</code></td><td>a chord row</td></tr>
+    <tr><td><code>lyrics NAME</code></td><td>a lyric row</td></tr>
+    <tr><td><code>ossia NAME</code></td><td>a small alternative staff</td></tr>
+    <tr><td><code>NAME</code> (bare)</td><td>played to MIDI only, never engraved — a click track, a cue part</td></tr>
+    <tr><td><code>title</code> / <code>composer</code></td><td>restate the file's metadata for this score alone</td></tr>
+    <tr><td><code>paper NAME</code> / <code>fonts NAME</code> / <code>layout NAME</code></td><td>use a named block for this score</td></tr>
+  </table>
+  <p>A staff's display name is always a quoted string, so a bare word after
+  <code>staff NAME</code> is always another score item — <code>staff flute click</code> is
+  flute's staff plus the MIDI-only <code>click</code> part. Position never changes what a
+  word means.</p>
+
+  <h3>Grouping staves</h3>
+  <table class="g">
+    <tr><th>Group</th><th>Left edge</th><th>Barlines between staves</th><th>For</th></tr>
+    <tr><td><code>grandStaff</code></td><td>brace</td><td>drawn through</td><td>one instrument on two staves</td></tr>
+    <tr><td><code>staffGroup</code></td><td>bracket</td><td>drawn through</td><td>one family</td></tr>
+    <tr><td><code>choirStaff</code></td><td>bracket</td><td><b>not</b> drawn through</td><td>independent voices</td></tr>
+  </table>
+  <p><code>staffGroup</code> reverses the word order on purpose — it is not a slip for
+  <code>groupStaff</code>: the other <code>…Staff</code> items each produce a staff, while a
+  staff group produces a group of staves.</p>
+  <p>Two more put several parts on <b>one</b> staff, and take bare part names:
+  <code>condensedStaff { fl1 fl2 }</code> gives each part its own voice of a single staff;
+  <code>combinedStaff { fl1 fl2 }</code> merges them the way an orchestral score condenses
+  two players — unisons become one notehead marked <code>a2</code>, different notes in the
+  same rhythm within a ninth become one voice of chords, a lone part is marked
+  <code>Solo</code>. The chord case is the usual outcome, not a corner; use
+  <code>condensedStaff</code> when the lines must stay visibly separate.</p>
+  <p>Because these are score items, one source prints both the condensed score and the
+  separate parts:</p>
+<pre>score main "full"  { condensedStaff { fl1 fl2 } }
+score main "parts" { staff fl1  staff fl2 }</pre>
+</section>
+
+<section id="tab">
+  <p class="eyebrow">18</p>
+  <h2>Tablature</h2>
+  <p>Give a part a <code>tuning</code> and render it with <code>tab</code>:</p>
+<pre>part gt { clef treble_8 tuning guitar }
+
+score main {
+  staff gt        // the notation
+  tab gt          // the tablature under it
+}</pre>
+  <p><b>A tab standing beside a staff prints fret numbers only</b> — the staff above it
+  already carries the meter, stems, beams, rests and ties. <b>A tab on its own carries the
+  meter, stems, rests and ties itself</b> (beams are not drawn yet). That is the default;
+  say which you want with
+  <code>tab gt as numbers</code> or <code>tab gt as full</code>.</p>
+  <p><code>\N</code> pins a note to string N when the automatic choice is not the one your
+  fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammeron @pulloff
+  @pluck(i)</code>) print on the tab, because they are ink a guitarist reads there.</p>
+</section>
+
+<section id="paper">
+  <p class="eyebrow">19</p>
+  <h2>Paper and fonts</h2>
+  <p>Both are optional blocks whose defaults equal LilyPond's, so an absent block changes
+  nothing. Both can also be <b>named</b> at the top level and referenced (or partly
+  overridden) per score.</p>
+<pre>paper {
+  size b5                    // width, height AND scaled margins, by name
+  paperWidth 210mm           // bare numbers are staff spaces; units are GLUED
+  paperHeight 0              // 0 = one content-driven page
+  leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm
+  indent 15mm  shortIndent 0
+  raggedRight                // a bare flag: do not justify
+  spacingIncrement 1.2
+  systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
+}</pre>
+  <p>The staff-spacing family lives here, not in <code>override</code>. Unknown keys are an
+  error; a key set twice warns and the last wins.</p>
+<pre>fonts {
+  serif "Georgia"                      // the two generic families together are
+  sans  "Verdana"                      //   "the whole document's text"
+  lyricText "Charis SIL" "Noto Serif CJK JP"   // several names = a fallback chain
+  tempo "Playfair Display"             // one role beats the group it belongs to
+  embedded                             // subset the named faces into the PDF
+}</pre>
+  <p>Keys are a generic family, a group, or a single role, and the <b>narrower</b> spelling
+  wins in either source order. Groups map to roles as: <code>header</code> → title, composer,
+  instrument · <code>lyrics</code> → lyricText, stanza · <code>chords</code> → chordName,
+  fretFrame, figuredBass · <code>marks</code> → tempo, mark, pedal, navigation, text,
+  dynamics, partCombine · <code>numbers</code> → barNumber, fingering, tuplet, volta, ottava,
+  bend, tabTechnique · <code>notation</code> → clefOctave, meter, tabFret.</p>
+  <p class="note">The keyword is <code>fonts</code>, plural, and it takes a block — there is
+  no <code>font</code> keyword and no one-line form. A named face is <b>measured</b> as well
+  as drawn, so naming one that a machine lacks makes the page machine-dependent; a missing
+  face warns rather than passing quietly.</p>
+</section>
+
+<section id="override">
+  <p class="eyebrow">20</p>
+  <h2>Override / revert</h2>
+<pre>override NoteHead.color = red
+c4 d e f |
+revert NoteHead.color
+once override Stem.transparent = true    // 'once' applies to the next note only
+c4 d e f |</pre>
+  <p>The syntax accepts any <code>Grob.property</code>, but the vocabulary is deliberately
+  <b>four properties</b>: <code>NoteHead.transparent</code>, <code>Stem.transparent</code>,
+  <code>NoteHead.color</code>, <code>Stem.color</code>. Anything outside that list is
+  refused with a message listing what is supported, rather than silently doing nothing. The
+  list grows, and each addition removes one error.</p>
+  <p>Grob names are PascalCase and properties are lisp-case; both are case-sensitive.</p>
+  <!--EXAMPLE:override-->
+</section>
+
+<section id="reserved">
+  <p class="eyebrow">21</p>
+  <h2>Reserved words</h2>
+<pre>section form using tab ossia transpose octave pitch instrument percussion drummap
+score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
+voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
+title composer tempo time key clef
+major minor ionian dorian phrygian lydian mixolydian aeolian locrian
+treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
+tuplet grace acciaccatura appoggiatura lyrics chords tuning
+override revert once
+segno fine coda dc ds al to
+ppp pp p mp mf ff fff</pre>
+  <p>The four clef words <code>treble bass alto tenor</code> are the exception: they may
+  still be used as part, section and phrase names. Single letters <code>a</code>–<code>g</code>
+  are pitches and <code>r</code>/<code>R</code>/<code>s</code> are rests — note that
+  <code>f</code> is a pitch, while <code>@f</code> still works because dynamics resolve from
+  the annotation's text. Articulation, ornament and mark <i>names</i> are not reserved at
+  all; they resolve from the <code>@name</code> text, so they stay free for your own
+  identifiers.</p>
+</section>
+
+<section id="diagnostics">
+  <p class="eyebrow">22</p>
+  <h2>Diagnostics</h2>
+  <p>Lily# would rather refuse than quietly do the wrong thing, and its messages are
+  written to be acted on. A few worth knowing, quoted as the compiler prints them:</p>
+  <table class="g">
+    <tr><th>You wrote</th><th>It says</th></tr>
+    <tr><td><code>c4 g. a4</code></td><td>This '.' belongs to nothing. A duration dot needs a number in front of it - write g4., not g. …</td></tr>
+    <tr><td><code>c4.5</code></td><td>'4.5' is not a duration - a duration is a whole number (c4, c8), lengthened by dots…</td></tr>
+    <tr><td><code>&lt;c e g2&gt;</code></td><td>A chord member can't carry a duration - members share one, written after the closing '&gt;': &lt;c e g&gt;2. …</td></tr>
+    <tr><td><code>4 g f e</code> opening a part's music</td><td>A bare duration repeats the previous note, chord or slash - and nothing repeatable comes before this one…</td></tr>
+    <tr><td><code>c4 d e f :|</code></td><td>':|' is a repeat, so it belongs in the form, not in the music…</td></tr>
+    <tr><td><code>repeat volta 2 { … }</code></td><td>'repeat volta' is LilyPond's spelling. In Lily# a repeat is written in the form…</td></tr>
+    <tr><td><code>\relative { … }</code></td><td>Lily# is relative by default — drop '\relative …'; switch modes with 'octave absolute'.</td></tr>
+    <tr><td><code>clef Treble</code></td><td>Unknown clef 'Treble'. clef names are case-sensitive; known: alto, baritone, bass, …</td></tr>
+    <tr><td><code>fonts "Georgia"</code></td><td><code>fonts</code> binds a face per text role, so it takes a block…</td></tr>
+    <tr><td><code>paperWidth 210 mm</code></td><td><code>mm</code> is a unit, and a unit is spelled glued to its number: <code>210mm</code>, one word.</td></tr>
+    <tr><td><code>override Beam.thickness = 2</code></td><td>'Beam.thickness' is not supported in this version of Lily# — this 'override' would change nothing. Supported: NoteHead.color, NoteHead.transparent, Stem.color, Stem.transparent. …</td></tr>
+    <tr><td><code>c4@rit d e f</code> (never closed)</td><td>a text spanner is never closed, so neither its word nor its line is drawn; write '@!rit' (or '@!textSpan') on the note it should reach…</td></tr>
+    <tr><td><code>c4~ d4</code></td><td>the note after a tie '~' does not repeat the tied pitch; a tie joins two notes of the same pitch - use a slur '( )' to connect different pitches</td></tr>
+    <tr><td>a slur crossing a cue edge</td><td>a slur cannot cross a cue boundary…</td></tr>
+  </table>
+  <p>Warnings are for things that are legal but probably not what you meant; errors are for
+  things with no defensible reading.</p>
+</section>
+
+<section id="lilypond">
+  <p class="eyebrow">23</p>
+  <h2>Coming from LilyPond</h2>
+  <p>Lily#'s engraving engine is a port of LilyPond's, but the language is deliberately not
+  LilyPond's. LilyPond's backslash commands are rejected outright, with a message naming the
+  Lily# spelling.</p>
+  <table class="g">
+    <tr><th>LilyPond</th><th>Lily#</th></tr>
+    <tr><td><code>\relative c' { … }</code></td><td>relative is the default; or <code>octave absolute</code></td></tr>
+    <tr><td><code>\new Staff</code>, <code>\new Voice</code></td><td><code>part</code> declarations and <code>score</code> rows</td></tr>
+    <tr><td><code>&lt;&lt; … \\ … &gt;&gt;</code></td><td><code>voice { … } { … }</code></td></tr>
+    <tr><td><code>&lt;&lt; … &gt;&gt;</code> (parallel)</td><td>in Lily# this spelling is a written-out arpeggio</td></tr>
+    <tr><td><code>\repeat volta 2 { … }</code></td><td><code>form main { |: A :| }</code></td></tr>
+    <tr><td><code>\alternative</code></td><td><code>[1. B] :| [2. C]</code> in the form</td></tr>
+    <tr><td><code>c4\staccato</code>, <code>c4-.</code></td><td><code>c4@staccato</code></td></tr>
+    <tr><td><code>c:maj7</code>, <code>fis:m7.5-</code></td><td><code>Cmaj7</code>, <code>F#m7-5</code> — the printed symbol, with <code>+</code>/<code>-</code> for an altered tension</td></tr>
+    <tr><td><code>q</code> (no marks)</td><td><code>q</code>, and <code>q'</code> to repeat the chord an octave up</td></tr>
+    <tr><td><code>\version</code></td><td>nothing; there is no version pragma</td></tr>
+    <tr><td><code>\include</code></td><td><code>using "other.lys"</code></td></tr>
+  </table>
+  <p>Chord entry is the sharpest difference and the one most worth knowing: LilyPond asks
+  you to encode a chord, Lily# asks you to type it as it prints.</p>
+</section>
+
+<section id="rough">
+  <p class="eyebrow">24</p>
+  <h2>Rough edges</h2>
+  <p>Measured against Lily# {{VER}} while this page was built. These are real and current;
+  they are listed here rather than smoothed over.</p>
+
+  <div class="rough">
+    <p><b>One typo can still produce three diagnostics.</b> <code>c4@bend.half</code>
+    reports the stray dot, then <code>@bend</code> missing its argument, then an undefined
+    variable <code>half</code>. The middle line now names the fix —
+    <code>@bend(half)</code> — but the other two remain.</p>
+    <p>Collapsing them means letting the parser eat the <code>.half</code>, and the obvious
+    rule for that (an argument-taking name followed by a dot) is wrong:
+    <code>@ottava.bassa</code> is a legitimate dotted <i>name</i>, and <code>ottava</code>
+    is in the same vocabulary.
+    The correct test is whether the whole dotted name is known, and that lives downstream.</p>
+  </div>
+
+  <div class="rough">
+    <p><b><code>lysc ly</code> cannot express a displaced <code>q</code>.</b> LilyPond's
+    <code>q</code> takes no octave marks, and wrapping it in <code>\transpose</code> does
+    not work either: LilyPond expands chord repetitions <i>after</i> transposition, so the
+    wrapper moves an empty placeholder and the expansion then fills in the untransposed
+    pitches (measured against 2.26.0 — it compiles and changes nothing). The twin writes a
+    plain <code>q</code> and warns; write the chord out by hand if the twin must match.</p>
+  </div>
+
+  <div class="rough">
+    <p><b>A chart that is nothing but a rhythm staff opens with a small gap.</b> A one-line
+    staff draws no clef, but the room for one is reserved per <i>score</i> rather than per
+    staff, so a score with no other staff to fill it leaves the space empty. In a
+    multi-staff score the reservation is right and nothing shows.</p>
+  </div>
+
+  <p>Documented gaps that are known and tracked: cross-staff beam layout and a
+  LilyPond-to-Lily# converter. The long tail of specialist notation — early music,
+  microtonal, clusters, ambitus — is deliberately out of scope.</p>
+</section>
+
+</article>
+</div>

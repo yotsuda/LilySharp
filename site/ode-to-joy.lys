@@ -1,0 +1,43 @@
+// An die Freude — Beethoven, Symphony No. 9, Op. 125 (1824); text by Schiller.
+// Public domain; four-part setting written for this showcase.
+// The chorale is homophonic and all four voices sing the same words, so ONE lyric
+// track is written and each score row binds it to the staff it sits under.
+title "An die Freude"
+composer "L. v. Beethoven"
+tempo "Allegro maestoso" 4 = 108
+time 4/4  key g major
+
+part sop { clef treble }
+part alt { clef treble }
+part ten { clef treble_8 }
+part bas { clef bass }
+
+section Chorale {
+  sop { b'4@mf b c d | d4 c b a | g4 g a b | b4. a8 a2 |
+        b4 b c d | d4 c b a | g4 g a b | a4. g8 g2 | }
+  alt { g'4 g g g | g4 g g fis | d4 d fis g | g4. fis8 fis2 |
+        g4 g g g | g4 g g fis | d4 d fis g | fis4. d8 d2 | }
+  ten { d'4 d e b | b4 e d d | b4 b d d | d4. d8 d2 |
+        d4 d e b | b4 e d d | b4 b d d | d4. b8 b2 | }
+  bas { g,4 g c g | g4 c g d' | g,4 g d' g, | g4. d'8 d2 |
+        g,4 g c g | g4 c g d' | g,4 g d' g, | d'4. g,8 g2 | }
+
+  lyrics verse {
+      Freu- de, schö- ner | Göt- ter- fun- ken, | Toch- ter aus E- | ly- si- um, |
+      Wir be- tre- ten | feu- er- trun- ken, | Himm- li- sche, dein | Hei- lig- tum! | }
+}
+
+form main { Chorale }
+
+score main {
+  choirStaff {
+    staff sop "Soprano"
+    lyrics verse sings sop
+    staff alt "Alto"
+    lyrics verse sings alt
+    staff ten "Tenor"
+    lyrics verse sings ten
+    staff bas "Bass"
+    lyrics verse sings bas
+  }
+}

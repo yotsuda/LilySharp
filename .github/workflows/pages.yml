@@ -1,0 +1,64 @@
+name: Pages
+
+# The showcase site (site/) is built from source on every push that could change it: the
+# pages, the .lys examples, or the engraver that draws them. build-site.ps1 refuses a site
+# whose examples do not compile, whose pictures are missing or whose version is stale, so a
+# red run here means the site stays as it was.
+#
+# One-time setup in the repository: Settings -> Pages -> Build and deployment -> Source:
+# "GitHub Actions".
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'site/**'
+      - 'LilySharp.Core/**'
+      - 'LilySharp.Cli/**'
+      - 'Directory.Build.props'
+      - 'README.md'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push supersedes a queued one but never cancels one
+# already publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Build lysc
+      run: dotnet build LilySharp.Cli --configuration Release
+
+    - name: Build and check the site
+      shell: pwsh
+      run: ./site/build-site.ps1
+
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: site/_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - id: deployment
+      uses: actions/deploy-pages@v4

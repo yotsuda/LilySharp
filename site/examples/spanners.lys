@@ -1,0 +1,18 @@
+// A spanner opens on one note and MUST be closed on another: one that is never
+// closed draws nothing at all and says so.
+octave absolute
+time 4/4
+part rh { clef treble }
+part lh { clef bass octave 3 }
+section A {
+  rh {
+    c'4@ottava d' e' f' | g'4 a' b' c''@!ottava |
+    c'4@rit b a g@!rit | c'1 |
+  }
+  lh {
+    c4@sustain e g e | c4@sustain e g e |   // a second @sustain while down re-pedals
+    c4@sustain e g e | c1@!sustain |
+  }
+}
+form main { ~A }
+score main { grandStaff { staff rh  staff lh } }

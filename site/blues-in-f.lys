@@ -1,0 +1,38 @@
+// Blues in F — a twelve-bar blues head written for this showcase. The form is
+// traditional; the head, comping figure and walking line are original.
+// Four rows from one source: chords, the written head, a ONE-LINE slash staff
+// for the rhythm section, and a walking bass.
+title "Blues in F"
+composer "Twelve-bar form"
+tempo "Medium Swing" 4 = 132 swing
+time 4/4
+key f major
+
+part head { clef treble }
+part comp { clef treble }
+part bass { clef bass }
+
+phrase riffF   { r4 f8 aes a c r4 | }
+phrase riffBb  { r4 bes'8 des d f r4 | }
+phrase riffC   { r4 c'8 ees e g r4 | }
+phrase comping { /4 4 4 4 | }
+
+section Chorus {
+  head { riffF | c'4 a8 f~ f2 | riffF r1 |
+         riffBb | f''4 d8 bes~ bes2 | riffF | r1 |
+         riffC | riffBb | riffF | r1 | }
+  comp { repeat unfold 12 { comping } }
+  bass { f,4 a c ees | bes d f aes | f,4 a c ees | f,4 a c ees |
+         bes d f aes | bes, d f aes | f,4 a c ees | f,4 a c ees |
+         c4 e g bes | bes, d f aes | f,4 a c ees | c4 e g bes | }
+  chords prog { F7 | Bb7 | F7 | F7 | Bb7 | Bb7 | F7 | F7 | C7 | Bb7 | F7 | C7 | }
+}
+
+form main { Chorus }
+
+score main "blues-in-f" {
+  chords prog            // symbols across the top
+  staff head             // the written melody
+  staff comp as lines 1  // one-line slash staff
+  staff bass bass        // the walking line
+}
