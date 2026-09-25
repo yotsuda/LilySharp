@@ -563,13 +563,13 @@ pedals `@sustain` ... `@!sustain`, `@sostenuto` ... `@!sostenuto`, `@unaCorda` .
 (`@treCorde` is the same release written as the word the Text style prints) — one word each,
 LilyPond's own names, taking NO argument (`@ped`, `@ped(off)`, `@sost(off)`, `@una(corda)` do not exist).
 A pedal CHANGE (release and re-press on the same note, LilyPond's `\sustainOff\sustainOn`) is
-both marks on one note: `g,4@!sustain@sustain` — the bracket draws its notch there. A second
-`@sustain` while the pedal is down means the same and engraves identically. How the span is
+the start again while the pedal is down: `g,4@sustain` — the bracket draws its notch there, and
+the one `@!sustain` at the end closes the span. `g,4@!sustain@sustain` means the same. How the span is
 drawn is the PART's: `part lh { clef bass pedal text }` (`text` = "Ped. … *", `bracket` =
 what an unset part draws, or `mixed` = text at the start, bracket for the hold).
 
 ```
-d,4@sustain a, d a, | g,4@!sustain@sustain d g d | a,1@!sustain |
+d,4@sustain a, d a, | g,4@sustain d g d | a,1@!sustain |
 ```
 Phrasing slur `@phrasingSlur` ... `@!phrasingSlur` (LilyPond's `\(` ... `\)`; **the end is REQUIRED**):
 the long curve over a musical sentence, drawn over the ordinary slurs `( )` inside it. One is open

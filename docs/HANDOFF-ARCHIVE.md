@@ -129,6 +129,39 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第628セッションの経緯
+
+### 1.1 第628セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p628`（HEAD `879022ab`・full **9170 / 0 / 2 / 9172**）。ユーザー:「`@!sustain@sustain` をもっと簡潔に」→ 案 A を選択（ユーザー決定）＝**踏み直しは、踏んでいる間にもう一度 `@sustain`**（既に同じ描画だった）を正式な書き方にする。
+
+★ **⑴ LP 双子の食い違いを直した**: 短い書き方は紙面・MIDI は同一だが双子が裸の `\sustainOn` を書き、LP 2.26.0 は括弧に切れ目を描かない（nocturne で 52 本 対 28 本）。`LilyPondExporter.RePedalStarts`＝ソース順に body（part ブロック／section／phrase）ごとのペダル状態を 1 度だけ歩き、踏んでいる間の開始の位置を集める→`MapArticulation` が `\sustainOff\sustainOn`（sostenuto・unaCorda も）。書き手は同じ node を何度も訊くので走る状態は持たない。網 `LilyPondExporterTests.ASecondPedalStart_WhileDown_IsWrittenAsAPedalChange`。nocturne は長短で双子が 1 byte も違わない。
+★ **⑵ 文書とサンプル**: SYNTAX_REFERENCE・GRAMMAR・GRAMMAR_FOR_LLM の主の書き方を短い方に（明示形は「同じ意味」へ格下げ）・`samples/nocturne.lys` の 7 か所。テストの fixture（pedal-change・showcase 03-piano ほか）は明示形の網として残す。
+
+終了: HEAD `4e7302f6`＋docs・full **9171 / 0 / 2 / 9173**。
+
+## 以下は第627セッションの経緯
+
+### 1.1 第627セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p627`（HEAD `6c1f85dc`・full **9169 / 0 / 2 / 9171**）。着手＝ChatGPT の `scratch/SongsByChatGPT` を目で見て誤りを探す（第623 の grace はここで見つかった）。
+
+★ **⑴ 描画**: `04_northbound_machines_orchestra`・`03_clockwork_garden_keyboard`・`city_lights_overture_true_clean_baseline` の頁を見た＝誤りなし（へ音記号の段が高いのは原文の音域＝0.8.0 から clef は音高を動かさない・21〜28 小節の括弧は `@sustain` のペダル）。
+★ **⑵ 同じ診断が 2 度出る**: `02_paper_satellites_song_form` で歌詞の溢れ 10 件が 2 度ずつ（form が PreChorus と Chorus を 2 度演奏＝collect がその section を 2 度歩く）。991 冊の `check` で重複は他に Holiday.lys の小節長 1 件だけ。**`SemanticValidation.Run` で (重大度・span・code・文面) の同じ診断を 1 つに**（CLI と editor の両方がここを通る）。網 `LyricSyllableValidatorTests.ASectionTheFormPlaysTwice_WarnsOnce`（毒で 2 件）。
+
+終了: HEAD `588631ef`＋docs・full **9170 / 0 / 2 / 9172**。
+
+## 以下は第626セッションの経緯
+
+### 1.1 第626セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p626`（HEAD `5fa2326e`・full **9168 / 0 / 2 / 9170**）。第625 ⚠️ の弱起の残り。
+
+★ **⑴ MIDI: section の弱起を全パートの最初の小節へ**: `_partial` は最初のレーンが最初の小節線で使い切る＝2 番目以降のパートは 1 小節目を満の小節で数え、section を延ばしていた（partial.lys＝`partial 2`・melody と空の `X { | | | }`＝紙面 4,800 tick に対し 5,760）。section-major の各パートの最初のブロックで `_partial` を張り直す（`PlaySectionCore` の `sectionPickup`）。網 `SectionVoicePaddingExportTests.Midi_ASectionPickup_ShortensEveryPartsFirstBar`（毒＝旧で 2 回目の A が 12 拍目）。942 冊で動いたのは partial.lys 1 冊（10,560 → 9,600）。
+★ **⑵ §1.0 の ⒵（第590 の時間の地図 2,440 字）と ✅ ⒮²⁶ を 1 行に畳んだ**（照合の基準・計器の場所・反証 2 つ・残る設計級 2 つだけ残す）。
+
+終了: HEAD `1bd5eb5d`＋docs・full **9169 / 0 / 2 / 9171**。
+
 ## 以下は第625セッションの経緯
 
 ### 1.1 第625セッション（2026-09-25・YT-DELL2）

@@ -1870,9 +1870,9 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
                      @startTrillSpan … @stopTrillSpan ,
                      @sustain … @!sustain , @sostenuto … @!sostenuto ,
                      @unaCorda … @!unaCorda   [@treCorde = @!unaCorda, the printed word]
-                     (* a pedal CHANGE is both marks on one note, release first:
-                        c4@!sustain@sustain — engraved the same as a second @sustain
-                        while the pedal is down *)
+                     (* a pedal CHANGE is the start again while the pedal is down:
+                        c4@sustain … g4@sustain … c4@!sustain — the second releases and
+                        re-presses; c4@!sustain@sustain on one note means the same *)
                      @phrasingSlur … @!phrasingSlur   [LilyPond's \( … \); an end is
                      REQUIRED; one open per voice, ordinary slurs ( ) may sit inside] *)
 

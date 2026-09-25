@@ -427,6 +427,7 @@ public sealed class LilyPondExporter
     public string Export(SyntaxTree tree)
     {
         var root = tree.GetRoot();
+        _rePedals = RePedalStarts(root);
 
         // Every section's voices and canonical bar count (SectionBarCounts, the semantic
         // counter): a voice that writes fewer bars than its section-mates is padded with
@@ -3532,6 +3533,69 @@ public sealed class LilyPondExporter
     ///   'SostenutoEvent START|STOP — sustainOn / sustainOff, unaCorda / treCorde,
     ///   sostenutoOn / sostenutoOff, each a post-event on the note.
     /// </remarks>
+    // The pedal STARTS written while that pedal is already down (RePedalStarts), by source
+    // offset: each is written as a release and a start.
+    private HashSet<int> _rePedals = new();
+
+    /// <summary>
+    /// Every pedal start (<c>@sustain</c>, <c>@sostenuto</c>, <c>@unaCorda</c>) written while
+    /// the same pedal is still down in the same music — the re-pedals the page engraves as
+    /// pedal changes — by source offset. One walk in source order per music body (a part
+    /// block, else its section or phrase), before any of it is written: the writers ask per
+    /// node and some ask more than once, so the answer cannot be a running state.
+    /// </summary>
+    private static HashSet<int> RePedalStarts(SyntaxNode root)
+    {
+        var rePedals = new HashSet<int>();
+        var down = new Dictionary<SyntaxNode, HashSet<string>>();
+        foreach (var node in root.DescendantNodes())
+        {
+            string? start = null, release = null;
+            if (node is ArticulationSyntax art)
+            {
+                switch (art.NameToken.Text.ToLowerInvariant())
+                {
+                    case "sustain": start = "sustain"; break;
+                    case "sostenuto": start = "sostenuto"; break;
+                    case "unacorda": start = "unacorda"; break;
+                    case "trecorde": release = "unacorda"; break;
+                }
+            }
+            else if (node is MusicMarkSyntax mark)
+            {
+                string? pedal = Svg.Model.MusicMarkItem.ParseMarkName(mark.Name) switch
+                {
+                    Svg.Model.MusicMarkType.SustainOn => "sustain",
+                    Svg.Model.MusicMarkType.SostenutoOn => "sostenuto",
+                    Svg.Model.MusicMarkType.UnaCordaOn => "unacorda",
+                    Svg.Model.MusicMarkType.UnaCordaOff => "unacorda",
+                    _ => null,
+                };
+                if (pedal != null && (mark.IsSpanEnd
+                        || Svg.Model.MusicMarkItem.ParseMarkName(mark.Name) == Svg.Model.MusicMarkType.UnaCordaOff))
+                    release = pedal;
+                else
+                    start = pedal;
+            }
+            if (start == null && release == null)
+                continue;
+            SyntaxNode body = node;
+            for (var p = node.Parent; p != null; p = p.Parent)
+                if (p is PartBlockSyntax or SectionDeclarationSyntax or PhraseDeclarationSyntax)
+                {
+                    body = p;
+                    break;
+                }
+            if (!down.TryGetValue(body, out var pedals))
+                down[body] = pedals = new HashSet<string>(StringComparer.Ordinal);
+            if (release != null)
+                pedals.Remove(release);
+            else if (!pedals.Add(start!))
+                rePedals.Add(node.SourceStart);
+        }
+        return rePedals;
+    }
+
     private static string? PedalPostEvent(MusicMarkSyntax mk)
     {
         var type = Svg.Model.MusicMarkItem.ParseMarkName(mk.Name);
@@ -4487,9 +4551,14 @@ public sealed class LilyPondExporter
             // Not scripts: no direction sign, so they answer here and never reach the tail.
             // LILYPOND-REF: ly/spanners-init.ly:94-101 make-span-event — sustainOn, sostenutoOn,
             //   unaCorda, treCorde are span events, post-events on the note.
-            case "sustain": return "\\sustainOn";
-            case "sostenuto": return "\\sostenutoOn";
-            case "unacorda": return "\\unaCorda";
+            // A start while that pedal is already DOWN is a pedal change — the page engraves
+            // it as one (SYNTAX_REFERENCE §Pedal Markings, a second `@sustain` re-pedals) — and
+            // LilyPond draws the change only for an explicit release first: a bare second
+            // \sustainOn continues the bracket with no notch (MEASURED 2026-09-25 on 2.26.0,
+            // samples/nocturne.lys: 52 bracket lines with the release, 28 without).
+            case "sustain": return _rePedals.Contains(a.SourceStart) ? "\\sustainOff\\sustainOn" : "\\sustainOn";
+            case "sostenuto": return _rePedals.Contains(a.SourceStart) ? "\\sostenutoOff\\sostenutoOn" : "\\sostenutoOn";
+            case "unacorda": return _rePedals.Contains(a.SourceStart) ? "\\treCorde\\unaCorda" : "\\unaCorda";
             case "trecorde": return "\\treCorde";
             // A text spanner's START written as a word (`@rit`, a bare `@textSpan`): the span
             // event; the word it prints is set before the note by SplitAttachments

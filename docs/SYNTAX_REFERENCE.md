@@ -1452,13 +1452,11 @@ its glossary and nowhere else). Write `@!ottava`.
 Each pedal is **one span**, opened by its name and closed by `@!` — the same rule as a text
 spanner and an ottava. A pedal nobody releases draws nothing at all, and says so (LYS4018).
 
-⚠️ A second `@sustain` while the pedal is down is **re-pedalling**, not a mistake: it
-releases and re-engages, which is what "Ped. … Ped." means on the page.
-
-The explicit spelling of a pedal change is both marks on ONE note, release first:
-`@!sustain@sustain` (LilyPond's `\sustainOff\sustainOn`). It engraves identically to the
-second `@sustain`, and says what the pianist's foot does, so prefer it when the pedal
-changes at every bar or chord.
+A **pedal change** — release and press again on the same note, LilyPond's
+`\sustainOff\sustainOn` — is simply the pedal's name again while it is down: a second
+`@sustain` releases and re-engages, and the bracket draws its notch there. The span stays
+open until the one `@!sustain` that ends it. (Both marks on one note, `@!sustain@sustain`,
+mean the same and engrave the same.)
 
 The drawing is a part property: `part lh { clef bass pedal text }` picks "Ped. … *",
 `pedal bracket` (what a part without the property draws) or `pedal mixed` (text at the
@@ -1466,7 +1464,7 @@ start, bracket for the hold).
 
 ```
 c4@sustain d e f@!sustain |           // Sustain pedal
-c4@sustain d e f | g4@!sustain@sustain a b c@!sustain |   // pedal change on g
+c4@sustain d e f | g4@sustain a b c@!sustain |   // pedal change on g
 c4@sostenuto d@!sostenuto |           // Sostenuto pedal
 c4@unaCorda d@!unaCorda |             // Una corda pedal
 c4@unaCorda d@treCorde |              // the same release, written as the word it prints

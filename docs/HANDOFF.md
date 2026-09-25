@@ -145,25 +145,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第627セッション（2026-09-25・YT-DELL2）
+### 1.1 第630セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p627`（HEAD `6c1f85dc`・full **9169 / 0 / 2 / 9171**）。着手＝ChatGPT の `scratch/SongsByChatGPT` を目で見て誤りを探す（第623 の grace はここで見つかった）。
+同じ会話の続き。★ `-Start p630`（HEAD `27856853`・full **9171 / 0 / 2 / 9173**）。ユーザー: GitHub Pages 用の `scratch/site-showcase`（git 管理外）をレビュー→「性能表は外して、2 の仕組みを入れて直して」。
 
-★ **⑴ 描画**: `04_northbound_machines_orchestra`・`03_clockwork_garden_keyboard`・`city_lights_overture_true_clean_baseline` の頁を見た＝誤りなし（へ音記号の段が高いのは原文の音域＝0.8.0 から clef は音高を動かさない・21〜28 小節の括弧は `@sustain` のペダル）。
-★ **⑵ 同じ診断が 2 度出る**: `02_paper_satellites_song_form` で歌詞の溢れ 10 件が 2 度ずつ（form が PreChorus と Chorus を 2 度演奏＝collect がその section を 2 度歩く）。991 冊の `check` で重複は他に Holiday.lys の小節長 1 件だけ。**`SemanticValidation.Run` で (重大度・span・code・文面) の同じ診断を 1 つに**（CLI と editor の両方がここを通る）。網 `LyricSyllableValidatorTests.ASectionTheFormPlaysTwice_WarnsOnce`（毒で 2 件）。
+★ **⑴ レビュー**（3 エージェント並行＋私の裏付け）: 生成物（`index.html`←`build-preview.ps1`、`grammar.html`←`manual-body.html`＋`build-manual.ps1`、例←`build-examples.ps1`）が 0.5.0 のまま。例の `bass-guitar`・`french-horn`・`section ~A`・`@invertedturn`・part の `time`、`F#m7b5`（登録外＝構成音なし・**警告も出ない**）、SVG 欠け（ギャラリー 5・例 14・chord-axes）、開発メモ、版数の手書き。
+★ **⑵ 直した**（約 80 か所・手順は Lab `sessions/p630/fix-*.ps1`・元は `site-showcase-before/`）: 仕様の古い記述を SYNTAX_REFERENCE／コンパイラに合わせ（本当の診断文をコンパイラから取得）、性能表を削除、版数は `Directory.Build.props` から読む。**`build-site.ps1`＝例・ギャラリー・図を `lysc check` してから描き、2 頁を生成し、画像の欠け・他の版数・置換残り／開発メモ・頁に載る完全な例のコンパイル失敗が 1 つでもあれば失敗**（毒 3 種で赤を確認）。今は全部通る（例 14・図 7・頁内の完全例 23）。
+⚠️ 提案: `F#m7b5` のような `b`／`#` のテンションは黙って登録外になる＝コンパイラが `m7-5` を示す警告を出すべき（未着手）。
 
-終了: HEAD `588631ef`＋docs・full **9170 / 0 / 2 / 9172**。
+終了: HEAD `27856853`＋docs（コードの変更なし）・full **9171 / 0 / 2 / 9173**。
 
-## 以下は第626セッションの経緯
+## 以下は第629セッションの経緯
 
-### 1.1 第626セッション（2026-09-25・YT-DELL2）
+### 1.1 第629セッション（2026-09-25・YT-DELL2）
 
-同じ会話の続き。★ `-Start p626`（HEAD `5fa2326e`・full **9168 / 0 / 2 / 9170**）。第625 ⚠️ の弱起の残り。
+同じ会話の続き。★ `-Start p629`（HEAD `dd4667d0`・full **9171 / 0 / 2 / 9173**）。ユーザー:「README に表示するに相応しい楽譜をひとつ」→ 8 小節のオリジナル「Morning Light」（コード名・メロディと歌詞・ベースの五線とタブ＝1 つのソースから 4 段）を Lab `sessions/p629/morning-light.lys`（＋ `ml.png`）に書いた。警告 0。途中、フレーズの印に書いた `( )` が歌詞を飲む（LYS4001 が正しく指摘）→ `@phrasingSlur` に。repo（samples／README）への追加はユーザーの判断待ち。コードの変更なし。
 
-★ **⑴ MIDI: section の弱起を全パートの最初の小節へ**: `_partial` は最初のレーンが最初の小節線で使い切る＝2 番目以降のパートは 1 小節目を満の小節で数え、section を延ばしていた（partial.lys＝`partial 2`・melody と空の `X { | | | }`＝紙面 4,800 tick に対し 5,760）。section-major の各パートの最初のブロックで `_partial` を張り直す（`PlaySectionCore` の `sectionPickup`）。網 `SectionVoicePaddingExportTests.Midi_ASectionPickup_ShortensEveryPartsFirstBar`（毒＝旧で 2 回目の A が 12 拍目）。942 冊で動いたのは partial.lys 1 冊（10,560 → 9,600）。
-★ **⑵ §1.0 の ⒵（第590 の時間の地図 2,440 字）と ✅ ⒮²⁶ を 1 行に畳んだ**（照合の基準・計器の場所・反証 2 つ・残る設計級 2 つだけ残す）。
-
-終了: HEAD `1bd5eb5d`＋docs・full **9169 / 0 / 2 / 9171**。
+終了: HEAD `dd4667d0`＋docs・full **9171 / 0 / 2 / 9173**。
 
 ## 2. 開いている作業
 

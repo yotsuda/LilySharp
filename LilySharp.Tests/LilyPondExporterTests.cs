@@ -493,6 +493,26 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
+    /// A second start while the pedal is DOWN is a pedal change — the page engraves it as one
+    /// — so the twin writes the release too: a bare second <c>\sustainOn</c> continues
+    /// LilyPond's bracket with no notch (MEASURED on 2.26.0: samples/nocturne.lys draws 52
+    /// bracket lines with the release, 28 without). The short spelling and the explicit
+    /// <c>@!sustain@sustain</c> write the same twin; a start after a release stays a start.
+    /// </summary>
+    [Fact]
+    public void ASecondPedalStart_WhileDown_IsWrittenAsAPedalChange()
+    {
+        string Twin(string music) => Export(PedalScore(music));
+        var shortForm = Twin("c,4@sustain d,4 e,4@sustain f,4 | c,4@sostenuto d,4@sostenuto e,4@unaCorda f,4@unaCorda | c,1@!sustain@!sostenuto@treCorde");
+        Assert.Contains("e,4\\sustainOff\\sustainOn", shortForm);
+        Assert.Contains("d,4\\sostenutoOff\\sostenutoOn", shortForm);
+        Assert.Contains("f,4\\treCorde\\unaCorda", shortForm);
+        Assert.Equal(Twin("c,4@sustain d,4 e,4@!sustain@sustain f,4 | c,1@!sustain"),
+            Twin("c,4@sustain d,4 e,4@sustain f,4 | c,1@!sustain"));
+        Assert.DoesNotContain("sustainOff\\sustainOn", Twin("c,4@sustain d,4@!sustain e,4@sustain f,4@!sustain"));
+    }
+
+    /// <summary>
     /// A text spanner is <c>\startTextSpan</c> … <c>\stopTextSpan</c> on its notes, with the
     /// word it prints set on the grob before the opening note — <c>@rit</c> prints "rit.",
     /// <c>@textSpan("poco rit.")</c> its argument, a bare <c>@textSpan</c> nothing (LilyPond's

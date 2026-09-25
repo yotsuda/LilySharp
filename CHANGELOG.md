@@ -63,6 +63,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **A pedal change is written as the pedal again.** A second `@sustain` while the pedal is
+  down already engraved as a pedal change; it is now the documented spelling (`g4@sustain`),
+  with `@!sustain@sustain` kept as the same thing written out. The LilyPond twin writes it
+  as `\sustainOff\sustainOn` — a bare second `\sustainOn` drew no notch in LilyPond's
+  bracket — and likewise for `@sostenuto` and `@unaCorda`. The nocturne sample uses it.
+
 - **The twin of a named score engraves that score's staves.** `lysc ly --score NAME` and
   `lysc ly --all` wrote every score's twin with the file's FIRST `score` — its staves, its
   `fonts` and `layout` plans, its instrument names — and only the form followed the name. Two
