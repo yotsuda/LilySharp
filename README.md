@@ -7,6 +7,55 @@ from plain text, with an IDE-first toolchain.
 [![VS Code Marketplace](https://vsmarketplacebadges.dev/version/yotsuda.lilysharp.svg?label=VS%20Code%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3%20or%20later-blue.svg)](LICENSE)
 
+<p align="center">
+  <img src="docs/images/morning-light.png" width="760"
+       alt="Morning Light, engraved by Lily#: chord symbols, a melody with its lyrics, and a bass part as notation and tablature">
+</p>
+
+That page is the whole of [`samples/morning-light.lys`](samples/morning-light.lys):
+
+<!-- README-SAMPLE:morning-light (kept identical to the file by ReadmeSampleTests) -->
+```lilysharp
+// Morning Light — an original eight-bar lead sheet written for the Lily# README.
+//
+// One source, four lines of output: chord symbols, a melody with its lyrics, and a
+// bass part engraved both as notation and as tablature.
+title "Morning Light"
+composer "Lily#"
+tempo "Moderato" 4 = 96
+time 4/4
+key g major
+
+part melody { clef treble }
+part bass { clef bass  tuning bass }
+
+section Verse {
+  melody {
+    d4@mp@phrasingSlur g a b | c2 b4 a@!phrasingSlur | g4. a8 b4 d | e2. r4 |
+    e4@mf@phrasingSlur d b g | a4 b8 a g4 e@!phrasingSlur | d4 g a8( b) a4 | g1@fermata |.
+  }
+  chords harmony { G | C | G | Em | C | D | Am7 D7 | G | }
+  lyrics words sings melody {
+    Morn- ing comes a- | cross the bay, | sil- ver on the | sea |
+    hold the light and | car- ry it a- way, | all the way to | me |
+  }
+  bass {
+    g4 d' g, d' | c4 g c g | g4 d' g, b | e,4 b' e, b' |
+    c4 g c e | d4 a d fis, | a4 e' d a | g1@fermata |.
+  }
+}
+
+form main { ~Verse }
+
+score main {
+  chords harmony
+  staff melody
+  lyrics words
+  staff bass
+  tab bass
+}
+```
+
 ## Overview
 
 Lily# compiles a `.lys` source file to engraved sheet music (SVG, PDF, PNG), and to
@@ -109,8 +158,8 @@ Standard pitch names with accidentals:
 By default each bare pitch takes the octave nearest the previous note (an interval of a
 fourth or less), and `'`/`,` shift from there.
 
-**`octave absolute`** switches that off: bare `c` is always C4, and `'`/`,` are absolute
-offsets from it (`c'` = C5, `c,` = C3), resolved independently per note. A wrong octave
+**`octave absolute`** switches that off: bare `c` is C4 (or the part's `octave N`), and
+`'`/`,` are absolute offsets from it (`c'` = C5, `c,` = C3), resolved independently per note. A wrong octave
 then stays one wrong note instead of cascading through everything after it.
 
 Relative is the default and the one to write by hand — it is shorter, and it is how a
@@ -127,7 +176,8 @@ part melody { clef treble }
 part bass   { clef bass octave 3 }   // bare c = C3 in this part
 ```
 
-Every file in [`samples/`](samples/) uses it.
+Most of the pieces in [`samples/`](samples/) use it; `morning-light.lys` at the top of this
+page is written relative, the way a person would write it.
 
 ### Articulations and Dynamics
 
@@ -290,7 +340,8 @@ Not shown above, all in [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md):
 
 - **Page and type** — `paper { … }` for page size, margins and vertical spacing;
   `fonts { … }` to bind text faces per role, both also as named blocks used per score
-- **Spanners** — ottava (`@ottava` … `@!ottava`), pedals (`@sustain` … `@!sustain`),
+- **Spanners** — ottava (`@ottava` … `@!ottava`), pedals (`@sustain` … `@!sustain`, a second
+  `@sustain` while down is a pedal change),
   text spanners (`@rit` / `@accel`), trill spanners, hairpins
 - **Cue notes** — `cue { … }`, optionally read in another instrument's clef
 - **Arpeggios** — `<< c e g >>` writes a broken chord out; `@arpeggio` rolls a chord

@@ -1,0 +1,38 @@
+// Morning Light — an original eight-bar lead sheet written for the Lily# README.
+//
+// One source, four lines of output: chord symbols, a melody with its lyrics, and a
+// bass part engraved both as notation and as tablature.
+title "Morning Light"
+composer "Lily#"
+tempo "Moderato" 4 = 96
+time 4/4
+key g major
+
+part melody { clef treble }
+part bass { clef bass  tuning bass }
+
+section Verse {
+  melody {
+    d4@mp@phrasingSlur g a b | c2 b4 a@!phrasingSlur | g4. a8 b4 d | e2. r4 |
+    e4@mf@phrasingSlur d b g | a4 b8 a g4 e@!phrasingSlur | d4 g a8( b) a4 | g1@fermata |.
+  }
+  chords harmony { G | C | G | Em | C | D | Am7 D7 | G | }
+  lyrics words sings melody {
+    Morn- ing comes a- | cross the bay, | sil- ver on the | sea |
+    hold the light and | car- ry it a- way, | all the way to | me |
+  }
+  bass {
+    g4 d' g, d' | c4 g c g | g4 d' g, b | e,4 b' e, b' |
+    c4 g c e | d4 a d fis, | a4 e' d a | g1@fermata |.
+  }
+}
+
+form main { ~Verse }
+
+score main {
+  chords harmony
+  staff melody
+  lyrics words
+  staff bass
+  tab bass
+}
