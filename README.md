@@ -360,7 +360,7 @@ Not shown above, all in [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md):
 ### VS Code extension (recommended)
 
 Open the Extensions view (`Ctrl+Shift+X` / `Cmd+Shift+X`), search for **Lily#**, and
-install `yotsuda.lilysharp` — or go straight to the
+click **Install** on the one by *yotsuda* — or install it from its
 [Marketplace listing](https://marketplace.visualstudio.com/items?itemName=yotsuda.lilysharp).
 Then open any `.lys` file: you get diagnostics as you type, completion, and a live
 score preview beside the source.
