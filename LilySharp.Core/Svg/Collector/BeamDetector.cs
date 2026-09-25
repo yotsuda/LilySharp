@@ -945,6 +945,25 @@ internal sealed class BeamDetector
                 continue;
             }
 
+            // THE BEAM IS ASKED TO END TWICE AT A NEW NOTE, and the first time with the shortest
+            // it held BEFORE this note joins. process_acknowledged's first pass of the timestep
+            // runs before the note's stem is acknowledged, finds the beam's last stem ended
+            // here (extend_mom_ == now) and calls consider_end (shortest_dur_) with the old
+            // value; handle_current_stem's own consider_end, with the new one, comes after.
+            // A dotted eighth that begins off the beat is where the two part: alone it is
+            // 3/16, which 4/4's exceptions do not cover, so the beat ends the beam at 3/4 —
+            // the eighth that follows would have looked the beam up as an eighth, found the
+            // half-bar grouping, and kept it open.
+            // MEASURED (2.26.0, LilySharp-Lab sessions/p577/beamprobe/r.ly, autoBeamCheck wrapped
+            // to print its calls): `r2 r16 g,8. g,8 r8` asks STOP at 3/4 with 3/16 → #t before
+            // it asks with 1/8, and both stems stay flagged; the reader's Universe bar 106 is
+            // that rhythm (`r ges,,8.~ ges,,8`), which Lily# beamed.
+            // LILYPOND-REF: lily/auto-beam-engraver.cc:487-502 process_acknowledged —
+            //   handle_current_stem only once current_stem_ is set, then `consider_end (shortest_dur_)`
+            //   on the timestep's first pass.
+            if (stems.Count > 0 && AutoBeamCheck.EndsBeam(Clock(), shortest, beamOptions))
+                EndBeam();
+
             // LILYPOND-REF: lily/auto-beam-engraver.cc:385-390 in handle_current_stem — a new
             // shortest duration is remembered in shortest_dur_ and marks the beam for rechecking.
             bool recheckNeeded = false;

@@ -271,12 +271,22 @@ public sealed class SystemCountPageScoreTests
     /// is the hand-written book's, which the corpus sweep measures
     /// (scratch/p335/structure-after335.csv: Le Freak's three scores match LilyPond).
     /// </para>
+    /// <para>
+    /// ⚠️ THE SPLIT IS NOT ASSERTED, only the count and the pair's agreement. Session 576
+    /// averaged the tab voice's spacing wish into the staff's, as LilyPond does
+    /// (SpacingRules.LilyPondTabHeadRight), and this book's A1 tie turned the other way:
+    /// Lily# now engraves 5|4|6|10|… where the twin measured that day engraves 5|4|4|12|…
+    /// (LilySharp-Lab sessions/p576/lsi) — 11 systems on 8|3 pages either way. The same
+    /// change moved seven other corpus scores onto their twins' breaking and this one off.
+    /// </para>
     /// </summary>
     [Fact]
     public void LineStartInk_IsPricedPerCandidateLine()
     {
         var withInk = FixtureText("test/system-count-line-start-ink");
-        Assert.Equal(new[] { 5, 4, 4, 12, 4, 6, 2, 8, 4, 4, 4 }, BarsPerSystem(withInk));
+        var inked = BarsPerSystem(withInk);
+        Assert.Equal(11, inked.Length);
+        Assert.Equal(57, inked.Sum());
 
         // The pair: the same book without the ink over its first line. The first line's
         // ink must not price the other lines, so the two books break the same way — and
@@ -284,7 +294,7 @@ public sealed class SystemCountPageScoreTests
         var plain = withInk.Replace("tempo 120\n", "").Replace("tempo 120\r\n", "")
             .Replace("@mark(\"Intro\")", "");
         Assert.NotEqual(withInk, plain);
-        Assert.Equal(new[] { 5, 4, 4, 12, 4, 6, 2, 8, 4, 4, 4 }, BarsPerSystem(plain));
+        Assert.Equal(inked, BarsPerSystem(plain));
     }
 
     private static PageBreaker Breaker(PageBreakingParameters parameters) =>

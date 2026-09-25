@@ -637,7 +637,11 @@ public class SpacingInvariantTests
             """);
 
         var next = score.PrimaryContentStaff.PrimaryVoice.Measures[1];
-        var bare = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, SpacingOptions.Default.WithShortest(0.125), allMeasures, next);
+        // The staves go along as the two production callers pass them: a tab voice's wish
+        // reads LilyPond's digit only when the layouter knows the measure is a tab's
+        // (SpacingRules.LilyPondTabHeadRight, session 576).
+        var bare = new MeasureLayouter().CreateTimingSprings(LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, primary, timings, SpacingOptions.Default.WithShortest(0.125), allMeasures, next,
+            stavesOfMeasures: MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(score, 0));
         var reserved = MultiStaffLayouter.ApplySharedColumnReservations(
             score, 0, bare, primary, timings, allMeasures, SpacingOptions.Default);
 

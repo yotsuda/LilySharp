@@ -232,9 +232,27 @@ internal static class ItemSkylineFactory
                                            double verticalPadding,
                                            int staffLines = EngravingDefaults.DefaultStaffLines)
     {
-        var boxes = Boxes(item, referenceX, staffY, which, staffLines);
+        var boxes = Boxes(item, referenceX, staffY, which & ~ColumnElements.Conditional, staffLines);
         var skyline = HorizontalSkyline.FromBoxesPadded(boxes, direction, verticalPadding);
         HorizontalSkyline.GiveBoxList(boxes);
+
+        // THE CONDITIONAL PARTS ARE NOT PADDED. LilyPond pads a separation item's own
+        // skylines when it stores them (calc_skylines), and merges the accidentals and the
+        // arpeggio in afterwards, from their bare boxes (conditional_skyline) — so an
+        // accidental meets a neighbour only where its ink's own Y reaches it. Padding it with
+        // the rest made a natural collide with a low head beside it that it clears by 0.455
+        // (MEASURED, 2.26.0, LilySharp-Lab sessions/p578: Universe's `f,8 c,8 a,4` — LilyPond
+        // compresses c → a to 2.43, where the padded natural held Lily# at 2.56).
+        // LILYPOND-REF: lily/separation-item.cc:83-87 conditional_skyline (no padding),
+        //   :92-110 calc_skylines (padded), :50-54 set_distance and
+        //   lily/spacing-interface.cc:85-89 skylines — the conditional one merged in after.
+        if ((which & ColumnElements.Conditional) != 0)
+        {
+            var conditional = Boxes(item, referenceX, staffY, ColumnElements.Conditional, staffLines);
+            if (conditional.Count > 0)
+                skyline.Merge(HorizontalSkyline.FromBoxesPadded(conditional, direction, 0.0));
+            HorizontalSkyline.GiveBoxList(conditional);
+        }
         return skyline;
     }
 
@@ -403,19 +421,14 @@ internal static class ItemSkylineFactory
     /// The left skyline represents the leftmost extent at each Y coordinate.
     /// </summary>
     /// <remarks>
-    /// ⚠️ THIS TAKES THE CONDITIONAL PARTS TOO, AND ONE OF ITS TWO CALLERS SHOULD NOT.
-    /// LilyPond puts accidentals and arpeggios in <c>conditional-elements</c>, which the ROD
-    /// merges in and which are ABSENT from the stored <c>horizontal-skylines</c> the SPRING's
-    /// minimum reads. So in LilyPond an accidental raises the rod and never the spring floor,
-    /// while in Lily# <see cref="SpacingRules.CalculateSkylineDistance"/> (the spring) and
-    /// <see cref="SpacingRules.SeparationRodDistance"/> (the rod) both see it.
-    /// LILYPOND-REF: lily/spacing-interface.cc:37-82 Spacing_interface::skylines — it reads
-    ///   each column's stored <c>horizontal-skylines</c> property and nothing else.
-    /// LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing — the spring's
-    ///   min_dist is that pair's distance, so no conditional part can reach it.
-    /// NOT CHANGED HERE: it moves every column that has an accidental, so it wants its own
-    /// ledger point and its own measurement, not a quiet ride inside a port that is
-    /// otherwise output-preserving.
+    /// This takes the conditional parts too, and so does the spring's view: LilyPond's rod
+    /// and its spring minimum both merge the right column's <c>conditional_skyline</c> in
+    /// after the stored <c>horizontal-skylines</c>. What sets the conditional parts apart is
+    /// that they are NOT PADDED (<see cref="Build"/>, session 579 — until then a note in this
+    /// place said the spring never sees them; spacing-interface.cc:87-89 says it does).
+    /// LILYPOND-REF: lily/spacing-interface.cc:85-89 Spacing_interface::skylines — the right
+    ///   items' conditional skyline, merged for the note spacing too.
+    /// LILYPOND-REF: lily/separation-item.cc:50-54 set_distance — and for the rod.
     /// </remarks>
     public static HorizontalSkyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
         => Build(item, referenceX, staffY, ColumnElements.All, HorizontalDirection.Left,

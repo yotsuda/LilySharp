@@ -129,6 +129,75 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第578セッションの経緯
+
+### 1.1 第578セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p578`（HEAD `1cc8ec7d`・full **9088 / 0 / 2 / 9090**・第576 を ARCHIVE へ）。着手＝第577 ⑶「圧縮した行の値付けのずれ」。
+
+★★★ **⑴ 圧縮した行のずれの出所＝臨時記号の最小幅（Lab `sessions/p578/`・製品 0）**: bar 17〜20 を LP の自然幅（行幅 400mm）・1 段に押し込んだ幅（`system-count = 1`）と Lily# のばねで列ごとに並べた（`cmp.ps1`・⚠️ LP の `PROBE` 出力は stdout／stderr を分けないと行が割れる＝前便の「3/8 の列が無い」はこれ）。**自然幅は全列 0.01 以内・圧縮の強さも一致**（ブロックされない列はすべて比 0.64＝LP の力 −0.64）。**違いは 1 か所**: `f,8 c,8( a,4\2)` の `c,→a,` で Lily# の最小幅 2.56・LP は 2.43 まで縮める。LP は ♮ を高さの重ならない `c,` とは衝突させず（rod 1.6042）、**2 列前の `f,` へ rod 2.7502 を張る**。Lily# は `c,` を下げても（位置 −13）2.52＝高さに関係なく衝突。
+  原因は 2 つ組: ⒜ LP の臨時記号は `conditional-elements`＝ばねの最小幅（`horizontal-skylines`）に**入らない**、rod にだけ高さ込みで入る（`ItemSkylineFactory.CreateLeftSkyline` の remarks が「一方の呼び手は入れるべきでない・別に測ってから」と保留済み）／⒝ LP の `set_column_rods`（`spacing-spanner.cc:228-297`）は左の列たちが**届く限り前の列まで** rod を張る（overhang のループ）＝**Lily# に移植が無い**（rod は隣どうしだけ）。⇒ **⒜ だけ直すと ♮ が 2 列前と重なる＝⒜⒝ を一緒に移植**。全ての臨時記号の列が動くので、LP 双子の台帳点（♮ が 1 列前と高さで離れ 2 列前と重なる形／隣と重なる形／和音）を先に立てる。
+
+## 以下は第577セッションの経緯
+
+### 1.1 第577セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p577`（HEAD `531808f1`・full **9084 / 0 / 2 / 9086**・第575 を ARCHIVE へ）。着手＝§1.0 の T7 残り⒝「Universe の staff＝圧縮行の値段」。
+
+★★★ **⑴ Universe の staff を 4 小節ずつ突き合わせた（Lab `sessions/p577/`）**: LP の 33 段と Lily# の 33 段候補の違いは 2 か所の入れ替えだけ（bar 17〜20：LP 1 段・Lily# 2,2／bar 104〜107：LP 2,2・Lily# 1 段）。抜粋の得点（`-ddebug-page-breaking-scoring` と `LayoutEngine.DebugPageBreakingScoring`）で **bar 104〜107 を 1 段は LP `inf`・Lily# 12.37**＝Lily# が詰めすぎ。LP を `system-count = 1` で押し込んだ列（`dump-just`）と Lily# の最小幅を列ごとに並べると、**bar 3 の `ges,,8.~ ges,,8` に LP は旗・Lily# は連桁**（rod が旗の分 0.763 × 2 小さい）。
+★★★ **⑵ 自動連桁の欠陥を直した**: LP は新しい音で「連桁を終えるか」を 2 回訊く＝`process_acknowledged` の最初の回（まだ stem が来ていない）で**それまでの最短**で `consider_end`、そのあと `handle_current_stem` で新しい音を入れた最短で。4/4 で拍の途中から始まる付点 8 分は単独なら 3/16＝例外が無く拍で切れる（`autoBeamCheck` を包んで呼び出しを刷った＝`beamprobe/r.ly`: STOP 3/4 test 3/16 → #t）。Lily# は後者しか訊かず半小節の例外でつないでいた。`BeamDetector` に前者を足した。網 `AutoBeamEndTimingTests` 4 本（毒で狙いの 2 本だけ赤・対照 2 本は緑）・snapshot 0・掃き 942 冊中 9 冊。修正後、H の 1 行目を 1 段は Lily# も `∞`、最小幅は LP と −0.025 まで一致。**双子基準の T7 は 419 のまま**（Universe は動いたが一致には届かない）。
+★ **⑶ 残りは値付けの累積**: LP の 33 段の割れ方を強制すると Lily# 29.525・LP 28.68（`noBreak` は LP の値付けを変えない）＝Lily# が自分で選ぶ 37 段（29.559）より安いのに、行の DP は力の差²込みの目的関数で別の割れ方を選ぶ。自然幅は LP と一致（小節 3 の 7/16→1/2 が −0.012 だけ）、1 段に押し込んだ 4 小節の得点は LP 0.937・Lily# 0.952。⇒ 第578 が出所を特定した（圧縮の強さではなく臨時記号の最小幅と rod）。full **9088 / 0 / 2 / 9090**（Lab `sessions/p577/run4.trx`）。棚卸し: `APPROXIMATIONS.md` は行番号の移動だけ。
+
+## 以下は第576セッションの経緯
+
+### 1.1 第576セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p576`（HEAD `0ab7bfb0`・full **9081 / 0 / 2 / 9083**・第574 を ARCHIVE へ）。着手＝§1.0 の頭「staff＋tab の wish の merge」。
+
+★★★ **⑴ LP の規則を列ごとに確定した（製品 0・Lab `sessions/p576/`）**: 第370 の Never Stop 抜粋（`ns4`）の LP 実測を 3 通りに並べ直した＝staff＋tab（`nsw`）・staff 単独（`ssw`）・tab 単独（`tsw`）。さらに LP で**片方の `Note_spacing_engraver` を外した** staff＋tab（`dump-wide-notabns.ly`／`-nostaffns.ly`）と、**数字だけの tab 単独**（`ns4-tabnum.ly`）を測った。結論: **staff＋tab の列のばねの ideal ＝（五線譜の wish ＋ tab の wish）/ 2**（`merge_springs`・`spring.cc:104-129`、min＋0.3 の床つき）。
+  - 五線譜の wish は**五線譜単独と同じ**（符尾の補正込み・`notabns` が `ssw` と 4 桁一致）。
+  - tab の wish は**符尾の補正が無い**（数字だけの tab は符尾が見えない＝`stem_dir_correction` が早く抜ける・`note-spacing.cc:248`）＝基準 − increment ＋ 数字の右端。検算: 全列で「2×LP − 五線譜の wish」＝「数字だけの tab 単独」− 0.1128（共有の列で数字が符頭に寄る分）。
+  - ⚠️ 第370 の「素の平均が 8 分だけ合う」は、**tab 単独の双子が `\tabFullNotation`（符尾あり＝補正あり）だったから**。`NoteSpacing` の items は声部ごと（`probe-notespacing.ly` で確認）＝tab の見えない符尾が五線譜の wish を止めるのではない。
+  - **Lily# は五線譜の wish をそのまま ideal にしている**（tab は `ApplyTabChordSpacing` が min を上げるだけ）＝16 分の 1 つ目の間 +0.29・小節線の前 +0.23 広い（Lab `sessions/p576/ns4.springs.txt`）＝§1.0 の「staff＋tab で Lily# が段を増やす 15 score」の向き。
+  ⇒ ユーザー決定（§3・2026-09-25）＝**LP の数字で測る** → ⑵ で移植。
+
+★★★ **⑵ 移植した（ユーザー決定「LP の数字で測る」）**: `SpacingRules.LilyPondTabHeadRight`（LP の数字＝列の中心 0.594094・1 桁 0.990155 幅・`probe-tabhead.ly` で 1／2 桁を実測）を tab の声部の wish の左の頭に（`ApplyLeftHeadWidth` の `headOverrides`）、数字だけの tab の wish は符尾の補正 0（`IsStemlessTabVoice`）、小節線へのばねも tab の声部があれば wish ごとの平均（`TabVoiceWishes`）。**Never Stop 抜粋の音符間は LP と 4 桁一致**（staff＋tab 4.4236／2.5217／2.2717／3.5967・tab 単独 4.4411／2.5392／2.0392／3.4892）・小節線の前は −0.020 残。網 `TabSpacingWishTests` 3 本（毒 3 つがそれぞれ赤）。**台帳 `slur.tab.span` 0.430 → 0・`slur.tab.{up,down}.attachment-to-control` 0.047 → 0**（原因の記録「数字が大きいから」は誤りだった＝書き換えた）。snapshot 37 枚（全部 tab）・掃き 942 冊中 276 冊（全部 tab を持つ本）。双子基準の T7: 一致 413 → **419**（得 7・失 1＝Le Freak の僅差）。`SpacingInvariantTests.BreakGate_PricesTabFretDigitFloors` は譜を渡さない呼び方だった＝本番と同じに直した／`LineStartInk` は割れ方ではなく段数と対の一致を持つ形に。CHANGELOG `## Unreleased` に記入。棚卸し: `magic_constants.csv` +1 行＝`MeasureLayouter` の `stackalloc` の上限 16（wish の器の大きさ・LP の量ではない）、他は行番号の移動。full **9084 / 0 / 2 / 9086**（Lab `sessions/p576/run5.trx`）。
+
+## 以下は第575セッションの経緯
+
+### 1.1 第575セッション（2026-09-25・YT-DELL2）
+
+新しい会話。★ `-Start p575`（HEAD `4f831bcc`＝release 0.8.0・full **9079 / 0 / 2 / 9081**・第573 を ARCHIVE へ）。ユーザー「タブ譜の LP 忠実度のワークストリームは完了したのだっけ」→ §2 T を読んで「T6・T7 が ▶ のまま」と答え、「着手して」＝**T7 の段署名を HEAD で取り直した**（製品 0・計器は Lab `sessions/p575/t7/`）。
+
+★★★ **⑴ 計器の移転**: LP 側の生出力（`lp.out`・`lp*.png`）は scratch → Lab の移転で移していない＝**LP 側は第368 の `sessions/p369/structure-after368.csv` を `(Name, LpSuffix)` で引く**（第337 の stencil=##f 基線のまま・手書き `.ly` は Lab への取り込み以降 Lab の git で不変）。`relayout575.ps1 -Bin … -Csv … [-OutName] [-Corpus]`（`parse-lib.ps1`＝parse321 の関数の写し）＝**Lily# 側 287 冊が 37 秒**。
+
+★★★ **⑵ HEAD の T7＝KindMatched 227 / SigMatch 171 / 段割れ違い 30 / 小節数違い 26・PagesMatch 217**（第368: 214 / 152 / 41 / 21・199）。**分解＝第368 の木 `a471544f` を worktree で Release にして*今の* `.lys` を描いた**（227 / 167 / 34 / 26）: **+15 は `.lys` 側**（score 構成が変わって代用対から KindMatched に 13 対・`.lys` の編集）／**+4 が製品側**（24 対が動き、SPLIT→SIG 8・SIG→SPLIT 4・頁一致 20 → 22）。
+
+★★★ **⑶ 製品側の悪化 4 対は欠陥ではない**（`I Want You Back`・`Video Killed The Radio Star`・`いとしのエリー`・`Don't You Worry 'Bout a Thing` の bass＝LP が `2,2` と割る 16 分の密な段を Lily# が 1 段に置く）: `git bisect run`（`bisect-step.ps1`）の最初の bad は **`0d75b948`（tab の列間を LP の rod 0.3 に＝第369 ③）**＝第369 が記録した失 3 対＋1。**LP に Lily# の双子を描かせると Lily# と同じ `4,…`（bar 41〜44 を 1 段）**、両側を `fonts { tabFret step 2 }`／`font-size = #2` にそろえると **Lily#・双子・手書き `.ly` の 3 つが `…,2,2,…` で一致**。Lily# の数字の em を振ると 4 冊とも **3.1〜3.4 em で LP の署名に戻る**（既定 3.0 の直前が境目）＝**数字の大きさ（§3 F9・第369 ③）に敏感な本**。
+⚠️ **第369 の助言「双子で比べるときは `fonts { tabFret size 2 }`」は今の文法では誤り**＝`size` は*絶対の em*（2.0＝既定 3.0 より小さい・双子に出せず警告）で、LP の `font-size` に当たるのは **`step`**（`CHANGELOG.md:1047` の文も同じ）。⚠️ ただし **全冊を `.ly` と同じ `step` にすると SigMatch 171 → 166**（Lily# の `step` は Lily# の大きい既定から上げる＝手書きより大きい）＝**全冊比較の基準は既定のままがよい**。
+
+★ **⑷ 「承認待ち」2 件は出荷済みだった**: 列間 0.3＝`0d75b948`（第369）・`beam-over-stem` の cross-voice の patch＝`17f7b7b3`（第360 第 2 便で承認）。§2 T7 の文言を直した。
+
+★★★ **⑸ 双子の不具合を直した（`9d6502e6`）**: `LilyPondExporter` は form だけを受け、譜・fonts・layout・楽器名は*ファイルの最初の* `score` から読んでいた＝**同じ form の score が複数ある本の `lysc ly --all` は全部最初の score（staff だけ）を書いていた**（tab の双子に TabStaff が無い・和音だけの `grid` に旋律と歌詞）。`Score`（宣言）を足し、CLI の `--score`／`--all` と preview の export-all が渡す（preview の単独書き出しは主 form の約束のまま・midi／xml は譜を持たないので不変）。掃き 942 冊: 86 冊 162 ファイルが動き、**全部が 2 番目以降の score**（tab 75・both 73・grid 3…）・最初の score は 0。網 `ExportedFormSelectionTests` +2（毒ごとに 1 本ずつ赤）。full **9081 / 0 / 2 / 9083**。CHANGELOG は `## Unreleased` の節に書いた（ユーザー指示・版の番号はリリース時に決める）。
+★★★ **⑹ 双子基準の T7**（§1.0）: 比べた 457 score で **一致 413・段割れ違い 30・小節数違い 14（計器）**。計器の罠: 双子の LP は段末の小節番号を 1 段目にしか出さない本がある（アゲハ蝶）＝`last − first` は 2 段目以降を 1 ずつ落とす → `probe-dir.ly` が break-dir を刷り、段末を捨てて数える。
+
+終了: full **9079 / 0 / 2 / 9081**（Lab `sessions/p575/run3.trx`・開始と合計一致）。途中の `-End` で `DeadCitationsDoNotGrow` が 1 赤＝§1 に Lab の commit の SHA を書いた（LilySharp の履歴に無い＝死んだ引用）→ 語に直して緑。worktree（第368 の木）は外した。
+
+## 以下は第574セッションの経緯
+
+### 1.1 第574セッション（2026-09-24・YT-DELL2）
+
+同じ会話の続き。★ `-Start p574`（HEAD `1d94ee5a`・full 9022 / 0 / 2 / 9024・第572 を ARCHIVE へ）。作業ツリーの `samples/*` はユーザーの手。
+
+★★★ **⑴ R9⒢ 梁の付いた単音トレモロ**: Lily# は梁の stem に付くトレモロを*予約も描画もしていなかった*（`DrawTremolo` は梁の stem には来ない）。LP 双子 `probes/beamed-tremolo.ly`（5 冊＋対照）で測ってから移植: ⑴ `CalculateBeamedStemInfo` に `height_of_my_trem`（`vertical_length`＝1.0×0.48 の回転箱を slope 0.35 で・梁の translation で積む＋translation 1 つ）＝理想の最小に足し、極小の床にも（`stem.cc:1187-1211`・`:1256`）＝TRB0 の梁が 2.81 → 4.0（LP と exact）／⑵ `SharedRenderer.DrawBeamedTremolo`＝梁線から beam_count 本ぶん内側（`stem-tremolo.cc:313-369`）・傾きは `calc_slope` の*字面*＝quantized-positions の dy ÷ *stem 間*の dx（positions は描いた梁端＝stem の半分外側に立つので梁そのものより急＝TRB1 で 0.225111 対 0.214964）／⑶ `NoteItem`／`ChordItem` の `TremoloBeams` の上限 3（Lily# 独自）を撤去＝`a8:64` は 3 本（`stem-engraver.cc` の flag-count は素の算術）。計器: `RenderedGeometry.BeamQuads`（stem に中心を持つ幅 1.25 以下の quad＝斜線を梁から外す。幅の条件が無いと 3 stem の梁が中の stem に中心を持って消えた＝第一版で 26 点赤）・`TremoloSlashes`。**台帳 17 点すべて exact**・毒（`heightOfMyTrem` を 0）で 14 点赤。掃き 942 冊 0 冊（梁付きトレモロ・`:64` を書いた本は無い）・snapshot 0 枚。full **9039 / 0 / 2 / 9041**。⇒ **R9 は全項 ✅**。
+★ **⑵ R10⒜ を測った＝欠陥無し**: 起票は「aligned_side が 3 綴り＋`on_line` の ledger parity」。`probes/script-positions.ly`（staccato／tenuto を g〜d''' の全位置・頭側／符尾側・slur の中）で LP の 77 個を読み、Lily# は**全部 exact**。regime ごとに 1 点ずつ台帳へ（8 点）＝綴りを 1 つに畳む保守の網。⚠️ 計器 `GlyphAboveStaffMiddle`。★ **⑶ R8⒝（頁 DP の walk の早期脱出）**: Lily# は force が −∞（＝rod が*印刷帯*−余白を越えた）で walk を切っていたが、LP は `rod_height_ > paper_height`（紙そのもの・ragged なら ＋spring_len）で切る（`page-spacing.cc:302-342`＝頁番号が未確定なので帯では切らないと LP 自身が書く）。字面に移植。掃き 0 冊（切られていた候補は BAD で頭打ちの overfull 頁＝page/turn penalty も page-count も無い Lily# では分割に必ず負ける）＝網は規則の単体。
+★ **⑷ ユーザー報告＝`section A { partial 2 }` の下の満杯の第 1 小節が無警告**（Lab `corpora/ベースタブLy/partial.lys`）: section header の `partial` が file 全体の値（`_filePartial`）として読まれ、その値は「どの section が曲頭か分からない」ので*拍子を満たした第 1 小節には当てない*免除つき＝まさにその誤りが免除されていた。header の `partial` を section 名で持ち（`_sectionPartials`）その section の第 1 小節に厳密に当て、同じ小節に開く span の後続 voice と repeat 本体には `inheritedPickup` で渡す（最初の版は span の voice 2 に届かず chord-flag・blogger2 に偽陽性＝掃きで捕まえた）。掃き 942 冊: 増えたのは報告の 1 件だけ・別 section の `partial` と比べられていた誤文 2 件（Locked out of Heaven・ミュージック・アワー）が普通の pickup の促しに。網 `PartialPickupValidationTests` +5（span の毒で赤）。
+★ **⑸ 歌詞が溢れた理由を言う（ChatGPT が書いた .lys のフィードバックから）**: 0.8.0 の「slur／tie は音節を持つ」で、フレーズ記号のつもりの長い slur が歌詞を飲む（`scratch/SongsByChatGPT/01_evening_song.lys` で 22 音節）・tie の音に書いた歌詞の `~` が次の音を取る（Lab の `amazing-grace.lys`）のに、警告は「揃える音が無い」だけだった。その小節で slur／tie に持たれた音数を別々に数え（`BuildNoteIndices` の `TieHeld`）、slur なら `@phrasingSlur`、tie なら `~` を消せと言う。どちらの助言も実ファイルで警告が消えることを確認。掃き 942 冊: 警告数不変・文面が変わったのは 2 件。網 `LyricSyllableValidatorTests` +4。フィードバックの他の提案（section の hover／CodeLens・構造化診断）は未着手。
+★ **⑹ LYS2007 を section ごとに 1 件に**: 12 層の section で flute だけ 1 小節多いと、正しい 11 層に 11 件・誤りの flute に 0 件だった。層を小節数で束ねた 1 件（どちらが正しいとは言わない・ページがどう埋めるかは種類ごとに残す）・位置は*声部の中で*いちばん少数派の層（同数なら短い側＝旧と同じ位置・声部が揃い歌詞だけ短ければ最初の短い歌詞）・全層を関連位置に（`Diagnostic.Related` 新設→LSP `relatedInformation`・CLI は `note:` 行）。クイックフィックスは短い層を全部 1 回で埋める（後ろから挿入・層ごとに再検証）。掃き 942 冊: 15 → 13 件・同じ 8 冊・位置は全部旧のどれか・他の診断はバイト同一。網 +3。
+★ **⑺ section の CodeLens**: `section` 宣言ごとに「Section A · 2 bars · melody, chords 'harmony' · 2× in form main」（4 つ以上は種類で数える「11 parts, 1 chord row」・不一致なら「⚠ 9 bars in flute, 8 bars in the other 11」・どの form にも無ければ「in no form」。⚠️ 最初は「1 layer」と出していた＝フィードバック由来で Lily# の文書に無い語・ユーザーが意味を尋ねた→名前と種類に。LYS2007 の文面も「everywhere it is written」に・クイックフィックスの題は「section A of melody」と誰の section かを言う）・クリックで全層を references peek（拡張の `lilysharp.showSectionLayers` が JSON 引数を VS Code 型に）。数は `SectionBarCounts`＝LYS2007 と同じ家（公開 API `Core.Editing.SectionOverview`）。form の数は*書かれた参照*（`|: A :|` は 1）。1000 小節で 32 ms・12 層の本で 1.4 ms。網 `SectionCodeLensTests` 5 本。
+  ⇒ **第395 レビューの R 行の*測れる忠実度*は尽きた**: R8⒞ は 1 system 1 extent の間は不活性、R8⒟ は Lily# 独自の crop 頁（LP に双子が無い＝crop の決定と一緒の設計判断）、R10⒜ は保守性だけ、R12⒠ は予算の単位（低優先）。台帳の上位もユーザー決定か Lily# 独自だけ。**次の忠実度の源は §2 の U（ユーザー報告）／T（タブ譜）／A〜H の各節**で、方針（第558）の「忠実度が尽きたら perf」を切り替えるかは**ユーザーの判断**。
+full **9047 / 0 / 2 / 9049**（途中 1 回 `UsingExpansionCacheTests.AMissingIncludeAppearing_…` が full の中でだけ赤＝単独 3/3 緑・再実行で緑＝ファイル監視の時間依存の flaky。コード変更とは無関係）。
+
 ## 以下は第573セッションの経緯
 
 ### 1.1 第573セッション（2026-09-24・YT-DELL2）

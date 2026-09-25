@@ -180,8 +180,8 @@
 ### `LilySharp.Core/Svg/Layout/HorizontalSkyline.cs`
 - **:178** outline. So the clearing is right and unobserved: a forgotten Clear here would
 ### `LilySharp.Core/Svg/Layout/ItemSkylineFactory.cs`
-- **:753** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
-- **:1026** NOT MEASURED — no ledger point reads a flag's draw x, and the last
+- **:766** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
+- **:1039** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:2320** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
 - **:2342** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
@@ -220,7 +220,7 @@
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
 - **:275** observed by: NOTHING. No ledger point covers a grace spacer, and the drawn
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
-- **:413** rest. No point observes it — see the branch below.
+- **:418** rest. No point observes it — see the branch below.
 ### `LilySharp.Core/Svg/Layout/TieFormattingProblem.cs`
 - **:551** so removing the floor here would be an unobserved change to degenerate ties rather
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
@@ -282,9 +282,9 @@
 - **:264** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:272** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
-- **:1227** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
-- **:1257** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
-- **:1340** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
+- **:1246** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
+- **:1276** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
+- **:1359** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`

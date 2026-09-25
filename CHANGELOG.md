@@ -6,6 +6,34 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Engraving
+
+- **A tab staff's notes are spaced as LilyPond spaces them.** LilyPond takes one spacing
+  wish per voice and averages them, a TabVoice's included, and a tab voice's wish reads its
+  fret digit where a staff's reads a notehead — with no stem correction when the tab prints
+  numbers only. Lily# priced the tab voice as a copy of the staff's, so a staff+tab system
+  was spaced as the staff alone: 0.29 staff space wide on the first sixteenth of a dotted
+  pair, 0.23 before the bar line. The tab's wish now reads LilyPond's own digit (the size
+  the digits are drawn at is unchanged, and still keeps them apart), and on a measured bass
+  line every gap between notes matches LilyPond to four places. Every book with a tab moves
+  a little — 276 of 942 in the sweep, 37 snapshots; against the LilyPond twins of the tab
+  corpus, 419 of 457 scores now break into systems the same way (413 before), and the
+  three tab-slur geometry points recorded as caused by the digit size are exact.
+
+- **A dotted eighth that starts off the beat is not beamed to the eighth after the beat.**
+  LilyPond asks whether an automatic beam ends at a new note twice — first with the shortest
+  note the beam held before it, then with the new note counted — and the first question can
+  close it: in 4/4 a lone dotted eighth has no beaming exception, so the beat ends the beam,
+  and `r16 g8. g8` keeps both flags. Lily# asked only the second question and joined them
+  over the beat. 9 of 942 books in the sweep change; none of the snapshots does.
+
+- **An accidental makes room only where its own ink reaches.** Spacing pads each note
+  column's outline by a small margin above and below, as LilyPond does, but LilyPond adds the
+  accidentals afterwards from their bare shapes; Lily# padded them with the rest, so a natural
+  held its neighbour away even when it stood clear of that neighbour's head. A dotted-eighth
+  bass line in Universe now compresses to within 0.012 of LilyPond's width where it was 0.14
+  wide. 42 of 942 books in the sweep move slightly; 2 snapshots.
+
 ### MIDI, MusicXML and the LilyPond twin
 
 - **The twin of a named score engraves that score's staves.** `lysc ly --score NAME` and

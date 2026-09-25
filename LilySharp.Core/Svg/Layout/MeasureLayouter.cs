@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -298,7 +298,9 @@ internal sealed class MeasureLayouter
 
         // End spring: last column → barline (see CreateLastToBarlineSpring).
         springs[timings.Count] = CreateLastToBarlineSpring(fonts, timings, columns, measuresToScan, totalDuration,
-            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure));
+            so, SpacingRules.BoundaryClefAllowance(fonts, measure.EndBarline, nextMeasure), stavesOfMeasures);
+
+        AddAccidentalReachRods(fonts, measuresToScan, timings, stavesOfMeasures, looseRods);
 
         var chain = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(springs);
         var rodded = looseRods.Count > 0
@@ -306,6 +308,102 @@ internal sealed class MeasureLayouter
             : chain;
         ListPool<(int Left, int Right, double Distance)>.Give(looseRods);
         return rodded;
+    }
+
+    /// <summary>
+    /// The rods an ACCIDENTAL raises past its neighbour: to the notes further left in its own
+    /// voice that its ink can still reach, each spanning the springs between.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond's set_column_rods does not stop at the adjacent column. For each column it
+    /// walks back through the columns whose right-hand ink could still reach it and raises a
+    /// rod to every one (Separation_item::set_distance, the rod over the pair), so an
+    /// accidental that clears the low note just before it but meets the note before that is
+    /// held off THAT note — over the springs of the column it passes. MEASURED (2.26.0,
+    /// LilySharp-Lab sessions/p578, Universe bars 17-20 squeezed onto one line): in
+    /// `f,8 c,8( a,4\2)` under five flats the f's column carries a rod of 2.750200 to the a,
+    /// two columns on, while c → a is 1.604200.
+    /// </para>
+    /// <para>
+    /// Only the accidental's column is walked, and only its own voice: the conditional parts
+    /// are the ones a column's skyline hangs past its neighbour, and a separation skyline is a
+    /// staff's. Every rod goes to <see cref="SpringSolver.ApplyRods"/>, which drops the ones
+    /// the springs' minimums already satisfy (range_len at −infinity), so LilyPond's reach
+    /// test (the overhangs) is answered there rather than estimated here; the walk stops four
+    /// columns back, past which no accidental reaches.
+    /// ⚠️ APPROXIMATIONS: the walk stays inside the bar (LilyPond's runs over the whole line,
+    /// bar-line columns included), and a voice's reach into another voice's column is not
+    /// rodded (LilyPond's paper column holds every voice of every staff).
+    /// </para>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the inner loop over j.
+    /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance.
+    /// </remarks>
+    internal static void AddAccidentalReachRods(Rendering.ScoreTextMetrics fonts,
+        IReadOnlyList<Measure> measuresToScan, List<Fraction> timings,
+        IReadOnlyList<Staff>? stavesOfMeasures,
+        List<(int Left, int Right, double Distance)> rods)
+    {
+        const int maxReach = 4;
+        for (int vi = 0; vi < measuresToScan.Count; vi++)
+        {
+            var items = measuresToScan[vi].Items;
+            bool anyAccidental = false;
+            foreach (var item in items)
+                if (HasAccidental(item)) { anyAccidental = true; break; }
+            if (!anyAccidental)
+                continue;
+
+            int staffLines = stavesOfMeasures is { } staves && staves.Count == measuresToScan.Count
+                ? staves[vi].Lines
+                : EngravingDefaults.DefaultStaffLines;
+
+            // The voice's own columns, in order: the items that start one (ItemStartingAt's
+            // filter — no grace, no mid-bar change), with their timing index.
+            var own = ListPool<(MusicItem Item, int Column)>.Rent();
+            var onset = Fraction.Zero;
+            foreach (var item in items)
+            {
+                if (!item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item)
+                    && item is not RestItem { IsSpacer: true, RepeatSlashCount: null })
+                {
+                    int column = timings.IndexOf(onset);
+                    if (column >= 0)
+                        own.Add((item, column));
+                }
+                onset += item.Duration;
+            }
+
+            for (int r = 2; r < own.Count; r++)
+            {
+                if (!HasAccidental(own[r].Item))
+                    continue;
+                for (int l = r - 2; l >= 0 && l >= r - maxReach; l--)
+                {
+                    double rod = SpacingRules.SeparationRodDistance(
+                        fonts, own[l].Item, own[r].Item, staffY: 0, staffLines: staffLines);
+                    if (rod > 0)
+                        rods.Add((own[l].Column + 1, own[r].Column + 1, rod));
+                }
+            }
+            ListPool<(MusicItem Item, int Column)>.Give(own);
+        }
+
+        static bool HasAccidental(MusicItem item) => item switch
+        {
+            NoteItem { Accidental: not null } => true,
+            ChordItem c => ChordHasAccidental(c),
+            _ => false,
+        };
+
+        // Indexed: an ImmutableArray walked through LINQ boxes its enumerator (RULES §5.3).
+        static bool ChordHasAccidental(ChordItem c)
+        {
+            for (int k = 0; k < c.Notes.Length; k++)
+                if (c.Notes[k].Accidental != null)
+                    return true;
+            return false;
+        }
     }
 
     /// <summary>
@@ -421,6 +519,36 @@ internal sealed class MeasureLayouter
             acc += item.Duration;
         }
         return null;
+    }
+
+    /// <summary>
+    /// The per-voice wishes of the column at <paramref name="t"/> — one left item per voice
+    /// sounding there, with a tab voice's head read as LilyPond's digit
+    /// (<see cref="SpacingRules.LilyPondTabHeadRight"/>) — or null when no TAB voice sounds
+    /// there, so every other bar keeps the column's own reading.
+    /// </summary>
+    private static (ItemColumn Items, double[] HeadOverrides)? TabVoiceWishes(
+        IReadOnlyList<Measure> measures, IReadOnlyList<Staff>? staves, Fraction t)
+    {
+        if (staves is null || staves.Count != measures.Count)
+            return null;
+        List<MusicItem>? items = null;
+        List<double>? heads = null;
+        bool anyTab = false;
+        for (int vi = 0; vi < measures.Count; vi++)
+        {
+            if (ItemStartingAt(measures[vi], t) is not { } item)
+                continue;
+            double head = double.NaN;
+            if (staves[vi].IsTab && item is NoteItem or ChordItem)
+            {
+                head = SpacingRules.LilyPondTabHeadRight(item, staves[vi]);
+                anyTab |= !double.IsNaN(head);
+            }
+            (items ??= []).Add(item);
+            (heads ??= []).Add(head);
+        }
+        return anyTab ? (new ItemColumn(items), heads!.ToArray()) : null;
     }
 
     /// <summary>
@@ -638,6 +766,14 @@ internal sealed class MeasureLayouter
         // both columns — expressible, and absent from 231 books) spills to a real list.
         MusicItem? wish0 = null, wish1 = null;
         List<MusicItem>? wishMany = null;
+        // A TAB voice's wish reads LilyPond's digit as its left head, not a notehead
+        // (SpacingRules.LilyPondTabHeadRight) — one slot per wish, in wish order.
+        bool stavesAligned = stavesOfMeasures is { } alignedStaves && alignedStaves.Count == measuresToScan.Count;
+        Span<double> headOverrides = measuresToScan.Count <= 16
+            ? stackalloc double[measuresToScan.Count]
+            : new double[measuresToScan.Count];
+        int wishCount = 0;
+        bool anyTabHead = false;
         for (int vi = 0; vi < measuresToScan.Count; vi++)
         {
             var vm = measuresToScan[vi];
@@ -650,6 +786,13 @@ internal sealed class MeasureLayouter
             else if (wish0 is null) wish0 = prev;
             else if (wish1 is null) wish1 = prev;
             else wishMany = [wish0, wish1, prev];
+            double headOverride = double.NaN;
+            if (stavesAligned && stavesOfMeasures![vi].IsTab && prev is NoteItem or ChordItem)
+            {
+                headOverride = SpacingRules.LilyPondTabHeadRight(prev, stavesOfMeasures[vi]);
+                anyTabHead |= !double.IsNaN(headOverride);
+            }
+            headOverrides[wishCount++] = headOverride;
             // The staff this pair stands on, for a rest's box (session 557): the staves list
             // is aligned with measuresToScan when the caller hands one (StaffItemsAt reads it
             // the same way); a single-measure caller has no staff and prices five lines.
@@ -704,7 +847,8 @@ internal sealed class MeasureLayouter
                 spacing.Increment, nextItems,
                 // Several wishes merge as LilyPond merges them — by AVERAGING the
                 // ideals (merge_springs) — not by taking the widest head.
-                mergeWishAverage: true);
+                mergeWishAverage: true,
+                headOverrides: anyTabHead ? headOverrides[..wishCount] : default);
 
         // A mid-measure clef/key/time change (zero duration, so it shares the NEXT
         // column's timing) gets its own non-musical column in LilyPond, and the gaps
@@ -796,7 +940,7 @@ internal sealed class MeasureLayouter
         {
             spring = SpacingRules.MergeVoiceStemWishes(
                 spring, measuresToScan, timings[i - 1], timings[i],
-                NoteSpacingParameters.Default, spacing.Increment);
+                NoteSpacingParameters.Default, spacing.Increment, stavesOfMeasures);
             // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)),
             // for every wish. MergeVoiceStemWishes clamps the NOTE wishes it sees; a wish
             // whose left column is a rest never reaches it, and ApplyLeftHeadWidth (:77)
@@ -855,7 +999,7 @@ internal sealed class MeasureLayouter
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, ItemColumn[] columns,
         IReadOnlyList<Measure> measuresToScan, Fraction totalDuration, SpacingOptions spacing,
-        double boundaryClefAllowance = 0)
+        double boundaryClefAllowance = 0, IReadOnlyList<Staff>? stavesOfMeasures = null)
     {
         var endDuration = totalDuration - timings[^1];
         var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
@@ -868,7 +1012,14 @@ internal sealed class MeasureLayouter
         var lastItems = columns[^1];
         if (lastItems.Count > 0)
         {
-            endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment);
+            endSpring = TabVoiceWishes(measuresToScan, stavesOfMeasures, timings[^1]) is { } tabWishes
+                // A TAB voice closes the bar: one wish per voice, averaged as merge_springs
+                // averages them, the tab's reading LilyPond's digit (see CreateInterColumnSpring).
+                // MEASURED (2.26.0, LilySharp-Lab sessions/p576): Never Stop's quarter → bar
+                // line is 4.9062 = (staff 5.0828 + numbers-only tab 4.7297) / 2.
+                ? SpacingRules.ApplyLeftHeadWidth(endSpring, tabWishes.Items, spacing.Increment,
+                    mergeWishAverage: true, headOverrides: tabWishes.HeadOverrides)
+                : SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment);
 
             // Stem-direction optical correction, with the bar line standing in for the
             // right-hand stem. LilyPond runs stem_dir_correction on THIS spring too,
@@ -880,7 +1031,7 @@ internal sealed class MeasureLayouter
             // LILYPOND-REF: lily/note-spacing.cc:111 + :243-264;
             // lily/spacing-spanner.cc:183-199 + :322-393.
             endSpring = SpacingRules.MergeVoiceStemWishesToBarline(
-                endSpring, measuresToScan, timings[^1], NoteSpacingParameters.Default);
+                endSpring, measuresToScan, timings[^1], NoteSpacingParameters.Default, stavesOfMeasures);
             // LILYPOND-REF: lily/note-spacing.cc:113 Note_spacing::get_spacing — set_ideal_distance (std::max (0.0, ideal)).
             // The merge clamps the NOTE wishes; a rest's wish never reaches it, and
             // ApplyLeftHeadWidth (:77) does not clamp, so the spring is clamped here too.

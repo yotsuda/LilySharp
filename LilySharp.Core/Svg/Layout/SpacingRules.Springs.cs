@@ -384,7 +384,8 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static Spring MergeVoiceStemWishes(
         Spring baseSpring, IReadOnlyList<Measure> voices,
-        Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams, double increment)
+        Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams, double increment,
+        IReadOnlyList<Staff>? staves = null)
     {
         var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         // Indexed, not foreach, here and in MergeVoiceStemWishesToBarline: `voices` is an
@@ -397,7 +398,9 @@ internal static partial class SpacingRules
             if (left is null || right is null)
                 continue;
 
-            double corr = CalculateStemCorrection(left, ApproachColumn(right), noteParams, increment);
+            double corr = IsStemlessTabVoice(staves, voices.Count, v)
+                ? 0.0
+                : CalculateStemCorrection(left, ApproachColumn(right), noteParams, increment);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141). The clamp is at ZERO, not at the minimum
@@ -414,6 +417,21 @@ internal static partial class SpacingRules
         GiveWishes(wishes);
         return merged;
     }
+
+    /// <summary>
+    /// Whether voice <paramref name="v"/> stands on a NUMBERS-ONLY tab staff, whose wish takes
+    /// no stem correction: its stems are never drawn.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p576): the numbers-only TabVoice's wish is the
+    /// bare base − increment + digit edge on every pair (16th → 16th 2.2892 whatever the stems
+    /// of the paired staff do), where a <c>\tabFullNotation</c> tab's wish carries the ±0.25
+    /// of a drawn stem (2.5392 / 2.0392).
+    /// LILYPOND-REF: lily/note-spacing.cc:246-249 stem_dir_correction — an invisible stem
+    ///   returns before any correction.
+    /// </remarks>
+    private static bool IsStemlessTabVoice(IReadOnlyList<Staff>? staves, int voiceCount, int v)
+        => staves is { } s && s.Count == voiceCount && s[v] is { IsTab: true, TabNumbersOnly: true };
 
     /// <summary>
     /// The wish list <see cref="MergeVoiceStemWishes"/>, <see cref="MergeVoiceStemWishesToBarline"/>
@@ -492,7 +510,8 @@ internal static partial class SpacingRules
     /// </remarks>
     internal static Spring MergeVoiceStemWishesToBarline(
         Spring baseSpring, IReadOnlyList<Measure> voices,
-        Fraction tLeft, NoteSpacingParameters noteParams)
+        Fraction tLeft, NoteSpacingParameters noteParams,
+        IReadOnlyList<Staff>? staves = null)
     {
         var wishes = RentWishes(); // given back once MergeSprings has read it (see RentWishes)
         for (int v = 0; v < voices.Count; v++)
@@ -500,7 +519,9 @@ internal static partial class SpacingRules
             if (NoteColumnAt(voices[v], tLeft) is not { } left)
                 continue;
 
-            double corr = CalculateStemCorrectionToBarline(left, noteParams);
+            double corr = IsStemlessTabVoice(staves, voices.Count, v)
+                ? 0.0
+                : CalculateStemCorrectionToBarline(left, noteParams);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing, as in MergeVoiceStemWishes — clamped
             // for every wish, a zero correction included (session 379).
             wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance + corr)));

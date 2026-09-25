@@ -371,9 +371,14 @@ internal static partial class SpacingRules
         return anyCue;
     }
 
+    /// <param name="headOverrides">Per left item (index-aligned with
+    /// <paramref name="leftItems"/>), the head's right edge to read INSTEAD of the notehead
+    /// glyph's — NaN, or past the span's end, reads the glyph. A tab voice's wish passes
+    /// <see cref="LilyPondTabHeadRight"/> here.</param>
     internal static Spring ApplyLeftHeadWidth(
         Spring spring, ItemColumn leftItems, double increment,
-        ItemColumn rightItems = default, bool mergeWishAverage = false)
+        ItemColumn rightItems = default, bool mergeWishAverage = false,
+        ReadOnlySpan<double> headOverrides = default)
     {
         if (CrossesVoiceBoundary(leftItems, rightItems))
             return spring;
@@ -441,6 +446,8 @@ internal static partial class SpacingRules
                     : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
                 _ => double.NaN
             };
+            if (p is NoteItem or ChordItem && i < headOverrides.Length && !double.IsNaN(headOverrides[i]))
+                w = headOverrides[i];
             if (double.IsNaN(w))
                 continue;
             leftHeadEnd = Math.Max(leftHeadEnd, w);
@@ -469,6 +476,65 @@ internal static partial class SpacingRules
         // LILYPOND-REF: lily/note-spacing.cc:113 base.set_ideal_distance (…) — the SETTER,
         // which leaves the duration-built compressibility alone (lily/spring.cc:131-141).
         return spring.WithIdealDistance(ideal);
+    }
+
+    /// <summary>
+    /// The right edge, in its column, of the fret digit a TAB voice's spacing wish reads as
+    /// its left head — LilyPond's own TabNoteHead, not the digit Lily# draws.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// LilyPond merges one Note_spacing wish per voice, a TabVoice's included, and each wish
+    /// reads its own left head (<c>left_head_end</c>): on a staff+tab system the column's
+    /// ideal is the MEAN of the staff's wish and the tab's. The tab's reads the digit, not a
+    /// notehead. MEASURED (2.26.0, Never Stop bars 29-32 — LilySharp-Lab sessions/p576): with
+    /// either Note_spacing_engraver removed the column takes the other wish alone, and with
+    /// both it takes their mean to 4 places (16th → 16th 2.2717 = (2.2542 + 2.2892) / 2).
+    /// </para>
+    /// <para>
+    /// OWNER'S DECISION 2026-09-25 (session 576): the wish reads LILYPOND'S digit, at the
+    /// TabNoteHead's default size, not Lily#'s enlarged one (TabConstants.FretFontSize) —
+    /// so the column's ideal is LilyPond's. Lily#'s digit still sets the column's ROD
+    /// (ApplyTabChordSpacing), which is what keeps the drawn digits apart.
+    /// MEASURED (probe-tabhead.ly on the same run): the digit is centred at 0.594094 in its
+    /// column, 0.990155 wide a digit — 0.099016 .. 1.089171 for one digit, −0.396062 ..
+    /// 1.584249 for two, alone or beside a staff.
+    /// </para>
+    /// <para>
+    /// ⚠️ APPROXIMATION: a chord reads its WIDEST fret, where LilyPond reads the stem's first
+    /// head (Stem::first_head, the extremal head opposite the stem) — they differ only on a
+    /// chord that mixes one- and two-digit frets.
+    /// </para>
+    /// LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing — left_head_end.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:336-393 musical_column_spacing → merge_springs.
+    /// </remarks>
+    internal static double LilyPondTabHeadRight(MusicItem item, Staff tab)
+    {
+        const double digitCentre = 0.594094;
+        const double digitWidth = 0.990155;
+        if (tab.Tuning is not { } tuningType)
+            return double.NaN;
+        var tuning = Tablature.Tunings.GetTuning(tuningType);
+        int shift = Tablature.Tunings.SoundingShift(tab.TabSourceClef, tab.Transposition);
+        int digits = 1;
+        switch (item)
+        {
+            case NoteItem n:
+                digits = FretDigits(Tablature.Tunings.CalculateFret(n.Midi + shift, tuning, n.StringNumber ?? 0).fret);
+                break;
+            case ChordItem c when c.Notes.Length > 0:
+                var notes = new (int Midi, int? StringNumber)[c.Notes.Length];
+                for (int k = 0; k < notes.Length; k++)
+                    notes[k] = (c.Notes[k].Midi + shift, c.Notes[k].StringNumber);
+                foreach (var (_, fret) in Tablature.Tunings.CalculateChordFrets(notes, tuning))
+                    digits = Math.Max(digits, FretDigits(fret));
+                break;
+            default:
+                return double.NaN;
+        }
+        return digitCentre + digits * digitWidth / 2;
+
+        static int FretDigits(int fret) => fret >= 10 ? 2 : 1;
     }
 
 }
