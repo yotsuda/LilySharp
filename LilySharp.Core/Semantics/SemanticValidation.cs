@@ -164,6 +164,12 @@ public static class SemanticValidation
         Func<MeasureCollector?>? previewCollect)
     {
         var result = new List<Diagnostic>();
+        // ONE diagnostic per (severity, span, code, message): a validator that reads the
+        // collect sees a section once per time the form plays it, and reported the same
+        // finding once per play — ChatGPT's 02_paper_satellites_song_form.lys listed ten lyric
+        // overflows twice, and Holiday.lys a bar-length warning twice (sweep of 991 books,
+        // 2026-09-25). Identical findings say nothing the first did not.
+        var reported = new HashSet<(DiagnosticSeverity, int, int, string, string)>();
         // One shared single-staff collect, computed at most once and reused by every
         // collector-backed validator (previously each re-ran the full collector).
         var sharedCollect = new Lazy<MeasureCollector?>(
@@ -175,7 +181,9 @@ public static class SemanticValidation
                 sc.ValidateWith(tree, sharedCollect);
             else
                 v.Validate(tree);
-            result.AddRange(v.Diagnostics);
+            foreach (var d in v.Diagnostics)
+                if (reported.Add((d.Severity, d.Span.Start, d.Span.Length, d.Code, d.Message)))
+                    result.Add(d);
         }
         return result;
     }

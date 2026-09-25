@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第625セッションの経緯
+
+### 1.1 第625セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p625`（HEAD `a0d3116a`・full **9162 / 0 / 2 / 9164**）。ユーザー決定「提案通りで」＝`chords { }` を MIDI で鳴らす（窓ボイシング・既定で鳴らす・専用トラックのピアノ・ベロシティ 70%・記号ごとに打ち直し・`r`＝無音・音符の `@chord` は鳴らさない）。
+
+★ **⑴ 実装**: `Music.ChordVoicing.Window`（各音を G3〜F#4 の窓へ・分数のバスは 1 オクターブ下・未登録の質は根音だけ）を MIDI とホバーが共有。`MidiExporter.PlayChordRow`＝`ChordNameCollector.SlotGroups`（紙面・LP 双子と同じ小節の割り方）で打ち、`ChordNameCollector.StructureOf`（紙面から切り出した記号→構造・度数は `_ambientTonic`／`_keySharps`）で読む。鳴るのは score が置く行だけ（`ChordRowSpec`＋`WithChords`・`SoundingChordRows`）。section 内のセル（`PlaySectionChordRows`＝どの経路より先に section の頭から）と part-major の section。弱起は最初の小節を `_partial` の長さに・`|:` は紙面の `CollectPart` と同じく空の小節を作らない。トラック名「NAME (chords)」は `SplitIntoPartTracks` でパートの後ろへ（チャンネル不変）。ホバーの `chords { }` もオクターブ付き（`G7/B (V7/VII)  B2  G3  B3  D4  F4`）。網 `ChordRowMidiTests` 5 本＋`SectionVoicePaddingExportTests` 1 本。
+★ **⑵ 942 冊**（Lab `sessions/p625/midihost`）: コード行が鳴る 24 冊・パートの音が変わった 2 冊＝**既存のずれが直った**（旧はコード行の小節線が空の小節として時間を進めていた＝greensleeves の Verse と Chorus の間に 13,200 tick の無音・partial.lys の 2 回目の A が 6 小節遅れ）。長くなった 6 冊＝コード行だけの 5 冊（旧は長さ 0）と Lambada（最後のコードが 1 拍長い）。
+⚠️ 残り: `PaddingTicks` は弱起を知らない（partial.lys で 960 tick・既存）／平らなトップレベルのコード行と part 内の無名ブロックは未対応（0 冊）。
+
+終了: HEAD `71f54444`＋docs・full **9168 / 0 / 2 / 9170**。
+
 ## 以下は第624セッションの経緯
 
 ### 1.1 第624セッション（2026-09-25・YT-DELL2）

@@ -60,6 +60,18 @@ public class LyricSyllableValidatorTests
     }
 
     [Fact]
+    public void ASectionTheFormPlaysTwice_WarnsOnce()
+    {
+        // The section's lyrics are walked once per play; the overflow is one mistake, and the
+        // run of all validators (what the CLI and the editor report) says it once.
+        var source = Scored("c4 d e f", "one two three four five")
+            .Replace("form main { S }", "form main { S S }");
+        Assert.Contains("form main { S S }", source);
+        Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(source)),
+            d => d.Code == DiagnosticCodes.LyricSyllableOverflow);
+    }
+
+    [Fact]
     public void TwoExtraSyllables_NamesFirstAndCountsTheRest()
     {
         var diags = Validate(Scored("c4 d e f", "a b c d e f"));

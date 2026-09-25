@@ -93,6 +93,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **A finding is reported once.** A validator that reads the collected score sees a section
+  once per time the form plays it, and reported the same warning once per play — a lyric
+  overflow in a chorus the form plays twice appeared twice in the Problems panel and in
+  `lysc check`. Identical diagnostics (same place, code and message) are now reported once.
+
 - **Hovering a chord shows its chord symbol, its degree and its pitches.** A chord, a `<< >>`
   arpeggio or a `q` — or any note inside one — hovers as the symbol a bare `@chord` on it would
   print, read by the same code, so the hover and the page agree; then its Roman-numeral degree

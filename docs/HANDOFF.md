@@ -145,6 +145,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第627セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p627`（HEAD `6c1f85dc`・full **9169 / 0 / 2 / 9171**）。着手＝ChatGPT の `scratch/SongsByChatGPT` を目で見て誤りを探す（第623 の grace はここで見つかった）。
+
+★ **⑴ 描画**: `04_northbound_machines_orchestra`・`03_clockwork_garden_keyboard`・`city_lights_overture_true_clean_baseline` の頁を見た＝誤りなし（へ音記号の段が高いのは原文の音域＝0.8.0 から clef は音高を動かさない・21〜28 小節の括弧は `@sustain` のペダル）。
+★ **⑵ 同じ診断が 2 度出る**: `02_paper_satellites_song_form` で歌詞の溢れ 10 件が 2 度ずつ（form が PreChorus と Chorus を 2 度演奏＝collect がその section を 2 度歩く）。991 冊の `check` で重複は他に Holiday.lys の小節長 1 件だけ。**`SemanticValidation.Run` で (重大度・span・code・文面) の同じ診断を 1 つに**（CLI と editor の両方がここを通る）。網 `LyricSyllableValidatorTests.ASectionTheFormPlaysTwice_WarnsOnce`（毒で 2 件）。
+
+終了: HEAD `588631ef`＋docs・full **9170 / 0 / 2 / 9172**。
+
+## 以下は第626セッションの経緯
+
 ### 1.1 第626セッション（2026-09-25・YT-DELL2）
 
 同じ会話の続き。★ `-Start p626`（HEAD `5fa2326e`・full **9168 / 0 / 2 / 9170**）。第625 ⚠️ の弱起の残り。
@@ -153,18 +164,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑵ §1.0 の ⒵（第590 の時間の地図 2,440 字）と ✅ ⒮²⁶ を 1 行に畳んだ**（照合の基準・計器の場所・反証 2 つ・残る設計級 2 つだけ残す）。
 
 終了: HEAD `1bd5eb5d`＋docs・full **9169 / 0 / 2 / 9171**。
-
-## 以下は第625セッションの経緯
-
-### 1.1 第625セッション（2026-09-25・YT-DELL2）
-
-同じ会話の続き。★ `-Start p625`（HEAD `a0d3116a`・full **9162 / 0 / 2 / 9164**）。ユーザー決定「提案通りで」＝`chords { }` を MIDI で鳴らす（窓ボイシング・既定で鳴らす・専用トラックのピアノ・ベロシティ 70%・記号ごとに打ち直し・`r`＝無音・音符の `@chord` は鳴らさない）。
-
-★ **⑴ 実装**: `Music.ChordVoicing.Window`（各音を G3〜F#4 の窓へ・分数のバスは 1 オクターブ下・未登録の質は根音だけ）を MIDI とホバーが共有。`MidiExporter.PlayChordRow`＝`ChordNameCollector.SlotGroups`（紙面・LP 双子と同じ小節の割り方）で打ち、`ChordNameCollector.StructureOf`（紙面から切り出した記号→構造・度数は `_ambientTonic`／`_keySharps`）で読む。鳴るのは score が置く行だけ（`ChordRowSpec`＋`WithChords`・`SoundingChordRows`）。section 内のセル（`PlaySectionChordRows`＝どの経路より先に section の頭から）と part-major の section。弱起は最初の小節を `_partial` の長さに・`|:` は紙面の `CollectPart` と同じく空の小節を作らない。トラック名「NAME (chords)」は `SplitIntoPartTracks` でパートの後ろへ（チャンネル不変）。ホバーの `chords { }` もオクターブ付き（`G7/B (V7/VII)  B2  G3  B3  D4  F4`）。網 `ChordRowMidiTests` 5 本＋`SectionVoicePaddingExportTests` 1 本。
-★ **⑵ 942 冊**（Lab `sessions/p625/midihost`）: コード行が鳴る 24 冊・パートの音が変わった 2 冊＝**既存のずれが直った**（旧はコード行の小節線が空の小節として時間を進めていた＝greensleeves の Verse と Chorus の間に 13,200 tick の無音・partial.lys の 2 回目の A が 6 小節遅れ）。長くなった 6 冊＝コード行だけの 5 冊（旧は長さ 0）と Lambada（最後のコードが 1 拍長い）。
-⚠️ 残り: `PaddingTicks` は弱起を知らない（partial.lys で 960 tick・既存）／平らなトップレベルのコード行と part 内の無名ブロックは未対応（0 冊）。
-
-終了: HEAD `71f54444`＋docs・full **9168 / 0 / 2 / 9170**。
 
 ## 2. 開いている作業
 
