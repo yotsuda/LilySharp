@@ -59,10 +59,18 @@ public sealed partial class MeasureCollector
         // written pair, because the author did not write two barlines next to each other —
         // one is the section's own close and this one is the structure's. See
         // MeasureBuilder.ArmBoundaryForStructuralBarline for what it cost to learn that.
-        void PushFormBarline(string barText, int position)
+        void PushFormBarline(string barText, int position, TextSpan read)
         {
             builder.ArmBoundaryForStructuralBarline();
-            processNodes(MusicSiteList.Preset([new GreenSite(CreateBarlineSyntax(barText, position))]));
+            _formBarRead = read;
+            try
+            {
+                processNodes(MusicSiteList.Preset([new GreenSite(CreateBarlineSyntax(barText, position))]));
+            }
+            finally
+            {
+                _formBarRead = null;
+            }
         }
 
         for (int i = 0; i < repeat.SlotCount; i++)
@@ -73,12 +81,12 @@ public sealed partial class MeasureCollector
             {
                 if (token.Text == "|:")
                 {
-                    PushFormBarline(token.Text, token.SourceStart);
+                    PushFormBarline(token.Text, token.SourceStart, token.Span);
                     afterRepeatStart = true;
                 }
                 else if (token.Text == ":|")
                 {
-                    PushFormBarline(token.Text, token.SourceStart);
+                    PushFormBarline(token.Text, token.SourceStart, token.Span);
                 }
                 else if (token.Text == ":|:")
                 {
@@ -86,8 +94,8 @@ public sealed partial class MeasureCollector
                     // the next. The adjacent ':|' + '|:' fuse into the RepeatBoth
                     // glyph at render time, and the following section is still marked
                     // as a repeat (StartBarline = RepeatStart) — exactly ':| |:'.
-                    PushFormBarline(":|", token.SourceStart);
-                    PushFormBarline("|:", token.SourceStart);
+                    PushFormBarline(":|", token.SourceStart, token.Span);
+                    PushFormBarline("|:", token.SourceStart, token.Span);
                     afterRepeatStart = true;
                 }
             }
@@ -575,25 +583,26 @@ public sealed partial class MeasureCollector
         if (_voiceName != null && builder.CurrentItemCount == 0)
         {
             // Record mode: the canonical bar count is a function of EVERY part's
-            // music for this section (GetCanonicalSectionBars — keep the fold's
-            // enumeration in step with it), so the whole section span and every
-            // part-major cell of this section join the walk's read extent. The
-            // decision "no padding needed" reads them just as much as the padding.
+            // music for this section — and of the phrase bodies they reference — and
+            // the decision "no padding needed" reads it just as much as the padding.
+            // It is recorded as a VALUE read (VoiceWalkRecording.CanonicalReads), which
+            // the resume re-counts on the edited text. ⚠️ It used to fold the whole
+            // section span and every part's cell of the section into MaxSourceRead: in a
+            // part-major book (`part bass { section A { … } }` — 327 of the owner's 333)
+            // another part's cells sit further down the file, so every checkpoint after
+            // the first section end read past an edit to this part, and the resume
+            // restarted from the walk's head (MEASURED session 592: 429 of 1,064 far
+            // restore points). The padding's spacers still cite the section's start, a
+            // POSITION, so that one stays in the read extent.
             if (_probeRecording != null)
-            {
-                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, section.FullSpan.End);
-                foreach (var kv in _sectionState.PartMajorCells)
-                    if (kv.Key.section == section.SectionName)
-                        _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, kv.Value.FullSpan.End);
-                foreach (var kv in _sectionState.ChordTrackCells)
-                    if (kv.Key.section == section.SectionName)
-                        _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, kv.Value.FullSpan.End);
-            }
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, section.SourceStart + 1);
             int produced = builder.CurrentMeasureIndex - startMeasure;
             // A collect that overran its expansion budget is truncated music: what it drew
             // is shorter than any count of the source (`R1*1000` under a cap of 10 draws 11
             // bars), so padding it up to the count would draw the truncation as silence.
             int canonical = ExpansionBudgetExceededAt == null ? GetCanonicalSectionBars(section) : 0;
+            if (_probeRecording != null)
+                _walkCanonicalReads.Add((section.SectionName, canonical));
             for (int i = produced; i < canonical; i++)
                 builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.SourceStart) { IsSpacer = true });
         }
@@ -762,6 +771,47 @@ public sealed partial class MeasureCollector
 
         _canonicalSectionBars[section] = max;
         return max;
+    }
+
+    /// <summary>
+    /// The prefix checkpoint <paramref name="plan"/> may restore, given that the canonical
+    /// section bar counts its padding read (<see cref="VoiceWalkRecording.CanonicalReads"/>)
+    /// must still hold on this collect's text: the planned target when all of them do,
+    /// otherwise the last checkpoint taken before the first count that moved (null when none
+    /// qualifies — the walk then runs live from its head, and may still splice).
+    /// </summary>
+    /// <remarks>
+    /// Checked at walk entry and not in the planner because the count needs this collect's
+    /// section and phrase tables (<see cref="CanonicalByName"/>). An earlier checkpoint
+    /// passes every planner guard the target passed — the read extent and the header reads
+    /// only grow along the walk — except the address shift, re-checked here.
+    /// </remarks>
+    private WalkCheckpoint? PrefixTargetWithStableCanonicalBars(VoiceResumePlan plan, CollectWalkProbe probe)
+    {
+        var target = plan.Checkpoint!;
+        var reads = plan.Recording.CanonicalReads;
+        if (target.CanonicalReadCount == 0)
+            return target;
+        if (reads == null)
+            return null;
+        var counts = CanonicalByName();
+        int stable = 0;
+        while (stable < target.CanonicalReadCount && stable < reads.Count
+               && counts.GetValueOrDefault(reads[stable].Section) == reads[stable].Bars)
+            stable++;
+        if (stable >= target.CanonicalReadCount)
+            return target;
+
+        var window = new CollectTailShifter.Window(probe.WindowPrefix, probe.WindowSuffixStart, probe.WindowDelta);
+        WalkCheckpoint? best = null;
+        foreach (var ck in plan.Recording.Checkpoints)
+        {
+            if (ReferenceEquals(ck, target) || ck.CanonicalReadCount > stable)
+                break;
+            if (ck.MeasureCount > 0 && window.TryShift(ck.NodeStart, out _))
+                best = ck;
+        }
+        return best;
     }
 
     // section name -> canonical bar count for the whole book (SectionBarCounts.CanonicalByNameSyntactic);

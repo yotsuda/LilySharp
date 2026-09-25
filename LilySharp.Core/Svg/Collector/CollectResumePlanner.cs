@@ -82,7 +82,8 @@ internal static class CollectResumePlanner
         //                         headerless score block at the file's bottom).
         var (prefix, suffixStart, delta) = ComputeWindow(oldText, newText);
 
-        if (!WindowRespectsTopLevel(baselineTree, prefix, suffixStart, delta))
+        if (!WindowRespectsTopLevel(baselineTree, prefix, suffixStart, delta)
+            || !TopLevelKindsAgree(baselineTree.GetRoot(), newTree.GetRoot()))
             return null;
 
         var resumer = CollectWalkProbe.Resumer();
@@ -102,6 +103,11 @@ internal static class CollectResumePlanner
         // span in MaxSourceRead). Costs reuse on in-body edits, never soundness.
         bool suffixEligible = !WindowTouchesPhraseOrVariable(
             baselineTree.GetRoot(), prefix, suffixStart);
+
+        // A prefix checkpoint must not have read an event the edit newly made the original
+        // of a `q` / bare duration (NewOriginalFloor): the restore replays only the spellings
+        // the RECORDING's tree logged.
+        int readFloor = Math.Min(prefix, NewOriginalFloor(baselineTree.GetRoot(), newTree.GetRoot(), prefix));
 
         foreach (var (ordinal, rec) in recording.Recordings)
         {
@@ -123,7 +129,7 @@ internal static class CollectResumePlanner
             var addressWindow = new CollectTailShifter.Window(prefix, suffixStart, delta);
             foreach (var ck in rec.Checkpoints)
             {
-                if (ck.MaxSourceRead > prefix)
+                if (ck.MaxSourceRead > readFloor)
                     break;
                 // The address must be revalidatable on the new tree: a node standing
                 // INSIDE the window has no counterpart. One before the window keeps its
@@ -732,7 +738,7 @@ internal static class CollectResumePlanner
                 return false;
             if (!more)
                 return true;
-            if (left.Current != right.Current)
+            if (left.Current != right.Current || left.CurrentMissing != right.CurrentMissing)
                 return false;
         }
     }
@@ -769,6 +775,13 @@ internal static class CollectResumePlanner
         /// <summary>The kind the walk is standing on.</summary>
         public SyntaxKind Current { get; private set; }
 
+        /// <summary>Whether that child has no text — a token the parser SUPPLIED in error
+        /// recovery. ⚠️ Same kind, not the same shape: `section Main {` with its `{` deleted
+        /// parses to an `OpenBrace` of width 0, and the resumed collect adopted a prefix the
+        /// full collect of that text no longer produced (session 596, a random edit of the
+        /// tracked collision.lys: the second voice's first bar a rest against a note).</summary>
+        public bool CurrentMissing { get; private set; }
+
         /// <summary>Advances to the next kind of the shape.</summary>
         public bool MoveNext()
         {
@@ -785,10 +798,12 @@ internal static class CollectResumePlanner
                     if (!opensRun)
                         continue;
                     Current = SyntaxKind.Note;
+                    CurrentMissing = false;
                     return true;
                 }
                 _inMusic = false;
                 Current = child.Kind;
+                CurrentMissing = child.FullWidth == 0;
                 return true;
             }
             return false;
@@ -816,6 +831,75 @@ internal static class CollectResumePlanner
     /// AND source positions into the checkpoints, so it must be fully stable.</item>
     /// </list>
     /// </summary>
+    /// <summary>
+    /// The two trees have the same top-level declarations, kind by kind in order. Every
+    /// guard above judges a BASELINE top-level node by its text; this one asks whether the
+    /// new parse still has it at top level at all. A length-preserving edit can turn a
+    /// part's closing `}` into a space and pull everything below into the part: the form
+    /// is still there, byte for byte, and no longer the book's form (session 594:
+    /// PrefixResume_AnEditThatSwallowsTheForm_DoesNotAdoptItsBars — the formless collect
+    /// labels its sections from other positions). Until session 594 the part's closing
+    /// brace was read as a position-sensitive header read and stood in for this guard by
+    /// accident, at the price of every length-changing edit inside the part.
+    /// </summary>
+    /// <summary>
+    /// The start of the earliest event in the unchanged prefix that the NEW tree makes the
+    /// original of a <c>q</c> or a bare duration and the baseline did not (int.MaxValue when
+    /// none). The recorder logs a resolved spelling only for an event its OWN tree calls an
+    /// original (<see cref="VoiceWalkRecording.ResolvedSpellings"/>), so a checkpoint that
+    /// read such an event restores without its spelling, and the copy after the window
+    /// resolves to nothing — MEASURED (session 594, a random edit of Silent Night.lys that
+    /// deleted a pitch letter: `d4 d8 d` → `4 d8 d`): the bar laid out without the note.
+    /// A checkpoint that has not read it yet walks it live, and logs nothing it needs.
+    /// </summary>
+    private static int NewOriginalFloor(SyntaxNode oldRoot, SyntaxNode newRoot, int prefix)
+    {
+        if (ReferenceEquals(oldRoot.Green, newRoot.Green))
+            return int.MaxValue;
+        var newBare = Music.BareDurations.OriginalsOf(newRoot);
+        var newChord = Music.ChordRepetitions.OriginalsOf(newRoot);
+        if (newBare.Count == 0 && newChord.Count == 0)
+            return int.MaxValue;
+        HashSet<int>? oldStarts = null;
+        int floor = int.MaxValue;
+        void Consider(SyntaxNode original)
+        {
+            if (original.FullSpan.End > prefix || original.FullSpan.Start >= floor)
+                return;
+            if (oldStarts == null)
+            {
+                oldStarts = new HashSet<int>();
+                foreach (var o in Music.BareDurations.OriginalsOf(oldRoot))
+                    oldStarts.Add(o.FullSpan.Start);
+                foreach (var o in Music.ChordRepetitions.OriginalsOf(oldRoot))
+                    oldStarts.Add(o.FullSpan.Start);
+            }
+            if (!oldStarts.Contains(original.FullSpan.Start))
+                floor = original.FullSpan.Start;
+        }
+        foreach (var o in newBare)
+            Consider(o);
+        foreach (var o in newChord)
+            Consider(o);
+        return floor;
+    }
+
+    private static bool TopLevelKindsAgree(SyntaxNode oldRoot, SyntaxNode newRoot)
+    {
+        if (ReferenceEquals(oldRoot.Green, newRoot.Green))
+            return true;
+        using var a = oldRoot.ChildNodes().GetEnumerator();
+        using var b = newRoot.ChildNodes().GetEnumerator();
+        while (true)
+        {
+            bool hasA = a.MoveNext(), hasB = b.MoveNext();
+            if (!hasA || !hasB)
+                return hasA == hasB;
+            if (a.Current.Kind != b.Current.Kind)
+                return false;
+        }
+    }
+
     private static bool WindowRespectsTopLevel(
         SyntaxTree baselineTree, int prefix, int suffixStart, int delta)
     {

@@ -123,7 +123,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - ★ **⒮²⁷ tie の家族の残り＝約 2,700 B／打鍵**（第529 が solver の貸し出しで 19,976、**第532 が scratch で 4,250 を閉じた**。Lab `sessions/p529/`・`p532/`）: 残りは `TieChordOutline` 1,643（object＋中の `HorizontalSkyline`＝bound column ごと・problem に貸すなら outline も `Bind` で建て直す形＝skyline は ⒫′ の土台）／`TieColumnParts` 1,504（`BuildTieSpecification` が建てる record・呼び手側）。⚠️ **problem／engraver の貸し出しの島は第532 で尽きた**: `BeamScoringProblem`（第530 −16,344）・`SlurScoringProblem`（第531 −22,325）・tie（第529・第532）。grep（`new \w+Problem\(`・`new \w+Engraver\(`）に残る `LyricEngraver`／`LyricHyphenEngraver` は**第532 が値付けした＝合わせて 1,340 B／打鍵 0.12%（ctor 727・calc 445・hyphen 168）で、しかもコーパスに歌詞が 0 冊**（`lyric.in` 0）＝直す軒ではない（Lab `sessions/p532/lyric-price.txt`）。**貸す前に `.Length`・`[^1]`・`foreach` で表を歩く読み手を数える**（第530 は `[^1]` で 1 度 hash を割った・第532 は tie の配列を*寸法ちょうど*で持った理由）
 - ✅ **⒮²⁶ は第588 が stack sampling で閉じた**（render 内の String の残りは出力と状態・Lab `sessions/p588/stralloc/`）。⚠️ **型地図の順位は stack で見るまで信じない**（GreenNode[] 139 KB は parse）
-- ★★ **⒵ 時間の地図（第590・Release・235 冊 × 8 打鍵・3,760 打鍵・HEAD `4d0753cc` で約 12,030 ms＝3.2 ms／打鍵）**＝計器は Lab `sessions/p590/cpuhost/`（`StageProbe`＋一時の `Zz590T` 計時表＝`sessions/p590/Zz590T.cs.txt`・Lap を段の境に差す）。**残りの値段（render 比）**: ⑴ ✅ **collect の声部の walk は第591 が大半を閉じた**（accidental の文字替えで splice が全部断られていた）。**残り＝第592 が値付け**（§1.1 第592）: live 363 ノード／打鍵のうち**窓の手前 133**＝再開点が遠い（容れ物の中の編集＝checkpoint は外側のリストだけ／section 末尾の小節数の fold が他 part のセルまで読む）＝設計級／⑵ ✅ **gate のばねは第593 が近傍を射影に細くした**（`SystemBreaker.SpringEdgeKey`・作り直し 3.04 → 1.05 小節／打鍵＝§1.1 第593。`LineEndCourtesyWidth(i−1, i)` は i しか読まない＝射影に要らなかった）／⑶ **content key 4.1%**（`MeasureContentKey.Compute`＝毎打鍵全小節）／⑷ **prelim 注釈 pass 8.5%**・**SVG 出力 18%**（未分解）／⑸ beam を**状態**で鍵にする memo＝残る Solve 9.39 のうち 2.94（同じ render・別の群で同じ形）＋1.39（前の打鍵）＝約 3.7%・鍵が 30 フィールド＝要設計／⑹ `ResolveTabStrings` の plan 以外 約 1.9%。⚠️ **EventPipe の CPU sampler は信じない**（§1.1 第589 ⑴）。⚠️ gen2 GC 289 回／run（未調査）
+- ★★ **⒵ 時間の地図（第590・Release・235 冊 × 8 打鍵・3,760 打鍵・HEAD `4d0753cc` で約 12,030 ms＝3.2 ms／打鍵）**＝計器は Lab `sessions/p590/cpuhost/`（`StageProbe`＋一時の `Zz590T` 計時表＝`sessions/p590/Zz590T.cs.txt`・Lap を段の境に差す）。**残りの値段（render 比）**: ⑴ ✅ **collect の声部の walk は第591 が大半を閉じた**（accidental の文字替えで splice が全部断られていた）。**第594 が prefix 側の遠い読みを畳んだ**（§1.1 第594・長さの変わる編集で採用 0.07 → 64.23 小節／打鍵）。**残り**: 容れ物の中の編集（checkpoint は外側のリストだけ）＝設計級／form 行の小節線は位置の読み＝Δ≠0 の編集では form より後ろの checkpoint が使えない（直すなら prefix の採用を位置シフト付きに）／⑦ ✅ **incremental ≠ 全面描画（`SvgGenerator.Generate`）は第595〜第597 で閉じた**（§1.1 第597＝6 通りの照合 19,560 打鍵で不一致 0）。⚠️ **照合の基準は `SvgGenerator.Generate`**（計器は Lab `sessions/p597/verify-all.ps1`・Release の `p594/cpuhost`。Debug だと 1 通り 10 分超）。⚠️ splice 側の疑い（尾の bare duration の元が窓の中に移る）は未調査／⑵ ✅ **gate のばねは第593 が近傍を射影に細くした**（`SystemBreaker.SpringEdgeKey`・作り直し 3.04 → 1.05 小節／打鍵＝§1.1 第593。`LineEndCourtesyWidth(i−1, i)` は i しか読まない＝射影に要らなかった）／⑶ **content key 4.1%**（`MeasureContentKey.Compute`＝毎打鍵全小節）／⑷ **prelim 注釈 pass 8.5%**・**SVG 出力 18%**（未分解）／⑸ beam を**状態**で鍵にする memo＝残る Solve 9.39 のうち 2.94（同じ render・別の群で同じ形）＋1.39（前の打鍵）＝約 3.7%・鍵が 30 フィールド＝要設計／⑹ `ResolveTabStrings` の plan 以外 約 1.9%。⚠️ **EventPipe の CPU sampler は信じない**（§1.1 第589 ⑴）。⚠️ gen2 GC 289 回／run（未調査）
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
@@ -147,33 +147,32 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
-### 1.1 第593セッション（2026-09-25・YT-DELL2）
+### 1.1 第597セッション（2026-09-25・YT-DELL2）
 
-新しい会話。★ `-Start p593`（HEAD `56b4780d`・full **9107 / 0 / 2 / 9109**・第591 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑵ gate のばねの近傍を「読む性質の射影」に細くする設計。
+★ `-Start p597`（HEAD `ed38ef68`・full **9133 / 0 / 2 / 9135**・第595 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ の残り 1 件（collision.lys・fuzz seed 1 の 8 打鍵目）。
 
-★★ **⑴ 近傍を射影に細くした（`88f7a72d`）**: ばね i が i±1 から読む性質を棚卸しした（全文は `SystemBreaker.SpringEdgeKey` の remarks）＝**i−1 から**主声部の `EndBarline`（全小節の spring 0 の左端・`DrawnLineStartBarline` の `:|:`）・`LineBreakPermission`（空小節）・歌詞の行の集合・その小節で効いている拍子（2 声目の拍子変更は entry context に無い）／**i+1 から** mmr の内側か・歌詞の行の集合・`%%` の半幅。`LineEndCourtesyWidth(i−1, i)` は i−1 を渡すが読まない。`SpringReusable` は隣を鍵全体ではなくこの 2 つの hash（`ReadByNext`／`ReadByPrevious`）で比べる。作り直し **3.04 → 1.05 小節／打鍵**（音高 workload 235 冊 × 8 打鍵）・fuzz（ランダムな 1 文字の削除・複製）では 1.8〜3.3 → 1.6〜2.5。⚠️ 時間の A/B は取っていない（回数だけ・ベンチの窓をもらっていない）。
+★★★ **⑴ 原因＝prefix の restore が `_parallelSpans` を記録から*そのまま*写していた**（`637e21f1`）。記録の span は**古い木の** `ParallelExpressionSyntax` を指す。`voice { } { }` の 2 声目以降は walk の後に span から live で歩かれるので、古い木の音符を歩く。2 声目の頭が bare duration（fuzz が `{ d2 e` の `d` を消した＝`{ 2 e`）だと `OriginalOf` は**古い木の** `a` を返し、新しい木へ re-key 済みの `_resolvedNotes` に当たらず休符になった（full は音符）。**suffix の splice は同じ壁を知っていて span を `ResolveShifted` で解き直していた**（`Resume.cs` の「The wall」）＝prefix 側だけ漏れていた。⇒ prefix も spelling と同じ恒等窓で re-key（解けなければ abort）。
+⚠️ 第596 が記した「`{` が欠けた構文回復」は**この件の原因ではなかった**＝旧も新も `{` 欠けで同形・壊れていたのは span の木。切り分けは Lab `sessions/p597/Zz597Collision.cs.txt`（old/full/resumed の item 列を並べる）。
 
-★★★ **⑵ 影の監査が既存の不健全を 1 つ見つけた**: 一時計器（Lab `sessions/p593/Zz593.cs.txt`＋host `cpuhost/`・`audit fuzz all`）で、memo が再利用する小節を*全部*作り直して前の値と比べた＝2 コーパス × 3 seed で約 66 万件。不一致は `keysig-treble.lys` の 3 件だけで、**旧規則でも m2・m3 に古い `LineStartPrefixExtra`（−1.1 対 0）を配っていた**。原因＝`LineStartPrefixExtra` は score 全体の `continuationGate`（小節 0 で効いている調）から測るのに、memo の適格条件がそれを比べていなかった（その小節の entry context は前の変更から来るので鍵は動かない）。⇒ `contPrefix == _contPrefix` を適格条件に足した。修正後は約 66 万件で不一致 0。
+⑵ **網** `CollectEditResumeTests.PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree`（手書き 1 声部の本・`{ 2 e` を持つ span の後ろを編集）＝直しを外すと fuzz と同じ `NoteItem vs RestItem` で赤。
 
-⑶ 網: `SpringEdgeKeyTests` 7 本（各性質を 1 つだけ変えると該当の側が動く・音符だけでは動かない・前提も assert＝`R1 | R1` は run にならないのを前提 assert が捕まえた）＋`SpringMemo_TheContinuationPrefixMoved_…`。毒 8 本（射影の各項目 7＋`contPrefix` の比較）がそれぞれ網を赤くする（Lab `sessions/p593/poisons.log`）。既存の数を固定したテスト 5 本は新しい数へ（例 (5,3) → (7,1)）。
+⑶ **照合（Release・`SvgGenerator.Generate` 基準）**: repo の追跡本 fuzz seed 1／2 各 5,264・ベースタブ本の音高 1,880・長さの変わる編集 1,824・fuzz seed 1／2 各 2,664 ＝**6 通りすべて不一致 0**（第596 は repo seed 1 で 1）。resume の採用量は 6 通りとも第596 と同じ（例: repo seed 1 26.12／3.24 小節／打鍵）＝直しは再利用を削らない。
 
-⑷ **ユーザーの問い「lys の文法改善で perf が上がる余地」**: 文法を変えて効く箇所は見つからなかった。⒜ 文法が collect の resume を丸ごと断る本は実コーパス 235 冊中 2 冊（La Isla Bonita・銀河鉄道999）／⒝ 遠い再開点（§1.0 ⒵ ⑴）の半分の原因である part-major（`part X { section A {…} }`）は 333 冊中 327 冊だが、原因は collector が小節数の fold を*本文の範囲の読み*として記録すること＝実装で直せる（文法を変えると 327 冊を書き換えることになる）／⒞ render の大半（layout・注釈・SVG）は解決済みのモデルの上で走る＝文法に依らない。
+終了: HEAD `637e21f1`＋docs・full **9134 / 0 / 2 / 9136**（+1）。
 
-終了: HEAD `88f7a72d`＋docs・full **9115 / 0 / 2 / 9117**（+8）。
+## 以下は第596セッションの経緯
 
-## 以下は第592セッションの経緯
+### 1.1 第596セッション（2026-09-25・YT-DELL2）
 
-### 1.1 第592セッション（2026-09-25・YT-DELL2）
+同じ会話の続き。★ `-Start p596`（HEAD `5e08f351`・full **9128 / 0 / 2 / 9130**・第594 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ の残り 12 件（repo の追跡本 fuzz seed 1・`SvgGenerator.Generate` 基準）。
 
-同じ会話の続き。★ `-Start p592`（HEAD `7765ec54`・full **9107 / 0 / 2 / 9109**・第590 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑴ の splice の残りの断りを値付けする。
+★★ **⑴ 切り分けの自動化**（Lab `sessions/p596/Zz596Triage.cs.txt`＝fuzz の列を同じ乱数で再現し、最初の不一致の打鍵で `IncrementalCompiler` と段キャッシュのフィールドを 1 つずつ空にする）: 7 冊 8 件が 3 群＝collect の resume／内容鍵の穴で丸ごと再利用／段キャッシュの staff skyline。
 
-★ **⑴ 第591 の後の collect の live の歩き**（一時計器・host は Lab `sessions/p592/cpuhost/`＝第2 引数 `plain` で accidental を使わない編集＝該当 7 冊だけ）: live 363 ノード／打鍵（第591 前 724）＋全面 collect 111。live を窓で分けると **窓の手前 133（restore の後）**・窓の中 57・窓の後 47・前半の再開なしの手前 15（うち反復ブロックの中 10）。断りの残り: 窓の前の候補 7.9（安い）・記録の尾が境の小節を書き換え 1.4・後半の一致 1.8・section 開始 1.2・octave 0.6。⚠️ **workload の窓は累積する**（baseline は全面 collect のときだけ取り直す＝8 打鍵目の窓は 1 打鍵目の編集から今の編集まで）＝「窓の中」57 は workload の形。
+★★★ **⑵ 直した 6 つ**（`eb6a411f`・`1e646fa9`）: ⒜ **splice の空の尾**＝境界が walk の最後の小節線だと採用 0 小節なのに、記録の終わりの builder の `LastMeasure`（編集前の記録の小節）で live の最後の小節を上書きしていた（key-signature-space の `@stemUpp`）／⒝ **構文回復で補われた token**（幅 0 の `{`）を `ShapeWalk` が同じ形と見ていた（collision の `section Main` の `{` 削除）／⒞ **内容鍵が null と 0 を区別しない**＝`Nullable.GetHashCode` は null も 0（scriptstack1 の `@ffinger(0)`＝`Fingering` 0 → null で鍵が同じ）＝`Hash64.NullFold`／⒟ **小節を持たない行が鍵に入らない**（lyrics の score ブロックの `lyrics wwords` → `lyric wwords`）＝staff の形（番号・同一性・声部数）を全鍵に。⚠️ 小節数を入れると小節の挿入で全鍵が動き、ずらし再利用の網 6 本が赤（入れない）／⒠ **ペダル記号の解をソース位置で名指し**していた＝段キャッシュは位置に依らないので、上の編集（`title` の崩れ）で解が引けず既定の置き方に落ちた（pedal-text）＝小節・アンカー・種類で名指し、流用時は小節番号を振り直す。
 
-★ **⑵ 再開点が遠い理由を値付けした**: 選ばれた再開点は 3,062 計画のうち 1,828 が窓の 40 文字以内。遠い 1,064 は ⒜ 533＝再開点と窓の間に checkpoint が無い（**容れ物の中の編集**：checkpoint は `ProcessNodes` の外側のリストにしか取らない＝`repeat volta { … }` の中を編集すると容れ物の頭から live／記録時の境の 26% は form の反復ブロックの中で取らない）⒝ 429＝間の checkpoint が窓の先を読んでいた（多くは 1,000 文字以上＝**`ProcessSectionBody` 末尾の小節数の fold（`MeasureCollector.Form.cs:584-590`）が同じ section の他 part のセルの末尾まで `MaxSourceRead` に入れる**＝part-major の本では以後の checkpoint が全部使えない）。どちらも設計級（容れ物の中に checkpoint を取るか、小節数の読みを値の読みとして別に持つ）＝**着手せず**。
+⑶ **照合（`SvgGenerator.Generate` 基準）**: ベースタブ本の音高・長さの変わる編集・fuzz 2 seed で不一致 0、repo の追跡本 fuzz seed 1 で 1 件（collision・§1.0 ⑦）・seed 2 で 0（第595 前は 31 件）。resume の採用量は変わらず。網 5 本（`CollectEditResumeTests` 2・`IncrementalFullAgreementTests` 3）がそれぞれ、直しを外すと赤。
 
-⑶ gate のばね（§1.0 ⒵ ⑵）の近傍の読みを確認した: ばね i が i±1 から読むのは run の開きの左の小節線・run の続き・歌詞の行の続き（第150 の棚卸し）と、**その後に足された `LineEndCourtesyWidth(i−1, i)`（第583）**。射影に細くする設計は次便へ。
-
-終了: HEAD `7765ec54`＋docs（コードの変更なし）・full **9107 / 0 / 2 / 9109**。
+終了: HEAD `1e646fa9`＋docs・full **9133 / 0 / 2 / 9135**（+5）。
 
 ## 2. 開いている作業
 

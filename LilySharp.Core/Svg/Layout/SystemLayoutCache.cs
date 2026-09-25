@@ -136,9 +136,11 @@ internal sealed class SystemLayoutCache
     /// called before the layout consults the cache. Also marks the edit boundary for
     /// eviction: entries inserted or hit from here on belong to the new pass and are
     /// exempt from eviction until the next boundary.</summary>
-    public void SetContentKeys(ImmutableArray<MeasureContentKey> keys)
+    public void SetContentKeys(ImmutableArray<MeasureContentKey> keys,
+        ImmutableArray<SystemBreaker.SpringEdgeKey> edges = default)
     {
         _keys = keys;
+        _edges = edges;
         _measures.NextGeneration();
         _skylines.NextGeneration();
         _staffSkylines.NextGeneration();
@@ -149,6 +151,44 @@ internal sealed class SystemLayoutCache
         _looseLines.NextGeneration();
         _voiceCollisions.NextGeneration();
         BeamDetection.BeginCollect();
+    }
+
+    // What each measure's neighbours read of it (SystemBreaker.SpringEdgeKey), index-aligned
+    // with _keys; default when the caller gave none (tests), and then ContextOf is 0.
+    private ImmutableArray<SystemBreaker.SpringEdgeKey> _edges;
+
+    /// <summary>
+    /// What a system spanning [<paramref name="first"/>, first + <paramref name="count"/>)
+    /// reads from OUTSIDE its measures, folded into one value every store matches on beside
+    /// the content slice: the previous measure's end as the line start reads it (its end bar
+    /// line — a `:|:` hands the line a `.|:` to draw — and its lyric lines), and the next
+    /// measure's start as the line end reads it (whether a run swallows it, its lyric lines,
+    /// the courtesy key and meter the line reserves for it).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SLICE ALONE WAS THE KEY UNTIL SESSION 595, and a store matched ANY entry with the
+    /// same slice — another system's, shifted. MEASURED on the owner's corpus
+    /// (You're the One That I Want (-1).lys): bars 20–23 and 28–31 carry the same keys, bar 27
+    /// ends on `:|:`, bar 19 on a plain bar line; the first render laid out the system at 28 by
+    /// shifting the one at 20, and the preview drew it 1.1 narrower at its start than
+    /// <c>SvgGenerator.Generate</c> did — on EVERY render of the book, edited or not. The same
+    /// read made an exact hit stale: an edit to bar 27's bar line alone leaves 28–31's keys.
+    /// </remarks>
+    private long ContextOf(int first, int count)
+    {
+        if (_edges.IsDefault || _keys.IsDefault || _edges.Length != _keys.Length)
+            return 0;
+        var h = new MeasureContentKey.Hash64();
+        h.Add(first > 0 && first - 1 < _edges.Length ? _edges[first - 1].ReadByNext : 0L);
+        int end = first + count;
+        if (end >= 0 && end < _edges.Length)
+        {
+            h.Add(_edges[end].ReadByPrevious);
+            h.Add(_edges[end].LineEndCourtesy);
+        }
+        else
+            h.Add(0L);
+        return h.ToHashCode();
     }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
@@ -268,7 +308,7 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration,
         TState state, Func<TState, ImmutableArray<MeasureLayout>> compute)
     {
-        var result = _measures.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
+        var result = _measures.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: 0, state, compute, out bool hit);
         LastWasHit = hit;
         return result;
@@ -315,7 +355,7 @@ internal sealed class SystemLayoutCache
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
         TState state, Func<TState, MultiStaffLayouter.StaffSkylineSet> compute)
-        => _staffSkylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
+        => _staffSkylines.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: 0, state, compute, out _);
 
     /// <summary>Hits and misses of <see cref="GetOrComputeLyricBand"/> over this cache's
@@ -367,7 +407,7 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration,
         TState state, Func<TState, LayoutEngine.LooseBlockProfiles> compute)
     {
-        var result = _lyricBands.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+        var result = _lyricBands.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
             state, compute, out bool hit);
         LyricBandStats = hit
@@ -408,7 +448,7 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration,
         Func<IReadOnlyList<MultiStaffLayouter.PairLooseLine>?> compute)
     {
-        var result = _looseLines.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+        var result = _looseLines.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
             compute, out bool hit, extra2: upperStaffIndex);
         LooseLinesStats = hit
@@ -423,7 +463,7 @@ internal sealed class SystemLayoutCache
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration, double systemHeight,
         TState state, Func<TState, (VerticalSkyline up, VerticalSkyline down)> compute)
-        => _skylines.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
+        => _skylines.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: systemHeight, state, compute, out _);
 
     /// <summary>Reuses or computes ONE staff's laid-out beams for ONE system — the
@@ -457,7 +497,7 @@ internal sealed class SystemLayoutCache
         int firstMeasureIndex, int measureCount, bool isFirstSystem, bool isLastSystem,
         double indent, double commonShortestDuration,
         TState state, Func<TState, ImmutableArray<BeamLayout>> compute)
-        => _staffSystemBeams.GetOrCompute(_keys, firstMeasureIndex, measureCount, isFirstSystem,
+        => _staffSystemBeams.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount, isFirstSystem,
             isLastSystem, indent, commonShortestDuration, extra: 0,
             state, compute, out _, extra2: staffIndex, systemIndex: systemIndex);
 
@@ -484,7 +524,7 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration,
         TState state, Func<TState, ImmutableArray<TieLayout>> compute)
     {
-        var result = _staffSystemTies.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+        var result = _staffSystemTies.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
             state, compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
         BowMemoStats = hit
@@ -503,7 +543,7 @@ internal sealed class SystemLayoutCache
         double indent, double commonShortestDuration,
         TState state, Func<TState, ImmutableArray<SlurLayout>> compute)
     {
-        var result = _staffSystemSlurs.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+        var result = _staffSystemSlurs.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount,
             isFirstSystem, isLastSystem, indent, commonShortestDuration, extra: 0,
             state, compute, out bool hit, extra2: staffIndex, systemIndex: systemIndex);
         BowMemoStats = hit
@@ -530,7 +570,7 @@ internal sealed class SystemLayoutCache
     public ImmutableArray<VoiceCollisionEntry> GetOrComputeStaffSystemVoiceCollisions<TState>(
         int staffIndex, int firstMeasureIndex, int measureCount,
         TState state, Func<TState, ImmutableArray<VoiceCollisionEntry>> compute)
-        => _voiceCollisions.GetOrCompute(_keys, firstMeasureIndex, measureCount,
+        => _voiceCollisions.GetOrCompute(_keys, ContextOf(firstMeasureIndex, measureCount), firstMeasureIndex, measureCount,
             isFirst: false, isLast: false, indent: 0, shortest: 0, extra: 0,
             state, compute, out _, extra2: staffIndex);
 
@@ -759,10 +799,25 @@ internal sealed class SystemLayoutCache
                 lb.Add(l with { StartMeasureIndex = l.StartMeasureIndex + delta });
             pedalLines.Add(lb.MoveToImmutable());
         }
+        // The pedal WORDS are named by their bar like the lines (PedalEngraver.SolvedPedalRow),
+        // so they re-stamp the same way.
+        var pedalRows = new List<ImmutableArray<PedalEngraver.SolvedPedalRow>>(set.PedalRows.Count);
+        foreach (var rows in set.PedalRows)
+        {
+            if (rows.IsDefaultOrEmpty)
+            {
+                pedalRows.Add(rows);
+                continue;
+            }
+            var rb = ImmutableArray.CreateBuilder<PedalEngraver.SolvedPedalRow>(rows.Length);
+            foreach (var r in rows)
+                rb.Add(r with { MeasureIndex = r.MeasureIndex + delta });
+            pedalRows.Add(rb.MoveToImmutable());
+        }
         var beams = new List<ImmutableArray<BeamLayout>>(set.Beams.Count);
         foreach (var staffBeams in set.Beams)
             beams.Add(ShiftBeams(staffBeams, delta));
-        return set with { Spanners = spanners, PedalLines = pedalLines, Beams = beams };
+        return set with { Spanners = spanners, PedalLines = pedalLines, PedalRows = pedalRows, Beams = beams };
     }
 
     // A keyed memo: bucket by a hash of (system shape + extra scalars + content slice),
@@ -778,6 +833,8 @@ internal sealed class SystemLayoutCache
             public readonly double Indent, Shortest, Extra, Extra2;
             public readonly ImmutableArray<MeasureContentKey> Content;
             public readonly T Value;
+            /// <summary>What the system read from outside its slice (SystemLayoutCache.ContextOf).</summary>
+            public readonly long Context;
 
             /// <summary>The pass (see <see cref="NextGeneration"/>) that last inserted
             /// or hit this entry — current-pass entries are exempt from eviction.</summary>
@@ -785,8 +842,9 @@ internal sealed class SystemLayoutCache
 
             public Entry(int first, int count, int system, bool isFirst, bool isLast, double indent,
                 double shortest, double extra, double extra2,
-                ImmutableArray<MeasureContentKey> content, T value, int generation)
+                ImmutableArray<MeasureContentKey> content, T value, int generation, long context)
             {
+                Context = context;
                 First = first; Count = count; System = system; IsFirst = isFirst; IsLast = isLast;
                 Indent = indent; Shortest = shortest; Extra = extra; Extra2 = extra2;
                 Content = content; Value = value;
@@ -798,9 +856,9 @@ internal sealed class SystemLayoutCache
             /// (an exact hit) or only shifted.</summary>
             public bool MatchesContent(int count, bool isFirst, bool isLast, double indent,
                 double shortest, double extra, double extra2,
-                ReadOnlySpan<MeasureContentKey> content)
+                ReadOnlySpan<MeasureContentKey> content, long context)
             {
-                if (Count != count || IsFirst != isFirst || IsLast != isLast
+                if (Context != context || Count != count || IsFirst != isFirst || IsLast != isLast
                     || Indent != indent || Shortest != shortest || Extra != extra
                     || Extra2 != extra2 || Content.Length != content.Length)
                     return false;
@@ -853,10 +911,10 @@ internal sealed class SystemLayoutCache
             Pass = default;
         }
 
-        public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
+        public T GetOrCompute(ImmutableArray<MeasureContentKey> keys, long context,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
             double extra, Func<T> compute, out bool hit, double extra2 = 0, int systemIndex = 0)
-            => GetOrCompute(keys, first, count, isFirst, isLast, indent, shortest, extra,
+            => GetOrCompute(keys, context, first, count, isFirst, isLast, indent, shortest, extra,
                 compute, static c => c(), out hit, extra2, systemIndex);
 
         /// <summary>The same lookup with the computation's inputs passed as
@@ -869,7 +927,7 @@ internal sealed class SystemLayoutCache
         /// corpus (session 469, A/B with this change alone left out) to build computations that
         /// were almost never run.
         /// </remarks>
-        public T GetOrCompute<TState>(ImmutableArray<MeasureContentKey> keys,
+        public T GetOrCompute<TState>(ImmutableArray<MeasureContentKey> keys, long context,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
             double extra, TState state, Func<TState, T> compute, out bool hit,
             double extra2 = 0, int systemIndex = 0)
@@ -894,6 +952,7 @@ internal sealed class SystemLayoutCache
             hc.Add(shortest);
             hc.Add(extra);
             hc.Add(extra2);
+            hc.Add(context);
             foreach (var k in slice)
                 hc.Add(k);
             int bucketKey = hc.ToHashCode();
@@ -903,7 +962,7 @@ internal sealed class SystemLayoutCache
             {
                 foreach (var e in list)
                 {
-                    if (!e.MatchesContent(count, isFirst, isLast, indent, shortest, extra, extra2, slice))
+                    if (!e.MatchesContent(count, isFirst, isLast, indent, shortest, extra, extra2, slice, context))
                         continue;
                     if (e.First == first && e.System == systemIndex)
                     {
@@ -946,7 +1005,7 @@ internal sealed class SystemLayoutCache
             // paging augment) need to hit at all. The content slice is shared with the entry
             // it came from — an ImmutableArray, so sharing is free.
             var entry = new Entry(first, count, systemIndex, isFirst, isLast, indent, shortest, extra, extra2,
-                shiftable?.Content ?? ImmutableArray.Create(keys, first, count), value, _generation);
+                shiftable?.Content ?? ImmutableArray.Create(keys, first, count), value, _generation, context);
             list.Add(entry);
             _insertionOrder.Enqueue((bucketKey, entry));
             _count++;

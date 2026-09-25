@@ -90,10 +90,15 @@ public static class ChordRepetitions
         var top = (SyntaxNode)chord;
         while (top.Parent != null)
             top = top.Parent;
-        var set = Originals.GetValue(top,
-            root => new HashSet<ChordSyntax>(Maps.GetValue(root, BuildMap).Values.Select(v => v.Chord)));
-        return set.Contains(chord);
+        return OriginalsOf(top).Contains(chord);
     }
+
+    /// <summary>Every chord some <c>q</c> of the tree rooted at <paramref name="root"/>
+    /// copies — the set <see cref="IsOriginal"/> answers from. The collect-resume planner
+    /// compares two trees' sets (CollectResumePlanner.NewOriginalFloor).</summary>
+    internal static IReadOnlySet<ChordSyntax> OriginalsOf(SyntaxNode root)
+        => Originals.GetValue(root,
+            r => new HashSet<ChordSyntax>(Maps.GetValue(r, BuildMap).Values.Select(v => v.Chord)));
 
     private static Dictionary<ChordRepetitionSyntax, Resolved> BuildMap(SyntaxNode root)
     {

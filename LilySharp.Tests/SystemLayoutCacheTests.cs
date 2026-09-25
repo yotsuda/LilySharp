@@ -290,6 +290,41 @@ public class SystemLayoutCacheTests
         Assert.Equal(2, calls);
     }
 
+    /// <summary>
+    /// A system reads the measures around it — the previous bar's end (a `:|:` hands the
+    /// line a `.|:` to draw) and the next bar's head — and the content slice cannot see
+    /// either. Session 595 found the first render of a corpus book laying out one system by
+    /// shifting another with the same slice but a different bar line before it, so every
+    /// store matches on the neighbours' edge keys too (SystemLayoutCache.ContextOf).
+    /// </summary>
+    [Fact]
+    public void TheSameSliceBehindADifferentBarLine_IsNotTheSameSystem()
+    {
+        var keys = ImmutableArray.Create(
+            new MeasureContentKey(7), new MeasureContentKey(1), new MeasureContentKey(2),
+            new MeasureContentKey(8), new MeasureContentKey(1), new MeasureContentKey(2));
+        SystemBreaker.SpringEdgeKey Edge(long next) => new(next, 0, 0);
+        var edges = ImmutableArray.Create(Edge(10), Edge(0), Edge(0), Edge(20), Edge(0), Edge(0));
+        var cache = new SystemLayoutCache();
+        cache.SetContentKeys(keys, edges);
+        int calls = 0;
+        Func<ImmutableArray<MeasureLayout>> factory = () => { calls++; return Layout(0); };
+
+        // Bars 1-2 and 4-5 hold the same content, behind bars 0 and 3 that end differently.
+        cache.GetOrComputeMeasures(1, 2, false, false, 1.0, 0.25, factory);
+        cache.GetOrComputeMeasures(4, 2, false, false, 1.0, 0.25, factory);
+        Assert.False(cache.LastWasHit);
+        Assert.Equal(2, calls);
+
+        // ...and the SAME system misses when only the bar before it changes its end.
+        cache.SetContentKeys(keys, edges.SetItem(3, Edge(30)));
+        cache.GetOrComputeMeasures(4, 2, false, false, 1.0, 0.25, factory);
+        Assert.False(cache.LastWasHit);
+        cache.GetOrComputeMeasures(1, 2, false, false, 1.0, 0.25, factory);
+        Assert.True(cache.LastWasHit);
+        Assert.Equal(3, calls);
+    }
+
     [Fact]
     public void OutOfRange_FallsBackToCompute_NoCaching()
     {
@@ -366,6 +401,51 @@ public class SystemLayoutCacheTests
         form main { Main }
         score main "x" { staff melody }
         """;
+
+    /// <summary>
+    /// Systems 2 and 4 hold the same bars, but system 4 opens after a `:|:` and draws its
+    /// `.|:` at the line start. With the content slice alone as the key, the FIRST render
+    /// laid system 4 out by shifting system 2 — the preview differed from
+    /// <see cref="SvgGenerator.Generate"/> before any edit (session 595, a corpus book).
+    /// </summary>
+    [Fact]
+    public void IncrementalCompiler_FirstRender_DoesNotReuseASystemAcrossADifferentBarLine()
+    {
+        const string src = """
+            octave absolute
+            time 4/4
+            key c major
+            part melody
+            section Main {
+              melody {
+                c4 d e f | g4 a b c |
+                break
+                e4 f g a | b4 c d e |
+                break
+                e4 f g a | b4 c d e :|:
+                break
+                e4 f g a | b4 c d e |
+                break
+                c4 d e f | g4 a b c |
+              }
+            }
+            form main { Main }
+            score main "x" { staff melody }
+            """;
+        var opt = new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false };
+        var tree = SyntaxTree.Parse(src);
+        // Non-vacuous: systems 2 and 4 (bars 2-3, 6-7) share their slice, and bar 5 ends on `:|:`.
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var keys = MeasureContentKey.Compute(score);
+        var ms = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        Assert.True(keys[2] == keys[6], ModelDeepDiff.FirstDifference(ms[2], ms[6], "m") ?? "same measure, other key");
+        Assert.Equal(keys[2], keys[6]);
+        Assert.Equal(keys[3], keys[7]);
+        Assert.Equal(BarlineType.RepeatBoth, score.PrimaryContentStaff.PrimaryVoice.Measures[5].EndBarline);
+
+        var session = new IncrementalCompiler(tree, opt);
+        Assert.Equal(SvgGenerator.Generate(SyntaxTree.Parse(src), opt), session.Render());
+    }
 
     [Fact]
     public void IncrementalCompiler_ReusesUnchangedSystems_AndStaysByteIdentical()

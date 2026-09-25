@@ -220,6 +220,16 @@ internal sealed class VoiceWalkRecording
     /// verifies that prefix span-by-span — content AND position stable.</summary>
     public List<HeaderRead>? HeaderReads;
 
+    /// <summary>The canonical section bar counts this walk's padding epilogues read, in
+    /// walk order: (section name, the count). The count is a function of every part's
+    /// cells of the section and the phrases they reference — text anywhere in the file —
+    /// so it is a VALUE read, not folded into <see cref="WalkCheckpoint.MaxSourceRead"/>:
+    /// each checkpoint records how many it had read
+    /// (<see cref="WalkCheckpoint.CanonicalReadCount"/>) and the resume re-counts exactly
+    /// that prefix on the edited text at walk entry
+    /// (<c>MeasureCollector.PrefixTargetWithStableCanonicalBars</c>).</summary>
+    public List<(string Section, int Bars)>? CanonicalReads;
+
     public List<WalkCheckpoint> Checkpoints { get; } = new();
 
     /// <summary>The walk's measures BEFORE <c>FinalizeMeasures</c> mutates them
@@ -304,7 +314,10 @@ internal readonly record struct HeaderRead(Syntax.TextSpan Span, bool ValueOnly,
 /// entry by their shifted address for O(1) lookup per clean boundary.</summary>
 internal sealed class VoiceResumePlan
 {
-    public required WalkCheckpoint? Checkpoint { get; init; }
+    /// <summary>The prefix target. Settable because walk entry may step it back to an
+    /// earlier checkpoint (or null) when a canonical bar count it read has moved
+    /// (<see cref="VoiceWalkRecording.CanonicalReads"/>).</summary>
+    public required WalkCheckpoint? Checkpoint { get; set; }
     public required VoiceWalkRecording Recording { get; init; }
     public required MeasureCollector Source { get; init; }
 
@@ -398,9 +411,10 @@ internal sealed class WalkCheckpoint
     // --- cross-edit (Δ≠0) validity ---
     /// <summary>The end of the furthest source text the walk had READ when this
     /// boundary was captured: every processed node (any depth, phrase bodies
-    /// included), every lookahead peek, and — at each section end — the whole
-    /// span every part contributes to that section (the padding epilogue prices
-    /// the section off ALL parts' bar counts). A checkpoint is valid across an
+    /// included), every lookahead peek, and — at each section end — the section's
+    /// start, which the padding spacers cite. (The padding's COUNT reads every part's
+    /// cells; it is a value read, <see cref="CanonicalReadCount"/>, since session 594.)
+    /// A checkpoint is valid across an
     /// edit iff this is ≤ the old/new common prefix: then the adopted state is a
     /// function of unchanged text, positions included. The walk's OTHER reads —
     /// part headers, section names/header directives, file-level defaults — are
@@ -434,6 +448,9 @@ internal sealed class WalkCheckpoint
     /// had been read at this boundary — the planner validates exactly that prefix,
     /// so a shifted LATER section header does not reject an EARLIER checkpoint.</summary>
     public required int HeaderReadCount { get; init; }
+    /// <summary>How many of the walk's <see cref="VoiceWalkRecording.CanonicalReads"/> had
+    /// been read at this boundary — the prefix a resume re-counts before restoring here.</summary>
+    public required int CanonicalReadCount { get; init; }
 
     // --- builder ---
     public required MeasureBuilder.BuilderCheckpoint Builder { get; init; }

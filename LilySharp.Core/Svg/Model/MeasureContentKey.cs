@@ -168,8 +168,30 @@ public readonly record struct MeasureContentKey(long Hash)
         // the keys below and dropped (session 527's census: 810 B a keystroke, and as much
         // again for the side-table buckets). Seeded cell by cell, so nothing stale is read.
         var acc = Layout.ScratchArray.Take(ref t_acc, n);
+
+        // The score's STAFF SHAPE, folded into every key: which staves and rows exist, each
+        // one's identity and voice count — NOT its bar count, which a bar inserted anywhere
+        // moves (every key would move with it, and the shifted-tail reuse the per-system memos
+        // stand on would never hit: the LayoutMemo_*Measure_ReStamps nets). The per-measure
+        // loop below folds a staff
+        // only at the measures it HAS, so a staff with none — a lyrics row whose lyrics name
+        // nothing — was in no key at all: MEASURED (session 596, a random edit of the tracked
+        // lyrics.lys, `lyrics wwords` → `lyric wwords` in the score block), the row went and
+        // every key stood, and the whole cached layout was served with the row's height.
+        var shape = new Hash64();
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+        {
+            shape.Add(staffIndex);
+            AddStaffIdentity(ref shape, staff);
+            AddGroupIdentity(ref shape, group);
+            shape.Add(staff.Voices.Length);
+        }
+        long shapeHash = shape.ToHashCode();
         for (int i = 0; i < n; i++)
+        {
             acc[i] = new Hash64();                    // seed the FNV basis (array init is zero)
+            acc[i].Add(shapeHash);
+        }
 
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
@@ -750,9 +772,9 @@ public readonly record struct MeasureContentKey(long Hash)
         {
             if (CompileDirectHash(p) is not { } direct) continue;
             object? boxed = CompileGetter(p)(item);
-            // What AddValue folds for these types: hc.Add(0) for a null (a Nullable with no
-            // value), otherwise hc.Add(object) — which is (uint)value.GetHashCode().
-            int viaBox = boxed is null ? 0 : boxed.GetHashCode();
+            // What AddValue folds for these types: Hash64.NullFold for a null (a Nullable with
+            // no value), otherwise hc.Add(object) — which is (uint)value.GetHashCode().
+            int viaBox = boxed is null ? unchecked((int)Hash64.NullFold) : boxed.GetHashCode();
             report.Add((p.Name, direct(item) == viaBox));
         }
         return report;
@@ -879,6 +901,18 @@ public readonly record struct MeasureContentKey(long Hash)
 
         var o = Expression.Parameter(typeof(object), "o");
         Expression value = Expression.Property(Expression.Convert(o, p.DeclaringType!), p);
+
+        // A Nullable folds its value's hash when it has one and Hash64.NullFold when it does
+        // not — the number the boxed path folds for a null (AddValue). Nullable's own
+        // GetHashCode answers 0 for null, the same as for the value 0.
+        Expression? nullable = null;
+        if (Nullable.GetUnderlyingType(t) is { } underlying)
+        {
+            nullable = value;
+            value = Expression.Property(value, "Value");
+            t = underlying;
+        }
+
         // An enum's own GetHashCode is Enum's, which would box; it returns the underlying
         // value's hash, so read that instead and the folded number is the same.
         if (t.IsEnum)
@@ -890,7 +924,11 @@ public readonly record struct MeasureContentKey(long Hash)
         if (hash == null || hash.DeclaringType != value.Type)
             return null;
 
-        return Expression.Lambda<Func<object, int>>(Expression.Call(value, hash), o).Compile();
+        Expression body = Expression.Call(value, hash);
+        if (nullable != null)
+            body = Expression.Condition(Expression.Property(nullable, "HasValue"), body,
+                Expression.Constant(unchecked((int)Hash64.NullFold)));
+        return Expression.Lambda<Func<object, int>>(body, o).Compile();
     }
 
     // o => (object)((TDeclaring)o).Prop
@@ -921,7 +959,7 @@ public readonly record struct MeasureContentKey(long Hash)
         switch (value)
         {
             case null:
-                hc.Add(0);
+                hc.AddNull();                          // not 0: see Hash64.NullFold
                 break;
             case string s:                            // before IEnumerable: hash chars
                 hc.Add(s);
@@ -978,8 +1016,20 @@ public readonly record struct MeasureContentKey(long Hash)
 
         public void Add<T>(T value)
         {
-            Fold(value is null ? 0u : unchecked((uint)value.GetHashCode()));
+            Fold(value is null ? NullFold : unchecked((uint)value.GetHashCode()));
         }
+
+        /// <summary>What a null folds: NOT 0. <c>Nullable&lt;T&gt;.GetHashCode</c> answers 0 for
+        /// null, which is also what the value 0 (or false, or an enum's first member) answers,
+        /// so a nullable field that went from 0 to null left the key unchanged — MEASURED
+        /// (session 596, a random edit of the tracked scriptstack1.lys, <c>@finger(0)</c> →
+        /// <c>@ffinger(0)</c>): <c>Fingering</c> 0 → null, the same keys, and the whole cached
+        /// layout served with the fingering still drawn. Every null path folds this value
+        /// (<see cref="AddValue"/>, the direct nullable getter, <c>ArrayFold</c>), so the
+        /// direct and boxed folds still agree.</summary>
+        public const uint NullFold = 0x6A09E667u;
+
+        public void AddNull() => Fold(NullFold);
 
         // Folds both halves, so a composed 64-bit sub-hash (HashContent, BucketSpan)
         // is not collapsed to lo^hi by Int64.GetHashCode on its way into the key.

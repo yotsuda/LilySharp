@@ -263,6 +263,286 @@ public class CollectEditResumeTests
         Assert.True(everSpliced, "no keystroke spliced the collect's suffix — the splice wiring is dead");
     }
 
+    // ---------- session 594: what the prefix side reads of text far from the music ----------
+
+    /// <summary>Records <paramref name="oldText"/>, plans and runs the resumed collect of
+    /// <paramref name="newText"/>, and asserts it deep-equals a full collect. Returns the
+    /// plans, their prefix targets AS PLANNED (walk entry may step one back), and the probe.</summary>
+    private static (CollectWalkProbe Resumer, Dictionary<int, WalkCheckpoint?> Planned) ResumeAndCompare(
+        string oldText, string newText)
+    {
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector { WalkProbe = recorder };
+        var oldTree = SyntaxTree.Parse(oldText);
+        SvgGenerator.CollectScore(source, oldTree, RenderSpecParser.FindFirst(oldTree));
+
+        var newTree = SyntaxTree.Parse(newText);
+        var newSpec = RenderSpecParser.FindFirst(newTree);
+        var fullNew = SvgGenerator.CollectScore(newTree, newSpec);
+
+        var resumer = CollectResumePlanner.Plan(oldTree, newTree, recorder, source);
+        Assert.True(resumer != null, "the edit produced no plan at all");
+        var planned = resumer!.ResumePlans.ToDictionary(kv => kv.Key, kv => kv.Value.Checkpoint);
+        var collector = new MeasureCollector { WalkProbe = resumer };
+        var resumed = SvgGenerator.CollectScore(collector, newTree, newSpec);
+        var diff = ModelDeepDiff.FirstDifference(fullNew, resumed, "score");
+        Assert.True(diff == null, $"resumed differs from full: {diff}");
+        return (resumer, planned);
+    }
+
+    // vb's cells stand ABOVE va's in the file, while va walks first (staff order): vb's
+    // padding of S reads a count of va's cell, text BELOW everything vb's walk reads.
+    // va's bars are rests so an edit to them leaves every cumulative table count alone
+    // (see SuffixSplice_DeclinesWhenAnotherPartsBarCountChanges' note).
+    private const string CanonBook = @"score main ""canon"" { staff va staff vb }
+
+part vb {
+  clef bass
+  section S { c4 b a g | }
+  section T { g4 a b c | c4 b a g | }
+}
+part va {
+  clef treble
+  section S { r4 r r r | r4 r r r | }
+  section T { r4 r r r | r4 r r r | }
+}
+form main { S T }
+";
+
+    /// <summary>
+    /// The canonical section bar count is a VALUE read (session 594): an edit to another
+    /// part's cell that leaves the count alone no longer costs vb its prefix. It used to fold
+    /// va's cells into vb's read extent at the end of S, so every vb checkpoint after S read
+    /// past an edit anywhere in va — the resume restarted vb from its head.
+    /// </summary>
+    [Fact]
+    public void PrefixResume_AnotherPartsEditThatKeepsTheBarCount_KeepsThePrefixPastTheSectionEnd()
+    {
+        var newText = CanonBook.Replace("section S { r4 r r r | r4 r r r | }", "section S { r2 r | r4 r r r | }");
+        Assert.NotEqual(CanonBook, newText);
+        var (resumer, _) = ResumeAndCompare(CanonBook, newText);
+        Assert.Contains(resumer.ResumePlans.Values, p =>
+            p.Consumed && p.Checkpoint is { CanonicalReadCount: > 0 } && p.Recording.VoiceName == "vb");
+    }
+
+    /// <summary>
+    /// ...and when the count DID move, the prefix steps back before the section end that read
+    /// it: the only thing between vb's walk and a stale spacer is the re-count at walk entry
+    /// (a poisoned re-count makes this the test that fails).
+    /// </summary>
+    [Fact]
+    public void PrefixResume_AnotherPartsEditThatMovesTheBarCount_StepsBackBeforeTheSectionEnd()
+    {
+        var newText = CanonBook.Replace("section S { r4 r r r | r4 r r r | }", "section S { r4 r r r | }");
+        Assert.NotEqual(CanonBook, newText);
+        var (resumer, planned) = ResumeAndCompare(CanonBook, newText);
+        var vb = resumer.ResumePlans.Single(kv => kv.Value.Recording.VoiceName == "vb");
+        // Non-vacuous: the planner (which cannot count) aimed past S's end...
+        Assert.True(planned[vb.Key] is { CanonicalReadCount: > 0 },
+            "the planner did not aim vb past S's end — the re-count is not reachable");
+        // ...and walk entry stepped the target back to before it.
+        Assert.True(vb.Value.Checkpoint is null or { CanonicalReadCount: 0 });
+    }
+
+    /// <summary>
+    /// A part declaration's closing `}` stands after every section of a part-major part; it
+    /// used to be recorded as a position-sensitive header read at walk entry, so ANY
+    /// length-changing edit inside the part made the walk's first checkpoint unstable
+    /// (session 594: 219 of 228 of the owner's books never resumed under such edits).
+    /// </summary>
+    [Fact]
+    public void PrefixResume_ALengthChangingEditInAPartMajorPart_KeepsThePrefix()
+    {
+        const string oldText = @"score main ""x"" { staff bl }
+
+part bl {
+  clef bass
+  section A { c4 d e f | g4 a b c | }
+  section B { c4 d e f | g4 a b c | }
+}
+form main { A B }
+";
+        var newText = oldText.Replace("section B { c4 d e f | g4 a b c | }", "section B { c4 d e f | g8 g a4 b c | }");
+        Assert.NotEqual(oldText, newText);
+        var (resumer, _) = ResumeAndCompare(oldText, newText);
+        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { MeasureCount: >= 2 });
+    }
+
+    /// <summary>
+    /// A bar written on the FORM line is read where the form stands — the file's bottom — so
+    /// it used to lift the read extent past every edit to the music above, and no checkpoint
+    /// after it could be restored. It is a position-sensitive header read now (session 594):
+    /// a length-preserving edit below it in walk order keeps the checkpoints past the bar.
+    /// </summary>
+    [Fact]
+    public void PrefixResume_AFormLineBar_DoesNotReadPastTheMusicAbove()
+    {
+        const string oldText = @"score main ""x"" { staff bl }
+
+part bl {
+  clef bass
+  section A { c4 d e f | }
+  section B { g4 a b c | }
+  section C { e4 f g a | a4 g f e | }
+}
+form main { A |: B :| C }
+";
+        var newText = oldText.Replace("a4 g f e", "b4 g f e");
+        Assert.Equal(oldText.Length, newText.Length);
+        var (resumer, _) = ResumeAndCompare(oldText, newText);
+        // Past A, B and C's first bar: every one of those checkpoints stands after the `:|`.
+        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { MeasureCount: >= 3 });
+    }
+
+    /// <summary>
+    /// Deleting a pitch letter turns the next note into a bare duration (`a4` → `4`), which
+    /// copies the note BEFORE it — here the last note of the previous bar, inside the
+    /// unchanged prefix. The recording logged resolved spellings only for its own tree's
+    /// originals, so a checkpoint past that note restores without it and the copy resolves to
+    /// nothing (session 594, Silent Night.lys under random edits). CollectResumePlanner's
+    /// NewOriginalFloor keeps the prefix before the new original.
+    /// </summary>
+    [Fact]
+    public void PrefixResume_AnEditThatMakesANewOriginal_DoesNotRestorePastIt()
+    {
+        const string oldText = @"octave absolute
+score main ""x"" { staff bl }
+
+part bl {
+  clef bass
+  section A { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
+}
+form main { A }
+";
+        var newText = oldText.Replace("| a4 b c d |", "| 4 b c d |");
+        Assert.NotEqual(oldText, newText);
+        var (resumer, _) = ResumeAndCompare(oldText, newText);
+        // Non-vacuous: a prefix was restored — just not past the note the `4` copies.
+        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { MeasureCount: >= 1 });
+    }
+
+    /// <summary>
+    /// A splice that adopts NO measure — its boundary is the walk's last bar line — must keep
+    /// the live last bar. It restored the recording's end-of-walk builder, whose last measure
+    /// is the RECORDED copy of that bar, over the one the edited text had just produced
+    /// (session 596, a random edit of this fixture: `@stemUp` → `@stemUpp` in the walk's last
+    /// bar kept the stem the deleted annotation forced).
+    /// </summary>
+    [Fact]
+    public void SuffixSplice_AnEmptyTail_KeepsTheLiveLastBar()
+    {
+        var src = File.ReadAllText(Path.Combine(FindRepoRootForTests(), "audit", "lp-regression", "lys", "key-signature-space.lys"));
+        Assert.Contains("e'4@stemUp e'2@stemUp", src);
+        ResumeAndCompare(src, src.Replace("e'4@stemUp e'2@stemUp", "e'4@stemUpp e'2@stemUp"));
+    }
+
+    /// <summary>
+    /// A token the parser SUPPLIED in error recovery is a different shape, not the same one:
+    /// deleting `section Main {`'s brace parses to an `OpenBrace` of width 0, and a structure
+    /// read that compared kinds alone let the resume adopt a prefix the full collect of that
+    /// text no longer produces (session 596, a random edit of this fixture: the second voice's
+    /// first bar a rest against a note). CollectResumePlanner.ShapeWalk.CurrentMissing.
+    /// </summary>
+    [Fact]
+    public void PrefixResume_ABraceTheParserHadToSupply_IsAShapeChange()
+    {
+        // The audit's own keystrokes: five random one-character edits of the fixture (they
+        // tighten the second voice's span, `f2 g | }` → `f2 g| }`, which the shape needs),
+        // then the one that deletes the brace. A seeded System.Random is the same sequence on
+        // every .NET, and the draw is the audit host's (Lab sessions/p593/cpuhost, `fuzz`).
+        var path = Path.Combine(FindRepoRootForTests(), "LilySharp.Tests", "Fixtures", "test", "collision.lys");
+        string text = File.ReadAllText(path);
+        int h = 17;
+        foreach (char ch in Path.GetFileName(path)) h = unchecked(h * 31 + ch);
+        var rng = new Random(h ^ 1);
+        var texts = new List<string>();
+        for (int i = 0; i < 6; i++)
+        {
+            int at = rng.Next(text.Length / 4, text.Length);
+            text = rng.Next(2) == 0 ? text.Remove(at, 1) : text.Insert(at, text[at].ToString());
+            texts.Add(text);
+        }
+        Assert.Contains("section Main {", texts[4]);
+        Assert.DoesNotContain("section Main {", texts[5]);
+        ResumeAndCompare(texts[4], texts[5]);
+    }
+
+    /// <summary>
+    /// A `voice { } { }` in the restored prefix: its extra voices are walked live after the
+    /// walk, from the span the restore put back. That span held the RECORDING's node, so a
+    /// bare duration opening the second voice asked OriginalOf for an old-tree note and missed
+    /// the spelling the restore had re-keyed onto the new tree — the copy became a rest
+    /// (session 597, a random edit of collision.lys). The restore re-keys the spans now.
+    /// </summary>
+    [Fact]
+    public void PrefixResume_AParallelSpanInThePrefix_IsReKeyedOntoTheNewTree()
+    {
+        const string oldText = @"octave absolute
+score main ""x"" { staff bl }
+
+part bl {
+  clef bass
+  section A { voice { e2 f | g2 a | } { 2 e | f2 g | } c4 d e f | g4 a b c | }
+}
+form main { A }
+";
+        var newText = oldText.Replace("g4 a b c", "g4 a b d");
+        Assert.Equal(oldText.Length, newText.Length);
+        var (resumer, _) = ResumeAndCompare(oldText, newText);
+        // Non-vacuous: the restored checkpoint stands past the span.
+        Assert.Contains(resumer.ResumePlans.Values, p => p.Consumed && p.Checkpoint is { ParallelSpanCount: > 0 });
+    }
+
+    private static string FindRepoRootForTests() => CollectResumeTests.FindRepoRoot();
+
+    /// <summary>
+    /// A form can stop being the book's form while its bytes stay put: replacing the part's
+    /// closing `}` with a space (length-preserving) pulls the form declaration into the part,
+    /// and the formless collect labels its sections from other positions — MEASURED (session
+    /// 594): bar 1's SectionLabelPosition 65 adopted against the full collect's 57, once the
+    /// brace stopped being read as a header read. CollectResumePlanner.TopLevelKindsAgree
+    /// declines it. Declining at plan time, aborting to a full collect, or resuming to the
+    /// full collect's model are all sound — adopting a different model is not.
+    /// </summary>
+    [Fact]
+    public void PrefixResume_AnEditThatSwallowsTheForm_DoesNotAdoptItsBars()
+    {
+        const string oldText = @"score main ""x"" { staff bl }
+
+part bl {
+  clef bass
+  section A { c4 d e f | }
+  section B { g4 a b c | }
+  section C { e4 f g a | a4 g f e | }
+}
+form main { A |: B :| C }
+";
+        int brace = oldText.LastIndexOf("}", oldText.IndexOf("form main", StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.True(brace > 0);
+        var newText = oldText.Remove(brace, 1).Insert(brace, " ");
+        var recorder = CollectWalkProbe.Recorder();
+        var source = new MeasureCollector { WalkProbe = recorder };
+        var oldTree = SyntaxTree.Parse(oldText);
+        SvgGenerator.CollectScore(source, oldTree, RenderSpecParser.FindFirst(oldTree));
+        var newTree = SyntaxTree.Parse(newText);
+        var newSpec = RenderSpecParser.FindFirst(newTree);
+        var fullNew = SvgGenerator.CollectScore(newTree, newSpec);
+        var resumer = CollectResumePlanner.Plan(oldTree, newTree, recorder, source);
+        if (resumer == null)
+            return;
+        LilySharp.Core.Svg.Model.MultiStaffScore resumed;
+        try
+        {
+            resumed = SvgGenerator.CollectScore(new MeasureCollector { WalkProbe = resumer }, newTree, newSpec);
+        }
+        catch (CollectResumeAbortException)
+        {
+            return;
+        }
+        var diff = ModelDeepDiff.FirstDifference(fullNew, resumed, "score");
+        Assert.True(diff == null, $"resumed differs from full: {diff}");
+    }
+
     [Fact]
     public void SuffixSplice_DeclinesWhenAnotherPartsBarCountChanges()
     {

@@ -599,7 +599,7 @@ public sealed class IncrementalCompiler
         if (reuseEligible)
         {
             _systemCache ??= new SystemLayoutCache();
-            _systemCache.SetContentKeys(contentKeys);
+            _systemCache.SetContentKeys(contentKeys, springEdges);
             cacheForEdit = _systemCache;
         }
         _lastCompileConsultedCache = cacheForEdit != null;

@@ -509,7 +509,7 @@ internal static class MusicMarkEngraver
         // line. Null (or a null answer) keeps the legacy below-the-system stack — the
         // bracket/mixed styles, an ossia's scale, and callers without per-staff
         // skylines.
-        Func<int, int, int, double?>? solvedPedalRowUp = null,
+        Func<int, int, MusicMarkItem, double?>? solvedPedalRowUp = null,
         // `marks beside` (Semantics.MarkArrangement, MultiStaffScore.MarksBeside): a boxed
         // label keeps the line-start edge and the bar's measure-start tempo stands to its
         // right on one line — see BesidePair. False is the stacked default, LilyPond's.
@@ -1206,7 +1206,7 @@ internal static class MusicMarkEngraver
                     if (solvedPedalRowUp != null
                         && measureToSystemIdx.TryGetValue(mark.MeasureIndex, out int pedalSys)
                         && solvedPedalRowUp(mark.StaffIndex, pedalSys,
-                               mark.SourcePosition) is { } solvedRow)
+                               mark) is { } solvedRow)
                     {
                         yUp = solvedRow;
                         solvedPedalRow = true;

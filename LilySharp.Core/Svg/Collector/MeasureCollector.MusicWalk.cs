@@ -938,7 +938,20 @@ public sealed partial class MeasureCollector
         // true read extent. One null-check per node when a probe records; nothing
         // when off (production CLI path).
         if (_probeRecording != null)
-            _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, node.FullSpan.End);
+        {
+            // A FORM-LINE bar (`A || B`, a `|: … :|` block's own bars) is read where the
+            // form stands — usually the file's last lines — so folding it here made every
+            // later checkpoint read past any edit to the music above. It burns its
+            // position into the measures (the bar line's source), which is exactly what a
+            // position-sensitive header read is: stable before the window, or after it on a
+            // length-preserving edit (CollectResumePlanner.SpanStable). That the form is
+            // still the book's form — an edit above can leave its bytes alone and swallow
+            // it into a part — is CollectResumePlanner.TopLevelKindsAgree's to say.
+            if (_formBarRead is { } formBar)
+                _walkHeaderReads.Add(new HeaderRead(formBar, ValueOnly: false));
+            else
+                _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, node.FullSpan.End);
+        }
 
         // IN GRACE TIME, ONLY WHAT A GRACE GROUP CAN STILL BE DRAWN AS COMES THROUGH.
         // ⚠️ THIS GATE IS SCAFFOLDING AND IT IS MEANT TO BE DELETED. LilyPond's grace body is

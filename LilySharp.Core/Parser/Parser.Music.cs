@@ -1259,6 +1259,12 @@ internal sealed partial class Parser
                     var span = new TextSpan(_textPosition, Current.FullWidth);
                     _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                         $"Expected articulation or dynamic name after '@', found '{Current.Kind}'");
+                    // ...and the '@' already consumed stays ON the tree, as ReportUnclaimedDot's
+                    // dot does: dropped, its width went with it and every later node's position
+                    // slid one left — MEASURED (session 594, a typo `a,,8\4@@staccato` in the
+                    // owner's corpus): the root spanned 9,341 of 9,342 characters, and the
+                    // form's `|:` at 9227 told the preview it stood at 9226.
+                    GreenRun.Take(at, ref first, ref second, ref more);
                 }
             }
             else if (Check(SyntaxKind.StringNumber))

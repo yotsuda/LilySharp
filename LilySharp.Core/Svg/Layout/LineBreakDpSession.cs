@@ -23,12 +23,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// finding 4-5): the previous keystroke's whole DP table, kept so the next run
 /// recomputes only the rows at and after the first changed spring instead of
 /// refilling Θ(n²) per keystroke. Row j of the table is a pure function of
-/// springs[0..j-1], the rows before it and the breaker's constants — verified
+/// springs[0..j], the rows before it and the breaker's constants — verified
 /// against the recurrence: the cumulative sums a row reads reach index j, the
 /// cross-bar pair sum reaches pair (j-2, j-1), the line-start substitution reads
-/// springs[i&lt;j], and every dp/prev/lineForce write of the outer loop's
-/// iteration j lands in row j. So rows 0..c are BIT-identical to a fresh run's
-/// whenever springs[0..c-1] match the stored vector and the constants match —
+/// springs[i&lt;j], the line-end courtesy reads springs[j] (session 583's addition,
+/// which the first inventory predates — see Begin), and every dp/prev/lineForce write
+/// of the outer loop's iteration j lands in row j. So rows 0..c are BIT-identical to a
+/// fresh run's whenever springs[0..c] match the stored vector and the constants match —
 /// the same operations in the same order on the same values.
 /// </summary>
 /// <remarks>
@@ -98,16 +99,25 @@ internal sealed class LineBreakDpSession
             && _looseness == looseness
             && _raggedRight == raggedRight;
 
-        // c = count of leading springs equal to the stored vector; rows 0..c are
-        // reusable (row j reads springs[0..j-1] only).
-        int c = 0;
+        // e = count of leading springs equal to the stored vector; rows 0..e-1 are
+        // reusable, and c = e - 1 is the last of them (0 = the base row alone, which
+        // every run writes itself).
+        // ⚠️ ROW j READS springs[j] TOO, not only springs[0..j-1] as the summary's
+        // inventory had it: a candidate line i..j-1 reserves the courtesy key / meter of
+        // the measure AFTER it (KnuthPlassBreaker.LineEdgeWidths, springData[j]
+        // .LineEndCourtesyWidth — added by session 583, after this inventory). Keeping
+        // rows 0..e served row e from a courtesy the edit had changed — MEASURED (session
+        // 595, a random edit of クリスマスソング.lys in the owner's corpus): the preview
+        // broke the lines where SvgGenerator.Generate did not.
+        int e = 0;
         if (constantsMatch)
         {
             var stored = _springs!;
             int limit = Math.Min(n, stored.Length);
-            while (c < limit && springs[c].Equals(stored[c]))
-                c++;
+            while (e < limit && springs[e].Equals(stored[e]))
+                e++;
         }
+        int c = Math.Max(0, e - 1);
 
         if (c > 0 && _springs!.Length == n)
         {

@@ -129,6 +129,71 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第595セッションの経緯
+
+### 1.1 第595セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p595`（HEAD `cebb6f33`・full **9124 / 0 / 2 / 9126**・第593 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑦ incremental ≠ 全面描画の既存の不一致（You're the One That I Want (-1)／(-2)・fuzz の 7／14 件）。
+
+★★★ **⑴ 第594 の照合の基準が間違っていた**: 「新規描画」として `IncrementalCompiler` の最初の描画を使っていたが、**それ自体が段キャッシュを使う**。基準を `SvgGenerator.Generate` に替えると、You're the One That I Want (-1) は**編集しなくても**プレビューが全面描画と違っていた。切り分け（Lab `sessions/p595/Zz595Dbg*.cs.txt`＝memo を 1 つずつ空にする）の結果、原因は 3 つ。
+
+★★★ **⑵ 段キャッシュの流用（`20bc5227`）**: 全 store が段の内容鍵の並びだけで引き、同じ並びの**別の段**を位置だけずらして流用していた。段の layout は前の小節の終わり（`:|:` なら行頭に `.|:`）と次の小節の頭（行末 courtesy）を読む＝小節 20〜23（前が `|`）と 28〜31（前が `:|:`）が同じ鍵で、最初の描画から 28〜31 が狭かった。⇒ `SystemLayoutCache.ContextOf`＝前の小節の `SpringEdgeKey.ReadByNext`＋次の小節の `ReadByPrevious`＋新しい 3 つ目 `LineEndCourtesy` を全 store の一致に入れた。
+
+★★ **⑶ 改行 DP の行の再開（`7f88b33a`）**: 「行 j は springs[0..j−1] しか読まない」という棚卸しの後に、第583 の行末 courtesy が springs[j] を読むようになっていた＝先頭 e 個が一致すると行 e まで再利用していた。行 0..e−1 に（クリスマスソング.lys の fuzz）。
+
+★★ **⑷ 断片の位置の指紋（`2360696a`）**: 音部記号と調号の `data-pos` は 2026-08-28 から全段に出るのに、指紋は 1 段目にしか入れていなかった＝part 名の打ち間違い（`part meldy`）で音部記号の宣言が外れて位置が 0 になっても、2 段目以降は古い位置のまま再生（samples/amazing-grace.lys の fuzz）。
+
+⑸ **照合（`SvgGenerator.Generate` 基準）**: ベースタブ本の音高 1,880・長さの変わる編集 1,824・fuzz 2 × 2,664 打鍵で**不一致 0**（修正前は音高だけで 16）。repo の追跡本 fuzz 2 × 5,264 打鍵で 12 件＋0 件（修正前 31 件）＝残り 12 件はすべて修正前にもあった。網 4 本（`SystemLayoutCacheTests` 2・`LineBreakDpSessionTests`・`Fragments_AClefThatLosesItsPosition_…`）、毒 3 本がそれぞれ赤くする。⚠️ 断片の網は「最初の描画は断片を記録しない」ので 2 打鍵目で再生させる形（1 打鍵の網は毒をすり抜けた）。
+
+終了: HEAD `2360696a`＋docs・full **9128 / 0 / 2 / 9130**（+4）。
+
+## 以下は第594セッションの経緯
+
+### 1.1 第594セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p594`（HEAD `c6f93ded`・full **9115 / 0 / 2 / 9117**・第592 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑴ ⒝ section 末尾の小節数の fold が他 part のセルまで `MaxSourceRead` に入れる＝part-major の本で以後の checkpoint が使えない。
+
+★★★ **⑴ 第592 の推定（遠い再開点の 429 件＝section の小節数の fold）は外れていた**。fold を値の読みに替えても採用は 68.16 → 68.19 小節／打鍵。計器（読み範囲が 1,000 文字以上跳ぶ箇所を数える・Lab `sessions/p594/Zz594.cs.txt`）で見ると、跳ぶのは **form 行の小節線**（`form main { A |: B :| C }`＝corpus 333 冊中 124 冊）だった。さらに長さの変わる編集の workload（`c4` → `c8 c8` ほか・Lab `sessions/p594/cpuhost/` の `delta`）を足すと、**採用は 0.07 小節／打鍵・228 冊中 219 冊が一度も resume しない**。原因＝walk の入口で part の宣言の子を位置の header の読みとして全部記録しており、その中に **part の閉じ `}`**（part の全 section の後ろ）が入っていた＝part の中のどこを Δ≠0 で編集しても 1 つ目の checkpoint から不安定。
+
+★★ **⑵ 直したもの（`b6d49b9a`）**: part の読みは config の子だけ（token を除く）／form 行の小節線は `MaxSourceRead` に畳まず位置の header の読み／section の padding の小節数は値の読み（`CanonicalReads`＝名前と数・walk の入口で数え直し、動いていたら手前の checkpoint へ下げる）。採用 **0.07 → 64.23**（長さの変わる編集）・**68.16 → 78.81**（長さを変えない編集）小節／打鍵、resume しない本 219 → 14。
+⚠️ **閉じ括弧の読みは偶然ほかの穴を塞いでいた**: 括弧を空白に替える（Δ=0）と form が part に取り込まれる＝`TopLevelKindsAgree`（旧新の top-level の種類の並びが一致）を足した。**bare duration の穴も露出した**: `a4` → `4` で prefix の音が新しく「元」になると、記録は旧い木の元しか再生しない＝`NewOriginalFloor`（その音を読んだ checkpoint へは戻らない）。
+
+★ **⑶ 照合**: 計器ホストの `verify`（各打鍵の incremental を同じ木の新規描画と比べる）で、長さの変わる編集 1,824・音高 1,880・fuzz 2 × 2,664 打鍵。**変更前に無い不一致は 0**。途中で見つけた `@@staccato` の不一致は **parser の既存バグ**だった＝名前の無い `@` を木に載せず幅ごと捨て、以後の位置が 1 つずれる（`3b5bddad`・網 `DoubledAtRoundTripTests`）。網: `CollectEditResumeTests.PrefixResume_*` 6 本。毒 7 本がそれぞれ網を赤くする（Lab `sessions/p594/poisons3.log`）。
+
+⚠️ **⑷ 既存の不一致（未調査）**: You're the One That I Want (-1)／(-2) は音高 workload の 8 打鍵すべてで incremental ≠ 全面描画（1 段目の最初の音の加線の x が 5.57 対 7.06・第593 より前の版でも同じ）。fuzz でも変更前から seed 1 で 7 件・seed 2 で 14 件。⚠️ splice 側にも疑い: 尾の bare duration の元が窓の中の新しい音に移る編集を、記録の元の範囲（旧い木）で認証している。
+
+終了: HEAD `b6d49b9a`＋docs・full **9124 / 0 / 2 / 9126**（+9）。
+
+## 以下は第593セッションの経緯
+
+### 1.1 第593セッション（2026-09-25・YT-DELL2）
+
+新しい会話。★ `-Start p593`（HEAD `56b4780d`・full **9107 / 0 / 2 / 9109**・第591 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑵ gate のばねの近傍を「読む性質の射影」に細くする設計。
+
+★★ **⑴ 近傍を射影に細くした（`88f7a72d`）**: ばね i が i±1 から読む性質を棚卸しした（全文は `SystemBreaker.SpringEdgeKey` の remarks）＝**i−1 から**主声部の `EndBarline`（全小節の spring 0 の左端・`DrawnLineStartBarline` の `:|:`）・`LineBreakPermission`（空小節）・歌詞の行の集合・その小節で効いている拍子（2 声目の拍子変更は entry context に無い）／**i+1 から** mmr の内側か・歌詞の行の集合・`%%` の半幅。`LineEndCourtesyWidth(i−1, i)` は i−1 を渡すが読まない。`SpringReusable` は隣を鍵全体ではなくこの 2 つの hash（`ReadByNext`／`ReadByPrevious`）で比べる。作り直し **3.04 → 1.05 小節／打鍵**（音高 workload 235 冊 × 8 打鍵）・fuzz（ランダムな 1 文字の削除・複製）では 1.8〜3.3 → 1.6〜2.5。⚠️ 時間の A/B は取っていない（回数だけ・ベンチの窓をもらっていない）。
+
+★★★ **⑵ 影の監査が既存の不健全を 1 つ見つけた**: 一時計器（Lab `sessions/p593/Zz593.cs.txt`＋host `cpuhost/`・`audit fuzz all`）で、memo が再利用する小節を*全部*作り直して前の値と比べた＝2 コーパス × 3 seed で約 66 万件。不一致は `keysig-treble.lys` の 3 件だけで、**旧規則でも m2・m3 に古い `LineStartPrefixExtra`（−1.1 対 0）を配っていた**。原因＝`LineStartPrefixExtra` は score 全体の `continuationGate`（小節 0 で効いている調）から測るのに、memo の適格条件がそれを比べていなかった（その小節の entry context は前の変更から来るので鍵は動かない）。⇒ `contPrefix == _contPrefix` を適格条件に足した。修正後は約 66 万件で不一致 0。
+
+⑶ 網: `SpringEdgeKeyTests` 7 本（各性質を 1 つだけ変えると該当の側が動く・音符だけでは動かない・前提も assert＝`R1 | R1` は run にならないのを前提 assert が捕まえた）＋`SpringMemo_TheContinuationPrefixMoved_…`。毒 8 本（射影の各項目 7＋`contPrefix` の比較）がそれぞれ網を赤くする（Lab `sessions/p593/poisons.log`）。既存の数を固定したテスト 5 本は新しい数へ（例 (5,3) → (7,1)）。
+
+⑷ **ユーザーの問い「lys の文法改善で perf が上がる余地」**: 文法を変えて効く箇所は見つからなかった。⒜ 文法が collect の resume を丸ごと断る本は実コーパス 235 冊中 2 冊（La Isla Bonita・銀河鉄道999）／⒝ 遠い再開点（§1.0 ⒵ ⑴）の半分の原因である part-major（`part X { section A {…} }`）は 333 冊中 327 冊だが、原因は collector が小節数の fold を*本文の範囲の読み*として記録すること＝実装で直せる（文法を変えると 327 冊を書き換えることになる）／⒞ render の大半（layout・注釈・SVG）は解決済みのモデルの上で走る＝文法に依らない。
+
+終了: HEAD `88f7a72d`＋docs・full **9115 / 0 / 2 / 9117**（+8）。
+
+## 以下は第592セッションの経緯
+
+### 1.1 第592セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p592`（HEAD `7765ec54`・full **9107 / 0 / 2 / 9109**・第590 を ARCHIVE へ）。着手＝§1.0 ⒵ ⑴ の splice の残りの断りを値付けする。
+
+★ **⑴ 第591 の後の collect の live の歩き**（一時計器・host は Lab `sessions/p592/cpuhost/`＝第2 引数 `plain` で accidental を使わない編集＝該当 7 冊だけ）: live 363 ノード／打鍵（第591 前 724）＋全面 collect 111。live を窓で分けると **窓の手前 133（restore の後）**・窓の中 57・窓の後 47・前半の再開なしの手前 15（うち反復ブロックの中 10）。断りの残り: 窓の前の候補 7.9（安い）・記録の尾が境の小節を書き換え 1.4・後半の一致 1.8・section 開始 1.2・octave 0.6。⚠️ **workload の窓は累積する**（baseline は全面 collect のときだけ取り直す＝8 打鍵目の窓は 1 打鍵目の編集から今の編集まで）＝「窓の中」57 は workload の形。
+
+★ **⑵ 再開点が遠い理由を値付けした**: 選ばれた再開点は 3,062 計画のうち 1,828 が窓の 40 文字以内。遠い 1,064 は ⒜ 533＝再開点と窓の間に checkpoint が無い（**容れ物の中の編集**：checkpoint は `ProcessNodes` の外側のリストにしか取らない＝`repeat volta { … }` の中を編集すると容れ物の頭から live／記録時の境の 26% は form の反復ブロックの中で取らない）⒝ 429＝間の checkpoint が窓の先を読んでいた（多くは 1,000 文字以上＝**`ProcessSectionBody` 末尾の小節数の fold（`MeasureCollector.Form.cs:584-590`）が同じ section の他 part のセルの末尾まで `MaxSourceRead` に入れる**＝part-major の本では以後の checkpoint が全部使えない）。どちらも設計級（容れ物の中に checkpoint を取るか、小節数の読みを値の読みとして別に持つ）＝**着手せず**。
+
+⑶ gate のばね（§1.0 ⒵ ⑵）の近傍の読みを確認した: ばね i が i±1 から読むのは run の開きの左の小節線・run の続き・歌詞の行の続き（第150 の棚卸し）と、**その後に足された `LineEndCourtesyWidth(i−1, i)`（第583）**。射影に細くする設計は次便へ。
+
+終了: HEAD `7765ec54`＋docs（コードの変更なし）・full **9107 / 0 / 2 / 9109**。
+
 ## 以下は第591セッションの経緯
 
 ### 1.1 第591セッション（2026-09-25・YT-DELL2）

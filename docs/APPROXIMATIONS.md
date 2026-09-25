@@ -109,7 +109,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:489** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **:469** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
+- **:485** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:927** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
@@ -151,8 +151,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:187** subdivision; a malformed meter has no observer. It disappears when Lily#
 ### `LilySharp.Core/Svg/Collector/CollectResumePlanner.cs`
-- **:355** byte-identical, and the reason is stronger than "no observer": the answer is ALREADY
-- **:362** itself is unobserved in this tree (HANDOFF §1.0 ⒮¹²).
+- **:361** byte-identical, and the reason is stronger than "no observer": the answer is ALREADY
+- **:368** itself is unobserved in this tree (HANDOFF §1.0 ⒮¹²).
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
 - **:456** this is unobserved rather than known-good; it closes when the labels travel with
 - **:1635** accidental, ledgers and fingering only. ⚠️ No point observes it: the corpus has no
@@ -214,7 +214,7 @@
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1915** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **:482** same part (leftHand). No book reaches the configuration, so no ledger point and
+- **:498** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -290,8 +290,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2589** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4788** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2595** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4822** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

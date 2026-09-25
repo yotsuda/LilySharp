@@ -950,6 +950,34 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// Every system's clef carries the offset of the clef that put it in force (since
+    /// 2026-08-28), but the fragment memo's position fingerprint held it for the FIRST system
+    /// only. An edit that detaches the declaration (the part's name mistyped: the same default
+    /// clef, no position any more) replayed the later systems with the old offset — MEASURED
+    /// (session 595, random edits of samples/amazing-grace.lys): a data-pos on a clef the full
+    /// render leaves untagged.
+    /// </summary>
+    [Fact]
+    public void Fragments_AClefThatLosesItsPosition_IsNotReplayedWithTheOldOne()
+    {
+        // The book the audit met it in.
+        var src = System.IO.File.ReadAllText(System.IO.Path.Combine(
+            CollectResumeTests.FindRepoRoot(), "samples", "amazing-grace.lys"));
+        Assert.Contains("clef treble", src);
+        var session = new IncrementalCompiler(SyntaxTree.Parse(src), Opt);
+        session.Render();
+        // A first keystroke records the fragments (the first render does not); the second
+        // is the one that could replay them. The part's name mistyped detaches its
+        // `clef treble`: the default is the same treble clef, and no position any more.
+        Assert.Contains("part melody { clef treble }", src);
+        string spaced = src.Replace("  melody {", "  melody {\n");
+        session.RenderIncrementalPages(SyntaxTree.Parse(spaced), System.Threading.CancellationToken.None);
+        string detached = spaced.Replace("part melody { clef treble }", "part meldy { clef treble }");
+        var incremental = Norm(session.RenderIncremental(SyntaxTree.Parse(detached)));
+        Assert.Equal(Full(detached), incremental);
+    }
+
+    /// <summary>
     /// Every entry's <c>LineStartPrefixExtra</c> is measured from the CONTINUATION prefix, a
     /// score-global width (the key in force at measure 0), so an edit that moves it moves
     /// every entry while their content keys stand — the key a bar is ENTERED with is carried

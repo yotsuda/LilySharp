@@ -83,15 +83,20 @@ public static class BareDurations
         var top = node;
         while (top.Parent != null)
             top = top.Parent;
-        var set = Originals.GetValue(top, root =>
+        return OriginalsOf(top).Contains(node);
+    }
+
+    /// <summary>Every event some bare duration of the tree rooted at
+    /// <paramref name="root"/> copies — the set <see cref="IsOriginal"/> answers from. The
+    /// collect-resume planner compares two trees' sets (CollectResumePlanner.NewOriginalFloor).</summary>
+    internal static IReadOnlySet<SyntaxNode> OriginalsOf(SyntaxNode root)
+        => Originals.GetValue(root, r =>
         {
             var s = new HashSet<SyntaxNode>();
-            foreach (var r in Maps.GetValue(root, BuildMap).Values)
-                s.Add(r.Original);
+            foreach (var res in Maps.GetValue(r, BuildMap).Values)
+                s.Add(res.Original);
             return s;
         });
-        return set.Contains(node);
-    }
 
     /// <summary>True when a barline stands between this bare duration and the
     /// nearest WRITTEN repeatable spelling before it — the shape a dropped

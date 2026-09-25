@@ -826,6 +826,12 @@ public sealed partial class MeasureCollector
     // name/config at entry, then each visited section's name + header directives).
     // See VoiceWalkRecording.HeaderReads.
     private readonly List<HeaderRead> _walkHeaderReads = new();
+    // Record mode only: the canonical section bar counts this walk's padding epilogues
+    // read, in walk order. See VoiceWalkRecording.CanonicalReads.
+    private readonly List<(string Section, int Bars)> _walkCanonicalReads = new();
+    // Set while the walk processes a bar written on the FORM line: its span, recorded as a
+    // header read instead of a read-extent fold (see ProcessMusicNode's record-mode note).
+    private TextSpan? _formBarRead;
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -2754,6 +2760,7 @@ public sealed partial class MeasureCollector
         _pendingInlineVoltas.Clear();
         _parallelSpans.Clear();
         _walkHeaderReads.Clear();
+        _walkCanonicalReads.Clear();
         _resolvedSpellingLog.Clear();
         _repetitionOriginalReads.Clear();
         _formRepeatDepth = 0;
@@ -2942,6 +2949,7 @@ public sealed partial class MeasureCollector
         _suffixSpliced = false;
         _walkMaxSourceRead = 0;
         _walkHeaderReads.Clear();
+        _walkCanonicalReads.Clear();
         _resolvedSpellingLog.Clear();
         _repetitionOriginalReads.Clear();
         _formRepeatDepth = 0;
@@ -2973,8 +2981,17 @@ public sealed partial class MeasureCollector
                         if (partDecl.Name.Text != _voiceName)
                             continue;
                         _walkHeaderReads.Add(new HeaderRead(partDecl.Name.Span, ValueOnly: false));
+                        // Config children only — not the part's tokens. ⚠️ The closing `}`
+                        // is a child too, and it stands AFTER every section of a part-major
+                        // part: read as a position-sensitive header read, a length-changing
+                        // edit anywhere in the part moved it and made the walk's FIRST
+                        // checkpoint unstable — MEASURED (session 594, the owner's corpus,
+                        // 228 books × 8 length-changing keystrokes): 0.07 bars a keystroke
+                        // adopted, 219 books never resumed. GetPartDefaults and
+                        // CollectPartBodyOverrides read property / key / override /
+                        // transpose nodes, never a token; the name is read just above.
                         foreach (var child in partDecl.ChildNodes())
-                            if (child is not SectionDeclarationSyntax)
+                            if (child is not (SectionDeclarationSyntax or SyntaxTokenNode))
                                 _walkHeaderReads.Add(new HeaderRead(child.FullSpan, ValueOnly: false));
                     }
                 }
@@ -3005,7 +3022,15 @@ public sealed partial class MeasureCollector
                     throw new CollectResumeAbortException(
                         $"collect resume: journals at walk entry ({_keyByMeasureLog.Count} keys, {_sectionStartLog.Count} section starts) differ from the recording's ({resume.Recording.StartKeyLogCount}, {resume.Recording.StartSectionStartLogCount})");
                 if (resume.Checkpoint != null)
-                    _resumePending = resume;
+                {
+                    // The canonical bar counts the prefix's padding read are VALUE reads
+                    // (VoiceWalkRecording.CanonicalReads): verified here, where this
+                    // collect's section table exists, and a target whose counts moved
+                    // steps back to the last checkpoint taken before the first one that did.
+                    resume.Checkpoint = PrefixTargetWithStableCanonicalBars(resume, probe);
+                    if (resume.Checkpoint != null)
+                        _resumePending = resume;
+                }
                 if (resume.SuffixCandidates is { } candidates)
                 {
                     _suffixPlan = resume;
@@ -3168,7 +3193,7 @@ public sealed partial class MeasureCollector
                 // A peeked synthetic marker (a phrase expansion's edge, positioned at its
                 // reference) is no text read: its kind is not the text's, and folding
                 // its call site here would be the scalar fold the value read avoids.
-                if (_probeRecording != null && furthestPeeked != null
+                if (_probeRecording != null && furthestPeeked != null && _formBarRead == null
                     && furthestPeeked.Kind != SyntaxKind.None)
                     _walkMaxSourceRead = Math.Max(_walkMaxSourceRead, furthestPeeked.FullSpan.End);
                 // The bar that follows a one-item site, read ahead for the builder's auto-fill
@@ -3183,7 +3208,7 @@ public sealed partial class MeasureCollector
                 // and the directive's own setter writes the live value over the pin. The read
                 // is a read all the same, and the fold is what says so if that guard changes.
                 int readTo = SetFollowingBoundary(nodeList, i, in site, builder);
-                if (_probeRecording != null && readTo > _walkMaxSourceRead)
+                if (_probeRecording != null && readTo > _walkMaxSourceRead && _formBarRead == null)
                     _walkMaxSourceRead = readTo;
                 ProcessMusicNode(site.Node, builder, flags);
                 builder.ClearFollowingBarline();
@@ -3254,6 +3279,7 @@ public sealed partial class MeasureCollector
             recording.PendingInlineVoltas = new(_pendingInlineVoltas);
             recording.ParallelSpans = new(_parallelSpans);
             recording.HeaderReads = new(_walkHeaderReads);
+            recording.CanonicalReads = new(_walkCanonicalReads);
             recording.ResolvedSpellings = new(_resolvedSpellingLog);
             recording.RepetitionOriginalReads = new(_repetitionOriginalReads);
             _probeRecording = null;
@@ -3574,7 +3600,15 @@ public sealed partial class MeasureCollector
                 // tokens inside FormRepeatBlockSyntax, not BarlineSyntax, so this arm
                 // cannot double-count them; the guard is for a nested form only.
                 case BarlineSyntax formBar when !IsInsideRepeatBlock(formBar):
-                    processNodes(MusicSiteList.Preset([new GreenSite(formBar)]));
+                    _formBarRead = formBar.Span;
+                    try
+                    {
+                        processNodes(MusicSiteList.Preset([new GreenSite(formBar)]));
+                    }
+                    finally
+                    {
+                        _formBarRead = null;
+                    }
                     break;
             }
         }

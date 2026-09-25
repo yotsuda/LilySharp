@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -131,7 +131,23 @@ internal static class PedalEngraver
     /// family: LilyPond side-positions each pedal item independently — measured on
     /// 2.26.0 (PLT), the release star sits at 4.806 (staff + padding 1.2 + its own ink)
     /// while the engage word is pushed to 5.997 by the note under it.</summary>
-    internal readonly record struct SolvedPedalRow(int SourcePosition, double BaselineYUp);
+    /// <remarks>
+    /// ⚠️ THE WORD IS NAMED BY ITS ANCHOR, NOT ITS SOURCE POSITION: the row rides in the
+    /// per-system staff-skyline memo, which is keyed by content and serves a value under
+    /// shifted text (and, re-stamped, under other bar numbers). Named by source position, an
+    /// edit ABOVE the pedal (a `title` mistyped, MEASURED session 596 on the tracked
+    /// pedal-text.lys) moved every mark by a character, the draw found no row, and the word
+    /// fell to the legacy stack 1.95 higher than the full render put it.
+    /// </remarks>
+    internal readonly record struct SolvedPedalRow(
+        int MeasureIndex, int AnchorItemIndex, Fraction AnchorTiming, MusicMarkType Type,
+        double BaselineYUp)
+    {
+        /// <summary>Whether this row is <paramref name="mark"/>'s.</summary>
+        public bool Names(MusicMarkItem mark)
+            => mark.MeasureIndex == MeasureIndex && mark.AnchorItemIndex == AnchorItemIndex
+               && mark.AnchorTiming == AnchorTiming && mark.Type == Type;
+    }
 
     /// <summary>
     /// A pedal word's own (Up, Down) outline profiles about its baseline, centred on
@@ -253,7 +269,7 @@ internal static class PedalEngraver
                 word.Down.Raise(move);
             }
             downProfile.Merge(word.Down);
-            solved.Add(new SolvedPedalRow(mark.SourcePosition, quiet + move));
+            solved.Add(new SolvedPedalRow(mark.MeasureIndex, mark.AnchorItemIndex, mark.AnchorTiming, mark.Type, quiet + move));
         }
         return solved.ToImmutable();
     }
@@ -439,7 +455,7 @@ internal static class PedalEngraver
                 var w = WordProfiles(score.TextMetrics, mark.Type, mark.Text, x);
                 w.Down.Raise(lineYUp);
                 downProfile.Merge(w.Down);
-                solvedRows.Add(new SolvedPedalRow(mark.SourcePosition, lineYUp));
+                solvedRows.Add(new SolvedPedalRow(mark.MeasureIndex, mark.AnchorItemIndex, mark.AnchorTiming, mark.Type, lineYUp));
             }
         }
         return (solved.ToImmutable(), solvedRows.ToImmutable());

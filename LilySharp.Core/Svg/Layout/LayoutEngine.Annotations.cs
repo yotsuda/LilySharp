@@ -1062,17 +1062,17 @@ internal sealed partial class LayoutEngine
                 : null);
         // TEXT-style pedal words were solved where the room was built (the same
         // skyline-time solve the brackets take); hand the draw those baselines, keyed
-        // (staff, system, the mark's source position), Y-up about the mark's OWN staff
-        // middle.
-        Func<int, int, int, double?>? solvedPedalRowUp = null;
+        // (staff, system, the mark's anchor — SolvedPedalRow.Names), Y-up about the mark's
+        // OWN staff middle.
+        Func<int, int, MusicMarkItem, double?>? solvedPedalRowUp = null;
         if (ctx.PedalRows is { } pedalRows)
-            solvedPedalRowUp = (staffIdx, sysIdx, sourcePosition) =>
+            solvedPedalRowUp = (staffIdx, sysIdx, mark) =>
             {
                 if (sysIdx < 0 || sysIdx >= pedalRows.Count
                     || staffIdx < 0 || staffIdx >= pedalRows[sysIdx].Count)
                     return null;
                 foreach (var row in pedalRows[sysIdx][staffIdx])
-                    if (row.SourcePosition == sourcePosition)
+                    if (row.Names(mark))
                         return row.BaselineYUp;
                 return null;
             };

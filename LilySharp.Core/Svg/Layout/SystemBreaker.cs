@@ -410,7 +410,12 @@ internal sealed class SystemBreaker
     /// stale entry. <c>SpringEdgeKeyTests</c> changes each fact above alone in a neighbour
     /// and asserts the measure beside it is rebuilt.
     /// </remarks>
-    internal readonly record struct SpringEdgeKey(long ReadByNext, long ReadByPrevious);
+    /// <param name="LineEndCourtesy">The courtesy key / meter a line ENDING just before this
+    /// measure reserves (<c>MultiStaffLayouter.LineEndCourtesyWidth</c>) — not a spring read
+    /// (each measure carries its own in its <see cref="MeasureSpringData"/>), but a read of the
+    /// per-system layout memo, whose system ends before this measure: see
+    /// <c>SystemLayoutCache.ContextOf</c>.</param>
+    internal readonly record struct SpringEdgeKey(long ReadByNext, long ReadByPrevious, double LineEndCourtesy = 0);
 
     [ThreadStatic] private static List<(int Voice, int Verse, int Staff, bool Row)>? t_lyricLines;
 
@@ -452,7 +457,8 @@ internal sealed class SystemBreaker
             previous.Add(runMap.IsInterior(i));
             previous.Add(lineHash.ToHashCode());
             previous.Add(i < signHalf.Count ? signHalf[i] : 0.0);
-            builder.Add(new SpringEdgeKey(next.ToHashCode(), previous.ToHashCode()));
+            builder.Add(new SpringEdgeKey(next.ToHashCode(), previous.ToHashCode(),
+                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i)));
         }
         return builder.MoveToImmutable();
     }

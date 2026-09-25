@@ -656,15 +656,18 @@ internal sealed class SvgSystemFragmentCache
         // every power of two on the way and then been copied into that array anyway.
         var anchors = new int[CountAnchors(score, first, last, isFirstSystem)];
         int n = 0;
-        if (isFirstSystem)
-        {
-            anchors[n++] = score.Header.Key;
-            anchors[n++] = score.Header.Time;
-        }
+        // Every system, not only the first: since 2026-08-28 each system's clef and key
+        // signature carry these offsets (SharedRenderer.ResolveClefAt / the key's
+        // Header.Key). While only the first system's vector held them, an edit that
+        // UNSET one (`part melody` mistyped `part meldy` detaches its `clef treble`: the
+        // same default clef, no position) replayed the later systems with the old offset —
+        // MEASURED (session 595, random edits of samples/amazing-grace.lys): a data-pos on a
+        // clef the full render leaves untagged.
+        anchors[n++] = score.Header.Key;
+        anchors[n++] = score.Header.Time;
         foreach (var (_, staff, _) in score.EnumerateStaves())
         {
-            if (isFirstSystem)
-                anchors[n++] = staff.ClefPosition;
+            anchors[n++] = staff.ClefPosition;
             foreach (var voice in staff.Voices)
             {
                 var measures = voice.Measures;
@@ -696,13 +699,12 @@ internal sealed class SvgSystemFragmentCache
     /// </summary>
     private static int CountAnchors(MultiStaffScore score, int first, int last, bool isFirstSystem)
     {
-        int n = isFirstSystem ? 2 : 0;
+        int n = 2;
         foreach (var group in score.StaffGroups)
         {
             foreach (var staff in group.Staves)
             {
-                if (isFirstSystem)
-                    n++;
+                n++;
                 foreach (var voice in staff.Voices)
                 {
                     var measures = voice.Measures;

@@ -148,6 +148,7 @@ public sealed partial class MeasureCollector
             NodeIsPhraseEnd = nodeIsPhraseEnd,
             GatherPath = gatherPath,
             HeaderReadCount = _walkHeaderReads.Count,
+            CanonicalReadCount = _walkCanonicalReads.Count,
             Builder = builder.Capture(),
             Octave = OctaveCheckpoint.Capture(_octave),
             Meta = meta,
@@ -222,9 +223,24 @@ public sealed partial class MeasureCollector
         _pendingInlineVoltas.Clear();
         for (int i = 0; i < ck.PendingInlineVoltaCount; i++)
             _pendingInlineVoltas.Add(rec.PendingInlineVoltas![i]);
+        // The spans are re-keyed onto this tree like the spellings below (the suffix
+        // splice's wall): their extra voices are walked LIVE after this walk, and an
+        // old-tree span hands them old-tree nodes — a bare duration in there asks
+        // OriginalOf for an OLD note and misses the re-keyed spelling. MEASURED
+        // (session 597, a fuzz of collision.lys that left `{ 2 e` in the second
+        // voice): the resumed collect drew the copy as a rest.
+        var idWindow = new CollectTailShifter.Window(int.MaxValue, int.MaxValue, 0);
         _parallelSpans.Clear();
         for (int i = 0; i < ck.ParallelSpanCount; i++)
-            _parallelSpans.Add(rec.ParallelSpans![i]);
+        {
+            var (oldNode, startMeasure, startOffset, frame, duration, dots) = rec.ParallelSpans![i];
+            if (_root == null
+                || CollectTailShifter.ResolveShifted(_root, oldNode, idWindow)
+                    is not ParallelExpressionSyntax rekeyed)
+                throw new CollectResumeAbortException(
+                    "collect resume could not re-key an adopted parallel span");
+            _parallelSpans.Add((rekeyed, startMeasure, startOffset, frame, duration, dots));
+        }
 
         // Resolved spellings (finding 3-4): the prefix's dictionary entries, RE-KEYED
         // onto this tree's nodes — the readers (a q / bare duration past the restore
@@ -235,7 +251,6 @@ public sealed partial class MeasureCollector
         // preserves a form replay's last-write-wins. The recorded VALUES are what a
         // live walk of the identical prefix would compute (the same determinism the
         // adopted measures stand on). Any resolution failure is structural drift.
-        var idWindow = new CollectTailShifter.Window(int.MaxValue, int.MaxValue, 0);
         for (int i = 0; i < ck.ResolvedSpellingCount; i++)
         {
             var (oldNode, resolvedMembers) = rec.ResolvedSpellings![i];
@@ -607,6 +622,14 @@ public sealed partial class MeasureCollector
 
         var measures = builder.MeasuresSnapshot();
         measures.AddRange(tailMeasures);
+        // ⚠️ AN EMPTY TAIL ADOPTS NO MEASURE, so the end-of-walk LastMeasure is the RECORDED
+        // copy of the live boundary measure — the edited text's own, which the rewrite guard
+        // above already proved the recorded tail never touched. Restoring it overwrote the
+        // live bar with the recording's: MEASURED (session 596, a random edit of the tracked
+        // key-signature-space.lys, `@stemUp` → `@stemUpp` in the walk's last bar), the note
+        // kept the stem direction its deleted annotation had forced.
+        if (tailMeasures.Count == 0)
+            shiftedEndBuilder = shiftedEndBuilder with { LastMeasure = null };
         builder.Restore(shiftedEndBuilder, measures);
 
         _suffixSpliced = true;
