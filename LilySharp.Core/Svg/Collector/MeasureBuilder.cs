@@ -565,6 +565,35 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
+    /// Adds a clef / key / time change to the run of changes standing at this moment in
+    /// LilyPond's break-align order — clef, then key, then time — whichever order the source
+    /// wrote them in (`time 4/4 key d major` draws the key first), and whichever order a
+    /// section reset queued them. The layout and the renderer walk the run in list order
+    /// (SpacingRules.MidMeasureChanges), so the list itself carries the order.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:650-664 break-align-orders
+    /// </remarks>
+    private void InsertInBreakAlignOrder(MusicItem item)
+    {
+        int rank = BreakAlignRank(item);
+        int at = _currentItems.Count;
+        while (at > 0 && _currentItems[at - 1] is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem
+               && BreakAlignRank(_currentItems[at - 1]) > rank)
+        {
+            at--;
+        }
+        _currentItems.Insert(at, item);
+    }
+
+    private static int BreakAlignRank(MusicItem item) => item switch
+    {
+        ClefChangeItem => 0,
+        KeySignatureChangeItem => 1,
+        _ => 2,
+    };
+
+    /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
     /// </summary>
     public void AddItem(MusicItem item)
@@ -599,7 +628,7 @@ internal sealed class MeasureBuilder
             if (standingTime >= 0)
                 _currentItems[standingTime] = item;
             else
-                _currentItems.Add(item);
+                InsertInBreakAlignOrder(item);
             return;
         }
 
@@ -663,7 +692,10 @@ internal sealed class MeasureBuilder
             return;
         }
 
-        _currentItems.Add(TakePendingPhrasingSlur(item));
+        if (item is ClefChangeItem or KeySignatureChangeItem)
+            InsertInBreakAlignOrder(item);
+        else
+            _currentItems.Add(TakePendingPhrasingSlur(item));
 
         // Real content fills this span, so a following barline closes IT, not an empty
         // measure. A ZERO-duration directive (a clef change) does not fill anything — it

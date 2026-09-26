@@ -169,4 +169,30 @@ public sealed class SectionResetTests
         Assert.Single(measures[1].Items.OfType<TimeSignatureChangeItem>());
         Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
     }
+
+    [Theory]
+    [InlineData("section A { c1 | time 3/4 key d major clef bass c2. | }")]  // written time, key, clef
+    [InlineData("section A { key g major time 6/8 c2. | }\n  section B { time 4/4 key d major c1 | }")]
+    [InlineData("section A { key g major time 6/8 c2. | }\n  section B { time 4/4 c1 | }")]  // the reset's own order
+    public void ChangesAtOneMoment_StandInBreakAlignOrder(string sections)
+    {
+        // LilyPond's break-align-orders draws clef, then key, then time whatever order they
+        // were written in; the layout and the renderer walk the list in order, so the list
+        // carries it. A section reset used to queue its time before its key ("C ♮").
+        var measures = Collect($$"""
+            time 4/4
+            part m {
+              {{sections}}
+            }
+            form main { A{{(sections.Contains("section B") ? " B" : "")}} }
+            score main { staff m }
+            """);
+
+        var kinds = measures[1].Items
+            .Where(i => i is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem)
+            .Select(i => i switch { ClefChangeItem => 0, KeySignatureChangeItem => 1, _ => 2 })
+            .ToArray();
+        Assert.True(kinds.Length >= 2);
+        Assert.Equal(kinds.OrderBy(k => k), kinds);
+    }
 }
