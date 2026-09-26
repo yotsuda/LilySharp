@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **An ottava that starts or stops inside a bar covers exactly the notes it spans.** An
+  `@!ottava` on the last note of a bar used to leave the whole bar at written pitch and
+  end the bracket at the bar before; an `@ottava` in the middle of a bar moved the notes
+  before it too. Now, as in LilyPond, the octavation begins and ends at the note, and a
+  bracket that stops inside a bar ends just after the last note it covers. 3 books in the
+  repository change, among them the website's spanner example.
+
 - **A beam runs across a clef or key change, and clears it.** As in LilyPond, eighths on
   both sides of a mid-measure `clef` or `key` are beamed together, and the beam is placed
   clear of the new clef or signature; Lily# used to break the beam in two at the change.

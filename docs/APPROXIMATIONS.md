@@ -107,7 +107,7 @@
 - **:1090** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
 - **:1184** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
-- **:489** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
+- **:531** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:489** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
@@ -210,7 +210,7 @@
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
 - **:106** and no point measures it yet. Scaling it here would be the half of a port that looks
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
-- **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
+- **:131** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1917** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`

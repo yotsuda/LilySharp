@@ -65,7 +65,23 @@ public sealed record OttavaBracketItem(
     //   ledger ottava.x.label-to-notehead read -2.800000000 against LilyPond's -0.800000000
     //   while this was the measure's origin, and -2.0 is exactly the clef-and-time-signature
     //   gap the first column sits past it.
-    int StartItemIndex = -1
+    int StartItemIndex = -1,
+    // The moment within the START measure the octavation begins at (the start note's), or
+    // null when it begins at the measure's start. The notes of the start measure BEFORE it
+    // keep their written position (OttavaTransposer).
+    // LILYPOND-REF: lily/ottava-engraver.cc:122-136 Ottava_spanner_engraver::process_music —
+    //   the span starts at the moment of the event, and middleCOffset changes there, not at
+    //   the bar.
+    Semantics.Fraction? StartMoment = null,
+    // The moment within the END measure the octavation stops at — the closing mark's note,
+    // which is back at written pitch — or null when the span runs to the end of
+    // EndMeasureIndex. Until 2026-09-26 the span was measure-granular at both ends: an
+    // `@!ottava` on the last note of a bar left that whole bar at written pitch and drew the
+    // bracket to the bar before (Lab probes/complex-lys/07, bar 8).
+    Semantics.Fraction? EndMoment = null,
+    // With EndMoment: the index, in the closing mark's voice, of the note that closes the
+    // span (exclusive) — the item-slot path's right bound is the item before it.
+    int EndItemIndex = -1
 )
 {
     // Identity, not value equality: see ModelIdentity.

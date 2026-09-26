@@ -16,6 +16,7 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Collector;
@@ -38,11 +39,15 @@ namespace LilySharp.Core.Svg.Collector;
 /// and exports are untouched. Stem direction and beams derive from StaffPosition
 /// at layout time (after this pass), so they follow the shift automatically.
 ///
-/// The transposition is measure-granular, matching the bracket geometry
-/// (<see cref="Layout.OttavaBracketEngraver"/> spans whole measures). Authoring
-/// an ottava with <c>@ottava</c>/<c>@loco</c> on measure boundaries — as real
-/// scores do — lines the two up exactly. A grace note that lives outside the
-/// measure item list is not shifted (rare; documented limitation).
+/// The transposition is MOMENT-granular at the span's two ends: in the start measure only
+/// the notes from <see cref="OttavaBracketItem.StartMoment"/> on move, in the end measure
+/// only those before <see cref="OttavaBracketItem.EndMoment"/> (the closing note is back at
+/// written pitch), in every voice of the staff alike, as Staff.middleCOffset is a Staff
+/// property. Until 2026-09-26 it was measure-granular, so an ottava that began or ended
+/// inside a bar moved that whole bar or none of it (Lab probes/complex-lys/07, bar 8: an
+/// `@!ottava` on a bar's last note left the bar's first six notes at written pitch).
+/// A grace note that lives outside the measure item list is not shifted (rare; documented
+/// limitation).
 /// </remarks>
 internal static class OttavaTransposer
 {
@@ -73,17 +78,24 @@ internal static class OttavaTransposer
         if (brackets.Count == 0)
             return voice;
 
-        // Per-measure display offset. Spans on one staff never overlap, so a
-        // plain dictionary (last writer wins) is exact.
-        var measureOffset = new Dictionary<int, int>();
+        // Per-measure display offset and the moment window it holds over, [from, until).
+        // Spans on one staff never overlap in time; two may share a measure (one ends inside
+        // it, the next begins), so a measure keeps a short list of windows.
+        var measureWindows = new Dictionary<int, List<(int Off, Fraction? From, Fraction? Until)>>();
         foreach (var b in brackets)
         {
             int off = OffsetFor(b.Type);
             if (off == 0) continue;
             for (int mi = b.StartMeasureIndex; mi <= b.EndMeasureIndex; mi++)
-                measureOffset[mi] = off;
+            {
+                var from = mi == b.StartMeasureIndex ? b.StartMoment : null;
+                var until = mi == b.EndMeasureIndex ? b.EndMoment : null;
+                if (!measureWindows.TryGetValue(mi, out var list))
+                    measureWindows[mi] = list = new();
+                list.Add((off, from, until));
+            }
         }
-        if (measureOffset.Count == 0)
+        if (measureWindows.Count == 0)
             return voice;
 
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
@@ -91,15 +103,24 @@ internal static class OttavaTransposer
         for (int mi = 0; mi < voice.Measures.Length; mi++)
         {
             var measure = voice.Measures[mi];
-            if (!measureOffset.TryGetValue(mi, out int off))
+            if (!measureWindows.TryGetValue(mi, out var windows))
             {
                 rebuilt.Add(measure);
                 continue;
             }
 
             var items = measure.Items.ToArray();
+            var onset = Fraction.Zero;
             for (int ii = 0; ii < items.Length; ii++)
-                items[ii] = Shift(items[ii], off);
+            {
+                foreach (var (off, from, until) in windows)
+                    if ((from is null || onset >= from.Value) && (until is null || onset < until.Value))
+                    {
+                        items[ii] = Shift(items[ii], off);
+                        break;
+                    }
+                onset += items[ii].Duration;
+            }
             rebuilt.Add(measure with { Items = System.Runtime.InteropServices.ImmutableCollectionsMarshal.AsImmutableArray(items) });
             changed = true;
         }

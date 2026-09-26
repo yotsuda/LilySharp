@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Rendering;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
@@ -338,7 +339,22 @@ internal static class OttavaBracketEngraver
                     ? segStartMeasure.X + segStartMeasure.Items[bracket.StartItemIndex].X
                         + LeftShorten
                     : segStartMeasure.X + LeftShorten;
-                double endX = segEndMeasure.X + segEndMeasure.Width + RightShorten;
+                double endX = segment.IsLast && bracket.EndMoment is { } endMoment
+                        && LastColumnBefore(segEndMeasure, endMoment, bracket.EndItemIndex) is { } lastColX
+                    // A span stopping INSIDE its last bar ends where LilyPond's does: just after
+                    // the last note head it covers, by the shorten-pair's right half.
+                    // LILYPOND-REF: lily/ottava-engraver.cc:168-191 typeset_all — the RIGHT bound
+                    //   is the last note column; lily/ottava-bracket.cc:89-121 print —
+                    //   span_points[RIGHT] = the heads' X extent's right, minus RIGHT * shorten.
+                    // ⚠️ The head is read as a black note head's width at the column X; a
+                    //   whole or half note's wider head, a chord's shifted head and a dot are
+                    //   not read (LilyPond unites the heads and the dots). No book stops an
+                    //   ottava mid-bar after one yet.
+                    ? lastColX + GlyphMetrics.GetNoteheadBBox(4).Right - RightShorten
+                    // ⚠️ A span running to its bar's end keeps the measure's right edge, pulled in
+                    //   by the same 0.6 — the pre-existing approximation of "just after the last
+                    //   head", which differs from LilyPond's by the room after that head.
+                    : segEndMeasure.X + segEndMeasure.Width + RightShorten;
 
                 // First segment shows the bare text ("8va"); continuation pieces use "(8va)".
                 // Last segment carries the hook; non-last ends are open.
@@ -376,6 +392,32 @@ internal static class OttavaBracketEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// The X of the last note column before <paramref name="endMoment"/> in
+    /// <paramref name="measure"/> — the span's right bound when it stops inside that bar — or
+    /// null when no column precedes it (the bracket then keeps the measure's edge).
+    /// </summary>
+    /// <remarks>
+    /// On the timing-column path (a multi-staff measure) the last column earlier than the
+    /// moment; on the item-slot path the item before the closing note in the closing mark's
+    /// voice, which on a single staff is the staff's own item list.
+    /// </remarks>
+    private static double? LastColumnBefore(MeasureLayout measure, Fraction endMoment, int endItemIndex)
+    {
+        if (!measure.Columns.IsDefaultOrEmpty)
+        {
+            double? x = null;
+            foreach (var c in measure.Columns)
+                if (c.Timing < endMoment)
+                    x = measure.X + c.X;
+            return x;
+        }
+        int last = endItemIndex - 1;
+        return last >= 0 && last < measure.Items.Length
+            ? measure.X + measure.Items[last].X
+            : null;
     }
 
     /// <summary>
@@ -561,7 +603,7 @@ internal static class OttavaBracketEngraver
                     continue;
                 }
                 open.Remove(key);
-                brackets.Add(BracketFrom(start, endMeasure: mark.MeasureIndex - 1));
+                brackets.Add(BracketFrom(start, closer: mark));
                 continue;
             }
 
@@ -574,7 +616,7 @@ internal static class OttavaBracketEngraver
             // audit/lpreg/ottcons.lys, the twin of LilyPond's own ottava-consecutive.ly,
             // caught it: that book exists to say consecutive ottavas are not merged.
             if (open.TryGetValue(key, out var previous))
-                brackets.Add(BracketFrom(previous, endMeasure: mark.MeasureIndex - 1));
+                brackets.Add(BracketFrom(previous, closer: mark));
             open[key] = (mark, srcIndex);
         }
 
@@ -585,18 +627,27 @@ internal static class OttavaBracketEngraver
     }
 
     /// <summary>
-    /// The bracket one open START makes, closed at <paramref name="endMeasure"/>.
+    /// The bracket one open START makes, closed by <paramref name="closer"/>.
     /// </summary>
     /// <remarks>
-    /// The bracket covers up to the measure BEFORE the mark that closes it: `@!ottava` marks
-    /// the first note back at written pitch, so the bracket must not reach it. A closer in
-    /// the start's own measure keeps the bracket on that measure rather than inverting it.
+    /// `@!ottava` (or the next START) marks the first note back at written pitch, so the span
+    /// stops just BEFORE the closer's moment — the note-granular stop LilyPond's
+    /// <c>\ottava #0</c> makes, the event ending the span at its own moment
+    /// (lily/ottava-engraver.cc:122-136). A closer on its measure's first moment ends the span
+    /// with the measure before, as before; a closer later in a bar ends it INSIDE that bar
+    /// (<see cref="OttavaBracketItem.EndMoment"/>). A start later than its bar's first moment
+    /// likewise begins the octavation there (<see cref="OttavaBracketItem.StartMoment"/>).
+    /// A closer in the start's own first moment keeps the bracket on that measure rather than
+    /// inverting it.
     /// ⚠️ ONE HOME because there are TWO closing sites — the terminator and the next START —
     /// and a bracket built differently by each is the "one quantity, two spellings" shape.
     /// </remarks>
     private static OttavaBracketItem BracketFrom(
-        (MusicMarkItem Mark, int Index) start, int endMeasure)
-        => new(
+        (MusicMarkItem Mark, int Index) start, MusicMarkItem closer)
+    {
+        var closeAt = MidMeasureMoment(closer);
+        int endMeasure = closeAt is null ? closer.MeasureIndex - 1 : closer.MeasureIndex;
+        return new(
             Type: TypeOf(start.Mark.Type),
             StartMeasureIndex: start.Mark.MeasureIndex,
             EndMeasureIndex: Math.Max(endMeasure, start.Mark.MeasureIndex),
@@ -606,7 +657,17 @@ internal static class OttavaBracketEngraver
             // The note the mark was written on IS the spanner's left bound. The collector
             // already anchors ottava marks to their host column (MeasureCollector.Annotations,
             // the compound-mark path), so this is a hand-over, not a new resolution.
-            StartItemIndex: start.Mark.AnchorItemIndex);
+            StartItemIndex: start.Mark.AnchorItemIndex,
+            StartMoment: MidMeasureMoment(start.Mark),
+            EndMoment: endMeasure >= start.Mark.MeasureIndex ? closeAt : null,
+            EndItemIndex: closeAt is null ? -1 : closer.AnchorItemIndex);
+    }
+
+    /// <summary>A mark's moment within its measure when it is past the measure's first one,
+    /// else null (the measure's start, or no anchor — <c>AnchorTiming</c>'s default is 0/0).</summary>
+    private static Fraction? MidMeasureMoment(MusicMarkItem mark)
+        => mark.AnchorTiming.Denominator != 0 && mark.AnchorTiming > Fraction.Zero
+            ? mark.AnchorTiming : null;
 
     /// <summary>The bracket an ottava START mark denotes.</summary>
     private static OttavaType TypeOf(MusicMarkType type) => type switch
