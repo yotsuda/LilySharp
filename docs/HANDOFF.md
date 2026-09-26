@@ -963,6 +963,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
     倒れるかは丸め＝移植できない。A Thousand Miles・Boogie・Crocodile・Are You Gonna・Xanadu・真夏）、
     それ以外（grammar-tour の `g2~ g4`＝単独では一致＝文脈依存・slurrest-*・whole 音符の下のスラー・
     SUMMER）は未読／⑸ 数の不一致 72 鍵（grace スラー・grace のタイ・tab の和音のタイ）。
+    ⑵ は**第647 が F9 の帰結と確かめた**: 差のある tab スラー 757 対のうち 742（98%）が**両端とも外向き**
+    （大きい数字は付着点を外へ押すだけ）。残る 15 対（内向き）は未読。⑶ の tab タイは宣言済みの
+    LILYSHARP-OWN の置き方（`TieFormattingProblem.EdgeYUp` の註）＝S3 の一覧へ。
+    ⚠️ Lily# の dump の staff の割り当ては**始点に最も近い符頭の staff**（staff の間に垂れたスラーが下の
+    staff の線に近い＝線で決めると隣の staff に付く）。
+    **第647 末の残り（notation staff・grace 以外）703 対**: tie 425（うち DIR 29）・slur 232（DIR 15）・
+    phrasing 2。見えている族: grammar-tour の B（単独では一致・系 2 の上段で tie と slur が揃って反転）／
+    `slurrest-*`（休符を含むスラーの y が +8.09＝向きか付着の取り違え）／`slurhcap`（+10〜11）／
+    `slurdot`（付点との衝突）／`figbass-empty`（和音のタイ）／`ossia-beams`（x −20＝対の取り違えの疑い）／
+    `lyhygrace`（行を跨ぐ grace）／小さい x（0.01〜0.2）の残り。
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、

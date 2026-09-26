@@ -85,10 +85,12 @@ public sealed class TwinBowSweep
             // The noteheads, so the reader can take the bows' x relative to where the heads
             // stand: a bow drawn right from a head that spacing put elsewhere is not a bow
             // defect. SMuFL's notehead block, U+E0A0-U+E0FF.
+            var heads = new List<(double X, double Y, int Staff)>();
             foreach (var g in page.Glyphs)
             {
                 if (g.Glyph < '' || g.Glyph > '' || staves.Count == 0) continue;
                 int si = NearestStaff(staves, g.Y);
+                heads.Add((g.X, g.Y, si));
                 sb.AppendFormat(ci, "HEAD {0} {1} x={2:F6}\n", p + 1, si, g.X - staves[si].Left);
             }
             // …and a tab staff's fret numbers, by the X they are drawn at (their centre).
@@ -104,7 +106,20 @@ public sealed class TwinBowSweep
                 // The staff whose LEDGER-extended grid the bow's ends are nearest: a tie under
                 // a low note can sit exactly between its own staff and the next system's, and
                 // only the ledger lines under the note say which one it belongs to.
-                int si = NearestStaff(staves, (b.P0.Y + b.P1.Y) / 2);
+                // The staff of the notehead nearest the bow's start: a slur hanging into the gap
+                // under its staff can sit nearer the NEXT staff's lines than its own, but never
+                // nearer another staff's heads than its own note's. The lines decide only when
+                // there is no head near (a tab staff, a piece broken at the system's start).
+                int si = -1;
+                double bestD = 3.0;
+                foreach (var h in heads)
+                {
+                    double dx = h.X - b.P0.X, dy = h.Y - b.P0.Y;
+                    double d = Math.Sqrt(dx * dx + dy * dy);
+                    if (d < bestD) { bestD = d; si = h.Staff; }
+                }
+                if (si < 0)
+                    si = NearestStaff(staves, (b.P0.Y + b.P1.Y) / 2);
                 var st = staves[si];
                 string at = b.SourcePosition >= 0 && b.SourcePosition < source.Length
                     ? source.Substring(b.SourcePosition, Math.Min(16, source.Length - b.SourcePosition))
