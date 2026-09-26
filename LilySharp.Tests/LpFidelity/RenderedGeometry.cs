@@ -132,6 +132,30 @@ internal sealed class RenderedGeometry
         return new RenderedGeometry(doc.Pages);
     }
 
+    /// <summary>
+    /// The book on the PRODUCT's own paper (<c>score.Paper</c>, the first system indented as
+    /// LilyPond indents it) — the paper <c>lysc ly</c>'s twin is engraved on, so a number read
+    /// off the twin of a real book can be asserted here as it stands. <see cref="Render"/> keeps
+    /// the probe corpus's paper instead.
+    /// </summary>
+    public static RenderedGeometry RenderProduct(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+        {
+            throw new InvalidOperationException(
+                "source does not parse:\n  "
+                + string.Join("\n  ", tree.Diagnostics.Select(d => d.ToString())));
+        }
+        var spec = RenderSpecParser.FindFirst(tree);
+        var score = SvgGenerator.CollectScore(tree, spec);
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+
+        using var doc = new RecordingDocumentContext();
+        SharedRenderer.RenderTo(score, layout, doc);
+        return new RenderedGeometry(doc.Pages);
+    }
+
     // ===================== PAGE VERTICAL =====================
     //
     // Y is DEVICE y-down measured from that page's top paper edge: SharedRenderer.cs:99

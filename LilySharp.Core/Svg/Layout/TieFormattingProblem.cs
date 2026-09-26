@@ -541,20 +541,18 @@ internal sealed class TieFormattingProblem
     /// <remarks>
     /// LILYPOND-REF: lily/tie-configuration.cc:62-72 get_untransformed_bezier —
     /// <c>slur_shape (attachment_x_.length (), …)</c>, so the width is whatever the interval
-    /// happens to be at the moment it is asked, gap or no gap.
+    /// happens to be at the moment it is asked, gap or no gap. There is no floor:
+    /// <c>min-length</c> only ever appears as a PENALTY (tie-formatting-problem.cc:751-754).
     /// <para>
-    /// ⚠️ LILYSHARP-OWN: the MINIMUM-LENGTH FLOOR. LilyPond puts none here — <c>min-length</c>
-    /// only ever appears as a PENALTY (:751-754) — and this engine has floored the bow's width
-    /// at it for as long as the bow math has existed.
-    ///   departs from: :65, <c>Real l = attachment_x_.length ();</c> unconditionally.
-    ///   goes away when: a book measures a tie shorter than min-length. Nothing does today,
-    ///     so removing the floor here would be an unobserved change to degenerate ties rather
-    ///     than a port; it is left where it was found and named instead.
-    ///   observed by: NOTHING.
+    /// ⚠️ THIS ENGINE FLOORED THE WIDTH AT min-length (1.0) UNTIL SESSION 647, as a named
+    /// LILYSHARP-OWN "observed by nothing". The bow twin sweep (HANDOFF §2 S0) observed it:
+    /// Are You Gonna Go My Way (Lab corpus) draws eighth-note ties 0.72–0.85 wide, whose
+    /// heights LilyPond makes 0.2286–0.2670 and Lily# made 0.3068 every one — the height of
+    /// a 1.0-wide tie. <c>TieShortTieHeightTests</c> holds it.
     /// </para>
     /// </remarks>
     private double BowHeight((double Left, double Right) attachment)
-        => CalculateTieHeight(Math.Max(attachment.Right - attachment.Left, _details.MinLength));
+        => CalculateTieHeight(attachment.Right - attachment.Left);
 
     /// <summary>
     /// One bound's tied-head Y extent on the <paramref name="dir"/> side —
@@ -1012,7 +1010,8 @@ internal sealed class TieFormattingProblem
         // LILYPOND-REF: tie-formatting-problem.cc:563-609 generate_configuration.
         double curveYFromMiddle = y + deltaY;        // sp, up+ from the middle line
         var (attachStartX, attachEndX) = FinalAttachment(specIdx, curveYFromMiddle, dir);
-        double finalWidth = Math.Max(attachEndX - attachStartX, _details.MinLength);
+        // No floor: see BowHeight.
+        double finalWidth = attachEndX - attachStartX;
 
         // From the pool (TakeCandidate): EVERY field is assigned here, the scoring flags
         // included, since the object may have been another column's configuration.

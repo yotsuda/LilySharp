@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="226.4" viewBox="0 0 119.50 22.64" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="225.7" viewBox="0 0 119.50 22.57" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="22.64" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="22.57" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text class="music" x="9.14" y="12.79" font-size="4.00"></text>
   <text class="music" x="13.46" y="12.79" font-size="4.00"></text>
@@ -24,8 +24,8 @@
   <line x1="29.72" y1="13.54" x2="38.33" y2="13.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="15.04" x2="16.95" y2="15.04" stroke="#000000" stroke-width="0.100"/>
   <line x1="18.66" y1="15.04" x2="38.33" y2="15.04" stroke="#000000" stroke-width="0.100"/>
-  <path d="M 18.86,16.72 C 19.06,16.96 19.34,16.96 19.54,16.72 C 19.34,17.08 19.06,17.08 18.86,16.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
-  <path d="M 29.92,15.09 C 30.12,15.34 30.41,15.34 30.60,15.09 C 30.41,15.46 30.12,15.46 29.92,15.09 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="242"/>
+  <path d="M 18.86,16.72 C 19.06,16.87 19.34,16.87 19.54,16.72 C 19.34,16.99 19.06,16.99 18.86,16.72 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="227"/>
+  <path d="M 29.92,15.09 C 30.12,15.25 30.41,15.25 30.60,15.09 C 30.41,15.37 30.12,15.37 29.92,15.09 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="242"/>
   <rect x="11.94" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="206"/>
   <text x="13.32" y="9.08" font-size="2.77" text-anchor="middle" data-pos="206">A</text>
   </g>
