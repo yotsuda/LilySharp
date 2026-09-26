@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第633セッションの経緯
+
+### 1.1 第633セッション（2026-09-26・YT-DELL2）
+
+新しい会話。★ `-Start p633`（HEAD `be874b85`・未 push 8・full **9175 / 0 / 2 / 9177**・CI／Pages 緑）。第632 の追補の後に commit が 2 本ある（`cc3d86e0` Transform Selection がファイル全体と診断を渡す・`be874b85` ファイル全体の書き換えと音域の検査）＝§1.1 第632 には未記載。ユーザー選択「タブ譜の .up/.down」（§1.0 ⒳¹³ ⑹）。
+
+★★★ **⑴ 起票より広かった＝単独の tab（Lily# の既定＝双子は `\tabFullNotation`）の全スラーが LP の既定 TabStaff の形で描かれていた**。LP の `\tabFullNotation` は `Slur.control-points` を revert する（property-init.ly:845）＝`slur::move-closer-to-tab-note-heads` の 0.35 が走らず、符尾と梁は普通の譜表と同じく採点に入る。実測（`audit/lp-geometry/probes/tab-slur-full.ly`＝tab-slur.ly の本を full で）: y0 1.570223＝plain の 1.220223 + 0.35 ちょうど・rise と span は同じ。Lily# は full でも 0.35 を掛けていた（台帳の残差は F9 − 0.35 ＝ −0.198）。
+★★ **⑵ 直した（`BuildTabSlurLayout`・numbers-only は今までどおり）**: full tab では ⒜ 0.35 を掛けない ⒝ 書かれた向き（`@phrasingSlur.up/.down`）を守る（numbers-only も＝符尾が無いので安全）⒞ 向きの規則は*描かれた*符尾（梁があれば梁の `GroupStemUp`）⒟ 端は梁の内側で梁に掛かる符尾なら梁の外面 + 0.5 ss（slur-scoring.cc:549-557）⒠ 端の `SlurEdgeInfo` に符尾（stem-attachment X の規則が読む）⒡ 弧の側へ向く符尾は encompass に入る（梁なら外面 + 梁の厚さの半分）。⚠️ **梁の線は梁自身の member frame（列 + `StemAttachX`）で読む**＝描いた符尾の X（`TabStemX`）で読むと傾いた梁で 0.053 内側に出た（台帳が捕まえた）。
+★ **⑶ 台帳 +7 点**: `slur.tab.full.{up,down}.string-to-attachment`（F9 の 0.151777＝plain と同じ）／`slur.tab.stems.{left-attachment 0.0002, left-control 0.007, span −0.1667}`（`tab-slur-stems.ly` score A＝16 分の梁の下へ書いた弧。16 分なのは 8 分の梁が宣言済みの逸脱を持つから）／`slur.tab.stems.{inner-control 0.0052, inner-span −0.1997}`（score B＝中の拍の梁が低い＝encompass を観測）。span の残差は tab 声部の間隔（§1.0 T8 に起票）。**毒 5 本すべて赤**（書いた向きを捨てる 2・full に 0.35 を掛ける 4・端を梁に掛けない 3・符尾を encompass に入れない 1（score B を足すまで緑だった）・梁を符尾 X で読む 2・Lab `sessions/p633/poisons.log`）。
+★ **⑷ 射程**: 追跡＋実コーパス 964 冊を `svg --combined`（全 score）で前後比較＝**43 冊が動く（すべて tab だけの score を持つ本）**。既定の score だけを描く `sweep.ps1` では 1 冊しか見えない＝**tab の変更の射程は `--combined` で数える**。wrongfret.lys は LP と同じく左端が梁の先から出るようになった。Lab `sessions/p633/sweep/`。
+⚠️ **⑸ `-dbackend=null` は LP 2.26 で「invalid value; possible values are (ps cairo svg)」と無視される**＝既定の backend で走っている（それでも LilyPond Serif の値＝台帳と一致）。probe の註は null と書いたまま。
+★ **終了**: code `6290188e`・full **9182 / 0 / 2 / 9184**（+7＝台帳の 7 点）・台帳 893 点・`-End` の門は全部 OK。§7.5 Core '+' 132・LILYPOND-REF 4・LILYSHARP-OWN 0（⑹ の OWN 註を消した＝全部が LP の移植）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第632セッションの経緯
 
 ### 1.1 第632セッション（2026-09-25・YT-DELL2）
