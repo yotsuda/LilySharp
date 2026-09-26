@@ -603,72 +603,42 @@ internal static partial class SharedRenderer
     }
 
     /// <summary>
-    /// Draws the swing/shuffle feel equation beside a tempo mark: two beamed straight
-    /// notes "=" a beamed dotted + plain note under a triplet "3". <paramref name="subdivision"/>
-    /// picks the note value — 8 = eighths (single beam), 16 = sixteenths (double beam).
-    /// Hand-built from the same notehead/stem/beam primitives the metronome mark uses.
+    /// Draws the swing/shuffle feel equation after a tempo mark's count — LilyPond's
+    /// <c>\rhythm { 8[ 8] } = \rhythm { \tuplet 3/2 { 4 8 } }</c> (sixteenths:
+    /// <c>16[ 16] = \tuplet 3/2 { 8 16 }</c>). Every piece comes from
+    /// <see cref="MetronomeMarkGeometry.Swing"/>, the home the stacker reserves from.
     /// </summary>
     private static void DrawSwingEquation(ScoreTextMetrics fonts, IDrawingContext gc,
         double startX, double baselineY, int subdivision)
     {
-        int beams = subdivision >= 16 ? 2 : 1;
-        const double beamGap = 0.3;          // spacing between the two beams of a 16th
-        // LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
-        // its head-gap/stem/beam constants were tuned for; a beam scaled to that small
-        // note (0.48 staff-beam x 1.6/FontSize) rather than the full staff-beam
-        // thickness, which read as too heavy here.
-        const double ns = SwingNoteSize;
-        const double headGap = 1.0;          // x between the two heads of a pair
-        const double stemUp = 1.4;           // stem height (tuned to ns)
-        const double stemDx = ns * 0.32;     // stem offset from head origin (right side)
-        const double stemW = 0.09;
-        const double beamW = EngravingDefaults.BeamThickness * (ns / FontSize);
-        const double eqSize = 1.8;           // the feel equation's own "=" size
-        const FontStyle EqStyle = FontStyle.Regular;  // one home: drawn AND stepped past
-        const double threeSize = 1.0;
-
-        // Draws one beamed eighth pair at px; returns the x just past it.
-        double DrawPair(double px, bool dotted, bool withThree)
+        var swing = MetronomeMarkGeometry.Swing(fonts, subdivision);
+        foreach (var p in swing.Pieces)
         {
-            double h1 = px;
-            double h2 = px + headGap + (dotted ? ns * 0.42 : 0);
-            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, h1, baselineY, ns);
-            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, h2, baselineY, ns);
-            if (dotted)
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, h1 + ns * 0.6, baselineY, ns);
-            double s1 = h1 + stemDx;
-            double s2 = h2 + stemDx;
-            double beamY = baselineY + stemUp;
-            gc.DrawLine(s1, baselineY, s1, beamY, Color.Black, stemW);
-            gc.DrawLine(s2, baselineY, s2, beamY, Color.Black, stemW);
-            for (int b = 0; b < beams; b++)   // 1 thin beam (8th) or 2 (16th)
-                gc.DrawLine(s1, beamY - b * beamGap, s2, beamY - b * beamGap, Color.Black, beamW);
-            if (withThree)
+            switch (p.Kind)
             {
-                // Triplet bracket "3" above the beam (as on shuffle charts).
-                double midX = (s1 + s2) / 2;
-                double brkY = beamY + 0.55;
-                const double hook = 0.22, halfGap = 0.3;
-                gc.DrawLine(s1, brkY, s1, brkY - hook, Color.Black, 0.07);
-                gc.DrawLine(s1, brkY, midX - halfGap, brkY, Color.Black, 0.07);
-                gc.DrawLine(midX + halfGap, brkY, s2, brkY, Color.Black, 0.07);
-                gc.DrawLine(s2, brkY, s2, brkY - hook, Color.Black, 0.07);
-                gc.DrawText("3", midX, brkY - 0.35, threeSize, TextRole.Tempo,
-                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                case MetronomeMarkGeometry.SwingPieceKind.Head:
+                case MetronomeMarkGeometry.SwingPieceKind.Flag:
+                    gc.DrawGlyph(p.Glyph, startX + p.X0, baselineY + p.Y0, swing.GlyphSize);
+                    break;
+                case MetronomeMarkGeometry.SwingPieceKind.Rule:
+                    gc.DrawRectangle(startX + p.X0, baselineY + p.Y1, p.X1 - p.X0, p.Y1 - p.Y0,
+                        fill: Color.Black);
+                    break;
+                case MetronomeMarkGeometry.SwingPieceKind.BracketLine:
+                    gc.DrawLine(startX + p.X0, baselineY + p.Y0, startX + p.X1, baselineY + p.Y1,
+                        Color.Black, swing.BracketThickness, cap: LineCap.Round);
+                    break;
+                case MetronomeMarkGeometry.SwingPieceKind.Number:
+                    gc.DrawText("3", startX + p.X0, baselineY + p.Y0, swing.NumberEm,
+                        TextRole.Tempo, FontStyle.Italic, TextAnchor.Start, Color.Black);
+                    break;
+                case MetronomeMarkGeometry.SwingPieceKind.EqualsSign:
+                    gc.DrawText("=", startX + p.X0, baselineY + p.Y0, MetronomeMarkGeometry.Em(fonts),
+                        TextRole.Tempo, MetronomeMarkGeometry.TextStyle(fonts), TextAnchor.Start,
+                        Color.Black);
+                    break;
             }
-            return s2 + ns * 0.35;
         }
-
-        double x = DrawPair(startX, dotted: false, withThree: false);
-        x += 0.35;
-        gc.DrawText("=", x, baselineY, eqSize, TextRole.Tempo, EqStyle, TextAnchor.Start, Color.Black);
-        // The step past the "=" measures the "=" that was drawn. It measured Bold against a
-        // Regular draw until 2026-08-18; ⚠️ the page did NOT move, and that is a fact about
-        // this face rather than a licence to leave such a pair alone — TeX Gyre Schola gives
-        // "=" the SAME advance bold and regular (1.092585827 at this 1.8 em, to fifteen
-        // digits), so the drift had nothing to show. A face where they differ would have.
-        x += fonts.Advance("=", eqSize, TextRole.Tempo, EqStyle) + 0.45;
-        DrawPair(x, dotted: true, withThree: true);
     }
 
     // absY is the mark's anchor in the page Y-up frame (page-bottom origin, up
@@ -765,7 +735,7 @@ internal static partial class SharedRenderer
             {
                 double textEnd = eqX + fonts.Advance(equation, em, TextRole.Tempo, plainStyle);
                 // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
-                DrawSwingEquation(fonts, gc, textEnd + 0.8, absY, m.SwingSubdivision);
+                DrawSwingEquation(fonts, gc, textEnd, absY, m.SwingSubdivision);
             }
             return;
         }

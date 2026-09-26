@@ -2982,13 +2982,48 @@ internal static class OutsideStaffStacker
                     tDown.Merge(eDown);
                     if (m.SwingSubdivision != 0)
                     {
-                        // The swing feel-equation keeps its named box estimate — a
-                        // Lily#-own device; the label lives at
-                        // MetronomeMarkGeometry.SwingEquationReach.
+                        // The swing feel-equation, piece by piece from the one home the
+                        // draw reads (MetronomeMarkGeometry.Swing): glyph and text pieces
+                        // by their ink boxes, rules and the bracket as drawn.
                         double sw0 = eqX + fonts.Advance(eq, em, TextRole.Tempo, tempoPlainStyle);
-                        double sw1 = sw0 + MetronomeMarkGeometry.SwingEquationReach;
-                        tUp.MergeBox(sw0, sw1, anchor - 0.5, anchor + 2.0);
-                        tDown.MergeBox(sw0, sw1, anchor - 0.5, anchor + 2.0);
+                        var swing = MetronomeMarkGeometry.Swing(fonts, m.SwingSubdivision);
+                        double swingScale = swing.GlyphSize / SharedRenderer.FontSize;
+                        double halfTh = swing.BracketThickness / 2;
+                        foreach (var p in swing.Pieces)
+                        {
+                            double px = sw0 + p.X0, py = anchor + p.Y0;
+                            (double l, double rgt, double bot, double tp) = p.Kind switch
+                            {
+                                MetronomeMarkGeometry.SwingPieceKind.Head => (
+                                    px, px + GlyphMetrics.NoteheadBlack.Right * swingScale,
+                                    py + GlyphMetrics.NoteheadBlack.Bottom * swingScale,
+                                    py + GlyphMetrics.NoteheadBlack.Top * swingScale),
+                                MetronomeMarkGeometry.SwingPieceKind.Flag => FlagBox(p.Glyph, px, py, swingScale),
+                                MetronomeMarkGeometry.SwingPieceKind.Rule => (
+                                    px, sw0 + p.X1, py, anchor + p.Y1),
+                                MetronomeMarkGeometry.SwingPieceKind.BracketLine => (
+                                    Math.Min(px, sw0 + p.X1) - halfTh, Math.Max(px, sw0 + p.X1) + halfTh,
+                                    Math.Min(py, anchor + p.Y1) - halfTh, Math.Max(py, anchor + p.Y1) + halfTh),
+                                MetronomeMarkGeometry.SwingPieceKind.Number => TextBox(
+                                    fonts.Ink("3", swing.NumberEm, TextRole.Tempo, FontStyle.Italic),
+                                    fonts.Advance("3", swing.NumberEm, TextRole.Tempo, FontStyle.Italic), px, py),
+                                _ => TextBox(
+                                    fonts.Ink("=", em, TextRole.Tempo, tempoTextStyle),
+                                    fonts.Advance("=", em, TextRole.Tempo, tempoTextStyle), px, py),
+                            };
+                            tUp.MergeBox(l, rgt, bot, tp);
+                            tDown.MergeBox(l, rgt, bot, tp);
+                        }
+
+                        static (double, double, double, double) FlagBox(char glyph, double x, double y, double s)
+                        {
+                            var box = glyph == EmmentalerGlyphs.Flag16thUp
+                                ? GlyphMetrics.Flag16thUp : GlyphMetrics.Flag8thUp;
+                            return (x + box.Left * s, x + box.Right * s, y + box.Bottom * s, y + box.Top * s);
+                        }
+                        static (double, double, double, double) TextBox(
+                            (double Bottom, double Top) ink, double advance, double x, double y)
+                            => (x, x + advance, y + ink.Bottom, y + ink.Top);
                     }
                 }
                 double tMove = trackers(sysIdx, m.StaffIndex).Place(tUp, tDown, OutsideStaffPadding,

@@ -77,11 +77,6 @@ internal static partial class SharedRenderer
     // Internal so LP-fidelity readers can identify a text run by the SAME size expression
     // the draw calls use (e.g. custom text at FontSize * 0.6), instead of a second literal.
     internal const double FontSize = 4.0;
-    // LILYSHARP-OWN: the swing feel-equation's small note size. The equation is Lily#'s
-    // own device (no LilyPond counterpart) and its head-gap/stem/beam constants are tuned
-    // to this size. The METRONOME MARK's own note is NOT this any more — it draws at
-    // \smaller = magstep(-1) of the full size (MetronomeMarkGeometry.NoteSize).
-    private const double SwingNoteSize = 1.6;
     private static readonly double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
 
     public static void RenderTo(

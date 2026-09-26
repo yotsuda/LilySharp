@@ -197,10 +197,129 @@ internal static class MetronomeMarkGeometry
         => fonts.Advance(" " + rest, Em(fonts), TextRole.Tempo, PlainStyle(fonts))
            - fonts.Advance(rest, Em(fonts), TextRole.Tempo, PlainStyle(fonts));
 
-    /// <summary>Reach of the swing feel-equation drawn right of the count (lead gap +
-    /// the drawn pairs). LILYSHARP-OWN: the shuffle equation is Lily#'s own device with
-    /// no LilyPond counterpart; this is the reservation estimate its consumers share.</summary>
-    public const double SwingEquationReach = 0.8 + 5.0;
+    /// <summary>What one piece of the swing feel-equation is.</summary>
+    public enum SwingPieceKind
+    {
+        /// <summary>A black notehead glyph: origin (X0, Y0) = (head left, head centre).</summary>
+        Head,
+        /// <summary>A filled rectangle X0..X1 × Y0..Y1 — a stem or a beam.</summary>
+        Rule,
+        /// <summary>An up-flag glyph (<see cref="SwingPiece.Glyph"/>) at its origin (X0, Y0).</summary>
+        Flag,
+        /// <summary>A round-capped line (X0, Y0)→(X1, Y1) of the bracket thickness.</summary>
+        BracketLine,
+        /// <summary>The tuplet number "3", italic, pen start X0 on baseline Y0.</summary>
+        Number,
+        /// <summary>The "=" between the two rhythms, pen start X0 on the markup baseline.</summary>
+        EqualsSign,
+    }
+
+    /// <summary>One piece of the swing feel-equation: X from the END of the count's text,
+    /// Y up from the markup baseline.</summary>
+    public readonly record struct SwingPiece(
+        SwingPieceKind Kind, double X0, double Y0, double X1 = 0, double Y1 = 0, char Glyph = default);
+
+    /// <summary>The swing feel-equation's whole geometry: its pieces, the note glyphs' font
+    /// size, the bracket's thickness, the number's em, and the reach/ink it adds to the mark.</summary>
+    public readonly record struct SwingEquation(
+        SwingPiece[] Pieces, double GlyphSize, double BracketThickness, double NumberEm,
+        double Width, double Top, double Bottom);
+
+    /// <summary>
+    /// The swing feel-equation drawn after the count, as LilyPond's own swing idiom writes
+    /// it — the <c>\rhythm</c> doc example and the user's transcriptions:
+    /// <c>\markup { … \hspace #0.4 \rhythm { 8[ 8] } = \rhythm { \tuplet 3/2 { 4 8 } } }</c>
+    /// (sixteenths: <c>\rhythm { 16[ 16] } = \rhythm { \tuplet 3/2 { 8 16 } }</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-markup-commands.scm:1920-1990 define-markup-command (rhythm …) —
+    /// a one-system <c>\score</c> at <c>font-size -2</c> (magnifyStaff magstep(-2)), aligned
+    /// X LEFT; ly/engraver-init.ly:1721-1763 the StandaloneRhythm contexts (cadenza,
+    /// common-shortest-duration 1/10, no staff lines, squashedPosition 1 = head centre half
+    /// a staff space above the baseline, stems up). The markup line joins its words with word-space 0.6 (\hspace #0.4 between
+    /// the count and the first rhythm; the "=" a word of the markup's own bold text).
+    /// ⚠️ The horizontal spacing and stem/beam/bracket heights inside each \rhythm are the
+    /// output of LilyPond's spacing and beam engines, which Lily# does not run on a markup:
+    /// they are MEASURED from LilyPond 2.26 SVG output (Lab sessions/p641/swing/lp-geom.svg),
+    /// in units of the rhythm's own staff space, and reproduce it to 1e-3.
+    /// </remarks>
+    public static SwingEquation Swing(ScoreTextMetrics fonts, int subdivision)
+    {
+        const double WordSpace = 0.6;          // markup line word-space
+        const double HSpace = 0.4;             // the idiom's \hspace #0.4
+        // The \rhythm stencil's left edge sits this far right of its first head's origin
+        // (measured: "=" pen end + word-space − head origin = −0.0721 at magstep(-2)).
+        const double LeftInsetU = 0.0908;
+        bool sixteenths = subdivision >= 16;
+        double k = EmmentalerDesignSize.Magstep(
+            fonts.StepOf(TextRole.Tempo, EngravingDefaults.MetronomeMarkFontSize));
+        double r = Math.Pow(2.0, -2.0 / 6.0) * k;          // \rhythm's font-size -2
+        double th = 0.13 * k;                               // Stem.thickness 1.3 x line 0.1
+        double bracketTh = 0.16 * k;                        // TupletBracket.thickness 1.6 x 0.1
+        var att = GlyphMetrics.NoteheadBlackStemAttachment;
+        double headCentre = 0.5 * r;                        // squashedPosition 1
+        var pieces = new List<SwingPiece>(20);
+
+        double StemCentre(double head) => head + att.X * r - th / 2;
+        void Note(double head, double stemTopU)
+        {
+            pieces.Add(new SwingPiece(SwingPieceKind.Head, head, headCentre,
+                Glyph: EmmentalerGlyphs.NoteheadBlack));
+            double sc = StemCentre(head);
+            pieces.Add(new SwingPiece(SwingPieceKind.Rule, sc - th / 2, headCentre + att.Y * r,
+                sc + th / 2, stemTopU * r));
+        }
+
+        // ── The straight pair, beamed: 8[ 8] or 16[ 16]. ──
+        double h1 = WordSpace + HSpace + WordSpace - LeftInsetU * r;
+        double h2 = h1 + (sixteenths ? 2.0508 : 2.8872) * r;
+        double beamTopU = sixteenths ? 3.1770 : 2.8230;     // stem top = upper beam's centre
+        Note(h1, beamTopU);
+        Note(h2, beamTopU);
+        double beamL = StemCentre(h1) - th / 2, beamR = StemCentre(h2) + th / 2;
+        double halfBeam = 0.48 * r / 2;
+        pieces.Add(new SwingPiece(SwingPieceKind.Rule, beamL, beamTopU * r - halfBeam,
+            beamR, beamTopU * r + halfBeam));
+        if (sixteenths)
+            pieces.Add(new SwingPiece(SwingPieceKind.Rule, beamL, 2.3541 * r - halfBeam,
+                beamR, 2.3541 * r + halfBeam));
+
+        // ── "=" — a word of the markup's bold text. ──
+        double eqX = beamR + WordSpace;
+        pieces.Add(new SwingPiece(SwingPieceKind.EqualsSign, eqX, 0));
+        double eqEnd = eqX + fonts.Advance("=", Em(fonts), TextRole.Tempo, TextStyle(fonts));
+
+        // ── The triplet: \tuplet 3/2 { 4 8 } or { 8 16 }, flagged, under a bracket. ──
+        const double TupletStemTopU = 3.7501, FlagOriginU = 3.6997;
+        double t1 = eqEnd + WordSpace - LeftInsetU * r;
+        double t2 = t1 + (sixteenths ? 2.6774 : 3.3852) * r;
+        Note(t1, sixteenths ? TupletStemTopU : 3.6666);
+        Note(t2, TupletStemTopU);
+        if (sixteenths)
+            pieces.Add(new SwingPiece(SwingPieceKind.Flag, StemCentre(t1) + th / 2, FlagOriginU * r,
+                Glyph: EmmentalerGlyphs.Flag8thUp));
+        var lastFlag = sixteenths ? GlyphMetrics.Flag16thUp : GlyphMetrics.Flag8thUp;
+        double flagX = StemCentre(t2) + th / 2;
+        pieces.Add(new SwingPiece(SwingPieceKind.Flag, flagX, FlagOriginU * r,
+            Glyph: sixteenths ? EmmentalerGlyphs.Flag16thUp : EmmentalerGlyphs.Flag8thUp));
+
+        // The bracket spans the stems, its number centred in a gap of the line.
+        double bL = StemCentre(t1) - 0.2818 * r, bR = StemCentre(t2) + 0.2818 * r;
+        double bY = 5.0357 * r, hook = 0.7 * r;             // TupletBracket.edge-height 0.7
+        double bC = (bL + bR) / 2;
+        pieces.Add(new SwingPiece(SwingPieceKind.BracketLine, bL, bY - hook, bL, bY));
+        pieces.Add(new SwingPiece(SwingPieceKind.BracketLine, bL, bY, bC - 0.9341 * r, bY));
+        pieces.Add(new SwingPiece(SwingPieceKind.BracketLine, bC + 1.1861 * r, bY, bR, bY));
+        pieces.Add(new SwingPiece(SwingPieceKind.BracketLine, bR, bY, bR, bY - hook));
+        pieces.Add(new SwingPiece(SwingPieceKind.Number, bC - 0.4301 * r, 4.5818 * r));
+
+        double width = Math.Max(bR + bracketTh / 2, flagX + lastFlag.Right * r);
+        double top = Math.Max(bY + bracketTh / 2, FlagOriginU * r + lastFlag.Top * r);
+        double bottom = Math.Min(0.0, headCentre + GlyphMetrics.NoteheadBlack.Bottom * r);
+        return new SwingEquation(pieces.ToArray(), SharedRenderer.FontSize * r, bracketTh,
+            Em(fonts) * Math.Pow(2.0, -4.0 / 6.0),           // TupletNumber font-size -2 inside -2
+            width, top, bottom);
+    }
 
     /// <summary>
     /// The whole mark's ink about its (left, baseline) origin: total advance width,
@@ -240,7 +359,12 @@ internal static class MetronomeMarkGeometry
         bottom = Math.Min(bottom, eqInk.Bottom);
         x += fonts.Advance(" " + eq, em, TextRole.Tempo, plainStyle);
         if (swingSubdivision != 0)
-            x += SwingEquationReach;
+        {
+            var swing = Swing(fonts, swingSubdivision);
+            x += swing.Width;
+            top = Math.Max(top, swing.Top);
+            bottom = Math.Min(bottom, swing.Bottom);
+        }
         return (x, top, bottom);
     }
 
