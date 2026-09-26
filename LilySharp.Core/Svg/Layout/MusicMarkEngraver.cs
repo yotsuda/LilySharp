@@ -628,6 +628,13 @@ internal static class MusicMarkEngraver
                     systems[sysIdx], LayoutUtilities.TopScoreGrobStaff(systems[sysIdx]))
                 : 0.0;
 
+        // A lyric baseline in the mark frame (Y-up from the anchor staff's middle): ly.YUp is
+        // from the SYSTEM top, which sits above the anchor by a chords row's depth. Until
+        // 2026-09-26 this was 2.0 + ly.YUp, so under a chords row the words read that much
+        // lower than they stood.
+        double LyricMarkFrameUp(LyricLayout ly)
+            => 2.0 + ly.YUp - AnchorStaffUp(ly.Item.MeasureIndex);
+
         // How far below its band top the anchor keeps its own baseline, on a system that has
         // NO STAFF — null on every system that has one.
         //
@@ -719,11 +726,12 @@ internal static class MusicMarkEngraver
         if (!lyrics.IsDefaultOrEmpty)
             foreach (var ly in lyrics)
                 // ly.YUp is Y-up from the system top; its mark-frame Y-up (from the
-                // top-staff middle) is 2.0 + ly.YUp. Track the LOWEST lyric baseline =
-                // the smallest mark-frame Y-up per system.
+                // anchor staff's middle) is 2.0 + ly.YUp − AnchorStaffUp. Track the LOWEST
+                // lyric baseline = the smallest mark-frame Y-up per system.
                 if (measureToSystemIdx.TryGetValue(ly.Item.MeasureIndex, out int lySys)
-                    && (!systemLyricBottomUp.TryGetValue(lySys, out double cur) || 2.0 + ly.YUp < cur))
-                    systemLyricBottomUp[lySys] = 2.0 + ly.YUp;
+                    && (!systemLyricBottomUp.TryGetValue(lySys, out double cur)
+                        || LyricMarkFrameUp(ly) < cur))
+                    systemLyricBottomUp[lySys] = LyricMarkFrameUp(ly);
 
         var layouts = RentLayoutBuilder();
 
@@ -1115,7 +1123,12 @@ internal static class MusicMarkEngraver
                 && SystemBottomByMeasure().TryGetValue(
                        belowMarks[0].Mark.MeasureIndex, out double sysBottom))
             {
-                belowBaseUp = 2.0 - (BelowMarkBaseline(sysBottom) - Padding);
+                // sysBottom is measured from the SYSTEM top; the mark's frame is its anchor
+                // staff's, which a chords row above it pushes down. Until 2026-09-26 the
+                // chord row's depth was counted twice, and "D.S. al Coda" hung that far
+                // (5.4 ss) under the system (night-avenue.lys line 114).
+                belowBaseUp = 2.0 - (BelowMarkBaseline(
+                    sysBottom + AnchorStaffUp(belowMarks[0].Mark.MeasureIndex)) - Padding);
             }
             // A jump/other below-staff mark must drop past the lyric line it shares
             // the band with (LyricClearance). Pedal text is EXEMPT — classic notation
@@ -1275,9 +1288,9 @@ internal static class MusicMarkEngraver
                         double lyHalf = ly.Width / 2 + 0.3;
                         if (mx1 < ly.X - lyHalf || mx0 > ly.X + lyHalf)
                             continue;
-                        // ly.YUp is Y-up from the system top; its mark-frame Y-up is
-                        // 2 + ly.YUp, and the lyric BOTTOM hangs 0.9 below that baseline.
-                        double lyricBottomUp = (2.0 + ly.YUp) - 0.9;
+                        // ly.YUp is Y-up from the system top (LyricMarkFrameUp converts),
+                        // and the lyric BOTTOM hangs 0.9 below that baseline.
+                        double lyricBottomUp = LyricMarkFrameUp(ly) - 0.9;
                         if (yUp + halfExtent > lyricBottomUp - OutsideStaffPadding)
                             yUp = lyricBottomUp - OutsideStaffPadding - halfExtent;
                     }

@@ -8,6 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A chords row no longer drops "D.S. al Coda" under the system.** A jump text (and any
+  below-staff mark) under a book with chord names hung the chord row's depth — about 5.4
+  staff spaces — further below the bottom staff than LilyPond places it. The system's
+  bottom and the lyric lines are now measured from the same staff the mark is.
+
 - **`to coda` is drawn "To 𝄌" again, clear of the next section's label.** The departure had
   been the bare coda sign, as LilyPond's `\codaMark` draws it, which read as the coda itself.
   It now stands 1.0 staff space left of the label's box, whatever the label's width; it used

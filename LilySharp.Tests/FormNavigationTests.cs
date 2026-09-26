@@ -186,6 +186,58 @@ public class FormNavigationTests
     }
 
     /// <summary>
+    /// A chords row above the staff does not push "D.S. al Coda" further under the system.
+    /// The system's bottom and the lyric baselines are measured from the system TOP, and the
+    /// mark's frame is its anchor staff's; until 2026-09-26 the row's depth went uncounted in
+    /// the conversion and the jump hung that much lower (night-avenue.lys line 114, about
+    /// 5.4 staff spaces under a tab staff).
+    /// </summary>
+    [Theory]
+    [InlineData("staff bass")]
+    [InlineData("staff bass  tab bass")]
+    [InlineData("staff melody  lyrics words  staff bass")]
+    public void AChordRow_DoesNotDropTheJumpText(string staves)
+    {
+        double withRow = JumpBelowBottomLine("chords harmony  " + staves);
+        double without = JumpBelowBottomLine(staves);
+        Assert.Equal(without, withRow, 2);
+    }
+
+    private static double JumpBelowBottomLine(string staves)
+    {
+        string source = $$"""
+            octave absolute
+            part melody { clef treble }
+            part bass { clef bass  tuning bass }
+            section A {
+              chords harmony { C | }
+              melody { c'4 d' e' f' | }
+              lyrics words sings melody { la la la la | }
+              bass { a,,4 c, e, g, | }
+            }
+            section B {
+              chords harmony { G | }
+              melody { g'1 | }
+              lyrics words sings melody { la | }
+              bass { d,1 | }
+            }
+            form main { segno A ds al coda coda B }
+            score main { {{staves}} }
+            """;
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(source),
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var ds = System.Text.RegularExpressions.Regex.Match(svg, @"y=""([\d.]+)""[^>]*>D\.S\. al Coda<");
+        Assert.True(ds.Success, "no D.S. al Coda drawn");
+        // The staff lines are the long horizontal rules; the lowest one is the system bottom.
+        double bottom = System.Text.RegularExpressions.Regex.Matches(svg,
+                @"<line x1=""([\d.]+)"" y1=""([\d.]+)"" x2=""([\d.]+)"" y2=""\2""")
+            .Where(m => double.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture)
+                      - double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) > 15)
+            .Max(m => double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture));
+        return double.Parse(ds.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) - bottom;
+    }
+
+    /// <summary>
     /// ⚠️ A sign at a line's END must not pair with the label OPENING the next line:
     /// absolute X keeps adjacent measures close across a break, so the X window alone
     /// cannot tell — the same-system gate is what says no.

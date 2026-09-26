@@ -97,8 +97,8 @@
 - **:3004** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
 - **:3990** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
-- **:1160** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2145** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:1173** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
+- **:2158** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -203,8 +203,8 @@
 - **:3560** staff down, and this reserves it on the hidden one. No book reaches that.
 - **:4909** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
-- **:840** does not spell a per-type padding — no point observes a segno/coda over a
-- **:1492** pinned there), no ledger point.
+- **:848** does not spell a per-type padding — no point observes a segno/coda over a
+- **:1505** pinned there), no ledger point.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:460** no observer distinguishes the two until a merge-differently-* producer lands.
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
@@ -409,17 +409,17 @@
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:149** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:175** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
-- **:634** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
-- **:1487** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
-- **:1522** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
-- **:1637** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
-- **:1654** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
-- **:2045** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2312** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2516** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2611** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2622** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2668** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:641** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
+- **:1500** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
+- **:1535** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
+- **:1650** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
+- **:1667** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
+- **:2058** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:2325** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2529** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2624** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2635** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2681** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
