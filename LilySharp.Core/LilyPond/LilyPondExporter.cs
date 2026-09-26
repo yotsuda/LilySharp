@@ -1427,7 +1427,10 @@ public sealed class LilyPondExporter
             switch (m)
             {
                 case TempoDeclarationSyntax t: _sb.Append("  ").Append(EmitTempo(t)).Append('\n'); break;
-                case KeySignatureSyntax k: _sb.Append("  ").Append(EmitKey(k)).Append('\n'); break;
+                case KeySignatureSyntax k:
+                    if (EmitKey(k) is { Length: > 0 } key)   // empty in \drummode
+                        _sb.Append("  ").Append(key).Append('\n');
+                    break;
                 case TimeSignatureSyntax ts: _sb.Append("  ").Append(EmitTime(ts)).Append('\n'); break;
                 case PartialDeclarationSyntax p: _sb.Append("  ").Append(ArmPartial(p)).Append('\n'); break;
             }
@@ -1439,7 +1442,8 @@ public sealed class LilyPondExporter
         // (ResetAmbientTonicToHome reads the file-level key).
         if (_partHeaderKeyNode is { } partKey)
         {
-            _sb.Append("  ").Append(EmitKey(partKey)).Append('\n');
+            if (EmitKey(partKey) is { Length: > 0 } key)   // empty in \drummode
+                _sb.Append("  ").Append(key).Append('\n');
             _tonic = _homeTonic;
         }
     }
@@ -3385,7 +3389,8 @@ public sealed class LilyPondExporter
             }
             else
             {
-                parts.Add("\\key c \\major");
+                if (!_drumMode)   // no key in \drummode (EmitKey's remark)
+                    parts.Add("\\key c \\major");
                 _keySharps = 0;
                 _tonic = KeyTonic.CMajor;
             }
@@ -3801,6 +3806,12 @@ public sealed class LilyPondExporter
         // MeasureCollector.CalculateKeySharps — PitchName, which carries the accidental
         // suffix and normalizes LilyPond's `es`/`as` contractions the table does not hold.
         _keySharps = k.IsCustom ? 0 : KeySpelling.SharpsFor(k.Pitch.PitchName, k.Mode.Text) ?? 0;
+        // A drum part writes NO key: inside \drummode the tonic is read as a drum name
+        // (`\key f \major` fails: "Expecting pitch, found \"f\""), and the DrumStaff has no
+        // Key_engraver to draw one anyway (ly/engraver-init.ly:297) — the page draws none
+        // either (SpacingRules.ClefEngravesKey). Until 2026-09-26 a keyed book with a drum
+        // part exported a twin LilyPond refused (a big-band probe in F).
+        if (_drumMode) return "";
         if (k.IsCustom) { _warnings.Add("custom key signature emitted as \\key c \\major (unsupported)"); return "\\key c \\major"; }
         string mode = k.IsMajor ? "major" : k.Mode.Text.ToLowerInvariant();
         return "\\key " + EmitPitch(k.Pitch) + " \\" + mode;
@@ -6251,8 +6262,48 @@ public sealed class LilyPondExporter
     private static readonly string[] DigitWords =
         ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
 
-    /// <summary>Every variable name this export has handed out (<see cref="VarName"/>).</summary>
-    private readonly HashSet<string> _usedVarNames = new(StringComparer.Ordinal);
+    /// <summary>Every variable name this export has handed out (<see cref="VarName"/>),
+    /// seeded with the names a variable must never take (<see cref="ReservedLilyPondNames"/>).</summary>
+    private readonly HashSet<string> _usedVarNames = new(ReservedLilyPondNames, StringComparer.Ordinal);
+
+    /// <summary>
+    /// Names a twin's variable must not take, so <see cref="VarName"/> steps past them the way
+    /// it steps past a name already used (<c>drums</c> → <c>drumsVarTwo</c>).
+    /// </summary>
+    /// <remarks>
+    /// Two kinds. LilyPond's KEYWORDS cannot be variables at all — `\drums` is the parser's
+    /// DRUMS token, so a part named <c>drums</c> gave `drums = \drummode { … }` and `{ \drums }`,
+    /// which LilyPond refused ("syntax error, unexpected '}'"; found exporting a big-band probe,
+    /// 2026-09-26). And the COMMANDS this exporter writes: a variable of that name would
+    /// shadow the command for the rest of the file (a part named <c>bar</c> and the twin's own
+    /// `\bar "|."`). Lily# reserves some of these words itself; the rest are ordinary part names.
+    /// LILYPOND-REF: lily/lily-lexer.cc:51-95 the_key_tab (the keywords).
+    /// </remarks>
+    private static readonly string[] ReservedLilyPondNames =
+    [
+        // lily/lily-lexer.cc the_key_tab
+        "accepts", "addlyrics", "alias", "alternative", "book", "bookpart", "change", "chordmode", "chords",
+        "consists", "context", "default", "defaultchild", "denies", "description", "drummode",
+        "drums", "etc", "figuremode", "figures", "header", "layout", "lyricmode", "lyrics",
+        "lyricsto", "markup", "markuplist", "midi", "name", "new", "notemode", "override", "paper",
+        "remove", "repeat", "rest", "revert", "score", "sequential", "set", "simultaneous",
+        "tempo", "type", "unset", "with",
+        // commands and music functions this exporter writes
+        "accent", "acciaccatura", "accidentalStyle", "appoggiatura", "arpeggio", "bar",
+        "bendAfter", "bold", "box", "break", "breathe", "cadenzaOff", "cadenzaOn", "caesura",
+        "clef", "codaMark", "concat", "cueClef", "cueClefUnset", "deadNote", "downbow", "fermata",
+        "fixed", "flageolet", "fontsize", "glissando", "grace", "hspace", "improvisationOff",
+        "improvisationOn", "italic", "jump", "key", "laissezVibrer", "major", "marcato", "mark",
+        "mordent", "noBreak", "nonArpeggiato", "noPageBreak", "note", "omit", "once", "ottava",
+        "pageBreak", "partCombine", "partial", "portato", "prall", "prallprall", "relative",
+        "repeatTie", "reverseturn", "rhythm", "rightHandFinger", "segnoMark", "skip", "smaller",
+        "snappizzicato", "sostenutoOff", "sostenutoOn", "staccatissimo", "staccato",
+        "startTextSpan", "startTrillSpan", "stopTextSpan", "stopTrillSpan", "sustainOff",
+        "sustainOn", "tabFullNotation", "tenuto", "time", "transpose", "treCorde", "trill",
+        "tuplet", "turn", "tweak", "unaCorda", "upbow", "version",
+        // the dynamics it writes by name
+        "ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sf", "sfz", "fp", "rfz", "fz",
+    ];
 
     private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

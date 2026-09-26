@@ -2136,6 +2136,53 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("\\clef", ly);
     }
 
+    /// <summary>
+    /// A drum part writes NO key: inside \drummode the tonic reads as a drum name, and LilyPond
+    /// refused the twin ("Expecting pitch, found \"f\"") — the DrumStaff has no Key_engraver
+    /// anyway, as the page draws none. A pitched part in the same book keeps its key. Found
+    /// exporting a big-band probe in F, 2026-09-26.
+    /// </summary>
+    [Fact]
+    public void ADrumPart_WritesNoKey_WhileAPitchedPartKeepsIt()
+    {
+        var ly = Export("""
+            key f major
+            part kit { clef percussion }
+            part m { clef treble }
+            section S { kit { hh8 hh bd4 sn4 r | key bes major hh8 hh bd4 sn4 r | } m { c'4 d' e' f' | key bes major bes4 a g f | } }
+            form main { ~S }
+            score main { staff m  staff kit }
+            """);
+        string kit = ly.Substring(ly.IndexOf("kit = \\drummode", System.StringComparison.Ordinal));
+        kit = kit.Substring(0, kit.IndexOf("\n}", System.StringComparison.Ordinal));
+        Assert.DoesNotContain("\\key", kit);
+        Assert.Contains("\\key f \\major", ly);
+        Assert.Contains("\\key bes \\major", ly);
+    }
+
+    /// <summary>
+    /// A part named after a LilyPond KEYWORD cannot keep its name as a variable: `\drums` is the
+    /// parser's DRUMS token, so `drums = \drummode { … }` and `{ \drums }` made a twin LilyPond
+    /// refused ("syntax error, unexpected '}'"). The name steps aside like a duplicate does; so
+    /// does one that would shadow a command the twin itself writes (`\bar`).
+    /// </summary>
+    [Theory]
+    [InlineData("drums", "percussion", "hh8 hh bd4 sn4 r", "drumsVarTwo")]
+    [InlineData("name", "treble", "c'4 d' e' f'", "nameVarTwo")]    // free in Lily#, a LilyPond keyword
+    [InlineData("bar", "treble", "c'4 d' e' f'", "barVarTwo")]
+    public void APartNamedAfterALilyPondWord_GetsAnotherVariable(string part, string clef, string music, string variable)
+    {
+        var ly = Export($$"""
+            part {{part}} { clef {{clef}} }
+            section S { {{part}} { {{music}} | } }
+            form main { S }
+            score main { staff {{part}} }
+            """);
+        Assert.Contains(variable + " = ", ly);
+        Assert.Contains("\\" + variable + " }", ly);
+        Assert.DoesNotContain(part + " = ", ly);
+    }
+
     [Fact]
     public void ADrumChord_KeepsItsMembers()
     {

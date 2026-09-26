@@ -138,7 +138,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（57 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2659** container, and the value stops being unobserved with the line above.
+- **:2663** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:687** no observer; add the paren widths when a book brings one. The unpacked
 - **:689** bare glyph width, which is exact for one and unobserved for many.
@@ -238,9 +238,9 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（168 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2654** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4731** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:6152** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2658** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:4742** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:6163** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`

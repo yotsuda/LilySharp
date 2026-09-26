@@ -131,6 +131,17 @@ workflow attaches that section to the GitHub Release verbatim.
   as `\sustainOff\sustainOn` — a bare second `\sustainOn` drew no notch in LilyPond's
   bracket — and likewise for `@sostenuto` and `@unaCorda`. The nocturne sample uses it.
 
+- **A keyed book with a drum part exports a twin LilyPond accepts.** The drum part's
+  `\drummode` block carried `\key f \major`, where LilyPond reads the tonic as a drum name
+  and refuses the file. A drum part now writes no key (its staff has none on the page
+  either).
+
+- **A part named after a LilyPond keyword or command gets another variable name.** A part
+  called `drums` became `drums = \drummode { … }` and `{ \drums }` — `\drums` is a LilyPond
+  keyword, and the file was refused. Such a name now steps aside the way a duplicate does
+  (`drumsVarTwo`), and so does one that would shadow a command the twin itself writes
+  (`bar`, `mark`, `break`, …). No book on disk has either shape.
+
 - **The twin of a named score engraves that score's staves.** `lysc ly --score NAME` and
   `lysc ly --all` wrote every score's twin with the file's FIRST `score` — its staves, its
   `fonts` and `layout` plans, its instrument names — and only the form followed the name. Two
