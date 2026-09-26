@@ -2327,7 +2327,7 @@ internal sealed class ElementCoordinator
         var geom = new TabStaffGeometry(fonts,
             staff.Tuning ?? TuningType.Guitar, 0, staff.TabSourceClef, staff.Transposition);
 
-        var byPosition = new (int Index, int Position)[ordered.Count];
+        var byPosition = new (int Index, int Position, bool? VoiceUp)[ordered.Count];
         for (int i = 0; i < ordered.Count; i++)
         {
             var tie = ordered[i];
@@ -2335,14 +2335,22 @@ internal sealed class ElementCoordinator
             int stringNum = item is ChordItem chord
                 ? geom.ChordNoteDigitColumn(chord, tie.StaffPosition).StringNum
                 : geom.NoteDigitColumn(tie.StartNote.Midi, tie.StartNote.StringNumber).StringNum;
-            byPosition[i] = (i, geom.StaffPositionOfString(stringNum));
+            // Inside a polyphonic span the voice props set the tie's side (NoteItem.VoiceStemUp).
+            // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — Tie.direction.
+            bool? voiceUp = item switch
+            {
+                NoteItem n => n.VoiceStemUp,
+                ChordItem c => c.VoiceStemUp,
+                _ => null,
+            };
+            byPosition[i] = (i, geom.StaffPositionOfString(stringNum), voiceUp);
         }
 
         // Bottom -> top on the TAB, which is the order the rule's front()/back() mean.
         Array.Sort(byPosition, (a, b) => a.Position.CompareTo(b.Position));
         var dirs = TieFormattingProblem.StandardDirections(
             byPosition.Select(p => p.Position).ToArray(),
-            new bool?[ordered.Count],
+            byPosition.Select(p => p.VoiceUp).ToArray(),
             TieDetails.Default.NeutralDirectionUp);
 
         var result = new bool[ordered.Count];
@@ -4143,9 +4151,18 @@ internal sealed class ElementCoordinator
         // were not scored, so a side toward them drew through the beams (Lab
         // sessions/p484/tab.lys). On a full tab they are scored now; on a numbers-only tab
         // there are no stems to cross.
-        int written = slur.IsPhrasing
-            ? ItemAt(voice, slur.StartMeasureIndex, slur.StartItemIndex)?.PhrasingSlurDirection ?? 0
-            : 0;
+        // Inside a polyphonic span the voice props set the side as they set the stems
+        // (NoteItem.VoiceStemUp): \voiceOne's slurs bow up, \voiceTwo's down.
+        // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — Slur.direction.
+        var startItem = ItemAt(voice, slur.StartMeasureIndex, slur.StartItemIndex);
+        int written = slur.IsPhrasing ? startItem?.PhrasingSlurDirection ?? 0 : 0;
+        if (written == 0 && startItem switch
+            {
+                NoteItem n => n.VoiceStemUp,
+                ChordItem c => c.VoiceStemUp,
+                _ => null,
+            } is { } voiceUp)
+            written = voiceUp ? 1 : -1;
         bool curveUp = written > 0;
         if (written == 0)
         {

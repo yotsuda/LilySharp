@@ -727,10 +727,14 @@ internal readonly struct TabStaffGeometry
         }
     }
 
+    // A SET direction: the writer's, else a polyphonic span's voice props (VoiceStemUp —
+    // never StemUpOverride, which is also the notation beam's pitch-derived answer).
+    // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — \voiceOne /
+    //   \voiceTwo set Stem.direction in the TabVoice as in any Voice.
     private static bool? ForcedStemUpOf(MusicItem item) => item switch
     {
-        NoteItem n => n.ForcedStemUp,
-        ChordItem c => c.ForcedStemUp,
+        NoteItem n => n.ForcedStemUp ?? n.VoiceStemUp,
+        ChordItem c => c.ForcedStemUp ?? c.VoiceStemUp,
         _ => null,
     };
 

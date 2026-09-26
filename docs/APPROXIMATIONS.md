@@ -77,7 +77,7 @@
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:1236** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
 - **:2127** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:3434** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:3442** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -169,7 +169,7 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2463** observed by: NOTHING. There is no ledger point on a tab tie's width,
+- **:2471** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:63** moving output no observer can check.
 - **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
@@ -343,8 +343,8 @@
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **:97** LILYSHARP-OWN: ink above / below the baseline for a label LilyPond does NOT spell in
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2452** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
-- **:2501** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
+- **:2460** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+- **:2509** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`

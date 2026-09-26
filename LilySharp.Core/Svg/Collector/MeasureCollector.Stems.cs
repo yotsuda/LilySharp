@@ -158,12 +158,16 @@ public sealed partial class MeasureCollector
                     // spacing reads it as the rest's pure voiced position.
                     // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set
                     int restDir = forced ? 1 : -1;
+                    // VoiceStemUp repeats the answer for a tab staff, which cannot read it
+                    // off StemUpOverride — see NoteItem.VoiceStemUp.
                     MusicItem? updated = items[ii] switch
                     {
-                        NoteItem n when n.ForcedStemUp is null && n.StemUpOverride != forced
-                            => n with { StemUpOverride = forced },
-                        ChordItem c when c.ForcedStemUp is null && c.StemUpOverride != forced
-                            => c with { StemUpOverride = forced },
+                        NoteItem n when n.ForcedStemUp is null
+                                && (n.StemUpOverride != forced || n.VoiceStemUp != forced)
+                            => n with { StemUpOverride = forced, VoiceStemUp = forced },
+                        ChordItem c when c.ForcedStemUp is null
+                                && (c.StemUpOverride != forced || c.VoiceStemUp != forced)
+                            => c with { StemUpOverride = forced, VoiceStemUp = forced },
                         // ...and a multi-measure rest: MultiMeasureRest is in the same list,
                         // so an R in a span's block draws at that voice's position
                         // (MultiMeasureRestEngraver reads the stamp; the spacing does not).
@@ -175,10 +179,12 @@ public sealed partial class MeasureCollector
                     };
                     if (updated == null)
                         continue;
-                    switch (updated)
+                    switch (items[ii])
                     {
-                        case NoteItem { BeamId: { } nb }: turnedBeams.Add(nb); break;
-                        case ChordItem { BeamId: { } cb }: turnedBeams.Add(cb); break;
+                        case NoteItem { BeamId: { } nb } before when before.StemUpOverride != forced:
+                            turnedBeams.Add(nb); break;
+                        case ChordItem { BeamId: { } cb } before when before.StemUpOverride != forced:
+                            turnedBeams.Add(cb); break;
                     }
                     items[ii] = updated;
                     measureChanged = true;

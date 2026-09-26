@@ -441,6 +441,7 @@ internal sealed record NoteItemRare
     public bool HasRepeatTie { get; init; }
     public bool? RepeatTieUp { get; init; }
     public bool? ForcedStemUp { get; init; }
+    public bool? VoiceStemUp { get; init; }
     public bool TabBelowRange { get; init; }
 }
 
@@ -746,6 +747,25 @@ public sealed record NoteItem : MusicItem
     {
         get => _rare?.ForcedStemUp;
         init { if (value != ForcedStemUp) _rare = (_rare ?? NoteItemRare.Empty) with { ForcedStemUp = value }; }
+    }
+
+    /// <summary>
+    /// The direction a polyphonic span's voice props set on this note's stem (<c>\voiceOne</c>
+    /// up, <c>\voiceTwo</c> down, …) — or null outside a span, for voices 5+, or when the writer
+    /// asked for a direction (<see cref="ForcedStemUp"/> wins).
+    /// </summary>
+    /// <remarks>
+    /// <c>MeasureCollector.ResolveVoiceStemDirections</c> writes it beside
+    /// <see cref="StemUpOverride"/>, which carries the same answer on a notation staff but is ALSO
+    /// the notation beam's pitch-derived direction — so a tab staff, whose stems read strings and
+    /// not pitches, cannot tell the two apart there. <c>TabStaffGeometry</c> reads this one as a
+    /// set direction: LilyPond's voice props reach the TabVoice's Stem like any other.
+    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — Stem.direction.
+    /// </remarks>
+    public bool? VoiceStemUp
+    {
+        get => _rare?.VoiceStemUp;
+        init { if (value != VoiceStemUp) _rare = (_rare ?? NoteItemRare.Empty) with { VoiceStemUp = value }; }
     }
 
     /// <summary>
@@ -1226,6 +1246,9 @@ public sealed record ChordItem : MusicItem
 
     /// <summary>A stem direction the writer asked for; see <see cref="NoteItem.ForcedStemUp"/>.</summary>
     public bool? ForcedStemUp { get; init; }
+
+    /// <summary>The voice props' stem direction; see <see cref="NoteItem.VoiceStemUp"/>.</summary>
+    public bool? VoiceStemUp { get; init; }
 
     /// <summary>Leading grace notes hanging left of this chord's column; see
     /// <see cref="NoteItem.LeadingGrace"/>.</summary>
