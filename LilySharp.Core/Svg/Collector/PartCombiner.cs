@@ -1788,9 +1788,52 @@ internal static class PartCombiner
             anySecond |= slot1[m].Length > 0;
         }
 
+        // The routed parts' beams are baked again at the direction \voiceOne / \voiceTwo gave
+        // their stems, as MeasureCollector.ResolveVoiceStemDirections does for a voice { }
+        // span: each part's collector baked PureBeamedStemTip at the direction ITS beam took
+        // from the pitches, and WithVoiceDirection turned the stems without it. Until session
+        // 651 part two's f'8[ f~] in audit/lpreg/pcglobal-probe kept an UP tip under its down
+        // stems, so the tie's outline boxed the stem above the head, nothing held the tie's
+        // right end off the next stem, and it ended 0.787 right of LilyPond's.
+        // LILYPOND-REF: lily/stem.cc:399-418 Stem::internal_pure_height (the actual direction).
+        RebakeRouted(measures0, VoiceContextId.CombineOne, forced: true);
+        RebakeRouted(measures1, VoiceContextId.CombineTwo, forced: false);
+
         var first = new Voice(one.Name, measures0.ToImmutable());
         if (!anySecond)
             return [first];
         return [first, new Voice(two.Name, measures1.ToImmutable())];
+    }
+
+    /// <summary>
+    /// Bakes the pure beamed stem tip again for every beam of the items routed to
+    /// <paramref name="context"/>, which WithVoiceDirection pointed <paramref name="forced"/>.
+    /// Only that context's items are the beams' members: the shared and solo items beside
+    /// them in the first voice come from the other part too, whose beam ids were numbered by
+    /// a separate collection.
+    /// </summary>
+    private static void RebakeRouted(
+        ImmutableArray<Measure>.Builder measures, VoiceContextId context, bool forced)
+    {
+        HashSet<int>? beams = null;
+        foreach (var measure in measures)
+            foreach (var item in measure.Items)
+            {
+                if (item.VoiceContext != context)
+                    continue;
+                int? beam = item switch
+                {
+                    NoteItem n => n.BeamId,
+                    ChordItem c => c.BeamId,
+                    _ => null,
+                };
+                if (beam is { } id)
+                    (beams ??= []).Add(id);
+            }
+        if (beams is null)
+            return;
+        MeasureCollector.RebakePureBeamedTips(measures, beams, forced,
+            static (measure, items) => measure with { Items = items },
+            item => item.VoiceContext == context);
     }
 }

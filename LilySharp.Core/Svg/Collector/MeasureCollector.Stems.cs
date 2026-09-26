@@ -227,10 +227,16 @@ public sealed partial class MeasureCollector
     /// LILYPOND-REF: lily/stem.cc:399-418 Stem::internal_pure_height — <c>dir =
     ///   get_grob_direction (me)</c>; <c>get_grob_direction (normal_stems[i]) == dir</c>.
     /// LILYPOND-REF: lily/stem.cc:449-458 Stem::cache_pure_height.
+    /// <para>
+    /// <paramref name="member"/> narrows which items count as the beams' members — the
+    /// combined staff's first voice holds part one's AND part two's items, whose beam ids
+    /// were numbered by separate collections and can coincide (PartCombiner.BuildVoices).
+    /// </para>
     /// </remarks>
-    private static void RebakePureBeamedTips(
+    internal static void RebakePureBeamedTips(
         ImmutableArray<Measure>.Builder measures, HashSet<int> beams, bool forced,
-        Func<Measure, ImmutableArray<MusicItem>, Measure> withItems)
+        Func<Measure, ImmutableArray<MusicItem>, Measure> withItems,
+        Func<MusicItem, bool>? member = null)
     {
         static int? BeamOf(MusicItem item) => item switch
         {
@@ -257,7 +263,8 @@ public sealed partial class MeasureCollector
         foreach (var measure in measures)
             foreach (var item in measure.Items)
             {
-                if (BeamOf(item) is not { } id || !beams.Contains(id) || StemUpOf(item) != forced)
+                if (BeamOf(item) is not { } id || !beams.Contains(id) || StemUpOf(item) != forced
+                    || member?.Invoke(item) == false)
                     continue;
                 if (Layout.SpacingRules.StemSpacingInfo(Bare(item), forced) is not { } band)
                     continue;
@@ -275,7 +282,7 @@ public sealed partial class MeasureCollector
             {
                 var item = measure.Items[ii];
                 if (BeamOf(item) is not { } id || !tips.TryGetValue(id, out var tip)
-                    || StemUpOf(item) != forced)
+                    || StemUpOf(item) != forced || member?.Invoke(item) == false)
                     continue;
                 MusicItem? updated = item switch
                 {
