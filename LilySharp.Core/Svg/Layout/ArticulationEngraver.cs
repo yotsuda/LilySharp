@@ -1247,9 +1247,12 @@ internal static class ArticulationEngraver
             // the renderer/skyline resolve the staff middle at their own boundary.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
             double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item,
-                NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), score.TextMetrics);
+                NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), fonts);
 
-            var seedBBox = GetSeedBBoxFor(effArt, score.TextMetrics);
+            // `fonts`, not score.TextMetrics: the score here is the one-voice walk Score, which
+            // carries no plan — a stepped fretFrame / tabTechnique was measured at the default
+            // size and drawn at the stepped one (Lab sessions/p646 fr3, 2026-09-26).
+            var seedBBox = GetSeedBBoxFor(effArt, fonts);
             var layout = new ArticulationLayout(
                 effArt.MeasureIndex,
                 effArt.ItemIndex,
@@ -2150,8 +2153,9 @@ internal static class ArticulationEngraver
             ArticulationType.DownBow => isAbove
                 ? GlyphMetrics.ArticDownBowAboveGlyph : GlyphMetrics.ArticDownBowBelowGlyph,
             ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
-            // Chord diagram: anchored at the grid bottom, ink rises 2.7.
-            ArticulationType.FretFrame => new GlyphMetrics.BBox(-1.7, 0, 2.9, 2.7),
+            // Chord diagram: anchored at the grid bottom; a six-string one at the default size
+            // (the instance's own box, spec and score size, is FrameBox).
+            ArticulationType.FretFrame => FretFrameGeometry.Box(null, 1.0),
             // The font's box, Y-extent (−0.5334 . 0.8000) = LilyPond's own grob extent
             // (after-line-breaking dump, articulation-snappizzicato book). It used to
             // fall to the half-space fallback below while the renderer drew primitives
@@ -2393,22 +2397,17 @@ internal static class ArticulationEngraver
     /// the occupancy a mark must clear changes. Other types fall back.
     /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
     /// </summary>
-    /// <summary>Real ink box of a chord diagram, anchored at the GRID BOTTOM
-    /// centre: 4 fret rows up (2.0), the o/x header above them (0.7), half the
-    /// string span each side plus the Nfr side-label allowance.</summary>
-    private static GlyphMetrics.BBox FrameBox(string? spec)
-    {
-        int strings = Math.Max(4, spec?.Length ?? 6);
-        double halfW = (strings - 1) * 0.55 / 2 + 0.3;
-        return new GlyphMetrics.BBox(-halfW, 0, halfW + 1.2, 2.7);
-    }
+    /// <summary>Real ink box of a chord diagram, anchored at the GRID BOTTOM centre, at the
+    /// score's size — the drawing's own dimensions (<see cref="FretFrameGeometry.Box"/>).</summary>
+    private static GlyphMetrics.BBox FrameBox(string? spec, ScoreTextMetrics fonts)
+        => FretFrameGeometry.Box(spec, FretFrameGeometry.Scale(fonts));
 
     /// <summary>Seed box for THIS articulation instance — frame boxes depend
-    /// on the spec, everything else on the type alone.</summary>
+    /// on the spec and the score's size, everything else on the type alone.</summary>
     private static GlyphMetrics.BBox GetSeedBBoxFor(
         ArticulationItem articulation, ScoreTextMetrics fonts) =>
         articulation.Type == ArticulationType.FretFrame
-            ? FrameBox(articulation.FrameSpec)
+            ? FrameBox(articulation.FrameSpec, fonts)
             : TabTechniqueLetterOf(articulation) is { } letter
                 ? TabTechniqueInkBox(fonts, letter)
                 : GetSeedBBox(articulation.Type, articulation.IsAbove);

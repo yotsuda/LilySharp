@@ -599,6 +599,13 @@ The keys, by group:
 | `numbers` | `barNumber` `fingering` `tuplet` `volta` `ottava` `bend` `tabTechnique` |
 | `notation` | `clefOctave` `meter` `tabFret` |
 
+**`fretFrame` sizes the whole chord diagram**, not only its "5fr" label. `fonts { fretFrame step +3 }`
+draws the grid, the dots and the o/x marks about 1.4× larger, and `step +6` draws them twice
+as large. With no entry, the diagram is LilyPond's default size: one staff space between
+strings and between frets. Chord diagrams stand side by side over their notes. When a bar is
+too narrow for its diagrams, the bar gets wider instead of the diagrams stacking (LilyPond's
+`\textLengthOn`, which the `.ly` export writes on each diagram).
+
 ⚠️ **`notation` is not reached by a `serif`/`sans` binding.** The
 octave digit under a `treble_8` clef, a compound meter's `+`, and tab fret numbers are
 notation that happens to be drawn as text — restyling them changes the notation rather

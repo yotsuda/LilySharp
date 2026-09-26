@@ -95,8 +95,28 @@ internal static class ArticulationSpacing
     {
         ArticulationType.Fermata or ArticulationType.FermataShort
             or ArticulationType.FermataLong => 75,
+        ArticulationType.FretFrame => TextScriptOutsideStaffPriority,
         _ => null,
     };
+
+    /// <summary>
+    /// The chord diagram's priority — it is no Script: LilyPond spells <c>@frame</c> as
+    /// <c>^\markup \fret-diagram-terse</c>, a TextScript, so it is a mover at TextScript's 450
+    /// and is placed AFTER the dynamics (250), the text spanners (350) and the ottava (400).
+    /// Neighbouring diagrams therefore stack, the later one clearing the earlier.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm TextScript outside-staff-priority 450.
+    /// MEASURED (Lab sessions/p646 fr2): two adjacent LP-size diagrams — LilyPond lifts the
+    /// second wholly above the first; Lily# overprinted them while the frame was a
+    /// priority-less script. Until 2026-09-26 the half-size frame rarely met its neighbour.
+    /// </remarks>
+    public const double TextScriptOutsideStaffPriority = 450;
+
+    /// <summary>Whether a script mover belongs to the 450 stage (a chord diagram, or a
+    /// script bumped to follow one) rather than the fermatas' 75 stage.</summary>
+    public static bool IsTextScriptStage(double outsideStaffPriority)
+        => outsideStaffPriority >= TextScriptOutsideStaffPriority;
 
     /// <summary>
     /// How far this script's own skyline is PADDED along the horizon before anything reads

@@ -228,11 +228,9 @@ internal static partial class SharedRenderer
     /// Spec is LOW string first ("x32010").
     /// LILYPOND-REF: LP \fret-diagram-terse / MusicXML &lt;frame&gt;.
     /// </summary>
-    /// <summary>The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own
-    /// device (LilyPond's fret-diagram markup sizes its label from the diagram's own size
-    /// property, which this frame does not carry); the label is drawn here and reserved
-    /// nowhere, so this is the one reader. Through the plan since 2026-09-08.</summary>
-    internal const double FretFrameLabelEm = 1.1;
+    /// <summary>The "Nfr" label's ENGRAVING em at the diagram's default size — the one home
+    /// is <see cref="FretFrameGeometry.LabelEm"/>, which also scales the grid with it.</summary>
+    internal const double FretFrameLabelEm = FretFrameGeometry.LabelEm;
 
     /// <summary>The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
     /// <see cref="FretFrameLabelEm"/> is: the bend arrow is Lily#'s own device and the label
@@ -241,10 +239,15 @@ internal static partial class SharedRenderer
 
     private static void DrawFretFrame(ScoreTextMetrics fonts, double cx, double bottomY, string spec, IDrawingContext gc)
     {
+        // Every length from the one home the reservation reads too, at the score's size.
+        double s = FretFrameGeometry.Scale(fonts);
         int strings = spec.Length;
-        const double dx = 0.55;   // string spacing
-        const double dy = 0.5;    // fret spacing
-        const int fretRows = 4;
+        double dx = FretFrameGeometry.StringSpacing(s);
+        double dy = FretFrameGeometry.FretSpacing(s);
+        const int fretRows = FretFrameGeometry.FretRows;
+        double thin = FretFrameGeometry.StringThickness(s);
+        double mark = FretFrameGeometry.MarkHalf(s);
+        double header = FretFrameGeometry.HeaderRise(s);
         double width = (strings - 1) * dx;
         double left = cx - width / 2;
         // The anchor Y comes from the script/skyline machinery (the frame's
@@ -254,43 +257,40 @@ internal static partial class SharedRenderer
         double bottom = top - fretRows * dy;
 
         // Base fret: shapes above the 4th fret shift down and get "Nfr".
-        int minFret = int.MaxValue;
-        foreach (var ch in spec)
-            if (ch is >= '1' and <= '9')
-                minFret = Math.Min(minFret, ch - '0');
-        int baseFret = minFret != int.MaxValue && minFret > 4 ? minFret : 1;
+        int baseFret = FretFrameGeometry.BaseFret(spec);
 
-        for (int s = 0; s < strings; s++)
-            gc.DrawLine(left + s * dx, top, left + s * dx, bottom, Color.Black, 0.05);
+        for (int i = 0; i < strings; i++)
+            gc.DrawLine(left + i * dx, top, left + i * dx, bottom, Color.Black, thin);
         for (int f = 0; f <= fretRows; f++)
             gc.DrawLine(left, top - f * dy, left + width, top - f * dy, Color.Black,
-                f == 0 && baseFret == 1 ? 0.16 : 0.05); // nut is thick at position 1
+                f == 0 && baseFret == 1 ? FretFrameGeometry.NutThickness(s) : thin); // nut is thick at position 1
 
         if (baseFret > 1)
-            gc.DrawText($"{baseFret}fr", left + width + 0.35, top - dy * 0.5,
+            gc.DrawText($"{baseFret}fr", left + width + FretFrameGeometry.LabelGap(s), top - dy * 0.5,
                 fonts.Size(TextRole.FretFrame, FretFrameLabelEm),
                 TextRole.FretFrame, fonts.Style(TextRole.FretFrame, FontStyle.Regular),
                 TextAnchor.Start, Color.Black);
 
-        for (int s = 0; s < strings; s++)
+        for (int i = 0; i < strings; i++)
         {
-            char ch = spec[s];
-            double sx = left + s * dx;
+            char ch = spec[i];
+            double sx = left + i * dx;
+            double hy = top + header;
             if (ch == 'x')
             {
-                gc.DrawLine(sx - 0.16, top + 0.5, sx + 0.16, top + 0.18, Color.Black, 0.07);
-                gc.DrawLine(sx - 0.16, top + 0.18, sx + 0.16, top + 0.5, Color.Black, 0.07);
+                gc.DrawLine(sx - mark * 0.7, hy + mark * 0.7, sx + mark * 0.7, hy - mark * 0.7, Color.Black, 1.4 * thin);
+                gc.DrawLine(sx - mark * 0.7, hy - mark * 0.7, sx + mark * 0.7, hy + mark * 0.7, Color.Black, 1.4 * thin);
             }
             else if (ch is '0' or 'o')
             {
-                gc.DrawCircle(sx, top + 0.34, 0.15, Color.Black);
-                gc.DrawCircle(sx, top + 0.34, 0.09, Color.White);
+                gc.DrawCircle(sx, hy, mark * 0.85, Color.Black);
+                gc.DrawCircle(sx, hy, mark * 0.85 - 1.4 * thin, Color.White);
             }
             else if (ch is >= '1' and <= '9')
             {
                 int fret = ch - '0' - (baseFret - 1);
                 if (fret is >= 1 and <= fretRows)
-                    gc.DrawCircle(sx, top - (fret - 0.5) * dy, 0.17, Color.Black);
+                    gc.DrawCircle(sx, top - (fret - 0.5) * dy, FretFrameGeometry.DotRadius(s), Color.Black);
             }
         }
     }

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1369,6 +1369,93 @@ internal static partial class SpacingRules
                     return true;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Chord diagrams (<c>@frame(…)</c>) stand SIDE BY SIDE: each one's box is a rod against
+    /// the next diagram's on the same staff — adjacent or several columns on — and against
+    /// both bar edges, so a bar too narrow for its diagrams grows instead of the diagrams
+    /// stacking. Heights are not compared: a diagram clears its neighbour at any height.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN by the owner's decision (session 646: "コード図は、横に並べてほしい。
+    /// 入らないときは、小節の長さを伸ばす"). LilyPond's default lets a TextScript overhang and
+    /// stacks colliding ones outward (Lab sessions/p646 fr2); this is its <c>\textLengthOn</c>
+    /// instead — the markup joins the column's horizontal extent with an infinite
+    /// extra-spacing-height — and the twin writes <c>\textLengthOn</c> to match.
+    /// LILYPOND-REF: ly/property-init.ly textLengthOn — TextScript extra-spacing-width
+    ///   (-0.0 . 0.4) "0.4 staff-space between adjacent texts", extra-spacing-height
+    ///   (-inf.0 . +inf.0).
+    /// LILYPOND-REF: lily/spacing-spanner.cc:315-316 generate_springs — the 0.1 column padding
+    ///   every rod carries.
+    /// ⚠️ The rods are priced to the BAR EDGES (springs 0 and Count), as the chord row's are
+    /// (<see cref="ApplyChordRowSpacing"/>): the springs are per measure, so no rod spans the
+    /// bar column, and two diagrams either side of a bar line clear it each.
+    /// </remarks>
+    public static ImmutableArray<Spring> ApplyFretFrameSpacing(
+        Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> timings,
+        Model.Staff staff,
+        ImmutableArray<ArticulationItem> articulations,
+        int measureIndex,
+        int staffIndex)
+    {
+        if (articulations.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
+            return springs;
+
+        // textLengthOn's extra-spacing-width (-0.0 . 0.4): the gap is owed on the right only.
+        const double TextLengthRightExtra = 0.4;
+        // Per column: how far its diagram reaches left and right of the column (0 = none).
+        double[]? left = null, right = null;
+        double scale = FretFrameGeometry.Scale(fonts);
+        var voices = staff.Voices;
+        foreach (var art in articulations)
+        {
+            if (art.Type != Syntax.ArticulationType.FretFrame || art.StaffIndex != staffIndex
+                || art.MeasureIndex != measureIndex || art.VoiceIndex >= voices.Length
+                || measureIndex >= voices[art.VoiceIndex].Measures.Length)
+                continue;
+            var items = voices[art.VoiceIndex].Measures[measureIndex].Items;
+            if (art.ItemIndex >= items.Length)
+                continue;
+            Fraction onset = Fraction.Zero;
+            for (int oi = 0; oi < art.ItemIndex; oi++)
+                onset += items[oi].Duration;
+            int t = -1;
+            for (int c = 0; c < timings.Count; c++)
+                if (timings[c] == onset)
+                {
+                    t = c;
+                    break;
+                }
+            if (t < 0)
+                continue;
+            var box = FretFrameGeometry.Box(art.FrameSpec, scale);
+            left ??= new double[timings.Count];
+            right ??= new double[timings.Count];
+            left[t] = Math.Max(left[t], -box.Left);
+            right[t] = Math.Max(right[t], box.Right + TextLengthRightExtra);
+        }
+        if (left is null || right is null)
+            return springs;
+
+        const double rodPadding = 0.1;
+        var rods = new List<(int Left, int Right, double Distance)>();
+        int prev = -1;
+        for (int t = 0; t < timings.Count; t++)
+        {
+            if (left[t] <= 0 && right[t] <= 0)
+                continue;
+            // spring s spans column s−1 → column s, so columns a → b are springs a+1 … b, and
+            // the bar's left edge → column b is springs 0 … b.
+            rods.Add(prev < 0
+                ? (0, t + 1, left[t] + rodPadding)
+                : (prev + 1, t + 1, right[prev] + left[t] + rodPadding));
+            prev = t;
+        }
+        rods.Add((prev + 1, timings.Count + 1, right[prev] + rodPadding));
+        return SpringSolver.ApplyRods(springs, rods);
     }
 
 

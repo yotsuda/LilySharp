@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -3686,16 +3686,32 @@ public sealed class LilyPondExporter
     /// <remarks>
     /// LILYPOND-REF: scm/fret-diagrams.scm:1232-1270 fret-diagram-terse — "x;x;o;2;3;2;" is the
     /// D chord; x mute, o open, a number a fret.
+    /// <para>
+    /// <c>fonts { fretFrame step ±n }</c> scales the page's whole diagram by 2^(n/6)
+    /// (FretFrameGeometry.Scale), and the markup's <c>size</c> is that same factor — the
+    /// FretBoard <c>font-size</c> the font block also writes does not reach a markup diagram
+    /// (MEASURED, Lab sessions/p646 fr3: the LP page was fr2's to the pixel).
+    /// LILYPOND-REF: scm/fret-diagrams.scm make-fret-diagram — size scales the grid.
+    /// </para>
     /// </remarks>
-    private static string? FretDiagram(MusicMarkSyntax mk)
+    private string? FretDiagram(MusicMarkSyntax mk)
     {
         if (Semantics.AnnotationValues.Frame(mk) is not { } spec)
             return null;
         var terse = new StringBuilder();
         foreach (char ch in spec)
             terse.Append(ch == '0' ? 'o' : ch).Append(';');
-        return (mk.ForcedAbove == false ? "_" : "^")
-            + "\\markup \\fret-diagram-terse \"" + terse + "\"";
+        string size = _fontPlan.WrittenStep(Rendering.TextRole.FretFrame) is { } step && step != 0
+            ? "\\override #'(size . "
+              + Math.Pow(2, step / 6.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + ") "
+            : "";
+        // The page stands diagrams side by side and widens the bar to fit them
+        // (SpacingRules.ApplyFretFrameSpacing) — LilyPond's \textLengthOn, tweaked onto the
+        // diagram alone so an ordinary ^"text" keeps overhanging as it does on the page.
+        // LILYPOND-REF: ly/property-init.ly textLengthOn.
+        return "-\\tweak extra-spacing-width #'(-0.0 . 0.4) -\\tweak extra-spacing-height #'(-inf.0 . +inf.0) "
+            + (mk.ForcedAbove == false ? "_" : "^")
+            + "\\markup " + size + "\\fret-diagram-terse \"" + terse + "\"";
     }
 
     /// <summary>

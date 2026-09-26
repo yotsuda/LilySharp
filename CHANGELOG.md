@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **Fret diagrams are LilyPond's size, stand side by side, and can be resized.** A chord
+  diagram used to be drawn at about half LilyPond's size and was hard to read. It now has
+  one staff space between strings and between frets, as in LilyPond. `fonts { fretFrame
+  step ±n }` scales the whole diagram: `step +6` doubles it. Neighbouring diagrams no
+  longer overprint each other. They sit side by side, and a bar too narrow for them gets
+  wider. The `.ly` export writes the same size and spacing.
+
 - **A fret diagram stands over its chord.** `@frame(…)` took the side opposite the stem
   like a staccato, so a low chord's diagram hung under the staff; it is above now, and
   `@frame(…).down` puts it below.

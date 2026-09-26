@@ -410,14 +410,19 @@ internal static class OutsideStaffStacker
         // both directions, axis-group-interface.cc:945-972 looping over UP and DOWN), and
         // it comes BEFORE the dynamics at 250, so a dynamic under a fermata clears the
         // fermata where it has landed.
-        var adjArticulations = articulations;
-        if (!articulations.IsDefaultOrEmpty)
+        var adjArticulations = PlaceBelowScriptMovers(articulations, textScriptStage: false);
+
+        ImmutableArray<ArticulationLayout> PlaceBelowScriptMovers(
+            ImmutableArray<ArticulationLayout> articulations, bool textScriptStage)
         {
+            if (articulations.IsDefaultOrEmpty || !anyBelowScriptMover)
+                return articulations;
             var artBuilder = articulations.ToBuilder();
             for (int i = 0; i < artBuilder.Count; i++)
             {
                 var a = artBuilder[i];
-                if (a.IsAbove || a.OutsideStaffPriority is null
+                if (a.IsAbove || a.OutsideStaffPriority is not { } osp
+                    || ArticulationSpacing.IsTextScriptStage(osp) != textScriptStage
                     || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
                 double off = applyStaffOffsets && sysIdx >= 0 && sysIdx < staffYBySystem.Count
@@ -428,7 +433,7 @@ internal static class OutsideStaffStacker
                 if (move != 0)
                     artBuilder[i] = a with { YUp = a.YUp + move };
             }
-            adjArticulations = artBuilder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
+            return artBuilder.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild
         }
 
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
@@ -604,6 +609,10 @@ internal static class OutsideStaffStacker
 
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
         // TextSpanner direction=UP) by StackAboveStaff, not here.
+
+        // --- Priority 450: a chord diagram forced below (@frame(…).down) — a TextScript,
+        // so AFTER the dynamics (ArticulationSpacing.TextScriptOutsideStaffPriority).
+        adjArticulations = PlaceBelowScriptMovers(adjArticulations, textScriptStage: true);
         return (adjDynamics, adjHairpins, adjArticulations, adjTrills);
     }
 
@@ -1703,11 +1712,14 @@ internal static class OutsideStaffStacker
         // order; each pass clears the occupancy seeded/accumulated by the earlier ones.
         var adjTrills = PlaceTrills(trills, trackers, measureToSystem);
         var adjArticulations = PlaceArticulations(
-            articulations, trackers, measureToSystem, systems);
+            articulations, trackers, measureToSystem, systems, textScriptStage: false);
         var adjBarNumbers = PlaceBarNumbers(fonts, barNumbers, trackers, measureToSystem, topStaff, systems);
         var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems);
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
+        // 450: a chord diagram (@frame) is a TextScript — ArticulationSpacing.TextScriptOutsideStaffPriority.
+        adjArticulations = PlaceArticulations(
+            adjArticulations, trackers, measureToSystem, systems, textScriptStage: true);
         var adjCustomTexts = PlaceCustomTexts(fonts, customTexts, trackers, measureToSystem, systems);
         var adjPartCombine = PlacePartCombineTexts(
             fonts, partCombineTexts, trackers, measureToSystem, systems);
@@ -2330,7 +2342,8 @@ internal static class OutsideStaffStacker
     /// </remarks>
     private static ImmutableArray<ArticulationLayout> PlaceArticulations(
         ImmutableArray<ArticulationLayout> articulations, Func<int, int, OutsideStaffSkylines> trackers,
-        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems)
+        IReadOnlyDictionary<int, int> measureToSystem, ImmutableArray<SystemLayout> systems,
+        bool textScriptStage)
     {
         if (articulations.IsDefaultOrEmpty)
             return articulations;
@@ -2338,7 +2351,8 @@ internal static class OutsideStaffStacker
         for (int i = 0; i < b.Count; i++)
         {
             var a = b[i];
-            if (!a.IsAbove || a.OutsideStaffPriority is null
+            if (!a.IsAbove || a.OutsideStaffPriority is not { } osp
+                || ArticulationSpacing.IsTextScriptStage(osp) != textScriptStage
                 || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                 continue;
             // Stack in system-relative Y-up: a.YUp is above this staff's WITHIN-SYSTEM

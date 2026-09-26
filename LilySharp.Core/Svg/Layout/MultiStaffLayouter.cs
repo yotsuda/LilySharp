@@ -2265,9 +2265,15 @@ internal sealed class MultiStaffLayouter
                 foreach (var aStaff in aGroup.Staves)
                 {
                     if (measureIndex < aStaff.PrimaryVoice.Measures.Length)
+                    {
                         springs = SpacingRules.ApplyArticulationSpacing(
                             springs, allTimings, aStaff,
                             score.Articulations, measureIndex, artStaffIndex);
+                        // Chord diagrams side by side, the bar widening to fit them.
+                        springs = SpacingRules.ApplyFretFrameSpacing(
+                            score.TextMetrics, springs, allTimings, aStaff,
+                            score.Articulations, measureIndex, artStaffIndex);
+                    }
                     artStaffIndex++;
                 }
         }
