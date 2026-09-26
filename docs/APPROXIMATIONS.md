@@ -14,14 +14,14 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 166 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **285** | |
+| `OWN` | 167 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **286** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 17 |
+| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 18 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
@@ -98,7 +98,7 @@
 - **:3990** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1173** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2158** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:2183** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（166 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（167 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2654** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -412,19 +412,20 @@
 - **:641** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
 - **:1500** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **:1535** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
-- **:1650** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
-- **:1667** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
-- **:2058** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2325** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2529** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2624** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2635** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2681** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:1654** (a sign the player must not miss). LILYSHARP-OWN with the composition.
+- **:1675** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
+- **:1692** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
+- **:2083** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
+- **:2350** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2554** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2649** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2660** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2706** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1176** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3322** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:3334** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

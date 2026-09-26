@@ -300,8 +300,11 @@ public class MarkReserveVersusDrawTests
         double textX = double.Parse(text.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         double textY = double.Parse(text.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
         var glyph = Regex.Match(svg,
-            @"<text class=""music"" x=""([\d.]+)"" y=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
+            @"<text class=""music"" x=""([\d.]+)"" y=""([\d.]+)"" font-size=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
         Assert.True(glyph.Success, "the To-Coda pair drew no coda glyph");
+        // The sign at the music size the arrival's coda is drawn at (4.00) — a sign the
+        // player must not miss. It was 0.8 of that until 2026-09-26.
+        Assert.Equal("4.00", glyph.Groups[3].Value);
         double glyphX = double.Parse(glyph.Groups[1].Value,
             System.Globalization.CultureInfo.InvariantCulture);
         double glyphY = double.Parse(glyph.Groups[2].Value,

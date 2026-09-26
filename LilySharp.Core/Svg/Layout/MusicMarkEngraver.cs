@@ -1640,11 +1640,36 @@ internal static class MusicMarkEngraver
         // off the word (the owner: too far apart, 2026-09-26).
         double textW = fonts.Advance("To", PlainMarkEm(fonts, MusicMarkType.ToCoda),
             TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda)) + ToCodaPrefixGap;
-        // The glyph's ink width at the draw's size (0.8 of the music size). It was an
-        // approximate 1.344 until 2026-09-26, under the ink's 1.63, and the renderer set the
-        // glyph's CENTRED origin at the text's end, so half of it sat on the "o" of "To".
-        double glyphW = (GlyphMetrics.MarkCoda.Right - GlyphMetrics.MarkCoda.Left) * 0.8;
+        // The glyph's ink width at the draw's size. It was an approximate 1.344 until
+        // 2026-09-26, under the ink's 1.63, and the renderer set the glyph's CENTRED origin
+        // at the text's end, so half of it sat on the "o" of "To".
+        double glyphW = (GlyphMetrics.MarkCoda.Right - GlyphMetrics.MarkCoda.Left) * ToCodaGlyphScale;
         return (textW, glyphW);
+    }
+
+    /// <summary>
+    /// The coda sign's size in "To 𝄌", as a fraction of the music size the arrival's sign
+    /// is drawn at. 1 — the same sign at both ends of the jump. It was 0.8 until
+    /// 2026-09-26, and the owner asked for the departure to read as clearly as the arrival
+    /// (a sign the player must not miss). LILYSHARP-OWN with the composition.
+    /// </summary>
+    internal const double ToCodaGlyphScale = 1.0;
+
+    /// <summary>
+    /// The ink box of the whole "To 𝄌" composition about its anchor — centred in X, and
+    /// Y-up about the text baseline — the ONE description the stacker, the page's
+    /// silhouette and the co-placed label's union all reserve. Since the sign is taller
+    /// than the word, the sign sets both the top and the bottom.
+    /// </summary>
+    internal static (double HalfWidth, double Bottom, double Top) ToCodaInk(ScoreTextMetrics fonts)
+    {
+        var (textW, glyphW) = ToCodaStencilWidths(fonts);
+        var (textBottom, textTop) = fonts.Ink("To", PlainMarkEm(fonts, MusicMarkType.ToCoda),
+            TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
+        double lift = ToCodaGlyphLift(fonts);
+        return ((textW + glyphW) / 2,
+            Math.Min(textBottom, lift + GlyphMetrics.MarkCoda.Bottom * ToCodaGlyphScale),
+            Math.Max(textTop, lift + GlyphMetrics.MarkCoda.Top * ToCodaGlyphScale));
     }
 
     // The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the

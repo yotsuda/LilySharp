@@ -820,7 +820,7 @@ internal static partial class SharedRenderer
             // "To" followed by the coda SIGN (not the word "Coda"), centered as a
             // group. LILYPOND-REF: the al-coda text is set with the coda glyph.
             double ts = MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType);
-            double gs = FontSize * 0.8;
+            double gs = FontSize * MusicMarkEngraver.ToCodaGlyphScale;
             const string prefix = "To";
             // The centring measures what the next line draws — one composition, read
             // from the one home (ToCodaStencilWidths), which the union placement's

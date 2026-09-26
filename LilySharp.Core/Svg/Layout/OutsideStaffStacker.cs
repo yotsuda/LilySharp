@@ -3005,9 +3005,11 @@ internal static class OutsideStaffStacker
             // asking TextOutlineSkylines for the outline of "Ped." would trace a serif
             // string nobody draws. It falls through to MusicMarkExtents, which prices the
             // glyphs' own LILC boxes — the boxes LilyPond juxtaposes them by.
+            // "To 𝄌" too: its outline would trace the words "To Coda", which nobody draws,
+            // and miss the sign that stands taller than the word (MusicMarkEngraver.ToCodaInk).
             if (!m.IsSymbol && !MusicMarkEngraver.IsGlyphPedal(m.MarkType)
                 && m.MarkType is not (MusicMarkType.Rehearsal
-                    or MusicMarkType.SectionLabel or MusicMarkType.Tempo))
+                    or MusicMarkType.SectionLabel or MusicMarkType.Tempo or MusicMarkType.ToCoda))
             {
                 double fs = MusicMarkEngraver.PlainMarkEm(fonts, m.MarkType);
                 var style = MusicMarkEngraver.TextStyleOf(fonts, m.MarkType);
@@ -3029,13 +3031,16 @@ internal static class OutsideStaffStacker
             if (signOfLabel.TryGetValue(i, out int signIdx))
             {
                 var sign = b[signIdx];
-                // The DRAWN composition's width ("To " + the coda glyph), from the
-                // same home the renderer reads — Advance(sign.Text) prices the word
-                // "Coda" nobody draws and its extra reach cleared neighbouring
-                // labels the ink never touches (ToCodaStencilWidths' remarks).
-                var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
-                double signHalfW = (textW + glyphW) / 2;
-                x0 = Math.Min(x0, sign.X - signHalfW - m.X);
+                // The DRAWN composition ("To" + the coda glyph), from the same home the
+                // renderer reads — Advance(sign.Text) prices the word "Coda" nobody draws
+                // and its extra reach cleared neighbouring labels the ink never touches
+                // (ToCodaStencilWidths' remarks). Its height too: the full-size sign
+                // (2026-09-26) reaches under the label box's bottom edge.
+                var signInk = MusicMarkEngraver.ToCodaInk(fonts);
+                double ds = sign.YUp - m.YUp;
+                x0 = Math.Min(x0, sign.X - signInk.HalfWidth - m.X);
+                top = Math.Max(top, ds + signInk.Top);
+                bottom = Math.Max(bottom, -(ds + signInk.Bottom));
             }
             // A label with a tempo beside it (`marks beside`) is priced as that union too:
             // the tempo's stencil box — its ink about ITS baseline, which stands d below the
@@ -3118,6 +3123,13 @@ internal static class OutsideStaffStacker
                 double halfW = MusicMarkEngraver.LabelBoxHalfWidth(fonts, m.MarkType, m.Text, m.Boxed);
                 double halfH = MusicMarkEngraver.LabelBoxHalfHeight(fonts, m.MarkType, m.Text, m.Boxed);
                 return (-halfW, halfW, halfH, halfH);
+            }
+            case MusicMarkType.ToCoda:
+            {
+                // "To 𝄌", centred on its anchor, baseline-anchored: the composition's own
+                // box from its one home (the sign sets the top and the bottom).
+                var ink = MusicMarkEngraver.ToCodaInk(fonts);
+                return (-ink.HalfWidth, ink.HalfWidth, ink.Top, -ink.Bottom);
             }
             case MusicMarkType.Tempo:
             {
