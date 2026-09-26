@@ -184,7 +184,9 @@ internal static class CombinedStaffReaddress
                     VoiceIndex = to.VoiceIndex,
                     MeasureIndex = to.MeasureIndex,
                     ItemIndex = to.ItemIndex,
-                }),
+                },
+                d => (d.StaffIndex, d.VoiceIndex, d.MeasureIndex, d.ItemIndex,
+                      d.Level, d.Text, d.IsAbove, d.IsExpressiveText)),
             Articulations = MoveEach(content.Articulations, byStaff,
                 a => new VoiceItemAddress(a.VoiceIndex, a.MeasureIndex, a.ItemIndex),
                 a => a.StaffIndex,
@@ -193,7 +195,13 @@ internal static class CombinedStaffReaddress
                     VoiceIndex = to.VoiceIndex,
                     MeasureIndex = to.MeasureIndex,
                     ItemIndex = to.ItemIndex,
-                }),
+                },
+                // A chord member's own mark (a fingering, a string) belongs to ITS note —
+                // two of them at one column are two notes' marks, never a duplicate.
+                a => a.IsChordMember
+                    ? null
+                    : (a.StaffIndex, a.VoiceIndex, a.MeasureIndex, a.ItemIndex, a.Type,
+                       a.IsAbove, a.DirectionForced, a.BendSemitones, a.FrameSpec, a.PluckLetter)),
             TupletBrackets = MoveEachSpan(content.TupletBrackets, byStaff,
                 t => (new VoiceItemAddress(t.VoiceIndex, t.MeasureIndex, t.StartNoteIndex),
                       new VoiceItemAddress(t.VoiceIndex, t.MeasureIndex, t.EndNoteIndex)),
@@ -224,22 +232,35 @@ internal static class CombinedStaffReaddress
     /// One list of single-anchor items, with the ones on a combined staff moved to where
     /// their note went and the ones whose note is engraved by nobody dropped.
     /// </summary>
+    /// <param name="sameMark">What makes two moved items the same mark (null: never a
+    /// duplicate). Where the combiner merges both parts' notes into one chord column
+    /// (<c>PartCombineConfig.Chords</c>), both parts' marks land on that column — and an
+    /// `@f` or a fermata written in both parts is ONE event there, as two identical events
+    /// in one LilyPond Voice are one grob. Only the first of a set is kept; a mark the two
+    /// parts write DIFFERENTLY is not a duplicate and both stay.</param>
     private static ImmutableArray<T> MoveEach<T>(
         ImmutableArray<T> items,
         Dictionary<int, CombinedStaffAddressing> byStaff,
         Func<T, VoiceItemAddress> addressOf,
         Func<T, int> staffOf,
-        Func<T, VoiceItemAddress, T> moved)
+        Func<T, VoiceItemAddress, T> moved,
+        Func<T, object?> sameMark)
     {
         if (items.IsDefaultOrEmpty || !items.Any(i => byStaff.ContainsKey(staffOf(i))))
             return items;
         var built = ImmutableArray.CreateBuilder<T>(items.Length);
+        var seen = new HashSet<object>();
         foreach (var item in items)
         {
             if (!byStaff.TryGetValue(staffOf(item), out var map))
                 built.Add(item);
             else if (map.Translate(addressOf(item)) is { } to)
-                built.Add(moved(item, to));
+            {
+                var placed = moved(item, to);
+                if (sameMark(placed) is { } key && !seen.Add(key))
+                    continue;
+                built.Add(placed);
+            }
         }
         return built.ToImmutable();
     }

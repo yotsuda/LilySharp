@@ -251,6 +251,34 @@ public class CombinedStaffTests
     // so part one's SIXTEEN-bar rest is cut at bar 16, where part two begins its own.
     // LILYPOND-REF: scm/part-combiner.scm:535-552 analyze-unsynced-silence.
 
+    /// <summary>
+    /// Where the two parts merge into chords, the same dynamic / script written in BOTH is
+    /// one mark on the merged column — LilyPond 2.26.0 draws one `f` and one fermata for this
+    /// book's twin (`\partCombine`), and Lily# drew each twice until 2026-09-26. A mark only
+    /// one part writes, or the two write differently, is not a duplicate.
+    /// </summary>
+    [Fact]
+    public void AMarkBothPartsWriteOnAChordColumn_IsEngravedOnce()
+    {
+        var tree = TestPaper.ParseAtIndentZero(Defaults + """
+            part pa { clef treble }
+            part pb { clef treble }
+            section A {
+              pa { e'4@f g' a'2@accent | g'1@fermata | }
+              pb { c'4@f e' f'2@staccato | e'1@fermata | }
+            }
+            form main { ~A }
+            score main { combinedStaff { pa pb } }
+            """);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+
+        Assert.Single(score.Dynamics, d => d.Text == "f");
+        Assert.Single(score.Articulations, a => a.Type == ArticulationType.Fermata);
+        // Different marks on one column both stay.
+        Assert.Single(score.Articulations, a => a.Type == ArticulationType.Accent);
+        Assert.Single(score.Articulations, a => a.Type == ArticulationType.Staccato);
+    }
+
     /// <summary>The multi-measure-rest runs of a combined staff, as the engraver groups them.</summary>
     private static ImmutableArray<MmrRun> CombinedRuns(string parts, string render)
     {
