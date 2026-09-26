@@ -104,4 +104,33 @@ public sealed class SlurEdgeBeamAndAccidentalTests
         var piece = doc.Page.Beziers.OrderBy(b => b.P0.X).First();
         Assert.Equal(0.7056, piece.P0.Y - piece.Centreline1.Y, 3);
     }
+
+    // A slur that leaves a note beamed on its inner side starts off the BEAM at the drawn
+    // stem's x (slur-scoring.cc:549-554 stem_extent_[Y][dir_]) — not at the head centre, which
+    // sits 0.65 along a sloped beam. LilyPond 2.26.0 (Lab sessions/p654 beamslur, the S1 book
+    // slur-voices reduced): both slurs start 7.2315 above / 5.2315 below the middle line;
+    // Lily# read the beam at the head centre until session 654 (0.077 off on the lower one).
+    [Fact]
+    public void ASlurOffABeam_StartsAtTheStemsX()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            part m {
+              section A { voice { c''8( b' a' g' f'4 e') } { e8( f g a b4 c') } }
+            }
+            form main { A }
+            score main { staff m }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        using var doc = new RecordingDocumentContext();
+        SharedRenderer.RenderTo(score, layout, doc);
+
+        double middle = Assert.Single(TwinBeamSweep.StavesOf(doc.Page)).Middle;
+        var bows = doc.Page.Beziers.OrderBy(b => b.P0.Y).ToList();
+        Assert.Equal(2, bows.Count);
+        Assert.Equal(7.231495, middle - bows[0].P0.Y, 0.001);
+        Assert.Equal(-5.231495, middle - bows[1].P0.Y, 0.001);
+    }
 }

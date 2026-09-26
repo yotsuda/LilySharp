@@ -1819,8 +1819,8 @@
       "probe": "slur-beam-reserve.ly",
       "score": "A",
       "lilypond": 2.6731763847604983,
-      "residual": -0.066124847,
-      "why": "The text's floor is LilyPond's since session 640 (@text is a TextScript: padding 0.3, staff-padding 0.5, its own outline, 2.2 em -- with the slur taken out both engines read 2.55, Lab sessions/p639/sb-noslur.ly), and the outside-staff pass lifts it off the slur's end with TextScript's horizontal padding 0.2 (define-grobs.scm:3806): 2.607052 against 2.673176. The -0.066 left is the slur's end region under the text's left edge (not decomposed). History: session 639 read 3.29 (+0.617, the DynamicText floor); before it 3.931767 (+1.258590), the skyline's slurs laid out with NO beams (MultiStaffLayouter.StaffSlurLayouts), the reserved bow on an unbeamed stem tip above the drawn one (lily/slur-scoring.cc:549-557)."
+      "residual": -0.062433619,
+      "why": "The text's floor is LilyPond's since session 640 (@text is a TextScript: padding 0.3, staff-padding 0.5, its own outline, 2.2 em -- with the slur taken out both engines read 2.55, Lab sessions/p639/sb-noslur.ly), and the outside-staff pass lifts it off the slur's end with TextScript's horizontal padding 0.2 (define-grobs.scm:3806): 2.607052 against 2.673176. The -0.062 left is the slur's end region under the text's left edge (not decomposed; session 654 took 0.0037 off it by reading the beamed slur end at the drawn stem's x, not the head centre). History: session 639 read 3.29 (+0.617, the DynamicText floor); before it 3.931767 (+1.258590), the skyline's slurs laid out with NO beams (MultiStaffLayouter.StaffSlurLayouts), the reserved bow on an unbeamed stem tip above the drawn one (lily/slur-scoring.cc:549-557)."
     },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",

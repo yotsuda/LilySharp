@@ -4192,7 +4192,10 @@ internal sealed class ElementCoordinator
                     segStartY = RestBoundBaseY(sRest);
                 else if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, slur.StartMeasureIndex, slur.StartItemIndex,
-                        segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
+                        // At the DRAWN STEM, as every reader of the beam face (not the head
+                        // centre segStartX: a sloped beam is 0.65 x slope off there).
+                        leftEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0,
+                        staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
@@ -4211,7 +4214,8 @@ internal sealed class ElementCoordinator
                     segEndY = RestBoundBaseY(eRest);
                 else if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
                     && TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex,
-                        segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
+                        rightEdgeInfo.StemXLo + EngravingDefaults.StemThickness / 2.0,
+                        staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
