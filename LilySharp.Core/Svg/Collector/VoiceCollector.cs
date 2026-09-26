@@ -154,7 +154,15 @@ internal sealed class VoiceCollector
                 // stacked at 16.2208 / 17.0831), and Lily# still draws them on top of
                 // each other. What the ticket needs is a column of grace time, beside
                 // this one — not grace heads inside this one.
-                if (item is not RestItem && !item.GraceTime)
+                // ⚠️ AND NOT A ZERO-LENGTH DIRECTIVE. A clef / key / time change is an item
+                // of the measure with no notehead, and it stands at the moment of the note
+                // after it: in a column it was a third and fourth "head" beside one note from
+                // each voice, and the solver then took the pair for a cluster and set the
+                // unison side by side instead of sharing its head — MEASURED, a
+                // condensedStaff's unison c'' at the head of a bar the section reset reverts
+                // to 4/4 (Lab corpora partial.lys bar 4, 2026-09-26), where the same unison
+                // without the change shares one head as LilyPond's does.
+                if (item is not RestItem && !item.GraceTime && item.Duration > Fraction.Zero)
                 {
                     if (!timeline.TryGetValue(timePosition, out var entries))
                     {

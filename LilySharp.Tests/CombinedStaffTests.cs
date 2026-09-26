@@ -279,6 +279,40 @@ public class CombinedStaffTests
         Assert.Single(score.Articulations, a => a.Type == ArticulationType.Staccato);
     }
 
+    /// <summary>
+    /// A unison at the head of a bar that opens with a meter change shares its head like any
+    /// other: the change is a zero-length directive, not a third head in the column.
+    /// </summary>
+    /// <remarks>
+    /// Lab corpora partial.lys (user report, 2026-09-26): `form main { A A }` with A ending
+    /// in 2/4, so the second A's pickup bar opens on the section reset's 4/4 change. Its
+    /// unison c'' was drawn as two heads side by side, where bar 1's shared one — and where
+    /// LilyPond 2.26.0 shares both.
+    /// </remarks>
+    [Fact]
+    public void AUnisonAfterAMeterChange_SharesItsHead()
+    {
+        var tree = TestPaper.ParseAtIndentZero("""
+            part melody { clef treble }
+            part x { clef treble octave 5 }
+            section A {
+              partial 2
+              melody { c'4 d | e2 f | time 2/4 g2 }
+              x { c4 f | g2 a | time 2/4 b2 | }
+            }
+            form main { A A }
+            score main { condensedStaff { x melody } }
+            """);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var voices = score.StaffGroups[0].Staves[0].Voices;
+
+        // Bar 1 and bar 4 are the same pickup — the second after the 2/4 bar's revert.
+        var bar4 = voices[0].Measures[3];
+        Assert.Contains(bar4.Items, i => i is LilySharp.Core.Svg.Model.TimeSignatureChangeItem);
+        var (offsets, _, _) = ElementCoordinator.ComputeVoiceOffsets(voices);
+        Assert.DoesNotContain(offsets.Keys, k => k.MeasureIndex == 0 || k.MeasureIndex == 3);
+    }
+
     /// <summary>The multi-measure-rest runs of a combined staff, as the engraver groups them.</summary>
     private static ImmutableArray<MmrRun> CombinedRuns(string parts, string render)
     {
