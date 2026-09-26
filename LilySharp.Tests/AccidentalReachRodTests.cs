@@ -16,6 +16,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -60,5 +61,58 @@ public class AccidentalReachRodTests
         // Column 0 (the f) to column 2 (the a): springs 1 and 2.
         var fToA = Assert.Single(rods, r => r.Left == 1 && r.Right == 3);
         Assert.InRange(fToA.Distance, 2.750200 - 0.015, 2.750200 + 0.015);
+    }
+
+    /// <summary>
+    /// An accidental is held off ANOTHER voice of its staff two columns back — the column
+    /// between belongs to a different staff, so no adjacent pair ever compared the two.
+    /// </summary>
+    /// <remarks>
+    /// 03-piano-nocturne (Lab probe, 2026-09-26): voice 1's fis8 on 3/8 and voice 2's
+    /// <c>&lt;ais d&gt;2</c> on 1/2, with the left hand's sixteenths putting a column at 7/16
+    /// that the right hand does not share. The flag stood on the ♯; LilyPond, whose separation
+    /// skyline is the staff's, keeps them apart. Counter-case: the same bar with no left hand,
+    /// where the two columns ARE adjacent and the cross-voice pass prices them — no reach rod.
+    /// </remarks>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AnAccidental_IsRoddedToAnotherVoiceOfItsStaff_PastAColumnItDoesNotShare(bool leftHand)
+    {
+        var tree = SyntaxTree.Parse($$"""
+            octave absolute
+            key e major
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section S {
+              rh { voice { gis''4. fis''8 e''4 dis'' } { <b' e''>2 <ais' d''>2 } | }
+              lh { {{(leftHand ? "e,16 b, e b e,16 b, e b e,16 b, e b e,16 b, e b" : "e,1")}} | }
+            }
+            form main { S }
+            score main { grandStaff { staff rh  staff lh } }
+            """);
+        Assert.False(tree.HasErrors);
+        var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
+        var measures = MultiStaffLayouter.CollectAllMeasuresAtIndex(multi, 0);
+        var timings = MultiStaffLayouter.CollectAllTimingsForMeasure(multi, 0);
+        var rods = new List<(int Left, int Right, double Distance)>();
+
+        MeasureLayouter.AddAccidentalReachRods(multi.TextMetrics, measures, timings,
+            MultiStaffLayouter.CollectStavesOfMeasuresAtIndex(multi, 0), rods);
+
+        int fis = timings.IndexOf(new Fraction(3, 8)), chord = timings.IndexOf(new Fraction(1, 2));
+        var reach = rods.Where(r => r.Left == fis + 1 && r.Right == chord + 1).ToList();
+        if (leftHand)
+        {
+            Assert.Equal(fis + 2, chord);                 // a left-hand column stands between
+            Assert.True(reach.Count > 0 && reach.Max(r => r.Distance) > 1.0,
+                "the fis8 must hold the ♯ off across the left hand's column");
+        }
+        else
+        {
+            Assert.Equal(fis + 1, chord);                 // adjacent: the cross-voice pass's pair
+            Assert.Empty(reach);
+        }
     }
 }

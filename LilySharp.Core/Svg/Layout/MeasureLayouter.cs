@@ -329,15 +329,16 @@ internal sealed class MeasureLayouter
     /// two columns on, while c → a is 1.604200.
     /// </para>
     /// <para>
-    /// Only the accidental's column is walked, and only its own voice: the conditional parts
-    /// are the ones a column's skyline hangs past its neighbour, and a separation skyline is a
-    /// staff's. Every rod goes to <see cref="SpringSolver.ApplyRods"/>, which drops the ones
-    /// the springs' minimums already satisfy (range_len at −infinity), so LilyPond's reach
-    /// test (the overhangs) is answered there rather than estimated here; the walk stops four
-    /// columns back, past which no accidental reaches.
+    /// Only the accidental's column is walked, against its own voice and the other voices of
+    /// its STAFF: the conditional parts are the ones a column's skyline hangs past its
+    /// neighbour, and a separation skyline is a staff's. Every rod goes to
+    /// <see cref="SpringSolver.ApplyRods"/>, which drops the ones the springs' minimums already
+    /// satisfy (range_len at −infinity), so LilyPond's reach test (the overhangs) is answered
+    /// there rather than estimated here; the walk stops four items back, past which no
+    /// accidental reaches.
     /// ⚠️ APPROXIMATIONS: the walk stays inside the bar (LilyPond's runs over the whole line,
-    /// bar-line columns included), and a voice's reach into another voice's column is not
-    /// rodded (LilyPond's paper column holds every voice of every staff).
+    /// bar-line columns included), and another voice's item is rodded at no collision shift
+    /// (the adjacent pair's pass, ApplyCrossVoiceColumnSpacing, reads the shifts).
     /// </para>
     /// LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods — the inner loop over j.
     /// LILYPOND-REF: lily/separation-item.cc:47-68 Separation_item::set_distance.
@@ -389,7 +390,64 @@ internal sealed class MeasureLayouter
                         rods.Add((own[l].Column + 1, own[r].Column + 1, rod));
                 }
             }
+
+            // …and the OTHER voices of the same staff: a separation skyline is the staff's,
+            // not the voice's, so an accidental is held off whatever another voice drew in a
+            // column it can reach. The adjacent column is priced already (the cross-voice pass,
+            // SpacingRules.ApplyCrossVoiceColumnSpacing); what it cannot see is a column the
+            // staff shares with NOBODY in between — another staff's notes put a column there.
+            // MEASURED (03-piano-nocturne, Lab probe, 2026-09-26): `voice { gis''4.( fis8 e4 dis) }
+            // { <b e>'2 <ais' d'>2 }` over left-hand sixteenths — the 7/16 column is the left
+            // hand's alone, so voice 1's fis8 and voice 2's ♯ were never compared and the flag
+            // stood on the sharp. LilyPond keeps them apart.
+            if (stavesOfMeasures is { } byStaff && byStaff.Count == measuresToScan.Count)
+                for (int ri = 0; ri < own.Count; ri++)
+                {
+                    if (!HasAccidental(own[ri].Item))
+                        continue;
+                    int column = own[ri].Column;
+                    for (int oj = 0; oj < measuresToScan.Count; oj++)
+                    {
+                        if (oj == vi || !ReferenceEquals(byStaff[oj], byStaff[vi]))
+                            continue;
+                        // The other voice's last few items that START before this column —
+                        // the ones whose right-hand ink can still reach the accidental.
+                        var left = LastStartsBefore(measuresToScan[oj].Items, timings, column, maxReach);
+                        foreach (var (item, leftColumn) in left)
+                        {
+                            if (leftColumn >= column - 1)
+                                continue;   // adjacent: the cross-voice pass's pair
+                            double rod = SpacingRules.SeparationRodDistance(
+                                fonts, item, own[ri].Item, staffY: 0, staffLines: staffLines);
+                            if (rod > 0)
+                                rods.Add((leftColumn + 1, column + 1, rod));
+                        }
+                        ListPool<(MusicItem Item, int Column)>.Give(left);
+                    }
+                }
             ListPool<(MusicItem Item, int Column)>.Give(own);
+        }
+
+        // Up to `count` items of one voice that start a column before `column`, nearest last.
+        static List<(MusicItem Item, int Column)> LastStartsBefore(
+            ImmutableArray<MusicItem> items, List<Fraction> timings, int column, int count)
+        {
+            var found = ListPool<(MusicItem Item, int Column)>.Rent();
+            var at = Fraction.Zero;
+            foreach (var item in items)
+            {
+                if (!item.GraceTime && !SpacingRules.IsMidMeasureChangeColumn(item)
+                    && item is not RestItem { IsSpacer: true })
+                {
+                    int c = timings.IndexOf(at);
+                    if (c >= 0 && c < column)
+                        found.Add((item, c));
+                }
+                at += item.Duration;
+            }
+            if (found.Count > count)
+                found.RemoveRange(0, found.Count - count);
+            return found;
         }
 
         static bool HasAccidental(MusicItem item) => item switch
