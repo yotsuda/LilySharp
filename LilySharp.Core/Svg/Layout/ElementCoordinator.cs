@@ -1906,11 +1906,17 @@ internal sealed class ElementCoordinator
     /// </remarks>
     internal static TieColumnParts? BuildTieColumn(
         Voice voice, int measureIndex, int itemIndex, double columnX,
-        IReadOnlyList<int> tiedPositions, bool isLeftBound)
+        IReadOnlyList<int> tiedPositions, bool isLeftBound, bool atLineStart = false)
     {
         var item = ItemAt(voice, measureIndex, itemIndex);
         if (item is not (NoteItem or ChordItem))
             return null;
+        // The right head of a tie broken by the line stands on the line-start column and
+        // draws the accidental its tie kept (Model.TiedAccidentals), which the outline has to
+        // clear: tie-formatting-problem.cc:226-236 set_column_chord_outline boxes a LIVE
+        // accidental on the right head.
+        if (atLineStart)
+            item = TiedAccidentals.LineStartView(item);
 
         int noteValue = GlyphMetrics.NoteValueOf(
             item is ChordItem c0 ? c0.BaseDuration : ((NoteItem)item).BaseDuration);
@@ -2544,7 +2550,7 @@ internal sealed class ElementCoordinator
         {
             endColumn = BuildTieColumn(
                 score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex,
-                endColumnX, tiedPositions, isLeftBound: false);
+                endColumnX, tiedPositions, isLeftBound: false, atLineStart: !segment.IsFirst);
             // The fallback anchor (tab only): the right head's inner (left) edge.
             segEndX = endColumnX
                 + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);

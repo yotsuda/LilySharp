@@ -109,6 +109,23 @@ public sealed class TiedAccidentalTests
     }
 
     [Fact]
+    public void ThePieceThatEndsOnTheReminder_ClearsIt()
+    {
+        // The tie's second piece ends on the head the reminder stands in front of, and its
+        // outline boxes that live accidental (tie-formatting-problem.cc:226-236
+        // set_column_chord_outline), so the bow stops short of the natural's ink.
+        // 真夏の夜の夢 (Lab corpus): the piece ran 1.03 past LilyPond's, over the natural.
+        var page = Render("a,2 c2~ | break c2 c2 |");
+        var reminder = page.Glyphs.Where(g => g.Glyph == EmmentalerGlyphs.AccidentalNatural)
+            .OrderBy(g => g.X).First(g => System.Math.Abs(g.Y - FirstNaturalY(page)) > 5);
+        var piece = page.Beziers.OrderBy(b => b.P0.X).First();
+        Assert.True(piece.P1.X < reminder.X, $"piece ends at {piece.P1.X}, natural starts at {reminder.X}");
+    }
+
+    private static double FirstNaturalY(RecordingDrawingContext page)
+        => page.Glyphs.First(g => g.Glyph == EmmentalerGlyphs.AccidentalNatural).Y;
+
+    [Fact]
     public void ACourtesyAccidentalIsForced_AndStaysOnTheTiedHead()
     {
         var score = Collect("a,2 c2~ | c2@courtesy c2 |");
