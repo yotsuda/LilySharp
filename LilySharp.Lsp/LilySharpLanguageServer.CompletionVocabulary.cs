@@ -1389,6 +1389,10 @@ public sealed partial class LilySharpLanguageServer
         foreach (string feel in LanguageVocabulary.TempoFeelWords)
             yield return ($"120 {feel}", "${1:120} " + feel,
                 $"{char.ToUpperInvariant(feel[0])}{feel[1..]} feel (eighths; '{feel} 16' for sixteenths)");
+        // The feel word alone: the swing equation with no metronome mark (`tempo swing`).
+        foreach (string feel in LanguageVocabulary.TempoFeelWords)
+            yield return (feel, feel,
+                $"{char.ToUpperInvariant(feel[0])}{feel[1..]} equation alone, no metronome mark");
     }
 
     /// <summary>The written tempo forms, as fill-in snippets — after <c>tempo</c>
@@ -1447,29 +1451,32 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The swung note value after a tempo's feel word (<c>tempo 100 swing |</c>): <c>16</c>
-    /// — the eighths are what the bare word already means.
+    /// The swung note value after a tempo's feel word. After a bpm (<c>tempo 100 swing |</c>)
+    /// only <c>16</c> — the eighths are what the bare word already means; with no bpm
+    /// (<c>tempo swing |</c>) both <c>8</c> and <c>16</c> (user requests, 2026-09-26).
     /// </summary>
     /// <param name="feel">The feel word before the caret, as written.</param>
     /// <param name="touching">Whether the caret still touches the word: the editor then
-    /// filters by the WORD, so the row filters as <c>swing 16</c> and replaces it.</param>
-    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching)
+    /// filters by the WORD, so a row filters as <c>swing 16</c> and replaces it.</param>
+    /// <param name="hasBpm">Whether the run writes a bpm before the feel word.</param>
+    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching,
+        bool hasBpm = true)
     {
         string name = $"{char.ToUpperInvariant(feel[0])}{feel[1..]}";
+        var values = hasBpm
+            ? new[] { ("16", "sixteenths") }
+            : new[] { ("8", "eighths"), ("16", "sixteenths") };
         return new CompletionList
         {
-            Items =
-            [
-                new CompletionItem
-                {
-                    Label = "16",
-                    Kind = CompletionItemKind.Value,
-                    Detail = $"{name} feel on the sixteenths",
-                    InsertText = touching ? $"{feel} 16" : "16",
-                    FilterText = touching ? $"{feel} 16" : "16",
-                    SortText = "00",
-                },
-            ],
+            Items = values.Select((v, i) => new CompletionItem
+            {
+                Label = v.Item1,
+                Kind = CompletionItemKind.Value,
+                Detail = $"{name} feel on the {v.Item2}",
+                InsertText = touching ? $"{feel} {v.Item1}" : v.Item1,
+                FilterText = touching ? $"{feel} {v.Item1}" : v.Item1,
+                SortText = i.ToString("D2"),
+            }).ToArray(),
         };
     }
 

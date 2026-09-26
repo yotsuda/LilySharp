@@ -140,7 +140,7 @@ public sealed partial class LilySharpLanguageServer
         // `tempo 100 swing |`: the swung note value, the same way.
         else if (context == CompletionContext.AfterTempoFeel && TempoFeelBeforeCaret(doc.Text, offset) is { } feel)
         {
-            tempoFeel = GetTempoSubdivisionCompletions(feel.Word, feel.Touching);
+            tempoFeel = GetTempoSubdivisionCompletions(feel.Word, feel.Touching, feel.HasBpm);
             if (GetCompletionContext(doc.Text, offset, tempoFeel: false) != CompletionContext.MusicBlock)
                 return tempoFeel;
             context = CompletionContext.MusicBlock;

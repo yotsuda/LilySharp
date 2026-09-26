@@ -198,7 +198,7 @@ public sealed partial class LilySharpLanguageServer
     /// (a run that already names its note value, <c>swing 16</c>, does not match).
     /// </summary>
     /// <remarks>The run before the feel word is <see cref="TempoBpmBeforeCaret"/>'s.</remarks>
-    internal static (string Word, bool Touching)? TempoFeelBeforeCaret(string text, int offset)
+    internal static (string Word, bool Touching, bool HasBpm)? TempoFeelBeforeCaret(string text, int offset)
     {
         int lineStart = text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
         if (offset < lineStart) return null;
@@ -206,10 +206,10 @@ public sealed partial class LilySharpLanguageServer
         if (!m.Success || m.Index + m.Length != offset) return null;
         if (!TempoValue.IsFeelWord(m.Groups["feel"].Value)) return null;
         if (m.Groups["word"].Success && TempoValue.IsFeelWord(m.Groups["word"].Value)) return null;
-        return (m.Groups["feel"].Value, m.Groups["space"].Length == 0);
+        return (m.Groups["feel"].Value, m.Groups["space"].Length == 0, m.Groups["bpm"].Success);
     }
 
-    [GeneratedRegex("""(?:^|(?<=[\s{]))tempo\s+(?:"[^"\n]*"\s*|(?<word>[A-Za-z]\w*)\s+)?(?:(?:\d+\.*\s*=\s*)?\d+[ \t]+)?(?<feel>[A-Za-z]+)(?<space>[ \t]*)$""")]
+    [GeneratedRegex("""(?:^|(?<=[\s{]))tempo\s+(?:"[^"\n]*"\s*|(?<word>[A-Za-z]\w*)\s+)?(?:(?:\d+\.*\s*=\s*)?(?<bpm>\d+)[ \t]+)?(?<feel>[A-Za-z]+)(?<space>[ \t]*)$""")]
     private static partial Regex TempoFeelRunRegex();
 
     /// <summary>
