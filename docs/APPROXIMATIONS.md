@@ -65,7 +65,7 @@
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:719** that does not exist yet. Named, not silently approximated.
-- **:2776** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:2784** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -165,7 +165,7 @@
 - **:367** hands the scorer the band it would have had without the digit. No book reaches that
 - **:2046** them as markup — so there is no LP geometry to port and no ledger point can observe
 - **:2213** see the difference, and no fixture and no ledger point reaches it.
-- **:2888** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:2896** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -239,8 +239,8 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2663** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4771** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:6266** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4803** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:6310** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`

@@ -1230,10 +1230,13 @@ internal sealed partial class Parser
                             parts.Add(Advance()); // argument token (or a ',' separator)
                         parts.Add(Expect(SyntaxKind.CloseParen));
                         // @text("…").up / .down — placement on the free-text
-                        // annotation. Only @text takes it: the other value
-                        // annotations have fixed sides, and consuming a '.'
-                        // here would corrupt their dotted MarkName forms.
-                        if (name.Text.Equals("text", StringComparison.OrdinalIgnoreCase)
+                        // annotation — and @frame(…).down, the fret diagram being
+                        // above by default (owner's decision, session 646). Only these
+                        // two take it: the other value annotations have fixed sides,
+                        // and consuming a '.' here would corrupt their dotted MarkName
+                        // forms (both of these read their argument, never the name).
+                        if ((name.Text.Equals("text", StringComparison.OrdinalIgnoreCase)
+                             || name.Text.Equals("frame", StringComparison.OrdinalIgnoreCase))
                             && Current.Kind == SyntaxKind.Dot
                             && IsPlacementWord(Peek(1))
                             && Peek(2)?.Kind != SyntaxKind.Dot)

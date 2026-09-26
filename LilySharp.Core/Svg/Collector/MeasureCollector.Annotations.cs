@@ -700,11 +700,17 @@ public sealed partial class MeasureCollector
                 }
                 else if (Semantics.AnnotationValues.Frame(markSyntax) is { } spec)
                 {
-                    // @frame(x32010) — chord diagram above the note.
+                    // @frame(x32010) — chord diagram above the note (ArticulationEngraver's
+                    // IsForcedAbove), or below with an explicit `.down`.
                     _articulations.Add(new ArticulationItem(
-                        ArticulationType.FretFrame, measureIndex, itemIndex, true,
+                        ArticulationType.FretFrame, measureIndex, itemIndex,
+                        markSyntax.ForcedAbove != false,
                         markSyntax.SourceStart, _cursor.StaffIndex)
-                    { FrameSpec = spec, VoiceIndex = _cursor.VoiceIndex });
+                    {
+                        FrameSpec = spec,
+                        VoiceIndex = _cursor.VoiceIndex,
+                        DirectionForced = markSyntax.ForcedAbove is not null,
+                    });
                 }
                 else if (Semantics.AnnotationValues.Bend(markSyntax) is { } semitones)
                 {

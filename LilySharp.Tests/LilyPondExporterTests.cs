@@ -2179,6 +2179,25 @@ public class LilyPondExporterTests
         Assert.Contains("c1", ly);
     }
 
+    /// <summary>
+    /// An octave clef's staff hands LilyPond the SOUNDING pitch: Lily#'s `g` under `treble_8`
+    /// stands where treble's `g` does and sounds an octave down, while LilyPond draws its
+    /// sounding pitches an octave up under `treble_8` — so the written pitch verbatim stood an
+    /// octave above the page (Lab sessions/p646 o8, 2026-09-26).
+    /// </summary>
+    [Fact]
+    public void AnOctaveClefStaff_IsWrittenAtSoundingPitch()
+    {
+        var ly = Export("""
+            octave absolute
+            part gt { clef treble_8 }
+            section S { gt { g4 d' g' b' | } }
+            form main { S }
+            score main { staff gt }
+            """);
+        Assert.Contains("\\clef \"treble_8\" \\transpose c c, \\gt", ly);
+    }
+
     [Fact]
     public void ADrumPart_IsWrittenInDrummode_OnADrumStaff()
     {

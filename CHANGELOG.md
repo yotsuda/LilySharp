@@ -8,6 +8,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A fret diagram stands over its chord.** `@frame(…)` took the side opposite the stem
+  like a staccato, so a low chord's diagram hung under the staff; it is above now, and
+  `@frame(…).down` puts it below.
+
 - **A note takes one dynamic.** In `c4@f@sfz` only the `f` is printed now, and the `sfz`
   warns (LYS4022) — LilyPond keeps the first of two as well. The page used to stack both.
   No book in the repository or corpora writes two.
@@ -160,6 +164,15 @@ workflow attaches that section to the GitHub Release verbatim.
   wide. 42 of 942 books in the sweep move slightly; 2 snapshots.
 
 ### MIDI, MusicXML and the LilyPond twin
+
+- **An octave-clef staff stands where the page does in the twin.** Under `treble_8` Lily#
+  draws `g` where treble draws it and it sounds an octave down; the twin handed LilyPond
+  the written pitch, which LilyPond's `treble_8` then drew an octave higher. The staff now
+  gets the sounding pitch, as the tab already did. 22 books use an octave clef.
+
+- **Fret diagrams reach the twin** as `\fret-diagram-terse` markups, over the chord (a
+  chord member's diagram belongs to the chord there — LilyPond takes no text script on one
+  note head).
 
 - **The LilyPond twin reads `tab bass as full` as the tab of part `bass`.** It took the
   first plain name after `tab` — and `bass` reads as a clef word — so it wrote a tab staff

@@ -2445,12 +2445,20 @@ internal static class ArticulationEngraver
     /// ornaments, editorial accidentals, bows, flageolet, and the technique marks
     /// stopped (+) / heel / toe / snap-pizzicato. Everything else is stem-coupled and
     /// takes the side opposite the (beam-resolved) stem.
-    /// LILYPOND-REF: scm/script.scm — these entries carry (direction . UP).</summary>
+    /// LILYPOND-REF: scm/script.scm — these entries carry (direction . UP).
+    /// ⚠️ The fret diagram (<c>@frame</c>) is here by DECISION, not by a script.scm entry: it
+    /// is LilyPond's <c>\markup \fret-diagram</c>, a TextScript, whose default direction is DOWN
+    /// (scm/define-grobs.scm:3804); a guitar chart puts the diagram over the chord, the twin
+    /// writes it with <c>^</c>, and <c>@frame(…).down</c> still puts it below. Until
+    /// 2026-09-26 it took the side opposite the stem like a staccato — neither the
+    /// collector's "above the note" nor LilyPond's default (Lab probes/complex-lys/06).
+    /// Owner's decision, session 646.</summary>
     private static bool IsForcedAbove(ArticulationItem a) =>
         IsFermata(a.Type) || a.IsOrnament || a.IsEditorialAccidental
         || a.Type is ArticulationType.UpBow or ArticulationType.DownBow
             or ArticulationType.Flageolet or ArticulationType.Stopped
-            or ArticulationType.Heel or ArticulationType.Toe or ArticulationType.SnapPizz;
+            or ArticulationType.Heel or ArticulationType.Toe or ArticulationType.SnapPizz
+            or ArticulationType.FretFrame;
 
     /// <summary>
     /// <see cref="GetNearExtent"/> for one script, which is where the TAB technique

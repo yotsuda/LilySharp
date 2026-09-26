@@ -2797,6 +2797,10 @@ public sealed class LilyPondExporter
         // in, shifted only by `off` (MeasureCollector.ItemFactory CreateChordItem's
         // restore). LilyPond's frame is a different story — see the update at the end.
         int frameStepIn = _lysStep, frameOctaveIn = _lysOctave;
+        // A member's fret diagram is the CHORD's post-event in the twin: LilyPond will not take a
+        // text script on one note head of a chord ("cannot add text scripts to individual note
+        // heads"), and the page draws the diagram for the chord's column anyway.
+        var memberFrames = new StringBuilder();
         bool hasDegrees = c.Degrees.Any();
         if (hasDegrees && !_frameTracked)
             _warnings.Add(
@@ -2923,6 +2927,9 @@ public sealed class LilyPondExporter
                     case MusicMarkSyntax mk when Fingering(mk) is { } fg:
                         sb.Append(fg);
                         break;
+                    case MusicMarkSyntax mk when FretDiagram(mk) is { } fd:
+                        memberFrames.Append(fd);
+                        break;
                     default:
                         _warnings.Add(
                             $"chord member {p.PitchName}: {art.GetType().Name} dropped (out of scope)");
@@ -2982,7 +2989,7 @@ public sealed class LilyPondExporter
         sb.Append('>');
         sb.Append(EmitEventDuration(c.Duration));
         var (prefix, suffix) = SplitAttachments(c.Articulations);
-        return prefix + sb.ToString() + suffix;
+        return prefix + sb.ToString() + suffix + memberFrames;
     }
 
     /// <summary>
@@ -3100,6 +3107,9 @@ public sealed class LilyPondExporter
                 // for why it is not written as a dynamic.
                 case MusicMarkSyntax mk when FreeText(mk) is { } freeText:
                     suffix.Append(freeText);
+                    break;
+                case MusicMarkSyntax mk when FretDiagram(mk) is { } fretDiagram:
+                    suffix.Append(fretDiagram);
                     break;
                 // A right-hand finger (`@pluck(p)`) is LilyPond's \rightHandFinger, an event
                 // function that makes a post-event, so it trails the note; the side is the
@@ -3665,6 +3675,28 @@ public sealed class LilyPondExporter
             ? (mk.ForcedAbove switch { true => "^", false => "_", null => "-" })
               + "\\markup { \\italic \"" + Escape(text) + "\" }"
             : null;
+
+    /// <summary>
+    /// <c>@frame(xx0232)</c> as LilyPond's fret-diagram markup, over the note as the page draws
+    /// it (<c>_</c> for <c>@frame(…).down</c>), or null for any other mark. The spec is written
+    /// low string first, one character a string — LilyPond's terse string is the same order,
+    /// one <c>;</c>-terminated entry a string, <c>o</c> for open. Until 2026-09-26 every one was
+    /// "dropped (out of scope)" (Lab probes/complex-lys/06).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/fret-diagrams.scm:1232-1270 fret-diagram-terse — "x;x;o;2;3;2;" is the
+    /// D chord; x mute, o open, a number a fret.
+    /// </remarks>
+    private static string? FretDiagram(MusicMarkSyntax mk)
+    {
+        if (Semantics.AnnotationValues.Frame(mk) is not { } spec)
+            return null;
+        var terse = new StringBuilder();
+        foreach (char ch in spec)
+            terse.Append(ch == '0' ? 'o' : ch).Append(';');
+        return (mk.ForcedAbove == false ? "_" : "^")
+            + "\\markup \\fret-diagram-terse \"" + terse + "\"";
+    }
 
     /// <summary>
     /// <c>@pluck(p|i|m|a)</c> as LilyPond's right-hand fingering <c>\rightHandFinger #1..#4</c>,
@@ -6066,6 +6098,18 @@ public sealed class LilyPondExporter
             if (clef != null) sb.Append("\\clef ").Append(LyClefName(clef)).Append(' ');
             sb.Append(PedalStyleSet(partName));
             sb.Append(StrokeFingerSet(partName));
+            // An octave clef does not move a Lily# pitch: `g` under `treble_8` is drawn where
+            // `g` stands under treble and SOUNDS an octave down (the 0.8.0 rule; TabResolver
+            // frets it there). LilyPond's pitches are sounding and its `treble_8` draws them an
+            // octave UP, so the written pitch handed over verbatim stood an octave above the
+            // page's on every octave-clef staff (Lab sessions/p646 o8: g d' g' b' at 1.0 … −3.5
+            // on the page, −6.0 … on the twin). The staff gets the sounding pitch the tab
+            // already did (AppendTabTranspose, the clef half of it).
+            if (clef != null
+                && Tablature.Tunings.ClefOctaveShift(ClefFromName(clef)) is int clefShift and not 0
+                && clefShift % 12 == 0)
+                sb.Append("\\transpose c ").Append('c')
+                  .Append(new string(clefShift < 0 ? ',' : '\'', Math.Abs(clefShift) / 12)).Append(' ');
             sb.Append('\\').Append(varName).Append(" }\n");
         }
         return sb.ToString();
