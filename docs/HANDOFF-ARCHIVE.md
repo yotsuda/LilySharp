@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第643セッションの経緯
+
+### 1.1 第643セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p643`（HEAD `3863c185`・未 push 62・full **9335 / 0 / 2 / 9337**＝引継ぎと一致）。ユーザー「続けて」＝第642 が起票した「小節途中の `key` が連桁を切る」。
+
+★ ⑴ **連桁は clef／key change をまたぐ・そして避ける**（`c0805798`）: LP の Auto_beam_engraver が受け取るのは stem・beam・breathing_sign・rest だけ（auto-beam-engraver.cc:519-523）＝**clef も同じ欠陥だった**（`c''8 d'' clef bass e8 a` で LP 1 本・Lily# 2 本）。`BeamDetector` は長さ 0 の item を全部「連桁を終える」腕に送っていた→ clef／key は grace と同じく跨ぐ（meter change は今まで通り終える）。⚠️ **跨ぐだけでは梁が低音部記号を突き抜けた**（画像で発見）＝LP の Beam_collision_engraver は Clef と KeySignature／KeyCancellation も covered grob にする（beam-collision-engraver.cc:217-225）→ `ElementCoordinator.CollectBeamCollisions` に `AddChangeCollisions`（外側の符尾のあいだの change だけ・x は描画と同じ change column の吊り）。LP と一致: 梁の中心が中央線の 1.81（clef）・2.19（key）下。網 `BeamAcrossChangeTests` 2 本（Core ごと stash で赤・衝突の登録だけ外しても赤）。掃き 963 冊で **2 冊**＝LP の回帰入力 spacing-loose-polyphony の訳 2 本（傾いた 2 本→水平 1 本・下の譜表の中央から 3.81 上＝LP と一致）。未対応（本 0）: cue clef・percussion clef change・clef の 8・loose column の吊り。
+⚠️ **毒の戻しに `git checkout -- <file>` を使い、未 commit の自分の変更ごと消した**（`ElementCoordinator.cs`・会話に残っていたので当て直した）＝毒は `git stash push -- <path>` か、バイトの退避→`WriteAllBytes` で戻す（Lab `CLAUDE-OPERATIONS.md` §1 に足した）。⚠️ 引用の網 `CitationsThatNameNothing_DoNotGrow` は `LILYPOND-REF` 行の*下線を含む名前*しか記号と数えない（`ADD_ACKNOWLEDGER` は数えない）。
+★ **終了**: full **9337 / 0 / 2 / 9339**（+2＝網）・`-End` の門は全部 OK。§7.5 Core '+' 112・LILYPOND-REF 2・LILYSHARP-OWN 0。§7.6／7.7 該当なし。push はユーザー（Lab も）。
+
 ## 以下は第642セッションの経緯
 
 ### 1.1 第642セッション（2026-09-26・YT-DELL2）

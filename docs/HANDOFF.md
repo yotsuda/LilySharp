@@ -129,7 +129,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
 - ✅ **T8 は第634 が閉じた**（§1.1 第634）。行頭の `|:` は第635 が閉じた。残り: staff＋`tab as full` の多段では各声部を*自分の*段の小節線で読む（LP は全段の列を各段の小節線で読んで merge）／小節線をまたぐ梁は小節ごとに半分で読む
-- ★ **第644 の探針の残り**（Lab `probes/complex-lys/05`〜`08` の LP 双子から）: ⑴ ly 出力の道しるべ（segno・To Coda・D.S.・coda）が同じ時刻に並ぶ＝間の skip が無く LP が 3 つ捨てる（06）／⑵ ly 出力の和音の行が拍子を見ない＝7/8 でも `a1:m`（LP の小節チェック失敗・06）／⑶ 1 音に強弱 2 つ（`@f@sfz`）を黙って受ける＝LP は片方を捨てる（05）／⑷ `@frame` のコード図が G は上・D と C は下（06・LP 側は出力から落ちる＝未比較）
+- ★ **第644 の探針の残り**（Lab `probes/complex-lys/05`〜`08` の LP 双子から）: ✅ 道しるべと和音の行の 2 つは第645 が閉じた（§1.1 第645）／⑶ 1 音に強弱 2 つ（`@f@sfz`）を黙って受ける＝LP は片方を捨てる（05）／⑷ `@frame` のコード図が G は上・D と C は下（06・LP 側は出力から落ちる＝未比較）
 - ✅ **T9（多声の tab の符尾の向き）は第636 が閉じた**（§1.1 第636）
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭 906 行にも在る・第636 で再確認「描画すべきではない」）**。LP の `\tabFullNotation` は描く（`Tab_tie_follow_engraver` が handle-ties を外す＝scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
@@ -153,6 +153,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第645セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p645`（HEAD `b2782542`・未 push 68・full **9341 / 0 / 2 / 9343**＝引継ぎと一致）。ユーザー「続けて」＝第644 の探針の残りの ⑴⑵（06 の LP 双子が警告を出した 2 つ）。
+
+★ ⑴ **道しるべが同じ時刻に固まったのは `tab bass as full` の読み違いの副作用**（`e8966ff5`）: `RenderPartName` は keyword の後の最初の Identifier を part にしていて、`bass` は clef の語として字句化される＝`full` を part と読み、存在しない part のギター調弦の TabStaff（中身は form の道しるべだけ）を書いていた。tab はページと同じ読み方（`as` 以降を外して最後の語）。該当 2 冊（samples/morning-light・コーパスの「夕暮れ沿い」）。
+★ ⑵ **和音の行の小節が曲全体の拍子のままだった**: `SectionBarMeters` が section の header の `time` と最初の音楽 part の中の `time` から小節ごとの拍子を読み、`ChordBars` は弱起と同じ縮尺を全小節に掛ける（ページの拍の割り方は曲全体の拍子のまま＝ページと食い違わない）。未対応: phrase 参照の中の `time`・`repeat` の本体は 1 回と数える。
+網 2 本（毒で 2 赤）。06 の双子は LP で警告 0 になった。
+★ **終了**: full **9343 / 0 / 2 / 9345**。push はユーザー（Lab も）。
+
+## 以下は第644セッションの経緯
+
 ### 1.1 第644セッション（2026-09-26・YT-DELL2）
 
 同じ会話の続き。★ `-Start p644`（HEAD `382c0259`・未 push 64・full **9337 / 0 / 2 / 9339**＝引継ぎと一致）。ユーザー「続けて」（島の指定なし）＝§1.0 ⒜ の `@text` の outside-staff の順番（250 vs 450）を選んだ。
@@ -162,16 +173,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ ⑶ **複雑な曲 4 冊**（ユーザー依頼・Lab `probes/complex-lys/05`〜`08`＝管弦楽・ロックバンド＋ベース tab・ピアノ・歌曲・LP 双子つき）。⚠️ `octave absolute` の裸の `c` は C4＝LP の書き方で書くなら part に `octave 3`。7/8 の八分が連桁されないのは LP 2.26 も同じ（欠陥ではない）。
 ★ ⑷ **オッタヴァを音単位に**（`b2a0716f`・ユーザー「1」）: `OttavaTransposer` は小節単位で、`@!ottava` を小節の最後の音に付けるとその小節全体が外れた・小節の途中の `@ottava` は前の音も動かした。括弧に `StartMoment`／`EndMoment`／`EndItemIndex`・移動は [始, 終) の音だけ・小節途中で終わる括弧の右端は最後の列の符頭＋0.6（LP 1.904・Lily# 1.91）。網 `OttavaMidBarTests` 3 本（毒で 3 赤）。掃き 3 冊（site の spanners 見本・lpreg fermata-osp-a/b）。
 ★ **終了**: full **9341 / 0 / 2 / 9343**。push はユーザー（Lab も）。
-
-## 以下は第643セッションの経緯
-
-### 1.1 第643セッション（2026-09-26・YT-DELL2）
-
-同じ会話の続き。★ `-Start p643`（HEAD `3863c185`・未 push 62・full **9335 / 0 / 2 / 9337**＝引継ぎと一致）。ユーザー「続けて」＝第642 が起票した「小節途中の `key` が連桁を切る」。
-
-★ ⑴ **連桁は clef／key change をまたぐ・そして避ける**（`c0805798`）: LP の Auto_beam_engraver が受け取るのは stem・beam・breathing_sign・rest だけ（auto-beam-engraver.cc:519-523）＝**clef も同じ欠陥だった**（`c''8 d'' clef bass e8 a` で LP 1 本・Lily# 2 本）。`BeamDetector` は長さ 0 の item を全部「連桁を終える」腕に送っていた→ clef／key は grace と同じく跨ぐ（meter change は今まで通り終える）。⚠️ **跨ぐだけでは梁が低音部記号を突き抜けた**（画像で発見）＝LP の Beam_collision_engraver は Clef と KeySignature／KeyCancellation も covered grob にする（beam-collision-engraver.cc:217-225）→ `ElementCoordinator.CollectBeamCollisions` に `AddChangeCollisions`（外側の符尾のあいだの change だけ・x は描画と同じ change column の吊り）。LP と一致: 梁の中心が中央線の 1.81（clef）・2.19（key）下。網 `BeamAcrossChangeTests` 2 本（Core ごと stash で赤・衝突の登録だけ外しても赤）。掃き 963 冊で **2 冊**＝LP の回帰入力 spacing-loose-polyphony の訳 2 本（傾いた 2 本→水平 1 本・下の譜表の中央から 3.81 上＝LP と一致）。未対応（本 0）: cue clef・percussion clef change・clef の 8・loose column の吊り。
-⚠️ **毒の戻しに `git checkout -- <file>` を使い、未 commit の自分の変更ごと消した**（`ElementCoordinator.cs`・会話に残っていたので当て直した）＝毒は `git stash push -- <path>` か、バイトの退避→`WriteAllBytes` で戻す（Lab `CLAUDE-OPERATIONS.md` §1 に足した）。⚠️ 引用の網 `CitationsThatNameNothing_DoNotGrow` は `LILYPOND-REF` 行の*下線を含む名前*しか記号と数えない（`ADD_ACKNOWLEDGER` は数えない）。
-★ **終了**: full **9337 / 0 / 2 / 9339**（+2＝網）・`-End` の門は全部 OK。§7.5 Core '+' 112・LILYPOND-REF 2・LILYSHARP-OWN 0。§7.6／7.7 該当なし。push はユーザー（Lab も）。
 
 ## 2. 開いている作業
 
