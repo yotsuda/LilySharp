@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第631セッションの経緯
+
+### 1.1 第631セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。ユーザーが p630 までを push。★ `-Start p631`（HEAD `746123f1`）。ユーザー:「まず readme.md から直して。morning-light.lys を readme.md に掲示して」。
+
+★ **`28293c4a`**: `samples/morning-light.lys`（Lab p629 の最終版）を追加し、README の冒頭（バッジの直後）に `docs/images/morning-light.png`（`lysc png` の Release・2x・白背景）とソース全文を掲示。SVG ではなく PNG にしたのは、SVG は Emmentaler しか埋め込まず、題名・歌詞・コード名の書体が GitHub では代替書体になって字幅がずれるため。**`ReadmeSampleTests`**: README の `<!-- README-SAMPLE:morning-light -->` 直後の lilysharp ブロック＝サンプルのファイル（改行を正規化して比較）＋画像の存在（毒で赤を確認）。画像の中身は比べない（彫りを改善すると画素が変わる）ので、⚠️ **サンプルか彫りが変わったら `lysc png samples/morning-light.lys docs/images/morning-light.png` で描き直す**。併せて README の `octave absolute` 説明（part の `octave N`）・「全サンプルが absolute」の誤り・ペダルの踏み替えを直し、`samples/README.md` に morning-light と nocturne の行を追加。
+
+★ **⑵ 終了時の full で `DeadCitationsDoNotGrow` が赤**（912＞834）＝ユーザーが push 前に 614〜630 の 105 commit を 13 本に regroup したため。前例どおり検算（旧 tip と新 tip `746123f1` の tree が同一 `060aae9e`＝上昇 78 は到達性を失った引用だけ）して上限を 912 に上げ、段落を足した（re-point しない）。⚠️ origin の CI もこの赤のはず＝次の push で緑に戻る。
+
+終了: HEAD＝その guard commit＋docs。
+
 ## 以下は第630セッションの経緯
 
 ### 1.1 第630セッション（2026-09-25・YT-DELL2）

@@ -126,7 +126,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
-- ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ **タブ譜は `.up`/`.down` を守らない**＝タブの採点は符尾を入れていない（弧は常に符尾の反対側という約束）ので、符尾側へ強制すると梁を突き抜ける（Lab `sessions/p484/tab.lys`）。直すなら符尾を採点に入れる
+- ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
+- ★ **T8 tab 声部の間隔に符尾の補正が無い**（第633 起票・台帳 `slur.tab.stems.span` −0.166667・`inner-span` −0.199661）: LP は TabVoice の符尾と*弦の位置*で `same_direction_correction`（note-spacing.cc:162-197・0.25）を掛ける＝弦 2→弦 1・両方下向きの間が 0.25 page 広い。Lily# の `SpacingRules.CalculateStemCorrection` は item の譜表の符尾と音高を読む。直すなら tab の wish（第576）に弦の位置と tab の符尾向きで補正を入れる。⚠️ 射程は未測
+- ★ **tab のスラーの残り（第633）**: 多声の tab は声部の向き（`\voiceOne`）を読まず弦の規則のまま／tab の旗を符尾の extent に入れていない／`StaffSlurLayouts`（skyline の予約）は梁を渡さないので、梁側へ書かれた弧の予約は符尾の先で止まる
 
 **⒞ ユーザー決定が先・触らない**
 
@@ -145,6 +147,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第633セッション（2026-09-26・YT-DELL2）
+
+新しい会話。★ `-Start p633`（HEAD `be874b85`・未 push 8・full **9175 / 0 / 2 / 9177**・CI／Pages 緑）。第632 の追補の後に commit が 2 本ある（`cc3d86e0` Transform Selection がファイル全体と診断を渡す・`be874b85` ファイル全体の書き換えと音域の検査）＝§1.1 第632 には未記載。ユーザー選択「タブ譜の .up/.down」（§1.0 ⒳¹³ ⑹）。
+
+★★★ **⑴ 起票より広かった＝単独の tab（Lily# の既定＝双子は `\tabFullNotation`）の全スラーが LP の既定 TabStaff の形で描かれていた**。LP の `\tabFullNotation` は `Slur.control-points` を revert する（property-init.ly:845）＝`slur::move-closer-to-tab-note-heads` の 0.35 が走らず、符尾と梁は普通の譜表と同じく採点に入る。実測（`audit/lp-geometry/probes/tab-slur-full.ly`＝tab-slur.ly の本を full で）: y0 1.570223＝plain の 1.220223 + 0.35 ちょうど・rise と span は同じ。Lily# は full でも 0.35 を掛けていた（台帳の残差は F9 − 0.35 ＝ −0.198）。
+★★ **⑵ 直した（`BuildTabSlurLayout`・numbers-only は今までどおり）**: full tab では ⒜ 0.35 を掛けない ⒝ 書かれた向き（`@phrasingSlur.up/.down`）を守る（numbers-only も＝符尾が無いので安全）⒞ 向きの規則は*描かれた*符尾（梁があれば梁の `GroupStemUp`）⒟ 端は梁の内側で梁に掛かる符尾なら梁の外面 + 0.5 ss（slur-scoring.cc:549-557）⒠ 端の `SlurEdgeInfo` に符尾（stem-attachment X の規則が読む）⒡ 弧の側へ向く符尾は encompass に入る（梁なら外面 + 梁の厚さの半分）。⚠️ **梁の線は梁自身の member frame（列 + `StemAttachX`）で読む**＝描いた符尾の X（`TabStemX`）で読むと傾いた梁で 0.053 内側に出た（台帳が捕まえた）。
+★ **⑶ 台帳 +7 点**: `slur.tab.full.{up,down}.string-to-attachment`（F9 の 0.151777＝plain と同じ）／`slur.tab.stems.{left-attachment 0.0002, left-control 0.007, span −0.1667}`（`tab-slur-stems.ly` score A＝16 分の梁の下へ書いた弧。16 分なのは 8 分の梁が宣言済みの逸脱を持つから）／`slur.tab.stems.{inner-control 0.0052, inner-span −0.1997}`（score B＝中の拍の梁が低い＝encompass を観測）。span の残差は tab 声部の間隔（§1.0 T8 に起票）。**毒 5 本すべて赤**（書いた向きを捨てる 2・full に 0.35 を掛ける 4・端を梁に掛けない 3・符尾を encompass に入れない 1（score B を足すまで緑だった）・梁を符尾 X で読む 2・Lab `sessions/p633/poisons.log`）。
+★ **⑷ 射程**: 追跡＋実コーパス 964 冊を `svg --combined`（全 score）で前後比較＝**43 冊が動く（すべて tab だけの score を持つ本）**。既定の score だけを描く `sweep.ps1` では 1 冊しか見えない＝**tab の変更の射程は `--combined` で数える**。wrongfret.lys は LP と同じく左端が梁の先から出るようになった。Lab `sessions/p633/sweep/`。
+⚠️ **⑸ `-dbackend=null` は LP 2.26 で「invalid value; possible values are (ps cairo svg)」と無視される**＝既定の backend で走っている（それでも LilyPond Serif の値＝台帳と一致）。probe の註は null と書いたまま。
+★ **終了**: code `6290188e`・full **9182 / 0 / 2 / 9184**（+7＝台帳の 7 点）・台帳 893 点・`-End` の門は全部 OK。§7.5 Core '+' 132・LILYPOND-REF 4・LILYSHARP-OWN 0（⑹ の OWN 註を消した＝全部が LP の移植）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第632セッションの経緯
+
 ### 1.1 第632セッション（2026-09-25・YT-DELL2）
 
 同じ会話の続き。★ `-Start p632`（full **9173 / 0 / 2 / 9175**）。ユーザー:「gh Pages を準備して」＋途中で「index.html の最初の画像を、リアルタイムでプレビューが更新される動画に差し替えたい。適切な .lys とシナリオを提案して」。
@@ -156,18 +171,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑷ 追補（同じ会話）**: ユーザーが ScreenToGif（winget・MSIX）と ffmpeg 9.0.2（winget `Gyan.FFmpeg`・user PATH）を入れ、ヒーロー動画を 4 回撮った。4 回目を採用＝commit `site: the hero is a clip …`（`site/hero-vscode.mp4` 1.0 MB・`.webm` 1.0 MB・poster＝最終コマの PNG・1280×720・30fps・29.2 秒・`ffmpeg -vf fps=30,format=yuv420p` x264 crf22／VP9 crf34）。元 GIF は Lab `sessions/p632/hero-take4.gif`。残る粗: 小節 1〜2 のコード行（`G Cmaj7 | Am`）と Keys（G・C）の不一致、終盤の横スクロールで行頭が切れる（撮り直すなら `editor.wordWrap`）。完成版の譜は Lab `hero2/morning-light-hero.lys`。 ★ **公開**: Pages を `gh api -X POST …/pages -f build_type=workflow` で有効化（ユーザー承認）→ユーザー push。初回 run は `fonts` 例の Georgia が runner に無い警告で赤→`build-site.ps1` の検査で「is not installed on this system」の警告だけ通す（他の警告・エラーは従来どおり拒否）＝`57c335a2`→2 回目 run 緑・**https://yotsuda.github.io/LilySharp/** で index・grammar・動画・SVG が 200。 ★ **AI 統合（同じ会話・ユーザー報告）**: ⑴ Copilot 自身の chat／agent／inline chat は Lily# の文法を見ていなかった→`contributes.chatInstructions`＝build が `out/lilysharp.instructions.md`（GRAMMAR_FOR_LLM＋`applyTo: '**/*.lys'`）を書く（`d4451584`）。⑵ Ghost Completion は拡張既定 `[lilysharp] editor.inlineSuggest.enabled=false` で一度も呼ばれていなかった→オンにしたとき 1 回だけ、inlineSuggest を .lys でオン＋`github.copilot.enable.lilysharp=false` を同意の上で書く（`485e6a83`）。⑶ 各結果を「Lily# Extension」出力に記録（`63d2f455`）＝VS Code の保存ログ `%APPDATA%\Code\logs\…\N-Lily# Extension.log` で読める。⑷ モデルは `models[0]`＝gpt-4o-mini だった→Transform は `lilysharp.ai.model`（空＝大きいもの）、Ghost は `lilysharp.ai.ghostModel`（空＝small 系・大きいものは 2〜3 秒で毎回 cancel された）＋「Lily#: Select AI Model…」・先頭 `|` 除去（`773a33f6`・`f83b7634`）。ユーザー確認: 空のままで ghost が出る（gpt-4o-mini・702 ms）。⚠️ Copilot 自身の「Ghost text suggestions for Lily#」は Copilot の灰色文字＝文法を知らず検証もしない。
 
 終了: docs のみ追加。
-
-## 以下は第631セッションの経緯
-
-### 1.1 第631セッション（2026-09-25・YT-DELL2）
-
-同じ会話の続き。ユーザーが p630 までを push。★ `-Start p631`（HEAD `746123f1`）。ユーザー:「まず readme.md から直して。morning-light.lys を readme.md に掲示して」。
-
-★ **`28293c4a`**: `samples/morning-light.lys`（Lab p629 の最終版）を追加し、README の冒頭（バッジの直後）に `docs/images/morning-light.png`（`lysc png` の Release・2x・白背景）とソース全文を掲示。SVG ではなく PNG にしたのは、SVG は Emmentaler しか埋め込まず、題名・歌詞・コード名の書体が GitHub では代替書体になって字幅がずれるため。**`ReadmeSampleTests`**: README の `<!-- README-SAMPLE:morning-light -->` 直後の lilysharp ブロック＝サンプルのファイル（改行を正規化して比較）＋画像の存在（毒で赤を確認）。画像の中身は比べない（彫りを改善すると画素が変わる）ので、⚠️ **サンプルか彫りが変わったら `lysc png samples/morning-light.lys docs/images/morning-light.png` で描き直す**。併せて README の `octave absolute` 説明（part の `octave N`）・「全サンプルが absolute」の誤り・ペダルの踏み替えを直し、`samples/README.md` に morning-light と nocturne の行を追加。
-
-★ **⑵ 終了時の full で `DeadCitationsDoNotGrow` が赤**（912＞834）＝ユーザーが push 前に 614〜630 の 105 commit を 13 本に regroup したため。前例どおり検算（旧 tip と新 tip `746123f1` の tree が同一 `060aae9e`＝上昇 78 は到達性を失った引用だけ）して上限を 912 に上げ、段落を足した（re-point しない）。⚠️ origin の CI もこの赤のはず＝次の push で緑に戻る。
-
-終了: HEAD＝その guard commit＋docs。
 
 ## 2. 開いている作業
 
