@@ -240,7 +240,7 @@
       {
         "command": "lilysharp.convertLayout",
         "category": "Lily#",
-        "title": "Convert Layout (by part ⇄ by section)"
+        "title": "Regroup (by part ⇄ by section)"
       },
       {
         "command": "lilysharp.extractPhrase",

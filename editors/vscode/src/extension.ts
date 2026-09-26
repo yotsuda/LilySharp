@@ -1487,7 +1487,7 @@ interface ConvertLayoutResponse {
 async function convertLayout() {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
-        vscode.window.showErrorMessage('Lily#: open a .lys file to convert its layout.');
+        vscode.window.showErrorMessage('Lily#: open a .lys file to regroup it.');
         return;
     }
     if (!client) {
@@ -1507,12 +1507,12 @@ async function convertLayout() {
             edit.replace(doc.uri, fullRange, response.NewText);
             await vscode.workspace.applyEdit(edit);
             vscode.window.showInformationMessage(
-                `Lily#: converted layout ${response.FromLayout} → ${response.ToLayout}.`);
+                `Lily#: regrouped ${response.ToLayout} (was ${response.FromLayout}).`);
         } else {
             vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
         }
     } catch (err) {
-        vscode.window.showErrorMessage(`Lily#: layout conversion failed: ${err}`);
+        vscode.window.showErrorMessage(`Lily#: regrouping failed: ${err}`);
     }
 }
 

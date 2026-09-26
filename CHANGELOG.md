@@ -242,12 +242,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
-- **The two layouts are called "by part" and "by section".** They used to be "part-major"
-  and "section-major", a term borrowed from matrix storage that says little to a musician.
-  A file laid out by part writes `part bass { section A { … } }`; one laid out by section
-  writes `section A { bass { … } }`. The editor command is now **Convert Layout (by part ⇄
-  by section)**, and the diagnostics and docs use the new names. Nothing about the files
-  changes.
+- **A file is "grouped by part" or "grouped by section".** These used to be "part-major"
+  and "section-major" layouts, a term borrowed from matrix storage that says little to a
+  musician (and "layout" is also a keyword). A file grouped by part writes
+  `part bass { section A { … } }`; one grouped by section writes `section A { bass { … } }`.
+  The editor command Convert Layout is now **Regroup (by part ⇄ by section)**, and the
+  diagnostics and docs use the new names. Nothing about the files changes.
 
 - **Punctuation in lyrics is text.** A `;` or `?` written against a syllable (`gent- ly;`,
   `are you?`) was reported as a stray character — an error — though the syllable kept it

@@ -1046,7 +1046,7 @@ public sealed partial class LilySharpLanguageServer
             return new ConvertLayoutResponse
             {
                 Success = false,
-                Error = "Fix the syntax errors before converting the layout — no changes made."
+                Error = "Fix the syntax errors before regrouping — no changes made."
             };
 
         var from = LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(doc.Text);
@@ -1054,7 +1054,7 @@ public sealed partial class LilySharpLanguageServer
             return new ConvertLayoutResponse
             {
                 Success = false,
-                Error = "No part/section layout to convert — the file needs parts with sections."
+                Error = "Nothing to regroup — the file needs parts with sections."
             };
 
         // Chord/lyric blocks only exist in the section-major layout; converting to
@@ -1064,8 +1064,8 @@ public sealed partial class LilySharpLanguageServer
             return new ConvertLayoutResponse
             {
                 Success = false,
-                Error = "This file has chords/lyrics blocks, which exist only in the by-section "
-                    + "layout. Converting to by-part would drop them, so it was left unchanged."
+                Error = "This file has chords/lyrics blocks, which exist only in a file grouped "
+                    + "by section. Regrouping by part would drop them, so it was left unchanged."
             };
 
         // Convert self-guards: it returns null unless the result round-trips to a
@@ -1078,24 +1078,27 @@ public sealed partial class LilySharpLanguageServer
             {
                 Success = false,
                 Error = $"{char.ToUpperInvariant(collision[0])}{collision[1..]} is written twice. "
-                    + "Converting would keep only the later one, so the file was left unchanged."
+                    + "Regrouping would keep only the later one, so the file was left unchanged."
             };
         if (newText == null)
             return new ConvertLayoutResponse
             {
                 Success = false,
-                Error = "Conversion would not produce a clean result — no changes made."
+                Error = "Regrouping would not produce a clean result — no changes made."
             };
 
         var to = from == LilySharp.Core.Editing.LayoutForm.PartMajor
             ? LilySharp.Core.Editing.LayoutForm.SectionMajor
             : LilySharp.Core.Editing.LayoutForm.PartMajor;
+        // The words the editor shows ("regrouped by section"), not the enum names.
+        static string Grouping(LilySharp.Core.Editing.LayoutForm form)
+            => form == LilySharp.Core.Editing.LayoutForm.PartMajor ? "by part" : "by section";
         return new ConvertLayoutResponse
         {
             Success = true,
             NewText = newText,
-            FromLayout = from.ToString(),
-            ToLayout = to.ToString(),
+            FromLayout = Grouping(from),
+            ToLayout = Grouping(to),
         };
     }
 

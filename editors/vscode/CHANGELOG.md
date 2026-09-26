@@ -53,9 +53,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Editor
 
-- **Convert Layout (part-major ⇄ section-major) is now Convert Layout (by part ⇄ by
-  section).** Same command, plainer names: by part writes `part bass { section A { … } }`,
-  by section writes `section A { bass { … } }`.
+- **Convert Layout (part-major ⇄ section-major) is now Regroup (by part ⇄ by section).**
+  Same command, plainer names: a file grouped by part writes `part bass { section A { … } }`,
+  one grouped by section writes `section A { bass { … } }`.
 
 ## 0.8.0
 

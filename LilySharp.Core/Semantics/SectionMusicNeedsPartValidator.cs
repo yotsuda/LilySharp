@@ -57,7 +57,7 @@ internal sealed class SectionMusicNeedsPartValidator : ISemanticValidator
                 if (child == null || !IsBareMusic(child))
                     continue;
                 _diagnostics.Error(child.Span, DiagnosticCodes.SectionMusicNeedsPart,
-                    "This file is laid out by part, so a top-level section holds only section-wide "
+                    "This file is grouped by part, so a top-level section holds only section-wide "
                     + "directives and the parts' cells — put the music inside a part, e.g. "
                     + $"'part melody {{ section {section.Name.Text} {{ … }} }}'.");
                 break; // one report per section is enough

@@ -62,7 +62,7 @@ internal sealed class TrackNeedsSectionsValidator : ISemanticValidator
             if (block.HasSections || HasPartOrSectionAncestor(block))
                 continue;
             _diagnostics.Error(block.LyricsKeyword.Span, DiagnosticCodes.LyricTrackNeedsSections,
-                "In a by-part layout a lyrics track must group its verses by section: " +
+                "In a file grouped by part, a lyrics track must group its verses by section: " +
                 "write 'lyrics { section A { … } }' (mirroring the part's sections).");
         }
 
@@ -74,7 +74,7 @@ internal sealed class TrackNeedsSectionsValidator : ISemanticValidator
             // spelling is what they are being asked to wrap, not a placeholder.
             string name = block.PartName is { Length: > 0 } n ? n + " " : "";
             _diagnostics.Error(block.ChordsKeyword.Span, DiagnosticCodes.ChordTrackNeedsSections,
-                "In a by-part layout a chords track must group its bars by section: " +
+                "In a file grouped by part, a chords track must group its bars by section: " +
                 $"write 'chords {name}{{ section A {{ … }} }}' (mirroring the part's sections).");
         }
     }
