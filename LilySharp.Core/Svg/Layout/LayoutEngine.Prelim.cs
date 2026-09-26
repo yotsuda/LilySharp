@@ -105,7 +105,8 @@ internal sealed partial class LayoutEngine
         List<List<(VerticalSkyline Up, VerticalSkyline Down)>> staffInside,
         IReadOnlyList<double> rowsAboveFirstStaff,
         List<VerticalSkyline?>? lyricBands = null,
-        List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null)
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalLine>>>? pedalLines = null,
+        List<List<ImmutableArray<PedalEngraver.SolvedPedalRow>>>? pedalRows = null)
     {
         var (prelimStaff, prelimStaffIndex) = score.PrimaryContentStaffWithIndex();
         var prelimScore = new Score(
@@ -277,6 +278,12 @@ internal sealed partial class LayoutEngine
             // plain/fingbeam/v2bow — the final pass was already reading these tables).
             StaffSpanners = staffSpanners,
             StaffInside = staffInside,
+            // ⚠️ AND THE ROOM'S SOLVED PEDAL ROWS, for the same reason once more: without them
+            // this pass placed every text-style pedal word by the legacy stack (close under
+            // the staff), the page reserved room for THAT, and the final pass drew the word
+            // at its solved row — lower, into the next system's tempo mark or trill
+            // (2026-09-26, fantasia.lys bar 7 "Ped." through "Agitato (♩ = 112)").
+            PedalRows = pedalRows,
             PrefixTimeSignatureX = BuildPrefixTimeSignatureX(score, prelimSystems),
             PrefixMarkAnchorX = BuildPrefixMarkAnchorX(score, prelimSystems),
             LineStartBarlineX = BuildLineStartBarlineX(score, prelimSystems),

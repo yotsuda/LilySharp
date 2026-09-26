@@ -458,7 +458,7 @@ internal sealed partial class LayoutEngine
             score, multiStaffLayouter, systems.ToImmutableArray(), perSystemExtents,
             perSystemSkylines, multiStaffLayouter.RestCollisionsOfDelegate, systemCache,
             commonShortestDuration, placed.StaffSpanners, placed.StaffInside,
-            rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines);
+            rowsAboveFirstStaff, placed.LyricBands, placed.PedalLines, placed.PedalRows);
 
         return new SystemPass(systems, perSystemExtents, perSystemSkylines, perSystemHeights,
             perSystemBandUps, systemHeight, placed, prelim);
