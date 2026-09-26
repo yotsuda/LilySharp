@@ -2286,6 +2286,17 @@ internal sealed class ElementCoordinator
                 ? TabColumnCurveUp(fonts, score, staff, ordered)
                 : null;
 
+            // A LONE tie BROKEN at a line end takes its direction BEFORE it is scored, from
+            // both original heads' stems (the piece's own and its broken neighbour's), and is
+            // then solved as a tie with that direction imposed.
+            // LILYPOND-REF: lily/tie.cc:193-211 Tie::calc_control_points (`me->original ()
+            //   && ties.size () == 1 && !direction` → set_grob_direction (get_default_dir)),
+            //   lily/tie.cc:94-127 Tie::get_default_dir.
+            bool? brokenCurveUp = segments.Length > 1 && ordered.Count == 1
+                && staff is not { IsTab: true } && ordered[0].ForcedCurveUp is null
+                    ? BrokenTieDefaultCurveUp(score.Voices[ordered[0].VoiceIndex], ordered[0])
+                    : null;
+
             var solved = new TieLayout[ordered.Count, segments.Length];
 
             for (int s = 0; s < segments.Length; s++)
@@ -2295,7 +2306,7 @@ internal sealed class ElementCoordinator
                 {
                     specs.Add(BuildTieSpecification(
                         fonts, score, systems, staff, staffIndex, ordered[i], segments[s],
-                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i]));
+                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i], brokenCurveUp));
                 }
 
                 // The thread's lent problem (TieFormattingProblem.SolveColumn) — one column a
@@ -2479,7 +2490,8 @@ internal sealed class ElementCoordinator
         MeasureLayout startMeasure,
         MeasureLayout endMeasure,
         List<int> tiedPositions,
-        bool? tabCurveUp = null)
+        bool? tabCurveUp = null,
+        bool? brokenCurveUp = null)
     {
         int startDots = tie.StartNote.Dots;
 
@@ -2680,6 +2692,17 @@ internal sealed class ElementCoordinator
         {
             double staffMiddleDown = staffY + _options.StaffHeight / 2;
             y = staffMiddleDown - tie.StaffPosition / 2.0;
+            // A lone broken tie's direction, decided before scoring (see the caller).
+            if (brokenCurveUp is { } up)
+            {
+                tieForProblem = new TieItem(
+                    tie.StartNote, tie.EndNote, tie.StaffPosition, forcedCurveUp: up,
+                    tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex,
+                    tie.VoiceIndex)
+                {
+                    SourcePosition = tie.SourcePosition,
+                };
+            }
         }
 
         // The two bound stems, which decide the direction whenever they AGREE
@@ -2709,6 +2732,37 @@ internal sealed class ElementCoordinator
             StartStemUp = startStemUp,
             EndStemUp = endStemUp,
         };
+    }
+
+    /// <summary>
+    /// The direction a lone tie broken at a line end is given before it is scored: DOWN when
+    /// both bound stems point up, against the one stem when only one bound has a stem, the
+    /// sign of its position when neither has, and otherwise (stems that conflict, or both
+    /// down) the Tie's <c>neutral-direction</c>, UP.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie.cc:94-127 Tie::get_default_dir, verbatim — including the two
+    /// gaps its own comments ask about: two DOWN stems do not give UP by their own branch, and
+    /// conflicting stems skip the position and go straight to neutral-direction
+    /// (scm/define-grobs.scm Tie: neutral-direction UP). Both heads are the ORIGINAL tie's:
+    /// a broken piece reads its missing one off the broken neighbour.
+    /// </remarks>
+    private static bool BrokenTieDefaultCurveUp(Voice voice, TieItem tie)
+    {
+        bool? left = BoundStemUp(voice, tie.StartMeasureIndex, tie.StartItemIndex);
+        bool? right = BoundStemUp(voice, tie.EndMeasureIndex, tie.EndItemIndex);
+        if (left is { } l && right is { } r)
+        {
+            if (l && r)
+                return false;
+        }
+        else if (left is { } lo)
+            return !lo;
+        else if (right is { } ro)
+            return !ro;
+        else if (tie.StaffPosition != 0)
+            return tie.StaffPosition > 0;
+        return true;
     }
 
     /// <summary>

@@ -64,4 +64,38 @@ public class TieBrokenAtLineEndTests
 
         Assert.Equal(110.5757, g.BowEndX(0), 3);
     }
+
+    /// <summary>
+    /// A lone tie broken at a line end takes its direction BEFORE it is scored, from both
+    /// original heads' stems — and stems that disagree give the Tie's neutral direction, UP.
+    /// </summary>
+    /// <remarks>
+    /// DADDY! DADDY! DO! (Lab corpus): <c>cis,~</c> ends the line beamed stem-up with the
+    /// low <c>b,,</c>; the <c>cis,</c> it is tied to opens the next line beamed stem-down with
+    /// the octave above. LilyPond 2.26.0 (this book's <c>lysc ly</c> twin, Lab
+    /// <c>sessions/p647/bows</c>) bows the first piece UP, rising 0.8544; Lily# scored the piece
+    /// like an unbroken tie, where the stems cast no vote, and the distance terms bowed it DOWN
+    /// (−0.8667). MEASURED before the fix: −0.8667.
+    /// LILYPOND-REF: lily/tie.cc:193-211 Tie::calc_control_points, :94-127 get_default_dir.
+    /// </remarks>
+    [Fact]
+    public void ALoneBrokenTie_TakesItsDirectionFromBothStems()
+    {
+        var g = RenderedGeometry.RenderProduct("""
+            octave absolute
+            key b major
+            time 4/4
+            part bassline {
+              clef bass
+              tuning bass5
+              section A {
+                cis,8 cis cis, cis cis, gis,, b,, cis,~ | break cis, cis cis, cis cis, e,4 dis,8 |
+              }
+            }
+            form main { A }
+            score main { staff bassline }
+            """);
+
+        Assert.Equal(0.8544, g.BowControlLift(0), 3);
+    }
 }
