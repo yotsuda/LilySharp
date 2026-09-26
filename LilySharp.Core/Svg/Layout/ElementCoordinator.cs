@@ -2534,8 +2534,25 @@ internal sealed class ElementCoordinator
         }
         else
         {
+            // Broken piece: the bound is the system's closing break column, and the tie
+            // runs to the LEFT edge of that column's staff extent — the end bar line's ink,
+            // or a courtesy clef standing in front of it — not to the measure's end, which
+            // is the bar line's RIGHT edge. LILYPOND-REF: lily/tie-formatting-problem.cc:262-270
+            // set_minimum_height (staff_extent[-dir]); the note-head gap comes off after
+            // (FinalAttachment). The same bound a multi-measure rest ends on
+            // (MultiMeasureRestEngraver's endX). ABC.lys (Lab corpus) bar 63: the extra
+            // bar-line width kept a line-end tie on the head's edge where LilyPond, 0.19
+            // shorter there, drops it under the head.
             var lastMeasure = segSystem.Measures[^1];
-            segEndX = lastMeasure.X + lastMeasure.Width;
+            var tieMeasures = score.Voices[tie.VoiceIndex].Measures;
+            int lastIndex = lastMeasure.MeasureIndex;
+            var endBar = lastIndex < tieMeasures.Length
+                ? EngravingDefaults.LineEndBarline(tieMeasures[lastIndex].EndBarline)
+                : BarlineType.Single;
+            segEndX = lastMeasure.X + lastMeasure.Width
+                - EngravingDefaults.BarlineDrawnWidth(endBar)
+                - SpacingRules.BoundaryClefAllowance(fonts, endBar,
+                    lastIndex + 1 < tieMeasures.Length ? tieMeasures[lastIndex + 1] : null);
         }
 
         // Tie Y position is uniform (same pitch on both ends).

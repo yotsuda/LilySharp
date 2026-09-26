@@ -158,10 +158,9 @@ internal static partial class SharedRenderer
     /// </summary>
     private static BarlineType EndBarWithBreakPieces(
         Measure measure, SystemLayout system, int measureIndex)
-        => measure.EndBarline == BarlineType.RepeatBoth
-           && system.Measures.Length > 0
+        => system.Measures.Length > 0
            && measureIndex >= system.Measures[^1].MeasureIndex
-            ? BarlineType.RepeatEnd
+            ? EngravingDefaults.LineEndBarline(measure.EndBarline)
             : measure.EndBarline;
 
     /// <summary>

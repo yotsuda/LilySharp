@@ -1287,6 +1287,18 @@ internal static class EngravingDefaults
     public const double RepeatDotsOffset = 2 * RepeatDotRadius + RepeatBarlineDotSeparation;
 
     /// <summary>
+    /// The bar line a measure's END prints when that measure closes a SYSTEM — its
+    /// end-of-line break piece: a combined repeat (RepeatBoth) prints only its repeat-END
+    /// there, and its begin piece moves to the next system's start. Every other type
+    /// prints whole. Shared by the pen (SharedRenderer.Barlines) and by the layout that
+    /// bounds a spanner at the system's end on that bar line's ink.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm define-bar-line ":|.|:" / ":|.:" —
+    /// end-of-line piece ":|.", begin-of-line piece ".|:".</remarks>
+    public static BarlineType LineEndBarline(BarlineType end)
+        => end == BarlineType.RepeatBoth ? BarlineType.RepeatEnd : end;
+
+    /// <summary>
     /// The drawn X-extent of a bar line, in staff spaces — the sum of the glyph
     /// components actually stencilled (thin/thick segments, their separations, and
     /// the leftward repeat-dots block). This is the SINGLE source of truth shared

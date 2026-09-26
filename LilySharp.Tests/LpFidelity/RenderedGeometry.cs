@@ -2368,6 +2368,23 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// Where bow <paramref name="index"/> ENDS, page X — LilyPond's <c>control-points</c>
+    /// [3].x plus its grob's X. The bound a piece broken at a line end reads is this, not
+    /// the span: the span also carries where the tie chose to START.
+    /// </summary>
+    public double BowEndX(int index, int page = 0)
+    {
+        var bows = _pages[page].Beziers;
+        if (index < 0 || index >= bows.Count)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: asked for bow {index} but {bows.Count} were drawn.\n"
+                + "Drawn geometry:\n" + Describe());
+        }
+        return bows[index].P1.X;
+    }
+
+    /// <summary>
     /// How far bow <paramref name="index"/>'s first centre-line control point stands above its
     /// start, in staff spaces (negative for a bow curving down) — LilyPond's
     /// <c>control-points</c> [1].y − [0].y, the slur_shape height the stencil is built from.

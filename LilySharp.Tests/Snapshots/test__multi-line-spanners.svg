@@ -104,7 +104,7 @@
   <text class="music" x="78.26" y="61.46" font-size="4.00" data-pos="631"></text>
   <line x1="78.32" y1="61.61" x2="78.32" y2="64.96" stroke="#000000" stroke-width="0.130"/>
   <rect x="102.24" y="59.96" width="0.19" height="4.00" data-pos="635"/>
-  <path d="M 90.62,40.46 C 91.92,41.30 100.93,41.30 102.23,40.46 C 100.93,41.42 91.92,41.42 90.62,40.46 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="495"/>
+  <path d="M 90.62,40.46 C 91.91,41.30 100.74,41.30 102.04,40.46 C 100.74,41.42 91.91,41.42 90.62,40.46 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="495"/>
   <path d="M 3.57,52.46 C 4.06,52.92 5.11,52.92 5.60,52.46 C 5.11,53.04 4.06,53.04 3.57,52.46 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="495"/>
   <path d="M 18.73,26.27 C 22.12,23.21 98.86,21.05 102.43,23.92 C 98.87,21.17 22.13,23.33 18.73,26.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="371"/>
   <path d="M 3.37,35.77 C 6.23,34.11 28.30,35.43 30.95,37.42 C 28.29,35.55 6.22,34.23 3.37,35.77 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="371"/>
