@@ -120,6 +120,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **The preview draws text in the faces the layout measured.** The preview loaded only the
+  music font, so on a machine without TeX Gyre installed every title, lyric, tempo, chord
+  name and label fell back to the browser's own serif and sans — narrower than what the
+  layout had spaced them for (a section label's frame read too wide around its text). The
+  preview and the AI-candidate view now load TeX Gyre Schola and Heros from the fonts the
+  extension already ships with its language server.
+
 - **A finding is reported once.** A validator that reads the collected score sees a section
   once per time the form plays it, and reported the same warning once per play — a lyric
   overflow in a chorus the form plays twice appeared twice in the Problems panel and in

@@ -32,6 +32,7 @@ import { registerSmartTyping } from './smartTyping';
 import { registerExportBatch } from './exportBatch';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
+import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -791,7 +792,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         {
             enableScripts: true,
             retainContextWhenHidden: true,
-            localResourceRoots: [fontsUri]
+            localResourceRoots: [fontsUri, textFontsRoot(context.extensionUri)]
         }
     );
 
@@ -937,7 +938,8 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
-    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme());
+    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(), getPreviewTheme(),
+        textFontFaceCss(panel.webview, context.extensionUri));
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -1891,7 +1893,7 @@ function getPreviewTheme(): 'auto' | 'light' | 'dark' {
 }
 
 function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
-                        theme: 'auto' | 'light' | 'dark'): string {
+                        theme: 'auto' | 'light' | 'dark', textFontCss: string): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -1919,6 +1921,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             font-family: 'Emmentaler-Brace';
             src: url('${braceFontUri}') format('woff2');
         }
+        /* The score's text faces — the ones the layout measured (scoreFonts.ts). */
+        ${textFontCss}
         body {
             margin: 0;
             padding: 0;

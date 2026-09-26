@@ -37,6 +37,7 @@ import * as path from 'path';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import { ChatClient, ChatMessage, resolveChatClient } from './modelClient';
 import { CandidateEdit as CoreCandidateEdit, SEL_CLOSE, SEL_OPEN, cleanCandidate, octaveOutliers, toCandidateEdit } from './aiTransformCore';
+import { textFontFaceCss, textFontsRoot } from './scoreFonts';
 export { cleanCandidate }; // aiComplete reads it from here
 
 // ---- Dependencies wired in from extension.ts (keeps the LSP client global there) ----
@@ -667,7 +668,8 @@ async function reviewOnScore(
 
     panel.webview.html = getCandidateHtml(
         fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce(),
-        renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed);
+        renderBefore.Svg, renderAfter.Svg, renderAfter.Error, caption, candidate, changed,
+        textFontFaceCss(panel.webview, deps.extensionUri));
     panel.reveal(vscode.ViewColumn.Beside, true);
 
     // Hand this round's resolver to the panel's persistent message pump. Iterate
@@ -688,7 +690,8 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
         'lilysharpAiCandidate',
         'Lily# — AI candidate',
         { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-        { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [fontsUri] });
+        { enableScripts: true, retainContextWhenHidden: true,
+          localResourceRoots: [fontsUri, textFontsRoot(deps.extensionUri)] });
 
     // One persistent message pump for the panel's whole lifetime. Registering the
     // listener once — before any html is set — guarantees it receives Accept/
@@ -715,7 +718,7 @@ function ensureCandidatePanel(deps: AiTransformDeps): vscode.WebviewPanel {
 function getCandidateHtml(
     fontUri: string, braceFontUri: string, cspSource: string, nonce: string,
     svgBefore: string | null, svgAfter: string | null, error: string | null,
-    caption: string, candidate: string, changed: ChangedSpans,
+    caption: string, candidate: string, changed: ChangedSpans, textFontCss: string,
 ): string {
     const afterBody = svgAfter
         ? `<div class="score">${svgAfter}</div>`
@@ -731,6 +734,7 @@ function getCandidateHtml(
 <style>
 @font-face { font-family: 'Emmentaler'; src: url('${fontUri}') format('woff2'); }
 @font-face { font-family: 'Emmentaler-Brace'; src: url('${braceFontUri}') format('woff2'); }
+${textFontCss}
 body { margin:0; padding:0; display:flex; flex-direction:column; height:100vh; overflow:hidden;
        font-family: system-ui, sans-serif; background: var(--vscode-editor-background); color: var(--vscode-foreground); }
 .header { padding:8px 12px; border-bottom:1px solid var(--vscode-panel-border); flex-shrink:0;
