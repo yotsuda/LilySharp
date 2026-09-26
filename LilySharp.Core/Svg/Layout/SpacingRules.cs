@@ -567,6 +567,30 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
+    /// Whether ANY staff in the score engraves a key signature — the OR over
+    /// <see cref="ContributesToKeyColumnWidth"/>, as <see cref="AnyStaffEngravesTime"/> is for
+    /// the meter. False for a score of drum and tab staves alone.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (Lab sessions/p642 k0/k1, u0/u1): a DrumStaff-only and a TabStaff-only score
+    /// with a mid-piece <c>\key</c> render their bar lines where the same score without it
+    /// does — no staff has a Key_engraver (ly/engraver-init.ly:297, :1214), so the column has
+    /// no KeySignature in it. Lily# booked the change: 7.98 ss (drums, F to E major) and 6.50
+    /// (tab) in front of the next note.
+    /// A staff-less lead sheet keeps its answer (true), as it does for the meter — nothing
+    /// changes there.
+    /// </remarks>
+    public static bool AnyStaffEngravesKey(MultiStaffScore score)
+    {
+        if (score.IsLeadSheet)
+            return true;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            if (ContributesToKeyColumnWidth(staff))
+                return true;
+        return false;
+    }
+
+    /// <summary>
     /// The engraved width of <paramref name="key"/> ON <paramref name="staff"/> — its
     /// stencil's X extent, which is the quantity the break-align group is the union of.
     /// </summary>

@@ -8,6 +8,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A key change in a score of drum or tab staves alone takes no room.** Neither staff
+  prints a key signature, as in LilyPond, but the change still pushed the next bar's notes
+  up to eight staff spaces right. Beside a pitched staff it keeps the room that staff's
+  signature needs. No book in the repository or corpora changes.
+
 - **The room a fermata or ornament takes in the note spacing is the room LilyPond gives
   it.** A lower voice's fermata was reserved on voice 1's note with the same number, above
   the staff, and a beamed note's fermata was reserved beside its own stem rather than above

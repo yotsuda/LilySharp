@@ -430,7 +430,7 @@ internal static class MultiMeasureRestEngraver
         {
             foreach (var item in items)
             {
-                if (item is KeySignatureChangeItem or TimeSignatureChangeItem { Blanked: false })
+                if (item is KeySignatureChangeItem { Blanked: false } or TimeSignatureChangeItem { Blanked: false })
                     return true;
                 if (item.Duration > Fraction.Zero)
                     break;

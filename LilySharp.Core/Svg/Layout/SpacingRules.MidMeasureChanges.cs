@@ -89,7 +89,7 @@ internal static partial class SpacingRules
     /// </para>
     /// </remarks>
     internal static bool ChangeItemHasInk(MusicItem item) =>
-        item is not TimeSignatureChangeItem { Blanked: true };
+        item is not (TimeSignatureChangeItem { Blanked: true } or KeySignatureChangeItem { Blanked: true });
 
     /// <summary>
     /// Whether this item stands in the non-musical change column rather than the musical

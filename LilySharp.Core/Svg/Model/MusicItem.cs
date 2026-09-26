@@ -1368,6 +1368,24 @@ public sealed record KeySignatureChangeItem : MusicItem
     /// </remarks>
     public ClefType Clef { get; init; } = ClefType.Treble;
 
+    /// <summary>
+    /// Whether NO staff of the score this item belongs to engraves a key signature (drum and
+    /// tab staves alone), so the change puts nothing in the non-musical column — no width,
+    /// no break-align gap, no space-alist distance. It still moves the running key.
+    /// </summary>
+    /// <remarks>
+    /// The key's counterpart of <see cref="TimeSignatureChangeItem.Blanked"/>, set by the same
+    /// pass (<c>MeterStencil.Blank</c>) for the same score-level reason: a paper column is the
+    /// union of every staff, so one notation staff gives the change its width however many
+    /// drum or tab staves stand beside it (<see cref="Svg.Layout.SpacingRules.AnyStaffEngravesKey"/>).
+    /// The walks that consult it are the ones the meter's already does
+    /// (<see cref="Svg.Layout.SpacingRules.ChangeItemHasInk"/>, the boundary column, the
+    /// multi-measure rest's gate). Unlike the meter LilyPond has no grob to blank here — the
+    /// Key_engraver is removed (ly/engraver-init.ly:297 DrumStaff, :1214 TabStaff) — but an
+    /// absent grob and one with an empty extent are stepped over alike.
+    /// </remarks>
+    public bool Blanked { get; init; }
+
     /// <summary>Always <c>Fraction.Zero</c> — the key change occupies horizontal space but no time.</summary>
     protected override Fraction SoundingDuration => Fraction.Zero;
 

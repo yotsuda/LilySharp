@@ -108,7 +108,8 @@ internal sealed class BoundaryColumn
             foreach (var item in leadingItems)
             {
                 if (item is ClefChangeItem c) clef = c;
-                else if (item is KeySignatureChangeItem k) key = k;
+                // A blanked key change (no staff engraves one) is stepped over like a blanked meter.
+                else if (item is KeySignatureChangeItem k) { if (!k.Blanked) key = k; }
                 // A BLANKED meter is stepped over rather than collected: its extent is empty,
                 // so break alignment gives it no offset and it widens the column by nothing
                 // (SpacingRules.ChangeItemHasInk). It is still not music, so the scan does not

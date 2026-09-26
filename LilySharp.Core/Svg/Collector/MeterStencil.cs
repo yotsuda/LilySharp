@@ -23,7 +23,9 @@ namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
 /// The last step of the collect phase: marks a score's mid-piece meter changes BLANKED when
-/// no staff in it engraves a time signature stencil.
+/// no staff in it engraves a time signature stencil — and its key changes when no staff
+/// engraves a key signature (<see cref="KeySignatureChangeItem.Blanked"/>, a drum- or tab-only
+/// score; the same pass for the same score-level reason, below).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -70,12 +72,16 @@ internal static class MeterStencil
     {
         // The one question, asked in the one place that already owns it. TRUE is the ordinary
         // answer — any notation staff at all gives the column its width — so the common path
-        // is this comparison and nothing else.
-        if (SpacingRules.AnyStaffEngravesTime(score))
+        // is these two comparisons and nothing else. The KEY asks the same question of its own
+        // column (KeySignatureChangeItem.Blanked): a drum- or tab-only score engraves none.
+        bool blankTime = !SpacingRules.AnyStaffEngravesTime(score);
+        bool blankKey = !SpacingRules.AnyStaffEngravesKey(score);
+        if (!blankTime && !blankKey)
             return score;
 
         var voices = new Dictionary<Voice, Voice>(ReferenceEqualityComparer.Instance);
         var measures = new Dictionary<Measure, Measure>(ReferenceEqualityComparer.Instance);
+        var mode = (blankTime, blankKey);
 
         var groups = ImmutableArray.CreateBuilder<StaffGroup>(score.StaffGroups.Length);
         bool anyGroupChanged = false;
@@ -85,7 +91,7 @@ internal static class MeterStencil
             bool anyStaffChanged = false;
             foreach (var staff in group.Staves)
             {
-                var rewritten = BlankVoices(staff.Voices, voices, measures);
+                var rewritten = BlankVoices(staff.Voices, voices, measures, mode);
                 anyStaffChanged |= !rewritten.IsDefault;
                 staves.Add(rewritten.IsDefault ? staff : staff with { Voices = rewritten });
             }
@@ -102,7 +108,8 @@ internal static class MeterStencil
     private static ImmutableArray<Voice> BlankVoices(
         ImmutableArray<Voice> source,
         Dictionary<Voice, Voice> voiceMemo,
-        Dictionary<Measure, Measure> measureMemo)
+        Dictionary<Measure, Measure> measureMemo,
+        (bool Time, bool Key) mode)
     {
         ImmutableArray<Voice>.Builder? builder = null;
         for (int i = 0; i < source.Length; i++)
@@ -110,7 +117,7 @@ internal static class MeterStencil
             var voice = source[i];
             if (!voiceMemo.TryGetValue(voice, out var rewritten))
             {
-                rewritten = BlankVoice(voice, measureMemo);
+                rewritten = BlankVoice(voice, measureMemo, mode);
                 voiceMemo[voice] = rewritten;
             }
             if (ReferenceEquals(rewritten, voice))
@@ -129,7 +136,8 @@ internal static class MeterStencil
         return builder?.ToImmutable() ?? default;
     }
 
-    private static Voice BlankVoice(Voice voice, Dictionary<Measure, Measure> measureMemo)
+    private static Voice BlankVoice(
+        Voice voice, Dictionary<Measure, Measure> measureMemo, (bool Time, bool Key) mode)
     {
         ImmutableArray<Measure>.Builder? builder = null;
         for (int i = 0; i < voice.Measures.Length; i++)
@@ -137,7 +145,7 @@ internal static class MeterStencil
             var measure = voice.Measures[i];
             if (!measureMemo.TryGetValue(measure, out var rewritten))
             {
-                rewritten = BlankMeasure(measure);
+                rewritten = BlankMeasure(measure, mode);
                 measureMemo[measure] = rewritten;
             }
             if (ReferenceEquals(rewritten, measure))
@@ -156,12 +164,18 @@ internal static class MeterStencil
         return builder == null ? voice : voice with { Measures = builder.ToImmutable() };
     }
 
-    private static Measure BlankMeasure(Measure measure)
+    private static Measure BlankMeasure(Measure measure, (bool Time, bool Key) mode)
     {
         ImmutableArray<MusicItem>.Builder? builder = null;
         for (int i = 0; i < measure.Items.Length; i++)
         {
-            if (measure.Items[i] is not TimeSignatureChangeItem { Blanked: false } time)
+            MusicItem? blanked = measure.Items[i] switch
+            {
+                TimeSignatureChangeItem { Blanked: false } time when mode.Time => time with { Blanked = true },
+                KeySignatureChangeItem { Blanked: false } key when mode.Key => key with { Blanked = true },
+                _ => null,
+            };
+            if (blanked is null)
             {
                 builder?.Add(measure.Items[i]);
                 continue;
@@ -172,7 +186,7 @@ internal static class MeterStencil
                 for (int j = 0; j < i; j++)
                     builder.Add(measure.Items[j]);
             }
-            builder.Add(time with { Blanked = true });
+            builder.Add(blanked);
         }
         return builder == null ? measure : measure with { Items = builder.ToImmutable() };
     }

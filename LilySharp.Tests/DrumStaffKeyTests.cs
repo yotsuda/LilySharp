@@ -68,6 +68,40 @@ public class DrumStaffKeyTests
         => Assert.Equal(PrefixWidth(Src("c major", "staff kit")),
                         PrefixWidth(Src("e major", "staff kit")));
 
+    private static string BarLines(string src)
+    {
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(src), new SvgRenderOptions { EmbedFont = false });
+        return string.Join(" ", System.Text.RegularExpressions.Regex.Matches(
+            svg, "<rect x=\"([\\d.]+)\" y=\"[\\d.]+\" width=\"0.19\"").Select(m => m.Groups[1].Value));
+    }
+
+    [Theory]
+    // a DrumStaff, F major to E major
+    [InlineData("staff kit", true)]
+    // a TabStaff (the tab of a pitched part): its Key_engraver is removed too (:1214)
+    [InlineData("tab m", false)]
+    public void AMidPieceKeyChange_TakesNoRoom_WhereNoStaffEngravesAKey(string score, bool drums)
+    {
+        // LilyPond 2.26 draws the bar lines of both twins at the same x (Lab sessions/p642
+        // k0/k1, u0/u1): the column holds no KeySignature. Lily# booked the change's width
+        // (KeySignatureChangeItem.Blanked, set by MeterStencil.Blank).
+        string Book(string change) => drums
+            ? Src("f major", score, drums: "hh8 hh hh hh sn4 bd | " + change + "hh8 hh hh hh sn4 bd |")
+            // e and a: natural in both keys, so the frets do not move with the key.
+            : Src("f major", score, melody: "e4 a e a | " + change + "e4 a e a |");
+        Assert.Equal(BarLines(Book("")), BarLines(Book("key e major ")));
+    }
+
+    [Fact]
+    public void BesideAPitchedStaff_AMidPieceKeyChange_StillTakesItsRoom()
+    {
+        // The column is the union of every staff: the treble staff's signature gives it width.
+        string Book(string change) => Src("f major", "staff m  staff kit",
+            drums: "hh8 hh hh hh sn4 bd | " + change + "hh8 hh hh hh sn4 bd |",
+            melody: "c4 d e f | " + change + "c4 d e g |");
+        Assert.NotEqual(BarLines(Book("")), BarLines(Book("key e major ")));
+    }
+
     [Fact]
     public void AMidPieceKeyChange_IsNotDrawnOnTheDrumStaff()
     {
