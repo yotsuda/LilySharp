@@ -1988,18 +1988,36 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             height: 20px;
             background: #ccc;
         }
-        #pageInfo {
+        #pageInput {
+            /* No width here: updatePageInfo sizes it to the page count's digits. */
+            padding: 3px 1px 3px 4px;
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            text-align: right;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            color: #333;
+        }
+        #pageInput:disabled {
+            opacity: 0.5;
+        }
+        #pageCount {
             font-family: system-ui, sans-serif;
             font-size: 13px;
             color: #333;
-            min-width: 44px;
-            text-align: center;
+            white-space: nowrap;
         }
         /* Dark scheme: :root.theme-dark, not a prefers-color-scheme media query — the
            class is the lilysharp.preview.theme setting resolved (see the head script),
            which is how "always light" / "always dark" can override the editor theme. */
         :root.theme-dark .toolbar .sep { background: #555; }
-        :root.theme-dark #pageInfo { color: #ccc; }
+        :root.theme-dark #pageCount { color: #ccc; }
+        :root.theme-dark #pageInput {
+            background: #3c3c3c;
+            color: #ccc;
+            border-color: #555;
+        }
         .main-content {
             flex: 1;
             /* A flex item defaults to min-height:auto, which refuses to shrink
@@ -2156,9 +2174,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
         <span class="sep"></span>
         <button id="firstPageBtn" type="button" title="First page">⏮</button>
-        <button id="prevPageBtn" type="button" title="Previous page">◀</button>
-        <span id="pageInfo">1 / 1</span>
-        <button id="nextPageBtn" type="button" title="Next page">▶</button>
+        <!-- No min/max: the spinner is inverted in script (down = next page), so
+             the native step must be free to go past either end (see pageInput). -->
+        <input id="pageInput" type="number" value="1" title="Page" style="width: calc(1ch + 22px)">
+        <span id="pageCount">/ 1</span>
         <button id="lastPageBtn" type="button" title="Last page">⏭</button>
     </div>
     <div id="errorBanner" class="error-banner" role="alert"></div>
@@ -2241,7 +2260,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // first render (and every resize after it) fits without being asked.
         let fitMode = 'width';
         const mainContent = document.querySelector('.main-content');
-        const pageInfo = document.getElementById('pageInfo');
+        const pageInput = document.getElementById('pageInput');
+        const pageCount = document.getElementById('pageCount');
+        // The page number last put in the box: the base the inverted spinner
+        // steps from (the box's own value has already moved by then).
+        let shownPageNumber = 1;
+        function showPageNumber(n) {
+            shownPageNumber = n;
+            pageInput.value = String(n);
+        }
 
         // Zoom by resizing the SVG element (not CSS transform): real layout
         // size keeps scrollbars, centering and page-scroll math correct.
@@ -2290,9 +2317,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         function updatePageInfo() {
             const n = pages.length;
-            pageInfo.textContent = (currentPageIndex() + 1) + ' / ' + n;
+            pageCount.textContent = '/ ' + n;
+            // As narrow as the widest page number allows: its digits, the
+            // padding and border (7px), and Chromium's spinner (about 15px).
+            pageInput.style.width = 'calc(' + String(n).length + 'ch + 22px)';
+            // Scrolling reports the page, but not over a number the user is
+            // still typing: a focused box keeps its text until change/blur.
+            if (document.activeElement !== pageInput) {
+                showPageNumber(currentPageIndex() + 1);
+            }
             const single = n < 2;
-            for (const id of ['firstPageBtn', 'prevPageBtn', 'nextPageBtn', 'lastPageBtn']) {
+            pageInput.disabled = single;
+            for (const id of ['firstPageBtn', 'lastPageBtn']) {
                 document.getElementById(id).disabled = single;
             }
         }
@@ -3442,9 +3478,40 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         document.getElementById('stopBtn').addEventListener('click', stopPlayback);
 
         document.getElementById('firstPageBtn').addEventListener('click', () => gotoPage(0));
-        document.getElementById('prevPageBtn').addEventListener('click', () => gotoPage(currentPageIndex() - 1));
-        document.getElementById('nextPageBtn').addEventListener('click', () => gotoPage(currentPageIndex() + 1));
         document.getElementById('lastPageBtn').addEventListener('click', () => gotoPage(pages.length - 1));
+        // change = spinner click, Enter, or blur after typing. A blank or
+        // non-number entry snaps back to the page actually in view.
+        function gotoPageNumber(v) {
+            const i = Math.max(0, Math.min(pages.length - 1, v - 1));
+            gotoPage(i);
+            showPageNumber(i + 1);
+        }
+        pageInput.addEventListener('change', () => {
+            const v = parseInt(pageInput.value, 10);
+            if (!Number.isFinite(v)) { showPageNumber(currentPageIndex() + 1); return; }
+            gotoPageNumber(v);
+        });
+        // The spinner reads top-to-bottom like the score: down = next page. A
+        // native step (spinner click, wheel) arrives as an input event with no
+        // inputType — typing always has one — so undo its direction here.
+        pageInput.addEventListener('input', (e) => {
+            const v = parseInt(pageInput.value, 10);
+            if (!Number.isFinite(v)) return;
+            // Typed digits are the base a spinner click right after steps from.
+            if (e.inputType) { shownPageNumber = v; return; }
+            gotoPageNumber(shownPageNumber - (v - shownPageNumber));
+        });
+        pageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                gotoPageNumber(shownPageNumber + (e.key === 'ArrowDown' ? 1 : -1));
+            } else if (e.key === 'Enter') pageInput.blur();
+            else if (e.key === 'Escape') {
+                showPageNumber(currentPageIndex() + 1);
+                pageInput.blur();
+            }
+        });
+        pageInput.addEventListener('blur', updatePageInfo);
         mainContent.addEventListener('scroll', updatePageInfo);
         window.addEventListener('resize', () => {
             if (fitMode === 'width') fitWidth();
