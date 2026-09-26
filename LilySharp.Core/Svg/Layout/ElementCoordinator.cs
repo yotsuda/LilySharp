@@ -2939,9 +2939,9 @@ internal sealed class ElementCoordinator
     /// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state extremes_ / edge_has_beams_.
     /// </summary>
     private static SlurEdgeInfo ResolveSlurEdge(
-        Voice voice, int measureIndex, int itemIndex, bool leftEdge,
+        Voice voice, int voiceIndex, int measureIndex, int itemIndex, bool leftEdge,
         double columnX = double.NaN, double staffMiddleDown = double.NaN,
-        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember = null)
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember = null)
     {
         if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
             return default;
@@ -3001,7 +3001,7 @@ internal sealed class ElementCoordinator
             stemXLo = stemX - halfStem;
             stemXHi = stemX + halfStem;
             stemBeginY = staffMiddleDown - col.HeadPositionToward(!stemUp) / 2.0;
-            if (TryGetBeamedStemTipDeviceY(beamByMember, measureIndex, itemIndex,
+            if (TryGetBeamedStemTipDeviceY(beamByMember, voiceIndex, measureIndex, itemIndex,
                     stemX, staffMiddleDown, stemUp, out double tip))
                 stemTipY = tip;
             else
@@ -3071,13 +3071,13 @@ internal sealed class ElementCoordinator
     /// an up stem — on every sloped beam a slur attached to.
     /// </remarks>
     private static bool TryGetBeamedStemTipDeviceY(
-        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember,
-        int measureIndex, int itemIndex, double noteX,
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember,
+        int voiceIndex, int measureIndex, int itemIndex, double noteX,
         double staffMiddleDown, bool curveUp, out double stemTipDeviceY)
     {
         stemTipDeviceY = 0;
         if (beamByMember is null
-            || !beamByMember.TryGetValue((measureIndex, itemIndex), out var bl))
+            || !beamByMember.TryGetValue((voiceIndex, measureIndex, itemIndex), out var bl))
             return false;
 
         // curveUp == the endpoint note's stem direction here (caller gates on StemUp == curveUp).
@@ -3121,7 +3121,7 @@ internal sealed class ElementCoordinator
     private static IReadOnlyList<SlurObstacle> BuildSlurObstacles(
         Voice voice, SystemLayout segSystem, SlurItem slur,
         double staffMiddleDown, double segStartX, double segEndX,
-        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember,
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember,
         ImmutableArray<GraceNoteItem> graceNotes,
         Dictionary<int, List<int>>? graceByMeasure,
         GraceObstacleGeom?[]? graceGeomCache)
@@ -3231,7 +3231,7 @@ internal sealed class ElementCoordinator
                 {
                     double stemX = LayoutUtilities.StemX(
                         x, col.StemUp, col.NoteValue, col.Notehead);
-                    if (TryGetBeamedStemTipDeviceY(beamByMember, mi, i, stemX,
+                    if (TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, mi, i, stemX,
                             staffMiddleDown, col.StemUp, out double beamTip))
                         // Beamed: the extent already ends on the stack's outer face
                         // (beam_end_corrective, stem.cc:142); LP adds another half
@@ -3890,7 +3890,7 @@ internal sealed class ElementCoordinator
         // per-column stem resolution used to scan every beam layout's member
         // list for every covered column of every slur — quadratic in bars on a
         // beamed-and-slurred book (perf-slurbeam300).
-        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember = null;
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember = null;
         if (!beamLayouts.IsDefaultOrEmpty)
         {
             // The members of every beam, which BOUNDS the table (TryAdd drops a repeat).
@@ -3904,11 +3904,14 @@ internal sealed class ElementCoordinator
             beamByMember.EnsureCapacity(memberCount);
             foreach (var bl in beamLayouts)
                 foreach (var m in bl.Group.Members)
-                    // TryAdd, not indexer: (measure, item) is ambiguous across
-                    // VOICES on a shared staff, and the linear scan this replaces
-                    // returned the FIRST matching layout — last-wins flipped one
-                    // multi-voice snapshot (test/dot-cross-voice-spacing).
-                    beamByMember.TryAdd((m.ResolveMeasureIndex(bl.Group.MeasureIndex), m.ItemIndex), bl);
+                    // Keyed by VOICE too: (measure, item) alone is ambiguous across the
+                    // voices of a shared staff. Until session 651 it was not, and the first
+                    // beam won — so voice one's unbeamed g''2 in test/dot-cross-voice-spacing
+                    // read voice two's beamed e8 (also item 0) as its stem, its up stem ended
+                    // on a down beam, the slur missed LP's stem attachment (slur-scoring.cc:
+                    // 742-752) and started 0.365 left of LilyPond's.
+                    beamByMember.TryAdd(
+                        (bl.Group.VoiceIndex, m.ResolveMeasureIndex(bl.Group.MeasureIndex), m.ItemIndex), bl);
         }
 
         // Tuplet-NUMBER boxes, once per pass: LilyPond's slur engraver acknowledges
@@ -4098,11 +4101,11 @@ internal sealed class ElementCoordinator
                 // note's stem points the same way as the slur AND is beamed on the inner side;
                 // otherwise to the notehead (slurOffset). This lifts the slur clear of the beam.
                 var leftEdgeInfo = segment.IsFirst
-                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true,
+                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.VoiceIndex, slur.StartMeasureIndex, slur.StartItemIndex, leftEdge: true,
                         windowStartX, staffMiddleDown, beamByMember)
                     : default;
                 var rightEdgeInfo = segment.IsLast
-                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false,
+                    ? ResolveSlurEdge(score.Voices[slur.VoiceIndex], slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex, leftEdge: false,
                         windowEndX, staffMiddleDown, beamByMember)
                     : default;
                 const double stemTipGap = 0.5; // staff-spaces beyond the beam (LP dir_*0.5*staff_space)
@@ -4138,7 +4141,7 @@ internal sealed class ElementCoordinator
                 if (startRest is { } sRest)
                     segStartY = RestBoundBaseY(sRest);
                 else if (segment.IsFirst && leftEdgeInfo.StemUp == slur.CurveUp && leftEdgeInfo.BeamedInner
-                    && TryGetBeamedStemTipDeviceY(beamByMember, slur.StartMeasureIndex, slur.StartItemIndex,
+                    && TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, slur.StartMeasureIndex, slur.StartItemIndex,
                         segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
@@ -4149,7 +4152,7 @@ internal sealed class ElementCoordinator
                 if (endRest is { } eRest)
                     segEndY = RestBoundBaseY(eRest);
                 else if (segment.IsLast && rightEdgeInfo.StemUp == slur.CurveUp && rightEdgeInfo.BeamedInner
-                    && TryGetBeamedStemTipDeviceY(beamByMember, slur.EndMeasureIndex, slur.EndItemIndex,
+                    && TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, slur.EndMeasureIndex, slur.EndItemIndex,
                         segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
@@ -4192,7 +4195,7 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// The slur pass's (measure, item) → beam table, lent from one map the thread keeps
+    /// The slur pass's (voice, measure, item) → beam table, lent from one map the thread keeps
     /// between passes.
     /// </summary>
     /// <remarks>
@@ -4204,8 +4207,8 @@ internal sealed class ElementCoordinator
     /// <para>
     /// RENTING TAKES IT OUT OF THE DRAWER (session 421's idiom), THE CLEARING IS ON GIVE
     /// (session 456) — and here a dirty map is WORSE than stale: the table is filled with
-    /// <c>TryAdd</c> (the first beam wins, see the fill), so a previous staff's entry under a
-    /// shared (measure, item) would win over this staff's own beam. A throw between the rent
+    /// <c>TryAdd</c> (the first beam wins, see the fill), so a stale entry under a shared key
+    /// would win over this pass's own beam. A throw between the rent
     /// and the give only costs the next pass a new map.
     /// </para>
     /// <para>
@@ -4214,18 +4217,18 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     [ThreadStatic]
-    private static Dictionary<(int Measure, int Item), BeamLayout>? t_beamByMember;
+    private static Dictionary<(int Voice, int Measure, int Item), BeamLayout>? t_beamByMember;
 
     /// <summary>Takes the thread's beam table, or makes the thread's first.</summary>
-    private static Dictionary<(int Measure, int Item), BeamLayout> RentBeamByMember()
+    private static Dictionary<(int Voice, int Measure, int Item), BeamLayout> RentBeamByMember()
     {
-        var map = t_beamByMember ?? new Dictionary<(int Measure, int Item), BeamLayout>();
+        var map = t_beamByMember ?? new Dictionary<(int Voice, int Measure, int Item), BeamLayout>();
         t_beamByMember = null;
         return map;
     }
 
     /// <summary>Puts a finished pass's beam table back, emptied, with its capacity.</summary>
-    private static void GiveBeamByMember(Dictionary<(int Measure, int Item), BeamLayout> map)
+    private static void GiveBeamByMember(Dictionary<(int Voice, int Measure, int Item), BeamLayout> map)
     {
         map.Clear();
         t_beamByMember = map;
@@ -4357,7 +4360,7 @@ internal sealed class ElementCoordinator
         Dictionary<int, List<int>>? graceByMeasure,
         GraceObstacleGeom?[]? graceGeomCache,
         IReadOnlyList<SlurLayout> slurLayouts,
-        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember)
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember)
     {
         const double eps = 0.001;
         var voice = score.Voices[slur.VoiceIndex];
@@ -4406,7 +4409,7 @@ internal sealed class ElementCoordinator
         // A numbers-only tab keeps the per-column rule it has always read.
         BeamLayout? BeamOf(int measure, int index) =>
             full && beamByMember is not null
-            && beamByMember.TryGetValue((measure, index), out var b) ? b : null;
+            && beamByMember.TryGetValue((slur.VoiceIndex, measure, index), out var b) ? b : null;
         bool StemUpOf(MusicItem item, BeamLayout? beam) =>
             beam is not null ? geom.GroupStemUp(beam.Group.MemberItems()) : geom.TabStemUp(item);
 
