@@ -609,6 +609,40 @@ internal readonly struct TabStaffGeometry
         }
     }
 
+    /// <summary>
+    /// The staff position and fret of the digit a stem STARTS from — the head opposite the
+    /// stem's direction (LilyPond's <c>Stem::get_reference_head</c> / <c>first_head</c>), whose
+    /// glyph sets where the stem meets it. Chords use the drawn chord's exclusive allocation.
+    /// </summary>
+    public (int Position, int Fret) StemRootDigit(MusicItem item, bool stemUp)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+            {
+                var (str, fret) = Fret(n.Midi, n.StringNumber);
+                return (StaffPositionOfString(str), fret);
+            }
+            case ChordItem c when c.Notes.Length > 0:
+            {
+                int shift = _octaveShift;
+                var alloc = Tunings.CalculateChordFrets(
+                    c.Notes.Select(x => (x.Midi + shift, x.StringNumber)).ToList(), _tuning);
+                var root = alloc[0];
+                foreach (var a in alloc)
+                    if (stemUp ? a.stringNum > root.stringNum : a.stringNum < root.stringNum)
+                        root = a;
+                return (StaffPositionOfString(root.stringNum), root.fret);
+            }
+            default:
+                return (0, 0);
+        }
+    }
+
+    /// <summary>The staff positions of an item's outermost digits, (lowest, highest) —
+    /// LilyPond's <c>Stem::head_positions</c> on a TabVoice stem.</summary>
+    public (int Low, int High) HeadPositionRange(MusicItem item) => HeadPositions(item);
+
     /// <summary>Half the string span in the tab's OWN spaces — LilyPond's
     /// <c>Staff_symbol_referencer::staff_radius</c> for this staff symbol.</summary>
     public double StaffRadius => (StringCount - 1) / 2.0;

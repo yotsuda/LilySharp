@@ -870,7 +870,8 @@ internal static partial class SpacingRules
     internal static Spring BarlineToFirstColumnSpring(
         Rendering.ScoreTextMetrics fonts, ItemColumn firstItems, bool fillsMeasure,
         IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems = null,
-        BarlineType leftBound = BarlineType.Single)
+        BarlineType leftBound = BarlineType.Single,
+        double? opticalOverride = null)
     {
         // `last_grob` is the RIGHTMOST break-aligned grob in the boundary column, which is
         // the bar line only when nothing else opens the measure. A key or time change shares
@@ -1068,7 +1069,8 @@ internal static partial class SpacingRules
             // main note 2.6207 off the bar line, where the column's down stem would have added 0.13.
             double opticalCorrection = own.HasValue || startLeadGrace > 0
                 ? 0.0
-                : BarlineToNextNotesCorrection(firstItems);
+                // A full tab's stems are read in its own frame (FullTabBarlineToNextNotesCorrection).
+                : opticalOverride ?? BarlineToNextNotesCorrection(firstItems);
             fixedDistance += opticalCorrection;
             ideal += opticalCorrection;
 

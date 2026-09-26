@@ -288,7 +288,10 @@ internal sealed class MeasureLayouter
         springs[0] = CreateBarlineToFirstSpring(
             fonts, timings, columns, measure,
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
-            droppedOnsetFollows, so, staffFirstItems);
+            droppedOnsetFollows, so, staffFirstItems,
+            timings[0] == Fraction.Zero
+                ? SpacingRules.FullTabBarlineToNextNotesCorrection(measuresToScan, stavesOfMeasures)
+                : null);
         GiveStaffItems(staffFirstItems);
 
         // Springs between adjacent timing columns (see CreateInterColumnSpring).
@@ -581,7 +584,8 @@ internal sealed class MeasureLayouter
         Rendering.ScoreTextMetrics fonts,
         List<Fraction> timings, ItemColumn[] columns,
         Measure measure, BarlineType leftBound, bool droppedOnsetFollows,
-        SpacingOptions spacing, IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems)
+        SpacingOptions spacing, IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems,
+        double? opticalOverride = null)
     {
         var firstItems = columns[0];
         // A bar that opens with a skip: the bar line's neighbour is a column at a later
@@ -604,7 +608,8 @@ internal sealed class MeasureLayouter
             && anyMusical
             && !anyLeadingGrace
             && !(staffFirstItems?.Any(items => items.Any(SpacingRules.HasLeadingGraceColumn)) ?? false);
-        return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure, staffFirstItems, leftBound);
+        return SpacingRules.BarlineToFirstColumnSpring(fonts, firstItems, fillsMeasure, staffFirstItems, leftBound,
+            opticalOverride);
     }
 
     /// <summary>

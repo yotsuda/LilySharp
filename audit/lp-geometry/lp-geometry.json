@@ -1763,36 +1763,36 @@
       "probe": "tab-slur-stems.ly",
       "score": "A",
       "lilypond": -2.1543796823863253,
-      "residual": 0.000200797,
-      "why": "THE BOW HANGS FROM THE BEAM, as LilyPond hangs it: the left stem points the bow's way and is beamed on its inner side, so the base attachment is the stem's end (the beam's outer face at that stem) + dir*0.5*staff_space (lily/slur-scoring.cc:549-557 get_base_attachments). The beam itself is LilyPond's exactly here (-1.5 / -0.873333 tab spaces, sixteenths; eighths would carry the declared uniformBeamedLength deviation). The 0.0002 left is the beam line read at the member's attachment X against LilyPond's stem extent, not decomposed further. Until session 633 a tab dropped the written side (the bow stood ABOVE the digits), and when first honoured the face was read at the drawn tab stem's X, 0.39 tab spaces into the slope: residual 0.052770."
+      "residual": 0.0,
+      "why": "EXACT since session 634. THE BOW HANGS FROM THE BEAM, as LilyPond hangs it: the left stem points the bow's way and is beamed on its inner side, so the base attachment is the stem's end (the beam's outer face at that stem) + dir*0.5*staff_space (lily/slur-scoring.cc:549-557 get_base_attachments). The beam itself is LilyPond's exactly here (-1.5 / -0.873333 tab spaces, sixteenths; eighths would carry the declared uniformBeamedLength deviation). Session 633 left 0.0002 here and did not decompose it: it was the tab column spacing (slur.tab.stems.span), which moved the stem under the sloped beam. Until session 633 a tab dropped the written side (the bow stood ABOVE the digits), and when first honoured the face was read at the drawn tab stem's X, 0.39 tab spaces into the slope: residual 0.052770."
     },
     "slur.tab.stems.left-control": {
       "probe": "tab-slur-stems.ly",
       "score": "A",
       "lilypond": -3.640864454920074,
-      "residual": 0.006989405,
-      "why": "The bow's rise under the beams, which the scorer chooses clear of every stem end (lily/slur-scoring.cc:146-158 get_encompass_info -- stem end + half the beam's thickness). What is left follows the bow's LENGTH (bezier-bow.cc slur_height is a function of it), and the length is short by slur.tab.stems.span's 0.166667: a spacing gap, not a slur one (not re-derived through the height formula)."
+      "residual": 0.0,
+      "why": "EXACT since session 634, with slur.tab.stems.span. The bow's rise under the beams, which the scorer chooses clear of every stem end (lily/slur-scoring.cc:146-158 get_encompass_info -- stem end + half the beam's thickness). Session 633 recorded 0.006989 here as following the bow's length, then 0.166667 short; the spacing fix closed both together, which is what said so."
     },
     "slur.tab.stems.span": {
       "probe": "tab-slur-stems.ly",
       "score": "A",
       "lilypond": 10.849466981627293,
-      "residual": -0.166666648,
-      "why": "TAB COLUMN SPACING, not the slur: the attachments are the first and last stems (the bow ends below their tips, lily/slur-scoring.cc:754-759), and LilyPond's stems are 10.849467 apart where Lily#'s are 10.682800. MEASURED (Lab sessions/p633/stems-x.ly, NoteColumn X in tab spaces): LilyPond's seven gaps are 1.526114 except the second, 1.692781 = + 0.166667 tab spaces = 0.25 page; Lily#'s are all 1.526114. That second gap is string 2 -> string 1, both stems DOWN and the heads 2 positions apart, which is LilyPond's same_direction_correction (lily/note-spacing.cc:162-197, NoteSpacing same-direction-correction 0.25): the TAB voice's wish does not carry it (SpacingRules.CalculateStemCorrection reads the items' notation stems and pitches, not the digits' strings). Open, HANDOFF §1.0."
+      "residual": 0.0,
+      "why": "EXACT since session 634: TAB COLUMN SPACING, not the slur -- the attachments are the first and last stems (the bow ends below their tips, lily/slur-scoring.cc:754-759). Until then Lily#'s stems stood 10.682800 apart: LilyPond's seven gaps are 1.526114 except the second, 1.692781 = + 0.166667 tab spaces = 0.25 page (Lab sessions/p633/stems-x.ly), string 2 -> string 1 with both stems DOWN and the heads 2 positions apart -- LilyPond's same_direction_correction (lily/note-spacing.cc:162-197), which the TAB voice's wish did not carry: it read the items' NOTATION stems and pitches. SpacingRules.TabStemSpacingInfo now reads the tab's own (see also audit/lp-geometry/probes/tab-stem-spacing.ly)."
     },
     "slur.tab.stems.inner-control": {
       "probe": "tab-slur-stems.ly",
       "score": "B",
       "lilypond": -4.089231719726121,
-      "residual": 0.005182188,
-      "why": "THE BOW CLEARS THE INNER STEMS: the middle beat's beam hangs below the outer beams' and the flat bow is pushed under it by the stems' ends + half the beam's thickness (lily/slur-scoring.cc:146-158 get_encompass_info). Without the stems in the encompass the bow stays at the outer beams' depth and runs through the middle beam (the poison of session 633). The 0.005 left is not decomposed; the bow is 0.20 shorter than LilyPond's (slur.tab.stems.inner-span), which is the first suspect."
+      "residual": 0.0,
+      "why": "EXACT since session 634, with slur.tab.stems.inner-span. THE BOW CLEARS THE INNER STEMS: the middle beat's beam hangs below the outer beams' and the flat bow is pushed under it by the stems' ends + half the beam's thickness (lily/slur-scoring.cc:146-158 get_encompass_info). Without the stems in the encompass the bow stays at the outer beams' depth and runs through the middle beam (the poison of session 633). The 0.005182 session 633 recorded was the span, as it suspected."
     },
     "slur.tab.stems.inner-span": {
       "probe": "tab-slur-stems.ly",
       "score": "B",
       "lilypond": 16.78725763779527,
-      "residual": -0.199661211,
-      "why": "TAB COLUMN SPACING, the same family as slur.tab.stems.span (the attachments are the first and last stems): Lily#'s tab voice carries no stem-spacing correction read off the digits' strings (LilyPond's note-spacing.cc stem_dir_correction runs on the TabVoice's own stems and string positions). Here the string changes 1 -> 3 -> 1 and a beat boundary are involved, so the split of the 0.1997 over the gaps has not been measured."
+      "residual": 0.0,
+      "why": "EXACT since session 634: TAB COLUMN SPACING, the same family as slur.tab.stems.span (the attachments are the first and last stems). Until then Lily#'s tab voice read its stem-spacing correction off the notation stems and pitches, where LilyPond's note-spacing.cc stem_dir_correction runs on the TabVoice's own stems and string positions; here the string changes 1 -> 3 -> 1 made it -0.199661."
     },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",
