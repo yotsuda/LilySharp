@@ -154,6 +154,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第650セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第649 の後・ユーザー「続けて」）。★ `-Start p650`（HEAD `d3b89963`・未 push 110・full **9405 / 0 / 2 / 9407**＝引継ぎと一致）。§2 S の残りから。
+★ ⑴ `ef68945f` 声部がスラー／タイの向きを決めるのは**その小節が多声のときだけ**（`VoiceScan.SpanCurvesUp` が part 全体の `voiceCount > 1` を見ていた＝grammar-tour の 13-15 小節が上に反転・7→1）。
+残り: 小節の途中から始まる `voice { }` の前に始まるスラーはまだ強制される（`VoiceColumn` が開示済みの小節粒度＝SUMMER 最終小節）。
+⚠️ **計器の罠: ユーザーがコーパスを編集中**（Sweet Child Of Mine などの .lys が第647 以降に変わった）＝`-SkipLp` の比較は**古い双子**と新しい Lily# を比べる。本ごとの悪化を見たら、その本だけ LP ごと取り直して確かめる（第650 で全体を取り直した＝`sessions/p650/report-fresh.tsv`・差 2,535）。
+
+## 以下は第649セッションの経緯
+
 ### 1.1 第649セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（第648 の後・ユーザー「続けて」）。★ `-Start p649`（HEAD `f4141934`・未 push 101・full **9399 / 0 / 2 / 9401**＝引継ぎと一致）。
@@ -170,25 +179,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 網: `BrokenTieLineStartTests`・`TiedAccidentalTests` +1・`SlurEdgeBeamAndAccidentalTests`（毒はすべて赤）。頁の掃き 4・6・14・33 冊。
 ⚠️ 計器の比較は `sessions/p649/report-after-*.tsv` を前後に残す（本ごとの悪化を数える＝⑷ で 0 を確認した方法）。
 ★ **終了**: full **9405 / 0 / 2 / 9407**・bow の差 **2,548**（五線・非 grace 334 前後）。残りの頭は spacing 起因（写像不能 68・短いタイの x3）と grace／tab（宣言済み）。push はユーザー。
-
-## 以下は第648セッションの経緯
-
-### 1.1 第648セッション（2026-09-27・YT-DELL2）
-
-新しい会話。★ `-Start p648`（HEAD `7cfe1267`・未 push 96・full **9388 / 0 / 2 / 9390**＝引継ぎと一致）。§2 S の続き。
-★ ⑴ `slurrest-*`・`slurhcap`・`figbass-empty` の差は**双子が treble**だった＝top-level の `clef bass` を exporter が読まず、
-本体も多段の collect（`partClef ?? "treble"`）と `RenderSpecParser.GetPartClef` が落としていた（1 段だけ読んでいた）→
-`bcc24031`（GRAMMAR §2.1＝top-level clef は常に既定）。頁の掃き 0 / 963・網 `OctaveTests` 4 本（3 か所それぞれ赤）。直した後の 7 冊は差 0。
-★ ⑵ 計器の直し 2 つ: `compare.ps1` の「縦長は括弧」が本物の急なスラー（fig4・LP も同形）を落としていた（Lab・幅 < 0.3×高さだけ落とす）／
-`d890fed3` dump の HEAD が SMuFL の範囲で旗・指番号を拾っていた（8 分の旗が 2 つ目の頭＝タイを 1 列ずらす）。差 2,909 → 2,768・五線の非 grace 694 → 553。
-★ ⑶ **タイ先の臨時記号を LP に合わせた（`d4ecf4d2`・ユーザー決定「LP に合わせて」）**。LP は同音のタイ先の臨時記号を行中では描かず幅も取らず
-（`remove_tied`・`split_accidentals`）、行で割れたタイの行頭だけ reminder、`localAlterations` に `tied` を積んで同じ小節の次の同音は必ず臨時記号。
-Lily#: `NoteItem`／`ChordNoteInfo.LineStartAccidental`（Accidental は null＝行中は誰も読まない）＋`TiedAccidentals.LineStartView` を
-`LineStartColumn.FirstNoteBoxes`（DP と最終の間隔が共有）と描画の段頭の列だけが聞く。`@courtesy`／`@editorial` は LP の forced＝残す。
-頁の掃き 40 / 963（census の 40 冊と一致・段割れの変化 0）・bow の差 2,768 → 2,652・網 `TiedAccidentalTests` 7 本（毒 4 つとも赤）。
-⚠️ 残り: 分割音（`c1.` が小節をまたぐ）の続きは従来どおり臨時記号を消すだけで行頭の reminder を持たない／checkpoint の欄は足していない
-（splice は編集の次の小節を歩き直す＝実測・網が持つ）。
-★ **終了**: full **9399 / 0 / 2 / 9401**。次は §2 S の残り 437 対（T x3・T x0 から）。push はユーザー。
 
 ## 2. 開いている作業
 
