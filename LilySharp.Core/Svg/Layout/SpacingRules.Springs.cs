@@ -738,18 +738,27 @@ internal static partial class SpacingRules
                 max = Math.Max(max, BarlineToStemOpticalCorrection(item));
                 continue;
             }
-            if (TabStemSpacingInfo(item, tab, voices[v]) is not { StemUp: false } band)
-                continue;
-            double space = EngravingDefaults.TabStringSpace(
-                Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar));
-            double barHalf = (Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar) - 1) / 2.0;
-            // Positions → the stem's own page units (× space / 2); the bar is in tab spaces.
-            double lo = Math.Max(band.StemMin * space / 2, -barHalf);
-            double hi = Math.Min(band.StemMax * space / 2, barHalf);
-            if (hi > lo)
-                max = Math.Max(max, Math.Min((hi - lo) / 7.0, 1.0) * StaffSpacingStemCorrection);
+            max = Math.Max(max, FullTabStemOpticalCorrection(item, tab, voices[v]));
         }
         return max;
+    }
+
+    /// <summary>
+    /// The bar line → note optical correction one FULL tab column earns — its drawn stem, if
+    /// it points down, against the tab's own bar. See <see cref="FullTabBarlineToNextNotesCorrection"/>.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.</remarks>
+    internal static double FullTabStemOpticalCorrection(MusicItem item, Staff tab, Measure voice)
+    {
+        if (TabStemSpacingInfo(item, tab, voice) is not { StemUp: false } band)
+            return 0;
+        int strings = Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar);
+        double space = EngravingDefaults.TabStringSpace(strings);
+        double barHalf = (strings - 1) / 2.0;
+        // Positions → the stem's own page units (× space / 2); the bar is in tab spaces.
+        double lo = Math.Max(band.StemMin * space / 2, -barHalf);
+        double hi = Math.Min(band.StemMax * space / 2, barHalf);
+        return hi > lo ? Math.Min((hi - lo) / 7.0, 1.0) * StaffSpacingStemCorrection : 0;
     }
 
     /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.</remarks>

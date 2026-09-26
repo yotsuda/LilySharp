@@ -96,6 +96,44 @@ public sealed class TabStemSpacingTests
     [Fact]
     public void ABeamedTabStemIsItsGroups() => AssertGaps(Bars6To7, Bars6To7Gaps);
 
+    /// <summary>
+    /// A system that opens on <c>.|:</c> before a full tab's DOWN stem stands its first note
+    /// further off by the optical correction, read by the tab's own stem.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (audit/lp-geometry/probes/tab-stem-spacing-line-start.ly): system 2 (string 1,
+    /// stem down) opens 0.228571 further right than system 3 (string 5, stem up). Until
+    /// session 635 the line start read the notation stems and gave 0.1894.
+    /// LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.
+    /// </remarks>
+    [Fact]
+    public void ALineStartRepeatBarReadsTheTabsStem()
+    {
+        const string book = """
+            octave absolute
+            time 4/4
+
+            part gtr { instrument guitar }
+
+            section A { gtr { c4\5 c\5 c\5 c\5 | break } }
+            section B { gtr { e'4\1 e'\1 e'\1 e'\1 | break } }
+            section C { gtr { c4\5 c\5 c\5 c\5 | } }
+
+            form main { A |: B :| |: C :| }
+
+            score main { tab gtr }
+            """;
+        var g = RenderedGeometry.Render(book);
+        // Each system's four digits share one string, so one Y a system; systems in page order.
+        var firsts = g.Texts.Where(t => t.Role == TextRole.TabFret)
+            .GroupBy(t => Math.Round(t.Y, 1))
+            .OrderBy(grp => grp.Key)
+            .Select(grp => grp.Min(t => t.X))
+            .ToArray();
+        Assert.Equal(3, firsts.Length);
+        Assert.Equal(0.228571, firsts[1] - firsts[2], 3);
+    }
+
     private static void AssertGaps(string music, double[] lilyPondGaps)
     {
         var g = RenderedGeometry.Render(Book.Replace("MUSIC", music));
