@@ -132,7 +132,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭 906 行にも在る・第636 で再確認「描画すべきではない」）**。LP の `\tabFullNotation` は描く（`Tab_tie_follow_engraver` が handle-ties を外す＝scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
 - ✅ **tab のスラーの残り（第633）は第638（旗）・第639（予約に梁）で閉じた**
-- ★ **U12 `@text` の上の床が LP より 0.74 高い**（第639 実測・Lab `sessions/p639/sb-noslur.ly`／`sbr-noslur.lys`＝`r4 e8 g <>@text("sul D").up c8 c c c`・スラー無し）: TextScript の基線が譜表中央から LP 2.55・Lily# 3.29。スラーがあると LP は +0.123 上がる（2.673）が Lily# は動かない（床が既にスラーより上）＝台帳 `slur.beamed.reserved-text` の残差 +0.617 の正体。未分解（Lily# は text を中央揃えで x 28.35 に置く＝LP の TextScript は self-alignment-X #f で音符の左端から＝X も違う可能性）
+- ★ **`@text` の上の床が LP より 0.74 高い**（第639 実測・Lab `sessions/p639/sb-noslur.ly`／`sbr-noslur.lys`＝`r4 e8 g <>@text("sul D").up c8 c c c`・スラー無し）: TextScript の基線が譜表中央から LP 2.55・Lily# 3.29。スラーがあると LP は +0.123 上がる（2.673）が Lily# は動かない（床が既にスラーより上）＝台帳 `slur.beamed.reserved-text` の残差 +0.617 の正体。未分解（Lily# は text を中央揃えで x 28.35 に置く＝LP の TextScript は self-alignment-X #f で音符の左端から＝X も違う可能性）
 
 **⒞ ユーザー決定が先・触らない**
 
@@ -156,7 +156,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 同じ会話の続き。★ `-Start p639`（HEAD `67111bc3`・未 push 19・full **9190 / 0 / 2 / 9192**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の tab のスラーの残り（`StaffSlurLayouts` の予約が梁を渡さない）。
 
 ★ **⑴ 予約のスラーに梁を渡した**（`1f3c05e3`）: `MultiStaffLayouter.StaffSlurLayouts`（間隔を決める前に skyline が予約するスラー）は「梁は端を動かすだけで間を縛る頂点は動かさない」という理由で梁を渡していなかった。だが梁の上を越える弧は梁の付いた符尾の端から立つ（slur-scoring.cc:549-557）＝梁が無いと予約の弧は梁の無い符尾の先に立って描く弧より高く、上に乗る text も一緒に上がる。描く側と同じ引数を渡すだけ（譜表も tab も同じ `LayoutSlurs` を通る）。
-★ **⑵ 実測・網**: 掃き 964 冊で動いたのは **1 冊**＝`audit/lp-regression/lys/empty-chord.lys`（1 小節目の `e8( g <>)^"sul D"`＝弧は e g の梁の上・text が 0.32 下がる・描く弧は不変）。LP の双子を `audit/lp-geometry/probes/slur-beam-reserve.ly` に置き、台帳 `slur.beamed.reserved-text`（text の基線）: 前 3.931767 → **3.29**（LP 2.673176）。毒（梁を渡さない）で 3.93 に戻り赤。残差 +0.617 は**スラーと無関係**＝スラーを消しても Lily# 3.29・LP 2.55（§1.0 U12 に起票）。accessor `RenderedGeometry.TextBaselineAboveStaff(text)` を足した（`CustomTexts` は form の `^"…"` だけを数える）。
+★ **⑵ 実測・網**: 掃き 964 冊で動いたのは **1 冊**＝`audit/lp-regression/lys/empty-chord.lys`（1 小節目の `e8( g <>)^"sul D"`＝弧は e g の梁の上・text が 0.32 下がる・描く弧は不変）。LP の双子を `audit/lp-geometry/probes/slur-beam-reserve.ly` に置き、台帳 `slur.beamed.reserved-text`（text の基線）: 前 3.931767 → **3.29**（LP 2.673176）。毒（梁を渡さない）で 3.93 に戻り赤。残差 +0.617 は**スラーと無関係**＝スラーを消しても Lily# 3.29・LP 2.55（§1.0 に起票＝`@text` の上の床）。accessor `RenderedGeometry.TextBaselineAboveStaff(text)` を足した（`CustomTexts` は form の `^"…"` だけを数える）。
 ★ **終了**: code `1f3c05e3`・full **9191 / 0 / 2 / 9193**（+1＝台帳）・`-End` の門は全部 OK。§7.5 Core '+' 7・LILYPOND-REF 0（引数 1 つと doc コメント＝出典は slur-scoring.cc:549-557 を本文に）・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 以下は第638セッションの経緯
