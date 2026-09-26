@@ -162,11 +162,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 `bcc24031`（GRAMMAR §2.1＝top-level clef は常に既定）。頁の掃き 0 / 963・網 `OctaveTests` 4 本（3 か所それぞれ赤）。直した後の 7 冊は差 0。
 ★ ⑵ 計器の直し 2 つ: `compare.ps1` の「縦長は括弧」が本物の急なスラー（fig4・LP も同形）を落としていた（Lab・幅 < 0.3×高さだけ落とす）／
 `d890fed3` dump の HEAD が SMuFL の範囲で旗・指番号を拾っていた（8 分の旗が 2 つ目の頭＝タイを 1 列ずらす）。差 2,909 → 2,768・五線の非 grace 694 → 553。
-★ ⑶ **見つけた（未着手・ユーザー判断待ち）: タイ先の臨時記号**。LP は同音のタイ先の臨時記号を行中では描かず幅も取らない
-（`Accidental_interface::remove_tied`・`Accidental_placement::split_accidentals`＝行頭のときだけ reminder）うえ、
-`localAlterations` に `tied` を積むので同じ小節の次の同音は必ず臨時記号を持つ（accidental-engraver.cc:405-415・
-music-functions.scm:1740）。Lily# は両方逆（China Grove (Xanadu) 29-30 小節: Lily# ♮c1~ ♮c2. c8・LP c1~ c2. ♮c8）。
-射程 162 音・40 冊（実コーパス 39）＝タイの x3 の差の族の一部。行割りの後で決まる＝collect と layout の両方＝設計級。
+★ ⑶ **タイ先の臨時記号を LP に合わせた（`d4ecf4d2`・ユーザー決定「LP に合わせて」）**。LP は同音のタイ先の臨時記号を行中では描かず幅も取らず
+（`remove_tied`・`split_accidentals`）、行で割れたタイの行頭だけ reminder、`localAlterations` に `tied` を積んで同じ小節の次の同音は必ず臨時記号。
+Lily#: `NoteItem`／`ChordNoteInfo.LineStartAccidental`（Accidental は null＝行中は誰も読まない）＋`TiedAccidentals.LineStartView` を
+`LineStartColumn.FirstNoteBoxes`（DP と最終の間隔が共有）と描画の段頭の列だけが聞く。`@courtesy`／`@editorial` は LP の forced＝残す。
+頁の掃き 40 / 963（census の 40 冊と一致・段割れの変化 0）・bow の差 2,768 → 2,652・網 `TiedAccidentalTests` 7 本（毒 4 つとも赤）。
+⚠️ 残り: 分割音（`c1.` が小節をまたぐ）の続きは従来どおり臨時記号を消すだけで行頭の reminder を持たない／checkpoint の欄は足していない
+（splice は編集の次の小節を歩き直す＝実測・網が持つ）。
+★ **終了**: full **9399 / 0 / 2 / 9401**。次は §2 S の残り 437 対（T x3・T x0 から）。push はユーザー。
 
 ## 以下は第647セッションの経緯
 
@@ -953,7 +956,7 @@ M20 の行末タイは LP と一致（線の上・1.46）＝ユーザーは「�
     「右隣の列」を読むと 1 音ずれる）／端が合って span だけ違う対は `span-only`（高さは幅の関数）。
 - **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第647 に落とした）
 - **S2 の進み（第648）**: ✅ `bcc24031` top-level clef（双子と多段）＝`slurrest-*` ほか 7 冊は差 0。計器 2 つ直し（§1.1 第648）。
-  **残り（五線・非 grace 553 対）**: 頭は T x3 133・T x0 53・T y0 45・S y0 44。T x3 の一部は**タイ先の臨時記号**（§1.1 第648 ⑶・判断待ち）。
+  **残り（五線・非 grace 553 対）**: 頭は T x3 133・T x0 53・T y0 45・S y0 44。タイ先の臨時記号は `d4ecf4d2` で閉じた → **437 対**（T x3 62・T x0 46・S y0 44・S x3 27）。
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、
