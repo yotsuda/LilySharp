@@ -69,7 +69,8 @@ public class CollectTailShifterTests
         [typeof(DynamicItem)] = new[] { "SourcePosition" },
         [typeof(ArticulationItem)] = new[] { "SourcePosition" },
         [typeof(GraceNoteItem)] = new[] { "SourcePosition" },
-        [typeof(MusicMarkItem)] = new[] { "SourcePosition" },
+        // A tempo mark's pieces (unit, bpm, feel word) ride the same map (2026-09-26).
+        [typeof(MusicMarkItem)] = new[] { "SourcePosition", "TempoPieces" },
         [typeof(CustomTextItem)] = new[] { "SourcePosition" },
         [typeof(VoltaBracketItem)] = new[] { "SourcePosition" },
         [typeof(TupletBracketItem)] = new[] { "SourcePosition" },
@@ -181,7 +182,9 @@ public class CollectTailShifterTests
             bool intish = prop.PropertyType == typeof(int)
                 || prop.PropertyType == typeof(int?)
                 || prop.PropertyType == typeof(System.Collections.Immutable.ImmutableArray<int>);
-            bool suspicious = intish
+            // A struct OF source offsets is position-bearing whatever it is named.
+            bool offsetStruct = prop.PropertyType == typeof(TempoPiecePositions);
+            bool suspicious = offsetStruct || intish
                 && (prop.Name.EndsWith("Position", StringComparison.Ordinal)
                     || prop.Name.StartsWith("Source", StringComparison.Ordinal)
                     || prop.Name == "EndHighlightAliases");

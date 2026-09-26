@@ -138,6 +138,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **Each piece of a tempo mark clicks to its own token in the preview.** Clicking the note
+  or "= 120" lands on `tempo |120` (the note on a written unit, `tempo |4 = 120`), clicking
+  the swing equation on `tempo 120 |swing`, and the marking on its text; a caret lights
+  only its own piece (the `16` of `swing 16` lights the equation). The whole mark used to
+  carry one offset, so the swing jumped to the number and a caret on the number lit the
+  swing as well.
+
 - **After a tempo's number, completion offers the feel words.** `tempo 100 ` (or Ctrl+Space
   with the caret still on the 100) offers `swing`, `shuffle` and their sixteenth forms; it
   offered nothing before. Inside music (`c4 tempo 96 `) they lead the list and the notes

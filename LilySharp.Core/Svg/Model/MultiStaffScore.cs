@@ -37,7 +37,9 @@ public readonly record struct HeaderPositions(
     // offset travels here with the rest of the header.
     int Tempo = 0,
     int Subtitle = 0,
-    int Poet = 0
+    int Poet = 0,
+    // The opening tempo's pieces (unit, bpm, feel word), for the same reason as Tempo.
+    TempoPiecePositions TempoPieces = default
 );
 
 /// <summary>

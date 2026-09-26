@@ -465,6 +465,7 @@ public sealed partial class MeasureCollector
                     TempoBeatUnit = sectionTempo.BeatUnit ?? 4,
                     TempoDots = sectionTempo.BeatDots,
                     SwingSubdivision = sectionTempo.SwingSubdivision,
+                    TempoPieces = PiecePositions(sectionTempo),
                 });
             else if (sectionTempo.Marking != null || sectionTempo.SwingSubdivision != 0)
                 // No count: the marking and/or the swing equation (`tempo swing`).
@@ -475,6 +476,7 @@ public sealed partial class MeasureCollector
                 {
                     TempoText = sectionTempo.Marking,
                     SwingSubdivision = sectionTempo.SwingSubdivision,
+                    TempoPieces = PiecePositions(sectionTempo),
                 });
         }
 

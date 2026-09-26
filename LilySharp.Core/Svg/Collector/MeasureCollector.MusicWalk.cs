@@ -1628,6 +1628,7 @@ public sealed partial class MeasureCollector
                             TempoBeatUnit = tempoChange.BeatUnit ?? 4,
                             TempoDots = tempoChange.BeatDots,
                             SwingSubdivision = tempoChange.SwingSubdivision,
+                            TempoPieces = PiecePositions(tempoChange),
                         });
                     else if (tempoChange.Marking != null || tempoChange.SwingSubdivision != 0)
                         // No count: a text-only change ("tempo Meno mosso", bold
@@ -1640,6 +1641,7 @@ public sealed partial class MeasureCollector
                         {
                             TempoText = tempoChange.Marking,
                             SwingSubdivision = tempoChange.SwingSubdivision,
+                            TempoPieces = PiecePositions(tempoChange),
                         });
                 }
                 break;

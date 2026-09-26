@@ -107,7 +107,7 @@ public class MigratedDataPosTests
             var editedMarks = MusicMarkEngraver.BuildAllMarks(
                 s2.MusicMarks, s2.PrimaryContentStaff.PrimaryVoice.Measures, s2.Tempo,
                 s2.SwingSubdivision, s2.TempoText, s2.TempoBeatUnit, s2.TempoDots,
-                s2.Header.Tempo);
+                s2.Header.Tempo, tempoPieces: s2.Header.TempoPieces);
             Check(fx, "MusicMark", l1.MusicMarkLayouts, l2.MusicMarkLayouts, editedMarks,
                 x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered,
                 skipNoDataPos: true);

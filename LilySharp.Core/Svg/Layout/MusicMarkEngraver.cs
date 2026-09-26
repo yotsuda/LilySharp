@@ -51,7 +51,7 @@ public readonly record struct MusicMarkLayout(
                               //   outside-staff pass prices the two as ONE union and moves
                               //   them together (OutsideStaffStacker.PlaceMusicMarks); −1
                               //   for every mark placed on its own anchor.
-    bool Boxed = true         // Labels only: whether the frame is DRAWN and RESERVED. False
+    bool Boxed = true,        // Labels only: whether the frame is DRAWN and RESERVED. False
                               //   for a section label under `layout { sectionLabels plain }`,
                               //   which is LilyPond's own SectionLabel picture (the frame is
                               //   Lily#-own). A `@mark` rehearsal box is unaffected — the
@@ -60,6 +60,9 @@ public readonly record struct MusicMarkLayout(
                               //   engraver — the draw, the stacker's extents, the paging
                               //   silhouette — asks the same bit instead of re-deriving it
                               //   from the score, which is the only place that knows it.
+    TempoPiecePositions TempoPieces = default // Tempo marks only: the note / "= N" / swing
+                              //   equation's own source offsets (MusicMarkItem.TempoPieces),
+                              //   re-derived with SourcePosition on a reused layout.
 );
 
 /// <summary>
@@ -532,7 +535,7 @@ internal static class MusicMarkEngraver
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
             score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
-            score?.Header.Tempo ?? 0, sectionLabels);
+            score?.Header.Tempo ?? 0, sectionLabels, score?.Header.TempoPieces ?? default);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
@@ -1100,7 +1103,8 @@ internal static class MusicMarkEngraver
                         tMark.MeasureIndex, tX, tBaseUp, tMark.Type, tMark.Text,
                         tMark.IsSymbol, tMark.SourcePosition, tSi, tMark.SwingSubdivision,
                         tMark.TempoText, tMark.TempoBeatUnit, tMark.TempoDots,
-                        BesideOfSourceIndex: si, Boxed: BoxedOf(tMark.Type)));
+                        BesideOfSourceIndex: si, Boxed: BoxedOf(tMark.Type))
+                        { TempoPieces = tMark.TempoPieces });
                 }
 
                 placedAbove.Add((chainX0, chainX1, placedTopYUp));
@@ -1109,7 +1113,8 @@ internal static class MusicMarkEngraver
                     mark.MeasureIndex, x, yUp, mark.Type, mark.Text,
                     mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
                     mark.TempoText, mark.TempoBeatUnit, mark.TempoDots,
-                    Boxed: BoxedOf(mark.Type)));
+                    Boxed: BoxedOf(mark.Type))
+                    { TempoPieces = mark.TempoPieces });
             }
 
             // Stack below-staff marks (lower priority = closer to staff).
@@ -1711,7 +1716,8 @@ internal static class MusicMarkEngraver
         int tempoBeatUnit = 4,
         int tempoDots = 0,
         int tempoPosition = 0,
-        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed)
+        Semantics.SectionLabelStyle sectionLabels = Semantics.SectionLabelStyle.Boxed,
+        TempoPiecePositions tempoPieces = default)
     {
         // `layout { sectionLabels none }`: the names are not engraved at all. Gated HERE,
         // in the one home that merges them in, so every reader follows — the placement, the
@@ -1724,7 +1730,7 @@ internal static class MusicMarkEngraver
             ? (musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks)
             : MergeSectionLabels(musicMarks, measures);
         return MergeTempoMark(allMarks, tempo, swingSubdivision, tempoText, tempoBeatUnit,
-            tempoDots, tempoPosition);
+            tempoDots, tempoPosition, tempoPieces);
     }
 
     /// <summary>
@@ -1824,7 +1830,7 @@ internal static class MusicMarkEngraver
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
         ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0,
         string? tempoText = null, int tempoBeatUnit = 4, int tempoDots = 0,
-        int tempoPosition = 0)
+        int tempoPosition = 0, TempoPiecePositions tempoPieces = default)
     {
         // A textual marking without a BPM ("tempo \"Grave\"") still prints, and so does the
         // swing equation alone ("tempo swing").
@@ -1842,6 +1848,7 @@ internal static class MusicMarkEngraver
             TempoText = tempoText,
             TempoBeatUnit = tempoBeatUnit,
             TempoDots = tempoDots,
+            TempoPieces = tempoPieces,
         };
 
         // The INITIAL tempo is drawn from Score.Tempo (the mark added below).
@@ -2358,7 +2365,7 @@ internal static class MusicMarkEngraver
         var marks = marksBeside
             ? BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
                 score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0,
-                score?.Header.Tempo ?? 0, labelStyle)
+                score?.Header.Tempo ?? 0, labelStyle, score?.Header.TempoPieces ?? default)
             : BuildAllMarks(musicMarks, measures, tempo: null, sectionLabels: labelStyle);
         // The label each measure-start tempo stands beside (BesidePair, the placement's
         // rule), keyed by the label so the window below finds its tempo.
@@ -2493,7 +2500,7 @@ internal static class MusicMarkEngraver
         var labelStyle = score.LayoutPlan.SectionLabels;
         var marks = BuildAllMarks(score.MusicMarks, measures, score.Tempo, score.SwingSubdivision,
             score.TempoText, score.TempoBeatUnit, score.TempoDots, score.Header.Tempo,
-            labelStyle);
+            labelStyle, score.Header.TempoPieces);
         double reach = 0.0;
         var atLineStart = ListPool<MusicMarkItem>.Rent();
         foreach (var m in marks)

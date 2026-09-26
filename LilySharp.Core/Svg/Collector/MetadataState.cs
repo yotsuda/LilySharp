@@ -59,6 +59,12 @@ internal sealed class MetadataState
     public int KeyPosition;
     public int ClefPosition;
     public int TempoPosition;
+    // The opening tempo's pieces (TempoDeclarationSyntax.ValuePositions): each follows the
+    // value it locates, so a `tempo` that writes no bpm leaves the bpm's position standing.
+    public int TempoUnitPosition;
+    public int TempoCountPosition;
+    public int SwingPosition;
+    public int SwingValuePosition;
 
     public int? Tempo;
     public string? TempoText;
@@ -108,6 +114,10 @@ internal sealed class MetadataState
         KeyPosition = other.KeyPosition;
         ClefPosition = other.ClefPosition;
         TempoPosition = other.TempoPosition;
+        TempoUnitPosition = other.TempoUnitPosition;
+        TempoCountPosition = other.TempoCountPosition;
+        SwingPosition = other.SwingPosition;
+        SwingValuePosition = other.SwingValuePosition;
         Tempo = other.Tempo;
         TempoText = other.TempoText;
         TempoBeatUnit = other.TempoBeatUnit;
@@ -146,6 +156,10 @@ internal sealed class MetadataState
             && KeyPosition == other.KeyPosition
             && ClefPosition == other.ClefPosition
             && TempoPosition == other.TempoPosition
+            && TempoUnitPosition == other.TempoUnitPosition
+            && TempoCountPosition == other.TempoCountPosition
+            && SwingPosition == other.SwingPosition
+            && SwingValuePosition == other.SwingValuePosition
             && Tempo == other.Tempo
             && TempoText == other.TempoText
             && TempoBeatUnit == other.TempoBeatUnit
@@ -187,6 +201,10 @@ internal sealed class MetadataState
         KeyPosition = 0;
         ClefPosition = 0;
         TempoPosition = 0;
+        TempoUnitPosition = 0;
+        TempoCountPosition = 0;
+        SwingPosition = 0;
+        SwingValuePosition = 0;
         Tempo = null;
         TempoText = null;
         TempoBeatUnit = 4;

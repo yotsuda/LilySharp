@@ -20,6 +20,19 @@ using LilySharp.Core.Semantics;
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
+/// Source offsets of a tempo mark's pieces, each a token's start and 0 when that piece is
+/// not written: the beat unit (<c>tempo |4 = 120</c>), the bpm (<c>tempo |120</c>), the
+/// feel word (<c>tempo 120 |swing</c>) and the swung value after it (<c>swing |16</c>).
+/// </summary>
+public readonly record struct TempoPiecePositions(int Unit = 0, int Count = 0, int Feel = 0,
+    int SwingValue = 0)
+{
+    /// <summary>Where the metronome NOTE points: the written beat unit, else the bpm (a
+    /// bare <c>tempo 120</c> writes no unit — the note stands for the count's beat).</summary>
+    public int Note => Unit != 0 ? Unit : Count;
+}
+
+/// <summary>
 /// Type of music mark symbol.
 /// </summary>
 /// <remarks>
@@ -223,6 +236,13 @@ public sealed record MusicMarkItem
 
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; init; }
+
+    /// <summary>For a Tempo mark: the source offsets of its pieces — the written beat unit,
+    /// the bpm and the feel word (<see cref="Syntax.TempoDeclarationSyntax.ValuePositions"/>),
+    /// 0 for a piece not written. The draw stamps the note, the "= N" and the swing equation
+    /// with their own so each clicks to and highlights its own token; the marking keeps
+    /// <see cref="SourcePosition"/>.</summary>
+    public TempoPiecePositions TempoPieces { get; init; }
 
     /// <summary>
     /// Index of the measure item (note/rest) this mark anchors on, or -1 when

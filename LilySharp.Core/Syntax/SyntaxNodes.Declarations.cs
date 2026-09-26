@@ -239,6 +239,48 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     public TempoValue Value => TempoValue.FromTokens(Values.OfType<SyntaxTokenNode>());
 
     /// <summary>
+    /// Where the pieces <see cref="Value"/> reads stand in the source — each a token's
+    /// <c>Span.Start</c>, 0 when the run does not write it: the beat unit (<c>tempo |4 = 120</c>),
+    /// the bpm (<c>tempo |120</c>), the feel word (<c>tempo 120 |swing</c>) and the swung
+    /// value after it (<c>swing |16</c>). The drawn mark stamps each piece with its own so the
+    /// preview jumps to and highlights the part clicked (user request 2026-09-26).
+    /// </summary>
+    /// <remarks>Picked by <see cref="TempoValue.FromTokens"/>'s own rules: the bpm is the
+    /// LAST integer before a feel word, the unit the last integer before the <c>=</c>, the
+    /// feel word the first one, the swung value the first integer after it.</remarks>
+    public (int Unit, int Count, int Feel, int SwingValue) ValuePositions
+    {
+        get
+        {
+            int unit = 0, count = 0, feel = 0, swingValue = 0, candidate = 0;
+            bool sawEquals = false;
+            foreach (var token in Values.OfType<SyntaxTokenNode>())
+            {
+                switch (token.Kind)
+                {
+                    case SyntaxKind.Identifier when TempoValue.IsFeelWord(token.Text):
+                        if (feel == 0) feel = token.Span.Start;
+                        break;
+                    case SyntaxKind.IntegerLiteral when feel != 0:
+                        if (swingValue == 0 && int.TryParse(token.Text, out _))
+                            swingValue = token.Span.Start;
+                        break;
+                    case SyntaxKind.IntegerLiteral:
+                        if (!int.TryParse(token.Text, out _)) break;
+                        count = token.Span.Start;
+                        if (!sawEquals) candidate = token.Span.Start;
+                        break;
+                    case SyntaxKind.Equals when !sawEquals:
+                        sawEquals = true;
+                        unit = candidate;
+                        break;
+                }
+            }
+            return (unit, count, feel, swingValue);
+        }
+    }
+
+    /// <summary>
     /// The tempo marking (e.g., "Allegro"), if present — a bare word in the FIRST
     /// value position (<c>tempo Comodo 4 = 84</c>) or a quoted string.
     /// </summary>

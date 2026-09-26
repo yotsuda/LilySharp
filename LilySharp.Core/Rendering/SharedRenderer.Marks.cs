@@ -676,6 +676,22 @@ internal static partial class SharedRenderer
             var plainStyle = MetronomeMarkGeometry.PlainStyle(fonts);
             double x = m.X;
             bool hasMetronome = m.Text.Length > 0;
+            // Each piece carries ITS token's offset, so a click lands on what was clicked
+            // and a caret on a token lights only its own piece (user request 2026-09-26):
+            // the marking the mark's own (the first value), the note the written beat unit
+            // or else the bpm, "(… = N)" the bpm (`tempo |120`), the swing equation the feel
+            // word (`tempo 120 |swing`). A piece the collector could not place (0) falls
+            // back to the mark's.
+            int markingPos = m.SourcePosition;
+            int notePos = m.TempoPieces.Note != 0 ? m.TempoPieces.Note : markingPos;
+            int countPos = m.TempoPieces.Count != 0 ? m.TempoPieces.Count : markingPos;
+            int feelPos = m.TempoPieces.Feel != 0 ? m.TempoPieces.Feel : markingPos;
+            // The swung value (`swing |16`) is the same equation's: an alias, so a caret on
+            // it lights the equation while a click still lands on the feel word.
+            int swingValuePos = m.TempoPieces.SwingValue;
+            IDisposable SwingSource() => swingValuePos != 0
+                ? gc.Source(feelPos, [swingValuePos])
+                : gc.Source(feelPos);
             if (!hasMetronome)
             {
                 // No count: the marking alone ("tempo Meno mosso"), and/or the swing
@@ -688,7 +704,8 @@ internal static partial class SharedRenderer
                     x += fonts.Advance(m.TempoText, em, TextRole.Tempo, textStyle);
                 }
                 if (m.SwingSubdivision != 0)
-                    DrawSwingEquation(fonts, gc, x, absY, m.SwingSubdivision, afterText: m.TempoText != null);
+                    using (SwingSource())
+                        DrawSwingEquation(fonts, gc, x, absY, m.SwingSubdivision, afterText: m.TempoText != null);
                 return;
             }
             if (m.TempoText != null)
@@ -697,11 +714,14 @@ internal static partial class SharedRenderer
                     TextRole.Tempo, textStyle, TextAnchor.Start, Color.Black);
                 x += fonts.Advance(m.TempoText, em, TextRole.Tempo, textStyle);
                 // The concat's " (" — one run; its leading space carried as the
-                // single-run offset so no backend collapses it.
-                gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, "("), absY, em,
-                    TextRole.Tempo, plainStyle, TextAnchor.Start, Color.Black);
+                // single-run offset so no backend collapses it. It opens the count's
+                // group, so it is the count's piece, as its ")" is.
+                using (gc.Source(countPos))
+                    gc.DrawText("(", x + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, "("), absY, em,
+                        TextRole.Tempo, plainStyle, TextAnchor.Start, Color.Black);
                 x += fonts.Advance(" (", em, TextRole.Tempo, plainStyle);
             }
+            using var noteSource = gc.Source(notePos);
             // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
             // half with stem; 4+ = black head, stem, flags from the 8th up.
             char head = MetronomeMarkGeometry.HeadGlyph(m.TempoBeatUnit);
@@ -742,13 +762,15 @@ internal static partial class SharedRenderer
             double eqX = x
                 + MetronomeMarkGeometry.NoteRight(fonts, m.TempoBeatUnit, m.TempoDots)
                 + MetronomeMarkGeometry.LeadingSpaceAdvance(fonts, equation);
-            gc.DrawText(equation, eqX, absY,
-                em, TextRole.Tempo, plainStyle, TextAnchor.Start, Color.Black);
+            using (gc.Source(countPos))
+                gc.DrawText(equation, eqX, absY,
+                    em, TextRole.Tempo, plainStyle, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
                 double textEnd = eqX + fonts.Advance(equation, em, TextRole.Tempo, plainStyle);
                 // DrawSwingEquation draws in the page Y-up frame; hand it the Y-up baseline.
-                DrawSwingEquation(fonts, gc, textEnd, absY, m.SwingSubdivision);
+                using (SwingSource())
+                    DrawSwingEquation(fonts, gc, textEnd, absY, m.SwingSubdivision);
             }
             return;
         }

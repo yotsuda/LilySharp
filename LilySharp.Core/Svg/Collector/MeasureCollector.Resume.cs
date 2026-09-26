@@ -804,7 +804,11 @@ public sealed partial class MeasureCollector
             || !w.TryShift(rec.TimePosition, out int time) || _meta.TimePosition != time
             || !w.TryShift(rec.KeyPosition, out int key) || _meta.KeyPosition != key
             || !w.TryShift(rec.ClefPosition, out int clef) || _meta.ClefPosition != clef
-            || !w.TryShift(rec.TempoPosition, out int tempo) || _meta.TempoPosition != tempo)
+            || !w.TryShift(rec.TempoPosition, out int tempo) || _meta.TempoPosition != tempo
+            || !w.TryShift(rec.TempoUnitPosition, out int unit) || _meta.TempoUnitPosition != unit
+            || !w.TryShift(rec.TempoCountPosition, out int count) || _meta.TempoCountPosition != count
+            || !w.TryShift(rec.SwingPosition, out int swing) || _meta.SwingPosition != swing
+            || !w.TryShift(rec.SwingValuePosition, out int swingValue) || _meta.SwingValuePosition != swingValue)
             return false;
 
         return _meta.Title == rec.Title
@@ -845,8 +849,16 @@ public sealed partial class MeasureCollector
             || !w.TryShift(meta.TimePosition, out int time)
             || !w.TryShift(meta.KeyPosition, out int key)
             || !w.TryShift(meta.ClefPosition, out int clef)
-            || !w.TryShift(meta.TempoPosition, out int tempo))
+            || !w.TryShift(meta.TempoPosition, out int tempo)
+            || !w.TryShift(meta.TempoUnitPosition, out int unit)
+            || !w.TryShift(meta.TempoCountPosition, out int count)
+            || !w.TryShift(meta.SwingPosition, out int swing)
+            || !w.TryShift(meta.SwingValuePosition, out int swingValue))
             return false;
+        meta.TempoUnitPosition = unit;
+        meta.TempoCountPosition = count;
+        meta.SwingPosition = swing;
+        meta.SwingValuePosition = swingValue;
         meta.TitlePosition = title;
         meta.ComposerPosition = composer;
         meta.SubtitlePosition = subtitle;

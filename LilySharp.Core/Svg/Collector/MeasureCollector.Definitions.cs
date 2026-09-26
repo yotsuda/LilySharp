@@ -609,6 +609,16 @@ public sealed partial class MeasureCollector
         => tempoDecl.Values.FirstOrDefault()?.Span.Start
            ?? tempoDecl.TempoKeyword.Span.Start;
 
+    /// <summary>A tempo mark's pieces — unit, bpm, feel word — as the mark carries them, so
+    /// the note and "= N" click to <c>tempo |120</c> and the swing equation to
+    /// <c>tempo 120 |swing</c> (user request 2026-09-26). The marking keeps
+    /// <see cref="TempoDataPos"/>.</summary>
+    private static TempoPiecePositions PiecePositions(TempoDeclarationSyntax tempoDecl)
+    {
+        var (unit, count, feel, swingValue) = tempoDecl.ValuePositions;
+        return new TempoPiecePositions(unit, count, feel, swingValue);
+    }
+
     /// <summary>
     /// Where a <c>time</c> declaration's meter points its data-pos: at the NUMERATOR,
     /// so clicking the time signature in the preview lands on the value —
@@ -647,8 +657,15 @@ public sealed partial class MeasureCollector
         // whatever the PREVIOUS tempo had put in _meta, while TempoValue.BeatUnit says
         // a quarter, which is what the '=' with no unit means.
         var tempo = tempoDecl.Value;
+        var pieces = tempoDecl.ValuePositions;
         if (tempo.Bpm is int bpm)
+        {
             _meta.Tempo = bpm;
+            // The note and "= N" are this declaration's: a unit it does not write leaves
+            // the note pointing at its bpm, not at an earlier declaration's unit.
+            _meta.TempoCountPosition = pieces.Count;
+            _meta.TempoUnitPosition = pieces.Unit;
+        }
         if (tempo.Marking is string marking)
             _meta.TempoText = marking;
         _meta.TempoPosition = TempoDataPos(tempoDecl);
@@ -659,7 +676,11 @@ public sealed partial class MeasureCollector
             _meta.TempoDots = tempo.BeatDots;
         }
         if (tempo.SwingSubdivision != 0)
+        {
             _meta.SwingSubdivision = tempo.SwingSubdivision;
+            _meta.SwingPosition = pieces.Feel;
+            _meta.SwingValuePosition = pieces.SwingValue;
+        }
     }
 
     private int CalculateKeySharps(KeySignatureSyntax key)

@@ -218,7 +218,14 @@ internal static class CollectTailShifter
             case GraceNoteItem e:
                 return w.TryShift(e.SourcePosition, out int p3) ? e with { SourcePosition = p3 } : null;
             case MusicMarkItem e:
-                return w.TryShift(e.SourcePosition, out int p4) ? e with { SourcePosition = p4 } : null;
+                // A tempo mark's pieces (unit, bpm, feel word) are offsets into the same text.
+                return w.TryShift(e.SourcePosition, out int p4)
+                    && w.TryShift(e.TempoPieces.Unit, out int pu)
+                    && w.TryShift(e.TempoPieces.Count, out int pc)
+                    && w.TryShift(e.TempoPieces.Feel, out int pf)
+                    && w.TryShift(e.TempoPieces.SwingValue, out int ps)
+                    ? e with { SourcePosition = p4, TempoPieces = new(pu, pc, pf, ps) }
+                    : null;
             case CustomTextItem e:
                 return w.TryShift(e.SourcePosition, out int p5) ? e with { SourcePosition = p5 } : null;
             case VoltaBracketItem e:

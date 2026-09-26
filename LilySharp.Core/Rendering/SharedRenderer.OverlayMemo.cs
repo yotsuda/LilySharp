@@ -132,8 +132,16 @@ internal static partial class SharedRenderer
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
             if (!sysTopYUp.ContainsKey(m.MeasureIndex)) continue;
             hc.Add(os.ScoreGrobStaffMiddleYUp(m.StaffIndex, m.MeasureIndex, StaffHeight));
-            hc.Add((m with { SourcePosition = 0 }).GetHashCode());
+            // A tempo mark's pieces are data-pos too: zeroed in the fold, anchored like the mark's.
+            hc.Add((m with { SourcePosition = 0, TempoPieces = default }).GetHashCode());
             (anchors ??= new()).Add(m.SourcePosition);
+            if (m.TempoPieces != default)
+            {
+                anchors.Add(m.TempoPieces.Unit);
+                anchors.Add(m.TempoPieces.Count);
+                anchors.Add(m.TempoPieces.Feel);
+                anchors.Add(m.TempoPieces.SwingValue);
+            }
         }
         var local = os;
         ThroughOverlayMemo(OverlayDrawerId.MusicMarks, hc.ToHashCode(), anchors, fragHost, fragments!,
