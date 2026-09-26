@@ -2222,6 +2222,13 @@ public class LilyPondExporterTests
         quiet.Export(SyntaxTree.Parse(
             PhraseScore("phrase A { c d }\nphrase B { e f }", "A B", headers: "")));
         Assert.DoesNotContain(quiet.Warnings, w => w.Contains("a note follows the phrase reference"));
+
+        // …and under `octave absolute` nothing is handed back at all (the reference is
+        // inlined), so the same stretch is exact and says nothing either (2026-09-26: it
+        // warned there too, four times on a quartet probe).
+        var absolute = new LilyPondExporter();
+        absolute.Export(SyntaxTree.Parse(PhraseScore("phrase A { c d }", "A e f")));
+        Assert.DoesNotContain(absolute.Warnings, w => w.Contains("a note follows the phrase reference"));
     }
 
     // ---- what the FORM says, not just which sections it names ----------------

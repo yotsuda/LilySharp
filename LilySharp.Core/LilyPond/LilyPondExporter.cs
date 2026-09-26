@@ -2094,7 +2094,11 @@ public sealed class LilyPondExporter
             // (lily/relative-octave-music.cc:39-45 relative_callback), while Lily# hands off
             // the phrase's ANCHOR. Nothing after the reference sees the difference unless
             // something after it is a pitch, so the warning is raised there and only there.
-            if (item is VariableReferenceSyntax vref && FollowedByPitch(items, i))
+            // ⚠️ ONLY IN RELATIVE MODE: under `octave absolute` the reference is inlined (or
+            // wrapped in a \fixed, EmitVariableReference) and no frame is handed back at all,
+            // so the stretch is exact. Until 2026-09-26 it warned there too — four false
+            // warnings on a quartet probe written in absolute mode.
+            if (!_octaveAbsolute && item is VariableReferenceSyntax vref && FollowedByPitch(items, i))
                 _warnings.Add(
                     $"a note follows the phrase reference '{vref.Name.Text}': LilyPond makes it "
                     + "relative to the pitch BEFORE the reference, Lily# to the phrase's anchor "
