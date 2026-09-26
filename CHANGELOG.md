@@ -142,8 +142,8 @@ workflow attaches that section to the GitHub Release verbatim.
   with the caret still on the 100) offers `swing`, `shuffle` and their sixteenth forms; it
   offered nothing before. Inside music (`c4 tempo 96 `) they lead the list and the notes
   stay in it, since a note may follow there instead. After the feel word
-  (`tempo 100 swing `, or with the caret still on the word) completion offers `16`, and
-  `8` and `16` when no number comes before it (`tempo swing `). `tempo ` itself now also
+  (`tempo 120 swing `, `tempo swing `, or with the caret still on the word) completion
+  offers `8` and `16`. `tempo ` itself now also
   offers `swing` and `shuffle` alone — the equation with no metronome mark.
 
 - **The preview draws text in the faces the layout measured.** The preview loaded only the

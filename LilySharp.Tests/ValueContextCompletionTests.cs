@@ -134,27 +134,26 @@ public class ValueContextCompletionTests
 
     /// <summary>
     /// After a tempo's feel word the swung note value may follow (`tempo 100 swing 16`).
-    /// User requests 2026-09-26: Ctrl+Space at `tempo 100 swing |` offers 16; at
-    /// `tempo swing |` (no bpm) it offers 8 and 16.
+    /// User requests 2026-09-26: Ctrl+Space after the feel word offers 8 and 16, with a
+    /// bpm before it or without.
     /// </summary>
     [Theory]
-    [InlineData("tempo 100 swing ", "swing", false, true, "16")]
-    [InlineData("tempo 100 swing", "swing", true, true, "16")]
-    [InlineData("tempo \"Grave\" 4. = 54 shuffle ", "shuffle", false, true, "16")]
-    [InlineData("tempo Comodo 84 swing ", "swing", false, true, "16")]
-    [InlineData("section A { m { c4 tempo 96 swing ", "swing", false, true, "16")]
-    [InlineData("tempo swing ", "swing", false, false, "8,16")]
-    [InlineData("tempo swing", "swing", true, false, "8,16")]
-    [InlineData("tempo \"Medium\" shuffle ", "shuffle", false, false, "8,16")]
-    [InlineData("section A { m { c4 tempo swing ", "swing", false, false, "8,16")]
-    public void AfterATemposFeelWord_TheSwungValuesAreOffered(
-        string text, string feel, bool touching, bool hasBpm, string labels)
+    [InlineData("tempo 120 swing ", "swing", false)]
+    [InlineData("tempo 100 swing", "swing", true)]
+    [InlineData("tempo \"Grave\" 4. = 54 shuffle ", "shuffle", false)]
+    [InlineData("tempo Comodo 84 swing ", "swing", false)]
+    [InlineData("section A { m { c4 tempo 96 swing ", "swing", false)]
+    [InlineData("tempo swing ", "swing", false)]
+    [InlineData("tempo swing", "swing", true)]
+    [InlineData("tempo \"Medium\" shuffle ", "shuffle", false)]
+    [InlineData("section A { m { c4 tempo swing ", "swing", false)]
+    public void AfterATemposFeelWord_TheSwungValuesAreOffered(string text, string feel, bool touching)
     {
         Assert.Equal("AfterTempoFeel", ContextOf(text).ToString());
-        Assert.Equal((feel, touching, hasBpm), LilySharpLanguageServer.TempoFeelBeforeCaret(text, text.Length));
+        Assert.Equal((feel, touching), LilySharpLanguageServer.TempoFeelBeforeCaret(text, text.Length));
 
-        var items = LilySharpLanguageServer.GetTempoSubdivisionCompletions(feel, touching, hasBpm).Items;
-        Assert.Equal(labels.Split(','), items.Select(i => i.Label));
+        var items = LilySharpLanguageServer.GetTempoSubdivisionCompletions(feel, touching).Items;
+        Assert.Equal(["8", "16"], items.Select(i => i.Label));
         foreach (var row in items)
             Assert.Equal(touching ? $"{feel} {row.Label}" : row.Label, row.InsertText);
     }
@@ -162,10 +161,11 @@ public class ValueContextCompletionTests
     [Fact]
     public void TheSwungValues_AloneInAHeader_BesideTheNotesInMusic()
     {
-        Assert.Equal(["16"], LabelsAtEnd("tempo 100 swing "));
+        Assert.Equal(["8", "16"], LabelsAtEnd("tempo 120 swing "));
         Assert.Equal(["8", "16"], LabelsAtEnd("tempo swing "));
         var music = LabelsAtEnd("part m { clef treble }\nsection A { m { c4 tempo 96 swing ");
-        Assert.Equal("16", music[0]);
+        Assert.Equal("8", music[0]);
+        Assert.Equal("16", music[1]);
         Assert.Contains("c", music);
     }
 

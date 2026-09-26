@@ -1451,21 +1451,17 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// The swung note value after a tempo's feel word. After a bpm (<c>tempo 100 swing |</c>)
-    /// only <c>16</c> — the eighths are what the bare word already means; with no bpm
-    /// (<c>tempo swing |</c>) both <c>8</c> and <c>16</c> (user requests, 2026-09-26).
+    /// The swung note value after a tempo's feel word (<c>tempo 120 swing |</c>,
+    /// <c>tempo swing |</c>): <c>8</c> and <c>16</c> — the two values the equation draws
+    /// (user requests, 2026-09-26).
     /// </summary>
     /// <param name="feel">The feel word before the caret, as written.</param>
     /// <param name="touching">Whether the caret still touches the word: the editor then
     /// filters by the WORD, so a row filters as <c>swing 16</c> and replaces it.</param>
-    /// <param name="hasBpm">Whether the run writes a bpm before the feel word.</param>
-    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching,
-        bool hasBpm = true)
+    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching)
     {
         string name = $"{char.ToUpperInvariant(feel[0])}{feel[1..]}";
-        var values = hasBpm
-            ? new[] { ("16", "sixteenths") }
-            : new[] { ("8", "eighths"), ("16", "sixteenths") };
+        var values = new[] { ("8", "eighths"), ("16", "sixteenths") };
         return new CompletionList
         {
             Items = values.Select((v, i) => new CompletionItem
