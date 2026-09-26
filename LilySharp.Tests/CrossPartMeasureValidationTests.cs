@@ -54,6 +54,28 @@ public class CrossPartMeasureValidationTests
         Assert.Empty(diags);
     }
 
+    /// <summary>
+    /// An arpeggio group `<< … >>` occupies its total — the cross-part pass counted it as
+    /// nothing, so a full bar opening with one read as short against the part beside it
+    /// (2026-09-26: `<< f as des >>4 c'8 des' f'2` "lasts 3/4" beside `c1`).
+    /// </summary>
+    [Theory]
+    [InlineData("<< f as des >>4 c'8 des' f'2 |")]
+    [InlineData("<< f as des >>4 r2. |")]
+    [InlineData("<< c e g c' >>2 c'2 |")]
+    public void AnArpeggioGroup_FillsItsTotal_ForTheCrossPartCheck(string rh)
+    {
+        var diags = Validate($$"""
+            time 4/4
+            section Main {
+              rh { {{rh}} c'1 | }
+              lh { c1 | c1 | }
+            }
+            form main { Main }
+            """);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
+    }
+
     [Fact]
     public void ShortMeasureInOnePart_ReportsMismatch()
     {

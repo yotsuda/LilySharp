@@ -274,7 +274,7 @@ internal static class MeasureModel
         // the node itself is the content.
         if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
             or ChordRepetitionSyntax or SlashNoteSyntax or BareDurationSyntax or BarlineSyntax
-            or TupletExpressionSyntax or GraceExpressionSyntax)
+            or TupletExpressionSyntax or GraceExpressionSyntax or ArpeggioSyntax)
         {
             output.Add(scope);
             return;
@@ -286,7 +286,7 @@ internal static class MeasureModel
             // inline-volta interiors are ordinary written measures and flow through
             // as themselves. Repeat interiors are expanded by the case below.
             if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope)
-                || IsInside<RepeatExpressionSyntax>(n, scope))
+                || IsInside<RepeatExpressionSyntax>(n, scope) || IsInside<ArpeggioSyntax>(n, scope))
                 continue;
 
             // A voice span's voices sound SIMULTANEOUSLY, so only voice 1 advances the
@@ -311,6 +311,15 @@ internal static class MeasureModel
                 case BarlineSyntax:
                 case TupletExpressionSyntax:
                 case GraceExpressionSyntax:
+                    output.Add(n);
+                    break;
+
+                // `<< … >>` is ONE item whose length is the group's total
+                // (MeasureDurations.ItemDuration), its members a subdivision of it. It was
+                // missing here, so the group counted for nothing: `<< f as des >>4 c'8 des'
+                // f'2` read as a 3/4 bar and a grand staff drew LYS2004 against the full
+                // bar beside it (2026-09-26).
+                case ArpeggioSyntax:
                     output.Add(n);
                     break;
 
