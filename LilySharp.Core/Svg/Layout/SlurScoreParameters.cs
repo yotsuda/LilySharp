@@ -155,9 +155,10 @@ public sealed record SlurScoreParameters
     /// Free distance for slur positioning.
     /// LILYPOND-REF: layout-slur.scm: free-slur-distance = 0.8
     /// </summary>
-    /// <remarks>Kept as a row of the ported alist, read by nothing: LilyPond lifts only a
-    /// PhrasingSlur's avoid point over an enclosed slur by it (lily/slur-scoring.cc:692), and
-    /// Lily# draws no PhrasingSlur (SlurScoringProblem.ScoreExtraEncompass).</remarks>
+    /// <remarks>LilyPond lifts only a PhrasingSlur's avoid point over an enclosed slur by it
+    /// (lily/slur-scoring.cc:692); SlurScoringProblem's avoid offsets read it for the enclosed
+    /// slurs' midpoints. (Until session 650 this said "read by nothing, Lily# draws no
+    /// PhrasingSlur" — both stopped being true when phrasing slurs were ported.)</remarks>
     public double FreeSlurDistance { get; init; } = 0.8;
 
     /// <summary>

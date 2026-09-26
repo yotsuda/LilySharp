@@ -189,8 +189,10 @@ internal static class TieVariantEngraver
     ///   within a second split DOWN/UP, and the rest take sign(position) (0 → DOWN).
     /// ⚠️ LilyPond then SCORES variations of the whole configuration
     ///   (generate_optimal_configuration) which can overturn these seeds and also
-    ///   quantizes each tie's Y off staff lines; that scorer is not ported (ticketed) —
-    ///   this is the base-configuration letter only.
+    ///   quantizes each tie's Y off staff lines. The drawn notation half-ties go through that
+    ///   scorer (SolveSemiTieColumn, since session 573); THIS is the base-configuration letter
+    ///   only, and what still reads it — the fallback / tab path and the spacing boxes — does
+    ///   not get the scored answer.
     /// </remarks>
     internal static ImmutableArray<SemiTie> SemiTiesOf(MusicItem item, TieVariantKind kind)
     {
