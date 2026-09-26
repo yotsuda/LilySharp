@@ -8,6 +8,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A beam runs across a clef or key change, and clears it.** As in LilyPond, eighths on
+  both sides of a mid-measure `clef` or `key` are beamed together, and the beam is placed
+  clear of the new clef or signature; Lily# used to break the beam in two at the change.
+  2 books in the repository change (LilyPond's own loose-column regression input, whose
+  beam now matches LilyPond's to the hundredth).
+
 - **A key change in a score of drum or tab staves alone takes no room.** Neither staff
   prints a key signature, as in LilyPond, but the change still pushed the next bar's notes
   up to eight staff spaces right. Beside a pitched staff it keeps the room that staff's

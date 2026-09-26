@@ -931,6 +931,18 @@ internal sealed class BeamDetector
                 continue;
             }
 
+            // A clef or key change is stepped over too: the auto-beam engraver acknowledges
+            // stems, beams, breathing signs and rests and nothing else, so a Clef or a
+            // KeySignature standing between two eighths is not offered to it and the beam runs
+            // on across the change. Until 2026-09-26 both fell into the not-beamable arm below
+            // and split the beam there. MEASURED (2.26.0, Lab sessions/p642/kb.ly and
+            // sessions/p643/cb.ly: `c''8 d'' \key e \major e'' a''` and `c''8 d'' \clef bass
+            // e8 a`): one Beam grob over the four eighths in each; Lily# drew two.
+            // LILYPOND-REF: lily/auto-beam-engraver.cc:519-523 Auto_beam_engraver — its
+            //   ADD_ACKNOWLEDGER list: stem, beam, breathing_sign, rest.
+            if (item is ClefChangeItem or KeySignatureChangeItem)
+                continue;
+
             // A rest, a note too long to be beamed, and a stem that already carries a beam of
             // its own (manual, or a cross-measure pair claimed by the first pass) all end the
             // beam being built.

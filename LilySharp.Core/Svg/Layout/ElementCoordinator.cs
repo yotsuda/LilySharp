@@ -365,7 +365,8 @@ internal sealed class ElementCoordinator
             var collisions = CollectBeamCollisions(
                 score.Voices[group.VoiceIndex].Measures[group.MeasureIndex],
                 group,
-                itemXPositions);
+                itemXPositions,
+                score.TextMetrics, fromColumns);
 
             // Also keep the beam clear of the OTHER voices' notes/rests (a
             // polyphonic staff's stem-up beam rides over a high note held below).
@@ -598,7 +599,9 @@ internal sealed class ElementCoordinator
     private List<BeamCollision>? CollectBeamCollisions(
         Measure measure,
         BeamGroup group,
-        IReadOnlyList<double> itemXPositions)
+        IReadOnlyList<double> itemXPositions,
+        Rendering.ScoreTextMetrics fonts,
+        bool fromColumns)
     {
         List<BeamCollision>? collisions = null;
         var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
@@ -644,6 +647,18 @@ internal sealed class ElementCoordinator
                 continue;
             double itemX = itemXPositions[i];
 
+            // A clef or key change the beam runs across (BeamDetector steps over them, as
+            // LilyPond's auto-beamer does) is a covered grob of the beam: the beam clears it
+            // rather than drawing through it. Only one BETWEEN the outer stems can be under the
+            // beam; the ones outside stand left of its first stem or right of its last.
+            if (item is ClefChangeItem or KeySignatureChangeItem)
+            {
+                if (i > firstMemberIndex && i < lastMemberIndex)
+                    AddChangeCollisions(ref collisions, fonts, measure, i, itemX, fromColumns,
+                                        beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                continue;
+            }
+
             AddItemCollisions(ref collisions, item, itemX,
                               beamEdgeLeftX, beamEdgeRightX, beamOriginX,
                               _beamEngraver.Parameters.StemCollisionFactor);
@@ -652,6 +667,89 @@ internal sealed class ElementCoordinator
         AddAccidentalCollisions(ref collisions, measure, itemXPositions,
                                 beamEdgeLeftX, beamEdgeRightX, beamOriginX);
         return collisions;
+    }
+
+    /// <summary>
+    /// Books a clef or key change under the beam as covered grobs: the clef as one box, the
+    /// key change as two — its KeyCancellation and its KeySignature, which are separate grobs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-collision-engraver.cc:217-225 acknowledge_clef /
+    ///   acknowledge_key_signature — both are covered grobs of a beam whose column span they
+    ///   fall in; KeyCancellation carries key-signature-interface too. Booked like every
+    ///   covered box (<see cref="AddBoxCollision"/>, beam-quanting.cc:377-392).
+    /// The x is the one the renderer draws the change at (SharedRenderer's change-column arm:
+    /// the musical column hung back by <see cref="SpacingRules.MidMeasureChangeRightGap"/>,
+    /// then <see cref="SpacingRules.MidMeasureChangeOffsetWithin"/>); on the item-slot path
+    /// the change has its own slot. A LOOSE change column's stored hang is not read — the
+    /// renderer reads it only for multi-staff polyphony a beam across a change never met.
+    /// ⚠️ NOT BOOKED, and not reached by any book: a CUE clef (drawn from the plain glyph
+    /// shrunk), a percussion clef change (no change-glyph box in the metrics), the clef
+    /// modifier's 8, and a meter change (BeamDetector still ends the beam there).
+    /// </remarks>
+    private static void AddChangeCollisions(
+        ref List<BeamCollision>? collisions, Rendering.ScoreTextMetrics fonts, Measure measure,
+        int itemIndex, double columnX, bool fromColumns,
+        double beamEdgeLeftX, double beamEdgeRightX, double beamOriginX)
+    {
+        var item = measure.Items[itemIndex];
+        double x = columnX;
+        if (fromColumns)
+        {
+            var columnItems = Rendering.SharedRenderer.ChangeColumnItems(measure, itemIndex);
+            x += SpacingRules.MidMeasureChangeOffsetWithin(fonts, columnItems, item)
+                 - SpacingRules.MidMeasureChangeRightGap(fonts, columnItems);
+        }
+
+        switch (item)
+        {
+            case ClefChangeItem { IsCue: false } clef:
+            {
+                // The glyph's origin is on the line the clef names (scm/parser-clef.scm
+                // supported-clefs — the same positions SharedRenderer.DrawClefChange anchors at).
+                (GlyphMetrics.BBox box, int line)? glyph = clef.NewClef switch
+                {
+                    ClefType.Bass or ClefType.Bass8Below => (GlyphMetrics.ClefFChange, 2),
+                    ClefType.Alto => (GlyphMetrics.ClefCChange, 0),
+                    ClefType.Tenor => (GlyphMetrics.ClefCChange, 2),
+                    ClefType.Soprano => (GlyphMetrics.ClefCChange, -4),
+                    ClefType.MezzoSoprano => (GlyphMetrics.ClefCChange, -2),
+                    ClefType.Baritone => (GlyphMetrics.ClefCChange, 4),
+                    ClefType.Percussion or ClefType.Tab => null,
+                    _ => (GlyphMetrics.ClefGChange, -2),
+                };
+                if (glyph is not { } g)
+                    return;
+                double lineY = g.line * 0.5;
+                AddBoxCollision(ref collisions, x + g.box.Left, x + g.box.Right,
+                                lineY + g.box.Bottom, lineY + g.box.Top,
+                                beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                return;
+            }
+            case KeySignatureChangeItem { Blanked: false } key
+                when SpacingRules.ClefEngravesKey(key.Clef):
+            {
+                // One box per grob: the cancellation naturals, then the new signature.
+                var cancel = (L: double.PositiveInfinity, B: double.PositiveInfinity,
+                              R: double.NegativeInfinity, T: double.NegativeInfinity);
+                var sign = cancel;
+                foreach (var (kind, dx, pos) in Rendering.SharedRenderer.KeyChangeGeometry(key).Glyphs)
+                {
+                    var b = GlyphMetrics.GetAccidentalBBox(kind);
+                    double gx = x + dx, gy = pos * 0.5;
+                    ref var acc = ref (kind == "natural" ? ref cancel : ref sign);
+                    acc = (Math.Min(acc.L, gx + b.Left), Math.Min(acc.B, gy + b.Bottom),
+                           Math.Max(acc.R, gx + b.Right), Math.Max(acc.T, gy + b.Top));
+                }
+                if (cancel.R > cancel.L)
+                    AddBoxCollision(ref collisions, cancel.L, cancel.R, cancel.B, cancel.T,
+                                    beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                if (sign.R > sign.L)
+                    AddBoxCollision(ref collisions, sign.L, sign.R, sign.B, sign.T,
+                                    beamEdgeLeftX, beamEdgeRightX, beamOriginX);
+                return;
+            }
+        }
     }
 
     /// <summary>
