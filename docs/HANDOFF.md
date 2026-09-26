@@ -154,6 +154,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第653セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第652 の後・ユーザー「続けて」＝§2 S4）。★ `-Start p653`（HEAD `02a13e81`・未 push 120・full **9411 / 0 / 2 / 9413**）。
+★ ⑴ **S1 は未着手だった**（S0 の母集団は追跡本＋実コーパス）＝**第653 が建てた**: Lab `sessions/p653/s1/` 18 冊（tie: 位置・音価・和音・臨時記号・行割れ・l.v./repeat・声部／slur: 長さ・梁・符尾・スクリプト・内側のタイ・phrasing・行割れ・grace・和音・声部・ottava）。双子で 166 対・差 5＋数の不一致 1。回し方は `sweep-bows.ps1 -Work sessions/p653/s1w -Books (…)`。
+★ ⑵ `779fcb32` 行で割れたスラーの断片の端は**境界の note column の全 extent**（符尾を含む・梁つきは梁の面）＋0.5（slur-scoring.cc:600-616）＝`BrokenEdgeStemBaseY`。`c2( e | break g2 c'')` の第 2 断片の始点 LP 3.0（g2 の符尾 2.5＋0.5）・Lily# 0.195 → 一致。**:602/:614 も移植**（断片の唯一の column が他端の実の bound なら、その bound の y）＝これを欠いた初版は実コーパスの exact 10 対を 2.8〜2.96 動かした（掃きが捕まえた）。移植後は実コーパス 0 対変化・S1 の 2 端は exact。網 `BrokenSlurEdgeStemTests` 2 本（毒 2 つでそれぞれ赤）。
+⚠️ 最初は「LP は断片ごとに向きを決める」と読んで外した（LP の 2 断片はどちらも up・Lily# の第 1 断片が下に見えたのは端の y の差）＝**向きを疑う前に dump の端の y を並べる**。
+⚠️ S1 の残り（S4 で説明するか直す）: slur-break 第 1 断片の高さ 0.24／slur-beams `c8( g'' c g'')` 0.041／slur-voices 0.077／tie-lv の repeatTie x 0.114（列の写像 −0.83＝spacing）／slur-grace の数 4 対 3（`grace { d''16( } f''4)` は GraceNotes の独自の path で描かれ Bezier に記録されない＝宣言済みの grace 族）。
+★ **終了**: full **9413 / 0 / 2 / 9415**・実コーパスの bow の差 **2,529**（変化 0）。push はユーザー。
+
+## 以下は第652セッションの経緯
+
 ### 1.1 第652セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（第651 の後・ユーザー「続けて」＝§2 S3 ⑶ を案 A で直す）。★ `-Start p652`（HEAD `0925e674`・未 push 117・full **9409 / 0 / 2 / 9411**）。
@@ -162,17 +173,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠️ 残差（未調査）: `voice { c8( d) … } { s8 a,8 … }` のスラーの右端 y が LP より 0.17 低い（向きは一致・Lab `sessions/p652/w-leadspacer`）。
 ⚠️ Lily# の `octave absolute` は LP より 1 オクターブ上（Lily# `c'` = C5）＝LP 双子のプローブを書くときの罠。
 ★ **終了**: full **9411 / 0 / 2 / 9413**・bow の差 **2,529**。push はユーザー。
-
-## 以下は第651セッションの経緯
-
-### 1.1 第651セッション（2026-09-27・YT-DELL2）
-
-新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p651`（HEAD `70c70b9f`・未 push 114・full **9407 / 0 / 2 / 9409**）。§2 S3 の「説明の無い残り 3 件」から。
-★ ⑴ `23d81ced` スラーの pass の梁の表を**声部つき**の鍵に（`(voice, measure, item)`）。`(measure, item)` だけでは同じ staff の声部をまたいで曖昧で、先に入った梁が勝った＝dot-cross-voice-spacing の voice 1 の `g''2` が voice 2 の梁つき `e8`（同じ item 0）を自分の符尾として読み、上向きの符尾の先が下の梁に→スラーの Y が符尾の範囲の外→符尾への付着（slur-scoring.cc:742-752）を逃して 0.365 左。bow の差 2,535 → 2,533（本の原本 Untitled-4 と 2 対・悪化 0）。網 `SlurStemAttachAcrossVoicesTests`。
-★ ⑵ `bee40494` part combiner が向きを変えた声部の梁の `PureBeamedStemTip` を焼き直す（`PartCombiner.BuildVoices`→`RebakeRouted`＝`voice { }` の `ResolveVoiceStemDirections` と同じ手順。members はその context の item だけ＝第 1 声部は両 part の item が混ざり梁 id が衝突しうる）。part 2 の `f'8[ f~]` が上向きの tip のまま下向きの符尾→タイの outline の符尾が頭の上→右端が次の符尾で止まらず 0.787 右。2,533 → 2,532・combinedStaff の 25 冊を前後で描いて変わったのはこの 1 枚。網 `CombinedStaffBeamedTieTests`。
-⚠️ ⑶ は**設計級＝ユーザー判断待ち**: 小節途中から始まる `voice { }` の前（同じ小節）の voice 1 の item も強制される。原因は `VoiceDefaults.GetDefaultStemUpAt`／`IsPolyphonicAt` が**小節粒度**で、読み手が 14 か所（梁・符頭・skyline・ばね・強弱・トリル・連符・タイ・スラー・`ResolveVoiceStemDirections` の焼き込み…）。後ろ側（span の終わりの後）は焼き込みだけが切っている。**先頭の spacer では span の始まりを読めない**（`mult-probe`・`phrslurtup`・`beam-over-stem` 3 小節目はユーザーが書いた `s1` の声部＝LP は小節全体を強制）＝`MeasureCollector.CollectMeasuresFromNode` の padding（:2597）に印を付けて読む必要がある。射程（一時計器・Lab `sessions/p651/span-reach.txt`・963 冊）: 途中開始の前に voice 1 の音がある小節は SUMMER（1 小節 8 音）・voiceissue・beam-skip ×2・dots・beam-over-stem の 1〜2 小節目。「後ろ」は 0。
-⚠️ 計器の罠: bow の sweep の Lily# 側は `dotnet test --no-build` ＝**`LilySharp.Tests` を build しないと古い dll を測る**（Cli だけ build して「変わらない」を 1 度見た）。
-★ **終了**: full **9409 / 0 / 2 / 9411**・bow の差 **2,532**。push はユーザー。
 
 ## 2. 開いている作業
 
@@ -916,7 +916,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ✅ **S0. 計器＝本全体の bow の双子比較**（Lab `sessions/p647/bows/`・第647 が建てた。第648 が `compare.ps1` の急なスラーと dump の旗を直した） → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第p649 に落とした）
 - **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第647 に落とした）
 - **S2 の残り（第649 末・五線・非 grace）334 対**: 列の写像が効く 0.1 以上 78（T x3 26・S x3 13・S x0 11・T y0 10・S h 5）／写像不能（spacing 起因）68／向きの反転 23／0.1 未満 165。703 → 437（第648）→ 334（第649＝§1.1）。
-- **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
+- **S1. 状況の行列（合成コーパス）** — ▶ 第653 が 18 冊を建てた（Lab `sessions/p653/s1/`・§1.1 第653）。未収録: tab・cue・加線の多い和音・ottava のタイ。1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、
     grace、tab（`tab as full` を含む）、ottava の下。

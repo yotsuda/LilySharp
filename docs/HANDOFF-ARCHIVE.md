@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第651セッションの経緯
+
+### 1.1 第651セッション（2026-09-27・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p651`（HEAD `70c70b9f`・未 push 114・full **9407 / 0 / 2 / 9409**）。§2 S3 の「説明の無い残り 3 件」から。
+★ ⑴ `23d81ced` スラーの pass の梁の表を**声部つき**の鍵に（`(voice, measure, item)`）。`(measure, item)` だけでは同じ staff の声部をまたいで曖昧で、先に入った梁が勝った＝dot-cross-voice-spacing の voice 1 の `g''2` が voice 2 の梁つき `e8`（同じ item 0）を自分の符尾として読み、上向きの符尾の先が下の梁に→スラーの Y が符尾の範囲の外→符尾への付着（slur-scoring.cc:742-752）を逃して 0.365 左。bow の差 2,535 → 2,533（本の原本 Untitled-4 と 2 対・悪化 0）。網 `SlurStemAttachAcrossVoicesTests`。
+★ ⑵ `bee40494` part combiner が向きを変えた声部の梁の `PureBeamedStemTip` を焼き直す（`PartCombiner.BuildVoices`→`RebakeRouted`＝`voice { }` の `ResolveVoiceStemDirections` と同じ手順。members はその context の item だけ＝第 1 声部は両 part の item が混ざり梁 id が衝突しうる）。part 2 の `f'8[ f~]` が上向きの tip のまま下向きの符尾→タイの outline の符尾が頭の上→右端が次の符尾で止まらず 0.787 右。2,533 → 2,532・combinedStaff の 25 冊を前後で描いて変わったのはこの 1 枚。網 `CombinedStaffBeamedTieTests`。
+⚠️ ⑶ は**設計級＝ユーザー判断待ち**: 小節途中から始まる `voice { }` の前（同じ小節）の voice 1 の item も強制される。原因は `VoiceDefaults.GetDefaultStemUpAt`／`IsPolyphonicAt` が**小節粒度**で、読み手が 14 か所（梁・符頭・skyline・ばね・強弱・トリル・連符・タイ・スラー・`ResolveVoiceStemDirections` の焼き込み…）。後ろ側（span の終わりの後）は焼き込みだけが切っている。**先頭の spacer では span の始まりを読めない**（`mult-probe`・`phrslurtup`・`beam-over-stem` 3 小節目はユーザーが書いた `s1` の声部＝LP は小節全体を強制）＝`MeasureCollector.CollectMeasuresFromNode` の padding（:2597）に印を付けて読む必要がある。射程（一時計器・Lab `sessions/p651/span-reach.txt`・963 冊）: 途中開始の前に voice 1 の音がある小節は SUMMER（1 小節 8 音）・voiceissue・beam-skip ×2・dots・beam-over-stem の 1〜2 小節目。「後ろ」は 0。
+⚠️ 計器の罠: bow の sweep の Lily# 側は `dotnet test --no-build` ＝**`LilySharp.Tests` を build しないと古い dll を測る**（Cli だけ build して「変わらない」を 1 度見た）。
+★ **終了**: full **9409 / 0 / 2 / 9411**・bow の差 **2,532**。push はユーザー。
+
 ## 以下は第650セッションの経緯
 
 ### 1.1 第650セッション（2026-09-27・YT-DELL2）
