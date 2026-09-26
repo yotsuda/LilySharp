@@ -385,8 +385,8 @@ public sealed partial class MeasureCollector
             // ⚠️ AND YET IT HAS AN OBSERVER (session 523): session 366's sweep rerun with this
             // guard forced open — 36 edit classes at every container edge of every book —
             // diverged nowhere in 259 net books and in 3 edits of 2 books of the owner's corpus,
-            // all a note typed after a PART-MAJOR cell's last item (tab-chord.lys, 想い人.lys).
-            // The suite's section-major twin of that hole stayed green with the guard open; the
+            // all a note typed after a BY-PART cell's last item (tab-chord.lys, 想い人.lys).
+            // The suite's by-section twin of that hole stayed green with the guard open; the
             // corpus's shapes are TrailingGapSpliceTests, which asserts the decline is THIS
             // guard's (so another guard taking over would not keep it green by accident).
             if (ck.NodeStart < w.Prefix

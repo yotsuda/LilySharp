@@ -47,7 +47,7 @@ public class PhraseExtractorTests
     }
 
     [Fact]
-    public void WholeSection_PartMajor_ExtractsAndSoundsTheSame()
+    public void WholeSection_GroupedByPart_ExtractsAndSoundsTheSame()
     {
         var src = """
             part melody { clef treble
@@ -96,7 +96,7 @@ public class PhraseExtractorTests
     }
 
     [Fact]
-    public void SectionMajorLayout_ExtractsFromThePartBlock()
+    public void GroupedBySectionLayout_ExtractsFromThePartBlock()
     {
         var src = """
             section A {

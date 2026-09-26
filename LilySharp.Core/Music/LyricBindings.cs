@@ -124,7 +124,7 @@ public static class LyricBindings
 
     /// <summary>
     /// The named voices written inside the named part's music (section cells and
-    /// part-major inner sections alike) — the other half of the binding rule: a
+    /// by-part inner sections alike) — the other half of the binding rule: a
     /// track binds to a part by <c>sings</c>, or by NAME to the part or one of
     /// these voices (<c>voice sop { } + lyrics sop { }</c>). One walk per tree,
     /// shared by the validator and the score-row folding in RenderSpecParser.

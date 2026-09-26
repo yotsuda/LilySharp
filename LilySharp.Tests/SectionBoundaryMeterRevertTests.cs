@@ -138,14 +138,14 @@ public sealed class SectionBoundaryMeterRevertTests
     }
 
     /// <summary>
-    /// A <c>key</c> written in the MIDDLE of a part-major section's inline music is not
+    /// A <c>key</c> written in the MIDDLE of a by-part section's inline music is not
     /// that section's HEADER key: it belongs to the bar it stands in.
     /// </summary>
     /// <remarks>
     /// <c>MusicXmlExporter.EmitSection</c> scanned the section's direct children for a
     /// header key, and an inline-music section's mid-music <c>key</c> IS a direct child —
     /// so the export claimed G major from bar 1 while the page turns it on at bar 2. The
-    /// section-major twin below is the control: the two spellings of one book must agree.
+    /// by-section twin below is the control: the two spellings of one book must agree.
     /// </remarks>
     [Fact]
     public void AMidMusicKeyIsNotTheSectionsHeaderKey()
@@ -154,7 +154,7 @@ public sealed class SectionBoundaryMeterRevertTests
             .Parts.SelectMany(p => p.Measures)
             .Select(m => m.Attributes?.KeyFifths ?? -99).ToArray();
 
-        var partMajor = Fifths("""
+        var groupedByPart = Fifths("""
             time 4/4
             part m {
               section A { c'4 d e f | key g major g a b c | }
@@ -163,7 +163,7 @@ public sealed class SectionBoundaryMeterRevertTests
             form main { ~A ~B }
             score main { staff m }
             """);
-        var sectionMajor = Fifths("""
+        var groupedBySection = Fifths("""
             time 4/4
             part m
             section A { m { c'4 d e f | key g major g a b c | } }
@@ -172,7 +172,7 @@ public sealed class SectionBoundaryMeterRevertTests
             score main { staff m }
             """);
 
-        Assert.Equal(new[] { 0, 1, 0 }, partMajor);
-        Assert.Equal(partMajor, sectionMajor);
+        Assert.Equal(new[] { 0, 1, 0 }, groupedByPart);
+        Assert.Equal(groupedByPart, groupedBySection);
     }
 }

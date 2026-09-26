@@ -88,7 +88,7 @@ public class SectionCodeLensTests
     }
 
     [Fact]
-    public void ASectionMajorBlock_SpeaksOverItsOwnLine()
+    public void AGroupedBySectionBlock_SpeaksOverItsOwnLine()
     {
         // Every layer is written inside the one declaration, so the declaration's name has no
         // line to point at the short one — the block itself carries it.
@@ -112,7 +112,7 @@ public class SectionCodeLensTests
         Assert.Equal("⚠ Section A · 2 bars here (1 bar shorter) · 3 bars in melody and X", lenses[1].Command!.Title);
         Assert.Equal("lilysharp.showSectionLayers", lenses[1].Command!.CommandIdentifier);
 
-        // A later section-major declaration (a section is open: it may gather parts from
+        // A later by-section declaration (a section is open: it may gather parts from
         // several declarations): still over the block, not the declaration's name.
         const string twice = """
             part flute
@@ -244,14 +244,14 @@ public class SectionCodeLensTests
     [Fact]
     public void TheOverview_ReadsBothLayouts()
     {
-        const string sectionMajor = """
+        const string groupedBySection = """
             part flute
             part oboe
             section A { flute { c1 | c1 | } oboe { c1 | } lyrics w sings flute { la | lu | } }
             form main { |: A :| }
             score main { staff flute  staff oboe }
             """;
-        var a = Assert.Single(SectionOverview.Build(SyntaxTree.Parse(sectionMajor).GetRoot()));
+        var a = Assert.Single(SectionOverview.Build(SyntaxTree.Parse(groupedBySection).GetRoot()));
         Assert.Equal(new[] { 2, 1, 2 }, a.Layers.Select(l => l.Bars).ToArray());
         Assert.True(a.IsInconsistent);
         Assert.Equal(2, a.Bars);

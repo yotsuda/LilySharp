@@ -2148,7 +2148,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// The top-level <c>lyrics</c> track scaffold: a named track that sings a part of this
     /// document, with a <c>section</c> cell inside (a flat top-level track is LYS4002 in
-    /// part-major layout, and right in neither layout — see the note at the call site).
+    /// by-part grouping, and right in neither layout — see the note at the call site).
     /// </summary>
     private static CompletionItem LyricsTrackItem(string? text)
     {
@@ -2227,8 +2227,8 @@ public sealed partial class LilySharpLanguageServer
     /// After <c>section </c>, the section names known to the piece but not yet declared
     /// in this scope — so a section can be filled in with what is still missing. In a
     /// <c>part { }</c> / <c>lyrics { }</c> container the missing set is measured against
-    /// the sections already in that container (part-major: <c>bass</c> already has
-    /// <c>A</c>, so only <c>B</c> / <c>C</c> are offered); at the top level (section-major)
+    /// the sections already in that container (by-part: <c>bass</c> already has
+    /// <c>A</c>, so only <c>B</c> / <c>C</c> are offered); at the top level (by-section)
     /// it is measured against every declared section, so what remains is the sections the
     /// <c>form { }</c> references but that have not been written yet. The universe is every
     /// section NAME the document mentions — declarations AND form references (incl.
@@ -2276,7 +2276,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Completions offered DIRECTLY inside a top-level <c>lyrics [name] { }</c> track: the
     /// document's section names not yet present in this track, each scaffolding a full
-    /// <c>section NAME { … }</c> entry (a section-major lyrics track holds
+    /// <c>section NAME { … }</c> entry (a by-section lyrics track holds
     /// <c>section NAME { syllables }</c>). Unlike <see cref="GetMissingSectionNameCompletions"/>
     /// — offered AFTER the user types <c>section</c> — this fires before it, so the insert
     /// carries the <c>section</c> keyword. The grammar still allows a bare syllable stream
@@ -2288,7 +2288,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// Completions offered DIRECTLY inside a top-level <c>chords NAME { }</c> track. The
     /// track has TWO forms and they take different vocabularies, so the form decides:
-    /// a SECTIONED track (or any track in a part-major file, where a flat one is LYS2011)
+    /// a SECTIONED track (or any track in a by-part file, where a flat one is LYS2011)
     /// holds <c>section NAME { … }</c> cells — the chords dual of
     /// <see cref="GetLyricsSectionCompletions"/> — and a flat lead-sheet track
     /// (<c>chords prog { C G7 | }</c>) holds the chord entries themselves.
@@ -2299,7 +2299,7 @@ public sealed partial class LilySharpLanguageServer
     /// <c>section</c>). Beside cells they are not merely noise — <c>ChordNameCollector</c>
     /// reads the sections once <c>HasSections</c>, so a symbol written there is dropped on
     /// the floor. The judgement is the SAME PAIR <c>TrackNeedsSectionsValidator</c> makes
-    /// (<c>HasSections</c> ∥ part-major); only the answer differs — the popup falls back to
+    /// (<c>HasSections</c> ∥ by-part); only the answer differs — the popup falls back to
     /// the chord list where the validator says nothing.
     /// </remarks>
     internal static CompletionList GetChordsTrackCompletions(string text, int offset)
@@ -2307,8 +2307,8 @@ public sealed partial class LilySharpLanguageServer
         // Written as cells already? (The sections of the block the caret is in — the same
         // reading the scaffolds subtract, so the two cannot disagree.)
         bool sectioned = SectionsDeclaredInCurrentBlock(text, offset).Count > 0
-            || LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(SyntaxTree.Parse(text).GetRoot())
-                == LilySharp.Core.Editing.LayoutForm.PartMajor;
+            || LilySharp.Core.Editing.PartSectionRegrouper.Detect(SyntaxTree.Parse(text).GetRoot())
+                == LilySharp.Core.Editing.Grouping.ByPart;
 
         return sectioned
             ? new CompletionList { Items = SectionScaffoldItems(text, offset, "Chords for this section").ToArray() }
@@ -2397,7 +2397,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>A <c>part { }</c> body's completions: its property names PLUS the document's
-    /// section names as <c>section NAME { }</c> scaffolds — a part-major part holds properties
+    /// section names as <c>section NAME { }</c> scaffolds — a by-part part holds properties
     /// AND inner sections. The bare <c>section</c> property is dropped: the scaffolds (and the
     /// "New section" item) are the one-step way in, so it would be a redundant second entry.</summary>
     internal static CompletionList GetPartBlockCompletions(string text, int offset)
@@ -2410,23 +2410,23 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Completions offered DIRECTLY inside a top-level <c>section { }</c> in a doc
-    /// WITH parts: the declared part names as <c>NAME { }</c> cell scaffolds. A section-major
+    /// WITH parts: the declared part names as <c>NAME { }</c> cell scaffolds. A by-section
     /// section's body holds part blocks (<c>melody { … }</c>), not notes — so this replaces
     /// the pitch-letter list there. A section sits at column 0, so a cell nests one level in.</summary>
     internal static CompletionList GetSectionBlockCompletions(string text, int offset)
     {
-        // In a PART-MAJOR file the music lives in `part X { section A { … } }`, so a top-level
+        // In a BY-PART file the music lives in `part X { section A { … } }`, so a top-level
         // `section A { }` is a standalone HEADER: it carries section-wide directives (a pickup,
         // key, time, tempo, a section-scoped grob override) that apply to every part of the
         // section — never part cells. Offer those directives, not part names.
-        if (LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(SyntaxTree.Parse(text).GetRoot())
-            == LilySharp.Core.Editing.LayoutForm.PartMajor)
+        if (LilySharp.Core.Editing.PartSectionRegrouper.Detect(SyntaxTree.Parse(text).GetRoot())
+            == LilySharp.Core.Editing.Grouping.ByPart)
             return new CompletionList { Items = SectionHeaderDirectiveItems() };
 
-        // Section-major (or a parts file not yet committed to a layout): the section body holds
+        // By-section (or a parts file not yet committed to a layout): the section body holds
         // one music cell per part. Offer the declared part names as `NAME { }` cell scaffolds —
-        // and, after them, the same section-wide directives the part-major header takes: a
-        // section-major section is a header AND a body (GRAMMAR SectionSetting stands beside
+        // and, after them, the same section-wide directives the by-part header takes: a
+        // by-section section is a header AND a body (GRAMMAR SectionSetting stands beside
         // the part cells — `section A { partial 4  key g major  m { … } }`), and until
         // 2026-09-02 this list offered only the cells, so the one place a pickup CAN be
         // written had no `partial` row while the music list, where it cannot, did.
@@ -2447,11 +2447,11 @@ public sealed partial class LilySharpLanguageServer
             InsertText = Body(n),
             SortText = i.ToString("D2"),
         });
-        // The two TRACK cells a section-major section also holds (GRAMMAR SectionItem:
+        // The two TRACK cells a by-section section also holds (GRAMMAR SectionItem:
         // LyricsBlock / ChordsBlock) — a named lyrics track that sings a part, a named chord
         // track. Both scaffolds are the sectioned body's dual of the top-level track items;
         // the track NAMES are placeholders (a track's name is required: LYS0032). Absent
-        // from this list until 2026-09-10, so a section-major writer had to know the
+        // from this list until 2026-09-10, so a by-section writer had to know the
         // spelling.
         // ⚠️ The `sings` TARGET is not a placeholder — it names a part that must exist, so
         // it comes from SingsClauseSnippet, the same reader the top-level item uses. It
@@ -2504,12 +2504,12 @@ public sealed partial class LilySharpLanguageServer
         };
 
     /// <summary>The directives a top-level section may carry beside (or instead of) its part
-    /// cells — the part-major HEADER's whole body, and the section-major section's opening:
+    /// cells — the by-part HEADER's whole body, and the by-section section's opening:
     /// a pickup and the section-wide key / time / tempo, plus a section-scoped grob override.
     /// They apply to every part of the section; clef is deliberately absent (it is per-part).
     /// READ FROM THE COMPILER (<see cref="LanguageVocabulary.SectionSettings"/>).</summary>
     /// <param name="sortPrefix">Where the block sorts in the caller's list — after the part
-    /// cells in a section-major section, first (empty) in a part-major header.</param>
+    /// cells in a by-section section, first (empty) in a by-part header.</param>
     private static CompletionItem[] SectionHeaderDirectiveItems(string sortPrefix = "")
         => LanguageVocabulary.SectionSettings.Select((keyword, i) =>
         {
@@ -2554,7 +2554,7 @@ public sealed partial class LilySharpLanguageServer
             // Top level: the enclosing "block" is the whole file, so its own sections are
             // those declared at brace depth 0. A `section` nested in a part / lyrics track is
             // that container's cell, NOT a top-level section, so it must not count — else a
-            // part-major `section B` would be treated as already present and never offered for
+            // by-part `section B` would be treated as already present and never offered for
             // pulling up to the top level.
             int curTop = SectionKeywordStartBeforeCursor(text, offset);
             int d = 0;
@@ -2621,8 +2621,8 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Every section declared anywhere in the document (section-major top-level or
-    /// part-major inner), EXCLUDING the declaration at the cursor itself. At the top
+    /// Every section declared anywhere in the document (by-section top-level or
+    /// by-part inner), EXCLUDING the declaration at the cursor itself. At the top
     /// level this is the scope a new <c>section</c> joins, so subtracting it from the
     /// known universe leaves the form-referenced sections not yet written.
     /// </summary>
@@ -3234,9 +3234,9 @@ public sealed partial class LilySharpLanguageServer
                     TwinklePianoTemplate, text, offset, position),
                 // ⚠️ BOTH track items scaffold a `section` (reported 2026-08-23, session 240).
                 // A top-level TRACK written flat has no section to anchor to, so its cells run
-                // from bar 0 across whatever the form plays — an error in part-major layout
+                // from bar 0 across whatever the form plays — an error in by-part grouping
                 // (LYS4002 for lyrics, LYS2011 for chords). The sectioned body is also right in
-                // a SECTION-major file, measured rather than assumed: a track declaring its own
+                // a BY-SECTION file, measured rather than assumed: a track declaring its own
                 // sections there places each cell on that section's bars. One body fits both
                 // layouts, so neither item can teach the spelling the compiler rejects.
                 // ⚠️ Only the CHORDS half had a net (TheChordTrackSnippet_IsWhatTheCompilerAccepts).
@@ -3270,7 +3270,7 @@ public sealed partial class LilySharpLanguageServer
                                && ExistsAtGlobalScope(text, it.Label!));
 
         // Offer the document's known section names — from the part cells and the form — as
-        // section-major fill-ins, so a section can be pulled up to the top level. Sections
+        // by-section fill-ins, so a section can be pulled up to the top level. Sections
         // ALREADY declared at the top level are dropped by SectionScaffoldItems (its
         // `SectionsDeclaredInCurrentBlock` returns the depth-0 sections here), so writing
         // `section A {}` still leaves `section B` on offer. Top-level sections sit at column 0

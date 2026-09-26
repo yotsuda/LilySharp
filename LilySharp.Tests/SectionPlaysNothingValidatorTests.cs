@@ -93,7 +93,7 @@ public class SectionPlaysNothingValidatorTests
     [InlineData("time 4/4\nsection A { key g major }\n"
         + "part m { clef treble\n  section A { f'4 f f f | }\n}\n"
         + "form main { ~A }\nscore main { staff m }\n")]
-    // section-major: the cell is the music, and it is a sibling of the header
+    // by-section: the cell is the music, and it is a sibling of the header
     [InlineData("time 4/4\npart m { clef treble }\nsection A { m { f'4 f f f | } }\n"
         + "section A { key g major }\nform main { ~A }\nscore main { staff m }\n")]
     // ⚠️ THE ROW THE PREDICATE IS SHAPED BY: A's music belongs to a part this score does not

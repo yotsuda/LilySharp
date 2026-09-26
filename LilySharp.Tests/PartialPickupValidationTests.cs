@@ -41,9 +41,9 @@ public class PartialPickupValidationTests
     private const string Tail = "\nform main { A }\nscore main { staff melody }";
 
     [Fact]
-    public void StandaloneSectionHeaderPartial_AppliesToPartMajorMusic_NoWarning()
+    public void StandaloneSectionHeaderPartial_AppliesToGroupedByPartMusic_NoWarning()
     {
-        // `section A { partial 2 }` declares the section pickup; the part-major cell's
+        // `section A { partial 2 }` declares the section pickup; the by-part cell's
         // half-note first bar IS that pickup — so no short-bar / incomplete warning.
         // (Regression: the header's `partial` was misread as inline music and dropped.)
         var d = Diags("section A { partial 2 }\npart melody { section A { c2 | a1 } }" + Tail);

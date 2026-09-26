@@ -83,7 +83,7 @@ public class CrossPartMeasureValidationTests
     /// <remarks>
     /// Until 2026-09-26 the header re-armed the document meter, so every 4/4 bar after a
     /// `section A { time 3/4 … }` drew LYS2002 "exceeds time signature 3/4", and a standalone
-    /// header over part-major music did not reach it (its first bar read as a short pickup).
+    /// header over by-part music did not reach it (its first bar read as a short pickup).
     /// </remarks>
     [Theory]
     [InlineData("""
@@ -208,9 +208,9 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_SectionBarCountDiffers_Warns()
+    public void GroupedByPart_SectionBarCountDiffers_Warns()
     {
-        // The same `section A` is written part-major in two parts with different bar
+        // The same `section A` is written by-part in two parts with different bar
         // counts (melody 2, bass 1). The collector pads bass to align, but the
         // differing count is usually a miscount — warn (LYS2007), anchored on the
         // shorter part's section.
@@ -227,7 +227,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_SectionBarCountsMatch_Silent()
+    public void GroupedByPart_SectionBarCountsMatch_Silent()
     {
         // Equal bar counts across parts — no mismatch warning.
         var diags = Validate("""
@@ -240,7 +240,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_ChordTrackLongerThanPart_WarnsOnThePart()
+    public void GroupedByPart_ChordTrackLongerThanPart_WarnsOnThePart()
     {
         // ★ scratch/ベースタブLy/tooLongChords.lys (2026-09-10): the chord track's A is two
         // bars, the melody's A one. The section spans two bars — the melody is the short
@@ -300,7 +300,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_ChordTrackMatchesPart_Silent()
+    public void GroupedByPart_ChordTrackMatchesPart_Silent()
     {
         // Two bars in both — no mismatch.
         var diags = Validate("""
@@ -319,7 +319,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_ChordTrackShorterThanPart_WarnsOnTheTrack()
+    public void GroupedByPart_ChordTrackShorterThanPart_WarnsOnTheTrack()
     {
         // The other direction: the row writes one bar of a two-bar section. It is a
         // miscount all the same (the second bar carries no chord), anchored on the
@@ -341,9 +341,9 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void SectionMajor_ChordBlockLongerThanPart_Warns()
+    public void GroupedBySection_ChordBlockLongerThanPart_Warns()
     {
-        // The section-major spelling of the same miscount: a named chords block beside a
+        // The by-section spelling of the same miscount: a named chords block beside a
         // single part block. One part alone used to end the pass before the count check.
         var diags = Validate("""
             section A { melody { g2 g | } chords prog { Dm7 | G7 } }
@@ -357,7 +357,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_LyricsCellShorterThanPart_WarnsOnTheCell()
+    public void GroupedByPart_LyricsCellShorterThanPart_WarnsOnTheCell()
     {
         // A lyrics track's cell writes one bar of a two-bar section (user request,
         // 2026-09-10: the words stop before the section does). The cell is anchored on ITS
@@ -381,7 +381,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_LyricsCellLongerThanPart_Silent()
+    public void GroupedByPart_LyricsCellLongerThanPart_Silent()
     {
         // The other direction is a stacked verse by design (LyricsCollector's auto-wrap):
         // four bars of words over a two-bar melody are verses 1 and 2. No warning on the
@@ -400,7 +400,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void PartMajor_LyricsCellsAlone_Silent()
+    public void GroupedByPart_LyricsCellsAlone_Silent()
     {
         // Two lyrics tracks and no voice: nothing sets the section's length, so a shorter
         // cell has nothing to be short of.
@@ -414,9 +414,9 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void SectionMajor_LyricsBlockShorterThanPart_WarnsOnTheBlock()
+    public void GroupedBySection_LyricsBlockShorterThanPart_WarnsOnTheBlock()
     {
-        // The section-major spelling: `lyrics w sings p { … }` beside a part block, one bar
+        // The by-section spelling: `lyrics w sings p { … }` beside a part block, one bar
         // short. Anchored on the block's track name.
         const string source = """
             part vocal { }
@@ -435,7 +435,7 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void SectionMajor_LyricsBlockMatchesPart_Silent()
+    public void GroupedBySection_LyricsBlockMatchesPart_Silent()
     {
         // ★ Fixtures/test/sings-chorus-row.lys in miniature: two tracks, both as long as
         // the vocal — silent.
@@ -453,9 +453,9 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void SectionMajor_ShorterPart_WarnsBarCountMismatch()
+    public void GroupedBySection_ShorterPart_WarnsBarCountMismatch()
     {
-        // lh runs one bar short of rh inside a section-major section: the per-measure
+        // lh runs one bar short of rh inside a by-section section: the per-measure
         // loop only reaches the shared index, so the missing bar is caught by the
         // count check.
         var diags = Validate("""

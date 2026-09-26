@@ -115,15 +115,15 @@ public class UnrenderedPartStructureMarkTests
             m.StartBarline == BarlineType.RepeatStart || m.EndBarline == BarlineType.RepeatEnd);
     }
 
-    // ── The SECTION-major spelling of the same books (music in `section A { piano { … } }`
+    // ── The BY-SECTION spelling of the same books (music in `section A { piano { … } }`
     // rather than `part piano { section A { … } }`). The two spellings are one meaning
     // (GRAMMAR §7: "the binding is where it is written"), but the harvest gate used to read
-    // only the part DECLARATION's subtree, so every section-major book below silently
+    // only the part DECLARATION's subtree, so every by-section book below silently
     // dropped its omitted part's structure (2026-08-27, measured: the two spellings of one
-    // book rendered different pages). Each twin pins the gate's section-major arm.
+    // book rendered different pages). Each twin pins the gate's by-section arm.
 
     [Fact]
-    public void SegnoInOmittedPart_SectionMajorSpelling_SurfacesToo()
+    public void SegnoInOmittedPart_GroupedBySectionSpelling_SurfacesToo()
     {
         var src = """
             time 4/4
@@ -138,7 +138,7 @@ public class UnrenderedPartStructureMarkTests
     }
 
     [Fact]
-    public void RepeatBarlinesInOmittedPart_SectionMajorSpelling_ProjectOntoTheChordRow()
+    public void RepeatBarlinesInOmittedPart_GroupedBySectionSpelling_ProjectOntoTheChordRow()
     {
         var src = """
             time 4/4
@@ -161,14 +161,14 @@ public class UnrenderedPartStructureMarkTests
     public void TheTwoSpellingsOfOneBook_CollectTheSameBarlinesAndMarks()
     {
         // One meaning, two spellings: the collected barline grid and mark list must agree.
-        var partMajor = """
+        var groupedByPart = """
             time 4/4
             part piano { clef treble  section A { |: segno c4 d e f | g a b c :| } }
             chords prog { section A { C | G } }
             form main { A }
             score main { chords prog }
             """;
-        var sectionMajor = """
+        var groupedBySection = """
             time 4/4
             part piano { clef treble }
             chords prog { section A { C | G } }
@@ -176,8 +176,8 @@ public class UnrenderedPartStructureMarkTests
             form main { A }
             score main { chords prog }
             """;
-        var pm = Collect(partMajor);
-        var sm = Collect(sectionMajor);
+        var pm = Collect(groupedByPart);
+        var sm = Collect(groupedBySection);
         var pmBars = pm.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
             .First().Measures.Select(m => (m.StartBarline, m.EndBarline));
         var smBars = sm.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices)
@@ -188,7 +188,7 @@ public class UnrenderedPartStructureMarkTests
     }
 
     [Fact]
-    public void VoltaBracketsInOmittedPart_SectionMajorSpelling_ProjectToo()
+    public void VoltaBracketsInOmittedPart_GroupedBySectionSpelling_ProjectToo()
     {
         var src = """
             time 4/4
@@ -307,7 +307,7 @@ public class UnrenderedPartStructureMarkTests
     }
 
     [Fact]
-    public void SingleStaffScore_SectionMajorSpelling_HarvestsToo()
+    public void SingleStaffScore_GroupedBySectionSpelling_HarvestsToo()
     {
         var src = """
             time 4/4

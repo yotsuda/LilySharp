@@ -144,9 +144,9 @@ public class MidiTests
     }
 
     [Fact]
-    public void SectionMajorKey_AppliesToTheSectionsPartBlocks()
+    public void GroupedBySectionKey_AppliesToTheSectionsPartBlocks()
     {
-        // A section-major section states its own key beside its part blocks —
+        // A by-section section states its own key beside its part blocks —
         //   section B { key g major  melody { … } }
         // — and it must apply to that block's music. Here the phrase auto-transposes to
         // the section key (C major section A stays put; G major section B drops to G).
@@ -169,9 +169,9 @@ public class MidiTests
     }
 
     [Fact]
-    public void StandalonePartMajorSectionHeaderKey_AppliesToTheSection()
+    public void StandaloneGroupedByPartSectionHeaderKey_AppliesToTheSection()
     {
-        // A part-major layout can state a section's key once in a standalone header
+        // A by-part grouping can state a section's key once in a standalone header
         // parallel to the parts — `section A { key g major }`. It must apply to every
         // part playing A (here the phrase auto-transposes to G).
         static int[] Pitches(string src) =>
@@ -216,9 +216,9 @@ public class MidiTests
     }
 
     [Fact]
-    public void StandalonePartMajorSectionHeaderTempo_ChangesTheConductorTempo()
+    public void StandaloneGroupedByPartSectionHeaderTempo_ChangesTheConductorTempo()
     {
-        // A standalone part-major header can state a section's tempo parallel to the
+        // A standalone by-part header can state a section's tempo parallel to the
         // parts — `section B { tempo 140 }`. On a NON-first section it must stamp a
         // conductor tempo change at that section's start tick (not at tick 0), so
         // playback speeds up there — matching the metronome mark the SVG prints.
@@ -235,7 +235,7 @@ public class MidiTests
     }
 
     [Fact]
-    public void StandalonePartMajorSectionHeaderTime_ChangesTheConductorMeter()
+    public void StandaloneGroupedByPartSectionHeaderTime_ChangesTheConductorMeter()
     {
         // Likewise a standalone header's meter — `section B { time 3/4 }` — must stamp a
         // conductor time-signature change at the section start, not only on the staff.

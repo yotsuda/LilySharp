@@ -25,7 +25,7 @@ namespace LilySharp.Core.MusicXmlImport;
 /// The bounded half of the importer: serializes an <see cref="ImportDocument"/> to
 /// idiomatic Lily# source. It is written as the INVERSE of the pitch/duration/
 /// annotation grammar — there is no general AST-to-<c>.lys</c> pretty-printer to
-/// reuse (<c>PartSectionLayoutConverter</c> preserves music text verbatim). Output
+/// reuse (<c>PartSectionRegrouper</c> preserves music text verbatim). Output
 /// is <c>octave absolute</c> so the register is explicit and unambiguous.
 /// </summary>
 internal static class LysWriter
@@ -35,7 +35,7 @@ internal static class LysWriter
         var sb = new StringBuilder();
 
         // Lily# resets the relative-octave reference at each section, so relative works
-        // for the section-major volta layout too — each section is its own stream.
+        // for the by-section volta layout too — each section is its own stream.
         var firstMeasures = doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>();
         // Endings first (the richer shape), then a plain repeat. ⚠️ THE SECOND CALL IS NOT AN
         // OPTIMISATION: since 2026-08-31 a repeat barline may only be written in a `form`

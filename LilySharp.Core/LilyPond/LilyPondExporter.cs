@@ -473,7 +473,7 @@ public sealed class LilyPondExporter
         EmitInlineChordTracks(tree, render);
         EmitLyricTracks(tree, render);
 
-        // One music variable per part. A part-major score keeps its sections inside
+        // One music variable per part. A by-part score keeps its sections inside
         // the part block; the form orders them.
         var partVars = new Dictionary<string, string>(StringComparer.Ordinal);
         var names = PartNames(parts, render);
@@ -1458,14 +1458,14 @@ public sealed class LilyPondExporter
         List<SectionDeclarationSyntax> allSections)
     {
         // A section reaches this part in one of TWO spellings, and both must be read.
-        //   part-major:    part m { section A { c8 d } }   — music inline in the section
-        //   section-major: section A { m { c8 d } }        — the section sits OUTSIDE the
+        //   by-part:    part m { section A { c8 d } }   — music inline in the section
+        //   by-section: section A { m { c8 d } }        — the section sits OUTSIDE the
         //                                                    part and names it with a PartBlock
         // ⚠️ Only the first was read here. `allSections` was collected by the caller FOR the
         // second and then never used, so every file written the ordinary way exported an
         // EMPTY part variable — a valid .ly that renders a blank staff, silently. All ten
-        // showcase fixtures and most of test/ are section-major.
-        // (MusicXmlExporter.EmitPartMajorSection carries the mirror-image note: that exporter
+        // showcase fixtures and most of test/ are by-section.
+        // (MusicXmlExporter.EmitGroupedByPartSection carries the mirror-image note: that exporter
         // was missing the OTHER spelling and had the same symptom.)
         // A part a score names but never declares (`ossia melody` with no `part melody`)
         // has no block of its own to hold sections — only the second and third spellings
@@ -1513,7 +1513,7 @@ public sealed class LilyPondExporter
                 // the name-keyed registry, once as this "music") and not one note, while
                 // the page engraved the four notes. Written BEFORE the part the same book
                 // was whole, so the two spellings differed by LINE ORDER alone.
-                // The language already says a top-level section in a part-major file holds
+                // The language already says a top-level section in a by-part file holds
                 // only directives and the parts' cells (SectionMusicNeedsPartValidator
                 // refuses music there), so the case this arm exists for — the lone part's
                 // music with no cell around it — is exactly what the canonical predicate
@@ -5409,7 +5409,7 @@ public sealed class LilyPondExporter
 
     /// <summary>
     /// A chord part's bars in playing order — the chord twin of <see cref="OrderedMusic"/>.
-    /// A part-major track (<c>chords P { section A { … } }</c>) registers each inner section
+    /// A by-part track (<c>chords P { section A { … } }</c>) registers each inner section
     /// under its name; a flat block registers under the section that encloses it; a flat
     /// block at top level plays once, first (the collector anchors it at bar 0).
     /// </summary>

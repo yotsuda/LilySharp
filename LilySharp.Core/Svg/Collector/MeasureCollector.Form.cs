@@ -334,7 +334,7 @@ public sealed partial class MeasureCollector
             _sectionActiveGrobProps.Clear();
         }
 
-        // A section-major section can carry its OWN grob directive
+        // A by-section section can carry its OWN grob directive
         // (`section A { override … melody {…} }`): a default for THIS section on every
         // staff. Collect it here — once per voice, staff-scoped — at the section start, and
         // track it so it resets at the next boundary (and re-applies on a reprise). An
@@ -370,7 +370,7 @@ public sealed partial class MeasureCollector
             builder.AddItem(new ClefChangeItem(ParseClefType(_sectionResetClef), sectionPos));
         }
 
-        // A section can state its own time (section-major or a standalone header): apply
+        // A section can state its own time (by-section or a standalone header): apply
         // it and re-arm the measure length; otherwise revert to the score meter.
         if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime)
             && builder.AtPieceOpening)
@@ -480,8 +480,8 @@ public sealed partial class MeasureCollector
                 });
         }
 
-        // A section's own starting key sits beside the part blocks (section-major) or in
-        // a standalone part-major header (`section A { key g major }`) — either way it is
+        // A section's own starting key sits beside the part blocks (by-section) or in
+        // a standalone by-part header (`section A { key g major }`) — either way it is
         // NOT reached by the per-part music walk. Apply it here (transposed per voice,
         // printed on every staff); it overrides the score-level revert below. Keyed by
         // section NAME so a standalone header applies whichever node represents the
@@ -545,10 +545,10 @@ public sealed partial class MeasureCollector
             }
         }
 
-        // Part-major fallback: this section's music for the current voice is not a
+        // By-part fallback: this section's music for the current voice is not a
         // part-block here but lives inside `part <voice> { section <name> { ... } }`.
         if (!matched && _voiceName != null
-            && _sectionState.PartMajorCells.TryGetValue((section.SectionName, _voiceName), out var cell))
+            && _sectionState.GroupedByPartCells.TryGetValue((section.SectionName, _voiceName), out var cell))
         {
             ProcessMusicContainer(cell, processNodes);
             matched = true;
@@ -557,9 +557,9 @@ public sealed partial class MeasureCollector
         // Single-part shorthand: bare music written straight into a top-level section
         // (`part bl { clef bass } section A { c d e }`) is the lone part's music for this
         // section — no part cell wraps it. Walk the section's OWN direct music (expanding
-        // phrase refs) for the current voice. (In a part-major file this loose music belongs
+        // phrase refs) for the current voice. (In a by-part file this loose music belongs
         // to no part and is reported by SectionMusicNeedsPartValidator; rendering it here is
-        // harmless.) Only a GENUINE top-level section — a part-major section lives inside a
+        // harmless.) Only a GENUINE top-level section — a by-part section lives inside a
         // part and its inline music is that part's alone, so other voices must spacer-fill it.
         if (!matched && section.Parent is CompilationUnitSyntax && SectionHasInlineMusic(section))
         {
@@ -612,7 +612,7 @@ public sealed partial class MeasureCollector
             // It is recorded as a VALUE read (VoiceWalkRecording.CanonicalReads), which
             // the resume re-counts on the edited text. ⚠️ It used to fold the whole
             // section span and every part's cell of the section into MaxSourceRead: in a
-            // part-major book (`part bass { section A { … } }` — 327 of the owner's 333)
+            // by-part book (`part bass { section A { … } }` — 327 of the owner's 333)
             // another part's cells sit further down the file, so every checkpoint after
             // the first section end read past an edit to this part, and the resume
             // restarted from the walk's head (MEASURED session 592: 429 of 1,064 far
@@ -636,7 +636,7 @@ public sealed partial class MeasureCollector
     /// Apply a key-signature change at the builder's current position: update the running
     /// key metadata (transposed for this voice), advance the phrase auto-transpose baseline
     /// and the per-measure key map, and emit the <see cref="KeySignatureChangeItem"/>.
-    /// Shared by a mid-music <c>key</c> and a section-major section's own <c>key</c>.
+    /// Shared by a mid-music <c>key</c> and a by-section section's own <c>key</c>.
     /// </summary>
     private void ApplyKeySignatureChange(KeySignatureSyntax keySig, MeasureBuilder builder)
     {
@@ -705,7 +705,7 @@ public sealed partial class MeasureCollector
     /// True when the section has a direct-child MUSIC node (note / phrase reference /
     /// rest / …), as opposed to only directives (<c>key</c> / <c>time</c> / …) and part /
     /// chord / lyric blocks. An inline-music section walks its own <c>key</c> as music;
-    /// a section-major or directives-only header does not.
+    /// a by-section or directives-only header does not.
     /// </summary>
     /// <remarks>
     /// THE ONE SPELLING — the MIDI exporter, the LilyPond exporter and
@@ -763,9 +763,9 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// The canonical bar count of a section: the greatest bar count among every part
-    /// that defines it (part-major cells across parts, or the sibling part blocks of a
-    /// section-major section) AND every named chord track that writes it (a part-major
-    /// chord-track cell, or a named chord block inside a section-major section). A
+    /// that defines it (by-part cells across parts, or the sibling part blocks of a
+    /// by-section section) AND every named chord track that writes it (a by-part
+    /// chord-track cell, or a named chord block inside a by-section section). A
     /// section spans as many bars as its longest voice, so shorter parts pad up to this
     /// to stay aligned. A chord row is a voice of the section too: were it left out, a
     /// row longer than its melody would spill its trailing chords onto the next section's
@@ -775,14 +775,14 @@ public sealed partial class MeasureCollector
     private int GetCanonicalSectionBars(SectionDeclarationSyntax section)
     {
         // One answer per section per collect: the count is a pure function of the
-        // syntax (PartMajorCells is filled once by CollectDefinitions), yet every
+        // syntax (GroupedByPartCells is filled once by CollectDefinitions), yet every
         // part's walk — and every reprise of the section in a form — re-counted every
         // part's bars from scratch, O(parts² × section syntax) per keystroke.
         if (_canonicalSectionBars.TryGetValue(section, out int cached))
             return cached;
 
-        // THE ONE HOUSE (SectionBarCounts): every voice of the name — part-major cells,
-        // chord-track cells, a section-major declaration's part blocks and named chord
+        // THE ONE HOUSE (SectionBarCounts): every voice of the name — by-part cells,
+        // chord-track cells, a by-section declaration's part blocks and named chord
         // blocks, the single-part shorthand — folded by name, once per collect (one green
         // walk over the section declarations). The page keeps the SYNTACTIC counter (its
         // remarks say what it undercounts and why the exporters use the semantic one).
@@ -850,7 +850,7 @@ public sealed partial class MeasureCollector
     internal Dictionary<string, int> CanonicalByNameForTest() => CanonicalByName();
 
     /// <summary>
-    /// Bar count of a music scope (a part block or a part-major section cell),
+    /// Bar count of a music scope (a part block or a by-part section cell),
     /// mirroring <see cref="MeasureBuilder.HandleBarline"/>'s bare-barline rules: a
     /// barline after music closes a bar; a <c>|</c> on an empty span closes an EMPTY
     /// measure — the one that OPENS the scope included, so <c>{ | | | | }</c> is four
@@ -1188,8 +1188,8 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Process the music inside a container node — a <c>part-block</c> (section-major)
-    /// or a part-major inner <c>section</c>. Both expose their music as descendants.
+    /// Process the music inside a container node — a <c>part-block</c> (by-section)
+    /// or a by-part inner <c>section</c>. Both expose their music as descendants.
     /// </summary>
     private void ProcessMusicContainer(SyntaxNode container, Action<MusicSiteList> processNodes)
     {
@@ -1266,7 +1266,7 @@ public sealed partial class MeasureCollector
     /// what says which (session 458; the reading below was written first and was half wrong).
     /// <see cref="ProcessMusicContainer"/> is reached from <see cref="ProcessSectionBody"/>
     /// alone, which runs from <see cref="ProcessSection"/> — the form's item loop, a repeat
-    /// block's section arms, the section-major loop — all OUTSIDE any <c>processNodes</c>
+    /// block's section arms, the by-section loop — all OUTSIDE any <c>processNodes</c>
     /// call, and nothing inside the walk reaches back here (the gather's
     /// <c>ExpandVariable</c> only appends to the list it was handed). So no container nests
     /// inside another. What DOES happen is the abort: the walk throws
@@ -1623,17 +1623,17 @@ public sealed partial class MeasureCollector
     /// <summary>
     /// The bar span section <paramref name="name"/> occupies in the chord / lyric ROW grid. A
     /// rows-only score never runs ProcessForm, so the section starts are laid out from here — and
-    /// the section must be counted however it is written: as a part-major chord / lyric TRACK
+    /// the section must be counted however it is written: as a by-part chord / lyric TRACK
     /// inner section (<c>chords X { section NAME { … } }</c>), whose bars live on the section
     /// itself (the block is its ancestor, not a descendant), OR as chord / lyric blocks nested in
-    /// a section-major section. The descendant-only count missed the track form, so a rows-only
+    /// a by-section section. The descendant-only count missed the track form, so a rows-only
     /// score with several sections stacked every section at bar 0.
     /// </summary>
     private int RowGridSectionBars(SyntaxNode root, string name)
     {
         int bars = 0;
 
-        // Part-major TRACKS: the section sits INSIDE the chord / lyric block.
+        // By-part TRACKS: the section sits INSIDE the chord / lyric block.
         foreach (var block in root.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>())
             if (block.HasSections)
                 foreach (var sec in block.Sections)
@@ -1645,7 +1645,7 @@ public sealed partial class MeasureCollector
                     if (sec.SectionName == name)
                         bars = Math.Max(bars, LyricSyllableReader.CountBars(sec));
 
-        // Section-major: the chord / lyric blocks are nested in the (registered) section itself.
+        // By-section: the chord / lyric blocks are nested in the (registered) section itself.
         if (_sectionState.Sections.TryGetValue(name, out var representative))
         {
             foreach (var block in representative.KindSites(SyntaxKind.ChordPartBlock).OfType<ChordPartBlockSyntax>())

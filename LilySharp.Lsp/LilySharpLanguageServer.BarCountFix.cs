@@ -33,8 +33,8 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>
     /// The edit that brings a section's SHORT layers up to the length it is laid out at, for
     /// one LYS2007 (<see cref="DiagnosticCodes.SectionBarCountMismatch"/>): every layer the
-    /// warning lists (its related locations) with fewer bars than that — a part-major
-    /// <c>section</c> of a part / chords / lyrics track, or a section-major part block / named
+    /// warning lists (its related locations) with fewer bars than that — a by-part
+    /// <c>section</c> of a part / chords / lyrics track, or a by-section part block / named
     /// chords block / lyrics block — gets bare <c>|</c> appended after its last item. An empty
     /// <c>| |</c> bar is a full measure to every counter (the bare-barline rule; MEASURED
     /// 2026-09-10 on scratch/p363/pad-probe.lys: no LYS2001 either; a bare <c>|</c> in a lyrics
@@ -115,15 +115,15 @@ public sealed partial class LilySharpLanguageServer
     /// Returns the insertion offset and the voice's label for the action title.</summary>
     private static (int Offset, string Voice)? ScopeAnchoredAt(SyntaxTree tree, TextSpan anchor)
     {
-        // Part-major: `part p { section A { … } }` / `chords t { section A { … } }` /
-        // `lyrics w { section A { … } }` — anchored on the section name. Section-major:
+        // By-part: `part p { section A { … } }` / `chords t { section A { … } }` /
+        // `lyrics w { section A { … } }` — anchored on the section name. By-section:
         // `section A { p { … } chords t { … } lyrics w { … } }` — anchored on the part block's
         // name / the chords block's name / the lyrics block's name (its keyword when nameless,
         // SectionBarCounts.LyricsAnchor).
         foreach (var sec in tree.GetNodes<SectionDeclarationSyntax>())
             if (sec.Name.Span == anchor)
             {
-                // WHOSE section A: every part-major writer's cell is `section A`, so a title
+                // WHOSE section A: every by-part writer's cell is `section A`, so a title
                 // that pads several of them has to say which (`section A of melody`).
                 string owner = sec.Parent switch
                 {

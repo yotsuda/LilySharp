@@ -49,7 +49,7 @@ internal sealed partial class Parser
         var properties = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
-            // Part-major form: a `part` may hold its own `section` blocks
+            // By-part grouping: a `part` may hold its own `section` blocks
             //   part bass { clef bass  section A { c d } section B { e f } }
             // Each inner section's music belongs to THIS part (cell = section x part).
             if (Check(SyntaxKind.SectionKeyword))
@@ -119,7 +119,7 @@ internal sealed partial class Parser
     }
 
     /// <summary>
-    /// Parse a section nested inside a part (part-major form). Unlike a top-level
+    /// Parse a section nested inside a part (by-part grouping). Unlike a top-level
     /// section — whose body is per-part blocks — an inner section's body is the
     /// music itself, implicitly bound to the enclosing part. Built faithfully
     /// (no synthesized tokens) so source positions stay exact.

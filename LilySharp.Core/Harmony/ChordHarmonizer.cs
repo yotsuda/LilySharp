@@ -51,8 +51,8 @@ public static partial class ChordHarmonizer
     /// Adds a harmonized chords part to <paramref name="source"/> and returns the new
     /// document text (plus an optional note for the user), or null when there is no
     /// section melody to harmonize. The chords track RESPECTS the document's layout: a
-    /// part-major file gets a top-level <c>chords harmony { section A { … } … }</c>
-    /// track (no reshaping), a section-major file gets a <c>chords harmony { … }</c>
+    /// by-part file gets a top-level <c>chords harmony { section A { … } … }</c>
+    /// track (no reshaping), a by-section file gets a <c>chords harmony { … }</c>
     /// spliced into each section. Powers the "Lily#: Add Chord Track" editor command.
     /// </summary>
     public static (string Text, string? Info)? AddChordTracks(string source)
@@ -60,15 +60,15 @@ public static partial class ChordHarmonizer
         var tree = SyntaxTree.Parse(source);
         var root = tree.GetRoot();
 
-        // Part-major: add a top-level chord track with matching inner sections, so the
+        // By-part: add a top-level chord track with matching inner sections, so the
         // current layout is preserved (previously the file was converted to
-        // section-major first, which moved the sections above the parts).
-        if (PartSectionLayoutConverter.Detect(root) == LayoutForm.PartMajor)
+        // by-section first, which moved the sections above the parts).
+        if (PartSectionRegrouper.Detect(root) == Grouping.ByPart)
         {
             var voice = DetectVoice(root);
             var melodyPart = voice == null ? null
                 : root.DescendantNodes<PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == voice);
-            var block = melodyPart == null ? null : HarmonizePartMajor(tree, voice!, melodyPart);
+            var block = melodyPart == null ? null : HarmonizeGroupedByPart(tree, voice!, melodyPart);
             if (block == null)
                 return null;
 
@@ -117,11 +117,11 @@ public static partial class ChordHarmonizer
     private static partial Regex KeyDeclRegex();
 
     /// <summary>
-    /// Harmonizes a part-major melody INTO A SINGLE part-major chord track:
+    /// Harmonizes a by-part melody INTO A SINGLE by-part chord track:
     /// <c>chords harmony { section A { … } section B { … } }</c>, one inner section per
     /// the melody part's own sections. Returns null when nothing harmonizes.
     /// </summary>
-    private static string? HarmonizePartMajor(SyntaxTree tree, string voice, PartDeclarationSyntax melodyPart)
+    private static string? HarmonizeGroupedByPart(SyntaxTree tree, string voice, PartDeclarationSyntax melodyPart)
     {
         var (tonic, sharps) = ReadKey(tree.ToFullString());
         var chords = DiatonicChords.ForKey(tonic, sharps);
@@ -132,7 +132,7 @@ public static partial class ChordHarmonizer
         foreach (var section in melodyPart.DescendantNodes<SectionDeclarationSyntax>())
         {
             // Collect just this section's melody (a local structure naming only it) and
-            // harmonize it, exactly as the section-major path does per section.
+            // harmonize it, exactly as the by-section path does per section.
             var measures = new MeasureCollector()
                 .Collect(tree, voice, SectionForm(section.Name.Text)).Voice.Measures;
             var entries = HarmonizeMeasures(measures, pcByPos, chords);
@@ -270,8 +270,8 @@ public static partial class ChordHarmonizer
         return entries;
     }
 
-    // The part to harmonize: the first part-block's name (section-major), else the
-    // first part declaration's name (part-major). From the tree, never a regex over
+    // The part to harmonize: the first part-block's name (by-section), else the
+    // first part declaration's name (by-part). From the tree, never a regex over
     // the source — so a comment containing the word "part" cannot mislead it.
     private static string? DetectVoice(SyntaxNode root)
     {

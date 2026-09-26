@@ -25,9 +25,9 @@ namespace LilySharp.Tests.Lsp;
 /// <summary>
 /// What completion offers DIRECTLY inside a top-level <c>chords NAME { }</c> TRACK body —
 /// the level that holds <c>section NAME { … }</c> cells once the track is written in the
-/// part-major form, NOT chord entries. A chord symbol written beside the cells is dropped
+/// by-part grouping, NOT chord entries. A chord symbol written beside the cells is dropped
 /// on the floor (<c>ChordNameCollector</c> reads the sections when <c>HasSections</c>), and
-/// in a part-major file a flat track is LYS2011 — so offering the chord vocabulary there
+/// in a by-part file a flat track is LYS2011 — so offering the chord vocabulary there
 /// offers a spelling that does not render.
 /// </summary>
 /// <remarks>
@@ -124,9 +124,9 @@ public class ChordsTrackBodyCompletionTests
     }
 
     [Fact]
-    public void PartMajorFlatTrackBody_OffersSection_NeverChordNames()
+    public void GroupedByPartFlatTrackBody_OffersSection_NeverChordNames()
     {
-        // No section written yet, but the file is part-major: a flat track is LYS2011, so
+        // No section written yet, but the file is by-part: a flat track is LYS2011, so
         // the cells are what belongs here even before the first one exists.
         var (text, offset) = At("""
             part melody { section A { c'4 d' e' f' | } section B { g'4 a' b' c'' | } }

@@ -272,7 +272,7 @@ docs 全体の 271 件（うち本書 92 件）のうち**ファイル名は 269
 累計**なので、**食われた点 1 個ぶん、後続のノードが全部 1 字ずつ手前を指す**
 （実測: `c4@staccato.up d4 …` で `root.FullWidth 35` 対 `src.Length 36`・`d4` の位置が
 空白を指す。対照＝点なしの同じ小節はぴったり）。**着地先は SVG の `data-pos`・LSP の
-ジャンプ先・`PartSectionLayoutConverter`（.lys を木から書き戻す編集器）。**
+ジャンプ先・`PartSectionRegrouper`（.lys を木から書き戻す編集器）。**
 ⇒ 修復は `ArticulationGreen` / `DynamicGreen` に**点のスロット**を足すだけ（`ForcedAbove` は
 スロット 3 へ）。**拒否した修飾子もノードに載せる**（`@staccato.up.down` の 2 つ目・
 hairpin の `@cresc.up`）——*消費して捨てる*のが欠陥そのものだったので。

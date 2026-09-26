@@ -67,7 +67,7 @@ public class PartSettingInSectionHeaderValidatorTests
         + "section A { clef bass  chords p { C Am | } m { c'4 c c c | } }\n")]
     // ⚠️ A DIRECTIVES-ONLY HEADER standing beside the parts — the shape GRAMMAR.md documents
     // for `key`. It holds no cells either, so a cells-only predicate let it through, and the
-    // LSP's convert-layout command then folds it into the section-major section and produces
+    // LSP's convert-layout command then folds it into the by-section section and produces
     // a book this very rule refuses (MEASURED: clean before, LYS1035 after). Refusing it at
     // the source is what keeps the editor from handing the author an uncompilable file.
     [InlineData("part m { clef treble\n  section A { c'4 c c c | }\n}\nsection A { clef bass }\n")]
@@ -92,7 +92,7 @@ public class PartSettingInSectionHeaderValidatorTests
         => Assert.Single(Reports(book + Score));
 
     [Theory]
-    // part-major: the section's body IS that part's music, so the clef is ordinary music
+    // by-part: the section's body IS that part's music, so the clef is ordinary music
     [InlineData("part m { clef treble\n  section A { clef bass c'4 c c c | }\n}\n")]
     // a single-part piece writing bare music in a section (GRAMMAR.md allows it): same
     [InlineData("part m { clef treble }\nsection A { clef bass c'4 c c c | }\n")]

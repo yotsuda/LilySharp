@@ -129,7 +129,7 @@ public class ChordDisplayCompletionTests
     /// The twin of the test above, written in session 240 because its absence is what let
     /// the defect stand: the two track items are a pair, only the chords half had a net, and
     /// the lyrics half had been offering a FLAT top-level track — the very shape LYS4002
-    /// rejects in part-major layout — for as long as that item existed. A rule that applies
+    /// rejects in by-part grouping — for as long as that item existed. A rule that applies
     /// to two items needs its net on both, or the unwatched one teaches the error.
     /// </summary>
     [Fact]

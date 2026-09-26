@@ -40,7 +40,7 @@ public sealed partial class LilySharpLanguageServer
     /// or, when they disagree, each length with who writes it — and how many times each form
     /// names it. A click lists everything that writes it. A later declaration gets a lens only
     /// when it writes a different length from most of the section's writers; in a
-    /// section-major book the block that does (<c>chords prog { … }</c>) gets it on its own line.
+    /// by-section book the block that does (<c>chords prog { … }</c>) gets it on its own line.
     /// </summary>
     /// <remarks>
     /// The section is a shared span of time, not a block (the point an AI author's feedback on
@@ -92,7 +92,7 @@ public sealed partial class LilySharpLanguageServer
                     : ShortDeclarationTitle(section, section.Declarations[i]);
                 if (title != null)
                     AddLens(declaration.Name, title);
-                // A section-major block (`melody { … }` inside `section A { … }`) is its own
+                // A by-section block (`melody { … }` inside `section A { … }`) is its own
                 // line, so the odd one speaks there — over the first declaration too, whose
                 // own line speaks for the whole section.
                 foreach (var layer in section.Layers)
@@ -105,8 +105,8 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>True when <paramref name="layer"/> stands on the declaration's own name — a
-    /// part-major cell (<c>part melody { section A { … } }</c>) or the single-part shorthand —
-    /// rather than on a block of its own inside a section-major declaration.</summary>
+    /// by-part cell (<c>part melody { section A { … } }</c>) or the single-part shorthand —
+    /// rather than on a block of its own inside a by-section declaration.</summary>
     private static bool IsAnchoredOn(SectionDeclaration declaration, SectionLayer layer)
         => layer.Anchor.Start == declaration.Name.Start;
 
@@ -154,7 +154,7 @@ public sealed partial class LilySharpLanguageServer
     /// its own to say: <c>⚠ Section A · 11 bars here (1 bar longer) · 10 bars in 10 parts</c>
     /// when what it writes differs from what most of the section's writers write
     /// (<see cref="SectionSummary.CommonBars"/>). Only the layers standing on its name speak
-    /// here; a section-major block speaks over its own line (<see cref="GetCodeLens"/>).</summary>
+    /// here; a by-section block speaks over its own line (<see cref="GetCodeLens"/>).</summary>
     /// <remarks>
     /// Measured against the MAJORITY, not the longest: ten parts at 10 bars and one at 11 is
     /// most likely one bar written twice, and a line on each of the ten would point at every
@@ -166,7 +166,7 @@ public sealed partial class LilySharpLanguageServer
             .Where(l => declaration.Writes(l) && IsAnchoredOn(declaration, l)).ToList());
 
     /// <summary>The line over <paramref name="mine"/> — one declaration's cells or one
-    /// section-major block — or null when none of them is odd. Several odd ones are named:
+    /// by-section block — or null when none of them is odd. Several odd ones are named:
     /// <c>2 bars in oboe and horn (1 bar shorter)</c>; a lone one is <c>here</c>.</summary>
     internal static string? OddLayersTitle(SectionSummary section, IReadOnlyList<SectionLayer> mine)
     {

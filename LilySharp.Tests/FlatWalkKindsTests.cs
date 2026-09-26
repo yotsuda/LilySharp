@@ -60,7 +60,7 @@ public sealed class FlatWalkKindsTests
     }
 
     /// <summary>A book that writes every spelling the three loops look for: a score-level
-    /// <c>time</c> and one inside a section, a part-major section, a section-major section
+    /// <c>time</c> and one inside a section, a by-part section, a by-section section
     /// with part and chord blocks, a chords track, a lyrics cell, and a phrase and a
     /// variable — so no list is declared safe by a net that never exercises it.</summary>
     private const string EverySpelling = """

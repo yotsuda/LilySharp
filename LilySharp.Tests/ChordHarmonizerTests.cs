@@ -99,13 +99,13 @@ public class ChordHarmonizerTests
     }
 
     [Fact]
-    public void PartMajor_AddsAPartMajorChordTrack_WithoutReshaping()
+    public void GroupedByPart_AddsAGroupedByPartChordTrack_WithoutReshaping()
     {
-        // The default (newScore) template is part-major. Adding a chord track must
+        // The default (newScore) template is by-part. Adding a chord track must
         // RESPECT that layout — a top-level `chords harmony { section A { } … }` track
-        // — not convert the file to section-major (which used to move the sections
+        // — not convert the file to by-section (which used to move the sections
         // above the parts).
-        var partMajor = """
+        var groupedByPart = """
             octave absolute
             time 4/4
             key c major
@@ -116,18 +116,18 @@ public class ChordHarmonizerTests
             form main { A B }
             score main { staff melody }
             """;
-        Assert.Equal(LayoutForm.PartMajor,
-            PartSectionLayoutConverter.Detect(SyntaxTree.Parse(partMajor).GetRoot()));
+        Assert.Equal(Grouping.ByPart,
+            PartSectionRegrouper.Detect(SyntaxTree.Parse(groupedByPart).GetRoot()));
 
-        var result = ChordHarmonizer.AddChordTracks(partMajor);
+        var result = ChordHarmonizer.AddChordTracks(groupedByPart);
         Assert.NotNull(result);
         Assert.Null(result!.Value.Info);   // no conversion happened
 
         var reparsed = SyntaxTree.Parse(result.Value.Text);
         Assert.False(reparsed.HasErrors, string.Join("\n", reparsed.Diagnostics));
-        // Still part-major, with a part-major chord track wired into the score.
-        Assert.Equal(LayoutForm.PartMajor,
-            PartSectionLayoutConverter.Detect(reparsed.GetRoot()));
+        // Still by-part, with a by-part chord track wired into the score.
+        Assert.Equal(Grouping.ByPart,
+            PartSectionRegrouper.Detect(reparsed.GetRoot()));
         Assert.Contains("part melody {", result.Value.Text);   // the part is untouched
         Assert.Contains("chords harmony {", result.Value.Text);
         Assert.Contains("section A", result.Value.Text);
@@ -137,7 +137,7 @@ public class ChordHarmonizerTests
     }
 
     [Fact]
-    public void AddChordTracks_SectionMajor_DoesNotConvert()
+    public void AddChordTracks_GroupedBySection_DoesNotConvert()
     {
         var result = ChordHarmonizer.AddChordTracks("""
             octave absolute
@@ -149,7 +149,7 @@ public class ChordHarmonizerTests
             score main { staff melody }
             """);
         Assert.NotNull(result);
-        Assert.Null(result!.Value.Info);   // already section-major: no conversion note
+        Assert.Null(result!.Value.Info);   // already by-section: no conversion note
         Assert.False(SyntaxTree.Parse(result.Value.Text).HasErrors);
     }
 

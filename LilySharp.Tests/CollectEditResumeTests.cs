@@ -376,13 +376,13 @@ form main { S T }
     }
 
     /// <summary>
-    /// A part declaration's closing `}` stands after every section of a part-major part; it
+    /// A part declaration's closing `}` stands after every section of a by-part part; it
     /// used to be recorded as a position-sensitive header read at walk entry, so ANY
     /// length-changing edit inside the part made the walk's first checkpoint unstable
     /// (session 594: 219 of 228 of the owner's books never resumed under such edits).
     /// </summary>
     [Fact]
-    public void PrefixResume_ALengthChangingEditInAPartMajorPart_KeepsThePrefix()
+    public void PrefixResume_ALengthChangingEditInAGroupedByPartPart_KeepsThePrefix()
     {
         const string oldText = @"score main ""x"" { staff bl }
 

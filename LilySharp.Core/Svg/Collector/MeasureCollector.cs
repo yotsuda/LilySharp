@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Collector;
 public sealed partial class MeasureCollector
 {
     // Section-tracking state grouped into one owner: section declarations by name,
-    // part-major cells `part X { section A { … } }` -> (A,X), the first/all
+    // by-part cells `part X { section A { … } }` -> (A,X), the first/all
     // expanded-measure starts per section (lyric/chord rows align to them; a
     // reprise like "A2" replays under every start), and rows-only section labels.
     // See SectionState.
@@ -716,12 +716,12 @@ public sealed partial class MeasureCollector
     // opening keys do not overwrite each other. See ApplyKeySignatureChange.
     private (int Sharps, string? Custom)? _openingKeyOverride;
     // section name -> its own starting key, for a section that carries a `key` but no
-    // inline music: a section-major section (`section A { key g major  melody { … } }`)
-    // or a standalone part-major header (`section A { key g major }`). Applied to every
+    // inline music: a by-section section (`section A { key g major  melody { … } }`)
+    // or a standalone by-part header (`section A { key g major }`). Applied to every
     // part playing that section (an inline-music section walks its key as music instead).
     private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
     // section name -> its own starting time / tempo, same rule as the header key: a
-    // section-major section or a standalone part-major header that carries the directive
+    // by-section section or a standalone by-part header that carries the directive
     // but no inline music. Applied to every part of the section.
     private readonly Dictionary<string, TimeSignatureSyntax> _sectionHeaderTimes = new();
     private readonly Dictionary<string, TempoDeclarationSyntax> _sectionHeaderTempos = new();
@@ -2038,14 +2038,14 @@ public sealed partial class MeasureCollector
     /// <summary>True when <paramref name="partName"/> writes score-level structure (a navigation
     /// mark, an inline volta or a repeat barline) in its music — the cheap gate that skips the
     /// isolated harvest pass when there is nothing to harvest. A part's music has TWO spellings
-    /// (GRAMMAR §7: part-major cells inside <c>part X { section A { … } }</c>, section-major
+    /// (GRAMMAR §7: by-part cells inside <c>part X { section A { … } }</c>, by-section
     /// cells inside <c>section A { X { … } }</c>), and the gate must read BOTH: it used to scan
-    /// only the part DECLARATION's subtree, so a repeat barline written in the section-major
+    /// only the part DECLARATION's subtree, so a repeat barline written in the by-section
     /// spelling — the fixture idiom — never opened the harvest and the omitted part's repeats
     /// silently vanished from the drawn score (measured 2026-08-27: the two spellings of one
-    /// book rendered different pages; UnrenderedPartStructureMarkTests' section-major twins pin
+    /// book rendered different pages; UnrenderedPartStructureMarkTests' by-section twins pin
     /// the repair). The harvest itself always handled both — ProcessSectionBody walks
-    /// section-major cells first and falls back to part-major cells — only this gate was blind.
+    /// by-section cells first and falls back to by-part cells — only this gate was blind.
     /// Structure the part reaches only through a PHRASE REFERENCE (<c>hook</c> where
     /// <c>phrase hook { |: … :| }</c>) counts too: the harvest's nested collect expands
     /// references (ExpandVariable) and carries the structure correctly — measured
@@ -2095,7 +2095,7 @@ public sealed partial class MeasureCollector
         }
         if (part != null && ScanScope(part, ref refs))
             return true;
-        // The section-major cells: direct children of each section declaration, the
+        // The by-section cells: direct children of each section declaration, the
         // same discovery ProcessSectionBody's own loop uses (grammar guarantee there).
         foreach (var section in root.ChildNodesOfKind<SectionDeclarationSyntax>())
             foreach (var child in section.ChildNodes())
@@ -2757,7 +2757,7 @@ public sealed partial class MeasureCollector
         _drumOverrides = null;
         _openingKeyOverride = null;
         // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
-        // on the same collector would carry a stale part-major cell map and lyric-row
+        // on the same collector would carry a stale by-part cell map and lyric-row
         // names, and PitchTrace would grow without bound. (All current callers use a
         // fresh instance, so this only matters for reuse via the public API.)
         _lyricsRowNames = new();
@@ -2989,7 +2989,7 @@ public sealed partial class MeasureCollector
                 // The part-level config reads that seeded this walk's entry state —
                 // GetPartDefaults (clef/instrument/octave/transpose/header key) and
                 // CollectPartBodyOverrides both consume direct children of the
-                // part's declaration(s); part-major section cells are walked as
+                // part's declaration(s); by-part section cells are walked as
                 // music and fold themselves into MaxSourceRead instead.
                 if (_voiceName != null && _root != null)
                 {
@@ -2999,7 +2999,7 @@ public sealed partial class MeasureCollector
                             continue;
                         _walkHeaderReads.Add(new HeaderRead(partDecl.Name.Span, ValueOnly: false));
                         // Config children only — not the part's tokens. ⚠️ The closing `}`
-                        // is a child too, and it stands AFTER every section of a part-major
+                        // is a child too, and it stands AFTER every section of a by-part
                         // part: read as a position-sensitive header read, a length-changing
                         // edit anywhere in the part moved it and made the walk's FIRST
                         // checkpoint unstable — MEASURED (session 594, the owner's corpus,
@@ -3673,7 +3673,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// The name of the <c>part</c> a node lives inside, or null if it is not inside
-    /// any part. Used to bind a part-major inner <c>section</c> to its part.
+    /// any part. Used to bind a by-part inner <c>section</c> to its part.
     /// </summary>
     private static string? EnclosingPartName(SyntaxNode node)
     {
@@ -3685,7 +3685,7 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// The name of the <c>chords</c> track a node lives inside, or null if it is not inside
-    /// a NAMED chord block. Binds a part-major chord-track inner <c>section</c> to its track
+    /// a NAMED chord block. Binds a by-part chord-track inner <c>section</c> to its track
     /// (<see cref="SectionState.ChordTrackCells"/>).
     /// </summary>
     private static string? EnclosingChordTrackName(SyntaxNode node)
@@ -3697,7 +3697,7 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>True when <paramref name="node"/> sits inside a <c>chords</c> or
-    /// <c>lyrics</c> block (a part-major track's inner section), so it is that track's
+    /// <c>lyrics</c> block (a by-part track's inner section), so it is that track's
     /// cell rather than a structure section.</summary>
     /// <remarks>
     /// internal because the VALIDATORS need the same answer: a track cell's body is chord
@@ -3707,7 +3707,7 @@ public sealed partial class MeasureCollector
     /// measure (LYS2001, user report session 240). One spelling, so the collector and the
     /// validator cannot disagree about what a section IS.
     /// </remarks>
-    internal static bool IsInsidePartMajorTrack(SyntaxNode node)
+    internal static bool IsInsideGroupedByPartTrack(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
             if (p is ChordPartBlockSyntax or LyricsBlockSyntax)

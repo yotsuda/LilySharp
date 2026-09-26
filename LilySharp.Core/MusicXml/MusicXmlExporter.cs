@@ -372,7 +372,7 @@ public sealed class MusicXmlExporter
     // contributes its first direct `key` / `time` / `tempo` / `partial`, first declaration
     // wins.
     // ⚠️ Keyed by name and not read off the declaration being played, because in a
-    // part-major book the header is a DIFFERENT declaration from the cell: `section A
+    // by-part book the header is a DIFFERENT declaration from the cell: `section A
     // { partial 8 }` beside `part m { section A { … } }`. Until 2026-09-17 this exporter
     // scanned only the declaration in hand, so the standalone header's key, time and
     // pickup never reached the cell (MEASURED on LilySharp-Lab/sessions/p398/probes/
@@ -417,7 +417,7 @@ public sealed class MusicXmlExporter
 
     /// <summary>True when the section is a HEADER and nothing else: a TOP-LEVEL declaration
     /// with no part, chord or lyrics block and no inline music — only directives
-    /// (<c>section A { partial 8 }</c> in a part-major book). Its directives reach every play
+    /// (<c>section A { partial 8 }</c> in a by-part book). Its directives reach every play
     /// of the name through the registry, so the declaration itself has no music to emit.
     /// ⚠️ Top-level only, the line the LilyPond twin draws ("a header is exactly what it
     /// turns away", its section walk): a directives-only cell INSIDE a part —
@@ -443,15 +443,15 @@ public sealed class MusicXmlExporter
         // to the score's home key (a mid-section modulation cannot leak out).
         _ambientTonic = _homeTonic;
         // The section's header, by NAME (see the registry's remarks): the same header for the
-        // section-major declaration that carries it and for a part-major cell whose header
+        // by-section declaration that carries it and for a by-part cell whose header
         // is a standalone declaration.
         // ⚠️ ONLY A SECTION THAT WRAPS ITS MUSIC IN PART BLOCKS HAS A HEADER.
-        // A part-major section holds its music INLINE, so a `key` or `time` written in the
+        // A by-part section holds its music INLINE, so a `key` or `time` written in the
         // MIDDLE of that music is also a direct child of the section node — and a scan of
         // the declaration read it as the section's header, applying it at the section's
         // FIRST bar. Measured 2026-08-31 on `section A { c'4 d e f | key g major g a b c | }`:
         // the page turns G major on at bar 2, the export claimed it from bar 1, and the
-        // same book written section-major placed it correctly. The registry draws the
+        // same book written by-section placed it correctly. The registry draws the
         // same line in the same words (MeasureCollector.SectionHasInlineMusic, which the
         // LilyPond exporter's BuildSectionHeaderRegistry already consults: "a declaration
         // with inline music walks its own directives as music and registers NOTHING").
@@ -497,10 +497,10 @@ public sealed class MusicXmlExporter
         }
         else
         {
-            // No nested part blocks: the section holds its music INLINE — a part-major
+            // No nested part blocks: the section holds its music INLINE — a by-part
             // `part m { section A { … } }` cell, or a standalone section (default part).
             // Emit it under the enclosing part's name; its lyrics map onto those notes.
-            EmitPartMajorSection(section);
+            EmitGroupedByPartSection(section);
         }
     }
 
@@ -832,9 +832,9 @@ public sealed class MusicXmlExporter
             ProcessNode(bar);
     }
 
-    /// <summary>A part-major section (<c>part m { section A { … } }</c>) holds its music
+    /// <summary>A by-part section (<c>part m { section A { … } }</c>) holds its music
     /// INLINE — not in a nested part block — so it is emitted here under the ENCLOSING
-    /// part's name (and clef/transpose), exactly like the section-major
+    /// part's name (and clef/transpose), exactly like the by-section
     /// <c>section A { m { … } }</c> form. Without this the inline notes hit
     /// <see cref="ProcessNode"/>'s skip-declarations case and the part exported EMPTY.</summary>
     /// <remarks>
@@ -844,7 +844,7 @@ public sealed class MusicXmlExporter
     /// shift, whatever the part it is drawn on says. The score is what says whose it is
     /// (see <see cref="_bareSectionOwner"/>); "Part 1" remains for a file that names nobody.
     /// </remarks>
-    private void EmitPartMajorSection(SectionDeclarationSyntax section)
+    private void EmitGroupedByPartSection(SectionDeclarationSyntax section)
     {
         EmitPartMusic(
             EnclosingPartName(section) ?? _bareSectionOwner ?? "Part 1",
@@ -861,7 +861,7 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>The name of the <c>part</c> declaration a node sits inside, or null when it
-    /// is not part-major (a standalone section maps to the default "Part 1").</summary>
+    /// is not by-part (a standalone section maps to the default "Part 1").</summary>
     private static string? EnclosingPartName(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
@@ -870,8 +870,8 @@ public sealed class MusicXmlExporter
         return null;
     }
 
-    /// <summary>Emits one span of a part's music (a section-major part block, or a
-    /// part-major section's inline body) under <paramref name="partName"/>: sets up the
+    /// <summary>Emits one span of a part's music (a by-section part block, or a
+    /// by-part section's inline body) under <paramref name="partName"/>: sets up the
     /// part (clef / transpose / fresh frame), processes the music children, and maps any
     /// lyrics onto the notes just emitted.</summary>
     private void EmitPartMusic(string partName, IEnumerable<SyntaxNode> children)

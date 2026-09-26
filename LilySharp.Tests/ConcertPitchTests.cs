@@ -198,19 +198,19 @@ public sealed class ConcertPitchTests
         => Assert.Equal(63, FirstMidiPitch("", "instrument alto-sax", " pitch concert"));
 
     /// <summary>
-    /// ⚠️ Found while wiring the shift: a part-major book's <c>transpose</c> reached the page
+    /// ⚠️ Found while wiring the shift: a by-part book's <c>transpose</c> reached the page
     /// and not the .mid — PlayInPart armed the instrument's sounding shift and nothing else,
-    /// while the section-major arm (the <c>x { … }</c> block) composed the transpose in.
-    /// Both arms now ask one function. The section-major row is the control that was
+    /// while the by-section arm (the <c>x { … }</c> block) composed the transpose in.
+    /// Both arms now ask one function. The by-section row is the control that was
     /// already right.
     /// </summary>
     [Fact]
-    public void APartMajorBooksTranspose_ReachesTheMidiAsTheSectionMajorOneDoes()
+    public void AGroupedByPartBooksTranspose_ReachesTheMidiAsTheGroupedBySectionOneDoes()
     {
-        Assert.Equal(74, FirstMidiPitch("", "transpose d")); // part-major: C5 written, D5 played
+        Assert.Equal(74, FirstMidiPitch("", "transpose d")); // by-part: C5 written, D5 played
 
-        var sectionMajor = Parse(Book("", "transpose d"));
-        Assert.Equal(74, new MidiExporter().Export(sectionMajor).Tracks[1].Notes[0].Pitch);
+        var groupedBySection = Parse(Book("", "transpose d"));
+        Assert.Equal(74, new MidiExporter().Export(groupedBySection).Tracks[1].Notes[0].Pitch);
     }
 
     // ───────────────────────────── MusicXML ─────────────────────────────

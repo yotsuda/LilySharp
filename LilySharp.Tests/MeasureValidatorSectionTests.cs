@@ -23,10 +23,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A PART-MAJOR section (<c>part mel { section A { c d f | } }</c>) keeps its music
+/// A BY-PART section (<c>part mel { section A { c d f | } }</c>) keeps its music
 /// INLINE on the SectionDeclaration — there is no MusicBlock wrapper — so the bar
 /// check used to skip it entirely and short measures passed silently. It must now
-/// be validated exactly like a section-major (part-block) section.
+/// be validated exactly like a by-section (part-block) section.
 /// </summary>
 public sealed class MeasureValidatorSectionTests
 {
@@ -39,7 +39,7 @@ public sealed class MeasureValidatorSectionTests
     }
 
     [Fact]
-    public void PartMajorSection_ShortInteriorMeasure_Warns()
+    public void GroupedByPartSection_ShortInteriorMeasure_Warns()
     {
         // Interior 1/4 bar in 4/4 — a genuine short measure, not an edge pickup.
         var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 d | c4 | c4 d | }\n}\n");
@@ -47,17 +47,17 @@ public sealed class MeasureValidatorSectionTests
     }
 
     [Fact]
-    public void PartMajorSection_ShortFirstMeasure_WarnsPickup()
+    public void GroupedByPartSection_ShortFirstMeasure_WarnsPickup()
     {
         // The reported case: section A { c d f | } in 4/4 — a 3/4 first measure.
-        // It now warns (before, part-major sections were never bar-checked).
+        // It now warns (before, by-part sections were never bar-checked).
         var diags = Diagnose("time 4/4\npart mel {\n  section A { c d f | }\n}\n");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
 
     /// <summary>
     /// A CHORD track's sections are not bar streams: an entry carries no duration, and a
-    /// slot's <c>s</c> / <c>r</c> is a beat-grid slot, not a quarter rest. The part-major
+    /// slot's <c>s</c> / <c>r</c> is a beat-grid slot, not a quarter rest. The by-part
     /// chord form wraps its cells in the same SectionDeclaration a part does, and the
     /// inline-music pass priced every rest slot of a 2/4 row as "1/4 is less than 2/4"
     /// (reported 2026-09-04 on the Lambada proposal, then spelled with the `s` spacer). The
@@ -79,7 +79,7 @@ public sealed class MeasureValidatorSectionTests
     }
 
     [Fact]
-    public void PartMajorSection_FullMeasures_NoWarning()
+    public void GroupedByPartSection_FullMeasures_NoWarning()
     {
         // Full 4/4 bars must NOT be flagged (no false positives from the new pass).
         var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 d e f | c4 d e f | }\n}\n");
@@ -89,9 +89,9 @@ public sealed class MeasureValidatorSectionTests
     }
 
     [Fact]
-    public void PartMajorSection_InlinePartial_DoesNotLeakToOtherSections()
+    public void GroupedByPartSection_InlinePartial_DoesNotLeakToOtherSections()
     {
-        // `partial 2.` INSIDE part-major section A (no MusicBlock wrapper) declares
+        // `partial 2.` INSIDE by-part section A (no MusicBlock wrapper) declares
         // A's own 3/4 pickup. It must NOT be mistaken for a file-wide partial that
         // then re-targets every later section to 3/4 and hides B's short measure.
         // Regression: before the fix this returned no diagnostics at all.
@@ -104,7 +104,7 @@ public sealed class MeasureValidatorSectionTests
     }
 
     [Fact]
-    public void PartMajorSection_ShortFinalMeasure_NoPickup_Warns()
+    public void GroupedByPartSection_ShortFinalMeasure_NoPickup_Warns()
     {
         // Reported case: section A's closing `d d` (2/4 in 4/4) is only "last"
         // within A's own text — a structure reuses A mid-form, so it is really
@@ -116,7 +116,7 @@ public sealed class MeasureValidatorSectionTests
     }
 
     [Fact]
-    public void PartMajorSection_ShortFinalMeasure_CompletingPickup_StaysExempt()
+    public void GroupedByPartSection_ShortFinalMeasure_CompletingPickup_StaysExempt()
     {
         // Genuine anacrusis: a 1/4 pickup and a 3/4 closing bar sum to one 4/4
         // bar. The closing bar completes the pickup, so it is NOT flagged short

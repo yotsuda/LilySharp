@@ -227,7 +227,7 @@ internal static class Outputs
             // The shift belongs to the PART, so it is taken from the part header — the same
             // reading MidiExporter takes (PartSoundingShift) — and attributed by the span of
             // the music that part owns: a `PartBlockSyntax` inside a section, or the part
-            // DECLARATION itself when the section is written inside it (part-major).
+            // DECLARATION itself when the section is written inside it (by-part).
             // ⚠️ Music in a bare top-level section that only a `score` assigns to a part is
             // inside NEITHER span, and gets 0 — which is what the MIDI does with it too.
             var partSpans = new List<(int Start, int End, int Shift)>();

@@ -27,7 +27,7 @@ namespace LilySharp.Tests;
 /// <c>@staccato.up</c> came back out of the tree as <c>@staccatoup</c> with no
 /// diagnostic at all, and every note after it reported a source position one
 /// character early. That reaches the SVG's data-pos, the LSP's jump targets and
-/// <c>PartSectionLayoutConverter</c>, which WRITES .lys back out of the tree.
+/// <c>PartSectionRegrouper</c>, which WRITES .lys back out of the tree.
 /// </summary>
 [Trait("Category", "Unit")]
 public class AnnotationRoundTripTests
@@ -173,7 +173,7 @@ public class AnnotationRoundTripTests
     /// then listed were 628 characters in and 628 out — while the two reordered nodes
     /// stand in the wrong place, so <c>g4(@cresc</c> reports data-pos 36 for a <c>@</c>
     /// that stands at 37. That is the source map the SVG's <c>data-pos</c>, the LSP's
-    /// jump targets and <c>PartSectionLayoutConverter</c> all read.
+    /// jump targets and <c>PartSectionRegrouper</c> all read.
     /// <para>
     /// ⚠️ THE TWO LISTS ARE THE SAME ELEVEN BOOKS TODAY, AND THAT IS MEASURED, NOT
     /// ASSUMED (2026-08-30 — the first draft of this remark claimed they differ and the

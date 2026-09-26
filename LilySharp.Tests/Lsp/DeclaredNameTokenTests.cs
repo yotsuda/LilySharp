@@ -72,7 +72,7 @@ public class DeclaredNameTokenTests
         return source.Substring(offset + token.Character, token.Length);
     }
 
-    private const string PartMajor = """
+    private const string GroupedByPart = """
         part melody {
           clef treble
           section A { c'4 d e f | g2 g | }
@@ -93,7 +93,7 @@ public class DeclaredNameTokenTests
         // every theme, because nothing — grammar or server — named it at all. The score's
         // `staff melody` is the same name, and colouring one and not the other is the
         // half-coloured shape this repo keeps closing.
-        Assert.Equal(["melody", "melody"], Coloured(PartMajor, Part));
+        Assert.Equal(["melody", "melody"], Coloured(GroupedByPart, Part));
     }
 
     [Theory]
@@ -200,7 +200,7 @@ public class DeclaredNameTokenTests
     [Fact]
     public void ASectionBodyPartBlock_DeclaresAPartAndIsColoured()
     {
-        // Section-major: `melody { … }` inside a section carries the part's music, so a
+        // By-section: `melody { … }` inside a section carries the part's music, so a
         // staff may render `melody` with no `part melody { … }` header anywhere. It is a
         // declaration, so it resolves the score's reference — and is coloured itself.
         const string source = """
@@ -215,16 +215,16 @@ public class DeclaredNameTokenTests
     [Fact]
     public void APhraseName_IsColoured()
     {
-        Assert.Equal(["turn"], Coloured(PartMajor, Phrase));
+        Assert.Equal(["turn"], Coloured(GroupedByPart, Phrase));
     }
 
     [Fact]
     public void ASectionName_IsColouredWhereverItIsWritten()
     {
         // Both declarations AND both resolved references in the form, in document order.
-        // ⚠️ The declarations here sit inside a `part { }` — part-major — which is where the
+        // ⚠️ The declarations here sit inside a `part { }` — by-part — which is where the
         // TextMate grammar had been failing to colour them at all.
-        Assert.Equal(["A", "B", "A", "B"], Coloured(PartMajor, Section));
+        Assert.Equal(["A", "B", "A", "B"], Coloured(GroupedByPart, Section));
     }
 
     [Fact]

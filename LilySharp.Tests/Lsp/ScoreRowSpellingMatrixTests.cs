@@ -57,7 +57,7 @@ namespace LilySharp.Tests.Lsp;
 [Trait("Category", "Unit")]
 public class ScoreRowSpellingMatrixTests
 {
-    /// <summary>A part-major book with everything the rows below reference.</summary>
+    /// <summary>A by-part book with everything the rows below reference.</summary>
     private const string Book = """
         part melody { clef treble
           section A { c'4 d' e' f' | }

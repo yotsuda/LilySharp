@@ -88,7 +88,7 @@ internal sealed class LyricCollector
         => Collect(lyricsBlock.Syllables, noteItemIndices, out overflow, voiceId, verseNumber, hideStanza);
 
     /// <summary>Collects lyrics from an explicit set of lyric-measure nodes (the
-    /// whole block, or one part-major inner section's measures).</summary>
+    /// whole block, or one by-part inner section's measures).</summary>
     public ImmutableArray<LyricItem> Collect(
         IEnumerable<SyntaxNode> syllableMeasures,
         IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing, bool Busy, bool TieHeld)> noteItemIndices,
@@ -285,7 +285,7 @@ internal sealed class LyricCollector
         var allTokens = new List<(string Text, int Position)>();
         foreach (var measureNode in measureNodes)
         {
-            // A part-major inner section is not a lyric measure — skip it (the
+            // A by-part inner section is not a lyric measure — skip it (the
             // sectioned form is collected via its sections, not this flat path).
             if (measureNode is SectionDeclarationSyntax)
                 continue;

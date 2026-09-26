@@ -193,7 +193,7 @@ public class SectionBoundarySplitBarTests
     }
 
     [Fact]
-    public void ThePartMajorSpelling_AndASilentReference_AreReadTheSame()
+    public void TheGroupedByPartSpelling_AndASilentReference_AreReadTheSame()
     {
         string book = """
             time 4/4

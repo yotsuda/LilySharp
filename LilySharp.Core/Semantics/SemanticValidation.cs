@@ -75,7 +75,7 @@ public static class SemanticValidation
         new KeyTonicValidator(),            // `key WORD mode` where WORD is not a note
         new FormDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
-        new TrackNeedsSectionsValidator(),  // part-major lyrics/chords track must use sections
+        new TrackNeedsSectionsValidator(),  // by-part lyrics/chords track must use sections
         new LyricSingsValidator(),          // sings bindings: unknown target / conflict / attachment
         new LyricPlainVerseShadowedValidator(), // a plain verse fully shadowed by [N.] verses
         new NavigationPlacementValidator(), // a nav mark placed mid-measure
@@ -110,7 +110,7 @@ public static class SemanticValidation
         new CueRegionValidator(),           // a nested cue, or a voice span inside a cue
         new CueSpanBoundaryValidator(),     // a slur/tie with one end inside a cue
         new GraceBodyValidator(),           // grace { } body content that is not engraved
-        new SectionMusicNeedsPartValidator(), // loose music in a part-major top-level section
+        new SectionMusicNeedsPartValidator(), // loose music in a by-part top-level section
         new ScoreSettingInPartHeaderValidator(), // tempo/time as a part header property
         new PartSettingInSectionHeaderValidator(), // clef/octave beside a section's part cells
         new DuplicateGlobalSettingValidator(), // a top-level tempo/time/key/title/… written twice

@@ -64,8 +64,8 @@ internal sealed class SectionBoundaryBars
         _phraseBodies = phraseBodies;
     }
 
-    /// <summary>The (section, part) cell a music item belongs to — a section-major part block
-    /// or a part-major section body — or null for music outside any section.</summary>
+    /// <summary>The (section, part) cell a music item belongs to — a by-section part block
+    /// or a by-part section body — or null for music outside any section.</summary>
     public static (string Section, string Part)? CellOf(SyntaxNode? item)
     {
         for (var n = item; n != null; n = n.Parent)

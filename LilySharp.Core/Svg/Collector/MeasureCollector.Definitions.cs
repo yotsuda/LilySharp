@@ -386,7 +386,7 @@ public sealed partial class MeasureCollector
                     // `chords prog { section A { Dm7 | G7 } }` over a one-bar melody A makes
                     // A two bars and pads the melody — rather than G7 landing on B's first
                     // bar beside B's own chord (scratch/ベースタブLy/tooLongChords.lys, 2026-09-10).
-                    if (IsInsidePartMajorTrack(section))
+                    if (IsInsideGroupedByPartTrack(section))
                     {
                         if (EnclosingChordTrackName(section) is { } track)
                             _sectionState.ChordTrackCells[(section.SectionName, track)] = section;
@@ -397,15 +397,15 @@ public sealed partial class MeasureCollector
                     // forms stays stable.
                     if (!_sectionState.Sections.ContainsKey(section.SectionName))
                         _sectionState.Sections[section.SectionName] = section;
-                    // Part-major: an inner section binds its music to the part it
+                    // By-part: an inner section binds its music to the part it
                     // lives in. Record the (section, part) cell for voice lookup.
                     var owningPart = EnclosingPartName(section);
                     if (owningPart != null)
-                        _sectionState.PartMajorCells[(section.SectionName, owningPart)] = section;
+                        _sectionState.GroupedByPartCells[(section.SectionName, owningPart)] = section;
                     // A section that carries its own key / time / tempo but no inline
-                    // music applies those to every part of the section: section-major
+                    // music applies those to every part of the section: by-section
                     // (`section A { key g major  melody { … } }`) or a standalone
-                    // part-major header (`section A { key g major }`). An inline-music
+                    // by-part header (`section A { key g major }`). An inline-music
                     // section walks the directives as music, so it is excluded to avoid a
                     // double application. First one wins.
                     if (!SectionHasInlineMusic(section))
@@ -530,7 +530,7 @@ public sealed partial class MeasureCollector
     /// tree and materializes a red node only at a match — through the parent
     /// chain's <see cref="SyntaxNode.GetChild"/>, so the yielded node carries its
     /// full Parent chain and every ancestor guard the case bodies run
-    /// (IsInsideMusicContent, IsInsideRenderDeclaration, IsInsidePartMajorTrack,
+    /// (IsInsideMusicContent, IsInsideRenderDeclaration, IsInsideGroupedByPartTrack,
     /// EnclosingPartName) works unchanged.
     /// </summary>
     /// <remarks>

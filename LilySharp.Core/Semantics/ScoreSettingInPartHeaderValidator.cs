@@ -26,7 +26,7 @@ namespace LilySharp.Core.Semantics;
 /// treated as a global default (the collector keeps only the last across parts), which is
 /// misleading — so this rejects them there. Their valid homes are the top level (the piece's
 /// opening value) and a section header (a change that applies to every part). A tempo/time
-/// change INSIDE the music stream (a part's inner section, a section-major cell) is a mid-piece
+/// change INSIDE the music stream (a part's inner section, a by-section cell) is a mid-piece
 /// change and is left alone — only the header attribute is flagged.
 /// </summary>
 internal sealed class ScoreSettingInPartHeaderValidator : ISemanticValidator

@@ -277,20 +277,20 @@ public class PlaybackResponse
     public string? Error { get; set; }
 }
 
-/// <summary>Parameters for the lilysharp/convertLayout request.</summary>
-public class ConvertLayoutParams
+/// <summary>Parameters for the lilysharp/regroup request.</summary>
+public class RegroupParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
 }
 
-/// <summary>Response for the lilysharp/convertLayout request: the rewritten source
+/// <summary>Response for the lilysharp/regroup request: the rewritten source
 /// plus which layout it went from / to (for a status message).</summary>
-public class ConvertLayoutResponse
+public class RegroupResponse
 {
     public bool Success { get; set; }
     public string? NewText { get; set; }
-    public string? FromLayout { get; set; }
-    public string? ToLayout { get; set; }
+    public string? FromGrouping { get; set; }
+    public string? ToGrouping { get; set; }
     public string? Error { get; set; }
 }
 

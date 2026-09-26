@@ -102,7 +102,7 @@
             ]
         },
         "lyrics-block": {
-            "comment": "Inside lyrics { … } the words are syllables, not code, so reserved words like 'key'/'time'/'a'/'f' must NOT be highlighted as keywords or pitches. Match the block as its own context that only knows comments, quoted syllables, barlines and the connector tokens; everything else stays plain text. The part-major form `lyrics { section A { … } }` nests one level: #lyrics-inner-section colours the section keyword+name AND balances its braces so this block doesn't end at the inner '}'.",
+            "comment": "Inside lyrics { … } the words are syllables, not code, so reserved words like 'key'/'time'/'a'/'f' must NOT be highlighted as keywords or pitches. Match the block as its own context that only knows comments, quoted syllables, barlines and the connector tokens; everything else stays plain text. The by-part grouping `lyrics { section A { … } }` nests one level: #lyrics-inner-section colours the section keyword+name AND balances its braces so this block doesn't end at the inner '}'.",
             "begin": "\\b(lyrics)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.control.lilysharp" },
@@ -119,7 +119,7 @@
             ]
         },
         "lyrics-inner-section": {
-            "comment": "Part-major lyric track: `section NAME { … }` written inside lyrics { }. Colour the section keyword and its name; the body is more lyric syllables, and matching the inner braces keeps the outer lyrics block from ending at this section's '}'.",
+            "comment": "By-part lyric track: `section NAME { … }` written inside lyrics { }. Colour the section keyword and its name; the body is more lyric syllables, and matching the inner braces keeps the outer lyrics block from ending at this section's '}'.",
             "begin": "\\b(section)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.control.section.lilysharp" },
@@ -392,7 +392,7 @@
             ]
         },
         "part-inner-section": {
-            "comment": "Part-major music: `section NAME { … }` written inside part { }. Sibling of #lyrics-inner-section, and it exists for the same two reasons at once. ⚠️ FIRST, the name: #part-body's list is the part HEADER's vocabulary and reaches nothing else, so `section` was coloured by the generic keyword rule and the NAME beside it was plain — the whole visible symptom (reported 2026-08-23). ⚠️ SECOND, and this is what made it more than a missing colour: #part-body ends at `\\}` and nothing inside it balanced a brace, so the part body ENDED AT THE FIRST SECTION'S CLOSING BRACE. Measured before the fix: in a part with sections A and B, A's name was plain and its music was read by the header rules (`|` plain, `4` a bare number), while B — which the tokenizer had already fallen back to the top level for — came out fully coloured. ⇒ The tell for this shape is that the SECOND one looks right. The body includes $self (music is the same language here as anywhere) behind #nested-braces, which keeps `repeat 2 { … }` from ending the section the way the section was ending the part.",
+            "comment": "By-part music: `section NAME { … }` written inside part { }. Sibling of #lyrics-inner-section, and it exists for the same two reasons at once. ⚠️ FIRST, the name: #part-body's list is the part HEADER's vocabulary and reaches nothing else, so `section` was coloured by the generic keyword rule and the NAME beside it was plain — the whole visible symptom (reported 2026-08-23). ⚠️ SECOND, and this is what made it more than a missing colour: #part-body ends at `\\}` and nothing inside it balanced a brace, so the part body ENDED AT THE FIRST SECTION'S CLOSING BRACE. Measured before the fix: in a part with sections A and B, A's name was plain and its music was read by the header rules (`|` plain, `4` a bare number), while B — which the tokenizer had already fallen back to the top level for — came out fully coloured. ⇒ The tell for this shape is that the SECOND one looks right. The body includes $self (music is the same language here as anywhere) behind #nested-braces, which keeps `repeat 2 { … }` from ending the section the way the section was ending the part.",
             "begin": "\\b(section)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.control.section.lilysharp" },

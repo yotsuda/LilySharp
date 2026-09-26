@@ -93,7 +93,7 @@ public class GrobOverrideTests
     }
 
     [Fact]
-    public void SectionMajorOverride_ScopesToEveryStaffForThatSectionOnly()
+    public void GroupedBySectionOverride_ScopesToEveryStaffForThatSectionOnly()
     {
         // `section A { override … melody {…} bass {…} }` colours A on BOTH staves and, via
         // the boundary reset, not B. Collected once per staff at A's start (measure 0).
@@ -123,7 +123,7 @@ public class GrobOverrideTests
     }
 
     [Fact]
-    public void SectionMajorRevert_IsAnError()
+    public void GroupedBySectionRevert_IsAnError()
     {
         Assert.True(HasRevertContextError(
             "part melody { clef treble }\nsection A { revert NoteHead.color  melody { c4 d e f | } }\n" +

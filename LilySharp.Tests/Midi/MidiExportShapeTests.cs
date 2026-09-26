@@ -56,9 +56,9 @@ public class MidiExportShapeTests
     }
 
     [Fact]
-    public void PartMajor_MultipleParts_WithChordsDeclaredLast_PlaysEveryPart()
+    public void GroupedByPart_MultipleParts_WithChordsDeclaredLast_PlaysEveryPart()
     {
-        // Part-major layout declares `section A` once per part. A structure
+        // By-part grouping declares `section A` once per part. A structure
         // reference must play EVERY part concurrently — even when a chords part
         // is declared last. Previously the last-declared section won the name, so
         // earlier parts were silently dropped, and a trailing chords part left

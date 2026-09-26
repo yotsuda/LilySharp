@@ -57,8 +57,8 @@ public static class PhraseExtractor
         if (DeclaredNames(tree).Contains(name))
             return new(null, $"'{name}' is already declared - pick another name.");
 
-        // The music container under the caret: a part-major section cell, a
-        // section-major part block, or a standalone section's own music.
+        // The music container under the caret: a by-part section cell, a
+        // by-section part block, or a standalone section's own music.
         var root = tree.GetRoot();
         var container = root.DescendantNodes()
             .Where(n => n is PartBlockSyntax or SectionDeclarationSyntax)
@@ -289,7 +289,7 @@ public static class PhraseExtractor
     }
 
     /// <summary>The text range between a container's braces (its music body). A
-    /// section-major part block holds its braces on a child music block, so fall
+    /// by-section part block holds its braces on a child music block, so fall
     /// through to it when the container has no direct brace tokens.</summary>
     private static (int Start, int End) BraceBody(SyntaxNode container)
     {

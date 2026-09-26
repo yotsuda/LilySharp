@@ -50,7 +50,7 @@ internal sealed class MeasureValidator : ISemanticValidator
     // as the collector applies it (MeasureCollector.ProcessSection: a section without one
     // reverts to the score meter). It re-armed the DOCUMENT meter until 2026-09-26, so
     // `section A { time 3/4 … }` flagged every 4/4 bar of the sections after it (LYS2002),
-    // and a standalone header over part-major music did not reach that music at all.
+    // and a standalone header over by-part music did not reach that music at all.
     private Dictionary<string, TimeSignatureSyntax> _sectionTimes = new();
     // True once the file has any part/section/form: a `partial` then belongs to a section
     // directive; a bare note stream takes a leading `partial` instead. Drives the pickup hint.
@@ -241,7 +241,7 @@ internal sealed class MeasureValidator : ISemanticValidator
             // A chord track is not a bar stream of durations: its entries carry none and divide
             // each bar on the meter's beat grid (ChordEntrySyntax, Svg.Collector.ChordRhythm), so
             // a bar of it can be neither underfull nor overfull and the grid walk owns its own
-            // diagnostics (LYS2010). The part-major form wraps its cells in
+            // diagnostics (LYS2010). The by-part grouping wraps its cells in
             // SectionDeclarationSyntax, which ValidateSectionInlineMusic would otherwise read as
             // inline music — pricing a slot's `s` / `r` as a QUARTER rest and reporting every
             // bar that holds one as "1/4 is less than 2/4" (reported 2026-09-04 on the Lambada
@@ -320,10 +320,10 @@ internal sealed class MeasureValidator : ISemanticValidator
     private void ValidateMusicBlock(MusicBlockSyntax block)
         => ValidateItemsScoped(block.Items, block.Position);
 
-    // Part-major sections hold their music INLINE (a SectionDeclarationSyntax with
+    // By-part sections hold their music INLINE (a SectionDeclarationSyntax with
     // note/bar children and no MusicBlock wrapper), so the bar-check never saw them
-    // — only section-major sections, whose part blocks each wrap a MusicBlock, were
-    // checked. Validate the inline music the same way. A section-major section holds
+    // — only by-section sections, whose part blocks each wrap a MusicBlock, were
+    // checked. Validate the inline music the same way. A by-section section holds
     // part blocks (not inline music) and is left to the per-part-block pass.
     private void ValidateSectionInlineMusic(SectionDeclarationSyntax section)
     {
@@ -332,7 +332,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         {
             var child = section.GetChild(i);
             if (child is null or SyntaxTokenNode) continue;
-            if (child is PartBlockSyntax) return; // section-major: not inline music
+            if (child is PartBlockSyntax) return; // by-section: not inline music
             items.Add(child);
         }
         if (items.Count > 0)
@@ -921,8 +921,8 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     /// <summary>
     /// The section whose HEADER holds <paramref name="directive"/> (a `partial` or a `time`)
-    /// — `section A { partial 2 }` standalone, or before the part blocks of a section-major
-    /// section — or null when it is written in music (a part-major section's inline music,
+    /// — `section A { partial 2 }` standalone, or before the part blocks of a by-section
+    /// section — or null when it is written in music (a by-part section's inline music,
     /// a part block) or at the top level.
     /// </summary>
     private static string? HeaderSectionOf(SyntaxNode directive)
@@ -962,10 +962,10 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     /// <summary>True when the node sits inside a music block (an in-music
     /// `partial`/`time` belongs to one voice/section; only a top-level one is
-    /// file-wide). A PART-MAJOR section holds its music inline with no MusicBlock
+    /// file-wide). A BY-PART section holds its music inline with no MusicBlock
     /// wrapper, so a `partial`/`time` written among that inline music counts as
     /// in-music too — otherwise it leaks as a file-wide pickup onto every section.
-    /// A SECTION-MAJOR section holds part blocks; its section-level `time`/`partial`
+    /// A BY-SECTION section holds part blocks; its section-level `time`/`partial`
     /// arms the meter for the whole section and is left to the top-level path, so
     /// that is NOT treated as "inside a block" here.</summary>
     private static bool IsInsideMusicBlock(SyntaxNode node)
@@ -980,13 +980,13 @@ internal sealed class MeasureValidator : ISemanticValidator
         return false;
     }
 
-    /// <summary>True for a PART-MAJOR section with actual inline music (note/bar children),
-    /// false for a SECTION-MAJOR section (part blocks), a directives-only header
+    /// <summary>True for a BY-PART section with actual inline music (note/bar children),
+    /// false for a BY-SECTION section (part blocks), a directives-only header
     /// (<c>section A { partial 2 }</c>), or an empty one. Delegated to the collector's
     /// <c>SectionHasInlineMusic</c> — the drift this remark used to warn about
     /// ("a directives-only header's <c>partial</c>/<c>time</c> classed as in-music here and
     /// dropped as a section-wide pickup" — a real bug once) is now impossible by
-    /// construction, the same fold as <c>IsInsidePartMajorTrack</c>.</summary>
+    /// construction, the same fold as <c>IsInsideGroupedByPartTrack</c>.</summary>
     private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
         => Svg.Collector.MeasureCollector.SectionHasInlineMusic(section);
 

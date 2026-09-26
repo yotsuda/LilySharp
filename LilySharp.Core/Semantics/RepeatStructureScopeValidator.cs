@@ -28,7 +28,7 @@ namespace LilySharp.Core.Semantics;
 /// <para>
 /// ⚠️ ONE PREDICATE, NOT N PARSER ARMS, and that is the load-bearing choice. The four shapes
 /// the tree's books spread this across — inside a phrase, inside a <c>chords</c> row, inside a
-/// part-major section, inside a section-major part block — all reach the same two node types,
+/// by-part section, inside a by-section part block — all reach the same two node types,
 /// so asking the TREE catches them together. Editing the parser instead means enumerating the
 /// arms, and the session that measured this rule's reach miscounted that very quantity three
 /// times in one hour (HANDOFF §2 F ⒫).

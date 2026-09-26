@@ -30,7 +30,7 @@ public class ChordEntryCompletionTests
     [Theory]
     [InlineData("chords harmony { ", true)]
     [InlineData("chords { ", true)]
-    [InlineData("chords harmony { section A { ", true)]  // part-major inner section
+    [InlineData("chords harmony { section A { ", true)]  // by-part inner section
     [InlineData("chords harmony { C | ", true)]
     [InlineData("part melody { section A { ", false)]    // music, not chords
     [InlineData("lyrics { section A { ", false)]

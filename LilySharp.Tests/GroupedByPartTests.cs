@@ -23,11 +23,11 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Part-major form (`part X { section A { music } }`) and the (section x part)
-/// cell-uniqueness rule shared with section-major form.
+/// By-part grouping (`part X { section A { music } }`) and the (section x part)
+/// cell-uniqueness rule shared with by-section grouping.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class PartMajorTests
+public sealed class GroupedByPartTests
 {
     private static string?[] Labels(string source)
     {
@@ -37,7 +37,7 @@ public sealed class PartMajorTests
         return score.Voice.Measures.Select(m => m.SectionLabel).ToArray();
     }
 
-    private const string PartMajor = """
+    private const string GroupedByPart = """
         part bl { clef bass tuning bass
           section Intro { c4 d e f | }
           section Verse { g4 a b c | }
@@ -46,7 +46,7 @@ public sealed class PartMajorTests
         score main "x" { tab bl }
         """;
 
-    private const string SectionMajor = """
+    private const string GroupedBySection = """
         part bl { clef bass tuning bass }
         section Intro { bl { c4 d e f | } }
         section Verse { bl { g4 a b c | } }
@@ -55,28 +55,28 @@ public sealed class PartMajorTests
         """;
 
     [Fact]
-    public void PartMajor_Parses_WithoutErrors()
+    public void GroupedByPart_Parses_WithoutErrors()
     {
-        var tree = SyntaxTree.Parse(PartMajor);
+        var tree = SyntaxTree.Parse(GroupedByPart);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 
     [Fact]
-    public void PartMajor_RendersSectionsInStructureOrder()
+    public void GroupedByPart_RendersSectionsInStructureOrder()
     {
-        Assert.Equal(new[] { "Intro", "Verse" }, Labels(PartMajor));
+        Assert.Equal(new[] { "Intro", "Verse" }, Labels(GroupedByPart));
     }
 
     [Fact]
-    public void PartMajor_IsEquivalentToSectionMajor()
+    public void GroupedByPart_IsEquivalentToGroupedBySection()
     {
         // The two orientations describe the same grid, so they must collect the
         // same section sequence for the part.
-        Assert.Equal(Labels(SectionMajor), Labels(PartMajor));
+        Assert.Equal(Labels(GroupedBySection), Labels(GroupedByPart));
     }
 
     [Fact]
-    public void PartMajor_NoStructure_UsesDeclarationOrder()
+    public void GroupedByPart_NoStructure_UsesDeclarationOrder()
     {
         var labels = Labels("""
             part bl { clef bass tuning bass
@@ -89,7 +89,7 @@ public sealed class PartMajorTests
     }
 
     [Fact]
-    public void PartMajor_TwoParts_GrandStaff_Parses()
+    public void GroupedByPart_TwoParts_GrandStaff_Parses()
     {
         var tree = SyntaxTree.Parse("""
             part rh { clef treble  section A { c'4 d' e' f' | } }
@@ -101,7 +101,7 @@ public sealed class PartMajorTests
     }
 
     [Fact]
-    public void DuplicateCell_PartMajor_SameSectionTwice_IsError()
+    public void DuplicateCell_GroupedByPart_SameSectionTwice_IsError()
     {
         var v = new DuplicateCellValidator();
         v.Validate(SyntaxTree.Parse(
@@ -110,7 +110,7 @@ public sealed class PartMajorTests
     }
 
     [Fact]
-    public void DuplicateCell_SectionMajor_SamePartTwice_IsError()
+    public void DuplicateCell_GroupedBySection_SamePartTwice_IsError()
     {
         var v = new DuplicateCellValidator();
         v.Validate(SyntaxTree.Parse(

@@ -22,14 +22,14 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The part-major chord track form: <c>chords name { section A { C } section B { C } }</c>
+/// The by-part chord track form: <c>chords name { section A { C } section B { C } }</c>
 /// — a chord progression written per section and replayed by the structure, the dual
 /// of an in-section chords block. It must parse and collect to the SAME chord row as
-/// the equivalent section-major file.
+/// the equivalent by-section file.
 /// </summary>
 public class ChordPartSectionsTests
 {
-    private const string SectionMajor = """
+    private const string GroupedBySection = """
         time 4/4
         key c major
         part melody { clef treble }
@@ -39,7 +39,7 @@ public class ChordPartSectionsTests
         score main "s" { chords harmony  staff melody }
         """;
 
-    private const string PartMajor = """
+    private const string GroupedByPart = """
         time 4/4
         key c major
         part melody { clef treble
@@ -55,17 +55,17 @@ public class ChordPartSectionsTests
         """;
 
     [Fact]
-    public void PartMajorChordTrack_ParsesClean()
+    public void GroupedByPartChordTrack_ParsesClean()
     {
-        Assert.False(SyntaxTree.Parse(PartMajor).HasErrors);
+        Assert.False(SyntaxTree.Parse(GroupedByPart).HasErrors);
     }
 
     [Fact]
-    public void PartMajorChordTrack_CollectsSameChordsAsSectionMajor()
+    public void GroupedByPartChordTrack_CollectsSameChordsAsGroupedBySection()
     {
         // A: C (m0), F (m1); B: C (m2).
-        Assert.Equal("0:C 1:F 2:C", ChordSignature(PartMajor));
-        Assert.Equal(ChordSignature(SectionMajor), ChordSignature(PartMajor));
+        Assert.Equal("0:C 1:F 2:C", ChordSignature(GroupedByPart));
+        Assert.Equal(ChordSignature(GroupedBySection), ChordSignature(GroupedByPart));
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class ChordPartSectionsTests
     {
         // The chord track's `section A/B` must not shadow the melody's sections: the
         // melody still collects its own notes (2 bars of A, 1 bar of B = 3 measures).
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(PartMajor), "melody");
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(GroupedByPart), "melody");
         Assert.Equal(3, score.Voice.Measures.Length);
     }
 
@@ -133,9 +133,9 @@ public class ChordPartSectionsTests
     }
 
     [Fact]
-    public void SectionMajorChordBlockLongerThanItsMelody_StretchesTheSection()
+    public void GroupedBySectionChordBlockLongerThanItsMelody_StretchesTheSection()
     {
-        // The section-major spelling of the same book collects the same row.
+        // The by-section spelling of the same book collects the same row.
         var tree = SyntaxTree.Parse("""
             section A { melody { g2 g | } chords prog { Dm7 | G7 } }
             section B { melody { c2 c | } chords prog { Cmaj7 | } }

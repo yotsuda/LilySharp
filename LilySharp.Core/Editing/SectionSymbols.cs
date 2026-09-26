@@ -69,7 +69,7 @@ public static class SectionSymbols
         [SyntaxKind.SectionReference, SyntaxKind.SilentSectionReference];
 
     /// <summary>The name token this node DECLARES as a section, or null if it declares
-    /// none. Part-major and section-major spell a declaration the same way — a
+    /// none. By-part and by-section spell a declaration the same way — a
     /// <c>section NAME { … }</c> inside a <c>part { }</c> is the same node as one at the
     /// top level — so there is nothing to branch on here.</summary>
     public static SyntaxTokenNode? DeclaredName(SyntaxNode node) =>
@@ -78,7 +78,7 @@ public static class SectionSymbols
     /// <summary>
     /// A DIRECTIVES-ONLY section header: `section A { key g major }` - every direct child
     /// is a section directive and there is at least one. It declares the name but gives it
-    /// no music; in part-major it states a section's key/meter/tempo once, parallel to the
+    /// no music; in by-part it states a section's key/meter/tempo once, parallel to the
     /// `part` blocks (GRAMMAR.md's SectionSetting note).
     /// </summary>
     /// <remarks>
@@ -113,7 +113,7 @@ public static class SectionSymbols
 
     /// <summary>A section-level directive child - <c>key</c> / <c>time</c> / <c>tempo</c>
     /// / <c>partial</c> / <c>clef</c> / <c>octave</c> - that a section may carry beside
-    /// its part blocks (section-major) or alone (a standalone part-major header).</summary>
+    /// its part blocks (by-section) or alone (a standalone by-part header).</summary>
     public static bool IsSectionDirective(SyntaxNode n)
         => n is KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
             or PartialDeclarationSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax;

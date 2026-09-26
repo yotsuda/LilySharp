@@ -534,7 +534,7 @@ internal sealed partial class Parser
             SyntaxKind.ScoreKeyword => ParseRenderDeclaration(),
             SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
-            // A top-level chord track — the part-major dual of an in-section chords
+            // A top-level chord track — the by-part dual of an in-section chords
             // block: `chords name { section A { c1 } section B { c1 } }`.
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
             SyntaxKind.DrummapKeyword => ParseDrummapDeclaration(),

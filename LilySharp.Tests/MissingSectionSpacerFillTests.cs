@@ -44,8 +44,8 @@ public class MissingSectionSpacerFillTests
     private static Voice VoiceOf(MultiStaffScore score, int staffIndex)
         => score.StaffGroups.SelectMany(g => g.Staves).ElementAt(staffIndex).Voices[0];
 
-    // Part-major: the dogfood repro — melody defines only A; bass defines A and B.
-    private const string PartMajorSource = """
+    // By-part: the dogfood repro — melody defines only A; bass defines A and B.
+    private const string GroupedByPartSource = """
         time 4/4
         part melody {
           clef treble
@@ -64,9 +64,9 @@ public class MissingSectionSpacerFillTests
         """;
 
     [Fact]
-    public void PartMajor_MissingSection_KeepsStavesAligned()
+    public void GroupedByPart_MissingSection_KeepsStavesAligned()
     {
-        var score = Collect(PartMajorSource);
+        var score = Collect(GroupedByPartSource);
         var melody = VoiceOf(score, 0);
         var bass = VoiceOf(score, 1);
 
@@ -76,9 +76,9 @@ public class MissingSectionSpacerFillTests
     }
 
     [Fact]
-    public void PartMajor_MissingSection_FilledWithSpacersNotNotes()
+    public void GroupedByPart_MissingSection_FilledWithSpacersNotNotes()
     {
-        var score = Collect(PartMajorSource);
+        var score = Collect(GroupedByPartSource);
         var melody = VoiceOf(score, 0);
 
         // Measures 1 and 2 are section B for the melody: invisible spacer rests, no notes.
@@ -98,7 +98,7 @@ public class MissingSectionSpacerFillTests
     // melody's B is a single `g1` while bass's B is two bars) is padded up to the
     // canonical length, not left short.
     [Fact]
-    public void PartMajor_ShortSection_PaddedToCanonicalLength()
+    public void GroupedByPart_ShortSection_PaddedToCanonicalLength()
     {
         var score = Collect("""
             time 4/4
@@ -133,7 +133,7 @@ public class MissingSectionSpacerFillTests
     }
 
     [Fact]
-    public void SectionMajor_MissingSection_KeepsStavesAligned()
+    public void GroupedBySection_MissingSection_KeepsStavesAligned()
     {
         var score = Collect("""
             time 4/4

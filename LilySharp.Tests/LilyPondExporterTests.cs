@@ -29,8 +29,8 @@ public class LilyPondExporterTests
     private static string Export(string lys) =>
         new LilyPondExporter().Export(SyntaxTree.Parse(lys));
 
-    // A part-major score with one bass section. ⚠️ NOT the shape the corpus uses (that is
-    // section-major, with phrase references) — this helper's monopoly on the suite is what
+    // A by-part score with one bass section. ⚠️ NOT the shape the corpus uses (that is
+    // by-section, with phrase references) — this helper's monopoly on the suite is what
     // hid two whole export gaps; see the phrase-reference tests at the bottom.
     private static string Score(string music, string headers = "octave absolute",
         string render = "staff bassline") => $$"""
@@ -57,7 +57,7 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("property-defaults", ly);
     }
 
-    // Several parts on one staff, section-major as the corpus writes it (CombinedStaffTests'
+    // Several parts on one staff, by-section as the corpus writes it (CombinedStaffTests'
     // shape). The first part's clef is bass so the twin's clef is visible.
     private static string SharedStaffScore(string render) => """
         octave absolute
@@ -1406,7 +1406,7 @@ public class LilyPondExporterTests
         Assert.StartsWith("\\version", ly);
     }
 
-    // ---- section-major, the ordinary spelling -------------------------------
+    // ---- by-section, the ordinary spelling -------------------------------
     //
     // ⚠️ Every test above uses Score(), which puts the section INSIDE the part
     // (`part m { section S { … } }`). That is the minority spelling. The corpus — all ten
@@ -1416,7 +1416,7 @@ public class LilyPondExporterTests
     // exactly why it survived. These are the points that say the music arrives.
 
     [Fact]
-    public void SectionMajorScore_ExportsTheMusicAndNotAnEmptyPart()
+    public void GroupedBySectionScore_ExportsTheMusicAndNotAnEmptyPart()
     {
         var ly = Export("""
             octave absolute
@@ -1433,7 +1433,7 @@ public class LilyPondExporterTests
     }
 
     [Fact]
-    public void SectionMajorScore_GivesEachPartItsOwnMusic()
+    public void GroupedBySectionScore_GivesEachPartItsOwnMusic()
     {
         // The block name is what routes the notes; if it were ignored, one part would
         // swallow both streams and the other would come out empty.
@@ -1461,7 +1461,7 @@ public class LilyPondExporterTests
     }
 
     [Fact]
-    public void SectionMajorScore_FollowsTheFormsOrderNotTheFilesOrder()
+    public void GroupedBySectionScore_FollowsTheFormsOrderNotTheFilesOrder()
     {
         // B is declared first and referenced second: the form wins.
         var ly = Export("""
@@ -1486,7 +1486,7 @@ public class LilyPondExporterTests
     // a "VariableReference not exported" warning to show for it. 52 of the corpus's 204
     // fixtures declare phrases, so the tool for building LilyPond twins could not build one
     // for any of them. These tests are written in that spelling on purpose: the suite's
-    // other 13 all go through the part-major Score() helper, which is exactly how the gap
+    // other 13 all go through the by-part Score() helper, which is exactly how the gap
     // survived (a test file that only ever uses one helper cannot see the other spelling).
 
     private static string PhraseScore(string phrases, string body,

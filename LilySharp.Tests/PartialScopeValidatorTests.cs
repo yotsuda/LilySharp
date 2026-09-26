@@ -41,12 +41,12 @@ public class PartialScopeValidatorTests
     // --- Allowed: a section directive (parent is the section node) ---
 
     [Fact]
-    public void SectionMajorHeaderPartial_Ok()
+    public void GroupedBySectionHeaderPartial_Ok()
         => Assert.Equal(0, ErrCount(
             "time 4/4\nsection A { partial 4  melody { g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
 
     [Fact]
-    public void StandalonePartMajorHeaderPartial_Ok()
+    public void StandaloneGroupedByPartHeaderPartial_Ok()
         => Assert.Equal(0, ErrCount(
             "part melody { section A { g4 | c' d' e' f' | } }\nsection A { partial 4 }\nform main { A }\nscore main { staff melody }"));
 
@@ -58,7 +58,7 @@ public class PartialScopeValidatorTests
     // --- Refused since 2026-09-15: a section's opening pickup is its header's ---
 
     [Fact]
-    public void PartialAtTheHeadOfAPartMajorCell_Errors()
+    public void PartialAtTheHeadOfAGroupedByPartCell_Errors()
         // The opening bar is the section's: `section A { partial 4 }` beside the cell says it once
         // for every part.
         => Assert.Equal(1, ErrCount(
@@ -78,7 +78,7 @@ public class PartialScopeValidatorTests
     // --- Allowed since 2026-09-08: in a part's music after the first bar, per part ---
 
     [Fact]
-    public void MidSectionPartialInAPartMajorCell_Ok()
+    public void MidSectionPartialInAGroupedByPartCell_Ok()
         => Assert.Equal(0, ErrCount(
             "part melody { section A { c'4 d' e' f' | partial 4  g4 | c' d' e' f' | } }\nform main { A }\nscore main { staff melody }"));
 

@@ -185,7 +185,7 @@ internal sealed class LyricsCollector
                         of.SlurHeldInFirstBar, of.TieHeldInFirstBar));
             }
 
-            // Part-major lyric track: each inner section's verse aligns under its own
+            // By-part lyric track: each inner section's verse aligns under its own
             // named section's bars — at EVERY occurrence (a reprise gets it too). Flat
             // form: the enclosing section's occurrences (or 0 at top level).
             List<int> StartsFor(string sectionName)
@@ -539,7 +539,7 @@ internal sealed class LyricsCollector
 
         foreach (var block in blocks)
         {
-            // Part-major track (`lyrics name { section A { .. } .. }`): each inner
+            // By-part track (`lyrics name { section A { .. } .. }`): each inner
             // section's verse spreads across THAT named section's bars — the `section
             // NAME { … }` wrapper is structure, not literal "section"/"NAME" syllables
             // (which is what the flat reader below would otherwise emit). Occurrences

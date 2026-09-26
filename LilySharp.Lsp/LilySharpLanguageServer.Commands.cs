@@ -153,7 +153,7 @@ public sealed partial class LilySharpLanguageServer
             return new AddChordTrackResponse { Error = "No section melody found to harmonize." };
 
         // One full-document replace: adding a chords part can convert the layout
-        // (part-major -> section-major), which reshapes the whole file.
+        // (by-part -> by-section), which reshapes the whole file.
         var (endLine, endCol) = GetLineAndColumn(doc.Text, doc.Text.Length);
         return new AddChordTrackResponse
         {
@@ -1001,7 +1001,7 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Converts the document between the section-major and part-major authoring
+    /// Converts the document between the by-section and by-part authoring
     /// layouts (the editor command toggles whichever the file currently uses) and
     /// returns the rewritten source; the extension applies it as a full-document edit.
     /// </summary>
@@ -1029,39 +1029,39 @@ public sealed partial class LilySharpLanguageServer
             : new ExtractPhraseResponse { Success = false, Error = result.Error };
     }
 
-    [JsonRpcMethod("lilysharp/convertLayout", UseSingleObjectParameterDeserialization = true)]
-    public Task<ConvertLayoutResponse> ConvertLayoutAsync(ConvertLayoutParams @params, CancellationToken token)
+    [JsonRpcMethod("lilysharp/regroup", UseSingleObjectParameterDeserialization = true)]
+    public Task<RegroupResponse> RegroupAsync(RegroupParams @params, CancellationToken token)
         => OffDispatch(() => ConvertLayout(@params), token);
 
-    public ConvertLayoutResponse ConvertLayout(ConvertLayoutParams @params)
+    public RegroupResponse ConvertLayout(RegroupParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
-            return new ConvertLayoutResponse { Success = false, Error = "Document not found" };
+            return new RegroupResponse { Success = false, Error = "Document not found" };
 
         // Refuse to convert a file with syntax errors: cell extraction needs a
         // clean, balanced tree, and the client overwrites the whole document with
         // the result — so a malformed file would be mangled. Leave it untouched.
         if (LilySharp.Core.Syntax.SyntaxTree.Parse(doc.Text).HasErrors)
-            return new ConvertLayoutResponse
+            return new RegroupResponse
             {
                 Success = false,
                 Error = "Fix the syntax errors before regrouping — no changes made."
             };
 
-        var from = LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(doc.Text);
-        if (from == LilySharp.Core.Editing.LayoutForm.Unknown)
-            return new ConvertLayoutResponse
+        var from = LilySharp.Core.Editing.PartSectionRegrouper.Detect(doc.Text);
+        if (from == LilySharp.Core.Editing.Grouping.Unknown)
+            return new RegroupResponse
             {
                 Success = false,
                 Error = "Nothing to regroup — the file needs parts with sections."
             };
 
-        // Chord/lyric blocks only exist in the section-major layout; converting to
-        // part-major would drop them. Explain and keep the file unchanged.
-        if (from == LilySharp.Core.Editing.LayoutForm.SectionMajor
-            && LilySharp.Core.Editing.PartSectionLayoutConverter.HasUntransposableSectionContent(doc.Text))
-            return new ConvertLayoutResponse
+        // Chord/lyric blocks only exist in the by-section grouping; converting to
+        // by-part would drop them. Explain and keep the file unchanged.
+        if (from == LilySharp.Core.Editing.Grouping.BySection
+            && LilySharp.Core.Editing.PartSectionRegrouper.HasUntransposableSectionContent(doc.Text))
+            return new RegroupResponse
             {
                 Success = false,
                 Error = "This file has chords/lyrics blocks, which exist only in a file grouped "
@@ -1070,35 +1070,35 @@ public sealed partial class LilySharpLanguageServer
 
         // Convert self-guards: it returns null unless the result round-trips to a
         // clean parse, so this can never produce a corrupt document.
-        var newText = LilySharp.Core.Editing.PartSectionLayoutConverter.Convert(doc.Text, out var collision);
+        var newText = LilySharp.Core.Editing.PartSectionRegrouper.Convert(doc.Text, out var collision);
         // A cell written twice: the other layout has room for one, so converting would
         // silently keep the later and drop the earlier.
         if (collision != null)
-            return new ConvertLayoutResponse
+            return new RegroupResponse
             {
                 Success = false,
                 Error = $"{char.ToUpperInvariant(collision[0])}{collision[1..]} is written twice. "
                     + "Regrouping would keep only the later one, so the file was left unchanged."
             };
         if (newText == null)
-            return new ConvertLayoutResponse
+            return new RegroupResponse
             {
                 Success = false,
                 Error = "Regrouping would not produce a clean result — no changes made."
             };
 
-        var to = from == LilySharp.Core.Editing.LayoutForm.PartMajor
-            ? LilySharp.Core.Editing.LayoutForm.SectionMajor
-            : LilySharp.Core.Editing.LayoutForm.PartMajor;
+        var to = from == LilySharp.Core.Editing.Grouping.ByPart
+            ? LilySharp.Core.Editing.Grouping.BySection
+            : LilySharp.Core.Editing.Grouping.ByPart;
         // The words the editor shows ("regrouped by section"), not the enum names.
-        static string Grouping(LilySharp.Core.Editing.LayoutForm form)
-            => form == LilySharp.Core.Editing.LayoutForm.PartMajor ? "by part" : "by section";
-        return new ConvertLayoutResponse
+        static string Words(LilySharp.Core.Editing.Grouping form)
+            => form == LilySharp.Core.Editing.Grouping.ByPart ? "by part" : "by section";
+        return new RegroupResponse
         {
             Success = true,
             NewText = newText,
-            FromLayout = Grouping(from),
-            ToLayout = Grouping(to),
+            FromGrouping = Words(from),
+            ToGrouping = Words(to),
         };
     }
 

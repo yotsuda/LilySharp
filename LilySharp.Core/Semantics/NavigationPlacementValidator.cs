@@ -41,7 +41,7 @@ internal sealed class NavigationPlacementValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         // Navigation marks live in a part's music, and the exact measure fill is only
-        // walked with a voice bound — the shared no-voice collect skips part-major music.
+        // walked with a voice bound — the shared no-voice collect skips by-part music.
         // A mark can sit in ANY part's music, but a single voice-bound collect walks only
         // that voice, so collect each declared part and union what they record (a mark in
         // a secondary part would otherwise never warn). Dedup by source position.

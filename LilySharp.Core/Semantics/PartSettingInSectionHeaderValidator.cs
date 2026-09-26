@@ -62,7 +62,7 @@ namespace LilySharp.Core.Semantics;
 /// ⚠️ THE PREDICATE IS ABOUT THE SECTION, NOT THE KEYWORD, and the two shapes that work are
 /// why. <c>part m { section A { clef bass … } }</c> and <c>section A { clef bass c'4 … }</c>
 /// both engrave the clef, because in each the section's body IS a music stream — the first is
-/// part-major, the second the single-part piece GRAMMAR.md allows to write bare music in a
+/// by-part, the second the single-part piece GRAMMAR.md allows to write bare music in a
 /// section. A section that holds CELLS has nowhere to put a loose setting, and that is the
 /// one case reported.
 /// </para>
@@ -160,7 +160,7 @@ internal sealed class PartSettingInSectionHeaderValidator : ISemanticValidator
     /// difference is a book the converter can produce. A DIRECTIVES-ONLY header —
     /// <c>section A { clef bass }</c> standing beside the parts, the shape GRAMMAR.md
     /// documents for <c>key</c> — holds no cells either, so a cells-only test let it through;
-    /// then the LSP's convert-layout command folds that header into the section-major section
+    /// then the LSP's convert-layout command folds that header into the by-section section
     /// and hands the author a book this rule refuses. MEASURED 2026-08-31: clean before the
     /// conversion, LYS1035 after. Asking for the STREAM catches both shapes at the source.
     /// </para>

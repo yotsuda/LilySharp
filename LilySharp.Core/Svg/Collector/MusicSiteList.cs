@@ -20,7 +20,7 @@ namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
 /// The flat list of music sites one <c>ProcessNodes</c> invocation of the collector's
-/// top-level walk consumes — the gathered sites of a container (a part block, a part-major
+/// top-level walk consumes — the gathered sites of a container (a part block, a by-part
 /// cell), phrase references expanded in place — read by index, as the checkpoint/resume
 /// substrate addresses it (<see cref="WalkCheckpoint.NodeIndex"/>). Three shapes behind
 /// one reader:

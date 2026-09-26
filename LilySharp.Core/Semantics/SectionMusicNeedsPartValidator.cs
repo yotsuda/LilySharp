@@ -21,15 +21,15 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// In a PART-MAJOR file (parts carry their own <c>section</c> blocks), a top-level
+/// In a BY-PART file (parts carry their own <c>section</c> blocks), a top-level
 /// <c>section A { … }</c> is a section-level HEADER: it may hold section-wide directives
 /// (a <c>partial</c> pickup, key, time) and cells for the parts, but no loose music. Bare
 /// notes written straight into it (<c>section A { c d e }</c>) belong to no part, so they are
 /// flagged: put the music inside a part (<c>part melody { section A { c d e } }</c>).
 ///
-/// Only PART-MAJOR files are checked. A single-part file that writes its one part's setup and
-/// music apart (<c>part bl { clef bass } section A { c d e }</c>) is NOT part-major — its loose
-/// section music binds to the lone part and is left alone; nor is a section-major file, whose
+/// Only BY-PART files are checked. A single-part file that writes its one part's setup and
+/// music apart (<c>part bl { clef bass } section A { c d e }</c>) is NOT by-part — its loose
+/// section music binds to the lone part and is left alone; nor is a by-section file, whose
 /// top-level sections legitimately hold the parts' cells.
 /// </summary>
 internal sealed class SectionMusicNeedsPartValidator : ISemanticValidator
@@ -41,7 +41,7 @@ internal sealed class SectionMusicNeedsPartValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        if (PartSectionLayoutConverter.Detect(root) != LayoutForm.PartMajor)
+        if (PartSectionRegrouper.Detect(root) != Grouping.ByPart)
             return;
 
         foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>())

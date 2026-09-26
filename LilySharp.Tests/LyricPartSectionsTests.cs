@@ -22,14 +22,14 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The part-major lyric track form: <c>lyrics w { section A { .. } section B { .. } }</c>
+/// The by-part lyric track form: <c>lyrics w { section A { .. } section B { .. } }</c>
 /// — a verse written per section and replayed by the structure, the dual of an
 /// in-section lyrics block. Must parse and collect to the SAME lyrics as the
-/// equivalent section-major file.
+/// equivalent by-section file.
 /// </summary>
 public class LyricPartSectionsTests
 {
-    private const string SectionMajor = """
+    private const string GroupedBySection = """
         time 4/4
         key c major
         part melody { clef treble }
@@ -39,7 +39,7 @@ public class LyricPartSectionsTests
         score main "s" { staff melody  lyrics w }
         """;
 
-    private const string PartMajor = """
+    private const string GroupedByPart = """
         time 4/4
         key c major
         part melody { clef treble
@@ -65,23 +65,23 @@ public class LyricPartSectionsTests
     }
 
     [Fact]
-    public void PartMajorLyricTrack_ParsesClean()
+    public void GroupedByPartLyricTrack_ParsesClean()
     {
-        Assert.False(SyntaxTree.Parse(PartMajor).HasErrors);
+        Assert.False(SyntaxTree.Parse(GroupedByPart).HasErrors);
     }
 
     [Fact]
-    public void PartMajorLyricTrack_CollectsSameLyricsAsSectionMajor()
+    public void GroupedByPartLyricTrack_CollectsSameLyricsAsGroupedBySection()
     {
-        Assert.Equal(ChordPartSectionsHelpers.NonEmpty(LyricSignature(SectionMajor)), LyricSignature(PartMajor));
-        Assert.Equal(LyricSignature(SectionMajor), LyricSignature(PartMajor));
+        Assert.Equal(ChordPartSectionsHelpers.NonEmpty(LyricSignature(GroupedBySection)), LyricSignature(GroupedByPart));
+        Assert.Equal(LyricSignature(GroupedBySection), LyricSignature(GroupedByPart));
     }
 
     [Fact]
     public void LyricInnerSection_IsNotTreatedAsAStructureSection()
     {
         // The lyric track's `section A/B` must not shadow the melody's sections.
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(PartMajor), "melody");
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(GroupedByPart), "melody");
         Assert.Equal(4, score.Voice.Measures.Length);
     }
 
@@ -109,9 +109,9 @@ public class LyricPartSectionsTests
     }
 
     [Fact]
-    public void PartMajorLyricTrack_AsIndependentRow_ReadsSectionSyllablesNotStructureTokens()
+    public void GroupedByPartLyricTrack_AsIndependentRow_ReadsSectionSyllablesNotStructureTokens()
     {
-        // A part-major lyric track referenced as an independent ROW (`lyrics words`)
+        // A by-part lyric track referenced as an independent ROW (`lyrics words`)
         // must read each inner section's syllables and align them to that section's
         // bars — NOT walk the `section NAME { … }` wrapper and emit "section"/"A" as
         // literal words (the row reader used to do exactly that).

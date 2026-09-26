@@ -24,7 +24,7 @@ namespace LilySharp.Core.Semantics;
 /// B { … } }</c>) may name each section only once. Repeating a name — two
 /// <c>section B { … }</c> blocks — reads as a single section written twice and, in a
 /// lyrics track, was the old way to stack a repeat's verses; that is confusing next to
-/// the section-major form, so this rejects it. To give a repeated or reprised section
+/// the by-section grouping, so this rejects it. To give a repeated or reprised section
 /// DIFFERENT words each pass, number the verses inside the one section instead:
 /// <c>section B { [1. … ] [2. … ] }</c>.
 ///

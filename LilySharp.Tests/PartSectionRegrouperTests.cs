@@ -23,15 +23,15 @@ using Xunit.Abstractions;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Converting a .lys document between the section-major and part-major layouts.
+/// Converting a .lys document between the by-section and by-part groupings.
 /// </summary>
 [Trait("Category", "Unit")]
-public class PartSectionLayoutConverterTests
+public class PartSectionRegrouperTests
 {
     private readonly ITestOutputHelper _output;
-    public PartSectionLayoutConverterTests(ITestOutputHelper output) => _output = output;
+    public PartSectionRegrouperTests(ITestOutputHelper output) => _output = output;
 
-    private const string SectionMajor = """
+    private const string GroupedBySection = """
         part low { clef bass }
         part high { clef treble }
         section A { low { c4 d } high { e'4 f' } }
@@ -75,7 +75,7 @@ public class PartSectionLayoutConverterTests
         Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(SyntaxTree.Parse(source))
             .Where(d => d.Severity == DiagnosticSeverity.Error));
 
-        var converted = PartSectionLayoutConverter.Convert(source);
+        var converted = PartSectionRegrouper.Convert(source);
         Assert.NotNull(converted);
         _output.WriteLine(converted);
 
@@ -88,19 +88,19 @@ public class PartSectionLayoutConverterTests
     [Fact]
     public void Detect_IdentifiesBothLayouts()
     {
-        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(SectionMajor));
-        var pm = PartSectionLayoutConverter.Convert(SectionMajor);
-        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
+        Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(GroupedBySection));
+        var pm = PartSectionRegrouper.Convert(GroupedBySection);
+        Assert.Equal(Grouping.ByPart, PartSectionRegrouper.Detect(pm!));
     }
 
     [Fact]
-    public void Convert_SectionMajor_ToPartMajor_KeepsCellsAndPassthrough()
+    public void Convert_GroupedBySection_ToGroupedByPart_KeepsCellsAndPassthrough()
     {
-        var pm = PartSectionLayoutConverter.Convert(SectionMajor);
+        var pm = PartSectionRegrouper.Convert(GroupedBySection);
         Assert.NotNull(pm);
         _output.WriteLine(pm);
 
-        // Part-major shape: each part owns its inner sections, music preserved.
+        // By-part shape: each part owns its inner sections, music preserved.
         Assert.Contains("part low {", pm);
         Assert.Contains("section A { c4 d }", pm);
         Assert.Contains("section B { g,4 a, }", pm);
@@ -151,7 +151,7 @@ public class PartSectionLayoutConverterTests
         // What the premise became: the tree spells these back EXACTLY, control included.
         Assert.Equal(sm, SyntaxTree.Parse(sm).GetRoot().ToFullString());
 
-        var pm = PartSectionLayoutConverter.Convert(sm);
+        var pm = PartSectionRegrouper.Convert(sm);
         Assert.NotNull(pm);
         _output.WriteLine(pm);
         Assert.Contains(music, pm);
@@ -159,14 +159,14 @@ public class PartSectionLayoutConverterTests
     }
 
     [Fact]
-    public void Convert_RoundTrips_BackToSectionMajor()
+    public void Convert_RoundTrips_BackToGroupedBySection()
     {
-        var pm = PartSectionLayoutConverter.Convert(SectionMajor);
-        var sm2 = PartSectionLayoutConverter.Convert(pm!);
+        var pm = PartSectionRegrouper.Convert(GroupedBySection);
+        var sm2 = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(sm2);
         _output.WriteLine(sm2);
 
-        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
+        Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(sm2!));
         Assert.Contains("section A {", sm2);
         Assert.Contains("low { c4 d }", sm2);
         Assert.Contains("high { e'4 f' }", sm2);
@@ -175,9 +175,9 @@ public class PartSectionLayoutConverterTests
     }
 
     [Fact]
-    public void Convert_SectionMajorWithChords_ToPartMajor_PreservesChordTrack()
+    public void Convert_GroupedBySectionWithChords_ToGroupedByPart_PreservesChordTrack()
     {
-        // A `chords name { }` chord part transposes to a part-major chord track
+        // A `chords name { }` chord part transposes to a by-part chord track
         // (`chords name { section .. }`) and back — no data loss.
         var sm = """
             part melody { clef treble }
@@ -186,28 +186,28 @@ public class PartSectionLayoutConverterTests
             form main { A B }
             score main "s" { chords harmony  staff melody }
             """;
-        Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
+        Assert.False(PartSectionRegrouper.HasUntransposableSectionContent(sm));
 
-        var pm = PartSectionLayoutConverter.Convert(sm);
+        var pm = PartSectionRegrouper.Convert(sm);
         Assert.NotNull(pm);
-        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
+        Assert.Equal(Grouping.ByPart, PartSectionRegrouper.Detect(pm!));
         Assert.Contains("chords harmony {", pm);
         Assert.Contains("section A { C | F | }", pm);
         Assert.Contains("section B { C | }", pm);
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
 
-        // Round-trips back to section-major with the chords folded into the sections.
-        var sm2 = PartSectionLayoutConverter.Convert(pm!);
+        // Round-trips back to by-section with the chords folded into the sections.
+        var sm2 = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(sm2);
-        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
+        Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(sm2!));
         Assert.Contains("chords harmony { C | F | }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
 
     [Fact]
-    public void Convert_SectionMajorWithLyrics_ToPartMajor_PreservesLyricTrack()
+    public void Convert_GroupedBySectionWithLyrics_ToGroupedByPart_PreservesLyricTrack()
     {
-        // A lyrics block transposes to a part-major lyric track and back — no loss.
+        // A lyrics block transposes to a by-part lyric track and back — no loss.
         var sm = """
             part melody { clef treble }
             section A { melody { c4 c g' g | } lyrics w { Twin- kle twin- kle | } }
@@ -215,19 +215,19 @@ public class PartSectionLayoutConverterTests
             form main { A B }
             score main "s" { staff melody  lyrics w }
             """;
-        Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
+        Assert.False(PartSectionRegrouper.HasUntransposableSectionContent(sm));
 
-        var pm = PartSectionLayoutConverter.Convert(sm);
+        var pm = PartSectionRegrouper.Convert(sm);
         Assert.NotNull(pm);
-        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
+        Assert.Equal(Grouping.ByPart, PartSectionRegrouper.Detect(pm!));
         Assert.Contains("lyrics w {", pm);
         Assert.Contains("section A { Twin- kle twin- kle | }", pm);
         Assert.Contains("section B { how I won- der | }", pm);
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
 
-        var sm2 = PartSectionLayoutConverter.Convert(pm!);
+        var sm2 = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(sm2);
-        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
+        Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(sm2!));
         Assert.Contains("lyrics w { Twin- kle twin- kle | }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
@@ -244,18 +244,18 @@ public class PartSectionLayoutConverterTests
             score main { staff melody lyrics en lyrics ja }
             """;
 
-        var pm = PartSectionLayoutConverter.Convert(sm);
+        var pm = PartSectionRegrouper.Convert(sm);
         Assert.NotNull(pm);
-        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
+        Assert.Equal(Grouping.ByPart, PartSectionRegrouper.Detect(pm!));
         Assert.Contains("lyrics en {", pm);
         Assert.Contains("lyrics ja {", pm);
         Assert.Contains("do re mi fa", pm);
         Assert.Contains("ど れ み ふぁ", pm);
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
 
-        var sm2 = PartSectionLayoutConverter.Convert(pm!);
+        var sm2 = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(sm2);
-        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
+        Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(sm2!));
         Assert.Contains("lyrics en { do re mi fa | }", sm2);
         Assert.Contains("lyrics ja { ど れ み ふぁ | }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
@@ -264,17 +264,17 @@ public class PartSectionLayoutConverterTests
     [Fact]
     public void Convert_PlainSections_NotFlaggedAsUntransposable()
     {
-        // The ordinary section-major file (only part blocks in its sections) must
+        // The ordinary by-section file (only part blocks in its sections) must
         // still convert — the guard only trips on chord/lyric blocks.
-        Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(SectionMajor));
-        Assert.NotNull(PartSectionLayoutConverter.Convert(SectionMajor));
+        Assert.False(PartSectionRegrouper.HasUntransposableSectionContent(GroupedBySection));
+        Assert.NotNull(PartSectionRegrouper.Convert(GroupedBySection));
     }
 
     [Fact]
     public void Convert_Unknown_ReturnsNull()
     {
         // No part blocks / inner sections — nothing to transpose.
-        Assert.Null(PartSectionLayoutConverter.Convert("title \"x\"\nsection A { c4 d e f }\n"));
+        Assert.Null(PartSectionRegrouper.Convert("title \"x\"\nsection A { c4 d e f }\n"));
     }
 
     [Fact]
@@ -283,15 +283,15 @@ public class PartSectionLayoutConverterTests
         // Unbalanced braces — must NOT be transposed (the caller overwrites the
         // whole document, so a malformed file would be mangled).
         var broken = "part low { clef bass }\nsection A { low { c4 d } \n";
-        Assert.Null(PartSectionLayoutConverter.Convert(broken));
+        Assert.Null(PartSectionRegrouper.Convert(broken));
     }
 
     [Theory]
-    // section-major: the same part twice in section A
+    // by-section: the same part twice in section A
     [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } ob { c1 | } }\nsection A { ob { d1 | } }\nform main { A }\n", "part 'ob' in section A")]
-    // part-major: one part writing section A twice
+    // by-part: one part writing section A twice
     [InlineData("part fl { section A { c1 | } section A { d1 | } }\nform main { A }\n", "part 'fl' in section A")]
-    // section-major chord rows and lyrics
+    // by-section chord rows and lyrics
     [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } chords harm { C | } }\nsection A { ob { c1 | } chords harm { D | } }\nform main { A }\n", "chords 'harm' in section A")]
     [InlineData("part fl { }\npart ob { }\nsection A { fl { c1 | } lyrics words { la } }\nsection A { ob { c1 | } lyrics words { lu } }\nform main { A }\n", "lyrics 'words' in section A")]
     // differing directives of one section
@@ -300,7 +300,7 @@ public class PartSectionLayoutConverterTests
     {
         // The other layout has room for one text per cell: converting kept the later and
         // dropped the earlier without a word. Refused, naming the cell.
-        Assert.Null(PartSectionLayoutConverter.Convert(src, out var collision));
+        Assert.Null(PartSectionRegrouper.Convert(src, out var collision));
         Assert.Equal(expected, collision);
     }
 
@@ -309,10 +309,10 @@ public class PartSectionLayoutConverterTests
     {
         // Legal — a section is open — and nothing collides: one declaration comes back.
         var src = "part fl { }\npart ob { }\nsection A { key g major  fl { c1 | } }\nsection A { key g major  ob { d1 | } }\nform main { A }\n";
-        var pm = PartSectionLayoutConverter.Convert(src, out var collision);
+        var pm = PartSectionRegrouper.Convert(src, out var collision);
         Assert.Null(collision);
         Assert.NotNull(pm);
-        var sm = PartSectionLayoutConverter.Convert(pm!);
+        var sm = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(sm);
         Assert.Single(System.Text.RegularExpressions.Regex.Matches(sm!, @"section A \{"));
         Assert.Contains("fl { c1 | }", sm);
@@ -323,7 +323,7 @@ public class PartSectionLayoutConverterTests
     public void Convert_CellEndingInLineComment_DoesNotSwallowBrace()
     {
         var src = "part low { clef bass }\nsection A { low { c4 d e f // melody\n} }\nform main { A }\n";
-        var converted = PartSectionLayoutConverter.Convert(src);
+        var converted = PartSectionRegrouper.Convert(src);
         Assert.NotNull(converted);
         // The // comment must not comment out the regenerated closing brace.
         Assert.False(SyntaxTree.Parse(converted!).HasErrors);
@@ -334,15 +334,15 @@ public class PartSectionLayoutConverterTests
     public void Convert_KeepsCommentAboveFirstStructuralBlock()
     {
         var src = "// verse arrangement\npart low { clef bass }\nsection A { low { c4 d } }\nform main { A }\n";
-        var converted = PartSectionLayoutConverter.Convert(src);
+        var converted = PartSectionRegrouper.Convert(src);
         Assert.NotNull(converted);
         Assert.Contains("// verse arrangement", converted);
         Assert.False(SyntaxTree.Parse(converted!).HasErrors);
     }
 
-    // A section-major section may state its own key beside its part blocks. It must not
+    // A by-section section may state its own key beside its part blocks. It must not
     // block the conversion (it used to refuse), and it becomes a standalone header.
-    private const string SectionMajorWithKey = """
+    private const string GroupedBySectionWithKey = """
         section A {
           key g major
           melody { c4 c g' g }
@@ -355,13 +355,13 @@ public class PartSectionLayoutConverterTests
     [Fact]
     public void Convert_SectionKey_NoLongerRefuses()
     {
-        Assert.NotNull(PartSectionLayoutConverter.Convert(SectionMajorWithKey));
+        Assert.NotNull(PartSectionRegrouper.Convert(GroupedBySectionWithKey));
     }
 
     [Fact]
-    public void Convert_SectionMajorKey_ToPartMajor_EmitsStandaloneHeader()
+    public void Convert_GroupedBySectionKey_ToGroupedByPart_EmitsStandaloneHeader()
     {
-        var pm = PartSectionLayoutConverter.Convert(SectionMajorWithKey);
+        var pm = PartSectionRegrouper.Convert(GroupedBySectionWithKey);
         Assert.NotNull(pm);
         _output.WriteLine(pm);
         // The section's key stands parallel to the parts as its own header block…
@@ -376,7 +376,7 @@ public class PartSectionLayoutConverterTests
     }
 
     [Fact]
-    public void Convert_PartMajorStandaloneHeader_ToSectionMajor_FoldsTheKeyIn()
+    public void Convert_GroupedByPartStandaloneHeader_ToGroupedBySection_FoldsTheKeyIn()
     {
         var src = """
             part melody { section A { c4 c g' g } }
@@ -385,8 +385,8 @@ public class PartSectionLayoutConverterTests
             form main { A }
             score main { staff melody  staff bass }
             """;
-        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(src));
-        var sm = PartSectionLayoutConverter.Convert(src);
+        Assert.Equal(Grouping.ByPart, PartSectionRegrouper.Detect(src));
+        var sm = PartSectionRegrouper.Convert(src);
         Assert.NotNull(sm);
         _output.WriteLine(sm);
         // The header folds back into the section, above its part cells.
@@ -399,12 +399,12 @@ public class PartSectionLayoutConverterTests
     [Fact]
     public void Convert_SectionKey_RoundTrips()
     {
-        var pm = PartSectionLayoutConverter.Convert(SectionMajorWithKey);
-        var back = PartSectionLayoutConverter.Convert(pm!);
+        var pm = PartSectionRegrouper.Convert(GroupedBySectionWithKey);
+        var back = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(back);
         // The key survives the round trip, folded back into the section.
         Assert.Contains("key g major", back);
-        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(back!));
+        Assert.Equal(Grouping.BySection, PartSectionRegrouper.Detect(back!));
         Assert.False(SyntaxTree.Parse(back!).HasErrors);
     }
 }

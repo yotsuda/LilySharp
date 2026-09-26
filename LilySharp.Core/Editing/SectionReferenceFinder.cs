@@ -22,7 +22,7 @@ namespace LilySharp.Core.Editing;
 
 /// <summary>
 /// Resolves every occurrence of a <c>section</c> name in a document: its
-/// declaration (<c>section NAME { … }</c>, top-level or part-major inner) and
+/// declaration (<c>section NAME { … }</c>, top-level or by-part inner) and
 /// each place a <c>structure { … }</c> plays it — a plain reference
 /// (<c>NAME</c>), a silent reference (<c>~NAME</c>), and a volta alternative
 /// (<c>[1. NAME]</c> / <c>1. NAME</c>). Powers the editor's "rename a section"

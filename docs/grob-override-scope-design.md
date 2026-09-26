@@ -93,8 +93,8 @@ clef / key / time reset (clef is already implemented this way).
 - A section-internal override does **not** leak into the next section.
 - Global and part-body overrides **persist** across sections (they are the part default).
 
-This is what makes part-major and section-major layouts agree: both reduce to the same
-grid, and `PartSectionLayoutConverter` only has to preserve "boundary reset + part-default
+This is what makes by-part and by-section groupings agree: both reduce to the same
+grid, and `PartSectionRegrouper` only has to preserve "boundary reset + part-default
 persists".
 
 Learned after implementation:
@@ -152,7 +152,7 @@ and `{ override red c d revert … e f }` are equivalent (c d red, e f black).
      reverts / re-overrides per staff).
 5. **Layout / render** — build a per-staff resolver filtered by staff scope.
 6. **Tests** — grid cases, section reset, staff isolation, validation errors, and
-   part-major ⇄ section-major equivalence.
+   by-part ⇄ by-section equivalence.
 
 ## Worked examples
 

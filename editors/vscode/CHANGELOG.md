@@ -55,7 +55,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 - **Convert Layout (part-major ⇄ section-major) is now Regroup (by part ⇄ by section).**
   Same command, plainer names: a file grouped by part writes `part bass { section A { … } }`,
-  one grouped by section writes `section A { bass { … } }`.
+  one grouped by section writes `section A { bass { … } }`. Its command id is now
+  `lilysharp.regroup` (was `lilysharp.convertLayout`): a keybinding set on the old id needs
+  setting again.
 
 ## 0.8.0
 

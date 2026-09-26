@@ -23,14 +23,14 @@ namespace LilySharp.Tests.MusicXml;
 
 /// <summary>
 /// A section's HEADER — its own <c>key</c>, <c>time</c> and <c>partial</c>, written beside
-/// the part blocks (section-major) or as a standalone <c>section A { partial 8 }</c> beside
-/// the parts' cells (part-major) — reaches every part's play of the section in the MusicXML,
+/// the part blocks (by-section) or as a standalone <c>section A { partial 8 }</c> beside
+/// the parts' cells (by-part) — reaches every part's play of the section in the MusicXML,
 /// the way it reaches the page, the MIDI and the LilyPond twin: through a registry keyed by
 /// the section's NAME (HANDOFF §2 R2, session 398).
 /// </summary>
 /// <remarks>
 /// Until session 398 the exporter read the header off the declaration in hand, so the
-/// standalone header of a part-major book reached nothing (the cell is a different
+/// standalone header of a by-part book reached nothing (the cell is a different
 /// declaration), and the header declaration itself was emitted as music — an EMPTY
 /// <c>&lt;part/&gt;</c> under "Part 1" when no single engraved part owned it, which the schema
 /// forbids and the importer cannot read back. The pickup never reached the document at all:
@@ -45,7 +45,7 @@ public class MusicXmlSectionHeaderTests
     /// of the same music write the same measures — the same implicit bar 0 with the pickup
     /// note alone, the same bar 1 with the four crotchets.</summary>
     [Fact]
-    public void HeaderPartial_SectionMajor_WritesTheSameMeasuresAsTheInlineSpelling()
+    public void HeaderPartial_GroupedBySection_WritesTheSameMeasuresAsTheInlineSpelling()
     {
         var inline = Export("octave absolute  time 4/4  partial 8  f'8 | g'4 a' b' c'' |");
         var header = Export("""
@@ -64,10 +64,10 @@ public class MusicXmlSectionHeaderTests
         Assert.Equal(inlineMeasures, headerMeasures);
     }
 
-    /// <summary>A part-major book whose score engraves TWO parts: the standalone header owns
+    /// <summary>A by-part book whose score engraves TWO parts: the standalone header owns
     /// no part, so it must open none — and its pickup is every part's first bar.</summary>
     [Fact]
-    public void HeaderPartial_PartMajorStandaloneHeader_ReachesEveryPart_AndOpensNoPartOfItsOwn()
+    public void HeaderPartial_GroupedByPartStandaloneHeader_ReachesEveryPart_AndOpensNoPartOfItsOwn()
     {
         var doc = Export("""
             key g major
@@ -94,9 +94,9 @@ public class MusicXmlSectionHeaderTests
         Assert.DoesNotContain("Part 1", xml);
     }
 
-    /// <summary>The same registry carries the header's key and time to a part-major cell.</summary>
+    /// <summary>The same registry carries the header's key and time to a by-part cell.</summary>
     [Fact]
-    public void HeaderKeyAndTime_PartMajorStandaloneHeader_ReachTheCell()
+    public void HeaderKeyAndTime_GroupedByPartStandaloneHeader_ReachTheCell()
     {
         var doc = Export("""
             key c major
@@ -119,7 +119,7 @@ public class MusicXmlSectionHeaderTests
     /// (Until session 398 it reached the document only because the standalone header was
     /// walked as music — the bass corpus's test.lys, <c>section A { tempo 110 }</c>.)</summary>
     [Fact]
-    public void HeaderTempo_PartMajorStandaloneHeader_OpensThePiece_OrMarksTheSectionStart()
+    public void HeaderTempo_GroupedByPartStandaloneHeader_OpensThePiece_OrMarksTheSectionStart()
     {
         const string book = """
             octave absolute
@@ -143,7 +143,7 @@ public class MusicXmlSectionHeaderTests
     /// a part is that part's play of the section and still opens the part (an empty chord
     /// chart in the bass corpus is written exactly so); only a top-level one is a header.</summary>
     [Fact]
-    public void AnEmptyPartMajorCell_IsNotAHeader_AndStillOpensItsPart()
+    public void AnEmptyGroupedByPartCell_IsNotAHeader_AndStillOpensItsPart()
     {
         var doc = Export("""
             part bassline { clef bass  section Body { } }

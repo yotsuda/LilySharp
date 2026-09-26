@@ -42,7 +42,7 @@ internal sealed partial class Parser
     /// name parses and every later offset stays true. Null when there is none.
     /// </summary>
     /// <remarks>
-    /// Asked by all four section parsers (top level, part-major, lyric and chord tracks), so
+    /// Asked by all four section parsers (top level, by-part, lyric and chord tracks), so
     /// the answer does not depend on where the declaration stands. The message names where the
     /// tilde does belong — the form reference — because <c>form { ~A }</c> is the analogy
     /// that makes <c>section ~A</c> look writable.
@@ -89,7 +89,7 @@ internal sealed partial class Parser
             // Only the NAMED form reaches here; the unnamed `lyrics { … }` was rejected above.
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
-            // A section-level grob directive (section-major): `override Grob.prop = value`
+            // A section-level grob directive (by-section): `override Grob.prop = value`
             // is a default for this section on every staff. revert/once parse too, then a
             // validator rejects them (they belong in a music stream).
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
@@ -105,7 +105,7 @@ internal sealed partial class Parser
             // music rather than dropping the tokens (plain pitches used to be skipped silently;
             // notes carrying an @annotation were even mis-read as a part cell named after the
             // annotation). This keeps it in the tree so SectionMusicNeedsPartValidator can report
-            // it in a part-major file (it belongs to no part).
+            // it in a by-part file (it belongs to no part).
             _ when IsMusicItemStart() => ParseMusicItem(),
             // Anything else: reported and KEPT (LYS0030). This arm used to be `null`, and
             // ParseList's shared `else Advance()` then dropped the token's width — measured
@@ -171,7 +171,7 @@ internal sealed partial class Parser
         var items = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
-            // Part-major lyric track: a `lyrics` block may hold its own `section`
+            // By-part lyric track: a `lyrics` block may hold its own `section`
             // blocks (dual of a part's inner sections), so a verse can be written per
             // section and replayed by the structure —
             //   lyrics { section A { Twin- kle | } section B { how | } }
@@ -201,7 +201,7 @@ internal sealed partial class Parser
         return new LyricsBlockGreen(keyword, name, singsKeyword, singsTarget, openBrace, [.. items], closeBrace);
     }
 
-    /// <summary>A lyric track's inner section (part-major form): <c>section NAME {
+    /// <summary>A lyric track's inner section (by-part grouping): <c>section NAME {
     /// syllables }</c>. Its body is lyric measures bound to this lyric track; reuses
     /// <see cref="SectionDeclarationGreen"/> so it resolves through the same
     /// section-name machinery as instrument parts.</summary>
@@ -257,7 +257,7 @@ internal sealed partial class Parser
 
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
-            // Part-major chord track: a `chords` block may hold its own `section`
+            // By-part chord track: a `chords` block may hold its own `section`
             // blocks (dual of a part's inner sections), so a chord progression can be
             // written per section and replayed by the structure —
             //   chords harmony { section A { c1 | f1 } section B { c1 } }
@@ -275,7 +275,7 @@ internal sealed partial class Parser
         return new ChordPartBlockGreen(keyword, name, openBrace, [.. items], closeBrace);
     }
 
-    /// <summary>A chord track's inner section (part-major form): <c>section NAME {
+    /// <summary>A chord track's inner section (by-part grouping): <c>section NAME {
     /// chord-entries }</c>. Its body is chord entries + barlines (not general music),
     /// bound to this chord part; reuses <see cref="SectionDeclarationGreen"/> so it
     /// resolves through the same section-name machinery as instrument parts.</summary>

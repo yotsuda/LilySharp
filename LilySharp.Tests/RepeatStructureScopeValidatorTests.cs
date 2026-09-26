@@ -60,10 +60,10 @@ public class RepeatStructureScopeValidatorTests
     // inside a phrase
     [InlineData("part m { clef treble }\nphrase T { |: c'4 d e f | }\n"
         + "section A { m { T } }\nform main { ~A }\nscore main { staff m }\n", 1)]
-    // inside a part-major section
+    // inside a by-part section
     [InlineData("part m { clef treble\n  section A { |: c'4 d e f | :| }\n}\n"
         + "form main { ~A }\nscore main { staff m }\n", 2)]
-    // inside a section-major part block
+    // inside a by-section part block
     [InlineData("part m { clef treble }\nsection A { m { |: c'4 d e f | :| } }\n"
         + "form main { ~A }\nscore main { staff m }\n", 2)]
     // inside a `chords` row — a repeat is a repeat wherever it is written

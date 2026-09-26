@@ -47,7 +47,7 @@ public readonly record struct SectionDeclaration(TextSpan Name, TextSpan Whole)
 /// <param name="Name">The section's name.</param>
 /// <param name="Layers">Every layer that writes it, in document order.</param>
 /// <param name="Declarations">Every <c>section NAME { … }</c> declaration of it, in document
-/// order (one per layer in a part-major book, one per section in a section-major book, plus a
+/// order (one per layer in a by-part book, one per section in a by-section book, plus a
 /// header-only <c>section A { partial 2 }</c>).</param>
 /// <param name="FormReferences">How many times each form names it, by form name, in document
 /// order — written references (<c>A</c>, <c>~A</c>, <c>[1. A]</c>); a <c>|: A :|</c> is one.</param>
@@ -125,12 +125,12 @@ public static class SectionOverview
                 order.Add(name);
             }
             spans.Add(new SectionDeclaration(sec.Name.Span, sec.Span));
-            // A section-major lyrics block (`section A { lyrics w { … } }`) is a layer the
+            // A by-section lyrics block (`section A { lyrics w { … } }`) is a layer the
             // voices above do not list.
             foreach (var child in sec.ChildNodes())
                 if (child is LyricsBlockSyntax lb && !lb.HasSections)
                 {
-                    var cell = SectionBarCounts.LyricsCell(name, lb, lb, SectionBarCounts.LyricsAnchor(lb), partMajor: false);
+                    var cell = SectionBarCounts.LyricsCell(name, lb, lb, SectionBarCounts.LyricsAnchor(lb), groupedByPart: false);
                     Add(name, new SectionLayer(cell.Label, cell.Bars, cell.Anchor, false, true));
                 }
         }

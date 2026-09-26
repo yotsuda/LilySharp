@@ -76,7 +76,7 @@ public class ChordRowMidiTests
     }
 
     [Fact]
-    public void APartMajorTrack_SoundsAtEverySectionItsFormPlays()
+    public void AGroupedByPartTrack_SoundsAtEverySectionItsFormPlays()
     {
         var midi = Export("""
             time 4/4

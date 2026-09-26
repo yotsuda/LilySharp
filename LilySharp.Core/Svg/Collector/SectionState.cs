@@ -20,7 +20,7 @@ namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
 /// Section-tracking state owned by <see cref="MeasureCollector"/>: the section
-/// declarations by name, the part-major cells, and the per-name measure-start
+/// declarations by name, the by-part cells, and the per-name measure-start
 /// bookkeeping that keeps lyric/chord rows aligned to their sections. Grouped
 /// out of MeasureCollector's ~55-field bag so section state has one owner and
 /// one <see cref="Reset"/> (mirrors the OctaveContext extraction).
@@ -30,11 +30,11 @@ internal sealed class SectionState
     /// <summary>Section declarations by name (last wins).</summary>
     public Dictionary<string, SectionDeclarationSyntax> Sections { get; } = new();
 
-    /// <summary>Part-major cells: <c>(section, part)</c> → its declaration.</summary>
-    public Dictionary<(string section, string part), SectionDeclarationSyntax> PartMajorCells { get; } = new();
+    /// <summary>By-part cells: <c>(section, part)</c> → its declaration.</summary>
+    public Dictionary<(string section, string part), SectionDeclarationSyntax> GroupedByPartCells { get; } = new();
 
-    /// <summary>Part-major CHORD-TRACK cells: <c>(section, track)</c> → the inner section of
-    /// <c>chords track { section NAME { … } }</c>. Kept apart from <see cref="PartMajorCells"/>
+    /// <summary>By-part CHORD-TRACK cells: <c>(section, track)</c> → the inner section of
+    /// <c>chords track { section NAME { … } }</c>. Kept apart from <see cref="GroupedByPartCells"/>
     /// (whose bodies are music) because a chord cell's bars are counted by the row's own
     /// rule (<see cref="ChordNameCollector.CountSectionBars(SectionDeclarationSyntax)"/>). A chord track is a voice of
     /// the section like any part: its bar count joins the section's canonical bar count, so
@@ -56,7 +56,7 @@ internal sealed class SectionState
     public void Reset()
     {
         Sections.Clear();
-        PartMajorCells.Clear();
+        GroupedByPartCells.Clear();
         ChordTrackCells.Clear();
         StartMeasure.Clear();
         AllStarts.Clear();

@@ -483,7 +483,7 @@ public class MusicXmlRoundTripTests
     [Fact]
     public void RelativeOctave_UnderVolta_PreservesPitches()
     {
-        // Relative output now also covers the section-major volta layout (each section
+        // Relative output now also covers the by-section volta layout (each section
         // is its own relative stream). Pitches must survive: Body/End1/End2 = C5/D5/E5.
         var (lys, _) = new MusicXmlImporter().Import("""
             <?xml version="1.0"?>

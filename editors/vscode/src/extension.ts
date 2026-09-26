@@ -461,9 +461,9 @@ export function activate(context: vscode.ExtensionContext) {
                 return vscode.commands.executeCommand(
                     'editor.action.showReferences', vscode.Uri.parse(uri), pos(position), locs);
             }),
-        vscode.commands.registerCommand('lilysharp.convertLayout', () => {
-            outputChannel.appendLine('convertLayout command triggered');
-            convertLayout();
+        vscode.commands.registerCommand('lilysharp.regroup', () => {
+            outputChannel.appendLine('regroup command triggered');
+            regroup();
         }),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
             outputChannel.appendLine('extractPhrase command triggered');
@@ -1471,20 +1471,20 @@ async function applyScoreTemplate(label: string, template: string, range: number
     editor.revealRange(new vscode.Range(start, start));
 }
 
-interface ConvertLayoutResponse {
+interface RegroupResponse {
     Success: boolean;
     NewText: string | null;
-    FromLayout: string | null;
-    ToLayout: string | null;
+    FromGrouping: string | null;
+    ToGrouping: string | null;
     Error: string | null;
 }
 
 /**
- * Converts the active .lys document between the section-major and part-major
+ * Converts the active .lys document between the by-section and by-part
  * layouts (toggles whichever the file currently uses) and applies the result as
  * a full-document edit.
  */
-async function convertLayout() {
+async function regroup() {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
         vscode.window.showErrorMessage('Lily#: open a .lys file to regroup it.');
@@ -1497,7 +1497,7 @@ async function convertLayout() {
 
     const doc = editor.document;
     try {
-        const response = await client.sendRequest<ConvertLayoutResponse>('lilysharp/convertLayout', {
+        const response = await client.sendRequest<RegroupResponse>('lilysharp/regroup', {
             textDocument: { uri: doc.uri.toString() }
         });
         if (response.Success && response.NewText != null) {
@@ -1507,7 +1507,7 @@ async function convertLayout() {
             edit.replace(doc.uri, fullRange, response.NewText);
             await vscode.workspace.applyEdit(edit);
             vscode.window.showInformationMessage(
-                `Lily#: regrouped ${response.ToLayout} (was ${response.FromLayout}).`);
+                `Lily#: regrouped ${response.ToGrouping} (was ${response.FromGrouping}).`);
         } else {
             vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
         }

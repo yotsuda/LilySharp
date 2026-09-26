@@ -359,9 +359,9 @@ public class SingsLyricsTests
     }
 
     [Fact]
-    public void TheLayoutConverter_CarriesTheBinding_BothWays()
+    public void TheRegrouper_CarriesTheBinding_BothWays()
     {
-        const string sectionMajor = """
+        const string groupedBySection = """
             part m { clef treble }
             section A {
               m { c4 d e f | }
@@ -370,11 +370,11 @@ public class SingsLyricsTests
             form main { A }
             score main { staff m  lyrics w }
             """;
-        var pm = PartSectionLayoutConverter.Convert(sectionMajor);
+        var pm = PartSectionRegrouper.Convert(groupedBySection);
         Assert.NotNull(pm);
         Assert.Contains("lyrics w sings m", pm);
 
-        var back = PartSectionLayoutConverter.Convert(pm!);
+        var back = PartSectionRegrouper.Convert(pm!);
         Assert.NotNull(back);
         Assert.Contains("lyrics w sings m", back);
         Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(back!)),

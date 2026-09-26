@@ -72,14 +72,14 @@ public class LilyPondStandaloneSectionHeaderTests
         + "part m { clef treble\n  section A { c'4 c c c | }\n}\n"
         + "section A { key g major }\n";
 
-    // The same pair written section-major — the header still stands outside the part, so
+    // The same pair written by-section — the header still stands outside the part, so
     // it reaches the exporter by the same arm and used to eat the cell the same way.
-    private const string SectionMajorBefore =
+    private const string GroupedBySectionBefore =
         "time 4/4\n"
         + "section A { key g major }\n"
         + "part m { clef treble }\n"
         + "section A { m { c'4 c c c | } }\n";
-    private const string SectionMajorAfter =
+    private const string GroupedBySectionAfter =
         "time 4/4\n"
         + "part m { clef treble }\n"
         + "section A { m { c'4 c c c | } }\n"
@@ -87,23 +87,23 @@ public class LilyPondStandaloneSectionHeaderTests
 
     [Theory]
     [InlineData(HeaderBefore, HeaderAfter)]
-    [InlineData(SectionMajorBefore, SectionMajorAfter)]
+    [InlineData(GroupedBySectionBefore, GroupedBySectionAfter)]
     public void MovingTheHeaderAcrossThePart_DoesNotChangeTheTwin(string before, string after)
         => Assert.Equal(Export(before + Tail), Export(after + Tail));
 
     [Theory]
     [InlineData(HeaderBefore)]
     [InlineData(HeaderAfter)]
-    [InlineData(SectionMajorBefore)]
-    [InlineData(SectionMajorAfter)]
+    [InlineData(GroupedBySectionBefore)]
+    [InlineData(GroupedBySectionAfter)]
     public void TheSectionsMusicReachesTheTwin(string book)
         => Assert.Contains("c'4 c c c |", Export(book + Tail));
 
     [Theory]
     [InlineData(HeaderBefore)]
     [InlineData(HeaderAfter)]
-    [InlineData(SectionMajorBefore)]
-    [InlineData(SectionMajorAfter)]
+    [InlineData(GroupedBySectionBefore)]
+    [InlineData(GroupedBySectionAfter)]
     public void TheHeadersDirectiveIsWrittenOnce(string book)
         => Assert.Equal(1, Regex.Matches(Export(book + Tail), Regex.Escape("\\key g \\major")).Count);
 

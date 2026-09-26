@@ -28,9 +28,9 @@ namespace LilySharp.Core.Svg.Collector;
 /// author which voice is short.
 /// </summary>
 /// <remarks>
-/// The voices of a section named <c>A</c>: every part-major cell <c>part p { section A { … } }</c>,
+/// The voices of a section named <c>A</c>: every by-part cell <c>part p { section A { … } }</c>,
 /// every chord-track cell <c>chords t { section A { … } }</c>, the part blocks and the NAMED
-/// chord blocks inside a section-major <c>section A { p { … } chords t { … } }</c>, and a
+/// chord blocks inside a by-section <c>section A { p { … } chords t { … } }</c>, and a
 /// top-level declaration's own inline music (the single-part shorthand, counted only when
 /// the declaration holds no part or chord block). A lyrics track's cell is NOT a voice: a
 /// lyrics section longer than its music is a stacked verse by design (LyricsCollector's
@@ -72,21 +72,21 @@ internal static class SectionBarCounts
     /// <param name="Label">How a message names it: <c>part 'x'</c> / <c>chords 'x'</c> /
     /// <c>section 'x'</c> (the single-part shorthand).</param>
     /// <param name="IsChords">A chord row (bars, no beats).</param>
-    /// <param name="Container">The node whose items are the voice's bars — the part-major
-    /// cell, the section-major part block / chord block, or the top-level section itself.</param>
+    /// <param name="Container">The node whose items are the voice's bars — the by-part
+    /// cell, the by-section part block / chord block, or the top-level section itself.</param>
     /// <param name="Anchor">The name token the validator anchors its warning on.</param>
     /// <param name="Bars">Bars written (semantic).</param>
     /// <param name="TrailingOpen">The last bar is still open — items after the last bar
     /// line — so a reader padding the voice closes it with its first added bar line.</param>
-    /// <param name="PartMajor">Written inside a <c>part</c> or a <c>chords</c> track (the
-    /// cross-part validator's part-major pass), as opposed to inside a section-major
+    /// <param name="GroupedByPart">Written inside a <c>part</c> or a <c>chords</c> track (the
+    /// cross-part validator's by-part pass), as opposed to inside a by-section
     /// declaration.</param>
     /// <param name="IsLyrics">A lyrics cell (<see cref="LyricsCells"/>) — compared by the
     /// validator only, and only as the SHORT side; never a voice of
     /// <see cref="SemanticVoices"/>, never in <see cref="SemanticIndex"/>.</param>
     public sealed record SemanticVoice(
         string SectionName, string Label, bool IsChords, SyntaxNode Container, TextSpan Anchor,
-        int Bars, bool TrailingOpen, bool PartMajor, bool IsLyrics = false);
+        int Bars, bool TrailingOpen, bool GroupedByPart, bool IsLyrics = false);
 
     /// <summary>The kinds <see cref="SemanticVoices"/>'s walk does something for: it arms
     /// the meter from a score-level <c>time</c> and makes a voice of a section. Every other
@@ -117,15 +117,15 @@ internal static class SectionBarCounts
     /// <param name="phraseBodies">The book's phrase-body table (a phrase's body, a variable's
     /// expression, by name), when the caller already holds one; null gathers it here with the
     /// same rule.</param>
-    /// <param name="partMajorOnly">Only the cells written inside a <c>part</c> or a
-    /// <c>chords</c> track (<see cref="SemanticVoice.PartMajor"/>), for the cross-part
-    /// validator's part-major pass, which reads the section-major voices from the section
-    /// itself: a section-major voice's bars are not split at all then — splitting them for a
+    /// <param name="groupedByPartOnly">Only the cells written inside a <c>part</c> or a
+    /// <c>chords</c> track (<see cref="SemanticVoice.GroupedByPart"/>), for the cross-part
+    /// validator's by-part pass, which reads the by-section voices from the section
+    /// itself: a by-section voice's bars are not split at all then — splitting them for a
     /// reader that discards them was most of that validator's cost on a one-part book
     /// (MEASURED, session 400). The meter rule is unchanged: a score-level <c>time</c> is
     /// still read wherever it stands.</param>
     public static List<SemanticVoice> SemanticVoices(SyntaxNode root,
-        IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null, bool partMajorOnly = false)
+        IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null, bool groupedByPartOnly = false)
     {
         var phrases = phraseBodies;
         if (phrases == null)
@@ -155,17 +155,17 @@ internal static class SectionBarCounts
             switch (sec.Parent)
             {
                 case PartDeclarationSyntax part:
-                    voices.Add(Music(name, $"part '{part.Name.Text}'", sec, sec.Name.Span, time, phrases, partMajor: true));
+                    voices.Add(Music(name, $"part '{part.Name.Text}'", sec, sec.Name.Span, time, phrases, groupedByPart: true));
                     continue;
                 case ChordPartBlockSyntax { PartName: { } track }:
-                    voices.Add(Chords(name, $"chords '{track}'", sec, sec.Name.Span, partMajor: true));
+                    voices.Add(Chords(name, $"chords '{track}'", sec, sec.Name.Span, groupedByPart: true));
                     continue;
                 case ChordPartBlockSyntax or LyricsBlockSyntax:
                     continue; // a nameless chord block's cell, or a lyrics cell: no voice
             }
-            if (partMajorOnly)
+            if (groupedByPartOnly)
                 continue;
-            // Section-major (or a standalone / header declaration): its blocks are the voices.
+            // By-section (or a standalone / header declaration): its blocks are the voices.
             var local = time;
             bool anyBlock = false;
             foreach (var child in sec.ChildNodes())
@@ -176,11 +176,11 @@ internal static class SectionBarCounts
                         local = DurationCalculator.ParseTimeSignature(t.Beats, t.BeatType);
                         break;
                     case PartBlockSyntax pb:
-                        voices.Add(Music(name, $"part '{pb.Name}'", pb, pb.PartName.Span, local, phrases, partMajor: false));
+                        voices.Add(Music(name, $"part '{pb.Name}'", pb, pb.PartName.Span, local, phrases, groupedByPart: false));
                         anyBlock = true;
                         break;
                     case ChordPartBlockSyntax { PartName: { } track, NameToken: { } tok } cb:
-                        voices.Add(Chords(name, $"chords '{track}'", cb, tok.Span, partMajor: false));
+                        voices.Add(Chords(name, $"chords '{track}'", cb, tok.Span, groupedByPart: false));
                         anyBlock = true;
                         break;
                 }
@@ -188,34 +188,34 @@ internal static class SectionBarCounts
             // The single-part shorthand: the lone part's music written straight into a
             // top-level section (MeasureCollector.Form.cs "Single-part shorthand").
             if (!anyBlock && sec.Parent is CompilationUnitSyntax && MeasureCollector.SectionHasInlineMusic(sec))
-                voices.Add(Music(name, $"section '{name}'", sec, sec.Name.Span, local, phrases, partMajor: false));
+                voices.Add(Music(name, $"section '{name}'", sec, sec.Name.Span, local, phrases, groupedByPart: false));
         }
         return voices;
     }
 
     private static SemanticVoice Music(string section, string label, SyntaxNode container, TextSpan anchor,
-        Fraction time, IReadOnlyDictionary<string, SyntaxNode> phrases, bool partMajor)
+        Fraction time, IReadOnlyDictionary<string, SyntaxNode> phrases, bool groupedByPart)
     {
         int bars = MeasureModel.Split(container, phrases, time).Count;
         MeasureCollector.CountBarsInScope(container, out bool open);
-        return new SemanticVoice(section, label, false, container, anchor, bars, open, partMajor);
+        return new SemanticVoice(section, label, false, container, anchor, bars, open, groupedByPart);
     }
 
-    private static SemanticVoice Chords(string section, string label, SyntaxNode container, TextSpan anchor, bool partMajor)
+    private static SemanticVoice Chords(string section, string label, SyntaxNode container, TextSpan anchor, bool groupedByPart)
     {
         int bars = container is ChordPartBlockSyntax block
             ? ChordNameCollector.CountBars(block, out bool open)
             : ChordNameCollector.CountSectionBars((SectionDeclarationSyntax)container, out open);
-        return new SemanticVoice(section, label, true, container, anchor, bars, open, partMajor);
+        return new SemanticVoice(section, label, true, container, anchor, bars, open, groupedByPart);
     }
 
-    /// <summary>The part-major lyrics CELLS of every section under <paramref name="root"/>
+    /// <summary>The by-part lyrics CELLS of every section under <paramref name="root"/>
     /// (<c>lyrics w { section A { … } }</c>), in document order, each with its bar count —
     /// <see cref="LyricSyllableReader.CountBars(SyntaxNode, out bool)"/>: one bar per lyric
     /// measure, the widest <c>[N. …]</c> verse. Not voices (see the class remarks): the
     /// cross-part validator reads these beside <see cref="SemanticVoices"/> and names a cell
     /// that writes FEWER bars than the section's voices (LYS2007); a longer one is a stacked
-    /// verse and says nothing. The section-major cell (<c>section A { lyrics w [sings p]
+    /// verse and says nothing. The by-section cell (<c>section A { lyrics w [sings p]
     /// { … } }</c>) is read by the validator where it reads the section's part blocks, with
     /// <see cref="LyricsCell"/>.</summary>
     public static List<SemanticVoice> LyricsCells(SyntaxNode root)
@@ -225,18 +225,18 @@ internal static class SectionBarCounts
         // second spelling to keep in step (session 409's rule; HANDOFF §2 R13⒮).
         foreach (var n in root.DescendantNodes<SectionDeclarationSyntax>())
             if (n is SectionDeclarationSyntax { Parent: LyricsBlockSyntax track } sec)
-                cells.Add(LyricsCell(sec.SectionName, track, sec, sec.Name.Span, partMajor: true));
+                cells.Add(LyricsCell(sec.SectionName, track, sec, sec.Name.Span, groupedByPart: true));
         return cells;
     }
 
     /// <summary>One lyrics cell of <paramref name="section"/>, written in
-    /// <paramref name="track"/>: the part-major inner section (container = the section,
-    /// anchored on its name) or the section-major block itself (container = the block,
+    /// <paramref name="track"/>: the by-part inner section (container = the section,
+    /// anchored on its name) or the by-section block itself (container = the block,
     /// anchored on its track name — the keyword when it writes none).</summary>
-    public static SemanticVoice LyricsCell(string section, LyricsBlockSyntax track, SyntaxNode container, TextSpan anchor, bool partMajor)
+    public static SemanticVoice LyricsCell(string section, LyricsBlockSyntax track, SyntaxNode container, TextSpan anchor, bool groupedByPart)
     {
         int bars = LyricSyllableReader.CountBars(container, out bool open);
-        return new SemanticVoice(section, LyricsLabel(track), false, container, anchor, bars, open, partMajor, IsLyrics: true);
+        return new SemanticVoice(section, LyricsLabel(track), false, container, anchor, bars, open, groupedByPart, IsLyrics: true);
     }
 
     /// <summary>How a message names a lyrics track: <c>lyrics 'w'</c>, or <c>lyrics</c> for
@@ -244,7 +244,7 @@ internal static class SectionBarCounts
     public static string LyricsLabel(LyricsBlockSyntax track)
         => track.VoiceName is { } name ? $"lyrics '{name}'" : "lyrics";
 
-    /// <summary>The span a section-major lyrics block's warning is anchored on: its track
+    /// <summary>The span a by-section lyrics block's warning is anchored on: its track
     /// name token, or the <c>lyrics</c> keyword when it writes none. The editor's quick fix
     /// resolves the block back from this span.</summary>
     public static TextSpan LyricsAnchor(LyricsBlockSyntax track)
@@ -261,7 +261,7 @@ internal static class SectionBarCounts
         /// <summary>Bars this voice's play is short of its section: 0 when it is the longest,
         /// unknown, or a container the index does not hold. <paramref name="trailingOpen"/>
         /// says whether its last bar is still open (see <see cref="SemanticVoice.TrailingOpen"/>).
-        /// A section-major part block may be handed as its BODY (the LilyPond twin's container
+        /// A by-section part block may be handed as its BODY (the LilyPond twin's container
         /// is the block's music node); the lookup walks up to the block.</summary>
         public int Missing(SyntaxNode container, out bool trailingOpen)
         {
@@ -318,8 +318,8 @@ internal static class SectionBarCounts
     }
 
     /// <summary>The greatest bar count among the voices ONE declaration of a section
-    /// holds: its own bars for a part-major or chord-track cell, the longest of its part
-    /// blocks / named chord blocks for a section-major declaration, its inline music for
+    /// holds: its own bars for a by-part or chord-track cell, the longest of its part
+    /// blocks / named chord blocks for a by-section declaration, its inline music for
     /// the single-part shorthand. −1 for a lyrics track's cell (no voice at all).</summary>
     private static int DeclarationBarsSyntactic(SectionDeclarationSyntax section, MeasureCollector.PhraseBarTable phrases)
     {

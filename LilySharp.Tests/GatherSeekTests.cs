@@ -251,7 +251,7 @@ public class GatherSeekTests
     }
 
     /// <summary>The containers the top-level walk gathers (ProcessMusicContainer): every
-    /// part block and every section declaration (a part-major cell is one), plus the
+    /// part block and every section declaration (a by-part cell is one), plus the
     /// root (the section-less path).</summary>
     private static IEnumerable<SyntaxNode> GatherRoots(SyntaxNode root)
     {

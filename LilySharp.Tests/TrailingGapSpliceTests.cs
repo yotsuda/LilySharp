@@ -36,10 +36,10 @@ namespace LilySharp.Tests;
 /// the suite, not the owner's corpus rendered forward — and filed ⒮¹². Session 523 reran the
 /// sweep with the gate forced open: 0 of 259 net books diverged, but 3 edits in 2 books of the
 /// owner's corpus did (tab-chord.lys twice, 想い人.lys once), every one of them a NOTE TYPED AFTER
-/// A PART-MAJOR CELL'S LAST ITEM. The suite's own shape of that hole
-/// (<c>CollectEditResumeTests.NoteTypedAfterABodysLastItem_IsNotSplicedAway</c>) is section-major,
+/// A BY-PART CELL'S LAST ITEM. The suite's own shape of that hole
+/// (<c>CollectEditResumeTests.NoteTypedAfterABodysLastItem_IsNotSplicedAway</c>) is by-section,
 /// walked through <see cref="IncrementalCompiler"/>, and stays green with the gate open — a
-/// part-major cell reaches the splice through a different address. These two books are the
+/// by-part cell reaches the splice through a different address. These two books are the
 /// corpus's shapes, on the planner's own path, asserting BOTH that the resumed collect equals a
 /// fresh one and that the gate is what declined (an equality alone would be satisfied by any
 /// other guard taking over — RULES §5.4's "a net that does not redden under the poison claims
@@ -48,8 +48,8 @@ namespace LilySharp.Tests;
 /// </remarks>
 public sealed class TrailingGapSpliceTests
 {
-    // tab-chord.lys's shape: two part-major cells of one whole note each, a tab staff.
-    private const string PartMajorChords = """
+    // tab-chord.lys's shape: two by-part cells of one whole note each, a tab staff.
+    private const string GroupedByPartChords = """
         part melody {
           section A { c1\3@chord(Cmaj7) }
         }
@@ -66,8 +66,8 @@ public sealed class TrailingGapSpliceTests
         }
         """;
 
-    // 想い人.lys's shape: a part-major cell whose last item closes a slur, on a bass tab.
-    private const string PartMajorSlurEnd = """
+    // 想い人.lys's shape: a by-part cell whose last item closes a slur, on a bass tab.
+    private const string GroupedByPartSlurEnd = """
         part bass { clef bass  octave 3 }
 
         part bass {
@@ -85,10 +85,10 @@ public sealed class TrailingGapSpliceTests
         """;
 
     [Theory]
-    [InlineData(PartMajorChords, @"c1\3@chord(Cmaj7) }", @"c1\3@chord(Cmaj7) c1\3@chord(Cmaj7) }")]
-    [InlineData(PartMajorChords, @"e1\3@chord(Dm7) }", @"e1\3@chord(Dm7) e1\3@chord(Dm7) }")]
-    [InlineData(PartMajorSlurEnd, @"b,,2.\4)", @"b,,2.\4) b,,2.\4)")]
-    public void ANoteTypedAfterAPartMajorCellsLastItem_IsDeclinedByTheContentWindowGate(
+    [InlineData(GroupedByPartChords, @"c1\3@chord(Cmaj7) }", @"c1\3@chord(Cmaj7) c1\3@chord(Cmaj7) }")]
+    [InlineData(GroupedByPartChords, @"e1\3@chord(Dm7) }", @"e1\3@chord(Dm7) e1\3@chord(Dm7) }")]
+    [InlineData(GroupedByPartSlurEnd, @"b,,2.\4)", @"b,,2.\4) b,,2.\4)")]
+    public void ANoteTypedAfterAGroupedByPartCellsLastItem_IsDeclinedByTheContentWindowGate(
         string source, string find, string replacement)
     {
         var oldText = source.Replace("\r\n", "\n");

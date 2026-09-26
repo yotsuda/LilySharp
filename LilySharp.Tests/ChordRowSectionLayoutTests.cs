@@ -24,7 +24,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// A rows-only score (chords / lyrics, no staff) never runs ProcessForm, so its section starts
 /// are laid out from the row tracks. The bar counter only looked for chord blocks NESTED in a
-/// section; a part-major chord TRACK (chords X { section A { … } }) keeps its bars on the section
+/// section; a by-part chord TRACK (chords X { section A { … } }) keeps its bars on the section
 /// itself, so every section counted zero bars and stacked at bar 0 — the whole chart collapsed
 /// onto one section's width. These lock the correct per-section bar layout.
 /// </summary>

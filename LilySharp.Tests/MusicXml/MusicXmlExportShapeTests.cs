@@ -85,9 +85,9 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
-    public void PartMajorSection_ExportsItsInlineNotes_NotAnEmptyPart()
+    public void GroupedByPartSection_ExportsItsInlineNotes_NotAnEmptyPart()
     {
-        // A part-major `part m { section A { … } }` cell holds its music INLINE.
+        // A by-part `part m { section A { … } }` cell holds its music INLINE.
         // The inline notes used to hit ProcessNode's skip-declarations case, so the
         // part exported empty; now they emit under the enclosing part's name and clef.
         var doc = Export("""
@@ -106,7 +106,7 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
-    public void PartMajorPart_WithSeveralSections_ConcatenatesThem()
+    public void GroupedByPartPart_WithSeveralSections_ConcatenatesThem()
     {
         // Two sections of the same part flow into one continuous part.
         var doc = Export("""

@@ -33,7 +33,7 @@ public class RenameSymbolTests
 {
     // One document exercising every renameable namespace. Names are distinct and
     // non-substring so occurrence counting is unambiguous. The section `Verse` is
-    // declared once per part-major track (part / lyrics / chords) plus referenced by
+    // declared once per by-part track (part / lyrics / chords) plus referenced by
     // the form — all four must rename together.
     private const string Source =
         "part tune {\n" +

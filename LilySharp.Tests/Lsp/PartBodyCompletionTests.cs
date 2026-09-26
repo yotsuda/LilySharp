@@ -69,7 +69,7 @@ public class PartBodyCompletionTests
     }
 
     [Fact]
-    public void PartMajorInnerSection_StillOffersMusic()
+    public void GroupedByPartInnerSection_StillOffersMusic()
     {
         // Control: inside `part melody "…" { section A { ▮ } }` the caret IS in music,
         // so pitch letters SHOULD be offered — the fix must not over-suppress.

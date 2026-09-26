@@ -21,8 +21,8 @@ namespace LilySharp.Core.Semantics;
 
 /// <summary>
 /// A piece is a grid of (section x part) cells. Each cell — the music for one part
-/// in one section — may be filled exactly once, whether written section-major
-/// (<c>section A { bass { ... } }</c>) or part-major (<c>part bass { section A { ... } }</c>),
+/// in one section — may be filled exactly once, whether written by-section
+/// (<c>section A { bass { ... } }</c>) or by-part (<c>part bass { section A { ... } }</c>),
 /// and across included files. Two definitions of the same cell would silently
 /// collide, so this flags them. (Sections and parts themselves are open: a section
 /// may gather music from many parts, and a part may span many sections.)
@@ -42,12 +42,12 @@ internal sealed class DuplicateCellValidator : ISemanticValidator
             var owningPart = EnclosingPartName(section);
             if (owningPart != null)
             {
-                // Part-major: the inner section is itself one cell for its part.
+                // By-part: the inner section is itself one cell for its part.
                 Record(seen, section.SectionName, owningPart, section.Name);
             }
             else
             {
-                // Section-major: each part-block in the section is a cell. Direct children
+                // By-section: each part-block in the section is a cell. Direct children
                 // only: a PartBlockSyntax is produced exclusively by ParseSectionItem
                 // (Parser.Sections.cs — the Identifier and clef-keyword arms), so every part
                 // block is a DIRECT child of its section declaration (the collector's

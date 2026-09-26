@@ -79,10 +79,10 @@ public class TopLevelSingletonCompletionTests
         Assert.Contains("time", labels);
     }
 
-    // ----- part-major with no top-level section yet: known section names at the top level -----
+    // ----- by-part with no top-level section yet: known section names at the top level -----
 
     [Fact]
-    public void PartMajorNoGlobalSection_OffersKnownSectionNamesAtTopLevel()
+    public void GroupedByPartNoGlobalSection_OffersKnownSectionNamesAtTopLevel()
     {
         var text = "part melody { section A { c } section B { d } }\nform main { A B }\n";
         var items = LilySharpLanguageServer.GetTopLevelCompletions(text, text.Length).Items;

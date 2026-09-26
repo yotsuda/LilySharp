@@ -107,7 +107,7 @@ public class EmptyMeasureValidatorTests
         => Assert.Equal(1, PlaceholderCount("||"));
 
     // (THREE THEORIES STOOD HERE and went with the pass they guarded, 2026-08-28:
-    // PartMajorTrackCells_AreNotMeasuredAsMusic, StafflessLeadSheetSection_IsNotMeasuredAsMusic
+    // GroupedByPartTrackCells_AreNotMeasuredAsMusic, StafflessLeadSheetSection_IsNotMeasuredAsMusic
     // and AMusicSectionStillWarns_SoTheTrackExemptionIsNotABlanketOne — plus
     // EmptyMeasure_WarnsRegardlessOfTheForm above them. All four were about
     // MeasureValidator.ValidateEmptyPlaceholders: which sections its scope list REACHED, and
@@ -116,7 +116,7 @@ public class EmptyMeasureValidatorTests
     // its scope list. The worry under the track cases — that a chord or lyric TRACK's
     // barlines get read as music — is still answered, structurally and elsewhere:
     // CrossPartMeasureValidator scopes on PartBlockSyntax, so a track never reaches it at
-    // all, and the collector routes a track through MeasureCollector.IsInsidePartMajorTrack.
+    // all, and the collector routes a track through MeasureCollector.IsInsideGroupedByPartTrack.
     // Rebuilding a scope list here only to have something to assert would be keeping a net
     // for a machine that was removed.)
 

@@ -23,17 +23,17 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// In a part-major file (parts nest their own sections) a top-level TRACK — lyrics or
+/// In a by-part file (parts nest their own sections) a top-level TRACK — lyrics or
 /// chords — must mirror that shape: <c>lyrics v { section A { … } }</c>,
 /// <c>chords prog { section A { … } }</c>. A flat top-level track is rejected; a
-/// sectioned track, an inline block inside a part or section, and any section-major or
+/// sectioned track, an inline block inside a part or section, and any by-section or
 /// structureless file are left alone.
 /// </summary>
 /// <remarks>
 /// The two kinds are asserted side by side on purpose. The lyrics half shipped alone
 /// (LYS4002) and the chords half did not exist, so the identical shape was an error in
 /// one track and silently accepted in the other — <c>chords prog { Dmaj7 | Em7 | Gmaj7 |
-/// A7 }</c> beside a part-major part laid its bars over bar 0 onward and chorded only the
+/// A7 }</c> beside a by-part part laid its bars over bar 0 onward and chorded only the
 /// first pass of the first section (user report, session 240).
 /// </remarks>
 [Trait("Category", "Unit")]
@@ -52,7 +52,7 @@ public class TrackNeedsSectionsValidatorTests
     private static bool ChordsFlagged(string source)
         => Run(source).Any(d => d.Code == DiagnosticCodes.ChordTrackNeedsSections);
 
-    private const string PartMajorParts = """
+    private const string GroupedByPartParts = """
         time 4/4
         key c major
         part melody { clef treble
@@ -64,9 +64,9 @@ public class TrackNeedsSectionsValidatorTests
     // ---- lyrics ----
 
     [Fact]
-    public void PartMajor_FlatTopLevelLyricsTrack_Errors()
+    public void GroupedByPart_FlatTopLevelLyricsTrack_Errors()
     {
-        Assert.True(LyricsFlagged(PartMajorParts + """
+        Assert.True(LyricsFlagged(GroupedByPartParts + """
             lyrics words { Do re mi fa | sol la ti do | }
             form main { A B }
             score main { staff melody  lyrics words }
@@ -74,9 +74,9 @@ public class TrackNeedsSectionsValidatorTests
     }
 
     [Fact]
-    public void PartMajor_SectionedLyricsTrack_IsClean()
+    public void GroupedByPart_SectionedLyricsTrack_IsClean()
     {
-        Assert.False(LyricsFlagged(PartMajorParts + """
+        Assert.False(LyricsFlagged(GroupedByPartParts + """
             lyrics words { section A { Do re mi fa | } section B { sol la ti do | } }
             form main { A B }
             score main { staff melody  lyrics words }
@@ -84,9 +84,9 @@ public class TrackNeedsSectionsValidatorTests
     }
 
     [Fact]
-    public void SectionMajor_InlineFlatLyrics_IsClean()
+    public void GroupedBySection_InlineFlatLyrics_IsClean()
     {
-        // Section-major (top-level `section` holds the parts): a flat lyrics block in a
+        // By-section (top-level `section` holds the parts): a flat lyrics block in a
         // section is the norm, not a top-level track — never flagged.
         Assert.False(LyricsFlagged("""
             time 4/4
@@ -101,17 +101,17 @@ public class TrackNeedsSectionsValidatorTests
     [Fact]
     public void Structureless_FlatLyrics_IsClean()
     {
-        // No parts-with-sections: layout is not part-major, so flat lyrics are fine.
+        // No parts-with-sections: layout is not by-part, so flat lyrics are fine.
         Assert.False(LyricsFlagged("time 4/4\n{ c4 d e f }\nlyrics { one two three four }\n"));
     }
 
     // ---- chords: the same four questions, which is the point ----
 
     [Fact]
-    public void PartMajor_FlatTopLevelChordsTrack_Errors()
+    public void GroupedByPart_FlatTopLevelChordsTrack_Errors()
     {
         // The reported shape, reduced.
-        Assert.True(ChordsFlagged(PartMajorParts + """
+        Assert.True(ChordsFlagged(GroupedByPartParts + """
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
             form main { A B }
             score main { staff melody  chords prog }
@@ -119,9 +119,9 @@ public class TrackNeedsSectionsValidatorTests
     }
 
     [Fact]
-    public void PartMajor_SectionedChordsTrack_IsClean()
+    public void GroupedByPart_SectionedChordsTrack_IsClean()
     {
-        Assert.False(ChordsFlagged(PartMajorParts + """
+        Assert.False(ChordsFlagged(GroupedByPartParts + """
             chords prog { section A { Dmaj7 | Em7 | } section B { Gmaj7 | A7 | } }
             form main { A B }
             score main { staff melody  chords prog }
@@ -129,12 +129,12 @@ public class TrackNeedsSectionsValidatorTests
     }
 
     [Fact]
-    public void PartMajor_ChordsInsideAStandaloneSection_IsClean()
+    public void GroupedByPart_ChordsInsideAStandaloneSection_IsClean()
     {
-        // A part-major file may still write a section header holding the track's cell.
+        // A by-part file may still write a section header holding the track's cell.
         // That block HAS its section — the ancestor test, not the file's layout, is what
         // exempts it.
-        Assert.False(ChordsFlagged(PartMajorParts + """
+        Assert.False(ChordsFlagged(GroupedByPartParts + """
             section A { chords prog { Dmaj7 | Em7 | } }
             form main { A B }
             score main { staff melody  chords prog }
@@ -150,7 +150,7 @@ public class TrackNeedsSectionsValidatorTests
     [Fact]
     public void TheChordsMessageNamesTheTrack_SoTheFixCanBePasted()
     {
-        var d = Run(PartMajorParts + """
+        var d = Run(GroupedByPartParts + """
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
             form main { A B }
             score main { staff melody  chords prog }
@@ -168,7 +168,7 @@ public class TrackNeedsSectionsValidatorTests
     [Fact]
     public void TheValidatorIsRegistered_SoCheckAndTheEditorBothReportIt()
     {
-        var tree = SyntaxTree.Parse(PartMajorParts + """
+        var tree = SyntaxTree.Parse(GroupedByPartParts + """
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
             form main { A B }
             score main { staff melody  chords prog }
@@ -184,7 +184,7 @@ public class TrackNeedsSectionsValidatorTests
     {
         // The reason the two halves share a validator: a file that writes both flat gets
         // both errors, and neither kind can quietly lose the rule the other keeps.
-        var diags = Run(PartMajorParts + """
+        var diags = Run(GroupedByPartParts + """
             lyrics words { Do re mi fa | sol la ti do | }
             chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }
             form main { A B }

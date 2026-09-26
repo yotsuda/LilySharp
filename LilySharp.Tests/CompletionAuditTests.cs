@@ -83,7 +83,7 @@ public class CompletionAuditTests
         return Regex.Replace(text, @"\$\{\d+\}|\$\d+", pick);
     }
 
-    /// <summary>A whole book: <paramref name="top"/> ahead of a one-part section-major piece,
+    /// <summary>A whole book: <paramref name="top"/> ahead of a one-part by-section piece,
     /// <paramref name="music"/> as the part's bars, <paramref name="header"/> between the
     /// score's form name and its brace, <paramref name="items"/> as its body.</summary>
     private static string Book(string top = "", string music = "c4 d e f |", string header = "",
@@ -120,8 +120,8 @@ public class CompletionAuditTests
     // The two bare-name groups.
     [InlineData("score main { condensedStaff { ", "BarePartNameList")]
     [InlineData("score main { combinedStaff { fl1 ", "BarePartNameList")]
-    // Lyrics bodies, in every spelling: a section-major cell (named, bound, unnamed), a
-    // part-major track's inner section, mid-verse.
+    // Lyrics bodies, in every spelling: a by-section cell (named, bound, unnamed), a
+    // by-part track's inner section, mid-verse.
     [InlineData("section A { lyrics w { ", "LyricsBody")]
     [InlineData("section A { lyrics w sings m { ", "LyricsBody")]
     [InlineData("section A { melody { c } lyrics { ", "LyricsBody")]
@@ -229,7 +229,7 @@ public class CompletionAuditTests
     // ================= a section's track cells =================
 
     [Fact]
-    public void SectionMajorSection_OffersLyricsAndChordsCells_AndEachCompiles()
+    public void GroupedBySectionSection_OffersLyricsAndChordsCells_AndEachCompiles()
     {
         var text = "part melody { }\npart bass { }\nsection A { ";
         var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
@@ -342,9 +342,9 @@ public class CompletionAuditTests
         {
             string verse = Resolved(item, "la la la la |");
             AssertCompiles(Book(sectionExtra: $"lyrics w sings m {{ {verse} }}", items: "staff m  lyrics w"),
-                $"`{item.Label}` in a section-major lyrics cell");
+                $"`{item.Label}` in a by-section lyrics cell");
             AssertCompiles($"part m {{ section A {{ c4 d e f | }} }}\nlyrics w sings m {{ section A {{ {verse} }} }}\n"
-                           + "form main { A }\nscore main { staff m  lyrics w }", $"`{item.Label}` in a part-major track");
+                           + "form main { A }\nscore main { staff m  lyrics w }", $"`{item.Label}` in a by-part track");
         }
         // No pitch letters in a lyrics body.
         Assert.DoesNotContain(items, i => i.Label is "c" or "d");
@@ -477,9 +477,9 @@ public class CompletionAuditTests
     [Fact]
     public void SectionHeader_ReadsTheCompilersDirectiveList_AndEachCompiles()
     {
-        // A part-major book: the top-level section is a HEADER and offers the directives alone.
-        const string partMajor = "part m { clef treble section A { c4 d e f | } }\nsection A { ";
-        var offered = LilySharpLanguageServer.GetSectionBlockCompletions(partMajor, partMajor.Length).Items
+        // A by-part book: the top-level section is a HEADER and offers the directives alone.
+        const string groupedByPart = "part m { clef treble section A { c4 d e f | } }\nsection A { ";
+        var offered = LilySharpLanguageServer.GetSectionBlockCompletions(groupedByPart, groupedByPart.Length).Items
             .Select(i => i.Label).ToList();
         Assert.Equal(LanguageVocabulary.SectionSettings, offered);
 
@@ -502,10 +502,10 @@ public class CompletionAuditTests
                 => d.Code != DiagnosticCodes.MeasureOverflow && d.Code != DiagnosticCodes.MeasureIncomplete;
             var header = Errors($"part m {{ clef treble section A {{ c4 d e f | }} }}\nsection A {{ {line} }}\n"
                                 + "form main { A }\nscore main { staff m }").Where(NotABarLength).ToList();
-            Assert.True(header.Count == 0, $"`{line}` in a part-major section header is refused: "
+            Assert.True(header.Count == 0, $"`{line}` in a by-part section header is refused: "
                 + string.Join(" | ", header.Select(d => $"{d.Code} {d.Message}")));
             var beside = Errors(Book(sectionExtra: line)).Where(NotABarLength).ToList();
-            Assert.True(beside.Count == 0, $"`{line}` beside a section-major part cell is refused: "
+            Assert.True(beside.Count == 0, $"`{line}` beside a by-section part cell is refused: "
                 + string.Join(" | ", beside.Select(d => $"{d.Code} {d.Message}")));
         }
     }

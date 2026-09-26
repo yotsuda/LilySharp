@@ -25,8 +25,8 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A section can carry its own time / tempo (beside key) — stated section-major
-/// (<c>section A { time 3/4  melody { … } }</c>) or in a standalone part-major header
+/// A section can carry its own time / tempo (beside key) — stated by-section
+/// (<c>section A { time 3/4  melody { … } }</c>) or in a standalone by-part header
 /// (<c>section A { time 3/4 }</c>). They must render: the meter re-arms the section's
 /// measures, the tempo prints a metronome mark.
 /// </summary>
@@ -51,7 +51,7 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
-    public void SectionMajorTime_EmitsTheSectionMeter()
+    public void GroupedBySectionTime_EmitsTheSectionMeter()
     {
         var score = Collect("""
             time 4/4
@@ -90,7 +90,7 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
-    public void SectionMajorTempo_EmitsAMetronomeMark()
+    public void GroupedBySectionTempo_EmitsAMetronomeMark()
     {
         // On a NON-first section, so it does not coincide with the score's initial tempo.
         var score = Collect("""
@@ -141,7 +141,7 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
-    public void StandalonePartMajorHeaderTime_AppliesToTheSection()
+    public void StandaloneGroupedByPartHeaderTime_AppliesToTheSection()
     {
         var score = Collect("""
             time 4/4
@@ -154,7 +154,7 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
-    public void StandalonePartMajorHeaderTempo_AppliesToTheSection()
+    public void StandaloneGroupedByPartHeaderTempo_AppliesToTheSection()
     {
         var score = Collect("""
             tempo 100
@@ -182,7 +182,7 @@ public class SectionHeaderDirectiveTests
     }
 
     [Fact]
-    public void StandalonePartMajorHeaderPartial_AppliesToTheSection()
+    public void StandaloneGroupedByPartHeaderPartial_AppliesToTheSection()
     {
         var score = Collect("""
             time 4/4

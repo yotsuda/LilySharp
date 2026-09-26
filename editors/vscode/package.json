@@ -238,7 +238,7 @@
         "title": "Open Preview to Side"
       },
       {
-        "command": "lilysharp.convertLayout",
+        "command": "lilysharp.regroup",
         "category": "Lily#",
         "title": "Regroup (by part ⇄ by section)"
       },
@@ -397,7 +397,7 @@
           "when": "resourceLangId == lilysharp"
         },
         {
-          "command": "lilysharp.convertLayout",
+          "command": "lilysharp.regroup",
           "when": "resourceLangId == lilysharp"
         },
         {
@@ -509,7 +509,7 @@
           "group": "1_modification@1"
         },
         {
-          "command": "lilysharp.convertLayout",
+          "command": "lilysharp.regroup",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
         },

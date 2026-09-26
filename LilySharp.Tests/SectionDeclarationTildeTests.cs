@@ -33,7 +33,7 @@ namespace LilySharp.Tests;
 /// <para>
 /// Owner's decision, 2026-09-24. From 2026-08-31 the declaration's tilde flipped the label
 /// default and a reference's tilde then SHOWED — one equality, and no form line could be read
-/// without the declarations. It went because in part-major layout the property had one home
+/// without the declarations. It went because in by-part grouping the property had one home
 /// per part (<c>part p1 { section ~A }</c> beside <c>part p2 { section A }</c> is one section,
 /// declared hidden once), and because the author's books never used the flip: 342 tilde
 /// declarations, each referenced once, none by a showing tilde.
@@ -48,7 +48,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class SectionDeclarationTildeTests
 {
-    /// <param name="declaration">"A" or "~A" — the section-major declaration of A.</param>
+    /// <param name="declaration">"A" or "~A" — the by-section declaration of A.</param>
     /// <param name="form">The form body.</param>
     private static string Book(string declaration, string form) => $$"""
         time 4/4
@@ -59,9 +59,9 @@ public sealed class SectionDeclarationTildeTests
         score main { staff m }
         """;
 
-    /// <summary>The same book written part-major — the layout converter turns these two into
+    /// <summary>The same book written by-part — the regrouper turns these two into
     /// each other, so they must label identically.</summary>
-    private static string PartMajorBook(string declaration, string form) => $$"""
+    private static string GroupedByPartBook(string declaration, string form) => $$"""
         time 4/4
         part m {
           section {{declaration}} { c'4 c c c | }
@@ -126,13 +126,13 @@ public sealed class SectionDeclarationTildeTests
     {
         Assert.Equal(PageLabels(Book("A", form)), PageLabels(Book("~A", form)));
         Assert.Equal(TwinLabels(Book("A", form)), TwinLabels(Book("~A", form)));
-        Assert.Equal(PageLabels(PartMajorBook("A", form)), PageLabels(PartMajorBook("~A", form)));
+        Assert.Equal(PageLabels(GroupedByPartBook("A", form)), PageLabels(GroupedByPartBook("~A", form)));
     }
 
     // ===== the reference decides =====
 
     /// <summary>A bare reference shows the label, a tilde reference hides it — on the page
-    /// and in the twin, section-major and part-major alike.</summary>
+    /// and in the twin, by-section and by-part alike.</summary>
     [Theory]
     [InlineData("A B", new[] { "A", "B" })]
     [InlineData("~A B", new[] { "B" })]
@@ -141,8 +141,8 @@ public sealed class SectionDeclarationTildeTests
     {
         Assert.Equal(expected, PageLabels(Book("A", form)));
         Assert.Equal(expected, TwinLabels(Book("A", form)));
-        Assert.Equal(expected, PageLabels(PartMajorBook("A", form)));
-        Assert.Equal(expected, TwinLabels(PartMajorBook("A", form)));
+        Assert.Equal(expected, PageLabels(GroupedByPartBook("A", form)));
+        Assert.Equal(expected, TwinLabels(GroupedByPartBook("A", form)));
     }
 
     /// <summary>A volta ending asks the same question: the tilde binds to the section NAME.</summary>

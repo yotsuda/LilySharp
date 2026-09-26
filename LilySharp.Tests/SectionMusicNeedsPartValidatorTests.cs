@@ -24,10 +24,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// In a PART-MAJOR file (parts carry their own sections), a top-level <c>section</c> is a
+/// In a BY-PART file (parts carry their own sections), a top-level <c>section</c> is a
 /// section header: it holds directives and the parts' cells, never loose music. Bare notes
 /// there belong to no part and are flagged. A single-part file that writes its lone part's
-/// setup and music apart (<c>part bl { clef bass } section A { c d e }</c>) is NOT part-major —
+/// setup and music apart (<c>part bl { clef bass } section A { c d e }</c>) is NOT by-part —
 /// its section music binds to the one part and both renders and validates cleanly.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -38,8 +38,8 @@ public class SectionMusicNeedsPartValidatorTests
             .Count(d => d.Code == DiagnosticCodes.SectionMusicNeedsPart);
 
     [Fact]
-    public void PartMajorLooseSectionMusic_Errors()
-        // melody carries section A (part-major); the stray top-level `section A { g4 … }`
+    public void GroupedByPartLooseSectionMusic_Errors()
+        // melody carries section A (by-part); the stray top-level `section A { g4 … }`
         // is loose music that belongs to no part.
         => Assert.Equal(1, ErrCount(
             "part melody { section A { c4 d e f } }\nsection A { g4 a b c }\n"
@@ -48,14 +48,14 @@ public class SectionMusicNeedsPartValidatorTests
     [Fact]
     public void SinglePartSectionMusic_Ok()
         // The bend/dead-note shape: one part's setup, its music in a top-level section.
-        // Not part-major (the part has no inner section) → the loose music is that part's.
+        // Not by-part (the part has no inner section) → the loose music is that part's.
         => Assert.Equal(0, ErrCount(
             "part bl { clef bass }\nsection A { c4 d e f }\n"
             + "form main { A }\nscore main { staff bl }"));
 
     [Fact]
     public void DirectiveOnlyTopLevelSection_Ok()
-        // A standalone part-major header (`section A { partial 4 }`) carries only a directive,
+        // A standalone by-part header (`section A { partial 4 }`) carries only a directive,
         // no music — allowed.
         => Assert.Equal(0, ErrCount(
             "section A { partial 4 }\npart melody { section A { g4 | c1 } }\n"
@@ -63,8 +63,8 @@ public class SectionMusicNeedsPartValidatorTests
             + "score main { staff melody staff bass }"));
 
     [Fact]
-    public void SectionMajorSection_Ok()
-        // Section-major: a top-level section legitimately holds the parts' cells.
+    public void GroupedBySectionSection_Ok()
+        // By-section: a top-level section legitimately holds the parts' cells.
         => Assert.Equal(0, ErrCount(
             "part melody { clef treble }\npart bass { clef bass }\n"
             + "section A { melody { c4 d e f } bass { c2 g } }\nform main { A }\n"

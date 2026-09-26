@@ -23,7 +23,7 @@ namespace LilySharp.Core.Semantics;
 /// Flags a <c>partial</c> (pickup) written where it may not stand. A <c>partial</c> says
 /// "the bar it stands in is this long". A section's OPENING bar is the section's: its pickup is
 /// a section directive (<c>section A { partial 4  melody {…} bass {…} }</c>, or a standalone
-/// <c>section A { partial 4 }</c> beside part-major cells), for every part at once — so a
+/// <c>section A { partial 4 }</c> beside by-part cells), for every part at once — so a
 /// <c>partial</c> written in a part's music within that first bar is refused and pointed at the
 /// header (owner's decision 2026-09-15). After the first bar it is legal in a part's or voice's
 /// music (<c>… | partial 2. r2. | …</c>, since 2026-09-08), written in every part that shares
@@ -105,8 +105,8 @@ internal sealed class PartialScopeValidator : ISemanticValidator
 
     /// <summary>
     /// The section whose opening bar <paramref name="partial"/> stands in, when it is written in
-    /// a PART's music — a section-major part block (<c>section A { melody { partial 4 … } }</c>)
-    /// or a part-major cell (<c>part melody { section A { partial 4 … } }</c>) — and no bar line
+    /// a PART's music — a by-section part block (<c>section A { melody { partial 4 … } }</c>)
+    /// or a by-part cell (<c>part melody { section A { partial 4 … } }</c>) — and no bar line
     /// of that music comes before it. Null anywhere else: a section directive, the section's own
     /// single-voice body, a phrase body (reusable music, not a section's head), or a later bar.
     /// </summary>

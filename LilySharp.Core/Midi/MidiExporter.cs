@@ -67,12 +67,12 @@ public sealed class MidiExporter
 
     // Structure-driven playback: sections play in `structure { … }` order
     // (with |: :| repeats and volta alternatives), not declaration order.
-    // Sections keyed by name. A name maps to a LIST because part-major layout
+    // Sections keyed by name. A name maps to a LIST because by-part grouping
     // declares the same section name once per part (`part melody { section A … }`,
     // `part bass { section A … }`); a structure reference plays them all.
     private Dictionary<string, List<SectionDeclarationSyntax>>? _sections;
     // section name -> its own header key (a section carrying a `key` but no inline
-    // music: section-major, or a standalone part-major header `section A { key g major }`).
+    // music: by-section, or a standalone by-part header `section A { key g major }`).
     // Applied up front to every part of the section, since it is not walked with the
     // part cell's music.
     private readonly Dictionary<string, KeySignatureSyntax> _sectionHeaderKeys = new();
@@ -775,10 +775,10 @@ public sealed class MidiExporter
     /// </summary>
     /// <remarks>
     /// The two callers are the two ways a section can belong to a part without a
-    /// <c>partName { }</c> block around its music: PART-MAJOR (the section is written
+    /// <c>partName { }</c> block around its music: BY-PART (the section is written
     /// inside <c>part X { … }</c>) and BARE (no block anywhere, the <c>score</c> says
     /// whose it is — see <see cref="_bareSectionOwner"/>). One house, because they arm the
-    /// same six things and the part-major one had already grown a comment explaining that
+    /// same six things and the by-part one had already grown a comment explaining that
     /// it must arm the sounding shift "too".
     /// <para>
     /// ⚠️ The part's pitch/duration lane is restored on entry and saved on exit, so
@@ -811,10 +811,10 @@ public sealed class MidiExporter
         // Music without a PartBlockSyntax around it never passes the arming in ProcessNode,
         // so the part's shift is armed here — otherwise a bass or guitar sounded at
         // written pitch. ⚠️ The SAME shift as the part-block arm, transpose included: until
-        // 2026-09-03 this line armed the sounding shift alone, so a part-major book's
+        // 2026-09-03 this line armed the sounding shift alone, so a by-part book's
         // `transpose` (and, with it, a concert-pitch file's instrument shift) reached the
         // page and not the .mid — measured on `part x { transpose d section A { c1 | } }`,
-        // which played C4 where the section-major spelling of the same book played D4.
+        // which played C4 where the by-section spelling of the same book played D4.
         _currentTransposeSemitones = PartPlaybackShift(partName);
         body();
         _partPitchLanes[partName] = (_currentNoteName, _currentOctave, _defaultDuration);
@@ -907,8 +907,8 @@ public sealed class MidiExporter
         // and it is the rule `test/section-octave-reset` names.
         _partPitchLanes.Clear();
 
-        // A section's own header key — stated beside the part blocks (section-major) or
-        // in a standalone part-major header — is not walked with the part cell's music,
+        // A section's own header key — stated beside the part blocks (by-section) or
+        // in a standalone by-part header — is not walked with the part cell's music,
         // so apply it up front (overriding the home reset) for every part of the section.
         if (_sectionHeaderKeys.TryGetValue(section.SectionName, out var headerKey))
         {
@@ -946,7 +946,7 @@ public sealed class MidiExporter
             ? headerPartial.ToFraction()
             : null;
 
-        // A part-major CHORD TRACK's section (`chords harmony { section A { … } }`): its
+        // A by-part CHORD TRACK's section (`chords harmony { section A { … } }`): its
         // entries sound when the score places the row (PlayChordRow), and take their bars'
         // time; a row the score does not place sounds nothing and takes none, as before.
         if (section.Parent is ChordPartBlockSyntax chordTrack)
@@ -964,7 +964,7 @@ public sealed class MidiExporter
         // its bars.
         int rowsEnd = PlaySectionChordRows(section, track);
 
-        // Part-major layout: the section lives INSIDE its part — arm that
+        // By-part grouping: the section lives INSIDE its part — arm that
         // part's anchor and play the children sequentially.
         for (var p = section.Parent; p != null; p = p.Parent)
         {
@@ -978,7 +978,7 @@ public sealed class MidiExporter
 
         // A section that declares no part block at all is music the SCORE attributes, not
         // the music (see _bareSectionOwner). Played inside that part exactly as a
-        // part-major section is played inside the part that contains it.
+        // by-part section is played inside the part that contains it.
         if (_bareSectionOwner is { } bareOwner && !SectionHasPartBlock(section))
         {
             PlayInPart(bareOwner, () => ProcessChildren(section, track, conductorTrack),
@@ -1005,7 +1005,7 @@ public sealed class MidiExporter
             {
                 string pname = sectionPart.Name;
                 var (anchor, absBase) = PartOctaveAnchors(pname);
-                // The reference's marks move both anchors here too — the section-major
+                // The reference's marks move both anchors here too — the by-section
                 // twin of PlayInPart's line, and the reason it is written twice is that
                 // this loop arms one lane PER PART BLOCK rather than one for the section.
                 anchor += octaveOffset;
@@ -1056,11 +1056,11 @@ public sealed class MidiExporter
     private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack,
         int octaveOffset = 0)
     {
-        // A structure reference to a part-major section name plays EVERY part's
+        // A structure reference to a by-part section name plays EVERY part's
         // copy of it concurrently — each from the shared start tick on its own
         // lane — not just the last-declared one (which silently dropped every
         // earlier part, and yielded no notes at all when a chords part was
-        // declared last). Section-major names map to a single-element list.
+        // declared last). By-section names map to a single-element list.
         if (_sections == null || !_sections.TryGetValue(name, out var sections))
             return;
         int start = _currentTick;
@@ -1070,8 +1070,8 @@ public sealed class MidiExporter
             _currentTick = start;
             _pendingGraceSteal = 0; // each part's copy is a lane of its own (PlaySection says why)
             PlaySection(section, track, conductorTrack, octaveOffset);
-            // A part-major cell (or a bare section the score attributes to one part) is one
-            // part's voice: pad it to the section's canonical bar count. A section-major
+            // A by-part cell (or a bare section the score attributes to one part) is one
+            // part's voice: pad it to the section's canonical bar count. A by-section
             // declaration pads each of its part blocks inside PlaySection; a chord-track
             // cell sounds nothing and pads nothing — its bars still count toward the
             // canonical length, which is what the parts are padded to.

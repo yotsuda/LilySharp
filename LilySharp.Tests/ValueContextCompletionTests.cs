@@ -54,7 +54,7 @@ public class ValueContextCompletionTests
     [InlineData("section A { m { pitch ", "MusicBlock")]
     [InlineData("title \"perfect pitch ", "AfterTitleText")]
     // `repeat ` in music offers its three kinds — in a section cell, mid-bar, in a voice,
-    // and in a part-major inner section alike.
+    // and in a by-part inner section alike.
     [InlineData("section A { m { repeat ", "AfterRepeat")]
     [InlineData("section A { m { c4 d repeat un", "AfterRepeat")]
     [InlineData("section A { m { voice { repeat ", "AfterRepeat")]

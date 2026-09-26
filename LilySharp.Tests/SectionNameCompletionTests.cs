@@ -22,7 +22,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// After <c>section </c> inside a part-major <c>part { }</c> body the editor offers the
+/// After <c>section </c> inside a by-part <c>part { }</c> body the editor offers the
 /// document's section names this part does NOT yet declare, so a part can be filled in
 /// with the sections it is still missing.
 /// </summary>
@@ -117,7 +117,7 @@ public class SectionNameCompletionTests
     [Fact]
     public void AfterSection_AtTopLevel_IsItsOwnContext()
     {
-        // Section-major top-level `section |` is a declaration site too — it fills in
+        // By-section top-level `section |` is a declaration site too — it fills in
         // from the form's references.
         var text = "section ";
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterSection,
@@ -125,7 +125,7 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void SectionMajor_OffersFormReferencedSectionsNotYetDeclared()
+    public void GroupedBySection_OffersFormReferencedSectionsNotYetDeclared()
     {
         // The form names A and B; only A is written, so `section ` at the top level
         // offers B — the section the piece expects but that has not been declared.
@@ -137,7 +137,7 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void SectionMajor_WithoutAForm_OffersNothing()
+    public void GroupedBySection_WithoutAForm_OffersNothing()
     {
         // No form means no known-but-unwritten section, so nothing is suggested.
         var text =
@@ -147,7 +147,7 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void SectionMajor_DoesNotReofferAnAlreadyDeclaredSection()
+    public void GroupedBySection_DoesNotReofferAnAlreadyDeclaredSection()
     {
         // A is declared and the form references it; it must not be offered again.
         var text =
@@ -316,9 +316,9 @@ public class SectionNameCompletionTests
     // ----- a top-level section body in a doc WITH parts holds part cells, not notes -----
 
     [Fact]
-    public void InsideTopLevelSectionBody_SectionMajor_OffersPartCellScaffolds_NotNotes()
+    public void InsideTopLevelSectionBody_GroupedBySection_OffersPartCellScaffolds_NotNotes()
     {
-        // Parts declared but not yet carrying inner sections (undetermined / section-major
+        // Parts declared but not yet carrying inner sections (undetermined / by-section
         // intent) → the top-level section body holds one cell per part. Offer part names.
         var text = "part melody { }\npart bass { }\nsection A { ";
         Assert.Equal(LilySharpLanguageServer.CompletionContext.SectionBlock,
@@ -326,7 +326,7 @@ public class SectionNameCompletionTests
         var items = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items;
         // The part cells first, then the two TRACK cells a section also holds (lyrics /
         // chords — added 2026-09-10, the completion audit), then the section-wide directives
-        // the header position takes (2026-09-02: a section-major section is a header too —
+        // the header position takes (2026-09-02: a by-section section is a header too —
         // `partial` is writable HERE and nowhere in the music, and this list had no row for
         // it).
         Assert.Equal(new[] { "melody", "bass", "lyrics", "chords", "partial", "key", "time", "tempo", "override" },
@@ -340,13 +340,13 @@ public class SectionNameCompletionTests
     }
 
     /// <summary>
-    /// Every directive the section-major list offers compiles at the head of a section-major
+    /// Every directive the by-section list offers compiles at the head of a by-section
     /// section, beside a real part cell — parser and validators both silent. This is the net
     /// the music list has (MusicCompletionFlatSpellingTests), for the other side of the
     /// `partial` rule: the row is offered exactly where the compiler accepts it.
     /// </summary>
     [Fact]
-    public void EverySectionMajorHeaderDirective_CompilesWhereItIsOffered()
+    public void EveryGroupedBySectionHeaderDirective_CompilesWhereItIsOffered()
     {
         var text = "part melody { }\npart bass { }\nsection A { ";
         var directives = LilySharpLanguageServer.GetSectionBlockCompletions(text, text.Length).Items
@@ -388,9 +388,9 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void InsideTopLevelSectionBody_PartMajor_OffersHeaderDirectives_NotPartNames()
+    public void InsideTopLevelSectionBody_GroupedByPart_OffersHeaderDirectives_NotPartNames()
     {
-        // part-major (parts carry their own inner sections) → a top-level section is a HEADER:
+        // by-part (parts carry their own inner sections) → a top-level section is a HEADER:
         // it holds section-wide directives (a pickup, key, time), never part cells. So the
         // part names must NOT be offered there.
         var text = "part melody { section A { c } }\npart bass { section A { d } }\nsection A { ";
@@ -414,9 +414,9 @@ public class SectionNameCompletionTests
     }
 
     [Fact]
-    public void PartMajorCellBody_IsNotASectionBlock()
+    public void GroupedByPartCellBody_IsNotASectionBlock()
     {
-        // `part melody { section A { ` — a part-major cell body is that part's music (notes),
+        // `part melody { section A { ` — a by-part cell body is that part's music (notes),
         // not part blocks.
         var text = "part melody { section A { ";
         Assert.NotEqual(LilySharpLanguageServer.CompletionContext.SectionBlock,

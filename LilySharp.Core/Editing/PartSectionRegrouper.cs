@@ -21,42 +21,42 @@ using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Editing;
 
-/// <summary>Which way a <c>.lys</c> file nests its part × section music cells.</summary>
-public enum LayoutForm
+/// <summary>Which way a <c>.lys</c> file groups its part × section music cells.</summary>
+public enum Grouping
 {
     /// <summary>Could not tell (no part blocks / inner sections found).</summary>
     Unknown,
-    /// <summary>section-major: <c>section A { melody { … } bass { … } }</c>.</summary>
-    SectionMajor,
-    /// <summary>part-major: <c>part melody { … section A { … } section B { … } }</c>.</summary>
-    PartMajor,
+    /// <summary>Grouped by section: <c>section A { melody { … } bass { … } }</c>.</summary>
+    BySection,
+    /// <summary>Grouped by part: <c>part melody { … section A { … } section B { … } }</c>.</summary>
+    ByPart,
 }
 
 /// <summary>
-/// Converts a <c>.lys</c> document between the two equivalent authoring layouts:
-/// section-major (a section holds per-part music blocks) and part-major (a part
+/// Regroups a <c>.lys</c> document between the two equivalent groupings:
+/// by section (a section holds per-part music blocks) and by part (a part
 /// holds its own inner sections). The two are duals over the part × section music
 /// cells; only the nesting is transposed. Music-cell text is preserved verbatim;
 /// the part/section scaffolding is regenerated to a canonical shape, and every
 /// other top-level item (title, structure, score, phrases, …) is kept verbatim.
 /// </summary>
-public static class PartSectionLayoutConverter
+public static class PartSectionRegrouper
 {
     /// <summary>Detects the current layout of <paramref name="source"/>.</summary>
-    public static LayoutForm Detect(string source) => Detect(SyntaxTree.Parse(source).GetRoot());
+    public static Grouping Detect(string source) => Detect(SyntaxTree.Parse(source).GetRoot());
 
     /// <summary>Detects the layout from a parsed root.</summary>
-    public static LayoutForm Detect(CompilationUnitSyntax root)
+    public static Grouping Detect(CompilationUnitSyntax root)
     {
         var parts = TopLevel(root).OfType<PartDeclarationSyntax>().ToList();
-        // part-major iff any part declaration carries inner sections.
+        // by-part iff any part declaration carries inner sections.
         if (parts.Any(p => DirectChildrenOfType<SectionDeclarationSyntax>(p).Any()))
-            return LayoutForm.PartMajor;
-        // section-major iff any top-level section carries part blocks.
+            return Grouping.ByPart;
+        // by-section iff any top-level section carries part blocks.
         if (TopLevel(root).OfType<SectionDeclarationSyntax>()
                 .Any(s => DirectChildrenOfType<PartBlockSyntax>(s).Any()))
-            return LayoutForm.SectionMajor;
-        return LayoutForm.Unknown;
+            return Grouping.BySection;
+        return Grouping.Unknown;
     }
 
     /// <summary>
@@ -90,15 +90,15 @@ public static class PartSectionLayoutConverter
 
         var root = tree.GetRoot();
         var form = Detect(root);
-        if (form == LayoutForm.Unknown)
+        if (form == Grouping.Unknown)
             return null;
-        var target = form == LayoutForm.PartMajor ? LayoutForm.SectionMajor : LayoutForm.PartMajor;
+        var target = form == Grouping.ByPart ? Grouping.BySection : Grouping.ByPart;
 
-        // Chord (`chords name { }`) and lyric blocks are SECTION-MAJOR ONLY — a
-        // part's inner section holds music, not sub-blocks — so going to part-major
+        // Chord (`chords name { }`) and lyric blocks are BY-SECTION ONLY — a
+        // part's inner section holds music, not sub-blocks — so going to by-part
         // has nowhere to put them. Refuse rather than silently drop them (data loss);
-        // the editor turns this into a clear "kept as section-major" message.
-        if (target == LayoutForm.PartMajor && HasUntransposableSectionContent(root))
+        // the editor turns this into a clear "kept as by-section" message.
+        if (target == Grouping.ByPart && HasUntransposableSectionContent(root))
             return null;
 
         var result = Emit(source, root, target, out collision);
@@ -111,7 +111,7 @@ public static class PartSectionLayoutConverter
     }
 
     /// <summary>
-    /// True when a section-major section carries a block the converter cannot transpose.
+    /// True when a by-section section carries a block the converter cannot transpose.
     /// Part blocks, <c>chords name { }</c> chord parts and <c>lyrics { }</c> blocks are
     /// all transposed, so nothing common trips this today — it stays as a guard against
     /// any future section-only block type. The editor uses it to explain a refusal.
@@ -128,7 +128,7 @@ public static class PartSectionLayoutConverter
 
     // --- model extraction -----------------------------------------------------
 
-    private static string? Emit(string source, CompilationUnitSyntax root, LayoutForm target, out string? collision)
+    private static string? Emit(string source, CompilationUnitSyntax root, Grouping target, out string? collision)
     {
         // The first cell written twice, which the maps below would keep only the later of.
         string? firstCollision = null;
@@ -152,8 +152,8 @@ public static class PartSectionLayoutConverter
         // through the conversion, or the round trip would silently unbind it.
         var lyricSings = new Dictionary<string, string>(StringComparer.Ordinal);
         var lyricCells = new Dictionary<(string? Name, int Ordinal, string Section), string>();
-        // section -> its own directive text (`key g major` …): a standalone part-major
-        // header, or the directives folded into a section-major section.
+        // section -> its own directive text (`key g major` …): a standalone by-part
+        // header, or the directives folded into a by-section section.
         var sectionHeaders = new Dictionary<string, string>();
         // Two declarations restating the same directives lose nothing; differing ones would.
         void PutHeader(string section, string directives)
@@ -186,7 +186,7 @@ public static class PartSectionLayoutConverter
                     var attrs = new List<string>();
                     foreach (var child in DirectChildren(part))
                     {
-                        if (child is SectionDeclarationSyntax inner) // part-major cell
+                        if (child is SectionDeclarationSyntax inner) // by-part cell
                         {
                             AddSection(inner.SectionName);
                             Put(cells, (part.Name.Text, inner.SectionName), BetweenBraces(Verbatim(source, inner)),
@@ -200,7 +200,7 @@ public static class PartSectionLayoutConverter
                     parts.Add((part.Name.Text, string.Join(" ", attrs.Where(a => a.Length > 0))));
                     break;
 
-                // Part-major chord track: chords name { section A { c1 } section B { c1 } }.
+                // By-part chord track: chords name { section A { c1 } section B { c1 } }.
                 case ChordPartBlockSyntax topChords when topChords.HasSections:
                     AddChordPart(topChords.PartName);
                     foreach (var cs in topChords.Sections)
@@ -211,7 +211,7 @@ public static class PartSectionLayoutConverter
                     }
                     break;
 
-                // Part-major lyric track: lyrics [name] { section A { .. } section B { .. } }.
+                // By-part lyric track: lyrics [name] { section A { .. } section B { .. } }.
                 case LyricsBlockSyntax topLyrics when topLyrics.HasSections:
                 {
                     int ord = lyricTracks.Count(t => t.Name == topLyrics.VoiceName);
@@ -228,7 +228,7 @@ public static class PartSectionLayoutConverter
                     break;
                 }
 
-                // Standalone part-major section header: `section A { key g major }` — the
+                // Standalone by-part section header: `section A { key g major }` — the
                 // section's directives stated once, parallel to the parts.
                 case SectionDeclarationSyntax header when IsSectionHeader(header):
                     AddSection(header.SectionName);
@@ -236,15 +236,15 @@ public static class PartSectionLayoutConverter
                     break;
 
                 case SectionDeclarationSyntax section
-                        when DirectChildrenOfType<PartBlockSyntax>(section).Any(): // section-major
+                        when DirectChildrenOfType<PartBlockSyntax>(section).Any(): // by-section
                     AddSection(section.SectionName);
                     // Section-level directives (`key g major`) fold out to a standalone
-                    // header in part-major.
+                    // header in by-part.
                     PutHeader(section.SectionName, SectionDirectiveText(source, section));
                     foreach (var pb in DirectChildrenOfType<PartBlockSyntax>(section))
                         Put(cells, (pb.Name, section.SectionName), BetweenBraces(Verbatim(source, pb)),
                             $"part '{pb.Name}' in section {section.SectionName}");
-                    // In-section chord tracks become part-major chord tracks and back.
+                    // In-section chord tracks become by-part chord tracks and back.
                     foreach (var cb in DirectChildrenOfType<ChordPartBlockSyntax>(section))
                     {
                         AddChordPart(cb.PartName);
@@ -282,9 +282,9 @@ public static class PartSectionLayoutConverter
                 parts.Add((p, ""));
 
         var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells, lyricSings);
-        var body = target == LayoutForm.PartMajor
-            ? EmitPartMajor(parts, sectionOrder, cells, tracks, sectionHeaders)
-            : EmitSectionMajor(parts, sectionOrder, cells, tracks, sectionHeaders);
+        var body = target == Grouping.ByPart
+            ? EmitGroupedByPart(parts, sectionOrder, cells, tracks, sectionHeaders)
+            : EmitGroupedBySection(parts, sectionOrder, cells, tracks, sectionHeaders);
 
         return Reassemble(source, root, body);
     }
@@ -326,7 +326,7 @@ public static class PartSectionLayoutConverter
         }
     }
 
-    private static string EmitPartMajor(
+    private static string EmitGroupedByPart(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
         Dictionary<(string, string), string> cells, TrackData tracks,
         Dictionary<string, string> sectionHeaders)
@@ -371,7 +371,7 @@ public static class PartSectionLayoutConverter
         return sb.ToString();
     }
 
-    private static string EmitSectionMajor(
+    private static string EmitGroupedBySection(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
         Dictionary<(string, string), string> cells, TrackData tracks,
         Dictionary<string, string> sectionHeaders)
@@ -426,10 +426,10 @@ public static class PartSectionLayoutConverter
         foreach (var member in TopLevel(root))
         {
             bool structural = member is PartDeclarationSyntax
-                || (member is ChordPartBlockSyntax cb && cb.HasSections)   // part-major chord track
-                || (member is LyricsBlockSyntax lb && lb.HasSections)      // part-major lyric track
+                || (member is ChordPartBlockSyntax cb && cb.HasSections)   // by-part chord track
+                || (member is LyricsBlockSyntax lb && lb.HasSections)      // by-part lyric track
                 || (member is SectionDeclarationSyntax s
-                        && (DirectChildrenOfType<PartBlockSyntax>(s).Any()  // section-major
+                        && (DirectChildrenOfType<PartBlockSyntax>(s).Any()  // by-section
                             || IsSectionHeader(s)));                        // standalone header
             if (structural)
             {
@@ -475,7 +475,7 @@ public static class PartSectionLayoutConverter
 
     /// <summary>A directives-only section header (<c>section A { key g major }</c>) —
     /// delegated to THE one spelling (<see cref="SectionSymbols.IsBareHeader"/>). In
-    /// part-major it stands parallel to the parts; in section-major it folds into the
+    /// by-part it stands parallel to the parts; in by-section it folds into the
     /// section. This file's own copy was the second of three; the remark on the shared
     /// spelling records what the third one's disagreement cost.</summary>
     private static bool IsSectionHeader(SectionDeclarationSyntax s) => SectionSymbols.IsBareHeader(s);

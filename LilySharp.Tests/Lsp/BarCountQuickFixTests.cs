@@ -127,7 +127,7 @@ public class BarCountQuickFixTests
     }
 
     [Fact]
-    public void PartMajor_ShortMelody_GetsOneBarAndTheWarningGoes()
+    public void GroupedByPart_ShortMelody_GetsOneBarAndTheWarningGoes()
     {
         // ★ scratch/ベースタブLy/tooLongChords.lys: melody's A is one bar, the chord row's two.
         const string text = """
@@ -199,7 +199,7 @@ public class BarCountQuickFixTests
     }
 
     [Fact]
-    public void SectionMajor_ShortPartBlock_GetsBarLines()
+    public void GroupedBySection_ShortPartBlock_GetsBarLines()
     {
         // Anchored on the part block's name; its braces belong to the block's body node.
         const string text = """
@@ -219,7 +219,7 @@ public class BarCountQuickFixTests
     }
 
     [Fact]
-    public void SectionMajor_ShortChordBlock_GetsBarLines()
+    public void GroupedBySection_ShortChordBlock_GetsBarLines()
     {
         const string text = """
             section A {
@@ -240,7 +240,7 @@ public class BarCountQuickFixTests
     }
 
     [Fact]
-    public void PartMajor_ShortLyricsCell_GetsBarLine()
+    public void GroupedByPart_ShortLyricsCell_GetsBarLine()
     {
         // A lyrics track's cell one bar short of the melody (user request, 2026-09-10):
         // anchored on the cell's section name, padded with one empty lyric bar.
@@ -264,7 +264,7 @@ public class BarCountQuickFixTests
     }
 
     [Fact]
-    public void SectionMajor_ShortLyricsBlock_GetsBarLines()
+    public void GroupedBySection_ShortLyricsBlock_GetsBarLines()
     {
         // Anchored on the block's track name. `la la` leaves its bar open (the parser closes
         // it with a zero-width bar line): one `|` closes it, one more is the empty bar.

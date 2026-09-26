@@ -609,7 +609,7 @@ public static class DiagnosticCodes
     /// <para>
     /// The history, kept as history: from 2026-08-31 the tilde flipped the section's label
     /// default and a reference's <c>~</c> then SHOWED. It was removed by owner's decision on
-    /// 2026-09-24 because in part-major layout the one property had one home per part
+    /// 2026-09-24 because in by-part grouping the one property had one home per part
     /// (<c>part p1 { section ~A }</c> beside <c>part p2 { section A }</c>), and a form line
     /// could not be read without the declarations.
     /// </para>
@@ -688,7 +688,7 @@ public static class DiagnosticCodes
     /// fine.)</summary>
     public const string PartialOutsideSection = "LYS1024";
 
-    /// <summary>Semantic: in a PART-MAJOR file, a top-level <c>section</c> holds section-wide
+    /// <summary>Semantic: in a BY-PART file, a top-level <c>section</c> holds section-wide
     /// directives and cells for DECLARED parts only. Loose music there (<c>section A { c d e }</c>)
     /// belongs to no part — the parser reads the first pitch as a part-cell name, so it shows up
     /// as a cell naming an undeclared part. Put the music inside a part instead.</summary>
@@ -848,7 +848,7 @@ public static class DiagnosticCodes
     /// <para>
     /// ⚠️ THE POSITION IS THE WHOLE RULE, and the two shapes that DO work are why the
     /// predicate asks whether the section holds cells: <c>part m { section A { clef bass … } }</c>
-    /// (part-major — the section body IS that part's music) and
+    /// (by-part — the section body IS that part's music) and
     /// <c>section A { clef bass c'4 … }</c> (a single-part piece writing bare music, which
     /// GRAMMAR.md allows) both engrave the clef correctly. Only a section that holds part
     /// cells has nowhere to put a loose one.
@@ -983,7 +983,7 @@ public static class DiagnosticCodes
     // (`| . C |`; an empty bar is `| |`, and `r` prints N.C.), so the `s` spacer, whose only
     // job that was, went with it (Parser.Sections' chord-row arm names the retired spelling).
 
-    /// <summary>Chord error: a top-level chords track in a part-major file is written
+    /// <summary>Chord error: a top-level chords track in a by-part file is written
     /// flat; it must group its bars by section (<c>chords prog { section A { … } }</c>).
     /// The lyrics twin is <see cref="LyricTrackNeedsSections"/> — one validator emits both,
     /// because a flat top-level track of either kind has the same defect: no section to
@@ -1002,7 +1002,7 @@ public static class DiagnosticCodes
 
     /// <summary>Lyric warning: more lyric syllables than available notes.</summary>
     public const string LyricSyllableOverflow = "LYS4001";
-    /// <summary>Lyric error: a top-level lyrics track in a part-major file is written
+    /// <summary>Lyric error: a top-level lyrics track in a by-part file is written
     /// flat; it must group its verses by section (<c>lyrics { section A { … } }</c>).</summary>
     public const string LyricTrackNeedsSections = "LYS4002";
     /// <summary>Warning: a navigation mark (segno/coda/D.S./…) sits mid-measure rather

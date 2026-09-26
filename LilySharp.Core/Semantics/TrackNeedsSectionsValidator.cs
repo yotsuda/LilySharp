@@ -21,7 +21,7 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// In a PART-MAJOR file (parts carry their own <c>section</c> blocks), a top-level
+/// In a BY-PART file (parts carry their own <c>section</c> blocks), a top-level
 /// TRACK must mirror that shape — <c>lyrics v { section A { … } section B { … } }</c>,
 /// <c>chords prog { section A { … } }</c> — one cell per named section. A flat top-level
 /// track has no section to anchor to: its cells silently run from bar 0 across whatever
@@ -30,18 +30,18 @@ namespace LilySharp.Core.Semantics;
 ///
 /// Only genuinely top-level track blocks are checked: an inline <c>lyrics { … }</c> or
 /// <c>chords { … }</c> written inside a part or section is bound to THAT section's music
-/// and left alone, and a section-major or structureless file (where flat tracks are the
+/// and left alone, and a by-section or structureless file (where flat tracks are the
 /// norm) is not touched.
 /// </summary>
 /// <remarks>
 /// The lyrics half shipped first (LYS4002). The chords half (LYS2011) was added in
 /// session 240 from a user report: <c>chords prog { Dmaj7 | Em7 | Gmaj7 | A7 }</c> beside
-/// a part-major <c>part melody { section A … section B … }</c> was accepted and laid its
+/// a by-part <c>part melody { section A … section B … }</c> was accepted and laid its
 /// four bars over bar 0 onward, so a form of <c>A |: B :| A</c> chorded the first pass of
 /// A and nothing else. The two halves live in ONE validator because it is one rule about
 /// one shape (HANDOFF §5.2.1②): a track kind that gains this rule later, or a change to
 /// what "top level" means, must not be able to apply to only one of them.
-/// ⚠️ The exemption is the ANCESTOR test, not the file's layout alone — a part-major file
+/// ⚠️ The exemption is the ANCESTOR test, not the file's layout alone — a by-part file
 /// may still write <c>section A { chords prog { … } }</c> as a standalone section header,
 /// and that block does have its section.
 /// </remarks>
@@ -54,7 +54,7 @@ internal sealed class TrackNeedsSectionsValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        if (PartSectionLayoutConverter.Detect(root) != LayoutForm.PartMajor)
+        if (PartSectionRegrouper.Detect(root) != Grouping.ByPart)
             return;
 
         foreach (var block in root.DescendantNodes<LyricsBlockSyntax>())

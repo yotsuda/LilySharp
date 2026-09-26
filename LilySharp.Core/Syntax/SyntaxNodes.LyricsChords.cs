@@ -84,7 +84,7 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
     /// <summary>The lyric syllable items (lyric measures), in order. For the
-    /// part-major form these are <see cref="SectionDeclarationSyntax"/> children
+    /// by-part grouping these are <see cref="SectionDeclarationSyntax"/> children
     /// instead; use <see cref="Sections"/> to read them.</summary>
     public IEnumerable<SyntaxNode> Syllables
     {
@@ -99,7 +99,7 @@ public sealed class LyricsBlockSyntax : SyntaxNode
         }
     }
 
-    /// <summary>Inner section declarations of the part-major lyric track form
+    /// <summary>Inner section declarations of the by-part lyric track form
     /// (<c>lyrics { section A { .. } section B { .. } }</c>) — each holds this
     /// track's verse for one named section. Empty for the flat form.</summary>
     public IEnumerable<SectionDeclarationSyntax> Sections
@@ -112,7 +112,7 @@ public sealed class LyricsBlockSyntax : SyntaxNode
         }
     }
 
-    /// <summary>True when this lyric track is written in the part-major (per-section) form.</summary>
+    /// <summary>True when this lyric track is written in the by-part (per-section) form.</summary>
     public bool HasSections
     {
         get
@@ -159,7 +159,7 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
 
-    /// <summary>The chord entries and barlines, in source order. For the part-major
+    /// <summary>The chord entries and barlines, in source order. For the by-part
     /// form these are <see cref="SectionDeclarationSyntax"/> children instead; use
     /// <see cref="Sections"/> to read them.</summary>
     public IEnumerable<SyntaxNode> Items
@@ -175,7 +175,7 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
         }
     }
 
-    /// <summary>Inner section declarations of the part-major chord track form
+    /// <summary>Inner section declarations of the by-part chord track form
     /// (<c>chords name { section A { c1 } section B { c1 } }</c>) — each holds this
     /// part's chords for one named section. Empty for the flat form.</summary>
     public IEnumerable<SectionDeclarationSyntax> Sections
@@ -188,7 +188,7 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
         }
     }
 
-    /// <summary>True when this chord track is written in the part-major (per-section) form.</summary>
+    /// <summary>True when this chord track is written in the by-part (per-section) form.</summary>
     public bool HasSections
     {
         get

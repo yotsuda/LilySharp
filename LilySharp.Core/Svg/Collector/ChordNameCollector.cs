@@ -241,7 +241,7 @@ internal sealed class ChordNameCollector
 
         foreach (var block in blocks)
         {
-            // Part-major chord track: each inner section's chords align under its own
+            // By-part chord track: each inner section's chords align under its own
             // named section's bars — at EVERY occurrence (a reprise gets them too).
             // Flat form: the whole block aligns under the section it is written inside.
             if (block.HasSections)
@@ -444,7 +444,7 @@ internal sealed class ChordNameCollector
     public static int CountBars(ChordPartBlockSyntax block, out bool trailingOpen)
         => CountBars(block.Items, out trailingOpen);
 
-    /// <summary>Bar count of a part-major chord-track inner section
+    /// <summary>Bar count of a by-part chord-track inner section
     /// (<c>chords X { section NAME { … } }</c>): its chords sit directly in the section, so
     /// count them there rather than in a nested chord block.</summary>
     public static int CountSectionBars(SectionDeclarationSyntax section)
@@ -583,7 +583,7 @@ internal sealed class ChordNameCollector
 
         foreach (var block in blocks)
         {
-            // Part-major chord track: each inner section fills its own named section's
+            // By-part chord track: each inner section fills its own named section's
             // bars, at EVERY occurrence. Flat form: the enclosing section's occurrences.
             if (block.HasSections)
                 foreach (var section in block.Sections)

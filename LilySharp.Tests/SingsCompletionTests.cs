@@ -37,7 +37,7 @@ public class SingsCompletionTests
     [Theory]
     [InlineData("lyrics verse ")]                                    // track-major, top level
     [InlineData("lyrics verse si")]                                  // typing the keyword
-    [InlineData("section A { melody { c4 d } lyrics words ")]        // section-major cell
+    [InlineData("section A { melody { c4 d } lyrics words ")]        // by-section cell
     public void AfterTheTrackName_OffersTheBindingKeyword(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterLyricsTrackName, Ctx(text));
 

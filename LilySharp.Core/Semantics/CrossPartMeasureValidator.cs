@@ -63,15 +63,15 @@ internal sealed class CrossPartMeasureValidator
         var time = new Fraction(4, 4);
         WalkForSections(root, ref time);
 
-        // Part-major (`part X { section S { … } }`) sections are not visited above
-        // (WalkForSections only sees section-major blocks that hold part sub-blocks),
+        // By-part (`part X { section S { … } }`) sections are not visited above
+        // (WalkForSections only sees by-section blocks that hold part sub-blocks),
         // so cross-part alignment there is checked separately by section name.
-        ValidatePartMajorSections(root);
+        ValidateGroupedByPartSections(root);
     }
 
     /// <summary>
     /// Flags a section whose bar count differs between the voices that define it
-    /// part-major: the same `section S` written inside more than one `part`, or inside a
+    /// by-part: the same `section S` written inside more than one `part`, or inside a
     /// `part` and a named `chords` track (<c>chords prog { section S { … } }</c>). The
     /// collector pads the shorter parts with spacer rests up to the section's canonical
     /// bar count (the greatest over parts AND chord tracks — MeasureCollector's
@@ -91,20 +91,20 @@ internal sealed class CrossPartMeasureValidator
     /// same day, short side only (user request: the editor's quick fix should pad a lyrics
     /// cell as it pads a part or a chord row).
     /// </remarks>
-    private void ValidatePartMajorSections(SyntaxNode root)
+    private void ValidateGroupedByPartSections(SyntaxNode root)
     {
         // The voices and their bar counts come from THE ONE HOUSE (SectionBarCounts —
         // the semantic counter, MeasureModel.Split with the score-level meter in force),
         // the same index the LilyPond / MIDI / MusicXML exporters pad by, so what this
-        // warning says is short is what those pad. Section name -> its part-major voices.
-        // Section-major voices are ValidateSectionCrossPart's (which also compares beats), so
+        // warning says is short is what those pad. Section name -> its by-part voices.
+        // By-section voices are ValidateSectionCrossPart's (which also compares beats), so
         // they are not asked for here — asking would split every one of their bars into a
         // count this pass then threw away. MEASURED (session 400, perf-fingbeam1k, one
-        // section-major part of 1000 bars): 31 ms of the panel pass's 69 ms in this validator
+        // by-section part of 1000 bars): 31 ms of the panel pass's 69 ms in this validator
         // were that split; with the second one below, this validator produced nothing for
         // 58 ms out of 69 on a book with one part.
         var byName = new Dictionary<string, List<SectionVoice>>();
-        foreach (var voice in Svg.Collector.SectionBarCounts.SemanticVoices(root, _phraseBodies, partMajorOnly: true))
+        foreach (var voice in Svg.Collector.SectionBarCounts.SemanticVoices(root, _phraseBodies, groupedByPartOnly: true))
         {
             if (!byName.TryGetValue(voice.SectionName, out var list))
                 byName[voice.SectionName] = list = new();
@@ -113,7 +113,7 @@ internal sealed class CrossPartMeasureValidator
         // The lyrics cells, after the voices: compared as the short side only.
         foreach (var cell in Svg.Collector.SectionBarCounts.LyricsCells(root))
         {
-            if (!cell.PartMajor)
+            if (!cell.GroupedByPart)
                 continue;
             if (!byName.TryGetValue(cell.SectionName, out var list))
                 byName[cell.SectionName] = list = new();
@@ -285,14 +285,14 @@ internal sealed class CrossPartMeasureValidator
         // pass (MeasureModel.Split over every bar of every part), and a section with one
         // voice, which is most sections of most books, used to pay it before the gate
         // above and then throw the bars away (MEASURED, session 400 — see
-        // ValidatePartMajorSections).
+        // ValidateGroupedByPartSections).
         var parts = new List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)>(blocks.Count);
         foreach (var (name, blockTime, span, block) in blocks)
             parts.Add((name, blockTime, span, BuildPartMeasures(block, blockTime)));
         if (parts.Count < 2)
         {
             // One part beside chord rows: nothing to compare per measure, only the count.
-            ReportSectionMajorBarCount(section, parts, chordVoices);
+            ReportGroupedBySectionBarCount(section, parts, chordVoices);
             return time;
         }
 
@@ -344,14 +344,14 @@ internal sealed class CrossPartMeasureValidator
 
         // Bar-count mismatch: a part with fewer bars than its section-mates is padded
         // to align (the per-measure loop above only compares indices both parts reach).
-        ReportSectionMajorBarCount(section, parts, chordVoices);
+        ReportGroupedBySectionBarCount(section, parts, chordVoices);
 
         return time;
     }
 
-    /// <summary>The bar-count check of a section-major section over its part blocks AND
+    /// <summary>The bar-count check of a by-section section over its part blocks AND
     /// its named chord blocks (a part-block voice is anchored on its part name).</summary>
-    private void ReportSectionMajorBarCount(
+    private void ReportGroupedBySectionBarCount(
         SectionDeclarationSyntax section,
         List<(string Name, Fraction Time, TextSpan TimeSpan, List<MeasureModel.Bar> Measures)> parts,
         List<SectionVoice> chordVoices)
@@ -362,7 +362,7 @@ internal sealed class CrossPartMeasureValidator
     }
 
     /// <summary>
-    /// Splits a music scope (a section-major part block, or a part-major section body)
+    /// Splits a music scope (a by-section part block, or a by-part section body)
     /// into measures via the shared <see cref="MeasureModel"/> — the one place that
     /// applies the bare-barline rule and expands phrase references. The empty-placeholder
     /// warning is emitted from <see cref="MeasureValidator"/> over the same model, so the

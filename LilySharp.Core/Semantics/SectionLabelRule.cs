@@ -44,7 +44,7 @@ namespace LilySharp.Core.Semantics;
 /// ⚠️ THE DECLARATION HAS NO SAY (owner's decision, 2026-09-24). From 2026-08-31 a
 /// <c>section ~A</c> declaration flipped the default and a reference's <c>~</c> then SHOWED
 /// the label, so the rule was an equality and no form line could be read on its own. It went
-/// because the property had many homes in part-major layout — <c>part p1 { section ~A }</c>
+/// because the property had many homes in by-part grouping — <c>part p1 { section ~A }</c>
 /// beside <c>part p2 { section A }</c> is one section declared twice, once hidden — and the
 /// author's books never used the flip (342 tilde declarations, every one referenced once,
 /// none by a showing <c>~</c>). A declaration's tilde is now LYS0033 and the label is a
