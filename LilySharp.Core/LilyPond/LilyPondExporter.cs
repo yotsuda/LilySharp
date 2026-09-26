@@ -3944,7 +3944,18 @@ public sealed class LilyPondExporter
     ///   declared there) while LilyPond warns "unterminated crescendo" and draws none —
     ///   that book's twin is not the page, and the warning is LilyPond's to give.
     /// </summary>
-    private static string EmitDynamic(DynamicSyntax d) => d.DynamicToken.Text switch
+    /// <remarks>
+    /// An explicit side (<c>@f.up</c> / <c>@f.down</c>) is written as LilyPond's <c>^</c> / <c>_</c>
+    /// before the event, the way the page takes it (MeasureCollector reads
+    /// <c>DynamicSyntax.ForcedAbove</c>). Until 2026-09-26 it was dropped, so the twin drew
+    /// `@f.up` below the staff (Lab sessions/p644 x4).
+    /// </remarks>
+    private static string EmitDynamic(DynamicSyntax d) => (d.ForcedAbove switch
+    {
+        true => "^",
+        false => "_",
+        null => "",
+    }) + d.DynamicToken.Text switch
     {
         "cresc" => "\\<",
         "decresc" or "dim" => "\\>",

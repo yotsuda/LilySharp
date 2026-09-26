@@ -2121,6 +2121,24 @@ public class LilyPondExporterTests
         score main { staff kit }
         """;
 
+    /// <summary>
+    /// A dynamic's explicit side goes to the twin as LilyPond's <c>^</c> / <c>_</c>: the page
+    /// draws <c>@f.up</c> above the staff, and the twin drew it below until 2026-09-26 (the
+    /// qualifier was dropped). Checked against LilyPond 2.26 (Lab sessions/p644 y1).
+    /// </summary>
+    [Fact]
+    public void ADynamicsExplicitSide_IsWrittenAsLilyPondsDirection()
+    {
+        var ly = Export("""
+            octave absolute
+            part m { clef treble }
+            section S { m { c''4@f.up d''@p.down e'' f''@mf | } }
+            form main { S }
+            score main { staff m }
+            """);
+        Assert.Contains("c''4^\\f d''_\\p e'' f''\\mf", ly);
+    }
+
     [Fact]
     public void ADrumPart_IsWrittenInDrummode_OnADrumStaff()
     {
