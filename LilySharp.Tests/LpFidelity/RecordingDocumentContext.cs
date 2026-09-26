@@ -55,13 +55,21 @@ internal readonly record struct DrawnQuad(
 /// control point — the one <c>TieFormattingProblem</c>/<c>SlurScoringProblem</c> solved — is
 /// the MIDPOINT of each pair, which is why both halves are kept rather than one.
 /// </summary>
+/// <param name="SourcePosition">The source scope the bow was drawn under (see
+/// <see cref="DrawnText.SourcePosition"/>) — what says a tie from a slur from a phrasing slur
+/// when a whole book's bows are read at once. −1 outside any scope.</param>
 internal readonly record struct DrawnBezier(
     (double X, double Y) P0, (double X, double Y) C1, (double X, double Y) C2,
-    (double X, double Y) P1, (double X, double Y) C2Back, (double X, double Y) C1Back)
+    (double X, double Y) P1, (double X, double Y) C2Back, (double X, double Y) C1Back,
+    int SourcePosition = -1)
 {
     /// <summary>The solved first control point: the sandwich's two halves averaged.</summary>
     public (double X, double Y) Centreline1
         => ((C1.X + C1Back.X) / 2, (C1.Y + C1Back.Y) / 2);
+
+    /// <summary>The solved second control point, likewise.</summary>
+    public (double X, double Y) Centreline2
+        => ((C2.X + C2Back.X) / 2, (C2.Y + C2Back.Y) / 2);
 }
 
 /// <summary>
@@ -218,7 +226,8 @@ internal sealed class RecordingDrawingContext : IDrawingContext
         // Y) and differ only in which side the controls sit.
         _beziers.Add(new DrawnBezier(
             (Tx(p0.X), Ty(p0.Y)), (Tx(c1.X), Ty(c1.Y)), (Tx(c2.X), Ty(c2.Y)),
-            (Tx(p1.X), Ty(p1.Y)), (Tx(c2Back.X), Ty(c2Back.Y)), (Tx(c1Back.X), Ty(c1Back.Y))));
+            (Tx(p1.X), Ty(p1.Y)), (Tx(c2Back.X), Ty(c2Back.Y)), (Tx(c1Back.X), Ty(c1Back.Y)),
+            _source));
     }
 
     // An open stroked curve (a fall / doit) as the line between its ends, which is what a

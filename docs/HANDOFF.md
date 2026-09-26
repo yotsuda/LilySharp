@@ -936,6 +936,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - 量: direction・両端 x／y・中央の高さ（cp1.y − cp0.y）・span。残差は ±0.01 ss を「一致」と数える
     （6 桁の追い込みは台帳でやる）。**bow の前段（spacing・符頭 X）の差**を分けるため、左右の bound の
     符頭 X の残差も並べる＝spacing 起因の bow 差を bow の欠陥と数えない。
+  - ✅ **第647 が建てた**: Lab `sessions/p647/bows/`（`bowdump.ily`・`run-lp.ps1`・`sweep-bows.ps1`・
+    `compare.ps1`・`summarize.ps1`）＋ `LilySharp.Tests/LpFidelity/TwinBowSweep.cs`（`LILYSHARP_BOW_SWEEP`）。
+    `DrawnBezier` は source 位置を持つ。tight の再現で LP と 6 桁一致を確認。**spacing の差は符頭の列で
+    差し引く**（列の数が揃えば区分線形、揃わなければ両側の最寄り列）が、**raw で既に合う端は raw のまま**
+    （列の写像は推測なので、差を*説明して消す*側にしか使わない＝頭 1 個ぶんの偽の差が 692 件出た）。
+    ⚠️ LP 側は stencil の無い bow（既定の TabStaff の Tie）を数えない。Lily# の grace スラーの source は
+    `acciaccatura` などの語。
+  - **初回の掃き（963 冊・第647）**: 対になった本 897・bow 23,591・±0.01 を超える差 3,425。
+    **族**（`summarize.ps1`）: ⑴ grace スラー（acciaccatura: x・y とも大きい。perf-grace200 ほか）／
+    ⑵ tab のスラーの y ±0.23・0.45（約 600 対・約 40 冊）＝**F9（数字の大きさ・宣言済み）の帰結かを先に
+    確かめる**（台帳 `slur.tab.*.string-to-attachment` の 0.151777 は F9）／⑶ tab のタイ（y −1.16・x +0.85）／
+    ⑷ 向きの反転（tie 40・slur 22 対）／⑸ tie の 0.01〜0.05 の x と高さ（多数・spacing の残りかを確認）／
+    ⑹ 段割りが違って対にできない 63 冊（T7 の族）／⑺ 数の不一致（Lily# の種類不明 65・l.v./repeat tie）。
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、

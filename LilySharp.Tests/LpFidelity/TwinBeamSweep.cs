@@ -48,8 +48,9 @@ public sealed class TwinBeamSweep
     /// the staff's own grid, continuing outward one space at a time, so the run of them is a
     /// stair back to the staff that owns the note.
     /// </remarks>
-    private readonly record struct StaffBox(
-        double Top, double Bottom, double Space, double LedgerTop, double LedgerBottom)
+    internal readonly record struct StaffBox(
+        double Top, double Bottom, double Space, double LedgerTop, double LedgerBottom,
+        double Left = 0)
     {
         public double Middle => (Top + Bottom) / 2;
 
@@ -198,21 +199,23 @@ public sealed class TwinBeamSweep
     /// ever asking how far apart two staves are.
     /// </para>
     /// </remarks>
-    private static List<StaffBox> StavesOf(RecordingDrawingContext page)
+    internal static List<StaffBox> StavesOf(RecordingDrawingContext page)
     {
-        var allRows = page.Lines
+        var rows = page.Lines
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9)
             .GroupBy(l => Math.Round(l.Y1, 6))
-            .Select(g => (Y: g.Key,
+            .Select(g => (Y: g.Key, Left: g.Min(l => Math.Min(l.X1, l.X2)),
                           Reach: g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))))
             .OrderBy(r => r.Y)
             .ToList();
+        var allRows = rows.Select(r => (r.Y, r.Reach)).ToList();
 
         var staves = new List<StaffBox>();
-        foreach (var group in allRows.Where(r => r.Reach >= MinStaffLineSpan)
-                                     .GroupBy(r => Math.Round(r.Reach, 6)))
+        foreach (var group in rows.Where(r => r.Reach >= MinStaffLineSpan)
+                                  .GroupBy(r => Math.Round(r.Reach, 6)))
         {
-            var ys = group.Select(r => r.Y).OrderBy(y => y).ToList();
+            var ordered = group.OrderBy(r => r.Y).ToList();
+            var ys = ordered.Select(r => r.Y).ToList();
             int i = 0;
             while (i < ys.Count)
             {
@@ -223,7 +226,8 @@ public sealed class TwinBeamSweep
                 {
                     double top = ys[i], bottom = ys[j - 1], space = (bottom - top) / (n - 1);
                     staves.Add(new StaffBox(top, bottom, space,
-                        LedgerRun(allRows, top, space, -1), LedgerRun(allRows, bottom, space, +1)));
+                        LedgerRun(allRows, top, space, -1), LedgerRun(allRows, bottom, space, +1),
+                        ordered.Skip(i).Take(n).Min(r => r.Left)));
                 }
                 i = j;
             }
