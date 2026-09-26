@@ -996,7 +996,7 @@ section A {
 }
 ```
 
-In **part-major** layout, where each part holds its own inner sections, a section's key/
+In the **by-part** layout, where each part holds its own inner sections, a section's key/
 meter/tempo can be stated once in a standalone **header** — a `section` block with only
 those settings — placed alongside the `part` blocks:
 
@@ -1006,7 +1006,8 @@ part bass   { section A { c2 e | } }
 section A { key g major }       // applies to every part playing A
 ```
 
-The layout converter turns the two forms into each other.
+The layout converter (**Convert Layout (by part ⇄ by section)** in the editor) turns the
+two forms into each other.
 
 **Those four are the whole list.** A setting that belongs to ONE part — `clef`,
 `instrument`, `transpose`, `octave` — is refused beside a section's part cells
@@ -1021,7 +1022,7 @@ section A { melody { clef bass c4 d e f | } }   // a change mid-piece
 
 ⚠️ **The position is the rule, not the keyword.** Where a section's body *is* a music
 stream, the same `clef` is ordinary music and engraves: `part m { section A { clef bass c4 … } }`
-(part-major) and `section A { clef bass c4 … }` (a single-part piece writing bare music) are
+(by part) and `section A { clef bass c4 … }` (a single-part piece writing bare music) are
 both correct. Only a section holding *cells* has nowhere to put a loose one.
 
 ### Structure (Playback Order)
@@ -1546,9 +1547,9 @@ independent: a degree chart prints names by default and degrees under `as roman`
 
 That fragment is the row's *contents*. Where it may sit depends on the file's layout:
 inside the section whose bars it fills (`section A { chords prog { … } }`), or — in a
-part-major file, where the parts carry their own sections — at the top level with the
+file laid out by part, where the parts carry their own sections — at the top level with the
 sections named inside it (`chords prog { section A { … } }`). A **flat top-level track
-in a part-major file is an error** (LYS2011 for chords, LYS4002 for lyrics): it has no
+in a file laid out by part is an error** (LYS2011 for chords, LYS4002 for lyrics): it has no
 section to anchor to, so its bars would run from bar 0 across whatever the form plays,
 and every section after the first would get nothing.
 

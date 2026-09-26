@@ -1064,8 +1064,8 @@ public sealed partial class LilySharpLanguageServer
             return new ConvertLayoutResponse
             {
                 Success = false,
-                Error = "This file has chords/lyrics blocks, which exist only in the section-major "
-                    + "layout. Converting to part-major would drop them, so it was left unchanged."
+                Error = "This file has chords/lyrics blocks, which exist only in the by-section "
+                    + "layout. Converting to by-part would drop them, so it was left unchanged."
             };
 
         // Convert self-guards: it returns null unless the result round-trips to a

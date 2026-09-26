@@ -51,6 +51,12 @@ All notable changes to the Lily# VS Code extension are documented here.
   ghost text and Copilot's look the same in the editor. A suggestion that opens with a
   barline no longer leaves an empty bar.
 
+### Editor
+
+- **Convert Layout (part-major ⇄ section-major) is now Convert Layout (by part ⇄ by
+  section).** Same command, plainer names: by part writes `part bass { section A { … } }`,
+  by section writes `section A { bass { … } }`.
+
 ## 0.8.0
 
 ### Breaking changes

@@ -199,7 +199,7 @@ PartialDecl    = 'partial' , DurationToken ;
                  (* "the bar this stands in is this long". A section's opening pickup is
                     a SECTION directive, for every part at once (§6) — `section A {
                     partial 4 … }`, or a standalone `section A { partial 4 }` beside
-                    part-major cells — and only there: written in a part's or voice's
+                    by-part cells — and only there: written in a part's or voice's
                     music within the section's first bar it is refused (LYS1024) with the
                     header spelling (owner's decision 2026-09-15). Later in the music
                     (§8.1) it shortens the bar it stands in, mid-section
@@ -903,7 +903,7 @@ SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
      form main { A |: B [1. ~B1] :| [2. ~B2] C }   -- B1 and B2 play without a label
    A declaration takes no tilde: 'section ~A { … }' is LYS0033 (an error that names the
    form spelling). The label is a property of the PLAY, so it is read off the form line
-   alone - and in part-major layout, where every part declares its own 'section A', there
+   alone - and in the by-part layout, where every part declares its own 'section A', there
    is no second place for it to disagree. A section with no form plays in declaration
    order and labels itself. An empty quoted label ('A ""') also suppresses the mark, and a
    label written on a '~' play is LYS0012. *)
@@ -918,7 +918,7 @@ SectionItem    = SectionSetting
 
 (* A section-level setting applies to the WHOLE section — its key / meter / tempo / pickup
    prints on every part of the section, not just one voice. A section whose body is ONLY
-   settings (no part blocks) is a standalone header: in part-major layout it states a
+   settings (no part blocks) is a standalone header: in the by-part layout it states a
    section's key/meter/tempo once, parallel to the 'part' blocks, e.g.
      part melody { section A { c d e f } }
      section A { key g major }              (* applies to every part playing A *)
@@ -932,7 +932,7 @@ SectionItem    = SectionSetting
      section A { instrument "Tuba"  melody { … } }      -- LYS0030
    ⚠️ THE POSITION IS THE RULE, NOT THE KEYWORD. Where a section's body IS a music stream
    the same clef is ordinary music and engraves — 'part m { section A { clef bass c4 … } }'
-   (part-major) and 'section A { clef bass c4 … }' (a single-part piece writing bare music)
+   (by part) and 'section A { clef bass c4 … }' (a single-part piece writing bare music)
    are both correct. Only a section holding CELLS has nowhere to put a loose one.
 
    ⚠️ THE SAME FOUR ARE REFUSED ON A PART CELL, which is the OTHER position they can be
@@ -1463,17 +1463,17 @@ DisplayName    = String ;
    has no degree, so a roman row shows its NAME there. Stacked, that slot reads once per
    row. Anything else after 'as' is an error (LYS2012). *)
 
-(* WHERE A TRACK'S CELLS GO. The example above is SECTION-major: each track block sits
-   inside the section whose bars it fills, so the binding is where it is written. The
-   PART-major spelling puts the track at the top level and names the sections inside it:
+(* WHERE A TRACK'S CELLS GO. The example above is laid out BY SECTION: each track block
+   sits inside the section whose bars it fills, so the binding is where it is written. The
+   BY-PART spelling puts the track at the top level and names the sections inside it:
 
      chords prog  { section A { C G7 | } section B { Am F | } }
      lyrics words { section A { Twin- kle | } section B { lit- tle | } }
 
-   In a part-major file a top-level track MUST be written that way. A flat top-level
+   In a file laid out by part a top-level track MUST be written that way. A flat top-level
    track has no section to anchor to, so its cells would run from bar 0 across whatever
    the form plays and every section after the first would get nothing. That is an error:
-   LYS4002 for lyrics, LYS2011 for chords. A section-major or structureless file is not
+   LYS4002 for lyrics, LYS2011 for chords. A by-section or structureless file is not
    affected, and neither is a track block written inside a part or a section. *)
 
 ================================================================================
