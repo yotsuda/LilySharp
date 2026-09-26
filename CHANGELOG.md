@@ -8,6 +8,21 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A drum staff prints no key signature.** LilyPond's DrumStaff has no key engraver, as a
+  tab staff has none; Lily# excluded only the tab staff, so a keyed score printed its
+  signature — and its key changes — on the drum staff of every system, and a drum-only
+  score reserved room for one.
+
+- **A pedal written on a member of a `<< >>` group lands on that member.** Every member's
+  mark was anchored at the start of its bar, so a pedal change on the third group of a
+  12/8 bar landed on beat one and the bracket lost whole bars.
+
+- **A slur may open right after `@ottava`.** `e8@ottava( d c b)` read the slur's whole run,
+  its `@!ottava` included, as `@ottava`'s argument, and the notes vanished from the bar.
+  For the names whose argument is optional (`@ottava`, `@quindicesima`, `@arpeggio`, a bare
+  `@chord`) a `(` followed by a space now opens the slur; the argument is still written
+  against the parenthesis (`@ottava(bassa)`).
+
 - **The swing equation is LilyPond's.** `tempo 122 swing` drew two beamed eighths "=" a
   beamed dotted eighth and eighth under a "3" — a figure that is not a triplet — at a
   small size of its own. It now draws what LilyPond's `\rhythm { 8[ 8] } = \rhythm

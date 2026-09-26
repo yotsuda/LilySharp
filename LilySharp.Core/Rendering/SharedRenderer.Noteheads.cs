@@ -160,7 +160,9 @@ internal static partial class SharedRenderer
                     // A change that OPENS a later system is folded into that
                     // system's prefix (new key only, like LilyPond) — drawing
                     // it here too overprinted the prefix with naturals.
-                    if (!IsSystemStartKeyChange(voice, system, ml.MeasureIndex, keyChange))
+                    // ...and a staff with no Key_engraver (a drum staff) draws none at all.
+                    if (SpacingRules.ClefEngravesKey(clef)
+                        && !IsSystemStartKeyChange(voice, system, ml.MeasureIndex, keyChange))
                         DrawKeySignatureChange(keyChange, itemX, staffY, gc);
                     break;
                 // A BLANKED meter is drawn nowhere — that is what blanked means

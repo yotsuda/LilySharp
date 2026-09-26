@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Semantics;
@@ -462,5 +463,37 @@ public class PedalTests
         Assert.True(sostenuto < sustain,
             $"sustain must sit OUTERMOST: sostenuto is at {sostenuto:F2} and sustain at "
             + $"{sustain:F2}");
+    }
+
+    /// <summary>
+    /// A pedal mark on a member of a <c>&lt;&lt; &gt;&gt;</c> group anchors at THAT member's moment,
+    /// as it does on a note. The members go in without advancing the bar's clock, and the
+    /// marks they carry were anchored at the bar's start: the change on the third group of a
+    /// 12/8 bar landed on beat one beside the one on the first, and the bracket lost whole
+    /// bars (user report 2026-09-26, a nocturne probe). The control is the same bar written
+    /// as plain notes, which always anchored right.
+    /// </summary>
+    [Theory]
+    [InlineData("<< ees,@sustain bes, ges >>4. << ees, bes, ges >>4. << aes,,@sustain ees, c >>4. << aes,, ees, c >>4. |")]
+    [InlineData("ees,4.@sustain ees, aes,,@sustain aes,, |")]
+    [InlineData("<< ees, bes, ges >>4. << ees, bes, ges >>4. << aes,, ees,@sustain c >>4. << aes,, ees, c >>4. |")]
+    public void APedalOnAGroupMember_AnchorsAtThatMembersMoment(string bar)
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+            "octave absolute\ntime 12/8\npart lh { clef bass }\n"
+            + "section A { lh { " + bar + " f,,1.@!sustain | } }\n"
+            + "form main { ~A }\nscore main { staff lh }\n");
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
+            tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+        var onsets = score.MusicMarks
+            .Where(m => m.Type == MusicMarkType.SustainOn && m.MeasureIndex == 0)
+            .Select(m => m.AnchorTiming)
+            .ToList();
+        // The third dotted quarter of a 12/8 bar starts 6/8 = 3/4 in; the third group's
+        // SECOND member (the last case) starts one eighth later, 7/8.
+        var expected = bar.Contains("ees,@sustain c")
+            ? new[] { new Fraction(7, 8) }
+            : new[] { Fraction.Zero, new Fraction(3, 4) };
+        Assert.Equal(expected, onsets);
     }
 }

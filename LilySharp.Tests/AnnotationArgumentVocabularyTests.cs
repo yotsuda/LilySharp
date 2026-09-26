@@ -49,6 +49,25 @@ public class AnnotationArgumentVocabularyTests
         Assert.Empty(root.DescendantNodes().OfType<MusicMarkSyntax>());
     }
 
+    /// <summary>
+    /// A name whose argument is OPTIONAL has the same trap GLUED: <c>e8@ottava( d c b)</c> is
+    /// the slur, and it was read as <c>@ottava</c>'s argument — the slur's notes, its
+    /// <c>@!ottava</c> included, vanished into one unknown mark (user report 2026-09-26, a
+    /// nocturne probe). The argument is written against the '(' (<c>@ottava(bassa)</c>, the
+    /// theory below); a slur's next note after a space.
+    /// </summary>
+    [Theory]
+    [InlineData("e4@ottava( d4 c4 b,4@!ottava) |")]
+    [InlineData("e4@quindicesima( d4 c4 b,4@!ottava) |")]
+    [InlineData("c4@arpeggio( d4 e4 f4) |")]
+    [InlineData("c4@chord( d4 e4 f4) |")]
+    public void AnOptionalArgument_AndASlurOnTheSameNote_KeepTheSlur(string music)
+    {
+        var root = Root(music);
+        Assert.Equal(4, root.DescendantNodes().OfType<NoteSyntax>().Count());
+        Assert.DoesNotContain(root.DescendantNodes().OfType<MusicMarkSyntax>(), m => m.HasArgumentList);
+    }
+
     [Theory]
     [InlineData("c4@fig(6) |", "fig.6")]
     [InlineData("c4@fig(3 5) |", "fig.3.5")]

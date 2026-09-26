@@ -431,6 +431,20 @@ internal static class SyntaxFacts
             || !Semantics.AnnotationNameValidator.IsKnownPlainName(name);
 
     /// <summary>
+    /// Whether <paramref name="name"/>'s argument is OPTIONAL — the name is complete on its
+    /// own (<c>@ottava</c>, <c>@quindicesima</c>, <c>@arpeggio</c>, a bare <c>@chord</c>) and
+    /// also takes one (<c>@ottava(bassa)</c>). For such a name a glued <c>(</c> is ambiguous:
+    /// the argument, or the slur that starts on the same note (<c>e8@ottava( d c b)</c>).
+    /// The parser tells them apart by what follows the <c>(</c> — an argument is written
+    /// against it, a slur's next note after a space (user report 2026-09-26: the slur's
+    /// whole run, <c>@!ottava</c> included, was read as the argument and dropped).
+    /// </summary>
+    public static bool AnnotationArgumentIsOptional(string name)
+        => ArgumentTakingAnnotations.Contains(name)
+           && (Semantics.AnnotationNameValidator.IsKnownPlainName(name)
+               || name.Equals("chord", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// Whether <paramref name="name"/> is one of the names that CAN take a
     /// parenthesised argument — the vocabulary above, without the "unknown names read
     /// one too" arm. A diagnostic uses this to tell a reader who wrote the name bare

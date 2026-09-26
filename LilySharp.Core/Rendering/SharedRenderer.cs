@@ -777,7 +777,9 @@ internal static partial class SharedRenderer
                 // reserved rather than tight against the clef. Each gap is measured off the
                 // previous item's ink (extra-space). LILYPOND-REF Clef/KeySignature space-alist.
                 bool keyDrawn = false;
-                if (ossiaAtSystemStart && prefatoryStaff)
+                // A drum staff (like a tab staff) has no Key_engraver — the predicate the
+                // reservation walks, so booked and drawn are the same staff set.
+                if (ossiaAtSystemStart && prefatoryStaff && SpacingRules.ContributesToKeyColumnWidth(staff))
                 {
                     // Tag the key sig with the declaration that put it in force HERE, on
                     // every line — the score's `key`, or the last mid-piece change before
@@ -908,7 +910,8 @@ internal static partial class SharedRenderer
                     //   observed by: audit/lp-geometry courtesy.* — including the line-end
                     //     spans, which see the whole suffix from the bar line's ink to the
                     //     staff line's end.
-                    if (GetSystemEndKeyChange(staff, system) is { } eolKeyChange)
+                    if (SpacingRules.ContributesToKeyColumnWidth(staff)
+                        && GetSystemEndKeyChange(staff, system) is { } eolKeyChange)
                     {
                         // Which symbol OPENS the group decides which entry the bar line's alist
                         // is keyed by — a cancellation and a signature are different break-align

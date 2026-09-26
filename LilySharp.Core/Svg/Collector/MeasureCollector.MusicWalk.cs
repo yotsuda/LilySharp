@@ -553,7 +553,13 @@ public sealed partial class MeasureCollector
             {
                 _octave.OctaveAbsolute = savedAbsolute; // the root, and any rest
             }
-            EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString, measureIndex);
+            // The member's ONSET — the group's start plus the members already emitted (they
+            // go in without advancing the bar's clock, which the group advances once below).
+            Fraction onset = startTiming;
+            for (int i = startNoteIndex; i < builder.CurrentItemCount; i++)
+                onset += builder.CurrentItems[i].Duration;
+            EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString,
+                measureIndex, onset);
             if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
@@ -614,9 +620,14 @@ public sealed partial class MeasureCollector
     /// several) at the tuplet <paramref name="scale"/>, added WITHOUT advancing the
     /// measure duration — the group adds its total once. The member's own post-events
     /// (scripts, dynamic, string number) are collected on its first part.</summary>
+    /// <param name="onset">The member's moment from its bar's start — what the marks it
+    /// carries anchor at (<c>CollectArticulations</c>' <c>anchorTiming</c>), as a note's do.
+    /// ⚠️ It was not passed until 2026-09-26, so every member's mark anchored at the bar's
+    /// start: a pedal change on the third group of a 12/8 bar landed on beat one, and the
+    /// bracket lost whole bars (user report, a nocturne probe).</param>
     private void EmitArpeggioMember(SyntaxNode member, MeasureBuilder builder,
         IReadOnlyList<(int Value, int Dots)> parts, Fraction scale, int octaveShift,
-        ArpeggioMarks marks, int? groupString, int measureIndex)
+        ArpeggioMarks marks, int? groupString, int measureIndex, Fraction onset)
     {
         switch (member)
         {
@@ -630,7 +641,7 @@ public sealed partial class MeasureCollector
                     if (k == 0)
                     {
                         CollectDynamics(pitch, measureIndex, itemIndex);
-                        CollectArticulations(pitch, measureIndex, itemIndex, items[k].StemUp);
+                        CollectArticulations(pitch, measureIndex, itemIndex, items[k].StemUp, anchorTiming: onset);
                     }
                 }
                 break;
@@ -661,7 +672,7 @@ public sealed partial class MeasureCollector
                     if (first)
                     {
                         CollectDynamics(chord, measureIndex, itemIndex);
-                        CollectArticulations(chord, measureIndex, itemIndex, item.StemUp);
+                        CollectArticulations(chord, measureIndex, itemIndex, item.StemUp, anchorTiming: onset);
                     }
                 }
                 break;
@@ -673,7 +684,7 @@ public sealed partial class MeasureCollector
                     builder.AddItemWithoutDuration(
                         CreateRestItem(rest, forcedDuration: parts[k]) with { TimeScale = scale });
                     if (k == 0)
-                        CollectArticulations(rest, measureIndex, itemIndex, stemUp: false);
+                        CollectArticulations(rest, measureIndex, itemIndex, stemUp: false, anchorTiming: onset);
                 }
                 break;
         }

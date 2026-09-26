@@ -1211,10 +1211,18 @@ internal sealed partial class Parser
                     // "Unknown annotation '@arpeggio ( d4 e4 )'". Every argument anyone
                     // writes is glued (`@fig(6 4)`, `@text("dolce")`), so the rule costs
                     // nothing and the trap is gone.
+                    // ⚠️ A name whose argument is OPTIONAL (@ottava, @ottava(bassa)) has the
+                    // same trap GLUED: `e8@ottava( d c b)` is the slur, and it used to be read
+                    // as the argument — the slur's notes and its `@!ottava` vanished into it.
+                    // For those names an argument is written against the '(' and a slur's
+                    // next note after a space, so a '(' followed by whitespace is the slur.
                     else if (Current.Kind == SyntaxKind.Identifier
                              && Peek(1) is { Kind: SyntaxKind.OpenParen } openParen
                              && GluedToPrevious(Current, openParen)
-                             && SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text))
+                             && SyntaxFacts.AnnotationReadsAParenthesisedArgument(Current.Text)
+                             && !(SyntaxFacts.AnnotationArgumentIsOptional(Current.Text)
+                                  && Peek(2) is { } afterParen
+                                  && !GluedToPrevious(openParen, afterParen)))
                     {
                         var name = Advance();
                         var parts = new List<SyntaxToken> { at, name, Advance() /* ( */ };

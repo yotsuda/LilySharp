@@ -476,7 +476,21 @@ internal static partial class SpacingRules
     /// spaced from, while LilyPond's two twins are geometrically identical.
     /// </remarks>
     public static bool ContributesToKeyColumnWidth(Staff staff) =>
-        !staff.IsTab && !staff.IsTextRow;
+        ClefEngravesKey(staff.Clef) && !staff.IsTextRow;
+
+    /// <summary>
+    /// Whether a staff of this clef has a <c>Key_engraver</c> at all: not a tab staff and not
+    /// a drum staff. The one rule <see cref="ContributesToKeyColumnWidth"/> and the drawing
+    /// walks (the prefix, the end-of-line courtesy, a mid-line change) read.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:292-297 Key_engraver removed from DrumStaff;
+    /// :1214 Key_engraver removed from TabStaff. Until 2026-09-26 the drum staff was left out of this rule
+    /// though the remark above already cited :297, and a keyed score printed its signature
+    /// on the drum staff of every system (user report, a big-band probe in F).
+    /// </remarks>
+    public static bool ClefEngravesKey(ClefType clef) =>
+        clef is not (ClefType.Tab or ClefType.Percussion);
 
     /// <summary>
     /// Whether this staff engraves a time signature with a STENCIL — the same question
