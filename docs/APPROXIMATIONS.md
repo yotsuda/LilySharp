@@ -46,9 +46,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:391** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1255** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1260** whiteout −1) is not ported.
-- **:1380** NOT ported; this takes the note's own stem direction. No book and
+- **:1262** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1267** whiteout −1) is not ported.
+- **:1387** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:305** Lily# has not ported; this arrow is its own device.
 - **:755** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
@@ -143,7 +143,7 @@
 - **:687** no observer; add the paren widths when a book brings one. The unpacked
 - **:689** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1381** no observer reaches that branch yet.
+- **:1388** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
 - **:767** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
@@ -266,7 +266,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:237** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1374** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1381** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **:231** The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own

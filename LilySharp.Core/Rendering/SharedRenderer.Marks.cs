@@ -621,8 +621,15 @@ internal static partial class SharedRenderer
                     gc.DrawGlyph(p.Glyph, startX + p.X0, baselineY + p.Y0, swing.GlyphSize);
                     break;
                 case MetronomeMarkGeometry.SwingPieceKind.Rule:
-                    gc.DrawRectangle(startX + p.X0, baselineY + p.Y1, p.X1 - p.X0, p.Y1 - p.Y0,
-                        fill: Color.Black);
+                    // A filled quad, as a beam is drawn — NOT a rectangle: the preview reads a
+                    // <rect> among a mark's elements as a boxed label's frame and then leaves
+                    // the mark's text uncoloured (so the label stays readable on its box),
+                    // which left the heads, flags, "=" and "3" dark when the swing was
+                    // highlighted (user report 2026-09-26).
+                    gc.DrawFilledQuad(
+                        (startX + p.X0, baselineY + p.Y0), (startX + p.X1, baselineY + p.Y0),
+                        (startX + p.X1, baselineY + p.Y1), (startX + p.X0, baselineY + p.Y1),
+                        Color.Black);
                     break;
                 case MetronomeMarkGeometry.SwingPieceKind.BracketLine:
                     gc.DrawLine(startX + p.X0, baselineY + p.Y0, startX + p.X1, baselineY + p.Y1,

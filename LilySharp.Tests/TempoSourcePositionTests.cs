@@ -73,6 +73,28 @@ public class TempoSourcePositionTests
         Assert.DoesNotContain(els, e => e.Pos == bpm && e.Tag.Contains(">3"));
     }
 
+    /// <summary>
+    /// The swing equation highlights WHOLE: the preview reads a <c>&lt;rect&gt;</c> among one
+    /// offset's elements as a boxed label's frame and then leaves that offset's text
+    /// uncoloured, so while the stems and beams were rects only they lit and the heads, the
+    /// flag, the "=" and the "3" stayed dark (user report 2026-09-26). No rect, and every kind
+    /// of piece present under the one address.
+    /// </summary>
+    [Fact]
+    public void TheSwingEquation_HasNoRect_SoThePreviewLightsAllOfIt()
+    {
+        string book = Book("tempo 120 swing");
+        int feel = At(book, "swing");
+        var swing = Addressed(SvgGenerator.Generate(SyntaxTree.Parse(book), Interactive))
+            .Where(e => e.Pos == feel).ToList();
+        Assert.DoesNotContain(swing, e => e.Tag.StartsWith("<rect", System.StringComparison.Ordinal));
+        Assert.Equal(5, swing.Count(e => e.Tag.Contains("class=\"music\"")));   // 4 heads + the flag
+        Assert.Contains(swing, e => e.Tag.StartsWith("<text", System.StringComparison.Ordinal) && e.Tag.EndsWith(">="));
+        Assert.Contains(swing, e => e.Tag.StartsWith("<text", System.StringComparison.Ordinal) && e.Tag.EndsWith(">3"));
+        // The pair's 2 stems and beam, the triplet's 2 stems.
+        Assert.Equal(5, swing.Count(e => e.Tag.StartsWith("<polygon", System.StringComparison.Ordinal)));
+    }
+
     [Fact]
     public void TheSwungValue_IsTheSwingEquationsAlias()
     {
