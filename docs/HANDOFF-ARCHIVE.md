@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第639セッションの経緯
+
+### 1.1 第639セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p639`（HEAD `67111bc3`・未 push 19・full **9190 / 0 / 2 / 9192**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の tab のスラーの残り（`StaffSlurLayouts` の予約が梁を渡さない）。
+
+★ **⑴ 予約のスラーに梁を渡した**（`1f3c05e3`）: `MultiStaffLayouter.StaffSlurLayouts`（間隔を決める前に skyline が予約するスラー）は「梁は端を動かすだけで間を縛る頂点は動かさない」という理由で梁を渡していなかった。だが梁の上を越える弧は梁の付いた符尾の端から立つ（slur-scoring.cc:549-557）＝梁が無いと予約の弧は梁の無い符尾の先に立って描く弧より高く、上に乗る text も一緒に上がる。描く側と同じ引数を渡すだけ（譜表も tab も同じ `LayoutSlurs` を通る）。
+★ **⑵ 実測・網**: 掃き 964 冊で動いたのは **1 冊**＝`audit/lp-regression/lys/empty-chord.lys`（1 小節目の `e8( g <>)^"sul D"`＝弧は e g の梁の上・text が 0.32 下がる・描く弧は不変）。LP の双子を `audit/lp-geometry/probes/slur-beam-reserve.ly` に置き、台帳 `slur.beamed.reserved-text`（text の基線）: 前 3.931767 → **3.29**（LP 2.673176）。毒（梁を渡さない）で 3.93 に戻り赤。残差 +0.617 は**スラーと無関係**＝スラーを消しても Lily# 3.29・LP 2.55（§1.0 に起票＝`@text` の上の床）。accessor `RenderedGeometry.TextBaselineAboveStaff(text)` を足した（`CustomTexts` は form の `^"…"` だけを数える）。
+★ **終了**: code `1f3c05e3`・full **9191 / 0 / 2 / 9193**（+1＝台帳）・`-End` の門は全部 OK。§7.5 Core '+' 7・LILYPOND-REF 0（引数 1 つと doc コメント＝出典は slur-scoring.cc:549-557 を本文に）・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第638セッションの経緯
 
 ### 1.1 第638セッション（2026-09-26・YT-DELL2）
