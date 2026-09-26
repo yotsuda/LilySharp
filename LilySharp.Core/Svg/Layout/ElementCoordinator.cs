@@ -4136,11 +4136,29 @@ internal sealed class ElementCoordinator
             };
             bool beamedInner = beam is not null && (leftEdge ? !beamEnd : !beamStart);
             double halfStem = EngravingDefaults.StemThickness / 2.0;
+            double stemXHi = stemX + halfStem;
+            double stemBeginY = geom.StringY(geom.StemHeadString(column.Item, !stemUp));
+            // A lone stem's extent is united with its FLAG, as the staff path's edge is
+            // (ResolveSlurEdge): the flag hangs on the stem's right and toward the head, so it
+            // widens X and can push the head-side edge of the Y window. The tab's flag is the
+            // staff's glyph at the stem's end (SharedRenderer.DrawUnbeamedTabStem).
+            // LILYPOND-REF: lily/slur-scoring.cc:188-203 get_bound_info — stem_extent_ is
+            //   stem->extent ∪ flag->extent on both axes.
+            var flag = beam is null
+                ? GlyphMetrics.GetFlagBBox(GlyphMetrics.NoteValueOf(column.Item), stemUp)
+                : default;
+            if (flag != default)
+            {
+                stemXHi = Math.Max(stemXHi, stemX + flag.Width);
+                var (flagYMin, flagYMax) = ItemSkylineFactory.FlagInkBand(tip, stemUp, flag);
+                double flagInnerY = stemUp ? flagYMax : flagYMin;
+                stemBeginY = stemUp ? Math.Max(stemBeginY, flagInnerY) : Math.Min(stemBeginY, flagInnerY);
+            }
             return new SlurEdgeInfo(
                 HasStem: true, StemUp: stemUp, BeamedInner: beamedInner, Beamed: beam is not null,
-                StemXLo: stemX - halfStem, StemXHi: stemX + halfStem,
+                StemXLo: stemX - halfStem, StemXHi: stemXHi,
                 StemTipY: tip,
-                StemBeginY: geom.StringY(geom.StemHeadString(column.Item, !stemUp)));
+                StemBeginY: stemBeginY);
         }
 
         // A written side wins over the rule, as on a staff (SlurDetector).
@@ -4193,8 +4211,7 @@ internal sealed class ElementCoordinator
         // A full tab's stems, in the frame the staff path hands the scorer (ResolveSlurEdge,
         // BuildSlurObstacles): the stem stands on the digits' X centre (SharedRenderer.TabStemX),
         // a beamed stem ends on its beam's outer face, a lone one where the renderer ends it.
-        // ⚠️ No flag in the stem's extent (the staff path unites the two): a tab flag's box is
-        // not read here.
+        // A lone stem's flag joins its extent (TabStemOf), as on the staff.
         var leftStem = isFirst ? TabStemOf(columns[0], leftEdge: true) : default;
         var rightStem = isLast ? TabStemOf(columns[^1], leftEdge: false) : default;
         // LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — a stem pointing

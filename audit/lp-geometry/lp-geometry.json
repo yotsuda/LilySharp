@@ -1794,6 +1794,27 @@
       "residual": 0.0,
       "why": "EXACT since session 634: TAB COLUMN SPACING, the same family as slur.tab.stems.span (the attachments are the first and last stems). Until then Lily#'s tab voice read its stem-spacing correction off the notation stems and pitches, where LilyPond's note-spacing.cc stem_dir_correction runs on the TabVoice's own stems and string positions; here the string changes 1 -> 3 -> 1 made it -0.199661."
     },
+    "slur.tab.stems.flag-attachment": {
+      "probe": "tab-slur-stems.ly",
+      "score": "C",
+      "lilypond": -1.0884802615022964,
+      "residual": -0.133519738,
+      "why": "F9 (the fret digit size). The bow attaches below the stem tip, so this is a base attachment read off the DIGIT (its ink bottom + dir*0.5*staff_space, lily/slur-scoring.cc:555-557, then the half-space grid): with the tab slur's half digit set to LilyPond's 0.6577 (a temporary experiment, session 638) this reads -0.013683. The X at both ends is LilyPond's: the stem-attachment rule (:738-760) puts it 0.3 past the flag's right edge, which is why slur.tab.stems.flag-span is exact."
+    },
+    "slur.tab.stems.flag-control": {
+      "probe": "tab-slur-stems.ly",
+      "score": "C",
+      "lilypond": -1.9438399128325674,
+      "residual": -0.060489706,
+      "why": "F9, with slur.tab.stems.flag-attachment: the control follows the lower base (+0.004561 with LilyPond's digit, session 638's experiment). Before session 638 -0.197158, the rest being the span."
+    },
+    "slur.tab.stems.flag-span": {
+      "probe": "tab-slur-stems.ly",
+      "score": "C",
+      "lilypond": 2.6976953280839866,
+      "residual": 0.0,
+      "why": "EXACT since session 638: THE FLAG IS IN THE EDGE STEM'S EXTENT. LilyPond's stem_extent_ is stem->extent united with flag->extent (lily/slur-scoring.cc:188-203 get_bound_info), so the left edge, attached to its stem (:748-752), sits 0.3 past the FLAG's right edge, not the stem's. The staff path did this already; the tab's edge record (ElementCoordinator.BuildTabSlurLayout TabStemOf) did not, and the span read 3.365562 (+0.667867)."
+    },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",
       "score": "qA",

@@ -10652,6 +10652,31 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// <see cref="TSS"/>'s third score: the edges are UNBEAMED, FLAGGED eighths (a quarter
+    /// between them), stems down toward the bow written below — the edge stem extent a tab
+    /// reads is the stem united with its flag.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:188-203 get_bound_info — stem_extent_ is the stem's
+    ///   extent ∪ its flag's, which the stem-attachment X rule (:738-760) reads.
+    /// LilyPond twin: audit/lp-geometry/probes/tab-slur-stems.ly, score C.
+    /// </remarks>
+    private static readonly string TSS3 = """
+        octave absolute
+        time 2/4
+
+        part gtr { instrument guitar }
+
+        section Main {
+          gtr { e'8\1@phrasingSlur.down f'4\1 g'8\1@!phrasingSlur | }
+        }
+
+        form main { ~Main }
+
+        score main "TSS3" { tab gtr }
+        """;
+
+    /// <summary>
     /// A beam quanted against the STEM of a note in another voice — the half of the
     /// covered-grob supply that is not a box at all.
     /// </summary>
@@ -16174,6 +16199,9 @@ internal static class LpGeometryProbes
         new("slur.tab.stems.span", TSS, g => g.TabBowSpan(0)),
         new("slur.tab.stems.inner-control", TSS2, g => g.TabBowPointAboveStaffMiddle(0, 1)),
         new("slur.tab.stems.inner-span", TSS2, g => g.TabBowSpan(0)),
+        new("slur.tab.stems.flag-attachment", TSS3, g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.stems.flag-control", TSS3, g => g.TabBowPointAboveStaffMiddle(0, 1)),
+        new("slur.tab.stems.flag-span", TSS3, g => g.TabBowSpan(0)),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar
         // with no span in the part at all. LilyPond prints the pair identically because
         // \voiceOne dies with the span; a part-wide reading moves only the first.

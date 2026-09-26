@@ -69,3 +69,18 @@ gtrb = \fixed c' {
     { \tabFullNotation \transpose c c, \gtrb }
   \layout {}
 }
+
+% Score C: UNBEAMED, FLAGGED edges. The two edge eighths stand alone (a quarter between
+% them), stems DOWN toward the bow written below, so each edge's stem extent is the stem
+% UNITED WITH ITS FLAG (lily/slur-scoring.cc:188-203 get_bound_info) -- the flag widens the
+% X extent the stem-attachment rule (:738-760) reads.
+gtrc = \fixed c' {
+  \time 2/4
+  e'8\1_\( f'4\1 g'8\1\) |
+}
+
+\score {
+  \new TabStaff \with { stringTunings = #guitar-tuning }
+    { \tabFullNotation \transpose c c, \gtrc }
+  \layout {}
+}
