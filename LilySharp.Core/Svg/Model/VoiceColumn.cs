@@ -107,9 +107,12 @@ public static class VoiceDefaults
     /// voices 2..N are built as full-length tracks that are EMPTY outside their
     /// span (MeasureCollector.BuildExtraVoiceTracks), so a measure is inside a
     /// span exactly where one of them has items.
+    /// This answers per MEASURE; the readers ask the per-item narrowing
+    /// (<see cref="GetDefaultStemUpAt"/> / <see cref="CoversItem"/>), which also cuts the
+    /// first voice's music before a span that opens mid-bar and after one that closes there.
     /// ⚠️ DIVERGENCE from the LILYPOND-REF above, not an own invention: reading the
-    /// span back off the model gets its reach at MEASURE granularity and only as far
-    /// as its later voices go. A span whose later voices run out before voice 1 does
+    /// span back off the model gets its reach only as far as its later voices go.
+    /// A span whose later voices run out before voice 1 does
     /// (<c>voice { a1 b1 } voice { c1 }</c>) stops forcing where they stop, where
     /// LilyPond keeps \voiceOne to the end of the span — its Voice context lives as
     /// long as its own music. Carrying the span's measure range on the model, which

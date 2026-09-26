@@ -148,8 +148,8 @@ internal static class VoiceScan
     /// LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo set Tie/Slur.direction = UP/DOWN
     /// — and they hold only inside the <c>&lt;&lt; \\ &gt;&gt;</c> span (scm/music-functions.scm
     /// voicify-sublist), where the grob is created with them. The question is therefore
-    /// <see cref="VoiceDefaults.GetDefaultStemUpAt"/>'s, per measure, the one stems and beams
-    /// already ask. It was <c>voiceCount &gt; 1</c> — PART-wide — until session 650, so one
+    /// <see cref="VoiceDefaults.GetDefaultStemUpAt"/>'s, at the span's START ITEM (per item
+    /// since session 652 — a voice span can open mid-bar), the one stems and beams also ask. It was <c>voiceCount &gt; 1</c> — PART-wide — until session 650, so one
     /// two-voice passage pinned every slur and tie of the part up: showcase/grammar-tour
     /// drew `b4( c d e)` and `g2~ g4` over the staff in bars 13-15, forty bars before its
     /// only `&lt;&lt; \\ &gt;&gt;`, where LilyPond draws them under (the same fold VoiceColumn's
