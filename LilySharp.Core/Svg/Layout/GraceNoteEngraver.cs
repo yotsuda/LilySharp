@@ -575,10 +575,19 @@ internal static class GraceNoteEngraver
         if (grace.Columns.Max(n => n.Highest.StaffPosition) < mainPos)
             return 0;
 
+        // A LOWER voice's script goes below unless it says .up (its voice forces it, as
+        // \voiceTwo does; the engraver's voiceScriptUp) — out of the above-band this gate
+        // models. A lower voice only has the grace's main note inside a voice span, so its
+        // index alone says so; voice 1's scripts stay above as before.
+        bool? voiceUp = grace.VoiceIndex > 0 ? VoiceDefaults.GetDefaultStemUp(grace.VoiceIndex + 1) : null;
         foreach (var art in articulations)
         {
+            // The script's OWN voice: MainNoteItemIndex counts the grace voice's items, and
+            // every voice numbers from zero (the two-step remark in Calculate).
             if (art.StaffIndex != grace.StaffIndex || art.MeasureIndex != grace.MeasureIndex
-                || art.ItemIndex != grace.MainNoteItemIndex)
+                || art.VoiceIndex != grace.VoiceIndex || art.ItemIndex != grace.MainNoteItemIndex)
+                continue;
+            if (voiceUp == false && !art.DirectionForced)
                 continue;
             if (ArticulationEngraver.SpacingInkBox(art, mainItem, staffY: 0) is not { } box)
                 continue;

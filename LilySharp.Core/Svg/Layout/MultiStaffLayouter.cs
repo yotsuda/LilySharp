@@ -2266,7 +2266,7 @@ internal sealed class MultiStaffLayouter
                 {
                     if (measureIndex < aStaff.PrimaryVoice.Measures.Length)
                         springs = SpacingRules.ApplyArticulationSpacing(
-                            springs, allTimings, aStaff.PrimaryVoice.Measures[measureIndex],
+                            springs, allTimings, aStaff,
                             score.Articulations, measureIndex, artStaffIndex);
                     artStaffIndex++;
                 }

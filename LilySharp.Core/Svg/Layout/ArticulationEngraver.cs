@@ -2632,27 +2632,59 @@ internal static class ArticulationEngraver
     /// skyline. Narrow scripts (staccato/accent/tenuto/marcato), bends and
     /// breaths never protrude far enough to matter, so they are left out (null)
     /// to keep the reservation — and the fixtures it moves — to the real cases.
-    /// The Y is the UNBEAMED placement: at spacing time the beam-quanted stem tip
-    /// is not visible, and the collision case is a HIGH note whose stem points
-    /// AWAY from the script, where note-head support already gives the exact Y.
+    /// The Y is the PURE placement: at spacing time the beam-quanted stem tip is not
+    /// visible (nor does LilyPond's separation box read it), so a beamed stem on the
+    /// script's side reaches its group's pure tip (below); a stem pointing AWAY from
+    /// the script leaves the head support, which is already exact.
     /// LILYPOND-REF: lily/separation-item.cc — every grob in a note column
     ///   (Script included) contributes to the column's horizontal skyline.
+    /// <paramref name="voiceUp"/> is the direction the script's voice forces inside a voice
+    /// span (\voiceOne up, \voiceTwo down), null outside one: it decides the stem and — below
+    /// an explicit .up/.down — the side, as it does for the drawn script (the engraver's
+    /// voiceScriptUp). Until 2026-09-26 the box assumed UP, so a lower voice's fermata
+    /// reserved room above the staff while it was drawn below.
     /// </summary>
     internal static (double YBottom, double YTop, double XLeft, double XRight)? SpacingInkBox(
-        ArticulationItem articulation, MusicItem item, double staffY)
+        ArticulationItem articulation, MusicItem item, double staffY, bool? voiceUp = null)
     {
         if (!(IsFermata(articulation.Type) || articulation.IsOrnament))
             return null;
 
         int staffPosition = GetStaffPosition(item);
-        bool stemUp = GetStemUp(item, staffPosition);
+        bool stemUp = voiceUp ?? GetStemUp(item, staffPosition);
 
         // The side CalculateYPosition will resolve to (fermata/ornament force UP
-        // unless an explicit .down overrides), so the glyph box matches the side.
-        bool isAbove = articulation.DirectionForced ? articulation.IsAbove : true;
+        // unless an explicit .down overrides — or the voice decides), so the glyph box
+        // matches the side. A voice-decided side travels as a FORCED one, as it does in
+        // the engraver, so CalculateYPosition does not put a forced-UP script back on top.
+        bool isAbove = articulation.DirectionForced ? articulation.IsAbove : voiceUp ?? true;
+        var sided = articulation.DirectionForced || voiceUp is null
+            ? articulation
+            : articulation with { IsAbove = isAbove, DirectionForced = true };
 
-        double anchorUp = CalculateYPosition(articulation, staffPosition, stemUp, item,
+        double anchorUp = CalculateYPosition(sided, staffPosition, stemUp, item,
             NoteColumnLayout.Of(item, stemUp));
+        // A BEAMED stem on the script's side reaches as far as its beam group's PURE tip —
+        // the extreme of the same-direction members' unbeamed tips, which is what LilyPond's
+        // separation box reads (pure_y_extent, never the quanted beam). The unbeamed own tip
+        // above parked a lower voice's fermata inside the band of a neighbour's accidental
+        // that the beam, running down to a low note, keeps it clear of (LilyPond 2.26 does
+        // not widen; Lab sessions/p642).
+        // LILYPOND-REF: lily/separation-item.cc:163 boxes — il->pure_y_extent;
+        // LILYPOND-REF: lily/stem.cc:387-447 Stem::internal_pure_height (the calc_beam branch).
+        double? pureTip = item switch
+        {
+            NoteItem n => n.PureBeamedStemTip,
+            ChordItem c => c.PureBeamedStemTip,
+            _ => null,
+        };
+        if (pureTip is { } tip && stemUp == isAbove)
+        {
+            double clear = NearExtentOf(sided, isAbove, fonts: null) + PaddingFor(sided.Type);
+            anchorUp = isAbove
+                ? Math.Max(anchorUp, tip * 0.5 + clear)
+                : Math.Min(anchorUp, tip * 0.5 - clear);
+        }
         // CalculateYPosition now returns Y-up (staff-spaces above the middle line).
         // This spacing skyline has its middle line at staffY with Y increasing DOWN,
         // so the device value there is staffY − up. (ArticulationLayout is not built

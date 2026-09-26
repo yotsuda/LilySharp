@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **The room a fermata or ornament takes in the note spacing is the room LilyPond gives
+  it.** A lower voice's fermata was reserved on voice 1's note with the same number, above
+  the staff, and a beamed note's fermata was reserved beside its own stem rather than above
+  the beam's reach — each could push the next note 0.47 staff spaces right where LilyPond
+  does not, and a lower voice's grace note 0.37 left. No book in the repository or corpora
+  changes.
+
 - **In a `voice { } { }` span every articulation follows its voice.** Voice 1's marks go
   above and voice 2's below, whatever the mark's own habit — as LilyPond's `\voiceOne` /
   `\voiceTwo` set them; an explicit `.up` / `.down` still wins. Voice 1's staccato and

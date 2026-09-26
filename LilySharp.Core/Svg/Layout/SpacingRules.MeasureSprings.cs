@@ -1230,6 +1230,14 @@ internal static partial class SpacingRules
     /// so most articulation fixtures are left exactly as before.
     /// LILYPOND-REF: lily/separation-item.cc set_distance() — every grob in the
     ///   note column (Script included) feeds the column's horizontal skyline.
+    /// ⚠️ EVERY VOICE OF THE STAFF. A script is addressed in its OWN voice's item list
+    /// (<see cref="ArticulationItem.VoiceIndex"/>), and the paper column a neighbour's
+    /// ink comes from holds every voice's note column. Until 2026-09-26 this read voice 1's
+    /// measure alone and matched scripts by item index only, so a lower voice's fermata was
+    /// hung on whatever voice-1 note had the same index, on voice 1's side, and the lower
+    /// voice's notes were never a neighbour.
+    /// LILYPOND-REF: lily/separation-item.cc boxes() — the column's separation boxes are the
+    ///   elements of every note column in the paper column.
     /// </summary>
     [ThreadStatic] private static MusicItem?[]? t_colItem;
     [ThreadStatic] private static List<(double YBottom, double YTop, double XLeft, double XRight)>?[]? t_colBoxes;
@@ -1237,7 +1245,7 @@ internal static partial class SpacingRules
     public static ImmutableArray<Spring> ApplyArticulationSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
-        Model.Measure measure,
+        Model.Staff staff,
         ImmutableArray<ArticulationItem> articulations,
         int measureIndex,
         int staffIndex)
@@ -1245,42 +1253,60 @@ internal static partial class SpacingRules
         if (articulations.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
             return springs;
 
-        // Per column: the note/chord starting at that onset, and any wide-script
-        // ink boxes it carries (skyline frame: column at X=0, middle line Y=0). Lent from
-        // the thread's drawer (ScratchArray) and CLEARED: the `??=` below reads the null a
-        // fresh table gave it. 7.58 measures a keystroke (session 527's census).
-        var colItem = ScratchArray.Take(ref t_colItem, timings.Count);
+        // The voices that have this measure; almost always voice 1 alone.
+        var voices = staff.Voices;
+        int voiceCount = 0;
+        for (int v = 0; v < voices.Length; v++)
+            if (measureIndex < voices[v].Measures.Length)
+                voiceCount = v + 1;
+        if (voiceCount == 0)
+            return springs;
+
+        // Per column and voice (colItem[t * voiceCount + v]): the note/chord starting at that
+        // onset; per column: any wide-script ink boxes it carries (skyline frame: column at
+        // X=0, middle line Y=0). Lent from the thread's drawer (ScratchArray) and CLEARED: the
+        // `??=` below reads the null a fresh table gave it. 7.58 measures a keystroke
+        // (session 527's census).
+        int cells = timings.Count * voiceCount;
+        var colItem = ScratchArray.Take(ref t_colItem, cells);
         var colBoxes = ScratchArray.Take(ref t_colBoxes, timings.Count);
-        Array.Clear(colItem, 0, timings.Count);
+        Array.Clear(colItem, 0, cells);
         Array.Clear(colBoxes, 0, timings.Count);
         bool any = false;
-        Fraction onset = Fraction.Zero;
-        for (int oi = 0; oi < measure.Items.Length; oi++)
+        for (int v = 0; v < voiceCount; v++)
         {
-            var item = measure.Items[oi];
-            // A grace column carries no script of its own (LYS4020 drops them) and is not
-            // the column a script on the MAIN note reaches from — and standing first at the
-            // shared moment, it would be the one `??=` kept.
-            if (item is (Model.NoteItem or Model.ChordItem) and not { GraceTime: true })
-                for (int t = 0; t < timings.Count; t++)
-                {
-                    if (timings[t] != onset)
-                        continue;
-                    colItem[t] ??= item;
-                    foreach (var art in articulations)
+            var measure = voices[v].Measures[measureIndex];
+            // The side and the stem the voice forces (\voiceOne up, \voiceTwo down) — the
+            // same question ArticulationEngraver asks — or null outside a voice span.
+            bool? voiceUp = VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex);
+            Fraction onset = Fraction.Zero;
+            for (int oi = 0; oi < measure.Items.Length; oi++)
+            {
+                var item = measure.Items[oi];
+                // A grace column carries no script of its own (LYS4020 drops them) and is not
+                // the column a script on the MAIN note reaches from — and standing first at the
+                // shared moment, it would be the one `??=` kept.
+                if (item is (Model.NoteItem or Model.ChordItem) and not { GraceTime: true })
+                    for (int t = 0; t < timings.Count; t++)
                     {
-                        if (art.StaffIndex != staffIndex || art.MeasureIndex != measureIndex
-                            || art.ItemIndex != oi)
+                        if (timings[t] != onset)
                             continue;
-                        if (ArticulationEngraver.SpacingInkBox(art, item, staffY: 0) is { } box)
+                        colItem[t * voiceCount + v] ??= item;
+                        foreach (var art in articulations)
                         {
-                            (colBoxes[t] ??= new()).Add(box);
-                            any = true;
+                            if (art.StaffIndex != staffIndex || art.MeasureIndex != measureIndex
+                                || art.VoiceIndex != v || art.ItemIndex != oi)
+                                continue;
+                            if (ArticulationEngraver.SpacingInkBox(art, item, staffY: 0, voiceUp) is { } box)
+                            {
+                                (colBoxes[t] ??= new()).Add(box);
+                                any = true;
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-            onset += item.Duration;
+                onset += item.Duration;
+            }
         }
         if (!any)
             return springs;
@@ -1299,34 +1325,50 @@ internal static partial class SpacingRules
             result[idx] = result[idx].EnsureMinDistance(needed);
         }
 
-        // The between-column spring t+1 spans colItem[t] → colItem[t+1]. A script
+        // The between-column spring t+1 spans column t → column t+1. A script
         // on the LEFT column reaches RIGHT into the right column's left ink; a
-        // script on the RIGHT column reaches LEFT over the left column's right ink.
+        // script on the RIGHT column reaches LEFT over the left column's right ink —
+        // every voice's note at that column is ink (the column's own boxes are read
+        // whole, whichever voice carries them).
         for (int t = 0; t + 1 < timings.Count; t++)
         {
-            var left = colItem[t];
-            var right = colItem[t + 1];
-            if (left is null || right is null)
+            if (!HasItem(t) || !HasItem(t + 1))
                 continue;
             double needed = 0;
             if (colBoxes[t] is { } lb)
             {
-                double d = HorizontalSkyline.FromBoxes(lb, HorizontalDirection.Right)
-                    .Distance(ItemSkylineFactory.CreateLeftSkyline(right, 0, 0));
-                if (!double.IsNegativeInfinity(d))
-                    needed = Math.Max(needed, d + gap);
+                var sky = HorizontalSkyline.FromBoxes(lb, HorizontalDirection.Right);
+                for (int v = 0; v < voiceCount; v++)
+                    if (colItem[(t + 1) * voiceCount + v] is { } right)
+                    {
+                        double d = sky.Distance(ItemSkylineFactory.CreateLeftSkyline(right, 0, 0));
+                        if (!double.IsNegativeInfinity(d))
+                            needed = Math.Max(needed, d + gap);
+                    }
             }
             if (colBoxes[t + 1] is { } rb)
             {
-                double d = ItemSkylineFactory.CreateRightSkyline(left, 0, 0)
-                    .Distance(HorizontalSkyline.FromBoxes(rb, HorizontalDirection.Left));
-                if (!double.IsNegativeInfinity(d))
-                    needed = Math.Max(needed, d + gap);
+                var sky = HorizontalSkyline.FromBoxes(rb, HorizontalDirection.Left);
+                for (int v = 0; v < voiceCount; v++)
+                    if (colItem[t * voiceCount + v] is { } left)
+                    {
+                        double d = ItemSkylineFactory.CreateRightSkyline(left, 0, 0).Distance(sky);
+                        if (!double.IsNegativeInfinity(d))
+                            needed = Math.Max(needed, d + gap);
+                    }
             }
             if (needed > 0)
                 Widen(t + 1, needed);
         }
         return result.ToImmutable();
+
+        bool HasItem(int t)
+        {
+            for (int v = 0; v < voiceCount; v++)
+                if (colItem[t * voiceCount + v] is not null)
+                    return true;
+            return false;
+        }
     }
 
 
