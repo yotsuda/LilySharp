@@ -84,11 +84,17 @@ public sealed class TwinBowSweep
             }
             // The noteheads, so the reader can take the bows' x relative to where the heads
             // stand: a bow drawn right from a head that spacing put elsewhere is not a bow
-            // defect. SMuFL's notehead block, U+E0A0-U+E0FF.
+            // defect. Emmentaler's noteheads (EmmentalerGlyphs.Notehead*, U+E0FA-U+E10B).
+            // ⚠️ Not "SMuFL's U+E0A0-U+E0FF": in this font that block also holds the flags,
+            // the fingering and figured-bass digits, so an eighth's flag read as a second head
+            // 1.304 right of it and every tie from a flagged note was mapped one column off
+            // (Lab sessions/p648: Everybody's Talkin' x0 −1.3042 × 36). The metronome mark's
+            // note shares the code points and still passes (one per book, above the staff).
             var heads = new List<(double X, double Y, int Staff)>();
             foreach (var g in page.Glyphs)
             {
-                if (g.Glyph < '' || g.Glyph > '' || staves.Count == 0) continue;
+                if (g.Glyph < EmmentalerGlyphs.NoteheadDoubleWhole || g.Glyph > EmmentalerGlyphs.NoteheadXCircle
+                    || staves.Count == 0) continue;
                 int si = NearestStaff(staves, g.Y);
                 heads.Add((g.X, g.Y, si));
                 sb.AppendFormat(ci, "HEAD {0} {1} x={2:F6}\n", p + 1, si, g.X - staves[si].Left);
