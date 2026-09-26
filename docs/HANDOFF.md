@@ -154,6 +154,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第652セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第651 の後・ユーザー「続けて」＝§2 S3 ⑶ を案 A で直す）。★ `-Start p652`（HEAD `0925e674`・未 push 117・full **9409 / 0 / 2 / 9411**）。
+★ `88619940` voice { } の強制は**その小節のうち span が覆う部分だけ**（第 1 声部）。`VoiceDefaults.GetDefaultStemUpAt(voices, v, m, item)`／`CoversItem`＝onset が [`SpanStartIn`, `SpanEndIn`) の item だけ。span の始まりは collector の padding（`RestItem.IsSpanLead`・`MeasureCollector.cs` の leadingOffset）＝**書かれた先頭の `s` は始まりを動かさない**。小節粒度の overload は消し、読み手 14 か所すべてを item で訊く（焼き込み・タイ・スラー・梁＝群の先頭・符頭・スクリプト・強弱・休符の衝突・skyline・ばね・トリル・連符）。
+射程: 963 冊を前後で描いて動いたのは SUMMER だけ。bow の差 2,532 → **2,529**（SUMMER 3 対 → 0・slur の数の不一致も閉じた）・悪化 0。網 `MidBarVoiceSpanTests` 2 本（毒 2 つでそれぞれ赤）。⇒ **S3 の「説明の無い残り」は 0 件＝次は S4（完了条件の確認）**。
+⚠️ 残差（未調査）: `voice { c8( d) … } { s8 a,8 … }` のスラーの右端 y が LP より 0.17 低い（向きは一致・Lab `sessions/p652/w-leadspacer`）。
+⚠️ Lily# の `octave absolute` は LP より 1 オクターブ上（Lily# `c'` = C5）＝LP 双子のプローブを書くときの罠。
+★ **終了**: full **9411 / 0 / 2 / 9413**・bow の差 **2,529**。push はユーザー。
+
+## 以下は第651セッションの経緯
+
 ### 1.1 第651セッション（2026-09-27・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p651`（HEAD `70c70b9f`・未 push 114・full **9407 / 0 / 2 / 9409**）。§2 S3 の「説明の無い残り 3 件」から。
@@ -162,15 +173,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠️ ⑶ は**設計級＝ユーザー判断待ち**: 小節途中から始まる `voice { }` の前（同じ小節）の voice 1 の item も強制される。原因は `VoiceDefaults.GetDefaultStemUpAt`／`IsPolyphonicAt` が**小節粒度**で、読み手が 14 か所（梁・符頭・skyline・ばね・強弱・トリル・連符・タイ・スラー・`ResolveVoiceStemDirections` の焼き込み…）。後ろ側（span の終わりの後）は焼き込みだけが切っている。**先頭の spacer では span の始まりを読めない**（`mult-probe`・`phrslurtup`・`beam-over-stem` 3 小節目はユーザーが書いた `s1` の声部＝LP は小節全体を強制）＝`MeasureCollector.CollectMeasuresFromNode` の padding（:2597）に印を付けて読む必要がある。射程（一時計器・Lab `sessions/p651/span-reach.txt`・963 冊）: 途中開始の前に voice 1 の音がある小節は SUMMER（1 小節 8 音）・voiceissue・beam-skip ×2・dots・beam-over-stem の 1〜2 小節目。「後ろ」は 0。
 ⚠️ 計器の罠: bow の sweep の Lily# 側は `dotnet test --no-build` ＝**`LilySharp.Tests` を build しないと古い dll を測る**（Cli だけ build して「変わらない」を 1 度見た）。
 ★ **終了**: full **9409 / 0 / 2 / 9411**・bow の差 **2,532**。push はユーザー。
-
-## 以下は第650セッションの経緯
-
-### 1.1 第650セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（第649 の後・ユーザー「続けて」）。★ `-Start p650`（HEAD `d3b89963`・未 push 110・full **9405 / 0 / 2 / 9407**＝引継ぎと一致）。§2 S の残りから。
-★ ⑴ `ef68945f` 声部がスラー／タイの向きを決めるのは**その小節が多声のときだけ**（`VoiceScan.SpanCurvesUp` が part 全体の `voiceCount > 1` を見ていた＝grammar-tour の 13-15 小節が上に反転・7→1）。
-残り: 小節の途中から始まる `voice { }` の前に始まるスラーはまだ強制される（`VoiceColumn` が開示済みの小節粒度＝SUMMER 最終小節）。
-⚠️ **計器の罠: ユーザーがコーパスを編集中**（Sweet Child Of Mine などの .lys が第647 以降に変わった）＝`-SkipLp` の比較は**古い双子**と新しい Lily# を比べる。本ごとの悪化を見たら、その本だけ LP ごと取り直して確かめる（第650 で全体を取り直した＝`sessions/p650/report-fresh.tsv`・差 2,535）。
 
 ## 2. 開いている作業
 
@@ -926,7 +928,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **S3. 宣言済みの逸脱の棚卸し** — ✅ **第650 が作った**（Lab `sessions/p650/s3-inventory.md`＝残差の族→宣言の対応表・未観測の宣言・ユーザー決定・APPROXIMATIONS.md が拾わない印）。
   fresh 2,535 対の内訳: grace スラー約 1,100（`GraceNotes.cs` の手の定数＝近似）・grace の bow 欠落（`VoiceScan` の足場＝U8）・tab スラー約 550（F9）・tab タイ約 320（LILYSHARP-OWN）・
   中央線タイの反転 11（LP の同点＝移植不能）・spacing 起因約 460。**説明の無い残り 3 件**: ⑴ 二声の `\voiceOne` 半音符から出るスラーの始点 0.365（dot-cross-voice-spacing）
-  ⑵ ✅ part combiner のタイ終点 0.787（pcglobal-probe）＝第651 `bee40494` ⑶ 小節途中から始まる `voice { }` の前のスラーの向き（SUMMER 最終小節）＝**設計級・ユーザー判断待ち**（§1.1 第651）。⑴ ✅ ＝第651 `23d81ced`。
+  ⑵ ✅ part combiner のタイ終点 0.787（pcglobal-probe）＝第651 `bee40494` ⑶ ✅ 小節途中から始まる `voice { }` の前のスラーの向き（SUMMER 最終小節）＝第652 `88619940`（§1.1 第652）。⑴ ✅ ＝第651 `23d81ced`。
 - **S4. 完了条件** — S1 の全冊と実コーパスで、対になった bow が全部 ±0.01 以内か、S3 の一覧の
   どれかで説明される。道具は Lab に残し、回帰用に合成コーパスを LilySharp 側の網へ移すか判断する。
 - **S5. その後（独自の改善・ユーザー判断が先）** — M20 型（線の上に乗る短い行末タイ）など。S4 の後に計画。
