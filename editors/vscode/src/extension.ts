@@ -465,6 +465,8 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('regroup command triggered');
             regroup();
         }),
+        vscode.commands.registerCommand('lilysharp.convertOctavesToAbsolute', () => convertOctaves(true)),
+        vscode.commands.registerCommand('lilysharp.convertOctavesToRelative', () => convertOctaves(false)),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
             outputChannel.appendLine('extractPhrase command triggered');
             extractPhrase();
@@ -1513,6 +1515,56 @@ async function regroup() {
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: regrouping failed: ${err}`);
+    }
+}
+
+interface ConvertOctavesResponse {
+    Success: boolean;
+    NewText: string | null;
+    ChangedNotes: number;
+    Error: string | null;
+}
+
+/**
+ * Rewrites the whole active .lys document into absolute or relative octaves. The server
+ * compiles the result and compares every note before answering, so what comes back sounds
+ * exactly as the file did; it is applied as one edit, so one undo restores the file.
+ */
+async function convertOctaves(absolute: boolean) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to convert its octaves.');
+        return;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const doc = editor.document;
+    const mode = absolute ? 'absolute' : 'relative';
+    try {
+        const response = await client.sendRequest<ConvertOctavesResponse>('lilysharp/convertOctaves', {
+            textDocument: { uri: doc.uri.toString() },
+            absolute
+        });
+        if (response.Success && response.NewText != null) {
+            if (response.NewText === doc.getText()) {
+                vscode.window.showInformationMessage(`Lily#: the octaves are already ${mode}.`);
+                return;
+            }
+            const fullRange = new vscode.Range(
+                doc.positionAt(0), doc.positionAt(doc.getText().length));
+            const edit = new vscode.WorkspaceEdit();
+            edit.replace(doc.uri, fullRange, response.NewText);
+            await vscode.workspace.applyEdit(edit);
+            vscode.window.showInformationMessage(
+                `Lily#: octaves converted to ${mode} (${response.ChangedNotes} note(s) re-marked).`);
+        } else {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: octave conversion failed: ${err}`);
     }
 }
 

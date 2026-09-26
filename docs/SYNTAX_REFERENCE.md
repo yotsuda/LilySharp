@@ -59,6 +59,10 @@ shift octaves on top of that.
 > octave absolute
 > c' d' e' c'       // always C5 D5 E5 C5 — no drift, whatever the leaps
 > ```
+>
+> A finished file can be switched either way without moving a note: the editor commands
+> **Convert Octaves to Absolute** / **Convert Octaves to Relative**, or
+> `lysc octave --absolute|--relative`, rewrite the directives and every note's marks.
 
 ```
 c d e f g a b c   // C4 D4 E4 F4 G4 A4 B4 C5 — bare c after b is already C5

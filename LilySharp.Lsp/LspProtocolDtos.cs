@@ -294,6 +294,25 @@ public class RegroupResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for the lilysharp/convertOctaves request: the document and the
+/// octave mode to rewrite it into.</summary>
+public class ConvertOctavesParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>True for <c>octave absolute</c>, false for relative.</summary>
+    public bool Absolute { get; set; }
+}
+
+/// <summary>Response for lilysharp/convertOctaves: the rewritten source and how many notes'
+/// marks changed, or why the file was left alone.</summary>
+public class ConvertOctavesResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public int ChangedNotes { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/extractPhrase: the caret (or a selection —
 /// snapped outward to whole measures) and the name for the extracted phrase.
 /// Offsets are 0-based character offsets into the document text.</summary>

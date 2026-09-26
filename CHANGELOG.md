@@ -172,6 +172,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **An instrument named with a display label keeps its preset in the MIDI.** For
+  `instrument bass5 "bass"` the MIDI read the value as one unknown preset, `bass5"bass"`, so
+  it played the part without the bass's octave-down sound, and in relative mode from middle
+  C's anchor instead of the preset's: an octave away from the page. It now plays like
+  `instrument bass5`. One of the 332 bass books writes an instrument this way.
+
 - **An octave-clef staff stands where the page does in the twin.** Under `treble_8` Lily#
   draws `g` where treble draws it and it sounds an octave down; the twin handed LilyPond
   the written pitch, which LilyPond's `treble_8` then drew an octave higher. The staff now
@@ -241,6 +247,16 @@ workflow attaches that section to the GitHub Release verbatim.
   section 960 ticks late. Of 942 books, that one changes.
 
 ### Editor
+
+- **Convert a file between absolute and relative octaves without moving a note.** The editor
+  commands **Convert Octaves to Absolute** / **Convert Octaves to Relative** and
+  `lysc octave --absolute|--relative` rewrite the `octave` directives and every note's
+  `'` / `,` marks, and nothing else. The compiler itself decides what each mark must become —
+  phrases, section references, chords, arpeggios, scale degrees and instrument anchors are
+  all read the way the page reads them — and the result is compiled and compared note by
+  note before it is written. A file with a note no score plays is left alone, since nothing
+  says what octave that note means. All 419 books of the corpora and samples that compile
+  with every note played convert both ways, and their MIDI is byte-identical before and after.
 
 - **A file is "grouped by part" or "grouped by section".** These used to be "part-major"
   and "section-major" layouts, a term borrowed from matrix storage that says little to a

@@ -243,6 +243,16 @@
         "title": "Regroup (by part ⇄ by section)"
       },
       {
+        "command": "lilysharp.convertOctavesToAbsolute",
+        "category": "Lily#",
+        "title": "Convert Octaves to Absolute"
+      },
+      {
+        "command": "lilysharp.convertOctavesToRelative",
+        "category": "Lily#",
+        "title": "Convert Octaves to Relative"
+      },
+      {
         "command": "lilysharp.extractPhrase",
         "category": "Lily#",
         "title": "Extract Phrase from Section"
@@ -401,6 +411,14 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.convertOctavesToAbsolute",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.convertOctavesToRelative",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.extractPhrase",
           "when": "resourceLangId == lilysharp"
         },
@@ -510,6 +528,16 @@
         },
         {
           "command": "lilysharp.regroup",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.convertOctavesToAbsolute",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.convertOctavesToRelative",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
         },

@@ -162,9 +162,15 @@ public sealed class PartHeaderDefaults
                     tuningText = Joined().ToLowerInvariant();
                     break;
                 case "instrument":
-                    string joined = Joined();
+                    // Token by token, as SplitInstrument reads them: joined into one string,
+                    // `instrument bass5 "bass"` became the unknown preset `bass5"bass"`, so the
+                    // MIDI lost the preset's anchor and its octave-down sound while the page
+                    // (which splits per token) kept both — a relative bass book played an
+                    // octave off (found 2026-09-26 by the octave converter's MIDI sweep).
                     var texts = new List<string>();
-                    if (joined.Length > 0) texts.Add(joined);
+                    for (int vi = 2; vi < prop.SlotCount; vi++)
+                        if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                            texts.Add(vt.Text);
                     string p = InstrumentDefaults.SplitInstrument(texts).Preset;
                     preset = p.Length == 0 ? null : p.ToLowerInvariant();
                     break;

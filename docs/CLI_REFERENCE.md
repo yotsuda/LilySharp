@@ -313,6 +313,37 @@ lysc import song.mxl song.lys         # From a compressed MusicXML
 lysc import --relative song.xml       # Relative-octave output
 ```
 
+### octave - Convert between absolute and relative octaves
+
+```bash
+lysc octave (--absolute | --relative) <input.lys> [output.lys]
+```
+
+Rewrites a whole file into the other octave mode, keeping every note at the pitch it sounds
+now. The `octave absolute` / `octave relative` directives are replaced (one file-level
+`octave absolute`, or none for relative) and each note's `'` / `,` marks are recomputed;
+nothing else in the file changes. In absolute mode a chord's or arpeggio's group mark
+(`<c e g>'`) is folded into its members. The result is compiled and compared note by note
+with the original before anything is written.
+
+A file is left alone, with the reason printed, when it has syntax errors, pulls in another
+file with `using`, or contains a note no score plays (a section missing from the form, a
+file with no `score`) — nothing says what octave such a note means.
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-a, --absolute` | Convert to `octave absolute` (bare `c` = C4, or the part's `octave N`) |
+| `-r, --relative` | Convert to relative octaves (the default mode) |
+| `-o, --output <file>` | Write here (may be the input itself); without an output the result goes to stdout |
+| `-h, --help` | Show help |
+
+**Examples:**
+```bash
+lysc octave --absolute song.lys              # Prints the absolute version
+lysc octave --relative song.lys -o song.lys  # Converts in place
+```
+
 ### harmonize - Suggest a chord track
 
 ```bash

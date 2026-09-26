@@ -1055,6 +1055,12 @@ public sealed partial class MeasureCollector
     /// </summary>
     private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position)
     {
+        // Every written pitch passes here once per time the walk reads it — a note, a chord
+        // or arpeggio member, a scale degree — so this is the one place the octave-mode
+        // converter records and forces the octave (OctaveOverride's remarks).
+        if (OctaveOverride is { } octaveOverride)
+            actualOctave = octaveOverride(position, actualOctave);
+
         // (A phrase reference's interval argument shifted the body by scale steps in the
         // WRITTEN key HERE — modal transposition, applied before the chromatic part
         // transpose below. The spelling was removed 2026-08-28 and nothing else ever

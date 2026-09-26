@@ -76,6 +76,7 @@ static int Dispatch(string command, string[] args) => command switch
     "ly" => RunLy(args),
     "import" => RunImport(args),
     "vsqx" => RunVsqx(args),
+    "octave" => RunOctave(args),
     "harmonize" => RunHarmonize(args),
     "check" => RunCheck(args),
     "layout" => RunLayout(args),
@@ -100,6 +101,7 @@ static void ShowHelp()
           xml        Convert to MusicXML
           ly         Convert to LilyPond (.ly) source
           import     Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
+          octave     Rewrite a Lily# file into absolute or relative octaves
 
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
           check      Check syntax without output
@@ -801,6 +803,82 @@ static int RunImport(string[] args)
             foreach (var w in report.Warnings)
                 Console.WriteLine($"    - {w}");
         }
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ Octave Command ============
+
+static int RunOctave(string[] args)
+{
+    if (WantsHelp(args))
+    {
+        Console.WriteLine("""
+            Usage: lysc octave (--absolute | --relative) <input.lys> [output.lys]
+
+            Rewrites a Lily# source file into the other octave mode, keeping every
+            note at the pitch it sounds now: the `octave absolute` / `octave relative`
+            directives are replaced, and each note's ' and , marks are recomputed.
+            Nothing else in the file changes. The result is compiled and compared
+            note by note before it is written; a file that cannot be converted
+            exactly is left alone and the reason is printed.
+
+            Options:
+              -a, --absolute         Convert to `octave absolute` (bare c = C4)
+              -r, --relative         Convert to relative octaves (the default mode)
+              -o, --output <file>    Write here (may be the input itself); without an
+                                     output the result goes to standard output
+              -h, --help             Show this help
+
+            Examples:
+              lysc octave --absolute song.lys             # print the absolute version
+              lysc octave --relative song.lys -o song.lys # convert in place
+            """);
+        return 0;
+    }
+
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Flag("absolute", "-a", "--absolute")
+        .Flag("relative", "-r", "--relative")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "octave");
+    if (r.Has("absolute") == r.Has("relative"))
+        return OptionError("give exactly one of --absolute or --relative", "octave");
+    if (r.Positionals.Count == 0)
+        return OptionError("Input file required", "octave");
+    var inputPath = r.Positionals[0];
+    var outputPath = r.Get("output") ?? (r.Positionals.Count > 1 ? r.Positionals[1] : null);
+    if (!File.Exists(inputPath))
+    {
+        Console.Error.WriteLine($"Error: File not found: {inputPath}");
+        return 1;
+    }
+
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var target = r.Has("absolute")
+            ? LilySharp.Core.Editing.OctaveMode.Absolute
+            : LilySharp.Core.Editing.OctaveMode.Relative;
+        var result = LilySharp.Core.Editing.OctaveModeConverter.Convert(source, target);
+        if (result.NewText == null)
+        {
+            Console.Error.WriteLine($"Error: {result.Error}");
+            return 1;
+        }
+        if (outputPath == null)
+        {
+            Console.Write(result.NewText);
+            return 0;
+        }
+        File.WriteAllText(outputPath, result.NewText);
+        Console.WriteLine($"Created: {outputPath} ({result.ChangedPitches} note(s) re-marked)");
         return 0;
     }
     catch (Exception ex)

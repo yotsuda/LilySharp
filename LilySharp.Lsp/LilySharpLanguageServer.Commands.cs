@@ -1029,11 +1029,31 @@ public sealed partial class LilySharpLanguageServer
             : new ExtractPhraseResponse { Success = false, Error = result.Error };
     }
 
+    [JsonRpcMethod("lilysharp/convertOctaves", UseSingleObjectParameterDeserialization = true)]
+    public Task<ConvertOctavesResponse> ConvertOctavesAsync(ConvertOctavesParams @params, CancellationToken token)
+        => OffDispatch(() => ConvertOctaves(@params), token);
+
+    /// <summary>The whole document rewritten into the other octave mode
+    /// (<see cref="LilySharp.Core.Editing.OctaveModeConverter"/>, which compiles the result and
+    /// compares every note before it answers).</summary>
+    public ConvertOctavesResponse ConvertOctaves(ConvertOctavesParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new ConvertOctavesResponse { Success = false, Error = "Document not found" };
+
+        var result = LilySharp.Core.Editing.OctaveModeConverter.Convert(doc.Text,
+            @params.Absolute ? LilySharp.Core.Editing.OctaveMode.Absolute : LilySharp.Core.Editing.OctaveMode.Relative);
+        return result.NewText != null
+            ? new ConvertOctavesResponse { Success = true, NewText = result.NewText, ChangedNotes = result.ChangedPitches }
+            : new ConvertOctavesResponse { Success = false, Error = result.Error };
+    }
+
     [JsonRpcMethod("lilysharp/regroup", UseSingleObjectParameterDeserialization = true)]
     public Task<RegroupResponse> RegroupAsync(RegroupParams @params, CancellationToken token)
-        => OffDispatch(() => ConvertLayout(@params), token);
+        => OffDispatch(() => Regroup(@params), token);
 
-    public RegroupResponse ConvertLayout(RegroupParams @params)
+    public RegroupResponse Regroup(RegroupParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)

@@ -53,6 +53,10 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Editor
 
+- **Convert Octaves to Absolute / Convert Octaves to Relative** (right-click menu and
+  command palette) rewrite the whole file into the other octave mode, keeping every note at
+  the pitch it sounds. The result is checked note by note before it replaces the text, and
+  one undo restores the file.
 - **Convert Layout (part-major ⇄ section-major) is now Regroup (by part ⇄ by section).**
   Same command, plainer names: a file grouped by part writes `part bass { section A { … } }`,
   one grouped by section writes `section A { bass { … } }`. Its command id is now

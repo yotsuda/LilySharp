@@ -103,6 +103,24 @@ public class InstrumentTranspositionMidiTests
     }
 
     /// <summary>
+    /// A display name after the preset (<c>instrument bass5 "bass"</c>) is only a label: the
+    /// preset still anchors the relative frame and still sounds 8vb, in MIDI as on the page.
+    /// </summary>
+    /// <remarks>
+    /// The part header read the value as ONE joined string, <c>bass5"bass"</c> — no preset of
+    /// that name — so MIDI played the part at C4's anchor with no octave-down shift while the
+    /// page anchored it at the preset's octave: an octave apart in relative mode (found
+    /// 2026-09-26 when the octave converter's corpus sweep compared MIDI across modes).
+    /// The bare-preset row is the control.
+    /// </remarks>
+    [Theory]
+    [InlineData("instrument bass5")]
+    [InlineData("instrument bass5 \"bass\"")]
+    [InlineData("instrument bass \"Electric Bass\"")]
+    public void APresetsDisplayName_DoesNotHideThePreset(string instrument)
+        => Assert.Equal(31, FirstPitch($"part x {{ {instrument} section A {{ g1 | }} }}"));
+
+    /// <summary>
     /// A part's bare letters play at the octave they PRINT, and the clef moves neither: the
     /// relative anchor is <c>octave N</c> &gt; instrument preset &gt; 4 (user decision
     /// 2026-09-15; InstrumentDefaults.AnchorOctave).
