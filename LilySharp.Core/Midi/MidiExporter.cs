@@ -1933,9 +1933,9 @@ public sealed class MidiExporter
         }
         int ticks = FractionToTicks(_defaultDuration);
         int actualTicks = Math.Max(1, ticks * durationPercent / 100);
-        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.Position), velocity,
-            _currentTick, actualTicks, pitch.Position, QuarterBend: pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(pitch.Position), Timbre: _currentTimbre, Part: _currentPart));
+        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, pitch.SourceStart), velocity,
+            _currentTick, actualTicks, pitch.SourceStart, QuarterBend: pitch.QuarterOffset,
+            SourceOrdinal: NextOrdinal(pitch.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
         // The last member is what a '~' after '>>' ties on from (OpenTieTargets).
         CloseOnset(track, [track.Notes.Count - 1], false);
         _currentTick += ticks;
@@ -1950,9 +1950,9 @@ public sealed class MidiExporter
             rootStep, anchorOctave, degree.Number, degree.Alteration, degree.OctaveOffset, _keySharps);
         int midiPitch = WrittenToMidi(step, alter, octave);
         int ticks = FractionToTicks(_defaultDuration);
-        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, degree.Position), _velocity,
-            _currentTick, ticks, degree.Position,
-            SourceOrdinal: NextOrdinal(degree.Position), Timbre: _currentTimbre, Part: _currentPart));
+        track.Notes.Add(new MidiNote(track.Channel, SoundKey(midiPitch, degree.SourceStart), _velocity,
+            _currentTick, ticks, degree.SourceStart,
+            SourceOrdinal: NextOrdinal(degree.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
         CloseOnset(track, [track.Notes.Count - 1], false); // see EmitArpeggioMidiPitch
         _currentTick += ticks;
     }
@@ -2009,7 +2009,7 @@ public sealed class MidiExporter
         // ⚠️ Pinned to the range BEFORE the tie is matched: the notes already in the track
         // hold sounding keys, so comparing a written 134 against a stored 127 would refuse
         // to merge a tie the page draws.
-        midiPitch = SoundKey(midiPitch, note.Position);
+        midiPitch = SoundKey(midiPitch, note.SourceStart);
 
         // What a following bare duration copies (same contract as
         // _resolvedChordNotes): the SOUNDING key, resolved by this walk.
@@ -2027,9 +2027,9 @@ public sealed class MidiExporter
         }
 
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity,
-            _currentTick, actualDuration, note.Position,
+            _currentTick, actualDuration, note.SourceStart,
             QuarterBend: note.Pitch.QuarterOffset,
-            SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre, Part: _currentPart));
+            SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
         CloseOnset(track, [track.Notes.Count - 1], startsTie);
         _currentTick += durationTicks;
     }
@@ -2063,7 +2063,7 @@ public sealed class MidiExporter
 
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
-            drum.Position, SourceOrdinal: NextOrdinal(drum.Position), Timbre: 9, Part: _currentPart));
+            drum.SourceStart, SourceOrdinal: NextOrdinal(drum.SourceStart), Timbre: 9, Part: _currentPart));
         CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
         _currentTick += durationTicks;
     }
@@ -2146,9 +2146,9 @@ public sealed class MidiExporter
                     break;
                 }
                 track.Notes.Add(new MidiNote(track.Channel, sound.MidiPitch, velocity,
-                    startTick, actualDuration, bare.Position,
+                    startTick, actualDuration, bare.SourceStart,
                     QuarterBend: sound.QuarterBend,
-                    SourceOrdinal: NextOrdinal(bare.Position), Timbre: _currentTimbre, Part: _currentPart));
+                    SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: _currentTimbre, Part: _currentPart));
                 CloseOnset(track, [track.Notes.Count - 1], startsTie);
                 break;
             }
@@ -2159,21 +2159,21 @@ public sealed class MidiExporter
                 // the chord where that q left it. Drums are exempt for the same reason.
                 var tieTargets = OpenTieTargets(track);
                 var onset = new List<int>();
-                int ordinal = NextOrdinal(bare.Position);
+                int ordinal = NextOrdinal(bare.SourceStart);
                 int semitones = 12 * Music.BareDurations.DisplacementOf(bare);
                 foreach (var n in notes)
                 {
                     if (n.IsDrum)
                     {
                         track.Notes.Add(new MidiNote(9, n.MidiPitch, velocity, startTick, actualDuration,
-                            bare.Position, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
+                            bare.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
                         continue;
                     }
                     int pitch = n.MidiPitch + semitones;
                     int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                     if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                     track.Notes.Add(new MidiNote(track.Channel, pitch, velocity, startTick, actualDuration,
-                        bare.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
+                        bare.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
                     onset.Add(track.Notes.Count - 1);
                 }
                 CloseOnset(track, onset, startsTie);
@@ -2183,7 +2183,7 @@ public sealed class MidiExporter
             {
                 var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
                 track.Notes.Add(new MidiNote(9, info.GmKey, velocity, startTick, actualDuration,
-                    bare.Position, SourceOrdinal: NextOrdinal(bare.Position), Timbre: 9, Part: _currentPart));
+                    bare.SourceStart, SourceOrdinal: NextOrdinal(bare.SourceStart), Timbre: 9, Part: _currentPart));
                 CloseOnset(track, [track.Notes.Count - 1], startsTie: false);
                 break;
             }
@@ -2282,7 +2282,7 @@ public sealed class MidiExporter
         var pitches = chord.Pitches.ToList();
         // One ordinal per chord ONSET — every head shares the chord's source
         // position and must map to the same printed copy.
-        int chordOrdinal = NextOrdinal(chord.Position);
+        int chordOrdinal = NextOrdinal(chord.SourceStart);
 
         // Use the chord's own typed duration, not a descendant scan (which could
         // pick up a duration on an inner pitch if the grammar ever allowed it).
@@ -2317,13 +2317,13 @@ public sealed class MidiExporter
             int midiPitch = ResolveChordMemberPitch(
                 pitch, isFirst, chordOctave, chordShift, ref firstNoteName, ref firstOctave);
             isFirst = false;
-            midiPitch = SoundKey(midiPitch, chord.Position);
+            midiPitch = SoundKey(midiPitch, chord.SourceStart);
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
                 onset.Add(tiedInto);
             else
             {
-                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.SourceStart,
                     QuarterBend: pitch.QuarterOffset,
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
@@ -2349,13 +2349,13 @@ public sealed class MidiExporter
             var (step, alter, octave) = ChordDegrees.Resolve(
                 firstNoteName, firstOctave, degree.Number, degree.Alteration,
                 degree.OctaveOffset, _keySharps);
-            int midiPitch = SoundKey(WrittenToMidi(step, alter, octave), chord.Position);
+            int midiPitch = SoundKey(WrittenToMidi(step, alter, octave), chord.SourceStart);
             int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
             if (tiedInto >= 0)
                 onset.Add(tiedInto);
             else
             {
-                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.SourceStart,
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
             }
@@ -2368,7 +2368,7 @@ public sealed class MidiExporter
         foreach (var drum in chord.DrumNames)
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
-            track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.Position,
+            track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.SourceStart,
                 SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart));
             resolved.Add((dinfo.GmKey, 0, true));
         }
@@ -2411,20 +2411,20 @@ public sealed class MidiExporter
             // ⚠️ A DRUM chord is exempt: its "pitch" is an instrument slot on channel 10,
             // not a pitch, so displacing it would silently pick a different instrument.
             int semitones = 12 * ChordRepetitions.DisplacementOf(rep);
-            int ordinal = NextOrdinal(rep.Position);
+            int ordinal = NextOrdinal(rep.SourceStart);
             foreach (var n in notes)
             {
                 if (n.IsDrum)
                 {
                     track.Notes.Add(new MidiNote(9, n.MidiPitch, _velocity, startTick, durationTicks,
-                        rep.Position, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
+                        rep.SourceStart, SourceOrdinal: ordinal, Timbre: 9, Part: _currentPart));
                     continue;
                 }
                 int pitch = n.MidiPitch + semitones;
                 int tiedInto = ExtendTied(track, tieTargets, pitch, durationTicks);
                 if (tiedInto >= 0) { onset.Add(tiedInto); continue; }
                 track.Notes.Add(new MidiNote(track.Channel, pitch, _velocity, startTick, durationTicks,
-                    rep.Position, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
+                    rep.SourceStart, QuarterBend: n.QuarterBend, SourceOrdinal: ordinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
             }
         }
@@ -2702,10 +2702,10 @@ public sealed class MidiExporter
                 {
                     if (note.Duration != null) written = note.Duration.ToFraction();
                     int g = GraceTicks(written);
-                    int midiPitch = SoundKey(CalculateRelativeMidiPitch(note.Pitch), note.Position);
+                    int midiPitch = SoundKey(CalculateRelativeMidiPitch(note.Pitch), note.SourceStart);
                     track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, g,
-                        note.Position, QuarterBend: note.Pitch.QuarterOffset,
-                        SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre, Part: _currentPart,
+                        note.SourceStart, QuarterBend: note.Pitch.QuarterOffset,
+                        SourceOrdinal: NextOrdinal(note.SourceStart), Timbre: _currentTimbre, Part: _currentPart,
                         IsGrace: true));
                     _currentTick += g;
                     _pendingGraceSteal += g;
@@ -2715,7 +2715,7 @@ public sealed class MidiExporter
                 {
                     if (chord.Duration != null) written = chord.Duration.ToFraction();
                     int g = GraceTicks(written);
-                    int chordOrdinal = NextOrdinal(chord.Position);
+                    int chordOrdinal = NextOrdinal(chord.SourceStart);
                     // Within-chord relative octave: the root's LETTER is the chord's ANCHOR
                     // and every other member STACKS above it, and the item AFTER the chord is
                     // relative to that anchor. Asked of ResolveChordMemberPitch, which is what
@@ -2732,10 +2732,10 @@ public sealed class MidiExporter
                         int mp = SoundKey(
                             ResolveChordMemberPitch(pitch, isFirst, chord.ChordOctaveOffset,
                                 chordShift, ref firstNoteName, ref firstOctave),
-                            chord.Position);
+                            chord.SourceStart);
                         isFirst = false;
                         track.Notes.Add(new MidiNote(track.Channel, mp, _velocity, _currentTick, g,
-                            chord.Position, QuarterBend: pitch.QuarterOffset,
+                            chord.SourceStart, QuarterBend: pitch.QuarterOffset,
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
                             IsGrace: true));
                     }

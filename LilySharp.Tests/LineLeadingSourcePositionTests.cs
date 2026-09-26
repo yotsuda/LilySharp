@@ -127,4 +127,25 @@ public class LineLeadingSourcePositionTests
             - (overfull.LastIndexOf('\n', diagnostic.Span.Start - 1) + 1) + 1;
         Assert.Equal(5, column);
     }
+
+    /// <summary>
+    /// The third reader of the same address: a MIDI note's source position is what the
+    /// preview lights during playback, by matching it to a glyph's <c>data-pos</c>. The MIDI
+    /// exporter kept reading <see cref="SyntaxNode.Position"/> — the indent's offset — after
+    /// the SVG moved to <see cref="SyntaxNode.SourceStart"/>, so every note opening a line
+    /// played dark (reported 2026-09-26, fantasia.lys line 47 `des,8`).
+    /// </summary>
+    [Fact]
+    public void EveryPlayedNoteIsAddressedWhereItsGlyphIs()
+    {
+        var tree = SyntaxTree.Parse(Indented);
+        var midi = new LilySharp.Core.Midi.MidiExporter().Export(tree);
+        var played = midi.Tracks.SelectMany(t => t.Notes).Select(n => n.SourcePos).ToHashSet();
+        var tagged = Regex.Matches(Render(Indented), "data-pos=\"(?<p>[0-9]+)\"")
+            .Select(m => int.Parse(m.Groups["p"].Value)).ToHashSet();
+
+        foreach (var token in new[] { "c1", "d1", "e1", "f1" })
+            Assert.Contains(OffsetOf(Indented, token), played);
+        Assert.Subset(tagged, played);
+    }
 }
