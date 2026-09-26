@@ -38,12 +38,13 @@ dir /b/s *.lys | lysc ly --batch -    # take the list from a pipe
 ```
 
 The list is one file per line. Blank lines and lines starting with `#` are skipped, and a
-**TAB** separates an input from the output it should be written to (a tab, not a space, so
-that filenames containing spaces still work):
+**TAB** separates an input from the folder its outputs go to (a tab, not a space, so that
+filenames containing spaces still work). The names are fixed as always (see
+[Output File Naming](#output-file-naming)); a line's folder wins over a batch-wide `-d`:
 
 ```
-score.lys                             # -> score.svg
-suite.lys<TAB>out/suite-a.svg         # -> out/suite-a.svg
+score.lys                             # -> score.svg (beside it)
+suite.lys<TAB>out                     # -> out/suite.svg, out/suite-<alias>.svg
 ```
 
 Measured speed-up, same machine, `svg -n`, outputs verified byte-identical to the
@@ -91,8 +92,8 @@ processes if you need parallel PDF.
 
 Notes:
 
-- `--batch` cannot be combined with `-o/--output` — one path cannot name many files. Put
-  the output in the list instead.
+- `-d <folder>` sends every book's outputs to one folder; the list's TAB column does it per
+  book.
 - Paths in the list resolve against the **working directory**, exactly as a path typed on
   the command line does — not against the list file's own directory.
 - A file that fails does not stop the rest. The run's exit code is non-zero if any file
@@ -103,68 +104,68 @@ Notes:
 ### svg - Export to SVG
 
 ```bash
-lysc svg [options] <input.lys> [output.svg]
+lysc svg [options] <input.lys>
 ```
+
+Writes every score: `score.svg` for the main one, `score-<alias>.svg` for each other
+([Output File Naming](#output-file-naming)).
 
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder; made if missing) |
+| `--score <name>` | Write only the named score |
 | `-n, --no-embed-font` | Don't embed Emmentaler font (smaller file, requires font installed) |
-| `--all` | Generate all render blocks as separate SVG files |
-| `--combined` | Stack all render blocks into ONE SVG (like a `\book`) |
-| `--score <name>` | Render the named score block (default: the first) |
+| `--combined` | Stack every score into ONE `score.svg` (like a `\book`) |
 | `-h, --help` | Show help |
 
-`--all` and `--combined` are mutually exclusive.
+`--combined` and `--score` are mutually exclusive.
 
 **Examples:**
 ```bash
-lysc svg score.lys                    # Creates score.svg
-lysc svg score.lys output.svg         # Specify output name
-lysc svg -o sheet.svg score.lys       # With -o flag
+lysc svg score.lys                    # Creates score.svg (+ score-<alias>.svg)
+lysc svg -d out score.lys             # The same, into out/
 lysc svg --no-embed-font score.lys    # Without embedded font
-lysc svg --score grid greensleeves.lys
-lysc svg --all multi-movement.lys     # One .svg per score block
-lysc svg --combined multi-movement.lys # All of them stacked into one
+lysc svg --score tab score.lys        # Only score-tab.svg
+lysc svg --combined multi-movement.lys # Every score stacked into one
 ```
 
 ### pdf - Export to PDF
 
 ```bash
-lysc pdf [options] <input.lys> [output.pdf]
+lysc pdf [options] <input.lys>
 ```
 
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
-| `--score <name>` | Render the named score block (default: the first) |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score |
 | `-h, --help` | Show help |
 
 **Examples:**
 ```bash
-lysc pdf score.lys                    # Creates score.pdf
-lysc pdf -o sheet.pdf score.lys       # With -o flag
+lysc pdf score.lys                    # Creates score.pdf (+ score-<alias>.pdf)
+lysc pdf -d out score.lys             # The same, into out/
 ```
 
 ### png - Export to PNG
 
 ```bash
-lysc png [options] <input.lys> [output.png]
+lysc png [options] <input.lys>
 ```
 
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score |
 | `--scale <factor>` | Scale factor for resolution (default: 2.0 = 192 DPI) |
 | `--crop` | Crop each page to its ink instead of keeping the page box |
-| `--score <name>` | Render the named score block (default: the first) |
 | `-h, --help` | Show help |
 
-A score of more than one page writes `BASE-page1.png`, `BASE-page2.png`, … (LilyPond's
-own naming).
+A score of more than one page writes `NAME-page1.png`, `NAME-page2.png`, … (LilyPond's
+own naming), where `NAME` is the score's fixed name.
 
 **Scale Values:**
 | Scale | DPI | Use Case |
@@ -183,33 +184,31 @@ lysc png --scale 1.0 score.lys       # Standard DPI
 ### midi - Export to MIDI
 
 ```bash
-lysc midi [options] <input.lys> [output.mid]
+lysc midi [options] <input.lys>
 ```
 
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
-| `--score <name>` | Write the named score's form (default: the first) |
-| `--all` | Write every score to its own `.mid` file |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score's form |
 | `-h, --help` | Show help |
 
-One file holds one form. A `.lys` declaring several movements therefore writes one of
-them and names the rest in a warning; `--score` picks one, `--all` writes them all.
-`--all` and `--score` are mutually exclusive.
+One file holds one form, so every score writes its form to a file of its own. Scores that
+share a form (`score main`, `score main "tab"`) write the same music under their own names.
+A file with no `score` block writes its primary form and names the others in a warning.
 
 **Examples:**
 ```bash
-lysc midi score.lys                   # Creates score.mid
-lysc midi -o audio.mid score.lys      # With -o flag
-lysc midi --score movement2 suite.lys # One named movement
-lysc midi --all suite.lys             # Every movement, one file each
+lysc midi score.lys                   # Creates score.mid (+ score-<alias>.mid)
+lysc midi -d out score.lys            # The same, into out/
+lysc midi --score movement2 suite.lys # One named movement: suite-movement2.mid
 ```
 
 ### xml - Export to MusicXML
 
 ```bash
-lysc xml [options] <input.lys> [output.xml]
+lysc xml [options] <input.lys>
 ```
 
 Exports to MusicXML 4.0 partwise format, compatible with Finale, Sibelius, MuseScore, and other notation software.
@@ -217,24 +216,22 @@ Exports to MusicXML 4.0 partwise format, compatible with Finale, Sibelius, MuseS
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
-| `--score <name>` | Write the named score's form (default: the first) |
-| `--all` | Write every score to its own `.xml` file |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score's form |
 | `-h, --help` | Show help |
 
 The same one-file-one-form rule as `midi` above.
 
 **Examples:**
 ```bash
-lysc xml score.lys                    # Creates score.xml
-lysc xml -o export.xml score.lys      # With -o flag
-lysc xml --all suite.lys              # Every movement, one file each
+lysc xml score.lys                    # Creates score.xml (+ score-<alias>.xml)
+lysc xml -d out score.lys             # The same, into out/
 ```
 
 ### ly - Export to LilyPond
 
 ```bash
-lysc ly [options] <input.lys> [output.ly]
+lysc ly [options] <input.lys>
 ```
 
 Writes a LilyPond `.ly` twin of the score — the file used to compare Lily#'s engraving
@@ -245,9 +242,8 @@ the pitches stay identical in LilyPond.
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
-| `--score <name>` | Write the named score's form (default: the first) |
-| `--all` | Write every score to its own `.ly` file |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
+| `--score <name>` | Write only the named score |
 | `--pin-fonts` | Write a `\paper` block pinning `property-defaults.fonts.serif` / `.sans` to LilyPond's bundled faces |
 | `-h, --help` | Show help |
 
@@ -261,26 +257,25 @@ when you measure a twin through `lilypond -dbackend=svg`, not when you print it.
 
 **Examples:**
 ```bash
-lysc ly score.lys                     # Creates score.ly
-lysc ly -o export.ly score.lys        # With -o flag
-lysc ly --all multi-movement.lys      # Every movement, one file each
+lysc ly score.lys                     # Creates score.ly (+ score-<alias>.ly)
+lysc ly -d out score.lys              # The same, into out/
 lysc ly --pin-fonts score.lys         # A twin to measure through the svg backend
 ```
 
 ### vsqx - Export to VOCALOID
 
 ```bash
-lysc vsqx <input.lys> [output.vsqx]
+lysc vsqx [options] <input.lys>
 ```
 
-Writes a VOCALOID4 sequence. The first part carrying lyrics becomes the vocal track
-(Piapro Studio and VOCALOID4+ import this directly): kana lyrics get VOCALOID phonemes,
-ties merge, and rests become gaps.
+Writes a VOCALOID4 sequence, `song.vsqx`. The first part carrying lyrics becomes the
+vocal track (Piapro Studio and VOCALOID4+ import this directly): kana lyrics get VOCALOID
+phonemes, ties merge, and rests become gaps.
 
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `-h, --help` | Show help |
 
 **Examples:**
@@ -291,32 +286,32 @@ lysc vsqx song.lys                    # Creates song.vsqx
 ### import - Import MusicXML
 
 ```bash
-lysc import [options] <input.(xml|musicxml|mxl)> [output.lys]
+lysc import [options] <input.(xml|musicxml|mxl)>
 ```
 
-Reads a MusicXML score (or an `.mxl` zip) and writes an idiomatic Lily# source file that
-renders the same music. Import is an opinionated, non-unique mapping: the result is a
+Reads a MusicXML score (or an `.mxl` zip) and writes an idiomatic Lily# source file,
+`song.lys`, that renders the same music. Import is an opinionated, non-unique mapping: the result is a
 faithful **starting point to edit**, not a byte round-trip. Anything not representable is
 reported, never emitted wrong.
 
 **Options:**
 | Option | Description |
 |--------|-------------|
-| `-o, --output <file>` | Output file path (default: input with `.lys`) |
+| `-d, --out-dir <folder>` | Write into this folder (default: the input's folder) |
 | `-r, --relative` | Emit relative-octave notes (default: absolute) |
 | `-h, --help` | Show help |
 
 **Examples:**
 ```bash
 lysc import song.xml                  # Creates song.lys
-lysc import song.mxl song.lys         # From a compressed MusicXML
+lysc import -d books song.mxl         # From a compressed MusicXML, into books/
 lysc import --relative song.xml       # Relative-octave output
 ```
 
 ### octave - Convert between absolute and relative octaves
 
 ```bash
-lysc octave (--absolute | --relative) <input.lys> [output.lys]
+lysc octave (--absolute | --relative) [options] <input.lys>
 ```
 
 Rewrites a whole file into the other octave mode, keeping every note at the pitch it sounds
@@ -335,13 +330,17 @@ file with no `score`) — nothing says what octave such a note means.
 |--------|-------------|
 | `-a, --absolute` | Convert to `octave absolute` (bare `c` = C4, or the part's `octave N`) |
 | `-r, --relative` | Convert to relative octaves (the default mode) |
-| `-o, --output <file>` | Write here (may be the input itself); without an output the result goes to stdout |
+| `-i, --in-place` | Overwrite the input |
+| `-d, --out-dir <folder>` | Write `song.lys` into this folder |
 | `-h, --help` | Show help |
+
+Without `-i` or `-d` the result goes to stdout.
 
 **Examples:**
 ```bash
 lysc octave --absolute song.lys              # Prints the absolute version
-lysc octave --relative song.lys -o song.lys  # Converts in place
+lysc octave --relative -i song.lys           # Converts in place
+lysc octave --absolute -d absolute song.lys  # Writes absolute/song.lys
 ```
 
 ### harmonize - Suggest a chord track
@@ -435,15 +434,19 @@ lysc layout score.lys
 
 ## Output File Naming
 
-If no output file is specified, the output file uses the input filename with the appropriate extension:
+An output is always named for its book; no option names a file. Every score is written
+unless `--score` picks one, and `-d <folder>` chooses where (default: the input's folder):
 
-| Command | Input | Default Output |
-|---------|-------|----------------|
-| `lysc svg score.lys` | score.lys | score.svg |
-| `lysc pdf score.lys` | score.lys | score.pdf |
-| `lysc png score.lys` | score.lys | score.png |
-| `lysc midi score.lys` | score.lys | score.mid |
-| `lysc xml score.lys` | score.lys | score.xml |
+| The score in `song.lys` | Output (`svg`; the others the same with their extension) |
+|---|---|
+| `score main { … }` — the main score | `song.svg` |
+| `score main "tab" { … }` — the same form, another alias | `song-tab.svg` |
+| `score coda { … }` — another form | `song-coda.svg` |
+| no `score` block at all | `song.svg` |
+
+Two scores that would get one name (two unlabelled `score main`) are refused rather than
+written over each other — give one an alias. `-o/--output`, an output argument and
+`--all` are gone: an old script using them is told what to write instead.
 
 ## Font Requirements
 

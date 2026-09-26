@@ -21,7 +21,7 @@ section Chorus {
 
 form main { ~Chorus }
 
-score main "sketch-in-c" {
+score main {
   chords prog                     // symbols across the top
   staff comp "Rhythm" as lines 1  // one-line slash staff under them
 }

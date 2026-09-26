@@ -42,12 +42,18 @@ public static class PdfGenerator
     /// <returns>PDF document as byte array</returns>
     public static byte[] Generate(SyntaxTree tree, PdfRenderOptions? options = null, string? renderName = null)
     {
-        options ??= PdfRenderOptions.Default;
-
         // Find render specification - by name if specified, otherwise first
         var renderSpec = string.IsNullOrEmpty(renderName)
             ? RenderSpecParser.FindFirst(tree)
             : RenderSpecParser.FindByName(tree, renderName);
+        return GenerateScore(tree, renderSpec, options);
+    }
+
+    /// <summary>The PDF of one given score (null = a file with no <c>score</c> block) —
+    /// <see cref="SvgGenerator.GenerateScore"/> says why a name is not always enough.</summary>
+    public static byte[] GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, PdfRenderOptions? options = null)
+    {
+        options ??= PdfRenderOptions.Default;
 
         // ONE collection path for every output format (see PngGenerator):
         // the hand-copied variant here silently missed score transpose and the

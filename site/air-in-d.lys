@@ -20,6 +20,6 @@ section Second { kb { voice { d'2.@fermata | } { fis2. | } } }
 
 form main { |: ~Body [1. ~First] :| [2. ~Second] }
 
-score main "air-in-d" {
+score main {
   staff kb  // one staff — both voices live on it
 }

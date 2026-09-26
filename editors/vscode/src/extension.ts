@@ -542,7 +542,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('lilysharp.selectAiModel', () => pickAiModel()));
 
     // The Explorer's batch export: right-click one or more .lys → the format
-    // submenu → a folder → every score of every file, named as `lysc --all` names
+    // submenu → a folder → every score of every file, named as `lysc` names
     // them. The preview's Export button (exportPreview below) stays the one-score door.
     registerExportBatch(context, {
         getClient: () => client,
@@ -1310,7 +1310,7 @@ async function exportPreview(
         return;
     }
 
-    // Default filename (matches `lysc svg --all`): the `main` score writes the
+    // Default filename (matches `lysc svg`): the `main` score writes the
     // source file's basename; every other score appends its name to it —
     // song.lys + `score sub` → song-sub, + `score sub "custom"` → song-custom.
     const docUri = vscode.Uri.parse(uri);

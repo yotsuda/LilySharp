@@ -30,7 +30,7 @@ section Chorus {
 
 form main { Chorus }
 
-score main "blues-in-f" {
+score main {
   chords prog            // symbols across the top
   staff head             // the written melody
   staff comp as lines 1  // one-line slash staff

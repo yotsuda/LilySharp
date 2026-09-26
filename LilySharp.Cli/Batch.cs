@@ -44,8 +44,8 @@ namespace LilySharp.Cli;
 /// </remarks>
 internal static class Batch
 {
-    /// <summary>One line of the list: an input, and optionally the output it names.</summary>
-    private readonly record struct Entry(string Input, string? Output);
+    /// <summary>One line of the list: an input, and optionally the folder its outputs go to.</summary>
+    private readonly record struct Entry(string Input, string? OutDir);
 
     /// <summary>
     /// Detects and STRIPS <c>--batch &lt;list&gt;</c> from <paramref name="args"/>, returning
@@ -106,15 +106,14 @@ internal static class Batch
         if (listPath.Length == 0)
             return 1;   // Take already said why
 
-        // ⚠️ -o NAMES ONE FILE, so it cannot name a batch of them: every book would write
-        // over the last. The list's own second column is how a batch names its outputs.
+        // ⚠️ AN OUTPUT IS NAMED FOR ITS BOOK (Program's "Where the outputs go"), so a batch
+        // chooses only FOLDERS: -d for all of them, or the list's second column per book.
         if (args.Contains("-o") || args.Contains("--output"))
         {
             Console.Error.WriteLine(
-                "Error: --batch and -o/--output are mutually exclusive — one output path "
-                + "cannot name many files.");
+                "Error: -o/--output is gone — output names are fixed (<input>[-<alias>].<ext>).");
             Console.Error.WriteLine(
-                "       Put the output in the list instead: '<input>\\t<output>' per line.");
+                "       Choose the folder: -d <folder> for every book, or '<input>\\t<folder>' per line.");
             return 1;
         }
 
@@ -142,9 +141,10 @@ internal static class Batch
             return 1;
         }
 
-        string[] ArgsFor(Entry e) => e.Output is null
+        // The line's own folder comes last, so it wins over a batch-wide -d.
+        string[] ArgsFor(Entry e) => e.OutDir is null
             ? [.. args, e.Input]
-            : [.. args, e.Input, e.Output];
+            : [.. args, "-d", e.OutDir, e.Input];
 
         int RunOne(Entry e)
         {
@@ -241,7 +241,7 @@ internal static class Batch
     };
 
     /// <summary>
-    /// One entry per non-blank line: <c>input</c>, or <c>input TAB output</c>. A line whose
+    /// One entry per non-blank line: <c>input</c>, or <c>input TAB folder</c>. A line whose
     /// first non-blank character is <c>#</c> is a comment.
     /// </summary>
     /// <remarks>

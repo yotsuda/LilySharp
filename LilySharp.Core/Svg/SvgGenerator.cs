@@ -50,7 +50,17 @@ public static class SvgGenerator
         // Choose, shared with IncrementalCompiler's session path, which must
         // resolve the same spec this full compile would to stay byte-identical.
         var renderSpec = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName);
+        return GenerateScore(tree, renderSpec, options);
+    }
 
+    /// <summary>
+    /// Generates the SVG of one given score (null = a file with no <c>score</c> block). A
+    /// name cannot always pick it: <c>score main</c> and <c>score main "tab"</c> share the
+    /// name <c>main</c>, so a caller walking every score hands over the spec itself.
+    /// </summary>
+    public static string GenerateScore(SyntaxTree tree, RenderSpec? renderSpec, SvgRenderOptions? options = null)
+    {
+        options ??= SvgRenderOptions.Default;
         var (multiScore, layout) = BuildLayout(tree, renderSpec, PaperBaseOf(options));
         return RenderToSvg(multiScore, layout, options);
     }

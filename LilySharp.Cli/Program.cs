@@ -88,8 +88,12 @@ static void ShowHelp()
     Console.WriteLine($"Lily# {VersionString()} - Music notation compiler");
     Console.WriteLine("""
 
-        Usage: lysc <command> [options] <input> [output]
+        Usage: lysc <command> [options] <input>
                lysc [options]
+
+        Outputs are named for the input: song.lys writes song.svg for its main
+        score and song-<alias>.svg for each other one, every score unless --score
+        picks one. -d <folder> chooses where they go (default: the input's folder).
 
         Commands:
           svg        Convert to SVG (sheet music)
@@ -120,9 +124,8 @@ static void ShowHelp()
           --verbose, --debug  Print full stack traces on error
 
         Examples:
-          lysc svg score.lys                    # Output: score.svg
-          lysc svg score.lys output.svg         # Specify output file
-          lysc svg score.lys -o output.svg      # Same as above
+          lysc svg score.lys                    # Output: score.svg (+ score-<alias>.svg)
+          lysc svg -d out score.lys             # The same, into out/
           lysc pdf score.lys                    # Output: score.pdf
           lysc midi score.lys                   # Output: score.mid
           lysc check score.lys                  # Syntax check only
@@ -130,20 +133,20 @@ static void ShowHelp()
         Batch: one command, many files, one process. The launch cost (~1 s, mostly font
         and JIT warm-up) is paid ONCE instead of per file, which is what makes a whole-
         corpus run practical. One file per line; '#' comments and blank lines are skipped;
-        a TAB names that file's output.
+        a TAB names the folder that file's outputs go to.
 
-          lysc svg --batch books.txt            # each book -> its own .svg
+          lysc svg --batch books.txt            # each book -> its own .svg files
+          lysc svg --batch books.txt -d out     # ...all into out/
           lysc svg --batch books.txt -j 0       # ...one per processor
           lysc check --batch books.txt          # syntax-check a whole corpus
           dir /b/s *.lys | lysc ly --batch -    # take the list from a pipe
 
           # books.txt
           score.lys                             # -> score.svg
-          suite.lys<TAB>out/suite-a.svg         # -> out/suite-a.svg
+          suite.lys<TAB>out                     # -> out/suite.svg, out/suite-<alias>.svg
 
-        Note: --batch cannot be combined with -o/--output (one path cannot name many
-        files); put the output in the list instead. A file that fails does not stop the
-        rest — the run's exit code is non-zero if any file failed.
+        A file that fails does not stop the rest — the run's exit code is non-zero if
+        any file failed.
 
         Per-command help:
           lysc svg --help
@@ -215,26 +218,29 @@ static int RunSvg(string[] args)
         return 0;
     }
 
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
+    var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
         .Flag("no-embed-font", "--no-embed-font", "-n")
-        .Flag("all", "--all")
         .Flag("combined", "--combined")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "svg");
 
-    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".svg");
-    if (ioError != null) return OptionError(ioError, "svg");
-
     bool embedFont = !r.Has("no-embed-font");
-    if (r.Has("all") && r.Has("combined"))
-        return OptionError("--all and --combined are mutually exclusive.", "svg");
     if (r.Has("combined"))
-        return ExecuteSvgCombined(inputPath!, outputPath!, embedFont);
-    if (r.Has("all"))
-        return ExecuteSvgAll(inputPath!, embedFont);
-    return ExecuteSvg(inputPath!, outputPath!, embedFont, r.Get("score"));
+    {
+        if (r.Get("score") != null)
+            return OptionError("--combined and --score are mutually exclusive.", "svg");
+        var (input, dir, error) = ResolveOutputs(r);
+        if (error != null) return OptionError(error, "svg");
+        return ExecuteSvgCombined(input!, OutputPathFor(input!, dir!, ".svg"), embedFont);
+    }
+    return RunScoreOutputs("svg", r, ".svg", (tree, output) =>
+    {
+        var svg = LilySharp.Core.Svg.SvgGenerator.GenerateScore(tree, output.Spec, MakeSvgOptions(embedFont));
+        File.WriteAllText(output.Path, svg);
+        Console.WriteLine($"Created: {output.Path}");
+        return 0;
+    });
 }
 
 static void ShowSvgHelp()
@@ -242,40 +248,26 @@ static void ShowSvgHelp()
     Console.WriteLine("""
         Convert Lily# source to SVG
 
-        Usage: lysc svg [options] <input.lys> [output.svg]
+        Usage: lysc svg [options] <input.lys>
 
-        Arguments:
-          <input.lys>      Input Lily# source file
-          [output.svg]     Output SVG file (default: input with .svg extension)
+        Writes every score of the file: <input>.svg for the main score and
+        <input>-<alias>.svg for each other one (score main "tab" -> song-tab.svg).
 
         Options:
-          -o, --output <file>    Output file path
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score
           -n, --no-embed-font    Don't embed font (smaller file, requires font installed)
-          --all                  Generate all render blocks as separate SVG files
-          --combined             Stack all render blocks into ONE SVG (like a \book)
-          --score <name>         Render the named score block (default: the first)
+          --combined             Stack every score into ONE <input>.svg (like a \book)
           -h, --help             Show this help
 
         Examples:
           lysc svg score.lys
-          lysc svg score.lys sheet.svg
-          lysc svg -o sheet.svg score.lys
+          lysc svg -d out score.lys
+          lysc svg --score tab score.lys
           lysc svg score.lys --no-embed-font
-          lysc svg --score grid greensleeves.lys
-          lysc svg --all multi-movement.lys
+          lysc svg --combined multi-movement.lys
         """);
 }
-
-static int ExecuteSvg(string inputPath, string outputPath, bool embedFont, string? scoreName = null) =>
-    RunOutputCommand(inputPath, scoreName, tree =>
-    {
-        var renderOptions = MakeSvgOptions(embedFont);
-        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions, scoreName);
-        File.WriteAllText(outputPath, svg);
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
-        return 0;
-    });
 
 static LilySharp.Core.Svg.Renderer.SvgRenderOptions MakeSvgOptions(bool embedFont)
     => embedFont
@@ -311,32 +303,6 @@ static int ExecuteSvgCombined(string inputPath, string outputPath, bool embedFon
         return 0;
     });
 
-static int ExecuteSvgAll(string inputPath, bool embedFont) =>
-    RunOutputCommand(inputPath, null, tree =>
-    {
-        var inputStem = Path.GetFileNameWithoutExtension(inputPath);
-        var results = LilySharp.Core.Svg.SvgGenerator.GenerateAll(tree, MakeSvgOptions(embedFont), inputStem);
-        var inputDir = Path.GetDirectoryName(inputPath) ?? ".";
-
-        Console.WriteLine($"Generating {results.Count} movement(s):");
-
-        foreach (var (filename, svg) in results)
-        {
-            var outputPath = string.IsNullOrEmpty(filename)
-                ? Path.ChangeExtension(inputPath, ".svg")
-                : Path.Combine(inputDir, filename);
-
-            // Ensure .svg extension
-            if (!outputPath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
-                outputPath = Path.ChangeExtension(outputPath, ".svg");
-
-            File.WriteAllText(outputPath, svg);
-            Console.WriteLine($"  Created: {outputPath}");
-        }
-
-        return 0;
-    });
-
 // ============ PDF Command ============
 
 static int RunPdf(string[] args)
@@ -347,16 +313,19 @@ static int RunPdf(string[] args)
         return 0;
     }
 
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
+    var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "pdf");
 
-    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".pdf");
-    if (ioError != null) return OptionError(ioError, "pdf");
-
-    return ExecutePdf(inputPath!, outputPath!, r.Get("score"));
+    return RunScoreOutputs("pdf", r, ".pdf", (tree, output) =>
+    {
+        var pdfBytes = PdfGenerator.GenerateScore(tree, output.Spec);
+        File.WriteAllBytes(output.Path, pdfBytes);
+        Console.WriteLine($"Created: {output.Path}");
+        Console.WriteLine($"  Size: {pdfBytes.Length / 1024.0:F1} KB");
+        return 0;
+    });
 }
 
 static void ShowPdfHelp()
@@ -364,33 +333,22 @@ static void ShowPdfHelp()
     Console.WriteLine("""
         Convert Lily# source to PDF
 
-        Usage: lysc pdf [options] <input.lys> [output.pdf]
+        Usage: lysc pdf [options] <input.lys>
 
-        Arguments:
-          <input.lys>      Input Lily# source file
-          [output.pdf]     Output PDF file (default: input with .pdf extension)
+        Writes every score of the file: <input>.pdf for the main score and
+        <input>-<alias>.pdf for each other one.
 
         Options:
-          -o, --output <file>    Output file path
-          --score <name>         Render the named score block (default: the first)
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score
           -h, --help             Show this help
 
         Examples:
           lysc pdf score.lys
-          lysc pdf score.lys sheet.pdf
-          lysc pdf -o sheet.pdf score.lys
+          lysc pdf -d out score.lys
+          lysc pdf --score tab score.lys
         """);
 }
-
-static int ExecutePdf(string inputPath, string outputPath, string? scoreName = null) =>
-    RunOutputCommand(inputPath, scoreName, tree =>
-    {
-        var pdfBytes = PdfGenerator.Generate(tree, null, scoreName);
-        File.WriteAllBytes(outputPath, pdfBytes);
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine($"  Size: {pdfBytes.Length / 1024.0:F1} KB");
-        return 0;
-    });
 
 // ============ PNG Command ============
 
@@ -402,8 +360,7 @@ static int RunPng(string[] args)
         return 0;
     }
 
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
+    var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
         .Value("scale", "--scale requires a number", "--scale")
         .Flag("crop", "--crop")
@@ -413,11 +370,32 @@ static int RunPng(string[] args)
     float scale = 2.0f;
     if (r.Get("scale") is { } scaleText && (!float.TryParse(scaleText, out scale) || scale <= 0))
         return OptionError("--scale must be a positive number", "png");
+    bool crop = r.Has("crop");
 
-    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".png");
-    if (ioError != null) return OptionError(ioError, "png");
-
-    return ExecutePng(inputPath!, outputPath!, scale, r.Get("score"), r.Has("crop"));
+    var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = LilySharp.Core.Rendering.FontLocator.Find() };
+    return RunScoreOutputs("png", r, ".png", (tree, output) =>
+    {
+        // One file per page, following LilyPond's PNG naming: a single page
+        // keeps the score's name, multiple pages become NAME-page1.png,
+        // NAME-page2.png, … (scm/ps-to-png.scm).
+        var rendered = PngGenerator.GenerateScorePages(tree, output.Spec, pngOptions);
+        var pages = crop
+            ? rendered.Select(CropToContent).ToList()
+            : rendered.ToList();
+        string dir = Path.GetDirectoryName(output.Path) ?? "";
+        string baseName = Path.GetFileNameWithoutExtension(output.Path);
+        for (int p = 0; p < pages.Count; p++)
+        {
+            string pagePath = pages.Count == 1
+                ? output.Path
+                : Path.Combine(dir, $"{baseName}-page{p + 1}.png");
+            File.WriteAllBytes(pagePath, pages[p]);
+            Console.WriteLine($"Created: {pagePath}");
+            Console.WriteLine($"  Size: {pages[p].Length / 1024.0:F1} KB");
+        }
+        Console.WriteLine($"  Scale: {scale:F1}x");
+        return 0;
+    });
 }
 
 static void ShowPngHelp()
@@ -425,62 +403,26 @@ static void ShowPngHelp()
     Console.WriteLine("""
         Convert Lily# source to PNG
 
-        Usage: lysc png [options] <input.lys> [output.png]
+        Usage: lysc png [options] <input.lys>
 
-        Arguments:
-          <input.lys>      Input Lily# source file
-          [output.png]     Output PNG file (default: input with .png extension)
+        Writes every score of the file: <input>.png for the main score and
+        <input>-<alias>.png for each other one; a score of several pages writes
+        NAME-page1.png, NAME-page2.png, …
 
         Options:
-          -o, --output <file>    Output file path
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
           --crop                 Trim whitespace to the content bounding box
-          --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
 
         Examples:
           lysc png score.lys
-          lysc png score.lys sheet.png
+          lysc png -d out score.lys
           lysc png --scale 3.0 score.lys    # High DPI (288 DPI)
           lysc png --scale 1.0 score.lys    # Standard DPI (96 DPI)
         """);
 }
-
-static int ExecutePng(string inputPath, string outputPath, float scale, string? scoreName = null, bool crop = false) =>
-    RunOutputCommand(inputPath, scoreName, tree =>
-    {
-        var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
-        var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
-
-        // One file per page, following LilyPond's PNG naming: a single page
-        // keeps the requested name, multiple pages become BASE-page1.png,
-        // BASE-page2.png, … (scm/ps-to-png.scm).
-        var rendered = PngGenerator.GeneratePages(tree, pngOptions, scoreName);
-        var pages = crop
-            ? rendered.Select(CropToContent).ToList()
-            : rendered.ToList();
-        if (pages.Count == 1)
-        {
-            File.WriteAllBytes(outputPath, pages[0]);
-            Console.WriteLine($"Created: {outputPath}");
-            Console.WriteLine($"  Size: {pages[0].Length / 1024.0:F1} KB");
-        }
-        else
-        {
-            string dir = Path.GetDirectoryName(outputPath) ?? "";
-            string baseName = Path.GetFileNameWithoutExtension(outputPath);
-            string ext = Path.GetExtension(outputPath);
-            for (int p = 0; p < pages.Count; p++)
-            {
-                string pagePath = Path.Combine(dir, $"{baseName}-page{p + 1}{ext}");
-                File.WriteAllBytes(pagePath, pages[p]);
-                Console.WriteLine($"Created: {pagePath}");
-                Console.WriteLine($"  Size: {pages[p].Length / 1024.0:F1} KB");
-            }
-        }
-        Console.WriteLine($"  Scale: {scale:F1}x");
-        return 0;
-    });
 
 // Trims a PNG to the bounding box of its non-background (non-near-white) pixels,
 // plus a small margin, so a tiny snippet fills the frame instead of floating in a
@@ -545,29 +487,23 @@ static void ShowMidiHelp()
     Console.WriteLine("""
         Convert Lily# source to MIDI
 
-        Usage: lysc midi [options] <input.lys> [output.mid]
+        Usage: lysc midi [options] <input.lys>
 
-        Arguments:
-          <input.lys>      Input Lily# source file
-          [output.mid]     Output MIDI file (default: input with .mid extension)
+        Writes every score's form: <input>.mid for the main score and
+        <input>-<alias>.mid for each other one. A .mid holds ONE arrangement, so
+        a file of several movements writes one file each — which is what
+        LilyPond does too (two \score blocks with \midi { } write ts.mid and
+        ts-1.mid).
 
         Options:
-          -o, --output <file>    Output file path
-          --score <name>         Write the named score's form (default: the first)
-          --all                  Write every score to its own .mid file
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score's form
           -h, --help             Show this help
-
-        A .mid holds ONE arrangement, so a file of several movements needs one
-        file each — which is what LilyPond does too (two \score blocks with
-        \midi { } write ts.mid and ts-1.mid). Without --score or --all the first
-        form is written and the rest are named in a warning.
 
         Examples:
           lysc midi score.lys
-          lysc midi score.lys audio.mid
-          lysc midi -o audio.mid score.lys
+          lysc midi -d out score.lys
           lysc midi --score movement2 multi-movement.lys
-          lysc midi --all multi-movement.lys
         """);
 }
 
@@ -601,18 +537,27 @@ static int RunVsqx(string[] args)
             Studio / VOCALOID4+ import this directly). Kana lyrics get
             VOCALOID phonemes; ties merge; rests become gaps.
 
-            Usage: lysc vsqx <input.lys> [output.vsqx]
+            Usage: lysc vsqx [options] <input.lys>
+
+            Writes <input>.vsqx.
+
+            Options:
+              -d, --out-dir <folder> Write into this folder (default: the input's folder)
+              -h, --help             Show this help
             """);
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseIoOnly(args, ".vsqx");
+    var r = OutputOptions().Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "vsqx");
+    var (inputPath, dir, error) = ResolveOutputs(r);
     if (error != null) return OptionError(error, "vsqx");
+    string outputPath = OutputPathFor(inputPath!, dir!, ".vsqx");
 
     return RunOutputCommand(inputPath!, null, tree =>
     {
         var doc = new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree);
-        doc.Save(outputPath!);
+        doc.Save(outputPath);
         Console.WriteLine($"Created: {outputPath}");
         return 0;
     });
@@ -636,28 +581,21 @@ static void ShowXmlHelp()
     Console.WriteLine("""
         Convert Lily# source to MusicXML
 
-        Usage: lysc xml [options] <input.lys> [output.xml]
+        Usage: lysc xml [options] <input.lys>
 
-        Arguments:
-          <input.lys>      Input Lily# source file
-          [output.xml]     Output MusicXML file (default: input with .xml extension)
+        Writes every score's form: <input>.xml for the main score and
+        <input>-<alias>.xml for each other one. One document holds ONE
+        arrangement, so a file of several movements writes one file each.
 
         Options:
-          -o, --output <file>    Output file path
-          --score <name>         Write the named score's form (default: the first)
-          --all                  Write every score to its own .xml file
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score's form
           -h, --help             Show this help
-
-        One document holds ONE arrangement, so a file of several movements needs
-        one file each. Without --score or --all the first form is written and the
-        rest are named in a warning.
 
         Examples:
           lysc xml score.lys
-          lysc xml score.lys export.xml
-          lysc xml -o export.xml score.lys
+          lysc xml -d out score.lys
           lysc xml --score movement2 multi-movement.lys
-          lysc xml --all multi-movement.lys
         """);
 }
 
@@ -695,16 +633,14 @@ static void ShowLyHelp()
     Console.WriteLine("""
         Convert Lily# source to LilyPond (.ly)
 
-        Usage: lysc ly [options] <input.lys> [output.ly]
+        Usage: lysc ly [options] <input.lys>
 
-        Arguments:
-          <input.lys>      Input Lily# source file
-          [output.ly]      Output LilyPond file (default: input with .ly extension)
+        Writes every score: <input>.ly for the main score and <input>-<alias>.ly
+        for each other one.
 
         Options:
-          -o, --output <file>    Output file path
-          --score <name>         Write the named score's form (default: the first)
-          --all                  Write every score to its own .ly file
+          -d, --out-dir <folder> Write into this folder (default: the input's folder)
+          --score <name>         Write only the named score
           --pin-fonts            Write a \paper block that pins the text faces
                                  (property-defaults.fonts.serif / .sans) so that
                                  a `lilypond -dbackend=svg` run of the twin uses
@@ -722,16 +658,13 @@ static void ShowLyHelp()
         LP-fidelity probes carry for that reason; use it when you measure a twin
         through svg, not when you print it.
 
-        The twin writes one \score, so a file of several movements needs one .ly
-        each. Without --score or --all the first form is written and the rest are
-        named in a warning.
+        The twin writes one \score, so a file of several movements writes one .ly
+        each.
 
         Examples:
           lysc ly score.lys
-          lysc ly score.lys export.ly
-          lysc ly -o export.ly score.lys
+          lysc ly -d out score.lys
           lysc ly --score movement2 multi-movement.lys
-          lysc ly --all multi-movement.lys
         """);
 }
 
@@ -760,41 +693,41 @@ static int RunImport(string[] args)
         Console.WriteLine("""
             Import MusicXML into a Lily# source file
 
-            Usage: lysc import [options] <input.(xml|musicxml|mxl)> [output.lys]
+            Usage: lysc import [options] <input.(xml|musicxml|mxl)>
 
             Reads a MusicXML score (or an .mxl zip) and writes an idiomatic Lily#
-            source file that renders the same music. Import is an opinionated,
-            non-unique mapping: the result is a faithful STARTING POINT to edit, not
-            a byte round-trip. Anything not representable is reported, never emitted
-            wrong.
+            source file, <input>.lys, that renders the same music. Import is an
+            opinionated, non-unique mapping: the result is a faithful STARTING POINT
+            to edit, not a byte round-trip. Anything not representable is reported,
+            never emitted wrong.
 
             Options:
-              -o, --output <file>    Output file path (default: input with .lys)
+              -d, --out-dir <folder> Write into this folder (default: the input's folder)
               -r, --relative         Emit relative-octave notes (default: absolute)
               -h, --help             Show this help
 
             Examples:
               lysc import song.xml
-              lysc import song.mxl song.lys
+              lysc import -d books song.mxl
               lysc import --relative song.xml
             """);
         return 0;
     }
 
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
+    var r = OutputOptions()
         .Flag("relative", "-r", "--relative")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "import");
 
-    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".lys");
+    var (inputPath, dir, ioError) = ResolveOutputs(r);
     if (ioError != null) return OptionError(ioError, "import");
 
     try
     {
         var bytes = File.ReadAllBytes(inputPath!);
         var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes, r.Has("relative"));
-        File.WriteAllText(outputPath!, lys);
+        string outputPath = OutputPathFor(inputPath!, dir!, ".lys");
+        File.WriteAllText(outputPath, lys);
 
         Console.WriteLine($"Created: {outputPath}");
         if (report.HasWarnings)
@@ -819,7 +752,7 @@ static int RunOctave(string[] args)
     if (WantsHelp(args))
     {
         Console.WriteLine("""
-            Usage: lysc octave (--absolute | --relative) <input.lys> [output.lys]
+            Usage: lysc octave (--absolute | --relative) [options] <input.lys>
 
             Rewrites a Lily# source file into the other octave mode, keeping every
             note at the pitch it sounds now: the `octave absolute` / `octave relative`
@@ -828,41 +761,42 @@ static int RunOctave(string[] args)
             note by note before it is written; a file that cannot be converted
             exactly is left alone and the reason is printed.
 
+            Without -i or -d the result goes to standard output.
+
             Options:
               -a, --absolute         Convert to `octave absolute` (bare c = C4)
               -r, --relative         Convert to relative octaves (the default mode)
-              -o, --output <file>    Write here (may be the input itself); without an
-                                     output the result goes to standard output
+              -i, --in-place         Overwrite the input
+              -d, --out-dir <folder> Write <input>.lys into this folder
               -h, --help             Show this help
 
             Examples:
               lysc octave --absolute song.lys             # print the absolute version
-              lysc octave --relative song.lys -o song.lys # convert in place
+              lysc octave --relative -i song.lys          # convert in place
+              lysc octave --absolute -d absolute song.lys # absolute/song.lys
             """);
         return 0;
     }
 
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
+    var r = OutputOptions()
         .Flag("absolute", "-a", "--absolute")
         .Flag("relative", "-r", "--relative")
+        .Flag("in-place", "-i", "--in-place")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, "octave");
     if (r.Has("absolute") == r.Has("relative"))
         return OptionError("give exactly one of --absolute or --relative", "octave");
-    if (r.Positionals.Count == 0)
-        return OptionError("Input file required", "octave");
-    var inputPath = r.Positionals[0];
-    var outputPath = r.Get("output") ?? (r.Positionals.Count > 1 ? r.Positionals[1] : null);
-    if (!File.Exists(inputPath))
-    {
-        Console.Error.WriteLine($"Error: File not found: {inputPath}");
-        return 1;
-    }
+    if (r.Has("in-place") && r.Get("out-dir") != null)
+        return OptionError("--in-place and --out-dir are mutually exclusive.", "octave");
+    var (inputPath, dir, ioError) = ResolveOutputs(r);
+    if (ioError != null) return OptionError(ioError, "octave");
+    string? outputPath = r.Has("in-place") ? inputPath
+        : r.Get("out-dir") != null ? OutputPathFor(inputPath!, dir!, ".lys")
+        : null;
 
     try
     {
-        var source = File.ReadAllText(inputPath);
+        var source = File.ReadAllText(inputPath!);
         var target = r.Has("absolute")
             ? LilySharp.Core.Editing.OctaveMode.Absolute
             : LilySharp.Core.Editing.OctaveMode.Relative;
@@ -1239,7 +1173,7 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
 //
 // ⚠️ The selector is a SCORE name and the unit written is its FORM, because that is what
 // `--score` already means for svg/pdf/png — one word, one meaning. Two scores naming one
-// form therefore write the same music to two names under `--all`, exactly as svg does.
+// form therefore write the same music under two names, exactly as svg does.
 // The score's DECLARATION goes along too: its staves are not the form's (a book's
 // `score main`, `score main "both"` and `score main "tab"` share one form), and the ly
 // twin engraves them. midi and xml write the form's music and take no staves from it.
@@ -1248,78 +1182,127 @@ static int RunFormOutput(
     Func<SyntaxTree, LilySharp.Core.Syntax.FormDeclarationSyntax?,
          LilySharp.Core.Syntax.RenderDeclarationSyntax?, string, int> write)
 {
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
+    var r = OutputOptions()
         .Value("score", "--score requires a score name", "--score")
-        .Flag("all", "--all")
         .Parse(args);
     if (r.Error != null) return OptionError(r.Error, verb);
-    if (r.Has("all") && r.Get("score") != null)
-        return OptionError("--all and --score are mutually exclusive.", verb);
 
-    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, defaultExt);
-    if (ioError != null) return OptionError(ioError, verb);
-
-    if (r.Has("all"))
-        return RunOutputCommand(inputPath!, null, tree =>
-        {
-            var scores = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAllDeclared(tree);
-            // A file with no `score` block has exactly one thing to write, and the
-            // requested output path is where it goes.
-            if (scores.Count == 0)
-                return write(tree, null, null, outputPath!);
-
-            string stem = Path.GetFileNameWithoutExtension(inputPath!);
-            string dir = Path.GetDirectoryName(inputPath!) ?? ".";
-            Console.WriteLine($"Writing {scores.Count} score(s):");
-            foreach (var (declaration, spec) in scores)
-            {
-                // The same naming rule `svg --all` uses: the main score keeps the input
-                // stem, every other appends its own name (RenderSpec.ResolveOutputStem).
-                int rc = write(tree, spec.Form, declaration,
-                    Path.Combine(dir, spec.ResolveOutputStem(stem) + defaultExt));
-                if (rc != 0) return rc;
-            }
-            return 0;
-        });
-
-    string? scoreName = r.Get("score");
-    return RunOutputCommand(inputPath!, scoreName, tree =>
+    return RunScoreOutputs(verb, r, defaultExt, (tree, output) =>
     {
-        var chosen = scoreName == null
-            ? null
-            : LilySharp.Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, scoreName);
-        var form = chosen?.Spec.Form;
-        int rc = write(tree, form, chosen?.Declaration, outputPath!);
-        if (rc == 0) WarnFormsLeftOut(tree, form);
+        int rc = write(tree, output.Spec?.Form, output.Declaration, output.Path);
+        // A file with no `score` block writes its primary form alone.
+        if (rc == 0 && output.Spec == null) WarnFormsLeftOut(tree);
         return rc;
     });
 }
 
 // ⚠️ "If you drop something, say so in Warnings" (HANDOFF §2F). One file is one form, so
-// a book of movements loses the others — in silence until 2026-08-17, when `lysc midi`
-// on the tree's one three-movement book wrote 40 notes and reported nothing.
-static void WarnFormsLeftOut(
-    SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? written)
+// a scoreless book of several forms loses all but the primary one — in silence until
+// 2026-08-17, when `lysc midi` on the tree's one three-movement book wrote 40 notes and
+// reported nothing. A book with scores writes every score's form, so only this case is left.
+static void WarnFormsLeftOut(SyntaxTree tree)
 {
     var forms = LilySharp.Core.Semantics.ScoreForms.All(tree.GetRoot());
     if (forms.Count <= 1) return;
-    var chosen = written ?? LilySharp.Core.Semantics.ScoreForms.Primary(tree.GetRoot());
+    var chosen = LilySharp.Core.Semantics.ScoreForms.Primary(tree.GetRoot());
     var left = forms.Where(f => !ReferenceEquals(f, chosen)).Select(f => f.NameText).ToList();
     if (left.Count == 0) return;
-    Console.WriteLine($"  warning: this file declares {forms.Count} forms and one file holds "
-        + $"one — wrote '{chosen?.NameText}', left out {string.Join(", ", left)} "
-        + "(--score <name> picks one, --all writes them all)");
+    Console.WriteLine($"  warning: this file declares {forms.Count} forms and no score — "
+        + $"wrote '{chosen?.NameText}', left out {string.Join(", ", left)} "
+        + "(declare a score for each to write them all)");
 }
 
-// The input/output pair for the format commands whose only option is -o/--output.
-static (string? InputPath, string? OutputPath, string? Error) ParseIoOnly(string[] args, string defaultExt)
+// ============ Where the outputs go ============
+//
+// ★ AN OUTPUT IS NAMED FOR ITS BOOK, NEVER BY THE CALLER (user decision 2026-09-26):
+// `<input stem>` for the main score and `<input stem>-<alias>` for every other one
+// (RenderSpec.ResolveOutputStem), in the folder `-d/--out-dir` names — the input's own
+// folder when it names none. Every score is written unless `--score` picks one. A name typed
+// on the command line could say anything; this one always says which book and which score a
+// file came from. And the old default wrote the FIRST score only: 92 of the owner's 332 bass
+// books declare two to four (`score main`, `"both"`, `"tab"`), and `pdf`/`png` had no way to
+// write the rest at all.
+
+static string RemovedOutputMessage() =>
+    "output names are fixed — <input>.<ext> for the main score, <input>-<alias>.<ext> for "
+    + "each other — so -o/--output and the output argument are gone; choose the folder with -d <folder>";
+
+// The options every file-writing command shares. `-o` is still RECOGNISED, only to say why
+// it went (an old script gets the new spelling rather than "Unknown option"); `--all` the
+// same, since writing every score is now what a command does.
+static CliParser OutputOptions() => new CliParser(maxPositionals: 2)
+    .Value("out-dir", "-d requires a folder", "-d", "--out-dir")
+    .Value("output", RemovedOutputMessage(), "-o", "--output")
+    .Flag("all", "--all");
+
+// The input, and the folder the outputs go to ("" = the working directory, for an input
+// named without one — the file then lands beside it, as it always did).
+static (string? Input, string? Dir, string? Error) ResolveOutputs(CliParser.Result r)
 {
-    var r = new CliParser(maxPositionals: 2)
-        .Value("output", "-o requires a file path", "-o", "--output")
-        .Parse(args);
-    if (r.Error != null) return (null, null, r.Error);
-    return CliParser.ResolveIo(r, defaultExt);
+    if (r.Get("output") != null || r.Positionals.Count > 1)
+        return (null, null, RemovedOutputMessage());
+    if (r.Has("all"))
+        return (null, null, "--all is gone: every score is written unless --score picks one");
+    if (r.Positionals.Count == 0)
+        return (null, null, "Input file required");
+    string input = r.Positionals[0];
+    if (!File.Exists(input))
+        return (null, null, $"File not found: {input}");
+    return (input, r.Get("out-dir") ?? Path.GetDirectoryName(input) ?? "", null);
+}
+
+// `<dir>/<input stem><ext>`, making the folder — the one name an output that is not a
+// score's (vsqx, a --combined stack) can have.
+static string OutputPathFor(string input, string dir, string ext)
+{
+    if (dir.Length > 0) Directory.CreateDirectory(dir);
+    return Path.Combine(dir, Path.GetFileNameWithoutExtension(input) + ext);
+}
+
+// Writes every score (or the one --score names) through `write`, one fixed name each.
+static int RunScoreOutputs(string verb, CliParser.Result r, string ext,
+    Func<SyntaxTree, ScoreOutput, int> write)
+{
+    var (input, dir, error) = ResolveOutputs(r);
+    if (error != null) return OptionError(error, verb);
+    string? scoreName = r.Get("score");
+    return RunOutputCommand(input!, scoreName, tree =>
+    {
+        var outputs = ScoreOutputs(tree, input!, dir!, scoreName, ext);
+        if (outputs == null) return 1;
+        foreach (var output in outputs)
+        {
+            int rc = write(tree, output);
+            if (rc != 0) return rc;
+        }
+        return 0;
+    });
+}
+
+static List<ScoreOutput>? ScoreOutputs(SyntaxTree tree, string input, string dir, string? scoreName, string ext)
+{
+    var scores = scoreName == null
+        ? LilySharp.Core.Svg.Collector.RenderSpecParser.FindAllDeclared(tree).ToList()
+        : LilySharp.Core.Svg.Collector.RenderSpecParser.FindDeclaredByName(tree, scoreName) is { } one
+            ? [one]
+            : [];
+    if (dir.Length > 0) Directory.CreateDirectory(dir);
+    string stem = Path.GetFileNameWithoutExtension(input);
+    if (scores.Count == 0)
+        return [new ScoreOutput(Path.Combine(dir, stem + ext), null, null)];
+
+    var outputs = scores
+        .Select(s => new ScoreOutput(Path.Combine(dir, s.Spec.ResolveOutputStem(stem) + ext), s.Declaration, s.Spec))
+        .ToList();
+    // Two scores with one name would write one file twice, the second over the first.
+    var clash = outputs.GroupBy(o => o.Path, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1);
+    if (clash != null)
+    {
+        Console.Error.WriteLine($"Error: {clash.Count()} scores would all be written to {clash.Key} — "
+            + "give each its own alias (score main \"tab\").");
+        return null;
+    }
+    return outputs;
 }
 
 // 1-based (line, column) for a source offset.
@@ -1342,3 +1325,9 @@ static string LineCol(string text, int offset)
     var (line, col) = LineColOf(text, offset);
     return $"{line},{col}";
 }
+
+/// <summary>One output of one score: where it goes, and the score (null for a file with no
+/// <c>score</c> block, which writes its one rendering under the input's own stem).</summary>
+sealed record ScoreOutput(string Path,
+    LilySharp.Core.Syntax.RenderDeclarationSyntax? Declaration,
+    LilySharp.Core.Svg.Collector.RenderSpec? Spec);

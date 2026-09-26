@@ -85,12 +85,18 @@ public static class PngGenerator
     /// callers name the files accordingly.
     /// </summary>
     public static IReadOnlyList<byte[]> GeneratePages(SyntaxTree tree, PngRenderOptions? options = null, string? renderName = null)
+        => GenerateScorePages(tree,
+            string.IsNullOrEmpty(renderName)
+                ? RenderSpecParser.FindFirst(tree)
+                : RenderSpecParser.FindByName(tree, renderName),
+            options);
+
+    /// <summary>One PNG per page of one given score (null = a file with no <c>score</c>
+    /// block) — <see cref="SvgGenerator.GenerateScore"/> says why a name is not always
+    /// enough.</summary>
+    public static IReadOnlyList<byte[]> GenerateScorePages(SyntaxTree tree, RenderSpec? renderSpec, PngRenderOptions? options = null)
     {
         options ??= PngRenderOptions.Default;
-
-        var renderSpec = string.IsNullOrEmpty(renderName)
-            ? RenderSpecParser.FindFirst(tree)
-            : RenderSpecParser.FindByName(tree, renderName);
 
         MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec);
         ScoreLayout layout = new LayoutEngine(multiScore.Paper).Layout(multiScore);

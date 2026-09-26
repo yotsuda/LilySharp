@@ -97,6 +97,14 @@ public class CliBatchTests : IDisposable
         return path;
     }
 
+    /// <summary>A folder under the test's own, named <paramref name="name"/> — where a run
+    /// is told to write (outputs are named for their book; only the folder is chosen).</summary>
+    private string Folder(string name) => Path.Combine(_dir, name);
+
+    /// <summary>The output <paramref name="book"/> writes into <paramref name="folder"/>.</summary>
+    private static string Out(string folder, string book, string ext)
+        => Path.Combine(folder, Path.GetFileNameWithoutExtension(book) + ext);
+
     [Fact]
     public void ABatchWritesExactlyWhatSeparateRunsWrite()
     {
@@ -105,22 +113,17 @@ public class CliBatchTests : IDisposable
         // cache keyed too loosely, a static memo, a resolver pointed at the last book —
         // shows up here and nowhere cheaper.
         string[] books = [Book("alpha"), Book("beta"), Book("gamma")];
+        string solo = Folder("solo"), batched = Folder("batch");
 
-        var solo = new Dictionary<string, byte[]>();
         foreach (string b in books)
-        {
-            string outPath = Path.ChangeExtension(b, ".solo.svg");
-            var r = Lysc("svg", "-n", b, outPath);
-            Assert.Equal(0, r.Exit);
-            solo[b] = File.ReadAllBytes(outPath);
-        }
+            Assert.Equal(0, Lysc("svg", "-n", "-d", solo, b).Exit);
 
-        string list = List([.. books.Select(b => $"{b}\t{Path.ChangeExtension(b, ".batch.svg")}")]);
+        string list = List([.. books.Select(b => $"{b}\t{batched}")]);
         var batch = Lysc("svg", "-n", "--batch", list);
         Assert.Equal(0, batch.Exit);
 
         foreach (string b in books)
-            Assert.Equal(solo[b], File.ReadAllBytes(Path.ChangeExtension(b, ".batch.svg")));
+            Assert.Equal(File.ReadAllBytes(Out(solo, b, ".svg")), File.ReadAllBytes(Out(batched, b, ".svg")));
 
         Assert.Contains("3 file(s), 0 failed", batch.Stdout);
     }
@@ -143,9 +146,8 @@ public class CliBatchTests : IDisposable
 
         string SoloFaces(string book)
         {
-            string o = Path.ChangeExtension(book, ".solo.pdf");
-            Assert.Equal(0, Lysc("pdf", book, o).Exit);
-            return Faces(o);
+            Assert.Equal(0, Lysc("pdf", "-d", Folder("solo"), book).Exit);
+            return Faces(Out(Folder("solo"), book, ".pdf"));
         }
         string soloBound = SoloFaces(bound), soloPlain = SoloFaces(plain);
 
@@ -157,11 +159,11 @@ public class CliBatchTests : IDisposable
         // not strip the bound one.
         foreach (var order in new[] { new[] { bound, plain }, new[] { plain, bound } })
         {
-            string tag = Path.GetFileNameWithoutExtension(order[0]);
-            string list = List([.. order.Select(b => $"{b}\t{b}.{tag}.pdf")]);
+            string folder = Folder("first-" + Path.GetFileNameWithoutExtension(order[0]));
+            string list = List([.. order.Select(b => $"{b}\t{folder}")]);
             Assert.Equal(0, Lysc("pdf", "--batch", list).Exit);
-            Assert.Equal(soloBound, Faces($"{bound}.{tag}.pdf"));
-            Assert.Equal(soloPlain, Faces($"{plain}.{tag}.pdf"));
+            Assert.Equal(soloBound, Faces(Out(folder, bound, ".pdf")));
+            Assert.Equal(soloPlain, Faces(Out(folder, plain, ".pdf")));
         }
     }
 
@@ -186,41 +188,56 @@ public class CliBatchTests : IDisposable
         File.WriteAllText(bad, "part m { clef treble\n");   // unclosed
         string after = Book("after");
 
-        string list = List(
-            $"{good}\t{good}.svg", $"{bad}\t{bad}.svg", $"{after}\t{after}.svg");
+        string outDir = Folder("out");
+        string list = List($"{good}\t{outDir}", $"{bad}\t{outDir}", $"{after}\t{outDir}");
         var r = Lysc("svg", "-n", "--batch", list);
 
         Assert.NotEqual(0, r.Exit);
         Assert.Contains("3 file(s), 1 failed", r.Stdout);
-        Assert.True(new FileInfo($"{after}.svg").Length > 0,
+        Assert.True(new FileInfo(Out(outDir, after, ".svg")).Length > 0,
             "the file after the bad one must still have been written");
     }
 
     [Fact]
-    public void CommentsAndBlankLinesAreSkipped_AndATabNamesTheOutput()
+    public void CommentsAndBlankLinesAreSkipped_AndATabNamesTheFolder()
     {
         string a = Book("a"), b = Book("b");
-        string named = Path.Combine(_dir, "named.svg");
+        string folder = Folder("named");
         string list = List(
-            "# a comment", "", $"   {a}   ", $"{b}\t{named}", "   ");
+            "# a comment", "", $"   {a}   ", $"{b}\t{folder}", "   ");
 
         var r = Lysc("svg", "-n", "--batch", list);
 
         Assert.Equal(0, r.Exit);
         Assert.Contains("2 file(s), 0 failed", r.Stdout);
-        Assert.True(File.Exists(Path.ChangeExtension(a, ".svg")), "the untabbed line takes the default name");
-        Assert.True(File.Exists(named), "the tabbed line takes the name after the tab");
+        Assert.True(File.Exists(Path.ChangeExtension(a, ".svg")), "the untabbed line writes beside its book");
+        Assert.True(File.Exists(Out(folder, b, ".svg")), "the tabbed line writes into the folder after the tab");
     }
 
     [Fact]
-    public void BatchAndOutputAreRefusedTogether()
+    public void ABatchWideFolder_TakesEveryBook_AndALinesOwnFolderWins()
     {
-        // One path cannot name many files; saying so beats writing every book over the last.
+        string a = Book("wide-a"), b = Book("wide-b");
+        string wide = Folder("wide"), own = Folder("own");
+        var r = Lysc("svg", "-n", "-d", wide, "--batch", List(a, $"{b}\t{own}"));
+
+        Assert.Equal(0, r.Exit);
+        Assert.True(File.Exists(Out(wide, a, ".svg")));
+        Assert.True(File.Exists(Out(own, b, ".svg")));
+        Assert.False(File.Exists(Out(wide, b, ".svg")));
+    }
+
+    [Fact]
+    public void AnOutputNameIsRefused_WithTheFolderToUseInstead()
+    {
+        // Output names are fixed (the book's stem, plus the score's alias); a batch chooses
+        // folders only — and an old script's -o is told so rather than "Unknown option".
         string list = List(Book("only"));
         var r = Lysc("svg", "--batch", list, "-o", Path.Combine(_dir, "one.svg"));
 
         Assert.NotEqual(0, r.Exit);
-        Assert.Contains("mutually exclusive", r.Stderr);
+        Assert.Contains("-o/--output is gone", r.Stderr);
+        Assert.Contains("-d <folder>", r.Stderr);
     }
 
     [Fact]
@@ -232,19 +249,18 @@ public class CliBatchTests : IDisposable
         // books to keep several workers genuinely overlapping rather than finishing in turn.
         string[] books = [.. Enumerable.Range(0, 12).Select(i => Book($"p{i}"))];
 
-        string seqList = List([.. books.Select(b => $"{b}\t{b}.seq.svg")]);
-        Assert.Equal(0, Lysc("svg", "-n", "--batch", seqList).Exit);
+        string seq = Folder("seq"), parallel = Folder("par");
+        Assert.Equal(0, Lysc("svg", "-n", "-d", seq, "--batch", List(books)).Exit);
 
-        string parList = List([.. books.Select(b => $"{b}\t{b}.par.svg")]);
-        var par = Lysc("svg", "-n", "--batch", parList, "-j", "4");
+        var par = Lysc("svg", "-n", "-d", parallel, "--batch", List(books), "-j", "4");
         Assert.Equal(0, par.Exit);
 
         foreach (string b in books)
-            Assert.Equal(File.ReadAllBytes($"{b}.seq.svg"), File.ReadAllBytes($"{b}.par.svg"));
+            Assert.Equal(File.ReadAllBytes(Out(seq, b, ".svg")), File.ReadAllBytes(Out(parallel, b, ".svg")));
 
         // ...and every file got exactly one progress line, none lost and none doubled.
-        // ⚠️ THE PROGRESS LINES, not every mention of the name: `Created: …\p1.lys.par.svg`
-        // contains `p1.lys` too, so counting bare occurrences finds two and says nothing.
+        // ⚠️ THE PROGRESS LINES, not every mention of the name: a `Created:` line may name
+        // the book too, so counting bare occurrences says nothing.
         Assert.Contains("12 file(s), 0 failed", par.Stdout);
         Assert.Contains("4 at a time", par.Stdout);
         foreach (string b in books)

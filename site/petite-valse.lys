@@ -30,7 +30,7 @@ section B {
 
 form main { A B }
 
-score main "petite-valse" {
+score main {
   grandStaff {        // brace on the left, barlines drawn through
     staff rh
     staff lh

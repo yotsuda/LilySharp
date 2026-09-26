@@ -16,7 +16,7 @@
 
 // The Explorer's batch export (HANDOFF §2F F-export): right-click one or more
 // .lys files → the "Lily#: Export" submenu names the format → a folder → every
-// score of every selected file lands there, named as `lysc --all` names them
+// score of every selected file lands there, named as `lysc` names them
 // (the `main` score takes the file's stem, every other appends its own name).
 // The same commands run from the palette on the score being edited.
 //

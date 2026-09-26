@@ -256,7 +256,7 @@ foreach ($name in $examples.Keys) {
         $failed += $name
         continue
     }
-    & $lysc svg $path (Join-Path $dir "$name.svg") | Out-Null
+    & $lysc svg $path | Out-Null   # -> $dir/$name.svg (lysc names its output for the book)
     Write-Host "ok  $name"
 }
 # A failed example would leave the manual with a broken picture and a source that does not

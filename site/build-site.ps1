@@ -44,7 +44,7 @@ foreach ($name in $pictures) {
     $lys = Join-Path $here "$name.lys"
     $problem = Test-Lys $lys
     if ($problem) { $failed += "$name.lys: $problem"; continue }
-    & $Lysc svg $lys (Join-Path $here "$name.svg") | Out-Null
+    & $Lysc svg $lys | Out-Null   # -> $here/$name.svg (lysc names its output for the book)
     Write-Host "ok  $name"
 }
 if ($failed) { throw "scores that do not compile:`n  $($failed -join "`n  ")" }

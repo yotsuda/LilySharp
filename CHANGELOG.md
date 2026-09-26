@@ -6,6 +6,21 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ## Unreleased
 
+### Breaking changes
+
+- **`lysc` names its outputs for the book and writes every score.** `lysc svg song.lys`
+  writes `song.svg` for the main score and `song-<alias>.svg` for each other one
+  (`score main "tab"` → `song-tab.svg`), and so do `pdf`, `png`, `midi`, `xml` and `ly`.
+  It used to write only the first score, and `pdf`/`png` could not write the others at all
+  — 92 of 332 bass books declare two to four scores. `-d <folder>` chooses where they go
+  (default: the input's folder, made if missing); `--score <name>` still writes one, under
+  the same fixed name. **`-o/--output`, the output argument and `--all` are gone**, so a
+  file can no longer be given a name that says nothing about its book; an old script that
+  uses them is told what to write instead. In a `--batch` list the TAB column now names a
+  folder, and `-d` applies to the whole batch. `import` writes `<input>.lys` the same way.
+  Two scores that would get one name (two unlabelled `score main`) are refused rather than
+  written over each other.
+
 ### Engraving
 
 - **Fret diagrams are LilyPond's size, stand side by side, and can be resized.** A chord

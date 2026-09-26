@@ -385,7 +385,7 @@ lysc png samples/amazing-grace.lys      # -> amazing-grace.png
 lysc midi samples/canon-in-d.lys        # -> canon-in-d.mid
 lysc check samples/drunken-sailor.lys   # syntax check only, no output file
 
-lysc svg score.lys out.svg              # name the output file
+lysc svg -d out score.lys              # every score, into out/ (score.svg, score-<alias>.svg)
 lysc --help                             # every command
 lysc svg --help                         # options for one command
 ```

@@ -27,7 +27,7 @@ section Close {
 
 form main { Verse Close }
 
-score main "rising-sun" {
+score main {
   chords prog     // the symbols, above ...
   staff gt        // ... the notation ...
   tab gt          // ... and the tablature under it

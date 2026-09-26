@@ -23,8 +23,8 @@ namespace LilySharp.Cli;
 /// in check/harmonize/layout). Handles value options (<c>-o &lt;v&gt;</c>), boolean flags
 /// (<c>--all</c>), and positionals, rejecting unknown options and stray positionals
 /// uniformly — so check/harmonize/layout now validate like svg/pdf/… already did.
-/// Input-file presence/existence resolution is <see cref="ResolveIo"/> (output
-/// commands) or per-command (check/harmonize/layout keep their own messages).
+/// Input-file presence/existence and the output folder are resolved by Program's
+/// ResolveOutputs (output commands) or per command (check/harmonize/layout keep their own).
 /// </summary>
 internal sealed class CliParser
 {
@@ -99,34 +99,6 @@ internal sealed class CliParser
             }
         }
         return r;
-    }
-
-    /// <summary>
-    /// Resolves the standard input/output pair for the file-output commands from a
-    /// parsed result: positional[0] is the input (must exist); the output is the
-    /// <c>-o/--output</c> value, else positional[1], else the input with
-    /// <paramref name="defaultExt"/>. Reproduces the old ParseSimpleOptions/ParseSvgOptions
-    /// messages exactly, including rejecting a stray positional when <c>-o</c> already set
-    /// the output ("Unexpected argument: …").
-    /// </summary>
-    public static (string? Input, string? Output, string? Error) ResolveIo(Result r, string defaultExt)
-    {
-        if (r.Positionals.Count == 0)
-            return (null, null, "Input file required");
-
-        string input = r.Positionals[0];
-        if (!File.Exists(input))
-            return (null, null, $"File not found: {input}");
-
-        string? explicitOutput = r.Get("output");
-        if (explicitOutput != null && r.Positionals.Count >= 2)
-            // -o AND a second positional: the old loop hit the second positional with
-            // outputPath already set and rejected it.
-            return (null, null, $"Unexpected argument: {r.Positionals[1]}");
-
-        string output = explicitOutput
-            ?? (r.Positionals.Count >= 2 ? r.Positionals[1] : Path.ChangeExtension(input, defaultExt));
-        return (input, output, null);
     }
 
     /// <summary>

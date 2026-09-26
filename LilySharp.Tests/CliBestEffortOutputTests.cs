@@ -96,8 +96,9 @@ public class CliBestEffortOutputTests : IDisposable
         Path.GetFullPath(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), "..", "..", "..")),
         OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet");
 
-    /// <summary>Runs <c>lysc svg -n &lt;input&gt; &lt;output&gt;</c> to completion.</summary>
-    private static (int Exit, string Stderr) RunLysc(string input, string output)
+    /// <summary>Runs <c>lysc svg -n &lt;input&gt;</c> to completion; the page lands beside the
+    /// input under its own name (<c>in.lys</c> → <c>in.svg</c>).</summary>
+    private static (int Exit, string Stderr) RunLysc(string input)
     {
         string dll = Path.Combine(AppContext.BaseDirectory, "lysc.dll");
         Assert.True(File.Exists(dll), $"lysc.dll not beside the tests: {dll}");
@@ -111,7 +112,7 @@ public class CliBestEffortOutputTests : IDisposable
         };
         // ArgumentList, not Arguments: the temp paths are quoted for us, on both platforms.
         // -n: no embedded font, so the run stays quick and the file small.
-        foreach (string arg in new[] { dll, "svg", "-n", input, output }) psi.ArgumentList.Add(arg);
+        foreach (string arg in new[] { dll, "svg", "-n", input }) psi.ArgumentList.Add(arg);
 
         using var p = Process.Start(psi)!;
         string stderr = p.StandardError.ReadToEnd();
@@ -123,11 +124,11 @@ public class CliBestEffortOutputTests : IDisposable
     private (int Exit, string Stderr, bool Wrote) RunSvg(string parts)
     {
         string input = Path.Combine(_dir, "in.lys");
-        string output = Path.Combine(_dir, "out.svg");
+        string output = Path.Combine(_dir, "in.svg");
         File.WriteAllText(input, Source(parts));
         if (File.Exists(output)) File.Delete(output);
 
-        var (exit, stderr) = RunLysc(input, output);
+        var (exit, stderr) = RunLysc(input);
         return (exit, stderr, File.Exists(output) && new FileInfo(output).Length > 0);
     }
 
@@ -179,7 +180,7 @@ public class CliBestEffortOutputTests : IDisposable
             + "section Main { m { c8[ d8 e8 f8 g8 a8 b8 c8 | } }\nform main { ~Main }\n"
             + "score main { staff m }\n");
 
-        var (exit, stderr) = RunLysc(input, output);
+        var (exit, stderr) = RunLysc(input);
 
         Assert.Equal(0, exit);
         Assert.True(File.Exists(output));
