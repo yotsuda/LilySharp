@@ -186,17 +186,21 @@ public class SenzaMisuraTests
             form main { A B }
             score main { staff melody }
             """;
-        var measures = Collect(source).Voice.Measures;
+        var score = Collect(source);
+        var measures = score.Voice.Measures;
         Assert.Equal(4, measures.Length);
         Assert.True(measures[0].Unmetered);
         Assert.True(measures[1].Unmetered);
         Assert.False(measures[2].Unmetered);
         Assert.False(measures[3].Unmetered);
 
-        // A's header time is the blanked change at its head; B states no time, so the
-        // boundary reverts to the score's 4/4 — and DRAWS it, because `none` and 4/4 differ.
-        var aHead = Assert.Single(measures[0].Items.OfType<TimeSignatureChangeItem>());
-        Assert.True(aHead.NewTime.SenzaMisura);
+        // A opens the piece, so its header time IS the opening meter — as a leading
+        // `time none` in the music is (the test above) — not a change at its head
+        // (2026-09-26: a change item there drew the opening meter twice for a metered
+        // header). B states no time, so the boundary reverts to the score's 4/4 — and
+        // DRAWS it, because `none` and 4/4 differ.
+        Assert.True(score.TimeSignature.SenzaMisura);
+        Assert.DoesNotContain(measures[0].Items, i => i is TimeSignatureChangeItem);
         var bHead = Assert.Single(measures[2].Items.OfType<TimeSignatureChangeItem>());
         Assert.False(bHead.NewTime.SenzaMisura);
         Assert.Equal(new[] { 1, 1, 1, 2 }, BarNumberEngraver.NumberMeasures(measures, 0));

@@ -372,7 +372,24 @@ public sealed partial class MeasureCollector
 
         // A section can state its own time (section-major or a standalone header): apply
         // it and re-arm the measure length; otherwise revert to the score meter.
-        if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime))
+        if (_sectionHeaderTimes.TryGetValue(section.SectionName, out var sectionTime)
+            && builder.AtPieceOpening)
+        {
+            // The section that OPENS the piece states the piece's opening meter: it
+            // replaces the initial signature, exactly as a `time` written before the first
+            // note does in the music walk (TimeSignatureSyntax, AtPieceOpening). Adding a
+            // change item here printed the meter twice — the initial one and the change —
+            // "C C" for a `section A { time 4/4 … }` that opens the form (2026-09-26).
+            // LILYPOND-REF: lily/time-signature-engraver.cc:94-122 process_music — one
+            //   TimeSignature per timestep.
+            _meta.TimeBeats = sectionTime.Beats;
+            _meta.TimeBeatsText = sectionTime.BeatsText;
+            _meta.TimeBeatType = sectionTime.BeatType;
+            _meta.TimeSenzaMisura = sectionTime.IsSenzaMisura;
+            builder.SetMeasureLength(new Fraction(sectionTime.Beats, sectionTime.BeatType),
+                sectionTime.IsSenzaMisura);
+        }
+        else if (sectionTime is not null)
         {
             // A `time none` header carries no ink and no width — TimeSignatureChangeItem.Blanked.
             builder.AddItem(new TimeSignatureChangeItem(

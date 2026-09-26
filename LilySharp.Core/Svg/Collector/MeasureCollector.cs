@@ -643,6 +643,14 @@ public sealed partial class MeasureCollector
     private string? _sectionResetTimeBeatsText;
     private bool _sectionResetTimeSenzaMisura;
 
+    // The score-level meter as the file-level walk left it (CollectDefinitions), which
+    // the snapshot above is taken FROM for every voice. ⚠️ Not _meta at the voice's start:
+    // a `time` at the piece's opening (in the music, or in the opening section's header)
+    // rewrites _meta.Time* so the opening signature reads it, and the NEXT voice then
+    // took that as its score meter — its later sections never reverted, and a grand
+    // staff's second staff lost the revert the first staff drew (2026-09-26).
+    private (int Beats, int BeatType, string? BeatsText, bool SenzaMisura) _scoreTime = (4, 4, null, false);
+
     // The grob-override state a section boundary reverts to (the grob analogue of
     // _sectionResetClef, but a SET): the part-default values — global + this voice's
     // part-body overrides — snapshotted at collection start. Section-internal overrides
@@ -2902,12 +2910,16 @@ public sealed partial class MeasureCollector
         _sectionResetKeyCustom = _meta.KeyCustom;
         // Same for the clef: the part default a section without its own clef reverts to.
         _sectionResetClef = _meta.Clef;
-        // And the score-level meter: the value a section without its own time reverts to.
-        // Captured here (before the section walk mutates _meta.Time via mid-music changes).
-        _sectionResetTimeBeats = _meta.TimeBeats;
-        _sectionResetTimeBeatType = _meta.TimeBeatType;
-        _sectionResetTimeBeatsText = _meta.TimeBeatsText;
-        _sectionResetTimeSenzaMisura = _meta.TimeSenzaMisura;
+        // And the score-level meter: the value a section without its own time reverts to —
+        // the file-level one, which _meta no longer holds once an earlier voice's opening
+        // `time` rewrote it (see _scoreTime).
+        (_sectionResetTimeBeats, _sectionResetTimeBeatType, _sectionResetTimeBeatsText,
+            _sectionResetTimeSenzaMisura) = _scoreTime;
+        // …and this voice STARTS in it too: the builder below is armed from _meta, and an
+        // earlier voice's opening `time` left its own meter there — the second staff then
+        // began in 3/4, its section reset drew a 4/4 "change", and its own opening `time
+        // 3/4` stood beside it ("3/4 C"). Each voice's opening `time` sets _meta again.
+        (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura) = _scoreTime;
         // And the grob-override part default (global + this voice's part-body overrides,
         // already collected at (0,0)) — the state each section boundary reverts to.
         _sectionResetOverrides.Clear();

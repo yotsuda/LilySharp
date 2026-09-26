@@ -500,6 +500,10 @@ public sealed partial class MeasureCollector
         // every inline @chord is collected after this.
         _chordSpelling = _meta.LayoutPlan.Chords;
         _chordNameCollector.Spelling = _chordSpelling;
+        // …and the score-level meter, while _meta still holds it: every voice's section
+        // resets revert to THIS (CollectMeasures), not to whatever _meta holds when that
+        // voice starts — the first voice's opening `time` has rewritten it by then.
+        _scoreTime = (_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura);
     }
 
     /// <summary>True for exactly the node kinds <see cref="CollectDefinitions"/>'s

@@ -40,6 +40,16 @@ public class SectionHeaderDirectiveTests
         => score.Voice.Measures.SelectMany(m => m.Items).OfType<TimeSignatureChangeItem>()
             .Any(t => t.NewTime.Beats == beats && t.NewTime.BeatType == beatType);
 
+    /// <summary>The piece's OPENING meter is <paramref name="beats"/>/<paramref name="beatType"/>
+    /// and no change item restates it in the first bar — the first section's header `time`
+    /// replaces the initial signature, as a `time` before the first note does.</summary>
+    private static void OpensIn(Score score, int beats, int beatType)
+    {
+        Assert.Equal(beats, score.TimeSignature.Beats);
+        Assert.Equal(beatType, score.TimeSignature.BeatType);
+        Assert.DoesNotContain(score.Voice.Measures[0].Items, i => i is TimeSignatureChangeItem);
+    }
+
     [Fact]
     public void SectionMajorTime_EmitsTheSectionMeter()
     {
@@ -49,7 +59,34 @@ public class SectionHeaderDirectiveTests
             form main { A }
             score main { staff melody }
             """);
-        Assert.True(HasMeter(score, 3, 4));
+        OpensIn(score, 3, 4);
+    }
+
+    /// <summary>
+    /// The first section's header meter is the OPENING signature, drawn once — also when it
+    /// restates the file's meter and when the form opens with a repeat.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-26 the header always added a change item, so the page opened "C C" (or
+    /// "C 3/4"), the second one after a leading `|:`.
+    /// LILYPOND-REF: lily/time-signature-engraver.cc:94-122 process_music — one TimeSignature
+    /// per timestep.
+    /// </remarks>
+    [Theory]
+    [InlineData("time 4/4", "form main { A }", 4, 4)]
+    [InlineData("time 4/4", "form main { |: A :| }", 4, 4)]
+    [InlineData("time 3/4", "form main { |: A :| }", 3, 4)]
+    public void TheOpeningSectionsHeaderTime_IsTheOpeningSignature_NotAChange(
+        string headerTime, string form, int beats, int beatType)
+    {
+        string body = beats == 3 ? "c4 d e |" : "c4 d e f |";
+        var score = Collect($$"""
+            section A { {{headerTime}}  melody { {{body}} } }
+            {{form}}
+            score main { staff melody }
+            """);
+        OpensIn(score, beats, beatType);
+        Assert.DoesNotContain(score.Voice.Measures.SelectMany(m => m.Items), i => i is TimeSignatureChangeItem);
     }
 
     [Fact]
@@ -113,7 +150,7 @@ public class SectionHeaderDirectiveTests
             form main { A }
             score main { staff melody }
             """);
-        Assert.True(HasMeter(score, 3, 4));
+        OpensIn(score, 3, 4);
     }
 
     [Fact]
@@ -157,6 +194,43 @@ public class SectionHeaderDirectiveTests
         Assert.Equal(Fraction.Quarter, score.Voice.Measures[0].TotalDuration);
     }
 
+    /// <summary>
+    /// On a grand staff an opening 3/4 — in the section header or written in each part's
+    /// music — opens BOTH staves in 3/4 with no change item, and BOTH revert to the score's
+    /// 4/4 at the next section.
+    /// </summary>
+    /// <remarks>
+    /// The staves are collected one after the other, and the first staff's opening `time`
+    /// rewrote the running meter the second one then took as its score meter: it never
+    /// reverted at B, and with the time written in the music it also opened "3/4 C"
+    /// (2026-09-26).
+    /// </remarks>
+    [Theory]
+    [InlineData("section A { time 3/4  rh { c'2. | }  lh { c2. | } }")]
+    [InlineData("section A { rh { time 3/4 c'2. | }  lh { time 3/4 c2. | } }")]
+    public void OnAGrandStaff_EveryStaffOpensInTheSectionMeter_AndReverts(string sectionA)
+    {
+        var tree = SyntaxTree.Parse($$"""
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            {{sectionA}}
+            section B { rh { c'1 | }  lh { c1 | } }
+            form main { ~A ~B }
+            score main { grandStaff { staff rh  staff lh } }
+            """);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+
+        Assert.Equal(3, score.TimeSignature.Beats);
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            var measures = staff.PrimaryVoice.Measures;
+            Assert.DoesNotContain(measures[0].Items, i => i is TimeSignatureChangeItem);
+            var revert = Assert.Single(measures[1].Items.OfType<TimeSignatureChangeItem>());
+            Assert.Equal(4, revert.NewTime.Beats);
+        }
+    }
+
     [Fact]
     public void NextSectionWithoutATime_RevertsToTheScoreMeter()
     {
@@ -168,7 +242,7 @@ public class SectionHeaderDirectiveTests
             form main { A B }
             score main { staff melody }
             """);
-        Assert.True(HasMeter(score, 3, 4)); // A's meter
+        OpensIn(score, 3, 4);               // A's meter opens the piece
         Assert.True(HasMeter(score, 4, 4)); // B reverted
     }
 }
