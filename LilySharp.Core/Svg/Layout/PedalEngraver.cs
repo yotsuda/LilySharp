@@ -54,7 +54,11 @@ public readonly record struct PedalBracketLayout(
     // asserting the array was "always empty today" — showcase/03-piano has had pedals all
     // along, and the benchmark that asserts reuse fires (IncrementalSessionBenchmark) had
     // been failing on exactly that.
-    int SourceIndex = -1
+    int SourceIndex = -1,
+    // A portion of a bracket broken across systems: the broken end is the system edge,
+    // drawn with no hook (LilyPond's broken spanner). LILYPOND-REF: lily/piano-pedal-bracket.cc:55-72 Piano_pedal_bracket::print -- broken[d] drops that edge's height.
+    bool BrokenLeft = false,
+    bool BrokenRight = false
 );
 
 /// <summary>
@@ -675,6 +679,26 @@ internal static class PedalEngraver
         }
         double bracketY = MusicMarkEngraver.BelowMarkBaseline(systemBottom);
 
+        // Pedal CHANGES: where one bracket ends at the very note the next begins on (a
+        // release + re-engage there), both shared ends render as flared edges (the "/\"
+        // notch) instead of vertical hooks. Matched by the MUSICAL moment, not by equal X:
+        // a change at the first note of a line has its two ends on two different systems,
+        // whose X frames are unrelated (until 2026-09-26 that change drew no notch).
+        var endsAtChange = new bool[brackets.Length];
+        var startsAtChange = new bool[brackets.Length];
+        for (int a = 0; a < brackets.Length; a++)
+            for (int b = 0; b < brackets.Length; b++)
+            {
+                var (x, y) = (brackets[a], brackets[b]);
+                if (a != b && x.Type == y.Type
+                    && x.EndMeasureIndex == y.StartMeasureIndex
+                    && x.EndItemIndex == y.StartItemIndex && x.EndTiming == y.StartTiming)
+                {
+                    endsAtChange[a] = true;
+                    startsAtChange[b] = true;
+                }
+            }
+
         for (int bi = 0; bi < brackets.Length; bi++)
         {
             var bracket = brackets[bi];
@@ -682,27 +706,72 @@ internal static class PedalEngraver
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
+            // ONE PORTION PER SYSTEM the bracket crosses, as LilyPond breaks the spanner:
+            // the first runs from the engaging note to its system's end, hook-less there;
+            // a middle one spans its whole system; the last runs from its system's start to
+            // the releasing note. The same portions SolveAndSeed reserved. Until 2026-09-26
+            // the whole bracket was drawn on its START system with the end note's X taken
+            // from the NEXT system's frame — a stub of the 2.0 minimum closed by a hook, and
+            // nothing at all on the following line (user report, a nocturne probe).
+            bool hasStartSys = measureToSystem.TryGetValue(bracket.StartMeasureIndex, out var startSys);
+            bool hasEndSys = measureToSystem.TryGetValue(bracket.EndMeasureIndex, out var endSys);
+            var portionSystems = new List<SystemLayout>();
+            if (hasStartSys && hasEndSys && !ReferenceEquals(startSys, endSys))
+            {
+                bool inRange = false;
+                foreach (var system in systems)
+                {
+                    if (ReferenceEquals(system, startSys)) inRange = true;
+                    if (inRange && !system.Measures.IsDefaultOrEmpty) portionSystems.Add(system);
+                    if (ReferenceEquals(system, endSys)) break;
+                }
+            }
+
+            if (portionSystems.Count < 2)
+            {
+                // One system (or measures no system holds): the bracket whole.
+                AddPortion(bi, bracket, bracket.StartMeasureIndex,
+                    AnchorX(measureLayouts[bracket.StartMeasureIndex], bracket.StartItemIndex, bracket.StartTiming),
+                    AnchorX(measureLayouts[bracket.EndMeasureIndex], bracket.EndItemIndex, bracket.EndTiming),
+                    brokenLeft: false, brokenRight: false);
+                continue;
+            }
+            for (int p = 0; p < portionSystems.Count; p++)
+            {
+                var sys = portionSystems[p];
+                bool first = p == 0, last = p == portionSystems.Count - 1;
+                int firstMeasure = sys.Measures[0].MeasureIndex;
+                int lastMeasure = sys.Measures[^1].MeasureIndex;
+                double startX = first
+                    ? AnchorX(measureLayouts[bracket.StartMeasureIndex], bracket.StartItemIndex, bracket.StartTiming)
+                    : measureLayouts[firstMeasure].X;
+                double endX = last
+                    ? AnchorX(measureLayouts[bracket.EndMeasureIndex], bracket.EndItemIndex, bracket.EndTiming)
+                    : measureLayouts[lastMeasure].X + measureLayouts[lastMeasure].Width;
+                AddPortion(bi, bracket, first ? bracket.StartMeasureIndex : firstMeasure, startX, endX,
+                    brokenLeft: !first, brokenRight: !last);
+            }
+        }
+
+        return layouts.ToImmutable();
+
+        void AddPortion(int bi, PedalBracketItem bracket, int portionMeasure,
+            double startX, double endX, bool brokenLeft, bool brokenRight)
+        {
             // The SOLVED line, when the room solved one: the same Y the staff's down
             // profile reserved at skyline-build time (SolveAndSeed), converted from
             // Y-up-about-the-middle-line to device-down from the system top — the top
-            // of the SYSTEM THIS BRACKET STARTS ON, read through staffTopDownOf. The
+            // of the SYSTEM THIS PORTION IS ON, read through staffTopDownOf. The
             // below-the-whole-system baseline above stays as the fallback -- a staff the
             // seed declined (ossia scale, text/mixed style) keeps the legacy row.
             double y = bracketY;
-            if (solvedLineUpOf?.Invoke(bracket.StartMeasureIndex, bracket.Type) is { } lineYUp
-                && staffTopDownOf?.Invoke(bracket.StartMeasureIndex) is { } topDown)
+            if (solvedLineUpOf?.Invoke(portionMeasure, bracket.Type) is { } lineYUp
+                && staffTopDownOf?.Invoke(portionMeasure) is { } topDown)
                 y = topDown + 2.0 - lineYUp;
 
-            var startMeasure = measureLayouts[bracket.StartMeasureIndex];
-            var endMeasure = measureLayouts[bracket.EndMeasureIndex];
-
-            // X anchors at the engaging / releasing note's column (LP places
-            // "Ped." and "*" at the note, not the measure start).
-            double startX = AnchorX(startMeasure, bracket.StartItemIndex, bracket.StartTiming);
-            double endX = AnchorX(endMeasure, bracket.EndItemIndex, bracket.EndTiming);
-
-            // Ensure minimum length
-            if (endX - startX < 2.0)
+            // A whole bracket keeps its minimum length; a broken portion is exactly its
+            // system's share (its broken end is the system edge, not a note).
+            if (!brokenLeft && !brokenRight && endX - startX < 2.0)
                 endX = startX + 2.0;
 
             layouts.Add(new PedalBracketLayout(
@@ -710,27 +779,16 @@ internal static class PedalEngraver
                 endX,
                 y,
                 EdgeHeight,
-                bracket.StartMeasureIndex,
+                portionMeasure,
                 bracket.SourcePosition,
-                isMixed,
-                SourceIndex: bi));
+                // Mixed style's leading word stands at the engage; a continuation has none.
+                isMixed && !brokenLeft,
+                StartChange: !brokenLeft && startsAtChange[bi],
+                EndChange: !brokenRight && endsAtChange[bi],
+                SourceIndex: bi,
+                BrokenLeft: brokenLeft,
+                BrokenRight: brokenRight));
         }
-
-        // Mark abutting ends as pedal CHANGES: where one bracket ends exactly where
-        // the next begins (a release + re-engage on the same note), both shared ends
-        // render as flared edges (the "/\" notch) instead of vertical hooks.
-        for (int a = 0; a < layouts.Count; a++)
-            for (int b = 0; b < layouts.Count; b++)
-            {
-                if (a == b) continue;
-                if (Math.Abs(layouts[a].EndX - layouts[b].StartX) < 0.01)
-                {
-                    layouts[a] = layouts[a] with { EndChange = true };
-                    layouts[b] = layouts[b] with { StartChange = true };
-                }
-            }
-
-        return layouts.ToImmutable();
     }
 
     /// <summary>

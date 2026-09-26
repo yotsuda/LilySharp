@@ -13,6 +13,14 @@ workflow attaches that section to the GitHub Release verbatim.
   signature — and its key changes — on the drum staff of every system, and a drum-only
   score reserved room for one.
 
+- **A pedal bracket that crosses a line break is drawn on both lines.** The whole bracket
+  was drawn on the line it starts on, with the release read from the next line's
+  coordinates: a stub two staff spaces long closed by a hook, and nothing on the next
+  line. Now, as in LilyPond, it runs hook-less to the end of the line and continues from
+  the start of the next one, and a pedal change on the first note of a line is notched
+  there. Of the 25 books with pedals in the repository and corpora, 13 change (the
+  nocturne sample among them); no snapshot does.
+
 - **A pedal written on a member of a `<< >>` group lands on that member.** Every member's
   mark was anchored at the start of its bar, so a pedal change on the third group of a
   12/8 bar landed on beat one and the bracket lost whole bars.

@@ -465,6 +465,54 @@ public class PedalTests
             + $"{sustain:F2}");
     }
 
+    private static ImmutableArray<PedalBracketLayout> BracketsOf(string music)
+    {
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
+            "octave absolute\npart lh { clef bass }\n"
+            + "section A { lh { " + music + " } }\n"
+            + "form main { ~A }\nscore main { staff lh }\n");
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
+            tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+        return new LayoutEngine().Layout(score).PedalBracketLayouts;
+    }
+
+    /// <summary>
+    /// A bracket that crosses a line break is drawn as LilyPond breaks the spanner: one
+    /// portion per system, the broken ends at the system edges with no hook. Until
+    /// 2026-09-26 the whole bracket was drawn on its START system with the release note's X
+    /// read from the next system's frame — a 2-staff-space stub closed by a hook, and nothing
+    /// on the lines after it (user report, a nocturne probe).
+    /// </summary>
+    [Fact]
+    public void ABracketAcrossTwoBreaks_IsThreePortions_BrokenAtTheSystemEdges()
+    {
+        var b = BracketsOf("c1@sustain | break c1 | break c1@!sustain |");
+        Assert.Equal(3, b.Length);
+        Assert.Equal(new[] { 0, 1, 2 }, b.Select(p => p.StartMeasureIndex));
+        Assert.Equal(new[] { false, true, true }, b.Select(p => p.BrokenLeft));
+        Assert.Equal(new[] { true, true, false }, b.Select(p => p.BrokenRight));
+        Assert.All(b, p => Assert.True(p.EndX - p.StartX > 2.0, $"a portion is its system's share: {p.StartX}..{p.EndX}"));
+        Assert.All(b, p => Assert.Equal(b[0].SourcePosition, p.SourcePosition));
+    }
+
+    /// <summary>
+    /// A pedal CHANGE on the first note of a line notches there: the bracket before it runs
+    /// hook-less to the end of the previous line, the one after it starts with the flare.
+    /// Matched by the musical moment — the two ends are on two systems, whose X frames are
+    /// unrelated, so the old equal-X match never found it.
+    /// </summary>
+    [Fact]
+    public void AChangeOnTheFirstNoteOfALine_NotchesThere()
+    {
+        var b = BracketsOf("c1@sustain | break d1@sustain | e1@!sustain |");
+        // First bracket: m1 whole, then its m2 portion ending at the change; second: m2..m3.
+        Assert.Equal(3, b.Length);
+        Assert.True(b[0].BrokenRight && !b[0].EndChange);
+        Assert.True(b[1].BrokenLeft && b[1].EndChange);
+        Assert.True(b[2].StartChange && !b[2].BrokenLeft);
+        Assert.Equal(b[1].EndX, b[2].StartX, 6);
+    }
+
     /// <summary>
     /// A pedal mark on a member of a <c>&lt;&lt; &gt;&gt;</c> group anchors at THAT member's moment,
     /// as it does on a note. The members go in without advancing the bar's clock, and the

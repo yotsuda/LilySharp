@@ -46,9 +46,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:391** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1262** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
-- **:1267** whiteout −1) is not ported.
-- **:1387** NOT ported; this takes the note's own stem direction. No book and
+- **:1265** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
+- **:1270** whiteout −1) is not ported.
+- **:1390** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:305** Lily# has not ported; this arrow is its own device.
 - **:755** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
@@ -109,7 +109,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:489** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **:485** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
+- **:489** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:927** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
@@ -143,7 +143,7 @@
 - **:687** no observer; add the paren widths when a book brings one. The unpacked
 - **:689** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1388** no observer reaches that branch yet.
+- **:1391** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
 - **:769** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
@@ -214,7 +214,7 @@
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
 - **:1917** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
-- **:498** same part (leftHand). No book reaches the configuration, so no ledger point and
+- **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
@@ -266,7 +266,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:237** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
-- **:1381** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
+- **:1384** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **:231** The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own

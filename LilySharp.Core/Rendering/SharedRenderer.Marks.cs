@@ -977,13 +977,16 @@ internal static partial class SharedRenderer
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawLine(lineStartX, absY, lineEndX, absY, Color.Black, thickness);
-                // Right end: flared notch toward b.EndX (change) or vertical hook.
-                if (b.EndChange)
+                // Right end: flared notch toward b.EndX (change) or vertical hook — or
+                // nothing where the bracket breaks at the system's end.
+                if (b.BrokenRight) { }
+                else if (b.EndChange)
                     gc.DrawLine(lineEndX, absY, b.EndX, top, Color.Black, thickness);
                 else
                     gc.DrawLine(b.EndX, absY, b.EndX, top, Color.Black, thickness);
-                // Left end: mixed has none; a change flares to b.StartX; else vertical.
-                if (!b.IsMixed)
+                // Left end: mixed has none; a continuation from the previous system has
+                // none; a change flares to b.StartX; else vertical.
+                if (!b.IsMixed && !b.BrokenLeft)
                 {
                     if (b.StartChange)
                         gc.DrawLine(lineStartX, absY, b.StartX, top, Color.Black, thickness);
