@@ -4028,6 +4028,7 @@ public sealed partial class MeasureCollector
         if (_percentCoveredDepth > 0)
             return;
         var articulations = ArticulationsOf(node);
+        bool levelTaken = false;
 
         foreach (var articulation in articulations)
         {
@@ -4036,6 +4037,19 @@ public sealed partial class MeasureCollector
                 var level = dynamicSyntax.Level;
                 if (level != DynamicLevel.None)
                 {
+                    // ONE dynamic a note: a second (`c4@f@sfz`) is not engraved, as LilyPond
+                    // keeps the first absolute-dynamic-event of a timestep and discards the
+                    // rest ("conflict with event" / "discarding event"). Until 2026-09-26 the
+                    // page stacked both, a picture LilyPond cannot make (Lab
+                    // probes/complex-lys/05). DoubleDynamicValidator (LYS4022) says so at the
+                    // dropped one. Owner's decision, session 645 — the rehearsal mark's
+                    // LYS4021 rule, for dynamics.
+                    // LILYPOND-REF: lily/dynamic-engraver.cc:66-70 Dynamic_engraver::listen_absolute_dynamic —
+                    //   assign_event_once (script_event_, ev);
+                    // LILYPOND-REF: lily/stream-event.cc:103-117 warn_reassign_event_ptr.
+                    if (levelTaken)
+                        continue;
+                    levelTaken = true;
                     _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.SourceStart, _cursor.StaffIndex)
                     {
                         IsAbove = dynamicSyntax.ForcedAbove == true,

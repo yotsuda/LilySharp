@@ -239,8 +239,8 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2663** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4758** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:6253** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4771** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:6266** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -294,7 +294,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2608** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4839** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:4853** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

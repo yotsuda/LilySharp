@@ -8,6 +8,10 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A note takes one dynamic.** In `c4@f@sfz` only the `f` is printed now, and the `sfz`
+  warns (LYS4022) — LilyPond keeps the first of two as well. The page used to stack both.
+  No book in the repository or corpora writes two.
+
 - **An ottava that starts or stops inside a bar covers exactly the notes it spans.** An
   `@!ottava` on the last note of a bar used to leave the whole bar at written pitch and
   end the bracket at the bar before; an `@ottava` in the middle of a bar moved the notes

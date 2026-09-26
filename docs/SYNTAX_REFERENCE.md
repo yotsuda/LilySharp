@@ -365,6 +365,10 @@ c4@f.up      // forte above the staff
 d4@p.down    // piano below (the default)
 ```
 
+A note takes one dynamic: in `c4@f@sfz` the `f` is printed and the `sfz` is not, and the
+second warns (LYS4022) — LilyPond keeps the first as well. A hairpin beside a dynamic is
+fine (`c4@p@cresc`).
+
 ### Hairpins (Crescendo/Decrescendo)
 
 ```

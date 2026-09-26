@@ -1189,6 +1189,17 @@ public static class DiagnosticCodes
     /// for one section.
     /// </para></summary>
     public const string RehearsalMarkShadowedBySectionLabel = "LYS4021";
+    /// <summary>Warning: a second dynamic on one note (<c>c4@f@sfz</c>). A note takes one
+    /// dynamic; the first is engraved and the later one is not, and this says so at it.
+    /// <para>
+    /// LILYPOND-REF: lily/dynamic-engraver.cc:66-70 Dynamic_engraver::listen_absolute_dynamic —
+    /// <c>assign_event_once</c>, so the first absolute-dynamic-event of a timestep is kept and a
+    /// second is dropped with "conflict with event" / "discarding event"
+    /// (lily/stream-event.cc:103-117 warn_reassign_event_ptr). Until 2026-09-26 the page drew
+    /// both, stacked — a picture LilyPond cannot make (Lab probes/complex-lys/05). Owner's
+    /// decision, session 645: the same rule as <see cref="RehearsalMarkShadowedBySectionLabel"/>.
+    /// </para></summary>
+    public const string DoubleDynamic = "LYS4022";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

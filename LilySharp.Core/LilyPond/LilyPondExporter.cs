@@ -3951,7 +3951,7 @@ public sealed class LilyPondExporter
     /// <c>DynamicSyntax.ForcedAbove</c>). Until 2026-09-26 it was dropped, so the twin drew
     /// `@f.up` below the staff (Lab sessions/p644 x4).
     /// </remarks>
-    private static string EmitDynamic(DynamicSyntax d) => (d.ForcedAbove switch
+    private static string EmitDynamic(DynamicSyntax d) => IsSecondDynamicLevel(d) ? "" : (d.ForcedAbove switch
     {
         true => "^",
         false => "_",
@@ -3962,6 +3962,19 @@ public sealed class LilyPondExporter
         "decresc" or "dim" => "\\>",
         var level => "\\" + level,
     };
+
+    /// <summary>Whether <paramref name="d"/> is a dynamic LEVEL after the first on its note —
+    /// not printed on the page (LYS4022), and not written to the twin either, where LilyPond
+    /// would discard it with a warning.</summary>
+    private static bool IsSecondDynamicLevel(DynamicSyntax d)
+    {
+        if (d.Level == DynamicLevel.None || d.Parent is not { } host)
+            return false;
+        for (int i = 0; i < host.SlotCount; i++)
+            if (host.GetChild(i) is DynamicSyntax { Level: not DynamicLevel.None } first)
+                return first.Span.Start != d.Span.Start;
+        return false;
+    }
 
     private static string EmitPartial(PartialDeclarationSyntax p)
     {
