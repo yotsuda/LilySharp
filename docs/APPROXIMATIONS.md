@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 61 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
 | `OWN` | 171 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **289** | |
+| **計** | **288** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（61 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:339** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -113,9 +113,8 @@
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:927** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:705** case of broken slur") — not ported; every slur this scorer sees lives on
-- **:880** column allows only 0.3 of movement) is not ported: every edge here
-- **:1267** approximation there); RIGHT wins when both edges match, as LP's
+- **:889** column allows only 0.3 of movement) is not ported: every edge here
+- **:1276** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`

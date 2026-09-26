@@ -701,12 +701,21 @@ internal sealed class SlurScoringProblem
     /// line_thickness_ is the layout dimension itself. The 0.1 is verified
     /// against LilyPond's own output: the twin SVGs draw staff lines at
     /// stroke-width 0.1000 staff space.
-    /// ⚠️ LP gates this on both extremes sharing one staff (its "TODO: handle
-    /// case of broken slur") — not ported; every slur this scorer sees lives on
-    /// a single staff frame, so the gate is vacuously true here.
+    /// ⚠️ LP gates this on both extremes having a staff, the same one (:48-50, its "TODO:
+    /// handle case of broken slur"). A BROKEN end has none: extremes_[d].staff_ is set from
+    /// the bound's slur head (slur-scoring.cc:221-227 get_bound_info), and a broken bound is
+    /// the line's break column, which has no head — so a broken piece is never bent off a
+    /// line. Until session 649 this read the gate as vacuously true and bent them anyway:
+    /// Yesterday Once More.lys (Lab corpus) `b,,2( | break e,4)` drew its second piece
+    /// 0.068 high with its middle points 0.27 higher than LilyPond's, whose winner is the
+    /// same idx 0 at the same height 0.7056. (The cross-staff half of the gate stays
+    /// vacuous: this scorer sees one staff frame.)
     /// </remarks>
     private Bezier AvoidStaffLine(Bezier bez, int dir)
     {
+        if (_isBrokenLeft || _isBrokenRight)
+            return bez;
+
         const double slurThickness = 1.2 * 0.1;
         const double lineThickness = 0.1;
 

@@ -75,4 +75,33 @@ public sealed class SlurEdgeBeamAndAccidentalTests
         Assert.Equal(middle - 1.195, slur.P0.Y, 2);
         Assert.Equal(middle - 1.195, slur.P1.Y, 2);
     }
+
+    // A piece of a slur broken by the line is never bent off a staff line: LilyPond gates
+    // avoid_staff_line on both extremes having a staff, and a broken bound has none
+    // (slur-configuration.cc:48-50, slur-scoring.cc:221-227). Yesterday Once More.lys (Lab
+    // corpus), reduced: LilyPond 2.26.0 draws the second piece's middle control points 0.7056
+    // above its ends (Lab sessions/p649 yom; debug-slur-scoring idx=0 TOTAL=0.00) — the
+    // generated height itself, unbent.
+    [Fact]
+    public void ABrokenPiece_IsNotBentOffAStaffLine()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            key e major
+            time 4/4
+            part bassline {
+              clef bass
+              section A { b,,4 r8 b,,8 b,,2( | break e,4) r8 e, e,4 r8 e, | }
+            }
+            form main { ~A }
+            score main { staff bassline }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        using var doc = new RecordingDocumentContext();
+        SharedRenderer.RenderTo(score, layout, doc);
+        var piece = doc.Page.Beziers.OrderBy(b => b.P0.X).First();
+        Assert.Equal(0.7056, piece.P0.Y - piece.Centreline1.Y, 3);
+    }
 }
