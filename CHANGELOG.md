@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **In a `voice { } { }` span every articulation follows its voice.** Voice 1's marks go
+  above and voice 2's below, whatever the mark's own habit — as LilyPond's `\voiceOne` /
+  `\voiceTwo` set them; an explicit `.up` / `.down` still wins. Voice 1's staccato and
+  accent used to sit between the voices, voice 2's fermata, trill and bow marks stood over
+  voice 1, and a drum kit's closed hi-hat `+` in the lower voice landed on the cymbal
+  above. Of 94 books with a voice span, 1 changes (one snapshot).
+
 - **A drum staff prints no key signature.** LilyPond's DrumStaff has no key engraver, as a
   tab staff has none; Lily# excluded only the tab staff, so a keyed score printed its
   signature — and its key changes — on the drum staff of every system, and a drum-only
@@ -130,6 +137,10 @@ workflow attaches that section to the GitHub Release verbatim.
   with `@!sustain@sustain` kept as the same thing written out. The LilyPond twin writes it
   as `\sustainOff\sustainOn` — a bare second `\sustainOn` drew no notch in LilyPond's
   bracket — and likewise for `@sostenuto` and `@unaCorda`. The nocturne sample uses it.
+
+- **No false warning after a phrase reference in `octave absolute`.** The export warned that
+  "a note follows the phrase reference … check that stretch by hand", which is a relative-
+  mode difference; in absolute mode the reference is inlined and the stretch is exact.
 
 - **A keyed book with a drum part exports a twin LilyPond accepts.** The drum part's
   `\drummode` block carried `\key f \major`, where LilyPond reads the tonic as a drum name

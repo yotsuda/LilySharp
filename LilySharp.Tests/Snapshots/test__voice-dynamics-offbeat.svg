@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="354.9" viewBox="0 0 119.50 35.49" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="377.4" viewBox="0 0 119.50 37.74" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="35.49" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="37.74" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="756">Off-beat voice dynamics</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="8.59" y1="22.05" x2="37.29" y2="22.05" stroke="#000000" stroke-width="0.100"/>
@@ -66,8 +66,8 @@
   <line x1="30.88" y1="17.40" x2="30.88" y2="14.78" stroke="#000000" stroke-width="0.130"/>
   <line x1="33.39" y1="16.90" x2="33.39" y2="14.51" stroke="#000000" stroke-width="0.130"/>
   <line x1="35.89" y1="16.40" x2="35.89" y2="14.24" stroke="#000000" stroke-width="0.130"/>
-  <text x="27.83" y="29.11" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="920">f</text>
-  <text class="music" x="27.83" y="24.55" font-size="4.00" data-pos="922"></text>
+  <text x="27.83" y="31.36" font-size="2.00" font-weight="bold" font-style="italic" text-anchor="middle" data-pos="920">f</text>
+  <text class="music" x="27.83" y="29.11" font-size="4.00" data-pos="922"></text>
   <rect x="11.90" y="13.48" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="845"/>
   <text x="15.57" y="15.83" font-size="2.77" text-anchor="middle" data-pos="845">Main</text>
   </g>

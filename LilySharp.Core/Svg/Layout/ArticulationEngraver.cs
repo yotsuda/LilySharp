@@ -1009,11 +1009,24 @@ internal static class ArticulationEngraver
             // Only inside the voice { } span, though — outside it voice 1 is the
             // only voice and keeps its pitch-natural direction.
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+            // ⚠️ THE SAME SETTING DECIDES THE SCRIPT'S SIDE. make-voice-props-set sets
+            // `direction` on every grob of direction-polyphonic-grobs, Script among them
+            // (scm/music-functions.scm:617-634, :666-674), so inside a voice span EVERY script
+            // follows its voice — voice 1 above, voice 2 below — whatever its own default
+            // (the fermata's and the stopped '+''s UP, a staccato's opposite-the-stem). Only
+            // an explicit .up/.down beats it. Until 2026-09-26 Lily# applied only the stem
+            // half: voice 1's staccato sat between the voices, voice 2's fermata and a drum
+            // kit's closed hi-hat '+' stood over voice 1 (found writing a big-band probe;
+            // measured against LilyPond 2.26, Lab sessions/p641/issues/i9-*).
+            bool? voiceScriptUp = null;
             if (staffByIndex != null
                 && staffByIndex.TryGetValue(articulation.StaffIndex, out var ownStaff)
                 && VoiceDefaults.GetDefaultStemUpAt(
                     ownStaff.Voices, articulation.VoiceIndex, articulation.MeasureIndex) is { } voiceStemUp)
+            {
                 stemUp = voiceStemUp;
+                voiceScriptUp = voiceStemUp;
+            }
 
             // A beamed member's stem ends on the BEAM, not at the unbeamed
             // formula's tip, and the beam also resolves its direction.
@@ -1071,8 +1084,9 @@ internal static class ArticulationEngraver
                 // LILYPOND-REF: ly/engraver-init.ly:1170-1188 TabVoice;
                 // LILYPOND-REF: scm/define-grobs.scm:1365 fermata direction = UP.
                 bool tabForceAbove = IsForcedAbove(articulation);
+                // …and inside a voice span the voice decides (voiceScriptUp's remark above).
                 bool tabAbove = articulation.DirectionForced
-                    ? articulation.IsAbove : (tabForceAbove || !tabStemUp);
+                    ? articulation.IsAbove : voiceScriptUp ?? (tabForceAbove || !tabStemUp);
                 // A fret digit is centred on its string line, so a digit on the
                 // OUTER string protrudes half its height past the outer line. Clear
                 // that too, or an above-script (accent/staccato/fermata) lands on the
@@ -1217,11 +1231,17 @@ internal static class ArticulationEngraver
             // stem-up beam takes its dot BELOW like its neighbours, not above the
             // beam. Fermata/ornament/bow keep their forced-UP side; an explicit
             // .up/.down still wins. Same rule the tab branch above already applies.
+            // Inside a voice span the VOICE decides (voiceScriptUp's remark above); an
+            // explicit .up/.down still wins.
             bool forceAbove = IsForcedAbove(articulation);
             bool effectiveAbove = articulation.DirectionForced
-                ? articulation.IsAbove : (forceAbove || !stemUp);
-            var effArt = effectiveAbove == articulation.IsAbove
-                ? articulation : articulation with { IsAbove = effectiveAbove };
+                ? articulation.IsAbove : voiceScriptUp ?? (forceAbove || !stemUp);
+            // A voice-decided side travels as a FORCED one, so CalculateYPosition (which
+            // re-reads the side and would put a forced-UP script back on top) keeps it.
+            bool sideForced = articulation.DirectionForced || voiceScriptUp.HasValue;
+            var effArt = effectiveAbove == articulation.IsAbove && sideForced == articulation.DirectionForced
+                ? articulation
+                : articulation with { IsAbove = effectiveAbove, DirectionForced = sideForced };
 
             // Y-up placement (staff-spaces above the staff middle). No staff offset:
             // the renderer/skyline resolve the staff middle at their own boundary.
