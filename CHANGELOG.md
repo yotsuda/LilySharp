@@ -161,6 +161,17 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **Punctuation in lyrics is text.** A `;` or `?` written against a syllable (`gent- ly;`,
+  `are you?`) was reported as a stray character — an error — though the syllable kept it
+  and the page printed it. Inside a `lyrics { }` body it is now simply part of the word.
+
+- **A lyric track may sing a part named `bass` (or `treble`, `alto`, `tenor`).**
+  `lyrics words sings bass { … }` was a parse error, though those four words are legal part
+  names everywhere else and the score row `lyrics words sings bass` already accepted it.
+
+- **A pedal's warnings speak of the pedal.** An unreleased `@sustain` was told to write
+  `@!rit`, and a stray `@!sustain` said "no text spanner is open".
+
 - **Each piece of a tempo mark clicks to its own token in the preview.** Clicking the note
   or "= 120" lands on `tempo |120` (the note on a written unit, `tempo |4 = 120`), clicking
   the swing equation on `tempo 120 |swing`, and the marking on its text; a caret lights

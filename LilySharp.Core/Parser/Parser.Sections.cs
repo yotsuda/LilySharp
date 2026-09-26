@@ -152,7 +152,11 @@ internal sealed partial class Parser
     {
         var keyword = Expect(SyntaxKind.LyricsKeyword);
         // Optional voice-binding name: `lyrics sop { … }` aligns to voice 'sop'.
-        var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
+        // ⚠️ A PART NAME, not just an identifier — the clef words are legal part names
+        // (SyntaxFacts.IsPartNameKind), and until 2026-09-26 `lyrics w sings bass { … }`
+        // was a parse error ("Expected 'OpenBrace', found 'BassKeyword'") for a part the
+        // grammar says may be called `bass` (found writing a hymn probe).
+        var name = SyntaxFacts.IsPartNameKind(Current.Kind) ? Advance() : (SyntaxToken?)null;
         // Optional melody binding: `lyrics ja sings vocal { … }` — the track sings
         // the named part. Contextual like `q`: 'sings' stays an ordinary identifier
         // everywhere else, claimed only between a track name and its brace.
@@ -160,7 +164,7 @@ internal sealed partial class Parser
         if (name != null && Check(SyntaxKind.Identifier) && Current.Text == "sings")
         {
             singsKeyword = Advance();
-            singsTarget = Check(SyntaxKind.Identifier) ? Advance() : null;
+            singsTarget = SyntaxFacts.IsPartNameKind(Current.Kind) ? Advance() : null;
         }
         var openBrace = Expect(SyntaxKind.OpenBrace);
 

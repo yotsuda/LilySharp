@@ -63,6 +63,12 @@ internal sealed partial class Parser
         int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@fig' name
         int chordsDepth = 0;   // brace depth inside a chords { } body (0 = outside)
         int chordsStage = 0;   // 0 = idle, 1 = saw 'chords', 2 = saw its name
+        // A lyrics { } body is free text: a '?' or ';' written against a syllable is part
+        // of the word (ParseLyricSyllable glues it on — "you?", "gent-ly;"), so it is not a
+        // stray character there. Until 2026-09-26 it was flagged as one, an ERROR, though
+        // the syllable kept it (found writing a hymn probe). 0 = outside, else brace depth.
+        int lyricsDepth = 0;
+        int lyricsHead = 0;  // tokens still allowed between 'lyrics' and its '{' (name, 'sings', part)
         SyntaxToken? previous = null;
         bool afterNote = false;  // the previous token was the tail of a note
         foreach (var t in _tokens)
@@ -81,7 +87,7 @@ internal sealed partial class Parser
             int inkPos = scanPos + t.LeadingTriviaWidth;
 
             bool inChordFigArg = argDepth > 0 || chordsDepth > 0;
-            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#"))
+            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#") && lyricsDepth == 0)
             {
                 // '?' is LilyPond's cautionary accidental; Lily# has no such
                 // shorthand, so point at the annotation form instead of a bare
@@ -169,6 +175,25 @@ internal sealed partial class Parser
                 chordsStage = 2;
             else
                 chordsStage = 0;
+
+            // A lyrics { } BODY. The score row `lyrics NAME sings PART` has no brace, so the
+            // region arms only on a '{' that follows the head (name, `sings`, part).
+            if (lyricsDepth > 0)
+            {
+                if (t.Kind == SyntaxKind.OpenBrace) lyricsDepth++;
+                else if (t.Kind == SyntaxKind.CloseBrace) lyricsDepth--;
+            }
+            else if (t.Kind == SyntaxKind.LyricsKeyword)
+                lyricsHead = 4;   // up to three head tokens, then the brace
+            else if (lyricsHead > 0 && t.Kind == SyntaxKind.OpenBrace)
+            {
+                lyricsDepth = 1;
+                lyricsHead = 0;
+            }
+            else if (lyricsHead > 0)
+                // The name, `sings` and the part, whatever they lex as (a part may be
+                // named `bass`); a fourth token means this was a score row, not a body.
+                lyricsHead = t.Kind is SyntaxKind.CloseBrace or SyntaxKind.EndOfFile ? 0 : lyricsHead - 1;
 
             scanPos += t.FullWidth;
             previous = t;

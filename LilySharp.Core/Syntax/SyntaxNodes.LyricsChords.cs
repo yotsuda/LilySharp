@@ -34,9 +34,10 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>True when written as `lyrics name { … }` (an optional name sits
-    /// between the keyword and the brace, binding to a same-named voice).</summary>
+    /// between the keyword and the brace, binding to a same-named voice). A PART NAME,
+    /// so a clef word counts (<see cref="SyntaxFacts.IsPartNameKind"/>, as the parser).</summary>
     private bool HasName =>
-        GetChild(1) is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier;
+        GetChild(1) is SyntaxTokenNode t && SyntaxFacts.IsPartNameKind(t.Kind);
 
     /// <summary>The token carrying this block's track name, or null when it writes none.
     /// The editor colours THIS; <see cref="VoiceName"/> is the same slot read once, so a
@@ -57,7 +58,7 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     /// <summary>The token naming the part this track sings, or null when this block
     /// declares no binding.</summary>
     public SyntaxTokenNode? SingsTargetToken =>
-        SingsKeyword != null && GetChild(3) is SyntaxTokenNode { Kind: SyntaxKind.Identifier } t2
+        SingsKeyword != null && GetChild(3) is SyntaxTokenNode t2 && SyntaxFacts.IsPartNameKind(t2.Kind)
             ? t2 : null;
 
     /// <summary>The part this track sings (<c>lyrics ja sings vocal</c> → "vocal"),

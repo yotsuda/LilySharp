@@ -212,7 +212,11 @@ public class SpanPairingValidatorTests
         // MEASURED (scratch/p289/pedopen.lys): the bracket vanishes entirely. Nothing about
         // the drawing changed here — what changed is that the loss is now said.
         var warning = Assert.Single(Reports("c'4@sustain c' c' c' |"));
-        Assert.Contains("never closed", warning.Message);
+        Assert.Contains("never released", warning.Message);
+        // The pedal's own terminator, not the text spanner's (it was "'@!rit'" until
+        // 2026-09-26: the pedal fell into the text spanner's words).
+        Assert.Contains("'@!sustain'", warning.Message);
+        Assert.DoesNotContain("text spanner", warning.Message);
     }
 
     [Fact]
@@ -220,6 +224,8 @@ public class SpanPairingValidatorTests
     {
         var warning = Assert.Single(Reports("c'4@!sustain c' c' c' |"));
         Assert.Contains("closes nothing", warning.Message);
+        Assert.Contains("no pedal is down", warning.Message);
+        Assert.DoesNotContain("text spanner", warning.Message);
     }
 
     /// <summary>

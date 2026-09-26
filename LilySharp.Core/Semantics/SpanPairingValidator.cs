@@ -119,6 +119,21 @@ internal sealed class SpanPairingValidator : ISharedCollectValidator
                     + "close the first with '@!phrasingSlur' before starting a second - phrasing "
                     + "slurs do not nest (an ordinary slur '(' ')' may sit inside one)",
             };
+        // The pedal's own words. Until 2026-09-26 it fell into the text spanner's arm below, so
+        // an unreleased '@sustain' was told to "write '@!rit' (or '@!textSpan')" and a stray
+        // '@!sustain' said "no text spanner is open" (found writing a nocturne probe).
+        // Only two faults reach it: a second start is re-pedalling (SpanKind.Pedal).
+        if (kind == SpanKind.Pedal)
+            return fault switch
+            {
+                SpanPairingFault.Unterminated =>
+                    "a pedal is never released, so no bracket is drawn; write '@!sustain' "
+                    + "(or '@!sostenuto' / '@!unaCorda') on the note it lifts on - a span with "
+                    + "no end has no length to draw",
+                _ =>
+                    "this '@!' closes nothing, so nothing is drawn; no pedal is down in this "
+                    + "voice - note that a span does not carry into another voice",
+            };
         bool ottava = kind == SpanKind.Ottava;
         string noun = ottava ? "an ottava bracket" : "a text spanner";
         string ends = ottava ? "'@!ottava'" : "'@!rit' (or '@!textSpan')";

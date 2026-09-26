@@ -505,6 +505,41 @@ key g major
             d => d.Code == DiagnosticCodes.UnexpectedCharacter);
     }
 
+    /// <summary>
+    /// A lyric body is free text: punctuation against a syllable is part of the word, which
+    /// the syllable keeps ("gent- ly;", "you?"). Until 2026-09-26 the character was also
+    /// reported as a stray one — an ERROR, on a line the page printed correctly (found
+    /// writing a hymn probe; LilyPond takes such a word as it stands).
+    /// </summary>
+    [Theory]
+    [InlineData("gent- ly; so", "ly;")]
+    [InlineData("are you? so", "you?")]
+    [InlineData("sing, sing; so", "sing;")]
+    public void PunctuationInALyricBody_IsText(string words, string syllable)
+    {
+        foreach (string head in new[] { "lyrics w", "lyrics w sings bass" })
+        {
+            var tree = SyntaxTree.Parse(
+                "part bass { clef bass }\nsection A {\n  bass { c4 d e f | }\n  "
+                + head + " { " + words + " | }\n}\n"
+                + "form main { ~A }\nscore main { staff bass  lyrics w sings bass }\n");
+            Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnexpectedCharacter);
+            var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(
+                tree, LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree));
+            Assert.Contains(score.Lyrics, l => l.Text == syllable);
+        }
+    }
+
+    [Fact]
+    public void PunctuationOutsideALyricBody_IsStillFlagged()
+    {
+        // A score ROW `lyrics w sings m` has no body: a ';' after it is a stray again.
+        Assert.Contains(SyntaxTree.Parse("score main { staff m  lyrics w sings m ; staff n }").Diagnostics,
+            d => d.Code == DiagnosticCodes.UnexpectedCharacter);
+        Assert.Contains(SyntaxTree.Parse("c4 ; d4").Diagnostics,
+            d => d.Code == DiagnosticCodes.UnexpectedCharacter);
+    }
+
     [Fact]
     public void CautionaryAccidentalReflex_PointsToCourtesy()
     {
