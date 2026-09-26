@@ -157,12 +157,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ### 1.1 第649セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（第648 の後・ユーザー「続けて」）。★ `-Start p649`（HEAD `f4141934`・未 push 101・full **9399 / 0 / 2 / 9401**＝引継ぎと一致）。
-天井のため §2 S の S0（計器の本文）を ARCHIVE へ畳んだ。§2 S の残り 437 対から。すべて LP のソースで名指して移植（bow の差 2,768 → 2,569）:
+天井のため §2 S の S0（計器の本文）を ARCHIVE へ畳んだ。§2 S の残り 437 対から。すべて LP のソースで名指して移植（bow の差 2,768 → 2,549）:
 ★ ⑴ `034a090c` 行で割れたタイの後半は**行頭の `.|:` の右端**から（`SystemLayout.LineStartBarRight`＝renderer と同じ break-align 表・ABC B3 で 2.94 左）。
 ★ ⑵ `3feb4009` 行頭 reminder の臨時記号をタイの後半の outline が避ける（`BuildTieColumn(atLineStart)`・真夏の夜の夢 1.03）。
 ★ ⑶ `45e2fbc2` 行で割れた**スラー**の端もタイと同じ bound（`BrokenPieceStartX／EndX` に共通化・slur-scoring.cc:594-598・0.19＝細い小節線）。
 ★ ⑷ `8f4af3ff` スラー端の「内側に梁」を `BeamId` で読む（自動の梁は `[` `]` を持たない＝最後の音から出るスラーが梁に乗っていた・1.55）＋
 **臨時記号をスラーの extra object に**（slur-engraver.cc:73・accidental-collision 3・idx は flat −1／sharp 0.5dir／natural −dir）。27 冊良化・悪化 0。
+★ ⑸ `fe649bac` 行頭の bound は**その staff 自身の**前置き（`SystemLayout.LineStartStaffRights`＝`LineStartColumn.StaffInkRight`・staff_extent は staff ごと）＝TAB clef の幅に引かれて 0.1166 右（Kokomo）。
+★ ⑹ `3c8752c2` 行で割れたスラーの断片に `avoid_staff_line` を掛けない（LP は両端に staff が要る＝割れた端は head が無い）＝Yesterday Once More 41→31。
+★ ⑺ 行頭で割れた**スラー**の bound は空の KeySignature の位置（clef の後 +0.5）も数える（robust_relative_extent・break-alignment-interface.cc:248-252）＝`LineStartSlurRights`。タイは staff_extent で空を数えない＝別の配列。
+⚠️ **診断の型**: LP は `\paper { debug-slur-scoring = ##t }` を双子に足して `-dbackend=svg` の `<text>` に winner の idx と TOTAL。Lily# 側は一時的に `Solve()` の後で best の idx・Demerits・Curve を書き出す（commit しない）＝⑹ は「同じ idx 0・同じ高さなのに曲線が違う」で後処理を特定した。
 網: `BrokenTieLineStartTests`・`TiedAccidentalTests` +1・`SlurEdgeBeamAndAccidentalTests`（毒はすべて赤）。頁の掃き 4・6・14・33 冊。
 ⚠️ 計器の比較は `sessions/p649/report-after-*.tsv` を前後に残す（本ごとの悪化を数える＝⑷ で 0 を確認した方法）。
 
@@ -926,7 +930,7 @@ Lily#: `NoteItem`／`ChordNoteInfo.LineStartAccidental`（Accidental は null＝
 
 - ✅ **S0. 計器＝本全体の bow の双子比較**（Lab `sessions/p647/bows/`・第647 が建てた。第648 が `compare.ps1` の急なスラーと dump の旗を直した） → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第p649 に落とした）
 - **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第647 に落とした）
-- **S2 の残り（第649・五線・非 grace）354 対**: 列の写像が効く 0.1 以上 96（T x3 26・S h 19・S x3 13・S x0 11・T y0 10）／写像不能（spacing 起因）68／向きの反転 23／0.1 未満 167。703 → 437（第648）→ 354（第649＝§1.1）。
+- **S2 の残り（第649 末・五線・非 grace）334 対**: 列の写像が効く 0.1 以上 78（T x3 26・S x3 13・S x0 11・T y0 10・S h 5）／写像不能（spacing 起因）68／向きの反転 23／0.1 未満 165。703 → 437（第648）→ 334（第649＝§1.1）。
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、

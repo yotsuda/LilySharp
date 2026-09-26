@@ -885,6 +885,7 @@ internal sealed partial class LayoutEngine
             perSystemCropDown.Add(BandDown(lyricBand.AtRest));
             perSystemHeights.Add(sysHeight);
 
+            var lineStartStaffRights = MultiStaffLayouter.LineStartStaffRights(score, firstMeasureIndex, isFirstSystem);
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY,
                 Width: _options.ContentWidth - sysIndent,
@@ -922,7 +923,9 @@ internal sealed partial class LayoutEngine
                 StaffSprings: multiStaffLayouter.StaffSprings(
                     score, sysStaffGroups, sysStaffSkylines.Skylines, sysRunSources))
             {
-                LineStartStaffRights = MultiStaffLayouter.LineStartStaffRights(score, firstMeasureIndex, isFirstSystem),
+                LineStartStaffRights = lineStartStaffRights,
+                LineStartSlurRights = MultiStaffLayouter.LineStartSlurRights(
+                    score, firstMeasureIndex, isFirstSystem, lineStartStaffRights),
             });
             perSystemRunSources.Add(sysRunSources);
             perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);

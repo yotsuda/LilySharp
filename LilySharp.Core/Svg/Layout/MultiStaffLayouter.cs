@@ -1317,6 +1317,47 @@ internal sealed class MultiStaffLayouter
         return rights.ToImmutable();
     }
 
+    /// <summary>
+    /// <see cref="SystemLayout.LineStartSlurRights"/>: <see cref="LineStartStaffRights"/>, and
+    /// on a staff that carries a KeySignature, at least where that signature stands when it
+    /// is EMPTY and the prefix ends on the clef.
+    /// </summary>
+    /// <remarks>
+    /// A slur's broken bound is the union of its line-start encompass objects
+    /// (slur-scoring.cc:460-476 breakable_bound_extent, robust_relative_extent), and a
+    /// KeySignature with no accidental is one of them — an empty extent that
+    /// <c>robust_relative_extent</c> turns into its POSITION. With the clef the last inked
+    /// group, break alignment puts the next group there: the clef's right plus its
+    /// <c>right-edge</c> extra-space, 0.5 (break-alignment-interface.cc:248-252;
+    /// scm/define-grobs.scm Clef space-alist). MEASURED (2.26.0, Lab sessions/p649 sl): the
+    /// empty KeySignature at 3.865 behind a clef ending at 3.365, with or without `\key c
+    /// \major`, and every such slur piece beginning there. A tie reads staff_extent, which
+    /// skips an empty extent — so this is the slur's bound only. A tab staff has no
+    /// Key_engraver (ly/engraver-init.ly TabStaff), so no signature to stand anywhere.
+    /// </remarks>
+    internal static ImmutableArray<double> LineStartSlurRights(
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem, ImmutableArray<double> staffRights)
+    {
+        var columns = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem).Columns;
+        if (columns.HasKey || columns.HasTime || columns.HasBar)
+            return staffRights;
+        var rights = ImmutableArray.CreateBuilder<double>(staffRights.Length);
+        int i = 0;
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            double right = i < staffRights.Length ? staffRights[i] : 0.0;
+            rights.Add(staff.IsTab || staff.IsTextRow ? right : Math.Max(right, ClefRightEdgeSpace));
+            i++;
+        }
+        return rights.MoveToImmutable();
+    }
+
+    /// <summary>The clef's <c>right-edge</c> extra-space — where break alignment puts the
+    /// group after a clef that ends the inked prefix.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm Clef space-alist
+    /// <c>(right-edge . (extra-space . 0.5))</c>.</remarks>
+    private const double ClefRightEdgeSpace = 0.5;
+
     /// <summary>A system's solved line-start break-align table plus the inputs it was
     /// solved from (the hoisted meter change, whether a meter is engraved at all, and
     /// the meter the prefix shows).</summary>

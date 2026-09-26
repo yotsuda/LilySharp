@@ -194,6 +194,18 @@ internal sealed record SystemLayout(
             ? LineStartStaffRights[staffIndex]
             : 0.0;
 
+    /// <summary>
+    /// The same per staff for a SLUR broken at this line start, whose bound also counts an
+    /// empty KeySignature's position (<see cref="MultiStaffLayouter.LineStartSlurRights"/>).
+    /// </summary>
+    public ImmutableArray<double> LineStartSlurRights { get; init; }
+
+    /// <summary><see cref="LineStartSlurRights"/> of one staff, falling back to the tie's.</summary>
+    public double LineStartSlurRightOf(int staffIndex)
+        => !LineStartSlurRights.IsDefault && staffIndex >= 0 && staffIndex < LineStartSlurRights.Length
+            ? LineStartSlurRights[staffIndex]
+            : LineStartRightOf(staffIndex);
+
     /// <summary>Whether this system has multiple staff groups.</summary>
     public bool HasMultipleStaffGroups => !StaffGroups.IsDefaultOrEmpty && StaffGroups.Length > 1;
 

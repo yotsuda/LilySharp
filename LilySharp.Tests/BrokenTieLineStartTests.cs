@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Linq;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
@@ -89,6 +90,37 @@ public sealed class BrokenTieLineStartTests
         using var doc = new RecordingDocumentContext();
         SharedRenderer.RenderTo(multi, layout, doc);
         return doc.Page.Beziers.Min(b => b.P0.X);
+    }
+
+    // A SLUR's broken bound is the union of its line-start encompass objects, and an empty
+    // KeySignature (C major) is one of them, at its POSITION — which break alignment puts
+    // 0.5 past a clef that ends the prefix (break-alignment-interface.cc:248-252, the Clef's
+    // right-edge extra-space). LilyPond 2.26.0 (Lab sessions/p649 sl, trebC): the piece
+    // begins 3.815 from the staff's left end, the clef's ink ending at 3.315. A tie reads
+    // staff_extent, which skips the empty signature (see the rows above).
+    [Fact]
+    public void ASlurPieceBeginsWhereAnEmptyKeySignatureStands()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            key c major
+            time 4/4
+            part m {
+              clef treble
+              section A { c'4( d' e' f' | break g'4 a') b' c'' | }
+            }
+            form main { ~A }
+            score main { staff m }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        using var doc = new RecordingDocumentContext();
+        SharedRenderer.RenderTo(score, layout, doc);
+        double staffLeft = doc.Page.Lines.Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9 && l.X2 - l.X1 > 20)
+            .Min(l => l.X1);
+        double pieceStart = doc.Page.Beziers.Min(b => b.P0.X);
+        Assert.Equal(3.815, pieceStart - staffLeft, 3);
     }
 
     [Fact]

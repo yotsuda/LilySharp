@@ -4012,7 +4012,9 @@ internal sealed class ElementCoordinator
                     // The line-start column's staff extent, as a broken tie's piece reads it:
                     // LILYPOND-REF: lily/slur-scoring.cc:594-598 get_base_attachments —
                     // x = ext[-d] of the bound column (generic_bound_extent).
-                    segStartX = BrokenPieceStartX(segSystem, staffIndex);
+                    // A slur's bound also counts an EMPTY KeySignature's position, which a tie's
+                    // staff_extent skips (MultiStaffLayouter.LineStartSlurRights).
+                    segStartX = segSystem.Measures[0].X + segSystem.LineStartSlurRightOf(staffIndex);
                 }
 
                 double segEndX;
