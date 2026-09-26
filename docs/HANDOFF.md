@@ -931,10 +931,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   - 実コーパス（ベースタブ・samples・fixtures）も同じ道具に通す＝**行列に無い形**を拾う。
 - **S2. 仕分け** — 残差を「原因の族」に束ね、(件数 × 大きさ) で並べる。族ごとに LP のソースで原因を
   名指し → 直す → 網（毒で赤）＋ 台帳の点 ＋ sweep。**各族で最初に 1 点を台帳に入れてから直す。**
-- **S3. 宣言済みの逸脱の棚卸し** — bow のコードの LILYSHARP-OWN（`docs/APPROXIMATIONS.md` の
-  `SlurScoringProblem.cs`・`TieFormattingProblem.cs`・`TieVariantEngraver.cs` 節）と §1.0 の決定
-  （tab のタイの行き先の数字・梁の無い符尾側のスラー）を一覧にし、S0 の道具で**それだけが差として残る**
-  ことを確かめる。「意図しない逸脱」が 0 になった状態を完了とする。
+- **S3. 宣言済みの逸脱の棚卸し** — ✅ **第650 が作った**（Lab `sessions/p650/s3-inventory.md`＝残差の族→宣言の対応表・未観測の宣言・ユーザー決定・APPROXIMATIONS.md が拾わない印）。
+  fresh 2,535 対の内訳: grace スラー約 1,100（`GraceNotes.cs` の手の定数＝近似）・grace の bow 欠落（`VoiceScan` の足場＝U8）・tab スラー約 550（F9）・tab タイ約 320（LILYSHARP-OWN）・
+  中央線タイの反転 11（LP の同点＝移植不能）・spacing 起因約 460。**説明の無い残り 3 件**: ⑴ 二声の `\voiceOne` 半音符から出るスラーの始点 0.365（dot-cross-voice-spacing）
+  ⑵ part combiner のタイ終点 0.787（pcglobal-probe）⑶ 小節途中から始まる `voice { }` の前のスラーの向き（SUMMER 最終小節）。
 - **S4. 完了条件** — S1 の全冊と実コーパスで、対になった bow が全部 ±0.01 以内か、S3 の一覧の
   どれかで説明される。道具は Lab に残し、回帰用に合成コーパスを LilySharp 側の網へ移すか判断する。
 - **S5. その後（独自の改善・ユーザー判断が先）** — M20 型（線の上に乗る短い行末タイ）など。S4 の後に計画。
