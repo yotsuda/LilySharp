@@ -128,8 +128,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **⒯ 索引を*緑*にする**＝**render 側は無い（第519 値付け）**: `DescendantIndex.Build` は 0.004 回／打鍵 1,297 B（0.09%・歌詞行の本の `LyricBindings.VoicesOfPart` だけ）＝診断 pass の費用
 - ★ **⒮²⁷ tie の家族の残り＝約 2,700 B／打鍵**（第529 が solver の貸し出しで 19,976、**第532 が scratch で 4,250 を閉じた**。Lab `sessions/p529/`・`p532/`）: 残りは `TieChordOutline` 1,643（object＋中の `HorizontalSkyline`＝bound column ごと・problem に貸すなら outline も `Bind` で建て直す形＝skyline は ⒫′ の土台）／`TieColumnParts` 1,504（`BuildTieSpecification` が建てる record・呼び手側）。⚠️ **problem／engraver の貸し出しの島は第532 で尽きた**: `BeamScoringProblem`（第530 −16,344）・`SlurScoringProblem`（第531 −22,325）・tie（第529・第532）。grep（`new \w+Problem\(`・`new \w+Engraver\(`）に残る `LyricEngraver`／`LyricHyphenEngraver` は**第532 が値付けした＝合わせて 1,340 B／打鍵 0.12%（ctor 727・calc 445・hyphen 168）で、しかもコーパスに歌詞が 0 冊**（`lyric.in` 0）＝直す軒ではない（Lab `sessions/p532/lyric-price.txt`）。**貸す前に `.Length`・`[^1]`・`foreach` で表を歩く読み手を数える**（第530 は `[^1]` で 1 度 hash を割った・第532 は tie の配列を*寸法ちょうど*で持った理由）
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render 約 12,030 → 9,200 ms（3,760 打鍵・−24%）・割当 −31%（第598〜第615・経緯は ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`・Release の `p594/cpuhost`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎ（第615 の地図・script の段ごと memo が 1 歩目）と collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）／⚠️ EventPipe の CPU sampler の PollGC は水増し（第589・第615）
-- ★★★ **LP 双子が要る R7〜R11 は*今日から着手できる***＝`lilypond.exe` の hang は 2026-09-20 に解決
-  （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
 - ✅ **T8 は第634 が閉じた**（§1.1 第634）。行頭の `|:` は第635 が閉じた。残り: staff＋`tab as full` の多段では各声部を*自分の*段の小節線で読む（LP は全段の列を各段の小節線で読んで merge）／小節線をまたぐ梁は小節ごとに半分で読む
@@ -149,10 +147,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **掃き終わった島（第434〜第456）＝*ここには戻らない*。根拠の全文は各便の §1＝ARCHIVE**（第496 が表を 3 行に畳んだ）。
   教訓だけ残す: **`GetOrAdd` の非 static factory はもう探さない**（第437）／`MusicSiteList.cs:83` は定数 hint で弁護できない（直すなら前回の数を憶える＝設計）／`OutsideStaffStacker:1171` の `toStore` は上限で直せない（第442）／
   **struct walk を歩く外側の iterator は太る**＝直すなら鎖ごと（第445）／census の hold1 欄は直し方を選べない（第451）／起票が外すのは値段より*直し方*（第455＝鍵がいつも添字なら地図ではなく配列）／**checkpoint は前と同値なら共有・walk の器は drawer**（第522・残りは `WalkCheckpoint` 本体 33 × ~330 B と path＝実仕事）
-- ⒥ は第409 が上限 4.7 ms と測った／**Ⓑ ⒢′ ⒳‴ ⒳⁗ ⒞″ ⒟ R13⒦ ⒤ ⒴⁵ ⒴⁷ ⒴¹⁰ ⒵⁵ ⒵⁶ ⒩′ ⒩‴ ⒩⁴の脇 ⒩⁵ ⒫ ⒬ ⒬′ ⒭ ⒮ ⒮′ ⒮‴ ⒮⁵ ⒮⁷ ⒮″ ⒮¹⁶ ⒮¹⁸ ⒮¹⁹ ⒮²⁰ ⒮⁹ ⒮¹³ ⒳⁸ ⒳⁹ ⒳¹⁰ ⒳¹¹ ⒳¹⁴ ⒳¹⁵ ⒮²² ⒮²¹ ⒮¹⁷ ⒱ ⒲ ✅ 閉じた**
-  （閉じ方と「毒が緑」の**4 つの顔**＋**第455 の切り分けの*順番***は RULES §5.4 末尾。経緯は第454・第455 の §1＝ARCHIVE）
+- 閉じた島の一覧（⒥ Ⓑ ⒢′ … ⒱ ⒲）は第654 が畳んだ＝各便の §1（ARCHIVE）と RULES §5.4 末尾（閉じ方と「毒が緑」の 4 つの顔）
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
+
+### 1.1 第654セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第653 の後・ユーザー「続けて」＝§2 S1 の残り）。★ `-Start p654`（HEAD `42ba8d2e`・未 push 122・full **9413 / 0 / 2 / 9415**）。§1.0 の廃れた 2 項（R7〜R11 の着手可・閉じた島の一覧）を畳んだ。
+★ ⑴ `f2b15ab6` 割れた側の外端の column を avoid 点に残す（`BuildAvoidOffsets`＝LP は slur の *extremes* だけ外す・slur-scoring.cc:668-670）＝`c2( e | break` の第 1 断片が e の符尾の上へ fit（ff 1.1117・LP と同じ高さ 2.1373）。実コーパス 0 変化。
+★ ⑵ `175e0b25` 内側に梁のある端の base は**描いた符尾の x で**梁を読む（`segStartX`＝頭の中心で読んでいた＝傾いた梁で 0.65×傾き）。S1 の slur-voices 0.077・slur-beams 0.041 → exact・実コーパス 2,529 → **2,526**（3 対 exact・悪化 0）・台帳 `slur.beamed.reserved-text` −0.0661 → −0.0624（記録）。網 `BrokenSlurEdgeStemTests`（制御点 2 つ）・`SlurEdgeBeamAndAccidentalTests.ASlurOffABeam_StartsAtTheStemsX`。
+⇒ **S1 の差は 1 対＋数の不一致 1 だけ**: tie-lv の repeatTie は**頭からの距離は LP と同じ（−1.300）＝spacing**＝LP は `@repeatTie` の音の前に約 0.94 広く取る（RepeatTie の幅が列の左に入る？・**未調査＝spacing の族として起票**）／slur-grace の数（GraceNotes の独自 path＝宣言済み）。
+⚠️ 計器の罠: **毒の run は test dll を毒入りで build したまま残す**＝戻した後の sweep・one.ps1 は `dotnet build LilySharp.Tests` を挟む（第654 は毒の後の one.ps1 で「直っていない」を見かけた）。⚠️ 縮めた本は S1 と段割りが違う＝LP の値は**その本で**取り直す。
+★ **終了**: full **9414 / 0 / 2 / 9416**・実コーパスの bow の差 **2,526**。次: S1 の未収録（tab・cue・加線の多い和音・ottava のタイ）→ S4。push はユーザー。
+
+## 以下は第653セッションの経緯
 
 ### 1.1 第653セッション（2026-09-27・YT-DELL2）
 
@@ -162,17 +170,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠️ 最初は「LP は断片ごとに向きを決める」と読んで外した（LP の 2 断片はどちらも up・Lily# の第 1 断片が下に見えたのは端の y の差）＝**向きを疑う前に dump の端の y を並べる**。
 ⚠️ S1 の残り（S4 で説明するか直す）: slur-break 第 1 断片の高さ 0.24／slur-beams `c8( g'' c g'')` 0.041／slur-voices 0.077／tie-lv の repeatTie x 0.114（列の写像 −0.83＝spacing）／slur-grace の数 4 対 3（`grace { d''16( } f''4)` は GraceNotes の独自の path で描かれ Bezier に記録されない＝宣言済みの grace 族）。
 ★ **終了**: full **9413 / 0 / 2 / 9415**・実コーパスの bow の差 **2,529**（変化 0）。push はユーザー。
-
-## 以下は第652セッションの経緯
-
-### 1.1 第652セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（第651 の後・ユーザー「続けて」＝§2 S3 ⑶ を案 A で直す）。★ `-Start p652`（HEAD `0925e674`・未 push 117・full **9409 / 0 / 2 / 9411**）。
-★ `88619940` voice { } の強制は**その小節のうち span が覆う部分だけ**（第 1 声部）。`VoiceDefaults.GetDefaultStemUpAt(voices, v, m, item)`／`CoversItem`＝onset が [`SpanStartIn`, `SpanEndIn`) の item だけ。span の始まりは collector の padding（`RestItem.IsSpanLead`・`MeasureCollector.cs` の leadingOffset）＝**書かれた先頭の `s` は始まりを動かさない**。小節粒度の overload は消し、読み手 14 か所すべてを item で訊く（焼き込み・タイ・スラー・梁＝群の先頭・符頭・スクリプト・強弱・休符の衝突・skyline・ばね・トリル・連符）。
-射程: 963 冊を前後で描いて動いたのは SUMMER だけ。bow の差 2,532 → **2,529**（SUMMER 3 対 → 0・slur の数の不一致も閉じた）・悪化 0。網 `MidBarVoiceSpanTests` 2 本（毒 2 つでそれぞれ赤）。⇒ **S3 の「説明の無い残り」は 0 件＝次は S4（完了条件の確認）**。
-⚠️ 残差（未調査）: `voice { c8( d) … } { s8 a,8 … }` のスラーの右端 y が LP より 0.17 低い（向きは一致・Lab `sessions/p652/w-leadspacer`）。
-⚠️ Lily# の `octave absolute` は LP より 1 オクターブ上（Lily# `c'` = C5）＝LP 双子のプローブを書くときの罠。
-★ **終了**: full **9411 / 0 / 2 / 9413**・bow の差 **2,529**。push はユーザー。
 
 ## 2. 開いている作業
 

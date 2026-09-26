@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第652セッションの経緯
+
+### 1.1 第652セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第651 の後・ユーザー「続けて」＝§2 S3 ⑶ を案 A で直す）。★ `-Start p652`（HEAD `0925e674`・未 push 117・full **9409 / 0 / 2 / 9411**）。
+★ `88619940` voice { } の強制は**その小節のうち span が覆う部分だけ**（第 1 声部）。`VoiceDefaults.GetDefaultStemUpAt(voices, v, m, item)`／`CoversItem`＝onset が [`SpanStartIn`, `SpanEndIn`) の item だけ。span の始まりは collector の padding（`RestItem.IsSpanLead`・`MeasureCollector.cs` の leadingOffset）＝**書かれた先頭の `s` は始まりを動かさない**。小節粒度の overload は消し、読み手 14 か所すべてを item で訊く（焼き込み・タイ・スラー・梁＝群の先頭・符頭・スクリプト・強弱・休符の衝突・skyline・ばね・トリル・連符）。
+射程: 963 冊を前後で描いて動いたのは SUMMER だけ。bow の差 2,532 → **2,529**（SUMMER 3 対 → 0・slur の数の不一致も閉じた）・悪化 0。網 `MidBarVoiceSpanTests` 2 本（毒 2 つでそれぞれ赤）。⇒ **S3 の「説明の無い残り」は 0 件＝次は S4（完了条件の確認）**。
+⚠️ 残差（未調査）: `voice { c8( d) … } { s8 a,8 … }` のスラーの右端 y が LP より 0.17 低い（向きは一致・Lab `sessions/p652/w-leadspacer`）。
+⚠️ Lily# の `octave absolute` は LP より 1 オクターブ上（Lily# `c'` = C5）＝LP 双子のプローブを書くときの罠。
+★ **終了**: full **9411 / 0 / 2 / 9413**・bow の差 **2,529**。push はユーザー。
+
 ## 以下は第651セッションの経緯
 
 ### 1.1 第651セッション（2026-09-27・YT-DELL2）
