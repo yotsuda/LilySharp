@@ -2163,11 +2163,38 @@ internal static class MusicMarkEngraver
         return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(fonts, type, boxed);
     }
 
-    /// <summary>Half the drawn frame's width.</summary>
+    /// <summary>Half the drawn frame's width — the string's INK plus the frame, like the height.</summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
+    /// equal on all four sides, the X ones are too wide"). LilyPond's box wraps the text
+    /// stencil, whose X is the ADVANCE (Pango's logical rectangle) and only whose Y is ink
+    /// (lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil), so its side
+    /// margins carry the side bearings on top of the padding. Lily# wraps the ink both ways.
+    /// Until 2026-09-26 this read the advance, as LilyPond does.
+    /// </remarks>
     internal static double LabelBoxHalfWidth(
         ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
-        => fonts.Advance(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts)) / 2
-           + LabelBoxMargin(fonts, type, boxed);
+    {
+        var (left, right) = LabelInkSpan(fonts, type, text);
+        return (right - left) / 2 + LabelBoxMargin(fonts, type, boxed);
+    }
+
+    /// <summary>The string's horizontal ink about its pen origin, at the label's own em.</summary>
+    internal static (double Left, double Right) LabelInkSpan(
+        ScoreTextMetrics fonts, MusicMarkType type, string text)
+        => fonts.InkSpan(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts));
+
+    /// <summary>
+    /// How far right of the label's anchor the string's ADVANCE centre stands, so that its
+    /// INK centre lands on the anchor — the frame's centre (see
+    /// <see cref="LabelBoxHalfWidth"/>). The renderer draws a middle-anchored text there.
+    /// </summary>
+    internal static double LabelTextShift(ScoreTextMetrics fonts, MusicMarkType type, string text)
+    {
+        var (left, right) = LabelInkSpan(fonts, type, text);
+        double advance = fonts.Advance(text, LabelEm(fonts, type), TextRole.Mark, LabelStyle(fonts));
+        return advance / 2 - (left + right) / 2;
+    }
 
     /// <summary>
     /// How far above the anchor staff's MIDDLE line a boxed label's frame bottom stands when

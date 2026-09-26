@@ -45,7 +45,7 @@
   <text x="30.46" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="944">F</text>
   <text x="36.48" y="17.98" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="946">G</text>
   <text x="38.53" y="16.79" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="946">ø</text>
-  <rect x="11.90" y="12.82" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="840"/>
-  <text x="15.94" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="840">Main</text>
+  <rect x="11.90" y="12.82" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="840"/>
+  <text x="15.92" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="840">Main</text>
   </g>
 </svg>

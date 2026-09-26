@@ -30,7 +30,7 @@
   <text class="music" x="15.71" y="21.29" font-size="4.00"></text>
   <text class="music" x="19.41" y="23.29" font-size="4.00" data-pos="86"></text>
   <rect x="25.47" y="19.29" width="0.19" height="4.00" data-pos="87"/>
-  <rect x="14.56" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="40"/>
-  <text x="15.97" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="40">A</text>
+  <rect x="14.56" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="40"/>
+  <text x="16.02" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="40">A</text>
   </g>
 </svg>

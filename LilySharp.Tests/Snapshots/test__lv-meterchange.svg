@@ -36,8 +36,8 @@
   <line x1="41.04" y1="13.14" x2="41.04" y2="9.79" stroke="#000000" stroke-width="0.130"/>
   <rect x="26.18" y="10.29" width="0.19" height="4.00" data-pos="51"/>
   <rect x="43.01" y="10.29" width="0.19" height="4.00" data-pos="85"/>
-  <rect x="11.90" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="23"/>
-  <text x="13.31" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="23">A</text>
+  <rect x="11.90" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="23"/>
+  <text x="13.36" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="23">A</text>
   <path d="M 31.67,11.09 C 32.11,10.56 32.98,10.56 33.42,11.09 C 32.98,10.68 32.11,10.68 31.67,11.09 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="64"/>
   </g>
 </svg>

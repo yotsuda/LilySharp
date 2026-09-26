@@ -64,7 +64,7 @@
   <text class="music" x="13.66" y="12.57" font-size="3.56" data-pos="6"></text>
   <line x1="14.76" y1="12.40" x2="14.76" y2="9.90" stroke="#000000" stroke-width="0.116" data-pos="6"/>
   <text x="15.43" y="13.06" font-size="2.20" data-pos="6">= 100</text>
-  <rect x="12.14" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="65"/>
-  <text x="13.55" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="65">A</text>
+  <rect x="12.14" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="65"/>
+  <text x="13.60" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="65">A</text>
   </g>
 </svg>

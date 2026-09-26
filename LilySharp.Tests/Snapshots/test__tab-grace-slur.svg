@@ -54,7 +54,7 @@
   <path d="M 25.12,34.87 C 26.58,35.43 28.74,34.70 29.57,33.37 C 28.78,34.81 26.62,35.54 25.12,34.87 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="533"/>
   <text x="19.27" y="31.39" font-size="2.38" font-weight="bold" text-anchor="middle" data-pos="509">0</text>
   <text x="26.62" y="29.89" font-size="2.38" font-weight="bold" text-anchor="middle" data-pos="535">0</text>
-  <rect x="12.14" y="16.72" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="484"/>
-  <text x="13.55" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="484">A</text>
+  <rect x="12.14" y="16.72" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="484"/>
+  <text x="13.60" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="484">A</text>
   </g>
 </svg>

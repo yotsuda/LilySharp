@@ -73,11 +73,11 @@
   <rect x="78.96" y="16.42" width="0.19" height="4.00" data-pos="831"/>
   <rect x="93.92" y="16.42" width="0.19" height="4.00" data-pos="851"/>
   <rect x="102.24" y="16.42" width="0.19" height="4.00" data-pos="858"/>
-  <rect x="11.90" y="12.83" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="802"/>
-  <text x="13.31" y="15.22" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="802">A</text>
-  <rect x="46.57" y="12.87" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="862"/>
-  <text x="47.99" y="15.22" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="862">B</text>
-  <rect x="64.70" y="12.82" width="4.43" height="2.76" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="802"/>
-  <text x="66.92" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="802">A2</text>
+  <rect x="11.90" y="12.83" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="802"/>
+  <text x="13.36" y="15.22" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="802">A</text>
+  <rect x="46.64" y="12.87" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="862"/>
+  <text x="48.02" y="15.22" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="862">B</text>
+  <rect x="64.75" y="12.82" width="4.33" height="2.76" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="802"/>
+  <text x="67.02" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="802">A2</text>
   </g>
 </svg>

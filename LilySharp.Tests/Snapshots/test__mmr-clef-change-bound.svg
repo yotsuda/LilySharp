@@ -40,8 +40,8 @@
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="1578"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="1578"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="1578">= 120</text>
-  <rect x="11.90" y="16.72" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
-  <text x="15.94" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">Main</text>
+  <rect x="11.90" y="16.72" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
+  <text x="15.92" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">Main</text>
   <text class="music" x="35.41" y="25.96" font-size="4.00"></text>
   <text class="music" x="38.97" y="24.96" font-size="4.00"></text>
   <text class="music" x="37.27" y="23.56" font-size="4.00">5</text>

@@ -110,13 +110,13 @@
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="56"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="56"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="56">= 120</text>
-  <rect x="11.90" y="16.72" width="8.18" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
-  <text x="15.99" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
-  <rect x="31.67" y="20.26" width="8.66" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
-  <text x="36.00" y="22.61" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="219">Verse</text>
-  <rect x="49.82" y="16.91" width="11.29" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
-  <text x="55.47" y="19.31" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="254">Chorus</text>
-  <rect x="75.38" y="16.95" width="8.18" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
-  <text x="79.47" y="19.31" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
+  <rect x="11.90" y="16.72" width="7.98" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="15.91" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
+  <rect x="31.72" y="20.26" width="8.55" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
+  <text x="36.10" y="22.61" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="219">Verse</text>
+  <rect x="49.96" y="16.91" width="11.03" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
+  <text x="55.49" y="19.31" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="254">Chorus</text>
+  <rect x="75.48" y="16.95" width="7.98" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="79.50" y="19.31" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="184">Intro</text>
   </g>
 </svg>

@@ -790,7 +790,8 @@ internal static partial class SharedRenderer
             if (m.Boxed)
                 gc.DrawRectangle(m.X - halfW, absY + halfH, halfW * 2, halfH * 2,
                     fill: Color.White, stroke: Color.Black, strokeWidth: EngravingDefaults.LineThickness);
-            gc.DrawText(m.Text, m.X,
+            // Shifted so the INK centres in the frame, which wraps the ink (LabelTextShift).
+            gc.DrawText(m.Text, m.X + MusicMarkEngraver.LabelTextShift(fonts, m.MarkType, m.Text),
                 absY - MusicMarkEngraver.LabelBaselineBelowCentre(fonts, m.MarkType, m.Text, m.Boxed),
                 fs, TextRole.Mark, MusicMarkEngraver.LabelStyle(fonts), TextAnchor.Middle, Color.Black);
             return;

@@ -50,7 +50,7 @@
   <line x1="28.78" y1="15.47" x2="28.78" y2="17.81" stroke="#000000" stroke-width="0.130"/>
   <line x1="32.94" y1="14.97" x2="32.94" y2="17.51" stroke="#000000" stroke-width="0.130"/>
   <path d="M 19.18,7.77 C 21.04,6.27 28.09,6.27 29.95,7.77 C 28.09,6.39 21.04,6.39 19.18,7.77 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="1311"/>
-  <rect x="11.90" y="7.72" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1287"/>
-  <text x="13.31" y="10.12" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1287">A</text>
+  <rect x="11.90" y="7.72" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1287"/>
+  <text x="13.36" y="10.12" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1287">A</text>
   </g>
 </svg>

@@ -117,13 +117,13 @@
   <line x1="33.05" y1="26.81" x2="34.58" y2="26.81" stroke="#000000" stroke-width="0.160" data-pos="131"/>
   <line x1="34.58" y1="26.81" x2="34.58" y2="26.11" stroke="#000000" stroke-width="0.160" data-pos="131"/>
   <text x="32.05" y="26.81" font-size="1.75" font-style="italic" text-anchor="middle" dominant-baseline="central" data-pos="131">3</text>
-  <rect x="12.14" y="17.81" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="112"/>
-  <text x="13.55" y="20.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="112">A</text>
-  <rect x="27.11" y="17.86" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="146"/>
-  <text x="28.54" y="20.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="146">B</text>
-  <rect x="50.45" y="12.82" width="2.85" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="564"/>
-  <text x="51.88" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="564">C</text>
-  <rect x="59.28" y="12.90" width="3.03" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="597"/>
-  <text x="60.79" y="15.25" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="597">D</text>
+  <rect x="12.14" y="17.81" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="112"/>
+  <text x="13.60" y="20.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="112">A</text>
+  <rect x="27.19" y="17.86" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="146"/>
+  <text x="28.57" y="20.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="146">B</text>
+  <rect x="50.58" y="12.82" width="2.60" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="564"/>
+  <text x="51.90" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="564">C</text>
+  <rect x="59.37" y="12.90" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="597"/>
+  <text x="60.83" y="15.25" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="597">D</text>
   </g>
 </svg>

@@ -124,7 +124,7 @@
   <polygon points="66.71,22.79 67.73,22.79 70.73,19.79 69.71,19.79" data-pos="733"/>
   <circle cx="66.00" cy="20.54" r="0.23" data-pos="733"/>
   <circle cx="69.83" cy="22.04" r="0.23" data-pos="733"/>
-  <rect x="12.14" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="717"/>
-  <text x="13.55" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="717">A</text>
+  <rect x="12.14" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="717"/>
+  <text x="13.60" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="717">A</text>
   </g>
 </svg>

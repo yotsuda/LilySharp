@@ -102,13 +102,13 @@
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="135"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="135"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="135">= 120</text>
-  <rect x="11.90" y="16.72" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="325"/>
-  <text x="13.31" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="325">A</text>
-  <rect x="36.17" y="20.41" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="360"/>
-  <text x="37.60" y="22.76" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="360">B</text>
-  <rect x="53.16" y="16.99" width="12.82" height="3.31" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="395"/>
-  <text x="59.57" y="19.38" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="395">Ending1</text>
-  <rect x="75.15" y="16.99" width="12.82" height="3.31" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="437"/>
-  <text x="81.56" y="19.38" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="437">Ending2</text>
+  <rect x="11.90" y="16.72" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="325"/>
+  <text x="13.36" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="325">A</text>
+  <rect x="36.25" y="20.41" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="360"/>
+  <text x="37.63" y="22.76" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="360">B</text>
+  <rect x="53.32" y="16.99" width="12.49" height="3.31" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="395"/>
+  <text x="59.69" y="19.38" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="395">Ending1</text>
+  <rect x="75.26" y="16.99" width="12.60" height="3.31" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="437"/>
+  <text x="81.63" y="19.38" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="437">Ending2</text>
   </g>
 </svg>

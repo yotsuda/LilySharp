@@ -70,8 +70,8 @@
   <rect x="72.30" y="19.51" width="0.19" height="4.00" data-pos="879"/>
   <rect x="80.45" y="19.51" width="0.19" height="4.00" data-pos="888"/>
   <text class="music" x="8.84" y="15.75" font-size="4.00" data-pos="778"></text>
-  <rect x="11.90" y="15.92" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="752"/>
-  <text x="15.94" y="18.27" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="752">Main</text>
+  <rect x="11.90" y="15.92" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="752"/>
+  <text x="15.92" y="18.27" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="752">Main</text>
   <text x="39.88" y="15.94" font-size="2.20" font-style="italic" data-pos="810">To</text>
   <text class="music" x="43.72" y="15.16" font-size="4.00" data-pos="810"></text>
   <text x="50.46" y="27.01" font-size="2.20" font-style="italic" text-anchor="middle" data-pos="829">D.S. al Coda</text>

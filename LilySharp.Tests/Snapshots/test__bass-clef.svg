@@ -43,7 +43,7 @@
   <text class="music" x="14.91" y="22.54" font-size="3.56" data-pos="74"></text>
   <line x1="16.01" y1="22.38" x2="16.01" y2="19.87" stroke="#000000" stroke-width="0.116" data-pos="74"/>
   <text x="16.69" y="23.03" font-size="2.20" data-pos="74">= 120</text>
-  <rect x="13.76" y="16.66" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
-  <text x="17.80" y="19.02" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="184">Main</text>
+  <rect x="13.76" y="16.66" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="17.77" y="19.02" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="184">Main</text>
   </g>
 </svg>

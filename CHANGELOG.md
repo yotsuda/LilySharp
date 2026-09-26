@@ -8,6 +8,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A section label's frame stands the same distance off the text on all four sides.** The
+  frame's height wrapped the text's ink but its width wrapped the advance, so the side
+  margins also carried the letters' side bearings and read wider than the top and bottom
+  ones. Both now wrap the ink, and the text is centred by its ink. Rehearsal-mark boxes
+  follow the same rule. A deliberate departure from LilyPond, whose box takes a text's
+  width from the advance. 236 snapshots change (the frames, and what is spaced against
+  them); no book changes its number of systems.
+
 - **A chords row no longer drops "D.S. al Coda" under the system.** A jump text (and any
   below-staff mark) under a book with chord names hung the chord row's depth — about 5.4
   staff spaces — further below the bottom staff than LilyPond places it. The system's

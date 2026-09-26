@@ -24,7 +24,7 @@
   <text class="music" x="19.15" y="22.02" font-size="4.00" data-pos="1483"></text>
   <text class="music" x="19.15" y="18.52" font-size="4.00" data-pos="1487"></text>
   <rect x="25.21" y="17.02" width="0.19" height="4.00" data-pos="1494"/>
-  <rect x="11.90" y="12.82" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1452"/>
-  <text x="15.94" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1452">Main</text>
+  <rect x="11.90" y="12.82" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1452"/>
+  <text x="15.92" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1452">Main</text>
   </g>
 </svg>

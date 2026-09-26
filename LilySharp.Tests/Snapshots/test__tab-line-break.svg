@@ -180,7 +180,7 @@
   <line x1="95.06" y1="24.08" x2="95.06" y2="20.48" stroke="#000000" stroke-width="0.130"/>
   <line x1="98.92" y1="24.08" x2="98.92" y2="20.48" stroke="#000000" stroke-width="0.130"/>
   <text x="0.00" y="21.49" font-size="1.75" font-weight="bold" text-anchor="end">4</text>
-  <rect x="11.94" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1044"/>
-  <text x="13.35" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1044">A</text>
+  <rect x="11.94" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1044"/>
+  <text x="13.40" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1044">A</text>
   </g>
 </svg>

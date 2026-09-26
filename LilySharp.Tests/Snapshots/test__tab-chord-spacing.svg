@@ -64,7 +64,7 @@
   <line x1="8.59" y1="22.04" x2="31.91" y2="22.04" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="23.54" x2="31.91" y2="23.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="25.04" x2="31.91" y2="25.04" stroke="#000000" stroke-width="0.100"/>
-  <rect x="12.14" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="507"/>
-  <text x="13.55" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="507">A</text>
+  <rect x="12.14" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="507"/>
+  <text x="13.60" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="507">A</text>
   </g>
 </svg>

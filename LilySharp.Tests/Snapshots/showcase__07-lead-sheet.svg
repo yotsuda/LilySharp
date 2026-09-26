@@ -73,8 +73,8 @@
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="444"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="444"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="444">= 120</text>
-  <rect x="11.90" y="16.72" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="499"/>
-  <text x="13.31" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="499">A</text>
+  <rect x="11.90" y="16.72" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="499"/>
+  <text x="13.36" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="499">A</text>
   <line x1="51.73" y1="34.04" x2="52.08" y2="34.04" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

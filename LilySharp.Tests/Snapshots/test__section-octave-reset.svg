@@ -90,11 +90,11 @@
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="155"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="155"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="155">= 120</text>
-  <rect x="11.90" y="16.72" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="432"/>
-  <text x="13.31" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="432">A</text>
-  <rect x="38.30" y="18.25" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="471"/>
-  <text x="39.72" y="20.61" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="471">B</text>
-  <rect x="57.76" y="20.33" width="2.85" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="509"/>
-  <text x="59.19" y="22.72" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="509">C</text>
+  <rect x="11.90" y="16.72" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="432"/>
+  <text x="13.36" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="432">A</text>
+  <rect x="38.37" y="18.25" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="471"/>
+  <text x="39.75" y="20.61" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="471">B</text>
+  <rect x="57.89" y="20.33" width="2.60" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="509"/>
+  <text x="59.21" y="22.72" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="509">C</text>
   </g>
 </svg>

@@ -31,7 +31,7 @@
   <text class="music" x="25.69" y="11.79" font-size="4.00" data-pos="421"></text>
   <rect x="28.84" y="10.29" width="0.19" height="4.00" data-pos="422"/>
   <path d="M 16.92,12.79 C 18.00,13.32 19.85,12.90 20.59,11.94 C 19.87,12.98 18.02,13.41 16.92,12.79 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="382"/>
-  <rect x="11.90" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="364"/>
-  <text x="13.31" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="364">A</text>
+  <rect x="11.90" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="364"/>
+  <text x="13.36" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="364">A</text>
   </g>
 </svg>

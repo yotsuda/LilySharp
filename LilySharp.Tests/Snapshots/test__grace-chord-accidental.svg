@@ -32,7 +32,7 @@
   <text class="music" x="28.24" y="12.29" font-size="4.00" data-pos="457"></text>
   <rect x="32.63" y="10.29" width="0.19" height="4.00" data-pos="458"/>
   <path d="M 21.42,12.79 C 22.50,13.32 24.35,12.90 25.08,11.94 C 24.37,12.98 22.52,13.41 21.42,12.79 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="418"/>
-  <rect x="11.90" y="6.69" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="396"/>
-  <text x="13.31" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="396">A</text>
+  <rect x="11.90" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="396"/>
+  <text x="13.36" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="396">A</text>
   </g>
 </svg>

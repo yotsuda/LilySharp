@@ -68,12 +68,12 @@
   <rect x="68.15" y="18.99" width="0.19" height="4.00" data-pos="1718"/>
   <rect x="81.21" y="18.99" width="0.19" height="4.00" data-pos="1650"/>
   <rect x="94.28" y="18.99" width="0.19" height="4.00" data-pos="1669"/>
-  <rect x="11.90" y="15.39" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
-  <text x="13.31" y="17.78" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">A</text>
-  <rect x="40.70" y="15.43" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1675"/>
-  <text x="42.13" y="17.78" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1675">B</text>
-  <rect x="66.03" y="13.47" width="4.43" height="2.76" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
-  <text x="68.24" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">A2</text>
+  <rect x="11.90" y="15.39" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
+  <text x="13.36" y="17.78" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">A</text>
+  <rect x="40.78" y="15.43" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1675"/>
+  <text x="42.16" y="17.78" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1675">B</text>
+  <rect x="66.08" y="13.47" width="4.33" height="2.76" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
+  <text x="68.34" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">A2</text>
   <text x="17.37" y="18.14" font-size="2.20" font-style="italic" data-pos="1636">rit.</text>
   <line x1="20.48" y1="18.14" x2="29.94" y2="18.14" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="1636"/>
   <text x="69.62" y="18.14" font-size="2.20" font-style="italic" data-pos="1636">rit.</text>

@@ -54,7 +54,7 @@
   <line x1="17.24" y1="23.14" x2="24.81" y2="23.81" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="583"/>
   <line x1="17.24" y1="31.59" x2="24.81" y2="32.25" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="620"/>
   <line x1="17.24" y1="32.92" x2="24.81" y2="32.25" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="620"/>
-  <rect x="12.02" y="13.47" width="2.55" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="560"/>
-  <text x="13.29" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="560">S</text>
+  <rect x="12.02" y="13.47" width="2.32" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="560"/>
+  <text x="13.15" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="560">S</text>
   </g>
 </svg>

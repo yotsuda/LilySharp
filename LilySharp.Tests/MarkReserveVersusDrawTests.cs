@@ -323,6 +323,33 @@ public class MarkReserveVersusDrawTests
         Assert.InRange(glyphX - halfGlyph - textX, prefix - 0.02, prefix + 0.02);
     }
 
+    /// <summary>
+    /// A boxed label's frame stands the same distance off the string's ink on all four
+    /// sides, and the ink is centred in it. Until 2026-09-26 the width wrapped the ADVANCE
+    /// (LilyPond's X extent of a text stencil), so the side margins carried the side
+    /// bearings and read wider than the top and bottom ones (owner's decision; LILYSHARP-OWN).
+    /// </summary>
+    [Theory]
+    [InlineData("Bridge")]
+    [InlineData("A")]
+    [InlineData("Verse")]
+    public void LabelFrame_HasEqualMarginsAroundTheInk(string text)
+    {
+        var type = MusicMarkType.SectionLabel;
+        double margin = MusicMarkEngraver.LabelBoxMargin(Fonts, type, boxed: true);
+        var (left, right) = MusicMarkEngraver.LabelInkSpan(Fonts, type, text);
+        var (bottom, top) = MusicMarkEngraver.LabelInk(Fonts, type, text);
+
+        Assert.Equal(margin, MusicMarkEngraver.LabelBoxHalfWidth(Fonts, type, text, true) - (right - left) / 2, 6);
+        Assert.Equal(margin, MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, text, true) - (top - bottom) / 2, 6);
+
+        // Drawn middle-anchored at anchor + shift, the ink's centre lands on the anchor.
+        double advance = Fonts.Advance(text, MusicMarkEngraver.LabelEm(Fonts, type),
+            TextRole.Mark, MusicMarkEngraver.LabelStyle(Fonts));
+        double shift = MusicMarkEngraver.LabelTextShift(Fonts, type, text);
+        Assert.Equal(0.0, shift - advance / 2 + (left + right) / 2, 6);
+    }
+
     // ---- dynamics and text scripts: the same claim, their own homes ----
 
     [Theory]

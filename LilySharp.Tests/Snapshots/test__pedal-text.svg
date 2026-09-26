@@ -36,7 +36,7 @@
   <text class="music" x="21.53" y="24.97" font-size="4.00" data-pos="330"></text>
   <text class="music" x="24.72" y="24.97" font-size="4.00" data-pos="330"></text>
   <text class="music" x="35.57" y="23.83" font-size="4.00" data-pos="349"></text>
-  <rect x="12.02" y="12.82" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="302"/>
-  <text x="16.06" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="302">Main</text>
+  <rect x="12.02" y="12.82" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="302"/>
+  <text x="16.03" y="15.17" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="302">Main</text>
   </g>
 </svg>

@@ -151,6 +151,15 @@ public sealed class ScoreTextMetrics
         => TextFontMetrics.Advance(text, fontSize, Face(role, style));
 
     /// <summary>
+    /// Horizontal INK span of <paramref name="text"/> about its pen origin (the advance when
+    /// the face lacks a glyph). ⚠️ Not a LilyPond X extent — see
+    /// <see cref="TextFontMetrics.InkSpanOrAdvance"/>.
+    /// </summary>
+    public (double Left, double Right) InkSpan(string text, double fontSize, TextRole role,
+        FontStyle style = FontStyle.Regular)
+        => TextFontMetrics.InkSpanOrAdvance(text, fontSize, Face(role, style));
+
+    /// <summary>
     /// INK extent of <paramref name="text"/> relative to its baseline, up-positive.
     /// </summary>
     public (double Bottom, double Top) Ink(string text, double fontSize, TextRole role,

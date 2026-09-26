@@ -64,8 +64,8 @@
   <text x="65.02" y="27.47" font-size="2.47" text-anchor="middle" data-pos="696">dy</text>
   <text x="69.23" y="27.47" font-size="2.47" text-anchor="middle" data-pos="699">sing</text>
   <text x="77.89" y="27.47" font-size="2.47" text-anchor="middle" data-pos="706">home</text>
-  <rect x="11.90" y="12.82" width="11.29" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="436"/>
-  <text x="17.55" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="436">Chorus</text>
+  <rect x="11.90" y="12.82" width="11.03" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="436"/>
+  <text x="17.43" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="436">Chorus</text>
   <line x1="35.94" y1="24.19" x2="36.60" y2="24.19" stroke="#000000" stroke-width="0.130"/>
   <line x1="51.36" y1="26.99" x2="52.02" y2="26.99" stroke="#000000" stroke-width="0.130"/>
   <line x1="61.96" y1="26.99" x2="62.62" y2="26.99" stroke="#000000" stroke-width="0.130"/>

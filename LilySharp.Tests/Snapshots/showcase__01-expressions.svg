@@ -116,13 +116,13 @@
   <line x1="30.61" y1="30.22" x2="37.09" y2="30.88" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="302"/>
   <line x1="52.34" y1="33.01" x2="57.96" y2="33.68" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
   <line x1="52.34" y1="34.34" x2="57.96" y2="33.68" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="432"/>
-  <rect x="61.07" y="20.41" width="2.85" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="625"/>
-  <text x="62.50" y="22.76" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="625">B</text>
+  <rect x="61.15" y="20.41" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="625"/>
+  <text x="62.53" y="22.76" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="625">B</text>
   <text class="music" x="16.07" y="22.60" font-size="3.56" data-pos="156"></text>
   <line x1="17.17" y1="22.43" x2="17.17" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="156"/>
   <text x="17.85" y="23.08" font-size="2.20" data-pos="156">= 120</text>
-  <rect x="14.92" y="16.72" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="778"/>
-  <text x="18.96" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="778">Main</text>
+  <rect x="14.92" y="16.72" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="778"/>
+  <text x="18.94" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="778">Main</text>
   <text x="66.10" y="22.95" font-size="2.20" font-style="italic" data-pos="642">rit.</text>
   <line x1="69.21" y1="22.95" x2="74.21" y2="22.95" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="642"/>
   <text x="81.67" y="22.95" font-size="2.20" font-style="italic" data-pos="728">accel.</text>

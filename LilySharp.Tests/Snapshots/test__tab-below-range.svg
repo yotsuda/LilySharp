@@ -187,7 +187,7 @@
   <line x1="49.81" y1="39.91" x2="49.81" y2="19.06" stroke="#000000" stroke-width="0.130"/>
   <line x1="52.08" y1="42.91" x2="52.08" y2="19.06" stroke="#000000" stroke-width="0.130"/>
   <line x1="54.35" y1="45.91" x2="54.35" y2="19.06" stroke="#000000" stroke-width="0.130"/>
-  <rect x="12.14" y="13.47" width="2.82" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="491"/>
-  <text x="13.55" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="491">A</text>
+  <rect x="12.14" y="13.47" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="491"/>
+  <text x="13.60" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="491">A</text>
   </g>
 </svg>

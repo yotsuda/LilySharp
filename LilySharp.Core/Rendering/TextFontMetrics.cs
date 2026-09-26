@@ -713,17 +713,32 @@ public static class TextFontMetrics
     private static readonly ConcurrentDictionary<TextFace, (double Ascender, double Descender)>
         Extents = new();
 
-    // (There is no horizontal-ink accessor, and that absence is deliberate. An `InkX` lived
-    // here for one day, 2026-08-02, put in to serve the ottava's
-    // `text_size = text.extent (X_AXIS)[RIGHT] + 0.3` — but a text stencil's box takes X
+    // ⚠️ NOT A TEXT STENCIL'S X EXTENT. That is the ADVANCE: a text stencil's box takes X
     // from Pango's LOGICAL rectangle and only Y from the ink one
-    // (LILYPOND-REF: lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil),
-    // so what that port wanted was the ADVANCE.
-    // Ledger text.width.* measures the same conclusion from the outside: LilyPond's widths
-    // are whole 1200-dpi pixels, and the ottava's number is a whole one only as an advance.
-    // Nothing else asked for horizontal ink — the outline walk reads the path itself
-    // (TextOutlineSkylines) — so the accessor came back out rather than waiting to be
-    // misread a second time.)
+    // (LILYPOND-REF: lily/pango-font.cc:351-362 Pango_font::pango_item_string_stencil) —
+    // an `InkX` lived here for one day, 2026-08-02, and was misread as the ottava's
+    // `text.extent (X_AXIS)`, which is why it came back out. Ledger text.width.* measures
+    // the same conclusion from the outside: LilyPond's widths are whole 1200-dpi pixels.
+    // This accessor is back (2026-09-26) for ONE Lily#-own reader that wants the ink on
+    // purpose: the boxed label's frame, whose four margins the owner asked to be equal
+    // (MusicMarkEngraver.LabelBoxHalfWidth). Anything porting a LilyPond X extent reads
+    // Advance.
+
+    /// <summary>
+    /// The horizontal INK span of <paramref name="text"/> about its pen origin, in staff
+    /// spaces — or <c>(0, Advance)</c> when the face cannot spell the whole string, whose
+    /// fallback glyphs the layout never measures.
+    /// </summary>
+    public static (double Left, double Right) InkSpanOrAdvance(string text, double fontSize, TextFace face)
+    {
+        if (string.IsNullOrEmpty(text) || HasMissingGlyph(text, fontSize, face))
+            return (0, Advance(text ?? "", fontSize, face));
+        var path = OutlinePath(text, face);
+        if (path.IsEmpty)
+            return (0, Advance(text, fontSize, face));
+        var b = path.Bounds;
+        return (b.Left / 1000.0 * fontSize, b.Right / 1000.0 * fontSize);
+    }
 
     /// <summary>Per-em INK of one string, cached.</summary>
     /// <remarks>

@@ -53,7 +53,7 @@
   <text class="music" x="22.22" y="23.96" font-size="4.00" data-pos="486"></text>
   <text class="music" x="23.22" y="23.96" font-size="4.00" data-pos="486"></text>
   <text class="music" x="24.22" y="23.96" font-size="4.00" data-pos="486"></text>
-  <rect x="12.02" y="13.47" width="8.08" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="434"/>
-  <text x="16.06" y="15.82" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="434">Main</text>
+  <rect x="12.02" y="13.47" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="434"/>
+  <text x="16.03" y="15.82" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="434">Main</text>
   </g>
 </svg>
