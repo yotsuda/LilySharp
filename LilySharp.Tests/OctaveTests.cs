@@ -153,6 +153,52 @@ score main ""test"" {
         Assert.Contains("\\relative c' {", ly);
     }
 
+    // A top-level `clef` is the clef of every part that names none (GRAMMAR §2.1) — on the
+    // one-staff path, which always read it, and on the multi-staff path, which fell to treble
+    // (Lab sessions/p648 clef). A part's own clef still wins. The twin writes it too: it never
+    // read the top-level word, so seven audit books with `clef bass` had a treble twin.
+    [Theory]
+    [InlineData("score main { staff melody }")]
+    [InlineData("score main { staff other  staff melody }")]
+    [InlineData("score main { grandStaff { staff other  staff melody } }")]
+    public void ATopLevelClef_IsTheClefOfAPartThatNamesNone(string score)
+    {
+        var source = "clef bass\npart melody\npart other\npart own { clef treble }\n"
+                     + "section A {\n  melody { c1 }\n  other { c1 }\n  own { c1 }\n}\nform main { A }\n"
+                     + score + "\n";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var multi = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        foreach (var staff in multi.StaffGroups.SelectMany(g => g.Staves))
+        {
+            Assert.Equal(ClefType.Bass, staff.Clef);
+            var first = staff.Voices[0].Measures.SelectMany(m => m.Items.OfType<NoteItem>()).First();
+            Assert.Equal(6, first.StaffPosition); // C4 drawn in bass clef
+        }
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Contains("\\clef \"bass\" \\melody", ly);
+    }
+
+    [Fact]
+    public void APartsOwnClef_WinsOverTheTopLevelOne()
+    {
+        var source = "clef bass\npart melody\npart own { clef treble }\n"
+                     + "section A {\n  melody { c1 }\n  own { c1 }\n}\nform main { A }\n"
+                     + "score main { staff melody  staff own }\n";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var multi = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var staves = multi.StaffGroups.SelectMany(g => g.Staves).ToList();
+        Assert.Equal(ClefType.Bass, staves[0].Clef);
+        Assert.Equal(ClefType.Treble, staves[1].Clef);
+
+        string ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
+        Assert.Contains("\\clef \"treble\" \\own", ly);
+    }
+
     [Fact]
     public void TrebleClef_StartsAtOctave4()
     {

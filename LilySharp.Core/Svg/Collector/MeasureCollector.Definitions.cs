@@ -199,6 +199,10 @@ public sealed partial class MeasureCollector
     private bool _fileTransposeDefaultSeen;
     private bool _fileIsConcert;
     private bool _fileIsConcertSeen;
+    // The top-level `clef` (null = none): the clef of every part that names neither a clef
+    // nor an instrument, on every path — the multi-staff one used to fall to treble.
+    private string? _fileClef;
+    private int _fileClefPosition;
 
     // Every section, phrase and variable declaration the definitions walk met, in walk
     // order — the node sets SectionBarCounts.CanonicalByNameSyntactic and PhraseGreens
@@ -222,6 +226,8 @@ public sealed partial class MeasureCollector
         _fileTransposeDefaultSeen = false;
         _fileIsConcert = false;
         _fileIsConcertSeen = false;
+        _fileClef = null;
+        _fileClefPosition = 0;
         _sectionDeclarationsInOrder.Clear();
         _phraseDeclarationsInOrder.Clear();
         _variableDeclarationsInOrder.Clear();
@@ -341,6 +347,8 @@ public sealed partial class MeasureCollector
                     {
                         _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
                         _meta.ClefPosition = clef.ClefName.Span.Start;
+                        _fileClef = _meta.Clef;
+                        _fileClefPosition = _meta.ClefPosition;
                     }
                     break;
 

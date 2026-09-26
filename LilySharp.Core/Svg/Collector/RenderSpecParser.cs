@@ -976,21 +976,7 @@ public static class RenderSpecParser
                     var valueToken = prop.GetChild(2) as SyntaxTokenNode;
                     if (valueToken == null) continue;
 
-                    var value = valueToken.Text.ToLowerInvariant();
-                    return value switch
-                    {
-                        "bass" => ClefType.Bass,
-                        "alto" => ClefType.Alto,
-                        "tenor" => ClefType.Tenor,
-                        "treble_8" => ClefType.Treble8Below,
-                        "treble^8" => ClefType.Treble8Above,
-                        "soprano" => ClefType.Soprano,
-                        "mezzosoprano" => ClefType.MezzoSoprano,
-                        "baritone" => ClefType.Baritone,
-                        "bass_8" => ClefType.Bass8Below,
-                        "percussion" => ClefType.Percussion,
-                        _ => ClefType.Treble
-                    };
+                    return ClefFromWord(valueToken.Text);
                 }
             }
 
@@ -1015,8 +1001,32 @@ public static class RenderSpecParser
             }
         }
 
-        return null;
+        // Neither: the file's top-level `clef`, which is ALWAYS the file default
+        // (docs/GRAMMAR.md §2.1). Returning null here drew a part without a clef of its own
+        // in treble on every multi-staff score while the single-staff path read the file's
+        // (Lab sessions/p648 clef: `clef bass` + two parts → two treble staves).
+        // The last one, as MeasureCollector.CollectDefinitions reads them.
+        ClefType? fileDefault = null;
+        foreach (var child in root.ChildNodes())
+            if (child is ClefDeclarationSyntax fileClef)
+                fileDefault = ClefFromWord(fileClef.ClefName.Text);
+        return fileDefault;
     }
+
+    private static ClefType ClefFromWord(string word) => word.ToLowerInvariant() switch
+    {
+        "bass" => ClefType.Bass,
+        "alto" => ClefType.Alto,
+        "tenor" => ClefType.Tenor,
+        "treble_8" => ClefType.Treble8Below,
+        "treble^8" => ClefType.Treble8Above,
+        "soprano" => ClefType.Soprano,
+        "mezzosoprano" => ClefType.MezzoSoprano,
+        "baritone" => ClefType.Baritone,
+        "bass_8" => ClefType.Bass8Below,
+        "percussion" => ClefType.Percussion,
+        _ => ClefType.Treble
+    };
 
     /// <summary>
     /// The inline display name of the part named <paramref name="partName"/>

@@ -1562,8 +1562,10 @@ public sealed partial class MeasureCollector
             // this rendering's clef, the one the page draws (pitches do not depend on it).
             if (renderSpec.WrittenClefOf(voiceName) is { } writtenClef)
                 partClef = InstrumentDefaults.ClefWord(writtenClef);
-            _meta.Clef = partClef ?? "treble";
-            _meta.ClefPosition = partClefPos;
+            // A part without a clef of its own reads the file's top-level one (GRAMMAR §2.1),
+            // as the single-staff path does — this used to fall straight to treble.
+            _meta.Clef = partClef ?? _fileClef ?? "treble";
+            _meta.ClefPosition = partClef != null ? partClefPos : _fileClefPosition;
             // …and remember it per VOICE: the staff built for this part carries its own
             // clef's offset, so a multi-staff score's line-start clefs each click through
             // to the `clef` that set them (stamped after ToStaffGroups below).
@@ -2430,7 +2432,7 @@ public sealed partial class MeasureCollector
         var spec = renderSpec with
         {
             Items = ImmutableArray.Create<RenderItemSpec>(
-                new SingleStaffSpec(new StaffSpec(ParseClefType(partClef ?? "treble"), partName))),
+                new SingleStaffSpec(new StaffSpec(ParseClefType(partClef ?? _fileClef ?? "treble"), partName))),
         };
         try
         {

@@ -443,6 +443,12 @@ public sealed class LilyPondExporter
         _homeKeySharps = ScoreHomeKey.Sharps(root);
         _homeKeyNode = ScoreHomeKey.Declaration(root);
 
+        // The file's top-level `clef` — the clef of every part that names none (PartClefWord).
+        _fileClef = null;
+        foreach (var child in root.ChildNodes())
+            if (child is ClefDeclarationSyntax fileClef)
+                _fileClef = fileClef.ClefName.Text;
+
         // …and the meter the same boundary reverts to, read the same way.
         (_homeTimeBeats, _homeTimeBeatType) = ScoreHomeMeter.Read(root);
         _homeTimeNode = ScoreHomeMeter.Declaration(root);
@@ -6238,15 +6244,25 @@ public sealed class LilyPondExporter
     /// looks right. Until this was read, ten fixtures declaring <c>instrument bass</c> and no
     /// <c>clef</c> exported a treble twin against a bass page (docs/HANDOFF.md gate ⑹).
     /// </para>
+    /// <para>
+    /// Neither → the file's top-level <c>clef</c> (<see cref="_fileClef"/>), the page's last
+    /// step too. Until 2026-09-27 the twin never read it: seven audit books that declare
+    /// <c>clef bass</c> at the top exported a treble twin (Lab sessions/p648).
+    /// </para>
     /// </remarks>
-    private static string? PartClefWord(PartDeclarationSyntax? part)
+    private string? PartClefWord(PartDeclarationSyntax? part)
     {
-        if (part == null) return null;
-        if (PartProperty(part, "clef") is string clef) return clef;
-        return InstrumentPresetOf(part) is string preset
-            ? InstrumentDefaults.ClefWord(InstrumentDefaults.GetDefaults(preset).Clef)
-            : null;
+        if (part != null)
+        {
+            if (PartProperty(part, "clef") is string clef) return clef;
+            if (InstrumentPresetOf(part) is string preset)
+                return InstrumentDefaults.ClefWord(InstrumentDefaults.GetDefaults(preset).Clef);
+        }
+        return _fileClef;
     }
+
+    // The file's top-level `clef` word (null = none), read once per export.
+    private string? _fileClef;
 
     /// <summary>
     /// The part's SOUNDING transposition in semitones, excluding the octave the clef itself
