@@ -129,6 +129,25 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第649セッションの経緯
+
+### 1.1 第649セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第648 の後・ユーザー「続けて」）。★ `-Start p649`（HEAD `f4141934`・未 push 101・full **9399 / 0 / 2 / 9401**＝引継ぎと一致）。
+天井のため §2 S の S0（計器の本文）を ARCHIVE へ畳んだ。§2 S の残り 437 対から。すべて LP のソースで名指して移植（bow の差 2,768 → 2,549）:
+★ ⑴ `034a090c` 行で割れたタイの後半は**行頭の `.|:` の右端**から（`SystemLayout.LineStartBarRight`＝renderer と同じ break-align 表・ABC B3 で 2.94 左）。
+★ ⑵ `3feb4009` 行頭 reminder の臨時記号をタイの後半の outline が避ける（`BuildTieColumn(atLineStart)`・真夏の夜の夢 1.03）。
+★ ⑶ `45e2fbc2` 行で割れた**スラー**の端もタイと同じ bound（`BrokenPieceStartX／EndX` に共通化・slur-scoring.cc:594-598・0.19＝細い小節線）。
+★ ⑷ `8f4af3ff` スラー端の「内側に梁」を `BeamId` で読む（自動の梁は `[` `]` を持たない＝最後の音から出るスラーが梁に乗っていた・1.55）＋
+**臨時記号をスラーの extra object に**（slur-engraver.cc:73・accidental-collision 3・idx は flat −1／sharp 0.5dir／natural −dir）。27 冊良化・悪化 0。
+★ ⑸ `fe649bac` 行頭の bound は**その staff 自身の**前置き（`SystemLayout.LineStartStaffRights`＝`LineStartColumn.StaffInkRight`・staff_extent は staff ごと）＝TAB clef の幅に引かれて 0.1166 右（Kokomo）。
+★ ⑹ `3c8752c2` 行で割れたスラーの断片に `avoid_staff_line` を掛けない（LP は両端に staff が要る＝割れた端は head が無い）＝Yesterday Once More 41→31。
+★ ⑺ 行頭で割れた**スラー**の bound は空の KeySignature の位置（clef の後 +0.5）も数える（robust_relative_extent・break-alignment-interface.cc:248-252）＝`LineStartSlurRights`。タイは staff_extent で空を数えない＝別の配列。
+⚠️ **診断の型**: LP は `\paper { debug-slur-scoring = ##t }` を双子に足して `-dbackend=svg` の `<text>` に winner の idx と TOTAL。Lily# 側は一時的に `Solve()` の後で best の idx・Demerits・Curve を書き出す（commit しない）＝⑹ は「同じ idx 0・同じ高さなのに曲線が違う」で後処理を特定した。
+網: `BrokenTieLineStartTests`・`TiedAccidentalTests` +1・`SlurEdgeBeamAndAccidentalTests`（毒はすべて赤）。頁の掃き 4・6・14・33 冊。
+⚠️ 計器の比較は `sessions/p649/report-after-*.tsv` を前後に残す（本ごとの悪化を数える＝⑷ で 0 を確認した方法）。
+★ **終了**: full **9405 / 0 / 2 / 9407**・bow の差 **2,548**（五線・非 grace 334 前後）。残りの頭は spacing 起因（写像不能 68・短いタイの x3）と grace／tab（宣言済み）。push はユーザー。
+
 ## 以下は第648セッションの経緯
 
 ### 1.1 第648セッション（2026-09-27・YT-DELL2）

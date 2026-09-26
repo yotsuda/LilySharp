@@ -154,31 +154,23 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第651セッション（2026-09-27・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p651`（HEAD `70c70b9f`・未 push 114・full **9407 / 0 / 2 / 9409**）。§2 S3 の「説明の無い残り 3 件」から。
+★ ⑴ `23d81ced` スラーの pass の梁の表を**声部つき**の鍵に（`(voice, measure, item)`）。`(measure, item)` だけでは同じ staff の声部をまたいで曖昧で、先に入った梁が勝った＝dot-cross-voice-spacing の voice 1 の `g''2` が voice 2 の梁つき `e8`（同じ item 0）を自分の符尾として読み、上向きの符尾の先が下の梁に→スラーの Y が符尾の範囲の外→符尾への付着（slur-scoring.cc:742-752）を逃して 0.365 左。bow の差 2,535 → 2,533（本の原本 Untitled-4 と 2 対・悪化 0）。網 `SlurStemAttachAcrossVoicesTests`。
+★ ⑵ `bee40494` part combiner が向きを変えた声部の梁の `PureBeamedStemTip` を焼き直す（`PartCombiner.BuildVoices`→`RebakeRouted`＝`voice { }` の `ResolveVoiceStemDirections` と同じ手順。members はその context の item だけ＝第 1 声部は両 part の item が混ざり梁 id が衝突しうる）。part 2 の `f'8[ f~]` が上向きの tip のまま下向きの符尾→タイの outline の符尾が頭の上→右端が次の符尾で止まらず 0.787 右。2,533 → 2,532・combinedStaff の 25 冊を前後で描いて変わったのはこの 1 枚。網 `CombinedStaffBeamedTieTests`。
+⚠️ ⑶ は**設計級＝ユーザー判断待ち**: 小節途中から始まる `voice { }` の前（同じ小節）の voice 1 の item も強制される。原因は `VoiceDefaults.GetDefaultStemUpAt`／`IsPolyphonicAt` が**小節粒度**で、読み手が 14 か所（梁・符頭・skyline・ばね・強弱・トリル・連符・タイ・スラー・`ResolveVoiceStemDirections` の焼き込み…）。後ろ側（span の終わりの後）は焼き込みだけが切っている。**先頭の spacer では span の始まりを読めない**（`mult-probe`・`phrslurtup`・`beam-over-stem` 3 小節目はユーザーが書いた `s1` の声部＝LP は小節全体を強制）＝`MeasureCollector.CollectMeasuresFromNode` の padding（:2597）に印を付けて読む必要がある。射程（一時計器・Lab `sessions/p651/span-reach.txt`・963 冊）: 途中開始の前に voice 1 の音がある小節は SUMMER（1 小節 8 音）・voiceissue・beam-skip ×2・dots・beam-over-stem の 1〜2 小節目。「後ろ」は 0。
+⚠️ 計器の罠: bow の sweep の Lily# 側は `dotnet test --no-build` ＝**`LilySharp.Tests` を build しないと古い dll を測る**（Cli だけ build して「変わらない」を 1 度見た）。
+★ **終了**: full **9409 / 0 / 2 / 9411**・bow の差 **2,532**。push はユーザー。
+
+## 以下は第650セッションの経緯
+
 ### 1.1 第650セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（第649 の後・ユーザー「続けて」）。★ `-Start p650`（HEAD `d3b89963`・未 push 110・full **9405 / 0 / 2 / 9407**＝引継ぎと一致）。§2 S の残りから。
 ★ ⑴ `ef68945f` 声部がスラー／タイの向きを決めるのは**その小節が多声のときだけ**（`VoiceScan.SpanCurvesUp` が part 全体の `voiceCount > 1` を見ていた＝grammar-tour の 13-15 小節が上に反転・7→1）。
 残り: 小節の途中から始まる `voice { }` の前に始まるスラーはまだ強制される（`VoiceColumn` が開示済みの小節粒度＝SUMMER 最終小節）。
 ⚠️ **計器の罠: ユーザーがコーパスを編集中**（Sweet Child Of Mine などの .lys が第647 以降に変わった）＝`-SkipLp` の比較は**古い双子**と新しい Lily# を比べる。本ごとの悪化を見たら、その本だけ LP ごと取り直して確かめる（第650 で全体を取り直した＝`sessions/p650/report-fresh.tsv`・差 2,535）。
-
-## 以下は第649セッションの経緯
-
-### 1.1 第649セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（第648 の後・ユーザー「続けて」）。★ `-Start p649`（HEAD `f4141934`・未 push 101・full **9399 / 0 / 2 / 9401**＝引継ぎと一致）。
-天井のため §2 S の S0（計器の本文）を ARCHIVE へ畳んだ。§2 S の残り 437 対から。すべて LP のソースで名指して移植（bow の差 2,768 → 2,549）:
-★ ⑴ `034a090c` 行で割れたタイの後半は**行頭の `.|:` の右端**から（`SystemLayout.LineStartBarRight`＝renderer と同じ break-align 表・ABC B3 で 2.94 左）。
-★ ⑵ `3feb4009` 行頭 reminder の臨時記号をタイの後半の outline が避ける（`BuildTieColumn(atLineStart)`・真夏の夜の夢 1.03）。
-★ ⑶ `45e2fbc2` 行で割れた**スラー**の端もタイと同じ bound（`BrokenPieceStartX／EndX` に共通化・slur-scoring.cc:594-598・0.19＝細い小節線）。
-★ ⑷ `8f4af3ff` スラー端の「内側に梁」を `BeamId` で読む（自動の梁は `[` `]` を持たない＝最後の音から出るスラーが梁に乗っていた・1.55）＋
-**臨時記号をスラーの extra object に**（slur-engraver.cc:73・accidental-collision 3・idx は flat −1／sharp 0.5dir／natural −dir）。27 冊良化・悪化 0。
-★ ⑸ `fe649bac` 行頭の bound は**その staff 自身の**前置き（`SystemLayout.LineStartStaffRights`＝`LineStartColumn.StaffInkRight`・staff_extent は staff ごと）＝TAB clef の幅に引かれて 0.1166 右（Kokomo）。
-★ ⑹ `3c8752c2` 行で割れたスラーの断片に `avoid_staff_line` を掛けない（LP は両端に staff が要る＝割れた端は head が無い）＝Yesterday Once More 41→31。
-★ ⑺ 行頭で割れた**スラー**の bound は空の KeySignature の位置（clef の後 +0.5）も数える（robust_relative_extent・break-alignment-interface.cc:248-252）＝`LineStartSlurRights`。タイは staff_extent で空を数えない＝別の配列。
-⚠️ **診断の型**: LP は `\paper { debug-slur-scoring = ##t }` を双子に足して `-dbackend=svg` の `<text>` に winner の idx と TOTAL。Lily# 側は一時的に `Solve()` の後で best の idx・Demerits・Curve を書き出す（commit しない）＝⑹ は「同じ idx 0・同じ高さなのに曲線が違う」で後処理を特定した。
-網: `BrokenTieLineStartTests`・`TiedAccidentalTests` +1・`SlurEdgeBeamAndAccidentalTests`（毒はすべて赤）。頁の掃き 4・6・14・33 冊。
-⚠️ 計器の比較は `sessions/p649/report-after-*.tsv` を前後に残す（本ごとの悪化を数える＝⑷ で 0 を確認した方法）。
-★ **終了**: full **9405 / 0 / 2 / 9407**・bow の差 **2,548**（五線・非 grace 334 前後）。残りの頭は spacing 起因（写像不能 68・短いタイの x3）と grace／tab（宣言済み）。push はユーザー。
 
 ## 2. 開いている作業
 
@@ -934,7 +926,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **S3. 宣言済みの逸脱の棚卸し** — ✅ **第650 が作った**（Lab `sessions/p650/s3-inventory.md`＝残差の族→宣言の対応表・未観測の宣言・ユーザー決定・APPROXIMATIONS.md が拾わない印）。
   fresh 2,535 対の内訳: grace スラー約 1,100（`GraceNotes.cs` の手の定数＝近似）・grace の bow 欠落（`VoiceScan` の足場＝U8）・tab スラー約 550（F9）・tab タイ約 320（LILYSHARP-OWN）・
   中央線タイの反転 11（LP の同点＝移植不能）・spacing 起因約 460。**説明の無い残り 3 件**: ⑴ 二声の `\voiceOne` 半音符から出るスラーの始点 0.365（dot-cross-voice-spacing）
-  ⑵ part combiner のタイ終点 0.787（pcglobal-probe）⑶ 小節途中から始まる `voice { }` の前のスラーの向き（SUMMER 最終小節）。
+  ⑵ ✅ part combiner のタイ終点 0.787（pcglobal-probe）＝第651 `bee40494` ⑶ 小節途中から始まる `voice { }` の前のスラーの向き（SUMMER 最終小節）＝**設計級・ユーザー判断待ち**（§1.1 第651）。⑴ ✅ ＝第651 `23d81ced`。
 - **S4. 完了条件** — S1 の全冊と実コーパスで、対になった bow が全部 ±0.01 以内か、S3 の一覧の
   どれかで説明される。道具は Lab に残し、回帰用に合成コーパスを LilySharp 側の網へ移すか判断する。
 - **S5. その後（独自の改善・ユーザー判断が先）** — M20 型（線の上に乗る短い行末タイ）など。S4 の後に計画。
