@@ -77,6 +77,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 > ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。 ⇒ ★★★★ **第588（2026-09-25・ユーザー決定「1」）: 忠実度の項目は尽きた（R7〜R11 閉じ・T7 は F9／tab 連桁／計器／僅差・台帳の非ゼロは宣言済みか書体の差）＝perf に移る**。
 
+> ★★★★ **第647（2026-09-26・ユーザー決定）: スラーとタイの LP 忠実度を先に閉じる＝§2 S**。S0（本全体の
+> bow の双子比較の計器）→ S1（状況の行列）→ S2（族ごとに直す）→ S3（宣言済み逸脱の棚卸し）→ S4 完了。
+> **独自の改善（S5）は S4 まで提案しない。**
+
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642 が画像で確認）
 - ✅ **T7 の staff＋tab の wish の merge は第576 が移植した**（§1.1 第576 ⑵）＝双子基準で一致 413 → 419（第582 で 422／459＝Universe ＋ ABC に増えた 2 score・第583 で 423）。**残り（双子と段割れが違う 22 score）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly・everybody goes・全力少年・星になれたら…）＝**第583 が F9 の帰結と確定**（everybody goes の 4→2,2 は LP も `TabNoteHead.font-size = 2` で 2,2 に割る・Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）＝**双子の既定の数字と比べる限り残る差**／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（§1.1 第587 ⑵・LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒤ ✅ **That's The Way の tab score は第569 のユーザー決定の帰結**（§1.1 第587 ⑴）／⒡ **小節の合計が合わない score（Disco Inferno・More Than A Woman・Honesty…＝上の 22 の外）は計器**（LP の小節番号の数え方）／⒢ ✅ **奏 の 1 段目の力は第584 が閉じた**（楽器名の indent を段の DP が値付けしていなかった＝§1.1 第584）／⒝ ✅ **Universe は第582 が閉じた**（♮ が下向きの符尾を避ける＝§1.1 第582）／⒠ ✅ **`set_column_rods` の届く rod は第580 が移植した**（臨時記号の列から同じ声部の 2〜4 列前へ・掃き 942 冊で効いた本 0＝安全網。小節をまたぐ届きと他の声部への届きは未移植）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。⚠️ 小節線へのばねの残差 −0.020（staff＋tab・`TabSpacingWishTests` が ±0.03 で持つ）と、和音の `first_head` の近似（最も桁の多い数字）は未解明のまま
@@ -907,6 +911,47 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **U14. ✅ 閉じた（第568・ユーザー報告 2026-09-24「L28 の @arpeggio が小節線と重なっている」）＝wiggle は*列の左端の ink*で、列の左 reach も置き場所もそれを知らなかった**。LP: 小節線→列の最小は `Paper_column::minimum_distance`（paper-column.cc:145-164）が**右列の CONDITIONAL skyline を merge** する（arpeggio は paper-column-engraver.cc:246-261 がそこへ回す）／`Accidental_engraver::make_standard_accidental`（accidental-engraver.cc:298-307）が**臨時記号を arpeggio の support に足す**。直し＝`SpacingRules.ChordSupportLeftReach`（和音自身の左 ink を 1 か所に・3 軒が読む）＋ `CalculateLeftExtent` がそこから `ArpeggioEngraver.ReachPastSupport` だけ伸びる ＋ 最左の箱は arpeggio の既定 0.1。台帳 `arpeggio.x.barline-to-wiggle`（ABL）と `arpeggio.x.right-edge-to-accidental`（AAC）が **−0.900000／−1.450000 → 両方 0**<!-- ledger: arpeggio.x.barline-to-wiggle = 0 --><!-- ledger: arpeggio.x.right-edge-to-accidental = 0 -->。網 `ArpeggioSpacingTests` 6 本。snapshot 2 枚。**実コーパス 231 冊に `@arpeggio` は 0 冊**＝射程は fixture と showcase だけ
 
 - **U15. ✅ 閉じた（第568・ユーザー報告 2026-09-24「B section mark が L22 の grace と重なっている」）＝grace が*どの vertical skyline にも居なかった***。LP に Grace context は無く（`\name Grace` 0 件）、grace の grob は普通の Voice のもの＝`inside_staff_skylines`（axis-group-interface.cc:914-935）に入って mover が避ける。直し＝`SkylineBuilder` が grace 時間の item を**普通の seed に通す**（サイズは `GrobFontSize` に訊く・**旗は輪郭**・梁の run は quant 済みの梁と符尾も）、X は `GraceNoteEngraver.RunPlacement` を切り出して 1 か所に。台帳 `mark.over-grace.staff-to-baseline`（MGF/MGN）と `staff.staff.grace-over-notes`（GCL/GCN＝同じ profile を横から読む）が **−2.000000 → 0** ほか全部 exact<!-- ledger: mark.over-grace.staff-to-baseline = 0 --><!-- ledger: staff.staff.grace-over-notes = 0 -->。網 `GraceInsideStaffSkylineTests` 2 本。snapshot 3 枚。⚠️ **seed していない残り 2 つ**＝grace の**付点**（X は `DotColumn.ReservedForGrace`）と **cue の縮小列**＝どちらもコードに departs-from／observed-by つきで名指し・観測者 0
+
+### S. スラーとタイの LP 忠実度（2026-09-26・第647 起票・ユーザー決定）← **新ワークストリーム**
+
+> ★★★ **なぜ在るか（ユーザー決定 2026-09-26）**: 「まず先に、すべてのスラーとタイが LP 忠実になって
+> いることを確認したい。逸脱が過ぎると、意図しない逸脱なのかそうでないのか、訳がわからなくなる。
+> さまざまな状況でさまざまなスラーやタイを描いて、LP 忠実度を可能な限り向上させる。そのあとで独自の
+> 改善を計画できるようになる。」＝**独自の改善（下の S5）はこの族が閉じるまで提案しない。**
+> 起点は ABC.lys（Lab）の行末タイ 2 つ: bar 63 は行末の bound が小節線の*右*端だった欠陥（`5343631e`
+> が閉じた）、M20 は LP と一致（行末・線の上・1.46）だが読みにくい＝S5 の候補。
+>
+> ★ **現状の計器（第647 実測）**: 台帳 897 点のうち tie 22 点（全部 exact）・slur 18 点（非ゼロ 7）。
+> 点は「1 冊・1 量」ずつで、**本全体の bow を LP と突き合わせる道具は無い**（`audit/lpreg/dump-curves.ps1`
+> は 1 組の SVG 固定・Lab `sessions/p575/twin/twin575.ps1` は段割りしか比べない）。PhrasingSlur の dump は皆無。
+
+- **S0. 計器＝本全体の bow の双子比較**（Lab `sessions/p647/bows/`）
+  - LP 側: `lysc ly` の双子に dump を注入。`Tie`・`Slur`・`PhrasingSlur`・`LaissezVibrerTie`・`RepeatTie` の
+    `after-line-breaking`（または `page-post-process` の all-elements＝`probes/slur-script.ly` の形）で、
+    grob 名・系・staff・broken 側・direction・control-points 4 点を**staff の中線と系の左端**を原点に 6 桁で印字。
+  - Lily# 側: `RecordingDocumentContext` の bezier に source 位置を持たせ（`Source` scope は既に在る）、
+    同じ枠（staff の中線・系の左端）で double のまま出す。種類は source の字（`~`／`(`／`\(`）で引く。
+  - 対の取り方: (系, staff, 種類, 左端 x の順)。**系の割りが違う本は対にしない**（段割りは T7 の族）。
+    合成コーパスは `break` を全部書いて割りを固定する。
+  - 量: direction・両端 x／y・中央の高さ（cp1.y − cp0.y）・span。残差は ±0.01 ss を「一致」と数える
+    （6 桁の追い込みは台帳でやる）。**bow の前段（spacing・符頭 X）の差**を分けるため、左右の bound の
+    符頭 X の残差も並べる＝spacing 起因の bow 差を bow の欠陥と数えない。
+- **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
+  - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
+    加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、
+    grace、tab（`tab as full` を含む）、ottava の下。
+  - スラー: 2 音〜1 小節以上、梁の上下・混在、符尾が内／外、アーティキュレーション・指番号・強弱付き、
+    タイを内に含む、フレージング・スラーと入れ子、系をまたいで割れる、ottava、多声、grace、tab。
+  - 実コーパス（ベースタブ・samples・fixtures）も同じ道具に通す＝**行列に無い形**を拾う。
+- **S2. 仕分け** — 残差を「原因の族」に束ね、(件数 × 大きさ) で並べる。族ごとに LP のソースで原因を
+  名指し → 直す → 網（毒で赤）＋ 台帳の点 ＋ sweep。**各族で最初に 1 点を台帳に入れてから直す。**
+- **S3. 宣言済みの逸脱の棚卸し** — bow のコードの LILYSHARP-OWN（`docs/APPROXIMATIONS.md` の
+  `SlurScoringProblem.cs`・`TieFormattingProblem.cs`・`TieVariantEngraver.cs` 節）と §1.0 の決定
+  （tab のタイの行き先の数字・梁の無い符尾側のスラー）を一覧にし、S0 の道具で**それだけが差として残る**
+  ことを確かめる。「意図しない逸脱」が 0 になった状態を完了とする。
+- **S4. 完了条件** — S1 の全冊と実コーパスで、対になった bow が全部 ±0.01 以内か、S3 の一覧の
+  どれかで説明される。道具は Lab に残し、回帰用に合成コーパスを LilySharp 側の網へ移すか判断する。
+- **S5. その後（独自の改善・ユーザー判断が先）** — M20 型（線の上に乗る短い行末タイ）など。S4 の後に計画。
 
 ### T. タブ譜 × 実コーパス（2026-09-01・第317 起票）← **新ワークストリーム**
 
