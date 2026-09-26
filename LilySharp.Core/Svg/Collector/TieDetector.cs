@@ -62,7 +62,7 @@ internal sealed class TieDetector
                         // the direction falls out of the scored search
                         // (lily/tie-formatting-problem.cc:1004-1023). See TieItem.ForcedCurveUp
                         // for what used to be here and what measured it wrong.
-                        bool? forcedCurveUp = VoiceScan.ForcedCurveUpAt(score.Voices, v, measureIdx);
+                        bool? forcedCurveUp = VoiceScan.ForcedCurveUpAt(score.Voices, v, measureIdx, itemIdx);
                         ties.Add(new TieItem(
                             startNote, note,
                             startNote.StaffPosition,
@@ -84,7 +84,7 @@ internal sealed class TieDetector
                 // between this chord and the next chord/note.
                 DetectChordTies(measures, v, measureIdx, itemIdx, startChord, ties,
                     // Polyphonic where the chord STARTS (VoiceScan.SpanCurvesUp's remarks).
-                    multiVoice: VoiceScan.ForcedCurveUpAt(score.Voices, v, measureIdx) is not null);
+                    multiVoice: VoiceScan.ForcedCurveUpAt(score.Voices, v, measureIdx, itemIdx) is not null);
             }
         }
 

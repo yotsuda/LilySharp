@@ -531,7 +531,7 @@ internal static class DynamicEngraver
                 // the voice { } span's forcing, overridden by the beam's resolved
                 // direction.
                 // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-                bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(vs, vi, measureIndex);
+                bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(vs, vi, measureIndex, itemIndex);
                 var beamInfo = beamOf?.Invoke(vi);
                 if (beamInfo is { } bi)
                     forcedStemUp = bi.StemUp;

@@ -1468,11 +1468,12 @@ internal sealed class ElementCoordinator
                     for (int o = 0; o < staff.Voices.Length; o++)
                     {
                         if (o == v) continue;
-                        bool otherUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, o, m) ?? (o % 2 == 0);
-                        foreach (var (otherTime, otherItem, _) in byVoice[o])
+                        foreach (var (otherTime, otherItem, otherIndex) in byVoice[o])
                         {
                             if (otherItem is not (NoteItem or ChordItem))
                                 continue;
+                            bool otherUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, o, m, otherIndex)
+                                ?? (o % 2 == 0);
                             if (otherTime > time
                                 || otherTime + GetItemDuration(otherItem) <= time)
                                 continue;
@@ -1754,7 +1755,7 @@ internal sealed class ElementCoordinator
                 var restSlots = new List<(int InputIndex, int Voice, int ItemIndex, int Pure)>();
                 foreach (var (v, item, i) in column)
                 {
-                    bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, v, m) ?? (v % 2 == 0);
+                    bool voiceUp = VoiceDefaults.GetDefaultStemUpAt(staff.Voices, v, m, i) ?? (v % 2 == 0);
                     int dir = voiceUp ? 1 : -1;
                     switch (item)
                     {

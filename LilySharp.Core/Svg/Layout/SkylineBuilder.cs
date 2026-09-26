@@ -672,11 +672,8 @@ internal sealed class SkylineBuilder
                 // in voice 2 is drawn stem-DOWN but its natural direction is up, so
                 // its down-stem would be missing from the down-skyline and
                 // lyrics/staves below would collide. Outside the span nothing forces
-                // it.
+                // it — asked per item below (a span can open or close mid-bar).
                 // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-                bool? forcedStemUp = VoiceDefaults.GetDefaultStemUpAt(
-                    staff.Voices, vi, measureIndex);
-
                 var measure = voice.Measures[measureIndex];
                 for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
                 {
@@ -788,8 +785,9 @@ internal sealed class SkylineBuilder
                         continue; // a change folded into the line-start prefix (not drawn here)
 
                     AddMusicItemToSkylines(item, seedX, staffMiddleUp, StaffSize.Of(staff),
-                        upSkyline, downSkyline, forcedStemUp, reserveStem, restShiftUp,
-                        restDotRel, staff.Clef, staff.Lines);
+                        upSkyline, downSkyline,
+                        VoiceDefaults.GetDefaultStemUpAt(staff.Voices, vi, measureIndex, itemIndex),
+                        reserveStem, restShiftUp, restDotRel, staff.Clef, staff.Lines);
                 }
             }
         }

@@ -62,7 +62,7 @@ internal sealed class SlurDetector
                 //   Slur_engraver::create_slur.
                 bool up = op.item.PhrasingSlurDirection != 0
                     ? op.item.PhrasingSlurDirection > 0
-                    : VoiceScan.SpanCurvesUp(score.Voices, v, op.measureIdx,
+                    : VoiceScan.SpanCurvesUp(score.Voices, v, op.measureIdx, op.itemIdx,
                         AnyCoveredStemDown(measures, op.measureIdx, op.itemIdx, measureIdx, itemIdx));
                 (phrasingSlurs ??= new List<SlurItem>()).Add(new SlurItem(
                     MusicItem.EdgeStaffPosition(op.item, up) ?? 0,
@@ -98,7 +98,7 @@ internal sealed class SlurDetector
                 // later note's stem side). Polyphony: the voice fixes the direction.
                 // LILYPOND-REF: lily/slur.cc Slur::calc_direction — d = DOWN, set UP
                 //   if any non-rest note column has direction DOWN.
-                bool curveUp = VoiceScan.SpanCurvesUp(score.Voices, v, startMeasureIdx,
+                bool curveUp = VoiceScan.SpanCurvesUp(score.Voices, v, startMeasureIdx, startItemIdx,
                     AnyCoveredStemDown(measures, startMeasureIdx, startItemIdx, measureIdx, itemIdx));
 
                 slurs.Add(new SlurItem(

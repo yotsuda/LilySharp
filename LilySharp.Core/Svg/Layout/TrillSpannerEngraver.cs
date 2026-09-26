@@ -156,14 +156,13 @@ internal static class TrillSpannerEngraver
             //   the start event's direction is set on the grob over the context's;
             // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs
             //   (TrillSpanner is in the list); scm/define-grobs.scm:4076 (direction . UP).
-            // ⚠️ The voice default is read at MEASURE granularity (the reach
-            //   VoiceDefaults.IsPolyphonicAt has); a trill starting after its span
-            //   closed mid-measure would keep the voice's direction — unbound, the same
-            //   family as the collector stamp's named approximation.
+            // The voice default is read at the trill's START ITEM (since session 652; it was
+            // per measure, so a trill before a span that opens mid-bar took the voice's side).
             int dir = spanner.Direction != 0
                 ? spanner.Direction
                 : VoiceDefaults.GetDefaultStemUpAt(
-                        trillVoices, spanner.VoiceIndex, spanner.StartMeasureIndex)
+                        trillVoices, spanner.VoiceIndex, spanner.StartMeasureIndex,
+                        spanner.StartItemIndex)
                     is bool voiceUp ? (voiceUp ? 1 : -1) : 1;
             // The left bound attaches at the CENTRE of the bound note column's X extent
             // (attach-dir CENTER) — the trill's OWN voice's column, since the engraver

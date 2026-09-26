@@ -280,7 +280,8 @@ internal static class TupletBracketEngraver
             // live and die with the voice { } span.
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
             bool staffMultiVoice = !tupVoices.IsDefaultOrEmpty
-                ? VoiceDefaults.IsPolyphonicAt(tupVoices, tuplet.MeasureIndex)
+                ? VoiceDefaults.CoversItem(tupVoices, tuplet.VoiceIndex, tuplet.MeasureIndex,
+                    tuplet.StartNoteIndex)
                 : forceStemUp;
             ImmutableArray<Measure> tupMeasures =
                 !tupVoices.IsDefaultOrEmpty && tuplet.VoiceIndex < tupVoices.Length

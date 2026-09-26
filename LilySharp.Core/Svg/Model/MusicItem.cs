@@ -913,6 +913,15 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public bool IsSpacer { get; init; }
 
+    /// <summary>
+    /// The collector's padding in front of a <c>voice { } { }</c> span's later voice where the
+    /// span opens mid-bar — not written music. Its length is where the span, and so the
+    /// \voiceOne forcing of the first voice, begins in that bar (<see cref="VoiceDefaults.SpanStartIn"/>);
+    /// a spacer the writer put first in a block (<c>{ s4 c }</c>) is music, and LilyPond forces
+    /// the first voice from the span's own start regardless.
+    /// </summary>
+    public bool IsSpanLead { get; init; }
+
     /// <summary>Whether this rest opens a manual beam group.</summary>
     /// <remarks>
     /// ⚠️ A REST IS A LEGAL BEAM BOUND, the same way it is a legal slur bound

@@ -1022,7 +1022,8 @@ internal static class ArticulationEngraver
             if (staffByIndex != null
                 && staffByIndex.TryGetValue(articulation.StaffIndex, out var ownStaff)
                 && VoiceDefaults.GetDefaultStemUpAt(
-                    ownStaff.Voices, articulation.VoiceIndex, articulation.MeasureIndex) is { } voiceStemUp)
+                    ownStaff.Voices, articulation.VoiceIndex, articulation.MeasureIndex,
+                    articulation.ItemIndex) is { } voiceStemUp)
             {
                 stemUp = voiceStemUp;
                 voiceScriptUp = voiceStemUp;

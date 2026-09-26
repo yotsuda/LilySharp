@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -125,11 +126,90 @@ public static class VoiceDefaults
     }
 
     /// <summary>
-    /// The stem direction voice <paramref name="voiceIndex"/> (0-based) is forced
-    /// to in measure <paramref name="measureIndex"/>, or null where nothing forces
-    /// it — <see cref="GetDefaultStemUp"/> narrowed to <see cref="IsPolyphonicAt"/>.
+    /// The stem direction the span forces on item <paramref name="itemIndex"/> of voice
+    /// <paramref name="voiceIndex"/> (0-based) in measure <paramref name="measureIndex"/>, or
+    /// null where nothing forces it: <see cref="GetDefaultStemUp"/> narrowed to
+    /// <see cref="IsPolyphonicAt"/> and, for the FIRST voice, to the part of the bar the span
+    /// covers (<see cref="CoversItem"/>).
     /// </summary>
+    /// <remarks>
+    /// The first voice is walked inline in the primary stream, so its bar also holds the music
+    /// written before a span that opens mid-bar and after one that closes mid-bar — music of
+    /// the surrounding Voice context, which LilyPond leaves unforced (the LILYPOND-REF on
+    /// <see cref="IsPolyphonicAt"/>; probe vrest-probe.ly for the trailing side). The later
+    /// voices hold nothing but span content, so the span's window in the bar is theirs:
+    /// from the collector's padding (<see cref="SpanStartIn"/>) to as far as they reach.
+    /// Until session 652 only the stem bake (MeasureCollector.ResolveVoiceStemDirections)
+    /// trimmed the trailing side and nothing trimmed the leading one: SUMMER.lys (Lab corpus)
+    /// ends `… &lt;a a'&gt;( &lt;a fis&gt;16) &lt;a d&gt; voice { d8 d16 e } { a,8 a }`, and its two
+    /// slurs and the tied chord before the span were all pinned up.
+    /// </remarks>
     public static bool? GetDefaultStemUpAt(
-        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex)
-        => IsPolyphonicAt(voices, measureIndex) ? GetDefaultStemUp(voiceIndex + 1) : null;
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
+        => CoversItem(voices, voiceIndex, measureIndex, itemIndex)
+            ? GetDefaultStemUp(voiceIndex + 1)
+            : null;
+
+    /// <summary>Whether the <c>voice { } { }</c> span covers item <paramref name="itemIndex"/>
+    /// of voice <paramref name="voiceIndex"/> in measure <paramref name="measureIndex"/> (see
+    /// <see cref="GetDefaultStemUpAt(ImmutableArray{Voice}, int, int, int)"/>).</summary>
+    public static bool CoversItem(
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
+    {
+        if (!IsPolyphonicAt(voices, measureIndex))
+            return false;
+        if (voiceIndex != 0 || measureIndex >= voices[0].Measures.Length)
+            return true;
+        var items = voices[0].Measures[measureIndex].Items;
+        var onset = Fraction.Zero;
+        for (int i = 0; i < itemIndex && i < items.Length; i++)
+            onset += items[i].Duration;
+        return onset >= SpanStartIn(voices, measureIndex) && onset < SpanEndIn(voices, measureIndex);
+    }
+
+    /// <summary>
+    /// Where in measure <paramref name="measureIndex"/> the span begins: the length of the
+    /// padding (<see cref="RestItem.IsSpanLead"/>) in front of a span that opens mid-bar, else 0.
+    /// </summary>
+    public static Fraction SpanStartIn(ImmutableArray<Voice> voices, int measureIndex)
+    {
+        Fraction? start = null;
+        for (int vi = 1; vi < voices.Length; vi++)
+        {
+            if (measureIndex >= voices[vi].Measures.Length)
+                continue;
+            var items = voices[vi].Measures[measureIndex].Items;
+            if (items.Length == 0)
+                continue;
+            var lead = items[0] is RestItem { IsSpanLead: true } pad ? pad.Duration : Fraction.Zero;
+            if (start is not { } s || lead < s)
+                start = lead;
+        }
+        return start ?? Fraction.Zero;
+    }
+
+    /// <summary>
+    /// Where in measure <paramref name="measureIndex"/> the span's later voices run out — the
+    /// span is over there for the first voice.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ An approximation (the one IsPolyphonicAt names): a first block LONGER than every
+    /// later one stops forcing where the later blocks stop, where LilyPond's \voiceOne holds to
+    /// the end of its own block.
+    /// </remarks>
+    public static Fraction SpanEndIn(ImmutableArray<Voice> voices, int measureIndex)
+    {
+        var end = Fraction.Zero;
+        for (int vi = 1; vi < voices.Length; vi++)
+        {
+            if (measureIndex >= voices[vi].Measures.Length)
+                continue;
+            var covered = Fraction.Zero;
+            foreach (var item in voices[vi].Measures[measureIndex].Items)
+                covered += item.Duration;
+            if (covered > end)
+                end = covered;
+        }
+        return end;
+    }
 }

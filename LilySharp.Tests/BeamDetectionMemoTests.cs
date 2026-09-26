@@ -114,7 +114,7 @@ public class BeamDetectionMemoTests
         var memo = new BeamDetectionMemo();
         memo.BeginCollect();
         new BeamDetector().DetectBeamGroups(voice, sig, tuplets, voiceIndex: 1, memo: memo);
-        new BeamDetector().DetectBeamGroups(voice, sig, tuplets, forceStemUpAt: _ => true, memo: memo);
+        new BeamDetector().DetectBeamGroups(voice, sig, tuplets, forceStemUpAt: (_, _) => true, memo: memo);
         Assert.Equal(0, memo.Hits);
         Assert.Equal(0, memo.Misses);
     }

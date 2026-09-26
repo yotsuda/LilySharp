@@ -130,12 +130,6 @@ internal sealed class VoiceCollector
             var measure = voice.Measures[measureIndex];
             var timePosition = Fraction.Zero;
 
-            // Forced stem direction for this voice, where the voice { } span
-            // actually reaches.
-            // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
-            bool? defaultStemUp = VoiceDefaults.GetDefaultStemUpAt(
-                voices, voiceIndex, measureIndex);
-
             for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
             {
                 var item = measure.Items[itemIndex];
@@ -179,7 +173,11 @@ internal sealed class VoiceCollector
                         ChordItem c => c.ForcedStemUp,
                         _ => null,
                     };
-                    entries.Add(new VoiceEntry(voiceId, item, itemIndex, writerAsk ?? defaultStemUp));
+                    // Forced stem direction for this voice, where the voice { } span
+                    // actually reaches — per item, since a span can open mid-bar.
+                    // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
+                    entries.Add(new VoiceEntry(voiceId, item, itemIndex,
+                        writerAsk ?? VoiceDefaults.GetDefaultStemUpAt(voices, voiceIndex, measureIndex, itemIndex)));
                 }
 
                 // Advance time position

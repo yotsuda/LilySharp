@@ -81,7 +81,8 @@ internal static partial class SharedRenderer
             var dotAdjust = layout.GetDotAdjustment(staffIndex, ml.MeasureIndex, voiceNumber, itemIdx);
 
             // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
-            // is asked per measure — not once per part.
+            // is asked per item — not once per part, nor per measure (a span can open
+            // or close mid-bar; VoiceDefaults.GetDefaultStemUpAt's remarks).
             // LILYPOND-REF: scm/music-functions.scm:1042-1057 voicify-sublist / make-voice-props-set
             // ⚠️ GRACE TIME OUTRANKS THE VOICE, and it is stated rather than derived from the
             // pitch: LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings —
@@ -91,7 +92,7 @@ internal static partial class SharedRenderer
             bool? forcedStemUp = item.GraceTime
                 ? true
                 : VoiceDefaults.GetDefaultStemUpAt(
-                    staffVoices, voiceNumber - 1, ml.MeasureIndex);
+                    staffVoices, voiceNumber - 1, ml.MeasureIndex, itemIdx);
 
             // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
             // Each voice/staff pass restarts at its first measure; the resolver detects the

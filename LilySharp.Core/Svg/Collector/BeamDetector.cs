@@ -85,7 +85,7 @@ internal sealed class BeamDetector
             all.AddRange(DetectBeamGroups(
                 score.Voices[v], score.TimeSignature, voiceTuplets,
                 voiceIndex: v,
-                forceStemUpAt: mi => VoiceDefaults.GetDefaultStemUpAt(score.Voices, voiceIndex, mi),
+                forceStemUpAt: (mi, ii) => VoiceDefaults.GetDefaultStemUpAt(score.Voices, voiceIndex, mi, ii),
                 memo: memo));
         }
         return all.ToImmutable();
@@ -142,7 +142,7 @@ internal sealed class BeamDetector
     /// </remarks>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature,
         ImmutableArray<TupletBracketItem> tupletBrackets = default,
-        int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null,
+        int voiceIndex = 0, Func<int, int, bool?>? forceStemUpAt = null,
         BeamDetectionMemo? memo = null)
     {
         var beamGroups = RentGroupBuffer();
@@ -266,7 +266,7 @@ internal sealed class BeamDetector
 
     /// <summary>
     /// The accumulator
-    /// <see cref="DetectBeamGroups(Model.Voice, Model.TimeSignature, ImmutableArray{Model.TupletBracketItem}, int, Func{int, bool?}, BeamDetectionMemo)"/>
+    /// <see cref="DetectBeamGroups(Model.Voice, Model.TimeSignature, ImmutableArray{Model.TupletBracketItem}, int, Func{int, int, bool?}, BeamDetectionMemo)"/>
     /// gathers a voice's beam groups into, lent from one list the thread keeps between
     /// detections.
     /// </summary>
@@ -316,7 +316,7 @@ internal sealed class BeamDetector
     /// <summary>The metered signature a beat grid is read from: <paramref name="timeSig"/>
     /// itself, or for <c>time none</c> the 4/4 its syntax falls back to — LilyPond's default
     /// <c>timeSignature</c>, which \cadenzaOn leaves in place (see the remark at the
-    /// per-measure walk in <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, bool?}?, BeamDetectionMemo?)"/>).</summary>
+    /// per-measure walk in <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, int, bool?}?, BeamDetectionMemo?)"/>).</summary>
     private static TimeSignature MeteredMeter(TimeSignature timeSig)
         => timeSig.SenzaMisura ? new TimeSignature(timeSig.Beats, timeSig.BeatType, timeSig.BeatsText) : timeSig;
 
@@ -332,7 +332,7 @@ internal sealed class BeamDetector
     }
 
     /// <summary>The memo key of one measure's detection input (see the memo remarks on
-    /// <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, bool?}?, BeamDetectionMemo?)"/>):
+    /// <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, int, bool?}?, BeamDetectionMemo?)"/>):
     /// the detection-input fold + the effective meter + the measure's tuplet brackets.</summary>
     private static long MeasureMemoKey(
         Measure measure, TimeSignature effectiveTimeSig, long bracketsHash)
@@ -454,7 +454,7 @@ internal sealed class BeamDetector
         ImmutableArray<BeamGroup> stored, Measure measure, int measureIndex,
         TimeSignature effectiveTimeSig, HashSet<(int, int)>? consumed,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans,
-        int voiceIndex, Func<int, bool?>? forceStemUpAt)
+        int voiceIndex, Func<int, int, bool?>? forceStemUpAt)
     {
         var live = new List<BeamGroup>();
         DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, live, consumed,
@@ -537,7 +537,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)> consumed,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
-        Func<int, bool?>? forceStemUpAt = null)
+        Func<int, int, bool?>? forceStemUpAt = null)
     {
         // Collect every (measureIndex, itemIndex, isStart) marker.
         var markers = new List<(int Measure, int Item, bool IsStart)>();
@@ -605,7 +605,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)> consumed,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
-        Func<int, bool?>? forceStemUpAt = null)
+        Func<int, int, bool?>? forceStemUpAt = null)
     {
         var allEntries = new List<(MusicItem Item, int Index, Fraction StartPos, int Measure)>();
         // Items this pair WOULD consume — committed to the shared `consumed` set
@@ -707,7 +707,7 @@ internal sealed class BeamDetector
 
         // A polyphonic voice forces its direction; otherwise the farthest head decides.
         // The beam is asked where it STARTS — one beam has one direction.
-        bool stemUp = forceStemUpAt?.Invoke(startMeasure) ?? DefaultBeamStemUp(visible);
+        bool stemUp = forceStemUpAt?.Invoke(startMeasure, startItem) ?? DefaultBeamStemUp(visible);
 
         bool boundRestLeft = HasBoundRest(restStems, 0);
         bool boundRestRight = HasBoundRest(restStems, stemCount);
@@ -799,7 +799,7 @@ internal sealed class BeamDetector
         HashSet<(int, int)>? consumed = null,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
-        Func<int, bool?>? forceStemUpAt = null)
+        Func<int, int, bool?>? forceStemUpAt = null)
     {
         // The beat grid and the meter's beamExceptions. Derived ONCE per measure rather than
         // per beam group: they depend only on the meter, and building them allocates.
@@ -1031,7 +1031,7 @@ internal sealed class BeamDetector
     private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex,
         BeamingPattern.Options beamOptions,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
-        int voiceIndex = 0, Func<int, bool?>? forceStemUpAt = null)
+        int voiceIndex = 0, Func<int, int, bool?>? forceStemUpAt = null)
     {
         var moments = new (MusicItem Item, Fraction Moment, int Measure, int Index)[group.Count];
         for (int i = 0; i < group.Count; i++)
@@ -1071,7 +1071,9 @@ internal sealed class BeamDetector
 
         // A polyphonic voice forces its direction (voice 1 up / voice 2 down);
         // otherwise the head farthest from the middle line decides (LP get_default_dir).
-        bool? forcedStemUp = forceStemUpAt?.Invoke(measureIndex);
+        // Asked at the group's FIRST member: one beam has one direction (and a span that opens
+        // or closes mid-bar forces only the part of the bar it covers).
+        bool? forcedStemUp = forceStemUpAt?.Invoke(measureIndex, group[0].index);
         bool stemUp = forcedStemUp ?? DefaultBeamStemUp(visible);
 
         // Check if first note has feathered beam direction
@@ -1763,7 +1765,7 @@ internal sealed class BeamDetector
         List<BeamGroup> beamGroups,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
-        Func<int, bool?>? forceStemUpAt = null)
+        Func<int, int, bool?>? forceStemUpAt = null)
     {
         var ranges = new List<(int start, int end)>();
         int? beamStart = null;

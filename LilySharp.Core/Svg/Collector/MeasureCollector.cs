@@ -2594,7 +2594,7 @@ public sealed partial class MeasureCollector
         // (walked inline in the primary stream) already elapsed to. Same device
         // PartCombiner uses to pad a part up to an onset.
         if (leadingOffset is { } offset && offset != Fraction.Zero)
-            builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true });
+            builder.AddItem(new RestItem(offset, 0, voiceNode.SourceStart) { IsSpacer = true, IsSpanLead = true });
         ResetAccidentalMemory();
         builder.MeasureCompleted = _advanceAccidentalBar ??= AdvanceAccidentalBar;
 

@@ -1276,9 +1276,6 @@ internal static partial class SpacingRules
         for (int v = 0; v < voiceCount; v++)
         {
             var measure = voices[v].Measures[measureIndex];
-            // The side and the stem the voice forces (\voiceOne up, \voiceTwo down) — the
-            // same question ArticulationEngraver asks — or null outside a voice span.
-            bool? voiceUp = VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex);
             Fraction onset = Fraction.Zero;
             for (int oi = 0; oi < measure.Items.Length; oi++)
             {
@@ -1297,6 +1294,10 @@ internal static partial class SpacingRules
                             if (art.StaffIndex != staffIndex || art.MeasureIndex != measureIndex
                                 || art.VoiceIndex != v || art.ItemIndex != oi)
                                 continue;
+                            // The side and the stem the voice forces (\voiceOne up, \voiceTwo
+                            // down) — the same question ArticulationEngraver asks — or null
+                            // where the voice span does not cover the item.
+                            bool? voiceUp = VoiceDefaults.GetDefaultStemUpAt(voices, v, measureIndex, oi);
                             if (ArticulationEngraver.SpacingInkBox(art, item, staffY: 0, voiceUp) is { } box)
                             {
                                 (colBoxes[t] ??= new()).Add(box);

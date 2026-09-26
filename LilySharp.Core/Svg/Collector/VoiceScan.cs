@@ -156,12 +156,16 @@ internal static class VoiceScan
     /// remarks record for stems on 2026-08-01).
     /// </remarks>
     public static bool SpanCurvesUp(
-        ImmutableArray<Voice> voices, int voiceIndex, int startMeasureIndex, bool singleVoiceFallback)
-        => ForcedCurveUpAt(voices, voiceIndex, startMeasureIndex) ?? singleVoiceFallback;
+        ImmutableArray<Voice> voices, int voiceIndex, int startMeasureIndex, int startItemIndex,
+        bool singleVoiceFallback)
+        => ForcedCurveUpAt(voices, voiceIndex, startMeasureIndex, startItemIndex) ?? singleVoiceFallback;
 
     /// <summary>The direction polyphony forces on a tie/slur of voice
-    /// <paramref name="voiceIndex"/> starting in measure <paramref name="startMeasureIndex"/>,
-    /// or null where that measure is not polyphonic (see <see cref="SpanCurvesUp"/>).</summary>
-    public static bool? ForcedCurveUpAt(ImmutableArray<Voice> voices, int voiceIndex, int startMeasureIndex)
-        => VoiceDefaults.GetDefaultStemUpAt(voices, voiceIndex, startMeasureIndex);
+    /// <paramref name="voiceIndex"/> starting at item <paramref name="startItemIndex"/> of
+    /// measure <paramref name="startMeasureIndex"/>, or null where the span does not cover it
+    /// (see <see cref="SpanCurvesUp"/>; since session 652 per item, not per measure — the
+    /// remarks of <see cref="VoiceDefaults.GetDefaultStemUpAt(ImmutableArray{Voice}, int, int, int)"/>).</summary>
+    public static bool? ForcedCurveUpAt(
+        ImmutableArray<Voice> voices, int voiceIndex, int startMeasureIndex, int startItemIndex)
+        => VoiceDefaults.GetDefaultStemUpAt(voices, voiceIndex, startMeasureIndex, startItemIndex);
 }
