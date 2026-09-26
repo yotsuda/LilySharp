@@ -1410,6 +1410,42 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    /// <summary>
+    /// The feel words after a tempo's bpm (<c>tempo 100 |</c>) — one row per word the
+    /// compiler reads (<see cref="LanguageVocabulary.TempoFeelWords"/>), plus the sixteenth
+    /// form of each.
+    /// </summary>
+    /// <param name="bpm">The bpm before the caret, as written.</param>
+    /// <param name="touching">Whether the caret still touches the bpm (no space typed): the
+    /// editor then filters by the NUMBER, so each row filters as <c>100 swing</c> and replaces
+    /// the number with it.</param>
+    internal static CompletionList GetTempoFeelCompletions(string bpm, bool touching)
+    {
+        var items = new List<CompletionItem>();
+        int i = 0;
+        foreach (string feel in LanguageVocabulary.TempoFeelWords)
+        {
+            string name = $"{char.ToUpperInvariant(feel[0])}{feel[1..]}";
+            foreach (var (label, detail) in new[]
+            {
+                (feel, $"{name} feel on the eighths"),
+                ($"{feel} 16", $"{name} feel on the sixteenths"),
+            })
+            {
+                items.Add(new CompletionItem
+                {
+                    Label = label,
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = detail,
+                    InsertText = touching ? $"{bpm} {label}" : label,
+                    FilterText = touching ? $"{bpm} {label}" : label,
+                    SortText = (i++).ToString("D2"),
+                });
+            }
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
     /// <summary>Common meters offered after <c>time</c>.</summary>
     internal static CompletionList GetTimeCompletions()
     {

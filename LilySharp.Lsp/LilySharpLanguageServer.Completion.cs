@@ -127,7 +127,18 @@ public sealed partial class LilySharpLanguageServer
             && context is not (CompletionContext.ChordsTrackBody or CompletionContext.AfterSection))
             return GetDiatonicChordCompletions(doc.Text, offset, degreesToo: true);
 
-        return context switch
+        // `tempo 100 |`: the feel words. Mid-music (`c4 tempo 96 |`) a NOTE may follow as
+        // well, so there the feel words lead the music list rather than replace it.
+        CompletionList? tempoFeel = null;
+        if (context == CompletionContext.AfterTempoBpm && TempoBpmBeforeCaret(doc.Text, offset) is { } run)
+        {
+            tempoFeel = GetTempoFeelCompletions(run.Bpm, run.Touching);
+            if (GetCompletionContext(doc.Text, offset, tempoFeel: false) != CompletionContext.MusicBlock)
+                return tempoFeel;
+            context = CompletionContext.MusicBlock;
+        }
+
+        var result = context switch
         {
             // The position goes with the text: the `template-…` items need a RANGE (not just
             // an offset) to re-type the word being completed without changing it.
@@ -164,6 +175,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterOverrideValue => GetOverrideValueCompletions(doc.Text, offset),
             CompletionContext.AfterRevert => GetRevertCompletions(),
             CompletionContext.AfterTempo => GetTempoCompletions(),
+            // (AfterTempoBpm is answered above, before the switch.)
             CompletionContext.AfterTime => GetTimeCompletions(),
             CompletionContext.AfterPartial => GetPartialCompletions(),
             CompletionContext.AfterTitleText => GetTitleTextCompletions(WordBeforeCursor(doc.Text, offset)),
@@ -271,6 +283,13 @@ public sealed partial class LilySharpLanguageServer
             // offered until 2026-09-03 were all refused by the parser).
             CompletionContext.AfterBackslash => GetStringNumberCompletions(),
             _ => null
+        };
+        if (tempoFeel is null || result is null)
+            return result;
+        return new CompletionList
+        {
+            IsIncomplete = result.IsIncomplete,
+            Items = [.. tempoFeel.Items, .. result.Items],
         };
     }
 

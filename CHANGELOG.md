@@ -127,6 +127,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Editor
 
+- **After a tempo's number, completion offers the feel words.** `tempo 100 ` (or Ctrl+Space
+  with the caret still on the 100) offers `swing`, `shuffle` and their sixteenth forms; it
+  offered nothing before. Inside music (`c4 tempo 96 `) they lead the list and the notes
+  stay in it, since a note may follow there instead.
+
 - **The preview draws text in the faces the layout measured.** The preview loaded only the
   music font, so on a machine without TeX Gyre installed every title, lyric, tempo, chord
   name and label fell back to the browser's own serif and sans — narrower than what the

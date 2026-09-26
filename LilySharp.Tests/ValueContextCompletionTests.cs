@@ -71,6 +71,82 @@ public class ValueContextCompletionTests
         Assert.Equal(expected, ContextOf(text).ToString());
     }
 
+    /// <summary>
+    /// After a tempo's bpm the feel words may follow (`tempo 100 swing`). Until 2026-09-26
+    /// Ctrl+Space there offered nothing a tempo takes: the number ended every value context.
+    /// </summary>
+    [Theory]
+    [InlineData("tempo 100 ", "100", false)]
+    [InlineData("tempo 100", "100", true)]
+    [InlineData("tempo \"Allegro\" 132 ", "132", false)]
+    [InlineData("tempo \"Grave\" 4. = 54", "54", true)]
+    [InlineData("tempo Comodo 84 ", "84", false)]
+    [InlineData("section A { m { c4 tempo 96 ", "96", false)]
+    [InlineData("part m { tempo 120 ", "120", false)]
+    public void AfterATemposBpm_TheFeelWordsAreOffered(string text, string bpm, bool touching)
+    {
+        Assert.Equal("AfterTempoBpm", ContextOf(text).ToString());
+        var run = LilySharpLanguageServer.TempoBpmBeforeCaret(text, text.Length);
+        Assert.Equal((bpm, touching), run);
+
+        var items = LilySharpLanguageServer.GetTempoFeelCompletions(bpm, touching).Items;
+        Assert.Contains(items, i => i.Label == "swing");
+        Assert.Contains(items, i => i.Label == "shuffle");
+        var swing = items.First(i => i.Label == "swing");
+        // Touching the number, the row re-types it: the editor filters by the word under
+        // the caret, which is the number.
+        Assert.Equal(touching ? $"{bpm} swing" : "swing", swing.InsertText);
+        Assert.Equal(touching ? $"{bpm} swing" : "swing", swing.FilterText);
+    }
+
+    private static string[] LabelsAtEnd(string text)
+    {
+        var server = new LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///tempo.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem
+            { Uri = uri, Text = text, LanguageId = "lilysharp", Version = 1 },
+        });
+        var (line, character) = LilySharpLanguageServer.GetLineAndCharacter(text, text.Length);
+        var list = server.Completion(new LilySharp.Lsp.Protocol.CompletionParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri },
+            Position = new LilySharp.Lsp.Protocol.Position(line, character),
+        });
+        return (list?.Items ?? []).Select(i => i.Label!).ToArray();
+    }
+
+    /// <summary>End to end: a header's `tempo 100 ` offers the feel words alone, and a
+    /// mid-music `tempo 96 ` offers them AHEAD of the music list — a note may follow there.</summary>
+    [Fact]
+    public void TheFeelWords_AloneInAHeader_BesideTheNotesInMusic()
+    {
+        var header = LabelsAtEnd("tempo 100 ");
+        Assert.Equal("swing", header[0]);
+        Assert.All(header, l => Assert.Contains(l.Split(' ')[0], new[] { "swing", "shuffle" }));
+
+        var music = LabelsAtEnd("part m { clef treble }\nsection A { m { c4 tempo 96 ");
+        Assert.Equal("swing", music[0]);
+        Assert.Contains("c", music);
+    }
+
+    [Theory]
+    // A feel word is already there — nothing more of that kind fits.
+    [InlineData("tempo 100 swing ")]
+    [InlineData("tempo 100 swing 16")]
+    [InlineData("tempo swing 100 ")]
+    // Not a tempo's bpm: an equation still missing its bpm, a time signature, a title.
+    [InlineData("tempo 4 = ")]
+    [InlineData("time 4/4 ")]
+    [InlineData("title \"tempo 100 ")]
+    // The bpm ended and music began.
+    [InlineData("section A { m { tempo 100 c4 ")]
+    public void ElsewhereTheFeelWordsAreNot(string text)
+    {
+        Assert.NotEqual("AfterTempoBpm", ContextOf(text).ToString());
+    }
+
     [Fact]
     public void InsideATitleString_TempoIsNotHijacked()
     {
