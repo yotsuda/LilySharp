@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第638セッションの経緯
+
+### 1.1 第638セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p638`（HEAD `867170dd`・未 push 17・full **9187 / 0 / 2 / 9189**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の tab のスラーの残り。
+
+★ **⑴ tab のスラーの端の符尾に旗を入れた**（`24159ad5`）: LP の端の `stem_extent_` は stem ∪ flag（slur-scoring.cc:188-203 get_bound_info）＝符尾に付く端は旗の右端 + 0.3 に立つ（:748-752）。譜表の `ResolveSlurEdge` は済んでいたが tab の `TabStemOf` は符尾だけだった。梁の無い単独の符尾だけ（`GlyphMetrics.GetFlagBBox`・Y は `ItemSkylineFactory.FlagInkBand`＝譜表と同じ綴り）。
+★ **⑵ 台帳**: `tab-slur-stems.ly` に score C（旗付きの 8 分 2 つを端に、下へ書いたフレージング・スラー）＝3 点。**span は exact**（前 +0.667867）。attachment −0.133520・control −0.060490 は **F9**（数字の大きさ）＝tab スラーの半数字高を LP の 0.6577 にする一時実験で −0.013683／+0.004561（Lab `sessions/p638/`・LP の Stem／Flag／NoteColumn の extent dump は `flag.ly`）。毒（旗の union を外す）で 2 赤。掃き 964 冊で動いた本 **0**（符尾がスラー側を向く旗付きの端＝多声か書かれた向きだけ）。
+★ **終了**: code `24159ad5`・full **9190 / 0 / 2 / 9192**（+3＝台帳）・`-End` の門は全部 OK。§7.5 Core '+' 21・LILYPOND-REF 1・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第637セッションの経緯
 
 ### 1.1 第637セッション（2026-09-26・YT-DELL2）

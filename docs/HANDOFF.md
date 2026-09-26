@@ -132,7 +132,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭 906 行にも在る・第636 で再確認「描画すべきではない」）**。LP の `\tabFullNotation` は描く（`Tab_tie_follow_engraver` が handle-ties を外す＝scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
 - ✅ **tab のスラーの残り（第633）は第638（旗）・第639（予約に梁）で閉じた**
-- ★ **`@text` の上の床が LP より 0.74 高い**（第639 実測・Lab `sessions/p639/sb-noslur.ly`／`sbr-noslur.lys`＝`r4 e8 g <>@text("sul D").up c8 c c c`・スラー無し）: TextScript の基線が譜表中央から LP 2.55・Lily# 3.29。スラーがあると LP は +0.123 上がる（2.673）が Lily# は動かない（床が既にスラーより上）＝台帳 `slur.beamed.reserved-text` の残差 +0.617 の正体。未分解（Lily# は text を中央揃えで x 28.35 に置く＝LP の TextScript は self-alignment-X #f で音符の左端から＝X も違う可能性）
+- ✅ **`@text` の上の床は第640 が閉じた**（TextScript として置く・§1.1 第640）。⚠️ 残り: outside-staff の順番は dynamics の 250 のまま（LP は 450）／CJK 文字列は字面の ascender/descender の箱（LILYSHARP-OWN・`DynamicEngraver.HasMissingGlyph`）
 
 **⒞ ユーザー決定が先・触らない**
 
@@ -151,6 +151,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第640セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p640`（HEAD `773f24db`・未 push 22・full **9191 / 0 / 2 / 9193**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の `@text` の上の床（LP より 0.74 高い）。
+
+★ **⑴ 原因**: `@text` は DynamicText の管（`DynamicItem`）に乗り、DynamicLineSpanner の数（padding 0.6・staff-padding 0.1・minimum-space・線の中の 0.6 の吊り・名目の ink 1.2／0.64・em 2.0）で置かれていた（コード自身が「出典が要る」と書いていた LILYSHARP-OWN）。LP の TextScript は padding 0.3（Text_engraver は support を足さない＝譜表の extent だけ）・staff-padding 0.5・基線＝参照点・字形の輪郭・outside-staff-horizontal-padding 0.2・紙面の text 寸法 2.2（define-grobs.scm:3800-3833）。**ユーザー決定「高さと大きさ両方 LP に」**。
+★ **⑵ 移植**（`edf1eac6`）: `DynamicEngraver.PointwiseBaselineY` に expressive の枝（TextScript の aligned_side）・`LabelEm/LabelStyle/LabelRole(expressive)`（`CustomTextEngraver.Em/Style`＝`text` の役）・`InkOf(fonts,…)` は字の実 ink・`LabelSkylines` は字の輪郭（`TextOutlineSkylines`）・stacker の上下の配置に横 padding 0.2・`SkylineBuilder` の種の X を描画と同じ左揃えに・描画の em と役。⚠️ **CJK の穴**: 同梱の書体に無い字の輪郭は空＝距離が無限＝**奏（かなで）がページ割りを失い 90 小節が 1 頁に溢れた**（掃きの PNG で見つけた）→ 字面の ascender/descender の箱で予約（LILYSHARP-OWN・網 `DynamicPlacementTests.ExpressiveTextTheFaceCannotSpell_…` 2 本・毒で赤）。
+★ **⑶ 結果**: 台帳 `lyrics.row-between.{lyric,staff}-to-staff` が **exact**（第258 の起票が「TextScript の高さの仕事」と予言していた +0.083）・`slur.beamed.reserved-text` 3.29 → **2.607**（LP 2.673・残り −0.066 はスラーの端＝未分解）。snapshot `test/text-annotation` 更新。毒（TextScript の枝を外す）で台帳 1 赤。掃き 964 冊で **23 冊**（`@text` を持つ全冊・実コーパス 2＝blogger・奏）＝目視で重なり無し。
+★ **終了**: code `edf1eac6`・full **9193 / 0 / 2 / 9195**（+2＝CJK の網）・`-End` の門は全部 OK。§7.5 Core '+' 127・LILYPOND-REF 4・LILYSHARP-OWN 1（CJK の箱）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第639セッションの経緯
+
 ### 1.1 第639セッション（2026-09-26・YT-DELL2）
 
 同じ会話の続き。★ `-Start p639`（HEAD `67111bc3`・未 push 19・full **9190 / 0 / 2 / 9192**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の tab のスラーの残り（`StaffSlurLayouts` の予約が梁を渡さない）。
@@ -158,16 +169,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑴ 予約のスラーに梁を渡した**（`1f3c05e3`）: `MultiStaffLayouter.StaffSlurLayouts`（間隔を決める前に skyline が予約するスラー）は「梁は端を動かすだけで間を縛る頂点は動かさない」という理由で梁を渡していなかった。だが梁の上を越える弧は梁の付いた符尾の端から立つ（slur-scoring.cc:549-557）＝梁が無いと予約の弧は梁の無い符尾の先に立って描く弧より高く、上に乗る text も一緒に上がる。描く側と同じ引数を渡すだけ（譜表も tab も同じ `LayoutSlurs` を通る）。
 ★ **⑵ 実測・網**: 掃き 964 冊で動いたのは **1 冊**＝`audit/lp-regression/lys/empty-chord.lys`（1 小節目の `e8( g <>)^"sul D"`＝弧は e g の梁の上・text が 0.32 下がる・描く弧は不変）。LP の双子を `audit/lp-geometry/probes/slur-beam-reserve.ly` に置き、台帳 `slur.beamed.reserved-text`（text の基線）: 前 3.931767 → **3.29**（LP 2.673176）。毒（梁を渡さない）で 3.93 に戻り赤。残差 +0.617 は**スラーと無関係**＝スラーを消しても Lily# 3.29・LP 2.55（§1.0 に起票＝`@text` の上の床）。accessor `RenderedGeometry.TextBaselineAboveStaff(text)` を足した（`CustomTexts` は form の `^"…"` だけを数える）。
 ★ **終了**: code `1f3c05e3`・full **9191 / 0 / 2 / 9193**（+1＝台帳）・`-End` の門は全部 OK。§7.5 Core '+' 7・LILYPOND-REF 0（引数 1 つと doc コメント＝出典は slur-scoring.cc:549-557 を本文に）・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第638セッションの経緯
-
-### 1.1 第638セッション（2026-09-26・YT-DELL2）
-
-同じ会話の続き。★ `-Start p638`（HEAD `867170dd`・未 push 17・full **9187 / 0 / 2 / 9189**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の tab のスラーの残り。
-
-★ **⑴ tab のスラーの端の符尾に旗を入れた**（`24159ad5`）: LP の端の `stem_extent_` は stem ∪ flag（slur-scoring.cc:188-203 get_bound_info）＝符尾に付く端は旗の右端 + 0.3 に立つ（:748-752）。譜表の `ResolveSlurEdge` は済んでいたが tab の `TabStemOf` は符尾だけだった。梁の無い単独の符尾だけ（`GlyphMetrics.GetFlagBBox`・Y は `ItemSkylineFactory.FlagInkBand`＝譜表と同じ綴り）。
-★ **⑵ 台帳**: `tab-slur-stems.ly` に score C（旗付きの 8 分 2 つを端に、下へ書いたフレージング・スラー）＝3 点。**span は exact**（前 +0.667867）。attachment −0.133520・control −0.060490 は **F9**（数字の大きさ）＝tab スラーの半数字高を LP の 0.6577 にする一時実験で −0.013683／+0.004561（Lab `sessions/p638/`・LP の Stem／Flag／NoteColumn の extent dump は `flag.ly`）。毒（旗の union を外す）で 2 赤。掃き 964 冊で動いた本 **0**（符尾がスラー側を向く旗付きの端＝多声か書かれた向きだけ）。
-★ **終了**: code `24159ad5`・full **9190 / 0 / 2 / 9192**（+3＝台帳）・`-End` の門は全部 OK。§7.5 Core '+' 21・LILYPOND-REF 1・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
