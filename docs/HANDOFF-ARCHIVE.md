@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第634セッションの経緯
+
+### 1.1 第634セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p634`（HEAD `d124bdc6`・未 push 10・full **9182 / 0 / 2 / 9184**）。ユーザー「続けて」＝§1.0 T8（tab 声部の間隔に符尾の補正が無い）。
+
+★★★ **⑴ 起票より広かった＝full tab の声部の wish は*譜表の*符尾と音高で補正されていた**（`SpacingRules.CalculateStemCorrection` が item の `StemUp`・`StaffPosition`・`PureBeamedStemTip` を読む）。LP の Note_spacing は TabVoice 自身の符尾＝*弦の位置*と tab の向き。実測（Lab `sessions/p634/sp.ly`＝guitar tab 5 小節・NoteColumn X と Stem の pure 高さを dump）: 31 間隔のうち 11 がずれていた＝1 本の弦を上る 8 分に −0.25（音高の輪郭が同方向補正を取る）・弦の跳びに ±0.25 が無い・上下の 4 分の組が ±0.05（譜表の符尾の重なり）・下向きで始まる小節の頭が 0.04。
+★★ **⑵ 移植（`TabStemSpacingInfo`＝tab の段位置での符尾の帯）**: 頭＝弦の位置／向き＝梁の群なら `GroupStemUp`・単独なら `TabStemUp`／頭側の端＝根の数字の位置 ± 1.35 × LP の数字の半高（TabNoteHead の `calc_tab_stem_attachment`＝(0, ±1.35)・数字の半高は**実測 3 種**: 0 3 5-9 0.630334・1 4 0.618114・2 0.621598・複数桁は最大＝Lab `digits.ly`）／先端＝単独は `CalculateStemEndPosition`・梁は群の同じ向きの member の単独の先端の最も遠いもの（stem.cc:399-418＝譜表の `RebakePureBeamedTips` と同じ規則）。`MergeVoiceStemWishes`（同じ・逆向き）と `…ToBarline`（小節線の半高＝弦数 − 1）が full tab の声部でそれを読み、臨時記号は見ない（TabVoice に無い）。**小節線→最初の音**（staff-spacing.cc:43-67）は符尾の pure 範囲を*page 単位のまま*、小節線を*間隔で割って*交わらせる（tab では 1.5 倍違う）＝`FullTabBarlineToNextNotesCorrection` を MeasureLayouter から渡す（full tab の声部が無い小節は従来どおり）。
+★ **⑶ 結果**: probe の 47 間隔すべて LP と 0.0001 以内（`audit/lp-geometry/probes/tab-stem-spacing.ly`＝7 小節・網 `TabStemSpacingTests` 2 本＝1 段に収まるよう 5＋2 小節）。**第633 の台帳 5 点が全部 exact に**（`slur.tab.stems.*`＝前便が「分解していない」とした 0.0002・0.007・0.005 も間隔だった）。毒 5 本すべて赤（tab の帯を読まない 7・梁の群の向き 1・数字の高さ 1・小節線の半高 1・梁の先端 1＝Lab `sessions/p634/poisons.log`。最初の book では 3 本が緑＝6・7 小節目を足して観測した）。スナップショット 16 枚（tab の本）を更新。
+★ **⑷ 射程**: 964 冊 `--combined` で **106 冊が動く**・`lysc layout --all` で段割りが変わったのは **1 冊**（That's The Way の tab score・15〜17 段の小節の配分だけ・段数は同じ）＝Lab `sessions/p634/sweep/`。
+⚠️ **⑸ LP の probe の出力を `> log 2>&1` で読むと行が割れる**（stderr の診断が数値の途中に入る＝1 列の X が空に読めた）＝**stdout だけを読む**（`> out 2> err`・Measure-LilyPondProbe.ps1 の註のとおり。ただしあれは svg backend＝数字の書体が代替になるので tab には使わない）。
+★ **終了**: code `e88c5881`・full **9184 / 0 / 2 / 9186**（+2＝`TabStemSpacingTests`）・`-End` の門は全部 OK。§7.5 Core '+' 231・LILYPOND-REF 5・LILYSHARP-OWN 0（近似 2 つ＝梁を小節で半分に読む・各声部を自分の段の小節線で読む は ⚠️ 註で開示）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第633セッションの経緯
 
 ### 1.1 第633セッション（2026-09-26・YT-DELL2）

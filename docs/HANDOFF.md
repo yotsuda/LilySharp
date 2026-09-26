@@ -128,7 +128,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
 - ✅ **T8 は第634 が閉じた**（§1.1 第634）。行頭の `|:` は第635 が閉じた。残り: staff＋`tab as full` の多段では各声部を*自分の*段の小節線で読む（LP は全段の列を各段の小節線で読んで merge）／小節線をまたぐ梁は小節ごとに半分で読む
-- ★ **T9 多声の tab の*符尾の向き*が声部を読まない**（第635 実測・Lab `sessions/p635/poly.lys`／`poly.ly`）: LP は `\voiceOne` の TabVoice の符尾を上・`\voiceTwo` を下に描くが、Lily# は弦の規則のまま＝上下の符尾が数字をまたいで交差する（スラーの向きは偶然合う）。原因＝`ResolveVoiceStemDirections` は声部の向きを `StemUpOverride`（梁の向きと同じ欄）に焼き、tab の `TabStemUp`／`GroupStemUp` は `ForcedStemUp` しか読まない。直すなら声部の向きを別の欄に焼いて tab の `ForcedStemUpOf` が読む（`MeasureContentKey` と `TabResolver.WithString` のキャッシュ比較にも入れる）。**射程＝実コーパス 0 冊・追跡 1 冊**（`audit/lp-regression/lys/automatic-polyphony-tabstaff.lys`）
+- ✅ **T9（多声の tab の符尾の向き）は第636 が閉じた**（§1.1 第636）
+- ★ **T10 full tab の*タイの行き先の数字*を Lily# は消すが、LP の `\tabFullNotation` は消さない**（第636 実測・Lab `sessions/p636/tie-mono.ly`＝単声の `g2\1~ g2\1` でも LP は 2 つ目の `0` を描く）。原因＝`Tab_tie_follow_engraver` が `tabFullNotation` のとき TabNoteHead の `after-line-breaking`（`tab-note-head::handle-ties`＝タイの行き先を透明にする／行頭なら括弧）を外す（scm/scheme-engravers.scm:2196-2200）。Lily# は `SharedRenderer.Tab.cs:423-440` で tab の種類を問わず handle-ties を走らせる＝numbers-only では正しく full では誤り（行頭の括弧も付けない側が LP）。**射程は未測（full tab ＋タイの本＝実コーパスに多いはず）＝着手前に掃いて値付けし、ユーザーに見せる**（見た目が大きく変わる）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
 - ★ **tab のスラーの残り（第633）**: tab の旗を符尾の extent に入れていない／`StaffSlurLayouts`（skyline の予約）は梁を渡さないので、梁側へ書かれた弧の予約は符尾の先で止まる
 
@@ -149,6 +150,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第636セッション（2026-09-26・YT-DELL2）
+
+新しい会話。★ `-Start p636`（HEAD `408f1b23`・未 push 14・full **9185 / 0 / 2 / 9187**＝引継ぎと一致）。ユーザー「HANDOFF を読んで着手」＝§1.0 T9（多声の tab の符尾の向き）。
+
+★ **⑴ T9 を閉じた**（`64925f16`）: 声部の向きを `StemUpOverride`（記譜の梁の音高の答えと同じ欄＝tab は読めない）に加えて新しい欄 `VoiceStemUp`（NoteItem は rare 箱・ChordItem は素の init）にも焼き、`TabStaffGeometry.ForcedStemUpOf` が `ForcedStemUp ?? VoiceStemUp` を読む＝単独の符尾も梁の群も声部の側へ。**起票より広かった**: tab のスラー（`BuildTabSlurLayout`）とタイ（`TabColumnCurveUp`）も声部を読まず、符尾が正しくなると*逆に*内側へ倒れた（スラーの規則は「下向きの符尾が 1 本でもあれば上」）＝LP の `make-voice-props-set` は Stem・Slur・Tie すべてに direction を置く（music-functions.scm:617-674）ので、スラーは始点の `VoiceStemUp` を書かれた側として、タイは `StandardDirections` の manual として渡す。`TabResolver.WithString` のキャッシュ比較は触らない（`VoiceStemUp` は init だけ＝同じ入力の instance では変わらない）・`MeasureContentKey` は public property を反射で畳むので自動で入る。
+★ **⑵ 結果**: Lab `sessions/p636/poly2.*`（2 声・スラー・8 分の梁・小節をまたぐタイ）で符尾・梁・スラー・タイの側が LP と一致。網 `TabVoiceDirectionTests` 2 本（各主張に「弦の規則なら逆」の陽性対照）・毒 3 本（tab が声部を読まない・スラー・タイ）すべて赤。掃き 964 冊で動いた本 **0**（陽性対照 poly2 は動く）＝射程は起票どおり実コーパス 0。
+★ **⑶ 見つけた別件＝T10**（§1.0）: full tab のタイの行き先の数字を Lily# は消すが LP の `\tabFullNotation` は描く。
+★ **終了**: code `64925f16`・full **9187 / 0 / 2 / 9189**（+2＝`TabVoiceDirectionTests`）・`-End` の門は全部 OK。§7.5 Core '+' 65・LILYPOND-REF 4・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第635セッションの経緯
+
 ### 1.1 第635セッション（2026-09-26・YT-DELL2）
 
 同じ会話の続き。★ `-Start p635`（HEAD `6c6b61e8`・未 push 12・full **9184 / 0 / 2 / 9186**）。ユーザー「続けて」＝§1.0 の T8 の残りと tab のスラーの残り。
@@ -156,19 +168,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑴ 行頭の `.|:` の後の光学補正を tab の符尾で読む**（`ba0aeb48`）: `LineStartColumn` は段ごとに回るので、full tab の段は各声部の最初の列を `SpacingRules.FullTabStemOpticalCorrection`（第634 の小節線→音の計算を 1 列分に切り出した）で読む。⚠️ numbers-only の tab は従来どおり（LP の長さ 0 の TabStaff の符尾も `Stem::is_normal_stem` では数える＝未測）。実測（`audit/lp-geometry/probes/tab-stem-spacing-line-start.ly`）: 弦 1（下向き）で始まる段は弦 5（上向き）で始まる段より 0.228571 奥＝LP。Lily# は 0.1894（譜表の符尾）だった。網 `TabStemSpacingTests.ALineStartRepeatBarReadsTheTabsStem`（毒で赤）。射程 964 冊中 8 冊。
 ★ **⑵ 多声の tab を LP と比べた**（Lab `sessions/p635/poly.*`）＝符尾の向きが声部を読まない欠陥を見つけた → §1.0 T9 に起票（実コーパス 0 冊）。LP の絵の 2 声部目のスラーが符尾のあいだ（頭の側）に付くのをユーザーが「不自然・stem の先につくべき」と指摘 → LP の規則（梁が無ければ頭側）を説明し、**ユーザー決定「LP 忠実にしておくのが無難」**＝変えない（§1.0 に ⚠️）。
 ★ **終了**: code `ba0aeb48`・full **9185 / 0 / 2 / 9187**（+1）・`-End` の門は全部 OK。§7.5 Core '+' 50・LILYPOND-REF 1・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第634セッションの経緯
-
-### 1.1 第634セッション（2026-09-26・YT-DELL2）
-
-同じ会話の続き。★ `-Start p634`（HEAD `d124bdc6`・未 push 10・full **9182 / 0 / 2 / 9184**）。ユーザー「続けて」＝§1.0 T8（tab 声部の間隔に符尾の補正が無い）。
-
-★★★ **⑴ 起票より広かった＝full tab の声部の wish は*譜表の*符尾と音高で補正されていた**（`SpacingRules.CalculateStemCorrection` が item の `StemUp`・`StaffPosition`・`PureBeamedStemTip` を読む）。LP の Note_spacing は TabVoice 自身の符尾＝*弦の位置*と tab の向き。実測（Lab `sessions/p634/sp.ly`＝guitar tab 5 小節・NoteColumn X と Stem の pure 高さを dump）: 31 間隔のうち 11 がずれていた＝1 本の弦を上る 8 分に −0.25（音高の輪郭が同方向補正を取る）・弦の跳びに ±0.25 が無い・上下の 4 分の組が ±0.05（譜表の符尾の重なり）・下向きで始まる小節の頭が 0.04。
-★★ **⑵ 移植（`TabStemSpacingInfo`＝tab の段位置での符尾の帯）**: 頭＝弦の位置／向き＝梁の群なら `GroupStemUp`・単独なら `TabStemUp`／頭側の端＝根の数字の位置 ± 1.35 × LP の数字の半高（TabNoteHead の `calc_tab_stem_attachment`＝(0, ±1.35)・数字の半高は**実測 3 種**: 0 3 5-9 0.630334・1 4 0.618114・2 0.621598・複数桁は最大＝Lab `digits.ly`）／先端＝単独は `CalculateStemEndPosition`・梁は群の同じ向きの member の単独の先端の最も遠いもの（stem.cc:399-418＝譜表の `RebakePureBeamedTips` と同じ規則）。`MergeVoiceStemWishes`（同じ・逆向き）と `…ToBarline`（小節線の半高＝弦数 − 1）が full tab の声部でそれを読み、臨時記号は見ない（TabVoice に無い）。**小節線→最初の音**（staff-spacing.cc:43-67）は符尾の pure 範囲を*page 単位のまま*、小節線を*間隔で割って*交わらせる（tab では 1.5 倍違う）＝`FullTabBarlineToNextNotesCorrection` を MeasureLayouter から渡す（full tab の声部が無い小節は従来どおり）。
-★ **⑶ 結果**: probe の 47 間隔すべて LP と 0.0001 以内（`audit/lp-geometry/probes/tab-stem-spacing.ly`＝7 小節・網 `TabStemSpacingTests` 2 本＝1 段に収まるよう 5＋2 小節）。**第633 の台帳 5 点が全部 exact に**（`slur.tab.stems.*`＝前便が「分解していない」とした 0.0002・0.007・0.005 も間隔だった）。毒 5 本すべて赤（tab の帯を読まない 7・梁の群の向き 1・数字の高さ 1・小節線の半高 1・梁の先端 1＝Lab `sessions/p634/poisons.log`。最初の book では 3 本が緑＝6・7 小節目を足して観測した）。スナップショット 16 枚（tab の本）を更新。
-★ **⑷ 射程**: 964 冊 `--combined` で **106 冊が動く**・`lysc layout --all` で段割りが変わったのは **1 冊**（That's The Way の tab score・15〜17 段の小節の配分だけ・段数は同じ）＝Lab `sessions/p634/sweep/`。
-⚠️ **⑸ LP の probe の出力を `> log 2>&1` で読むと行が割れる**（stderr の診断が数値の途中に入る＝1 列の X が空に読めた）＝**stdout だけを読む**（`> out 2> err`・Measure-LilyPondProbe.ps1 の註のとおり。ただしあれは svg backend＝数字の書体が代替になるので tab には使わない）。
-★ **終了**: code `e88c5881`・full **9184 / 0 / 2 / 9186**（+2＝`TabStemSpacingTests`）・`-End` の門は全部 OK。§7.5 Core '+' 231・LILYPOND-REF 5・LILYSHARP-OWN 0（近似 2 つ＝梁を小節で半分に読む・各声部を自分の段の小節線で読む は ⚠️ 註で開示）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 
