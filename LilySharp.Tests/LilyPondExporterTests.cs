@@ -2139,6 +2139,46 @@ public class LilyPondExporterTests
         Assert.Contains("c''4^\\f d''_\\p e'' f''\\mf", ly);
     }
 
+    /// <summary>
+    /// `tab bass as full` is the tab of part `bass`, as the page reads it: the part is the
+    /// last target before the `as` selector. The twin took the first IDENTIFIER — `bass`
+    /// lexes as a clef word — and wrote a TabStaff of a part named `full`, in guitar tuning,
+    /// holding only the form's road-map marks (Lab probes/complex-lys/06, 2026-09-26).
+    /// </summary>
+    [Fact]
+    public void ATabOfAPartNamedLikeAClef_IsThatPartsTab()
+    {
+        var ly = Export("""
+            octave absolute
+            part bass { clef bass tuning bass }
+            section S { bass { e,,4 a,, d, g, | } }
+            form main { S }
+            score main { staff bass  tab bass as full }
+            """);
+        Assert.Contains("stringTunings = #bass-four-string-tuning", ly);
+        Assert.Contains("\\bass }", ly);
+        Assert.DoesNotContain("\\full", ly);
+    }
+
+    /// <summary>
+    /// A chord row's bar is as long as the music's bar there: a section whose part says
+    /// `time 7/8` has 7/8 chord bars, not the score's 4/4 (LilyPond's bar check failed on
+    /// `a1:m` in Lab probes/complex-lys/06, 2026-09-26).
+    /// </summary>
+    [Fact]
+    public void AChordRowBar_TakesTheMeterTheMusicWritesThere()
+    {
+        var ly = Export("""
+            octave absolute
+            part m { clef treble }
+            section S { chords ch { C | Am | } m { c'1 | time 7/8 a4 a a4. | } }
+            form main { S }
+            score main { chords ch  staff m }
+            """);
+        Assert.Contains("a2..:m", ly);
+        Assert.Contains("c1", ly);
+    }
+
     [Fact]
     public void ADrumPart_IsWrittenInDrummode_OnADrumStaff()
     {

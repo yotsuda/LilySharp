@@ -157,6 +157,16 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### MIDI, MusicXML and the LilyPond twin
 
+- **The LilyPond twin reads `tab bass as full` as the tab of part `bass`.** It took the
+  first plain name after `tab` — and `bass` reads as a clef word — so it wrote a tab staff
+  of a part called `full`, in guitar tuning, with the road-map marks piled on one moment.
+  2 books in the repository and corpora wrote their tab that way.
+
+- **A chord row's bars in the twin follow the music's meter.** A chord row under a `time
+  7/8` bar was written as a whole 4/4 bar, and LilyPond's bar check failed there.
+
+- **A dynamic's `.up` / `.down` reaches the twin** as LilyPond's `^` / `_`.
+
 - **A pedal change is written as the pedal again.** A second `@sustain` while the pedal is
   down already engraved as a pedal change; it is now the documented spelling (`g4@sustain`),
   with `@!sustain@sustain` kept as the same thing written out. The LilyPond twin writes it

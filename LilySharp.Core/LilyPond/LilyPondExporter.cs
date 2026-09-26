@@ -1792,7 +1792,8 @@ public sealed class LilyPondExporter
         // header directives — the key is read for the degree spelling instead.
         if (_chordTrack)
         {
-            result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name)));
+            result.AddRange(ChordBars(entry.Container, ChordKeyFor(name), ChordPickupFor(name),
+                SectionBarMeters(entry.Section, name)));
             result.AddRange(PaddingBars(entry.Container));
             return;
         }
@@ -5390,7 +5391,8 @@ public sealed class LilyPondExporter
         else
             foreach (var entry in inOrder)
             {
-                result.AddRange(ChordBars(entry.Container, ChordKeyFor(entry.Section.SectionName)));
+                result.AddRange(ChordBars(entry.Container, ChordKeyFor(entry.Section.SectionName),
+                    meters: SectionBarMeters(entry.Section, entry.Section.SectionName)));
                 result.AddRange(PaddingBars(entry.Container));
             }
         _chordTrack = false;
@@ -5420,6 +5422,71 @@ public sealed class LilyPondExporter
             : null;
 
     /// <summary>
+    /// The meter of each bar of a section's play, as its MUSIC writes it — the length a chord
+    /// row's bar must have to stay with it. The section starts on its header's <c>time</c>, or
+    /// the score's (a section resets the meter, as the page's collector does), and each
+    /// <c>time</c> inside the section's first music part moves it from the bar it stands in.
+    /// Null when the section has no music part to read.
+    /// </summary>
+    /// <remarks>
+    /// Read off the first part block that is not a chord row, in document order, one voice
+    /// branch only (a <c>voice { } { }</c> writes each bar once per voice). A <c>time</c>
+    /// written only inside a phrase the part references is not seen — the section keeps the
+    /// meter it had — and a <c>repeat</c>'s body counts its bars once; past the bars read, the
+    /// last meter read holds.
+    /// </remarks>
+    private List<Fraction>? SectionBarMeters(SectionDeclarationSyntax section, string sectionName)
+    {
+        var start = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+        if (_sectionHeaders.TryGetValue(sectionName, out var headers)
+            && headers.OfType<TimeSignatureSyntax>().LastOrDefault() is { IsSenzaMisura: false } headerTime)
+            start = new Fraction(headerTime.Beats, headerTime.BeatType);
+
+        PartBlockSyntax? part = null;
+        foreach (var node in section.DescendantNodes())
+            if (node is PartBlockSyntax pb) { part = pb; break; }
+        if (part is null)
+            return null;
+
+        var meters = new List<Fraction>();
+        var current = start;
+        bool pendingNotes = false;
+        void Walk(SyntaxNode node)
+        {
+            // A voice span: its first branch only.
+            if (node.SlotCount > 0 && node.GetChild(0) is SyntaxTokenNode { Kind: SyntaxKind.VoiceKeyword })
+            {
+                for (int i = 1; i < node.SlotCount; i++)
+                    if (node.GetChild(i) is MusicBlockSyntax branch) { Walk(branch); return; }
+                return;
+            }
+            for (int i = 0; i < node.SlotCount; i++)
+            {
+                switch (node.GetChild(i))
+                {
+                    case TimeSignatureSyntax { IsSenzaMisura: false } t:
+                        current = new Fraction(t.Beats, t.BeatType);
+                        break;
+                    case BarlineSyntax:
+                        meters.Add(current);
+                        pendingNotes = false;
+                        break;
+                    case SyntaxTokenNode:
+                        break;
+                    case SyntaxNode child:
+                        pendingNotes = true;
+                        Walk(child);
+                        break;
+                }
+            }
+        }
+        Walk(part);
+        if (pendingNotes)
+            meters.Add(current);
+        return meters.Count > 0 ? meters : null;
+    }
+
+    /// <summary>
     /// One chord container's bars as stream items: each bar's slots pre-spelled into ONE
     /// <see cref="ChordBarMarker"/>, its written bar lines kept as the nodes they are — so
     /// <see cref="EmitMusicStream"/> groups an inline <c>|: … :|</c> exactly as it does for
@@ -5430,7 +5497,7 @@ public sealed class LilyPondExporter
     /// <paramref name="pickup"/> when it is the play's first.
     /// </summary>
     private IEnumerable<SyntaxNode> ChordBars(SyntaxNode container, (int TonicStep, int Sharps) key,
-        Fraction? pickup = null)
+        Fraction? pickup = null, IReadOnlyList<Fraction>? meters = null)
     {
         IEnumerable<SyntaxNode> items = container switch
         {
@@ -5441,9 +5508,17 @@ public sealed class LilyPondExporter
         var result = new List<SyntaxNode>();
         var pending = new List<SyntaxNode>();
         bool firstBar = true;
+        int barIndex = 0;
         void Flush()
         {
-            var barLength = firstBar && pickup is { } p ? p : new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            // The bar is as long as the MUSIC's bar at this point of the section (see
+            // SectionBarMeters): a chord row written under a `time 7/8` bar still said `a1:m`,
+            // a whole 4/4 bar, and LilyPond's bar check failed there (Lab probes/complex-lys/06).
+            var home = new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            var barMeter = meters is { Count: > 0 }
+                ? meters[Math.Min(barIndex, meters.Count - 1)] : home;
+            barIndex++;
+            var barLength = firstBar && pickup is { } p ? p : barMeter;
             result.Add(new ChordBarMarker(pending.Count == 0
                 ? "s" + ChordModeDuration(barLength)
                 : ChordBarText(pending, key, barLength)));
@@ -6218,6 +6293,25 @@ public sealed class LilyPondExporter
 
     private static string? RenderPartName(SyntaxNode renderItem)
     {
+        // A tab item is `tab [tuning] part [as numbers|full]`, read the way the page reads it
+        // (RenderSpecParser.ParseTab): the selector off, the LAST target is the part. The
+        // first-identifier rule below named `full` as the part of `tab bass as full` — `bass`
+        // lexes as a clef word, not an identifier — so the twin wrote a TabStaff of a part
+        // that does not exist, in guitar tuning, holding only the form's road-map marks, which
+        // LilyPond then found all at one moment (Lab probes/complex-lys/06).
+        if (renderItem is TabRenderSyntax tab)
+        {
+            string? last = null;
+            for (int i = 1; i < tab.SlotCount; i++)
+            {
+                if (tab.GetChild(i) is not SyntaxTokenNode t) continue;
+                if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace) continue;
+                if (string.Equals(t.Text, "as", StringComparison.Ordinal)) break;
+                last = t.Text;
+            }
+            if (last != null)
+                return last;
+        }
         // staff/tab items: the first bare identifier token after the keyword is
         // the part name (an optional clef/tuning token may precede or follow it,
         // but the part name is what a declared part matches).
