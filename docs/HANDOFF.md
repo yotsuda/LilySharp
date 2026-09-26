@@ -949,6 +949,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
     確かめる**（台帳 `slur.tab.*.string-to-attachment` の 0.151777 は F9）／⑶ tab のタイ（y −1.16・x +0.85）／
     ⑷ 向きの反転（tie 40・slur 22 対）／⑸ tie の 0.01〜0.05 の x と高さ（多数・spacing の残りかを確認）／
     ⑹ 段割りが違って対にできない 63 冊（T7 の族）／⑺ 数の不一致（Lily# の種類不明 65・l.v./repeat tie）。
+  - **計器の直し（第647・同じ便）**: LP 側の `LaissezVibrerTie`／`RepeatTie` は Item（`ly:spanner-bound`
+    で dump が止まり、その頁の残りが消えていた）／Lily# の縦長の bezier は bow ではない（tab の数字の
+    括弧）／tie の端は**最寄りの符頭列**で spacing を差し引く（符頭を縦に避けたタイは頭の*下*に着く＝
+    「右隣の列」を読むと 1 音ずれる）／端が合って span だけ違う対は `span-only`（高さは幅の関数）。
+- **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を
+    実コーパスが観測）／✅ `0de7a65a` 行末で割れた単独のタイの向き（`Tie::get_default_dir` を採点の前に）。
+    **掃き（第647 末）: 対 23,040・差 2,619**。残る族: ⑴ grace スラー（perf-grace200 ほか・**描画時の近似で
+    移植ではない**＝`SharedRenderer.GraceNotes.DrawGraceSlur` の 0.5／0.65／0.15。直すなら slur の pass で
+    普通の Slur として解く＝設計級）＋ slur の中の grace スラーを Lily# が描かない（perf-slurgrace300 で
+    LP 12・Lily# 6）／⑵ tab スラーの y（F9 か未確認）／⑶ tab タイ（perf-tab300 y −1.16・tab-tie x +0.85）／
+    ⑷ 向きの反転: **中線のタイは LP の浮動小数の同点**（`tiecard.ps1`＝両向き TOTAL 2.96 が鏡像、どちらに
+    倒れるかは丸め＝移植できない。A Thousand Miles・Boogie・Crocodile・Are You Gonna・Xanadu・真夏）、
+    それ以外（grammar-tour の `g2~ g4`＝単独では一致＝文脈依存・slurrest-*・whole 音符の下のスラー・
+    SUMMER）は未読／⑸ 数の不一致 72 鍵（grace スラー・grace のタイ・tab の和音のタイ）。
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、
