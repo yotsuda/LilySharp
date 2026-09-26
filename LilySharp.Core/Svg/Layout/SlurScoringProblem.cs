@@ -610,7 +610,13 @@ internal sealed class SlurScoringProblem
     {
         var avoid = _avoid;
         avoid.Clear();
-        for (int i = 1; i + 1 < _obstacles.Count; i++)
+        // The skipped columns are the slur's EXTREMES (:668-670), and a broken side has none —
+        // its bound is the system's edge, so the piece's first (last) column stays in. Until
+        // session 653 both ends were always dropped: `c2( e | break` kept its curve 0.24 under
+        // LilyPond's, which lifts it over e's up stem (Lab sessions/p653 S1 slur-break).
+        int first = _isBrokenLeft ? 0 : 1;
+        int end = _isBrokenRight ? _obstacles.Count : _obstacles.Count - 1;
+        for (int i = first; i < end; i++)
         {
             var o = _obstacles[i];
             double edge = dir > 0 ? o.TopY : o.BottomY;

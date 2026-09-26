@@ -62,6 +62,12 @@ public sealed class BrokenSlurEdgeStemTests
         // Device Y grows downward: "above the middle" is middle − y.
         Assert.Equal(3.0, staves[1].Middle - pieces[1].P0.Y, 3);
         Assert.Equal(2.15, staves[0].Middle - pieces[0].P1.Y, 3);
+        // …and the first piece's curve is lifted over e's up stem, which LilyPond keeps among
+        // its avoid points: only the slur's EXTREMES leave them (slur-scoring.cc:668-670), and
+        // a broken side has none. LilyPond (Lab sessions/p654 sbred, this book): control points
+        // 0.4948 and 4.1200 above the middle — the fit factor 1.1117 over e's stem.
+        Assert.Equal(0.4948, staves[0].Middle - pieces[0].Centreline1.Y, 3);
+        Assert.Equal(4.1200, staves[0].Middle - pieces[0].Centreline2.Y, 3);
     }
 
     [Fact]

@@ -113,8 +113,8 @@
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:925** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:889** column allows only 0.3 of movement) is not ported: every edge here
-- **:1276** approximation there); RIGHT wins when both edges match, as LP's
+- **:895** column allows only 0.3 of movement) is not ported: every edge here
+- **:1282** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
