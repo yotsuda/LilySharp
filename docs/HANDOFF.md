@@ -160,7 +160,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ ⑵ **ly 出力が `@frame` を全部落としていた** → `^\markup \fret-diagram-terse "x;x;o;2;3;2;"`。和音の中の音の図は和音の後に書く（LP は「cannot add text scripts to individual note heads」）。
 ★ ⑶ **比べて見つけた: `treble_8` の譜表が ly 出力で 1 オクターブ上**。Lily# の `g` は treble の位置に描いて 1 オクターブ下で鳴る（0.8.0 の「clef は音高を動かさない」）のに、双子は書いた音を渡し LP の treble_8 がさらに 1 オクターブ上に描いていた。通常の譜表にも `\transpose c c,`（tab は既に掛けていた）。LP の符頭がページと一致（1.0・−1.0・−2.5・−3.5）。オクターブ記号の clef を使う本 22 冊の双子が変わる（ページは不変）。
 網 3 本（stash の毒で 3 赤）。⚠️ 最初の網は旧コードでも緑だった＝Lily# の音域では `<g d' g'>` が高く符尾が下で、旧規則でも上に出た→低い和音に替えた。
-★ **終了**: full **9349 / 0 / 2 / 9351**。push はユーザー（Lab も）。
+★ ⑷ **コード図の大きさと並び**（`6db2dd1b`・ユーザー決定 2 つ）: ユーザー「小さくて見にくい・サイズを指定できると便利」→ 決定「既定を LP の大きさ＋`fonts { fretFrame step ±n }` で全体を拡大縮小」。続けて「コード図は横に並べてほしい。入らないときは小節の長さを伸ばす」。
+- 大きさ: 弦間・フレット間 1 ss（LP の size 1.0）。Lily# は約半分だった。寸法は `FretFrameGeometry` 1 か所（描画と予約の箱が同じ値を読む）。「Nfr」の場所は、ラベルを描くときだけ取る。
+- ⚠️ **engraver の `score.TextMetrics` は font plan を持たない**（1 声部の歩行用 Score）→ step を付けた図は既定の大きさで予約され、拡大した大きさで描かれていた（tabTechnique も同じ穴）。渡された `fonts` を読むよう直した。
+- 横並び: `SpacingRules.ApplyFretFrameSpacing`＝同じ譜表の次の図（隣でなくても）と小節の両端に rod を張る。高さは見ない。LP の `\textLengthOn`（extra-spacing-width (-0.0 . 0.4)＋列の padding 0.1）に当たる。双子は図ごとに同じ 2 つの property を `-\tweak` する（`^"text"` は従来どおりはみ出す）。
+- 図は LP では TextScript＝outside-staff 450 の mover（dynamics・ottava の後に置く、上下とも）。
+- 双子: step は markup の `\override #'(size . k)` で書く（fonts の `FretBoard.font-size` は `\markup` の図に効かないと実測）。
+- Lab `sessions/p646` fr2/fr3: ページと LP 双子で、4 つの図が横に並び小節の比率も同じ（両方の大きさで）。網 4 本（spacing の呼び出しを外すと横並びの 2 件が赤）。sweep は HEAD の exe と比べて 0 / 963。
+- ⚠️ 見かけた: Lab の `corpora/ベースタブLy/*.lys` に未 commit の変更がある（2026-09-25 7:28・このセッションより前）。触っていない。
+★ **終了**: full **9354 / 0 / 2 / 9356**。push はユーザー（Lab も）。
 
 ## 以下は第645セッションの経緯
 
