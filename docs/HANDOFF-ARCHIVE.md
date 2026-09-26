@@ -129,6 +129,22 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第647セッションの経緯
+
+### 1.1 第647セッション（2026-09-26〜27・YT-DELL2）
+
+同じ会話の続き（第646 の後）。ユーザー報告を順に: ABC.lys の行末タイ（bar 63）→ `5343631e`（行末で割れたタイの
+右端は小節線の*左*端 − note-head-gap＝LP の staff_extent[LEFT]・`EngravingDefaults.LineEndBarline` を共有）。
+M20 の行末タイは LP と一致（線の上・1.46）＝ユーザーは「独自の改善の前に、まずすべてのスラーとタイが LP 忠実か
+確認したい」と決定 → **§2 S を起票**（§1.0 冒頭）。
+★ S0 の計器を建てた（`66885130`・Lab `sessions/p647/bows/`）。★ S2 で 2 件閉じた: `e5d9d4b4`（短いタイの高さの
+床）・`0de7a65a`（行末で割れた単独のタイの向き）。tab スラーは F9 と確認。残りは §2 S の「第647 末の残り」。
+★ **次便はここから**: `pwsh sessions/p647/bows/sweep-bows.ps1`（約 4 分・`-SkipLp` なら Lily# 側だけ）→
+`summarize.ps1`。1 冊は `one.ps1 -Book x.lys`、LP の tie の採点カードは `tiecard.ps1 -Ly twin.ly`。
+⚠️ `cmd /d /s /c` の中の `--filter "A|B"` は引用しないと cmd のパイプになって止まる。
+⚠️ Lab の生成物（`bows/corpus/`・`w-*`）は `.gitignore` 済み。
+★ **終了**: full **9388/0/2/9390**。⚠️ HANDOFF は天井の直下＝**次便は書く前に畳む**。push はユーザー。
+
 ## 以下は第646セッションの経緯
 
 ### 1.1 第646セッション（2026-09-26・YT-DELL2）
@@ -43209,4 +43225,34 @@ top-level＝ファイル既定（既定 `written`）／part header＝その part
     `slurrest-*`（休符を含むスラーの y が +8.09＝向きか付着の取り違え）／`slurhcap`（+10〜11）／
     `slurdot`（付点との衝突）／`figbass-empty`（和音のタイ）／`ossia-beams`（x −20＝対の取り違えの疑い）／
     `lyhygrace`（行を跨ぐ grace）／小さい x（0.01〜0.2）の残り。
+
+#### [S] ✅ S0. 計器＝本全体の bow の双子比較（Lab `sessions/p647/bows/`・第647 が建てた。第648 が `compare.ps1` の急なスラーと dump の旗を直した）
+
+  - LP 側: `lysc ly` の双子に dump を注入。`Tie`・`Slur`・`PhrasingSlur`・`LaissezVibrerTie`・`RepeatTie` の
+    `after-line-breaking`（または `page-post-process` の all-elements＝`probes/slur-script.ly` の形）で、
+    grob 名・系・staff・broken 側・direction・control-points 4 点を**staff の中線と系の左端**を原点に 6 桁で印字。
+  - Lily# 側: `RecordingDocumentContext` の bezier に source 位置を持たせ（`Source` scope は既に在る）、
+    同じ枠（staff の中線・系の左端）で double のまま出す。種類は source の字（`~`／`(`／`\(`）で引く。
+  - 対の取り方: (系, staff, 種類, 左端 x の順)。**系の割りが違う本は対にしない**（段割りは T7 の族）。
+    合成コーパスは `break` を全部書いて割りを固定する。
+  - 量: direction・両端 x／y・中央の高さ（cp1.y − cp0.y）・span。残差は ±0.01 ss を「一致」と数える
+    （6 桁の追い込みは台帳でやる）。**bow の前段（spacing・符頭 X）の差**を分けるため、左右の bound の
+    符頭 X の残差も並べる＝spacing 起因の bow 差を bow の欠陥と数えない。
+  - ✅ **第647 が建てた**: Lab `sessions/p647/bows/`（`bowdump.ily`・`run-lp.ps1`・`sweep-bows.ps1`・
+    `compare.ps1`・`summarize.ps1`）＋ `LilySharp.Tests/LpFidelity/TwinBowSweep.cs`（`LILYSHARP_BOW_SWEEP`）。
+    `DrawnBezier` は source 位置を持つ。tight の再現で LP と 6 桁一致を確認。**spacing の差は符頭の列で
+    差し引く**（列の数が揃えば区分線形、揃わなければ両側の最寄り列）が、**raw で既に合う端は raw のまま**
+    （列の写像は推測なので、差を*説明して消す*側にしか使わない＝頭 1 個ぶんの偽の差が 692 件出た）。
+    ⚠️ LP 側は stencil の無い bow（既定の TabStaff の Tie）を数えない。Lily# の grace スラーの source は
+    `acciaccatura` などの語。
+  - **初回の掃き（963 冊・第647）**: 対になった本 897・bow 23,591・±0.01 を超える差 3,425。
+    **族**（`summarize.ps1`）: ⑴ grace スラー（acciaccatura: x・y とも大きい。perf-grace200 ほか）／
+    ⑵ tab のスラーの y ±0.23・0.45（約 600 対・約 40 冊）＝**F9（数字の大きさ・宣言済み）の帰結かを先に
+    確かめる**（台帳 `slur.tab.*.string-to-attachment` の 0.151777 は F9）／⑶ tab のタイ（y −1.16・x +0.85）／
+    ⑷ 向きの反転（tie 40・slur 22 対）／⑸ tie の 0.01〜0.05 の x と高さ（多数・spacing の残りかを確認）／
+    ⑹ 段割りが違って対にできない 63 冊（T7 の族）／⑺ 数の不一致（Lily# の種類不明 65・l.v./repeat tie）。
+  - **計器の直し（第647・同じ便）**: LP 側の `LaissezVibrerTie`／`RepeatTie` は Item（`ly:spanner-bound`
+    で dump が止まり、その頁の残りが消えていた）／Lily# の縦長の bezier は bow ではない（tab の数字の
+    括弧）／tie の端は**最寄りの符頭列**で spacing を差し引く（符頭を縦に避けたタイは頭の*下*に着く＝
+    「右隣の列」を読むと 1 音ずれる）／端が合って span だけ違う対は `span-only`（高さは幅の関数）。
 
