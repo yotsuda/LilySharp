@@ -97,4 +97,38 @@ public class ChordNoteSourcePositionTests
 
         Assert.NotEqual(MeasureContentKey.Compute(a), MeasureContentKey.Compute(b));
     }
+
+    /// <summary>
+    /// A playing chord lights every one of its heads: the chord is ONE MIDI event addressed
+    /// at its '&lt;', so each head carries that offset as an alias (<c>data-alt</c>) beside
+    /// its own pitch's (<c>data-pos</c>).
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-26 the heads carried their pitches only, and during playback the preview
+    /// lit what carries the '&lt;' — the augmentation dots — and left every head dark
+    /// (fantasia.lys line 74, `&lt;bes,, f, des&gt;1.`). Interactive, because the alias exists
+    /// only in the preview's SVG (static export drops data-alt).
+    /// </remarks>
+    [Fact]
+    public void APlayingChord_LightsEveryHead()
+    {
+        const string source = "part m { clef bass }\nsection A { m { <c e g>1. s4 | } }\n"
+            + "form main { ~A }\nscore main { staff m }\n";
+        var tree = SyntaxTree.Parse(source);
+        string svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree,
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false, Interactive = true });
+
+        int chordAt = source.IndexOf('<');
+        var played = new LilySharp.Core.Midi.MidiExporter().Export(tree)
+            .Tracks.SelectMany(t => t.Notes).Select(n => n.SourcePos).Distinct().ToList();
+        Assert.Equal(new[] { chordAt }, played);
+
+        // Every head (the glyph, not its click rect) answers to the chord's offset.
+        var heads = System.Text.RegularExpressions.Regex.Matches(svg, "<text class=\"music\"[^>]*>")
+            .Select(m => m.Value)
+            .Where(tag => System.Text.RegularExpressions.Regex.IsMatch(tag, $"data-pos=\"({chordAt + 1}|{chordAt + 3}|{chordAt + 5})\""))
+            .ToList();
+        Assert.Equal(3, heads.Count);
+        Assert.All(heads, tag => Assert.Contains($"data-alt=\"{chordAt}\"", tag));
+    }
 }

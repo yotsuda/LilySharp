@@ -1089,8 +1089,16 @@ internal static partial class SharedRenderer
             // onto the ink box and did not move the chord's. It is 0.024 on a black head, it
             // is the full-size answer too, and it wants its own point — the FONT is what
             // changed here, not which box.
+            // …and the CHORD's own offset rides along as an alias (data-alt): a playing chord
+            // is ONE MIDI event addressed at its '<', and the preview lit only what carries
+            // that offset — the dots — while every head stayed dark (reported 2026-09-26,
+            // fantasia.lys line 74). A caret on '<' lights the whole chord the same way; a
+            // caret on one pitch still lights that head alone.
             if (!headWiped && !headTransparent)
-                using (gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
+                using (n.SourcePosition >= 0 && chord.SourcePosition >= 0
+                       && n.SourcePosition != chord.SourcePosition
+                           ? gc.Source(n.SourcePosition, [chord.SourcePosition])
+                           : gc.Source(n.SourcePosition >= 0 ? n.SourcePosition : chord.SourcePosition))
                     gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
                         GlyphMetrics.GetNoteheadAdvance(chordHeadFont, noteValue),
                         GlyphMetrics.GetNoteheadBBox(chordHeadFont, noteValue).Height);
