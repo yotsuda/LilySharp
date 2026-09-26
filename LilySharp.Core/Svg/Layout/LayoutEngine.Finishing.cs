@@ -413,8 +413,8 @@ internal sealed partial class LayoutEngine
 
     /// <summary>
     /// Voice collision offsets / head-wipes / dot-force-down for multi-voice staves (so the
-    /// renderer can nudge opposing voices apart), keyed (measureIndex, voiceId, itemIndex)
-    /// — correct for the common single-multi-voice-staff case. Filed from the SAME
+    /// renderer can nudge opposing voices apart), keyed (staffIndex, measureIndex, voiceId,
+    /// itemIndex) — the staff axis since 2026-09-26 (<see cref="VoiceItemKey"/>). Filed from the SAME
     /// per-measure table the spacing floor, the ledger rods, the skyline seed and the beam
     /// frame read (<see cref="SpacingRules.VoiceCollisionShiftsOf(Staff)"/>), a system's
     /// measures at a time through the per-system memo — so on a keystroke only the edited
@@ -457,7 +457,7 @@ internal sealed partial class LayoutEngine
                         staffIndex, first, count, (Table: table, First: first, Count: count),
                         static s => s.Table.SliceOf(s.First, s.Count));
                 ElementCoordinator.AddVoiceCollisions(
-                    slice, voiceOffsetsBuilder, headWipeBuilder, dotAdjustBuilder);
+                    slice, staffIndex, voiceOffsetsBuilder, headWipeBuilder, dotAdjustBuilder);
             }
         }
 

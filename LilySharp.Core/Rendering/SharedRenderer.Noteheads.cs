@@ -73,12 +73,12 @@ internal static partial class SharedRenderer
         foreach (var (item, ml, itemIdx, itemX, voiceX) in staffItems)
         {
             // Head-wipe when this voice's notehead merges with another's.
-            bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
+            bool headWiped = layout.IsHeadWiped(staffIndex, ml.MeasureIndex, voiceNumber, itemIdx);
             // Multi-voice collision: the dot-column adjustments the collision imposed
             // on this item — a preferred direction for its dots and/or a minimum X
             // that clears the opposite voice's heads.
             // LILYPOND-REF: lily/note-collision.cc:352-397 check_meshing_chords.
-            var dotAdjust = layout.GetDotAdjustment(ml.MeasureIndex, voiceNumber, itemIdx);
+            var dotAdjust = layout.GetDotAdjustment(staffIndex, ml.MeasureIndex, voiceNumber, itemIdx);
 
             // \voiceOne/\voiceTwo hold only where the voice { } span does, so this
             // is asked per measure — not once per part.
@@ -356,7 +356,7 @@ internal static partial class SharedRenderer
                 // (LILYPOND-REF: lily/accidental-placement.cc — the AccidentalPlacement grob
                 // is not inside the note column note-collision.cc translates; MEASURED in
                 // Collector.StaffAccidentalColumns's remark).
-                double voiceX = layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
+                double voiceX = layout.GetVoiceOffset(staffIndex, ml.MeasureIndex, voiceNumber, itemIdx);
                 itemX += voiceX;
                 into.Add((item, ml, itemIdx, itemX, voiceX));
             }

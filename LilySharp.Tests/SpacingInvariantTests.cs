@@ -776,12 +776,12 @@ public class SpacingInvariantTests
 
         // cis2. is voice 3, item 0 of measure 0. The down group's first head is the
         // e8 — a BLACK head — so the shift is half ITS ink width.
-        double cisShift = offsets[new VoiceItemKey(0, 3, 0)];
+        double cisShift = offsets[new VoiceItemKey(0, 0, 3, 0)];
         Assert.Equal(0.5 * GlyphMetrics.GetNoteheadBBox(8).Width, cisShift, precision: 9);
 
         // Voices one and two stay on the column (the pin only chases negative amounts).
-        Assert.False(offsets.ContainsKey(new VoiceItemKey(0, 1, 0)));
-        Assert.False(offsets.ContainsKey(new VoiceItemKey(0, 2, 0)));
+        Assert.False(offsets.ContainsKey(new VoiceItemKey(0, 0, 1, 0)));
+        Assert.False(offsets.ContainsKey(new VoiceItemKey(0, 0, 2, 0)));
     }
 
     /// <summary>

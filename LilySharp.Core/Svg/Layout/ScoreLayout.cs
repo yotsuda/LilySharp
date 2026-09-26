@@ -208,7 +208,15 @@ internal sealed record PageLayout(
 /// <summary>
 /// Key for voice-specific layout offsets in multi-voice scores.
 /// </summary>
-public readonly record struct VoiceItemKey(int MeasureIndex, int VoiceId, int ItemIndex);
+/// <remarks>
+/// ⚠️ THE STAFF AXIS IS LOAD-BEARING SINCE 2026-09-26. Item indices are numbered per voice
+/// INSIDE a staff, so without it every staff's voice 1, item 0 of a bar shared one entry: in
+/// 03-piano-nocturne (Lab probe) the right hand's two-voice collision shifted its `dis1` 0.6
+/// right, and the left hand's first `b16` of the same bar was drawn 0.6 right of its own stem
+/// (the stem reads the staff's own table). <c>StaffIndex</c> is the score-wide index of
+/// <c>MultiStaffScore.EnumerateStaves</c>, the one the renderer draws the staff by.
+/// </remarks>
+public readonly record struct VoiceItemKey(int StaffIndex, int MeasureIndex, int VoiceId, int ItemIndex);
 
 /// <summary>
 /// Key for a rest's vertical shift — beam collision, or collision with another voice.
@@ -363,9 +371,9 @@ internal sealed record ScoreLayout(
     /// Gets the X offset for a specific voice item due to collision handling.
     /// Returns 0 if no offset is needed. Value is in staff spaces.
     /// </summary>
-    public double GetVoiceOffset(int measureIndex, int voiceId, int itemIndex)
+    public double GetVoiceOffset(int staffIndex, int measureIndex, int voiceId, int itemIndex)
     {
-        var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
+        var key = new VoiceItemKey(staffIndex, measureIndex, voiceId, itemIndex);
         return VoiceOffsets.TryGetValue(key, out var offset) ? offset : 0;
     }
 
@@ -378,9 +386,9 @@ internal sealed record ScoreLayout(
     /// side supports and the dot direction rule, computed in
     /// NoteCollision.CalculateVoiceOffsets.
     /// </remarks>
-    public DotAdjustment GetDotAdjustment(int measureIndex, int voiceId, int itemIndex)
+    public DotAdjustment GetDotAdjustment(int staffIndex, int measureIndex, int voiceId, int itemIndex)
     {
-        var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
+        var key = new VoiceItemKey(staffIndex, measureIndex, voiceId, itemIndex);
         return DotAdjustments.TryGetValue(key, out var dot) ? dot : default;
     }
 
@@ -416,9 +424,9 @@ internal sealed record ScoreLayout(
     /// LILYPOND-REF: lily/note-collision.cc:254-318
     /// Head wipe hides the down-stem notehead when two voices merge at the same pitch.
     /// </remarks>
-    public bool IsHeadWiped(int measureIndex, int voiceId, int itemIndex)
+    public bool IsHeadWiped(int staffIndex, int measureIndex, int voiceId, int itemIndex)
     {
-        var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
+        var key = new VoiceItemKey(staffIndex, measureIndex, voiceId, itemIndex);
         return HeadWipeEntries.Contains(key);
     }
 

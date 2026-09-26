@@ -87,10 +87,43 @@ public sealed class SharedRendererMultiVoiceTests
         bool anyOffset = false;
         for (int voice = 1; voice <= 2 && !anyOffset; voice++)
             for (int item = 0; item < 4; item++)
-                if (System.Math.Abs(layout.GetVoiceOffset(0, voice, item)) > 1e-6)
+                if (System.Math.Abs(layout.GetVoiceOffset(0, 0, voice, item)) > 1e-6)
                     anyOffset = true;
 
         Assert.True(anyOffset, "colliding voices should yield a non-zero voice X-offset");
+    }
+
+    /// <summary>
+    /// A collision shift belongs to its STAFF: the right hand's voice 1, item 0 moving over
+    /// does not move the left hand's voice 1, item 0 of the same bar.
+    /// </summary>
+    /// <remarks>
+    /// 03-piano-nocturne (Lab probe, 2026-09-26): the key had no staff axis, so the right
+    /// hand's `dis1` shift (0.6) was also drawn on the left hand's first `b16`, whose stem —
+    /// placed from the staff's own table — stayed put: head and stem a gap apart.
+    /// </remarks>
+    [Fact]
+    public void ACollisionShift_StaysOnItsOwnStaff()
+    {
+        var (_, layout) = BuildLayout("""
+            octave absolute
+            key e major
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section S {
+              rh { voice { dis''1 } { <a'' b''>1 } | }
+              lh { b,16 fis a fis b,16 fis a fis b,16 fis a fis b,16 fis a fis | }
+            }
+            form main { S }
+            score main { grandStaff { staff rh  staff lh } }
+            """);
+
+        // Positive control: the right hand really does collide and shift.
+        Assert.True(Math.Abs(layout.GetVoiceOffset(0, 0, 1, 0)) + Math.Abs(layout.GetVoiceOffset(0, 0, 2, 0)) > 1e-6,
+            "the right hand's two voices should collide");
+        Assert.Equal(0.0, layout.GetVoiceOffset(1, 0, 1, 0));
+        Assert.DoesNotContain(layout.VoiceOffsets.Keys, k => k.StaffIndex == 1);
     }
 
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(string source)

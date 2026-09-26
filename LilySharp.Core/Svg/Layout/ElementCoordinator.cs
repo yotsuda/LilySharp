@@ -73,7 +73,7 @@ internal sealed class ElementCoordinator
     internal static (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
             ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
             ImmutableDictionary<VoiceItemKey, DotAdjustment> DotAdjustments) ComputeVoiceOffsets(
-        ImmutableArray<Voice> voices, GrobPropertyResolver? resolver = null)
+        ImmutableArray<Voice> voices, GrobPropertyResolver? resolver = null, int staffIndex = 0)
     {
         var offsetBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
@@ -84,7 +84,7 @@ internal sealed class ElementCoordinator
             foreach (var voice in voices)
                 measureCount = Math.Max(measureCount, voice.Measures.Length);
             for (int m = 0; m < measureCount; m++)
-                AddVoiceCollisions(ComputeVoiceCollisionsOfMeasure(voices, m, resolver),
+                AddVoiceCollisions(ComputeVoiceCollisionsOfMeasure(voices, m, resolver), staffIndex,
                     offsetBuilder, headWipeBuilder, dotAdjustBuilder);
         }
         return (offsetBuilder.ToImmutable(), headWipeBuilder.ToImmutable(), dotAdjustBuilder.ToImmutable());
@@ -92,17 +92,18 @@ internal sealed class ElementCoordinator
 
     /// <summary>
     /// Files a run of collision entries into the renderer's three tables — the one place
-    /// that knows which field of an entry goes to which table.
+    /// that knows which field of an entry goes to which table. The entries are one staff's
+    /// (<paramref name="staffIndex"/>, score-wide): see <see cref="VoiceItemKey"/>.
     /// </summary>
     internal static void AddVoiceCollisions(
-        ImmutableArray<VoiceCollisionEntry> entries,
+        ImmutableArray<VoiceCollisionEntry> entries, int staffIndex,
         ImmutableDictionary<VoiceItemKey, double>.Builder offsets,
         ImmutableHashSet<VoiceItemKey>.Builder headWipes,
         ImmutableDictionary<VoiceItemKey, DotAdjustment>.Builder dotAdjustments)
     {
         foreach (var e in entries)
         {
-            var key = new VoiceItemKey(e.MeasureIndex, e.VoiceId, e.ItemIndex);
+            var key = new VoiceItemKey(staffIndex, e.MeasureIndex, e.VoiceId, e.ItemIndex);
             if (e.XOffset != 0)
                 offsets[key] = e.XOffset;
             if (e.HeadTransparent)
