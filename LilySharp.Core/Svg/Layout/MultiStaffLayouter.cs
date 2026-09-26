@@ -1293,6 +1293,17 @@ internal sealed class MultiStaffLayouter
             : SolveLineStartPrefix(score, system.Measures[0].MeasureIndex, system.SystemIndex == 0)
                 .Columns.BarGap;
 
+    /// <summary>
+    /// <see cref="SystemLayout.LineStartBarRight"/> for a system opening at
+    /// <paramref name="startMeasureIndex"/>: the opening bar line's gap plus its drawn width,
+    /// from the same break-align table the renderer draws it by.
+    /// </summary>
+    internal static double LineStartBarRight(MultiStaffScore score, int startMeasureIndex, bool isFirstSystem)
+    {
+        var columns = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem).Columns;
+        return columns.HasBar ? columns.BarGap + columns.BarWidth : 0.0;
+    }
+
     /// <summary>A system's solved line-start break-align table plus the inputs it was
     /// solved from (the hoisted meter change, whether a meter is engraved at all, and
     /// the meter the prefix shows).</summary>

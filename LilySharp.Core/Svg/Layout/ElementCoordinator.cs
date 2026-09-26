@@ -2530,8 +2530,13 @@ internal sealed class ElementCoordinator
         }
         else
         {
-            // Broken piece: the bound is the system edge, and there is no column.
-            segStartX = segSystem.Measures[0].X;
+            // Broken piece: the bound is the line-start column's staff extent, and there is no
+            // note column. That extent ENDS at the bar line the system opens with, when it opens
+            // with one (a `.|:`), the mirror of the line-end bound below —
+            // LILYPOND-REF: lily/tie-formatting-problem.cc:262-270 set_minimum_height
+            // (staff_extent[-dir] of the break column). ABC.lys (Lab corpus) section B3: the piece began 2.94 left
+            // of LilyPond's, under the repeat bar.
+            segStartX = segSystem.Measures[0].X + segSystem.LineStartBarRight;
         }
 
         double segEndX;

@@ -177,6 +177,15 @@ internal sealed record SystemLayout(
     ImmutableArray<StaffSpring> StaffSprings = default
 )
 {
+    /// <summary>
+    /// How far right of <c>Measures[0].X</c> the ink of the bar line this system OPENS with
+    /// (a <c>.|:</c>) ends — its column gap plus its drawn width — or 0 when it opens with none.
+    /// The right edge of the line-start column's staff extent, which is where a spanner
+    /// broken at this line start begins (lily/tie-formatting-problem.cc:262-270
+    /// set_minimum_height: <c>staff_extent (bounds[0])[-dir]</c>).
+    /// </summary>
+    public double LineStartBarRight { get; init; }
+
     /// <summary>Whether this system has multiple staff groups.</summary>
     public bool HasMultipleStaffGroups => !StaffGroups.IsDefaultOrEmpty && StaffGroups.Length > 1;
 
