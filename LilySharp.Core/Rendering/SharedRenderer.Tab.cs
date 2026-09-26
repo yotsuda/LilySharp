@@ -429,6 +429,11 @@ internal static partial class SharedRenderer
                     //   — tied + at-line-begin? or repeat-tied? → 'parenthesized #t;
                     //   plain tied → 'transparent. (The span-start branch — a slur or
                     //   glissando starting at the tie's end — is not wired here.)
+                    // ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
+                    //   HANDOFF §2 T and session 636): \tabFullNotation takes handle-ties off
+                    //   (scm/scheme-engravers.scm:2196-2200 Tab_tie_follow_engraver), so
+                    //   LilyPond prints a full tab's tied-to digit. Lily# hides it on every
+                    //   tab. Not a defect to file.
                     if (!note.IsTieTarget && !note.HasRepeatTie)
                         DrawTabNote(fonts, note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition,

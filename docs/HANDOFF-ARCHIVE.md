@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第635セッションの経緯
+
+### 1.1 第635セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p635`（HEAD `6c6b61e8`・未 push 12・full **9184 / 0 / 2 / 9186**）。ユーザー「続けて」＝§1.0 の T8 の残りと tab のスラーの残り。
+
+★ **⑴ 行頭の `.|:` の後の光学補正を tab の符尾で読む**（`ba0aeb48`）: `LineStartColumn` は段ごとに回るので、full tab の段は各声部の最初の列を `SpacingRules.FullTabStemOpticalCorrection`（第634 の小節線→音の計算を 1 列分に切り出した）で読む。⚠️ numbers-only の tab は従来どおり（LP の長さ 0 の TabStaff の符尾も `Stem::is_normal_stem` では数える＝未測）。実測（`audit/lp-geometry/probes/tab-stem-spacing-line-start.ly`）: 弦 1（下向き）で始まる段は弦 5（上向き）で始まる段より 0.228571 奥＝LP。Lily# は 0.1894（譜表の符尾）だった。網 `TabStemSpacingTests.ALineStartRepeatBarReadsTheTabsStem`（毒で赤）。射程 964 冊中 8 冊。
+★ **⑵ 多声の tab を LP と比べた**（Lab `sessions/p635/poly.*`）＝符尾の向きが声部を読まない欠陥を見つけた → §1.0 T9 に起票（実コーパス 0 冊）。LP の絵の 2 声部目のスラーが符尾のあいだ（頭の側）に付くのをユーザーが「不自然・stem の先につくべき」と指摘 → LP の規則（梁が無ければ頭側）を説明し、**ユーザー決定「LP 忠実にしておくのが無難」**＝変えない（§1.0 に ⚠️）。
+★ **終了**: code `ba0aeb48`・full **9185 / 0 / 2 / 9187**（+1）・`-End` の門は全部 OK。§7.5 Core '+' 50・LILYPOND-REF 1・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第634セッションの経緯
 
 ### 1.1 第634セッション（2026-09-26・YT-DELL2）

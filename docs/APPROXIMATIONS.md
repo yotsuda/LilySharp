@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 161 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **280** | |
+| `OWN` | 162 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **281** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（161 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（162 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2644** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -277,7 +277,8 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:573** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
-- **:949** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:432** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
+- **:954** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 - **:670** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
