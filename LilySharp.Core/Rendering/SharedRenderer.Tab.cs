@@ -244,10 +244,11 @@ internal static partial class SharedRenderer
         // … break-visibility, the TimeSignature grob's own block) — on a full-notation tab
         // exactly as on a notation staff. It stands off the final BAR LINE's own space-alist
         // entry rather than a courtesy key's: a tab staff has no Key_engraver in either mode,
-        // so nothing is ever in front of it here. The string lines then run over the suffix
-        // the layout reserved for it, which is why the right edge is picked here and not at
-        // the top — an unextended tab would stop its lines short under the glyph.
-        double lineRight = staffRight;
+        // so nothing is ever in front of it here.
+        // The string lines run to the SYSTEM's end (StaffRightEdges' TabRight) whether or not
+        // this tab draws the meter: a numbers-only tab under a notation staff's courtesy suffix
+        // prints nothing there, and its lines still end with the other staves', as in LilyPond.
+        double lineRight = courtesyStaffRight;
         if (engravesMeter && system.Measures.Length > 0
             && GetSystemEndTimeChange(staff, system) is { } eolTimeChange)
         {
@@ -257,7 +258,6 @@ internal static partial class SharedRenderer
                     lastMl.X + lastMl.Width + SpacingRules.BreakAlignGap(
                         BreakAlignSymbol.StaffBar, BreakAlignSymbol.TimeSignature),
                     meterStaffY, gc);
-            lineRight = courtesyStaffRight;
         }
 
         // LAST, so every digit above has booked its bite out of the line it sits on.

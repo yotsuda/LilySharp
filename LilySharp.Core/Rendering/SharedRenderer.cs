@@ -308,6 +308,15 @@ internal static partial class SharedRenderer
                 tabStaffRight += SpacingRules.TimeCourtesySuffixWidth(
                     score.TextMetrics, eolMeter, afterCourtesyKey: false);
             }
+            // …and a tab's string lines run on to the SYSTEM's end, whether or not the tab
+            // draws anything there: every staff's StaffSymbol spans the system to its last
+            // (breakable) column, whose width is the widest staff's suffix. MEASURED, 2.26.0
+            // (the twin of ABC.lys "both", bar 36): a numbers-only tab under a notation
+            // staff's courtesy `C` prints no meter, and its lines still end with the notation
+            // staff's; Lily# stopped them at the bar line.
+            // LILYPOND-REF: lily/staff-symbol-engraver.cc — the StaffSymbol spanner ends at
+            //   the system's last column (its right bound), not at the last bar line.
+            tabStaffRight = Math.Max(tabStaffRight, notationStaffRight);
         }
         return (staffRight, notationStaffRight, tabStaffRight);
     }

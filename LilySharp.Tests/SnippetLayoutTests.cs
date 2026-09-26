@@ -89,6 +89,39 @@ public sealed class SnippetLayoutTests
         Assert.Equal(page.Height, snippet.Height, 9);
     }
 
+    /// <summary>
+    /// A numbers-only tab under a notation staff ends its string lines where the SYSTEM ends,
+    /// though it draws no courtesy meter of its own: every staff's StaffSymbol spans the
+    /// system to its last column. ABC.lys "both" bar 36 (Lab corpus) stopped the tab at the
+    /// bar line under the bass staff's courtesy `C`; LilyPond 2.26 runs it on.
+    /// </summary>
+    [Theory]
+    [InlineData("time 2/4")]              // the meter alone (ABC.lys)
+    [InlineData("key g major time 2/4")]  // a courtesy key in front of it widens the suffix
+    public void ANumbersOnlyTab_RunsItsLinesToTheSystemsEnd_UnderAnotherStaffsCourtesyMeter(string change)
+    {
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse($$"""
+            octave absolute
+            part bl { instrument bass }
+            section A { bl { c4 d e f | break {{change}} g4 a | } }
+            form main { A }
+            score main { staff bl  tab bl }
+            """), new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+
+        // The first system's staff and string lines: the nine highest horizontal lines
+        // (five of the bass staff, four of the tab), each keyed by its Y.
+        var lines = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line x1=\"([\\d.]+)\" y1=\"([\\d.]+)\" x2=\"([\\d.]+)\" y2=\"\\2\"")
+            .Select(m => (Y: double.Parse(m.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture),
+                          X2: double.Parse(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture)))
+            .GroupBy(l => l.Y).Select(g => (Y: g.Key, X2: g.Max(l => l.X2)))
+            .OrderBy(l => l.Y).Take(9).ToArray();
+
+        Assert.Equal(9, lines.Length);
+        double notationEnd = lines[..5].Max(l => l.X2);
+        Assert.All(lines[5..], l => Assert.Equal(notationEnd, l.X2, 2));
+    }
+
     [Fact]
     public void ATitleWiderThanTheMusic_WidensThePicture_ToTheTitle()
     {
