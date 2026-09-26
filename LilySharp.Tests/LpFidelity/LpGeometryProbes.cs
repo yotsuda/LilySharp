@@ -10677,6 +10677,32 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// A slur hanging from a BEAM with a text riding over it — the first bar of
+    /// input/regression/empty-chord.ly. The text's height reads the slur the skyline
+    /// reserved, which Lily# lays out apart from the drawn one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — the left end, a
+    ///   stem-up note beamed on the inner side under an up slur, attaches at the beam's end
+    ///   + 0.5 staff space.
+    /// Until session 639 <c>MultiStaffLayouter.StaffSlurLayouts</c> (the reservation) was
+    /// handed no beams, so its bow attached to an unbeamed stem tip and rose higher than the
+    /// drawn one, and the text stood 0.32 higher. LilyPond twin:
+    /// audit/lp-geometry/probes/slur-beam-reserve.ly.
+    /// </remarks>
+    private static readonly string SBR = """
+        part melody
+
+        section Main {
+          melody { r4 e8( g <>)@text("sul D").up c8 c c c | }
+        }
+
+        form main { ~Main }
+
+        score main "SBR" { staff melody }
+        """;
+
+    /// <summary>
     /// A beam quanted against the STEM of a note in another voice — the half of the
     /// covered-grob supply that is not a box at all.
     /// </summary>
@@ -16202,6 +16228,8 @@ internal static class LpGeometryProbes
         new("slur.tab.stems.flag-attachment", TSS3, g => g.TabBowPointAboveStaffMiddle(0, 0)),
         new("slur.tab.stems.flag-control", TSS3, g => g.TabBowPointAboveStaffMiddle(0, 1)),
         new("slur.tab.stems.flag-span", TSS3, g => g.TabBowSpan(0)),
+        // The skyline reserves a slur laid out apart from the drawn one. See SBR.
+        new("slur.beamed.reserved-text", SBR, g => g.TextBaselineAboveStaff("sul D")),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar
         // with no span in the part at all. LilyPond prints the pair identically because
         // \voiceOne dies with the span; a part-wide reading moves only the first.

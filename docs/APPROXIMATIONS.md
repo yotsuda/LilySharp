@@ -201,7 +201,7 @@
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3560** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:4906** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4909** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:840** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1492** pinned there), no ledger point.
@@ -402,7 +402,7 @@
 - **:1237** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
 - **:1708** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
 - **:2309** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4598** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
+- **:4601** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:149** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:175** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

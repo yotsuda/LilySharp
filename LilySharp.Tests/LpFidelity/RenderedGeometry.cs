@@ -1096,6 +1096,31 @@ internal sealed class RenderedGeometry
     }
 
     /// <summary>
+    /// The baseline of the ONE drawn text reading <paramref name="text"/>, above the staff
+    /// reference point it rides over — any role and size, for a note's own text script
+    /// (<c>@text(…)</c>), which <see cref="CustomTexts"/> does not count.
+    /// </summary>
+    public double TextBaselineAboveStaff(string text, int page = 0)
+    {
+        var hits = Texts.Where(t => t.Text == text).ToList();
+        if (hits.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: expected exactly ONE text \"{text}\", found {hits.Count} — the "
+                + "probe is not measuring what it claims.\nDrawn geometry:\n" + Describe());
+        }
+        double y = hits[0].Y;
+        var below = StaffRefpoints(page).Where(r => r > y).ToList();
+        if (below.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"page {page}: the text at {y:F6} has no staff below it, so it is "
+                + "not riding over one.\nDrawn geometry:\n" + Describe());
+        }
+        return below.Min() - y;
+    }
+
+    /// <summary>
     /// The sole custom text's drawn PEN ORIGIN minus the
     /// <paramref name="noteheadIndex"/>-th notehead's anchor — the TextScript X pair
     /// (books TXD/TXP). LILYPOND-REF: lily/self-alignment-interface.cc:143-175 aligned_on_parent

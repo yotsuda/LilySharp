@@ -1815,6 +1815,13 @@
       "residual": 0.0,
       "why": "EXACT since session 638: THE FLAG IS IN THE EDGE STEM'S EXTENT. LilyPond's stem_extent_ is stem->extent united with flag->extent (lily/slur-scoring.cc:188-203 get_bound_info), so the left edge, attached to its stem (:748-752), sits 0.3 past the FLAG's right edge, not the stem's. The staff path did this already; the tab's edge record (ElementCoordinator.BuildTabSlurLayout TabStemOf) did not, and the span read 3.365562 (+0.667867)."
     },
+    "slur.beamed.reserved-text": {
+      "probe": "slur-beam-reserve.ly",
+      "score": "A",
+      "lilypond": 2.6731763847604983,
+      "residual": 0.616823615,
+      "why": "THE SLUR'S PART IS NOW RIGHT; THE REST IS THE TEXT'S OWN FLOOR. With the slur taken out (Lab sessions/p639/sb-noslur.ly, sbr-noslur.lys) LilyPond reads 2.55 and Lily# 3.29 -- the @text over this staff already stands 0.74 higher with nothing under it (not decomposed; HANDOFF 1.0). The slur lifts LilyPond's text by 0.123 and Lily#'s by 0. Until session 639 Lily# read 3.931767 (+1.258590): the skyline reserved this staff's slurs laid out with NO beams (MultiStaffLayouter.StaffSlurLayouts), so the reserved bow hung from an unbeamed stem tip and rose above the drawn one, which hangs from the beam (lily/slur-scoring.cc:549-557)."
+    },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",
       "score": "qA",

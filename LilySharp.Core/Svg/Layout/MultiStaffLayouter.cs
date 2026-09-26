@@ -4232,10 +4232,12 @@ internal sealed class MultiStaffLayouter
     /// of its scoring. Slur geometry is independent of inter-staff spacing (it is fixed by
     /// note X and pitch), so computing it before the spacing is decided is sound.
     /// <para>
-    /// Beams are not passed (default): they only shift a slur's ENDPOINT attachment to a
-    /// beamed stem tip, never the peak that binds the gap. (⚠️ Not for want of layouts —
-    /// <see cref="StaffBeamLayouts"/> exists and <see cref="StaffTupletBracketLayouts"/>
-    /// consumes it since 2026-07-29; the slur trade stands on the endpoint argument alone.)
+    /// The staff's beams are passed, as the drawn pass passes them. ⚠️ Until session 639 they
+    /// were not, on the argument that a beam only moves a slur's ENDPOINT and never the peak
+    /// that binds the gap — but the endpoint IS the curve's footing: a bow over a beam hangs
+    /// from the beamed stem's end (lily/slur-scoring.cc:549-557), and without the beam the
+    /// reserved bow stood on an unbeamed stem tip, higher than the drawn one, and the text
+    /// placed over it with it (audit/lp-geometry/probes/slur-beam-reserve.ly: +0.64).
     /// </para>
     /// </remarks>
     private ImmutableArray<SlurLayout> StaffSlurLayouts(
@@ -4279,6 +4281,7 @@ internal sealed class MultiStaffLayouter
         return _elementCoordinator.LayoutSlurs(
             score.TextMetrics, items.Slurs, items.LocalScore, ImmutableArray.Create(system),
             staffIndex: 0, staff, score.GraceNotes,
+            beamLayouts: beamLayouts,
             insideScripts: staffScripts.IsEmpty ? null : () =>
                 ArticulationEngraver.InsideSlurScriptLayouts(
                     score.TextMetrics, items.LocalScore, staffScripts, measureLayouts,
