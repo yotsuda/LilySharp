@@ -131,7 +131,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ✅ **T9（多声の tab の符尾の向き）は第636 が閉じた**（§1.1 第636）
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭 906 行にも在る・第636 で再確認「描画すべきではない」）**。LP の `\tabFullNotation` は描く（`Tab_tie_follow_engraver` が handle-ties を外す＝scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
-- ★ **tab のスラーの残り（第633）**: tab の旗を符尾の extent に入れていない／`StaffSlurLayouts`（skyline の予約）は梁を渡さないので、梁側へ書かれた弧の予約は符尾の先で止まる
+- ★ **tab のスラーの残り（第633）**: ✅ 旗は第638 が閉じた／`StaffSlurLayouts`（skyline の予約）は梁を渡さないので、梁側へ書かれた弧の予約は符尾の先で止まる
 
 **⒞ ユーザー決定が先・触らない**
 
@@ -150,21 +150,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第638セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p638`（HEAD `867170dd`・未 push 17・full **9187 / 0 / 2 / 9189**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の tab のスラーの残り。
+
+★ **⑴ tab のスラーの端の符尾に旗を入れた**（`24159ad5`）: LP の端の `stem_extent_` は stem ∪ flag（slur-scoring.cc:188-203 get_bound_info）＝符尾に付く端は旗の右端 + 0.3 に立つ（:748-752）。譜表の `ResolveSlurEdge` は済んでいたが tab の `TabStemOf` は符尾だけだった。梁の無い単独の符尾だけ（`GlyphMetrics.GetFlagBBox`・Y は `ItemSkylineFactory.FlagInkBand`＝譜表と同じ綴り）。
+★ **⑵ 台帳**: `tab-slur-stems.ly` に score C（旗付きの 8 分 2 つを端に、下へ書いたフレージング・スラー）＝3 点。**span は exact**（前 +0.667867）。attachment −0.133520・control −0.060490 は **F9**（数字の大きさ）＝tab スラーの半数字高を LP の 0.6577 にする一時実験で −0.013683／+0.004561（Lab `sessions/p638/`・LP の Stem／Flag／NoteColumn の extent dump は `flag.ly`）。毒（旗の union を外す）で 2 赤。掃き 964 冊で動いた本 **0**（符尾がスラー側を向く旗付きの端＝多声か書かれた向きだけ）。
+★ **終了**: code `24159ad5`・full **9190 / 0 / 2 / 9192**（+3＝台帳）・`-End` の門は全部 OK。§7.5 Core '+' 21・LILYPOND-REF 1・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第637セッションの経緯
+
 ### 1.1 第637セッション（2026-09-26・YT-DELL2）
 
 同じ会話の続き。★ `-Start p637`（HEAD `d2355f01`・未 push 16・full **9187 / 0 / 2 / 9189**＝引継ぎと一致）。ユーザー「続けて」＝T10 のつもりだったが、**ユーザーが T10 を取り下げた**（第636 ⑶・§1.0 の ⚠️）＝コードは註だけ（`SharedRenderer.Tab.cs`）。次の一手はユーザー待ち。
 ★ **終了**: full **9187 / 0 / 2 / 9189**（±0）・`-End` の門は全部 OK。棚卸し＝`APPROXIMATIONS.md` に LILYSHARP-OWN 1 件増（その註＝意図した逸脱の明示）。§7.6／7.7 該当なし。⚠️ 取り下げを受けたとき `-Start p637` の呼び出しは拒否されたが**実際には走り切っていた**（ARCHIVE へ第635 を移した）＝見出しを立てて便として閉じた。**push はユーザー**（Lab も）。
-
-## 以下は第636セッションの経緯
-
-### 1.1 第636セッション（2026-09-26・YT-DELL2）
-
-新しい会話。★ `-Start p636`（HEAD `408f1b23`・未 push 14・full **9185 / 0 / 2 / 9187**＝引継ぎと一致）。ユーザー「HANDOFF を読んで着手」＝§1.0 T9（多声の tab の符尾の向き）。
-
-★ **⑴ T9 を閉じた**（`64925f16`）: 声部の向きを `StemUpOverride`（記譜の梁の音高の答えと同じ欄＝tab は読めない）に加えて新しい欄 `VoiceStemUp`（NoteItem は rare 箱・ChordItem は素の init）にも焼き、`TabStaffGeometry.ForcedStemUpOf` が `ForcedStemUp ?? VoiceStemUp` を読む＝単独の符尾も梁の群も声部の側へ。**起票より広かった**: tab のスラー（`BuildTabSlurLayout`）とタイ（`TabColumnCurveUp`）も声部を読まず、符尾が正しくなると*逆に*内側へ倒れた（スラーの規則は「下向きの符尾が 1 本でもあれば上」）＝LP の `make-voice-props-set` は Stem・Slur・Tie すべてに direction を置く（music-functions.scm:617-674）ので、スラーは始点の `VoiceStemUp` を書かれた側として、タイは `StandardDirections` の manual として渡す。`TabResolver.WithString` のキャッシュ比較は触らない（`VoiceStemUp` は init だけ＝同じ入力の instance では変わらない）・`MeasureContentKey` は public property を反射で畳むので自動で入る。
-★ **⑵ 結果**: Lab `sessions/p636/poly2.*`（2 声・スラー・8 分の梁・小節をまたぐタイ）で符尾・梁・スラー・タイの側が LP と一致。網 `TabVoiceDirectionTests` 2 本（各主張に「弦の規則なら逆」の陽性対照）・毒 3 本（tab が声部を読まない・スラー・タイ）すべて赤。掃き 964 冊で動いた本 **0**（陽性対照 poly2 は動く）＝射程は起票どおり実コーパス 0。
-★ **⑶ full tab のタイの行き先の数字を「LP は描く」と見つけて T10 に起票したが、ユーザー「タブ譜では、タイの行先の数字は描画すべきではない。これは意図して LP から逸脱した部分だ」で取り下げた**（§1.0 に ⚠️）。**§2 T の冒頭に同じ決定が在った＝§0 の「見つけたと思ったら、まず §2 を grep」を飛ばした**。再発防止にコード側（`SharedRenderer.Tab.cs`）へ LILYSHARP-OWN の註を置いた。
-★ **終了**: code `64925f16`・full **9187 / 0 / 2 / 9189**（+2＝`TabVoiceDirectionTests`）・`-End` の門は全部 OK。§7.5 Core '+' 65・LILYPOND-REF 4・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 

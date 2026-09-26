@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第636セッションの経緯
+
+### 1.1 第636セッション（2026-09-26・YT-DELL2）
+
+新しい会話。★ `-Start p636`（HEAD `408f1b23`・未 push 14・full **9185 / 0 / 2 / 9187**＝引継ぎと一致）。ユーザー「HANDOFF を読んで着手」＝§1.0 T9（多声の tab の符尾の向き）。
+
+★ **⑴ T9 を閉じた**（`64925f16`）: 声部の向きを `StemUpOverride`（記譜の梁の音高の答えと同じ欄＝tab は読めない）に加えて新しい欄 `VoiceStemUp`（NoteItem は rare 箱・ChordItem は素の init）にも焼き、`TabStaffGeometry.ForcedStemUpOf` が `ForcedStemUp ?? VoiceStemUp` を読む＝単独の符尾も梁の群も声部の側へ。**起票より広かった**: tab のスラー（`BuildTabSlurLayout`）とタイ（`TabColumnCurveUp`）も声部を読まず、符尾が正しくなると*逆に*内側へ倒れた（スラーの規則は「下向きの符尾が 1 本でもあれば上」）＝LP の `make-voice-props-set` は Stem・Slur・Tie すべてに direction を置く（music-functions.scm:617-674）ので、スラーは始点の `VoiceStemUp` を書かれた側として、タイは `StandardDirections` の manual として渡す。`TabResolver.WithString` のキャッシュ比較は触らない（`VoiceStemUp` は init だけ＝同じ入力の instance では変わらない）・`MeasureContentKey` は public property を反射で畳むので自動で入る。
+★ **⑵ 結果**: Lab `sessions/p636/poly2.*`（2 声・スラー・8 分の梁・小節をまたぐタイ）で符尾・梁・スラー・タイの側が LP と一致。網 `TabVoiceDirectionTests` 2 本（各主張に「弦の規則なら逆」の陽性対照）・毒 3 本（tab が声部を読まない・スラー・タイ）すべて赤。掃き 964 冊で動いた本 **0**（陽性対照 poly2 は動く）＝射程は起票どおり実コーパス 0。
+★ **⑶ full tab のタイの行き先の数字を「LP は描く」と見つけて T10 に起票したが、ユーザー「タブ譜では、タイの行先の数字は描画すべきではない。これは意図して LP から逸脱した部分だ」で取り下げた**（§1.0 に ⚠️）。**§2 T の冒頭に同じ決定が在った＝§0 の「見つけたと思ったら、まず §2 を grep」を飛ばした**。再発防止にコード側（`SharedRenderer.Tab.cs`）へ LILYSHARP-OWN の註を置いた。
+★ **終了**: code `64925f16`・full **9187 / 0 / 2 / 9189**（+2＝`TabVoiceDirectionTests`）・`-End` の門は全部 OK。§7.5 Core '+' 65・LILYPOND-REF 4・LILYSHARP-OWN 0。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第635セッションの経緯
 
 ### 1.1 第635セッション（2026-09-26・YT-DELL2）
