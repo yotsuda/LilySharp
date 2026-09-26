@@ -127,7 +127,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
   （MCP コンソールの入力読み取り待ち・`cmd /d /s /c "… < NUL > log 2>&1"`＝RULES §5.5）
 
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
-- ★ **T8 tab 声部の間隔に符尾の補正が無い**（第633 起票・台帳 `slur.tab.stems.span` −0.166667・`inner-span` −0.199661）: LP は TabVoice の符尾と*弦の位置*で `same_direction_correction`（note-spacing.cc:162-197・0.25）を掛ける＝弦 2→弦 1・両方下向きの間が 0.25 page 広い。Lily# の `SpacingRules.CalculateStemCorrection` は item の譜表の符尾と音高を読む。直すなら tab の wish（第576）に弦の位置と tab の符尾向きで補正を入れる。⚠️ 射程は未測
+- ✅ **T8 は第634 が閉じた**（§1.1 第634）。残り: 行頭の `|:` の後の光学補正（`LineStartColumn`）は tab でも譜表の符尾を読む／staff＋`tab as full` の多段では各声部を*自分の*段の小節線で読む（LP は全段の列を各段の小節線で読んで merge）／小節線をまたぐ梁は小節ごとに半分で読む
 - ★ **tab のスラーの残り（第633）**: 多声の tab は声部の向き（`\voiceOne`）を読まず弦の規則のまま／tab の旗を符尾の extent に入れていない／`StaffSlurLayouts`（skyline の予約）は梁を渡さないので、梁側へ書かれた弧の予約は符尾の先で止まる
 
 **⒞ ユーザー決定が先・触らない**
@@ -147,6 +147,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第634セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p634`（HEAD `d124bdc6`・未 push 10・full **9182 / 0 / 2 / 9184**）。ユーザー「続けて」＝§1.0 T8（tab 声部の間隔に符尾の補正が無い）。
+
+★★★ **⑴ 起票より広かった＝full tab の声部の wish は*譜表の*符尾と音高で補正されていた**（`SpacingRules.CalculateStemCorrection` が item の `StemUp`・`StaffPosition`・`PureBeamedStemTip` を読む）。LP の Note_spacing は TabVoice 自身の符尾＝*弦の位置*と tab の向き。実測（Lab `sessions/p634/sp.ly`＝guitar tab 5 小節・NoteColumn X と Stem の pure 高さを dump）: 31 間隔のうち 11 がずれていた＝1 本の弦を上る 8 分に −0.25（音高の輪郭が同方向補正を取る）・弦の跳びに ±0.25 が無い・上下の 4 分の組が ±0.05（譜表の符尾の重なり）・下向きで始まる小節の頭が 0.04。
+★★ **⑵ 移植（`TabStemSpacingInfo`＝tab の段位置での符尾の帯）**: 頭＝弦の位置／向き＝梁の群なら `GroupStemUp`・単独なら `TabStemUp`／頭側の端＝根の数字の位置 ± 1.35 × LP の数字の半高（TabNoteHead の `calc_tab_stem_attachment`＝(0, ±1.35)・数字の半高は**実測 3 種**: 0 3 5-9 0.630334・1 4 0.618114・2 0.621598・複数桁は最大＝Lab `digits.ly`）／先端＝単独は `CalculateStemEndPosition`・梁は群の同じ向きの member の単独の先端の最も遠いもの（stem.cc:399-418＝譜表の `RebakePureBeamedTips` と同じ規則）。`MergeVoiceStemWishes`（同じ・逆向き）と `…ToBarline`（小節線の半高＝弦数 − 1）が full tab の声部でそれを読み、臨時記号は見ない（TabVoice に無い）。**小節線→最初の音**（staff-spacing.cc:43-67）は符尾の pure 範囲を*page 単位のまま*、小節線を*間隔で割って*交わらせる（tab では 1.5 倍違う）＝`FullTabBarlineToNextNotesCorrection` を MeasureLayouter から渡す（full tab の声部が無い小節は従来どおり）。
+★ **⑶ 結果**: probe の 47 間隔すべて LP と 0.0001 以内（`audit/lp-geometry/probes/tab-stem-spacing.ly`＝7 小節・網 `TabStemSpacingTests` 2 本＝1 段に収まるよう 5＋2 小節）。**第633 の台帳 5 点が全部 exact に**（`slur.tab.stems.*`＝前便が「分解していない」とした 0.0002・0.007・0.005 も間隔だった）。毒 5 本すべて赤（tab の帯を読まない 7・梁の群の向き 1・数字の高さ 1・小節線の半高 1・梁の先端 1＝Lab `sessions/p634/poisons.log`。最初の book では 3 本が緑＝6・7 小節目を足して観測した）。スナップショット 16 枚（tab の本）を更新。
+★ **⑷ 射程**: 964 冊 `--combined` で **106 冊が動く**・`lysc layout --all` で段割りが変わったのは **1 冊**（That's The Way の tab score・15〜17 段の小節の配分だけ・段数は同じ）＝Lab `sessions/p634/sweep/`。
+⚠️ **⑸ LP の probe の出力を `> log 2>&1` で読むと行が割れる**（stderr の診断が数値の途中に入る＝1 列の X が空に読めた）＝**stdout だけを読む**（`> out 2> err`・Measure-LilyPondProbe.ps1 の註のとおり。ただしあれは svg backend＝数字の書体が代替になるので tab には使わない）。
+★ **終了**: code `e88c5881`・full **9184 / 0 / 2 / 9186**（+2＝`TabStemSpacingTests`）・`-End` の門は全部 OK。§7.5 Core '+' 231・LILYPOND-REF 5・LILYSHARP-OWN 0（近似 2 つ＝梁を小節で半分に読む・各声部を自分の段の小節線で読む は ⚠️ 註で開示）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
+## 以下は第633セッションの経緯
+
 ### 1.1 第633セッション（2026-09-26・YT-DELL2）
 
 新しい会話。★ `-Start p633`（HEAD `be874b85`・未 push 8・full **9175 / 0 / 2 / 9177**・CI／Pages 緑）。第632 の追補の後に commit が 2 本ある（`cc3d86e0` Transform Selection がファイル全体と診断を渡す・`be874b85` ファイル全体の書き換えと音域の検査）＝§1.1 第632 には未記載。ユーザー選択「タブ譜の .up/.down」（§1.0 ⒳¹³ ⑹）。
@@ -157,20 +170,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ **⑷ 射程**: 追跡＋実コーパス 964 冊を `svg --combined`（全 score）で前後比較＝**43 冊が動く（すべて tab だけの score を持つ本）**。既定の score だけを描く `sweep.ps1` では 1 冊しか見えない＝**tab の変更の射程は `--combined` で数える**。wrongfret.lys は LP と同じく左端が梁の先から出るようになった。Lab `sessions/p633/sweep/`。
 ⚠️ **⑸ `-dbackend=null` は LP 2.26 で「invalid value; possible values are (ps cairo svg)」と無視される**＝既定の backend で走っている（それでも LilyPond Serif の値＝台帳と一致）。probe の註は null と書いたまま。
 ★ **終了**: code `6290188e`・full **9182 / 0 / 2 / 9184**（+7＝台帳の 7 点）・台帳 893 点・`-End` の門は全部 OK。§7.5 Core '+' 132・LILYPOND-REF 4・LILYSHARP-OWN 0（⑹ の OWN 註を消した＝全部が LP の移植）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
-
-## 以下は第632セッションの経緯
-
-### 1.1 第632セッション（2026-09-25・YT-DELL2）
-
-同じ会話の続き。★ `-Start p632`（full **9173 / 0 / 2 / 9175**）。ユーザー:「gh Pages を準備して」＋途中で「index.html の最初の画像を、リアルタイムでプレビューが更新される動画に差し替えたい。適切な .lys とシナリオを提案して」。
-
-★ **⑴ Pages（commit `site: …`）**: `scratch/site-showcase`（git 管理外）のソースだけを **`site/`** に移した（.lys・examples/*.lys・build-*.ps1・manual-body.html・hero-vscode.png）。生成物（2 頁・全 SVG・`_site/`）は `site/.gitignore`＝毎回ソースから描く。スクリプトは Linux でも動く（`/` 区切り・`$IsWindows` で lysc/lysc.exe・`../` が repo 根）。`build-site.ps1` は検査の後に **2 頁と頁が参照するファイルだけ**を `site/_site/`（＋`.nojekyll`）へ集める。`<video>` の poster／`<source>` の欠けも検査する。**`.github/workflows/pages.yml`**＝master への push（site/・Core・Cli・props・README・自身）と手動で、ubuntu で lysc を Release ビルド→`build-site.ps1`→upload-pages-artifact→deploy-pages。⚠️ **ユーザーが一度だけ Settings → Pages → Source を「GitHub Actions」にする**。Linux 上の実走は未確認（push 後の初回 run が最初）。`scratch/site-showcase` は古い写し＝編集は `site/` で。
-★ **⑵ ヒーロー動画の受け口**: `hero-vscode.mp4`（任意で `.webm`）があれば muted・loop・playsinline の `<video>`、poster＝`hero-vscode.png`、`prefers-reduced-motion` では再生せず controls。偽 mp4 で経路を確認して消した。
-★ **⑶ 動画のシナリオ案**: Lab `sessions/p632/hero-stages.ps1`＝Morning Light の 4 小節版で 6 段階（開始→旋律を打つ→chords→lyrics→`bass { walk }`＋`staff bass`→`tab bass`）。全段階で診断 0（bass は `phrase walk` に置き、途中の小節数不一致 LYS2007 を避けた）。各段階の PNG も同所。
-
-★ **⑷ 追補（同じ会話）**: ユーザーが ScreenToGif（winget・MSIX）と ffmpeg 9.0.2（winget `Gyan.FFmpeg`・user PATH）を入れ、ヒーロー動画を 4 回撮った。4 回目を採用＝commit `site: the hero is a clip …`（`site/hero-vscode.mp4` 1.0 MB・`.webm` 1.0 MB・poster＝最終コマの PNG・1280×720・30fps・29.2 秒・`ffmpeg -vf fps=30,format=yuv420p` x264 crf22／VP9 crf34）。元 GIF は Lab `sessions/p632/hero-take4.gif`。残る粗: 小節 1〜2 のコード行（`G Cmaj7 | Am`）と Keys（G・C）の不一致、終盤の横スクロールで行頭が切れる（撮り直すなら `editor.wordWrap`）。完成版の譜は Lab `hero2/morning-light-hero.lys`。 ★ **公開**: Pages を `gh api -X POST …/pages -f build_type=workflow` で有効化（ユーザー承認）→ユーザー push。初回 run は `fonts` 例の Georgia が runner に無い警告で赤→`build-site.ps1` の検査で「is not installed on this system」の警告だけ通す（他の警告・エラーは従来どおり拒否）＝`57c335a2`→2 回目 run 緑・**https://yotsuda.github.io/LilySharp/** で index・grammar・動画・SVG が 200。 ★ **AI 統合（同じ会話・ユーザー報告）**: ⑴ Copilot 自身の chat／agent／inline chat は Lily# の文法を見ていなかった→`contributes.chatInstructions`＝build が `out/lilysharp.instructions.md`（GRAMMAR_FOR_LLM＋`applyTo: '**/*.lys'`）を書く（`d4451584`）。⑵ Ghost Completion は拡張既定 `[lilysharp] editor.inlineSuggest.enabled=false` で一度も呼ばれていなかった→オンにしたとき 1 回だけ、inlineSuggest を .lys でオン＋`github.copilot.enable.lilysharp=false` を同意の上で書く（`485e6a83`）。⑶ 各結果を「Lily# Extension」出力に記録（`63d2f455`）＝VS Code の保存ログ `%APPDATA%\Code\logs\…\N-Lily# Extension.log` で読める。⑷ モデルは `models[0]`＝gpt-4o-mini だった→Transform は `lilysharp.ai.model`（空＝大きいもの）、Ghost は `lilysharp.ai.ghostModel`（空＝small 系・大きいものは 2〜3 秒で毎回 cancel された）＋「Lily#: Select AI Model…」・先頭 `|` 除去（`773a33f6`・`f83b7634`）。ユーザー確認: 空のままで ghost が出る（gpt-4o-mini・702 ms）。⚠️ Copilot 自身の「Ghost text suggestions for Lily#」は Copilot の灰色文字＝文法を知らず検証もしない。
-
-終了: docs のみ追加。
 
 ## 2. 開いている作業
 

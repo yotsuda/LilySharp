@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第632セッションの経緯
+
+### 1.1 第632セッション（2026-09-25・YT-DELL2）
+
+同じ会話の続き。★ `-Start p632`（full **9173 / 0 / 2 / 9175**）。ユーザー:「gh Pages を準備して」＋途中で「index.html の最初の画像を、リアルタイムでプレビューが更新される動画に差し替えたい。適切な .lys とシナリオを提案して」。
+
+★ **⑴ Pages（commit `site: …`）**: `scratch/site-showcase`（git 管理外）のソースだけを **`site/`** に移した（.lys・examples/*.lys・build-*.ps1・manual-body.html・hero-vscode.png）。生成物（2 頁・全 SVG・`_site/`）は `site/.gitignore`＝毎回ソースから描く。スクリプトは Linux でも動く（`/` 区切り・`$IsWindows` で lysc/lysc.exe・`../` が repo 根）。`build-site.ps1` は検査の後に **2 頁と頁が参照するファイルだけ**を `site/_site/`（＋`.nojekyll`）へ集める。`<video>` の poster／`<source>` の欠けも検査する。**`.github/workflows/pages.yml`**＝master への push（site/・Core・Cli・props・README・自身）と手動で、ubuntu で lysc を Release ビルド→`build-site.ps1`→upload-pages-artifact→deploy-pages。⚠️ **ユーザーが一度だけ Settings → Pages → Source を「GitHub Actions」にする**。Linux 上の実走は未確認（push 後の初回 run が最初）。`scratch/site-showcase` は古い写し＝編集は `site/` で。
+★ **⑵ ヒーロー動画の受け口**: `hero-vscode.mp4`（任意で `.webm`）があれば muted・loop・playsinline の `<video>`、poster＝`hero-vscode.png`、`prefers-reduced-motion` では再生せず controls。偽 mp4 で経路を確認して消した。
+★ **⑶ 動画のシナリオ案**: Lab `sessions/p632/hero-stages.ps1`＝Morning Light の 4 小節版で 6 段階（開始→旋律を打つ→chords→lyrics→`bass { walk }`＋`staff bass`→`tab bass`）。全段階で診断 0（bass は `phrase walk` に置き、途中の小節数不一致 LYS2007 を避けた）。各段階の PNG も同所。
+
+★ **⑷ 追補（同じ会話）**: ユーザーが ScreenToGif（winget・MSIX）と ffmpeg 9.0.2（winget `Gyan.FFmpeg`・user PATH）を入れ、ヒーロー動画を 4 回撮った。4 回目を採用＝commit `site: the hero is a clip …`（`site/hero-vscode.mp4` 1.0 MB・`.webm` 1.0 MB・poster＝最終コマの PNG・1280×720・30fps・29.2 秒・`ffmpeg -vf fps=30,format=yuv420p` x264 crf22／VP9 crf34）。元 GIF は Lab `sessions/p632/hero-take4.gif`。残る粗: 小節 1〜2 のコード行（`G Cmaj7 | Am`）と Keys（G・C）の不一致、終盤の横スクロールで行頭が切れる（撮り直すなら `editor.wordWrap`）。完成版の譜は Lab `hero2/morning-light-hero.lys`。 ★ **公開**: Pages を `gh api -X POST …/pages -f build_type=workflow` で有効化（ユーザー承認）→ユーザー push。初回 run は `fonts` 例の Georgia が runner に無い警告で赤→`build-site.ps1` の検査で「is not installed on this system」の警告だけ通す（他の警告・エラーは従来どおり拒否）＝`57c335a2`→2 回目 run 緑・**https://yotsuda.github.io/LilySharp/** で index・grammar・動画・SVG が 200。 ★ **AI 統合（同じ会話・ユーザー報告）**: ⑴ Copilot 自身の chat／agent／inline chat は Lily# の文法を見ていなかった→`contributes.chatInstructions`＝build が `out/lilysharp.instructions.md`（GRAMMAR_FOR_LLM＋`applyTo: '**/*.lys'`）を書く（`d4451584`）。⑵ Ghost Completion は拡張既定 `[lilysharp] editor.inlineSuggest.enabled=false` で一度も呼ばれていなかった→オンにしたとき 1 回だけ、inlineSuggest を .lys でオン＋`github.copilot.enable.lilysharp=false` を同意の上で書く（`485e6a83`）。⑶ 各結果を「Lily# Extension」出力に記録（`63d2f455`）＝VS Code の保存ログ `%APPDATA%\Code\logs\…\N-Lily# Extension.log` で読める。⑷ モデルは `models[0]`＝gpt-4o-mini だった→Transform は `lilysharp.ai.model`（空＝大きいもの）、Ghost は `lilysharp.ai.ghostModel`（空＝small 系・大きいものは 2〜3 秒で毎回 cancel された）＋「Lily#: Select AI Model…」・先頭 `|` 除去（`773a33f6`・`f83b7634`）。ユーザー確認: 空のままで ghost が出る（gpt-4o-mini・702 ms）。⚠️ Copilot 自身の「Ghost text suggestions for Lily#」は Copilot の灰色文字＝文法を知らず検証もしない。
+
+終了: docs のみ追加。
+
 ## 以下は第631セッションの経緯
 
 ### 1.1 第631セッション（2026-09-25・YT-DELL2）
