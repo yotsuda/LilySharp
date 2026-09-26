@@ -12,7 +12,8 @@ workflow attaches that section to the GitHub Release verbatim.
   been the bare coda sign, as LilyPond's `\codaMark` draws it, which read as the coda itself.
   It now stands 1.0 staff space left of the label's box, whatever the label's width; it used
   to stand a fixed 4.0 left of the label's centre, so a wide label like "Bridge" covered it.
-  The sign no longer overlaps the "o" of "To". The `.ly` export writes the words again.
+  The sign no longer overlaps the "o" of "To": it stands 0.3 staff space past the word
+  (not a whole word space), its centre on the middle of the word's ink. The `.ly` export writes the words again.
 
 - **A beamed grace group on a lower staff stays on its heads.** Every system is spaced against
   its own staves, so a lower staff stands at a different depth below the system top from one

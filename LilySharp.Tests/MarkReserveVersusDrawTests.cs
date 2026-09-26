@@ -287,24 +287,32 @@ public class MarkReserveVersusDrawTests
     public void ToCodaPrefix_IsCentredOnTheStyleItDraws()
     {
         string svg = Svg("to coda g4 a b c' |");
-        var (size, style) = DrawnTextAttributes(svg, "To ");
+        var (size, style) = DrawnTextAttributes(svg, "To");
         Assert.Equal(MusicMarkEngraver.PlainTextFontSize, size, 2);
         Assert.Equal(MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda), style);
 
-        // The coda glyph's ink starts exactly one measured "To " past the text's pen origin —
-        // which is only true if the centring measured the face it drew. Its origin is its
-        // CENTRE, so the drawn x is half the glyph further; until 2026-09-26 the origin
-        // stood at the text's end and half the sign sat on the "o".
-        double textX = double.Parse(
-            Regex.Match(svg, @"<text x=""([\d.]+)""[^>]*>To </text>").Groups[1].Value,
-            System.Globalization.CultureInfo.InvariantCulture);
+        // The coda glyph's ink starts exactly one measured "To" and the prefix gap past the
+        // text's pen origin — which is only true if the centring measured the face it drew.
+        // Its origin is its CENTRE, so the drawn x is half the glyph further; until
+        // 2026-09-26 the origin stood at the text's end and half the sign sat on the "o".
+        var text = Regex.Match(svg, @"<text x=""([\d.]+)"" y=""([\d.]+)""[^>]*>To</text>");
+        Assert.True(text.Success, "the To-Coda pair drew no \"To\"");
+        double textX = double.Parse(text.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        double textY = double.Parse(text.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
         var glyph = Regex.Match(svg,
-            @"<text class=""music"" x=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
+            @"<text class=""music"" x=""([\d.]+)"" y=""([\d.]+)""[^>]*>" + EmmentalerGlyphs.MarkCoda + "</text>");
         Assert.True(glyph.Success, "the To-Coda pair drew no coda glyph");
         double glyphX = double.Parse(glyph.Groups[1].Value,
             System.Globalization.CultureInfo.InvariantCulture);
-        double prefix = Fonts.Advance("To ", MusicMarkEngraver.PlainTextFontSize,
+        double glyphY = double.Parse(glyph.Groups[2].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        double prefix = Fonts.Advance("To", MusicMarkEngraver.PlainTextFontSize,
+            TextRole.Navigation, MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda))
+            + MusicMarkEngraver.ToCodaPrefixGap;
+        // The sign's centre stands on the middle of the word's ink (SVG y grows downward).
+        var (inkBottom, inkTop) = Fonts.Ink("To", MusicMarkEngraver.PlainTextFontSize,
             TextRole.Navigation, MusicMarkEngraver.TextStyleOf(MusicMarkType.ToCoda));
+        Assert.InRange(textY - glyphY, (inkBottom + inkTop) / 2 - 0.02, (inkBottom + inkTop) / 2 + 0.02);
         // ⚠️ Tolerance 0.02, not a decimal count: the SVG prints coordinates to 2 places, so
         // a difference of two printed numbers carries two roundings. The gap this separates
         // is 0.136573228 — the Bold/BoldItalic advance difference — an order above the noise.

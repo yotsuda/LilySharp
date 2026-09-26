@@ -1623,13 +1623,31 @@ internal static class MusicMarkEngraver
     /// </summary>
     internal static (double TextW, double GlyphW) ToCodaStencilWidths(ScoreTextMetrics fonts)
     {
-        double textW = fonts.Advance("To ", PlainMarkEm(fonts, MusicMarkType.ToCoda),
-            TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
+        // "To" plus a gap narrower than a word space: "To " put the sign a whole space
+        // off the word (the owner: too far apart, 2026-09-26).
+        double textW = fonts.Advance("To", PlainMarkEm(fonts, MusicMarkType.ToCoda),
+            TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda)) + ToCodaPrefixGap;
         // The glyph's ink width at the draw's size (0.8 of the music size). It was an
         // approximate 1.344 until 2026-09-26, under the ink's 1.63, and the renderer set the
         // glyph's CENTRED origin at the text's end, so half of it sat on the "o" of "To".
         double glyphW = (GlyphMetrics.MarkCoda.Right - GlyphMetrics.MarkCoda.Left) * 0.8;
         return (textW, glyphW);
+    }
+
+    // The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
+    // composition itself; chosen by eye against a word space (about 0.55 at this size).
+    internal const double ToCodaPrefixGap = 0.3;
+
+    /// <summary>
+    /// How far above the text baseline the coda sign's centre stands: the middle of the
+    /// "To" ink, so the two centre on one line. (A fixed 0.30 of the glyph size until
+    /// 2026-09-26, which set the sign's centre about 0.25 ss above the word's.)
+    /// </summary>
+    internal static double ToCodaGlyphLift(ScoreTextMetrics fonts)
+    {
+        var (bottom, top) = fonts.Ink("To", PlainMarkEm(fonts, MusicMarkType.ToCoda),
+            TextRole.Navigation, TextStyleOf(fonts, MusicMarkType.ToCoda));
+        return (bottom + top) / 2;
     }
 
     // The air between a boundary "To Coda"'s ink right and the box of the section label it

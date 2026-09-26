@@ -50,8 +50,8 @@
   <rect x="42.73" y="21.22" width="0.19" height="4.00" data-pos="1106"/>
   <rect x="56.04" y="21.22" width="0.19" height="4.00" data-pos="1145"/>
   <rect x="64.19" y="21.22" width="0.19" height="4.00" data-pos="1150"/>
-  <text x="35.63" y="16.16" font-size="2.20" font-style="italic" data-pos="1173">To </text>
-  <text class="music" x="39.58" y="15.20" font-size="3.20" data-pos="1173"></text>
+  <text x="35.94" y="16.16" font-size="2.20" font-style="italic" data-pos="1173">To</text>
+  <text class="music" x="39.58" y="15.38" font-size="3.20" data-pos="1173"></text>
   <text class="music" x="42.92" y="18.72" font-size="4.00" data-pos="1130"></text>
   <rect x="41.40" y="13.47" width="2.85" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1112"/>
   <text x="42.82" y="15.86" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1112">C</text>
