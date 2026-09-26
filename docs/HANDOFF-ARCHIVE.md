@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第641セッションの経緯
+
+### 1.1 第641セッション（2026-09-26・YT-DELL2）
+
+別会話（`/clear` の後）。⚠️ `-Start` は回していない（検証は各 commit の full run で代えた）。⚠️ **§1 に記録の無い 22 commit が第640 と本便の間にある**（`b89283ee`〜`b0ad75e4`: label の書体と枠・To 𝄌・header の subtitle/poet・MIDI の dynamics・break-align 順ほか）＝その会話は §1 を書かなかった。本便の起点 HEAD `b0ad75e4`・本便 12 commit・未 push 58。
+
+★ ⑴ **swing の式を LP の `\rhythm` 慣用に**（`70432b1e`・ユーザー報告「9 to 5 の L4 swing は Lily# の発明」）: 「付点 8 分＋8 分に 3」（3 連にならない）→ `\rhythm { 8[ 8] } = \rhythm { \tuplet 3/2 { 4 8 } }`（16 は `16[ 16] = \tuplet 3/2 { 8 16 }`）。幾何は `MetronomeMarkGeometry.Swing` 1 か所＝LP 2.26 の SVG 実測（`\rhythm` の staff space 単位・全部品 0.01 以内）。LILYSHARP-OWN の SwingNoteSize／SwingEquationReach は消えた。
+★ ⑵ **文法の穴**（`70e82562`）: `tempo swing`（bpm 無し）は何も描かなかった→式だけを描く・`tempo "Medium" shuffle` は marking の後／`swing 4` 等は **LYS0034**（警告）／ly 双子も `\rhythm` 慣用（count は markup 内・`tempoHideNote`）。補完（`d5f3149d` `9f5d404a`・ユーザー指示）: `tempo |` に feel 語単独、feel 語の後に 8 と 16。
+★ ⑶ **プレビュー**（`aa9ee071` `613e3ad2`・ユーザー指示）: tempo mark の部品ごとの data-pos（音符と「= N」→ bpm・swing 式→ feel 語・`swing 16` の 16 は data-alt）＝`TempoDeclarationSyntax.ValuePositions`→`TempoPiecePositions`（MusicMarkItem／HeaderPositions／MusicMarkLayout・collect の splice・ResolveDataPos・overlay memo の anchor まで）。⚠️ **preview は `<rect>` を label の枠と読み、同じ data-pos の text を塗らない**＝swing の符尾・連桁を quad にして符頭・旗・「3」が光るようにした。
+★ ⑷ **複雑な曲 4 冊**（Lab `probes/complex-lys/01`〜`04`・ユーザー依頼）から出た欠陥を閉じた: drum 譜表の調号（`SpacingRules.ClefEngravesKey`）／`<< >>` の member の pedal が小節頭に anchor（onset を渡す）／`@ottava(` 直後のスラーが引数に読まれる（省略可能な引数の名前は「`(` の後が空白ならスラー」）＝`d156ef2a`。**改行をまたぐ pedal 括弧**＝始まりの段に 2 ss の切れ端（段ごとの X 枠の混同）→段ごとの portion・broken 端は鉤無し・change は音楽的位置で照合（LP 2.26 と一致・pedal を持つ 25 冊中 13 冊が動く＝nocturne 見本を含む・snapshot 0）＝`114053d9`。lyric の `;` `?` が LYS0018／`lyrics w sings bass` が構文エラー（`IsPartNameKind`）／pedal の警告が text spanner の文言＝`b3d00006`。ly 双子: drum の `\drummode` に `\key`・部名 `drums` が LP の keyword（`VarName` に予約語）＝`f144ddc0`、absolute での「phrase 参照の後の音」偽警告＝`399354c1`。**voice span の script は voice の向き**（`\voiceOne/Two` が Script.direction を設定＝hhc の + も fermata も staccato も。明示の .up/.down だけが勝つ）＝`2a71b1fc`（voice を持つ 94 冊中 1 冊・snapshot 1）。
+⚠️ 計器の罠を 1 つ踏んだ: **Tests は Cli を参照する**＝毒の `dotnet test` は `lysc` も毒入りで建て直す。A/B の after を毒の後に描くと before と同じ bin になる（0 冊と出た）。
+★ **終了**: full **9328 / 0 / 2 / 9330**。push はユーザー（Lab も）。
+
 ## 以下は第640セッションの経緯
 
 ### 1.1 第640セッション（2026-09-26・YT-DELL2）

@@ -78,7 +78,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。 ⇒ ★★★★ **第588（2026-09-25・ユーザー決定「1」）: 忠実度の項目は尽きた（R7〜R11 閉じ・T7 は F9／tab 連桁／計器／僅差・台帳の非ゼロは宣言済みか書体の差）＝perf に移る**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★ **新規（第642 が見つけた）: 小節途中の `key` が連桁を切る**＝`c''8 d'' key e major e'' a''` で Lily# は梁 2 本・LP 2.26 は 1 本（Lab `sessions/p642/kb.*`）。音高の譜表でも drum でも（km1）。旧コードから同じ。着手は BeamDetector の区切り（change item を区切りに数えている所）から
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642 が画像で確認）
 - ✅ **T7 の staff＋tab の wish の merge は第576 が移植した**（§1.1 第576 ⑵）＝双子基準で一致 413 → 419（第582 で 422／459＝Universe ＋ ABC に増えた 2 score・第583 で 423）。**残り（双子と段割れが違う 22 score）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly・everybody goes・全力少年・星になれたら…）＝**第583 が F9 の帰結と確定**（everybody goes の 4→2,2 は LP も `TabNoteHead.font-size = 2` で 2,2 に割る・Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）＝**双子の既定の数字と比べる限り残る差**／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（§1.1 第587 ⑵・LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒤ ✅ **That's The Way の tab score は第569 のユーザー決定の帰結**（§1.1 第587 ⑴）／⒡ **小節の合計が合わない score（Disco Inferno・More Than A Woman・Honesty…＝上の 22 の外）は計器**（LP の小節番号の数え方）／⒢ ✅ **奏 の 1 段目の力は第584 が閉じた**（楽器名の indent を段の DP が値付けしていなかった＝§1.1 第584）／⒝ ✅ **Universe は第582 が閉じた**（♮ が下向きの符尾を避ける＝§1.1 第582）／⒠ ✅ **`set_column_rods` の届く rod は第580 が移植した**（臨時記号の列から同じ声部の 2〜4 列前へ・掃き 942 冊で効いた本 0＝安全網。小節をまたぐ届きと他の声部への届きは未移植）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。⚠️ 小節線へのばねの残差 −0.020（staff＋tab・`TabSpacingWishTests` が ±0.03 で持つ）と、和音の `first_head` の近似（最も桁の多い数字）は未解明のまま
 - ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝未読。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
@@ -153,6 +152,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第643セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p643`（HEAD `3863c185`・未 push 62・full **9335 / 0 / 2 / 9337**＝引継ぎと一致）。ユーザー「続けて」＝第642 が起票した「小節途中の `key` が連桁を切る」。
+
+★ ⑴ **連桁は clef／key change をまたぐ・そして避ける**（`c0805798`）: LP の Auto_beam_engraver が受け取るのは stem・beam・breathing_sign・rest だけ（auto-beam-engraver.cc:519-523）＝**clef も同じ欠陥だった**（`c''8 d'' clef bass e8 a` で LP 1 本・Lily# 2 本）。`BeamDetector` は長さ 0 の item を全部「連桁を終える」腕に送っていた→ clef／key は grace と同じく跨ぐ（meter change は今まで通り終える）。⚠️ **跨ぐだけでは梁が低音部記号を突き抜けた**（画像で発見）＝LP の Beam_collision_engraver は Clef と KeySignature／KeyCancellation も covered grob にする（beam-collision-engraver.cc:217-225）→ `ElementCoordinator.CollectBeamCollisions` に `AddChangeCollisions`（外側の符尾のあいだの change だけ・x は描画と同じ change column の吊り）。LP と一致: 梁の中心が中央線の 1.81（clef）・2.19（key）下。網 `BeamAcrossChangeTests` 2 本（Core ごと stash で赤・衝突の登録だけ外しても赤）。掃き 963 冊で **2 冊**＝LP の回帰入力 spacing-loose-polyphony の訳 2 本（傾いた 2 本→水平 1 本・下の譜表の中央から 3.81 上＝LP と一致）。未対応（本 0）: cue clef・percussion clef change・clef の 8・loose column の吊り。
+⚠️ **毒の戻しに `git checkout -- <file>` を使い、未 commit の自分の変更ごと消した**（`ElementCoordinator.cs`・会話に残っていたので当て直した）＝毒は `git stash push -- <path>` か、バイトの退避→`WriteAllBytes` で戻す（Lab `CLAUDE-OPERATIONS.md` §1 に足した）。⚠️ 引用の網 `CitationsThatNameNothing_DoNotGrow` は `LILYPOND-REF` 行の*下線を含む名前*しか記号と数えない（`ADD_ACKNOWLEDGER` は数えない）。
+★ **終了**: full **9337 / 0 / 2 / 9339**（+2＝網）・`-End` の門は全部 OK。§7.5 Core '+' 112・LILYPOND-REF 2・LILYSHARP-OWN 0。§7.6／7.7 該当なし。push はユーザー（Lab も）。
+
+## 以下は第642セッションの経緯
+
 ### 1.1 第642セッション（2026-09-26・YT-DELL2）
 
 別会話（`/clear` の後）。★ `-Start p642`（HEAD `5208f52d`・未 push 59・full **9328 / 0 / 2 / 9330**＝引継ぎと一致）。§1.0 の「第641 の残り」⑴〜⑶。
@@ -162,19 +171,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ ⑶ **quartet の bar 25**: 画像で確かめた＝Agitato が段の右端を越える。LP の MetronomeMark も右余白へ押し戻さない＝同じ割りなら LP も越える＝**段割れの差（T7 の族）のまま**。
 ⚠️ 計器の罠を踏み直した（第641 と同じ）: 毒の `dotnet test` が Debug の `lysc` も毒入りで建て直す＝毒の後の probe が旧コードの値を出した。**毒の後は `dotnet build LilySharp.Cli` してから描く**。`clef tab` は Lily# の文法ではない（LYS1014・tab は score の `tab m`）。
 ★ **終了**: full **9335 / 0 / 2 / 9337**（+7＝網）・`-End` の門は全部 OK。§7.5 Core '+' 206・LILYPOND-REF 3・LILYSHARP-OWN 0。§7.6／7.7 該当なし。push はユーザー（Lab も）。
-
-## 以下は第641セッションの経緯
-
-### 1.1 第641セッション（2026-09-26・YT-DELL2）
-
-別会話（`/clear` の後）。⚠️ `-Start` は回していない（検証は各 commit の full run で代えた）。⚠️ **§1 に記録の無い 22 commit が第640 と本便の間にある**（`b89283ee`〜`b0ad75e4`: label の書体と枠・To 𝄌・header の subtitle/poet・MIDI の dynamics・break-align 順ほか）＝その会話は §1 を書かなかった。本便の起点 HEAD `b0ad75e4`・本便 12 commit・未 push 58。
-
-★ ⑴ **swing の式を LP の `\rhythm` 慣用に**（`70432b1e`・ユーザー報告「9 to 5 の L4 swing は Lily# の発明」）: 「付点 8 分＋8 分に 3」（3 連にならない）→ `\rhythm { 8[ 8] } = \rhythm { \tuplet 3/2 { 4 8 } }`（16 は `16[ 16] = \tuplet 3/2 { 8 16 }`）。幾何は `MetronomeMarkGeometry.Swing` 1 か所＝LP 2.26 の SVG 実測（`\rhythm` の staff space 単位・全部品 0.01 以内）。LILYSHARP-OWN の SwingNoteSize／SwingEquationReach は消えた。
-★ ⑵ **文法の穴**（`70e82562`）: `tempo swing`（bpm 無し）は何も描かなかった→式だけを描く・`tempo "Medium" shuffle` は marking の後／`swing 4` 等は **LYS0034**（警告）／ly 双子も `\rhythm` 慣用（count は markup 内・`tempoHideNote`）。補完（`d5f3149d` `9f5d404a`・ユーザー指示）: `tempo |` に feel 語単独、feel 語の後に 8 と 16。
-★ ⑶ **プレビュー**（`aa9ee071` `613e3ad2`・ユーザー指示）: tempo mark の部品ごとの data-pos（音符と「= N」→ bpm・swing 式→ feel 語・`swing 16` の 16 は data-alt）＝`TempoDeclarationSyntax.ValuePositions`→`TempoPiecePositions`（MusicMarkItem／HeaderPositions／MusicMarkLayout・collect の splice・ResolveDataPos・overlay memo の anchor まで）。⚠️ **preview は `<rect>` を label の枠と読み、同じ data-pos の text を塗らない**＝swing の符尾・連桁を quad にして符頭・旗・「3」が光るようにした。
-★ ⑷ **複雑な曲 4 冊**（Lab `probes/complex-lys/01`〜`04`・ユーザー依頼）から出た欠陥を閉じた: drum 譜表の調号（`SpacingRules.ClefEngravesKey`）／`<< >>` の member の pedal が小節頭に anchor（onset を渡す）／`@ottava(` 直後のスラーが引数に読まれる（省略可能な引数の名前は「`(` の後が空白ならスラー」）＝`d156ef2a`。**改行をまたぐ pedal 括弧**＝始まりの段に 2 ss の切れ端（段ごとの X 枠の混同）→段ごとの portion・broken 端は鉤無し・change は音楽的位置で照合（LP 2.26 と一致・pedal を持つ 25 冊中 13 冊が動く＝nocturne 見本を含む・snapshot 0）＝`114053d9`。lyric の `;` `?` が LYS0018／`lyrics w sings bass` が構文エラー（`IsPartNameKind`）／pedal の警告が text spanner の文言＝`b3d00006`。ly 双子: drum の `\drummode` に `\key`・部名 `drums` が LP の keyword（`VarName` に予約語）＝`f144ddc0`、absolute での「phrase 参照の後の音」偽警告＝`399354c1`。**voice span の script は voice の向き**（`\voiceOne/Two` が Script.direction を設定＝hhc の + も fermata も staccato も。明示の .up/.down だけが勝つ）＝`2a71b1fc`（voice を持つ 94 冊中 1 冊・snapshot 1）。
-⚠️ 計器の罠を 1 つ踏んだ: **Tests は Cli を参照する**＝毒の `dotnet test` は `lysc` も毒入りで建て直す。A/B の after を毒の後に描くと before と同じ bin になる（0 冊と出た）。
-★ **終了**: full **9328 / 0 / 2 / 9330**。push はユーザー（Lab も）。
 
 ## 2. 開いている作業
 
