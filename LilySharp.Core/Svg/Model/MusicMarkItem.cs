@@ -254,12 +254,11 @@ public sealed record MusicMarkItem
         Text = GetMarkText(type);
         Position = GetMarkPosition(type);
         Vertical = GetMarkVertical(type);
-        // The coda SIGN stands at both ends of the jump: the departure (`to coda`) is drawn
-        // as the sign, not the words — LilyPond's own picture (owner's decision, session 560).
-        // LILYPOND-REF: ly/music-functions-init.ly:442-450 define-music-function codaMark —
-        // one CodaMarkEvent, so one CodaMark grob, for the departure and the arrival alike;
-        // scm/translation-functions.scm:270 format-coda-mark — its markup is the coda glyph.
-        IsSymbol = type is MusicMarkType.Segno or MusicMarkType.Coda or MusicMarkType.ToCoda;
+        // The departure (`to coda`) is "To 𝄌", words and sign, not a symbol: LilyPond's
+        // \codaMark draws the bare sign at both ends of the jump, and Lily# did too from
+        // session 560 until the owner took it back on 2026-09-26 — the bare sign read as the
+        // coda itself (LILYSHARP-OWN, a Gould-style departure).
+        IsSymbol = type == MusicMarkType.Segno || type == MusicMarkType.Coda;
         MeasureIndex = measureIndex;
         SourcePosition = sourcePosition;
         AnchorItemIndex = anchorItemIndex;
@@ -469,7 +468,7 @@ public sealed record MusicMarkItem
         MusicMarkType.DalSegnoAlCoda => "D.S. al Coda",
         MusicMarkType.DaCapoAlFine => "D.C. al Fine",
         MusicMarkType.DaCapoAlCoda => "D.C. al Coda",
-        MusicMarkType.ToCoda => "𝄌",       // the sign, as at the arrival (IsSymbol)
+        MusicMarkType.ToCoda => "To Coda",
         // A text spanner's word is written by the reader, not implied by the type: the
         // sugar words go through TextSpanSugarText and @textSpan("…") carries its own, both
         // via BuildPlain / the collector's argument reading, which use the TEXT constructor.

@@ -1069,9 +1069,7 @@ form main { イントロ イントロ "イントロ(再現)" }
 The form may carry repeat-navigation marks between sections. The *signs*
 `segno` and `coda` engrave at the start of the following section (the jump
 target); the *text* directives `fine`, `to coda`, `dc`/`ds` (optionally
-`dc al fine`, `ds al coda`, …) engrave at the end of the section just played.
-`to coda` is drawn as the coda **sign** centred on that barline, not as words — the
-departure and the arrival are the same mark, as LilyPond's `\codaMark` draws both:
+`dc al fine`, `ds al coda`, …) engrave at the end of the section just played:
 
 ```
 form main {
@@ -1287,8 +1285,6 @@ side of that barline it is drawn on is the mark's kind — a text (`fine`, `dc`,
 `to coda`, the `al` forms) hangs to the bar's left, at the end of the measure just played;
 a sign (`segno`, `coda`) sits to its right, at the start of the next — as LilyPond aligns
 `JumpScript` and `SegnoMark`/`CodaMark`. A text after the last bar is drawn at that bar.
-`to coda` itself is drawn as the coda sign centred on its barline (LilyPond's `\codaMark`),
-not as the words "To Coda".
 
 ```
 segno c4 d e f |

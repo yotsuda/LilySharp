@@ -8,6 +8,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **`to coda` is drawn "To 𝄌" again, clear of the next section's label.** The departure had
+  been the bare coda sign, as LilyPond's `\codaMark` draws it, which read as the coda itself.
+  It now stands 1.0 staff space left of the label's box, whatever the label's width; it used
+  to stand a fixed 4.0 left of the label's centre, so a wide label like "Bridge" covered it.
+  The sign no longer overlaps the "o" of "To". The `.ly` export writes the words again.
+
 - **A beamed grace group on a lower staff stays on its heads.** Every system is spaced against
   its own staves, so a lower staff stands at a different depth below the system top from one
   system to the next; the grace's beam and its stems were drawn at ONE score-wide depth while

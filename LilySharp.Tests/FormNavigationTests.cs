@@ -144,8 +144,8 @@ public class FormNavigationTests
     /// <summary>
     /// The pairing half of the co-placement (session 227 rebuilt it INSIDE the
     /// stacking pass): a boundary "To Coda" and the next section's label share a
-    /// barline (close X), so the sign is tucked to the label's left — a fixed 4.0
-    /// centre-to-centre gap, baseline at the label box's bottom edge — while the
+    /// barline (close X), so the sign is tucked to the label's left — 1.0 clear of the
+    /// box edge to edge, baseline at the label box's bottom edge — while the
     /// label itself is untouched. The stacker then prices the pair as ONE union
     /// extent and moves both together, which is what makes a raise over a volta
     /// bracket under the sign (blogger.lys) and a raise over ink under the label
@@ -161,8 +161,9 @@ public class FormNavigationTests
             new MusicMarkLayout(2, 41.15, 4.50, MusicMarkType.SectionLabel, "C", false, 0),
             new MusicMarkLayout(1, 23.93, 4.50, MusicMarkType.SectionLabel, "B", false, 0));
 
+        var fonts = LilySharp.Core.Rendering.ScoreTextMetrics.Bundled;
         var placed = MusicMarkEngraver.CoPlaceToCodaWithLabels(
-            marks, (_, _) => true, out var pairs);
+            fonts, marks, (_, _) => true, out var pairs);
         var tc = placed.First(m => m.MarkType == MusicMarkType.ToCoda);
         var cLabel = placed.First(m => m.MarkType == MusicMarkType.SectionLabel && m.Text == "C");
 
@@ -170,8 +171,10 @@ public class FormNavigationTests
         Assert.Equal(MusicMarkType.ToCoda, placed[pairs[0].Sign].MarkType);
         Assert.Equal("C", placed[pairs[0].Label].Text);
         Assert.Equal(1, tc.MeasureIndex);   // keeps its own (prev-section) measure
-        // Centre-to-centre gap 4.0, to the label's LEFT.
-        Assert.Equal(41.15 - 4.0, tc.X, 3);
+        // Edge to edge, to the label's LEFT: the composition's right 1.0 clear of the box.
+        var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
+        double boxLeft = 41.15 - MusicMarkEngraver.LabelBoxHalfWidth(fonts, MusicMarkType.SectionLabel, "C", true);
+        Assert.Equal(1.0, boxLeft - (tc.X + (textW + glyphW) / 2), 3);
         // Sign baseline meets the box bottom: label line − boxHalf, boxHalf =
         // (4.0*0.55 + 0.4)/2 = 1.3, so 4.50 − 1.30 = 3.20.
         Assert.Equal(3.20, tc.YUp, 3);
@@ -196,7 +199,7 @@ public class FormNavigationTests
 
         // Measure 1 ends one system, measure 2 opens the next.
         var placed = MusicMarkEngraver.CoPlaceToCodaWithLabels(
-            marks, (ma, mb) => ma == mb, out var pairs);
+            LilySharp.Core.Rendering.ScoreTextMetrics.Bundled, marks, (ma, mb) => ma == mb, out var pairs);
 
         Assert.Empty(pairs);
         Assert.Equal(marks, placed);

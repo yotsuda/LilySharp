@@ -2826,7 +2826,7 @@ internal static class OutsideStaffStacker
         // and the members never price each other (their inks overlap by design).
         // See CoPlaceToCodaWithLabels' remarks for why the post-stack shape failed.
         musicMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(
-            musicMarks,
+            fonts, musicMarks,
             (ma, mb) => measureToSystem.TryGetValue(ma, out int sa)
                      && measureToSystem.TryGetValue(mb, out int sb) && sa == sb,
             out var toCodaPairs);
@@ -3029,11 +3029,13 @@ internal static class OutsideStaffStacker
             if (signOfLabel.TryGetValue(i, out int signIdx))
             {
                 var sign = b[signIdx];
-                // The sign is the coda GLYPH (session 560; it was "To " + the glyph), so
-                // its reach is the glyph's own box — the same answer its stand-alone
-                // placement reads (MusicMarkExtents' symbol arm).
-                var (sx0, _, _, _) = MusicMarkExtents(fonts, sign);
-                x0 = Math.Min(x0, sign.X + sx0 - m.X);
+                // The DRAWN composition's width ("To " + the coda glyph), from the
+                // same home the renderer reads — Advance(sign.Text) prices the word
+                // "Coda" nobody draws and its extra reach cleared neighbouring
+                // labels the ink never touches (ToCodaStencilWidths' remarks).
+                var (textW, glyphW) = MusicMarkEngraver.ToCodaStencilWidths(fonts);
+                double signHalfW = (textW + glyphW) / 2;
+                x0 = Math.Min(x0, sign.X - signHalfW - m.X);
             }
             // A label with a tempo beside it (`marks beside`) is priced as that union too:
             // the tempo's stencil box — its ink about ITS baseline, which stands d below the

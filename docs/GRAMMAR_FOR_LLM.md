@@ -540,8 +540,7 @@ form main { Intro Main ~Main' Coda }
 
 Navigation marks sit between section names. Signs `segno` / `coda` engrave at the start
 of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc al fine`,
-`ds al coda`) engrave at the end of the section just played (`to coda` is drawn as the coda
-sign on that barline, not as words).
+`ds al coda`) engrave at the end of the section just played.
 
 ```
 form main { A segno  B to coda  C ds al coda  coda D }

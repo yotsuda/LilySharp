@@ -1134,7 +1134,7 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
 
 (* Navigation: signs (segno/coda) engrave at the START of the following section; text
    directives (fine, to coda, dc/ds, dc al fine, ds al coda) engrave at the END of the
-   section just played — `to coda` as the coda SIGN on that barline, not as words:
+   section just played:
    form main { A segno  B to coda  C ds al coda  coda D } *)
 
 ================================================================================
