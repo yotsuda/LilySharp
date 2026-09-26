@@ -139,12 +139,29 @@ internal static class VoiceScan
     }
 
     /// <summary>
-    /// Curve direction for a tie/slur span. In polyphony the voice fixes it —
-    /// the upper voice (index 0, 2, …) curves UP, the lower voice (1, 3, …) DOWN —
-    /// so the voices' spans stay clear of each other; a single voice uses the
-    /// given stem-based <paramref name="singleVoiceFallback"/>.
+    /// Curve direction for a tie/slur span. Where the span STARTS inside polyphony the voice
+    /// fixes it — the upper voice (index 0, 2, …) curves UP, the lower voice (1, 3, …) DOWN —
+    /// so the voices' spans stay clear of each other; elsewhere the given stem-based
+    /// <paramref name="singleVoiceFallback"/>.
     /// </summary>
-    /// <remarks>LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo set Tie/Slur.direction = UP/DOWN.</remarks>
-    public static bool SpanCurvesUp(int voiceCount, int voiceIndex, bool singleVoiceFallback)
-        => voiceCount > 1 ? (voiceIndex % 2 == 0) : singleVoiceFallback;
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo set Tie/Slur.direction = UP/DOWN
+    /// — and they hold only inside the <c>&lt;&lt; \\ &gt;&gt;</c> span (scm/music-functions.scm
+    /// voicify-sublist), where the grob is created with them. The question is therefore
+    /// <see cref="VoiceDefaults.GetDefaultStemUpAt"/>'s, per measure, the one stems and beams
+    /// already ask. It was <c>voiceCount &gt; 1</c> — PART-wide — until session 650, so one
+    /// two-voice passage pinned every slur and tie of the part up: showcase/grammar-tour
+    /// drew `b4( c d e)` and `g2~ g4` over the staff in bars 13-15, forty bars before its
+    /// only `&lt;&lt; \\ &gt;&gt;`, where LilyPond draws them under (the same fold VoiceColumn's
+    /// remarks record for stems on 2026-08-01).
+    /// </remarks>
+    public static bool SpanCurvesUp(
+        ImmutableArray<Voice> voices, int voiceIndex, int startMeasureIndex, bool singleVoiceFallback)
+        => ForcedCurveUpAt(voices, voiceIndex, startMeasureIndex) ?? singleVoiceFallback;
+
+    /// <summary>The direction polyphony forces on a tie/slur of voice
+    /// <paramref name="voiceIndex"/> starting in measure <paramref name="startMeasureIndex"/>,
+    /// or null where that measure is not polyphonic (see <see cref="SpanCurvesUp"/>).</summary>
+    public static bool? ForcedCurveUpAt(ImmutableArray<Voice> voices, int voiceIndex, int startMeasureIndex)
+        => VoiceDefaults.GetDefaultStemUpAt(voices, voiceIndex, startMeasureIndex);
 }
