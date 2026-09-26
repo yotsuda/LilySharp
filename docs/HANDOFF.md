@@ -133,10 +133,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
 - ✅ **T8 は第634 が閉じた**（§1.1 第634）。行頭の `|:` は第635 が閉じた。残り: staff＋`tab as full` の多段では各声部を*自分の*段の小節線で読む（LP は全段の列を各段の小節線で読んで merge）／小節線をまたぐ梁は小節ごとに半分で読む
-- ✅ **T9（多声の tab の符尾の向き）は第636 が閉じた**（§1.1 第636）
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭 906 行にも在る・第636 で再確認「描画すべきではない」）**。LP の `\tabFullNotation` は描く（`Tab_tie_follow_engraver` が handle-ties を外す＝scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
-- ✅ **tab のスラーの残り（第633）は第638（旗）・第639（予約に梁）で閉じた**
 - ✅ **`@text` の上の床は第640 が閉じた**（TextScript として置く・§1.1 第640）。⚠️ 残り: outside-staff の順番は dynamics の 250 のまま（LP は 450）＝**第644 が値付けした**: `c'4@p@text("dolce")` で dolce が LP より 0.12 低い（LP 6.681・Lily# 6.800・p は 4.72 で一致＝250 の中の間隔が約 0.6、LP は 450 で outside-staff-padding 0.46）・同じ音に dynamic と `@text` が付く本は回帰入力の 2 冊だけ（実コーパス 0）・直すなら `@text` を dynamics の全経路（配置・staff 間隔の skyline・積み・下側 memo・横揃え）から外す＝設計級（Lab `sessions/p644/x1`）／CJK 文字列は字面の ascender/descender の箱（LILYSHARP-OWN・`DynamicEngraver.HasMissingGlyph`）
 
 **⒞ ユーザー決定が先・触らない**
@@ -156,6 +154,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第648セッション（2026-09-27・YT-DELL2）
+
+新しい会話。★ `-Start p648`（HEAD `7cfe1267`・未 push 96・full **9388 / 0 / 2 / 9390**＝引継ぎと一致）。§2 S の続き。
+★ ⑴ `slurrest-*`・`slurhcap`・`figbass-empty` の差は**双子が treble**だった＝top-level の `clef bass` を exporter が読まず、
+本体も多段の collect（`partClef ?? "treble"`）と `RenderSpecParser.GetPartClef` が落としていた（1 段だけ読んでいた）→
+`bcc24031`（GRAMMAR §2.1＝top-level clef は常に既定）。頁の掃き 0 / 963・網 `OctaveTests` 4 本（3 か所それぞれ赤）。直した後の 7 冊は差 0。
+★ ⑵ 計器の直し 2 つ: `compare.ps1` の「縦長は括弧」が本物の急なスラー（fig4・LP も同形）を落としていた（Lab・幅 < 0.3×高さだけ落とす）／
+`d890fed3` dump の HEAD が SMuFL の範囲で旗・指番号を拾っていた（8 分の旗が 2 つ目の頭＝タイを 1 列ずらす）。差 2,909 → 2,768・五線の非 grace 694 → 553。
+★ ⑶ **見つけた（未着手・ユーザー判断待ち）: タイ先の臨時記号**。LP は同音のタイ先の臨時記号を行中では描かず幅も取らない
+（`Accidental_interface::remove_tied`・`Accidental_placement::split_accidentals`＝行頭のときだけ reminder）うえ、
+`localAlterations` に `tied` を積むので同じ小節の次の同音は必ず臨時記号を持つ（accidental-engraver.cc:405-415・
+music-functions.scm:1740）。Lily# は両方逆（China Grove (Xanadu) 29-30 小節: Lily# ♮c1~ ♮c2. c8・LP c1~ c2. ♮c8）。
+射程 162 音・40 冊（実コーパス 39）＝タイの x3 の差の族の一部。行割りの後で決まる＝collect と layout の両方＝設計級。
+
+## 以下は第647セッションの経緯
+
 ### 1.1 第647セッション（2026-09-26〜27・YT-DELL2）
 
 同じ会話の続き（第646 の後）。ユーザー報告を順に: ABC.lys の行末タイ（bar 63）→ `5343631e`（行末で割れたタイの
@@ -169,26 +183,6 @@ M20 の行末タイは LP と一致（線の上・1.46）＝ユーザーは「�
 ⚠️ `cmd /d /s /c` の中の `--filter "A|B"` は引用しないと cmd のパイプになって止まる。
 ⚠️ Lab の生成物（`bows/corpus/`・`w-*`）は `.gitignore` 済み。
 ★ **終了**: full **9388/0/2/9390**。⚠️ HANDOFF は天井の直下＝**次便は書く前に畳む**。push はユーザー。
-
-## 以下は第646セッションの経緯
-
-### 1.1 第646セッション（2026-09-26・YT-DELL2）
-
-同じ会話の続き。★ `-Start p646`（HEAD `9face711`・未 push 72・full **9346 / 0 / 2 / 9348**＝引継ぎと一致）。ユーザー「続けて」＝探針の最後の残り（`@frame` のコード図の上下）。
-
-★ ⑴ **`@frame` は常に上**（`2158387c`・ユーザー決定「常に上」）: collector は「上」で作っていたのに engraver が符尾の反対側（スタッカートの規則）で置いていた＝低い和音の図が下に出た。`IsForcedAbove` に FretFrame（LP の既定は TextScript の DOWN＝define-grobs.scm:3804 なので決定として註）・パーサが `@frame(…).down` を受ける（`@text` と同じ）。
-★ ⑵ **ly 出力が `@frame` を全部落としていた** → `^\markup \fret-diagram-terse "x;x;o;2;3;2;"`。和音の中の音の図は和音の後に書く（LP は「cannot add text scripts to individual note heads」）。
-★ ⑶ **比べて見つけた: `treble_8` の譜表が ly 出力で 1 オクターブ上**。Lily# の `g` は treble の位置に描いて 1 オクターブ下で鳴る（0.8.0 の「clef は音高を動かさない」）のに、双子は書いた音を渡し LP の treble_8 がさらに 1 オクターブ上に描いていた。通常の譜表にも `\transpose c c,`（tab は既に掛けていた）。LP の符頭がページと一致（1.0・−1.0・−2.5・−3.5）。オクターブ記号の clef を使う本 22 冊の双子が変わる（ページは不変）。
-網 3 本（stash の毒で 3 赤）。⚠️ 最初の網は旧コードでも緑だった＝Lily# の音域では `<g d' g'>` が高く符尾が下で、旧規則でも上に出た→低い和音に替えた。
-★ ⑷ **コード図の大きさと並び**（`6db2dd1b`・ユーザー決定 2 つ）: ユーザー「小さくて見にくい・サイズを指定できると便利」→ 決定「既定を LP の大きさ＋`fonts { fretFrame step ±n }` で全体を拡大縮小」。続けて「コード図は横に並べてほしい。入らないときは小節の長さを伸ばす」。
-- 大きさ: 弦間・フレット間 1 ss（LP の size 1.0）。Lily# は約半分だった。寸法は `FretFrameGeometry` 1 か所（描画と予約の箱が同じ値を読む）。「Nfr」の場所は、ラベルを描くときだけ取る。
-- ⚠️ **engraver の `score.TextMetrics` は font plan を持たない**（1 声部の歩行用 Score）→ step を付けた図は既定の大きさで予約され、拡大した大きさで描かれていた（tabTechnique も同じ穴）。渡された `fonts` を読むよう直した。
-- 横並び: `SpacingRules.ApplyFretFrameSpacing`＝同じ譜表の次の図（隣でなくても）と小節の両端に rod を張る。高さは見ない。LP の `\textLengthOn`（extra-spacing-width (-0.0 . 0.4)＋列の padding 0.1）に当たる。双子は図ごとに同じ 2 つの property を `-\tweak` する（`^"text"` は従来どおりはみ出す）。
-- 図は LP では TextScript＝outside-staff 450 の mover（dynamics・ottava の後に置く、上下とも）。
-- 双子: step は markup の `\override #'(size . k)` で書く（fonts の `FretBoard.font-size` は `\markup` の図に効かないと実測）。
-- Lab `sessions/p646` fr2/fr3: ページと LP 双子で、4 つの図が横に並び小節の比率も同じ（両方の大きさで）。網 4 本（spacing の呼び出しを外すと横並びの 2 件が赤）。sweep は HEAD の exe と比べて 0 / 963。
-- ⚠️ 見かけた: Lab の `corpora/ベースタブLy/*.lys` に未 commit の変更がある（2026-09-25 7:28・このセッションより前）。触っていない。
-★ **終了**: full **9354 / 0 / 2 / 9356**。push はユーザー（Lab も）。
 
 ## 2. 開いている作業
 
@@ -958,6 +952,8 @@ M20 の行末タイは LP と一致（線の上・1.46）＝ユーザーは「�
     括弧）／tie の端は**最寄りの符頭列**で spacing を差し引く（符頭を縦に避けたタイは頭の*下*に着く＝
     「右隣の列」を読むと 1 音ずれる）／端が合って span だけ違う対は `span-only`（高さは幅の関数）。
 - **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第647 に落とした）
+- **S2 の進み（第648）**: ✅ `bcc24031` top-level clef（双子と多段）＝`slurrest-*` ほか 7 冊は差 0。計器 2 つ直し（§1.1 第648）。
+  **残り（五線・非 grace 553 対）**: 頭は T x3 133・T x0 53・T y0 45・S y0 44。T x3 の一部は**タイ先の臨時記号**（§1.1 第648 ⑶・判断待ち）。
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、
