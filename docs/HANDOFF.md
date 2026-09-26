@@ -1,4 +1,4 @@
-# Lily# 開発ハンドオフ（常設・単一）
+﻿# Lily# 開発ハンドオフ（常設・単一）
 
 > **このファイルが唯一の引継ぎ先。新しい `handoff-*.md` を作らないこと。**
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
@@ -78,7 +78,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針（2026-09-24・第558・ユーザー決定）「先に LP 忠実度を上げて。それが完了してから、改めて perf を見たほうが良い」**＝**着手順は忠実度が先**: R7〜R11 の LP 双子／⒳⁶／⒡′／⒵⁴／U11 の lead（title→first-system の rod）。**perf の島（⒮*・⒭⁸・⒨・⒵…）は忠実度の項目が尽きるまで提案しない**。 ⇒ ★★★★ **第588（2026-09-25・ユーザー決定「1」）: 忠実度の項目は尽きた（R7〜R11 閉じ・T7 は F9／tab 連桁／計器／僅差・台帳の非ゼロは宣言済みか書体の差）＝perf に移る**。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★ **第641 の残り**（complex-lys の探針から・§1.1 第641）: ⑴ quartet の bar 25 で tempo mark が右余白を越える＝**段割れの差**（LP は「Dev」で改行）＝下の T7 の族／⑵ voice 2 の fermata・ornament の間隔予約 `SpacingInkBox` はまだ UP を仮定／⑶ drum だけの score の曲中 key change は item 幅をまだ予約する（本は 0 冊）
+- ★ **新規（第642 が見つけた）: 小節途中の `key` が連桁を切る**＝`c''8 d'' key e major e'' a''` で Lily# は梁 2 本・LP 2.26 は 1 本（Lab `sessions/p642/kb.*`）。音高の譜表でも drum でも（km1）。旧コードから同じ。着手は BeamDetector の区切り（change item を区切りに数えている所）から
+- ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642 が画像で確認）
 - ✅ **T7 の staff＋tab の wish の merge は第576 が移植した**（§1.1 第576 ⑵）＝双子基準で一致 413 → 419（第582 で 422／459＝Universe ＋ ABC に増えた 2 score・第583 で 423）。**残り（双子と段割れが違う 22 score）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly・everybody goes・全力少年・星になれたら…）＝**第583 が F9 の帰結と確定**（everybody goes の 4→2,2 は LP も `TabNoteHead.font-size = 2` で 2,2 に割る・Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）＝**双子の既定の数字と比べる限り残る差**／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（§1.1 第587 ⑵・LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒤ ✅ **That's The Way の tab score は第569 のユーザー決定の帰結**（§1.1 第587 ⑴）／⒡ **小節の合計が合わない score（Disco Inferno・More Than A Woman・Honesty…＝上の 22 の外）は計器**（LP の小節番号の数え方）／⒢ ✅ **奏 の 1 段目の力は第584 が閉じた**（楽器名の indent を段の DP が値付けしていなかった＝§1.1 第584）／⒝ ✅ **Universe は第582 が閉じた**（♮ が下向きの符尾を避ける＝§1.1 第582）／⒠ ✅ **`set_column_rods` の届く rod は第580 が移植した**（臨時記号の列から同じ声部の 2〜4 列前へ・掃き 942 冊で効いた本 0＝安全網。小節をまたぐ届きと他の声部への届きは未移植）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。⚠️ 小節線へのばねの残差 −0.020（staff＋tab・`TabSpacingWishTests` が ±0.03 で持つ）と、和音の `first_head` の近似（最も桁の多い数字）は未解明のまま
 - ⚠️ **双子の計器の残り**: 小節数の違う 14 score は計器（LP の小節番号の数え方＝途中の弱起・反復）／署名なし 21 は 1 段だけの試験ファイル（段中の番号が無い）／LP 失敗 2（Mandy・You're the One That I Want (-1)）＝未読。**比較の基準は双子の既定の数字**（`TabNoteHead.font-size` 2・3 を足すと一致が 413 → 409 → 394 に減る）
 - **U9 ユーザー報告 `space.lys` の小節頭の余白＝保留（ユーザー判断「毒入りのビルドを私が作ってしまったのかもしれない。一旦この件は忘れて」・第477）**。第477 は 4 通り（HEAD 全描画・1 文字ずつの増分・`2c9bd51a`・プレビューと同じ 0.7.0）すべてで再現せず LP とも同比率（Lab `sessions/p477/`）。⚠️ **毒は今後も同じフォルダで回してよい**（ユーザー決定「私が不注意だった。今後は私が注意する」）＝毒の最中のビルドはユーザー側で避ける。第476 の毒 1〜3 は `StaffItemsAt`＝小節頭のばねの入力を汚す形で、症状と合っていた
@@ -152,6 +153,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第642セッション（2026-09-26・YT-DELL2）
+
+別会話（`/clear` の後）。★ `-Start p642`（HEAD `5208f52d`・未 push 59・full **9328 / 0 / 2 / 9330**＝引継ぎと一致）。§1.0 の「第641 の残り」⑴〜⑶。
+
+★ ⑴ **script の間隔予約を LP の separation box に**（`23b48297`）: `ApplyArticulationSpacing` は voice 1 の小節だけを受け、script を item 番号だけで照合していた＝voice 2 の fermata が同じ番号の voice 1 の音に掛かっていた。全声部で照合・隣の列のインクも全声部・側と符尾は声部の向き（第641 の voiceScriptUp と同じ）・**連桁の符尾が script 側を向くときは `PureBeamedStemTip` まで**（LP の pure_y_extent＝stem.cc:387-447）。grace の `ScriptOverhangForGrace` も声部で照合。LP 2.26 で裁定（Lab `sessions/p642` r0/r1・v0/v1・w0〜w4）: LP は fermata の有無で間隔も grace も動かさない・Lily# は 0.47 広げ grace を 0.37 押していた。網 `ScriptSpacingReservationTests` 4 本（毒で 4 赤）。掃き 963 冊で 0 冊。⚠️ 途中の版（側だけ直して pure tip 無し）は voice 2 の fermata で逆に +1.32 広げた＝LP と比べて気づいた。
+★ ⑵ **drum／tab だけの score の key change は幅を取らない**（`d24a812d`）: 拍子の `Blanked`（`MeterStencil.Blank`・`ChangeItemHasInk`・`BoundaryColumn`・MMR の門）を key にも＝`KeySignatureChangeItem.Blanked`・`SpacingRules.AnyStaffEngravesKey`。**tab だけの score も同じ欠陥だった**（6.50 ss・起票は drum だけ）。LP の双子は両方とも key change の有無で小節線が同じ（k0/k1・u0/u1）。網は `DrumStaffKeyTests` に 3 本（毒で行動の 2 本が赤・対照 1 本）。掃き 963 冊で 0 冊。⚠️ 最初に書いた「collect で item を出さない」案は、行頭の調号の解決（`ResolveKeySignature` が item を辿る）を失うので捨てた。
+★ ⑶ **quartet の bar 25**: 画像で確かめた＝Agitato が段の右端を越える。LP の MetronomeMark も右余白へ押し戻さない＝同じ割りなら LP も越える＝**段割れの差（T7 の族）のまま**。
+⚠️ 計器の罠を踏み直した（第641 と同じ）: 毒の `dotnet test` が Debug の `lysc` も毒入りで建て直す＝毒の後の probe が旧コードの値を出した。**毒の後は `dotnet build LilySharp.Cli` してから描く**。`clef tab` は Lily# の文法ではない（LYS1014・tab は score の `tab m`）。
+★ **終了**: full **9335 / 0 / 2 / 9337**（+7＝網）・`-End` の門は全部 OK。§7.5 Core '+' 206・LILYPOND-REF 3・LILYSHARP-OWN 0。§7.6／7.7 該当なし。push はユーザー（Lab も）。
+
+## 以下は第641セッションの経緯
+
 ### 1.1 第641セッション（2026-09-26・YT-DELL2）
 
 別会話（`/clear` の後）。⚠️ `-Start` は回していない（検証は各 commit の full run で代えた）。⚠️ **§1 に記録の無い 22 commit が第640 と本便の間にある**（`b89283ee`〜`b0ad75e4`: label の書体と枠・To 𝄌・header の subtitle/poet・MIDI の dynamics・break-align 順ほか）＝その会話は §1 を書かなかった。本便の起点 HEAD `b0ad75e4`・本便 12 commit・未 push 58。
@@ -162,17 +175,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ ⑷ **複雑な曲 4 冊**（Lab `probes/complex-lys/01`〜`04`・ユーザー依頼）から出た欠陥を閉じた: drum 譜表の調号（`SpacingRules.ClefEngravesKey`）／`<< >>` の member の pedal が小節頭に anchor（onset を渡す）／`@ottava(` 直後のスラーが引数に読まれる（省略可能な引数の名前は「`(` の後が空白ならスラー」）＝`d156ef2a`。**改行をまたぐ pedal 括弧**＝始まりの段に 2 ss の切れ端（段ごとの X 枠の混同）→段ごとの portion・broken 端は鉤無し・change は音楽的位置で照合（LP 2.26 と一致・pedal を持つ 25 冊中 13 冊が動く＝nocturne 見本を含む・snapshot 0）＝`114053d9`。lyric の `;` `?` が LYS0018／`lyrics w sings bass` が構文エラー（`IsPartNameKind`）／pedal の警告が text spanner の文言＝`b3d00006`。ly 双子: drum の `\drummode` に `\key`・部名 `drums` が LP の keyword（`VarName` に予約語）＝`f144ddc0`、absolute での「phrase 参照の後の音」偽警告＝`399354c1`。**voice span の script は voice の向き**（`\voiceOne/Two` が Script.direction を設定＝hhc の + も fermata も staccato も。明示の .up/.down だけが勝つ）＝`2a71b1fc`（voice を持つ 94 冊中 1 冊・snapshot 1）。
 ⚠️ 計器の罠を 1 つ踏んだ: **Tests は Cli を参照する**＝毒の `dotnet test` は `lysc` も毒入りで建て直す。A/B の after を毒の後に描くと before と同じ bin になる（0 冊と出た）。
 ★ **終了**: full **9328 / 0 / 2 / 9330**。push はユーザー（Lab も）。
-
-## 以下は第640セッションの経緯
-
-### 1.1 第640セッション（2026-09-26・YT-DELL2）
-
-同じ会話の続き。★ `-Start p640`（HEAD `773f24db`・未 push 22・full **9191 / 0 / 2 / 9193**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の `@text` の上の床（LP より 0.74 高い）。
-
-★ **⑴ 原因**: `@text` は DynamicText の管（`DynamicItem`）に乗り、DynamicLineSpanner の数（padding 0.6・staff-padding 0.1・minimum-space・線の中の 0.6 の吊り・名目の ink 1.2／0.64・em 2.0）で置かれていた（コード自身が「出典が要る」と書いていた LILYSHARP-OWN）。LP の TextScript は padding 0.3（Text_engraver は support を足さない＝譜表の extent だけ）・staff-padding 0.5・基線＝参照点・字形の輪郭・outside-staff-horizontal-padding 0.2・紙面の text 寸法 2.2（define-grobs.scm:3800-3833）。**ユーザー決定「高さと大きさ両方 LP に」**。
-★ **⑵ 移植**（`edf1eac6`）: `DynamicEngraver.PointwiseBaselineY` に expressive の枝（TextScript の aligned_side）・`LabelEm/LabelStyle/LabelRole(expressive)`（`CustomTextEngraver.Em/Style`＝`text` の役）・`InkOf(fonts,…)` は字の実 ink・`LabelSkylines` は字の輪郭（`TextOutlineSkylines`）・stacker の上下の配置に横 padding 0.2・`SkylineBuilder` の種の X を描画と同じ左揃えに・描画の em と役。⚠️ **CJK の穴**: 同梱の書体に無い字の輪郭は空＝距離が無限＝**奏（かなで）がページ割りを失い 90 小節が 1 頁に溢れた**（掃きの PNG で見つけた）→ 字面の ascender/descender の箱で予約（LILYSHARP-OWN・網 `DynamicPlacementTests.ExpressiveTextTheFaceCannotSpell_…` 2 本・毒で赤）。
-★ **⑶ 結果**: 台帳 `lyrics.row-between.{lyric,staff}-to-staff` が **exact**（第258 の起票が「TextScript の高さの仕事」と予言していた +0.083）・`slur.beamed.reserved-text` 3.29 → **2.607**（LP 2.673・残り −0.066 はスラーの端＝未分解）。snapshot `test/text-annotation` 更新。毒（TextScript の枝を外す）で台帳 1 赤。掃き 964 冊で **23 冊**（`@text` を持つ全冊・実コーパス 2＝blogger・奏）＝目視で重なり無し。
-★ **終了**: code `edf1eac6`・full **9193 / 0 / 2 / 9195**（+2＝CJK の網）・`-End` の門は全部 OK。§7.5 Core '+' 127・LILYPOND-REF 4・LILYSHARP-OWN 1（CJK の箱）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
 
 ## 2. 開いている作業
 

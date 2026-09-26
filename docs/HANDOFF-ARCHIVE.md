@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第640セッションの経緯
+
+### 1.1 第640セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p640`（HEAD `773f24db`・未 push 22・full **9191 / 0 / 2 / 9193**＝引継ぎと一致）。ユーザー「続けて」＝§1.0 の `@text` の上の床（LP より 0.74 高い）。
+
+★ **⑴ 原因**: `@text` は DynamicText の管（`DynamicItem`）に乗り、DynamicLineSpanner の数（padding 0.6・staff-padding 0.1・minimum-space・線の中の 0.6 の吊り・名目の ink 1.2／0.64・em 2.0）で置かれていた（コード自身が「出典が要る」と書いていた LILYSHARP-OWN）。LP の TextScript は padding 0.3（Text_engraver は support を足さない＝譜表の extent だけ）・staff-padding 0.5・基線＝参照点・字形の輪郭・outside-staff-horizontal-padding 0.2・紙面の text 寸法 2.2（define-grobs.scm:3800-3833）。**ユーザー決定「高さと大きさ両方 LP に」**。
+★ **⑵ 移植**（`edf1eac6`）: `DynamicEngraver.PointwiseBaselineY` に expressive の枝（TextScript の aligned_side）・`LabelEm/LabelStyle/LabelRole(expressive)`（`CustomTextEngraver.Em/Style`＝`text` の役）・`InkOf(fonts,…)` は字の実 ink・`LabelSkylines` は字の輪郭（`TextOutlineSkylines`）・stacker の上下の配置に横 padding 0.2・`SkylineBuilder` の種の X を描画と同じ左揃えに・描画の em と役。⚠️ **CJK の穴**: 同梱の書体に無い字の輪郭は空＝距離が無限＝**奏（かなで）がページ割りを失い 90 小節が 1 頁に溢れた**（掃きの PNG で見つけた）→ 字面の ascender/descender の箱で予約（LILYSHARP-OWN・網 `DynamicPlacementTests.ExpressiveTextTheFaceCannotSpell_…` 2 本・毒で赤）。
+★ **⑶ 結果**: 台帳 `lyrics.row-between.{lyric,staff}-to-staff` が **exact**（第258 の起票が「TextScript の高さの仕事」と予言していた +0.083）・`slur.beamed.reserved-text` 3.29 → **2.607**（LP 2.673・残り −0.066 はスラーの端＝未分解）。snapshot `test/text-annotation` 更新。毒（TextScript の枝を外す）で台帳 1 赤。掃き 964 冊で **23 冊**（`@text` を持つ全冊・実コーパス 2＝blogger・奏）＝目視で重なり無し。
+★ **終了**: code `edf1eac6`・full **9193 / 0 / 2 / 9195**（+2＝CJK の網）・`-End` の門は全部 OK。§7.5 Core '+' 127・LILYPOND-REF 4・LILYSHARP-OWN 1（CJK の箱）。§7.6／7.7 該当なし。**push はユーザー**（Lab も）。
+
 ## 以下は第639セッションの経緯
 
 ### 1.1 第639セッション（2026-09-26・YT-DELL2）
