@@ -169,6 +169,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠️ **診断の型**: LP は `\paper { debug-slur-scoring = ##t }` を双子に足して `-dbackend=svg` の `<text>` に winner の idx と TOTAL。Lily# 側は一時的に `Solve()` の後で best の idx・Demerits・Curve を書き出す（commit しない）＝⑹ は「同じ idx 0・同じ高さなのに曲線が違う」で後処理を特定した。
 網: `BrokenTieLineStartTests`・`TiedAccidentalTests` +1・`SlurEdgeBeamAndAccidentalTests`（毒はすべて赤）。頁の掃き 4・6・14・33 冊。
 ⚠️ 計器の比較は `sessions/p649/report-after-*.tsv` を前後に残す（本ごとの悪化を数える＝⑷ で 0 を確認した方法）。
+★ **終了**: full **9405 / 0 / 2 / 9407**・bow の差 **2,548**（五線・非 grace 334 前後）。残りの頭は spacing 起因（写像不能 68・短いタイの x3）と grace／tab（宣言済み）。push はユーザー。
 
 ## 以下は第648セッションの経緯
 
