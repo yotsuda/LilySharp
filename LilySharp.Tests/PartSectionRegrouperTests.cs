@@ -330,6 +330,21 @@ public class PartSectionRegrouperTests
         Assert.Contains("// melody", converted);
     }
 
+    // A cell that spans lines closes on its own line, indented like the line that opened
+    // it — at column 0 the brace read as closing the enclosing part / section.
+    [Fact]
+    public void Convert_MultiLineCell_ClosesUnderItsOwnOpeningLine_BothWays()
+    {
+        var src = "part ob { clef treble }\nsection B {\n  ob { c4 d e f |\n    g1 |\n  }\n}\nform main { B }\n";
+        var byPart = PartSectionRegrouper.Convert(src);
+        Assert.NotNull(byPart);
+        Assert.Contains("  section B { c4 d e f |\n    g1 |\n  }\n}\n", byPart!.ReplaceLineEndings("\n"));
+
+        var bySection = PartSectionRegrouper.Convert(byPart);
+        Assert.NotNull(bySection);
+        Assert.Contains("  ob { c4 d e f |\n    g1 |\n  }\n}\n", bySection!.ReplaceLineEndings("\n"));
+    }
+
     [Fact]
     public void Convert_KeepsCommentAboveFirstStructuralBlock()
     {

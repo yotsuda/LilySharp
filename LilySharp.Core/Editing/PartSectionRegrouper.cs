@@ -522,9 +522,12 @@ public static class PartSectionRegrouper
 
     /// <summary>Wraps a music cell in braces. A cell that spans lines or ends in a
     /// <c>//</c> line comment puts the closing brace on its OWN line, so the comment
-    /// can't swallow the brace (which would unbalance and corrupt the document).</summary>
+    /// can't swallow the brace (which would unbalance and corrupt the document). That
+    /// line is indented like the cell's opening line — both emitters write every cell
+    /// two spaces in — so the brace closes under the <c>section</c> / part name it
+    /// belongs to rather than at column 0, where it read as closing the outer block.</summary>
     private static string Braced(string music)
         => music.Contains('\n') || music.Contains("//")
-            ? "{ " + music + "\n}"
+            ? "{ " + music + "\n  }"
             : "{ " + music + " }";
 }

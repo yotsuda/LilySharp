@@ -249,6 +249,10 @@ workflow attaches that section to the GitHub Release verbatim.
   The editor command Convert Layout is now **Regroup (by part ⇄ by section)**, and the
   diagnostics and docs use the new names. Nothing about the files changes.
 
+- **Regroup indents the closing brace of a cell that spans lines.** It was written at column
+  0, so `section B { … }` inside a part seemed to close the part itself. It now closes under
+  the line that opened it.
+
 - **Punctuation in lyrics is text.** A `;` or `?` written against a syllable (`gent- ly;`,
   `are you?`) was reported as a stray character — an error — though the syllable kept it
   and the page printed it. Inside a `lyrics { }` body it is now simply part of the word.
