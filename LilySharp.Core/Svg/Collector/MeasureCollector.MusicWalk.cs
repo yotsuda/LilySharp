@@ -658,7 +658,7 @@ public sealed partial class MeasureCollector
                     if (!first)
                         (_octave.OctaveAbsolute, _octave.OctaveBase, _octave.CurrentOctave, _octave.LastPitchName) = frame;
                     int itemIndex = builder.CurrentItemCount;
-                    var item = CreateChordItem(chord, forcedDuration: parts[k], extraOctave: octaveShift,
+                    var item = CreateChordItem(chord, forcedDuration: parts[k], extraOctave: octaveShift, builder: builder,
                         hasTieAfter: !last || marks.TieAfter,
                         hasSlurStartAfter: first && marks.SlurStart,
                         hasSlurEndAfter: last && marks.SlurEnd) with
@@ -1119,7 +1119,7 @@ public sealed partial class MeasureCollector
 
                     bool hasGliss = HasGlissandoArticulation(note);
                     var noteItem = DecorateSoundingItem(
-                        CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue),
+                        CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue, builder),
                         note, isCue);
                     builder.AddItem(WithBowSources(noteItem, m));
                     CollectDynamics(note, measureIndex, itemIndex);
@@ -1295,7 +1295,7 @@ public sealed partial class MeasureCollector
                         art is MusicMarkSyntax { } am
                         && Semantics.AnnotationValues.IsArpeggioBracket(am));
                     var chordItem = DecorateSoundingItem(
-                        CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter),
+                        CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter, builder: builder),
                         chord, isCue);
                     if (arpBracket)
                         chordItem = chordItem with { HasArpeggioBracket = true };
@@ -1331,7 +1331,7 @@ public sealed partial class MeasureCollector
                     bool arpBracket = rep.Articulations.Any(art =>
                         art is MusicMarkSyntax { } am
                         && Semantics.AnnotationValues.IsArpeggioBracket(am));
-                    var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter, builder: builder);
                     if (repItem is not ChordItem chordCopy)
                     {
                         // Bad chord repetition: a spacer keeps the time; the
@@ -2077,7 +2077,7 @@ public sealed partial class MeasureCollector
                 // above already had (a tuplet note's @glissando dropped silently).
                 (annItemIndex, bool isCue, int featherDir) =
                     OpenSoundingItem(note, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
-                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note), featherDir, isCue);
+                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, HasGlissandoArticulation(note), featherDir, isCue, builder);
                 // The WRITTEN duration is read off the item BEFORE the scale goes on — the
                 // caller's clock is fed the sum of written values and scales it once.
                 Fraction written = noteItem.Duration;
@@ -2113,7 +2113,7 @@ public sealed partial class MeasureCollector
                 (annItemIndex, bool isCue, _) =
                     OpenSoundingItem(chord, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
-                    hasArpeggio: false, isCue, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
+                    hasArpeggio: false, isCue, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, builder: builder);
                 Fraction written = chordItem.Duration;
                 chordItem = DecorateSoundingItem(chordItem with { TimeScale = scale }, chord, isCue);
                 builder.AddItemWithoutDuration(WithBowSources(chordItem, m));
@@ -2132,7 +2132,7 @@ public sealed partial class MeasureCollector
                     OpenSoundingItem(rep, builder, annMeasureIndex, annItemIndex, ref hasSlurEndAfter);
                 var repItem = CreateChordRepetitionItem(rep, hasBeamStartAfter, hasBeamEndAfter,
                     hasArpeggio: false, isCue, hasTieAfter: hasTieAfter,
-                    hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter, builder: builder);
                 if (repItem is ChordItem chordCopy)
                 {
                     Fraction written = chordCopy.Duration;

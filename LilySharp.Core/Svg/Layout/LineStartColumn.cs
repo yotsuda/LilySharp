@@ -449,7 +449,8 @@ internal static class LineStartColumn
             {
                 if (!SpacingRules.IsMusicalColumn(item))
                     continue;
-                items.Add(item);
+                // A line start's first note shows the accidental its broken tie kept.
+                items.Add(Model.TiedAccidentals.LineStartView(item));
                 break;
             }
         }
@@ -475,10 +476,16 @@ internal static class LineStartColumn
         {
             if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
                 continue;
-            foreach (var item in voice.Measures[measureIndex].Items)
+            foreach (var raw in voice.Measures[measureIndex].Items)
             {
-                if (!SpacingRules.IsMusicalColumn(item))
+                if (!SpacingRules.IsMusicalColumn(raw))
                     continue;
+                // The column is a line start's, so a tie broken here brings back the
+                // accidental it swallowed (Model.TiedAccidentals — LilyPond's break
+                // reminder, counted only on a line-start column: accidental-placement.cc:86-100 split_accidentals).
+                // The break DP and the laid-out system both reach this through
+                // LineStartSpring, so the two price the reminder identically.
+                var item = Model.TiedAccidentals.LineStartView(raw);
                 reachLeft = Math.Max(reachLeft, SpacingRules.MusicalColumnLeftReach(item));
                 reachRight = Math.Max(reachRight,
                     SpacingRules.CalculateNoteheadRightExtent(fonts, item)

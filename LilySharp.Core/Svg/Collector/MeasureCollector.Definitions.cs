@@ -757,6 +757,27 @@ public sealed partial class MeasureCollector
                 _measureAccidentals.Remove(key);
     }
 
+    /// <summary>
+    /// The alteration an accidental-memory entry holds for a head whose accidental a tie
+    /// swallowed — LilyPond's <c>'tied</c> in <c>localAlterations</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc:405-415 stop_translation_timestep — a tied accidental that is not
+    /// forced "remembers an alteration that is different both from that of the tied note and
+    /// of the key signature", so the next head of that pitch in the bar always prints one
+    /// (China Grove (Xanadu) bars 29-30: `c1~ | c2. c8` → LP ♮ on the c8, not on the tied
+    /// notes). A value no real alteration takes; only CheckPitchAgainstSignature reads it.
+    /// </remarks>
+    private const int TiedAlteration = 1000;
+
+    /// <summary>Re-stamps the memory entry the last <see cref="GetDisplayAccidental"/> call
+    /// for this pitch wrote as <see cref="TiedAlteration"/> (the tied head's accidental).</summary>
+    private void MarkAccidentalTied(int step, int octave)
+    {
+        if (_measureAccidentals.TryGetValue((step, octave), out var entry))
+            _measureAccidentals[(step, octave)] = (TiedAlteration, entry.Bar, entry.Order);
+    }
+
     /// <summary>What one rule says about a pitch: whether an accidental is needed, and
     /// whether a "restore" natural precedes it.</summary>
     /// <remarks>LILYPOND-REF: lily/accidental-engraver.cc:130-150 Accidental_result — the
@@ -804,6 +825,10 @@ public sealed partial class MeasureCollector
             previous = GetKeySignatureAlteration(step);
         }
 
+        // A tied accidental's entry: invalid, so the next head needs one whatever it is,
+        // and never a restore natural (music-functions.scm:1740-1741 accidental-invalid?).
+        if (previous == TiedAlteration)
+            return new AccidentalNeed(NeedRestore: false, NeedAcc: true);
         if (actual == previous)
             return default;
         // need-restore: this note steps DOWN inside one sign (𝄪→♯, 𝄫→♭).

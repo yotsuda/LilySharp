@@ -28,7 +28,7 @@ namespace LilySharp.Core.Svg.Collector;
 // as a partial class; same instance state, no behavior change.
 public sealed partial class MeasureCollector
 {
-    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0, bool isCue = false)
+    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0, bool isCue = false, MeasureBuilder? builder = null)
     {
         // The pitch and the duration are read off the green slots (PitchReading /
         // DurationReading): nothing below wants the red child, and for a plain note the
@@ -137,6 +137,20 @@ public sealed partial class MeasureCollector
             accidental = null; // suggestion replaces the left-of-note accidental
         }
 
+        // A tie's right head keeps its accidental for a line start only (NoteItem.
+        // LineStartAccidental) and leaves `tied` in the memory, so the next head of this pitch
+        // in the bar prints one. @courtesy (`?`) and @editorial (`!`) are FORCED in LilyPond
+        // and keep theirs (lily/parser.yy:3767-3770 set_property; accidental.cc:110 remove_tied `!forced`).
+        string? lineStartAccidental = null;
+        if (accidental != null && builder != null
+            && !_courtesySourcePositions.Contains(note.SourceStart)
+            && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
+        {
+            MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
+            lineStartAccidental = accidental;
+            accidental = null;
+        }
+
         return new NoteItem(
             staffPosition,
             Fraction.FromNoteValue(noteValue),
@@ -180,6 +194,7 @@ public sealed partial class MeasureCollector
                 ? NamedArticulationSourceOf(note, "laissezvibrer") : MusicItem.NoSourcePosition,
             RepeatTieSourcePosition = hasRepeatTie
                 ? NamedArticulationSourceOf(note, "repeattie") : MusicItem.NoSourcePosition,
+            LineStartAccidental = lineStartAccidental,
         };
     }
 
@@ -356,7 +371,7 @@ public sealed partial class MeasureCollector
     /// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/>. Cleared per walk.</summary>
     private readonly List<(int Start, int End)> _repetitionOriginalReads = new();
 
-    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0, MeasureBuilder? builder = null)
     {
         var notes = new List<ChordNoteInfo>();
         var members = new List<ResolvedChordMember>();
@@ -467,6 +482,16 @@ public sealed partial class MeasureCollector
             if (memberCourtesy && accidental == null)
                 accidental = KeySignatureAccidentalName(rp.DisplayStep);
 
+            // A tied member keeps its accidental for a line start only (CreateNoteItem).
+            string? memberLineStart = null;
+            if (accidental != null && !memberCourtesy && builder != null
+                && builder.TiesInto(staffPosition, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)))
+            {
+                MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
+                memberLineStart = accidental;
+                accidental = null;
+            }
+
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
 
             // LILYPOND-REF: lily/fingering-engraver.cc — per-pitch finger via <c@finger.N>.
@@ -508,7 +533,8 @@ public sealed partial class MeasureCollector
                 // reads the chord's first, because a chord-level event wins over a
                 // member-level one and its '@' is then the character that wrote every tie.
                 LaissezVibrerSourcePosition: memberLv?.SourceStart ?? MusicItem.NoSourcePosition,
-                RepeatTieSourcePosition: memberRt?.SourceStart ?? MusicItem.NoSourcePosition));
+                RepeatTieSourcePosition: memberRt?.SourceStart ?? MusicItem.NoSourcePosition,
+                LineStartAccidental: memberLineStart));
             members.Add(new ResolvedChordMember(staffPosition, rp.DisplayStep, rp.DisplayAlteration,
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
@@ -686,7 +712,7 @@ public sealed partial class MeasureCollector
     /// reports it (LP keeps the empty chord the same way).
     /// </summary>
     /// <remarks>LILYPOND-REF: scm/music-functions.scm:854-920 copy-repeat-chord.</remarks>
-    private MusicItem CreateChordRepetitionItem(ChordRepetitionSyntax rep, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null)
+    private MusicItem CreateChordRepetitionItem(ChordRepetitionSyntax rep, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, MeasureBuilder? builder = null)
     {
         // Checkpoint/resume (finding 3-4): a `q` reads _resolvedChordMembers, whose
         // entry is written when the ORIGINAL chord is walked. A resumed walk restores
@@ -746,13 +772,23 @@ public sealed partial class MeasureCollector
             var (accidental, styleCourtesy) = m.Step is { } step
                 ? GetDisplayAccidental(step, m.Alter!.Value, m.Octave!.Value)
                 : (null, false);
+            // `<c e>~ q`: a tied member keeps its accidental for a line start only.
+            string? memberLineStart = null;
+            if (accidental != null && builder != null && m.Step is { } tiedStep
+                && builder.TiesInto(m.StaffPosition, m.Midi))
+            {
+                MarkAccidentalTied(tiedStep, m.Octave!.Value);
+                memberLineStart = accidental;
+                accidental = null;
+            }
             notes.Add(new ChordNoteInfo(
                 m.StaffPosition, accidental,
                 m.StaffPosition is <= -6 or >= 6,
                 IsCourtesy: styleCourtesy,
                 Notehead: m.Notehead,
                 Midi: m.Midi,
-                SourcePosition: rep.SourceStart));
+                SourcePosition: rep.SourceStart,
+                LineStartAccidental: memberLineStart));
         }
 
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, rep.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)

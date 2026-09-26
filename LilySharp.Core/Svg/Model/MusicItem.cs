@@ -443,6 +443,7 @@ internal sealed record NoteItemRare
     public bool? ForcedStemUp { get; init; }
     public bool? VoiceStemUp { get; init; }
     public bool TabBelowRange { get; init; }
+    public string? LineStartAccidental { get; init; }
 }
 
 /// <summary>
@@ -580,6 +581,25 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note is a cue note (drawn at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue => _rare?.IsCue ?? false;
+
+    /// <summary>
+    /// The accidental a tie swallowed: this note is a tie's right head and would print this
+    /// glyph, but LilyPond prints it only when the note starts a system (a broken tie's
+    /// reminder). <see cref="Accidental"/> is null on such a note, so mid-line nothing reads,
+    /// spaces or draws it; the line-start readers ask <see cref="TiedAccidentals.LineStartView"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc:352-379 stop_translation_timestep — the right head's Accidental gets
+    /// the tie; lily/accidental.cc:102-117 remove_tied — it suicides after line breaking
+    /// unless the tie was broken (<c>tie-&gt;original ()</c>) or the accidental forced;
+    /// lily/accidental-placement.cc:86-100 split_accidentals — until then it is a
+    /// break reminder, which spacing counts only on a line-start column.
+    /// </remarks>
+    public string? LineStartAccidental
+    {
+        get => _rare?.LineStartAccidental;
+        init { if (value != LineStartAccidental) _rare = (_rare ?? NoteItemRare.Empty) with { LineStartAccidental = value }; }
+    }
 
     /// <summary>
     /// Editorial (suggestion) accidental kind ("sharp", "flat", "natural", ...)
@@ -1121,8 +1141,46 @@ public readonly record struct ChordNoteInfo(
     // own SourcePosition above is its PITCH token and would light the head instead.
     int LaissezVibrerSourcePosition = -1,
     // Source offset of the '@' that wrote THIS member's @repeatTie; see above.
-    int RepeatTieSourcePosition = -1
+    int RepeatTieSourcePosition = -1,
+    // The accidental a tie swallowed on THIS member — drawn and spaced only when the chord
+    // starts a system (Accidental is null meanwhile). See NoteItem.LineStartAccidental.
+    string? LineStartAccidental = null
 );
+
+/// <summary>
+/// The line-start face of an item whose tied accidental waits for a line break
+/// (<see cref="NoteItem.LineStartAccidental"/>): the same item with that accidental put back.
+/// </summary>
+/// <remarks>
+/// The model is one score for every system, so the reminder is not a separate item; the
+/// readers that know they stand on a system's first note column — the line-start spring
+/// (LineStartColumn.FirstNoteBoxes, which the break DP and the laid-out system share) and
+/// the renderer's first column — ask for this view, and nobody else sees the glyph.
+/// </remarks>
+public static class TiedAccidentals
+{
+    /// <summary>The item as a system's first note column draws it, or the item itself when it
+    /// holds no reminder.</summary>
+    public static MusicItem LineStartView(MusicItem item)
+    {
+        switch (item)
+        {
+            case NoteItem { LineStartAccidental: { } acc } n:
+                return n with { Accidental = acc, LineStartAccidental = null };
+            case ChordItem c:
+            {
+                var notes = c.Notes;
+                ChordNoteInfo[]? copy = null;
+                for (int i = 0; i < notes.Length; i++)
+                    if (notes[i].LineStartAccidental is { } acc)
+                        (copy ??= notes.ToArray())[i] = notes[i] with { Accidental = acc, LineStartAccidental = null };
+                return copy == null ? c : c with { Notes = ImmutableArray.Create(copy) };
+            }
+            default:
+                return item;
+        }
+    }
+}
 
 /// <summary>
 /// A chord (multiple notes played simultaneously).

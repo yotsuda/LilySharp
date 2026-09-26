@@ -260,6 +260,54 @@ internal sealed class MeasureBuilder
     public int CurrentItemCount => _currentItems.Count;
 
     /// <summary>
+    /// Whether the voice's previous note or chord ties INTO a head of this pitch — a head at
+    /// <paramref name="staffPosition"/> sounding <paramref name="midi"/> on the event that
+    /// last entered, which carries a tie. A rest between them (or no event yet) answers no.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's accidental engraver marks the accidental of a tie's RIGHT head as tied
+    /// (lily/accidental-engraver.cc:352-379 stop_translation_timestep), and only when the two heads share a pitch
+    /// (:358-365, the enharmonic tie). Read off what this builder already holds — the current
+    /// measure's items, then the emitted measures — so it is state a resume restores with
+    /// the prefix.
+    /// Grace notes count: LilyPond's are ordinary events of the voice.
+    /// </remarks>
+    public bool TiesInto(int staffPosition, int midi)
+    {
+        var last = LastSoundingItem();
+        return last switch
+        {
+            NoteItem n => n.HasTieStart && n.StaffPosition == staffPosition && n.Midi == midi,
+            ChordItem c => c.HasTieStart && ChordHas(c, staffPosition, midi),
+            _ => false,
+        };
+
+        static bool ChordHas(ChordItem c, int staffPosition, int midi)
+        {
+            var notes = c.Notes;
+            for (int i = 0; i < notes.Length; i++)
+                if (notes[i].StaffPosition == staffPosition && notes[i].Midi == midi)
+                    return true;
+            return false;
+        }
+    }
+
+    private MusicItem? LastSoundingItem()
+    {
+        for (int i = _currentItems.Count - 1; i >= 0; i--)
+            if (_currentItems[i] is NoteItem or ChordItem or RestItem)
+                return _currentItems[i];
+        for (int m = _measures.Count - 1; m >= 0; m--)
+        {
+            var items = _measures[m].Items;
+            for (int i = items.Length - 1; i >= 0; i--)
+                if (items[i] is NoteItem or ChordItem or RestItem)
+                    return items[i];
+        }
+        return null;
+    }
+
+    /// <summary>
     /// The phrasing-slur marks written on the node the walk is emitting — the source
     /// positions of its <c>@phrasingSlur</c> (<c>Start</c>) and <c>@!phrasingSlur</c>
     /// (<c>End</c>), −1 where none was written — or null. The next note, chord or sounding

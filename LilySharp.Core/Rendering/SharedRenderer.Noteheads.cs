@@ -211,9 +211,18 @@ internal static partial class SharedRenderer
             // Running X for changes that OPEN this measure (clef/key/time), so
             // several are sequenced left-to-right after the barline instead of stacked.
             double openChangeX = double.NaN;
+            // The voice's first note column on a system's first measure is where a tie broken
+            // by the line lands, and it draws the accidental that tie kept — the same column
+            // LineStartColumn.FirstNoteBoxes spaced it for (Model.TiedAccidentals).
+            bool lineStartColumnPending = ml.MeasureIndex == system.Measures[0].MeasureIndex;
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
                 var item = measure.Items[itemIdx];
+                if (lineStartColumnPending && SpacingRules.IsMusicalColumn(item))
+                {
+                    item = TiedAccidentals.LineStartView(item);
+                    lineStartColumnPending = false;
+                }
 
                 // GRACE TIME IS DRAWN HERE, by the ordinary engravers, at the font each of
                 // its grobs states. That is LilyPond's own shape: a grace body is an

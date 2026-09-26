@@ -252,18 +252,20 @@ internal sealed class TabResolver
     private static MusicItem WithoutAccidentals(MusicItem item) => item switch
     {
         NoteItem note when note.Accidental != null || note.EditorialAccidental != null
+                           || note.LineStartAccidental != null
                            || GraceHasAccidental(note.LeadingGrace)
             => note with
             {
                 Accidental = null,
                 EditorialAccidental = null,
+                LineStartAccidental = null,
                 LeadingGrace = WithoutGraceAccidentals(note.LeadingGrace),
             },
-        ChordItem chord when chord.Notes.Any(n => n.Accidental != null)
+        ChordItem chord when chord.Notes.Any(n => n.Accidental != null || n.LineStartAccidental != null)
                              || GraceHasAccidental(chord.LeadingGrace)
             => chord with
             {
-                Notes = ImmutableArray.CreateRange(chord.Notes, n => n with { Accidental = null }),
+                Notes = ImmutableArray.CreateRange(chord.Notes, n => n with { Accidental = null, LineStartAccidental = null }),
                 LeadingGrace = WithoutGraceAccidentals(chord.LeadingGrace),
             },
         _ => item,

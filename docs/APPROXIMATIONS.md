@@ -145,7 +145,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1391** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
-- **:769** observed by: no observer, and none is possible while the term is dominated — it
+- **:778** observed by: no observer, and none is possible while the term is dominated — it
 ### `LilySharp.Core/Semantics/DrummapValidator.cs`
 - **:30** ★ This validator exists because the block had NO observer of any kind. Measured
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
@@ -301,7 +301,7 @@
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
-- **:320** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
+- **:322** built on (LILYSHARP-OWN and deliberately not LilyPond's). REFINED 2026-09-14: only a
 ### `LilySharp.Core/Svg/EngravingDefaults.cs`
 - **:87** ⚠️ LILYSHARP-OWN in the two- and four-line rows. LilyPond's own line-count N
 - **:200** LILYSHARP-OWN: a 5-half-space floor with no single named LP constant behind it.
@@ -378,9 +378,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:910** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:608** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:693** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:701** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:615** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
+- **:700** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:708** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:297** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is
