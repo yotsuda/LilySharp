@@ -2347,7 +2347,7 @@ public sealed partial class MeasureCollector
                     sub = CollectMeasuresFromNode(blocks[t], applyFilePartial: start == 0,
                         leadingOffset: startOffset,
                         logicalIndexBase: MidBarBreaks?.ToLogical(start) ?? start);
-                    ResolveBeamStemDirections(sub);
+                    ResolveBeamStemDirections(sub, measureOffset: start);
                 }
 
                 _octave.Restore(savedOctave);

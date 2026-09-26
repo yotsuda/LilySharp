@@ -324,11 +324,47 @@ public sealed partial class MeasureCollector
     /// problem and calls the same home. The list is empty in the overwhelming majority of
     /// books, so the common path allocates nothing.
     /// </remarks>
+    /// <summary>
+    /// <paramref name="measures"/> as the page will draw them: the ottava display shift of
+    /// the staff being collected applied (<see cref="OttavaTransposer"/>, the same pass that
+    /// runs later on the finished voice). The same array, uncopied, when this staff has no
+    /// ottava mark — every book but a handful.
+    /// </summary>
+    private ImmutableArray<Measure> OttavaDisplayProbe(List<Measure> measures, int measureOffset)
+    {
+        int staff = _cursor.StaffIndex;
+        bool any = false;
+        foreach (var mark in _musicMarks)
+            if (mark.StaffIndex == staff
+                && mark.Type is MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+                    or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown)
+            {
+                any = true;
+                break;
+            }
+        var written = measures.ToImmutableArray();
+        if (!any)
+            return written;
+
+        var spans = DetectOttavaSpans(staff);
+        if (measureOffset != 0)
+            for (int i = 0; i < spans.Count; i++)
+                spans[i] = spans[i] with
+                {
+                    StartMeasureIndex = spans[i].StartMeasureIndex - measureOffset,
+                    EndMeasureIndex = spans[i].EndMeasureIndex - measureOffset,
+                };
+        return OttavaTransposer.Transpose(new Voice("ottava-display-probe", written), spans).Measures;
+    }
+
     private ImmutableArray<TupletBracketItem> ProbeTupletBrackets()
         => TupletBracketItem.AddressedTo(
             _tupletBrackets, _cursor.StaffIndex, _cursor.VoiceIndex);
 
-    private void ResolveBeamStemDirections(List<Measure> measures)
+    /// <param name="measureOffset">Where <paramref name="measures"/> starts in the staff — a
+    /// parallel sub-voice is collected from its span's bar, 0-based, and the ottava spans it
+    /// may sit under are counted in the staff's own bars.</param>
+    private void ResolveBeamStemDirections(List<Measure> measures, int measureOffset = 0)
     {
         if (measures.Count == 0)
             return;
@@ -365,7 +401,17 @@ public sealed partial class MeasureCollector
                 }
             }
 
-        var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
+        // ⚠️ JUDGED WHERE THE PAGE DRAWS THEM: under an 8va/8vb the notes are drawn an octave
+        // away from their written staff positions (OttavaTransposer), and that shift runs
+        // AFTER this bake — so a beam's direction and pure tip read off the written positions
+        // belonged to notes the page does not show. The beam engraver re-derives the drawn
+        // direction, but a reader of the STAMP did not: in 03-piano-nocturne (Lab probe) bar 9,
+        // `a gis fis e` under an 8va are written above the middle line (stamped DOWN) and
+        // drawn below it (beamed UP), and the slur, asking the stamp, ended on the last head
+        // instead of its stem tip and cut through the beam. So the probe is the DISPLAYED copy
+        // (the same shift, the same windows), and the stamps below still land on the real items.
+        var probe = OttavaDisplayProbe(measures, measureOffset);
+        var voice = new Voice("beam-direction-probe", probe);
         var groups = new BeamDetector().DetectBeamGroups(
             voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
             ProbeTupletBrackets(),
@@ -381,6 +427,8 @@ public sealed partial class MeasureCollector
         // the first pass wrote — which is now simply true of the live items.
         int ItemCount(int mi) => measures[mi].Items.Length;
         MusicItem ItemAt(int mi, int i) => measures[mi].Items[i];
+        // The displayed copy of the same item — what a stem's band is read off.
+        MusicItem ShownAt(int mi, int i) => probe[mi].Items[i];
 
         // ⚠️ ONE REBUILD PER NOTE, NOT ONE PER STAMP — the same rule as the measures above,
         // one level down. The direction/BeamId stamp and the pure-tip stamp used to be two
@@ -425,7 +473,7 @@ public sealed partial class MeasureCollector
                 // direction and BeamId below, which is what the unconditional first pass
                 // gave it before the tip pass filtered it out.
                 if (Layout.SpacingRules.StemSpacingInfo(
-                        ItemAt(mi, member.ItemIndex), member.MemberStemUp) is not { } info)
+                        ShownAt(mi, member.ItemIndex), member.MemberStemUp) is not { } info)
                 {
                     memberBands.Add((mi, member.ItemIndex, member.MemberStemUp, false));
                     continue;

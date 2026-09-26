@@ -36,8 +36,10 @@ namespace LilySharp.Core.Svg.Collector;
 /// Only <see cref="NoteItem.StaffPosition"/> / <see cref="ChordNoteInfo.StaffPosition"/>
 /// (the render position) is touched; <c>Midi</c> and both exporters read the
 /// written pitch (MidiExporter/MusicXmlExporter walk the syntax tree), so sound
-/// and exports are untouched. Stem direction and beams derive from StaffPosition
-/// at layout time (after this pass), so they follow the shift automatically.
+/// and exports are untouched. The beam stamps (a beamed stem's direction and pure tip,
+/// baked at collect time BEFORE this pass) are judged on the shifted positions: the bake
+/// runs this same pass on a copy (MeasureCollector.OttavaDisplayProbe). Until 2026-09-26 it
+/// read the written ones, so a stamp could say DOWN under a beam the page drew UP.
 ///
 /// The transposition is MOMENT-granular at the span's two ends: in the start measure only
 /// the notes from <see cref="OttavaBracketItem.StartMoment"/> on move, in the end measure

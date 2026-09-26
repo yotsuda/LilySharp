@@ -48,6 +48,35 @@ public class OttavaMidBarTests
                           double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture)))
             .ToArray();
 
+    /// <summary>
+    /// A beam's stems are stamped in the direction the page DRAWS them. The stamp is baked at
+    /// collect time, before the ottava moves the notes; 03-piano-nocturne (Lab probe) bar 9's
+    /// `a gis fis` under an 8va were stamped DOWN off their written positions (above the
+    /// middle line) while the beam was drawn UP, and the slur, which reads the stamp, ended on
+    /// the last head and cut through the beam. Both collect roads: one staff, and a grand
+    /// staff (the per-staff bake).
+    /// </summary>
+    [Theory]
+    [InlineData("staff m")]
+    [InlineData("grandStaff { staff m  staff l }")]
+    public void AnOttavasBeam_IsStampedTheWayItIsDrawn(string staves)
+    {
+        var tree = SyntaxTree.Parse(
+            "octave absolute\nkey e major\npart m { clef treble }\npart l { clef bass }\n"
+            + "section A {\n  m { e''8@ottava( dis'' cis'' b' a' gis' fis' e'@!ottava) | }\n"
+            + "  l { e,1 | }\n}\nform main { A }\nscore main { " + staves + " }\n");
+        Assert.False(tree.HasErrors);
+        var score = SvgGenerator.CollectScore(tree,
+            LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree).First());
+        var items = score.StaffGroups[0].Staves[0].Voices[0].Measures[0].Items
+            .OfType<LilySharp.Core.Svg.Model.NoteItem>().ToArray();
+
+        Assert.Equal(8, items.Length);
+        // e d# c# b drawn high in the staff: down. a g# f# e drawn low: up, like the beam.
+        Assert.All(items[..4], n => Assert.False(n.StemUpOverride));
+        Assert.All(items[4..], n => Assert.True(n.StemUpOverride));
+    }
+
     [Fact]
     public void AStopOnABarsLastNote_KeepsTheBarsOtherNotesUnderTheOttava()
     {
