@@ -218,7 +218,12 @@ public sealed partial class MeasureCollector
     // (`c8 voice { d e } { f g }` drew f g as crotchets against d e's quavers) and the
     // music after the span carried whatever voice 0 last wrote — the page, the MIDI, the
     // MusicXML and the twin each with its own answer.
-    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame, Fraction Duration, int Dots)> _parallelSpans = new();
+    // Meta is the metadata — key, clef, meter — at the same opening. Voices 2..N are walked
+    // AFTER the whole primary stream, so without it they read whatever the part ended in:
+    // `key e major voice { … } { <a' dis'>2 }` in a book that later returns to D-flat drew
+    // voice 2 in D-flat, a ♮ on the a and a ♯ on the dis, and the ♯ ran into voice 1's flag
+    // (03-piano-nocturne, 2026-09-26). LilyPond prints neither.
+    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame, Fraction Duration, int Dots, MetadataState Meta)> _parallelSpans = new();
     // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
     // this collector so two voices of the same staff cannot be handed the same number.
     private int _nextBeamId;
@@ -2216,7 +2221,7 @@ public sealed partial class MeasureCollector
 
         // Map named voices (voice sop { … }) to their measure track so a
         // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
-        foreach (var (parallel, _, _, _, _, _) in _parallelSpans)
+        foreach (var (parallel, _, _, _, _, _, _) in _parallelSpans)
         {
             int vi = 0;
             foreach (var (name, _) in parallel.NamedVoices)
@@ -2279,7 +2284,7 @@ public sealed partial class MeasureCollector
     {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
-        foreach (var (parallel, _, _, _, _, _) in _parallelSpans)
+        foreach (var (parallel, _, _, _, _, _, _) in _parallelSpans)
             voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
 
         var tracks = new List<ImmutableArray<Measure>>();
@@ -2289,7 +2294,7 @@ public sealed partial class MeasureCollector
             for (int m = 0; m < totalMeasures; m++)
                 trackMeasures[m] = EmptyMeasure(track0[m]);
 
-            foreach (var (parallel, start, startOffset, spanFrame, spanDuration, spanDots) in _parallelSpans)
+            foreach (var (parallel, start, startOffset, spanFrame, spanDuration, spanDots, spanMeta) in _parallelSpans)
             {
                 var blocks = parallel.Voices.ToList();
                 if (t >= blocks.Count)
@@ -2301,12 +2306,15 @@ public sealed partial class MeasureCollector
                 // octave, which made `voice { c'1 } voice { d1 }` after a low g read its d
                 // two octaves from where the MIDI put it. The note-value default is the
                 // opening's too (it used to be a fresh quarter — see the field's remarks).
+                // …and so is the key, clef and meter (the Meta field's remarks).
                 var savedOctave = _octave.Snapshot();
                 var savedDuration = _defaultDuration;
                 var savedDots = _defaultDots;
+                var savedMeta = _meta.Clone();
                 _octave.Restore(spanFrame);
                 _defaultDuration = spanDuration;
                 _defaultDots = spanDots;
+                _meta.CopyFrom(spanMeta);
 
                 // The sub-voice's cursor, installed for exactly the walk below:
                 //   * MetadataMeasureOffset — per-note metadata in this sub-voice is
@@ -2345,6 +2353,7 @@ public sealed partial class MeasureCollector
                 _octave.Restore(savedOctave);
                 _defaultDuration = savedDuration;
                 _defaultDots = savedDots;
+                _meta.CopyFrom(savedMeta);
 
                 for (int k = 0; k < sub.Count && start + k < totalMeasures; k++)
                     trackMeasures[start + k] = sub[k];

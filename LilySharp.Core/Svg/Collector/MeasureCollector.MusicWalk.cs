@@ -1057,7 +1057,7 @@ public sealed partial class MeasureCollector
                     var (spanDuration, spanDots) = (_defaultDuration, _defaultDots);
                     _parallelSpans.Add(
                         (parallel, builder.CurrentMeasureIndex, builder.CurrentDuration, spanFrame,
-                            spanDuration, spanDots));
+                            spanDuration, spanDots, _meta.Clone()));
                     if (voiceBlocks.Count > 0)
                     {
                         // Voice 0 is render voice 1: an override in its block scopes to it.
