@@ -77,7 +77,7 @@
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:1335** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
 - **:2233** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:3744** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:3793** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`

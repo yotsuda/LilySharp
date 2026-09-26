@@ -2844,6 +2844,55 @@ internal sealed class ElementCoordinator
     /// </summary>
     private static int? EdgeNoteStaffPosition(
         Voice voice, SystemLayout segSystem, SlurItem slur, bool leftEdge)
+        => EdgeColumn(voice, segSystem, slur, leftEdge) is { } c
+            ? MusicItem.EdgeStaffPosition(voice.Measures[c.Measure].Items[c.Item], slur.CurveUp)
+            : null;
+
+    /// <summary>
+    /// Device Y a broken slur edge's base attachment starts from when the edge column's
+    /// STEM reaches past its heads on the slur's side — the stem tip (a beamed stem's, on
+    /// the beam's face) plus half a space; null when the stem points away or does not reach
+    /// further than the head, so the head base stands.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:600-616 get_base_attachments, a broken bound:
+    ///   y = robust_relative_extent (col, Y)[dir_] + dir_ * 0.5 — the WHOLE note column's
+    ///   extent, whose stem counts (Note_column holds its Stem; stem.cc:142 ends a beamed
+    ///   one on the beam). MEASURED, Lab sessions/p653 s1/slur-break (LilyPond 2.26.0): the
+    ///   second piece of `c2( e | break g2 c'')` starts at 3.0 = the up stem's tip 2.5 +
+    ///   0.5, where the head base put Lily#'s at 0.195.
+    /// :602 `extremes_[-d].bound_ != col`: when the piece's only column is its OTHER, real
+    ///   bound (`a( | break b)`'s first piece holds `a` alone), LilyPond takes that bound's y
+    ///   (:614) — the caller copies it; this answers null for <paramref name="otherBound"/>.
+    ///   Omitting it moved ten exact pairs of the reader's corpus by 2.8-2.96 (session 653).
+    /// </remarks>
+    private static double? BrokenEdgeStemBaseY(
+        Voice voice, SystemLayout segSystem, SlurItem slur, bool leftEdge,
+        double staffMiddleDown, double headBaseY,
+        Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember,
+        (int Measure, int Item)? otherBound)
+    {
+        if (EdgeColumn(voice, segSystem, slur, leftEdge) is not { } c
+            || (otherBound is { } ob && ob.Measure == c.Measure && ob.Item == c.Item))
+            return null;
+        var item = voice.Measures[c.Measure].Items[c.Item];
+        if (NoteColumnLayout.Of(item) is not { HasStem: true } col || col.StemUp != slur.CurveUp)
+            return null;
+        double x = c.Layout.X + GetItemXOffset(voice, c.Measure, c.Item, c.Layout);
+        double stemX = LayoutUtilities.StemX(x, col.StemUp, col.NoteValue, col.Notehead);
+        double tip = TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, c.Measure, c.Item,
+                stemX, staffMiddleDown, col.StemUp, out double beamTip)
+            ? beamTip
+            : staffMiddleDown - EngravingDefaults.StaffMiddle + col.OutwardTipDeviceY(col.StemUp);
+        double y = tip + (slur.CurveUp ? -0.5 : 0.5);
+        // Device Y grows downward: the stem base wins only where it lies further out.
+        return slur.CurveUp ? (y < headBaseY ? y : null) : (y > headBaseY ? y : null);
+    }
+
+    /// <summary>The first (<paramref name="leftEdge"/>) or last sounding note column of
+    /// <paramref name="segSystem"/> within the slur's span — a broken edge's bound column.</summary>
+    private static (int Measure, int Item, MeasureLayout Layout)? EdgeColumn(
+        Voice voice, SystemLayout segSystem, SlurItem slur, bool leftEdge)
     {
         var measures = leftEdge
             ? segSystem.Measures.AsEnumerable()
@@ -2873,15 +2922,15 @@ internal sealed class ElementCoordinator
             {
                 for (int i = lo; i <= hi; i++)
                     if (!items[i].GraceTime
-                        && MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
-                        return p;
+                        && MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is not null)
+                        return (mi, i, ml);
             }
             else
             {
                 for (int i = hi; i >= lo; i--)
                     if (!items[i].GraceTime
-                        && MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
-                        return p;
+                        && MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is not null)
+                        return (mi, i, ml);
             }
         }
         return null;
@@ -4146,8 +4195,16 @@ internal sealed class ElementCoordinator
                         segStartX, staffMiddleDown, slur.CurveUp, out double startTip))
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
+                {
                     segStartY = (staffMiddleDown - startStaffPos / 2.0)
                         + (slur.CurveUp ? -slurOffset : slurOffset);
+                    // A broken edge reads its bound column's whole extent, stem included.
+                    if (!segment.IsFirst
+                        && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true,
+                            staffMiddleDown, segStartY, beamByMember,
+                            segment.IsLast ? (slur.EndMeasureIndex, slur.EndItemIndex) : null) is { } stemBase)
+                        segStartY = stemBase;
+                }
 
                 double segEndY;
                 if (endRest is { } eRest)
@@ -4157,8 +4214,26 @@ internal sealed class ElementCoordinator
                         segEndX, staffMiddleDown, slur.CurveUp, out double endTip))
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
+                {
                     segEndY = (staffMiddleDown - endStaffPos / 2.0)
                         + (slur.CurveUp ? -slurOffset : slurOffset);
+                    if (!segment.IsLast
+                        && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false,
+                            staffMiddleDown, segEndY, beamByMember,
+                            segment.IsFirst ? (slur.StartMeasureIndex, slur.StartItemIndex) : null) is { } stemBase)
+                        segEndY = stemBase;
+                }
+                // A piece whose only column is its other, real bound: the broken end takes that
+                // bound's base y (slur-scoring.cc:613-614 `y = base_attachment[-d][Y_AXIS]`).
+                var pieceVoice = score.Voices[slur.VoiceIndex];
+                if (!segment.IsLast && segment.IsFirst && startRest is null
+                    && EdgeColumn(pieceVoice, segSystem, slur, leftEdge: false) is { } rc
+                    && rc.Measure == slur.StartMeasureIndex && rc.Item == slur.StartItemIndex)
+                    segEndY = segStartY;
+                else if (!segment.IsFirst && segment.IsLast && endRest is null
+                    && EdgeColumn(pieceVoice, segSystem, slur, leftEdge: true) is { } lc
+                    && lc.Measure == slur.EndMeasureIndex && lc.Item == slur.EndItemIndex)
+                    segStartY = segEndY;
 
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown,
