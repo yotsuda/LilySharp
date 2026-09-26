@@ -191,6 +191,28 @@ public sealed partial class LilySharpLanguageServer
     private static partial Regex TempoBpmRunRegex();
 
     /// <summary>
+    /// When the caret ends a <c>tempo</c> run whose last item is its feel word —
+    /// <c>tempo 100 swing |</c>, <c>tempo "Allegro" 4 = 132 shuffle|</c>, <c>tempo swing |</c>
+    /// (the equation alone) — the feel
+    /// word as written and whether the caret still TOUCHES it; null anywhere else
+    /// (a run that already names its note value, <c>swing 16</c>, does not match).
+    /// </summary>
+    /// <remarks>The run before the feel word is <see cref="TempoBpmBeforeCaret"/>'s.</remarks>
+    internal static (string Word, bool Touching)? TempoFeelBeforeCaret(string text, int offset)
+    {
+        int lineStart = text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
+        if (offset < lineStart) return null;
+        var m = TempoFeelRunRegex().Match(text, lineStart, offset - lineStart);
+        if (!m.Success || m.Index + m.Length != offset) return null;
+        if (!TempoValue.IsFeelWord(m.Groups["feel"].Value)) return null;
+        if (m.Groups["word"].Success && TempoValue.IsFeelWord(m.Groups["word"].Value)) return null;
+        return (m.Groups["feel"].Value, m.Groups["space"].Length == 0);
+    }
+
+    [GeneratedRegex("""(?:^|(?<=[\s{]))tempo\s+(?:"[^"\n]*"\s*|(?<word>[A-Za-z]\w*)\s+)?(?:(?:\d+\.*\s*=\s*)?\d+[ \t]+)?(?<feel>[A-Za-z]+)(?<space>[ \t]*)$""")]
+    private static partial Regex TempoFeelRunRegex();
+
+    /// <summary>
     /// True when <paramref name="offset"/> sits inside a <c>"…"</c> string literal.
     /// Strings never span lines, so an odd number of quotes between the line start
     /// and the cursor means the cursor is inside one.
@@ -560,6 +582,9 @@ public sealed partial class LilySharpLanguageServer
         /// <summary><c>tempo 100 |</c> / <c>tempo "Allegro" 4 = 132|</c> — the run has its bpm
         /// and no feel word yet, so a feel word (<c>swing</c>, <c>shuffle</c>) may follow.</summary>
         AfterTempoBpm,
+        /// <summary><c>tempo 100 swing |</c> — the run ends in its feel word, so the swung
+        /// note value (<c>16</c>) may follow.</summary>
+        AfterTempoFeel,
         AfterTime,
         AfterPartial,
         AfterTitleText,
@@ -870,6 +895,9 @@ public sealed partial class LilySharpLanguageServer
             // there offered nothing a tempo can take.
             if (tempoFeel && TempoBpmBeforeCaret(text, offset) is not null)
                 return CompletionContext.AfterTempoBpm;
+            // `tempo 100 swing |`: the swung note value may follow the feel word.
+            if (tempoFeel && TempoFeelBeforeCaret(text, offset) is not null)
+                return CompletionContext.AfterTempoFeel;
             switch (prevWord)
             {
                 case "tempo": return CompletionContext.AfterTempo;

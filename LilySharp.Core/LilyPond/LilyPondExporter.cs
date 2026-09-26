@@ -3871,6 +3871,8 @@ public sealed class LilyPondExporter
     private static string EmitTempo(TempoDeclarationSyntax t)
     {
         string text = !string.IsNullOrEmpty(t.Marking) ? " \"" + Escape(t.Marking!) + "\"" : "";
+        if (t.SwingSubdivision != 0)
+            return EmitSwingTempo(t, text);
         if (t.Bpm is int bpm)
         {
             int unit = t.BeatUnit is int u ? u : 4;
@@ -3880,6 +3882,35 @@ public sealed class LilyPondExporter
         if (text.Length > 0)
             return "\\tempo" + text;
         return "";
+    }
+
+    /// <summary>
+    /// <c>tempo 122 swing</c> as LilyPond's own swing idiom (the <c>\rhythm</c> doc example):
+    /// <c>\tempo \markup { [marking] [♩ = 122] \hspace #0.4 \rhythm { 8[ 8] } = \rhythm
+    /// { \tuplet 3/2 { 4 8 } } }</c> — sixteenths a value down. The count is drawn inside the
+    /// markup in the metronome's plain face, so a written bpm still sets the tempo but its
+    /// own printing is hidden (<c>tempoHideNote</c>) — one mark, as Lily# draws it.
+    /// LILYPOND-REF: scm/define-markup-commands.scm:1920-1990 define-markup-command (rhythm …);
+    /// scm/translation-functions.scm:100-151 format-metronome-markup (tempoHideNote).
+    /// </summary>
+    private static string EmitSwingTempo(TempoDeclarationSyntax t, string text)
+    {
+        var sb = new StringBuilder("\\tempo \\markup {");
+        sb.Append(text);
+        string unit = (t.BeatUnit is int u ? u : 4) + new string('.', t.BeatDots);
+        if (t.Bpm is int bpm)
+            sb.Append(" \\normal-text \\concat { ")
+              .Append(text.Length > 0 ? "\"(\" " : "")
+              .Append("\\smaller \\general-align #Y #DOWN \\note {").Append(unit).Append("} #UP \" = ")
+              .Append(bpm).Append(text.Length > 0 ? ")" : "").Append("\" }");
+        if (text.Length > 0 || t.Bpm != null)
+            sb.Append(" \\hspace #0.4");
+        sb.Append(t.SwingSubdivision >= 16
+            ? " \\rhythm { 16[ 16] } = \\rhythm { \\tuplet 3/2 { 8 16 } } }"
+            : " \\rhythm { 8[ 8] } = \\rhythm { \\tuplet 3/2 { 4 8 } } }");
+        if (t.Bpm is int count)
+            return "\\once \\set Score.tempoHideNote = ##t " + sb + " " + unit + " = " + count;
+        return sb.ToString();
     }
 
     /// <summary>

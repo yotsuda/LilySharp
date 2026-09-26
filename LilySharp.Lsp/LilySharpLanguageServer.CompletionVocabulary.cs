@@ -1446,6 +1446,33 @@ public sealed partial class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
+    /// <summary>
+    /// The swung note value after a tempo's feel word (<c>tempo 100 swing |</c>): <c>16</c>
+    /// — the eighths are what the bare word already means.
+    /// </summary>
+    /// <param name="feel">The feel word before the caret, as written.</param>
+    /// <param name="touching">Whether the caret still touches the word: the editor then
+    /// filters by the WORD, so the row filters as <c>swing 16</c> and replaces it.</param>
+    internal static CompletionList GetTempoSubdivisionCompletions(string feel, bool touching)
+    {
+        string name = $"{char.ToUpperInvariant(feel[0])}{feel[1..]}";
+        return new CompletionList
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = "16",
+                    Kind = CompletionItemKind.Value,
+                    Detail = $"{name} feel on the sixteenths",
+                    InsertText = touching ? $"{feel} 16" : "16",
+                    FilterText = touching ? $"{feel} 16" : "16",
+                    SortText = "00",
+                },
+            ],
+        };
+    }
+
     /// <summary>Common meters offered after <c>time</c>.</summary>
     internal static CompletionList GetTimeCompletions()
     {

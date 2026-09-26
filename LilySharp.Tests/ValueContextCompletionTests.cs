@@ -131,6 +131,47 @@ public class ValueContextCompletionTests
         Assert.Contains("c", music);
     }
 
+    /// <summary>
+    /// After a tempo's feel word the swung note value may follow (`tempo 100 swing 16`).
+    /// User request 2026-09-26: Ctrl+Space at `tempo 100 swing |` offers 16.
+    /// </summary>
+    [Theory]
+    [InlineData("tempo 100 swing ", "swing", false)]
+    [InlineData("tempo 100 swing", "swing", true)]
+    [InlineData("tempo \"Grave\" 4. = 54 shuffle ", "shuffle", false)]
+    [InlineData("section A { m { c4 tempo 96 swing ", "swing", false)]
+    [InlineData("tempo swing ", "swing", false)]
+    [InlineData("tempo \"Medium\" shuffle ", "shuffle", false)]
+    public void AfterATemposFeelWord_SixteenIsOffered(string text, string feel, bool touching)
+    {
+        Assert.Equal("AfterTempoFeel", ContextOf(text).ToString());
+        Assert.Equal((feel, touching), LilySharpLanguageServer.TempoFeelBeforeCaret(text, text.Length));
+
+        var row = Assert.Single(LilySharpLanguageServer.GetTempoSubdivisionCompletions(feel, touching).Items);
+        Assert.Equal("16", row.Label);
+        Assert.Equal(touching ? $"{feel} 16" : "16", row.InsertText);
+    }
+
+    [Fact]
+    public void Sixteen_AloneInAHeader_BesideTheNotesInMusic()
+    {
+        Assert.Equal(["16"], LabelsAtEnd("tempo 100 swing "));
+        var music = LabelsAtEnd("part m { clef treble }\nsection A { m { c4 tempo 96 swing ");
+        Assert.Equal("16", music[0]);
+        Assert.Contains("c", music);
+    }
+
+    [Theory]
+    [InlineData("tempo 100 swing 16 ")]
+    [InlineData("tempo 100 ")]
+    [InlineData("tempo Comodo ")]
+    [InlineData("tempo swing 100 ")]
+    [InlineData("section A { m { tempo 100 swing c4 ")]
+    public void ElsewhereSixteenIsNot(string text)
+    {
+        Assert.NotEqual("AfterTempoFeel", ContextOf(text).ToString());
+    }
+
     [Theory]
     // A feel word is already there — nothing more of that kind fits.
     [InlineData("tempo 100 swing ")]

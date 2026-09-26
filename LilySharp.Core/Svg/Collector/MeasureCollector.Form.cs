@@ -466,11 +466,16 @@ public sealed partial class MeasureCollector
                     TempoDots = sectionTempo.BeatDots,
                     SwingSubdivision = sectionTempo.SwingSubdivision,
                 });
-            else if (sectionTempo.Marking is { } marking)
+            else if (sectionTempo.Marking != null || sectionTempo.SwingSubdivision != 0)
+                // No count: the marking and/or the swing equation (`tempo swing`).
                 _musicMarks.Add(new MusicMarkItem(
                     MusicMarkType.Tempo, "",
                     builder.CurrentMeasureIndex, sectionPos,
-                    builder.CurrentItemCount, builder.CurrentDuration) { TempoText = marking });
+                    builder.CurrentItemCount, builder.CurrentDuration)
+                {
+                    TempoText = sectionTempo.Marking,
+                    SwingSubdivision = sectionTempo.SwingSubdivision,
+                });
         }
 
         // A section's own starting key sits beside the part blocks (section-major) or in

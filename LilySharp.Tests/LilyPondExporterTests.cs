@@ -449,6 +449,26 @@ public class LilyPondExporterTests
         Assert.DoesNotContain("\\dim", ly);
     }
 
+    /// <summary>
+    /// The swing equation in the twin is LilyPond's own idiom (the \rhythm doc example) —
+    /// until 2026-09-26 the twin dropped it and printed a bare metronome mark. With a count,
+    /// the count is drawn inside the markup and the mark's own is hidden, so the tempo still
+    /// reaches the MIDI and the page shows one mark, as Lily#'s does.
+    /// </summary>
+    [Theory]
+    [InlineData("tempo 122 swing",
+        "\\once \\set Score.tempoHideNote = ##t \\tempo \\markup { \\normal-text \\concat { \\smaller \\general-align #Y #DOWN \\note {4} #UP \" = 122\" } \\hspace #0.4 \\rhythm { 8[ 8] } = \\rhythm { \\tuplet 3/2 { 4 8 } } } 4 = 122")]
+    [InlineData("tempo 100 swing 16",
+        "\\rhythm { 16[ 16] } = \\rhythm { \\tuplet 3/2 { 8 16 } } } 4 = 100")]
+    [InlineData("tempo swing",
+        "\\tempo \\markup { \\rhythm { 8[ 8] } = \\rhythm { \\tuplet 3/2 { 4 8 } } }")]
+    [InlineData("tempo \"Swing\" shuffle",
+        "\\tempo \\markup { \"Swing\" \\hspace #0.4 \\rhythm { 8[ 8] }")]
+    public void ASwingTempo_IsTheRhythmIdiom(string tempo, string expected)
+    {
+        Assert.Contains(expected, Export(Score("a,4 e, a, e,", headers: "octave absolute\n" + tempo)));
+    }
+
     private static string PedalScore(string music, string pedalProperty = "") => $$"""
         octave absolute
         part piano { clef bass {{pedalProperty}} }

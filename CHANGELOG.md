@@ -8,6 +8,17 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **The swing equation is LilyPond's.** `tempo 122 swing` drew two beamed eighths "=" a
+  beamed dotted eighth and eighth under a "3" — a figure that is not a triplet — at a
+  small size of its own. It now draws what LilyPond's `\rhythm { 8[ 8] } = \rhythm
+  { \tuplet 3/2 { 4 8 } }` draws: a quarter and a flagged eighth under a tuplet bracket,
+  at `\rhythm`'s size, measured from LilyPond to 0.01 staff space (`swing 16`:
+  `16[ 16] = \tuplet 3/2 { 8 16 }`). The bracket rises above the metronome mark, so the
+  mark is spaced a little higher, as LilyPond's is. **`tempo swing` with no number now
+  prints the equation alone** (it printed nothing), and after a marking with no number
+  (`tempo "Medium" shuffle`) it follows the marking. A swung value other than 8 or 16
+  (`swing 4`) is reported, LYS0034. The LilyPond twin writes the same `\rhythm` markup.
+
 - **Section labels and rehearsal marks are set in the regular weight, not bold**, and a
   label with a descender ("Bridge") keeps half the gap under it and has as much frame
   above its capitals as below its baseline, so its letters sit centred in the frame
@@ -130,7 +141,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - **After a tempo's number, completion offers the feel words.** `tempo 100 ` (or Ctrl+Space
   with the caret still on the 100) offers `swing`, `shuffle` and their sixteenth forms; it
   offered nothing before. Inside music (`c4 tempo 96 `) they lead the list and the notes
-  stay in it, since a note may follow there instead.
+  stay in it, since a note may follow there instead. After the feel word
+  (`tempo 100 swing `, or with the caret still on the word) completion offers `16`.
 
 - **The preview draws text in the faces the layout measured.** The preview loaded only the
   music font, so on a machine without TeX Gyre installed every title, lyric, tempo, chord

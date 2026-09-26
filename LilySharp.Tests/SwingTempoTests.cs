@@ -82,6 +82,53 @@ public class SwingTempoTests
         Assert.Equal(0, plain.SwingSubdivision);
     }
 
+    /// <summary>
+    /// `tempo swing` — the equation with no count — used to print NOTHING and say nothing:
+    /// every path that made a tempo mark wanted a bpm or a marking (user report 2026-09-26).
+    /// LilyPond prints `\tempo \markup { \rhythm … = \rhythm … }` alone, and so does Lily#,
+    /// at the opening, at a section's start and mid-music.
+    /// </summary>
+    [Theory]
+    [InlineData("tempo swing", "", "section A { m { c'4 d' e' f' | } }")]
+    [InlineData("", "", "section A { m { c'4 d' e' f' | } }\nsection B { tempo swing\n m { c'4 d' e' f' | } }")]
+    [InlineData("", "", "section A { m { c'4 d' tempo swing e' f' | } }")]
+    [InlineData("tempo \"Medium\" shuffle", "Medium", "section A { m { c'4 d' e' f' | } }")]
+    public void TheEquationWithNoCount_IsAMarkOfItsOwn(string header, string marking, string sections)
+    {
+        var src = header + "\npart m { clef treble }\n" + sections + "\n"
+            + "form main { " + (sections.Contains("section B") ? "A B" : "A") + " }\n"
+            + "score main \"s\" { staff m }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var layout = new LayoutEngine().Layout(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var mark = Assert.Single(layout.MusicMarkLayouts, m => m.MarkType == MusicMarkType.Tempo);
+        Assert.Equal(8, mark.SwingSubdivision);
+        Assert.Equal("", mark.Text);
+        Assert.Equal(marking == "" ? null : marking, mark.TempoText);
+    }
+
+    [Theory]
+    [InlineData("tempo 120 swing 4", "'swing 4'")]
+    [InlineData("tempo 120 shuffle 32", "'shuffle 32'")]
+    [InlineData("tempo swing 0", "'swing 0'")]
+    public void ANoteValueThatIsNotSwung_IsReported(string tempo, string quoted)
+    {
+        var tree = SyntaxTree.Parse(tempo);
+        var warning = Assert.Single(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnsupportedSwingValue);
+        Assert.Contains(quoted, warning.Message);
+    }
+
+    [Theory]
+    [InlineData("tempo 120 swing")]
+    [InlineData("tempo 120 swing 8")]
+    [InlineData("tempo 120 shuffle 16")]
+    [InlineData("tempo 4 = 120 swing 16")]   // the 4 and the 120 are not the swung value
+    public void EighthsAndSixteenths_AreNotReported(string tempo)
+    {
+        Assert.DoesNotContain(SyntaxTree.Parse(tempo).Diagnostics,
+            d => d.Code == DiagnosticCodes.UnsupportedSwingValue);
+    }
+
     [Fact]
     public void SwingAndShuffle_AreNotReservedWords()
     {

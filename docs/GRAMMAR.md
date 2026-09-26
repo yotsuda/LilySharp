@@ -237,7 +237,12 @@ FeelWord       = 'swing' | 'shuffle' ;      (* contextual, NOT reserved words *)
                     tempo Comodo 4 = 84 — a bare word is a marking only where a marking
                     can start, so a trailing feel word is never swallowed by it.
                     'tempo 120 swing' draws a shuffle-feel equation; 'swing 16' = 16th
-                    swing; a bare feel word means eighths. *)
+                    swing; a bare feel word means eighths. The equation is LilyPond's
+                    \rhythm { 8[ 8] } = \rhythm { \tuplet 3/2 { 4 8 } } (16ths: 16[ 16] =
+                    \tuplet 3/2 { 8 16 }). With no bpm ('tempo swing', 'tempo "Medium"
+                    shuffle') it prints alone or after the marking. A swung value other
+                    than 8 or 16 is LYS0034 (a warning; drawn as the nearer of the two,
+                    'swing 0' as none). *)
                  (* HOW THE RUN IS READ (one pass, LysValue's neighbour TempoValue):
                     - bpm        = the LAST integer, stopping at a feel word, so the 16
                                    of `swing 16` is not the tempo. Last, not first,

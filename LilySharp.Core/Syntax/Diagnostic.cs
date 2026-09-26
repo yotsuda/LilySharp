@@ -616,6 +616,14 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string SectionDeclarationTilde = "LYS0033";
 
+    /// <summary>Warning: the note value after a tempo's feel word is neither 8 nor 16
+    /// (<c>tempo 120 swing 4</c>). Only eighths (the bare word's meaning) and sixteenths are
+    /// swung; the equation is drawn for the nearer of the two (sixteenths from 16 up,
+    /// eighths below), and <c>swing 0</c> draws none.</summary>
+    /// <remarks>Before this the number was taken without a word and drawn as eighths or
+    /// sixteenths whatever it said (reported 2026-09-26).</remarks>
+    public const string UnsupportedSwingValue = "LYS0034";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

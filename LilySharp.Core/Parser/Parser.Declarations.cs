@@ -939,6 +939,8 @@ internal sealed partial class Parser
         // Collect value tokens: "marking" duration = bpm, plus an optional trailing
         // 'swing' / 'shuffle' feel word (kept as a value token; TempoValue reads the
         // whole run). These are NOT reserved words, so they stay usable as names.
+        string? feelWord = null;
+        bool subdivisionRead = false;
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
                // a dotted beat unit: "tempo \"Lively\" 4. = 116" lexes as
@@ -961,6 +963,21 @@ internal sealed partial class Parser
                     $"'{Current.Text}' is not a tempo value - a metronome mark is a whole "
                     + "number of beats per minute (tempo 4 = 116) and a beat unit is a "
                     + "note value, dotted with a dot (tempo 4. = 116).");
+            }
+            // The swung note value — the FIRST integer after the feel word, as TempoValue
+            // reads it — is 8 or 16; anything else used to be drawn as one of them silently.
+            if (Check(SyntaxKind.Identifier))
+                feelWord ??= Current.Text;
+            else if (feelWord != null && !subdivisionRead && Check(SyntaxKind.IntegerLiteral))
+            {
+                subdivisionRead = true;
+                if (Current.Text is not ("8" or "16"))
+                {
+                    var span = new TextSpan(_textPosition, System.Math.Max(1, Current.FullWidth));
+                    _diagnostics.Warning(span, DiagnosticCodes.UnsupportedSwingValue,
+                        $"'{feelWord} {Current.Text}' is not a swing value - only eighths (the bare "
+                        + $"word, or '{feelWord} 8') and sixteenths ('{feelWord} 16') are swung.");
+                }
             }
             valueTokens.Add(Advance());
         }

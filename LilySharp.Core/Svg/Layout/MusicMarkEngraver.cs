@@ -1826,8 +1826,9 @@ internal static class MusicMarkEngraver
         string? tempoText = null, int tempoBeatUnit = 4, int tempoDots = 0,
         int tempoPosition = 0)
     {
-        // A textual marking without a BPM ("tempo \"Grave\"") still prints.
-        if (tempo == null && tempoText == null)
+        // A textual marking without a BPM ("tempo \"Grave\"") still prints, and so does the
+        // swing equation alone ("tempo swing").
+        if (tempo == null && tempoText == null && swingSubdivision == 0)
             return marks;
 
         // The mark is SYNTHESISED from the score's metadata rather than walked off a

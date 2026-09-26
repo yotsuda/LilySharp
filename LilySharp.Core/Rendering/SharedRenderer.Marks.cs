@@ -609,9 +609,9 @@ internal static partial class SharedRenderer
     /// <see cref="MetronomeMarkGeometry.Swing"/>, the home the stacker reserves from.
     /// </summary>
     private static void DrawSwingEquation(ScoreTextMetrics fonts, IDrawingContext gc,
-        double startX, double baselineY, int subdivision)
+        double startX, double baselineY, int subdivision, bool afterText = true)
     {
-        var swing = MetronomeMarkGeometry.Swing(fonts, subdivision);
+        var swing = MetronomeMarkGeometry.Swing(fonts, subdivision, afterText);
         foreach (var p in swing.Pieces)
         {
             switch (p.Kind)
@@ -676,12 +676,25 @@ internal static partial class SharedRenderer
             var plainStyle = MetronomeMarkGeometry.PlainStyle(fonts);
             double x = m.X;
             bool hasMetronome = m.Text.Length > 0;
+            if (!hasMetronome)
+            {
+                // No count: the marking alone ("tempo Meno mosso"), and/or the swing
+                // equation — after the marking ("Swing \hspace #0.4 \rhythm …", the
+                // \rhythm doc example) or alone ("tempo swing").
+                if (m.TempoText != null)
+                {
+                    gc.DrawText(m.TempoText, x, absY, em,
+                        TextRole.Tempo, textStyle, TextAnchor.Start, Color.Black);
+                    x += fonts.Advance(m.TempoText, em, TextRole.Tempo, textStyle);
+                }
+                if (m.SwingSubdivision != 0)
+                    DrawSwingEquation(fonts, gc, x, absY, m.SwingSubdivision, afterText: m.TempoText != null);
+                return;
+            }
             if (m.TempoText != null)
             {
                 gc.DrawText(m.TempoText, x, absY, em,
                     TextRole.Tempo, textStyle, TextAnchor.Start, Color.Black);
-                if (!hasMetronome)
-                    return;
                 x += fonts.Advance(m.TempoText, em, TextRole.Tempo, textStyle);
                 // The concat's " (" — one run; its leading space carried as the
                 // single-run offset so no backend collapses it.

@@ -1629,16 +1629,17 @@ public sealed partial class MeasureCollector
                             TempoDots = tempoChange.BeatDots,
                             SwingSubdivision = tempoChange.SwingSubdivision,
                         });
-                    else if (tempoChange.Marking is { } markingOnly)
-                        // Text-only change ("tempo Meno mosso"): bold marking,
-                        // no metronome equation.
+                    else if (tempoChange.Marking != null || tempoChange.SwingSubdivision != 0)
+                        // No count: a text-only change ("tempo Meno mosso", bold
+                        // marking) and/or the swing equation ("tempo swing").
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, "",
                             // The declaration's first VALUE — see TempoDataPos.
                             builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
-                            TempoText = markingOnly,
+                            TempoText = tempoChange.Marking,
+                            SwingSubdivision = tempoChange.SwingSubdivision,
                         });
                 }
                 break;

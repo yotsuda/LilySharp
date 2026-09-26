@@ -485,13 +485,16 @@ tempo 120             // Quarter = 120 BPM
 tempo "Allegro" 4 = 120  // With text marking
 tempo 120 swing       // + swing/shuffle feel equation beside the mark
 tempo 120 swing 16    // sixteenth-note swing (double-beamed)
+tempo swing           // the swing equation alone, no metronome mark
 ```
 
-Adding `swing` (or `shuffle`) after the tempo draws the swing equation — straight
-notes = a beamed dotted + plain note under a triplet `3` — to the right of the
-metronome mark, the way shuffle charts are headed. A trailing number picks the note
-value that swings: `swing` (= `swing 8`) for eighths, `swing 16` for sixteenths
-(double-beamed). The words are contextual, not reserved, so `swing` / `shuffle`
+Adding `swing` (or `shuffle`) after the tempo draws the swing equation — two beamed
+straight notes = a quarter and an eighth under a triplet `3` bracket, LilyPond's own
+`\rhythm { 8[ 8] } = \rhythm { \tuplet 3/2 { 4 8 } }` — to the right of the metronome
+mark (or of the marking, or alone when neither is written), the way shuffle charts are
+headed. A trailing number picks the note value that swings: `swing` (= `swing 8`) for
+eighths, `swing 16` for sixteenths (`16[ 16] = \tuplet 3/2 { 8 16 }`); any other number
+is reported (LYS0034). The words are contextual, not reserved, so `swing` / `shuffle`
 stay usable as your own names.
 
 ## Metadata

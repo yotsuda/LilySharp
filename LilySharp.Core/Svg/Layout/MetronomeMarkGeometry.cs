@@ -214,8 +214,8 @@ internal static class MetronomeMarkGeometry
         EqualsSign,
     }
 
-    /// <summary>One piece of the swing feel-equation: X from the END of the count's text,
-    /// Y up from the markup baseline.</summary>
+    /// <summary>One piece of the swing feel-equation: X from the END of the text before it
+    /// (or from the mark's ink left when nothing precedes it), Y up from the markup baseline.</summary>
     public readonly record struct SwingPiece(
         SwingPieceKind Kind, double X0, double Y0, double X1 = 0, double Y1 = 0, char Glyph = default);
 
@@ -243,7 +243,12 @@ internal static class MetronomeMarkGeometry
     /// they are MEASURED from LilyPond 2.26 SVG output (Lab sessions/p641/swing/lp-geom.svg),
     /// in units of the rhythm's own staff space, and reproduce it to 1e-3.
     /// </remarks>
-    public static SwingEquation Swing(ScoreTextMetrics fonts, int subdivision)
+    /// <param name="fonts">The score's text metrics.</param>
+    /// <param name="subdivision">The swung value: 16 = sixteenths, anything else eighths.</param>
+    /// <param name="afterText">True when a count or a marking precedes the equation on the
+    /// same line (the <c>\hspace #0.4</c> and its word-spaces lead it); false for the
+    /// equation alone (<c>tempo swing</c>), whose first head IS the mark's ink left.</param>
+    public static SwingEquation Swing(ScoreTextMetrics fonts, int subdivision, bool afterText = true)
     {
         const double WordSpace = 0.6;          // markup line word-space
         const double HSpace = 0.4;             // the idiom's \hspace #0.4
@@ -271,7 +276,7 @@ internal static class MetronomeMarkGeometry
         }
 
         // ── The straight pair, beamed: 8[ 8] or 16[ 16]. ──
-        double h1 = WordSpace + HSpace + WordSpace - LeftInsetU * r;
+        double h1 = afterText ? WordSpace + HSpace + WordSpace - LeftInsetU * r : 0.0;
         double h2 = h1 + (sixteenths ? 2.0508 : 2.8872) * r;
         double beamTopU = sixteenths ? 3.1770 : 2.8230;     // stem top = upper beam's centre
         Note(h1, beamTopU);
@@ -341,26 +346,30 @@ internal static class MetronomeMarkGeometry
             top = Math.Max(top, tInk.Top);
             bottom = Math.Min(bottom, tInk.Bottom);
             x += fonts.Advance(tempoText, em, TextRole.Tempo, textStyle);
-            if (!hasMetronome)
-                return (x, top, bottom);
-            var pInk = fonts.Ink("(", em, TextRole.Tempo, plainStyle);
-            top = Math.Max(top, pInk.Top);
-            bottom = Math.Min(bottom, pInk.Bottom);
-            x += fonts.Advance(" (", em, TextRole.Tempo, plainStyle);
+            if (hasMetronome)
+            {
+                var pInk = fonts.Ink("(", em, TextRole.Tempo, plainStyle);
+                top = Math.Max(top, pInk.Top);
+                bottom = Math.Min(bottom, pInk.Bottom);
+                x += fonts.Advance(" (", em, TextRole.Tempo, plainStyle);
+            }
         }
-        // The note: bottom ON the baseline (DOWN-aligned), top at its stem/head.
-        top = Math.Max(top, NoteTop(fonts, beatUnit));
-        x += NoteRight(fonts, beatUnit, dots);
-        // " = N" — ONE text run whose leading space is the concat's separator, so its
-        // advance is one measurement of the whole string, as one stencil's extent is.
-        string eq = EquationText(count, tempoText != null);
-        var eqInk = fonts.Ink(eq, em, TextRole.Tempo, plainStyle);
-        top = Math.Max(top, eqInk.Top);
-        bottom = Math.Min(bottom, eqInk.Bottom);
-        x += fonts.Advance(" " + eq, em, TextRole.Tempo, plainStyle);
+        if (hasMetronome)
+        {
+            // The note: bottom ON the baseline (DOWN-aligned), top at its stem/head.
+            top = Math.Max(top, NoteTop(fonts, beatUnit));
+            x += NoteRight(fonts, beatUnit, dots);
+            // " = N" — ONE text run whose leading space is the concat's separator, so its
+            // advance is one measurement of the whole string, as one stencil's extent is.
+            string eq = EquationText(count, tempoText != null);
+            var eqInk = fonts.Ink(eq, em, TextRole.Tempo, plainStyle);
+            top = Math.Max(top, eqInk.Top);
+            bottom = Math.Min(bottom, eqInk.Bottom);
+            x += fonts.Advance(" " + eq, em, TextRole.Tempo, plainStyle);
+        }
         if (swingSubdivision != 0)
         {
-            var swing = Swing(fonts, swingSubdivision);
+            var swing = Swing(fonts, swingSubdivision, afterText: hasMetronome || tempoText != null);
             x += swing.Width;
             top = Math.Max(top, swing.Top);
             bottom = Math.Min(bottom, swing.Bottom);
