@@ -329,11 +329,17 @@ public class MarkReserveVersusDrawTests
     /// (LilyPond's X extent of a text stencil), so the side margins carried the side
     /// bearings and read wider than the top and bottom ones (owner's decision; LILYSHARP-OWN).
     /// </summary>
+    /// <remarks>
+    /// The one exception, also the owner's (2026-09-26): under a DESCENDER the gap is half
+    /// the padding, so "Bridge" does not read as sitting high in its frame. A string whose
+    /// ink stays on the baseline keeps the same margin on all four sides.
+    /// </remarks>
     [Theory]
-    [InlineData("Bridge")]
-    [InlineData("A")]
-    [InlineData("Verse")]
-    public void LabelFrame_HasEqualMarginsAroundTheInk(string text)
+    [InlineData("Bridge", true)]
+    [InlineData("A", false)]
+    [InlineData("Verse", false)]
+    [InlineData("Chorus", false)]
+    public void LabelFrame_HasEqualMarginsAroundTheInk(string text, bool descender)
     {
         var type = MusicMarkType.SectionLabel;
         double margin = MusicMarkEngraver.LabelBoxMargin(Fonts, type, boxed: true);
@@ -341,7 +347,16 @@ public class MarkReserveVersusDrawTests
         var (bottom, top) = MusicMarkEngraver.LabelInk(Fonts, type, text);
 
         Assert.Equal(margin, MusicMarkEngraver.LabelBoxHalfWidth(Fonts, type, text, true) - (right - left) / 2, 6);
-        Assert.Equal(margin, MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, text, true) - (top - bottom) / 2, 6);
+        double frameH = 2 * MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, text, true);
+        double bottomMargin = frameH - (top - bottom) - margin;
+        Assert.Equal(MusicMarkEngraver.LabelBoxBottomMargin(Fonts, type, text, true), bottomMargin, 6);
+        if (descender)
+            Assert.InRange(bottomMargin, 0.1, margin - 0.1);
+        else
+            Assert.Equal(margin, bottomMargin, 6);
+        // The baseline stands where the frame puts it: ink bottom = frame bottom + bottom margin.
+        double baselineBelowCentre = MusicMarkEngraver.LabelBaselineBelowCentre(Fonts, type, text, true);
+        Assert.Equal(-frameH / 2 + bottomMargin, -baselineBelowCentre + bottom, 6);
 
         // Drawn middle-anchored at anchor + shift, the ink's centre lands on the anchor.
         double advance = Fonts.Advance(text, MusicMarkEngraver.LabelEm(Fonts, type),

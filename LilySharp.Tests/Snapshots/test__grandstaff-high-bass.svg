@@ -49,7 +49,7 @@
   <text class="music" x="31.16" y="22.66" font-size="4.00" data-pos="1680"></text>
   <rect x="29.07" y="29.16" width="0.19" height="4.00" data-pos="1669"/>
   <rect x="37.22" y="29.16" width="0.19" height="4.00" data-pos="1686"/>
-  <rect x="12.02" y="13.47" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
-  <text x="16.03" y="15.82" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1617">Main</text>
+  <rect x="12.02" y="13.47" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1617"/>
+  <text x="15.69" y="15.82" font-size="2.77" text-anchor="middle" data-pos="1617">Main</text>
   </g>
 </svg>

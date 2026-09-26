@@ -41,7 +41,7 @@
   <path d="M 28.75,23.66 C 29.30,24.17 30.56,24.17 31.11,23.66 C 30.56,24.29 29.30,24.29 28.75,23.66 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
   <path d="M 28.75,22.69 C 29.30,23.19 30.56,23.19 31.11,22.69 C 30.56,23.31 29.30,23.31 28.75,22.69 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
   <path d="M 28.75,21.20 C 29.32,20.55 30.67,20.55 31.24,21.20 C 30.67,20.67 29.32,20.67 28.75,21.20 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="3230"/>
-  <rect x="11.90" y="16.72" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="3164"/>
-  <text x="15.92" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="3164">Main</text>
+  <rect x="11.90" y="16.72" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="3164"/>
+  <text x="15.57" y="19.07" font-size="2.77" text-anchor="middle" data-pos="3164">Main</text>
   </g>
 </svg>

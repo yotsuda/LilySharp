@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="407.3" viewBox="0 0 119.50 40.73" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="407.2" viewBox="0 0 119.50 40.72" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="40.73" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="40.72" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="407">Lead Sheet</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="429">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -70,11 +70,11 @@
   <text x="49.74" y="25.53" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="573">F</text>
   <text x="66.10" y="25.53" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="593">G</text>
   <text x="68.15" y="24.34" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="593">7</text>
-  <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="444"></text>
+  <text class="music" x="13.42" y="22.59" font-size="3.56" data-pos="444"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="444"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="444">= 120</text>
-  <rect x="11.90" y="16.72" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="499"/>
-  <text x="13.36" y="19.11" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="499">A</text>
+  <rect x="11.90" y="16.72" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="499"/>
+  <text x="13.28" y="19.11" font-size="2.77" text-anchor="middle" data-pos="499">A</text>
   <line x1="51.73" y1="34.04" x2="52.08" y2="34.04" stroke="#000000" stroke-width="0.130"/>
   </g>
 </svg>

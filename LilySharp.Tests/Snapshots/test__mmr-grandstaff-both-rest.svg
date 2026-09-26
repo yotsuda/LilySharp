@@ -56,8 +56,8 @@
   <rect x="29.48" y="29.31" width="0.19" height="4.00" data-pos="1145"/>
   <rect x="40.47" y="29.31" width="0.19" height="4.00" data-pos="1156"/>
   <rect x="53.43" y="29.31" width="0.19" height="4.00" data-pos="1167"/>
-  <rect x="12.02" y="16.72" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1058"/>
-  <text x="16.03" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1058">Main</text>
+  <rect x="12.02" y="16.72" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1058"/>
+  <text x="15.69" y="19.07" font-size="2.77" text-anchor="middle" data-pos="1058">Main</text>
   <text class="music" x="34.77" y="22.31" font-size="4.00"></text>
   <text class="music" x="34.27" y="19.91" font-size="4.00">4</text>
   <text class="music" x="34.77" y="31.31" font-size="4.00"></text>

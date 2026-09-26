@@ -53,14 +53,15 @@ public class SectionMarkOverKeyChangeTests
             """),
         new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
 
-    /// <summary>The boxed label's rect (x, y, w, h) whose following bold text is
-    /// <paramref name="label"/>.</summary>
+    /// <summary>The boxed label's rect (x, y, w, h) whose following text is
+    /// <paramref name="label"/>. (The label was bold until 2026-09-26; the pattern no longer
+    /// asks for a weight.)</summary>
     private static (double X, double Y, double W, double H) MarkBox(string svg, string label)
     {
         var m = Regex.Match(svg,
             "<rect x=\"([\\d.-]+)\" y=\"([\\d.-]+)\" width=\"([\\d.]+)\" height=\"([\\d.]+)\"" +
             "[^>]*stroke=\"#000000\"[^>]*/>\\s*" +
-            "<text [^>]*font-weight=\"bold\"[^>]*>" + Regex.Escape(label) + "</text>");
+            "<text [^>]*>" + Regex.Escape(label) + "</text>");
         Assert.True(m.Success, $"boxed label '{label}' not found");
         return (double.Parse(m.Groups[1].Value), double.Parse(m.Groups[2].Value),
                 double.Parse(m.Groups[3].Value), double.Parse(m.Groups[4].Value));

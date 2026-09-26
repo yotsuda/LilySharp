@@ -46,10 +46,10 @@
   <rect x="39.20" y="11.88" width="0.19" height="4.00" data-pos="292"/>
   <rect x="52.45" y="11.88" width="0.19" height="4.00" data-pos="328"/>
   <rect x="60.60" y="11.88" width="0.19" height="4.00" data-pos="333"/>
-  <rect x="11.90" y="8.29" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
-  <text x="13.36" y="10.68" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="255">A</text>
-  <rect x="37.95" y="6.69" width="2.70" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
-  <text x="39.33" y="9.04" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="298">B</text>
+  <rect x="11.90" y="8.29" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="255"/>
+  <text x="13.28" y="10.68" font-size="2.77" text-anchor="middle" data-pos="255">A</text>
+  <rect x="38.06" y="6.69" width="2.48" height="2.71" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="298"/>
+  <text x="39.34" y="9.04" font-size="2.77" text-anchor="middle" data-pos="298">B</text>
   <text x="30.46" y="10.89" font-size="2.20" font-style="italic" data-pos="354">poco a poco dim.</text>
   </g>
 </svg>

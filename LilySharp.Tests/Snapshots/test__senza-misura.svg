@@ -96,7 +96,7 @@
   <rect x="52.30" y="32.31" width="0.19" height="4.00" data-pos="791"/>
   <rect x="102.24" y="32.31" width="0.19" height="4.00" data-pos="800"/>
   <text x="0.00" y="31.26" font-size="1.75" font-weight="bold" text-anchor="end">2</text>
-  <rect x="11.90" y="16.72" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="663"/>
-  <text x="15.92" y="19.07" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="663">Main</text>
+  <rect x="11.90" y="16.72" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="663"/>
+  <text x="15.57" y="19.07" font-size="2.77" text-anchor="middle" data-pos="663">Main</text>
   </g>
 </svg>

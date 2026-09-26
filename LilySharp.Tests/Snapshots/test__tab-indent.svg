@@ -19,7 +19,7 @@
   <text class="music" x="16.96" y="18.91" font-size="4.00" data-pos="305"></text>
   <line x1="18.20" y1="18.76" x2="18.20" y2="15.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="19.86" y="18.41" font-size="4.00" data-pos="307"></text>
-  <line x1="19.92" y1="18.56" x2="19.92" y2="21.75" stroke="#000000" stroke-width="0.130"/>
+  <line x1="19.92" y1="18.56" x2="19.92" y2="21.74" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="22.75" y="17.91" font-size="4.00" data-pos="309"></text>
   <line x1="22.82" y1="18.06" x2="22.82" y2="21.41" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="25.65" y="17.41" font-size="4.00" data-pos="311"></text>
@@ -53,7 +53,7 @@
   <line x1="8.59" y1="28.16" x2="16.75" y2="28.16" stroke="#000000" stroke-width="0.100"/>
   <line x1="18.46" y1="28.16" x2="39.67" y2="28.16" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="29.66" x2="39.67" y2="29.66" stroke="#000000" stroke-width="0.100"/>
-  <rect x="12.14" y="12.82" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="293"/>
-  <text x="13.60" y="15.21" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="293">A</text>
+  <rect x="12.14" y="12.82" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="293"/>
+  <text x="13.52" y="15.21" font-size="2.77" text-anchor="middle" data-pos="293">A</text>
   </g>
 </svg>

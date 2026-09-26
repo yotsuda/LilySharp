@@ -147,10 +147,10 @@
   <text x="80.59" y="30.29" font-size="2.62" font-family="TeX Gyre Heros, sans-serif" data-pos="1142">A</text>
   <text x="82.33" y="29.10" font-size="1.85" font-family="TeX Gyre Heros, sans-serif" data-pos="1142">7</text>
   <text x="0.00" y="32.17" font-size="1.75" font-weight="bold" text-anchor="end">5</text>
-  <rect x="13.82" y="15.32" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="906"/>
-  <text x="15.28" y="17.71" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="906">A</text>
-  <rect x="5.29" y="24.88" width="2.60" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="978"/>
-  <text x="6.60" y="27.28" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="978">C</text>
+  <rect x="13.82" y="15.32" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="906"/>
+  <text x="15.20" y="17.71" font-size="2.77" text-anchor="middle" data-pos="906">A</text>
+  <rect x="5.29" y="24.88" width="2.43" height="2.79" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="978"/>
+  <text x="6.52" y="27.28" font-size="2.77" text-anchor="middle" data-pos="978">C</text>
   <text x="18.92" y="17.90" font-size="2.20" font-style="italic" data-pos="920">rit.</text>
   <line x1="22.03" y1="17.90" x2="42.61" y2="17.90" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="920"/>
   <text x="8.04" y="32.24" font-size="2.20" font-style="italic" data-pos="992">rit.</text>

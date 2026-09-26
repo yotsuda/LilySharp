@@ -33,17 +33,17 @@
   <rect x="34.31" y="20.73" width="0.19" height="4.00" data-pos="344"/>
   <rect x="47.04" y="20.73" width="0.19" height="4.00" data-pos="353"/>
   <text class="music" x="17.77" y="26.47" font-size="4.00" data-pos="328"></text>
-  <text x="17.77" y="29.23" font-size="2.47" text-anchor="middle" data-pos="399">Twin</text>
-  <text x="22.57" y="29.23" font-size="2.47" text-anchor="middle" data-pos="405">kle</text>
-  <text x="27.34" y="29.23" font-size="2.47" text-anchor="middle" data-pos="409">twin</text>
-  <text x="31.76" y="29.23" font-size="2.47" text-anchor="middle" data-pos="415">kle</text>
-  <text x="36.05" y="29.23" font-size="2.47" text-anchor="middle" data-pos="421">lit</text>
-  <text x="39.05" y="29.23" font-size="2.47" text-anchor="middle" data-pos="426">tle</text>
-  <text x="43.26" y="29.23" font-size="2.47" text-anchor="middle" data-pos="430">star</text>
+  <text x="17.77" y="29.22" font-size="2.47" text-anchor="middle" data-pos="399">Twin</text>
+  <text x="22.57" y="29.22" font-size="2.47" text-anchor="middle" data-pos="405">kle</text>
+  <text x="27.34" y="29.22" font-size="2.47" text-anchor="middle" data-pos="409">twin</text>
+  <text x="31.76" y="29.22" font-size="2.47" text-anchor="middle" data-pos="415">kle</text>
+  <text x="36.05" y="29.22" font-size="2.47" text-anchor="middle" data-pos="421">lit</text>
+  <text x="39.05" y="29.22" font-size="2.47" text-anchor="middle" data-pos="426">tle</text>
+  <text x="43.26" y="29.22" font-size="2.47" text-anchor="middle" data-pos="430">star</text>
   <text class="music" x="13.42" y="19.36" font-size="3.56" data-pos="260"></text>
-  <line x1="14.52" y1="19.20" x2="14.52" y2="16.69" stroke="#000000" stroke-width="0.116" data-pos="260"/>
-  <text x="15.20" y="19.85" font-size="2.20" data-pos="260">= 100</text>
-  <rect x="11.90" y="13.48" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="314"/>
-  <text x="13.36" y="15.88" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="314">A</text>
+  <line x1="14.52" y1="19.19" x2="14.52" y2="16.69" stroke="#000000" stroke-width="0.116" data-pos="260"/>
+  <text x="15.20" y="19.84" font-size="2.20" data-pos="260">= 100</text>
+  <rect x="11.90" y="13.48" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="314"/>
+  <text x="13.28" y="15.87" font-size="2.77" text-anchor="middle" data-pos="314">A</text>
   </g>
 </svg>

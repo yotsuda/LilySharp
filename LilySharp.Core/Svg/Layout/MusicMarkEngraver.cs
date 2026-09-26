@@ -2056,11 +2056,14 @@ internal static class MusicMarkEngraver
     //   box bottom 1.100000            → LilyPond stands it at 0.850000 for all eight texts
     //                                    measured, empty staff or high notes underneath
     //
-    // ⚠️ The BOX ITSELF and the BOLD are Lily#'s own decisions, not LilyPond's (LilyPond
-    // draws a bare mark, and scm/define-grobs.scm:3051-3053 font-size carries SectionLabel's
-    // own comment that it avoids bold on purpose).
-    // Those stay; the ledger's mark.over-chord.* residual is that box term and is
-    // OPEN on purpose. What is ported here is the GEOMETRY of a box around a string.
+    // ⚠️ The BOX ITSELF is Lily#'s own decision, not LilyPond's (LilyPond draws a bare
+    // SectionLabel). It stays; the ledger's mark.over-chord.* residual is that box term and
+    // is OPEN on purpose. What is ported here is the GEOMETRY of a box around a string —
+    // except where the owner has since decided otherwise (2026-09-26): the frame wraps the
+    // ink in X too (LabelBoxHalfWidth) and keeps a smaller gap under a descender
+    // (LabelBoxBottomMargin). The text was BOLD, also Lily#'s own, until the same day; it is
+    // regular now, as the twin and SectionLabel's own block (scm/define-grobs.scm:3051-3053,
+    // which avoids bold on purpose) draw it.
     // ------------------------------------------------------------------------------------
 
     /// <summary>The text font's em, in staff spaces, before a grob's own font-size.</summary>
@@ -2113,11 +2116,18 @@ internal static class MusicMarkEngraver
         => fonts.Size(TextRole.Mark, LabelEngravingEm(type));
 
     /// <summary>
-    /// A boxed label's weight and slant for THIS score: bold (Lily#'s own decision — see the
-    /// section note above) unless the score's <c>fonts { }</c> wrote a style for <c>mark</c>.
+    /// A boxed label's weight and slant for THIS score: regular unless the score's
+    /// <c>fonts { }</c> wrote a style for <c>mark</c>.
     /// </summary>
+    /// <remarks>
+    /// Regular since 2026-09-26 (owner's decision): once the preview drew the real TeX Gyre
+    /// Schola, the bold read too heavy inside the frame. It is also what the LilyPond twin
+    /// draws — <c>\mark \markup \box</c> with no <c>\bold</c> (LilyPondExporter) — and
+    /// SectionLabel's own block avoids bold on purpose (scm/define-grobs.scm:3051-3053).
+    /// Bold was Lily#'s own decision until then.
+    /// </remarks>
     internal static FontStyle LabelStyle(ScoreTextMetrics fonts)
-        => fonts.Style(TextRole.Mark, FontStyle.Bold);
+        => fonts.Style(TextRole.Mark, FontStyle.Regular);
 
     /// <summary>
     /// How far the frame stands outside the string's INK, per side.
@@ -2142,10 +2152,12 @@ internal static class MusicMarkEngraver
     /// sites and they must agree, so a site that forgets the bit does not compile
     /// (§5.2.1②, which this box has already taught once).</param>
     internal static double LabelBoxMargin(ScoreTextMetrics fonts, MusicMarkType type, bool boxed)
-        => !boxed ? 0
-           : LabelBoxPadding
-           * Magstep(LabelFontSizeStep(type) + fonts.StepOf(TextRole.Mark, LabelEngravingEm(type)))
-           + EngravingDefaults.LineThickness;
+        => !boxed ? 0 : LabelBoxScaledPadding(fonts, type) + EngravingDefaults.LineThickness;
+
+    /// <summary>The padding part of <see cref="LabelBoxMargin"/>, scaled by the label's magstep.</summary>
+    private static double LabelBoxScaledPadding(ScoreTextMetrics fonts, MusicMarkType type)
+        => LabelBoxPadding
+           * Magstep(LabelFontSizeStep(type) + fonts.StepOf(TextRole.Mark, LabelEngravingEm(type)));
 
     /// <summary>The string's ink about its baseline, at the label's own em.</summary>
     internal static (double Bottom, double Top) LabelInk(
@@ -2160,8 +2172,39 @@ internal static class MusicMarkEngraver
         ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
     {
         var ink = LabelInk(fonts, type, text);
-        return (ink.Top - ink.Bottom) / 2 + LabelBoxMargin(fonts, type, boxed);
+        return (ink.Top - ink.Bottom
+                + LabelBoxMargin(fonts, type, boxed) + LabelBoxBottomMargin(fonts, type, text, boxed)) / 2;
     }
+
+    /// <summary>
+    /// How far the frame's BOTTOM stands under the string's ink: the ordinary margin, or —
+    /// when a descender carries the ink below the baseline — a margin with half the padding.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
+    /// label with a descender ("Bridge") read as if its bottom margin were too wide — the
+    /// letters without one stand a descender's depth above the frame. The descender's own
+    /// gap is halved instead; a string whose ink stays on the baseline is unchanged.
+    /// LilyPond's box keeps its padding on every side.
+    /// Goes away when: the owner wants equal ink margins again.
+    /// Observed by: MarkReserveVersusDrawTests.LabelFrame_HasEqualMarginsAroundTheInk.
+    /// </remarks>
+    internal static double LabelBoxBottomMargin(
+        ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
+    {
+        double margin = LabelBoxMargin(fonts, type, boxed);
+        if (!boxed || !HasDescender(fonts, type, text))
+            return margin;
+        return margin - LabelBoxScaledPadding(fonts, type) / 2;
+    }
+
+    // A round letter's overshoot dips below the baseline by a few hundredths of an em; a
+    // descender (g, p, y, Q) by a fifth or more. A tenth of the em separates the two.
+    // LILYSHARP-OWN with LabelBoxBottomMargin.
+    private const double DescenderEmFraction = 0.1;
+
+    private static bool HasDescender(ScoreTextMetrics fonts, MusicMarkType type, string text)
+        => -LabelInk(fonts, type, text).Bottom > DescenderEmFraction * LabelEm(fonts, type);
 
     /// <summary>Half the drawn frame's width — the string's INK plus the frame, like the height.</summary>
     /// <remarks>
@@ -2470,14 +2513,14 @@ internal static class MusicMarkEngraver
     /// <remarks>
     /// Derived from the frame rather than restated: the frame's bottom edge is
     /// <see cref="LabelBoxHalfHeight"/> below the centre, the ink starts
-    /// <see cref="LabelBoxMargin"/> inside that, and the ink's own bottom is
+    /// <see cref="LabelBoxBottomMargin"/> inside that, and the ink's own bottom is
     /// <c>ink.Bottom</c> above the baseline (negative for a descender). So the baseline is
     /// <c>halfHeight − margin + ink.Bottom</c> below the centre and no em appears twice.
     /// <c>SharedRenderer.DrawSingleMusicMark</c> draws at exactly this offset.
     /// </remarks>
     internal static double LabelBaselineBelowCentre(
         ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
-        => LabelBoxHalfHeight(fonts, type, text, boxed) - LabelBoxMargin(fonts, type, boxed)
+        => LabelBoxHalfHeight(fonts, type, text, boxed) - LabelBoxBottomMargin(fonts, type, text, boxed)
            + LabelInk(fonts, type, text).Bottom;
 
     /// <summary>

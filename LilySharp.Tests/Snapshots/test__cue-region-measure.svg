@@ -65,7 +65,7 @@
   <rect x="55.68" y="17.06" width="0.19" height="4.00" data-pos="1689"/>
   <rect x="68.97" y="17.06" width="0.19" height="4.00" data-pos="1735"/>
   <rect x="81.96" y="17.06" width="0.19" height="4.00" data-pos="1748"/>
-  <rect x="11.90" y="13.47" width="7.97" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1753"/>
-  <text x="15.92" y="15.82" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="1753">Main</text>
+  <rect x="11.90" y="13.47" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="1753"/>
+  <text x="15.57" y="15.82" font-size="2.77" text-anchor="middle" data-pos="1753">Main</text>
   </g>
 </svg>

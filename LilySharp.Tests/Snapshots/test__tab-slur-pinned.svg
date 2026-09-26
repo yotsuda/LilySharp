@@ -29,9 +29,9 @@
   <line x1="8.59" y1="15.04" x2="29.26" y2="15.04" stroke="#000000" stroke-width="0.100"/>
   <line x1="30.97" y1="15.04" x2="32.05" y2="15.04" stroke="#000000" stroke-width="0.100"/>
   <line x1="33.76" y1="15.04" x2="37.97" y2="15.04" stroke="#000000" stroke-width="0.100"/>
-  <path d="M 14.99,10.73 C 16.85,9.09 21.49,9.09 23.35,10.73 C 21.49,9.21 16.85,9.21 14.99,10.73 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2506"/>
-  <path d="M 27.33,14.85 C 29.19,16.37 33.83,16.37 35.69,14.85 C 33.83,16.49 29.19,16.49 27.33,14.85 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2533"/>
-  <rect x="11.94" y="6.69" width="2.91" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="2478"/>
-  <text x="13.40" y="9.09" font-size="2.77" font-weight="bold" text-anchor="middle" data-pos="2478">A</text>
+  <path d="M 14.99,10.73 C 16.85,9.08 21.49,9.08 23.35,10.73 C 21.49,9.20 16.85,9.20 14.99,10.73 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2506"/>
+  <path d="M 27.33,14.84 C 29.19,16.37 33.83,16.37 35.69,14.84 C 33.83,16.49 29.19,16.49 27.33,14.84 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2533"/>
+  <rect x="11.94" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="2478"/>
+  <text x="13.32" y="9.08" font-size="2.77" text-anchor="middle" data-pos="2478">A</text>
   </g>
 </svg>
