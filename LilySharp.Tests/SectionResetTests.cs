@@ -145,4 +145,28 @@ public sealed class SectionResetTests
         Assert.DoesNotContain(measures[1].Items, i => i is KeySignatureChangeItem);
         Assert.DoesNotContain(measures[1].Items, i => i is ClefChangeItem);
     }
+
+    [Theory]
+    [InlineData("time 4/4")]                   // the reset key stands between the two times
+    [InlineData("time 4/4 key d major")]
+    [InlineData("key d major time 4/4")]
+    public void SectionResetThenOwnTimeAndKey_DrawOneOfEach(string opening)
+    {
+        // A leaves G major and 6/8; B's boundary reset queues the score's 4/4 and then
+        // its C major, and B then writes its own directives. Only the LAST item before a
+        // new one used to be merged, so a key change standing between the reset time and
+        // B's own `time` (or a time between the two keys) printed "C ♮ C".
+        var measures = Collect($$"""
+            time 4/4
+            part m {
+              section A { key g major time 6/8 d8 e f g a b | }
+              section B { {{opening}} e4 f g a | }
+            }
+            form main { A B }
+            score main { staff m }
+            """);
+
+        Assert.Single(measures[1].Items.OfType<TimeSignatureChangeItem>());
+        Assert.Single(measures[1].Items.OfType<KeySignatureChangeItem>());
+    }
 }

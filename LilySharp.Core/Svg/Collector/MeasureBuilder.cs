@@ -548,6 +548,23 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
+    /// The index of the last <typeparamref name="T"/> in the run of clef / key / time
+    /// changes at the end of the current measure's items — the changes standing at this
+    /// moment, since each takes no time — or -1 when the run holds none.
+    /// </summary>
+    private int FindInPrefixRun<T>() where T : MusicItem
+    {
+        for (int i = _currentItems.Count - 1;
+             i >= 0 && _currentItems[i] is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+             i--)
+        {
+            if (_currentItems[i] is T)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
     /// </summary>
     public void AddItem(MusicItem item)
@@ -574,10 +591,13 @@ internal sealed class MeasureBuilder
             FreezeOrThaw(tsc.NewTime.SenzaMisura);
             if (!tsc.NewTime.SenzaMisura)
                 _timeSignature = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
-            // Collapse a section reset immediately followed by the section's own
-            // `time`: keep the last meter so two time signatures don't overprint.
-            if (_currentItems.Count > 0 && _currentItems[^1] is TimeSignatureChangeItem)
-                _currentItems[^1] = item;
+            // Collapse a section reset followed by the section's own `time`: keep the last
+            // meter so two time signatures don't print side by side ("C ♮ C"). The reset
+            // queues the time before the key, so the key change can stand between them —
+            // look back through the whole run at this moment, not just the last item.
+            int standingTime = FindInPrefixRun<TimeSignatureChangeItem>();
+            if (standingTime >= 0)
+                _currentItems[standingTime] = item;
             else
                 _currentItems.Add(item);
             return;
@@ -602,18 +622,20 @@ internal sealed class MeasureBuilder
         // boundary reset (revert to the score key) immediately followed by the
         // section's own `key`. Draw ONE change from the ORIGINAL previous key to the
         // FINAL new key, or nothing if the net key is unchanged; otherwise the two
-        // signatures (e.g. a cancel-natural and the new flat) overprint.
+        // signatures (e.g. a cancel-natural and the new flat) overprint. As with the time
+        // above, a time change may stand between the two (`time 4/4 key e minor`).
         if (item is KeySignatureChangeItem kc
-            && _currentItems.Count > 0 && _currentItems[^1] is KeySignatureChangeItem prevKc)
+            && FindInPrefixRun<KeySignatureChangeItem>() is var standingKey and >= 0)
         {
+            var prevKc = (KeySignatureChangeItem)_currentItems[standingKey];
             var merged = new KeySignatureChangeItem(kc.NewKey, prevKc.PreviousKey, kc.SourcePosition)
             {
                 Clef = kc.Clef,
             };
             if (merged.NewKey == merged.PreviousKey)
-                _currentItems.RemoveAt(_currentItems.Count - 1); // net no change
+                _currentItems.RemoveAt(standingKey); // net no change
             else
-                _currentItems[^1] = merged;
+                _currentItems[standingKey] = merged;
             return;
         }
 
