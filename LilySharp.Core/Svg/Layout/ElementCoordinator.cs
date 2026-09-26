@@ -3726,7 +3726,7 @@ internal sealed class ElementCoordinator
                     var tabLayout = BuildTabSlurLayout(
                         fonts, score, slur, segment.IsFirst, segment.IsLast, segSystem,
                         staffIndex, staff, segStartX, segEndX, graceNotes,
-                        graceByMeasure, graceGeomCache, slurLayouts);
+                        graceByMeasure, graceGeomCache, slurLayouts, beamByMember);
                     if (tabLayout != null)
                         slurLayouts.Add(tabLayout with { RenderMeasureIndex = segment.StartMeasureIndex });
                     continue;
@@ -3977,7 +3977,7 @@ internal sealed class ElementCoordinator
     /// them invented here: ⑴ the ORDINARY slur scorer, run in the tab staff's own frame
     /// (staff-space 1.5, four or six lines, fret digits for note heads and no stems at
     /// all), then ⑵ the whole curve translated <c>staff-space × direction × 0.35</c> back
-    /// toward the numbers.
+    /// toward the numbers — on a numbers-only tab; a full tab reverts ⑵.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: ly/engraver-init.ly:1248-1258 no-stem-extend, stem-shorten,
@@ -4016,12 +4016,14 @@ internal sealed class ElementCoordinator
     /// coincidence — the second invention covering the first (docs/RULES.md §5.2.1).
     /// </para>
     /// <para>
-    /// ⚠️ Lily# DRAWS tab stems where a default TabStaff hides them (a lone tab is full
-    /// notation, U4; the stem's reach is <see cref="TabStaffGeometry.UnbeamedStemTipY"/>), and
-    /// they stay out of this scorer because that is what the ported code reads. They are not in the
-    /// curve's way: the direction rule above puts the slur on the side away from the stems
-    /// (a column whose stem points down forces the slur up), so the two sit on opposite
-    /// sides of the digits by construction.
+    /// ⚠️ ALL OF THE ABOVE IS THE NUMBERS-ONLY TAB (LilyPond's default TabStaff). A FULL tab —
+    /// a lone <c>tab</c>, U4, whose twin is <c>\tabFullNotation</c> — draws its stems and
+    /// beams, and LilyPond scores them there as on a staff and does not translate the curve
+    /// (ly/property-init.ly:845 reverts <c>Slur.control-points</c>). So on a full tab the
+    /// edges and the encompass read the drawn stems, and ⑵ does not run. Until session 633
+    /// every tab took the numbers-only path; a written side toward the stems (HANDOFF ⒳¹³ ⑹)
+    /// is what made the difference visible — the direction rule alone keeps a bow away from
+    /// its stems. MEASURED: audit/lp-geometry/probes/tab-slur-full.ly and tab-slur-stems.ly.
     /// </para>
     /// <para>
     /// ⚠️ Rests do not enter. On a TabStaff LilyPond sets <c>Rest.stencil = ##f</c>
@@ -4038,10 +4040,15 @@ internal sealed class ElementCoordinator
         ImmutableArray<GraceNoteItem> graceNotes,
         Dictionary<int, List<int>>? graceByMeasure,
         GraceObstacleGeom?[]? graceGeomCache,
-        IReadOnlyList<SlurLayout> slurLayouts)
+        IReadOnlyList<SlurLayout> slurLayouts,
+        Dictionary<(int Measure, int Item), BeamLayout>? beamByMember)
     {
         const double eps = 0.001;
         var voice = score.Voices[slur.VoiceIndex];
+        // A FULL tab draws its stems and beams (LilyPond's \tabFullNotation reverts the
+        // TabStaff's zero-length stems), so they enter the scorer as they do on a staff. A
+        // numbers-only tab keeps LilyPond's default TabStaff: bare digits, then the 0.35.
+        bool full = !staff.TabNumbersOnly;
         // Within-system staff-top offset (device, down from system top), NOT absolute —
         // so the tab slur's digit/string geometry is system-independent and DrawSlurs
         // (shared with the notation slur) can add the system-top Y-up back uniformly.
@@ -4055,7 +4062,7 @@ internal sealed class ElementCoordinator
 
         // The note columns this segment encompasses, in X order — LilyPond's
         // note_columns_. A grace column joins below, at its own (smaller) digit size.
-        var columns = new List<(double X, MusicItem Item)>();
+        var columns = new List<(double X, MusicItem Item, int Measure, int Index)>();
         foreach (var ml in segSystem.Measures)
         {
             int mi = ml.MeasureIndex;
@@ -4072,28 +4079,85 @@ internal sealed class ElementCoordinator
                 double cx = ml.X + GetItemXOffset(voice, mi, i, ml);
                 if (cx < segStartX - eps || cx > segEndX + eps)
                     continue;
-                columns.Add((cx, items[i]));
+                columns.Add((cx, items[i], mi, i));
             }
         }
         if (columns.Count == 0)
             return null;
 
+        // The DRAWN stem's direction: a beamed stem takes its whole beam's (a full tab
+        // draws beams; ArticulationEngraver asks the same), a lone one its own digits'.
+        // A numbers-only tab keeps the per-column rule it has always read.
+        BeamLayout? BeamOf(int measure, int index) =>
+            full && beamByMember is not null
+            && beamByMember.TryGetValue((measure, index), out var b) ? b : null;
+        bool StemUpOf(MusicItem item, BeamLayout? beam) =>
+            beam is not null ? geom.GroupStemUp(beam.Group.MemberItems()) : geom.TabStemUp(item);
+
+        // A full tab's drawn stem as the scorer's edge record (no head width — the caller
+        // adds it); default (no stem) on a numbers-only tab, a whole note, or a missing tip.
+        SlurEdgeInfo TabStemOf((double X, MusicItem Item, int Measure, int Index) column, bool leftEdge)
+        {
+            if (!full || NoteColumnLayout.Of(column.Item) is not { HasStem: true })
+                return default;
+            var beam = BeamOf(column.Measure, column.Index);
+            bool stemUp = StemUpOf(column.Item, beam);
+            double stemX = Rendering.SharedRenderer.TabStemX(column.X);
+            // ⚠️ The beam line is read in ITS OWN member frame (the column plus the stem
+            // attachment, TabBeamOuterEdgeY's xs), where its ends are the drawn beam's ends —
+            // at the drawn stem's X it answered 0.053 tab spaces inside LilyPond's stem end
+            // on a sloped beam (MEASURED, audit/lp-geometry/probes/tab-slur-stems.ly).
+            double beamX = column.X + LayoutUtilities.StemAttachX(
+                stemUp, GlyphMetrics.NoteValueOf(column.Item), column.Item switch
+                {
+                    NoteItem n => n.Notehead,
+                    ChordItem c => c.Notehead,
+                    _ => NoteheadStyle.Default,
+                });
+            double tip = beam is not null
+                ? ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, beamX)
+                : geom.UnbeamedStemTipY(column.Item, stemUp, geom.StemHeadString(column.Item, stemUp))
+                    ?? double.NaN;
+            if (double.IsNaN(tip))
+                return default;
+            var (beamStart, beamEnd) = column.Item switch
+            {
+                NoteItem n => (n.HasBeamStart, n.HasBeamEnd),
+                ChordItem c => (c.HasBeamStart, c.HasBeamEnd),
+                _ => (false, false),
+            };
+            bool beamedInner = beam is not null && (leftEdge ? !beamEnd : !beamStart);
+            double halfStem = EngravingDefaults.StemThickness / 2.0;
+            return new SlurEdgeInfo(
+                HasStem: true, StemUp: stemUp, BeamedInner: beamedInner, Beamed: beam is not null,
+                StemXLo: stemX - halfStem, StemXHi: stemX + halfStem,
+                StemTipY: tip,
+                StemBeginY: geom.StringY(geom.StemHeadString(column.Item, !stemUp)));
+        }
+
+        // A written side wins over the rule, as on a staff (SlurDetector).
+        // LILYPOND-REF: lily/slur-engraver.cc:190-191 set_grob_direction in Slur_engraver::create_slur.
         // LILYPOND-REF: lily/slur.cc:60-68 calc_direction — DOWN unless some column's stem
         //   points DOWN.
-        bool curveUp = false;
-        foreach (var (_, item) in columns)
+        // ⚠️ Until session 633 the written side was dropped here (HANDOFF ⒳¹³ ⑹): the stems
+        // were not scored, so a side toward them drew through the beams (Lab
+        // sessions/p484/tab.lys). On a full tab they are scored now; on a numbers-only tab
+        // there are no stems to cross.
+        int written = slur.IsPhrasing
+            ? ItemAt(voice, slur.StartMeasureIndex, slur.StartItemIndex)?.PhrasingSlurDirection ?? 0
+            : 0;
+        bool curveUp = written > 0;
+        if (written == 0)
         {
-            if (!geom.TabStemUp(item))
+            foreach (var (_, item, m, ix) in columns)
             {
-                curveUp = true;
-                break;
+                if (!StemUpOf(item, BeamOf(m, ix)))
+                {
+                    curveUp = true;
+                    break;
+                }
             }
         }
-        // ⚠️ LILYSHARP-OWN: a phrasing slur's WRITTEN side ('.up'/'.down') is NOT honoured here, a
-        // known gap (HANDOFF ⒳¹³ ⑹): LilyPond honours it on a TabVoice too, but this scorer keeps
-        // the tab STEMS out (remarks above) on the promise that the curve always stands on the
-        // side away from them — a forced side toward them would draw through the beams
-        // (MEASURED, Lab sessions/p484/tab.lys). Closing it means scoring the stems.
         int dir = curveUp ? 1 : -1;              // LilyPond's dir_, in the Y-UP frame
         double outward = curveUp ? -1.0 : 1.0;   // the same direction in DEVICE Y (down)
 
@@ -4109,6 +4173,20 @@ internal sealed class ElementCoordinator
         double startY = startDigitY + outward * (halfDigit + 0.5 * space);
         double endY = endDigitY + outward * (halfDigit + 0.5 * space);
 
+        // A full tab's stems, in the frame the staff path hands the scorer (ResolveSlurEdge,
+        // BuildSlurObstacles): the stem stands on the digits' X centre (SharedRenderer.TabStemX),
+        // a beamed stem ends on its beam's outer face, a lone one where the renderer ends it.
+        // ⚠️ No flag in the stem's extent (the staff path unites the two): a tab flag's box is
+        // not read here.
+        var leftStem = isFirst ? TabStemOf(columns[0], leftEdge: true) : default;
+        var rightStem = isLast ? TabStemOf(columns[^1], leftEdge: false) : default;
+        // LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — a stem pointing
+        //   the slur's way and beamed on the inner side: its end, then dir·0.5·staff_space.
+        if (leftStem.Beamed && leftStem.BeamedInner && leftStem.StemUp == curveUp)
+            startY = leftStem.StemTipY + outward * 0.5 * space;
+        if (rightStem.Beamed && rightStem.BeamedInner && rightStem.StemUp == curveUp)
+            endY = rightStem.StemTipY + outward * 0.5 * space;
+
         // The fret digits sit a TabHeadCenterOffset right of their note columns
         // (see EngravingDefaults), plus the chord zigzag of the digit actually attached to.
         double startX = segStartX + (isFirst ? EngravingDefaults.TabHeadCenterOffset + startCol.Dx : 0);
@@ -4116,32 +4194,42 @@ internal sealed class ElementCoordinator
         if (endX - startX < 0.5)
             return null;
 
-        // One obstacle per column: its digit stack's ink box, at the slur-side digit's X.
-        // No StemY — see the remark.
+        // One obstacle per column: its digit stack's ink box, at the slur-side digit's X —
+        // and on a full tab, a stem pointing the slur's way, at the stem's X.
+        // LILYPOND-REF: lily/slur-scoring.cc:146-158 get_encompass_info — stem_ is the stem's
+        //   extent on the slur side, plus half the beam's thickness when beamed; x_ the stem's.
         var obstacles = new List<SlurObstacle>(columns.Count);
-        foreach (var (cx, item) in columns)
+        foreach (var column in columns)
         {
+            var (cx, item, _, _) = column;
             var top = geom.EdgeDigitColumn(item, top: true);
             var bottom = geom.EdgeDigitColumn(item, top: false);
+            double ox = cx + EngravingDefaults.TabHeadCenterOffset + (curveUp ? top.Dx : bottom.Dx);
+            double stemY = double.NaN;
+            var stem = TabStemOf(column, leftEdge: true);
+            if (stem.HasStem && stem.StemUp == curveUp && !double.IsNaN(stem.StemTipY))
+            {
+                stemY = stem.StemTipY
+                    + (stem.Beamed ? outward * 0.5 * EngravingDefaults.BeamThickness : 0.0);
+                ox = (stem.StemXLo + stem.StemXHi) / 2.0;
+            }
             obstacles.Add(new SlurObstacle(
-                cx + EngravingDefaults.TabHeadCenterOffset + (curveUp ? top.Dx : bottom.Dx),
+                ox,
                 geom.StringY(top.StringNum) - halfDigit,
-                geom.StringY(bottom.StringNum) + halfDigit));
+                geom.StringY(bottom.StringNum) + halfDigit,
+                stemY));
         }
         AddTabGraceObstacles(
             obstacles, voice, slur, geom, graceNotes, graceByMeasure, graceGeomCache,
             segSystem, segStartX, segEndX);
         obstacles.Sort((a, b) => a.X.CompareTo(b.X));
 
-        // No stem on either edge (LilyPond's are zero-length and stencil-less), so the
-        // edge info carries only the head width the min-length snap-back and the tilt
-        // shift read — LilyPond's slur_head_x_extent_.
-        var leftEdge = new SlurEdgeInfo(
-            HasStem: false, StemUp: false, BeamedInner: false, Beamed: false,
-            HeadWidth: isFirst ? startCol.HalfWidth * 2 : 0.0);
-        var rightEdge = new SlurEdgeInfo(
-            HasStem: false, StemUp: false, BeamedInner: false, Beamed: false,
-            HeadWidth: isLast ? endCol.HalfWidth * 2 : 0.0);
+        // A numbers-only tab has no stem on either edge (LilyPond's are zero-length and
+        // stencil-less), so the edge info carries only the head width the min-length
+        // snap-back and the tilt shift read — LilyPond's slur_head_x_extent_. A full tab's
+        // edge carries its stem as well, which the stem-attachment X rule reads.
+        var leftEdge = leftStem with { HeadWidth = isFirst ? startCol.HalfWidth * 2 : 0.0 };
+        var rightEdge = rightStem with { HeadWidth = isLast ? endCol.HalfWidth * 2 : 0.0 };
 
         var tabSlur = new SlurItem(
             slur.StartStaffPosition, slur.EndStaffPosition, curveUp,
@@ -4179,11 +4267,18 @@ internal sealed class ElementCoordinator
             //   reference coordinates, which on a tab are their STRING lines (Y-up = −device).
             musicalDy: startDigitY - endDigitY);
 
-        // ⑵ The transformer: every control point down toward the numbers by
+        // ⑵ The transformer: every control point toward the numbers by
         // staff-space × direction × 0.35 (0.525 on a 1.5-space tab). BowLayout's Ys are
         // page Y-up, which is the frame LilyPond's control-points live in, so the
         // subtraction is spelled exactly as scm/lily/tablature.scm:155-156 spells it.
-        double closer = space * dir * 0.35;
+        // ⚠️ A NUMBERS-ONLY TAB ONLY. A full tab (a lone `tab`, or `as full`) is LilyPond's
+        // \tabFullNotation, which puts the ordinary control points back, so its bow stays
+        // where the scorer left it.
+        // LILYPOND-REF: ly/property-init.ly:845 (tabFullNotation) reverts ly/engraver-init.ly:1275 slur::move-closer-to-tab-note-heads.
+        // MEASURED on 2.26.0 (audit/lp-geometry/probes/tab-slur-full.ly, tab-slur.ly's book
+        // under \tabFullNotation): y0 1.570223 against the plain tab's 1.220223, the 0.35
+        // exactly, and the same rise and span. Until session 633 every full tab moved too.
+        double closer = staff.TabNumbersOnly ? space * dir * 0.35 : 0.0;
         return new SlurLayout(tabSlur,
             solved.StartX, solved.StartYUp - closer,
             solved.EndX, solved.EndYUp - closer,

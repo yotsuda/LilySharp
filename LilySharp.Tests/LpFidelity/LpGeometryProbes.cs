@@ -10580,6 +10580,78 @@ internal static class LpGeometryProbes
         """;
 
     /// <summary>
+    /// <see cref="TSL"/>'s book on a FULL tab — Lily#'s default for a lone <c>tab</c>, and the
+    /// regime its twin writes <c>\tabFullNotation</c> for.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/property-init.ly:845 (tabFullNotation) reverts ly/engraver-init.ly:1275 slur::move-closer-to-tab-note-heads —
+    ///   the 0.35 translation of <see cref="TSL"/>'s stage ⑵
+    ///   does not run, so each bow stays where the scorer put it.
+    /// LilyPond twin (audit/lp-geometry/probes/tab-slur-full.ly) — MEASURED: every y 0.35
+    /// farther out than tab-slur.ly's, rise and span unchanged. Until session 633 Lily# moved a
+    /// full tab's bows too, and these two points read the F9 residual minus 0.35.
+    /// </remarks>
+    private static readonly string TSLF = TSL.Replace("tab bl as numbers", "tab bl");
+
+    /// <summary>
+    /// A phrasing slur written TOWARD a full tab's stems: every digit on the two top strings
+    /// (stems down, one beam a beat) and the bow written below, so it has to pass under the
+    /// beams — the one regime where a tab slur meets its stems.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:549-557 get_base_attachments — the edge stem points
+    ///   the slur's way and is beamed on the inner side, so the bow attaches at its end plus
+    ///   dir·0.5·staff_space.
+    /// LILYPOND-REF: lily/slur-scoring.cc:146-158 get_encompass_info — each column's stem end
+    ///   (plus half the beam's thickness) is what the bow must clear.
+    /// Sixteenths, because an eighth group carries the declared tab-beam deviation
+    /// (BeamScoringProblem uniformBeamedLength) and a sixteenth group does not; every note
+    /// names its string. LilyPond twin: audit/lp-geometry/probes/tab-slur-stems.ly. Until
+    /// session 633 the written side was dropped on a tab (HANDOFF ⒳¹³ ⑹) and this bow stood
+    /// above the digits.
+    /// </remarks>
+    private static readonly string TSS = """
+        octave absolute
+        time 2/4
+
+        part gtr { instrument guitar }
+
+        section Main {
+          gtr { c'16\2@phrasingSlur.down d'\2 e'\1 f'\1 g'\1 a'\1 g'\1 f'\1@!phrasingSlur | }
+        }
+
+        form main { ~Main }
+
+        score main "TSS" { tab gtr }
+        """;
+
+    /// <summary>
+    /// <see cref="TSS"/>'s second score: the MIDDLE beat on string 3 hangs its beam lower than
+    /// the outer beats' (string 1), so a bow attached under the outer beams must still clear
+    /// the inner stems — the encompass half, which <see cref="TSS"/> cannot observe (its inner
+    /// stems end inside the bow).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:146-158 get_encompass_info — a stem pointing the
+    ///   slur's way enters as its end plus half the beam's thickness, at the stem's X.
+    /// LilyPond twin: audit/lp-geometry/probes/tab-slur-stems.ly, score B.
+    /// </remarks>
+    private static readonly string TSS2 = """
+        octave absolute
+        time 3/4
+
+        part gtr { instrument guitar }
+
+        section Main {
+          gtr { e'16\1@phrasingSlur.down f'\1 g'\1 f'\1 g\3 a\3 b\3 a\3 e'\1 f'\1 g'\1 e'\1@!phrasingSlur | }
+        }
+
+        form main { ~Main }
+
+        score main "TSS2" { tab gtr }
+        """;
+
+    /// <summary>
     /// A beam quanted against the STEM of a note in another voice — the half of the
     /// covered-grob supply that is not a box at all.
     /// </summary>
@@ -16091,6 +16163,17 @@ internal static class LpGeometryProbes
         // a wrong height or a wrong span and the ledger could not tell. One entry, not a pair:
         // LilyPond prints the same span for both bars, and so does Lily#.
         new("slur.tab.span", TSL, g => g.TabBowSpan(0)),
+        // The same two landings on a FULL tab, which reverts the 0.35. See TSLF.
+        new("slur.tab.full.up.string-to-attachment", TSLF,
+            g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.full.down.string-to-attachment", TSLF,
+            g => g.TabBowPointAboveStaffMiddle(1, 0)),
+        // A bow written TOWARD a full tab's stems: both ends hang from the beams. See TSS.
+        new("slur.tab.stems.left-attachment", TSS, g => g.TabBowPointAboveStaffMiddle(0, 0)),
+        new("slur.tab.stems.left-control", TSS, g => g.TabBowPointAboveStaffMiddle(0, 1)),
+        new("slur.tab.stems.span", TSS, g => g.TabBowSpan(0)),
+        new("slur.tab.stems.inner-control", TSS2, g => g.TabBowPointAboveStaffMiddle(0, 1)),
+        new("slur.tab.stems.inner-span", TSS2, g => g.TabBowSpan(0)),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar
         // with no span in the part at all. LilyPond prints the pair identically because
         // \voiceOne dies with the span; a part-wide reading moves only the first.

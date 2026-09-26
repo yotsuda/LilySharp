@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 162 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **281** | |
+| `OWN` | 161 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **280** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -26,11 +26,11 @@
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 7 |
 | `LilySharp.Core/Rendering/SharedRenderer.Marks.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs` | 6 |
+| `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（162 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（161 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2644** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -345,7 +345,6 @@
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2452** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2501** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
-- **:4092** ⚠️ LILYSHARP-OWN: a phrasing slur's WRITTEN side ('.up'/'.down') is NOT honoured here, a
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`
