@@ -362,6 +362,32 @@ internal static class LineStartColumn
     /// its neighbour's grob.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The right edge of <paramref name="staff"/>'s OWN line-start prefatory ink — its clef,
+    /// the key and meter it engraves, the opening bar line — in the break-align frame
+    /// (<paramref name="columns"/>), or null for a row that engraves none.
+    /// </summary>
+    /// <remarks>
+    /// What a spanner broken at this line start begins from: lily/tie-formatting-problem.cc
+    /// :262-270 set_minimum_height reads <c>Axis_group_interface::staff_extent</c> of the
+    /// break column — the extent of the grobs on THIS staff, not the column's across the
+    /// system. A notation staff beside a tab ends on its bass clef, 0.1166 left of the wider
+    /// TAB clef the shared column is sized by (Kokomo.lys, Lab corpus). Same walk as the
+    /// spacing (PrefatoryGrobs), bare ink with no extra-spacing-width.
+    /// </remarks>
+    public static double? StaffInkRight(
+        Model.MultiStaffScore score, Model.Staff staff,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft, double timeInkWidth, int startMeasureIndex)
+    {
+        if (staff.IsTextRow)
+            return null;
+        double right = double.NegativeInfinity;
+        foreach (var g in PrefatoryGrobs(score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
+            right = Math.Max(right, g.InkRight);
+        return double.IsNegativeInfinity(right) ? null : right;
+    }
+
     private static List<PrefatoryGrob> PrefatoryGrobs(
         Model.MultiStaffScore score,
         Model.Staff staff,

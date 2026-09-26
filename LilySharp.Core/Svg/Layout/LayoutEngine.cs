@@ -922,7 +922,7 @@ internal sealed partial class LayoutEngine
                 StaffSprings: multiStaffLayouter.StaffSprings(
                     score, sysStaffGroups, sysStaffSkylines.Skylines, sysRunSources))
             {
-                LineStartBarRight = MultiStaffLayouter.LineStartBarRight(score, firstMeasureIndex, isFirstSystem),
+                LineStartStaffRights = MultiStaffLayouter.LineStartStaffRights(score, firstMeasureIndex, isFirstSystem),
             });
             perSystemRunSources.Add(sysRunSources);
             perSystemStaffSkylines.Add(sysStaffSkylines.Skylines);

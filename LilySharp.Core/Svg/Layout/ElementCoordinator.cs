@@ -2477,8 +2477,9 @@ internal sealed class ElementCoordinator
 
     /// <summary>
     /// Where a tie or slur piece that a line break OPENS begins: the right edge of the
-    /// line-start column's staff extent, which ends at the bar line the system opens with
-    /// when it opens with one (a <c>.|:</c>).
+    /// line-start column's extent ON THIS STAFF (its own clef, key and meter), which ends at
+    /// the bar line the system opens with when it opens with one (a <c>.|:</c>) —
+    /// <see cref="SystemLayout.LineStartStaffRights"/>.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:262-270 set_minimum_height
@@ -2486,8 +2487,8 @@ internal sealed class ElementCoordinator
     /// get_base_attachments (<c>ext[-d]</c> of the bound column). ABC.lys (Lab corpus)
     /// section B3: the tie piece began 2.94 left of LilyPond's, under the repeat bar.
     /// </remarks>
-    private static double BrokenPieceStartX(SystemLayout segSystem)
-        => segSystem.Measures[0].X + segSystem.LineStartBarRight;
+    private static double BrokenPieceStartX(SystemLayout segSystem, int staffIndex)
+        => segSystem.Measures[0].X + segSystem.LineStartRightOf(staffIndex);
 
     /// <summary>
     /// Where a tie or slur piece that a line break CLOSES ends: the LEFT edge of the system's
@@ -2578,7 +2579,7 @@ internal sealed class ElementCoordinator
         {
             // Broken piece: the line-start column's staff extent (BrokenPieceStartX); there is
             // no note column.
-            segStartX = BrokenPieceStartX(segSystem);
+            segStartX = BrokenPieceStartX(segSystem, staffIndex);
         }
 
         double segEndX;
@@ -4011,7 +4012,7 @@ internal sealed class ElementCoordinator
                     // The line-start column's staff extent, as a broken tie's piece reads it:
                     // LILYPOND-REF: lily/slur-scoring.cc:594-598 get_base_attachments —
                     // x = ext[-d] of the bound column (generic_bound_extent).
-                    segStartX = BrokenPieceStartX(segSystem);
+                    segStartX = BrokenPieceStartX(segSystem, staffIndex);
                 }
 
                 double segEndX;

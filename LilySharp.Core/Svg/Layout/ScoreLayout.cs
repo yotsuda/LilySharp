@@ -178,13 +178,21 @@ internal sealed record SystemLayout(
 )
 {
     /// <summary>
-    /// How far right of <c>Measures[0].X</c> the ink of the bar line this system OPENS with
-    /// (a <c>.|:</c>) ends — its column gap plus its drawn width — or 0 when it opens with none.
-    /// The right edge of the line-start column's staff extent, which is where a spanner
-    /// broken at this line start begins (lily/tie-formatting-problem.cc:262-270
-    /// set_minimum_height: <c>staff_extent (bounds[0])[-dir]</c>).
+    /// Per staff (the score's <c>EnumerateStaves</c> index), how far right of
+    /// <c>Measures[0].X</c> that staff's OWN line-start prefatory ink ends — clef, key, meter,
+    /// an opening <c>.|:</c> — negative where a wider clef on another staff sized the shared
+    /// column. The right edge of the line-start column's staff extent, which is where a
+    /// spanner broken at this line start begins (lily/tie-formatting-problem.cc:262-270
+    /// set_minimum_height: <c>staff_extent (bounds[0])[-dir]</c>). Default where the system was
+    /// built without it (a staff's own frame for skylines): read as 0.
     /// </summary>
-    public double LineStartBarRight { get; init; }
+    public ImmutableArray<double> LineStartStaffRights { get; init; }
+
+    /// <summary><see cref="LineStartStaffRights"/> of one staff, 0 when unknown.</summary>
+    public double LineStartRightOf(int staffIndex)
+        => !LineStartStaffRights.IsDefault && staffIndex >= 0 && staffIndex < LineStartStaffRights.Length
+            ? LineStartStaffRights[staffIndex]
+            : 0.0;
 
     /// <summary>Whether this system has multiple staff groups.</summary>
     public bool HasMultipleStaffGroups => !StaffGroups.IsDefaultOrEmpty && StaffGroups.Length > 1;

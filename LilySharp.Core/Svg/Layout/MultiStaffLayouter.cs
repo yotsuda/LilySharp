@@ -1294,14 +1294,27 @@ internal sealed class MultiStaffLayouter
                 .Columns.BarGap;
 
     /// <summary>
-    /// <see cref="SystemLayout.LineStartBarRight"/> for a system opening at
-    /// <paramref name="startMeasureIndex"/>: the opening bar line's gap plus its drawn width,
-    /// from the same break-align table the renderer draws it by.
+    /// <see cref="SystemLayout.LineStartStaffRights"/> for a system opening at
+    /// <paramref name="startMeasureIndex"/>: each staff's own prefatory ink right edge
+    /// (<see cref="LineStartColumn.StaffInkRight"/>) past the first measure's X, which stands
+    /// at the column table's <c>Right</c>. Indexed like <see cref="MultiStaffScore.EnumerateStaves"/>;
+    /// 0 for a row with no prefatory grob. The same table and inputs as the line-start spring
+    /// (<see cref="LineStartSpringForLine"/>) and the renderer's opening bar.
     /// </summary>
-    internal static double LineStartBarRight(MultiStaffScore score, int startMeasureIndex, bool isFirstSystem)
+    internal static ImmutableArray<double> LineStartStaffRights(
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem)
     {
-        var columns = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem).Columns;
-        return columns.HasBar ? columns.BarGap + columns.BarWidth : 0.0;
+        var prefix = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem);
+        double clefGroupLeft = SpacingRules.ClefGroupInkLeft(score);
+        double timeInkWidth = prefix.HasTime
+            ? GlyphMetrics.GetTimeSigWidth(score.TextMetrics, prefix.Numerator, prefix.Denominator)
+            : 0.0;
+        var rights = ImmutableArray.CreateBuilder<double>();
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            rights.Add(LineStartColumn.StaffInkRight(
+                score, staff, prefix.Columns, clefGroupLeft, timeInkWidth, startMeasureIndex)
+                is { } right ? right - prefix.Columns.Right : 0.0);
+        return rights.ToImmutable();
     }
 
     /// <summary>A system's solved line-start break-align table plus the inputs it was

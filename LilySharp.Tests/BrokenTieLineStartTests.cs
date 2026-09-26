@@ -64,4 +64,35 @@ public sealed class BrokenTieLineStartTests
     public void APieceOnALineThatOpensWithARepeatBar_BeginsPastTheBar()
         => Assert.Equal(11.793400 - 8.853400,
             ContinuationStartX("~A |: ~B :|") - ContinuationStartX("~A ~B"), 6);
+
+    // The extent is THIS staff's: a tab staff's wider TAB clef sizes the shared clef column,
+    // but the notation staff's piece still begins at its own bass clef's ink. LilyPond 2.26.0
+    // (Lab sessions/p649 kok): 3.633400 from the staff's left end with the tab and without.
+    // Lily# began it at the shared column's edge, 0.1166 right (Kokomo.lys, Lab corpus).
+    private static double NotationPieceStartX(string score)
+    {
+        var tree = SyntaxTree.Parse($$"""
+            octave absolute
+            key c major
+            time 4/4
+            part bassline {
+              clef bass
+              tuning bass
+              section A { c,2 r4 r8 g,,8~ | break g,, g,,4 g,,8 g,,4 r8 g,, | }
+            }
+            form main { ~A }
+            score main { {{score}} }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(multi);
+        using var doc = new RecordingDocumentContext();
+        SharedRenderer.RenderTo(multi, layout, doc);
+        return doc.Page.Beziers.Min(b => b.P0.X);
+    }
+
+    [Fact]
+    public void APieceBeginsAtItsOwnStaffsPrefix_NotAWiderClefOnAnotherStaff()
+        => Assert.Equal(NotationPieceStartX("staff bassline"),
+            NotationPieceStartX("staff bassline  tab bassline"), 6);
 }
