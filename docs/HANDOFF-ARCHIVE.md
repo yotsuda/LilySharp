@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第642セッションの経緯
+
+### 1.1 第642セッション（2026-09-26・YT-DELL2）
+
+別会話（`/clear` の後）。★ `-Start p642`（HEAD `5208f52d`・未 push 59・full **9328 / 0 / 2 / 9330**＝引継ぎと一致）。§1.0 の「第641 の残り」⑴〜⑶。
+
+★ ⑴ **script の間隔予約を LP の separation box に**（`23b48297`）: `ApplyArticulationSpacing` は voice 1 の小節だけを受け、script を item 番号だけで照合していた＝voice 2 の fermata が同じ番号の voice 1 の音に掛かっていた。全声部で照合・隣の列のインクも全声部・側と符尾は声部の向き（第641 の voiceScriptUp と同じ）・**連桁の符尾が script 側を向くときは `PureBeamedStemTip` まで**（LP の pure_y_extent＝stem.cc:387-447）。grace の `ScriptOverhangForGrace` も声部で照合。LP 2.26 で裁定（Lab `sessions/p642` r0/r1・v0/v1・w0〜w4）: LP は fermata の有無で間隔も grace も動かさない・Lily# は 0.47 広げ grace を 0.37 押していた。網 `ScriptSpacingReservationTests` 4 本（毒で 4 赤）。掃き 963 冊で 0 冊。⚠️ 途中の版（側だけ直して pure tip 無し）は voice 2 の fermata で逆に +1.32 広げた＝LP と比べて気づいた。
+★ ⑵ **drum／tab だけの score の key change は幅を取らない**（`d24a812d`）: 拍子の `Blanked`（`MeterStencil.Blank`・`ChangeItemHasInk`・`BoundaryColumn`・MMR の門）を key にも＝`KeySignatureChangeItem.Blanked`・`SpacingRules.AnyStaffEngravesKey`。**tab だけの score も同じ欠陥だった**（6.50 ss・起票は drum だけ）。LP の双子は両方とも key change の有無で小節線が同じ（k0/k1・u0/u1）。網は `DrumStaffKeyTests` に 3 本（毒で行動の 2 本が赤・対照 1 本）。掃き 963 冊で 0 冊。⚠️ 最初に書いた「collect で item を出さない」案は、行頭の調号の解決（`ResolveKeySignature` が item を辿る）を失うので捨てた。
+★ ⑶ **quartet の bar 25**: 画像で確かめた＝Agitato が段の右端を越える。LP の MetronomeMark も右余白へ押し戻さない＝同じ割りなら LP も越える＝**段割れの差（T7 の族）のまま**。
+⚠️ 計器の罠を踏み直した（第641 と同じ）: 毒の `dotnet test` が Debug の `lysc` も毒入りで建て直す＝毒の後の probe が旧コードの値を出した。**毒の後は `dotnet build LilySharp.Cli` してから描く**。`clef tab` は Lily# の文法ではない（LYS1014・tab は score の `tab m`）。
+★ **終了**: full **9335 / 0 / 2 / 9337**（+7＝網）・`-End` の門は全部 OK。§7.5 Core '+' 206・LILYPOND-REF 3・LILYSHARP-OWN 0。§7.6／7.7 該当なし。push はユーザー（Lab も）。
+
 ## 以下は第641セッションの経緯
 
 ### 1.1 第641セッション（2026-09-26・YT-DELL2）
