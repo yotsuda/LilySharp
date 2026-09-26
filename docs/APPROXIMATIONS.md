@@ -246,7 +246,7 @@
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:421** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **:1154** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2552** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2573** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordVoicing.cs`

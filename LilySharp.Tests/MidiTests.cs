@@ -468,6 +468,38 @@ public class MidiTests
         Assert.Equal(110, notes[2].Velocity);
     }
 
+    /// <summary>
+    /// A dynamic spanner carries no level, so it leaves the velocity where the last real
+    /// dynamic put it. Until 2026-09-26 it set 0 and every later note played silent
+    /// (fantasia.lys line 65, <c>bes'8@f@cresc</c>).
+    /// </summary>
+    [Theory]
+    [InlineData("c4@f@cresc d4 e4")]
+    [InlineData("c4@f@decresc d4 e4")]
+    [InlineData("c4@f@dim d4 e4")]
+    [InlineData("<c e>4@f@cresc <d f>4 <e g>4")]
+    public void ADynamicSpanner_KeepsTheVelocity(string source)
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
+
+        var notes = midi.Tracks.SelectMany(t => t.Notes).ToList();
+        Assert.NotEmpty(notes);
+        Assert.All(notes, n => Assert.Equal(95, n.Velocity));
+    }
+
+    /// <summary>A chord reads its own dynamic and scripts as a note does.</summary>
+    [Theory]
+    [InlineData("<c e>4@p", 50)]
+    [InlineData("<c e>4@accent", 100)]
+    public void AChord_ReadsItsOwnDynamicAndScripts(string source, int velocity)
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(source));
+
+        var notes = midi.Tracks.SelectMany(t => t.Notes).ToList();
+        Assert.Equal(2, notes.Count);
+        Assert.All(notes, n => Assert.Equal(velocity, n.Velocity));
+    }
+
     [Fact]
     public void ExportWithStaccato()
     {

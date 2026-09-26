@@ -1922,7 +1922,7 @@ public sealed class MidiExporter
         {
             switch (child)
             {
-                case DynamicSyntax dynamic:
+                case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
                     _velocity = velocity;
                     break;
@@ -1988,7 +1988,9 @@ public sealed class MidiExporter
         {
             switch (child)
             {
-                case DynamicSyntax dynamic:
+                // A spanner (@cresc/@decresc/@dim) is a DynamicSyntax with no level; letting
+                // it through set velocity 0 and silenced the rest of the part (fantasia.lys L65).
+                case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
                     _velocity = velocity; // Update default velocity for subsequent notes
                     break;
@@ -2051,7 +2053,7 @@ public sealed class MidiExporter
         {
             switch (child)
             {
-                case DynamicSyntax dynamic:
+                case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
                     _velocity = velocity;
                     break;
@@ -2122,7 +2124,7 @@ public sealed class MidiExporter
         {
             switch (child)
             {
-                case DynamicSyntax dynamic:
+                case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
                     velocity = dynamic.Velocity;
                     _velocity = velocity;
                     break;
@@ -2290,6 +2292,25 @@ public sealed class MidiExporter
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this chord
 
+        // The chord's own dynamic and scripts, read as a note's are (ProcessNote). Until
+        // 2026-09-26 a chord ignored them and `<c e>4@f` played at the running level.
+        int velocity = _velocity;
+        int durationPercent = 100;
+        foreach (var child in chord.Articulations)
+        {
+            switch (child)
+            {
+                case DynamicSyntax { Level: not DynamicLevel.None } dynamic:
+                    velocity = dynamic.Velocity;
+                    _velocity = velocity;
+                    break;
+                case ArticulationSyntax articulation:
+                    (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
+                    break;
+            }
+        }
+        int soundTicks = Math.Max(1, durationTicks * durationPercent / 100);
+
         // The first member is the ROOT: its bare LETTER is the chord's ANCHOR; every
         // other member STACKS above the anchor — the same octave placement as a
         // scale degree, so a chord's pitches are independent of the order its notes
@@ -2323,7 +2344,7 @@ public sealed class MidiExporter
                 onset.Add(tiedInto);
             else
             {
-                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.SourceStart,
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
                     QuarterBend: pitch.QuarterOffset,
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
@@ -2355,7 +2376,7 @@ public sealed class MidiExporter
                 onset.Add(tiedInto);
             else
             {
-                track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.SourceStart,
+                track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
                     SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
                 onset.Add(track.Notes.Count - 1);
             }
@@ -2368,7 +2389,7 @@ public sealed class MidiExporter
         foreach (var drum in chord.DrumNames)
         {
             var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
-            track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.SourceStart,
+            track.Notes.Add(new MidiNote(9, dinfo.GmKey, velocity, startTick, soundTicks, chord.SourceStart,
                 SourceOrdinal: chordOrdinal, Timbre: 9, Part: _currentPart));
             resolved.Add((dinfo.GmKey, 0, true));
         }
