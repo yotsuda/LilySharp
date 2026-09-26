@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -530,13 +530,13 @@ internal sealed partial class LayoutEngine
         {
             // d.YUp is Y-up above the staff middle; system-relative device is 2 − YUp.
             // The label's OWN ink, from the font, per glyph — the same house the placement
-            // and the stacker read (DynamicEngraver.InkOf; free @text falls back there).
+            // and the stacker read (DynamicEngraver.InkOf; free @text reads its own string).
             // ⚠️ THIS SITE WAS MISSED when the three other spellings were unified on it: it
             // kept a flat 1.2 / 0.3 box, and 0.3 against the `f` glyph's real 0.692002 is why
             // audit/lp-geometry dynamic.page.{quiet,deep} opened at -0.412774 and -0.390489,
             // i.e. a page that ends closer under its own ink than LilyPond's does.
             double dY = 2.0 - d.YUp;
-            var (dAscent, dDescent) = DynamicEngraver.InkOf(d.Text, d.IsExpressiveText);
+            var (dAscent, dDescent) = DynamicEngraver.InkOf(fonts, d.Text, d.IsExpressiveText);
             Add(d.MeasureIndex, dY - dAscent, dY + dDescent);
         }
         foreach (var h in ann.Hairpins)
@@ -1210,11 +1210,10 @@ internal sealed partial class LayoutEngine
         // ledger-line note under the same column moved it 1.40.
         // Both houses are the ones the placement and the stacker read: the half-width is half
         // the DRAWN advance (DynamicEngraver.LabelHalfWidth) and the vertical pair is the
-        // label's own font ink (InkOf — for @text that is the conservative fallback, since
-        // only the dynamic GLYPHS have measured ink).
+        // label's own font ink (InkOf — the dynamic glyph's, or @text's own string's since
+        // session 640).
         // No silhouette margin here: unlike the mark box above, this one is the drawn ink and
-        // there is nothing to widen it for — the fallback descent is already deeper than the
-        // ink it stands in for.
+        // there is nothing to widen it for.
         // LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline — the system skyline
         //   contains the DynamicText grob like any other outside-staff stencil.
         if (!dynamics.IsDefaultOrEmpty)
@@ -1222,7 +1221,7 @@ internal sealed partial class LayoutEngine
             foreach (var d in dynamics)
             {
                 double halfW = DynamicEngraver.LabelHalfWidth(fonts, d.Text, d.IsExpressiveText);
-                var (dAscent, dDescent) = DynamicEngraver.InkOf(d.Text, d.IsExpressiveText);
+                var (dAscent, dDescent) = DynamicEngraver.InkOf(fonts, d.Text, d.IsExpressiveText);
                 // The system this dynamic's box belongs to — same resolution as the mark
                 // and custom-text arms above.
                 if (!measureToSystem.TryGetValue(d.MeasureIndex, out int ds))

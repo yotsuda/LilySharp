@@ -333,8 +333,13 @@ public class MarkReserveVersusDrawTests
     [InlineData("dim.", true)]
     public void DynamicLabelHalfWidth_IsHalfTheDrawnAdvance(string text, bool expressive)
     {
-        double drawn = Fonts.Advance(text, 2.0, TextRole.Dynamics,
-            DynamicEngraver.LabelStyle(expressive));
+        // A level is a DynamicText at 2.0; free expressive text is LilyPond's TextScript,
+        // set at the paper text size under the `text` role (session 640; it was 2.0 too).
+        double drawn = expressive
+            ? Fonts.Advance(text, EngravingDefaults.TextScriptFontSize, TextRole.Text,
+                DynamicEngraver.LabelStyle(expressive))
+            : Fonts.Advance(text, 2.0, TextRole.Dynamics,
+                DynamicEngraver.LabelStyle(expressive));
         Assert.Equal(drawn / 2.0, DynamicEngraver.LabelHalfWidth(Fonts, text, expressive), 9);
     }
 
@@ -345,8 +350,11 @@ public class MarkReserveVersusDrawTests
     public void DrawnDynamic_CarriesTheStyleTheReservationMeasures(
         string source, string content, bool expressive)
     {
-        var (_, style) = DrawnTextAttributes(Svg(source), content);
+        var (size, style) = DrawnTextAttributes(Svg(source), content);
         Assert.Equal(DynamicEngraver.LabelStyle(expressive), style);
+        // ...and at the em the reservation measures (a TextScript's 2.2 for @text since
+        // session 640, a DynamicText's 2.0 for a level).
+        Assert.Equal(DynamicEngraver.LabelEm(Fonts, expressive), size, 2);
     }
 
     /// <summary>

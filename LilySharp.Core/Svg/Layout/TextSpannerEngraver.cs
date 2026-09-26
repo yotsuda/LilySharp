@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -289,7 +289,7 @@ internal static class TextSpannerEngraver
                     : dynamicLayouts.Where(d => d.StaffIndex == spanner.StaffIndex).ToImmutableArray();
                 double y = CalculateYWithPriorityStacking(
                     startX, endX, segment.StartMeasureIndex,
-                    sameStaffDynamics, measureToSystem, staffOffset);
+                    sameStaffDynamics, measureToSystem, fonts ?? ScoreTextMetrics.Bundled, staffOffset);
 
                 layouts.Add(new TextSpannerLayout(
                     StartMeasureIndex: segment.StartMeasureIndex,
@@ -327,6 +327,7 @@ internal static class TextSpannerEngraver
         double startX, double endX, int startMeasureIndex,
         ImmutableArray<DynamicLayout> dynamicLayouts,
         IReadOnlyDictionary<int, int> measureToSystem,
+        ScoreTextMetrics fonts,
         double staffOffset = 0)
     {
         // Minimum Y: below THIS staff (its within-system offset) with padding + text ascent
@@ -359,7 +360,7 @@ internal static class TextSpannerEngraver
                 // staff's offset (staffOffset) reflects it into the system-relative
                 // device frame this method (and minY) works in.
                 double dynY = staffOffset + (2.0 - dyn.YUp);
-                var (_, descent) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
+                var (_, descent) = DynamicEngraver.InkOf(fonts, dyn.Text, dyn.IsExpressiveText);
                 // Device-down frame: the glyph's bottom is BELOW its baseline, i.e. +.
                 maxDynamicBottom = Math.Max(maxDynamicBottom, dynY + descent);
             }

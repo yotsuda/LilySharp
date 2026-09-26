@@ -94,33 +94,73 @@ internal static class DynamicEngraver
     // Staff geometry (5 lines = 4 staff spaces)
     private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // staff bottom (4.0) / 2
 
-    // LILYSHARP-OWN: ink above / below the baseline for a label LilyPond does NOT spell in
-    // the fetaText dynamic letters — free expressive text (@text), which has no LilyPond
-    // grob at all: Lily# rides it on the DynamicText pipeline and draws it in a serif face
-    // (SharedRenderer.DrawDynamics). There is no LilyPond formula to port, so these stay
-    // nominal. A real dynamic never reaches them: GlyphMetrics.TryGetDynamicInk answers
-    // from the font instead, per glyph.
-    // ⚠️ DEBT, carried unchanged rather than re-tuned: these are the values the code
-    // already had, and 0.64's old comment derived it by MEASURING a LilyPond 2.24.4
-    // forced-up dynamic. That derivation is void — the thing it was fitting is the `f`
-    // glyph's 0.692002 ink, which now comes from the font — but replacing the number for
-    // free text would be fitting a second time. It needs a source, not a better guess.
-    // These are also the single fallback for all three paths that used to keep their own
-    // (this file's 0.64, the stacker's 0.3, the skyline's 0.3): three numbers for ONE
-    // quantity is the duplication that let the real defect hide. 0.64 is the largest, so
-    // unifying on it can only reserve more room, never overlap.
+    // Ink above / below the baseline for a dynamic label the fetaText letters do not spell
+    // (GlyphMetrics.TryGetDynamicInk has no outline for it) — kept from the old nominal
+    // pair. Free expressive text (@text) no longer reaches it: it is LilyPond's TextScript
+    // and reads its own string's ink (session 640).
     private const double FallbackAscent = 1.2;
     private const double FallbackDescent = 0.64;
+
+    // Free expressive text (@text) IS LilyPond's TextScript on its note, not a DynamicText:
+    // it is placed by TextScript's own aligned_side — the Text_engraver adds NO support, so
+    // only the staff's extent floors it (its padding is spent against that), staff-padding
+    // 0.5, no minimum-space, and the baseline is the grob's own reference point (no 0.6
+    // hang inside a line spanner). Until session 640 it took DynamicLineSpanner's numbers
+    // (padding 0.6, staff-padding 0.1, minimum-space, the hang) and a nominal 1.2 / 0.64 ink,
+    // and stood 0.74 higher than LilyPond's over an empty staff
+    // (audit/lp-geometry/probes/slur-beam-reserve.ly, the no-slur pair in Lab sessions/p639/).
+    // LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript outside-staff-horizontal-padding 0.2,
+    //   padding 0.3, staff-padding 0.5, Y-offset side-position-interface::y-aligned-side,
+    //   vertical-skylines from the stencil.
+    // LILYPOND-REF: lily/text-engraver.cc:84-100 — acknowledge_note_column sets the X parent
+    //   only; no add_support.
+    // ⚠️ It is still PLACED in the dynamics' outside-staff turn (250), where LilyPond places a
+    // TextScript at 450 — the order only matters where a dynamic and a text meet on one side.
+    private const double TextScriptPadding = 0.3;
+
+    // ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
+    // a missing glyph rather than measuring it) is drawn from a system face the layout never
+    // sees, so neither its outline nor its ink box exists here: the outline of
+    // "人差し指で" is EMPTY, and an empty profile put the text at an infinite distance
+    // (session 640: 奏（かなで） lost its page breaks). Such a string is reserved as the
+    // face's own ascender/descender box over its advance.
+    //   departs from: LilyPond's Pango shapes the fallback face and reads its glyphs.
+    //   goes away when: the layout measures the fallback face the renderer draws with.
+    private static bool HasMissingGlyph(string text, double em, Rendering.TextFace face)
+    {
+        foreach (var g in Rendering.TextFontMetrics.ShapeRun(text, em, face))
+            if (g.MissingCodepoint is not null)
+                return true;
+        return false;
+    }
 
     /// <summary>
     /// A label's own ink above (<c>Ascent</c>) and below (<c>Descent</c>) its baseline,
     /// in staff spaces. See <see cref="GlyphMetrics.TryGetDynamicInk"/>: LilyPond's
-    /// DynamicText extent is the drawn glyphs' ink, so it differs per dynamic.
+    /// DynamicText extent is the drawn glyphs' ink, so it differs per dynamic; free
+    /// expressive text's is its own string's, at the TextScript em and face.
     /// </summary>
-    internal static (double Ascent, double Descent) InkOf(string? text, bool expressive)
-        => !expressive && GlyphMetrics.TryGetDynamicInk(text, out double bottom, out double top)
+    internal static (double Ascent, double Descent) InkOf(
+        Rendering.ScoreTextMetrics fonts, string? text, bool expressive)
+    {
+        if (expressive)
+        {
+            if (string.IsNullOrEmpty(text))
+                return (0.0, 0.0);
+            double em = LabelEm(fonts, true);
+            var face = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
+            if (HasMissingGlyph(text, em, face))
+            {
+                var (asc, desc) = Rendering.TextFontMetrics.FontExtents(face);
+                return (asc * em, -desc * em);
+            }
+            var (b, t) = Rendering.TextFontMetrics.Ink(text, em, face);
+            return (t, -b);
+        }
+        return GlyphMetrics.TryGetDynamicInk(text, out double bottom, out double top)
             ? (top, -bottom)
             : (FallbackAscent, FallbackDescent);
+    }
 
     // Vertical step between two dynamics that fall on the same note column.
     internal const double StackStep = 2.0;
@@ -363,6 +403,22 @@ internal static class DynamicEngraver
         double xColumn, double xLabel, string? text, bool expressive,
         Func<int, (BeamLayout Beam, double StemX, bool StemUp)?>? beamOf)
     {
+        if (expressive)
+        {
+            // TextScript's aligned_side (see TextScriptPadding): the staff's extent is the
+            // only support, the text's own outline faces it, and the staff-padding floor
+            // applies to the baseline itself.
+            // LILYPOND-REF: lily/side-position-interface.cc:323-330 set_minimum_height (the staff
+            //   floor); :354-370 total_off (distance + padding); :433-453 staff_padding.
+            double dir = above ? 1.0 : -1.0;
+            var floor = StaffFloorSupport();
+            var mine = LabelSkylines(fonts, text, true, xLabel, 0.0);
+            double off = dir * (dir > 0 ? mine.Down.Distance(floor.Up) : mine.Up.Distance(floor.Down));
+            off += dir * TextScriptPadding;
+            double floorDiff = StaffExtent + EngravingDefaults.TextScriptStaffPadding - dir * off;
+            off += dir * Math.Max(floorDiff, 0.0);
+            return off;
+        }
         var support = ColumnSupportSkylines(
             voices, voiceIndex, measureIndex, itemIndex, xColumn, beamOf);
         double textOffset = TextOffsetInSpanner(fonts);
@@ -541,8 +597,17 @@ internal static class DynamicEngraver
             && DynamicOutline.AdvanceWidth(text) is { } w
             && DynamicOutline.Place(text, xCentre - w / 2.0, yBaseline) is { } outline)
             return outline;
-        var (ascent, descent) = InkOf(text, expressive);
         double half = LabelHalfWidth(fonts, text ?? "", expressive);
+        // Free expressive text: its own glyph outlines, as a TextScript's vertical-skylines
+        // are its stencil's (define-grobs.scm:3818) — the form-level text's same call.
+        if (expressive && text is { Length: > 0 })
+        {
+            double em = LabelEm(fonts, true);
+            var face = fonts.Face(LabelRole(true), LabelStyle(fonts, true));
+            if (!HasMissingGlyph(text, em, face))
+                return TextOutlineSkylines.Place(text, em, face, xCentre - half, yBaseline);
+        }
+        var (ascent, descent) = InkOf(fonts, text, expressive);
         return (VerticalSkyline.FromBox(xCentre - half, xCentre + half,
                     yBaseline - descent, yBaseline + ascent, VerticalDirection.Up),
                 VerticalSkyline.FromBox(xCentre - half, xCentre + half,
@@ -692,7 +757,22 @@ internal static class DynamicEngraver
     /// <c>fonts { }</c> wrote a style for <c>dynamics</c>. The draw and the reservation both
     /// read this overload.</summary>
     internal static Rendering.FontStyle LabelStyle(Rendering.ScoreTextMetrics fonts, bool expressive)
-        => fonts.Style(Rendering.TextRole.Dynamics, LabelStyle(expressive));
+        => expressive
+            ? CustomTextEngraver.Style(fonts)
+            : fonts.Style(Rendering.TextRole.Dynamics, LabelStyle(false));
+
+    /// <summary>The font-plan role a label is set under: free expressive text is a
+    /// TextScript (<c>text</c>, the form-level text's role), a level is a <c>dynamics</c>
+    /// label.</summary>
+    internal static Rendering.TextRole LabelRole(bool expressive)
+        => expressive ? Rendering.TextRole.Text : Rendering.TextRole.Dynamics;
+
+    /// <summary>The em a label is drawn and reserved at: a dynamic's <see cref="LabelEm(Rendering.ScoreTextMetrics)"/>,
+    /// or for free expressive text the TextScript's own (the paper text size, 2.2 — it was
+    /// the dynamics' 2.0 until session 640).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3800-3833 TextScript outside-staff-priority block — no font-size of its own.</remarks>
+    internal static double LabelEm(Rendering.ScoreTextMetrics fonts, bool expressive)
+        => expressive ? CustomTextEngraver.Em(fonts) : LabelEm(fonts);
 
     /// <summary>The label's em for THIS score: <see cref="DynamicFontSize"/> unless the
     /// score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for <c>dynamics</c>. ONE
@@ -706,7 +786,7 @@ internal static class DynamicEngraver
     internal static double LabelHalfWidth(
         Rendering.ScoreTextMetrics fonts, string text, bool expressive)
     {
-        double w = fonts.Advance(text, LabelEm(fonts), Rendering.TextRole.Dynamics,
+        double w = fonts.Advance(text, LabelEm(fonts, expressive), LabelRole(expressive),
             LabelStyle(fonts, expressive));
         return w / 2.0;
     }

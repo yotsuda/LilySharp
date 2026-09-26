@@ -561,7 +561,9 @@ internal static class OutsideStaffStacker
                 //   — padding = outside-staff-padding.
                 var (myUp, myDown) = DynamicEngraver.LabelSkylines(
                     fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dynYup);
-                double move = tracker.Place(myUp, myDown, OutsideStaffPadding);
+                // @text is a TextScript: its horizontal padding (see PlaceAboveDynamics).
+                double move = tracker.Place(myUp, myDown, OutsideStaffPadding,
+                    dyn.IsExpressiveText ? OutsideStaffHorizontalPadding : 0.0);
                 if (move != 0)
                     dynBuilder[i] = dyn with
                     { YUp = dynYup + move + off + EngravingDefaults.StaffMiddle };
@@ -2442,7 +2444,10 @@ internal static class OutsideStaffStacker
             double midUp = LayoutUtilities.StaffMiddleUpInSystem(systems[sysIdx], dyn.StaffIndex);
             var (myUp, myDown) = DynamicEngraver.LabelSkylines(
                 fonts, dyn.Text, dyn.IsExpressiveText, dyn.X, dyn.YUp + midUp);
-            double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding);
+            // Free expressive text is a TextScript, which declares the horizontal padding a
+            // DynamicText does not (define-grobs.scm:3806 outside-staff-horizontal-padding 0.2).
+            double move = trackers(sysIdx, dyn.StaffIndex).Place(myUp, myDown, OutsideStaffPadding,
+                dyn.IsExpressiveText ? OutsideStaffHorizontalPadding : 0.0);
             b[i] = dyn with { YUp = dyn.YUp + move };
         }
         return b.MoveToImmutable(); // ToBuilder's array IS the result (Count == Capacity) — see Rebuild

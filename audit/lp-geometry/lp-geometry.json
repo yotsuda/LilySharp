@@ -1311,16 +1311,16 @@
       "probe": "row-between-staves.ly",
       "score": "IOA",
       "lilypond": 3.587044154,
-      "residual": 0.082995881,
-      "why": "SEEDED 2026-08-26 (session 258). LilyPond's 3.587044154 decomposes as lyric descender 0.037044154 + padding 1.5 + staff line top 2.05 - but the ROOM's binding is elsewhere: the one walk faces staff1's raised down ink against staff2's ^Text textscript (4.138464013 above its refpoint in LilyPond), and Lily# stands that Text ~0.35 higher (its textscript box island, the same family as the mark box term 0.400000), which prices this closing +0.082995881. ⚠️ THE OLD SPELLING READ 3.587041248 - EXACT TO 3e-6 - AND WAS WRONG ANYWAY: it measured the row against staff2 alone, so it could never see the staff1-to-Text collision LilyPond's walk resolves; it matched by structural blindness, and the +0.083 is that collision priced with Lily#'s too-tall Text, not a spacing defect of the walk. Closing it is the TextScript height's work, and this entry is its observer from below.",
+      "residual": -0.000002906,
+      "why": "EXACT since session 640 (3.587041248 against 3.587044154): THE TEXTSCRIPT HEIGHT closed it, as this entry said it would. Lily#'s @text rode the DynamicText pipeline's numbers (DynamicLineSpanner padding 0.6, staff-padding 0.1, minimum-space, the 0.6 hang, a nominal 1.2 / 0.64 ink) and stood the staff2 ^Text too tall and too high; as a TextScript (padding 0.3, staff-padding 0.5, its own ink and outline, 2.2 em) the one walk faces the same Text LilyPond's does. Session 258 seeded +0.082995881 as that collision priced with the too-tall Text. The pre-port spelling had read this same number by structural blindness (the row against staff2 alone); this one reads it through the walk.",
       "unit": "ss"
     },
     "lyrics.row-between.staff-to-staff": {
       "probe": "row-between-staves.ly",
       "score": "IOA",
       "lilypond": 9.240492503,
-      "residual": 0.082840830,
-      "why": "SEEDED 2026-08-26 (session 258). THE ROOM OF THE UNFOLDED-ROW PAIR, which LilyPond reads at the walk's floors EXACTLY (5.653448349 + 3.587044154 - no slack, barely over basic-distance 9). Lily#'s pair-placement port reads it the same way - max(basic-distance, the per-line-spec walk) - and the residual is the sum of the steps' own (-0.000155051 + 0.082995881), all of it the Text height (see lyric-to-staff). Before the port the pair happened to read 9.240334546 (near-exact) through the band stack's pairwise steps, which could not see the collision the walk prices; the corpus book this is (input-order-alignment.lys) moved by +0.083 when the port landed, and this entry is what says that move is the walk becoming LilyPond's rather than a regression.",
+      "residual": -0.000157957,
+      "why": "EXACT to the walk's own -0.000155051 since session 640, with lyrics.row-between.lyric-to-staff: the +0.082995881 it carried was the too-tall @text (DynamicText numbers until then; a TextScript now). The room of the unfolded-row pair, which LilyPond reads at the walk's floors exactly (5.653448349 + 3.587044154).",
       "unit": "ss"
     },
     "lyrics.grand-staff.staff-to-lyric": {
@@ -1819,8 +1819,8 @@
       "probe": "slur-beam-reserve.ly",
       "score": "A",
       "lilypond": 2.6731763847604983,
-      "residual": 0.616823615,
-      "why": "THE SLUR'S PART IS NOW RIGHT; THE REST IS THE TEXT'S OWN FLOOR. With the slur taken out (Lab sessions/p639/sb-noslur.ly, sbr-noslur.lys) LilyPond reads 2.55 and Lily# 3.29 -- the @text over this staff already stands 0.74 higher with nothing under it (not decomposed; HANDOFF 1.0). The slur lifts LilyPond's text by 0.123 and Lily#'s by 0. Until session 639 Lily# read 3.931767 (+1.258590): the skyline reserved this staff's slurs laid out with NO beams (MultiStaffLayouter.StaffSlurLayouts), so the reserved bow hung from an unbeamed stem tip and rose above the drawn one, which hangs from the beam (lily/slur-scoring.cc:549-557)."
+      "residual": -0.066124847,
+      "why": "The text's floor is LilyPond's since session 640 (@text is a TextScript: padding 0.3, staff-padding 0.5, its own outline, 2.2 em -- with the slur taken out both engines read 2.55, Lab sessions/p639/sb-noslur.ly), and the outside-staff pass lifts it off the slur's end with TextScript's horizontal padding 0.2 (define-grobs.scm:3806): 2.607052 against 2.673176. The -0.066 left is the slur's end region under the text's left edge (not decomposed). History: session 639 read 3.29 (+0.617, the DynamicText floor); before it 3.931767 (+1.258590), the skyline's slurs laid out with NO beams (MultiStaffLayouter.StaffSlurLayouts), the reserved bow on an unbeamed stem tip above the drawn one (lily/slur-scoring.cc:549-557)."
     },
     "beam.quant.over-stem.beamed": {
       "probe": "beam-over-stem.ly",

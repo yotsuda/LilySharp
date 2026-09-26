@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -48,7 +48,6 @@ internal static partial class SharedRenderer
         if (layout.DynamicLayouts.IsDefaultOrEmpty) return;
         // The em from the one home the reservation reads (it was a second spelling of the
         // same 2.0, `FontSize * 0.5`, until 2026-09-08), through the score's plan.
-        double fontSize = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelEm(fonts);
         foreach (var d in layout.DynamicLayouts)
         {
             string text = NormalizeDynamicText(d.Text);
@@ -59,12 +58,12 @@ internal static partial class SharedRenderer
             // staff middle (the shared per-grob draw boundary), then apply ossia.
             double midYup = os.StaffMiddleYUp(d.StaffIndex, d.MeasureIndex, StaffHeight);
             double y = os.YUp(midYup + d.YUp, d.StaffIndex, d.MeasureIndex);
-            double size = os.Size(fontSize, d.StaffIndex);
+            double size = os.Size(LilySharp.Core.Svg.Layout.DynamicEngraver.LabelEm(fonts, d.IsExpressiveText), d.StaffIndex);
             // Free expressive text (@text) prints plain italic; dynamic levels keep LP's
             // bold-italic DynamicText face — from the one home the reservation reads.
             var style = LilySharp.Core.Svg.Layout.DynamicEngraver.LabelStyle(fonts, d.IsExpressiveText);
             using (gc.Source(d.SourcePosition))
-                gc.DrawText(text, d.X, y, size, TextRole.Dynamics,
+                gc.DrawText(text, d.X, y, size, LilySharp.Core.Svg.Layout.DynamicEngraver.LabelRole(d.IsExpressiveText),
                     style, TextAnchor.Middle, Color.Black);
         }
     }

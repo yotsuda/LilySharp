@@ -50,8 +50,8 @@
 - **:1233** whiteout −1) is not ported.
 - **:1353** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:306** Lily# has not ported; this arrow is its own device.
-- **:756** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:305** Lily# has not ported; this arrow is its own device.
+- **:755** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -212,7 +212,7 @@
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:130** staff_extent[DOWN], which is the ink edge too. ⚠️ No ledger point measures
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1915** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
+- **:1917** would be output-moving with no observer, which is the one move HANDOFF 5.0 forbids.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:498** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
@@ -270,10 +270,10 @@
 - **:616** LILYSHARP-OWN sizes: the feel equation keeps the small chart-style note (1.6)
 - **:1347** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:181** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
-- **:232** The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own
-- **:238** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
-- **:304** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
+- **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
+- **:231** The "Nfr" label's ENGRAVING em. LILYSHARP-OWN: the fret frame is Lily#'s own
+- **:237** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
+- **:303** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:573** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
@@ -342,7 +342,7 @@
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
 - **:266** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
-- **:97** LILYSHARP-OWN: ink above / below the baseline for a label LilyPond does NOT spell in
+- **:121** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2460** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2509** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
@@ -419,8 +419,8 @@
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`
-- **:1174** system would hand back marks placed without the labels under them. LILYSHARP-OWN
-- **:3315** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
+- **:1176** system would hand back marks placed without the labels under them. LILYSHARP-OWN
+- **:3320** LILYSHARP-OWN: the SUPPORT entry cannot be passed on its far side.
 ### `LilySharp.Core/Svg/Layout/PageBreaker.cs`
 - **:100** ⚠️ LILYSHARP-OWN: THE NULLABILITY. LilyPond's Line_details ALWAYS carries a shape —
 - **:154** LILYSHARP-OWN: the number itself has no LilyPond counterpart, because LilyPond's

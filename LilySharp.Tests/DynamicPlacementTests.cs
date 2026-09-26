@@ -147,6 +147,32 @@ public class DynamicPlacementTests
         Assert.Equal(3.342, aboveBaseline, 3);
     }
 
+    /// <summary>
+    /// Free expressive text the bundled face cannot spell (CJK) still sits a finite,
+    /// ordinary distance from the staff.
+    /// </summary>
+    /// <remarks>
+    /// Since session 640 an @text is placed by its own OUTLINE (a TextScript's skylines are
+    /// its stencil's), and the bundled Latin faces have no CJK — the outline of "人差し指で"
+    /// is empty, so the distance to it was infinite: the user's 奏（かなで） lost every page
+    /// break and printed 90 bars on one page. Such a string is reserved as the face's
+    /// ascender/descender box (DynamicEngraver.HasMissingGlyph).
+    /// </remarks>
+    [Theory]
+    [InlineData("c4@text(\"人差し指で\") d e f |", false)]
+    [InlineData("c4@text(\"ゆっくり!\").up d e f |", true)]
+    public void ExpressiveTextTheFaceCannotSpell_SitsAFiniteDistanceFromTheStaff(string music, bool up)
+    {
+        var score = Collect(music);
+        var layout = new LayoutEngine().Layout(score);
+        var text = Assert.Single(layout.DynamicLayouts, d => d.IsExpressiveText);
+        Assert.True(double.IsFinite(text.YUp), $"the text's Y is {text.YUp}");
+        // Past the staff's own 2.05 + staff-padding 0.5 floor (under a low note, farther),
+        // and nowhere near a page away.
+        double reach = up ? text.YUp : -text.YUp;
+        Assert.InRange(reach, 2.5, 10.0);
+    }
+
     [Fact]
     public void AboveGrobsSharingAColumn_StackClearInsteadOfOverprinting()
     {
@@ -176,10 +202,10 @@ public class DynamicPlacementTests
         // own one home — this line spelled the upright serif until 2026-08-18 and so was
         // pinning a reservation that did not match the italic draw (the claim here is the
         // ALIGNMENT, and it was silently carrying a claim about the face as well).
+        // (Since session 640 the text is set as a TextScript — the paper text em and the
+        // `text` role — so the half-advance is read from that one home too.)
         Assert.Equal(column,
-            txt.X - ScoreTextMetrics.Bundled.Advance(
-                "cresc", 2.0, LilySharp.Core.Rendering.TextRole.Dynamics,
-                DynamicEngraver.LabelStyle(expressive: true)) / 2.0, 3);
+            txt.X - DynamicEngraver.LabelHalfWidth(ScoreTextMetrics.Bundled, "cresc", expressive: true), 3);
         Assert.True(above[1].YUp - above[0].YUp >= 1.5,
             $"stacked above-staff grobs must be separated (got {above[0].YUp} and {above[1].YUp})");
     }

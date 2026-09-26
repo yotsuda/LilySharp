@@ -2300,8 +2300,10 @@ internal sealed class SkylineBuilder
             // computes (DynamicEngraver.Calculate), so seed and draw agree.
             double xColumn = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 primaryMeasures, dyn.MeasureIndex, dyn.ItemIndex, measureLayout);
-            double xLabel = xColumn + DynamicEngraver.AnchorCentreOffset(
-                DynamicEngraver.AnchorItem(voices, dyn.VoiceIndex, dyn.MeasureIndex, dyn.ItemIndex));
+            double xLabel = xColumn + (dyn.IsExpressiveText
+                ? DynamicEngraver.LabelHalfWidth(_fonts, dyn.Text ?? string.Empty, expressive: true)
+                : DynamicEngraver.AnchorCentreOffset(
+                    DynamicEngraver.AnchorItem(voices, dyn.VoiceIndex, dyn.MeasureIndex, dyn.ItemIndex)));
 
             int mi = dyn.MeasureIndex, ii = dyn.ItemIndex;
             int dynStaff = dyn.StaffIndex;
@@ -2311,7 +2313,7 @@ internal sealed class SkylineBuilder
 
             // This label's own ink, from the font. LilyPond's DynamicText extent IS the
             // drawn glyph's ink, so it differs per dynamic — see DynamicEngraver.InkOf.
-            var (ascent, descent) = DynamicEngraver.InkOf(dyn.Text, dyn.IsExpressiveText);
+            var (ascent, descent) = DynamicEngraver.InkOf(_fonts, dyn.Text, dyn.IsExpressiveText);
 
             if (dyn.IsAbove)
             {
