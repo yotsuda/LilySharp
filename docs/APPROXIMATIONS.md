@@ -77,7 +77,7 @@
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:1335** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
 - **:2232** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:3641** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:3742** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -113,9 +113,9 @@
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:927** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:696** case of broken slur") — not ported; every slur this scorer sees lives on
-- **:871** column allows only 0.3 of movement) is not ported: every edge here
-- **:1258** approximation there); RIGHT wins when both edges match, as LP's
+- **:705** case of broken slur") — not ported; every slur this scorer sees lives on
+- **:880** column allows only 0.3 of movement) is not ported: every edge here
+- **:1267** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`

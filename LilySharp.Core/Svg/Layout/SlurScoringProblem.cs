@@ -123,7 +123,10 @@ internal readonly record struct SlurExtraObject(
     // lily/slur-configuration.cc:413-416), and the X read is the box's
     // linear_combination(Idx) — its left edge, centre or right edge — not its centre.
     bool IsSlurPoint = false,
-    int Idx = 0,
+    // Where along X the box is read — Interval::linear_combination (Idx): −1 its left edge,
+    // 0 the centre, +1 the right edge. A slur point's is its hdir; an accidental's is the
+    // side its ink reaches toward the slur (lily/slur-scoring.cc:860-877); 0 otherwise.
+    double Idx = 0,
     // A SPANNER's box (a Tie): LilyPond's "object over an edge head" test casts the grob
     // to an Item and skips it for a spanner (lily/slur-configuration.cc:413-416), so the
     // box is read at its centre X like any other and never at the attachment Y.
@@ -498,6 +501,12 @@ internal sealed class SlurScoringProblem
 
     private double CalculateIndent(double width) =>
         BezierBow.Indent(_parameters.HeightLimit * _staffSpace, width);
+
+    /// <summary>The X an extra object is read at: its box's
+    /// <c>Interval::linear_combination (Idx)</c> — (1 − Idx)/2 of the left edge plus
+    /// (1 + Idx)/2 of the right.</summary>
+    private static double LinearCombination(SlurExtraObject info)
+        => ((1 - info.Idx) * info.LeftX + (1 + info.Idx) * info.RightX) / 2.0;
 
     /// <summary>
     /// Nudges a base attachment 0.15 staff-space slurward when it rounds onto one
@@ -1299,9 +1308,7 @@ internal sealed class SlurScoringProblem
                     // linear_combination(idx).
                     // LILYPOND-REF: lily/slur-configuration.cc:413-416 as_item is null for it,
                     //   :429 info.extents_[X_AXIS].linear_combination (info.idx_).
-                    double sx = info.Idx < 0 ? info.LeftX
-                        : info.Idx > 0 ? info.RightX
-                        : (info.LeftX + info.RightX) / 2.0;
+                    double sx = LinearCombination(info);
                     if (sx < config.StartX || sx > config.EndX || slurWid < 0.001)
                         continue;
                     y = config.Curve.GetOtherCoordinate(sx);
@@ -1326,7 +1333,9 @@ internal sealed class SlurScoringProblem
 
                 if (!found)
                 {
-                    double x = (info.LeftX + info.RightX) / 2.0;
+                    // LILYPOND-REF: lily/slur-configuration.cc:429 score_extra_encompass —
+                    // info.extents_[X_AXIS].linear_combination (info.idx_), for every object.
+                    double x = LinearCombination(info);
                     if (x < config.StartX || x > config.EndX || slurWid < 0.001)
                         continue;
                     // The config's REAL curve, not a parabolic stand-in.

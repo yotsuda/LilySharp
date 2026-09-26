@@ -2886,6 +2886,50 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// Whether the beam of the stem at (<paramref name="measureIndex"/>,
+    /// <paramref name="itemIndex"/>) continues on its <paramref name="rightward"/> side — the
+    /// voice's neighbouring sounding item on that side stands under the same beam.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:549-554 get_base_attachments —
+    /// <c>Stem::get_beaming (stem, -d)</c>, the beam count on the stem's INNER side. Read off
+    /// the items' <see cref="NoteItem.BeamId"/>, not the written <c>[</c> <c>]</c> marks
+    /// (<c>HasBeamStart</c> / <c>HasBeamEnd</c>), which an AUTOMATIC beam never carries: the
+    /// last note of an auto-beamed pair counted as beamed on its right, and a slur leaving it
+    /// started on the beam instead of the head (Butterfly.lys, Lab corpus: `b,,8 b,,( dis,)`,
+    /// 1.55 above LilyPond's left end; 想い人, Need You Now, Top of the World …).
+    /// </remarks>
+    private static bool BeamContinuesToward(Voice voice, int measureIndex, int itemIndex, bool rightward)
+    {
+        var self = voice.Measures[measureIndex].Items[itemIndex];
+        int? beam = self switch { NoteItem n => n.BeamId, ChordItem c => c.BeamId, _ => null };
+        if (beam is null)
+            return false;
+        int step = rightward ? 1 : -1;
+        for (int m = measureIndex, i = itemIndex + step; m >= 0 && m < voice.Measures.Length; )
+        {
+            var items = voice.Measures[m].Items;
+            for (; i >= 0 && i < items.Length; i += step)
+            {
+                var item = items[i];
+                // A rest has no stem to share the beam with; a beam that runs over it goes on
+                // to the next stem, which answers.
+                if (item.GraceTime)
+                    continue;
+                switch (item)
+                {
+                    case NoteItem n: return n.BeamId == beam;
+                    case ChordItem c: return c.BeamId == beam;
+                }
+            }
+            m += step;
+            if (m >= 0 && m < voice.Measures.Length)
+                i = rightward ? 0 : voice.Measures[m].Items.Length - 1;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Resolves the slur-edge note facts (stem presence/direction, inner-side beaming)
     /// the scorer needs. Returns default (no stem) for a rest, an out-of-range index, or a
     /// whole/breve note. <paramref name="leftEdge"/> selects which side is "inner": the left
@@ -2925,7 +2969,7 @@ internal sealed class ElementCoordinator
         // Whole notes (value 1) and breves have no stem.
         bool hasStem = GlyphMetrics.NoteValueOf(baseDuration) >= 2;
         // Beamed on the INNER side (toward the other endpoint).
-        bool beamedInner = beamed && (leftEdge ? !hasBeamEnd : !hasBeamStart);
+        bool beamedInner = beamed && BeamContinuesToward(voice, measureIndex, itemIndex, rightward: leftEdge);
         // The endpoint head's ink width — LP's slur_head_x_extent_, consumed by the
         // tilt X shift and the extra-encompass edge check.
         double headWidth = GlyphMetrics.GetNoteheadBBox(
@@ -3397,6 +3441,60 @@ internal sealed class ElementCoordinator
                 AvoidBottomY: dotCenterDeviceY - dotBox.Bottom));
         }
 
+        // The accidentals of every column the slur covers, its two ends included: an
+        // Accidental is avoid-slur 'inside, which the slur engraver acknowledges as an extra
+        // object (lily/slur-engraver.cc:73 ADD_ACKNOWLEDGER_FOR inline_accidental;
+        // scm/define-grobs.scm:39 Accidental). Scored with accidental-collision (3), not the
+        // extra-object 50, and read along X not at the centre but where the glyph's ink
+        // reaches toward the slur (lily/slur-scoring.cc:860-877 get_extra_encompass_infos —
+        // flat LEFT, sharp 0.5·dir, natural −dir; a parenthesized or restore-first one at
+        // the centre). Until session 649 no accidental entered: Butterfly.lys (Lab corpus)
+        // `b,,8 b,,( dis,)` drew the slur through the sharp once it left the head.
+        // Same frame as the beam's accidental collisions (AddAccidentalCollisions): the
+        // packed column X when the collector packed one, else the per-item solve; scale 1,
+        // the simplification this set already discloses for heads and dots.
+        void AddAccidentals(MusicItem item, double columnX)
+        {
+            IEnumerable<AccidentalLayout> laid = item switch
+            {
+                NoteItem { Accidental: { } acc, AccidentalX: { } px } pn
+                    => [new AccidentalLayout(pn.StaffPosition, acc, px, pn.IsCourtesy)],
+                NoteItem { Accidental: not null } n
+                    => BeamAccidentalColumn.CalculateSinglePosition(n) is { } one ? [one] : [],
+                ChordItem c when c.Notes.Any(m => m.Accidental != null) => ChordAccidentalLayouts(c),
+                _ => [],
+            };
+            int dir = slur.CurveUp ? 1 : -1;
+            foreach (var layout in laid)
+            {
+                var box = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
+                double width = box.Width;
+                if (layout.IsCourtesy)
+                    width += GlyphMetrics.AccidentalLeftParen.Width + GlyphMetrics.AccidentalRightParen.Width;
+                double left = columnX + layout.XOffset;
+                double centreDown = staffMiddleDown - layout.StaffPosition / 2.0;
+                double topDown = centreDown - box.Top, bottomDown = centreDown - box.Bottom;
+                double idx = layout.IsCourtesy || layout.Accidental.StartsWith("natural", StringComparison.Ordinal)
+                        && layout.Accidental != "natural"
+                    ? 0.0
+                    : layout.Accidental switch
+                    {
+                        "flat" or "doubleFlat" => -1.0,
+                        "sharp" => 0.5 * dir,
+                        "natural" => -dir,
+                        _ => 0.0,
+                    };
+                extras.Add(new SlurExtraObject(
+                    left - slurThickness, left + width + slurThickness,
+                    topDown - slurThickness * 0.5, bottomDown + slurThickness * 0.5,
+                    SlurAvoidType.Inside,
+                    SlurScoreParameters.Default.AccidentalCollision,
+                    Idx: idx,
+                    AvoidTopY: topDown,
+                    AvoidBottomY: bottomDown));
+            }
+        }
+
         foreach (var ml in segSystem.Measures)
         {
             int mi = ml.MeasureIndex;
@@ -3415,6 +3513,9 @@ internal sealed class ElementCoordinator
                 double x = ml.X + GetItemXOffset(voice, mi, i, ml);
                 if (x < segStartX - eps || x > segEndX + eps)
                     continue;
+
+                if (!items[i].GraceTime)
+                    AddAccidentals(items[i], x);
 
                 switch (items[i])
                 {
@@ -4332,13 +4433,9 @@ internal sealed class ElementCoordinator
                     ?? double.NaN;
             if (double.IsNaN(tip))
                 return default;
-            var (beamStart, beamEnd) = column.Item switch
-            {
-                NoteItem n => (n.HasBeamStart, n.HasBeamEnd),
-                ChordItem c => (c.HasBeamStart, c.HasBeamEnd),
-                _ => (false, false),
-            };
-            bool beamedInner = beam is not null && (leftEdge ? !beamEnd : !beamStart);
+            // Inner-side beaming off the beam identity, as on a staff (BeamContinuesToward).
+            bool beamedInner = beam is not null
+                && BeamContinuesToward(voice, column.Measure, column.Index, rightward: leftEdge);
             double halfStem = EngravingDefaults.StemThickness / 2.0;
             double stemXHi = stemX + halfStem;
             double stemBeginY = geom.StringY(geom.StemHeadString(column.Item, !stemUp));
