@@ -2171,10 +2171,38 @@ internal static class MusicMarkEngraver
     internal static double LabelBoxHalfHeight(
         ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
     {
-        var ink = LabelInk(fonts, type, text);
-        return (ink.Top - ink.Bottom
-                + LabelBoxMargin(fonts, type, boxed) + LabelBoxBottomMargin(fonts, type, text, boxed)) / 2;
+        var (bottom, top) = LabelFrameAboutBaseline(fonts, type, text, boxed);
+        return (top - bottom) / 2;
     }
+
+    /// <summary>
+    /// The frame's bottom and top edges about the text BASELINE, up-positive — the one
+    /// description the half-height and the baseline offset are both read from.
+    /// </summary>
+    /// <remarks>
+    /// Ordinarily the ink plus <see cref="LabelBoxMargin"/> on each side. Under a descender
+    /// the bottom takes <see cref="LabelBoxBottomMargin"/>, and the top stands as far above
+    /// the CAPITALS as the bottom stands below the baseline, so the letters' body — baseline
+    /// to cap height — is centred in the frame and the descender hangs into its lower half.
+    /// ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
+    /// the B 0.40, below the baseline 0.78). The frame grows at the top only; a label with no
+    /// descender is unchanged.
+    /// </remarks>
+    internal static (double Bottom, double Top) LabelFrameAboutBaseline(
+        ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
+    {
+        var ink = LabelInk(fonts, type, text);
+        double margin = LabelBoxMargin(fonts, type, boxed);
+        double bottom = ink.Bottom - LabelBoxBottomMargin(fonts, type, text, boxed);
+        double top = ink.Top + margin;
+        if (boxed && HasDescender(fonts, type, text))
+            top = Math.Max(top, LabelCapHeight(fonts, type) - bottom);
+        return (bottom, top);
+    }
+
+    /// <summary>The label face's cap height — the top of an "H" — at the label's em.</summary>
+    private static double LabelCapHeight(ScoreTextMetrics fonts, MusicMarkType type)
+        => LabelInk(fonts, type, "H").Top;
 
     /// <summary>
     /// How far the frame's BOTTOM stands under the string's ink: the ordinary margin, or —
@@ -2511,17 +2539,17 @@ internal static class MusicMarkEngraver
     /// carries for one — its text baseline is drawn.
     /// </summary>
     /// <remarks>
-    /// Derived from the frame rather than restated: the frame's bottom edge is
-    /// <see cref="LabelBoxHalfHeight"/> below the centre, the ink starts
-    /// <see cref="LabelBoxBottomMargin"/> inside that, and the ink's own bottom is
-    /// <c>ink.Bottom</c> above the baseline (negative for a descender). So the baseline is
-    /// <c>halfHeight − margin + ink.Bottom</c> below the centre and no em appears twice.
-    /// <c>SharedRenderer.DrawSingleMusicMark</c> draws at exactly this offset.
+    /// Derived from the frame rather than restated: <see cref="LabelFrameAboutBaseline"/>
+    /// gives the frame's edges about the baseline, so the centre stands at their mean above
+    /// it and no em appears twice. <c>SharedRenderer.DrawSingleMusicMark</c> draws at exactly
+    /// this offset.
     /// </remarks>
     internal static double LabelBaselineBelowCentre(
         ScoreTextMetrics fonts, MusicMarkType type, string text, bool boxed)
-        => LabelBoxHalfHeight(fonts, type, text, boxed) - LabelBoxBottomMargin(fonts, type, text, boxed)
-           + LabelInk(fonts, type, text).Bottom;
+    {
+        var (bottom, top) = LabelFrameAboutBaseline(fonts, type, text, boxed);
+        return (top + bottom) / 2;
+    }
 
     /// <summary>
     /// Half a mark's vertical extent about its anchor.

@@ -347,16 +347,27 @@ public class MarkReserveVersusDrawTests
         var (bottom, top) = MusicMarkEngraver.LabelInk(Fonts, type, text);
 
         Assert.Equal(margin, MusicMarkEngraver.LabelBoxHalfWidth(Fonts, type, text, true) - (right - left) / 2, 6);
-        double frameH = 2 * MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, text, true);
-        double bottomMargin = frameH - (top - bottom) - margin;
+        var frame = MusicMarkEngraver.LabelFrameAboutBaseline(Fonts, type, text, true);
+        double bottomMargin = bottom - frame.Bottom;
         Assert.Equal(MusicMarkEngraver.LabelBoxBottomMargin(Fonts, type, text, true), bottomMargin, 6);
         if (descender)
+        {
             Assert.InRange(bottomMargin, 0.1, margin - 0.1);
+            // …and the letters' BODY is centred: as much frame above the capitals as below
+            // the baseline ("Bridge"'s B stood 0.19 high until 2026-09-26).
+            double cap = MusicMarkEngraver.LabelInk(Fonts, type, "H").Top;
+            Assert.Equal(-frame.Bottom, frame.Top - cap, 6);
+        }
         else
+        {
             Assert.Equal(margin, bottomMargin, 6);
-        // The baseline stands where the frame puts it: ink bottom = frame bottom + bottom margin.
-        double baselineBelowCentre = MusicMarkEngraver.LabelBaselineBelowCentre(Fonts, type, text, true);
-        Assert.Equal(-frameH / 2 + bottomMargin, -baselineBelowCentre + bottom, 6);
+            Assert.Equal(margin, frame.Top - top, 6);
+        }
+        // The half-height and the baseline read the same frame.
+        Assert.Equal((frame.Top - frame.Bottom) / 2,
+            MusicMarkEngraver.LabelBoxHalfHeight(Fonts, type, text, true), 6);
+        Assert.Equal((frame.Top + frame.Bottom) / 2,
+            MusicMarkEngraver.LabelBaselineBelowCentre(Fonts, type, text, true), 6);
 
         // Drawn middle-anchored at anchor + shift, the ink's centre lands on the anchor.
         double advance = Fonts.Advance(text, MusicMarkEngraver.LabelEm(Fonts, type),

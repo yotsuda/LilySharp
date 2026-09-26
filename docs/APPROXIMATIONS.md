@@ -14,14 +14,14 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 170 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **289** | |
+| `OWN` | 171 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **290** | |
 
 ## 密度の高いファイル（上位 12）
 
 | ファイル | 件数 |
 |---|---:|
-| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 21 |
+| `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs` | 22 |
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
@@ -98,7 +98,7 @@
 - **:3990** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1173** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
-- **:2253** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
+- **:2281** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
 - **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（170 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（171 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2654** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -416,14 +416,15 @@
 - **:1675** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
 - **:1692** shares the rehearsal line with. LILYSHARP-OWN with the arrangement itself
 - **:2086** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-11, session 368): a Lily# `form'
-- **:2184** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
-- **:2203** LILYSHARP-OWN with LabelBoxBottomMargin.
-- **:2211** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
-- **:2420** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
-- **:2624** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
-- **:2719** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
-- **:2730** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
-- **:2776** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+- **:2187** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "Bridge"'s B stood too high — above
+- **:2212** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26): with equal margins round the ink, a
+- **:2231** LILYSHARP-OWN with LabelBoxBottomMargin.
+- **:2239** ⚠️ LILYSHARP-OWN (owner's decision, 2026-09-26: "the margins inside the frame should be
+- **:2448** LILYSHARP-OWN, the same decision's third step (2026-08-24: the label sits ON the chord
+- **:2652** ⚠️ LILYSHARP-OWN limit: a mid-line meter CHANGE is not a break-align column in
+- **:2747** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
+- **:2758** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
+- **:2804** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`

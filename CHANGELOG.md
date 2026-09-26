@@ -9,8 +9,9 @@ workflow attaches that section to the GitHub Release verbatim.
 ### Engraving
 
 - **Section labels and rehearsal marks are set in the regular weight, not bold**, and a
-  label with a descender ("Bridge") keeps half the gap under it, so it no longer reads as
-  sitting high in its frame. Regular is also what the LilyPond twin draws; the section-label
+  label with a descender ("Bridge") keeps half the gap under it and has as much frame
+  above its capitals as below its baseline, so its letters sit centred in the frame
+  with the descender hanging into the lower half. Regular is also what the LilyPond twin draws; the section-label
   page ledger point moves to within 0.0001 of LilyPond. A score's `fonts { mark … }` style
   still wins. 236 snapshots change (the labels only; no book changes its systems).
 
