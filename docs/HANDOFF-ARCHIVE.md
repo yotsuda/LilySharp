@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第645セッションの経緯
+
+### 1.1 第645セッション（2026-09-26・YT-DELL2）
+
+同じ会話の続き。★ `-Start p645`（HEAD `b2782542`・未 push 68・full **9341 / 0 / 2 / 9343**＝引継ぎと一致）。ユーザー「続けて」＝第644 の探針の残りの ⑴⑵（06 の LP 双子が警告を出した 2 つ）。
+
+★ ⑴ **道しるべが同じ時刻に固まったのは `tab bass as full` の読み違いの副作用**（`e8966ff5`）: `RenderPartName` は keyword の後の最初の Identifier を part にしていて、`bass` は clef の語として字句化される＝`full` を part と読み、存在しない part のギター調弦の TabStaff（中身は form の道しるべだけ）を書いていた。tab はページと同じ読み方（`as` 以降を外して最後の語）。該当 2 冊（samples/morning-light・コーパスの「夕暮れ沿い」）。
+★ ⑵ **和音の行の小節が曲全体の拍子のままだった**: `SectionBarMeters` が section の header の `time` と最初の音楽 part の中の `time` から小節ごとの拍子を読み、`ChordBars` は弱起と同じ縮尺を全小節に掛ける（ページの拍の割り方は曲全体の拍子のまま＝ページと食い違わない）。未対応: phrase 参照の中の `time`・`repeat` の本体は 1 回と数える。
+網 2 本（毒で 2 赤）。06 の双子は LP で警告 0 になった。
+★ ⑶ **1 音に強弱は 1 つ**（`00cd80e6`・ユーザー決定「LP に合わせる」＝LYS4021 と同じ扱い）: `@f@sfz` は f だけ描き、sfz に LYS4022（新しい `DoubleDynamicValidator`）・ly 出力も 2 つ目を書かない（LP の assign_event_once＝dynamic-engraver.cc:66-70）。hairpin（`@p@cresc`）は対象外。網 `DoubleDynamicTests` 3 本（3 か所を無効にする毒で 3 赤）。該当本 0 冊。⚠️ stash は未追跡の新規ファイルを外さない＝新規 validator を含む変更の毒は 3 か所を無効にする形で当てた。
+★ **終了**: full **9346 / 0 / 2 / 9348**。push はユーザー（Lab も）。
+
 ## 以下は第644セッションの経緯
 
 ### 1.1 第644セッション（2026-09-26・YT-DELL2）
@@ -43155,4 +43167,26 @@ top-level＝ファイル既定（既定 `written`）／part header＝その part
 #### ★★★★ 和音・アルペジオは枠を読むが書かない。動かすのは `>`/`>>` の後のマークだけ・着地は「元の枠 ± マーク」（群のアンカーではない）（2026-09-16・ユーザー決定・✅ 同便・詳細は GRAMMAR／…
 
 旧規則は根音の素の文字でアンカーを連鎖させ、和音 4 つで 1 オクターブ漂流した。案⒜（根音のマークもアンカーに入れる＝LP 寄り）は**漂流を直さず** `<c, e g>`＝C3 E4 G4 を失うので退けた。⚠️ 私の反対論は実測で折れた——逃げ道の楽中 `octave N` は**無く**（part ヘッダ専用）、局所シフトは `<g' b' d'>` で書ける。決め手は一貫性「単音 `g,` が伝播するなら `<>,` も」。exporter は Lily# 側の枠だけ変更（LP 側は第 1 メンバ連鎖）。
+
+#### [S] S2 の進み（第647）: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を
+
+    実コーパスが観測）／✅ `0de7a65a` 行末で割れた単独のタイの向き（`Tie::get_default_dir` を採点の前に）。
+    **掃き（第647 末）: 対 23,040・差 2,619**。残る族: ⑴ grace スラー（perf-grace200 ほか・**描画時の近似で
+    移植ではない**＝`SharedRenderer.GraceNotes.DrawGraceSlur` の 0.5／0.65／0.15。直すなら slur の pass で
+    普通の Slur として解く＝設計級）＋ slur の中の grace スラーを Lily# が描かない（perf-slurgrace300 で
+    LP 12・Lily# 6）／⑵ tab スラーの y（F9 か未確認）／⑶ tab タイ（perf-tab300 y −1.16・tab-tie x +0.85）／
+    ⑷ 向きの反転: **中線のタイは LP の浮動小数の同点**（`tiecard.ps1`＝両向き TOTAL 2.96 が鏡像、どちらに
+    倒れるかは丸め＝移植できない。A Thousand Miles・Boogie・Crocodile・Are You Gonna・Xanadu・真夏）、
+    それ以外（grammar-tour の `g2~ g4`＝単独では一致＝文脈依存・slurrest-*・whole 音符の下のスラー・
+    SUMMER）は未読／⑸ 数の不一致 72 鍵（grace スラー・grace のタイ・tab の和音のタイ）。
+    ⑵ は**第647 が F9 の帰結と確かめた**: 差のある tab スラー 757 対のうち 742（98%）が**両端とも外向き**
+    （大きい数字は付着点を外へ押すだけ）。残る 15 対（内向き）は未読。⑶ の tab タイは宣言済みの
+    LILYSHARP-OWN の置き方（`TieFormattingProblem.EdgeYUp` の註）＝S3 の一覧へ。
+    ⚠️ Lily# の dump の staff の割り当ては**始点に最も近い符頭の staff**（staff の間に垂れたスラーが下の
+    staff の線に近い＝線で決めると隣の staff に付く）。
+    **第647 末の残り（notation staff・grace 以外）703 対**: tie 425（うち DIR 29）・slur 232（DIR 15）・
+    phrasing 2。見えている族: grammar-tour の B（単独では一致・系 2 の上段で tie と slur が揃って反転）／
+    `slurrest-*`（休符を含むスラーの y が +8.09＝向きか付着の取り違え）／`slurhcap`（+10〜11）／
+    `slurdot`（付点との衝突）／`figbass-empty`（和音のタイ）／`ossia-beams`（x −20＝対の取り違えの疑い）／
+    `lyhygrace`（行を跨ぐ grace）／小さい x（0.01〜0.2）の残り。
 

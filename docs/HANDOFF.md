@@ -156,6 +156,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第647セッション（2026-09-26〜27・YT-DELL2）
+
+同じ会話の続き（第646 の後）。ユーザー報告を順に: ABC.lys の行末タイ（bar 63）→ `5343631e`（行末で割れたタイの
+右端は小節線の*左*端 − note-head-gap＝LP の staff_extent[LEFT]・`EngravingDefaults.LineEndBarline` を共有）。
+M20 の行末タイは LP と一致（線の上・1.46）＝ユーザーは「独自の改善の前に、まずすべてのスラーとタイが LP 忠実か
+確認したい」と決定 → **§2 S を起票**（§1.0 冒頭）。
+★ S0 の計器を建てた（`66885130`・Lab `sessions/p647/bows/`）。★ S2 で 2 件閉じた: `e5d9d4b4`（短いタイの高さの
+床）・`0de7a65a`（行末で割れた単独のタイの向き）。tab スラーは F9 と確認。残りは §2 S の「第647 末の残り」。
+★ **次便はここから**: `pwsh sessions/p647/bows/sweep-bows.ps1`（約 4 分・`-SkipLp` なら Lily# 側だけ）→
+`summarize.ps1`。1 冊は `one.ps1 -Book x.lys`、LP の tie の採点カードは `tiecard.ps1 -Ly twin.ly`。
+⚠️ `cmd /d /s /c` の中の `--filter "A|B"` は引用しないと cmd のパイプになって止まる。
+⚠️ Lab の生成物（`bows/corpus/`・`w-*`）は `.gitignore` 済み。
+★ **終了**: full **9388/0/2/9390**。⚠️ HANDOFF は天井の直下＝**次便は書く前に畳む**。push はユーザー。
+
+## 以下は第646セッションの経緯
+
 ### 1.1 第646セッション（2026-09-26・YT-DELL2）
 
 同じ会話の続き。★ `-Start p646`（HEAD `9face711`・未 push 72・full **9346 / 0 / 2 / 9348**＝引継ぎと一致）。ユーザー「続けて」＝探針の最後の残り（`@frame` のコード図の上下）。
@@ -173,18 +189,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - Lab `sessions/p646` fr2/fr3: ページと LP 双子で、4 つの図が横に並び小節の比率も同じ（両方の大きさで）。網 4 本（spacing の呼び出しを外すと横並びの 2 件が赤）。sweep は HEAD の exe と比べて 0 / 963。
 - ⚠️ 見かけた: Lab の `corpora/ベースタブLy/*.lys` に未 commit の変更がある（2026-09-25 7:28・このセッションより前）。触っていない。
 ★ **終了**: full **9354 / 0 / 2 / 9356**。push はユーザー（Lab も）。
-
-## 以下は第645セッションの経緯
-
-### 1.1 第645セッション（2026-09-26・YT-DELL2）
-
-同じ会話の続き。★ `-Start p645`（HEAD `b2782542`・未 push 68・full **9341 / 0 / 2 / 9343**＝引継ぎと一致）。ユーザー「続けて」＝第644 の探針の残りの ⑴⑵（06 の LP 双子が警告を出した 2 つ）。
-
-★ ⑴ **道しるべが同じ時刻に固まったのは `tab bass as full` の読み違いの副作用**（`e8966ff5`）: `RenderPartName` は keyword の後の最初の Identifier を part にしていて、`bass` は clef の語として字句化される＝`full` を part と読み、存在しない part のギター調弦の TabStaff（中身は form の道しるべだけ）を書いていた。tab はページと同じ読み方（`as` 以降を外して最後の語）。該当 2 冊（samples/morning-light・コーパスの「夕暮れ沿い」）。
-★ ⑵ **和音の行の小節が曲全体の拍子のままだった**: `SectionBarMeters` が section の header の `time` と最初の音楽 part の中の `time` から小節ごとの拍子を読み、`ChordBars` は弱起と同じ縮尺を全小節に掛ける（ページの拍の割り方は曲全体の拍子のまま＝ページと食い違わない）。未対応: phrase 参照の中の `time`・`repeat` の本体は 1 回と数える。
-網 2 本（毒で 2 赤）。06 の双子は LP で警告 0 になった。
-★ ⑶ **1 音に強弱は 1 つ**（`00cd80e6`・ユーザー決定「LP に合わせる」＝LYS4021 と同じ扱い）: `@f@sfz` は f だけ描き、sfz に LYS4022（新しい `DoubleDynamicValidator`）・ly 出力も 2 つ目を書かない（LP の assign_event_once＝dynamic-engraver.cc:66-70）。hairpin（`@p@cresc`）は対象外。網 `DoubleDynamicTests` 3 本（3 か所を無効にする毒で 3 赤）。該当本 0 冊。⚠️ stash は未追跡の新規ファイルを外さない＝新規 validator を含む変更の毒は 3 か所を無効にする形で当てた。
-★ **終了**: full **9346 / 0 / 2 / 9348**。push はユーザー（Lab も）。
 
 ## 2. 開いている作業
 
@@ -953,26 +957,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
     で dump が止まり、その頁の残りが消えていた）／Lily# の縦長の bezier は bow ではない（tab の数字の
     括弧）／tie の端は**最寄りの符頭列**で spacing を差し引く（符頭を縦に避けたタイは頭の*下*に着く＝
     「右隣の列」を読むと 1 音ずれる）／端が合って span だけ違う対は `span-only`（高さは幅の関数）。
-- **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を
-    実コーパスが観測）／✅ `0de7a65a` 行末で割れた単独のタイの向き（`Tie::get_default_dir` を採点の前に）。
-    **掃き（第647 末）: 対 23,040・差 2,619**。残る族: ⑴ grace スラー（perf-grace200 ほか・**描画時の近似で
-    移植ではない**＝`SharedRenderer.GraceNotes.DrawGraceSlur` の 0.5／0.65／0.15。直すなら slur の pass で
-    普通の Slur として解く＝設計級）＋ slur の中の grace スラーを Lily# が描かない（perf-slurgrace300 で
-    LP 12・Lily# 6）／⑵ tab スラーの y（F9 か未確認）／⑶ tab タイ（perf-tab300 y −1.16・tab-tie x +0.85）／
-    ⑷ 向きの反転: **中線のタイは LP の浮動小数の同点**（`tiecard.ps1`＝両向き TOTAL 2.96 が鏡像、どちらに
-    倒れるかは丸め＝移植できない。A Thousand Miles・Boogie・Crocodile・Are You Gonna・Xanadu・真夏）、
-    それ以外（grammar-tour の `g2~ g4`＝単独では一致＝文脈依存・slurrest-*・whole 音符の下のスラー・
-    SUMMER）は未読／⑸ 数の不一致 72 鍵（grace スラー・grace のタイ・tab の和音のタイ）。
-    ⑵ は**第647 が F9 の帰結と確かめた**: 差のある tab スラー 757 対のうち 742（98%）が**両端とも外向き**
-    （大きい数字は付着点を外へ押すだけ）。残る 15 対（内向き）は未読。⑶ の tab タイは宣言済みの
-    LILYSHARP-OWN の置き方（`TieFormattingProblem.EdgeYUp` の註）＝S3 の一覧へ。
-    ⚠️ Lily# の dump の staff の割り当ては**始点に最も近い符頭の staff**（staff の間に垂れたスラーが下の
-    staff の線に近い＝線で決めると隣の staff に付く）。
-    **第647 末の残り（notation staff・grace 以外）703 対**: tie 425（うち DIR 29）・slur 232（DIR 15）・
-    phrasing 2。見えている族: grammar-tour の B（単独では一致・系 2 の上段で tie と slur が揃って反転）／
-    `slurrest-*`（休符を含むスラーの y が +8.09＝向きか付着の取り違え）／`slurhcap`（+10〜11）／
-    `slurdot`（付点との衝突）／`figbass-empty`（和音のタイ）／`ossia-beams`（x −20＝対の取り違えの疑い）／
-    `lyhygrace`（行を跨ぐ grace）／小さい x（0.01〜0.2）の残り。
+- **S2 の進み（第647）**: ✅ `e5d9d4b4` 短いタイの高さ（min-length の床＝LILYSHARP-OWN「観測者なし」を → **本文は `HANDOFF-ARCHIVE.md`「閉じた §2 の本文」の同じ見出し**（2026-09-27・第647 に落とした）
 - **S1. 状況の行列（合成コーパス）** — 1 冊 1 状況族、各状況を 1 系に並べる:
   - タイ: 位置 −12〜+12 × 符尾上下、付点、和音（2〜4 音・2 度・同音の隣接）、梁／旗、行き先の臨時記号、
     加線、行末で割れる（小節線との余裕を変える＝bar 63／M20）、l.v.・repeat tie、多声（voice 1／2）、
