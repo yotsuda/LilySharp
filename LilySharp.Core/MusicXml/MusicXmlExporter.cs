@@ -1753,6 +1753,10 @@ public sealed class MusicXmlExporter
             _document.Title = title;
         else if (keyword == "composer" && metadata.StringValue is string composer)
             _document.Composer = composer;
+        else if (keyword == "subtitle" && metadata.StringValue is string subtitle)
+            _document.Subtitle = subtitle;
+        else if (keyword == "poet" && metadata.StringValue is string poet)
+            _document.Poet = poet;
     }
 
     private void ProcessKeySignature(KeySignatureSyntax key)

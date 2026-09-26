@@ -26,6 +26,8 @@ internal sealed class MetadataState
 {
     public string? Title;
     public string? Composer;
+    public string? Subtitle;
+    public string? Poet;
 
     // Which face each kind of non-music text is drawn in, from the top-level
     // `fonts { … }` directive. Never null: a score without
@@ -51,6 +53,8 @@ internal sealed class MetadataState
     // preview can click-to-jump to the title/composer/time/key/clef declarations.
     public int TitlePosition;
     public int ComposerPosition;
+    public int SubtitlePosition;
+    public int PoetPosition;
     public int TimePosition;
     public int KeyPosition;
     public int ClefPosition;
@@ -91,11 +95,15 @@ internal sealed class MetadataState
     {
         Title = other.Title;
         Composer = other.Composer;
+        Subtitle = other.Subtitle;
+        Poet = other.Poet;
         Fonts = other.Fonts;
         Paper = other.Paper;
         LayoutPlan = other.LayoutPlan;
         TitlePosition = other.TitlePosition;
         ComposerPosition = other.ComposerPosition;
+        SubtitlePosition = other.SubtitlePosition;
+        PoetPosition = other.PoetPosition;
         TimePosition = other.TimePosition;
         KeyPosition = other.KeyPosition;
         ClefPosition = other.ClefPosition;
@@ -125,11 +133,15 @@ internal sealed class MetadataState
     public bool SameAs(MetadataState other)
         => Title == other.Title
             && Composer == other.Composer
+            && Subtitle == other.Subtitle
+            && Poet == other.Poet
             && ReferenceEquals(Fonts, other.Fonts)
             && ReferenceEquals(Paper, other.Paper)
             && ReferenceEquals(LayoutPlan, other.LayoutPlan)
             && TitlePosition == other.TitlePosition
             && ComposerPosition == other.ComposerPosition
+            && SubtitlePosition == other.SubtitlePosition
+            && PoetPosition == other.PoetPosition
             && TimePosition == other.TimePosition
             && KeyPosition == other.KeyPosition
             && ClefPosition == other.ClefPosition
@@ -162,11 +174,15 @@ internal sealed class MetadataState
     {
         Title = null;
         Composer = null;
+        Subtitle = null;
+        Poet = null;
         // (Fonts, Paper and LayoutPlan are deliberately NOT reset: they are resolved once by
         // CollectDefinitions and read at capture, and a per-pass reset here would drop
         // them before the score is assembled — measured 2026-09-09 on `marks beside`.)
         TitlePosition = 0;
         ComposerPosition = 0;
+        SubtitlePosition = 0;
+        PoetPosition = 0;
         TimePosition = 0;
         KeyPosition = 0;
         ClefPosition = 0;

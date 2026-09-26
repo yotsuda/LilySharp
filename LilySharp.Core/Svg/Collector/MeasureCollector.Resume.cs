@@ -793,12 +793,14 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>Compares the live <see cref="MetadataState"/> against a recorded
-    /// one, the six header positions through the window map. All other fields
+    /// one, the eight header positions through the window map. All other fields
     /// are value scalars/strings.</summary>
     private bool MetaMatchesShifted(MetadataState rec, in CollectTailShifter.Window w)
     {
         if (!w.TryShift(rec.TitlePosition, out int title) || _meta.TitlePosition != title
             || !w.TryShift(rec.ComposerPosition, out int composer) || _meta.ComposerPosition != composer
+            || !w.TryShift(rec.SubtitlePosition, out int subtitle) || _meta.SubtitlePosition != subtitle
+            || !w.TryShift(rec.PoetPosition, out int poet) || _meta.PoetPosition != poet
             || !w.TryShift(rec.TimePosition, out int time) || _meta.TimePosition != time
             || !w.TryShift(rec.KeyPosition, out int key) || _meta.KeyPosition != key
             || !w.TryShift(rec.ClefPosition, out int clef) || _meta.ClefPosition != clef
@@ -807,6 +809,8 @@ public sealed partial class MeasureCollector
 
         return _meta.Title == rec.Title
             && _meta.Composer == rec.Composer
+            && _meta.Subtitle == rec.Subtitle
+            && _meta.Poet == rec.Poet
             && _meta.Fonts.Equals(rec.Fonts)
             && _meta.Paper.Equals(rec.Paper)
             && _meta.LayoutPlan.Equals(rec.LayoutPlan)
@@ -829,13 +833,15 @@ public sealed partial class MeasureCollector
             && _meta.InitialClef == rec.InitialClef;
     }
 
-    /// <summary>Re-homes a cloned <see cref="MetadataState"/>'s six header
+    /// <summary>Re-homes a cloned <see cref="MetadataState"/>'s eight header
     /// positions through the window map (the splice's end-state jump); false
     /// when one lies inside the dirty window.</summary>
     private static bool ShiftMetaPositions(MetadataState meta, in CollectTailShifter.Window w)
     {
         if (!w.TryShift(meta.TitlePosition, out int title)
             || !w.TryShift(meta.ComposerPosition, out int composer)
+            || !w.TryShift(meta.SubtitlePosition, out int subtitle)
+            || !w.TryShift(meta.PoetPosition, out int poet)
             || !w.TryShift(meta.TimePosition, out int time)
             || !w.TryShift(meta.KeyPosition, out int key)
             || !w.TryShift(meta.ClefPosition, out int clef)
@@ -843,6 +849,8 @@ public sealed partial class MeasureCollector
             return false;
         meta.TitlePosition = title;
         meta.ComposerPosition = composer;
+        meta.SubtitlePosition = subtitle;
+        meta.PoetPosition = poet;
         meta.TimePosition = time;
         meta.KeyPosition = key;
         meta.ClefPosition = clef;

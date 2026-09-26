@@ -127,12 +127,7 @@ internal static class DynamicEngraver
     //   departs from: LilyPond's Pango shapes the fallback face and reads its glyphs.
     //   goes away when: the layout measures the fallback face the renderer draws with.
     private static bool HasMissingGlyph(string text, double em, Rendering.TextFace face)
-    {
-        foreach (var g in Rendering.TextFontMetrics.ShapeRun(text, em, face))
-            if (g.MissingCodepoint is not null)
-                return true;
-        return false;
-    }
+        => Rendering.TextFontMetrics.HasMissingGlyph(text, em, face);
 
     /// <summary>
     /// A label's own ink above (<c>Ascent</c>) and below (<c>Descent</c>) its baseline,

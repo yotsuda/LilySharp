@@ -15,6 +15,8 @@ with `|`.
 ```
 title "Song"            // optional metadata
 composer "Composer"     // optional
+subtitle "Subtitle"     // optional: the line under the title (LilyPond's \header subtitle)
+poet "Poet"             // optional: the left end of the composer's line (\header poet)
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit), tempo "Lively" 4. = 116 (dotted unit), tempo Comodo 4 = 84 (a bare word is the marking); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // (common time) glyph and 2/2 as cut-C, like LilyPond.
@@ -122,8 +124,8 @@ score full { combinedStaff { flute1 flute2 } }
 the same rhythm become chords in one voice. Use `condensedStaff` when the two lines must stay
 visibly separate.
 
-**A score's own header, and parts that only play** — `title` / `composer` written inside a
-score restate the file's metadata for that score alone, and a **bare part name** renders
+**A score's own header, and parts that only play** — `title` / `subtitle` / `composer` /
+`poet` written inside a score restate the file's metadata for that score alone, and a **bare part name** renders
 that part to MIDI only (played, never engraved — a click track, a cue part):
 
 ```
@@ -685,7 +687,7 @@ the twin writes it as `\override Grob.font-size`) · `size n` (absolute em in st
 `regular` clears; a written style REPLACES the engraving's, e.g. `text bold` is bold, not
 bold-italic). One entry takes `step` or `size`, not both.
 
-Groups → roles: `header` → `title composer instrument` · `lyrics` → `lyricText stanza` ·
+Groups → roles: `header` → `title subtitle composer poet instrument` · `lyrics` → `lyricText stanza` ·
 `chords` → `chordName fretFrame figuredBass` · `marks` → `tempo mark pedal navigation text
 dynamics partCombine` · `numbers` → `barNumber fingering tuplet volta ottava bend
 tabTechnique` · `notation` → `clefOctave meter tabFret`.
@@ -706,7 +708,7 @@ Rules worth knowing before emitting one:
   measuring or drawing.
 - ⚠️ **`chordName serif` (a bare family word after a key) is refused** — write
   `chordName as serif`. A bare word after a key is the next key.
-- Size and style reach these roles: `title composer instrument lyricText stanza chordName
+- Size and style reach these roles: `title subtitle composer poet instrument lyricText stanza chordName
   fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta
   ottava bend tabTechnique clefOctave tabFret meter`; `fingering` and `figuredBass`
   (Emmentaler digits) take a size and no style (a style on them warns, LYS8018). `tabFret
@@ -863,7 +865,7 @@ part is fine). Keywords:
 section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
-title composer tempo time key clef
+title subtitle composer poet tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
 tuplet grace acciaccatura appoggiatura lyrics chords tuning

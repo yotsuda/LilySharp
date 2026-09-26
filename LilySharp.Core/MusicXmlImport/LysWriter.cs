@@ -50,8 +50,12 @@ internal static class LysWriter
         sb.Append(useRelative ? "octave relative\n" : "octave absolute\n");
         if (!string.IsNullOrWhiteSpace(doc.Title))
             sb.Append("title \"").Append(EscapeString(doc.Title!)).Append("\"\n");
+        if (!string.IsNullOrWhiteSpace(doc.Subtitle))
+            sb.Append("subtitle \"").Append(EscapeString(doc.Subtitle!)).Append("\"\n");
         if (!string.IsNullOrWhiteSpace(doc.Composer))
             sb.Append("composer \"").Append(EscapeString(doc.Composer!)).Append("\"\n");
+        if (!string.IsNullOrWhiteSpace(doc.Poet))
+            sb.Append("poet \"").Append(EscapeString(doc.Poet!)).Append("\"\n");
         sb.Append('\n');
 
         WritePaper(sb, doc.Paper);

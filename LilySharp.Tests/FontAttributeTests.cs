@@ -74,6 +74,8 @@ public class FontAttributeTests
     private const string Book = """
         title "Ttl"
         composer "Cmp"
+        subtitle "Sbt"
+        poet "Pht"
         tempo 120
         time 4/4
         part melody "Vln." { pedal text }
@@ -169,6 +171,8 @@ public class FontAttributeTests
     {
         [TextRole.Title] = "Ttl",
         [TextRole.Composer] = "Cmp",
+        [TextRole.Subtitle] = "Sbt",
+        [TextRole.Poet] = "Pht",
         [TextRole.Instrument] = "Vln.",
         [TextRole.LyricText] = "lyr",
         [TextRole.Stanza] = "3.",

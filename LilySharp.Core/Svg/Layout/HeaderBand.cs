@@ -20,15 +20,17 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// The book title as LilyPond pages it: a TOP-ALIGNED column of the header's rows — the
-/// title, then the composer — whose ink depth is what the page chain spaces the first
-/// system against, and whose baselines are where the renderer sets the strings.
+/// title, the subtitle, then the poet / composer line — whose ink depth is what the page
+/// chain spaces the first system against, and whose baselines are where the renderer sets
+/// the strings.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: ly/titling-init.ly bookTitleMarkup (lines 68-97) — a \column with baseline-skip 3.5
-/// of \fill-line rows: the title in \huge \larger \larger \bold, the composer on the
-/// poet / instrument / composer row at text size. The rows Lily# has no text for
-/// (dedication, subtitle, subsubtitle, meter, arranger) are empty stencils and the column
-/// drops them, so it holds two rows at most.
+/// of \fill-line rows: the title in \huge \larger \larger \bold, the subtitle in
+/// \large \bold, the poet and the composer at the two ends of the poet / instrument /
+/// composer row at text size. The rows Lily# has no text for (dedication, subsubtitle,
+/// meter, arranger) are empty stencils and the column drops them, so it holds three rows
+/// at most.
 /// LILYPOND-REF: lily/paper-book.cc:443 Paper_book::book_title — <c>align_to (Y_AXIS, UP)</c>:
 /// the column's reference point is the TOP of its ink, so the paper system LilyPond pages
 /// it as has Y-extent (−Depth . 0), and the page's top spring runs to that top.
@@ -46,21 +48,38 @@ namespace LilySharp.Core.Svg.Layout;
 /// ink, in staff spaces.</param>
 /// <param name="TitleBaseline">The title row's baseline below the column's top, or null when
 /// the header has no title.</param>
-/// <param name="ComposerBaseline">The composer row's baseline below the column's top, or null
-/// when the header has no composer.</param>
-/// <param name="Width">The wider of the rows' advance widths, in staff spaces — what the
+/// <param name="ComposerBaseline">The poet / composer row's baseline below the column's top,
+/// or null when the header has neither a poet nor a composer.</param>
+/// <param name="Width">The widest of the rows' advance widths, in staff spaces — what the
 /// snippet page (<see cref="LayoutOptions.CropWidth"/>) must be at least as wide as, the
-/// title being centred on the page and the composer set against its right margin.</param>
+/// title and subtitle being centred on the page, the poet set against its left margin and
+/// the composer against its right.</param>
+/// <param name="SubtitleBaseline">The subtitle row's baseline below the column's top, or null
+/// when the header has no subtitle.</param>
 internal sealed record HeaderBand(
     double Depth,
     double? TitleBaseline,
     double? ComposerBaseline,
-    double Width = 0)
+    double Width = 0,
+    double? SubtitleBaseline = null)
 {
     /// <summary>The column's minimum baseline-to-baseline step.</summary>
     /// <remarks>LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, line 69 —
     /// <c>\override #'(baseline-skip . 3.5)</c>.</remarks>
     public const double BaselineSkip = 3.5;
+
+    /// <summary>
+    /// The least white left between one row's ink and the next row's, in staff spaces.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (user decision 2026-09-26): LilyPond stacks the rows with ZERO padding
+    /// between their extents (scm/stencil.scm stack-lines → ly:stencil-stack), so a row made
+    /// larger by a <c>fonts { subtitle step +5 }</c> sits with its cap height touching the
+    /// title's baseline — measured on LilyPond 2.26.0 itself, the same picture. At the
+    /// default sizes the 3.5 baseline-skip binds with room to spare and this changes nothing;
+    /// it only moves a row whose own ink outgrows the skip.
+    /// </remarks>
+    public const double RowPadding = 0.5;
 
     /// <summary>
     /// The title's font size: four font-size steps over the 11pt text font, 2.2 × 2^(4/6).
@@ -95,13 +114,51 @@ internal sealed record HeaderBand(
     public static FontStyle ComposerStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Composer, FontStyle.Regular);
 
     /// <summary>
-    /// The column for a header, or null when the book has neither a title nor a composer and
-    /// LilyPond would page no title line at all.
+    /// The subtitle's font size: two font-size steps over the 11pt text font, 2.2 × 2^(2/6).
     /// </summary>
-    /// <param name="fonts">The score's text metrics — the faces the title and composer are set in.</param>
-    public static HeaderBand? Build(string? title, string? composer, ScoreTextMetrics fonts)
+    /// <remarks>
+    /// LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, lines 78-81 — the subtitle row,
+    /// <c>\large \bold \fromproperty #'header:subtitle</c>; large is font-size 2, each step a
+    /// magstep of 2^(1/6) — 11pt × 2^(2/6) = 13.86pt, 2.77 staff spaces at a 20pt staff.
+    /// </remarks>
+    public const double SubtitleFontSize = 2.77;
+
+    /// <summary>The subtitle's em for THIS score — see <see cref="TitleEm"/>.</summary>
+    public static double SubtitleEm(ScoreTextMetrics fonts) => fonts.Size(TextRole.Subtitle, SubtitleFontSize);
+
+    /// <summary>The subtitle's weight and slant: bookTitleMarkup's <c>\bold</c> unless the
+    /// score wrote a style.</summary>
+    public static FontStyle SubtitleStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Subtitle, FontStyle.Bold);
+
+    /// <summary>The poet's em for THIS score: the composer's text size, the same row.</summary>
+    /// <remarks>LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, lines 86-90 —
+    /// <c>\fromproperty #'header:poet</c> carries no size command, like the composer.</remarks>
+    public static double PoetEm(ScoreTextMetrics fonts) => fonts.Size(TextRole.Poet, ComposerFontSize);
+
+    /// <summary>The poet's weight and slant: upright unless the score wrote a style.</summary>
+    public static FontStyle PoetStyle(ScoreTextMetrics fonts) => fonts.Style(TextRole.Poet, FontStyle.Regular);
+
+    /// <summary>
+    /// The least room <c>\fill-line</c> leaves between the poet and the composer when the row
+    /// is too full to spread them — the snippet page's width reads it.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-markup-commands.scm:2157-2161 define-markup-command
+    /// (fill-line …) — <c>(word-space 0.6)</c>.</remarks>
+    public const double FillLineWordSpace = 0.6;
+
+    /// <summary>
+    /// The column for a header, or null when the book has no title, subtitle, poet or
+    /// composer and LilyPond would page no title line at all.
+    /// </summary>
+    /// <param name="title">The title, or null.</param>
+    /// <param name="composer">The composer, or null.</param>
+    /// <param name="fonts">The score's text metrics — the faces the header is set in.</param>
+    /// <param name="subtitle">The subtitle, or null.</param>
+    /// <param name="poet">The poet, or null.</param>
+    public static HeaderBand? Build(string? title, string? composer, ScoreTextMetrics fonts,
+        string? subtitle = null, string? poet = null)
     {
-        if (title is null && composer is null)
+        if (title is null && composer is null && subtitle is null && poet is null)
             return null;
 
         double? previousBaseline = null;
@@ -110,27 +167,54 @@ internal sealed record HeaderBand(
 
         // LILYPOND-REF: scm/stencil.scm stack-lines (lines 153-168) — ly:stencil-stack: the row's
         // reference point is its baseline; it is placed at least BaselineSkip below the
-        // previous baseline and at least its own ink top below the previous row's ink bottom.
-        double Stack(string text, double size, TextRole role, FontStyle style)
+        // previous baseline and at least its own ink top below the previous row's ink bottom —
+        // plus RowPadding, which LilyPond does not add (LILYSHARP-OWN, see the constant).
+        // A row is one or two strings on one baseline (\fill-line): its ink is their union.
+        double Stack(double inkBottom, double inkTop, double rowWidth)
         {
-            var (inkBottom, inkTop) = fonts.Ink(text, size, role, style);
             double baseline = previousBaseline is { } prev
-                ? Math.Max(prev + BaselineSkip, depth + inkTop)
+                ? Math.Max(prev + BaselineSkip, depth + RowPadding + inkTop)
                 : inkTop;
             previousBaseline = baseline;
             depth = Math.Max(depth, baseline - inkBottom);
-            // The same size and style the draw sets the row in (SharedRenderer.DrawHeader).
-            width = Math.Max(width, fonts.Advance(text, size, role, style));
+            width = Math.Max(width, rowWidth);
             return baseline;
         }
 
-        double? titleBaseline = title is null
-            ? null
-            : Stack(title, TitleEm(fonts), TextRole.Title, TitleStyle(fonts));
-        double? composerBaseline = composer is null
-            ? null
-            : Stack(composer, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
+        // The same size and style the draw sets each string in (SharedRenderer.DrawHeader).
+        double? StackOne(string? text, double size, TextRole role, FontStyle style)
+        {
+            if (text is null)
+                return null;
+            // A string the face cannot spell (CJK) is drawn from a fallback face this layout
+            // never measures — reserve the face's own box for it (InkOrFallbackBox).
+            var (inkBottom, inkTop) = fonts.InkOrFallbackBox(text, size, role, style);
+            return Stack(inkBottom, inkTop, fonts.Advance(text, size, role, style));
+        }
 
-        return new HeaderBand(depth, titleBaseline, composerBaseline, width);
+        double? titleBaseline = StackOne(title, TitleEm(fonts), TextRole.Title, TitleStyle(fonts));
+        double? subtitleBaseline = StackOne(subtitle, SubtitleEm(fonts), TextRole.Subtitle, SubtitleStyle(fonts));
+
+        double? composerBaseline = null;
+        if (poet is not null || composer is not null)
+        {
+            double inkBottom = double.PositiveInfinity, inkTop = double.NegativeInfinity, rowWidth = 0;
+            void Add(string? text, double size, TextRole role, FontStyle style)
+            {
+                if (text is null)
+                    return;
+                var (bottom, top) = fonts.InkOrFallbackBox(text, size, role, style);
+                inkBottom = Math.Min(inkBottom, bottom);
+                inkTop = Math.Max(inkTop, top);
+                rowWidth += fonts.Advance(text, size, role, style);
+            }
+            Add(poet, PoetEm(fonts), TextRole.Poet, PoetStyle(fonts));
+            Add(composer, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
+            if (poet is not null && composer is not null)
+                rowWidth += FillLineWordSpace;
+            composerBaseline = Stack(inkBottom, inkTop, rowWidth);
+        }
+
+        return new HeaderBand(depth, titleBaseline, composerBaseline, width, subtitleBaseline);
     }
 }

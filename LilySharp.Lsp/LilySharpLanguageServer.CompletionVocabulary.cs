@@ -588,8 +588,8 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
-    /// <summary>After <c>title</c> / <c>composer</c>: one snippet that drops a
-    /// quote pair and parks the caret inside — the text itself is typed.</summary>
+    /// <summary>After <c>title</c> / <c>subtitle</c> / <c>composer</c> / <c>poet</c>: one
+    /// snippet that drops a quote pair and parks the caret inside — the text itself is typed.</summary>
     internal static CompletionList GetTitleTextCompletions(string keyword)
     {
         return new CompletionList
@@ -602,7 +602,13 @@ public sealed partial class LilySharpLanguageServer
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "\"$0\"",
-                    Detail = keyword == "composer" ? "Quoted composer name" : "Quoted title text",
+                    Detail = keyword switch
+                    {
+                        "composer" => "Quoted composer name",
+                        "poet" => "Quoted poet name",
+                        "subtitle" => "Quoted subtitle text",
+                        _ => "Quoted title text",
+                    },
                 },
             ]
         };
@@ -808,9 +814,16 @@ public sealed partial class LilySharpLanguageServer
     /// the reader validates against — and never listed here. A hand-copied key list is the
     /// shape of rot this repo has met repeatedly, most recently in the score-item lists.
     /// <para>
-    /// Each key inserts <c>key "…"</c> with the caret inside the quotes and re-triggers
-    /// suggestions, so the face list appears without a second keystroke — the same motion
-    /// the <c>font</c> keyword itself has.
+    /// Each key inserts itself and re-triggers suggestions, so the next list appears without
+    /// a second keystroke. A ROLE or GROUP inserts <c>key </c> and lands on its value list —
+    /// <c>step</c> / <c>size</c> / the styles / <c>as</c> / a quoted face
+    /// (<see cref="GetFontRoleValueCompletions"/>). A GENERIC FAMILY takes faces alone, so it
+    /// inserts <c>key "…"</c> with the caret inside the quotes, straight into the face list.
+    /// </para>
+    /// <para>
+    /// ★ Owner decision 2026-09-26: every key used to open the face list, which skipped the
+    /// size and style words the value list puts first (the 2026-09-12 decision that "being
+    /// able to pick size or step first is more useful").
     /// </para>
     /// </remarks>
     private static CompletionList? _fontBlockCompletions;
@@ -820,18 +833,22 @@ public sealed partial class LilySharpLanguageServer
         {
             Items =
             [
-                .. TextRoles.AllKeySpellings().Select(key => new CompletionItem
+                .. TextRoles.AllKeySpellings().Select(key =>
                 {
-                    Label = key,
-                    Kind = CompletionItemKind.Property,
-                    InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = key + " \"$0\"",
-                    Detail = FontKeyDetail(key),
-                    Command = new Command
+                    bool family = TextRoles.TryParseFamily(key, out _);
+                    return new CompletionItem
                     {
-                        Title = "Suggest font name",
-                        CommandIdentifier = "editor.action.triggerSuggest",
-                    },
+                        Label = key,
+                        Kind = CompletionItemKind.Property,
+                        InsertTextFormat = InsertTextFormat.Snippet,
+                        InsertText = family ? key + " \"$0\"" : key + " $0",
+                        Detail = FontKeyDetail(key),
+                        Command = new Command
+                        {
+                            Title = family ? "Suggest font name" : "Suggest size, style or face",
+                            CommandIdentifier = "editor.action.triggerSuggest",
+                        },
+                    };
                 }),
                 // `embedded` is an entry of the block too, not a key — it subsets every
                 // named face into an exported PDF.
@@ -1041,7 +1058,7 @@ public sealed partial class LilySharpLanguageServer
     {
         "serif" => "Generic family: everything except chord symbols falls back here",
         "sans" => "Generic family: chord symbols fall back here",
-        "header" => "Group: title, composer, instrument names",
+        "header" => "Group: title, subtitle, composer, poet, instrument names",
         "lyrics" => "Group: lyric syllables and stanza numbers",
         "chords" => "Group: chord symbols, diagrams, figured bass",
         "marks" => "Group: tempo, rehearsal marks, pedal, navigation, free text, dynamics",
@@ -1477,7 +1494,9 @@ public sealed partial class LilySharpLanguageServer
             ["chords"] = ("chords $0", "Chord row (no staff) for the named chord part", true),
             ["lyrics"] = ("lyrics $0", "Lyrics row (no staff) for the named lyrics part", true),
             ["title"] = ("title \"$0\"", "This score's own title, overriding the file's", false),
+            ["subtitle"] = ("subtitle \"$0\"", "This score's own subtitle, overriding the file's", false),
             ["composer"] = ("composer \"$0\"", "This score's own composer, overriding the file's", false),
+            ["poet"] = ("poet \"$0\"", "This score's own poet, overriding the file's", false),
             ["fonts"] = ("fonts $0", "This score's faces: reference a named top-level fonts block", true),
             ["paper"] = ("paper $0", "This score's page: reference a named top-level paper block", true),
             ["layout"] = ("layout $0", "This score's display switches (marks, barNumbers): reference a named top-level layout block", true),
@@ -3099,7 +3118,9 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "form", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "form " + FreeFormName(text) + " { $0 }", Detail = "Piece form (section play order)" },
                 ScoreScaffoldItem(text),
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"$0\"", Detail = "Title metadata" },
+                new CompletionItem { Label = "subtitle", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "subtitle \"$0\"", Detail = "Subtitle metadata (the line under the title)" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
+                new CompletionItem { Label = "poet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "poet \"$0\"", Detail = "Poet metadata (left of the composer)" },
                 // ⚠️ This inserted `font "$0"` until 2026-08-18 — the removed one-liner —
                 // so completing the KEYWORD typed a diagnostic (LYS8007). It is the path a
                 // writer actually takes, and it survived the removal because the removal
@@ -3196,10 +3217,11 @@ public sealed partial class LilySharpLanguageServer
     }
 
     /// <summary>Top-level keywords that may appear only ONCE at the global scope — metadata
-    /// (title/composer/font/paper/layout) and the piece-wide defaults (time/key/tempo/octave).
-    /// Completion drops them once present; duplicable keywords are NOT listed here.</summary>
+    /// (title/subtitle/composer/poet/font/paper/layout) and the piece-wide defaults
+    /// (time/key/tempo/octave). Completion drops them once present; duplicable keywords are
+    /// NOT listed here.</summary>
     private static readonly System.Collections.Generic.HashSet<string> GlobalSingletonKeywords =
-        new(StringComparer.Ordinal) { "title", "composer", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose" };
+        new(StringComparer.Ordinal) { "title", "subtitle", "composer", "poet", "fonts", "paper", "layout", "tempo", "time", "key", "octave", "pitch", "transpose" };
 
     /// <summary>True when <paramref name="keyword"/> appears as a whole word at the GLOBAL
     /// scope (brace depth 0) in live code — not inside a block, a string, or a comment.</summary>

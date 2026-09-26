@@ -871,13 +871,16 @@ public sealed partial class MeasureCollector
         _grobOverrides.ToImmutableArray(),
         _grobReverts.ToImmutableArray(),
         PairTrillSpannerEvents(measureCount),
-        new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition, _meta.TempoPosition),
+        new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition, _meta.TempoPosition,
+            _meta.SubtitlePosition, _meta.PoetPosition),
         _meta.TempoText,
         _meta.TempoBeatUnit,
         _meta.TempoDots,
         _meta.Fonts,
         _meta.Paper,
-        _meta.LayoutPlan);
+        _meta.LayoutPlan,
+        _meta.Subtitle,
+        _meta.Poet);
 
     /// <summary>
     /// Collects a Score from a syntax tree.

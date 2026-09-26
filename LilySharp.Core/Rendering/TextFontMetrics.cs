@@ -639,6 +639,41 @@ public static class TextFontMetrics
         return (m.Bottom * fontSize, m.Top * fontSize);
     }
 
+    /// <summary>
+    /// Does <paramref name="face"/> lack a glyph <paramref name="text"/> needs — a string the
+    /// renderer will draw (partly) from a system fallback face the layout never measures,
+    /// typically CJK?
+    /// </summary>
+    public static bool HasMissingGlyph(string text, double fontSize, TextFace face)
+    {
+        foreach (var g in ShapeRun(text, fontSize, face))
+            if (g.MissingCodepoint is not null)
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// <see cref="Ink(string, double, TextFace)"/>, widened to the face's own
+    /// ascender/descender box when the face cannot spell the whole string.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
+    /// face the layout never sees, so their ink does not exist here and the measured ink is
+    /// only the glyphs the face HAS — "ホ短調 in E minor" measured as "in E minor". Such a
+    /// string is reserved as the face's own ascender/descender box, the answer
+    /// DynamicEngraver.InkOf gives free expressive text.
+    ///   departs from: LilyPond's Pango shapes the fallback face and reads its glyphs.
+    ///   goes away when: the layout measures the fallback face the renderer draws with.
+    /// </remarks>
+    public static (double Bottom, double Top) InkOrFallbackBox(string text, double fontSize, TextFace face)
+    {
+        var (bottom, top) = Ink(text, fontSize, face);
+        if (!HasMissingGlyph(text, fontSize, face))
+            return (bottom, top);
+        var (ascender, descender) = FontExtents(face);
+        return (Math.Min(bottom, descender * fontSize), Math.Max(top, ascender * fontSize));
+    }
+
     /// <summary>Ink height (<c>Top - Bottom</c>) of <paramref name="text"/> in staff spaces.</summary>
     public static double InkHeight(string text, double fontSize, bool sans = false,
         FontStyle style = FontStyle.Regular)

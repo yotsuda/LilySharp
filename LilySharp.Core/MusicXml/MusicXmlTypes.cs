@@ -25,6 +25,8 @@ internal sealed class MusicXmlDocument
 {
     public string? Title { get; set; }
     public string? Composer { get; set; }
+    public string? Subtitle { get; set; }
+    public string? Poet { get; set; }
     public List<MusicXmlPart> Parts { get; } = new();
 
     /// <summary>
@@ -42,11 +44,25 @@ internal sealed class MusicXmlDocument
                 new XElement("work-title", Title)));
         }
 
-        // Identification
-        if (!string.IsNullOrEmpty(Composer))
+        // Identification: one <creator> per credited person, typed.
+        if (!string.IsNullOrEmpty(Composer) || !string.IsNullOrEmpty(Poet))
         {
-            scorePartwise.Add(new XElement("identification",
-                new XElement("creator", new XAttribute("type", "composer"), Composer)));
+            var identification = new XElement("identification");
+            if (!string.IsNullOrEmpty(Composer))
+                identification.Add(new XElement("creator", new XAttribute("type", "composer"), Composer));
+            if (!string.IsNullOrEmpty(Poet))
+                identification.Add(new XElement("creator", new XAttribute("type", "poet"), Poet));
+            scorePartwise.Add(identification);
+        }
+
+        // MusicXML has no subtitle field; a typed <credit> is the page text that carries one
+        // (after <identification> and <defaults>, before <part-list> in the schema's order).
+        if (!string.IsNullOrEmpty(Subtitle))
+        {
+            scorePartwise.Add(new XElement("credit",
+                new XAttribute("page", 1),
+                new XElement("credit-type", "subtitle"),
+                new XElement("credit-words", Subtitle)));
         }
 
         // Part list

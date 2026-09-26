@@ -319,8 +319,8 @@ internal sealed partial class Parser
                 else
                     members.Add(ReportStrayItem("a file",
                         "A file holds declarations — 'part', 'phrase', 'section', 'form', "
-                        + "'score', 'using' — and the file-wide defaults 'title', 'composer', "
-                        + "'clef', 'key', 'time', 'tempo', 'octave'."));
+                        + "'score', 'using' — and the file-wide defaults 'title', 'subtitle', "
+                        + "'composer', 'poet', 'clef', 'key', 'time', 'tempo', 'octave'."));
             }
         }
 
@@ -517,7 +517,8 @@ internal sealed partial class Parser
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
 
-            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
+            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword
+                or SyntaxKind.SubtitleKeyword or SyntaxKind.PoetKeyword => ParseMetadataDeclaration(),
             SyntaxKind.FontsKeyword => ParseFontDeclaration(),
             SyntaxKind.PaperKeyword => ParsePaperDeclaration(),
             SyntaxKind.LayoutKeyword => ParseLayoutDeclaration(),

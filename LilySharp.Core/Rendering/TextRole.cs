@@ -56,6 +56,10 @@ public enum TextRole
     Title,
     /// <summary>The score's composer line (<c>DrawHeader</c>).</summary>
     Composer,
+    /// <summary>The score's subtitle, on its own line under the title (<c>DrawHeader</c>).</summary>
+    Subtitle,
+    /// <summary>The score's poet, at the left end of the composer's line (<c>DrawHeader</c>).</summary>
+    Poet,
     /// <summary>An instrument name at a system's left edge (<c>DrawInstrumentNames</c>).
     /// LilyPond grob: <c>InstrumentName</c>.</summary>
     Instrument,
@@ -158,7 +162,7 @@ public enum TextRole
 /// </remarks>
 public enum TextRoleGroup
 {
-    /// <summary>Title, composer, instrument names.</summary>
+    /// <summary>Title, subtitle, composer, poet, instrument names.</summary>
     Header,
     /// <summary>Lyric syllables and stanza numbers.</summary>
     Lyrics,
@@ -209,7 +213,8 @@ public static class TextRoles
     /// </remarks>
     public static TextRoleGroup? GroupOf(TextRole role) => role switch
     {
-        TextRole.Title or TextRole.Composer or TextRole.Instrument => TextRoleGroup.Header,
+        TextRole.Title or TextRole.Composer or TextRole.Subtitle or TextRole.Poet
+            or TextRole.Instrument => TextRoleGroup.Header,
         TextRole.LyricText or TextRole.Stanza => TextRoleGroup.Lyrics,
         TextRole.ChordName or TextRole.FretFrame or TextRole.FiguredBass => TextRoleGroup.Chords,
         TextRole.Tempo or TextRole.Mark or TextRole.Pedal or TextRole.Navigation
@@ -271,6 +276,8 @@ public static class TextRoles
     {
         TextRole.Title => "title",
         TextRole.Composer => "composer",
+        TextRole.Subtitle => "subtitle",
+        TextRole.Poet => "poet",
         TextRole.Instrument => "instrument",
         TextRole.LyricText => "lyricText",
         TextRole.Stanza => "stanza",
@@ -476,7 +483,8 @@ public static class TextRoles
     /// </remarks>
     public static PlanReach PlanReachOf(TextRole role) => role switch
     {
-        TextRole.Title or TextRole.Composer or TextRole.Instrument
+        TextRole.Title or TextRole.Composer or TextRole.Subtitle or TextRole.Poet
+            or TextRole.Instrument
             or TextRole.LyricText or TextRole.Stanza
             or TextRole.ChordName or TextRole.FretFrame
             or TextRole.Tempo or TextRole.Mark or TextRole.Pedal or TextRole.Navigation

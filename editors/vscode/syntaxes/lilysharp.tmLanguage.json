@@ -185,7 +185,7 @@
                 },
                 {
                     "name": "keyword.other.font-key.lilysharp",
-                    "match": "\\b(sans-serif|serif|sans|header|lyrics|chords|marks|numbers|notation|title|composer|instrument|lyricText|stanza|chordName|fretFrame|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombine|barNumber|fingering|tuplet|volta|ottava|bend|tabTechnique|clefOctave|meter|tabFret)\\b"
+                    "match": "\\b(sans-serif|serif|sans|header|lyrics|chords|marks|numbers|notation|title|subtitle|composer|poet|instrument|lyricText|stanza|chordName|fretFrame|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombine|barNumber|fingering|tuplet|volta|ottava|bend|tabTechnique|clefOctave|meter|tabFret)\\b"
                 },
                 {
                     "comment": "The one entry that is a bare word rather than a key/value pair, and the one word here that IS reserved.",
@@ -480,7 +480,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|fonts|paper|layout|embedded|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
+                    "match": "\\b(title|subtitle|composer|poet|tempo|time|partial|key|clef|fonts|paper|layout|embedded|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|pitch|tuning|noPageBreak|pageBreak|noBreak|break|treble_8|treble|bass_8|bass|alto|tenor|soprano|mezzosoprano|baritone|percussion)\\b"
                 }
             ]
         },

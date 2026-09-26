@@ -120,7 +120,8 @@ internal sealed partial class LayoutEngine
         // The book title as LilyPond pages it — a top-aligned column at the head of the
         // page's chain, or nothing (HeaderBand). It reaches the first system's placement,
         // the count loop's page estimate and the page breaker as ONE value.
-        var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics);
+        var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics,
+            score.Subtitle, score.Poet);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout

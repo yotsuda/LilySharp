@@ -295,7 +295,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 break;
 
             case MetadataDeclarationSyntax:
-                // MetadataDeclaration now only handles title/composer
+                // MetadataDeclaration now only handles title/subtitle/composer/poet
                 // Time signatures use TimeSignatureSyntax
                 break;
 

@@ -565,6 +565,20 @@ public sealed partial class MeasureCollector
                     _meta.ComposerPosition = composerToken.Span.Start;
                 }
                 break;
+            case "subtitle":
+                if (values.Count > 0 && values[0] is SyntaxTokenNode subtitleToken)
+                {
+                    _meta.Subtitle = subtitleToken.Text.Trim('"');
+                    _meta.SubtitlePosition = subtitleToken.Span.Start;
+                }
+                break;
+            case "poet":
+                if (values.Count > 0 && values[0] is SyntaxTokenNode poetToken)
+                {
+                    _meta.Poet = poetToken.Text.Trim('"');
+                    _meta.PoetPosition = poetToken.Span.Start;
+                }
+                break;
         }
     }
 

@@ -29,6 +29,8 @@ internal sealed class ImportDocument
 {
     public string? Title { get; set; }
     public string? Composer { get; set; }
+    public string? Subtitle { get; set; }
+    public string? Poet { get; set; }
     /// <summary>Opening tempo (quarter BPM), or null when the source gives none.</summary>
     public int? Tempo { get; set; }
     /// <summary>The page the document states (<c>&lt;defaults&gt;&lt;page-layout&gt;</c>),

@@ -157,6 +157,14 @@ public sealed class ScoreTextMetrics
         FontStyle style = FontStyle.Regular)
         => TextFontMetrics.Ink(text, fontSize, Face(role, style));
 
+    /// <summary>
+    /// <see cref="Ink"/>, widened to the face's ascender/descender box when the face lacks a
+    /// glyph the string needs — see <see cref="TextFontMetrics.InkOrFallbackBox"/>.
+    /// </summary>
+    public (double Bottom, double Top) InkOrFallbackBox(string text, double fontSize, TextRole role,
+        FontStyle style = FontStyle.Regular)
+        => TextFontMetrics.InkOrFallbackBox(text, fontSize, Face(role, style));
+
     /// <summary>Ink height (<c>Top - Bottom</c>) of <paramref name="text"/>.</summary>
     public double InkHeight(string text, double fontSize, TextRole role,
         FontStyle style = FontStyle.Regular)

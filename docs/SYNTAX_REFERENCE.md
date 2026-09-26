@@ -498,8 +498,15 @@ stay usable as your own names.
 
 ```
 title "Sonata in C"
+subtitle "K. 545"
 composer "W.A. Mozart"
+poet "Anonymous"
 ```
+
+The four words are LilyPond's `\header` fields of the same names, and the page draws them
+where LilyPond's title block does: the title centred; the subtitle centred on the line below
+it, bold and a little smaller; the poet at the left end and the composer at the right end of
+the next line, at text size. Each is optional.
 
 ## Text Fonts
 
@@ -557,7 +564,7 @@ a bare word after a key is the next key, so that line opens an empty `serif` ent
 `chordName as serif`. A generic family (`serif`, `sans`) takes quoted faces only; a size
 or a style on it is an error.
 
-**Size and style reach these roles**: `title composer instrument lyricText stanza chordName
+**Size and style reach these roles**: `title subtitle composer poet instrument lyricText stanza chordName
 fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta ottava
 bend tabTechnique clefOctave tabFret meter` — every role, and for each one the drawing and the
 reserved space read the plan together. `fingering` and `figuredBass` are Emmentaler digit
@@ -578,7 +585,7 @@ The keys, by group:
 
 | Group | Roles it covers |
 |---|---|
-| `header` | `title` `composer` `instrument` |
+| `header` | `title` `subtitle` `composer` `poet` `instrument` |
 | `lyrics` | `lyricText` `stanza` |
 | `chords` | `chordName` `fretFrame` `figuredBass` |
 | `marks` | `tempo` `mark` `pedal` `navigation` `text` `dynamics` `partCombine` |
@@ -1130,7 +1137,7 @@ its own contexts the same way for the same reason: of its seventeen staff contex
 
 ### This score's own header, and parts that only play
 
-A `title` / `composer` inside a score restates the file's metadata for **that score
+A `title` / `subtitle` / `composer` / `poet` inside a score restates the file's metadata for **that score
 alone** — a part extract can be headed with the part's name while the full score keeps
 the work's title. A **bare part name** renders that part to MIDI only: played, never
 engraved, which is how a click track or a cue part rides along without appearing on the
@@ -1562,7 +1569,7 @@ be declared and referenced).
 |-------|-------|
 | Structure | `section` `form` `using` `tab` `ossia` `transpose` `octave` `pitch` `instrument` `percussion` `drummap` |
 | Score / layout | `score` `part` `staff` `grandStaff` `staffGroup` `choirStaff` `condensedStaff` `combinedStaff` `voice` `phrase` `repeat` `break` `noBreak` `pageBreak` `noPageBreak` `partial` `embedded` `fonts` `paper` `layout` |
-| Metadata | `title` `composer` `tempo` `time` `key` `clef` |
+| Metadata | `title` `subtitle` `composer` `poet` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` `bass_8` `soprano` `mezzosoprano` `baritone` |
 | Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `cue` `lyrics` `chords` `tuning` |

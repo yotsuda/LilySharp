@@ -75,6 +75,12 @@ internal static class MusicXmlReader
                     ?? Local(root, "movement-title")?.Value.Trim(),
             Composer = Els(Local(root, "identification"), "creator")
                 .FirstOrDefault(c => (string?)c.Attribute("type") == "composer")?.Value.Trim(),
+            // "poet" is what Lily# (and MuseScore) write; "lyricist" is the schema's own word.
+            Poet = Els(Local(root, "identification"), "creator")
+                .FirstOrDefault(c => (string?)c.Attribute("type") is "poet" or "lyricist")?.Value.Trim(),
+            Subtitle = Els(root, "credit")
+                .FirstOrDefault(c => Local(c, "credit-type")?.Value.Trim() == "subtitle")
+                is { } credit ? Local(credit, "credit-words")?.Value.Trim() : null,
         };
         doc.Paper = ReadPageLayout(root, report);
 
@@ -956,7 +962,7 @@ internal static class MusicXmlReader
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         "part", "section", "score", "staff", "structure", "chords", "lyrics",
-        "time", "key", "clef", "tempo", "octave", "title", "composer",
+        "time", "key", "clef", "tempo", "octave", "title", "composer", "subtitle", "poet",
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
         "acciaccatura", "appoggiatura",
         "a", "b", "c", "d", "e", "f", "g", "r",

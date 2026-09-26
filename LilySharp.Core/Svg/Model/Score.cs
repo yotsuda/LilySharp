@@ -152,6 +152,12 @@ public sealed record Score
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
 
+    /// <summary>Subtitle (optional) — see <see cref="MultiStaffScore.Subtitle"/>.</summary>
+    public string? Subtitle { get; init; }
+
+    /// <summary>Poet (optional) — see <see cref="MultiStaffScore.Poet"/>.</summary>
+    public string? Poet { get; init; }
+
     /// <summary>
     /// Which face each kind of non-music text is drawn in, from the <c>font</c> header
     /// directive. Never null — a score without one carries

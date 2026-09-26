@@ -92,7 +92,7 @@ DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 
 ### Keywords
 
-Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
+Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' | 'clef'
         | 'part' | 'phrase' | 'section' | 'form' | 'score'
         | 'staff' | 'grandStaff' | 'staffGroup' | 'choirStaff'
         | 'condensedStaff' | 'combinedStaff' | 'tab' | 'ossia' | 'voice'
@@ -149,7 +149,7 @@ Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
 
 File           = { TopLevelItem } ;
 
-TopLevelItem   = MetadataDecl                     (* title, composer *)
+TopLevelItem   = MetadataDecl                     (* title, subtitle, composer, poet *)
                | FontDecl                         (* text fonts, per role *)
                | PaperDecl                        (* page dimensions *)
                | LayoutDecl                       (* display switches *)
@@ -176,7 +176,12 @@ TopLevelItem   = MetadataDecl                     (* title, composer *)
 ### 2.2 Metadata
 
 MetadataDecl   = MetadataKey , String ;
-MetadataKey    = 'title' | 'composer' ;
+MetadataKey    = 'title' | 'subtitle' | 'composer' | 'poet' ;
+
+(* LilyPond's \header fields of the same names, drawn where its bookTitleMarkup draws them
+   (ly/titling-init.ly:68-97): the title centred; the subtitle centred on the line below it,
+   \large \bold; the poet at the left end and the composer at the right end of the next line,
+   at text size. *)
 
 UsingDecl      = 'using' , String ;
                  (* 'using "other.lys"': the named file's declarations join this file's
@@ -295,7 +300,8 @@ FontAttribute  = String                          (* a face; several = a fallback
 FontKey        = GenericFamily | RoleGroup | Role ;
 GenericFamily  = 'serif' | 'sans' | 'sans-serif' ;
 RoleGroup      = 'header' | 'lyrics' | 'chords' | 'marks' | 'numbers' | 'notation' ;
-Role           = 'title' | 'composer' | 'instrument'          (* header  *)
+Role           = 'title' | 'subtitle' | 'composer' | 'poet'
+               | 'instrument'                                 (* header  *)
                | 'lyricText' | 'stanza'                       (* lyrics  *)
                | 'chordName' | 'fretFrame' | 'figuredBass'    (* chords  *)
                | 'tempo' | 'mark' | 'pedal' | 'navigation'
@@ -372,7 +378,7 @@ Role           = 'title' | 'composer' | 'instrument'          (* header  *)
    ⚠️ NOT EVERY ROLE READS ITS SIZE AND STYLE FROM THE PLAN YET. The face reaches every
    role; the size and the style reach the roles whose every reader — the draw, the space
    reserved for it, the collision skyline — asks the plan (TextRoles.PlanReachOf, held to
-   the page by a test): title, composer, instrument, lyricText, stanza, chordName, fretFrame,
+   the page by a test): title, subtitle, composer, poet, instrument, lyricText, stanza, chordName, fretFrame,
    tempo, mark, pedal, navigation, text, dynamics, partCombine, barNumber, tuplet, volta,
    ottava, bend, tabTechnique, clefOctave, tabFret, meter — size and style both; fingering
    and figuredBass — size only: they are Emmentaler digit runs, so a `step` moves the
@@ -1187,7 +1193,8 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                                                         the row takes the definition's default.
                                                         Unbound with no 'sings' anywhere - the
                                                         even-spread lead-sheet row. *)
-               | ( 'title' | 'composer' ) , String   (* THIS score's own header — see below *)
+               | ( 'title' | 'subtitle' | 'composer' | 'poet' ) , String
+                                                     (* THIS score's own header — see below *)
                | 'fonts' , Identifier , [ FontBlock ] (* THIS score's faces: a reference to a
                                                         named top-level block, the optional
                                                         block overriding part of it *)
@@ -1361,9 +1368,9 @@ DisplayName    = String ;
                     reference; GRAMMAR_AUDIT §3.1. Also uniform with 'part X "Violin I"',
                     which was already quoted-only.) *)
 
-(* THIS SCORE'S OWN HEADER: 'title' / 'composer' written inside a score restate the file's
-   metadata for that score alone — the same two words as the top-level MetadataDecl, in a
-   score body. A part-extract score can be headed with the part's name while the full score
+(* THIS SCORE'S OWN HEADER: 'title' / 'subtitle' / 'composer' / 'poet' written inside a score
+   restate the file's metadata for that score alone — the same words as the top-level
+   MetadataDecl, in a score body. A part-extract score can be headed with the part's name while the full score
    keeps the work's title. *)
 
 (* A BARE PART NAME renders that part to MIDI ONLY: it is played and not engraved, which is

@@ -35,7 +35,9 @@ public readonly record struct HeaderPositions(
     // syntax node); the opening one is synthesised from the score's metadata by
     // MusicMarkEngraver.MergeTempoMark, which has no syntax to read, so its
     // offset travels here with the rest of the header.
-    int Tempo = 0
+    int Tempo = 0,
+    int Subtitle = 0,
+    int Poet = 0
 );
 
 /// <summary>
@@ -93,6 +95,12 @@ public sealed record MultiStaffScore
 
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
+
+    /// <summary>Subtitle (optional) — the line under the title.</summary>
+    public string? Subtitle { get; init; }
+
+    /// <summary>Poet (optional) — the left end of the composer's line.</summary>
+    public string? Poet { get; init; }
 
     /// <summary>
     /// Which face each kind of non-music text is drawn in, from the <c>font</c> header
@@ -354,6 +362,8 @@ public sealed record MultiStaffScore
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,
             TempoDots = score.TempoDots,
+            Subtitle = score.Subtitle,
+            Poet = score.Poet,
             Fonts = score.Fonts,
             Paper = score.Paper,
             // The wrap a SINGLE-staff score always takes: a score-global bit left out here

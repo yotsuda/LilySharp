@@ -709,7 +709,8 @@ public sealed class LilyPondExporter
                 _warnings.Add($"fonts {spelling} size {size.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} "
                               + "is not exported: an absolute em has no LilyPond spelling in the twin; write step instead");
             // The header and navigation roles are spelled in their markups, not here.
-            if (role is Rendering.TextRole.Title or Rendering.TextRole.Composer or Rendering.TextRole.Navigation)
+            if (role is Rendering.TextRole.Title or Rendering.TextRole.Composer
+                or Rendering.TextRole.Subtitle or Rendering.TextRole.Poet or Rendering.TextRole.Navigation)
                 continue;
             var grobs = TwinGrobsOf(role);
             if (grobs.Length == 0)
@@ -1151,26 +1152,35 @@ public sealed class LilyPondExporter
                 + "paper, so line and page breaks differ wherever the directive bit");
 
         var meta = root.DescendantNodes<MetadataDeclarationSyntax>().ToList();
-        string? title = MetaString(meta, "title");
-        string? composer = MetaString(meta, "composer");
-        if (title != null || composer != null)
+        // The \header fields of the same names, each drawn by ly/titling-init.ly's
+        // bookTitleMarkup where Lily#'s HeaderBand puts it.
+        (string Field, Rendering.TextRole Role)[] fields =
+        [
+            ("title", Rendering.TextRole.Title),
+            ("subtitle", Rendering.TextRole.Subtitle),
+            ("poet", Rendering.TextRole.Poet),
+            ("composer", Rendering.TextRole.Composer),
+        ];
+        bool opened = false;
+        foreach (var (field, role) in fields)
         {
+            if (MetaString(meta, field) is not { } value)
+                continue;
+            if (!opened)
+            {
+                _sb.Append("\\header {\n");
+                opened = true;
+            }
             // A `fonts { title step … }` / style reaches the header through its markup:
             // \fontsize composes with bookTitleMarkup's own \huge \larger \larger, which is
             // exactly what a STEP means on the page (relative to the role's default em).
-            _sb.Append("\\header {\n");
-            if (title != null)
-                _sb.Append("  title = ")
-                   .Append(MarkupForRole(Rendering.TextRole.Title, "\"" + Escape(title) + "\"", "")
-                           ?? "\"" + Escape(title) + "\"")
-                   .Append('\n');
-            if (composer != null)
-                _sb.Append("  composer = ")
-                   .Append(MarkupForRole(Rendering.TextRole.Composer, "\"" + Escape(composer) + "\"", "")
-                           ?? "\"" + Escape(composer) + "\"")
-                   .Append('\n');
-            _sb.Append("}\n\n");
+            _sb.Append("  ").Append(field).Append(" = ")
+               .Append(MarkupForRole(role, "\"" + Escape(value) + "\"", "")
+                       ?? "\"" + Escape(value) + "\"")
+               .Append('\n');
         }
+        if (opened)
+            _sb.Append("}\n\n");
     }
 
     private static string? MetaString(List<MetadataDeclarationSyntax> meta, string keyword)

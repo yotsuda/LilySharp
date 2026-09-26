@@ -336,6 +336,21 @@ internal static partial class SharedRenderer
                 gc.DrawText(title, centerX, page.Height - (top + titleBaseline),
                     HeaderBand.TitleEm(fonts), TextRole.Title, HeaderBand.TitleStyle(fonts), TextAnchor.Middle);
         }
+        if (score.Subtitle is { } subtitle && band.SubtitleBaseline is { } subtitleBaseline)
+        {
+            double centerX = page.Width / 2;
+            using (SourceScope(gc, score.Header.Subtitle))
+                gc.DrawText(subtitle, centerX, page.Height - (top + subtitleBaseline),
+                    HeaderBand.SubtitleEm(fonts), TextRole.Subtitle, HeaderBand.SubtitleStyle(fonts), TextAnchor.Middle);
+        }
+        if (score.Poet is { } poet && band.ComposerBaseline is { } poetBaseline)
+        {
+            // The left end of the poet / instrument / composer \fill-line: the left margin.
+            double leftX = options.MarginLeft;
+            using (SourceScope(gc, score.Header.Poet))
+                gc.DrawText(poet, leftX, page.Height - (top + poetBaseline),
+                    HeaderBand.PoetEm(fonts), TextRole.Poet, HeaderBand.PoetStyle(fonts), TextAnchor.Start);
+        }
         if (score.Composer is { } composer && band.ComposerBaseline is { } composerBaseline)
         {
             double rightX = page.Width - options.MarginLeft;

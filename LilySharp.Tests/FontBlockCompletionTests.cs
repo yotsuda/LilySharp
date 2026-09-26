@@ -66,8 +66,24 @@ public class FontBlockCompletionTests
     [InlineData("fonts { lyricText ")]
     [InlineData("fonts { chordName ")]
     [InlineData("fonts { notation ")]
+    // Role keys that are also metadata / directive keywords elsewhere: inside the block they
+    // are keys, not `title "…"` or `tempo 120` (2026-09-26 — each offered its own value).
+    [InlineData("fonts { title ")]
+    [InlineData("fonts { subtitle ")]
+    [InlineData("fonts { composer ")]
+    [InlineData("fonts { poet ")]
+    [InlineData("fonts { tempo ")]
+    [InlineData("fonts {\n  serif \"Georgia\"\n  subtitle ")]
     public void AfterARoleKey_OffersTheValue(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontRoleKey, Ctx(text));
+
+    [Fact]
+    public void TheKeyList_OffersTheHeaderRoles()
+    {
+        var labels = LilySharpLanguageServer.GetFontBlockCompletions().Items.Select(i => i.Label).ToArray();
+        Assert.Contains("subtitle", labels);
+        Assert.Contains("poet", labels);
+    }
 
     [Theory]
     // The face list has to be reachable from INSIDE the block, not only from the one-liner:
@@ -159,16 +175,29 @@ public class FontBlockCompletionTests
         Assert.Contains("embedded", labels);
     }
 
+    /// <summary>
+    /// A role or group key lands the caret on its VALUE list (step / size / styles / as / a
+    /// face), a generic family straight in the face list — each by re-triggering suggest.
+    /// </summary>
+    /// <remarks>
+    /// ★ Owner decision 2026-09-26: every key used to open the face list first, skipping the
+    /// size and style words. The insert is replayed and the context read at the caret, so the
+    /// assertion is the popup that opens, not the snippet's spelling.
+    /// </remarks>
     [Fact]
-    public void EveryKeyLandsTheCaretInTheFaceList()
+    public void AKeyLandsOnItsValueList_AndAFamilyOnTheFaces()
     {
-        // A key that inserted only its own spelling would leave the writer to type the
-        // quotes and re-trigger by hand — the motion the one-liner never demanded.
         foreach (var item in LilySharpLanguageServer.GetFontBlockCompletions().Items
                      .Where(i => i.Label != "embedded"))
         {
-            Assert.Equal("\"$0\"", item.InsertText?[^4..]);
             Assert.NotNull(item.Command);
+            string inserted = item.InsertText!;
+            int caret = inserted.IndexOf("$0", StringComparison.Ordinal);
+            string text = "fonts { " + inserted[..caret];
+            var expected = TextRoles.TryParseFamily(item.Label!, out _)
+                ? LilySharpLanguageServer.CompletionContext.AfterFontName
+                : LilySharpLanguageServer.CompletionContext.AfterFontRoleKey;
+            Assert.Equal(expected, Ctx(text));
         }
     }
 

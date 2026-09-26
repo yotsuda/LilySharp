@@ -787,6 +787,47 @@ public sealed partial class LilySharpLanguageServer
             && !IsInsideScoreBlock(scan.Stack))
             return CompletionContext.AfterOctave;
 
+        // Inside `fonts { … }` the body binds text ROLES to faces, so it is intercepted
+        // before every fallthrough below.
+        //
+        // ⚠️ Without this the block reached the MusicBlock fallthrough at the end of this
+        // method — the '{' is a brace like any other — and the popup offered PITCHES AND
+        // ARTICULATIONS at every caret a writer reaches while filling one in. Measured
+        // 2026-08-18, all twelve carets from `fonts {` to `fonts { serif "Georgia"  sans "|`.
+        // The one-liner had two dedicated contexts and the block had none, which is most of
+        // why the block read as the harder form to write.
+        // ⚠️ AHEAD OF THE VALUE SWITCH BELOW, because four of its words are also role keys:
+        // `fonts { title |` / `composer` / `subtitle` / `poet` read as the metadata keyword and
+        // offered a quoted title, and `fonts { tempo |` offered metronome marks, instead of
+        // the key's face and attributes (2026-09-26).
+        if (IsInsideFontBlock(scan.Stack))
+        {
+            // A quoted value: the same 188-face list the one-liner's string offers. The
+            // owning keyword here is the ROLE KEY (`serif`), not `font`, so the switch
+            // below could never have reached it.
+            if (IsInsideStringLiteral(text, offset))
+                return CompletionContext.AfterFontName;
+            // `fonts { serif |` — a bound key takes quoted faces, and a role or group may
+            // also take the attributes (`chordName as sans`, `mark step +1 bold`).
+            if (TextRoles.TryParseKey(prevWord, out _, out _, out _))
+                return CompletionContext.AfterFontRoleKey;
+            // `… as |` — the generic family the key follows.
+            if (prevWord.Equals("as", StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterFontAs;
+            // `… step |` / `… size |` — a number, which no list can offer.
+            if (prevWord.Equals("step", StringComparison.OrdinalIgnoreCase)
+                || prevWord.Equals("size", StringComparison.OrdinalIgnoreCase))
+                return CompletionContext.AfterFontNumber;
+            // After a face or an attribute of an OPEN entry (`mark "X" |`, `mark bold |`)
+            // the entry may continue with another attribute or the next key may begin —
+            // unless the open entry is a generic family, which takes faces alone.
+            if (LastFontKeyBefore(text, offset) is { } openKey
+                && !(TextRoles.TryParseKey(openKey, out _, out _, out var fam) && fam != null))
+                return CompletionContext.FontEntryOpen;
+            // Anywhere else in the block a KEY is what belongs.
+            return CompletionContext.FontBlock;
+        }
+
         // Value positions after the metadata/meter keywords: only their own
         // value forms fit there, not the keyword list. Guarded against string
         // interiors so a title like "tempo di valse" is not hijacked.
@@ -797,7 +838,7 @@ public sealed partial class LilySharpLanguageServer
                 case "tempo": return CompletionContext.AfterTempo;
                 case "time": return CompletionContext.AfterTime;
                 case "partial": return CompletionContext.AfterPartial;
-                case "title" or "composer": return CompletionContext.AfterTitleText;
+                case "title" or "composer" or "subtitle" or "poet": return CompletionContext.AfterTitleText;
                 // `fonts |` with no block yet: offer the block forms — except inside a
                 // score, where the item is a REFERENCE and the declared names fit.
                 case "fonts":
@@ -831,43 +872,6 @@ public sealed partial class LilySharpLanguageServer
             // (the char before the caret is '='), so this is a separate check.
             if (OverrideValueProperty(text, offset) is not null)
                 return CompletionContext.AfterOverrideValue;
-        }
-
-        // Inside `fonts { … }` the body binds text ROLES to faces, so it is intercepted
-        // before every fallthrough below.
-        //
-        // ⚠️ Without this the block reached the MusicBlock fallthrough at the end of this
-        // method — the '{' is a brace like any other — and the popup offered PITCHES AND
-        // ARTICULATIONS at every caret a writer reaches while filling one in. Measured
-        // 2026-08-18, all twelve carets from `fonts {` to `fonts { serif "Georgia"  sans "|`.
-        // The one-liner had two dedicated contexts and the block had none, which is most of
-        // why the block read as the harder form to write.
-        if (IsInsideFontBlock(scan.Stack))
-        {
-            // A quoted value: the same 188-face list the one-liner's string offers. The
-            // owning keyword here is the ROLE KEY (`serif`), not `font`, so the switch
-            // below could never have reached it.
-            if (IsInsideStringLiteral(text, offset))
-                return CompletionContext.AfterFontName;
-            // `fonts { serif |` — a bound key takes quoted faces, and a role or group may
-            // also take the attributes (`chordName as sans`, `mark step +1 bold`).
-            if (TextRoles.TryParseKey(prevWord, out _, out _, out _))
-                return CompletionContext.AfterFontRoleKey;
-            // `… as |` — the generic family the key follows.
-            if (prevWord.Equals("as", StringComparison.OrdinalIgnoreCase))
-                return CompletionContext.AfterFontAs;
-            // `… step |` / `… size |` — a number, which no list can offer.
-            if (prevWord.Equals("step", StringComparison.OrdinalIgnoreCase)
-                || prevWord.Equals("size", StringComparison.OrdinalIgnoreCase))
-                return CompletionContext.AfterFontNumber;
-            // After a face or an attribute of an OPEN entry (`mark "X" |`, `mark bold |`)
-            // the entry may continue with another attribute or the next key may begin —
-            // unless the open entry is a generic family, which takes faces alone.
-            if (LastFontKeyBefore(text, offset) is { } openKey
-                && !(TextRoles.TryParseKey(openKey, out _, out _, out var fam) && fam != null))
-                return CompletionContext.FontEntryOpen;
-            // Anywhere else in the block a KEY is what belongs.
-            return CompletionContext.FontBlock;
         }
 
         // Inside `paper { … }` a KEY is what belongs (a length value is a number, which
@@ -926,7 +930,7 @@ public sealed partial class LilySharpLanguageServer
         // list now has exactly one home — inside `fonts { … }`, handled above.
         switch (KeywordBeforeCurrentString(text, offset))
         {
-            case "title" or "composer": return CompletionContext.AfterTitleText;
+            case "title" or "composer" or "subtitle" or "poet": return CompletionContext.AfterTitleText;
         }
 
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")

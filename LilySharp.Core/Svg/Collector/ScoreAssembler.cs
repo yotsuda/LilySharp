@@ -61,7 +61,9 @@ internal sealed record ScoreContent(
     // The `layout { }` switches the score resolved to (Semantics.LayoutPlanReader);
     // LayoutPlan.Default when it wrote none. ⚠️ Not named `Layout` — that is the namespace
     // the `Paper` line above reaches its own type through (CS0236).
-    Semantics.LayoutPlan LayoutPlan);
+    Semantics.LayoutPlan LayoutPlan,
+    string? Subtitle = null,
+    string? Poet = null);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -111,6 +113,8 @@ internal static class ScoreAssembler
             TempoText = c.TempoText,
             TempoBeatUnit = c.TempoBeatUnit,
             TempoDots = c.TempoDots,
+            Subtitle = c.Subtitle,
+            Poet = c.Poet,
             Fonts = c.Fonts,
             Paper = c.Paper,
             LayoutPlan = c.LayoutPlan,
@@ -155,6 +159,8 @@ internal static class ScoreAssembler
             TempoText = c.TempoText,
             TempoBeatUnit = c.TempoBeatUnit,
             TempoDots = c.TempoDots,
+            Subtitle = c.Subtitle,
+            Poet = c.Poet,
             Fonts = c.Fonts,
             Paper = c.Paper,
             LayoutPlan = c.LayoutPlan,
