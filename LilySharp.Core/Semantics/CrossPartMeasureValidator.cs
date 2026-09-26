@@ -233,7 +233,11 @@ internal sealed class CrossPartMeasureValidator
                     time = DurationCalculator.ParseTimeSignature(ts.Beats, ts.BeatType);
                     break;
                 case SectionDeclarationSyntax section:
-                    time = ValidateSectionCrossPart(section, time);
+                    // A section's own `time` is ITS meter only — the next section starts
+                    // back in the score meter, as the collector reverts it at every boundary
+                    // (MeasureCollector.ProcessSection). Carrying it on was the cross-part
+                    // half of the leak MeasureValidator._sectionTimes closes (2026-09-26).
+                    ValidateSectionCrossPart(section, time);
                     break;
                 case PhraseDeclarationSyntax:
                 case VariableDeclarationSyntax:

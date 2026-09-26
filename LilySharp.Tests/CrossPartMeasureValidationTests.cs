@@ -76,6 +76,47 @@ public class CrossPartMeasureValidationTests
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
     }
 
+    /// <summary>
+    /// A section header's `time` is THAT section's meter: its bars are checked against it,
+    /// and the next section's against the score meter again — as the collector reverts it.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-26 the header re-armed the document meter, so every 4/4 bar after a
+    /// `section A { time 3/4 … }` drew LYS2002 "exceeds time signature 3/4", and a standalone
+    /// header over part-major music did not reach it (its first bar read as a short pickup).
+    /// </remarks>
+    [Theory]
+    [InlineData("""
+        part rh { clef treble }
+        section A { time 3/4  rh { c'2. | c'2. | } }
+        section B { rh { c'1 | c'1 | } }
+        """)]
+    [InlineData("""
+        part rh { clef treble }
+        part lh { clef bass }
+        section A { time 3/4  rh { c'2. | }  lh { c2. | } }
+        section B { rh { c'1 | }  lh { c1 | } }
+        """)]
+    [InlineData("""
+        part rh { clef treble  section A { c'2. | c'2. | }  section B { c'1 | c'1 | } }
+        section A { time 3/4 }
+        """)]
+    public void ASectionHeaderTime_IsThatSectionsMeterOnly(string body)
+    {
+        var diags = Validate("time 4/4\n" + body + "\nform main { A B }\n");
+        Assert.Empty(diags);
+    }
+
+    /// <summary>…and the check still bites on either side of the boundary.</summary>
+    [Theory]
+    [InlineData("section A { time 3/4  rh { c'2. | c'1 | } }\nsection B { rh { c'1 | } }", "exceeds")]
+    [InlineData("section A { time 3/4  rh { c'2. | } }\nsection B { rh { c'1 | c'2. | } }", "less than")]
+    public void ASectionHeaderTime_StillFlagsABarThatMissesItsOwnSectionsMeter(string sections, string words)
+    {
+        var diags = Validate("time 4/4\npart rh { clef treble }\n" + sections + "\nform main { A B }\n");
+        Assert.Contains(diags, d => d.Message.Contains(words));
+    }
+
     [Fact]
     public void ShortMeasureInOnePart_ReportsMismatch()
     {
