@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 57 | 観測者がゼロだと自認しているもの |
-| `OWN` | 169 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **288** | |
+| `OWN` | 171 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **290** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -25,9 +25,9 @@
 | `LilySharp.Core/Svg/EngravingDefaults.cs` | 12 |
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs` | 10 |
+| `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
-| `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
@@ -101,11 +101,11 @@
 - **:2289** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
 - **:180** non-default merge-differently-* switches. dot_wipe_head is NOT ported (no channel).
-- **:564** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
-- **:765** see . ⚠️ STILL NOT PORTED: :578-586 (an up
-- **:992** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
-- **:1090** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
-- **:1184** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
+- **:571** ⚠️ NOT PORTED — dot_wipe_head: LilyPond also kills the down head's DOT on
+- **:772** see . ⚠️ STILL NOT PORTED: :578-586 (an up
+- **:999** ⚠️ NOT PORTED: stem/flag boxes and rest supports (see DotColumnSupportMinX);
+- **:1097** ⚠️ NOT PORTED: the FLAG boxes of the support heads' stems (dot-column.cc:135-141
+- **:1191** whole note reads [0, 0.375] — is not ported: Lily# has no producer for a
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
 - **:531** ⚠️⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED OTTAVA IS **NOT PORTED HERE**, deliberately.
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
@@ -206,7 +206,7 @@
 - **:851** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1510** pinned there), no ledger point.
 ### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
-- **:460** no observer distinguishes the two until a merge-differently-* producer lands.
+- **:462** no observer distinguishes the two until a merge-differently-* producer lands.
 ### `LilySharp.Core/Svg/Layout/NoteColumnLayout.cs`
 - **:106** and no point measures it yet. Scaling it here would be the half of a port that looks
 ### `LilySharp.Core/Svg/Layout/OttavaBracketEngraver.cs`
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（169 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（171 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2663** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -422,6 +422,9 @@
 - **:2755** ⚠️ LILYSHARP-OWN, declared (user decision 2026-09-02, HANDOFF §3 第322): the
 - **:2766** (BesideTempoX), the chart's one line. LILYSHARP-OWN, declared, like the
 - **:2812** ⚠️ LILYSHARP-OWN, and it has to be: LilyPond never draws this sign here at all.
+### `LilySharp.Core/Svg/Layout/NoteCollision.cs`
+- **:296** too (LILYSHARP-OWN, the remark at the meshing branch). Kept as LilyPond's number.
+- **:499** LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.
 ### `LilySharp.Core/Svg/Layout/NoteSpacingParameters.cs`
 - **:69** LILYSHARP-OWN: ⚠️ this knob no longer reaches note-to-note spacing at all, and it is
 ### `LilySharp.Core/Svg/Layout/OutsideStaffStacker.cs`

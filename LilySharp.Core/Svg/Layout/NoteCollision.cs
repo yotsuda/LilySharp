@@ -292,6 +292,8 @@ internal sealed record NoteCollisionParameters
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords()
+    /// ⚠️ UNREAD since 2026-09-26: Lily# meshes a dotted head by <see cref="MeshingGeneralShift"/>
+    /// too (LILYSHARP-OWN, the remark at the meshing branch). Kept as LilyPond's number.
     /// </remarks>
     public double MeshingDottedShift { get; init; } = 0.1;
 }
@@ -494,9 +496,14 @@ internal sealed class NoteCollision
             // note sits more than a threshold BELOW the down-stem note, so none of
             // merge/touch/full/close/distant fired, yet the notes are not too far apart —
             // the up-stem's stem would pierce the down-stem head.
-            shiftAmount *= upDots > 0 || downDots > 0
-                ? _params.MeshingDottedShift
-                : _params.MeshingGeneralShift;
+            // LILYSHARP-OWN (user decision 2026-09-26): ONE meshing shift, dotted or not.
+            // LilyPond narrows it to meshing_dotted 0.1 when either head is dotted
+            // (note-collision.cc:335), which in 03-piano-nocturne (Lab probe) bar 7 left the
+            // dotted `a'4.` 0.2755 off `<cis' e'>2` — its head nearly on the chord's — while the
+            // undotted `fis4` two beats later stands 0.468 off `<b' dis'>2`. The owner read the
+            // narrow one as LilyPond's defect: same crossing, same clearance.
+            // MeshingDottedShift keeps LilyPond's number, unread.
+            shiftAmount *= _params.MeshingGeneralShift;
             type = CollisionType.Meshing;
         }
 

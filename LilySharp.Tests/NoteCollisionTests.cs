@@ -348,16 +348,27 @@ public class NoteCollisionTests
         Assert.Equal(-0.17, result.DownStemXOffset, 2);
     }
 
-    [Fact]
-    public void Crossing_Dotted_UsesDottedMeshingShift()
+    /// <summary>
+    /// LILYSHARP-OWN (user decision 2026-09-26): a dotted head meshes by the SAME shift as an
+    /// undotted one. LilyPond narrows it to 0.1 (note-collision.cc:333-335); in
+    /// 03-piano-nocturne bar 7 that left the dotted `a'4.` nearly on `<cis' e'>2` while the
+    /// undotted `fis4` stood clear of `<b' dis'>2`, and the owner called the narrow one a
+    /// LilyPond defect. Both arms: a dot on either voice.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 0)]
+    public void Crossing_Dotted_MeshesLikeTheUndotted(int upDots, int downDots)
     {
-        // LILYPOND-REF: lily/note-collision.cc:333-335 — dotted meshing shift 0.1.
         var collision = new NoteCollision();
-        var result = collision.AnalyzeCollision(new[] { 1 }, new[] { 6 },
-            upNoteValue: 8, downNoteValue: 1, upDots: 0, downDots: 1);
+        var undotted = collision.AnalyzeCollision(new[] { 1 }, new[] { 6 },
+            upNoteValue: 8, downNoteValue: 1, upDots: 0, downDots: 0);
+        var dotted = collision.AnalyzeCollision(new[] { 1 }, new[] { 6 },
+            upNoteValue: 8, downNoteValue: 1, upDots: upDots, downDots: downDots);
 
-        Assert.Equal(CollisionType.Meshing, result.Type);
-        Assert.Equal(0.1, result.UpStemXOffset, 2);
+        Assert.Equal(CollisionType.Meshing, dotted.Type);
+        Assert.Equal(undotted.UpStemXOffset, dotted.UpStemXOffset, 9);
+        Assert.Equal(0.17, dotted.UpStemXOffset, 2);
     }
 
     [Fact]
