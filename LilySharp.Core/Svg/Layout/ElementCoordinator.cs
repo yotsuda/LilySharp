@@ -2476,6 +2476,46 @@ internal sealed class ElementCoordinator
     }
 
     /// <summary>
+    /// Where a tie or slur piece that a line break OPENS begins: the right edge of the
+    /// line-start column's staff extent, which ends at the bar line the system opens with
+    /// when it opens with one (a <c>.|:</c>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:262-270 set_minimum_height
+    /// (<c>staff_extent (bounds[0])[-dir]</c>); lily/slur-scoring.cc:594-598
+    /// get_base_attachments (<c>ext[-d]</c> of the bound column). ABC.lys (Lab corpus)
+    /// section B3: the tie piece began 2.94 left of LilyPond's, under the repeat bar.
+    /// </remarks>
+    private static double BrokenPieceStartX(SystemLayout segSystem)
+        => segSystem.Measures[0].X + segSystem.LineStartBarRight;
+
+    /// <summary>
+    /// Where a tie or slur piece that a line break CLOSES ends: the LEFT edge of the system's
+    /// closing break column — the end bar line's ink, or a courtesy clef standing in front of
+    /// it — not the measure's end, which is the bar line's RIGHT edge.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:262-270 set_minimum_height
+    /// (staff_extent[-dir]; a tie's note-head gap comes off after, in FinalAttachment);
+    /// lily/slur-scoring.cc:594-598 get_base_attachments. The same bound a multi-measure rest
+    /// ends on (MultiMeasureRestEngraver's endX). ABC.lys (Lab corpus) bar 63: the extra
+    /// bar-line width kept a line-end tie on the head's edge where LilyPond, 0.19 shorter
+    /// there, drops it under the head.
+    /// </remarks>
+    private static double BrokenPieceEndX(Rendering.ScoreTextMetrics fonts, Voice voice, SystemLayout segSystem)
+    {
+        var lastMeasure = segSystem.Measures[^1];
+        var measures = voice.Measures;
+        int lastIndex = lastMeasure.MeasureIndex;
+        var endBar = lastIndex < measures.Length
+            ? EngravingDefaults.LineEndBarline(measures[lastIndex].EndBarline)
+            : BarlineType.Single;
+        return lastMeasure.X + lastMeasure.Width
+            - EngravingDefaults.BarlineDrawnWidth(endBar)
+            - SpacingRules.BoundaryClefAllowance(fonts, endBar,
+                lastIndex + 1 < measures.Length ? measures[lastIndex + 1] : null);
+    }
+    /// <summary>
     /// Everything one tie's two bounds hand the scorer, for one system segment of it.
     /// </summary>
     /// <remarks>
@@ -2536,13 +2576,9 @@ internal sealed class ElementCoordinator
         }
         else
         {
-            // Broken piece: the bound is the line-start column's staff extent, and there is no
-            // note column. That extent ENDS at the bar line the system opens with, when it opens
-            // with one (a `.|:`), the mirror of the line-end bound below —
-            // LILYPOND-REF: lily/tie-formatting-problem.cc:262-270 set_minimum_height
-            // (staff_extent[-dir] of the break column). ABC.lys (Lab corpus) section B3: the piece began 2.94 left
-            // of LilyPond's, under the repeat bar.
-            segStartX = segSystem.Measures[0].X + segSystem.LineStartBarRight;
+            // Broken piece: the line-start column's staff extent (BrokenPieceStartX); there is
+            // no note column.
+            segStartX = BrokenPieceStartX(segSystem);
         }
 
         double segEndX;
@@ -2557,25 +2593,7 @@ internal sealed class ElementCoordinator
         }
         else
         {
-            // Broken piece: the bound is the system's closing break column, and the tie
-            // runs to the LEFT edge of that column's staff extent — the end bar line's ink,
-            // or a courtesy clef standing in front of it — not to the measure's end, which
-            // is the bar line's RIGHT edge. LILYPOND-REF: lily/tie-formatting-problem.cc:262-270
-            // set_minimum_height (staff_extent[-dir]); the note-head gap comes off after
-            // (FinalAttachment). The same bound a multi-measure rest ends on
-            // (MultiMeasureRestEngraver's endX). ABC.lys (Lab corpus) bar 63: the extra
-            // bar-line width kept a line-end tie on the head's edge where LilyPond, 0.19
-            // shorter there, drops it under the head.
-            var lastMeasure = segSystem.Measures[^1];
-            var tieMeasures = score.Voices[tie.VoiceIndex].Measures;
-            int lastIndex = lastMeasure.MeasureIndex;
-            var endBar = lastIndex < tieMeasures.Length
-                ? EngravingDefaults.LineEndBarline(tieMeasures[lastIndex].EndBarline)
-                : BarlineType.Single;
-            segEndX = lastMeasure.X + lastMeasure.Width
-                - EngravingDefaults.BarlineDrawnWidth(endBar)
-                - SpacingRules.BoundaryClefAllowance(fonts, endBar,
-                    lastIndex + 1 < tieMeasures.Length ? tieMeasures[lastIndex + 1] : null);
+            segEndX = BrokenPieceEndX(fonts, score.Voices[tie.VoiceIndex], segSystem);
         }
 
         // Tie Y position is uniform (same pitch on both ends).
@@ -3889,7 +3907,10 @@ internal sealed class ElementCoordinator
                 }
                 else
                 {
-                    segStartX = segSystem.Measures[0].X;
+                    // The line-start column's staff extent, as a broken tie's piece reads it:
+                    // LILYPOND-REF: lily/slur-scoring.cc:594-598 get_base_attachments —
+                    // x = ext[-d] of the bound column (generic_bound_extent).
+                    segStartX = BrokenPieceStartX(segSystem);
                 }
 
                 double segEndX;
@@ -3902,8 +3923,10 @@ internal sealed class ElementCoordinator
                 }
                 else
                 {
-                    var lastMeasure = segSystem.Measures[^1];
-                    segEndX = lastMeasure.X + lastMeasure.Width;
+                    // The line-end column's LEFT edge (the bar line's ink, or a courtesy clef in
+                    // front of it), not the measure's end past the bar: slur-scoring.cc:594-598.
+                    // Bohemian Rhapsody, multi-line-spanners…: 0.19 (a thin bar) past LilyPond's.
+                    segEndX = BrokenPieceEndX(fonts, score.Voices[slur.VoiceIndex], segSystem);
                 }
 
                 // On a TAB staff the same scorer runs, but in the tab's own frame —
