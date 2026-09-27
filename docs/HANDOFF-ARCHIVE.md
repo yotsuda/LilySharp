@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第654セッションの経緯
+
+### 1.1 第654セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第653 の後・ユーザー「続けて」＝§2 S1 の残り）。★ `-Start p654`（HEAD `42ba8d2e`・未 push 122・full **9413 / 0 / 2 / 9415**）。§1.0 の廃れた 2 項（R7〜R11 の着手可・閉じた島の一覧）を畳んだ。
+★ ⑴ `f2b15ab6` 割れた側の外端の column を avoid 点に残す（`BuildAvoidOffsets`＝LP は slur の *extremes* だけ外す・slur-scoring.cc:668-670）＝`c2( e | break` の第 1 断片が e の符尾の上へ fit（ff 1.1117・LP と同じ高さ 2.1373）。実コーパス 0 変化。
+★ ⑵ `175e0b25` 内側に梁のある端の base は**描いた符尾の x で**梁を読む（`segStartX`＝頭の中心で読んでいた＝傾いた梁で 0.65×傾き）。S1 の slur-voices 0.077・slur-beams 0.041 → exact・実コーパス 2,529 → **2,526**（3 対 exact・悪化 0）・台帳 `slur.beamed.reserved-text` −0.0661 → −0.0624（記録）。網 `BrokenSlurEdgeStemTests`（制御点 2 つ）・`SlurEdgeBeamAndAccidentalTests.ASlurOffABeam_StartsAtTheStemsX`。
+⇒ **S1 の差は 1 対＋数の不一致 1 だけ**: tie-lv の repeatTie は**頭からの距離は LP と同じ（−1.300）＝spacing**＝LP は `@repeatTie` の音の前に約 0.94 広く取る（RepeatTie の幅が列の左に入る？・**未調査＝spacing の族として起票**）／slur-grace の数（GraceNotes の独自 path＝宣言済み）。
+⚠️ 計器の罠: **毒の run は test dll を毒入りで build したまま残す**＝戻した後の sweep・one.ps1 は `dotnet build LilySharp.Tests` を挟む（第654 は毒の後の one.ps1 で「直っていない」を見かけた）。⚠️ 縮めた本は S1 と段割りが違う＝LP の値は**その本で**取り直す。
+★ **終了**: full **9414 / 0 / 2 / 9416**・実コーパスの bow の差 **2,526**。次: S1 の未収録（tab・cue・加線の多い和音・ottava のタイ）→ S4。push はユーザー。
+
 ## 以下は第653セッションの経緯
 
 ### 1.1 第653セッション（2026-09-27・YT-DELL2）

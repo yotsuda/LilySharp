@@ -151,6 +151,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第656セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第655 の後・ユーザー「続けて」＝cue のスラー）。★ `-Start p656`（HEAD `7266acc2`・未 push 128・full **9415 / 0 / 2 / 9417**）。
+★ `d1738971` cue の bow は cue の頭を読む（`BowHeadBox`＝cue は `EngravingDefaults.CueFont`＝13 の design × 0.62996）: スラーの端 x（頭の中心）・頭からの持ち上げ（定数 1.045 → 端の column ごと）・tilt の頭幅・obstacle の頭の箱・タイの column の頭の箱。LP の `cue { e4( f) }` は頭の中心から 0.354 下・左端から 0.461、`cue { e4~ e4 }` のタイは頭から 0.6077／0.2077＝すべて exact。網 `CueBowTests` 2 本（毒で両方赤）。実コーパス（cue 0 冊）不変。
+⚠️ S1 bow-cue の残りは **spacing**（cue の列が LP より約 0.25 広い）＝頭からの距離は一致。
+⇒ **S1 23 冊の差はすべて説明が付いた**: spacing 2 族（repeatTie の前・cue の列）／grace の数（宣言済み）／tab 2 冊（宣言済み F9・tab タイ）。**次は S4**＝実コーパスの 2,526 対を S3 の一覧（`sessions/p650/s3-inventory.md`）で説明し切る・説明の無い族を起票。
+★ **終了**: full **9417 / 0 / 2 / 9419**・実コーパスの bow の差 **2,526**。push はユーザー。
+
+## 以下は第655セッションの経緯
+
 ### 1.1 第655セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（第654 の後・ユーザー「続けて」＝S1 の未収録の状況）。★ `-Start p655`（HEAD `708e8e09`・未 push 125・full **9414 / 0 / 2 / 9416**）。
@@ -159,17 +169,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ ⑵ `548d7574` 計器: `TwinBeamSweep.StavesOf` が同じ高さの加線の列を staff と読んだ（tie-ledger で「3 段」）＝行に 4.0 より長い 1 片を要求。「1 本の線」は 65 冊・「reach の半分」は tab（数字で途切れる弦）で 17 冊の staff を失った。実コーパス: staffcount 不一致 61 → **44**・対になった本 899 → 916・対 +33（全部許容内）・既存の対の変化 0。
 ⚠️ 新しい族（未着手）: **cue のスラーは cue の大きさを読まない**（ElementCoordinator のスラー経路に IsCue が無い＝base の頭の高さ・obstacle の頭の箱・頭幅・符尾はフルサイズ・LP は font-size −4 で ×0.63）。S1 bow-cue で y 約 0.19。**実コーパス 0 冊**（cue は試験・audit の 5 冊だけ）。タイは写像後 exact。tab の 2 冊は宣言済み（F9・tab タイ）。
 ★ **終了**: full **9415 / 0 / 2 / 9417**・実コーパスの bow の差 **2,526**。次: cue のスラー → S4（S3 の一覧で全残差を説明）。push はユーザー。
-
-## 以下は第654セッションの経緯
-
-### 1.1 第654セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（第653 の後・ユーザー「続けて」＝§2 S1 の残り）。★ `-Start p654`（HEAD `42ba8d2e`・未 push 122・full **9413 / 0 / 2 / 9415**）。§1.0 の廃れた 2 項（R7〜R11 の着手可・閉じた島の一覧）を畳んだ。
-★ ⑴ `f2b15ab6` 割れた側の外端の column を avoid 点に残す（`BuildAvoidOffsets`＝LP は slur の *extremes* だけ外す・slur-scoring.cc:668-670）＝`c2( e | break` の第 1 断片が e の符尾の上へ fit（ff 1.1117・LP と同じ高さ 2.1373）。実コーパス 0 変化。
-★ ⑵ `175e0b25` 内側に梁のある端の base は**描いた符尾の x で**梁を読む（`segStartX`＝頭の中心で読んでいた＝傾いた梁で 0.65×傾き）。S1 の slur-voices 0.077・slur-beams 0.041 → exact・実コーパス 2,529 → **2,526**（3 対 exact・悪化 0）・台帳 `slur.beamed.reserved-text` −0.0661 → −0.0624（記録）。網 `BrokenSlurEdgeStemTests`（制御点 2 つ）・`SlurEdgeBeamAndAccidentalTests.ASlurOffABeam_StartsAtTheStemsX`。
-⇒ **S1 の差は 1 対＋数の不一致 1 だけ**: tie-lv の repeatTie は**頭からの距離は LP と同じ（−1.300）＝spacing**＝LP は `@repeatTie` の音の前に約 0.94 広く取る（RepeatTie の幅が列の左に入る？・**未調査＝spacing の族として起票**）／slur-grace の数（GraceNotes の独自 path＝宣言済み）。
-⚠️ 計器の罠: **毒の run は test dll を毒入りで build したまま残す**＝戻した後の sweep・one.ps1 は `dotnet build LilySharp.Tests` を挟む（第654 は毒の後の one.ps1 で「直っていない」を見かけた）。⚠️ 縮めた本は S1 と段割りが違う＝LP の値は**その本で**取り直す。
-★ **終了**: full **9414 / 0 / 2 / 9416**・実コーパスの bow の差 **2,526**。次: S1 の未収録（tab・cue・加線の多い和音・ottava のタイ）→ S4。push はユーザー。
 
 ## 2. 開いている作業
 
