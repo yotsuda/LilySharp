@@ -501,14 +501,19 @@ internal static partial class SpacingRules
     /// 1.584249 for two, alone or beside a staff.
     /// </para>
     /// <para>
-    /// ⚠️ APPROXIMATION: a chord reads its WIDEST fret, where LilyPond reads the stem's first
-    /// head (Stem::first_head, the extremal head opposite the stem) — they differ only on a
-    /// chord that mixes one- and two-digit frets.
+    /// A CHORD reads its FIRST head: <c>Note_column::first_head</c> is the stem's, the extremal
+    /// digit opposite the stem (<see cref="TabStemOf"/> gives the direction). Until session
+    /// 661 a chord read its WIDEST fret, which differs on a chord mixing one- and two-digit
+    /// frets. MEASURED (2.26.0, LilySharp-Lab sessions/p661/chordhead/c.ly, numbers-only bass
+    /// tab): <c>&lt;e,,\4 c\3&gt;4</c> (up, first head the open E) → the next quarter 2.787216,
+    /// the lone open E's own gap; the widest reading gave 3.282294.
     /// </para>
     /// LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing — left_head_end.
+    /// LILYPOND-REF: lily/note-column.cc:158-163 Note_column::first_head — Stem::first_head of its stem.
+    /// LILYPOND-REF: lily/stem.cc:215-221 Stem::first_head — extremal_heads (me)[-d].
     /// LILYPOND-REF: lily/spacing-spanner.cc:336-393 musical_column_spacing → merge_springs.
     /// </remarks>
-    internal static double LilyPondTabHeadRight(MusicItem item, Staff tab)
+    internal static double LilyPondTabHeadRight(MusicItem item, Staff tab, Measure voice)
     {
         const double digitCentre = 0.594094;
         const double digitWidth = 0.990155;
@@ -523,11 +528,9 @@ internal static partial class SpacingRules
                 digits = FretDigits(Tablature.Tunings.CalculateFret(n.Midi + shift, tuning, n.StringNumber ?? 0).fret);
                 break;
             case ChordItem c when c.Notes.Length > 0:
-                var notes = new (int Midi, int? StringNumber)[c.Notes.Length];
-                for (int k = 0; k < notes.Length; k++)
-                    notes[k] = (c.Notes[k].Midi + shift, c.Notes[k].StringNumber);
-                foreach (var (_, fret) in Tablature.Tunings.CalculateChordFrets(notes, tuning))
-                    digits = Math.Max(digits, FretDigits(fret));
+                var geom = TabGeometryOf(tab);
+                bool stemUp = TabStemOf(c, tab, voice, geom).StemUp;
+                digits = FretDigits(geom.StemRootDigit(c, stemUp).Fret);
                 break;
             default:
                 return double.NaN;

@@ -603,7 +603,7 @@ internal sealed class MeasureLayouter
             double head = double.NaN;
             if (staves[vi].IsTab && item is NoteItem or ChordItem)
             {
-                head = SpacingRules.LilyPondTabHeadRight(item, staves[vi]);
+                head = SpacingRules.LilyPondTabHeadRight(item, staves[vi], measures[vi]);
                 anyTab |= !double.IsNaN(head);
             }
             (items ??= []).Add(item);
@@ -852,7 +852,7 @@ internal sealed class MeasureLayouter
             double headOverride = double.NaN;
             if (stavesAligned && stavesOfMeasures![vi].IsTab && prev is NoteItem or ChordItem)
             {
-                headOverride = SpacingRules.LilyPondTabHeadRight(prev, stavesOfMeasures[vi]);
+                headOverride = SpacingRules.LilyPondTabHeadRight(prev, stavesOfMeasures[vi], vm);
                 anyTabHead |= !double.IsNaN(headOverride);
             }
             headOverrides[wishCount++] = headOverride;

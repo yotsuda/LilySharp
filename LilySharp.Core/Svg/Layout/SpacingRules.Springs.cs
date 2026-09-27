@@ -499,30 +499,8 @@ internal static partial class SpacingRules
     {
         if (item is not (NoteItem or ChordItem) || NoteColumnLayout.Of(item) is not { HasStem: true })
             return null;
-        var geom = new TabStaffGeometry(Rendering.ScoreTextMetrics.Bundled,
-            tab.Tuning ?? Syntax.TuningType.Guitar, 0, tab.TabSourceClef, tab.Transposition);
-        int? beamId = item switch { NoteItem n => n.BeamId, ChordItem c => c.BeamId, _ => null };
-
-        List<MusicItem>? members = null;
-        if (beamId is { } id)
-        {
-            bool manual = false;
-            members = new List<MusicItem>();
-            foreach (var m in voice.Items)
-            {
-                if (!m.GraceTime && m switch { NoteItem n => n.BeamId == id, ChordItem c => c.BeamId == id, _ => false })
-                    members.Add(m);
-                manual |= m switch
-                {
-                    NoteItem n => n.BeamId == id && n.HasBeamStart,
-                    ChordItem c => c.BeamId == id && c.HasBeamStart,
-                    _ => false,
-                };
-            }
-            if (tab.TabNumbersOnly && !manual)
-                (beamId, members) = (null, null);
-        }
-        bool stemUp = members is { Count: > 0 } ? geom.GroupStemUp(members) : geom.TabStemUp(item);
+        var geom = TabGeometryOf(tab);
+        var (stemUp, beamId, members) = TabStemOf(item, tab, voice, geom);
 
         double begin = Begin(item);
         double tip = Tip(item, begin);
@@ -550,6 +528,46 @@ internal static partial class SpacingRules
                     stemUp, StemCalculator.GetDurationLog(GlyphMetrics.NoteValueOf(m)),
                     stemUp ? mHi : mLo, null, geom.StaffRadius);
         }
+    }
+
+    /// <summary>The tab's geometry in its own frame (staff top at 0) — the one the spacing
+    /// readings of a TabVoice's stems and digits share.</summary>
+    internal static TabStaffGeometry TabGeometryOf(Staff tab)
+        => new(Rendering.ScoreTextMetrics.Bundled,
+            tab.Tuning ?? Syntax.TuningType.Guitar, 0, tab.TabSourceClef, tab.Transposition);
+
+    /// <summary>
+    /// The direction of a TabVoice's stem on <paramref name="item"/>, and the beam it answers
+    /// to: a beamed stem takes its whole beam's direction (the members are this measure's),
+    /// a lone one its digits' — and on a NUMBERS-ONLY tab only a manual beam is a beam
+    /// (the TabStaff sets <c>autoBeaming = ##f</c>). See <see cref="TabStemSpacingInfo"/>.
+    /// </summary>
+    internal static (bool StemUp, int? BeamId, List<MusicItem>? Members) TabStemOf(
+        MusicItem item, Staff tab, Measure voice, TabStaffGeometry geom)
+    {
+        int? beamId = item switch { NoteItem n => n.BeamId, ChordItem c => c.BeamId, _ => null };
+
+        List<MusicItem>? members = null;
+        if (beamId is { } id)
+        {
+            bool manual = false;
+            members = new List<MusicItem>();
+            foreach (var m in voice.Items)
+            {
+                if (!m.GraceTime && m switch { NoteItem n => n.BeamId == id, ChordItem c => c.BeamId == id, _ => false })
+                    members.Add(m);
+                manual |= m switch
+                {
+                    NoteItem n => n.BeamId == id && n.HasBeamStart,
+                    ChordItem c => c.BeamId == id && c.HasBeamStart,
+                    _ => false,
+                };
+            }
+            if (tab.TabNumbersOnly && !manual)
+                (beamId, members) = (null, null);
+        }
+        bool stemUp = members is { Count: > 0 } ? geom.GroupStemUp(members) : geom.TabStemUp(item);
+        return (stemUp, beamId, members);
     }
 
     /// <summary>

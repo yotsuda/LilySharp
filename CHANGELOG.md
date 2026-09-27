@@ -39,6 +39,11 @@ workflow attaches that section to the GitHub Release verbatim.
   repeat sign a down stem on one staff earned only half its room. Of 332 bass books 142
   move by hundredths; none breaks its lines differently.
 
+- **A tab chord is spaced by the fret on the stem's far side, as in LilyPond.** A chord
+  pairing a two-digit fret with a one-digit one took the wider fret's room after it; LilyPond
+  reads the fret opposite the stem, so such a chord could stand up to half a staff space too
+  far from the next note. No book in the repository or corpora changes.
+
 - **Fret diagrams are LilyPond's size, stand side by side, and can be resized.** A chord
   diagram used to be drawn at about half LilyPond's size and was hard to read. It now has
   one staff space between strings and between frets, as in LilyPond. `fonts { fretFrame

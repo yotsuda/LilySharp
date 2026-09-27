@@ -125,6 +125,40 @@ public class TabSpacingWishTests
     }
 
     /// <summary>
+    /// A tab chord's wish reads its FIRST head — the digit opposite the stem — not its widest
+    /// fret: both chords here pair a two-digit fret with an open string on the far side.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p661/chordhead: c.ly, cf.ly, cs.ly — the
+    /// chord's column to the next quarter's): numbers-only 2.787216 / 2.748759,
+    /// <c>\tabFullNotation</c> 2.787216 / 2.663588, staff + numbers-only tab 2.658031 /
+    /// 2.696931. Until session 661 the up chord read its "15" and stood 0.495078 wider.
+    /// </remarks>
+    [Theory]
+    [InlineData("tab bassline as numbers", 2.787216, 2.748759)]
+    [InlineData("tab bassline", 2.787216, 2.663588)]
+    [InlineData("staff bassline  tab bassline", 2.658031, 2.696931)]
+    public void TabChord_WishReadsTheFirstHeadsDigit(string staves, double upChord, double downChord)
+    {
+        var tree = SyntaxTree.Parse($$"""
+            octave absolute
+            time 4/4
+            part bassline {
+              clef bass
+              tuning bass
+              section S { <e,,\4 c\3>4 e,,\4 e,,\4 e,,\4 | <c\2 g,\1>4 e,,\4 e,,\4 e,,\4 | }
+            }
+            form main { S }
+            score main { {{staves}} }
+            """);
+        var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
+        var data = SystemBreaker.ComputeMultiStaffSpringData(
+            multi, SpacingRules.CalculateCommonShortestDuration(multi));
+        Assert.Equal(upChord, data[0].Springs[1].IdealDistance, precision: 5);
+        Assert.Equal(downChord, data[1].Springs[1].IdealDistance, precision: 5);
+    }
+
+    /// <summary>
     /// A chord's stub begins at its STEM-SIDE digit (LilyPond's reference head under the
     /// TabStaff's avoid-note-head): <c>&lt;e,, d,&gt;4</c> stems up from the d, over (2.1346,
     /// 3.2692) positions, so it meets the bar line's ±3 over 0.8654 where the lone e,, meets
