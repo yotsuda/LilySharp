@@ -224,6 +224,11 @@ public sealed partial class MeasureCollector
     // voice 2 in D-flat, a ♮ on the a and a ♯ on the dis, and the ♯ ran into voice 1's flag
     // (03-piano-nocturne, 2026-09-26). LilyPond prints neither.
     private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure, Fraction StartOffset, OctaveSnapshot Frame, Fraction Duration, int Dots, MetadataState Meta)> _parallelSpans = new();
+    // Whether the stream the last builder collected stops off the bar (MeasureBuilder.EndsOffTheBar),
+    // read right after a PRIMARY stream's collect; and, on the multi-staff road, the staves whose
+    // primary stream does. See DropFinalBarWhereTheMusicStopsOffTheBar.
+    private bool _lastEndsOffTheBar;
+    private readonly HashSet<string> _offBarVoices = new();
     // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
     // this collector so two voices of the same staff cannot be handed the same number.
     private int _nextBeamId;
@@ -1002,6 +1007,14 @@ public sealed partial class MeasureCollector
         _parallelSpans.Clear();
         _openingKeyOverride = null;
         var measures = CollectMeasures();
+        // Read now: the omitted parts' harvest below collects again. A staff with parallel voices
+        // keeps its last bar line — the longest voice decides where LilyPond's music ends, and
+        // the primary stream alone cannot say (Lab sessions/p659: audit/lpreg/restdur, oice { g1 | g2 }
+        // { … two full bars … }, ends ON the bar).
+        // A piece with volta endings keeps it too: LilyPond counts each alternative from where the
+        // first one started, where this position runs straight through them (Lab sessions/p659:
+        // Disco Inferno's four alternatives come back round to the bar in LilyPond).
+        bool dropFinalBar = _lastEndsOffTheBar && _parallelSpans.Count == 0 && _voltaBrackets.Count == 0;
         ResolveBeamStemDirections(measures);
 
         // Score-level structure from the parts this score OMITS (|: :|, navigation
@@ -1038,6 +1051,11 @@ public sealed partial class MeasureCollector
                     measures[i] = synced[i];
             }
         }
+
+        // After the omitted parts' barline sync above: they are not drawn, and the twin does not
+        // play them, so they do not keep the drawn staff's last bar line.
+        if (dropFinalBar)
+            MeasureBuilder.DropFinalBarLine(measures);
 
         // A section that OPENS with its own key folds into this single staff's opening
         // signature (Score.KeySignature reads _meta.InitialKey*). See ApplyKeySignatureChange.
@@ -1304,7 +1322,54 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>
-    /// Of two barline types at the same timestep, the more significant wins
+    /// The piece's last bar line, on the multi-staff road: LilyPond's music ends where its
+    /// longest voice does, and a bar line is engraved there only if measurePosition is zero.
+    /// So the plain bar at the score's last measure goes when every voice with MUSIC in that
+    /// bar is a staff's primary stream that stops off the bar (<see cref="_offBarVoices"/>);
+    /// an extra voice (a staff's `voice { }` / `<< \\ >>`) there keeps it, since the primary
+    /// stream's position cannot speak for it. Runs after the score-wide barline sync, on every
+    /// voice that reaches the last measure (the omitted parts' included — never drawn).
+    /// </summary>
+    /// <remarks>See <see cref="MeasureBuilder.DropFinalBarLine"/> for the measurements.</remarks>
+    private void DropFinalBarWhereTheMusicStopsOffTheBar(Dictionary<string, Voice> flatVoices)
+    {
+        // Volta endings: see the single-staff road's dropFinalBar.
+        if (_voltaBrackets.Count > 0)
+            return;
+        int end = 0;
+        foreach (var (name, v) in flatVoices)
+            if (!name.StartsWith("omit:", StringComparison.Ordinal))
+                end = Math.Max(end, v.Measures.Length);
+        if (end == 0)
+            return;
+
+        bool any = false;
+        foreach (var (name, v) in flatVoices)
+        {
+            if (name.StartsWith("omit:", StringComparison.Ordinal) || v.Measures.Length != end)
+                continue;
+            var last = v.Measures[end - 1].IsTrailingClefColumn && end >= 2
+                ? v.Measures[end - 2] : v.Measures[end - 1];
+            if (last.IsEmptyPlaceholder || !last.Items.Any(i => i is NoteItem or ChordItem or RestItem))
+                continue;
+            if (!_offBarVoices.Contains(name))
+                return;
+            any = true;
+        }
+        if (!any)
+            return;
+
+        foreach (var name in flatVoices.Keys.ToArray())
+        {
+            var v = flatVoices[name];
+            if (v.Measures.Length != end)
+                continue;
+            var measures = v.Measures.ToList();
+            MeasureBuilder.DropFinalBarLine(measures);
+            flatVoices[name] = new Voice(v.Name, measures.ToImmutableArray());
+        }
+    }
+
     /// (repeats and finals over plain bars; both-repeat over either half).
     /// </summary>
     /// <remarks>
@@ -1753,6 +1818,7 @@ public sealed partial class MeasureCollector
                     })
                     .ToImmutableArray());
         SynchronizeBarlines(flatVoices);
+        DropFinalBarWhereTheMusicStopsOffTheBar(flatVoices);
         // The repeat-bar pairing is a SCORE-level fact, so it is read here — after the sync
         // that gives every voice the score's barlines, and including the omitted parts fed
         // in above — from ONE voice, not once per staff.
@@ -2375,6 +2441,8 @@ public sealed partial class MeasureCollector
     private ImmutableArray<Voice> CollectStaffVoices(string voiceName)
     {
         var track0 = CollectMeasuresForVoice(voiceName); // clears + fills _parallelSpans
+        if (_lastEndsOffTheBar)
+            _offBarVoices.Add(voiceName);
         ResolveBeamStemDirections(track0);
 
         var voices = ImmutableArray.CreateBuilder<Voice>();
@@ -2613,7 +2681,9 @@ public sealed partial class MeasureCollector
 
         FinalizeInlineVoltas();
 
-        return builder.FinalizeMeasures();
+        var finalized = builder.FinalizeMeasures();
+        _lastEndsOffTheBar = builder.EndsOffTheBar;
+        return finalized;
     }
 
     // ===== expansion budget (the liveness guard on phrase/repeat expansion) =====
@@ -2702,6 +2772,7 @@ public sealed partial class MeasureCollector
         // Balanced by the marker pairs within a walk; cleared per pass so a walk cut short
         // cannot leave a name that would stop a later cue from expanding it.
         _openPhrases.Clear();
+        _offBarVoices.Clear();
 
         // The cumulative output tables clear FROM THE REGISTRY that names them
         // (CumulativeSideTables) — a table added there is reset here by construction,
@@ -3331,7 +3402,9 @@ public sealed partial class MeasureCollector
 
         FinalizeInlineVoltas();
 
-        return builder.FinalizeMeasures();
+        var finalized = builder.FinalizeMeasures();
+        _lastEndsOffTheBar = builder.EndsOffTheBar;
+        return finalized;
     }
 
     // --- checkpoint/resume probe internals (see CollectWalkProbe.cs) ---

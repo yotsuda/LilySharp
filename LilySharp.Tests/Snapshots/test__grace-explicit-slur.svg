@@ -7,11 +7,11 @@
 </style>
   <rect x="0" y="0" width="119.50" height="22.87" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="10.28" x2="65.00" y2="10.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="11.28" x2="65.00" y2="11.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="12.28" x2="65.00" y2="12.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="13.28" x2="65.00" y2="13.28" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="14.28" x2="65.00" y2="14.28" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="10.28" x2="64.81" y2="10.28" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="11.28" x2="64.81" y2="11.28" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="12.28" x2="64.81" y2="12.28" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="13.28" x2="64.81" y2="13.28" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="14.28" x2="64.81" y2="14.28" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="13.28" font-size="4.00" data-pos="745"></text>
   <text class="music" x="13.42" y="12.28" font-size="4.00" data-pos="723"></text>
   <line x1="16.79" y1="15.28" x2="18.75" y2="15.28" stroke="#000000" stroke-width="0.200"/>
@@ -64,7 +64,6 @@
   <line x1="61.42" y1="11.43" x2="61.42" y2="14.78" stroke="#000000" stroke-width="0.130"/>
   <rect x="32.01" y="10.28" width="0.19" height="4.00" data-pos="797"/>
   <rect x="47.99" y="10.28" width="0.19" height="4.00" data-pos="831"/>
-  <rect x="64.86" y="10.28" width="0.19" height="4.00" data-pos="864"/>
   <path d="M 20.35,17.78 C 21.01,18.15 21.97,17.99 22.47,17.43 C 21.98,18.08 21.02,18.23 20.35,17.78 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="773"/>
   <path d="M 36.33,17.78 C 36.99,18.15 37.95,17.99 38.46,17.43 C 37.96,18.08 37.00,18.23 36.33,17.78 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="802"/>
   <line x1="53.10" y1="13.78" x2="53.10" y2="11.13" stroke="#000000" stroke-width="0.130" data-pos="836"/>

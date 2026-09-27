@@ -223,9 +223,12 @@ public class MeasureContentKeyTests
     public void Edit_RhythmChange_ChangesOnlyThatKey()
     {
         // A duration change (the kind that DOES move natural width) is still local
-        // to its measure as far as identity goes.
+        // to its measure as far as identity goes — one that keeps the bar full: a bar
+        // written SHORT moves every later LilyPond bar line, and the last bar then ends off
+        // the bar with no line after it (session 659, MeasureBuilder.FinalizeMeasures), so
+        // `g8 a b c d` here changes the last bar's key too, rightly.
         var before = Keys(FourBars("g4 a b c"));
-        var after = Keys(FourBars("g8 a b c d"));
+        var after = Keys(FourBars("g8 a b c d e f g"));
 
         Assert.Equal(before[0], after[0]);
         Assert.NotEqual(before[1], after[1]);

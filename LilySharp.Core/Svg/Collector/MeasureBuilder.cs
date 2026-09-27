@@ -142,6 +142,11 @@ internal sealed class MeasureBuilder
 
     private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
+    // LilyPond's measurePosition where the last emitted bar ENDS: zero when the bars so far
+    // filled the meter, not zero after a bar closed short (a written `|` is only a bar check
+    // there, so LilyPond's bars run on across it). FinalizeMeasures reads it: music that stops
+    // off the bar gets no bar line after it.
+    private Fraction _barPosition = Fraction.Zero;
     // True while a note, rest or chord (or a tuplet's reported duration) has entered the
     // measure under construction. Read where "is there music in this span" is asked —
     // HasMeasureContent, AtPieceOpening — instead of `_currentDuration > 0`, because under
@@ -950,6 +955,27 @@ internal sealed class MeasureBuilder
         TrySplitAtMidBar(sourcePosition);
     }
 
+    /// <summary>
+    /// Moves <see cref="_barPosition"/> over the bar about to be emitted: a pickup ends on the
+    /// downbeat; an unmetered bar leaves it where it was (the clock stands still); any other bar
+    /// adds its length and comes round the meter.
+    /// </summary>
+    private void AdvanceBarPosition()
+    {
+        if (_senzaMisura)
+            return;
+        if (_partialRestore != null)
+        {
+            _barPosition = Fraction.Zero;
+            return;
+        }
+        var p = _barPosition + _currentDuration;
+        if (_timeSignature > Fraction.Zero)
+            while (p >= _timeSignature)
+                p -= _timeSignature;
+        _barPosition = p;
+    }
+
     private Fraction GetItemDuration(MusicItem item)
     {
         // Duration already includes dots (BaseDuration.Dotted(Dots))
@@ -1023,6 +1049,7 @@ internal sealed class MeasureBuilder
             case BreakKind.NoPage: page = Layout.BreakPermission.Forbid; break;
         }
 
+        AdvanceBarPosition();
         _measures.Add(new Measure(
             _currentItems.ToImmutableArray(),
             _pendingStartBarline,
@@ -1448,6 +1475,7 @@ internal sealed class MeasureBuilder
         // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
         {
+            AdvanceBarPosition();
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -1512,9 +1540,9 @@ internal sealed class MeasureBuilder
         //   than LilyPond's in essentially every book — the single most visible systematic
         //   divergence in the LP regression corpus, and a documented comparison trap
         //   (HANDOFF 5.3 "LP は \bar "|." を書かないと終止線を細い | にする").
-        // ⚠️ STILL NOT LILYPOND: an incomplete final measure gets a thin bar here where
-        //   LilyPond draws none. That is a different rule (whether a bar is engraved at
-        //   all) and is not fixed by this change.
+        // An incomplete final measure gets its thin bar here too, and LilyPond draws none —
+        //   that is decided with the whole score in view: EndsOffTheBar / DropFinalBarLine below,
+        //   called by the collector (session 659).
 
         // A trailing measure holding ONLY clef changes (a clef written after the last
         // note — clef-change-at-end.ly) owns no bar moment of its own: LilyPond engraves
@@ -1564,6 +1592,43 @@ internal sealed class MeasureBuilder
         return _measures;
     }
 
+    /// <summary>
+    /// True when the music this builder collected stops INSIDE a bar as LilyPond counts bars:
+    /// its measurePosition at the end is not zero. Read after <see cref="FinalizeMeasures"/>.
+    /// The collector decides from it — with every voice of the score in view — whether the
+    /// piece's last bar line is engraved at all (<see cref="DropFinalBarLine"/>).
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ The position is the RUN's (<see cref="_barPosition"/>), not the last bar's own
+    /// length: a bar written short earlier moves every later LilyPond bar line (test/barcheck:
+    /// 3/4 then 5/4 comes back round to a bar line; test/cross-voice-accidental: four 2/4 bars
+    /// in 4/4 end on one — LilyPond draws the final line in both, measured session 659).
+    /// </remarks>
+    public bool EndsOffTheBar => _barPosition > Fraction.Zero;
+
+    /// <summary>
+    /// Music that stops off the bar stops with no bar line after it: LilyPond engraves a bar
+    /// line only where measurePosition comes round to zero (or where one is written with
+    /// \bar). Takes the plain bar of the last bar with music (a trailing clef-only column hands
+    /// its bar back first, above) away; a typed bar (`|.`, `||`, `:|`…) is a \bar and stays,
+    /// an unmetered bar is left alone. A plain `|` is the twin's bar CHECK, which draws nothing.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (scratch/beamskip/lp-bar.ly, see FinalizeMeasures: `{ c'4 }` gets NO bar; Lab
+    /// sessions/p658/endbeam/vis2.ly: `c'8 d'` ends with no line, `c'2 c'8 d' e' f'` with one;
+    /// Lab sessions/p659/bars/endpos.ps1: LilyPond's own measurePosition at the end of 56
+    /// books whose last line Lily# drops, zero in none of them).
+    /// </remarks>
+    internal static void DropFinalBarLine(IList<Measure> measures)
+    {
+        int lastBar = measures.Count - 1;
+        if (lastBar >= 0 && measures[lastBar].IsTrailingClefColumn)
+            lastBar--;
+        if (lastBar >= 0
+            && measures[lastBar] is { EndBarline: BarlineType.Single, Unmetered: false } closing)
+            measures[lastBar] = closing with { EndBarline = BarlineType.None };
+    }
+
     // --- checkpoint/resume substrate (CollectWalkProbe) ---
 
     /// <summary>Every cross-measure field of the builder, captured at a clean
@@ -1592,7 +1657,8 @@ internal sealed class MeasureBuilder
         int SectionLabelPosition,
         int MeasureSourceStart,
         Measure? LastMeasure,
-        int LogicalCount);
+        int LogicalCount,
+        Fraction BarPosition);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
     /// current measure, not even a zero-duration directive — and not inside a split bar
@@ -1613,7 +1679,7 @@ internal sealed class MeasureBuilder
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
         _measures.Count > 0 ? _measures[^1] : null,
-        _logicalCount);
+        _logicalCount, _barPosition);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -1647,6 +1713,7 @@ internal sealed class MeasureBuilder
         _sectionLabel = ck.SectionLabel;
         _sectionLabelPosition = ck.SectionLabelPosition;
         _measureSourceStart = ck.MeasureSourceStart;
+        _barPosition = ck.BarPosition;
     }
 
     /// <summary>A copy of the emitted measures BEFORE <see cref="FinalizeMeasures"/>

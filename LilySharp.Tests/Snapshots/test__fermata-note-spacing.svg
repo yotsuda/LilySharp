@@ -7,11 +7,11 @@
   <rect x="0" y="0" width="119.50" height="29.01" fill="#FFFFFF"/>
   <text x="59.75" y="12.21" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="473">Fermata note spacing</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="17.78" x2="30.15" y2="17.78" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="18.78" x2="30.15" y2="18.78" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="19.78" x2="30.15" y2="19.78" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="20.78" x2="30.15" y2="20.78" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="21.78" x2="30.15" y2="21.78" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="17.78" x2="29.96" y2="17.78" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="18.78" x2="29.96" y2="18.78" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="19.78" x2="29.96" y2="19.78" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="20.78" x2="29.96" y2="20.78" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="21.78" x2="29.96" y2="21.78" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="20.78" font-size="4.00" data-pos="523"></text>
   <text class="music" x="13.42" y="19.78" font-size="4.00"></text>
   <line x1="17.52" y1="16.78" x2="19.32" y2="16.78" stroke="#000000" stroke-width="0.200"/>
@@ -28,7 +28,6 @@
   <text class="music" x="24.51" y="15.78" font-size="4.00" data-pos="568"></text>
   <text class="music" x="26.54" y="15.28" font-size="4.00" data-pos="574"></text>
   <text class="music" x="27.69" y="15.28" font-size="4.00" data-pos="574"></text>
-  <rect x="30.01" y="17.78" width="0.19" height="4.00" data-pos="0"/>
   <polygon points="17.69,19.73 27.82,19.54 27.82,20.02 17.69,20.21"/>
   <line x1="17.76" y1="16.93" x2="17.76" y2="19.96" stroke="#000000" stroke-width="0.130"/>
   <line x1="21.40" y1="16.43" x2="21.40" y2="19.90" stroke="#000000" stroke-width="0.130"/>
