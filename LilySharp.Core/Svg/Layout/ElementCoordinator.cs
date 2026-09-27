@@ -1927,7 +1927,9 @@ internal sealed class ElementCoordinator
         // BOTH ends recede to a head centre — the whole span shifts and the width does not —
         // and it is 0.000700 on one whose other end is held by the stem.
         // LILYPOND-REF: lily/tie-formatting-problem.cc:119 set_column_chord_outline.
-        var headBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        // A cue head's own box (BowHeadBox): a tie out of `cue { e2~ e2 }` began 0.2511 right of
+        // LilyPond's with the twenty's box (Lab sessions/p656, S1 bow-cue).
+        var headBBox = BowHeadBox(item, noteValue);
         double headLeftInk = headBBox.Left;
         double headRightInk = headBBox.Right;
         bool stemUp = item is ChordItem c1 ? c1.StemUp : ((NoteItem)item).StemUp;
@@ -1940,10 +1942,8 @@ internal sealed class ElementCoordinator
         var offsets = new List<double>(headCount);
         if (item is ChordItem chord)
         {
-            // ⚠️ The OFFSETS come out of the cue's own font while headBBox above is still the
-            // twenty's — a tie column of a cue chord reads two sizes. Only the offsets were in
-            // this session's island; the boxes beside them are the wider cue-outline ticket
-            // (docs/HANDOFF.md §2 U8c).
+            // The OFFSETS come out of the cue's own font, as headBBox above does since session
+            // 656 (BowHeadBox) — a cue chord's tie column reads one size.
             var chordOffsets = ChordHeadPositioning.CalculateOffsets(
                 chord.Notes, chord.StemUp, noteValue,
                 chord.IsCue ? EngravingDefaults.CueFont : null);
@@ -2904,6 +2904,13 @@ internal sealed class ElementCoordinator
         return slur.CurveUp ? (y < headBaseY ? y : null) : (y > headBaseY ? y : null);
     }
 
+    /// <summary>The item of <see cref="EdgeColumn"/>, or null.</summary>
+    private static MusicItem? EdgeColumnItem(
+        Voice voice, SystemLayout segSystem, SlurItem slur, bool leftEdge)
+        => EdgeColumn(voice, segSystem, slur, leftEdge) is { } c
+            ? voice.Measures[c.Measure].Items[c.Item]
+            : null;
+
     /// <summary>The first (<paramref name="leftEdge"/>) or last sounding note column of
     /// <paramref name="segSystem"/> within the slur's span — a broken edge's bound column.</summary>
     private static (int Measure, int Item, MeasureLayout Layout)? EdgeColumn(
@@ -3038,8 +3045,7 @@ internal sealed class ElementCoordinator
         bool beamedInner = beamed && BeamContinuesToward(voice, measureIndex, itemIndex, rightward: leftEdge);
         // The endpoint head's ink width — LP's slur_head_x_extent_, consumed by the
         // tilt X shift and the extra-encompass edge check.
-        double headWidth = GlyphMetrics.GetNoteheadBBox(
-            GlyphMetrics.NoteValueOf(baseDuration)).Width;
+        double headWidth = BowHeadBox(items[itemIndex], GlyphMetrics.NoteValueOf(baseDuration)).Width;
 
         // The edge stem's frame — LP's extremes_[d].stem_extent_, consumed by the
         // stem-attachment X rule (slur-scoring.cc:738-760). The tip is the same
@@ -3119,8 +3125,27 @@ internal sealed class ElementCoordinator
                 return GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(r.BaseDuration)).CenterX;
             default: return 0;
         }
-        return GlyphMetrics.GetNoteheadBBox(GlyphMetrics.NoteValueOf(dur)).Width / 2.0;
+        return BowHeadBox(items[itemIndex], GlyphMetrics.NoteValueOf(dur)).Width / 2.0;
     }
+
+    /// <summary>
+    /// The notehead box a slur reads off a note column: a cue note's in the cue's own font
+    /// (EngravingDefaults.CueFont — the thirteen design at font-size −4), everyone else's in
+    /// the twenty.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:556-562 get_base_attachments (head->extent), as the
+    /// encompass infos read theirs —
+    /// every head extent the slur reads is the head grob's own, and a CueVoice head is set at
+    /// font-size −4. MEASURED, Lab sessions/p656 cue1 (LilyPond 2.26.0): `cue { e4( f) }`'s
+    /// down slur ends 0.354 under the head centres (0.56222 × 0.62996) and starts 0.461 right
+    /// of the head's left edge (the cue head's centre 0.4077 + the tilt shift); Lily# read the
+    /// twenty's 0.545 and 0.652 until session 656.
+    /// </remarks>
+    private static GlyphMetrics.BBox BowHeadBox(MusicItem item, int noteValue)
+        => item is NoteItem { IsCue: true } or ChordItem { IsCue: true }
+            ? GlyphMetrics.GetNoteheadBBox(EngravingDefaults.CueFont, noteValue)
+            : GlyphMetrics.GetNoteheadBBox(noteValue);
 
     /// <summary>
     /// Device-Y of the slur attachment when the endpoint note's stem joins a beam — LP's
@@ -3284,7 +3309,7 @@ internal sealed class ElementCoordinator
                 int headValue = NoteColumnLayout.Of(items[i]) is { } headCol
                     ? headCol.NoteValue
                     : GlyphMetrics.NoteValueOf(items[i]);
-                var headBox = GlyphMetrics.GetNoteheadBBox(headValue);
+                var headBox = BowHeadBox(items[i], headValue);
                 double topY = (staffMiddleDown - topPos.Value / 2.0) - headBox.Top;
                 double bottomY = (staffMiddleDown - bottomPos.Value / 2.0) - headBox.Bottom;
 
@@ -4195,6 +4220,11 @@ internal sealed class ElementCoordinator
                         : originDown - box.Bottom + 0.5;
                 }
 
+                // LILYPOND-REF: slur-scoring.cc:556-557 — head->extent (Y)[dir_] + dir_ * 0.5.
+                double HeadLift(MusicItem? item) => item is NoteItem or ChordItem
+                    ? BowHeadBox(item, GlyphMetrics.NoteValueOf(item)).Top + 0.5
+                    : slurOffset;
+
                 RestItem? startRest = segment.IsFirst
                     && ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex)
                         is RestItem { IsSpacer: false } sr ? sr : null;
@@ -4214,8 +4244,12 @@ internal sealed class ElementCoordinator
                     segStartY = startTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
+                    // The lift off the head is that head's own extent (a cue head is smaller).
+                    double startLift = HeadLift(segment.IsFirst
+                        ? ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex)
+                        : EdgeColumnItem(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true));
                     segStartY = (staffMiddleDown - startStaffPos / 2.0)
-                        + (slur.CurveUp ? -slurOffset : slurOffset);
+                        + (slur.CurveUp ? -startLift : startLift);
                     // A broken edge reads its bound column's whole extent, stem included.
                     if (!segment.IsFirst
                         && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true,
@@ -4234,8 +4268,11 @@ internal sealed class ElementCoordinator
                     segEndY = endTip + (slur.CurveUp ? -stemTipGap : stemTipGap);
                 else
                 {
+                    double endLift = HeadLift(segment.IsLast
+                        ? ItemAt(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex)
+                        : EdgeColumnItem(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false));
                     segEndY = (staffMiddleDown - endStaffPos / 2.0)
-                        + (slur.CurveUp ? -slurOffset : slurOffset);
+                        + (slur.CurveUp ? -endLift : endLift);
                     if (!segment.IsLast
                         && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false,
                             staffMiddleDown, segEndY, beamByMember,
