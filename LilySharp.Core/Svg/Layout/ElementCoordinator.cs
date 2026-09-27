@@ -2248,15 +2248,17 @@ internal sealed class ElementCoordinator
             //     or against it. Separating them needs a book where the two systems' pieces
             //     would score differently, which is a COLUMN broken mid-chord; there is none.
             var anchor = column[0];
-            if (!measureMap.TryGetValue(anchor.StartMeasureIndex, out var startInfo))
-                continue;
-            if (!measureMap.TryGetValue(anchor.EndMeasureIndex, out var endInfo))
-                continue;
+            // A tie whose other end is on a system this call was not handed (the per-system staff
+            // skylines lay out ONE system) still has its piece here, as a slur's does
+            // (SpannerBreakSubstitution.SplitClipped): the missing bound's measure is null and only
+            // the piece that holds it reads it.
+            measureMap.TryGetValue(anchor.StartMeasureIndex, out var startInfo);
+            measureMap.TryGetValue(anchor.EndMeasureIndex, out var endInfo);
 
             var (_, startMeasure) = startInfo;
             var (_, endMeasure) = endInfo;
 
-            var segments = SpannerBreakSubstitution.Split(
+            var segments = SpannerBreakSubstitution.SplitClipped(
                 anchor.StartMeasureIndex, anchor.EndMeasureIndex, systems, measureToSystemIdx);
 
             if (segments.IsEmpty)
@@ -2313,7 +2315,10 @@ internal sealed class ElementCoordinator
             // LILYPOND-REF: lily/tie.cc:193-211 Tie::calc_control_points (`me->original ()
             //   && ties.size () == 1 && !direction` → set_grob_direction (get_default_dir)),
             //   lily/tie.cc:94-127 Tie::get_default_dir.
-            bool? brokenCurveUp = segments.Length > 1 && ordered.Count == 1
+            // Broken = some piece lacks one of the tie's own ends (one system handed can hold
+            // a single piece of a broken tie).
+            bool broken = segments.Length > 1 || !segments[0].IsFirst || !segments[0].IsLast;
+            bool? brokenCurveUp = broken && ordered.Count == 1
                 && staff is not { IsTab: true } && ordered[0].ForcedCurveUp is null
                     ? BrokenTieDefaultCurveUp(score.Voices[ordered[0].VoiceIndex], ordered[0])
                     : null;
@@ -2549,8 +2554,8 @@ internal sealed class ElementCoordinator
         int staffIndex,
         TieItem tie,
         SpannerBreakSegment segment,
-        MeasureLayout startMeasure,
-        MeasureLayout endMeasure,
+        MeasureLayout? startMeasure,
+        MeasureLayout? endMeasure,
         List<int> tiedPositions,
         bool? tabCurveUp = null,
         bool? brokenCurveUp = null,
@@ -2569,10 +2574,12 @@ internal sealed class ElementCoordinator
         // MEASURED (session 658, `c8[~ c]` against `e4` in the other voice of a condensedStaff):
         // LilyPond's tie leaves the shifted c at 10.618, Lily#'s left the unshifted one at 10.174.
         var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
-        double startColumnX = startMeasure.X
+        // A bound on a system this call was not handed has no measure (null) — only the piece
+        // that holds that bound reads its X.
+        double startColumnX = startMeasure is null ? double.NaN : startMeasure.X
             + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
             + voiceShifts.ShiftOf(tie.StartMeasureIndex, tie.VoiceIndex + 1, tie.StartItemIndex);
-        double endColumnX = endMeasure.X
+        double endColumnX = endMeasure is null ? double.NaN : endMeasure.X
             + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
             + voiceShifts.ShiftOf(tie.EndMeasureIndex, tie.VoiceIndex + 1, tie.EndItemIndex);
 

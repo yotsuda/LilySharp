@@ -69,4 +69,39 @@ public sealed class BrokenSlurStaffSpacingTests
         Assert.Equal(11.045, staves[1].Middle - staves[0].Middle, 0.05);   // the first piece
         Assert.Equal(14.281, staves[3].Middle - staves[2].Middle, 0.05);   // the continued piece
     }
+    /// <summary>
+    /// The same for a tie: a tie climbing out of the lower staff over a line break keeps the
+    /// staves apart on both lines. MEASURED (LilyPond 2.26.0, Lab sessions/p660/xs/xtie.lys):
+    /// 13.329 on the first line, 13.025 on the second; Lily# had 12.595 on both.
+    /// </summary>
+    [Fact]
+    public void ATieOverALineBreak_KeepsTheStavesApartOnBothLines()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            part up { clef treble }
+            part lo { clef treble }
+            section A {
+              up { g1 | g1 | g1 | g1 | break g1 | g1 | g1 | g1 | }
+              lo { c''1 | c''1 | c''1 | f'''1~ | break f'''1 | c''1 | c''1 | c''1 | }
+            }
+            form main { A }
+            score main {
+              grandStaff {
+                staff up
+                staff lo
+              }
+            }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine(score.Paper).Layout(score);
+        using var doc = new RecordingDocumentContext();
+        SharedRenderer.RenderTo(score, layout, doc);
+        var staves = TwinBeamSweep.StavesOf(doc.Page);
+        Assert.Equal(4, staves.Count);
+
+        Assert.Equal(13.329, staves[1].Middle - staves[0].Middle, 0.05);   // the tie's start
+        Assert.Equal(13.025, staves[3].Middle - staves[2].Middle, 0.05);   // its continuation
+    }
 }
