@@ -217,6 +217,52 @@ internal static class SpannerBreakSubstitution
     }
 
     /// <summary>
+    /// The pieces of [start, end] on the systems <paramref name="systems"/> holds, when they
+    /// need not hold both ends: a caller laying out ONE system (the per-system staff skylines)
+    /// still gets the piece of a slur that began on the line before or ends on the line after,
+    /// with IsFirst / IsLast only where the spanner's own end is on that system. Equal to
+    /// <see cref="Split"/> when both ends are held.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spanner.cc:124-137 Spanner::do_break_processing — each broken piece is its own clone with its
+    /// bounds at the system edges, so a piece is laid out from its own line alone (the vertical
+    /// spacing then sees it: a slur continued onto a line pushes the staves apart there too).
+    /// </remarks>
+    public static ImmutableArray<SpannerBreakSegment> SplitClipped(
+        int spannerStartMeasure,
+        int spannerEndMeasure,
+        ImmutableArray<SystemLayout> systems,
+        IReadOnlyDictionary<int, int> measureToSystemIdx)
+    {
+        if (measureToSystemIdx.ContainsKey(spannerStartMeasure) && measureToSystemIdx.ContainsKey(spannerEndMeasure))
+            return Split(spannerStartMeasure, spannerEndMeasure, systems, measureToSystemIdx);
+        if (systems.IsDefaultOrEmpty || spannerStartMeasure > spannerEndMeasure)
+            return ImmutableArray<SpannerBreakSegment>.Empty;
+
+        var builder = ImmutableArray.CreateBuilder<SpannerBreakSegment>();
+        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+        {
+            var sys = systems[sysIdx];
+            if (sys.Measures.IsDefaultOrEmpty)
+                continue;
+            int first = sys.Measures[0].MeasureIndex;
+            int last = sys.Measures[^1].MeasureIndex;
+            if (spannerEndMeasure < first || spannerStartMeasure > last)
+                continue;
+            bool isFirst = spannerStartMeasure >= first;
+            bool isLast = spannerEndMeasure <= last;
+            builder.Add(new SpannerBreakSegment(
+                SystemIndex: sysIdx,
+                StartMeasureIndex: isFirst ? spannerStartMeasure : first,
+                EndMeasureIndex: isLast ? spannerEndMeasure : last,
+                IsFirst: isFirst,
+                IsLast: isLast,
+                IsMiddle: !isFirst && !isLast));
+        }
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
     /// Iterates a spanner's broken pieces: <see cref="Split"/>s [start, end] into
     /// per-system segments and pairs each with its <see cref="SystemLayout"/>.
     /// Centralizes the split + empty-guard + system lookup that every spanner engraver

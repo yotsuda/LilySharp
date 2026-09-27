@@ -4097,15 +4097,15 @@ internal sealed class ElementCoordinator
 
         foreach (var slur in slurs)
         {
-            if (!measureMap.TryGetValue(slur.StartMeasureIndex, out var startInfo))
-                continue;
-            if (!measureMap.TryGetValue(slur.EndMeasureIndex, out var endInfo))
-                continue;
+            // A slur whose other end is on a system this call was not handed (the per-system
+            // staff skylines lay out ONE system) still has its piece here: SplitClipped below.
+            measureMap.TryGetValue(slur.StartMeasureIndex, out var startInfo);
+            measureMap.TryGetValue(slur.EndMeasureIndex, out var endInfo);
 
             var (_, startMeasure) = startInfo;
             var (_, endMeasure) = endInfo;
 
-            var segments = SpannerBreakSubstitution.Split(
+            var segments = SpannerBreakSubstitution.SplitClipped(
                 slur.StartMeasureIndex, slur.EndMeasureIndex, systems, measureToSystemIdx);
 
             if (segments.IsEmpty)
