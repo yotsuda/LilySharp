@@ -159,7 +159,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⇒ **S4 完了**（§2 S）。
 ★ `754bd3ed` ユーザー決定「うつして」＝S1 の 23 冊を網へ: `LilySharp.Tests/Fixtures/bows/`（本＋LP 2.26.0 の bow の値 `*.lp.txt`）・`BowTwinTests`（`compare.ps1` の対応付けを C# に移植・各対 ±0.01 か `residuals.tsv` の既知の残差＝grace の数 1・tab スラー F9 8・tab タイ 6・0.005 動いたら赤）・LP 側の取り直しは `audit/bows/regen-lp.ps1`・更新は `LILYSHARP_UPDATE_BOWS=1`。毒: スラーの頭からの持ち上げ・タイの min-length でどちらも赤（`slurOffset` は音符以外の既定値だけ＝死んだ毒だった）。
 ★★ **ユーザー決定（S5）: ⑴ 読みやすさのために LP から外れてよい ⑶ 直すなら常に直す（既定を変える・設定にしない）**。⑵ 候補の一覧（Lab `sessions/p659/s5/s5-candidates.md`・絵 `montage2.png`・`scan.ps1`）: 外側の線に端が乗るタイ 855（うち行末で割れた M20 型 79）・幅 1.0 未満のタイ 176・内側の線に沿う平たいタイ 16・線を通る低いスラー 35＝**どれを直すかはユーザーが選ぶ**。
-★ **終了**: full **9427 / 0 / 2 / 9429**。push はユーザー。
+★ 別件（ユーザー「S5 は後回し、別件を進めて」）`1deef3e0`: 小節の途中で終わる曲の最後に小節線を描かない（`MeasureBuilder.cs` の宣言済み「STILL NOT LILYPOND」を閉じた）。LP は measurePosition が 0 に戻る所にだけ小節線を描く＝位置は**曲頭からの通し**（途中の短い小節で後の小節線が全部ずれる）。builder が位置を持ち（checkpoint にも載せた）`EndsOffTheBar` を報告、集める側が「最後の小節に音楽がある声部がすべて主の流れで小節の途中」のときだけ消す。**多声の段と volta のある本は安全側で残す**（LP は volta の 2 番目以降を 1 番目の頭から数え直す＝未移植）。検証は LP 自身の終わりの measurePosition（双子の各 part 変数の末尾に `\applyContext`・Lab `sessions/p659/bars/endpos.ps1`）: 消えた 44 冊すべて LP も小節の途中。ユーザーコーパスで 16 冊が変わる（多くは途中に短い小節のある本）。網 `EndOfMusicBarLineTests`（毒 2 つで赤）・snapshot 9 枚。
+★ **終了**: full **9433 / 0 / 2 / 9435**。push はユーザー。
 
 ## 以下は第658セッションの経緯
 
