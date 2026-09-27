@@ -9,7 +9,7 @@ key c major
 part m { clef treble }
 
 section A {
-  m { <c e g>1@chord | <d f a>1@chord | <g b d>1@chord | <c e g>1@chord | }
+  m { <c e g>1@chord | <d f a>1@chord | <g b d>,1@chord | <c e g>1@chord | }
   chords byName  { Cmaj7 | Dm7 | G7 | Cmaj7 | }
   chords byRoman { Imaj7 | IIm7 | V7 | Imaj7 | }
 }

@@ -2101,7 +2101,7 @@ public sealed class MusicXmlExporter
         // normal frame; degrees stack on the root by diatonic steps in the key.
         bool savedAbsolute = _octaveAbsolute;
         int savedAnchor = _octaveAnchor;
-        // The frame the group leaves behind is the one it was given (see the end).
+        // The incoming frame, for a group with no pitched member (see the end).
         int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;
         bool rootSet = false;
         int anchorOctave = 0;
@@ -2179,12 +2179,13 @@ public sealed class MusicXmlExporter
         _octaveAnchor = savedAnchor;
         // Acts like one note: a trailing `>>N` carries N as the running duration.
         _defaultDuration = arpeggio.TotalDuration?.ToFraction() ?? savedDefault;
-        // THE GROUP DOES NOT MOVE THE FRAME (user decision, 2026-09-16 — the chord rule,
-        // which `<< >>` follows by design): what leaves is what came in, shifted only by
-        // the marks written after '>>'. `rootSet` decides nothing here: a group of rests
-        // leaves the frame alone because its shift is zero (MeasureCollector.MusicWalk).
-        _currentOctave = frameOctaveIn + groupOctave;
-        _currentStep = frameStepIn;
+        // THE GROUP WRITES THE FRAME the way a chord does (user decision, 2026-09-27): the
+        // next note is relative to the group's ANCHOR, the root's bare letter (or the tonic)
+        // plus the marks after '>>'; a group of rests hands the incoming frame on, shifted
+        // by the marks (MeasureCollector.MusicWalk ProcessArpeggio).
+        bool anchored = rootSet && !savedAbsolute;
+        _currentOctave = anchored ? anchorOctave : frameOctaveIn + groupOctave;
+        _currentStep = anchored ? rootStep : frameStepIn;
 
         if (sub.HasTuplet)
         {
@@ -2587,13 +2588,11 @@ public sealed class MusicXmlExporter
     /// LilyPond, matching <c>MidiExporter</c> and <c>MeasureCollector</c>.
     /// </para>
     /// <para>
-    /// ⚠️ THE FRAME THIS LEAVES IS THROWN AWAY BY THE CALLER. It advances the running state
-    /// to the root's anchor while the members are placed, and the caller then puts the
-    /// INCOMING frame back, shifted only by the marks after <c>&gt;</c> — the chord reads
-    /// the frame and never writes it (user decision 2026-09-16,
-    /// <c>MeasureCollector.CreateChordItem</c>; the twin does the same). Session 394 changed
-    /// the page and the twin and left this exporter and the MIDI one on the old rule for a
-    /// day — four readers of one sentence, again.
+    /// ⚠️ THE CALLER DECIDES THE FRAME THE CHORD LEAVES. This advances the running state to
+    /// the root's anchor while the members are placed; the caller then sets the frame to the
+    /// chord's anchor (user decision 2026-09-27, <c>MeasureCollector.CreateChordItem</c>; the
+    /// twin does the same). Session 394 changed the page and the twin and left this exporter
+    /// and the MIDI one on the old rule for a day — four readers of one sentence, again.
     /// </para>
     /// </remarks>
     private (string Step, int Alter, int Octave) ResolveChordMemberPitch(
@@ -2671,9 +2670,9 @@ public sealed class MusicXmlExporter
         // matching MidiExporter and MeasureCollector. extraOctave is the enclosing
         // arpeggio's group shift when this chord is its root.
         int chordOctave = chord.ChordOctaveOffset + extraOctave;
-        // THE CHORD DOES NOT MOVE THE FRAME (user decision, 2026-09-16): the note after
-        // the chord is relative to what came IN, shifted only by the marks after '>' —
-        // MeasureCollector.CreateChordItem's `frameOctaveIn + chordOctave`.
+        // THE CHORD WRITES THE FRAME (user decision, 2026-09-27): the note after the chord
+        // is relative to its ANCHOR — MeasureCollector.CreateChordItem's frame update. The
+        // incoming frame is kept for a chord that anchors nothing and for absolute mode.
         int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;
 
         int firstStep = _currentStep, firstOctave = _currentOctave;
@@ -2827,10 +2826,12 @@ public sealed class MusicXmlExporter
         _chordArpeggio = null;
         _chordMembers.Clear();
 
-        // What leaves is what came in, shifted only by the whole-chord marks: the letters
-        // inside the chord (the root's included) were read to PLACE it and write nothing.
-        _currentStep = frameStepIn;
-        _currentOctave = frameOctaveIn + chordOctave;
+        // The next note is relative to the chord's ANCHOR (the root's bare letter or the
+        // tonic, plus the whole-chord marks); a chord that anchors nothing, and absolute
+        // mode, hand the incoming frame on shifted by the marks.
+        bool anchored = !_octaveAbsolute && (pitches.Count > 0 || chord.Degrees.Any());
+        _currentStep = anchored ? firstStep : frameStepIn;
+        _currentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
         MaybeClosePickup(duration);
     }
 
@@ -3237,9 +3238,10 @@ public sealed class MusicXmlExporter
                         });
                         firstMember = false;
                     }
-                    // The chord reads the frame and never writes it — ProcessChord's rule.
-                    _currentStep = frameStepIn;
-                    _currentOctave = frameOctaveIn + chordOctave;
+                    // The chord's anchor is the next note's frame — ProcessChord's rule.
+                    bool anchored = !_octaveAbsolute && (chord.Pitches.Any() || chord.Degrees.Any());
+                    _currentStep = anchored ? firstStep : frameStepIn;
+                    _currentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
                     break;
                 }
 

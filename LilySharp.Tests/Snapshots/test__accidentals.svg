@@ -1,25 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="371.5" viewBox="0 0 119.50 37.15" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="361.5" viewBox="0 0 119.50 36.15" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="37.15" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="36.15" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="65">Accidentals</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="88">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
-  <line x1="8.59" y1="23.96" x2="94.91" y2="23.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="24.96" x2="94.91" y2="24.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="25.96" x2="94.91" y2="25.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="26.96" x2="94.91" y2="26.96" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="27.96" x2="94.91" y2="27.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="23.96" x2="96.45" y2="23.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="24.96" x2="96.45" y2="24.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="25.96" x2="96.45" y2="25.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="26.96" x2="96.45" y2="26.96" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="27.96" x2="96.45" y2="27.96" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="9.34" y="26.96" font-size="4.00"></text>
   <text class="music" x="13.42" y="25.96" font-size="4.00" data-pos="112"></text>
   <line x1="16.79" y1="28.96" x2="18.75" y2="28.96" stroke="#000000" stroke-width="0.200"/>
   <line x1="20.30" y1="28.96" x2="22.11" y2="28.96" stroke="#000000" stroke-width="0.200"/>
   <line x1="75.74" y1="28.96" x2="78.68" y2="28.96" stroke="#000000" stroke-width="0.200"/>
-  <line x1="90.00" y1="28.96" x2="93.38" y2="28.96" stroke="#000000" stroke-width="0.200"/>
-  <line x1="90.00" y1="29.96" x2="92.07" y2="29.96" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="17.12" y="28.96" font-size="4.00" data-pos="193"></text>
   <line x1="18.36" y1="28.81" x2="18.36" y2="25.46" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="19.03" y="28.96" font-size="4.00" data-pos="196"></text>
@@ -71,17 +69,17 @@
   <text class="music" x="85.83" y="27.46" font-size="4.00" data-pos="433"></text>
   <text class="music" x="87.14" y="26.96" font-size="4.00" data-pos="437"></text>
   <line x1="87.14" y1="27.46" x2="87.14" y2="23.46" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="88.90" y="29.46" font-size="4.00" data-pos="448"></text>
-  <text class="music" x="87.60" y="29.96" font-size="4.00" data-pos="444"></text>
-  <text class="music" x="90.35" y="29.96" font-size="4.00" data-pos="444"></text>
-  <text class="music" x="91.66" y="29.46" font-size="4.00" data-pos="448"></text>
-  <line x1="91.66" y1="29.96" x2="91.66" y2="25.96" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="90.42" y="25.96" font-size="4.00" data-pos="448"></text>
+  <text class="music" x="89.12" y="26.46" font-size="4.00" data-pos="444"></text>
+  <text class="music" x="91.87" y="26.46" font-size="4.00" data-pos="444"></text>
+  <text class="music" x="93.18" y="25.96" font-size="4.00" data-pos="448"></text>
+  <line x1="93.18" y1="26.46" x2="93.18" y2="22.63" stroke="#000000" stroke-width="0.130"/>
   <rect x="30.05" y="23.96" width="0.19" height="4.00" data-pos="206"/>
   <rect x="43.71" y="23.96" width="0.19" height="4.00" data-pos="263"/>
   <rect x="58.88" y="23.96" width="0.19" height="4.00" data-pos="334"/>
   <rect x="72.93" y="23.96" width="0.19" height="4.00" data-pos="355"/>
   <rect x="82.29" y="23.96" width="0.19" height="4.00" data-pos="428"/>
-  <rect x="94.77" y="23.96" width="0.19" height="4.00" data-pos="454"/>
+  <rect x="96.31" y="23.96" width="0.19" height="4.00" data-pos="454"/>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="103"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="103"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="103">= 120</text>

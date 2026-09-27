@@ -206,31 +206,35 @@ Notes enclosed in angle brackets share a duration (written after the `>`):
 ```
 
 **Octaves — the anchor model.** Two rules: *a mark moves only what it is attached to*,
-and *a chord reads the octave frame but never writes it.*
+and *a chord is one item of the relative chain — the next note reads its anchor.*
 
 - The chord's **anchor** — where the chord *sits* — is the first member's bare **letter**
   (or the key **tonic** when the chord is degrees-only), resolved nearest to the running
-  frame. Reading the frame is all a chord does to it: the letters inside, the first
-  member's included, **do not move the frame**, so a run of chords cannot drift —
-  `<c e g> | <d f a> | <g b d> | <c e g>` ends on the chord it began on.
+  frame. The note after the chord is relative to that anchor, just as after a single
+  note, so editing a note two items back cannot move it: in `g1 | <c e g>1 | <f a c>1`
+  the f reads the chord's c, and rewriting the `g1` as `f1` moves neither chord.
+  A run of chords climbs or falls the way a run of single notes does —
+  `<c e g> | <d f a> | <g b d> | <c e g>` ends an octave up, like `c d g c`; write
+  `<g b d>,` to come back down.
 - Every member sits at-or-above the anchor, so the written order doesn't matter
   (`<c e g>` = `<c g e>`); only the first slot does (`<g c e>` anchors on g).
   Degrees are fully order-independent (`<2 4 6>` = `<6 2 4>`).
 - A `'` / `,` **on a member** moves *that one note* only — the first member's
-  included: `<c' e g>` = C5 E4 G4, and the next bare `c` is still C4.
-- A `'` / `,` **after the `>`** (before the duration) moves the **whole chord**, and it is
-  the one thing that moves the **frame** — by that many octaves, so it *propagates*: after
-  `<c e g>'4` (C5 E5 G5) a bare `c` continues at C5. The frame lands *where it was ± the
-  marks*, never on the chord's own anchor, so what follows a chord never depends on which
-  letters the chord holds.
+  included: `<c' e g>` = C5 E4 G4, and the next bare `c` is still C4. Because the
+  anchor is the bare letter, `<c, e g> <c, e g>` repeats the same C3 E4 G4 however many
+  times it is pasted.
+- A `'` / `,` **after the `>`** (before the duration) moves the **whole chord** and its
+  anchor, so it *propagates*: after `<c e g>'4` (C5 E5 G5) a bare `c` continues at C5.
+- A degree chord hands on the **tonic**, not the first degree written: the degrees are
+  stacked upward from the tonic, so `<1 3 5> <5 7 2> <1 3 5>` returns to the same I.
 
 ```
 <c e g>4       // C4 E4 G4
 <c g,>4        // C4 G3 — a member ',' drops that one note
 <c' e g>4      // C5 E4 G4 — the root's mark is local; next bare c = C4
 <c e g>'4      // C5 E5 G5 — whole chord up, and the frame with it; next bare c = C5
-<g' b' d'>4    // marking every member sounds the same chord as <g b d>' — but LOCALLY,
-               // the frame stays where it was, so the next bare c does not follow
+<g' b' d'>4    // marking every member sounds the same chord as <g b d>' — but LOCALLY:
+               // the anchor stays on the bare g, so the next bare c does not follow
 ```
 
 ### Arpeggios (`<< … >>`)
@@ -238,7 +242,8 @@ and *a chord reads the octave frame but never writes it.*
 An arpeggio is a *written-out* broken chord: the members play in **sequence** and
 **equally subdivide** the group's total duration (members carry no durations of their
 own — a bare number is always a scale degree). Octaves follow the chord anchor model — the
-group reads the frame and never writes it; only a mark after `>>` moves the frame:
+note after the group reads the group's anchor (not its last member), and a mark after `>>`
+moves the group and its anchor:
 
 ```
 << c e g >>         // c, then e and g stacked above it (E4, G4) — an ascending arpeggio

@@ -25,7 +25,7 @@ section B {
   lh { a4@sustain <c e a> <c e a> | d4 <f a d> <f a d>@!sustain |
        e,4@sustain <gis b d>' <gis b d> | e,2.@!sustain |
        a4@sustain <c e a> <c e a> | a4 <c e a> <c e a>@!sustain |
-       e4@sustain <gis b d>' <gis b d> | <a, e a c e,>2.@arpeggio@!sustain | }
+       e,4@sustain <gis b d>' <gis b d> | <a, e a c e,>2.@arpeggio@!sustain | }
 }
 
 form main { A B }

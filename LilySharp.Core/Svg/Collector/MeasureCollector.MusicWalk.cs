@@ -500,8 +500,7 @@ public sealed partial class MeasureCollector
         // normal frame; degrees stack on the root by diatonic steps in the key.
         bool savedAbsolute = _octave.OctaveAbsolute;
         int savedBase = _octave.OctaveBase;
-        // The incoming frame, saved because the group gives it back (see below): like a
-        // chord, an arpeggio READS the frame to place itself and never WRITES it.
+        // The incoming frame, saved for a group with no pitched member (see below).
         int savedFrameOctave = _octave.CurrentOctave;
         char savedFramePitchName = _octave.LastPitchName;
         bool rootSet = false;
@@ -570,13 +569,21 @@ public sealed partial class MeasureCollector
         }
         _octave.OctaveAbsolute = savedAbsolute;
         _octave.OctaveBase = savedBase;
-        // THE GROUP DOES NOT MOVE THE FRAME EITHER (user decision, 2026-09-16 — the chord
-        // rule, and `<< >>` follows the chord anchor model by design). What leaves is what
-        // came in, shifted only by the marks written after '>>'. ⚠️ `rootSet` no longer
-        // decides anything here: a group of rests leaves the frame alone because its shift
-        // is zero, not because no root was found.
-        _octave.CurrentOctave = savedFrameOctave + groupOctave;
-        _octave.LastPitchName = savedFramePitchName;
+        // THE GROUP WRITES THE FRAME the way a chord does (user decision, 2026-09-27): the
+        // next note is relative to the group's ANCHOR — the root's bare letter (the tonic
+        // when a degree comes first) plus the marks after '>>' — not to the last member
+        // heard. A group with no pitched member (rests only) hands the incoming frame on,
+        // shifted by the marks.
+        if (rootSet && !savedAbsolute)
+        {
+            _octave.CurrentOctave = anchorOctave;
+            _octave.LastPitchName = rootLetter;
+        }
+        else
+        {
+            _octave.CurrentOctave = savedFrameOctave + groupOctave;
+            _octave.LastPitchName = savedFramePitchName;
+        }
 
         // Post-events after '>>': a chord name (bare '@chord' derives it from the
         // members; explicit '@chord(...)' shows as written) and a dynamic (@f — it

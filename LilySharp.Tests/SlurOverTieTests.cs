@@ -54,7 +54,7 @@ public class SlurOverTieTests
             grace { b16 } a4( cis8 e g4 fis8 e) |
             <fis a>4.( <e g>8 <d fis>4 <cis e>) |
             <b d>2( <bes d>2) |
-            tuplet 3/2 { a,8( b a } fis4 e8 g fis e) |
+            tuplet 3/2 { a8( b a } fis4 e8 g fis e) |
             <a d fis>1 |.
           }
         }

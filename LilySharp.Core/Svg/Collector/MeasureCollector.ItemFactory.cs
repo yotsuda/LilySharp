@@ -406,13 +406,14 @@ public sealed partial class MeasureCollector
         // the arpeggio's root (`<< <c e> g >>,`); 0 otherwise.
         int chordOctave = chord.ChordOctaveOffset + extraOctave;
 
-        // THE INCOMING FRAME, saved because the chord gives it back (see the restore at
-        // the end of this method): a chord READS the frame to place itself and never
-        // WRITES it.
+        // THE INCOMING FRAME, saved for the chords that anchor nothing (`<>`, drums
+        // only) and for absolute mode: those hand it back shifted only by the marks
+        // after '>' (see the frame update at the end of this method).
         int frameOctaveIn = _octave.CurrentOctave;
         char framePitchNameIn = _octave.LastPitchName;
+        bool anchored = false;
 
-        // Track first note's state for subsequent chord/note relative calculation
+        // The chord's ANCHOR — where it sits, and what the next chord/note is relative to.
         int firstOctave = _octave.CurrentOctave;
         char firstPitchName = _octave.LastPitchName;
         int rootStepForStack = 0;
@@ -424,12 +425,11 @@ public sealed partial class MeasureCollector
             {
                 // The first member is the ROOT: its LETTER, resolved bare in the
                 // incoming frame, is the chord's ANCHOR — the base every other
-                // member stacks on. The root's own '/, marks are LOCAL to its
-                // sounding pitch (<c' e g> = C5 E4 G4). ⚠️ The anchor is where the
-                // chord SITS, not where the frame goes: nothing in here moves the
-                // frame (see the restore at the end of this method). Absolute mode
-                // has no frame: the root's marks are its register and anchor the
-                // degrees as written.
+                // member stacks on and the frame the next chord/note reads. The
+                // root's own '/, marks are LOCAL to its sounding pitch
+                // (<c' e g> = C5 E4 G4, and the next bare c is still C4). Absolute
+                // mode has no frame: the root's marks are its register and anchor
+                // the degrees as written.
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
                 rootStepForStack = GetPitchIndex(firstPitchName);
                 if (_octave.OctaveAbsolute)
@@ -443,6 +443,7 @@ public sealed partial class MeasureCollector
                     rp = ResolveAbsolutePitch(rootStepForStack, pitch.AccidentalOffset,
                         anchor + pitch.OctaveOffset, pitch.SourceStart);
                     firstOctave = anchor;
+                    anchored = true;
                 }
             }
             else if (_octave.OctaveAbsolute)
@@ -570,8 +571,9 @@ public sealed partial class MeasureCollector
 
         // Omitted root (<1 3 5> / <3 5>): the degrees are relative to the KEY'S
         // TONIC (degree 1 = tonic). Anchor the (unsounded) tonic in the relative
-        // frame like a written root would be — to PLACE the chord only; the frame
-        // is handed back untouched below, same as for a written root. A custom/
+        // frame like a written root would be; the TONIC, not the first degree written,
+        // is the anchor the next note reads — the degrees are stacked upward from it,
+        // not chosen nearest, so `<1 3 5> <5 7 2> <1 3 5>` must not climb. A custom/
         // atonal key has no tonic, so fall back to C.
         if (chord.Root is null && chord.Degrees.Any())
         {
@@ -579,6 +581,7 @@ public sealed partial class MeasureCollector
             char tonicName = "cdefgab"[tonicStep];
             firstOctave = _octave.Resolve(tonicStep, 0, tonicName) + chordOctave;
             firstPitchName = tonicName;
+            anchored = !_octave.OctaveAbsolute;
         }
 
         // Scale-degree members (<d 3 5 7,>): each stacks on the root by diatonic
@@ -637,18 +640,19 @@ public sealed partial class MeasureCollector
             && (Music.ChordRepetitions.IsOriginal(chord) || Music.BareDurations.IsOriginal(chord)))
             _resolvedSpellingLog.Add((chord, memberArray));
 
-        // THE CHORD DOES NOT MOVE THE FRAME (user decision, 2026-09-16). What leaves is
-        // what came in, shifted ONLY by the whole-chord marks written after '>'. The
-        // letters inside — the root's included — are read to PLACE the chord and never
-        // write the frame, so `<c e g> | <d f a> | <g b d> | <c e g>` cannot drift (the
-        // old rule chained anchor to anchor and climbed a whole octave over those four
-        // bars), while `<g b d>,` lowers this chord AND everything after it, exactly as a
-        // single `g,` would.
-        // ⚠️ THE SHIFT IS "THE INCOMING FRAME ± THE MARKS", NOT "THE CHORD'S OWN ANCHOR":
-        // the frame after a chord never depends on which letters the chord holds. That is
-        // the whole point of the rule — it is predictable without reading the chord.
-        _octave.CurrentOctave = frameOctaveIn + chordOctave;
-        _octave.LastPitchName = framePitchNameIn;
+        // THE CHORD WRITES THE FRAME: the next chord/note is relative to the chord's
+        // ANCHOR — the root's bare letter (the tonic for a degree chord) plus the
+        // whole-chord marks after '>'; the members' own marks stay local (user decision,
+        // 2026-09-27, replacing 2026-09-16's "a chord reads the frame and never writes
+        // it"). A chord is then ONE item of the relative chain, like a note: in
+        // `g1 | <c e g>1 | <f a c>` the last chord reads the chord before it, so
+        // rewriting the g cannot move it while the chord in between stays put (under the
+        // old rule it read the g, two items back, and jumped an octave). The anchor, not
+        // the root's sounding pitch, so `<c, e g> <c, e g>` repeats without falling.
+        // A chord that anchors nothing (`<>`, drums only) and absolute mode hand the
+        // incoming frame on, shifted by the marks.
+        _octave.CurrentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
+        _octave.LastPitchName = anchored ? firstPitchName : framePitchNameIn;
 
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).

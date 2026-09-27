@@ -282,12 +282,18 @@ free except the first slot (`<c e g>` = `<c g e>`; degrees are fully order-free)
 `'`/`,` on a member moves THAT note only — the first member's included: `<c' e g>` =
 C5 E4 G4 and the next bare c is still C4. A `'`/`,` AFTER the `>` (before the duration)
 moves the whole chord AND the anchor, so it propagates: `<c e g>'4 c` = C5 E5 G5, C5.
+The note AFTER a chord is relative to the chord's ANCHOR, exactly as after a single note
+— a chord is ONE item of the relative chain: `g1 <c e g>1 <f a c>1` = G3, C4 E4 G4,
+F4 A4 C5 (the f reads the chord's c, not the g), and `<c, e g> <c, e g>` repeats the
+same C3 E4 G4 because the anchor is the bare c, not the lowered one. Degree chords
+hand on the TONIC, not the first degree written.
 
 ## Arpeggios `<< … >>` (written-out broken chords)
 
 Members play in SEQUENCE and EQUALLY SUBDIVIDE the group's total (no per-member
 durations — a bare number is always a scale degree). Octaves follow the chord anchor
-model above; a degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
+model above — the next note reads the group's anchor, not its last member; a
+degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
 (parallel voices) — those are `voice { }` in Lily#; a `\\` inside is an error.
 
 ```

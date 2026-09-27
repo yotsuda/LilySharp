@@ -234,14 +234,14 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2676** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4832** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:6349** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:4829** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:6346** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:421** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **:1154** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2573** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2574** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordVoicing.cs`

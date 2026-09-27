@@ -1827,7 +1827,7 @@ public sealed class MidiExporter
         // ⚠️ The ABSOLUTE base, because the stacking below switches absolute mode ON and
         // spells each member's octave itself. The relative seed is untouched.
         int savedAnchor = _partAbsoluteBase;
-        // The frame the group leaves behind is the one it was given (see the end).
+        // The incoming frame, for a group with no pitched member (see the end).
         int frameNameIn = _currentNoteName, frameOctaveIn = _currentOctave;
         bool rootSet = false;
         int anchorOctave = 0;
@@ -1884,12 +1884,13 @@ public sealed class MidiExporter
         // Acts like one note: a trailing `>>N` carries N as the running duration; an inherited
         // total leaves it unchanged.
         _defaultDuration = arpeggio.TotalDuration?.ToFraction() ?? savedDefault;
-        // THE GROUP DOES NOT MOVE THE FRAME (user decision, 2026-09-16 — the chord rule,
-        // which `<< >>` follows by design): what leaves is what came in, shifted only by
-        // the marks written after '>>'. `rootSet` decides nothing here: a group of rests
-        // leaves the frame alone because its shift is zero (MeasureCollector.MusicWalk).
-        _currentOctave = frameOctaveIn + groupOctave;
-        _currentNoteName = frameNameIn;
+        // THE GROUP WRITES THE FRAME the way a chord does (user decision, 2026-09-27): the
+        // next note is relative to the group's ANCHOR, the root's bare letter (or the tonic)
+        // plus the marks after '>>'; a group of rests hands the incoming frame on, shifted
+        // by the marks (MeasureCollector.MusicWalk ProcessArpeggio).
+        bool anchored = rootSet && !savedAbsolute;
+        _currentOctave = anchored ? anchorOctave : frameOctaveIn + groupOctave;
+        _currentNoteName = anchored ? rootStep : frameNameIn;
     }
 
     /// <summary>Play one bare arpeggio pitch at the forced member duration, resolved through
@@ -2224,13 +2225,11 @@ public sealed class MidiExporter
     /// <c>MeasureCollector</c>.
     /// </para>
     /// <para>
-    /// ⚠️ THE FRAME THIS LEAVES IS THROWN AWAY BY THE CALLER. It advances the running
-    /// state to the root's anchor while the members are placed, and the caller then puts
-    /// the INCOMING frame back, shifted only by the marks after <c>&gt;</c> — the chord
-    /// reads the frame and never writes it (user decision 2026-09-16,
-    /// <c>MeasureCollector.CreateChordItem</c>; the twin does the same). Session 394
-    /// changed the page and the twin and left this exporter and the MusicXML one on the
-    /// old rule for a day — four readers of one sentence, again.
+    /// ⚠️ THE CALLER DECIDES THE FRAME THE CHORD LEAVES. This advances the running state to
+    /// the root's anchor while the members are placed; the caller then sets the frame to the
+    /// chord's anchor (user decision 2026-09-27, <c>MeasureCollector.CreateChordItem</c>; the
+    /// twin does the same). Session 394 changed the page and the twin and left this exporter
+    /// and the MusicXML one on the old rule for a day — four readers of one sentence, again.
     /// </para>
     /// </remarks>
     private int ResolveChordMemberPitch(
@@ -2324,9 +2323,9 @@ public sealed class MidiExporter
         // arpeggio's root (`<< <c e> g >>,`); 0 otherwise.
         int chordOctave = chord.ChordOctaveOffset + extraOctave;
         int chordShift = chordOctave * 12;
-        // THE CHORD DOES NOT MOVE THE FRAME (user decision, 2026-09-16): the note after
-        // the chord is relative to what came IN, shifted only by the marks after '>' —
-        // MeasureCollector.CreateChordItem's `frameOctaveIn + chordOctave`.
+        // THE CHORD WRITES THE FRAME (user decision, 2026-09-27): the note after the chord
+        // is relative to its ANCHOR — MeasureCollector.CreateChordItem's frame update. The
+        // incoming frame is kept for a chord that anchors nothing and for absolute mode.
         int frameNameIn = _currentNoteName, frameOctaveIn = _currentOctave;
 
         bool isFirst = true;
@@ -2396,10 +2395,12 @@ public sealed class MidiExporter
         _resolvedChordNotes[chord] = resolved;
         CloseOnset(track, onset, startsTie);
 
-        // What leaves is what came in, shifted only by the whole-chord marks: the letters
-        // inside the chord (the root's included) were read to PLACE it and write nothing.
-        _currentNoteName = frameNameIn;
-        _currentOctave = frameOctaveIn + chordOctave;
+        // The next note is relative to the chord's ANCHOR (the root's bare letter or the
+        // tonic, plus the whole-chord marks); a chord that anchors nothing, and absolute
+        // mode, hand the incoming frame on shifted by the marks.
+        bool anchored = !_octaveAbsolute && (pitches.Count > 0 || chord.Degrees.Any());
+        _currentNoteName = anchored ? firstNoteName : frameNameIn;
+        _currentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
 
         _currentTick = startTick + durationTicks;
     }
@@ -2760,9 +2761,10 @@ public sealed class MidiExporter
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
                             IsGrace: true));
                     }
-                    // The chord reads the frame and never writes it — ProcessChord's rule.
-                    _currentNoteName = frameNameIn;
-                    _currentOctave = frameOctaveIn + chord.ChordOctaveOffset;
+                    // The chord's anchor is the next note's frame — ProcessChord's rule.
+                    bool anchored = !_octaveAbsolute && !isFirst;
+                    _currentNoteName = anchored ? firstNoteName : frameNameIn;
+                    _currentOctave = anchored ? firstOctave : frameOctaveIn + chord.ChordOctaveOffset;
                     _currentTick += g;
                     _pendingGraceSteal += g;
                     break;

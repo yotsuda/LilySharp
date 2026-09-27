@@ -108,7 +108,7 @@ public class ChordHoverTests
 
     [Fact]
     public void AnArpeggio_ListsItsPitchesInPlayedOrder() =>
-        Assert.EndsWith("G4 \u00A0E4 \u00A0C4", HoverAt("<< g' e c >>"));
+        Assert.EndsWith("G5 \u00A0E5 \u00A0C5", HoverAt("<< g' e c >>"));
 
     [Fact]
     public void AChordRepetition_HoversAsWhatItRepeats() =>

@@ -1391,6 +1391,36 @@ public class LilyPondExporterTests
         Assert.Contains("<a c g'>4 a4 e4 f4", ly);
     }
 
+    /// <summary>The twin follows Lily#'s chord frame: the note after a chord or an arpeggio
+    /// is relative to the group's ANCHOR (GRAMMAR.md "Chord/arpeggio OCTAVES", 2026-09-27).</summary>
+    /// <remarks>
+    /// LilyPond leaves a chord on its first member's SOUNDING pitch and an arpeggio (a plain
+    /// sequence in the twin) on its last, so the two frames part whenever the root carries its
+    /// own mark or a group is broken, and the next note's marks carry the difference. Each
+    /// row is the pitch sequence Lily# sounds, read back through LilyPond's \relative by
+    /// hand: G3, C4 E4 G4, F4 A4 C5 — the owner's report (the old frame, G3, gave F3);
+    /// A3, C3 E4 G4, B3, C3 E4 G4 — the `b'` is there because LilyPond stands on C3;
+    /// G3, C4 E4 G4, F4 — LilyPond stands on the last g, Lily# on the c, and both reach F4
+    /// (the old frame, G3, gave F3); C4 E4 G4, G4 B4 D4, C4 E4 G4, C4 — the degree chord
+    /// hands on the tonic.
+    /// </remarks>
+    [Theory]
+    [InlineData("g2 <c e g>4 <f a c>4", "g2 <c e g>4 <f a c>4")]
+    [InlineData("a4 <c, e g> b <c, e g>", "a4 <c, e' g> b' <c, e' g>")]
+    [InlineData("g4 << c e g >>2 f4", "g4 \\tuplet 3/2 { c4 e4 g4 } f4")]
+    [InlineData("<1 3 5>4 <5 7 2> <1 3 5> c", "<c e g>4 <g' b d,> <c, e g> c")]
+    public void TheNoteAfterAGroup_IsWrittenAgainstTheGroupsAnchor(string music, string expected)
+    {
+        var ly = Export($$"""
+            part gt {
+              section S { {{music}} | }
+            }
+            form main { ~S }
+            score main { staff gt }
+            """);
+        Assert.Contains(expected, ly);
+    }
+
     [Fact]
     public void Ties_AndBreaks_ArePreserved()
     {
