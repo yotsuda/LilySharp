@@ -1,0 +1,11 @@
+octave absolute
+time 4/4
+part m {
+  instrument bass
+  clef bass
+  section A { e,,4( f,,) g,,~ g,, | a,,8( b,, c, d,) e,4~ e, | c,2( e,,) | g,,4~ g,, a,,( b,,) | }
+}
+form main { A }
+score main {
+  tab m
+}

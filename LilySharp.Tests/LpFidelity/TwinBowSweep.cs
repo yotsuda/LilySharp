@@ -13,7 +13,8 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-// SCRATCH INSTRUMENT — not part of the suite's claims (HANDOFF §2 S0). Dumps every bow a
+// The S0 instrument (HANDOFF §2 S0): its DumpBows fact is a scratch sweep, not a claim of the
+// suite, but its Dump is what BowTwinTests holds the bow books to (session 659). Dumps every bow a
 // book draws — ties, slurs, phrasing slurs — in the frame the LilyPond side's bowdump.ily
 // prints (Lab sessions/p647/bows): x from the staff lines' left end, y up from the staff's
 // middle line, at full double precision. Opt-in through LILYSHARP_BOW_SWEEP=<list file>,
@@ -59,7 +60,8 @@ public sealed class TwinBowSweep
         }
     }
 
-    private static string Dump(string source)
+    /// <summary>The book's bows in the twin frame — also what <see cref="BowTwinTests"/> reads.</summary>
+    internal static string Dump(string source)
     {
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);

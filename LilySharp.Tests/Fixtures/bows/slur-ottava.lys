@@ -1,0 +1,7 @@
+octave absolute
+time 4/4
+part m {
+  section A { c''4@ottava( d'' e'' f''@!ottava) | g''2( e''4 c'') | }
+}
+form main { A }
+score main { staff m }

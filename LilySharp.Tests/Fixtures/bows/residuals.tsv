@@ -1,0 +1,18 @@
+# Known bow residuals of the bow situation books against their LilyPond 2.26.0 twins (BowTwinTests).
+# book <TAB> staff-ordinal|kind|pair-index (or |COUNT, or STAFFCOUNT) <TAB> worst term in staff spaces (or the counts) <TAB> why
+# kind: T tie, S slur, P phrasing slur, R repeat tie, V laissez-vibrer tie. Declarations: HANDOFF §2 S3 (Lab sessions/p650/s3-inventory.md).
+slur-grace	0|S|COUNT	lp=4 ls=3	grace: a slur on a grace note is not drawn — VoiceScan skips grace notes (declared scaffolding, HANDOFF §2 U8, LYS4020)
+tab-full-bows	1|S|0	0.4649	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-full-bows	1|S|1	0.2277	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-full-bows	1|S|2	0.4527	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-full-bows	1|S|3	0.2364	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-full-bows	1|T|0	0.9115	tab tie: LILYSHARP-OWN tab tie (height string line +- 0.36 FretEm + 0.1, each tie leaves its own digit; ElementCoordinator tab tie arm)
+tab-full-bows	1|T|1	1.3907	tab tie: LILYSHARP-OWN tab tie (height string line +- 0.36 FretEm + 0.1, each tie leaves its own digit; ElementCoordinator tab tie arm)
+tab-full-bows	1|T|2	0.9338	tab tie: LILYSHARP-OWN tab tie (height string line +- 0.36 FretEm + 0.1, each tie leaves its own digit; ElementCoordinator tab tie arm)
+tab-only-bows	0|S|0	0.4649	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-only-bows	0|S|1	0.2277	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-only-bows	0|S|2	0.4527	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-only-bows	0|S|3	0.2364	tab slur: F9, the tab digit font size (declared; both ends move outward)
+tab-only-bows	0|T|0	0.9115	tab tie: LILYSHARP-OWN tab tie (height string line +- 0.36 FretEm + 0.1, each tie leaves its own digit; ElementCoordinator tab tie arm)
+tab-only-bows	0|T|1	1.3865	tab tie: LILYSHARP-OWN tab tie (height string line +- 0.36 FretEm + 0.1, each tie leaves its own digit; ElementCoordinator tab tie arm)
+tab-only-bows	0|T|2	1.2655	tab tie: LILYSHARP-OWN tab tie (height string line +- 0.36 FretEm + 0.1, each tie leaves its own digit; ElementCoordinator tab tie arm)

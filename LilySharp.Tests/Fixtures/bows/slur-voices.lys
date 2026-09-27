@@ -1,0 +1,7 @@
+octave absolute
+time 4/4
+part m {
+  section A { voice { e'4( f' g' a') } { c4( d e f) } | voice { g'2( f') } { b,2( c) } | voice { c''8( b' a' g' f'4 e') } { e8( f g a b4 c') } | }
+}
+form main { A }
+score main { staff m }

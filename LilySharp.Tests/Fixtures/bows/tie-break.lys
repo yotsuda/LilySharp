@@ -1,0 +1,7 @@
+octave absolute
+time 4/4
+part m {
+  section A { c'2 d'2~ | break d'2 e' | f'1~ | break f'1 | a2 b~ | break b1 | c4 d e f~ | break f1 | <c e>2 <d f>~ | break <d f>1 | }
+}
+form main { A }
+score main { staff m }
