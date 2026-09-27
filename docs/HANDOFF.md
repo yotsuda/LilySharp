@@ -106,7 +106,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 - ★ **⒵ perf は第615 で区切り（ユーザー判断）**: render 約 12,030 → 9,200 ms（3,760 打鍵・−24%）・割当 −31%（第598〜第615・経緯は ARCHIVE）。照合の基準は `SvgGenerator.Generate`（Lab `sessions/p611/verify-all.ps1`・Release の `p594/cpuhost`）・打鍵ごとの計器は Lab `sessions/p613/lathost`。残る大物は設計級＝長い score の段ごと引き継ぎ（第615 の地図・script の段ごと memo が 1 歩目）と collect の尾の `_tieTargetWarnings` abort（第613 ⒝）。⚠️ 弱参照の表で全 item を memo する形は GC で負ける（第602）／⚠️ EventPipe の CPU sampler の PollGC は水増し（第589・第615）
 
-- ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ prelim の系ごとの束ね（`LayoutPreliminaryStaffSlurs`）では、別の系に始まる内側スラーが見えない＝間隔の近似だけ（最終段は全部見る）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
+- ★ **⒳¹³ フレージング・スラーの残り**（⑴⑵⑶ は第483、⑸ のタブ譜の内側スラー回避は第484 が閉じた）: ⑷ ✅ **第660 `7961dbf7` が閉じた**＝実体は「段ごとの staff skyline が 1 系だけで `LayoutSlurs` を呼び、片端が別の系のスラーを捨てていた」（行をまたぐスラーが下の段から上の段を突き抜けた）。⚠️ 残り: **タイも同じ形**（`ElementCoordinator.cs` のタイ列の `measureMap` 門）＝未修正（組み立てが両端の小節を無条件に読む・影響は小さい）／⑹ ✅ **第633 が閉じた**（full tab の符尾と梁を採点に入れた・§1.1 第633）
 - ✅ **T8 は第634 が閉じた**（§1.1 第634）。行頭の `|:` は第635 が閉じた。残り: staff＋`tab as full` の多段では各声部を*自分の*段の小節線で読む（LP は全段の列を各段の小節線で読んで merge）／小節線をまたぐ梁は小節ごとに半分で読む
 - ⚠️ **tab のタイの行き先の数字は*描かない*＝意図した LP からの逸脱（ユーザー決定・§2 T の冒頭 906 行にも在る・第636 で再確認「描画すべきではない」）**。LP の `\tabFullNotation` は描く（`Tab_tie_follow_engraver` が handle-ties を外す＝scheme-engravers.scm:2196-2200）が、**Lily# は tab の種類を問わず消す＝欠陥として起票しない・提案しない**（`SharedRenderer.Tab.cs` の該当行に LILYSHARP-OWN の註を置いた）
 - ⚠️ **梁の無い符尾がスラー側を向くとき、スラーは頭の側（符尾のあいだ）に付く＝LP の規則のまま**（slur-scoring.cc:549-557／:742-752）。ユーザーは LP の絵を見て「stem の先につくべき」と指摘したが、決定は「LP 忠実にしておくのが無難」（第635）＝**変えない・提案しない**
@@ -133,7 +133,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ✅ `SkylineMergeTests.ABatchsResultList…` の 1 度だけの赤（full の並列実行）は再現せず（full 3 回・単独 3 回）＝`2c04e4a3` で「3 回測って最小値」にした（毒＝渡された数で取る は赤のまま）。
 ★ ユーザー「進めて」＝§1.0 の一時停止中の perf の島 13 項目と「掃き終わった島」の教訓（約 13 KB）を `HANDOFF-ARCHIVE.md` 末尾「§1.0 から移した perf の島」へ逐語で移した（§1.0 には ⏸ の指し示す行 3 本）＝HANDOFF 445.7 → 432.8 KB。再開するときはそこから §1.0 へ戻す。
 ★ `9b74ad2b` 音楽の中に書いた括弧（`[1. … ]`）も位置を戻す＝どの括弧が最後か分からないので毎回戻し、組の後の音楽（または曲の終わり）で最後の戻しを取り消す（`EndAlternative`／`CloseAlternatives`・checkpoint に載せた）。安全策を撤去。LP の終わりの位置と 3 形一致・986 冊で動く本 0・網 3 本（取り消しを外す毒で 2 赤）。
-★ **終了**: full **9438 / 0 / 2 / 9440**。push はユーザー。
+★ `7961dbf7` ⒳¹³⑷ の実体を見つけて閉じた: 段ごとの staff skyline（`StaffSlurLayouts`）は 1 系だけを渡して `LayoutSlurs` を呼び、片端が別の系のスラーを捨てていた＝行をまたぐスラーはどちらの行でも段の間隔に入らず、grandStaff で下の段から出るスラーが上の段を突き抜けた。`SpannerBreakSubstitution.SplitClipped`（渡された系の中の切れ端）で解く（LP は切れ端ごとに自分の行で解く＝`Spanner::do_break_processing`）。再現本（Lab `sessions/p660/xs/xsys3.lys`）: 段の間隔 LP 11.045／14.281・旧 10.095／12.595・新 11.042／14.306。986 冊で 3 冊動く（lyhygrace 2 段目 9.0→9.1・LP 9.35／tab 本 2 冊はページの均し）。網 `BrokenSlurStaffSpacingTests`（`Split` に戻す毒で赤）。途中で LP 引用に関数名が無く `CitationsThatNameNothing` が赤＝名前を入れて commit に畳んだ。
+★ **終了**: full **9439 / 0 / 2 / 9441**。push はユーザー。
 
 ## 以下は第659セッションの経緯
 
