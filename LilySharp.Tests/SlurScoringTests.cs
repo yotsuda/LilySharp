@@ -77,7 +77,10 @@ public class SlurScoringTests
         // LILYPOND-REF: lily/slur-scoring.cc:483-516 get_y_attachment_range
         // LILYPOND-REF: lily/slur-scoring.cc:639-658 move_away_from_staffline
         // LILYPOND-REF: lily/slur-scoring.cc:850-884 get_extra_encompass_infos
-        string svg = Render("e''16.( e,,32)");
+        // `|.` as the twin writes `\bar "|."`: without a bar line the unfinished auto beam is
+        // dropped at the end of the music and the stems keep their flags (session 658,
+        // EndOfMusicAutoBeamTests) — LilyPond's own slur-dot-collision.ly, which has no bar.
+        string svg = Render("e''16.( e,,32) |.");
         double middle = MiddleLineY(svg);
         var c = BowCurve(svg);
 

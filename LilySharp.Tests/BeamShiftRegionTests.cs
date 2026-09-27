@@ -34,7 +34,9 @@ public class BeamShiftRegionTests
     /// <remarks>
     /// LilyPond 2.26.0 on audit/lpreg/slurdot.ly (input/regression/slur-dot-collision.ly, the
     /// book below exported), Beam.positions dumped: <c>(-3.5 . -5.5)</c>. Lily# drew
-    /// (−3.00, −5.19) while it clamped the seed to one side.
+    /// (−3.00, −5.19) while it clamped the seed to one side. The `|.` is the twin's
+    /// <c>\bar "|."</c>: without a bar line the music's end drops the unfinished auto beam
+    /// (EndOfMusicAutoBeamTests).
     /// LILYPOND-REF: lily/beam-quanting.cc:777-890 shift_region_to_valid, :440-450 point_in_interval.
     /// </remarks>
     [Fact]
@@ -45,7 +47,7 @@ public class BeamShiftRegionTests
 
             section A {
               melody {
-                e''16.( e,,32)
+                e''16.( e,,32) |.
               }
             }
 

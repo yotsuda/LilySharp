@@ -10,7 +10,7 @@ part melody
 
 section A {
   melody {
-    e''16.( e,,32)
+    e''16.( e,,32) |.
   }
 }
 

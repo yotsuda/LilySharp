@@ -1795,11 +1795,13 @@ public class IncrementalCompilerTests
             """;
         var session = new IncrementalCompiler(SyntaxTree.Parse(src), Opt);
         Assert.Equal(Full(src), Norm(session.Render()));
-        // One miss: the key folds only what detection READS (AddDetectionInputs), so
+        // Two misses. The key folds only what detection READS (AddDetectionInputs), so
         // measure 0's section label — which detection never looks at — does not split
-        // the key. (Under the earlier MeasureContentKey.Of fold it did: this was (6, 2),
-        // measured — the label sat in the intrinsic key.)
-        Assert.Equal((7, 1), session.LastBeamMemo);
+        // the key. (Under the earlier MeasureContentKey.Of fold it did — the label sat in
+        // the intrinsic key.) The second miss is the LAST bar, which detection does read
+        // differently: it ends the music (session 658 — an unfinished auto beam there is
+        // asked the beat check, not ended by a bar line), so it is keyed apart.
+        Assert.Equal((6, 2), session.LastBeamMemo);
     }
 
     /// <summary>

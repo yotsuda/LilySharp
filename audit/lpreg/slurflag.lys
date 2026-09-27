@@ -9,7 +9,7 @@ part melody
 
 section A {
   melody {
-    b'8( c8)
+    b'8( c8) |.
   }
 }
 

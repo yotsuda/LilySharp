@@ -211,19 +211,22 @@ internal sealed class BeamDetector
                 if (item is TimeSignatureChangeItem { NewTime: { SenzaMisura: false } newTime })
                     beamingMeter = newTime;
 
+            // The voice's last bar is asked one more question (DetectBeamGroupsInMeasure's
+            // end-of-music arm) that the bar's content does not answer: a fourth key input.
+            bool endsTheMusic = measureIndex == voice.Measures.Length - 1;
             if (memoEligible
                 && (crossMeasureTouched == null || !crossMeasureTouched.Contains(measureIndex)))
             {
                 long bracketsHash = 0;
                 bracketHashes?.TryGetValue(measureIndex, out bracketsHash);
-                long key = MeasureMemoKey(measure, beamingMeter, bracketsHash);
+                long key = MeasureMemoKey(measure, beamingMeter, bracketsHash, endsTheMusic);
                 if (memo!.TryGet(key, out var stored))
                 {
 #if DEBUG
                     // Every Debug hit re-detects live and compares — the drift net over
                     // AddDetectionInputs' hand-rolled read set (see its remarks).
                     VerifyReplayAgainstLiveDetection(stored, measure, measureIndex,
-                        beamingMeter, consumed, tupletSpans, voiceIndex, forceStemUpAt);
+                        beamingMeter, consumed, tupletSpans, voiceIndex, forceStemUpAt, endsTheMusic);
 #endif
                     // Re-base to the live measure index; everything else in a stored
                     // per-measure group is measure-local (members carry the −1 sentinel).
@@ -239,7 +242,7 @@ internal sealed class BeamDetector
                 }
                 int before = beamGroups.Count;
                 DetectBeamGroupsInMeasure(measure, measureIndex, beamingMeter, beamGroups,
-                    consumed, tupletSpans, voiceIndex, forceStemUpAt);
+                    consumed, tupletSpans, voiceIndex, forceStemUpAt, endsTheMusic);
                 var slice = ImmutableArray.CreateBuilder<BeamGroup>(beamGroups.Count - before);
                 for (int g = before; g < beamGroups.Count; g++)
                     slice.Add(beamGroups[g]);
@@ -247,7 +250,8 @@ internal sealed class BeamDetector
                 continue;
             }
 
-            DetectBeamGroupsInMeasure(measure, measureIndex, beamingMeter, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt);
+            DetectBeamGroupsInMeasure(measure, measureIndex, beamingMeter, beamGroups, consumed, tupletSpans, voiceIndex, forceStemUpAt,
+                endsTheMusic);
         }
 
         // ToImmutableArray COPIES, so the accumulator is finished with here and not at the
@@ -333,14 +337,17 @@ internal sealed class BeamDetector
 
     /// <summary>The memo key of one measure's detection input (see the memo remarks on
     /// <see cref="DetectBeamGroups(Voice, TimeSignature, ImmutableArray{TupletBracketItem}, int, Func{int, int, bool?}?, BeamDetectionMemo?)"/>):
-    /// the detection-input fold + the effective meter + the measure's tuplet brackets.</summary>
+    /// the detection-input fold + the effective meter + the measure's tuplet brackets + whether the
+    /// bar ends the voice's music (and then its end bar line: the end-of-music arm of
+    /// <see cref="DetectBeamGroupsInMeasure"/> reads both, and no other bar reads either).</summary>
     private static long MeasureMemoKey(
-        Measure measure, TimeSignature effectiveTimeSig, long bracketsHash)
+        Measure measure, TimeSignature effectiveTimeSig, long bracketsHash, bool endsTheMusic)
     {
         var hc = new MeasureContentKey.Hash64();
         AddDetectionInputs(ref hc, measure);
         hc.Add(effectiveTimeSig);
         hc.Add(bracketsHash);
+        hc.Add(endsTheMusic ? 1 + (int)measure.EndBarline : 0);
         return hc.ToHashCode();
     }
 
@@ -454,11 +461,11 @@ internal sealed class BeamDetector
         ImmutableArray<BeamGroup> stored, Measure measure, int measureIndex,
         TimeSignature effectiveTimeSig, HashSet<(int, int)>? consumed,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans,
-        int voiceIndex, Func<int, int, bool?>? forceStemUpAt)
+        int voiceIndex, Func<int, int, bool?>? forceStemUpAt, bool endsTheMusic)
     {
         var live = new List<BeamGroup>();
         DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, live, consumed,
-            tupletSpans, voiceIndex, forceStemUpAt);
+            tupletSpans, voiceIndex, forceStemUpAt, endsTheMusic);
         bool Mismatch() // any difference on the surface the bake consumes
         {
             if (live.Count != stored.Length)
@@ -799,7 +806,8 @@ internal sealed class BeamDetector
         HashSet<(int, int)>? consumed = null,
         IReadOnlyDictionary<int, List<TupletSpan>>? tupletSpans = null,
         int voiceIndex = 0,
-        Func<int, int, bool?>? forceStemUpAt = null)
+        Func<int, int, bool?>? forceStemUpAt = null,
+        bool endsTheMusic = false)
     {
         // The beat grid and the meter's beamExceptions. Derived ONCE per measure rather than
         // per beam group: they depend only on the meter, and building them allocates.
@@ -1021,6 +1029,25 @@ internal sealed class BeamDetector
 
             position = position + duration;
         }
+
+        // THE MUSIC ENDING IS NOT A BAR LINE. A last bar the meter does not fill, with no bar
+        // line written after it (a plain `|` is exported as LilyPond's bar CHECK, which draws
+        // nothing), gets no currentBarLine at the final moment, so the only question the beam
+        // still being built is asked there is the beat check — consider_end with the run's
+        // shortest, on the final timestep's first pass. A beam it does not end is still open
+        // at finalize, which JUNKS it: the stems keep their flags.
+        // MEASURED (2.26.0, Lab sessions/p658/endbeam/vis2.ly): `c'8 d'` flagged (1/4 ends no
+        // eighth beam in 4/4), `c'16 d' e' f'` beamed (1/4 ends a sixteenth beam), six eighths
+        // beamed 4 + flagged 2, `c'16. d'32` flagged (the reader's slur-dot-collision twin),
+        // `\time 3/4 c'8 d'` flagged, `\time 6/8 c'8 d' e' f'` beamed 3 + one; a full last bar
+        // (`c'2 c'8 d' e' f'`) and a written `\bar "|."` beam, the bar line ending them.
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:303-310 finalize — `if (busy ()) junk_beam ()`;
+        // LILYPOND-REF: lily/auto-beam-engraver.cc:497-502 process_acknowledged — consider_end
+        //   (shortest_dur_) on the timestep's first pass.
+        if (endsTheMusic && stems.Count > 0 && !frozen && position < beamOptions.Period
+            && measure.EndBarline is BarlineType.Single or BarlineType.None
+            && !AutoBeamCheck.EndsBeam(Clock(), shortest, beamOptions))
+            stems.Clear();
 
         // LILYPOND-REF: lily/auto-beam-engraver.cc:462-485 process_acknowledged — currentBarLine
         // forces the beam to end. Lily# builds one measure at a time, so the bar line is here.

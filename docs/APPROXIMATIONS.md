@@ -281,9 +281,9 @@
 - **:264** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:272** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
-- **:1260** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
-- **:1290** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
-- **:1373** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
+- **:1287** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
+- **:1317** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
+- **:1400** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
