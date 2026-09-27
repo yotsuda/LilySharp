@@ -1,4 +1,4 @@
-﻿# Lily# 開発ハンドオフ（常設・単一）
+# Lily# 開発ハンドオフ（常設・単一）
 
 > **このファイルが唯一の引継ぎ先。新しい `handoff-*.md` を作らないこと。**
 > 引継ぎは §1「現在地」を**書き換えて**行う（追記しない）。恒久的な知識は §4 の表に従って
@@ -126,6 +126,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第662セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き。★ `-Start p662`（HEAD `6b7a2147`・未 push 159・full **9448 / 0 / 2 / 9450**）。
+★★★ **ユーザー決定: 和音・アルペジオは相対の枠を*書く*（第394 の「読むが書かない」を改める）**＝和音の後の枠は**アンカー**（文字モード＝先頭メンバーの*素の文字*・度数モード＝主音）± `>`／`>>` の後のマーク。メンバー自身のマークは枠に入らない。動機（ユーザー報告）: `g1 | <c e g>1 | <f a c>` の `g1` を `f1` にすると `<c e g>` は動かないのに `<f a c>` が 1 オクターブ動く＝透過する和音の後の音は 2 つ前の単音を読む。先頭メンバーの実音（LP）ではなくアンカーにした理由: `<c, e g> <c, e g>` が繰り返しで落ちない・`x <c, e g> b <c, e g>` で 2 つの和音が同じ。度数モードを先頭の度数にしない理由: `<1 3 5> <5 7 2> <1 3 5>` が 1 オクターブ上がる（度数は主音から上へ積むので、先頭の度数は最寄りで選ばれた音ではない）。
+★★ `e45ce514` 実装（9/16 の `38b22537`＋`fe760d24` が変えた 4 読み手を戻す形・7 箇所）: `CreateChordItem`（枠＝`firstOctave`/`firstPitchName`・アンカーの無い `<>`/ドラムと absolute は「入った枠 ± マーク」のまま）／`ProcessArpeggio`（`rootSet` なら `anchorOctave`/`rootLetter`）／MIDI と MusicXML の `ProcessChord`・grace の和音・アルペジオ／LP 双子の `EmitChord`・`EmitArpeggio`（Lily# 側の `_lys*` だけ・LP 側は ret_first のまま）。副産物: アルペジオの根が和音（`<< <c e> g >>`）のときの collector のアンカーが双子と一致した（9/16 以後、collector は「入った枠」を読んでいた）。網 `ChordRelativeFrameTests`（13 例 × ページ・MIDI・MusicXML・`<< <c e> g >>` の g が G3 に落ちていたのも 1 行）＋ `LilyPondExporterTests.TheNoteAfterAGroup_…`（4 例）。毒 8 本すべて赤（Lab `sessions/p662/poisons.ps1`・`poisons.log`。LP の毒は最初の例が弱く緑→見分ける例 `g2 <c e g>4 <f a c>4` を足して赤）。snapshot 6 枚＝9/16 に再ベースした 6 枚そのもの（差分行数も `38b22537` と同じ＝元の絵に戻った）。
+★ 射程（音高の掃き・Lab `sessions/p662/pitch-sweep.ps1`・`sweep/moved.tsv`）: 986 冊中 19 冊。repo 15 冊のうち 12 冊は 9/16 より前の本＝元の音楽に戻る。9/16 以後の 3 冊（`samples/nocturne.lys`・`site/chord-axes.lys`・`site/petite-valse.lys`）は鳴る音が変わらないようにマークを直した（`a,8`→`a8`・`<g b d>1`→`<g b d>,1`・`e4`→`e,4`＝3 冊とも base の音と一致を確認）。`SlurOverTieTests` の埋め込み nocturne も同じ 1 字、`LpGeometryProbes` の CSB/CFA/CF3 の末尾は `a' b c`（アンカーが D4/C4）、`ChordHoverTests` は G5 E5 C5（`<d f a>` の後）。
+⚠️ **ユーザーコーパスの 4 冊の音が動く＝未編集・ユーザー判断**: `chord.lys`・`etde10-05.xml.lys`・`SUMMER.lys`・`tup-arp.lys`（編集途中の 26 冊には入っていない）。
+★ **終了**: full **9465 / 0 / 2 / 9467**（+17＝網）・Core 0 警告（`--no-incremental`）・`-End` の門は全 OK・§7.5: Core `+` 118 行／REF 0／OWN 0＝LP の移植ではなく言語の規則（Lily# の意図的な逸脱は GRAMMAR「Chord/arpeggio OCTAVES」が名指す・9/16 のコードも同じく無印）。push はユーザー。
+
+## 以下は第661セッションの経緯
+
 ### 1.1 第661セッション（2026-09-27・YT-DELL2）
 
 同じ会話ではなく新しい会話（`/clear` の後）。★ `-Start p661`（HEAD `a4c3db30`・未 push 151・full **9440 / 0 / 2 / 9442**）。
@@ -135,19 +146,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ ユーザー「続けて」→ `a86ed9d9` **小節線→最初の音の光学補正を段ごとに読む（LP どおり）**＝§1.0 T8 の残り。LP の Staff_spacing の right-items は音楽の PaperColumn＝各段の wish が**全段の最初の列を自分の小節線**（五線 ±2・n 弦 tab ±(n−1)/2）で読み、それを平均する。Lily# は全段に「自分の声部の小節線で読んだ最大」を足していた（小節中）・行頭は自分の段の声部だけ読んでいた。実測（Lab `sessions/p661/merge/`）: staff＋4 弦 tab で五線の d' 下向き 0.100000（旧 0.114286）・g 下向き 0.175074（旧 0.189360）・束ねない 2 段の行頭 `.|:` で下段だけ下向き 0.132217（旧はその半分）＝すべて一致。PianoStaff では LP 0.133646＝小節線が隣の段へ 0.05 伸びる（上段 (−2.05, 2)・下段 (−2, 2.05)＝`ls4.ly`）分で、未移植（網の註に書いた）。実装: `SpacingRules.TabBarlineToNextNotesCorrections`（段ごとの span・スレッドのバッファ）＋`StaffSpacingOpticalCorrection`／`BarHalfSpaces`・`LineStartColumn.ColumnOptical`。網 `ColumnOpticalCorrectionTests` 2 本（毒 2 本とも赤・`sessions/p661/poisons2.log`）。射程（基準 `a98b0869`）: 986 冊中 146 冊（ユーザーの本 142 冊）が動く・段割りの変化 0 冊（`sessions/p661/sweep2/`）。snapshot 6 枚。
 ★ ユーザー「続けて」→ 束ねた小節線の 0.05 はピアノ譜の小節頭で 0.0014・配管（束ね方を間隔の計算へ）が要る＝後回しにし、先に `f716f076` **tab の和音の wish は first_head（符尾と反対側の数字）を読む**（§1.0 の未解明の近似）。LP の left_head_end は `Note_column::first_head`＝`Stem::first_head`。向きは `TabStemOf`（`TabStemSpacingInfo` から切り出した・numbers-only は手書きの梁だけ）。実測（Lab `sessions/p661/chordhead/`）: `<e,,\4 c\3>4`（上）・`<c\2 g,\1>4`（下）→ 次の 4 分＝numbers-only 2.787216／2.748759・full 2.787216／2.663588・staff＋tab 2.658031／2.696931＝全部一致（旧は上の和音が "15" を読んで +0.495078）。網 `TabSpacingWishTests.TabChord_…` 3 行（毒で 3 本赤）。射程: 986 冊で動く本 0＝安全網。
 ⚠️ **Lab の `corpora/ベースタブLy/` に未 commit の変更が 26 冊**（`octave absolute` を外して相対音高に書き換えた形・LF）。この便は触っていない＝ユーザーの編集中の可能性＝そのまま。
-
-## 以下は第660セッションの経緯
-
-### 1.1 第660セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p660`（HEAD `0db40b8e`・未 push 141・full **9433 / 0 / 2 / 9435**）。S1 を ✅ にして §2 から畳んだ。
-★ `d1e374b3` volta の括弧は位置を戻す（LP の `alternativeRestores`: 最初の括弧の頭で measurePosition を覚え、最後以外の括弧の終わりで戻す＝`alternative-sequence-iterator.cc:170-225`）。builder の `BeginAlternatives`／`EndAlternative`（checkpoint に載せた）を form の反復ブロックから呼ぶ＝第659 の「volta のある本は残す」安全策を外した（音楽の中に書いた括弧だけ残す）。ユーザーコーパス 5 冊で最後の小節線が消え、LP の終わりの位置もすべて小節の途中（Air on G 7/8・Reelin' 1/2・アゲハ蝶 15/16・ミュージック・アワー 3/4・銀河鉄道999 3/4）、Disco Inferno は LP も小節頭＝残る。網 2 本（毒で赤）。
-✅ `SkylineMergeTests.ABatchsResultList…` の 1 度だけの赤（full の並列実行）は再現せず（full 3 回・単独 3 回）＝`2c04e4a3` で「3 回測って最小値」にした（毒＝渡された数で取る は赤のまま）。
-★ ユーザー「進めて」＝§1.0 の一時停止中の perf の島 13 項目と「掃き終わった島」の教訓（約 13 KB）を `HANDOFF-ARCHIVE.md` 末尾「§1.0 から移した perf の島」へ逐語で移した（§1.0 には ⏸ の指し示す行 3 本）＝HANDOFF 445.7 → 432.8 KB。再開するときはそこから §1.0 へ戻す。
-★ `9b74ad2b` 音楽の中に書いた括弧（`[1. … ]`）も位置を戻す＝どの括弧が最後か分からないので毎回戻し、組の後の音楽（または曲の終わり）で最後の戻しを取り消す（`EndAlternative`／`CloseAlternatives`・checkpoint に載せた）。安全策を撤去。LP の終わりの位置と 3 形一致・986 冊で動く本 0・網 3 本（取り消しを外す毒で 2 赤）。
-★ `7961dbf7` ⒳¹³⑷ の実体を見つけて閉じた: 段ごとの staff skyline（`StaffSlurLayouts`）は 1 系だけを渡して `LayoutSlurs` を呼び、片端が別の系のスラーを捨てていた＝行をまたぐスラーはどちらの行でも段の間隔に入らず、grandStaff で下の段から出るスラーが上の段を突き抜けた。`SpannerBreakSubstitution.SplitClipped`（渡された系の中の切れ端）で解く（LP は切れ端ごとに自分の行で解く＝`Spanner::do_break_processing`）。再現本（Lab `sessions/p660/xs/xsys3.lys`）: 段の間隔 LP 11.045／14.281・旧 10.095／12.595・新 11.042／14.306。986 冊で 3 冊動く（lyhygrace 2 段目 9.0→9.1・LP 9.35／tab 本 2 冊はページの均し）。網 `BrokenSlurStaffSpacingTests`（`Split` に戻す毒で赤）。途中で LP 引用に関数名が無く `CitationsThatNameNothing` が赤＝名前を入れて commit に畳んだ。
-★ `1e42c069` タイも同じ形を閉じた（⒳¹³⑷ の残り）: タイ列も `SplitClipped` で切れ端を取り、欠けた端の小節は null にしてその端を持つ切れ端だけが読む。再現本（Lab `sessions/p660/xs/xtie.lys`・下の段 `f'''1~ | break`）: 段の間隔 LP 13.329／13.025・旧 12.595／12.595・新 = LP。986 冊で 2 冊動く（Honesty 2 ページ目の最後の系 0.25 下へ・ABC の練習番号 B3 が 0.58 上へ＝どちらも行をまたぐタイが輪郭に入った分）。網 `BrokenSlurStaffSpacingTests.ATieOverALineBreak…`（端が欠けたら飛ばす毒で赤）。
-★ **終了**: full **9440 / 0 / 2 / 9442**。push はユーザー。
 
 ## 2. 開いている作業
 
@@ -2383,12 +2381,13 @@ LP には break-align モデルが **1 本**しか無い。Lily# に**同じ量�
 
 | 決定 | 根拠（要点） |
 |---|---|
+| ★★★★ **和音・アルペジオは相対の枠を*書く*＝次の音は群の*アンカー*（文字モード＝先頭メンバーの素の文字・度数モード＝主音）± `>`/`>>` の後のマーク。メンバー自身のマークは枠に入らない。休符だけの群・`<>` は透過**（2026-09-27・第662・**ユーザー決定**「あなたの提案通りにするのがよさそうだ」・✅ 同便・詳細は GRAMMAR「Chord/arpeggio OCTAVES」／SYNTAX_REFERENCE） | 2026-09-16 の「読むが書かない」を改めた。ユーザー報告: `g1 \| <c e g>1 \| <f a c>` の `g1` を `f1` にすると `<c e g>` は動かず `<f a c>` だけ 1 オクターブ動く（和音の後の音が 2 つ前の単音を読む）。代償は単音と同じ連鎖＝`<c e g> \| <d f a> \| <g b d> \| <c e g>` は 1 オクターブ上がり、`<g b d>,` で戻す。**先頭メンバーの実音（LP の ret_first）にしない理由**: `<c, e g>` を貼り重ねても落ちない・`x <c, e g> b <c, e g>` の 2 和音が一致する。**度数モードを先頭の度数にしない理由**: 度数は主音から上へ積む（最寄りで選ばない）ので `<1 3 5> <5 7 2> <1 3 5>` が 1 オクターブ上がる。ユーザー指示「手元のコーパスは参考にしないで」（サンプルが少なく偏っている） |
 | ★★ **⒳⁵ 和音にも tie の outline の旗の箱を建てる（2026-09-23・第524・ユーザー決定「建てて」）** | 第524 が LP 双子で測った: 建てると 2 冊の下の tie が LP に寄る（GT の幅 +0.47 → +0.04・LST の高さ +0.035 → exact）、上の tie は不変、動く頁は実コーパス 24 頁・2 冊、割当 ±0。台帳 `tie.width.chord-flag`／`tie.y.chord-flag`。残差 0.04 は第525 が閉じた（箱の Y＝blot/2・左端ではなかった） <!-- ledger: tie.width.chord-flag = 0 --> <!-- ledger: tie.y.chord-flag = -4.32e-07 --> |
 | ★★ **§1.0 の判断待ち 7 件（2026-09-23・第523・ユーザー決定）＝⒮¹⁴ `LedgerLineSpannerEngraver` は消す／⒳⁷ 小節線の床は「効かない床」として計算しない／⒮¹² は第366 の形で網を書く（門は畳まない）／⒩⁶ ⑵ `ClearBeamStamp` の観測者は後回し／U10 コーパスの効いていない弦番号は放置／⒳¹² navigation 記号の仕様は起票のまま・あとで判断／⒳⁵ 和音の旗の箱は測ってよい** | 私が 7 件を perf に効く順に並べて訊いた答え。⒮¹⁴ は読み手がテストだけ・⒳⁷ は 2 便かけて動かせる本が見つからず・⒮¹² は門を支える母集団（第366 の 88 件）をスイートが持っていない・U10 は描画が変わらない。着手と結果は §1 第523 |
 | ★★★ **フレージング・スラーの綴りは `@phrasingSlur` … `@!phrasingSlur`**（2026-09-22・第482・**ユーザー決定**＝3 択から選択・✅ `eedf4197`） | 既存の span（`@rit`…`@!rit`・`@ottava`…`@!ottava`・`@sustain`…`@!sustain`）と同じ型。名前は LP の grob 名 PhrasingSlur。LP の `\(` `\)` は「バックスラッシュはタブ譜専用・注釈は `@`」の方針に例外を作るので退けた。`@phrase` は `phrase` が予約語で使えない |
 | ★★★ **`voice { } { }` の span は音価の既定も動かさない＝全 branch は span が開いた時点の (Duration, Dots) から読み、span の*後ろ*の音楽もそこから読む。octave frame（2026-08-01）と同じ 1 つの規則**（2026-09-17・第398 第 3 便・私が octave の決定の延長として置き、**ユーザー確認「あなたの判断を残す方が、一貫して分かりやすいよね」**・✅ `0c25c5d2`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18 に落とした） |
 | ★★★ **`volta`・`alternative` は予約語ではない。LYS0006 は「`repeat volta` は LilyPond の綴りだ」と form へ案内するだけで、*撤去した*体の文面を取らない。LilyPond の `alternative { }` 節はパーサから消し、その語が受ける普通の文法エラーに落とす**（2026-09-17・第398 第 2 便・**ユーザー決定**「LYS0006 のメッセージは不正だ。削除したのではなく、最初からなかった体にすべきだ」「volta は予約語から外してもよい」「alternative の後方互換な警告も完全に削除して、普通の文法エラーを出すので十分」・✅ 同便実装） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
-| ★★★★ **和音・アルペジオは*枠を読むが書かない*。動かすのは `>`/`>>` の後のマークだけ・着地は「元の枠 ± マーク」（群のアンカーではない）**（2026-09-16・**ユーザー決定**・✅ 同便・詳細は GRAMMAR／SYNTAX_REFERENCE） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
+| ⛔ **第662 で改めた（最上段）** ★★★★ **和音・アルペジオは*枠を読むが書かない*。動かすのは `>`/`>>` の後のマークだけ・着地は「元の枠 ± マーク」（群のアンカーではない）**（2026-09-16・**ユーザー決定**・✅ 同便・詳細は GRAMMAR／SYNTAX_REFERENCE） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
 | ★★★★ **撤去した綴りに移行ヒントも Did you mean も付けない＝その語が受ける汎用メッセージだけ。0.x を公開した後も同じ**（2026-09-15・第385・0.7.0 準備中・**ユーザー「lily# のユーザーは、今はまだほとんどいないから後方互換性は気にしなくて良い」「後方互換を気にした固有の警告があれば削除して」**・✅ `b5f112a8`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |
 | ★★★ **綴りは 1 構文 1 つ（出荷前に 4 つ退役）＝Markdown フェンスは ```` ```lily# ```` だけ／`@feather(right\|left)` だけ（`accel`/`rit` 退役）／調弦語は LP の名前だけ（`standard`/`uke` 退役）／真偽値は `true\|false`（`partCombineText on\|off` を退役）**（2026-09-15・第385・0.7.0 の CHANGELOG レビュー・**ユーザー決定**・✅ `e27522d5`／`32274aa1`／`2554d59a`） | `$` と `tocoda` を退役させた「1 命令 1 綴り」の同じ規則を、レビューで見つかった 4 つの二重綴りに当てた。`lily#` は言語自身の名前（2026-09-09 に `lilysharp` より選んだ）。`accel`/`rit` は `@rit`/`@accel` テキストスパナと同じ語だった。`none` は**他の値が別の絵を名指すキー**（`sectionLabels`・`barNumbers`）にだけ使い、ただの yes/no は `removeEmpty` と同じ `true`/`false`（LP の `##t`/`##f`）。**`instrument uke`（楽器プリセットの `ukulele` の別名）も同日に退役**（ユーザー「ukulele の別名であれば削除したい」・0.7.0 出荷後なので CHANGELOG は `## 0.8.0` の Breaking changes）。 |
 | ★★★ **section 冒頭の pickup は section header にだけ書く**（`section A { partial 4 … }`／by-part では単独の `section A { partial 4 }`）。**part の音楽の 1 小節目の `partial` は LYS1024**。途中の `partial` は従来どおり、その小節を共有する全 part に書く（2026-09-15・第385・**ユーザー「partial は、セクション先頭についてはセクションヘッダだけに書ける方が良い」「多くの場合、partial は曲の先頭に配置したいだろう。セクションヘッダに配置する方が簡潔に記述できて便利だ」**・✅ `32274aa1`＝`PartialScopeValidator.OpeningBarOfPartMusic`） | **根拠は `HANDOFF-ARCHIVE.md`「閉じた §3 の根拠」の同じ見出し**（2026-09-18・第410 に落とした） |

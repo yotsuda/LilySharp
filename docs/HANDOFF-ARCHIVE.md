@@ -129,6 +129,19 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第660セッションの経緯
+
+### 1.1 第660セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p660`（HEAD `0db40b8e`・未 push 141・full **9433 / 0 / 2 / 9435**）。S1 を ✅ にして §2 から畳んだ。
+★ `d1e374b3` volta の括弧は位置を戻す（LP の `alternativeRestores`: 最初の括弧の頭で measurePosition を覚え、最後以外の括弧の終わりで戻す＝`alternative-sequence-iterator.cc:170-225`）。builder の `BeginAlternatives`／`EndAlternative`（checkpoint に載せた）を form の反復ブロックから呼ぶ＝第659 の「volta のある本は残す」安全策を外した（音楽の中に書いた括弧だけ残す）。ユーザーコーパス 5 冊で最後の小節線が消え、LP の終わりの位置もすべて小節の途中（Air on G 7/8・Reelin' 1/2・アゲハ蝶 15/16・ミュージック・アワー 3/4・銀河鉄道999 3/4）、Disco Inferno は LP も小節頭＝残る。網 2 本（毒で赤）。
+✅ `SkylineMergeTests.ABatchsResultList…` の 1 度だけの赤（full の並列実行）は再現せず（full 3 回・単独 3 回）＝`2c04e4a3` で「3 回測って最小値」にした（毒＝渡された数で取る は赤のまま）。
+★ ユーザー「進めて」＝§1.0 の一時停止中の perf の島 13 項目と「掃き終わった島」の教訓（約 13 KB）を `HANDOFF-ARCHIVE.md` 末尾「§1.0 から移した perf の島」へ逐語で移した（§1.0 には ⏸ の指し示す行 3 本）＝HANDOFF 445.7 → 432.8 KB。再開するときはそこから §1.0 へ戻す。
+★ `9b74ad2b` 音楽の中に書いた括弧（`[1. … ]`）も位置を戻す＝どの括弧が最後か分からないので毎回戻し、組の後の音楽（または曲の終わり）で最後の戻しを取り消す（`EndAlternative`／`CloseAlternatives`・checkpoint に載せた）。安全策を撤去。LP の終わりの位置と 3 形一致・986 冊で動く本 0・網 3 本（取り消しを外す毒で 2 赤）。
+★ `7961dbf7` ⒳¹³⑷ の実体を見つけて閉じた: 段ごとの staff skyline（`StaffSlurLayouts`）は 1 系だけを渡して `LayoutSlurs` を呼び、片端が別の系のスラーを捨てていた＝行をまたぐスラーはどちらの行でも段の間隔に入らず、grandStaff で下の段から出るスラーが上の段を突き抜けた。`SpannerBreakSubstitution.SplitClipped`（渡された系の中の切れ端）で解く（LP は切れ端ごとに自分の行で解く＝`Spanner::do_break_processing`）。再現本（Lab `sessions/p660/xs/xsys3.lys`）: 段の間隔 LP 11.045／14.281・旧 10.095／12.595・新 11.042／14.306。986 冊で 3 冊動く（lyhygrace 2 段目 9.0→9.1・LP 9.35／tab 本 2 冊はページの均し）。網 `BrokenSlurStaffSpacingTests`（`Split` に戻す毒で赤）。途中で LP 引用に関数名が無く `CitationsThatNameNothing` が赤＝名前を入れて commit に畳んだ。
+★ `1e42c069` タイも同じ形を閉じた（⒳¹³⑷ の残り）: タイ列も `SplitClipped` で切れ端を取り、欠けた端の小節は null にしてその端を持つ切れ端だけが読む。再現本（Lab `sessions/p660/xs/xtie.lys`・下の段 `f'''1~ | break`）: 段の間隔 LP 13.329／13.025・旧 12.595／12.595・新 = LP。986 冊で 2 冊動く（Honesty 2 ページ目の最後の系 0.25 下へ・ABC の練習番号 B3 が 0.58 上へ＝どちらも行をまたぐタイが輪郭に入った分）。網 `BrokenSlurStaffSpacingTests.ATieOverALineBreak…`（端が欠けたら飛ばす毒で赤）。
+★ **終了**: full **9440 / 0 / 2 / 9442**。push はユーザー。
+
 ## 以下は第659セッションの経緯
 
 ### 1.1 第659セッション（2026-09-27・YT-DELL2）
