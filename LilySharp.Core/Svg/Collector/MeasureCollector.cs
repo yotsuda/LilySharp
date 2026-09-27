@@ -228,9 +228,6 @@ public sealed partial class MeasureCollector
     // read right after a PRIMARY stream's collect; and, on the multi-staff road, the staves whose
     // primary stream does. See DropFinalBarWhereTheMusicStopsOffTheBar.
     private bool _lastEndsOffTheBar;
-    // An ending written inside the music ([1. … ] in a part) was seen this pass — its
-    // alternatives do not hand LilyPond's measurePosition back yet (FinalizeInlineVoltas).
-    private bool _inlineVoltaSeen;
     private readonly HashSet<string> _offBarVoices = new();
     // Next beam identity handed out by ResolveBeamStemDirections. Runs across every call on
     // this collector so two voices of the same staff cannot be handed the same number.
@@ -1014,10 +1011,7 @@ public sealed partial class MeasureCollector
         // keeps its last bar line — the longest voice decides where LilyPond's music ends, and
         // the primary stream alone cannot say (Lab sessions/p659: audit/lpreg/restdur, oice { g1 | g2 }
         // { … two full bars … }, ends ON the bar).
-        // A piece with endings written INSIDE the music keeps it too: LilyPond counts each
-        // alternative from where the first began — the form's endings hand the position back
-        // (MeasureBuilder.BeginAlternatives), the inline ones do not yet.
-        bool dropFinalBar = _lastEndsOffTheBar && _parallelSpans.Count == 0 && !_inlineVoltaSeen;
+        bool dropFinalBar = _lastEndsOffTheBar && _parallelSpans.Count == 0;
         ResolveBeamStemDirections(measures);
 
         // Score-level structure from the parts this score OMITS (|: :|, navigation
@@ -1336,9 +1330,6 @@ public sealed partial class MeasureCollector
     /// <remarks>See <see cref="MeasureBuilder.DropFinalBarLine"/> for the measurements.</remarks>
     private void DropFinalBarWhereTheMusicStopsOffTheBar(Dictionary<string, Voice> flatVoices)
     {
-        // Endings written inside the music: see the single-staff road's dropFinalBar.
-        if (_inlineVoltaSeen)
-            return;
         int end = 0;
         foreach (var (name, v) in flatVoices)
             if (!name.StartsWith("omit:", StringComparison.Ordinal))
@@ -2776,7 +2767,6 @@ public sealed partial class MeasureCollector
         // cannot leave a name that would stop a later cue from expanding it.
         _openPhrases.Clear();
         _offBarVoices.Clear();
-        _inlineVoltaSeen = false;
 
         // The cumulative output tables clear FROM THE REGISTRY that names them
         // (CumulativeSideTables) — a table added there is reset here by construction,

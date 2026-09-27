@@ -150,6 +150,10 @@ internal sealed class MeasureBuilder
     // The LilyPond measurePosition where the current volta group's FIRST ending began: each
     // ending but the last hands the position back to it (BeginAlternatives / EndAlternative).
     private Fraction? _alternativeStart;
+    // What the last hand-back moved the position by (undone if the group closes after it: the
+    // last ending does not hand back), and whether an ending's music is being walked now.
+    private Fraction? _alternativeUndo;
+    private bool _inEnding;
     // True while a note, rest or chord (or a tuplet's reported duration) has entered the
     // measure under construction. Read where "is there music in this span" is asked —
     // HasMeasureContent, AtPieceOpening — instead of `_currentDuration > 0`, because under
@@ -654,6 +658,7 @@ internal sealed class MeasureBuilder
     /// </summary>
     public void AddItem(MusicItem item)
     {
+        CloseAlternatives();
         // GRACE TIME TAKES NO MEASURE TIME. LilyPond's grace notes live in a negative
         // "grace part" of the moment and the main stream's clock does not see them
         // (LILYPOND-REF: lily/moment.cc — Moment's grace_part_); Lily# says the same by
@@ -993,8 +998,9 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
-    /// A volta group's first ending begins here: remember LilyPond's measurePosition, which
-    /// every ending but the last hands back (<see cref="EndAlternative"/>).
+    /// An ending of a volta group begins here. The group's FIRST ending remembers LilyPond's
+    /// measurePosition, which every ending but the last hands back (<see cref="EndAlternative"/>).
+    /// Called at every ending.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/alternative-sequence-iterator.cc:195-225 save_context_properties —
@@ -1004,32 +1010,63 @@ internal sealed class MeasureBuilder
     /// </remarks>
     internal void BeginAlternatives()
     {
-        if (!_senzaMisura)
-            _alternativeStart = CurrentBarPosition();
+        if (_senzaMisura)
+            return;
+        _alternativeStart ??= CurrentBarPosition();
+        _inEnding = true;
     }
 
     /// <summary>
-    /// An ending of the group <see cref="BeginAlternatives"/> opened is over. Every one but the
-    /// last puts LilyPond's measurePosition back where the first began — so the next ending,
-    /// and the music after the last, count their bars from there. The builder's own bars are
-    /// untouched; only the position <see cref="EndsOffTheBar"/> reads moves (it is shifted so
-    /// that the open bar, if any, ends where LilyPond's would).
+    /// An ending is over. Every one but the last puts LilyPond's measurePosition back where the
+    /// first began — so the next ending, and the music after the last, count their bars from
+    /// there. The builder's own bars are untouched; only the position <see cref="EndsOffTheBar"/>
+    /// reads moves (shifted so that the open bar, if any, ends where LilyPond's would).
+    /// A caller that cannot tell which ending is the last (an ending written inside the music)
+    /// passes <c>false</c> every time: the hand-back is remembered, and the first music after
+    /// the group (or the end of the piece) takes the last one away (<see cref="CloseAlternatives"/>).
     /// </summary>
     internal void EndAlternative(bool last)
     {
+        _inEnding = false;
         if (_alternativeStart is not { } start)
             return;
         if (last)
         {
             _alternativeStart = null;
+            _alternativeUndo = null;
             return;
         }
-        var p = start - _currentDuration;
-        if (_timeSignature > Fraction.Zero)
-            while (p < Fraction.Zero)
-                p += _timeSignature;
-        _barPosition = p;
+        var before = _barPosition;
+        _barPosition = RoundTheMeter(start - _currentDuration);
+        _alternativeUndo = _barPosition - before;
     }
+
+    /// <summary>
+    /// Music (or the end of the piece) after a volta group whose last ending was closed as if
+    /// another followed: that last hand-back never happened in LilyPond, so it is taken away.
+    /// </summary>
+    private void CloseAlternatives()
+    {
+        if (_inEnding || _alternativeStart is null)
+            return;
+        if (_alternativeUndo is { } undo)
+            _barPosition = RoundTheMeter(_barPosition - undo);
+        _alternativeStart = null;
+        _alternativeUndo = null;
+    }
+
+    /// <summary>A position brought into [0, meter).</summary>
+    private Fraction RoundTheMeter(Fraction p)
+    {
+        if (_timeSignature <= Fraction.Zero)
+            return p;
+        while (p < Fraction.Zero)
+            p += _timeSignature;
+        while (p >= _timeSignature)
+            p -= _timeSignature;
+        return p;
+    }
+
 
     private Fraction GetItemDuration(MusicItem item)
     {
@@ -1527,6 +1564,7 @@ internal sealed class MeasureBuilder
 
     public List<Measure> FinalizeMeasures()
     {
+        CloseAlternatives();
         // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
         {
@@ -1714,7 +1752,9 @@ internal sealed class MeasureBuilder
         Measure? LastMeasure,
         int LogicalCount,
         Fraction BarPosition,
-        Fraction? AlternativeStart);
+        Fraction? AlternativeStart,
+        Fraction? AlternativeUndo,
+        bool InEnding);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
     /// current measure, not even a zero-duration directive — and not inside a split bar
@@ -1735,7 +1775,7 @@ internal sealed class MeasureBuilder
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
         _measures.Count > 0 ? _measures[^1] : null,
-        _logicalCount, _barPosition, _alternativeStart);
+        _logicalCount, _barPosition, _alternativeStart, _alternativeUndo, _inEnding);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -1771,6 +1811,8 @@ internal sealed class MeasureBuilder
         _measureSourceStart = ck.MeasureSourceStart;
         _barPosition = ck.BarPosition;
         _alternativeStart = ck.AlternativeStart;
+        _alternativeUndo = ck.AlternativeUndo;
+        _inEnding = ck.InEnding;
     }
 
     /// <summary>A copy of the emitted measures BEFORE <see cref="FinalizeMeasures"/>

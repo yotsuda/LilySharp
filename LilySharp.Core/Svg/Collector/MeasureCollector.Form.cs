@@ -74,8 +74,7 @@ public sealed partial class MeasureCollector
         }
 
         // LilyPond's alternatives each count their bars from where the first began (the
-        // builder's BeginAlternatives / EndAlternative); a group opens at its first ending.
-        bool alternativesOpen = false;
+        // builder's BeginAlternatives / EndAlternative, called at every ending).
         for (int i = 0; i < repeat.SlotCount; i++)
         {
             var child = repeat.GetChild(i);
@@ -155,11 +154,8 @@ public sealed partial class MeasureCollector
                     string altSectionName = alt.SectionName.Text;
                     if (_sectionState.Sections.TryGetValue(altSectionName, out var section))
                     {
-                        if (live && !alternativesOpen)
-                        {
+                        if (live)
                             builder.BeginAlternatives();
-                            alternativesOpen = true;
-                        }
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
                         if (live)
@@ -198,8 +194,6 @@ public sealed partial class MeasureCollector
                                     break;
                                 }
                             builder.EndAlternative(lastEnding);
-                            if (lastEnding)
-                                alternativesOpen = false;
                         }
 
                         // Track measure index after processing

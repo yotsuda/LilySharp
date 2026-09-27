@@ -441,8 +441,6 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void FinalizeInlineVoltas()
     {
-        if (_pendingInlineVoltas.Count > 0)
-            _inlineVoltaSeen = true;
         foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in _pendingInlineVoltas)
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         _pendingInlineVoltas.Clear();
@@ -1438,7 +1436,12 @@ public sealed partial class MeasureCollector
                     var innerNodes = new List<GreenSite>();
                     foreach (var item in volta.Items)
                         GatherMusicSite(new GreenSite(item), innerNodes);
+                    // An ending counts its bars from where its group's first began; which ending is
+                    // the last is not known here, so each hands back and the builder takes the last
+                    // hand-back away when music follows the group (MeasureBuilder.EndAlternative).
+                    builder.BeginAlternatives();
                     ProcessMusicNodeSequence(innerNodes, builder);
+                    builder.EndAlternative(last: false);
 
                     int endMeasureIndex = builder.CurrentMeasureIndex;
                     if (builder.CurrentItemCount > 0)

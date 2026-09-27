@@ -111,4 +111,20 @@ public class EndOfMusicBarLineTests
     public void ASecondEnding_CountsFromWhereTheFirstBegan_OffTheBar()
         // from 1/2: 1/2 + 1 = 3/2 — off the bar (straight through it would be 2).
         => Assert.Equal(BarlineType.None, LastBarWithEndings("c'1"));
+
+    // The same endings written INSIDE the music: which one is the last is not known while it is
+    // walked, so every one hands back and the music after the group takes the last one away.
+    [Fact]
+    public void AnInlineSecondEnding_CountsFromWhereTheFirstBegan_OnTheBar()
+        => Assert.Equal(BarlineType.Single, LastBar("|: c'1 | c'2 [1. c'2 ] :| [2. c'1 | c'2 ]"));
+
+    [Fact]
+    public void AnInlineSecondEnding_CountsFromWhereTheFirstBegan_OffTheBar()
+        => Assert.Equal(BarlineType.None, LastBar("|: c'1 | c'2 [1. c'2 ] :| [2. c'1 ]"));
+
+    [Fact]
+    public void MusicAfterTheLastInlineEnding_CountsOnFromIt()
+        // from 1/2: the second ending ends on the bar (1/2 + 1/2), then half a bar — off it.
+        // Were the last ending's hand-back left standing, the music would end ON the bar.
+        => Assert.Equal(BarlineType.None, LastBar("|: c'2 [1. c'2 ] :| [2. c'2 ] c'2"));
 }
