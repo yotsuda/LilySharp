@@ -151,6 +151,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第655セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第654 の後・ユーザー「続けて」＝S1 の未収録の状況）。★ `-Start p655`（HEAD `708e8e09`・未 push 125・full **9414 / 0 / 2 / 9416**）。
+★ S1 に 5 冊を足した（tie-ledger・tie-ottava・bow-cue・tab-full-bows・tab-only-bows＝計 23 冊・双子 `sessions/p655/s1w`）。
+★ ⑴ `0450e2ce` ottava の端をまたぐ同音のタイ（`TieDetector.SamePitch`＝同じ位置、または同じ MIDI で 7 の倍数だけ離れた位置。異名同音は結ばない）＋終点の column は**タイが実際に届く頭の位置**で建てる（`endTiedPositions`）。LP 4 本・Lily# 2 本 → 5 対すべて exact。網 `OttavaBoundaryTieTests`（毒 2 つで赤）。⚠️ 残り: 2 音のあいだの clef 変更は結ばないまま。
+★ ⑵ `548d7574` 計器: `TwinBeamSweep.StavesOf` が同じ高さの加線の列を staff と読んだ（tie-ledger で「3 段」）＝行に 4.0 より長い 1 片を要求。「1 本の線」は 65 冊・「reach の半分」は tab（数字で途切れる弦）で 17 冊の staff を失った。実コーパス: staffcount 不一致 61 → **44**・対になった本 899 → 916・対 +33（全部許容内）・既存の対の変化 0。
+⚠️ 新しい族（未着手）: **cue のスラーは cue の大きさを読まない**（ElementCoordinator のスラー経路に IsCue が無い＝base の頭の高さ・obstacle の頭の箱・頭幅・符尾はフルサイズ・LP は font-size −4 で ×0.63）。S1 bow-cue で y 約 0.19。**実コーパス 0 冊**（cue は試験・audit の 5 冊だけ）。タイは写像後 exact。tab の 2 冊は宣言済み（F9・tab タイ）。
+★ **終了**: full **9415 / 0 / 2 / 9417**・実コーパスの bow の差 **2,526**。次: cue のスラー → S4（S3 の一覧で全残差を説明）。push はユーザー。
+
+## 以下は第654セッションの経緯
+
 ### 1.1 第654セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（第653 の後・ユーザー「続けて」＝§2 S1 の残り）。★ `-Start p654`（HEAD `42ba8d2e`・未 push 122・full **9413 / 0 / 2 / 9415**）。§1.0 の廃れた 2 項（R7〜R11 の着手可・閉じた島の一覧）を畳んだ。
@@ -159,17 +170,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⇒ **S1 の差は 1 対＋数の不一致 1 だけ**: tie-lv の repeatTie は**頭からの距離は LP と同じ（−1.300）＝spacing**＝LP は `@repeatTie` の音の前に約 0.94 広く取る（RepeatTie の幅が列の左に入る？・**未調査＝spacing の族として起票**）／slur-grace の数（GraceNotes の独自 path＝宣言済み）。
 ⚠️ 計器の罠: **毒の run は test dll を毒入りで build したまま残す**＝戻した後の sweep・one.ps1 は `dotnet build LilySharp.Tests` を挟む（第654 は毒の後の one.ps1 で「直っていない」を見かけた）。⚠️ 縮めた本は S1 と段割りが違う＝LP の値は**その本で**取り直す。
 ★ **終了**: full **9414 / 0 / 2 / 9416**・実コーパスの bow の差 **2,526**。次: S1 の未収録（tab・cue・加線の多い和音・ottava のタイ）→ S4。push はユーザー。
-
-## 以下は第653セッションの経緯
-
-### 1.1 第653セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（第652 の後・ユーザー「続けて」＝§2 S4）。★ `-Start p653`（HEAD `02a13e81`・未 push 120・full **9411 / 0 / 2 / 9413**）。
-★ ⑴ **S1 は未着手だった**（S0 の母集団は追跡本＋実コーパス）＝**第653 が建てた**: Lab `sessions/p653/s1/` 18 冊（tie: 位置・音価・和音・臨時記号・行割れ・l.v./repeat・声部／slur: 長さ・梁・符尾・スクリプト・内側のタイ・phrasing・行割れ・grace・和音・声部・ottava）。双子で 166 対・差 5＋数の不一致 1。回し方は `sweep-bows.ps1 -Work sessions/p653/s1w -Books (…)`。
-★ ⑵ `779fcb32` 行で割れたスラーの断片の端は**境界の note column の全 extent**（符尾を含む・梁つきは梁の面）＋0.5（slur-scoring.cc:600-616）＝`BrokenEdgeStemBaseY`。`c2( e | break g2 c'')` の第 2 断片の始点 LP 3.0（g2 の符尾 2.5＋0.5）・Lily# 0.195 → 一致。**:602/:614 も移植**（断片の唯一の column が他端の実の bound なら、その bound の y）＝これを欠いた初版は実コーパスの exact 10 対を 2.8〜2.96 動かした（掃きが捕まえた）。移植後は実コーパス 0 対変化・S1 の 2 端は exact。網 `BrokenSlurEdgeStemTests` 2 本（毒 2 つでそれぞれ赤）。
-⚠️ 最初は「LP は断片ごとに向きを決める」と読んで外した（LP の 2 断片はどちらも up・Lily# の第 1 断片が下に見えたのは端の y の差）＝**向きを疑う前に dump の端の y を並べる**。
-⚠️ S1 の残り（S4 で説明するか直す）: slur-break 第 1 断片の高さ 0.24／slur-beams `c8( g'' c g'')` 0.041／slur-voices 0.077／tie-lv の repeatTie x 0.114（列の写像 −0.83＝spacing）／slur-grace の数 4 対 3（`grace { d''16( } f''4)` は GraceNotes の独自の path で描かれ Bezier に記録されない＝宣言済みの grace 族）。
-★ **終了**: full **9413 / 0 / 2 / 9415**・実コーパスの bow の差 **2,529**（変化 0）。push はユーザー。
 
 ## 2. 開いている作業
 
