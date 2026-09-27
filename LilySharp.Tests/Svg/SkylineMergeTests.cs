@@ -1022,9 +1022,16 @@ public class SkylineMergeTests
             + "stopped doing that, this gate is measuring the disjoint case and cannot see "
             + "the difference it exists for");
         Batch();                      // JIT and first-touch, so the measured round is steady
-        long before = System.GC.GetAllocatedBytesForCurrentThread();
-        Batch();
-        long spent = System.GC.GetAllocatedBytesForCurrentThread() - before;
+        // The LEAST of three rounds: a policy that sizes by the appends allocates in every round,
+        // while a one-off on this thread (a tier-up, a stub) does not recur — the full suite ran
+        // this red once in session 660 and green alone and in every rerun since.
+        long spent = long.MaxValue;
+        for (int round = 0; round < 3; round++)
+        {
+            long before = System.GC.GetAllocatedBytesForCurrentThread();
+            Batch();
+            spent = System.Math.Min(spent, System.GC.GetAllocatedBytesForCurrentThread() - before);
+        }
 
         Assert.True(spent < 3000,
             $"a warm 600-box batch that resolves to a handful of buildings allocated {spent} B; "
