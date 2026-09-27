@@ -130,9 +130,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p660`（HEAD `0db40b8e`・未 push 141・full **9433 / 0 / 2 / 9435**）。S1 を ✅ にして §2 から畳んだ。
 ★ `d1e374b3` volta の括弧は位置を戻す（LP の `alternativeRestores`: 最初の括弧の頭で measurePosition を覚え、最後以外の括弧の終わりで戻す＝`alternative-sequence-iterator.cc:170-225`）。builder の `BeginAlternatives`／`EndAlternative`（checkpoint に載せた）を form の反復ブロックから呼ぶ＝第659 の「volta のある本は残す」安全策を外した（音楽の中に書いた括弧だけ残す）。ユーザーコーパス 5 冊で最後の小節線が消え、LP の終わりの位置もすべて小節の途中（Air on G 7/8・Reelin' 1/2・アゲハ蝶 15/16・ミュージック・アワー 3/4・銀河鉄道999 3/4）、Disco Inferno は LP も小節頭＝残る。網 2 本（毒で赤）。
-⚠️ `SkylineMergeTests.ABatchsResultList_IsSizedByWhatTheResolveKeeps…` が full の並列実行で 1 度だけ赤（単独 3 回・full 再実行は緑）＝未記録の揺らぎ・未調査。
+✅ `SkylineMergeTests.ABatchsResultList…` の 1 度だけの赤（full の並列実行）は再現せず（full 3 回・単独 3 回）＝`2c04e4a3` で「3 回測って最小値」にした（毒＝渡された数で取る は赤のまま）。
 ★ ユーザー「進めて」＝§1.0 の一時停止中の perf の島 13 項目と「掃き終わった島」の教訓（約 13 KB）を `HANDOFF-ARCHIVE.md` 末尾「§1.0 から移した perf の島」へ逐語で移した（§1.0 には ⏸ の指し示す行 3 本）＝HANDOFF 445.7 → 432.8 KB。再開するときはそこから §1.0 へ戻す。
-★ **終了**: full **9435 / 0 / 2 / 9437**。push はユーザー。
+★ `9b74ad2b` 音楽の中に書いた括弧（`[1. … ]`）も位置を戻す＝どの括弧が最後か分からないので毎回戻し、組の後の音楽（または曲の終わり）で最後の戻しを取り消す（`EndAlternative`／`CloseAlternatives`・checkpoint に載せた）。安全策を撤去。LP の終わりの位置と 3 形一致・986 冊で動く本 0・網 3 本（取り消しを外す毒で 2 赤）。
+★ **終了**: full **9438 / 0 / 2 / 9440**。push はユーザー。
 
 ## 以下は第659セッションの経緯
 
