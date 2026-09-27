@@ -1069,7 +1069,7 @@ internal static partial class SpacingRules
             // main note 2.6207 off the bar line, where the column's down stem would have added 0.13.
             double opticalCorrection = own.HasValue || startLeadGrace > 0
                 ? 0.0
-                // A full tab's stems are read in its own frame (FullTabBarlineToNextNotesCorrection).
+                // A tab's stems are read in its own frame (TabBarlineToNextNotesCorrection).
                 : opticalOverride ?? BarlineToNextNotesCorrection(firstItems);
             fixedDistance += opticalCorrection;
             ideal += opticalCorrection;

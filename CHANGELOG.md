@@ -23,6 +23,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Engraving
 
+- **A numbers-only tab is spaced by its hidden stems, as in LilyPond.** LilyPond's default
+  tab draws no stems, but they are still there, zero-length, and they still take part in
+  the optical spacing corrections from a half note up: a quarter moving to a higher string
+  gets a quarter staff space more room, one moving lower a quarter less, and the gaps into
+  and out of a bar line shift by up to 0.05. Lily# gave those stems nothing, which left
+  every staff + tab bar end 0.02 short of LilyPond. Of 332 bass books 194 move by a few
+  hundredths; none breaks its lines differently.
+
 - **Fret diagrams are LilyPond's size, stand side by side, and can be resized.** A chord
   diagram used to be drawn at about half LilyPond's size and was hard to read. It now has
   one staff space between strings and between frets, as in LilyPond. `fonts { fretFrame

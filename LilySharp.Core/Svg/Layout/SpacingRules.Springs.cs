@@ -198,7 +198,7 @@ internal static partial class SpacingRules
 
         // LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction — the left-side
         // flag gate returns before any branch below, the same-direction one included.
-        if (HasHangingFlag(prevItem))
+        if (HasHangingFlag(prevItem, l.BeamId))
             return 0;
 
         int leftDir = l.StemUp ? 1 : -1;
@@ -239,18 +239,15 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// An unbeamed eighth or shorter — a note whose stem carries a FLAG. Read off the
-    /// item the way <see cref="ItemSkylineFactory"/> reads it for the flag's box: the
-    /// collector has resolved beaming before any spacing runs.
+    /// An unbeamed eighth or shorter — a note whose stem carries a FLAG. The beam is the
+    /// band's (<paramref name="beamId"/>): on a staff the item's own, which the collector
+    /// resolved before any spacing runs; on a numbers-only tab only a manual one
+    /// (<see cref="TabStemSpacingInfo"/>).
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction —
     /// <c>Stem::duration_log (stem) &gt; 2 &amp;&amp; !Stem::get_beam (stem)</c>.</remarks>
-    private static bool HasHangingFlag(MusicItem? item) => item switch
-    {
-        NoteItem { IsBeamed: false } n => GetNoteValue(n) >= 8,
-        ChordItem { IsBeamed: false } c => GetNoteValue(c) >= 8,
-        _ => false,
-    };
+    private static bool HasHangingFlag(MusicItem? item, int? beamId)
+        => beamId is null && item is NoteItem or ChordItem && GetNoteValue(item) >= 8;
 
     /// <summary>
     /// The optical correction for a KNEE — two columns of one beam whose stems point
@@ -368,7 +365,7 @@ internal static partial class SpacingRules
         // The left-side flag gate stands BEFORE the bar branch in stem_dir_correction's
         // loop, so a flagged note before a bar line takes no correction either.
         // LILYPOND-REF: lily/note-spacing.cc:264-266 stem_dir_correction.
-        if (HasHangingFlag(prevItem))
+        if (HasHangingFlag(prevItem, l.BeamId))
             return 0;
 
         int leftDir = l.StemUp ? 1 : -1;
@@ -418,13 +415,11 @@ internal static partial class SpacingRules
                 continue;
 
             var approach = ApproachColumn(right);
-            double corr = IsStemlessTabVoice(staves, voices.Count, v)
-                ? 0.0
-                : FullTabOf(staves, voices.Count, v) is { } tab
-                    ? StemCorrectionOf(TabStemSpacingInfo(left, tab, voice),
-                        TabStemSpacingInfo(approach, tab, voice),
-                        left, approach, accidentalsSeen: false, noteParams, increment)
-                    : CalculateStemCorrection(left, approach, noteParams, increment);
+            double corr = TabOf(staves, voices.Count, v) is { } tab
+                ? StemCorrectionOf(TabStemSpacingInfo(left, tab, voice),
+                    TabStemSpacingInfo(approach, tab, voice),
+                    left, approach, accidentalsSeen: false, noteParams, increment)
+                : CalculateStemCorrection(left, approach, noteParams, increment);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing — stem_dir_correction adjusts the
             // ideal and hands it to base.set_ideal_distance, which does not touch either
             // strength (lily/spring.cc:131-141). The clamp is at ZERO, not at the minimum
@@ -442,32 +437,24 @@ internal static partial class SpacingRules
         return merged;
     }
 
-    /// <summary>
-    /// Whether voice <paramref name="v"/> stands on a NUMBERS-ONLY tab staff, whose wish takes
-    /// no stem correction: its stems are never drawn.
-    /// </summary>
+    /// <summary>The tab staff voice <paramref name="v"/> stands on, or null — its wish is
+    /// corrected by the TabVoice's own stems (<see cref="TabStemSpacingInfo"/>), drawn on a
+    /// full tab, zero-length on a numbers-only one.</summary>
     /// <remarks>
-    /// MEASURED (2.26.0, LilySharp-Lab sessions/p576): the numbers-only TabVoice's wish is the
-    /// bare base − increment + digit edge on every pair (16th → 16th 2.2892 whatever the stems
-    /// of the paired staff do), where a <c>\tabFullNotation</c> tab's wish carries the ±0.25
-    /// of a drawn stem (2.5392 / 2.0392).
-    /// LILYPOND-REF: lily/note-spacing.cc:246-249 stem_dir_correction — an invisible stem
-    ///   returns before any correction.
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p576): a numbers-only TabVoice's wish between
+    /// flagged 16ths is the bare base − increment + digit edge (2.2892 whatever the stems of
+    /// the paired staff do) — the flag gate, not a missing stem: from a quarter up the stub
+    /// takes its ±0.25 (sessions/p661, see <see cref="TabStemSpacingInfo"/>).
     /// </remarks>
-    private static bool IsStemlessTabVoice(IReadOnlyList<Staff>? staves, int voiceCount, int v)
-        => staves is { } s && s.Count == voiceCount && s[v] is { IsTab: true, TabNumbersOnly: true };
-
-    /// <summary>The FULL tab staff voice <paramref name="v"/> stands on, or null — a tab whose
-    /// stems are drawn (<c>\tabFullNotation</c>), so its wish is corrected by THOSE stems.</summary>
-    private static Staff? FullTabOf(IReadOnlyList<Staff>? staves, int voiceCount, int v)
-        => staves is { } s && s.Count == voiceCount && s[v] is { IsTab: true, TabNumbersOnly: false } tab
-            ? tab : null;
+    private static Staff? TabOf(IReadOnlyList<Staff>? staves, int voiceCount, int v)
+        => staves is { } s && s.Count == voiceCount && s[v] is { IsTab: true } tab ? tab : null;
 
     /// <summary>
-    /// <see cref="StemSpacingInfo"/> for a FULL tab's column: the band of the stem the tab
-    /// DRAWS, in the tab's own staff positions — heads on their strings, the direction the
-    /// tab's rule gives (a beamed stem its whole beam's), the head-side end where the digit's
-    /// glyph puts it, and a beamed tip at the group's farthest unbeamed reach.
+    /// <see cref="StemSpacingInfo"/> for a tab's column: the band of the TabVoice's own stem,
+    /// in the tab's own staff positions — heads on their strings, the direction the tab's rule
+    /// gives (a beamed stem its whole beam's), the head-side end where the digit's glyph puts
+    /// it, and the tip: a full tab's drawn one (a beamed tip at the group's farthest unbeamed
+    /// reach), a numbers-only tab's zero-length stub.
     /// </summary>
     /// <remarks>
     /// Until session 634 a tab voice's wish read the NOTATION stem — the item's pitch, its
@@ -475,16 +462,36 @@ internal static partial class SpacingRules
     /// contour and a string change took none. MEASURED (2.26.0, LilySharp-Lab sessions/p634/
     /// sp.ly, NoteColumn X and the Stem's pure height dumped): every gap of the probe within
     /// 0.0001 of LilyPond once the tab's own band is read.
+    /// <para>
+    /// A NUMBERS-ONLY tab's stems are not drawn (<c>Stem.stencil = ##f</c>) but are still
+    /// normal stems — <c>Stem::is_normal_stem</c> reads the heads and the duration, not the
+    /// stencil — so from a half note up they take part in every correction a full tab's do
+    /// (until session 661 Lily# gave them none, from a probe of flagged 16ths, which the flag
+    /// gate silences anyway). Their <c>details.lengths</c> are 0: the end is the stem-side
+    /// digit's position, the length is |end − begin| = the attachment, and the pure extent
+    /// runs from the begin one attachment further, i.e. to 2 · begin − end. And the TabStaff
+    /// sets <c>autoBeaming = ##f</c>, so only a MANUAL beam is a beam there.
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p661/tabstem): bass tab, <c>e,,4</c> up
+    /// (−1.399, −0.548), <c>&lt;e,, d,&gt;4</c> up (1.601, 2.452) — the chord's stem begins
+    /// at the d, (the stem-side digit), under <c>\tabFullNotation</c> as well; and the open-
+    /// string quarters <c>e,, → a,,</c> 3.0372 / <c>g, → d,</c> 2.5372 against 2.7872 on one
+    /// string, 0.0405 either way into the bar line (q.ly).
+    /// </para>
     /// LILYPOND-REF: lily/note-spacing.cc:268-275 stem_dir_correction — head_positions and
     ///   pure_y_extent · 2 / staff_space, on the TabVoice's own stem.
     /// LILYPOND-REF: lily/stem.cc:934-963 internal_calc_stem_begin_position — the reference
-    ///   head's position plus the head's height at its stem attachment, which on a TabNoteHead is
-    ///   (0, ±1.35) (lily/note-head.cc:221-234 calc_tab_stem_attachment).
+    ///   head's position (get_reference_head: last_head, the stem-side one, under the TabStaff's
+    ///   avoid-note-head) plus first_head's height at its stem attachment, which on a
+    ///   TabNoteHead is (0, ±1.35) (lily/note-head.cc:221-234 calc_tab_stem_attachment).
+    /// LILYPOND-REF: lily/stem.cc:481-596 Stem::internal_calc_stem_end_position — hp[dir] +
+    ///   dir · length, with length 0 from the TabStaff's details (ly/engraver-init.ly:1252).
+    /// LILYPOND-REF: lily/stem.cc:846-887 Stem::internal_height — begin + dir · length.
     /// LILYPOND-REF: lily/stem.cc:399-418 Stem::internal_pure_height — a beamed stem's pure
     ///   tip unites the same-direction members' unbeamed ones (MeasureCollector.RebakePureBeamedTips
     ///   on a staff).
     /// ⚠️ The beam is the members of this MEASURE with the same beam id: a beam over a bar
-    /// line is read in halves.
+    /// line is read in halves, and on a numbers-only tab such a beam's second half, or a
+    /// beam opened on a rest, carries no manual start among its notes and is read unbeamed.
     /// </remarks>
     internal static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax,
                     int? BeamId)?
@@ -499,30 +506,49 @@ internal static partial class SpacingRules
         List<MusicItem>? members = null;
         if (beamId is { } id)
         {
+            bool manual = false;
             members = new List<MusicItem>();
             foreach (var m in voice.Items)
+            {
                 if (!m.GraceTime && m switch { NoteItem n => n.BeamId == id, ChordItem c => c.BeamId == id, _ => false })
                     members.Add(m);
+                manual |= m switch
+                {
+                    NoteItem n => n.BeamId == id && n.HasBeamStart,
+                    ChordItem c => c.BeamId == id && c.HasBeamStart,
+                    _ => false,
+                };
+            }
+            if (tab.TabNumbersOnly && !manual)
+                (beamId, members) = (null, null);
         }
         bool stemUp = members is { Count: > 0 } ? geom.GroupStemUp(members) : geom.TabStemUp(item);
 
-        double tip = UnbeamedTip(item);
+        double begin = Begin(item);
+        double tip = Tip(item, begin);
         if (members is not null)
             foreach (var m in members)
-                tip = stemUp ? Math.Max(tip, UnbeamedTip(m)) : Math.Min(tip, UnbeamedTip(m));
+                tip = stemUp ? Math.Max(tip, Tip(m, Begin(m))) : Math.Min(tip, Tip(m, Begin(m)));
 
-        var (rootPos, rootFret) = geom.StemRootDigit(item, stemUp);
-        double begin = rootPos + (stemUp ? 1 : -1) * 1.35 * LilyPondTabDigitHalfHeight(rootFret)
-            * 2 / geom.StringSpace;
         var (lo, hi) = geom.HeadPositionRange(item);
         return (stemUp, Math.Min(begin, tip), Math.Max(begin, tip), lo, hi, beamId);
 
-        double UnbeamedTip(MusicItem m)
+        double Begin(MusicItem m)
         {
             var (mLo, mHi) = geom.HeadPositionRange(m);
-            return StemCalculator.CalculateStemEndPosition(
-                stemUp, StemCalculator.GetDurationLog(GlyphMetrics.NoteValueOf(m)),
-                stemUp ? mHi : mLo, null, geom.StaffRadius);
+            int rootFret = geom.StemRootDigit(m, stemUp).Fret;
+            return (stemUp ? mHi : mLo)
+                + (stemUp ? 1 : -1) * 1.35 * LilyPondTabDigitHalfHeight(rootFret) * 2 / geom.StringSpace;
+        }
+
+        double Tip(MusicItem m, double mBegin)
+        {
+            var (mLo, mHi) = geom.HeadPositionRange(m);
+            return tab.TabNumbersOnly
+                ? 2 * mBegin - (stemUp ? mHi : mLo)
+                : StemCalculator.CalculateStemEndPosition(
+                    stemUp, StemCalculator.GetDurationLog(GlyphMetrics.NoteValueOf(m)),
+                    stemUp ? mHi : mLo, null, geom.StaffRadius);
         }
     }
 
@@ -635,15 +661,13 @@ internal static partial class SpacingRules
             if (NoteColumnAt(voices[v], tLeft) is not { } left)
                 continue;
 
-            double corr = IsStemlessTabVoice(staves, voices.Count, v)
-                ? 0.0
-                : FullTabOf(staves, voices.Count, v) is { } tab
-                    // The bar spans the tab's own lines: ±(strings − 1) of its positions.
-                    // LILYPOND-REF: lily/staff-spacing.cc:69-93 Staff_spacing::bar_y_positions.
-                    ? StemCorrectionToBarlineOf(TabStemSpacingInfo(left, tab, voices[v]), left,
-                        Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar) - 1,
-                        noteParams)
-                    : CalculateStemCorrectionToBarline(left, noteParams);
+            double corr = TabOf(staves, voices.Count, v) is { } tab
+                // The bar spans the tab's own lines: ±(strings − 1) of its positions.
+                // LILYPOND-REF: lily/staff-spacing.cc:69-93 Staff_spacing::bar_y_positions.
+                ? StemCorrectionToBarlineOf(TabStemSpacingInfo(left, tab, voices[v]), left,
+                    Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar) - 1,
+                    noteParams)
+                : CalculateStemCorrectionToBarline(left, noteParams);
             // LILYPOND-REF: lily/note-spacing.cc:111-113 Note_spacing::get_spacing, as in MergeVoiceStemWishes — clamped
             // for every wish, a zero correction included (session 379).
             wishes.Add(baseSpring.WithIdealDistance(Math.Max(0.0, baseSpring.IdealDistance + corr)));
@@ -698,10 +722,10 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// <see cref="BarlineToNextNotesCorrection"/> for a bar whose voices include a FULL tab —
-    /// each voice's first column read by its own staff (a tab's by the stem it draws, in its
-    /// own frame) — or null when no voice stands on a full tab, so every other bar keeps the
-    /// column reading.
+    /// <see cref="BarlineToNextNotesCorrection"/> for a bar whose voices include a tab —
+    /// each voice's first column read by its own staff (a tab's by the TabVoice's own stem, in
+    /// its own frame: drawn on a full tab, a zero-length stub on a numbers-only one) — or null
+    /// when no voice stands on a tab, so every other bar keeps the column reading.
     /// </summary>
     /// <remarks>
     /// LilyPond's optical correction intersects the stem's pure extent — in the STEM's staff,
@@ -709,46 +733,50 @@ internal static partial class SpacingRules
     /// On a tab the two differ by that division: a six-string tab's bar is ±2.5 there, and a
     /// quarter on the top string stems down over (−1.5, 2.899). MEASURED (2.26.0,
     /// LilySharp-Lab sessions/p634/sp.ly): the two bars that open on a top-string down stem
-    /// were each 0.039 short of LilyPond with the notation stem read here.
+    /// were each 0.039 short of LilyPond with the notation stem read here. A numbers-only tab's
+    /// stub counts too (Stem::is_normal_stem does not read the stencil): MEASURED (2.26.0,
+    /// LilySharp-Lab sessions/p661/tabstem/q.ly) a bass tab's bar opening on the top string's
+    /// quarter is 0.0486 wider than one opening on the bottom string's — the stub (0.548,
+    /// 1.399) inside the bar's ±1.5, over 7, times 0.4. Until session 661 that tab took the
+    /// notation stems of its staff's pitches.
     /// LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction and
     ///   :72-93 bar_y_positions.
     /// ⚠️ Each voice is read against ITS OWN staff's bar; LilyPond reads every staff's note
     /// columns against each staff's bar and merges the wishes. The two agree when every staff
     /// is one kind (a lone tab, or tabs of one tuning).
     /// </remarks>
-    internal static double? FullTabBarlineToNextNotesCorrection(
+    internal static double? TabBarlineToNextNotesCorrection(
         IReadOnlyList<Measure> voices, IReadOnlyList<Staff>? staves)
     {
         if (staves is null || staves.Count != voices.Count)
             return null;
-        bool anyFullTab = false;
-        for (int v = 0; v < voices.Count && !anyFullTab; v++)
-            anyFullTab = FullTabOf(staves, voices.Count, v) is not null;
-        if (!anyFullTab)
+        bool anyTab = false;
+        for (int v = 0; v < voices.Count && !anyTab; v++)
+            anyTab = TabOf(staves, voices.Count, v) is not null;
+        if (!anyTab)
             return null;
 
         double max = 0;
         for (int v = 0; v < voices.Count; v++)
         {
-            if (NoteColumnAt(voices[v], Fraction.Zero) is not { } item
-                || IsStemlessTabVoice(staves, voices.Count, v))
+            if (NoteColumnAt(voices[v], Fraction.Zero) is not { } item)
                 continue;
-            if (FullTabOf(staves, voices.Count, v) is not { } tab)
+            if (TabOf(staves, voices.Count, v) is not { } tab)
             {
                 max = Math.Max(max, BarlineToStemOpticalCorrection(item));
                 continue;
             }
-            max = Math.Max(max, FullTabStemOpticalCorrection(item, tab, voices[v]));
+            max = Math.Max(max, TabStemOpticalCorrection(item, tab, voices[v]));
         }
         return max;
     }
 
     /// <summary>
-    /// The bar line → note optical correction one FULL tab column earns — its drawn stem, if
-    /// it points down, against the tab's own bar. See <see cref="FullTabBarlineToNextNotesCorrection"/>.
+    /// The bar line → note optical correction one tab column earns — the TabVoice's own stem,
+    /// if it points down, against the tab's own bar. See <see cref="TabBarlineToNextNotesCorrection"/>.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.</remarks>
-    internal static double FullTabStemOpticalCorrection(MusicItem item, Staff tab, Measure voice)
+    internal static double TabStemOpticalCorrection(MusicItem item, Staff tab, Measure voice)
     {
         if (TabStemSpacingInfo(item, tab, voice) is not { StemUp: false } band)
             return 0;

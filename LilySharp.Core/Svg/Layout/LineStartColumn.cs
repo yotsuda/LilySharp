@@ -443,9 +443,9 @@ internal static class LineStartColumn
     /// <paramref name="measureIndex"/> — the note columns <c>Spacing_interface::right_note_columns</c>
     /// hands <c>Staff_spacing::next_notes_correction</c>.
     /// </summary>
-    /// <summary>The line-start optical correction of a FULL tab: each voice's first musical
-    /// column read by the stem the tab draws.</summary>
-    private static double FullTabOptical(Model.Staff staff, int measureIndex)
+    /// <summary>The line-start optical correction of a tab: each voice's first musical
+    /// column read by the TabVoice's own stem (drawn, or a numbers-only tab's stub).</summary>
+    private static double TabOptical(Model.Staff staff, int measureIndex)
     {
         double max = 0;
         foreach (var voice in staff.Voices)
@@ -457,7 +457,7 @@ internal static class LineStartColumn
             {
                 if (!SpacingRules.IsMusicalColumn(item))
                     continue;
-                max = Math.Max(max, SpacingRules.FullTabStemOpticalCorrection(item, staff, measure));
+                max = Math.Max(max, SpacingRules.TabStemOpticalCorrection(item, staff, measure));
                 break;
             }
         }
@@ -682,14 +682,13 @@ internal static class LineStartColumn
 
             // staff-spacing.cc:206 next_notes_correction — bar_y_positions is empty for
             // anything but a bar line, so only the opening `|:` earns it.
-            // A full tab reads the stems it draws, in its own frame (as the mid-line bar does,
-            // SpacingRules.FullTabBarlineToNextNotesCorrection). ⚠️ A numbers-only tab keeps
-            // the notation reading: LilyPond's zero-length TabStaff stems still count
-            // (Stem::is_normal_stem reads heads and duration, not the stencil) and are unmeasured.
+            // A tab reads the TabVoice's own stems, in its own frame (as the mid-line bar does,
+            // SpacingRules.TabBarlineToNextNotesCorrection) — a numbers-only tab's zero-length
+            // stubs included: Stem::is_normal_stem reads heads and duration, not the stencil.
             double optical = last.Symbol != BreakAlignSymbol.StaffBar
                 ? 0.0
-                : staff is { IsTab: true, TabNumbersOnly: false }
-                    ? FullTabOptical(staff, startMeasureIndex)
+                : staff.IsTab
+                    ? TabOptical(staff, startMeasureIndex)
                     : SpacingRules.BarlineToNextNotesCorrection(
                         FirstMusicalItems(staff, startMeasureIndex));
 

@@ -80,17 +80,76 @@ public class TabSpacingWishTests
     /// took until session 576 — is 5.0828.
     /// </summary>
     /// <remarks>
-    /// ⚠️ OPEN RESIDUAL −0.020: Lily# gives 4.885971. The staff's wish alone agrees with
-    /// LilyPond (5.082771), so the gap is in how the two halves split the bar-line term —
-    /// Lily#'s base and correction come apart differently from LilyPond's (0.1786 against
-    /// 0.1381 of correction for the same sum), which only the averaging exposes. Held to
-    /// ±0.03 here, a tenth of the move, so that losing the tab wish is still caught.
+    /// The tab's 4.7297 carries its own +0.0405: the numbers-only tab's zero-length stem
+    /// stub still meets the bar line's opposite-direction correction (the up stub on the low
+    /// E, 1.1347 positions inside the bar's ±3, over 7, times 0.5, halved). Until session 661
+    /// Lily# gave that stub nothing and closed the bar at 4.885971, 0.020 short.
     /// </remarks>
     [Fact]
     public void StaffAndNumbersTab_CloseTheBarOnTheMergedWish()
     {
         var ideals = Ideals("score main { staff bassline  tab bassline }");
-        Assert.InRange(ideals[^1], 4.9062 - 0.03, 4.9062 + 0.03);
+        Assert.Equal(4.9062, ideals[^1], precision: 4);
+    }
+
+    /// <summary>
+    /// A numbers-only tab's quarters take the stem corrections of their zero-length stubs:
+    /// one open string to the next up is +0.25, down −0.25, and the bar line ±0.0405 by the
+    /// stub's direction. MEASURED (2.26.0, LilySharp-Lab sessions/p661/tabstem/q.ly, bass tab
+    /// alone, NoteColumn and BarLine X with the line ragged): 2.7872 / 3.0372 / 2.7872 /
+    /// 2.8277 and 2.7872 / 2.5372 / 2.7872 / 2.7467; the bar into a top-string quarter 0.0486
+    /// wider than into a bottom-string one (the staff-spacing optical correction).
+    /// </summary>
+    [Fact]
+    public void NumbersTabQuarters_TakeTheirStubsCorrections()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part bassline {
+              clef bass
+              tuning bass
+              section S { e,,4 e,, a,, a,, | g, g, d, d, | }
+            }
+            form main { S }
+            score main { tab bassline as numbers }
+            """);
+        var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
+        var data = SystemBreaker.ComputeMultiStaffSpringData(
+            multi, SpacingRules.CalculateCommonShortestDuration(multi));
+        double[] first = data[0].Springs.Select(s => s.IdealDistance).ToArray();
+        double[] second = data[1].Springs.Select(s => s.IdealDistance).ToArray();
+        Assert.Equal([2.7872, 3.0372, 2.7872, 2.8277], first[1..].Select(x => Math.Round(x, 4)));
+        Assert.Equal([2.7872, 2.5372, 2.7872, 2.7467], second[1..].Select(x => Math.Round(x, 4)));
+        Assert.Equal(0.0486, second[0] - first[0], precision: 4);
+    }
+
+    /// <summary>
+    /// A chord's stub begins at its STEM-SIDE digit (LilyPond's reference head under the
+    /// TabStaff's avoid-note-head): <c>&lt;e,, d,&gt;4</c> stems up from the d, over (2.1346,
+    /// 3.2692) positions, so it meets the bar line's ±3 over 0.8654 where the lone e,, meets
+    /// it over 1.1347. MEASURED (2.26.0, LilySharp-Lab sessions/p661/tabstem/qc.ly): 2.8181
+    /// into the bar against 2.8277.
+    /// </summary>
+    [Fact]
+    public void NumbersTabChord_StubBeginsAtTheStemSideDigit()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part bassline {
+              clef bass
+              tuning bass
+              section S { <e,, d,>4 <e,, d,> <e,, d,> <e,, d,> | e,,4 e,, e,, e,, | }
+            }
+            form main { S }
+            score main { tab bassline as numbers }
+            """);
+        var multi = SvgGenerator.CollectScore(tree, RenderSpecParser.FindAll(tree).First());
+        var data = SystemBreaker.ComputeMultiStaffSpringData(
+            multi, SpacingRules.CalculateCommonShortestDuration(multi));
+        Assert.Equal(2.8181, data[0].Springs[^1].IdealDistance, precision: 4);
+        Assert.Equal(2.8277, data[1].Springs[^1].IdealDistance, precision: 4);
     }
 
     [Fact]

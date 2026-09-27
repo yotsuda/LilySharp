@@ -290,7 +290,7 @@ internal sealed class MeasureLayouter
             leftBound ?? (measure.StartBarline == BarlineType.None ? BarlineType.Single : measure.StartBarline),
             droppedOnsetFollows, so, staffFirstItems,
             timings[0] == Fraction.Zero
-                ? SpacingRules.FullTabBarlineToNextNotesCorrection(measuresToScan, stavesOfMeasures)
+                ? SpacingRules.TabBarlineToNextNotesCorrection(measuresToScan, stavesOfMeasures)
                 : null);
         GiveStaffItems(staffFirstItems);
 

@@ -1721,8 +1721,8 @@
       "probe": "tab-slur.ly",
       "score": "A",
       "lilypond": 1.0574289421686834,
-      "residual": 0.0,
-      "why": "EXACT since session 576 (2026-09-25), with slur.tab.span: the span was the column spacing, and the column spacing was the tab voice missing from the merged wish (see slur.tab.span). What stood here before, THE WIDER BOW, which is the SAME ratified deviation seen through the spacing rather than through the digit box -- see slur.tab.span, which measures it directly. A bow's height is h_inf*(2/pi)*atan(pi*width*ratio/(2*h_inf)) with h_inf = staff_space*height-limit = 3.0 and ratio 0.25 (lily/bezier-bow.cc slur_height; scm/define-grobs.scm Slur). ⚠️ RE-MEASURED session 376 WITH -dbackend=null (LilyPond 1.057429, residual 0.046919): the previous 1.031225 / 0.073124 and the decomposition that stood here (LilyPond's span 8.023631 page units -> 1.030640; Lily#'s span 9.006735 -> 1.103945, i.e. 0.072720 of 0.073124) were read off an unpinned -dbackend=svg run whose fallback face has narrower digits. The height formula has NOT been re-fed the canonical span 8.361649 page units, so the split of 0.046919 between span and clamp is unmeasured. The bow is FLAT here, so this rise IS the height with nothing else in it. What this point rules out is the alternative: a height-limit or ratio that had drifted would move it with the span unchanged."
+      "residual": 0.00022689,
+      "why": "SESSION 661 (2026-09-27): 0.000227 = THE RATIFIED DIGIT BOX, now visible. The numbers-only tab's zero-length stems take their same-direction corrections, so the columns are LilyPond's 3.0372 / 2.7872 / 2.5372 (were 2.7872 x3; LilySharp-Lab sessions/p661/tabstem/tabslur.ly, NoteColumn X) -- the span is unchanged (slur.tab.span stays exact) but the middle digits moved, and the bow's height fit now meets Lily#'s larger digit box (TabConstants.FretDigitHeight, the owner's decision). MEASURED: with the obstacles' half-digit set to LilyPond's 0.630334 this point and the down one are exact again. Before that: EXACT since session 576 (2026-09-25), with slur.tab.span: the span was the column spacing, and the column spacing was the tab voice missing from the merged wish (see slur.tab.span). What stood here before, THE WIDER BOW, which is the SAME ratified deviation seen through the spacing rather than through the digit box -- see slur.tab.span, which measures it directly. A bow's height is h_inf*(2/pi)*atan(pi*width*ratio/(2*h_inf)) with h_inf = staff_space*height-limit = 3.0 and ratio 0.25 (lily/bezier-bow.cc slur_height; scm/define-grobs.scm Slur). ⚠️ RE-MEASURED session 376 WITH -dbackend=null (LilyPond 1.057429, residual 0.046919): the previous 1.031225 / 0.073124 and the decomposition that stood here (LilyPond's span 8.023631 page units -> 1.030640; Lily#'s span 9.006735 -> 1.103945, i.e. 0.072720 of 0.073124) were read off an unpinned -dbackend=svg run whose fallback face has narrower digits. The height formula has NOT been re-fed the canonical span 8.361649 page units, so the split of 0.046919 between span and clamp is unmeasured. The bow is FLAT here, so this rise IS the height with nothing else in it. What this point rules out is the alternative: a height-limit or ratio that had drifted would move it with the span unchanged."
     },
     "slur.tab.down.string-to-attachment": {
       "probe": "tab-slur.ly",
@@ -1735,8 +1735,8 @@
       "probe": "tab-slur.ly",
       "score": "A",
       "lilypond": -1.0574289421686834,
-      "residual": 0.0,
-      "why": "EXACT since session 576, with the up bow and slur.tab.span. The exact negative of the up bow's rise. Same cause as slur.tab.up.attachment-to-control (the wider span); the pair is what says the height rule is direction-symmetric on both sides."
+      "residual": -0.00022689,
+      "why": "SESSION 661: the up bow's 0.000227 mirrored (the ratified digit box, met once the columns took the stubs' corrections -- see slur.tab.up.attachment-to-control). Before that: EXACT since session 576, with the up bow and slur.tab.span. The exact negative of the up bow's rise. Same cause as slur.tab.up.attachment-to-control (the wider span); the pair is what says the height rule is direction-symmetric on both sides."
     },
     "slur.tab.span": {
       "probe": "tab-slur.ly",

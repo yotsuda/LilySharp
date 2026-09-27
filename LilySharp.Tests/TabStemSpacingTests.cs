@@ -134,6 +134,42 @@ public sealed class TabStemSpacingTests
         Assert.Equal(0.228571, firsts[1] - firsts[2], 3);
     }
 
+    /// <summary>
+    /// The same on a NUMBERS-ONLY tab: its zero-length stub on string 1 still points down and
+    /// still meets the bar, over (2.048, 2.5) page units — 0.452 / 7 · 0.4.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p661/tabstem/ls.ly, the probe above without
+    /// <c>\tabFullNotation</c>): first columns 7.265823 and 7.240000. Until session 661 the
+    /// numbers-only line start read the notation stems of the tab's pitches.
+    /// </remarks>
+    [Fact]
+    public void ALineStartRepeatBarReadsANumbersTabsStub()
+    {
+        const string book = """
+            octave absolute
+            time 4/4
+
+            part gtr { instrument guitar }
+
+            section A { gtr { c4\5 c\5 c\5 c\5 | break } }
+            section B { gtr { e'4\1 e'\1 e'\1 e'\1 | break } }
+            section C { gtr { c4\5 c\5 c\5 c\5 | } }
+
+            form main { A |: B :| |: C :| }
+
+            score main { tab gtr as numbers }
+            """;
+        var g = RenderedGeometry.Render(book);
+        var firsts = g.Texts.Where(t => t.Role == TextRole.TabFret)
+            .GroupBy(t => Math.Round(t.Y, 1))
+            .OrderBy(grp => grp.Key)
+            .Select(grp => grp.Min(t => t.X))
+            .ToArray();
+        Assert.Equal(3, firsts.Length);
+        Assert.Equal(0.025823, firsts[1] - firsts[2], 4);
+    }
+
     private static void AssertGaps(string music, double[] lilyPondGaps)
     {
         var g = RenderedGeometry.Render(Book.Replace("MUSIC", music));
