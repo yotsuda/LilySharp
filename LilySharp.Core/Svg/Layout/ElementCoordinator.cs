@@ -2564,10 +2564,17 @@ internal sealed class ElementCoordinator
         // per head and belongs to the outline, not to the column. Hoisted out of the two
         // branches because the TAB anchors below are measured from these, not from the
         // notation offsets the branches build.
+        // …and a head is where the note-collision shift put its voice's column (the slur pass
+        // reads the same table and says why: a bound IS the shifted NoteColumn).
+        // MEASURED (session 658, `c8[~ c]` against `e4` in the other voice of a condensedStaff):
+        // LilyPond's tie leaves the shifted c at 10.618, Lily#'s left the unshifted one at 10.174.
+        var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
         double startColumnX = startMeasure.X
-            + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
+            + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
+            + voiceShifts.ShiftOf(tie.StartMeasureIndex, tie.VoiceIndex + 1, tie.StartItemIndex);
         double endColumnX = endMeasure.X
-            + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure);
+            + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
+            + voiceShifts.ShiftOf(tie.EndMeasureIndex, tie.VoiceIndex + 1, tie.EndItemIndex);
 
         double segStartX;
         TieColumnParts? startColumn = null;
@@ -2885,7 +2892,7 @@ internal sealed class ElementCoordinator
         Voice voice, SystemLayout segSystem, SlurItem slur, bool leftEdge,
         double staffMiddleDown, double headBaseY,
         Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember,
-        (int Measure, int Item)? otherBound)
+        (int Measure, int Item)? otherBound, VoiceCollisionTable voiceShifts)
     {
         if (EdgeColumn(voice, segSystem, slur, leftEdge) is not { } c
             || (otherBound is { } ob && ob.Measure == c.Measure && ob.Item == c.Item))
@@ -2893,7 +2900,8 @@ internal sealed class ElementCoordinator
         var item = voice.Measures[c.Measure].Items[c.Item];
         if (NoteColumnLayout.Of(item) is not { HasStem: true } col || col.StemUp != slur.CurveUp)
             return null;
-        double x = c.Layout.X + GetItemXOffset(voice, c.Measure, c.Item, c.Layout);
+        double x = c.Layout.X + GetItemXOffset(voice, c.Measure, c.Item, c.Layout)
+            + voiceShifts.ShiftOf(c.Measure, slur.VoiceIndex + 1, c.Item);
         double stemX = LayoutUtilities.StemX(x, col.StemUp, col.NoteValue, col.Notehead);
         double tip = TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, c.Measure, c.Item,
                 stemX, staffMiddleDown, col.StemUp, out double beamTip)
@@ -3214,7 +3222,8 @@ internal sealed class ElementCoordinator
         Dictionary<(int Voice, int Measure, int Item), BeamLayout>? beamByMember,
         ImmutableArray<GraceNoteItem> graceNotes,
         Dictionary<int, List<int>>? graceByMeasure,
-        GraceObstacleGeom?[]? graceGeomCache)
+        GraceObstacleGeom?[]? graceGeomCache,
+        VoiceCollisionTable voiceShifts)
     {
         const double eps = 0.001;
         var obstacles = new List<SlurObstacle>();
@@ -3257,7 +3266,8 @@ internal sealed class ElementCoordinator
                 if (items[i] is RestItem { IsSpacer: false } rest
                     && !rest.IsMultiMeasure)
                 {
-                    double rx = ml.X + GetItemXOffset(voice, mi, i, ml);
+                    double rx = ml.X + GetItemXOffset(voice, mi, i, ml)
+                        + voiceShifts.ShiftOf(mi, slur.VoiceIndex + 1, i);
                     if (rx < segStartX - eps || rx > segEndX + eps)
                         continue;
                     int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
@@ -3286,7 +3296,8 @@ internal sealed class ElementCoordinator
                 // column exactly ON its attachment X, where LP's strictly-inside
                 // test (slur-configuration.cc:251) leaves it out of the scoring
                 // unless a candidate's tilt shift moves the attachment off it.
-                double x = ml.X + GetItemXOffset(voice, mi, i, ml);
+                double x = ml.X + GetItemXOffset(voice, mi, i, ml)
+                    + voiceShifts.ShiftOf(mi, slur.VoiceIndex + 1, i);
                 if (x < segStartX - eps || x > segEndX + eps)
                     continue;
                 double obstacleX = x + EndpointHeadHalfWidth(voice, mi, i);
@@ -3341,7 +3352,7 @@ internal sealed class ElementCoordinator
 
             AddGraceObstaclesForMeasure(
                 obstacles, voice, slur, graceNotes, graceByMeasure, graceGeomCache,
-                ml, mi, hi, staffMiddleDown, segStartX, segEndX);
+                ml, mi, hi, staffMiddleDown, segStartX, segEndX, voiceShifts);
         }
 
         obstacles.Sort((a, b) => a.X.CompareTo(b.X));
@@ -3371,7 +3382,8 @@ internal sealed class ElementCoordinator
         ImmutableArray<GraceNoteItem> graceNotes,
         Dictionary<int, List<int>>? graceByMeasure, GraceObstacleGeom?[]? graceGeomCache,
         MeasureLayout ml, int mi, int hi,
-        double staffMiddleDown, double segStartX, double segEndX)
+        double staffMiddleDown, double segStartX, double segEndX,
+        VoiceCollisionTable voiceShifts)
     {
         if (graceByMeasure is null || graceGeomCache is null
             || !graceByMeasure.TryGetValue(mi, out var groupIndices))
@@ -3401,6 +3413,7 @@ internal sealed class ElementCoordinator
             }
             double groupX = ml.X
                 + GetItemXOffset(voice, mi, g.MainNoteItemIndex, ml)
+                + voiceShifts.ShiftOf(mi, slur.VoiceIndex + 1, g.MainNoteItemIndex)
                 - geom.Span;
 
             var font = g.HeadFont;
@@ -3503,7 +3516,8 @@ internal sealed class ElementCoordinator
         ImmutableArray<TupletBracketItem> tupletItems = default,
         ImmutableArray<InsideSlurScript> insideScripts = default,
         ImmutableArray<TieLayout> tieLayouts = default,
-        IReadOnlyDictionary<int, int>? measureToSystemIdx = null)
+        IReadOnlyDictionary<int, int>? measureToSystemIdx = null,
+        VoiceCollisionTable? voiceShifts = null)
     {
         // thickness_ = Slur.thickness (1.2, define-grobs.scm) * the layout
         // line-thickness dimension (0.1 ss at default staff size) = 0.12 ss.
@@ -3601,7 +3615,8 @@ internal sealed class ElementCoordinator
 
             for (int i = lo; i <= hi; i++)
             {
-                double x = ml.X + GetItemXOffset(voice, mi, i, ml);
+                double x = ml.X + GetItemXOffset(voice, mi, i, ml)
+                    + (voiceShifts?.ShiftOf(mi, slur.VoiceIndex + 1, i) ?? 0);
                 if (x < segStartX - eps || x > segEndX + eps)
                     continue;
 
@@ -4071,6 +4086,15 @@ internal sealed class ElementCoordinator
         //   y = head->extent(Y)[dir]; y += dir * 0.5 * staff_space.
         double slurOffset = GlyphMetrics.NoteheadBlack.Top + 0.5; // 0.545 + 0.5 = 1.045 ss
 
+        // The note-collision shift of a voice's column — the table the beams stand their stems
+        // on (ApplyVoiceCollisionShifts) and the renderer draws the heads by. A slur's bound is
+        // that shifted NoteColumn in LilyPond, so its head centre and its stem move with it.
+        // MEASURED (session 658, the reader's beam-slur.lys, `c8[( c)]` against `e4` in the
+        // other voice of a condensedStaff): LilyPond shifts the up-stemmed c 0.443 right and
+        // starts the slur on the shifted stem, 10.218; Lily# drew the c there too but started
+        // the slur on the UNSHIFTED column's stem, 9.774.
+        var voiceShifts = SpacingRules.VoiceCollisionShiftsOf(score.Voices);
+
         foreach (var slur in slurs)
         {
             if (!measureMap.TryGetValue(slur.StartMeasureIndex, out var startInfo))
@@ -4098,7 +4122,8 @@ internal sealed class ElementCoordinator
                     segStartX = startMeasure.X
                         + GetItemXOffset(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, startMeasure)
                         // Follow the curve-side head's within-chord displacement (seconds).
-                        + GetChordHeadXOffset(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, slur.StartStaffPosition);
+                        + GetChordHeadXOffset(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, slur.StartStaffPosition)
+                        + voiceShifts.ShiftOf(slur.StartMeasureIndex, slur.VoiceIndex + 1, slur.StartItemIndex);
                 }
                 else
                 {
@@ -4116,7 +4141,8 @@ internal sealed class ElementCoordinator
                     segEndX = endMeasure.X
                         + GetItemXOffset(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, endMeasure)
                         // Follow the curve-side head's within-chord displacement (seconds).
-                        + GetChordHeadXOffset(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, slur.EndStaffPosition);
+                        + GetChordHeadXOffset(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, slur.EndStaffPosition)
+                        + voiceShifts.ShiftOf(slur.EndMeasureIndex, slur.VoiceIndex + 1, slur.EndItemIndex);
                 }
                 else
                 {
@@ -4254,7 +4280,7 @@ internal sealed class ElementCoordinator
                     if (!segment.IsFirst
                         && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true,
                             staffMiddleDown, segStartY, beamByMember,
-                            segment.IsLast ? (slur.EndMeasureIndex, slur.EndItemIndex) : null) is { } stemBase)
+                            segment.IsLast ? (slur.EndMeasureIndex, slur.EndItemIndex) : null, voiceShifts) is { } stemBase)
                         segStartY = stemBase;
                 }
 
@@ -4276,7 +4302,7 @@ internal sealed class ElementCoordinator
                     if (!segment.IsLast
                         && BrokenEdgeStemBaseY(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false,
                             staffMiddleDown, segEndY, beamByMember,
-                            segment.IsFirst ? (slur.StartMeasureIndex, slur.StartItemIndex) : null) is { } stemBase)
+                            segment.IsFirst ? (slur.StartMeasureIndex, slur.StartItemIndex) : null, voiceShifts) is { } stemBase)
                         segEndY = stemBase;
                 }
                 // A piece whose only column is its other, real bound: the broken end takes that
@@ -4294,13 +4320,13 @@ internal sealed class ElementCoordinator
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown,
                     windowStartX, windowEndX, beamByMember, graceNotes,
-                    graceByMeasure, graceGeomCache);
+                    graceByMeasure, graceGeomCache, voiceShifts);
 
                 var extraObjects = BuildSlurExtraObjects(
                     score.TextMetrics, score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown, windowStartX, windowEndX,
                     out var tieEnds,
                     tupletNumberLayouts, score.TupletBrackets, insideScriptLayouts,
-                    tieLayouts, measureToSystemIdx);
+                    tieLayouts, measureToSystemIdx, voiceShifts);
 
                 // The slurs already laid out are NOT obstacles: a slur never avoids a slur in
                 // LilyPond (SlurScoringProblem.ScoreExtraEncompass's ⚠️) — only a PhrasingSlur
