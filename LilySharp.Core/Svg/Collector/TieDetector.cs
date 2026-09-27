@@ -48,8 +48,8 @@ internal sealed class TieDetector
                     var (endMeasureIdx, endItemIdx, endItem) = next.Value;
                     NoteItem? note = endItem switch
                     {
-                        NoteItem n when n.StaffPosition == startNote.StaffPosition => n,
-                        ChordItem c => MatchingChordPitch(c, startNote.StaffPosition),
+                        NoteItem n when SamePitch(n.StaffPosition, n.Midi, startNote.StaffPosition, startNote.Midi) => n,
+                        ChordItem c => MatchingChordPitch(c, startNote.StaffPosition, startNote.Midi),
                         _ => null,
                     };
                     if (note != null)
@@ -140,7 +140,7 @@ internal sealed class TieDetector
             {
                 foreach (var endPitch in endChord.Notes)
                 {
-                    if (endPitch.StaffPosition == startPitch.StaffPosition)
+                    if (SamePitch(endPitch.StaffPosition, endPitch.Midi, startPitch.StaffPosition, startPitch.Midi))
                     {
                         matched.Add((startPitch, SynthesizeNote(endPitch, endChord)));
                         break;
@@ -157,7 +157,7 @@ internal sealed class TieDetector
             var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
             foreach (var startPitch in startChord.Notes)
             {
-                if (endNoteItem.StaffPosition == startPitch.StaffPosition)
+                if (SamePitch(endNoteItem.StaffPosition, endNoteItem.Midi, startPitch.StaffPosition, startPitch.Midi))
                     matched.Add((startPitch, endNoteItem));
             }
             EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
@@ -177,14 +177,34 @@ internal sealed class TieDetector
         => NoteScan.FindNext(measures, measureIdx, itemIdx,
             x => x is NoteItem or ChordItem or RestItem);
 
+    /// <summary>
+    /// Whether two heads are the SAME PITCH for a tie: the same staff position, or — where the
+    /// drawn position moved under them (an ottava bracket begins or ends between the two) —
+    /// the same sounding MIDI number a whole number of octaves (7 positions) apart. The
+    /// octave test keeps an enharmonic pair (fis~ges: one position apart) untied, as LilyPond
+    /// does.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-engraver.cc — the tie binds heads whose PITCHES are equal
+    /// (ly:pitch), not their staff positions; the ottava only moves where a head is drawn.
+    /// MEASURED, Lab sessions/p655 (S1 tie-ottava, LilyPond 2.26.0): `d''~ \ottava #0 d''`
+    /// draws its tie at the first head's height, ending 0.335 short of the second head, which
+    /// stands an octave higher; Lily# dropped every tie whose end note carried `@ottava` or
+    /// `@!ottava`. ⚠️ A clef change between the two heads moves the position by a non-octave
+    /// amount and is still left untied (no corpus book writes one).
+    /// </remarks>
+    private static bool SamePitch(int positionA, int midiA, int positionB, int midiB)
+        => positionA == positionB
+           || (midiA != 0 && midiA == midiB && (positionA - positionB) % 7 == 0);
+
     /// <summary>The synthesized end note for a note→chord tie: the chord pitch
     /// matching <paramref name="staffPosition"/>, or null when the chord does
     /// not contain it (then there is no tie).</summary>
-    private static NoteItem? MatchingChordPitch(ChordItem chord, int staffPosition)
+    private static NoteItem? MatchingChordPitch(ChordItem chord, int staffPosition, int midi)
     {
         foreach (var pitch in chord.Notes)
         {
-            if (pitch.StaffPosition == staffPosition)
+            if (SamePitch(pitch.StaffPosition, pitch.Midi, staffPosition, midi))
                 return SynthesizeNote(pitch, chord);
         }
         return null;

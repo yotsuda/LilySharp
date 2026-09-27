@@ -2286,6 +2286,20 @@ internal sealed class ElementCoordinator
             foreach (var t in ordered)
                 if (!tiedPositions.Contains(t.StaffPosition))
                     tiedPositions.Add(t.StaffPosition);
+            // The END column's bound heads are the ties' own end heads, which stand elsewhere only
+            // where an ottava bracket begins or ends between the two (TieDetector.SamePitch). The
+            // outline is then built around the head the tie really reaches, stem and all
+            // (tie-formatting-problem.cc:96-287 reads the bound heads), not around no head at all.
+            List<int>? endTiedPositions = null;
+            foreach (var t in ordered)
+                if (t.EndNote.StaffPosition != t.StaffPosition)
+                {
+                    endTiedPositions = [];
+                    foreach (var u in ordered)
+                        if (!endTiedPositions.Contains(u.EndNote.StaffPosition))
+                            endTiedPositions.Add(u.EndNote.StaffPosition);
+                    break;
+                }
 
             // A TAB column's directions come from the STRING LINES, so they are decided here,
             // once for the column, and handed to every segment's specifications.
@@ -2313,7 +2327,7 @@ internal sealed class ElementCoordinator
                 {
                     specs.Add(BuildTieSpecification(
                         fonts, score, systems, staff, staffIndex, ordered[i], segments[s],
-                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i], brokenCurveUp));
+                        startMeasure, endMeasure, tiedPositions, tabCurveUp?[i], brokenCurveUp, endTiedPositions));
                 }
 
                 // The thread's lent problem (TieFormattingProblem.SolveColumn) — one column a
@@ -2539,7 +2553,8 @@ internal sealed class ElementCoordinator
         MeasureLayout endMeasure,
         List<int> tiedPositions,
         bool? tabCurveUp = null,
-        bool? brokenCurveUp = null)
+        bool? brokenCurveUp = null,
+        List<int>? endTiedPositions = null)
     {
         int startDots = tie.StartNote.Dots;
 
@@ -2588,7 +2603,7 @@ internal sealed class ElementCoordinator
         {
             endColumn = BuildTieColumn(
                 score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex,
-                endColumnX, tiedPositions, isLeftBound: false, atLineStart: !segment.IsFirst);
+                endColumnX, endTiedPositions ?? tiedPositions, isLeftBound: false, atLineStart: !segment.IsFirst);
             // The fallback anchor (tab only): the right head's inner (left) edge.
             segEndX = endColumnX
                 + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);
