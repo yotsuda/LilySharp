@@ -1330,10 +1330,17 @@ public sealed class LilyPondExporter
         _sb.Append(varName).Append(" = ").Append(wrapper).Append(" {\n");
 
         // Each part starts from Lily#'s own default duration, as the collector does
-        // (MeasureCollector resets _defaultDuration to a quarter per part).
+        // (MeasureCollector resets _defaultDuration to a quarter per part) — but LilyPond's
+        // does NOT: default_duration_ is parser state, carried from the last duration READ
+        // anywhere above, the previous part's variable included. So the part's first
+        // unwritten event writes its value out, as a section boundary does (below, the
+        // prologue's twin of this). MEASURED (session 658, the reader's beam-slur.lys through
+        // LilyPond 2.26.0): the second part's `e g b r` after the first's `… d d d d d ]`
+        // (eighths) read as four EIGHTHS in the twin, where Lily# engraves quarters.
+        // LILYPOND-REF: lily/parser.yy:3503-3515 optional_notemode_duration.
         _lastWrittenValue = "4";
         _lastWrittenDots = 0;
-        _forceNextDuration = false;
+        _forceNextDuration = true;
         // Each part's music variable is its own scope - a slash run cannot stay
         // open across the boundary (the next part opened with a stray
         // improvisationOff when it did).
