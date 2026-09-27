@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第655セッションの経緯
+
+### 1.1 第655セッション（2026-09-27・YT-DELL2）
+
+同じ会話の続き（第654 の後・ユーザー「続けて」＝S1 の未収録の状況）。★ `-Start p655`（HEAD `708e8e09`・未 push 125・full **9414 / 0 / 2 / 9416**）。
+★ S1 に 5 冊を足した（tie-ledger・tie-ottava・bow-cue・tab-full-bows・tab-only-bows＝計 23 冊・双子 `sessions/p655/s1w`）。
+★ ⑴ `0450e2ce` ottava の端をまたぐ同音のタイ（`TieDetector.SamePitch`＝同じ位置、または同じ MIDI で 7 の倍数だけ離れた位置。異名同音は結ばない）＋終点の column は**タイが実際に届く頭の位置**で建てる（`endTiedPositions`）。LP 4 本・Lily# 2 本 → 5 対すべて exact。網 `OttavaBoundaryTieTests`（毒 2 つで赤）。⚠️ 残り: 2 音のあいだの clef 変更は結ばないまま。
+★ ⑵ `548d7574` 計器: `TwinBeamSweep.StavesOf` が同じ高さの加線の列を staff と読んだ（tie-ledger で「3 段」）＝行に 4.0 より長い 1 片を要求。「1 本の線」は 65 冊・「reach の半分」は tab（数字で途切れる弦）で 17 冊の staff を失った。実コーパス: staffcount 不一致 61 → **44**・対になった本 899 → 916・対 +33（全部許容内）・既存の対の変化 0。
+⚠️ 新しい族（未着手）: **cue のスラーは cue の大きさを読まない**（ElementCoordinator のスラー経路に IsCue が無い＝base の頭の高さ・obstacle の頭の箱・頭幅・符尾はフルサイズ・LP は font-size −4 で ×0.63）。S1 bow-cue で y 約 0.19。**実コーパス 0 冊**（cue は試験・audit の 5 冊だけ）。タイは写像後 exact。tab の 2 冊は宣言済み（F9・tab タイ）。
+★ **終了**: full **9415 / 0 / 2 / 9417**・実コーパスの bow の差 **2,526**。次: cue のスラー → S4（S3 の一覧で全残差を説明）。push はユーザー。
+
 ## 以下は第654セッションの経緯
 
 ### 1.1 第654セッション（2026-09-27・YT-DELL2）
@@ -43346,4 +43357,10 @@ top-level＝ファイル既定（既定 `written`）／part header＝その part
     で dump が止まり、その頁の残りが消えていた）／Lily# の縦長の bezier は bow ではない（tab の数字の
     括弧）／tie の端は**最寄りの符頭列**で spacing を差し引く（符頭を縦に避けたタイは頭の*下*に着く＝
     「右隣の列」を読むと 1 音ずれる）／端が合って span だけ違う対は `span-only`（高さは幅の関数）。
+
+#### [S] S3. 宣言済みの逸脱の棚卸し — ✅ 第650 が作った（Lab `sessions/p650/s3-inventory.md`＝残差の族→宣言の対応表・未観測の宣言・ユーザー決定・APPROXIMATIONS.md …
+
+  fresh 2,535 対の内訳: grace スラー約 1,100（`GraceNotes.cs` の手の定数＝近似）・grace の bow 欠落（`VoiceScan` の足場＝U8）・tab スラー約 550（F9）・tab タイ約 320（LILYSHARP-OWN）・
+  中央線タイの反転 11（LP の同点＝移植不能）・spacing 起因約 460。**説明の無い残り 3 件**: ⑴ 二声の `\voiceOne` 半音符から出るスラーの始点 0.365（dot-cross-voice-spacing）
+  ⑵ ✅ part combiner のタイ終点 0.787（pcglobal-probe）＝第651 `bee40494` ⑶ ✅ 小節途中から始まる `voice { }` の前のスラーの向き（SUMMER 最終小節）＝第652 `88619940`（§1.1 第652）。⑴ ✅ ＝第651 `23d81ced`。
 
