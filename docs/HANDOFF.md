@@ -126,6 +126,13 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**（第473 が §5.4 に 1 本足した）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第661セッション（2026-09-27・YT-DELL2）
+
+同じ会話ではなく新しい会話（`/clear` の後）。★ `-Start p661`（HEAD `a4c3db30`・未 push 151・full **9440 / 0 / 2 / 9442**）。
+★ **Core の 0 警告が破れていた**（CS1570 × 6・`MeasureCollector.cs`）: 第659 `1deef3e0` の doc が ⑴ `<< \\ >>` を裸で書き ⑵ 次のメソッドの `<summary>` の頭 2 行を消していた（挿入が他人の doc を割った形）＝元の文を `1deef3e0~1` から戻した。
+
+## 以下は第660セッションの経緯
+
 ### 1.1 第660セッション（2026-09-27・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p660`（HEAD `0db40b8e`・未 push 141・full **9433 / 0 / 2 / 9435**）。S1 を ✅ にして §2 から畳んだ。
@@ -136,19 +143,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ `7961dbf7` ⒳¹³⑷ の実体を見つけて閉じた: 段ごとの staff skyline（`StaffSlurLayouts`）は 1 系だけを渡して `LayoutSlurs` を呼び、片端が別の系のスラーを捨てていた＝行をまたぐスラーはどちらの行でも段の間隔に入らず、grandStaff で下の段から出るスラーが上の段を突き抜けた。`SpannerBreakSubstitution.SplitClipped`（渡された系の中の切れ端）で解く（LP は切れ端ごとに自分の行で解く＝`Spanner::do_break_processing`）。再現本（Lab `sessions/p660/xs/xsys3.lys`）: 段の間隔 LP 11.045／14.281・旧 10.095／12.595・新 11.042／14.306。986 冊で 3 冊動く（lyhygrace 2 段目 9.0→9.1・LP 9.35／tab 本 2 冊はページの均し）。網 `BrokenSlurStaffSpacingTests`（`Split` に戻す毒で赤）。途中で LP 引用に関数名が無く `CitationsThatNameNothing` が赤＝名前を入れて commit に畳んだ。
 ★ `1e42c069` タイも同じ形を閉じた（⒳¹³⑷ の残り）: タイ列も `SplitClipped` で切れ端を取り、欠けた端の小節は null にしてその端を持つ切れ端だけが読む。再現本（Lab `sessions/p660/xs/xtie.lys`・下の段 `f'''1~ | break`）: 段の間隔 LP 13.329／13.025・旧 12.595／12.595・新 = LP。986 冊で 2 冊動く（Honesty 2 ページ目の最後の系 0.25 下へ・ABC の練習番号 B3 が 0.58 上へ＝どちらも行をまたぐタイが輪郭に入った分）。網 `BrokenSlurStaffSpacingTests.ATieOverALineBreak…`（端が欠けたら飛ばす毒で赤）。
 ★ **終了**: full **9440 / 0 / 2 / 9442**。push はユーザー。
-
-## 以下は第659セッションの経緯
-
-### 1.1 第659セッション（2026-09-27・YT-DELL2）
-
-同じ会話の続き（第658 の後）。★ `-Start p659`（HEAD `fea54d40`・未 push 135・full **9424 / 0 / 2 / 9426**）。
-★★ **ユーザー決定（2026-09-27）: S4 の「説明済み」に 3 つを認める**＝⑴ 双子の小節ずれ（本の小節の長さが合わない・LP は小節線チェックを無視して続ける）／⑵ 幅の違いから来る弓の高さ・同点のタイの倒れ方（spacing）／⑶ 段割れの違い。
-★ 粉雪 `c,4( c8\2)` の +0.5 は spacing と確定: その系は Lily# の列が LP より 2.6 左・スラーの幅が 0.17 狭い（急なスラー＝始点が 1 格子上がる）。同じ小節を単独に置くと五線のスラーは LP と一致（差 0・残るのは宣言済みの tab F9 だけ）＝幾何が揃えば同じ答え（Lab `sessions/p659/kona*.lys`）。
-⇒ **S4 完了**（§2 S）。
-★ `754bd3ed` ユーザー決定「うつして」＝S1 の 23 冊を網へ: `LilySharp.Tests/Fixtures/bows/`（本＋LP 2.26.0 の bow の値 `*.lp.txt`）・`BowTwinTests`（`compare.ps1` の対応付けを C# に移植・各対 ±0.01 か `residuals.tsv` の既知の残差＝grace の数 1・tab スラー F9 8・tab タイ 6・0.005 動いたら赤）・LP 側の取り直しは `audit/bows/regen-lp.ps1`・更新は `LILYSHARP_UPDATE_BOWS=1`。毒: スラーの頭からの持ち上げ・タイの min-length でどちらも赤（`slurOffset` は音符以外の既定値だけ＝死んだ毒だった）。
-★★ **ユーザー決定（S5）: ⑴ 読みやすさのために LP から外れてよい ⑶ 直すなら常に直す（既定を変える・設定にしない）**。⑵ 候補の一覧（Lab `sessions/p659/s5/s5-candidates.md`・絵 `montage2.png`・`scan.ps1`）: 外側の線に端が乗るタイ 855（うち行末で割れた M20 型 79）・幅 1.0 未満のタイ 176・内側の線に沿う平たいタイ 16・線を通る低いスラー 35＝**どれを直すかはユーザーが選ぶ**。
-★ 別件（ユーザー「S5 は後回し、別件を進めて」）`1deef3e0`: 小節の途中で終わる曲の最後に小節線を描かない（`MeasureBuilder.cs` の宣言済み「STILL NOT LILYPOND」を閉じた）。LP は measurePosition が 0 に戻る所にだけ小節線を描く＝位置は**曲頭からの通し**（途中の短い小節で後の小節線が全部ずれる）。builder が位置を持ち（checkpoint にも載せた）`EndsOffTheBar` を報告、集める側が「最後の小節に音楽がある声部がすべて主の流れで小節の途中」のときだけ消す。**多声の段と volta のある本は安全側で残す**（LP は volta の 2 番目以降を 1 番目の頭から数え直す＝未移植）。検証は LP 自身の終わりの measurePosition（双子の各 part 変数の末尾に `\applyContext`・Lab `sessions/p659/bars/endpos.ps1`）: 消えた 44 冊すべて LP も小節の途中。ユーザーコーパスで 16 冊が変わる（多くは途中に短い小節のある本）。網 `EndOfMusicBarLineTests`（毒 2 つで赤）・snapshot 9 枚。
-★ **終了**: full **9433 / 0 / 2 / 9435**。push はユーザー。
 
 ## 2. 開いている作業
 
