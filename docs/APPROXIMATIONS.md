@@ -375,9 +375,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`
 - **:910** (the chain's last node — see its LILYSHARP-OWN remark), the single-page path
 ### `LilySharp.Core/Svg/Layout/LineStartColumn.cs`
-- **:641** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
-- **:725** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
-- **:733** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
+- **:637** This is Lily#'s own (LILYSHARP-OWN), not LilyPond's: LilyPond puts a leading
+- **:719** LILYSHARP-OWN, the lead-sheet meter (decided divergence 2026-08-20, see
+- **:727** LILYSHARP-OWN, the same decision one step on: a text row DOES draw the bar
 ### `LilySharp.Core/Svg/Layout/LyricEngraver.cs`
 - **:213** ⚠️ LILYSHARP-OWN, AND IT IS LOAD BEARING NOW THAT NOTHING ELSE IS. LilyPond has no
 - **:297** LILYSHARP-OWN: the CJK term. The bundled face has no CJK glyphs, so the outline is

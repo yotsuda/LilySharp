@@ -31,6 +31,14 @@ workflow attaches that section to the GitHub Release verbatim.
   every staff + tab bar end 0.02 short of LilyPond. Of 332 bass books 194 move by a few
   hundredths; none breaks its lines differently.
 
+- **The first note after a bar line gets LilyPond's room when the staves differ.** LilyPond
+  gives a down stem just after a bar line a little extra room, and it works this out once
+  for each staff, measuring every staff's first notes against that staff's bar line before
+  averaging the results. Lily# measured each staff's own notes only, so a staff + tab bar
+  that opened on a down stem stood up to 0.014 too wide, and on a system opening with a
+  repeat sign a down stem on one staff earned only half its room. Of 332 bass books 142
+  move by hundredths; none breaks its lines differently.
+
 - **Fret diagrams are LilyPond's size, stand side by side, and can be resized.** A chord
   diagram used to be drawn at about half LilyPond's size and was hard to read. It now has
   one staff space between strings and between frets, as in LilyPond. `fonts { fretFrame

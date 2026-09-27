@@ -439,48 +439,44 @@ internal static class LineStartColumn
     }
 
     /// <summary>
-    /// The FIRST sounding item of each voice of <paramref name="staff"/> in measure
-    /// <paramref name="measureIndex"/> — the note columns <c>Spacing_interface::right_note_columns</c>
-    /// hands <c>Staff_spacing::next_notes_correction</c>.
+    /// The line-start optical correction of one staff's wish: the FIRST musical column of
+    /// every voice of every staff — the musical PaperColumn a Staff_spacing's right-items is —
+    /// against that staff's bar, <paramref name="barHalfSpaces"/> high each way; a tab voice
+    /// read by the TabVoice's own stem (drawn, or a numbers-only tab's stub).
     /// </summary>
-    /// <summary>The line-start optical correction of a tab: each voice's first musical
-    /// column read by the TabVoice's own stem (drawn, or a numbers-only tab's stub).</summary>
-    private static double TabOptical(Model.Staff staff, int measureIndex)
+    /// <remarks>
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p661/merge/ls2.ly, a piano staff opening a
+    /// system on <c>.|:</c>): the lower staff's down-stem E3 under the upper staff's up-stem c'
+    /// puts the first column 0.133646 further off than an up/up opening — the whole
+    /// correction, as mid-line. Until session 661 each staff read only its own voices, so the
+    /// upper staff's wish took none and the mean halved it.
+    /// LILYPOND-REF: lily/separating-line-group-engraver.cc:147-150 Separating_line_group_engraver::stop_translation_timestep — right-items = currentMusicalColumn
+    /// LILYPOND-REF: lily/staff-spacing.cc:95-110 Staff_spacing::next_notes_correction.
+    /// </remarks>
+    private static double ColumnOptical(Model.MultiStaffScore score, int measureIndex, double barHalfSpaces)
     {
         double max = 0;
-        foreach (var voice in staff.Voices)
+        foreach (var (_, staff, _) in score.EnumerateStaves())
         {
-            if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            if (staff.IsTextRow)
                 continue;
-            var measure = voice.Measures[measureIndex];
-            foreach (var item in measure.Items)
+            foreach (var voice in staff.Voices)
             {
-                if (!SpacingRules.IsMusicalColumn(item))
+                if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
                     continue;
-                max = Math.Max(max, SpacingRules.TabStemOpticalCorrection(item, staff, measure));
-                break;
+                var measure = voice.Measures[measureIndex];
+                foreach (var item in measure.Items)
+                {
+                    if (!SpacingRules.IsMusicalColumn(item))
+                        continue;
+                    // A line start's first note shows the accidental its broken tie kept.
+                    max = Math.Max(max, SpacingRules.StaffSpacingOpticalCorrection(
+                        Model.TiedAccidentals.LineStartView(item), staff, measure, barHalfSpaces));
+                    break;
+                }
             }
         }
         return max;
-    }
-
-    private static List<Model.MusicItem> FirstMusicalItems(Model.Staff staff, int measureIndex)
-    {
-        var items = new List<Model.MusicItem>();
-        foreach (var voice in staff.Voices)
-        {
-            if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
-                continue;
-            foreach (var item in voice.Measures[measureIndex].Items)
-            {
-                if (!SpacingRules.IsMusicalColumn(item))
-                    continue;
-                // A line start's first note shows the accidental its broken tie kept.
-                items.Add(Model.TiedAccidentals.LineStartView(item));
-                break;
-            }
-        }
-        return items;
     }
 
     /// <summary>
@@ -682,15 +678,13 @@ internal static class LineStartColumn
 
             // staff-spacing.cc:206 next_notes_correction — bar_y_positions is empty for
             // anything but a bar line, so only the opening `|:` earns it.
-            // A tab reads the TabVoice's own stems, in its own frame (as the mid-line bar does,
-            // SpacingRules.TabBarlineToNextNotesCorrection) — a numbers-only tab's zero-length
-            // stubs included: Stem::is_normal_stem reads heads and duration, not the stencil.
+            // Every staff's first column against THIS staff's bar (ColumnOptical); a tab voice
+            // reads the TabVoice's own stems, in its own frame — a numbers-only tab's
+            // zero-length stubs included: Stem::is_normal_stem reads heads and duration, not
+            // the stencil.
             double optical = last.Symbol != BreakAlignSymbol.StaffBar
                 ? 0.0
-                : staff.IsTab
-                    ? TabOptical(staff, startMeasureIndex)
-                    : SpacingRules.BarlineToNextNotesCorrection(
-                        FirstMusicalItems(staff, startMeasureIndex));
+                : ColumnOptical(score, startMeasureIndex, SpacingRules.BarHalfSpaces(staff));
 
             wishes.Add(WishFrom(
                 last.Symbol, last.InkLeft, last.InkRight, floor, minDistance, optical));

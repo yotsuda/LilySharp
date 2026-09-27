@@ -722,10 +722,12 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// <see cref="BarlineToNextNotesCorrection"/> for a bar whose voices include a tab —
-    /// each voice's first column read by its own staff (a tab's by the TabVoice's own stem, in
-    /// its own frame: drawn on a full tab, a zero-length stub on a numbers-only one) — or null
-    /// when no voice stands on a tab, so every other bar keeps the column reading.
+    /// <see cref="BarlineToNextNotesCorrection"/> for a bar whose voices include a tab, ONE
+    /// PER STAFF — in the order <c>MeasureLayouter.StaffItemsAt</c> lists the staves (first
+    /// appearance, text rows skipped) — or empty when no voice stands on a tab, so every other
+    /// bar keeps the column reading. Each staff's is every voice's first column (a tab's read
+    /// by the TabVoice's own stem, in its own frame: drawn on a full tab, a zero-length stub on
+    /// a numbers-only one) against THAT staff's bar.
     /// </summary>
     /// <remarks>
     /// LilyPond's optical correction intersects the stem's pure extent — in the STEM's staff,
@@ -739,80 +741,126 @@ internal static partial class SpacingRules
     /// quarter is 0.0486 wider than one opening on the bottom string's — the stub (0.548,
     /// 1.399) inside the bar's ±1.5, over 7, times 0.4. Until session 661 that tab took the
     /// notation stems of its staff's pitches.
-    /// LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction and
-    ///   :72-93 bar_y_positions.
-    /// ⚠️ Each voice is read against ITS OWN staff's bar; LilyPond reads every staff's note
-    /// columns against each staff's bar and merges the wishes. The two agree when every staff
-    /// is one kind (a lone tab, or tabs of one tuning).
+    /// <para>
+    /// EVERY STAFF'S COLUMN AGAINST EACH STAFF'S BAR. A Staff_spacing's right-items is the
+    /// musical PaperColumn, so each staff's wish reads every staff's note columns — against its
+    /// OWN bar (bar_y_positions) — and the wishes are then averaged. On staves of one bar
+    /// height that is the column's max on every staff; beside a tab the bars differ, and a
+    /// stem is intersected with each in its own page units. MEASURED (2.26.0, LilySharp-Lab
+    /// sessions/p661/merge/m2.ly, staff + four-string numbers-only tab, against an up/up bar):
+    /// a bar opening on the staff's down-stem d' over the tab's up stub is 0.100000 wider =
+    /// (0.114286 against the staff's ±2 + 0.085714 against the tab's ±1.5) / 2; one opening
+    /// on the staff's g over the tab's down stub 0.175074 = (0.189360 + 0.160788) / 2. Until
+    /// session 661 every staff took the column's max against the bars of its own voices
+    /// (0.114286 / 0.189360).
+    /// </para>
+    /// LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction,
+    ///   :72-93 bar_y_positions and :95-110 next_notes_correction.
+    /// LILYPOND-REF: lily/separating-line-group-engraver.cc:147-150 Separating_line_group_engraver::stop_translation_timestep — right-items = currentMusicalColumn
+    /// LILYPOND-REF: lily/spring.cc:104-129 merge_springs — the staves' wishes averaged.
+    /// <para>
+    /// The span is a thread-owned buffer, valid until the next call on the thread — the
+    /// caller reads it at once (a bar with a tab is most of a bass player's books, and this
+    /// runs on every such bar).
+    /// </para>
     /// </remarks>
-    internal static double? TabBarlineToNextNotesCorrection(
+    internal static ReadOnlySpan<double> TabBarlineToNextNotesCorrections(
         IReadOnlyList<Measure> voices, IReadOnlyList<Staff>? staves)
     {
         if (staves is null || staves.Count != voices.Count)
-            return null;
+            return default;
         bool anyTab = false;
         for (int v = 0; v < voices.Count && !anyTab; v++)
             anyTab = TabOf(staves, voices.Count, v) is not null;
         if (!anyTab)
-            return null;
+            return default;
 
-        double max = 0;
-        for (int v = 0; v < voices.Count; v++)
+        var buffer = t_opticalByStaff is { } b && b.Length >= voices.Count
+            ? b : t_opticalByStaff = new double[Math.Max(4, voices.Count)];
+        int count = 0;
+        for (int s = 0; s < voices.Count; s++)
         {
-            if (NoteColumnAt(voices[v], Fraction.Zero) is not { } item)
+            // The staves in StaffItemsAt's order: each at its first voice, text rows skipped.
+            var staff = staves[s];
+            if (staff.IsTextRow || IsSeenBefore(staves, s))
                 continue;
-            if (TabOf(staves, voices.Count, v) is not { } tab)
+            double barHalf = BarHalfSpaces(staff);
+            double max = 0;
+            for (int v = 0; v < voices.Count; v++)
             {
-                max = Math.Max(max, BarlineToStemOpticalCorrection(item));
-                continue;
+                if (staves[v].IsTextRow || NoteColumnAt(voices[v], Fraction.Zero) is not { } item)
+                    continue;
+                max = Math.Max(max, StaffSpacingOpticalCorrection(item, staves[v], voices[v], barHalf));
             }
-            max = Math.Max(max, TabStemOpticalCorrection(item, tab, voices[v]));
+            buffer[count++] = max;
         }
-        return max;
+        return buffer.AsSpan(0, count);
+
+        static bool IsSeenBefore(IReadOnlyList<Staff> staves, int s)
+        {
+            for (int k = 0; k < s; k++)
+                if (ReferenceEquals(staves[k], staves[s]))
+                    return true;
+            return false;
+        }
     }
 
+    [ThreadStatic]
+    private static double[]? t_opticalByStaff;
+
+    /// <summary>A staff's bar line's half-height in its OWN staff spaces — LilyPond's
+    /// <c>bar_y_positions</c>: ±2 on a five-line staff, ±(strings − 1) / 2 on a tab.</summary>
+    /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:72-93 Staff_spacing::bar_y_positions —
+    ///   the bar's extent divided by its staff space. Every other staff is read as five-line,
+    ///   as it always was here.</remarks>
+    internal static double BarHalfSpaces(Staff staff)
+        => staff.IsTab
+            ? (Tablature.Tunings.GetStringCount(staff.Tuning ?? Syntax.TuningType.Guitar) - 1) / 2.0
+            : 2.0;
+
     /// <summary>
-    /// The bar line → note optical correction one tab column earns — the TabVoice's own stem,
-    /// if it points down, against the tab's own bar. See <see cref="TabBarlineToNextNotesCorrection"/>.
+    /// The bar line → note optical correction one column earns against a bar
+    /// <paramref name="barHalfSpaces"/> high each way: its stem, if it points down — a tab
+    /// voice's the TabVoice's own (<see cref="TabStemSpacingInfo"/>), any other its notation
+    /// stem — in its own staff's page units, intersected with the bar, over 7, times the
+    /// staff-spacing stem correction.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.</remarks>
-    internal static double TabStemOpticalCorrection(MusicItem item, Staff tab, Measure voice)
+    /// <remarks>
+    /// Positions → page units: × space / 2 on a tab, / 2 on a staff, whose space is 1. The
+    /// stem is NOT divided by its staff space while the bar is (see
+    /// <see cref="TabBarlineToNextNotesCorrections"/>).
+    /// LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction — `d == DOWN` only.
+    /// </remarks>
+    internal static double StaffSpacingOpticalCorrection(
+        MusicItem item, Staff? staff, Measure? voice, double barHalfSpaces)
     {
-        if (TabStemSpacingInfo(item, tab, voice) is not { StemUp: false } band)
-            return 0;
-        int strings = Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar);
-        double space = EngravingDefaults.TabStringSpace(strings);
-        double barHalf = (strings - 1) / 2.0;
-        // Positions → the stem's own page units (× space / 2); the bar is in tab spaces.
-        double lo = Math.Max(band.StemMin * space / 2, -barHalf);
-        double hi = Math.Min(band.StemMax * space / 2, barHalf);
+        double lo, hi;
+        if (staff is { IsTab: true } tab && voice is not null)
+        {
+            if (TabStemSpacingInfo(item, tab, voice) is not { StemUp: false } band)
+                return 0;
+            double space = EngravingDefaults.TabStringSpace(
+                Tablature.Tunings.GetStringCount(tab.Tuning ?? Syntax.TuningType.Guitar));
+            (lo, hi) = (band.StemMin * space / 2, band.StemMax * space / 2);
+        }
+        else
+        {
+            if (StemSpacingInfo(item) is not { StemUp: false } s)
+                return 0;
+            (lo, hi) = (s.StemMin / 2, s.StemMax / 2);
+        }
+        lo = Math.Max(lo, -barHalfSpaces);
+        hi = Math.Min(hi, barHalfSpaces);
         return hi > lo ? Math.Min((hi - lo) / 7.0, 1.0) * StaffSpacingStemCorrection : 0;
     }
 
-    /// <remarks>LILYPOND-REF: lily/staff-spacing.cc:43-67 Staff_spacing::optical_correction.</remarks>
+    /// <remarks>
+    /// A plain bar line spans the staff: ±2 staff-spaces, i.e. ±4 staff positions.
+    /// LILYPOND-REF: lily/staff-spacing.cc:78-90 bar_y_positions — only for glyphs
+    ///   beginning "|" or "."; an empty interval yields no correction at all.
+    /// </remarks>
     private static double BarlineToStemOpticalCorrection(MusicItem? item)
-    {
-        if (StemSpacingInfo(item) is not { } s)
-            return 0;
-
-        // LILYPOND-REF: lily/staff-spacing.cc:55 — `d == DOWN` only.
-        if (s.StemUp)
-            return 0;
-
-        // A plain bar line spans the staff: ±2 staff-spaces, i.e. ±4 staff positions.
-        // LILYPOND-REF: lily/staff-spacing.cc:78-90 bar_y_positions — only for glyphs
-        //   beginning "|" or "."; an empty interval yields no correction at all.
-        const double barHalfHeightPositions = 4.0;
-
-        double lo = Math.Max(s.StemMin, -barHalfHeightPositions);
-        double hi = Math.Min(s.StemMax, barHalfHeightPositions);
-        if (hi <= lo)
-            return 0;
-
-        // Positions → staff-spaces, because this formula is the staff-spacing one.
-        double overlapStaffSpaces = (hi - lo) / 2.0;
-        return Math.Min(Math.Abs(overlapStaffSpaces / 7.0), 1.0) * StaffSpacingStemCorrection;
-    }
+        => item is null ? 0 : StaffSpacingOpticalCorrection(item, null, null, 2.0);
 
     /// <summary>
     /// The note or chord column starting exactly at moment <paramref name="t"/> in

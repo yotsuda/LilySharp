@@ -871,7 +871,7 @@ internal static partial class SpacingRules
         Rendering.ScoreTextMetrics fonts, ItemColumn firstItems, bool fillsMeasure,
         IReadOnlyList<IReadOnlyList<MusicItem>>? staffFirstItems = null,
         BarlineType leftBound = BarlineType.Single,
-        double? opticalOverride = null)
+        ReadOnlySpan<double> opticalByStaff = default)
     {
         // `last_grob` is the RIGHTMOST break-aligned grob in the boundary column, which is
         // the bar line only when nothing else opens the measure. A key or time change shares
@@ -959,12 +959,13 @@ internal static partial class SpacingRules
             var wishes = new List<Spring>(staffFirstItems.Count);
             for (int s = 0; s < staffFirstItems.Count; s++)
             {
-                wishes.Add(Wish(BoundaryChangePrefix(fonts, new ItemColumn(staffFirstItems[s]))));
+                wishes.Add(Wish(BoundaryChangePrefix(fonts, new ItemColumn(staffFirstItems[s])),
+                    s < opticalByStaff.Length ? opticalByStaff[s] : null));
             }
             spring = Spring.MergeSprings(wishes);
         }
         else
-            spring = Wish(boundary);
+            spring = Wish(boundary, opticalByStaff.Length > 0 ? opticalByStaff[0] : null);
 
         // A GRACE RUN OPENING THE BAR: the merged spring stops at the grace column, and when that
         // column has a grace part LilyPond scales the whole spring by 0.8 — column origin to
@@ -1025,7 +1026,7 @@ internal static partial class SpacingRules
         // column by LilyPond's design (right-items is the musical PaperColumn). It took the
         // staff's column until session 485 and never read it: session 470's poison handing it
         // the whole column instead was an identity, green over the suite and the corpus.
-        Spring Wish((double Prefix, MusicItem LastChange)? own)
+        Spring Wish((double Prefix, MusicItem LastChange)? own, double? staffOptical)
         {
             var (distance, fixedDistance, isStretchable) = SpaceFrom(own);
             // Every arm involved puts the IDEAL at last_ext[RIGHT] + distance; they differ only
@@ -1069,8 +1070,9 @@ internal static partial class SpacingRules
             // main note 2.6207 off the bar line, where the column's down stem would have added 0.13.
             double opticalCorrection = own.HasValue || startLeadGrace > 0
                 ? 0.0
-                // A tab's stems are read in its own frame (TabBarlineToNextNotesCorrection).
-                : opticalOverride ?? BarlineToNextNotesCorrection(firstItems);
+                // Beside a tab, each staff's own: every column against ITS bar
+                // (TabBarlineToNextNotesCorrections).
+                : staffOptical ?? BarlineToNextNotesCorrection(firstItems);
             fixedDistance += opticalCorrection;
             ideal += opticalCorrection;
 
