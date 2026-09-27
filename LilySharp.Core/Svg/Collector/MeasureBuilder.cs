@@ -147,6 +147,9 @@ internal sealed class MeasureBuilder
     // there, so LilyPond's bars run on across it). FinalizeMeasures reads it: music that stops
     // off the bar gets no bar line after it.
     private Fraction _barPosition = Fraction.Zero;
+    // The LilyPond measurePosition where the current volta group's FIRST ending began: each
+    // ending but the last hands the position back to it (BeginAlternatives / EndAlternative).
+    private Fraction? _alternativeStart;
     // True while a note, rest or chord (or a tuplet's reported duration) has entered the
     // measure under construction. Read where "is there music in this span" is asked —
     // HasMeasureContent, AtPieceOpening — instead of `_currentDuration > 0`, because under
@@ -976,6 +979,58 @@ internal sealed class MeasureBuilder
         _barPosition = p;
     }
 
+    /// <summary>
+    /// LilyPond's measurePosition NOW: the last emitted bar's end plus what the open bar holds,
+    /// round the meter.
+    /// </summary>
+    private Fraction CurrentBarPosition()
+    {
+        var p = _barPosition + _currentDuration;
+        if (_timeSignature > Fraction.Zero)
+            while (p >= _timeSignature)
+                p -= _timeSignature;
+        return p;
+    }
+
+    /// <summary>
+    /// A volta group's first ending begins here: remember LilyPond's measurePosition, which
+    /// every ending but the last hands back (<see cref="EndAlternative"/>).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/alternative-sequence-iterator.cc:195-225 save_context_properties —
+    /// the Timing properties named by alternativeRestores (ly/engraver-init.ly:856:
+    /// measurePosition, measureLength, measureStartNow…) are saved at the first alternative
+    /// and restored at the end of each alternative but the last (:170-193).
+    /// </remarks>
+    internal void BeginAlternatives()
+    {
+        if (!_senzaMisura)
+            _alternativeStart = CurrentBarPosition();
+    }
+
+    /// <summary>
+    /// An ending of the group <see cref="BeginAlternatives"/> opened is over. Every one but the
+    /// last puts LilyPond's measurePosition back where the first began — so the next ending,
+    /// and the music after the last, count their bars from there. The builder's own bars are
+    /// untouched; only the position <see cref="EndsOffTheBar"/> reads moves (it is shifted so
+    /// that the open bar, if any, ends where LilyPond's would).
+    /// </summary>
+    internal void EndAlternative(bool last)
+    {
+        if (_alternativeStart is not { } start)
+            return;
+        if (last)
+        {
+            _alternativeStart = null;
+            return;
+        }
+        var p = start - _currentDuration;
+        if (_timeSignature > Fraction.Zero)
+            while (p < Fraction.Zero)
+                p += _timeSignature;
+        _barPosition = p;
+    }
+
     private Fraction GetItemDuration(MusicItem item)
     {
         // Duration already includes dots (BaseDuration.Dotted(Dots))
@@ -1658,7 +1713,8 @@ internal sealed class MeasureBuilder
         int MeasureSourceStart,
         Measure? LastMeasure,
         int LogicalCount,
-        Fraction BarPosition);
+        Fraction BarPosition,
+        Fraction? AlternativeStart);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
     /// current measure, not even a zero-duration directive — and not inside a split bar
@@ -1679,7 +1735,7 @@ internal sealed class MeasureBuilder
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
         _measures.Count > 0 ? _measures[^1] : null,
-        _logicalCount, _barPosition);
+        _logicalCount, _barPosition, _alternativeStart);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -1714,6 +1770,7 @@ internal sealed class MeasureBuilder
         _sectionLabelPosition = ck.SectionLabelPosition;
         _measureSourceStart = ck.MeasureSourceStart;
         _barPosition = ck.BarPosition;
+        _alternativeStart = ck.AlternativeStart;
     }
 
     /// <summary>A copy of the emitted measures BEFORE <see cref="FinalizeMeasures"/>

@@ -80,4 +80,35 @@ public class EndOfMusicBarLineTests
     public void APickupRestartsTheCount()
         // partial 4, then a full bar and three quarters: the end is at 3/4 of a bar.
         => Assert.Equal(BarlineType.None, LastBar("c'4 c'1 c'2.", "partial 4"));
+
+    // Endings: each counts its bars from where the FIRST began, and so does the music after the
+    // last (LilyPond's alternativeRestores; session 660 — Air on G String, Reelin' In the Years,
+    // アゲハ蝶, ミュージック・アワー and 銀河鉄道999 end off the bar in LilyPond, Disco Inferno on it).
+    // A ends half a bar in; the first ending fills that bar, the second is what decides.
+    private static BarlineType LastBarWithEndings(string second)
+    {
+        var tree = SyntaxTree.Parse($$"""
+            octave absolute
+            part m
+            section A { m { c'1 | c'2 } }
+            section B { m { c'2 } }
+            section C { m { {{second}} } }
+            form main { |: A [1. B] :| [2. C] }
+            score main { staff m }
+            """);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var (_, staff, _) = score.EnumerateStaves().First();
+        return staff.PrimaryVoice.Measures[^1].EndBarline;
+    }
+
+    [Fact]
+    public void ASecondEnding_CountsFromWhereTheFirstBegan_OnTheBar()
+        // from 1/2: 1/2 + 3/2 = 2 — on the bar (straight through it would be 5/2).
+        => Assert.Equal(BarlineType.Single, LastBarWithEndings("c'1 | c'2"));
+
+    [Fact]
+    public void ASecondEnding_CountsFromWhereTheFirstBegan_OffTheBar()
+        // from 1/2: 1/2 + 1 = 3/2 — off the bar (straight through it would be 2).
+        => Assert.Equal(BarlineType.None, LastBarWithEndings("c'1"));
 }

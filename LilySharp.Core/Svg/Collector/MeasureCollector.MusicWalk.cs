@@ -441,6 +441,8 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void FinalizeInlineVoltas()
     {
+        if (_pendingInlineVoltas.Count > 0)
+            _inlineVoltaSeen = true;
         foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in _pendingInlineVoltas)
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         _pendingInlineVoltas.Clear();

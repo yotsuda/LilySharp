@@ -73,6 +73,9 @@ public sealed partial class MeasureCollector
             }
         }
 
+        // LilyPond's alternatives each count their bars from where the first began (the
+        // builder's BeginAlternatives / EndAlternative); a group opens at its first ending.
+        bool alternativesOpen = false;
         for (int i = 0; i < repeat.SlotCount; i++)
         {
             var child = repeat.GetChild(i);
@@ -152,6 +155,11 @@ public sealed partial class MeasureCollector
                     string altSectionName = alt.SectionName.Text;
                     if (_sectionState.Sections.TryGetValue(altSectionName, out var section))
                     {
+                        if (live && !alternativesOpen)
+                        {
+                            builder.BeginAlternatives();
+                            alternativesOpen = true;
+                        }
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
                         if (live)
@@ -180,6 +188,19 @@ public sealed partial class MeasureCollector
                         // An ending IS a section reference with a bracket around it, marks
                         // included: `[1. B']` opens B an octave up for that ending only.
                         ProcessSection(section, processNodes, builder, alt.OctaveOffset);
+                        if (live)
+                        {
+                            bool lastEnding = true;
+                            for (int j = i + 1; j < repeat.SlotCount; j++)
+                                if (repeat.GetChild(j) is FormAlternativeSyntax)
+                                {
+                                    lastEnding = false;
+                                    break;
+                                }
+                            builder.EndAlternative(lastEnding);
+                            if (lastEnding)
+                                alternativesOpen = false;
+                        }
 
                         // Track measure index after processing
                         int endMeasureIndex = builder.CurrentMeasureIndex;
