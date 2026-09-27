@@ -38,6 +38,9 @@ public sealed class TwinBeamSweep
     /// <summary>A horizontal rule must reach at least this far to count as a staff line.</summary>
     private const double MinStaffLineSpan = 10.0;
 
+    /// <summary>…and one piece of it must be longer than any ledger line (see StavesOf).</summary>
+    private const double MinLongestPiece = 4.0;
+
     /// <summary>
     /// One staff as the page shows it: the five (or four, or six) lines that carry the
     /// position arithmetic, plus how far its LEDGER lines run out from them.
@@ -205,13 +208,20 @@ public sealed class TwinBeamSweep
             .Where(l => Math.Abs(l.Y1 - l.Y2) < 1e-9)
             .GroupBy(l => Math.Round(l.Y1, 6))
             .Select(g => (Y: g.Key, Left: g.Min(l => Math.Min(l.X1, l.X2)),
-                          Reach: g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2))))
+                          Reach: g.Max(l => Math.Max(l.X1, l.X2)) - g.Min(l => Math.Min(l.X1, l.X2)),
+                          Longest: g.Max(l => Math.Abs(l.X2 - l.X1))))
             .OrderBy(r => r.Y)
             .ToList();
         var allRows = rows.Select(r => (r.Y, r.Reach)).ToList();
 
         var staves = new List<StaffBox>();
-        foreach (var group in rows.Where(r => r.Reach >= MinStaffLineSpan)
+        // A row of ledger lines at one height under notes bars apart REACHES as far as a staff
+        // line without being one, and four such rows read as a staff (Lab sessions/p655 S1
+        // tie-ledger: three "staves"). Every ledger line is short (a displaced chord's is ~3.1);
+        // a staff line has a long piece even where it is drawn in pieces — a TAB string is
+        // broken round its fret digits, which is why neither "one rule" (65 books' staves lost)
+        // nor "covers half its reach" (17 lost) is the test.
+        foreach (var group in rows.Where(r => r.Reach >= MinStaffLineSpan && r.Longest >= MinLongestPiece)
                                   .GroupBy(r => Math.Round(r.Reach, 6)))
         {
             var ordered = group.OrderBy(r => r.Y).ToList();
