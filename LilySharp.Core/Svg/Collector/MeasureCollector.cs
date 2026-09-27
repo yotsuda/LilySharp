@@ -1323,7 +1323,7 @@ public sealed partial class MeasureCollector
     /// longest voice does, and a bar line is engraved there only if measurePosition is zero.
     /// So the plain bar at the score's last measure goes when every voice with MUSIC in that
     /// bar is a staff's primary stream that stops off the bar (<see cref="_offBarVoices"/>);
-    /// an extra voice (a staff's `voice { }` / `<< \\ >>`) there keeps it, since the primary
+    /// an extra voice (a staff's <c>voice { }</c> / <c>&lt;&lt; \\ &gt;&gt;</c>) there keeps it, since the primary
     /// stream's position cannot speak for it. Runs after the score-wide barline sync, on every
     /// voice that reaches the last measure (the omitted parts' included — never drawn).
     /// </summary>
@@ -1364,6 +1364,8 @@ public sealed partial class MeasureCollector
         }
     }
 
+    /// <summary>
+    /// Of two barline types at the same timestep, the more significant wins
     /// (repeats and finals over plain bars; both-repeat over either half).
     /// </summary>
     /// <remarks>
