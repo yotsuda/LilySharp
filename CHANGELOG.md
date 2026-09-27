@@ -4,7 +4,7 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
-## Unreleased
+## 0.9.0
 
 ### Breaking changes
 
@@ -20,6 +20,14 @@ workflow attaches that section to the GitHub Release verbatim.
   folder, and `-d` applies to the whole batch. `import` writes `<input>.lys` the same way.
   Two scores that would get one name (two unlabelled `score main`) are refused rather than
   written over each other.
+- **In relative octaves, the note after a chord or an arpeggio reads the chord.** 0.8.0 let
+  a chord pass through the chain, so the note after it was relative to the note *before*
+  the chord: in `g1 | <c e g>1 | <f a c>1`, rewriting the `g1` as `f1` moved the second
+  chord an octave while the first stayed put. The chord now hands on its anchor — the first
+  member's bare letter (a mark on that member moves only that note), or the tonic for a
+  degrees-only chord — shifted by any mark after the `>`, as it did before 0.8.0. A note right after a chord or `<< >>` can therefore land an octave away from where
+  0.8.0 put it; nothing warns, so check such spots by ear or by the page. MIDI, MusicXML and
+  the LilyPond twin follow the same rule.
 
 ### Engraving
 

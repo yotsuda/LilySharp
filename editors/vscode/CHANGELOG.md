@@ -2,7 +2,15 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
-## Unreleased
+## 0.9.0
+
+### Breaking changes
+
+- **In relative octaves, the note after a chord or an arpeggio reads the chord.** 0.8.0
+  read it from the note before the chord, so editing a note two items back could move a
+  later chord by an octave. The chord now hands on its anchor (its first member's bare
+  letter, or the tonic for a degrees-only chord), as it did before 0.8.0. A note right after a
+  chord or `<< >>` can land an octave away from where 0.8.0 put it, without a warning.
 
 ### AI
 
