@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）の残り**: K5 ⑥ ウクレレの 1 番以降（③ 形の表は第664・④ カポは第665・⑤ 使用コード一覧は第666 が閉じた）。指・バレーの描画と MusicXML の行（K5 ① の残り）。小さい穴: 行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
+- ★★★ **コード図（§2 K が正）の残り＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667）**。残るのは ① の尾＝指・バレーの描画と MusicXML の行。小さい穴: 行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ★★ **セクション跨ぎの span の第 2 段**: text spanner／ottava／pedal／trill の持ち越し（ユーザー「後で」・第663 `fed7f176` はスラー／フレージング／タイ／ヘアピンだけ）
 - ★ 大文字小文字だけ違う綴り（`@upbow`）の quick fix
 - ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂）＝安いものから
@@ -119,6 +119,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第667セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p667`（HEAD `2f0c5bd1`・未 push 42・full **10221 / 0 / 2 / 10223**）。
+★★★ **§2 K5 ⑥ 完了＝ウクレレの 1 番以降**（規則案を数字つきで示してユーザー「良い」）: 再入調弦（`IsGuitarType` が偽＝ウクレレ・バンジョー）では **V4（最低音は根音）だけ外して**列挙する（`ChordVoicings.Enumerate` が `bassPc` に −1 を渡す）。他の規則・並び順・極大の取り方はギターと同じ。**実測: V4 を外すと試した 10 コード（C Am F G7 Dm Em B♭ E A7 F♯m7-5）全部で並び順の先頭が LP の表と一致**＝表と規則が同じ答えを出す（網 `OnTheUkulele_TheOrderOpensOnLilyPondsShape` が 10 組と個数を固定）。C13 は 4 弦に 7 音で形無し（今までどおり警告）。`ChordShapes.Default`・`NoteStepper.ShapeOrder`／`SortKeyOf`・validator の「ギター型だけ」の門を外した＝ウクレレでも `Ctrl+Shift+↑↓` とホバーの「shape n of N」が効く。`NoShape` の文言から「rise in pitch」の分岐を落とした。
+★ 検証: 網 +12（theory 10・ホバー 1・step の行 3 を既存に足した・`ChordShapeCheckTests` のウクレレ例外を外した）。
+⚠️ 未: バンジョーは同じ扱いになるが実測していない（LP の表も無い）。
+★ **終了**: `381612ac`「voicings: the ukulele's shapes beyond LilyPond's table — the same rules less V4 (K5 ⑥)」。`-End p667 -DiffBase 2f0c5bd1` 緑・full **10232 / 0 / 2 / 10234**（run2.trx）。sweep 1,163 冊 × svg/ly/xml/midi/check（Release の HEAD worktree）: moved 0・check 行 0（ウクレレの既定形を描く冊は盤に無い）。門: 天井・seam・毒・inventory・worktree 全部 OK。§7.5 Core '+' 32 行／REF 0／OWN 0。push はユーザー（未 push 43）。
+
+## 以下は第666セッションの経緯
+
 ### 1.1 第666セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p666`（HEAD `cb9280e1`・未 push 40・full **10217 / 0 / 2 / 10219**）。
@@ -126,16 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 検証: 網 `ChordDiagramTests` +4（reader・初出順／N.C.／度数／`@chord`／capo／none・8+8 と 7+6 の均等割りと中央・ヘッダの帯と双子）。デモの絵は Lab `sessions/p666/demo/*.png`（few/many × center/left/even）。
 ⚠️ 未: 双子の一覧の名前は素の文字（`Dm7` の 7 が上がらない）／一覧は最初の頁だけ／`chordDiagrams none` では名前だけ（図無しの一覧の意味は薄い＝警告は出していない）。
 ★ **終了**（commit `978977df`）: `-End p666 -DiffBase cb9280e1`＝full **10221 / 0 / 2 / 10223**（trx `sessions/p666/run2.trx`）・掃き **1,163 冊 × svg/ly/xml/midi/check＝moved 0・check 差 0**・門 6 つ全 OK・§7.5: Core `+` 322 行／REF 0／OWN 4（一覧の帯・間隔・双子の markup・`ChordListKey`＝全部 Lily# 独自で LP に無い）。7.6: 出所は本便のユーザー決定 3 つ（初出順と定番／題名の下／中央揃え・均等）。7.7: 匂いは「一覧は 1 頁目だけ」と双子の素の名前。APPROXIMATIONS 再生成。push はユーザー（42 件）。
-
-## 以下は第665セッションの経緯
-
-### 1.1 第665セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p665`（HEAD `a8e0b2f1`・未 push 38・full **10186 / 0 / 2 / 10188**）。
-★★★ **§2 K5 ④ 完了＝カポ**（設計はユーザーに文法を示して確認: 語順 `chordDiagrams [調弦] [capo N] [all] [{表}]`・「Capo 3」はヘッダの instrument 行・**綴りは「現在のキーに沿う」（ユーザー決定）**・`both` の上付きは**名前ごとに 2 範囲**（ユーザー「2」）。音楽には鳴る音を書き、形は押さえる形（表の項目も）。`ChordSpelling` に `Capo`/`Names` を足して全 namer に届ける＝`PrintedSymbol(spelling, keySharps)` が `Pressed(capo, keySharps)` を名付ける（`PressedKeySharps`＝5 度圏を 7N 下げて −5..+6・三全音は F♯）。`ChordSymbolText.BracketSuperFrom`＝括弧内 2 つ目の名前の上付き開始（`Pieces` は 1 つ目の run を " (" の前で切る）。図は `Drawn(…, capo)`＝既定は押さえるコードの定番、表は鳴る名前で引く。LYS1039（行・`@chord`・表・`chord(…)`）は押さえるコードで検査。`chord(X 形)` の音は capo 分上（`ShapeChords.Notes` の shift は「sounding = written + shift」なので **shift − capo**＝最初 + にして MIDI で発覚）。ヘッダ: `ScoreContent.Instrument`→`HeaderBand.Build(instrument)`→`DrawHeader` 中央。双子: `TwinChord`＝`\chordmode` を押さえるコードで（FretBoards は常に・ChordNames は `shape` のとき）・`\header { instrument = "Capo 3" }`・`both` は警告。MusicXML: `<harmony>` は鳴る音・`<frame>` は押さえる形（`_diagramsWord` に Capo）。MIDI: 最初の score の layout を読む（`MidiExporter.Capo`）。提案: `Semantics/CapoAdvisor`（相異なるコード×capo 0..7 の定番の形のバレー数＝定番表は LP の `Barres`、列挙形は最低フレット 3 弦以上）→ `capo ` の後の補完（順位つき）・`capo`／数字のホバー（`LanguageReference.CapoHover`）。新キー `chordNames`（`LayoutKeyVocabulary`・補完・TextMate・スニペット 2 つ）。
-★ 検証（commit `28bb6c63`）: build 0 エラー／Core 0 警告・網 +31（`ChordDiagramTests` 7 本＝theory 込み 30・`ShapeChordItemTests` 1・既存 3 本を語順と補完に合わせて更新）・掃き **1,163 冊 × svg/ly/xml/midi/check＝moved 0・check 差 0**・APPROXIMATIONS 再生成。文法書 3 冊・CHANGELOG 2 冊。
-⚠️ 未: MusicXML `<staff-details><capo>`／双子の `both`／`chord(…)` の MIDI・ホバー・検査は「最初の score」のカポ／補完の順位表は打鍵ごとに doc を parse し直す（popup の中だけ）／バレー判定は定番表の `Barres` が正で列挙形は近似。
-★ **終了**: `-End p665 -DiffBase a8e0b2f1`＝full **10217 / 0 / 2 / 10219**（trx `sessions/p665/run2.trx`）・§7.5: Core `+` 654 行／REF 1／OWN 2＝言語の規則（REF はヘッダの instrument 行＝bookTitleMarkup の poet／instrument／composer 行・OWN は `ChordNameMode`（LP に capo の名前機能無し）と `CapoAdvisor`）。7.6: 出所は §2 K2（ユーザー 09-28）＋本便のユーザー決定 2 つ（綴り・上付き 2 範囲）。7.7: 匂いは `ShapeChords.Notes` の shift の符号（コメントで名指した）と MIDI の「最初の score のカポ」。push はユーザー（40 件）。
 
 ## 2. 開いている作業
 
@@ -894,9 +894,9 @@ chords prog { F(guitar 133211  ukulele 2010) }         // 同じ弦数の楽器�
 - 何も無い所: Linux＝`insertCursorAbove/Below`（Ctrl+Shift+↑↓ はその第 2 割り当て）・Windows/macOS＝何もしない（既定の割り当て無し）。
 - ホバー: 形の無いコードに「Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)」。形があれば調弦ごとの形と「shape n of N」。
 - 並び順（エディタだけ・凍結しない）: 0 番＝定番 → 極大の形をポジション→指の数→低音弦からの辞書順。押すたびに鳴らす。極大の形＝3 弦以上・0〜15 フレット・構成音だけ・5 度以外必須・最低音は根音（分数はその音）・幅 4 フレット・指 4 本（最低フレットのバレーは 1 本）を満たし、どのミュート弦にも音を足せない形（押さえられる形はすべて「極大＋ミュート」）。ストレッチ（幅 5）は設定 `includeStretch` のときだけ。
-- ウクレレ（G が高い）は「最低音は根音」が成り立たない＝0 番は表、1 番以降は別途。
+- ウクレレ（G が高い）は「最低音は根音」が成り立たない＝0 番は表、**1 番以降は同じ規則から V4 だけ外す**（ユーザー決定 2026-09-29・第667。実測: V4 を外すと試した 10 コード全部で並び順の先頭が LP の表と一致）。
 
-**K5. 順序**: ① ✅ 表の移植（`audit/fretboards/`）・`chordDiagrams`・描画（残: 指・バレー描画・MusicXML の行）② ✅ `@chord(X 形)`・行の `X(形)`・弦数振り分け・形のステップ（行も）・書いた所だけ図・調弦＝layout→パートの楽器→guitar ③ ✅ `layout` の表（曲全体・`section Name { … }`）＝挙げたコードの図を出す（書いた形の次に効く。`ChordShapes.Drawn` に差し込んだ・第664）④ ✅ カポ（第665） ⑤ ✅ 使用コード一覧＝`layout { chordList true }`（第666・ユーザー決定: 題名の下・中央揃え・行の組数は均等）⑥ ウクレレの 1 番以降 ⑦ ✅ `chord(X 形)`＝形の音を五線に（絶対・最低音を次へ・弦番号つき）09-28。
+**K5. 順序**: ① ✅ 表の移植（`audit/fretboards/`）・`chordDiagrams`・描画（残: 指・バレー描画・MusicXML の行）② ✅ `@chord(X 形)`・行の `X(形)`・弦数振り分け・形のステップ（行も）・書いた所だけ図・調弦＝layout→パートの楽器→guitar ③ ✅ `layout` の表（曲全体・`section Name { … }`）＝挙げたコードの図を出す（書いた形の次に効く。`ChordShapes.Drawn` に差し込んだ・第664）④ ✅ カポ（第665） ⑤ ✅ 使用コード一覧＝`layout { chordList true }`（第666・ユーザー決定: 題名の下・中央揃え・行の組数は均等）⑥ ✅ ウクレレの 1 番以降（第667・V4 を外すだけ）⑦ ✅ `chord(X 形)`＝形の音を五線に（絶対・最低音を次へ・弦番号つき）09-28。
 
 **K6. 否定した案（蒸し返さない）**: `@frame`・`@gchord`・`@fret`・`@shape`／`.fret().mute()`・`mute(…)`・`chord(…)@chord@diagram`／`ooxxoo`／ポジション＋番号・番号をソースに／楽器ごとの `chords {}` 複製／1 文字の楽器記号／名前だけで定番を自動表示（9cf95fab・同日撤回）／譜表単位の調弦上書き。
 

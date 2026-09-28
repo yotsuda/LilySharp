@@ -129,15 +129,20 @@ public static class ChordVoicings
     }
 
     /// <summary>
-    /// Whether Lily# lists shapes on a tuning at all: its open strings rise STRICTLY from the lowest
-    /// string to the highest (a guitar in standard, drop or open tuning, a seven-string, a bass).
-    /// A re-entrant tuning — a ukulele's G4 C4 E4 A4, a banjo's drone — does not qualify.
+    /// Whether V4 (the root lowest) is asked on a tuning: its open strings rise STRICTLY from
+    /// the lowest string to the highest (a guitar in standard, drop or open tuning, a
+    /// seven-string, a bass). A re-entrant tuning — a ukulele's G4 C4 E4 A4, a banjo's drone —
+    /// does not qualify, and its shapes are listed by the other five rules alone.
     /// </summary>
     /// <remarks>
-    /// Owner's decision (2026-09-27): the rules were written for, and checked on, the
-    /// guitar. On a re-entrant tuning "the lowest string" is not the lowest note, and the rules
-    /// would number shapes a player of that instrument would not recognise; the position-string
-    /// form still works there.
+    /// Owner's decisions: 2026-09-27, the rules were written for and checked on the guitar, and
+    /// on a re-entrant tuning "the lowest string" is not the lowest note, so V4 would number
+    /// shapes a player would not recognise — until 2026-09-29 no shape was listed there at all;
+    /// 2026-09-29 (HANDOFF §2 K5 ⑥), the ukulele's shapes beyond LilyPond's table are the same
+    /// rules LESS V4. MEASURED then: with V4 off, the order's FIRST shape is LilyPond's
+    /// predefined ukulele shape for every chord tried that has one (C 0003 of 39 bases, Am 2000
+    /// of 38, F 2010 of 23, G7 0212 of 19, Dm 2210 of 11, Em 0402 of 24, B♭ 3211 of 9, E 1402 of
+    /// 13, A7 0100 of 37, F♯m7-5 2423 of 14); C13 has no shape (seven tones, four strings).
     /// </remarks>
     public static bool IsGuitarType(IReadOnlyList<int> tuning)
     {
@@ -234,7 +239,11 @@ public static class ChordVoicings
     internal static VoicingSet Enumerate(IReadOnlyList<int> tuning, int allowed, int required, int bassPc,
         int maxSpan)
     {
-        var valid = ValidShapes(tuning, allowed, required, bassPc, maxSpan, out var options);
+        // V4 (the root lowest) is asked only where "the lowest string" is the lowest note; on a
+        // re-entrant tuning (the ukulele's high G) every shape has an upper string below it, so
+        // the ordinary shapes — Am 2000, F 2010 — would all fail it (owner's design 2026-09-29,
+        // HANDOFF §2 K5 ⑥: the ukulele's shapes beyond the table are the same rules less V4).
+        var valid = ValidShapes(tuning, allowed, required, IsGuitarType(tuning) ? bassPc : -1, maxSpan, out var options);
         var bases = Maximal(valid, options);
         bases.Sort((a, b) => CompareInOrder(a, b));
         var result = ImmutableArray.CreateBuilder<ImmutableArray<int>>(bases.Count);
@@ -272,7 +281,7 @@ public static class ChordVoicings
             if (i == n)
             {
                 if ((pcs & required) == required                    // V3
-                    && Mod12(lowest) == bassPc                      // V4
+                    && (bassPc < 0 || Mod12(lowest) == bassPc)      // V4 (−1: not asked)
                     && Fingers(frets) <= MaxFingers)                // V6
                     valid.Add((int[])frets.Clone());
                 return;

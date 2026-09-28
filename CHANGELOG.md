@@ -148,6 +148,13 @@ workflow attaches that section to the GitHub Release verbatim.
   line with as nearly equal counts as those rows allow (16 chords where 12 fit a row make 8 +
   8), each row centred on the page. The `.ly` twin writes the rows as `\markup` lines of
   `\center-column { "NAME" \fret-diagram-terse … }` before the score.
+- **The ukulele's shapes beyond LilyPond's table.** Lily#'s order now lists shapes on the
+  re-entrant tunings too (the ukulele's high G, a banjo's drone) — the same rules less "the
+  lowest note is the root", which the lowest string cannot promise there. Measured: with that,
+  the order opens on LilyPond's own ukulele shape for every chord tried (C `0003` of 39, Am
+  `2000` of 38, F `2010` of 23, G7 `0212` of 19). So a chord the ukulele table lacks now has a
+  usual shape (Cmaj9 `4203`), `Ctrl+Shift+Up`/`Down` steps on a ukulele part, and the hover
+  counts the order there; a chord no rule can voice on four strings (C13) still has none.
 - **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
   neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes; a
   symbol-less `@chord` whose shape is miswritten (`@chord(x3a010)`) now gets that warning rather

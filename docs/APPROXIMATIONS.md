@@ -247,7 +247,7 @@
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordShapes.cs`
-- **:108** LILYSHARP-OWN, the rule and the routing: LilyPond's FretBoards context draws a diagram for
+- **:109** LILYSHARP-OWN, the rule and the routing: LilyPond's FretBoards context draws a diagram for
 ### `LilySharp.Core/Music/ChordShapeTable.cs`
 - **:75** LILYSHARP-OWN: LilyPond's FretBoards context draws every chord it is given, from its
 ### `LilySharp.Core/Music/ChordVoicing.cs`

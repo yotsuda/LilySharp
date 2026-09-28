@@ -132,12 +132,8 @@ public class ChordShapeCheckTests
                 PredefinedFretboards.Table.Ukulele => TuningType.Ukulele,
                 _ => Tunings.Parse("mandolin"),
             };
+            // The ukulele's too, since the order reached the re-entrant tunings (2026-09-29, K5 ⑥).
             var fallback = ChordShapes.Default(tuningType, Parse(chord));
-            if (table == PredefinedFretboards.Table.Ukulele)
-            {
-                Assert.Null(fallback);   // no enumeration on the re-entrant ukulele: no usual shape
-                continue;
-            }
             Assert.NotNull(fallback);
             Assert.Equal(ShapeSource.FirstOfOrder, fallback!.Source);
             Assert.NotEqual(frets.Replace(" ", ""), fallback.Spelled);

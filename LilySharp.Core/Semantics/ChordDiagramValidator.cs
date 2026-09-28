@@ -364,7 +364,7 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
                     continue;
                 var strings = Tablature.Tunings.GetTuning(tuning);
                 _diagnostics.Warning(span, DiagnosticCodes.ChordDiagramNotDrawn,
-                    ChordShapes.NoShape(symbol, word, ChordVoicings.IsGuitarType(strings), strings.Length));
+                    ChordShapes.NoShape(symbol, word, strings.Length));
             }
         }
 

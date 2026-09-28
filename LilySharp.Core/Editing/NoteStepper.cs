@@ -680,8 +680,6 @@ public static class NoteStepper
     private static IReadOnlyList<int> SortKeyOf(ImmutableArray<int> written, IReadOnlyList<int> tuning,
         Music.ChordStructure chord)
     {
-        if (!Music.ChordVoicings.IsGuitarType(tuning))
-            return written;
         var bases = Music.ChordVoicings.For(tuning, chord, includeStretch: true).Bases;
         int i = PlaceInOrder(written, bases);
         return i >= 0 ? bases[i] : written;
@@ -739,9 +737,9 @@ public static class NoteStepper
         }
         if (Music.ChordShapes.Default(tuningType, pressed) is { } first)
             Add(first.Frets);
-        if (Music.ChordVoicings.IsGuitarType(tuning))
-            foreach (var b in Music.ChordVoicings.For(tuning, pressed, includeStretch).Bases)
-                Add(b);
+        // On every tuning since 2026-09-29 (the ukulele's too: the rules less V4, K5 ⑥).
+        foreach (var b in Music.ChordVoicings.For(tuning, pressed, includeStretch).Bases)
+            Add(b);
         return (tuning, order);
     }
 

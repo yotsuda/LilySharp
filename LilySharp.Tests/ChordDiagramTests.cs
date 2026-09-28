@@ -187,14 +187,42 @@ public class ChordDiagramTests
         Assert.Equal("x33211", Chosen("F", TuningType.GuitarDropD, "guitar 133211", "x33211"));
     }
 
-    /// <summary>The ukulele has no enumeration (re-entrant): a chord its table lacks has no
-    /// default there at all; a written shape still draws.</summary>
+    /// <summary>The ukulele (re-entrant) is enumerated by the rules less V4 since 2026-09-29
+    /// (K5 ⑥): a chord its table lacks takes the first of that order; one no rule can voice on
+    /// four strings has none; a written shape still draws.</summary>
     [Fact]
-    public void OnTheUkulele_TheDefaultIsOnlyTheTables()
+    public void OnTheUkulele_TheDefaultIsTheTables_ThenTheOrder()
     {
         Assert.Null(DefaultShape("C13", TuningType.Ukulele));
         Assert.Equal("0003", DefaultShape("C", TuningType.Ukulele));
+        Assert.Equal("4203", DefaultShape("Cmaj9", TuningType.Ukulele));
+        Assert.Equal(ShapeSource.FirstOfOrder, ChordShapes.Default(TuningType.Ukulele, Parse("Cmaj9"))!.Source);
         Assert.Equal("0000", Chosen("C13", TuningType.Ukulele, "0000"));
+    }
+
+    /// <summary>MEASURED 2026-09-29, the owner's rule for the ukulele's shapes beyond the table
+    /// (K5 ⑥): the same rules less V4 (the root lowest), and with that the order's FIRST shape is
+    /// LilyPond's predefined ukulele shape for every chord tried — the table and the order agree.</summary>
+    [Theory]
+    [InlineData("C", "0003", 39)]
+    [InlineData("Am", "2000", 38)]
+    [InlineData("F", "2010", 23)]
+    [InlineData("G7", "0212", 19)]
+    [InlineData("Dm", "2210", 11)]
+    [InlineData("Em", "0402", 24)]
+    [InlineData("Bb", "3211", 9)]
+    [InlineData("E", "1402", 13)]
+    [InlineData("A7", "0100", 37)]
+    [InlineData("F#m7-5", "2423", 14)]
+    public void OnTheUkulele_TheOrderOpensOnLilyPondsShape(string symbol, string predefined, int bases)
+    {
+        var uke = Tunings.GetTuning(TuningType.Ukulele);
+        Assert.Equal(predefined, Predefined(symbol, TuningType.Ukulele));
+        var set = ChordVoicings.For(uke, Parse(symbol), includeStretch: false);
+        Assert.Equal(bases, set.Bases.Length);
+        Assert.Equal(predefined, ChordVoicings.Spell(set.Bases[0]));
+        // Every listed shape sounds the chord's tones (V2, V3): the check passes them all.
+        Assert.All(set.Bases, b => Assert.Null(ChordShapes.Mismatch(b, uke, Parse(symbol))));
     }
 
     /// <summary>A fretted part's instrument is its tab's tuning; a piano, a voice and the bowed
@@ -2100,6 +2128,21 @@ public class ChordDiagramTests
         Assert.True(markup >= 0, ly);
         Assert.True(markup < ly.IndexOf("\\score {", StringComparison.Ordinal));
         Assert.DoesNotContain("\\fill-line", Twin(Song(Guitar, "C |", "c'1 |")));
+    }
+
+    /// <summary>The hover on a ukulele part counts the shape among the ukulele's order (K5 ⑥).</summary>
+    [Fact]
+    public void Hover_OnTheUkulele_CountsTheOrder()
+    {
+        string doc = """
+            octave absolute
+            part uk { instrument ukulele }
+            section A { uk { c'2@chord(C 0003) c'2@chord(Cmaj9) | } }
+            form main { A }
+            score main { staff uk }
+            """;
+        Assert.Contains("ukulele: `0003` (written) — shape 1 of 39", HoverAt(doc, "@chord(C 0003)"));
+        Assert.Contains("adds a chord diagram (ukulele: 4203)", HoverAt(doc, "@chord(Cmaj9)"));
     }
 
     /// <summary>The block form is the shape table's alone: any other key's brace is refused

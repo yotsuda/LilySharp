@@ -230,6 +230,11 @@ public class StepRequestTests
             """;
         Assert.Equal(Uke("c'1@chord(C 0003)"), Up("c'1@chord(C‸)", Uke));
         Assert.Equal(Uke("c'1@chord(C x32010)"), Down("c'1@chord(C x32010 0003‸)", Uke));
+        // The ukulele's order past the table (2026-09-29, K5 ⑥: the rules less V4): 0003 → 0403;
+        // a chord the table lacks starts on the order's first shape.
+        Assert.Equal(Uke("c'1@chord(C 0403)"), Up("c'1@chord(C 0003‸)", Uke));
+        Assert.Equal(Uke("c'1@chord(C 0003)"), Down("c'1@chord(C 0403‸)", Uke));
+        Assert.Equal(Uke("c'1@chord(Cmaj9 4203)"), Up("c'1@chord(Cmaj9‸)", Uke));
         Assert.Equal(Guitar("c'1@chord(C 0003)"), Down("c'1@chord(C 0003 x32010‸)", Guitar));
         Assert.Equal(Guitar("c'1@chord(C 0003 x32010)"), Up("c'1@chord(C 0003‸)", Guitar));
     }

@@ -67,6 +67,10 @@ All notable changes to the Lily# VS Code extension are documented here.
   ranking. `capo`, `chordNames` and their words are completed and coloured.
 - **The chord list: `layout { chordList true }`** — every chord the score uses, with its
   diagram, under the title in centred rows; completed and coloured.
+- **`Ctrl+Shift+Up`/`Down` step on a ukulele part too**: past LilyPond's ukulele table the
+  shapes come from Lily#'s order, which on the re-entrant ukulele drops the "root lowest" rule
+  and opens on LilyPond's own shape for every chord tried; the hover counts them (`ukulele:
+  0003 (written) — shape 1 of 39`).
 - **Hover** a chord with no shape to see how to add one: `Ctrl+Shift+↑ adds a chord diagram
   (guitar: 320003)`. With a shape written, the hover shows the shape each tuning draws —
   `guitar: x3x546 (written)`, `ukulele: no diagram` — and where it stands in the editor's

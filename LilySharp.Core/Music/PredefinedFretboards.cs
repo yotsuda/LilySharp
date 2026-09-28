@@ -37,8 +37,8 @@ namespace LilySharp.Core.Music;
 /// Faug <c>xx1443</c>, Baug <c>x3200x</c>; ukulele Bsus2 <c>5122</c>; mandolin C♯aug/D♭aug
 /// <c>x630</c>) and two lack a required tone (mandolin C♯dim7/D♭dim7 <c>3210</c>: only B♭ and
 /// E, no diminished fifth), so the editor's step would write a shape LYS1039 then warns. Those chords take
-/// the first shape of Lily#'s order instead (non-stretch first) — save the ukulele's Bsus2,
-/// which then has no usual shape (Lily# lists no shapes on the re-entrant ukulele) — on the
+/// the first shape of Lily#'s order instead (non-stretch first; the ukulele's Bsus2 too since
+/// 2026-09-29, when the order reached the re-entrant ukulele) — on the
 /// page and in the twin alike (its one-shape tables write Lily#'s choice). The list, with each entry's file:line and
 /// reason, is the generator's (audit/fretboards/Generate-PredefinedFretboards.ps1);
 /// <c>ChordShapeCheckTests</c> pins it.

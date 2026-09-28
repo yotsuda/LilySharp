@@ -99,10 +99,11 @@ public sealed record ChosenShape(ImmutableArray<int> Frets, ShapeSource Source,
 /// that the same day) — save in a score that asks for it, <c>chordDiagrams … all</c> (owner's
 /// decision 2026-09-28, the scope word); it is what
 /// the editor's step writes when it adds a shape, and what its hover offers.
-/// ⚠️ THE ENUMERATION ANSWERS ONLY ON A GUITAR-TYPE TUNING (strings rising in pitch,
-/// <see cref="ChordVoicings.IsGuitarType"/>): its rules were written for and checked on the
-/// guitar (owner's decision 2026-09-27). On the re-entrant ukulele a chord the predefined
-/// table lacks has no default.
+/// The enumeration answers on EVERY tuning since 2026-09-29 (HANDOFF §2 K5 ⑥): on a
+/// guitar-type tuning (strings rising in pitch, <see cref="ChordVoicings.IsGuitarType"/>) by
+/// the six rules, on a re-entrant one (the ukulele) by the same rules less V4 — measured to
+/// put LilyPond's predefined ukulele shape first for every chord tried. A chord no rule can
+/// voice (C13 on four strings) has no default.
 /// </para>
 /// <para>
 /// LILYSHARP-OWN, the rule and the routing: LilyPond's FretBoards context draws a diagram for
@@ -173,7 +174,7 @@ public static class ChordShapes
         int[] strings = Tunings.GetTuning(tuning);
         if (PredefinedFretboards.Find(strings, chord) is { } predefined)
             return new ChosenShape(predefined.Frets, ShapeSource.Predefined, predefined);
-        if (ChordVoicings.IsGuitarType(strings) && ChordVoicings.Fallback(strings, chord) is { } first)
+        if (ChordVoicings.Fallback(strings, chord) is { } first)
             return new ChosenShape(first, ShapeSource.FirstOfOrder);
         return null;
     }
@@ -770,12 +771,9 @@ public static class ChordShapes
 
     /// <summary>A chord of a <c>chordDiagrams … all</c> score with no shape on its tuning
     /// (<see cref="Default"/> is null and none is written).</summary>
-    internal static string NoShape(string symbol, string tuningWord, bool enumerates, int strings)
+    internal static string NoShape(string symbol, string tuningWord, int strings)
         => $"{symbol} has no chord diagram on '{tuningWord}': LilyPond's predefined table has no "
-           + "shape for it and "
-           + (enumerates
-               ? "Lily#'s shape rules find none"
-               : "Lily# finds shapes by rule only on a tuning whose strings rise in pitch")
+           + "shape for it and Lily#'s shape rules find none"
            + $" - write the shape: {symbol}({new string('x', strings)}) in a chords row, "
            + $"@chord({symbol} {new string('x', strings)}) on a note, with the frets filled in. "
            + "No diagram is drawn.";

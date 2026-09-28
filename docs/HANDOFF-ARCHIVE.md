@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第665セッションの経緯
+
+### 1.1 第665セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p665`（HEAD `a8e0b2f1`・未 push 38・full **10186 / 0 / 2 / 10188**）。
+★★★ **§2 K5 ④ 完了＝カポ**（設計はユーザーに文法を示して確認: 語順 `chordDiagrams [調弦] [capo N] [all] [{表}]`・「Capo 3」はヘッダの instrument 行・**綴りは「現在のキーに沿う」（ユーザー決定）**・`both` の上付きは**名前ごとに 2 範囲**（ユーザー「2」）。音楽には鳴る音を書き、形は押さえる形（表の項目も）。`ChordSpelling` に `Capo`/`Names` を足して全 namer に届ける＝`PrintedSymbol(spelling, keySharps)` が `Pressed(capo, keySharps)` を名付ける（`PressedKeySharps`＝5 度圏を 7N 下げて −5..+6・三全音は F♯）。`ChordSymbolText.BracketSuperFrom`＝括弧内 2 つ目の名前の上付き開始（`Pieces` は 1 つ目の run を " (" の前で切る）。図は `Drawn(…, capo)`＝既定は押さえるコードの定番、表は鳴る名前で引く。LYS1039（行・`@chord`・表・`chord(…)`）は押さえるコードで検査。`chord(X 形)` の音は capo 分上（`ShapeChords.Notes` の shift は「sounding = written + shift」なので **shift − capo**＝最初 + にして MIDI で発覚）。ヘッダ: `ScoreContent.Instrument`→`HeaderBand.Build(instrument)`→`DrawHeader` 中央。双子: `TwinChord`＝`\chordmode` を押さえるコードで（FretBoards は常に・ChordNames は `shape` のとき）・`\header { instrument = "Capo 3" }`・`both` は警告。MusicXML: `<harmony>` は鳴る音・`<frame>` は押さえる形（`_diagramsWord` に Capo）。MIDI: 最初の score の layout を読む（`MidiExporter.Capo`）。提案: `Semantics/CapoAdvisor`（相異なるコード×capo 0..7 の定番の形のバレー数＝定番表は LP の `Barres`、列挙形は最低フレット 3 弦以上）→ `capo ` の後の補完（順位つき）・`capo`／数字のホバー（`LanguageReference.CapoHover`）。新キー `chordNames`（`LayoutKeyVocabulary`・補完・TextMate・スニペット 2 つ）。
+★ 検証（commit `28bb6c63`）: build 0 エラー／Core 0 警告・網 +31（`ChordDiagramTests` 7 本＝theory 込み 30・`ShapeChordItemTests` 1・既存 3 本を語順と補完に合わせて更新）・掃き **1,163 冊 × svg/ly/xml/midi/check＝moved 0・check 差 0**・APPROXIMATIONS 再生成。文法書 3 冊・CHANGELOG 2 冊。
+⚠️ 未: MusicXML `<staff-details><capo>`／双子の `both`／`chord(…)` の MIDI・ホバー・検査は「最初の score」のカポ／補完の順位表は打鍵ごとに doc を parse し直す（popup の中だけ）／バレー判定は定番表の `Barres` が正で列挙形は近似。
+★ **終了**: `-End p665 -DiffBase a8e0b2f1`＝full **10217 / 0 / 2 / 10219**（trx `sessions/p665/run2.trx`）・§7.5: Core `+` 654 行／REF 1／OWN 2＝言語の規則（REF はヘッダの instrument 行＝bookTitleMarkup の poet／instrument／composer 行・OWN は `ChordNameMode`（LP に capo の名前機能無し）と `CapoAdvisor`）。7.6: 出所は §2 K2（ユーザー 09-28）＋本便のユーザー決定 2 つ（綴り・上付き 2 範囲）。7.7: 匂いは `ShapeChords.Notes` の shift の符号（コメントで名指した）と MIDI の「最初の score のカポ」。push はユーザー（40 件）。
+
 ## 以下は第664セッションの経緯
 
 ### 1.1 第664セッション（2026-09-29・YT-DELL2）

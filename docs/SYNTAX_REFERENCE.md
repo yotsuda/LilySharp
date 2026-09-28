@@ -1960,10 +1960,9 @@ that tuning is the diagram's. `@chord` takes the same words after its symbol:
 hover offers, and what an `all` score draws for a name alone — is LilyPond's predefined shape for the tuning (its tables for the guitar: 136
 chords and 17 ninth chords; the ukulele: 306; the mandolin: 204 — less nine, below — C `x32010`, F `133211`,
 Cm7 `x35343`, ukulele C `0003`, F `2010`; a table serves only the tuning it was made for, and
-holds no slash chord), else the first shape of Lily#'s order (below) — on a tuning whose
-strings rise in pitch; without a stretch when there is one (F11 in open G, `333047`, has
-only stretch shapes). On the ukulele, whose G string is re-entrant, Lily# finds no shape by
-rule, so a chord its table lacks has no usual shape: write it.
+holds no slash chord), else the first shape of Lily#'s order (below); without a stretch when
+there is one (F11 in open G, `333047`, has only stretch shapes). A chord no rule can voice
+(C13 on the ukulele's four strings) has no usual shape: write it.
 
 **Warnings (LYS1038)** — about WRITTEN shapes; the shape is not used and the name still draws:
 a shape of the wrong length (`@chord(C 7)`: one character, which no tuning has strings for; a
@@ -2008,8 +2007,7 @@ ukulele's Bsus2 has none). Every other predefined shape passes.
 
 **Lily#'s order.** For the usual shape of the chords LilyPond's tables lack, and for the
 editor's `Ctrl+Shift+Up`/`Down` (which rewrites a chord's shape to the next / previous: the
-usual shape first, then this order), Lily# lists a chord's shapes on a tuning whose strings
-rise in pitch.
+usual shape first, then this order), Lily# lists a chord's shapes on every tuning.
 A shape assigns each string muted or a fret. A shape is VALID when:
 
 - **V1.** at least 3 strings sound; frets 0..15;
@@ -2018,7 +2016,11 @@ A shape assigns each string muted or a fret. A shape is VALID when:
 - **V3.** every REQUIRED tone sounds: all of the chord's tones except the perfect fifth,
   which may be omitted; altered fifths (dim, aug, m7-5, 7-5, 7+5) are required; for X/Y, Y is
   required;
-- **V4.** the LOWEST-PITCHED sounding note is the root (for X/Y: Y);
+- **V4.** the LOWEST-PITCHED sounding note is the root (for X/Y: Y) — asked only on a tuning
+  whose strings rise in pitch; on a re-entrant tuning (the ukulele's high G, a banjo's drone)
+  the lowest string is not the lowest note, so V4 is not asked and the other rules alone list
+  the shapes — which puts LilyPond's own ukulele shape first for every chord tried (C `0003`
+  of 39 shapes, Am `2000` of 38, F `2010` of 23, G7 `0212` of 19);
 - **V5.** span: among fretted strings (fret > 0), max − min ≤ 3 (four frets); open strings
   are not counted. A shape with max − min = 4 (five frets) is a STRETCH shape — hard to play,
   so left out unless stretch shapes are asked for (below);
