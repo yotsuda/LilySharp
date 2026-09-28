@@ -362,8 +362,33 @@ public class HistoryCitationTests
     /// <c>LooksLikeCitation</c> declared above. Not re-pointed, for the reason the paragraphs
     /// above give. The LIVE ratchet did not fall (1071, floor 564).
     /// </para>
+    /// <para>
+    /// ⚠️ RAISED 912 → 947, THE SAME WAY, ON 2026-09-29 (after session 667). The forty-four
+    /// commits of sessions 663-667 after the 0.9.0 tag were regrouped into sixteen and pushed;
+    /// the push met this test red on origin/master's CI and locally alike. The backup tag the
+    /// regroup left was deleted once the push was up, but the reflog still holds the old tip
+    /// (not named here because naming it would add one more dead token), so the check was
+    /// made: the old tip and the new one (<c>618c91b7</c>) name the SAME tree object,
+    /// <c>2519508f</c>, and the diff between them is empty. With the tree unchanged the census
+    /// reads the same tokens as before, so the rise of 35 is exactly the citations that lost
+    /// reachability: 37 distinct hex tokens in the tree name one of the 44 folded commits —
+    /// §1 and the archive's "HEAD", "commit" and "-DiffBase" of each session — and the two
+    /// that carry fewer than two letters in their abbreviation are the honest miss of
+    /// <c>LooksLikeCitation</c> declared above. The order was the other way round here, as on
+    /// 2026-09-19: the census was read FIRST, because CI failed on it, and the prediction from
+    /// the tree was computed afterwards — 37 cited minus 2 unshaped — and landed on 35
+    /// exactly, so what it confirms is only that the rise is accounted for by the fold and
+    /// carries nothing else. The session records were not re-pointed, for the reason the
+    /// paragraphs above give. Five CODE comments also named two of the folded commits — the
+    /// one that first drew a default diagram for every chord name, and the one that put
+    /// half-ties into the staff skyline — as the state a rule was later reversed or completed
+    /// from; the fold put each of those states and its reversal into ONE commit, so a
+    /// re-pointed SHA would have named the fix as the defect, and the five were reworded to
+    /// say the date instead. The two tokens remain in the archive, so that rewording moves
+    /// nothing here. The LIVE ratchet did not fall (1177, floor 564).
+    /// </para>
     /// </remarks>
-    private const int DeadCitationsWhenWritten = 912;
+    private const int DeadCitationsWhenWritten = 947;
 
     /// <summary>
     /// Extensions scanned for citations. Chosen because they are where citations are actually

@@ -961,7 +961,7 @@ public class ChordDiagramTests
 
     /// <summary>A name with no shape written draws no diagram by design (owner's decision
     /// 2026-09-28), so there is nothing to warn about — not even a chord the tuning has no
-    /// default for (C13 on the ukulele). 9cf95fab warned "no chord diagram on 'ukulele'".</summary>
+    /// default for (C13 on the ukulele). The first cut of 2026-09-28 warned "no chord diagram on 'ukulele'".</summary>
     [Fact]
     public void ANameWithNoShape_IsNotWarned()
     {

@@ -32,7 +32,7 @@ namespace LilySharp.Tests;
 /// A HALF-TIE (<c>@laissezVibrer</c>, <c>@repeatTie</c>, and the repeat tie a tie carried back
 /// over a repeat sign draws — SectionTieCarry) is drawn on EVERY staff and in EVERY voice, at
 /// the bow the inside-staff skyline reserves. Until 2026-09-28 <c>TieVariantEngraver.Calculate</c>
-/// walked the primary staff's first voice alone, while the skyline (2505ff4f) reserved room on
+/// walked the primary staff's first voice alone, while the skyline (in place since that morning) reserved room on
 /// every staff and voice: a second part, a piano's lower staff and a lower voice reserved room
 /// and drew nothing. The MusicXML wrote neither annotation at all.
 /// LilyPond: Laissez_vibrer_engraver / Repeat_tie_engraver live in every Voice context

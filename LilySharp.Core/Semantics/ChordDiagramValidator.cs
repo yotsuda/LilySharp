@@ -306,7 +306,7 @@ public static class ChordDiagramScores
 /// meant to draw, so a chord with NO shape on the score's tuning — none written, no default
 /// (<see cref="ChordShapes.Default"/>: an eleventh on the ukulele) — is warned ONCE per symbol
 /// and tuning in the file, at its first appearance, naming the fix (write the shape).
-/// (Commit 9cf95fab drew a default for every name and warned in every score.)
+/// (The first cut of 2026-09-28 drew a default for every name and warned in every score.)
 /// </para>
 /// <para>
 /// Lily#'s choices for what the tree cannot say: a ROMAN degree is not checked — neither its

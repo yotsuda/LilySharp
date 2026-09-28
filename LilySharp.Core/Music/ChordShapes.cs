@@ -95,8 +95,8 @@ public sealed record ChosenShape(ImmutableArray<int> Frets, ShapeSource Source,
 /// </para>
 /// <para>
 /// The DEFAULT (<see cref="Default"/>: LilyPond's predefined shape, else the first of Lily#'s
-/// order) is not drawn by itself (commit 9cf95fab drew it for every name; the owner reversed
-/// that the same day) — save in a score that asks for it, <c>chordDiagrams … all</c> (owner's
+/// order) is not drawn by itself (the first cut of 2026-09-28 drew it for every name; the owner
+/// reversed that the same day) — save in a score that asks for it, <c>chordDiagrams … all</c> (owner's
 /// decision 2026-09-28, the scope word); it is what
 /// the editor's step writes when it adds a shape, and what its hover offers.
 /// The enumeration answers on EVERY tuning since 2026-09-29 (HANDOFF §2 K5 ⑥): on a

@@ -302,7 +302,7 @@ internal static class TieVariantEngraver
     /// <paramref name="staffIndex"/>.</param>
     /// <remarks>
     /// ⚠️ UNTIL 2026-09-28 THIS WALKED <c>score.Voice</c> ALONE — the primary staff's first
-    /// voice — while the skyline (2505ff4f) reserved room on every staff and voice: a
+    /// voice — while the skyline (in place since that morning) reserved room on every staff and voice: a
     /// <c>@laissezVibrer</c> / <c>@repeatTie</c> in a second part, a piano's lower staff or a
     /// lower voice, and the automatic repeat tie SectionTieCarry adds there, reserved room
     /// and drew nothing.
