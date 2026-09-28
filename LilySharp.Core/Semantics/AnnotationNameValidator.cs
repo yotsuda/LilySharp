@@ -629,21 +629,34 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     }
 
     /// <summary>
-    /// Returns the closest known name within edit distance 2 (typo range), or
-    /// null when nothing is close enough to suggest.
+    /// Returns the closest known name that is a plausible TYPO of <paramref name="name"/>,
+    /// or null when nothing is close enough to suggest.
     /// </summary>
+    /// <remarks>
+    /// "Close" is relative to the length of what was written (owner's decision 2026-09-28):
+    /// the allowed edit distance is <see cref="AllowedTypoDistance"/> — none for a name of
+    /// one or two letters (only a swapped pair, <c>@fs</c> → <c>@sf</c>), one for three to
+    /// five letters, two from six letters up. With a flat "distance ≤ 2" every two-letter
+    /// word was within reach of some two-letter dynamic: <c>@ho</c> answered
+    /// "did you mean '@sf'?", which is noise, not a typo. A swap of two adjacent letters
+    /// counts as one edit (<c>@tenuot</c> → <c>@tenuto</c>).
+    /// </remarks>
     private static string? FindSuggestion(string name)
     {
+        var written = name.ToLowerInvariant();
+        int allowed = AllowedTypoDistance(written.Length);
         string? best = null;
-        int bestDistance = 3; // accept distance 1..2 only
+        int bestDistance = int.MaxValue;
 
         foreach (var candidate in SuggestionCandidates)
         {
-            int d = Levenshtein(name.ToLowerInvariant(), candidate.ToLowerInvariant(), bestDistance);
+            var known = candidate.ToLowerInvariant();
+            int d = allowed == 0
+                ? (IsAdjacentSwap(written, known) ? 1 : int.MaxValue)
+                : TypoDistance(written, known, allowed + 1);
             // d == 0 means the name IS this candidate — never suggest it back to
-            // itself ("did you mean '@harmonic'?" for '@harmonic'); only real typos
-            // (distance 1..2) are useful.
-            if (d >= 1 && d < bestDistance)
+            // itself ("did you mean '@harmonic'?" for '@harmonic'); only real typos are useful.
+            if (d >= 1 && d <= Math.Max(allowed, 1) && d < bestDistance)
             {
                 bestDistance = d;
                 best = candidate;
@@ -652,12 +665,32 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         return best;
     }
 
-    /// <summary>Bounded Levenshtein distance (returns <paramref name="cap"/> when exceeding it).</summary>
-    private static int Levenshtein(string a, string b, int cap)
+    /// <summary>How many edits a written name of <paramref name="length"/> characters may be
+    /// from a known one and still read as its typo: a third of its length, at most two.
+    /// Zero for one or two letters, where only a swapped pair is a typo.</summary>
+    internal static int AllowedTypoDistance(int length) => Math.Min(2, length / 3);
+
+    /// <summary>Whether <paramref name="a"/> is <paramref name="b"/> with exactly one pair of
+    /// adjacent letters swapped.</summary>
+    private static bool IsAdjacentSwap(string a, string b)
+    {
+        if (a.Length != b.Length)
+            return false;
+        int i = 0;
+        while (i < a.Length && a[i] == b[i])
+            i++;
+        return i + 1 < a.Length && a[i] == b[i + 1] && a[i + 1] == b[i]
+               && string.CompareOrdinal(a, i + 2, b, i + 2, a.Length - i - 2) == 0;
+    }
+
+    /// <summary>Bounded optimal-string-alignment distance — Levenshtein plus the swap of two
+    /// adjacent letters as one edit (returns <paramref name="cap"/> when reaching it).</summary>
+    private static int TypoDistance(string a, string b, int cap)
     {
         if (Math.Abs(a.Length - b.Length) >= cap)
             return cap;
 
+        var prev2 = new int[b.Length + 1];
         var prev = new int[b.Length + 1];
         var curr = new int[b.Length + 1];
         for (int j = 0; j <= b.Length; j++)
@@ -670,12 +703,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             for (int j = 1; j <= b.Length; j++)
             {
                 int cost = a[i - 1] == b[j - 1] ? 0 : 1;
-                curr[j] = Math.Min(Math.Min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
-                rowMin = Math.Min(rowMin, curr[j]);
+                int d = Math.Min(Math.Min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+                if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1])
+                    d = Math.Min(d, prev2[j - 2] + 1);
+                curr[j] = d;
+                rowMin = Math.Min(rowMin, d);
             }
             if (rowMin >= cap)
                 return cap;
-            (prev, curr) = (curr, prev);
+            (prev2, prev, curr) = (prev, curr, prev2);
         }
         return Math.Min(prev[b.Length], cap);
     }

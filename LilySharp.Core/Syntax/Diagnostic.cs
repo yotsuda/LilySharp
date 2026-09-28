@@ -344,10 +344,9 @@ public static class DiagnosticCodes
     public const string FractionalTempoValue = "LYS0022";
 
     /// <summary>Parse error: a '.' in a music stream that belongs to nothing — no rule
-    /// claimed it. It has TWO causes, both measured, and the message names both: an
-    /// augmentation dot with no number in front of it (<c>c4 g.</c>), and the legacy
-    /// dotted spelling of an annotation that now takes parentheses
-    /// (<c>@finger.3</c> for <c>@finger(3)</c>).</summary>
+    /// claimed it, e.g. an augmentation dot with no number in front of it
+    /// (<c>c4 g.</c>). (The message also named the old dotted annotation spelling,
+    /// <c>@finger.3</c>, until 2026-09-28; that backward-compatibility hint is gone.)</summary>
     /// <remarks>
     /// <para>
     /// The duration half: LILYPOND-REF <c>lily/parser.yy</c> — <c>steno_duration</c> is

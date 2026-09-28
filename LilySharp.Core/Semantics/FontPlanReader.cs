@@ -56,15 +56,15 @@ internal static class FontPlanReader
 
         if (!font.IsBlock)
         {
-            // The one-line `font "NAME"` was removed 2026-08-18; the parser reports it
-            // (LYS8007) and keeps its tokens so no source position slides. It binds
-            // NOTHING here. (A blockless NAMED node — a score's pure reference — reads
-            // through ReadReference instead, never here.)
+            // A blockless `fonts "NAME"` is refused by the parser (LYS8008), which keeps its
+            // tokens so no source position slides. It binds NOTHING here. (A blockless NAMED
+            // node — a score's pure reference — reads through ReadReference instead, never
+            // here.)
             //
-            // ⚠️ Applying the old meaning anyway would be worse than either choice: the
-            // score would engrave in the named face while the editor underlined the line
-            // as an error, and the writer would have no reason to believe the message.
-            // A refused directive has to be refused all the way through.
+            // ⚠️ Applying a meaning anyway would be worse than either choice: the score
+            // would engrave in the named face while the editor underlined the line as an
+            // error, and the writer would have no reason to believe the message. A refused
+            // directive has to be refused all the way through.
             return builder.Build();
         }
 

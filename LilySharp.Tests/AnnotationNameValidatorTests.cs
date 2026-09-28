@@ -278,6 +278,45 @@ public class AnnotationNameValidatorTests
             + string.Join("\n", failures));
     }
 
+    /// <summary>
+    /// A suggestion has to be close RELATIVE TO WHAT WAS WRITTEN (2026-09-28): a third of the
+    /// name's length in edits, at most two, and for a one- or two-letter name only a swapped
+    /// pair. A flat "within two edits" put every two-letter word near some two-letter dynamic —
+    /// '@ho' answered "did you mean '@sf'?".
+    /// </summary>
+    [Theory]
+    [InlineData("c4@fs d |", "@sf")]            // two letters: a swapped pair is a typo
+    [InlineData("c4@acent d |", "@accent")]      // five letters: one edit
+    [InlineData("c4@tenuot d |", "@tenuto")]     // a swap counts as one edit
+    [InlineData("c4@stacatto d |", "@staccato")] // eight letters: two edits
+    public void ACloseTypo_IsSuggested(string source, string suggestion)
+    {
+        var warning = Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains($"Did you mean '{suggestion}'?", warning.Message);
+    }
+
+    [Theory]
+    [InlineData("c4@ho d |")]      // two letters, two edits from '@sf' / '@fp'
+    [InlineData("c4@po d |")]
+    [InlineData("c4@x d |")]
+    [InlineData("c4@trl d |")]     // three letters, two edits from '@trill'
+    [InlineData("c4@ped d |")]
+    public void AShortNameFarFromEveryKnownOne_GetsNoSuggestion(string source)
+    {
+        var warning = Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.DoesNotContain("Did you mean", warning.Message);
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 0)]
+    [InlineData(3, 1)]
+    [InlineData(5, 1)]
+    [InlineData(6, 2)]
+    [InlineData(20, 2)]
+    public void TheAllowedTypoDistance_GrowsWithTheName(int length, int allowed)
+        => Assert.Equal(allowed, AnnotationNameValidator.AllowedTypoDistance(length));
+
     [Fact]
     public void NothingClose_NoSuggestion()
     {

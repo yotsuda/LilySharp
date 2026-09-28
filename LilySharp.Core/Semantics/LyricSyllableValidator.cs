@@ -73,7 +73,7 @@ internal sealed class LyricSyllableValidator : ISharedCollectValidator
             if (w.TieHeldInFirstBar > 0)
                 cause += $". {w.TieHeldInFirstBar} note(s) of that bar are reached by a tie and take no " +
                          "syllable (the tie already holds the one before); a lyric '~' or '_' written " +
-                         "for a tied note now takes the next note - drop it";
+                         "for a tied note takes the next note - drop it";
             _diagnostics.Warning(w.Span, DiagnosticCodes.LyricSyllableOverflow,
                 $"lyric syllable '{w.FirstSyllable}' (bar {w.FirstBar} of its lyrics line) " +
                 $"has no note to align with; {tail}{cause}");

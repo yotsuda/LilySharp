@@ -114,11 +114,11 @@ public class DurationAdjacencyTests
         => Assert.True(Has(source, DiagnosticCodes.UnclaimedDot), source);
 
     /// <summary>
-    /// The SECOND cause, and the commoner one on disk: the legacy dotted spelling of
-    /// an annotation whose argument now goes in parentheses. Its dot reaches no rule
-    /// either — the mark parser takes only the dots it owns — so it used to disappear
-    /// with the rest of the spelling, leaving a file that compiled and drew the wrong
-    /// thing. Both causes are in the message for this reason.
+    /// A dot written after an annotation name (<c>@finger.3</c>, an old Lily# spelling of
+    /// <c>@finger(3)</c>) reaches no rule either — the mark parser takes only the dots it
+    /// owns — so it is reported, and never disappears with the rest of the spelling. The
+    /// report is the ORDINARY one: the message named the old spelling's replacement until
+    /// 2026-09-28, when the backward-compatibility hints were removed (owner's decision).
     /// </summary>
     [Theory]
     [InlineData("{ c4@finger.3 }")]
@@ -126,8 +126,12 @@ public class DurationAdjacencyTests
     [InlineData("{ c4@mark.A }")]
     [InlineData("{ c4@bend.half }")]
     [InlineData("{ c4@notehead.x }")]
-    public void TheLegacyDottedAnnotationSpelling_IsAnUnclaimedDot(string source)
-        => Assert.True(Has(source, DiagnosticCodes.UnclaimedDot), source);
+    public void ADotAfterAnAnnotationName_IsAnOrdinaryUnclaimedDot(string source)
+    {
+        var dot = Assert.Single(SyntaxTree.Parse(source).Diagnostics,
+            d => d.Code == DiagnosticCodes.UnclaimedDot);
+        Assert.DoesNotContain("annotation", dot.Message);
+    }
 
     /// <summary>One mistake, written twice, is reported once.</summary>
     [Fact]

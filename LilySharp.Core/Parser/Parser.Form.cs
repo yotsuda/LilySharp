@@ -393,8 +393,7 @@ internal sealed partial class Parser
                 DiagnosticCodes.UnpairedRepeat,
                 "this form repeat '|:' is never closed — add the matching ':|' before the "
                 + "form's '}'. A repeat opens and closes in the form; a ':|' written in a "
-                + "section's music does not close it, and is not a spelling the language "
-                + "takes any more.");
+                + "section's music does not close it.");
             endBar = new SyntaxToken(SyntaxKind.RepeatEndBar, "", null, null);
         }
 

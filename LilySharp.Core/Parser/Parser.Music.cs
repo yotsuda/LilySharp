@@ -305,11 +305,11 @@ internal sealed partial class Parser
     /// space belongs to the token but not to the mistake.
     /// </para>
     /// <para>
-    /// ⚠️ The message names BOTH causes because both were measured on disk, and the
-    /// second is the commoner one: of the 23 files that raise this, every one is in
-    /// the legacy dotted spelling of an annotation (<c>@finger.3</c>, <c>@chord.C</c>,
-    /// <c>@mark.A</c>) rather than a mis-written duration. A diagnostic that named only
-    /// the duration would send most of its readers the wrong way.
+    /// The message speaks of the duration dot only. It also named the older dotted
+    /// spelling of an annotation (<c>@finger.3</c> for <c>@finger(3)</c>) until 2026-09-28,
+    /// when that hint went with the rest of the backward-compatibility messages (owner's
+    /// decision): a dot after an annotation now gets this ordinary report, and the
+    /// annotation itself gets its own ("'@finger' takes its argument in parentheses").
     /// </para>
     /// </remarks>
     private GreenNode ReportUnclaimedDot()
@@ -320,9 +320,7 @@ internal sealed partial class Parser
             _diagnostics.Error(span, DiagnosticCodes.UnclaimedDot,
                 "This '.' belongs to nothing. A duration dot needs a number in front of "
                 + "it - write g4., not g. (a note with no duration already inherits the "
-                + "previous one WITH its dots, so 'c4. g' is two dotted quarters). An "
-                + "annotation takes its argument in parentheses - write @finger(3) and "
-                + "@chord(c), not @finger.3 and @chord.c.");
+                + "previous one WITH its dots, so 'c4. g' is two dotted quarters).");
         }
         return Advance();
     }
