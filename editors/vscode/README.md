@@ -35,6 +35,24 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 | **Document Highlight** | Highlight all occurrences of selected variable |
 | **Section CodeLens** | Over a section's first declaration: its length, who writes it (parts, chord rows, lyrics tracks — by name, or counted when many) — or each length with who writes it when they disagree — and how often each form names it. A later declaration shows a line only when its length differs from what most of the others write. Click to list everything that writes it |
 
+### Stepping and Audition
+
+| Key | What it does |
+|-----|--------------|
+| `Ctrl+Alt+Up` / `Ctrl+Alt+Down` on a **note** | Adds one `'` (Up) or `,` (Down) after the pitch — or takes away one of the other mark if the note has it. Inside `< >` / `<< >>` only the member under the caret moves; on the chord's `>` or its duration, the marks after the bracket move the whole chord. With a selection, every note in it steps. It is a plain mark edit: in relative octave mode the notes after it follow |
+| `Ctrl+Alt+Up` / `Ctrl+Alt+Down` in an **`@chord(…)`** | Steps the voicing index: `@chord(Cm7 2)` → `3` / `1`. On `@chord(Cm7)` Up shows voicing `0`; Down at `0` goes back to the name alone (a `mute …` goes with it). At the last voicing Up stays put and the status bar says the range (`Cm7: voicings 0–51`) |
+| `Ctrl+Alt+Up` / `Ctrl+Alt+Down` **anywhere else** | VS Code's own *Add Cursor Above / Below*, as without the extension |
+
+With a preview open, edits sound through the preview's synth: the step's result, the
+note (or chord, or `@chord` voicing) the caret lands on when you move it — once per
+note, not on every arrow-key repeat — and a note as you type it, once its pitch and
+octave marks are in. Switch this off with `"lilysharp.audition.enabled": false`; `Alt+P`
+and `Alt+M` keep working either way. Nothing sounds while no preview is open.
+
+To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
+`lilysharp.stepUp` / `lilysharp.stepDown`, and bind them where you like (Mac:
+`Ctrl+Option+Up/Down` is the default binding there too, not yet tried on a Mac).
+
 ### Semantic Token Colors
 
 The extension provides custom semantic highlighting:
@@ -121,6 +139,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
 8. Open the preview (`Ctrl+Shift+V`), then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth)
+9. Press `Ctrl+Alt+Up` / `Ctrl+Alt+Down` on a note to move it an octave, or in `@chord(Cm7 2)` to try the next voicing — see [Stepping and Audition](#stepping-and-audition)
 
 ## Example
 

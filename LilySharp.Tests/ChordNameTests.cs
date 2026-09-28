@@ -202,17 +202,20 @@ public class ChordNameTests
         => Assert.Null(Chord(music));
 
     /// <summary>
-    /// ★ Positive control for the change above, and the measurement that decided the
-    /// reader's shape: an argument written with a SPACE is still accepted, because ALL
-    /// the runs are joined and not just the first. (Every <c>@chord(</c> in the corpus
-    /// is a single run, so the spaced form is unexercised, not impossible.) A comma
-    /// joins the same way — the reader concatenates every argument's text.
+    /// ★ A BREAKING CHANGE, the owner's (2026-09-27): arguments written apart are WORDS, and
+    /// only the first is the symbol — the words after it choose a chord diagram
+    /// (<c>Semantics.ChordAnnotation</c>). Until then every run was concatenated, so
+    /// <c>@chord(C 7)</c> named C7; it now names C with voicing 7. A comma separates words the
+    /// same way. (Measured before the change: no <c>@chord(</c> in the repo's books or the Lab
+    /// corpora was written with a space.)
     /// </summary>
     [Theory]
-    [InlineData("c4@chord(C m7) |", "Cm7")]
-    [InlineData("c4@chord(C, m7) |", "Cm7")]
-    [InlineData("c4@chord(x, m7) |", null)]   // "xm7" is no chord entry
-    public void ArgumentsWrittenApart_AreJoined(string music, string? symbol)
+    [InlineData("c4@chord(C 7) |", "C")]       // C, voicing 7 — no longer C7
+    [InlineData("c4@chord(C m7) |", "C")]      // 'm7' is no index: LYS1038, the name stands
+    [InlineData("c4@chord(C, m7) |", "C")]
+    [InlineData("c4@chord(C7) |", "C7")]       // a symbol written together is unchanged
+    [InlineData("c4@chord(x, m7) |", null)]    // 'x' is a (bad) position string, no symbol
+    public void ArgumentsWrittenApart_AreWords_TheFirstIsTheSymbol(string music, string? symbol)
         => Assert.Equal(symbol, Chord(music));
 
     // --- ChordNameEngraver ---

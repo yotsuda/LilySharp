@@ -244,7 +244,7 @@ internal static partial class SharedRenderer
         int strings = spec.Length;
         double dx = FretFrameGeometry.StringSpacing(s);
         double dy = FretFrameGeometry.FretSpacing(s);
-        const int fretRows = FretFrameGeometry.FretRows;
+        int fretRows = FretFrameGeometry.RowCount(spec);
         double thin = FretFrameGeometry.StringThickness(s);
         double mark = FretFrameGeometry.MarkHalf(s);
         double header = FretFrameGeometry.HeaderRise(s);
@@ -273,23 +273,25 @@ internal static partial class SharedRenderer
 
         for (int i = 0; i < strings; i++)
         {
-            char ch = spec[i];
+            // One reader of a fret for every consumer (FretFrameGeometry.FretAt — it also
+            // reads the a–f a chosen voicing uses for frets 10–15).
+            int written = FretFrameGeometry.FretAt(spec, i);
             double sx = left + i * dx;
             double hy = top + header;
-            if (ch == 'x')
+            if (written < 0)
             {
                 gc.DrawLine(sx - mark * 0.7, hy + mark * 0.7, sx + mark * 0.7, hy - mark * 0.7, Color.Black, 1.4 * thin);
                 gc.DrawLine(sx - mark * 0.7, hy - mark * 0.7, sx + mark * 0.7, hy + mark * 0.7, Color.Black, 1.4 * thin);
             }
-            else if (ch is '0' or 'o')
+            else if (written == 0)
             {
                 gc.DrawCircle(sx, hy, mark * 0.85, Color.Black);
                 gc.DrawCircle(sx, hy, mark * 0.85 - 1.4 * thin, Color.White);
             }
-            else if (ch is >= '1' and <= '9')
+            else
             {
-                int fret = ch - '0' - (baseFret - 1);
-                if (fret is >= 1 and <= fretRows)
+                int fret = written - (baseFret - 1);
+                if (fret >= 1 && fret <= fretRows)
                     gc.DrawCircle(sx, top - (fret - 0.5) * dy, FretFrameGeometry.DotRadius(s), Color.Black);
             }
         }

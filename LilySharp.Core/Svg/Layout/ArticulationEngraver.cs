@@ -102,8 +102,7 @@ internal static class ArticulationEngraver
     private static double PaddingFor(ArticulationType type) =>
         ArticulationSpacing.VerticalPadding(type);
 
-    // LILYPOND-REF: define-grobs.scm:3004 staff-padding = 0.25
-    private const double StaffPadding = 0.25;
+    // staff-padding (Script's 0.25, a diagram's TextScript 0.5) is ArticulationSpacing.StaffPadding.
 
     /// <summary>The Script grob's horizon-padding — the horizontal widening its
     /// engraver-level side-position pays in every skyline distance ("to avoid
@@ -619,7 +618,7 @@ internal static class ArticulationEngraver
         // two dictionary operations, and the walk is the pre-bump walk.
         bool anyMover = false;
         foreach (var a in articulations)
-            if (ArticulationSpacing.OutsideStaffPriority(a.Type) is not null)
+            if (ArticulationSpacing.OutsideStaffPriority(a) is not null)
             {
                 anyMover = true;
                 break;
@@ -1268,7 +1267,7 @@ internal static class ArticulationEngraver
                 StaffIndex: effArt.StaffIndex,
                 SkylineHorizontalPadding:
                     ArticulationSpacing.SkylineHorizontalPadding(effArt.Type),
-                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt.Type)
+                OutsideStaffPriority: ArticulationSpacing.OutsideStaffPriority(effArt)
             );
 
             // A tie starting or ending on this note supports this script: pointwise
@@ -2798,7 +2797,7 @@ internal static class ArticulationEngraver
         //   THIS script's padding — the aligned_side support floor.
         double inkFloor = DynamicEngraver.StaffExtent + PaddingFor(articulation.Type);
         double refpointFloor = StaffHalf + EngravingDefaults.StaffLineThickness / 2
-            + StaffPadding;                         // ② = 2.05 ink + 0.25
+            + ArticulationSpacing.StaffPadding(articulation.Type);   // ② = 2.05 ink + 0.25
         if (isAbove)
         {
             double glyphEdgeUp = targetUp - glyphNearExtent;

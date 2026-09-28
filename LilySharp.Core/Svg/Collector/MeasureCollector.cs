@@ -962,6 +962,7 @@ public sealed partial class MeasureCollector
             CollectPartBodyOverrides(tree.GetRoot(), voiceName, _cursor.StaffIndex);
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
                 tree.GetRoot(), voiceName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
+            SetPartTuning(tree.GetRoot(), voiceName);
             // The POSITION follows the clef it describes. A part without its own
             // `clef` keeps the top-level one, so overwriting the offset regardless
             // dropped it to 0 — and 0 reads as "no position", which left the clef
@@ -991,6 +992,7 @@ public sealed partial class MeasureCollector
         else
         {
             _octave.CurrentOctave = InstrumentDefaults.DefaultAnchorOctave;
+            SetPartTuning(tree.GetRoot(), null);
         }
         _octave.InitialOctave = _octave.CurrentOctave;
         _octave.InitialOctaveBase = _octave.OctaveBase; // absolute mode's section-reset target
@@ -1619,6 +1621,7 @@ public sealed partial class MeasureCollector
             // Set clef and octave for this voice from part definition
             var (partClef, partOctave, partExplicitOctave, partTranspose, partClefPos, partKey) = GetPartDefaults(
                 tree.GetRoot(), voiceName, ScoreConcert, _fileTransposeDefault, _fileIsConcert);
+            SetPartTuning(tree.GetRoot(), voiceName);
             // A clef the staff item wrote (`staff bass melody`) wins over the part's: it is
             // this rendering's clef, the one the page draws (pitches do not depend on it).
             if (renderSpec.WrittenClefOf(voiceName) is { } writtenClef)

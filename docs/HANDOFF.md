@@ -139,7 +139,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **ユーザー決定（2026-09-27）: 綴りの統一**＝「fonts のキーは、ソースがその物を書く語と同じ綴り」。`@frame`→`@diagram`／fonts: `chordName`→`chord`・`fretFrame`→`diagram`・`fingering`→`finger`・`barNumber`→`barNumbers`・`partCombine`→`partCombineText`・`meter`→`time`・`tabFret`→`tab`・`lyricText` は廃止（`lyrics` 群が音節を指す・`TextRoles.IsWritable`）／layout `marks`→`markTempo`（ラベルとテンポの並べ方・描画の順）。総称（`pedal` `navigation` `dynamics` `tabTechnique`）と構造が出す文字（`stanza` `volta` `clefOctave`）は据え置き。fonts 群 `marks` も据え置き。旧綴りは別名にせず未知（LYS8004／LYS9101）。
 ★★ **ユーザー決定（2026-09-27）: 名前は大文字小文字を区別する（言語全体で 1 つの規則）**＝注釈名・fonts／layout／paper のキー・fonts の属性語と総称。正式な綴りは補完の候補名（LilyPond の命令名に倣う: `upbow` は小文字・`laissezVibrer` は camel・Lily# 独自の `hammerOn` `pullOff` `snapPizz`）。一か所の索引 `Semantics/AnnotationNames`（各表は Ordinal）。大文字小文字だけ違う綴りは未知として何も描かず、診断が正しい綴りを名指す（「Names/Keys are case-sensitive: write '…'」）。網 `NameCaseSensitivityTests`。**値も区別する（同日・ユーザー決定）**: 注釈の括弧の中の語（notehead・bend・pluck・feather・arpeggio(bracket)・diagram の x/o・figuredBass の s/f/n）・用紙サイズ名（`a4`・ユーザー決定）・単位は小文字だけ。診断は「Values/Size names/Units are case-sensitive: write '…'」（`AnnotationNameValidator.CaseCorrected` が値を小文字にして既知かを確かめる・`PaperSizes.CaseOnlyMatch`）。自由な文章（`@text`・`@mark`）とコード名（`@chord`）は大文字小文字が中身なので対象外。camelCase の規則（`@upBow` ほか 5 語・`@pralltriller` は 1 語）も同日。`@ho`／`@po` も同日に退役（検証と補完に残っていた＝描かれないのに通っていた）。掃き（1,157 冊 × svg/ly/xml/midi/check）で動いた本 0（大文字小文字の違う 2 冊は repo の fixture で、同じ長さの正式な綴りに直した）。
 ⚠️ **この作業で見つかった既存の不整合（未修正）**: ⑴ MusicXML の `ProcessDirectionName` に una corda の開始（と quindicesima）の腕が無い＝`@treCorde` は止めを書くが `@unaCorda` は始まりを書かない ⑵ `@!X` の警告文「今は text spanner だけが終わりを持つ」が古い（ペダル・ottava・phrasingSlur も持つ）⑶ 1 セクションの本で 1 小節目の `@mark("Z")` がセクション名の横に何も描かない（2 小節目は描く）。
-★ **次の設計（ユーザーと相談中）: ギター譜のコード図**。名前／図／構成音の相互導出（図→名前は裸の `@chord` が図を読む・図→音は `<>4@diagram(…)`・名前→図は既定の押さえ方＋読める指定 `at 3`／CAGED、番号はエディタの UI に置く案）。カポとコード行への図も論点。
+★★★ **ギターのコード図（2026-09-27〜28・ユーザーと設計）＝確定した仕様は §2 K が正**（ソースには形だけ・番号はエディタだけ・図の有無と調弦は `layout { chordDiagrams … }`・0 番は LilyPond の定番の表・カポの提案）。実装済み（未 push）で K4 に従って置き換えるもの: `a02967b3`（`Music/ChordVoicings`＝極大の形の数え上げと並び順・`Semantics/ChordAnnotation`・`@chord(Cm7 2)`・`mute`・LYS1038・図の描画と 3fr 修正・MusicXML `<harmony>` 内 `<frame>`・双子 `\fret-diagram-terse`・網 `ChordVoicingTests`／`ChordDiagramTests`）と `86b606f5`（Ctrl+Alt+Up/Down＝`@chord` の番号 ±1／音符の `'`・`,`／それ以外はカーソル追加、試聴＝`lilysharp/step`・`lilysharp/auditionAt`・`playPitches`・設定 `lilysharp.audition.enabled`・網 `StepRequestTests`／`auditionCore.test.ts`・VS Code での手動確認は未・Mac 未確認）。
 ★ **終了**: full **9465 / 0 / 2 / 9467**（+17＝網）・Core 0 警告（`--no-incremental`）・`-End` の門は全 OK・§7.5: Core `+` 118 行／REF 0／OWN 0＝LP の移植ではなく言語の規則（Lily# の意図的な逸脱は GRAMMAR「Chord/arpeggio OCTAVES」が名指す・9/16 のコードも同じく無印）。push はユーザー。
 
 ## 以下は第661セッションの経緯
@@ -879,6 +879,52 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **U14. ✅ 閉じた（第568・ユーザー報告 2026-09-24「L28 の @arpeggio が小節線と重なっている」）＝wiggle は*列の左端の ink*で、列の左 reach も置き場所もそれを知らなかった**。LP: 小節線→列の最小は `Paper_column::minimum_distance`（paper-column.cc:145-164）が**右列の CONDITIONAL skyline を merge** する（arpeggio は paper-column-engraver.cc:246-261 がそこへ回す）／`Accidental_engraver::make_standard_accidental`（accidental-engraver.cc:298-307）が**臨時記号を arpeggio の support に足す**。直し＝`SpacingRules.ChordSupportLeftReach`（和音自身の左 ink を 1 か所に・3 軒が読む）＋ `CalculateLeftExtent` がそこから `ArpeggioEngraver.ReachPastSupport` だけ伸びる ＋ 最左の箱は arpeggio の既定 0.1。台帳 `arpeggio.x.barline-to-wiggle`（ABL）と `arpeggio.x.right-edge-to-accidental`（AAC）が **−0.900000／−1.450000 → 両方 0**<!-- ledger: arpeggio.x.barline-to-wiggle = 0 --><!-- ledger: arpeggio.x.right-edge-to-accidental = 0 -->。網 `ArpeggioSpacingTests` 6 本。snapshot 2 枚。**実コーパス 231 冊に `@arpeggio` は 0 冊**＝射程は fixture と showcase だけ
 
 - **U15. ✅ 閉じた（第568・ユーザー報告 2026-09-24「B section mark が L22 の grace と重なっている」）＝grace が*どの vertical skyline にも居なかった***。LP に Grace context は無く（`\name Grace` 0 件）、grace の grob は普通の Voice のもの＝`inside_staff_skylines`（axis-group-interface.cc:914-935）に入って mover が避ける。直し＝`SkylineBuilder` が grace 時間の item を**普通の seed に通す**（サイズは `GrobFontSize` に訊く・**旗は輪郭**・梁の run は quant 済みの梁と符尾も）、X は `GraceNoteEngraver.RunPlacement` を切り出して 1 か所に。台帳 `mark.over-grace.staff-to-baseline`（MGF/MGN）と `staff.staff.grace-over-notes`（GCL/GCN＝同じ profile を横から読む）が **−2.000000 → 0** ほか全部 exact<!-- ledger: mark.over-grace.staff-to-baseline = 0 --><!-- ledger: staff.staff.grace-over-notes = 0 -->。網 `GraceInsideStaffSkylineTests` 2 本。snapshot 3 枚。⚠️ **seed していない残り 2 つ**＝grace の**付点**（X は `DotColumn.ReservedForGrace`）と **cue の縮小列**＝どちらもコードに departs-from／observed-by つきで名指し・観測者 0
+
+### K. ギターのコード図（2026-09-28・ユーザーと設計確定・**未実装**）← **新ワークストリーム**
+
+> 2026-09-27〜28 の設計議論の結論＝**この節が正**。
+> 否定した案は末尾。試作（Python）は scratchpad＝要るなら Lab へ。
+
+**K0. 原則**
+- **ソースに書くのは「形」か「何も書かない」だけ。番号はエディタの中だけの概念**（ユーザー案）。
+  ＝並び順・数え上げの規則を**言語仕様として凍結しない**。規則を後で改良しても既存の本の図は動かない。
+- **図を出すか・どの調弦で出すかは譜面（`layout`）が決める**＝パートの楽器でも `chords {}` でもない
+  （ピアノ譜にギターの図・同じソースからギター譜とウクレレ譜。LP の FretBoards が自分の調弦を持つのと同じ）。
+- **何も書かなければ定番の形**＝LilyPond の表（`predefined-guitar-fretboards.ly` 136・`-ukulele-` 306・`-mandolin-` 204、指番号つき・GPL）を移植。
+  弾き語りの本は番号も形も書かずに定番のローコードが出る。
+
+**K1. 書き方**
+```
+c2@chord(Cm7)                    // 名前（図を出す譜面では定番の形）
+c2@chord(Cm7 x3x546)             // 名前＋この形（その場所だけ）
+c2@diagram(x32010)               // 名前の無い図（従来どおり）
+chords prog { Cm7 | F(133211) G }                      // コード行の中で、その場所だけの形
+chords prog { F(guitar 133211  ukulele 2010) }         // 複数の楽器で使うファイル
+layout gtr { chordDiagrams guitar capo 3 { Cm7 x35343  section Chorus { C x35553 } } }
+score gtr { layout gtr  chords prog  staff vocal }
+```
+- コード行には**鳴る音**のコード名を書く（ピアノと共通のソース）。
+- 形の決まり方（強い順）: その場所（`@chord(X 形)`・行の `X(形)`）→ `layout` のセクションの表（`section Name { … }`＝セクション名 A/B/C とコード名の衝突を避けるためキーワードで囲む）→ 曲全体の表 → 定番の形 → （表に無いコード）並び順の先頭。
+- 行の中の形は**弦の数が合う調弦にだけ効く**（6 文字＝6 弦、4 文字＝4 弦）。同じ弦数の楽器を 2 つ使うときだけ調弦名を書く（`guitar` `ukulele` `dropd`…＝`chordDiagrams` と同じ名前）。1 文字の楽器記号は却下（`Fm2010` がマンドリンか F マイナーか決まらない・略語禁止の方針）。
+- ミュートは形の中の `x`。`mute` 構文と番号の構文は**言語に置かない**。
+- `@chord(C 7)` は「C と長さの合わない形 7」＝警告（旧: C7）。
+
+**K2. カポ**
+- `chordDiagrams guitar capo 3`：図は押さえる形（鳴る音 − カポ）で、カポからの相対で描く。名前は既定で押さえる形（歌本の慣習）＋譜面の頭に「Capo 3」。`chordNames shape | sounding | both`（both＝「E♭ (C)」）。
+- 押さえる形の綴り（C# か D♭ か）はギタリストの慣習（シャープ寄り・開放コードの名前を優先）＝要規則。
+- **カポの提案**：キーではなく**その曲で実際に使うコード**から、カポ 0〜7 ごとに押さえにくい形（バレー）の数を数えて並べる。エディタで `capo` にカーソル→候補を並べて見せ、選んだら数字を書く（`capo auto` はソースに書かない＝コード 1 つの修正で全部の図が変わりうる）。試作: E♭ の曲→カポ 3（C の形）・B♭→カポ 3（G の形）・F#m→カポ 2・A→カポ 2（F#m・Bm7 を避ける）＝ギタリストの選び方と合う。
+
+**K3. エディタ（Ctrl+Alt+↑↓）**
+- 形の上・名前だけの `@chord` の上で押すと、並び順の次／前の形を探して**形の文字列を書き換える**（今の形がミュート入りでも、並び順のどこに当たるかを求めて進む＝`x` は外れる。ミュートは決めた後で入れ直す＝ユーザー決定）。定番の形まで戻ったら形を消す。
+- 並び順（エディタだけの規則・凍結しない）: 0 番＝定番の形 → 以降は極大の形（下記）をポジション→指の数→低音弦からの辞書順。カーソルを置くと「3 番目／52 通り」を表示。押すたびに鳴らす（実装済みの audition を流用）。
+- 極大の形＝規則（3 弦以上・0〜15 フレット・構成音だけ・5 度以外の特徴音は必須・最低音は根音（分数コードはその音）・押さえる幅 5 フレット以内・指 4 本以内（最低フレットのバレーは 1 本））を満たし、どのミュート弦もどのフレットでも鳴らせない形。**押さえられる形はすべて「極大の形＋ミュート」**（6 コードで全数確認・取りこぼし 0）。旧案「最低音の弦から 1 弦まで全部鳴らす土台」は取りこぼしがあった（例 Cm7 `x3x546`）＝ユーザーの指摘。
+- ウクレレ（G が高い調弦）は「最低音は根音」が成り立たない＝0 番は表、1 番以降の規則は別途。
+
+**K4. 置き換え**: `a02967b3` の番号・`mute` の構文と「番号があれば描く」→ K1 と `layout`（数え上げ・描画・3fr 修正・書き出しは流用）／`86b606f5` の番号の増減 → 形の書き換え（音符の `'`・`,` と試聴は流用）。
+
+**K5. 順序（案）**: ① 定番の表の移植＋`layout { chordDiagrams 調弦 }`＋図の描画条件の置き換え ② `@chord(X 形)`・行の `X(形)`・弦の数による振り分け ③ `layout` の表（曲全体・セクション）④ エディタの形の書き換え ⑤ カポ（図・名前・提案）⑥ 使用コード一覧（曲の頭）⑦ ウクレレの 1 番以降 ⑧ 音符を作る `chord(X)`（K1 の後で再設計）。
+
+**K6. 否定した案（蒸し返さない）**: `@frame`・`@gchord`・`@fret`・`@shape`（語が不適）／`.fret().mute()`・`mute(…)` 入れ子・`chord(…)@chord@diagram`（冗長）／`ooxxoo`（`o`＝開放弦）／ポジション＋番号・番号をソースに（凍結が要る）／楽器ごとの `chords {}` 複製／1 文字の楽器記号（`Fm2010` が曖昧）。
 
 ### S. スラーとタイの LP 忠実度（2026-09-26・第647 起票・ユーザー決定）← **新ワークストリーム**
 

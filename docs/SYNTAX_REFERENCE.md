@@ -1570,6 +1570,11 @@ Written as they print — an UPPERCASE root, `#`/`b`, a bare quality (`C`, `Am`,
 c4@chord(C) d@chord(Dm) e@chord(Em) f@chord(F) |
 ```
 
+The symbol is the FIRST word of the argument: the words after it ask for a chord diagram
+(`@chord(Cm7 2)`, see *Chord Diagrams*). A space therefore separates words — `@chord(C 7)`
+is C with voicing 7, not C7 (write `@chord(C7)`). A bare `@chord` names the chord from the
+notes it sits on.
+
 In a `chords NAME { }` row the same symbols place themselves on the bar's beat
 grid (no durations): one entry takes the bar, two in 4/4 are halves, and `.`
 holds the previous chord one more beat:
@@ -1624,6 +1629,94 @@ c4@diagram(x32010) d@diagram(xx0232) e@diagram(022100).down f |   // C, D, E (th
 A diagram stands above its note whatever the stem; `.down` puts it below. The `.ly` twin
 writes `\fret-diagram-terse`; MusicXML writes a `<frame>`, inside the `<harmony>` of an
 `@chord(…)` on the same note. Its size is the `fonts` key `diagram` (see *Text Fonts*).
+A shape that reaches past the 4th fret is drawn from its lowest fretted fret and labelled
+`Nfr` (`x35343` is `3fr`), as LilyPond draws it.
+
+### A diagram with the chord name: `@chord(Cm7 2)`
+
+`@chord` takes optional words after the chord symbol that choose a diagram; the NAME is drawn
+where every chord symbol is drawn, and the DIAGRAM stands under it, between the name and the
+staff:
+
+```
+c4@chord(Cm7)              // the name only
+c4@chord(Cm7 2)            // the name + voicing 2 of Cm7
+c4@chord(Cm7 2 mute 3 4)   // … with strings 3 and 4 muted
+c4@chord(D mute 5)         // voicing 0 with string 5 muted: the open D, xx0232
+c4@chord(Cm7 x3x546)       // the name + a diagram written out
+c4@chord(x32010)           // a diagram written out; the name (C) comes from its notes
+c4@chord(C/G 2 mute 1)     // a slash chord: G is the lowest note
+```
+
+- **Word 1** is a chord symbol (as in *Chord Names*) or a **position string** — it starts with
+  `x`, `o` or a digit, lower case, one character per string from the LOW string, as long as the
+  part's tuning has strings.
+- **Word 2** (after a symbol only) is a voicing **index** — 1 to 3 digits, counted **from 0** —
+  or a position string. The two cannot be confused: a position string is at least 4 long.
+- **`mute`** and one or more string numbers, in any order, mute those strings of the chosen
+  voicing (guitarist's numbering: 1 is the highest-pitched string). It applies to the index
+  form only — with no index it means index 0 — and is an **overlay**: it never renumbers and
+  the result is not checked again (muting the root string to make an inversion is your call).
+  A written-out diagram mutes with its own `x`.
+- The tuning is the **part's**: its `tuning`, else its `instrument` preset's, else the guitar.
+- `@chord` takes no `.up`/`.down`: the diagram is always above, under its name.
+- `@diagram(x32010)` is unchanged: a diagram with no name.
+
+**The base voicings — frozen rules.** These rules are frozen: any change to them renumbers
+written indices, so it is a breaking change.
+
+The index form works on a *guitar-type* tuning: open pitches strictly rising from the lowest
+string to the highest (standard guitar E2 A2 D3 G3 B3 E4, drop D, a 7-string, a bass). On a
+re-entrant tuning (a ukulele's G4 C4 E4 A4) it warns and draws no diagram — write the
+position string instead.
+
+A shape assigns each string muted or a fret. A shape is VALID when:
+
+- **V1.** at least 3 strings sound; frets 0..15;
+- **V2.** only chord tones sound — the pitch classes of the chord; for a slash chord X/Y, X's
+  tones plus Y;
+- **V3.** every REQUIRED tone sounds: all of the chord's tones except the perfect fifth,
+  which may be omitted; altered fifths (dim, aug, m7-5, 7-5, 7+5) are required; for X/Y, Y is
+  required;
+- **V4.** the LOWEST-PITCHED sounding note is the root (for X/Y: Y);
+- **V5.** span: among fretted strings (fret > 0), max − min ≤ 4; open strings are not counted;
+- **V6.** at most 4 fingers: one per fretted string, except that if the lowest fretted fret f
+  is used on two or more strings and every string between its first and last use is fretted
+  at ≥ f (none open or muted), those strings at f count as ONE finger (barre).
+
+A BASE is a MAXIMAL valid shape: valid, and no muted string can be given any fret 0..15 such
+that the result is still valid. (Every valid shape is then a base with some strings muted —
+which is what `mute` reaches.)
+
+ORDER (index 0 = first): (a) POSITION = lowest fretted fret, 0 if none fretted, ascending;
+(b) FINGER COUNT (V6's count), ascending; (c) frets as a tuple from the LOWEST string to the
+highest, muted = −1, lexicographic ascending.
+
+Index 0 is therefore the lowest-position shape — often, not always, one with open strings:
+C's #0 is `x32010` and G7's `320001`, but F's is `xx3211` (a barre at the first fret) and D's
+is `x50232` (the fifth string adds a D at its 5th fret), so the familiar open D is
+`@chord(D mute 5)`. On standard tuning:
+
+| chord | bases | examples |
+|---|---|---|
+| C | 57 | `x32010` #0, `x35553` #12, `8-10-10-9-8-8` #47; `x3x010` = `@chord(C 0 mute 4)` |
+| Cm7 | 52 | `x35343` #2, `x3x546` #3, `8-10-8-8-8-8` #31 |
+| D | 64 | `x50232` #0 (open D = `@chord(D mute 5)`), `x54232` #2, `x57775` #9, `10-12-12-11-10-10` #47 |
+
+Hovering the annotation in the editor shows the chosen shape, its index and range
+(`#2 (0–51)`) and the fret on each string.
+
+**Warnings (LYS1038).** The diagram is then not drawn; the name still is: an index out of range
+(`Cm7 has 52 voicings on this tuning (0–51).`), a chord with no voicing on the tuning, a
+`mute` number outside 1..n, a string listed twice, `mute` with no numbers, `mute` after a
+written-out diagram, a position string of the wrong length, the index form on a re-entrant
+tuning, a word 2 that is neither an index nor a position string, and extra words. A written-out
+diagram whose notes name no chord draws with no name and warns (write the name first). An
+unknown chord symbol keeps `@chord`'s own warning (LYS1008).
+
+**Exports.** The `.ly` twin writes the name in the part's `ChordNames` line and the diagram as
+the note's `\fret-diagram-terse` markup, so LilyPond stacks it under the name; MusicXML nests
+the diagram's `<frame>` in the `<harmony>`. A diagram does not sound in the MIDI.
 
 ## Guitar Bends and Technique Letters
 

@@ -58,8 +58,29 @@ internal static class ArticulationSpacing
         ArticulationType.Fermata or ArticulationType.FermataShort
             or ArticulationType.FermataLong => 0.40,
         ArticulationType.Portato => 0.45,
+        // The chord diagram is LilyPond's TextScript (\markup \fret-diagram-terse), not a
+        // Script: its padding is TextScript's. Until 2026-09-28 it took the Scripts' 0.20, which
+        // nothing saw while every diagram was a 450 mover lifted off by the outside-staff pass;
+        // the diagram an @chord chooses is placed by THIS side-position (it declares no
+        // priority, ArticulationSpacing.OutsideStaffPriority(ArticulationItem)), and at 0.20 its
+        // grid stood 0.30 over the top line where the LilyPond twin leaves a clear half space.
+        // LILYPOND-REF: scm/define-grobs.scm TextScript — padding 0.3, staff-padding 0.5
+        //   (the second is StaffPadding below).
+        ArticulationType.FretFrame => 0.30,
         _ => 0.20,
     };
+
+    /// <summary>
+    /// A script's <c>staff-padding</c>: the floor its reference point keeps off the staff's
+    /// outer line ink — the Script grob's 0.25, a chord diagram's (a TextScript) 0.5.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Script staff-padding 0.25; TextScript staff-padding 0.5.
+    /// Only the diagram an <c>@chord</c> chooses is placed by this floor (a <c>@diagram</c> is a
+    /// 450 mover and the outside-staff pass lifts it off); see <see cref="VerticalPadding"/>.
+    /// </remarks>
+    public static double StaffPadding(ArticulationType type)
+        => type == ArticulationType.FretFrame ? 0.5 : 0.25;
 
     /// <summary>
     /// A script's declared <c>outside-staff-priority</c>, or <c>null</c> when it declares
@@ -98,6 +119,25 @@ internal static class ArticulationSpacing
         ArticulationType.FretFrame => TextScriptOutsideStaffPriority,
         _ => null,
     };
+
+    /// <summary>
+    /// The priority of one placed script: its type's, except that the diagram an
+    /// <c>@chord</c> chose (<see cref="Model.ArticulationItem.UnderChordName"/>) declares NONE.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
+    /// it and the staff" — LilyPond's ChordNames line over a FretBoards line). Lily# places an
+    /// inline chord name BEFORE the outside-staff movers and seeds it as their support
+    /// (<c>OutsideStaffStacker</c>'s chord-symbol seed), so a diagram left a 450 mover is lifted
+    /// OVER its own name — measured on the first cut: the diagram at 10.78 above the staff
+    /// middle, the name's baseline under it. Without a priority the diagram stays in the
+    /// staff's support skyline (<c>LayoutEngine.AugmentSkylinesWithScripts</c>), and the
+    /// chord-name line — which clears that skyline — stands above it. Two neighbouring diagrams
+    /// cannot overprint for want of the stacking a mover gets: the spacing stands every
+    /// diagram beside the next (<c>SpacingRules.ApplyFretFrameSpacing</c>).
+    /// </remarks>
+    public static double? OutsideStaffPriority(Model.ArticulationItem a)
+        => a.UnderChordName ? null : OutsideStaffPriority(a.Type);
 
     /// <summary>
     /// The chord diagram's priority — it is no Script: LilyPond spells <c>@diagram</c> as

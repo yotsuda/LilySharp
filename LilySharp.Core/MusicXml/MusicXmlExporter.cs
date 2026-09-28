@@ -117,6 +117,7 @@ public sealed class MusicXmlExporter
     private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _noteFrameSpec; // @diagram(...) on the note being written
+    private int[] _partTuning = Tablature.Tunings.Guitar; // the part an @chord's voicing counts on
     private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
     private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
@@ -1809,6 +1810,8 @@ public sealed class MusicXmlExporter
 
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
+        // The strings an @chord's voicing index counts on (the page's reading, the same header).
+        _partTuning = Tablature.Tunings.GetTuning(header.Tuning);
 
         // The part's General MIDI sound, the one the .mid gives it (HANDOFF §2 F-midi).
         if (_currentPart != null)
@@ -3445,21 +3448,41 @@ public sealed class MusicXmlExporter
         // ⚠️ Only the TEXT is taken: a <harmony> has no typography to carry, so the raised
         // run the symbol would print with on the page (ChordSymbolText.SuperFrom) is the
         // page's and stops here, exactly as the spelling does.
+        // ★ The diagram an @chord's own words choose (`@chord(Cm7 2)`, `@chord(Cm7 x3x546)`,
+        // owner's decision 2026-09-27) is resolved against the PART's tuning — the reading the
+        // page draws with (Semantics.ChordAnnotation) — and nests in the <harmony> as its
+        // <frame>. A written-out diagram with no symbol (`@chord(x32010)`) is named from its
+        // notes as the page names it; if they name nothing there is no <harmony> for the
+        // <frame> to live in (MusicXML has no free-standing frame) and nothing is written.
         if (_currentMeasure != null
-            && LilySharp.Core.Semantics.AnnotationValues.Chord(
-                mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out _)
-                is { Text.Length: > 0 } chordSymbol
-            && chordSymbol.Text is var chordText)
+            && LilySharp.Core.Semantics.ChordAnnotation.Of(mark) is { } words)
         {
-            if (BuildHarmony(chordText) is { } harmony)
+            var diagram = words.WantsDiagram ? words.Resolve(_partTuning) : default;
+            string? chordText =
+                LilySharp.Core.Semantics.AnnotationValues.Chord(
+                    mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out _)
+                    is { Text.Length: > 0 } chordSymbol
+                    ? chordSymbol.Text
+                    : words.NamesFromDiagram && diagram.HasDiagram
+                      && LilySharp.Core.Semantics.ChordAnnotation.NameFromFrets(
+                          diagram.Frets, _partTuning, _keyFifths) is { } derived
+                        ? derived.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text
+                        : null;
+            if (chordText != null)
             {
-                // A @diagram on the same note nests inside the harmony (MusicXML
-                // <frame> is a harmony child).
-                if (_noteFrameSpec is { } fspec && BuildFrame(fspec) is { } frameEl)
-                    harmony.Add(frameEl);
-                _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
+                if (BuildHarmony(chordText) is { } harmony)
+                {
+                    // The @chord's own diagram, else a @diagram on the same note — both nest
+                    // inside the harmony (MusicXML <frame> is a harmony child).
+                    string? fspec = diagram.HasDiagram
+                        ? Music.ChordVoicings.ToFrameSpec(diagram.Frets)
+                        : _noteFrameSpec;
+                    if (fspec != null && BuildFrame(fspec) is { } frameEl)
+                        harmony.Add(frameEl);
+                    _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
+                }
+                return;
             }
-            return;
         }
 
         // Figured bass is read from the annotation too, and for the same reason: it is a
@@ -3644,18 +3667,25 @@ public sealed class MusicXmlExporter
     /// <summary>&lt;frame&gt; from a diagram spec ("x32010", LOW string
     /// first): frame-note per sounding string (string 1 = highest pitch),
     /// muted strings omitted per the schema.</summary>
+    /// <remarks>
+    /// The fret is read by the page's one reader (<c>FretFrameGeometry.FretAt</c>), so the
+    /// frets 10–15 a chosen voicing can use (spelled a–f inside the spec) come out as numbers.
+    /// <c>frame-frets</c> is the rows the page draws and <c>first-fret</c> the fret they start
+    /// at when the shape is shifted (the page's "Nfr" label) — MusicXML's own spelling of both.
+    /// </remarks>
     private static System.Xml.Linq.XElement? BuildFrame(string spec)
     {
         int strings = spec.Length;
         if (strings < 4) return null;
         var frame = new System.Xml.Linq.XElement("frame",
             new System.Xml.Linq.XElement("frame-strings", strings),
-            new System.Xml.Linq.XElement("frame-frets", 4));
+            new System.Xml.Linq.XElement("frame-frets", Svg.Layout.FretFrameGeometry.RowCount(spec)));
+        if (Svg.Layout.FretFrameGeometry.BaseFret(spec) is > 1 and var firstFret)
+            frame.Add(new System.Xml.Linq.XElement("first-fret", firstFret));
         for (int i = 0; i < strings; i++)
         {
-            char ch = spec[i];
-            if (ch == 'x') continue;
-            int fret = ch is >= '1' and <= '9' ? ch - '0' : 0;
+            int fret = Svg.Layout.FretFrameGeometry.FretAt(spec, i);
+            if (fret < 0) continue;
             frame.Add(new System.Xml.Linq.XElement("frame-note",
                 new System.Xml.Linq.XElement("string", strings - i),
                 new System.Xml.Linq.XElement("fret", fret)));

@@ -24,6 +24,31 @@ All notable changes to the Lily# VS Code extension are documented here.
   lowercase): a name of several words is camelCase.
 - **Value words are lowercase only** — `@notehead(triangle)`, `@diagram(x32010)`,
   `size a4`, `210mm`; `@notehead(TRIANGLE)` or `size A4` is refused with the spelling.
+- **`@chord(C 7)` is C with voicing 7, not C7** — the words after the chord symbol now choose
+  a chord diagram; write `@chord(C7)`.
+
+### Chord diagrams from `@chord`
+
+- **`@chord(Cm7 2)` draws voicing 2 of Cm7 as a diagram under the name** (the index counts
+  from 0 on the part's tuning); `@chord(Cm7 2 mute 3 4)`, `@chord(D mute 5)` (the open D),
+  `@chord(Cm7 x3x546)` and `@chord(x32010)` (named from its notes) are the other forms. The
+  rules that number the voicings are frozen and stated in the syntax reference.
+- **Hover** a `@chord` with a diagram to see the chosen shape (`x35343`), which voicing it is
+  and the range (`#2 (0–51)`), and the fret on each string. A diagram that cannot be drawn is
+  a warning (LYS1038) that names the fix; the name still draws.
+- Chord-symbol completion inside `@chord(…)` works as before on the first word.
+
+### Editor
+
+- **`Ctrl+Alt+Up` / `Ctrl+Alt+Down` step what the caret is on**: a note gains or loses one
+  octave mark (`'` / `,`; a chord member alone, or the whole chord from its `>`; every note
+  of a selection), and inside `@chord(…)` the voicing index goes up or down
+  (`@chord(Cm7)` → `@chord(Cm7 0)`; Down from `0` back to the name). Off a note they are VS
+  Code's *Add Cursor Above / Below* as before. One undo step for all cursors.
+- **Audition as you edit** (with a preview open): the note, chord or `@chord` voicing the
+  caret lands on, a note as you type it, and the result of a step sound through the preview's
+  synth, with the pitches the compiler plays. `lilysharp.audition.enabled` (default on)
+  switches it off; `Alt+P` / `Alt+M` are unaffected.
 
 ## 0.9.0
 

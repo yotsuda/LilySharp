@@ -29,6 +29,7 @@ import { registerAiTransform } from './aiTransform';
 import { registerAiComplete } from './aiComplete';
 import { pickAiModel } from './modelClient';
 import { registerSmartTyping } from './smartTyping';
+import { registerStepAudition } from './stepAudition';
 import { registerExportBatch } from './exportBatch';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
@@ -558,6 +559,17 @@ export function activate(context: vscode.ExtensionContext) {
     // slurs, octave marks, beams, ties and durations — hence smartTyping, not
     // smartBrackets.
     registerSmartTyping(context, (msg: string) => outputChannel.appendLine(msg));
+
+    // The step keys (Ctrl+Alt+Up / Ctrl+Alt+Down: a note's octave mark, an @chord's
+    // voicing index) and the automatic audition (the caret landing on a note, a note
+    // typed, a step) — owner's decision 2026-09-28. The server computes both; the
+    // preview webview is the synth, and with no preview open they are silent.
+    registerStepAudition(context, {
+        getClient: () => client,
+        isReady: () => clientReady,
+        getPreview: (uri: string) => previewPanels.get(uri),
+        log: (msg: string) => outputChannel.appendLine(msg),
+    });
 
     // Watch for document changes
     context.subscriptions.push(
@@ -3522,6 +3534,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             else { auditionNote(a.position, a.gapMs); }
         }
 
+        // Arbitrary pitches for a fixed time: the step keys and the automatic
+        // audition (the caret landing on a note, a typed note, an @chord's voicing).
+        // The extension sends the compiler's MIDI numbers, so no note list is
+        // needed here. Same voice as the held audition: a fresh strike (the huge
+        // gap), then released after durationMs instead of waiting for key-repeats.
+        function playPitches(pitches, timbre, durationMs) {
+            if (!pitches || pitches.length === 0) { return; }
+            stopHeldNote();
+            holdNotes(pitches, timbre || 0, 1e9);
+            if (heldWatchdog) { clearTimeout(heldWatchdog); }
+            heldWatchdog = setTimeout(stopHeldNote, durationMs || 450);
+        }
+
         document.getElementById('playBtn').addEventListener('click', () => {
             setPlayUi(true); // immediate feedback while the request runs
             // A highlighted note (editor sync / preview click) is the start
@@ -3661,6 +3686,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     }
                     break;
                 }
+                case 'playPitches':
+                    playPitches(message.pitches, message.timbre, message.durationMs);
+                    break;
                 // Context-menu actions. Play reuses the Play button's path
                 // exactly (fetch the events, then start at pendingStartPos), so
                 // the right-clicked note resolves to an onset the same way a

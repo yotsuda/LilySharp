@@ -52,10 +52,22 @@ public sealed partial class LilySharpLanguageServer
         if (node == null)
             return null;
 
-        var chordLike = ChordLikeAt(node);
-        if (chordLike != null)
-            node = chordLike;
-        var content = chordLike != null ? ChordHover(doc.Tree, chordLike) : GetHoverContent(node);
+        // An @chord that chooses a diagram hovers as that diagram — checked first, because the
+        // mark sits INSIDE a chord (`<c e g>@chord(C 0)`), which would otherwise answer.
+        string? content = null;
+        if (ChordDiagramMarkAt(node) is { } diagramMark
+            && ChordDiagramHover(diagramMark) is { } diagramHover)
+        {
+            node = diagramMark;
+            content = diagramHover;
+        }
+        else
+        {
+            var chordLike = ChordLikeAt(node);
+            if (chordLike != null)
+                node = chordLike;
+            content = chordLike != null ? ChordHover(doc.Tree, chordLike) : GetHoverContent(node);
+        }
         if (content == null)
             return null;
 
@@ -81,6 +93,59 @@ public sealed partial class LilySharpLanguageServer
     // table, so the two features cannot drift apart on the same construct).
     private static string? GetHoverContent(SyntaxNode node)
         => LanguageReference.Hover(node);
+
+    /// <summary>The <c>@chord(…)</c> mark the hovered node is or sits inside, when its words ask
+    /// for a diagram (<see cref="ChordAnnotation.WantsDiagram"/>); else null.</summary>
+    private static MusicMarkSyntax? ChordDiagramMarkAt(SyntaxNode node)
+    {
+        for (var n = node; n != null; n = n.Parent)
+            if (n is MusicMarkSyntax mark)
+                return ChordAnnotation.Of(mark) is { WantsDiagram: true } ? mark : null;
+        return null;
+    }
+
+    /// <summary>
+    /// The diagram an <c>@chord</c> resolves to on its part's tuning — the page's reading
+    /// (<see cref="ChordAnnotation.Resolve"/>): the position string, which voicing of how many
+    /// (the index counts from 0), and the fret on each string, string 6 first:
+    /// <c>**Chord diagram** `Cm7` `x35343` #2 (0–51)</c> then <c>6 x · 5 3 · 4 5 · 3 3 · 2 4 · 1 3</c>.
+    /// When nothing is drawn, the reason (the LYS1038 message) is what hovers.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision, 2026-09-27: "Hover on a @chord with a diagram: the resolved voicing as
+    /// a position string, '#3 of 52', and the frets per string" (0-based since 2026-09-28,
+    /// shown with its range). A frets-10-and-up voicing spells with '-' (<c>8-10-10-9-8-8</c>).
+    /// </remarks>
+    internal static string? ChordDiagramHover(MusicMarkSyntax mark)
+    {
+        if (ChordAnnotation.Of(mark) is not { WantsDiagram: true } words)
+            return null;
+        if (words.Problem != null)
+            return "**Chord diagram** — " + words.Problem;
+        if (ChordAnnotation.PartTuningOf(mark) is not { } tuning)
+            return "**Chord diagram** — the parts that may play this phrase are tuned differently, "
+                + "so the diagram depends on which part plays it.";
+        var resolved = words.Resolve(tuning);
+        if (!resolved.HasDiagram)
+            return resolved.Problem != null ? "**Chord diagram** — " + resolved.Problem : null;
+
+        var head = new StringBuilder("**Chord diagram**");
+        if (words.Symbol != null)
+            head.Append(" `").Append(words.Symbol).Append('`');
+        else if (ChordAnnotation.NameFromFrets(resolved.Frets, tuning, 0) is { } named)
+            head.Append(" `").Append(named.DisplayName(ChordSpelling.Canonical)).Append('`');
+        head.Append("  `").Append(ChordVoicings.Spell(resolved.Frets)).Append('`');
+        if (resolved.Index >= 0)
+            head.Append("  #").Append(resolved.Index)
+                .Append(" (0–").Append(resolved.Count - 1).Append(')');
+        if (!words.Mutes.IsDefaultOrEmpty)
+            head.Append("  mute ").Append(string.Join(" ", words.Mutes));
+
+        int n = resolved.Frets.Length;
+        var strings = Enumerable.Range(0, n)
+            .Select(i => $"{n - i} {(resolved.Frets[i] < 0 ? "x" : resolved.Frets[i].ToString(System.Globalization.CultureInfo.InvariantCulture))}");
+        return head + "\n\n" + string.Join("  ·  ", strings);
+    }
 
     /// <summary>The chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio, <c>q</c> or <c>chords { }</c> entry the
     /// hovered node is (or sits inside — a member pitch hovers as its chord), or null.</summary>

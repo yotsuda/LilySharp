@@ -519,6 +519,9 @@ public sealed class LilyPondExporter
                         + " reads it as one voice's simultaneous music");
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
                 ArmPartHome(part);
+                // The strings an @chord's voicing index counts on — the part's tuning, read
+                // as the page reads it (PartHeaderDefaults), so the twin draws the same frets.
+                _partTuning = Tablature.Tunings.GetTuning(Semantics.PartHeaderDefaults.Read(part).Tuning);
                 string varName = VarName(name);
                 partVars[name] = varName;
                 // An undeclared part has no `octave` or `instrument` to anchor to, so it takes
@@ -3141,6 +3144,13 @@ public sealed class LilyPondExporter
                 case MusicMarkSyntax mk when OttavaCommand(mk.MarkName, mk.IsSpanEnd) is { } ott:
                     prefix.Append(ott).Append(' ');
                     break;
+                // An @chord that chooses a diagram: the diagram is the note's markup, and the
+                // name goes wherever EmitMark sends an @chord (the part's ChordNames stream).
+                case MusicMarkSyntax mk when ChordDiagramMarkup(mk) is { } chordDiagram:
+                    suffix.Append(chordDiagram);
+                    string cm = EmitMark(mk);
+                    if (cm.Length > 0) prefix.Append(cm).Append(' ');
+                    break;
                 case MusicMarkSyntax mk:
                     string m = EmitMark(mk);
                     if (m.Length > 0) prefix.Append(m).Append(' ');
@@ -3706,12 +3716,43 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private string? FretDiagram(MusicMarkSyntax mk)
+        => Semantics.AnnotationValues.Frame(mk) is { } spec
+            ? FretDiagramMarkup(spec, above: mk.ForcedAbove != false)
+            : null;
+
+    /// <summary>
+    /// The chord diagram an <c>@chord</c>'s own words choose (<c>@chord(Cm7 2)</c>,
+    /// <c>@chord(Cm7 x3x546)</c>, <c>@chord(x32010)</c> — owner's decision 2026-09-27), as the
+    /// same fret-diagram markup <c>@diagram</c> writes, over the note; null when the mark asks
+    /// for none or the part's tuning draws none (the page draws none then either).
+    /// </summary>
+    /// <remarks>
+    /// ★ THE NAME STAYS ABOVE IT for the reason the page's does: the name rides the part's
+    /// ChordNames context (<see cref="EmitInlineChordTracks"/>), a line of its own standing over
+    /// the staff, and the markup is a TextScript of the staff — so LilyPond stacks the diagram
+    /// between the staff and the name, the owner's ChordNames-over-FretBoards picture.
+    /// The frets are the part's tuning's (<c>_partTuning</c>, the page's reading).
+    /// </remarks>
+    private string? ChordDiagramMarkup(MusicMarkSyntax mk)
+        => Semantics.ChordAnnotation.Of(mk) is { WantsDiagram: true } words
+           && words.Resolve(_partTuning) is { HasDiagram: true } resolved
+            ? FretDiagramMarkup(Music.ChordVoicings.ToFrameSpec(resolved.Frets), above: true)
+            : null;
+
+    /// <summary>The part being written's open strings (the page's <c>PartHeaderDefaults.Tuning</c>).</summary>
+    private int[] _partTuning = Tablature.Tunings.Guitar;
+
+    private string FretDiagramMarkup(string spec, bool above)
     {
-        if (Semantics.AnnotationValues.Frame(mk) is not { } spec)
-            return null;
+        // One entry a string, low string first: x, o, or the fret — read by the page's own
+        // reader, so a chosen voicing's frets 10–15 are written as numbers.
         var terse = new StringBuilder();
-        foreach (char ch in spec)
-            terse.Append(ch == '0' ? 'o' : ch).Append(';');
+        for (int i = 0; i < spec.Length; i++)
+        {
+            int fret = Svg.Layout.FretFrameGeometry.FretAt(spec, i);
+            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                 .Append(';');
+        }
         string size = _fontPlan.WrittenStep(Rendering.TextRole.FretFrame) is { } step && step != 0
             ? "\\override #'(size . "
               + Math.Pow(2, step / 6.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + ") "
@@ -3721,7 +3762,7 @@ public sealed class LilyPondExporter
         // diagram alone so an ordinary ^"text" keeps overhanging as it does on the page.
         // LILYPOND-REF: ly/property-init.ly textLengthOn.
         return "-\\tweak extra-spacing-width #'(-0.0 . 0.4) -\\tweak extra-spacing-height #'(-inf.0 . +inf.0) "
-            + (mk.ForcedAbove == false ? "_" : "^")
+            + (above ? "^" : "_")
             + "\\markup " + size + "\\fret-diagram-terse \"" + terse + "\"";
     }
 

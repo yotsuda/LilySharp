@@ -66,6 +66,13 @@ public sealed record ArticulationItem
     /// 0 = open, digit = fret); only for <see cref="ArticulationType.FretFrame"/>.</summary>
     public string? FrameSpec { get; init; }
 
+    /// <summary>
+    /// True for the diagram an <c>@chord(Cm7 2)</c> chose: it stands UNDER its chord name, so
+    /// it is not an outside-staff mover (<see cref="Layout.ArticulationSpacing.OutsideStaffPriority(ArticulationItem)"/>)
+    /// — it stays in the staff's support skyline, which the chord-name line is placed above.
+    /// </summary>
+    public bool UnderChordName { get; init; }
+
     /// <summary>Right-hand pluck letter (p/i/m/a); only for
     /// <see cref="ArticulationType.Pluck"/>.</summary>
     public string? PluckLetter { get; init; }

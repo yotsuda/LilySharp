@@ -43,6 +43,39 @@ workflow attaches that section to the GitHub Release verbatim.
   `@figuredBass(6 s)`), paper size names (`size a4`) and units (`210mm`) are lowercase
   only; `@notehead(TRIANGLE)`, `size A4` and `210MM` are refused with the spelling to
   write. Free text (`@text("Dolce")`) and chord symbols (`@chord(Dm)`) keep their case.
+- **`@chord`'s argument is read as words: `@chord(C 7)` is C with voicing 7, not C7.** The
+  words after the symbol now choose a chord diagram (below), so a space no longer joins the
+  symbol back together — write `@chord(C7)`. `@chord(C m7)` names C and warns (LYS1038) that
+  `m7` is neither a voicing index nor a position string. No book in the repository or the
+  test corpora wrote a spaced `@chord(…)`.
+
+### Chord diagrams from `@chord`
+
+- **`@chord` takes optional words that draw a chord diagram under the name.**
+  `c4@chord(Cm7 2)` prints Cm7 with its voicing 2 drawn beneath it, between the name and the
+  staff; `@chord(Cm7 2 mute 3 4)` mutes strings 3 and 4 of that voicing (1 is the
+  highest-pitched string; any order); `@chord(D mute 5)` is voicing 0 with string 5 muted —
+  the open D; `@chord(Cm7 x3x546)` draws a diagram written out; `@chord(x32010)` draws it and
+  names the chord from its notes (C). The index counts from 0 on the PART's tuning (its
+  `tuning`, else its instrument's, else the guitar); `@diagram(…)` is unchanged.
+- **The voicings follow frozen rules**, stated in the syntax reference (*Chord Diagrams*): at
+  least three strings, frets 0–15, chord tones only, every tone but the perfect fifth, the
+  root (or the slash bass) lowest, a span of at most four frets, at most four fingers with a
+  barre at the lowest fret counting once; a base is a shape no muted string of which can be
+  made to sound; they are ordered by position, then fingers, then frets from the low string.
+  Changing any of this renumbers indices, so it will only ever change as a breaking change.
+  On standard tuning C has 57 bases (`x32010` is #0), Cm7 52 (`x35343` is #2), D 64.
+- **A diagram that cannot be drawn warns (LYS1038) and the name still draws**: an index out of
+  range (`Cm7 has 52 voicings on this tuning (0–51).`), a chord with no voicing on the tuning,
+  a bad `mute`, a position string of the wrong length, the index form on a re-entrant tuning
+  such as the ukulele's, or a written-out diagram whose notes name no chord.
+- **A diagram reaching past the 4th fret is shifted as LilyPond shifts it.** `x35343` is now
+  drawn from the 3rd fret with a `3fr` label; the grid used to stay at the nut and drop its
+  5th-fret dots. A shape spanning five frets draws five rows.
+- **The twin and MusicXML carry it**: the `.ly` twin writes the name in the part's
+  `ChordNames` line and the diagram as `\fret-diagram-terse` on the note (LilyPond stacks it
+  under the name); MusicXML nests the diagram's `<frame>` — with `<first-fret>` when shifted —
+  in the chord's `<harmony>`. The MIDI is unchanged: a diagram does not sound.
 
 ## 0.9.0
 

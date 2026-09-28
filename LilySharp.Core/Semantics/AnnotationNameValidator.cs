@@ -241,6 +241,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         mark.Span,
                         DiagnosticCodes.MarkLabelNotQuoted,
                         "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
+                else if (ChordDiagramProblem(mark) is { } diagramProblem)
+                    _diagnostics.Warning(mark.Span, DiagnosticCodes.ChordDiagramNotDrawn, diagramProblem);
                 else if (mark.Parent is ChordSyntax chord && mark.MarkName == "chord" && !CanNameChord(chord))
                     _diagnostics.Warning(
                         chord.Span,
@@ -310,6 +312,9 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             || AnnotationValues.Frame(mark) is not null
             // The spelling cannot change WHETHER a mark names a chord, only how it prints.
             || AnnotationValues.Chord(mark, ChordSpelling.Default, out _) is not null
+            // …and a written-out diagram alone names its chord from its notes
+            // (@chord(x32010)); what it cannot draw is ChordDiagramProblem's to say.
+            || ChordAnnotation.Of(mark) is { NamesFromDiagram: true }
             || AnnotationValues.Rehearsal(mark, out _) is not null
             || AnnotationValues.Figures(mark) is not null)
             return true;
@@ -406,7 +411,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// </summary>
     private static string? UnregisteredChordQuality(MusicMarkSyntax mark)
     {
-        var written = AnnotationValues.WrittenArgument(mark);
+        // The SYMBOL is the first word; the words after it choose a diagram (ChordAnnotation).
+        var written = ChordAnnotation.Of(mark)?.Symbol ?? "";
         if (written.Length == 0 || written[0] == '"')
             return null;
         int slash = written.IndexOf('/');
@@ -415,6 +421,40 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                && quality.Length > 0
             ? quality
             : null;
+    }
+
+    /// <summary>
+    /// Why the chord diagram an <c>@chord</c> asks for is not drawn, or null (LYS1038).
+    /// </summary>
+    /// <remarks>
+    /// The words' own problems first (<see cref="ChordAnnotation.Problem"/>), then what the
+    /// PART's tuning makes of them (<see cref="ChordAnnotation.Resolve"/>), then — for a
+    /// written-out diagram with no name — whether its notes name a chord. The same two readers
+    /// the page draws with, so a warning here is a diagram missing there.
+    /// ⚠️ Outside every part (a phrase), with parts tuned differently, the tuning is not the
+    /// tree's to say (<see cref="ChordAnnotation.PartTuningOf"/> answers null) and only the
+    /// words' own problems are reported: the page, which knows the part, still draws or does
+    /// not draw by the right tuning.
+    /// </remarks>
+    private static string? ChordDiagramProblem(MusicMarkSyntax mark)
+    {
+        if (ChordAnnotation.Of(mark) is not { } chord)
+            return null;
+        // A word the grammar does not take is reported whether or not a diagram was asked for:
+        // `@chord(C m7)` is no index and no position string (it named Cm7 before 2026-09-27).
+        if (chord.Problem != null)
+            return chord.Problem;
+        if (!chord.WantsDiagram)
+            return null;
+        if (ChordAnnotation.PartTuningOf(mark) is not { } tuning)
+            return null;
+        var resolved = chord.Resolve(tuning);
+        if (resolved.Problem != null)
+            return resolved.Problem;
+        if (chord.NamesFromDiagram && resolved.HasDiagram
+            && ChordAnnotation.NameFromFrets(resolved.Frets, tuning, 0) is null)
+            return ChordAnnotation.NoDerivedName(chord.Written!);
+        return null;
     }
 
     /// <summary>

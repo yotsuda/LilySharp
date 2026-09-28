@@ -915,6 +915,15 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string MidBarBreakNotSplit = "LYS1037";
 
+    /// <summary>Warning: an <c>@chord</c> asks for a chord diagram that cannot be drawn — a
+    /// voicing index out of range, a position string of the wrong length, a bad <c>mute</c>, a
+    /// re-entrant tuning — or its written-out diagram names no chord.</summary>
+    /// <remarks>
+    /// Owner's decision, 2026-09-27: the diagram then draws nothing and the NAME still draws
+    /// when there is one; each message names the fix (<c>Semantics.ChordAnnotation</c>).
+    /// </remarks>
+    public const string ChordDiagramNotDrawn = "LYS1038";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

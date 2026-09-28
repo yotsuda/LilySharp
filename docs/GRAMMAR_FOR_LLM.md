@@ -354,7 +354,17 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)` , `e4@chord(Am7)` — the SYMBOL as it
   prints (`F#m`, `Bb7/D`, `Gm7-5`), the same format as a chords row. The retired
   lowercase `:` entry (`@chord(a:m)`) is not recognised (LYS1008 warns, no symbol is
-  engraved). A bare `@chord` derives it from the notes.
+  engraved). A bare `@chord` derives it from the notes. The symbol is the FIRST word only:
+  `@chord(C 7)` is C with voicing 7 — write `@chord(C7)` for C7.
+- Chord name + diagram (the diagram stands under the name): `c4@chord(Cm7 2)` (voicing 2,
+  counted from 0), `@chord(Cm7 2 mute 3 4)` (mute strings 3 and 4 of it; 1 = highest-pitched
+  string), `@chord(D mute 5)` (voicing 0 with string 5 muted = the open D `xx0232`),
+  `@chord(Cm7 x3x546)` (a diagram written out, low string first), `@chord(x32010)` (the name
+  is derived from the diagram's notes). An index is 1–3 digits; a position string is as long
+  as the part's tuning has strings. The voicings of a chord on the part's tuning follow frozen
+  rules (docs/SYNTAX_REFERENCE.md *Chord Diagrams*): #0 is the lowest-position shape — C
+  `x32010`, Cm7 #2 `x35343`, D #0 `x50232`. A diagram that cannot be drawn warns LYS1038
+  (e.g. `Cm7 has 52 voicings on this tuning (0–51).`) and the name still draws.
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)

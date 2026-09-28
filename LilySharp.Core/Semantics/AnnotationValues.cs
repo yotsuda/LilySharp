@@ -343,11 +343,14 @@ public static class AnnotationValues
     /// §9.3 counted, now gone.
     /// </para>
     /// <para>
-    /// ⚠️ ALL the arguments, joined, not the first one. <c>@chord(c :m7)</c> — written
-    /// with a space — is two runs and names Cm7 today, and reading only the first would
-    /// quietly stop accepting it. (Measured: across the 80-book corpus and 219 fixtures
-    /// every one of the 14 written <c>@chord(…)</c> arguments is a single run, so the
-    /// spaced form is unexercised, not impossible.)
+    /// ⚠️ THE FIRST WORD ONLY, since 2026-09-27 (owner's decision; a BREAKING change). The
+    /// runs used to be concatenated, so <c>@chord(C 7)</c> named C7; the words after the
+    /// symbol now choose a chord diagram (<see cref="ChordAnnotation"/>), and
+    /// <c>@chord(C 7)</c> is C with voicing 7. (Measured before the change: across the repo's
+    /// <c>.lys</c> and the Lab corpora no <c>@chord(…)</c> argument was written with a space.)
+    /// A written-out diagram alone — <c>@chord(x32010)</c> — names its chord from the
+    /// diagram's notes, which needs the part's tuning, so this answers null for it and the
+    /// page asks <see cref="ChordAnnotation.NameFromFrets"/>.
     /// </para>
     /// <para>
     /// ⚠️ <b>A behaviour change, declared and chosen</b>: a '.' WRITTEN inside the
@@ -366,25 +369,9 @@ public static class AnnotationValues
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
     /// </remarks>
     /// <summary>
-    /// A mark's argument exactly as written, with the runs concatenated —
-    /// <c>@chord(C 7)</c> and <c>@chord(C7)</c> both give "C7". Empty when the mark
-    /// carries no argument at all.
-    /// </summary>
-    /// <remarks>
-    /// One spelling, so the reader and the diagnostic that explains a rejection cannot
-    /// disagree about what the writer typed.
-    /// </remarks>
-    public static string WrittenArgument(MusicMarkSyntax mark) => mark.Arguments.Length switch
-    {
-        0 => "",
-        1 => mark.Arguments[0].Text,
-        _ => string.Concat(mark.Arguments.Select(a => a.Text)),
-    };
-
-    /// <summary>
     /// The symbol an <c>@chord</c> mark prints, spelled the way <paramref name="spelling"/>
     /// asks, and the structure behind it; null when the mark is not an <c>@chord</c> or
-    /// names nothing Lily# can print.
+    /// names nothing Lily# can print from its words alone.
     /// </summary>
     /// <remarks>
     /// ⚠️ The spelling is a REQUIRED argument (<see cref="ChordSpelling"/>). A caller that
@@ -396,31 +383,25 @@ public static class AnnotationValues
         out Music.ChordStructure? structure)
     {
         structure = null;
-        if (!string.Equals(mark.Name, "chord", StringComparison.Ordinal))
+        if (ChordAnnotation.Of(mark) is not { } chord)
             return null;
 
         // No argument at all: a bare '@chord' derives its symbol from the notes it sits
         // on, and '@chord()' is the state the completion leaves behind. Both are known
         // annotations that name nothing here, which is what the empty string says.
-        var written = WrittenArgument(mark);
-        if (written.Length == 0)
+        if (chord.IsBare)
             return Music.ChordSymbolText.Flat("");
 
         // Quoted free text — @chord("N.C.") — prints verbatim, dots and all. Read from
         // the TEXT (which keeps the quotes) rather than the value, so that an unbalanced
         // quote is refused here exactly as it was before.
-        if (written[0] == '"')
-        {
-            int close = written.LastIndexOf('"');
-            return close >= 1
-                ? Music.ChordSymbolText.Flat(written.Substring(1, close - 1))
-                : null;
-        }
+        if (chord.QuotedText is { } quoted)
+            return Music.ChordSymbolText.Flat(quoted);
 
         // A real chord entry (the chords{} form) prints as its canonical symbol;
         // anything else is refused (→ unknown-annotation warning), which steers @chord
         // to chords that can also be played. Free display text goes in quotes, above.
-        if (Music.ChordStructure.TryParseChordEntry(written, out var parsed))
+        if (chord.Structure is { } parsed)
         {
             structure = parsed;
             return parsed.PrintedSymbol(spelling);

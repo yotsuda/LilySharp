@@ -124,10 +124,35 @@ public sealed partial class MeasureCollector
             if (child is not MusicMarkSyntax markSyntax)
                 continue;
 
+            // The words after the symbol choose a chord diagram (owner's decision 2026-09-27):
+            // read once, resolved against THIS part's tuning — the page knows the part, which
+            // the tree alone does not when the music is a phrase.
+            var words = Semantics.ChordAnnotation.Of(markSyntax);
+            var diagram = words is { WantsDiagram: true }
+                ? words.Resolve(_partTuning)
+                : default;
+
             var chordSymbol = Semantics.AnnotationValues.Chord(
                 markSyntax, _chordSpelling, out var structure);
             if (chordSymbol is not { } sym)
+            {
+                // @chord(x32010): a written-out diagram with no symbol. The diagram draws, and
+                // the name is the one its notes spell — by the recognizer a bare @chord uses
+                // on notes — or none, which LYS1038 reports.
+                if (words is { NamesFromDiagram: true } && diagram.HasDiagram)
+                {
+                    AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
+                    if (Semantics.ChordAnnotation.NameFromFrets(
+                            diagram.Frets, _partTuning, WrittenKeySharps()) is { } fromFrets)
+                    {
+                        var named = fromFrets.PrintedSymbol(_chordSpelling);
+                        _chordNameCollector.AddInline(
+                            named.Text, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
+                            _cursor.StaffIndex, fromFrets, named.SuperFrom);
+                    }
+                }
                 continue;
+            }
             string chordText = sym.Text;
             int superFrom = sym.SuperFrom;
 
@@ -148,8 +173,55 @@ public sealed partial class MeasureCollector
             _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
                 _cursor.StaffIndex, structure, superFrom);
+            if (diagram.HasDiagram)
+                AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
         }
     }
+
+    /// <summary>
+    /// The chord diagram an <c>@chord</c> chose, as the page's diagram — the very item
+    /// <c>@diagram(…)</c> makes, so its size, its place in the outside-staff stack, the
+    /// side-by-side spacing and its drawing are that annotation's, not a second copy of them.
+    /// </summary>
+    /// <remarks>
+    /// ★ BELOW THE NAME, which is the owner's picture (LilyPond's ChordNames standing over a
+    /// FretBoards line): the diagram is an above-staff script that declares no outside-staff
+    /// priority (<see cref="ArticulationItem.UnderChordName"/>), so it is in the staff's
+    /// script-augmented up-skyline, and the chord-name line is placed OVER that skyline
+    /// (<c>ChordNameEngraver.Calculate</c>'s line floor) — the name rises above the diagram.
+    /// ⚠️ The ONE difference from <c>@diagram</c>'s item is that flag: left a 450 mover, the
+    /// diagram was lifted over its own name (the name is the movers' support).
+    /// ⚠️ ALWAYS ABOVE: <c>@chord</c> takes no <c>.up</c>/<c>.down</c> (the parser reads the
+    /// placement word after <c>@text</c> and <c>@diagram</c> only), and a diagram under the
+    /// staff with its name over it would not be a chord symbol any more.
+    /// </remarks>
+    private void AddChordDiagram(MusicMarkSyntax markSyntax, ImmutableArray<int> frets,
+        int measureIndex, int itemIndex)
+        => _articulations.Add(new ArticulationItem(
+            ArticulationType.FretFrame, measureIndex, itemIndex, true,
+            markSyntax.SourceStart, _cursor.StaffIndex)
+        {
+            FrameSpec = Music.ChordVoicings.ToFrameSpec(frets),
+            VoiceIndex = _cursor.VoiceIndex,
+            UnderChordName = true,
+        });
+
+    /// <summary>The key signature as WRITTEN at this point of the walk — the one a chord
+    /// named from notes is spelled in (<see cref="TryNameChord"/> reads it the same way).</summary>
+    private int WrittenKeySharps() => _meta.KeySharps - _octave.TransposeKeySharps(0);
+
+    /// <summary>The open strings of the part being collected, LOW string first
+    /// (<see cref="Semantics.PartHeaderDefaults.Tuning"/>): what an <c>@chord</c>'s voicing
+    /// index counts on. The guitar until a part says otherwise.</summary>
+    private int[] _partTuning = Tablature.Tunings.Guitar;
+
+    /// <summary>Reads the tuning of <paramref name="partName"/> for the chord diagrams its
+    /// <c>@chord</c> marks choose.</summary>
+    private void SetPartTuning(SyntaxNode root, string? partName)
+        => _partTuning = partName == null
+            ? Tablature.Tunings.Guitar
+            : Tablature.Tunings.GetTuning(Semantics.PartHeaderDefaults.Read(
+                Semantics.ConcertPitch.FindPart(root, partName)).Tuning);
 
     /// <summary>
     /// When set, every chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio and <c>q</c> this collect walks

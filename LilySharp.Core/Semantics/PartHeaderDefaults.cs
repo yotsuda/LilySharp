@@ -122,6 +122,19 @@ public sealed class PartHeaderDefaults
     /// <summary>The part's written <c>midiInstrument</c> name (quotes removed), or null.</summary>
     public string? MidiInstrument { get; private init; }
 
+    /// <summary>
+    /// The tuning the part's strings are tuned to: its <c>tuning</c> word, else the one its
+    /// <c>instrument</c> preset implies, else the guitar.
+    /// </summary>
+    /// <remarks>
+    /// The same precedence the page's tab reads (<c>RenderSpecParser.ParseTab</c>, less the
+    /// score row's own modifier, which belongs to one rendering and not to the part) and the
+    /// twin's (<c>LilyPondExporter.TabTuningType</c>). Read here for the chord diagrams an
+    /// <c>@chord(Cm7 2)</c> chooses (2026-09-28): a voicing is a fact about the instrument, so
+    /// it is asked of the part, never of a staff.
+    /// </remarks>
+    public TuningType Tuning { get; private init; } = TuningType.Guitar;
+
     /// <summary>The defaults of a part that declares nothing.</summary>
     public static readonly PartHeaderDefaults Empty = new();
 
@@ -217,6 +230,7 @@ public sealed class PartHeaderDefaults
             TranspositionSemitones = transposition,
             MidiProgram = midiProgram,
             MidiInstrument = midiName,
+            Tuning = Tunings.Parse(tuningText ?? InstrumentDefaults.GetTuning(preset)),
         };
     }
 

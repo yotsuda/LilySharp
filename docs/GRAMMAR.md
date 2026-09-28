@@ -1869,6 +1869,17 @@ Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
 Annotation     = '@' , [ '!' ] , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;
 Placement      = '.up' | '.down' ;   (* force above / below; default is automatic *)
+
+(* @chord's argument: its Args are WORDS (owner's decision 2026-09-27). *)
+ChordArgument  = ChordEntry , [ VoicingIndex | PositionString ] , [ Mute ]    (* Mute only with no PositionString *)
+               | PositionString                                  (* the name comes from its notes *)
+               | QuotedText ;                                    (* @chord("N.C.") *)
+VoicingIndex   = Digit , [ Digit , [ Digit ] ] ;                 (* 0-based; 1–3 digits *)
+PositionString = ( 'x' | 'o' | Digit ) , { 'x' | 'o' | Digit } ; (* one per string, LOW string
+                                                                    first; exactly as many as the
+                                                                    part's tuning has strings (≥ 4) *)
+Mute           = 'mute' , StringNumber , { StringNumber } ;      (* 1 = highest-pitched string;
+                                                                    any order; each once *)
 (* A value-bearing annotation puts its argument(s) in parentheses (space- or
    comma-separated); '.' is reserved for the .up / .down placement suffix. *)
 (* '@!X' is the TERMINATOR: it ends what '@X' opened, and it reports the SAME name, so the
@@ -1915,7 +1926,14 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Chord name:    c4@chord(C) , d4@chord(Dm)   (* the SYMBOL as it prints — the same
                     ChordEntry format as a chords row: Am7, G7, F#m, Bb7/D. The retired
                     lowercase ':' entry ('@chord(a:m)') is NOT recognised — LYS1008 warns
-                    and the symbol is not engraved. A bare '@chord' derives it from the notes. *)
+                    and the symbol is not engraved. A bare '@chord' derives it from the notes.
+                    The words after the symbol ask for a chord DIAGRAM drawn under the name
+                    (ChordArgument below): c4@chord(Cm7 2) , c4@chord(Cm7 2 mute 3 4) ,
+                    c4@chord(D mute 5) , c4@chord(Cm7 x3x546) , c4@chord(x32010).
+                    ⚠️ Since 2026-09-27 words are NOT concatenated: '@chord(C 7)' is C with
+                    voicing 7, not C7. The voicings (numbered from 0), their frozen rules and
+                    order: SYNTAX_REFERENCE *Chord Diagrams*. A diagram that cannot be drawn
+                    warns LYS1038 and the name still draws. *)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)

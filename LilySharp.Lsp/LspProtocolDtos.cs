@@ -457,3 +457,70 @@ public class FactsForRangeResponse
     public ResolvedPitchFact[] Pitches { get; set; } = System.Array.Empty<ResolvedPitchFact>();
     public string? Error { get; set; }
 }
+
+/// <summary>One selection of lilysharp/step, as 0-based character offsets into the document
+/// text (<c>Start == End</c> is a caret).</summary>
+public class StepSelection
+{
+    public int Start { get; set; }
+    public int End { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/step (Ctrl+Alt+Up / Ctrl+Alt+Down): every selection
+/// and the direction, +1 up or -1 down.</summary>
+public class StepParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public StepSelection[] Selections { get; set; } = System.Array.Empty<StepSelection>();
+    public int Direction { get; set; }
+}
+
+/// <summary>One replacement of <c>[Start, End)</c> (offsets into the text of
+/// <see cref="StepResponse.Version"/>).</summary>
+public class StepTextEdit
+{
+    public int Start { get; set; }
+    public int End { get; set; }
+    public string NewText { get; set; } = "";
+}
+
+/// <summary>
+/// Response for lilysharp/step. <see cref="Fallback"/>: no selection was on anything
+/// steppable, so the editor runs the key's own command (add a cursor above/below).
+/// Otherwise the edits (applied as ONE undo step; empty when the step changed nothing), a
+/// status-bar message, and what to sound afterwards: MIDI pitches from the compiler and the
+/// preview synth's timbre family (PlaybackNote.I).
+/// </summary>
+public class StepResponse
+{
+    public bool Fallback { get; set; }
+    public StepTextEdit[] Edits { get; set; } = System.Array.Empty<StepTextEdit>();
+    public string? Message { get; set; }
+    public int[] Pitches { get; set; } = System.Array.Empty<int>();
+    public int Timbre { get; set; }
+    /// <summary>The document version the edits are against; the client applies them only
+    /// when its document is still that version.</summary>
+    public int Version { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/auditionAt: the caret as a 0-based character offset.</summary>
+public class AuditionAtParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public int Offset { get; set; }
+}
+
+/// <summary>
+/// Response for lilysharp/auditionAt: what the caret is on and what it sounds. <see cref="Key"/>
+/// is the thing's start offset (-1: on nothing that sounds) — the client plays only when it
+/// differs from the last one; <see cref="Kind"/> is note, member, chord or voicing.
+/// </summary>
+public class AuditionAtResponse
+{
+    public int Key { get; set; } = -1;
+    public string? Kind { get; set; }
+    public int[] Pitches { get; set; } = System.Array.Empty<int>();
+    public int Timbre { get; set; }
+    public int Version { get; set; }
+}

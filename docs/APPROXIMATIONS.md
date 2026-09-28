@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
-| `OWN` | 171 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **287** | |
+| `OWN` | 174 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **290** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -50,8 +50,8 @@
 - **:1270** whiteout −1) is not ported.
 - **:1390** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
-- **:305** Lily# has not ported; this arrow is its own device.
-- **:755** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:307** Lily# has not ported; this arrow is its own device.
+- **:757** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -64,8 +64,8 @@
 ### `LilySharp.Core/Svg/Layout/AlignmentWalk.cs`
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:719** that does not exist yet. Named, not silently approximated.
-- **:2784** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:718** that does not exist yet. Named, not silently approximated.
+- **:2783** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（56 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2681** container, and the value stops being unobserved with the line above.
+- **:2684** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:687** no observer; add the paren widths when a book brings one. The unpacked
 - **:689** bare glyph width, which is exact for one and unobserved for many.
@@ -159,12 +159,12 @@
 ### `LilySharp.Core/Svg/Layout/ArpeggioEngraver.cs`
 - **:205** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:367** hands the scorer the band it would have had without the digit. No book reaches that
-- **:2050** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:2218** see the difference, and no fixture and no ledger point reaches it.
-- **:2896** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:366** hands the scorer the band it would have had without the digit. No book reaches that
+- **:2049** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:2217** see the difference, and no fixture and no ledger point reaches it.
+- **:2895** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
-- **:90** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
+- **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2659** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -230,12 +230,12 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（171 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（174 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2676** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:4829** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:6346** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2679** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:4870** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:6387** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -246,6 +246,8 @@
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordVoicing.cs`
 - **:29** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): the WINDOW voicing. Every
+### `LilySharp.Core/Music/ChordVoicings.cs`
+- **:31** LILYSHARP-OWN, all of it: LilyPond has no voicing catalogue. Its predefined fret diagrams
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:448** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
@@ -265,7 +267,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:180** LILYSHARP-OWN: LilyPond has no scoop or plop — no grob and no event spells either in
 - **:235** The bend amount label's ENGRAVING em. LILYSHARP-OWN, as
-- **:303** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
+- **:305** LILYSHARP-OWN: LilyPond's guitar bend is the BendSpanner (`\^`) — a line and curve to
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:573** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
@@ -276,7 +278,9 @@
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
 - **:705** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:552** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:592** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+### `LilySharp.Core/Semantics/ChordAnnotation.cs`
+- **:62** LILYSHARP-OWN: LilyPond names a chord in a ChordNames context and draws a diagram in a
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
 - **:271** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
 - **:279** The range a size may take, in staff spaces. LILYSHARP-OWN, as
@@ -287,8 +291,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2698** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4947** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2701** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:4950** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -309,10 +313,12 @@
 - **:814** ⚠️ LILYSHARP-OWN: ONE NOMINAL BOX FOR EVERY REST, WHICH LILYPOND DOES NOT HAVE. There a
 - **:914** a LILYSHARP-OWN divergence that had been measured and left because closing it redraws
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
-- **:122** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
-- **:128** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
-- **:130** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
-- **:132** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
+- **:121** LILYSHARP-OWN: the bend-up is Lily#'s own arrow-and-label device — LilyPond's guitar
+- **:127** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
+- **:129** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
+- **:131** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
+### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
+- **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:284** ⚠️ LILYSHARP-OWN, AND IT IS THE BAND TOP, NOT LILYPOND'S REFPOINT.
 - **:300** Lily#'s own object, hence LILYSHARP-OWN rather than a REF.

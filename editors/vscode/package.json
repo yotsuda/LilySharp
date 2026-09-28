@@ -189,6 +189,11 @@
           "default": "auto",
           "description": "The score preview's color scheme. Takes effect immediately in open previews."
         },
+        "lilysharp.audition.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what Ctrl+Alt+Up / Ctrl+Alt+Down step a note or a chord voicing to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
+        },
         "lilysharp.completion.flatSpelling": {
           "type": "string",
           "enum": [
@@ -294,6 +299,16 @@
         "command": "lilysharp.playMeasureAtCursor",
         "category": "Lily#",
         "title": "Play Current Measure"
+      },
+      {
+        "command": "lilysharp.stepUp",
+        "category": "Lily#",
+        "title": "Step Up (octave mark / chord voicing)"
+      },
+      {
+        "command": "lilysharp.stepDown",
+        "category": "Lily#",
+        "title": "Step Down (octave mark / chord voicing)"
       },
       {
         "command": "lilysharp.previewPlayFromHere",
@@ -439,6 +454,14 @@
         },
         {
           "command": "lilysharp.playMeasureAtCursor",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.stepUp",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.stepDown",
           "when": "resourceLangId == lilysharp"
         },
         {
@@ -588,6 +611,16 @@
         "command": "lilysharp.playMeasureAtCursor",
         "key": "alt+m",
         "when": "editorTextFocus && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.stepUp",
+        "key": "ctrl+alt+up",
+        "when": "editorTextFocus && !editorReadonly && editorLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.stepDown",
+        "key": "ctrl+alt+down",
+        "when": "editorTextFocus && !editorReadonly && editorLangId == lilysharp"
       },
       {
         "command": "lilysharp.smartType",

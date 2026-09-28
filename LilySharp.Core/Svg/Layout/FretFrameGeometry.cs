@@ -70,21 +70,78 @@ internal static class FretFrameGeometry
     {
         int strings = System.Math.Max(4, spec?.Length ?? 6);
         double halfW = (strings - 1) * StringSpacing(s) / 2 + MarkHalf(s);
-        double top = FretRows * FretSpacing(s) + HeaderRise(s) + MarkHalf(s);
+        int rows = spec is null ? FretRows : RowCount(spec);
+        double top = rows * FretSpacing(s) + HeaderRise(s) + MarkHalf(s);
         // Room for the label only where one is drawn — a first-position shape has none, and
         // reserving it anyway pushed the NEXT diagram off its neighbour's empty air.
         double labelRoom = spec is null || BaseFret(spec) > 1 ? LabelGap(s) + 2.0 * s : 0.0;
         return new GlyphMetrics.BBox(-halfW, 0, halfW + labelRoom, top);
     }
 
-    /// <summary>The fret the grid starts at: 1, or the lowest fretted note when every
-    /// fretted note is above the 4th fret (the shape is shifted down and labelled "Nfr").</summary>
+    /// <summary>
+    /// The fret on string <paramref name="i"/> of a spec (LOW string first): −1 muted
+    /// (<c>x</c>), 0 open (<c>o</c> or <c>0</c>), else the fret.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ TWO ALPHABETS, ONE READER. A WRITTEN spec (<c>@diagram(x32010)</c>, the position
+    /// string of <c>@chord(x32010)</c>) is x / o / 0–9 only — the gate is
+    /// <c>Semantics.AnnotationValues.Frame</c>. A voicing <c>@chord(Cm7 31)</c> CHOOSES can
+    /// stand at frets 10–15, which one character per string cannot spell in digits, so the
+    /// spec it hands the page carries them as <c>a</c>–<c>f</c> (<c>8aa988</c> is
+    /// 8-10-10-9-8-8; <c>Music.ChordVoicings.ToFrameSpec</c> writes it). A writer cannot type
+    /// those letters — the written gate refuses them — so the internal alphabet never meets a
+    /// user's spelling. The drawing, the reservation, the twin and MusicXML all read a fret
+    /// through here, so none of them can read the two alphabets differently.
+    /// </remarks>
+    internal static int FretAt(string spec, int i) => spec[i] switch
+    {
+        'x' => -1,
+        'o' => 0,
+        >= '0' and <= '9' and var d => d - '0',
+        >= 'a' and <= 'f' and var h => h - 'a' + 10,
+        _ => -1,
+    };
+
+    /// <summary>The fret the grid starts at: 1, or the lowest fretted note when a fretted
+    /// note lies beyond the 4th fret (the shape is shifted and labelled "Nfr").</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/fret-diagrams.scm:233-254 fret-parse-marking-list — "calculate
+    ///   fret-range": when <c>maxfret &gt; my-fret-count</c> the range becomes
+    ///   <c>(minfret . max(minfret + fret-count − 1, maxfret))</c>, else <c>(1 . fret-count)</c>;
+    ///   the dots are then counted from <c>(1- (car fret-range))</c>. Open strings are not dots.
+    /// ⚠️ Until 2026-09-28 Lily# shifted only when EVERY fretted note was above the 4th fret
+    /// (<c>minFret &gt; 4</c>), so a shape straddling it — <c>x35553</c>, <c>x35343</c> — kept
+    /// the grid at fret 1 and its 5th-fret dots fell off the bottom row undrawn. No book wrote
+    /// such a diagram (measured: no <c>@diagram(</c> in any <c>.lys</c> of the repo or of the
+    /// Lab corpora), and the voicings <c>@chord(Cm7 2)</c> chooses are exactly that shape, so
+    /// LilyPond's rule came in with them.
+    /// </remarks>
     internal static int BaseFret(string spec)
     {
-        int minFret = int.MaxValue;
-        foreach (var ch in spec)
-            if (ch is >= '1' and <= '9')
-                minFret = System.Math.Min(minFret, ch - '0');
-        return minFret != int.MaxValue && minFret > 4 ? minFret : 1;
+        var (min, max) = FrettedRange(spec);
+        return max > FretRows ? min : 1;
+    }
+
+    /// <summary>The fret rows the grid draws: <see cref="FretRows"/>, or more when a shifted
+    /// shape spans further (LilyPond's <c>fret-range</c> above — a span of five frets draws
+    /// five rows rather than dropping a dot).</summary>
+    internal static int RowCount(string spec)
+    {
+        var (min, max) = FrettedRange(spec);
+        return max > FretRows ? System.Math.Max(FretRows, max - min + 1) : FretRows;
+    }
+
+    private static (int Min, int Max) FrettedRange(string spec)
+    {
+        int min = int.MaxValue, max = 0;
+        for (int i = 0; i < spec.Length; i++)
+        {
+            int f = FretAt(spec, i);
+            if (f <= 0)
+                continue;
+            min = System.Math.Min(min, f);
+            max = System.Math.Max(max, f);
+        }
+        return (min == int.MaxValue ? 1 : min, max);
     }
 }
