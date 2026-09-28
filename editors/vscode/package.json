@@ -253,6 +253,11 @@
         "title": "Regroup (by part ⇄ by section)"
       },
       {
+        "command": "lilysharp.splitSectionsToMatch",
+        "category": "Lily#",
+        "title": "Split Sections to Match a Part"
+      },
+      {
         "command": "lilysharp.convertOctavesToAbsolute",
         "category": "Lily#",
         "title": "Convert Octaves to Absolute"
@@ -431,6 +436,10 @@
           "when": "resourceLangId == lilysharp"
         },
         {
+          "command": "lilysharp.splitSectionsToMatch",
+          "when": "resourceLangId == lilysharp"
+        },
+        {
           "command": "lilysharp.convertOctavesToAbsolute",
           "when": "resourceLangId == lilysharp"
         },
@@ -556,6 +565,11 @@
         },
         {
           "command": "lilysharp.regroup",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "lilysharp.splitSectionsToMatch",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification@2"
         },

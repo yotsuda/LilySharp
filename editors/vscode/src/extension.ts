@@ -34,6 +34,7 @@ import { registerExportBatch } from './exportBatch';
 import { markdownItExtensionApi } from './markdownFence';
 import { svgPostKey, pagesSummary, SvgPages } from './previewCore';
 import { textFontFaceCss, textFontsRoot } from './scoreFonts';
+import { SplitSectionsChoice, modalText, splitChoiceItems } from './splitSectionsCore';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -466,6 +467,11 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('regroup command triggered');
             regroup();
         }),
+        // From the palette with no arguments (the active file, the first section some part
+        // subdivides), or from the LYS2007 quick fix with the document and the section.
+        vscode.commands.registerCommand('lilysharp.splitSectionsToMatch',
+            (uri?: string, section?: string) => splitSectionsToMatch(
+                typeof uri === 'string' ? uri : undefined, typeof section === 'string' ? section : undefined)),
         vscode.commands.registerCommand('lilysharp.convertOctavesToAbsolute', () => convertOctaves(true)),
         vscode.commands.registerCommand('lilysharp.convertOctavesToRelative', () => convertOctaves(false)),
         vscode.commands.registerCommand('lilysharp.extractPhrase', () => {
@@ -1577,6 +1583,85 @@ async function convertOctaves(absolute: boolean) {
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: octave conversion failed: ${err}`);
+    }
+}
+
+interface SplitSectionsResponse {
+    Success: boolean;
+    NewText: string | null;
+    Plan: string | null;
+    Section: string | null;
+    Choices: SplitSectionsChoice[] | null;
+    Error: string | null;
+}
+
+/**
+ * "Split Sections to Match a Part" (owner's design, 2026-09-28): one part has cut a section into
+ * several and the others still write it whole. The server finds the part to follow, cuts the
+ * others at the same bars, updates the forms and checks that every cut part sounds exactly as
+ * before; this side asks which part to follow only when the candidates disagree, shows the plan
+ * in ONE modal confirmation, and applies it as one edit — one undo restores the file. A refusal
+ * (a tie or slur across a cut, a cut mid-bar, a check that failed) is shown the same way, with
+ * its reasons as the detail.
+ */
+async function splitSectionsToMatch(uriArg?: string, sectionArg?: string) {
+    const doc = uriArg
+        ? vscode.workspace.textDocuments.find(d => d.uri.toString() === uriArg)
+        : vscode.window.activeTextEditor?.document;
+    if (!doc || doc.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to split its sections.');
+        return;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const request = (section?: string, reference?: string) =>
+        client!.sendRequest<SplitSectionsResponse>('lilysharp/splitSections', {
+            textDocument: { uri: doc.uri.toString() },
+            section: section ?? null,
+            reference: reference ?? null,
+        });
+    try {
+        const version = doc.version;
+        let response = await vscode.window.withProgress(
+            { location: vscode.ProgressLocation.Window, title: 'Lily#: checking the split…' },
+            () => request(sectionArg));
+        if (!response.Success && response.Choices && response.Choices.length > 0) {
+            const pick = await vscode.window.showQuickPick(splitChoiceItems(response.Choices), {
+                title: `Lily#: split section ${response.Section} to match which part?`,
+                placeHolder: 'The parts subdivide it differently — pick the one the others should follow',
+            });
+            if (!pick) {
+                return;
+            }
+            const section = response.Section ?? undefined;
+            response = await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Window, title: 'Lily#: checking the split…' },
+                () => request(section, pick.part));
+        }
+        if (!response.Success || response.NewText == null) {
+            const refusal = modalText(response.Error ?? 'The sections were not split.');
+            await vscode.window.showWarningMessage(refusal.message, { modal: true, detail: refusal.detail });
+            return;
+        }
+        const plan = modalText(response.Plan ?? '');
+        const answer = await vscode.window.showInformationMessage(
+            plan.message, { modal: true, detail: plan.detail }, 'Apply');
+        if (answer !== 'Apply') {
+            return;
+        }
+        if (doc.version !== version) {
+            vscode.window.showWarningMessage('Lily#: the file changed while the split was being checked — run the command again.');
+            return;
+        }
+        const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(doc.getText().length));
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(doc.uri, fullRange, response.NewText);
+        await vscode.workspace.applyEdit(edit);
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: splitting sections failed: ${err}`);
     }
 }
 

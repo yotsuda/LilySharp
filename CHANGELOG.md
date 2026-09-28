@@ -136,6 +136,29 @@ workflow attaches that section to the GitHub Release verbatim.
   out with `\5`…`\1`. `chord` is now reserved in music — a phrase cannot be named it (none in
   the repo's or the Lab corpora's 1,206 books was).
 
+### Editor
+
+- **Split Sections to Match a Part.** When one part of a file grouped by part has cut a
+  section into several (`vn1: section A` of 16 bars + `section B` of 121) while the others
+  still write the passage in one `section A` of 137 — the "not the same length everywhere"
+  warning (LYS2007) — the new editor command, also that warning's quick fix, cuts the other
+  parts' `A` (and the section's chord rows and lyrics tracks) at the same bars into the same
+  sections and makes every form play `A B` where it played `A`, inside repeats too. When two
+  parts subdivide the section differently it asks which to follow. It carries on to every
+  section still split differently — a part holding several of the followed part's sections in
+  one (a double bass with all of `A`…`H` in `A`) is cut too, from whichever warning it was
+  started — and refuses the whole plan if any part of it is refused, so no split that leaves
+  a section long in one part is offered; anything still not the same length is named. At each cut the new
+  section's first note gets the octave marks and the note value the section boundary would
+  otherwise reset, and the meter, key and clef in force are restated. The rewrite is compiled
+  and checked before it is offered — every part it cuts sounds exactly as before (MIDI, part
+  by part) and writes as many bars, the warning is gone, no error is new — and one
+  confirmation shows the plan (*Follow vn1: A 16 + B 121 bars. Split A in vn2, va, vc and cb
+  after bar 16 → A, B. Form main: A → A B.*). A tie, slur, hairpin, pedal or other span across
+  a cut, a cut that falls mid-bar, or the section played as a repeat ending is reported with
+  where, and nothing changes. A file grouped by section is not supported yet (regroup it by
+  part first).
+
 ### Fixes
 
 - **An `@chord` on a rest or a spacer draws.** `r1@chord(C x32013)`, `s1@chord(G)` drew

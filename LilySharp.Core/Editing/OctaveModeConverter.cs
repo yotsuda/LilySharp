@@ -186,6 +186,109 @@ public static class OctaveModeConverter
         return new Result(result, null, changed);
     }
 
+    /// <summary>
+    /// The same pitch-preserving machinery, lent to a rewrite that is NOT a mode change:
+    /// <paramref name="candidate"/> is <paramref name="source"/> with text moved around its
+    /// pitches (no pitch added or removed, the order kept), and every pitch the original
+    /// played is re-marked so it resolves to the octave it did — steps ⑵ and ⑶ above, with
+    /// the candidate standing in for the mode-changed file.
+    /// </summary>
+    /// <remarks>
+    /// Written for <see cref="SectionSplitter"/> (2026-09-28): cutting a section in two opens
+    /// the second half in a FRESH frame, so its first pitch needs the marks that put it back
+    /// where the running frame had it. A pitch the original never played (the reference
+    /// part's later sections under a form that did not list them yet) has nothing recorded
+    /// and is left as written; one the original played is played exactly as often, or the
+    /// rewrite is refused.
+    /// </remarks>
+    internal static Result Repin(string source, string candidate)
+    {
+        var tree = SyntaxTree.Parse(source);
+        if (tree.HasErrors)
+            return Fail("The file has syntax errors — no changes made.");
+        var pitches = WrittenPitches(tree.GetRoot());
+        var recorded = new Dictionary<int, List<int>>();
+        if (!Walk(tree, (pos, octave) =>
+            {
+                if (!recorded.TryGetValue(pos, out var list))
+                    recorded[pos] = list = new List<int>();
+                list.Add(octave);
+                return octave;
+            }))
+            return Fail("The file could not be compiled — no changes made.");
+
+        var candidateTree = SyntaxTree.Parse(candidate);
+        if (candidateTree.HasErrors)
+            return Fail("The rewritten file would not parse — no changes made.");
+        var candidatePitches = WrittenPitches(candidateTree.GetRoot());
+        var toOriginal = PositionMap(candidatePitches, pitches);
+        if (toOriginal == null)
+            return Fail("The rewrite moved the notes — no changes made.");
+
+        // ⑵ Force: each recorded pitch resolves where it did; the marks that make it do so
+        // are read off the walk (resolved − written = what the frame contributed).
+        var newMarks = new Dictionary<int, int>();   // candidate position → marks
+        var plays = new Dictionary<int, int>();      // original position → plays seen
+        int? conflict = null;
+        if (!Walk(candidateTree, (pos, octave) =>
+            {
+                if (!toOriginal.TryGetValue(pos, out int orig)
+                    || !recorded.TryGetValue(orig, out var wanted))
+                    return octave;
+                plays.TryGetValue(orig, out int k);
+                plays[orig] = k + 1;
+                if (k >= wanted.Count)
+                    return octave;
+                int marks = wanted[k] - (octave - candidatePitches[pos].Marks);
+                if (newMarks.TryGetValue(pos, out int earlier) && earlier != marks)
+                    conflict ??= orig;
+                newMarks[pos] = marks;
+                return wanted[k];
+            }))
+            return Fail("The rewritten file could not be compiled — no changes made.");
+        if (conflict is { } c)
+            return Fail($"The note at {LineCol(source, c)} is played in places that would need "
+                + "different octave marks after the rewrite — no changes made.");
+        if (recorded.Any(r => plays.GetValueOrDefault(r.Key) != r.Value.Count))
+            return Fail("The rewrite plays the notes a different number of times — no changes made.");
+
+        var edits = new List<Edit>();
+        int changed = 0;
+        foreach (var (pos, marks) in newMarks)
+        {
+            var pitch = candidatePitches[pos];
+            if (marks == pitch.Marks)
+                continue;
+            edits.Add(new Edit(pitch.MarksStart, pitch.MarksEnd, MarkText(marks)));
+            changed++;
+        }
+        var result = Apply(candidate, edits);
+
+        // ⑶ Verify, unforced.
+        var resultTree = SyntaxTree.Parse(result);
+        var resultToOriginal = resultTree.HasErrors ? null
+            : PositionMap(WrittenPitches(resultTree.GetRoot()), pitches);
+        if (resultToOriginal == null)
+            return Fail("The re-marked file lost track of its notes — no changes made.");
+        var again = new Dictionary<int, List<int>>();
+        if (!Walk(resultTree, (pos, octave) =>
+            {
+                if (resultToOriginal.TryGetValue(pos, out int orig))
+                {
+                    if (!again.TryGetValue(orig, out var list))
+                        again[orig] = list = new List<int>();
+                    list.Add(octave);
+                }
+                return octave;
+            }))
+            return Fail("The re-marked file could not be compiled — no changes made.");
+        foreach (var (pos, wanted) in recorded)
+            if (!again.TryGetValue(pos, out var got) || !got.SequenceEqual(wanted))
+                return Fail($"The rewrite would move the note at {LineCol(source, pos)} — "
+                    + "no changes made.");
+        return new Result(result, null, changed);
+    }
+
     private static Result Fail(string error) => new(null, error, 0);
 
     /// <summary>" (section B2 of part bass)" — the declarations around the pitch at

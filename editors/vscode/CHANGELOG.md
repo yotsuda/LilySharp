@@ -92,6 +92,17 @@ All notable changes to the Lily# VS Code extension are documented here.
   caret lands on, a note as you type it, and the result of a step sound through the preview's
   synth, with the pitches the compiler plays. `lilysharp.audition.enabled` (default on)
   switches it off; `Alt+P` / `Alt+M` are unaffected.
+- **Lily#: Split Sections to Match a Part** (command palette, right-click menu, and a quick fix
+  on the "not the same length everywhere" warning): when one part has cut a section into
+  several and the others still write it whole, the others are cut at the same bars into the
+  same sections — chord rows and lyrics tracks too — and the forms play the new sections where
+  they played the old one. If the parts subdivide it differently, a picker asks which to
+  follow; then one confirmation shows the plan, and **Apply** makes it one edit (one undo).
+  The server checks the result first: every cut part sounds and counts exactly as before. The
+  plan covers every part still holding the followed sections in one (from the A warning or the
+  B warning alike) and is refused whole — no partial split is offered. A
+  tie, slur or other span across a cut, or a cut mid-bar, is shown as the reason nothing
+  changed. Files grouped by part.
 
 ### Fixes
 

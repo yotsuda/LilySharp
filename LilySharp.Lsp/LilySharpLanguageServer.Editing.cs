@@ -346,6 +346,8 @@ public sealed partial class LilySharpLanguageServer
                     continue;
                 if (BarCountPadding(doc.Tree, doc.Text, diagnostic) is { } pads)
                     actions.Add(PadBarsAction(doc, uri, diagnostic, pads));
+                if (SplitSectionsAction(doc, uri, diagnostic) is { } split)
+                    actions.Add(split);
             }
         }
         catch
@@ -363,6 +365,47 @@ public sealed partial class LilySharpLanguageServer
 
         return actions.ToArray();
     }
+
+    /// <summary>The command the "split to match" quick fix runs — the extension's, which asks
+    /// the server for the plan (lilysharp/splitSections), shows it and applies it.</summary>
+    internal const string SplitSectionsCommand = "lilysharp.splitSectionsToMatch";
+
+    /// <summary>The second quick fix for an LYS2007 (owner's decision, 2026-09-28): when one part
+    /// has cut the section into several and the others still write it whole, offer to cut the
+    /// others the same way. Only OFFERED here, from the cheap part of the splitter (a parse
+    /// and the bar counts); the plan is built, checked and confirmed when the author picks it.
+    /// </summary>
+    private static CodeAction? SplitSectionsAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        if (diagnostic.Code != DiagnosticCodes.SectionBarCountMismatch)
+            return null;
+        var name = SectionOfWarning.Match(diagnostic.Message);
+        if (!name.Success)
+            return null;
+        var offer = LilySharp.Core.Editing.SectionSplitter.FindOffers(doc.Text)
+            .FirstOrDefault(o => o.Section == name.Groups[1].Value);
+        if (offer == null)
+            return null;
+        string title = offer.NeedsChoice
+            ? $"Split section {offer.Section} in the other parts to match a part…"
+            : $"Split section {offer.Section} in the other parts to match {offer.Candidates[0].Part} "
+                + $"({offer.Candidates[0].Describe()})…";
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Command = new Command
+            {
+                Title = title,
+                CommandIdentifier = SplitSectionsCommand,
+                Arguments = [uri.ToString(), offer.Section],
+            },
+        };
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex SectionOfWarning =
+        new(@"^Section '([^']+)' is not the same length", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>The quick fix for one LYS2007: insert the bare bar lines
     /// <see cref="BarCountPadding"/> settled on, at the end of each short layer's body — one

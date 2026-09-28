@@ -33,6 +33,7 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 | **Code Actions** | Quick fixes and refactoring suggestions |
 | **Signature Help** | Parameter hints while typing keywords |
 | **Document Highlight** | Highlight all occurrences of selected variable |
+| **Split Sections to Match a Part** | One part has cut a section into several (`vn1: section A` + `section B`) while the others still write it whole: cuts the others at the same bars into the same sections (chord rows and lyrics tracks too) and makes the forms play `A B` where they played `A`. Palette command, and a quick fix on the "not the same length" warning. One confirmation shows the plan; it is checked first (every cut part sounds and counts as before) and applied as one edit. A tie, slur or other span across a cut, or a cut mid-bar, is reported instead. Files grouped by part |
 | **Section CodeLens** | Over a section's first declaration: its length, who writes it (parts, chord rows, lyrics tracks — by name, or counted when many) — or each length with who writes it when they disagree — and how often each form names it. A later declaration shows a line only when its length differs from what most of the others write. Click to list everything that writes it |
 
 ### Stepping and Audition

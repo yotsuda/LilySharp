@@ -1049,6 +1049,42 @@ public sealed partial class LilySharpLanguageServer
             : new ConvertOctavesResponse { Success = false, Error = result.Error };
     }
 
+    [JsonRpcMethod("lilysharp/splitSections", UseSingleObjectParameterDeserialization = true)]
+    public Task<SplitSectionsResponse> SplitSectionsAsync(SplitSectionsParams @params, CancellationToken token)
+        => OffDispatch(() => SplitSections(@params), token);
+
+    /// <summary>"Split Sections to Match a Part" (<see cref="LilySharp.Core.Editing.SectionSplitter"/>,
+    /// which compiles the result and compares every cut part's sound before it answers): the
+    /// rewritten document and the plan the editor shows for confirmation, or the choice of part
+    /// to follow when the candidates disagree (grouped: the parts that subdivide alike are one
+    /// choice), or the refusal.</summary>
+    public SplitSectionsResponse SplitSections(SplitSectionsParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new SplitSectionsResponse { Success = false, Error = "Document not found" };
+
+        var result = LilySharp.Core.Editing.SectionSplitter.Split(doc.Text, @params.Section, @params.Reference);
+        if (result.NewText != null)
+            return new SplitSectionsResponse { Success = true, NewText = result.NewText, Plan = result.Plan };
+        if (result.Offer is { } offer)
+            return new SplitSectionsResponse
+            {
+                Success = false,
+                Section = offer.Section,
+                Choices = offer.Candidates
+                    .GroupBy(c => c.Describe())
+                    .Select(g => new SplitSectionsChoice
+                    {
+                        Part = g.First().Part,
+                        Parts = string.Join(", ", g.Select(c => c.Part)),
+                        Description = g.Key,
+                    })
+                    .ToArray(),
+            };
+        return new SplitSectionsResponse { Success = false, Error = result.Error };
+    }
+
     [JsonRpcMethod("lilysharp/regroup", UseSingleObjectParameterDeserialization = true)]
     public Task<RegroupResponse> RegroupAsync(RegroupParams @params, CancellationToken token)
         => OffDispatch(() => Regroup(@params), token);

@@ -313,6 +313,37 @@ public class ConvertOctavesResponse
     public string? Error { get; set; }
 }
 
+/// <summary>Parameters for lilysharp/splitSections: the document, and optionally the section
+/// to split (null: the first one some part subdivides) and the part to follow (null: the only
+/// candidate, or the first of several that agree — otherwise the response asks).</summary>
+public class SplitSectionsParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    public string? Section { get; set; }
+    public string? Reference { get; set; }
+}
+
+/// <summary>One way to follow: the parts that subdivide the section alike (the first is the
+/// one to name as the reference) and how (<c>A 16 + B 121 bars</c>).</summary>
+public class SplitSectionsChoice
+{
+    public string Part { get; set; } = "";
+    public string Parts { get; set; } = "";
+    public string Description { get; set; } = "";
+}
+
+/// <summary>Response for lilysharp/splitSections: the rewritten source and the plan to confirm,
+/// or <see cref="Choices"/> when the parts to follow disagree, or why nothing was done.</summary>
+public class SplitSectionsResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public string? Plan { get; set; }
+    public string? Section { get; set; }
+    public SplitSectionsChoice[]? Choices { get; set; }
+    public string? Error { get; set; }
+}
+
 /// <summary>Parameters for lilysharp/extractPhrase: the caret (or a selection —
 /// snapped outward to whole measures) and the name for the extracted phrase.
 /// Offsets are 0-based character offsets into the document text.</summary>

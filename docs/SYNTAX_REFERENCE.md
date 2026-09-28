@@ -1035,6 +1035,26 @@ section A { key g major }       // applies to every part playing A
 The editor command **Regroup (by part ⇄ by section)** rewrites a file from one grouping to
 the other.
 
+**Splitting the other parts to match.** When one part has cut a section into several
+(`part vn1 { section A { … 16 bars } section B { … 121 bars } }`) while the others still write
+the whole passage in one `section A`, the section is not the same length everywhere
+(LYS2007). The editor command **Split Sections to Match a Part** — also offered as that
+warning's quick fix — cuts the other parts' `A`, and the section's chord rows and lyrics
+tracks, at the same bars into the same sections, and every form plays `A B` where it played
+`A` (`|: A :|` becomes `|: A B :|`). When two parts subdivide the section differently, it asks
+which one to follow. It does not stop at that section: a part that still holds several of the
+followed part's sections in one (the double bass writing all of `A`…`H` in `A` while the others
+write `B`…`H`) is cut too, whichever section's warning it was started from, and the whole plan
+is refused if any part of it is — a split that would leave a section long in one part is never
+offered. Whatever is still not the same length afterwards is named in the plan. A section boundary resets the relative frame, the note value, the meter,
+the key and the clef, so at each cut the new section's first note is given the octave marks
+and the note value that keep it where it was, and the meter / key / clef in force are
+restated. The rewrite is checked before it is offered — every part it cuts must sound exactly
+as before (the MIDI, part by part) and write as many bars, and the warning must be gone — and
+applied as one edit. A tie, slur, hairpin, pedal or other span running across a cut, a cut
+that falls mid-bar, or the section played as a repeat ending (`[1. A]`) is reported instead,
+with where. It works on files grouped by part; regroup a file grouped by section first.
+
 **Those four are the whole list.** A setting that belongs to ONE part — `clef`,
 `instrument`, `transpose`, `octave` — is refused beside a section's part cells
 (**LYS1035** for `clef` / `octave`, **LYS0030** for the other two), because written there it
