@@ -155,10 +155,12 @@ internal sealed record HeaderBand(
     /// <param name="fonts">The score's text metrics — the faces the header is set in.</param>
     /// <param name="subtitle">The subtitle, or null.</param>
     /// <param name="poet">The poet, or null.</param>
+    /// <param name="instrument">The instrument line, or null — "Capo 3" for a capo score
+    /// (2026-09-29): the centre of the poet / composer row, at the composer's size.</param>
     public static HeaderBand? Build(string? title, string? composer, ScoreTextMetrics fonts,
-        string? subtitle = null, string? poet = null)
+        string? subtitle = null, string? poet = null, string? instrument = null)
     {
-        if (title is null && composer is null && subtitle is null && poet is null)
+        if (title is null && composer is null && subtitle is null && poet is null && instrument is null)
             return null;
 
         double? previousBaseline = null;
@@ -196,7 +198,7 @@ internal sealed record HeaderBand(
         double? subtitleBaseline = StackOne(subtitle, SubtitleEm(fonts), TextRole.Subtitle, SubtitleStyle(fonts));
 
         double? composerBaseline = null;
-        if (poet is not null || composer is not null)
+        if (poet is not null || composer is not null || instrument is not null)
         {
             double inkBottom = double.PositiveInfinity, inkTop = double.NegativeInfinity, rowWidth = 0;
             void Add(string? text, double size, TextRole role, FontStyle style)
@@ -209,9 +211,13 @@ internal sealed record HeaderBand(
                 rowWidth += fonts.Advance(text, size, role, style);
             }
             Add(poet, PoetEm(fonts), TextRole.Poet, PoetStyle(fonts));
+            // LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, lines 86-90 — the middle of the
+            // poet / instrument / composer \fill-line; set in the composer's face and size.
+            Add(instrument, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
             Add(composer, ComposerEm(fonts), TextRole.Composer, ComposerStyle(fonts));
-            if (poet is not null && composer is not null)
-                rowWidth += FillLineWordSpace;
+            int strings = (poet is null ? 0 : 1) + (instrument is null ? 0 : 1) + (composer is null ? 0 : 1);
+            if (strings > 1)
+                rowWidth += FillLineWordSpace * (strings - 1);
             composerBaseline = Stack(inkBottom, inkTop, rowWidth);
         }
 

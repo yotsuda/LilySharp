@@ -133,11 +133,17 @@ public sealed partial class MeasureCollector
             // guitar's (ChordDiagramsKey.Resolve); `chordDiagrams none` draws none.
             var words = Semantics.ChordAnnotation.Of(markSyntax);
             var diagramTuning = Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning);
+            // The layout's shape table lists chords that draw wherever they are named, per the
+            // section the mark is WRITTEN in (ChordShapeTable); read only when a table exists.
+            string? section = _chordDiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(markSyntax) : null;
             Music.ChosenShape? DiagramFor(Music.ChordStructure? derived)
-                => words != null && diagramTuning is { } dt ? words.Drawn(dt, _chordDiagramsAll, derived) : null;
+                => words != null && diagramTuning is { } dt
+                    ? words.Drawn(dt, _chordDiagramsAll, derived, _chordDiagramTable, section, _chordSpelling.Capo) : null;
 
+            // The key as written here spells a capo score's pressed name (ChordStructure.Pressed).
+            int keySharps = WrittenKeySharps();
             var chordSymbol = Semantics.AnnotationValues.Chord(
-                markSyntax, _chordSpelling, out var structure);
+                markSyntax, _chordSpelling, out var structure, keySharps);
             if (chordSymbol is not { } sym)
             {
                 // @chord(x32010): a shape with no symbol. The diagram draws (on a diagram
@@ -154,16 +160,17 @@ public sealed partial class MeasureCollector
                         AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
                     if (fromFrets != null)
                     {
-                        var named = fromFrets.PrintedSymbol(_chordSpelling);
+                        var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
                         _chordNameCollector.AddInline(
                             named.Text, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                            _cursor.StaffIndex, fromFrets, named.SuperFrom);
+                            _cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom);
                     }
                 }
                 continue;
             }
             string chordText = sym.Text;
             int superFrom = sym.SuperFrom;
+            int bracketSuperFrom = sym.BracketSuperFrom;
 
             // Bare '@chord' auto-derives the symbol from the notes it's on. On a
             // chord (or a << >> arpeggio — a broken chord names the same way) we
@@ -175,14 +182,15 @@ public sealed partial class MeasureCollector
                 structure = NameFromNotes(node);
                 if (structure == null)
                     continue;
-                var derived = structure.PrintedSymbol(_chordSpelling);
+                var derived = structure.PrintedSymbol(_chordSpelling, keySharps);
                 chordText = derived.Text;
                 superFrom = derived.SuperFrom;
+                bracketSuperFrom = derived.BracketSuperFrom;
             }
 
             _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                _cursor.StaffIndex, structure, superFrom);
+                _cursor.StaffIndex, structure, superFrom, bracketSuperFrom);
             // A bare @chord names its notes and writes no shape, so it draws no diagram (the
             // shape the notes spell on the staff is not a fingering) — save in an `all` score,
             // where its derived name draws the default like any name; nor does a name with no
@@ -242,6 +250,10 @@ public sealed partial class MeasureCollector
     /// <summary>The score's <c>chordDiagrams … all</c>: every <c>@chord</c> name draws a diagram,
     /// its written shape else the default — set with <see cref="_chordDiagramsWord"/>.</summary>
     private bool _chordDiagramsAll;
+
+    /// <summary>The score's layout shape table (<c>chordDiagrams … { Cm7 x35343 … }</c>): the
+    /// chords that draw wherever they are named — or null. Set with <see cref="_chordDiagramsWord"/>.</summary>
+    private Music.ChordShapeTable? _chordDiagramTable;
 
     /// <summary>The fretted tuning of the single staff <paramref name="voiceName"/> — the one its
     /// attached row <paramref name="rowName"/> stands over (<see cref="Semantics.ChordDiagramScores.StaffWord"/>)

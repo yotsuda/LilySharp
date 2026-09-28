@@ -629,8 +629,12 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutMinorChords,
         /// <summary><c>layout { chordDiagrams |</c> — none / the tuning words / all.</summary>
         AfterLayoutChordDiagrams,
-        /// <summary><c>layout { chordDiagrams guitar |</c> — all.</summary>
+        /// <summary><c>layout { chordDiagrams guitar |</c> — capo / all (after <c>capo N</c>: all).</summary>
         AfterLayoutChordDiagramsTuning,
+        /// <summary><c>layout { chordDiagrams guitar capo |</c> — the frets, ranked (CapoAdvisor).</summary>
+        AfterLayoutChordDiagramsCapo,
+        /// <summary><c>layout { chordNames |</c> — shape / sounding / both.</summary>
+        AfterLayoutChordNames,
         /// <summary><c>layout { voltaBracket |</c> — all / line / a number of bars.</summary>
         AfterLayoutVoltaBracket,
         /// <summary><c>[1. B C]@voltaBracket(|</c> — all / line / a number of bars.</summary>
@@ -1009,11 +1013,21 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutMinorChords;
             if (prevWord.Equals(ChordDiagramsKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordDiagrams;
-            // `chordDiagrams guitar |` — the scope word may follow the tuning (and only then:
-            // not after `none`, not after `all`).
+            // `chordDiagrams guitar |` — the capo and the scope word may follow the tuning (and
+            // only then: not after `none`, not after `all`); `chordDiagrams [guitar] capo |` the
+            // ranked frets; `… capo 3 |` the scope word alone.
             if (ChordDiagramsKey.IsTuningWord(prevWord)
                 && SecondWordBeforeCursor(text, offset) == ChordDiagramsKey.Key)
                 return CompletionContext.AfterLayoutChordDiagramsTuning;
+            if (prevWord.Equals(ChordDiagramsKey.CapoWord, StringComparison.Ordinal)
+                && SecondWordBeforeCursor(text, offset) is var beforeCapo
+                && (beforeCapo == ChordDiagramsKey.Key || ChordDiagramsKey.IsTuningWord(beforeCapo)))
+                return CompletionContext.AfterLayoutChordDiagramsCapo;
+            if (prevWord.Length > 0 && prevWord.All(char.IsAsciiDigit)
+                && SecondWordBeforeCursor(text, offset) == ChordDiagramsKey.CapoWord)
+                return CompletionContext.AfterLayoutChordDiagramsTuning;
+            if (prevWord.Equals(ChordNamesKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutChordNames;
             if (prevWord.Equals(VoltaBracketLength.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutVoltaBracket;
             return CompletionContext.LayoutBlock;

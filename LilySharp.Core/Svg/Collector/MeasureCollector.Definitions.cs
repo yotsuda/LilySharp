@@ -515,6 +515,9 @@ public sealed partial class MeasureCollector
         // …and whether every chord name draws one (`chordDiagrams … all`), not only a written shape.
         _chordDiagramsAll = _meta.LayoutPlan.ChordDiagramsAll;
         _chordNameCollector.DiagramsAll = _chordDiagramsAll;
+        // …and the layout's shape table (the chords that draw wherever they are named).
+        _chordDiagramTable = _meta.LayoutPlan.ChordDiagramTable;
+        _chordNameCollector.Table = _chordDiagramTable;
         // …and the score-level meter, while _meta still holds it: every voice's section
         // resets revert to THIS (CollectMeasures), not to whatever _meta holds when that
         // voice starts — the first voice's opening `time` has rewritten it by then.

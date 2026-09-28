@@ -138,8 +138,9 @@ public sealed partial class LilySharpLanguageServer
             return "**Chord diagram** — " + words.Problems[0].Message;
         var scores = ChordDiagramScores.TuningsOfMark(mark);
         // A name alone: the add hint — save where a score draws every chord (`chordDiagrams …
-        // all`), which shows the default it draws instead (owner's decision 2026-09-28).
-        if (words.Shapes.IsEmpty && !DrawsAll(scores))
+        // all`) or its layout table lists this one, which shows the shape it draws instead
+        // (owner's decision 2026-09-28; the table 2026-09-29).
+        if (words.Shapes.IsEmpty && !NameAloneDraws(mark, scores, words.Structure))
             return words.Structure is { } bare ? AddHint(mark, bare) : null;
         if (words.Shapes.IsEmpty && words.Structure == null)
             return null;
@@ -165,9 +166,11 @@ public sealed partial class LilySharpLanguageServer
         if (!words.Problems.IsEmpty)
             return head + " — " + words.Problems[0].Message;
         var lines = new List<string>();
+        // A capo raises every string by its fret (the first score's capo, as the step reads it).
+        int capo = NoteStepper.CapoOf(item);
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
-            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift, keySharps: 0);
+            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps: 0);
             if (ShapeChords.ShapeFor(words, part.Tuning) is not { } shape || notes.IsEmpty)
             {
                 lines.Add($"{part.Word}: no shape for its {LilySharp.Core.Tablature.Tunings.GetStringCount(part.Tuning)} "
@@ -184,10 +187,17 @@ public sealed partial class LilySharpLanguageServer
         return head + "\n\n" + string.Join("  \n", lines.Distinct(StringComparer.Ordinal));
     }
 
-    /// <summary>Whether some score of <paramref name="scores"/> draws every chord name
-    /// (<c>chordDiagrams … all</c>) — then a name alone has a diagram to show.</summary>
-    private static bool DrawsAll(IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores)
-        => scores.Any(s => s.Score.All && s.Word != null);
+    /// <summary>Whether some score of <paramref name="scores"/> draws a diagram for the chord's
+    /// NAME ALONE at <paramref name="site"/> — it writes <c>chordDiagrams … all</c>, or its
+    /// layout table lists <paramref name="chord"/> (<see cref="ChordShapeTable"/>) — then a name
+    /// alone has a diagram to show instead of the add hint.</summary>
+    private static bool NameAloneDraws(SyntaxNode site,
+        IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores, ChordStructure? chord)
+        => scores.Any(s => s.Word != null
+            && (s.Score.All
+                || (chord != null && s.Score.Table != null
+                    && ChordShapes.Drawn(LilySharp.Core.Tablature.Tunings.Parse(s.Word), [], all: false, chord,
+                        s.Score.Table, ChordDiagramScores.SectionNameOf(site), s.Score.Capo) != null)));
 
     /// <summary>
     /// The diagram lines of a <c>chords</c> row entry: with no shape written, the add hint
@@ -200,7 +210,7 @@ public sealed partial class LilySharpLanguageServer
         var shapes = ChordDiagramScores.ShapesOf(entry).Shapes;
         var scores = ChordDiagramScores.BlockOf(entry)?.PartName is { } rowName
             ? ChordDiagramScores.TuningsOfRow(root, rowName) : null;
-        if (entry.ShapeWords.Count == 0 && (scores == null || !DrawsAll(scores) || chord == null))
+        if (entry.ShapeWords.Count == 0 && (scores == null || !NameAloneDraws(entry, scores, chord) || chord == null))
             return chord != null ? AddHint(entry, chord) : null;
         return scores != null ? DiagramLines(entry, scores, shapes, chord) : null;
     }
@@ -240,14 +250,22 @@ public sealed partial class LilySharpLanguageServer
         return string.Join("  \n", words.Select(word =>
         {
             // The first score drawing on this tuning says whether a name alone draws there.
-            bool all = scores.First(s => s.Word == word).Score.All;
+            var score = scores.First(s => s.Word == word).Score;
+            bool all = score.All;
             var tuning = LilySharp.Core.Tablature.Tunings.Parse(word);
-            if (ChordShapes.Drawn(tuning, shapes, all, chord) is not { } drawn)
-                return all && chord != null
+            string? section = score.Table != null ? ChordDiagramScores.SectionNameOf(site) : null;
+            if (ChordShapes.Drawn(tuning, shapes, all, chord, score.Table, section, score.Capo) is not { } drawn)
+                return chord != null && (all || score.Table?.Find(section, chord, tuning) != null)
                     ? $"{word}: no diagram - no shape on {word} for this chord; write one "
                       + $"({new string('x', LilySharp.Core.Tablature.Tunings.GetStringCount(tuning))} with the frets filled in)"
                     : $"{word}: no diagram";
-            return $"{word}: `{drawn.Spelled}` ({(drawn.Source == ShapeSource.Written ? drawn.SourceWord : "default")})"
+            string source = drawn.Source switch
+            {
+                ShapeSource.Written => "written",
+                ShapeSource.Layout => "layout",
+                _ => "default",
+            };
+            return $"{word}: `{drawn.Spelled}` ({source})"
                 + (word == stepWord && chord != null
                     && NoteStepper.ShapePlace(site, chord, drawn.Frets) is { } place
                       ? $" — {place}" : "");

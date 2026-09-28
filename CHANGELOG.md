@@ -109,6 +109,37 @@ workflow attaches that section to the GitHub Release verbatim.
   written shapes draw, as before. The twin writes a `FretBoards` entry for every chord of such a
   score (one-shape tables, so LilyPond draws exactly the page's shape) and the `@chord` markup
   for every name; MusicXML a `<frame>` for every drawn diagram.
+- **A shape table in the layout lists the chords that draw.** After the `chordDiagrams` words,
+  a table in braces — `layout { chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553
+  } } }` — names the chords that draw a diagram wherever they are named (a `chords` row, an
+  `@chord`, a bare `@chord` by the name it derives) and the shape each draws, written as a row
+  writes shapes after its symbol (`F 133211 2010`, `F guitar 133211 ukulele 2010`); a name
+  alone draws the usual shape. A `section NAME { … }` block's entries apply to the chords
+  written in that section (an `@chord`'s note, a row's bar, a by-part row's inner section), the
+  rest to the whole score. Strongest first: the shape written at the chord, the section's entry,
+  the song's, then — under `all` — the usual shape. The table follows `all` (`chordDiagrams all
+  { F xx3211 }`) or stands alone (`chordDiagrams { C }`); `none` takes none. A symbol that is no
+  chord, a bad shape, a shape before any symbol and a chord listed twice (the last wins) are
+  warnings and the rest of the table stands; a section nothing declares warns; a table shape
+  that disagrees with its chord is LYS1039; a chord listed alone with no shape on the tuning
+  warns as in an `all` score. The twin's `FretBoards` context now appears under a row when some
+  entry DRAWS (written or listed) and is left out when none does — a row with a written shape
+  whose symbol is a degree or does not parse used to get a context of silent slots; MusicXML
+  nests the listed shape's `<frame>`.
+- **A capo: `chordDiagrams guitar capo 3`.** The music still writes the sounding chords (`Eb`,
+  `@chord(Eb)`), and everything a player reads follows the capo: every shape is the shape
+  PRESSED above it (`Eb(x32010)` is the C shape, and LYS1039 checks it against the pressed
+  chord; the usual shape is the pressed chord's; the table's shapes are pressed shapes); the
+  printed name is the pressed chord's — `C` for `Eb`, `G` for `Bb` — spelled in the key that
+  many semitones below the key at the bar (in E major at capo 3 a sounding `G#m` prints `Fm`);
+  "Capo 3" stands at the score's head on the header's instrument line; a `chord(Eb x32010)`
+  item sounds three semitones higher. `capo 0`, a fret above 11, `none capo 3` and `all capo 3`
+  (the capo comes first) are errors. New key **`chordNames shape | sounding | both`**: what a
+  name shows under the capo — the pressed chord's (default), the sounding chord's, or both,
+  `E♭m7 (Cm7)`, each name with its own raised quality. The `.ly` twin writes the pressed chords
+  into `\chordmode` and `instrument = "Capo 3"` in its `\header` (under `sounding` the sounding
+  chords; `both` it cannot spell, and warns); MusicXML's `<harmony>` stays the sounding chord,
+  its `<frame>` the pressed shape; the MIDI plays the sounding music.
 - **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
   neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes; a
   symbol-less `@chord` whose shape is miswritten (`@chord(x3a010)`) now gets that warning rather

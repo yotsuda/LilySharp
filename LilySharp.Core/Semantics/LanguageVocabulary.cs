@@ -129,6 +129,10 @@ public static class LanguageVocabulary
     /// word <c>all</c> — which may also follow a tuning word (<see cref="ChordDiagramsKey.AllWord"/>).</summary>
     public static IReadOnlyCollection<string> ChordDiagramWords => ChordDiagramsKey.Words;
 
+    /// <summary>The words the <c>chordNames</c> key of a <c>layout { }</c> block takes
+    /// (<see cref="ChordNamesKey"/>): what a name shows under a capo, the default first.</summary>
+    public static IReadOnlyCollection<string> ChordNameWords => ChordNamesKey.Words;
+
     /// <summary>The keys a <c>layout { }</c> block takes (<c>marks</c>, <c>barNumbers</c>) —
     /// <see cref="SyntaxFacts.LayoutKeyVocabulary"/>, the list the block's entry walker and
     /// its reader share.</summary>

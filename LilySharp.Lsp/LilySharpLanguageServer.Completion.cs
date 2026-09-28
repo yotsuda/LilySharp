@@ -214,7 +214,13 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutChordQualities => GetChordQualityStyleCompletions(),
             CompletionContext.AfterLayoutMinorChords => GetMinorChordCompletions(),
             CompletionContext.AfterLayoutChordDiagrams => GetChordDiagramCompletions(),
-            CompletionContext.AfterLayoutChordDiagramsTuning => GetChordDiagramScopeCompletions(),
+            // After a tuning word `capo` and `all`; after `capo N` only `all`.
+            CompletionContext.AfterLayoutChordDiagramsTuning => GetChordDiagramScopeCompletions(
+                capoAllowed: !WordBeforeCursor(doc.Text, offset).All(char.IsAsciiDigit)),
+            // The ranked capo frets, on the entry's tuning (the word before `capo`), else the guitar.
+            CompletionContext.AfterLayoutChordDiagramsCapo => GetChordDiagramCapoCompletions(
+                doc.Text, SecondWordBeforeCursor(doc.Text, offset)),
+            CompletionContext.AfterLayoutChordNames => GetChordNameCompletions(),
             // `layout { voltaBracket |` and a form ending's `]@voltaBracket(|` take the same
             // values; `]@|` the one annotation an ending takes.
             CompletionContext.AfterLayoutVoltaBracket => GetVoltaBracketCompletions(),

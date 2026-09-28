@@ -55,8 +55,13 @@ public static class ChordDiagramScores
     /// staff or as a row), and whether it draws EVERY chord name (<c>chordDiagrams … all</c>,
     /// <see cref="LayoutPlan.ChordDiagramsAll"/>).</summary>
     public sealed record Score(RenderDeclarationSyntax? Node, string? LayoutWord,
-        RenderSpec? Spec, ImmutableArray<string> RowNames, bool All = false)
+        RenderSpec? Spec, ImmutableArray<string> RowNames, bool All = false,
+        ChordShapeTable? Table = null, int Capo = 0)
     {
+        /// <summary>Whether a name alone can draw in this score: it writes <c>all</c>, or a
+        /// shape table (<see cref="LayoutPlan.ChordDiagramTable"/>) that may list the chord.</summary>
+        public bool DrawsNamesAlone => All || Table != null;
+
         /// <summary>The tuning word a diagram of a part with fretted tuning
         /// <paramref name="partWord"/> draws on in this score; null under <c>none</c>.</summary>
         public string? TuningWordFor(string? partWord) => ChordDiagramsKey.ResolveWord(LayoutWord, partWord);
@@ -75,14 +80,30 @@ public static class ChordDiagramScores
             var plan = LayoutPlanReader.Resolve(root, render);
             var spec = RenderSpecParser.Parse(render);
             scores.Add(new Score(render, plan.ChordDiagrams, spec, spec == null ? [] : [.. RowNamesOf(spec)],
-                plan.ChordDiagramsAll));
+                plan.ChordDiagramsAll, plan.ChordDiagramTable, plan.Chords.Capo));
         }
         if (scores.Count == 0)
         {
             var plan = LayoutPlanReader.Resolve(root, null);
-            scores.Add(new Score(null, plan.ChordDiagrams, null, [], plan.ChordDiagramsAll));
+            scores.Add(new Score(null, plan.ChordDiagrams, null, [], plan.ChordDiagramsAll, plan.ChordDiagramTable,
+                plan.Chords.Capo));
         }
         return scores;
+    }
+
+    /// <summary>
+    /// The section <paramref name="node"/> is written in — the enclosing <c>section NAME { }</c>
+    /// (a by-part row's inner section included) — or null outside every section (a phrase, a
+    /// top-level block). The section a layout table's <c>section NAME { … }</c> entries apply
+    /// to (<see cref="ChordShapeTable"/>): the one the chord is WRITTEN in, read from the syntax
+    /// by every reader alike (the page, the twin, MusicXML, the editor).
+    /// </summary>
+    public static string? SectionNameOf(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is SectionDeclarationSyntax section)
+                return section.SectionName;
+        return null;
     }
 
     /// <summary>The <c>chords</c> rows a spec places: as rows, and attached to staves and tabs
@@ -217,6 +238,18 @@ public static class ChordDiagramScores
         => [.. scores.Where(s => s.Spec != null && s.RowNames.Contains(rowName))
             .Select(s => (s, s.TuningWordFor(RowStaffWord(root, s.Spec!, rowName))))];
 
+    /// <summary>The capo fret in the first score that draws the part <paramref name="node"/> is
+    /// written in (every score when none does, or when the part is not the tree's to say), 0
+    /// for none — what a <c>chord(…)</c> item's check and hover read (2026-09-29).</summary>
+    public static int CapoOfNode(SyntaxNode node)
+    {
+        var scores = Of(RootOf(node));
+        var rendering = PartNameOf(node) is { } part ? scores.Where(s => s.RendersPart(part)).ToList() : [];
+        if (rendering.Count == 0)
+            rendering = [.. scores];
+        return rendering.Count > 0 ? rendering[0].Capo : 0;
+    }
+
     /// <summary>The <c>chords</c> block an entry is written in, or null.</summary>
     public static ChordPartBlockSyntax? BlockOf(SyntaxNode node)
     {
@@ -310,19 +343,24 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
         var fileScores = ChordDiagramScores.Of(root);
         CheckShapesAgainstSymbols(root, entries, fileScores);
 
-        // ⑵ In a `chordDiagrams … all` score: the chords with no shape on its tuning.
-        if (!fileScores.Any(s => s.All))
+        // ⑵ In a `chordDiagrams … all` score: the chords with no shape on its tuning — and in a
+        // score whose layout table LISTS a chord by name alone, that chord (2026-09-29): both
+        // mean to draw it.
+        if (!fileScores.Any(s => s.DrawsNamesAlone))
             return;
         var warned = new HashSet<(string Symbol, TuningType Tuning)>();
-        void Check(string symbol, ChordStructure chord, IReadOnlyList<WrittenShape> shapes,
+        void Check(SyntaxNode site, string symbol, ChordStructure chord, IReadOnlyList<WrittenShape> shapes,
             TextSpan span, IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores)
         {
             foreach (var (score, word) in scores)
             {
-                if (!score.All || word == null)
+                if (!score.DrawsNamesAlone || word == null)
                     continue;
                 var tuning = Tablature.Tunings.Parse(word);
-                if (ChordShapes.Drawn(tuning, shapes, all: true, chord) != null || !warned.Add((symbol, tuning)))
+                string? section = score.Table != null ? ChordDiagramScores.SectionNameOf(site) : null;
+                if (ChordShapes.Drawn(tuning, shapes, score.All, chord, score.Table, section, score.Capo) != null
+                    || (!score.All && score.Table?.Find(section, chord, tuning) == null)
+                    || !warned.Add((symbol, tuning)))
                     continue;
                 var strings = Tablature.Tunings.GetTuning(tuning);
                 _diagnostics.Warning(span, DiagnosticCodes.ChordDiagramNotDrawn,
@@ -342,12 +380,12 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
                 if (ChordDiagramScores.BlockOf(entry)?.PartName is not { } rowName
                     || !ChordStructure.TryParseChordEntry(entry.SymbolText, out var chord))
                     continue;
-                Check(entry.SymbolText, chord, ChordDiagramScores.ShapesOf(entry).Shapes, entry.Span,
+                Check(entry, entry.SymbolText, chord, ChordDiagramScores.ShapesOf(entry).Shapes, entry.Span,
                     ChordDiagramScores.TuningsOfRowIn(root, rowName, fileScores));
             }
             else if (site is MusicMarkSyntax mark
                      && ChordAnnotation.Of(mark) is { Symbol: { } symbol, Structure: { } structure } words)
-                Check(symbol, structure, words.Shapes, mark.Span, ChordDiagramScores.TuningsOfMarkIn(mark, fileScores));
+                Check(mark, symbol, structure, words.Shapes, mark.Span, ChordDiagramScores.TuningsOfMarkIn(mark, fileScores));
         }
     }
 
@@ -364,14 +402,16 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
             IReadOnlyList<(string Text, TextSpan Span)> words, bool inRow,
             IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores)
         {
-            foreach (var (_, word) in scores)
+            foreach (var (score, word) in scores)
             {
                 if (word == null)
                     continue;
                 var tuning = Tablature.Tunings.Parse(word);
+                // A written shape is the PRESSED shape: under a capo it is checked against the
+                // pressed chord (ChordStructure.Pressed), the sounding one that many frets down.
                 if (ChordShapes.WrittenFor(tuning, shapes) is not { } shape
-                    || ChordShapes.Mismatch(ChordShapes.Frets(shape), Tablature.Tunings.GetTuning(tuning), chord)
-                        is not { } mismatch)
+                    || ChordShapes.Mismatch(ChordShapes.Frets(shape), Tablature.Tunings.GetTuning(tuning),
+                        chord.Pressed(score.Capo, 0)) is not { } mismatch)
                     continue;
                 string? tuningName = shapes.First(s => s.Shape == shape).TuningName;
                 string message = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow);

@@ -1600,7 +1600,18 @@ and always draws. The scope word **`all`**, after the tuning (`chordDiagrams gui
 `chordDiagrams ukulele all`) or alone (`chordDiagrams all` — the tuning then resolved as when
 unset), makes EVERY chord name draw a diagram: its written shape, else the usual one. `none all`
 is refused (`none` draws nothing), as are `all guitar` (the tuning comes first) and a word
-written twice.
+written twice. A **shape table** in braces may follow the words (`chordDiagrams guitar { Cm7
+x35343  G  section Chorus { C x35553 } }`): the chords it lists draw a diagram wherever they are
+named, with the shape written after each (a name alone: the usual shape), and a `section NAME
+{ … }` block's entries apply in that section only — see *Listed chords* under *Chord
+Diagrams*. `none` takes no table. **`capo N`** after the tuning word (before `all`) puts a capo
+on fret N: the shapes are the shapes pressed above it, the names the pressed chords', and
+"Capo N" stands at the score's head — see *A capo* under *Chord Diagrams*.
+
+**`chordNames`** — what a chord name shows in a score with a capo: `shape` (the default) the
+name of the shape the player presses (`C` for a sounding E♭ at capo 3), `sounding` the sounding
+chord's name (`E♭`), `both` the sounding name with the pressed one in brackets (`E♭ (C)`).
+Without a capo the three print the same name.
 
 **`voltaBracket`** — how far a form ending's volta bracket reaches: `all` (the default)
 covers every bar of the ending; `line` stops at the end of the system the bracket starts in;
@@ -1820,6 +1831,70 @@ score main "piano" { layout piano  chords prog  staff melody }  // none
 score main "book" { layout book  chords prog  staff melody }    // every chord: C F G Am, x35343 x3x546
 ```
 
+**Listed chords: a shape table.** Between "only what is written" and "everything", the layout
+can LIST the chords that draw: a table in braces after the `chordDiagrams` words —
+`chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } }`. Each entry is a chord
+symbol and the shape it draws, written as a row writes them after its symbol (`F 133211 2010`,
+`F guitar 133211 ukulele 2010` — several shapes route by string count or by a tuning word); a
+name alone (`G`) draws the usual shape. A listed chord draws wherever it is named — in a
+`chords` row, in an `@chord`, a bare `@chord` by the name it derives — and the shape it draws
+is decided strongest first: the shape WRITTEN at the chord, the entry of the `section` the
+chord is written in, the song's entry, then (in an `all` score) the usual shape. A
+`section NAME { … }` block's entries apply to the chords written in that section — an
+`@chord`'s note, a row's bar, a by-part row's inner `section NAME { }` — and the keyword keeps
+a section named `A` or `C` from reading as a chord; a phrase outside every section takes the
+song's entries alone. An entry whose shapes fit no tuning the score draws on is not used there
+(a table can carry a guitar shape and a ukulele shape as a row can). The table follows `all`
+(`chordDiagrams all { F xx3211 }`: the listed shape for F, the usual shape for every other
+chord) or stands alone (`chordDiagrams { C }`, the tuning as when unset); `none` takes none.
+
+```
+layout { chordDiagrams guitar { C  F xx3211  section B { F 133211  G } } }
+section A { melody { c'1@chord(F) | c'1@chord(G) | }  chords prog { C | F | } }   // F xx3211, G none; C x32010, F xx3211
+section B { melody { c'1@chord(F) | c'1@chord(G) | }  chords prog { C | F | } }   // F 133211, G 320003; C x32010, F 133211
+```
+
+A symbol that is no chord, a shape that is none, a shape before any symbol (the row's LYS1038
+words) and a chord listed twice in one scope (the last wins) are warnings and the rest of the
+table stands; a section nothing declares warns (its entries apply nowhere); a table shape that
+disagrees with its chord is LYS1039 (below). A brace where none belongs, a `section` with no
+name or block and a word after the closing `}` refuse the whole `chordDiagrams` entry. A chord
+listed by name alone that has no shape at all on the tuning (C13 on the ukulele) warns as in an
+`all` score. The editor treats a listed chord as an `all` score treats every chord: the hover
+shows the shape the name draws (`guitar: xx3211 (layout)`), and the step counts from it.
+
+**A capo.** `layout { chordDiagrams guitar capo 3 }` puts a capo on the third fret. The music
+still writes the SOUNDING chords — a row's `Eb`, `@chord(Eb)` — and everything a player
+reads follows the capo:
+
+- every shape is the shape PRESSED above the capo, drawn capo-relative: `Eb(x32010)` is the C
+  shape; the usual shape of a chord is its pressed chord's (`Eb` at capo 3 draws `x32010`
+  under `all`); the table's shapes are pressed shapes; a written shape is checked (LYS1039)
+  against the pressed chord — the sounding chord that many semitones down;
+- the printed NAME is the pressed chord's: `C` for `Eb`, `G` for `Bb`, spelled in the key that
+  many semitones below the key at the bar (the key's own letter, else a natural, else the key's
+  side of the accidental: in E major at capo 3, the pressed key is D♭, so a sounding `G#m`
+  prints `Fm`; at the tritone the sharp side, F♯). `chordNames sounding` prints the sounding
+  names instead, `chordNames both` both — `E♭m7 (Cm7)`, each name with its own raised quality.
+  A Roman degree is the sounding key's and is not moved;
+- "Capo 3" stands at the score's head, on the header's instrument line (the middle of the
+  poet / composer row);
+- a `chord(Eb x32010)` item's strings sound three semitones higher (E♭ major), on the staff,
+  in the MIDI and in the twin.
+
+`capo 0` is refused (leave the word out), as is a fret above 11, `none capo 3` and `all capo
+3` (the capo comes first). The `.ly` twin writes the pressed chords into `\chordmode` (LilyPond
+then prints the same names) and `instrument = "Capo 3"` in its `\header`; under `chordNames
+sounding` it writes the sounding chords, and `both` it cannot spell (it names the sounding
+chord and warns). MusicXML's `<harmony>` stays the sounding chord, its `<frame>` the pressed
+shape.
+
+**The capo suggestion.** After `capo ` the completion lists the frets 0 to 7 ranked by how
+many of the file's chords would be played with a barre there (on their usual shapes; fewest
+first — `capo 3: 0 barre chords of 3`, `capo 0: 2 barre chords of 3 (F 133211, Bb x13331)`),
+and hovering `capo` or its fret shows the same ranking. Pick a fret and write it: there is no
+`capo auto`.
+
 **Which tuning.** A diagram draws on ONE tuning, strongest first:
 
 1. the score's `layout { chordDiagrams TUNING }` (with or without `all`) — `none` draws no
@@ -1953,21 +2028,25 @@ the FIRST score that renders the chord (for a row, the first score placing it); 
 score draws it on another tuning, the status bar says so. When that first score writes
 `chordDiagrams … all`, a name alone already SHOWS the usual shape, so the step counts from it:
 `Up` on the name writes the NEXT shape after the usual one, and `Down` at the usual shape —
-written or not — does nothing (the status bar says why).
+written or not — does nothing (the status bar says why). The same where that score's layout
+table lists the chord (*Listed chords*): the name alone shows the table's shape, `Up` writes
+the shape after it, and `Down` at the written table shape removes it (the page keeps showing it).
 
 **Hover** a `@chord` or a `chords` row entry with no shape: one line says how to add a diagram
 and what it would be — `Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)`; in an `all` score,
-the usual shape it draws instead — `guitar: 320003 (default) — shape 1 of N`. With a shape
+the usual shape it draws instead — `guitar: 320003 (default) — shape 1 of N`; for a chord the
+layout table lists, the table's shape — `guitar: xx3211 (layout)`. With a shape
 written: the shape each tuning its scores draw on shows — `guitar: x3x546 (written)`,
 `ukulele: no diagram` — and the stepping tuning's line also says where the shape stands in the
 editor's order — `shape n of N (M with stretch)` (the hover carries no setting, so it gives
 both counts), or `stretch shape n of M` for a stretch shape.
 
-**Exports.** Under a `chords` row whose entries write a shape the `.ly` twin writes a
-`FretBoards` context over the same chord music — each written shape as a one-shape table set
-on that chord, a silent `s` for every chord with none (LilyPond would compute a diagram for
-it), `stringTunings` for a tuning other than the guitar's — so LilyPond stacks the diagrams
-under the `ChordNames` line as the page does. In an `all` score every row gets the context and
+**Exports.** Under a `chords` row some entry of which draws a diagram the `.ly` twin writes a
+`FretBoards` context over the same chord music — each drawn shape (written, or the layout
+table's) as a one-shape table set on that chord, a silent `s` for every chord with none
+(LilyPond would compute a diagram for it), `stringTunings` for a tuning other than the
+guitar's — so LilyPond stacks the diagrams under the `ChordNames` line as the page does; a row
+none of whose chords draws gets no context. In an `all` score every row gets the context and
 every chord its one-shape table (the usual shape, with LilyPond's fingers when it is theirs) —
 not LilyPond's own tables, which would draw a shape of LilyPond's where they hold none. An
 `@chord`'s diagram is the note's `\fret-diagram-terse` markup under its name. MusicXML nests an

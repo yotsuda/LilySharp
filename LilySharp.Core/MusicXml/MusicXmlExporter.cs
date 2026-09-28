@@ -126,7 +126,7 @@ public sealed class MusicXmlExporter
     private string? _noteFrameSpec; // @diagram(...) on the note being written
     private int[] _partTuning = Tablature.Tunings.Guitar; // what a symbol-less @chord(x32010) is named on
     private TuningType? _partFrettedTuning;  // the part's fretted instrument: a diagram's tuning when the layout names none
-    private (bool Read, string? Word, bool All) _diagramsWord;  // the score's chordDiagrams word as written (and its `all`), read once
+    private (bool Read, string? Word, bool All, Music.ChordShapeTable? Table, int Capo) _diagramsWord;  // the score's chordDiagrams word as written (its `all`, its shape table, its capo), read once
     private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
     private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
@@ -271,6 +271,8 @@ public sealed class MusicXmlExporter
         {
             string? word;
             bool all;
+            Music.ChordShapeTable? table;
+            int capo;
             if (Score is { } score)
             {
                 var file = Semantics.LayoutPlanReader.FileDefault(_root) is { } f
@@ -279,22 +281,38 @@ public sealed class MusicXmlExporter
                 var plan = score.LayoutRef is { } layoutRef
                     ? Semantics.LayoutPlanReader.ReadReference(_root, layoutRef, file)
                     : file;
-                (word, all) = (plan.ChordDiagrams, plan.ChordDiagramsAll);
+                (word, all, table, capo) = (plan.ChordDiagrams, plan.ChordDiagramsAll, plan.ChordDiagramTable, plan.Chords.Capo);
             }
             else
             {
                 var first = Semantics.ChordDiagramScores.Of(_root).FirstOrDefault();
-                (word, all) = (first?.LayoutWord, first?.All ?? false);
+                (word, all, table, capo) = (first?.LayoutWord, first?.All ?? false, first?.Table, first?.Capo ?? 0);
             }
-            _diagramsWord = (true, word, all);
+            _diagramsWord = (true, word, all, table, capo);
         }
         return Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, _partFrettedTuning);
+    }
+
+    /// <summary>The exported score's capo fret (read with <see cref="DiagramTuning"/>), 0 for
+    /// none: a diagram is the pressed shape, a <c>chord(…)</c> item's strings sound that many
+    /// semitones higher. The <c>&lt;harmony&gt;</c> stays the sounding chord (data).</summary>
+    private int DiagramCapo
+    {
+        get
+        {
+            DiagramTuning();
+            return _diagramsWord.Capo;
+        }
     }
 
     /// <summary>The exported score's <c>chordDiagrams … all</c> (read with
     /// <see cref="DiagramTuning"/>, which is always asked first): every chord name draws a
     /// diagram, its written shape else the default.</summary>
     private bool DiagramsAll => _diagramsWord.All;
+
+    /// <summary>The exported score's layout shape table (read with <see cref="DiagramTuning"/>):
+    /// the chords that draw wherever they are named, or null.</summary>
+    private Music.ChordShapeTable? DiagramTable => _diagramsWord.Table;
 
     internal MusicXmlDocument Export(SyntaxTree tree)
     {
@@ -2881,7 +2899,7 @@ public sealed class MusicXmlExporter
         // shaped silence keeps the time (the page's spacer, LYS1040).
         var shapeNotes = chord.IsShapeChord
             ? Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-                _partTransposeSemitones, _keyFifths)
+                _partTransposeSemitones - DiagramCapo, _keyFifths)   // the capo raises the strings (2026-09-29)
             : [];
         if (chord.IsShapeChord && shapeNotes.IsEmpty)
         {
@@ -3566,7 +3584,7 @@ public sealed class MusicXmlExporter
                     // A chord(…) item in a grace body: its strings, as ProcessChord writes them.
                     var graceShape = chord.IsShapeChord
                         ? Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-                            _partTransposeSemitones, _keyFifths)
+                            _partTransposeSemitones - DiagramCapo, _keyFifths)
                         : [];
                     foreach (var sn in Music.ShapeChords.Ascending(graceShape))
                     {
@@ -3858,8 +3876,12 @@ public sealed class MusicXmlExporter
                         ? derived.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text
                         : null;
             // In a `chordDiagrams … all` score every name draws: the written shape, else the
-            // default of its chord (a symbol-less shape's, the one its frets name).
-            var diagram = diagramTuning is { } dt ? words.Drawn(dt, DiagramsAll, derived) : null;
+            // default of its chord (a symbol-less shape's, the one its frets name); a chord the
+            // layout's shape table lists draws the table's shape (per the section the mark is in).
+            var diagram = diagramTuning is { } dt
+                ? words.Drawn(dt, DiagramsAll, derived, DiagramTable,
+                    DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(mark) : null, DiagramCapo)
+                : null;
             if (chordText != null)
             {
                 if (BuildHarmony(chordText) is { } harmony)

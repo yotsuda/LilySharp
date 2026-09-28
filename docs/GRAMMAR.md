@@ -610,8 +610,10 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'partCombineText' , Boolean
                | 'chordQualities' , ChordQualityStyle
                | 'minorChords' , MinorChordCase
-               | 'chordDiagrams' , ( 'none' | TuningName , [ 'all' ] | 'all' )    (* TuningName: the tab's 'tuning' words *)
+               | 'chordDiagrams' , ( 'none' | [ TuningName ] , [ 'capo' , Integer ] , [ 'all' ] , [ ShapeTable ] )   (* TuningName: the tab's 'tuning' words; at least one of the four; the capo's Integer 1..11 *)
+               | 'chordNames' , ChordNameMode
                | 'voltaBracket' , VoltaLength ;       (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
+ChordNameMode  = 'shape' | 'sounding' | 'both' ;
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
 AccidentalStyle = 'default' | 'modern' | 'modernCautionary' | 'forget' | 'noReset' ;
@@ -619,6 +621,8 @@ SectionLabelStyle = 'boxed' | 'plain' | 'none' ;
 ChordQualityStyle = 'symbols' | 'words' ;
 MinorChordCase = 'upper' | 'lower' ;
 Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as removeEmpty *)
+ShapeTable     = '{' , { ShapeEntry | 'section' , Identifier , '{' , { ShapeEntry } , '}' } , '}' ;
+ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and shapes a ChordRowEntry writes; a name alone: the usual shape *)
 
 (* THE SCORE-WIDE DISPLAY SWITCHES — closed vocabularies that say how a class of symbol
    is drawn or arranged: no unit, no grob scope, one answer for the whole page. The
@@ -738,7 +742,55 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
    'none all', 'all guitar' (the tuning comes first) and a word written twice are errors.
    Unset, a diagram takes the fretted instrument of its part — the part an @chord's note is
    in, the staff a row stands directly above — else the guitar. The twin writes a FretBoards
-   context under a row's ChordNames when some entry writes a shape (every row with 'all').
+   context under a row's ChordNames when some entry draws (every row with 'all').
+
+   The SHAPE TABLE (ShapeTable, after the words; 2026-09-29, HANDOFF §2 K5 ③) lists the
+   chords that draw a diagram wherever they are named, with the shape each draws:
+   'chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } }'. An entry is a
+   chord symbol and its shapes, the words a ChordRowEntry writes after its symbol (several
+   shapes route by string count or by a tuning word: 'F guitar 133211 ukulele 2010'); a name
+   alone draws the usual shape. A 'section NAME { … }' block's entries apply to the chords
+   WRITTEN in that section (an @chord's note, a row's bar, a by-part row's inner section);
+   the others to the whole score — the keyword keeps a section named A or C from reading as a
+   chord. Strongest first: the shape written at the chord, the section's entry, the song's,
+   then (under 'all') the usual shape. An entry whose shapes fit no tuning the score draws on
+   is not used there. The table follows 'all' ('chordDiagrams all { F xx3211 }': the listed
+   shape for F, the usual one for the rest) or stands alone ('chordDiagrams { C }'); 'none'
+   takes none. A symbol that is no chord, a shape that is none, a shape before any symbol
+   (LYS1038) and a chord listed twice in one scope (the last wins) are warnings that leave the
+   rest of the table standing; a section nothing declares warns; a table shape that disagrees
+   with its chord is LYS1039 (on the layout's tuning, else on the guitar and each fretted
+   instrument the file's parts play). A brace where none belongs, a 'section' with no name or
+   block and a word after the closing '}' refuse the whole entry (the key's error).
+
+   THE CAPO ('capo' Integer after the TuningName, before 'all'; 2026-09-29, HANDOFF §2 K2):
+   'chordDiagrams guitar capo 3'. The music still writes the SOUNDING chords (a row's 'Eb',
+   '@chord(Eb)'); every shape — written at the chord, listed in the table, the usual one — is
+   the shape PRESSED above the capo, drawn capo-relative ('Eb(x32010)' is the C shape, and its
+   check, LYS1039, reads the pressed chord: the sounding chord that many semitones down); the
+   usual shape is the pressed chord's; a 'chord(SYMBOL SHAPE)' item's strings sound that many
+   semitones higher. The printed NAME is the pressed chord's — 'C' for a sounding E♭ — spelled
+   in the key that many semitones below the key at the bar (the key's own letter for the note,
+   else a natural, else the key's side of the accidental; the tritone falls to F♯: owner's
+   decision 2026-09-29), and "Capo 3" stands at the score's head on the header's instrument
+   line (the poet / instrument / composer row of LilyPond's bookTitleMarkup). A Roman degree is
+   the sounding key's and is not moved. 'capo 0' is refused (leave the word out), as is a fret
+   above 11, 'none capo N', 'all capo N' (the capo comes first) and a capo written twice. The
+   .ly twin writes the pressed chords into \chordmode (so LilyPond prints the same names) and
+   'instrument = "Capo 3"' in \header; MusicXML's <harmony> stays the sounding chord, its
+   <frame> the pressed shape; the MIDI plays the sounding music.
+
+   chordNames — what a chord name shows under a capo: 'shape' (the default) the pressed
+   chord's name, 'sounding' the sounding chord's, 'both' the sounding name first and the
+   pressed one in brackets — "E♭m7 (Cm7)", each name with its own raised quality (the one
+   symbol carries two raised runs, ChordSymbolText.BracketSuperFrom). Without a capo the three
+   print the same name. The twin cannot spell 'both' (LilyPond 2.26 has no capo on its
+   ChordNames) and names the sounding chord, with a warning.
+
+   THE CAPO SUGGESTION is the editor's, not the language's: after 'capo' the completion lists
+   the frets 0..7 ranked by how many of the file's chords would take a barre there on their
+   usual shape (CapoAdvisor; fewest first), and hovering 'capo N' shows the same ranking. The
+   writer reads it and writes a fret; there is no 'capo auto'.
 
    voltaBracket — how far a form ending's volta bracket reaches (2026-09-28). 'all' (the
    default) covers every bar of the ending; 'line' stops at the end of the system the
@@ -756,7 +808,8 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
    words are reserved — 'part markTempo { … }' compiles. An unknown key is an ERROR, the
    fonts block's reasoning: a switch nobody reads looks exactly like one that works. A
    key set twice in one block warns and the last one wins. A brace inside the block is
-   refused where it stands: no layout key opens a block. *)
+   refused where it stands: no layout key opens a block — save 'chordDiagrams', whose
+   shape table is one (2026-09-29). *)
 
 (* Example:
    layout {
@@ -767,7 +820,8 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
      partCombineText false
      chordQualities words
      minorChords lower
-     chordDiagrams guitar all
+     chordDiagrams guitar capo 3 { Cm7 x35343  G  section Chorus { C x35553 } }
+     chordNames both
      voltaBracket line
    }
 *)

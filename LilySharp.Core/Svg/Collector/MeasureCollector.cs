@@ -956,7 +956,10 @@ public sealed partial class MeasureCollector
         _meta.Paper,
         _meta.LayoutPlan,
         _meta.Subtitle,
-        _meta.Poet);
+        _meta.Poet,
+        // "Capo 3" at the score's head, on the header's instrument line (owner's design
+        // HANDOFF §2 K2; the row LilyPond's bookTitleMarkup gives header:instrument).
+        _meta.LayoutPlan.Chords.Capo > 0 ? "Capo " + _meta.LayoutPlan.Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture) : null);
 
     /// <summary>
     /// Collects a Score from a syntax tree.

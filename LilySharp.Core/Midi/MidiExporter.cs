@@ -261,6 +261,26 @@ public sealed class MidiExporter
     // Sounding-pitch transpose for the part currently being played. A part option
     // transpose: shifts every note by the interval's semitones (no respelling).
     private SyntaxNode? _root;
+
+    /// <summary>The capo fret of the file's first score (its layout's <c>chordDiagrams … capo N</c>),
+    /// 0 for none: a <c>chord(…)</c> item's strings sound that many semitones higher. Read once
+    /// per export (<see cref="_capo"/>); the MIDI plays no score of its own, so the first
+    /// score's capo is the one it follows, as it follows the first score's tunings.</summary>
+    private int Capo
+    {
+        get
+        {
+            if (_capo < 0)
+            {
+                var render = _root != null
+                    ? Semantics.TopLevelNodes.OfRoot<RenderDeclarationSyntax>(_root).FirstOrDefault() : null;
+                _capo = _root != null ? Semantics.LayoutPlanReader.Resolve(_root, render).Chords.Capo : 0;
+            }
+            return _capo;
+        }
+    }
+
+    private int _capo = -1;
     private int _currentTransposeSemitones;
 
     /// <summary>Written pitch → MIDI key: the chromatic transpose. The ONE funnel every
@@ -389,6 +409,7 @@ public sealed class MidiExporter
 
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
         _root = tree.GetRoot();
+        _capo = -1;
         // Every section's voices and canonical bar count (SectionBarCounts, the semantic
         // counter): a part voice that writes fewer bars than its section-mates is padded
         // with silence when its play ends (PaddingTicks), as the page pads its staff.
@@ -2424,7 +2445,7 @@ public sealed class MidiExporter
         {
             var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
             var shapeNotes = Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
-                header.SoundingShiftSemitones, _keySharps);
+                header.SoundingShiftSemitones - Capo, _keySharps);   // the capo raises the strings (2026-09-29)
             shapeLowest = Music.ShapeChords.Lowest(shapeNotes);
             foreach (var sn in shapeNotes)
             {
@@ -2864,7 +2885,7 @@ public sealed class MidiExporter
                     {
                         var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
                         var shapeNotes = Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
-                            header.SoundingShiftSemitones, _keySharps);
+                            header.SoundingShiftSemitones - Capo, _keySharps);
                         graceLowest = Music.ShapeChords.Lowest(shapeNotes);
                         foreach (var sn in shapeNotes)
                             track.Notes.Add(new MidiNote(track.Channel,

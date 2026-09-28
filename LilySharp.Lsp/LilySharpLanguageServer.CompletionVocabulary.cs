@@ -444,10 +444,54 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetChordDiagramCompletions()
         => WordList(Core.Semantics.ChordDiagramsKey.Words, ChordDiagramDetails);
 
-    /// <summary>After <c>layout { chordDiagrams guitar</c>: the scope word <c>all</c>, the one
-    /// word that may follow a tuning (owner's decision 2026-09-28).</summary>
-    internal static CompletionList GetChordDiagramScopeCompletions()
-        => WordList([Core.Semantics.ChordDiagramsKey.AllWord], ChordDiagramScopeDetails);
+    /// <summary>After <c>layout { chordDiagrams guitar</c>: the words that may follow a tuning —
+    /// <c>capo</c> (then its fret) and the scope word <c>all</c> (owner's decision 2026-09-28;
+    /// the capo 2026-09-29); after <c>capo N</c> only <c>all</c>.</summary>
+    internal static CompletionList GetChordDiagramScopeCompletions(bool capoAllowed = true)
+        => WordList(capoAllowed
+                ? [Core.Semantics.ChordDiagramsKey.CapoWord, Core.Semantics.ChordDiagramsKey.AllWord]
+                : [Core.Semantics.ChordDiagramsKey.AllWord],
+            ChordDiagramScopeDetails);
+
+    /// <summary>
+    /// After <c>layout { chordDiagrams [guitar] capo</c>: the capo frets 0 to
+    /// <see cref="Core.Semantics.CapoAdvisor.MaxSuggested"/>, ranked by how many of the file's
+    /// chords take a barre there (fewest first) — the owner's capo suggestion (HANDOFF §2 K2):
+    /// the writer reads the ranking and writes a fret. On the entry's tuning word, else the guitar.
+    /// </summary>
+    internal static CompletionList GetChordDiagramCapoCompletions(string text, string? tuningWord)
+    {
+        var root = Core.Syntax.SyntaxTree.Parse(text).GetRoot();
+        var tuning = Core.Tablature.Tunings.Parse(
+            tuningWord != null && Core.Semantics.ChordDiagramsKey.IsTuningWord(tuningWord) ? tuningWord : "guitar");
+        var ranking = Core.Semantics.CapoAdvisor.Rank(root, tuning);
+        if (ranking.Count == 0)
+            return new CompletionList
+            {
+                Items = Enumerable.Range(1, Core.Semantics.CapoAdvisor.MaxSuggested).Select(n => new CompletionItem
+                {
+                    Label = n.ToString(),
+                    Kind = CompletionItemKind.Value,
+                    Detail = "The fret the capo is on (no chord in the file to rank the frets by yet)",
+                    SortText = n.ToString(),
+                }).ToArray()
+            };
+        return new CompletionList
+        {
+            Items = ranking.Select((c, i) => new CompletionItem
+            {
+                Label = c.Capo.ToString(),
+                Kind = CompletionItemKind.Value,
+                Detail = (c.Capo == 0 ? "no capo — " : "") + Core.Semantics.CapoAdvisor.Describe(c),
+                SortText = i.ToString("00"),
+                Preselect = i == 0,
+            }).ToArray()
+        };
+    }
+
+    /// <summary>After <c>layout { chordNames</c>: what a name shows under a capo.</summary>
+    internal static CompletionList GetChordNameCompletions()
+        => WordList(LanguageVocabulary.ChordNameWords, ChordNameDetails);
 
     private static readonly System.Collections.Generic.Dictionary<string, string> ChordDiagramDetails = new()
     {
@@ -455,12 +499,21 @@ public sealed partial class LilySharpLanguageServer
         ["guitar"] = "Written shapes draw as guitar diagrams (the default for a part that frets nothing)",
         ["ukulele"] = "Written shapes draw as ukulele diagrams",
         ["mandolin"] = "Written shapes draw as mandolin diagrams",
+        ["capo"] = "A capo at fret N: shapes and names are the pressed chords', \"Capo N\" at the head (the list ranks the frets)",
         ["all"] = "Every chord name draws a diagram — its written shape, else the default (on the part's instrument, else guitar)",
     };
 
     private static readonly System.Collections.Generic.Dictionary<string, string> ChordDiagramScopeDetails = new()
     {
+        ["capo"] = "A capo at fret N on this tuning: shapes and names are the pressed chords' (the list ranks the frets)",
         ["all"] = "Every chord name draws a diagram on this tuning — its written shape, else the default",
+    };
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> ChordNameDetails = new()
+    {
+        ["shape"] = "Under a capo a name is the pressed shape's — C for a sounding E♭ at capo 3 (default)",
+        ["sounding"] = "A name is the sounding chord's — E♭",
+        ["both"] = "Both, the sounding name first — E♭ (C)",
     };
 
     /// <summary>After <c>layout { voltaBracket</c> and inside an ending's
@@ -569,7 +622,7 @@ public sealed partial class LilySharpLanguageServer
                         // `guitar`, not the absent key's "the part's instrument, else guitar"
                         // (no word says that): the same page unless a part is a ukulele,
                         // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
-                        + "\n  chordDiagrams ${8:guitar}\n  voltaBracket ${9:all}$0\n}",
+                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  voltaBracket ${10:all}$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -618,7 +671,8 @@ public sealed partial class LilySharpLanguageServer
         "partCombineText" => "Whether a combinedStaff prints a2 / Solo: true (default) | false",
         "chordQualities" => "How a chord's quality is spelled: symbols (default) | words",
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
-        "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `all` to draw every chord",
+        "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `capo N` for a capo, `all` to draw every chord, `{ … }` to list the chords that draw",
+        "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
         "voltaBracket" => "How far an ending's bracket reaches: all (default) | line | N bars; an ending's own @voltaBracket(…) overrides it",
         _ => "Layout key",
     };
@@ -3287,7 +3341,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page — save
                 // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tvoltaBracket ${9:all}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, voltaBracket), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tvoltaBracket ${10:all}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, voltaBracket), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

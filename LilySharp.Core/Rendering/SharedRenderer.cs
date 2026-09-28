@@ -362,6 +362,13 @@ internal static partial class SharedRenderer
                 gc.DrawText(composer, rightX, page.Height - (top + composerBaseline),
                     HeaderBand.ComposerEm(fonts), TextRole.Composer, HeaderBand.ComposerStyle(fonts), TextAnchor.End);
         }
+        if (score.Instrument is { } instrument && band.ComposerBaseline is { } instrumentBaseline)
+        {
+            // The middle of the poet / instrument / composer \fill-line: "Capo 3" (2026-09-29).
+            double centerX = page.Width / 2;
+            gc.DrawText(instrument, centerX, page.Height - (top + instrumentBaseline),
+                HeaderBand.ComposerEm(fonts), TextRole.Composer, HeaderBand.ComposerStyle(fonts), TextAnchor.Middle);
+        }
     }
 
     /// <summary>Opens a data-pos source scope for a header grob, or a no-op scope

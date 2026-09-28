@@ -68,7 +68,12 @@ public sealed record LayoutPlan(
     bool ChordDiagramsAll = false,
     // `voltaBracket all|line|N` — how far an ending's bracket reaches (VoltaBracketLength);
     // an ending's own `@voltaBracket(…)` overrides it. The struct's default is `all`.
-    VoltaBracketLength VoltaBracket = default)
+    VoltaBracketLength VoltaBracket = default,
+    // `chordDiagrams [TUNING] [all] { Cm7 x35343  G  section B { … } }` — the chords that draw
+    // a diagram wherever they are named, with the shape each draws (Music.ChordShapeTable;
+    // HANDOFF §2 K5 ③, 2026-09-29). Null when the key writes no table. Set with the two halves
+    // above: a key written again is written whole, table included.
+    Music.ChordShapeTable? ChordDiagramTable = null)
 {
     /// <summary>The tuning a chord diagram of this score draws on, given the fretted tuning
     /// of the part it belongs to (<paramref name="partTuning"/>, null for none) — or null
@@ -120,7 +125,15 @@ public sealed record LayoutPlan(
 /// <param name="Qualities">The quality's vocabulary.</param>
 /// <param name="LowercaseMinor">LilyPond's <c>chordNameLowercaseMinor</c>: a minor-third
 /// chord prints a lowercase root and drops the <c>m</c>.</param>
-public readonly record struct ChordSpelling(ChordQualityStyle Qualities, bool LowercaseMinor)
+/// <param name="Capo">The fret the capo is on (<c>chordDiagrams … capo N</c>), 0 for none:
+/// a name is then the PRESSED chord's, the sounding chord that many semitones down
+/// (<see cref="Music.ChordStructure.Pressed"/>) — unless <paramref name="Names"/> says
+/// otherwise. Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29.</param>
+/// <param name="Names">What a name shows under a capo (<c>chordNames shape|sounding|both</c>,
+/// <see cref="ChordNamesKey"/>): the pressed shape's name (the default, the guitarist's
+/// chart), the sounding chord's, or both — <c>E♭ (C)</c>.</param>
+public readonly record struct ChordSpelling(ChordQualityStyle Qualities, bool LowercaseMinor,
+    int Capo = 0, ChordNameMode Names = ChordNameMode.Shape)
 {
     /// <summary>What a book with no <c>layout { }</c> gets, which is also the struct's
     /// <c>default</c>: LilyPond's own symbols, and an uppercase root with its <c>m</c>.</summary>
@@ -238,6 +251,47 @@ public static class MinorChords
     };
 }
 
+/// <summary>What a chord name shows in a score with a capo (<c>chordDiagrams … capo N</c>):
+/// the name of the shape the player presses, the sounding chord's name, or both.</summary>
+/// <remarks>
+/// Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29: the guitarist's chart names
+/// the PRESSED shapes and says "Capo 3" at its head, so <see cref="Shape"/> is the default;
+/// <see cref="Both"/> prints <c>E♭ (C)</c>, the sounding name first. Without a capo the three
+/// print the same name. A Roman degree is the sounding key's and is not moved.
+/// LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
+/// <c>\fret-diagram-verbose</c> knows a <c>capo</c> bar inside one diagram only); the twin
+/// writes the pressed chords into <c>\chordmode</c> for <see cref="Shape"/> and cannot spell
+/// <see cref="Both"/>.
+/// </remarks>
+public enum ChordNameMode
+{
+    /// <summary>The pressed shape's name — <c>C</c> for a sounding E♭ under capo 3 (the default).</summary>
+    Shape,
+    /// <summary>The sounding chord's name — <c>E♭</c>.</summary>
+    Sounding,
+    /// <summary>Both, the sounding name first — <c>E♭ (C)</c>.</summary>
+    Both,
+}
+
+/// <summary>The <c>chordNames</c> key's words (<see cref="ChordNameMode"/>).</summary>
+public static class ChordNamesKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "chordNames";
+
+    /// <summary>The words, the default first.</summary>
+    public static readonly IReadOnlyList<string> Words = ["shape", "sounding", "both"];
+
+    /// <summary>The mode <paramref name="word"/> names, or null.</summary>
+    public static ChordNameMode? Find(string word) => word switch
+    {
+        "shape" => ChordNameMode.Shape,
+        "sounding" => ChordNameMode.Sounding,
+        "both" => ChordNameMode.Both,
+        _ => null,
+    };
+}
+
 /// <summary>How a form section's name is drawn above the staff.</summary>
 /// <remarks>
 /// ⚠️ The BOX is Lily#-own: LilyPond's SectionLabel grob draws the bare string, and the
@@ -347,15 +401,25 @@ public static class ChordDiagramsKey
     /// <c>chordDiagrams guitar all</c>).</summary>
     public const string AllWord = "all";
 
-    /// <summary>The words the key's FIRST value takes: <c>none</c>, the tuning vocabulary, and
-    /// <c>all</c> (which may also follow a tuning word).</summary>
-    public static readonly IReadOnlyList<string> Words =
-        [Music.ChordShapes.NoneWord, .. Tablature.Tunings.Names, AllWord];
+    /// <summary>The capo word, followed by the fret it is on (<c>chordDiagrams guitar capo 3</c>;
+    /// after the tuning, before <c>all</c>): the diagrams are the PRESSED shapes, the names the
+    /// pressed chords' (<see cref="ChordSpelling.Capo"/>, <see cref="ChordNameMode"/>), and the
+    /// score's head says "Capo 3". Owner's design 2026-09-28 (HANDOFF §2 K2), built 2026-09-29.</summary>
+    public const string CapoWord = "capo";
 
-    /// <summary>True for a word the key's first value takes (<c>none</c>, a tuning word or
-    /// <c>all</c>).</summary>
+    /// <summary>The highest fret a capo is written on (a guitar's capo range); 0 is no capo
+    /// and is refused — leave the word out.</summary>
+    public const int MaxCapo = 11;
+
+    /// <summary>The words the key's FIRST value takes: <c>none</c>, the tuning vocabulary,
+    /// <c>capo</c> (then its fret) and <c>all</c> (which may also follow a tuning word).</summary>
+    public static readonly IReadOnlyList<string> Words =
+        [Music.ChordShapes.NoneWord, .. Tablature.Tunings.Names, CapoWord, AllWord];
+
+    /// <summary>True for a word the key's first value takes (<c>none</c>, a tuning word,
+    /// <c>capo</c> or <c>all</c>).</summary>
     public static bool TryFind(string word)
-        => word == Music.ChordShapes.NoneWord || word == AllWord || IsTuningWord(word);
+        => word == Music.ChordShapes.NoneWord || word == AllWord || word == CapoWord || IsTuningWord(word);
 
     /// <summary>True for a tuning word (<see cref="Tablature.Tunings.Names"/>).</summary>
     public static bool IsTuningWord(string word) => Tablature.Tunings.Names.Contains(word);

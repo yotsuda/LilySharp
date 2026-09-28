@@ -188,16 +188,21 @@ public sealed record ChordAnnotation
     }
 
     /// <summary>The shape this annotation's diagram draws on <paramref name="diagramTuning"/> —
-    /// the one written for it; in a <c>chordDiagrams … all</c> score (<paramref name="all"/>)
-    /// else the default of its chord — or null: elsewhere a name alone draws no diagram
-    /// (<see cref="ChordShapes.Drawn"/>, owner's decisions 2026-09-28).</summary>
+    /// the one written for it; else the one the score's layout table lists for its chord
+    /// (<paramref name="table"/>, in <paramref name="section"/>); in a <c>chordDiagrams … all</c>
+    /// score (<paramref name="all"/>) else the default of its chord — or null: elsewhere a name
+    /// alone draws no diagram (<see cref="ChordShapes.Drawn"/>, owner's decisions 2026-09-28).</summary>
     /// <param name="diagramTuning">The resolved tuning.</param>
     /// <param name="all">The score draws every chord name.</param>
     /// <param name="derived">The chord a name-less form names — a bare <c>@chord</c>'s, from its
     /// notes; a symbol-less shape's, from its frets — which the page knows and the words do not.
     /// Ignored when the annotation writes a symbol (<see cref="Structure"/> is its chord).</param>
-    public ChosenShape? Drawn(Syntax.TuningType diagramTuning, bool all = false, ChordStructure? derived = null)
-        => ChordShapes.Drawn(diagramTuning, Shapes, all, Symbol != null ? Structure : derived);
+    /// <param name="table">The score's layout shape table, or null.</param>
+    /// <param name="section">The section the mark is written in, or null.</param>
+    /// <param name="capo">The fret the score's capo is on, 0 for none.</param>
+    public ChosenShape? Drawn(Syntax.TuningType diagramTuning, bool all = false, ChordStructure? derived = null,
+        ChordShapeTable? table = null, string? section = null, int capo = 0)
+        => ChordShapes.Drawn(diagramTuning, Shapes, all, Symbol != null ? Structure : derived, table, section, capo);
 
     /// <summary>
     /// The tuning a symbol-less shape (<c>@chord(x32010)</c>) is NAMED on — the score's

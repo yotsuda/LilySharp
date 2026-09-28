@@ -46,6 +46,9 @@ public enum ShapeSource
     /// normal rule's, else — no shape without a stretch — the stretch-inclusive rule's
     /// (<see cref="ChordVoicings.Fallback(IReadOnlyList{int}, ChordStructure)"/>).</summary>
     FirstOfOrder,
+    /// <summary>Written in the layout's shape table for the chord
+    /// (<c>chordDiagrams guitar { Cm7 x35343 }</c>, <see cref="ChordShapeTable"/>; 2026-09-29).</summary>
+    Layout,
 }
 
 /// <summary>A chord's shape on one tuning, and where it came from.</summary>
@@ -66,6 +69,7 @@ public sealed record ChosenShape(ImmutableArray<int> Frets, ShapeSource Source,
     public string SourceWord => Source switch
     {
         ShapeSource.Written => "written",
+        ShapeSource.Layout => "layout",
         ShapeSource.Predefined => "predefined",
         _ => "first of the order",
     };
@@ -114,31 +118,47 @@ public static class ChordShapes
     public const string NoneWord = "none";
 
     /// <summary>
-    /// The shape a diagram draws on <paramref name="diagramTuning"/>: the one written for it
-    /// (<see cref="WrittenFor"/>); else, in a score whose layout writes <c>chordDiagrams … all</c>
-    /// (<paramref name="all"/>), the <see cref="Default"/> of <paramref name="chord"/>; else null
-    /// — no diagram.
+    /// The shape a diagram draws on <paramref name="diagramTuning"/>, strongest first: the one
+    /// written for it at the chord (<see cref="WrittenFor"/>); else the one the score's layout
+    /// TABLE lists for the chord (<paramref name="table"/>, <see cref="ChordShapeTable.Find"/>:
+    /// the entry of the <paramref name="section"/> the chord is written in, else the song's — its
+    /// shape for the tuning, or the <see cref="Default"/> for a name listed alone); else, in a
+    /// score whose layout writes <c>chordDiagrams … all</c> (<paramref name="all"/>), the
+    /// <see cref="Default"/> of <paramref name="chord"/>; else null — no diagram.
     /// </summary>
     /// <param name="diagramTuning">The resolved tuning (<see cref="Semantics.ChordDiagramsKey.Resolve"/>).</param>
     /// <param name="written">The shapes written at the chord, in source order.</param>
     /// <param name="all">The score draws EVERY chord name (<see cref="Semantics.LayoutPlan.ChordDiagramsAll"/>).</param>
     /// <param name="chord">The chord the name spells (a bare <c>@chord</c>'s, the one it derives),
     /// or null (quoted text, a symbol that does not parse): with no written shape, no diagram.</param>
+    /// <param name="table">The score's layout shape table (<see cref="Semantics.LayoutPlan.ChordDiagramTable"/>), or null.</param>
+    /// <param name="section">The section the chord is written in (<see cref="Semantics.ChordDiagramScores.SectionNameOf"/>), or null.</param>
+    /// <param name="capo">The fret the score's capo is on (<see cref="Semantics.ChordSpelling.Capo"/>), 0 for
+    /// none: a written or listed shape is the PRESSED shape as it stands, and the default is
+    /// the pressed chord's (<see cref="ChordStructure.Pressed"/>); the table is read by the
+    /// sounding chord, the name the music writes.</param>
     /// <remarks>
     /// Owner's decision 2026-09-28: with <c>all</c> a WRITTEN shape still wins, and a chord with
     /// no shape at all on the tuning (an eleventh on the ukulele) draws none — the validator
-    /// warns once per symbol and tuning.
-    /// ⚠️ THE NEXT STEP (HANDOFF §2 K5 ③, not built): a per-song / per-section table in
-    /// <c>layout</c> that turns diagrams on for the chords it lists. It slots in HERE, after the
-    /// written shape and before the default — a written shape stays the strongest.
+    /// warns once per symbol and tuning. The table (HANDOFF §2 K5 ③, 2026-09-29) slots in
+    /// between: a written shape stays the strongest, and a listed chord draws whether or not the
+    /// score writes <c>all</c>.
     /// </remarks>
     public static ChosenShape? Drawn(TuningType diagramTuning, IReadOnlyList<WrittenShape> written,
-        bool all = false, ChordStructure? chord = null)
-        => WrittenFor(diagramTuning, written) is { } shape
-            ? new ChosenShape(Frets(shape), ShapeSource.Written)
-            // A raw-suffix chord (a row's Cm13: a root, its tones unknown) has no shape to find.
-            : all && chord is { RawSuffix: null } ? Default(diagramTuning, chord)
-            : null;
+        bool all = false, ChordStructure? chord = null, ChordShapeTable? table = null, string? section = null,
+        int capo = 0)
+    {
+        if (WrittenFor(diagramTuning, written) is { } shape)
+            return new ChosenShape(Frets(shape), ShapeSource.Written);
+        // A raw-suffix chord (a row's Cm13: a root, its tones unknown) has no shape to find.
+        if (chord is not { RawSuffix: null })
+            return null;
+        if (table?.Find(section, chord, diagramTuning) is { } listed)
+            return listed.Shapes.IsEmpty
+                ? Default(diagramTuning, chord.Pressed(capo, 0))
+                : new ChosenShape(Frets(WrittenFor(diagramTuning, listed.Shapes)!), ShapeSource.Layout);
+        return all ? Default(diagramTuning, chord.Pressed(capo, 0)) : null;
+    }
 
     /// <summary>
     /// The DEFAULT shape of <paramref name="chord"/> on <paramref name="tuning"/> — LilyPond's
@@ -564,15 +584,7 @@ public static class ChordShapes
     /// names B natural C♭ in F and C natural B♯ in B.
     /// </summary>
     private static (int Step, int Alter) SpellInKey(int pc, int keySharps)
-    {
-        for (int step = 0; step < 7; step++)
-            if (Mod12(Semantics.RelativeOctave.StepSemitoneOf(step) + KeySpelling.Alteration(step, keySharps)) == pc)
-                return (step, KeySpelling.Alteration(step, keySharps));
-        for (int step = 0; step < 7; step++)
-            if (Semantics.RelativeOctave.StepSemitoneOf(step) == pc)
-                return (step, 0);
-        return Semantics.ChordAnnotation.SpellPitchClass(pc, keySharps);
-    }
+        => ChordStructure.SpellInKey(pc, keySharps);   // one home, shared with the capo's pressed name
 
     /// <summary>What a chord tone is, by its diatonic step above the root.</summary>
     private static string ToneRole(int diatonicStep) => diatonicStep switch
@@ -629,13 +641,16 @@ public static class ChordShapes
     /// </summary>
     /// <param name="item">A <c>chord(…)</c> item's shape (<see cref="ShapeChords"/>): the fix is
     /// spelled <c>chord(X shape)</c>.</param>
+    /// <param name="inTable">A layout table entry's shape (<see cref="ChordShapeTable"/>): the fix
+    /// is spelled as the table writes it, <c>X shape</c>.</param>
     internal static string MismatchMessage(ShapeMismatch m, string shape, string? tuningName,
-        string symbol, bool inRow, bool item = false)
+        string symbol, bool inRow, bool item = false, bool inTable = false)
     {
         string Notes(IEnumerable<int> pcs) => string.Join(" ", pcs.Select(m.Spell));
         string written = tuningName == null ? shape : $"{tuningName} {shape}";
         string Form(string sym) => inRow ? $"{sym}({written})"
             : item ? $"chord({sym} {written})"
+            : inTable ? $"{sym} {written}"
             : $"@chord({sym} {written})";
         string missingList = AndList(m.Missing.Select(t => $"{m.Spell(t.Pc)} ({t.Role})").ToList());
         string foreignWords = m.Foreign.Length == 1 ? "is not a tone" : "are not tones";

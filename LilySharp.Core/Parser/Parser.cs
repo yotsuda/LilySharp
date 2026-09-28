@@ -63,6 +63,10 @@ internal sealed partial class Parser
         int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@figuredBass' name
         int chordsDepth = 0;   // brace depth inside a chords { } body (0 = outside)
         int chordsStage = 0;   // 0 = idle, 1 = saw 'chords', 2 = saw its name
+        // A layout's `chordDiagrams [words] { … }` shape table (2026-09-29): chord symbols
+        // there spell sharps with '#' as a chords body does (`C#m7 x46654`).
+        int tableDepth = 0;    // brace depth inside the table (0 = outside)
+        bool tableHead = false; // saw `chordDiagrams`, its words may follow, then the brace
         // A lyrics { } body is free text: a '?' or ';' written against a syllable is part
         // of the word (ParseLyricSyllable glues it on — "you?", "gent-ly;"), so it is not a
         // stray character there. Until 2026-09-26 it was flagged as one, an ERROR, though
@@ -86,7 +90,7 @@ internal sealed partial class Parser
             // right (`d? e` pointed at the space, not the '?').
             int inkPos = scanPos + t.LeadingTriviaWidth;
 
-            bool inChordFigArg = argDepth > 0 || chordsDepth > 0;
+            bool inChordFigArg = argDepth > 0 || chordsDepth > 0 || tableDepth > 0;
             if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#") && lyricsDepth == 0)
             {
                 // '?' is LilyPond's cautionary accidental; Lily# has no such
@@ -175,6 +179,23 @@ internal sealed partial class Parser
                 chordsStage = 2;
             else
                 chordsStage = 0;
+
+            // The shape table of a layout's `chordDiagrams`: the key, then its words (a tuning,
+            // `all`), then the brace; any other token disarms it.
+            if (tableDepth > 0)
+            {
+                if (t.Kind == SyntaxKind.OpenBrace) tableDepth++;
+                else if (t.Kind == SyntaxKind.CloseBrace) tableDepth--;
+            }
+            else if (t.Kind == SyntaxKind.Identifier && t.Text.Equals(Semantics.ChordDiagramsKey.Key, StringComparison.Ordinal))
+                tableHead = true;
+            else if (tableHead && t.Kind == SyntaxKind.OpenBrace)
+            {
+                tableDepth = 1;
+                tableHead = false;
+            }
+            else if (tableHead && t.Kind != SyntaxKind.Identifier)
+                tableHead = false;
 
             // A lyrics { } BODY. The score row `lyrics NAME sings PART` has no brace, so the
             // region arms only on a '{' that follows the head (name, `sings`, part).

@@ -126,14 +126,20 @@ public enum ChordQuality
 ///   The raised group is a single contiguous span between the other three, which is the
 ///   fact this one index records.
 /// <para>
-/// ⚠️ ONE INDEX, NOT TWO. The raised run always ENDS at the slash or at the end of the
-/// string — LilyPond puts nothing on the baseline between the quality and the bass — so a
+/// ⚠️ ONE INDEX PER NAME, NOT TWO. The raised run always ENDS at the slash or at the end of
+/// the name — LilyPond puts nothing on the baseline between the quality and the bass — so a
 /// second index would be a second spelling of a fact the string already carries, and the
 /// two could disagree. The renderer and the reservation both find the end the same way
-/// (<c>ChordNameGlyphRun</c>).
+/// (<c>ChordNameGlyphRun</c>). A capo score's <c>chordNames both</c> prints TWO names,
+/// <c>E♭m7 (Cm7)</c> (2026-09-29, owner's choice: each with its own raised run, LilyPond's
+/// picture twice), so the bracketed second name carries its own start
+/// (<paramref name="BracketSuperFrom"/>); the first run then ends before the <c> (</c>, the
+/// second at the <c>)</c> or its own slash.
 /// </para>
 /// </remarks>
-public readonly record struct ChordSymbolText(string Text, int SuperFrom)
+/// <param name="BracketSuperFrom">Where the bracketed second name's raised run starts, or
+/// <see cref="NoSuperscript"/> (every symbol but a capo <c>both</c> name).</param>
+public readonly record struct ChordSymbolText(string Text, int SuperFrom, int BracketSuperFrom = -1)
 {
     /// <summary>The symbol stands on one baseline.</summary>
     public const int NoSuperscript = -1;
@@ -628,8 +634,27 @@ public sealed record ChordStructure(
     /// raised.
     /// </para>
     /// </remarks>
-    public ChordSymbolText PrintedSymbol(Semantics.ChordSpelling spelling)
+    public ChordSymbolText PrintedSymbol(Semantics.ChordSpelling spelling, int keySharps = 0)
     {
+        // A capo (layout { chordDiagrams … capo N }, 2026-09-29): the name a player reads is
+        // the PRESSED chord's — this chord N semitones down, spelled in the key N semitones
+        // down (Pressed; owner's decision 2026-09-29, "follow the key") — unless chordNames
+        // asks for the sounding name, or for both: "E♭m7 (Cm7)", each name with its own
+        // raised run (ChordSymbolText.BracketSuperFrom).
+        if (spelling.Capo > 0 && spelling.Names != Semantics.ChordNameMode.Sounding)
+        {
+            var plain = spelling with { Capo = 0 };
+            var pressed = Pressed(spelling.Capo, keySharps).PrintedSymbol(plain);
+            if (spelling.Names == Semantics.ChordNameMode.Shape)
+                return pressed;
+            var sounding = PrintedSymbol(plain);
+            int offset = sounding.Text.Length + 2;
+            return new ChordSymbolText(sounding.Text + " (" + pressed.Text + ")", sounding.SuperFrom,
+                pressed.SuperFrom == ChordSymbolText.NoSuperscript
+                    ? ChordSymbolText.NoSuperscript
+                    : offset + pressed.SuperFrom);
+        }
+
         bool lower = spelling.LowercaseMinor && RawSuffix == null
                      && ChordQualityRegistry.HasMinorThird(Quality);
         var sb = new StringBuilder();
@@ -670,6 +695,70 @@ public sealed record ChordStructure(
         }
         return new ChordSymbolText(sb.ToString(), superFrom);
     }
+
+    /// <summary>
+    /// The chord a player PRESSES with a capo at fret <paramref name="capo"/>: this chord
+    /// <paramref name="capo"/> semitones down, its root and slash bass spelled in the key
+    /// that many semitones below <paramref name="keySharps"/> (<see cref="PressedKeySharps"/>)
+    /// — that key's own letter for the note, else a natural, else the key's side of the
+    /// accidental (<see cref="SpellInKey"/>). The quality, a raw suffix and the added-bass
+    /// flag are kept; a capo of 0 answers this chord itself.
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-09-29 ("follow the current key"), for HANDOFF §2 K2's open
+    /// spelling rule: a sounding E♭ in E♭ major under capo 3 is pressed as C in C major; a
+    /// sounding B♭ there as G; in E major under capo 3 (pressed key D♭) a sounding G♯m is
+    /// pressed as Fm. The pitch classes alone decide the shapes (<see cref="PredefinedFretboards"/>,
+    /// <c>ChordVoicings</c>); the spelling decides only the printed name.
+    /// </remarks>
+    public ChordStructure Pressed(int capo, int keySharps)
+    {
+        if (capo == 0)
+            return this;
+        int key = PressedKeySharps(keySharps, capo);
+        var (rootStep, rootAlter) = SpellInKey(
+            Wrap12(Semantics.RelativeOctave.StepSemitoneOf(Wrap7(RootStep)) + RootAlter - capo), key);
+        int? bassStep = null, bassAlter = null;
+        if (BassStep is int b)
+        {
+            var (s, a) = SpellInKey(Wrap12(Semantics.RelativeOctave.StepSemitoneOf(Wrap7(b)) + (BassAlter ?? 0) - capo), key);
+            bassStep = s;
+            bassAlter = a;
+        }
+        return this with { RootStep = rootStep, RootAlter = rootAlter, BassStep = bassStep, BassAlter = bassAlter };
+    }
+
+    /// <summary>
+    /// The key signature <paramref name="capo"/> semitones below <paramref name="keySharps"/>:
+    /// seven fifths down per semitone, brought into −5…+6 — at the tritone the SHARP side
+    /// (F♯ major, six sharps, over G♭: the guitarist's spelling, HANDOFF §2 K2 "sharp-leaning").
+    /// </summary>
+    public static int PressedKeySharps(int keySharps, int capo)
+    {
+        int k = ((keySharps - 7 * capo) % 12 + 12) % 12;
+        return k > 6 ? k - 12 : k;
+    }
+
+    /// <summary>
+    /// A pitch class spelled in the key of <paramref name="keySharps"/>: the key's own letter
+    /// for it, else a NATURAL, else <see cref="Semantics.ChordAnnotation.SpellPitchClass"/>'s
+    /// sharp or flat. (Lily#'s rule, 2026-09-28: a bare <c>@chord</c>'s spelling goes straight
+    /// to the sharp or flat, which in a chord's own key names B natural C♭ in F and C natural
+    /// B♯ in B.) The one home for the pressed name and for LYS1039's note names.
+    /// </summary>
+    internal static (int Step, int Alter) SpellInKey(int pc, int keySharps)
+    {
+        for (int step = 0; step < 7; step++)
+            if (Wrap12(Semantics.RelativeOctave.StepSemitoneOf(step) + KeySpelling.Alteration(step, keySharps)) == pc)
+                return (step, KeySpelling.Alteration(step, keySharps));
+        for (int step = 0; step < 7; step++)
+            if (Semantics.RelativeOctave.StepSemitoneOf(step) == pc)
+                return (step, 0);
+        return Semantics.ChordAnnotation.SpellPitchClass(pc, keySharps);
+    }
+
+    private static int Wrap12(int a) => ((a % 12) + 12) % 12;
+    private static int Wrap7(int a) => ((a % 7) + 7) % 7;
 
     /// <summary>
     /// The suffix with its leading minor modifier removed — the <c>m</c> the lowercase root

@@ -753,7 +753,8 @@ internal sealed partial class Parser
     /// The block's tokens are kept FLAT, like the paper block's: the entries are read back
     /// by <c>LayoutDeclarationSyntax.Entries</c> and judged by <c>LayoutPlanReader</c>. The
     /// parser's only jobs are the block's extent and refusing a token that could never be a
-    /// key or a value — there is no nested block in this vocabulary, so a brace inside is
+    /// key or a value — the one nested block in this vocabulary is the shape table after
+    /// <c>chordDiagrams</c> (<see cref="ParseLayoutShapeTable"/>); any other brace inside is
     /// refused where it stands.
     /// </remarks>
     private LayoutDeclarationGreen ParseLayoutDeclaration(bool inScore = false)
@@ -830,6 +831,9 @@ internal sealed partial class Parser
         if (name != null)
             tokens.Add(name);
         tokens.Add(Advance()); // {
+        // The key of the entry being read — for the ONE key that opens a block, chordDiagrams'
+        // shape table (Semantics.ChordDiagramsKey.Key; owner's design HANDOFF §2 K5 ③, 2026-09-29).
+        string? entryKey = null;
         while (!Check(SyntaxKind.EndOfFile))
         {
             if (Check(SyntaxKind.CloseBrace))
@@ -839,12 +843,19 @@ internal sealed partial class Parser
             }
             if (Check(SyntaxKind.OpenBrace))
             {
-                // No layout key opens a block; refused where it stands and skipped so the
+                if (entryKey == Semantics.ChordDiagramsKey.Key)
+                {
+                    ParseLayoutShapeTable(tokens);
+                    entryKey = null;
+                    continue;
+                }
+                // No other layout key opens a block; refused where it stands and skipped so the
                 // walker upstairs stays one level deep. Its closer is consumed with it.
                 var braceSpan = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
                 _diagnostics.Error(braceSpan, DiagnosticCodes.LayoutEntryBadValue,
                     "A 'layout { }' entry is a key followed by its word (markTempo beside, "
-                    + "barNumbers every 4) — it does not open a block.");
+                    + "barNumbers every 4) — it does not open a block; only 'chordDiagrams' takes "
+                    + "one, its shape table (chordDiagrams guitar { Cm7 x35343 }).");
                 tokens.Add(Advance());
                 while (!Check(SyntaxKind.EndOfFile) && !Check(SyntaxKind.CloseBrace))
                     tokens.Add(Advance());
@@ -855,6 +866,8 @@ internal sealed partial class Parser
             if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral) ||
                 Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current))
             {
+                if (SyntaxFacts.IsLayoutKey(Current.Text))
+                    entryKey = Current.Text;
                 tokens.Add(Advance());
                 continue;
             }
@@ -869,6 +882,51 @@ internal sealed partial class Parser
         _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
             "This 'layout {' has no closing '}'.");
         return new LayoutDeclarationGreen(keyword, [.. tokens]);
+    }
+
+    /// <summary>
+    /// <c>chordDiagrams [TUNING] [all] { Cm7 x35343  G  section Chorus { C x35553 } }</c> — the
+    /// shape table, the one layout entry that opens a block (owner's design, HANDOFF §2 K5 ③;
+    /// 2026-09-29). Only BOUNDED here: its tokens stay flat in the node, braces included, and
+    /// <c>LayoutPlanReader</c> reads them — a chord symbol's glued run (<c>C#m7-5/G</c>: the
+    /// <c>#</c> is a BadToken, <c>-</c> and <c>/</c> their own tokens, as in a chords row) is
+    /// re-joined by adjacency there. A <c>section NAME { … }</c> nests one level.
+    /// </summary>
+    private void ParseLayoutShapeTable(List<GreenNode?> tokens)
+    {
+        tokens.Add(Advance()); // {
+        int depth = 1;
+        while (!Check(SyntaxKind.EndOfFile) && depth > 0)
+        {
+            if (Check(SyntaxKind.OpenBrace))
+            {
+                depth++;
+                tokens.Add(Advance());
+                continue;
+            }
+            if (Check(SyntaxKind.CloseBrace))
+            {
+                depth--;
+                tokens.Add(Advance());
+                continue;
+            }
+            if (Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DecimalLiteral)
+                || Check(SyntaxKind.StringLiteral) || IsWordLikeToken(Current)
+                || Check(SyntaxKind.Minus) || Check(SyntaxKind.Plus) || Check(SyntaxKind.Slash)
+                || (Check(SyntaxKind.BadToken) && Current.Text == "#"))
+            {
+                tokens.Add(Advance());
+                continue;
+            }
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.LayoutEntryBadValue,
+                "A chord-diagram table lists chord names with their shapes — Cm7 x35343, "
+                + "F 133211 2010, section Chorus { … } — and '" + Current.Text + "' is neither.");
+            tokens.Add(Advance());
+        }
+        if (depth > 0)
+            _diagnostics.Error(new TextSpan(_textPosition, 1), DiagnosticCodes.ExpectedToken,
+                "This 'chordDiagrams … {' has no closing '}'.");
     }
 
     // A token that reads as a bare WORD, judged by its text rather than by its kind:

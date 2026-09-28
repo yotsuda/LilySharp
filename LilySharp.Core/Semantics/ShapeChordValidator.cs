@@ -72,14 +72,16 @@ internal sealed class ShapeChordValidator : ISemanticValidator
                 + "still sounds, but nothing is checked against the symbol and a bare @chord on "
                 + "the item names nothing.");
 
-        // ⑵ A shape the part's tuning can play, and ⑶ the shape against the symbol.
+        // ⑵ A shape the part's tuning can play, and ⑶ the shape against the symbol — under a
+        // capo, against the PRESSED chord (the shape is pressed above the capo; 2026-09-29).
         var said = new HashSet<string>();
+        int capo = ChordDiagramScores.CapoOfNode(item);
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
             var strings = Tablature.Tunings.GetTuning(part.Tuning);
             if (ShapeChords.ShapeFor(words, part.Tuning) is not { } shape)
             {
-                string? example = words.Structure is { } s ? ChordShapes.Default(part.Tuning, s)?.Spelled : null;
+                string? example = words.Structure is { } s ? ChordShapes.Default(part.Tuning, s.Pressed(capo, 0))?.Spelled : null;
                 string message = ShapeChords.NoShape(written, words.Symbol, part.Word, strings.Length,
                     !words.Shapes.IsEmpty, example);
                 if (said.Add(message))
@@ -88,7 +90,7 @@ internal sealed class ShapeChordValidator : ISemanticValidator
                 continue;
             }
             if (words.Symbol is not { } symbol || words.Structure is not { } structure
-                || ChordShapes.Mismatch(ChordShapes.Frets(shape), strings, structure) is not { } mismatch)
+                || ChordShapes.Mismatch(ChordShapes.Frets(shape), strings, structure.Pressed(capo, 0)) is not { } mismatch)
                 continue;
             string? tuningName = words.Shapes.First(w => w.Shape == shape).TuningName;
             string mismatchMessage = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol,

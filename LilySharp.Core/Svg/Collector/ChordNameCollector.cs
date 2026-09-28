@@ -58,6 +58,11 @@ internal sealed class ChordNameCollector
     /// set by the collector with <see cref="DiagramsWord"/>.</summary>
     public bool DiagramsAll { get; set; }
 
+    /// <summary>The score's layout shape table (<c>chordDiagrams … { … }</c>: the chords that
+    /// draw wherever they are named, <see cref="LilySharp.Core.Music.ChordShapeTable"/>), or
+    /// null — set by the collector with <see cref="DiagramsWord"/>.</summary>
+    public LilySharp.Core.Music.ChordShapeTable? Table { get; set; }
+
     /// <summary>The fretted tuning of the staff the row being collected stands over
     /// (<see cref="Semantics.ChordDiagramScores.StaffWord"/> / <see cref="Semantics.ChordDiagramScores.RowStaffWord"/>),
     /// or null (a lead-sheet row, a piano staff) — set by the collector before each row.</summary>
@@ -65,20 +70,23 @@ internal sealed class ChordNameCollector
 
     /// <summary>
     /// The diagram spec a row entry draws under its symbol, or null: a WRITTEN shape (owner's
-    /// decision 2026-09-28) — in a <c>chordDiagrams … all</c> score, else the default shape of
-    /// <paramref name="structure"/> (the chord the entry names, a degree resolved in its key) —
-    /// on the layout's tuning, else the staff's fretted instrument's, else the guitar's
-    /// (<see cref="Semantics.ChordDiagramsKey.Resolve"/>); never under <c>chordDiagrams none</c>.
+    /// decision 2026-09-28) — else the layout table's shape for the chord (<see cref="Table"/>,
+    /// in the section the entry is written in) — in a <c>chordDiagrams … all</c> score, else the
+    /// default shape of <paramref name="structure"/> (the chord the entry names, a degree resolved
+    /// in its key) — on the layout's tuning, else the staff's fretted instrument's, else the
+    /// guitar's (<see cref="Semantics.ChordDiagramsKey.Resolve"/>); never under <c>chordDiagrams none</c>.
     /// </summary>
     private string? DiagramOf(ChordEntrySyntax entry, LilySharp.Core.Music.ChordStructure? structure)
     {
         var words = entry.ShapeWords;
-        if ((words.Count == 0 && !DiagramsAll)
+        if ((words.Count == 0 && !DiagramsAll && Table == null)
             || Semantics.ChordDiagramsKey.Resolve(DiagramsWord, RowStaffTuning) is not { } tuning)
             return null;
         LilySharp.Core.Music.ChordShapes.ParseWords(
             [.. words.Select(w => w.Text)], entry.SymbolText, out var shapes);
-        return LilySharp.Core.Music.ChordShapes.Drawn(tuning, shapes, DiagramsAll, structure)?.FrameSpec;
+        string? section = Table != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null;
+        return LilySharp.Core.Music.ChordShapes.Drawn(tuning, shapes, DiagramsAll, structure, Table, section,
+            Spelling.Capo)?.FrameSpec;
     }
 
     /// <summary>The key timeline for Roman-numeral degrees: (start measure, tonic step
@@ -213,9 +221,10 @@ internal sealed class ChordNameCollector
     /// symbol on (see <c>MeasureCollector.CollectChordNames</c>).</summary>
     public void AddInline(string text, int measureIndex, int itemIndex, Fraction timing,
         int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null,
-        int superFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript)
+        int superFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
+        int bracketSuperFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript)
         => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
-            timing: timing, structure: structure) { SuperFrom = superFrom });
+            timing: timing, structure: structure) { SuperFrom = superFrom, BracketSuperFrom = bracketSuperFrom });
 
     /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
     /// collected on a staff (aligned/row items already carry their own mode). Called
@@ -338,6 +347,7 @@ internal sealed class ChordNameCollector
                         useTiming: true, timing: timing, structure: structure)
                     {
                         SuperFrom = sym.SuperFrom,
+                        BracketSuperFrom = sym.BracketSuperFrom,
                         RomanText = Roman(structure, mi),
                         DisplayMode = mode,
                         FrameSpec = DiagramOf(entry, structure),
@@ -684,6 +694,7 @@ internal sealed class ChordNameCollector
                     isChordRow: true)
                 {
                     SuperFrom = sym.SuperFrom,
+                    BracketSuperFrom = sym.BracketSuperFrom,
                     RomanText = Roman(structure, measureIndex),
                     DisplayMode = mode,
                     FrameSpec = DiagramOf(entry, structure),
@@ -753,8 +764,9 @@ internal sealed class ChordNameCollector
     {
         string symbol = entry.SymbolText;
         var (tonicStep, sharps) = KeyAt(measure);
+        // The key at the bar spells a capo score's pressed name (ChordStructure.Pressed).
         return StructureOf(symbol, tonicStep, sharps) is { } structure
-            ? (structure.PrintedSymbol(Spelling), structure)
+            ? (structure.PrintedSymbol(Spelling, sharps), structure)
             // Unparseable root — show the raw run with no structure at all.
             : (LilySharp.Core.Music.ChordSymbolText.Flat(symbol), null);
     }

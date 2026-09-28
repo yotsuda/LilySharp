@@ -121,7 +121,7 @@ internal sealed partial class LayoutEngine
         // page's chain, or nothing (HeaderBand). It reaches the first system's placement,
         // the count loop's page estimate and the page breaker as ONE value.
         var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics,
-            score.Subtitle, score.Poet);
+            score.Subtitle, score.Poet, score.Instrument);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout

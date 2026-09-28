@@ -388,8 +388,10 @@ public static class AnnotationValues
     /// <see cref="ChordSpelling.Default"/> because the answer is the same under every
     /// spelling, and MusicXML passes it because a <c>&lt;harmony&gt;</c> is data.
     /// </remarks>
+    /// <param name="keySharps">The key signature in force at the mark, which a capo score's
+    /// pressed name is spelled in (<see cref="Music.ChordStructure.PrintedSymbol"/>).</param>
     public static Music.ChordSymbolText? Chord(MusicMarkSyntax mark, ChordSpelling spelling,
-        out Music.ChordStructure? structure)
+        out Music.ChordStructure? structure, int keySharps = 0)
     {
         structure = null;
         if (ChordAnnotation.Of(mark) is not { } chord)
@@ -413,7 +415,7 @@ public static class AnnotationValues
         if (chord.Structure is { } parsed)
         {
             structure = parsed;
-            return parsed.PrintedSymbol(spelling);
+            return parsed.PrintedSymbol(spelling, keySharps);
         }
         return null;
     }

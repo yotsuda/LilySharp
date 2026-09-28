@@ -81,6 +81,11 @@ public sealed record ChordNameItem
     /// </remarks>
     public int SuperFrom { get; init; } = Music.ChordSymbolText.NoSuperscript;
 
+    /// <summary>Where the bracketed second name's superscript begins in a capo score's
+    /// <c>chordNames both</c> symbol (<c>E♭m7 (Cm7)</c>), or
+    /// <see cref="Music.ChordSymbolText.NoSuperscript"/> (<see cref="Music.ChordSymbolText.BracketSuperFrom"/>).</summary>
+    public int BracketSuperFrom { get; init; } = Music.ChordSymbolText.NoSuperscript;
+
     /// <summary>The Roman-numeral degree for the current key (e.g. "IIm7", "V7"), or
     /// null when the chord has no resolved structure. Computed at collection time (the
     /// key is known there); shown when <see cref="DisplayMode"/> is Roman or Both.</summary>

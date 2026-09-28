@@ -93,7 +93,7 @@ internal static partial class SharedRenderer
                 // loop that drew at one size would print the chord on one line again while
                 // the row reserved for two. The factor multiplies each kind's own em.
                 foreach (var piece in LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Pieces(
-                             fonts, c.ChordText, c.SuperFrom))
+                             fonts, c.ChordText, c.SuperFrom, c.BracketSuperFrom))
                 {
                     if (piece.IsTriangle)
                         DrawMajorSevenTriangle(gc, c.X + piece.DrawX, cy + piece.Raise,

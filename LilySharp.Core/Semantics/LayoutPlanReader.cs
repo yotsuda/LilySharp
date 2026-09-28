@@ -61,6 +61,7 @@ internal static class LayoutPlanReader
         ChordQualityStyles.Key => ChordQualityStyles.Words,
         MinorChords.Key => MinorChords.Words,
         ChordDiagramsKey.Key => ChordDiagramsKey.Words,
+        ChordNamesKey.Key => ChordNamesKey.Words,
         VoltaBracketLength.Key => VoltaBracketLength.Words,
         _ => [],
     };
@@ -229,7 +230,12 @@ internal static class LayoutPlanReader
                 MinorChords.Key => ReadOneWord(plan, entry, span, found, MinorChords.Key,
                     MinorChords.Words, w => MinorChords.Find(w) is { } b
                         ? plan with { Chords = plan.Chords with { LowercaseMinor = b } } : null),
-                ChordDiagramsKey.Key => ReadChordDiagrams(plan, entry, span, found),
+                ChordDiagramsKey.Key => ReadChordDiagrams(plan, entry, span, found, layout),
+                // What a name shows under a capo (ChordNameMode) — the third half of the
+                // chord spelling, beside the quality's vocabulary and the minor root's case.
+                ChordNamesKey.Key => ReadOneWord(plan, entry, span, found, ChordNamesKey.Key,
+                    ChordNamesKey.Words, w => ChordNamesKey.Find(w) is { } mode
+                        ? plan with { Chords = plan.Chords with { Names = mode } } : null),
                 VoltaBracketLength.Key => ReadVoltaBracket(plan, entry, span, found),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch
@@ -356,83 +362,151 @@ internal static class LayoutPlanReader
         return plan with { Accidentals = style };
     }
 
-    // chordDiagrams none | TUNING | all | TUNING all (owner's decision 2026-09-28: the tuning
-    // first, then the scope word). Its own reader for the grammar and the message: the tuning
-    // vocabulary is thirty words, so the "takes" sentence names the commonest and points at
-    // the rest rather than listing them (ReadOneWord would).
+    // chordDiagrams none | [TUNING] [capo N] [all] [{ table }] (owner's decision 2026-09-28: the
+    // tuning first, then the scope word; the capo between them, 2026-09-29, HANDOFF §2 K2), then
+    // optionally the SHAPE TABLE in braces (owner's design HANDOFF §2 K5 ③, 2026-09-29:
+    // `chordDiagrams guitar { Cm7 x35343  G  section B { … } }`, ReadShapeTable). Its own
+    // reader for the grammar and the message: the tuning vocabulary is thirty words, so the
+    // "takes" sentence names the commonest and points at the rest rather than listing them
+    // (ReadOneWord would).
     private static LayoutPlan ReadChordDiagrams(
-        LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found)
+        LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found,
+        LayoutDeclarationSyntax layout)
     {
-        const string all = ChordDiagramsKey.AllWord, none = Music.ChordShapes.NoneWord;
+        const string all = ChordDiagramsKey.AllWord, none = Music.ChordShapes.NoneWord,
+            capoWord = ChordDiagramsKey.CapoWord;
         string key = ChordDiagramsKey.Key;
         string takes = $"'{key}' takes {none} or a tuning name (guitar, ukulele, mandolin, "
-            + $"guitardropd, ... - the words a tab's 'tuning' takes), optionally followed by '{all}' "
-            + $"(every chord name draws a diagram), or '{all}' alone";
+            + $"guitardropd, ... - the words a tab's 'tuning' takes), optionally followed by '{capoWord} N' "
+            + $"(the fret the capo is on) and by '{all}' (every chord name draws a diagram), or "
+            + $"'{capoWord} N' / '{all}' alone; then, optionally, a shape "
+            + "table in braces ('{ Cm7 x35343  G }': the chords that draw a diagram, with the shape each draws)";
         void Refuse(TextSpan span, string message)
             => found.Add(new Problem(span, DiagnosticCodes.LayoutEntryBadValue, message, IsError: true));
 
-        if (entry.Values.Count == 0)
+        // The words before the table's '{' (the table is read after them).
+        int open = -1;
+        for (int i = 0; i < entry.Values.Count; i++)
+            if (entry.Values[i].Kind == SyntaxKind.OpenBrace)
+            {
+                open = i;
+                break;
+            }
+        IReadOnlyList<SyntaxTokenNode> head = open < 0 ? entry.Values : [.. entry.Values.Take(open)];
+
+        if (head.Count == 0 && open < 0)
         {
             Refuse(keySpan, takes + $" - e.g. '{key} guitar' or '{key} guitar {all}'.");
             return plan;
         }
-        var word = entry.Values[0];
-        if (!ChordDiagramsKey.TryFind(word.Text))
+        string? tuningWord = null;
+        bool drawsAll = false;
+        int capo = 0;
+        if (head.Count > 0)
         {
-            Refuse(word.Span, $"'{word.Text}' is not a value of '{key}'." + CaseHint(word.Text) + " " + takes + ".");
-            return plan;
-        }
-        bool drawsAll = word.Text == all;
-        if (entry.Values.Count > 1)
-        {
-            var second = entry.Values[1];
-            string s = second.Text;
+            var word = head[0];
+            if (!ChordDiagramsKey.TryFind(word.Text))
+            {
+                Refuse(word.Span, $"'{word.Text}' is not a value of '{key}'." + CaseHint(word.Text) + " " + takes + ".");
+                return plan;
+            }
             if (word.Text == none)
             {
-                Refuse(second.Span, s == all
-                    ? $"'{none}' draws no diagram, so it takes no '{all}' - write '{key} {all}' "
-                      + $"(or '{key} guitar {all}') to draw every chord, or '{key} {none}' alone."
-                    : $"'{none}' takes nothing after it; '{s}' is extra.");
-                return plan;
+                if (head.Count > 1)
+                {
+                    string s = head[1].Text;
+                    Refuse(head[1].Span, s == all
+                        ? $"'{none}' draws no diagram, so it takes no '{all}' - write '{key} {all}' "
+                          + $"(or '{key} guitar {all}') to draw every chord, or '{key} {none}' alone."
+                        : s == capoWord
+                            ? $"'{none}' draws no diagram, so it takes no '{capoWord}' - write '{key} guitar {capoWord} 3', "
+                              + $"or '{key} {none}' alone."
+                            : $"'{none}' takes nothing after it; '{s}' is extra.");
+                    return plan;
+                }
+                tuningWord = none;
             }
-            if (drawsAll)
+            else
             {
-                Refuse(second.Span, s == all
-                    ? $"'{all}' is written twice - write '{key} {all}'."
-                    : ChordDiagramsKey.IsTuningWord(s)
-                        ? $"the tuning comes first: write '{key} {s} {all}'."
-                        : $"'{all}' takes nothing after it; '{s}' is extra.");
-                return plan;
-            }
-            // A tuning word: only `all` may follow it.
-            if (s != all)
-            {
-                Refuse(second.Span, s == word.Text
-                    ? $"'{s}' is written twice - write '{key} {s}'."
-                    : ChordDiagramsKey.IsTuningWord(s) || s == none
-                        ? takes + $" - one word for the tuning, then optionally '{all}'; '{s}' is extra."
-                        : $"'{s}' is not a value of '{key}' here: after the tuning only '{all}' may follow."
+                // [TUNING] [capo N] [all], in that order; anything else names what it should be.
+                int i = 0;
+                if (ChordDiagramsKey.IsTuningWord(word.Text))
+                {
+                    tuningWord = word.Text;
+                    i = 1;
+                }
+                if (i < head.Count && head[i].Text == capoWord)
+                {
+                    if (i + 1 >= head.Count || head[i + 1].Kind != SyntaxKind.IntegerLiteral
+                        || !int.TryParse(head[i + 1].Text, NumberStyles.None, CultureInfo.InvariantCulture, out capo)
+                        || capo > ChordDiagramsKey.MaxCapo)
+                    {
+                        var at = i + 1 < head.Count ? head[i + 1].Span : head[i].Span;
+                        Refuse(at, $"'{capoWord}' takes the fret the capo is on, 1 to {ChordDiagramsKey.MaxCapo}: "
+                            + $"'{key} guitar {capoWord} 3'.");
+                        return plan;
+                    }
+                    if (capo == 0)
+                    {
+                        Refuse(head[i + 1].Span, $"'{capoWord} 0' is no capo - leave the '{capoWord}' out.");
+                        return plan;
+                    }
+                    i += 2;
+                }
+                if (i < head.Count && head[i].Text == all)
+                {
+                    drawsAll = true;
+                    i++;
+                }
+                if (i < head.Count)
+                {
+                    var extra = head[i];
+                    string s = extra.Text;
+                    string written = tuningWord ?? "guitar";
+                    Refuse(extra.Span,
+                        s == all ? $"'{all}' is written twice - write '{key} {(tuningWord == null && capo == 0 ? all : $"{written}{(capo > 0 ? $" {capoWord} {capo}" : "")} {all}")}'."
+                        : s == capoWord && capo > 0 ? $"'{capoWord}' is written twice - write '{key} {written} {capoWord} {capo}'."
+                        : s == capoWord ? $"the capo comes before '{all}': write '{key} {written} {capoWord} N {all}'."
+                        : ChordDiagramsKey.IsTuningWord(s) && tuningWord == null
+                            ? $"the tuning comes first: write '{key} {s}{(capo > 0 ? $" {capoWord} {capo}" : "")}{(drawsAll ? $" {all}" : "")}'."
+                        : s == tuningWord ? $"'{s}' is written twice - write '{key} {s}'."
+                        : ChordDiagramsKey.IsTuningWord(s) || s == none
+                            ? takes + $" - one word for the tuning, then optionally '{capoWord} N' and '{all}'; '{s}' is extra."
+                        : drawsAll ? $"'{all}' takes nothing after it; '{s}' is extra."
+                        : $"'{s}' is not a value of '{key}' here: after the tuning only '{capoWord} N' and '{all}' may follow."
                           + CaseHint(s));
-                return plan;
+                    return plan;
+                }
             }
-            if (entry.Values.Count > 2)
-            {
-                var third = entry.Values[2];
-                Refuse(third.Span, third.Text == all
-                    ? $"'{all}' is written twice - write '{key} {word.Text} {all}'."
-                    : takes + $"; '{third.Text}' is extra.");
-                return plan;
-            }
-            drawsAll = true;
         }
+
+        // The shape table, when one follows (never after `none`: it draws nothing).
+        Music.ChordShapeTable? table = null;
+        if (open >= 0)
+        {
+            if (tuningWord == none)
+            {
+                Refuse(entry.Values[open].Span, $"'{none}' draws no diagram, so it takes no shape table - "
+                    + $"write '{key} guitar {{ ... }}' (or '{key} {{ ... }}') for the chords that draw, "
+                    + $"or '{key} {none}' alone.");
+                return plan;
+            }
+            table = ReadShapeTable(entry.Values, open, tuningWord, capo, layout, found);
+            if (table == null)
+                return plan;
+        }
+
         // The tuning word as written, `none` included: an absent key — or `all` alone — is
         // null, and means "the part's instrument, else the guitar" (ChordDiagramsKey.Resolve).
-        // Both halves are set, so an override block's `chordDiagrams guitar` drops a named
-        // block's `all` (a key written again is written whole).
+        // All four parts are set, so an override block's `chordDiagrams guitar` drops a named
+        // block's `all`, its capo and its table (a key written again is written whole). The
+        // capo lives in the chord SPELLING, the value every namer is handed (ChordSpelling).
         return plan with
         {
-            ChordDiagrams = word.Text == all ? null : word.Text,
+            ChordDiagrams = tuningWord,
             ChordDiagramsAll = drawsAll,
+            ChordDiagramTable = table,
+            Chords = plan.Chords with { Capo = capo },
         };
 
         // Values are case-sensitive, like keys: `Guitar`, `ALL` name the spelling that works.
@@ -441,6 +515,260 @@ internal static class LayoutPlanReader
                     && !w.Equals(written, StringComparison.Ordinal)) is { } canonical
                 ? $" Values are case-sensitive: write '{canonical}'."
                 : "";
+    }
+
+    /// <summary>
+    /// Reads the shape table after the <c>chordDiagrams</c> words — the tokens from the
+    /// <c>{</c> at <paramref name="open"/> to its closer — into a <see cref="Music.ChordShapeTable"/>:
+    /// entries <c>SYMBOL [TUNINGWORD] SHAPE …</c> (a name alone: the usual shape), and
+    /// <c>section NAME { entries }</c> blocks. Null when the table is refused as a whole (a
+    /// structural error: a stray brace, a <c>section</c> with no name or block, tokens after
+    /// the closer); an entry with a problem is left out with a warning and the rest stand, the
+    /// way a row's written shapes do (LYS1038).
+    /// </summary>
+    /// <remarks>
+    /// The words are the tokens re-joined by ADJACENCY (a chords row's rule): <c>C#m7-5/G</c>
+    /// and <c>8xx88-11</c> are one word each; a brace is always its own. A word is a chord
+    /// symbol unless it starts a shape (<see cref="Music.ChordShapes.StartsShape"/>) or names a
+    /// tuning — the words after a symbol are its shapes, read by
+    /// <see cref="Music.ChordShapes.ParseWords"/>. The section names are wrapped in the
+    /// keyword so a section named <c>A</c> or <c>C</c> cannot be read as a chord. A section no
+    /// <c>section NAME { }</c> declares warns (its entries apply nowhere); a chord listed twice
+    /// in one scope warns, and the last one wins (a key's rule). Each shape is checked against
+    /// its chord (LYS1039) on the tunings it can draw on here: the layout's, else the guitar and
+    /// every fretted instrument the file's parts play.
+    /// </remarks>
+    private static Music.ChordShapeTable? ReadShapeTable(IReadOnlyList<SyntaxTokenNode> values, int open,
+        string? tuningWord, int capo, LayoutDeclarationSyntax layout, List<Problem> found)
+    {
+        const string sectionWord = "section";
+        string key = ChordDiagramsKey.Key;
+        bool refused = false;
+        void Error(TextSpan span, string message)
+        {
+            found.Add(new Problem(span, DiagnosticCodes.LayoutEntryBadValue, message, IsError: true));
+            refused = true;
+        }
+        void Warn(TextSpan span, string code, string message)
+            => found.Add(new Problem(span, code, message, IsError: false));
+
+        var words = TableWords(values, open + 1);
+        var song = System.Collections.Immutable.ImmutableArray.CreateBuilder<Music.ChordShapeEntry>();
+        var sections = System.Collections.Immutable.ImmutableArray
+            .CreateBuilder<(string Section, System.Collections.Immutable.ImmutableArray<Music.ChordShapeEntry> Entries)>();
+        var sectionSpans = new List<(string Name, TextSpan Span)>();
+        var scope = song;
+        string? sectionName = null;
+
+        // The entry being read: its symbol (null between entries, or while the words of a
+        // symbol that did not parse are skipped), and the words after it.
+        string? symbol = null;
+        TextSpan symbolSpan = default;
+        Music.ChordStructure? chord = null;
+        bool skipping = false;
+        var entryWords = new List<(string Text, TextSpan Span)>();
+
+        SyntaxNode root = layout;
+        while (root.Parent != null)
+            root = root.Parent;
+        List<TuningType>? checkTunings = null;
+
+        void Flush()
+        {
+            if (symbol == null || chord == null)
+            {
+                entryWords.Clear();
+                return;
+            }
+            var problems = Music.ChordShapes.ParseWords([.. entryWords.Select(w => w.Text)], symbol, out var shapes);
+            foreach (var p in problems)
+                Warn(entryWords[p.WordIndex].Span, DiagnosticCodes.ChordDiagramNotDrawn, p.Message);
+            checkTunings ??= CheckTunings(root, tuningWord);
+            // A table shape is the PRESSED shape: under a capo it is checked against the
+            // pressed chord (ChordStructure.Pressed), the sounding chord that many frets down.
+            var pressed = chord.Pressed(capo, 0);
+            foreach (var tuning in checkTunings)
+            {
+                if (Music.ChordShapes.WrittenFor(tuning, shapes) is not { } shape
+                    || Music.ChordShapes.Mismatch(Music.ChordShapes.Frets(shape), Tablature.Tunings.GetTuning(tuning), pressed)
+                        is not { } mismatch)
+                    continue;
+                string? tuningName = shapes.First(s => s.Shape == shape).TuningName;
+                string message = Music.ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow: false, inTable: true);
+                var at = entryWords.First(w => w.Text == shape).Span;
+                if (!found.Any(f => f.Span.Start == at.Start && f.Message == message))
+                    Warn(at, DiagnosticCodes.ChordShapeMismatch, message);
+            }
+            if (scope.Any(e => Music.ChordShapeTable.SameChord(e.Chord, chord)))
+                Warn(symbolSpan, DiagnosticCodes.LayoutEntryBadValue,
+                    $"'{symbol}' is listed twice in this table; the last one wins.");
+            scope.Add(new Music.ChordShapeEntry(symbol, chord, shapes));
+            symbol = null;
+            chord = null;
+            entryWords.Clear();
+        }
+
+        int i = 0, depth = 1;
+        while (i < words.Count && depth > 0)
+        {
+            var w = words[i];
+            if (w.Text == "}")
+            {
+                Flush();
+                skipping = false;
+                depth--;
+                if (depth == 1 && sectionName != null)
+                {
+                    sections.Add((sectionName, scope.ToImmutable()));
+                    sectionName = null;
+                    scope = song;
+                }
+                i++;
+                continue;
+            }
+            if (w.Text == "{")
+            {
+                Error(w.Span, "'{' here opens nothing - a shape table lists chord names with their shapes "
+                    + "(Cm7 x35343), and only 'section NAME { ... }' opens a block inside it.");
+                return null;
+            }
+            if (w.Text == sectionWord)
+            {
+                if (depth > 1)
+                {
+                    Error(w.Span, "a section's table holds no 'section' of its own - close this one "
+                        + "with '}' first.");
+                    return null;
+                }
+                Flush();
+                skipping = false;
+                if (i + 2 >= words.Count || words[i + 1].Text is "{" or "}" || words[i + 2].Text != "{")
+                {
+                    Error(w.Span, "'section' takes the section's name and a block of entries: "
+                        + "section Chorus { C x35553 }.");
+                    return null;
+                }
+                sectionName = words[i + 1].Text;
+                sectionSpans.Add((sectionName, words[i + 1].Span));
+                scope = System.Collections.Immutable.ImmutableArray.CreateBuilder<Music.ChordShapeEntry>();
+                depth = 2;
+                i += 3;
+                continue;
+            }
+            bool shapeOrTuning = Music.ChordShapes.StartsShape(w.Text)
+                || Tablature.Tunings.Names.Contains(w.Text)
+                || Music.ChordShapes.CaseCorrected(w.Text) != null;
+            if (shapeOrTuning)
+            {
+                if (symbol != null)
+                    entryWords.Add((w.Text, w.Span));
+                else if (!skipping)
+                    Warn(w.Span, DiagnosticCodes.ChordDiagramNotDrawn,
+                        $"'{w.Text}' comes before any chord name - a table entry is the chord's name, "
+                        + "then its shapes: Cm7 x35343. It is not used.");
+                i++;
+                continue;
+            }
+            // A chord symbol: the entry before it is complete.
+            Flush();
+            if (Music.ChordStructure.TryParseChordEntry(w.Text, out var parsed))
+            {
+                symbol = w.Text;
+                symbolSpan = w.Span;
+                chord = parsed;
+                skipping = false;
+            }
+            else
+            {
+                Warn(w.Span, DiagnosticCodes.ChordDiagramNotDrawn,
+                    $"'{w.Text}' is not a chord symbol (Cm7, F#m7-5/A) - a table entry is the chord's "
+                    + "name, then its shapes: Cm7 x35343. It is not used.");
+                skipping = true;
+            }
+            i++;
+        }
+        Flush();
+        if (depth > 0)
+        {
+            Error(values[open].Span, $"This '{key}' shape table has no closing '}}'.");
+            return null;
+        }
+        if (i < words.Count)
+        {
+            Error(words[i].Span, $"'{words[i].Text}' comes after the shape table's closing '}}' - the table "
+                + $"ends the '{key}' entry.");
+            return null;
+        }
+
+        // A section no `section NAME { }` declares: its entries apply nowhere.
+        if (sectionSpans.Count > 0)
+        {
+            var known = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var node in root.KindSites(SyntaxKind.SectionDeclaration))
+                if (node is SectionDeclarationSyntax declared)
+                    known.Add(declared.SectionName);
+            foreach (var (name, span) in sectionSpans)
+                if (!known.Contains(name))
+                    Warn(span, DiagnosticCodes.LayoutEntryBadValue,
+                        $"No section is named '{name}', so its entries apply nowhere."
+                        + (known.Count > 0 ? " Sections: " + string.Join(", ", known.OrderBy(k => k, StringComparer.Ordinal)) + "." : ""));
+        }
+        return refused ? null : new Music.ChordShapeTable(song.ToImmutable(), sections.ToImmutable());
+    }
+
+    /// <summary>The tokens from <paramref name="from"/> on, re-joined by ADJACENCY into words
+    /// (a chords row's rule: <c>C#m7-5/G</c>, <c>8xx88-11</c> are one word each); a brace is
+    /// always a word of its own.</summary>
+    private static List<(string Text, TextSpan Span)> TableWords(IReadOnlyList<SyntaxTokenNode> values, int from)
+    {
+        var words = new List<(string Text, TextSpan Span)>();
+        var sb = new System.Text.StringBuilder();
+        int start = -1, end = -1;
+        void Flush()
+        {
+            if (sb.Length > 0)
+                words.Add((sb.ToString(), new TextSpan(start, end - start)));
+            sb.Clear();
+            start = -1;
+        }
+        for (int i = from; i < values.Count; i++)
+        {
+            var t = values[i];
+            if (t.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace)
+            {
+                Flush();
+                words.Add((t.Text, t.Span));
+                continue;
+            }
+            if (t.Text.Length == 0)
+                continue;
+            if (sb.Length > 0 && t.Span.Start != end)
+                Flush();
+            if (start < 0)
+                start = t.Span.Start;
+            sb.Append(t.Text);
+            end = t.Span.Start + t.Text.Length;
+        }
+        Flush();
+        return words;
+    }
+
+    /// <summary>The tunings a table's shapes are checked on (LYS1039): the layout's own when it
+    /// names one, else the guitar and every fretted instrument the file's parts play — the
+    /// tunings a diagram of this score can draw on (<see cref="ChordDiagramsKey.Resolve"/>).</summary>
+    private static List<TuningType> CheckTunings(SyntaxNode root, string? tuningWord)
+    {
+        var tunings = new List<TuningType>();
+        if (tuningWord != null)
+        {
+            tunings.Add(Tablature.Tunings.Parse(tuningWord));
+            return tunings;
+        }
+        tunings.Add(TuningType.Guitar);
+        foreach (var part in TopLevelNodes.OfRoot<PartDeclarationSyntax>(root))
+            if (PartHeaderDefaults.Read(part).FrettedTuning is { } fretted && !tunings.Contains(fretted))
+                tunings.Add(fretted);
+        return tunings;
     }
 
     // voltaBracket all | line | N — exactly one value (VoltaBracketLength, owner's design

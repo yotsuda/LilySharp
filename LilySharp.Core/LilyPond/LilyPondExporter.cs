@@ -1194,6 +1194,20 @@ public sealed class LilyPondExporter
                        ?? "\"" + Escape(value) + "\"")
                .Append('\n');
         }
+        // "Capo 3" on the header's instrument line — where the page puts it (HeaderBand;
+        // owner's design HANDOFF §2 K2, 2026-09-29).
+        if (_layoutPlan.Chords.Capo > 0)
+        {
+            if (!opened)
+            {
+                _sb.Append("\\header {\n");
+                opened = true;
+            }
+            _sb.Append("  instrument = \"Capo ").Append(_layoutPlan.Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("\"\n");
+            if (_layoutPlan.Chords.Names == Semantics.ChordNameMode.Both)
+                _warnings.Add("chordNames both is not exported: LilyPond names the sounding chord alone, "
+                    + "the page writes the pressed name in brackets after it");
+        }
         if (opened)
             _sb.Append("}\n\n");
     }
@@ -3279,7 +3293,9 @@ public sealed class LilyPondExporter
         else
             _warnings.Add("a chord(...) item in a phrase played by parts of different tunings is "
                 + "written on the guitar's strings - check its notes by hand");
-        var notes = Music.ShapeChords.Notes(c, tuning, shift, _keySharps);
+        // A capo raises every string by its fret (the page's ShapeNotesOf; 2026-09-29): the shift
+        // is "sounding = written + shift", so the capo comes OFF it.
+        var notes = Music.ShapeChords.Notes(c, tuning, shift - _layoutPlan.Chords.Capo, _keySharps);
         var (prefix, suffix) = SplitAttachments(c.Articulations);
         if (notes.IsEmpty)
             return prefix + "s" + EmitEventDuration(c.Duration) + suffix;
@@ -4049,15 +4065,23 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private string? ChordDiagramMarkup(MusicMarkSyntax mk)
-        => _layoutPlan.ChordDiagramTuningFor(_currentPartName is { } part && _root is { } root
+    {
+        // A name alone draws under `all`, and where the layout's shape table lists the chord
+        // (per the section the mark is written in, ChordShapeTable; 2026-09-29).
+        var table = _layoutPlan.ChordDiagramTable;
+        bool namesAlone = _layoutPlan.ChordDiagramsAll || table != null;
+        return _layoutPlan.ChordDiagramTuningFor(_currentPartName is { } part && _root is { } root
                 ? Semantics.ChordDiagramScores.FrettedWordOfPart(root, part) is { } w ? Tablature.Tunings.Parse(w) : null
                 : null) is { } tuning
            && Semantics.ChordAnnotation.Of(mk) is { } words
-           && (!words.IsBare || _layoutPlan.ChordDiagramsAll)
+           && (!words.IsBare || namesAlone)
            && words.Drawn(tuning, _layoutPlan.ChordDiagramsAll,
-                   words.Symbol == null && _layoutPlan.ChordDiagramsAll ? PageChordAt(mk) : null) is { } chosen
+                   words.Symbol == null && namesAlone ? PageChordAt(mk) : null,
+                   table, table != null ? Semantics.ChordDiagramScores.SectionNameOf(mk) : null,
+                   _layoutPlan.Chords.Capo) is { } chosen
             ? FretDiagramMarkup(chosen.FrameSpec, above: true)
             : null;
+    }
 
     /// <summary>The chord the page named at an inline <c>@chord</c> (its model's symbol at the
     /// mark's source position), or null when the page was not collected or named none.</summary>
@@ -5449,33 +5473,35 @@ public sealed class LilyPondExporter
             // The diagrams under the names: the idiomatic LilyPond is a FretBoards context over
             // the SAME chord music (EmitScore places it under the ChordNames row) — the same
             // bars, spelled again with the diagram of each chord the page draws
-            // (FretBoardPrefix). Only a WRITTEN shape draws (owner's decision 2026-09-28), so the
-            // context appears only when some entry writes one for the row's tuning (the
-            // layout's, else the instrument of the staff the row stands over, else the guitar)
-            // — or for every row of a `chordDiagrams … all` score, where every entry draws.
+            // (FretBoardPrefix). The context appears only when some entry DRAWS on the row's
+            // tuning (the layout's, else the instrument of the staff the row stands over, else
+            // the guitar): a written shape (owner's decision 2026-09-28), a chord the layout's
+            // shape table lists (2026-09-29), or — in a `chordDiagrams … all` score — every
+            // entry. The track is spelled first and kept only when a prefix was written
+            // (_fretPrefixes): a FretBoards context of silent slots alone would be an empty band.
             var rowStaffWord = _root != null && _renderSpec != null
                 ? Semantics.ChordDiagramScores.RowStaffWord(_root, _renderSpec, row.PartName) : null;
             if (_layoutPlan.ChordDiagramTuningFor(rowStaffWord is { } rw ? Tablature.Tunings.Parse(rw) : null)
-                    is { } diagramTuning
-                && (_layoutPlan.ChordDiagramsAll
-                    || blocks.SelectMany(b => b.DescendantNodes().OfType<ChordEntrySyntax>())
-                        .Any(e => Music.ChordShapes.WrittenFor(diagramTuning,
-                            Semantics.ChordDiagramScores.ShapesOf(e).Shapes) != null)))
+                    is { } diagramTuning)
             {
                 _fretTuning = diagramTuning;
                 _fretTrack = true;
+                _fretPrefixes = 0;
                 var fretItems = OrderedChordItems(blocks, form, allSections);
                 _fretTrack = false;
-                _sb.Append(_fretDefinitions);
-                _fretDefinitions.Clear();
-                string fretVar = VarName(row.PartName + "Frets");
-                _fretVars[row.PartName] = fretVar;
-                _fretTunings[row.PartName] = diagramTuning;
-                _sb.Append(fretVar).Append(" = \\chordmode {\n");
-                _chordTrack = true;
-                EmitMusicStream(fretItems, indent: "  ");
-                _chordTrack = false;
-                _sb.Append("}\n\n");
+                if (_fretPrefixes > 0)
+                {
+                    _sb.Append(_fretDefinitions);
+                    _fretDefinitions.Clear();
+                    string fretVar = VarName(row.PartName + "Frets");
+                    _fretVars[row.PartName] = fretVar;
+                    _fretTunings[row.PartName] = diagramTuning;
+                    _sb.Append(fretVar).Append(" = \\chordmode {\n");
+                    _chordTrack = true;
+                    EmitMusicStream(fretItems, indent: "  ");
+                    _chordTrack = false;
+                    _sb.Append("}\n\n");
+                }
             }
         }
     }
@@ -5489,6 +5515,10 @@ public sealed class LilyPondExporter
     /// <summary>True while <see cref="EmitChordTracks"/> spells a row's bars for its
     /// FretBoards context (<see cref="ChordBarText"/> then prefixes each entry).</summary>
     private bool _fretTrack;
+
+    /// <summary>How many entries of the row being spelled got a prefix (<see cref="FretBoardPrefix"/>)
+    /// — zero: no diagram draws under it, and the FretBoards context is left out.</summary>
+    private int _fretPrefixes;
 
     /// <summary>The tuning each row's FretBoards context draws on (<see cref="EmitChordTracks"/>).</summary>
     private readonly Dictionary<string, TuningType> _fretTunings = new(StringComparer.Ordinal);
@@ -5534,11 +5564,17 @@ public sealed class LilyPondExporter
             : Music.ChordStructure.TryParseRomanEntry(symbol, key.TonicStep, key.Sharps, out var degree) ? degree
             : null;
         var shapes = Semantics.ChordDiagramScores.ShapesOf(entry).Shapes;
-        var chosen = Music.ChordShapes.Drawn(tuningType, shapes, _layoutPlan.ChordDiagramsAll, chord);
+        var table = _layoutPlan.ChordDiagramTable;
+        var chosen = Music.ChordShapes.Drawn(tuningType, shapes, _layoutPlan.ChordDiagramsAll, chord,
+            table, table != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null,
+            _layoutPlan.Chords.Capo);
         if (chosen == null || chord == null)
             return null;
+        _fretPrefixes++;
 
-        string chordEntry = chord.ToChordMode("");
+        // The FretBoards track spells the PRESSED chords under a capo (ChordBarText), so the
+        // one-shape table is keyed by the pressed chord too.
+        string chordEntry = chord.Pressed(_layoutPlan.Chords.Capo, key.Sharps).ToChordMode("");
         var terse = new StringBuilder();
         for (int i = 0; i < chosen.Frets.Length; i++)
         {
@@ -5906,11 +5942,24 @@ public sealed class LilyPondExporter
     /// by <see cref="Music.ChordStructure.ToChordMode"/>; a symbol with no tone set (an
     /// unregistered quality, or a literal the page could not parse) goes out as its root or
     /// as silence, and the twin says so once.</summary>
+    /// <summary>
+    /// The chord a <c>\chordmode</c> entry spells under the score's capo: the PRESSED chord
+    /// (<see cref="Music.ChordStructure.Pressed"/>) in the FretBoards track (its diagrams are
+    /// pressed shapes) and, under <c>chordNames shape</c> — the default — in the ChordNames
+    /// track too, so LilyPond prints the name the page prints; the sounding chord under
+    /// <c>sounding</c> and <c>both</c> (LilyPond has no capo naming; <see cref="EmitHeader"/> warns
+    /// for <c>both</c>). Without a capo, the chord itself.
+    /// </summary>
+    private Music.ChordStructure TwinChord(Music.ChordStructure chord, int keySharps)
+        => _layoutPlan.Chords.Capo > 0 && (_fretTrack || _layoutPlan.Chords.Names == Semantics.ChordNameMode.Shape)
+            ? chord.Pressed(_layoutPlan.Chords.Capo, keySharps)
+            : chord;
+
     private string InlineChordEntry(Svg.Model.ChordNameItem c, string duration)
     {
         if (c.Structure is { } s)
         {
-            string spelled = s.ToChordMode(duration);
+            string spelled = TwinChord(s, _keySharps).ToChordMode(duration);
             if (s.RawSuffix != null && _chordWarned.Add(c.ChordText))
                 _warnings.Add($"@chord '{c.ChordText}': the quality '{s.RawSuffix}' has no \\chordmode spelling — "
                     + $"the twin writes the root alone ({spelled})");
@@ -6176,9 +6225,9 @@ public sealed class LilyPondExporter
     private string ChordModeEntry(string symbol, string duration, (int TonicStep, int Sharps) key)
     {
         if (Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
-            return parsed.ToChordMode(duration);
+            return TwinChord(parsed, key.Sharps).ToChordMode(duration);
         if (Music.ChordStructure.TryParseRomanEntry(symbol, key.TonicStep, key.Sharps, out var degree))
-            return degree.ToChordMode(duration);
+            return TwinChord(degree, key.Sharps).ToChordMode(duration);
 
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol[..slash] : symbol;
@@ -6195,7 +6244,7 @@ public sealed class LilyPondExporter
             }
             var raw = new Music.ChordStructure(step, alter, Music.ChordQuality.Major,
                 bassStep, bassAlter, RawSuffix: qual);
-            string spelled = raw.ToChordMode(duration);
+            string spelled = TwinChord(raw, key.Sharps).ToChordMode(duration);
             if (_chordWarned.Add(symbol))
                 _warnings.Add($"chord '{symbol}': the quality '{qual}' has no \\chordmode spelling — "
                     + $"the twin writes the root alone ({spelled})");

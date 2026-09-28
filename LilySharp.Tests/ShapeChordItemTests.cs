@@ -110,6 +110,17 @@ public class ShapeChordItemTests
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
     }
 
+    /// <summary>Under a capo (2026-09-29) the shape is pressed above it: every string sounds the
+    /// capo's fret higher — x32010 at capo 3 is E♭ major, on the page, in the MIDI and the twin.</summary>
+    [Fact]
+    public void UnderACapo_TheShapeSoundsAboveTheCapo()
+    {
+        string book = Book("instrument guitar", "chord(Eb x32010)1 |", top: "layout { chordDiagrams guitar capo 3 }");
+        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, MidiPitches(book));   // E♭3 G3 B♭3 E♭4 G4
+        Assert.DoesNotContain(Diagnostics(book), d => d.Severity != DiagnosticSeverity.Info);
+        Assert.Contains("<ees\\5 g\\4 bes\\3 ees\\2 g\\1>1", new LilyPondExporter().Export(SyntaxTree.Parse(book)));
+    }
+
     /// <summary>`<>` and `chord(…)` are the same node: the MeasureDurations and every chord arm
     /// see a chord that takes its time — the bar adds up with no warning.</summary>
     [Fact]

@@ -472,7 +472,8 @@ internal static class ChordNameGlyphRun
     /// </para>
     /// </remarks>
     internal static ImmutableArray<Piece> Pieces(
-        ScoreTextMetrics fonts, string text, int superFrom = Music.ChordSymbolText.NoSuperscript)
+        ScoreTextMetrics fonts, string text, int superFrom = Music.ChordSymbolText.NoSuperscript,
+        int bracketSuperFrom = Music.ChordSymbolText.NoSuperscript)
     {
         if (string.IsNullOrEmpty(text)) return ImmutableArray<Piece>.Empty;
 
@@ -485,19 +486,34 @@ internal static class ChordNameGlyphRun
 
         // The raised span, as a half-open character range. Everything outside it — the root,
         // the minor modifier, the `+` / `°`, the slash bass — is drawn at the symbol's own em
-        // on its own baseline.
+        // on its own baseline. A capo score's `chordNames both` prints a second name in
+        // brackets, "E♭m7 (Cm7)" (2026-09-29): the first run then stops before the " (", and
+        // the bracketed name's own run (bracketSuperFrom) ends at its slash or the ")".
         int superStart = superFrom;
         int superEnd = text.Length;
         if (superStart >= 0 && superStart < text.Length)
         {
             int slash = text.IndexOf('/', superStart);
+            int bracket = text.IndexOf(" (", superStart, System.StringComparison.Ordinal);
+            if (bracket >= 0 && (slash < 0 || bracket < slash)) slash = bracket;
             if (slash >= 0) superEnd = slash;
         }
         else
         {
             superStart = int.MaxValue;   // nothing is raised
         }
-        bool Raised(int i) => i >= superStart && i < superEnd;
+        int bracketStart = bracketSuperFrom;
+        int bracketEnd = text.Length;
+        if (bracketStart >= 0 && bracketStart < text.Length)
+        {
+            int end = text.IndexOfAny(['/', ')'], bracketStart);
+            if (end >= 0) bracketEnd = end;
+        }
+        else
+        {
+            bracketStart = int.MaxValue;
+        }
+        bool Raised(int i) => (i >= superStart && i < superEnd) || (i >= bracketStart && i < bracketEnd);
 
         double superRaise = SuperRaise(fonts);
         double x = 0;
@@ -523,8 +539,8 @@ internal static class ChordNameGlyphRun
 
         for (int i = 0; i < text.Length;)
         {
-            // An edge of the raised span cuts the run even when nothing else does.
-            if ((i == superStart || i == superEnd) && i > runStart)
+            // An edge of a raised span cuts the run even when nothing else does.
+            if ((i == superStart || i == superEnd || i == bracketStart || i == bracketEnd) && i > runStart)
             {
                 FlushText(i);
                 runStart = i;
@@ -645,8 +661,9 @@ internal static class ChordNameGlyphRun
     /// replaced was a single face call: without it, a name with no accidental — nearly all of
     /// them — would begin allocating a builder per ask on the keystroke path (§5.6, §7.9).
     /// </remarks>
-    private static bool IsPlainText(string text, int superFrom) =>
+    private static bool IsPlainText(string text, int superFrom, int bracketSuperFrom) =>
         superFrom == Music.ChordSymbolText.NoSuperscript
+        && bracketSuperFrom == Music.ChordSymbolText.NoSuperscript
         && text.IndexOf('♯') < 0 && text.IndexOf('♭') < 0
         && text.IndexOf(TriangleCarrier) < 0
         && text.IndexOf(WhiteCircle) < 0;
@@ -668,24 +685,26 @@ internal static class ChordNameGlyphRun
 
     /// <summary>The symbol's whole X extent, whose left edge is its reference point.</summary>
     internal static double Width(
-        ScoreTextMetrics fonts, string text, int superFrom = Music.ChordSymbolText.NoSuperscript)
+        ScoreTextMetrics fonts, string text, int superFrom = Music.ChordSymbolText.NoSuperscript,
+        int bracketSuperFrom = Music.ChordSymbolText.NoSuperscript)
     {
-        if (IsPlainText(text, superFrom))
+        if (IsPlainText(text, superFrom, bracketSuperFrom))
             return fonts.Advance(text, Em(fonts), TextRole.ChordName, Style(fonts));
         double w = 0;
-        foreach (var p in Pieces(fonts, text, superFrom)) w += p.Advance;
+        foreach (var p in Pieces(fonts, text, superFrom, bracketSuperFrom)) w += p.Advance;
         return w;
     }
 
     /// <summary>The symbol's ink about its baseline — the union of its pieces'.</summary>
     internal static (double Bottom, double Top) Ink(
-        ScoreTextMetrics fonts, string text, int superFrom = Music.ChordSymbolText.NoSuperscript)
+        ScoreTextMetrics fonts, string text, int superFrom = Music.ChordSymbolText.NoSuperscript,
+        int bracketSuperFrom = Music.ChordSymbolText.NoSuperscript)
     {
-        if (IsPlainText(text, superFrom))
+        if (IsPlainText(text, superFrom, bracketSuperFrom))
             return fonts.Ink(text, Em(fonts), TextRole.ChordName, Style(fonts));
         double bottom = 0, top = 0;
         bool any = false;
-        foreach (var p in Pieces(fonts, text, superFrom))
+        foreach (var p in Pieces(fonts, text, superFrom, bracketSuperFrom))
         {
             bottom = any ? System.Math.Min(bottom, p.Bottom) : p.Bottom;
             top = any ? System.Math.Max(top, p.Top) : p.Top;

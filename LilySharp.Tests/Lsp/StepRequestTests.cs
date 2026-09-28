@@ -234,6 +234,34 @@ public class StepRequestTests
         Assert.Equal(Guitar("c'1@chord(C 0003 x32010)"), Up("c'1@chord(C 0003‸)", Guitar));
     }
 
+    // ---- a layout shape table (2026-09-29): a listed name alone draws the table's shape
+
+    private static string TableGuitar(string music) => "layout { chordDiagrams guitar { Cm7 x35343 } }\n" + Guitar(music);
+
+    /// <summary>Where the layout's table lists the chord, the name alone shows the table's shape,
+    /// so the step counts from it exactly as in an <c>all</c> score: Up writes the shape after
+    /// it, Down on the name does nothing, Down at the written table shape removes it. A chord
+    /// the table does not list steps as in any score.</summary>
+    [Fact]
+    public void InATableScore_TheNameAloneStandsAtTheTablesShape()
+    {
+        var order = Cm7Order();
+        var (up, after) = Step(TableGuitar("c'1@chord(Cm7‸)"), +1);
+        Assert.Equal(TableGuitar($"c'1@chord(Cm7 {order[1]})"), after);
+        Assert.Equal($"Cm7: shape 2 of {order.Count} ({order[1]})", up.Message);
+
+        var (down, same) = Step(TableGuitar("c'1@chord(Cm7‸)"), -1);
+        Assert.Empty(down.Edits);
+        Assert.Equal(TableGuitar("c'1@chord(Cm7)"), same);
+        Assert.Contains("this score's layout table lists it, so it shows (guitar: x35343)", down.Message);
+
+        var (atTable, removed) = Step(TableGuitar("c'1@chord(Cm7 x35343‸)"), -1);
+        Assert.Equal(TableGuitar("c'1@chord(Cm7)"), removed);
+        Assert.Contains("layout table lists it, so the name alone still shows it", atTable.Message);
+
+        Assert.Equal(TableGuitar("c'1@chord(G 320003)"), Up("c'1@chord(G‸)", TableGuitar));
+    }
+
     // ---- chordDiagrams … all (owner's decision 2026-09-28): a name alone already draws the default
 
     private static string AllGuitar(string music) => "layout { chordDiagrams all }\n" + Guitar(music);

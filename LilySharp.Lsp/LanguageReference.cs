@@ -121,6 +121,8 @@ internal static class LanguageReference
     {
         if (VoltaBracketHover(node) is { } volta)
             return volta;
+        if (CapoHover(node) is { } capo)
+            return capo;
         return node switch
         {
             NoteSyntax note => $"**Note**: {note.Pitch.PitchName}\n\nOctave offset: {note.Pitch.OctaveOffset}\n\nDuration: {note.Duration?.Value.ToString() ?? "inherited"}",
@@ -150,6 +152,64 @@ internal static class LanguageReference
             ArticulationSyntax art => $"**Articulation**: @{art.NameToken.Text}",
             _ => null
         };
+    }
+
+    /// <summary>
+    /// The hover for a layout's <c>capo</c> word and the fret after it (owner's design
+    /// 2026-09-28, HANDOFF §2 K2; built 2026-09-29): what a capo does, and the capo suggestion —
+    /// each fret 0–7 with the barre chords the file's chords would take there
+    /// (<see cref="LilySharp.Core.Semantics.CapoAdvisor"/>), fewest first, on the entry's tuning
+    /// word, else the guitar. Or null.
+    /// </summary>
+    private static string? CapoHover(SyntaxNode node)
+    {
+        const string capo = LilySharp.Core.Semantics.ChordDiagramsKey.CapoWord;
+        if (node is not SyntaxTokenNode token || token.Parent is not LayoutDeclarationSyntax layout)
+            return null;
+        // The word itself, or the number right after it.
+        bool onWord = token.Text == capo;
+        bool onFret = token.Kind == SyntaxKind.IntegerLiteral && PreviousToken(layout, token)?.Text == capo;
+        if (!onWord && !onFret)
+            return null;
+        string? tuningWord = null;
+        foreach (var entry in layout.Entries)
+        {
+            if (entry.Key != LilySharp.Core.Semantics.ChordDiagramsKey.Key)
+                continue;
+            if (entry.Values.Count > 0 && LilySharp.Core.Semantics.ChordDiagramsKey.IsTuningWord(entry.Values[0].Text))
+                tuningWord = entry.Values[0].Text;
+        }
+        SyntaxNode root = layout;
+        while (root.Parent != null)
+            root = root.Parent;
+        var tuning = LilySharp.Core.Tablature.Tunings.Parse(tuningWord ?? "guitar");
+        var ranking = LilySharp.Core.Semantics.CapoAdvisor.Rank(root, tuning);
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"**Capo** `{capo} N` — the diagrams are the shapes pressed above the capo, the chord names ")
+          .Append("the pressed chords' (`chordNames shape|sounding|both`), and \"Capo N\" stands at the score's head.");
+        if (ranking.Count > 0)
+        {
+            sb.Append($"\n\nOn {tuningWord ?? "guitar"}, fewest barre chords first:");
+            foreach (var c in ranking)
+                sb.Append("  \n").Append(LilySharp.Core.Semantics.CapoAdvisor.Describe(c));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>The token before <paramref name="token"/> among <paramref name="layout"/>'s
+    /// children, or null.</summary>
+    private static SyntaxTokenNode? PreviousToken(LayoutDeclarationSyntax layout, SyntaxTokenNode token)
+    {
+        SyntaxTokenNode? previous = null;
+        for (int i = 0; i < layout.SlotCount; i++)
+        {
+            if (layout.GetChild(i) is not SyntaxTokenNode t)
+                continue;
+            if (t.SourceStart == token.SourceStart && t.Text == token.Text)
+                return previous;
+            previous = t;
+        }
+        return null;
     }
 
     private const string VoltaBracketValues =

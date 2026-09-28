@@ -53,7 +53,9 @@ public readonly record struct ChordNameLayout(
     // stands with its LEFT edge at X and its grid bottom FrameBottom below the baseline (Y-up,
     // negative) — one level for the whole line (ChordNameEngraver.LineDiagramBottom).
     string? FrameSpec = null,
-    double FrameBottom = 0
+    double FrameBottom = 0,
+    // Where a capo `both` symbol's bracketed second name raises (ChordNameItem.BracketSuperFrom).
+    int BracketSuperFrom = Music.ChordSymbolText.NoSuperscript
 );
 
 /// <summary>
@@ -316,7 +318,7 @@ internal static class ChordNameEngraver
         {
             double w = SymbolWidth(fonts, c);
             var cs = DisplaySymbol(c);
-        double bottom = SymbolInk(fonts, cs.Text, cs.SuperFrom).Bottom;
+            double bottom = SymbolInk(fonts, cs.Text, cs.SuperFrom, cs.BracketSuperFrom).Bottom;
             foreach (var (ix, ic) in inline)
             {
                 if (!Meets(x, w, ix, SymbolWidth(fonts, ic)))
@@ -324,7 +326,7 @@ internal static class ChordNameEngraver
                 lifted.Add(c);
                 blocked.Add(ic);
                 var ics = DisplaySymbol(ic);
-                step = Math.Max(step, SymbolInk(fonts, ics.Text, ics.SuperFrom).Top + SymbolGap - bottom);
+                step = Math.Max(step, SymbolInk(fonts, ics.Text, ics.SuperFrom, ics.BracketSuperFrom).Top + SymbolGap - bottom);
             }
         }
 
@@ -588,7 +590,7 @@ internal static class ChordNameEngraver
                 EngravingDefaults.StaffLineThickness / 2.0);
             var symbol = DisplaySymbol(p.chord);
             double floor = peak + RelatedStaffPadding
-                - SymbolInk(fonts, symbol.Text, symbol.SuperFrom).Bottom;
+                - SymbolInk(fonts, symbol.Text, symbol.SuperFrom, symbol.BracketSuperFrom).Bottom;
             // A diagram under the name is the line's lowest ink there: IT clears the staff by
             // the padding (the FretBoards line is what stands on the staff in LilyPond's stack).
             if (p.chord.FrameSpec is { } spec
@@ -625,7 +627,8 @@ internal static class ChordNameEngraver
                     DisplaySymbol(p.chord).SuperFrom,
                     p.chord.FrameSpec,
                     // The diagram hangs from the LINE, not from a lifted symbol: `- lift`.
-                    lineDiagramBottom.GetValueOrDefault((p.sysIdx, p.chord.StaffIndex, true)) - lift));
+                    lineDiagramBottom.GetValueOrDefault((p.sysIdx, p.chord.StaffIndex, true)) - lift,
+                    DisplaySymbol(p.chord).BracketSuperFrom));
                 continue;
             }
 
@@ -639,7 +642,8 @@ internal static class ChordNameEngraver
                     p.chord.MeasureIndex, p.x,
                     -(join.RowStaffOffset + RowTextBaseline(chordGridSheet)),
                     DisplaySymbol(p.chord).Text, p.chord.SourcePosition, p.idx, join.RowStaffIndex,
-                    DisplaySymbol(p.chord).SuperFrom));
+                    DisplaySymbol(p.chord).SuperFrom,
+                    BracketSuperFrom: DisplaySymbol(p.chord).BracketSuperFrom));
                 continue;
             }
 
@@ -661,7 +665,8 @@ internal static class ChordNameEngraver
             double floorAboveTop = lineFloor.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var lineFloorAboveTop)
                 ? lineFloorAboveTop
                 : EngravingDefaults.StaffLineThickness / 2.0 + RelatedStaffPadding
-                    - SymbolInk(fonts, DisplaySymbol(p.chord).Text, DisplaySymbol(p.chord).SuperFrom).Bottom;
+                    - SymbolInk(fonts, DisplaySymbol(p.chord).Text, DisplaySymbol(p.chord).SuperFrom,
+                        DisplaySymbol(p.chord).BracketSuperFrom).Bottom;
             double y = -(solvedAboveTop ?? floorAboveTop) + p.staffOffset;
 
             string text = DisplayText(p.chord);
@@ -670,7 +675,8 @@ internal static class ChordNameEngraver
                 p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx,
                     RowStaffIndex: -1, SuperFrom: DisplaySymbol(p.chord).SuperFrom,
                     FrameSpec: p.chord.FrameSpec,
-                    FrameBottom: lineDiagramBottom.GetValueOrDefault((p.sysIdx, p.chord.StaffIndex, false))));
+                    FrameBottom: lineDiagramBottom.GetValueOrDefault((p.sysIdx, p.chord.StaffIndex, false)),
+                    BracketSuperFrom: DisplaySymbol(p.chord).BracketSuperFrom));
         }
 
         return results.ToImmutable();
@@ -858,13 +864,14 @@ internal static class ChordNameEngraver
     /// </para>
     /// </remarks>
     internal static double SymbolInkWidth(Rendering.ScoreTextMetrics fonts, string text,
-        int superFrom = Music.ChordSymbolText.NoSuperscript) =>
-        ChordNameGlyphRun.Width(fonts, text, superFrom);
+        int superFrom = Music.ChordSymbolText.NoSuperscript,
+        int bracketSuperFrom = Music.ChordSymbolText.NoSuperscript) =>
+        ChordNameGlyphRun.Width(fonts, text, superFrom, bracketSuperFrom);
 
     /// <summary>
     /// A chord symbol's ink about its baseline — the union of its text runs' and its
     /// accidental glyphs'. The one home for the symbol's HEIGHT, as
-    /// <see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int)"/> is for its width.
+    /// <see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int, int)"/> is for its width.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm:837-855 — the ChordName block, which declares chord-name-interface
@@ -875,8 +882,9 @@ internal static class ChordNameEngraver
     /// </remarks>
     internal static (double Bottom, double Top) SymbolInk(
         Rendering.ScoreTextMetrics fonts, string text,
-        int superFrom = Music.ChordSymbolText.NoSuperscript) =>
-        ChordNameGlyphRun.Ink(fonts, text, superFrom);
+        int superFrom = Music.ChordSymbolText.NoSuperscript,
+        int bracketSuperFrom = Music.ChordSymbolText.NoSuperscript) =>
+        ChordNameGlyphRun.Ink(fonts, text, superFrom, bracketSuperFrom);
 
     /// <summary>
     /// …and the same two readings taken OFF A SYMBOL, which is what every pass outside this
@@ -898,7 +906,7 @@ internal static class ChordNameEngraver
         Rendering.ScoreTextMetrics fonts, ChordNameItem chord)
     {
         var ds = DisplaySymbol(chord);
-        return SymbolInk(fonts, ds.Text, ds.SuperFrom);
+        return SymbolInk(fonts, ds.Text, ds.SuperFrom, ds.BracketSuperFrom);
     }
 
     /// <inheritdoc cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameItem)"/>
@@ -906,7 +914,7 @@ internal static class ChordNameEngraver
         Rendering.ScoreTextMetrics fonts, ChordNameItem chord)
     {
         var ds = DisplaySymbol(chord);
-        return SymbolInkWidth(fonts, ds.Text, ds.SuperFrom);
+        return SymbolInkWidth(fonts, ds.Text, ds.SuperFrom, ds.BracketSuperFrom);
     }
 
     /// <summary>The same two readings off a PLACED symbol, whose display text and raised run
@@ -914,17 +922,17 @@ internal static class ChordNameEngraver
     /// <inheritdoc cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameItem)"/>
     internal static (double Bottom, double Top) SymbolInk(
         Rendering.ScoreTextMetrics fonts, ChordNameLayout placed) =>
-        SymbolInk(fonts, placed.ChordText, placed.SuperFrom);
+        SymbolInk(fonts, placed.ChordText, placed.SuperFrom, placed.BracketSuperFrom);
 
     /// <inheritdoc cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameLayout)"/>
     internal static double SymbolInkWidth(
         Rendering.ScoreTextMetrics fonts, ChordNameLayout placed) =>
-        SymbolInkWidth(fonts, placed.ChordText, placed.SuperFrom);
+        SymbolInkWidth(fonts, placed.ChordText, placed.SuperFrom, placed.BracketSuperFrom);
 
 
     /// <summary>
     /// The reserved width of a chord symbol — its ink
-    /// (<see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int)"/>) under
+    /// (<see cref="SymbolInkWidth(Rendering.ScoreTextMetrics, string, int, int)"/>) under
     /// a floor. The symbol occupies <c>(x . x + width)</c>: LilyPond's ChordName declares
     /// no X-offset and no self-alignment-interface (scm/define-grobs.scm:837-855), so its
     /// reference point is its ink LEFT and it stands ON its column.
@@ -1207,9 +1215,9 @@ internal static class ChordNameEngraver
     /// a degreeless slot printing its name on a roman row — is flat for the same reason:
     /// the row's line is one baseline.
     /// </remarks>
-    private static (string Text, int SuperFrom) DisplaySymbol(ChordNameItem c) => c.DisplayMode switch
+    private static (string Text, int SuperFrom, int BracketSuperFrom) DisplaySymbol(ChordNameItem c) => c.DisplayMode switch
     {
-        ChordDisplayMode.Roman => (c.RomanText ?? c.ChordText, Music.ChordSymbolText.NoSuperscript),
-        _ => (c.ChordText, c.SuperFrom),
+        ChordDisplayMode.Roman => (c.RomanText ?? c.ChordText, Music.ChordSymbolText.NoSuperscript, Music.ChordSymbolText.NoSuperscript),
+        _ => (c.ChordText, c.SuperFrom, c.BracketSuperFrom),
     };
 }

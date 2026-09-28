@@ -473,6 +473,8 @@ public static class NoteStepper
         var tuningType = Tablature.Tunings.Parse(word);
         var tuning = Tablature.Tunings.GetTuning(tuningType);
         var (_, order) = ShapeOrder(node, site.Chord, includeStretch);
+        // Under a capo the shapes are the PRESSED chord's (ChordStructure.Pressed), as the order is.
+        var pressedChord = site.Chord.Pressed(CapoOf(node), 0);
         string symbol = site.Symbol;
         if (order.Count == 0)
             return (null, $"{symbol}: no shape to step through on {word}{note}.", true);
@@ -496,9 +498,13 @@ public static class NoteStepper
         // stands — Lily#'s reading of the owner's decision 2026-09-28: Up from the name writes the
         // shape AFTER the default (writing the default itself would change nothing on the page);
         // Down at a written default removes it (below), the name alone drawing it all the same.
-        bool drawsAll = DrawsEveryChord(node);
-        int defaultAt = drawsAll && Music.ChordShapes.Default(tuningType, site.Chord) is { } drawnDefault
-            ? PlaceInOrder(drawnDefault.Frets, order) : -1;
+        // The same where the score's layout TABLE lists the chord (2026-09-29): the name alone
+        // draws the table's shape, and the step counts from it.
+        var nameAlone = ShapeOfNameAlone(node, site.Chord);
+        bool drawsAll = nameAlone != null && DrawsEveryChord(node);
+        string shows = drawsAll ? "this score draws every chord, so it shows the default"
+            : "this score's layout table lists it, so it shows";
+        int defaultAt = nameAlone != null ? PlaceInOrder(nameAlone.Frets, order) : -1;
 
         if (shapeAt < 0)
         {
@@ -506,10 +512,10 @@ public static class NoteStepper
             {
                 string shown = Music.ChordVoicings.Spell(order[defaultAt]);
                 if (dir < 0)
-                    return (null, $"{symbol}: no shape written - this score draws every chord, so it shows "
-                        + $"the default ({word}: {shown}); Down does nothing, Up writes the next shape{note}", true);
+                    return (null, $"{symbol}: no shape written - {shows} "
+                        + $"({word}: {shown}); Down does nothing, Up writes the next shape{note}", true);
                 if (defaultAt + 1 >= order.Count)
-                    return (null, $"{symbol}: the default ({word}: {shown}) is the only shape - this score "
+                    return (null, $"{symbol}: the shape shown ({word}: {shown}) is the last - this score "
                         + $"already draws it{note}", true);
                 return (Insert(site, Music.ChordVoicings.Spell(order[defaultAt + 1])),
                     ShapeMessage(symbol, defaultAt + 1, order) + note, true);
@@ -527,7 +533,7 @@ public static class NoteStepper
         int at = PlaceInOrder(frets, order), next;
         if (at < 0)
         {
-            next = NextBySortKey(SortKeyOf(frets, tuning, site.Chord), order, dir);
+            next = NextBySortKey(SortKeyOf(frets, tuning, pressedChord), order, dir);
             if (next < 0)
                 return (null, $"{symbol}: '{written.Text}' sorts after the last of the {order.Count} shapes{note}.", true);
         }
@@ -538,8 +544,10 @@ public static class NoteStepper
             // does not change — the name alone draws the same default — but the source loses a
             // shape that says nothing, which is what Down at the default means everywhere else.
             return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt),
-                $"{symbol}: shape removed - this score draws every chord, so the name alone still shows "
-                + $"the default ({Music.ChordVoicings.Spell(order[at])}){note}", true);
+                $"{symbol}: shape removed - {(drawsAll
+                    ? "this score draws every chord, so the name alone still shows the default"
+                    : "this score's layout table lists it, so the name alone still shows it")} "
+                + $"({Music.ChordVoicings.Spell(order[at])}){note}", true);
         }
         else if (dir < 0 && at == 0 && site.IsItem)
         {
@@ -720,19 +728,29 @@ public static class NoteStepper
     {
         var tuningType = Tablature.Tunings.Parse(StepTuning(site).Word);
         IReadOnlyList<int> tuning = Tablature.Tunings.GetTuning(tuningType);
+        // Under a capo (the first score's, like the tuning) the shapes are the PRESSED chord's:
+        // the sounding chord that many semitones down (ChordStructure.Pressed; 2026-09-29).
+        var pressed = chord.Pressed(CapoOf(site), 0);
         var order = new List<ImmutableArray<int>>();
         void Add(ImmutableArray<int> shape)
         {
             if (!order.Any(o => o.SequenceEqual(shape)))
                 order.Add(shape);
         }
-        if (Music.ChordShapes.Default(tuningType, chord) is { } first)
+        if (Music.ChordShapes.Default(tuningType, pressed) is { } first)
             Add(first.Frets);
         if (Music.ChordVoicings.IsGuitarType(tuning))
-            foreach (var b in Music.ChordVoicings.For(tuning, chord, includeStretch).Bases)
+            foreach (var b in Music.ChordVoicings.For(tuning, pressed, includeStretch).Bases)
                 Add(b);
         return (tuning, order);
     }
+
+    /// <summary>The fret the capo is on in the first score rendering the chord at
+    /// <paramref name="site"/> (<see cref="StepTuning"/>'s score), 0 for none.</summary>
+    public static int CapoOf(SyntaxNode site)
+        => ScoresOf(site, out _) is { Count: > 0 } scores ? scores[0].Score.Capo
+            // A chord(…) item, or a mark no score places: the first score drawing its part.
+            : ChordDiagramScores.CapoOfNode(site);
 
     /// <summary>
     /// Where <paramref name="frets"/> stands among a chord's shapes, for the hover:
@@ -785,6 +803,23 @@ public static class NoteStepper
     /// </summary>
     public static bool DrawsEveryChord(SyntaxNode site)
         => ScoresOf(site, out _) is { Count: > 0 } scores && scores[0].Score.All && scores[0].Word != null;
+
+    /// <summary>
+    /// The shape a NAME ALONE draws for <paramref name="chord"/> at <paramref name="site"/> in the
+    /// first score rendering it (<see cref="StepTuning"/>'s): the default under
+    /// <c>chordDiagrams … all</c>, the table's shape — or the default, for a name listed alone —
+    /// where the score's layout table lists the chord (<see cref="Music.ChordShapeTable"/>,
+    /// 2026-09-29); null where a name alone draws nothing.
+    /// </summary>
+    public static Music.ChosenShape? ShapeOfNameAlone(SyntaxNode site, Music.ChordStructure chord)
+    {
+        var scores = ScoresOf(site, out _);
+        if (scores.Count == 0 || scores[0].Word is not { } word || !scores[0].Score.DrawsNamesAlone)
+            return null;
+        var score = scores[0].Score;
+        return Music.ChordShapes.Drawn(Tablature.Tunings.Parse(word), [], score.All, chord, score.Table,
+            score.Table != null ? ChordDiagramScores.SectionNameOf(site) : null, score.Capo);
+    }
 
     /// <summary>The scores rendering the chord at <paramref name="site"/>, in document order, with
     /// the tuning word each draws it on; <paramref name="partWord"/> is an <c>@chord</c>'s part's

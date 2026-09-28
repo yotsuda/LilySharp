@@ -784,6 +784,7 @@ public class EditorColouringTests
             ("chordQualities", LanguageVocabulary.ChordQualityStyleWords),
             ("minorChords", LanguageVocabulary.MinorChordWords),
             ("chordDiagrams", LanguageVocabulary.ChordDiagramWords),
+            ("chordNames", LanguageVocabulary.ChordNameWords),
         })
         {
             string pattern = Assert.Single(rules, r => r.Contains($"({key})\\s+(", StringComparison.Ordinal));

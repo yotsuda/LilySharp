@@ -104,6 +104,11 @@ public sealed record MultiStaffScore
     /// <summary>Poet (optional) — the left end of the composer's line.</summary>
     public string? Poet { get; init; }
 
+    /// <summary>The header's instrument line (optional) — the centre of the poet / composer
+    /// row (LilyPond's bookTitleMarkup places <c>header:instrument</c> there): "Capo 3" for a
+    /// score whose layout writes a capo (2026-09-29).</summary>
+    public string? Instrument { get; init; }
+
     /// <summary>
     /// Which face each kind of non-music text is drawn in, from the <c>font</c> header
     /// directive. Never null — a score without one carries
@@ -366,6 +371,7 @@ public sealed record MultiStaffScore
             TempoDots = score.TempoDots,
             Subtitle = score.Subtitle,
             Poet = score.Poet,
+            Instrument = score.Instrument,
             Fonts = score.Fonts,
             Paper = score.Paper,
             // The wrap a SINGLE-staff score always takes: a score-global bit left out here

@@ -63,7 +63,10 @@ internal sealed record ScoreContent(
     // the `Paper` line above reaches its own type through (CS0236).
     Semantics.LayoutPlan LayoutPlan,
     string? Subtitle = null,
-    string? Poet = null);
+    string? Poet = null,
+    // The header's instrument line — "Capo 3" for a score whose layout writes a capo
+    // (ChordSpelling.Capo; 2026-09-29), else null.
+    string? Instrument = null);
 
 /// <summary>
 /// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
@@ -115,6 +118,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Subtitle = c.Subtitle,
             Poet = c.Poet,
+            Instrument = c.Instrument,
             Fonts = c.Fonts,
             Paper = c.Paper,
             LayoutPlan = c.LayoutPlan,
@@ -161,6 +165,7 @@ internal static class ScoreAssembler
             TempoDots = c.TempoDots,
             Subtitle = c.Subtitle,
             Poet = c.Poet,
+            Instrument = c.Instrument,
             Fonts = c.Fonts,
             Paper = c.Paper,
             LayoutPlan = c.LayoutPlan,

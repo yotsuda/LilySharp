@@ -382,7 +382,11 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Chord diagrams (drawn under the name) appear ONLY where a chord WRITES its shape; a name
   alone (`@chord(G)`, a row's `G`) draws none — unless the score's layout says
   `chordDiagrams all` / `chordDiagrams guitar all`, where EVERY chord name (a bare `@chord`'s
-  derived one too) draws its written shape, else the usual one. A shape is one character per string, LOW string
+  derived one too) draws its written shape, else the usual one — or LISTS the chord in its
+  shape table: `layout { chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } } }`
+  (a listed chord draws wherever it is named — the table's shape, the usual one for a name
+  alone; a `section NAME { … }` block's entries apply to the chords written in that section;
+  a shape written at the chord still wins). A shape is one character per string, LOW string
   first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)`, `@chord(x32010)`
   (the name is derived from its notes); in a chords row glued to the symbol: `F(133211)`,
   `F(133211 2010)` (a guitar and a ukulele shape, routed by string count),
@@ -392,7 +396,7 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   (`x-x-10-12-13-11`). Between dashes, EXACTLY two digits are ONE fret: frets 10, 9, 9 are
   `10-9-9` (`10-99` = fret 99, an error); routed by string count (`8xx88-11` = 6); lower case
   only; use the one-character form when every fret is ≤ 9. The diagram's tuning: the score's
-  `layout { chordDiagrams TUNING [all] }` (the tab tuning words; `none` = no diagrams at all), else
+  `layout { chordDiagrams TUNING [all] [{ table }] }` (the tab tuning words; `none` = no diagrams at all), else
   the part's fretted instrument (an `@chord`'s part; for a row, the staff it stands directly
   above), else the guitar. Common guitar shapes (LilyPond's): C `x32010`, F `133211`, G
   `320003`, Cm7 `x35343`; ukulele C `0003`. A written shape that cannot be used warns LYS1038;
@@ -896,6 +900,9 @@ layout {
   minorChords lower        // a minor chord's root: upper (default) | lower
   chordDiagrams ukulele    // the tuning written chord shapes draw on: a tuning word | none (unset: the part's instrument, else guitar)
                            // `chordDiagrams ukulele all` / `chordDiagrams all`: every chord draws a diagram
+                           // `chordDiagrams guitar { Cm7 x35343  G  section B { C x35553 } }`: the listed chords draw
+                           // `chordDiagrams guitar capo 3`: a capo — pressed shapes, pressed names, "Capo 3" at the head
+  chordNames both          // under a capo a name shows: shape (default, the pressed chord's) | sounding | both "E♭ (C)"
   voltaBracket line        // how far an ending's bracket reaches: all (default) | line | N bars
 }
 ```
@@ -947,10 +954,29 @@ layout {
   all`), or alone (`chordDiagrams all`, the tuning as when unset), makes EVERY chord name draw:
   its written shape, else the usual one (LilyPond's predefined, else Lily#'s first); a chord
   with no shape on the tuning warns once per symbol and tuning. `none all`, `all guitar` (the
-  tuning comes first) and a repeated word are errors. The shape rules are under Annotations
-  (*Chord diagrams*). The twin writes a `FretBoards` context under a row's `ChordNames` when an
-  entry writes a shape (under `all`, for every row); MusicXML nests an `@chord`'s `<frame>` in
-  its `<harmony>`.
+  tuning comes first) and a repeated word are errors. A shape TABLE in braces may follow the
+  words — `chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } }` — listing the
+  chords that draw wherever they are named: each entry a chord symbol and the shape(s) a row
+  writes after its symbol, a name alone the usual shape; a `section NAME { … }` block's entries
+  apply to the chords written in that section, the rest to the whole score. Strongest first:
+  the shape written at the chord, the section's entry, the song's, then (under `all`) the usual
+  shape; an entry whose shapes fit no tuning of the score is not used there. `none` takes no
+  table. A bad symbol or shape in the table and a chord listed twice (the last wins) are
+  warnings, the rest stands; a section nothing declares warns. The shape rules are under
+  Annotations (*Chord diagrams*). The twin writes a `FretBoards` context under a row's
+  `ChordNames` when an entry draws (written or listed; under `all`, for every row); MusicXML
+  nests an `@chord`'s `<frame>` in its `<harmony>`. `capo N` after the tuning word (before
+  `all`; 1–11) puts a capo on fret N: the music still writes the SOUNDING chords (`Eb`), every
+  shape is the shape pressed above the capo (`Eb(x32010)` is the C shape, checked against the
+  pressed chord), the printed name is the pressed chord's (`C`), spelled in the key N
+  semitones below the key at the bar, "Capo N" stands at the score's head, and a
+  `chord(Eb x32010)` item sounds N semitones higher. The twin writes the pressed chords into
+  `\chordmode` and `instrument = "Capo N"`; MusicXML's `<harmony>` stays sounding. After
+  `capo ` the completion ranks the frets 0–7 by their barre chords (fewest first); hover `capo`
+  for the same ranking; there is no `capo auto`.
+- `chordNames shape` (the default) names the pressed chord under a capo, `sounding` the
+  sounding chord, `both` both — `E♭m7 (Cm7)`. Without a capo all three print the same name.
+  The twin cannot spell `both` and warns.
 - `voltaBracket all` (default) draws an ending's bracket over every bar; `line` stops it at
   the end of the system it starts in; `N` covers the ending's first N bars (all of it when
   shorter). An ending overrides it with `[1. B C]@voltaBracket(2)`. A cut bracket ends

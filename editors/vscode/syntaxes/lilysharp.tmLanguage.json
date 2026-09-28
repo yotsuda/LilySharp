@@ -308,12 +308,22 @@
                     }
                 },
                 {
-                    "comment": "chordDiagrams takes none, a tuning word — the tuning vocabulary a tab's `tuning` takes (Tablature.Tunings.Names) — or all; a tuning word may be followed by all (ChordDiagramsKey.AllWord). The lookbehinds keep `none all` / `all all` (refused by the compiler) from colouring the second word.",
-                    "match": "\\b(chordDiagrams)\\s+(none|banjoc|banjodoublec|banjodoubled|banjomodal|banjoopend|banjoopendm|banjoopeng|baritoneukulele|bass|bass4|bass5|bass6|bassdropd|cello|doublebass|guitar|guitar7|guitarasus4|guitardadgad|guitardropc|guitardropd|guitarlute|guitaropend|guitaropeng|mandolin|tenorukulele|ukulele|ukuleled|viola|violin|all)(?:(?<!none)(?<!all)\\s+(all))?\\b",
+                    "comment": "chordDiagrams takes none, a tuning word — the tuning vocabulary a tab's `tuning` takes (Tablature.Tunings.Names) — capo (then its fret) or all; a tuning word may be followed by `capo N` (ChordDiagramsKey.CapoWord) and by all (ChordDiagramsKey.AllWord). The lookbehinds keep `none all` / `all all` (refused by the compiler) from colouring the second word.",
+                    "match": "\\b(chordDiagrams)\\s+(none|banjoc|banjodoublec|banjodoubled|banjomodal|banjoopend|banjoopendm|banjoopeng|baritoneukulele|bass|bass4|bass5|bass6|bassdropd|capo|cello|doublebass|guitar|guitar7|guitarasus4|guitardadgad|guitardropc|guitardropd|guitarlute|guitaropend|guitaropeng|mandolin|tenorukulele|ukulele|ukuleled|viola|violin|all)(?:(?<!none)(?<!all)(?<!capo)\\s+(capo)\\s+(\\d+))?(?:(?<!none)(?<!all)\\s+(all))?\\b",
                     "captures": {
                         "1": { "name": "keyword.other.layout-key.lilysharp" },
                         "2": { "name": "support.constant.layout-value.lilysharp" },
-                        "3": { "name": "support.constant.layout-value.lilysharp" }
+                        "3": { "name": "support.constant.layout-value.lilysharp" },
+                        "4": { "name": "constant.numeric.lilysharp" },
+                        "5": { "name": "support.constant.layout-value.lilysharp" }
+                    }
+                },
+                {
+                    "comment": "chordNames takes shape, sounding or both (ChordNamesKey.Words): what a chord name shows under a capo.",
+                    "match": "\\b(chordNames)\\s+(both|shape|sounding)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
                     }
                 },
                 {
@@ -327,7 +337,7 @@
                 {
                     "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
                     "name": "keyword.other.layout-key.lilysharp",
-                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords|chordDiagrams|voltaBracket)\\b"
+                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords|chordDiagrams|chordNames|voltaBracket)\\b"
                 },
                 {
                     "comment": "`every`'s count, and voltaBracket's.",

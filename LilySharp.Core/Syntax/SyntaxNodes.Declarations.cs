@@ -846,9 +846,10 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
 /// <remarks>
 /// The green node holds the block's tokens FLAT, like the paper block's: the entries are
 /// read back here, so a growing layout vocabulary grows <c>LayoutPlanReader</c>'s table
-/// and nothing in the syntax tree. There is no nested block — the parser refuses a brace
-/// inside — so the walker is one level deep. An entry runs from its key to the next KEY,
-/// and a word is a key when it opens the block or is one of the known keys
+/// and nothing in the syntax tree. The one nested block — <c>chordDiagrams</c>' shape table
+/// (2026-09-29); the parser refuses any other brace inside — belongs to its entry whole,
+/// braces included, and no word inside it is a key. An entry runs from its key to the next
+/// KEY, and a word is a key when it opens the block or is one of the known keys
 /// (<see cref="SyntaxFacts.LayoutKeyVocabulary"/>): the value words are a closed vocabulary
 /// disjoint from the keys, so <c>marks sideways</c> keeps <c>sideways</c> as the value the
 /// reader refuses, and <c>mark beside</c> refuses <c>mark</c> as the key it is.
@@ -899,7 +900,8 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
     /// </summary>
     /// <param name="Key">The key as written.</param>
     /// <param name="KeyToken">The key's token, for a diagnostic's span.</param>
-    /// <param name="Values">The value tokens, in source order; empty when none followed.</param>
+    /// <param name="Values">The value tokens, in source order — a nested block's tokens, its
+    /// braces included, among them; empty when none followed.</param>
     public readonly record struct Entry(
         string Key,
         SyntaxTokenNode KeyToken,
@@ -924,12 +926,36 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
                 values.Clear();
             }
 
+            int depth = 0;
             for (int i = NameToken != null ? 3 : 2; i < SlotCount; i++)
             {
                 if (GetChild(i) is not SyntaxTokenNode token)
                     continue;
-                if (token.Kind is SyntaxKind.OpenBrace or SyntaxKind.CloseBrace)
-                    continue; // the block's own braces (a nested one was refused and skipped)
+                // A nested block (chordDiagrams' shape table) is its entry's, braces and all,
+                // and nothing inside it is a key; a stray block the parser refused, with no
+                // key before it, is skipped with its contents. The block's own closer ends it.
+                if (token.Kind == SyntaxKind.OpenBrace)
+                {
+                    depth++;
+                    if (keyToken != null)
+                        values.Add(token);
+                    continue;
+                }
+                if (token.Kind == SyntaxKind.CloseBrace)
+                {
+                    if (depth == 0)
+                        break;
+                    depth--;
+                    if (keyToken != null)
+                        values.Add(token);
+                    continue;
+                }
+                if (depth > 0)
+                {
+                    if (keyToken != null)
+                        values.Add(token);
+                    continue;
+                }
 
                 bool isWord = token.Text.Length > 0 && char.IsLetter(token.Text[0]);
                 // A key written in the wrong case cuts too, so it is refused as a key (with

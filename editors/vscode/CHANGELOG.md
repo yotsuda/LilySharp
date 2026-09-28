@@ -51,6 +51,20 @@ All notable changes to the Lily# VS Code extension are documented here.
   hover of a name alone shows the diagram it draws — `guitar: 320003 (default) — shape 1 of N`
   — and `Ctrl+Shift+Up` on it writes the NEXT shape (the usual one is already drawn), while
   `Down` at the usual shape does nothing; the status bar says so.
+- **A shape table in the layout lists the chords that draw**: `layout { chordDiagrams guitar {
+  Cm7 x35343  G  section Chorus { C x35553 } } }` — each listed chord draws wherever it is
+  named (the table's shape, or the usual one for a name alone; a `section NAME { … }` block's
+  entries apply in that section; a shape written at the chord still wins). The hover of a
+  listed name shows the shape it draws — `guitar: xx3211 (layout)` — and `Ctrl+Shift+Up` /
+  `Down` count from it as in an `all` score. A bad symbol or shape in the table, a chord
+  listed twice and a section nothing declares are warnings at the word.
+- **A capo: `chordDiagrams guitar capo 3`** — the shapes, the names (`chordNames shape |
+  sounding | both`, a new key) and "Capo 3" at the score's head follow the capo, and the
+  hover, `Ctrl+Shift+Up`/`Down` and the shape check read the pressed chord. **The capo
+  suggestion**: after `capo ` the completion lists the frets 0–7 ranked by how many of the
+  file's chords would take a barre there (`capo 3: 0 barre chords of 3` first, `capo 0: 2
+  barre chords of 3 (F 133211, Bb x13331)`), and hovering `capo` or its fret shows the same
+  ranking. `capo`, `chordNames` and their words are completed and coloured.
 - **Hover** a chord with no shape to see how to add one: `Ctrl+Shift+↑ adds a chord diagram
   (guitar: 320003)`. With a shape written, the hover shows the shape each tuning draws —
   `guitar: x3x546 (written)`, `ukulele: no diagram` — and where it stands in the editor's
