@@ -258,7 +258,7 @@
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
-- **:426** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **:433** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
@@ -305,8 +305,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2768** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5092** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2778** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5102** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

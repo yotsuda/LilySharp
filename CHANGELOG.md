@@ -232,6 +232,23 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A tuplet — and everything else tied to a bar — in a lower voice of a later bar lands
+  in its own bar.** In
+  `voice { … } { tuplet 3/2 { … } … }` written anywhere but the first bar, the tuplet in voice
+  2 (or 3, …) drew no bracket, and a `3` bracket appeared under the same voice's notes in an
+  earlier bar — the bracket was counted from the start of the `voice` block instead of the
+  start of the piece. The same miscount put everything else written in those voices that
+  belongs to a bar in an earlier bar: a `<< >>` group's automatic bracket, dynamic, chord name
+  and articulations; an `override` / `once override` / `revert` (so a colour set in bar 2's
+  lower voice coloured bar 1's too); a `tempo` change; a `segno` / `coda` / `fine` and the
+  other navigation marks; an inline volta `[1. … ]`; and the signs of `repeat percent`. The
+  MIDI, the MusicXML `<time-modification>`/`<tuplet>` and the `.ly` twin's `\tuplet` were
+  already right.
+- **The MusicXML no longer adds an empty bar after `voice { … } { … } |`.** The bar line
+  after a `voice` block was read as a second, empty bar, so each such bar was followed by a
+  whole-bar rest (a two-bar piece exported four measures). A `||`, `:|` or `|.` written there
+  now marks the block's last bar; `voice { … } { … } | |` still writes one empty bar.
+
 - **A tie into the next section sounds and exports as one note in a book of several parts.**
   The MIDI kept one tie memory for the whole score, and every other part's block of the section
   overwrote it, so `c~ ||` into the next section's `c` played twice; the MusicXML forgot the

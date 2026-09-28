@@ -489,7 +489,9 @@ public sealed partial class MeasureCollector
         // `>>4\3`: the string every member plays on, unless the member names its own.
         int? groupString = ExtractStringNumber(arpeggio);
 
-        int measureIndex = builder.CurrentMeasureIndex;
+        // The staff's bar, not the builder's: see ProcessTuplet (the group's bracket, chord
+        // name, dynamics and articulations are all keyed by it).
+        int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
         int startNoteIndex = builder.CurrentItemCount;
         Fraction startTiming = builder.CurrentDuration;
 
@@ -1463,7 +1465,7 @@ public sealed partial class MeasureCollector
                     // Render the ending's music in place (the body before |: … :| is
                     // written once; repeat barlines imply repetition) and overlay a
                     // volta bracket across the measures the ending occupies.
-                    int startMeasureIndex = builder.CurrentMeasureIndex;
+                    int startMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
 
                     var innerNodes = new List<GreenSite>();
                     foreach (var item in volta.Items)
@@ -1475,7 +1477,7 @@ public sealed partial class MeasureCollector
                     ProcessMusicNodeSequence(innerNodes, builder);
                     builder.EndAlternative(last: false);
 
-                    int endMeasureIndex = builder.CurrentMeasureIndex;
+                    int endMeasureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     if (builder.CurrentItemCount > 0)
                         endMeasureIndex++; // include the in-progress measure
                     int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
@@ -1518,7 +1520,7 @@ public sealed partial class MeasureCollector
                     // answer there is.
                     int markMeasure = _markHostMeasure.TryGetValue(mark.SourceStart, out int hostMeasure)
                         ? hostMeasure
-                        : builder.CurrentMeasureIndex;
+                        : builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     if (Semantics.AnnotationValues.Rehearsal(mark, out _) is { } label)
                     {
                         _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, label, markMeasure, mark.SourceStart));
@@ -1571,7 +1573,7 @@ public sealed partial class MeasureCollector
                         };
                         _navPlacementWarnings.Add(new NavigationMarkPlacementWarning(nav.SourceStart, term));
                     }
-                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder), nav.SourceStart));
+                    _musicMarks.Add(new MusicMarkItem(navType, NavigationMarkMeasure(navType, builder) + _cursor.MetadataMeasureOffset, nav.SourceStart));
                 }
                 break;
 
@@ -1667,7 +1669,7 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),
                             // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
+                            builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             // The mid-music path dropped everything but the
@@ -1684,7 +1686,7 @@ public sealed partial class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, "",
                             // The declaration's first VALUE — see TempoDataPos.
-                            builder.CurrentMeasureIndex, TempoDataPos(tempoChange),
+                            builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, TempoDataPos(tempoChange),
                             builder.CurrentItemCount, builder.CurrentDuration)
                         {
                             TempoText = tempoChange.Marking,
@@ -1718,21 +1720,21 @@ public sealed partial class MeasureCollector
                 break;
 
             case OverrideDeclarationSyntax overrideDecl:
-                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false, staffIndex: _cursor.StaffIndex);
+                CollectOverride(overrideDecl, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: false, staffIndex: _cursor.StaffIndex);
                 // Track it so the next section boundary reverts it to the part default.
                 _sectionActiveGrobProps.Add((overrideDecl.GrobName.Text, overrideDecl.PropertyName.Text));
                 break;
 
             case RevertDeclarationSyntax revertDecl:
-                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
+                CollectRevert(revertDecl, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
                 _sectionActiveGrobProps.Remove((revertDecl.GrobName.Text, revertDecl.PropertyName.Text));
                 break;
 
             case OnceModifierSyntax onceModifier:
                 if (onceModifier.Command is OverrideDeclarationSyntax innerOverride)
-                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true, staffIndex: _cursor.StaffIndex);
+                    CollectOverride(innerOverride, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, isOnce: true, staffIndex: _cursor.StaffIndex);
                 else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
-                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
+                    CollectRevert(innerRevert, builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset, builder.CurrentItemCount, staffIndex: _cursor.StaffIndex);
                 break;
         }
     }
@@ -1815,7 +1817,11 @@ public sealed partial class MeasureCollector
     private Fraction ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
         Fraction? parentScale = null)
     {
-        int measureIndex = builder.CurrentMeasureIndex;
+        // ⚠️ + MetadataMeasureOffset, like every other side table the walk keys by bar: in
+        // voice 2..N of a `voice { } { }` span the builder counts the SPAN's bars from 0, and
+        // the bracket is read against the whole staff's track. Without the offset, a tuplet
+        // in voice 2 of bar 2 was drawn over bar 1's voice-2 notes and bar 2 got none.
+        int measureIndex = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
         int startNoteIndex = builder.CurrentItemCount;
         // A grace written BEFORE the tuplet is walked by the tuplet's first sounding item
         // (OpenSoundingItem), so its columns land inside the index range opened above.

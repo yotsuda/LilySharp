@@ -348,9 +348,26 @@ public sealed partial class MeasureCollector
         return OttavaTransposer.Transpose(new Voice("ottava-display-probe", written), spans).Measures;
     }
 
-    private ImmutableArray<TupletBracketItem> ProbeTupletBrackets()
-        => TupletBracketItem.AddressedTo(
+    /// <param name="measureOffset">Where the probed stream starts in the staff (see
+    /// <see cref="ResolveBeamStemDirections"/>). The brackets are keyed by the STAFF's bar
+    /// (the walk adds <c>_cursor.MetadataMeasureOffset</c>), the probe's measures by the span's
+    /// own, so a sub-voice's brackets are shifted back into its frame (the same reason
+    /// <see cref="OttavaDisplayProbe"/> shifts its spans). ⚠️ NO OUTPUT IS KNOWN TO DEPEND ON
+    /// THIS, measured by poisoning it (VoiceSpanTupletBarTests): the probe's brackets reach
+    /// only BeamDetector.BeamletCounts, and the probe stamps no beamlets. It keeps the input
+    /// in the frame of the measures it is handed rather than fixing a drawn fault.</param>
+    private ImmutableArray<TupletBracketItem> ProbeTupletBrackets(int measureOffset)
+    {
+        var own = TupletBracketItem.AddressedTo(
             _tupletBrackets, _cursor.StaffIndex, _cursor.VoiceIndex);
+        if (measureOffset == 0 || own.IsEmpty)
+            return own;
+        var shifted = ImmutableArray.CreateBuilder<TupletBracketItem>(own.Length);
+        foreach (var b in own)
+            if (b.MeasureIndex >= measureOffset)
+                shifted.Add(b with { MeasureIndex = b.MeasureIndex - measureOffset });
+        return shifted.ToImmutable();
+    }
 
     /// <param name="measureOffset">Where <paramref name="measures"/> starts in the staff — a
     /// parallel sub-voice is collected from its span's bar, 0-based, and the ottava spans it
@@ -405,7 +422,7 @@ public sealed partial class MeasureCollector
         var voice = new Voice("beam-direction-probe", probe);
         var groups = new BeamDetector().DetectBeamGroups(
             voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
-            ProbeTupletBrackets(),
+            ProbeTupletBrackets(measureOffset),
             memo: BeamMemo);
 
         // ⚠️ NO REBUILD AT ALL — the stamps are written into the items themselves. Sessions

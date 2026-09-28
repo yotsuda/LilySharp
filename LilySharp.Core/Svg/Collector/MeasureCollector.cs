@@ -122,6 +122,16 @@ public sealed partial class MeasureCollector
         // voices (they're collected with a fresh 0-based builder), so their
         // per-note metadata — dynamics, articulations, etc. — lands at the span's
         // real measure index instead of measure 0. Zero for the primary stream.
+        // ⚠️ EVERY side table the music walk keys by bar adds it — builder.CurrentMeasureIndex
+        // alone is the SPAN's bar inside a sub-voice. Until 2026-09-28 tuplet brackets, << >>
+        // groups, overrides/reverts, tempo and navigation marks, inline voltas and percent
+        // signs did not, and each landed that many bars early (VoiceSpanTupletBarTests has
+        // one net per site). The reads that rightly go WITHOUT it: the section/form walk
+        // (RecordSectionStart, the form's nav marks and texts, Form.cs) and the
+        // _parallelSpans record run on the primary stream only — a `voice` block does not
+        // nest (LYS0010) — so the offset there is always 0; the resume checkpoints compare a
+        // builder with itself; and ProbeTupletBrackets/OttavaDisplayProbe read a sub-voice in
+        // its OWN frame and shift the staff-keyed tables back.
         public int MetadataMeasureOffset;
     }
 
@@ -4786,7 +4796,7 @@ public sealed partial class MeasureCollector
                 {
                     // A beat slash covers no measure, so the sign needs the moment and the
                     // item slot it stands at inside the measure it lands in.
-                    int slashMeasure = builder.CurrentMeasureIndex;
+                    int slashMeasure = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                     var slashTiming = builder.CurrentDuration;
                     int slashItemIndex = builder.CurrentItemCount;
                     WriteRepetitionAsSpacers(bodyLength, slashCount);
@@ -4800,7 +4810,7 @@ public sealed partial class MeasureCollector
                     continue;
                 }
 
-                int iterStart = builder.CurrentMeasureIndex;
+                int iterStart = builder.CurrentMeasureIndex + _cursor.MetadataMeasureOffset;
                 WriteRepetitionAsSpacers(bodyLength);
 
                 // A TWO-MEASURE body gets ONE double-percent sign for the whole repetition,
