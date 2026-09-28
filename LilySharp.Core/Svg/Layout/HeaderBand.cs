@@ -103,12 +103,12 @@ internal sealed record HeaderBand(
     {
         if (entries.Count == 0)
             return band;
-        double s = FretFrameGeometry.Scale(fonts);
         var measured = entries.Select(e =>
         {
             double nameWidth = ChordNameGlyphRun.Width(fonts, e.Text, e.SuperFrom, e.BracketSuperFrom);
             var (bottom, top) = ChordNameGlyphRun.Ink(fonts, e.Text, e.SuperFrom, e.BracketSuperFrom);
-            var box = e.Spec != null ? FretFrameGeometry.Box(e.Spec, s) : (GlyphMetrics.BBox?)null;
+            // A markup diagram (no finger numbers), as the twin's \fret-diagram-terse is.
+            var box = e.Spec != null ? FretFrameGeometry.Box(e.Spec, fonts) : (GlyphMetrics.BBox?)null;
             double width = Math.Max(nameWidth, box?.Width ?? 0);
             return (Entry: e, NameWidth: nameWidth, NameBottom: bottom, NameTop: top, Box: box, Width: width);
         }).ToList();
@@ -161,7 +161,10 @@ internal sealed record HeaderBand(
                 cells.Add(new ChordListCell(m.Entry, cx, m.Width, nameX, baseline, gridCentre, gridBottom));
                 cx += m.Width + ChordListCellGap;
             }
-            y = row.Any(i => measured[i].Box != null) ? gridBottom : baseline - nameBottom;
+            // The row's depth: the diagrams' ink under their grid bottom (the strings' overhang,
+            // Box.Bottom is negative), else the names'.
+            double boxBottom = row.Min(i => measured[i].Box?.Bottom ?? 0);
+            y = row.Any(i => measured[i].Box != null) ? gridBottom - boxBottom : baseline - nameBottom;
             y += ChordListGap;
         }
         double listDepth = y - ChordListGap;

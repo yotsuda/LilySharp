@@ -158,7 +158,7 @@ public sealed partial class MeasureCollector
                         naming.Frets, naming.Tuning, WrittenKeySharps());
                     var diagram = DiagramFor(fromFrets);
                     if (diagram != null)
-                        AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
+                        AddChordDiagram(markSyntax, diagram.FrameSpec, measureIndex, itemIndex);
                     if (fromFrets != null)
                     {
                         var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
@@ -199,7 +199,7 @@ public sealed partial class MeasureCollector
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
                 _cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec);
             if (drawn != null)
-                AddChordDiagram(markSyntax, drawn.Frets, measureIndex, itemIndex);
+                AddChordDiagram(markSyntax, drawn.FrameSpec, measureIndex, itemIndex);
         }
     }
 
@@ -220,13 +220,15 @@ public sealed partial class MeasureCollector
     /// placement word after <c>@text</c> and <c>@diagram</c> only), and a diagram under the
     /// staff with its name over it would not be a chord symbol any more.
     /// </remarks>
-    private void AddChordDiagram(MusicMarkSyntax markSyntax, ImmutableArray<int> frets,
+    private void AddChordDiagram(MusicMarkSyntax markSyntax, string frameSpec,
         int measureIndex, int itemIndex)
         => _articulations.Add(new ArticulationItem(
             ArticulationType.FretFrame, measureIndex, itemIndex, true,
             markSyntax.SourceStart, _cursor.StaffIndex)
         {
-            FrameSpec = Music.ChordVoicings.ToFrameSpec(frets),
+            // The chosen shape's spec, its barre included (a predefined shape's; the fingers it
+            // carries too are not drawn on a markup diagram — FretFrameGeometry).
+            FrameSpec = frameSpec,
             VoiceIndex = _cursor.VoiceIndex,
             UnderChordName = true,
         });

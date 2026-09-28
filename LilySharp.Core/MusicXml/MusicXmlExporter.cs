@@ -4086,23 +4086,35 @@ public sealed class MusicXmlExporter
     /// frets 10–15 a chosen voicing can use (spelled a–f inside the spec) come out as numbers.
     /// <c>frame-frets</c> is the rows the page draws and <c>first-fret</c> the fret they start
     /// at when the shape is shifted (the page's "Nfr" label) — MusicXML's own spelling of both.
+    /// A predefined shape's detail (the spec's suffix, <c>FretFrameGeometry.Detailed</c>) is
+    /// data the frame carries whole: each fingered note's <c>&lt;fingering&gt;</c>, and a barre's
+    /// <c>&lt;barre type="start"&gt;</c> on its lowest-pitched string (the highest string
+    /// number) and <c>stop</c> on its highest — MusicXML's frame-note children in schema order.
     /// </remarks>
     private static System.Xml.Linq.XElement? BuildFrame(string spec)
     {
-        int strings = spec.Length;
+        int strings = Svg.Layout.FretFrameGeometry.Strings(spec);
         if (strings < 4) return null;
         var frame = new System.Xml.Linq.XElement("frame",
             new System.Xml.Linq.XElement("frame-strings", strings),
             new System.Xml.Linq.XElement("frame-frets", Svg.Layout.FretFrameGeometry.RowCount(spec)));
         if (Svg.Layout.FretFrameGeometry.BaseFret(spec) is > 1 and var firstFret)
             frame.Add(new System.Xml.Linq.XElement("first-fret", firstFret));
+        var barres = Svg.Layout.FretFrameGeometry.Barres(spec);
         for (int i = 0; i < strings; i++)
         {
             int fret = Svg.Layout.FretFrameGeometry.FretAt(spec, i);
             if (fret < 0) continue;
-            frame.Add(new System.Xml.Linq.XElement("frame-note",
+            var note = new System.Xml.Linq.XElement("frame-note",
                 new System.Xml.Linq.XElement("string", strings - i),
-                new System.Xml.Linq.XElement("fret", fret)));
+                new System.Xml.Linq.XElement("fret", fret));
+            if (fret > 0 && Svg.Layout.FretFrameGeometry.FingerAt(spec, i) is > 0 and var finger)
+                note.Add(new System.Xml.Linq.XElement("fingering", finger));
+            foreach (var b in barres)
+                if (b.From == i || b.To == i)
+                    note.Add(new System.Xml.Linq.XElement("barre",
+                        new System.Xml.Linq.XAttribute("type", b.From == i ? "start" : "stop")));
+            frame.Add(note);
         }
         return frame;
     }

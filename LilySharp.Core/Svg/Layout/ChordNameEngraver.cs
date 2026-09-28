@@ -972,9 +972,10 @@ internal static class ChordNameEngraver
     internal const double DiagramUnderNamePadding = 0.5;
 
     /// <summary>The ink box of a row symbol's diagram, anchored at its grid bottom centre
-    /// (<see cref="FretFrameGeometry.Box"/>, at this score's diagram size).</summary>
+    /// (<see cref="FretFrameGeometry.Box"/>, at this score's diagram size) — a FretBoard's,
+    /// with its finger numbers under the strings.</summary>
     internal static GlyphMetrics.BBox DiagramBox(Rendering.ScoreTextMetrics fonts, string spec)
-        => FretFrameGeometry.Box(spec, FretFrameGeometry.Scale(fonts));
+        => FretFrameGeometry.Box(spec, fonts, fingers: true);
 
     /// <summary>
     /// The width a chord symbol occupies from its column: its ink, or the diagram under it when

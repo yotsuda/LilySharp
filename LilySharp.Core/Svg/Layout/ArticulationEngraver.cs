@@ -2155,7 +2155,7 @@ internal static class ArticulationEngraver
             ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
             // Chord diagram: anchored at the grid bottom; a six-string one at the default size
             // (the instance's own box, spec and score size, is FrameBox).
-            ArticulationType.FretFrame => FretFrameGeometry.Box(null, 1.0),
+            ArticulationType.FretFrame => FretFrameGeometry.Box(null, ScoreTextMetrics.Bundled),
             // The font's box, Y-extent (−0.5334 . 0.8000) = LilyPond's own grob extent
             // (after-line-breaking dump, articulation-snappizzicato book). It used to
             // fall to the half-space fallback below while the renderer drew primitives
@@ -2400,7 +2400,7 @@ internal static class ArticulationEngraver
     /// <summary>Real ink box of a chord diagram, anchored at the GRID BOTTOM centre, at the
     /// score's size — the drawing's own dimensions (<see cref="FretFrameGeometry.Box"/>).</summary>
     private static GlyphMetrics.BBox FrameBox(string? spec, ScoreTextMetrics fonts)
-        => FretFrameGeometry.Box(spec, FretFrameGeometry.Scale(fonts));
+        => FretFrameGeometry.Box(spec, fonts);
 
     /// <summary>
     /// Whether this placed script is the chord diagram an <c>@chord</c> chose — the frame that

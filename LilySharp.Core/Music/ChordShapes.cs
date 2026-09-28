@@ -62,8 +62,14 @@ public sealed record ChosenShape(ImmutableArray<int> Frets, ShapeSource Source,
     /// <summary>The shape as a player writes it (<c>x32010</c>, <c>8-10-10-988</c>).</summary>
     public string Spelled => ChordVoicings.Spell(Frets);
 
-    /// <summary>The page's diagram spec (<see cref="ChordVoicings.ToFrameSpec"/>).</summary>
-    public string FrameSpec => ChordVoicings.ToFrameSpec(Frets);
+    /// <summary>The page's diagram spec (<see cref="ChordVoicings.ToFrameSpec"/>) — with the
+    /// predefined entry's fingers and barres as its detail suffix
+    /// (<c>Svg.Layout.FretFrameGeometry.Detailed</c>), which the page's diagram draws (the
+    /// barre everywhere, the fingers under a chords row's), the twin's terse string carries,
+    /// and MusicXML's <c>&lt;frame&gt;</c> writes.</summary>
+    public string FrameSpec => Predefined is { } p
+        ? Svg.Layout.FretFrameGeometry.Detailed(ChordVoicings.ToFrameSpec(Frets), p.Fingers, p.Barres)
+        : ChordVoicings.ToFrameSpec(Frets);
 
     /// <summary>The source as the editor's hover words it.</summary>
     public string SourceWord => Source switch

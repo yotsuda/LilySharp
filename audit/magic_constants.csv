@@ -736,7 +736,6 @@
 "Svg/Layout/ArticulationEngraver.cs","2099","2.0","TabTechniqueStyle(fonts)) / 2.0;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","2143","0.6000, 0.8200, 0.6000, 0.0700","? new GlyphMetrics.BBox(-0.6000, -0.8200, 0.6000, 0.0700)","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","2144","0.6000, 0.0700, 0.6000, 0.8200",": new GlyphMetrics.BBox(-0.6000, -0.0700, 0.6000, 0.8200),","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
-"Svg/Layout/ArticulationEngraver.cs","2158","1.0","ArticulationType.FretFrame => FretFrameGeometry.Box(null, 1.0),","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","2171","0.5, 0.5, 0.5, 0.5","_ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for the ornament family","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","2263","1.0, 0.0","double magnification = 1.0, double extraPad = 0.0)","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"
 "Svg/Layout/ArticulationEngraver.cs","2277","0.0","return extraPad > 0.0 ? box.Padded(extraPad) : box;","(file-level) LILYPOND-REF: define-grobs.scm:2992-3024 Script grob","Yellow"

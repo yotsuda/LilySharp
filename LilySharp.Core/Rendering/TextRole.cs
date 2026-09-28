@@ -74,11 +74,12 @@ public enum TextRole
 
     // ---- chords: harmony labels ---------------------------------------------------
     /// <summary>A chord symbol above the staff (<c>DrawChordNames</c>). LilyPond grob:
-    /// <c>ChordName</c>. ⚠️ The one role whose DEFAULT family is sans, which is
-    /// LilyPond's default too.</summary>
+    /// <c>ChordName</c>. ⚠️ One of the two roles whose DEFAULT family is sans (with
+    /// <see cref="FretFrame"/>), which is LilyPond's default too.</summary>
     ChordName,
-    /// <summary>The fret/finger digits inside a chord diagram
-    /// (<c>DrawFretFrame</c>). LilyPond grob: <c>FretBoard</c>.</summary>
+    /// <summary>The text of a chord diagram — its X / O, finger numbers and "Nfr" label
+    /// (<c>DrawFretFrame</c>). LilyPond grob: <c>FretBoard</c>; set in sans, as LilyPond's
+    /// fret diagram sets its text.</summary>
     FretFrame,
     /// <summary>A figured-bass digit under the staff (<c>DrawFiguredBass</c>). LilyPond
     /// grob: <c>BassFigure</c>.</summary>
@@ -232,11 +233,14 @@ public static class TextRoles
     /// <remarks>
     /// LILYPOND-REF: scm/define-grobs.scm — <c>ChordName</c> carries
     /// <c>(font-family . sans)</c>; every other text grob this engine draws inherits the
-    /// default <c>roman</c>. So the one exception here is LilyPond's exception, not an
-    /// invention.
+    /// default <c>roman</c> — save the fret diagram, whose every string (the X / O, the finger
+    /// numbers, the "Nfr") is set through
+    /// LILYPOND-REF: scm/fret-diagrams.scm:194-201 sans-serif-stencil — font-family sans.
+    /// So the two exceptions here are LilyPond's exceptions, not inventions (the diagram's
+    /// since 2026-09-29; it was measured in the serif face before).
     /// </remarks>
     public static TextFontFamily DefaultFamily(TextRole role) =>
-        role == TextRole.ChordName ? TextFontFamily.Sans : TextFontFamily.Serif;
+        role is TextRole.ChordName or TextRole.FretFrame ? TextFontFamily.Sans : TextFontFamily.Serif;
 
     /// <summary>
     /// Is <paramref name="role"/> notation drawn as text — the clef's octave digit, a

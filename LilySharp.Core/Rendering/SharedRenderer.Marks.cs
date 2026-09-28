@@ -114,7 +114,8 @@ internal static partial class SharedRenderer
                 if (c.FrameSpec is { } spec)
                 {
                     var box = LilySharp.Core.Svg.Layout.ChordNameEngraver.DiagramBox(fonts, spec);
-                    DrawFretFrame(fonts, c.X - box.Left, cy + c.FrameBottom, spec, gc);
+                    // A row's diagram is LilyPond's FretBoard: its finger numbers are drawn.
+                    DrawFretFrame(fonts, c.X - box.Left, cy + c.FrameBottom, spec, gc, fingers: true);
                 }
             }
         }

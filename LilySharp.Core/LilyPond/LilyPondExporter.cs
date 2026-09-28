@@ -4092,14 +4092,10 @@ public sealed class LilyPondExporter
     private string FretDiagramMarkup(string spec, bool above)
     {
         // One entry a string, low string first: x, o, or the fret — read by the page's own
-        // reader, so a chosen voicing's frets 10–15 are written as numbers.
-        var terse = new StringBuilder();
-        for (int i = 0; i < spec.Length; i++)
-        {
-            int fret = Svg.Layout.FretFrameGeometry.FretAt(spec, i);
-            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture))
-                 .Append(';');
-        }
+        // reader, so a chosen voicing's frets 10–15 are written as numbers; a predefined
+        // shape's barre as its parentheses. No fingers: a markup diagram's finger-code is none
+        // and the page draws none on it either.
+        string terse = TerseOf(spec);
         string size = _fontPlan.WrittenStep(Rendering.TextRole.FretFrame) is { } step && step != 0
             ? "\\override #'(size . "
               + Math.Pow(2, step / 6.0).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + ") "
@@ -5301,16 +5297,34 @@ public sealed class LilyPondExporter
         _sb.Append('\n');
     }
 
-    /// <summary>A page diagram spec as LilyPond's terse string — one entry a string, low string
-    /// first: <c>x</c>, <c>o</c>, or the fret (<see cref="FretDiagramMarkup"/>'s spelling).</summary>
-    private static string TerseOf(string spec)
+    /// <summary>
+    /// A page diagram spec as LilyPond's terse string — one entry a string, low string first:
+    /// <c>x</c>, <c>o</c>, or the fret, then (with <paramref name="fingers"/>, a FretBoard's)
+    /// <c>-N</c> the finger, then <c>-(</c> / <c>-)</c> where a barre of the spec's detail
+    /// suffix starts / ends (<c>1-1-(;3-3;3-4;2-2;1-1;1-1-);</c> is LilyPond's own F).
+    /// LILYPOND-REF: scm/fret-diagrams.scm:1003-1066 fret-parse-terse-definition-string — the
+    ///   items split on <c>;</c>, an item's parts on <c>-</c>: fret, finger, and a last <c>(</c>
+    ///   or <c>)</c> for the barre (barre-start-list).
+    /// </summary>
+    private static string TerseOf(string spec, bool fingers = false)
     {
         var terse = new StringBuilder();
-        for (int i = 0; i < spec.Length; i++)
+        var barres = Svg.Layout.FretFrameGeometry.Barres(spec);
+        int n = Svg.Layout.FretFrameGeometry.Strings(spec);
+        for (int i = 0; i < n; i++)
         {
             int fret = Svg.Layout.FretFrameGeometry.FretAt(spec, i);
-            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture))
-                 .Append(';');
+            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (fingers && fret > 0 && Svg.Layout.FretFrameGeometry.FingerAt(spec, i) is > 0 and var finger)
+                terse.Append('-').Append(finger.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            foreach (var b in barres)
+            {
+                if (b.From == i)
+                    terse.Append("-(");
+                if (b.To == i)
+                    terse.Append("-)");
+            }
+            terse.Append(';');
         }
         return terse.ToString();
     }
@@ -5628,15 +5642,9 @@ public sealed class LilyPondExporter
         // The FretBoards track spells the PRESSED chords under a capo (ChordBarText), so the
         // one-shape table is keyed by the pressed chord too.
         string chordEntry = chord.Pressed(_layoutPlan.Chords.Capo, key.Sharps).ToChordMode("");
-        var terse = new StringBuilder();
-        for (int i = 0; i < chosen.Frets.Length; i++)
-        {
-            int fret = chosen.Frets[i];
-            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            if (fret > 0 && chosen.Predefined is { } p && p.Fingers[i] > 0)
-                terse.Append('-').Append(p.Fingers[i].ToString(System.Globalization.CultureInfo.InvariantCulture));
-            terse.Append(';');
-        }
+        // A FretBoard: the fingers and the barre of a predefined shape are LilyPond's own
+        // (finger-code below-string draws the fingers; the page's row diagram draws both too).
+        string terse = TerseOf(chosen.FrameSpec, fingers: true);
         string tableKey = chordEntry + "|" + terse;
         if (!_fretTables.TryGetValue(tableKey, out var name))
         {

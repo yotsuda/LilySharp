@@ -222,12 +222,6 @@ internal static partial class SharedRenderer
             (x0 + dx, y0 + dy),
             Color.Black, BendAfterGeometry.Thickness);
 
-    /// <summary>
-    /// Draws a chord diagram (fret frame): string grid, finger dots, o/x
-    /// row, and an "Nfr" label when the shape sits above the 4th fret.
-    /// Spec is LOW string first ("x32010").
-    /// LILYPOND-REF: LP \fret-diagram-terse / MusicXML &lt;frame&gt;.
-    /// </summary>
     /// <summary>The "Nfr" label's ENGRAVING em at the diagram's default size — the one home
     /// is <see cref="FretFrameGeometry.LabelEm"/>, which also scales the grid with it.</summary>
     internal const double FretFrameLabelEm = FretFrameGeometry.LabelEm;
@@ -237,71 +231,122 @@ internal static partial class SharedRenderer
     /// is drawn here and reserved nowhere.</summary>
     internal const double BendLabelEm = 1.6;
 
-    private static void DrawFretFrame(ScoreTextMetrics fonts, double cx, double bottomY, string spec, IDrawingContext gc)
+    /// <summary>
+    /// Draws a chord diagram — LilyPond's fret diagram, stencil by stencil: the strings (one
+    /// fret past the last row), the frets, a curved barre over the dots it spans, the dots 0.6
+    /// of the way down their fret space, the thick nut at the first position, an <c>X</c> /
+    /// <c>O</c> over each muted / open string, the "Nfr" label right, and — for a FretBoard,
+    /// <paramref name="fingers"/>, a chords row's diagram — the finger numbers under the
+    /// strings. The spec is LOW string first (<c>x32010</c>, a detail suffix for the fingers
+    /// and barres: <see cref="FretFrameGeometry"/>); the anchor is the grid bottom's centre,
+    /// Y-up. Every length is <see cref="FretFrameGeometry.Measure"/>'s, the same the
+    /// reservation reads.
+    /// LILYPOND-REF: scm/fret-diagrams.scm:855-899 make-fret-diagram — the body: draw-strings,
+    ///   draw-frets, draw-barre, draw-dots, draw-thick-zero-fret, draw-xo, label-fret, in that order.
+    /// </summary>
+    private static void DrawFretFrame(ScoreTextMetrics fonts, double cx, double bottomY, string spec,
+        IDrawingContext gc, bool fingers = false)
     {
-        // Every length from the one home the reservation reads too, at the score's size.
-        double s = FretFrameGeometry.Scale(fonts);
-        int strings = spec.Length;
-        double dx = FretFrameGeometry.StringSpacing(s);
-        double dy = FretFrameGeometry.FretSpacing(s);
-        int fretRows = FretFrameGeometry.RowCount(spec);
-        double thin = FretFrameGeometry.StringThickness(s);
-        double mark = FretFrameGeometry.MarkHalf(s);
-        double header = FretFrameGeometry.HeaderRise(s);
-        double width = (strings - 1) * dx;
-        double left = cx - width / 2;
-        // The anchor Y comes from the script/skyline machinery (the frame's
-        // real ink box is seeded there) — the grid bottom sits ON the anchor.
-        // Y-up: the grid top is above the bottom (larger Y).
-        double top = bottomY + fretRows * dy; // grid top (above the grid bottom)
-        double bottom = top - fretRows * dy;
+        var m = LilySharp.Core.Svg.Layout.FretFrameGeometry.Measure(spec, fonts, fingers);
+        double s = m.Size, th = m.Th, half = th / 2;
+        int n = m.Strings, rows = m.Rows;
+        double left = cx - (n - 1) * s / 2;
+        double top = bottomY + rows * s;
+        var style = fonts.Style(TextRole.FretFrame, FontStyle.Regular);
 
-        // Base fret: shapes above the 4th fret shift down and get "Nfr".
-        int baseFret = FretFrameGeometry.BaseFret(spec);
-
-        for (int i = 0; i < strings; i++)
-            gc.DrawLine(left + i * dx, top, left + i * dx, bottom, Color.Black, thin);
-        for (int f = 0; f <= fretRows; f++)
-            gc.DrawLine(left, top - f * dy, left + width, top - f * dy, Color.Black,
-                f == 0 && baseFret == 1 ? FretFrameGeometry.NutThickness(s) : thin); // nut is thick at position 1
-
-        if (baseFret > 1)
-            gc.DrawText($"{baseFret}fr", left + width + FretFrameGeometry.LabelGap(s), top - dy * 0.5,
-                fonts.Size(TextRole.FretFrame, FretFrameLabelEm),
-                TextRole.FretFrame, fonts.Style(TextRole.FretFrame, FontStyle.Regular),
-                TextAnchor.Start, Color.Black);
-
-        for (int i = 0; i < strings; i++)
+        // Strings: a box th wide from half a thickness over fret 0's line to the overhang's end,
+        // half a thickness past it.
+        // LILYPOND-REF: scm/fret-diagrams.scm:406-429 string-stencil — round-filled-box, string-overhang
+        for (int i = 0; i < n; i++)
         {
-            // One reader of a fret for every consumer (FretFrameGeometry.FretAt — it also
-            // reads the a–f a chosen voicing uses for frets 10–15).
-            int written = FretFrameGeometry.FretAt(spec, i);
-            double sx = left + i * dx;
-            double hy = top + header;
-            if (written < 0)
-            {
-                gc.DrawLine(sx - mark * 0.7, hy + mark * 0.7, sx + mark * 0.7, hy - mark * 0.7, Color.Black, 1.4 * thin);
-                gc.DrawLine(sx - mark * 0.7, hy - mark * 0.7, sx + mark * 0.7, hy + mark * 0.7, Color.Black, 1.4 * thin);
-            }
-            else if (written == 0)
-            {
-                // An open string is a RING: a stroked circle with no fill, as LilyPond draws it
-                // (fret-diagrams.scm draw-open-string: make-circle-stencil … #f = not filled).
-                // It used to be a black disc under a white one, which read as a black dot in the
-                // preview — its dark theme inverts the page (white core → black) and its caret
-                // highlight repaints every fill (owner report 2026-09-28). Same outer edge as
-                // before: the stroke's centre line is half a stroke inside it.
-                double ring = 1.4 * thin;
-                double r = mark * 0.85 - ring / 2;
-                gc.DrawEllipse(sx, hy, r, r, fill: null, stroke: Color.Black, strokeWidth: ring);
-            }
-            else
-            {
-                int fret = written - (baseFret - 1);
-                if (fret >= 1 && fret <= fretRows)
-                    gc.DrawCircle(sx, top - (fret - 0.5) * dy, FretFrameGeometry.DotRadius(s), Color.Black);
-            }
+            double x = left + i * s;
+            gc.DrawLine(x, top + half, x,
+                bottomY - LilySharp.Core.Svg.Layout.FretFrameGeometry.StringOverhang * s - half, Color.Black, th);
         }
+        // Frets: a line th thick from the low string's centre to the high string's, round ends.
+        // LILYPOND-REF: scm/fret-diagrams.scm:440-460 fret-stencil — make-line-stencil, fret-distance
+        for (int f = 0; f <= rows; f++)
+        {
+            double y = top - f * s;
+            gc.DrawLine(left, y, left + (n - 1) * s, y, Color.Black, th, cap: LineCap.Round);
+        }
+
+        // The barres: a bezier sandwich from the first string's dot centre to the last's, arching
+        // bezier-height toward the nut, bezier-thick thick and stroked as thick again.
+        // LILYPOND-REF: scm/fret-diagrams.scm:462-495 draw-barre — barre-fret-coordinate, the string coordinates
+        // LILYPOND-REF: scm/fret-diagrams.scm:352-395 make-bezier-sandwich-list — the six control points
+        // LILYPOND-REF: scm/stencil.scm:20-31 make-bezier-sandwich-stencil — two curveto, closepath, filled, thick
+        foreach (var barre in LilySharp.Core.Svg.Layout.FretFrameGeometry.Barres(spec))
+        {
+            int fret = barre.Fret - (m.BaseFret - 1);
+            if (fret < 1 || fret > rows)
+                continue;
+            double baseY = top - (fret - 1 + LilySharp.Core.Svg.Layout.FretFrameGeometry.DotPosition) * s;
+            double start = left + barre.From * s, stop = left + barre.To * s;
+            double halfThick = LilySharp.Core.Svg.Layout.FretFrameGeometry.BarreThick * s;
+            double height = LilySharp.Core.Svg.Layout.FretFrameGeometry.BarreHeight * s;
+            double width = 1 + (stop - start);          // LilyPond's own arithmetic: 1 + the span
+            double cpLeft = start + width * halfThick, cpRight = stop - width * halfThick;
+            gc.DrawClosedBezier(
+                (start, baseY),
+                (cpLeft, baseY + height - halfThick), (cpRight, baseY + height - halfThick),
+                (stop, baseY),
+                (cpRight, baseY + height), (cpLeft, baseY + height),
+                Color.Black, strokeWidth: halfThick);
+        }
+
+        // The dots: a filled circle of dot-radius ringed by a line th thick, dot-position down
+        // the fret space.
+        // LILYPOND-REF: scm/fret-diagrams.scm:535-613 draw-dots — fret-coordinate, make-circle-stencil scale-dot-radius scale-dot-thick #t
+        for (int i = 0; i < n; i++)
+        {
+            int written = LilySharp.Core.Svg.Layout.FretFrameGeometry.FretAt(spec, i);
+            if (written <= 0)
+                continue;
+            int fret = written - (m.BaseFret - 1);
+            if (fret < 1 || fret > rows)
+                continue;
+            gc.DrawCircle(left + i * s,
+                top - (fret - 1 + LilySharp.Core.Svg.Layout.FretFrameGeometry.DotPosition) * s,
+                LilySharp.Core.Svg.Layout.FretFrameGeometry.DotRadius * s + half, Color.Black);
+        }
+
+        // The nut at the first position: a box top-fret-thickness thick standing on half a
+        // thickness under fret 0's line, from the low string's outer edge to the high string's.
+        // LILYPOND-REF: scm/fret-diagrams.scm:737-762 draw-thick-zero-fret
+        if (m.BaseFret == 1)
+        {
+            double nut = LilySharp.Core.Svg.Layout.FretFrameGeometry.TopFretThickness * th;
+            gc.DrawLine(left - half, top - half + nut / 2, left + (n - 1) * s + half, top - half + nut / 2,
+                Color.Black, nut);
+        }
+
+        // X / O: each centred on its string, the row centred xo-padding over the diagram's top.
+        // LILYPOND-REF: scm/fret-diagrams.scm:764-801 draw-xo — xo-font-magnification, centered-stencil, xo-fret-offset
+        if (m.XoCentre is { } xoCentre)
+            for (int i = 0; i < n; i++)
+            {
+                int written = LilySharp.Core.Svg.Layout.FretFrameGeometry.FretAt(spec, i);
+                var label = written < 0 ? m.X : written == 0 ? m.O : null;
+                if (label is { } glyph)
+                    gc.DrawText(glyph.Text, glyph.PenX(left + i * s), glyph.Baseline(bottomY + xoCentre), glyph.Em,
+                        TextRole.FretFrame, style, TextAnchor.Start, Color.Black);
+            }
+
+        // The finger numbers under the strings (a FretBoard's): each centred on its string, its
+        // ink top on the line finger-label-padding under the strings.
+        // LILYPOND-REF: scm/fret-diagrams.scm:695-728 draw-dots — finger-label-fret-coordinate, finger-code below-string
+        for (int i = 0; i < m.Fingers.Length; i++)
+            if (m.Fingers[i] is { } finger)
+                gc.DrawText(finger.Text, finger.PenX(left + i * s),
+                    finger.Baseline(bottomY + m.FingerTop - finger.Height / 2), finger.Em,
+                    TextRole.FretFrame, style, TextAnchor.Start, Color.Black);
+
+        // "Nfr": centred half a fret under the top line, right of the strings.
+        // LILYPOND-REF: scm/fret-diagrams.scm:816-852 label-fret — fret-label-vertical-offset, label-outside-diagram
+        if (m.FretLabel is { } fl)
+            gc.DrawText(fl.Text, fl.PenX(cx + m.LabelCentreX), fl.Baseline(bottomY + m.LabelCentreY), fl.Em,
+                TextRole.FretFrame, style, TextAnchor.Start, Color.Black);
     }
 
     /// <summary>

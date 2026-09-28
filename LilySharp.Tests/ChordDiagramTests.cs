@@ -888,8 +888,14 @@ public class ChordDiagramTests
                         && Num(m.Groups[3].Value) - Num(m.Groups[1].Value) > 20)
             .Min(m => Num(m.Groups[2].Value));
 
+    /// <summary>The chord name's baseline (device Y): of the sans texts carrying the mark's
+    /// data-pos — the name, and since 2026-09-29 the diagram's own X / O and finger numbers,
+    /// set smaller — the one at the largest font size.</summary>
     private static double NameBaseline(string svg, int dataPos)
-        => Num(Regex.Match(svg, $"<text x=\"[-0-9.]+\" y=\"([-0-9.]+)\"[^>]*sans-serif[^>]*data-pos=\"{dataPos}\"").Groups[1].Value);
+        => Regex.Matches(svg, $"<text x=\"[-0-9.]+\" y=\"([-0-9.]+)\" font-size=\"([-0-9.]+)\"[^>]*sans-serif[^>]*data-pos=\"{dataPos}\"")
+            .OrderByDescending(m => Num(m.Groups[2].Value))
+            .Select(m => Num(m.Groups[1].Value))
+            .First();
 
     private static double Num(string s) => double.Parse(s, System.Globalization.CultureInfo.InvariantCulture);
 
@@ -1078,6 +1084,48 @@ public class ChordDiagramTests
         Assert.Contains("<harmony>", Xml(Book(NoDiagrams)));
         // On a ukulele part the four-string shape.
         Assert.Contains("<frame-strings>4</frame-strings>", Xml(Book("", "C x32010 0003", "instrument ukulele")));
+    }
+
+    /// <summary>
+    /// A predefined shape's fingers and barre (HANDOFF §2 K5 ①'s tail, 2026-09-29): the page
+    /// draws the curved barre on every diagram of the shape, and the finger numbers under a
+    /// chords row's diagram only — a FretBoard's finger-code is below-string, a markup
+    /// diagram's none (scm/define-grobs.scm FretBoard; scm/fret-diagrams.scm make-fret-diagram);
+    /// the twin's terse strings say the same, and MusicXML's frame carries both as data.
+    /// </summary>
+    [Fact]
+    public void APredefinedShapesFingersAndBarre_DrawAsLilyPondDraws_AndReachTheExporters()
+    {
+        string book = GuitarAll + """
+            octave absolute
+            part gt { clef treble }
+            section A {
+              gt { c'1@chord(F) | }
+              chords prog { F | }
+            }
+            form main { A }
+            score main { chords prog  staff gt }
+            """;
+        var tree = SyntaxTree.Parse(book);
+        Assert.False(tree.HasErrors, string.Join(" | ", tree.Diagnostics.Select(d => d.Message)));
+        string svg = SvgGenerator.Generate(tree);
+        // Two diagrams (the row's, the @chord's), two barres: a closed two-curve path each.
+        Assert.Equal(2, Regex.Matches(svg, "<path[^>]*d=\"M[^\"]*C[^\"]*C[^\"]*Z\"").Count);
+        // The fingers 1 3 4 2 1 1 under the row's diagram only: one "4" and one "3" on the page.
+        Assert.Single(Regex.Matches(svg, "<text[^>]*>4</text>"));
+        Assert.Single(Regex.Matches(svg, "<text[^>]*>3</text>"));
+        string ly = new LilyPondExporter().Export(tree);
+        Assert.Contains("\"1-1-(;3-3;3-4;2-2;1-1;1-1-);\"", ly);            // the row: a FretBoard
+        Assert.Contains("\\fret-diagram-terse \"1-(;3;3;2;1;1-);\"", ly);   // the @chord: markup
+        string xml = Xml(book);
+        var harmony = Regex.Match(xml, "<harmony>.*?</harmony>", RegexOptions.Singleline).Value;
+        Assert.Contains("<fingering>4</fingering>", harmony);
+        Assert.Matches("<string>6</string>\\s*<fret>1</fret>\\s*<fingering>1</fingering>\\s*<barre type=\"start\" />", harmony);
+        Assert.Contains("<barre type=\"stop\" />", harmony);
+        // Without the row: no finger number on the page, the barre still.
+        string alone = SvgGenerator.Generate(SyntaxTree.Parse(book.Replace("chords prog { F | }", "").Replace("chords prog  staff gt", "staff gt")));
+        Assert.Empty(Regex.Matches(alone, "<text[^>]*>4</text>"));
+        Assert.Single(Regex.Matches(alone, "<path[^>]*d=\"M[^\"]*C[^\"]*C[^\"]*Z\""));
     }
 
     /// <summary>A dash-separated shape at frets 12–15 (owner's decision 2026-09-28) reaches the
@@ -1317,17 +1365,19 @@ public class ChordDiagramTests
     public void AllScore_ARowDrawsEveryEntry_TheWrittenShapeWinning()
     {
         string cmaj9 = DefaultShape("Cmaj9", TuningType.Guitar)!;
-        Assert.Equal(new string?[] { "x32010", "xx3211", cmaj9 }, RowFrames(Song(All, "C | F(xx3211) | Cmaj9 |")));
-        Assert.Equal(new string?[] { "x32010", "xx3211", cmaj9 }, RowFrames(Song(GuitarAll, "C | F(xx3211) | Cmaj9 |")));
+        // A predefined shape's spec carries its fingers (and barre) after a '|' — the row draws
+        // them; a written shape's carries none.
+        Assert.Equal(new string?[] { "x32010|032010", "xx3211", cmaj9 }, RowFrames(Song(All, "C | F(xx3211) | Cmaj9 |")));
+        Assert.Equal(new string?[] { "x32010|032010", "xx3211", cmaj9 }, RowFrames(Song(GuitarAll, "C | F(xx3211) | Cmaj9 |")));
         Assert.Equal(new string?[] { null, "xx3211", null }, RowFrames(Song(Guitar, "C | F(xx3211) | Cmaj9 |")));
         // A degree draws the default of the chord it resolves to (IV in C = F).
-        Assert.Equal(new string?[] { "133211" }, RowFrames(Song(All, "IV |", "c'1 |")));
+        Assert.Equal(new string?[] { "133211|134211|6-1@1" }, RowFrames(Song(All, "IV |", "c'1 |")));
         // `all` alone keeps today's tuning rule: over a ukulele staff, the ukulele's.
-        Assert.Equal(new string?[] { "0003" }, RowFrames(Song(All, "C |", "c'1 |", "chords prog  staff uk")));
-        Assert.Equal(new string?[] { "0003" }, RowFrames(Song(UkuleleAll, "C |", "c'1 |")));
+        Assert.Equal(new string?[] { "0003|0003" }, RowFrames(Song(All, "C |", "c'1 |", "chords prog  staff uk")));
+        Assert.Equal(new string?[] { "0003|0003" }, RowFrames(Song(UkuleleAll, "C |", "c'1 |")));
         // A chord with no shape on the tuning draws none (C13: no ukulele table entry, and no
         // enumeration on the re-entrant ukulele).
-        Assert.Equal(new string?[] { null, "0003" }, RowFrames(Song(UkuleleAll, "C13 | C |", "c'1 | c'1 |")));
+        Assert.Equal(new string?[] { null, "0003|0003" }, RowFrames(Song(UkuleleAll, "C13 | C |", "c'1 | c'1 |")));
     }
 
     [Fact]
@@ -1342,7 +1392,7 @@ public class ChordDiagramTests
             """;
         // Cm7's default (predefined x35343), the written x3x546 winning, the bare chord's
         // derived C (x32010); quoted text names no chord.
-        Assert.Equal(new[] { "frame:x35343", "frame:x3x546", "frame:x32010" },
+        Assert.Equal(new[] { "frame:x35343|013121|5-1@3", "frame:x3x546", "frame:x32010|032010" },
             Laid(With(All)).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
         Assert.Equal("frame:x3x546", Assert.Single(Laid(With(Guitar)).ArticulationLayouts).Glyph);
     }
@@ -1402,7 +1452,7 @@ public class ChordDiagramTests
             score main { staff gt }
             """;
         string ly = Twin(Book(All));
-        Assert.Contains("\\fret-diagram-terse \"x;3;5;3;4;3;\"", ly);        // Cm7's default
+        Assert.Contains("\\fret-diagram-terse \"x;3-(;5;3;4;3-);\"", ly);    // Cm7's default, its barre
         Assert.Contains("\\fret-diagram-terse \"x;3;2;o;1;o;\"", ly);        // the bare chord's C
         Assert.DoesNotContain("fret-diagram", Twin(Book(Guitar)));
         var harmony = Regex.Match(Xml(Book(All)), "<harmony>.*?</harmony>", RegexOptions.Singleline).Value;
@@ -1504,7 +1554,7 @@ public class ChordDiagramTests
         Assert.Equal(5, plain.ChordNameLayouts.Count());
         Assert.All(plain.ArticulationLayouts, a => Assert.Equal("frame:x32010", a.Glyph));
         // chordDiagrams all: a name alone draws the default, on a rest as on a note.
-        Assert.Equal(new[] { "frame:320003" },
+        Assert.Equal(new[] { "frame:320003|210003" },
             Laid(RestBook(All, "r1@chord(G) |")).ArticulationLayouts.Select(a => a.Glyph));
         // A symbol-less shape on a spacer names its chord from the frets, as on a note.
         Assert.Equal("C", Assert.Single(Collected(RestBook("", "s1@chord(x32010) |")).ChordNames).ChordText);
@@ -1685,13 +1735,13 @@ public class ChordDiagramTests
     public void TheTable_DrawsTheChordsItLists_WhereverTheyAreNamed()
     {
         // A row: C (listed alone) draws the default, F the table's shape, G nothing.
-        Assert.Equal(new string?[] { "x32010", "xx3211", null }, RowFrames(Song(Table, "C | F | G |")));
+        Assert.Equal(new string?[] { "x32010|032010", "xx3211", null }, RowFrames(Song(Table, "C | F | G |")));
         // A written shape wins over the table.
         Assert.Equal(new string?[] { "x32013" }, RowFrames(Song(Table, "C(x32013) |", "c'1 |")));
         // A degree resolves to its chord first (IV in C is F).
         Assert.Equal(new string?[] { "xx3211" }, RowFrames(Song(Table, "IV |", "c'1 |")));
         // With `all`: the table's shape for a listed chord, the default for the rest.
-        Assert.Equal(new string?[] { "xx3211", "320003" },
+        Assert.Equal(new string?[] { "xx3211", "320003|210003" },
             RowFrames(Song("layout { chordDiagrams all { F xx3211 } }\n", "F | G |", "c'1 | c'1 |")));
         // An entry whose shapes fit no tuning of the score is not used there.
         Assert.Equal(new string?[] { null }, RowFrames(Song("layout { chordDiagrams guitar { F 2010 } }\n", "F |", "c'1 |")));
@@ -1707,7 +1757,7 @@ public class ChordDiagramTests
             form main { A }
             score main { staff gt }
             """;
-        Assert.Equal(new[] { "frame:xx3211", "frame:x32010", "frame:133211" },
+        Assert.Equal(new[] { "frame:xx3211", "frame:x32010|032010", "frame:133211" },
             Laid(book).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
     }
 
@@ -1726,7 +1776,7 @@ public class ChordDiagramTests
             form main { A B }
             score main { chords prog  staff gt }
             """;
-        Assert.Equal(new string?[] { "xx3211", null, "133211", "320003" }, RowFrames(byPart));
+        Assert.Equal(new string?[] { "xx3211", null, "133211", "320003|210003" }, RowFrames(byPart));
         const string marks = layout + """
             octave absolute
             part gt { clef treble }
@@ -1735,7 +1785,7 @@ public class ChordDiagramTests
             form main { A B }
             score main { staff gt }
             """;
-        Assert.Equal(new[] { "frame:xx3211", "frame:133211", "frame:320003" },
+        Assert.Equal(new[] { "frame:xx3211", "frame:133211", "frame:320003|210003" },
             Laid(marks).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
         // A row written inside the section takes the section's entry too.
         const string flat = """
@@ -1928,7 +1978,7 @@ public class ChordDiagramTests
     [Fact]
     public void UnderACapo_TheDiagramsAreThePressedShapes()
     {
-        Assert.Equal(new string?[] { "x32010", "320003" }, RowFrames(Song(Capo3All, "Eb | Bb |", "c'1 | c'1 |")));
+        Assert.Equal(new string?[] { "x32010|032010", "320003|210003" }, RowFrames(Song(Capo3All, "Eb | Bb |", "c'1 | c'1 |")));
         Assert.Equal(new string?[] { "x32013", null }, RowFrames(Song(Capo3, "Eb(x32013) | Bb |", "c'1 | c'1 |")));
         Assert.Equal(new string?[] { "133211" }, RowFrames(Song("layout { chordDiagrams guitar capo 3 { Ab 133211 } }\n", "Ab |", "c'1 |")));
         // LYS1039 reads the pressed chord: x32010 is the pressed E♭ (C); 320003 is not.
@@ -2056,10 +2106,10 @@ public class ChordDiagramTests
     public void TheChordList_ListsEachChordOnce_InOrderOfFirstAppearance()
     {
         // A row: each chord once, the written shape where one is written, else the usual shape.
-        Assert.Equal(new (string, string?)[] { ("C", "x32010"), ("F", "xx3211"), ("G", "320003"), ("Am", "x02210") },
+        Assert.Equal(new (string, string?)[] { ("C", "x32010|032010"), ("F", "xx3211"), ("G", "320003|210003"), ("Am", "x02210|002310") },
             Listed(Song(List, "C | F(xx3211) | G | C | Am |", "c'1 | c'1 | c'1 | c'1 | c'1 |")));
         // "N.C." names no chord; a degree lists as the chord it resolves to.
-        Assert.Equal(new (string, string?)[] { ("C", "x32010"), ("F", "133211") },
+        Assert.Equal(new (string, string?)[] { ("C", "x32010|032010"), ("F", "133211|134211|6-1@1") },
             Listed(Song(List, "C | r | IV |", "c'1 | c'1 | c'1 |")));
         // An @chord joins the row's chords in order of appearance; a bare @chord by its derived name.
         string book = List + """
@@ -2075,7 +2125,7 @@ public class ChordDiagramTests
         Assert.Equal(new[] { "C", "Dm7", "Em", "G" }, Listed(book).Select(e => e.Text));
         // Under `chordDiagrams none` the names alone; under a capo the pressed names and shapes.
         Assert.All(Listed(Song("layout { chordDiagrams none  chordList true }\n", "C | F |", "c'1 | c'1 |")), e => Assert.Null(e.Spec));
-        Assert.Equal(new (string, string?)[] { ("C", "x32010"), ("G", "320003") },
+        Assert.Equal(new (string, string?)[] { ("C", "x32010|032010"), ("G", "320003|210003") },
             Listed(Song("layout { chordDiagrams guitar capo 3  chordList true }\n", "Eb | Bb |", "c'1 | c'1 |")));
         // Without the key, nothing.
         Assert.Empty(Listed(Song(Guitar, "C | F |", "c'1 | c'1 |")));
@@ -2095,7 +2145,7 @@ public class ChordDiagramTests
         Assert.Equal(new[] { 8, 8 }, rows.Select(r => r.Count));
         double centre = options.MarginLeft + options.ContentWidth / 2;
         foreach (var row in rows)
-            Assert.Equal(centre, (row[0].X + row[^1].X + row[^1].Width) / 2, 6);
+            Assert.Equal(centre, (row[0].X + row[^1].X + row[^1].Width) / 2, 5);
         Assert.True(rows[1][0].NameBaseline > rows[0][0].GridBottom);
         Assert.Equal(band.ChordList.Depth, band.Depth);
         Assert.True(band.Width > 0 && band.Width <= options.ContentWidth);

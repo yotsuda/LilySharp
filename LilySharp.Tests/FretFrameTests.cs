@@ -16,6 +16,8 @@
 
 using System.Linq;
 using LilySharp.Core.LilyPond;
+using LilySharp.Core.Music;
+using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -43,19 +45,22 @@ public class FretFrameTests
         """;
 
     /// <summary>
-    /// An open string is a RING — a stroked circle with no fill, as LilyPond's
-    /// fret-diagrams.scm draws it — not a black disc under a white one: the preview's dark
-    /// theme inverts the page (the white core turned black) and its caret highlight repaints
-    /// fills, so the old pair read as a black dot (owner report 2026-09-28). 320003 has three
-    /// open strings (twice), x32010 two.
+    /// An open string is an <c>O</c> and a muted one an <c>X</c>, set in the sans face over the
+    /// string, as LilyPond's fret-diagrams.scm draw-xo sets them (2026-09-29; until then a
+    /// stroked ring and two strokes, and before 2026-09-28 a black disc under a white one, which
+    /// the preview's dark theme inverted — owner report). 320003 has three open strings (twice),
+    /// x32010 two open and one muted.
     /// </summary>
     [Fact]
-    public void AnOpenString_IsAnUnfilledRing()
+    public void AnOpenString_IsAnO_AMutedOneAnX_InTheSansFace()
     {
         string svg = SvgGenerator.Generate(SyntaxTree.Parse(Book));
-        int rings = System.Text.RegularExpressions.Regex.Matches(svg, "<ellipse[^>]*fill=\"none\"[^>]*stroke=").Count;
-        Assert.Equal(3 + 3 + 2, rings);
-        // No white disc anywhere (the page's own background rect is white — not a circle).
+        var os = System.Text.RegularExpressions.Regex.Matches(svg, "<text([^>]*)>O</text>");
+        Assert.Equal(3 + 3 + 2, os.Count);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(svg, "<text[^>]*>X</text>"));
+        Assert.All(os, m => Assert.Contains("sans-serif", m.Groups[1].Value));
+        // No ring and no disc: the dots are the only circles.
+        Assert.DoesNotContain("<ellipse", svg);
         Assert.DoesNotMatch("<circle[^>]*fill=\"#FFFFFF\"", svg);
     }
 
@@ -103,14 +108,75 @@ public class FretFrameTests
         score main { staff gt }
         """;
 
+    private static readonly ScoreTextMetrics Fonts = ScoreTextMetrics.Bundled;
+
     [Fact]
     public void ADefaultFrame_IsLilyPondsSize_OneStaffSpaceAStringAndAFret()
     {
-        // Six strings one staff space apart (5 wide) plus the o / x reach each side, four frets
-        // one space deep plus the header. LILYPOND-REF: scm/fret-diagrams.scm make-fret-diagram.
-        var ink = Frames(Pair)[0].Ink;
-        Assert.Equal(5.0 + 2 * 0.32, ink.Right - ink.Left, 9);
-        Assert.Equal(4.0 + 0.68 + 0.32, ink.Top, 9);
+        // Six strings one staff space apart (5 wide) plus the X / O glyphs' reach each side; four
+        // frets one space deep, the nut's box over the top line (three line thicknesses less the
+        // half under the line), the X / O row xo-padding over it; the strings one fret past the
+        // last row and half a line thickness more. LILYPOND-REF: scm/fret-diagrams.scm make-fret-diagram.
+        var ink = Frames(Pair)[0].Ink;                       // 320003: three open, none muted
+        var m = FretFrameGeometry.Measure("320003", Fonts);
+        Assert.Equal(5.0 + 2 * m.XoHalfWidth, ink.Right - ink.Left, 9);
+        Assert.Equal(4.0 + (3 * 0.05 - 0.025) + 0.2 + m.XoHeight, ink.Top, 9);
+        Assert.Equal(-(1.0 + 0.025), ink.Bottom, 9);
+        // The O is the text font's em at magnification 0.4: 2.2 × 0.4.
+        Assert.Equal(0.88, m.O!.Value.Em, 9);
+        Assert.Null(m.X);
+    }
+
+    /// <summary>A shape with every string fretted has no X / O row: its top is the nut's.
+    /// A shifted shape has no nut, only fret 0's line, and its "Nfr" label right.</summary>
+    [Fact]
+    public void WithNoOpenOrMutedString_TheTopIsTheNut_AndAShiftedShapeHasNoNut()
+    {
+        var full = FretFrameGeometry.Measure("133211", Fonts);
+        Assert.Null(full.XoCentre);
+        Assert.Equal(4.0 + (3 * 0.05 - 0.025), full.Box.Top, 9);
+        Assert.Null(full.FretLabel);
+        var shifted = FretFrameGeometry.Measure("x57775", Fonts);    // 5fr
+        Assert.Equal(0.025, shifted.AboveTop, 9);
+        Assert.Equal("5fr", shifted.FretLabel!.Value.Text);
+        Assert.Equal(1.1, shifted.FretLabel!.Value.Em, 9);
+        // Centred half a fret under the top line; its ink starts 0.7 right of the last string.
+        Assert.Equal(4.0 - 0.5, shifted.LabelCentreY, 9);
+        Assert.Equal(2.5 + 0.7 + shifted.FretLabel!.Value.Width / 2, shifted.LabelCentreX, 9);
+        Assert.Equal(shifted.LabelCentreX + shifted.FretLabel!.Value.Width / 2, shifted.Box.Right, 9);
+    }
+
+    /// <summary>
+    /// A predefined shape's spec carries its fingers and barre as a detail suffix; the fingers
+    /// are set under the strings only on a FretBoard (a chords row's diagram) — their tops
+    /// finger-label-padding under the strings' overhang — and never on a markup diagram.
+    /// </summary>
+    [Fact]
+    public void TheSpecCarriesFingersAndBarres_TheFingersDeepenAFretBoardOnly()
+    {
+        Assert.True(ChordStructure.TryParseChordEntry("F", out var chord));
+        var f = ChordShapes.Default(TuningType.Guitar, chord!)!;
+        Assert.Equal("133211|134211|6-1@1", f.FrameSpec);
+        Assert.Equal(6, FretFrameGeometry.Strings(f.FrameSpec));
+        Assert.Equal(new[] { 1, 3, 4, 2, 1, 1 }, Enumerable.Range(0, 6).Select(i => FretFrameGeometry.FingerAt(f.FrameSpec, i)));
+        Assert.Equal(new FretFrameGeometry.BarreSpan(0, 5, 1), Assert.Single(FretFrameGeometry.Barres(f.FrameSpec)));
+        Assert.Equal(1, FretFrameGeometry.FretAt(f.FrameSpec, 0));
+        Assert.Equal(1, FretFrameGeometry.BaseFret(f.FrameSpec));
+
+        var markup = FretFrameGeometry.Measure(f.FrameSpec, Fonts);
+        var board = FretFrameGeometry.Measure(f.FrameSpec, Fonts, fingers: true);
+        Assert.All(markup.Fingers, l => Assert.Null(l));
+        Assert.Equal(-(1.0 + 0.025), markup.Box.Bottom, 9);
+        Assert.Equal(6, board.Fingers.Count(l => l != null));
+        Assert.Equal(-(1.0 + 0.3), board.FingerTop, 9);
+        double tallest = board.Fingers.Max(l => l!.Value.Height);
+        Assert.Equal(board.FingerTop - tallest, board.Box.Bottom, 9);
+        Assert.Equal(2.2 * 0.6, board.Fingers[0]!.Value.Em, 9);
+        // The same shape written at the chord has no detail: no fingers even on a row.
+        Assert.Equal("133211", ChordVoicings.ToFrameSpec(f.Frets));
+        Assert.All(FretFrameGeometry.Measure("133211", Fonts, fingers: true).Fingers, l => Assert.Null(l));
+        // A written shape's box is the row's box less the fingers.
+        Assert.Equal(FretFrameGeometry.Box("133211", Fonts).Top, board.Box.Top, 9);
     }
 
     [Fact]

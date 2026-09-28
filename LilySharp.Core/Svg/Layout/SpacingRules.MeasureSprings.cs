@@ -1409,7 +1409,6 @@ internal static partial class SpacingRules
         const double TextLengthRightExtra = 0.4;
         // Per column: how far its diagram reaches left and right of the column (0 = none).
         double[]? left = null, right = null;
-        double scale = FretFrameGeometry.Scale(fonts);
         var voices = staff.Voices;
         foreach (var art in articulations)
         {
@@ -1432,7 +1431,7 @@ internal static partial class SpacingRules
                 }
             if (t < 0)
                 continue;
-            var box = FretFrameGeometry.Box(art.FrameSpec, scale);
+            var box = FretFrameGeometry.Box(art.FrameSpec, fonts);
             left ??= new double[timings.Count];
             right ??= new double[timings.Count];
             left[t] = Math.Max(left[t], -box.Left);

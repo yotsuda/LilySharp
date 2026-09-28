@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第666セッションの経緯
+
+### 1.1 第666セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p666`（HEAD `cb9280e1`・未 push 40・full **10217 / 0 / 2 / 10219**）。
+★★★ **§2 K5 ⑤ 完了＝使用コード一覧 `layout { chordList true | false }`**（文法を先に示して確認。ユーザー決定 2026-09-29: ⑴ 各コード 1 組（名前＋図）を初出順・曲中で図を描かないコードも一覧では定番の形 ⑵ 置き場所は題名の行の直下・1 段目の上 ⑶ **中央揃えで各行の組数はなるべく同じ**＝左寄せと 12＋4 の絵を見て決定。`chordList none|center|left` で両方描いて見せたあと `true|false` に戻した）。実装: `ChordNameItem.DrawnShape`（その場所で描いた形＝行は FrameSpec・`@chord` は script の図）→ `Svg/Layout/ChordListBand.EntriesOf(score)`（`ChordNames` を小節・timing 順に・`SameChord` で 1 回・描いていない物は `Drawn(all:true)` の定番・調弦は layout の語→guitar・`none` なら名前だけ）→ `HeaderBand.WithChordList`（ヘッダの帯の一部にした＝Depth と Width が頁の鎖・title details・crop 幅にそのまま乗る。行数 r=1,2,… で ⌈n/r⌉／⌊n/r⌋ に割って全行が行幅に入る最小の r、各行を中央に）→ `SharedRenderer.DrawHeader` が名前（`Pieces` の断片＝上付き・臨時記号）と図（`DrawFretFrame`）を描く。双子: `EmitChordList`＝`\score` の前に行ごとの `\markup \fill-line { \line { \center-column { "C" \fret-diagram-terse #"…" } … } }`（名前は素の文字＝LILYSHARP-OWN）。新キーは vocab・reader・補完・TextMate・スニペット 2 つ。数字: A4 で 1 行 12 組（6 弦・開放位置）・組の間隔 3 ss・帯の間隔 2 ss。
+★ 検証: 網 `ChordDiagramTests` +4（reader・初出順／N.C.／度数／`@chord`／capo／none・8+8 と 7+6 の均等割りと中央・ヘッダの帯と双子）。デモの絵は Lab `sessions/p666/demo/*.png`（few/many × center/left/even）。
+⚠️ 未: 双子の一覧の名前は素の文字（`Dm7` の 7 が上がらない）／一覧は最初の頁だけ／`chordDiagrams none` では名前だけ（図無しの一覧の意味は薄い＝警告は出していない）。
+★ **終了**（commit `978977df`）: `-End p666 -DiffBase cb9280e1`＝full **10221 / 0 / 2 / 10223**（trx `sessions/p666/run2.trx`）・掃き **1,163 冊 × svg/ly/xml/midi/check＝moved 0・check 差 0**・門 6 つ全 OK・§7.5: Core `+` 322 行／REF 0／OWN 4（一覧の帯・間隔・双子の markup・`ChordListKey`＝全部 Lily# 独自で LP に無い）。7.6: 出所は本便のユーザー決定 3 つ（初出順と定番／題名の下／中央揃え・均等）。7.7: 匂いは「一覧は 1 頁目だけ」と双子の素の名前。APPROXIMATIONS 再生成。push はユーザー（42 件）。
+
 ## 以下は第665セッションの経緯
 
 ### 1.1 第665セッション（2026-09-29・YT-DELL2）
