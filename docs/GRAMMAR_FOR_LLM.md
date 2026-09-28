@@ -355,16 +355,20 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   prints (`F#m`, `Bb7/D`, `Gm7-5`), the same format as a chords row. The retired
   lowercase `:` entry (`@chord(a:m)`) is not recognised (LYS1008 warns, no symbol is
   engraved). A bare `@chord` derives it from the notes. The symbol is the FIRST word only:
-  `@chord(C 7)` is C with voicing 7 — write `@chord(C7)` for C7.
-- Chord name + diagram (the diagram stands under the name): `c4@chord(Cm7 2)` (voicing 2,
-  counted from 0), `@chord(Cm7 2 mute 3 4)` (mute strings 3 and 4 of it; 1 = highest-pitched
-  string), `@chord(D mute 5)` (voicing 0 with string 5 muted = the open D `xx0232`),
-  `@chord(Cm7 x3x546)` (a diagram written out, low string first), `@chord(x32010)` (the name
-  is derived from the diagram's notes). An index is 1–3 digits; a position string is as long
-  as the part's tuning has strings. The voicings of a chord on the part's tuning follow frozen
-  rules (docs/SYNTAX_REFERENCE.md *Chord Diagrams*): #0 is the lowest-position shape — C
-  `x32010`, Cm7 #2 `x35343`, D #0 `x50232`. A diagram that cannot be drawn warns LYS1038
-  (e.g. `Cm7 has 52 voicings on this tuning (0–51).`) and the name still draws.
+  `@chord(C 7)` is C with a one-character shape (warns) — write `@chord(C7)` for C7.
+- Chord diagrams (drawn under the name) appear ONLY where a chord WRITES its shape; a name
+  alone (`@chord(G)`, a row's `G`) draws none — unless the score's layout says
+  `chordDiagrams all` / `chordDiagrams guitar all`, where EVERY chord name (a bare `@chord`'s
+  derived one too) draws its written shape, else the usual one. A shape is one character per string, LOW string
+  first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)`, `@chord(x32010)`
+  (the name is derived from its notes); in a chords row glued to the symbol: `F(133211)`,
+  `F(133211 2010)` (a guitar and a ukulele shape, routed by string count),
+  `F(guitar 133211 ukulele 2010)` (bound by tuning name). The diagram's tuning: the score's
+  `layout { chordDiagrams TUNING [all] }` (the tab tuning words; `none` = no diagrams at all), else
+  the part's fretted instrument (an `@chord`'s part; for a row, the staff it stands directly
+  above), else the guitar. Common guitar shapes (LilyPond's): C `x32010`, F `133211`, G
+  `320003`, Cm7 `x35343`; ukulele C `0003`. A written shape that cannot be used warns LYS1038;
+  the name still draws. There is no voicing index and no `mute` word.
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
@@ -844,6 +848,8 @@ layout {
   partCombineText false    // a2 / Solo words: true (default) | false
   chordQualities words     // chord quality: symbols (default) | words
   minorChords lower        // a minor chord's root: upper (default) | lower
+  chordDiagrams ukulele    // the tuning written chord shapes draw on: a tuning word | none (unset: the part's instrument, else guitar)
+                           // `chordDiagrams ukulele all` / `chordDiagrams all`: every chord draws a diagram
 }
 ```
 
@@ -885,6 +891,19 @@ layout {
   set Lily# spells these chords exactly as LilyPond prints them. `maj7` is NOT switchable:
   LilyPond draws it as a raised triangle, which Lily#'s one-line chord name has no home for.
 - Neither chord key reaches MIDI or MusicXML — a `<harmony>` carries the chord as data.
+- `chordDiagrams ukulele` (or `guitar`, `mandolin`, `guitardropd`, … — the words a tab's
+  `tuning` takes) is the tuning the score's chord diagrams draw on. A diagram draws only where
+  a chord writes its shape; this picks which written shape applies. Unset, a diagram takes the
+  part's fretted instrument (an `@chord`'s part, the staff a row stands above), else the
+  guitar. `none` draws no diagram at all, even where a shape is written — the same source
+  makes a piano score and a guitar score. `all` after the tuning word (`chordDiagrams guitar
+  all`), or alone (`chordDiagrams all`, the tuning as when unset), makes EVERY chord name draw:
+  its written shape, else the usual one (LilyPond's predefined, else Lily#'s first); a chord
+  with no shape on the tuning warns once per symbol and tuning. `none all`, `all guitar` (the
+  tuning comes first) and a repeated word are errors. The shape rules are under Annotations
+  (*Chord diagrams*). The twin writes a `FretBoards` context under a row's `ChordNames` when an
+  entry writes a shape (under `all`, for every row); MusicXML nests an `@chord`'s `<frame>` in
+  its `<harmony>`.
 - ⚠️ **The keyword is `layout` and it takes a BLOCK.** A bare `markTempo beside` or
   `barNumbers none` at the top level is an error (the words are not directives); write
   `layout { markTempo beside }`. The keys and their words are not reserved (`part markTempo { }`

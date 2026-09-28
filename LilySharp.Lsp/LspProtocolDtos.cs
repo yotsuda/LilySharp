@@ -466,13 +466,17 @@ public class StepSelection
     public int End { get; set; }
 }
 
-/// <summary>Parameters for lilysharp/step (Ctrl+Alt+Up / Ctrl+Alt+Down): every selection
+/// <summary>Parameters for lilysharp/step (Ctrl+Shift+Up / Ctrl+Shift+Down): every selection
 /// and the direction, +1 up or -1 down.</summary>
 public class StepParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
     public StepSelection[] Selections { get; set; } = System.Array.Empty<StepSelection>();
     public int Direction { get; set; }
+    /// <summary>lilysharp.chordShapes.includeStretch (owner's decision 2026-09-28): an
+    /// <c>@chord</c> also steps through stretch shapes (fretted frets five apart). Optional;
+    /// absent means false.</summary>
+    public bool IncludeStretch { get; set; }
 }
 
 /// <summary>One replacement of <c>[Start, End)</c> (offsets into the text of
@@ -509,6 +513,9 @@ public class AuditionAtParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
     public int Offset { get; set; }
+    /// <summary>lilysharp.chordShapes.includeStretch, as <see cref="StepParams.IncludeStretch"/>.
+    /// Optional; absent means false.</summary>
+    public bool IncludeStretch { get; set; }
 }
 
 /// <summary>

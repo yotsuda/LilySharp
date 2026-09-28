@@ -409,7 +409,9 @@ internal sealed partial class LayoutEngine
             // cn.YUp is Y-up from the system top; the system-relative device Y (old
             // cn.Y) is its negation.
             double cnY = -cn.YUp;
-            var (cnBottom, cnTop) = ChordNameEngraver.SymbolInk(fonts, cn);
+            // …with the chord diagram under a row symbol (a written shape, HANDOFF §2 K): a
+            // staffless row's diagrams are the system's lowest ink.
+            var (_, cnBottom, cnTop) = ChordNameEngraver.InkWithDiagram(fonts, cn);
             Add(cn.MeasureIndex, cnY - cnTop, cnY - cnBottom);
         }
         // Lyric text (staff-bound AND row): the ascender rises ~2.11 ss above

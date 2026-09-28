@@ -560,8 +560,8 @@ export function activate(context: vscode.ExtensionContext) {
     // smartBrackets.
     registerSmartTyping(context, (msg: string) => outputChannel.appendLine(msg));
 
-    // The step keys (Ctrl+Alt+Up / Ctrl+Alt+Down: a note's octave mark, an @chord's
-    // voicing index) and the automatic audition (the caret landing on a note, a note
+    // The step keys (Ctrl+Shift+Up / Ctrl+Shift+Down: a note's octave mark, a chord's
+    // shape) and the automatic audition (the caret landing on a note, a note
     // typed, a step) — owner's decision 2026-09-28. The server computes both; the
     // preview webview is the synth, and with no preview open they are silent.
     registerStepAudition(context, {
@@ -3535,7 +3535,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         // Arbitrary pitches for a fixed time: the step keys and the automatic
-        // audition (the caret landing on a note, a typed note, an @chord's voicing).
+        // audition (the caret landing on a note, a typed note, an @chord's shape).
         // The extension sends the compiler's MIDI numbers, so no note list is
         // needed here. Same voice as the held audition: a fresh strike (the huge
         // gap), then released after durationMs instead of waiting for key-repeats.

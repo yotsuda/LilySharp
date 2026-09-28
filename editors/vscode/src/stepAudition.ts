@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// The step keys (Ctrl+Alt+Up / Ctrl+Alt+Down) and the automatic audition — the
-// half that talks to VS Code. Owner's decision, 2026-09-28.
+// The step keys (Ctrl+Shift+Up / Ctrl+Shift+Down) and the automatic audition — the
+// half that talks to VS Code. Owner's decisions, 2026-09-28.
 //
 // WHAT a step does and WHAT sounds are the server's (lilysharp/step,
 // lilysharp/auditionAt — LilySharp.Core's NoteStepper): it has the tree, the
@@ -30,7 +30,7 @@ import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
 import {
     AuditionMemory, CARET_DEBOUNCE_MS, Debouncer, TYPING_SETTLE_MS,
-    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch,
+    auditionDurationMs, caretMoveMaySound, mayChangeATypedPitch, stepFallbackCommand,
 } from './auditionCore';
 
 export interface StepAuditionDeps {
@@ -64,6 +64,13 @@ function auditionEnabled(): boolean {
     return vscode.workspace.getConfiguration('lilysharp').get<boolean>('audition.enabled', true);
 }
 
+/** lilysharp.chordShapes.includeStretch (owner's decision 2026-09-28): an @chord also
+ * steps through stretch shapes (fretted frets five apart). Sent with every step and
+ * audition request (IncludeStretch; the server reads a missing one as false). */
+function includeStretch(): boolean {
+    return vscode.workspace.getConfiguration('lilysharp').get<boolean>('chordShapes.includeStretch', false);
+}
+
 export function registerStepAudition(context: vscode.ExtensionContext, deps: StepAuditionDeps) {
     const memory = new AuditionMemory();
     const caretWait = new Debouncer(CARET_DEBOUNCE_MS);
@@ -92,6 +99,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         try {
             const answer = await client.sendRequest<AuditionAtResponse>('lilysharp/auditionAt', {
                 TextDocument: { uri: doc.uri.toString() }, Offset: offset,
+                IncludeStretch: includeStretch(),
             });
             // Moved on while the server thought: the answer is about a caret or a
             // text that no longer exists.
@@ -113,8 +121,12 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
         return stepChain;
     };
 
-    const fallback = (direction: 1 | -1) => vscode.commands.executeCommand(
-        direction > 0 ? 'editor.action.insertCursorAbove' : 'editor.action.insertCursorBelow');
+    // Nothing steppable: Add Cursor Above / Below on Linux (the key's own second binding
+    // there), nothing on Windows and macOS (stepFallbackCommand).
+    const fallback = async (direction: 1 | -1) => {
+        const command = stepFallbackCommand(direction, process.platform);
+        if (command) { await vscode.commands.executeCommand(command); }
+    };
 
     const runStep = async (direction: 1 | -1) => {
         const editor = vscode.window.activeTextEditor;
@@ -129,6 +141,7 @@ export function registerStepAudition(context: vscode.ExtensionContext, deps: Ste
             TextDocument: { uri: doc.uri.toString() },
             Selections: editor.selections.map(s => ({ Start: doc.offsetAt(s.start), End: doc.offsetAt(s.end) })),
             Direction: direction,
+            IncludeStretch: includeStretch(),
         });
         if (response.Fallback) {
             if (response.Error) { deps.log(`step: ${response.Error}`); }

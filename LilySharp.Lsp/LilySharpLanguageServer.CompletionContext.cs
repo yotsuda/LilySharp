@@ -627,6 +627,10 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordQualities,
         /// <summary><c>layout { minorChords |</c> — upper / lower.</summary>
         AfterLayoutMinorChords,
+        /// <summary><c>layout { chordDiagrams |</c> — none / the tuning words / all.</summary>
+        AfterLayoutChordDiagrams,
+        /// <summary><c>layout { chordDiagrams guitar |</c> — all.</summary>
+        AfterLayoutChordDiagramsTuning,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -982,6 +986,13 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutChordQualities;
             if (prevWord.Equals(MinorChords.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutMinorChords;
+            if (prevWord.Equals(ChordDiagramsKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutChordDiagrams;
+            // `chordDiagrams guitar |` — the scope word may follow the tuning (and only then:
+            // not after `none`, not after `all`).
+            if (ChordDiagramsKey.IsTuningWord(prevWord)
+                && SecondWordBeforeCursor(text, offset) == ChordDiagramsKey.Key)
+                return CompletionContext.AfterLayoutChordDiagramsTuning;
             return CompletionContext.LayoutBlock;
         }
 

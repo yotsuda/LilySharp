@@ -124,26 +124,33 @@ public sealed partial class MeasureCollector
             if (child is not MusicMarkSyntax markSyntax)
                 continue;
 
-            // The words after the symbol choose a chord diagram (owner's decision 2026-09-27):
-            // read once, resolved against THIS part's tuning — the page knows the part, which
-            // the tree alone does not when the music is a phrase.
+            // The chord diagram (owner's decisions 2026-09-28, HANDOFF §2 K): drawn where a
+            // shape is WRITTEN — and, in a `chordDiagrams … all` score, for every name, the
+            // default shape when none is written (a bare @chord's derived name included) — on the
+            // tuning the score's layout names, else the part's fretted instrument's, else the
+            // guitar's (ChordDiagramsKey.Resolve); `chordDiagrams none` draws none.
             var words = Semantics.ChordAnnotation.Of(markSyntax);
-            var diagram = words is { WantsDiagram: true }
-                ? words.Resolve(_partTuning)
-                : default;
+            var diagramTuning = Semantics.ChordDiagramsKey.Resolve(_chordDiagramsWord, _partFrettedTuning);
+            Music.ChosenShape? DiagramFor(Music.ChordStructure? derived)
+                => words != null && diagramTuning is { } dt ? words.Drawn(dt, _chordDiagramsAll, derived) : null;
 
             var chordSymbol = Semantics.AnnotationValues.Chord(
                 markSyntax, _chordSpelling, out var structure);
             if (chordSymbol is not { } sym)
             {
-                // @chord(x32010): a written-out diagram with no symbol. The diagram draws, and
-                // the name is the one its notes spell — by the recognizer a bare @chord uses
-                // on notes — or none, which LYS1038 reports.
-                if (words is { NamesFromDiagram: true } && diagram.HasDiagram)
+                // @chord(x32010): a shape with no symbol. The diagram draws (on a diagram
+                // score whose tuning it fits), and the name is the one its notes spell — by the
+                // recognizer a bare @chord uses on notes — on the diagram tuning when the shape
+                // fits it, else on the part's; or none, which LYS1038 reports. In an `all` score
+                // a shape the tuning cannot take draws the default of the chord it names.
+                if (words is { NamesFromDiagram: true }
+                    && words.NamingShape(diagramTuning, _partTuning) is { } naming)
                 {
-                    AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
-                    if (Semantics.ChordAnnotation.NameFromFrets(
-                            diagram.Frets, _partTuning, WrittenKeySharps()) is { } fromFrets)
+                    var fromFrets = Semantics.ChordAnnotation.NameFromFrets(
+                        naming.Frets, naming.Tuning, WrittenKeySharps());
+                    if (DiagramFor(fromFrets) is { } diagram)
+                        AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
+                    if (fromFrets != null)
                     {
                         var named = fromFrets.PrintedSymbol(_chordSpelling);
                         _chordNameCollector.AddInline(
@@ -173,8 +180,12 @@ public sealed partial class MeasureCollector
             _chordNameCollector.AddInline(
                 chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
                 _cursor.StaffIndex, structure, superFrom);
-            if (diagram.HasDiagram)
-                AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
+            // A bare @chord names its notes and writes no shape, so it draws no diagram (the
+            // shape the notes spell on the staff is not a fingering) — save in an `all` score,
+            // where its derived name draws the default like any name; nor does a name with no
+            // shape for the tuning. Quoted text names no chord: never a diagram.
+            if (DiagramFor(structure) is { } drawn)
+                AddChordDiagram(markSyntax, drawn.Frets, measureIndex, itemIndex);
         }
     }
 
@@ -211,17 +222,46 @@ public sealed partial class MeasureCollector
     private int WrittenKeySharps() => _meta.KeySharps - _octave.TransposeKeySharps(0);
 
     /// <summary>The open strings of the part being collected, LOW string first
-    /// (<see cref="Semantics.PartHeaderDefaults.Tuning"/>): what an <c>@chord</c>'s voicing
-    /// index counts on. The guitar until a part says otherwise.</summary>
+    /// (<see cref="Semantics.PartHeaderDefaults.Tuning"/>): what a symbol-less
+    /// <c>@chord(x32010)</c> is NAMED on when the score draws no diagrams on a tuning it fits.
+    /// The guitar until a part says otherwise.</summary>
     private int[] _partTuning = Tablature.Tunings.Guitar;
 
-    /// <summary>Reads the tuning of <paramref name="partName"/> for the chord diagrams its
-    /// <c>@chord</c> marks choose.</summary>
+    /// <summary>The fretted tuning of the part being collected
+    /// (<see cref="Semantics.PartHeaderDefaults.FrettedTuning"/>), or null: what its
+    /// <c>@chord</c> diagrams draw on when the layout names no <c>chordDiagrams</c> tuning.</summary>
+    private TuningType? _partFrettedTuning;
+
+    /// <summary>The score's <c>layout { chordDiagrams … }</c> word as written, or null when
+    /// absent — set with the plan (<c>CollectDefinitions</c>), before any walk.</summary>
+    private string? _chordDiagramsWord;
+
+    /// <summary>The score's <c>chordDiagrams … all</c>: every <c>@chord</c> name draws a diagram,
+    /// its written shape else the default — set with <see cref="_chordDiagramsWord"/>.</summary>
+    private bool _chordDiagramsAll;
+
+    /// <summary>The fretted tuning of the single staff <paramref name="voiceName"/> — the one its
+    /// attached row <paramref name="rowName"/> stands over (<see cref="Semantics.ChordDiagramScores.StaffWord"/>)
+    /// — or null (no part, or one that frets nothing).</summary>
+    /// <remarks>⚠️ The part is PASSED, not read from the collector's part state: the harvest
+    /// of the parts a score omits collects them through this same collector, which leaves the
+    /// last omitted part's tuning behind (measured: <c>staff uk with chords prog</c> drew the
+    /// guitar's shape until this took the name).</remarks>
+    private static TuningType? StaffDiagramTuning(SyntaxNode root, RenderSpec? spec, string? voiceName, string rowName)
+        => voiceName != null
+           && Semantics.ChordDiagramScores.StaffWord(root, spec, voiceName, rowName) is { } word
+            ? Tablature.Tunings.Parse(word)
+            : null;
+
+    /// <summary>Reads the tuning of <paramref name="partName"/> for the names its symbol-less
+    /// <c>@chord</c> shapes derive, and its fretted tuning for the diagrams they draw.</summary>
     private void SetPartTuning(SyntaxNode root, string? partName)
-        => _partTuning = partName == null
-            ? Tablature.Tunings.Guitar
-            : Tablature.Tunings.GetTuning(Semantics.PartHeaderDefaults.Read(
-                Semantics.ConcertPitch.FindPart(root, partName)).Tuning);
+    {
+        var header = partName == null ? null
+            : Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(root, partName));
+        _partTuning = header == null ? Tablature.Tunings.Guitar : Tablature.Tunings.GetTuning(header.Tuning);
+        _partFrettedTuning = header?.FrettedTuning;
+    }
 
     /// <summary>
     /// When set, every chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio and <c>q</c> this collect walks

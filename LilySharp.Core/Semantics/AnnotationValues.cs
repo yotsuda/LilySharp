@@ -345,8 +345,8 @@ public static class AnnotationValues
     /// <para>
     /// ⚠️ THE FIRST WORD ONLY, since 2026-09-27 (owner's decision; a BREAKING change). The
     /// runs used to be concatenated, so <c>@chord(C 7)</c> named C7; the words after the
-    /// symbol now choose a chord diagram (<see cref="ChordAnnotation"/>), and
-    /// <c>@chord(C 7)</c> is C with voicing 7. (Measured before the change: across the repo's
+    /// symbol are its chord diagram's shapes (<see cref="ChordAnnotation"/>), and
+    /// <c>@chord(C 7)</c> is C with a one-character shape. (Measured before the change: across the repo's
     /// <c>.lys</c> and the Lab corpora no <c>@chord(…)</c> argument was written with a space.)
     /// A written-out diagram alone — <c>@chord(x32010)</c> — names its chord from the
     /// diagram's notes, which needs the part's tuning, so this answers null for it and the

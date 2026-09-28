@@ -439,6 +439,30 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetMinorChordCompletions()
         => WordList(LanguageVocabulary.MinorChordWords, MinorChordDetails);
 
+    /// <summary>After <c>layout { chordDiagrams</c>: none, then the tuning words, then all (the
+    /// compiler's <see cref="Core.Semantics.ChordDiagramsKey.Words"/>).</summary>
+    internal static CompletionList GetChordDiagramCompletions()
+        => WordList(Core.Semantics.ChordDiagramsKey.Words, ChordDiagramDetails);
+
+    /// <summary>After <c>layout { chordDiagrams guitar</c>: the scope word <c>all</c>, the one
+    /// word that may follow a tuning (owner's decision 2026-09-28).</summary>
+    internal static CompletionList GetChordDiagramScopeCompletions()
+        => WordList([Core.Semantics.ChordDiagramsKey.AllWord], ChordDiagramScopeDetails);
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> ChordDiagramDetails = new()
+    {
+        ["none"] = "No chord diagrams, even for written shapes (a piano score from the same source)",
+        ["guitar"] = "Written shapes draw as guitar diagrams (the default for a part that frets nothing)",
+        ["ukulele"] = "Written shapes draw as ukulele diagrams",
+        ["mandolin"] = "Written shapes draw as mandolin diagrams",
+        ["all"] = "Every chord name draws a diagram — its written shape, else the default (on the part's instrument, else guitar)",
+    };
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> ChordDiagramScopeDetails = new()
+    {
+        ["all"] = "Every chord name draws a diagram on this tuning — its written shape, else the default",
+    };
+
     /// <summary>After <c>layout { partCombineText</c>.</summary>
     internal static CompletionList GetPartCombineTextCompletions()
         => WordList(LanguageVocabulary.PartCombineTextWords, PartCombineTextDetails);
@@ -493,7 +517,11 @@ public sealed partial class LilySharpLanguageServer
                     InsertTextFormat = InsertTextFormat.Snippet,
                     InsertText = "{\n  markTempo ${1:stacked}\n  barNumbers ${2:lines}\n  accidentals ${3:default}"
                         + "\n  sectionLabels ${4:boxed}\n  partCombineText ${5:true}"
-                        + "\n  chordQualities ${6:symbols}\n  minorChords ${7:upper}$0\n}",
+                        + "\n  chordQualities ${6:symbols}\n  minorChords ${7:upper}"
+                        // `guitar`, not the absent key's "the part's instrument, else guitar"
+                        // (no word says that): the same page unless a part is a ukulele,
+                        // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
+                        + "\n  chordDiagrams ${8:guitar}$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -542,6 +570,7 @@ public sealed partial class LilySharpLanguageServer
         "partCombineText" => "Whether a combinedStaff prints a2 / Solo: true (default) | false",
         "chordQualities" => "How a chord's quality is spelled: symbols (default) | words",
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
+        "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `all` to draw every chord",
         _ => "Layout key",
     };
 
@@ -3207,8 +3236,9 @@ public sealed partial class LilySharpLanguageServer
                 // part-header item never had (fixed 2026-09-03).
                 new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
-                // accepting the completion and changing nothing does not move the page.
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
+                // accepting the completion and changing nothing does not move the page — save
+                // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

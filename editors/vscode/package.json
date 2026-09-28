@@ -192,7 +192,12 @@
         "lilysharp.audition.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what Ctrl+Alt+Up / Ctrl+Alt+Down step a note or a chord voicing to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
+          "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what Ctrl+Shift+Up / Ctrl+Shift+Down step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
+        },
+        "lilysharp.chordShapes.includeStretch": {
+          "type": "boolean",
+          "default": false,
+          "description": "Let Ctrl+Shift+Up / Ctrl+Shift+Down on a chord (an @chord(...) or a chords-row entry) also step through stretch shapes: shapes whose fretted frets lie five frets apart (lowest to highest), which are hard to play. Off by default, so the step offers only shapes within four frets. The first shape a step writes is not affected: for a chord LilyPond's table lacks it is a shape without a stretch whenever there is one."
         },
         "lilysharp.completion.flatSpelling": {
           "type": "string",
@@ -303,12 +308,12 @@
       {
         "command": "lilysharp.stepUp",
         "category": "Lily#",
-        "title": "Step Up (octave mark / chord voicing)"
+        "title": "Step Up (octave mark / chord shape)"
       },
       {
         "command": "lilysharp.stepDown",
         "category": "Lily#",
-        "title": "Step Down (octave mark / chord voicing)"
+        "title": "Step Down (octave mark / chord shape)"
       },
       {
         "command": "lilysharp.previewPlayFromHere",
@@ -614,12 +619,12 @@
       },
       {
         "command": "lilysharp.stepUp",
-        "key": "ctrl+alt+up",
+        "key": "ctrl+shift+up",
         "when": "editorTextFocus && !editorReadonly && editorLangId == lilysharp"
       },
       {
         "command": "lilysharp.stepDown",
-        "key": "ctrl+alt+down",
+        "key": "ctrl+shift+down",
         "when": "editorTextFocus && !editorReadonly && editorLangId == lilysharp"
       },
       {

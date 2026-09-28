@@ -107,6 +107,15 @@ internal static partial class SharedRenderer
                             LilySharp.Core.Svg.Layout.ChordNameGlyphRun.EmAt(piece.FontSize),
                             TextRole.ChordName, style, TextAnchor.Start, Color.Black);
                 }
+                // The chord diagram under a row symbol (a written shape, HANDOFF §2 K): its box's
+                // left edge on the symbol's column, its grid bottom at the line's one level —
+                // the box ChordNameEngraver reserved (PlacedDiagram), drawn by the one
+                // diagram painter @diagram uses.
+                if (c.FrameSpec is { } spec)
+                {
+                    var box = LilySharp.Core.Svg.Layout.ChordNameEngraver.DiagramBox(fonts, spec);
+                    DrawFretFrame(fonts, c.X - box.Left, cy + c.FrameBottom, spec, gc);
+                }
             }
         }
     }

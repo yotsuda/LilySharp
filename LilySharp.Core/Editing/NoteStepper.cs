@@ -25,24 +25,26 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Editing;
 
 /// <summary>
-/// The editor's "step" keys (Ctrl+Alt+Up / Ctrl+Alt+Down in a <c>.lys</c>) and the
-/// audition that sounds what the caret is on: which written thing a caret or a selection
-/// is on, the text edit one step up or down makes of it, and the pitches it sounds.
+/// The editor's "step" keys (Ctrl+Shift+Up / Ctrl+Shift+Down in a <c>.lys</c>; Ctrl+Alt until
+/// the owner moved them, 2026-09-28) and the audition that sounds what the caret is on: which
+/// written thing a caret or a selection is on, the text edit one step up or down makes of it,
+/// and the pitches it sounds.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Owner's decision, 2026-09-28. What a step does depends on what the caret is on:
+/// Owner's decisions, 2026-09-28. What a step does depends on what the caret is on:
 /// </para>
 /// <list type="bullet">
-/// <item>an <c>@chord(…)</c> with a voicing index (<c>@chord(Cm7 2)</c>,
-/// <c>@chord(Cm7 2 mute 1)</c>): the index ±1. Up at the last index changes nothing and
-/// says the range (<c>Cm7: voicings 0–51</c>); Down at 0 goes back to the name alone —
-/// <c>@chord(Cm7 0 mute 1)</c> and <c>@chord(D mute 5)</c> (whose index is an implicit 0)
-/// both become the bare name, the <c>mute</c> words going with the index they overlay.</item>
-/// <item>an <c>@chord(Cm7)</c> naming a chord and nothing more: Up writes <c> 0</c> (voicing
-/// 0 appears); Down does nothing.</item>
-/// <item>an <c>@chord(D mute 5)</c>: Up writes the implicit index out as its successor,
-/// <c>@chord(D 1 mute 5)</c>.</item>
+/// <item>an <c>@chord(Cm7)</c> / <c>@chord(Cm7 x35343)</c>, or a <c>chords</c> row entry
+/// <c>Cm7</c> / <c>Cm7(x35343)</c> (HANDOFF §2 K): the shape is REWRITTEN to the next /
+/// previous shape of the editor's order (<see cref="ShapeOrder"/>: the default first —
+/// LilyPond's predefined shape, else Lily#'s first — then Lily#'s maximal shapes) on
+/// <see cref="StepTuning"/>. A diagram draws only where a shape is written, so on a name alone
+/// Up WRITES the default and the diagram appears; Down at the default removes the shape and
+/// the diagram goes; Down on a name alone does nothing. A shape with muted strings steps from
+/// the shape it mutes and loses its <c>x</c>. The status bar says
+/// <c>Cm7: shape 4 of 19 (x3x546)</c>. Stretch shapes are walked only on request (owner's
+/// decision 2026-09-28, the <c>includeStretch</c> argument).</item>
 /// <item>a NOTE — a pitch with its accidental, octave marks, duration and dots; a chord
 /// member inside <c>&lt; &gt;</c> / <c>&lt;&lt; &gt;&gt;</c>; a scale-degree member: Up
 /// removes one <c>,</c> if the pitch has any, else adds one <c>'</c>; Down mirrors it. A
@@ -55,16 +57,18 @@ namespace LilySharp.Core.Editing;
 /// </list>
 /// <para>
 /// Anything else — a rest, a barline, a written-out diagram <c>@chord(x32010)</c>, a
-/// bare <c>@chord</c>, the space between notes — is not steppable, and the editor runs the
-/// key's own command instead (add a cursor above/below): <see cref="StepResult.Fallback"/>.
+/// bare <c>@chord</c>, the space between notes — is not steppable: <see cref="StepResult.Fallback"/>,
+/// and the editor runs Add Cursor Above / Below on Linux (where Ctrl+Shift+Up/Down is that
+/// command's second binding) and nothing on Windows and macOS.
 /// </para>
 /// <para>
 /// ⚠️ THE PITCHES ARE THE COMPILER'S. A note sounds what the MIDI export plays at its
 /// source position — the same numbers the preview's Play button schedules — and a chord
 /// member, which the export files under its chord's position, is the collector's resolved
-/// pitch moved by whatever the export moved the chord by (a transposing part). A voicing
-/// sounds its diagram on the part's tuning: the open string plus the fret, muted strings
-/// silent. Nothing here re-derives a pitch from the letters.
+/// pitch moved by whatever the export moved the chord by (a transposing part). An
+/// <c>@chord</c> sounds its shape (<see cref="SoundedShape"/>) on <see cref="StepTuning"/>:
+/// the open string plus the fret, muted strings silent. Nothing here re-derives a pitch from
+/// the letters.
 /// </para>
 /// </remarks>
 public static class NoteStepper
@@ -81,14 +85,15 @@ public static class NoteStepper
         Member,
         /// <summary>A chord or an arpeggio as a whole.</summary>
         Chord,
-        /// <summary>An <c>@chord(…)</c> annotation.</summary>
+        /// <summary>An <c>@chord(…)</c> annotation, or a <c>chords</c> row entry
+        /// (<see cref="ChordEntrySyntax"/>) — a chord whose shape the step rewrites.</summary>
         Voicing,
     }
 
     /// <summary>A written thing the caret is on: its kind and its node (a
     /// <see cref="NoteSyntax"/>, a <see cref="PitchSyntax"/> or <see cref="ScaleDegreeSyntax"/>
-    /// member, a <see cref="ChordSyntax"/> or <see cref="ArpeggioSyntax"/>, or a
-    /// <see cref="MusicMarkSyntax"/>).</summary>
+    /// member, a <see cref="ChordSyntax"/> or <see cref="ArpeggioSyntax"/>, a
+    /// <see cref="MusicMarkSyntax"/> or a <see cref="ChordEntrySyntax"/>).</summary>
     public readonly record struct Target(TargetKind Kind, SyntaxNode Node)
     {
         /// <summary>Where it starts — what tells one target from another.</summary>
@@ -123,10 +128,12 @@ public static class NoteStepper
     /// (<c>Start == End</c>) steps what it is on; a selection steps every note and member
     /// whose pitch starts inside it. <paramref name="expand"/> turns the stepped text into the
     /// tree that SOUNDS (the server's <c>using</c> expansion); null parses it as it stands.
+    /// <paramref name="includeStretch"/> (<c>lilysharp.chordShapes.includeStretch</c>) lets an
+    /// <c>@chord</c> step through stretch shapes too (<see cref="ShapeOrder"/>).
     /// </summary>
     public static StepResult Step(
         string text, SyntaxTree tree, IReadOnlyList<(int Start, int End)> selections, int direction,
-        Func<string, SyntaxTree>? expand = null)
+        Func<string, SyntaxTree>? expand = null, bool includeStretch = false)
     {
         int dir = direction >= 0 ? 1 : -1;
         var targets = new List<Target>();
@@ -162,7 +169,7 @@ public static class NoteStepper
         foreach (var t in targets)
         {
             var (edit, said, handled) = t.Kind == TargetKind.Voicing
-                ? VoicingEdit((MusicMarkSyntax)t.Node, dir)
+                ? VoicingEdit(t.Node, dir, includeStretch)
                 : (MarkEdit(text, MarksStart(t), dir), null, true);
             if (!handled)
                 continue;
@@ -190,7 +197,7 @@ public static class NoteStepper
                 int at = MapThrough(edits, t.Key);
                 if (FindTarget(newTree, t.Kind, at) is not { } moved)
                     continue;
-                var (p, i) = Sound(moved, sounding);
+                var (p, i) = Sound(moved, sounding, includeStretch);
                 foreach (int pitch in p)
                     pitches.Add(pitch);
                 if (timbre < 0 && p.Length > 0)
@@ -212,16 +219,24 @@ public static class NoteStepper
     /// What the caret at <paramref name="offset"/> is on and the pitches it sounds, or null
     /// when it is on nothing that sounds (a rest, a barline, an <c>@chord</c> with no
     /// diagram). <paramref name="sounding"/> is the tree the piece plays from (the
-    /// <c>using</c>-expanded one); null means <paramref name="tree"/>.
+    /// <c>using</c>-expanded one); null means <paramref name="tree"/>. <paramref name="includeStretch"/>
+    /// is the step's setting; an <c>@chord</c> with no shape written sounds the drawn default
+    /// either way (the compiler's pick, which prefers a shape without a stretch).
     /// </summary>
-    public static Audition? AuditionAt(string text, SyntaxTree tree, int offset, SyntaxTree? sounding = null)
+    public static Audition? AuditionAt(string text, SyntaxTree tree, int offset, SyntaxTree? sounding = null,
+        bool includeStretch = false)
     {
         if (TargetAt(text, tree, offset) is not { } target)
             return null;
-        if (target.Kind == TargetKind.Voicing
-            && ChordAnnotation.Of((MusicMarkSyntax)target.Node) is not { WantsDiagram: true })
+        // A chords-row entry sounds when STEPPED, not when the caret lands on it: the caret
+        // audition stays what it was before row entries became steppable (Lily#'s choice,
+        // 2026-09-28 — a caret crossing a chord row would otherwise strike every chord).
+        if (target.Node is ChordEntrySyntax)
             return null;
-        var (pitches, timbre) = Sound(target, sounding ?? tree);
+        if (target.Kind == TargetKind.Voicing
+            && SoundedShape(target.Node, includeStretch) is null)
+            return null;
+        var (pitches, timbre) = Sound(target, sounding ?? tree, includeStretch);
         return pitches.IsEmpty ? null : new Audition(target, pitches, timbre);
     }
 
@@ -240,6 +255,10 @@ public static class NoteStepper
         foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
             if (mark.Name == "chord" && mark.Span.Start < offset && offset <= mark.Span.End)
                 return new Target(TargetKind.Voicing, mark);
+        // A chords-row entry: from its symbol's first character to its ')' (or its symbol's end).
+        foreach (var entry in tree.GetNodes<ChordEntrySyntax>())
+            if (entry.SourceStart <= offset && offset <= EntryEnd(entry))
+                return new Target(TargetKind.Voicing, entry);
 
         Target? note = null;
         foreach (var pitch in PitchLikeNodes(tree))
@@ -268,6 +287,16 @@ public static class NoteStepper
                 return new Target(TargetKind.Chord, node);
         }
         return null;
+    }
+
+    /// <summary>Just past a row entry's last token (its <c>)</c>, or its symbol).</summary>
+    private static int EntryEnd(ChordEntrySyntax entry)
+    {
+        int end = entry.SourceStart;
+        for (int i = 0; i < entry.SlotCount; i++)
+            if (entry.GetChild(i) is SyntaxTokenNode t && t.Text.Length > 0)
+                end = Math.Max(end, t.SourceStart + t.Text.Length);
+        return end;
     }
 
     /// <summary>The written pitches a step moves: a note's pitch, a chord's or an arpeggio's
@@ -353,7 +382,7 @@ public static class NoteStepper
                 TargetKind.Member => node is PitchSyntax or ScaleDegreeSyntax
                     && node.Parent is ChordSyntax or ArpeggioSyntax,
                 TargetKind.Chord => node is ChordSyntax or ArpeggioSyntax,
-                _ => node is MusicMarkSyntax { Name: "chord" },
+                _ => node is MusicMarkSyntax { Name: "chord" } or ChordEntrySyntax,
             };
             if (fits)
                 return new Target(kind, node);
@@ -379,92 +408,363 @@ public static class NoteStepper
     }
 
     /// <summary>
-    /// The voicing-index edit of an <c>@chord</c>, a status-bar message, and whether the
-    /// annotation is steppable at all (a symbol, optionally an index and <c>mute</c> — not
-    /// a written-out diagram, quoted text or the bare <c>@chord</c>). A steppable one that
-    /// cannot move (Up at the last index, Down with no index) answers no edit.
+    /// The shape edit of an <c>@chord</c> or a <c>chords</c> row entry (HANDOFF §2 K, owner's
+    /// decisions 2026-09-28), a status-bar message, and whether it is steppable at all (a chord
+    /// symbol — not a symbol-less shape, quoted text or the bare <c>@chord</c>). The step walks
+    /// <see cref="ShapeOrder"/> on <see cref="StepTuning"/>, stepping the shape written for that
+    /// tuning (the others in the group stay): with none written, Up writes the order's first —
+    /// the default, so the diagram APPEARS (<c>G</c> → <c>G(320003)</c>) — and Down does
+    /// nothing; from a written shape Up / Down write its neighbour — a shape with muted strings
+    /// steps from the order's shape it mutes, and loses its <c>x</c> (the owner: mutes are put
+    /// back once the shape is chosen); Down AT the default REMOVES the shape, and the diagram
+    /// goes (a row's group left empty goes whole). A steppable one that cannot move answers no
+    /// edit.
+    /// <para>
+    /// ★ IN A <c>chordDiagrams … all</c> SCORE (the first rendering the chord,
+    /// <see cref="DrawsEveryChord"/>) a name alone already draws the default, so the step
+    /// counts from there (owner's decision 2026-09-28): Up from the name writes the shape AFTER
+    /// the default, and Down at the default — written or not — does nothing; the status bar
+    /// says why.
+    /// </para>
     /// </summary>
-    private static (Edit? Edit, string? Message, bool Handled) VoicingEdit(MusicMarkSyntax mark, int dir)
+    /// <remarks>
+    /// A written shape the order does not hold — a STRETCH shape while
+    /// <paramref name="includeStretch"/> is off (owner's decision 2026-09-28), or a shape no rule
+    /// allows — steps by where it would SORT (<see cref="Music.ChordVoicings.CompareInOrder"/>;
+    /// a muted copy sorts as the stretch shape it mutes): Up to the first shape of the order
+    /// after it, Down to the last before it, or back to the default.
+    /// </remarks>
+    private static (Edit? Edit, string? Message, bool Handled) VoicingEdit(SyntaxNode node, int dir,
+        bool includeStretch)
     {
-        if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: not null, Written: null } words)
-            return (null, null, false);
-        var spans = WordSpans(mark);
-        if (spans.Count != mark.Arguments.Length || spans.Count == 0)
-            return (null, null, false);
-        if (words.Problem != null)
-            return (null, words.Problem, true);
+        var (site, refusal) = ShapeSiteOf(node);
+        if (site == null)
+            return (null, refusal, refusal != null);
+        if (site.Problems.Count > 0)
+            return (null, site.Problems[0], true);
 
-        // How many voicings there are, when the part's tuning is known (a phrase the parts
-        // play on different tunings has no one count; it steps unbounded, as the page and
-        // the validator will judge it per part).
-        int? count = null;
-        string? unavailable = null;
-        if (ChordAnnotation.PartTuningOf(mark) is { } tuning)
-        {
-            var r = (words with { Index = 0, HasMute = false, Mutes = [] }).Resolve(tuning);
-            if (r.Problem != null)
-                unavailable = r.Problem;
-            else
-                count = r.Count;
-        }
+        var (word, note) = StepTuning(node);
+        var tuningType = Tablature.Tunings.Parse(word);
+        var tuning = Tablature.Tunings.GetTuning(tuningType);
+        var (_, order) = ShapeOrder(node, site.Chord, includeStretch);
+        string symbol = site.Symbol;
+        if (order.Count == 0)
+            return (null, $"{symbol}: no shape to step through on {word}{note}.", true);
 
-        int symbolEnd = spans[0].End;
-        if (!words.IsIndexForm)
+        // The shape written for the step's tuning, if any: its word, and its tuning word's.
+        int shapeAt = -1, namedAt = -1;
+        for (int i = 0; i + 1 < site.Words.Count && shapeAt < 0; i++)
+            if (site.Words[i].Text is var t && Tablature.Tunings.Names.Contains(t)
+                && Tablature.Tunings.Parse(t) == tuningType && site.Words[i + 1].Text.Length == tuning.Length)
+                (namedAt, shapeAt) = (i, i + 1);
+        for (int i = 0; i < site.Words.Count && shapeAt < 0; i++)
+            if (Music.ChordShapes.StartsShape(site.Words[i].Text)
+                && (i == 0 || !Tablature.Tunings.Names.Contains(site.Words[i - 1].Text))
+                && site.Words[i].Text.Length == tuning.Length)
+                shapeAt = i;
+
+        // In a `chordDiagrams … all` score (the first rendering this chord) a name alone already
+        // DRAWS the default (Music.ChordShapes.Drawn), so the default is where an unwritten name
+        // stands — Lily#'s reading of the owner's decision 2026-09-28: Up from the name writes the
+        // shape AFTER the default (writing the default itself would change nothing on the page),
+        // and Down at the default does nothing (removing it would draw the same shape again).
+        bool drawsAll = DrawsEveryChord(node);
+        int defaultAt = drawsAll && Music.ChordShapes.Default(tuningType, site.Chord) is { } drawnDefault
+            ? PlaceInOrder(drawnDefault.Frets, order) : -1;
+
+        if (shapeAt < 0)
         {
+            if (defaultAt >= 0)
+            {
+                string shown = Music.ChordVoicings.Spell(order[defaultAt]);
+                if (dir < 0)
+                    return (null, $"{symbol}: no shape written - this score draws every chord, so it shows "
+                        + $"the default ({word}: {shown}); Down does nothing, Up writes the next shape{note}", true);
+                if (defaultAt + 1 >= order.Count)
+                    return (null, $"{symbol}: the default ({word}: {shown}) is the only shape - this score "
+                        + $"already draws it{note}", true);
+                return (Insert(site, Music.ChordVoicings.Spell(order[defaultAt + 1])),
+                    ShapeMessage(symbol, defaultAt + 1, order) + note, true);
+            }
+            // No shape for this tuning: Up writes the drawn default, so the diagram appears;
+            // Down has nothing to take away.
             if (dir < 0)
-                return (null, null, true);
-            if (unavailable != null)
-                return (null, unavailable, true);
-            return (new Edit(symbolEnd, symbolEnd, " 0"), null, true);
+                return (null, $"{symbol}: no shape written, no diagram - Up adds one ({word}: "
+                    + $"{Music.ChordVoicings.Spell(order[0])}){note}", true);
+            return (Insert(site, Music.ChordVoicings.Spell(order[0])), ShapeMessage(symbol, 0, order) + note, true);
         }
 
-        int index = words.Index ?? 0;
-        if (dir > 0)
+        var written = site.Words[shapeAt];
+        var frets = Music.ChordShapes.Frets(written.Text);
+        int at = PlaceInOrder(frets, order), next;
+        if (at < 0)
         {
-            if (count is int n && index >= n - 1)
-                return (null, $"{symbol}: voicings 0–{n - 1}", true);
-            return words.Index == null
-                ? (new Edit(symbolEnd, symbolEnd, " 1"), null, true)
-                : (new Edit(spans[1].Start, spans[1].End, Invariant(index + 1)), null, true);
+            next = NextBySortKey(SortKeyOf(frets, tuning, site.Chord), order, dir);
+            if (next < 0)
+                return (null, $"{symbol}: '{written.Text}' sorts after the last of the {order.Count} shapes{note}.", true);
         }
-        if (index == 0)
-            // Back to the name alone. The mute words go too: without an index they would
-            // be `@chord(D mute 5)`, which IS index 0 — the step would not have moved.
-            return (new Edit(symbolEnd, spans[^1].End, ""), null, true);
-        int down = count is int total && index > total - 1 ? total - 1 : index - 1;
-        return (new Edit(spans[1].Start, spans[1].End, Invariant(down)), null, true);
+        else if (dir < 0 && at == defaultAt)
+        {
+            // Down at the default of an `all` score: nothing — the name alone draws this shape.
+            return (null, $"{symbol}: at the default ({Music.ChordVoicings.Spell(order[at])}) - this score "
+                + $"draws every chord, so a name alone shows it too; Down does nothing{note}", true);
+        }
+        else if (dir < 0 && at == 0)
+        {
+            // Down at the default: the shape goes, and with it the diagram.
+            return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt),
+                $"{symbol}: shape removed, no diagram (Up adds {Music.ChordVoicings.Spell(order[0])}){note}", true);
+        }
+        else
+        {
+            next = at + dir;
+            if (next >= order.Count)
+                return (null, ShapeMessage(symbol, at, order) + note, true);
+        }
+        return (new Edit(written.Start, written.End, Music.ChordVoicings.Spell(order[next])),
+            ShapeMessage(symbol, next, order) + note, true);
     }
 
-    private static string Invariant(int n) => n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    /// <summary>
+    /// Where a step rewrites a chord's shapes: an <c>@chord(…)</c> with a symbol, or a
+    /// <c>chords</c> row entry (<c>G</c>, <c>G(320003)</c>, <c>F(133211 2010)</c>) — the symbol,
+    /// its chord, the words after it with their spans, the first problem of those words, where
+    /// the symbol ends and, for a row entry, its parenthesised group.
+    /// </summary>
+    private sealed record ShapeSite(string Symbol, Music.ChordStructure Chord,
+        List<(string Text, int Start, int End)> Words, List<string> Problems, int SymbolEnd,
+        (int Open, int OpenEnd, int Close)? Group, bool IsRow);
 
-    /// <summary>The source span of each argument word — the runs <see cref="MarkArgument"/>
-    /// reads: adjacent tokens form one word, whitespace and ',' separate them.</summary>
-    private static List<(int Start, int End)> WordSpans(MusicMarkSyntax mark)
+    /// <summary>The site a step at <paramref name="node"/> rewrites, or null with the refusal
+    /// to show (null refusal: not steppable at all — the key's own command runs).</summary>
+    private static (ShapeSite? Site, string? Refusal) ShapeSiteOf(SyntaxNode node)
     {
-        var spans = new List<(int Start, int End)>();
-        int start = -1, end = -1;
-        foreach (var token in mark.ArgumentTokens)
+        if (node is MusicMarkSyntax mark)
         {
-            if (token.Kind == SyntaxKind.Comma)
-            {
-                if (start >= 0)
-                    spans.Add((start, end));
-                start = -1;
-                continue;
-            }
-            if (start >= 0 && token.Span.Start == end)
-            {
-                end = token.Span.End;
-                continue;
-            }
-            if (start >= 0)
-                spans.Add((start, end));
-            start = token.Span.Start;
-            end = token.Span.End;
+            if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } chord } words)
+                return (null, null);
+            var spans = ChordAnnotation.WordSpans(mark);
+            if (spans.Count != mark.Arguments.Length || spans.Count == 0)
+                return (null, null);
+            var list = new List<(string, int, int)>();
+            for (int i = 1; i < spans.Count; i++)
+                list.Add((mark.Arguments[i].Text, spans[i].Start, spans[i].End));
+            return (new ShapeSite(symbol, chord, list, [.. words.Problems.Select(p => p.Message)],
+                spans[0].End, null, IsRow: false), null);
         }
-        if (start >= 0)
-            spans.Add((start, end));
-        return spans;
+        if (node is not ChordEntrySyntax entry)
+            return (null, null);
+        string sym = entry.SymbolText;
+        if (!Music.ChordStructure.TryParseChordEntry(sym, out var parsed))
+            return (null, $"{sym}: the step writes shapes for a chord name, not a degree - its chord "
+                + "depends on the key.");
+        int symbolEnd = entry.SourceStart;
+        SyntaxTokenNode? open = null, close = null;
+        for (int i = 0; i < entry.SlotCount; i++)
+        {
+            if (entry.GetChild(i) is not SyntaxTokenNode tk)
+                continue;
+            if (tk.Kind == SyntaxKind.OpenParen)
+                open ??= tk;
+            else if (tk.Kind == SyntaxKind.CloseParen && open != null)
+                close ??= tk;
+            else if (open == null && tk.Text.Length > 0)
+                symbolEnd = tk.SourceStart + tk.Text.Length;
+        }
+        if (open != null && close == null)
+            return (null, $"{sym}: close the shape's ')' first.");
+        var shapeWords = entry.ShapeWords;
+        var problems = ChordDiagramScores.ShapesOf(entry).Problems;
+        return (new ShapeSite(sym, parsed,
+            [.. shapeWords.Select(w => (w.Text, w.Span.Start, w.Span.End))],
+            [.. problems.Select(p => p.Message)], symbolEnd,
+            open != null ? (open.SourceStart, open.SourceStart + 1, close!.SourceStart + 1) : null,
+            IsRow: true), null);
+    }
+
+    /// <summary>The edit that adds <paramref name="spelled"/> to a site: after its last word
+    /// (a row entry with no group gains one: <c>G</c> → <c>G(320003)</c>).</summary>
+    private static Edit Insert(ShapeSite site, string spelled)
+    {
+        if (site.Words.Count > 0)
+            return new Edit(site.Words[^1].End, site.Words[^1].End, " " + spelled);
+        if (site.Group is { } g)
+            return new Edit(g.OpenEnd, g.OpenEnd, spelled);
+        return new Edit(site.SymbolEnd, site.SymbolEnd, site.IsRow ? "(" + spelled + ")" : " " + spelled);
+    }
+
+    /// <summary>The edit that takes words <paramref name="from"/>..<paramref name="to"/> (a
+    /// shape and its tuning word) out of a site, with the space before them — or, first in a
+    /// row's group, after them; a row's group left empty goes whole (<c>G(320003)</c> → <c>G</c>).</summary>
+    private static Edit Remove(ShapeSite site, int from, int to)
+    {
+        if (site.Group is { } g && site.Words.Count == to - from + 1)
+            return new Edit(site.SymbolEnd, g.Close, "");
+        if (from > 0)
+            return new Edit(site.Words[from - 1].End, site.Words[to].End, "");
+        if (site.Group != null)
+            return new Edit(site.Words[from].Start,
+                to + 1 < site.Words.Count ? site.Words[to + 1].Start : site.Words[to].End, "");
+        return new Edit(site.SymbolEnd, site.Words[to].End, "");
+    }
+
+    /// <summary>"Cm7: shape 3 of 21 (x35343)" — the position counted from 1, the first being
+    /// the default the step writes first.</summary>
+    private static string ShapeMessage(string symbol, int at, IReadOnlyList<ImmutableArray<int>> order)
+        => $"{symbol}: shape {at + 1} of {order.Count} ({Music.ChordVoicings.Spell(order[at])})";
+
+    /// <summary>What a written shape the order lacks sorts as: the stretch-inclusive base it
+    /// is (or is a muted copy of), else itself.</summary>
+    private static IReadOnlyList<int> SortKeyOf(ImmutableArray<int> written, IReadOnlyList<int> tuning,
+        Music.ChordStructure chord)
+    {
+        if (!Music.ChordVoicings.IsGuitarType(tuning))
+            return written;
+        var bases = Music.ChordVoicings.For(tuning, chord, includeStretch: true).Bases;
+        int i = PlaceInOrder(written, bases);
+        return i >= 0 ? bases[i] : written;
+    }
+
+    /// <summary>Up: the first shape of the order (past the default) sorting after
+    /// <paramref name="key"/>, −1 when none does; Down: the last sorting before it, else the
+    /// default (0).</summary>
+    private static int NextBySortKey(IReadOnlyList<int> key, IReadOnlyList<ImmutableArray<int>> order, int dir)
+    {
+        if (dir > 0)
+        {
+            for (int i = 1; i < order.Count; i++)
+                if (Music.ChordVoicings.CompareInOrder(order[i], key) > 0)
+                    return i;
+            return -1;
+        }
+        for (int i = order.Count - 1; i >= 1; i--)
+            if (Music.ChordVoicings.CompareInOrder(order[i], key) < 0)
+                return i;
+        return 0;
+    }
+
+    /// <summary>
+    /// The order the step walks (K3 — the editor's own, NOT frozen in the language): the
+    /// default first (<see cref="Music.ChordShapes.Default"/>: LilyPond's predefined shape, else
+    /// the compiler's fallback), then Lily#'s maximal shapes in their order
+    /// (<see cref="Music.ChordVoicings"/>) — the normal rule's, or with
+    /// <paramref name="includeStretch"/> the stretch-inclusive rule's (owner's decision
+    /// 2026-09-28, <c>lilysharp.chordShapes.includeStretch</c>) — each once, on
+    /// <see cref="StepTuning"/>. <paramref name="site"/> is an <c>@chord</c> or a row entry.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ A shape reaching fret 10 or higher is left out: the shape grammar writes one
+    /// character per string (<see cref="Music.ChordShapes.IsShape"/>), so the step could not
+    /// write it back.
+    /// </remarks>
+    public static (IReadOnlyList<int> Tuning, List<ImmutableArray<int>> Order) ShapeOrder(
+        SyntaxNode site, Music.ChordStructure chord, bool includeStretch)
+    {
+        var tuningType = Tablature.Tunings.Parse(StepTuning(site).Word);
+        IReadOnlyList<int> tuning = Tablature.Tunings.GetTuning(tuningType);
+        var order = new List<ImmutableArray<int>>();
+        void Add(ImmutableArray<int> shape)
+        {
+            if (shape.All(f => f <= 9) && !order.Any(o => o.SequenceEqual(shape)))
+                order.Add(shape);
+        }
+        if (Music.ChordShapes.Default(tuningType, chord) is { } first)
+            Add(first.Frets);
+        if (Music.ChordVoicings.IsGuitarType(tuning))
+            foreach (var b in Music.ChordVoicings.For(tuning, chord, includeStretch).Bases)
+                Add(b);
+        return (tuning, order);
+    }
+
+    /// <summary>
+    /// Where <paramref name="frets"/> stands among a chord's shapes, for the hover:
+    /// <c>shape 3 of 21 (34 with stretch)</c> — the normal order's count, and the
+    /// stretch-inclusive one's when it differs (a hover carries no setting); a stretch shape
+    /// says <c>stretch shape 25 of 34</c>. Null when neither order holds it.
+    /// </summary>
+    public static string? ShapePlace(SyntaxNode site, Music.ChordStructure chord, ImmutableArray<int> frets)
+    {
+        var (_, normal) = ShapeOrder(site, chord, includeStretch: false);
+        var (_, stretch) = ShapeOrder(site, chord, includeStretch: true);
+        string withStretch = stretch.Count != normal.Count ? $" ({stretch.Count} with stretch)" : "";
+        int at = PlaceInOrder(frets, normal);
+        if (at >= 0)
+            return $"shape {at + 1} of {normal.Count}{withStretch}";
+        int s = PlaceInOrder(frets, stretch);
+        return s >= 0 ? $"stretch shape {s + 1} of {stretch.Count}" : null;
+    }
+
+    /// <summary>
+    /// The tuning word the editor steps, sounds and offers a chord's shapes on, and a note for
+    /// the status bar (or null): the owner's rule for which tuning a diagram draws on
+    /// (<see cref="ChordDiagramsKey.Resolve"/>: the layout's <c>chordDiagrams</c>, else the
+    /// part's fretted instrument, else the guitar), read in the FIRST score that renders the
+    /// chord — for an <c>@chord</c>, the first score drawing its part
+    /// (<see cref="ChordDiagramScores.TuningsOfMark"/>); for a row entry, the first score placing
+    /// its row, on the staff it is first placed over (<see cref="ChordDiagramScores.TuningsOfRow"/>).
+    /// </summary>
+    /// <remarks>
+    /// Lily#'s choices: when later scores draw it on another tuning the note says so
+    /// (" - on guitar, the first score's; another draws ukulele"); when the first score writes
+    /// <c>chordDiagrams none</c> the step still works, on the part's instrument or the guitar,
+    /// and the note says that score draws no diagram.
+    /// </remarks>
+    public static (string Word, string? Note) StepTuning(SyntaxNode site)
+    {
+        var scores = ScoresOf(site, out string? partWord);
+        if (scores.Count == 0)
+            return (partWord ?? "guitar", null);
+        if (scores[0].Word is not { } word)
+            return (partWord ?? "guitar", " (the first score writes chordDiagrams none: no diagram there)");
+        var other = scores.Select(s => s.Word).OfType<string>().FirstOrDefault(w => w != word);
+        return (word, other == null ? null : $" - on {word}, the first score's; another draws {other}");
+    }
+
+    /// <summary>
+    /// Whether the FIRST score rendering the chord (<see cref="StepTuning"/>'s) writes
+    /// <c>chordDiagrams … all</c> — so a name with no shape already SHOWS the default there
+    /// (owner's decision 2026-09-28), and the step treats the default as what the name draws.
+    /// </summary>
+    public static bool DrawsEveryChord(SyntaxNode site)
+        => ScoresOf(site, out _) is { Count: > 0 } scores && scores[0].Score.All && scores[0].Word != null;
+
+    /// <summary>The scores rendering the chord at <paramref name="site"/>, in document order, with
+    /// the tuning word each draws it on; <paramref name="partWord"/> is an <c>@chord</c>'s part's
+    /// fretted tuning (null for a row entry).</summary>
+    private static IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> ScoresOf(SyntaxNode site,
+        out string? partWord)
+    {
+        partWord = null;
+        if (site is ChordEntrySyntax entry)
+            return ChordDiagramScores.BlockOf(entry)?.PartName is { } row
+                ? ChordDiagramScores.TuningsOfRow(RootOf(site), row) : [];
+        partWord = ChordDiagramScores.FrettedWordOfNode(site);
+        return site is MusicMarkSyntax mark ? ChordDiagramScores.TuningsOfMark(mark) : [];
+    }
+
+    private static SyntaxNode RootOf(SyntaxNode node)
+    {
+        while (node.Parent != null)
+            node = node.Parent;
+        return node;
+    }
+
+    /// <summary>Where a written shape stands in the order: its own place, else the first shape
+    /// it is a muted copy of (equal on every string it sounds), else −1.</summary>
+    private static int PlaceInOrder(ImmutableArray<int> written, IReadOnlyList<ImmutableArray<int>> order)
+    {
+        for (int i = 0; i < order.Count; i++)
+            if (order[i].SequenceEqual(written))
+                return i;
+        for (int i = 0; i < order.Count; i++)
+        {
+            bool fits = order[i].Length == written.Length;
+            for (int s = 0; s < written.Length && fits; s++)
+                fits = written[s] < 0 || written[s] == order[i][s];
+            if (fits)
+                return i;
+        }
+        return -1;
     }
 
     /// <summary>The text with <paramref name="sorted"/> (by start, not overlapping) applied.</summary>
@@ -495,7 +795,8 @@ public static class NoteStepper
 
     /// <summary>The pitches a target sounds (MIDI, lowest first) and the timbre to sound
     /// them in, read off <paramref name="sounding"/>.</summary>
-    private static (ImmutableArray<int> Pitches, int Timbre) Sound(Target target, SyntaxTree sounding)
+    private static (ImmutableArray<int> Pitches, int Timbre) Sound(Target target, SyntaxTree sounding,
+        bool includeStretch)
     {
         var index = SoundIndex.Of(sounding);
         switch (target.Kind)
@@ -550,21 +851,49 @@ public static class NoteStepper
             }
             default:
             {
-                var mark = (MusicMarkSyntax)target.Node;
-                if (ChordAnnotation.Of(mark) is not { WantsDiagram: true } words
-                    || ChordAnnotation.PartTuningOf(mark) is not { } tuning)
+                var mark = target.Node;
+                if (SoundedShape(mark, includeStretch) is not { } sounded)
                     return ([], 0);
-                var resolved = words.Resolve(tuning);
-                if (!resolved.HasDiagram)
-                    return ([], 0);
+                var (tuning, frets) = sounded;
                 var pitches = new SortedSet<int>();
-                for (int s = 0; s < resolved.Frets.Length && s < tuning.Count; s++)
-                    if (resolved.Frets[s] >= 0)
-                        pitches.Add(tuning[s] + resolved.Frets[s]);
-                int host = mark.Parent?.SourceStart ?? -1;
+                for (int s = 0; s < frets.Length && s < tuning.Count; s++)
+                    if (frets[s] >= 0)
+                        pitches.Add(tuning[s] + frets[s]);
+                int host = mark is MusicMarkSyntax ? mark.Parent?.SourceStart ?? -1 : -1;
                 return ([.. pitches], index.Timbre.TryGetValue(host, out int t) ? t : GuitarTimbre);
             }
         }
+    }
+
+    /// <summary>
+    /// The shape an <c>@chord</c> or a row entry sounds in the editor, on
+    /// <see cref="StepTuning"/>: the shape written for that tuning, else the first of
+    /// <see cref="ShapeOrder"/> (the default the step would write — it sounds though no diagram
+    /// draws, so a name can be tried by ear); null for one with no symbol it can read and no
+    /// shape, or none on the tuning.
+    /// </summary>
+    private static (IReadOnlyList<int> Tuning, ImmutableArray<int> Frets)? SoundedShape(SyntaxNode site,
+        bool includeStretch)
+    {
+        ImmutableArray<Music.WrittenShape> shapes;
+        Music.ChordStructure? structure;
+        if (site is ChordEntrySyntax entry)
+        {
+            shapes = ChordDiagramScores.ShapesOf(entry).Shapes;
+            structure = Music.ChordStructure.TryParseChordEntry(entry.SymbolText, out var parsed) ? parsed : null;
+        }
+        else if (site is MusicMarkSyntax mark
+                 && ChordAnnotation.Of(mark) is { IsBare: false, QuotedText: null } words)
+            (shapes, structure) = (words.Shapes, words.Structure);
+        else
+            return null;
+        var tuningType = Tablature.Tunings.Parse(StepTuning(site).Word);
+        if (Music.ChordShapes.WrittenFor(tuningType, shapes) is { } written)
+            return (Tablature.Tunings.GetTuning(tuningType), Music.ChordShapes.Frets(written));
+        if (structure is not { } chord)
+            return null;
+        var (t, order) = ShapeOrder(site, chord, includeStretch);
+        return order.Count > 0 ? (t, order[0]) : null;
     }
 
     /// <summary>A chord's pitch and degree members (an arpeggio's, nested chords' included).</summary>

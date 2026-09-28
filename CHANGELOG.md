@@ -43,39 +43,58 @@ workflow attaches that section to the GitHub Release verbatim.
   `@figuredBass(6 s)`), paper size names (`size a4`) and units (`210mm`) are lowercase
   only; `@notehead(TRIANGLE)`, `size A4` and `210MM` are refused with the spelling to
   write. Free text (`@text("Dolce")`) and chord symbols (`@chord(Dm)`) keep their case.
-- **`@chord`'s argument is read as words: `@chord(C 7)` is C with voicing 7, not C7.** The
-  words after the symbol now choose a chord diagram (below), so a space no longer joins the
-  symbol back together — write `@chord(C7)`. `@chord(C m7)` names C and warns (LYS1038) that
-  `m7` is neither a voicing index nor a position string. No book in the repository or the
-  test corpora wrote a spaced `@chord(…)`.
+- **`@chord`'s argument is read as words: `@chord(C 7)` is C followed by a shape, not C7.**
+  The words after the symbol are its chord diagram's shapes (below), so a space no longer joins
+  the symbol back together — write `@chord(C7)`. `@chord(C 7)` names C and warns (LYS1038) that
+  `7` is a shape no tuning has strings for; `@chord(C m7)` warns that `m7` is neither a shape
+  nor a tuning. No book in the repository or the test corpora wrote a spaced `@chord(…)`.
 
-### Chord diagrams from `@chord`
+### Chord diagrams
 
-- **`@chord` takes optional words that draw a chord diagram under the name.**
-  `c4@chord(Cm7 2)` prints Cm7 with its voicing 2 drawn beneath it, between the name and the
-  staff; `@chord(Cm7 2 mute 3 4)` mutes strings 3 and 4 of that voicing (1 is the
-  highest-pitched string; any order); `@chord(D mute 5)` is voicing 0 with string 5 muted —
-  the open D; `@chord(Cm7 x3x546)` draws a diagram written out; `@chord(x32010)` draws it and
-  names the chord from its notes (C). The index counts from 0 on the PART's tuning (its
-  `tuning`, else its instrument's, else the guitar); `@diagram(…)` is unchanged.
-- **The voicings follow frozen rules**, stated in the syntax reference (*Chord Diagrams*): at
-  least three strings, frets 0–15, chord tones only, every tone but the perfect fifth, the
-  root (or the slash bass) lowest, a span of at most four frets, at most four fingers with a
-  barre at the lowest fret counting once; a base is a shape no muted string of which can be
-  made to sound; they are ordered by position, then fingers, then frets from the low string.
-  Changing any of this renumbers indices, so it will only ever change as a breaking change.
-  On standard tuning C has 57 bases (`x32010` is #0), Cm7 52 (`x35343` is #2), D 64.
-- **A diagram that cannot be drawn warns (LYS1038) and the name still draws**: an index out of
-  range (`Cm7 has 52 voicings on this tuning (0–51).`), a chord with no voicing on the tuning,
-  a bad `mute`, a position string of the wrong length, the index form on a re-entrant tuning
-  such as the ukulele's, or a written-out diagram whose notes name no chord.
-- **A diagram reaching past the 4th fret is shifted as LilyPond shifts it.** `x35343` is now
-  drawn from the 3rd fret with a `3fr` label; the grid used to stay at the nut and drop its
-  5th-fret dots. A shape spanning five frets draws five rows.
-- **The twin and MusicXML carry it**: the `.ly` twin writes the name in the part's
-  `ChordNames` line and the diagram as `\fret-diagram-terse` on the note (LilyPond stacks it
-  under the name); MusicXML nests the diagram's `<frame>` — with `<first-fret>` when shifted —
-  in the chord's `<harmony>`. The MIDI is unchanged: a diagram does not sound.
+- **A chord whose shape is written draws a chord diagram under its name**: `c4@chord(Cm7 x3x546)`
+  on a note, `F(133211)` in a `chords` row (over a staff, or on a lead sheet with no staff),
+  `@chord(x32010)` (the name derived from its notes) — between the name and the staff, side by
+  side, with the row's spacing and the bars widened for them. A name alone (`@chord(G)`, a row's
+  `G`) draws none. A shape is one character per string from the low string (`x` muted, `o` or
+  `0` open, a digit the fret); it goes to the tuning with as many strings, so one chord can
+  carry several: `F(133211 2010)`; a tuning word binds a shape by name when two tunings have
+  the same string count: `F(guitar 133211 guitardropd 333211)`. `@diagram(…)` is unchanged and
+  always draws.
+- **The diagram's tuning** is the score's `layout { chordDiagrams TUNING }` — a tuning word,
+  the ones a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitardropd`, …) — else
+  the instrument of the part when it is fretted (the part an `@chord`'s note is in; for a row,
+  the staff it stands directly above), else the guitar. `chordDiagrams none` draws no diagram
+  at all, so one source makes a piano score and a guitar score, or a guitar score and a
+  ukulele score.
+- **`chordDiagrams all` draws a diagram for EVERY chord.** The scope word `all`, after the
+  tuning (`chordDiagrams guitar all`, `chordDiagrams ukulele all`) or alone (`chordDiagrams all`:
+  the tuning as when unset), makes every chord name in the score draw one — the `chords` rows'
+  entries and every `@chord`, a bare `@chord` by the name it derives: the shape written for the
+  tuning, else the usual shape (below). A chord with no shape at all on the tuning (C13 on the
+  ukulele) draws none and warns once per chord and tuning (write its shape). `none all`, `all
+  guitar` (the tuning comes first) and a word written twice are errors. Without `all`, only
+  written shapes draw, as before. The twin writes a `FretBoards` entry for every chord of such a
+  score (one-shape tables, so LilyPond draws exactly the page's shape) and the `@chord` markup
+  for every name; MusicXML a `<frame>` for every drawn diagram.
+- **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
+  neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes. A
+  written shape is never checked against its symbol; a name with no shape is not warned about
+  (save in a `chordDiagrams … all` score, above).
+- **The editor writes the shapes** (see the VS Code extension's changelog): `Ctrl+Shift+Up` on
+  a chord adds its usual shape — LilyPond's predefined one (the guitar's 136 and 17 ninth
+  chords, the ukulele's 306, the mandolin's 204: C `x32010`, F `133211`, Cm7 `x35343`; ukulele
+  C `0003`), else the first of Lily#'s order (at least three strings, chord tones only, the
+  root lowest, a span of four frets, four fingers — *Chord Diagrams* in the syntax reference).
+- **A diagram reaching past the 4th fret is shifted as LilyPond shifts it.** `x35343` is drawn
+  from the 3rd fret with a `3fr` label; the grid used to stay at the nut and drop its 5th-fret
+  dots. A shape spanning five frets draws five rows.
+- **The twin and MusicXML carry them**: under a `chords` row with a written shape the `.ly`
+  twin writes a `FretBoards` context over the same chord music (each written shape as a
+  one-shape table, a silent slot for every chord without one, `stringTunings` for a tuning
+  other than the guitar's); an `@chord`'s diagram is the note's `\fret-diagram-terse`, under
+  the name.
+  MusicXML nests an `@chord`'s `<frame>` — with `<first-fret>` when shifted — in its
+  `<harmony>` (MusicXML does not export `chords` rows yet). The MIDI is unchanged.
 
 ## 0.9.0
 

@@ -130,6 +130,21 @@ public sealed record ChordNameItem
     public ChordStructure? Structure { get; }
 
     /// <summary>
+    /// The chord diagram drawn UNDER this symbol, as the page's diagram spec (low string
+    /// first, <c>Music.ChordVoicings.ToFrameSpec</c>), or null. Set only on a <c>chords</c>
+    /// row's symbol (attached track or independent row) that WRITES a shape for the row's
+    /// tuning (<c>G(320003)</c> — owner's decision 2026-09-28; <c>ChordNameCollector.DiagramOf</c>)
+    /// — an <c>@chord</c>'s diagram is the note's script instead (<c>ArticulationItem.UnderChordName</c>).
+    /// </summary>
+    /// <remarks>
+    /// ★ PART OF THE SYMBOL for every pass that prices it — its width
+    /// (<c>ChordNameEngraver.FootprintWidth</c>) and the line's skyline
+    /// (<c>ChordNameEngraver.RowSkylines</c>) — the way LilyPond's FretBoards line stands under
+    /// its ChordNames line and is spaced with it.
+    /// </remarks>
+    public string? FrameSpec { get; init; }
+
+    /// <summary>
     /// True when this symbol belongs to an independent chord ROW (a <c>chords name
     /// { }</c> part placed via <c>chords name</c> in a score). The engraver then
     /// places it WITHIN its row's band (by <see cref="StaffIndex"/>) rather than

@@ -91,6 +91,7 @@ public static class SemanticValidation
         new DoubleDynamicValidator(),       // a second dynamic on one note (the first is printed)
         new ChordRowGridValidator(),        // a chord-row bar off the beat grid / a bar-head '.'
         new ChordDisplayModeValidator(),    // `chords X as WORD` where WORD is not a display
+        new ChordDiagramValidator(),        // a chords-row shape that cannot be used (wrong length, unknown tuning, …)
         new TabRenderVocabularyValidator(), // `tab [TUNING] X as WORD` — the same clause's other half
         new RepeatStructureScopeValidator(),// a repeat barline / volta ending written in music
         new RepeatPairingValidator(),       // a '|:' that no ':|' closes (score-expanded)

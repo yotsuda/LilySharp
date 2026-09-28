@@ -85,7 +85,7 @@ internal static class FretFrameGeometry
     /// <remarks>
     /// ⚠️ TWO ALPHABETS, ONE READER. A WRITTEN spec (<c>@diagram(x32010)</c>, the position
     /// string of <c>@chord(x32010)</c>) is x / o / 0–9 only — the gate is
-    /// <c>Semantics.AnnotationValues.Frame</c>. A voicing <c>@chord(Cm7 31)</c> CHOOSES can
+    /// <c>Semantics.AnnotationValues.Frame</c>. A shape Lily#'s order picks (<c>Music.ChordVoicings</c>) can
     /// stand at frets 10–15, which one character per string cannot spell in digits, so the
     /// spec it hands the page carries them as <c>a</c>–<c>f</c> (<c>8aa988</c> is
     /// 8-10-10-9-8-8; <c>Music.ChordVoicings.ToFrameSpec</c> writes it). A writer cannot type
@@ -113,7 +113,7 @@ internal static class FretFrameGeometry
     /// (<c>minFret &gt; 4</c>), so a shape straddling it — <c>x35553</c>, <c>x35343</c> — kept
     /// the grid at fret 1 and its 5th-fret dots fell off the bottom row undrawn. No book wrote
     /// such a diagram (measured: no <c>@diagram(</c> in any <c>.lys</c> of the repo or of the
-    /// Lab corpora), and the voicings <c>@chord(Cm7 2)</c> chooses are exactly that shape, so
+    /// Lab corpora), and the shapes Lily#'s order yields are often exactly that, so
     /// LilyPond's rule came in with them.
     /// </remarks>
     internal static int BaseFret(string spec)

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -467,6 +467,10 @@ public sealed class LilyPondExporter
         // The score's resolved layout plan — the bar-number policy the twin writes into
         // its \layout block, and the `markTempo beside` it can only warn about.
         _layoutPlan = ResolveLayoutPlan(root, render);
+        // …and what a chord diagram's tuning is read against (the parts' instruments, the
+        // staff a row stands over — ChordDiagramScores).
+        _root = root;
+        _renderSpec = render != null ? Svg.Collector.RenderSpecParser.Parse(render) : null;
 
         EmitHeader(root);
 
@@ -519,9 +523,6 @@ public sealed class LilyPondExporter
                         + " reads it as one voice's simultaneous music");
                 var part = parts.FirstOrDefault(p => p.Name.Text == name);
                 ArmPartHome(part);
-                // The strings an @chord's voicing index counts on — the part's tuning, read
-                // as the page reads it (PartHeaderDefaults), so the twin draws the same frets.
-                _partTuning = Tablature.Tunings.GetTuning(Semantics.PartHeaderDefaults.Read(part).Tuning);
                 string varName = VarName(name);
                 partVars[name] = varName;
                 // An undeclared part has no `octave` or `instrument` to anchor to, so it takes
@@ -615,6 +616,11 @@ public sealed class LilyPondExporter
     /// reason a score's <c>fonts NAME</c> had been invisible to the twin.
     /// </remarks>
     private Semantics.LayoutPlan _layoutPlan = Semantics.LayoutPlan.Default;
+
+    /// <summary>The exported file's root and score spec, for the tuning a chord diagram draws
+    /// on (<see cref="Semantics.ChordDiagramScores"/>); null before an export.</summary>
+    private SyntaxNode? _root;
+    private Svg.Collector.RenderSpec? _renderSpec;
 
     private static Semantics.LayoutPlan ResolveLayoutPlan(SyntaxNode root, RenderDeclarationSyntax? render)
         => Semantics.LayoutPlanReader.Resolve(root, render);
@@ -3721,26 +3727,41 @@ public sealed class LilyPondExporter
             : null;
 
     /// <summary>
-    /// The chord diagram an <c>@chord</c>'s own words choose (<c>@chord(Cm7 2)</c>,
-    /// <c>@chord(Cm7 x3x546)</c>, <c>@chord(x32010)</c> — owner's decision 2026-09-27), as the
-    /// same fret-diagram markup <c>@diagram</c> writes, over the note; null when the mark asks
-    /// for none or the part's tuning draws none (the page draws none then either).
+    /// The chord diagram an <c>@chord</c> draws (owner's decisions 2026-09-28) — the shape the
+    /// page draws: the one WRITTEN for the tuning the score's layout names, else the part's
+    /// fretted instrument's, else the guitar's (<see cref="Semantics.ChordAnnotation.Drawn"/>) —
+    /// as the same fret-diagram markup <c>@diagram</c> writes, over the note; null for a name
+    /// with no shape for that tuning, and under <c>chordDiagrams none</c> (the page draws none
+    /// then either).
     /// </summary>
     /// <remarks>
     /// ★ THE NAME STAYS ABOVE IT for the reason the page's does: the name rides the part's
     /// ChordNames context (<see cref="EmitInlineChordTracks"/>), a line of its own standing over
     /// the staff, and the markup is a TextScript of the staff — so LilyPond stacks the diagram
     /// between the staff and the name, the owner's ChordNames-over-FretBoards picture.
-    /// The frets are the part's tuning's (<c>_partTuning</c>, the page's reading).
+    /// <para>
+    /// In a <c>chordDiagrams … all</c> score every chord name draws — its written shape, else the
+    /// default of its chord — and the chord of a NAME-LESS form (a bare <c>@chord</c>, named from
+    /// its notes; a symbol-less shape, from its frets) is the page's: read off the page model's
+    /// inline symbol at the mark (<see cref="PageChordAt"/>), as the twin's inline ChordNames
+    /// stream already is, so the two cannot name it differently.
+    /// </para>
     /// </remarks>
     private string? ChordDiagramMarkup(MusicMarkSyntax mk)
-        => Semantics.ChordAnnotation.Of(mk) is { WantsDiagram: true } words
-           && words.Resolve(_partTuning) is { HasDiagram: true } resolved
-            ? FretDiagramMarkup(Music.ChordVoicings.ToFrameSpec(resolved.Frets), above: true)
+        => _layoutPlan.ChordDiagramTuningFor(_currentPartName is { } part && _root is { } root
+                ? Semantics.ChordDiagramScores.FrettedWordOfPart(root, part) is { } w ? Tablature.Tunings.Parse(w) : null
+                : null) is { } tuning
+           && Semantics.ChordAnnotation.Of(mk) is { } words
+           && (!words.IsBare || _layoutPlan.ChordDiagramsAll)
+           && words.Drawn(tuning, _layoutPlan.ChordDiagramsAll,
+                   words.Symbol == null && _layoutPlan.ChordDiagramsAll ? PageChordAt(mk) : null) is { } chosen
+            ? FretDiagramMarkup(chosen.FrameSpec, above: true)
             : null;
 
-    /// <summary>The part being written's open strings (the page's <c>PartHeaderDefaults.Tuning</c>).</summary>
-    private int[] _partTuning = Tablature.Tunings.Guitar;
+    /// <summary>The chord the page named at an inline <c>@chord</c> (its model's symbol at the
+    /// mark's source position), or null when the page was not collected or named none.</summary>
+    private Music.ChordStructure? PageChordAt(MusicMarkSyntax mk)
+        => _page?.ChordNames.FirstOrDefault(c => !c.UseTiming && c.SourcePosition == mk.SourceStart)?.Structure;
 
     private string FretDiagramMarkup(string spec, bool above)
     {
@@ -4981,6 +5002,9 @@ public sealed class LilyPondExporter
                         if (_chordVars.TryGetValue(chords.PartName, out var chordVar))
                         {
                             rows.Add("    \\new ChordNames " + ChordNamesWith() + "\\" + chordVar + "\n");
+                            // …and its diagrams under the names, when some entry writes a shape.
+                            if (_fretVars.TryGetValue(chords.PartName, out var fretVar))
+                                rows.Add("    \\new FretBoards " + FretBoardsWith(chords.PartName) + "\\" + fretVar + "\n");
                             // The page can show the row as degrees of the key; LilyPond
                             // prints the names it realizes, so say so once.
                             if (string.Equals(chords.DisplayModeText, "roman", StringComparison.OrdinalIgnoreCase))
@@ -5120,7 +5144,145 @@ public sealed class LilyPondExporter
             EmitMusicStream(items, indent: "  ");
             _chordTrack = false;
             _sb.Append("}\n\n");
+
+            // The diagrams under the names: the idiomatic LilyPond is a FretBoards context over
+            // the SAME chord music (EmitScore places it under the ChordNames row) — the same
+            // bars, spelled again with the diagram of each chord the page draws
+            // (FretBoardPrefix). Only a WRITTEN shape draws (owner's decision 2026-09-28), so the
+            // context appears only when some entry writes one for the row's tuning (the
+            // layout's, else the instrument of the staff the row stands over, else the guitar)
+            // — or for every row of a `chordDiagrams … all` score, where every entry draws.
+            var rowStaffWord = _root != null && _renderSpec != null
+                ? Semantics.ChordDiagramScores.RowStaffWord(_root, _renderSpec, row.PartName) : null;
+            if (_layoutPlan.ChordDiagramTuningFor(rowStaffWord is { } rw ? Tablature.Tunings.Parse(rw) : null)
+                    is { } diagramTuning
+                && (_layoutPlan.ChordDiagramsAll
+                    || blocks.SelectMany(b => b.DescendantNodes().OfType<ChordEntrySyntax>())
+                        .Any(e => Music.ChordShapes.WrittenFor(diagramTuning,
+                            Semantics.ChordDiagramScores.ShapesOf(e).Shapes) != null)))
+            {
+                _fretTuning = diagramTuning;
+                _fretTrack = true;
+                var fretItems = OrderedChordItems(blocks, form, allSections);
+                _fretTrack = false;
+                _sb.Append(_fretDefinitions);
+                _fretDefinitions.Clear();
+                string fretVar = VarName(row.PartName + "Frets");
+                _fretVars[row.PartName] = fretVar;
+                _fretTunings[row.PartName] = diagramTuning;
+                _sb.Append(fretVar).Append(" = \\chordmode {\n");
+                _chordTrack = true;
+                EmitMusicStream(fretItems, indent: "  ");
+                _chordTrack = false;
+                _sb.Append("}\n\n");
+            }
         }
+    }
+
+    // ---- Chord diagrams under a row (a written shape, HANDOFF §2 K) -----------------------
+
+    /// <summary>The FretBoards variable of each chord part a row places, when the score draws
+    /// chord diagrams (<see cref="EmitChordTracks"/>).</summary>
+    private readonly Dictionary<string, string> _fretVars = new(StringComparer.Ordinal);
+
+    /// <summary>True while <see cref="EmitChordTracks"/> spells a row's bars for its
+    /// FretBoards context (<see cref="ChordBarText"/> then prefixes each entry).</summary>
+    private bool _fretTrack;
+
+    /// <summary>The tuning each row's FretBoards context draws on (<see cref="EmitChordTracks"/>).</summary>
+    private readonly Dictionary<string, TuningType> _fretTunings = new(StringComparer.Ordinal);
+
+    /// <summary>The tuning of the FretBoards variable being spelled (<see cref="FretBoardPrefix"/>).</summary>
+    private TuningType _fretTuning = TuningType.Guitar;
+
+    /// <summary>The one-shape fretboard tables already defined, by (chord entry, terse
+    /// string), and the Scheme name each got.</summary>
+    private readonly Dictionary<string, string> _fretTables = new(StringComparer.Ordinal);
+
+    /// <summary>The table definitions the current FretBoards variable needs, written before it.</summary>
+    private readonly StringBuilder _fretDefinitions = new();
+
+    /// <summary>
+    /// What a FretBoards entry needs before it so LilyPond draws the diagram the page draws:
+    /// <c>\once \set predefinedDiagramTable = #lysFrets…</c>, a one-shape table holding the
+    /// shape WRITTEN for the row's tuning — in a <c>chordDiagrams … all</c> score, else the
+    /// default the page draws (<see cref="Music.ChordShapes.Drawn"/>); null when the page draws
+    /// none (owner's decision 2026-09-28) — the FretBoards track then writes a silent
+    /// <c>s</c> in its place, since LilyPond would compute a diagram of its own for any chord it
+    /// is given.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ ONE-SHAPE TABLES IN AN <c>all</c> SCORE TOO, not LilyPond's predefined tables
+    /// <c>\include</c>d: those would reproduce Lily#'s choice only for the chords they hold, and
+    /// for the rest LilyPond computes a shape of its own where Lily# draws the first of its order
+    /// (or nothing, on the ukulele) — so every entry keeps the table that holds exactly the shape
+    /// the page draws (with the predefined entry's fingers, when that is its source).
+    /// LILYPOND-REF: scm/translation-functions.scm:798-822 get-predefined-fretboard — the
+    ///   FretBoards context looks a chord up in its predefinedDiagramTable by (stringTunings .
+    ///   pitches), an octave either way, and computes a shape of its own when the table has
+    ///   none (:861-877) — which would draw a diagram the page does not, hence the one-shape
+    ///   table rather than trusting LilyPond's lookup.
+    /// LILYPOND-REF: ly/predefined-fretboards-init.ly storePredefinedDiagram (lines 65-82).
+    /// </remarks>
+    private string? FretBoardPrefix(ChordEntrySyntax entry, (int TonicStep, int Sharps) key)
+    {
+        var tuningType = _fretTuning;
+        string symbol = entry.SymbolText;
+        Music.ChordStructure? chord =
+            Music.ChordStructure.TryParseChordEntry(symbol, out var parsed) ? parsed
+            : Music.ChordStructure.TryParseRomanEntry(symbol, key.TonicStep, key.Sharps, out var degree) ? degree
+            : null;
+        var shapes = Semantics.ChordDiagramScores.ShapesOf(entry).Shapes;
+        var chosen = Music.ChordShapes.Drawn(tuningType, shapes, _layoutPlan.ChordDiagramsAll, chord);
+        if (chosen == null || chord == null)
+            return null;
+
+        string chordEntry = chord.ToChordMode("");
+        var terse = new StringBuilder();
+        for (int i = 0; i < chosen.Frets.Length; i++)
+        {
+            int fret = chosen.Frets[i];
+            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (fret > 0 && chosen.Predefined is { } p && p.Fingers[i] > 0)
+                terse.Append('-').Append(p.Fingers[i].ToString(System.Globalization.CultureInfo.InvariantCulture));
+            terse.Append(';');
+        }
+        string tableKey = chordEntry + "|" + terse;
+        if (!_fretTables.TryGetValue(tableKey, out var name))
+        {
+            name = "lysFrets" + ColumnLetters(_fretTables.Count);
+            _fretTables[tableKey] = name;
+            _fretDefinitions.Append("#(define ").Append(name).Append(" (make-fretboard-table))\n")
+                .Append("\\storePredefinedDiagram #").Append(name)
+                .Append(" \\chordmode { ").Append(chordEntry).Append(" } #")
+                .Append(Tablature.Tunings.LilyPondName(tuningType))
+                .Append(" \"").Append(terse).Append("\"\n");
+        }
+        return "\\once \\set predefinedDiagramTable = #" + name + " ";
+    }
+
+    /// <summary>A, B, … Z, AA, AB, … — a Scheme-safe suffix for the n-th table.</summary>
+    private static string ColumnLetters(int n)
+    {
+        var s = new StringBuilder();
+        n++;
+        while (n > 0)
+        {
+            n--;
+            s.Insert(0, (char)('A' + n % 26));
+            n /= 26;
+        }
+        return s.ToString();
+    }
+
+    /// <summary>The <c>\with { }</c> a row's FretBoards context takes: its tuning, unless it is
+    /// the guitar's (FretBoards' own default).</summary>
+    private string FretBoardsWith(string rowName)
+    {
+        var tuningType = _fretTunings.GetValueOrDefault(rowName, TuningType.Guitar);
+        return tuningType == TuningType.Guitar
+            ? ""
+            : "\\with { stringTunings = #" + Tablature.Tunings.LilyPondName(tuningType) + " } ";
     }
 
     /// <summary>
@@ -5681,7 +5843,14 @@ public sealed class LilyPondExporter
             switch (node)
             {
                 case ChordEntrySyntax entry:
-                    sb.Append(ChordModeEntry(entry.SymbolText, d, key));
+                    // In the FretBoards track a chord the page draws no diagram for is a
+                    // silent slot: LilyPond would compute a diagram of its own for a chord.
+                    if (!_fretTrack)
+                        sb.Append(ChordModeEntry(entry.SymbolText, d, key));
+                    else if (FretBoardPrefix(entry, key) is { } prefix)
+                        sb.Append(prefix).Append(ChordModeEntry(entry.SymbolText, d, key));
+                    else
+                        sb.Append('s').Append(d);
                     break;
                 case RestSyntax:
                     sb.Append('r').Append(d);

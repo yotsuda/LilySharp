@@ -24,28 +24,49 @@ All notable changes to the Lily# VS Code extension are documented here.
   lowercase): a name of several words is camelCase.
 - **Value words are lowercase only** — `@notehead(triangle)`, `@diagram(x32010)`,
   `size a4`, `210mm`; `@notehead(TRIANGLE)` or `size A4` is refused with the spelling.
-- **`@chord(C 7)` is C with voicing 7, not C7** — the words after the chord symbol now choose
-  a chord diagram; write `@chord(C7)`.
+- **`@chord(C 7)` is C followed by a shape, not C7** — the words after the chord symbol are
+  its chord diagram's shapes; write `@chord(C7)`.
 
-### Chord diagrams from `@chord`
+### Chord diagrams
 
-- **`@chord(Cm7 2)` draws voicing 2 of Cm7 as a diagram under the name** (the index counts
-  from 0 on the part's tuning); `@chord(Cm7 2 mute 3 4)`, `@chord(D mute 5)` (the open D),
-  `@chord(Cm7 x3x546)` and `@chord(x32010)` (named from its notes) are the other forms. The
-  rules that number the voicings are frozen and stated in the syntax reference.
-- **Hover** a `@chord` with a diagram to see the chosen shape (`x35343`), which voicing it is
-  and the range (`#2 (0–51)`), and the fret on each string. A diagram that cannot be drawn is
-  a warning (LYS1038) that names the fix; the name still draws.
+- **A chord whose shape is written draws a diagram under its name** — `@chord(Cm7 x3x546)`
+  on a note, `F(133211)` or `F(133211 2010)` (a shape per string count) or
+  `F(guitar 133211 ukulele 2010)` in a `chords` row, `@chord(x32010)`. A name alone draws
+  none.
+- **On the part's instrument**: the score's `layout { chordDiagrams TUNING }` (`guitar`,
+  `ukulele`, `mandolin`, `guitardropd`, … — the tab tuning words; `none` turns diagrams off),
+  else the part's fretted instrument (for a row, the staff it stands above), else the guitar.
+  Completion offers the key and its words, and the grammar colours them.
+- **`chordDiagrams all` (or `chordDiagrams guitar all`) draws every chord** — each chord name
+  its written shape, else the usual one; a chord with no shape on the tuning warns once. After
+  a tuning word the completion offers `all`, and the grammar colours it. In such a score the
+  hover of a name alone shows the diagram it draws — `guitar: 320003 (default) — shape 1 of N`
+  — and `Ctrl+Shift+Up` on it writes the NEXT shape (the usual one is already drawn), while
+  `Down` at the usual shape does nothing; the status bar says so.
+- **Hover** a chord with no shape to see how to add one: `Ctrl+Shift+↑ adds a chord diagram
+  (guitar: 320003)`. With a shape written, the hover shows the shape each tuning draws —
+  `guitar: x3x546 (written)`, `ukulele: no diagram` — and where it stands in the editor's
+  order. A written shape that cannot be used is a warning (LYS1038) that names the fix.
 - Chord-symbol completion inside `@chord(…)` works as before on the first word.
 
 ### Editor
 
-- **`Ctrl+Alt+Up` / `Ctrl+Alt+Down` step what the caret is on**: a note gains or loses one
-  octave mark (`'` / `,`; a chord member alone, or the whole chord from its `>`; every note
-  of a selection), and inside `@chord(…)` the voicing index goes up or down
-  (`@chord(Cm7)` → `@chord(Cm7 0)`; Down from `0` back to the name). Off a note they are VS
-  Code's *Add Cursor Above / Below* as before. One undo step for all cursors.
-- **Audition as you edit** (with a preview open): the note, chord or `@chord` voicing the
+- **`Ctrl+Shift+Up` / `Ctrl+Shift+Down` step what the caret is on**: a note gains or loses
+  one octave mark (`'` / `,`; a chord member alone, or the whole chord from its `>`; every
+  note of a selection); on a chord — an `@chord` or a `chords` row entry — Up on a name alone
+  writes its usual shape (LilyPond's predefined one, else Lily#'s first) and the diagram
+  appears (`@chord(Cm7)` → `@chord(Cm7 x35343)`, `G` → `G(320003)`), further Ups walk Lily#'s
+  shapes, and Down back at the usual shape removes it again. With several shapes the one for
+  the chord's tuning steps. The status bar says `Cm7: shape 4 of 19 (…)`. On nothing
+  steppable the keys do nothing on Windows and macOS, and are VS Code's *Add Cursor Above /
+  Below* on Linux (their second binding there). One undo step for all cursors.
+- **Stretch shapes are left out by default** — a shape whose fretted frets lie five apart
+  is hard to play. `lilysharp.chordShapes.includeStretch` (default off) lets the step walk
+  them too; a stretch shape already written steps to the shapes that sort around it. The
+  hover says where a written shape stands, with both counts: `shape 1 of 19 (… with
+  stretch)`. The usual shape of a chord LilyPond's table lacks is the first shape without a
+  stretch, and a stretch shape only when it has no other.
+- **Audition as you edit** (with a preview open): the note, chord or `@chord` shape the
   caret lands on, a note as you type it, and the result of a step sound through the preview's
   synth, with the pitches the compiler plays. `lilysharp.audition.enabled` (default on)
   switches it off; `Alt+P` / `Alt+M` are unaffected.

@@ -295,7 +295,7 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
     <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @fall @doit @breath @caesura</code></td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
-    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 2) @diagram(032010) @pluck(i) @ottava(bassa)</code> — <code>@chord(Cm7 2)</code> draws Cm7 with its voicing 2 (counted from 0) as a diagram under the name; <code>@chord(D mute 5)</code>, <code>@chord(Cm7 x3x546)</code> and <code>@chord(x32010)</code> are the other forms</td></tr>
+    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name, on the part's instrument (a guitar unless the part is fretted otherwise, or <code>layout { chordDiagrams ukulele }</code> says; <code>none</code> turns diagrams off); a name alone draws none — save under <code>chordDiagrams all</code> (or <code>chordDiagrams ukulele all</code>), where every chord name draws its usual shape; <code>@chord(x32010)</code> names the chord from its shape</td></tr>
   </table>
 
   <h3>Spanners — the end is required</h3>

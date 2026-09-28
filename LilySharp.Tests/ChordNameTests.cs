@@ -203,15 +203,15 @@ public class ChordNameTests
 
     /// <summary>
     /// ★ A BREAKING CHANGE, the owner's (2026-09-27): arguments written apart are WORDS, and
-    /// only the first is the symbol — the words after it choose a chord diagram
-    /// (<c>Semantics.ChordAnnotation</c>). Until then every run was concatenated, so
-    /// <c>@chord(C 7)</c> named C7; it now names C with voicing 7. A comma separates words the
-    /// same way. (Measured before the change: no <c>@chord(</c> in the repo's books or the Lab
-    /// corpora was written with a space.)
+    /// only the first is the symbol — the words after it are its chord diagram's shapes
+    /// (<c>Semantics.ChordAnnotation</c>, since 2026-09-28). Until then every run was
+    /// concatenated, so <c>@chord(C 7)</c> named C7; it now names C with a one-character shape
+    /// no tuning has (LYS1038). A comma separates words the same way. (Measured before the
+    /// change: no <c>@chord(</c> in the repo's books or the Lab corpora was written with a space.)
     /// </summary>
     [Theory]
-    [InlineData("c4@chord(C 7) |", "C")]       // C, voicing 7 — no longer C7
-    [InlineData("c4@chord(C m7) |", "C")]      // 'm7' is no index: LYS1038, the name stands
+    [InlineData("c4@chord(C 7) |", "C")]       // C and a shape of the wrong length — no longer C7
+    [InlineData("c4@chord(C m7) |", "C")]      // 'm7' is no shape: LYS1038, the name stands
     [InlineData("c4@chord(C, m7) |", "C")]
     [InlineData("c4@chord(C7) |", "C7")]       // a symbol written together is unchanged
     [InlineData("c4@chord(x, m7) |", null)]    // 'x' is a (bad) position string, no symbol

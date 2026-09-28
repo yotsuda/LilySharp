@@ -602,7 +602,8 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'sectionLabels' , SectionLabelStyle
                | 'partCombineText' , Boolean
                | 'chordQualities' , ChordQualityStyle
-               | 'minorChords' , MinorChordCase ;
+               | 'minorChords' , MinorChordCase
+               | 'chordDiagrams' , ( 'none' | TuningName , [ 'all' ] | 'all' ) ;   (* TuningName: the tab's 'tuning' words *)
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
 AccidentalStyle = 'default' | 'modern' | 'modernCautionary' | 'forget' | 'noReset' ;
@@ -719,6 +720,18 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
    refpoint (audit/lp-geometry lyrics.chord-run.staff-to-chord, exact). Neither key reaches
    MIDI or MusicXML: a <harmony> carries the chord as data, and asks for the words.
 
+   chordDiagrams — the tuning the score's CHORD DIAGRAMS draw on: a TuningName, or 'none'
+   (no diagram at all, written shapes included — one source makes a piano score and a
+   guitar score). A diagram draws only where a chord WRITES its shape (ChordArgument,
+   ChordRowEntry); a name alone draws none (owner's decisions 2026-09-28, HANDOFF §2 K) —
+   save with the scope word 'all' (after the TuningName, or alone: 'chordDiagrams all' takes
+   the tuning as when unset), where EVERY chord name draws, its written shape else the usual
+   one (a chord with no shape on the tuning warns once per symbol and tuning, LYS1038).
+   'none all', 'all guitar' (the tuning comes first) and a word written twice are errors.
+   Unset, a diagram takes the fretted instrument of its part — the part an @chord's note is
+   in, the staff a row stands directly above — else the guitar. The twin writes a FretBoards
+   context under a row's ChordNames when some entry writes a shape (every row with 'all').
+
    The keys are case-sensitive (a paper key's rule; a wrong-case key is refused with its
    right spelling); the value words are the language's closed vocabulary, canonical case
    only. Neither the keys nor the
@@ -736,6 +749,7 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
      partCombineText false
      chordQualities words
      minorChords lower
+     chordDiagrams guitar all
    }
 *)
 
@@ -1011,7 +1025,17 @@ LyricSyllable  = LyricText , [ '-' ] | '--' | '-' | '~' | '_' ;
                     the slur's. '__' is the extender LINE and takes no note; '_' and a
                     detached '~' take one note each, holding the previous syllable. *)
 
-ChordsBlock    = 'chords' , Identifier , '{' , { ChordEntry | ChordExtend | Rest | Barline } , '}' ;
+ChordsBlock    = 'chords' , Identifier , '{' , { ChordRowEntry | ChordExtend | Rest | Barline } , '}' ;
+ChordRowEntry  = ( ChordEntry | RomanEntry ) , [ '(' , ShapeWords , ')' ] ;   (* '(' GLUED to the symbol *)
+                 (* The chord diagram's shapes (owner's design 2026-09-28): F(133211),
+                    F(133211 2010), F(guitar 133211 ukulele 2010), F/A(x03211). ShapeWords
+                    is ChordArgument's (§8.4): each unnamed shape goes to the diagram tuning
+                    with as many strings; a TuningName binds the next one by name. Only an
+                    entry that writes a shape draws a diagram (every entry under a
+                    layout's 'chordDiagrams … all', the usual shape if none), on the layout's
+                    'chordDiagrams' tuning, else the instrument of the staff the row stands
+                    above, else the guitar. A '(' after a space is a stray token, as it
+                    always was. *)
                  (* A named chord part; a score places it as a 'chords NAME' row —
                     directly above a staff, or as a lead-sheet row on its own.
                     The NAMELESS form (auto-attach above "the co-written part's
@@ -1870,16 +1894,22 @@ Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 Annotation     = '@' , [ '!' ] , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;
 Placement      = '.up' | '.down' ;   (* force above / below; default is automatic *)
 
-(* @chord's argument: its Args are WORDS (owner's decision 2026-09-27). *)
-ChordArgument  = ChordEntry , [ VoicingIndex | PositionString ] , [ Mute ]    (* Mute only with no PositionString *)
-               | PositionString                                  (* the name comes from its notes *)
+(* @chord's argument: its Args are WORDS (owner's decisions 2026-09-27 / 28). *)
+ChordArgument  = ChordEntry , ShapeWords                         (* the name + its diagram's shapes *)
+               | Shape , { Shape }                               (* the name comes from its notes *)
                | QuotedText ;                                    (* @chord("N.C.") *)
-VoicingIndex   = Digit , [ Digit , [ Digit ] ] ;                 (* 0-based; 1–3 digits *)
-PositionString = ( 'x' | 'o' | Digit ) , { 'x' | 'o' | Digit } ; (* one per string, LOW string
-                                                                    first; exactly as many as the
-                                                                    part's tuning has strings (≥ 4) *)
-Mute           = 'mute' , StringNumber , { StringNumber } ;      (* 1 = highest-pitched string;
-                                                                    any order; each once *)
+ShapeWords     = { [ TuningName ] , Shape } ;                    (* also a chords row's F(…) *)
+Shape          = ( 'x' | 'o' | Digit ) , { 'x' | 'o' | Digit } ; (* one per string, LOW string
+                                                                    first; an unnamed Shape goes to
+                                                                    the diagram tuning with as many
+                                                                    strings (4, 5, 6, 7 — any other
+                                                                    length warns), a named one to its
+                                                                    TuningName and must fit it *)
+(* The voicing INDEX and the 'mute' words of 2026-09-27 never shipped and are gone (2026-09-28):
+   '@chord(C 7)' is C with a one-character Shape — LYS1038, the name still draws. A diagram
+   draws only where a Shape is written (or, under 'chordDiagrams … all', for every name); which of them applies is the tuning the score's
+   'layout { chordDiagrams … }' names (§2.6 LayoutEntry), else the part's fretted
+   instrument, else the guitar. *)
 (* A value-bearing annotation puts its argument(s) in parentheses (space- or
    comma-separated); '.' is reserved for the .up / .down placement suffix. *)
 (* '@!X' is the TERMINATOR: it ends what '@X' opened, and it reports the SAME name, so the
@@ -1927,13 +1957,15 @@ Mute           = 'mute' , StringNumber , { StringNumber } ;      (* 1 = highest-
                     ChordEntry format as a chords row: Am7, G7, F#m, Bb7/D. The retired
                     lowercase ':' entry ('@chord(a:m)') is NOT recognised — LYS1008 warns
                     and the symbol is not engraved. A bare '@chord' derives it from the notes.
-                    The words after the symbol ask for a chord DIAGRAM drawn under the name
-                    (ChordArgument below): c4@chord(Cm7 2) , c4@chord(Cm7 2 mute 3 4) ,
-                    c4@chord(D mute 5) , c4@chord(Cm7 x3x546) , c4@chord(x32010).
+                    The words after the symbol are the shapes of its chord DIAGRAM
+                    (ChordArgument above): c4@chord(Cm7 x3x546) , c4@chord(x32010) ,
+                    c4@chord(F guitar 133211 ukulele 2010). Only a written shape draws a
+                    diagram under the name, on the layout's 'chordDiagrams' tuning, else the
+                    part's fretted instrument, else the guitar (SYNTAX_REFERENCE *Chord
+                    Diagrams*); a name alone draws none, save under 'chordDiagrams … all'
+                    (the usual shape — a bare '@chord' by the name it derives).
                     ⚠️ Since 2026-09-27 words are NOT concatenated: '@chord(C 7)' is C with
-                    voicing 7, not C7. The voicings (numbered from 0), their frozen rules and
-                    order: SYNTAX_REFERENCE *Chord Diagrams*. A diagram that cannot be drawn
-                    warns LYS1038 and the name still draws. *)
+                    a one-character shape (LYS1038), not C7. *)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)

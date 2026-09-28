@@ -433,6 +433,21 @@ internal sealed partial class Parser
             prev = Advance();
             tokens.Add(prev);
         }
+        // The chord diagram's shapes, in parentheses GLUED to the symbol (owner's design
+        // 2026-09-28, HANDOFF §2 K1): `F(133211)`, `F(133211 2010)`,
+        // `F(guitar 133211 ukulele 2010)`, `F/A(x03211)`. The words inside are read by
+        // Music.ChordShapes.ParseWords, the grammar @chord's words share; the parser only
+        // bounds them. '(' meant nothing in a chords body before (it fell to the stray-token
+        // report), so no spelling changes meaning. A '(' after a space is still a stray.
+        if (prev.TrailingTriviaWidth == 0 && Check(SyntaxKind.OpenParen))
+        {
+            tokens.Add(Advance());
+            while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.CloseBrace)
+                   && !Check(SyntaxKind.OpenBrace) && !Check(SyntaxKind.EndOfFile)
+                   && !SyntaxFacts.IsMeasureBarlineKind(Current.Kind))
+                tokens.Add(Advance());
+            tokens.Add(Expect(SyntaxKind.CloseParen));
+        }
         return new ChordEntryGreen([.. tokens]);
     }
 

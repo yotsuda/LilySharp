@@ -52,8 +52,9 @@ public sealed partial class LilySharpLanguageServer
         if (node == null)
             return null;
 
-        // An @chord that chooses a diagram hovers as that diagram — checked first, because the
-        // mark sits INSIDE a chord (`<c e g>@chord(C 0)`), which would otherwise answer.
+        // An @chord hovers as its diagrams, or with no shape written as the line that says how to
+        // add one — checked first, because the mark sits INSIDE a chord (`<c e g>@chord(C)`),
+        // which would otherwise answer.
         string? content = null;
         if (ChordDiagramMarkAt(node) is { } diagramMark
             && ChordDiagramHover(diagramMark) is { } diagramHover)
@@ -67,6 +68,9 @@ public sealed partial class LilySharpLanguageServer
             if (chordLike != null)
                 node = chordLike;
             content = chordLike != null ? ChordHover(doc.Tree, chordLike) : GetHoverContent(node);
+            // A chords-row entry adds the diagram each score placing its row draws (or the add hint).
+            if (chordLike is ChordEntrySyntax entry && RowDiagramLines(doc.Tree.GetRoot(), entry) is { } lines)
+                content = (content ?? "**Chord symbol**") + "\n\n" + lines;
         }
         if (content == null)
             return null;
@@ -94,57 +98,121 @@ public sealed partial class LilySharpLanguageServer
     private static string? GetHoverContent(SyntaxNode node)
         => LanguageReference.Hover(node);
 
-    /// <summary>The <c>@chord(…)</c> mark the hovered node is or sits inside, when its words ask
-    /// for a diagram (<see cref="ChordAnnotation.WantsDiagram"/>); else null.</summary>
+    /// <summary>The <c>@chord(…)</c> mark the hovered node is or sits inside; else null.</summary>
     private static MusicMarkSyntax? ChordDiagramMarkAt(SyntaxNode node)
     {
         for (var n = node; n != null; n = n.Parent)
             if (n is MusicMarkSyntax mark)
-                return ChordAnnotation.Of(mark) is { WantsDiagram: true } ? mark : null;
+                return ChordAnnotation.Of(mark) is { IsBare: false, QuotedText: null } ? mark : null;
         return null;
     }
 
     /// <summary>
-    /// The diagram an <c>@chord</c> resolves to on its part's tuning — the page's reading
-    /// (<see cref="ChordAnnotation.Resolve"/>): the position string, which voicing of how many
-    /// (the index counts from 0), and the fret on each string, string 6 first:
-    /// <c>**Chord diagram** `Cm7` `x35343` #2 (0–51)</c> then <c>6 x · 5 3 · 4 5 · 3 3 · 2 4 · 1 3</c>.
-    /// When nothing is drawn, the reason (the LYS1038 message) is what hovers.
+    /// An <c>@chord</c>'s chord-diagram hover. With NO shape written — so no diagram draws
+    /// (owner's decision 2026-09-28) — one line that says how to add one and what it would be:
+    /// <c>Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)</c> (<see cref="AddHint"/>). With a
+    /// shape written: the name, then the shape each tuning its scores draw on shows —
+    /// <c>**Chord diagram** `C`</c>, <c>guitar: `x32010` (written) — shape 1 of 12</c>,
+    /// <c>ukulele: no diagram</c> — or why none is.
     /// </summary>
     /// <remarks>
-    /// Owner's decision, 2026-09-27: "Hover on a @chord with a diagram: the resolved voicing as
-    /// a position string, '#3 of 52', and the frets per string" (0-based since 2026-09-28,
-    /// shown with its range). A frets-10-and-up voicing spells with '-' (<c>8-10-10-9-8-8</c>).
+    /// The tunings are the owner's rule per score (<see cref="ChordDiagramScores.TuningsOfMark"/>:
+    /// the layout's <c>chordDiagrams</c>, else the part's fretted instrument, else the guitar).
+    /// The line of the tuning the step walks (<see cref="NoteStepper.StepTuning"/>) also says
+    /// where the shape stands — "shape 3 of 21 (34 with stretch)", the normal count and the
+    /// stretch-inclusive one, since a hover carries no setting (owner's decision 2026-09-28,
+    /// lilysharp.chordShapes.includeStretch). A frets-10-and-up shape spells with '-'
+    /// (<c>8-10-10-9-8-8</c>).
     /// </remarks>
     internal static string? ChordDiagramHover(MusicMarkSyntax mark)
     {
-        if (ChordAnnotation.Of(mark) is not { WantsDiagram: true } words)
+        if (ChordAnnotation.Of(mark) is not { IsBare: false, QuotedText: null } words)
             return null;
-        if (words.Problem != null)
-            return "**Chord diagram** — " + words.Problem;
-        if (ChordAnnotation.PartTuningOf(mark) is not { } tuning)
-            return "**Chord diagram** — the parts that may play this phrase are tuned differently, "
-                + "so the diagram depends on which part plays it.";
-        var resolved = words.Resolve(tuning);
-        if (!resolved.HasDiagram)
-            return resolved.Problem != null ? "**Chord diagram** — " + resolved.Problem : null;
+        if (!words.Problems.IsEmpty)
+            return "**Chord diagram** — " + words.Problems[0].Message;
+        var scores = ChordDiagramScores.TuningsOfMark(mark);
+        // A name alone: the add hint — save where a score draws every chord (`chordDiagrams …
+        // all`), which shows the default it draws instead (owner's decision 2026-09-28).
+        if (words.Shapes.IsEmpty && !DrawsAll(scores))
+            return words.Structure is { } bare ? AddHint(mark, bare) : null;
+        if (words.Shapes.IsEmpty && words.Structure == null)
+            return null;
 
         var head = new StringBuilder("**Chord diagram**");
         if (words.Symbol != null)
             head.Append(" `").Append(words.Symbol).Append('`');
-        else if (ChordAnnotation.NameFromFrets(resolved.Frets, tuning, 0) is { } named)
-            head.Append(" `").Append(named.DisplayName(ChordSpelling.Canonical)).Append('`');
-        head.Append("  `").Append(ChordVoicings.Spell(resolved.Frets)).Append('`');
-        if (resolved.Index >= 0)
-            head.Append("  #").Append(resolved.Index)
-                .Append(" (0–").Append(resolved.Count - 1).Append(')');
-        if (!words.Mutes.IsDefaultOrEmpty)
-            head.Append("  mute ").Append(string.Join(" ", words.Mutes));
+        return DiagramLines(mark, scores, words.Shapes, words.Structure)
+            is { } lines ? head + "\n\n" + lines : null;
+    }
 
-        int n = resolved.Frets.Length;
-        var strings = Enumerable.Range(0, n)
-            .Select(i => $"{n - i} {(resolved.Frets[i] < 0 ? "x" : resolved.Frets[i].ToString(System.Globalization.CultureInfo.InvariantCulture))}");
-        return head + "\n\n" + string.Join("  ·  ", strings);
+    /// <summary>Whether some score of <paramref name="scores"/> draws every chord name
+    /// (<c>chordDiagrams … all</c>) — then a name alone has a diagram to show.</summary>
+    private static bool DrawsAll(IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores)
+        => scores.Any(s => s.Score.All && s.Word != null);
+
+    /// <summary>
+    /// The diagram lines of a <c>chords</c> row entry: with no shape written, the add hint
+    /// (<see cref="AddHint"/>); with one, the shape each tuning its scores draw the row on shows
+    /// (<see cref="ChordDiagramScores.TuningsOfRow"/>) — null when nothing is to be said.
+    /// </summary>
+    internal static string? RowDiagramLines(SyntaxNode root, ChordEntrySyntax entry)
+    {
+        var chord = ChordStructure.TryParseChordEntry(entry.SymbolText, out var parsed) ? parsed : null;
+        var shapes = ChordDiagramScores.ShapesOf(entry).Shapes;
+        var scores = ChordDiagramScores.BlockOf(entry)?.PartName is { } rowName
+            ? ChordDiagramScores.TuningsOfRow(root, rowName) : null;
+        if (entry.ShapeWords.Count == 0 && (scores == null || !DrawsAll(scores) || chord == null))
+            return chord != null ? AddHint(entry, chord) : null;
+        return scores != null ? DiagramLines(entry, scores, shapes, chord) : null;
+    }
+
+    /// <summary>
+    /// The discoverability line of a chord with no shape written (owner's decision 2026-09-28):
+    /// <c>Ctrl+Shift+↑ adds a chord diagram (guitar: 320003)</c> — the tuning the step writes on
+    /// and the default it would write (<see cref="NoteStepper.ShapeOrder"/>'s first); when that
+    /// tuning has no shape for the chord, that the shape has to be written by hand. Not where a
+    /// score writes <c>chordDiagrams … all</c>: the name draws the default there, and the hover
+    /// shows it (<see cref="DiagramLines"/>).
+    /// </summary>
+    private static string AddHint(SyntaxNode site, ChordStructure chord)
+    {
+        var (word, _) = NoteStepper.StepTuning(site);
+        var (tuning, order) = NoteStepper.ShapeOrder(site, chord, includeStretch: false);
+        return order.Count > 0
+            ? $"Ctrl+Shift+↑ adds a chord diagram ({word}: {ChordVoicings.Spell(order[0])})"
+            : $"No chord diagram: no shape found for this chord on {word} - write one "
+              + $"({new string('x', tuning.Count)} with the frets filled in).";
+    }
+
+    /// <summary>One line per distinct tuning <paramref name="scores"/> draw on: the written
+    /// shape — in a <c>chordDiagrams … all</c> score, else the default it draws
+    /// (<c>guitar: `320003` (default) — shape 1 of 12</c>) — or "no diagram"; or why nothing
+    /// draws at all (every score writes <c>chordDiagrams none</c>, or none places the row).</summary>
+    private static string DiagramLines(SyntaxNode site,
+        IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores,
+        IReadOnlyList<WrittenShape> shapes, ChordStructure? chord)
+    {
+        var words = scores.Select(s => s.Word).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
+        if (words.Count == 0)
+            return scores.Count > 0
+                ? "not drawn: every score of this row or part writes `chordDiagrams none`."
+                : "not drawn: no score places this row.";
+        string stepWord = NoteStepper.StepTuning(site).Word;
+        return string.Join("  \n", words.Select(word =>
+        {
+            // The first score drawing on this tuning says whether a name alone draws there.
+            bool all = scores.First(s => s.Word == word).Score.All;
+            var tuning = LilySharp.Core.Tablature.Tunings.Parse(word);
+            if (ChordShapes.Drawn(tuning, shapes, all, chord) is not { } drawn)
+                return all && chord != null
+                    ? $"{word}: no diagram - no shape on {word} for this chord; write one "
+                      + $"({new string('x', LilySharp.Core.Tablature.Tunings.GetStringCount(tuning))} with the frets filled in)"
+                    : $"{word}: no diagram";
+            return $"{word}: `{drawn.Spelled}` ({(drawn.Source == ShapeSource.Written ? drawn.SourceWord : "default")})"
+                + (word == stepWord && chord != null
+                    && NoteStepper.ShapePlace(site, chord, drawn.Frets) is { } place
+                      ? $" — {place}" : "");
+        }));
     }
 
     /// <summary>The chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio, <c>q</c> or <c>chords { }</c> entry the

@@ -1074,7 +1074,8 @@ public sealed partial class MeasureCollector
         // itself (this method's CollectAttached below is never reached for the
         // multi-voice path).
         if (_parallelSpans.Count > 0)
-            return BuildMultiVoiceScore(measures, tree.GetRoot(), attachedChordPart, attachedChordDisplay, attachedLyricParts);
+            return BuildMultiVoiceScore(measures, tree.GetRoot(), attachedChordPart, attachedChordDisplay, attachedLyricParts,
+                renderSpec, voiceName);
 
         // Single voice
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
@@ -1101,9 +1102,12 @@ public sealed partial class MeasureCollector
         // (The nameless `chords { }` auto-attach is gone — LYS0032. A chord part
         // renders only where a score places its row.)
         if (attachedChordPart != null)
+        {
+            _chordNameCollector.RowStaffTuning = StaffDiagramTuning(tree.GetRoot(), renderSpec, voiceName, attachedChordPart);
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
+        }
 
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent(voice.Measures.Length));
     }
@@ -1543,7 +1547,8 @@ public sealed partial class MeasureCollector
         // Sings = the row's OWN `sings` target (null = the track's default applies).
         var pendingLyricsRows = new List<(string Name, int StaffIndex, string? Sings)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
-        var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode)>();
+        // Voice = the staff's part, whose instrument the row's diagrams draw on (StaffDiagramTuning).
+        var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode, string Voice)>();
         // `staff NAME with lyrics L [with lyrics L2 …]`: named lyrics parts aligned
         // note-by-note BELOW that staff, applied post-loop (verses in written order).
         // StaffVoice = the staff's primary voice, whose notes the syllables align to.
@@ -1587,7 +1592,7 @@ public sealed partial class MeasureCollector
             // attachment (and its display); the chord symbols are collected AFTER
             // the voice loop, once every section's start measure is registered.
             if (withChords != null)
-                attachedChords.Add((withChords, _cursor.StaffIndex, chordDisplay));
+                attachedChords.Add((withChords, _cursor.StaffIndex, chordDisplay, voiceName));
 
             // `staff NAME with lyrics L`: remember each named lyrics part to align
             // under THIS staff (post-loop, once section starts are registered).
@@ -1686,6 +1691,11 @@ public sealed partial class MeasureCollector
         _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
         {
+            // A row's diagrams draw on the instrument of the staff it stands directly above
+            // (a lead-sheet row: none, so the guitar) — ChordDiagramScores.RowStaffWord.
+            _chordNameCollector.RowStaffTuning =
+                Semantics.ChordDiagramScores.RowStaffWord(tree.GetRoot(), renderSpec, rowName) is { } rowWord
+                    ? Tablature.Tunings.Parse(rowWord) : null;
             var rowMeasures = _chordNameCollector.CollectPart(
                 tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
@@ -1854,10 +1864,15 @@ public sealed partial class MeasureCollector
         // (The nameless `chords { }` auto-attach is gone — LYS0032. It was the one
         // band a score never placed, and its "co-written staff" association was a
         // hard-coded staff 0 on any multi-staff score.)
-        foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
+        foreach (var (attachedPart, attachedStaff, attachedMode, staffVoice) in attachedChords)
+        {
+            _chordNameCollector.RowStaffTuning =
+                Semantics.ChordDiagramScores.StaffWord(tree.GetRoot(), renderSpec, staffVoice, attachedPart) is { } staffWord
+                    ? Tablature.Tunings.Parse(staffWord) : null;
             _chordNameCollector.CollectAttached(
                 tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedMode);
+        }
 
         // Phase 3: Build staff groups from render spec
         // A combinedStaff also reports how it re-addressed its parts, because building it
@@ -2266,7 +2281,8 @@ public sealed partial class MeasureCollector
     private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root,
         string? attachedChordPart = null,
         ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names,
-        IReadOnlyList<string>? attachedLyricParts = null)
+        IReadOnlyList<string>? attachedLyricParts = null,
+        RenderSpec? renderSpec = null, string? voiceName = null)
     {
         var voices = new List<Voice>
         {
@@ -2315,9 +2331,12 @@ public sealed partial class MeasureCollector
         // Attached chords on a multi-voice single staff — collected here because
         // Collect's own CollectAttached is skipped by the multi-voice early return.
         if (attachedChordPart != null)
+        {
+            _chordNameCollector.RowStaffTuning = StaffDiagramTuning(root, renderSpec, voiceName, attachedChordPart);
             _chordNameCollector.CollectAttached(
                 root, attachedChordPart, _sectionState.StartMeasure, _cursor.StaffIndex,
                 _meta.TimeBeats, _meta.TimeBeatType, attachedChordDisplay);
+        }
 
         // A single-staff score surfaces the same annotations whether it has one
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord

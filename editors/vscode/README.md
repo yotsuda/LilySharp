@@ -39,19 +39,26 @@ same number. See the [changelog](https://github.com/yotsuda/LilySharp/blob/maste
 
 | Key | What it does |
 |-----|--------------|
-| `Ctrl+Alt+Up` / `Ctrl+Alt+Down` on a **note** | Adds one `'` (Up) or `,` (Down) after the pitch — or takes away one of the other mark if the note has it. Inside `< >` / `<< >>` only the member under the caret moves; on the chord's `>` or its duration, the marks after the bracket move the whole chord. With a selection, every note in it steps. It is a plain mark edit: in relative octave mode the notes after it follow |
-| `Ctrl+Alt+Up` / `Ctrl+Alt+Down` in an **`@chord(…)`** | Steps the voicing index: `@chord(Cm7 2)` → `3` / `1`. On `@chord(Cm7)` Up shows voicing `0`; Down at `0` goes back to the name alone (a `mute …` goes with it). At the last voicing Up stays put and the status bar says the range (`Cm7: voicings 0–51`) |
-| `Ctrl+Alt+Up` / `Ctrl+Alt+Down` **anywhere else** | VS Code's own *Add Cursor Above / Below*, as without the extension |
+| `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a **note** | Adds one `'` (Up) or `,` (Down) after the pitch — or takes away one of the other mark if the note has it. Inside `< >` / `<< >>` only the member under the caret moves; on the chord's `>` or its duration, the marks after the bracket move the whole chord. With a selection, every note in it steps. It is a plain mark edit: in relative octave mode the notes after it follow |
+| `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a **chord** — an `@chord(…)` or a `chords` row entry | A chord draws a diagram only where its shape is written — unless the score's layout says `chordDiagrams all` (or `chordDiagrams guitar all`), where every chord draws, its usual shape when none is written; there Up on a name alone writes the NEXT shape and Down at the usual shape does nothing. On a name alone, Up writes its usual shape — LilyPond's predefined one, else Lily#'s first — and the diagram appears: `@chord(Cm7)` → `@chord(Cm7 x35343)`, `G` → `G(320003)`. Further Ups (and Downs) walk Lily#'s shapes; Down back at the usual shape removes it, and the diagram goes; Down on a name alone does nothing. With several shapes written (`F(133211 2010)`) the one for the chord's tuning steps. A shape with muted strings steps from the shape it mutes. The status bar says where it is (`Cm7: shape 4 of 19 (x3x546)`). Stretch shapes — fretted frets five apart, hard to play — are left out unless `"lilysharp.chordShapes.includeStretch": true`; a stretch shape already written steps to the shapes that sort around it. Hover a chord with no shape to see what Up would write |
+| `Ctrl+Shift+Up` / `Ctrl+Shift+Down` **anywhere else** | Nothing on Windows and macOS (VS Code binds these keys to nothing in the editor there); on Linux, VS Code's own *Add Cursor Above / Below*, which these keys are the second binding of |
+
+The chord's tuning is the diagram's: the score's `layout { chordDiagrams TUNING [all] }`, else the
+part's instrument when it is fretted (for a `chords` row, the staff it stands above), else the
+guitar — read in the first score that renders the chord; the status bar says when another
+score draws it on another tuning.
 
 With a preview open, edits sound through the preview's synth: the step's result, the
-note (or chord, or `@chord` voicing) the caret lands on when you move it — once per
+note (or chord, or `@chord` shape) the caret lands on when you move it — once per
 note, not on every arrow-key repeat — and a note as you type it, once its pitch and
 octave marks are in. Switch this off with `"lilysharp.audition.enabled": false`; `Alt+P`
 and `Alt+M` keep working either way. Nothing sounds while no preview is open.
 
 To use other keys, open **Keyboard Shortcuts** (`Ctrl+K Ctrl+S`), search for
-`lilysharp.stepUp` / `lilysharp.stepDown`, and bind them where you like (Mac:
-`Ctrl+Option+Up/Down` is the default binding there too, not yet tried on a Mac).
+`lilysharp.stepUp` / `lilysharp.stepDown`, and bind them where you like — and, on Linux, if
+you want `Ctrl+Shift+Up/Down` back as plain *Add Cursor Above / Below*, remove the two
+bindings there (Mac: the default is `Ctrl+Shift+Up/Down` too — the Control key — not yet
+tried on a Mac).
 
 ### Semantic Token Colors
 
@@ -139,7 +146,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
 8. Open the preview (`Ctrl+Shift+V`), then **hold `Alt+P`** to hear the note under the caret, or press `Alt+M` to play the measure the caret is in (the preview panel is the synth)
-9. Press `Ctrl+Alt+Up` / `Ctrl+Alt+Down` on a note to move it an octave, or in `@chord(Cm7 2)` to try the next voicing — see [Stepping and Audition](#stepping-and-audition)
+9. Press `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on a note to move it an octave, or on `@chord(Cm7)` (or a chords-row `Cm7`) to add a chord diagram and try the next shape — see [Stepping and Audition](#stepping-and-audition)
 
 ## Example
 

@@ -22,16 +22,19 @@ using System.Text;
 namespace LilySharp.Core.Music;
 
 /// <summary>
-/// The numbered BASE VOICINGS of a chord on a fretted tuning — what <c>@chord(Cm7 2)</c>
-/// counts in. Owner's decision, 2026-09-27; the rules below are FROZEN (any change to them
-/// renumbers every written index, i.e. is a breaking change).
+/// The ordered BASE VOICINGS of a chord on a fretted tuning — Lily#'s own list of a chord's
+/// shapes. Owner's rules of 2026-09-27; since 2026-09-28 (HANDOFF §2 K0) the order is NOT
+/// part of the language: a source writes a shape or nothing, never a place in this list. It
+/// serves the chords LilyPond's predefined table lacks (<see cref="ChordShapes.Default"/>'s
+/// fallback — the shape the editor's step writes first), the editor's shape stepping and the
+/// hover.
 /// </summary>
 /// <remarks>
 /// <para>
 /// LILYSHARP-OWN, all of it: LilyPond has no voicing catalogue. Its predefined fret diagrams
-/// (<c>\storePredefinedDiagram</c>) are a hand-written table keyed by chord, one shape each;
-/// Lily# counts shapes by rule instead, so every chord Lily# can name has voicings, and a
-/// writer can predict the count from the rules rather than from a table.
+/// (<c>\storePredefinedDiagram</c>, <see cref="PredefinedFretboards"/>) are a hand-written
+/// table keyed by chord, one shape each; Lily# lists shapes by rule for every chord it can
+/// name. Changing a rule moves only the diagrams of chords drawn from the fallback.
 /// </para>
 /// <para>
 /// A shape gives each string a fret or mutes it. A shape is VALID when
@@ -43,7 +46,8 @@ namespace LilySharp.Core.Music;
 ///   required; for X/Y, Y is required;</item>
 /// <item>V4 the LOWEST-PITCHED sounding note is the root (for X/Y, Y);</item>
 /// <item>V5 among the fretted strings (fret &gt; 0) the highest fret less the lowest is at most
-///   4 — open strings do not count;</item>
+///   <see cref="NormalSpan"/> (3: four frets) — or, with STRETCH shapes allowed,
+///   <see cref="StretchSpan"/> (4: five frets); open strings do not count;</item>
 /// <item>V6 at most four fingers: one per fretted string, except that when the lowest fretted
 ///   fret is used on two or more strings and every string from its first use to its last is
 ///   fretted at or above it (none open or muted), those strings are ONE finger (a barre).</item>
@@ -59,9 +63,20 @@ namespace LilySharp.Core.Music;
 /// string to the highest, a muted string −1, lexicographic ascending.
 /// </para>
 /// <para>
+/// TWO RULE SETS (owner's decision 2026-09-28): a STRETCH shape — fretted frets five apart,
+/// highest − lowest = 4 — is hard to play, so by default it is not offered. The NORMAL rule
+/// (V5 at 3) is what the compiler's fallback reads first and what the editor steps through; the
+/// STRETCH-INCLUSIVE rule (V5 at 4, the owner's prototype) is the editor's when
+/// <c>lilysharp.chordShapes.includeStretch</c> is on, and the fallback's only when the normal
+/// rule finds nothing (<see cref="Fallback(IReadOnlyList{int}, ChordStructure)"/>). Each rule's
+/// bases are MAXIMAL WITHIN ITS OWN valid set: a base of the normal rule can be a muted copy
+/// of a stretch shape, so the normal bases are not the stretch-inclusive bases filtered.
+/// </para>
+/// <para>
 /// Reference numbers (standard tuning), reproduced from the owner's prototype
-/// (<c>maximal.py</c>) and pinned by <c>ChordVoicingTests</c>: C 267 valid / 57 bases, Cm7
-/// 126 / 52, G7 321 / 89, D 255 / 64, F♯m7♭5 105 / 45, C9 156 / 68.
+/// (<c>maximal.py</c>) and pinned by <c>ChordVoicingTests</c> — the stretch-inclusive rule:
+/// C 267 valid / 57 bases, Cm7 126 / 52, G7 321 / 89, D 255 / 64, F♯m7♭5 105 / 45, C9 156 / 68.
+/// The normal rule's are pinned there too.
 /// </para>
 /// <para>
 /// ⚠️ ON A KEYSTROKE PATH: the validator and the page both ask. The walk is a backtrack string
@@ -78,26 +93,48 @@ public static class ChordVoicings
     /// <summary>V1: the highest fret a voicing may use.</summary>
     public const int MaxFret = 15;
 
-    /// <summary>V5: the widest span of fretted frets (highest − lowest).</summary>
-    public const int MaxSpan = 4;
+    /// <summary>V5, the normal rule: the widest span of fretted frets (highest − lowest) — four
+    /// frets.</summary>
+    public const int NormalSpan = 3;
+
+    /// <summary>V5 with stretch shapes allowed — five frets (the owner's prototype).</summary>
+    public const int StretchSpan = 4;
 
     /// <summary>V6: the fingers a voicing may use.</summary>
     public const int MaxFingers = 4;
 
-    /// <summary>The bases of one chord on one tuning, in the frozen order, and how many VALID
+    /// <summary>The bases of one chord on one tuning, in the order, and how many VALID
     /// shapes they were chosen from (the count the tests pin).</summary>
     public sealed record VoicingSet(ImmutableArray<ImmutableArray<int>> Bases, int ValidCount);
 
-    private static readonly ConcurrentDictionary<(string Tuning, int Allowed, int Required, int Bass), VoicingSet>
+    private static readonly ConcurrentDictionary<(string Tuning, int Allowed, int Required, int Bass, int Span), VoicingSet>
         Cache = new();
 
+    /// <summary>V5's span for a rule set: <see cref="StretchSpan"/> with stretch shapes,
+    /// else <see cref="NormalSpan"/>.</summary>
+    public static int SpanOf(bool includeStretch) => includeStretch ? StretchSpan : NormalSpan;
+
+    /// <summary>A STRETCH shape: its fretted frets lie further apart than the normal rule
+    /// allows (highest − lowest &gt; <see cref="NormalSpan"/>).</summary>
+    public static bool IsStretch(IReadOnlyList<int> frets)
+    {
+        int lo = int.MaxValue, hi = int.MinValue;
+        foreach (int f in frets)
+            if (f > 0)
+            {
+                lo = System.Math.Min(lo, f);
+                hi = System.Math.Max(hi, f);
+            }
+        return hi - lo > NormalSpan;
+    }
+
     /// <summary>
-    /// Whether the index form works on a tuning: its open strings rise STRICTLY from the lowest
+    /// Whether Lily# lists shapes on a tuning at all: its open strings rise STRICTLY from the lowest
     /// string to the highest (a guitar in standard, drop or open tuning, a seven-string, a bass).
     /// A re-entrant tuning — a ukulele's G4 C4 E4 A4, a banjo's drone — does not qualify.
     /// </summary>
     /// <remarks>
-    /// Owner's decision (2026-09-27): the frozen rules were written for, and checked on, the
+    /// Owner's decision (2026-09-27): the rules were written for, and checked on, the
     /// guitar. On a re-entrant tuning "the lowest string" is not the lowest note, and the rules
     /// would number shapes a player of that instrument would not recognise; the position-string
     /// form still works there.
@@ -144,18 +181,43 @@ public static class ChordVoicings
     public static bool IsPerfectFifth(ChordToneSpec tone) => tone.DiatonicStep == 4 && tone.Semitone == 7;
 
     /// <summary>The bases of <paramref name="chord"/> on <paramref name="tuning"/> (open
-    /// strings as MIDI numbers, LOW string first), in the frozen order; empty for a chord
-    /// with no tone set.</summary>
-    public static VoicingSet For(IReadOnlyList<int> tuning, ChordStructure chord)
+    /// strings as MIDI numbers, LOW string first) under the normal rule or, with
+    /// <paramref name="includeStretch"/>, the stretch-inclusive one, in the order; empty for a
+    /// chord with no tone set.</summary>
+    public static VoicingSet For(IReadOnlyList<int> tuning, ChordStructure chord, bool includeStretch)
         => TryTones(chord, out int allowed, out int required, out int bass)
-            ? For(tuning, allowed, required, bass)
+            ? For(tuning, allowed, required, bass, includeStretch)
             : new VoicingSet([], 0);
 
     /// <summary>The same, from the masks <see cref="TryTones"/> gives.</summary>
-    public static VoicingSet For(IReadOnlyList<int> tuning, int allowed, int required, int bassPc)
+    public static VoicingSet For(IReadOnlyList<int> tuning, int allowed, int required, int bassPc,
+        bool includeStretch)
     {
-        var key = (TuningKey(tuning), allowed, required, bassPc);
-        return Cache.GetOrAdd(key, _ => Enumerate(tuning, allowed, required, bassPc));
+        int span = SpanOf(includeStretch);
+        var key = (TuningKey(tuning), allowed, required, bassPc, span);
+        return Cache.GetOrAdd(key, _ => Enumerate(tuning, allowed, required, bassPc, span));
+    }
+
+    /// <summary>
+    /// The default shape of a chord LilyPond's table lacks (<see cref="ChordShapes.Default"/>,
+    /// what the editor's step writes first): the first of the NORMAL order; only when the normal
+    /// rule finds no shape, the first of the stretch-inclusive order; null when neither does.
+    /// </summary>
+    /// <remarks>Owner's decision (2026-09-28): stretch shapes are hard to play, so the default
+    /// prefers a shape without one — a chord whose every shape stretches still gets one.</remarks>
+    public static ImmutableArray<int>? Fallback(IReadOnlyList<int> tuning, ChordStructure chord)
+        => TryTones(chord, out int allowed, out int required, out int bass)
+            ? Fallback(tuning, allowed, required, bass)
+            : null;
+
+    /// <summary>The same, from the masks <see cref="TryTones"/> gives.</summary>
+    public static ImmutableArray<int>? Fallback(IReadOnlyList<int> tuning, int allowed, int required, int bassPc)
+    {
+        if (For(tuning, allowed, required, bassPc, includeStretch: false).Bases is [var normal, ..])
+            return normal;
+        if (For(tuning, allowed, required, bassPc, includeStretch: true).Bases is [var stretch, ..])
+            return stretch;
+        return null;
     }
 
     private static string TuningKey(IReadOnlyList<int> tuning)
@@ -166,12 +228,15 @@ public static class ChordVoicings
         return sb.ToString();
     }
 
-    /// <summary>The walk itself — uncached, so a test can time it.</summary>
-    internal static VoicingSet Enumerate(IReadOnlyList<int> tuning, int allowed, int required, int bassPc)
+    /// <summary>The walk itself — uncached, so a test can time it. <paramref name="maxSpan"/>
+    /// is V5's (<see cref="SpanOf"/>); the bases are maximal among the valid shapes of THAT
+    /// rule.</summary>
+    internal static VoicingSet Enumerate(IReadOnlyList<int> tuning, int allowed, int required, int bassPc,
+        int maxSpan)
     {
-        var valid = ValidShapes(tuning, allowed, required, bassPc, out var options);
+        var valid = ValidShapes(tuning, allowed, required, bassPc, maxSpan, out var options);
         var bases = Maximal(valid, options);
-        bases.Sort(CompareInOrder);
+        bases.Sort((a, b) => CompareInOrder(a, b));
         var result = ImmutableArray.CreateBuilder<ImmutableArray<int>>(bases.Count);
         foreach (var b in bases)
             result.Add([.. b]);
@@ -181,7 +246,7 @@ public static class ChordVoicings
     /// <summary>Every VALID shape (V1–V6), in the walk's order — the set the bases are
     /// chosen from, which the coverage net compares them against.</summary>
     internal static List<int[]> ValidShapes(IReadOnlyList<int> tuning, int allowed, int required,
-        int bassPc, out int[][] options)
+        int bassPc, int maxSpan, out int[][] options)
     {
         int n = tuning.Count;
         // Per string, the frets that sound an allowed pitch class (V1, V2). A muted string is
@@ -221,7 +286,7 @@ public static class ChordVoicings
                 {
                     lo = System.Math.Min(lo, f);
                     hi = System.Math.Max(hi, f);
-                    if (hi - lo > MaxSpan)
+                    if (hi - lo > maxSpan)
                         continue;   // V5
                 }
                 int pitch = tuning[i] + f;
@@ -269,8 +334,8 @@ public static class ChordVoicings
         return bases;
     }
 
-    /// <summary>The frozen ORDER: position, then fingers, then the frets low string first.</summary>
-    internal static int CompareInOrder(int[] a, int[] b)
+    /// <summary>The ORDER: position, then fingers, then the frets low string first.</summary>
+    public static int CompareInOrder(IReadOnlyList<int> a, IReadOnlyList<int> b)
     {
         int c = Position(a).CompareTo(Position(b));
         if (c != 0)
@@ -278,7 +343,7 @@ public static class ChordVoicings
         c = Fingers(a).CompareTo(Fingers(b));
         if (c != 0)
             return c;
-        for (int i = 0; i < a.Length; i++)
+        for (int i = 0; i < a.Count && i < b.Count; i++)
         {
             c = a[i].CompareTo(b[i]);
             if (c != 0)

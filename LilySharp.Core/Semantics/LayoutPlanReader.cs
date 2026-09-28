@@ -60,6 +60,7 @@ internal static class LayoutPlanReader
         PartCombineTexts.Key => PartCombineTexts.Words,
         ChordQualityStyles.Key => ChordQualityStyles.Words,
         MinorChords.Key => MinorChords.Words,
+        ChordDiagramsKey.Key => ChordDiagramsKey.Words,
         _ => [],
     };
 
@@ -227,6 +228,7 @@ internal static class LayoutPlanReader
                 MinorChords.Key => ReadOneWord(plan, entry, span, found, MinorChords.Key,
                     MinorChords.Words, w => MinorChords.Find(w) is { } b
                         ? plan with { Chords = plan.Chords with { LowercaseMinor = b } } : null),
+                ChordDiagramsKey.Key => ReadChordDiagrams(plan, entry, span, found),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch
                 // nobody reads looks exactly like one that works", the sentence the
@@ -350,6 +352,93 @@ internal static class LayoutPlanReader
             return plan;
         }
         return plan with { Accidentals = style };
+    }
+
+    // chordDiagrams none | TUNING | all | TUNING all (owner's decision 2026-09-28: the tuning
+    // first, then the scope word). Its own reader for the grammar and the message: the tuning
+    // vocabulary is thirty words, so the "takes" sentence names the commonest and points at
+    // the rest rather than listing them (ReadOneWord would).
+    private static LayoutPlan ReadChordDiagrams(
+        LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found)
+    {
+        const string all = ChordDiagramsKey.AllWord, none = Music.ChordShapes.NoneWord;
+        string key = ChordDiagramsKey.Key;
+        string takes = $"'{key}' takes {none} or a tuning name (guitar, ukulele, mandolin, "
+            + $"guitardropd, ... - the words a tab's 'tuning' takes), optionally followed by '{all}' "
+            + $"(every chord name draws a diagram), or '{all}' alone";
+        void Refuse(TextSpan span, string message)
+            => found.Add(new Problem(span, DiagnosticCodes.LayoutEntryBadValue, message, IsError: true));
+
+        if (entry.Values.Count == 0)
+        {
+            Refuse(keySpan, takes + $" - e.g. '{key} guitar' or '{key} guitar {all}'.");
+            return plan;
+        }
+        var word = entry.Values[0];
+        if (!ChordDiagramsKey.TryFind(word.Text))
+        {
+            Refuse(word.Span, $"'{word.Text}' is not a value of '{key}'." + CaseHint(word.Text) + " " + takes + ".");
+            return plan;
+        }
+        bool drawsAll = word.Text == all;
+        if (entry.Values.Count > 1)
+        {
+            var second = entry.Values[1];
+            string s = second.Text;
+            if (word.Text == none)
+            {
+                Refuse(second.Span, s == all
+                    ? $"'{none}' draws no diagram, so it takes no '{all}' - write '{key} {all}' "
+                      + $"(or '{key} guitar {all}') to draw every chord, or '{key} {none}' alone."
+                    : $"'{none}' takes nothing after it; '{s}' is extra.");
+                return plan;
+            }
+            if (drawsAll)
+            {
+                Refuse(second.Span, s == all
+                    ? $"'{all}' is written twice - write '{key} {all}'."
+                    : ChordDiagramsKey.IsTuningWord(s)
+                        ? $"the tuning comes first: write '{key} {s} {all}'."
+                        : $"'{all}' takes nothing after it; '{s}' is extra.");
+                return plan;
+            }
+            // A tuning word: only `all` may follow it.
+            if (s != all)
+            {
+                Refuse(second.Span, s == word.Text
+                    ? $"'{s}' is written twice - write '{key} {s}'."
+                    : ChordDiagramsKey.IsTuningWord(s) || s == none
+                        ? takes + $" - one word for the tuning, then optionally '{all}'; '{s}' is extra."
+                        : $"'{s}' is not a value of '{key}' here: after the tuning only '{all}' may follow."
+                          + CaseHint(s));
+                return plan;
+            }
+            if (entry.Values.Count > 2)
+            {
+                var third = entry.Values[2];
+                Refuse(third.Span, third.Text == all
+                    ? $"'{all}' is written twice - write '{key} {word.Text} {all}'."
+                    : takes + $"; '{third.Text}' is extra.");
+                return plan;
+            }
+            drawsAll = true;
+        }
+        // The tuning word as written, `none` included: an absent key — or `all` alone — is
+        // null, and means "the part's instrument, else the guitar" (ChordDiagramsKey.Resolve).
+        // Both halves are set, so an override block's `chordDiagrams guitar` drops a named
+        // block's `all` (a key written again is written whole).
+        return plan with
+        {
+            ChordDiagrams = word.Text == all ? null : word.Text,
+            ChordDiagramsAll = drawsAll,
+        };
+
+        // Values are case-sensitive, like keys: `Guitar`, `ALL` name the spelling that works.
+        static string CaseHint(string written)
+            => ChordDiagramsKey.Words.FirstOrDefault(w => w.Equals(written, StringComparison.OrdinalIgnoreCase)
+                    && !w.Equals(written, StringComparison.Ordinal)) is { } canonical
+                ? $" Values are case-sensitive: write '{canonical}'."
+                : "";
     }
 
     /// <summary>

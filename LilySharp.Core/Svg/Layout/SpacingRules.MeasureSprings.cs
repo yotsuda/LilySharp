@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -379,7 +379,7 @@ internal static partial class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        ChordNameEngraver.SymbolInkWidth(fonts, cn));
+                        ChordNameEngraver.FootprintWidth(fonts, cn));
                     any = true;
                     break;
                 }
@@ -500,7 +500,7 @@ internal static partial class SpacingRules
                 if (timings[t] == cn.Timing)
                 {
                     width[t] = Math.Max(width[t],
-                        ChordNameEngraver.SymbolInkWidth(fonts, cn));
+                        ChordNameEngraver.FootprintWidth(fonts, cn));
                     break;
                 }
         }

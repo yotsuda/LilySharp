@@ -221,7 +221,8 @@ public sealed class ChordEntrySyntax : SyntaxNode
     }
 
     /// <summary>The symbol exactly as written — the run's token texts joined
-    /// (adjacent by construction, so this is the source slice).</summary>
+    /// (adjacent by construction, so this is the source slice), up to the <c>(</c> that
+    /// opens its shapes.</summary>
     public string SymbolText
     {
         get
@@ -229,8 +230,73 @@ public sealed class ChordEntrySyntax : SyntaxNode
             var sb = new System.Text.StringBuilder();
             for (int i = 0; i < SlotCount; i++)
                 if (GetChild(i) is SyntaxTokenNode t)
+                {
+                    if (t.Kind == SyntaxKind.OpenParen)
+                        break;
                     sb.Append(t.Text);
+                }
             return sb.ToString();
+        }
+    }
+
+    /// <summary>The <c>(</c> that opens the entry's chord-diagram shapes
+    /// (<c>F(133211 2010)</c>), or null when it writes none.</summary>
+    public SyntaxTokenNode? ShapesOpenParen
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.OpenParen } t)
+                    return t;
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The words inside the entry's parentheses — each a run of GLUED tokens, as a
+    /// <c>@chord</c>'s argument is — with their spans; empty when it writes none. Read by
+    /// <c>Music.ChordShapes.ParseWords</c>.
+    /// </summary>
+    public IReadOnlyList<(string Text, TextSpan Span)> ShapeWords
+    {
+        get
+        {
+            var words = new List<(string, TextSpan)>();
+            bool inside = false;
+            var sb = new System.Text.StringBuilder();
+            int start = -1, end = -1;
+            void Flush()
+            {
+                if (sb.Length > 0)
+                    words.Add((sb.ToString(), new TextSpan(start, end - start)));
+                sb.Clear();
+                start = -1;
+            }
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is not SyntaxTokenNode t)
+                    continue;
+                if (!inside)
+                {
+                    inside = t.Kind == SyntaxKind.OpenParen;
+                    continue;
+                }
+                if (t.Kind == SyntaxKind.CloseParen)
+                    break;
+                if (t.Text.Length == 0)
+                    continue;
+                // A token after trivia starts a new word (the MarkArgument rule).
+                if (sb.Length > 0 && t.Green.LeadingTriviaWidth > 0)
+                    Flush();
+                if (start < 0)
+                    start = t.SourceStart;
+                sb.Append(t.Text);
+                end = t.SourceStart + t.Text.Length;
+                if (t.Green.TrailingTriviaWidth > 0)
+                    Flush();
+            }
+            Flush();
+            return words;
         }
     }
 }

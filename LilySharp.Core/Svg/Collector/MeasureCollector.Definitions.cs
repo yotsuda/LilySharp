@@ -508,6 +508,13 @@ public sealed partial class MeasureCollector
         // every inline @chord is collected after this.
         _chordSpelling = _meta.LayoutPlan.Chords;
         _chordNameCollector.Spelling = _chordSpelling;
+        // …and the tuning chord diagrams draw on (chordDiagrams; absent = the part's instrument,
+        // else the guitar — resolved per part and per row, ChordDiagramsKey.Resolve).
+        _chordDiagramsWord = _meta.LayoutPlan.ChordDiagrams;
+        _chordNameCollector.DiagramsWord = _chordDiagramsWord;
+        // …and whether every chord name draws one (`chordDiagrams … all`), not only a written shape.
+        _chordDiagramsAll = _meta.LayoutPlan.ChordDiagramsAll;
+        _chordNameCollector.DiagramsAll = _chordDiagramsAll;
         // …and the score-level meter, while _meta still holds it: every voice's section
         // resets revert to THIS (CollectMeasures), not to whatever _meta holds when that
         // voice starts — the first voice's opening `time` has rewritten it by then.

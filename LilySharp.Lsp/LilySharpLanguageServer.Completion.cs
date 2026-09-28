@@ -213,6 +213,8 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutPartCombineText => GetPartCombineTextCompletions(),
             CompletionContext.AfterLayoutChordQualities => GetChordQualityStyleCompletions(),
             CompletionContext.AfterLayoutMinorChords => GetMinorChordCompletions(),
+            CompletionContext.AfterLayoutChordDiagrams => GetChordDiagramCompletions(),
+            CompletionContext.AfterLayoutChordDiagramsTuning => GetChordDiagramScopeCompletions(),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>

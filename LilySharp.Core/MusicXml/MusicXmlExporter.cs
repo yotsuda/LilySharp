@@ -117,7 +117,9 @@ public sealed class MusicXmlExporter
     private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _noteFrameSpec; // @diagram(...) on the note being written
-    private int[] _partTuning = Tablature.Tunings.Guitar; // the part an @chord's voicing counts on
+    private int[] _partTuning = Tablature.Tunings.Guitar; // what a symbol-less @chord(x32010) is named on
+    private TuningType? _partFrettedTuning;  // the part's fretted instrument: a diagram's tuning when the layout names none
+    private (bool Read, string? Word, bool All) _diagramsWord;  // the score's chordDiagrams word as written (and its `all`), read once
     private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
     private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
@@ -219,8 +221,47 @@ public sealed class MusicXmlExporter
         return (doc.Parts.Count, doc.Parts.Sum(p => p.Measures.Count));
     }
 
+    /// <summary>
+    /// The tuning an <c>@chord</c>'s diagram draws on in the exported score (owner's decisions
+    /// 2026-09-28): the score's <c>layout { chordDiagrams T }</c> — the <see cref="Score"/> being
+    /// written (its layout reference over the file's default), else the file's first score, the
+    /// page's reading (<see cref="Semantics.LayoutPlanReader"/>) — else the part's fretted
+    /// instrument, else the guitar; null under <c>chordDiagrams none</c>.
+    /// </summary>
+    private TuningType? DiagramTuning()
+    {
+        if (!_diagramsWord.Read && _root != null)
+        {
+            string? word;
+            bool all;
+            if (Score is { } score)
+            {
+                var file = Semantics.LayoutPlanReader.FileDefault(_root) is { } f
+                    ? Semantics.LayoutPlanReader.Read(f, out _)
+                    : Semantics.LayoutPlan.Default;
+                var plan = score.LayoutRef is { } layoutRef
+                    ? Semantics.LayoutPlanReader.ReadReference(_root, layoutRef, file)
+                    : file;
+                (word, all) = (plan.ChordDiagrams, plan.ChordDiagramsAll);
+            }
+            else
+            {
+                var first = Semantics.ChordDiagramScores.Of(_root).FirstOrDefault();
+                (word, all) = (first?.LayoutWord, first?.All ?? false);
+            }
+            _diagramsWord = (true, word, all);
+        }
+        return Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, _partFrettedTuning);
+    }
+
+    /// <summary>The exported score's <c>chordDiagrams … all</c> (read with
+    /// <see cref="DiagramTuning"/>, which is always asked first): every chord name draws a
+    /// diagram, its written shape else the default.</summary>
+    private bool DiagramsAll => _diagramsWord.All;
+
     internal MusicXmlDocument Export(SyntaxTree tree)
     {
+        _diagramsWord = default;
         _document = new MusicXmlDocument();
 
         var root = tree.GetRoot();
@@ -1810,8 +1851,10 @@ public sealed class MusicXmlExporter
 
         _partAnchorOctave = header.AnchorOctave;
         _octaveAnchor = header.AbsoluteBaseOctave;
-        // The strings an @chord's voicing index counts on (the page's reading, the same header).
+        // The strings a symbol-less @chord(x32010) is named on (the page's reading, the same header).
         _partTuning = Tablature.Tunings.GetTuning(header.Tuning);
+        // …and the fretted instrument its chord diagrams draw on when the layout names none.
+        _partFrettedTuning = header.FrettedTuning;
 
         // The part's General MIDI sound, the one the .mid gives it (HANDOFF §2 F-midi).
         if (_currentPart != null)
@@ -3448,34 +3491,40 @@ public sealed class MusicXmlExporter
         // ⚠️ Only the TEXT is taken: a <harmony> has no typography to carry, so the raised
         // run the symbol would print with on the page (ChordSymbolText.SuperFrom) is the
         // page's and stops here, exactly as the spelling does.
-        // ★ The diagram an @chord's own words choose (`@chord(Cm7 2)`, `@chord(Cm7 x3x546)`,
-        // owner's decision 2026-09-27) is resolved against the PART's tuning — the reading the
-        // page draws with (Semantics.ChordAnnotation) — and nests in the <harmony> as its
-        // <frame>. A written-out diagram with no symbol (`@chord(x32010)`) is named from its
-        // notes as the page names it; if they name nothing there is no <harmony> for the
-        // <frame> to live in (MusicXML has no free-standing frame) and nothing is written.
+        // ★ The chord DIAGRAM (owner's decisions 2026-09-28): the shape the page draws — one
+        // WRITTEN for the tuning, or in a `chordDiagrams … all` score the default (DiagramTuning:
+        // the layout's, else the part's instrument, else the guitar; none under `chordDiagrams
+        // none`), ChordAnnotation.Drawn — nested in
+        // the <harmony> as its <frame>. A shape with no symbol
+        // (`@chord(x32010)`) is named from its notes as the page names it; if they name
+        // nothing there is no <harmony> for the <frame> to live in (MusicXML has no
+        // free-standing frame) and nothing is written.
         if (_currentMeasure != null
             && LilySharp.Core.Semantics.ChordAnnotation.Of(mark) is { } words)
         {
-            var diagram = words.WantsDiagram ? words.Resolve(_partTuning) : default;
+            var diagramTuning = DiagramTuning();
+            LilySharp.Core.Music.ChordStructure? derived = null;
             string? chordText =
                 LilySharp.Core.Semantics.AnnotationValues.Chord(
                     mark, LilySharp.Core.Semantics.ChordSpelling.Canonical, out _)
                     is { Text.Length: > 0 } chordSymbol
                     ? chordSymbol.Text
-                    : words.NamesFromDiagram && diagram.HasDiagram
-                      && LilySharp.Core.Semantics.ChordAnnotation.NameFromFrets(
-                          diagram.Frets, _partTuning, _keyFifths) is { } derived
+                    : words.NamingShape(diagramTuning, _partTuning) is { } naming
+                      && (derived = LilySharp.Core.Semantics.ChordAnnotation.NameFromFrets(
+                          naming.Frets, naming.Tuning, _keyFifths)) != null
                         ? derived.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text
                         : null;
+            // In a `chordDiagrams … all` score every name draws: the written shape, else the
+            // default of its chord (a symbol-less shape's, the one its frets name).
+            var diagram = diagramTuning is { } dt ? words.Drawn(dt, DiagramsAll, derived) : null;
             if (chordText != null)
             {
                 if (BuildHarmony(chordText) is { } harmony)
                 {
                     // The @chord's own diagram, else a @diagram on the same note — both nest
                     // inside the harmony (MusicXML <frame> is a harmony child).
-                    string? fspec = diagram.HasDiagram
-                        ? Music.ChordVoicings.ToFrameSpec(diagram.Frets)
+                    string? fspec = diagram != null
+                        ? diagram.FrameSpec
                         : _noteFrameSpec;
                     if (fspec != null && BuildFrame(fspec) is { } frameEl)
                         harmony.Add(frameEl);

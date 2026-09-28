@@ -23,7 +23,7 @@ namespace LilySharp.Lsp;
 
 /// <summary>
 /// The step keys and the audition (owner's decision, 2026-09-28): <c>lilysharp/step</c>
-/// computes what Ctrl+Alt+Up / Ctrl+Alt+Down do at every selection, <c>lilysharp/auditionAt</c>
+/// computes what Ctrl+Shift+Up / Ctrl+Shift+Down do at every selection, <c>lilysharp/auditionAt</c>
 /// what the caret is on and what it sounds. Both are <see cref="NoteStepper"/>'s — the server
 /// has the tree, the resolved voicings and the pitches the compiler plays, so the extension
 /// only applies the edits and forwards the pitches to the preview's synth.
@@ -48,7 +48,8 @@ public sealed partial class LilySharpLanguageServer
             var result = NoteStepper.Step(doc.Text, doc.Tree,
                 @params.Selections.Select(s => (s.Start, s.End)).ToList(), @params.Direction,
                 text => ExpandUsings(text, SyntaxTree.Parse(text), basePath,
-                    p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree);
+                    p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null).Tree,
+                @params.IncludeStretch);
             return new StepResponse
             {
                 Fallback = result.Fallback,
@@ -81,7 +82,8 @@ public sealed partial class LilySharpLanguageServer
         try
         {
             var (sounding, _) = ExpandUsings(doc, @params.TextDocument.Uri);
-            if (NoteStepper.AuditionAt(doc.Text, doc.Tree, @params.Offset, sounding) is not { } audition)
+            if (NoteStepper.AuditionAt(doc.Text, doc.Tree, @params.Offset, sounding,
+                    @params.IncludeStretch) is not { } audition)
                 return new AuditionAtResponse { Version = doc.Version };
             return new AuditionAtResponse
             {

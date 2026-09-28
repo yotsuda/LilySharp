@@ -16,6 +16,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -129,11 +130,33 @@ public sealed class PartHeaderDefaults
     /// <remarks>
     /// The same precedence the page's tab reads (<c>RenderSpecParser.ParseTab</c>, less the
     /// score row's own modifier, which belongs to one rendering and not to the part) and the
-    /// twin's (<c>LilyPondExporter.TabTuningType</c>). Read here for the chord diagrams an
-    /// <c>@chord(Cm7 2)</c> chooses (2026-09-28): a voicing is a fact about the instrument, so
-    /// it is asked of the part, never of a staff.
+    /// twin's (<c>LilyPondExporter.TabTuningType</c>). Read here for the name a shape with no
+    /// symbol (<c>@chord(x32010)</c>) is given when no diagram tuning of the score fits it
+    /// (2026-09-28): the strings are the instrument's, so they are asked of the part.
     /// </remarks>
     public TuningType Tuning { get; private init; } = TuningType.Guitar;
+
+    /// <summary>
+    /// The tuning word of a FRETTED part — its <c>tuning</c> word, else its preset's (the tuning
+    /// its tab staff would use) — or null for a part with no strings to fret: no tuning and no
+    /// string preset (a piano, a voice), or a bowed one.
+    /// </summary>
+    /// <remarks>
+    /// What a chord diagram of the part draws on when the score's layout names no
+    /// <c>chordDiagrams</c> tuning (owner's decision 2026-09-28, <see cref="ChordDiagramsKey.Resolve"/>).
+    /// ⚠️ Lily#'s choice: the bowed strings (<c>violin</c>, <c>viola</c>, <c>cello</c> and the
+    /// <c>contrabass</c> preset) have tunings for their tabs but no frets, so their chord
+    /// diagrams take the guitar like a piano's. The <c>mandolin</c> word shares the violin's
+    /// strings (Tunings) and IS fretted — hence the test on the word, not on the tuning.
+    /// </remarks>
+    public string? FrettedTuningWord { get; private init; }
+
+    /// <summary>The tuning <see cref="FrettedTuningWord"/> names, or null.</summary>
+    public TuningType? FrettedTuning => FrettedTuningWord is { } w ? Tunings.Parse(w) : null;
+
+    /// <summary>The words of a string instrument without frets (<see cref="FrettedTuningWord"/>).</summary>
+    private static readonly HashSet<string> Unfretted = new(StringComparer.Ordinal)
+        { "violin", "viola", "cello", "contrabass" };
 
     /// <summary>The defaults of a part that declares nothing.</summary>
     public static readonly PartHeaderDefaults Empty = new();
@@ -231,7 +254,18 @@ public sealed class PartHeaderDefaults
             MidiProgram = midiProgram,
             MidiInstrument = midiName,
             Tuning = Tunings.Parse(tuningText ?? InstrumentDefaults.GetTuning(preset)),
+            FrettedTuningWord = FrettedWord(tuningText, preset),
         };
+    }
+
+    /// <summary>The part's fretted tuning word (<see cref="FrettedTuningWord"/>).</summary>
+    private static string? FrettedWord(string? tuningText, string? preset)
+    {
+        if (tuningText != null)
+            return Tunings.Names.Contains(tuningText) && !Unfretted.Contains(tuningText) ? tuningText : null;
+        if (preset == null || Unfretted.Contains(preset))
+            return null;
+        return InstrumentDefaults.GetTuning(preset) is { } word && !Unfretted.Contains(word) ? word : null;
     }
 
     /// <summary>A <c>.lys</c> clef word → the clef it names.</summary>

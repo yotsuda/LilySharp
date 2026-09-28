@@ -424,37 +424,45 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     }
 
     /// <summary>
-    /// Why the chord diagram an <c>@chord</c> asks for is not drawn, or null (LYS1038).
+    /// What is wrong with an <c>@chord</c>'s shapes, or null (LYS1038) — the first problem of
+    /// its words (<see cref="ChordAnnotation.Problems"/>: a word that is neither a shape nor a
+    /// tuning, a shape of the wrong length, two unnamed shapes of one length), then — for a
+    /// shape with no name — whether its notes name a chord.
     /// </summary>
     /// <remarks>
-    /// The words' own problems first (<see cref="ChordAnnotation.Problem"/>), then what the
-    /// PART's tuning makes of them (<see cref="ChordAnnotation.Resolve"/>), then — for a
-    /// written-out diagram with no name — whether its notes name a chord. The same two readers
-    /// the page draws with, so a warning here is a diagram missing there.
-    /// ⚠️ Outside every part (a phrase), with parts tuned differently, the tuning is not the
-    /// tree's to say (<see cref="ChordAnnotation.PartTuningOf"/> answers null) and only the
-    /// words' own problems are reported: the page, which knows the part, still draws or does
-    /// not draw by the right tuning.
+    /// A symbol-less shape is named on a diagram tuning it fits (of the scores that draw its
+    /// part — <see cref="ChordDiagramScores.TuningsOfMark"/>), else on the PART's tuning
+    /// (<see cref="ChordAnnotation.NamingShape"/>, the page's reading).
+    /// ⚠️ Outside every part (a phrase), with parts tuned differently, the part's tuning is not
+    /// the tree's to say (<see cref="ChordAnnotation.PartTuningOf"/> answers null) and the name
+    /// is not checked: the page, which knows the part, still names or does not.
+    /// Whether a chord has a shape on a score's tuning at all is
+    /// <see cref="ChordDiagramValidator"/>'s, which knows the scores.
     /// </remarks>
     private static string? ChordDiagramProblem(MusicMarkSyntax mark)
     {
         if (ChordAnnotation.Of(mark) is not { } chord)
             return null;
-        // A word the grammar does not take is reported whether or not a diagram was asked for:
-        // `@chord(C m7)` is no index and no position string (it named Cm7 before 2026-09-27).
-        if (chord.Problem != null)
-            return chord.Problem;
-        if (!chord.WantsDiagram)
+        // A word the grammar does not take is reported whether or not a score draws diagrams:
+        // `@chord(C m7)` is neither a shape nor a tuning (it named Cm7 before 2026-09-27), and
+        // `@chord(C 7)` a shape no tuning has strings for.
+        if (!chord.Problems.IsEmpty)
+            return chord.Problems[0].Message;
+        if (!chord.NamesFromDiagram)
             return null;
-        if (ChordAnnotation.PartTuningOf(mark) is not { } tuning)
+        var diagramTuning = ChordDiagramScores.TuningsOfMark(mark)
+            .Select(t => t.Word).OfType<string>().Distinct(System.StringComparer.Ordinal)
+            .Select(Tablature.Tunings.Parse)
+            .Cast<TuningType?>()
+            .FirstOrDefault(t => ChordShapes.WrittenFor(t!.Value, chord.Shapes) != null);
+        var partTuning = ChordAnnotation.PartTuningOf(mark);
+        if (partTuning == null && diagramTuning == null)
             return null;
-        var resolved = chord.Resolve(tuning);
-        if (resolved.Problem != null)
-            return resolved.Problem;
-        if (chord.NamesFromDiagram && resolved.HasDiagram
-            && ChordAnnotation.NameFromFrets(resolved.Frets, tuning, 0) is null)
-            return ChordAnnotation.NoDerivedName(chord.Written!);
-        return null;
+        if (chord.NamingShape(diagramTuning, partTuning ?? []) is not { } naming)
+            return null;
+        return ChordAnnotation.NameFromFrets(naming.Frets, naming.Tuning, 0) is null
+            ? ChordAnnotation.NoDerivedName(chord.Shapes[0].Shape)
+            : null;
     }
 
     /// <summary>

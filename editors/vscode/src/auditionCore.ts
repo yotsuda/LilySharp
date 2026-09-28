@@ -24,6 +24,22 @@
 // (debounced, never while a selection is being extended), a note typed from the
 // keyboard sounds once its token has settled, a step sounds what it stepped to.
 
+/** The step keys (owner's decision 2026-09-28: Ctrl+Shift+Up / Ctrl+Shift+Down, moved from
+ * Ctrl+Alt, which is Windows' Add Cursor Above / Below). */
+export const STEP_UP_KEY = 'ctrl+shift+up';
+export const STEP_DOWN_KEY = 'ctrl+shift+down';
+
+/** The command a step key falls back to when the caret is on nothing steppable, or
+ * undefined for none. VS Code's editor binds Ctrl+Shift+Up/Down to nothing on Windows and
+ * macOS, so there the key simply does nothing; on Linux it is the SECOND binding of
+ * editor.action.insertCursorAbove / Below, which the extension's binding shadows — so it
+ * runs that command, and the key keeps doing what it did without the extension.
+ * `platform` is Node's process.platform. */
+export function stepFallbackCommand(direction: 1 | -1, platform: string): string | undefined {
+    if (platform !== 'linux') { return undefined; }
+    return direction > 0 ? 'editor.action.insertCursorAbove' : 'editor.action.insertCursorBelow';
+}
+
 /** A caret move sounds only after the caret has rested this long: an arrow key held
  * down repeats every ~30 ms, and a note per repeat would machine-gun. */
 export const CARET_DEBOUNCE_MS = 80;

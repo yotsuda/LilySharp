@@ -74,15 +74,25 @@ public class ChordHoverTests
         "form main { A }\n" +
         "score main { chords harmony  staff melody }\n";
 
+    /// <summary>The chord line of a row entry's hover \u2014 the paragraph before the chord-diagram
+    /// line an entry with no shape adds (<c>Ctrl+Shift+\u2191 adds a chord diagram (guitar: \u2026)</c>,
+    /// owner's decision 2026-09-28; ChordDiagramTests pins that line).</summary>
+    private static string? ChordLine(string needle)
+    {
+        var hover = HoverAt(needle, doc: ChordRowDoc);
+        Assert.Contains("\n\nCtrl+Shift+\u2191 adds a chord diagram (guitar: ", hover);
+        return hover!.Split("\n\n")[0];
+    }
+
     [Fact]
     public void AChordRowEntry_HoversAsItsSymbolDegreeAndTones() =>
-        Assert.Equal("`Dm (IIm)` \u00A0A3 \u00A0D4 \u00A0F4", HoverAt("Dm", doc: ChordRowDoc));
+        Assert.Equal("`Dm (IIm)` \u00A0A3 \u00A0D4 \u00A0F4", ChordLine("Dm"));
 
     [Fact]
     public void AChordRowSlash_ListsTheBassAnOctaveBelowTheWindow()
     {
-        Assert.Equal("`G7/B (V7/VII)` \u00A0B2 \u00A0G3 \u00A0B3 \u00A0D4 \u00A0F4", HoverAt("G7/B", doc: ChordRowDoc));
-        Assert.Equal("`C/E (I/III)` \u00A0E3 \u00A0G3 \u00A0C4 \u00A0E4", HoverAt("C/E", doc: ChordRowDoc));
+        Assert.Equal("`G7/B (V7/VII)` \u00A0B2 \u00A0G3 \u00A0B3 \u00A0D4 \u00A0F4", ChordLine("G7/B"));
+        Assert.Equal("`C/E (I/III)` \u00A0E3 \u00A0G3 \u00A0C4 \u00A0E4", ChordLine("C/E"));
     }
 
     [Fact]

@@ -915,12 +915,17 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string MidBarBreakNotSplit = "LYS1037";
 
-    /// <summary>Warning: an <c>@chord</c> asks for a chord diagram that cannot be drawn — a
-    /// voicing index out of range, a position string of the wrong length, a bad <c>mute</c>, a
-    /// re-entrant tuning — or its written-out diagram names no chord.</summary>
+    /// <summary>Warning: a chord diagram's shape cannot be used — a shape of the wrong length,
+    /// a word that is neither a shape nor a tuning, two unnamed shapes of one length, a tuning
+    /// given two — or a symbol-less shape's notes name no chord — or, in a
+    /// <c>chordDiagrams … all</c> score, a chord with no shape on the score's tuning.</summary>
     /// <remarks>
-    /// Owner's decision, 2026-09-27: the diagram then draws nothing and the NAME still draws
-    /// when there is one; each message names the fix (<c>Semantics.ChordAnnotation</c>).
+    /// Owner's design, 2026-09-27/28: the diagram then draws nothing and the NAME still draws
+    /// when there is one; each message names the fix (<c>Music.ChordShapes</c>,
+    /// <c>Semantics.ChordDiagramValidator</c>). A name with NO shape written is not warned
+    /// about: it draws no diagram by design (owner's decision 2026-09-28) — save in an
+    /// <c>all</c> score, where it should draw the default and a chord with none is warned once
+    /// per symbol and tuning.
     /// </remarks>
     public const string ChordDiagramNotDrawn = "LYS1038";
 

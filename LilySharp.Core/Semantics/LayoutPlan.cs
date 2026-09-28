@@ -57,8 +57,22 @@ public sealed record LayoutPlan(
     // `chordQualities symbols|words` and `minorChords upper|lower` — how a chord SYMBOL is
     // spelled (ChordSpelling). The struct's own default is LilyPond's spelling, so
     // LayoutPlan.Default compares equal to a plan that writes both keys out.
-    ChordSpelling Chords = default)
+    ChordSpelling Chords = default,
+    // `chordDiagrams none|guitar|ukulele|…` — the TUNING word as written, or null when the key
+    // is absent or writes no tuning (`chordDiagrams all`): then each diagram takes its part's
+    // instrument, else the guitar (ChordDiagramsKey.Resolve, owner's decision 2026-09-28).
+    string? ChordDiagrams = null,
+    // `chordDiagrams [TUNING] all` — every chord name draws a diagram: its written shape, else
+    // the default one (Music.ChordShapes.Drawn; owner's decision 2026-09-28). False without it:
+    // only a written shape draws. Never true with `none` (the reader refuses `none all`).
+    bool ChordDiagramsAll = false)
 {
+    /// <summary>The tuning a chord diagram of this score draws on, given the fretted tuning
+    /// of the part it belongs to (<paramref name="partTuning"/>, null for none) — or null
+    /// when the score writes <c>chordDiagrams none</c> (<see cref="ChordDiagramsKey.Resolve"/>).</summary>
+    public Syntax.TuningType? ChordDiagramTuningFor(Syntax.TuningType? partTuning)
+        => ChordDiagramsKey.Resolve(ChordDiagrams, partTuning);
+
     /// <summary>What a book with no <c>layout { }</c> gets: LilyPond's picture on every
     /// switch — labels stacked over the tempo, a number at the start of every line but the
     /// first, and the 18th-century accidental style.</summary>
@@ -291,6 +305,72 @@ public static class PartCombineTexts
         "false" => false,
         _ => null,
     };
+}
+
+/// <summary>
+/// The <c>chordDiagrams</c> key's words: <c>none</c> or a tuning word — the same vocabulary a
+/// tab staff's <c>tuning</c> takes (<see cref="Tablature.Tunings.Names"/>) — and the scope
+/// word <c>all</c>, alone or after the tuning; and which tuning a diagram draws on
+/// (<see cref="Resolve"/>).
+/// </summary>
+/// <remarks>
+/// <para>
+/// Owner's decisions (HANDOFF §2 K, 2026-09-28): a diagram draws only where a shape is
+/// WRITTEN (<see cref="Music.ChordShapes.Drawn"/>) — unless the score writes <c>all</c>
+/// (<c>chordDiagrams all</c>, <c>chordDiagrams ukulele all</c>: the tuning first), when EVERY
+/// chord name draws one, its written shape else the default (<see cref="Music.ChordShapes.Default"/>).
+/// <c>none all</c> is refused (<c>none</c> draws nothing). A diagram draws on ONE tuning,
+/// strongest first:
+/// the score's <c>chordDiagrams TUNING</c> (<c>none</c>: no diagram at all, written shapes
+/// included — a piano score from the same source); else the fretted instrument of the part
+/// the chord belongs to (<see cref="PartHeaderDefaults.FrettedTuningWord"/>); else the guitar.
+/// A staff-level override (<c>staff melody with chords prog on ukulele</c>) was considered and
+/// NOT added: the layout suffices.
+/// </para>
+/// <para>
+/// LILYSHARP-OWN: LilyPond's FretBoards context carries its own <c>stringTunings</c>
+/// (guitar by default) whatever the staves around it play, and draws a diagram for every chord
+/// it is given — its predefined shape or one it computes.
+/// LILYPOND-REF: ly/engraver-init.ly FretBoards context (lines 38-57) — predefinedDiagramTable,
+///   and a stringTunings of its own.
+/// </para>
+/// </remarks>
+public static class ChordDiagramsKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "chordDiagrams";
+
+    /// <summary>The scope word: every chord name draws a diagram (<c>chordDiagrams all</c>,
+    /// <c>chordDiagrams guitar all</c>).</summary>
+    public const string AllWord = "all";
+
+    /// <summary>The words the key's FIRST value takes: <c>none</c>, the tuning vocabulary, and
+    /// <c>all</c> (which may also follow a tuning word).</summary>
+    public static readonly IReadOnlyList<string> Words =
+        [Music.ChordShapes.NoneWord, .. Tablature.Tunings.Names, AllWord];
+
+    /// <summary>True for a word the key's first value takes (<c>none</c>, a tuning word or
+    /// <c>all</c>).</summary>
+    public static bool TryFind(string word)
+        => word == Music.ChordShapes.NoneWord || word == AllWord || IsTuningWord(word);
+
+    /// <summary>True for a tuning word (<see cref="Tablature.Tunings.Names"/>).</summary>
+    public static bool IsTuningWord(string word) => Tablature.Tunings.Names.Contains(word);
+
+    /// <summary>
+    /// The tuning a diagram draws on: the layout's word (<paramref name="layoutWord"/>, null
+    /// when the key is absent), else the part's fretted tuning (<paramref name="partTuning"/>),
+    /// else the guitar — null for <c>none</c>, which draws no diagram.
+    /// </summary>
+    public static Syntax.TuningType? Resolve(string? layoutWord, Syntax.TuningType? partTuning)
+        => layoutWord == Music.ChordShapes.NoneWord ? null
+            : layoutWord != null ? Tablature.Tunings.Parse(layoutWord)
+            : partTuning ?? Syntax.TuningType.Guitar;
+
+    /// <summary>The same, as a tuning WORD (for the editor's messages): the layout's word, else
+    /// the part's (<paramref name="partWord"/>), else <c>guitar</c>; null for <c>none</c>.</summary>
+    public static string? ResolveWord(string? layoutWord, string? partWord)
+        => layoutWord == Music.ChordShapes.NoneWord ? null : layoutWord ?? partWord ?? "guitar";
 }
 
 /// <summary>Which bars carry a printed number.</summary>

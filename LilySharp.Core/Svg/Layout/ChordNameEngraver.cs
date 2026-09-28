@@ -48,7 +48,12 @@ public readonly record struct ChordNameLayout(
     // (text, index) is what the drawing takes, and it is the SAME pair the reservation
     // above was computed from (ChordNameEngraver.DisplaySymbol) — the contract this file
     // already keeps for the accidental glyphs, extended to the raised run.
-    int SuperFrom = Music.ChordSymbolText.NoSuperscript
+    int SuperFrom = Music.ChordSymbolText.NoSuperscript,
+    // The chord diagram drawn under a ROW symbol (ChordNameItem.FrameSpec), or null; its box
+    // stands with its LEFT edge at X and its grid bottom FrameBottom below the baseline (Y-up,
+    // negative) — one level for the whole line (ChordNameEngraver.LineDiagramBottom).
+    string? FrameSpec = null,
+    double FrameBottom = 0
 );
 
 /// <summary>
@@ -554,6 +559,14 @@ internal static class ChordNameEngraver
         // staff, so the edge is floored in here — a bare staff then lands the baseline
         // 0.5 + 0.05 − inkBottom above the centre, LilyPond's 0.537 above the ink
         // (chord-bare-lp.log).
+        // The diagrams under a chord line's names (a written shape, HANDOFF §2 K) stand at ONE
+        // level per line — LineDiagramBottom — keyed like the line itself.
+        var lineDiagramBottom = new Dictionary<(int sys, int staff, bool row), double>();
+        foreach (var g in prepared.Where(p => p.sysIdx >= 0 && p.chord.FrameSpec != null)
+                     .GroupBy(p => (p.sysIdx, p.chord.StaffIndex, p.chord.IsChordRow)))
+            if (LineDiagramBottom(fonts, g.Select(p => p.chord)) is { } gridBottom)
+                lineDiagramBottom[g.Key] = gridBottom;
+
         var lineFloor = new Dictionary<(int sys, int staff), double>();
         foreach (var p in prepared)
         {
@@ -576,6 +589,16 @@ internal static class ChordNameEngraver
             var symbol = DisplaySymbol(p.chord);
             double floor = peak + RelatedStaffPadding
                 - SymbolInk(fonts, symbol.Text, symbol.SuperFrom).Bottom;
+            // A diagram under the name is the line's lowest ink there: IT clears the staff by
+            // the padding (the FretBoards line is what stands on the staff in LilyPond's stack).
+            if (p.chord.FrameSpec is { } spec
+                && lineDiagramBottom.TryGetValue((p.sysIdx, p.chord.StaffIndex, false), out double gridBottom))
+            {
+                var (dl, dr, db, _) = PlacedDiagram(fonts, spec, p.x, gridBottom);
+                double under = Math.Max(up.MaxProtrusionInRange(dl, dr),
+                    EngravingDefaults.StaffLineThickness / 2.0);
+                floor = Math.Max(floor, under + RelatedStaffPadding - db);
+            }
             var key = (p.sysIdx, p.chord.StaffIndex);
             if (!lineFloor.TryGetValue(key, out var cur) || floor > cur)
                 lineFloor[key] = floor;
@@ -599,7 +622,10 @@ internal static class ChordNameEngraver
                 results.Add(new ChordNameLayout(
                     p.chord.MeasureIndex, p.x, -(p.staffOffset + rowBaseline) + lift,
                     rowText, p.chord.SourcePosition, p.idx, p.chord.StaffIndex,
-                    DisplaySymbol(p.chord).SuperFrom));
+                    DisplaySymbol(p.chord).SuperFrom,
+                    p.chord.FrameSpec,
+                    // The diagram hangs from the LINE, not from a lifted symbol: `- lift`.
+                    lineDiagramBottom.GetValueOrDefault((p.sysIdx, p.chord.StaffIndex, true)) - lift));
                 continue;
             }
 
@@ -642,7 +668,9 @@ internal static class ChordNameEngraver
             // Store Y-up from the system top (= -y); no staff offset is baked.
             results.Add(new ChordNameLayout(
                 p.chord.MeasureIndex, p.x, -y, text, p.chord.SourcePosition, p.idx,
-                    RowStaffIndex: -1, SuperFrom: DisplaySymbol(p.chord).SuperFrom));
+                    RowStaffIndex: -1, SuperFrom: DisplaySymbol(p.chord).SuperFrom,
+                    FrameSpec: p.chord.FrameSpec,
+                    FrameBottom: lineDiagramBottom.GetValueOrDefault((p.sysIdx, p.chord.StaffIndex, false))));
         }
 
         return results.ToImmutable();
@@ -910,7 +938,108 @@ internal static class ChordNameEngraver
     /// with the other named inventions in docs/HANDOFF.md section 2H.
     /// </remarks>
     private static double SymbolWidth(Rendering.ScoreTextMetrics fonts, ChordNameItem c) =>
-        Math.Max(2.0, SymbolInkWidth(fonts, DisplaySymbol(c).Text, DisplaySymbol(c).SuperFrom));
+        Math.Max(2.0, FootprintWidth(fonts, c));
+
+    // ========== THE CHORD DIAGRAM UNDER A ROW SYMBOL (a written shape, HANDOFF §2 K) ==========
+    //
+    // Owner's design (HANDOFF §2 K, 2026-09-28): in a score that asks for chord diagrams, every
+    // name of a `chords` row draws its diagram UNDER it — LilyPond's ChordNames line over a
+    // FretBoards line (`\new ChordNames \prog  \new FretBoards \prog`). The diagram is part of
+    // the symbol for every pass that prices the symbol: its width (FootprintWidth — the
+    // spacing, the neighbour clearance) and its line's skyline (RowSkylines — how far the staff
+    // or the next row stands off).
+
+    /// <summary>
+    /// The gap between a chord-name line's ink and the diagram line under it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly ChordNames context (line 723) — VerticalAxisGroup
+    ///   nonstaff-nonstaff-spacing.padding 0.5: the FretBoards line under a ChordNames line is
+    ///   spaced from it by this padding between the two skylines.
+    /// MEASURED on 2.26.0 (a ChordNames + FretBoards score, C Fm7 G D7 B♭maj7): the B♭maj7
+    /// name's ink bottom −1.034 and its diagram's top −1.534, exactly 0.500 apart; every
+    /// diagram of the line has the same BOTTOM (−8.785), i.e. the line is one level and the
+    /// deepest name over a diagram sets it.
+    /// </remarks>
+    internal const double DiagramUnderNamePadding = 0.5;
+
+    /// <summary>The ink box of a row symbol's diagram, anchored at its grid bottom centre
+    /// (<see cref="FretFrameGeometry.Box"/>, at this score's diagram size).</summary>
+    internal static GlyphMetrics.BBox DiagramBox(Rendering.ScoreTextMetrics fonts, string spec)
+        => FretFrameGeometry.Box(spec, FretFrameGeometry.Scale(fonts));
+
+    /// <summary>
+    /// The width a chord symbol occupies from its column: its ink, or the diagram under it when
+    /// that is wider. The one width the spacing and the neighbour clearance price.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
+    /// column, as the name does, so the pair reaches only RIGHT of the column — the reach the
+    /// spacing already prices for a symbol (<c>SpacingRules.ApplyChordRowSpacing</c>'s
+    /// asymmetric extent). LilyPond centres a FretBoard on its paper column (measured on
+    /// 2.26.0: the C diagram's box runs 1.69 left of the column over a whole note); Lily#'s
+    /// row has no note column of its own to centre on.
+    /// </remarks>
+    internal static double FootprintWidth(Rendering.ScoreTextMetrics fonts, ChordNameItem c)
+        => c.FrameSpec is { } spec
+            ? Math.Max(SymbolInkWidth(fonts, c), DiagramBox(fonts, spec).Width)
+            : SymbolInkWidth(fonts, c);
+
+    /// <summary>
+    /// Where the diagrams of one chord line stand: their common GRID BOTTOM below the line's
+    /// baseline (Y-up, negative), or null when no symbol of the line carries one.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's FretBoards line is one level (the remark on
+    /// <see cref="DiagramUnderNamePadding"/>): its top clears the deepest name ink over a
+    /// diagram by the padding, and every grid hangs from the tallest diagram's top.
+    /// ⚠️ Approximated in one respect: the depth is taken over the names that CARRY a diagram,
+    /// not over every name whose ink overlaps one in X — a name without a diagram (an
+    /// <c>N.C.</c>) between two diagrams does not push the line down.
+    /// </remarks>
+    internal static double? LineDiagramBottom(Rendering.ScoreTextMetrics fonts, IEnumerable<ChordNameItem> line)
+    {
+        double? inkBottom = null;
+        double tallest = 0;
+        foreach (var c in line)
+        {
+            if (c.FrameSpec is not { } spec)
+                continue;
+            double bottom = SymbolInk(fonts, c).Bottom;
+            inkBottom = inkBottom is { } b ? Math.Min(b, bottom) : bottom;
+            tallest = Math.Max(tallest, DiagramBox(fonts, spec).Top);
+        }
+        return inkBottom is { } lowest ? lowest - DiagramUnderNamePadding - tallest : null;
+    }
+
+    /// <summary>
+    /// A PLACED symbol's whole ink about its baseline, the diagram under it included: the
+    /// width from its column and the (bottom, top) — what the page's extents and the
+    /// Score-level movers' support read, so a diagram is ink wherever the name is.
+    /// </summary>
+    internal static (double Width, double Bottom, double Top) InkWithDiagram(
+        Rendering.ScoreTextMetrics fonts, ChordNameLayout placed)
+    {
+        var (bottom, top) = SymbolInk(fonts, placed);
+        double width = SymbolInkWidth(fonts, placed);
+        if (placed.FrameSpec is { } spec)
+        {
+            var box = DiagramBox(fonts, spec);
+            width = Math.Max(width, box.Width);
+            bottom = Math.Min(bottom, placed.FrameBottom + box.Bottom);
+            top = Math.Max(top, placed.FrameBottom + box.Top);
+        }
+        return (width, bottom, top);
+    }
+
+    /// <summary>A row symbol's diagram box on the page frame of its line: left edge at
+    /// <paramref name="x"/>, grid bottom at <paramref name="gridBottom"/> (baseline-relative).</summary>
+    internal static (double Left, double Right, double Bottom, double Top) PlacedDiagram(
+        Rendering.ScoreTextMetrics fonts, string spec, double x, double gridBottom)
+    {
+        var box = DiagramBox(fonts, spec);
+        return (x, x + box.Width, gridBottom + box.Bottom, gridBottom + box.Top);
+    }
 
     /// <summary>
     /// <paramref name="curX"/> shifted right, if it has to be, so its box clears the
@@ -1041,6 +1170,16 @@ internal static class ChordNameEngraver
             up.MergeBox(x, right, bottom + lift, top + lift);
             down.MergeBox(x, right, bottom + lift, top + lift);
         }
+        // …and the diagrams under the names (a written shape, HANDOFF §2 K): the line's ink, so
+        // the staff below and the row above stand off them as they do off the names.
+        if (LineDiagramBottom(fonts, placed.Select(p => p.Chord)) is { } gridBottom)
+            foreach (var (x, chord, _) in placed)
+                if (chord.FrameSpec is { } spec)
+                {
+                    var (l, r, b, t) = PlacedDiagram(fonts, spec, x, gridBottom);
+                    up.MergeBox(l, r, b, t);
+                    down.MergeBox(l, r, b, t);
+                }
         return (up, down);
     }
 

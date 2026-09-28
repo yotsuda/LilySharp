@@ -67,7 +67,7 @@ public sealed record ArticulationItem
     public string? FrameSpec { get; init; }
 
     /// <summary>
-    /// True for the diagram an <c>@chord(Cm7 2)</c> chose: it stands UNDER its chord name, so
+    /// True for the diagram an <c>@chord</c> draws (a written shape, HANDOFF §2 K): it stands UNDER its chord name, so
     /// it is not an outside-staff mover (<see cref="Layout.ArticulationSpacing.OutsideStaffPriority(ArticulationItem)"/>)
     /// — it stays in the staff's support skyline, which the chord-name line is placed above.
     /// </summary>

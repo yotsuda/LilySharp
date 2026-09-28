@@ -50,6 +50,37 @@ internal sealed class ChordNameCollector
     /// what a book that writes neither key gets.</summary>
     public Semantics.ChordSpelling Spelling { get; set; } = Semantics.ChordSpelling.Default;
 
+    /// <summary>The score's <c>layout { chordDiagrams … }</c> word as written, or null when
+    /// absent — set by the collector with <see cref="Spelling"/>, before any row is walked.</summary>
+    public string? DiagramsWord { get; set; }
+
+    /// <summary>The score's <c>chordDiagrams … all</c> (every chord name draws a diagram) —
+    /// set by the collector with <see cref="DiagramsWord"/>.</summary>
+    public bool DiagramsAll { get; set; }
+
+    /// <summary>The fretted tuning of the staff the row being collected stands over
+    /// (<see cref="Semantics.ChordDiagramScores.StaffWord"/> / <see cref="Semantics.ChordDiagramScores.RowStaffWord"/>),
+    /// or null (a lead-sheet row, a piano staff) — set by the collector before each row.</summary>
+    public TuningType? RowStaffTuning { get; set; }
+
+    /// <summary>
+    /// The diagram spec a row entry draws under its symbol, or null: a WRITTEN shape (owner's
+    /// decision 2026-09-28) — in a <c>chordDiagrams … all</c> score, else the default shape of
+    /// <paramref name="structure"/> (the chord the entry names, a degree resolved in its key) —
+    /// on the layout's tuning, else the staff's fretted instrument's, else the guitar's
+    /// (<see cref="Semantics.ChordDiagramsKey.Resolve"/>); never under <c>chordDiagrams none</c>.
+    /// </summary>
+    private string? DiagramOf(ChordEntrySyntax entry, LilySharp.Core.Music.ChordStructure? structure)
+    {
+        var words = entry.ShapeWords;
+        if ((words.Count == 0 && !DiagramsAll)
+            || Semantics.ChordDiagramsKey.Resolve(DiagramsWord, RowStaffTuning) is not { } tuning)
+            return null;
+        LilySharp.Core.Music.ChordShapes.ParseWords(
+            [.. words.Select(w => w.Text)], entry.SymbolText, out var shapes);
+        return LilySharp.Core.Music.ChordShapes.Drawn(tuning, shapes, DiagramsAll, structure)?.FrameSpec;
+    }
+
     /// <summary>The key timeline for Roman-numeral degrees: (start measure, tonic step
     /// 0=C..6=B, signature ±sharps) sorted ascending, so a chord's degree follows the
     /// key in force at its bar (a mid-piece modulation re-bases the degrees). Set by
@@ -309,6 +340,7 @@ internal sealed class ChordNameCollector
                         SuperFrom = sym.SuperFrom,
                         RomanText = Roman(structure, mi),
                         DisplayMode = mode,
+                        FrameSpec = DiagramOf(entry, structure),
                     });
                 }
             });
@@ -654,6 +686,7 @@ internal sealed class ChordNameCollector
                     SuperFrom = sym.SuperFrom,
                     RomanText = Roman(structure, measureIndex),
                     DisplayMode = mode,
+                    FrameSpec = DiagramOf(entry, structure),
                 });
             }
             else if (node is RestSyntax)
