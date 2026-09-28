@@ -1055,25 +1055,15 @@ public static class SectionSplitter
             foreach (var form in _model.Root.DescendantNodes<FormDeclarationSyntax>())
             {
                 string label = form.NameText.Length > 0 ? $"Form {form.NameText}" : "The form";
+                // Every play, including an ending's sections ([1. S]), which are the same
+                // reference nodes: splitting S there makes a multi-section ending [1. S T].
                 var items = form.DescendantNodes()
-                    .Where(n => n is SectionReferenceSyntax or FormAlternativeSyntax
-                        || n.Kind == SyntaxKind.SilentSectionReference)
+                    .Where(n => n is SectionReferenceSyntax || n.Kind == SyntaxKind.SilentSectionReference)
                     .ToList();
                 var handled = new HashSet<SyntaxNode>(ReferenceEqualityComparer.Instance);
                 int edited = 0, already = 0;
                 foreach (var item in items)
                 {
-                    if (item is FormAlternativeSyntax alt)
-                    {
-                        if (alt.SectionName.Text == S)
-                            _problems.Add($"{label.ToLowerInvariant()} plays {S} as a repeat ending "
-                                + $"({InkText(alt)}); an ending holds one section, so it cannot become "
-                                + $"{S} {string.Join(" ", newNames)} — split the form by hand.");
-                        else if (newNames.Contains(alt.SectionName.Text))
-                            _problems.Add($"{label.ToLowerInvariant()} already plays {alt.SectionName.Text} "
-                                + "as a repeat ending — fix the form by hand.");
-                        continue;
-                    }
                     if (handled.Contains(item) || SectionSymbols.ReferencedName(item)?.Text != S)
                         continue;
                     // The plays right after this one, in the same list.
@@ -1095,7 +1085,7 @@ public static class SectionSplitter
                 }
                 // A new name played anywhere but right after S.
                 foreach (var item in items)
-                    if (!handled.Contains(item) && item is not FormAlternativeSyntax
+                    if (!handled.Contains(item)
                         && SectionSymbols.ReferencedName(item)?.Text is { } n && newNames.Contains(n))
                     {
                         _problems.Add($"{label.ToLowerInvariant()} already plays {n} somewhere other than "
@@ -1292,15 +1282,19 @@ public static class SectionSplitter
             {
                 foreach (var n in form.DescendantNodes())
                 {
-                    string? name = n is FormAlternativeSyntax alt ? alt.SectionName.Text
-                        : SectionSymbols.ReferencedName(n)?.Text;
+                    // An ending's sections are reference nodes too; each plays once per
+                    // pass its bracket names.
+                    string? name = SectionSymbols.ReferencedName(n)?.Text;
                     if (name == null)
                         continue;
                     int times = 1;
-                    if (n is FormAlternativeSyntax a2 && a2.HasSeparator && a2.Separator!.Kind == SyntaxKind.Minus
-                        && a2.GetChild(3) is SyntaxTokenNode endNo && int.TryParse(endNo.Text, out int last))
-                        times = Math.Max(1, last - a2.AlternativeNumber + 1);
-                    else if (n is not FormAlternativeSyntax && n.Parent is FormRepeatBlockSyntax block)
+                    if (n.Parent is FormAlternativeSyntax a2)
+                    {
+                        if (a2.Separator is { Kind: SyntaxKind.Minus } && a2.EndNumber is { } endNo
+                            && int.TryParse(endNo.Text, out int last))
+                            times = Math.Max(1, last - a2.AlternativeNumber + 1);
+                    }
+                    else if (n.Parent is FormRepeatBlockSyntax block)
                         times = block.DescendantNodes().OfType<BarlineSyntax>().FirstOrDefault(b => b.HasExplicitRepeatCount)
                             ?.RepeatCount ?? 2;
                     plays[name] = plays.GetValueOrDefault(name) + times;

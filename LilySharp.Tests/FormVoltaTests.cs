@@ -54,30 +54,60 @@ public sealed class FormVoltaTests
         Assert.True(MeasureCount("form main { |: A [1. D] :| [2. O] }") > 0);
     }
 
+    /// <summary>
+    /// The first ending closes the body: the next token must be its <c>:|</c>. What used to
+    /// be the old after-both spelling (<c>|: A [1. D] [2. O] :|</c>, LYS1010 until
+    /// 2026-09-28) gets the parser's ordinary "Expected" error and nothing that names the
+    /// old spelling, and the <c>[2. O]</c> is NOT one of the repeat's endings: no <c>2.</c>
+    /// bracket is engraved.
+    /// </summary>
     [Fact]
-    public void OldSpelling_RepeatBarlineAfterBothEndings_IsAnError()
+    public void AnEndingFollowedByAnotherEndingBeforeTheRepeatBar_IsAnOrdinarySyntaxError()
     {
-        // |: A [1. D] [2. O] :|  — the repeat barline must go BETWEEN the endings
-        // ([1. D] :| [2. O]); the old after-both spelling is rejected.
         var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] [2. O] :| }" + Tail);
-        Assert.True(tree.HasErrors);
-        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.VoltaRepeatBarlinePlacement);
+        var errors = tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        var error = Assert.Single(errors);
+        Assert.Equal(DiagnosticCodes.ExpectedToken, error.Code);
+        Assert.Equal("Expected 'RepeatEndBar', found 'OpenBracket'", error.Message);
+
+        var repeat = tree.GetRoot().DescendantNodes().OfType<FormRepeatBlockSyntax>().Single();
+        Assert.Single(repeat.DescendantNodes().OfType<FormAlternativeSyntax>());
+
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var layout = new LayoutEngine().Layout(new MeasureCollector().CollectMultiStaff(tree, spec));
+        Assert.DoesNotContain(layout.VoltaBracketLayouts, v => v.VoltaText == "2.");
+    }
+
+    /// <summary>
+    /// A bracketless ending (<c>:| 2. O</c>, <c>|: A | 1. D :| 2. O</c> — LYS1011 until
+    /// 2026-09-28, which still built the ending) is not an ending at all: the number and the
+    /// dot are stray form items (LYS0030), the name is an ordinary reference, and no
+    /// <see cref="FormAlternativeSyntax"/> is built.
+    /// </summary>
+    [Theory]
+    [InlineData("form main { |: A [1. D] :| 2. O }", "2")]
+    [InlineData("form main { |: A :| 2. O }", "2")]
+    [InlineData("form main { |: A | 1. D :| 2. O }", "1")]
+    public void ABareNumberedEnding_IsStrayFormItems(string form, string firstNumber)
+    {
+        var tree = SyntaxTree.Parse(Head + form + Tail);
+        var errors = tree.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.NotEmpty(errors);
+        Assert.All(errors, d => Assert.Equal(DiagnosticCodes.StrayItemToken, d.Code));
+        Assert.StartsWith($"'{firstNumber}' is not something a form can hold.", errors[0].Message);
+        Assert.Contains(errors, d => d.Message.StartsWith("'.' is not something a form can hold."));
+
+        Assert.Equal(form.Contains("[1. D]") ? 1 : 0,
+            tree.GetRoot().DescendantNodes().OfType<FormAlternativeSyntax>().Count());
+        Assert.Equal(Head + form + Tail, tree.GetRoot().ToFullString());
     }
 
     [Fact]
-    public void BareEnding_WithoutOpeningBracket_IsRejected()
+    public void OpenBracket_WithoutClosingBracket_IsAccepted_BeforeItsRepeatBar()
     {
-        // The '[' is required: write '[2. O]', not a bare '2. O'.
-        var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] :| 2. O }" + Tail);
-        Assert.True(tree.HasErrors);
-        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.VoltaBracketRequired);
-    }
-
-    [Fact]
-    public void OpenBracket_WithoutClosingBracket_IsAccepted()
-    {
-        // The closing ']' is optional — absent leaves the cap open.
-        Assert.True(MeasureCount("form main { |: A [1. D :| [2. O }") > 0);
+        // The closing ']' may be left off only where a ':|' follows at once (owner's design
+        // 2026-09-28): the ':|' delimits the ending. The last ending writes `]` or `-]`.
+        Assert.True(MeasureCount("form main { |: A [1. D :| [2. O -] }") > 0);
     }
 
     [Fact]

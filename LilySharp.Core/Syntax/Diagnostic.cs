@@ -208,7 +208,15 @@ public sealed class DiagnosticBag
 /// the same day it was born (2026-08-19, user decision, still before the first tag):
 /// with every book already respelled, <c>with</c> stopped being a keyword at all (the
 /// LYS8007 / <c>font</c> precedent below), so the old spelling reads as ordinary
-/// tokens — a bare display name, then a row — and the error had nothing left to catch.
+/// tokens — a bare display name, then a row — and the error had nothing left to catch. ·
+/// <c>LYS1010</c> VoltaRepeatBarlinePlacement and <c>LYS1011</c> VoltaBracketRequired
+/// (2026-09-28, owner policy: no acceptance kept for old Lily# spellings): they refused the
+/// old form endings <c>|: A [1. D] [2. O] :|</c> and the bracketless <c>:| 2. O</c> /
+/// <c>|: A | 1. A1 :| 2. A2</c> but still built the ending, so both kept rendering. The
+/// grammar no longer has either shape: the first ending closes a repeat's body (anything
+/// but <c>:|</c> after it is <see cref="ExpectedToken"/>), and a bare <c>2.</c> is a
+/// stray form item (<see cref="StrayItemToken"/>). Written by 0 of the 1,163 tracked and
+/// Lab-corpus books when they were retired.
 /// </para>
 /// <para>
 /// LYS8007 lived for one day. It refused the one-line <c>font "NAME"</c> and told the
@@ -664,11 +672,19 @@ public static class DiagnosticCodes
     public const string DuplicateFormName = "LYS1017";
     /// <summary>Semantic error: a <c>score</c> references a form that is missing or undeclared.</summary>
     public const string UnknownFormReference = "LYS1018";
-    /// <summary>Semantic error: invalid barline placement for a volta repeat.</summary>
-    public const string VoltaRepeatBarlinePlacement = "LYS1010";
+    // LYS1010 (VoltaRepeatBarlinePlacement) and LYS1011 (VoltaBracketRequired) are
+    // RETIRED — see the class remarks' retired-numbers list.
 
-    /// <summary>Syntax error: a volta ending must be bracketed — <c>[N. Section]</c>.</summary>
-    public const string VoltaBracketRequired = "LYS1011";
+    /// <summary>Syntax error: a form repeat run names no section — <c>|: [1. X] :| [2. Y]</c>
+    /// (nothing before the first ending), <c>|: :|</c>, or an empty run between a <c>|:</c>
+    /// and a <c>:|:</c>. The body is what every pass plays; a run without one repeats
+    /// nothing. Reported at the run's opening bar (<c>|:</c> or <c>:|:</c>).</summary>
+    /// <remarks>
+    /// Until 2026-09-28 all three compiled in silence (the empty form got LYS6007 only because
+    /// the whole form was empty). Written by one Lab book (<c>ベースタブLy/repeat.lys</c>,
+    /// <c>|: [1. B] :| [2. C D]</c>) and no tracked book.
+    /// </remarks>
+    public const string EmptyRepeatBody = "LYS1041";
 
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";

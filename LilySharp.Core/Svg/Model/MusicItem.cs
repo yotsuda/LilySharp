@@ -119,8 +119,12 @@ public enum SectionRepeatRole : byte
     None,
     /// <summary>A play of a repeat block's body.</summary>
     Body,
-    /// <summary>One of a repeat block's endings (<c>[1. A]</c>), in written order.</summary>
+    /// <summary>One of a repeat block's endings (<c>[1. A]</c>), in written order — the play of
+    /// its FIRST section.</summary>
     Ending,
+    /// <summary>A later section of the same ending (<c>D</c> in <c>[1. C D]</c>): played right
+    /// after the one before it, on the same pass.</summary>
+    EndingContinued,
 }
 
 /// <summary>

@@ -1352,8 +1352,8 @@ public sealed class MidiExporter
             // the page were the two walks that dropped it. Saying so to the author is
             // the other half of the repair and lives in FormDeclarationValidator.
             case FormWalk.Ending e:
-                PlaySectionByName(e.Node.SectionName.Text, track, conductorTrack,
-                    e.Node.OctaveOffset);
+                foreach (var s in e.Sections)
+                    PlaySectionByName(s.Name, track, conductorTrack, s.OctaveOffset);
                 break;
             // A one-sided ':|' only rewinds on the FIRST pass (PlayForm's loop); inside
             // a replayed stretch it does NOT rewind again — that would not terminate.
@@ -1399,7 +1399,8 @@ public sealed class MidiExporter
         // readers give B B C C — no book on disk writes the divider inside a block (925
         // scanned), so the observers are FormRepeatBarlineTests' own.
         var body = new List<(string Name, int OctaveOffset)>();
-        var alternatives = new List<(string Name, int OctaveOffset)>();
+        // One entry per ENDING, each the sections it plays in order ([1. C D]).
+        var alternatives = new List<List<(string Name, int OctaveOffset)>>();
         foreach (var child in repeatBlock.Children)
         {
             switch (child)
@@ -1409,12 +1410,12 @@ public sealed class MidiExporter
                     body.Add((s.Name, s.OctaveOffset));
                     break;
                 case FormWalk.Ending e:
-                    alternatives.Add((e.Node.SectionName.Text, e.Node.OctaveOffset));
+                    alternatives.Add(e.Sections.Select(s => (s.Name, s.OctaveOffset)).ToList());
                     break;
                 case FormWalk.BothBar:
                     PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack);
                     body = new List<(string Name, int OctaveOffset)>();
-                    alternatives = new List<(string Name, int OctaveOffset)>();
+                    alternatives = new List<List<(string Name, int OctaveOffset)>>();
                     break;
             }
         }
@@ -1425,7 +1426,7 @@ public sealed class MidiExporter
     /// when it holds no <c>:|:</c>. The written <c>:|*N</c> is the block's and applies to
     /// every run, as the LilyPond twin writes it on each run's close.</summary>
     private void PlayRepeatRun(FormWalk.Repeat repeatBlock,
-        List<(string Name, int OctaveOffset)> body, List<(string Name, int OctaveOffset)> alternatives,
+        List<(string Name, int OctaveOffset)> body, List<List<(string Name, int OctaveOffset)>> alternatives,
         MidiTrack track, MidiTrack conductorTrack)
     {
         if (body.Count == 0 && alternatives.Count == 0)
@@ -1472,8 +1473,9 @@ public sealed class MidiExporter
                             _sourceOrdinals[key] += pass;
                     }
                 }
-                PlaySectionByName(alternatives[pass].Name, track, conductorTrack,
-                    alternatives[pass].OctaveOffset);
+                // An ending's sections play in order, as one stretch of the pass.
+                foreach (var (name, endingOctave) in alternatives[pass])
+                    PlaySectionByName(name, track, conductorTrack, endingOctave);
             }
         }
     }

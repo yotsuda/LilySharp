@@ -372,9 +372,9 @@ public sealed class FormRepeatBarlineTests
                 Assert.Collection(block.Children,
                     c => Assert.IsType<FormWalk.RepeatStart>(c),
                     c => Assert.Equal("B", Assert.IsType<FormWalk.SectionRef>(c).Name),
-                    c => Assert.Equal("C", Assert.IsType<FormWalk.Ending>(c).Node.SectionName.Text),
+                    c => Assert.Equal("C", Assert.Single(Assert.IsType<FormWalk.Ending>(c).Sections).Name),
                     c => Assert.IsType<FormWalk.RepeatEnd>(c),
-                    c => Assert.Equal("D", Assert.IsType<FormWalk.Ending>(c).Node.SectionName.Text));
+                    c => Assert.Equal("D", Assert.Single(Assert.IsType<FormWalk.Ending>(c).Sections).Name));
             });
     }
 

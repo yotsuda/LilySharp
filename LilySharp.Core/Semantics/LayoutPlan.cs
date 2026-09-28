@@ -65,7 +65,10 @@ public sealed record LayoutPlan(
     // `chordDiagrams [TUNING] all` — every chord name draws a diagram: its written shape, else
     // the default one (Music.ChordShapes.Drawn; owner's decision 2026-09-28). False without it:
     // only a written shape draws. Never true with `none` (the reader refuses `none all`).
-    bool ChordDiagramsAll = false)
+    bool ChordDiagramsAll = false,
+    // `voltaBracket all|line|N` — how far an ending's bracket reaches (VoltaBracketLength);
+    // an ending's own `@voltaBracket(…)` overrides it. The struct's default is `all`.
+    VoltaBracketLength VoltaBracket = default)
 {
     /// <summary>The tuning a chord diagram of this score draws on, given the fretted tuning
     /// of the part it belongs to (<paramref name="partTuning"/>, null for none) — or null
@@ -371,6 +374,100 @@ public static class ChordDiagramsKey
     /// the part's (<paramref name="partWord"/>), else <c>guitar</c>; null for <c>none</c>.</summary>
     public static string? ResolveWord(string? layoutWord, string? partWord)
         => layoutWord == Music.ChordShapes.NoneWord ? null : layoutWord ?? partWord ?? "guitar";
+}
+
+/// <summary>How far an ending's volta bracket reaches (<see cref="VoltaBracketLength"/>).</summary>
+public enum VoltaBracketLengthMode
+{
+    /// <summary>Every bar of the ending (the default, and the enum's zero).</summary>
+    All,
+    /// <summary>Up to the end of the system the bracket starts in.</summary>
+    Line,
+    /// <summary>The ending's first <see cref="VoltaBracketLength.Bars"/> bars.</summary>
+    Bars,
+}
+
+/// <summary>
+/// The <c>voltaBracket</c> value — a layout key (<c>layout { voltaBracket line }</c>) and an
+/// ending's own annotation (<c>[1. B C]@voltaBracket(3)</c>, which wins over the key):
+/// <c>all</c> covers every bar of the ending, <c>line</c> stops at the end of the system the
+/// bracket starts in, and a whole number N covers the ending's first N bars (all of it when
+/// the ending is shorter). Owner's design, 2026-09-28.
+/// </summary>
+/// <remarks>
+/// ⚠️ A bracket CUT SHORT always ends straight, whatever its <c>]</c> / <c>-]</c> says: the
+/// down-hook means "the ending ends here", and a cut bracket's right end is not the ending's
+/// end (<see cref="IsCut"/>).
+/// LILYPOND-REF: lily/volta-engraver.cc:232-296 Volta_engraver::process_music — a
+/// VoltaBracket ends early when its <c>musical-length</c> (or
+/// <c>voltaBracketMusicalLength</c>) runs out;
+/// LILYPOND-REF: lily/volta-engraver.cc:428-533 Volta_engraver::stop_translation_timestep —
+/// zeroes the right <c>edge-height</c> unless the bar where it ends allows a hook.
+/// </remarks>
+/// <param name="Mode">Which reach.</param>
+/// <param name="Bars">For <see cref="VoltaBracketLengthMode.Bars"/>, the N (at least 1); 0 otherwise.</param>
+public readonly record struct VoltaBracketLength(VoltaBracketLengthMode Mode, int Bars = 0)
+{
+    /// <summary>The layout key, and the annotation's name.</summary>
+    public const string Key = "voltaBracket";
+
+    /// <summary>The value words (a whole number is the third spelling).</summary>
+    public const string AllWord = "all";
+    /// <inheritdoc cref="AllWord"/>
+    public const string LineWord = "line";
+
+    /// <summary>The words, the default first — for messages and completion.</summary>
+    public static readonly IReadOnlyList<string> Words = [AllWord, LineWord];
+
+    /// <summary>The sentence every refusal of a value ends with.</summary>
+    public const string Takes = "takes all, line or a whole number of bars (at least 1)";
+
+    /// <summary>Every bar of the ending — the default.</summary>
+    public static readonly VoltaBracketLength All = default;
+
+    /// <summary>To the end of the bracket's first system.</summary>
+    public static readonly VoltaBracketLength Line = new(VoltaBracketLengthMode.Line);
+
+    /// <summary>The ending's first <paramref name="bars"/> bars.</summary>
+    public static VoltaBracketLength FirstBars(int bars) => new(VoltaBracketLengthMode.Bars, bars);
+
+    /// <summary>The value <paramref name="word"/> spells — <c>all</c>, <c>line</c> or a whole
+    /// number of at least 1 written in ASCII digits — or null. Case-sensitive, like every
+    /// Lily# value word.</summary>
+    public static VoltaBracketLength? Parse(string word)
+    {
+        if (word == AllWord) return All;
+        if (word == LineWord) return Line;
+        if (word.Length > 0 && word.All(char.IsAsciiDigit)
+            && int.TryParse(word, System.Globalization.NumberStyles.None,
+                System.Globalization.CultureInfo.InvariantCulture, out int n) && n >= 1)
+            return FirstBars(n);
+        return null;
+    }
+
+    /// <summary>The spelling of a value word that differs from <paramref name="word"/> only
+    /// in case (<c>Line</c> → <c>line</c>), or null.</summary>
+    public static string? CaseOnlyMatch(string word)
+        => Words.FirstOrDefault(w => !w.Equals(word, StringComparison.Ordinal)
+                                     && w.Equals(word, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The written spelling of this value.</summary>
+    public override string ToString() => Mode switch
+    {
+        VoltaBracketLengthMode.Line => LineWord,
+        VoltaBracketLengthMode.Bars => Bars.ToString(System.Globalization.CultureInfo.InvariantCulture),
+        _ => AllWord,
+    };
+
+    /// <summary>The last bar the bracket covers, for an ending over bars
+    /// <paramref name="first"/>..<paramref name="last"/> (inclusive) — before any system
+    /// break is known: a <c>line</c> bracket is cut by the layout, not here.</summary>
+    public int LastBar(int first, int last)
+        => Mode == VoltaBracketLengthMode.Bars ? Math.Min(last, first + Bars - 1) : last;
+
+    /// <summary>True when N bars stop before the ending's last bar — the bracket is cut
+    /// short and ends straight.</summary>
+    public bool IsCut(int first, int last) => LastBar(first, last) < last;
 }
 
 /// <summary>Which bars carry a printed number.</summary>

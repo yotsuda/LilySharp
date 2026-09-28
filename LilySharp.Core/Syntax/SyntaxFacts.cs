@@ -264,7 +264,7 @@ internal static class SyntaxFacts
     /// </summary>
     public static IReadOnlyList<string> LayoutKeyVocabulary { get; } =
         ["markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
-         "chordQualities", "minorChords", "chordDiagrams"];
+         "chordQualities", "minorChords", "chordDiagrams", "voltaBracket"];
 
     /// <summary>True when <paramref name="word"/> is a layout key as written — keys are
     /// case-sensitive, like a paper key's (owner's decision 2026-09-27).</summary>

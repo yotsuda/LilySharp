@@ -222,6 +222,36 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>
+    /// The <c>layout { }</c> switches of the score being written — its layout reference over
+    /// the file's default, the page's reading (<see cref="Semantics.LayoutPlanReader"/>) — or,
+    /// with no score chosen, the file's first score's. Read once.
+    /// </summary>
+    private Semantics.LayoutPlan ScoreLayoutPlan()
+    {
+        if (_scoreLayoutPlan is { } read)
+            return read;
+        var plan = Semantics.LayoutPlan.Default;
+        if (_root != null)
+        {
+            if (Score is { } score)
+            {
+                var file = Semantics.LayoutPlanReader.FileDefault(_root) is { } f
+                    ? Semantics.LayoutPlanReader.Read(f, out _)
+                    : Semantics.LayoutPlan.Default;
+                plan = score.LayoutRef is { } layoutRef
+                    ? Semantics.LayoutPlanReader.ReadReference(_root, layoutRef, file)
+                    : file;
+            }
+            else
+                plan = Semantics.LayoutPlanReader.Resolve(_root,
+                    _root.DescendantNodes().OfType<RenderDeclarationSyntax>().FirstOrDefault());
+        }
+        return (_scoreLayoutPlan = plan);
+    }
+
+    private Semantics.LayoutPlan? _scoreLayoutPlan;
+
+    /// <summary>
     /// The tuning an <c>@chord</c>'s diagram draws on in the exported score (owner's decisions
     /// 2026-09-28): the score's <c>layout { chordDiagrams T }</c> — the <see cref="Score"/> being
     /// written (its layout reference over the file's default), else the file's first score, the
@@ -262,6 +292,7 @@ public sealed class MusicXmlExporter
     internal MusicXmlDocument Export(SyntaxTree tree)
     {
         _diagramsWord = default;
+        _scoreLayoutPlan = null;
         _document = new MusicXmlDocument();
 
         var root = tree.GetRoot();
@@ -676,8 +707,11 @@ public sealed class MusicXmlExporter
                     EmitWithPendingTargets(() => EmitRepeatBlock(rb, byName));
                     break;
                 case FormWalk.Ending alt:
-                    EmitWithPendingTargets(() => EmitSectionByName(byName, alt.Node.SectionName.Text,
-                        alt.Node.OctaveOffset));
+                    EmitWithPendingTargets(() =>
+                    {
+                        foreach (var s in alt.Sections)
+                            EmitSectionByName(byName, s.Name, s.OctaveOffset);
+                    });
                     break;
                 case FormWalk.Other { Node: NavigationMarkSyntax nav }:
                     ApplyNavMark(nav.MarkType);
@@ -871,9 +905,10 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>A <c>|: BODY [1. E1] :| [2. E2]</c> volta repeat. The body opens the
-    /// forward repeat; each ending gets a &lt;ending&gt; start/stop bracket; the
-    /// backward repeat sits on the last measure before the <c>:|</c>; endings AFTER
-    /// the <c>:|</c> are final (type "discontinue", no repeat).
+    /// forward repeat; each ending gets a &lt;ending&gt; start/stop bracket — "stop" for a
+    /// hooked end (<c>]</c>), "discontinue" for an open one (<c>-]</c>) or one its
+    /// <c>voltaBracket N</c> cuts short; the backward repeat sits on the last measure before
+    /// the <c>:|</c>.
     /// <para>
     /// A silent <c>~</c> ending is INDISTINGUISHABLE HERE, and that is the correct answer
     /// rather than a gap: the tilde binds to the section name and hides the section LABEL,
@@ -887,24 +922,38 @@ public sealed class MusicXmlExporter
     private void EmitVoltaRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         bool forwardPending = true;
-        bool afterEndBar = false;
 
         foreach (var child in rb.Children)
         {
-            if (child is FormWalk.Ending { Node: var alt })
+            if (child is FormWalk.Ending { Node: var alt } ending)
             {
                 _xmlRole = Svg.Model.SectionRepeatRole.Ending;
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
-                EmitSectionByName(byName, alt.SectionName.Text, alt.OctaveOffset);
+                // One <ending> across all of the ending's sections: start on the first
+                // measure of the first, stop on the last measure of the last.
+                foreach (var s in ending.Sections)
+                {
+                    EmitSectionByName(byName, s.Name, s.OctaveOffset);
+                    _xmlRole = Svg.Model.SectionRepeatRole.EndingContinued;
+                }
                 string num = EndingNumbers(alt);
-                string stopType = afterEndBar ? "discontinue" : "stop";
+                // END SHAPE and LENGTH (owner's design 2026-09-28, the page's reading in
+                // MeasureCollector.EndingBracket): `]` stops with a hook ("stop"), `-]` without
+                // one ("discontinue"); `voltaBracket N` puts the end at the ending's Nth bar,
+                // always "discontinue" there — a cut bracket is not the ending's end.
+                // ⚠️ `voltaBracket line` has no reading here: a MusicXML file carries no
+                // system breaks of the page's, so the ending is written whole.
+                var length = alt.LengthUnder(ScoreLayoutPlan().VoltaBracket);
                 foreach (var p in Document.Parts)
                 {
-                    if (p.Measures.Count <= startIdx.GetValueOrDefault(p)) continue;
-                    p.Measures[startIdx.GetValueOrDefault(p)].EndingStartNumbers = num;
-                    p.Measures[^1].EndingStopNumbers = num;
-                    p.Measures[^1].EndingStopType = stopType;
-                    if (forwardPending) p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
+                    int first = startIdx.GetValueOrDefault(p);
+                    if (p.Measures.Count <= first) continue;
+                    int last = p.Measures.Count - 1;
+                    int stopAt = length.LastBar(first, last);
+                    p.Measures[first].EndingStartNumbers = num;
+                    p.Measures[stopAt].EndingStopNumbers = num;
+                    p.Measures[stopAt].EndingStopType = alt.EndsHooked && stopAt == last ? "stop" : "discontinue";
+                    if (forwardPending) p.Measures[first].RepeatForward = true;
                 }
                 forwardPending = false;
             }
@@ -924,7 +973,6 @@ public sealed class MusicXmlExporter
             else if (child is FormWalk.RepeatEnd)
             {
                 // The :| repeats back to the |:; it caps the ending just played.
-                afterEndBar = true;
                 foreach (var p in Document.Parts)
                     if (p.Measures.Count > 0)
                         p.Measures[^1].RepeatBackward = true;

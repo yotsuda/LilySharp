@@ -209,8 +209,17 @@ public sealed partial class FormRepeatBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Represents an alternative in structure: 1. SectionName or [1. SectionName] or [1-3. SectionName] or [1. ~SectionName]
+/// Represents a volta ending in a form: <c>[1. B]</c>, <c>[1-3. B]</c>, <c>[1,3. ~B]</c> or
+/// <c>[1. B C']</c> — one or more section references played in order under one bracket.
 /// </summary>
+/// <remarks>
+/// The sections are ordinary <see cref="SectionReferenceSyntax"/> / silent-reference nodes, so
+/// each carries its own <c>~</c>, octave marks and label, and every reader of references
+/// (rename, go to definition, the undefined-section check) sees them without learning about
+/// endings. ⚠️ The flip side: a walk over a form's DESCENDANTS meets each ending's sections
+/// twice — once inside the ending, once as references — unless it skips references whose
+/// parent is an ending (<see cref="IsEndingSection"/>).
+/// </remarks>
 public sealed partial class FormAlternativeSyntax : SyntaxNode
 {
     internal FormAlternativeSyntax(FormAlternativeGreen green, SyntaxNode? parent, int position)
@@ -218,75 +227,52 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     {
     }
 
-    /// <summary>
-    /// True if this is bracket style [1. A], false if legacy style 1. A
-    /// </summary>
-    public bool HasBracket => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
+    private const int FirstSectionSlot = 5;
 
     /// <summary>
-    /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A].
+    /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A] (slot 2, null
+    /// when absent).
     /// </summary>
-    /// <remarks>
-    /// ⚠️ Asked of SLOT 2, not of <c>SlotCount</c>. It counted slots (9 with a separator,
-    /// 7 without) until 2026-08-31, when the ending gained variable-length octave marks and
-    /// <c>[1. A'']</c> reached 9 slots without a separator — which would have made this read
-    /// the `.` as the separator and the tilde slot as the end number. The separator is the
-    /// only thing that can stand at slot 2, so ask it there.
-    /// </remarks>
-    public bool HasSeparator => HasBracket
-        && GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Minus or SyntaxKind.Comma };
+    public bool HasSeparator =>
+        GetChild(2) is SyntaxTokenNode { Kind: SyntaxKind.Minus or SyntaxKind.Comma };
 
-    /// <summary>
-    /// True if this is a silent section reference [1. ~A] (no label displayed)
-    /// </summary>
-    public bool IsSilent
-    {
-        get
-        {
-            if (!HasBracket) return false;
-            // Tilde is at slot[3] for without separator, slot[5] for with separator
-            var tildeSlot = HasSeparator ? 5 : 3;
-            var child = GetChild(tildeSlot);
-            return child != null && child is SyntaxTokenNode token && token.Kind == SyntaxKind.Tilde;
-        }
-    }
+    /// <summary>True when the ending was written <c>-]</c>: its bracket's right end stays
+    /// straight (open). <c>]</c> — and an ending its <c>:|</c> closes — hooks down
+    /// (<see cref="EndsHooked"/>).</summary>
+    public bool EndsOpen => GetChild(SlotCount - 3) is SyntaxTokenNode { Kind: SyntaxKind.Minus };
 
-    /// <summary>True when the bracket ending is terminated by a closing <c>]</c> — its
-    /// right cap is drawn. Omitting the <c>]</c> leaves the ending open on the right.</summary>
-    public bool IsClosed =>
-        HasBracket && GetChild(SlotCount - 1) is SyntaxTokenNode { Kind: SyntaxKind.CloseBracket };
+    /// <summary>True when the bracket's right end hooks down ("the ending ends here"): written
+    /// <c>]</c>, or closed by the <c>:|</c> right after it. A bracket the length setting cuts
+    /// short ends straight regardless (<see cref="Semantics.VoltaBracketLength.IsCut"/>).</summary>
+    public bool EndsHooked => !EndsOpen;
 
-    /// <summary>
-    /// Gets the number token.
-    /// Legacy: slot[0], Bracket: slot[1]
-    /// </summary>
-    public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(HasBracket ? 1 : 0)!;
+    /// <summary>The <c>@name(…)</c> glued to the ending's <c>]</c>, or null.</summary>
+    public MusicMarkSyntax? Annotation => GetChild(SlotCount - 1) as MusicMarkSyntax;
 
-    /// <summary>
-    /// Gets the section name token.
-    /// Legacy (3 slots): slot[2]
-    /// Bracket without separator (6 slots): slot[4]
-    /// Bracket with separator (8 slots): slot[6]
-    /// </summary>
-    public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(SectionNameSlot)!;
+    /// <summary>The ending's own <c>@voltaBracket(…)</c> value when it is written and valid,
+    /// else null (the layout's <c>voltaBracket</c> applies). An invalid one is the annotation
+    /// validator's to report.</summary>
+    public Semantics.VoltaBracketLength? LengthOverride
+        => Annotation is { Name: Semantics.VoltaBracketLength.Key, IsSpanEnd: false } mark
+           && mark.ArgumentTokens is [var only]
+           && Semantics.VoltaBracketLength.Parse(only.Text) is { } length
+            ? length : null;
 
-    /// <summary>
-    /// Gets the alternative number.
-    /// </summary>
+    /// <summary>How far this ending's bracket reaches: its own <c>@voltaBracket(…)</c>, else
+    /// <paramref name="layoutDefault"/> (the score's <c>layout { voltaBracket … }</c>).</summary>
+    public Semantics.VoltaBracketLength LengthUnder(Semantics.VoltaBracketLength layoutDefault)
+        => LengthOverride ?? layoutDefault;
+
+    /// <summary>Gets the number token (slot 1, after the '[').</summary>
+    public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>Gets the alternative number.</summary>
     public int AlternativeNumber => int.Parse(Number.Text);
 
-    /// <summary>
-    /// Gets the separator token (- or ,) if present.
-    /// Only valid when HasBracket and HasSeparator are true.
-    /// Slot[2] when HasSeparator.
-    /// </summary>
+    /// <summary>Gets the separator token (- or ,) if present (slot 2).</summary>
     public SyntaxTokenNode? Separator => HasSeparator ? (SyntaxTokenNode?)GetChild(2) : null;
 
-    /// <summary>
-    /// Gets the end number token (e.g., "3" in [1-3. A]).
-    /// Only valid when HasBracket and HasSeparator are true.
-    /// Slot[3] when HasSeparator.
-    /// </summary>
+    /// <summary>Gets the end number token (e.g., "3" in [1-3. A]) if present (slot 3).</summary>
     public SyntaxTokenNode? EndNumber => HasSeparator ? (SyntaxTokenNode?)GetChild(3) : null;
 
     /// <summary>
@@ -296,39 +282,32 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     {
         get
         {
-            if (!HasBracket) return $"{Number.Text}.";
             if (!HasSeparator) return $"{Number.Text}.";
             return $"{Number.Text}{Separator!.Text}{EndNumber!.Text}.";
         }
     }
 
     /// <summary>
-    /// Optional display label on a bracket alternative: <c>[1. A "label"]</c>,
-    /// shown as the section's mark just like a plain reference's <c>A "A2"</c>.
-    /// Null when no label was given (or on the legacy non-bracket style). The
-    /// label slot sits right after the section name (slot[7] with a separator,
-    /// slot[5] without).
+    /// The ending's sections in the order they play: each a <see cref="SectionReferenceSyntax"/>
+    /// or a silent (<c>~</c>) reference. Never empty — a missing name is kept as an empty
+    /// reference.
     /// </summary>
-    public string? DisplayLabel => HasBracket ? SyntaxFacts.UnquotedLabel(this) : null;
+    public IReadOnlyList<SyntaxNode> Sections
+    {
+        get
+        {
+            var sections = new List<SyntaxNode>(1);
+            for (int i = FirstSectionSlot; i < SlotCount; i++)
+                if (GetChild(i) is { Kind: SyntaxKind.SectionReference or SyntaxKind.SilentSectionReference } s)
+                    sections.Add(s);
+            return sections;
+        }
+    }
 
-    /// <summary>
-    /// Net octave shift from the trailing marks (<c>[1. B']</c> = +1), the same spelling
-    /// and the same meaning a plain section reference carries
-    /// (<see cref="SectionReferenceSyntax.OctaveOffset"/>) — an ending IS a reference with
-    /// a bracket around it.
-    /// </summary>
-    /// <remarks>
-    /// ⚠️ Counted FROM the section-name slot, not over the whole node, because this is the
-    /// one reference shape whose <c>,</c> tokens are not all marks: the range separator in
-    /// <c>[1,3. B]</c> is a Comma standing at slot 2. Counting every slot would read that
-    /// ending as "an octave down".
-    /// </remarks>
-    public int OctaveOffset => SyntaxFacts.NetOctaveMarksFrom(this, SectionNameSlot + 1);
-
-    /// <summary>The slot the section name stands at — the last FIXED index in this node,
-    /// and the place the by-kind reads above start from.</summary>
-    private int SectionNameSlot => HasBracket ? (HasSeparator ? 6 : 4) : 2;
+    /// <summary>True when <paramref name="reference"/> is one of an ending's sections.</summary>
+    public static bool IsEndingSection(SyntaxNode reference) => reference.Parent is FormAlternativeSyntax;
 }
+
 
 /// <summary>
 /// Represents a navigation mark: segno, fine, coda, dc, ds, etc.

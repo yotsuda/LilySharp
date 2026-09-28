@@ -893,64 +893,34 @@ internal sealed class MusicMarkGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
 {
-    // Simple repeat: |: items :|
-    public FormRepeatBlockGreen(
-        SyntaxToken repeatStart,
-        GreenNode?[] items,
-        SyntaxToken repeatEnd)
-        : base(SyntaxKind.FormRepeatBlock, [repeatStart, .. items, repeatEnd])
-    {
-    }
-
-    // Repeat with alternatives: |: items | 1. A :| 2. B
-    public FormRepeatBlockGreen(
-        SyntaxToken repeatStart,
-        GreenNode?[] items,
-        SyntaxToken? barline,
-        GreenNode?[] alternativesBeforeEnd,
-        SyntaxToken repeatEnd,
-        GreenNode? finalAlternative)
-        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, null, null))
-    {
-    }
-
-    // Repeat with count: |: items :|*3 — the SAME spelling the inline music stream uses on its
-    // own end-repeat bar line (Parser.Music.cs ParseBarline), which is LilyPond's `R1*20`
+    // |: items [1. A] :|*3 [2. B] :| [3. C]. The count is the SAME spelling the inline music
+    // stream uses on its own end-repeat bar line (Parser.Music.cs ParseBarline), which is LilyPond's `R1*20`
     // multiplier idiom. It was `x3` until 2026-08-03, which was a second spelling of one thing
     // AND unreachable: the lexer glues `x3` into one identifier, so the parser branch that read
     // it never fired and the count landed as an undefined section reference instead.
     public FormRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
-        SyntaxToken? barline,
-        GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative,
         SyntaxToken? asterisk,
         SyntaxToken? repeatCount,
-        GreenNode?[]? furtherAlternatives = null)
-        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, asterisk, repeatCount, furtherAlternatives))
+        GreenNode?[] furtherAlternatives)
+        : base(SyntaxKind.FormRepeatBlock, BuildChildren(repeatStart, items, repeatEnd, finalAlternative, asterisk, repeatCount, furtherAlternatives))
     {
     }
 
     private static GreenNode?[] BuildChildren(
         SyntaxToken repeatStart,
         GreenNode?[] items,
-        SyntaxToken? barline,
-        GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative,
         SyntaxToken? asterisk,
         SyntaxToken? repeatCount,
-        GreenNode?[]? furtherAlternatives = null)
+        GreenNode?[] furtherAlternatives)
     {
         var children = new List<GreenNode?> { repeatStart };
         children.AddRange(items);
-        if (barline != null)
-        {
-            children.Add(barline);
-            children.AddRange(alternativesBeforeEnd);
-        }
         children.Add(repeatEnd);
         // ⚠️ THE COUNT SITS ON THE BAR LINE, so it goes in right after it and BEFORE any final
         // ending — `|: A [1. B] :|*3 [2. C]`. Children are in source order or ToFullString
@@ -968,10 +938,7 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
         // — `|: A [1. B] :| [2. C] :| [3. D]`. Kept as flat children in source order like
         // everything above, which is what lets FormWalk read the block by walking slots
         // rather than by fixed indices, and what keeps ToFullString round-tripping.
-        if (furtherAlternatives != null)
-        {
-            children.AddRange(furtherAlternatives);
-        }
+        children.AddRange(furtherAlternatives);
         return [.. children];
     }
 }
@@ -979,63 +946,31 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
 
 
 /// <summary>
-/// Alternative in repeat: 1. A, 2. B or [1. A] or [1-3. A] or [1. ~A]
+/// Volta ending in a form: [1. A] or [1-3. A] or [1,3. A] or [1. ~A "label"] or [1. A' B],
+/// holding one or more section references under one bracket.
 /// </summary>
 internal sealed class FormAlternativeGreen : GreenSyntaxNode
 {
-    // Legacy style: 1. A
-    public FormAlternativeGreen(
-        SyntaxToken number,
-        SyntaxToken dot,
-        SyntaxToken sectionName)
-        : base(SyntaxKind.FormAlternative, [number, dot, sectionName])
-    {
-    }
-
-    // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A] or [1. A "label"] or [1. A']
+    // Slot layout, fixed at both ends: [openBracket, number, separator?, endNumber?, dot,
+    // section…, openEnd?, closeBracket?, annotation?]. Absent slots are null, so the dot is
+    // always slot 4, the first section slot 5, and the LAST THREE slots are always the
+    // `-` of a `-]`, the `]`, and the `@voltaBracket(…)` glued to it. Each section is an
+    // ordinary SectionReference / SilentSectionReference node (octave marks and label
+    // included), which is what keeps a range separator — the Comma in `[1,3. B]` — from being
+    // read as a mark.
     public FormAlternativeGreen(
         SyntaxToken openBracket,
         SyntaxToken number,
         SyntaxToken? separator,
         SyntaxToken? endNumber,
         SyntaxToken dot,
-        SyntaxToken? tilde,
-        SyntaxToken sectionName,
-        GreenNode?[] octaveMarks,
-        SyntaxToken? displayLabel,
-        SyntaxToken? closeBracket)
+        GreenNode?[] sections,
+        SyntaxToken? openEnd,
+        SyntaxToken? closeBracket,
+        GreenNode? annotation)
         : base(SyntaxKind.FormAlternative,
-            BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, octaveMarks, displayLabel, closeBracket))
+            [openBracket, number, separator, endNumber, dot, .. sections, openEnd, closeBracket, annotation])
     {
-    }
-
-    private static GreenNode?[] BuildSlots(
-        SyntaxToken openBracket,
-        SyntaxToken number,
-        SyntaxToken? separator,
-        SyntaxToken? endNumber,
-        SyntaxToken dot,
-        SyntaxToken? tilde,
-        SyntaxToken sectionName,
-        GreenNode?[] octaveMarks,
-        SyntaxToken? displayLabel,
-        SyntaxToken? closeBracket)
-    {
-        // Slot layout (always include tilde + displayLabel slots for consistent indexing):
-        // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, marks…, displayLabel?, closeBracket]
-        // Without separator: [openBracket, number, dot, tilde?, sectionName, marks…, displayLabel?, closeBracket]
-        // ⚠️ Everything UP TO the section name keeps a fixed index; the marks are variable
-        // length, so the two slots after it (label, ']') are read by KIND — see
-        // FormAlternativeSyntax.DisplayLabel / IsClosed. HasSeparator likewise stopped
-        // counting slots: `[1,3. A']` and `[1. A]` can now have the same SlotCount.
-        if (separator != null)
-        {
-            return [openBracket, number, separator, endNumber, dot, tilde, sectionName, .. octaveMarks, displayLabel, closeBracket];
-        }
-        else
-        {
-            return [openBracket, number, dot, tilde, sectionName, .. octaveMarks, displayLabel, closeBracket];
-        }
     }
 }
 

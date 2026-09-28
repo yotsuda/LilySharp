@@ -71,7 +71,7 @@ public sealed partial class MeasureCollector
     private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
-        var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
+        var pendingVoltaBrackets = new List<VoltaBracketItem>();
 
         // A form barline CONFIRMS the boundary it lands on; it is never the second of a
         // written pair, because the author did not write two barlines next to each other —
@@ -178,39 +178,46 @@ public sealed partial class MeasureCollector
                 {
                     MarkFormEdge(SectionPlayEdge.Volta);
                     _pendingRole = SectionRepeatRole.Ending;
-                    string altSectionName = alt.SectionName.Text;
-                    if (_sectionState.Sections.TryGetValue(altSectionName, out var section))
+                    // The ending's sections the book declares, in order: [1. C D] plays C
+                    // then D on the same pass, under ONE bracket.
+                    var sections = new List<(SyntaxNode Reference, string Name, SectionDeclarationSyntax Section)>();
+                    foreach (var endingRef in alt.Sections)
+                        if (Editing.SectionSymbols.ReferencedName(endingRef)?.Text is { } refName
+                            && _sectionState.Sections.TryGetValue(refName, out var declared))
+                            sections.Add((endingRef, refName, declared));
+                    if (sections.Count > 0)
                     {
                         if (live)
                             builder.BeginAlternatives();
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
-                        if (live)
-                            RecordSectionStart(altSectionName, startMeasureIndex);
 
-                        // `~` BINDS TO THE SECTION NAME, NOT TO THE ENDING — the grammar
-                        // spells the ending `'[' Integer '.' ['~'] Identifier [']']`, so the
-                        // tilde is the same one the plain `~Name` item carries and it hides
-                        // the same thing: the section LABEL. The bracket, its number and its
-                        // caps are the ending's own and are not the tilde's to take.
-                        // ⚠️ UNTIL 2026-08-25 THIS ARM APPLIED IT TO THE OTHER LINE, and both
-                        // halves were wrong at once: the label was written unconditionally
-                        // here while the bracket was gated on IsSilent below, so
-                        // `|: [1. ~B :|` printed B's label and drew no ending at all —
-                        // exactly inverted (user report, scratch/ベースタブLy/
-                        // repeat-disappear.lys). The sibling arm for an ending OUTSIDE a
-                        // repeat (MeasureCollector.cs, the `!IsInsideRepeatBlock` case) has
-                        // always read it this way and FormVoltaWithoutRepeatTests pins it;
-                        // so do the two resume arms. This was the ONE page reader of four
-                        // that had not been taught.
-                        if (live)
+                        foreach (var (endingRef, refName, section) in sections)
                         {
-                            builder.SectionLabel = LabelForEnding(alt);
-                            builder.SectionLabelPosition = SectionDeclPos(altSectionName);
+                            if (live)
+                            {
+                                RecordSectionStart(refName, builder.CurrentMeasureIndex);
+                                // `~` BINDS TO THE SECTION NAME, NOT TO THE ENDING — the
+                                // tilde is the same one the plain `~Name` item carries and it
+                                // hides the same thing: the section LABEL. The bracket, its
+                                // number and its caps are the ending's own and are not the
+                                // tilde's to take.
+                                // ⚠️ UNTIL 2026-08-25 THIS ARM APPLIED IT TO THE OTHER LINE:
+                                // the label was written unconditionally here while the bracket
+                                // was gated on the tilde below, so `|: [1. ~B :|` printed B's
+                                // label and drew no ending at all — exactly inverted (user
+                                // report, scratch/ベースタブLy/repeat-disappear.lys).
+                                builder.SectionLabel = LabelForEndingSection(endingRef);
+                                builder.SectionLabelPosition = SectionDeclPos(refName);
+                            }
+                            // An ending's section IS a section reference with a bracket around
+                            // it, marks included: `[1. B']` opens B an octave up for that
+                            // ending only.
+                            ProcessSection(section, processNodes, builder, SyntaxFacts.NetOctaveMarks(endingRef));
+                            // The next section of the SAME ending follows this one on the same
+                            // pass: a plain sequential edge (a slur may run from C into D).
+                            _pendingRole = SectionRepeatRole.EndingContinued;
                         }
-                        // An ending IS a section reference with a bracket around it, marks
-                        // included: `[1. B']` opens B an octave up for that ending only.
-                        ProcessSection(section, processNodes, builder, alt.OctaveOffset);
                         if (live)
                         {
                             bool lastEnding = true;
@@ -229,29 +236,47 @@ public sealed partial class MeasureCollector
                         if (builder.CurrentItemCount > 0)
                             endMeasureIndex++;
 
-                        // Collect volta bracket info if bracket style
+                        // Collect the volta bracket's span — ONE bracket over every section.
                         // endMeasureIndex is exclusive (one-past-end); convert to inclusive
                         // for VoltaBracketItem which stores the last measure index
-                        // ⚠️ NOT gated on IsSilent — see the label above. Writing an ending
+                        // ⚠️ NOT gated on a tilde — see the label above. Writing an ending
                         // with no bracket already has a spelling, and it is the one without
-                        // the `[`: `|: A :|` engraves the repeat and no volta.
+                        // the ending: `|: A :|` engraves the repeat and no volta.
                         // Resume: gated like every emission above — a skipped block's
                         // brackets are in the adopted table slice, and the frozen
                         // builder would pair (0, 0) here.
-                        if (live && alt.HasBracket)
+                        if (live)
                         {
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                            pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.IsClosed, alt.SourceStart));
+                            pendingVoltaBrackets.Add(EndingBracket(alt, startMeasureIndex, lastMeasure));
                         }
                     }
                 }
             }
         }
 
-        // Each ending's right cap follows its source ']' (present = closed); the
-        // engraver's segment splitter opens only line-break pieces of a closed one.
-        foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in pendingVoltaBrackets)
-            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
+        // Each ending's right end follows its source (`]` hooks, `-]` stays straight) unless
+        // its length cuts it short; the engraver's segment splitter opens only line-break
+        // pieces of a hooked one.
+        _voltaBrackets.AddRange(pendingVoltaBrackets);
+    }
+
+    /// <summary>
+    /// The bracket a form ending over bars <paramref name="first"/>..<paramref name="last"/>
+    /// engraves — ONE HOME for the three separate settings (owner's design 2026-09-28): the
+    /// RANGE is the bars given, the LENGTH is the ending's <c>@voltaBracket(…)</c> else the
+    /// score's <c>layout { voltaBracket … }</c>, and the END SHAPE is <c>]</c> (hook) or
+    /// <c>-]</c> (straight) — straight whenever the length cuts the bracket short.
+    /// </summary>
+    private VoltaBracketItem EndingBracket(FormAlternativeSyntax alt, int first, int last)
+    {
+        var length = alt.LengthUnder(_meta.LayoutPlan.VoltaBracket);
+        int lastCovered = length.LastBar(first, last);
+        bool cut = lastCovered < last;
+        return new VoltaBracketItem(first, lastCovered, alt.VoltaText,
+            IsClosed: alt.EndsHooked && !cut, alt.SourceStart,
+            FirstSystemOnly: length.Mode == Semantics.VoltaBracketLengthMode.Line,
+            CutEndingLastMeasureIndex: cut ? last : -1);
     }
 
     /// <param name="octaveOffset">The net octave shift written on the REFERENCE that
@@ -1601,11 +1626,19 @@ public sealed partial class MeasureCollector
                         // ACROSS the advance — the same start/end pair ProcessRepeatBlock
                         // reads off the builder (Form.cs:105-125).
                         int altStart = cur;
-                        AdvanceSection(alt.SectionName.Text, LabelForEnding(alt),
-                            SectionDeclPos(alt.SectionName.Text));
-                        if (alt.HasBracket && !alt.IsSilent && cur > altStart)
-                            _voltaBrackets.Add(new VoltaBracketItem(
-                                altStart, cur - 1, alt.VoltaText, alt.IsClosed, alt.SourceStart));
+                        bool allSilent = true;
+                        foreach (var reference in alt.Sections)
+                        {
+                            if (Editing.SectionSymbols.ReferencedName(reference)?.Text is not { } refName)
+                                continue;
+                            AdvanceSection(refName, LabelForEndingSection(reference), SectionDeclPos(refName));
+                            allSilent &= reference.Kind == SyntaxKind.SilentSectionReference;
+                        }
+                        // ⚠️ Gated on the tilde here and nowhere else — this rows-only walk kept
+                        // the rule ProcessRepeatBlock dropped on 2026-08-25 (a `~` hides the
+                        // label, not the bracket). Kept as found; not this change's to settle.
+                        if (!allSilent && cur > altStart)
+                            _voltaBrackets.Add(EndingBracket(alt, altStart, cur - 1));
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when silent.GetChild(1) is SyntaxTokenNode silentName:
@@ -1631,13 +1664,11 @@ public sealed partial class MeasureCollector
                     case FormRepeatBlockSyntax repeat:
                         AdvanceRepeatBlock(repeat);
                         break;
-                    // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
-                    // It plays exactly once and engraves no bracket; see the same arm in
-                    // ProcessForm for the LilyPond reference that settles the play count.
-                    case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt):
-                        AdvanceSection(alt.SectionName.Text, LabelForEnding(alt),
-                            SectionDeclPos(alt.SectionName.Text));
-                        break;
+                    // A volta ending that NO repeat block opened — `form main { A [1. B] }` —
+                    // plays exactly once and engraves no bracket (see ProcessForm for the
+                    // LilyPond reference that settles the play count). Its sections are
+                    // ordinary reference nodes, advanced by the reference arms as this walk
+                    // meets them.
                     // ~Name — its bars are played, its label is not shown.
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when !IsInsideRepeatBlock(silent)

@@ -923,9 +923,42 @@ score main { staff m }
 ```
 
 An ending NAMES a section — the music lives in the section, and the bracket goes round
-the reference. Endings accept ranges and lists: `[1-2. B]`, `[1,3. B]`, and a trailing
-octave mark (`[1. B']`). A third and later ending is written by repeating the same
-shape: `:| [3. D]`. Without endings, a bare `|: A :|` simply repeats the body (twice by
+the reference. It may name several, played in order under one bracket:
+`|: A [1. B C] :| [2. D]` plays A B C, then A D. Each is written as in the form body
+(`[1. ~B C']` — `~` hides that play's label, a trailing mark shifts its octave). Endings
+accept ranges and lists: `[1-2. B]`, `[1,3. B]`. The first ending is the last thing before
+the `:|`; a third and later ending is written by repeating the same shape: `:| [3. D]`.
+
+**Where an ending ends, how its bracket ends, and how far the bracket reaches** are three
+separate settings (2026-09-28):
+
+- **Range** — the `]` ends the ending. It may be left off only right before a `:|`:
+  `|: A [1. B C :| [2. D]` — the `:|` closes it. Anywhere else a missing `]` is an ordinary
+  syntax error ("Expected 'CloseBracket'"); an unclosed *last* ending is no longer accepted.
+- **End shape** — `]` hooks the bracket's right end down ("the ending ends here"); `-]` leaves
+  it straight, the open look: `|: A [1. B] :| [2. C D -]`. An ending its `:|` closes hooks.
+- **Length** — `layout { voltaBracket all | line | N }` (see *Display switches*), or one
+  ending's own `@voltaBracket(…)` glued to its `]` / `-]`, which wins:
+  `|: A [1. B C]@voltaBracket(2) :| [2. D]`. `all` (the default) covers every bar of the
+  ending, `line` stops at the end of the system the bracket starts in, and `N` covers the
+  ending's first N bars (all of it when the ending is shorter; across a system break when N
+  reaches past it). **A bracket cut short always ends straight**, whatever `]` / `-]` says.
+
+| Written | Bracket |
+|---|---|
+| `[2. C D]` | over C D, right end hooked |
+| `[2. C D -]` | over C D, right end straight |
+| `[1. B C :\|` | over B C, hooked (the `:\|` closes it) |
+| `[1. B C]@voltaBracket(1)` | over B's first bar only, straight |
+| `[2. D]@voltaBracket(line)` | up to the end of the line it starts on (then straight) |
+
+The page, the `.ly` twin (`VoltaBracket.edge-height` / `musical-length`) and MusicXML
+(`<ending type="stop">` for a hook, `"discontinue"` for a straight end or at the cut) all
+follow; MIDI is unaffected. A MusicXML file carries no system breaks, so `line` writes the
+whole ending there.
+
+A repeat needs music every pass plays: `|: [1. B] :| [2. C]` (nothing before the first
+ending), `|: :|` and an empty run after a `:|:` are errors (**LYS1041**). Without endings, a bare `|: A :|` simply repeats the body (twice by
 default, or `|: A :|*N` times).
 
 An ending needs a repeat to be an ending *of*. An ending that no repeat opens —
@@ -1455,6 +1488,7 @@ layout {
   minorChords upper        // the default: Am, Am7
   chordDiagrams guitar     // written chord shapes draw as guitar diagrams (unset: the part's instrument)
                            // (`chordDiagrams guitar all` / `chordDiagrams all`: EVERY chord draws one)
+  voltaBracket all         // the default: an ending's bracket covers every bar of it
 }
 layout chart {
   markTempo beside         // the chart's: "[Chorus] ♩ = 132" on one line
@@ -1567,6 +1601,16 @@ and always draws. The scope word **`all`**, after the tuning (`chordDiagrams gui
 unset), makes EVERY chord name draw a diagram: its written shape, else the usual one. `none all`
 is refused (`none` draws nothing), as are `all guitar` (the tuning comes first) and a word
 written twice.
+
+**`voltaBracket`** — how far a form ending's volta bracket reaches: `all` (the default)
+covers every bar of the ending; `line` stops at the end of the system the bracket starts in;
+a whole number `N` covers the ending's first N bars (all of it when the ending is shorter,
+continuing across a system break when N reaches past it). One ending overrides it with
+`@voltaBracket(…)` after its `]`: `[1. B C]@voltaBracket(2)`. A bracket cut short always ends
+straight — the hook means "the ending ends here" (see *Volta Repeats*). A bad value is the
+ordinary layout error (`'Line' is not a value of 'voltaBracket'. Values are case-sensitive:
+write 'line'.`); on an ending it is the ordinary annotation warning (LYS1008) and the layout's
+value applies.
 
 The keys are case-sensitive — `barnumbers` is refused with "write 'barNumbers'" — and so
 are the value words. Neither

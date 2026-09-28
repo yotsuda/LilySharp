@@ -317,12 +317,20 @@
                     }
                 },
                 {
-                    "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
-                    "name": "keyword.other.layout-key.lilysharp",
-                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords|chordDiagrams)\\b"
+                    "comment": "voltaBracket takes all, line or a number of bars (VoltaBracketLength); the number is coloured by the count rule below.",
+                    "match": "\\b(voltaBracket)\\s+(all|line)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.other.layout-key.lilysharp" },
+                        "2": { "name": "support.constant.layout-value.lilysharp" }
+                    }
                 },
                 {
-                    "comment": "`every`'s count.",
+                    "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
+                    "name": "keyword.other.layout-key.lilysharp",
+                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords|chordDiagrams|voltaBracket)\\b"
+                },
+                {
+                    "comment": "`every`'s count, and voltaBracket's.",
                     "name": "constant.numeric.lilysharp",
                     "match": "\\b\\d+\\b"
                 }
@@ -511,6 +519,11 @@
                         "2": { "name": "constant.numeric.volta.lilysharp" },
                         "3": { "name": "punctuation.definition.volta.lilysharp" }
                     }
+                },
+                {
+                    "comment": "An ending's open end: `[2. D E -]` — its bracket's right end stays straight (FormAlternativeSyntax.EndsOpen). One symbol, glued.",
+                    "name": "punctuation.definition.volta.lilysharp",
+                    "match": "-\\]"
                 }
             ]
         },

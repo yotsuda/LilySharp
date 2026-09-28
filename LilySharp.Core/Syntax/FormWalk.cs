@@ -90,9 +90,10 @@ internal static class FormWalk
         FormRepeatBlockSyntax? Node, int PlayCount, IReadOnlyList<Item> Children,
         int? ExplicitPlayCount = null) : Item;
 
-    /// <summary>A volta ending <c>[1. Name]</c>, inside a repeat block or lone. The
-    /// syntax node carries the whole surface (numbers, label, <c>~</c>).</summary>
-    internal sealed record Ending(FormAlternativeSyntax Node) : Item;
+    /// <summary>A volta ending <c>[1. B C]</c>, inside a repeat block or lone. The syntax
+    /// node carries the bracket's surface (numbers, <c>]</c>); <paramref name="Sections"/>
+    /// are the references it plays, in order, read exactly as the form body's are.</summary>
+    internal sealed record Ending(FormAlternativeSyntax Node, IReadOnlyList<SectionRef> Sections) : Item;
 
     /// <summary>The block's opening <c>|:</c> token.</summary>
     internal sealed record RepeatStart(SyntaxTokenNode Token) : Item;
@@ -243,7 +244,14 @@ internal static class FormWalk
                 items.Add(ReadRepeat(rb));
                 break;
             case FormAlternativeSyntax alt:
-                items.Add(new Ending(alt));
+                var sections = new List<Item>();
+                foreach (var section in alt.Sections)
+                    Classify(section, sections, insideRepeat: false);
+                var refs = new List<SectionRef>(sections.Count);
+                foreach (var s in sections)
+                    if (s is SectionRef r)
+                        refs.Add(r);
+                items.Add(new Ending(alt, refs));
                 break;
             // The block's own bar-line tokens (only meaningful inside a repeat —
             // matched before the generic token skip below).

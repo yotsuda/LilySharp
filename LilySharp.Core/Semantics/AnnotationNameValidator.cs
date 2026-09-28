@@ -188,6 +188,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                     WarnArpeggioUnsupported(art, name);
                 break;
             }
+            case MusicMarkSyntax mark when mark.Parent is FormAlternativeSyntax
+                                           || mark.Name == VoltaBracketLength.Key:
+                CheckEndingAnnotation(mark);
+                break;
             case MusicMarkSyntax mark:
             {
                 // ⚠️ The dotted MarkName is BUILT on every read — it joins the name tokens
@@ -284,6 +288,43 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// The annotation an ending carries after its <c>]</c> — <c>@voltaBracket(all|line|N)</c>,
+    /// the only one — and <c>@voltaBracket</c> written anywhere else. Warnings, like every
+    /// annotation the page ignores (LYS1008): the ending still engraves, with the layout's
+    /// <c>voltaBracket</c>.
+    /// </summary>
+    private void CheckEndingAnnotation(MusicMarkSyntax mark)
+    {
+        const string key = VoltaBracketLength.Key;
+        string written = Written(mark, mark.MarkName);
+        if (mark.Parent is not FormAlternativeSyntax)
+        {
+            _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
+                $"'{written}' is ignored: '@{key}' belongs on a form ending, glued to its ']' "
+                + $"- [1. B C]@{key}(line).");
+            return;
+        }
+        if (mark.Name != key || mark.IsSpanEnd)
+        {
+            _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
+                $"Unknown annotation '{written}' on an ending - it is ignored. "
+                + (key.Equals(mark.Name, StringComparison.OrdinalIgnoreCase) && !mark.IsSpanEnd
+                    ? CaseHint($"@{key}({ArgumentText(mark)})")
+                    : $"An ending takes '@{key}(…)': [1. B C]@{key}(2)."));
+            return;
+        }
+        if (mark.ArgumentTokens is [var only] && VoltaBracketLength.Parse(only.Text) is not null)
+            return;
+        _diagnostics.Warning(mark.Span, DiagnosticCodes.UnknownAnnotation,
+            $"Unknown annotation '{written}' - it is ignored. "
+            + (mark.ArgumentTokens is [var one] && VoltaBracketLength.CaseOnlyMatch(one.Text) is { } canonical
+                ? $"Values are case-sensitive: write '@{key}({canonical})'."
+                : $"'@{key}' {VoltaBracketLength.Takes}: @{key}(line), @{key}(2)."));
+
+        static string ArgumentText(MusicMarkSyntax m) => string.Join(" ", m.ArgumentTokens.Select(t => t.Text));
     }
 
     /// <summary>

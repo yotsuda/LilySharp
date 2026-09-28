@@ -265,6 +265,8 @@ internal sealed partial class Parser
 
     /// <summary>
     /// Parse volta bracket: [1. Section] or [1,3. Section] or [1-3. Section] or [1. ~Section]
+    /// or [1. B C] — one or more sections under one bracket — closed by <c>]</c> (hooked end)
+    /// or <c>-]</c> (straight end), optionally followed by <c>@voltaBracket(…)</c>.
     /// </summary>
     private FormAlternativeGreen ParseVoltaBracket()
     {
@@ -282,28 +284,94 @@ internal sealed partial class Parser
 
         var dot = Expect(SyntaxKind.Dot);
 
-        // Check for silent section reference: [1. ~Section]
-        SyntaxToken? tilde = null;
-        if (Check(SyntaxKind.Tilde))
+        // The ending's sections, played in order under one bracket: [1. B C] — each an
+        // ordinary section reference, written exactly as in the form body (`~B` hides that
+        // play's label, `B'` opens it an octave up, `B "label"` relabels it). They are the
+        // SAME nodes, so everything that reads a reference reads these too.
+        var sections = new List<GreenNode?> { ParseEndingSection() };
+        while (IsEndingSectionStart(Current.Kind))
+            sections.Add(ParseEndingSection());
+
+        // RANGE, then END SHAPE (owner's design 2026-09-28 — the two are separate questions):
+        //   `]`   delimits the ending; its bracket's right end hooks down.
+        //   `-]`  delimits it too; the right end stays straight (open).
+        //   none  only when a ':|' follows at once — `|: A [1. B C :| [2. D]`: the first
+        //         ending is the last thing before the ':|', so the ':|' delimits it, and the
+        //         end hooks. Anywhere else a missing ']' is the ordinary "Expected" error
+        //         (an unclosed LAST ending used to hold its first section alone; retired).
+        // ⚠️ `-]` IS TWO TOKENS, Minus and CloseBracket, and it cannot be misread: '-' never
+        // lexes into an identifier or a number (Lexer.ScanTokenCore returns it bare), so after
+        // an ending's sections a Minus has no other reading. It must be GLUED to its ']'.
+        SyntaxToken? openEnd = null;
+        SyntaxToken? closeBracket = null;
+        if (Check(SyntaxKind.Minus) && Peek(1).Kind == SyntaxKind.CloseBracket
+            && Current.TrailingTriviaWidth == 0 && Peek(1).LeadingTriviaWidth == 0)
         {
-            tilde = Advance();
+            openEnd = Advance();
+            closeBracket = Advance();
         }
+        else if (Check(SyntaxKind.CloseBracket))
+            closeBracket = Advance();
+        else if (!Check(SyntaxKind.RepeatEndBar))
+            closeBracket = Expect(SyntaxKind.CloseBracket);
 
-        var section = Expect(SyntaxKind.Identifier);
-        // The same trailing octave marks a plain reference takes: an ending IS a section
-        // reference with a bracket around it, so `[1. B']` opens B an octave up for THAT
-        // play. ⚠️ Collected AFTER the name on purpose — the range separator in `[1,3. B]`
-        // is a Comma token too, and it sits before the dot, so the two can only be told
-        // apart by position (SyntaxFacts.NetOctaveMarksFrom takes a starting slot for
-        // exactly this node).
-        var marks = ParsePhraseOctaveMarks();
-        // Optional display label: [1. B "label"] — shown as the section's mark,
-        // exactly like a plain reference's  A "A2".
-        SyntaxToken? displayLabel = Check(SyntaxKind.StringLiteral) ? Advance() : null;
-        // The ']' is optional: present = closed (right cap drawn), absent = open.
-        SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
+        // LENGTH: `[1. B C]@voltaBracket(3)` — the ending's own override of the layout's
+        // `voltaBracket`, glued to its `]`. Written as an ordinary '@name(…)' annotation node,
+        // so the annotation validator reads its name and value (AnnotationNameValidator).
+        // ⚠️ Only after a written `]` / `-]`: an ending closed by its ':|' has no ']' to
+        // glue it to — write the ']' (`[1. B]@voltaBracket(line) :|`).
+        GreenNode? annotation = null;
+        if (closeBracket is { Text.Length: > 0 } && Check(SyntaxKind.At)
+            && closeBracket.TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0)
+            annotation = ParseEndingAnnotation();
 
-        return new FormAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, marks, displayLabel, closeBracket);
+        return new FormAlternativeGreen(openBracket, number, separator, endNumber, dot, [.. sections],
+            openEnd, closeBracket, annotation);
+    }
+
+    /// <summary>The <c>@name(…)</c> glued to an ending's <c>]</c>: the '@', a name, and a glued
+    /// parenthesised argument list when one follows — the shape
+    /// <see cref="ParseArticulations"/> gives a valued annotation.</summary>
+    private MusicMarkGreen ParseEndingAnnotation()
+    {
+        var parts = new List<SyntaxToken> { Advance() };   // @
+        var name = CurrentGluedToPrevious && IsWordText(Current.Text) ? Advance() : Expect(SyntaxKind.Identifier);
+        parts.Add(name);
+        if (Check(SyntaxKind.OpenParen) && CurrentGluedToPrevious)
+        {
+            parts.Add(Advance()); // (
+            while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.EndOfFile)
+                   && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.RepeatEndBar))
+                parts.Add(Advance());
+            parts.Add(Expect(SyntaxKind.CloseParen));
+        }
+        return new MusicMarkGreen([.. parts]);
+    }
+
+    /// <summary>LYS1041 — a repeat run (from its <c>|:</c> or <c>:|:</c>) that names no section
+    /// before its first ending or its <c>:|</c>. Underlines the run's opening bar.</summary>
+    private void ReportEmptyRepeatRun(TextSpan openingBar, bool withEnding) =>
+        _diagnostics.Error(openingBar, DiagnosticCodes.EmptyRepeatBody, withEnding
+            ? "A repeat with endings needs music before its first ending — the part every "
+              + "pass plays: write a section after the repeat's opening bar, e.g. "
+              + "'|: A [1. B] :| [2. C]'."
+            : "This repeat has nothing to repeat: write a section between its bars, "
+              + "e.g. '|: A :|'.");
+
+    private static bool IsEndingSectionStart(SyntaxKind kind) =>
+        kind is SyntaxKind.Tilde or SyntaxKind.Identifier or SyntaxKind.BassKeyword
+            or SyntaxKind.TrebleKeyword or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
+
+    /// <summary>One section of an ending: a plain or <c>~</c> reference, the same node the
+    /// form body builds. A missing name is reported once and kept as an empty reference, so
+    /// an ending always holds at least one section.</summary>
+    private GreenNode ParseEndingSection()
+    {
+        if (Check(SyntaxKind.Tilde))
+            return ParseSilentSectionReference();
+        if (IsEndingSectionStart(Current.Kind))
+            return ParseSectionReference();
+        return new SectionReferenceGreen(Expect(SyntaxKind.Identifier), [], null);
     }
 
     /// <summary>
@@ -315,11 +383,8 @@ internal sealed partial class Parser
         var startBar = Expect(SyntaxKind.RepeatStartBar);
 
         var items = new List<GreenNode?>();
-        var alternatives = new List<GreenNode?>();
-        SyntaxToken? pipeBeforeAlternatives = null;
-        int voltaBracketsBeforeClose = 0;
 
-        // Parse items until :| or | (for alternatives)
+        // Parse items until :| — or until the first ending, which is the last thing before it.
         // ⚠️ AND STOP AT THE FORM'S OWN `}`. Without that stop an unclosed `|:` ate the rest
         // of the FILE looking for a `:|` that was never coming: `form main { ~Body |: A }`
         // reported `}`, `score`, `{`, `staff`, `}` as five things "a form cannot hold" and
@@ -327,6 +392,14 @@ internal sealed partial class Parser
         // the true one, and the score block declared garbage. Reported 2026-08-31 on
         // scratch/ベースタブLy/Venus.lys, where the author had moved the repeat's OPEN into
         // the form and left its `:|` in the section's music.
+        // Every run — from the '|:', or from a ':|:' that opens the next — has to name a
+        // section before it closes or reaches its first ending (LYS1041): the body is what
+        // every pass plays, and a run with none repeats nothing.
+        var runBar = startBar.Text.Length > 0
+            ? new TextSpan(startPosition + startBar.LeadingTriviaWidth, startBar.Text.Length)
+            : new TextSpan(startPosition, 1);
+        bool runHasSection = false;
+
         while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile)
                && !Check(SyntaxKind.CloseBrace))
         {
@@ -336,28 +409,12 @@ internal sealed partial class Parser
             // RepeatBoth glyph), so 'A |: B :|: C :|' == 'A |: B :| |: C :|'.
             if (Check(SyntaxKind.RepeatBothBar))
             {
+                if (!runHasSection)
+                    ReportEmptyRepeatRun(runBar, withEnding: false);
+                runBar = new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length);
+                runHasSection = false;
                 items.Add(Advance());
                 continue;
-            }
-
-            // Check for | followed by number (start of alternatives)
-            if (Check(SyntaxKind.Bar) && Peek(1)?.Kind == SyntaxKind.IntegerLiteral)
-            {
-                pipeBeforeAlternatives = Advance(); // consume |
-                break;
-            }
-
-            // The repeat barline belongs BETWEEN the endings — write
-            //   |: … [1. D] :| [2. Outro]
-            // A second ending bracket before the :| is the old, ambiguous spelling
-            // (|: … [1. D] [2. Outro] :|), which wrongly implies the 2nd ending also
-            // repeats. Reject it with a hint to the correct form.
-            if (Check(SyntaxKind.OpenBracket) && ++voltaBracketsBeforeClose == 2)
-            {
-                _diagnostics.Error(new TextSpan(_textPosition, Current.FullWidth),
-                    DiagnosticCodes.VoltaRepeatBarlinePlacement,
-                    "Put the repeat barline between the endings: write '[1. ...] :| [2. ...]', " +
-                    "not '[1. ...] [2. ...] :|'");
             }
 
             var item = ParseFormItem();
@@ -365,15 +422,23 @@ internal sealed partial class Parser
                 items.Add(item);
             else
                 Advance();
-        }
-        // Parse alternatives before :| (e.g., "1. A1" in "|: A | 1. A1 :| 2. A2")
-        if (pipeBeforeAlternatives != null)
-        {
-            while (Check(SyntaxKind.IntegerLiteral) && !Check(SyntaxKind.RepeatEndBar))
+            if (item is SectionReferenceGreen or SilentSectionReferenceGreen)
+                runHasSection = true;
+
+            // The repeat barline stands BETWEEN the endings — |: … [1. D] :| [2. Outro] — so
+            // the first ending closes the body and the next token has to be its ':|'. Anything
+            // else there gets the ordinary "Expected" error below.
+            if (item is FormAlternativeGreen)
             {
-                alternatives.Add(ParseFormAlternative());
+                if (!runHasSection)
+                    ReportEmptyRepeatRun(runBar, withEnding: true);
+                runHasSection = true; // reported once
+                break;
             }
         }
+        if (!runHasSection && Check(SyntaxKind.RepeatEndBar))
+            ReportEmptyRepeatRun(runBar, withEnding: Peek(1).Kind == SyntaxKind.OpenBracket
+                || (Peek(1).Kind == SyntaxKind.Asterisk && Peek(3).Kind == SyntaxKind.OpenBracket));
 
         // ⚠️ THE PAIRING USED TO CROSS THE FORM/MUSIC LINE IN ONE DIRECTION ONLY, and saying
         // so was the whole value of this message: a `|:` written in a SECTION could be closed
@@ -386,6 +451,14 @@ internal sealed partial class Parser
         if (Check(SyntaxKind.RepeatEndBar))
         {
             endBar = Advance();
+        }
+        else if (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            // Stopped by an ending that something other than ':|' follows. The block ends
+            // here, unclosed: what follows is read as ordinary form items, so no later
+            // ending is taken as one of this repeat's.
+            endBar = Expect(SyntaxKind.RepeatEndBar);
+            return new FormRepeatBlockGreen(startBar, [.. items], endBar, null, null, null, []);
         }
         else
         {
@@ -414,14 +487,10 @@ internal sealed partial class Parser
             repeatCount = Expect(SyntaxKind.IntegerLiteral);
         }
 
-        // Final alternative after :| — the bare "2. A2" form or the bracket form
-        // "[2. A2]", so a structure repeat reads exactly like the inline volta:
+        // Final ending after :| — "[2. A2]", so a structure repeat reads exactly like the
+        // inline volta:
         //   |: Intro2 B C A2 [1. D] :| [2. Outro]
-        GreenNode? finalAlternative = null;
-        if (Check(SyntaxKind.IntegerLiteral))
-            finalAlternative = ParseFormAlternative();
-        else if (Check(SyntaxKind.OpenBracket))
-            finalAlternative = ParseVoltaBracket();
+        GreenNode? finalAlternative = Check(SyntaxKind.OpenBracket) ? ParseVoltaBracket() : null;
 
         // A THIRD ENDING, AND A FOURTH: `:| [3. C]` again, as many times as it is written.
         // ⚠️ This arm exists because of LYS1034 (2026-08-31). The music stream could spell
@@ -431,41 +500,15 @@ internal sealed partial class Parser
         // the music spelling existed. MEASURED before writing this: 13 of the author's 326
         // books and one tracked book (audit/lpreg/voltasky) write a third or later ending,
         // so banning the music spelling without this arm would have left them NO spelling.
-        // ⚠️ It takes the same two shapes the first final ending takes, so the bare
-        // `:| 3. C` still reaches ParseFormAlternative's "the bracket is required" hint
-        // rather than falling out of the block as a stray `:|`.
         var furtherAlternatives = new List<GreenNode?>();
         while (finalAlternative != null && Check(SyntaxKind.RepeatEndBar)
-               && Peek(1).Kind is SyntaxKind.OpenBracket or SyntaxKind.IntegerLiteral)
+               && Peek(1).Kind == SyntaxKind.OpenBracket)
         {
             furtherAlternatives.Add(Advance());   // the ':|' between this ending and the next
-            furtherAlternatives.Add(Check(SyntaxKind.OpenBracket)
-                ? ParseVoltaBracket()
-                : ParseFormAlternative());
+            furtherAlternatives.Add(ParseVoltaBracket());
         }
 
-        return new FormRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, asterisk, repeatCount, [.. furtherAlternatives]);
-
-    }
-
-    /// <summary>
-    /// Parse a bare (unbracketed) structure alternative: 1. SectionName.
-    /// The bracket is required — <c>[1. SectionName]</c> — so this rejects the bare
-    /// form with a hint and recovers by keeping the parsed alternative.
-    /// </summary>
-    private FormAlternativeGreen ParseFormAlternative()
-    {
-        int startPos = _textPosition;
-        var number = Expect(SyntaxKind.IntegerLiteral);
-        var dot = Expect(SyntaxKind.Dot);
-        var section = Expect(SyntaxKind.Identifier);
-
-        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
-        _diagnostics.Error(span, DiagnosticCodes.VoltaBracketRequired,
-            $"A volta ending must be bracketed: write '[{number.Text}. {section.Text}]'. " +
-            "The closing ']' is optional (present = closed cap, absent = open).");
-
-        return new FormAlternativeGreen(number, dot, section);
+        return new FormRepeatBlockGreen(startBar, [.. items], endBar, finalAlternative, asterisk, repeatCount, [.. furtherAlternatives]);
     }
 
     /// <summary>

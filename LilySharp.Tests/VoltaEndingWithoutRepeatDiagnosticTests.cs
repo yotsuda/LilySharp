@@ -132,7 +132,8 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// </remarks>
     [Theory]
     [InlineData("form main { A [1. B] }", "[1. B]")]
-    [InlineData("form main { A [1. B }", "[1. B")]        // no ']' — ends on the section name
+    [InlineData("form main { A [1. B -] }", "[1. B -]")]  // an open end — ends on its ']'
+    [InlineData("form main { A [1. B]@voltaBracket(1) }", "[1. B]@voltaBracket(1)")]
     public void TheWarningMarksExactlyTheEndingAsWritten(string form, string ink)
     {
         var d = Assert.Single(Warnings(form));

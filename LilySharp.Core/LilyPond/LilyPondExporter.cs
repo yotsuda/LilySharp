@@ -1760,11 +1760,11 @@ public sealed class LilyPondExporter
             // and that arm was the one page reader of four that had never been taught
             // IsSilent — so the citation carried the defect into the twin, twice.
             // ⇒ A "mirrors X" comment is a claim about X AT THE TIME IT WAS WRITTEN.
-            case FormWalk.Ending { Node: var alt }:
-                AppendSection(alt.SectionName.Text, byName, result,
-                    markLabel: Semantics.SectionLabelRule.LabelFor(
-                        alt.IsSilent, alt.DisplayLabel, alt.SectionName.Text),
-                    octaveOffset: alt.OctaveOffset);
+            case FormWalk.Ending lone:
+                foreach (var s in lone.Sections)
+                    AppendSection(s.Name, byName, result,
+                        markLabel: Semantics.SectionLabelRule.LabelFor(s.Silent, s.DisplayLabel, s.Name),
+                        octaveOffset: s.OctaveOffset);
                 break;
 
             // The one-sided form-level ':|' flows through as the barline it is:
@@ -1922,8 +1922,9 @@ public sealed class LilyPondExporter
         // The :|*N play count is read once, by FormWalk.PlayCount (default 2).
         int playCount = repeat.PlayCount;
 
-        foreach (var child in repeat.Children)
+        for (int ci = 0; ci < repeat.Children.Count; ci++)
         {
+            var child = repeat.Children[ci];
             switch (child)
             {
                 case FormWalk.RepeatStart { Token: var open }:
@@ -1939,8 +1940,12 @@ public sealed class LilyPondExporter
                     result.Add(CreateBarline(SyntaxKind.RepeatStartBar, "|:", both.Position, 0));
                     break;
 
-                case FormWalk.Ending { Node: var ending } when byName.ContainsKey(ending.SectionName.Text):
-                    result.Add(CreateEnding(ending, byName));
+                case FormWalk.Ending ending when ending.Sections.Any(s => byName.ContainsKey(s.Name)):
+                    // An ending a ':|' follows ends on LilyPond's ":|." bar, whose glyph
+                    // allows the hook by itself; the one after the last ':|' does not.
+                    result.Add(CreateEnding(ending, byName,
+                        lastEnding: !(ci + 1 < repeat.Children.Count
+                                      && repeat.Children[ci + 1] is FormWalk.RepeatEnd or FormWalk.BothBar)));
                     break;
 
                 default:
@@ -1951,7 +1956,8 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
-    /// A form ending (<c>[1. D]</c>) as the inline ending node the emitter groups.
+    /// A form ending (<c>[1. D]</c>, <c>[1. C D]</c>) as the inline ending node the emitter
+    /// groups — one alternative holding every section of the ending, in order.
     /// </summary>
     /// <remarks>
     /// The two spellings differ only in where the music lives: an inline volta HOLDS its items,
@@ -1963,19 +1969,37 @@ public sealed class LilyPondExporter
     /// the .ly reads positions, but a warning raised on one of these items points at the form.
     /// </remarks>
     private InlineVoltaSyntax CreateEnding(
-        FormAlternativeSyntax ending,
-        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
+        FormWalk.Ending written,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName,
+        bool lastEnding)
     {
+        var ending = written.Node;
         var items = new List<SyntaxNode>();
-        // The ending's label rule mirrors MeasureCollector.Form.cs's alternative arm
-        // (alt.DisplayLabel ?? name, hidden by `~`), like the outside-a-repeat
-        // FormAlternative case. ⚠️ The tilde takes the LABEL and not the ending: the volta
-        // green built below is emitted whatever IsSilent says, because an ending with no
-        // bracket is spelled by leaving the `[` out. See the note on that case.
-        AppendSection(ending.SectionName.Text, byName, items,
-            markLabel: Semantics.SectionLabelRule.LabelFor(
-                ending.IsSilent, ending.DisplayLabel, ending.SectionName.Text),
-            octaveOffset: ending.OctaveOffset);
+        // Each section's label rule mirrors MeasureCollector.Form.cs's alternative arm
+        // (DisplayLabel ?? name, hidden by `~`), like the outside-a-repeat
+        // Ending case. ⚠️ The tilde takes the LABEL and not the ending: the volta
+        // green built below is emitted whatever the tildes say, because a repeat with no
+        // bracket is spelled by writing no ending (`|: A :|`). See the note on that case.
+        int shapeAt = -1;
+        foreach (var s in written.Sections)
+        {
+            int before = items.Count;
+            AppendSection(s.Name, byName, items,
+                markLabel: Semantics.SectionLabelRule.LabelFor(s.Silent, s.DisplayLabel, s.Name),
+                octaveOffset: s.OctaveOffset);
+            if (shapeAt < 0 && items.Count > before)
+            {
+                // After the first play's marker and header directives: a `\time` there is
+                // the meter a `voltaBracket N` counts its bars in.
+                shapeAt = before;
+                while (shapeAt < items.Count && items[shapeAt] is { Green: SectionPlayGreen }
+                           or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                           or ClefDeclarationSyntax)
+                    shapeAt++;
+            }
+        }
+        if (VoltaShapeFor(written, lastEnding) is { } shape)
+            items.Insert(Math.Max(0, shapeAt), shape);
 
         var green = new InternalSyntax.InlineVoltaGreen(
             new InternalSyntax.SyntaxToken(SyntaxKind.OpenBracket, "["),
@@ -1984,9 +2008,82 @@ public sealed class LilyPondExporter
             ending.EndNumber is { } end ? new InternalSyntax.SyntaxToken(end.Kind, end.Text) : null,
             new InternalSyntax.SyntaxToken(SyntaxKind.Dot, "."),
             [.. items.Select(n => n.Green)],
-            ending.IsClosed ? new InternalSyntax.SyntaxToken(SyntaxKind.CloseBracket, "]") : null);
+            new InternalSyntax.SyntaxToken(SyntaxKind.CloseBracket, "]"));
 
         return new InlineVoltaSyntax(green, null, ending.Position);
+    }
+
+    /// <summary>
+    /// The overrides that give an ending's LilyPond bracket the page's end shape and length
+    /// (owner's design 2026-09-28; <see cref="Svg.Collector.MeasureCollector"/>'s
+    /// <c>EndingBracket</c> is the page's reading of the same three settings), or null when
+    /// LilyPond's default already draws it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/volta-engraver.cc:394-418 Volta_engraver::acknowledge_bar_line — with
+    ///   the end of the timestep after it, the right <c>edge-height</c> is zeroed unless the
+    ///   bar the bracket ends on is in the allow-volta-hook list (":|." "|." and kin).
+    /// LILYPOND-REF: scm/bar-line.scm:1130-1133 volta-bracket::calc-hook-visibility — that list's
+    ///   reader. So a first ending (it ends on ":|.") hooks by default and a last one on a
+    ///   plain bar does not: a hooked LAST ending re-sets the hook after line breaking, and an
+    ///   open one (<c>-]</c>) zeroes it up front, which the engraver leaves alone.
+    /// LILYPOND-REF: lily/volta-engraver.cc:428-533 Volta_engraver::stop_translation_timestep —
+    ///   <c>VoltaBracket.musical-length</c> ends the bracket that many whole notes after its
+    ///   start (<c>voltaBracket N</c>: N bars of the meter the ending opens in).
+    /// LILYPOND-REF: lily/volta-bracket.cc:115-142 Volta_bracket_interface::modify_edge_height —
+    ///   a broken bracket's first piece has no right hook; <c>voltaBracket line</c> kills every
+    ///   later piece.
+    /// </remarks>
+    private SyntaxNode? VoltaShapeFor(FormWalk.Ending written, bool lastEnding)
+    {
+        var ending = written.Node;
+        var length = ending.LengthUnder(_layoutPlan.VoltaBracket);
+        int bars = 0;
+        foreach (var s in written.Sections)
+            if (_sectionBars.Canonical.TryGetValue(s.Name, out int n))
+                bars += n;
+        int cutBars = length.Mode == Semantics.VoltaBracketLengthMode.Bars && length.Bars < bars
+            ? length.Bars : 0;
+        bool line = length.Mode == Semantics.VoltaBracketLengthMode.Line;
+        bool hooked = ending.EndsHooked && cutBars == 0;
+        if (cutBars == 0 && !line && hooked && !lastEnding)
+            return null; // a hooked ending before its ':|' — LilyPond's own picture
+        return new VoltaShapeMarker(new VoltaShapeGreen(hooked, lastEnding, line, cutBars));
+    }
+
+    /// <summary>The LilyPond overrides a <see cref="VoltaShapeGreen"/> asks for, in the meter
+    /// the stream is in where the ending starts.</summary>
+    private string EmitVoltaShape(VoltaShapeGreen v)
+    {
+        const string once = "\\once \\override Score.VoltaBracket.";
+        const string openEnd = once + "edge-height = #'(2.0 . 0.0)";
+        var parts = new List<string>();
+        if (v.CutBars > 0)
+        {
+            // N bars of the ending's opening meter, in whole notes.
+            long num = (long)v.CutBars * _timeBeats, den = _timeBeatType;
+            long g = (long)System.Numerics.BigInteger.GreatestCommonDivisor(num, den);
+            parts.Add(once + $"musical-length = #(ly:make-moment {num / g}/{den / g})");
+            parts.Add(openEnd);
+            return string.Join(" ", parts);
+        }
+        // ⚠️ The hook is re-set BEFORE line breaking, not after: the bracket's stencil is
+        // computed while the lines are being broken (its skyline), and an after-line-breaking
+        // callback ran after it — MEASURED on LilyPond 2.26.0, the stencil kept the engraver's
+        // zeroed right edge. The broken pieces inherit the property, and the print zeroes
+        // the inner ends itself (Volta_bracket_interface::modify_edge_height).
+        if (v.Hooked && (v.LastEnding || v.FirstSystemOnly))
+            parts.Add(once + "before-line-breaking = #(lambda (grob) "
+                + "(ly:grob-set-property! grob 'edge-height '(2.0 . 2.0)))");
+        // Killing the later pieces can only happen once they exist; a dead grob is not
+        // output whatever its stencil was.
+        if (v.FirstSystemOnly)
+            parts.Add(once + "after-line-breaking = #(lambda (grob) (let ((pieces "
+                + "(ly:spanner-broken-into (ly:grob-original grob)))) (if (and (pair? pieces) "
+                + "(not (eq? grob (car pieces)))) (ly:grob-suicide! grob))))");
+        if (!v.Hooked)
+            parts.Add(openEnd);
+        return string.Join(" ", parts);
     }
 
     /// <summary>
@@ -2287,6 +2384,7 @@ public sealed class LilyPondExporter
         { Green: SectionPlayGreen } => false,
         { Green: ClosedBarGreen } => false,
         { Green: RepeatTieGreen } => false,
+        { Green: VoltaShapeGreen } => false,
         _ => true,
     };
 
@@ -2435,6 +2533,7 @@ public sealed class LilyPondExporter
         // A chord track's bar, pre-spelled (ChordBars): matched by its green for the same
         // reason as the play sentinel above.
         { Green: ChordBarGreen cb } => cb.Entries,
+        { Green: VoltaShapeGreen vs } => EmitVoltaShape(vs),
         // Writes nothing: it only tells the `| |` rule a bar has closed (PaddingBars).
         { Green: ClosedBarGreen } => "",
         NavigationMarkSyntax nav => EmitNavMark(nav),
@@ -2566,7 +2665,8 @@ public sealed class LilyPondExporter
                     Add(s.Name, Svg.Model.SectionRepeatRole.None, false, 0);
                     break;
                 case FormWalk.Ending e:
-                    Add(e.Node.SectionName.Text, Svg.Model.SectionRepeatRole.None, false, 0);
+                    foreach (var es in e.Sections)
+                        Add(es.Name, Svg.Model.SectionRepeatRole.None, false, 0);
                     break;
                 case FormWalk.LoneRepeatEnd:
                     rewind = true;
@@ -2583,8 +2683,14 @@ public sealed class LilyPondExporter
                         }
                         else if (child is FormWalk.Ending be)
                         {
-                            Add(be.Node.SectionName.Text, Svg.Model.SectionRepeatRole.Ending, runStart, count);
-                            runStart = false;
+                            // [1. C D] is two printed plays of ONE ending.
+                            var role = Svg.Model.SectionRepeatRole.Ending;
+                            foreach (var es in be.Sections)
+                            {
+                                Add(es.Name, role, runStart, count);
+                                runStart = false;
+                                role = Svg.Model.SectionRepeatRole.EndingContinued;
+                            }
                         }
                         else if (child is FormWalk.BothBar)
                             runStart = true;
@@ -6996,6 +7102,42 @@ internal sealed class ClosedBarGreen : InternalSyntax.GreenNode
     public ClosedBarGreen()
         : base(SyntaxKind.None, fullWidth: 0)
     {
+    }
+}
+
+/// <summary>
+/// "Give the volta bracket starting here this end shape and length" — the overrides a form
+/// ending's <c>-]</c> / <c>voltaBracket</c> asks of LilyPond (<c>LilyPondExporter.VoltaShapeFor</c>).
+/// Matched by its green, like <see cref="SectionPlayMarker"/>, so it survives the ending's
+/// green rebuild; written where the alternative's music starts.
+/// </summary>
+internal sealed class VoltaShapeMarker : SyntaxNode
+{
+    public VoltaShapeMarker(VoltaShapeGreen green)
+        : base(green, parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>The volta-shape marker's green (see <see cref="VoltaShapeMarker"/>).</summary>
+internal sealed class VoltaShapeGreen : InternalSyntax.GreenNode
+{
+    /// <summary>The right end hooks down (<c>]</c>, not cut short).</summary>
+    public bool Hooked { get; }
+    /// <summary>No <c>:|</c> follows the ending (LilyPond's bar there does not hook).</summary>
+    public bool LastEnding { get; }
+    /// <summary><c>voltaBracket line</c>.</summary>
+    public bool FirstSystemOnly { get; }
+    /// <summary><c>voltaBracket N</c> when N bars stop before the ending's end, else 0.</summary>
+    public int CutBars { get; }
+
+    public VoltaShapeGreen(bool hooked, bool lastEnding, bool firstSystemOnly, int cutBars)
+        : base(SyntaxKind.None, fullWidth: 0)
+    {
+        Hooked = hooked;
+        LastEnding = lastEnding;
+        FirstSystemOnly = firstSystemOnly;
+        CutBars = cutBars;
     }
 }
 

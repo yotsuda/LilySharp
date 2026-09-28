@@ -215,6 +215,11 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutMinorChords => GetMinorChordCompletions(),
             CompletionContext.AfterLayoutChordDiagrams => GetChordDiagramCompletions(),
             CompletionContext.AfterLayoutChordDiagramsTuning => GetChordDiagramScopeCompletions(),
+            // `layout { voltaBracket |` and a form ending's `]@voltaBracket(|` take the same
+            // values; `]@|` the one annotation an ending takes.
+            CompletionContext.AfterLayoutVoltaBracket => GetVoltaBracketCompletions(),
+            CompletionContext.InVoltaBracketAnnotation => GetVoltaBracketCompletions(),
+            CompletionContext.AfterEndingAt => GetEndingAnnotationCompletions(),
             // The key the caret sits after decides which values fit: a generic family takes
             // only quoted names, a role or group may also redirect to a family.
             CompletionContext.AfterFontRoleKey =>

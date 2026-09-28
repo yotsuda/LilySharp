@@ -8,6 +8,26 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **An ending's range, end shape and length are three separate settings.** The `]` ends an
+  ending; it may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|`
+  closes it, and its bracket now hooks). An **unclosed last ending is now a syntax error**
+  ("Expected 'CloseBracket'"): `:| [2. C D E` used to hold C alone and draw an open
+  bracket, with D E playing after the repeat. Write `[2. C -]` for that open look — `-]` ends
+  an ending with a straight right end, `]` hooks it down — and move D E out of the brackets.
+  The length is new: `layout { voltaBracket all|line|N }` (`all`, the default, covers the
+  whole ending; `line` stops at the end of the system the bracket starts in; `N` covers its
+  first N bars), and one ending overrides it with `[1. B C]@voltaBracket(2)`. A bracket cut
+  short always ends straight. The `.ly` twin now draws what the page draws — a hooked last
+  ending re-sets LilyPond's hook, `-]` zeroes it, N sets `VoltaBracket.musical-length`, `line`
+  drops the later pieces — and MusicXML writes `<ending type="stop">` for a hook and
+  `"discontinue"` for a straight end or at the cut (a closed last ending was always
+  `"discontinue"` before). Completion and hover know the key, the annotation and `-]`.
+- **The old form-ending spellings are gone.** `|: A [1. D] [2. O] :|` (the repeat bar after
+  both endings) and the bracketless `:| 2. O` / `|: A | 1. D :| 2. O` were refused (LYS1010,
+  LYS1011) but still built endings, so they kept rendering. They now get the ordinary
+  errors — the first ending must be followed by its `:|` ("Expected 'RepeatEndBar'"), and a
+  bare `2.` is a stray form item (LYS0030) — and nothing is engraved as an ending. Write
+  `|: A [1. D] :| [2. O]`. LYS1010 and LYS1011 are retired.
 - **Figured bass is written `@figuredBass(…)`.** The abbreviation `@fig(…)` told a reader
   nothing; the new name is the term itself and matches the `fonts { figuredBass … }` role.
   The figures are written as before (`c4@figuredBass(6 4)`). `@fig(6)` is now an unknown
@@ -169,6 +189,20 @@ workflow attaches that section to the GitHub Release verbatim.
   cursors, an octave mark, digit, dot, `\` or `@` is applied at each cursor on its own note,
   in one undo step. A new setting, `lilysharp.typingAids.enabled` (default on), turns every
   typing aid off.
+
+### Form endings
+
+- **An ending may hold several sections.** `form main { |: A [1. B C] :| [2. D] }` plays
+  A B C, then A D: the sections play in order under one bracket, which spans all of them.
+  Each is written as in the form body (`[1. ~B C']`), ranges and lists stay (`[1-2. B C]`),
+  and the MIDI, MusicXML (one `<ending>` from the first section to the last) and the
+  LilyPond twin (one `\alternative` branch) follow. A slur may run from one section of an
+  ending into the next. Without its `]` an ending runs up to the `:|` after it (see the
+  breaking change on unclosed endings above). Split Sections now splits a section
+  played as an ending (`[1. A]` → `[1. A B]`) instead of refusing. An undeclared section
+  named in an ending is now reported as undefined (it was dropped in silence).
+- **A repeat needs a body.** `|: [1. B] :| [2. C]` (nothing before the first ending),
+  `|: :|` and an empty run after `:|:` are errors (**LYS1041**) — they compiled in silence.
 
 ### Spans across a section boundary
 

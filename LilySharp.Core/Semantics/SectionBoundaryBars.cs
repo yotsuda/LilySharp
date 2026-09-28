@@ -149,8 +149,9 @@ internal sealed class SectionBoundaryBars
                     plays.Add(r.Name);
                     break;
                 case FormWalk.Ending e:
-                    // A lone ending plays once, as its plain section.
-                    plays.Add(e.Node.SectionName.Text);
+                    // A lone ending plays once, as its plain sections.
+                    foreach (var s in e.Sections)
+                        plays.Add(s.Name);
                     break;
                 case FormWalk.Repeat rep:
                     ExpandRepeat(rep, plays);
@@ -176,7 +177,8 @@ internal sealed class SectionBoundaryBars
         {
             Expand(body, plays);
             if (endings.Count > 0)
-                plays.Add(endings[Math.Min(t, endings.Count - 1)].Node.SectionName.Text);
+                foreach (var s in endings[Math.Min(t, endings.Count - 1)].Sections)
+                    plays.Add(s.Name);
         }
     }
 

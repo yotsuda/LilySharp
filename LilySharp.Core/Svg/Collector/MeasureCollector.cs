@@ -1288,7 +1288,7 @@ public sealed partial class MeasureCollector
         {
             var prev = brackets[k - 1];
             var b = brackets[k];
-            bool sameRepeat = b.StartMeasureIndex == prev.EndMeasureIndex + 1
+            bool sameRepeat = b.StartMeasureIndex == prev.EndingLastMeasureIndex + 1
                 && FirstEndingNumber(b.VoltaText) > FirstEndingNumber(prev.VoltaText);
             if (!sameRepeat)
             {
@@ -3638,10 +3638,10 @@ public sealed partial class MeasureCollector
 
     /// <summary>The repeat role of a play the form names OUTSIDE any repeat block: a body
     /// play of a run a form-level <c>:|:</c> opened, an ending of such a run, or none.</summary>
-    private void SetTopLevelRole(bool ending)
+    private void SetTopLevelRole(bool ending, bool continued = false)
     {
         if (ending && (_formDividerOpen || _formDividerClosed))
-            _pendingRole = SectionRepeatRole.Ending;
+            _pendingRole = continued ? SectionRepeatRole.EndingContinued : SectionRepeatRole.Ending;
         else if (!ending && _formDividerOpen)
             _pendingRole = SectionRepeatRole.Body;
         else
@@ -3679,7 +3679,7 @@ public sealed partial class MeasureCollector
                             builder.SectionLabel = LabelForReference(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
-                        SetTopLevelRole(ending: false);
+                        SetLoneEndingAwareRole(reference);
                         ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                     }
                     break;
@@ -3690,8 +3690,11 @@ public sealed partial class MeasureCollector
                     break;
 
                 // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
-                // It is its section and nothing more: there is no repeat for the ending to
-                // be an ending OF, so no bracket and no number are engraved.
+                // It is its sections and nothing more: there is no repeat for the ending to
+                // be an ending OF, so no bracket and no number are engraved. Its sections are
+                // ordinary reference nodes, played by the two reference arms (the plain one
+                // above, the `~` one below) as this walk meets them — nothing is left for
+                // the ending itself to do.
                 // LILYPOND-REF: lily/alternative-sequence-iterator.cc:83-84 — Alternative_sequence_iterator::analyze reads repeat-count, defaulting it to 1
                 // when no enclosing repeat has set it, so every alternative plays exactly
                 // once and nothing spans a second pass. Confirmed on 2.26.0 rather than
@@ -3705,21 +3708,6 @@ public sealed partial class MeasureCollector
                 // depending on which output you asked for. Telling the author that the
                 // number they wrote prints nothing is the OTHER half of this repair, and
                 // lives in the validator (see FormDeclarationValidator).
-                case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt)
-                        && _sectionState.Sections.TryGetValue(alt.SectionName.Text, out var altSection):
-                    // Resume: same skip as the plain reference arm above, for the same reason
-                    // — this IS a plain reference as far as the page is concerned.
-                    if (_resumePending == null && !_suffixSpliced)
-                    {
-                        RecordSectionStart(alt.SectionName.Text, builder.CurrentMeasureIndex);
-                        // `[1. ~B]` asks the same question `~B` does — the tilde binds to the
-                        // section NAME — and both go through the one rule now.
-                        builder.SectionLabel = LabelForEnding(alt);
-                        builder.SectionLabelPosition = SectionDeclPos(alt.SectionName.Text);
-                    }
-                    SetTopLevelRole(ending: true);
-                    ProcessSection(altSection, processNodes, builder, alt.OctaveOffset);
-                    break;
 
                 // Navigation marks in the structure (segno / coda / fine / to coda /
                 // D.C. / D.S. al fine|coda) — engraved like the inline @-marks, at the
@@ -3803,7 +3791,7 @@ public sealed partial class MeasureCollector
                         builder.SectionLabel = LabelForSilentReference(silent, nameTok.Text);
                         builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     }
-                    SetTopLevelRole(ending: false);
+                    SetLoneEndingAwareRole(silent);
                     ProcessSection(silentSection, processNodes, builder,
                         SyntaxFacts.NetOctaveMarks(silent));
                     break;
@@ -3896,11 +3884,24 @@ public sealed partial class MeasureCollector
         => Semantics.SectionLabelRule.LabelFor(
             referenceIsSilent: true, SyntaxFacts.UnquotedLabel(silent), name);
 
-    /// <summary>`[1. A]` / `[1. ~A]` — the tilde binds to the section NAME, so an ending
-    /// asks the same question a bare reference does.</summary>
-    private static string? LabelForEnding(FormAlternativeSyntax alt)
-        => Semantics.SectionLabelRule.LabelFor(
-            alt.IsSilent, alt.DisplayLabel, alt.SectionName.Text);
+    /// <summary>A section of an ending (<c>[1. A ~B]</c>) — an ordinary reference node, so it
+    /// asks the question its own spelling asks: the tilde binds to the section NAME.</summary>
+    private static string? LabelForEndingSection(SyntaxNode section) => section switch
+    {
+        SectionReferenceSyntax r => LabelForReference(r),
+        _ when section.GetChild(1) is SyntaxTokenNode name => LabelForSilentReference(section, name.Text),
+        _ => null,
+    };
+
+    /// <summary>The role of a play the form names outside any repeat block — for a section of
+    /// a lone ending, an ending (its first section) or the ending's continuation.</summary>
+    private void SetLoneEndingAwareRole(SyntaxNode reference)
+    {
+        if (reference.Parent is FormAlternativeSyntax ending)
+            SetTopLevelRole(ending: true, continued: ending.Sections[0].Position != reference.Position);
+        else
+            SetTopLevelRole(ending: false);
+    }
 
     /// <summary>No form: sections play in declaration order, each labelled with its own name
     /// (a form is the only place a label can be hidden).</summary>

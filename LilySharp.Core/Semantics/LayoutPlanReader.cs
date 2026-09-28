@@ -61,6 +61,7 @@ internal static class LayoutPlanReader
         ChordQualityStyles.Key => ChordQualityStyles.Words,
         MinorChords.Key => MinorChords.Words,
         ChordDiagramsKey.Key => ChordDiagramsKey.Words,
+        VoltaBracketLength.Key => VoltaBracketLength.Words,
         _ => [],
     };
 
@@ -229,6 +230,7 @@ internal static class LayoutPlanReader
                     MinorChords.Words, w => MinorChords.Find(w) is { } b
                         ? plan with { Chords = plan.Chords with { LowercaseMinor = b } } : null),
                 ChordDiagramsKey.Key => ReadChordDiagrams(plan, entry, span, found),
+                VoltaBracketLength.Key => ReadVoltaBracket(plan, entry, span, found),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch
                 // nobody reads looks exactly like one that works", the sentence the
@@ -439,6 +441,39 @@ internal static class LayoutPlanReader
                     && !w.Equals(written, StringComparison.Ordinal)) is { } canonical
                 ? $" Values are case-sensitive: write '{canonical}'."
                 : "";
+    }
+
+    // voltaBracket all | line | N — exactly one value (VoltaBracketLength, owner's design
+    // 2026-09-28). Its own reader because the third spelling is a number, which ReadOneWord's
+    // closed list cannot hold.
+    private static LayoutPlan ReadVoltaBracket(
+        LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found)
+    {
+        const string key = VoltaBracketLength.Key;
+        string takes = $"'{key}' {VoltaBracketLength.Takes}";
+        if (entry.Values.Count == 0)
+        {
+            found.Add(new Problem(keySpan, DiagnosticCodes.LayoutEntryBadValue,
+                takes + $" — e.g. '{key} {VoltaBracketLength.LineWord}' or '{key} 2'.", IsError: true));
+            return plan;
+        }
+        var word = entry.Values[0];
+        if (VoltaBracketLength.Parse(word.Text) is not { } length)
+        {
+            found.Add(new Problem(word.Span, DiagnosticCodes.LayoutEntryBadValue,
+                $"'{word.Text}' is not a value of '{key}'."
+                + (VoltaBracketLength.CaseOnlyMatch(word.Text) is { } canonical
+                    ? $" Values are case-sensitive: write '{canonical}'."
+                    : " " + takes + "."), IsError: true));
+            return plan;
+        }
+        if (entry.Values.Count > 1)
+        {
+            found.Add(new Problem(entry.Values[1].Span, DiagnosticCodes.LayoutEntryBadValue,
+                takes + $" — one value; '{entry.Values[1].Text}' is extra.", IsError: true));
+            return plan;
+        }
+        return plan with { VoltaBracket = length };
     }
 
     /// <summary>

@@ -463,6 +463,54 @@ public sealed partial class LilySharpLanguageServer
         ["all"] = "Every chord name draws a diagram on this tuning — its written shape, else the default",
     };
 
+    /// <summary>After <c>layout { voltaBracket</c> and inside an ending's
+    /// <c>@voltaBracket(…)</c>: all, line (the compiler's
+    /// <see cref="Core.Semantics.VoltaBracketLength.Words"/>), then a number of bars.</summary>
+    internal static CompletionList GetVoltaBracketCompletions()
+    {
+        var list = WordList(Core.Semantics.VoltaBracketLength.Words, VoltaBracketDetails);
+        return new CompletionList
+        {
+            Items =
+            [
+                .. list.Items,
+                new CompletionItem
+                {
+                    Label = "N",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "${1:2}",
+                    FilterText = "0123456789",
+                    Detail = "A number of bars: the bracket covers the ending's first N bars (all of it when shorter)",
+                    SortText = list.Items.Length.ToString(),
+                },
+            ],
+        };
+    }
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> VoltaBracketDetails = new()
+    {
+        ["all"] = "The bracket covers every bar of the ending (the default)",
+        ["line"] = "The bracket stops at the end of the system it starts in",
+    };
+
+    /// <summary>After an ending's <c>]@</c>: the one annotation an ending takes.</summary>
+    internal static CompletionList GetEndingAnnotationCompletions()
+        => new()
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = Core.Semantics.VoltaBracketLength.Key,
+                    Kind = CompletionItemKind.Function,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = Core.Semantics.VoltaBracketLength.Key + "(${1:line})",
+                    Detail = "How far THIS ending's bracket reaches: all | line | N bars (overrides layout { voltaBracket })",
+                },
+            ],
+        };
+
     /// <summary>After <c>layout { partCombineText</c>.</summary>
     internal static CompletionList GetPartCombineTextCompletions()
         => WordList(LanguageVocabulary.PartCombineTextWords, PartCombineTextDetails);
@@ -521,7 +569,7 @@ public sealed partial class LilySharpLanguageServer
                         // `guitar`, not the absent key's "the part's instrument, else guitar"
                         // (no word says that): the same page unless a part is a ukulele,
                         // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
-                        + "\n  chordDiagrams ${8:guitar}$0\n}",
+                        + "\n  chordDiagrams ${8:guitar}\n  voltaBracket ${9:all}$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -571,6 +619,7 @@ public sealed partial class LilySharpLanguageServer
         "chordQualities" => "How a chord's quality is spelled: symbols (default) | words",
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
         "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `all` to draw every chord",
+        "voltaBracket" => "How far an ending's bracket reaches: all (default) | line | N bars; an ending's own @voltaBracket(…) overrides it",
         _ => "Layout key",
     };
 
@@ -3238,7 +3287,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page — save
                 // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tvoltaBracket ${9:all}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, voltaBracket), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

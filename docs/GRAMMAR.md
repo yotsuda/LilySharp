@@ -610,7 +610,8 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'partCombineText' , Boolean
                | 'chordQualities' , ChordQualityStyle
                | 'minorChords' , MinorChordCase
-               | 'chordDiagrams' , ( 'none' | TuningName , [ 'all' ] | 'all' ) ;   (* TuningName: the tab's 'tuning' words *)
+               | 'chordDiagrams' , ( 'none' | TuningName , [ 'all' ] | 'all' )    (* TuningName: the tab's 'tuning' words *)
+               | 'voltaBracket' , VoltaLength ;       (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
 MarkArrangement = 'stacked' | 'beside' ;
 BarNumberPolicy = 'lines' | 'none' | 'every' , Integer ;
 AccidentalStyle = 'default' | 'modern' | 'modernCautionary' | 'forget' | 'noReset' ;
@@ -739,6 +740,16 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
    in, the staff a row stands directly above — else the guitar. The twin writes a FretBoards
    context under a row's ChordNames when some entry writes a shape (every row with 'all').
 
+   voltaBracket — how far a form ending's volta bracket reaches (2026-09-28). 'all' (the
+   default) covers every bar of the ending; 'line' stops at the end of the system the
+   bracket starts in; a whole number N covers the ending's first N bars (all of them when
+   the ending is shorter), continuing across a system break if N reaches past it. An
+   ending's own '@voltaBracket(…)' after its ']' overrides the key. A bracket cut short
+   always ends straight — the hook means "the ending ends here". The twin writes
+   VoltaBracket.musical-length for N and kills the later pieces for 'line'; MusicXML stops
+   the <ending> at the Nth bar as "discontinue" (a MusicXML file carries no system breaks,
+   so 'line' writes the whole ending there).
+
    The keys are case-sensitive (a paper key's rule; a wrong-case key is refused with its
    right spelling); the value words are the language's closed vocabulary, canonical case
    only. Neither the keys nor the
@@ -757,6 +768,7 @@ Boolean        = 'true' | 'false' ;   (* the language's one boolean spelling, as
      chordQualities words
      minorChords lower
      chordDiagrams guitar all
+     voltaBracket line
    }
 *)
 
@@ -1147,14 +1159,38 @@ StructureItem  = SectionRef                        (* Identifier , { OctaveMark 
                                                       permissions *)
                ;
 
-(* A repeat block. The endings go BETWEEN the barlines — |: … [1. D] :| [2. O] — and the
-   play count rides on the closing bar the way the music stream spells it. *)
-StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ;
+(* A repeat block. The endings go BETWEEN the barlines — |: … [1. D] :| [2. O] :| [3. E] —
+   and the play count rides on the closing bar the way the music stream spells it. The first
+   ending is the last item before the ':|': anything else after it is the ordinary
+   "Expected 'RepeatEndBar'" error, and the block ends there, unclosed.
+   Every RUN — from the '|:', or from a ':|:' that opens the next — names at least one
+   section before its first ending or its ':|' (LYS1041): the body is what every pass plays,
+   so |: [1. X] :| [2. Y], |: :| and |: A :|: :| are errors. *)
+StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ,
+                  [ StructureVolta , { ':|' , StructureVolta } ] ;
 
-(* A repeat volta ending inside a |: … :| repeat, referencing a section:
+(* A repeat volta ending inside a |: … :| repeat, naming one or more sections that play in
+   order under ONE bracket:
    form main { |: A [1. D] :| [2. O] }
-   The '[' is REQUIRED; the closing ']' is OPTIONAL — present draws the right cap
-   (closed ending), absent leaves it open.
+   form main { |: A [1. B C] :| [2. D] }       -- the first pass plays A B C, the second A D
+   Each section is written exactly as in the form body: '~' hides that play's label, octave
+   marks and a quoted label ride on it ([1. ~B C' "C2"]).
+   RANGE, END SHAPE and LENGTH are three separate settings (2026-09-28):
+   - RANGE: the ']' delimits the ending. It may be left off only where a ':|' follows at once
+     — |: A [1. B C :| [2. D] holds B C, the ':|' closing it. Anywhere else a missing ']'
+     is the ordinary "Expected 'CloseBracket'" error (an unclosed LAST ending no longer holds
+     its first section alone).
+   - END SHAPE: ']' hooks the bracket's right end down ("the ending ends here"); '-]' (one
+     glued symbol) leaves it straight: |: A [1. B] :| [2. C D -]. An ending closed by its
+     ':|' hooks. '-' never lexes into a name or a number, so '-]' is unambiguous.
+   - LENGTH: layout { voltaBracket all|line|N } (§2.6), or the ending's own
+     '@voltaBracket(all|line|N)' glued to its ']' / '-]', which wins:
+     |: A [1. B C]@voltaBracket(2) :| [2. D]. 'all' (default) covers every bar, 'line'
+     stops at the end of the system the bracket starts in, N covers the first N bars (all
+     of them when the ending is shorter). A bracket CUT SHORT always ends straight,
+     whatever ']' / '-]' says. An ending closed only by its ':|' takes no annotation (there
+     is no ']' to glue it to). A bad value, or another annotation on an ending, is warned
+     (LYS1008) and ignored.
 
    An ending that NO repeat opens — form main { A [1. B] } — is accepted and engraves as
    the plain reference B: no bracket, no number, played once. That is LilyPond's answer
@@ -1163,8 +1199,12 @@ StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ;
    ⚠️ "Opened by a repeat" is about the TREE, not the text: in |: A [1. D] :| [2. O] the
    ending after the ':|' belongs to the repeat block, while in |: A :| B [1. B] the ending
    does not — that second one warns even though the form has a repeat in it. *)
-StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier ,
-                 { OctaveMark } , [ String ] , [ ']' ] ;
+StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' ,
+                 EndingSection , { EndingSection } ,
+                 ( ( ']' | '-]' ) , [ '@voltaBracket(' , VoltaLength , ')' ]
+                 | (* nothing — only when ':|' follows at once *) ) ;
+VoltaLength    = 'all' | 'line' | Integer ;          (* Integer >= 1 *)
+EndingSection  = [ '~' ] , Identifier , { OctaveMark } , [ String ] ;
 
 (* OCTAVE MARKS ON A SECTION REFERENCE (2026-08-31). A trailing ' or , moves the frame THAT
    PLAY of the section opens in, one octave per mark — the same spelling, and the same

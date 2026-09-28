@@ -227,6 +227,13 @@ internal static class VoltaBracketEngraver
             foreach (var (segment, _) in SpannerBreakSubstitution.BrokenPieces(
                 bracket.StartMeasureIndex, bracket.EndMeasureIndex, systems, measureToSystemIdx))
             {
+                // `voltaBracket line`: the bracket stops at the end of the system it starts
+                // in. The first piece of a broken bracket is never its last, so it already
+                // ends straight — the cut says "not the ending's end" (owner's design
+                // 2026-09-28; LilyPond's own first piece of a broken bracket is drawn the
+                // same way: lily/volta-bracket.cc:115-142 Volta_bracket_interface::modify_edge_height).
+                if (bracket.FirstSystemOnly && !segment.IsFirst)
+                    break;
                 if (segment.StartMeasureIndex >= measureLayouts.Length ||
                     segment.EndMeasureIndex >= measureLayouts.Length)
                     continue;

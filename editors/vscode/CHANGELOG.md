@@ -6,6 +6,14 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Breaking changes
 
+- **An unclosed last ending is a syntax error.** `:| [2. C D E` no longer holds C alone;
+  write `[2. C -]` for the open (straight-ended) bracket, `[2. C]` for a hooked one. The
+  `]` may still be left off right before a `:|`. New: `layout { voltaBracket all|line|N }`
+  and an ending's own `[1. B C]@voltaBracket(2)` say how far the bracket reaches (a cut
+  bracket ends straight) — completed and explained on hover, and `-]` is coloured.
+- **Old form-ending spellings removed.** `|: A [1. D] [2. O] :|` and the bracketless
+  `:| 2. O` get the ordinary syntax errors and no longer render as endings; write
+  `|: A [1. D] :| [2. O]`. Diagnostics LYS1010 / LYS1011 are retired.
 - **Figured bass is written `@figuredBass(…)`** (was `@fig(…)`); the figures inside are
   unchanged. `@fig(6)` now warns as an unknown annotation. Typing `@fig` still finds the new
   name in the completion list.
@@ -126,6 +134,14 @@ All notable changes to the Lily# VS Code extension are documented here.
   everywhere). A selection is still replaced by the key, as anywhere in VS Code.
 - **`lilysharp.typingAids.enabled`** (default on) turns all the typing aids off: every key
   types exactly as pressed.
+
+### Form endings
+
+- **An ending may hold several sections**: `|: A [1. B C] :| [2. D]` — one bracket over B
+  and C in the preview, both played on the first pass. Rename, go to definition and the
+  undefined-section check see every section in an ending. **Split Sections** turns a section
+  played as an ending into a two-section ending instead of refusing.
+- **A repeat needs a body**: `|: [1. B] :| [2. C]` and `|: :|` are errors (LYS1041).
 
 ### Fixes
 

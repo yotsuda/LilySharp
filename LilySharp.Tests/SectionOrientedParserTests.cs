@@ -197,9 +197,10 @@ form main {
         var alternatives = repeatBlock.DescendantNodes().OfType<FormAlternativeSyntax>().ToList();
         
         Assert.Equal(2, alternatives.Count);
-        Assert.False(alternatives[0].IsSilent); // [1. Bridge]
-        Assert.True(alternatives[1].IsSilent);  // [2. ~Verse]
-        Assert.Equal("Verse", alternatives[1].SectionName.Text);
+        Assert.Equal(SyntaxKind.SectionReference, Assert.Single(alternatives[0].Sections).Kind);        // [1. Bridge]
+        var silent = Assert.Single(alternatives[1].Sections);                                          // [2. ~Verse]
+        Assert.Equal(SyntaxKind.SilentSectionReference, silent.Kind);
+        Assert.Equal("Verse", LilySharp.Core.Editing.SectionSymbols.ReferencedName(silent)!.Text);
     }
 
     [Fact]

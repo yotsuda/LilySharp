@@ -33,10 +33,10 @@ namespace LilySharp.Tests;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The grammar says it in the production: <c>StructureVolta = '[' , Integer ,
-/// [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier , [ ']' ]</c> — the optional
-/// tilde stands immediately before the Identifier, exactly as in the plain item
-/// <c>'~' , Identifier , [ String ]</c> whose comment reads "same section, label hidden".
+/// The grammar says it in the production: <c>EndingSection = [ '~' ] , Identifier , …</c> —
+/// each of an ending's sections is written exactly as the plain item
+/// <c>'~' , Identifier , [ String ]</c> whose comment reads "same section, label hidden",
+/// and since 2026-09-28 it is the same reference node.
 /// </para>
 /// <para>
 /// ⚠️ IT WAS INVERTED INSIDE A REPEAT, AND ONLY THERE (user report,
@@ -46,6 +46,8 @@ namespace LilySharp.Tests;
 /// halves the wrong way round — while the three other page readers
 /// (<c>MeasureCollector.cs</c>'s outside-a-repeat arm and its two resume arms) had always
 /// read it correctly and <see cref="FormVoltaWithoutRepeatTests"/> pinned one of them.
+/// The rows below write <c>|: A [1. ~B :|</c>: the reported book's empty body
+/// (<c>A |: [1. ~B :|</c>) has been an error since 2026-09-28 (LYS1041).
 /// </para>
 /// <para>
 /// ⚠️ AND IT CROSSED THE OUTPUT BOUNDARY BY CITATION, which is why this file tests all
@@ -117,11 +119,11 @@ public class FormVoltaSilentLabelTests
     [Fact]
     public void InsideARepeat_TheTildeHidesTheLabelAndKeepsTheEnding()
     {
-        var texts = Texts(Svg("A |: [1. ~B :|"));
+        var texts = Texts(Svg("|: A [1. ~B :|"));
         Assert.Contains("1.", texts);
         Assert.DoesNotContain("B", texts);
         Assert.Contains("A", texts);          // the untilded section still speaks
-        Assert.NotNull(Bracket(Svg("A |: [1. ~B :|")));
+        Assert.NotNull(Bracket(Svg("|: A [1. ~B :|")));
     }
 
     /// <summary>
@@ -131,7 +133,7 @@ public class FormVoltaSilentLabelTests
     [Fact]
     public void InsideARepeat_WithoutTheTilde_TheLabelIsDrawn()
     {
-        var texts = Texts(Svg("A |: [1. B :|"));
+        var texts = Texts(Svg("|: A [1. B :|"));
         Assert.Contains("1.", texts);
         Assert.Contains("B", texts);
     }
@@ -150,8 +152,8 @@ public class FormVoltaSilentLabelTests
     /// tilde for.
     /// </remarks>
     [Theory]
-    [InlineData("A |: [1. B :|", "A |: [1. ~B :|")]
-    [InlineData("A |: [1. B] :|", "A |: [1. ~B] :|")]
+    [InlineData("|: A [1. B :|", "|: A [1. ~B :|")]
+    [InlineData("|: A [1. B] :|", "|: A [1. ~B] :|")]
     public void TheTildeMovesTheLabelOnly_NotTheEnding(string plain, string tilded)
     {
         var plainSvg = Svg(plain);
@@ -178,8 +180,8 @@ public class FormVoltaSilentLabelTests
     [Fact]
     public void TheTwin_DropsTheMarkAndKeepsTheAlternative()
     {
-        string plain = new LilyPondExporter().Export(SyntaxTree.Parse(Source("A |: [1. B :|")));
-        string tilded = new LilyPondExporter().Export(SyntaxTree.Parse(Source("A |: [1. ~B :|")));
+        string plain = new LilyPondExporter().Export(SyntaxTree.Parse(Source("|: A [1. B :|")));
+        string tilded = new LilyPondExporter().Export(SyntaxTree.Parse(Source("|: A [1. ~B :|")));
 
         Assert.Contains("\\alternative", plain);
         Assert.Contains("\\alternative", tilded);
@@ -205,8 +207,8 @@ public class FormVoltaSilentLabelTests
         string Xml(string form) => new MusicXmlExporter()
             .Export(SyntaxTree.Parse(Source(form))).ToXml().ToString();
 
-        Assert.Equal(Xml("A |: [1. B :|"), Xml("A |: [1. ~B :|"));
+        Assert.Equal(Xml("|: A [1. B :|"), Xml("|: A [1. ~B :|"));
         // …and the endings are actually there, so the equality above is not two blanks.
-        Assert.Contains("<ending", Xml("A |: [1. ~B :|"));
+        Assert.Contains("<ending", Xml("|: A [1. ~B :|"));
     }
 }

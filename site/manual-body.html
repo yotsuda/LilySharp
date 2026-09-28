@@ -773,13 +773,17 @@ form practice { Verse }        // a second form = a second output</pre>
     <tr><th>Written</th><th>Means</th></tr>
     <tr><td><code>|: … :|</code></td><td>repeat; count defaults to the number of endings, or 2</td></tr>
     <tr><td><code>:|*N</code></td><td>an explicit play count</td></tr>
-    <tr><td><code>[1. Name]</code></td><td>a volta ending. The opening <code>[</code> is required; the closing <code>]</code> is optional and draws the right-hand cap</td></tr>
+    <tr><td><code>[1. Name]</code></td><td>a volta ending — the first stands just before the <code>:|</code>, each later one just after one. The <code>]</code> ends it and hooks the bracket's right end down; it may be left off only right before a <code>:|</code> (<code>[1. B C :|</code>, hooked). An unclosed last ending is an error</td></tr>
+    <tr><td><code>[2. Name -]</code></td><td>the same ending with a straight (open) right end</td></tr>
+    <tr><td><code>[1. B C]@voltaBracket(2)</code></td><td>how far this ending's bracket reaches — <code>all</code>, <code>line</code> or a number of bars — over the layout's <code>voltaBracket</code>; a bracket cut short always ends straight</td></tr>
+    <tr><td><code>[1. B C]</code></td><td>an ending of several sections, played in order under one bracket</td></tr>
     <tr><td><code>~Name</code></td><td>hide that play's rehearsal label</td></tr>
     <tr><td><code>Name'</code> <code>Name,</code></td><td>shift that play's octave — one section quoted at two octaves is <code>~B ~B'</code></td></tr>
     <tr><td><code>"Label"</code></td><td>a custom printed label for that play</td></tr>
   </table>
   <p>An ending needs a repeat to be an ending <i>of</i>: written without one, no bracket is
-  drawn and a warning says the <code>1.</code> prints nothing.</p>
+  drawn and a warning says the <code>1.</code> prints nothing. And a repeat needs a body —
+  the music every pass plays: <code>|: [1. B] :| [2. C]</code> is an error.</p>
   <h3>Navigation marks</h3>
   <p>Signs (<code>segno</code>, <code>coda</code>) engrave at the start of the following
   section; text directives (<code>fine</code>, <code>to coda</code>, <code>dc</code>,
@@ -929,6 +933,7 @@ score main {
   partCombineText true     // the default: a combinedStaff prints a2 / Solo
   chordQualities symbols   // the default: C°, C+, Cø, C°7
   minorChords upper        // the default: Am, Am7
+  voltaBracket all         // the default: an ending's bracket covers all of it
 }
 layout chart { markTempo beside  barNumbers every 4  chordQualities words }
 score main  { staff melody }                 // the file's default
@@ -943,6 +948,7 @@ score parts { layout chart  staff melody }   // this score's own</pre>
     <tr><td><code>chordQualities</code></td><td><code>symbols</code> · <code>words</code></td><td>C° C+ Cø C°7, or Cdim Caug Cm7♭5 Cdim7</td></tr>
     <tr><td><code>minorChords</code></td><td><code>upper</code> · <code>lower</code></td><td>Am, or a lowercase root with no m (a)</td></tr>
     <tr><td><code>chordDiagrams</code></td><td>a tuning word · <code>none</code>, optionally <code>all</code></td><td>which instrument chord diagrams are drawn for, and whether every chord draws one — see <a href="chords.html#layout">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>voltaBracket</code></td><td><code>all</code> · <code>line</code> · <code>N</code></td><td>how far a repeat ending's bracket reaches: all of the ending, to the end of its first line, or its first N bars (cut short, it ends straight); one ending overrides it with <code>[1. B]@voltaBracket(…)</code> — see <a href="#forms">Forms</a></td></tr>
   </table>
   <p>Keys and values are case-sensitive (<code>barnumbers</code> is refused with “write
   'barNumbers'”), an unknown key is an error, and a key set twice warns. None of them is a

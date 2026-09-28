@@ -262,7 +262,8 @@ public class MusicXmlExportShapeTests
         Assert.True(HasEnding(measures[1], "1", "stop"));
         Assert.True(HasRepeat(measures[1], "backward"));       // :| caps the 1st ending
         Assert.True(HasEnding(measures[2], "2", "start"));     // 2nd ending
-        Assert.True(HasEnding(measures[2], "2", "discontinue"));
+        // `[2. O]` hooks (its `]`): "stop". `-]` would be "discontinue" (VoltaBracketShapeTests).
+        Assert.True(HasEnding(measures[2], "2", "stop"));
         Assert.False(HasRepeat(measures[2], "backward"));      // 2nd ending does not repeat
     }
 

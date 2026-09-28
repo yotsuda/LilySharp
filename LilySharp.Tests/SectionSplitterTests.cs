@@ -508,11 +508,37 @@ public class SectionSplitterTests
         Assert.Contains("no bar line of its own ends that bar", error);
     }
 
-    [Fact]
-    public void TheSectionAsARepeatEnding_IsRefused()
+    private const string EndingFrame = """
+        part fl {
+          section A { c'1 | d1 | }
+          section B { e1 | f1 | }
+          section C { g1 | }
+        }
+        part ob {
+          section A { g'1 | g1 | a1 | a1 | }
+          section C { c'1 | }
+        }
+        form FORM
+        score main { staff fl staff ob }
+        """;
+
+    /// <summary>A section played as a repeat ending splits like any other play: the ending
+    /// holds both halves ([1. A] → [1. A B]), under the one bracket. Until endings could hold
+    /// several sections (2026-09-28) this was refused.</summary>
+    [Theory]
+    [InlineData("main { |: C [1. A] :| [2. C] }", "|: C [1. A B] :| [2. C]")]
+    [InlineData("main { |: C [1. A :| [2. C] }", "|: C [1. A B :| [2. C]")]
+    [InlineData("main { |: C [1. C] :| [2. A] }", "|: C [1. C] :| [2. A B]")]
+    // An open-ended last ending (`-]`, owner's design 2026-09-28) holds every section before
+    // its `-]` like a `]` one, so it splits the same way — the open end stays.
+    [InlineData("main { |: C [1. C] :| [2. A -] }", "|: C [1. C] :| [2. A B -]")]
+    public void TheSectionAsARepeatEnding_BecomesATwoSectionEnding(string form, string expected)
     {
-        var error = Refusal(With("g'1 | g1 | a1 | a1 |", "main { |: B [1. A] :| }"));
-        Assert.Contains("plays A as a repeat ending ([1. A])", error);
+        string src = EndingFrame.Replace("FORM", form);
+        var result = Split(src);
+        Assert.True(result.NewText != null, result.Error);
+        Assert.Contains(expected, result.NewText);
+        AssertSoundsTheSame(src, result.NewText!, "ob");
     }
 
     [Fact]

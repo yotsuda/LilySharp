@@ -631,6 +631,12 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordDiagrams,
         /// <summary><c>layout { chordDiagrams guitar |</c> — all.</summary>
         AfterLayoutChordDiagramsTuning,
+        /// <summary><c>layout { voltaBracket |</c> — all / line / a number of bars.</summary>
+        AfterLayoutVoltaBracket,
+        /// <summary><c>[1. B C]@voltaBracket(|</c> — all / line / a number of bars.</summary>
+        InVoltaBracketAnnotation,
+        /// <summary><c>[1. B C]@|</c> — the one annotation an ending takes.</summary>
+        AfterEndingAt,
         ScoreBlock,
         StaffGroupBlock,
         AfterStaffRef,
@@ -796,6 +802,21 @@ public sealed partial class LilySharpLanguageServer
         int i = offset - 1;
         while (i >= 0 && char.IsWhiteSpace(text[i]))
             i--;
+
+        // A form ending's own annotation (owner's design 2026-09-28): `[1. B C]@|` offers the
+        // one name an ending takes, `@voltaBracket(|` its values. Asked before the generic
+        // '@' arms, which would offer a note's annotations there.
+        if (AnnotationArgumentName(text, offset) == VoltaBracketLength.Key)
+            return CompletionContext.InVoltaBracketAnnotation;
+        if (i >= 0)
+        {
+            int atSign = i;
+            while (atSign >= 0 && char.IsLetter(text[atSign]))
+                atSign--;
+            if (atSign > 0 && text[atSign] == '@' && text[atSign - 1] == ']'
+                && scan.Stack.Count > 0 && scan.Stack[^1].Frame.Prefix == "form")
+                return CompletionContext.AfterEndingAt;
+        }
 
         if (i >= 0)
         {
@@ -993,6 +1014,8 @@ public sealed partial class LilySharpLanguageServer
             if (ChordDiagramsKey.IsTuningWord(prevWord)
                 && SecondWordBeforeCursor(text, offset) == ChordDiagramsKey.Key)
                 return CompletionContext.AfterLayoutChordDiagramsTuning;
+            if (prevWord.Equals(VoltaBracketLength.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutVoltaBracket;
             return CompletionContext.LayoutBlock;
         }
 

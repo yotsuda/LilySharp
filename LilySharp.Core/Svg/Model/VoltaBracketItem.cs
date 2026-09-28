@@ -35,19 +35,33 @@ public sealed record VoltaBracketItem(
     // Starting measure index (inclusive).
     int StartMeasureIndex,
 
-    // Ending measure index (inclusive).
+    // Ending measure index (inclusive) — the last bar the BRACKET covers: an ending's
+    // `voltaBracket N` is already applied here (Semantics.VoltaBracketLength.LastBar).
     int EndMeasureIndex,
 
     // Volta number text (e.g., "1.", "2.", "1, 3.", "1-3.").
     string VoltaText,
 
-    // Whether the bracket is closed at the end (has right hook).
+    // Whether the bracket's right end hooks down: the ending's `]` (not `-]`), and not cut
+    // short by its length setting.
     bool IsClosed,
 
     // Source position for click-to-source mapping.
-    int SourcePosition
+    int SourcePosition,
+
+    // `voltaBracket line`: only the piece on the system the bracket starts in is drawn — a
+    // bracket the system break cuts ends straight (VoltaBracketEngraver.Calculate).
+    bool FirstSystemOnly = false,
+
+    // The ENDING's last bar when the bracket stops before it (`voltaBracket N`), else -1 —
+    // for the readers that ask where the ending is, not where its ink is (MeasureCollector
+    // LaterEndingPredecessors pairs a repeat's endings by adjacency).
+    int CutEndingLastMeasureIndex = -1
 )
 {
+    /// <summary>The ending's last bar — the bracket's own, unless the bracket was cut short.</summary>
+    public int EndingLastMeasureIndex => CutEndingLastMeasureIndex >= 0 ? CutEndingLastMeasureIndex : EndMeasureIndex;
+
     // Identity, not value equality: see ModelIdentity.
     public bool Equals(VoltaBracketItem? other) => ReferenceEquals(this, other);
 

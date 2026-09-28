@@ -174,7 +174,9 @@ internal sealed partial class LayoutEngine
         {
             foreach (var vb in voltaBrackets)
             {
-                if (vb.StartMeasureIndex < endMeasure && vb.EndMeasureIndex >= startMeasure)
+                if (vb.StartMeasureIndex < endMeasure && vb.EndMeasureIndex >= startMeasure
+                    // `voltaBracket line` draws nothing on the systems after its first.
+                    && !(vb.FirstSystemOnly && vb.StartMeasureIndex < startMeasure))
                 {
                     upExtent = Math.Max(upExtent, 2.0); // volta bracket height
                     break;

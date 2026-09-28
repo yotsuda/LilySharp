@@ -454,10 +454,19 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
   meter just auto-filled a bar merely confirms it — which is why a trailing `c1 |` is one
   bar, not two.
 - Volta repeats are symbolic and live in the form: `form main { |: A [1. B] :| [2. C] }`.
-  An ending NAMES a section. Play count defaults to the number of endings (2 with none);
-  set it explicitly with `:|*N`. The opening `[` is required (a bare `1. A` is rejected);
-  the closing `]` is optional — write it to draw the right cap, omit it to leave the ending
-  open. A third and later ending is written the same way: `:| [3. D]` again.
+  An ending NAMES one or more sections, played in order under one bracket:
+  `|: A [1. B C] :| [2. D]` plays A B C, then A D. The body before the first ending must
+  name a section (`|: [1. B] :| [2. C]` and `|: :|` are errors, LYS1041).
+  Play count defaults to the number of endings (2 with none);
+  set it explicitly with `:|*N`. The `]` ends the ending and hooks its bracket's right end
+  down; `-]` ends it with a straight (open) right end: `|: A [1. B] :| [2. C D -]`. The
+  `]` may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|` closes
+  it, hooked); an unclosed LAST ending is an error. The first ending is the last thing
+  before the `:|`, and each later ending follows its own `:|`: `:| [3. D]` again.
+- How far the bracket reaches: `layout { voltaBracket all|line|N }` — `all` (default) every
+  bar of the ending, `line` up to the end of the system it starts in, `N` its first N bars.
+  One ending overrides it after its `]`: `[1. B C]@voltaBracket(2)`. A bracket cut short
+  always ends straight, whatever `]` / `-]` says.
 - An ending needs a repeat to be an ending OF. Write `form main { [1. A] }` and no bracket
   is drawn: it engraves as the plain reference `A`, and LYS6008 warns that the `1.` prints
   nothing. Put the ending inside the repeat — `form main { |: A [1. B] :| [2. C] }`.
@@ -887,6 +896,7 @@ layout {
   minorChords lower        // a minor chord's root: upper (default) | lower
   chordDiagrams ukulele    // the tuning written chord shapes draw on: a tuning word | none (unset: the part's instrument, else guitar)
                            // `chordDiagrams ukulele all` / `chordDiagrams all`: every chord draws a diagram
+  voltaBracket line        // how far an ending's bracket reaches: all (default) | line | N bars
 }
 ```
 
@@ -941,6 +951,11 @@ layout {
   (*Chord diagrams*). The twin writes a `FretBoards` context under a row's `ChordNames` when an
   entry writes a shape (under `all`, for every row); MusicXML nests an `@chord`'s `<frame>` in
   its `<harmony>`.
+- `voltaBracket all` (default) draws an ending's bracket over every bar; `line` stops it at
+  the end of the system it starts in; `N` covers the ending's first N bars (all of it when
+  shorter). An ending overrides it with `[1. B C]@voltaBracket(2)`. A cut bracket ends
+  straight. The twin writes `VoltaBracket.musical-length` / kills the later pieces; MusicXML
+  stops the `<ending>` at the Nth bar as `discontinue` (`line` writes the whole ending there).
 - ⚠️ **The keyword is `layout` and it takes a BLOCK.** A bare `markTempo beside` or
   `barNumbers none` at the top level is an error (the words are not directives); write
   `layout { markTempo beside }`. The keys and their words are not reserved (`part markTempo { }`

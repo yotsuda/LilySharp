@@ -96,8 +96,8 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
         {
             var (name, silent, span) = node switch
             {
+                // An ending's sections ([1. ~B "x"]) are these same reference nodes.
                 SectionReferenceSyntax r => (r.SectionName, false, r.Identifier.Span),
-                FormAlternativeSyntax a => (a.SectionName.Text, a.IsSilent, a.SectionName.Span),
                 { Kind: SyntaxKind.SilentSectionReference } s
                     when s.GetChild(1) is SyntaxTokenNode n => (n.Text, true, n.Span),
                 _ => (null, false, default(TextSpan)),
@@ -148,7 +148,11 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
                 || ending.IsInside<FormRepeatBlockSyntax>())
                 continue;
 
-            string section = ending.SectionName.Text;
+            var names = ending.Sections
+                .Select(s => Editing.SectionSymbols.ReferencedName(s)?.Text ?? "")
+                .ToList();
+            string section = string.Join(" ", names);
+            string reference = names.Count == 1 ? "an ordinary section reference" : "ordinary section references";
             _diagnostics.Warning(InkSpan(ending), DiagnosticCodes.VoltaEndingWithoutRepeat,
                 // ⚠️ Every quoted spelling here is either lifted from the source or is a
                 // SUGGESTION. HANDOFF §5.0: "what you report, you quote — you do not
@@ -158,7 +162,7 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
                 // language accepts. VoltaText IS written ("1.", "1-3."), and the "|: … :|"
                 // clause is a candidate, which is the one place rebuilding is the right job.
                 $"No repeat opens this ending, so '{ending.VoltaText}' prints nothing and "
-                + $"'{section}' is engraved as an ordinary section reference. Open a repeat "
+                + $"'{section}' is engraved as {reference}. Open a repeat "
                 + $"('|: … [{ending.VoltaText} {section}] :| …'), or remove the brackets and "
                 + $"write '{section}' on its own.");
         }
@@ -173,15 +177,16 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
     /// <c>"[1. B] "</c> — one character too many, and the squiggle would reach into the space
     /// after the ending. A TOKEN's span is ink (measured: the <c>]</c> is 104..105, not
     /// 104..106), so the ink end is the last present child's end. Children are walked
-    /// backwards because the optional slots — separator, end number, tilde, display label,
-    /// closing bracket — are null when unwritten, and an ending with no <c>]</c> ends on its
-    /// section name.
+    /// backwards because the optional slots — separator, end number, closing bracket — are
+    /// null when unwritten, and an ending with no <c>]</c> ends on its last section, a NODE
+    /// whose own span keeps the trailing trivia again — so the walk descends into it.
     /// </remarks>
     private static TextSpan InkSpan(SyntaxNode node)
     {
         for (int i = node.SlotCount - 1; i >= 0; i--)
             if (node.GetChild(i) is { } last)
-                return new TextSpan(node.Span.Start, last.Span.End - node.Span.Start);
+                return new TextSpan(node.Span.Start,
+                    (last is SyntaxTokenNode ? last.Span.End : InkSpan(last).End) - node.Span.Start);
         return node.Span;
     }
 

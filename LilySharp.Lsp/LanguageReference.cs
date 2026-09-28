@@ -63,8 +63,8 @@ internal static class LanguageReference
         // The kinds are joined from the compiler's list (SyntaxFacts.RepeatKindVocabulary),
         // not spelled here — this row carried its own copy of the three until 2026-09-03.
         new("repeat", $"repeat ({string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds)}) count {{ music }}",
-            "Repeats the music block. For volta repeats use the symbolic form "
-                + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",
+            "Repeats the music block. A volta repeat is written in the form instead: "
+                + "'|: A :|' (count ':|*N'), with endings '|: A [1. B] :| [2. C]'.",
             new[] { (string.Join("|", LilySharp.Core.Semantics.LanguageVocabulary.RepeatKinds), "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
                     ("count", "Number of repetitions (integer)"),
                     ("{ music }", "Music block to repeat") },
@@ -119,6 +119,8 @@ internal static class LanguageReference
     /// <see cref="SignatureEntry.HoverMarker"/>s the drift net matches.</summary>
     internal static string? Hover(SyntaxNode node)
     {
+        if (VoltaBracketHover(node) is { } volta)
+            return volta;
         return node switch
         {
             NoteSyntax note => $"**Note**: {note.Pitch.PitchName}\n\nOctave offset: {note.Pitch.OctaveOffset}\n\nDuration: {note.Duration?.Value.ToString() ?? "inherited"}",
@@ -148,5 +150,32 @@ internal static class LanguageReference
             ArticulationSyntax art => $"**Articulation**: @{art.NameToken.Text}",
             _ => null
         };
+    }
+
+    private const string VoltaBracketValues =
+        "`all` — every bar of the ending (the default) · `line` — up to the end of the system "
+        + "the bracket starts in · `N` — the ending's first N bars (all of it when shorter). "
+        + "A bracket cut short always ends straight.";
+
+    /// <summary>The hover for the <c>voltaBracket</c> layout key, an ending's
+    /// <c>@voltaBracket(…)</c>, and an ending's <c>]</c> / <c>-]</c> (owner's design
+    /// 2026-09-28), or null.</summary>
+    private static string? VoltaBracketHover(SyntaxNode node)
+    {
+        const string key = LilySharp.Core.Semantics.VoltaBracketLength.Key;
+        if (node is SyntaxTokenNode { Text: key, Parent: LayoutDeclarationSyntax })
+            return $"**Layout** `{key}` — how far an ending's volta bracket reaches: " + VoltaBracketValues
+                + $"\n\nAn ending's own `[1. B C]@{key}(…)` overrides it.";
+        var mark = node as MusicMarkSyntax ?? node.Parent as MusicMarkSyntax;
+        if (mark is { Parent: FormAlternativeSyntax ending } && mark.Name == key)
+            return $"**Ending bracket length** `@{key}` — this ending's own reach, over the layout's "
+                + $"`{key}`: " + VoltaBracketValues
+                + (ending.LengthOverride is { } length ? $"\n\nHere: `{length}`." : "");
+        if (node is SyntaxTokenNode { Kind: SyntaxKind.CloseBracket or SyntaxKind.Minus, Parent: FormAlternativeSyntax alt })
+            return alt.EndsOpen
+                ? "**Ending end** `-]` — the ending ends here; its bracket's right end stays straight (open)."
+                : "**Ending end** `]` — the ending ends here; its bracket's right end hooks down "
+                  + "(write `-]` to leave it open). A bracket its length cuts short ends straight.";
+        return null;
     }
 }

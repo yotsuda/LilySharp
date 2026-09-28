@@ -3835,7 +3835,7 @@ internal static class LpGeometryProbes
         section B { mel { e'1 | g'2 a'4 bes'4{{(chord ? "@chord(Fm)" : "")}} } }
         section C { mel { g'1 | a'1 } }
 
-        form main { |: ~A [1. ~B] :| [2. ~C }
+        form main { |: ~A [1. ~B] :| [2. ~C -] }
 
         score main "{{name}}" { staff mel }
         """;
@@ -3872,7 +3872,7 @@ internal static class LpGeometryProbes
         section B { mel { e1 | g1 } }
         section C { mel { g1 | a1 } }
 
-        form main { |: ~A [1. ~B] :| [2. ~C }
+        form main { |: ~A [1. ~B] :| [2. ~C -] }
 
         score main "VOCF" { staff mel }
         """;

@@ -315,12 +315,18 @@ internal static class PlayedOrder
                 continue;
             }
             var body = new List<int>();
-            var endings = new List<int>();
+            // One list per ending: its sections' plays in order ([1. C D] is two plays).
+            var endings = new List<List<int>>();
             int count = plays[i].Count;
             int j = i;
             do
             {
-                (plays[j].Role == SectionRepeatRole.Body ? body : endings).Add(j);
+                if (plays[j].Role == SectionRepeatRole.Body)
+                    body.Add(j);
+                else if (plays[j].Role == SectionRepeatRole.EndingContinued && endings.Count > 0)
+                    endings[^1].Add(j);
+                else
+                    endings.Add(new List<int> { j });
                 j++;
             }
             while (j < plays.Count && plays[j].Role != SectionRepeatRole.None
@@ -332,8 +338,8 @@ internal static class PlayedOrder
                 plain.AddRange(body);
                 if (pass < endings.Count)
                 {
-                    played.Add(endings[pass]);
-                    plain.Add(endings[pass]);
+                    played.AddRange(endings[pass]);
+                    plain.AddRange(endings[pass]);
                 }
             }
             i = j;
