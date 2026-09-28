@@ -59,11 +59,16 @@ $problems = [System.Collections.Generic.List[string]]::new()
 $published = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $tmp = Join-Path ([IO.Path]::GetTempPath()) 'lilysharp-site-check'
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
-foreach ($page in 'index.html', 'grammar.html') {
+$pages = 'index.html', 'grammar.html', 'chords.html', 'editor.html'
+foreach ($page in $pages) {
     $html = Get-Content (Join-Path $here $page) -Raw -Encoding UTF8
     function LineOf([int]$index) { ($html.Substring(0, $index) -split "`n").Count }
 
-    foreach ($m in [regex]::Matches($html, '<(?:img|source|video)[^>]+?\b(?:src|poster)="([^"]+)"')) {
+    # A demo clip still marked data-pending is hidden on the page and its file is not
+    # expected yet: blank it out of the media scan (same length, so line numbers hold).
+    $media = [regex]::Replace($html, '(?s)<figure class="demo-video" data-pending>.*?</figure>',
+        { param($m) $m.Value -replace '[^\n]', ' ' })
+    foreach ($m in [regex]::Matches($media, '<(?:img|source|video)[^>]+?\b(?:src|poster)="([^"]+)"')) {
         $src = $m.Groups[1].Value
         if ($src -match '^[a-z]+:') { continue }
         if (-not (Test-Path (Join-Path $here $src))) { $problems.Add("${page}:$(LineOf $m.Index): missing file $src") }
@@ -76,8 +81,10 @@ foreach ($page in 'index.html', 'grammar.html') {
         foreach ($m in [regex]::Matches($html, $pattern)) { $problems.Add("${page}:$(LineOf $m.Index): leftover '$($m.Value)'") }
     }
     # A <pre> that is a whole document (it has a form and a score) is compiled as shown.
+    # `<pre data-fragment>` opts out: a listing that is not a .lys file as it stands (a
+    # Markdown fence wrapped around one).
     $i = 0
-    foreach ($m in [regex]::Matches($html, '(?s)<pre(?![^>]*mermaid)[^>]*>(.*?)</pre>')) {
+    foreach ($m in [regex]::Matches($html, '(?s)<pre(?![^>]*(?:mermaid|data-fragment))[^>]*>(.*?)</pre>')) {
         $text = [System.Web.HttpUtility]::HtmlDecode(($m.Groups[1].Value -replace '<[^>]+>', ''))
         if ($text -notmatch '(?m)^\s*score\b' -or $text -notmatch '(?m)^\s*form\b') { continue }
         $i++
@@ -93,15 +100,15 @@ if ($problems.Count) {
 }
 
 # ------------------------------------------------------------------ 5. assemble _site/
-# Only the two pages and the files they reference: a picture the pages stopped using does
-# not linger on the published site.
+# Only the pages and the files they reference: a picture the pages stopped using does not
+# linger on the published site (nor does videos/SHOTLIST.md, or a clip still pending).
 $out = Join-Path $here '_site'
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 New-Item -ItemType Directory -Path $out | Out-Null
-foreach ($f in @('index.html', 'grammar.html') + @($published)) {
+foreach ($f in @($pages) + @($published)) {
     $target = Join-Path $out $f
     New-Item -ItemType Directory -Force -Path (Split-Path $target) | Out-Null
     Copy-Item (Join-Path $here $f) $target
 }
 New-Item -ItemType File -Path (Join-Path $out '.nojekyll') | Out-Null   # serve as is, no Jekyll pass
-Write-Host "Site built and checked: Lily# $ver -> _site/ ($($published.Count + 2) files)" -ForegroundColor Green
+Write-Host "Site built and checked: Lily# $ver -> _site/ ($($published.Count + $pages.Count) files)" -ForegroundColor Green

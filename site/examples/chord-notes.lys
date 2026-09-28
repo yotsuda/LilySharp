@@ -1,0 +1,13 @@
+// chord(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
+// with its string number, so the tab shows the same shape. A bare @chord on it adds the
+// name and the diagram. A chord name belongs to the beat, so a rest or a spacer takes one.
+time 4/4
+part gt { instrument guitar }
+section A {
+  gt {
+    s1@chord(C x32010) | chord(C x32013)1 |
+    chord(Am x02210)2@chord chord(F 133211)2@chord | r1@chord(G 320003) |
+  }
+}
+form main { ~A }
+score main { staff gt  tab gt }

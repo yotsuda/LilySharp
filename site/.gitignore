@@ -2,5 +2,7 @@
 # every build (locally and in .github/workflows/pages.yml), never committed.
 /index.html
 /grammar.html
+/chords.html
+/editor.html
 *.svg
 /_site/

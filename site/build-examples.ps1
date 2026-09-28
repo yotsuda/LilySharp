@@ -243,6 +243,81 @@ form main { ~A }
 score main { staff melody }
 '@
 
+# ---- chords.html: chords and chord diagrams, step by step
+
+'chord-names' = @'
+// Chord names alone. A `chords` row placed directly above a staff aligns over it;
+// `@chord(NAME)` puts a name on one note. Neither draws a diagram: a name is only a name.
+time 4/4
+part melody { clef treble }
+section A {
+  melody { e'4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
+  chords prog { C | Am | Dm7 G7 | | }
+}
+form main { ~A }
+score main { chords prog  staff melody }
+'@
+
+'chord-shapes' = @'
+// A shape in parentheses after a row's chord draws its diagram under the name. One
+// character per string from the low string: x mutes the string, 0 (or o) leaves it open,
+// a digit is the fret. Frets 10-15 take a '-' on each side: 8xx88-11, xx-10-12-13-11.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody { e'2 c'2 | c'2 b2 | c''2 g'2 | }
+  chords prog { C(x32010) Am(x02210) | F(133211) G7(320001) | Cm(8xx88-11) Cm(xx-10-12-13-11) | }
+}
+form main { ~A }
+score main { chords prog  staff melody }
+'@
+
+'chord-on-note' = @'
+// On a note, the shape follows the name inside @chord( ). A shape with no name names
+// itself from its notes; @diagram draws a diagram with no name at all.
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody { e'1@chord(C x32010) | c'1@chord(Am7 x02010) | a'1@chord(x02210) | b'1@diagram(x24442) | }
+}
+form main { ~A }
+score main { staff melody }
+'@
+
+'chord-notes' = @'
+// chord(NAME SHAPE) WRITES the shape's notes: each string's open pitch plus its fret,
+// with its string number, so the tab shows the same shape. A bare @chord on it adds the
+// name and the diagram. A chord name belongs to the beat, so a rest or a spacer takes one.
+time 4/4
+part gt { instrument guitar }
+section A {
+  gt {
+    s1@chord(C x32010) | chord(C x32013)1 |
+    chord(Am x02210)2@chord chord(F 133211)2@chord | r1@chord(G 320003) |
+  }
+}
+form main { ~A }
+score main { staff gt  tab gt }
+'@
+
+'chord-all' = @'
+// `chordDiagrams all` draws a diagram for EVERY chord name: the shape written for the
+// tuning, else its usual shape. The row stands above a ukulele staff, so the diagrams
+// are the ukulele's - no layout word needed for that.
+layout { chordDiagrams all }
+octave absolute
+time 4/4
+part uke { instrument ukulele "Ukulele" }
+section A {
+  uke { g'4 e' c' e' | a'2 c'' | a'4 f' c' f' | g'1 | }
+  chords prog { C | Am | F | G7(0212) | }
+}
+form main { ~A }
+score main { chords prog  staff uke }
+'@
+
 }
 
 $failed = @()

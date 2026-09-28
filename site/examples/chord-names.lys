@@ -1,0 +1,10 @@
+// Chord names alone. A `chords` row placed directly above a staff aligns over it;
+// `@chord(NAME)` puts a name on one note. Neither draws a diagram: a name is only a name.
+time 4/4
+part melody { clef treble }
+section A {
+  melody { e'4 d c d | e e e2 | d4 d e d | c1@chord(C) | }
+  chords prog { C | Am | Dm7 G7 | | }
+}
+form main { ~A }
+score main { chords prog  staff melody }

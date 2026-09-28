@@ -1,0 +1,13 @@
+// `chordDiagrams all` draws a diagram for EVERY chord name: the shape written for the
+// tuning, else its usual shape. The row stands above a ukulele staff, so the diagrams
+// are the ukulele's - no layout word needed for that.
+layout { chordDiagrams all }
+octave absolute
+time 4/4
+part uke { instrument ukulele "Ukulele" }
+section A {
+  uke { g'4 e' c' e' | a'2 c'' | a'4 f' c' f' | g'1 | }
+  chords prog { C | Am | F | G7(0212) | }
+}
+form main { ~A }
+score main { chords prog  staff uke }

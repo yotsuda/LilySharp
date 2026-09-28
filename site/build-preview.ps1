@@ -133,6 +133,16 @@ $template = @'
   a { color:var(--accent); text-underline-offset:3px; }
   a:hover { text-decoration-thickness:2px; }
   footer { padding:36px 0 64px; color:var(--muted); font-size:14px; border-top:1px solid var(--rule); }
+
+  /* A demo clip. A figure.demo-video carries the data-pending attribute until its file is in
+     videos/: a pending one is not shown at all (and build-site.ps1 does not look for its
+     file), so the published pages never carry an empty box. Drop the clip into videos/ and
+     delete data-pending to publish it. */
+  figure.demo-video { margin:18px 0 22px; }
+  figure.demo-video[data-pending] { display:none; }
+  figure.demo-video video { display:block; width:100%; max-width:960px; height:auto;
+                            border:1px solid var(--rule); border-radius:10px; box-shadow:0 2px 14px var(--shadow); }
+  figure.demo-video figcaption { color:var(--muted); font-size:14px; margin:8px 0 0; }
 </style>
 </head>
 <body>
@@ -140,7 +150,9 @@ $template = @'
   <h1 class="brand">Lily#</h1>
   <p class="tagline">Publication-quality sheet music from plain text — engraved by a
   LilyPond port, edited in an IDE that keeps up with your keystrokes.
-  <a href="grammar.html">Read the language manual &rarr;</a></p>
+  <a href="grammar.html">Read the language manual &rarr;</a> ·
+  <a href="chords.html">Chords and chord diagrams</a> ·
+  <a href="editor.html">The editor and AI</a></p>
   {{HERO_SHOT}}
   <p class="caption">The source and the engraving, side by side. The preview follows your
   keystrokes — it does not wait for a save.</p>
@@ -181,15 +193,15 @@ $template = @'
       the score redraws in milliseconds.</p></div>
     <div class="pillar"><span class="n">04</span><h3>AI that compiles first</h3>
       <p>Ask in words, and every candidate is compiled and repaired before you see it.
-      A candidate that adds errors is never shown. It uses your GitHub Copilot models or
-      your own API key.</p></div>
+      A candidate that adds errors is never shown. It uses the models VS Code offers you,
+      such as GitHub Copilot's.</p></div>
     <div class="pillar"><span class="n">05</span><h3>An editor that knows the grammar</h3>
       <p>Completion offers what can actually come next — after <code>lyrics&nbsp;NAME</code>
       it proposes <code>sings</code>, then the part names that exist in your file. Rename a
       part and every reference to it moves with it. Hover a chord and it names itself — symbol,
-      degree and pitches. More than a dozen language-server features in all: diagnostics,
-      hover, go to definition, find references, rename, document symbols, folding, formatting,
-      code actions, CodeLens, signature help, semantic highlighting.</p></div>
+      degree and pitches. An octave mark or a duration typed anywhere on a note lands in its
+      slot, <code>Ctrl+Shift+Up/Down</code> steps an octave or a chord shape, and the note you
+      land on sounds. <a href="editor.html">Everything the editor does &rarr;</a></p></div>
     <div class="pillar"><span class="n">06</span><h3>One source, every score</h3>
       <p>A file can carry more than one <code>score</code> and more than one
       <code>form</code>. The full score, the separate parts, a staff-less chord grid and a
@@ -383,8 +395,9 @@ $template = @'
       into the extension at build time, so the canon ships with it and cannot drift.</li>
       <li><b>Pick bars on the score.</b> Shift-click a range in the preview and transform it —
       the same loop, whether the selection began in text or on the page.</li>
-      <li><b>Your model, no telemetry.</b> It runs on your GitHub Copilot models or your own
-      API key, and outcomes go to an output channel on your machine.</li>
+      <li><b>Your model, no telemetry.</b> It runs on the language models VS Code offers you —
+      GitHub Copilot's, or another provider's — and outcomes go to an output channel on your
+      machine. <a href="editor.html#ai">More on the AI features &rarr;</a></li>
     </ul>
   </div>
 </div></section>

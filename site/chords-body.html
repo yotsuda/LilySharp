@@ -1,0 +1,201 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Step by step</p>
+  <ol>
+    <li><a href="#names">1. Chord names</a></li>
+    <li><a href="#shapes">2. A shape draws a diagram</a></li>
+    <li><a href="#onnote">3. On a note, and with no name</a></li>
+    <li><a href="#notes">4. The notes on the staff</a></li>
+    <li><a href="#layout">5. Which instrument, and every chord</a></li>
+    <li><a href="#check">6. When a shape is not the chord</a></li>
+    <li><a href="#editor">7. Let the editor write the shapes</a></li>
+  </ol>
+  <p class="grp">Elsewhere</p>
+  <ol>
+    <li><a href="grammar.html#chordrows">Chord rows (the manual)</a></li>
+    <li><a href="grammar.html#tab">Tablature (the manual)</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="names">
+  <p class="eyebrow">01</p>
+  <h2>Chord names</h2>
+  <p>A chord name is typed the way it prints — <code>C</code>, <code>Am</code>,
+  <code>Dm7</code>, <code>G7</code>, <code>Bb7/D</code>, <code>F#m7-5</code> (an altered
+  tension takes <code>+</code> or <code>-</code>, because <code>#</code> and <code>b</code>
+  belong to the root). There are two places to write one:</p>
+  <ul>
+    <li><b>A <code>chords</code> row</b> holds a progression. Placed directly above a staff in
+    the <code>score</code>, it aligns over that staff; entries carry no durations — one entry
+    takes the bar, two in 4/4 take half each.</li>
+    <li><b><code>@chord(NAME)</code></b> puts a name on one note.</li>
+  </ul>
+  <p>A name alone draws <b>no diagram</b>. That is the rule the rest of this page builds on:
+  a diagram appears where you ask for one.</p>
+  <!--EXAMPLE:chord-names-->
+  <p class="note">Spelling, the registered qualities, Roman degrees (<code>Imaj7</code>),
+  <code>as roman</code> and the name a bare <code>@chord</code> derives from its notes are in
+  the manual's <a href="grammar.html#chordrows">Chords and chord rows</a>.</p>
+</section>
+
+<section id="shapes">
+  <p class="eyebrow">02</p>
+  <h2>A shape draws a diagram</h2>
+  <p>Write the chord's <b>shape</b> in parentheses after its name —
+  <code>C(x32010)</code> in a row — and a chord diagram is drawn under the name, between the
+  name and the staff. The bars widen to make room.</p>
+  <table class="g">
+    <tr><th>In a shape</th><th>Means</th></tr>
+    <tr><td>one character per string</td><td>from the <b>low</b> string up: <code>x32010</code> is low E muted, A at the 3rd fret, D at the 2nd, G open, B at the 1st, high E open</td></tr>
+    <tr><td><code>x</code></td><td>a muted string — drawn as a cross above the grid</td></tr>
+    <tr><td><code>0</code> or <code>o</code></td><td>an open string — drawn as a ring above the grid</td></tr>
+    <tr><td>a digit</td><td>the fret. A shape that reaches past the 4th fret is drawn from its lowest fret, labelled <code>3fr</code>, <code>8fr</code> … as LilyPond draws it</td></tr>
+    <tr><td><code>-10-</code> … <code>-15-</code></td><td>a two-digit fret, with a <code>-</code> on each side: <code>8xx88-11</code>, <code>xx-10-12-13-11</code>. A <code>-</code> between every string reads the same (<code>x-x-10-12-13-11</code>), so a chord chart's spelling can be pasted in</td></tr>
+  </table>
+  <!--EXAMPLE:chord-shapes-->
+  <p>Between dashes, <b>exactly two digits are one fret</b>, so frets 10, 9, 9 are written
+  <code>10-9-9</code> (<code>10-99</code> would be fret 99, and warns). Shapes are lower
+  case, like every value word. A shape of the wrong length, a doubled or dangling
+  <code>-</code>, or a fret above 15 warns (LYS1038), naming the fix; the name still draws.</p>
+  <p>A shape is routed by its <b>string count</b>, so one chord can carry a shape for each
+  instrument that might draw it — <code>F(133211 2010)</code> is the guitar's six strings
+  and the ukulele's four. When two tunings have the same count, a tuning word names which
+  shape is whose: <code>F(guitar 133211 guitardropd 333211)</code>.</p>
+</section>
+
+<section id="onnote">
+  <p class="eyebrow">03</p>
+  <h2>On a note, and with no name</h2>
+  <p>On a note the shape follows the name, inside the parentheses:
+  <code>@chord(C x32010)</code>. The words after the name are its shapes — which is why
+  <code>@chord(C 7)</code> is C with a (too short) shape, not C7: write
+  <code>@chord(C7)</code>.</p>
+  <table class="g">
+    <tr><th>Written</th><th>Draws</th></tr>
+    <tr><td><code>@chord(C)</code></td><td>the name only</td></tr>
+    <tr><td><code>@chord(C x32010)</code></td><td>the name and its diagram</td></tr>
+    <tr><td><code>@chord(x02210)</code></td><td>the diagram, and a name read off the shape's notes (Am)</td></tr>
+    <tr><td><code>@diagram(x24442)</code></td><td>a diagram with no name at all — not a chord symbol, so it always draws. <code>.down</code> puts it under the staff</td></tr>
+  </table>
+  <!--EXAMPLE:chord-on-note-->
+</section>
+
+<section id="notes">
+  <p class="eyebrow">04</p>
+  <h2>The notes on the staff</h2>
+  <p>A diagram shows a shape; <b><code>chord(NAME SHAPE)</code></b> plays it. It is a music
+  item, written where a note or a <code>&lt;…&gt;</code> chord would be, and it writes each
+  sounding string as a note — the string's open pitch plus its fret, on the part's
+  instrument — with its string number, so a <code>tab</code> of the part shows exactly that
+  shape. <code>chord(C x32013)1</code> on a guitar is C3 E3 G3 C4 G4 for a whole note.</p>
+  <ul>
+    <li>It takes what a chord takes after it: a duration, dots, ties, slurs, beams,
+    articulations, dynamics; a bare duration or <code>q</code> repeats it.</li>
+    <li>It draws no name of its own. A bare <code>@chord</code> on it adds the item's name
+    and diagram: <code>chord(Am x02210)2@chord</code>.</li>
+    <li>Its pitches are absolute — octave marks after the <code>)</code> are an error; play
+    it higher on the neck instead. The note after it reads its lowest note.</li>
+    <li>The shape is required: <code>chord(C)</code> warns — <i>write a shape: chord(C
+    x32010)</i> — and keeps its time as a spacer.</li>
+  </ul>
+  <p><b>A chord name belongs to the beat, not to a note</b>, so a rest, a spacer or a
+  full-measure rest takes one, diagram and all: <code>s1@chord(C x32010)</code> is an intro
+  bar over silence, <code>r1@chord(G 320003)</code> a rest bar that still names its chord.
+  (A bare <code>@chord</code> there has no notes to name, and says so: write the name.)</p>
+  <!--EXAMPLE:chord-notes-->
+  <p class="note">String numbers, <code>\N</code> and the tab staff itself are in the
+  manual's <a href="grammar.html#tab">Tablature</a>.</p>
+</section>
+
+<section id="layout">
+  <p class="eyebrow">05</p>
+  <h2>Which instrument, and every chord</h2>
+  <p>A diagram is drawn for one tuning. Which one is decided per score, strongest first:</p>
+  <ol>
+    <li><b>The score's layout:</b> <code>layout { chordDiagrams ukulele }</code> — any word
+    a tab's <code>tuning</code> takes (<code>guitar</code>, <code>ukulele</code>,
+    <code>mandolin</code>, <code>guitardropd</code>, <code>bass</code>, …).
+    <code>chordDiagrams none</code> draws no diagram at all, written shapes included.</li>
+    <li><b>Else the part's instrument</b>, when it is fretted: for an <code>@chord</code>, the
+    part whose note carries it; for a row, the staff the row stands directly above.</li>
+    <li><b>Else the guitar</b> — a lead-sheet row with no staff under it, or a staff that
+    frets nothing.</li>
+  </ol>
+  <p>So one source prints a guitar book, a ukulele book and a piano score, each from its own
+  <code>score</code>:</p>
+<pre>layout uke   { chordDiagrams ukulele }
+layout piano { chordDiagrams none }
+part melody { clef treble }
+section A {
+  melody { c'1@chord(C x32010) | }
+  chords prog { F(guitar 133211 ukulele 2010) | }
+}
+form main { A }
+score main         { chords prog  staff melody }               // guitar: C and F
+score main "uke"   { layout uke    chords prog  staff melody } // ukulele: F only
+score main "piano" { layout piano  chords prog  staff melody } // no diagrams</pre>
+  <p>A shape the diagram's tuning cannot take (the guitar's six characters on a ukulele) is
+  simply not used there.</p>
+
+  <h3><code>all</code> — a diagram for every chord</h3>
+  <p>Writing a shape on every chord of a song is tedious when the shapes are the usual ones.
+  The scope word <code>all</code> — after the tuning (<code>chordDiagrams guitar all</code>,
+  <code>chordDiagrams ukulele all</code>) or alone (<code>chordDiagrams all</code>, the tuning
+  then chosen as above) — makes <b>every</b> chord name in that score draw a diagram: the
+  shape written for its tuning, else its <b>usual shape</b>. The usual shape is LilyPond's
+  predefined one for that tuning (C <code>x32010</code>, F <code>133211</code>; ukulele C
+  <code>0003</code>), else the first shape of Lily#'s own order. A chord with no shape at
+  all on the tuning warns once, asking you to write one.</p>
+  <!--EXAMPLE:chord-all-->
+  <p class="note">G7 above carries a written shape, <code>0212</code>, and draws it; the other
+  three draw the ukulele's usual shapes. Without <code>all</code>, only G7 would have a
+  diagram.</p>
+</section>
+
+<section id="check">
+  <p class="eyebrow">06</p>
+  <h2>When a shape is not the chord</h2>
+  <p>A written shape is checked against the name it is written for (<b>LYS1039</b>, a
+  warning — the shape still draws). Two things are asked: every note it sounds is a tone of
+  the chord, and every tone the chord needs is there. The root and the perfect fifth may be
+  left out; the 3rd, the 7th, an altered fifth and the tensions may not. The bass is not
+  checked — an inversion is an ordinary shape.</p>
+<pre>c'2@chord(C x02210) c'2@chord(C7 x3201x) |</pre>
+  <table class="g">
+    <tr><th>Shape</th><th>The compiler says</th></tr>
+    <tr><td><code>@chord(C x02210)</code></td><td>'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or another shape.</td></tr>
+    <tr><td><code>@chord(C7 x3201x)</code></td><td>'x3201x' for C7 lacks B♭ (the 7th) - fret B♭ or write another shape.</td></tr>
+  </table>
+  <p>A shape with no name (<code>@chord(x32010)</code>), an <code>@diagram</code> and a Roman
+  degree in a row are not checked. Nine of LilyPond's predefined shapes would fail this check
+  (guitar D♯m <code>xx4341</code>, Faug and Baug among them), so Lily# does not use them as
+  usual shapes.</p>
+</section>
+
+<section id="editor">
+  <p class="eyebrow">07</p>
+  <h2>Let the editor write the shapes</h2>
+  <p>You rarely need to type a shape. In VS Code, put the caret on a chord — an
+  <code>@chord(Cm7)</code> or a row's <code>Cm7</code> — and press <kbd>Ctrl+Shift+Up</kbd>:
+  its usual shape is written and the diagram appears. Press it again to walk through the
+  other playable shapes, each one sounded as you go; <kbd>Ctrl+Shift+Down</kbd> walks back,
+  and at the usual shape removes it again. Hovering a chord shows what it would draw. Hard
+  stretch shapes are left out unless you ask for them.</p>
+  <!-- VIDEO chords-shape-step: caret on @chord(Cm7) in a melody with the preview open.
+       Ctrl+Shift+Up four or five times: the shape appears (x35343), then steps; the preview's
+       diagram changes and each shape sounds. Ctrl+Shift+Down back to the usual shape, once
+       more: the shape is removed and the diagram goes. ~15 s, with sound. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/chords-shape-step.mp4" controls playsinline preload="none"></video>
+    <figcaption>Ctrl+Shift+Up on <code>@chord(Cm7)</code> writes its usual shape, then steps
+    through the others; Down at the usual shape removes it.</figcaption>
+  </figure>
+  <p>The keys, the stepping order and the <code>lilysharp.chordShapes.includeStretch</code>
+  setting are on the <a href="editor.html#step">editor page</a>.</p>
+</section>
+
+</article>
+</div>

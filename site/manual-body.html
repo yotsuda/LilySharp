@@ -31,6 +31,7 @@
     <li><a href="#scores">Scores</a></li>
     <li><a href="#tab">Tablature</a></li>
     <li><a href="#paper">Paper and fonts</a></li>
+    <li><a href="#layout">Layout switches</a></li>
     <li><a href="#override">Override / revert</a></li>
   </ol>
   <p class="grp">Reference</p>
@@ -39,6 +40,11 @@
     <li><a href="#diagnostics">Diagnostics</a></li>
     <li><a href="#lilypond">Coming from LilyPond</a></li>
     <li><a href="#rough">Rough edges</a></li>
+  </ol>
+  <p class="grp">Other pages</p>
+  <ol>
+    <li><a href="chords.html">Chords and chord diagrams</a></li>
+    <li><a href="editor.html">The editor and AI</a></li>
   </ol>
 </nav>
 
@@ -78,6 +84,7 @@ score main { staff melody }</pre>
   <p>Everything else is optional, and top-level settings come first:</p>
 <pre>// comments are // to end of line, or /* … */
 title    "Song"
+subtitle "Op. 1"             // also: poet "Lyricist" — LilyPond's title block
 composer "Composer"
 tempo    120                 // also: tempo "Allegro" 4 = 96, tempo 120 swing
 time     4/4                 // default 4/4; engraves as C, and 2/2 as cut-C
@@ -87,6 +94,7 @@ pitch    written             // optional; concert = the letters are what SOUNDS 
 
 fonts { serif "Georgia" }    // optional, a face per kind of text
 paper { size a4 }            // optional, page geometry
+layout { barNumbers every 4 }  // optional, score-wide display switches — see Layout
 
 part rightHand { clef treble }
 part leftHand  { clef bass octave 3 }
@@ -197,7 +205,7 @@ score main "out" {           // one or more render blocks
     <tr><td><code>/4</code></td><td>slash note — pitchless rhythm, silent, on the middle line</td></tr>
     <tr><td><code>q</code></td><td>the previous chord again</td></tr>
     <tr><td><code>q'</code></td><td>…an octave up (<code>q,,</code> two down)</td></tr>
-    <tr><td><code>chord(C x32013)1</code></td><td>a chord from a shape — each string's open pitch plus its fret on the part's instrument (else the guitar): C3 E3 G3 C4 G4, absolute, with string numbers; the next note reads its lowest note</td></tr>
+    <tr><td><code>chord(C x32013)1</code></td><td>a chord from a shape — each string's open pitch plus its fret on the part's instrument (else the guitar): C3 E3 G3 C4 G4, absolute, with string numbers; the next note reads its lowest note — see <a href="chords.html#notes">Chords and chord diagrams</a></td></tr>
   </table>
 
   <h3>Repeating a chord — and why there are two ways</h3>
@@ -275,6 +283,41 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
   Beaming follows the meter unless you bracket it yourself. A phrasing slur is a spanner:
   its end is required, and one may be open per voice.</p>
   <!--EXAMPLE:connectors-->
+
+  <h3>Across a section boundary</h3>
+  <p>A slur, a phrasing slur, a tie or a hairpin still open when a section ends is carried
+  into the section the form plays <b>next</b>, and must end there. The carry follows the
+  form, play by play — <code>form main { C D C E }</code> carries C's slur into D the first
+  time and into E the second — so it is checked per form, per part and per play:</p>
+<pre>part vc {
+  section C { g4 a b c( || }
+  section D { d4) e f g~ || }
+  section E { g'1 | }   // the frame resets at E: g' is the tied G
+}
+form main { C D E }
+score main { staff vc }</pre>
+  <p>A span that breaks the rule draws nothing (a hairpin is cut at its own section's end)
+  and is reported as <b>LYS4023</b>: carried in and not ended in that next section, a
+  <code>)</code> at a section's start with nothing carried in, or carried into a section the
+  part plays nothing in (warnings); a slur, phrasing slur or hairpin carried over a repeat
+  sign, into or out of a volta ending, or over a jump mark (an error — what comes before
+  differs from pass to pass).</p>
+  <p><b>A tie may cross any of those.</b> It is carried to the first note of every section
+  <i>played</i> after its own — the body again at each pass, that pass's ending, whatever
+  follows the block — and each of those notes must repeat the pitch. Where the section played
+  next is also the one printed next the tie is an ordinary arc; where it is not (back to the
+  <code>|:</code>, into a later ending) the tied note gets a hanging tie and the note it
+  reaches an automatic repeat tie, and playback holds the note over.</p>
+<pre>part vn {
+  section I { c''1~ || }
+  section A { c''1 | e1~ || }
+  section B { e''1 | }
+}
+form main { I |: A [1. B] :| [2. B] }
+score main { staff vn }</pre>
+  <p>Everything else a section starts from still resets at the boundary — the relative frame,
+  the note value, the meter, key and clef — so the note a tie reaches states its own
+  octave.</p>
 </section>
 
 <section id="anno">
@@ -296,7 +339,7 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
     <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @fall @doit @breath @caesura</code></td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
-    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name, on the part's instrument (a guitar unless the part is fretted otherwise, or <code>layout { chordDiagrams ukulele }</code> says; <code>none</code> turns diagrams off); a name alone draws none — save under <code>chordDiagrams all</code> (or <code>chordDiagrams ukulele all</code>), where every chord name draws its usual shape; <code>@chord(x32010)</code> names the chord from its shape; frets 10–15 take a <code>-</code> on each side (<code>@chord(Cm xx-10-12-13-11)</code>, <code>@diagram(8-10-10-888)</code>; frets 10, 9, 9 are <code>10-9-9</code>)</td></tr>
+    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that also writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name; a name alone draws none. Shapes, <code>@diagram</code> and which instrument a diagram is drawn for are on <a href="chords.html">Chords and chord diagrams</a></td></tr>
   </table>
 
   <h3>Spanners — the end is required</h3>
@@ -515,6 +558,32 @@ section Main { melody { motif g2 g | } }</pre>
   <p>A section prints a rehearsal label by default. <code>~</code> on a form reference hides
   it for that play (<code>form main { ~Verse Chorus }</code>). The tilde belongs to the
   reference only — <code>section ~A { … }</code> is an error.</p>
+  <p>A section may state its own <code>key</code>, <code>time</code>, <code>tempo</code> or
+  <code>partial</code> at the top of its body; they apply to every part of that section, and
+  key and meter revert at the next one (the tempo carries on). Those four are the whole list:
+  a setting of one part — <code>clef</code>, <code>octave</code>, <code>instrument</code>,
+  <code>transpose</code> — belongs on the part, or (a clef) in the music where it changes.</p>
+<pre>section B {
+  key g major
+  time 3/4
+  melody { g4 a b | }
+}</pre>
+
+  <h3>Grouped by section, or by part</h3>
+  <p>The examples on this page are grouped <b>by section</b>: each section lists the music of
+  every part. A long score is often easier to write <b>by part</b>, each part holding its own
+  sections — the same music, the other way round. A standalone section header then carries
+  the section's key, meter or tempo for all parts:</p>
+<pre>part melody { section A { c4 c g' g | } }
+part bass   { section A { c2 e | } }
+section A { key g major }       // applies to every part playing A
+form main { A }
+score main { staff melody  staff bass }</pre>
+  <p>In that grouping a chord row or a lyrics track names its sections inside it
+  (<code>chords prog { section A { C | } }</code>). The editor's <i>Regroup</i> command
+  rewrites a file from one grouping to the other, and <i>Split Sections to Match a Part</i>
+  keeps parts that cut a section differently in step — see <a href="editor.html#commands">the
+  editor page</a>.</p>
 </section>
 
 <section id="lyrics">
@@ -555,6 +624,21 @@ score main { staff melody  lyrics words sings melody }</pre>
   <code>f</code>. A slur written only to mark phrasing over a lyric line would swallow its
   syllables — write that one as <code>@phrasingSlur … @!phrasingSlur</code>, which holds
   none; the warning says so when it happens.</p>
+  <p><b>Verses</b> — different words for each pass of a section — are written with a verse
+  header, <code>[1. … ]</code>. The number names the pass and prints as the stanza number; a
+  list or range covers several (<code>[1,3. …]</code>, <code>[1-2. …]</code>) and
+  <code>[~1. …]</code> keeps the words but hides the number. Under a <code>|: B :|</code>
+  repeat the section is printed once, so its verses stack under it:</p>
+<pre>part melody { clef treble }
+section B {
+  melody { g4 a b c | }
+  lyrics words sings melody {
+    [1. up up up up |]
+    [2. down down down down |]
+  }
+}
+form main { |: B :| }
+score main { staff melody  lyrics words }</pre>
   <p>Barlines follow the same rule as music: every written <code>|</code> closes one bar,
   the one that <i>opens</i> the run included. That leading <code>|</code> is how a verse
   skips the rest bar its melody opens with.</p>
@@ -577,10 +661,13 @@ score main { staff melody  lyrics words sings melody }</pre>
     <tr><th>Written</th><th>Means</th></tr>
     <tr><td>one entry in a bar</td><td>takes the bar</td></tr>
     <tr><td>two entries in 4/4</td><td>halves; four, beats — entries divide the bar on the meter's beat grid</td></tr>
-    <tr><td><code>.</code></td><td>hold the previous chord one more beat (never across a barline)</td></tr>
+    <tr><td><code>.</code></td><td>hold the previous chord one more beat (never across a barline); at a bar's head, a slot with no chord (<code>| . C |</code>)</td></tr>
     <tr><td><code>r</code> <code>R</code></td><td>print “N.C.” in that slot</td></tr>
-    <tr><td><code>s</code></td><td>print nothing</td></tr>
+    <tr><td><code>| |</code></td><td>a bar with no chord at all</td></tr>
+    <tr><td><code>C(x32010)</code></td><td>a chord that also draws its diagram — see <a href="chords.html">Chords and chord diagrams</a></td></tr>
   </table>
+  <p class="note">There is no <code>s</code> in a chord row; it is refused with the spellings
+  above.</p>
   <h3>How a symbol is spelled</h3>
   <p>You type the symbol, not an encoding: <code>Cmaj7</code>, <code>Am7</code>,
   <code>G7sus4</code>, <code>C/G</code>, <code>Bb7/D</code>, <code>F#7</code>. One rule is
@@ -620,10 +707,10 @@ score main { staff melody  lyrics words sings melody }</pre>
   road.</p>
   <table class="g">
     <tr><th>You write</th><th>Score item</th><th>It prints</th></tr>
-    <tr><td><code>chords p { Cmaj7 }</code></td><td><code>chords p</code></td><td>Cmaj7</td></tr>
-    <tr><td><code>chords p { Cmaj7 }</code></td><td><code>chords p as roman</code></td><td>Imaj7</td></tr>
-    <tr><td><code>chords p { Imaj7 }</code></td><td><code>chords p</code></td><td>Cmaj7</td></tr>
-    <tr><td><code>chords p { Imaj7 }</code></td><td><code>chords p as roman</code></td><td>Imaj7</td></tr>
+    <tr><td><code>chords prog { Cmaj7 }</code></td><td><code>chords prog</code></td><td>Cmaj7</td></tr>
+    <tr><td><code>chords prog { Cmaj7 }</code></td><td><code>chords prog as roman</code></td><td>Imaj7</td></tr>
+    <tr><td><code>chords prog { Imaj7 }</code></td><td><code>chords prog</code></td><td>Cmaj7</td></tr>
+    <tr><td><code>chords prog { Imaj7 }</code></td><td><code>chords prog as roman</code></td><td>Imaj7</td></tr>
     <tr><td><code>&lt;c e g&gt;4@chord</code></td><td><code>staff …</code></td><td>C — derived from the notes</td></tr>
     <tr><td><code>c4@chord(Dm)</code></td><td><code>staff …</code></td><td>Dm — stated on the note</td></tr>
   </table>
@@ -783,6 +870,9 @@ score main {
   <p><code>\N</code> pins a note to string N when the automatic choice is not the one your
   fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammerOn @pullOff
   @pluck(i)</code>) print on the tab, because they are ink a guitarist reads there.</p>
+  <p>Chord diagrams over the staff, and <code>chord(C x32013)</code> — a chord written as a
+  fretboard shape, which the tab then shows string for string — are on
+  <a href="chords.html">Chords and chord diagrams</a>.</p>
 </section>
 
 <section id="paper">
@@ -798,11 +888,15 @@ score main {
   leftMargin 15mm  rightMargin 15mm  topMargin 10mm  bottomMargin 10mm
   indent 15mm  shortIndent 0
   raggedRight                // a bare flag: do not justify
+  raggedBottom               // a bare flag: every page keeps its natural spacing
   spacingIncrement 1.2
   systemSystemSpacing { basicDistance 12  minimumDistance 8  padding 1  stretchability 60 }
 }</pre>
   <p>The staff-spacing family lives here, not in <code>override</code>. Unknown keys are an
-  error; a key set twice warns and the last wins.</p>
+  error; a key set twice warns and the last wins. <code>size</code> takes LilyPond's paper
+  names, bare and lower case (<code>a4</code>, <code>b5</code>, <code>letter</code> —
+  <code>size A4</code> is refused), plus <code>jisb5</code>, the Japanese B5 that ISO
+  <code>b5</code> is not.</p>
 <pre>fonts {
   serif "Georgia"                      // the two generic families together are
   sans  "Verdana"                      //   "the whole document's text"
@@ -826,8 +920,44 @@ score main {
   face warns rather than passing quietly.</p>
 </section>
 
-<section id="override">
+<section id="layout">
   <p class="eyebrow">20</p>
+  <h2>Layout — display switches</h2>
+  <p><code>layout { }</code> holds the score-wide switches that pick one of a few drawings.
+  Like <code>paper</code> and <code>fonts</code>, one unnamed block is the file's default and
+  a named one is referenced by a score (<code>layout chart</code>, or
+  <code>layout chart { barNumbers none }</code> to override part of it there).</p>
+<pre>layout {
+  markTempo stacked        // the default: LilyPond's arrangement
+  barNumbers lines         // the default: a number at the start of every line but the first
+  accidentals default      // the default: the 18th-century rule
+  sectionLabels boxed      // the default: the section's name in a frame
+  partCombineText true     // the default: a combinedStaff prints a2 / Solo
+  chordQualities symbols   // the default: C°, C+, Cø, C°7
+  minorChords upper        // the default: Am, Am7
+}
+layout chart { markTempo beside  barNumbers every 4  chordQualities words }
+score main  { staff melody }                 // the file's default
+score parts { layout chart  staff melody }   // this score's own</pre>
+  <table class="g">
+    <tr><th>Key</th><th>Values</th><th>Chooses</th></tr>
+    <tr><td><code>markTempo</code></td><td><code>stacked</code> · <code>beside</code></td><td>a section label and a metronome mark at the same bar: stacked, or on one line (“[Chorus] ♩ = 132”)</td></tr>
+    <tr><td><code>barNumbers</code></td><td><code>lines</code> · <code>none</code> · <code>every N</code></td><td>which bars carry a number: each line's first, none, or every Nth bar wherever it stands</td></tr>
+    <tr><td><code>accidentals</code></td><td><code>default</code> · <code>modern</code> · <code>modernCautionary</code> · <code>forget</code> · <code>noReset</code></td><td>LilyPond's accidental styles for a staff</td></tr>
+    <tr><td><code>sectionLabels</code></td><td><code>boxed</code> · <code>plain</code> · <code>none</code></td><td>how a form section's name is drawn — framed, bare, or not at all (a part sheet)</td></tr>
+    <tr><td><code>partCombineText</code></td><td><code>true</code> · <code>false</code></td><td>whether a <code>combinedStaff</code> prints a2 / Solo</td></tr>
+    <tr><td><code>chordQualities</code></td><td><code>symbols</code> · <code>words</code></td><td>C° C+ Cø C°7, or Cdim Caug Cm7♭5 Cdim7</td></tr>
+    <tr><td><code>minorChords</code></td><td><code>upper</code> · <code>lower</code></td><td>Am, or a lowercase root with no m (a)</td></tr>
+    <tr><td><code>chordDiagrams</code></td><td>a tuning word · <code>none</code>, optionally <code>all</code></td><td>which instrument chord diagrams are drawn for, and whether every chord draws one — see <a href="chords.html#layout">Chords and chord diagrams</a></td></tr>
+  </table>
+  <p>Keys and values are case-sensitive (<code>barnumbers</code> is refused with “write
+  'barNumbers'”), an unknown key is an error, and a key set twice warns. None of them is a
+  reserved word. <code>markTempo</code> was called <code>marks</code> before; the old key is
+  refused.</p>
+</section>
+
+<section id="override">
+  <p class="eyebrow">21</p>
   <h2>Override / revert</h2>
 <pre>override NoteHead.color = red
 c4 d e f |
@@ -844,12 +974,12 @@ c4 d e f |</pre>
 </section>
 
 <section id="reserved">
-  <p class="eyebrow">21</p>
+  <p class="eyebrow">22</p>
   <h2>Reserved words</h2>
 <pre>section form using tab ossia transpose octave pitch instrument percussion drummap
 score part staff grandStaff staffGroup choirStaff condensedStaff combinedStaff
 voice phrase repeat break noBreak pageBreak noPageBreak partial cue embedded fonts paper layout
-title composer tempo time key clef
+title subtitle composer poet tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8 bass_8 soprano mezzosoprano baritone
 tuplet grace acciaccatura appoggiatura lyrics chords tuning
@@ -867,7 +997,7 @@ ppp pp p mp mf ff fff</pre>
 </section>
 
 <section id="diagnostics">
-  <p class="eyebrow">22</p>
+  <p class="eyebrow">23</p>
   <h2>Diagnostics</h2>
   <p>Lily# would rather refuse than quietly do the wrong thing, and its messages are
   written to be acted on. A few worth knowing, quoted as the compiler prints them:</p>
@@ -887,13 +1017,17 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>c4@rit d e f</code> (never closed)</td><td>a text spanner is never closed, so neither its word nor its line is drawn; write '@!rit' (or '@!textSpan') on the note it should reach…</td></tr>
     <tr><td><code>c4~ d4</code></td><td>the note after a tie '~' does not repeat the tied pitch; a tie joins two notes of the same pitch - use a slur '( )' to connect different pitches</td></tr>
     <tr><td>a slur crossing a cue edge</td><td>a slur cannot cross a cue boundary…</td></tr>
+    <tr><td><code>c4@upbow</code></td><td>Unknown annotation '@upbow' — it is ignored. Names are case-sensitive: write '@upBow'.</td></tr>
+    <tr><td><code>c( ||</code> ending a section, nothing closing it in the next</td><td>a slur '(' is carried from section C into section D, which follows it in form 'main', and is not closed there, so no slur is drawn; close it with ')' in section D…</td></tr>
+    <tr><td><code>@chord(C x02210)</code></td><td>'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or another shape.</td></tr>
+    <tr><td><code>r1@chord</code></td><td>@chord on a rest has no notes to name a chord from, so nothing is drawn; write the name, e.g. @chord(C).</td></tr>
   </table>
   <p>Warnings are for things that are legal but probably not what you meant; errors are for
   things with no defensible reading.</p>
 </section>
 
 <section id="lilypond">
-  <p class="eyebrow">23</p>
+  <p class="eyebrow">24</p>
   <h2>Coming from LilyPond</h2>
   <p>Lily#'s engraving engine is a port of LilyPond's, but the language is deliberately not
   LilyPond's. LilyPond's backslash commands are rejected outright, with a message naming the
@@ -908,6 +1042,8 @@ ppp pp p mp mf ff fff</pre>
     <tr><td><code>\alternative</code></td><td><code>[1. B] :| [2. C]</code> in the form</td></tr>
     <tr><td><code>c4\staccato</code>, <code>c4-.</code></td><td><code>c4@staccato</code></td></tr>
     <tr><td><code>c:maj7</code>, <code>fis:m7.5-</code></td><td><code>Cmaj7</code>, <code>F#m7-5</code> — the printed symbol, with <code>+</code>/<code>-</code> for an altered tension</td></tr>
+    <tr><td><code>\fret-diagram-terse</code>, <code>FretBoards</code></td><td><code>@chord(C x32010)</code>, <code>@diagram(x32010)</code>, <code>C(x32010)</code> in a chord row — see <a href="chords.html">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>\repeatTie</code> after a volta</td><td>nothing: a tie into a repeat or an ending is written as a tie, and the repeat tie is drawn for you</td></tr>
     <tr><td><code>q</code> (no marks)</td><td><code>q</code>, and <code>q'</code> to repeat the chord an octave up</td></tr>
     <tr><td><code>\version</code></td><td>nothing; there is no version pragma</td></tr>
     <tr><td><code>\include</code></td><td><code>using "other.lys"</code></td></tr>
@@ -917,7 +1053,7 @@ ppp pp p mp mf ff fff</pre>
 </section>
 
 <section id="rough">
-  <p class="eyebrow">24</p>
+  <p class="eyebrow">25</p>
   <h2>Rough edges</h2>
   <p>Measured against Lily# {{VER}} while this page was built. These are real and current;
   they are listed here rather than smoothed over.</p>

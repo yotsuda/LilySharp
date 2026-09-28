@@ -1,0 +1,392 @@
+<div class="layout">
+
+<nav class="toc">
+  <p class="grp">Getting started</p>
+  <ol>
+    <li><a href="#install">Install and open</a></li>
+    <li><a href="#typing">Typing aids you might not notice</a></li>
+    <li><a href="#preview">The preview</a></li>
+  </ol>
+  <p class="grp">Editing</p>
+  <ol>
+    <li><a href="#step">Stepping: Ctrl+Shift+Up/Down</a></li>
+    <li><a href="#audition">Audition</a></li>
+    <li><a href="#language">Completion, hover, fixes</a></li>
+    <li><a href="#commands">Commands</a></li>
+    <li><a href="#settings">Settings</a></li>
+  </ol>
+  <p class="grp">AI</p>
+  <ol>
+    <li><a href="#ai">AI in the editor</a></li>
+    <li><a href="#llm">Other assistants and agents</a></li>
+  </ol>
+  <p class="grp">Outside the editor</p>
+  <ol>
+    <li><a href="#markdown">Scores in Markdown</a></li>
+    <li><a href="#cli">The <code>lysc</code> command line</a></li>
+  </ol>
+</nav>
+
+<article>
+
+<section id="install">
+  <p class="eyebrow">01</p>
+  <h2>Install and open</h2>
+  <p>In VS Code (1.90 or newer) open the Extensions view — <kbd>Ctrl+Shift+X</kbd>,
+  <kbd>Cmd+Shift+X</kbd> on macOS — search for “Lily#” and install the one by
+  <i>yotsuda</i>. Each platform's package carries its own .NET runtime, the compiler, the
+  language server and the fonts, so there is nothing else to install. Open any
+  <code>.lys</code> file and the language server starts.</p>
+  <table class="g">
+    <tr><th>Key</th><th>Does</th></tr>
+    <tr><td><kbd>Ctrl+Shift+V</kbd></td><td>open the score preview</td></tr>
+    <tr><td><kbd>Ctrl+K</kbd> <kbd>V</kbd></td><td>open it beside the source</td></tr>
+    <tr><td><kbd>Alt+P</kbd> (hold)</td><td>sound the note under the caret</td></tr>
+    <tr><td><kbd>Alt+M</kbd></td><td>play the measure the caret is in</td></tr>
+    <tr><td><kbd>Ctrl+Shift+Up</kbd> / <kbd>Down</kbd></td><td>step an octave mark or a chord shape — <a href="#step">below</a></td></tr>
+    <tr><td><kbd>Ctrl+I</kbd></td><td>transform the selection with AI — <a href="#ai">below</a></td></tr>
+  </table>
+  <p class="note">On macOS read <kbd>Cmd</kbd> for <kbd>Ctrl</kbd> in the first two and the
+  last; the stepping keys are <kbd>Ctrl+Shift+Up/Down</kbd> (the Control key) there too.</p>
+</section>
+
+<section id="typing">
+  <p class="eyebrow">02</p>
+  <h2>Typing aids you might not notice</h2>
+  <p>A note is written in one order — pitch, octave marks, duration, dots, then its string
+  number, annotations and marks: <code>cis'4.\2@accent(</code>. The editor knows that order,
+  so <b>a mark typed anywhere on the note lands in its slot</b>, and the caret stays where
+  you pressed the key. You never have to move to the right spot first. In the examples,
+  <code>|</code> is the caret.</p>
+
+  <h3>Octave marks land after the pitch</h3>
+  <p>Type <code>'</code> or <code>,</code> with the caret anywhere on a note — at its start,
+  in the middle of its name, after its duration or dots, or among its annotations and marks —
+  and the mark is inserted after the pitch letters and the marks already there, before the
+  duration.</p>
+  <table class="g">
+    <tr><th>Before</th><th>Type</th><th>After</th></tr>
+    <tr><td class="ba">c|is4.</td><td><code>'</code></td><td class="ba">c|is'4.</td></tr>
+    <tr><td class="ba">cis4.|</td><td><code>'</code></td><td class="ba">cis'4.|</td></tr>
+    <tr><td class="ba">cis4.@accent|</td><td><code>'</code></td><td class="ba">cis'4.@accent|</td></tr>
+    <tr><td class="ba">c,4|</td><td><code>'</code></td><td class="ba">c4| — the opposite key cancels one mark</td></tr>
+    <tr><td class="ba">&lt;c e g&gt;4|</td><td><code>'</code></td><td class="ba">&lt;c e g&gt;'4| — the whole chord</td></tr>
+  </table>
+  <p>Marks stack from wherever the caret rests (<code>'</code> twice gives <code>c''4</code>).
+  Inside a chord's brackets the mark is the member's and is typed where you press it
+  (<code>&lt;c e| g&gt;</code> → <code>&lt;c e'| g&gt;</code>); the chord as a whole takes one
+  at its <code>&lt;</code> or after its <code>&gt;</code>. A rest takes no octave mark, so
+  there the key types as pressed.</p>
+  <!-- VIDEO editor-octave-mark: source `c4 cis4. d4 e4 |` with the preview open. Click into
+       the middle of `cis4.` and press ' twice, then , once: the marks appear between `cis` and
+       `4.` and the note moves in the preview; the caret does not move. Then do the same at the
+       end of `e4`. ~10 s, no sound needed. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-octave-mark.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>An octave mark typed in the middle of <code>cis4.</code> lands after the pitch.</figcaption>
+  </figure>
+
+  <h3>A duration digit replaces the duration</h3>
+  <p>Type a digit with the caret anywhere on a note and it goes to the duration slot — and a
+  digit that starts a new duration <b>replaces</b> the one there rather than appending to it.
+  Dots stay.</p>
+  <table class="g">
+    <tr><th>Before</th><th>Type</th><th>After</th></tr>
+    <tr><td class="ba">c4|</td><td><code>8</code></td><td class="ba">c8|</td></tr>
+    <tr><td class="ba">c|4</td><td><code>8</code></td><td class="ba">c|8</td></tr>
+    <tr><td class="ba">c16|</td><td><code>8</code></td><td class="ba">c8|</td></tr>
+    <tr><td class="ba">c4.|</td><td><code>8</code></td><td class="ba">c8.| — the dot is kept</td></tr>
+    <tr><td class="ba">&lt;c e g&gt;4|</td><td><code>8</code></td><td class="ba">&lt;c e g&gt;8|</td></tr>
+    <tr><td class="ba">r4|</td><td><code>2</code></td><td class="ba">r2| — rests too</td></tr>
+    <tr><td class="ba">c4@f|</td><td><code>8</code></td><td class="ba">c8@f|</td></tr>
+  </table>
+  <p>Longer values still type naturally: <b>directly after the digits</b> a keystroke that can
+  continue a duration extends it (<code>c1|</code> + <code>6</code> → <code>c16</code>; and
+  <code>c1|</code> + <code>2</code> → <code>c12</code>, on the way to a 128th). A
+  <code>3</code> or a <code>6</code> can only start 32 or 64, so on its own it is completed
+  (<code>c|4</code> + <code>3</code> → <code>c32</code>). A digit that begins no duration —
+  <code>5</code>, <code>7</code>, <code>9</code>, <code>0</code> — is typed as pressed, and so
+  is any digit inside a chord's brackets (a scale degree) or inside an annotation's
+  parentheses (<code>@finger(3)</code>).</p>
+  <!-- VIDEO editor-duration-overwrite: source `c4 d4 e4 f4 |` with the preview open. Put the
+       caret after `d4` and type 8, then after `e4` type 2, then in the middle of `f4` type 1:
+       each duration is replaced, not appended, and the bar re-spaces in the preview. ~10 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-duration-overwrite.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>Typing a digit on a note replaces its duration.</figcaption>
+  </figure>
+
+  <h3>The rest of the slots</h3>
+  <table class="g">
+    <tr><th>Key</th><th>What happens</th><th>Example</th></tr>
+    <tr><td><code>.</code></td><td>the dot goes after the duration and any dots already there (on a rest too)</td><td class="ba">c|'8. → c|'8..</td></tr>
+    <tr><td><code>\</code></td><td>opens the note's tab string number in its slot and the caret follows, ready for the digit; on a note that already has one, the digit is selected so the next key replaces it</td><td class="ba">|a4 → a4\|</td></tr>
+    <tr><td><code>@</code></td><td>goes after the string number and the annotations already there, and the name list opens there</td><td class="ba">c|4( → c4@|(</td></tr>
+    <tr><td><code>~</code></td><td>moves to the end of the note</td><td class="ba">|c2 → c2~</td></tr>
+    <tr><td><code>(</code> / <code>)</code></td><td>a slur is placed over two notes at once — the one typed on and the next; <code>)</code> on the note after a slur's end extends it by one</td><td class="ba">c4| d e → c4( d) e</td></tr>
+    <tr><td><code>[</code> / <code>]</code></td><td>a manual beam, the same way, within the bar</td><td class="ba">c8| d e f → c8[ d] e f</td></tr>
+    <tr><td><code>&lt;</code> / <code>&gt;</code></td><td><code>&lt;</code> before a note wraps it in a chord (the duration stays outside); turning one end into <code>&lt;&lt;</code> or back turns the matching end too</td><td class="ba">|c4 → &lt;c|&gt;4</td></tr>
+  </table>
+  <p class="note"><b>When it steps aside.</b> With a selection, or with several cursors, every
+  key types exactly as pressed. So do keys inside strings and comments, and outside notes —
+  <code>time 4/4</code>, <code>tuplet 3/2</code>, a title. A slash note (<code>/4</code>) is not
+  handled: a digit there is appended. Every aid is one undo step with the keystroke. There is
+  no setting that turns the aids off.</p>
+</section>
+
+<section id="preview">
+  <p class="eyebrow">03</p>
+  <h2>The preview</h2>
+  <p>The score redraws as you type, not when you save: a keystroke reparses only what it
+  touched, and only the systems whose width changed are laid out again.</p>
+  <ul>
+    <li><b>Source and score are linked both ways.</b> The note under the caret is highlighted
+    in the score, and a selection highlights every note in it. Click a note, a tie, a slur, a
+    clef or a key signature in the preview to jump to the text that wrote it.</li>
+    <li><b>It plays.</b> Right-click in the preview for <i>Play from Here</i>, <i>Stop
+    Playback</i>, <i>Fit Width</i> and <i>Reset Zoom</i>; playback highlights each note as it
+    sounds, with each part's own General MIDI sound.</li>
+    <li><b>It exports.</b> <i>Lily#: Export</i> writes PDF, SVG, PNG, LilyPond
+    (<code>.ly</code>), MusicXML, MIDI or a VOCALOID sequence — from the preview, the command
+    palette, or by right-clicking <code>.lys</code> files in the Explorer (every score of
+    every selected file, into one folder).</li>
+    <li><b>Its colours</b> follow VS Code's theme, or stay light (the printed page) or dark:
+    <code>lilysharp.preview.theme</code>.</li>
+  </ul>
+  <!-- VIDEO editor-preview: a short melody with the preview beside it. Type a few notes and a
+       bar line — the score follows each keystroke. Move the caret along the notes (the note
+       lights in the score), select a bar (all its notes light), then click a note in the
+       preview (the editor jumps to it). ~15 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-preview.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>The preview follows each keystroke; caret and clicks link source and score.</figcaption>
+  </figure>
+</section>
+
+<section id="step">
+  <p class="eyebrow">04</p>
+  <h2>Stepping: <kbd>Ctrl+Shift+Up</kbd> / <kbd>Ctrl+Shift+Down</kbd></h2>
+  <p>Two keys that step what the caret is on, one notch at a time.</p>
+  <table class="g">
+    <tr><th>On</th><th>Up / Down</th></tr>
+    <tr><td>a <b>note</b></td><td>adds one <code>'</code> (Up) or <code>,</code> (Down) — or takes away one of the other mark. Inside <code>&lt; &gt;</code> or <code>&lt;&lt; &gt;&gt;</code> only the member under the caret moves; on the chord's <code>&gt;</code> or its duration, the whole chord moves. With a selection, every note in it steps. It is a plain mark edit, so in relative mode the notes after it follow.</td></tr>
+    <tr><td>a <b>chord name</b> — <code>@chord(Cm7)</code> or a row's <code>Cm7</code></td><td>Up on a name with no shape writes its usual shape and the diagram appears (<code>@chord(Cm7)</code> → <code>@chord(Cm7 x35343)</code>, <code>G</code> → <code>G(320003)</code>); further Ups and Downs walk the other playable shapes, frets 10–15 included; Down back at the usual shape removes it. The status bar says where you are: <code>Cm7: shape 4 of 33 (x3x546)</code>.</td></tr>
+    <tr><td>a <b><code>chord(…)</code></b> item</td><td>steps its shape the same way on the part's own instrument (from <code>chord(C)</code>, Up writes the usual shape); Down stops at the usual shape, since the item needs one.</td></tr>
+    <tr><td>anything else</td><td>nothing on Windows and macOS; on Linux, VS Code's own <i>Add Cursor Above / Below</i></td></tr>
+  </table>
+  <p>All cursors step in one undo step. The shapes walked are the playable ones — at least
+  three strings, chord tones only, the root lowest, within four frets and four fingers;
+  <b>stretch shapes</b> (fretted frets five apart) are left out unless
+  <code>"lilysharp.chordShapes.includeStretch": true</code>. Hover a chord to see what it
+  draws, or what Up would write. In a score whose layout says <code>chordDiagrams all</code> a
+  name already draws its usual shape, so there Up writes the <i>next</i> one. What a diagram
+  is and which instrument it is drawn for: <a href="chords.html">Chords and chord
+  diagrams</a>.</p>
+  <p class="note">To use other keys, open <i>Keyboard Shortcuts</i> (<kbd>Ctrl+K</kbd>
+  <kbd>Ctrl+S</kbd>) and bind <code>lilysharp.stepUp</code> / <code>lilysharp.stepDown</code>.</p>
+  <!-- VIDEO editor-step-octave: WITH SOUND. Source `c4 e g <c e g>4 |`, preview open. Caret on
+       the first c: Ctrl+Shift+Up twice, Down once (each result sounds). Caret on the e inside
+       the chord: Up — only that member moves. Caret after the chord's >: Up — the whole chord
+       moves. ~15 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-step-octave.mp4" controls playsinline preload="none"></video>
+    <figcaption>Ctrl+Shift+Up/Down on a note, on one member of a chord, and on the whole chord
+    — each result sounds.</figcaption>
+  </figure>
+</section>
+
+<section id="audition">
+  <p class="eyebrow">05</p>
+  <h2>Audition</h2>
+  <p>With a preview open, edits sound through the preview's synthesizer, with the pitches the
+  compiler plays: the note, chord or <code>@chord</code> shape the caret lands on (once per
+  note, not on every arrow-key repeat), a note as you type it once its pitch and octave marks
+  are in, and the result of every step. Nothing sounds while no preview is open.
+  <code>"lilysharp.audition.enabled": false</code> turns it off; <kbd>Alt+P</kbd> and
+  <kbd>Alt+M</kbd> keep working either way.</p>
+  <!-- VIDEO editor-audition: WITH SOUND. Preview open, source `c4 d e f | g2 g |`. Move the
+       caret note by note with the arrow keys (each sounds once), then type `a4` at the end
+       (it sounds as the pitch is typed). ~10 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-audition.mp4" controls playsinline preload="none"></video>
+    <figcaption>The caret's note sounds as it moves, and a typed note sounds as it is written.</figcaption>
+  </figure>
+</section>
+
+<section id="language">
+  <p class="eyebrow">06</p>
+  <h2>Completion, hover, fixes</h2>
+  <ul>
+    <li><b>Completion offers what can come next</b> — after <code>lyrics NAME</code> it offers
+    <code>sings</code>, then the part names in the file; inside <code>layout { }</code>,
+    <code>fonts { }</code> and <code>paper { }</code> the keys and their values. In a section's
+    music it offers the key's chords, and accepting one writes its notes (<code>IIm7</code> in C
+    writes <code>&lt;d f a c&gt;</code>); in a <code>chords</code> row or an
+    <code>@chord(…)</code> it offers the key's chord names.</li>
+    <li><b>Hover</b> names a chord — symbol, degree and pitches (<code>Dm (IIm)  D4 F4 A4</code>)
+    — and shows a chord's diagram, or how to add one.</li>
+    <li><b>Diagnostics</b> as you type, worded to be acted on, and <b>quick fixes</b> where there
+    is one obvious repair: a section written at different lengths gets <i>Add bar lines</i>
+    (pad the shorter parts) and, when one part has cut it into sections, <i>Split Sections to
+    Match a Part</i>; a missing brace or rest can be inserted.</li>
+    <li><b>Rename</b> a part or a phrase and every reference follows; <b>go to
+    definition</b>, <b>find references</b>, the <b>outline</b>, <b>folding</b>,
+    <b>formatting</b> and <b>semantic colouring</b> work as in any language.</li>
+    <li><b>A CodeLens over each section</b> says how long it is, who writes it and how often
+    each form plays it — or, when the parts disagree, each length and who writes it.</li>
+  </ul>
+  <!-- VIDEO editor-quickfix: a two-part file where one part's section A is one bar short
+       (`melody { c4 d e f | g1 | }  bass { c1 | }`). The warning squiggle, Ctrl+. and
+       "Add 1 bar line to bass (|)": the warning goes and the preview fills the bar. ~10 s. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-quickfix.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>A section that is not the same length everywhere, fixed from the lightbulb.</figcaption>
+  </figure>
+</section>
+
+<section id="commands">
+  <p class="eyebrow">07</p>
+  <h2>Commands</h2>
+  <p>In the command palette under <i>Lily#:</i>, and most of them on the editor's right-click
+  menu. Every command that rewrites the file checks the result before it offers it, and
+  applies as one undo step.</p>
+  <table class="g">
+    <tr><th>Command</th><th>Does</th></tr>
+    <tr><td>New Score</td><td>opens a new <code>.lys</code> from a template, with the title selected</td></tr>
+    <tr><td>Import MusicXML…</td><td>turns a <code>.xml</code> / <code>.musicxml</code> / <code>.mxl</code> into a Lily# file — a faithful starting point, with a report of what was approximated</td></tr>
+    <tr><td>Regroup (by part ⇄ by section)</td><td>rewrites the file between <code>part bass { section A { … } }</code> and <code>section A { bass { … } }</code></td></tr>
+    <tr><td>Split Sections to Match a Part</td><td>when one part has cut a section into several (<code>A</code> of 16 bars + <code>B</code> of 121) and the others still write it whole, cuts the others — and the section's chord rows and lyrics — at the same bars, and makes every form play <code>A B</code> where it played <code>A</code>. If parts subdivide it differently it asks which to follow; one confirmation shows the plan. It is checked first — every cut part must sound and count exactly as before — and a slur, tie or hairpin across a cut is carried into the new section. A beam, a pedal or another span across a cut, or a cut mid-bar, is reported instead and nothing changes. Files grouped by part.</td></tr>
+    <tr><td>Convert Octaves to Absolute / to Relative</td><td>rewrites the whole file into the other octave mode, every note at the pitch it sounds, checked note by note</td></tr>
+    <tr><td>Extract Phrase from Section</td><td>lifts music into a <code>phrase</code> and puts its name in its place — only if it still sounds the same</td></tr>
+    <tr><td>Add Chord Track (auto-harmonize)</td><td>adds a <code>chords</code> row that harmonizes the melody with the key's chords, and places it above the staff — a starting point to edit</td></tr>
+    <tr><td>Play Note at Cursor · Play Current Measure</td><td><kbd>Alt+P</kbd> (hold) · <kbd>Alt+M</kbd></td></tr>
+    <tr><td>Step Up · Step Down</td><td><kbd>Ctrl+Shift+Up</kbd> · <kbd>Ctrl+Shift+Down</kbd> — <a href="#step">above</a></td></tr>
+    <tr><td>Open Preview · Open Preview to Side</td><td><kbd>Ctrl+Shift+V</kbd> · <kbd>Ctrl+K</kbd> <kbd>V</kbd></td></tr>
+    <tr><td>Export as PDF / SVG / PNG / LilyPond / MusicXML / MIDI / VOCALOID</td><td>writes the file's scores</td></tr>
+    <tr><td>Transform Selection with AI… · Select AI Model…</td><td><a href="#ai">below</a></td></tr>
+  </table>
+  <!-- VIDEO editor-split-sections: a file grouped by part — vn1 has `section A` (2 bars) and
+       `section B` (2 bars), vn2 still writes all 4 bars in `section A`, form main { A }. Hover
+       the LYS2007 warning on A, Ctrl+. → "Split section A in the other parts to match vn1…",
+       read the confirmation, Apply: vn2 now has A and B, the form plays A B, and the warning
+       is gone. ~20 s. See site/videos/SHOTLIST.md. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/editor-split-sections.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>Split Sections to Match a Part, from the length warning to the result.</figcaption>
+  </figure>
+</section>
+
+<section id="settings">
+  <p class="eyebrow">08</p>
+  <h2>Settings</h2>
+  <table class="g">
+    <tr><th>Setting</th><th>Default</th><th>Does</th></tr>
+    <tr><td><code>lilysharp.audition.enabled</code></td><td><code>true</code></td><td>sound notes as you edit (<a href="#audition">Audition</a>)</td></tr>
+    <tr><td><code>lilysharp.chordShapes.includeStretch</code></td><td><code>false</code></td><td>let chord-shape stepping walk stretch shapes too</td></tr>
+    <tr><td><code>lilysharp.preview.theme</code></td><td><code>auto</code></td><td>the preview's colours: follow VS Code, light or dark</td></tr>
+    <tr><td><code>lilysharp.preview.autoRefresh</code> · <code>refreshDelay</code></td><td><code>true</code> · 100 ms</td><td>redraw on every change, after this pause</td></tr>
+    <tr><td><code>lilysharp.completion.flatSpelling</code></td><td><code>full</code></td><td>how completion spells flats (both spellings compile)</td></tr>
+    <tr><td><code>lilysharp.import.relativeOctave</code></td><td><code>false</code></td><td>MusicXML import writes relative octaves instead of absolute</td></tr>
+    <tr><td><code>lilysharp.ai.model</code> · <code>ai.ghostModel</code></td><td>automatic</td><td>the models the AI features use (<a href="#ai">AI</a>)</td></tr>
+    <tr><td><code>lilysharp.ai.ghostCompletion</code></td><td><code>false</code></td><td>suggest the next measure as ghost text</td></tr>
+    <tr><td><code>lilysharp.serverPath</code> · <code>trace.server</code></td><td></td><td>use another language server; trace its traffic</td></tr>
+  </table>
+</section>
+
+<section id="ai">
+  <p class="eyebrow">09</p>
+  <h2>AI in the editor</h2>
+  <p>The AI features use the language models VS Code offers — GitHub Copilot's, or those of
+  another extension that provides models. Lily# keeps no key or account of its own and has no
+  telemetry; what happened is logged to an output channel on your machine.</p>
+
+  <h3>Transform Selection with AI — <kbd>Ctrl+I</kbd></h3>
+  <p>Select a few bars — in the text, or by clicking and shift-clicking notes in the preview —
+  press <kbd>Ctrl+I</kbd> (<kbd>Cmd+I</kbd>) and ask in words: <i>“harmonise this in
+  thirds”</i>, <i>“transpose up a fourth”</i>, <i>“add a crescendo”</i>.</p>
+  <ul>
+    <li><b>The model is given what the compiler knows</b>: the Lily# grammar, the file around
+    the selection, and the file's current errors and warnings.</li>
+    <li><b>Every candidate is compiled before you see it.</b> One that does not compile, adds
+    warnings, or puts notes more than an octave away from the ones they replace is sent back
+    with the reason, for up to two repairs.</li>
+    <li><b>You judge the music, not a diff.</b> The candidate is engraved beside the original,
+    with an After/Before toggle. It may change the file around the selection when it has to (a
+    harmony line needs a new part and a score row).</li>
+    <li><b>Nothing changes until you accept</b>, and one <kbd>Ctrl+Z</kbd> undoes it.</li>
+  </ul>
+  <!-- VIDEO ai: select two bars of a melody, Ctrl+I, type "add a harmony a third below", wait:
+       the engraved candidate appears with After/Before; toggle it, Accept, then Ctrl+Z. Needs a
+       GitHub Copilot sign-in. ~20 s, no sound. -->
+  <figure class="demo-video" data-pending>
+    <video src="videos/ai-transform.mp4" muted loop playsinline autoplay preload="none"></video>
+    <figcaption>Transform Selection with AI: the answer arrives compiled and engraved.</figcaption>
+  </figure>
+
+  <h3>Ghost completion</h3>
+  <p><code>lilysharp.ai.ghostCompletion</code> (off by default) suggests the next measure as
+  ghost text just after you type a barline; each suggestion is compiled first and shown only if
+  it is valid. It needs a fast model, so it has its own choice,
+  <code>lilysharp.ai.ghostModel</code>. Switching it on offers to enable inline suggestions for
+  <code>.lys</code> files — Lily# keeps them off there by default, because Copilot's own
+  completion slowed every keystroke in a score.</p>
+
+  <h3>Choosing the model</h3>
+  <p><i>Lily#: Select AI Model…</i> picks one for good (<code>lilysharp.ai.model</code>).
+  Without a choice, Transform takes the largest model on offer and passes over the small ones,
+  which write poor Lily#; ghost completion takes a small, fast one.</p>
+
+  <h3>Copilot Chat knows the grammar</h3>
+  <p>The extension gives Copilot the Lily# grammar as an instructions file for
+  <code>.lys</code> files, so Copilot Chat, agent mode and inline chat answer in Lily# instead
+  of guessing LilyPond. (Copilot's as-you-type suggestions do not read instructions files —
+  that is Copilot's rule.)</p>
+</section>
+
+<section id="llm">
+  <p class="eyebrow">10</p>
+  <h2>Other assistants and agents</h2>
+  <p>The grammar the extension gives its models is a plain file in the repository,
+  <a href="https://github.com/yotsuda/LilySharp/blob/master/docs/GRAMMAR_FOR_LLM.md"><code>docs/GRAMMAR_FOR_LLM.md</code></a>:
+  the whole language, its gotchas and its reserved words, written for a model to read. Give it
+  to any assistant that writes <code>.lys</code>, and let the compiler close the loop the way
+  the extension does — <code>lysc check song.lys</code> prints every error and warning with its
+  line and column, and exits non-zero on an error. For generated music,
+  <code>octave absolute</code> keeps a wrong octave from cascading
+  (<a href="grammar.html#pitch">Pitches and octaves</a>).</p>
+  <p class="note">There is no MCP server or packaged agent skill; the grammar file and
+  <code>lysc</code> are the interface.</p>
+</section>
+
+<section id="markdown">
+  <p class="eyebrow">11</p>
+  <h2>Scores in Markdown</h2>
+  <p>A fenced block marked <code>lily#</code> in a Markdown file draws its score in VS Code's
+  built-in Markdown preview, the way a <code>mermaid</code> fence draws a diagram. The fence
+  holds a complete file with exactly one <code>score { }</code>, and is laid out as a snippet —
+  one page as tall as the music.</p>
+<pre data-fragment>```lily#
+part m { clef treble }
+section A { m { c4 d e f | g1 | } }
+form main { ~A }
+score main { staff m }
+```</pre>
+</section>
+
+<section id="cli">
+  <p class="eyebrow">12</p>
+  <h2>The <code>lysc</code> command line</h2>
+  <p>The same compiler, for batch work and scripts:</p>
+<pre>lysc check song.lys         // errors and warnings, nothing written
+lysc svg song.lys           // song.svg, plus song-ALIAS.svg for each other score
+lysc pdf | png | midi | xml | ly | vsqx song.lys
+lysc import score.musicxml  // MusicXML to .lys
+lysc octave --absolute song.lys   // rewrite into absolute (or --relative) octaves
+lysc harmonize song.lys     // suggest a diatonic chord track for the melody
+lysc layout song.lys        // where the lines break, bars per system</pre>
+  <p><code>-d DIR</code> chooses the output folder, and <code>--batch LIST</code> runs a
+  command over many files in one process. <code>lysc --help</code> lists the rest.</p>
+</section>
+
+</article>
+</div>

@@ -1,4 +1,7 @@
-# Builds grammar.html — the Lily# language manual.
+# Builds the site's reading pages, each from its *-body.html:
+#   grammar.html  <- manual-body.html   the Lily# language manual
+#   chords.html   <- chords-body.html   chords and chord diagrams, step by step
+#   editor.html   <- editor-body.html   the VS Code extension and its AI features
 # Shares its stylesheet with the showcase page: the CSS is lifted out of
 # build-preview.ps1 so there is only ever one copy of it.
 # Run from this directory:  pwsh -File build-manual.ps1
@@ -39,6 +42,11 @@ $extra = @'
   .topbar .wrap { display:flex; flex-wrap:wrap; gap:18px; align-items:baseline; }
   .topbar a.home { font-weight:700; font-size:18px; text-decoration:none; }
   .topbar span { color:var(--muted); font-size:14px; }
+  .topbar nav.pages { margin-left:auto; display:flex; flex-wrap:wrap; gap:6px 18px; font-size:14px; }
+  .topbar nav.pages b { font-weight:600; }
+  kbd { font:12.5px/1.3 "SFMono-Regular",Consolas,monospace; background:var(--code);
+        border:1px solid var(--rule); border-bottom-width:2px; border-radius:4px; padding:1px 5px; white-space:nowrap; }
+  .ba { font:13px/1.5 "SFMono-Regular",Consolas,monospace; white-space:nowrap; }
   table.g { margin:14px 0 4px; }
   table.g td:first-child, table.g th:first-child { white-space:nowrap; }
   table.g code { white-space:nowrap; }
@@ -51,36 +59,61 @@ $extra = @'
   .k { font:13px/1.4 "SFMono-Regular",Consolas,monospace; }
 '@
 
-# ---------------------------------------------------------------- body
-$body = (Get-Content (Join-Path $here 'manual-body.html') -Raw -Encoding UTF8).Replace('{{VER}}', $ver)
+# ---------------------------------------------------------------- pages
+# Every page carries the same links along the top, so a reader can get from any page to any
+# other; the page being read is marked rather than linked.
+$pages = @(
+    @{ Out = 'grammar.html'; Body = 'manual-body.html'; Nav = 'The language'
+       Title = 'Lily# — the language'
+       Desc = 'The Lily# language manual: every construct of the .lys music notation language, with engraved examples.'
+       Sub = 'The language — a reference for <code>.lys</code>'
+       Authority = 'The parser is the authority: where this page and the compiler disagree, the compiler is right and this page is a bug.' },
+    @{ Out = 'chords.html'; Body = 'chords-body.html'; Nav = 'Chords and diagrams'
+       Title = 'Lily# — chords and chord diagrams'
+       Desc = 'Chord names, guitar chord diagrams and chords written from a shape in Lily#, step by step, with engraved examples.'
+       Sub = 'Chords and chord diagrams — step by step'
+       Authority = 'The parser is the authority: where this page and the compiler disagree, the compiler is right and this page is a bug.' },
+    @{ Out = 'editor.html'; Body = 'editor-body.html'; Nav = 'Editor and AI'
+       Title = 'Lily# — the editor and AI'
+       Desc = 'The Lily# VS Code extension: live preview, typing aids, stepping, audition, commands, settings and the AI features.'
+       Sub = 'The VS Code extension, and what it does with AI'
+       Authority = 'The extension is the authority: where this page and the extension disagree, the extension is right and this page is a bug.' }
+)
 
 # <!--EXAMPLE:name--> becomes the engraved example plus its COMPLETE source, folded
 # away. The source is read from the file that was rendered, so the picture and the
 # text on the page can never drift apart — build-examples.ps1 compiles every one.
-$body = [regex]::Replace($body, '<!--EXAMPLE:([a-z0-9-]+)-->', {
-    param($m)
-    $name = $m.Groups[1].Value
-    $lys = Join-Path $here "examples/$name.lys"
-    $svg = "examples/$name.svg"
-    if (-not (Test-Path $lys)) { throw "No example named '$name' (looked for $lys)" }
-    $src = (Get-Content $lys -Raw -Encoding UTF8).TrimEnd().
-        Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;')
-    @"
+function Expand-Examples([string]$body) {
+    [regex]::Replace($body, '<!--EXAMPLE:([a-z0-9-]+)-->', {
+        param($m)
+        $name = $m.Groups[1].Value
+        $lys = Join-Path $here "examples/$name.lys"
+        $svg = "examples/$name.svg"
+        if (-not (Test-Path $lys)) { throw "No example named '$name' (looked for $lys)" }
+        $src = (Get-Content $lys -Raw -Encoding UTF8).TrimEnd().
+            Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;')
+        @"
 <figure class="ex">
   <div class="paper"><img src="$svg" alt="engraved example"></div>
   <details><summary>Show the whole file</summary><pre>$src</pre></details>
 </figure>
 "@
-})
+    })
+}
 
-$html = @"
+foreach ($page in $pages) {
+    $body = Expand-Examples ((Get-Content (Join-Path $here $page.Body) -Raw -Encoding UTF8).Replace('{{VER}}', $ver))
+    $nav = ($pages | ForEach-Object {
+        if ($_.Out -eq $page.Out) { "<b>$($_.Nav)</b>" } else { "<a href=`"$($_.Out)`">$($_.Nav)</a>" }
+    }) -join ' '
+    $html = @"
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lily# — the language</title>
-<meta name="description" content="The Lily# language manual: every construct of the .lys music notation language, with engraved examples.">
+<title>$($page.Title)</title>
+<meta name="description" content="$($page.Desc)">
 <style>
 $css
 $extra
@@ -89,7 +122,8 @@ $extra
 <body>
 <div class="topbar"><div class="wrap">
   <a class="home" href="index.html">Lily#</a>
-  <span>The language — a reference for <code>.lys</code></span>
+  <span>$($page.Sub)</span>
+  <nav class="pages">$nav</nav>
 </div></div>
 
 <div class="wrap" style="padding-top:40px;padding-bottom:40px">
@@ -98,12 +132,11 @@ $body
 
 <footer><div class="wrap">
   <p style="margin:0" class="note">Written against Lily# $ver, built $(Get-Date -Format 'yyyy-MM-dd').
-  The parser is the authority: where this page and the compiler disagree, the compiler is
-  right and this page is a bug.</p>
+  $($page.Authority)</p>
 </div></footer>
 </body>
 </html>
 "@
-
-Set-Content -Path (Join-Path $here 'grammar.html') -Value $html -Encoding UTF8
-Write-Host "Wrote $(Join-Path $here 'grammar.html')"
+    Set-Content -Path (Join-Path $here $page.Out) -Value $html -Encoding UTF8
+    Write-Host "Wrote $(Join-Path $here $page.Out)"
+}
