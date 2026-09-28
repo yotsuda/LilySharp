@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第661セッションの経緯
+
+### 1.1 第661セッション（2026-09-27・YT-DELL2）
+
+同じ会話ではなく新しい会話（`/clear` の後）。★ `-Start p661`（HEAD `a4c3db30`・未 push 151・full **9440 / 0 / 2 / 9442**）。
+★ **Core の 0 警告が破れていた**（CS1570 × 6・`MeasureCollector.cs`）: 第659 `1deef3e0` の doc が ⑴ `<< \\ >>` を裸で書き ⑵ 次のメソッドの `<summary>` の頭 2 行を消していた（挿入が他人の doc を割った形）＝元の文を `1deef3e0~1` から戻した。
+★ ユーザー「タイとスラーの件は後回しにして、別件からやって」（S5 の族選びは保留）。
+★★ `a98b0869` **numbers-only tab の隠れた符尾が間隔の補正に入る（LP どおり）**＝§1.0 の「小節線へのばねの残差 −0.020（未解明）」の正体。LP の TabStaff は `Stem.stencil = ##f` で隠すだけで、`Stem::is_normal_stem` は stencil を読まない＝2 分音符以上は `stem_dir_correction` と Staff_spacing の光学補正に入る。長さ 0（details.lengths 0）なので pure 範囲は「符尾側の数字＋取り付け量」から取り付け量 1 つ先まで（和音も符尾側の数字が根元＝full tab も同じ・既存の full tab の和音の読みも直した）。第576 の「numbers-only は補正なし」は旗つき 16 分だけの実測で、旗の門が黙らせていた。実測（Lab `sessions/p661/tabstem/`）: 開放弦の 4 分 2.7872／弦を上る 3.0372／下る 2.5372・小節線へ ±0.0405・小節線から弦 1 へ +0.0486・行頭 `.|:` 0.025823・和音→小節線 2.8181＝すべて Lily# と 4 桁一致。staff＋tab の閉じのばねは LP の 4.9062。ほか: numbers-only では手書きの梁だけが梁（TabStaff は autoBeaming オフ）・旗の門は帯の梁を読む。台帳 `slur.tab.*.attachment-to-control` に 0.000227 を記録＝宣言済みの「Lily# の大きい数字の箱」（中の列が LP の位置に動いて初めて効いた・LP の数字の高さにすると exact に戻るのを確かめた）。網 `TabSpacingWishTests` 2 本追加＋残差の網を ±0.03 → 4 桁・`TabStemSpacingTests` 1 本。毒 6 本すべて赤（Lab `sessions/p661/poisons.log`＋行頭の毒は単独で）。射程: 986 冊中 210 冊（ユーザーの 332 冊中 194 冊）が 0.01〜0.1 動く・段割りの変化 0 冊（`sessions/p661/sweep/`）。snapshot 14 枚。
+★★ ユーザー「続けて」→ `a86ed9d9` **小節線→最初の音の光学補正を段ごとに読む（LP どおり）**＝§1.0 T8 の残り。LP の Staff_spacing の right-items は音楽の PaperColumn＝各段の wish が**全段の最初の列を自分の小節線**（五線 ±2・n 弦 tab ±(n−1)/2）で読み、それを平均する。Lily# は全段に「自分の声部の小節線で読んだ最大」を足していた（小節中）・行頭は自分の段の声部だけ読んでいた。実測（Lab `sessions/p661/merge/`）: staff＋4 弦 tab で五線の d' 下向き 0.100000（旧 0.114286）・g 下向き 0.175074（旧 0.189360）・束ねない 2 段の行頭 `.|:` で下段だけ下向き 0.132217（旧はその半分）＝すべて一致。PianoStaff では LP 0.133646＝小節線が隣の段へ 0.05 伸びる（上段 (−2.05, 2)・下段 (−2, 2.05)＝`ls4.ly`）分で、未移植（網の註に書いた）。実装: `SpacingRules.TabBarlineToNextNotesCorrections`（段ごとの span・スレッドのバッファ）＋`StaffSpacingOpticalCorrection`／`BarHalfSpaces`・`LineStartColumn.ColumnOptical`。網 `ColumnOpticalCorrectionTests` 2 本（毒 2 本とも赤・`sessions/p661/poisons2.log`）。射程（基準 `a98b0869`）: 986 冊中 146 冊（ユーザーの本 142 冊）が動く・段割りの変化 0 冊（`sessions/p661/sweep2/`）。snapshot 6 枚。
+★ ユーザー「続けて」→ 束ねた小節線の 0.05 はピアノ譜の小節頭で 0.0014・配管（束ね方を間隔の計算へ）が要る＝後回しにし、先に `f716f076` **tab の和音の wish は first_head（符尾と反対側の数字）を読む**（§1.0 の未解明の近似）。LP の left_head_end は `Note_column::first_head`＝`Stem::first_head`。向きは `TabStemOf`（`TabStemSpacingInfo` から切り出した・numbers-only は手書きの梁だけ）。実測（Lab `sessions/p661/chordhead/`）: `<e,,\4 c\3>4`（上）・`<c\2 g,\1>4`（下）→ 次の 4 分＝numbers-only 2.787216／2.748759・full 2.787216／2.663588・staff＋tab 2.658031／2.696931＝全部一致（旧は上の和音が "15" を読んで +0.495078）。網 `TabSpacingWishTests.TabChord_…` 3 行（毒で 3 本赤）。射程: 986 冊で動く本 0＝安全網。
+⚠️ **Lab の `corpora/ベースタブLy/` に未 commit の変更が 26 冊**（`octave absolute` を外して相対音高に書き換えた形・LF）。この便は触っていない＝ユーザーの編集中の可能性＝そのまま。
+
 ## 以下は第660セッションの経緯
 
 ### 1.1 第660セッション（2026-09-27・YT-DELL2）
