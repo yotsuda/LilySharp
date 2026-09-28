@@ -82,6 +82,19 @@ form main { ~A }
 score main { staff melody }
 '@
 
+'tie-repeats' = @'
+// A tie may cross a repeat sign or an ending. I's C ties into A (the next section printed
+// and played); A's E ties into ending 1 as an ordinary arc and into ending 2, which is not
+// printed next, as an automatic repeat tie.
+part vn {
+  section I { c''1~ || }
+  section A { c''1 | e1~ || }
+  section B { e''1 | }
+}
+form main { I |: A [1. B] :| [2. B] }
+score main { staff vn }
+'@
+
 'annotations' = @'
 // Articulations, ornaments and dynamics attach with '@'. A hairpin goes on the
 // note it starts from and runs to the next dynamic. '.up' forces the side.

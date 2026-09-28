@@ -2923,6 +2923,9 @@ public sealed class MusicXmlExporter
             }
             if (memberString is { } memberStringNumber)
                 xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", memberStringNumber));
+            // A member-level half-tie ties its own head (LP `<d\laissezVibrer g>`); the
+            // chord-level one is written on every member below.
+            ApplyHalfTies(pitch.Articulations, xmlNote);
 
             // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
@@ -3044,6 +3047,11 @@ public sealed class MusicXmlExporter
                 new System.Xml.Linq.XAttribute("number", 1)));
         }
         _resolvedChordXmlNotes[chord] = resolved;
+
+        // A chord-level half-tie ties EVERY head (the page's SemiTiesOf); ProcessArticulations
+        // wrote it on the first member only.
+        foreach (var member in _chordMembers)
+            ApplyHalfTies(chord.Articulations, member);
 
         // Ties apply to EVERY member of the chord: <c e g>~ <c e g> ties all
         // voices, so tagging only the first note (the old behavior) dropped the
@@ -3568,6 +3576,8 @@ public sealed class MusicXmlExporter
                 && Semantics.AnnotationValues.Frame(fm) is { } spec)
                 _noteFrameSpec = spec;
 
+        ApplyHalfTies(articulations, xmlNote);
+
         foreach (var artic in articulations)
         {
             if (artic is ArticulationSyntax articulation)
@@ -3665,6 +3675,39 @@ public sealed class MusicXmlExporter
                     xmlNote.SlurStart = true;
                 else
                     xmlNote.SlurStop = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The half-ties written on a note or chord member: <c>@laissezVibrer</c> is
+    /// <c>&lt;tied type="let-ring"/&gt;</c>, <c>@repeatTie</c> a tie STOP with no start before
+    /// it on the page — the spelling this exporter already writes for the repeat tie a tie
+    /// carried back over a repeat sign draws (FinishCarriedTies' remark). Idempotent, so a
+    /// chord-level and a member-level annotation on the same head write it once.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-28 neither annotation reached the MusicXML at all (every part and voice);
+    /// the page and the LilyPond twin (<c>\laissezVibrer</c> / <c>\repeatTie</c>) had them.
+    /// MusicXML 4.0 tied-type: start / stop / continue / let-ring.
+    /// </remarks>
+    private static void ApplyHalfTies(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote)
+    {
+        foreach (var a in articulations)
+        {
+            if (a is not ArticulationSyntax { Type: ArticulationType.None } named)
+                continue;
+            switch (named.NameToken.Text)
+            {
+                case "laissezVibrer":
+                    if (!xmlNote.ExtraNotations.Any(e => e.Name.LocalName == "tied"
+                            && (string?)e.Attribute("type") == "let-ring"))
+                        xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("tied",
+                            new System.Xml.Linq.XAttribute("type", "let-ring")));
+                    break;
+                case "repeatTie":
+                    xmlNote.TieStop = true;
+                    break;
             }
         }
     }

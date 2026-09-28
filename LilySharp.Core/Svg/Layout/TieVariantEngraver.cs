@@ -61,7 +61,10 @@ public readonly record struct TieVariantLayout(
     // the bow gets no Source scope. See TieVariantEngraver.SemiTie.
     int SourcePosition,
     // Owning staff (ossia shrink); -1 = unknown/test construction.
-    int StaffIndex = -1);
+    int StaffIndex = -1,
+    // The voice of that staff the host item is in (0-based) — with StaffIndex, the table
+    // SharedRenderer.ResolveSemiTies re-reads the live annotation from.
+    int VoiceIndex = 0);
 
 /// <summary>
 /// Engraver for half-ties (LaissezVibrerTie and RepeatTie).
@@ -187,6 +190,13 @@ internal static class TieVariantEngraver
     ///   sign(position) (0 → neutral-direction, DOWN when unset — tie-details.cc:43-46);
     ///   in a column of several, the bottom tie takes DOWN, the top UP, adjacent ties
     ///   within a second split DOWN/UP, and the rest take sign(position) (0 → DOWN).
+    /// LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs —
+    ///   LaissezVibrerTie and RepeatTie are in the list, so inside a polyphonic span
+    ///   make-voice-props-set (:666-674) sets their direction like a Tie's: voice one UP,
+    ///   voice two DOWN, for every tie of the column. Read here off the item's
+    ///   <c>VoiceStemUp</c> (the same voice-props answer MeasureCollector bakes for the
+    ///   stem); a written ^/_ still wins (the event's direction is copied onto the tie).
+    ///   Until 2026-09-28 a lower voice's half-tie took the pitch rule.
     /// ⚠️ LilyPond then SCORES variations of the whole configuration
     ///   (generate_optimal_configuration) which can overturn these seeds and also
     ///   quantizes each tie's Y off staff lines. The drawn notation half-ties go through that
@@ -201,7 +211,8 @@ internal static class TieVariantEngraver
         {
             case NoteItem n when lv ? n.HasLaissezVibrer : n.HasRepeatTie:
             {
-                bool? forced = lv ? n.LaissezVibrerUp : n.RepeatTieUp;
+                // Written ^/_ first, then the voice props' direction (see the remarks).
+                bool? forced = (lv ? n.LaissezVibrerUp : n.RepeatTieUp) ?? n.VoiceStemUp;
                 // Column of one: sign(position), 0 → neutral (DOWN).
                 bool curveUp = forced ?? n.StaffPosition > 0;
                 // The `@` that wrote it, NOT n.SourcePosition — the note's own address
@@ -232,12 +243,17 @@ internal static class TieVariantEngraver
                 int chordSrc = lv ? c.LaissezVibrerSourcePosition : c.RepeatTieSourcePosition;
                 foreach (var m in c.Notes)
                     if (lv ? m.HasLaissezVibrer : m.HasRepeatTie)
+                    {
+                        // Written ^/_ first, then the voice props' direction, which sets
+                        // every tie of the column alike (see the remarks).
+                        bool? dir = (lv ? m.LaissezVibrerUp : m.RepeatTieUp) ?? c.VoiceStemUp;
                         ties[k++] = (m.StaffPosition,
-                            lv ? m.LaissezVibrerUp : m.RepeatTieUp,
+                            dir,
                             chordSrc >= 0
                                 ? chordSrc
                                 : lv ? m.LaissezVibrerSourcePosition : m.RepeatTieSourcePosition,
-                            lv ? m.LaissezVibrerUp : m.RepeatTieUp);
+                            dir);
+                    }
                 Array.Sort(ties, static (a, b) => a.Pos.CompareTo(b.Pos));
 
                 // set_ties_config_standard_directions, on the sorted column.
@@ -272,43 +288,104 @@ internal static class TieVariantEngraver
     }
 
     /// <summary>
-    /// Calculates layouts for all half-ties (laissez-vibrer + repeat-tie) in the score.
+    /// Calculates layouts for all half-ties (laissez-vibrer + repeat-tie) in the score: every
+    /// voice of every notation staff each system carries.
     /// </summary>
     /// <param name="measureMap">The caller's measure → (system, layout) map, when it has one
     /// (<c>LayoutEngine.CalculateAnnotationLayouts</c> builds it once for the tail's three
-    /// engravers). Null ⇒ build it here, which is what every non-keystroke caller does.</param>
-    /// <param name="onTab">The staff is a TAB (the Score's clef string folds tab into "treble").</param>
+    /// engravers). Null ⇒ build it here, which is what every non-keystroke caller does.
+    /// Read only on the single-staff path (<paramref name="staffByIndex"/> null).</param>
+    /// <param name="staffByIndex">Every staff by index (the annotation pass's table). Given,
+    /// the walk is the inside-staff skyline's (<c>SkylineBuilder.AddStaffToSkylines</c>): per
+    /// system, per placed staff, per voice — so the bows drawn are the bows reserved. Null ⇒
+    /// the single-staff path: every voice of <paramref name="score"/> at
+    /// <paramref name="staffIndex"/>.</param>
+    /// <remarks>
+    /// ⚠️ UNTIL 2026-09-28 THIS WALKED <c>score.Voice</c> ALONE — the primary staff's first
+    /// voice — while the skyline (2505ff4f) reserved room on every staff and voice: a
+    /// <c>@laissezVibrer</c> / <c>@repeatTie</c> in a second part, a piano's lower staff or a
+    /// lower voice, and the automatic repeat tie SectionTieCarry adds there, reserved room
+    /// and drew nothing.
+    /// A TAB staff gets none: LilyPond's TabStaff engraves no half-tie
+    /// (audit/lpreg/tabtie-probe2 — a repeat tie parenthesises the fret instead), and the
+    /// tab skyline (AddTabStaffToSkylines) reserves none. Until the same date a PRIMARY tab
+    /// staff drew a Lily#-own approximation with nothing reserved for it.
+    /// </remarks>
     public static ImmutableArray<TieVariantLayout> Calculate(
         Score score,
         ImmutableArray<SystemLayout> systems,
         int staffIndex = -1,
         IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? measureMap = null,
-        bool onTab = false)
+        IReadOnlyDictionary<int, Staff>? staffByIndex = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<TieVariantLayout>.Empty;
 
-        // ⚠️ ONE MAP, NOT TWO. This used to build BuildMeasureLayoutMap AND BuildMeasureMap —
-        // the second is the first plus the system, over the identical key set by construction
-        // (both walk every system's Measures and key on MeasureIndex), so the layout half was
-        // a whole second dictionary of the score's measures for a value already in hand.
-        var map = measureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         // ⚠️ IT WAITS FOR ITS FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays out its
         // first block — 88 B for a reference element — before a single Add, and over the
         // reader's corpus this one is built 2.17 times a keystroke and stays EMPTY in every
         // one of them: a book with no l.v. or repeat tie has nothing to lay out (session 448).
         ImmutableArray<TieVariantLayout>.Builder? builder = null;
 
-        var voice = score.Voice;
-        for (int mi = 0; mi < voice.Measures.Length; mi++)
+        if (staffByIndex is not null)
         {
-            if (!map.TryGetValue(mi, out var info))
-                continue;
-            var (system, measureLayout) = info;
+            // The skyline's walk: each system's measure layouts, each staff it places.
+            foreach (var system in systems)
+            {
+                if (system.StaffGroups.IsDefaultOrEmpty)
+                    continue;
+                foreach (var group in system.StaffGroups)
+                {
+                    if (group.Staves.IsDefaultOrEmpty)
+                        continue;
+                    foreach (var placed in group.Staves)
+                    {
+                        if (placed.IsHidden
+                            || !staffByIndex.TryGetValue(placed.StaffIndex, out var staff)
+                            || staff.IsTab || staff.IsTextRow)
+                            continue;
+                        foreach (var measureLayout in system.Measures)
+                            for (int vi = 0; vi < staff.Voices.Length; vi++)
+                                AppendMeasure(ref builder, system, measureLayout,
+                                    staff.Voices[vi], vi, placed.StaffIndex);
+                    }
+                }
+            }
+            return builder?.ToImmutable() ?? [];
+        }
 
-            var measure = voice.Measures[mi];
+        // ⚠️ ONE MAP, NOT TWO. This used to build BuildMeasureLayoutMap AND BuildMeasureMap —
+        // the second is the first plus the system, over the identical key set by construction
+        // (both walk every system's Measures and key on MeasureIndex), so the layout half was
+        // a whole second dictionary of the score's measures for a value already in hand.
+        var map = measureMap ?? LayoutUtilities.BuildMeasureMap(systems);
+        for (int vi = 0; vi < score.Voices.Length; vi++)
+        {
+            var voice = score.Voices[vi];
+            for (int mi = 0; mi < voice.Measures.Length; mi++)
+                if (map.TryGetValue(mi, out var info))
+                    AppendMeasure(ref builder, info.System, info.Measure, voice, vi, staffIndex);
+        }
+        return builder?.ToImmutable() ?? [];
+    }
+
+    /// <summary>One measure of one voice: its items' half-ties, at the X and staff the inside-
+    /// staff skyline reserves them at (<c>SkylineBuilder.AddSemiTiesToSkylines</c>).</summary>
+    private static void AppendMeasure(
+        ref ImmutableArray<TieVariantLayout>.Builder? builder, SystemLayout system,
+        MeasureLayout measureLayout, Voice voice, int voiceIndex, int staffIndex)
+    {
+        int mi = measureLayout.MeasureIndex;
+        if (mi >= voice.Measures.Length)
+            return;
+        var measure = voice.Measures[mi];
+        {
             for (int ii = 0; ii < measure.Items.Length; ii++)
             {
+                // The skyline's guard: a slot the layout did not place is not drawn.
+                if (measureLayout.Columns.IsDefaultOrEmpty && ii >= measureLayout.Items.Length)
+                    continue;
+
                 // One half-tie per marked head, per kind — the fan and the curve
                 // sides are SemiTiesOf's (a chord-level event marks every member,
                 // a member-level one just its own head; chord repeat-ties used to
@@ -317,36 +394,108 @@ internal static class TieVariantEngraver
                 //   — one tie per head; Repeat_tie_engraver inherits the path
                 //   (repeat-tie-engraver.cc:27-33).
                 var item = measure.Items[ii];
-                foreach (var kind in KindPair)
-                {
-                    var ties = SemiTiesOf(item, kind);
-                    if (ties.IsEmpty)
-                        continue;
-                    int noteValue = GlyphMetrics.NoteValueOf(item switch
-                    {
-                        NoteItem n => n.BaseDuration,
-                        ChordItem c => c.BaseDuration,
-                        _ => default,
-                    });
-                    builder ??= ImmutableArray.CreateBuilder<TieVariantLayout>();
-                    if (onTab || !SolveSemiTieColumn(builder, voice, mi, ii, item, ties, kind,
-                            measureLayout, system, staffIndex))
-                    {
-                        // Not a note column the tie outline can be built from: the drawn
-                        // approximation (SemiTieGeometry) is all there is. ⚠️ A TAB is
-                        // Lily#-own either way — LilyPond's TabStaff does not engrave a half-tie
-                        // at all (a repeat tie parenthesises the fret, audit/lpreg/tabtie-probe2),
-                        // and a fret digit has no chord outline to score against.
-                        foreach (var tie in ties)
-                            builder.Add(BuildLayout(
-                                tie.StaffPosition, tie.CurveUp, tie.SourcePosition,
-                                noteValue, mi, ii, measureLayout, system, staffIndex, kind));
-                    }
-                }
+                if (!HasSemiTie(item))
+                    continue;
+                // Reads the raw item slot X for the approximation. Safe on every path:
+                // MultiStaffLayouter derives Items[i].X FROM the timing columns (see
+                // MeasureLayouter.LayoutItemsFromColumns), so the slot equals the column-grid
+                // X the renderer draws the notehead at even when a bar opens with a mid-piece
+                // time/clef change; single-staff layouts have no columns and the slot is
+                // already the grid.
+                double columnX = measureLayout.X
+                    + LayoutUtilities.GetItemXOffset(voice.Measures, mi, ii, measureLayout);
+                double slotX = ii < measureLayout.Items.Length
+                    ? measureLayout.X + measureLayout.Items[ii].X
+                    : columnX;
+                // Within-system Y offset (device, down from the system top) of the staff
+                // middle, NOT an absolute page Y — so the tie's Y/control points are
+                // independent of where paging places the system. DrawTieVariants resolves
+                // the system-top Y-up and subtracts these, keeping the output byte-identical
+                // to the former absolute origin while decoupling from SystemLayout.Y for the
+                // Stage-4 W2 stacking-origin flip (step 2a MMR / step 2b Ledger). The
+                // internal arc geometry stays device-frame (intentional-device island 2).
+                const double StaffHeight = 4.0;
+                double staffMiddleDown = LayoutUtilities.StaffOffsetInSystemDown(system, staffIndex)
+                    + StaffHeight / 2.0;
+                builder ??= ImmutableArray.CreateBuilder<TieVariantLayout>();
+                AppendItemSemiTies(builder, voice, mi, ii, item, columnX, slotX,
+                    staffMiddleDown, staffIndex, voiceIndex);
             }
         }
+    }
 
-        return builder?.ToImmutable() ?? [];
+    /// <summary>The cheap flag scan: does <paramref name="item"/> carry a half-tie of either
+    /// kind? Almost no item does, and the per-kind fan must not be paid for the rest.</summary>
+    internal static bool HasSemiTie(MusicItem item)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+                return n.HasLaissezVibrer || n.HasRepeatTie;
+            case ChordItem c:
+                foreach (var m in c.Notes)
+                    if (m.HasLaissezVibrer || m.HasRepeatTie)
+                        return true;
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// One item's half-ties, both kinds, exactly as they are DRAWN — the one home both the
+    /// drawing (<see cref="Calculate"/>) and the staff's inside-staff skyline
+    /// (<c>SkylineBuilder.AddStaffToSkylines</c>) read, so the bow a section label or a
+    /// volta bracket clears is the bow on the page.
+    /// </summary>
+    /// <param name="into">Receives one layout per half-tie.</param>
+    /// <param name="voice">The voice the item is in (the column outline is built from it).</param>
+    /// <param name="measureIndex">The item's measure.</param>
+    /// <param name="itemIndex">The item's index in its measure.</param>
+    /// <param name="item">The host note or chord.</param>
+    /// <param name="columnX">The host column's X (head ink left), in the caller's X frame.</param>
+    /// <param name="slotX">The item slot's X, which the approximation hangs off.</param>
+    /// <param name="staffMiddleDown">The staff middle's device-down offset in the caller's
+    /// Y frame: the within-system offset for the drawing, 0 for a staff-local skyline (the
+    /// layouts then come back device-down about the staff's middle line).</param>
+    /// <param name="staffIndex">Stamped on the layouts (ossia shrink).</param>
+    /// <param name="voiceIndex">Stamped on the layouts (the data-pos re-read).</param>
+    internal static void AppendItemSemiTies(
+        ICollection<TieVariantLayout> into, Voice voice, int measureIndex, int itemIndex,
+        MusicItem item, double columnX, double slotX, double staffMiddleDown, int staffIndex,
+        int voiceIndex)
+    {
+        // One half-tie per marked head, per kind — the fan and the curve
+        // sides are SemiTiesOf's (a chord-level event marks every member,
+        // a member-level one just its own head; chord repeat-ties used to
+        // silently drop here, the mirror of the chord-l.v. drop before it).
+        // LILYPOND-REF: lily/laissez-vibrer-engraver.cc:66-108 acknowledge_note_head
+        //   — one tie per head; Repeat_tie_engraver inherits the path
+        //   (repeat-tie-engraver.cc:27-33).
+        foreach (var kind in KindPair)
+        {
+            var ties = SemiTiesOf(item, kind);
+            if (ties.IsEmpty)
+                continue;
+            if (!SolveSemiTieColumn(into, voice, measureIndex, itemIndex, item, ties,
+                    kind, columnX, staffMiddleDown, staffIndex, voiceIndex))
+            {
+                // Not a note column the tie outline can be built from: the drawn
+                // approximation (SemiTieGeometry) is all there is. (A TAB staff never
+                // gets here — LilyPond's TabStaff engraves no half-tie; see Calculate.)
+                int noteValue = GlyphMetrics.NoteValueOf(item switch
+                {
+                    NoteItem n => n.BaseDuration,
+                    ChordItem c => c.BaseDuration,
+                    _ => default,
+                });
+                foreach (var tie in ties)
+                    into.Add(BuildLayout(
+                        tie.StaffPosition, tie.CurveUp, tie.SourcePosition,
+                        noteValue, measureIndex, itemIndex, slotX, staffMiddleDown,
+                        staffIndex, kind) with { VoiceIndex = voiceIndex });
+            }
+        }
     }
 
     /// <summary>
@@ -373,13 +522,11 @@ internal static class TieVariantEngraver
     /// which a column's spacing box cannot ask for before layout.
     /// </remarks>
     private static bool SolveSemiTieColumn(
-        ImmutableArray<TieVariantLayout>.Builder builder, Voice voice, int measureIndex,
+        ICollection<TieVariantLayout> builder, Voice voice, int measureIndex,
         int itemIndex, MusicItem item, ImmutableArray<SemiTie> ties, TieVariantKind kind,
-        MeasureLayout measureLayout, SystemLayout system, int staffIndex)
+        double columnX, double staffMiddleDown, int staffIndex, int voiceIndex)
     {
         bool lv = kind == TieVariantKind.LaissezVibrer;
-        double columnX = measureLayout.X
-            + LayoutUtilities.GetItemXOffset(voice.Measures, measureIndex, itemIndex, measureLayout);
         var positions = new List<int>(ties.Length);
         foreach (var tie in ties)
             if (!positions.Contains(tie.StaffPosition))
@@ -392,9 +539,6 @@ internal static class TieVariantEngraver
         // LILYPOND-REF: lily/tie-formatting-problem.cc:436-441 — the open outline, set_minimum_height (extremal − head_dir · 1.5).
         double openX = lv ? OutlineExtreme(parts, right: true) + OpenReach
                           : OutlineExtreme(parts, right: false) - OpenReach;
-        const double StaffHeight = 4.0;
-        double staffMiddleDown = LayoutUtilities.StaffOffsetInSystemDown(system, staffIndex)
-            + StaffHeight / 2.0;
         bool? stemUp = ElementCoordinator.BoundStemUp(voice, measureIndex, itemIndex);
         int dots = SpacingRules.GetDots(item);
         var baseDuration = item switch
@@ -442,7 +586,8 @@ internal static class TieVariantEngraver
                 Control2: (l.Control2.X, -l.Control2.Y),
                 CurveUp: l.CurveUp,
                 SourcePosition: ties[i].SourcePosition,
-                StaffIndex: staffIndex));
+                StaffIndex: staffIndex,
+                VoiceIndex: voiceIndex));
         }
         return true;
     }
@@ -487,32 +632,14 @@ internal static class TieVariantEngraver
     private static TieVariantLayout BuildLayout(
         int staffPosition, bool curveUp, int sourcePosition, int noteValue,
         int measureIndex, int itemIndex,
-        MeasureLayout measureLayout, SystemLayout system, int staffIndex,
+        double headLeftX, double staffMiddleOffset, int staffIndex,
         TieVariantKind kind)
     {
-        // Reads the raw item slot X. Safe on every path: MultiStaffLayouter
-        // derives Items[i].X FROM the timing columns (see
-        // MeasureLayouter.LayoutItemsFromColumns), so the slot equals the column-grid X the
-        // renderer draws the notehead at even when a bar opens with a mid-piece time/clef
-        // change; single-staff layouts have no columns and the slot is already the grid.
-        var itemLayout = measureLayout.Items[itemIndex];
-        double headLeftX = measureLayout.X + itemLayout.X;
-
         // The half-tie's own geometry (X span, baseline, signed arc) — the one
         // spelling shared with the spacing skylines' box (SemiTieGeometry).
         var (xLeft, xRight, baseYFromMiddle, signedArc) = SemiTieGeometry(
             noteValue, staffPosition, curveUp, kind);
 
-        const double StaffHeight = 4.0;
-        // Within-system Y offset (device, down from the system top) of the staff
-        // middle, NOT an absolute page Y — so the tie's Y/control points are
-        // independent of where paging places the system. DrawTieVariants resolves
-        // the system-top Y-up and subtracts these, keeping the output byte-identical
-        // to the former absolute origin while decoupling from SystemLayout.Y for the
-        // Stage-4 W2 stacking-origin flip (step 2a MMR / step 2b Ledger). The
-        // internal arc geometry stays device-frame (intentional-device island 2).
-        double staffMiddleOffset = LayoutUtilities.StaffOffsetInSystemDown(system, staffIndex)
-            + StaffHeight / 2.0;
         double baseY = staffMiddleOffset + baseYFromMiddle;
 
         // It used to hang off the item SLOT's right edge — a whole note's slot

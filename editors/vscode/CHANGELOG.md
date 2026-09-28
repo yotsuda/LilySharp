@@ -113,6 +113,19 @@ All notable changes to the Lily# VS Code extension are documented here.
   played next (the body again, the next ending), and the preview draws the arc where that note
   is printed next and a hanging tie plus an automatic repeat tie where it is not; playback
   sustains the note on those passes. A target on another pitch is flagged (LYS4007).
+- **A digit typed on a note always leaves a valid duration** (1 2 4 8 16 32 64 128): it
+  extends the digits there only when that makes one (`c1|` + `6` → `c16`) and replaces them
+  otherwise — `c1|` + `2` is now `c2`, no longer `c12` (a 128th is pasted, or typed with the
+  aids off, or `8` typed after a `12`). A `3` or `6` that extends into nothing completes to
+  32 or 64 (`c4|` + `6` → `c64`). `5`, `7`, `9` and `0` leave the note unchanged, with a
+  status-bar hint, instead of writing `c45`.
+- **Slash notes take the typing aids**: a digit replaces the duration (`/4|` + `8` → `/8`,
+  was `/48`); dots, ties, slurs and beams land on them as on a note.
+- **Several cursors**: an octave mark, digit, dot, `\` or `@` typed with several cursors is
+  applied at each cursor on its own note, in one undo step (it used to be typed as pressed
+  everywhere). A selection is still replaced by the key, as anywhere in VS Code.
+- **`lilysharp.typingAids.enabled`** (default on) turns all the typing aids off: every key
+  types exactly as pressed.
 
 ### Fixes
 
@@ -122,6 +135,15 @@ All notable changes to the Lily# VS Code extension are documented here.
   `s1@chord(G)` drew nothing): the name at that moment and its diagram, as on a note. The step,
   the hover and the audition work on it as on a note's. A bare `@chord` there warns — write
   the name.
+- **The Problems list's "Did you mean …?" names only a close typo** — within a third of the
+  name's length in edits (`@glisando` → `@glissando`, `@tenuot` → `@tenuto`); a one- or
+  two-letter name only for a swapped pair (`@fs` → `@sf`). `@ho` no longer suggests `@sf`.
+- **A stray dot after an annotation (`@finger.3`) gets the ordinary message**, without the
+  hint for an older Lily# spelling.
+- **Repeat ties and hanging ties draw in the preview on every staff and in every voice**
+  (`@laissezVibrer`, `@repeatTie`, and the automatic repeat tie of a tie carried over a
+  repeat were drawn only in the first voice of the first staff); a lower voice's curves down.
+  A tab staff draws none, as in LilyPond.
 
 ## 0.9.0
 

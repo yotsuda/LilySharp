@@ -159,6 +159,16 @@ workflow attaches that section to the GitHub Release verbatim.
   open at that section's end. A manual beam, a pedal or other span across a cut, a cut that
   falls mid-bar, or the section played as a repeat ending is reported with where, and nothing
   changes. A file grouped by section is not supported yet (regroup it by part first).
+- **Typing aids: a digit typed on a note, rest, chord or slash note always leaves a valid
+  duration** (1 2 4 8 16 32 64 128). It extends the digits there only when that makes a
+  duration (`c1|` + `6` → `c16`) and replaces them otherwise: `c1|` + `2` is now `c2`, no
+  longer `c12` (a 128th is pasted, typed with the aids off, or finished by typing `8` after a
+  `12`). A `3` or `6` that extends into nothing completes to 32 or 64 (`c4|` + `6` → `c64`).
+  `5`, `7`, `9` and `0` leave the note unchanged, with a status-bar hint, where they used to
+  write `c45`. Slash notes take the aids too (`/4|` + `8` → `/8`, was `/48`). With several
+  cursors, an octave mark, digit, dot, `\` or `@` is applied at each cursor on its own note,
+  in one undo step. A new setting, `lilysharp.typingAids.enabled` (default on), turns every
+  typing aid off.
 
 ### Spans across a section boundary
 
@@ -194,12 +204,39 @@ workflow attaches that section to the GitHub Release verbatim.
   open tie at every section boundary and wrote a `<tie type="start">` with no stop. The page
   drew the tie all along.
 
+- **A section label, mark or volta bracket stands clear of a repeat tie or hanging tie.** A
+  half-tie (`@repeatTie`, `@laissezVibrer`, and the automatic repeat tie a tie carried over a
+  repeat draws) was in no vertical skyline, so the label at a second ending or at a section
+  opened by `@repeatTie` was drawn on top of the tie. It is now inside-staff ink like any tie,
+  as in LilyPond, and what stands above the staff is placed over it.
+
+- **Repeat ties and hanging ties draw on every staff and in every voice.** `@laissezVibrer`,
+  `@repeatTie` and the automatic repeat tie of a tie carried over a repeat were drawn only in
+  the first voice of the first staff: in a second part, a piano's lower staff or a lower voice
+  the room was kept but no tie was drawn. A lower voice's half-tie now curves down and an upper
+  voice's up, like its ordinary ties (a written `.up`/`.down` still decides). A tab staff draws
+  none, as in LilyPond (a tab used to draw one when it was the score's first staff). The
+  MusicXML now writes them too, in every part and voice: `@laissezVibrer` as
+  `<tied type="let-ring"/>` (on every note of a chord that carries it), `@repeatTie` as a tie
+  stop; neither was exported before.
+
 - **An `@chord` on a rest or a spacer draws.** `r1@chord(C x32013)`, `s1@chord(G)` drew
   nothing — neither the name nor the diagram, and said nothing — while `r1@diagram(…)` drew. A
   chord symbol belongs to the beat, not to a note: on a rest, a spacer or a multi-measure rest
   it now draws exactly as on a note (the name at that moment, the diagram under it by the usual
   rules), in the `.ly` twin's chord names and as a MusicXML `<harmony>` before the rest. A bare
   `@chord` there has no notes to name: it warns (LYS1020), naming the fix — write the name.
+
+- **"Did you mean …?" is offered only for a close typo.** An unknown annotation is compared
+  with the known names allowing a third of its length in edits (at most two; a swap of two
+  adjacent letters is one), and a one- or two-letter name gets a suggestion only for a swapped
+  pair (`@fs` → `@sf`). `c4@ho` said *did you mean '@sf'?*; it now says only that `@ho` is
+  unknown. `@glisando`, `@acent` and `@tenuot` are still pointed at `@glissando`, `@accent`
+  and `@tenuto`.
+- **The stray-dot error no longer names an old annotation spelling.** `c4@finger.3` gets the
+  ordinary *This '.' belongs to nothing* (LYS0023) and `@finger`'s own *takes its argument in
+  parentheses*; the dot message used to add *write @finger(3) and @chord(c), not @finger.3
+  and @chord.c*, a hint for an older Lily# spelling.
 
 ## 0.9.0
 

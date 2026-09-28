@@ -111,7 +111,7 @@
 ### `LilySharp.Core/Svg/Layout/PedalEngraver.cs`
 - **:489** ⚠️ LILYPOND'S ANSWER FOR AN UNCLOSED PEDAL IS **NOT PORTED HERE** either:
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
-- **:925** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
+- **:978** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:895** column allows only 0.3 of movement) is not ported: every edge here
 - **:1282** approximation there); RIGHT wins when both edges match, as LP's
@@ -260,8 +260,8 @@
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:395** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
 ### `LilySharp.Core/Parser/Parser.Music.cs`
-- **:454** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
-- **:719** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
+- **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
+- **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
@@ -459,7 +459,7 @@
 - **:129** ⚠️ LILYSHARP-OWN: THE TWO-EDGE MODEL ITSELF. LilyPond has no such pair —
 - **:297** ⚠️ LILYSHARP-OWN: THE SELECTION IS DELIBERATELY THE OLD ONE, and it is a KNOWN
 - **:383** ⚠️ LILYSHARP-OWN: THE FALLBACK TO THE DERIVED VALUE IS A SECOND ANSWER FOR ONE
-- **:1568** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
+- **:1621** LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
 ### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
 - **:324** LILYSHARP-OWN: the bar line's box is grown toward THIS column only. LilyPond grows it
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`

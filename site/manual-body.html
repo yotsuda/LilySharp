@@ -308,13 +308,7 @@ score main { staff vc }</pre>
   next is also the one printed next the tie is an ordinary arc; where it is not (back to the
   <code>|:</code>, into a later ending) the tied note gets a hanging tie and the note it
   reaches an automatic repeat tie, and playback holds the note over.</p>
-<pre>part vn {
-  section I { c''1~ || }
-  section A { c''1 | e1~ || }
-  section B { e''1 | }
-}
-form main { I |: A [1. B] :| [2. B] }
-score main { staff vn }</pre>
+  <!--EXAMPLE:tie-repeats-->
   <p>Everything else a section starts from still resets at the boundary — the relative frame,
   the note value, the meter, key and clef — so the note a tie reaches states its own
   octave.</p>

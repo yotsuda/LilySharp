@@ -726,6 +726,12 @@ internal sealed class SkylineBuilder
                     }
                     double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                         voice.Measures, measureIndex, itemIndex, measureLayout);
+                    // The item's half-ties, where they are drawn (before the collision shift
+                    // below, which the drawn half-tie does not take either).
+                    if (TieVariantEngraver.HasSemiTie(item))
+                        AddSemiTiesToSkylines(voice, measureIndex, itemIndex, item, itemX,
+                            measureLayout, staffMiddleUp, StaffSize.Of(staff),
+                            upSkyline, downSkyline);
 
                     // ...plus the drawn collision shift (VoiceId is 1-based), RAW — not
                     // through StaffSize.Span. The renderer adds this offset to itemX in
@@ -797,6 +803,53 @@ internal sealed class SkylineBuilder
         // the drawn geometry the withheld stems above were left to.
         if (graceSeeds is not null)
             AddGraceBeamsToSkyline(graceSeeds, staffMiddleUp, StaffSize.Of(staff), upSkyline);
+    }
+
+    /// <summary>
+    /// Seeds one item's HALF-TIES (<c>@laissezVibrer</c> / <c>@repeatTie</c>, and the repeat
+    /// tie a tie carried back over a repeat sign draws) into the staff's inside profile, at the
+    /// bow the page draws — <see cref="TieVariantEngraver.AppendItemSemiTies"/>, the drawing's
+    /// own home, asked with the staff middle as the Y origin — so the outside-staff movers (a
+    /// section label, a mark, a tempo, a volta bracket) stand clear of it.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm LaissezVibrerTie / RepeatTie — vertical-skylines
+    ///   from the stencil (the Tie's grob::unpure-vertical-skylines-from-stencil) and NO
+    ///   outside-staff-priority, so lily/axis-group-interface.cc:914-935 skyline_spacing puts
+    ///   them in inside_staff_skylines like a Tie, and every outside-staff grob is placed
+    ///   against them.
+    /// ⚠️ UNTIL 2026-09-28 A HALF-TIE WAS IN NO VERTICAL SKYLINE: its box was in the
+    /// horizontal spacing (ItemSkylineFactory.AddSemiTies) and nowhere else, so a section
+    /// label at a repeat's second ending was drawn on the automatic repeat tie at its first
+    /// note (SectionTieCarry) — the label sits over the barline, the tie reaches back to it.
+    /// The bow's ink is the tie's bezier sandwich (DrawTieVariants passes TieMidThickness),
+    /// seeded by the same outer-edge sampler as a Tie (<see cref="MergeBowOuterEdge"/>).
+    /// </remarks>
+    private static void AddSemiTiesToSkylines(
+        Voice voice, int measureIndex, int itemIndex, MusicItem item, double columnX,
+        MeasureLayout measureLayout, double staffMiddleUp, StaffSize size,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        double slotX = itemIndex < measureLayout.Items.Length
+            ? measureLayout.X + measureLayout.Items[itemIndex].X
+            : columnX;
+        var bows = new List<TieVariantLayout>(2);
+        TieVariantEngraver.AppendItemSemiTies(bows, voice, measureIndex, itemIndex, item,
+            columnX, slotX, staffMiddleDown: 0, staffIndex: -1, voiceIndex: 0);
+        double halfCurve = size.Span(0.5 * EngravingDefaults.TieMidThickness);
+        double halfPen = size.Span(0.5 * EngravingDefaults.BowEndRounding);
+        foreach (var b in bows)
+        {
+            // Device-down about the staff middle → this skyline's Y-up frame, at this
+            // staff's size (the SeedBowInk door, from the middle instead of the top line).
+            double y = staffMiddleUp - size.Span(b.Y);
+            (double X, double Y) c1 = (b.Control1.X, staffMiddleUp - size.Span(b.Control1.Y));
+            (double X, double Y) c2 = (b.Control2.X, staffMiddleUp - size.Span(b.Control2.Y));
+            bool up = (c1.Y + c2.Y) >= 2 * y;
+            MergeBowOuterEdge(up ? upSkyline : downSkyline,
+                up ? VerticalDirection.Up : VerticalDirection.Down,
+                b.StartX, y, c1, c2, b.EndX, y, halfCurve, halfPen);
+        }
     }
 
     /// <summary>

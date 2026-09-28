@@ -631,16 +631,17 @@ internal static partial class SharedRenderer
     /// which is all the note locator can express — would collapse them onto one offset.
     /// <c>TieVariantEngraver.Calculate</c> emits the fan in <c>SemiTiesOf</c>'s order,
     /// contiguously per (measure, item, kind), so walking the two lists in step is exact.
-    /// <para>⚠️ The measures are the ONE voice <c>Calculate</c> walked
-    /// (<c>Score.Voice</c> of the annotation pass's score) — the same table
-    /// <c>MusicMarkLayouts</c> re-reads above, for the same reason.</para>
+    /// <para>The measures are the host's own staff and voice (the layout's
+    /// <c>StaffIndex</c> / <c>VoiceIndex</c>) — every staff and voice since 2026-09-28,
+    /// when <c>Calculate</c> stopped walking the primary staff's first voice alone; the
+    /// <c>-1</c> of the single-staff path reads the primary staff.</para>
     /// </remarks>
     private static ImmutableArray<TieVariantLayout> ResolveSemiTies(
         ImmutableArray<TieVariantLayout> layouts, MultiStaffScore score)
     {
         if (layouts.IsDefaultOrEmpty)
             return layouts;
-        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? staves = null;
         TieVariantLayout[]? copy = null;
         int i = 0;
         while (i < layouts.Length)
@@ -649,10 +650,21 @@ internal static partial class SharedRenderer
             int run = 1;
             while (i + run < layouts.Length
                    && layouts[i + run].Kind == head.Kind
+                   && layouts[i + run].StaffIndex == head.StaffIndex
+                   && layouts[i + run].VoiceIndex == head.VoiceIndex
                    && layouts[i + run].MeasureIndex == head.MeasureIndex
                    && layouts[i + run].ItemIndex == head.ItemIndex)
                 run++;
 
+            var voices = score.PrimaryContentStaff.Voices;
+            if (head.StaffIndex >= 0)
+            {
+                staves ??= BuildStaffVoices(score);
+                voices = staves.TryGetValue(head.StaffIndex, out var vs) ? vs : default;
+            }
+            var measures = !voices.IsDefault && (uint)head.VoiceIndex < (uint)voices.Length
+                ? voices[head.VoiceIndex].Measures
+                : ImmutableArray<Measure>.Empty;
             if ((uint)head.MeasureIndex < (uint)measures.Length)
             {
                 var items = measures[head.MeasureIndex].Items;
