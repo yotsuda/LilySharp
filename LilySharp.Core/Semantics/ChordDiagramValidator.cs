@@ -249,14 +249,22 @@ public static class ChordDiagramScores
 /// <summary>
 /// The chord-diagram warnings (LYS1038) a <c>chords</c> row's written shapes earn — a word
 /// that is not a shape or a tuning, a shape of the wrong length, two unnamed shapes of one
-/// length, a tuning named twice.
+/// length, a tuning named twice — and (LYS1039) a written shape that disagrees with its
+/// symbol, in a row or an <c>@chord</c>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// ⚠️ A WRITTEN SHAPE IS NOT CHECKED AGAINST ITS SYMBOL (owner's decision 2026-09-28): the
-/// shape is the writer's call — a voicing with an added tone, a partial shape — and no
-/// warning second-guesses it. Nor is a shape for a tuning the score does not use: a file
-/// written for two instruments carries shapes each score leaves alone.
+/// ⚠️ A WRITTEN SHAPE IS CHECKED AGAINST ITS SYMBOL (owner's decision 2026-09-28, REVERSING
+/// the same day's "the shape is the writer's call, no warning second-guesses it"): a shape
+/// that sounds a note outside the chord or lacks a required tone (not the root, not the perfect
+/// fifth; the bass is not checked — the owner's second decision that day) is warned once (<see cref="ChordShapes.Mismatch"/>), naming the chord it does play when the
+/// recognizer names one. Each shape is checked on the tuning it is ROUTED to
+/// (<see cref="ChordShapes.WrittenFor"/>) in each score that draws it
+/// (<see cref="ChordDiagramScores"/>: layout, else the part's fretted instrument, else the
+/// guitar); identical warnings from several scores are said once. A shape routed to no tuning
+/// in any score — a file written for two instruments carries shapes each score leaves alone —
+/// is not checked, nor is a symbol-less <c>@chord(x32010)</c> (its name comes from the shape)
+/// or an <c>@diagram</c> (it names nothing).
 /// </para>
 /// <para>
 /// ⚠️ THE "NO SHAPE ON THIS TUNING" WARNING IS ONLY FOR <c>chordDiagrams … all</c> SCORES
@@ -268,8 +276,9 @@ public static class ChordDiagramScores
 /// (Commit 9cf95fab drew a default for every name and warned in every score.)
 /// </para>
 /// <para>
-/// Lily#'s choices for what the tree cannot say: a ROMAN degree is not checked (its chord
-/// depends on the key at its bar, which the page resolves), nor are a bare <c>@chord</c> and a
+/// Lily#'s choices for what the tree cannot say: a ROMAN degree is not checked — neither its
+/// shape against its chord nor its "no shape" — because its chord depends on the key at its
+/// bar, which the page resolves and the tree does not; nor are a bare <c>@chord</c> and a
 /// symbol-less shape (their names come from notes the page reads). The <c>@chord</c> half reads
 /// the scores drawing the mark's part (<see cref="ChordDiagramScores.TuningsOfMark"/>); a row is
 /// checked against the scores that place it.
@@ -298,8 +307,10 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
                 _diagnostics.Warning(words[p.WordIndex].Span, DiagnosticCodes.ChordDiagramNotDrawn, p.Message);
         }
 
-        // ⑵ In a `chordDiagrams … all` score: the chords with no shape on its tuning.
         var fileScores = ChordDiagramScores.Of(root);
+        CheckShapesAgainstSymbols(root, entries, fileScores);
+
+        // ⑵ In a `chordDiagrams … all` score: the chords with no shape on its tuning.
         if (!fileScores.Any(s => s.All))
             return;
         var warned = new HashSet<(string Symbol, TuningType Tuning)>();
@@ -337,6 +348,63 @@ internal sealed class ChordDiagramValidator : ISemanticValidator
             else if (site is MusicMarkSyntax mark
                      && ChordAnnotation.Of(mark) is { Symbol: { } symbol, Structure: { } structure } words)
                 Check(symbol, structure, words.Shapes, mark.Span, ChordDiagramScores.TuningsOfMarkIn(mark, fileScores));
+        }
+    }
+
+    /// <summary>
+    /// ⑶ LYS1039: each written shape of a row entry or an <c>@chord</c> with a symbol, checked
+    /// against that symbol on the tuning it is routed to in each score drawing it (the class
+    /// remarks); a warning at the shape word, said once however many scores repeat it.
+    /// </summary>
+    private void CheckShapesAgainstSymbols(SyntaxNode root, IReadOnlyList<ChordEntrySyntax> entries,
+        IReadOnlyList<ChordDiagramScores.Score> fileScores)
+    {
+        var said = new HashSet<(int Start, string Message)>();
+        void Check(string symbol, ChordStructure chord, IReadOnlyList<WrittenShape> shapes,
+            IReadOnlyList<(string Text, TextSpan Span)> words, bool inRow,
+            IReadOnlyList<(ChordDiagramScores.Score Score, string? Word)> scores)
+        {
+            foreach (var (_, word) in scores)
+            {
+                if (word == null)
+                    continue;
+                var tuning = Tablature.Tunings.Parse(word);
+                if (ChordShapes.WrittenFor(tuning, shapes) is not { } shape
+                    || ChordShapes.Mismatch(ChordShapes.Frets(shape), Tablature.Tunings.GetTuning(tuning), chord)
+                        is not { } mismatch)
+                    continue;
+                string? tuningName = shapes.First(s => s.Shape == shape).TuningName;
+                string message = ChordShapes.MismatchMessage(mismatch, shape, tuningName, symbol, inRow);
+                var at = words.FirstOrDefault(w => w.Text == shape);
+                var span = at.Text == null ? words[0].Span : at.Span;
+                if (said.Add((span.Start, message)))
+                    _diagnostics.Warning(span, DiagnosticCodes.ChordShapeMismatch, message);
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            var words = entry.ShapeWords;
+            if (words.Count == 0 || ChordDiagramScores.BlockOf(entry)?.PartName is not { } rowName
+                || !ChordStructure.TryParseChordEntry(entry.SymbolText, out var chord))
+                continue;   // a Roman degree does not parse here: its key is the page's
+            Check(entry.SymbolText, chord, ChordDiagramScores.ShapesOf(entry).Shapes, words, inRow: true,
+                ChordDiagramScores.TuningsOfRowIn(root, rowName, fileScores));
+        }
+        foreach (var mark in root.KindSites(SyntaxKind.MusicMark).OfType<MusicMarkSyntax>())
+        {
+            if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } structure } annotation
+                || annotation.Shapes.IsEmpty)
+                continue;
+            var spans = ChordAnnotation.WordSpans(mark);
+            var args = mark.Arguments.Select(a => a.Text).ToList();
+            var words = new List<(string Text, TextSpan Span)>();
+            for (int i = 1; i < args.Count && i < spans.Count; i++)
+                words.Add((args[i], new TextSpan(spans[i].Start, spans[i].End - spans[i].Start)));
+            if (words.Count == 0)
+                continue;
+            Check(symbol, structure, annotation.Shapes, words, inRow: false,
+                ChordDiagramScores.TuningsOfMarkIn(mark, fileScores));
         }
     }
 }

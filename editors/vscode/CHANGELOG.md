@@ -47,7 +47,29 @@ All notable changes to the Lily# VS Code extension are documented here.
   (guitar: 320003)`. With a shape written, the hover shows the shape each tuning draws —
   `guitar: x3x546 (written)`, `ukulele: no diagram` — and where it stands in the editor's
   order. A written shape that cannot be used is a warning (LYS1038) that names the fix.
+- **A written shape that disagrees with its chord symbol is a warning (LYS1039)** — a note
+  outside the chord, or a missing 3rd, 7th, altered fifth or tension (the root and the perfect
+  fifth may go; the bass is not checked) — naming the chord the shape does play:
+  `'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or
+  another shape`. The usual shapes `Ctrl+Shift+Up` writes first all pass: nine of LilyPond's
+  that would warn (guitar D♯m `xx4341`, Faug, Baug; ukulele Bsus2; mandolin C♯aug and C♯dim7)
+  are replaced by the first shape of Lily#'s order.
+- **Frets 10–15: a shape writes a two-digit fret with a `-` on each side** —
+  `@chord(Cm xx-10-12-13-11)`, `Cm(8xx88-11)`, `@diagram(8-10-10-888)`; a `-` between every
+  string (`x-x-10-12-13-11`, the common chord-chart notation) reads the same. Between dashes,
+  exactly two digits are one fret, so frets 10, 9, 9 are `10-9-9`. A shape routes by its
+  string count (`8xx88-11` is six); one without `-` is one character per string as before.
+  `Ctrl+Shift+Up` / `Down` now walk into frets 10–15 too (Cm goes on past `8xx888` to
+  `8xx88-11`), writing a `-` only around the two-digit frets and only when a fret needs it;
+  the hover spells shapes the same way. A miswritten one (`x-x-16-…`, `x--3-…`, `10-99-…`,
+  `X-3-…`) is a warning that names the fix.
 - Chord-symbol completion inside `@chord(…)` works as before on the first word.
+- **`chord(C x32013)1` writes a shape's notes** on the staff (and the tab, with string
+  numbers), on the part's instrument. Hover it to see the notes it sounds —
+  `guitar: x32013 — C3 E3 G3 C4 G4`; `Ctrl+Shift+Up` / `Down` on it steps its shape (and
+  sounds it) as on an `@chord`, from `chord(C)` Up writes the usual shape, and Down stops
+  there; inside `chord(` the completion offers the chord symbols; `chord` is coloured as a
+  keyword. `chord(C)` with no shape warns (LYS1040).
 
 ### Editor
 
@@ -57,19 +79,26 @@ All notable changes to the Lily# VS Code extension are documented here.
   writes its usual shape (LilyPond's predefined one, else Lily#'s first) and the diagram
   appears (`@chord(Cm7)` → `@chord(Cm7 x35343)`, `G` → `G(320003)`), further Ups walk Lily#'s
   shapes, and Down back at the usual shape removes it again. With several shapes the one for
-  the chord's tuning steps. The status bar says `Cm7: shape 4 of 19 (…)`. On nothing
+  the chord's tuning steps. The status bar says `Cm7: shape 4 of 33 (…)`. On nothing
   steppable the keys do nothing on Windows and macOS, and are VS Code's *Add Cursor Above /
   Below* on Linux (their second binding there). One undo step for all cursors.
 - **Stretch shapes are left out by default** — a shape whose fretted frets lie five apart
   is hard to play. `lilysharp.chordShapes.includeStretch` (default off) lets the step walk
   them too; a stretch shape already written steps to the shapes that sort around it. The
-  hover says where a written shape stands, with both counts: `shape 1 of 19 (… with
+  hover says where a written shape stands, with both counts: `shape 1 of 33 (… with
   stretch)`. The usual shape of a chord LilyPond's table lacks is the first shape without a
   stretch, and a stretch shape only when it has no other.
 - **Audition as you edit** (with a preview open): the note, chord or `@chord` shape the
   caret lands on, a note as you type it, and the result of a step sound through the preview's
   synth, with the pitches the compiler plays. `lilysharp.audition.enabled` (default on)
   switches it off; `Alt+P` / `Alt+M` are unaffected.
+
+### Fixes
+
+- **An `@chord` on a rest or a spacer draws in the preview** (`r1@chord(C x32013)`,
+  `s1@chord(G)` drew nothing): the name at that moment and its diagram, as on a note. The step,
+  the hover and the audition work on it as on a note's. A bare `@chord` there warns — write
+  the name.
 
 ## 0.9.0
 

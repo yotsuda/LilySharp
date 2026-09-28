@@ -2687,7 +2687,30 @@ public sealed class MusicXmlExporter
         _justAutoClosedPickup = false;
 
         var pitches = chord.Pitches.ToList();
-        if (pitches.Count == 0 && !chord.Degrees.Any())
+        // chord(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —
+        // the page's reading), each with its <technical><string>. No usable shape: a rest-
+        // shaped silence keeps the time (the page's spacer, LYS1040).
+        var shapeNotes = chord.IsShapeChord
+            ? Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
+                _partTransposeSemitones, _keyFifths)
+            : [];
+        if (chord.IsShapeChord && shapeNotes.IsEmpty)
+        {
+            var spacerDuration = GetDuration(chord.Duration);
+            var (spacerType, spacerDots) = GetNoteType(spacerDuration);
+            _lastPitchedNote = null;
+            _lastEmittedNotes.Clear();
+            _currentMeasure.Notes.Add(new MusicXmlNote
+            {
+                IsRest = true,
+                Duration = FractionToTicks(spacerDuration),
+                Type = spacerType,
+                Dots = spacerDots,
+            });
+            MaybeClosePickup(spacerDuration);
+            return;
+        }
+        if (pitches.Count == 0 && !chord.Degrees.Any() && !chord.IsShapeChord)
         {
             // An EMPTY chord emits no note of its own, so nothing downstream will read
             // its post-events — but a marker written on it still belongs to the music
@@ -2805,6 +2828,45 @@ public sealed class MusicXmlExporter
             _chordMembers.Add(xmlNote);
         }
 
+        // chord(SYMBOL SHAPE): lowest sounding first, each note's string in <technical>.
+        foreach (var sn in Music.ShapeChords.Ascending(shapeNotes))
+        {
+            var (sstep, salter, soctave) = ApplyWrittenTransforms(sn.Step, sn.Alter, sn.Octave);
+            string stepName = "CDEFGAB"[sstep].ToString();
+            resolved.Add((stepName, salter, soctave));
+            var xmlNote = new MusicXmlNote
+            {
+                Step = stepName,
+                Alter = salter,
+                Octave = soctave,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+                IsChord = !isFirst,
+                ActualNotes = tupletActual,
+                NormalNotes = tupletNormal
+            };
+            xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
+            if (isFirst)
+            {
+                if (chord.Articulations.Any(a2 => a2 is ArticulationSyntax { Type: ArticulationType.None } na
+                        && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal)))
+                    _chordArpeggio = "arpeggiate";
+                else if (chord.Articulations.Any(a2 => a2 is MusicMarkSyntax mm
+                             && Semantics.AnnotationValues.IsArpeggioBracket(mm)))
+                    _chordArpeggio = "non-arpeggiate";
+                // Every note carries its own string: an outside \N has nothing left to pair with.
+                ProcessArticulations(
+                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote);
+                isFirst = false;
+            }
+            if (_chordArpeggio == "arpeggiate")
+                xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
+                    new System.Xml.Linq.XAttribute("number", 1)));
+            _currentMeasure.Notes.Add(xmlNote);
+            _chordMembers.Add(xmlNote);
+        }
+
         // Omitted root (<1 3 5> / <3 5>): anchor the degrees on the key's tonic
         // (degree 1 = tonic), resolved relatively like a written root.
         if (pitches.Count == 0 && chord.Degrees.Any())
@@ -2878,6 +2940,12 @@ public sealed class MusicXmlExporter
         bool anchored = !_octaveAbsolute && (pitches.Count > 0 || chord.Degrees.Any());
         _currentStep = anchored ? firstStep : frameStepIn;
         _currentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
+        // A chord from a shape hands on its lowest sounding note, as written (the page's rule).
+        if (Music.ShapeChords.Lowest(shapeNotes) is { } low && !_octaveAbsolute)
+        {
+            _currentStep = low.Step;
+            _currentOctave = low.Octave;
+        }
         MaybeClosePickup(duration);
     }
 
@@ -3046,6 +3114,20 @@ public sealed class MusicXmlExporter
             Type = type,
             Dots = dots
         };
+
+        // A chord symbol on a rest or a spacer (`r1@chord(C x32010)`, `s1@chord(G)`): a
+        // <harmony> before the rest, at its moment, with its <frame> — the page draws it there
+        // since 2026-09-28 (owner's decision: a chord symbol belongs to the beat). A spacer is
+        // written as a rest here, so the harmony stands before that. ONLY the chord family is
+        // read: this arm has never read a rest's other post-events (r@fermata, r@p — reported
+        // with the fix, not changed by it).
+        _noteFrameSpec = null;
+        foreach (var artic in rest.Articulations)
+            if (artic is MusicMarkSyntax fm && Semantics.AnnotationValues.Frame(fm) is { } spec)
+                _noteFrameSpec = spec;
+        foreach (var artic in rest.Articulations)
+            if (artic is MusicMarkSyntax mark && Semantics.ChordAnnotation.Of(mark) != null)
+                ProcessDirectionMark(mark);
 
         _currentMeasure.Notes.Add(xmlNote);
         MaybeClosePickup(duration);
@@ -3284,10 +3366,39 @@ public sealed class MusicXmlExporter
                         });
                         firstMember = false;
                     }
+                    // A chord(…) item in a grace body: its strings, as ProcessChord writes them.
+                    var graceShape = chord.IsShapeChord
+                        ? Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
+                            _partTransposeSemitones, _keyFifths)
+                        : [];
+                    foreach (var sn in Music.ShapeChords.Ascending(graceShape))
+                    {
+                        var (sstep, salter, soctave) = ApplyWrittenTransforms(sn.Step, sn.Alter, sn.Octave);
+                        var graceNote = new MusicXmlNote
+                        {
+                            IsGrace = true,
+                            IsSlash = isAcciaccatura,
+                            IsChord = !firstMember,
+                            Step = "CDEFGAB"[sstep].ToString(),
+                            Alter = salter,
+                            Octave = soctave,
+                            Type = chordType,
+                            ActualNotes = chordActual,
+                            NormalNotes = chordNormal
+                        };
+                        graceNote.Technicals.Add(new System.Xml.Linq.XElement("string", sn.StringNumber));
+                        _currentMeasure.Notes.Add(graceNote);
+                        firstMember = false;
+                    }
                     // The chord's anchor is the next note's frame — ProcessChord's rule.
                     bool anchored = !_octaveAbsolute && (chord.Pitches.Any() || chord.Degrees.Any());
                     _currentStep = anchored ? firstStep : frameStepIn;
                     _currentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
+                    if (Music.ShapeChords.Lowest(graceShape) is { } graceLow && !_octaveAbsolute)
+                    {
+                        _currentStep = graceLow.Step;
+                        _currentOctave = graceLow.Octave;
+                    }
                     break;
                 }
 

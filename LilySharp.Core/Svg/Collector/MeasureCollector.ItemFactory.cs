@@ -371,6 +371,26 @@ public sealed partial class MeasureCollector
     /// <see cref="VoiceWalkRecording.RepetitionOriginalReads"/>. Cleared per walk.</summary>
     private readonly List<(int Start, int End)> _repetitionOriginalReads = new();
 
+    /// <summary>The notes of a <c>chord(…)</c> item on the part being collected
+    /// (<see cref="Music.ShapeChords"/>): its tuning and sounding shift, and the key as
+    /// written here. Empty when no written shape fits — the walk then makes a spacer.</summary>
+    private ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
+        => Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift, WrittenKeySharps());
+
+    /// <summary>A <c>chord(…)</c> item with no usable shape as a SPACER of its written length —
+    /// the duration carry as a chord's (LYS1040 says why nothing is drawn).</summary>
+    private RestItem CreateShapeSpacerItem(ChordSyntax chord)
+    {
+        int noteValue = chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        int dots = chord.Duration?.DotCount ?? _defaultDots;
+        if (chord.Duration != null)
+        {
+            _defaultDuration = Fraction.FromNoteValue(noteValue);
+            _defaultDots = dots;
+        }
+        return new RestItem(Fraction.FromNoteValue(noteValue), dots, chord.SourceStart) { IsSpacer = true };
+    }
+
     private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0, MeasureBuilder? builder = null)
     {
         var notes = new List<ChordNoteInfo>();
@@ -540,6 +560,44 @@ public sealed partial class MeasureCollector
                 rp.DisplayOctave, NoteheadStyle.Default, PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
+        // chord(SYMBOL SHAPE): the shape's strings on the part's tuning, ABSOLUTE and each with
+        // its string number (Music.ShapeChords, owner's decisions 2026-09-28). The written pitch
+        // takes the path a note's does from here on (transpose, staff position, accidentals).
+        // The frame it hands on is its LOWEST sounding note — see the frame update below.
+        Music.ShapeNote? shapeLowest = null;
+        if (chord.IsShapeChord)
+        {
+            var shapeNotes = ShapeNotesOf(chord);
+            shapeLowest = Music.ShapeChords.Lowest(shapeNotes);
+            foreach (var sn in shapeNotes)
+            {
+                var rp = ResolveAbsolutePitch(sn.Step, sn.Alter, sn.Octave, chord.SourceStart, fixedOctave: true);
+                var (accidental, styleCourtesy) =
+                    GetDisplayAccidental(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+                int midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+                string? memberLineStart = null;
+                if (accidental != null && builder != null && builder.TiesInto(rp.StaffPosition, midi))
+                {
+                    MarkAccidentalTied(rp.DisplayStep, rp.DisplayOctave);
+                    memberLineStart = accidental;
+                    accidental = null;
+                }
+                notes.Add(new ChordNoteInfo(
+                    rp.StaffPosition, accidental, rp.StaffPosition is <= -6 or >= 6,
+                    IsCourtesy: styleCourtesy,
+                    StringNumber: sn.StringNumber,
+                    Midi: midi,
+                    SourcePosition: chord.SourceStart,
+                    HasLaissezVibrer: chordLv,
+                    LaissezVibrerUp: chordLvUp,
+                    HasRepeatTie: chordRt,
+                    RepeatTieUp: chordRtUp,
+                    LineStartAccidental: memberLineStart));
+                members.Add(new ResolvedChordMember(rp.StaffPosition, rp.DisplayStep, rp.DisplayAlteration,
+                    rp.DisplayOctave, NoteheadStyle.Default, midi));
+            }
+        }
+
         // String numbers OUTSIDE the brackets (<e dis'>\5\4) pair with the members
         // in written order: each member without its own \N takes the next
         // chord-level one, so <e dis'>\5\4 == <e\5 dis'\4> == <e dis'\4>\5
@@ -653,6 +711,13 @@ public sealed partial class MeasureCollector
         // incoming frame on, shifted by the marks.
         _octave.CurrentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
         _octave.LastPitchName = anchored ? firstPitchName : framePitchNameIn;
+        // A chord from a shape hands on its LOWEST sounding note, as written — as a chord
+        // hands on its anchor (owner's decision 2026-09-28); absolute mode keeps the frame.
+        if (shapeLowest is { } low && !_octave.OctaveAbsolute)
+        {
+            _octave.CurrentOctave = low.Octave;
+            _octave.LastPitchName = "cdefgab"[low.Step];
+        }
 
         // An arpeggio member has no written duration — the group forces the
         // equal-subdivision value/dots on it (and must not disturb the default carry).
@@ -1093,12 +1158,16 @@ public sealed partial class MeasureCollector
     /// Shared by ordinary pitches (after relative-octave resolution) and by
     /// scale-degree chord members (absolute from the start, anchored on the root).
     /// </summary>
-    private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position)
+    /// <param name="fixedOctave">The octave is not the writer's to convert — a <c>chord(…)</c>
+    /// item's note, where its string is — so the octave-mode converter neither records nor
+    /// forces it (it has no pitch text to rewrite).</param>
+    private ResolvedPitch ResolveAbsolutePitch(int step, int accidentalOffset, int actualOctave, int position,
+        bool fixedOctave = false)
     {
         // Every written pitch passes here once per time the walk reads it — a note, a chord
         // or arpeggio member, a scale degree — so this is the one place the octave-mode
         // converter records and forces the octave (OctaveOverride's remarks).
-        if (OctaveOverride is { } octaveOverride)
+        if (!fixedOctave && OctaveOverride is { } octaveOverride)
             actualOctave = octaveOverride(position, actualOctave);
 
         // (A phrase reference's interval argument shifted the body by scale steps in the

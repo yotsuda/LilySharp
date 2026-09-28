@@ -60,6 +60,19 @@ workflow attaches that section to the GitHub Release verbatim.
   carry several: `F(133211 2010)`; a tuning word binds a shape by name when two tunings have
   the same string count: `F(guitar 133211 guitardropd 333211)`. `@diagram(…)` is unchanged and
   always draws.
+- **Frets 10–15: a shape writes a two-digit fret with a `-` on each side** — `8xx88-11`,
+  `xx-10-12-13-11`, `8-10-10-888`: `@chord(Cm xx-10-12-13-11)`, `@chord(8-10-10-888)` (named
+  from its frets), `Cm(8xx88-11)`, `@diagram(x-15-13-12-13-x)`. A shape holding `-` is read in
+  segments (the parts between the dashes): exactly two digits are ONE fret, 10–15; any other
+  segment is one character per string — so the chord-chart spelling with a `-` between every
+  string reads the same (`x-x-10-12-13-11`, `F(1-3-3-2-1-1 2-0-1-0)`). Frets 10, 9, 9 are
+  `10-9-9`: a `99` segment is fret 99 and `09` no fret, and both warn naming the split. A shape
+  routes by its string count (`8xx88-11` is six); one without `-` is one character per string,
+  as before. Lower case only; a leading, trailing or doubled `-`, a fret above 15 and an
+  upper-case shape warn (LYS1038 / the case fix), naming the fix. The page, the twin (terse
+  markup and `FretBoards` tables) and MusicXML carry the two-digit frets. The editor's step now
+  walks shapes at frets 10–15 too (it used to skip them) and writes a `-` only around the
+  two-digit frets (and between two lone single digits: `10-9-9`), and only when a fret needs it.
 - **The diagram's tuning** is the score's `layout { chordDiagrams TUNING }` — a tuning word,
   the ones a tab's `tuning` takes (`guitar`, `ukulele`, `mandolin`, `guitardropd`, …) — else
   the instrument of the part when it is fretted (the part an `@chord`'s note is in; for a row,
@@ -77,12 +90,27 @@ workflow attaches that section to the GitHub Release verbatim.
   score (one-shape tables, so LilyPond draws exactly the page's shape) and the `@chord` markup
   for every name; MusicXML a `<frame>` for every drawn diagram.
 - **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
-  neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes. A
-  written shape is never checked against its symbol; a name with no shape is not warned about
-  (save in a `chordDiagrams … all` score, above).
+  neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes; a
+  symbol-less `@chord` whose shape is miswritten (`@chord(x3a010)`) now gets that warning rather
+  than "unknown annotation". A name with no shape is not warned about (save in a
+  `chordDiagrams … all` score, above).
+- **A written shape is checked against its symbol (LYS1039).** `@chord(C x02210)` warns
+  *'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210) or
+  another shape*; `@chord(C7 x3201x)` *lacks B♭ (the 7th) - fret B♭ or write another shape* —
+  one warning per shape listing every problem, in `@chord` and in rows, on the tuning each score
+  routes the shape to (a shape no score uses is not checked). Two rules: only chord tones (for
+  X/Y, plus Y), and every tone but the root and the perfect fifth (for X/Y, a Y that is
+  neither). The bass is not checked — an inversion is an ordinary shape. A symbol-less
+  `@chord(x32010)`, `@diagram` and a Roman degree in a row are not checked.
+- **Nine of LilyPond's predefined shapes are left out** of Lily#'s tables because they would
+  warn — seven sound a note outside their chord (guitar D♯m/E♭m `xx4341`, Faug `xx1443`, Baug
+  `x3200x`; ukulele Bsus2 `5122`; mandolin C♯aug/D♭aug `x630`), two lack the diminished fifth
+  (mandolin C♯dim7/D♭dim7 `3210`, only B♭ and E). Those chords take the first shape of Lily#'s
+  order instead (the ukulele's Bsus2 has no usual shape), on the page and in the `.ly` twin.
+  Every other predefined shape passes the check.
 - **The editor writes the shapes** (see the VS Code extension's changelog): `Ctrl+Shift+Up` on
   a chord adds its usual shape — LilyPond's predefined one (the guitar's 136 and 17 ninth
-  chords, the ukulele's 306, the mandolin's 204: C `x32010`, F `133211`, Cm7 `x35343`; ukulele
+  chords, the ukulele's 306, the mandolin's 204, less the nine above: C `x32010`, F `133211`, Cm7 `x35343`; ukulele
   C `0003`), else the first of Lily#'s order (at least three strings, chord tones only, the
   root lowest, a span of four frets, four fingers — *Chord Diagrams* in the syntax reference).
 - **A diagram reaching past the 4th fret is shifted as LilyPond shifts it.** `x35343` is drawn
@@ -95,6 +123,27 @@ workflow attaches that section to the GitHub Release verbatim.
   the name.
   MusicXML nests an `@chord`'s `<frame>` — with `<first-fret>` when shifted — in its
   `<harmony>` (MusicXML does not export `chords` rows yet). The MIDI is unchanged.
+- **`chord(SYMBOL SHAPE)` writes a shape's notes.** `chord(C x32013)1` is a chord of each
+  string's open pitch plus its fret — C3 E3 G3 C4 G4 on a guitar — on the tuning of the part
+  that plays it (its fretted instrument, else the guitar), every note with its string number so
+  a `tab` shows the shape. The pitches are absolute (octave marks after the `)` are an error,
+  LYS0035) and written the way the part writes a sounding pitch (a guitar part an octave up);
+  the note after it reads its lowest note. It takes a chord's tail (duration, dots, ties,
+  slurs, beams, scripts, dynamics, tuplets, grace). Chord tones are spelled from the symbol
+  (Cm7's E♭ and B♭). It draws no name itself; a bare `@chord` on it names the item and draws
+  its shape. The shape is required: `chord(C)` warns (LYS1040) and keeps its time as a spacer.
+  The MIDI plays it, MusicXML writes each note's `<string>`, the `.ly` twin writes the chord
+  out with `\5`…`\1`. `chord` is now reserved in music — a phrase cannot be named it (none in
+  the repo's or the Lab corpora's 1,206 books was).
+
+### Fixes
+
+- **An `@chord` on a rest or a spacer draws.** `r1@chord(C x32013)`, `s1@chord(G)` drew
+  nothing — neither the name nor the diagram, and said nothing — while `r1@diagram(…)` drew. A
+  chord symbol belongs to the beat, not to a note: on a rest, a spacer or a multi-measure rest
+  it now draws exactly as on a note (the name at that moment, the diagram under it by the usual
+  rules), in the `.ly` twin's chord names and as a MusicXML `<harmony>` before the rest. A bare
+  `@chord` there has no notes to name: it warns (LYS1020), naming the fix — write the name.
 
 ## 0.9.0
 

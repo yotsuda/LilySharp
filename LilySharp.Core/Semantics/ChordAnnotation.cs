@@ -36,6 +36,7 @@ namespace LilySharp.Core.Semantics;
 /// @chord(Cm7 x3x546)                   name + the shape its diagram draws
 /// @chord(F guitar 133211 ukulele 2010) shapes for two tunings, named (ChordShapes)
 /// @chord(x32010)                       a shape alone; the name is derived from its notes
+/// @chord(Cm xx-10-12-13-11)            frets 10-15: a '-' each side of a two-digit fret (2026-09-28)
 /// @chord                               bare: the name is derived from the notes it is on
 /// </code>
 /// Word 1 is a chord symbol (<see cref="ChordStructure.TryParseChordEntry"/>) or a shape (it
@@ -85,12 +86,35 @@ public sealed record ChordAnnotation
     /// <summary>A shape with no symbol: the name comes from the shape's notes.</summary>
     public bool NamesFromDiagram => Symbol == null && QuotedText == null && !Shapes.IsEmpty;
 
+    /// <summary>The words came from the <c>chord(…)</c> item a bare <c>@chord</c> is attached
+    /// to, not from the mark (<see cref="Of"/>): there is nothing of the mark's own to edit or
+    /// to point a diagnostic at.</summary>
+    public bool FromShapeItem { get; init; }
+
     /// <summary>Reads the words of <paramref name="mark"/>, or null when it is not an
     /// <c>@chord</c>.</summary>
+    /// <remarks>
+    /// ⚠️ A BARE <c>@chord</c> ON A <c>chord(…)</c> ITEM reads THE ITEM'S words (owner's decision
+    /// 2026-09-28, HANDOFF §2 K5): <c>chord(Cm7 x3x546)2@chord</c> names Cm7 and draws x3x546,
+    /// exactly as <c>@chord(Cm7 x3x546)</c> would — so every reader of an <c>@chord</c> (the page,
+    /// the MusicXML harmony, the twin, the hover) treats it alike with no second path. A symbol-
+    /// less item (<c>chord(x32010)</c>) names from its shape's notes, which are the item's notes.
+    /// The words' problems are left off (<see cref="FromShapeItem"/>): the item's own validator
+    /// reports them at the item's words, once.
+    /// </remarks>
     public static ChordAnnotation? Of(MusicMarkSyntax mark)
-        => string.Equals(mark.Name, "chord", System.StringComparison.Ordinal)
-            ? Parse(mark.Arguments.Select(a => a.Text).ToList())
-            : null;
+    {
+        if (!string.Equals(mark.Name, "chord", System.StringComparison.Ordinal))
+            return null;
+        var words = mark.Arguments;
+        if (words.IsEmpty && mark.Parent is ChordSyntax { IsShapeChord: true } item)
+        {
+            var itemWords = ShapeChords.Words(item);
+            if (!itemWords.IsBare)
+                return itemWords with { Problems = [], FromShapeItem = true };
+        }
+        return Parse(words.Select(a => a.Text).ToList());
+    }
 
     /// <summary>The source span of each argument word — the runs <see cref="MarkArgument"/>
     /// reads: adjacent tokens form one word, whitespace and ',' separate them. Index i is the
@@ -143,8 +167,10 @@ public sealed record ChordAnnotation
             };
         }
 
-        // A shape first: shapes alone, the name derived from their notes.
-        if (ChordShapes.StartsShape(first))
+        // A shape first: shapes alone, the name derived from their notes. A shape written in
+        // upper case (X32010, X-3-5-5-4-3 — no chord root is X or O) reads the same way, so
+        // ParseWords names the case fix rather than the symbol reader calling it unknown.
+        if (ChordShapes.StartsShape(first) || ChordShapes.CaseCorrected(first) != null)
         {
             var problems = ChordShapes.ParseWords(words, null, out var alone);
             return new ChordAnnotation { Shapes = alone, Problems = [.. problems] };
@@ -186,7 +212,7 @@ public sealed record ChordAnnotation
         if (diagramTuning is { } d && ChordShapes.WrittenFor(d, Shapes) is { } onDiagram)
             return (Tablature.Tunings.GetTuning(d), ChordShapes.Frets(onDiagram));
         foreach (var s in Shapes)
-            if (s.TuningName == null && s.Shape.Length == partTuning.Count)
+            if (s.TuningName == null && ChordShapes.StringCount(s.Shape) == partTuning.Count)
                 return (partTuning, ChordShapes.Frets(s.Shape));
         return null;
     }
@@ -280,7 +306,10 @@ public sealed record ChordAnnotation
         => $"'{w}' is not understood after quoted text - a quoted @chord prints its text and "
            + "takes no shape.";
 
+    // Owner (2026-09-28): the fix is either a name or the nameless diagram — the old
+    // "@chord(C …)" put a made-up C in front of any shape.
     internal static string NoDerivedName(string written)
         => $"the notes of '{written}' name no chord Lily# knows, so no chord name is drawn - "
-           + $"write the name first: @chord(C {written}).";
+           + $"write the chord name first (@chord(NAME {written})), or use @diagram({written}) "
+           + "for a diagram with no name.";
 }

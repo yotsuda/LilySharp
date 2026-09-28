@@ -42,6 +42,23 @@ public class FretFrameTests
         score main { staff gt }
         """;
 
+    /// <summary>
+    /// An open string is a RING — a stroked circle with no fill, as LilyPond's
+    /// fret-diagrams.scm draws it — not a black disc under a white one: the preview's dark
+    /// theme inverts the page (the white core turned black) and its caret highlight repaints
+    /// fills, so the old pair read as a black dot (owner report 2026-09-28). 320003 has three
+    /// open strings (twice), x32010 two.
+    /// </summary>
+    [Fact]
+    public void AnOpenString_IsAnUnfilledRing()
+    {
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(Book));
+        int rings = System.Text.RegularExpressions.Regex.Matches(svg, "<ellipse[^>]*fill=\"none\"[^>]*stroke=").Count;
+        Assert.Equal(3 + 3 + 2, rings);
+        // No white disc anywhere (the page's own background rect is white — not a circle).
+        Assert.DoesNotMatch("<circle[^>]*fill=\"#FFFFFF\"", svg);
+    }
+
     [Fact]
     public void AFrame_StandsAboveWhateverTheStem_AndBelowWithDown()
     {
@@ -121,6 +138,32 @@ public class FretFrameTests
             double gap = (f[i + 1].X + f[i + 1].Ink.Left) - (f[i].X + f[i].Ink.Right);
             Assert.True(gap >= 0.4 + 0.1 - 1e-9, $"frames {i}/{i + 1}: gap {gap}");
         }
+    }
+
+    /// <summary>A dash-separated shape (owner's decision 2026-09-28) draws its frets 10–15 on
+    /// the page: the grid shifted to the lowest fretted note with its "Nfr" label, four dots —
+    /// and the twin's terse markup writes the same frets.</summary>
+    [Fact]
+    public void ADashSeparatedFrame_DrawsFretsTenToFifteen_WithItsFretLabel()
+    {
+        const string high = """
+            octave absolute
+            part gt { clef treble }
+            section A { gt { c'2@diagram(x-15-13-12-13-x) c'2@diagram(x-x-10-12-13-11) | } }
+            form main { A }
+            score main { staff gt }
+            """;
+        var f = Frames(high);
+        Assert.Equal(new[] { "frame:xfdcdx", "frame:xxacdb" }, f.Select(a => a.Glyph));
+        Assert.Equal(12, FretFrameGeometry.BaseFret("xfdcdx"));
+        Assert.Equal(10, FretFrameGeometry.BaseFret("xxacdb"));
+        Assert.Equal(4, FretFrameGeometry.RowCount("xfdcdx"));   // frets 12-15
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(high));
+        Assert.Contains(">12fr<", svg);
+        Assert.Contains(">10fr<", svg);
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse(high));
+        Assert.Contains("\\fret-diagram-terse \"x;15;13;12;13;x;\"", ly);
+        Assert.Contains("\\fret-diagram-terse \"x;x;10;12;13;11;\"", ly);
     }
 
     [Fact]

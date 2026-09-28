@@ -174,6 +174,12 @@ internal sealed partial class Parser
             // (part names, section names).
             SyntaxKind.Identifier when Current.Text == "q" => ParseChordRepetition(),
 
+            // `chord(C x32013)1` — a chord FROM A SHAPE (owner's decision 2026-09-28). Claimed
+            // here like `q`, so `chord` is reserved in a music stream only (a phrase cannot
+            // be named it — RejectUnreachablePhraseName) and stays an ordinary word elsewhere;
+            // `@chord` is read after its '@' and never reaches this switch.
+            SyntaxKind.Identifier when Current.Text == ShapeChordWord => ParseShapeChord(),
+
             // Drum-kit vocabulary (bd, sn, hh, …) claims otherwise-invalid bare
             // identifiers; anything else keeps the deprecated-variable warning.
             SyntaxKind.Identifier => DrumNameRegistry.Contains(Current.Text)
@@ -691,6 +697,69 @@ internal sealed partial class Parser
         var articulations = ParsePostEvents();
 
         return new ChordGreen(openAngle, [.. pitches], closeAngle, [.. octaveMarks], duration, tremolo, articulations);
+    }
+
+    /// <summary>The word that opens a chord from a shape in a music stream.</summary>
+    internal const string ShapeChordWord = "chord";
+
+    /// <summary>
+    /// <c>chord(SYMBOL SHAPE)</c> + the tail a <c>&lt;…&gt;</c> chord takes — duration, dots,
+    /// tremolo, post-events (ties, slurs, beams, scripts, dynamics). The words between the
+    /// parentheses are kept as tokens and read later as an <c>@chord(…)</c> argument's are
+    /// (<see cref="ChordSyntax.ShapeArguments"/>, <see cref="Music.ShapeChords"/>).
+    /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-09-28 (HANDOFF §2 K5): the item makes NOTES only — the shape's
+    /// sounding strings on the part's tuning, absolute, each with its string number. Octave
+    /// marks after the <c>)</c> would move a chord that is where the strings are, so they are
+    /// refused (LYS0035) and ignored rather than read — the recommendation the owner left open,
+    /// taken: <c>chord(…)'</c> has no natural reading once the frame does not apply.
+    /// The '(' may follow after a space: <c>chord</c> alone means nothing in music, so there
+    /// is no slur to confuse it with (the glue rule of <c>@name(…)</c> guards a note's slur).
+    /// LILYSHARP-OWN: LilyPond writes such a chord out note by note.
+    /// </remarks>
+    private ChordGreen ParseShapeChord()
+    {
+        int wordStart = _textPosition + Current.LeadingTriviaWidth;
+        var word = Advance();
+        var tokens = new List<GreenNode?>();
+        SyntaxToken openParen, closeParen;
+        if (Check(SyntaxKind.OpenParen))
+        {
+            openParen = Advance();
+            // Stop at a ')' — and at a '}' or the end, so an unclosed item cannot swallow the
+            // rest of its block (Expect reports the missing ')').
+            while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+                tokens.Add(Advance());
+            closeParen = Expect(SyntaxKind.CloseParen);
+        }
+        else
+        {
+            // Zero-width stand-ins carry no trivia (Expect's own rule), so the round trip holds.
+            _diagnostics.Error(new TextSpan(wordStart, word.Text.Length), DiagnosticCodes.ExpectedToken,
+                "'chord' in music writes the notes of a chord shape: chord(C x32010)4 - a chord "
+                + "symbol and a shape in parentheses. (A phrase cannot be named 'chord'.)");
+            openParen = new SyntaxToken(SyntaxKind.OpenParen, "", null, null);
+            closeParen = new SyntaxToken(SyntaxKind.CloseParen, "", null, null);
+        }
+
+        var octaveMarks = new List<GreenNode?>();
+        int marksStart = _textPosition + Current.LeadingTriviaWidth;
+        while ((Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma)) && CurrentGluedToPrevious)
+            octaveMarks.Add(Advance());
+        if (octaveMarks.Count > 0)
+        {
+            string marks = string.Concat(octaveMarks.OfType<SyntaxToken>().Select(t => t.Text));
+            _diagnostics.Error(new TextSpan(marksStart, marks.Length), DiagnosticCodes.ShapeChordOctaveMarks,
+                $"'{marks}' cannot move a chord(...) item: its notes are where the shape's strings "
+                + "are, whatever the octave marks, the relative frame or 'octave absolute' say - "
+                + "remove the marks, and write a shape higher (or lower) on the neck to play it "
+                + "there. The marks are ignored.");
+        }
+        var duration = ParseOptionalDuration();
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
+        var articulations = ParsePostEvents();
+        return new ChordGreen(word, openParen, [.. tokens], closeParen, [.. octaveMarks], duration, tremolo, articulations);
     }
 
     /// <summary>Parse an arpeggio: <c>&lt;&lt; member member … &gt;&gt;</c> with an optional

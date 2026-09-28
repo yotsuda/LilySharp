@@ -530,7 +530,7 @@ internal sealed partial class Parser
     /// clef words, while a music stream turns only an IDENTIFIER into a reference — and
     /// claims <c>q</c> and the drum vocabulary out of that before it gets there
     /// (Parser.Music.cs, the music-item dispatch). So the unreachable names are exactly the
-    /// clef words plus <c>q</c> plus <see cref="DrumNameRegistry"/>. Both halves are read
+    /// clef words plus <c>q</c> and <c>chord</c> plus <see cref="DrumNameRegistry"/>. Both halves are read
     /// from their own source here rather than listed, so the set cannot drift from them.
     /// ⚠️ The two failure modes differ and the message says which: a clef word is a loud
     /// LYS0030 at the reference, a drum name silently rewrites the staff (measured
@@ -546,6 +546,10 @@ internal sealed partial class Parser
             text == "q"
                 ? "'q' repeats the previous chord in a music stream, so it can never be "
                   + "read as a phrase to play"
+            // Reserved 2026-09-28 with the chord-from-a-shape item (Parser.ParseShapeChord).
+            : text == ShapeChordWord
+                ? "'chord' opens a chord from a shape in a music stream (chord(C x32010)4), so "
+                  + "it can never be read as a phrase to play"
             : DrumNameRegistry.Contains(text)
                 ? $"'{text}' is a drum-kit name, so a music stream reads it as a drum note "
                   + "on ANY part — the staff would silently become a drum staff"

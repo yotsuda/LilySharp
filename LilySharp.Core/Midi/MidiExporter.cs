@@ -2351,6 +2351,33 @@ public sealed class MidiExporter
             resolved.Add((midiPitch, pitch.QuarterOffset, false));
         }
 
+        // chord(SYMBOL SHAPE): the shape's strings on the part's tuning, written as the part
+        // writes a sounding pitch and then played the way every written pitch is — the page's
+        // reading (MeasureCollector.CreateChordItem; Music.ShapeChords). No usable shape: the
+        // item sounds nothing and keeps its time (a spacer, LYS1040).
+        Music.ShapeNote? shapeLowest = null;
+        if (chord.IsShapeChord)
+        {
+            var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
+            var shapeNotes = Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
+                header.SoundingShiftSemitones, _keySharps);
+            shapeLowest = Music.ShapeChords.Lowest(shapeNotes);
+            foreach (var sn in shapeNotes)
+            {
+                int midiPitch = SoundKey(WrittenToMidi(sn.Step, sn.Alter, sn.Octave), chord.SourceStart);
+                int tiedInto = ExtendTied(track, tieTargets, midiPitch, durationTicks);
+                if (tiedInto >= 0)
+                    onset.Add(tiedInto);
+                else
+                {
+                    track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, startTick, soundTicks, chord.SourceStart,
+                        SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart));
+                    onset.Add(track.Notes.Count - 1);
+                }
+                resolved.Add((midiPitch, 0, false));
+            }
+        }
+
         // Omitted root (<1 3 5> / <3 5>): anchor the degrees on the key's tonic
         // (degree 1 = tonic), resolved relatively like a written root.
         if (pitches.Count == 0 && chord.Degrees.Any())
@@ -2401,6 +2428,12 @@ public sealed class MidiExporter
         bool anchored = !_octaveAbsolute && (pitches.Count > 0 || chord.Degrees.Any());
         _currentNoteName = anchored ? firstNoteName : frameNameIn;
         _currentOctave = anchored ? firstOctave : frameOctaveIn + chordOctave;
+        // A chord from a shape hands on its lowest sounding note, as written (the page's rule).
+        if (shapeLowest is { } low && !_octaveAbsolute)
+        {
+            _currentNoteName = low.Step;
+            _currentOctave = low.Octave;
+        }
 
         _currentTick = startTick + durationTicks;
     }
@@ -2761,10 +2794,30 @@ public sealed class MidiExporter
                             SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
                             IsGrace: true));
                     }
+                    // A chord(…) item in a grace body: its strings, as ProcessChord plays them.
+                    Music.ShapeNote? graceLowest = null;
+                    if (chord.IsShapeChord)
+                    {
+                        var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
+                        var shapeNotes = Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
+                            header.SoundingShiftSemitones, _keySharps);
+                        graceLowest = Music.ShapeChords.Lowest(shapeNotes);
+                        foreach (var sn in shapeNotes)
+                            track.Notes.Add(new MidiNote(track.Channel,
+                                SoundKey(WrittenToMidi(sn.Step, sn.Alter, sn.Octave), chord.SourceStart),
+                                _velocity, _currentTick, g, chord.SourceStart,
+                                SourceOrdinal: chordOrdinal, Timbre: _currentTimbre, Part: _currentPart,
+                                IsGrace: true));
+                    }
                     // The chord's anchor is the next note's frame — ProcessChord's rule.
                     bool anchored = !_octaveAbsolute && !isFirst;
                     _currentNoteName = anchored ? firstNoteName : frameNameIn;
                     _currentOctave = anchored ? firstOctave : frameOctaveIn + chord.ChordOctaveOffset;
+                    if (graceLowest is { } gl && !_octaveAbsolute)
+                    {
+                        _currentNoteName = gl.Step;
+                        _currentOctave = gl.Octave;
+                    }
                     _currentTick += g;
                     _pendingGraceSteal += g;
                     break;

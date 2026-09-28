@@ -2402,6 +2402,49 @@ internal static class ArticulationEngraver
     private static GlyphMetrics.BBox FrameBox(string? spec, ScoreTextMetrics fonts)
         => FretFrameGeometry.Box(spec, FretFrameGeometry.Scale(fonts));
 
+    /// <summary>
+    /// Whether this placed script is the chord diagram an <c>@chord</c> chose — the frame that
+    /// declares no outside-staff priority (<see cref="ArticulationSpacing.OutsideStaffPriority(ArticulationItem)"/>)
+    /// and stands under its name. An <c>@diagram</c>'s frame is a 450 mover and is not one.
+    /// </summary>
+    internal static bool IsDiagramUnderName(in ArticulationLayout a)
+        => a.OutsideStaffPriority is null && a.IsAbove
+           && a.Glyph.StartsWith("frame:", StringComparison.Ordinal);
+
+    /// <summary>
+    /// The Y-up (about the staff middle) at which a chord diagram under its name clears the
+    /// staff's ink below it — <paramref name="up"/>, the staff's inside-staff up-skyline in its
+    /// own frame (origin the middle line, <paramref name="magnification"/> applied) — by
+    /// TextScript's padding, or its script placement when that already clears.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
+    /// grid bottom stood 0.4 into the ♭ of its top note). The diagram declares no priority so the
+    /// chord-name line, which is placed over the staff's skyline, stands above it (the owner's
+    /// picture: LilyPond's ChordNames over a FretBoards line). But declaring none also made its
+    /// placement a Script's side-position (<see cref="CalculateYPosition"/>), whose support is the
+    /// note's own heads and stem: the ACCIDENTAL of the top note, a neighbouring column the wide
+    /// grid overhangs, a slur, a beam, another script — none of it was below the grid. In LilyPond
+    /// the FretBoards line is a VerticalAxisGroup of its own, stacked over the staff's WHOLE
+    /// skyline (lily/align-interface.cc get_skylines); a markup diagram is a TextScript mover at
+    /// 450 placed over the whole skyline too (lily/axis-group-interface.cc:952-972). Either way the
+    /// grid clears every inside-staff grob, which is what this gives it: the side-position stays
+    /// the floor (a quiet note keeps the diagram where it was), and the skyline under the grid's
+    /// width raises it.
+    /// LILYPOND-REF: scm/define-grobs.scm TextScript padding 0.3 (<see cref="ArticulationSpacing.VerticalPadding"/>).
+    /// </remarks>
+    internal static double DiagramYUpOverInk(in ArticulationLayout a, VerticalSkyline up,
+        double magnification)
+    {
+        double l = a.X + a.Ink.Left * magnification, r = a.X + a.Ink.Right * magnification;
+        double peak = up.MaxHeightInRange(l, r);
+        if (double.IsNegativeInfinity(peak))
+            return a.YUp;
+        double clear = peak / magnification
+            + ArticulationSpacing.VerticalPadding(ArticulationType.FretFrame) - a.Ink.Bottom;
+        return Math.Max(a.YUp, clear);
+    }
+
     /// <summary>Seed box for THIS articulation instance — frame boxes depend
     /// on the spec and the score's size, everything else on the type alone.</summary>
     private static GlyphMetrics.BBox GetSeedBBoxFor(

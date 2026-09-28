@@ -1224,7 +1224,8 @@ public sealed class LilyPondExporter
     {
         foreach (var item in music)
             foreach (var n in item.DescendantNodes().Prepend(item))
-                if (n is StringNumberAnnotationSyntax)
+                // A chord(…) item writes a string number on every note (EmitShapeChord).
+                if (n is StringNumberAnnotationSyntax or ChordSyntax { IsShapeChord: true })
                     return true;
         return false;
     }
@@ -2693,6 +2694,11 @@ public sealed class LilyPondExporter
         // body written inside a `~B'` play sounds where the play sounds.
         buf._sectionOctaveOffset = _sectionOctaveOffset;
         buf._drumMode = _drumMode;
+        // The part and the tree, for a chord(…) item in the body: its notes are on the PART's
+        // strings (EmitShapeChord). Measured 2026-09-28: without them a grace or tuplet body
+        // wrote the item on the guitar at sounding pitch, an octave under the page.
+        buf._currentPartName = _currentPartName;
+        buf._root = _root;
         buf._combinedPart = _combinedPart;
         buf._improvisationOpen = _improvisationOpen;
         buf._lysClef = _lysClef;
@@ -2813,6 +2819,8 @@ public sealed class LilyPondExporter
     /// </remarks>
     private string EmitChord(ChordSyntax c)
     {
+        if (c.IsShapeChord)
+            return EmitShapeChord(c);
         int off = c.ChordOctaveOffset;
         // The incoming Lily# frame, for a chord that anchors nothing (drums only): it hands
         // the frame on shifted only by `off` — see the update at the end.
@@ -3010,6 +3018,69 @@ public sealed class LilyPondExporter
         sb.Append(EmitEventDuration(c.Duration));
         var (prefix, suffix) = SplitAttachments(c.Articulations);
         return prefix + sb.ToString() + suffix + memberFrames;
+    }
+
+    /// <summary>
+    /// <c>chord(SYMBOL SHAPE)</c> written out: the shape's strings on the part's tuning
+    /// (<see cref="Music.ShapeChords"/>, the page's reading) as an ordinary LilyPond chord,
+    /// lowest sounding note first, each note with its string number — <c>&lt;c\5 e\4 g\3 c'\2
+    /// g'\1&gt;1</c> in absolute terms — and, with no usable shape, a spacer of the item's length
+    /// (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+    /// </summary>
+    /// <remarks>
+    /// The octave marks are computed like a degree's (<see cref="EmitChord"/>): in <c>\relative</c>
+    /// each note against the one before it, the first against LilyPond's frame; in
+    /// <c>\fixed</c> against the part's base. The notes are written lowest first so that
+    /// LilyPond's frame after the chord (its FIRST note) is the note Lily# hands on (its LOWEST,
+    /// owner's decision 2026-09-28) — the two frames agree again after the item.
+    /// </remarks>
+    private string EmitShapeChord(ChordSyntax c)
+    {
+        // The part's strings; outside a part (a phrase body, written once for every part that
+        // plays it) the one tuning the file's parts share, else the guitar.
+        var (tuning, shift) = (TuningType.Guitar, 0);
+        if (_currentPartName != null && _root != null)
+        {
+            var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(_root, _currentPartName));
+            (tuning, shift) = (Music.ShapeChords.TuningOf(header), header.SoundingShiftSemitones);
+        }
+        else if (Music.ShapeChords.PartTuningsOf(c) is [var only])
+            (tuning, shift) = (only.Tuning, only.SoundingShift);
+        else
+            _warnings.Add("a chord(...) item in a phrase played by parts of different tunings is "
+                + "written on the guitar's strings - check its notes by hand");
+        var notes = Music.ShapeChords.Notes(c, tuning, shift, _keySharps);
+        var (prefix, suffix) = SplitAttachments(c.Articulations);
+        if (notes.IsEmpty)
+            return prefix + "s" + EmitEventDuration(c.Duration) + suffix;
+        if (!_octaveAbsolute && !_frameTracked)
+            _warnings.Add(
+                "a chord(...) item follows a phrase reference, whose nested \\relative leaves the "
+                + "octave frame with a different answer on each side — check its octave by hand");
+
+        var sb = new StringBuilder("<");
+        int chainStep = _lyStep, chainOctave = _lyOctave;
+        int firstStep = -1, firstOctave = 0;
+        foreach (var n in Music.ShapeChords.Ascending(notes))
+        {
+            if (firstStep >= 0) sb.Append(' ');
+            int marks = _octaveAbsolute
+                ? n.Octave - _absoluteBaseOctave
+                : n.Octave - RelativeOctave.Resolve(chainStep, chainOctave, n.Step, 0);
+            sb.Append(SpellPitch(n.Step, n.Alter)).Append(OctaveMarks(marks))
+              .Append('\\').Append(n.StringNumber);
+            if (firstStep < 0) { firstStep = n.Step; firstOctave = n.Octave; }
+            chainStep = n.Step;
+            chainOctave = n.Octave;
+        }
+        if (!_octaveAbsolute)
+        {
+            _lysStep = _lyStep = firstStep;
+            _lysOctave = _lyOctave = firstOctave;
+        }
+        sb.Append('>');
+        sb.Append(EmitEventDuration(c.Duration));
+        return prefix + sb + suffix;
     }
 
     /// <summary>

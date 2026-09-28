@@ -256,6 +256,17 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         DiagnosticCodes.ChordNotRecognized,
                         "@chord can't name this chord repetition — the repeated chord's notes "
                         + "match no known chord quality; use the explicit form, e.g. @chord(Cmaj7).");
+                // A bare @chord on a rest or a spacer has no notes to name (owner's decision
+                // 2026-09-28): the page draws nothing there, so say so and name the fix.
+                // @chord() — the completion's leftover — is bare too (AnnotationValues.Chord
+                // answers "" for both).
+                else if (mark.Parent is RestSyntax restHost
+                         && AnnotationValues.Chord(mark, ChordSpelling.Default, out _) is { Text.Length: 0 })
+                    _diagnostics.Warning(
+                        mark.Span,
+                        DiagnosticCodes.ChordNotRecognized,
+                        $"@chord on a {(restHost.RestText == "s" ? "spacer" : "rest")} has no notes "
+                        + "to name a chord from, so nothing is drawn; write the name, e.g. @chord(C).");
                 else if (mark.Parent is ArpeggioSyntax arp && mark.MarkName == "chord" && !CanNameArpeggio(arp))
                     _diagnostics.Warning(
                         arp.Span,
@@ -315,6 +326,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             // …and a written-out diagram alone names its chord from its notes
             // (@chord(x32010)); what it cannot draw is ChordDiagramProblem's to say.
             || ChordAnnotation.Of(mark) is { NamesFromDiagram: true }
+            // …and one whose only shape is miswritten (@chord(x-x-16-12-13-11),
+            // @chord(X32010)) is a shape too: ChordDiagramProblem names the fix, where
+            // "unknown annotation" would send the reader to '@chord' (2026-09-28).
+            || ChordAnnotation.Of(mark) is { Symbol: null, QuotedText: null, IsBare: false, Problems.IsEmpty: false }
             || AnnotationValues.Rehearsal(mark, out _) is not null
             || AnnotationValues.Figures(mark) is not null)
             return true;

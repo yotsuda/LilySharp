@@ -262,6 +262,9 @@ public static class BareDurations
     /// member among the slots.</summary>
     private static bool ChordIsEmpty(Syntax.InternalSyntax.GreenNode chord)
     {
+        // chord(SYMBOL SHAPE) — ChordSyntax.IsShapeChord: never empty.
+        if (chord.GetSlot(0) is { Kind: SyntaxKind.Identifier })
+            return false;
         for (int i = 0; i < chord.SlotCount; i++)
             if (chord.GetSlot(i) is { Kind: SyntaxKind.Pitch or SyntaxKind.ChordDegree or SyntaxKind.DrumNote })
                 return false;

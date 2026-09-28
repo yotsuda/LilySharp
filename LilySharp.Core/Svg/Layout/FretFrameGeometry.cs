@@ -83,14 +83,14 @@ internal static class FretFrameGeometry
     /// (<c>x</c>), 0 open (<c>o</c> or <c>0</c>), else the fret.
     /// </summary>
     /// <remarks>
-    /// ⚠️ TWO ALPHABETS, ONE READER. A WRITTEN spec (<c>@diagram(x32010)</c>, the position
-    /// string of <c>@chord(x32010)</c>) is x / o / 0–9 only — the gate is
-    /// <c>Semantics.AnnotationValues.Frame</c>. A shape Lily#'s order picks (<c>Music.ChordVoicings</c>) can
-    /// stand at frets 10–15, which one character per string cannot spell in digits, so the
-    /// spec it hands the page carries them as <c>a</c>–<c>f</c> (<c>8aa988</c> is
+    /// ⚠️ TWO ALPHABETS, ONE READER. A shape at frets 10–15 — Lily#'s order's
+    /// (<c>Music.ChordVoicings</c>), or one WRITTEN dash-separated (<c>@diagram(x-x-10-12-13-11)</c>,
+    /// <c>Cm(8-10-10-8-8-8)</c>, owner's decision 2026-09-28; read by
+    /// <c>Music.ChordShapes.TryRead</c>) — cannot be spelled one digit per string, so the spec
+    /// handed to the page carries those frets as <c>a</c>–<c>f</c> (<c>8aa988</c> is
     /// 8-10-10-9-8-8; <c>Music.ChordVoicings.ToFrameSpec</c> writes it). A writer cannot type
-    /// those letters — the written gate refuses them — so the internal alphabet never meets a
-    /// user's spelling. The drawing, the reservation, the twin and MusicXML all read a fret
+    /// those letters — the written gate (<c>Semantics.AnnotationValues.Frame</c>) refuses them —
+    /// so the internal alphabet never meets a user's spelling. The drawing, the reservation, the twin and MusicXML all read a fret
     /// through here, so none of them can read the two alphabets differently.
     /// </remarks>
     internal static int FretAt(string spec, int i) => spec[i] switch

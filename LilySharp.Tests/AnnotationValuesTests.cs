@@ -198,10 +198,38 @@ public class AnnotationValuesTests
     public void AFrameArgument_IsItsPositionString(string music, string spec)
         => Assert.Equal(spec, AnnotationValues.Frame(Mark(music)));
 
+    /// <summary>
+    /// Owner's decision 2026-09-28: a DASH-SEPARATED shape, one item per string, writes frets
+    /// 10–15 — and the lexer's tokens (<c>x</c>, <c>-</c>, <c>10</c> …) glue into one argument.
+    /// The reader hands the page its spec: frets 10–15 as <c>a</c>–<c>f</c>, which every
+    /// consumer reads through <c>FretFrameGeometry.FretAt</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@diagram(x-x-10-12-13-11) |", "xxacdb")]
+    [InlineData("c4@diagram(8-10-10-8-8-8) |", "8aa888")]
+    [InlineData("c4@diagram(x-3-5-5-4-3) |", "x35543")]
+    [InlineData("c4@diagram(x-15-13-12-13-x) |", "xfdcdx")]
+    [InlineData("c4@diagram(o-o-o-3) |", "0003")]
+    [InlineData("c4@diagram(x-x-10-12-13-11).down |", "xxacdb")]
+    // The compact form (owner's decision 2026-09-28): '-' only around the two-digit frets.
+    [InlineData("c4@diagram(xx-10-12-13-11) |", "xxacdb")]
+    [InlineData("c4@diagram(8xx88-11) |", "8xx88b")]
+    [InlineData("c4@diagram(8-10-10-888) |", "8aa888")]
+    [InlineData("c4@diagram(10-9-9-988) |", "a99988")]
+    public void ADashSeparatedFrameArgument_IsItsSpec(string music, string spec)
+        => Assert.Equal(spec, AnnotationValues.Frame(Mark(music)));
+
     [Theory]
     [InlineData("c4@diagram(032) |")]          // too few strings
     [InlineData("c4@diagram(032010789) |")]    // too many
     [InlineData("c4@diagram(zzzz) |")]         // not fret / open / muted
+    [InlineData("c4@diagram(x-x-16-12-13-11) |")]   // beyond fret 15
+    [InlineData("c4@diagram(x--3-5-5-4-3) |")]      // an empty item
+    [InlineData("c4@diagram(x-3-5-5-4-3-) |")]      // a trailing dash
+    [InlineData("c4@diagram(x-3-5) |")]             // three items
+    [InlineData("c4@diagram(X-3-5-5-4-3) |")]       // upper case
+    [InlineData("c4@diagram(10-99-88) |")]          // '99' is one fret, 99 (10-9-9-88 meant)
+    [InlineData("c4@diagram(xx-10-12-13-01) |")]    // '01' is one fret, and none
     public void SomethingElse_IsNoFrame(string music)
         => Assert.Null(AnnotationValues.Frame(Mark(music)));
 

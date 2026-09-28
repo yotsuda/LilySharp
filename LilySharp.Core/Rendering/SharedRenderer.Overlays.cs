@@ -285,8 +285,15 @@ internal static partial class SharedRenderer
             }
             else if (written == 0)
             {
-                gc.DrawCircle(sx, hy, mark * 0.85, Color.Black);
-                gc.DrawCircle(sx, hy, mark * 0.85 - 1.4 * thin, Color.White);
+                // An open string is a RING: a stroked circle with no fill, as LilyPond draws it
+                // (fret-diagrams.scm draw-open-string: make-circle-stencil … #f = not filled).
+                // It used to be a black disc under a white one, which read as a black dot in the
+                // preview — its dark theme inverts the page (white core → black) and its caret
+                // highlight repaints every fill (owner report 2026-09-28). Same outer edge as
+                // before: the stroke's centre line is half a stroke inside it.
+                double ring = 1.4 * thin;
+                double r = mark * 0.85 - ring / 2;
+                gc.DrawEllipse(sx, hy, r, r, fill: null, stroke: Color.Black, strokeWidth: ring);
             }
             else
             {

@@ -63,10 +63,14 @@ public class ChordVoicingTests
         return s;
     }
 
-    /// <summary>"x35343" or "8-10-10-9-8-8" → frets, LOW string first, −1 muted.</summary>
+    /// <summary>"x35343", "8-10-10-9-8-8" or the writer's compact "8-10-10-988" → frets, LOW
+    /// string first, −1 muted (the shape reader, <see cref="ChordShapes.TryRead"/>: the step's
+    /// spellings are compact since 2026-09-28).</summary>
     internal static int[] Shape(string s)
-        => (s.Contains('-') ? s.Split('-') : s.Select(c => c.ToString()).ToArray())
-            .Select(t => t == "x" ? -1 : t == "o" ? 0 : int.Parse(t)).ToArray();
+    {
+        Assert.True(ChordShapes.TryRead(s, out var frets, out var problem), problem);
+        return [.. frets];
+    }
 
     private static int IndexOf(ChordVoicings.VoicingSet set, string shape)
     {

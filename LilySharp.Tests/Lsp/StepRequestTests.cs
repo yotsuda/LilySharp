@@ -124,6 +124,59 @@ public class StepRequestTests
         return [.. order.Select(o => LilySharp.Core.Music.ChordVoicings.Spell(o))];
     }
 
+    /// <summary>
+    /// Cm's normal-rule bases on the guitar, PINNED (owner's decision 2026-09-28): position →
+    /// fingers → lexicographic among the maximal shapes, frets 0–15 — the Python prototype's
+    /// 29 (scratchpad cm_list.py), frets 10–15 written in the compact form (a '-' on each side
+    /// of each two-digit fret; two lone single digits between dashes split: xx-10-8-8-11,
+    /// owner's decision 2026-09-28). The step walks them after the drawn default (LilyPond's
+    /// predefined x35543, itself the 4th base).
+    /// </summary>
+    private static readonly string[] CmBases =
+    [
+        "x31013", "x31043", "x35043", "x35543", "8x58x8", "8x588x", "8650x8", "86508x", "8655x8",
+        "86558x", "8658xx", "86x088", "86x8x8", "86x88x", "xx-10-888", "xx-10-8-8-11",
+        "8-10-10-888", "8xx888", "8xx88-11", "8x-10-0-8-11", "8x-10-8x8",
+        "8-10-x08-11", "8-10-x8x8", "8-10-10-0x-11", "8-10-10-8-8-11",
+        "xx-10-12-13-11", "x-15-13-12-x-15", "x-15-13-12-13-x", "x-15-13-x-13-15",
+    ];
+
+    [Fact]
+    public void CmsOrder_IsPinned_FretsTenToFifteenIncluded()
+    {
+        var chord = LilySharp.Core.Semantics.ChordAnnotation.Parse(["Cm"]).Structure!;
+        var bases = LilySharp.Core.Music.ChordVoicings.For(LilySharp.Core.Tablature.Tunings.Guitar, chord,
+            includeStretch: false).Bases.Select(b => LilySharp.Core.Music.ChordVoicings.Spell(b));
+        Assert.Equal(CmBases, bases);
+        var order = Order("Cm", includeStretch: false);
+        Assert.Equal(29, order.Count);
+        Assert.Equal(["x35543", "x31013", "x31043", "x35043", "8x58x8"], order.Take(5));
+        Assert.Equal(["8-10-10-8-8-11", "xx-10-12-13-11", "x-15-13-12-x-15", "x-15-13-12-13-x", "x-15-13-x-13-15"],
+            order.TakeLast(5));
+    }
+
+    /// <summary>The step walks on past 8xx888 into frets 10–15 and writes them in the compact
+    /// form (owner's decision 2026-09-28); back below fret 10 it writes one character per string
+    /// again. A written dash shape — compact or full-dash — steps from its place like any other
+    /// (a row entry too).</summary>
+    [Fact]
+    public void TheStep_WalksIntoFretsTenToFifteen_AndSpellsEachInItsForm()
+    {
+        var (response, after) = Step(Guitar("c'1@chord(Cm 8xx888‸)"), +1);
+        Assert.Equal(Guitar("c'1@chord(Cm 8xx88-11)"), after);
+        Assert.Equal("Cm: shape 19 of 29 (8xx88-11)", response.Message);
+        Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Down("c'1@chord(Cm 8xx88-11‸)", Guitar));
+        // The full-dash spelling of the same shape steps from the same place.
+        Assert.Equal(Guitar("c'1@chord(Cm 8xx888)"), Down("c'1@chord(Cm 8-x-x-8-8-11‸)", Guitar));
+        Assert.Equal(Guitar("c'1@chord(Cm x-15-13-12-13-x)"), Up("c'1@chord(Cm x-15-13-12-x-15‸)", Guitar));
+        Assert.Equal(Guitar("c'1@chord(Cm xx-10-12-13-11)"), Up("c'1@chord(Cm 8-10-10-8-8-11‸)", Guitar));
+        Assert.Equal(Guitar("c'1@chord(Cm 8-10-10-888)"), Up("c'1@chord(Cm xx-10-8-8-11‸)", Guitar));
+        // A written x-3-5-5-4-3 is the default x35543: Up writes the next one-character shape.
+        Assert.Equal(Guitar("c'1@chord(Cm x31013)"), Up("c'1@chord(Cm x-3-5-5-4-3‸)", Guitar));
+        Assert.Equal(Row("Cm(8xx88-11) |"), Up("Cm(8xx888‸) |", Row));
+        Assert.Equal(Row("Cm(8xx888) |"), Down("Cm(8xx88-11‸) |", Row));
+    }
+
     [Fact]
     public void TheOrder_StartsWithTheDrawnDefault_ThenLilySharpsShapes()
     {
@@ -186,9 +239,10 @@ public class StepRequestTests
     private static string AllGuitar(string music) => "layout { chordDiagrams all }\n" + Guitar(music);
 
     /// <summary>In an <c>all</c> score the name alone shows the default, so Up writes the shape
-    /// AFTER it and Down does nothing — at the name, and at a written default.</summary>
+    /// AFTER it and Down on the name does nothing; Down at a WRITTEN default removes it, as in
+    /// any score (owner, 2026-09-28: <c>@chord(Cm7 x35343)</c> + Down = <c>@chord(Cm7)</c>).</summary>
     [Fact]
-    public void InAnAllScore_UpFromTheNameWritesTheNextShape_AndDownAtTheDefaultDoesNothing()
+    public void InAnAllScore_UpFromTheNameWritesTheNextShape_AndDownAtAWrittenDefaultRemovesIt()
     {
         var order = Cm7Order();
         var (up, after) = Step(AllGuitar("c'1@chord(Cm7‸)"), +1);
@@ -201,11 +255,10 @@ public class StepRequestTests
         Assert.Equal(AllGuitar("c'1@chord(Cm7)"), same);
         Assert.Contains("this score draws every chord, so it shows the default (guitar: x35343)", down.Message);
 
-        var (atDefault, kept) = Step(AllGuitar("c'1@chord(Cm7 x35343‸)"), -1);
+        var (atDefault, removed) = Step(AllGuitar("c'1@chord(Cm7 x35343‸)"), -1);
         Assert.False(atDefault.Fallback);
-        Assert.Empty(atDefault.Edits);
-        Assert.Equal(AllGuitar("c'1@chord(Cm7 x35343)"), kept);
-        Assert.Contains("Down does nothing", atDefault.Message);
+        Assert.Equal(AllGuitar("c'1@chord(Cm7)"), removed);
+        Assert.Contains("shape removed", atDefault.Message);
 
         // From the next shape Down still writes the default, and Up walks on as elsewhere.
         Assert.Equal(AllGuitar("c'1@chord(Cm7 x35343)"), Down($"c'1@chord(Cm7 {order[1]}‸)", AllGuitar));
@@ -215,7 +268,7 @@ public class StepRequestTests
         static string AllRow(string row) => "layout { chordDiagrams all }\n" + Row(row);
         var gOrder = Order("G", includeStretch: false);
         Assert.Equal(AllRow($"G({gOrder[1]}) | C |"), Up("G‸ | C |", AllRow));
-        Assert.Empty(Step(AllRow("G(320003‸) | C |"), -1).Response.Edits);
+        Assert.Equal(AllRow("G | C |"), Down("G(320003‸) | C |", AllRow));
     }
 
     // ---------------------------------------------------------------- chords-row entries
@@ -306,9 +359,10 @@ public class StepRequestTests
         Assert.Equal("x35343", off[0]);
         Assert.Equal("x35343", on[0]);
         Assert.DoesNotContain(off, s => LilySharp.Core.Music.ChordVoicings.IsStretch(ChordVoicingTests.Shape(s)));
-        // The README's example, "Cm7: shape 4 of 19 (x3x546)": the normal rule's 33 bases less
-        // the 14 reaching fret 10 (the step cannot write them), the default among them.
-        Assert.Equal(19, off.Count);
+        // The README's example, "Cm7: shape 4 of 33 (x3x546)": the normal rule's 33 bases, the
+        // default among them — the 14 reaching fret 10 included since 2026-09-28 (the shape
+        // grammar writes them dash-separated; until then the step left them out, 19).
+        Assert.Equal(33, off.Count);
         Assert.Equal(3, off.IndexOf("x3x546"));
         Assert.Contains("8xx546", on);                    // frets 4 to 8
         Assert.DoesNotContain("8xx546", off);
@@ -444,6 +498,21 @@ public class StepRequestTests
         // A name with no shape written sounds the shape drawn for it (K3: every step sounds).
         Assert.Equal(Cm7X35343, AuditionAt(Guitar("c'1@chord(Cm7‸)")).Pitches);
         Assert.Equal(-1, AuditionAt(Guitar("c'1@chord(\"N.C.\"‸)")).Key);   // no shape, no sound
+    }
+
+    /// <summary>An <c>@chord</c> on a rest or a spacer (owner's decision 2026-09-28: a chord symbol
+    /// belongs to the beat) steps and sounds as on a note — the rest itself still does not step.</summary>
+    [Fact]
+    public void AnAtChordOnARestOrASpacer_StepsAndSounds()
+    {
+        var order = Cm7Order();
+        Assert.Equal(Guitar("r1@chord(Cm7 x35343)"), Up("r1@chord(Cm7‸)", Guitar));
+        Assert.Equal(Guitar($"s1@chord(Cm7 {order[1]})"), Up("s1@chord(Cm7 x35343‸)", Guitar));
+        Assert.Equal(Guitar("s1@chord(Cm7)"), Down("s1@chord(Cm7 x35343‸)", Guitar));
+        var voicing = AuditionAt(Guitar("r1@chord(Cm7 ‸x35343)"));
+        Assert.Equal("voicing", voicing.Kind);
+        Assert.Equal(Cm7X35343, voicing.Pitches);
+        Assert.Equal(Cm7X35343, AuditionAt(Guitar("s1@chord(Cm7‸)")).Pitches);
     }
 
     [Fact]

@@ -57,13 +57,15 @@ public class ChordDiagramTests
     }
 
     /// <summary>What LilyPond 2.26.0 stored, per table — the guitar's 136 plus its 17 ninth
-    /// chords, the ukulele's 306, the mandolin's 204.</summary>
+    /// chords, the ukulele's 306, the mandolin's 204 — less the nine entries Lily# leaves out
+    /// (LILYSHARP-OWN 2026-09-28: they sound a note outside their chord or lack a required tone
+    /// — guitar 4, ukulele 1, mandolin 4; <c>ChordShapeCheckTests</c> pins which).</summary>
     [Fact]
-    public void TheTables_HoldWhatLilyPondStored()
+    public void TheTables_HoldWhatLilyPondStored_LessTheLeftOut()
     {
-        Assert.Equal(153, PredefinedFretboards.Count(PredefinedFretboards.Table.Guitar));
-        Assert.Equal(306, PredefinedFretboards.Count(PredefinedFretboards.Table.Ukulele));
-        Assert.Equal(204, PredefinedFretboards.Count(PredefinedFretboards.Table.Mandolin));
+        Assert.Equal(153 - 4, PredefinedFretboards.Count(PredefinedFretboards.Table.Guitar));
+        Assert.Equal(306 - 1, PredefinedFretboards.Count(PredefinedFretboards.Table.Ukulele));
+        Assert.Equal(204 - 4, PredefinedFretboards.Count(PredefinedFretboards.Table.Mandolin));
     }
 
     [Theory]
@@ -248,8 +250,141 @@ public class ChordDiagramTests
     [InlineData("C x32010 x35553", "two shapes of 6 strings")]
     [InlineData("C guitar x32010 guitar x35553", "is given two shapes")]
     [InlineData("C x3a010", "is not a shape")]
+    [InlineData("Cm x-x-16-12-13-11", "fret 16 is beyond the highest a shape can write (15)")]
+    [InlineData("Cm x--3-5-5-4-3", "has an empty item ('--')")]
+    [InlineData("Cm x-3-5-5-4-3-", "write 'x-3-5-5-4-3'")]
+    [InlineData("Cm -x-3-5-5-4-3", "write 'x-3-5-5-4-3'")]
+    [InlineData("Cm x-3-5", "has 3 item(s), which no tuning has strings for")]
+    [InlineData("Cm guitar x-3-5-5", "has 4 item(s) but 'guitar' has 6 strings")]
+    [InlineData("Cm x-3-5-5-4-q", "'q' is not a fret")]
+    [InlineData("Cm X-3-5-5-4-3", "Values are case-sensitive: write 'x-3-5-5-4-3'")]
+    [InlineData("X-3-5-5-4-3", "Values are case-sensitive: write 'x-3-5-5-4-3'")]
+    [InlineData("C X32010", "Values are case-sensitive: write 'x32010'")]
+    [InlineData("Cm x35543 x-3-5-5-4-3", "two shapes of 6 strings")]
+    // The compact form's two-digit segments (owner's decision 2026-09-28): one fret, always.
+    [InlineData("Cm x-09-10-12-11", "a two-digit segment is one fret, and '09' is none - separate single frets with '-': write 'x-0-9-10-12-11'")]
+    [InlineData("C 10-99-9-9", "fret 99 is beyond the highest a shape can write (15)")]
+    [InlineData("C 10-99-9-9", "for two strings write '10-9-9-9-9'")]
+    [InlineData("Cm x-10-12", "has 3 item(s), which no tuning has strings for")]
+    [InlineData("Cm guitar 8xx8-11", "has 5 item(s) but 'guitar' has 6 strings")]
+    [InlineData("Cm 8xq88-11", "'q' is not a fret")]
     public void EachProblem_NamesTheFix(string argument, string fix)
         => Assert.Contains(fix, Words(argument).Problems[0].Message);
+
+    /// <summary>Owner's decision 2026-09-28: a shape holding '-' is DASH-SEPARATED, one item per
+    /// string (<c>x</c>, <c>o</c> or a fret 0–15) — the only way to write frets 10–15; it routes
+    /// by its ITEM count, and a shape without '-' is one character per string as before.</summary>
+    [Fact]
+    public void ADashSeparatedShape_ReadsItsItems_AndRoutesByTheirCount()
+    {
+        var cm = Words("Cm x-x-10-12-13-11");
+        Assert.Empty(cm.Problems);
+        Assert.Equal(new WrittenShape(null, "x-x-10-12-13-11"), Assert.Single(cm.Shapes));
+        Assert.Equal(new[] { -1, -1, 10, 12, 13, 11 }, ChordShapes.Frets("x-x-10-12-13-11"));
+        Assert.Equal(new[] { 0, 0, 0, 3 }, ChordShapes.Frets("o-0-o-3"));
+        Assert.Equal(6, ChordShapes.StringCount("x-x-10-12-13-11"));
+        Assert.Equal(6, ChordShapes.StringCount("x32010"));
+        Assert.True(Words("x-x-10-12-13-11").NamesFromDiagram);
+        var two = Words("F guitar 1-3-3-2-1-1 ukulele 2010");
+        Assert.Empty(two.Problems);
+        Assert.Equal(new[] { new WrittenShape("guitar", "1-3-3-2-1-1"), new WrittenShape("ukulele", "2010") }, two.Shapes);
+        // Routing counts items: six go to the guitar, four to the ukulele.
+        Assert.Equal("8-10-10-888", Chosen("Cm", TuningType.Guitar, "8-10-10-8-8-8", "0-3-3-3"));
+        Assert.Equal("0333", Chosen("Cm", TuningType.Ukulele, "8-10-10-8-8-8", "0-3-3-3"));
+        // The writer spells one character per string whenever every fret is 9 or less.
+        Assert.Equal("x35543", Chosen("Cm", TuningType.Guitar, "x-3-5-5-4-3"));
+        Assert.Equal("8xaa88", ChordShapes.Drawn(TuningType.Guitar, [new WrittenShape(null, "8-x-10-10-8-8")])!.FrameSpec);
+    }
+
+    /// <summary>
+    /// Owner's decision 2026-09-28, the COMPACT form: the word split on '-' into SEGMENTS; a
+    /// segment of exactly two digits is ONE fret (10–15), any other one character per string.
+    /// The full-dash words read exactly as before; the item count is the string count.
+    /// </summary>
+    [Theory]
+    [InlineData("8xx88-11", "8 x x 8 8 11")]
+    [InlineData("xx-10-12-13-11", "x x 10 12 13 11")]
+    [InlineData("8-10-10-888", "8 10 10 8 8 8")]
+    [InlineData("x-15-13-12-13-x", "x 15 13 12 13 x")]
+    [InlineData("x-x-10-12-13-11", "x x 10 12 13 11")]
+    [InlineData("8-x-x-8-8-11", "8 x x 8 8 11")]
+    [InlineData("10-9-9-988", "10 9 9 9 8 8")]
+    [InlineData("o0-12-x3", "0 0 12 x 3")]
+    [InlineData("x-3-5-5-4-3", "x 3 5 5 4 3")]
+    [InlineData("x35-543", "x 3 5 5 4 3")]
+    [InlineData("x32010", "x 3 2 0 1 0")]
+    public void ACompactShape_ReadsByItsSegments(string written, string frets)
+    {
+        var want = frets.Split(' ').Select(f => f == "x" ? -1 : int.Parse(f)).ToArray();
+        Assert.True(ChordShapes.TryRead(written, out var read, out var problem), problem);
+        Assert.Equal(want, read);
+        Assert.Equal(want, ChordShapes.Frets(written));
+        Assert.Equal(want.Length, ChordShapes.StringCount(written));
+    }
+
+    /// <summary>A two-digit segment is always one fret: <c>00</c>–<c>09</c> and 16–99 are errors
+    /// that name the split (the pitfall: frets 10, 9, 9 are <c>10-9-9</c>, never <c>10-99</c>).</summary>
+    [Theory]
+    [InlineData("10-99-988", "write '10-9-9-988'")]
+    [InlineData("8xx88-09", "'09' is none - separate single frets with '-': write '8xx88-0-9'")]
+    [InlineData("00-10-12-13", "write '0-0-10-12-13'")]
+    [InlineData("x-x-16-12-13-11", "fret 16 is beyond the highest")]
+    [InlineData("xx--10-12-13-11", "has an empty item")]
+    [InlineData("xx-10-12-13-11-", "write 'xx-10-12-13-11'")]
+    public void ATwoDigitSegment_IsOneFret_ElseAnErrorNamingTheFix(string written, string fix)
+    {
+        Assert.False(ChordShapes.TryRead(written, out _, out var problem));
+        Assert.Contains(fix, problem);
+    }
+
+    /// <summary>The writer (owner's decision 2026-09-28): one character per string when every
+    /// fret is 9 or less; else the compact form — single characters run together, a '-' on each
+    /// side of every two-digit fret, none at the ends, and two lone single digits between dashes
+    /// split (they would read as one fret).</summary>
+    [Theory]
+    [InlineData("8-x-x-8-8-11", "8xx88-11")]
+    [InlineData("x-x-10-12-13-11", "xx-10-12-13-11")]
+    [InlineData("8-10-10-8-8-8", "8-10-10-888")]
+    [InlineData("x-15-13-12-13-x", "x-15-13-12-13-x")]
+    [InlineData("10-9-9", "10-9-9")]
+    [InlineData("12-1-1-12", "12-1-1-12")]
+    [InlineData("x-x-10-8-8-11", "xx-10-8-8-11")]
+    [InlineData("8-x-10-0-8-11", "8x-10-0-8-11")]
+    [InlineData("x-3-5-5-4-3", "x35543")]
+    public void TheWriter_SpellsTheCompactForm(string frets, string spelled)
+        => Assert.Equal(spelled, ChordVoicings.Spell(ChordShapes.Frets(frets)));
+
+    /// <summary>What the writer spells always reads back to the same frets: every base of
+    /// several chords (both rules), and random frets 0–15 / muted on 4–7 strings.</summary>
+    [Fact]
+    public void TheWritersSpelling_AlwaysReadsBack()
+    {
+        void RoundTrip(IReadOnlyList<int> frets)
+        {
+            string spelled = ChordVoicings.Spell(frets);
+            Assert.True(ChordShapes.TryRead(spelled, out var read, out var problem),
+                $"{string.Join(" ", frets)} spelled '{spelled}': {problem}");
+            Assert.True(read.SequenceEqual(frets), $"{string.Join(" ", frets)} spelled '{spelled}' reads {string.Join(" ", read)}");
+            Assert.Equal(frets.Count, ChordShapes.StringCount(spelled));
+        }
+        foreach (var symbol in new[] { "C", "Cm", "Cm7", "D", "G7", "F#m7-5", "C9", "Bbmaj7", "E" })
+            foreach (bool stretch in new[] { false, true })
+                foreach (var b in ChordVoicings.For(Tunings.Guitar, Parse(symbol), includeStretch: stretch).Bases)
+                    RoundTrip(b);
+        var random = new Random(20260928);
+        for (int n = 0; n < 20000; n++)
+        {
+            var frets = new int[random.Next(4, 8)];
+            for (int i = 0; i < frets.Length; i++)
+                frets[i] = random.Next(-1, 16);
+            RoundTrip(frets);
+        }
+        // Dense two-digit neighbourhoods the random walk may miss.
+        RoundTrip([10, 9, 9, 10]);
+        RoundTrip([12, 1, 1, 12]);
+        RoundTrip([1, 1, 10, 1, 1, 1, 1]);
+        RoundTrip([0, 9, 15, 0, 0]);
+    }
 
     // ================================================================ the layout key
 
@@ -388,6 +523,85 @@ public class ChordDiagramTests
         Assert.Equal(new string?[] { "2013", "5553", null, null }, RowFrames(Song(Ukulele, row)));
     }
 
+    /// <summary>A row group's dash-separated shapes (owner's decision 2026-09-28): the tokens
+    /// glue into one word, the chord symbol before the '(' keeps its own '-' (a quality's
+    /// <c>-5</c>), and the page's spec carries frets 10–15 as a–f.</summary>
+    [Fact]
+    public void TheRowForms_ReadDashSeparatedShapes()
+    {
+        const string row = "Cm(8-10-10-8-8-8) | F(1-3-3-2-1-1 2-0-1-0) | Cm7-5(x-3-4-3-4-x) | Cm(x-x-10-12-13-11) |";
+        var tree = SyntaxTree.Parse(Song(Guitar, row));
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+        Assert.Empty(Warnings(Song(Guitar, row)));
+        var entries = tree.GetRoot().DescendantNodes().OfType<ChordEntrySyntax>().ToList();
+        Assert.Equal("Cm7-5", entries[2].SymbolText);
+        Assert.Equal(new[] { "1-3-3-2-1-1", "2-0-1-0" }, entries[1].ShapeWords.Select(w => w.Text));
+        Assert.Equal(tree.Text, tree.GetRoot().ToFullString());
+        Assert.Equal(new string?[] { "8aa888", "133211", "x3434x", "xxacdb" }, RowFrames(Song(Guitar, row)));
+        Assert.Equal(new string?[] { null, "2010", null, null }, RowFrames(Song(Ukulele, row)));
+        // The compact form (owner's decision 2026-09-28) reads the same in a row.
+        const string compact = "Cm(8-10-10-888) | Cm(8xx88-11 0-3-3-3) | Cm(xx-10-12-13-11) |";
+        Assert.Empty(Warnings(Song(Guitar, compact)));
+        Assert.Equal(new string?[] { "8aa888", "8xx88b", "xxacdb" }, RowFrames(Song(Guitar, compact)));
+        Assert.Equal(new string?[] { null, "0333", null }, RowFrames(Song(Ukulele, compact)));
+    }
+
+    /// <summary>The same in an <c>@chord</c> (with a name, and alone — the name derived from
+    /// the frets) and a nameless <c>@diagram</c>; the errors name the fix.</summary>
+    [Fact]
+    public void AnAtChordAndADiagram_ReadDashSeparatedShapes()
+    {
+        const string book = Guitar + """
+            octave absolute
+            part gt { clef treble }
+            section A { gt { c'4@chord(Cm x-x-10-12-13-11) c'4@chord(8-10-10-8-8-8) c'4@diagram(x-15-13-12-13-x) c'4@diagram(x-x-10-12-13-11).down | } }
+            form main { A }
+            score main { staff gt }
+            """;
+        var tree = SyntaxTree.Parse(book);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+        Assert.Empty(Warnings(book));
+        var lay = Laid(book);
+        Assert.Equal(new[] { "frame:xxacdb", "frame:8aa888", "frame:xfdcdx", "frame:xxacdb" },
+            lay.ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
+        Assert.Equal(new[] { "Cm", "Cm" }, lay.ChordNameLayouts.OrderBy(c => c.X).Select(c => c.ChordText));
+        // The compact form (owner's decision 2026-09-28): the same frames.
+        string compact = book.Replace("x-x-10-12-13-11", "xx-10-12-13-11").Replace("8-10-10-8-8-8", "8-10-10-888");
+        Assert.Empty(Warnings(compact));
+        Assert.Equal(new[] { "frame:xxacdb", "frame:8aa888", "frame:xfdcdx", "frame:xxacdb" },
+            Laid(compact).ArticulationLayouts.OrderBy(a => a.X).Select(a => a.Glyph));
+    }
+
+    [Theory]
+    [InlineData("c'1@chord(Cm x-x-16-12-13-11) |", "fret 16 is beyond")]
+    [InlineData("c'1@chord(Cm x--3-5-5-4-3) |", "has an empty item")]
+    [InlineData("c'1@chord(Cm x-3-5) |", "has 3 item(s)")]
+    [InlineData("c'1@chord(Cm X-3-5-5-4-3) |", "Values are case-sensitive: write 'x-3-5-5-4-3'")]
+    [InlineData("c'1@chord(X-3-5-5-4-3) |", "Values are case-sensitive: write 'x-3-5-5-4-3'")]
+    [InlineData("c'1@chord(x-x-16-12-13-11) |", "fret 16 is beyond")]
+    [InlineData("c'1@diagram(X-3-5-5-4-3) |", "Values are case-sensitive: write '@diagram(x-3-5-5-4-3)'")]
+    [InlineData("c'1@chord(Cm 10-99-988) |", "write '10-9-9-988'")]
+    [InlineData("c'1@chord(Cm 8xx88-01) |", "write '8xx88-0-1'")]
+    public void AMiswrittenDashShape_IsWarnedWithTheFix(string music, string fix)
+    {
+        string book = $$"""
+            octave absolute
+            part gt { clef treble }
+            section A { gt { {{music}} } }
+            form main { A }
+            score main { staff gt }
+            """;
+        Assert.Contains(fix, Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(book)), d =>
+            d.Code == DiagnosticCodes.ChordDiagramNotDrawn || d.Code == DiagnosticCodes.UnknownAnnotation).Message);
+    }
+
+    [Theory]
+    [InlineData("Cm(x-x-16-12-13-11) |", "fret 16 is beyond")]
+    [InlineData("Cm(x--3-5-5-4-3) |", "has an empty item")]
+    [InlineData("Cm(X-3-5-5-4-3) |", "Values are case-sensitive: write 'x-3-5-5-4-3'")]
+    public void AMiswrittenDashShapeInARow_IsWarnedWithTheFix(string row, string fix)
+        => Assert.Contains(fix, Assert.Single(Warnings(Song(Guitar, row))).Message);
+
     [Fact]
     public void TheRowGrammar_StillReadsHoldsRestsAndDegrees()
     {
@@ -507,6 +721,138 @@ public class ChordDiagramTests
         Assert.True(lift >= height, $"the names rose {lift:0.00}, a diagram is {height:0.00} tall");
     }
 
+    // ------------------------------------------------ an @chord's diagram over its staff's ink
+
+    /// <summary>The owner's "Shape chords" book (2026-09-28): the Cm diagram's grid stood in the
+    /// ♭ of its top note.</summary>
+    private const string ShapeChords = """
+        title "Shape chords"
+        part gt { instrument guitar }
+        section A { gt {
+          chord(C x32013)2@chord e | chord(Am x02210)2@chord a | chord(G 320003)1@chord | chord(Cm xx-10-12-13-11)2@chord d2 |
+        } }
+        form main { A }
+        score main { staff gt  tab gt }
+        """;
+
+    /// <summary>One treble staff (<c>octave absolute</c>) with <paramref name="music"/>.</summary>
+    private static string OnAStaff(string music) => $$"""
+        octave absolute
+        part gt { clef treble }
+        section A { gt { {{music}} } }
+        form main { A }
+        score main { staff gt }
+        """;
+
+    /// <summary>
+    /// For every diagram an <c>@chord</c> drew on the top staff: how far its grid bottom stands
+    /// over the staff's ink under the grid's width — the staff's inside profile (heads,
+    /// accidentals, stems, ledgers, beams, flags, the other scripts, fingerings, slurs, ties,
+    /// tuplet brackets) rebuilt here from the drawn layout, the diagrams left out. Staff-middle
+    /// frame; a one-system book whose top staff is the system's first (its spanners' frame).
+    /// </summary>
+    private static List<(string Glyph, double Clearance)> DiagramClearances(string book)
+    {
+        var tree = SyntaxTree.Parse(book);
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var lay = new LayoutEngine().Layout(score);
+        Assert.Single(lay.Systems);
+        var system = lay.Systems[0];
+        var staff = score.StaffGroups[0].Staves[0];
+        var scripts = lay.ArticulationLayouts.Where(a => a.StaffIndex == 0).ToList();
+        var diagrams = scripts.Where(a => ArticulationEngraver.IsDiagramUnderName(a)).ToList();
+        Assert.NotEmpty(diagrams);
+        var up = new SkylineBuilder(4.0, score.TextMetrics).BuildInsideStaffSkylines(
+            staff, system.Measures,
+            articulationLayouts: [.. scripts.Where(a => !ArticulationEngraver.IsDiagramUnderName(a))],
+            tupletBrackets: [.. lay.TupletBracketLayouts.Where(t => t.StaffIndex == 0)],
+            slurs: [.. lay.SlurLayouts.Where(s => s.StaffIndex == 0)],
+            ties: [.. lay.TieLayouts.Where(t => t.StaffIndex == 0)],
+            beams: [.. lay.BeamLayouts.Where(b => b.StaffIndex == 0)],
+            systemLeft: system.Indent,
+            fingerings: [.. lay.FingeringLayouts.Where(f => f.StaffIndex == 0)]).Up;
+        return [.. diagrams.Select(d => (d.Glyph,
+            d.YUp + d.Ink.Bottom - up.MaxHeightInRange(d.X + d.Ink.Left, d.X + d.Ink.Right)))];
+    }
+
+    /// <summary>
+    /// ★ An <c>@chord</c>'s diagram clears EVERYTHING on the staff under its grid by TextScript's
+    /// padding 0.3 — not only its own note's heads and stem (2026-09-28: the Cm grid of the
+    /// owner's book stood 0.4 into its top note's ♭). A high note with an accidental, a high
+    /// chord either way up, a high neighbour under the wide grid, a script over the note, a
+    /// slur over a high run, a beam.
+    /// </summary>
+    [Theory]
+    [InlineData("shape-chords")]
+    [InlineData("ais''1@chord(A# x13331) |")]
+    [InlineData("<ees'' g'' bes''>2@chord(Eb x68886) r2 |")]
+    [InlineData("<g' b' d'' g''>2@chord(G 320003) r2 |")]
+    [InlineData("c'4@chord(C x32010) a''4 bes''2 |")]
+    [InlineData("a''2@accent@chord(Am x02210) b''2@marcato@chord(Bm x24432) |")]
+    [InlineData("c''4(@chord(C x32010) e'' g'' c''') |")]
+    [InlineData("c''8@chord(C x32010) e'' g'' c''' e''' c''' g'' e'' |")]
+    public void AnAtChordsDiagram_ClearsTheStaffsInkUnderIt(string music)
+    {
+        string book = music == "shape-chords" ? ShapeChords : OnAStaff(music);
+        foreach (var (glyph, clearance) in DiagramClearances(book))
+            Assert.True(clearance >= 0.3 - 1e-6,
+                $"{music}: {glyph}'s grid bottom stands {clearance:0.000} over the staff's ink (0.3 wanted)");
+    }
+
+    /// <summary>
+    /// A ROW's diagrams over a high passage (a ♯ over ledger lines, a ♭ chord, a beamed run, a
+    /// high neighbour, a note far over the staff) clear the staff's ink under each grid: the row
+    /// is its own line, stacked over the staff's whole skyline with its diagrams in its own
+    /// (ChordNameEngraver's row skyline) — measured 2026-09-28 when the @chord diagram was
+    /// found in a ♭; this pins that the row never was.
+    /// </summary>
+    [Fact]
+    public void RowDiagrams_OverAHighPassage_ClearTheStaffsInk()
+    {
+        string book = Song(Guitar,
+            "Bb(x13331) | Cm(x35543) C(x32010) | C(x32010) F(133211) | Am(x02210) |",
+            "ais''1 | <ees'' g'' c'''>2 c''8 e'' g'' c''' | c'4 a''4 bes''2 | e'''1 |");
+        var tree = SyntaxTree.Parse(book);
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var lay = new LayoutEngine().Layout(score);
+        Assert.Single(lay.Systems);
+        var system = lay.Systems[0];
+        const int staffIndex = 1;   // `chords prog  staff gt`: the row is 0
+        var staff = score.StaffGroups.SelectMany(g => g.Staves).ElementAt(staffIndex);
+        var up = new SkylineBuilder(4.0, score.TextMetrics).BuildInsideStaffSkylines(
+            staff, system.Measures,
+            articulationLayouts: [.. lay.ArticulationLayouts.Where(a => a.StaffIndex == staffIndex)],
+            beams: [.. lay.BeamLayouts.Where(b => b.StaffIndex == staffIndex)],
+            systemLeft: system.Indent).Up;
+        double middle = LayoutUtilities.StaffMiddleUpInSystem(system, staffIndex);
+        var names = lay.ChordNameLayouts.Where(n => n.FrameSpec != null).ToList();
+        Assert.Equal(6, names.Count);
+        foreach (var n in names)
+        {
+            var (l, r, b, _) = ChordNameEngraver.PlacedDiagram(Fonts, n.FrameSpec!, n.X, n.YUp + n.FrameBottom);
+            double clearance = b - (middle + up.MaxHeightInRange(l, r));
+            Assert.True(clearance > 0.3, $"{n.ChordText}: the row's grid stands {clearance:0.000} over the staff's ink");
+        }
+    }
+
+    /// <summary>...and the name still stands over its diagram: on the page every stroke of the
+    /// diagram is below the baseline of the name the same <c>@chord</c> printed.</summary>
+    [Theory]
+    [InlineData("ais''1@chord(A# x13331) |", "@chord(A#")]
+    [InlineData("c'4@chord(C x32010) a''4 bes''2 |", "@chord(C")]
+    [InlineData("<ees'' g'' bes''>2@chord(Eb x68886) r2 |", "@chord(Eb")]
+    public void AnAtChordsDiagram_OverHighNotes_StaysUnderItsName(string music, string mark)
+    {
+        string book = OnAStaff(music);
+        string svg = SvgGenerator.Generate(SyntaxTree.Parse(book));
+        int pos = book.IndexOf(mark, StringComparison.Ordinal);
+        var ys = Regex.Matches(svg, $"<(?:line|circle)[^>]*data-pos=\"{pos}\"[^>]*>")
+            .SelectMany(m => Regex.Matches(m.Value, " (?:y1|y2|cy)=\"([-0-9.]+)\"").Select(g => Num(g.Groups[1].Value)))
+            .ToList();
+        Assert.NotEmpty(ys);
+        Assert.True(ys.Min() > NameBaseline(svg, pos), $"{music}: diagram top {ys.Min():0.00} over its name");
+    }
+
     /// <summary>The page's staff top line (device Y): the highest long horizontal line.</summary>
     private static double StaffTop(string svg)
         => Regex.Matches(svg, "<line x1=\"([-0-9.]+)\" y1=\"([-0-9.]+)\" x2=\"([-0-9.]+)\" y2=\"([-0-9.]+)\"")
@@ -608,7 +954,11 @@ public class ChordDiagramTests
             """;
         Assert.Contains("no tuning has strings for", Assert.Single(Warnings(Book("", "c'1@chord(C 7) |"))).Message);
         Assert.Contains("'mute' is neither", Assert.Single(Warnings(Book("", "c'1@chord(D mute 5) |"))).Message);
-        Assert.Contains("name no chord Lily# knows", Assert.Single(Warnings(Book("", "c'1@chord(x0x00x) |"))).Message);
+        var unnamed = Assert.Single(Warnings(Book("", "c'1@chord(x0x00x) |"))).Message;
+        Assert.Contains("name no chord Lily# knows", unnamed);
+        // The two fixes (owner, 2026-09-28): a name, or the nameless diagram.
+        Assert.Contains("@chord(NAME x0x00x)", unnamed);
+        Assert.Contains("@diagram(x0x00x)", unnamed);
         Assert.Empty(Warnings(Book(Guitar, "c'4@chord(Cm7) c'4@chord(Cm7 x3x546) c'4@chord(x32010) <c' e' g'>4@chord |")));
         // No shape written: nothing drawn, nothing said.
         Assert.Empty(Warnings(Book(Ukulele, "c'2@chord(C13) c'2@chord(C13) |")));
@@ -700,6 +1050,37 @@ public class ChordDiagramTests
         Assert.Contains("<harmony>", Xml(Book(NoDiagrams)));
         // On a ukulele part the four-string shape.
         Assert.Contains("<frame-strings>4</frame-strings>", Xml(Book("", "C x32010 0003", "instrument ukulele")));
+    }
+
+    /// <summary>A dash-separated shape at frets 12–15 (owner's decision 2026-09-28) reaches the
+    /// twin — the terse markup, the FretBoards table — and MusicXML with its two-digit frets.</summary>
+    [Fact]
+    public void TheExporters_WriteADashShapesHighFrets()
+    {
+        string Book(string music) => Guitar + $$"""
+            octave absolute
+            part gt { clef treble }
+            section A { gt { {{music}} } }
+            form main { A }
+            score main { staff gt }
+            """;
+        string ly = Twin(Book("c'2@chord(Cm x-15-13-12-13-x) c'2@diagram(x-x-10-12-13-11) |"));
+        Assert.Contains("\\fret-diagram-terse \"x;15;13;12;13;x;\"", ly);
+        Assert.Contains("\\fret-diagram-terse \"x;x;10;12;13;11;\"", ly);
+        string row = Twin(Song(Guitar, "Cm(x-15-13-12-13-x) |", "c'1 |"));
+        Assert.Contains("\\storePredefinedDiagram #lysFretsA \\chordmode { c:m } #guitar-tuning \"x;15;13;12;13;x;\"", row);
+
+        var harmony = Regex.Match(Xml(Book("c'1@chord(Cm x-15-13-12-13-x) |")), "<harmony>.*?</harmony>",
+            RegexOptions.Singleline).Value;
+        Assert.Contains("<first-fret>12</first-fret>", harmony);
+        Assert.Equal(new[] { "15", "13", "12", "13" },
+            Regex.Matches(harmony, "<fret>(\\d+)</fret>").Select(m => m.Groups[1].Value));
+        // A @diagram nests in the harmony of a name on the same note (MusicXML's frame is a
+        // harmony child).
+        var diagram = Xml(Book("c'1@chord(Cm)@diagram(x-x-10-12-13-11) |"));
+        Assert.Contains("<first-fret>10</first-fret>", diagram);
+        Assert.Equal(new[] { "10", "12", "13", "11" },
+            Regex.Matches(diagram, "<fret>(\\d+)</fret>").Select(m => m.Groups[1].Value));
     }
 
     // ================================================================ the editor
@@ -800,6 +1181,25 @@ public class ChordDiagramTests
             HoverAt(doc, "@chord(Cm7 x"));
         Assert.Contains($"guitar: `8xx546` (written) — stretch shape {wide.IndexOf("8xx546") + 1} of {wide.Count}",
             HoverAt(doc, "@chord(Cm7 8"));
+    }
+
+    /// <summary>The hover spells a written shape the way the step writes it (2026-09-28): one
+    /// character per string when every fret is 9 or less, else the compact form — a '-' on each
+    /// side of each two-digit fret (owner's decision 2026-09-28), whichever way it was written.</summary>
+    [Fact]
+    public void Hover_SpellsADashShapeInTheWritersForm()
+    {
+        string doc = """
+            layout gtr { chordDiagrams guitar }
+            octave absolute
+            part gt { clef treble }
+            section A { gt { c'2@chord(Cm x-3-5-5-4-3) c'4@chord(Cm 8-x-x-8-8-11) c'4@chord(Cm x-x-10-12-13-11) | } }
+            form main { A }
+            score g { layout gtr  staff gt }
+            """;
+        Assert.Contains("guitar: `x35543` (written) — shape 1 of 29", HoverAt(doc, "@chord(Cm x-3"));
+        Assert.Contains("guitar: `8xx88-11` (written) — shape 19 of 29", HoverAt(doc, "@chord(Cm 8"));
+        Assert.Contains("guitar: `xx-10-12-13-11` (written) — shape 26 of 29", HoverAt(doc, "@chord(Cm x-x"));
     }
 
     [Fact]
@@ -1031,5 +1431,120 @@ public class ChordDiagramTests
         // A chord with no shape there says how to give it one.
         string uke = UkuleleAll + doc[All.Length..].Replace("@chord(G)", "@chord(C13)");
         Assert.Contains("ukulele: no diagram - no shape on ukulele", HoverAt(uke, "@chord(C13)"));
+    }
+
+    // ================================================================ on a rest or a spacer
+
+    /// <summary>The owner's report 2026-09-28, verbatim: <c>r1@chord(C x32013)</c>,
+    /// <c>s1@chord(G)</c> drew nothing — not even the name — while <c>@diagram</c> drew.</summary>
+    private static string RestBook(string layout, string music =
+        "c'1@chord(C x32013) | r1@chord(C x32013) | s1@chord(C x32013) | r1@chord(G) | s1@chord(G) | r1@diagram(x32010) | s1@diagram(x32010) |")
+        => layout + $$"""
+        title "Rests and spacers"
+        part gt { clef treble }
+        section A { gt {
+          {{music}}
+        } }
+        form main { A }
+        score main { staff gt }
+        """;
+
+    /// <summary>Owner's decision 2026-09-28: a chord symbol belongs to the BEAT, not to a note —
+    /// on a rest or a spacer it draws exactly what it draws on a note: the name at that moment,
+    /// and the diagram under it by the usual rules (written shape; the layout's tuning, else the
+    /// part's, else the guitar; <c>none</c> draws none).</summary>
+    [Fact]
+    public void OnARestOrASpacer_AnAtChordDrawsItsNameAndItsDiagram()
+    {
+        foreach (string layout in new[] { "", Guitar })
+        {
+            var names = Collected(RestBook(layout)).ChordNames.OrderBy(c => c.MeasureIndex).ToList();
+            Assert.Equal(new[] { "C", "C", "C", "G", "G" }, names.Select(c => c.ChordText));
+            Assert.Equal(new[] { 0, 1, 2, 3, 4 }, names.Select(c => c.MeasureIndex));
+            var lay = Laid(RestBook(layout));
+            Assert.Equal(5, lay.ChordNameLayouts.Count());
+            Assert.Equal(3, lay.ArticulationLayouts.Count(a => a.Glyph == "frame:x32013"));
+            Assert.Equal(2, lay.ArticulationLayouts.Count(a => a.Glyph == "frame:x32010"));
+        }
+        // chordDiagrams none: the names still print; only the @diagrams draw.
+        var plain = Laid(RestBook(NoDiagrams));
+        Assert.Equal(5, plain.ChordNameLayouts.Count());
+        Assert.All(plain.ArticulationLayouts, a => Assert.Equal("frame:x32010", a.Glyph));
+        // chordDiagrams all: a name alone draws the default, on a rest as on a note.
+        Assert.Equal(new[] { "frame:320003" },
+            Laid(RestBook(All, "r1@chord(G) |")).ArticulationLayouts.Select(a => a.Glyph));
+        // A symbol-less shape on a spacer names its chord from the frets, as on a note.
+        Assert.Equal("C", Assert.Single(Collected(RestBook("", "s1@chord(x32010) |")).ChordNames).ChordText);
+        // A multi-measure rest, a tuplet's rest and a pitched rest carry one too.
+        Assert.Equal(new[] { "C", "F", "G" },
+            Collected(RestBook("", "R1*2@chord(C) | tuplet 3/2 { r2@chord(F) c'2 c'2 } | c'1@rest@chord(G) |"))
+                .ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.ChordText));
+        Assert.Empty(SemanticValidation.Run(SyntaxTree.Parse(RestBook(""))).Where(d => d.Severity != LilySharp.Core.Syntax.DiagnosticSeverity.Info));
+    }
+
+    /// <summary>A bare <c>@chord</c> on a rest or a spacer has no notes to name: it draws nothing
+    /// and says so, naming the fix (write the name).</summary>
+    [Theory]
+    [InlineData("r1@chord |", "rest")]
+    [InlineData("s1@chord |", "spacer")]
+    [InlineData("s1@chord() |", "spacer")]
+    public void ABareAtChordOnARest_Warns_AndDrawsNothing(string music, string what)
+    {
+        string book = RestBook("", music);
+        var only = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(book)), d => d.Code == DiagnosticCodes.ChordNotRecognized);
+        Assert.Contains($"@chord on a {what} has no notes", only.Message);
+        Assert.Contains("write the name, e.g. @chord(C)", only.Message);
+        Assert.Empty(Collected(book).ChordNames);
+        // A named one is not warned.
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(RestBook("", "r1@chord(C) |"))),
+            d => d.Code == DiagnosticCodes.ChordNotRecognized);
+    }
+
+    /// <summary>The validators that read an <c>@chord</c> read it on a rest the same (LYS1039, LYS1038).</summary>
+    [Fact]
+    public void OnARest_TheShapeWarningsApply()
+    {
+        var mismatch = Assert.Single(SemanticValidation.Run(SyntaxTree.Parse(RestBook("", "r1@chord(Cm x32010) |"))),
+            d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+        Assert.Contains("x32010", mismatch.Message);
+        Assert.Contains("'mute' is neither", Assert.Single(Warnings(RestBook("", "s1@chord(D mute 5) |"))).Message);
+    }
+
+    [Fact]
+    public void OnARestOrASpacer_TheTwinWritesTheNameAtItsMomentAndTheDiagram()
+    {
+        string ly = Twin(RestBook(""));
+        string inline = Regex.Match(ly, @"gtInlineChords = \\chordmode \{[^}]*\}").Value;
+        Assert.Equal(new[] { "c1", "c1", "c1", "g1", "g1" },
+            Regex.Matches(inline, @"\b[cg]1\b").Select(m => m.Value));
+        Assert.Equal(3, Regex.Matches(ly, "\\\\fret-diagram-terse \"x;3;2;o;1;3;\"").Count);
+        // A half-bar spacer's name stands at its moment: the silent half first.
+        string half = Regex.Match(Twin(RestBook("", "c'2 s2@chord(G) |")), @"gtInlineChords = \\chordmode \{[^}]*\}").Value;
+        Assert.Matches(@"s2\s+g2", half);
+    }
+
+    [Fact]
+    public void OnARestOrASpacer_MusicXmlWritesAHarmonyBeforeIt()
+    {
+        string xml = Xml(RestBook(""));
+        Assert.Equal(5, Regex.Matches(xml, "<harmony>").Count);
+        Assert.Equal(3, Regex.Matches(xml, "<frame>").Count);
+        // Bar 2: the harmony, with its frame, then the rest.
+        var bar2 = Regex.Match(xml, "<measure number=\"2\".*?</measure>", RegexOptions.Singleline).Value;
+        Assert.True(bar2.IndexOf("<harmony>", StringComparison.Ordinal) < bar2.IndexOf("<rest", StringComparison.Ordinal), bar2);
+        Assert.Contains("<frame-strings>6</frame-strings>", bar2);
+        // Mid-bar: the harmony stands between the note and the rest, at the rest's offset.
+        var half = Regex.Match(Xml(RestBook("", "c'2 r2@chord(G) |")), "<measure number=\"1\".*?</measure>",
+            RegexOptions.Singleline).Value;
+        int pitch = half.IndexOf("<pitch>", StringComparison.Ordinal), harmony = half.IndexOf("<harmony>", StringComparison.Ordinal);
+        Assert.True(pitch >= 0 && pitch < harmony && harmony < half.IndexOf("<rest", StringComparison.Ordinal), half);
+    }
+
+    [Fact]
+    public void OnARest_TheHoverShowsTheDiagram()
+    {
+        string doc = RestBook("", "r1@chord(C x32013) | s1@chord(G) |");
+        Assert.Contains("guitar: `x32013` (written)", HoverAt(doc, "@chord(C"));
+        Assert.Contains("adds a chord diagram", HoverAt(doc, "@chord(G"));
     }
 }

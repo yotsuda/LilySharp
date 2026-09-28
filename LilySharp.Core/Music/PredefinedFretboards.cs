@@ -32,6 +32,16 @@ namespace LilySharp.Core.Music;
 /// data is LilyPond's own (<see cref="Entries"/>, generated — see that file's header), taken
 /// from what LilyPond STORED, not from the .ly text, because many entries are barre shapes
 /// moved up the neck by Scheme (<c>chord-shape</c>, <c>offset-fret</c>).
+/// LILYSHARP-OWN: NINE of LilyPond's entries are LEFT OUT (owner's decisions 2026-09-28) — seven
+/// sound a note that is no tone of the chord they are stored for (guitar D♯m/E♭m <c>xx4341</c>,
+/// Faug <c>xx1443</c>, Baug <c>x3200x</c>; ukulele Bsus2 <c>5122</c>; mandolin C♯aug/D♭aug
+/// <c>x630</c>) and two lack a required tone (mandolin C♯dim7/D♭dim7 <c>3210</c>: only B♭ and
+/// E, no diminished fifth), so the editor's step would write a shape LYS1039 then warns. Those chords take
+/// the first shape of Lily#'s order instead (non-stretch first) — save the ukulele's Bsus2,
+/// which then has no usual shape (Lily# lists no shapes on the re-entrant ukulele) — on the
+/// page and in the twin alike (its one-shape tables write Lily#'s choice). The list, with each entry's file:line and
+/// reason, is the generator's (audit/fretboards/Generate-PredefinedFretboards.ps1);
+/// <c>ChordShapeCheckTests</c> pins it.
 /// LILYPOND-REF: ly/predefined-fretboards-init.ly storePredefinedDiagram (lines 65-82) — the key is
 ///   (tuning . pitches), the value the verbose placement list.
 /// </para>

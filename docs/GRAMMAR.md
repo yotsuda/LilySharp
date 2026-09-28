@@ -118,6 +118,13 @@ Keyword = 'title' | 'subtitle' | 'composer' | 'poet' | 'tempo' | 'time' | 'key' 
    NOT reserved. 'using' is the multi-file include ('using "other.lys"', UsingDecl below —
    implemented, top level only: LYS0029 elsewhere).
 
+   RESERVED IN MUSIC ONLY (claimed by the music-item dispatch, not by the lexer, so they
+   are not in the list above): 'q' (ChordRepetition), 'chord' (ShapeChord, 2026-09-28) and
+   the drum-kit names. A phrase cannot be named any of them (LYS1030 — a music stream
+   would read the reference as the item); a part, a section, a fonts key and '@chord' are
+   untouched. Measured before 'chord' was claimed: 0 identifiers 'chord' outside strings
+   and comments in the repo's 703 .lys and the Lab corpora's 503.
+
    ⚠️ 'volta' and 'alternative' are NOT reserved either (2026-09-17). LilyPond's
    'repeat volta 2 { … }' is refused by the word's TEXT after 'repeat' (LYS0006 points at
    the form), 'fonts { volta "TeX Gyre Schola" }' binds the volta-bracket face — a fonts
@@ -1710,6 +1717,34 @@ ChordNote      = PitchToken , { Annotation } ;
      ⇒ A claim about the engine that was measured only through a report is a claim about
      the report. The page is the arbiter, and reading it costs one hash. *)
 
+(* A CHORD FROM A SHAPE (owner's decisions 2026-09-28, HANDOFF §2 K5): the notes a fretted
+   shape sounds, written as a chord. The words between the parentheses are an '@chord(…)'
+   argument's — a chord symbol and a shape (ChordShapes.TryRead: one character per string,
+   or the dash form for frets 10-15), a tuning word binding a shape by name, or a shape
+   alone. 'chord' is claimed by the music-item dispatch only (reserved in music, like 'q':
+   a phrase cannot be named it; '@chord' and a part named 'chord' are untouched); the '('
+   may follow after a space. The tail is a chord's: duration, dots, tremolo, post-events.
+   - PITCHES: each unmuted string's open pitch + fret, on the tuning of the PART playing
+     the item — its fretted instrument (the tuning its tab frets on), else the standard
+     guitar. They are SOUNDING pitches; the staff writes them less the part's
+     written→sounding shift (a guitar part's treble_8 octave), exactly as the part writes
+     any sounding pitch, and the written pitch then takes a note's path (the part's
+     'transpose' included). ABSOLUTE: no relative frame, 'octave absolute' or mark moves
+     them; octave marks after ')' are an error (LYS0035) and ignored.
+   - ANCHOR RULE: the item hands on its LOWEST sounding note (as written) as the relative
+     frame — as a '<…>' chord hands on its anchor — so the note after it is read from
+     there. In 'octave absolute' nothing changes. (The twin writes the notes lowest first,
+     so LilyPond's frame after the chord, its first note, is the same note.)
+   - Each note carries its string number, as 'c\3' would; a muted string gives no note.
+   - The shape is REQUIRED for now: with none the part's tuning takes ('chord(C)', a shape
+     of another string count) the item is a SPACER of its length and warns (LYS1040),
+     naming the fix. The words' own diagnostics are LYS1038 / LYS1039's.
+   - The item makes notes only; a bare '@chord' on it reads the ITEM's words (name +
+     diagram, as '@chord(SYMBOL SHAPE)'), a symbol-less item's by its notes.
+   LILYSHARP-OWN: LilyPond has no such item; the twin writes the chord out. *)
+ShapeChord     = 'chord' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, not QuotedText *)
+               , [ DurationToken ] , { Annotation } ;
+
 (* Arpeggio: a written-out broken chord. Members carry NO duration of their own — they play
    in SEQUENCE and EQUALLY SUBDIVIDE the group's total, so a bare number is always a scale
    degree (never a duration): '<< c 3 5 >>' = c e g. The share becomes an auto-tuplet when it
@@ -1899,12 +1934,37 @@ ChordArgument  = ChordEntry , ShapeWords                         (* the name + i
                | Shape , { Shape }                               (* the name comes from its notes *)
                | QuotedText ;                                    (* @chord("N.C.") *)
 ShapeWords     = { [ TuningName ] , Shape } ;                    (* also a chords row's F(…) *)
-Shape          = ( 'x' | 'o' | Digit ) , { 'x' | 'o' | Digit } ; (* one per string, LOW string
-                                                                    first; an unnamed Shape goes to
-                                                                    the diagram tuning with as many
-                                                                    strings (4, 5, 6, 7 — any other
-                                                                    length warns), a named one to its
-                                                                    TuningName and must fit it *)
+Shape          = OneCharShape | DashShape ;                      (* LOW string first; an unnamed
+                                                                    Shape goes to the diagram tuning
+                                                                    with as many strings as it has
+                                                                    characters / items (4, 5, 6, 7 —
+                                                                    any other count warns), a named
+                                                                    one to its TuningName and must
+                                                                    fit it *)
+OneCharShape   = ShapeChar , { ShapeChar } ;                     (* no '-': one character per
+                                                                    string — x32010 *)
+ShapeChar      = 'x' | 'o' | Digit ;                             (* x muted, o / 0 open *)
+DashShape      = Segment , '-' , Segment , { '-' , Segment } ;
+                                                                 (* for frets 10-15: a '-' each
+                                                                    side of a two-digit fret —
+                                                                    8xx88-11, xx-10-12-13-11,
+                                                                    8-10-10-888 — or between every
+                                                                    item, x-x-10-12-13-11 (2026-09-28) *)
+Segment        = TwoDigitFret | OneCharShape ;                   (* EXACTLY two digits: ONE fret;
+                                                                    else one character per string *)
+TwoDigitFret   = Digit , Digit ;                                 (* 10-15 *)
+(* A written shape holding '-' is a DashShape, read by SEGMENTS (the word split on '-'); one
+   without is a OneCharShape, exactly as before. A segment of exactly two digits is always one
+   fret, so frets 10, 9, 9 are '10-9-9' — a '99' segment is fret 99 and '00'-'09' no fret: both
+   warn LYS1038 naming the split ('10-9-9'). The item count is the string count ('8xx88-11' is
+   six). Lower case only ('X', 'O' warn with the case fix); a leading, trailing or doubled '-'
+   and a fret above 15 warn LYS1038 naming the fix. Inside '@chord(…)' / '@diagram(…)' and a
+   row's F(…) the tokens of 'x-x-10' are GLUED, so they are one word — never a negative number
+   or an articulation; a space still separates words. The chord symbol's own '-' (Cm7-5) comes
+   before the '(' and is the symbol's. A WRITER (the editor's step, the hover) spells one
+   character per string when every fret is 9 or less, else the compact form: single characters
+   run together, a '-' each side of every two-digit fret, and two lone single digits between
+   dashes separated ('10-9-9', never '10-99'). *)
 (* The voicing INDEX and the 'mute' words of 2026-09-27 never shipped and are gone (2026-09-28):
    '@chord(C 7)' is C with a one-character Shape — LYS1038, the name still draws. A diagram
    draws only where a Shape is written (or, under 'chordDiagrams … all', for every name); which of them applies is the tuning the score's
@@ -1940,7 +2000,8 @@ Shape          = ( 'x' | 'o' | Digit ) , { 'x' | 'o' | Digit } ; (* one per stri
    - Figured bass:  c4@figuredBass(6) , d4@figuredBass(6 4)
    - Chord diagram: c4@diagram(x32010) , c4@diagram(x32010).down
                     (* a guitar fret diagram: a position string, one character per string
-                    low -> high — a digit is the fret ('0' or 'o' open), 'x' muted; 4 to 8
+                    low -> high — a digit is the fret ('0' or 'o' open), 'x' muted — or the
+                    DashShape of §8.4 for frets 10-15 (c4@diagram(xx-10-12-13-11)); 4 to 8
                     strings (anything else warns as unknown and is ignored). Above the note
                     whatever the stem; '.down' puts it below. The twin writes
                     \fret-diagram-terse; MusicXML a <frame> inside the <harmony> of an

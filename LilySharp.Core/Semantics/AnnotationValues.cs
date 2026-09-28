@@ -316,13 +316,22 @@ public static class AnnotationValues
     /// 2026-09-27 (owner's decision: players call it a chord diagram, and the
     /// <c>fonts { diagram … }</c> role is spelled the same). <c>@frame</c> is now unknown.
     /// </para>
+    /// <para>
+    /// ★ Since 2026-09-28 (owner's decision) the shape may hold '-' — a '-' on each side of
+    /// each two-digit fret, <c>@diagram(xx-10-12-13-11)</c>, or between every item,
+    /// <c>@diagram(x-x-10-12-13-11)</c> — the only way to write frets 10–15
+    /// (<see cref="Music.ChordShapes.TryRead"/>, the one reader of a written shape). What this
+    /// returns is then the page's SPEC, not the text: one character per string, frets 10–15 as
+    /// <c>a</c>–<c>f</c> (<see cref="Music.ChordVoicings.ToFrameSpec"/>), which every consumer
+    /// reads through <c>FretFrameGeometry.FretAt</c>. A one-character shape is its own spec.
+    /// </para>
     /// LILYPOND-REF: MusicXML &lt;frame&gt;; LilyPond's <c>\fret-diagram</c>.
     /// </remarks>
     public static string? Frame(MusicMarkSyntax mark)
-        => Named(mark, "diagram") && Sole(mark)?.Text is { } spec
-           && spec.Length is >= 4 and <= 8
-           && spec.All(ch => ch is 'x' or 'o' or (>= '0' and <= '9'))
-            ? spec
+        => Named(mark, "diagram") && Sole(mark)?.Text is { } written
+           && Music.ChordShapes.TryRead(written, out var frets, out _)
+           && frets.Length is >= 4 and <= 8
+            ? (Music.ChordShapes.IsDashed(written) ? Music.ChordVoicings.ToFrameSpec(frets) : written)
             : null;
 
     /// <summary>

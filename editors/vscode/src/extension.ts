@@ -3137,7 +3137,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     // Save the shipped paint once (guard against re-highlight
                     // clobbering it with the highlight color) so clear can restore
                     // the real value, not SVG's default.
-                    if (tag === 'line') {
+                    if (tag === 'line' || (el.getAttribute('fill') === 'none' && el.getAttribute('stroke'))) {
+                        // A line, or an outline-only shape (a chord diagram's open-string
+                        // ring): recolor the stroke — filling a ring would turn it into a dot.
                         if (el.__origStroke === undefined) el.__origStroke = el.getAttribute('stroke');
                         el.setAttribute('stroke', color);
                     } else if (tag === 'text' && hasBox) {

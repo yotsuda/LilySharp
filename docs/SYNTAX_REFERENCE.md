@@ -1591,6 +1591,17 @@ diagram (`@chord(Cm7 x3x546)`, see *Chord Diagrams*). A space therefore separate
 `@chord(C 7)` is C with a one-character shape (a warning), not C7 (write `@chord(C7)`). A bare
 `@chord` names the chord from the notes it sits on.
 
+A chord symbol belongs to the beat, not to a note: it may sit on a rest, a spacer or a
+multi-measure rest, and draws there exactly as on a note — the name at that moment, and its
+diagram under it by the usual rules (*Chord Diagrams*). An intro over silence:
+
+```
+s1@chord(C) | s1@chord(G 320003) | r2@chord(Am) c'2 |
+```
+
+A bare `@chord` on a rest or a spacer has no notes to name, so it draws nothing and warns
+(LYS1020): write the name.
+
 In a `chords NAME { }` row the same symbols place themselves on the bar's beat
 grid (no durations): one entry takes the bar, two in 4/4 are halves, and `.`
 holds the previous chord one more beat:
@@ -1638,7 +1649,8 @@ pitch from G3 up to (not including) G4, and a slash bass its pitch an octave bel
 
 `@diagram(…)` draws a guitar chord diagram (a fret diagram) over its note. The argument is a
 position string, one character per string from the lowest to the highest: a digit is the
-fret (`0` or `o` open), `x` a muted string; 4 to 8 strings. Anything else is not a diagram:
+fret (`0` or `o` open), `x` a muted string — and, for frets 10–15, a `-` on each side of each
+two-digit fret (`@diagram(xx-10-12-13-11)`, *A shape* below); 4 to 8 strings. Anything else is not a diagram:
 it warns as an unknown annotation and is ignored.
 
 ```
@@ -1697,14 +1709,24 @@ score main "book" { layout book  chords prog  staff melody }    // every chord: 
 There is no staff-level override; a score that needs another tuning says so in its `layout`.
 
 **A shape** is one character per string from the LOW string: `x` muted, `o` or `0` open, a
-digit the fret (so frets 10 and up cannot be written). An unnamed shape goes to the tuning
-with as MANY STRINGS as it has characters — `F(133211 2010)` is the guitar's and the
-ukulele's; a shape the diagram's tuning cannot take is simply not used. When a file uses two
+digit the fret. For frets 10 to 15, put a `-` on each side of each two-digit fret:
+`Cm(8xx88-11)`, `Cm(xx-10-12-13-11)`, `@chord(Cm 8-10-10-888)`, `@diagram(x-15-13-12-13-x)`.
+A shape holding `-` is read in SEGMENTS, the parts between the dashes: a segment of exactly
+two digits is ONE fret, 10–15; any other segment is one character per string. So the
+chord-chart spelling with a `-` between every string reads the same (`x-x-10-12-13-11`,
+`x-3-5-5-4-3` is `x35543`). ⚠️ A two-digit segment is always one fret: frets 10, 9, 9 are
+`10-9-9` — `10-99` is fret 99 and warns, as does `09` (write `0-9`). Lower case only; a
+leading, trailing or doubled `-` and a fret above 15 warn, naming the fix. An unnamed shape
+goes to the tuning with as MANY STRINGS as it has — characters, a two-digit fret counting one
+(`8xx88-11` is six) — `F(133211 2010)` and `F(1-3-3-2-1-1 2-0-1-0)` are the guitar's and
+the ukulele's; a shape the diagram's tuning cannot take is simply not used. The editor writes
+a shape one character per string when every fret is 9 or less, else with a `-` only around
+the two-digit frets (and between two lone single digits: `10-9-9`). When a file uses two
 tunings of one string count, a tuning word binds the next shape by name:
 `F(guitar 133211 guitardropd 333211)` (the words of `chordDiagrams`) — it applies only where
 that tuning is the diagram's. `@chord` takes the same words after its symbol:
-`@chord(F guitar 133211 ukulele 2010)`. A written shape is the writer's call — it is never
-checked against the chord's notes.
+`@chord(F guitar 133211 ukulele 2010)`. A written shape is checked against its chord symbol
+(below, LYS1039).
 
 - `@chord(x32010)` — a shape with no symbol — draws that shape and names the chord from its
   notes (C), on the diagram's tuning, else on the part's tuning.
@@ -1715,7 +1737,7 @@ checked against the chord's notes.
 
 **The usual shape** — what `Ctrl+Shift+Up` writes first on a chord with none, what the
 hover offers, and what an `all` score draws for a name alone — is LilyPond's predefined shape for the tuning (its tables for the guitar: 136
-chords and 17 ninth chords; the ukulele: 306; the mandolin: 204 — C `x32010`, F `133211`,
+chords and 17 ninth chords; the ukulele: 306; the mandolin: 204 — less nine, below — C `x32010`, F `133211`,
 Cm7 `x35343`, ukulele C `0003`, F `2010`; a table serves only the tuning it was made for, and
 holds no slash chord), else the first shape of Lily#'s order (below) — on a tuning whose
 strings rise in pitch; without a stretch when there is one (F11 in open G, `333047`, has
@@ -1726,12 +1748,42 @@ rule, so a chord its table lacks has no usual shape: write it.
 a shape of the wrong length (`@chord(C 7)`: one character, which no tuning has strings for; a
 named shape whose tuning has another count), a word that is neither a shape nor a tuning word
 (`@chord(C m7)`), two unnamed shapes of one length (name the tuning each is for), a tuning
-given two shapes. A symbol-less shape whose notes name no chord draws with no name and warns
-(write the name first). A name with no shape is not warned about — save in an `all` score,
+given two shapes, a miswritten dash-separated shape (`x-x-16-12-13-11`, `x--3-5-5-4-3`, a
+leading or trailing `-`, a two-digit segment that is no fret: `10-99-988`, `8xx88-09`), a shape in upper case (`X-3-5-5-4-3`: values are case-sensitive).
+A symbol-less shape whose notes name no chord draws with no name and warns: write the
+chord name first (`@chord(NAME 808081)`), or use `@diagram(808081)` for a diagram with no
+name. A name with no shape is not warned about — save in an `all` score,
 where a chord with no shape at all on the score's tuning (none written, no usual shape) warns
 ONCE per chord and tuning in the file, at its first appearance, naming the fix (write the
 shape); a Roman degree, a bare `@chord` and a symbol-less shape are not checked there (their
 chord is the page's to resolve). An unknown chord symbol keeps `@chord`'s own warning (LYS1008).
+
+**The check (LYS1039)** — a WRITTEN shape that disagrees with the symbol it is written for
+(`@chord(SYMBOL shape)`, a row's `SYMBOL(shape)`) warns; the shape still draws. The notes it
+sounds are each unmuted string's open pitch plus its fret, and two rules are asked (looser
+than Lily#'s order, below, so every shape of that order passes):
+
+1. a note that is not a chord tone (for X/Y, X's tones plus Y): `@chord(C x02210)` —
+   *'x02210' sounds A C E, which is Am, not C (A is not a tone of C) - write @chord(Am x02210)
+   or another shape*; the chord the notes do name is suggested (a slash chord when its root is
+   not the lowest note), else the foreign notes are listed;
+2. a required tone missing — every tone but the ROOT and the PERFECT FIFTH (the 3rd, the 7th,
+   an altered fifth such as m7-5's, the tensions); for X/Y, Y when it is neither X's root nor
+   its perfect fifth (`@chord(C/F# x32010)` lacks F♯): `@chord(C7 x3201x)` — *'x3201x' for C7
+   lacks B♭ (the 7th) - fret B♭ or write another shape*.
+
+The bass is not checked: an inversion (`@chord(C 032010)`, LilyPond's own C7 `032310`) is an
+ordinary shape. One warning per shape lists every problem. A shape is checked on the tuning it is routed to
+in each score that draws it (layout, else the part's instrument, else the guitar); a shape
+no score uses (a four-string shape in a guitar-only score) and a shape under
+`chordDiagrams none` are not. A symbol-less `@chord(x32010)` (its name comes from the shape),
+`@diagram` and a Roman degree in a row (its chord is the key's at its bar) are not checked.
+The notes are named as the chord spells them; any other in the key its root suggests.
+Nine of LilyPond's predefined shapes would warn and are left out of Lily#'s tables — seven
+sound a note outside their chord (guitar D♯m/E♭m `xx4341`, Faug `xx1443`, Baug `x3200x`;
+ukulele Bsus2 `5122`; mandolin C♯aug/D♭aug `x630`), two lack the diminished fifth (mandolin
+C♯dim7/D♭dim7 `3210`, only B♭ and E): those chords take the first shape of Lily#'s order (the
+ukulele's Bsus2 has none). Every other predefined shape passes.
 
 **Lily#'s order.** For the usual shape of the chords LilyPond's tables lack, and for the
 editor's `Ctrl+Shift+Up`/`Down` (which rewrites a chord's shape to the next / previous: the
@@ -1768,7 +1820,8 @@ diagram.
 
 **Stepping.** `Ctrl+Shift+Up` on a chord — an `@chord(G)` or a row entry `G` — with no shape
 writes the usual shape (`@chord(G 320003)`, `G(320003)`) and the diagram appears; further Ups
-walk the order; `Down` back AT the usual shape removes it again (the diagram goes, a row's
+walk the order — frets 10–15 included, a `-` around each two-digit fret (Cm goes on past
+`8xx888` to `8xx88-11` … `x-15-13-x-13-15`, its 29th); `Down` back AT the usual shape removes it again (the diagram goes, a row's
 empty `( )` with it); `Down` on a name alone does nothing. With several shapes written, the
 one for the chord's tuning steps and the others stay. That tuning is the rule above read in
 the FIRST score that renders the chord (for a row, the first score placing it); when another
@@ -1794,7 +1847,56 @@ every chord its one-shape table (the usual shape, with LilyPond's fingers when i
 not LilyPond's own tables, which would draw a shape of LilyPond's where they hold none. An
 `@chord`'s diagram is the note's `\fret-diagram-terse` markup under its name. MusicXML nests an
 `@chord`'s diagram's `<frame>` in its `<harmony>` (a `chords` row is not exported to MusicXML
-yet, nor is a bare `@chord`'s name). A diagram does not sound in the MIDI.
+yet, nor is a bare `@chord`'s name); on a rest or a spacer the `<harmony>` stands before the
+rest, at its moment. A diagram does not sound in the MIDI.
+
+### Chords from a shape — `chord(…)`
+
+`chord(SYMBOL SHAPE)` is a music item that WRITES THE NOTES of a shape: each unmuted
+string's open pitch plus its fret, as a chord on the staff, every note with its string number.
+It takes what a `<…>` chord takes after it — duration, dots, tremolo, ties, slurs, beams,
+articulations, dynamics, a bare duration or `q` repeating it, a tuplet or a grace body around it.
+
+```
+chord(C x32013)1                 // C3 E3 G3 C4 G4 on a guitar, a whole note
+chord(Cm7 x3x546)2@chord         // + the name and the diagram (the bare @chord takes the item's words)
+chord(C xx-10-12-13-12)4.~       // frets 10-15 in the dash form; duration, dots, tie as on <…>
+chord(x32010)2@chord             // no symbol: the shape alone gives the notes; @chord names them (C)
+```
+
+- **The words** are an `@chord(…)` argument's: a symbol then a shape (or a shape alone), either
+  shape form, a tuning word binding a shape to one tuning (`chord(F guitar 133211 ukulele 2010)`).
+  Every shape warning applies (LYS1038: length, dashes, case), and a shape that disagrees with its
+  symbol warns (LYS1039, the fix written `chord(X shape)`).
+- **The shape is required** (for now): `chord(C)` warns (LYS1040) naming the fix —
+  `write a shape: chord(C x32010)` — and keeps its time as a SPACER, so the bar still adds up;
+  so does a shape no string count of the part's tuning takes.
+- **The tuning** is the PART's: its fretted instrument (its `tuning`, else its `instrument`
+  preset's — the tuning its tab frets on), else the standard guitar. The shape gives SOUNDING
+  pitches, and the staff writes them the way the part writes any sounding pitch: a guitar part
+  (`treble_8`) writes x32013 an octave up, as C4 E4 G4 C5 G5, and plays C3 E3 G3 C4 G4; a part
+  with no instrument writes them where they sound. The ukulele's re-entrant G string sounds where
+  it is (`chord(C 0003)` = G4 C4 E4 C5).
+- **Absolute.** Octave marks, the relative frame and `octave absolute` do not move the item;
+  marks after its `)` are an error (LYS0035) and ignored — write a shape higher on the neck.
+- **The frame after it** is its LOWEST sounding note (as a `<…>` chord hands on its anchor): in
+  relative mode the next note is read from it; absolute mode changes nothing.
+- **Spelling:** a note that is a tone of the symbol (or its slash bass) is spelled as the chord
+  spells it — Cm7's E♭ and B♭, never D♯ and A♯; any other note in the key.
+- **String numbers:** every note carries its string, so a `tab` of the part shows exactly the
+  shape; a muted string gives no note.
+- **Notes only.** The item draws no name and no diagram of its own. A bare `@chord` on it names
+  the item's symbol and draws its shape (the usual diagram rules: the diagram's tuning is layout,
+  else the part's instrument, else the guitar); an `@chord(Other …)` on it is its own.
+- **Exports.** The MIDI plays the notes; MusicXML writes the chord with each note's
+  `<technical><string>`; the `.ly` twin writes the notes out as a chord, lowest first, each with
+  its string number (`<c\5 e\4 g\3 c'\2 g'\1>1`), and `\omit StringNumber` on the staff.
+- **Editor.** Hover lists the notes it sounds on each tuning that plays it —
+  `guitar: x32013 — C3 E3 G3 C4 G4 — shape n of N`; `Ctrl+Shift+Up`/`Down` on the item steps its
+  shape through the order above on the PART's tuning (from `chord(C)`, Up writes the usual shape),
+  sounding each, and Down stops at the usual shape (the item keeps a shape); inside `chord(` the
+  completion offers the chord symbols `@chord(` does.
+- `chord` is reserved in music only: a phrase cannot be named it (a part can).
 
 ## Guitar Bends and Technique Letters
 
@@ -1854,6 +1956,10 @@ fine — `include`, `let`, `use`, `chordnames`, `tabStaff` — and the sixteen a
 Notes:
 
 - Single letters `a`–`g` are pitch names; `r`/`R` are rests, `s` is a spacer rest.
+- **Reserved in music only:** `q` (repeats the previous chord), `chord` (a chord from a
+  shape, `chord(C x32010)` — 2026-09-28) and the drum-kit names (`bd`, `sn`, `hh`, …). A music
+  stream reads them as music items, so a **phrase** cannot be named any of them (LYS1030); a
+  part, a section or a `fonts` key still can (`part chord { … }` compiles).
 - Articulation, ornament, dynamic-text and mark **names** (`staccato`, `tr`, `mordent`,
   `cresc`, `dim`, `segno`, …) are resolved from the `@name` text and are **not** reserved
   as identifiers — `tr`, `acc`, `ten`, `dim` etc. remain usable as your own names.

@@ -127,6 +127,40 @@ $entries = foreach ($line in $lines) {
     }
 }
 
+# LILYSHARP-OWN — ENTRIES LEFT OUT OF LILY#'S TABLE (owner's decisions 2026-09-28). Each of these
+# sounds a note that is not a tone of the chord it is stored for (LYS1039 rule 1), or lacks a
+# required tone (rule 2 — the mandolin's two dim7), the checks a WRITTEN shape gets, so the
+# editor's step would write a shape the checker then warns. Left out,
+# the chord falls back to the first shape of Lily#'s order (ChordVoicings, non-stretch first) on
+# the page, in the .ly twin (its one-shape tables follow Lily#'s choice) and in MusicXML.
+# Measured on 2.26.0 by ChordShapeCheckTests, which pins this list. Keyed by file:line.
+$excluded = [ordered]@{
+    # dis:m and es:m 'x;x;4;3;4;1;' — the top string's F is no tone of D#m/Ebm (F#/Gb is).
+    'predefined-guitar-fretboards.ly:160'  = 'dis:m xx4341 sounds an F'
+    'predefined-guitar-fretboards.ly:187'  = 'es:m xx4341 sounds an F'
+    # f:aug 'x;x;1;4;4;3;' sounds Eb G B — the Eb augmented triad, not F A C#.
+    'predefined-guitar-fretboards.ly:244'  = 'f:aug xx1443 sounds Eb G B'
+    # b:aug 'x;3;2;o;o;x;' sounds C E G B — Cmaj7, not B D# F##.
+    'predefined-guitar-fretboards.ly:487'  = 'b:aug x3200x sounds C E G B'
+    # b:sus2 '5;1;2;2;' sounds C C# F# B — the C is no tone of Bsus2.
+    'predefined-ukulele-fretboards.ly:279' = 'b:sus2 5122 sounds a C'
+    # cis:aug and des:aug: three placements for four strings (see the bare-string note above) —
+    # G# C E, another augmented triad.
+    'predefined-mandolin-fretboards.ly:319' = 'cis:aug x630 sounds G# C E'
+    'predefined-mandolin-fretboards.ly:369' = 'des:aug x630 sounds Ab C E'
+    # cis:dim7 and des:dim7 '3;2;1;o;' sound only Bb and E (two notes) — they lack the
+    # diminished fifth (G / Abb), which is required (an altered fifth; rule 2).
+    'predefined-mandolin-fretboards.ly:299' = 'cis:dim7 3210 lacks the diminished 5th'
+    'predefined-mandolin-fretboards.ly:349' = 'des:dim7 3210 lacks the diminished 5th'
+}
+$kept = @()
+foreach ($e in $entries) {
+    $key = "$($e.File):$($e.Line)"
+    if ($excluded.Contains($key)) { Write-Host "left out: $key — $($excluded[$key])" } else { $kept += $e }
+}
+if ($entries.Count - $kept.Count -ne $excluded.Count) { throw "an excluded entry was not found — LilyPond's data moved" }
+$entries = $kept
+
 $sorted = $entries | Sort-Object Order, File, Line
 $counts = $sorted | Group-Object Table | ForEach-Object { "$($_.Name) $($_.Count)" }
 
@@ -173,7 +207,11 @@ public static partial class PredefinedFretboards
 [void]$sb.Append("    /// LILYPOND-REF: ly/predefined-guitar-fretboards.ly (and ly/predefined-guitar-ninth-fretboards.ly, which it includes)`n")
 [void]$sb.Append("    /// LILYPOND-REF: ly/predefined-ukulele-fretboards.ly`n")
 [void]$sb.Append("    /// LILYPOND-REF: ly/predefined-mandolin-fretboards.ly`n")
-[void]$sb.Append("    /// Counts: $($counts -join ', ') (guitar = 136 + 17 ninths).`n")
+[void]$sb.Append("    /// Counts: $($counts -join ', ') (LilyPond stores guitar 136 + 17 ninths, ukulele 306, mandolin 204).`n")
+[void]$sb.Append("    /// LILYSHARP-OWN: $($excluded.Count) entries are left out — each sounds a note that is no tone of its`n")
+[void]$sb.Append("    /// chord or lacks a required tone (owner's decisions 2026-09-28; the list and the reasons are`n")
+[void]$sb.Append("    /// the generator's):`n")
+foreach ($k in $excluded.Keys) { [void]$sb.Append("    /// ly/$($k) ($($excluded[$k])).`n") }
 [void]$sb.Append("    /// </remarks>`n")
 [void]$sb.Append("    internal static readonly Entry[] Entries =`n    [`n")
 $lastFile = $null

@@ -1420,7 +1420,8 @@ internal sealed class SkylineBuilder
         double systemLeft = double.NaN,
         IReadOnlyDictionary<RestShiftKey, double>? restShifts = null,
         ImmutableArray<FingeringLayout> fingerings = default,
-        GraceSeeds? graceSeeds = null)
+        GraceSeeds? graceSeeds = null,
+        List<ArticulationLayout>? clearedDiagrams = null)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -1547,7 +1548,47 @@ internal sealed class SkylineBuilder
         upSkyline.EndBatch();
         downSkyline.EndBatch();
 
+        // ...and the chord diagrams an @chord chose, which READ it: each stands over the
+        // whole inside profile under its grid (2026-09-28, see PlaceDiagramsUnderNames).
+        PlaceDiagramsUnderNames(articulationLayouts, size, upSkyline, clearedDiagrams);
+
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Places each chord diagram an <c>@chord</c> chose over the staff's finished inside
+    /// profile (<see cref="ArticulationEngraver.DiagramYUpOverInk"/>) and merges it in there,
+    /// so what stands on the staff after it — the chord-name line, the movers — clears the
+    /// diagram where it is drawn. <paramref name="cleared"/>, when given, receives each
+    /// diagram at its placed height: the drawn pass reads its positions from here
+    /// (<c>LayoutEngine.ClearChordDiagramsOverStaffInk</c>), so the reserved diagram and the
+    /// drawn one are one answer.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (2026-09-28). Until then the diagram was merged with the other scripts at
+    /// its Script side-position, which is supported by its note's heads and stem only; on the
+    /// owner's "Shape chords" book the Cm grid stood in the ♭ of its top note. In order: a
+    /// later diagram clears an earlier one it overhangs (the spacing stands them side by side,
+    /// SpacingRules.ApplyFretFrameSpacing, so this binds only where that could not).
+    /// </remarks>
+    private static void PlaceDiagramsUnderNames(
+        ImmutableArray<ArticulationLayout> articulationLayouts, StaffSize size,
+        VerticalSkyline upSkyline, List<ArticulationLayout>? cleared)
+    {
+        if (articulationLayouts.IsDefaultOrEmpty)
+            return;
+        foreach (var a in articulationLayouts)
+        {
+            if (!ArticulationEngraver.IsDiagramUnderName(a))
+                continue;
+            var placed = a with
+            {
+                YUp = ArticulationEngraver.DiagramYUpOverInk(a, upSkyline, size.Magnification),
+            };
+            ArticulationEngraver.MergeScriptProfile(
+                upSkyline, placed, size.Span(placed.YUp), size.Magnification);
+            cleared?.Add(placed);
+        }
     }
 
     /// <summary>
@@ -2164,6 +2205,10 @@ internal sealed class SkylineBuilder
         foreach (var a in articulationLayouts)
         {
             if (moversInstead != (a.OutsideStaffPriority is not null))
+                continue;
+            // The diagram under a chord name goes in LAST, over everything else in the
+            // profile (PlaceDiagramsUnderNames) — 2026-09-28.
+            if (ArticulationEngraver.IsDiagramUnderName(a))
                 continue;
             // ⚠️ A SCRIPT THAT DECLARES A PRIORITY IS A MOVER, NOT INSIDE-STAFF INK. The
             // fermata family declares 75 (scm/script.scm), so LilyPond leaves it OUT of

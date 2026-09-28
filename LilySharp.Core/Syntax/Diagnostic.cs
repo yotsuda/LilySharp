@@ -624,6 +624,12 @@ public static class DiagnosticCodes
     /// sixteenths whatever it said (reported 2026-09-26).</remarks>
     public const string UnsupportedSwingValue = "LYS0034";
 
+    /// <summary>Error: octave marks after a chord-from-a-shape's <c>)</c> — <c>chord(C x32013)'</c>.
+    /// The item's notes are where the strings are (owner's decision 2026-09-28: absolute, never
+    /// moved by marks, the relative frame or <c>octave absolute</c>); the marks are ignored and
+    /// the message names the fix (another shape, higher up the neck).</summary>
+    public const string ShapeChordOctaveMarks = "LYS0035";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
@@ -928,6 +934,26 @@ public static class DiagnosticCodes
     /// per symbol and tuning.
     /// </remarks>
     public const string ChordDiagramNotDrawn = "LYS1038";
+
+    /// <summary>Warning: a WRITTEN chord shape disagrees with the chord symbol it is written
+    /// for — it sounds a note that is not a chord tone, or lacks a required tone (every tone but
+    /// the root and the perfect fifth; for X/Y, a Y that is neither). The bass is not checked.
+    /// One per shape, listing every problem and naming the fix.</summary>
+    /// <remarks>
+    /// Owner's decision 2026-09-28, reversing the earlier "a written shape is the writer's
+    /// call" (<c>Semantics.ChordDiagramValidator</c>, <c>Music.ChordShapes.Mismatch</c>). The
+    /// diagram still draws the shape as written — a code of its own, since LYS1038 says a shape
+    /// is NOT used.
+    /// </remarks>
+    public const string ChordShapeMismatch = "LYS1039";
+
+    /// <summary>Warning: a <c>chord(…)</c> item has no shape its part's tuning can play —
+    /// none written (<c>chord(C)</c>), or none of the written ones usable (a problem LYS1038
+    /// names, or a length the tuning does not have). The item keeps its time as a SPACER, so
+    /// the bars still add up, and draws and sounds nothing.</summary>
+    /// <remarks>Owner's decision 2026-09-28 (HANDOFF §2 K5): the shape is REQUIRED for now; the
+    /// message names the fix (<c>chord(C x32010)</c>).</remarks>
+    public const string ShapeChordNoShape = "LYS1040";
 
     // Measure errors (LYS2xxx)
 

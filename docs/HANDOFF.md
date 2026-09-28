@@ -138,7 +138,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★ **ユーザー決定（2026-09-27）: `@fig(…)` → `@figuredBass(…)` に改名**（「略語では意味が分からない」・fonts の役割名と一致）。`@fig` は別名として残さない＝未知の注釈の警告（LYS0016 系）。移行の診断は足さない（上の「後方互換は気にしない」）。Lab の dogfood 3 冊（`fig.lys`・`sarabande.lys`・`uxeval2/t.lys`）は未編集。命名の原則として「注釈名は用語そのもの・誰でも分かる略だけ許す」を提案済み（明文化は未）。
 ★★ **ユーザー決定（2026-09-27）: 綴りの統一**＝「fonts のキーは、ソースがその物を書く語と同じ綴り」。`@frame`→`@diagram`／fonts: `chordName`→`chord`・`fretFrame`→`diagram`・`fingering`→`finger`・`barNumber`→`barNumbers`・`partCombine`→`partCombineText`・`meter`→`time`・`tabFret`→`tab`・`lyricText` は廃止（`lyrics` 群が音節を指す・`TextRoles.IsWritable`）／layout `marks`→`markTempo`（ラベルとテンポの並べ方・描画の順）。総称（`pedal` `navigation` `dynamics` `tabTechnique`）と構造が出す文字（`stanza` `volta` `clefOctave`）は据え置き。fonts 群 `marks` も据え置き。旧綴りは別名にせず未知（LYS8004／LYS9101）。
 ★★ **ユーザー決定（2026-09-27）: 名前は大文字小文字を区別する（言語全体で 1 つの規則）**＝注釈名・fonts／layout／paper のキー・fonts の属性語と総称。正式な綴りは補完の候補名（LilyPond の命令名に倣う: `upbow` は小文字・`laissezVibrer` は camel・Lily# 独自の `hammerOn` `pullOff` `snapPizz`）。一か所の索引 `Semantics/AnnotationNames`（各表は Ordinal）。大文字小文字だけ違う綴りは未知として何も描かず、診断が正しい綴りを名指す（「Names/Keys are case-sensitive: write '…'」）。網 `NameCaseSensitivityTests`。**値も区別する（同日・ユーザー決定）**: 注釈の括弧の中の語（notehead・bend・pluck・feather・arpeggio(bracket)・diagram の x/o・figuredBass の s/f/n）・用紙サイズ名（`a4`・ユーザー決定）・単位は小文字だけ。診断は「Values/Size names/Units are case-sensitive: write '…'」（`AnnotationNameValidator.CaseCorrected` が値を小文字にして既知かを確かめる・`PaperSizes.CaseOnlyMatch`）。自由な文章（`@text`・`@mark`）とコード名（`@chord`）は大文字小文字が中身なので対象外。camelCase の規則（`@upBow` ほか 5 語・`@pralltriller` は 1 語）も同日。`@ho`／`@po` も同日に退役（検証と補完に残っていた＝描かれないのに通っていた）。掃き（1,157 冊 × svg/ly/xml/midi/check）で動いた本 0（大文字小文字の違う 2 冊は repo の fixture で、同じ長さの正式な綴りに直した）。
-⚠️ **この作業で見つかった既存の不整合（未修正）**: ⑴ MusicXML の `ProcessDirectionName` に una corda の開始（と quindicesima）の腕が無い＝`@treCorde` は止めを書くが `@unaCorda` は始まりを書かない ⑵ `@!X` の警告文「今は text spanner だけが終わりを持つ」が古い（ペダル・ottava・phrasingSlur も持つ）⑶ 1 セクションの本で 1 小節目の `@mark("Z")` がセクション名の横に何も描かない（2 小節目は描く）。
+⚠️ **見つかった既存の欠陥（未修正）**: ⑴ MusicXML に `@unaCorda`（と quindicesima）の開始が無い ⑵ `@!X` の警告文が古い（終わりを持つのは text spanner だけ、と言う）⑶ 1 セクションの本で 1 小節目の `@mark("Z")` が描かれない ⑷ **MusicXML: `R1*N` が 1 小節（17 小節→13）・休符の注釈がすべて落ちる・`s` が見える休符** ⑸ 頁: `R1*N` の `@text`・強弱・フェルマータが黙って落ちる・`R1*2@mark` が終わりに描かれる。
 ★★★ **ギターのコード図（2026-09-27〜28・ユーザーと設計）＝確定した仕様は §2 K が正**（ソースには形だけ・番号はエディタだけ・図の有無と調弦は `layout { chordDiagrams … }`・0 番は LilyPond の定番の表・カポの提案）。実装済み（未 push）で K4 に従って置き換えるもの: `a02967b3`（`Music/ChordVoicings`＝極大の形の数え上げと並び順・`Semantics/ChordAnnotation`・`@chord(Cm7 2)`・`mute`・LYS1038・図の描画と 3fr 修正・MusicXML `<harmony>` 内 `<frame>`・双子 `\fret-diagram-terse`・網 `ChordVoicingTests`／`ChordDiagramTests`）と `86b606f5`（Ctrl+Alt+Up/Down＝`@chord` の番号 ±1／音符の `'`・`,`／それ以外はカーソル追加、試聴＝`lilysharp/step`・`lilysharp/auditionAt`・`playPitches`・設定 `lilysharp.audition.enabled`・網 `StepRequestTests`／`auditionCore.test.ts`・VS Code での手動確認は未・Mac 未確認）。
 ★ **終了**: full **9465 / 0 / 2 / 9467**（+17＝網）・Core 0 警告（`--no-incremental`）・`-End` の門は全 OK・§7.5: Core `+` 118 行／REF 0／OWN 0＝LP の移植ではなく言語の規則（Lily# の意図的な逸脱は GRAMMAR「Chord/arpeggio OCTAVES」が名指す・9/16 のコードも同じく無印）。push はユーザー。
 
@@ -886,7 +886,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **K0. 原則**
 - **ソースに書くのは「形」か「何も書かない」だけ。番号はエディタの中だけ**＝並び順を言語仕様として凍結しない。
-- **図は形を書いた所にだけ出る**（`G(320003)`・`@chord(G 320003)`・`@chord(x32010)`）。名前だけ＝図なし（全譜面・定番の自動表示なし・「形が無い」警告もなし）。例外: `chordDiagrams all`＝全コードに既定の形（09-28）。書いた形の警告（長さ・未知の調弦名・同じ長さ 2 つ）は残す。
+- **図は形を書いた所にだけ出る**（`G(320003)`・`@chord(G 320003)`・`@chord(x32010)`）。名前だけ＝図なし（全譜面・定番の自動表示なし・「形が無い」警告もなし）。例外: `chordDiagrams all`＝全コードに既定の形（09-28）。書いた形の警告（長さ・未知の調弦名・同じ長さ 2 つ）は残す。構成音外の音・3 度/7 度など特徴音の欠けを警告（根音と 5 度は省略可・低音は見ない）。
 - **調弦（強い順）**: ① 譜面の `layout { chordDiagrams T }`（`none`＝書いた形も出さない＝同じソースからピアノ譜）② パートの楽器が弦楽器なら（`tuning`→preset＝タブと同じ。擦弦は除外）: `@chord`＝その音符のパート／行＝**直下の譜表**（譜面は帯の縦積み・行は下へ付く・旧 `staff X with chords` は無い。タブ譜はその調弦）③ `guitar`（譜表の無い行も）。形は弦数でこの 1 調弦に振り分け、合わない形は黙って不使用。
 - **譜表単位の上書きは作らない**（ユーザー: `layout` で足りる。要るなら `staff melody with chords prog on ukulele` の形）。
 
@@ -898,7 +898,7 @@ c2@chord(x32010)                 // 形だけ（名前は音から）
 chords prog { Cm7 | F(133211) G }                      // 行の中の形
 chords prog { F(guitar 133211  ukulele 2010) }         // 同じ弦数の楽器が 2 つのときだけ調弦名
 ```
-- 行には**鳴る音**のコード名（ピアノと共通）。ミュートは形の `x`。1 文字の楽器記号は却下（`Fm2010` が曖昧）。
+- 行には**鳴る音**のコード名（ピアノと共通）。ミュートは形の `x`。1 文字の楽器記号は却下（`Fm2010` が曖昧）。10〜15 フレットは 2 桁の前後だけ `-`（`8xx88-11`）・全区切りも可（`-` 間のちょうど 2 桁＝1 フレット、10 9 9 は `10-9-9`・弦数＝項目数・書く側は全部 9 以下なら 1 文字形・ステップも 10 以上を含む。09-28 ユーザー決定）。
 - `@chord(C 7)`＝C と長さの合わない形＝警告（旧: C7）。
 
 **K2. カポ**
@@ -913,7 +913,7 @@ chords prog { F(guitar 133211  ukulele 2010) }         // 同じ弦数の楽器�
 - 並び順（エディタだけ・凍結しない）: 0 番＝定番 → 極大の形をポジション→指の数→低音弦からの辞書順。押すたびに鳴らす。極大の形＝3 弦以上・0〜15 フレット・構成音だけ・5 度以外必須・最低音は根音（分数はその音）・幅 4 フレット・指 4 本（最低フレットのバレーは 1 本）を満たし、どのミュート弦にも音を足せない形（押さえられる形はすべて「極大＋ミュート」）。ストレッチ（幅 5）は設定 `includeStretch` のときだけ。
 - ウクレレ（G が高い）は「最低音は根音」が成り立たない＝0 番は表、1 番以降は別途。
 
-**K5. 順序**: ① ✅ 表の移植（`audit/fretboards/`）・`chordDiagrams`・描画（残: 指・バレー描画・MusicXML の行）② ✅ `@chord(X 形)`・行の `X(形)`・弦数振り分け・形のステップ（行も）・書いた所だけ図・調弦＝layout→パートの楽器→guitar ③ **次**: `layout` の表（曲全体・`section Name { … }`）＝挙げたコードの図を出す（書いた形の次に効く。`ChordShapes.Drawn` に差し込む）④ カポ ⑤ 使用コード一覧 ⑥ ウクレレの 1 番以降 ⑦ 音符を作る `chord(X)`（再設計）。
+**K5. 順序**: ① ✅ 表の移植（`audit/fretboards/`）・`chordDiagrams`・描画（残: 指・バレー描画・MusicXML の行）② ✅ `@chord(X 形)`・行の `X(形)`・弦数振り分け・形のステップ（行も）・書いた所だけ図・調弦＝layout→パートの楽器→guitar ③ **次**: `layout` の表（曲全体・`section Name { … }`）＝挙げたコードの図を出す（書いた形の次に効く。`ChordShapes.Drawn` に差し込む）④ カポ ⑤ 使用コード一覧 ⑥ ウクレレの 1 番以降 ⑦ ✅ `chord(X 形)`＝形の音を五線に（絶対・最低音を次へ・弦番号つき）09-28。
 
 **K6. 否定した案（蒸し返さない）**: `@frame`・`@gchord`・`@fret`・`@shape`／`.fret().mute()`・`mute(…)`・`chord(…)@chord@diagram`／`ooxxoo`／ポジション＋番号・番号をソースに／楽器ごとの `chords {}` 複製／1 文字の楽器記号／名前だけで定番を自動表示（9cf95fab・同日撤回）／譜表単位の調弦上書き。
 

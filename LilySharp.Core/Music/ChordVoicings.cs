@@ -397,23 +397,49 @@ public static class ChordVoicings
 
     /// <summary>
     /// A shape as a player writes it: one character per string, low string first —
-    /// <c>x35343</c> — or, when a fret needs two digits, the frets joined by '-':
-    /// <c>8-10-10-9-8-8</c>.
+    /// <c>x35343</c> — or, when a fret needs two digits, the COMPACT form: single-character
+    /// items run together and a <c>-</c> on each side of every two-digit fret, none at the ends
+    /// — <c>8xx88-11</c>, <c>xx-10-12-13-11</c>, <c>8-10-10-888</c>.
     /// </summary>
+    /// <remarks>
+    /// Owner's decision 2026-09-28: the compact form, read by <see cref="ChordShapes.TryRead"/>'s
+    /// segment rule. ⚠️ A run of EXACTLY two single digits between dashes would be a two-digit
+    /// segment — one fret — so its digits are separated too: frets 10 9 9 are <c>10-9-9</c>, never
+    /// <c>10-99</c> (fret 99); 8 10 10 0 8 11 is <c>8-10-10-0-8-11</c>. What this writes always
+    /// reads back to the same frets (the round-trip test in ChordDiagramTests).
+    /// </remarks>
     public static string Spell(IReadOnlyList<int> frets)
     {
+        static string Item(int f) => f < 0 ? "x" : f.ToString(System.Globalization.CultureInfo.InvariantCulture);
         bool wide = false;
         foreach (int f in frets)
             if (f > 9)
                 wide = true;
-        var sb = new StringBuilder();
-        for (int i = 0; i < frets.Count; i++)
+        if (!wide)
+            return string.Concat(frets.Select(Item));
+        // Segments: each two-digit fret alone, the single characters between them in runs.
+        var segments = new List<string>();
+        var run = new StringBuilder();
+        void EndRun()
         {
-            if (wide && i > 0)
-                sb.Append('-');
-            sb.Append(frets[i] < 0 ? "x" : frets[i].ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (run.Length == 2 && char.IsAsciiDigit(run[0]) && char.IsAsciiDigit(run[1]))
+                segments.Add($"{run[0]}-{run[1]}");
+            else if (run.Length > 0)
+                segments.Add(run.ToString());
+            run.Clear();
         }
-        return sb.ToString();
+        foreach (int f in frets)
+        {
+            if (f > 9)
+            {
+                EndRun();
+                segments.Add(Item(f));
+            }
+            else
+                run.Append(Item(f));
+        }
+        EndRun();
+        return string.Join('-', segments);
     }
 
     /// <summary>

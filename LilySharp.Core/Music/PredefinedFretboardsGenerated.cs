@@ -36,7 +36,19 @@ public static partial class PredefinedFretboards
     /// LILYPOND-REF: ly/predefined-guitar-fretboards.ly (and ly/predefined-guitar-ninth-fretboards.ly, which it includes)
     /// LILYPOND-REF: ly/predefined-ukulele-fretboards.ly
     /// LILYPOND-REF: ly/predefined-mandolin-fretboards.ly
-    /// Counts: Guitar 153, Mandolin 204, Ukulele 306 (guitar = 136 + 17 ninths).
+    /// Counts: Guitar 149, Mandolin 200, Ukulele 305 (LilyPond stores guitar 136 + 17 ninths, ukulele 306, mandolin 204).
+    /// LILYSHARP-OWN: 9 entries are left out — each sounds a note that is no tone of its
+    /// chord or lacks a required tone (owner's decisions 2026-09-28; the list and the reasons are
+    /// the generator's):
+    /// ly/predefined-guitar-fretboards.ly:160 (dis:m xx4341 sounds an F).
+    /// ly/predefined-guitar-fretboards.ly:187 (es:m xx4341 sounds an F).
+    /// ly/predefined-guitar-fretboards.ly:244 (f:aug xx1443 sounds Eb G B).
+    /// ly/predefined-guitar-fretboards.ly:487 (b:aug x3200x sounds C E G B).
+    /// ly/predefined-ukulele-fretboards.ly:279 (b:sus2 5122 sounds a C).
+    /// ly/predefined-mandolin-fretboards.ly:319 (cis:aug x630 sounds G# C E).
+    /// ly/predefined-mandolin-fretboards.ly:369 (des:aug x630 sounds Ab C E).
+    /// ly/predefined-mandolin-fretboards.ly:299 (cis:dim7 3210 lacks the diminished 5th).
+    /// ly/predefined-mandolin-fretboards.ly:349 (des:dim7 3210 lacks the diminished 5th).
     /// </remarks>
     internal static readonly Entry[] Entries =
     [
@@ -74,7 +86,6 @@ public static partial class PredefinedFretboards
         new(Table.Guitar, 148, "d", 1, 0, "0 4 7 11", "x x 0 2 2 2", "- - - 1 2 3", ""),
         new(Table.Guitar, 151, "d", 1, 0, "0 3 7 10", "x x 0 2 1 1", "- - - 2 1 1", "2-1@1"),
         new(Table.Guitar, 157, "dis", 1, 1, "0 4 7", "x x 5 3 4 3", "- - 3 1 2 1", "3-1@3"),
-        new(Table.Guitar, 160, "dis", 1, 1, "0 3 7", "x x 4 3 4 1", "- - 3 2 4 1", ""),
         new(Table.Guitar, 163, "dis", 1, 1, "0 4 8", "3 2 1 0 0 3", "3 2 1 - - 4", ""),
         new(Table.Guitar, 166, "dis", 1, 1, "0 3 6", "x x 4 2 4 2", "- - 3 1 4 1", "3-1@2"),
         new(Table.Guitar, 169, "dis", 1, 1, "0 3 6 9", "x x 1 2 1 2", "- - 1 3 2 4", ""),
@@ -82,7 +93,6 @@ public static partial class PredefinedFretboards
         new(Table.Guitar, 175, "dis", 1, 1, "0 4 7 11", "x x 1 3 3 3", "- - 1 2 3 4", ""),
         new(Table.Guitar, 178, "dis", 1, 1, "0 3 7 10", "x x 1 3 2 2", "- - 1 2 3 4", ""),
         new(Table.Guitar, 184, "es", 2, -1, "0 4 7", "x x 5 3 4 3", "- - 3 1 2 1", "3-1@3"),
-        new(Table.Guitar, 187, "es", 2, -1, "0 3 7", "x x 4 3 4 1", "- - 3 2 4 1", ""),
         new(Table.Guitar, 190, "es", 2, -1, "0 4 8", "3 2 1 0 0 3", "3 2 1 - - 4", ""),
         new(Table.Guitar, 193, "es", 2, -1, "0 3 6", "x x 4 2 4 2", "- - 3 1 4 1", "3-1@2"),
         new(Table.Guitar, 196, "es", 2, -1, "0 3 6 9", "x x 1 2 1 2", "- - 1 3 2 4", ""),
@@ -99,7 +109,6 @@ public static partial class PredefinedFretboards
         new(Table.Guitar, 232, "e", 2, 0, "0 3 7 10", "0 2 0 0 0 0", "- 2 - - - -", ""),
         new(Table.Guitar, 238, "f", 3, 0, "0 4 7", "1 3 3 2 1 1", "1 3 4 2 1 1", "6-1@1"),
         new(Table.Guitar, 241, "f", 3, 0, "0 3 7", "1 3 3 1 1 1", "1 3 4 1 1 1", "6-1@1"),
-        new(Table.Guitar, 244, "f", 3, 0, "0 4 8", "x x 1 4 4 3", "- - 1 3 4 2", ""),
         new(Table.Guitar, 247, "f", 3, 0, "0 3 6", "x x 6 4 6 4", "- - 3 1 4 1", "3-1@4"),
         new(Table.Guitar, 250, "f", 3, 0, "0 3 6 9", "x x 0 1 0 1", "- - - 1 - 2", ""),
         new(Table.Guitar, 253, "f", 3, 0, "0 4 7 10", "1 3 1 2 1 1", "1 3 1 2 1 1", "6-1@1"),
@@ -171,7 +180,6 @@ public static partial class PredefinedFretboards
         new(Table.Guitar, 475, "bes", 6, -1, "0 3 7 10", "x 1 3 1 2 1", "- 1 3 1 2 1", "5-1@1"),
         new(Table.Guitar, 481, "b", 6, 0, "0 4 7", "x 2 4 4 4 2", "- 1 2 3 4 1", "5-1@2"),
         new(Table.Guitar, 484, "b", 6, 0, "0 3 7", "x 2 4 4 3 2", "- 1 3 4 2 1", "5-1@2"),
-        new(Table.Guitar, 487, "b", 6, 0, "0 4 8", "x 3 2 0 0 x", "- 2 1 - - -", ""),
         new(Table.Guitar, 490, "b", 6, 0, "0 3 6", "x 2 3 4 3 x", "- 1 2 4 3 -", ""),
         new(Table.Guitar, 493, "b", 6, 0, "0 3 6 9", "x x 0 1 0 1", "- - - 1 - 2", ""),
         new(Table.Guitar, 496, "b", 6, 0, "0 4 7 10", "x 2 1 2 0 2", "- 2 1 3 - 4", ""),
@@ -257,7 +265,6 @@ public static partial class PredefinedFretboards
         new(Table.Ukulele, 267, "b", 6, 0, "0 3 6 9", "1 2 1 2", "1 3 2 4", ""),
         new(Table.Ukulele, 271, "b", 6, 0, "0 4 7 11", "3 3 2 2", "2 2 1 1", "2-1@2 4-3@3"),
         new(Table.Ukulele, 275, "b", 6, 0, "0 4 7 9", "1 3 2 2", "1 4 2 3", ""),
-        new(Table.Ukulele, 279, "b", 6, 0, "0 2 7", "5 1 2 2", "4 1 3 2", ""),
         new(Table.Ukulele, 283, "b", 6, 0, "0 5 7", "4 4 2 2", "2 3 1 1", "2-1@2"),
         new(Table.Ukulele, 287, "b", 6, 0, "0 4 8", "0 3 3 2", "- 2 3 1", ""),
         new(Table.Ukulele, 291, "b", 6, 0, "0 4 7 10 14", "2 3 2 4", "1 3 2 4", ""),
@@ -568,24 +575,20 @@ public static partial class PredefinedFretboards
         new(Table.Mandolin, 287, "cis", 0, 1, "0 4 7 10", "6 3 2 4", "4 2 1 3", ""),
         new(Table.Mandolin, 291, "cis", 0, 1, "0 3 7 10", "6 6 7 7", "1 1 2 2", "2-1@7 4-3@6"),
         new(Table.Mandolin, 295, "cis", 0, 1, "0 3 6 10", "4 2 4 3", "3 1 4 2", ""),
-        new(Table.Mandolin, 299, "cis", 0, 1, "0 3 6 9", "3 2 1 0", "2 1 1 -", ""),
         new(Table.Mandolin, 303, "cis", 0, 1, "0 4 7 11", "6 3 3 4", "4 1 1 2", "3-2@3"),
         new(Table.Mandolin, 307, "cis", 0, 1, "0 4 7 9", "3 3 4 4", "1 1 2 2", "2-1@4 4-3@3"),
         new(Table.Mandolin, 311, "cis", 0, 1, "0 2 7", "1 1 4 4", "1 1 3 4", "4-3@1"),
         new(Table.Mandolin, 315, "cis", 0, 1, "0 5 7", "6 4 4 4", "3 1 1 1", "3-1@4"),
-        new(Table.Mandolin, 319, "cis", 0, 1, "0 4 8", "x 6 3 0", "- 4 1 -", ""),
         new(Table.Mandolin, 323, "cis", 0, 1, "0 4 7 10 14", "6 3 6 7", "2 1 3 4", ""),
         new(Table.Mandolin, 329, "des", 1, -1, "0 4 7", "6 3 4 1", "4 2 3 1", ""),
         new(Table.Mandolin, 333, "des", 1, -1, "0 3 7", "6 6 4 0", "2 3 1 -", ""),
         new(Table.Mandolin, 337, "des", 1, -1, "0 4 7 10", "6 3 2 4", "4 2 1 3", ""),
         new(Table.Mandolin, 341, "des", 1, -1, "0 3 7 10", "6 6 7 7", "1 1 2 2", "2-1@7 4-3@6"),
         new(Table.Mandolin, 345, "des", 1, -1, "0 3 6 10", "4 2 4 3", "3 1 4 2", ""),
-        new(Table.Mandolin, 349, "des", 1, -1, "0 3 6 9", "3 2 1 0", "2 1 1 -", ""),
         new(Table.Mandolin, 353, "des", 1, -1, "0 4 7 11", "6 3 3 4", "4 1 1 2", "3-2@3"),
         new(Table.Mandolin, 357, "des", 1, -1, "0 4 7 9", "3 3 4 4", "1 1 2 2", "2-1@4 4-3@3"),
         new(Table.Mandolin, 361, "des", 1, -1, "0 2 7", "1 1 4 4", "1 1 3 4", "4-3@1"),
         new(Table.Mandolin, 365, "des", 1, -1, "0 5 7", "6 4 4 4", "3 1 1 1", "3-1@4"),
-        new(Table.Mandolin, 369, "des", 1, -1, "0 4 8", "x 6 3 0", "- 4 1 -", ""),
         new(Table.Mandolin, 373, "des", 1, -1, "0 4 7 10 14", "6 3 6 7", "2 1 3 4", ""),
         new(Table.Mandolin, 379, "d", 1, 0, "0 4 7", "2 0 0 2", "1 - - 2", ""),
         new(Table.Mandolin, 383, "d", 1, 0, "0 3 7", "2 0 0 1", "2 - - 1", ""),

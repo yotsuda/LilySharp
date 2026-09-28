@@ -62,6 +62,11 @@ public sealed partial class LilySharpLanguageServer
             node = diagramMark;
             content = diagramHover;
         }
+        else if (ChordLikeAt(node) is ChordSyntax { IsShapeChord: true } shapeItem)
+        {
+            node = shapeItem;
+            content = ShapeChordHover(shapeItem);
+        }
         else
         {
             var chordLike = ChordLikeAt(node);
@@ -121,8 +126,9 @@ public sealed partial class LilySharpLanguageServer
     /// The line of the tuning the step walks (<see cref="NoteStepper.StepTuning"/>) also says
     /// where the shape stands — "shape 3 of 21 (34 with stretch)", the normal count and the
     /// stretch-inclusive one, since a hover carries no setting (owner's decision 2026-09-28,
-    /// lilysharp.chordShapes.includeStretch). A frets-10-and-up shape spells with '-'
-    /// (<c>8-10-10-9-8-8</c>).
+    /// lilysharp.chordShapes.includeStretch). A frets-10-and-up shape spells in the compact
+    /// form, a '-' on each side of each two-digit fret (<c>8-10-10-988</c>; a written full-dash
+    /// <c>8-x-x-8-8-11</c> shows as <c>8xx88-11</c>).
     /// </remarks>
     internal static string? ChordDiagramHover(MusicMarkSyntax mark)
     {
@@ -143,6 +149,39 @@ public sealed partial class LilySharpLanguageServer
             head.Append(" `").Append(words.Symbol).Append('`');
         return DiagramLines(mark, scores, words.Shapes, words.Structure)
             is { } lines ? head + "\n\n" + lines : null;
+    }
+
+    /// <summary>
+    /// A <c>chord(…)</c> item's hover (owner's decision 2026-09-28): the notes it sounds on each
+    /// tuning of the parts that play it, lowest first — <c>guitar: `x32013` — C3 E3 G3 C4 G4</c> —
+    /// with where the shape stands in the step's order, or why it sounds nothing.
+    /// </summary>
+    internal static string ShapeChordHover(ChordSyntax item)
+    {
+        var words = ShapeChords.Words(item);
+        var head = new StringBuilder("**Chord from a shape**");
+        if (words.Symbol != null)
+            head.Append(" `").Append(words.Symbol).Append('`');
+        if (!words.Problems.IsEmpty)
+            return head + " — " + words.Problems[0].Message;
+        var lines = new List<string>();
+        foreach (var part in ShapeChords.PartTuningsOf(item))
+        {
+            var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift, keySharps: 0);
+            if (ShapeChords.ShapeFor(words, part.Tuning) is not { } shape || notes.IsEmpty)
+            {
+                lines.Add($"{part.Word}: no shape for its {LilySharp.Core.Tablature.Tunings.GetStringCount(part.Tuning)} "
+                    + "strings - a spacer, nothing sounds");
+                continue;
+            }
+            string spelled = ChordVoicings.Spell(ChordShapes.Frets(shape));
+            string place = words.Structure is { } chord
+                && NoteStepper.ShapePlace(item, chord, ChordShapes.Frets(shape)) is { } p ? $" — {p}" : "";
+            lines.Add($"{part.Word}: `{spelled}` — "
+                + string.Join("  ", ShapeChords.Ascending(notes).Select(n => PitchGlyphs(n.SoundingName)))
+                + place);
+        }
+        return head + "\n\n" + string.Join("  \n", lines.Distinct(StringComparer.Ordinal));
     }
 
     /// <summary>Whether some score of <paramref name="scores"/> draws every chord name

@@ -288,6 +288,26 @@ F4 A4 C5 (the f reads the chord's c, not the g), and `<c, e g> <c, e g>` repeats
 same C3 E4 G4 because the anchor is the bare c, not the lowered one. Degree chords
 hand on the TONIC, not the first degree written.
 
+A CHORD FROM A SHAPE — `chord(SYMBOL SHAPE)` + a chord's tail (duration, dots, ties, slurs,
+beams, scripts, dynamics): writes the notes a fretted shape sounds (2026-09-28).
+
+```
+chord(C x32013)1            // C3 E3 G3 C4 G4 on a guitar — each string's open pitch + fret
+chord(Cm7 x3x546)2@chord    // + name and diagram: a bare @chord takes the item's words
+chord(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
+```
+
+- The words are `@chord(…)`'s (a symbol + a shape, or a shape alone); the shape is REQUIRED —
+  `chord(C)` warns (LYS1040) and is a SPACER of its length.
+- Tuning: the PART's fretted instrument (its tab tuning), else the guitar. The shape gives
+  SOUNDING pitches; the staff writes them as the part writes any sounding pitch (a guitar
+  part, treble_8, an octave up). ABSOLUTE: the frame, `octave absolute` and marks do not move
+  it; marks after `)` are an error (LYS0035).
+- The note AFTER it is read from its LOWEST sounding note (relative mode).
+- Chord tones are spelled from the symbol (Cm7 → E♭ B♭); every note carries its string
+  number (a tab shows the shape). It draws no name/diagram itself.
+- `chord` is reserved in music: a phrase cannot be named it.
+
 ## Arpeggios `<< … >>` (written-out broken chords)
 
 Members play in SEQUENCE and EQUALLY SUBDIVIDE the group's total (no per-member
@@ -343,7 +363,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
 - Glissando: `c4@glissando d` (line from this note to the next)
 - Figured bass: `c4@figuredBass(6)` , `d4@figuredBass(6 4)`
 - Chord diagram (guitar fret diagram): `c4@diagram(x32010)` — one character per string, low
-  to high: a digit is the fret (`0` or `o` open), `x` muted; 4–8 strings. Above the note
+  to high: a digit is the fret (`0` or `o` open), `x` muted — frets 10–15 with a `-` on each
+  side (`@diagram(xx-10-12-13-11)`); 4–8 strings. Above the note
   whatever the stem; `@diagram(x32010).down` puts it below. MusicXML nests it as `<frame>`
   in the `<harmony>` of an `@chord` on the same note. Size: `fonts { diagram step +3 }`.
 - Guitar bend: `c4@bend(half)` (1 semitone), `@bend(full)` (2), `@bend(N)` (N = 1–12
@@ -356,6 +377,8 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   lowercase `:` entry (`@chord(a:m)`) is not recognised (LYS1008 warns, no symbol is
   engraved). A bare `@chord` derives it from the notes. The symbol is the FIRST word only:
   `@chord(C 7)` is C with a one-character shape (warns) — write `@chord(C7)` for C7.
+  It may sit on a rest or spacer too (`s1@chord(C)`, name and diagram as on a note); a bare
+  `@chord` there has no notes to name and warns (LYS1020) — write the name.
 - Chord diagrams (drawn under the name) appear ONLY where a chord WRITES its shape; a name
   alone (`@chord(G)`, a row's `G`) draws none — unless the score's layout says
   `chordDiagrams all` / `chordDiagrams guitar all`, where EVERY chord name (a bare `@chord`'s
@@ -363,12 +386,19 @@ Value words inside the parentheses are lowercase too (`@notehead(triangle)`,
   first (`x` muted, `o`/`0` open, a digit the fret): `@chord(Cm7 x3x546)`, `@chord(x32010)`
   (the name is derived from its notes); in a chords row glued to the symbol: `F(133211)`,
   `F(133211 2010)` (a guitar and a ukulele shape, routed by string count),
-  `F(guitar 133211 ukulele 2010)` (bound by tuning name). The diagram's tuning: the score's
+  `F(guitar 133211 ukulele 2010)` (bound by tuning name). Frets 10–15: put a `-` on each
+  side of each two-digit fret — `@chord(Cm 8xx88-11)`, `Cm(xx-10-12-13-11)`,
+  `Cm(8-10-10-888)`, `@diagram(x-15-13-12-13-x)`; a `-` between every string also reads
+  (`x-x-10-12-13-11`). Between dashes, EXACTLY two digits are ONE fret: frets 10, 9, 9 are
+  `10-9-9` (`10-99` = fret 99, an error); routed by string count (`8xx88-11` = 6); lower case
+  only; use the one-character form when every fret is ≤ 9. The diagram's tuning: the score's
   `layout { chordDiagrams TUNING [all] }` (the tab tuning words; `none` = no diagrams at all), else
   the part's fretted instrument (an `@chord`'s part; for a row, the staff it stands directly
   above), else the guitar. Common guitar shapes (LilyPond's): C `x32010`, F `133211`, G
   `320003`, Cm7 `x35343`; ukulele C `0003`. A written shape that cannot be used warns LYS1038;
-  the name still draws. There is no voicing index and no `mute` word.
+  the name still draws. A written shape that disagrees with its symbol (a non-chord tone, or a
+  missing 3rd/7th/altered fifth/tension — the root and the perfect fifth may be left out; the
+  bass is not checked) warns LYS1039 naming the fix. There is no voicing index and no `mute` word.
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
@@ -946,7 +976,9 @@ segno fine coda dc ds al to
 ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)
 ```
 
-Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Articulation,
+Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Reserved IN
+MUSIC only: `q`, `chord` (`chord(C x32010)`) and the drum names (`bd` `sn` `hh` …) — a
+phrase cannot be named them; a part can. Articulation,
 ornament, dynamic-text and mark NAMES (`staccato`, `tr`, `mordent`, `cresc`, `dim`, …) are
 NOT reserved — they are resolved from the `@name` text — so they remain free for your own
 identifiers.

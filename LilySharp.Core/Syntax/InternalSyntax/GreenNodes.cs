@@ -189,6 +189,28 @@ internal sealed class ChordGreen : GreenSyntaxNode
             [openAngle, .. pitches, closeAngle, .. octaveMarks, duration, tremolo, .. articulations])
     {
     }
+
+    /// <summary>
+    /// A chord FROM A SHAPE: <c>chord(SYMBOL SHAPE)</c> + the same tail a <c>&lt;…&gt;</c>
+    /// chord takes (owner's decision 2026-09-28, HANDOFF §2 K5). The words between the
+    /// parentheses are kept as raw tokens, read the way an <c>@chord(…)</c> argument is
+    /// (<see cref="MarkArgument"/> runs); the pitches are not in the tree — they depend on the
+    /// tuning of the part that plays the item (<see cref="Music.ShapeChords"/>). The
+    /// <c>octaveMarks</c> slot holds marks written after <c>)</c>, which the parser refuses.
+    /// </summary>
+    public ChordGreen(
+        SyntaxToken chordWord,
+        SyntaxToken openParen,
+        GreenNode?[] shapeTokens,
+        SyntaxToken closeParen,
+        GreenNode?[] octaveMarks,
+        DurationGreen? duration,
+        SyntaxToken? tremolo,
+        GreenNode?[] articulations)
+        : base(SyntaxKind.Chord,
+            [chordWord, openParen, .. shapeTokens, closeParen, .. octaveMarks, duration, tremolo, .. articulations])
+    {
+    }
 }
 
 /// <summary>

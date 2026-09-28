@@ -197,6 +197,7 @@ score main "out" {           // one or more render blocks
     <tr><td><code>/4</code></td><td>slash note — pitchless rhythm, silent, on the middle line</td></tr>
     <tr><td><code>q</code></td><td>the previous chord again</td></tr>
     <tr><td><code>q'</code></td><td>…an octave up (<code>q,,</code> two down)</td></tr>
+    <tr><td><code>chord(C x32013)1</code></td><td>a chord from a shape — each string's open pitch plus its fret on the part's instrument (else the guitar): C3 E3 G3 C4 G4, absolute, with string numbers; the next note reads its lowest note</td></tr>
   </table>
 
   <h3>Repeating a chord — and why there are two ways</h3>
@@ -295,7 +296,7 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
     <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @fall @doit @breath @caesura</code></td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
-    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name, on the part's instrument (a guitar unless the part is fretted otherwise, or <code>layout { chordDiagrams ukulele }</code> says; <code>none</code> turns diagrams off); a name alone draws none — save under <code>chordDiagrams all</code> (or <code>chordDiagrams ukulele all</code>), where every chord name draws its usual shape; <code>@chord(x32010)</code> names the chord from its shape</td></tr>
+    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @chord(Cm7 x3x546) @diagram(032010) @pluck(i) @ottava(bassa)</code> — an <code>@chord</code> that writes a shape (<code>@chord(Cm7 x3x546)</code>) draws that chord diagram under its name, on the part's instrument (a guitar unless the part is fretted otherwise, or <code>layout { chordDiagrams ukulele }</code> says; <code>none</code> turns diagrams off); a name alone draws none — save under <code>chordDiagrams all</code> (or <code>chordDiagrams ukulele all</code>), where every chord name draws its usual shape; <code>@chord(x32010)</code> names the chord from its shape; frets 10–15 take a <code>-</code> on each side (<code>@chord(Cm xx-10-12-13-11)</code>, <code>@diagram(8-10-10-888)</code>; frets 10, 9, 9 are <code>10-9-9</code>)</td></tr>
   </table>
 
   <h3>Spanners — the end is required</h3>
@@ -859,7 +860,8 @@ ppp pp p mp mf ff fff</pre>
   still be used as part, section and phrase names. Single letters <code>a</code>–<code>g</code>
   are pitches and <code>r</code>/<code>R</code>/<code>s</code> are rests — note that
   <code>f</code> is a pitch, while <code>@f</code> still works because dynamics resolve from
-  the annotation's text. Articulation, ornament and mark <i>names</i> are not reserved at
+  the annotation's text. <code>q</code>, <code>chord</code> and the drum names are reserved
+  in music only: a phrase cannot be named them, a part can. Articulation, ornament and mark <i>names</i> are not reserved at
   all; they resolve from the <code>@name</code> text, so they stay free for your own
   identifiers.</p>
 </section>

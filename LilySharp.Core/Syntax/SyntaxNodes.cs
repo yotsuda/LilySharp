@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax.InternalSyntax;
@@ -812,6 +813,10 @@ public sealed class ChordSyntax : SyntaxNode
     {
         get
         {
+            // A chord from a shape holds no member in the tree and still takes its time:
+            // with no usable shape it is a SPACER, never the zero-time carrier `<>` is.
+            if (IsShapeChord)
+                return false;
             for (int i = 0; i < SlotCount; i++)
                 if (GetChild(i) is PitchSyntax or ScaleDegreeSyntax or DrumNoteSyntax)
                     return false;
@@ -836,7 +841,109 @@ public sealed class ChordSyntax : SyntaxNode
     /// <c>&gt;</c> (<c>&lt;1 3 5&gt;'</c> = whole chord up an octave). A member's own
     /// marks are inside its pitch/degree node, so only the chord-level marks — direct
     /// apostrophe/comma tokens — count here.</summary>
-    public int ChordOctaveOffset => SyntaxFacts.NetOctaveMarks(this);
+    /// <remarks>Always 0 for a chord from a shape (<see cref="IsShapeChord"/>): its pitches are
+    /// where the strings are, and the parser refuses marks after its <c>)</c> — nor could its
+    /// <c>,</c> word separators be read as marks.</remarks>
+    public int ChordOctaveOffset => IsShapeChord ? 0 : SyntaxFacts.NetOctaveMarks(this);
+
+    // ---------------------------------------------------------------- chord(SYMBOL SHAPE)
+
+    /// <summary>
+    /// Whether this is a chord FROM A SHAPE — <c>chord(C x32013)1</c> — rather than a
+    /// <c>&lt;…&gt;</c> chord: the item whose notes are the shape's sounding strings on the
+    /// tuning of the part that plays it (owner's decision 2026-09-28, HANDOFF §2 K5;
+    /// <see cref="Music.ShapeChords"/>). It holds no pitch member in the tree.
+    /// </summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
+    /// absolute chord with string numbers.</remarks>
+    public bool IsShapeChord => Green.GetSlot(0) is { Kind: SyntaxKind.Identifier };
+
+    /// <summary>The slot of the <c>)</c> closing a shape chord's words (SlotCount when absent);
+    /// −1 for a <c>&lt;…&gt;</c> chord.</summary>
+    private int ShapeCloseSlot
+    {
+        get
+        {
+            if (!IsShapeChord)
+                return -1;
+            for (int i = 2; i < SlotCount; i++)
+                if (Green.GetSlot(i) is { Kind: SyntaxKind.CloseParen })
+                    return i;
+            return SlotCount;
+        }
+    }
+
+    /// <summary>The first slot of the chord's tail (octave marks, duration, tremolo,
+    /// post-events): past the <c>)</c> of a shape chord's words, 0 otherwise (a
+    /// <c>&lt;…&gt;</c> chord's accessors have always scanned from the start).</summary>
+    private int TailStart => IsShapeChord ? ShapeCloseSlot + 1 : 0;
+
+    /// <summary>The tokens between a shape chord's parentheses, in source order; empty for a
+    /// <c>&lt;…&gt;</c> chord.</summary>
+    public ImmutableArray<SyntaxTokenNode> ShapeTokens
+    {
+        get
+        {
+            int close = ShapeCloseSlot;
+            if (close < 0)
+                return [];
+            var b = ImmutableArray.CreateBuilder<SyntaxTokenNode>();
+            for (int i = 2; i < close && i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode t)
+                    b.Add(t);
+            return b.ToImmutable();
+        }
+    }
+
+    /// <summary>A shape chord's WORDS — the runs an <c>@chord(…)</c> argument reads
+    /// (<see cref="MarkArgument"/>): <c>chord(Cm7 x3x546)</c> → <c>Cm7</c>, <c>x3x546</c>.</summary>
+    public ImmutableArray<MarkArgument> ShapeArguments => MarkArgument.FromTokens(ShapeTokens);
+
+    /// <summary>The source span of each of <see cref="ShapeArguments"/>, by the same run rule.</summary>
+    public IReadOnlyList<TextSpan> ShapeWordSpans
+    {
+        get
+        {
+            var spans = new List<TextSpan>();
+            int start = -1, end = -1;
+            foreach (var token in ShapeTokens)
+            {
+                if (token.Kind == SyntaxKind.Comma)
+                {
+                    if (start >= 0)
+                        spans.Add(new TextSpan(start, end - start));
+                    start = -1;
+                    continue;
+                }
+                if (start >= 0 && token.Span.Start == end)
+                {
+                    end = token.Span.End;
+                    continue;
+                }
+                if (start >= 0)
+                    spans.Add(new TextSpan(start, end - start));
+                start = token.Span.Start;
+                end = token.Span.End;
+            }
+            if (start >= 0)
+                spans.Add(new TextSpan(start, end - start));
+            return spans;
+        }
+    }
+
+    /// <summary>The <c>'</c> / <c>,</c> tokens written after a shape chord's <c>)</c> — refused
+    /// by the parser, kept so the tree spells the source.</summary>
+    public IEnumerable<SyntaxTokenNode> ShapeOctaveMarks
+    {
+        get
+        {
+            if (!IsShapeChord)
+                yield break;
+            for (int i = TailStart; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Apostrophe or SyntaxKind.Comma } t)
+                    yield return t;
+        }
+    }
 
     /// <summary>
     /// Gets the duration of the chord (after the closing angle bracket).
@@ -845,7 +952,7 @@ public sealed class ChordSyntax : SyntaxNode
     {
         get
         {
-            for (int i = 0; i < SlotCount; i++)
+            for (int i = TailStart; i < SlotCount; i++)
             {
                 if (GetChild(i) is DurationSyntax duration)
                     return duration;
@@ -861,7 +968,7 @@ public sealed class ChordSyntax : SyntaxNode
     {
         get
         {
-            for (int i = 0; i < SlotCount; i++)
+            for (int i = TailStart; i < SlotCount; i++)
             {
                 var child = GetChild(i);
                 if (child is SyntaxTokenNode token && token.Kind == SyntaxKind.TremoloSuffix)
@@ -884,7 +991,7 @@ public sealed class ChordSyntax : SyntaxNode
     /// lost its slur close from BOTH the MusicXML and the LilyPond twin, silently, while
     /// the engraved page was unaffected.
     /// </remarks>
-    public ChildNodeList Articulations => new(this, 0, ChildNodeFilter.FullPostEvents);
+    public ChildNodeList Articulations => new(this, TailStart, ChildNodeFilter.FullPostEvents);
 }
 
 /// <summary>

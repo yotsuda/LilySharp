@@ -76,7 +76,9 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// Collects the chord symbols written on a note or chord — <c>@chord(c:m7)</c>, and
-    /// the bare <c>@chord</c> that derives its symbol from the notes it sits on.
+    /// the bare <c>@chord</c> that derives its symbol from the notes it sits on — and on a
+    /// rest or a spacer (<c>s1@chord(C)</c>): a chord symbol belongs to the beat, not to a
+    /// note (owner's decision 2026-09-28).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -166,7 +168,8 @@ public sealed partial class MeasureCollector
             // Bare '@chord' auto-derives the symbol from the notes it's on. On a
             // chord (or a << >> arpeggio — a broken chord names the same way) we
             // recognize it; on a single note there is nothing to derive, so it
-            // shows nothing.
+            // shows nothing — nor on a rest or a spacer, which has no notes at all
+            // (AnnotationNameValidator warns there, naming the fix: write the name).
             if (chordText.Length == 0)
             {
                 structure = NameFromNotes(node);
@@ -261,7 +264,17 @@ public sealed partial class MeasureCollector
             : Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(root, partName));
         _partTuning = header == null ? Tablature.Tunings.Guitar : Tablature.Tunings.GetTuning(header.Tuning);
         _partFrettedTuning = header?.FrettedTuning;
+        _partShapeTuning = Music.ShapeChords.TuningOf(header);
+        _partSoundingShift = header?.SoundingShiftSemitones ?? 0;
     }
+
+    /// <summary>The tuning a <c>chord(…)</c> item of the part being collected sounds on
+    /// (<see cref="Music.ShapeChords.TuningOf"/>: its fretted instrument, else the guitar).</summary>
+    private TuningType _partShapeTuning = TuningType.Guitar;
+
+    /// <summary>The part's written→sounding shift (<see cref="Semantics.PartHeaderDefaults.SoundingShiftSemitones"/>):
+    /// what a <c>chord(…)</c> item's sounding strings are written less.</summary>
+    private int _partSoundingShift;
 
     /// <summary>
     /// When set, every chord, <c>&lt;&lt; &gt;&gt;</c> arpeggio and <c>q</c> this collect walks

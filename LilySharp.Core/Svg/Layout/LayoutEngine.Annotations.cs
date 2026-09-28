@@ -477,6 +477,79 @@ internal sealed partial class LayoutEngine
                     : prefix.Columns.ClefX + clefWidth);
         };
 
+    /// <summary>
+    /// The drawn scripts with each chord diagram an <c>@chord</c> chose raised over its
+    /// staff's inside-staff profile — the same placement the room made when it reserved the
+    /// diagram (<c>SkylineBuilder.PlaceDiagramsUnderNames</c>), asked of the same builder with
+    /// this pass's own scripts, fingerings and beams. Every other script is returned as it was.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN (2026-09-28): see <see cref="ArticulationEngraver.DiagramYUpOverInk"/> for
+    /// the defect and the LilyPond shapes this stands in for.
+    /// <para>
+    /// ⚠️ A REBUILD AND NOT THE ROOM'S PROFILE: <see cref="AnnotationLayoutContext.InsideOf"/>
+    /// already HOLDS the placed diagram, and a diagram measured against a profile containing
+    /// itself would climb its own ink. The rebuild runs only on a (system, staff) that carries
+    /// such a diagram, so a book without one pays one scan of its scripts and nothing more.
+    /// </para>
+    /// </remarks>
+    private ImmutableArray<ArticulationLayout> ClearChordDiagramsOverStaffInk(
+        AnnotationLayoutContext ctx, ImmutableArray<SystemLayout> systems,
+        ImmutableArray<ArticulationLayout> scripts, ImmutableArray<FingeringLayout> fingerings,
+        ImmutableArray<BeamLayout> beams, IReadOnlyDictionary<int, int> measureToSystem)
+    {
+        if (scripts.IsDefaultOrEmpty || ctx.StaffByIndex is not { } staffByIndex)
+            return scripts;
+        HashSet<(int Sys, int Staff)>? wanted = null;
+        foreach (var a in scripts)
+            if (ArticulationEngraver.IsDiagramUnderName(a)
+                && measureToSystem.TryGetValue(a.MeasureIndex, out int s))
+                (wanted ??= []).Add((s, a.StaffIndex));
+        if (wanted is null)
+            return scripts;
+
+        var raised = new Dictionary<int, double>();
+        var cleared = new List<ArticulationLayout>();
+        foreach (var (sysIdx, staffIndex) in wanted)
+        {
+            if (sysIdx < 0 || sysIdx >= systems.Length
+                || !staffByIndex.TryGetValue(staffIndex, out var staff))
+                continue;
+            var measures = systems[sysIdx].Measures;
+            bool InThisRoom(int measureIndex)
+                => measureToSystem.TryGetValue(measureIndex, out int m) && m == sysIdx;
+            var spanners = ctx.SpannersOf(sysIdx, staffIndex);
+            cleared.Clear();
+            _skylineBuilder.BuildInsideStaffSkylines(
+                staff, measures,
+                articulationLayouts: [.. scripts.Where(a => a.StaffIndex == staffIndex && InThisRoom(a.MeasureIndex))],
+                tupletBrackets: spanners.TupletBrackets,
+                slurs: spanners.Slurs,
+                ties: spanners.Ties,
+                beams: beams.IsDefaultOrEmpty
+                    ? ImmutableArray<BeamLayout>.Empty
+                    : [.. beams.Where(b => b.StaffIndex == staffIndex && b.SystemIndex == sysIdx)],
+                systemLeft: systems[sysIdx].Indent,
+                restShifts: ctx.RestCollisionsOf(staff),
+                fingerings: fingerings.IsDefaultOrEmpty
+                    ? default
+                    : [.. fingerings.Where(f => f.StaffIndex == staffIndex && InThisRoom(f.MeasureIndex))],
+                graceSeeds: SkylineBuilder.GraceSeedsFor(
+                    staff, staffIndex, ctx.GraceNotes, ctx.Articulations, measures),
+                clearedDiagrams: cleared);
+            foreach (var d in cleared)
+                raised[d.SourceIndex] = d.YUp;
+        }
+        if (raised.Count == 0)
+            return scripts;
+        var result = scripts.ToBuilder();
+        for (int i = 0; i < result.Count; i++)
+            if (ArticulationEngraver.IsDiagramUnderName(result[i])
+                && raised.TryGetValue(result[i].SourceIndex, out double yUp))
+                result[i] = result[i] with { YUp = yUp };
+        return result.MoveToImmutable();
+    }
+
     private AnnotationLayouts CalculateAnnotationLayouts(AnnotationLayoutContext ctx)
     {
         var score = ctx.Score;
@@ -619,6 +692,12 @@ internal sealed partial class LayoutEngine
             ctx, score, systems, voicesByStaff, beamLayouts ?? default,
             articulations, ml, measuresByStaff, staffYAt, staffByIndex,
             measureToSystem, passMeasureMap);
+        // The chord diagrams an @chord chose stand over the staff's whole inside profile, not
+        // just their note's heads and stem — BEFORE anything reads the scripts' positions
+        // (the chord-name line over them, the movers, the lyric rows). 2026-09-28.
+        articulationLayouts = ClearChordDiagramsOverStaffInk(
+            ctx, systems, articulationLayouts, fingeringLayouts, beamLayouts ?? default,
+            measureToSystem);
         var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
         var lyricLayouts = LayoutLyrics(ctx, ml, scriptedSkylines);

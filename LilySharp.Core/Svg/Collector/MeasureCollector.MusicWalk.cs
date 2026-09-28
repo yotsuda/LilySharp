@@ -1121,6 +1121,8 @@ public sealed partial class MeasureCollector
                         CollectArticulations(note, prMeasureIndex, prItemIndex,
                             stemUp: false, anchorTiming: prAnchorTiming);
                         CollectDynamics(note, prMeasureIndex, prItemIndex);
+                        // …and a chord symbol, as on `r1@chord(C)` (owner's decision 2026-09-28).
+                        CollectChordNames(note, prMeasureIndex, prItemIndex, prAnchorTiming);
                         break;
                     }
 
@@ -1199,6 +1201,16 @@ public sealed partial class MeasureCollector
                         //   dynamic is its own event stream, unanchored to note heads
                         //   (regression dynamics-rest-positioning.ly is the pin).
                         CollectDynamics(rest, restMeasureIndex, restItemIndex);
+                        // A chord symbol belongs to the BEAT, not to a note (owner's decision
+                        // 2026-09-28): `r1@chord(C x32013)` / `s1@chord(G)` draw the name on the
+                        // chord-name line at the rest's moment, and the diagram under it by the
+                        // usual rules. ⚠️ This arm never called the collect, so the name AND the
+                        // diagram were dropped in silence while `r1@diagram(…)` (an articulation)
+                        // drew — the owner's report 2026-09-28. A bare @chord has no notes to
+                        // name here: it draws nothing and LYS1020 says to write the name.
+                        // LILYPOND-REF: scm/scheme-engravers.scm:1513 Current_chord_text_engraver
+                        //   — listens to the moment's events, not to a note head.
+                        CollectChordNames(rest, restMeasureIndex, restItemIndex, restAnchorTiming);
                     }
                     else
                     {
@@ -1224,6 +1236,9 @@ public sealed partial class MeasureCollector
                         var following = builder.FollowingBoundary;
                         builder.ClearFollowingBarline();
                         builder.AddItem(restItem);
+                        // `R1*4@chord(C)`: the symbol stands at the run's first bar, on the
+                        // written event (the count<=1 arm's remark — owner's decision 2026-09-28).
+                        CollectChordNames(rest, restMeasureIndex, restItemIndex, restAnchorTiming);
                         // Each interior copy is a site like any other: `R1*2000000000`
                         // parses (int.TryParse, no clamp) and used to emit that many
                         // records — the expansion budget truncates it instead.
@@ -1285,6 +1300,16 @@ public sealed partial class MeasureCollector
                             _pendingEmptyChordSlurEndSource = m.SlurEndSource;
                         _pendingEmptyChordSlurStart |= hasSlurStartAfter;
                         _pendingEmptyChordSlurEnd |= hasSlurEndAfter;
+                        break;
+                    }
+                    // A chord(…) item with no shape its part's tuning can play: a SPACER of its
+                    // written length (owner's decision 2026-09-28, LYS1040) — the bar adds up,
+                    // nothing is drawn. A bare @chord on it still names the item's symbol.
+                    if (chord.IsShapeChord && ShapeNotesOf(chord).IsEmpty)
+                    {
+                        builder.AddItem(WithBowSources(CreateShapeSpacerItem(chord), m));
+                        CollectDynamics(chord, measureIndex, itemIndex);
+                        CollectChordNames(chord, measureIndex, itemIndex, chordAnchorTiming);
                         break;
                     }
                     // The grace group waiting for this chord is walked BEFORE it (octave
@@ -2082,6 +2107,7 @@ public sealed partial class MeasureCollector
                     builder.AddItemWithoutDuration(WithBowSources(pitchedRest with { TimeScale = scale }, m));
                     CollectArticulations(note, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                     CollectDynamics(note, annMeasureIndex, annItemIndex);
+                    CollectChordNames(note, annMeasureIndex, annItemIndex, annAnchor);
                     return pitchedRest.Duration;
                 }
                 // hasGlissando read here too — the main walk's arm reads it and this
@@ -2118,7 +2144,18 @@ public sealed partial class MeasureCollector
                 CollectArticulations(rest, annMeasureIndex, annItemIndex, stemUp: false, anchorTiming: annAnchor);
                 // Same repair as the main walk's rest case: a rest carries dynamics too.
                 CollectDynamics(rest, annMeasureIndex, annItemIndex);
+                // …and a chord symbol (the main rest arm's remark, 2026-09-28).
+                CollectChordNames(rest, annMeasureIndex, annItemIndex, annAnchor);
                 return restItem.Duration;
+            }
+            case ChordSyntax chord when chord.IsShapeChord && ShapeNotesOf(chord).IsEmpty:
+            {
+                // A chord(…) item with no usable shape: a spacer (LYS1040), as the main arm.
+                var spacer = CreateShapeSpacerItem(chord);
+                builder.AddItemWithoutDuration(WithBowSources(spacer with { TimeScale = scale }, m));
+                CollectDynamics(chord, annMeasureIndex, annItemIndex);
+                CollectChordNames(chord, annMeasureIndex, annItemIndex, annAnchor);
+                return spacer.Duration;
             }
             case ChordSyntax chord:
             {

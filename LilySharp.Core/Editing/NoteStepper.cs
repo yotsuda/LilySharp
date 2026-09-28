@@ -252,9 +252,18 @@ public static class NoteStepper
     {
         // An @chord: strictly after its '@' — a caret just before the '@' is also just after
         // the note's duration, and belongs to the note.
+        // A bare one on a chord(…) item names the item's words (ChordAnnotation.Of), so it
+        // steps the item's shape.
         foreach (var mark in tree.GetNodes<MusicMarkSyntax>())
             if (mark.Name == "chord" && mark.Span.Start < offset && offset <= mark.Span.End)
-                return new Target(TargetKind.Voicing, mark);
+                return ChordAnnotation.Of(mark) is { FromShapeItem: true }
+                    ? new Target(TargetKind.Voicing, mark.Parent!)
+                    : new Target(TargetKind.Voicing, mark);
+        // A chord(…) item (owner's decision 2026-09-28): from its word 'chord' to its ')' —
+        // the step rewrites its shape as an @chord's, on the part's tuning (StepTuning).
+        foreach (var item in tree.GetNodes<ChordSyntax>())
+            if (item.IsShapeChord && item.SourceStart <= offset && offset <= ShapeItemHeadEnd(item))
+                return new Target(TargetKind.Voicing, item);
         // A chords-row entry: from its symbol's first character to its ')' (or its symbol's end).
         foreach (var entry in tree.GetNodes<ChordEntrySyntax>())
             if (entry.SourceStart <= offset && offset <= EntryEnd(entry))
@@ -287,6 +296,22 @@ public static class NoteStepper
                 return new Target(TargetKind.Chord, node);
         }
         return null;
+    }
+
+    /// <summary>Just past a <c>chord(…)</c> item's <c>)</c> (or its last word, unclosed).</summary>
+    private static int ShapeItemHeadEnd(ChordSyntax item)
+    {
+        int end = item.SourceStart + Parser.Parser.ShapeChordWord.Length;
+        for (int i = 0; i < item.SlotCount; i++)
+            if (item.GetChild(i) is SyntaxTokenNode t && t.Text.Length > 0)
+            {
+                end = Math.Max(end, t.SourceStart + t.Text.Length);
+                if (t.Kind == SyntaxKind.CloseParen)
+                    break;
+            }
+            else if (item.GetChild(i) is not null and not SyntaxTokenNode)
+                break;
+        return end;
     }
 
     /// <summary>Just past a row entry's last token (its <c>)</c>, or its symbol).</summary>
@@ -382,7 +407,8 @@ public static class NoteStepper
                 TargetKind.Member => node is PitchSyntax or ScaleDegreeSyntax
                     && node.Parent is ChordSyntax or ArpeggioSyntax,
                 TargetKind.Chord => node is ChordSyntax or ArpeggioSyntax,
-                _ => node is MusicMarkSyntax { Name: "chord" } or ChordEntrySyntax,
+                _ => node is MusicMarkSyntax { Name: "chord" } or ChordEntrySyntax
+                    or ChordSyntax { IsShapeChord: true },
             };
             if (fits)
                 return new Target(kind, node);
@@ -423,8 +449,8 @@ public static class NoteStepper
     /// ★ IN A <c>chordDiagrams … all</c> SCORE (the first rendering the chord,
     /// <see cref="DrawsEveryChord"/>) a name alone already draws the default, so the step
     /// counts from there (owner's decision 2026-09-28): Up from the name writes the shape AFTER
-    /// the default, and Down at the default — written or not — does nothing; the status bar
-    /// says why.
+    /// the default; Down on the name alone does nothing, and Down at a WRITTEN default removes it
+    /// like in any score (the page keeps showing it); the status bar says why.
     /// </para>
     /// </summary>
     /// <remarks>
@@ -455,19 +481,21 @@ public static class NoteStepper
         int shapeAt = -1, namedAt = -1;
         for (int i = 0; i + 1 < site.Words.Count && shapeAt < 0; i++)
             if (site.Words[i].Text is var t && Tablature.Tunings.Names.Contains(t)
-                && Tablature.Tunings.Parse(t) == tuningType && site.Words[i + 1].Text.Length == tuning.Length)
+                && Tablature.Tunings.Parse(t) == tuningType
+                && Music.ChordShapes.StringCount(site.Words[i + 1].Text) == tuning.Length)
                 (namedAt, shapeAt) = (i, i + 1);
+        // Counted in strings, not characters: a dash-separated shape (8-x-x-8-8-11) is six.
         for (int i = 0; i < site.Words.Count && shapeAt < 0; i++)
             if (Music.ChordShapes.StartsShape(site.Words[i].Text)
                 && (i == 0 || !Tablature.Tunings.Names.Contains(site.Words[i - 1].Text))
-                && site.Words[i].Text.Length == tuning.Length)
+                && Music.ChordShapes.StringCount(site.Words[i].Text) == tuning.Length)
                 shapeAt = i;
 
         // In a `chordDiagrams … all` score (the first rendering this chord) a name alone already
         // DRAWS the default (Music.ChordShapes.Drawn), so the default is where an unwritten name
         // stands — Lily#'s reading of the owner's decision 2026-09-28: Up from the name writes the
-        // shape AFTER the default (writing the default itself would change nothing on the page),
-        // and Down at the default does nothing (removing it would draw the same shape again).
+        // shape AFTER the default (writing the default itself would change nothing on the page);
+        // Down at a written default removes it (below), the name alone drawing it all the same.
         bool drawsAll = DrawsEveryChord(node);
         int defaultAt = drawsAll && Music.ChordShapes.Default(tuningType, site.Chord) is { } drawnDefault
             ? PlaceInOrder(drawnDefault.Frets, order) : -1;
@@ -505,9 +533,19 @@ public static class NoteStepper
         }
         else if (dir < 0 && at == defaultAt)
         {
-            // Down at the default of an `all` score: nothing — the name alone draws this shape.
-            return (null, $"{symbol}: at the default ({Music.ChordVoicings.Spell(order[at])}) - this score "
-                + $"draws every chord, so a name alone shows it too; Down does nothing{note}", true);
+            // Down at the default of an `all` score REMOVES the written shape, as in any score
+            // (owner, 2026-09-28: "@chord(Cm7 x35343) + Down should give @chord(Cm7)"). The page
+            // does not change — the name alone draws the same default — but the source loses a
+            // shape that says nothing, which is what Down at the default means everywhere else.
+            return (Remove(site, namedAt >= 0 ? namedAt : shapeAt, shapeAt),
+                $"{symbol}: shape removed - this score draws every chord, so the name alone still shows "
+                + $"the default ({Music.ChordVoicings.Spell(order[at])}){note}", true);
+        }
+        else if (dir < 0 && at == 0 && site.IsItem)
+        {
+            // A chord(…) item's shape IS its notes (required, owner's decision 2026-09-28):
+            // Down stops at the default instead of leaving a spacer.
+            return (null, ShapeMessage(symbol, 0, order) + " - the first; a chord(...) item keeps its shape" + note, true);
         }
         else if (dir < 0 && at == 0)
         {
@@ -533,12 +571,28 @@ public static class NoteStepper
     /// </summary>
     private sealed record ShapeSite(string Symbol, Music.ChordStructure Chord,
         List<(string Text, int Start, int End)> Words, List<string> Problems, int SymbolEnd,
-        (int Open, int OpenEnd, int Close)? Group, bool IsRow);
+        (int Open, int OpenEnd, int Close)? Group, bool IsRow, bool IsItem = false);
 
     /// <summary>The site a step at <paramref name="node"/> rewrites, or null with the refusal
     /// to show (null refusal: not steppable at all — the key's own command runs).</summary>
     private static (ShapeSite? Site, string? Refusal) ShapeSiteOf(SyntaxNode node)
     {
+        // A chord(…) item: its words are an @chord's (Music.ShapeChords.Words).
+        if (node is ChordSyntax { IsShapeChord: true } item)
+        {
+            var itemWords = Music.ShapeChords.Words(item);
+            if (itemWords is not { Symbol: { } itemSymbol, Structure: { } itemChord })
+                return (null, null);
+            var itemSpans = item.ShapeWordSpans;
+            var itemArgs = item.ShapeArguments;
+            if (itemSpans.Count != itemArgs.Length || itemSpans.Count == 0)
+                return (null, null);
+            var itemList = new List<(string, int, int)>();
+            for (int i = 1; i < itemSpans.Count; i++)
+                itemList.Add((itemArgs[i].Text, itemSpans[i].Start, itemSpans[i].End));
+            return (new ShapeSite(itemSymbol, itemChord, itemList, [.. itemWords.Problems.Select(p => p.Message)],
+                itemSpans[0].End, null, IsRow: false, IsItem: true), null);
+        }
         if (node is MusicMarkSyntax mark)
         {
             if (ChordAnnotation.Of(mark) is not { Symbol: { } symbol, Structure: { } chord } words)
@@ -653,9 +707,13 @@ public static class NoteStepper
     /// <see cref="StepTuning"/>. <paramref name="site"/> is an <c>@chord</c> or a row entry.
     /// </summary>
     /// <remarks>
-    /// ⚠️ A shape reaching fret 10 or higher is left out: the shape grammar writes one
-    /// character per string (<see cref="Music.ChordShapes.IsShape"/>), so the step could not
-    /// write it back.
+    /// Shapes at frets 10–15 are IN the order since 2026-09-28 (owner's decision): the shape
+    /// grammar writes them dash-separated (<see cref="Music.ChordShapes.TryRead"/>), and the
+    /// step spells each with <see cref="Music.ChordVoicings.Spell"/> — one character per string
+    /// when every fret is 9 or less, else the compact form, a '-' on each side of each two-digit
+    /// fret (owner's decision, same day) — so Cm walks on past <c>8xx888</c> to
+    /// <c>8xx88-11</c>. (Until then they were left out: one character per string could not
+    /// write them back.)
     /// </remarks>
     public static (IReadOnlyList<int> Tuning, List<ImmutableArray<int>> Order) ShapeOrder(
         SyntaxNode site, Music.ChordStructure chord, bool includeStretch)
@@ -665,7 +723,7 @@ public static class NoteStepper
         var order = new List<ImmutableArray<int>>();
         void Add(ImmutableArray<int> shape)
         {
-            if (shape.All(f => f <= 9) && !order.Any(o => o.SequenceEqual(shape)))
+            if (!order.Any(o => o.SequenceEqual(shape)))
                 order.Add(shape);
         }
         if (Music.ChordShapes.Default(tuningType, chord) is { } first)
@@ -859,7 +917,8 @@ public static class NoteStepper
                 for (int s = 0; s < frets.Length && s < tuning.Count; s++)
                     if (frets[s] >= 0)
                         pitches.Add(tuning[s] + frets[s]);
-                int host = mark is MusicMarkSyntax ? mark.Parent?.SourceStart ?? -1 : -1;
+                int host = mark is MusicMarkSyntax ? mark.Parent?.SourceStart ?? -1
+                    : mark is ChordSyntax ? mark.SourceStart : -1;
                 return ([.. pitches], index.Timbre.TryGetValue(host, out int t) ? t : GuitarTimbre);
             }
         }
@@ -885,6 +944,9 @@ public static class NoteStepper
         else if (site is MusicMarkSyntax mark
                  && ChordAnnotation.Of(mark) is { IsBare: false, QuotedText: null } words)
             (shapes, structure) = (words.Shapes, words.Structure);
+        else if (site is ChordSyntax { IsShapeChord: true } item
+                 && Music.ShapeChords.Words(item) is { IsBare: false, QuotedText: null } itemWords)
+            (shapes, structure) = (itemWords.Shapes, itemWords.Structure);
         else
             return null;
         var tuningType = Tablature.Tunings.Parse(StepTuning(site).Word);
