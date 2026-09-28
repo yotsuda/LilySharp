@@ -493,6 +493,16 @@ public sealed partial class LilySharpLanguageServer
     internal static CompletionList GetChordNameCompletions()
         => WordList(LanguageVocabulary.ChordNameWords, ChordNameDetails);
 
+    /// <summary>After <c>layout { chordList</c>: the chord list at the score's head.</summary>
+    internal static CompletionList GetChordListCompletions()
+        => WordList(LanguageVocabulary.ChordListWords, ChordListDetails);
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> ChordListDetails = new()
+    {
+        ["false"] = "No chord list (default)",
+        ["true"] = "The chords the score uses, each with its diagram, under the title — centred rows of even counts",
+    };
+
     private static readonly System.Collections.Generic.Dictionary<string, string> ChordDiagramDetails = new()
     {
         ["none"] = "No chord diagrams, even for written shapes (a piano score from the same source)",
@@ -622,7 +632,7 @@ public sealed partial class LilySharpLanguageServer
                         // `guitar`, not the absent key's "the part's instrument, else guitar"
                         // (no word says that): the same page unless a part is a ukulele,
                         // a mandolin, a bass… (owner's rule 2026-09-28, ChordDiagramsKey.Resolve).
-                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  voltaBracket ${10:all}$0\n}",
+                        + "\n  chordDiagrams ${8:guitar}\n  chordNames ${9:shape}\n  chordList ${10:false}\n  voltaBracket ${11:all}$0\n}",
                     Preselect = true,
                     SortText = "0",
                     Detail = "Set the score's display switches (pre-filled with LilyPond's defaults)",
@@ -673,6 +683,7 @@ public sealed partial class LilySharpLanguageServer
         "minorChords" => "How a minor chord's root is spelled: upper (default) | lower",
         "chordDiagrams" => "The tuning written chord shapes draw on: guitar | ukulele | mandolin | … | none (default: the part's instrument, else guitar); add `capo N` for a capo, `all` to draw every chord, `{ … }` to list the chords that draw",
         "chordNames" => "What a chord name shows under a capo: shape (default, the pressed chord's) | sounding | both",
+        "chordList" => "The chords the score uses, each with its diagram, under the title: true | false (default)",
         "voltaBracket" => "How far an ending's bracket reaches: all (default) | line | N bars; an ending's own @voltaBracket(…) overrides it",
         _ => "Layout key",
     };
@@ -3341,7 +3352,7 @@ public sealed partial class LilySharpLanguageServer
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page — save
                 // chordDiagrams, whose default no word spells (see GetLayoutDeclarationCompletions).
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tvoltaBracket ${10:all}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, voltaBracket), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}\n\tchordDiagrams ${8:guitar}\n\tchordNames ${9:shape}\n\tchordList ${10:false}\n\tvoltaBracket ${11:all}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords, chordDiagrams, chordNames, chordList, voltaBracket), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not

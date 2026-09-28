@@ -65,6 +65,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   file's chords would take a barre there (`capo 3: 0 barre chords of 3` first, `capo 0: 2
   barre chords of 3 (F 133211, Bb x13331)`), and hovering `capo` or its fret shows the same
   ranking. `capo`, `chordNames` and their words are completed and coloured.
+- **The chord list: `layout { chordList true }`** — every chord the score uses, with its
+  diagram, under the title in centred rows; completed and coloured.
 - **Hover** a chord with no shape to see how to add one: `Ctrl+Shift+↑ adds a chord diagram
   (guitar: 320003)`. With a shape written, the hover shows the shape each tuning draws —
   `guitar: x3x546 (written)`, `ukulele: no diagram` — and where it stands in the editor's

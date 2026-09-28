@@ -156,14 +156,16 @@ public sealed partial class MeasureCollector
                 {
                     var fromFrets = Semantics.ChordAnnotation.NameFromFrets(
                         naming.Frets, naming.Tuning, WrittenKeySharps());
-                    if (DiagramFor(fromFrets) is { } diagram)
+                    var diagram = DiagramFor(fromFrets);
+                    if (diagram != null)
                         AddChordDiagram(markSyntax, diagram.Frets, measureIndex, itemIndex);
                     if (fromFrets != null)
                     {
                         var named = fromFrets.PrintedSymbol(_chordSpelling, keySharps);
                         _chordNameCollector.AddInline(
                             named.Text, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                            _cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom);
+                            _cursor.StaffIndex, fromFrets, named.SuperFrom, named.BracketSuperFrom,
+                            diagram?.FrameSpec);
                     }
                 }
                 continue;
@@ -188,14 +190,15 @@ public sealed partial class MeasureCollector
                 bracketSuperFrom = derived.BracketSuperFrom;
             }
 
-            _chordNameCollector.AddInline(
-                chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
-                _cursor.StaffIndex, structure, superFrom, bracketSuperFrom);
             // A bare @chord names its notes and writes no shape, so it draws no diagram (the
             // shape the notes spell on the staff is not a fingering) — save in an `all` score,
             // where its derived name draws the default like any name; nor does a name with no
             // shape for the tuning. Quoted text names no chord: never a diagram.
-            if (DiagramFor(structure) is { } drawn)
+            var drawn = DiagramFor(structure);
+            _chordNameCollector.AddInline(
+                chordText, measureIndex, itemIndex, anchorTiming, markSyntax.SourceStart,
+                _cursor.StaffIndex, structure, superFrom, bracketSuperFrom, drawn?.FrameSpec);
+            if (drawn != null)
                 AddChordDiagram(markSyntax, drawn.Frets, measureIndex, itemIndex);
         }
     }

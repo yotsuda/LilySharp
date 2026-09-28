@@ -369,6 +369,33 @@ internal static partial class SharedRenderer
             gc.DrawText(instrument, centerX, page.Height - (top + instrumentBaseline),
                 HeaderBand.ComposerEm(fonts), TextRole.Composer, HeaderBand.ComposerStyle(fonts), TextAnchor.Middle);
         }
+        if (band.ChordList is { } list)
+        {
+            // The chord list (chordList; 2026-09-29): each name in the chord symbol's own pieces
+            // — the raised quality, the accidental glyphs — and its diagram by the one painter,
+            // at the places HeaderBand.WithChordList reserved.
+            FontStyle style = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Style(fonts);
+            foreach (var cell in list.Cells)
+            {
+                double baseline = page.Height - (top + cell.NameBaseline);
+                foreach (var piece in LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Pieces(
+                             fonts, cell.Entry.Text, cell.Entry.SuperFrom, cell.Entry.BracketSuperFrom))
+                {
+                    if (piece.IsTriangle)
+                        DrawMajorSevenTriangle(gc, cell.NameX + piece.DrawX, baseline + piece.Raise,
+                            LilySharp.Core.Svg.Layout.ChordNameGlyphRun.TriangleBaseOf(piece));
+                    else if (piece.IsGlyph)
+                        gc.DrawGlyph(piece.Glyph, cell.NameX + piece.DrawX, baseline + piece.Raise,
+                            LilySharp.Core.Svg.Layout.ChordNameGlyphRun.AccidentalGlyphEm(FontSize, piece.FontSize));
+                    else
+                        gc.DrawText(piece.Text, cell.NameX + piece.X, baseline + piece.Raise,
+                            LilySharp.Core.Svg.Layout.ChordNameGlyphRun.EmAt(piece.FontSize),
+                            TextRole.ChordName, style, TextAnchor.Start, Color.Black);
+                }
+                if (cell.Entry.Spec is { } spec)
+                    DrawFretFrame(fonts, cell.GridCentreX, page.Height - (top + cell.GridBottom), spec, gc);
+            }
+        }
     }
 
     /// <summary>Opens a data-pos source scope for a header grob, or a no-op scope

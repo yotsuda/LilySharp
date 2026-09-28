@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第664セッションの経緯
+
+### 1.1 第664セッション（2026-09-29・YT-DELL2）
+
+新しい会話（`/clear`）。★ `-Start p664`（HEAD `7d870c98`・未 push 36・full **10170 / 0 / 2 / 10172**・61 秒で完走）。
+★★★ **§2 K5 ③ 完了＝`layout` の形の表** `chordDiagrams [調弦] [all] { Cm7 x35343  G  section Chorus { C x35553 } }`: 挙げたコードは名前だけの所でも図を描く。強さは **書いた形 → セクションの表（そのコードが*書かれている* `section`＝`@chord` の音符・行の小節・by-part 行の内側の `section`）→ 曲全体の表 → （`all` なら）定番**。名前だけの項目＝定番。項目の形がその調弦に合わなければ無いものとして次へ（弦数／調弦語の振り分けは行の `F(133211 2010)` と同じ＝`ChordShapes.ParseWords`）。`none` は表を取らない（エラー）。実装: `Music/ChordShapeTable`（値で比較＝incremental の契約）・`ChordShapes.Drawn(…, table, section)`・`LayoutPlan.ChordDiagramTable`・`LayoutPlanReader.ReadShapeTable`（隣接で語を束ねる＝行と同じ・`section` はキーワードで囲む）・parser は `chordDiagrams` の後だけ `{ }` を許す（`ParseLayoutShapeTable`・BadToken `#` の許容域に表を足した）・`LayoutDeclarationSyntax.Entries` は入れ子の brace を値として持つ・消費側 7 つ（頁の `@chord`／行・双子の markup／FretBoards・MusicXML `<frame>`・validator・hover・step）は全部 `ChordDiagramScores.SectionNameOf(node)`（構文の親を辿る）で section を読む。診断: 記号でない語・悪い形・記号の前の形＝LYS1038 の警告で残りは生きる／同じ scope に 2 度＝警告（後勝ち）／無い section＝警告／表の形 vs コード＝LYS1039（layout の調弦、無ければ guitar＋各パートの弦楽器）／構造の壊れ（余計な brace・名前の無い `section`・閉じ brace の後の語）＝エントリ全体のエラー。**双子の FretBoards の条件を「書いた形が在る」から「prefix を書いた項目が在る」に変えた**（`_fretPrefixes`）＝表で描く行にも出る。度数に形だけ書いた行は silent slot だけの context を出していた→出なくなる（実コーパスに無し＝掃き 0）。
+★ 検証（commit `82186602`）: build 0 エラー／Core 0 警告・網 +16（`ChordDiagramTests` 9 本＝theory 7 例込みで 15・`StepRequestTests` 1）・掃き **1,163 冊 × svg/ly/xml/midi/check＝moved 0・check 差 0**（base は HEAD の detached worktree の Release build・Lab `sessions/p664/sweep.ps1 -Lab`）・APPROXIMATIONS／magic_constants 再生成（行番号だけ）。文法書 3 冊・CHANGELOG 2 冊。⚠️ Edit ツールが 6 ファイルを LF 化（`git ls-files --eol` で見つけて CRLF に戻した＝CLAUDE-OPERATIONS §1 の罠）。
+⚠️ 未: 補完は表の中を知らない／TextMate は表を色付けしない／表の項目は span を持たず診断は reader が出す（validator ではない）。
+★ **終了**: `-End p664 -DiffBase 7d870c98`＝full **10186 / 0 / 2 / 10188**（trx `sessions/p664/run2.trx`）・門 6 つ全 OK・§7.5: Core `+` 807 行／REF 0／OWN 1＝言語の規則（LP の移植ではない・`ChordShapeTable` の LILYSHARP-OWN が FretBoards との違いを名指す）。7.6: 出所は全部 §2 K の設計（ユーザー 09-28）＋ `cfe23c98` の原文（`layout gtr { chordDiagrams guitar capo 3 { Cm7 x35343  section Chorus { C x35553 } } }`）。7.7: 匂いは双子の FretBoards 条件の変更 1 つ（上）。push はユーザー（37 件）。
+
 ## 以下は第663セッションの経緯
 
 ### 1.1 第663セッション（2026-09-28・YT-DELL2）

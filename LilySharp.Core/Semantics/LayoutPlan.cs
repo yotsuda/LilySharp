@@ -73,7 +73,10 @@ public sealed record LayoutPlan(
     // a diagram wherever they are named, with the shape each draws (Music.ChordShapeTable;
     // HANDOFF §2 K5 ③, 2026-09-29). Null when the key writes no table. Set with the two halves
     // above: a key written again is written whole, table included.
-    Music.ChordShapeTable? ChordDiagramTable = null)
+    Music.ChordShapeTable? ChordDiagramTable = null,
+    // `chordList true|false` — the chords the score uses, each with its diagram, at the head of
+    // the score under the title (ChordListKey; HANDOFF §2 K5 ⑤, 2026-09-29).
+    bool ChordList = false)
 {
     /// <summary>The tuning a chord diagram of this score draws on, given the fretted tuning
     /// of the part it belongs to (<paramref name="partTuning"/>, null for none) — or null
@@ -271,6 +274,35 @@ public enum ChordNameMode
     Sounding,
     /// <summary>Both, the sounding name first — <c>E♭ (C)</c>.</summary>
     Both,
+}
+
+/// <summary>
+/// The <c>chordList</c> key's words — the chord list at the head of a score: every chord the
+/// score names, each once in order of first appearance, with the diagram it draws — the
+/// songbook's "chords used" row under the title. Owner's design 2026-09-29 (HANDOFF §2 K5 ⑤).
+/// </summary>
+/// <remarks>
+/// LILYSHARP-OWN: LilyPond has no such list; the twin writes a <c>\markup</c> line of
+/// <c>\fret-diagram-terse</c> figures before the score. The rows are CENTRED on the page (the
+/// title's alignment) and hold as nearly equal counts as the page's width allows (owner's
+/// decision 2026-09-29, after seeing a left-set row and a 12 + 4 split: "centred, and the
+/// rows as even as can be") — <c>Svg.Layout.HeaderBand.WithChordList</c>.
+/// </remarks>
+public static class ChordListKey
+{
+    /// <summary>The key as written in the block.</summary>
+    public const string Key = "chordList";
+
+    /// <summary>The two words, the default first — the language's one boolean spelling.</summary>
+    public static readonly IReadOnlyList<string> Words = ["false", "true"];
+
+    /// <summary>True for <c>true</c>, false for <c>false</c>, null for anything else.</summary>
+    public static bool? Find(string word) => word switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null,
+    };
 }
 
 /// <summary>The <c>chordNames</c> key's words (<see cref="ChordNameMode"/>).</summary>

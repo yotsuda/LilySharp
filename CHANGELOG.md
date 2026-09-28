@@ -140,6 +140,14 @@ workflow attaches that section to the GitHub Release verbatim.
   into `\chordmode` and `instrument = "Capo 3"` in its `\header` (under `sounding` the sounding
   chords; `both` it cannot spell, and warns); MusicXML's `<harmony>` stays the sounding chord,
   its `<frame>` the pressed shape; the MIDI plays the sounding music.
+- **The chord list: `layout { chordList true }`.** Every chord the score names — its `chords`
+  rows and every `@chord` — once, in order of first appearance, at the head of the score under
+  the title, each as the name the score prints over the diagram it draws there (a chord that
+  draws none in the score shows its usual shape; `chordDiagrams none` lists the names alone;
+  under a capo the pressed names and shapes). The cells stand in the fewest rows that fit the
+  line with as nearly equal counts as those rows allow (16 chords where 12 fit a row make 8 +
+  8), each row centred on the page. The `.ly` twin writes the rows as `\markup` lines of
+  `\center-column { "NAME" \fret-diagram-terse … }` before the score.
 - **Warnings (LYS1038)** about written shapes: a shape of the wrong length, a word that is
   neither a shape nor a tuning, two unnamed shapes of one length, a tuning given two shapes; a
   symbol-less `@chord` whose shape is miswritten (`@chord(x3a010)`) now gets that warning rather

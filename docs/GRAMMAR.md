@@ -612,6 +612,7 @@ LayoutEntry    = 'markTempo' , MarkArrangement
                | 'minorChords' , MinorChordCase
                | 'chordDiagrams' , ( 'none' | [ TuningName ] , [ 'capo' , Integer ] , [ 'all' ] , [ ShapeTable ] )   (* TuningName: the tab's 'tuning' words; at least one of the four; the capo's Integer 1..11 *)
                | 'chordNames' , ChordNameMode
+               | 'chordList' , Boolean
                | 'voltaBracket' , VoltaLength ;       (* VoltaLength: 'all' | 'line' | Integer >= 1 — §6 StructureVolta *)
 ChordNameMode  = 'shape' | 'sounding' | 'both' ;
 MarkArrangement = 'stacked' | 'beside' ;
@@ -792,6 +793,20 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
    usual shape (CapoAdvisor; fewest first), and hovering 'capo N' shows the same ranking. The
    writer reads it and writes a fret; there is no 'capo auto'.
 
+   chordList — 'true' puts the CHORD LIST at the score's head, under the title rows and above
+   the first system (2026-09-29, HANDOFF §2 K5 ⑤): every chord the score names — its chords
+   rows and every @chord, a bare @chord by the name it derives, a degree by the chord it
+   resolves to — each once, in order of first appearance, as the name the score prints (a
+   capo's pressed name) over the diagram it draws there; a chord that draws no diagram in the
+   score shows its usual shape here (the list is where a shape is looked up), on the layout's
+   tuning, else the guitar; 'chordDiagrams none' lists the names alone. The cells stand
+   ChordListCellGap (3 ss) apart in the FEWEST rows that fit the line width with as nearly
+   EQUAL counts as those rows allow (16 chords where 12 fit a row make 8 + 8), each row
+   CENTRED on the page (owner's decision 2026-09-29, after seeing a left-set row and a 12 + 4
+   split). LILYSHARP-OWN: LilyPond has no chord list; the twin writes the rows as top-level
+   \markup lines of \center-column { "NAME" \fret-diagram-terse … } before the score, the
+   names as plain text.
+
    voltaBracket — how far a form ending's volta bracket reaches (2026-09-28). 'all' (the
    default) covers every bar of the ending; 'line' stops at the end of the system the
    bracket starts in; a whole number N covers the ending's first N bars (all of them when
@@ -822,6 +837,7 @@ ShapeEntry     = ChordSymbol , { [ TuningName ] , Shape } ;   (* the symbol and 
      minorChords lower
      chordDiagrams guitar capo 3 { Cm7 x35343  G  section Chorus { C x35553 } }
      chordNames both
+     chordList true
      voltaBracket line
    }
 *)

@@ -62,6 +62,7 @@ internal static class LayoutPlanReader
         MinorChords.Key => MinorChords.Words,
         ChordDiagramsKey.Key => ChordDiagramsKey.Words,
         ChordNamesKey.Key => ChordNamesKey.Words,
+        ChordListKey.Key => ChordListKey.Words,
         VoltaBracketLength.Key => VoltaBracketLength.Words,
         _ => [],
     };
@@ -236,6 +237,10 @@ internal static class LayoutPlanReader
                 ChordNamesKey.Key => ReadOneWord(plan, entry, span, found, ChordNamesKey.Key,
                     ChordNamesKey.Words, w => ChordNamesKey.Find(w) is { } mode
                         ? plan with { Chords = plan.Chords with { Names = mode } } : null),
+                // The chord list at the score's head (ChordListKey).
+                ChordListKey.Key => ReadOneWord(plan, entry, span, found, ChordListKey.Key,
+                    ChordListKey.Words, w => ChordListKey.Find(w) is { } on
+                        ? plan with { ChordList = on } : null),
                 VoltaBracketLength.Key => ReadVoltaBracket(plan, entry, span, found),
                 // ⚠️ A key published in SyntaxFacts.LayoutKeyVocabulary with no arm here
                 // lands on the default below and binds NOTHING, in silence — "a switch

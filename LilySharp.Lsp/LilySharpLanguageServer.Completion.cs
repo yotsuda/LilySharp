@@ -221,6 +221,7 @@ public sealed partial class LilySharpLanguageServer
             CompletionContext.AfterLayoutChordDiagramsCapo => GetChordDiagramCapoCompletions(
                 doc.Text, SecondWordBeforeCursor(doc.Text, offset)),
             CompletionContext.AfterLayoutChordNames => GetChordNameCompletions(),
+            CompletionContext.AfterLayoutChordList => GetChordListCompletions(),
             // `layout { voltaBracket |` and a form ending's `]@voltaBracket(|` take the same
             // values; `]@|` the one annotation an ending takes.
             CompletionContext.AfterLayoutVoltaBracket => GetVoltaBracketCompletions(),

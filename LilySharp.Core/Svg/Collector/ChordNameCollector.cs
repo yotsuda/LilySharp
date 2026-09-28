@@ -222,9 +222,11 @@ internal sealed class ChordNameCollector
     public void AddInline(string text, int measureIndex, int itemIndex, Fraction timing,
         int position, int staffIndex, LilySharp.Core.Music.ChordStructure? structure = null,
         int superFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
-        int bracketSuperFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript)
+        int bracketSuperFrom = LilySharp.Core.Music.ChordSymbolText.NoSuperscript,
+        string? drawnShape = null)
         => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
-            timing: timing, structure: structure) { SuperFrom = superFrom, BracketSuperFrom = bracketSuperFrom });
+            timing: timing, structure: structure)
+        { SuperFrom = superFrom, BracketSuperFrom = bracketSuperFrom, DrawnShape = drawnShape });
 
     /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
     /// collected on a staff (aligned/row items already carry their own mode). Called
@@ -342,6 +344,7 @@ internal sealed class ChordNameCollector
                 else if (node is ChordEntrySyntax entry)
                 {
                     var (sym, structure) = ResolveChordEntry(entry, mi);
+                    string? diagram = DiagramOf(entry, structure);
                     _items.Add(new ChordNameItem(
                         sym.Text, mi, itemIndex: -1, entry.SourceStart, staffIndex,
                         useTiming: true, timing: timing, structure: structure)
@@ -350,7 +353,8 @@ internal sealed class ChordNameCollector
                         BracketSuperFrom = sym.BracketSuperFrom,
                         RomanText = Roman(structure, mi),
                         DisplayMode = mode,
-                        FrameSpec = DiagramOf(entry, structure),
+                        FrameSpec = diagram,
+                        DrawnShape = diagram,
                     });
                 }
             });
@@ -688,6 +692,7 @@ internal sealed class ChordNameCollector
             if (node is ChordEntrySyntax entry)
             {
                 var (sym, structure) = ResolveChordEntry(entry, measureIndex);
+                string? diagram = DiagramOf(entry, structure);
                 _items.Add(new ChordNameItem(
                     sym.Text, measureIndex, itemIndex: -1, position,
                     staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
@@ -697,7 +702,8 @@ internal sealed class ChordNameCollector
                     BracketSuperFrom = sym.BracketSuperFrom,
                     RomanText = Roman(structure, measureIndex),
                     DisplayMode = mode,
-                    FrameSpec = DiagramOf(entry, structure),
+                    FrameSpec = diagram,
+                    DrawnShape = diagram,
                 });
             }
             else if (node is RestSyntax)

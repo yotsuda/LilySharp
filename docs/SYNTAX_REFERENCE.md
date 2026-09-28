@@ -1613,6 +1613,10 @@ name of the shape the player presses (`C` for a sounding E♭ at capo 3), `sound
 chord's name (`E♭`), `both` the sounding name with the pressed one in brackets (`E♭ (C)`).
 Without a capo the three print the same name.
 
+**`chordList`** — `true` puts the chords the score uses, each with its diagram, at the head
+of the score under the title: every chord once in order of first appearance, in centred rows
+of even counts — see *The chord list* under *Chord Diagrams*. `false` (the default) draws none.
+
 **`voltaBracket`** — how far a form ending's volta bracket reaches: `all` (the default)
 covers every bar of the ending; `line` stops at the end of the system the bracket starts in;
 a whole number `N` covers the ending's first N bars (all of it when the ending is shorter,
@@ -1888,6 +1892,23 @@ then prints the same names) and `instrument = "Capo 3"` in its `\header`; under 
 sounding` it writes the sounding chords, and `both` it cannot spell (it names the sounding
 chord and warns). MusicXML's `<harmony>` stays the sounding chord, its `<frame>` the pressed
 shape.
+
+**The chord list.** `layout { chordList true }` puts every chord the score names at its head,
+under the title rows and above the first system — the songbook's "chords used" row: each
+chord once, in order of first appearance across the `chords` rows and the `@chord`s (a bare
+`@chord` by the name it derives, a degree by the chord it resolves to), as the name the score
+prints (a capo's pressed name) over the diagram it draws there. A chord that draws no diagram
+in the score shows its usual shape in the list — the list is where a shape is looked up — on
+the layout's tuning, else the guitar; under `chordDiagrams none` the names stand alone. The
+cells stand 3 staff spaces apart in the fewest rows that fit the line with as nearly equal
+counts as those rows allow (16 chords where 12 would fit a row make two rows of 8), and each
+row is centred on the page. The `.ly` twin writes the rows as `\markup` lines of
+`\center-column { "NAME" \fret-diagram-terse … }` before the score, the names as plain text.
+
+```
+layout { chordDiagrams guitar  chordList true }
+section A { melody { c'1 | c'1 | c'1 | }  chords prog { C | F(xx3211) | G | } }   // the head: C x32010, F xx3211, G 320003
+```
 
 **The capo suggestion.** After `capo ` the completion lists the frets 0 to 7 ranked by how
 many of the file's chords would be played with a barre there (on their usual shapes; fewest

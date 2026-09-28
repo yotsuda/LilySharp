@@ -14,9 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Rendering;
 
 namespace LilySharp.Core.Svg.Layout;
+
+/// <summary>One chord of the score's chord list (<c>chordList</c>): the printed name and the
+/// diagram it draws, or none (a chord with no shape on the tuning, <c>chordDiagrams none</c>).</summary>
+internal sealed record ChordListEntry(string Text, int SuperFrom, int BracketSuperFrom, string? Spec);
+
+/// <summary>One placed chord of the list: its cell from the page's left edge, the name's start
+/// X and baseline (below the band's top), and the diagram's grid centre X and grid bottom.</summary>
+internal sealed record ChordListCell(ChordListEntry Entry, double X, double Width,
+    double NameX, double NameBaseline, double GridCentreX, double GridBottom);
+
+/// <summary>The chord list's rows as placed: every cell, and the list's bottom below the band's top.</summary>
+internal sealed record ChordListLayout(ImmutableArray<ChordListCell> Cells, double Depth);
 
 /// <summary>
 /// The book title as LilyPond pages it: a TOP-ALIGNED column of the header's rows — the
@@ -61,8 +76,98 @@ internal sealed record HeaderBand(
     double? TitleBaseline,
     double? ComposerBaseline,
     double Width = 0,
-    double? SubtitleBaseline = null)
+    double? SubtitleBaseline = null,
+    // The chord list under the title rows (chordList; owner's design 2026-09-29, HANDOFF §2 K5 ⑤),
+    // or null. Its depth is in Depth, its widest row in Width.
+    ChordListLayout? ChordList = null)
 {
+    /// <summary>The white between the title rows and the chord list, and between its rows.</summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond has no chord list; the gap is Lily#'s, a little more
+    /// than the padding a diagram keeps under its name (<c>ChordNameEngraver.DiagramUnderNamePadding</c>).</remarks>
+    public const double ChordListGap = 2.0;
+
+    /// <summary>The white between two cells of a chord-list row.</summary>
+    public const double ChordListCellGap = 3.0;
+
+    /// <summary>
+    /// <paramref name="band"/> (or a fresh one) with the chord list <paramref name="entries"/>
+    /// placed under its rows: cells as wide as the name or the diagram, <see cref="ChordListCellGap"/>
+    /// apart, in the fewest rows that fit <paramref name="contentWidth"/> with as nearly EQUAL
+    /// counts as those rows allow (16 chords on a page that holds 12 make 8 + 8, not 12 + 4;
+    /// owner's decision 2026-09-29), each row CENTRED on the page. The name stands centred over
+    /// its diagram, the diagram <c>ChordNameEngraver.DiagramUnderNamePadding</c> under the
+    /// name's ink, every diagram of a row on one grid-bottom line.
+    /// </summary>
+    public static HeaderBand? WithChordList(HeaderBand? band, IReadOnlyList<ChordListEntry> entries,
+        ScoreTextMetrics fonts, double pageWidth, double marginLeft, double contentWidth)
+    {
+        if (entries.Count == 0)
+            return band;
+        double s = FretFrameGeometry.Scale(fonts);
+        var measured = entries.Select(e =>
+        {
+            double nameWidth = ChordNameGlyphRun.Width(fonts, e.Text, e.SuperFrom, e.BracketSuperFrom);
+            var (bottom, top) = ChordNameGlyphRun.Ink(fonts, e.Text, e.SuperFrom, e.BracketSuperFrom);
+            var box = e.Spec != null ? FretFrameGeometry.Box(e.Spec, s) : (GlyphMetrics.BBox?)null;
+            double width = Math.Max(nameWidth, box?.Width ?? 0);
+            return (Entry: e, NameWidth: nameWidth, NameBottom: bottom, NameTop: top, Box: box, Width: width);
+        }).ToList();
+
+        // Rows: the fewest with EVEN counts that all fit — r = 1, 2, …: split the list into r
+        // runs of ceil(n / r) or floor(n / r) cells (the longer runs first) and take the first
+        // r whose every run fits the width; a run of one cell always "fits".
+        var rows = new List<List<int>>();
+        int n = measured.Count;
+        for (int r = 1; r <= n; r++)
+        {
+            var split = new List<List<int>>();
+            int at = 0, extra = n % r, size = n / r;
+            for (int k = 0; k < r; k++)
+            {
+                int count = size + (k < extra ? 1 : 0);
+                split.Add([.. Enumerable.Range(at, count)]);
+                at += count;
+            }
+            bool fits = split.All(run => run.Count <= 1
+                || run.Sum(i => measured[i].Width) + ChordListCellGap * (run.Count - 1) <= contentWidth);
+            if (fits)
+            {
+                rows = split;
+                break;
+            }
+        }
+
+        double depth = band?.Depth ?? 0;
+        double widest = band?.Width ?? 0;
+        var cells = ImmutableArray.CreateBuilder<ChordListCell>();
+        double y = depth + (depth > 0 ? ChordListGap : 0);
+        foreach (var row in rows)
+        {
+            double rowWidth = row.Sum(i => measured[i].Width) + ChordListCellGap * (row.Count - 1);
+            widest = Math.Max(widest, rowWidth);
+            double left = marginLeft + (contentWidth - rowWidth) / 2;
+            double nameTop = row.Max(i => measured[i].NameTop);
+            double nameBottom = row.Min(i => measured[i].NameBottom);
+            double boxTop = row.Max(i => measured[i].Box?.Top ?? 0);
+            double baseline = y + nameTop;
+            // The row's diagrams share one grid bottom: under the deepest name's ink.
+            double gridBottom = baseline - nameBottom + ChordNameEngraver.DiagramUnderNamePadding + boxTop;
+            double cx = left;
+            foreach (int i in row)
+            {
+                var m = measured[i];
+                double nameX = cx + (m.Width - m.NameWidth) / 2;
+                double gridCentre = m.Box is { } b ? cx + (m.Width - b.Width) / 2 - b.Left : cx + m.Width / 2;
+                cells.Add(new ChordListCell(m.Entry, cx, m.Width, nameX, baseline, gridCentre, gridBottom));
+                cx += m.Width + ChordListCellGap;
+            }
+            y = row.Any(i => measured[i].Box != null) ? gridBottom : baseline - nameBottom;
+            y += ChordListGap;
+        }
+        double listDepth = y - ChordListGap;
+        var list = new ChordListLayout(cells.ToImmutable(), listDepth);
+        return (band ?? new HeaderBand(0, null, null)) with { Depth = listDepth, Width = widest, ChordList = list };
+    }
     /// <summary>The column's minimum baseline-to-baseline step.</summary>
     /// <remarks>LILYPOND-REF: ly/titling-init.ly bookTitleMarkup, line 69 —
     /// <c>\override #'(baseline-skip . 3.5)</c>.</remarks>

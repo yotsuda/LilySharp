@@ -149,6 +149,13 @@ public sealed record ChordNameItem
     /// </remarks>
     public string? FrameSpec { get; init; }
 
+    /// <summary>The diagram this chord draws HERE — a row symbol's <see cref="FrameSpec"/>, an
+    /// <c>@chord</c>'s script diagram — or null: what the score's chord list
+    /// (<c>chordList</c>, 2026-09-29) shows for the chord at its first appearance. Drawn by
+    /// nothing itself (the row's diagram is <see cref="FrameSpec"/>, the <c>@chord</c>'s an
+    /// articulation item).</summary>
+    public string? DrawnShape { get; init; }
+
     /// <summary>
     /// True when this symbol belongs to an independent chord ROW (a <c>chords name
     /// { }</c> part placed via <c>chords name</c> in a score). The engraver then

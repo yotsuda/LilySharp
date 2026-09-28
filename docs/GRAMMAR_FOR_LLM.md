@@ -903,6 +903,7 @@ layout {
                            // `chordDiagrams guitar { Cm7 x35343  G  section B { C x35553 } }`: the listed chords draw
                            // `chordDiagrams guitar capo 3`: a capo — pressed shapes, pressed names, "Capo 3" at the head
   chordNames both          // under a capo a name shows: shape (default, the pressed chord's) | sounding | both "E♭ (C)"
+  chordList true           // the chords the score uses, each with its diagram, under the title: true | false (default)
   voltaBracket line        // how far an ending's bracket reaches: all (default) | line | N bars
 }
 ```
@@ -977,6 +978,10 @@ layout {
 - `chordNames shape` (the default) names the pressed chord under a capo, `sounding` the
   sounding chord, `both` both — `E♭m7 (Cm7)`. Without a capo all three print the same name.
   The twin cannot spell `both` and warns.
+- `chordList true` puts every chord the score names at its head under the title, each once in
+  order of first appearance with the diagram it draws (its usual shape when it draws none), in
+  centred rows of even counts; `chordDiagrams none` lists the names alone. The twin writes the
+  rows as `\markup` lines of `\center-column { "NAME" \fret-diagram-terse … }` before the score.
 - `voltaBracket all` (default) draws an ending's bracket over every bar; `line` stops it at
   the end of the system it starts in; `N` covers the ending's first N bars (all of it when
   shorter). An ending overrides it with `[1. B C]@voltaBracket(2)`. A cut bracket ends

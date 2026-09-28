@@ -587,6 +587,7 @@ public sealed class LilyPondExporter
         }
 
         EmitChordTracks(root, render, form, sections);
+        EmitChordList();
         EmitScore(render, parts, partVars);
         // `markTempo beside` is a Lily#-own arrangement (Semantics.MarkArrangement): LilyPond
         // stacks a RehearsalMark over a MetronomeMark and has no chart pair, so the twin
@@ -5260,6 +5261,58 @@ public sealed class LilyPondExporter
     {
         _warnings.Add($"{item.Kind} not exported");
         return "";
+    }
+
+    // ---- The chord list (layout { chordList true }, HANDOFF §2 K5 ⑤) -----------------------
+
+    /// <summary>
+    /// The chord list as a top-level <c>\markup</c> before the score — the page's own rows
+    /// (<see cref="Svg.Layout.ChordListBand"/>, <see cref="Svg.Layout.HeaderBand.WithChordList"/>
+    /// on the page's metrics and paper), each a <c>\fill-line</c> holding one centred line of
+    /// <c>\center-column { "NAME" \fret-diagram-terse "…" }</c> cells, so LilyPond pages the
+    /// list where the page does: under the title, above the first system.
+    /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
+    /// (<c>Dm7</c>, not the raised <c>Dm⁷</c> the page and a ChordNames context print — a name
+    /// is formatted only inside that context); the diagrams are the page's pressed shapes.
+    /// </remarks>
+    private void EmitChordList()
+    {
+        if (!_layoutPlan.ChordList || _page is not { } page)
+            return;
+        var entries = Svg.Layout.ChordListBand.EntriesOf(page);
+        var band = Svg.Layout.HeaderBand.WithChordList(null, entries, page.TextMetrics,
+            page.Paper.PageWidth, page.Paper.MarginLeft, page.Paper.ContentWidth);
+        if (band?.ChordList is not { } list)
+            return;
+        foreach (var row in list.Cells.GroupBy(c => c.NameBaseline).OrderBy(g => g.Key))
+        {
+            _sb.Append("\\markup \\fill-line { \\line {");
+            foreach (var cell in row.OrderBy(c => c.X))
+            {
+                _sb.Append(" \\center-column { \"").Append(Escape(cell.Entry.Text)).Append('"');
+                if (cell.Entry.Spec is { } spec)
+                    _sb.Append(" \\fret-diagram-terse #\"").Append(TerseOf(spec)).Append('"');
+                _sb.Append(" }");
+            }
+            _sb.Append(" } }\n");
+        }
+        _sb.Append('\n');
+    }
+
+    /// <summary>A page diagram spec as LilyPond's terse string — one entry a string, low string
+    /// first: <c>x</c>, <c>o</c>, or the fret (<see cref="FretDiagramMarkup"/>'s spelling).</summary>
+    private static string TerseOf(string spec)
+    {
+        var terse = new StringBuilder();
+        for (int i = 0; i < spec.Length; i++)
+        {
+            int fret = Svg.Layout.FretFrameGeometry.FretAt(spec, i);
+            terse.Append(fret < 0 ? "x" : fret == 0 ? "o" : fret.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                 .Append(';');
+        }
+        return terse.ToString();
     }
 
     // ---- Score / staff / tab ----------------------------------------------

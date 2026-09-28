@@ -214,7 +214,7 @@ public class LayoutBlockTests
     {
         Assert.Equal(
             new[] { "markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
-                    "chordQualities", "minorChords", "chordDiagrams", "chordNames", "voltaBracket" },
+                    "chordQualities", "minorChords", "chordDiagrams", "chordNames", "chordList", "voltaBracket" },
             LanguageVocabulary.LayoutKeys);
         Assert.Equal(LanguageVocabulary.LayoutKeys, LayoutPlanReader.AllKeySpellings());
         Assert.Equal(new[] { "lines", "none", "every" }, LanguageVocabulary.BarNumberPolicies);

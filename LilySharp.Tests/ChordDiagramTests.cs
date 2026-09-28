@@ -2002,6 +2002,106 @@ public class ChordDiagramTests
         Assert.Contains("adds a chord diagram (guitar: x32010)", HoverAt(plain, "@chord(Eb)"));
     }
 
+    // ================================================================ the chord list (K5 ⑤)
+    // Owner's design 2026-09-29: `layout { chordList true }` lists every chord the score names,
+    // each once in order of first appearance, with the diagram it draws (its usual shape when it
+    // draws none), under the title — rows of even counts, each centred (the owner's choice after
+    // seeing a left-set row and a 12 + 4 split).
+
+    private const string List = "layout { chordDiagrams guitar  chordList true }\n";
+
+    [Fact]
+    public void TheKey_TakesTrueOrFalse()
+    {
+        Assert.True(Layout("chordList true").Plan.ChordList);
+        Assert.False(Layout("chordList false").Plan.ChordList);
+        Assert.False(Layout("chordDiagrams guitar").Plan.ChordList);
+        var (plan, problems) = Layout("chordList yes");
+        Assert.Contains("'yes' is not a value of 'chordList'", Assert.Single(problems).Message);
+        Assert.False(plan.ChordList);
+    }
+
+    private static (string Text, string? Spec)[] Listed(string book)
+        => [.. ChordListBand.EntriesOf(Collected(book)).Select(e => (e.Text, e.Spec))];
+
+    [Fact]
+    public void TheChordList_ListsEachChordOnce_InOrderOfFirstAppearance()
+    {
+        // A row: each chord once, the written shape where one is written, else the usual shape.
+        Assert.Equal(new (string, string?)[] { ("C", "x32010"), ("F", "xx3211"), ("G", "320003"), ("Am", "x02210") },
+            Listed(Song(List, "C | F(xx3211) | G | C | Am |", "c'1 | c'1 | c'1 | c'1 | c'1 |")));
+        // "N.C." names no chord; a degree lists as the chord it resolves to.
+        Assert.Equal(new (string, string?)[] { ("C", "x32010"), ("F", "133211") },
+            Listed(Song(List, "C | r | IV |", "c'1 | c'1 | c'1 |")));
+        // An @chord joins the row's chords in order of appearance; a bare @chord by its derived name.
+        string book = List + """
+            octave absolute
+            part gt { clef treble }
+            section A {
+              gt { c'2@chord(Dm7) <e' g' b'>2@chord | c'1 | }
+              chords prog { C | G |  }
+            }
+            form main { A }
+            score main { chords prog  staff gt }
+            """;
+        Assert.Equal(new[] { "C", "Dm7", "Em", "G" }, Listed(book).Select(e => e.Text));
+        // Under `chordDiagrams none` the names alone; under a capo the pressed names and shapes.
+        Assert.All(Listed(Song("layout { chordDiagrams none  chordList true }\n", "C | F |", "c'1 | c'1 |")), e => Assert.Null(e.Spec));
+        Assert.Equal(new (string, string?)[] { ("C", "x32010"), ("G", "320003") },
+            Listed(Song("layout { chordDiagrams guitar capo 3  chordList true }\n", "Eb | Bb |", "c'1 | c'1 |")));
+        // Without the key, nothing.
+        Assert.Empty(Listed(Song(Guitar, "C | F |", "c'1 | c'1 |")));
+    }
+
+    /// <summary>The rows hold as nearly equal counts as the page's width allows, and each is
+    /// centred on the page: 16 six-string shapes on A4 make 8 + 8 (12 would fit a row), 6 one row.</summary>
+    [Fact]
+    public void TheChordList_RowsAreEvenAndCentred()
+    {
+        var fonts = Collected(Song(List, "C |", "c'1 |")).TextMetrics;
+        var options = new LayoutOptions();
+        static ChordListEntry Cell(int i) => new($"C{i}", -1, -1, "x32010");
+        var band = HeaderBand.WithChordList(null, [.. Enumerable.Range(0, 16).Select(Cell)], fonts,
+            options.PageWidth, options.MarginLeft, options.ContentWidth)!;
+        var rows = band.ChordList!.Cells.GroupBy(c => c.NameBaseline).OrderBy(g => g.Key).Select(g => g.OrderBy(c => c.X).ToList()).ToList();
+        Assert.Equal(new[] { 8, 8 }, rows.Select(r => r.Count));
+        double centre = options.MarginLeft + options.ContentWidth / 2;
+        foreach (var row in rows)
+            Assert.Equal(centre, (row[0].X + row[^1].X + row[^1].Width) / 2, 6);
+        Assert.True(rows[1][0].NameBaseline > rows[0][0].GridBottom);
+        Assert.Equal(band.ChordList.Depth, band.Depth);
+        Assert.True(band.Width > 0 && band.Width <= options.ContentWidth);
+        // 6 chords: one row; 13 (one over a row): 7 + 6.
+        Assert.Single(HeaderBand.WithChordList(null, [.. Enumerable.Range(0, 6).Select(Cell)], fonts,
+            options.PageWidth, options.MarginLeft, options.ContentWidth)!.ChordList!.Cells.GroupBy(c => c.NameBaseline));
+        Assert.Equal(new[] { 7, 6 }, HeaderBand.WithChordList(null, [.. Enumerable.Range(0, 13).Select(Cell)], fonts,
+            options.PageWidth, options.MarginLeft, options.ContentWidth)!.ChordList!.Cells
+            .GroupBy(c => c.NameBaseline).OrderBy(g => g.Key).Select(g => g.Count()));
+    }
+
+    /// <summary>The list is part of the header band: the page's chain and its draw see one
+    /// column, a title-less book gets a band for the list alone, and the twin writes it as a
+    /// markup before the score.</summary>
+    [Fact]
+    public void TheChordList_IsPartOfTheHeader_AndTheTwinWritesIt()
+    {
+        string book = Song(List, "C | F(xx3211) |", "c'1 | c'1 |");
+        var page = Laid(book).Pages[0];
+        Assert.NotNull(page.Header?.ChordList);
+        Assert.Equal(2, page.Header!.ChordList!.Cells.Length);
+        Assert.Null(page.Header.TitleBaseline);
+        Assert.Null(Laid(Song(Guitar, "C |", "c'1 |")).Pages[0].Header);
+        var titled = Laid("title \"T\"\n" + book).Pages[0].Header!;
+        Assert.NotNull(titled.TitleBaseline);
+        Assert.True(titled.ChordList!.Cells[0].NameBaseline > titled.TitleBaseline);
+
+        string ly = Twin(book);
+        int markup = ly.IndexOf("\\markup \\fill-line { \\line { \\center-column { \"C\" \\fret-diagram-terse #\"x;3;2;o;1;o;\" } \\center-column { \"F\" \\fret-diagram-terse #\"x;x;3;2;1;1;\" } } }", StringComparison.Ordinal);
+        Assert.True(markup >= 0, ly);
+        Assert.True(markup < ly.IndexOf("\\score {", StringComparison.Ordinal));
+        Assert.DoesNotContain("\\fill-line", Twin(Song(Guitar, "C |", "c'1 |")));
+    }
+
     /// <summary>The block form is the shape table's alone: any other key's brace is refused
     /// where it stands, as before (the parser's rule).</summary>
     [Fact]

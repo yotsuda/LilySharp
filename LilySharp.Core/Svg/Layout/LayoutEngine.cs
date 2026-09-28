@@ -122,6 +122,10 @@ internal sealed partial class LayoutEngine
         // the count loop's page estimate and the page breaker as ONE value.
         var header = HeaderBand.Build(score.Title, score.Composer, score.TextMetrics,
             score.Subtitle, score.Poet, score.Instrument);
+        // …and the chord list under it (layout { chordList … }): part of the same column, so
+        // the page chain, the crop width and the draw see one band.
+        header = HeaderBand.WithChordList(header, ChordListBand.EntriesOf(score), score.TextMetrics,
+            _options.PageWidth, _options.MarginLeft, _options.ContentWidth);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
         // Apply user overrides for StaffGrouper spacing before layout

@@ -635,6 +635,8 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordDiagramsCapo,
         /// <summary><c>layout { chordNames |</c> — shape / sounding / both.</summary>
         AfterLayoutChordNames,
+        /// <summary><c>layout { chordList |</c> — none / center / left.</summary>
+        AfterLayoutChordList,
         /// <summary><c>layout { voltaBracket |</c> — all / line / a number of bars.</summary>
         AfterLayoutVoltaBracket,
         /// <summary><c>[1. B C]@voltaBracket(|</c> — all / line / a number of bars.</summary>
@@ -1028,6 +1030,8 @@ public sealed partial class LilySharpLanguageServer
                 return CompletionContext.AfterLayoutChordDiagramsTuning;
             if (prevWord.Equals(ChordNamesKey.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordNames;
+            if (prevWord.Equals(ChordListKey.Key, StringComparison.Ordinal))
+                return CompletionContext.AfterLayoutChordList;
             if (prevWord.Equals(VoltaBracketLength.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutVoltaBracket;
             return CompletionContext.LayoutBlock;
