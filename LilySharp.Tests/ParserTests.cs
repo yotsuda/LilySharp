@@ -487,8 +487,8 @@ key g major
     [Fact]
     public void Sharp_IsLegalInsideChordAndFigArgs()
     {
-        // '#' is illegal everywhere EXCEPT inside a @chord(...) / @fig(...) argument.
-        foreach (var src in new[] { "c4 @chord(C#m7) d", "c4 @fig(#6) d" })
+        // '#' is illegal everywhere EXCEPT inside a @chord(...) / @figuredBass(...) argument.
+        foreach (var src in new[] { "c4 @chord(C#m7) d", "c4 @figuredBass(#6) d" })
         {
             var tree = SyntaxTree.Parse(src);
             Assert.DoesNotContain(tree.Diagnostics,

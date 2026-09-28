@@ -30,7 +30,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// <c>layout { marks stacked | beside }</c> — the display switch that arranges a boxed
+/// <c>layout { markTempo stacked | beside }</c> — the display switch that arranges a boxed
 /// section label and the tempo mark standing at the same bar (user decision 2026-09-02,
 /// HANDOFF §3; built 2026-09-09 as a bare directive, moved into the <c>layout</c> block
 /// 2026-09-11). The words, their two tiers, and the geometry each produces.
@@ -38,7 +38,7 @@ namespace LilySharp.Tests;
 /// <remarks>
 /// <para>
 /// The stacked default is LilyPond's and is what every book on disk printed before the
-/// option existed, so the first net is BYTE IDENTITY: writing <c>marks stacked</c> changes
+/// option existed, so the first net is BYTE IDENTITY: writing <c>markTempo stacked</c> changes
 /// nothing, and writing nothing is the same page. The beside arrangement is Lily#-own
 /// (LilyPond has no chart pair), so its net is the arrangement's own geometry — the label
 /// at the line-start edge, the tempo's ink left one gap past the box, its baseline on the
@@ -57,8 +57,8 @@ public class MarkArrangementTests
 {
     private static readonly SvgRenderOptions Opt = new() { EmbedFont = false };
 
-    private const string Beside = "layout { marks beside }\n";
-    private const string Stacked = "layout { marks stacked }\n";
+    private const string Beside = "layout { markTempo beside }\n";
+    private const string Stacked = "layout { markTempo stacked }\n";
 
     /// <summary>fx4: bass, D major, 4/4, tempo 117, one labelled section.</summary>
     private static string Book(string top = "", string scoreItems = "")
@@ -97,23 +97,23 @@ public class MarkArrangementTests
         Assert.Equal(MarkArrangement.Modes, LanguageVocabulary.MarkArrangements);
         // The block's word is reserved; the key and its values are the block's own words.
         Assert.NotEqual(SyntaxKind.Identifier, new Lexer("layout").ScanAllTokens().First().Kind);
-        Assert.Equal(SyntaxKind.Identifier, new Lexer("marks").ScanAllTokens().First().Kind);
+        Assert.Equal(SyntaxKind.Identifier, new Lexer("markTempo").ScanAllTokens().First().Kind);
     }
 
     [Theory]
     [InlineData(Beside, "", true)]
     [InlineData(Stacked, "", false)]
     // A named block, referenced by the score.
-    [InlineData("layout chart { marks beside }\n", "layout chart", true)]
-    [InlineData("layout chart { marks stacked }\n", "layout chart", false)]
+    [InlineData("layout chart { markTempo beside }\n", "layout chart", true)]
+    [InlineData("layout chart { markTempo stacked }\n", "layout chart", false)]
     // The score's reference REPLACES the file's unnamed default, in both directions…
-    [InlineData(Beside + "layout chart { marks stacked }\n", "layout chart", false)]
-    [InlineData(Stacked + "layout chart { marks beside }\n", "layout chart", true)]
+    [InlineData(Beside + "layout chart { markTempo stacked }\n", "layout chart", false)]
+    [InlineData(Stacked + "layout chart { markTempo beside }\n", "layout chart", true)]
     // …and replaces it whole: a referenced block that says nothing about marks is the
     // stacked default, not the file's beside (no hidden three-layer chain).
     [InlineData(Beside + "layout chart { barNumbers none }\n", "layout chart", false)]
     // An override block on the reference reads as if written at the named block's end.
-    [InlineData("layout chart { marks stacked }\n", "layout chart { marks beside }", true)]
+    [InlineData("layout chart { markTempo stacked }\n", "layout chart { markTempo beside }", true)]
     // Nothing written: the stacked default.
     [InlineData("", "", false)]
     public void BothTiers_ReadIntoTheScore_AndTheScoresReferenceWins(string top, string item, bool beside)
@@ -136,7 +136,7 @@ public class MarkArrangementTests
     [Fact]
     public void AThirdWord_IsRefusedAtTheWord_AndNamesTheTwo()
     {
-        string src = Book("layout { marks sideways }\n");
+        string src = Book("layout { markTempo sideways }\n");
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, "the parser keeps the word; the reader refuses it");
         var d = Assert.Single(SemanticValidation.Run(tree), x => x.Severity == DiagnosticSeverity.Error);
@@ -172,7 +172,7 @@ public class MarkArrangementTests
         string bare = SvgGenerator.Generate(SyntaxTree.Parse(Book()), Opt);
         string top = SvgGenerator.Generate(SyntaxTree.Parse(Book(Stacked)), Opt);
         string item = SvgGenerator.Generate(
-            SyntaxTree.Parse(Book("layout s { marks stacked }\n", "layout s")), Opt);
+            SyntaxTree.Parse(Book("layout s { markTempo stacked }\n", "layout s")), Opt);
         // data-pos moves with the added text; the ink must not.
         Assert.Equal(MaskDataPos(bare), MaskDataPos(top));
         Assert.Equal(MaskDataPos(bare), MaskDataPos(item));
@@ -239,7 +239,7 @@ public class MarkArrangementTests
         // A tempo change inside the bar is anchored to its note under either arrangement
         // (CalculateXPosition's note-column arm); only a measure-start tempo pairs.
         string book = """
-        layout { marks beside }
+        layout { markTempo beside }
         octave absolute
         key d major
         time 4/4
@@ -286,15 +286,15 @@ public class MarkArrangementTests
     {
         var beside = new LilyPondExporter();
         beside.Export(SyntaxTree.Parse(Book(Beside)));
-        Assert.Contains(beside.Warnings, w => w.Contains("marks beside", StringComparison.Ordinal));
+        Assert.Contains(beside.Warnings, w => w.Contains("markTempo beside", StringComparison.Ordinal));
 
         var perScore = new LilyPondExporter();
-        perScore.Export(SyntaxTree.Parse(Book("layout chart { marks beside }\n", "layout chart")));
-        Assert.Contains(perScore.Warnings, w => w.Contains("marks beside", StringComparison.Ordinal));
+        perScore.Export(SyntaxTree.Parse(Book("layout chart { markTempo beside }\n", "layout chart")));
+        Assert.Contains(perScore.Warnings, w => w.Contains("markTempo beside", StringComparison.Ordinal));
 
         var stacked = new LilyPondExporter();
         string ly = stacked.Export(SyntaxTree.Parse(Book(Stacked)));
-        Assert.DoesNotContain(stacked.Warnings, w => w.Contains("marks", StringComparison.Ordinal));
+        Assert.DoesNotContain(stacked.Warnings, w => w.Contains("markTempo", StringComparison.Ordinal));
         // ...and the twin's text is the same twin: the option is a display option.
         Assert.Equal(new LilyPondExporter().Export(SyntaxTree.Parse(Book())), ly);
     }

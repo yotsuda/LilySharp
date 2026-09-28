@@ -465,7 +465,7 @@ public sealed class LilyPondExporter
         // writes as overrides (EmitFontOverrides); the faces stay unwritten (EmitHeader).
         _fontPlan = ResolveFontPlan(tree, root, render);
         // The score's resolved layout plan — the bar-number policy the twin writes into
-        // its \layout block, and the `marks beside` it can only warn about.
+        // its \layout block, and the `markTempo beside` it can only warn about.
         _layoutPlan = ResolveLayoutPlan(root, render);
 
         EmitHeader(root);
@@ -584,12 +584,12 @@ public sealed class LilyPondExporter
 
         EmitChordTracks(root, render, form, sections);
         EmitScore(render, parts, partVars);
-        // `marks beside` is a Lily#-own arrangement (Semantics.MarkArrangement): LilyPond
+        // `markTempo beside` is a Lily#-own arrangement (Semantics.MarkArrangement): LilyPond
         // stacks a RehearsalMark over a MetronomeMark and has no chart pair, so the twin
         // keeps LilyPond's picture and says so — the `fonts … size` rule, not a silent drop.
         // Read the way the page reads it (the score's own reference, else the file's default).
         if (_layoutPlan.MarksBeside)
-            _warnings.Add("marks beside is not exported: the twin stacks the section label over "
+            _warnings.Add("markTempo beside is not exported: the twin stacks the section label over "
                           + "the tempo mark, as LilyPond does — the arrangement has no LilyPond spelling");
         return _sb.ToString();
     }
@@ -1240,7 +1240,7 @@ public sealed class LilyPondExporter
                 if (n is MusicMarkSyntax mk && PedalPostEvent(mk) != null)
                     return true;
                 if (n is ArticulationSyntax art
-                    && art.NameToken.Text.ToLowerInvariant() is "sustain" or "sostenuto" or "unacorda" or "trecorde")
+                    && art.NameToken.Text is "sustain" or "sostenuto" or "unaCorda" or "treCorde")
                     return true;
             }
         return false;
@@ -2926,8 +2926,7 @@ public sealed class LilyPondExporter
                 switch (art)
                 {
                     case ArticulationSyntax { Type: ArticulationType.None } ma
-                        when ma.NameToken.Text.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase)
-                             || ma.NameToken.Text.Equals("repeattie", StringComparison.OrdinalIgnoreCase):
+                        when ma.NameToken.Text is "laissezVibrer" or "repeatTie":
                         string ev = MapArticulation(ma);
                         if (ev[0] == '\\')
                             sb.Append('-');
@@ -3204,7 +3203,7 @@ public sealed class LilyPondExporter
     }
 
     private static bool IsDeadNote(ArticulationSyntax a)
-        => a.NameToken.Text.Equals("dead", StringComparison.OrdinalIgnoreCase);
+        => a.NameToken.Text.Equals("dead", StringComparison.Ordinal);
 
     /// <summary>
     /// An ottava annotation as LilyPond's <c>\ottava #n</c>, or null for any other name:
@@ -3265,7 +3264,7 @@ public sealed class LilyPondExporter
     /// </remarks>
     private static char? AccidentalMark(ArticulationSyntax a)
         => a.Type == ArticulationType.None
-            ? a.NameToken.Text.ToLowerInvariant() switch
+            ? a.NameToken.Text switch
             {
                 "courtesy" => '?',
                 "editorial" => '!',
@@ -3313,10 +3312,10 @@ public sealed class LilyPondExporter
     /// </para>
     /// </remarks>
     private static bool? StemDirectionOverride(ArticulationSyntax a)
-        => a.NameToken.Text.ToLowerInvariant() switch
+        => a.NameToken.Text switch
         {
-            "stemup" => true,
-            "stemdown" => false,
+            "stemUp" => true,
+            "stemDown" => false,
             _ => null,
         };
 
@@ -3446,7 +3445,7 @@ public sealed class LilyPondExporter
     /// </para>
     /// <para>
     /// ⚠️ <b>A behaviour change, declared</b> — the same shape as <c>@finger("3")</c>
-    /// and <c>@frame(zzz)</c> before it: the twin wrote the label UNQUOTED, and
+    /// and <c>@diagram(zzz)</c> before it: the twin wrote the label UNQUOTED, and
     /// <c>\box</c> takes ONE markup argument, so a label with a space said different
     /// music than Lily# draws. Measured on LilyPond 2.26.0: <c>\box a b</c> boxes only
     /// <c>a</c> and prints <c>b</c> outside the box (box width 1.9331), while
@@ -3595,12 +3594,12 @@ public sealed class LilyPondExporter
             string? start = null, release = null;
             if (node is ArticulationSyntax art)
             {
-                switch (art.NameToken.Text.ToLowerInvariant())
+                switch (art.NameToken.Text)
                 {
                     case "sustain": start = "sustain"; break;
                     case "sostenuto": start = "sostenuto"; break;
-                    case "unacorda": start = "unacorda"; break;
-                    case "trecorde": release = "unacorda"; break;
+                    case "unaCorda": start = "unacorda"; break;
+                    case "treCorde": release = "unacorda"; break;
                 }
             }
             else if (node is MusicMarkSyntax mark)
@@ -3689,8 +3688,8 @@ public sealed class LilyPondExporter
             : null;
 
     /// <summary>
-    /// <c>@frame(xx0232)</c> as LilyPond's fret-diagram markup, over the note as the page draws
-    /// it (<c>_</c> for <c>@frame(…).down</c>), or null for any other mark. The spec is written
+    /// <c>@diagram(xx0232)</c> as LilyPond's fret-diagram markup, over the note as the page draws
+    /// it (<c>_</c> for <c>@diagram(…).down</c>), or null for any other mark. The spec is written
     /// low string first, one character a string — LilyPond's terse string is the same order,
     /// one <c>;</c>-terminated entry a string, <c>o</c> for open. Until 2026-09-26 every one was
     /// "dropped (out of scope)" (Lab probes/complex-lys/06).
@@ -3699,7 +3698,7 @@ public sealed class LilyPondExporter
     /// LILYPOND-REF: scm/fret-diagrams.scm:1232-1270 fret-diagram-terse — "x;x;o;2;3;2;" is the
     /// D chord; x mute, o open, a number a fret.
     /// <para>
-    /// <c>fonts { fretFrame step ±n }</c> scales the page's whole diagram by 2^(n/6)
+    /// <c>fonts { diagram step ±n }</c> scales the page's whole diagram by 2^(n/6)
     /// (FretFrameGeometry.Scale), and the markup's <c>size</c> is that same factor — the
     /// FretBoard <c>font-size</c> the font block also writes does not reach a markup diagram
     /// (MEASURED, Lab sessions/p646 fr3: the LP page was fr2's to the pixel).
@@ -4647,8 +4646,9 @@ public sealed class LilyPondExporter
 
     private string MapArticulation(ArticulationSyntax a)
     {
-        // Name-based marks whose Type is None (resolved downstream in Lily#).
-        switch (a.NameToken.Text.ToLowerInvariant())
+        // Name-based marks whose Type is None (resolved downstream in Lily#). Matched as
+        // written: names are case-sensitive (owner's decision 2026-09-27).
+        switch (a.NameToken.Text)
         {
             // A fall drops off the note, a doit is the same event with the interval rising;
             // the amount is the page's own (BendAfterGeometry.DeltaStep — the ONE home, so
@@ -4697,33 +4697,33 @@ public sealed class LilyPondExporter
             // samples/nocturne.lys: 52 bracket lines with the release, 28 without).
             case "sustain": return _rePedals.Contains(a.SourceStart) ? "\\sustainOff\\sustainOn" : "\\sustainOn";
             case "sostenuto": return _rePedals.Contains(a.SourceStart) ? "\\sostenutoOff\\sostenutoOn" : "\\sostenutoOn";
-            case "unacorda": return _rePedals.Contains(a.SourceStart) ? "\\treCorde\\unaCorda" : "\\unaCorda";
-            case "trecorde": return "\\treCorde";
+            case "unaCorda": return _rePedals.Contains(a.SourceStart) ? "\\treCorde\\unaCorda" : "\\unaCorda";
+            case "treCorde": return "\\treCorde";
             // A text spanner's START written as a word (`@rit`, a bare `@textSpan`): the span
             // event; the word it prints is set before the note by SplitAttachments
             // (TextSpanEvents), which catches these before they reach here.
-            case "rit" or "accel" or "rall" or "textspan": return "\\startTextSpan";
+            case "rit" or "accel" or "rall" or "textSpan": return "\\startTextSpan";
             // The phrasing slur's start; its end is a terminator (EmitMark). A forced side is
             // the event's direction, as for the half-ties below; unforced stays bare.
             // LILYPOND-REF: ly/declarations-init.ly:87-88 "\\(" / "\\)" = make-span-event
             //   'PhrasingSlurEvent START / STOP.
-            case "phrasingslur":
+            case "phrasingSlur":
                 return a.ForcedAbove switch { true => "^\\(", false => "_\\(", null => "\\(" };
-            case "starttrillspan": return "\\startTrillSpan";
-            case "stoptrillspan": return "\\stopTrillSpan";
+            case "startTrillSpan": return "\\startTrillSpan";
+            case "stopTrillSpan": return "\\stopTrillSpan";
             // The half-tie events DO carry a meaningful written direction — ^/_ is
             // copied onto the tie (laissez-vibrer-engraver.cc:99-103, inherited by
             // Repeat_tie_engraver) and repeat-tie-chords.ly writes `d^\repeatTie` —
             // so a FORCED side must survive into the twin; unforced stays bare
             // (never `-`, same reason as above).
-            case "laissezvibrer":
+            case "laissezVibrer":
                 return a.ForcedAbove switch
                 {
                     true => "^\\laissezVibrer",
                     false => "_\\laissezVibrer",
                     null => "\\laissezVibrer",
                 };
-            case "repeattie":
+            case "repeatTie":
                 return a.ForcedAbove switch
                 {
                     true => "^\\repeatTie",
@@ -4732,7 +4732,7 @@ public sealed class LilyPondExporter
                 };
         }
 
-        // The TAB technique letters — `@hammeron` H, `@pulloff` P, `@tap` T. LilyPond has no
+        // The TAB technique letters — `@hammerOn` H, `@pullOff` P, `@tap` T. LilyPond has no
         // grob for them (ArticulationEngraver's remark: a player writes them as markup), so
         // the twin writes what a player writes: a TEXT SCRIPT on the note,
         // `-\markup { \italic "H" }` — the post-event FreeText writes for `@text`, with the
@@ -4790,8 +4790,8 @@ public sealed class LilyPondExporter
             ArticulationType.Portato => "\\portato",
             // Three more true scripts (added 2026-09-23): the page draws each from the SAME
             // Emmentaler glyph LilyPond's script table names, so the twin's word is the
-            // table's — `@reverseturn` is scripts.reverseturn, `@pralltriller` is
-            // scripts.prallprall (ArticulationItem: OrnPrallPrall), `@snappizz` is
+            // table's — `@reverseTurn` is scripts.reverseturn, `@pralltriller` is
+            // scripts.prallprall (ArticulationItem: OrnPrallPrall), `@snapPizz` is
             // scripts.snappizzicato. Until then all three were "not mapped, dropped".
             // LILYPOND-REF: ly/script-init.ly, lines 53, 55 and 60 — prallprall / reverseturn /
             //   snappizzicato, each `name = #(make-articulation 'name)`, a post-event a

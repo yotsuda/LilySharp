@@ -26,7 +26,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A fret diagram (<c>@frame(…)</c>) stands over its chord whatever the stem, and under it
+/// A fret diagram (<c>@diagram(…)</c>) stands over its chord whatever the stem, and under it
 /// with <c>.down</c> — owner's decision, session 646. It took the side opposite the stem like a
 /// staccato until 2026-09-26, and the LilyPond twin dropped every one (Lab
 /// probes/complex-lys/06); LilyPond's TextScript default is DOWN, so the twin writes the side.
@@ -37,7 +37,7 @@ public class FretFrameTests
     private const string Book = """
         octave absolute
         part gt { clef treble }
-        section A { gt { <g,@frame(320003) d g>2 <g' d'' g''@frame(320003)>2 | e2 c2@frame(x32010).down | } }
+        section A { gt { <g,@diagram(320003) d g>2 <g' d'' g''@diagram(320003)>2 | e2 c2@diagram(x32010).down | } }
         form main { A }
         score main { staff gt }
         """;
@@ -81,7 +81,7 @@ public class FretFrameTests
     private const string Pair = """
         octave absolute
         part gt { clef treble }
-        section A { gt { <g@frame(320003) b d'>4 <d'@frame(xx0232) fis' a'>4 <c'@frame(x32010) e' g'>4 <a@frame(x02220) cis' e'>4 | } }
+        section A { gt { <g@diagram(320003) b d'>4 <d'@diagram(xx0232) fis' a'>4 <c'@diagram(x32010) e' g'>4 <a@diagram(x02220) cis' e'>4 | } }
         form main { A }
         score main { staff gt }
         """;
@@ -102,14 +102,14 @@ public class FretFrameTests
         // The layout's box, not only the drawing: the walk hands the engraver a Score with no
         // font plan, and until 2026-09-26 the box stayed at size 1 under a stepped drawing.
         var plain = Frames(Pair)[0].Ink;
-        var big = Frames("fonts { fretFrame step +6 }\n" + Pair)[0].Ink;
+        var big = Frames("fonts { diagram step +6 }\n" + Pair)[0].Ink;
         Assert.Equal(2.0 * plain.Top, big.Top, 9);
         Assert.Equal(2.0 * (plain.Right - plain.Left), big.Right - big.Left, 9);
     }
 
     [Theory]
     [InlineData("")]
-    [InlineData("fonts { fretFrame step +6 }\n")]
+    [InlineData("fonts { diagram step +6 }\n")]
     public void Frames_StandSideBySide_TheBarWideningToFitThem(string fonts)
     {
         // Four quarter-note diagrams in one bar: each clears the next by textLengthOn's 0.4
@@ -128,7 +128,7 @@ public class FretFrameTests
     {
         // FretBoard.font-size does not reach a \markup diagram (Lab sessions/p646 fr3); the
         // markup's own size is the page's factor, 2^(step/6).
-        string ly = new LilyPondExporter().Export(SyntaxTree.Parse("fonts { fretFrame step +6 }\n" + Pair));
+        string ly = new LilyPondExporter().Export(SyntaxTree.Parse("fonts { diagram step +6 }\n" + Pair));
         Assert.Contains("^\\markup \\override #'(size . 2) \\fret-diagram-terse \"3;2;o;o;o;3;\"", ly);
     }
 }

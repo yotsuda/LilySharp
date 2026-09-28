@@ -194,7 +194,7 @@ public class CompletionVocabularyTests
             .Where(i => i.Detail is null).Select(i => $"pitch {i.Label}"));
 
         undescribed.AddRange(LilySharpLanguageServer.GetMarkArrangementCompletions().Items
-            .Where(i => i.Detail is null).Select(i => $"marks {i.Label}"));
+            .Where(i => i.Detail is null).Select(i => $"markTempo {i.Label}"));
 
         undescribed.AddRange(LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items
             .Where(i => i.Detail is null).Select(i => $"barNumbers {i.Label}"));
@@ -232,7 +232,7 @@ public class CompletionVocabularyTests
             LilySharpLanguageServer.GetPitchModeCompletions().Items.Select(i => i.Label));
     }
 
-    /// <summary>The two words after <c>layout { marks</c> come from the compiler, in the
+    /// <summary>The two words after <c>layout { markTempo</c> come from the compiler, in the
     /// compiler's order (the default first), and each compiles in both of the block's
     /// tiers — the file's unnamed block and a named block a score references.</summary>
     [Fact]
@@ -243,8 +243,8 @@ public class CompletionVocabularyTests
         Assert.Equal(LanguageVocabulary.MarkArrangements, offered);
         foreach (string word in offered)
         {
-            Assert.Empty(Errors($"layout {{ marks {word} }}\n{PartHeaderDoc("clef treble")}"));
-            Assert.Empty(Errors($"layout house {{ marks {word} }}\n" + PartHeaderDoc("clef treble")
+            Assert.Empty(Errors($"layout {{ markTempo {word} }}\n{PartHeaderDoc("clef treble")}"));
+            Assert.Empty(Errors($"layout house {{ markTempo {word} }}\n" + PartHeaderDoc("clef treble")
                 .Replace("score main { staff vln }", "score main { layout house  staff vln }")));
         }
     }

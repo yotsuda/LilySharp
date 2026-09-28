@@ -91,7 +91,7 @@ public class FontAttributeTests
         }
         section C {
           chords prog { D | }
-          melody { c''4@ottava d@fig(6) e f@!ottava | }
+          melody { c''4@ottava d@figuredBass(6) e f@!ottava | }
           lyrics words { la la la la | }
         }
         section Z {
@@ -131,7 +131,7 @@ public class FontAttributeTests
         time 4/4
         part gtr { clef treble_8 }
         section S {
-          gtr { c4@hammeron e@bend(full) g@frame(x57565) b'\2 | }
+          gtr { c4@hammerOn e@bend(full) g@diagram(x57565) b'\2 | }
         }
         form main { S }
         score main { staff gtr  tab gtr }
@@ -253,9 +253,9 @@ public class FontAttributeTests
     [Fact]
     public void TheRedirectIsSpelledWithAs()
     {
-        // `chordName as serif` moves the measured family without naming a face — the
-        // meaning `chordName serif` used to carry.
-        var face = Plan("fonts { chordName as serif }").Resolve(TextRole.ChordName);
+        // `chord as serif` moves the measured family without naming a face — the
+        // meaning `chord serif` used to carry.
+        var face = Plan("fonts { chord as serif }").Resolve(TextRole.ChordName);
         Assert.True(face.IsBundled);
         Assert.Equal(TextFontFamily.Serif, face.Family);
     }
@@ -263,11 +263,11 @@ public class FontAttributeTests
     [Fact]
     public void TheOldBareRedirectIsRefused_AndAnsweredWithTheAsForm()
     {
-        // A bare word after a key is the NEXT KEY now, so `chordName serif` opens an empty
+        // A bare word after a key is the NEXT KEY now, so `chord serif` opens an empty
         // `serif` entry. The refusal names the spelling that replaced it.
-        // Two refusals: the now-empty `chordName` entry, and the `serif` entry it left with no
+        // Two refusals: the now-empty `chord` entry, and the `serif` entry it left with no
         // face — the second carries the hint, since that is where the reader's eye lands.
-        var all = Check("fonts { chordName serif }\n" + Book)
+        var all = Check("fonts { chord serif }\n" + Book)
             .Where(x => x.Code == DiagnosticCodes.FontBindingMissingValue).ToList();
         Assert.Equal(2, all.Count);
         Assert.All(all, x => Assert.Equal(DiagnosticSeverity.Error, x.Severity));
@@ -276,20 +276,20 @@ public class FontAttributeTests
     [Fact]
     public void SizeAndStyleResolveNarrowerFirst_EachOnItsOwn()
     {
-        // The group's step and the leaf's style compose: a small bold syllable.
-        var plan = Plan("fonts { lyrics step -1  lyricText bold }");
-        Assert.Equal(3.0 * Magstep(-1), plan.SizeOf(TextRole.LyricText, 3.0), 12);
-        Assert.Equal(FontStyle.Bold, plan.StyleOf(TextRole.LyricText, FontStyle.Regular));
-        // The stanza number takes the group's step and keeps the engraving's style.
+        // The group's step and the leaf's style compose: a small bold stanza number.
+        var plan = Plan("fonts { lyrics step -1  stanza bold }");
         Assert.Equal(3.0 * Magstep(-1), plan.SizeOf(TextRole.Stanza, 3.0), 12);
-        Assert.Equal(FontStyle.Regular, plan.StyleOf(TextRole.Stanza, FontStyle.Regular));
+        Assert.Equal(FontStyle.Bold, plan.StyleOf(TextRole.Stanza, FontStyle.Regular));
+        // The syllable takes the group's step and keeps the engraving's style.
+        Assert.Equal(3.0 * Magstep(-1), plan.SizeOf(TextRole.LyricText, 3.0), 12);
+        Assert.Equal(FontStyle.Regular, plan.StyleOf(TextRole.LyricText, FontStyle.Regular));
     }
 
     [Fact]
     public void ALeafSizeIsNotScaledByItsGroupStep()
     {
-        var plan = Plan("fonts { lyrics step -1  lyricText size 3 }");
-        Assert.Equal(3.0, plan.SizeOf(TextRole.LyricText, 2.2));
+        var plan = Plan("fonts { lyrics step -1  stanza size 3 }");
+        Assert.Equal(3.0, plan.SizeOf(TextRole.Stanza, 2.2));
     }
 
     [Fact]
@@ -297,7 +297,7 @@ public class FontAttributeTests
     {
         // A chord symbol's accidental steps with the name; an absolute size has to say by
         // how many steps, which is the log of the ratio.
-        var plan = Plan("fonts { chordName size 4.4 }");
+        var plan = Plan("fonts { chord size 4.4 }");
         Assert.Equal(6.0, plan.StepOf(TextRole.ChordName, 2.2), 9);
         Assert.Equal(0.0, TextFontPlan.Default.StepOf(TextRole.ChordName, 2.2));
     }
@@ -390,11 +390,11 @@ public class FontAttributeTests
 
     [Fact]
     public void AWellFormedEntry_IsSilent()
-        => Assert.Empty(Check($"fonts {{ mark \"{TextFontMetrics.SerifFamily}\" step +1 bold  lyrics step -1  chordName as serif  tempo italic }}\n" + Book)
+        => Assert.Empty(Check($"fonts {{ mark \"{TextFontMetrics.SerifFamily}\" step +1 bold  lyrics step -1  chord as serif  tempo italic }}\n" + Book)
             .Where(x => x.Code.StartsWith("LYS80", StringComparison.Ordinal)));
 
     [Theory]
-    [InlineData("fonts { fingering bold }")]      // a glyph run has a size but no style
+    [InlineData("fonts { finger bold }")]         // a glyph run has a size but no style
     [InlineData("fonts { figuredBass italic }")]
     public void AnAttributeThePageWouldIgnore_Warns(string block)
     {
@@ -403,14 +403,14 @@ public class FontAttributeTests
     }
 
     [Theory]
-    [InlineData("fonts { numbers step +1 }")]    // barNumber, tuplet, volta follow
+    [InlineData("fonts { numbers step +1 }")]    // barNumbers, tuplet, volta follow
     [InlineData("fonts { marks italic }")]
-    [InlineData("fonts { barNumber step +1 }")]
-    [InlineData("fonts { fingering step +1 }")]  // the digit run follows the size, not the style
+    [InlineData("fonts { barNumbers step +1 }")]
+    [InlineData("fonts { finger step +1 }")]     // the digit run follows the size, not the style
     [InlineData("fonts { figuredBass size 3 }")]
-    [InlineData("fonts { tabFret step +1 }")]    // the notation roles, named out loud
+    [InlineData("fonts { tab step +1 }")]    // the notation roles, named out loud
     [InlineData("fonts { clefOctave bold }")]
-    [InlineData("fonts { meter step +1 }")]      // the compound «+», advance and pen alike
+    [InlineData("fonts { time step +1 }")]       // the compound «+», advance and pen alike
     [InlineData("fonts { notation bold }")]
     public void AnAttributeSomeRoleReads_DoesNotWarn(string block)
         => Assert.DoesNotContain(Check(block + "\n" + Book), x => x.Code == DiagnosticCodes.FontAttributeNotFollowed);
@@ -492,7 +492,7 @@ public class FontAttributeTests
         if (!follows)
         {
             // Not in the table for STYLE — the music-font digit runs are here too: a
-            // `fingering bold` has nothing to act on and moves nothing.
+            // `finger bold` has nothing to act on and moves nothing.
             Assert.Equal(Mask(control), Mask(styled));
             Assert.Equal(Mask(control), Mask(plain));
             return;
@@ -550,7 +550,7 @@ public class FontAttributeTests
             score main { staff melody  lyrics words }
             """;
         double plain = LastBarLineX(Svg(wideLyrics));
-        double big = LastBarLineX(Svg("fonts { lyricText step +6 }\n" + wideLyrics));
+        double big = LastBarLineX(Svg("fonts { lyrics step +6 }\n" + wideLyrics));
         Assert.True(big > plain + 1.0, $"bar line {plain} -> {big}: the reservation did not follow the doubled syllable");
     }
 
@@ -626,7 +626,7 @@ public class FontAttributeTests
     [InlineData("fonts { mark step +1 ", "FontEntryOpen")]
     [InlineData("fonts { mark step ", "AfterFontNumber")]
     [InlineData("fonts { mark size ", "AfterFontNumber")]
-    [InlineData("fonts { chordName as ", "AfterFontAs")]
+    [InlineData("fonts { chord as ", "AfterFontAs")]
     [InlineData("fonts { serif \"Georgia\" ", "FontBlock")]
     [InlineData("fonts { mark ", "AfterFontRoleKey")]
     public void EveryCaretInsideAnEntry_KnowsWhatMayFollow(string text, string expected)
@@ -651,8 +651,10 @@ public class FontAttributeTests
     {
         var labels = LilySharpLanguageServer.GetFontEntryContinuationCompletions().Items.Select(i => i.Label).ToArray();
         Assert.Contains("step", labels);
-        Assert.Contains("lyricText", labels);
+        Assert.Contains("lyrics", labels);
         Assert.Contains("embedded", labels);
+        // The syllable has no key of its own since 2026-09-27: `lyrics` names it.
+        Assert.DoesNotContain("lyricText", labels);
     }
 
     [Fact]
@@ -667,7 +669,7 @@ public class FontAttributeTests
     /// <remarks>
     /// ⚠️ THIS IS A CLAIM THE CODE MAKES, and until now nothing watched it.
     /// <c>ChordNameGlyphRun.SuperRaise</c>'s remark says the lift follows the symbol's own
-    /// step "so a score that writes <c>fonts { chordName step … }</c> moves it with
+    /// step "so a score that writes <c>fonts { chord step … }</c> moves it with
     /// everything else" — which is LilyPond's rule (<c>super-markup</c> lifts by
     /// <c>magstep</c> of the ORIGINAL font-size, and takes three steps off whatever that
     /// was), but Lily# computes the em and the lift in two different places and nothing
@@ -701,9 +703,9 @@ public class FontAttributeTests
 
     [Theory]
     [InlineData("", 0)]
-    [InlineData("fonts { chordName step +2 }", 2)]
-    [InlineData("fonts { chordName step -2 }", -2)]
-    [InlineData("fonts { chordName step +5 }", 5)]
+    [InlineData("fonts { chord step +2 }", 2)]
+    [InlineData("fonts { chord step -2 }", -2)]
+    [InlineData("fonts { chord step +5 }", 5)]
     public void ASteppedChordName_StepsItsSuperscriptWithIt(string fonts, double step)
     {
         string book = "time 4/4\n" + fonts + "\n" + Book0Body;

@@ -337,7 +337,7 @@ public sealed record MusicMarkItem
     /// the terminator <c>@!rit</c> included.
     /// </para>
     /// </remarks>
-    public static string? TextSpanSugarText(string name) => name.ToLowerInvariant() switch
+    public static string? TextSpanSugarText(string name) => name switch
     {
         "rit" => "rit.",
         "accel" => "accel.",
@@ -356,33 +356,49 @@ public sealed record MusicMarkItem
     /// (docs/VALUE_SITE_AUDIT.md §9.5.3 ⑵). Everything left below is a name a reader
     /// types whole, so this takes a string and asks nothing about arguments.
     /// </remarks>
+    /// <para>
+    /// Case-sensitive, every key in its one canonical spelling (owner's decision
+    /// 2026-09-27): <c>@unacorda</c> is unknown, and the validator names <c>@unaCorda</c>.
+    /// </para>
     public static MusicMarkType? ParseMarkName(string name)
-    {
-        return name.ToLowerInvariant() switch
+        => MarkNameTable.TryGetValue(name, out var type) ? type : null;
+
+    /// <summary>Every name <see cref="ParseMarkName"/> reads, as it must be written.</summary>
+    public static IReadOnlyCollection<string> MarkNames => MarkNameTable.Keys;
+
+    private static readonly Dictionary<string, MusicMarkType> MarkNameTable =
+        new(StringComparer.Ordinal)
         {
-            "segno" => MusicMarkType.Segno,
-            "coda" => MusicMarkType.Coda,
-            "fine" => MusicMarkType.Fine,
-            "ds" => MusicMarkType.DalSegno,
-            "dc" => MusicMarkType.DaCapo,
-            "ds.al.fine" => MusicMarkType.DalSegnoAlFine,
-            "ds.al.coda" => MusicMarkType.DalSegnoAlCoda,
-            "dc.al.fine" => MusicMarkType.DaCapoAlFine,
-            "dc.al.coda" => MusicMarkType.DaCapoAlCoda,
+            ["segno"] = MusicMarkType.Segno,
+            ["coda"] = MusicMarkType.Coda,
+            ["fine"] = MusicMarkType.Fine,
+            ["ds"] = MusicMarkType.DalSegno,
+            ["dc"] = MusicMarkType.DaCapo,
+            ["ds.al.fine"] = MusicMarkType.DalSegnoAlFine,
+            ["ds.al.coda"] = MusicMarkType.DalSegnoAlCoda,
+            ["dc.al.fine"] = MusicMarkType.DaCapoAlFine,
+            ["dc.al.coda"] = MusicMarkType.DaCapoAlCoda,
             // One spelling, like the form's `to coda` (the run-together `tocoda` left the
             // language 2026-09-02).
-            "to.coda" => MusicMarkType.ToCoda,
+            ["to.coda"] = MusicMarkType.ToCoda,
             // The text spanner: the general spelling plus the three sugar words. All four
             // open the SAME spanner and differ only in the text they print, which
             // TextSpanSugarText / the @textSpan argument supplies — see BuildPlain.
-            "textspan" or "rit" or "accel" or "rall" => MusicMarkType.TextSpanStart,
-            "cresc" => MusicMarkType.Cresc,
-            "decresc" => MusicMarkType.Decresc,
-            "dim" => MusicMarkType.Dim,
-            "ottava" or "8va" => MusicMarkType.OttavaUp,
-            "ottava.bassa" or "8vb" => MusicMarkType.OttavaDown,
-            "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
-            "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
+            ["textSpan"] = MusicMarkType.TextSpanStart,
+            ["rit"] = MusicMarkType.TextSpanStart,
+            ["accel"] = MusicMarkType.TextSpanStart,
+            ["rall"] = MusicMarkType.TextSpanStart,
+            ["cresc"] = MusicMarkType.Cresc,
+            ["decresc"] = MusicMarkType.Decresc,
+            ["dim"] = MusicMarkType.Dim,
+            ["ottava"] = MusicMarkType.OttavaUp,
+            ["8va"] = MusicMarkType.OttavaUp,
+            ["ottava.bassa"] = MusicMarkType.OttavaDown,
+            ["8vb"] = MusicMarkType.OttavaDown,
+            ["quindicesima"] = MusicMarkType.QuindicesUp,
+            ["15ma"] = MusicMarkType.QuindicesUp,
+            ["quindicesima.bassa"] = MusicMarkType.QuindicesDown,
+            ["15mb"] = MusicMarkType.QuindicesDown,
             // The pedals: each is ONE span, opened by its name and closed by '@!' —
             // '@sustain' … '@!sustain', '@sostenuto' … '@!sostenuto',
             // '@unaCorda' … '@!unaCorda'.
@@ -405,17 +421,15 @@ public sealed record MusicMarkItem
             // 'Off', it is a real word that the Text style prints, so retiring it would
             // take a word off the page out of the vocabulary. Both spellings make the
             // same mark, exactly as '@!rit' and '@!textSpan' do.
-            "sustain" => MusicMarkType.SustainOn,
-            "sostenuto" => MusicMarkType.SostenutoOn,
-            "unacorda" => MusicMarkType.UnaCordaOn,
-            "trecorde" => MusicMarkType.UnaCordaOff,
+            ["sustain"] = MusicMarkType.SustainOn,
+            ["sostenuto"] = MusicMarkType.SostenutoOn,
+            ["unaCorda"] = MusicMarkType.UnaCordaOn,
+            ["treCorde"] = MusicMarkType.UnaCordaOff,
             // LilyPond's \( … \), spelled as this language spells every span: '@phrasingSlur'
             // … '@!phrasingSlur' (user decision 2026-09-22, session 482 — the backslash stays
             // tablature's). The name is the grob's, PhrasingSlur.
-            "phrasingslur" => MusicMarkType.PhrasingSlurStart,
-            _ => null
+            ["phrasingSlur"] = MusicMarkType.PhrasingSlurStart,
         };
-    }
 
     /// <summary>
     /// Parses the name of a TERMINATOR annotation — the <c>X</c> of <c>@!X</c> — into the

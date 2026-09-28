@@ -407,7 +407,7 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
 
     /// <summary>
     /// Gets the mark name by joining the name and its arguments with '.'.
-    /// For example "@fig(6 4)" returns "fig.6.4" and "@chord(Dm)" returns "chord.Dm".
+    /// For example "@figuredBass(6 4)" returns "figuredBass.6.4" and "@chord(Dm)" returns "chord.Dm".
     /// The bracketing '(' ')' and ',' separators are part of the source span but are
     /// excluded here, so downstream collectors keep parsing the same dotted string.
     /// </summary>
@@ -462,7 +462,7 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     /// <summary>
     /// The annotation's NAME on its own — the word after the '@' (and after the '!' of a
     /// terminator), with no arguments, no dotted name parts and no placement qualifier
-    /// ("fig", "chord", "ds").
+    /// ("figuredBass", "chord", "ds").
     /// </summary>
     public string Name
     {

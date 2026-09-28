@@ -151,7 +151,7 @@
             ]
         },
         "fonts-block": {
-            "comment": "`fonts { serif \"Georgia\"  barNumber sans }`. ⚠️ The KEYS are a vocabulary of their own (LilySharp.Core TextRole.AllKeySpellings) and are NOT reserved words — `part barNumber { … }` compiles — so nothing outside this block may colour them, and only a rule that knows it is INSIDE one can. That is what begin/end is for: it carries CONTEXT, which is a claim about what a word IS. (It is not licence to claim a word is WRONG; see the #keywords comment.) A key the parser knows and this list omits comes out plain, which is what `serif`/`sans`/`barNumber` did until 2026-08-18 while `tempo` next to them was coloured — by the keyword rule, for an unrelated reason. EditorColouringTests holds this list to TextRole.AllKeySpellings in both directions.",
+            "comment": "`fonts { serif \"Georgia\"  barNumbers as sans }`. ⚠️ The KEYS are a vocabulary of their own (LilySharp.Core TextRole.AllKeySpellings) and are NOT reserved words — `part barNumber { … }` compiles — so nothing outside this block may colour them, and only a rule that knows it is INSIDE one can. That is what begin/end is for: it carries CONTEXT, which is a claim about what a word IS. (It is not licence to claim a word is WRONG; see the #keywords comment.) A key the parser knows and this list omits comes out plain, which is what `serif`/`sans`/`barNumber` did until 2026-08-18 while `tempo` next to them was coloured — by the keyword rule, for an unrelated reason. EditorColouringTests holds this list to TextRole.AllKeySpellings in both directions.",
             "begin": "\\b(fonts)(?:\\s+([A-Za-z][A-Za-z0-9_-]*))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.other.lilysharp" },
@@ -166,7 +166,7 @@
                 { "include": "#comments" },
                 { "include": "#strings" },
                 {
-                    "comment": "A key POINTED AT a generic family instead of a face name: `chordName as sans` (2026-09-08; the bare `chordName serif` is refused). Read before the bare-key rule so the family word is seen as the value it is. ⚠️ `sans-serif` precedes `sans` — TextMate takes the first alternative that matches, and \\b succeeds before the hyphen, so the shorter spelling would colour `sans` and leave `-serif` plain (the same trap #instrument-value was written for).",
+                    "comment": "A key POINTED AT a generic family instead of a face name: `chord as sans` (2026-09-08; the bare `chord serif` is refused). Read before the bare-key rule so the family word is seen as the value it is. ⚠️ `sans-serif` precedes `sans` — TextMate takes the first alternative that matches, and \\b succeeds before the hyphen, so the shorter spelling would colour `sans` and leave `-serif` plain (the same trap #instrument-value was written for).",
                     "match": "\\b(as)\\s+(sans-serif|serif|sans)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.font-attribute.lilysharp" },
@@ -185,7 +185,7 @@
                 },
                 {
                     "name": "keyword.other.font-key.lilysharp",
-                    "match": "\\b(sans-serif|serif|sans|header|lyrics|chords|marks|numbers|notation|title|subtitle|composer|poet|instrument|lyricText|stanza|chordName|fretFrame|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombine|barNumber|fingering|tuplet|volta|ottava|bend|tabTechnique|clefOctave|meter|tabFret)\\b"
+                    "match": "\\b(sans-serif|serif|sans|header|lyrics|chords|marks|numbers|notation|title|subtitle|composer|poet|instrument|stanza|chord|diagram|figuredBass|tempo|mark|pedal|navigation|text|dynamics|partCombineText|barNumbers|finger|tuplet|volta|ottava|bend|tabTechnique|clefOctave|time|tab)\\b"
                 },
                 {
                     "comment": "The one entry that is a bare word rather than a key/value pair, and the one word here that IS reserved.",
@@ -242,7 +242,7 @@
             ]
         },
         "layout-block": {
-            "comment": "`layout { marks beside  barNumbers every 4 }`. Same device as #paper-block and for the same reason: the KEYS (LilySharp.Core LanguageVocabulary.LayoutKeys) and their VALUE WORDS (MarkArrangements, BarNumberPolicies) are NOT reserved — `part marks { … }` and `part beside { … }` compile — so only a rule that knows it is INSIDE the block may colour them. Each value is read WITH its key (captures), the #directive-value device, so `marks lines` does not come out looking right. EditorColouringTests holds these lists to LanguageVocabulary in both directions.",
+            "comment": "`layout { markTempo beside  barNumbers every 4 }`. Same device as #paper-block and for the same reason: the KEYS (LilySharp.Core LanguageVocabulary.LayoutKeys) and their VALUE WORDS (MarkArrangements, BarNumberPolicies) are NOT reserved — `part markTempo { … }` and `part beside { … }` compile — so only a rule that knows it is INSIDE the block may colour them. Each value is read WITH its key (captures), the #directive-value device, so `markTempo lines` does not come out looking right. EditorColouringTests holds these lists to LanguageVocabulary in both directions.",
             "begin": "\\b(layout)(?:\\s+([A-Za-z][A-Za-z0-9_-]*))?\\s*(\\{)",
             "beginCaptures": {
                 "1": { "name": "keyword.other.lilysharp" },
@@ -257,7 +257,7 @@
                 { "include": "#comments" },
                 { "include": "#strings" },
                 {
-                    "match": "\\b(marks)\\s+(stacked|beside)\\b",
+                    "match": "\\b(markTempo)\\s+(stacked|beside)\\b",
                     "captures": {
                         "1": { "name": "keyword.other.layout-key.lilysharp" },
                         "2": { "name": "support.constant.layout-value.lilysharp" }
@@ -309,7 +309,7 @@
                 {
                     "comment": "A key still gets its colour while the writer has typed it and not yet its word — the two-word rules above take over the moment the word lands.",
                     "name": "keyword.other.layout-key.lilysharp",
-                    "match": "\\b(marks|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords)\\b"
+                    "match": "\\b(markTempo|barNumbers|accidentals|sectionLabels|partCombineText|chordQualities|minorChords)\\b"
                 },
                 {
                     "comment": "`every`'s count.",
@@ -577,7 +577,7 @@
         "music-marks": {
             "patterns": [
                 {
-                    "comment": "Value-carrying annotations take PARENTHESES: @mark(A), @fig(6 4), @chord(Dm), @feather(right), @ped(off), @text(\"dolce\"), @tuplet(3), @finger(1), @bend(…), @notehead(…), @frame(…). (The old dotted form @mark.A / @fig.6.4 was removed.)",
+                    "comment": "Value-carrying annotations take PARENTHESES: @mark(A), @figuredBass(6 4), @chord(Dm), @feather(right), @ped(off), @text(\"dolce\"), @tuplet(3), @finger(1), @bend(…), @notehead(…), @diagram(…). (The old dotted form @mark.A / @fig.6.4 was removed.)",
                     "begin": "(@[A-Za-z][A-Za-z0-9]*)\\s*(\\()",
                     "beginCaptures": {
                         "1": { "name": "keyword.other.annotation.lilysharp" },
@@ -600,8 +600,8 @@
             "patterns": [
                 {
                     "name": "keyword.other.articulation.lilysharp",
-                    "comment": "Keep in sync with LilySharp.Core ArticulationRegistry (full names + abbreviations).",
-                    "match": "@(staccato|stac|accent|acc|tenuto|ten|marcato|marc|fermata|ferm|portato|trill|tr|mordent|prall|turn|reverseturn|pralltriller)\\b"
+                    "comment": "Keep in sync with LilySharp.Core ArticulationRegistry (names are case-sensitive, one spelling each; the abbreviations stac/acc/ten/marc/ferm/tr are retired).",
+                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato|trill|mordent|prall|turn|reverseTurn|pralltriller)\\b"
                 }
             ]
         },

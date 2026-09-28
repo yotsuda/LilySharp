@@ -132,7 +132,7 @@ public enum SyntaxKind : ushort
     /// <summary>The <c>paper</c> keyword — the block that sets the page's dimensions.</summary>
     PaperKeyword,
     /// <summary>The <c>layout</c> keyword — the block of score-wide display switches
-    /// (<c>marks stacked|beside</c>, <c>barNumbers lines|none|every N</c>): a file default
+    /// (<c>markTempo stacked|beside</c>, <c>barNumbers lines|none|every N</c>): a file default
     /// at the top level, a named declaration a score references, like <c>paper</c>.</summary>
     LayoutKeyword,
     /// <summary>The <c>embedded</c> keyword.</summary>

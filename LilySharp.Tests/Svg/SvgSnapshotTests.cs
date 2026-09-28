@@ -793,7 +793,7 @@ public class SvgSnapshotTests
         // Restore-first accidentals: 𝄪→♯ prints ♮♯, 𝄫→♭ prints ♮♭ (LP regression
         // accidental-single-double.ly). Columns LP-exact to two decimals.
         yield return new object[] { "test/accidental-restore-natural" };
-        // @snappizz is the font's scripts.snappizzicato at LilyPond's own box and
+        // @snapPizz is the font's scripts.snappizzicato at LilyPond's own box and
         // position (LP regression articulation-snappizzicato.ly) — not primitives.
         yield return new object[] { "test/snappizzicato" };
         // A pickup starts mid-bar: its autobeam beat structure is the bar's TAIL
@@ -822,7 +822,7 @@ public class SvgSnapshotTests
         // change to the page constants moves every gap on every page and every other
         // snapshot stays green. See the header of the .lys for why three and not two.
         yield return new object[] { "test/multi-page-vertical" };
-        // The TAB technique letters — @tap (T), @hammeron (H), @pulloff (P) and
+        // The TAB technique letters — @tap (T), @hammerOn (H), @pullOff (P) and
         // @pluck's finger letter — on both a notation staff and a tab staff, with the
         // LOW notes that take the letter BELOW its note. ⚠️ ON 2026-08-28 NOT ONE OF THE
         // 572 TRACKED BOOKS DREW ANY OF THEM, which is why a letter drawn 0.383 ss into

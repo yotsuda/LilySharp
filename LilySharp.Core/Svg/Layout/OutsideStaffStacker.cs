@@ -610,7 +610,7 @@ internal static class OutsideStaffStacker
         // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
         // TextSpanner direction=UP) by StackAboveStaff, not here.
 
-        // --- Priority 450: a chord diagram forced below (@frame(…).down) — a TextScript,
+        // --- Priority 450: a chord diagram forced below (@diagram(…).down) — a TextScript,
         // so AFTER the dynamics (ArticulationSpacing.TextScriptOutsideStaffPriority).
         adjArticulations = PlaceBelowScriptMovers(adjArticulations, textScriptStage: true);
         return (adjDynamics, adjHairpins, adjArticulations, adjTrills);
@@ -1717,7 +1717,7 @@ internal static class OutsideStaffStacker
         var adjDynamics = PlaceAboveDynamics(fonts, aboveDynamics, trackers, measureToSystem, systems);
         var adjTextSpanners = PlaceTextSpanners(fonts, textSpanners, trackers, measureToSystem, systems);
         var adjOttavas = PlaceOttavas(fonts, ottavas, trackers, measureToSystem);
-        // 450: a chord diagram (@frame) is a TextScript — ArticulationSpacing.TextScriptOutsideStaffPriority.
+        // 450: a chord diagram (@diagram) is a TextScript — ArticulationSpacing.TextScriptOutsideStaffPriority.
         adjArticulations = PlaceArticulations(
             adjArticulations, trackers, measureToSystem, systems, textScriptStage: true);
         var adjCustomTexts = PlaceCustomTexts(fonts, customTexts, trackers, measureToSystem, systems);
@@ -2848,7 +2848,7 @@ internal static class OutsideStaffStacker
         foreach (var (sign, label) in toCodaPairs)
             signOfLabel[label] = sign;
         var pairedSigns = new HashSet<int>(signOfLabel.Values);
-        // `marks beside`: a tempo the engraver stood beside its label
+        // `markTempo beside`: a tempo the engraver stood beside its label
         // (MusicMarkLayout.BesideOfSourceIndex) is the same arrangement — priced as the
         // label's union (the box widened to the tempo's ink right and raised to its note
         // top) and moved with it. Paired by the label's SourceIndex, which survives the
@@ -3094,7 +3094,7 @@ internal static class OutsideStaffStacker
                 top = Math.Max(top, ds + signInk.Top);
                 bottom = Math.Max(bottom, -(ds + signInk.Bottom));
             }
-            // A label with a tempo beside it (`marks beside`) is priced as that union too:
+            // A label with a tempo beside it (`markTempo beside`) is priced as that union too:
             // the tempo's stencil box — its ink about ITS baseline, which stands d below the
             // label's centre — folded into the label's box on the right. A box rather than
             // the tempo's piecewise outline pair, the shape the to-coda union takes: the

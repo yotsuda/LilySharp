@@ -13,8 +13,8 @@ part melody
 
 section A {
   melody {
-    a''4. a@fermata a@shortfermata a@longfermata |
-    a4.@shortfermata a@longfermata a@shortfermata a@longfermata |
+    a''4. a@fermata a@shortFermata a@longFermata |
+    a4.@shortFermata a@longFermata a@shortFermata a@longFermata |
   }
 }
 

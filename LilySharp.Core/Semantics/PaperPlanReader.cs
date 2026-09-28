@@ -229,14 +229,13 @@ internal static class PaperPlanReader
     private static LayoutOptions ReadEntriesInto(
         LayoutOptions options, PaperDeclarationSyntax paper, List<Problem> found)
     {
-        var boundKeys = new Dictionary<string, TextSpan>(StringComparer.OrdinalIgnoreCase);
+        var boundKeys = new Dictionary<string, TextSpan>(StringComparer.Ordinal);
         foreach (var entry in paper.Entries)
         {
             var span = entry.KeyToken.Span;
-            string? key = Canonical(entry.Key, ScalarKeys)
-                ?? Canonical(entry.Key, SpecKeys)
-                ?? Canonical(entry.Key, FlagKeys)
-                ?? (entry.Key.Equals(SizeKey, StringComparison.OrdinalIgnoreCase) ? SizeKey : null);
+            // Keys are case-sensitive (owner's decision 2026-09-27); a wrong-case key is
+            // refused with its canonical spelling.
+            string? key = Exact(entry.Key, AllKeySpellings());
             if (key == null)
             {
                 found.Add(new Problem(span, DiagnosticCodes.UnknownPaperKey,
@@ -245,6 +244,9 @@ internal static class PaperPlanReader
                         // mm, and the fix is the glued spelling, not the vocabulary list.
                         ? $"'{entry.Key}' is a unit, and a unit is spelled glued to its "
                           + $"number: 210{entry.Key.ToLowerInvariant()}, one word."
+                        : Canonical(entry.Key, AllKeySpellings()) is { } canonicalKey
+                        ? $"'{entry.Key}' is not a paper key. Keys are case-sensitive: "
+                          + $"write '{canonicalKey}'."
                         : $"'{entry.Key}' is not a paper key. Known keys: "
                           + string.Join(", ", AllKeySpellings()) + ".",
                     IsError: true));
@@ -265,7 +267,7 @@ internal static class PaperPlanReader
                 continue;
             }
 
-            bool isSpec = Canonical(key, SpecKeys) != null;
+            bool isSpec = Exact(key, SpecKeys) != null;
             if (isSpec)
             {
                 if (!entry.HasBlock || entry.NumberToken != null)
@@ -286,7 +288,7 @@ internal static class PaperPlanReader
                 continue;
             }
 
-            if (Canonical(key, FlagKeys) != null)
+            if (Exact(key, FlagKeys) != null)
             {
                 if (entry.NumberToken != null || entry.MinusToken != null)
                 {
@@ -382,8 +384,10 @@ internal static class PaperPlanReader
         {
             var nameSpan = entry.StringToken?.Span ?? entry.BareValueSpan;
             found.Add(new Problem(nameSpan, DiagnosticCodes.UnknownPaperSizeName,
-                $"'{name}' is not a paper size. Known sizes: "
-                + string.Join(", ", PaperSizes.AllNames()) + ".", IsError: true));
+                PaperSizes.CaseOnlyMatch(name) is { } right
+                    ? $"'{name}' is not a paper size. Size names are case-sensitive: write '{right}'."
+                    : $"'{name}' is not a paper size. Known sizes: "
+                      + string.Join(", ", PaperSizes.AllNames()) + ".", IsError: true));
             return options;
         }
         double sideMm = Math.Round(widthMm * SideMarginDefaultMm / A4WidthMm);
@@ -408,11 +412,22 @@ internal static class PaperPlanReader
     }
 
     /// <summary>The canonical spelling <paramref name="word"/> matches in
-    /// <paramref name="vocabulary"/>, or null. Case-insensitive, like a font key.</summary>
-    private static string? Canonical(string word, string[] vocabulary)
+    /// <paramref name="vocabulary"/> IGNORING CASE, or null — only what a diagnostic names;
+    /// keys and units themselves match <see cref="Exact"/>.</summary>
+    private static string? Canonical(string word, IReadOnlyList<string> vocabulary)
     {
         foreach (var candidate in vocabulary)
             if (word.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+                return candidate;
+        return null;
+    }
+
+    /// <summary><paramref name="word"/> when it is in <paramref name="vocabulary"/> exactly
+    /// as written, or null. Keys are case-sensitive (owner's decision 2026-09-27).</summary>
+    private static string? Exact(string word, IReadOnlyList<string> vocabulary)
+    {
+        foreach (var candidate in vocabulary)
+            if (word.Equals(candidate, StringComparison.Ordinal))
                 return candidate;
         return null;
     }
@@ -446,17 +461,20 @@ internal static class PaperPlanReader
     private static VerticalSpacingSpec ReadSpec(
         VerticalSpacingSpec current, PaperDeclarationSyntax.Entry entry, List<Problem> found)
     {
-        var bound = new Dictionary<string, TextSpan>(StringComparer.OrdinalIgnoreCase);
+        var bound = new Dictionary<string, TextSpan>(StringComparer.Ordinal);
         foreach (var sub in entry.SubEntries)
         {
             var span = sub.KeyToken.Span;
-            string? key = Canonical(sub.Key, SubKeys);
+            string? key = Exact(sub.Key, SubKeys);
             if (key == null)
             {
                 found.Add(new Problem(span, DiagnosticCodes.UnknownPaperKey,
                     Canonical(sub.Key, Units) != null
                         ? $"'{sub.Key}' is a unit, and a unit is spelled glued to its "
                           + $"number: 12{sub.Key.ToLowerInvariant()}, one word."
+                        : Canonical(sub.Key, SubKeys) is { } canonicalSubKey
+                        ? $"'{sub.Key}' is not a spacing sub-key. Keys are case-sensitive: "
+                          + $"write '{canonicalSubKey}'."
                         : $"'{sub.Key}' is not a spacing sub-key. Known sub-keys: "
                           + string.Join(", ", SubKeys) + ".",
                     IsError: true));
@@ -518,12 +536,16 @@ internal static class PaperPlanReader
                 + "bare number.", IsError: true));
             return false;
         }
-        string? u = Canonical(unit.Text, Units);
+        // Units are case-sensitive, as SI's are (owner's decision 2026-09-27; `MM` was read).
+        string? u = Exact(unit.Text, Units);
         if (u == null)
         {
             found.Add(new Problem(unit.Span, DiagnosticCodes.UnknownPaperUnit,
-                $"'{unit.Text}' is not a unit of this language. A bare number is staff "
-                + "spaces; the physical units are mm, cm and in.", IsError: true));
+                Canonical(unit.Text, Units) is { } right
+                    ? $"'{unit.Text}' is not a unit of this language. Units are case-sensitive: "
+                      + $"write '{right}'."
+                    : $"'{unit.Text}' is not a unit of this language. A bare number is staff "
+                      + "spaces; the physical units are mm, cm and in.", IsError: true));
             return false;
         }
         value = u switch

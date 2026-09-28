@@ -41,8 +41,8 @@ namespace LilySharp.Core.Semantics;
 /// </para>
 /// </remarks>
 public sealed record LayoutPlan(
-    // `marks beside` — a boxed section label and the bar's tempo on one line (the chart's);
-    // false is `marks stacked`, LilyPond's arrangement and the default (MarkArrangement).
+    // `markTempo beside` — a boxed section label and the bar's tempo on one line (the chart's);
+    // false is `markTempo stacked`, LilyPond's arrangement and the default (MarkArrangement).
     bool MarksBeside,
     // `barNumbers lines|none|every N` — where the bar numbers stand (BarNumberPolicy).
     BarNumberPolicy BarNumbers,

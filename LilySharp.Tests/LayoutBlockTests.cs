@@ -82,7 +82,7 @@ public class LayoutBlockTests
     public void StatingTheDefaults_IsTheDefault()
     {
         // A book that writes the defaults out lays out exactly as one that writes nothing.
-        Assert.Equal(LayoutPlan.Default, ReadClean("layout { marks stacked  barNumbers lines }"));
+        Assert.Equal(LayoutPlan.Default, ReadClean("layout { markTempo stacked  barNumbers lines }"));
         Assert.Equal(LayoutPlan.Default, ReadClean("layout { }"));
         Assert.False(LayoutPlan.Default.MarksBeside);
         Assert.Equal(BarNumberMode.Lines, LayoutPlan.Default.BarNumbers.Mode);
@@ -91,7 +91,7 @@ public class LayoutBlockTests
     [Fact]
     public void EachKeyBindsItsOwnSwitch_AndLeavesTheOther()
     {
-        var beside = ReadClean("layout { marks beside }");
+        var beside = ReadClean("layout { markTempo beside }");
         Assert.True(beside.MarksBeside);
         Assert.Equal(BarNumberPolicy.Lines, beside.BarNumbers);
 
@@ -99,19 +99,36 @@ public class LayoutBlockTests
         Assert.False(none.MarksBeside);
         Assert.Equal(BarNumberPolicy.None, none.BarNumbers);
 
-        var every = ReadClean("layout { barNumbers every 4  marks beside }");
+        var every = ReadClean("layout { barNumbers every 4  markTempo beside }");
         Assert.True(every.MarksBeside);
         Assert.Equal(BarNumberPolicy.Every(4), every.BarNumbers);
         Assert.Equal(4, every.BarNumbers.Period);
     }
 
-    [Fact]
-    public void KeysAreCaseInsensitive_LikeAPaperKey_AndWordsAreNot()
+    /// <summary>
+    /// Keys are case-sensitive, like a paper key (owner's decision 2026-09-27; they were
+    /// case-insensitive until then): a wrong-case key binds nothing and its LYS9101 names
+    /// the spelling to write — also mid-block, where it must not be read as a value.
+    /// </summary>
+    [Theory]
+    [InlineData("layout { MARKTEMPO beside }", "markTempo")]
+    [InlineData("layout { barnumbers none }", "barNumbers")]
+    [InlineData("layout { markTempo beside  barnumbers none }", "barNumbers")]
+    public void KeysAreCaseSensitive_LikeAPaperKey_AndTheRightSpellingIsNamed(
+        string block, string canonical)
     {
-        Assert.True(ReadClean("layout { MARKS beside }").MarksBeside);
-        Assert.Equal(BarNumberPolicy.None, ReadClean("layout { barnumbers none }").BarNumbers);
+        var plan = Read(block, out var problems);
+        Assert.Equal(BarNumberPolicy.Lines, plan.BarNumbers);
+        var p = Assert.Single(problems);
+        Assert.Equal(DiagnosticCodes.UnknownLayoutKey, p.Code);
+        Assert.Contains($"Keys are case-sensitive: write '{canonical}'.", p.Message);
+    }
+
+    [Fact]
+    public void ValueWordsAreCaseSensitive()
+    {
         // The value words are the language's closed vocabulary: canonical case only.
-        Read("layout { marks Beside }", out var problems);
+        Read("layout { markTempo Beside }", out var problems);
         var p = Assert.Single(problems);
         Assert.Equal(DiagnosticCodes.LayoutEntryBadValue, p.Code);
     }
@@ -196,12 +213,12 @@ public class LayoutBlockTests
     public void TheVocabularyIsPublished_AndTheReaderReadsIt()
     {
         Assert.Equal(
-            new[] { "marks", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
+            new[] { "markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
                     "chordQualities", "minorChords" },
             LanguageVocabulary.LayoutKeys);
         Assert.Equal(LanguageVocabulary.LayoutKeys, LayoutPlanReader.AllKeySpellings());
         Assert.Equal(new[] { "lines", "none", "every" }, LanguageVocabulary.BarNumberPolicies);
-        Assert.Equal(LanguageVocabulary.MarkArrangements, LayoutPlanReader.ValueWords("marks"));
+        Assert.Equal(LanguageVocabulary.MarkArrangements, LayoutPlanReader.ValueWords("markTempo"));
         Assert.Equal(LanguageVocabulary.BarNumberPolicies, LayoutPlanReader.ValueWords("barNumbers"));
         Assert.Equal(LanguageVocabulary.AccidentalStyleWords, LayoutPlanReader.ValueWords("accidentals"));
         Assert.Equal(new[] { "boxed", "plain", "none" }, LanguageVocabulary.SectionLabelStyles);
@@ -217,7 +234,7 @@ public class LayoutBlockTests
     [Fact]
     public void AnUnknownKeyIsAnError_AndTheRestStillBinds()
     {
-        var plan = Read("layout { bogus 3  marks beside }", out var problems);
+        var plan = Read("layout { bogus 3  markTempo beside }", out var problems);
         var problem = Assert.Single(problems);
         Assert.Equal(DiagnosticCodes.UnknownLayoutKey, problem.Code);
         Assert.True(problem.IsError);
@@ -237,9 +254,9 @@ public class LayoutBlockTests
     }
 
     [Theory]
-    [InlineData("layout { marks }", "marks")]                    // no word at all
-    [InlineData("layout { marks sideways }", "sideways")]        // not one of the two
-    [InlineData("layout { marks beside stacked }", "stacked")]   // one word, not two
+    [InlineData("layout { markTempo }", "markTempo")]                    // no word at all
+    [InlineData("layout { markTempo sideways }", "sideways")]        // not one of the two
+    [InlineData("layout { markTempo beside stacked }", "stacked")]   // one word, not two
     [InlineData("layout { barNumbers }", "barNumbers")]
     [InlineData("layout { barNumbers weekly }", "weekly")]
     [InlineData("layout { barNumbers every }", "every")]         // no count
@@ -263,7 +280,7 @@ public class LayoutBlockTests
     [Fact]
     public void AKeySetTwice_Warns_AndTheLastWins()
     {
-        var plan = Read("layout { marks beside  marks stacked }", out var problems);
+        var plan = Read("layout { markTempo beside  markTempo stacked }", out var problems);
         var problem = Assert.Single(problems);
         Assert.Equal(DiagnosticCodes.DuplicateLayoutKey, problem.Code);
         Assert.False(problem.IsError);
@@ -273,11 +290,11 @@ public class LayoutBlockTests
     [Fact]
     public void ANestedBrace_IsRefusedWhereItStands_AndTheBlockStillCloses()
     {
-        var diags = All("layout { marks { beside } }\n" + Body);
+        var diags = All("layout { markTempo { beside } }\n" + Body);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.LayoutEntryBadValue);
         // The rest of the file parses: the score is still there.
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.StrayItemToken);
-        Assert.Single(SyntaxTree.Parse("layout { marks { beside } }\n" + Body)
+        Assert.Single(SyntaxTree.Parse("layout { markTempo { beside } }\n" + Body)
             .GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>());
     }
 
@@ -302,24 +319,24 @@ public class LayoutBlockTests
             + "score main { " + item + " staff m }\n";
 
         // An unnamed block inside a score: the reference form is what belongs there.
-        Assert.Contains(All(Doc("", "layout { marks beside }")),
+        Assert.Contains(All(Doc("", "layout { markTempo beside }")),
             d => d.Code == DiagnosticCodes.ScoreLayoutNeedsAName);
         // A reference to nothing.
         Assert.Contains(All(Doc("", "layout chart")),
             d => d.Code == DiagnosticCodes.UnknownLayoutBlockName && d.Message.Contains("'chart'", StringComparison.Ordinal));
         // Two declarations, one name.
-        Assert.Contains(All(Doc("layout a { marks beside }\nlayout a { marks stacked }\n", "layout a")),
+        Assert.Contains(All(Doc("layout a { markTempo beside }\nlayout a { markTempo stacked }\n", "layout a")),
             d => d.Code == DiagnosticCodes.DuplicateLayoutBlockName);
         // A declaration nobody references warns.
-        Assert.Contains(All(Doc("layout a { marks beside }\n", "")),
+        Assert.Contains(All(Doc("layout a { markTempo beside }\n", "")),
             d => d.Code == DiagnosticCodes.UnreferencedNamedLayout && d.Severity == DiagnosticSeverity.Warning);
         // Two references in one score: the earlier one is named, the last wins.
-        var diags = All(Doc("layout a { marks beside }\nlayout b { marks stacked }\n", "layout a  layout b"));
+        var diags = All(Doc("layout a { markTempo beside }\nlayout b { markTempo stacked }\n", "layout a  layout b"));
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.DuplicateLayoutReference);
-        var tree = SyntaxTree.Parse(Doc("layout a { marks beside }\nlayout b { marks stacked }\n", "layout a  layout b"));
+        var tree = SyntaxTree.Parse(Doc("layout a { markTempo beside }\nlayout b { markTempo stacked }\n", "layout a  layout b"));
         Assert.False(SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)).MarksBeside);
         // The clean shape: no diagnostic at all.
-        Assert.Empty(All(Doc("layout a { marks beside  barNumbers every 2 }\n", "layout a { barNumbers none }")));
+        Assert.Empty(All(Doc("layout a { markTempo beside  barNumbers every 2 }\n", "layout a { barNumbers none }")));
     }
 
     // ================================================================================

@@ -192,7 +192,7 @@ internal sealed class LyricEngraver
         => fonts.Size(Rendering.TextRole.LyricText, EngravingDefaults.LyricTextFontSize);
 
     /// <summary>The syllable's weight and slant: upright (LyricText declares no series or
-    /// shape) unless the score's <c>fonts { }</c> wrote a style for <c>lyricText</c> or
+    /// shape) unless the score's <c>fonts { }</c> wrote a style for <c>lyrics</c> or
     /// <c>lyrics</c>. Read by the draw and by every reservation here.</summary>
     internal static Rendering.FontStyle LyricStyle(Rendering.ScoreTextMetrics fonts)
         => fonts.Style(Rendering.TextRole.LyricText, Rendering.FontStyle.Regular);

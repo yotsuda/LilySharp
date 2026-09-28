@@ -27,7 +27,7 @@ namespace LilySharp.Core.Syntax;
 /// <remarks>
 /// <para>
 /// Both, not one. <c>docs/VALUE_SITE_AUDIT.md</c> §9.2 measured the reason:
-/// <c>@frame(032010)</c> is a fret POSITION STRING, one character per string, and its
+/// <c>@diagram(032010)</c> is a fret POSITION STRING, one character per string, and its
 /// value is <c>Int(32010)</c> — the leading zero, i.e. the sixth string, is gone the
 /// moment the argument becomes only a value. <c>@chord(c:m7)</c> is worse: its
 /// <c>c</c> arrives as a <c>PitchC</c> token because the argument borrows the music
@@ -49,8 +49,8 @@ namespace LilySharp.Core.Syntax;
 /// <para>
 /// That rule was chosen by measurement, not taste: across the 80-book corpus and 219
 /// fixtures, the only <c>@name(…)</c> argument that contains whitespace is the
-/// genuinely multi-valued figured bass (<c>@fig(5 3)</c>, <c>@fig(6 4)</c>,
-/// <c>@fig(6 s)</c>). Every other written argument is one unbroken run.
+/// genuinely multi-valued figured bass (<c>@figuredBass(5 3)</c>, <c>@figuredBass(6 4)</c>,
+/// <c>@figuredBass(6 s)</c>). Every other written argument is one unbroken run.
 /// </para>
 /// </remarks>
 /// <param name="Text">

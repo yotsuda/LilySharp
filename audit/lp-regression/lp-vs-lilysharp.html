@@ -419,13 +419,13 @@ c0 68 51 124 117 132z" fill="currentColor"/>
 \relative { c''4\snappizzicato }
 </pre><pre>// lilypond-src/input/regression/articulation-snappizzicato.ly の Lily# 訳。
 // CLAIM: snappizzicato articulation が音符に snappizzicato 記号を付ける。
-// 綴り: LP \relative { c''4\snappizzicato } → Lily# absolute c'4@snappizz。
+// 綴り: LP \relative { c''4\snappizzicato } → Lily# absolute c'4@snapPizz。
 octave absolute
 
 part m { clef treble }
 
 section Main {
-  m { c'4@snappizz }
+  m { c'4@snapPizz }
 }
 
 form main { ~Main }
@@ -30260,7 +30260,7 @@ part melody
 section A {
   melody {
     r4 e8( g &lt;&gt;)@text(&quot;sul D&quot;).up@f @decresc c8@staccato c@staccato c@staccato c@staccato |
-    c@staccato c@staccato c@staccato c@staccato &lt;&gt;@sfz &lt;&gt;@downbow c g c g |
+    c@staccato c@staccato c@staccato c@staccato &lt;&gt;@sfz &lt;&gt;@downBow c g c g |
     c1 @decresc &lt;&gt;@pp |
   }
 }
@@ -30809,8 +30809,8 @@ part melody
 
 section A {
   melody {
-    a''4. a@fermata a@shortfermata a@longfermata |
-    a4.@shortfermata a@longfermata a@shortfermata a@longfermata |
+    a''4. a@fermata a@shortFermata a@longFermata |
+    a4.@shortFermata a@longFermata a@shortFermata a@longFermata |
   }
 }
 
@@ -36254,9 +36254,9 @@ part melody
 
 section A {
   melody {
-    e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
-    r4 a@staccato@tenuto@upbow f''@staccato@tenuto@finger(3)@upbow e'@flageolet@fermata@upbow |
-    e,@tenuto@finger(0)@downbow@text(&quot;div.&quot;).up |
+    e'4(@accent@finger(0)@downBow c4@staccato) d@tenuto@downBow d,@staccato@finger(0)@accent |
+    r4 a@staccato@tenuto@upBow f''@staccato@tenuto@finger(3)@upBow e'@flageolet@fermata@upBow |
+    e,@tenuto@finger(0)@downBow@text(&quot;div.&quot;).up |
   }
 }
 

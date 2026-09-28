@@ -94,9 +94,9 @@ public class DiatonicChordCompletionTests
     [Fact]
     public void IsInsideChordAnnotation_TracksPosition()
     {
-        var t = "c'4@chord(Cm) d'4@fig(6)";
+        var t = "c'4@chord(Cm) d'4@figuredBass(6)";
         Assert.True(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf("Cm") + 1));   // inside @chord
         Assert.False(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf(") d") + 2)); // after ')'
-        Assert.False(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf("6)")));       // inside @fig, not @chord
+        Assert.False(LilySharpLanguageServer.IsInsideChordAnnotation(t, t.IndexOf("6)")));       // inside @figuredBass, not @chord
     }
 }

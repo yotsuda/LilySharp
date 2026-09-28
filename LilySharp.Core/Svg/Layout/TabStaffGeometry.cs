@@ -59,7 +59,7 @@ internal static class TabConstants
 
     /// <summary>
     /// The em a fret number is set at for THIS score: <see cref="FretFontSize"/> stepped by
-    /// what its <c>fonts { }</c> wrote for <c>tabFret</c> (or <c>notation</c>).
+    /// what its <c>fonts { }</c> wrote for <c>tab</c> (or <c>notation</c>).
     /// </summary>
     /// <remarks>
     /// ⚠️ EVERY READER OF THE DIGIT'S SIZE ASKS HERE — the pen, the width the columns
@@ -68,7 +68,7 @@ internal static class TabConstants
     /// SPACING does not (<c>EngravingDefaults.TabStringSpace</c> is the staff's, as
     /// LilyPond's <c>TabNoteHead.font-size</c> leaves <c>StaffSymbol.staff-space</c> alone).
     /// USER DECISION 2026-09-09: the notation roles follow a written size and style, named
-    /// out loud (<c>tabFret</c> or <c>notation</c>) — a family binding never reaches them.
+    /// out loud (<c>tab</c> or <c>notation</c>) — a family binding never reaches them.
     /// </remarks>
     public static double FretEm(Rendering.ScoreTextMetrics fonts)
         => fonts.Size(Rendering.TextRole.TabFret, FretFontSize);
@@ -141,7 +141,7 @@ internal static class TabConstants
     /// thing. <see cref="Rendering.TextRole.TabFret"/> is NOTATION
     /// (<c>TextRoles.IsNotation</c>): a broad <c>font "Georgia"</c> or <c>fonts { serif … }</c>
     /// does not reach it, by decision, because a fret number is not prose. Only a score
-    /// that names <c>notation</c> or <c>tabFret</c> outright binds it, and this and its two
+    /// that names <c>notation</c> or <c>tab</c> outright binds it, and this and its two
     /// neighbours below still take the bundled face when it does — the FACE. The SIZE and
     /// the STYLE are the score's since 2026-09-09 (<see cref="FretEm"/>,
     /// <see cref="FretStyle"/>), which is why this stopped being a <c>static readonly</c>
@@ -219,7 +219,7 @@ internal static class TabConstants
     /// 1.6911, rods 0.81–1.60 never binding) could not be squeezed at all — T7's
     /// "Lily# splits the line LilyPond keeps" for 16th-dense tab. The gap now follows
     /// LilyPond's rod; the digit size stays. To compare a book with its twin, write
-    /// <c>fonts { tabFret size 2 }</c> first so the two pages carry near-equal digits.
+    /// <c>fonts { tab size 2 }</c> first so the two pages carry near-equal digits.
     /// </para>
     /// <para>
     /// ⚠️ IT BELONGS BETWEEN COLUMNS, NOT IN A COLUMN'S EXTENT. Folding it into

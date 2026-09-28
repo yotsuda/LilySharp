@@ -9,8 +9,8 @@ part melody
 
 section A {
   melody {
-    a''4@accent a@accent@fermata a@accent@shortfermata a@accent@longfermata |
-    a4@accent@shortfermata a@accent@longfermata a@accent@shortfermata a@accent@longfermata |
+    a''4@accent a@accent@fermata a@accent@shortFermata a@accent@longFermata |
+    a4@accent@shortFermata a@accent@longFermata a@accent@shortFermata a@accent@longFermata |
   }
 }
 

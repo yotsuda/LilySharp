@@ -29,7 +29,7 @@ namespace LilySharp.Core.Semantics;
 /// <c>@pluck(p|i|m|a)</c>, <c>@bend(half|full|N)</c>, <c>@notehead(style)</c>,
 /// <c>@text("…")</c>, <c>@feather(…)</c>, <c>@arpeggio(bracket)</c> — because nothing
 /// is lost by reading them as one (<c>docs/VALUE_SITE_AUDIT.md</c> §9.5). Then the two
-/// whose SPELLING is their meaning: <c>@frame</c>'s fret position string, read from the
+/// whose SPELLING is their meaning: <c>@diagram</c>'s fret position string, read from the
 /// text because its value has dropped a leading zero, and <c>@chord</c>'s sub-language,
 /// read from the text because it denotes no single value at all. Last, <c>@mark</c>'s
 /// rehearsal label, which is free text like <c>@text</c>'s but was sliced out of the
@@ -78,13 +78,21 @@ public static class AnnotationValues
             : null;
 
     /// <summary>
-    /// The right-hand finger letter of <c>@pluck(p|i|m|a)</c> in lower case, or null.
+    /// The right-hand finger letter of <c>@pluck(p|i|m|a)</c>, or null.
     /// </summary>
-    /// <remarks>LILYPOND-REF: the p-i-m-a fingering, printed below the note.</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: the p-i-m-a fingering, printed below the note.
+    /// <para>
+    /// ★ The VALUE WORDS of every annotation here are case-sensitive, like its name
+    /// (owner's decision 2026-09-27): <c>@pluck(P)</c>, <c>@notehead(TRIANGLE)</c>,
+    /// <c>@bend(Full)</c>, <c>@diagram(X32010)</c> are unknown, and the validator names the
+    /// spelling (<see cref="AnnotationNameValidator"/>). Free text (<c>@text</c>,
+    /// <c>@mark</c>) keeps its case, and a chord symbol's case is its meaning.
+    /// </para>
+    /// </remarks>
     public static string? Pluck(MusicMarkSyntax mark)
-        => Named(mark, "pluck") && Sole(mark) is { Text.Length: 1 } argument
-           && char.ToLowerInvariant(argument.Text[0]) is 'p' or 'i' or 'm' or 'a'
-            ? argument.Text.ToLowerInvariant()
+        => Named(mark, "pluck") && Sole(mark) is { Text: "p" or "i" or "m" or "a" } argument
+            ? argument.Text
             : null;
 
     /// <summary>
@@ -95,7 +103,7 @@ public static class AnnotationValues
     {
         if (!Named(mark, "bend") || Sole(mark) is not { } argument)
             return null;
-        return argument.Text.ToLowerInvariant() switch
+        return argument.Text switch
         {
             "half" => 1,
             "full" => 2,
@@ -104,8 +112,8 @@ public static class AnnotationValues
     }
 
     /// <summary>
-    /// The notehead style word of <c>@notehead(style)</c> in lower case, or null when
-    /// the annotation is not one or names no style Lily# draws.
+    /// The notehead style word of <c>@notehead(style)</c>, or null when the annotation is
+    /// not one or names no style Lily# draws.
     /// </summary>
     /// <remarks>
     /// The WORD, not a style enum: its two consumers map it to different things (Lily#'s
@@ -113,7 +121,7 @@ public static class AnnotationValues
     /// those mappings are genuinely two. What was three copies of the ACCEPTED SET is one.
     /// </remarks>
     public static string? Notehead(MusicMarkSyntax mark)
-        => Named(mark, "notehead") && Sole(mark)?.Text.ToLowerInvariant() is
+        => Named(mark, "notehead") && Sole(mark)?.Text is
            ("x" or "cross" or "diamond" or "triangle" or "slash" or "xcircle") and var style
             ? style
             : null;
@@ -211,10 +219,10 @@ public static class AnnotationValues
     /// space, and no book writes one.
     /// </para>
     /// <para>
-    /// ⚠️ The name gate is case-INSENSITIVE — the opposite of <see cref="Chord"/>'s.
-    /// The string form asked <c>MarkName.ToLowerInvariant().StartsWith("mark.")</c>, so
-    /// <c>@Mark("A")</c> and <c>@MARK("A")</c> are rehearsal marks today (measured) and
-    /// must stay so. Its second condition, <c>Length > 5</c>, is what rejects a mark
+    /// The name gate is case-sensitive, like every annotation name's (owner's decision
+    /// 2026-09-27; <c>@Mark("A")</c> and <c>@MARK("A")</c> were rehearsal marks until
+    /// then, and are now unknown annotations whose diagnostic names <c>@mark</c>).
+    /// The string form's second condition, <c>Length > 5</c>, is what rejects a mark
     /// with no argument at all: <c>@mark()</c> spells <c>MarkName</c> as just
     /// <c>"mark"</c>, and is an unknown annotation rather than an empty label. That is
     /// <c>Arguments.Length > 0</c> here, the same gate <see cref="IsTextAnnotation"/> uses.
@@ -259,7 +267,7 @@ public static class AnnotationValues
     /// </remarks>
     public static int Feather(MusicMarkSyntax mark)
         => Named(mark, "feather")
-            ? Sole(mark)?.Text.ToLowerInvariant() switch
+            ? Sole(mark)?.Text switch
             {
                 "right" => 1,
                 "left" => -1,
@@ -278,10 +286,11 @@ public static class AnnotationValues
     /// </remarks>
     public static bool IsArpeggioBracket(MusicMarkSyntax mark)
         => Named(mark, "arpeggio")
-           && string.Equals(Sole(mark)?.Text, "bracket", StringComparison.OrdinalIgnoreCase);
+           && Sole(mark)?.Text == "bracket";
 
     /// <summary>
-    /// The fret-diagram position string of <c>@frame(032010)</c> in lower case, or null.
+    /// The fret-diagram position string of <c>@diagram(032010)</c>, or null. <c>x</c> and
+    /// <c>o</c> are lower case only (as in LilyPond's terse diagrams).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -299,13 +308,18 @@ public static class AnnotationValues
     /// into the chord diagram, so <c>@frame(zzz)</c> reached the XML while Lily# drew
     /// nothing and the validator called it unknown. Three copies, one of them accepting a
     /// strictly larger set than the thing it was exporting. One reader, so one answer.
-    /// No book writes <c>@frame(</c> at all (measured over the 80-book corpus and 219
+    /// No book wrote <c>@frame(</c> at all (measured over the 80-book corpus and 219
     /// fixtures), so the nets here are the only guard this family has ever had.
+    /// </para>
+    /// <para>
+    /// The annotation was spelled <c>@frame(…)</c> — MusicXML's element name — until
+    /// 2026-09-27 (owner's decision: players call it a chord diagram, and the
+    /// <c>fonts { diagram … }</c> role is spelled the same). <c>@frame</c> is now unknown.
     /// </para>
     /// LILYPOND-REF: MusicXML &lt;frame&gt;; LilyPond's <c>\fret-diagram</c>.
     /// </remarks>
     public static string? Frame(MusicMarkSyntax mark)
-        => Named(mark, "frame") && Sole(mark)?.Text.ToLowerInvariant() is { } spec
+        => Named(mark, "diagram") && Sole(mark)?.Text is { } spec
            && spec.Length is >= 4 and <= 8
            && spec.All(ch => ch is 'x' or 'o' or (>= '0' and <= '9'))
             ? spec
@@ -346,9 +360,8 @@ public static class AnnotationValues
     /// round trip this reader removes.
     /// </para>
     /// <para>
-    /// ⚠️ The name gate is case-SENSITIVE, unlike <see cref="Named"/>: the string form
-    /// asked <c>StartsWith("chord.", Ordinal)</c>, so <c>@Chord(c)</c> names no chord
-    /// today and must keep naming none.
+    /// The name gate is case-sensitive, as every annotation name's is: <c>@Chord(c)</c>
+    /// names no chord.
     /// </para>
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
     /// </remarks>
@@ -416,7 +429,7 @@ public static class AnnotationValues
     }
 
     /// <summary>
-    /// The stacked figures of <c>@fig(6 4)</c>, or null when the annotation is not one
+    /// The stacked figures of <c>@figuredBass(6 4)</c>, or null when the annotation is not one
     /// or spells no figure group Lily# can draw.
     /// </summary>
     /// <remarks>
@@ -429,22 +442,28 @@ public static class AnnotationValues
     /// <see cref="Svg.Model.FiguredBassItem.ParseFigures"/>.
     /// </para>
     /// <para>
-    /// ⚠️ The name gate is case-INSENSITIVE, like <see cref="Rehearsal"/>'s and unlike
-    /// <see cref="Chord"/>'s: the string form asked
-    /// <c>StartsWith("fig.", OrdinalIgnoreCase)</c>, so <c>@Fig(6)</c> is figured bass
-    /// today and stays so. Its second condition — that something followed "fig." — is
-    /// the emptiness check inside the parser, so a bare <c>@fig</c> and an empty
-    /// <c>@fig()</c> name no figures, as before.
+    /// The name gate is case-sensitive, like every annotation name's (owner's decision
+    /// 2026-09-27; it was case-insensitive until then): <c>@FiguredBass(6)</c> is an
+    /// unknown annotation whose diagnostic names <c>@figuredBass</c>. Its second
+    /// condition — that something followed the name — is the emptiness check inside the
+    /// parser, so a bare <c>@figuredBass</c> and an empty <c>@figuredBass()</c> name no
+    /// figures.
+    /// </para>
+    /// <para>
+    /// The annotation was spelled <c>@fig(…)</c> until 2026-09-27 (owner's decision: the
+    /// abbreviation told a reader nothing). <c>@fig</c> is now an unknown annotation.
     /// </para>
     /// </remarks>
     public static System.Collections.Immutable.ImmutableArray<Svg.Model.FiguredBassFigure>?
         Figures(MusicMarkSyntax mark)
-        => Named(mark, "fig")
+        => Named(mark, "figuredBass")
             ? Svg.Model.FiguredBassItem.ParseFigures(mark.ArgumentTokens)
             : null;
 
+    // Case-sensitive, as every annotation name is (owner's decision 2026-09-27): a
+    // wrong-case name is unknown, and the validator names the right spelling.
     private static bool Named(MusicMarkSyntax mark, string name)
-        => string.Equals(mark.Name, name, StringComparison.OrdinalIgnoreCase);
+        => string.Equals(mark.Name, name, StringComparison.Ordinal);
 
     /// <summary>
     /// The single argument, or null when the annotation has none or several. All four

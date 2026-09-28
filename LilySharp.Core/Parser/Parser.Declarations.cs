@@ -533,7 +533,7 @@ internal sealed partial class Parser
                     // The writer's own face name, so the fix is a copy rather than a reading.
                     ? $"'fonts' binds a face per text role, so it takes a block: "
                       + $"fonts {{ serif \"{face}\"  sans \"{face}\" }} for the whole document's "
-                      + "text, or one role at a time, e.g. lyricText \"Charis SIL\"."
+                      + "text, or one role at a time, e.g. lyrics \"Charis SIL\"."
                     : "'fonts' takes a block of role bindings: fonts { serif \"Georgia\" }.");
 
         // Consume the stray value so one mistake does not cascade into the rest of the file.
@@ -549,7 +549,7 @@ internal sealed partial class Parser
         return new FontDeclarationGreen(keyword, [.. tokens]);
     }
 
-    // fonts { serif "Georgia"  lyricText "Charis SIL" "Noto Serif CJK JP"  embedded }
+    // fonts { serif "Georgia"  lyrics "Charis SIL" "Noto Serif CJK JP"  embedded }
     //
     // House style, the same as a part header: bare KEY, bare VALUEs, no colons and no
     // commas, entries separated by nothing but whitespace. That is also why an entry's
@@ -593,7 +593,7 @@ internal sealed partial class Parser
             _diagnostics.Error(span, DiagnosticCodes.FontBindingMissingValue,
                 "A 'fonts { }' entry is a key followed by quoted face names and attributes " +
                 "(as serif|sans, step +N, size N, bold, italic, regular), e.g. " +
-                "lyricText \"Charis SIL\" step -1 — '" + Current.Text + "' is none of these.");
+                "lyrics \"Charis SIL\" step -1 — '" + Current.Text + "' is none of these.");
             tokens.Add(Advance());
         }
         if (Check(SyntaxKind.CloseBrace))
@@ -772,7 +772,7 @@ internal sealed partial class Parser
                 var braceSpan = new TextSpan(_textPosition + Current.LeadingTriviaWidth, 1);
                 _diagnostics.Error(braceSpan, DiagnosticCodes.ScoreLayoutNeedsAName,
                     "A score's layout item references a named top-level block: layout NAME, "
-                    + "or layout NAME { marks beside } to override part of it here.");
+                    + "or layout NAME { markTempo beside } to override part of it here.");
             }
             return ParseLayoutBlock(keyword, name);
         }
@@ -786,7 +786,7 @@ internal sealed partial class Parser
                 Math.Max(1, name.Text.Length));
             _diagnostics.Error(nameSpan, DiagnosticCodes.NamedLayoutNeedsABlock,
                 $"A named layout block is a declaration, so it takes a block: layout "
-                + $"{name.Text} {{ marks beside }} — a score then references it as "
+                + $"{name.Text} {{ markTempo beside }} — a score then references it as "
                 + $"'layout {name.Text}'.");
             return new LayoutDeclarationGreen(keyword, [name]);
         }
@@ -799,11 +799,11 @@ internal sealed partial class Parser
         if (inScore)
             _diagnostics.Error(span, DiagnosticCodes.ScoreLayoutNeedsAName,
                 "A score's layout item references a named top-level block: layout NAME, "
-                + "or layout NAME { marks beside } to override part of it here.");
+                + "or layout NAME { markTempo beside } to override part of it here.");
         else
             _diagnostics.Error(span, DiagnosticCodes.LayoutNeedsABlock,
                 "'layout' sets the score's display switches, so it takes a block: "
-                + "layout { marks beside  barNumbers every 4 }.");
+                + "layout { markTempo beside  barNumbers every 4 }.");
 
         // Consume the stray value so one mistake does not cascade into the rest of the file.
         while (Check(SyntaxKind.StringLiteral) ||
@@ -817,7 +817,7 @@ internal sealed partial class Parser
         return new LayoutDeclarationGreen(keyword, [.. tokens]);
     }
 
-    // layout { marks beside  barNumbers every 4 }
+    // layout { markTempo beside  barNumbers every 4 }
     //
     // House style, the same as the paper block: bare KEY, bare VALUEs, no colons and no
     // commas, entries separated by nothing but whitespace. The values are closed
@@ -843,7 +843,7 @@ internal sealed partial class Parser
                 // walker upstairs stays one level deep. Its closer is consumed with it.
                 var braceSpan = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
                 _diagnostics.Error(braceSpan, DiagnosticCodes.LayoutEntryBadValue,
-                    "A 'layout { }' entry is a key followed by its word (marks beside, "
+                    "A 'layout { }' entry is a key followed by its word (markTempo beside, "
                     + "barNumbers every 4) — it does not open a block.");
                 tokens.Add(Advance());
                 while (!Check(SyntaxKind.EndOfFile) && !Check(SyntaxKind.CloseBrace))
@@ -862,7 +862,7 @@ internal sealed partial class Parser
             // does not swallow the rest of the score.
             var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
             _diagnostics.Error(span, DiagnosticCodes.LayoutEntryBadValue,
-                "A 'layout { }' entry is a key followed by its word — marks stacked|beside, "
+                "A 'layout { }' entry is a key followed by its word — markTempo stacked|beside, "
                 + "barNumbers lines|none|every N — and '" + Current.Text + "' is neither.");
             tokens.Add(Advance());
         }

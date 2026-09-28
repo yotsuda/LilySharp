@@ -58,7 +58,7 @@ internal static partial class SharedRenderer
         // Written→sounding recovery: the clef octave (treble_8) plus the part's
         // resolved transposition (bass = −12) — one value shared with MIDI.
         int octaveShift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
-        // The fret digits' em and style are the score's (fonts { tabFret … }) — the same
+        // The fret digits' em and style are the score's (fonts { tab … }) — the same
         // accessor the layout's reservations read (TabConstants.FretEm / FretStyle).
         var fonts = score.TextMetrics;
 
@@ -603,7 +603,7 @@ internal static partial class SharedRenderer
     // read clearly; the chord-collision shifts below keep the bigger digits from
     // overlapping. Background/clearance dimensions scale with this.
     // Single source: TabConstants (shared with the tie/grace layout so they can't desync),
-    // read through the score's plan since 2026-09-09 (fonts { tabFret step … }).
+    // read through the score's plan since 2026-09-09 (fonts { tab step … }).
     private static double TabFretEm(ScoreTextMetrics fonts) => TabConstants.FretEm(fonts);
 
     /// <summary>Grace fret digits relative to the normal fret size — just slightly

@@ -108,7 +108,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// six tracked fixtures plus <c>TabScriptStemClearanceTests</c> — all of them tab-only or
 /// explicitly <c>as full</c>, so all of them keep their scripts.
 /// ⚠️⚠️ <b>EXCEPT THE TAB TECHNIQUE LETTERS</b>, which are the reason this is asked per
-/// ITEM and not per type. <c>@tap</c>, <c>@hammeron</c>, <c>@pulloff</c> and
+/// ITEM and not per type. <c>@tap</c>, <c>@hammerOn</c>, <c>@pullOff</c> and
 /// <c>@pluck</c>'s finger letter are TABLATURE ink — a guitarist reads T/H/P/p-i-m-a off
 /// the tab, not off the staff above — and <c>test/tab-technique-letters</c> is a
 /// NUMBERS-ONLY tab written for exactly them, after a reader reported one drawn into its

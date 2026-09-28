@@ -263,17 +263,29 @@ internal static class SyntaxFacts
     /// cut the entries; the reader (<c>LayoutPlanReader</c>) reads the same list.
     /// </summary>
     public static IReadOnlyList<string> LayoutKeyVocabulary { get; } =
-        ["marks", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
+        ["markTempo", "barNumbers", "accidentals", "sectionLabels", "partCombineText",
          "chordQualities", "minorChords"];
 
-    /// <summary>True when <paramref name="word"/> is a layout key, case-insensitively —
-    /// the block's keys are matched like a paper key's.</summary>
+    /// <summary>True when <paramref name="word"/> is a layout key as written — keys are
+    /// case-sensitive, like a paper key's (owner's decision 2026-09-27).</summary>
     public static bool IsLayoutKey(string word)
     {
         foreach (var key in LayoutKeyVocabulary)
-            if (string.Equals(word, key, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(word, key, StringComparison.Ordinal))
                 return true;
         return false;
+    }
+
+    /// <summary>The layout key <paramref name="word"/> differs from ONLY IN CASE, or null.
+    /// The entry walker cuts an entry there too, so the reader can refuse the word as a key
+    /// and name the spelling to write.</summary>
+    public static string? LayoutKeyCaseOnlyMatch(string word)
+    {
+        foreach (var key in LayoutKeyVocabulary)
+            if (!string.Equals(word, key, StringComparison.Ordinal)
+                && string.Equals(word, key, StringComparison.OrdinalIgnoreCase))
+                return key;
+        return null;
     }
 
     /// <summary>
@@ -402,10 +414,11 @@ internal static class SyntaxFacts
     /// trap rather than a live defect, but it is one a reader falls into by
     /// writing perfectly ordinary music.
     /// </remarks>
+    // Case-sensitive, like every annotation name (owner's decision 2026-09-27).
     private static readonly HashSet<string> ArgumentTakingAnnotations =
-        new(StringComparer.OrdinalIgnoreCase)
+        new(StringComparer.Ordinal)
         {
-            "fig", "chord", "finger", "bend", "notehead", "frame", "text",
+            "figuredBass", "chord", "finger", "bend", "notehead", "diagram", "text",
             "mark", "feather", "pluck", "arpeggio",
             // @textSpan("poco rit.") — the general text spanner; the argument is the text it
             // prints. The sugar spellings (@rit, @accel, @rall) take no argument and are
@@ -442,7 +455,7 @@ internal static class SyntaxFacts
     public static bool AnnotationArgumentIsOptional(string name)
         => ArgumentTakingAnnotations.Contains(name)
            && (Semantics.AnnotationNameValidator.IsKnownPlainName(name)
-               || name.Equals("chord", StringComparison.OrdinalIgnoreCase));
+               || name.Equals("chord", StringComparison.Ordinal));
 
     /// <summary>
     /// Whether <paramref name="name"/> is one of the names that CAN take a
@@ -452,4 +465,7 @@ internal static class SyntaxFacts
     /// </summary>
     public static bool IsArgumentTakingAnnotationName(string name)
         => ArgumentTakingAnnotations.Contains(name);
+
+    /// <summary>The argument-taking names above, for <c>AnnotationNames</c>.</summary>
+    public static IReadOnlyCollection<string> ArgumentTakingAnnotationNames => ArgumentTakingAnnotations;
 }

@@ -1120,7 +1120,7 @@ internal sealed class SkylineBuilder
         // String 1 is the TOP line; the middle of the span is this staff's reference point.
         double topLineUp = staffMiddleUp + (tuning.Length - 1) * space / 2.0;
         int shift = Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
-        // The digit's box is the score's (fonts { tabFret step … }), the same em the pen
+        // The digit's box is the score's (fonts { tab step … }), the same em the pen
         // and the column reservation read (TabConstants.FretEm).
         double fretEm = TabConstants.FretEm(_fonts);
         double half = TabConstants.FretDigitHeight(_fonts) / 2.0;

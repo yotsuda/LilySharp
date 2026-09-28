@@ -25,10 +25,10 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <c>marks stacked</c> (the default) is LilyPond's arrangement: the label break-aligns to
+/// <c>markTempo stacked</c> (the default) is LilyPond's arrangement: the label break-aligns to
 /// the key/clef column and the tempo to the meter column, each on its own anchor, and the
 /// outside-staff pass stacks the label over the tempo wherever their inks meet
-/// (MusicMarkEngraver, OutsideStaffStacker.PlaceMusicMarks). <c>marks beside</c> is the
+/// (MusicMarkEngraver, OutsideStaffStacker.PlaceMusicMarks). <c>markTempo beside</c> is the
 /// chart's one line: the label's box stands at the line-start edge (after the drawn
 /// <c>|:</c> when the line opens on one) and the tempo sits to its right, baselines aligned
 /// — "[Chorus] ♩ = 132". LilyPond has no such construction;
@@ -46,7 +46,7 @@ namespace LilySharp.Core.Semantics;
 public static class MarkArrangement
 {
     /// <summary>The key, as written in the block.</summary>
-    public const string Property = "marks";
+    public const string Property = "markTempo";
 
     /// <summary>LilyPond's arrangement — the label stacked over the tempo — the default.</summary>
     public const string Stacked = "stacked";

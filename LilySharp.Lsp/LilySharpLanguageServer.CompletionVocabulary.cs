@@ -349,7 +349,7 @@ public sealed partial class LilySharpLanguageServer
         ["beside"] = "The section label at the line start with the tempo mark to its right on one line (the chart's)",
     };
 
-    /// <summary>After <c>layout { marks</c>: the two arrangements, from the compiler, in
+    /// <summary>After <c>layout { markTempo</c>: the two arrangements, from the compiler, in
     /// its order (the default first).</summary>
     internal static CompletionList GetMarkArrangementCompletions()
     {
@@ -491,7 +491,7 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "layout",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "{\n  marks ${1:stacked}\n  barNumbers ${2:lines}\n  accidentals ${3:default}"
+                    InsertText = "{\n  markTempo ${1:stacked}\n  barNumbers ${2:lines}\n  accidentals ${3:default}"
                         + "\n  sectionLabels ${4:boxed}\n  partCombineText ${5:true}"
                         + "\n  chordQualities ${6:symbols}\n  minorChords ${7:upper}$0\n}",
                     Preselect = true,
@@ -535,7 +535,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>One line of help per layout key — what the key switches, and its default.</summary>
     private static string LayoutKeyDetail(string key) => key switch
     {
-        "marks" => "How a section label and the tempo at the same bar are arranged: stacked (default) | beside",
+        "markTempo" => "How a section label and the tempo at the same bar are arranged: stacked (default) | beside",
         "barNumbers" => "Which bars carry a number: lines (default) | none | every N",
         "accidentals" => "Which notes carry a printed accidental: default | modern | modernCautionary | forget | noReset",
         "sectionLabels" => "How a form section's name is drawn: boxed (default) | plain | none",
@@ -1069,7 +1069,7 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>
-    /// After a key (<c>fonts { lyricText |</c>): the values THAT KEY takes.
+    /// After a key (<c>fonts { chord |</c>): the values THAT KEY takes.
     /// </summary>
     /// <param name="key">The key the caret sits after. A generic family narrows the list.</param>
     /// <remarks>
@@ -1088,7 +1088,7 @@ public sealed partial class LilySharpLanguageServer
     /// about to refuse. The reader's own message even says the offer must not be made
     /// there — it "must not offer the family form the other keys accept" — and the editor
     /// made it anyway, because the value list did not know which key it was answering for.
-    /// ⚠️ And until 2026-09-08 it offered the bare family words (<c>chordName serif</c>),
+    /// ⚠️ And until 2026-09-08 it offered the bare family words (<c>chord serif</c>),
     /// which is the spelling the <c>as</c> form replaced; offering it now would complete
     /// a line the reader refuses.
     /// </para>
@@ -1214,7 +1214,7 @@ public sealed partial class LilySharpLanguageServer
         }
     }
 
-    /// <summary>At <c>fonts { chordName as |</c>: the two generic families.</summary>
+    /// <summary>At <c>fonts { chord as |</c>: the two generic families.</summary>
     private static CompletionList? _fontAsCompletions;
 
     internal static CompletionList GetFontAsCompletions()
@@ -3208,7 +3208,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "pitch", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "pitch $0", Detail = "Pitch convention for transposing instruments: written (default) | concert", Command = new Command { Title = "Suggest pitch mode", CommandIdentifier = "editor.action.triggerSuggest" } },
                 // ⚠️ Pre-filled with the DEFAULTS (stacked, lines), the paper snippet's rule:
                 // accepting the completion and changing nothing does not move the page.
-                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarks ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
+                new CompletionItem { Label = "layout", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "layout {\n\tmarkTempo ${1:stacked}\n\tbarNumbers ${2:lines}\n\taccidentals ${3:default}\n\tsectionLabels ${4:boxed}\n\tpartCombineText ${5:true}\n\tchordQualities ${6:symbols}\n\tminorChords ${7:upper}$0\n}", Detail = "Display switches (marks, barNumbers, accidentals, sectionLabels, partCombineText, chordQualities, minorChords), pre-filled with LilyPond's defaults" },
                 // `override` is a valid global default; `revert` / `once` are NOT offered at
                 // the top level — they only work in a music stream (LYS1023 otherwise).
                 // `partial` is likewise NOT offered here — a pickup belongs to a section, not
@@ -3752,18 +3752,21 @@ public sealed partial class LilySharpLanguageServer
         ["phrasingSlur"] = "phrase curve",
         // All-lowercase names cannot be split into words, so the part a user is
         // most likely to type has to be listed.
-        ["shortfermata"] = "fermata short",
-        ["longfermata"] = "fermata long",
-        ["reverseturn"] = "turn inverted",
+        ["shortFermata"] = "fermata short",
+        ["longFermata"] = "fermata long",
+        ["reverseTurn"] = "turn inverted",
         ["pralltriller"] = "trill prall",
         ["staccatissimo"] = "staccato wedge",
-        ["upbow"] = "bow up",
-        ["downbow"] = "bow down",
+        ["upBow"] = "bow up",
+        ["downBow"] = "bow down",
         ["flageolet"] = "harmonic circle",
         ["harmonic"] = "flageolet circle",
         ["notehead"] = "head shape",
-        ["fig"] = "figured bass continuo",
+        ["figuredBass"] = "figured bass continuo",
         ["snapPizz"] = "bartok pizzicato",
+        // The retired short spellings, so typing them lands on the name.
+        ["hammerOn"] = "ho legato",
+        ["pullOff"] = "po legato",
         ["dead"] = "mute muted",
         ["laissezVibrer"] = "lv tie",
         ["repeatTie"] = "tie",
@@ -3868,12 +3871,12 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "fermata", Kind = CompletionItemKind.Value, Detail = "Fermata", SortText = "0fermata" },
                 new CompletionItem { Label = "portato", Kind = CompletionItemKind.Value, Detail = "Portato (tenuto + staccato)", SortText = "0portato" },
                 new CompletionItem { Label = "staccatissimo", Kind = CompletionItemKind.Value, Detail = "Staccatissimo (wedge)", SortText = "0staccatissimo" },
-                new CompletionItem { Label = "upbow", Kind = CompletionItemKind.Value, Detail = "Up-bow (V, above)", SortText = "0upbow" },
-                new CompletionItem { Label = "downbow", Kind = CompletionItemKind.Value, Detail = "Down-bow (frog, above)", SortText = "0downbow" },
+                new CompletionItem { Label = "upBow", Kind = CompletionItemKind.Value, Detail = "Up-bow (V, above)", SortText = "0upBow" },
+                new CompletionItem { Label = "downBow", Kind = CompletionItemKind.Value, Detail = "Down-bow (frog, above)", SortText = "0downBow" },
                 new CompletionItem { Label = "harmonic", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @flageolet)", SortText = "0harmonic" },
                 new CompletionItem { Label = "flageolet", Kind = CompletionItemKind.Value, Detail = "Harmonic circle ○ (a.k.a. @harmonic)", SortText = "0flageolet" },
-                new CompletionItem { Label = "shortfermata", Kind = CompletionItemKind.Value, Detail = "Short fermata (angular)", SortText = "0shortfermata" },
-                new CompletionItem { Label = "longfermata", Kind = CompletionItemKind.Value, Detail = "Long fermata (square)", SortText = "0longfermata" },
+                new CompletionItem { Label = "shortFermata", Kind = CompletionItemKind.Value, Detail = "Short fermata (angular)", SortText = "0shortFermata" },
+                new CompletionItem { Label = "longFermata", Kind = CompletionItemKind.Value, Detail = "Long fermata (square)", SortText = "0longFermata" },
                 new CompletionItem { Label = "breath", Kind = CompletionItemKind.Value, Detail = "Breath mark after the note", SortText = "0breath" },
                 new CompletionItem { Label = "caesura", Kind = CompletionItemKind.Value, Detail = "Caesura (railroad tracks) after the note", SortText = "0caesura" },
                 new CompletionItem { Label = "stopped", Kind = CompletionItemKind.Value, Detail = "Stopped note + (brass hand-stop / left-hand pizz.)", SortText = "0stopped" },
@@ -3885,12 +3888,13 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "fall", Kind = CompletionItemKind.Value, Detail = "Fall (jazz articulation off the note)", SortText = "0fall" },
                 new CompletionItem { Label = "doit", Kind = CompletionItemKind.Value, Detail = "Doit (jazz articulation off the note)", SortText = "0doit" },
 
-                // Fretted-instrument techniques. Each has a short spelling that
-                // reads better mid-passage, so both are offered.
-                new CompletionItem { Label = "hammerOn", Kind = CompletionItemKind.Value, Detail = "Hammer-on (a.k.a. @ho)", SortText = "0hammerOn" },
-                new CompletionItem { Label = "ho", Kind = CompletionItemKind.Value, Detail = "Hammer-on, short spelling of @hammerOn", SortText = "0ho" },
-                new CompletionItem { Label = "pullOff", Kind = CompletionItemKind.Value, Detail = "Pull-off (a.k.a. @po)", SortText = "0pullOff" },
-                new CompletionItem { Label = "po", Kind = CompletionItemKind.Value, Detail = "Pull-off, short spelling of @pullOff", SortText = "0po" },
+                // Fretted-instrument techniques. The short spellings @ho / @po were
+                // retired from the language (pre-0.3.0 in the registry; the validator and
+                // this list kept offering them until 2026-09-27, so they compiled clean
+                // and drew nothing). Typing "ho" / "po" still finds these two
+                // (ExtraSearchTerms), so the long name costs no keystrokes.
+                new CompletionItem { Label = "hammerOn", Kind = CompletionItemKind.Value, Detail = "Hammer-on (H)", SortText = "0hammerOn" },
+                new CompletionItem { Label = "pullOff", Kind = CompletionItemKind.Value, Detail = "Pull-off (P)", SortText = "0pullOff" },
                 new CompletionItem { Label = "tap", Kind = CompletionItemKind.Value, Detail = "Tapped note", SortText = "0tap" },
                 new CompletionItem { Label = "snapPizz", Kind = CompletionItemKind.Value, Detail = "Snap (Bartók) pizzicato", SortText = "0snapPizz" },
                 new CompletionItem { Label = "slide", Kind = CompletionItemKind.Value, Detail = "Slide to the next note", SortText = "0slide" },
@@ -3910,7 +3914,7 @@ public sealed partial class LilySharpLanguageServer
                 new CompletionItem { Label = "mordent", Kind = CompletionItemKind.Value, Detail = "Mordent ornament", SortText = "1mordent" },
                 new CompletionItem { Label = "prall", Kind = CompletionItemKind.Value, Detail = "Inverted mordent (pralltriller)", SortText = "1prall" },
                 new CompletionItem { Label = "turn", Kind = CompletionItemKind.Value, Detail = "Turn ornament", SortText = "1turn" },
-                new CompletionItem { Label = "reverseturn", Kind = CompletionItemKind.Value, Detail = "Reverse (inverted) turn", SortText = "1reverseturn" },
+                new CompletionItem { Label = "reverseTurn", Kind = CompletionItemKind.Value, Detail = "Reverse (inverted) turn", SortText = "1reverseTurn" },
                 new CompletionItem { Label = "pralltriller", Kind = CompletionItemKind.Value, Detail = "Prall-triller (trill with prall)", SortText = "1pralltriller" },
 
                 // Dynamics (@ prefix style)
@@ -4007,12 +4011,12 @@ public sealed partial class LilySharpLanguageServer
                 ArgumentStub("pluck", "Right-hand (plucking) finger — offers p, i, m, a", "6pluck"),
                 ArgumentStub("bend", "String bend — offers half, full", "6bend"),
 
-                // Guitar chord frame: one character per string, low to high —
+                // Guitar chord diagram: one character per string, low to high —
                 // x = muted, o = open, digit = fret.
-                new CompletionItem { Label = "frame(x32010)", Kind = CompletionItemKind.Value, Detail = "Chord frame (x = muted, o = open, digit = fret)", SortText = "6frame" },
+                new CompletionItem { Label = "diagram(x32010)", Kind = CompletionItemKind.Value, Detail = "Chord diagram (x = muted, o = open, digit = fret)", SortText = "6diagram" },
 
-                // Figured bass — parenthesised, figures space-separated: @fig(6 4).
-                ArgumentStub("fig", "Figured bass — offers 6, 6 4, 7, 6 5, 4 3, … (space-separated)", "7fig"),
+                // Figured bass — parenthesised, figures space-separated: @figuredBass(6 4).
+                ArgumentStub("figuredBass", "Figured bass — offers 6, 6 4, 7, 6 5, 4 3, … (space-separated)", "7fig"),
 
                 // Chord name — on a note the '(…)' form (offers the key's diatonic
                 // chords); on a chord the bare auto-derive form. Built above.
@@ -4044,20 +4048,21 @@ public sealed partial class LilySharpLanguageServer
 
     /// <summary>
     /// The argument vocabulary of an <c>@name(…)</c> annotation, or null when the
-    /// annotation takes free-form text (<c>@text</c>, <c>@mark</c>, <c>@frame</c>)
+    /// annotation takes free-form text (<c>@text</c>, <c>@mark</c>, <c>@diagram</c>)
     /// or has its own key-dependent list (<c>@chord</c>, handled separately).
     /// This is the second half of the two-step completion: the '@' list offers the
     /// bare name, and the argument is picked from here.
     /// </summary>
     internal static CompletionList? GetAnnotationArgumentCompletions(string annotation) =>
-        annotation.ToLowerInvariant() switch
+        // Matched as written: annotation names are case-sensitive (owner's decision 2026-09-27).
+        annotation switch
         {
             "notehead" => GetNoteheadCompletions(),
             "finger" => GetFingerCompletions(),
             "pluck" => GetPluckCompletions(),
             "bend" => GetBendCompletions(),
             "feather" => GetFeatherCompletions(),
-            "fig" => GetFiguredBassCompletions(),
+            "figuredBass" => GetFiguredBassCompletions(),
             _ => null
         };
 
@@ -4136,7 +4141,7 @@ public sealed partial class LilySharpLanguageServer
     };
 
     /// <summary>
-    /// Figured bass, inside <c>@fig(…)</c>. The figures are space-separated and
+    /// Figured bass, inside <c>@figuredBass(…)</c>. The figures are space-separated and
     /// stack top to bottom, so the vocabulary is not a fixed set — what is
     /// offered is the continuo shorthand a score actually uses, most frequent
     /// first, plus the two non-numeric atoms (bare accidental, held line).

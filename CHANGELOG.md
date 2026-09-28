@@ -4,6 +4,46 @@ Notable changes to Lily# are recorded here, newest first. Release notes are take
 from this file: the topmost section is the version being tagged, and the release
 workflow attaches that section to the GitHub Release verbatim.
 
+## Unreleased
+
+### Breaking changes
+
+- **Figured bass is written `@figuredBass(…)`.** The abbreviation `@fig(…)` told a reader
+  nothing; the new name is the term itself and matches the `fonts { figuredBass … }` role.
+  The figures are written as before (`c4@figuredBass(6 4)`). `@fig(6)` is now an unknown
+  annotation — it warns and draws nothing.
+- **A chord diagram is written `@diagram(x32010)`.** It was `@frame(…)`, MusicXML's element
+  name, which no player uses; guitarists call it a chord diagram. The position string and
+  `.down` are unchanged. `@frame(…)` is now an unknown annotation.
+- **`fonts { }` keys are spelled as the source writes what they style.** `chordName` →
+  `chord`, `fretFrame` → `diagram`, `fingering` → `finger`, `barNumber` → `barNumbers`,
+  `partCombine` → `partCombineText`, `meter` → `time`, `tabFret` → `tab`. `lyricText` is
+  gone: `lyrics` binds the syllables (with the stanza numbers), and `lyrics "X"  stanza "Y"`
+  still sets the two apart. An old key is refused as unknown (LYS8004), and the message
+  lists the keys.
+- **`layout { marks stacked|beside }` is `layout { markTempo stacked|beside }`.** It
+  arranges a boxed label and the metronome mark at the same bar; `marks` read like the
+  `fonts` group of the same name. The old key is refused (LYS9101).
+- **`@ho` and `@po` warn as unknown annotations.** They were retired before 0.3.0, but the
+  checker still accepted them, so `c4@ho` compiled without a word and drew no H — nor did
+  the `.ly` twin or MusicXML carry it. Write `@hammerOn` / `@pullOff`.
+- **Names are case-sensitive.** Every annotation name and every `fonts` / `layout` /
+  `paper` key (and the fonts words `as step size bold italic regular serif sans`) has one
+  spelling: `@hammeron`, `@Staccato`, `@FiguredBass(6)` and `barnumbers` used to be read,
+  and are now refused as unknown — nothing drawn or exported — with the right spelling in
+  the message (`Names are case-sensitive: write '@hammerOn'.`).
+- **A name of several words is camelCase, even where LilyPond's is not.** `@upbow`,
+  `@downbow`, `@shortfermata`, `@longfermata` and `@reverseturn` are now `@upBow`,
+  `@downBow`, `@shortFermata`, `@longFermata` and `@reverseTurn`, like `@laissezVibrer` and
+  `@hammerOn` beside them. The old spellings are told the new one. The `.ly` twin still
+  writes LilyPond's `\upbow`.
+- **Value words are case-sensitive too.** The words inside an annotation's parentheses
+  (`@notehead(triangle)`, `@bend(full)`, `@pluck(p)`, `@feather(right)`,
+  `@arpeggio(bracket)`, the `x` / `o` of `@diagram(x32010)`, the `s` / `f` / `n` of
+  `@figuredBass(6 s)`), paper size names (`size a4`) and units (`210mm`) are lowercase
+  only; `@notehead(TRIANGLE)`, `size A4` and `210MM` are refused with the spelling to
+  write. Free text (`@text("Dolce")`) and chord symbols (`@chord(Dm)`) keep their case.
+
 ## 0.9.0
 
 ### Breaking changes

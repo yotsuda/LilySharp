@@ -38,21 +38,31 @@ public class PedalTests
 
     // --- MusicMarkType pedal entries ---
 
-    // One name per pedal, opened by the name and closed by '@!' — case-insensitive like
-    // every other annotation name. '@treCorde' is the one release with a name of its own,
-    // kept because it is a WORD the Text style prints (session 289, user decision).
+    // One name per pedal, opened by the name and closed by '@!' — case-sensitive like
+    // every other annotation name (owner's decision 2026-09-27). '@treCorde' is the one
+    // release with a name of its own, kept because it is a WORD the Text style prints
+    // (session 289, user decision).
     [Theory]
     [InlineData("sustain", MusicMarkType.SustainOn)]
     [InlineData("sostenuto", MusicMarkType.SostenutoOn)]
     [InlineData("unaCorda", MusicMarkType.UnaCordaOn)]
     [InlineData("treCorde", MusicMarkType.UnaCordaOff)]
-    [InlineData("SUSTAIN", MusicMarkType.SustainOn)]
-    [InlineData("UNACORDA", MusicMarkType.UnaCordaOn)]
     public void ParseMarkName_PedalMarks(string name, MusicMarkType expected)
     {
         var result = MusicMarkItem.ParseMarkName(name);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value);
+    }
+
+    [Theory]
+    [InlineData("SUSTAIN")]
+    [InlineData("UNACORDA")]
+    [InlineData("unacorda")]
+    [InlineData("trecorde")]
+    public void ParseMarkName_AWrongCasePedal_IsNoMark(string name)
+    {
+        Assert.Null(MusicMarkItem.ParseMarkName(name));
+        Assert.Null(MusicMarkItem.ParseSpanEndName(name));
     }
 
     /// <summary>

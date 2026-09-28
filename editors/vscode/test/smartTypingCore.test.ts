@@ -229,7 +229,7 @@ describe('durations (rules 16–18a, 25, 28)', () => {
         typed('c8\\8(‸[', '4', 'c4\\8(‸[');
     });
     it('28. inside an annotation\'s arguments a digit is the argument', () => {
-        typed('c4@fig(6‸)', '4', 'c4@fig(64‸)');
+        typed('c4@figuredBass(6‸)', '4', 'c4@figuredBass(64‸)');
     });
     it('a digit in a header line is typed as pressed', () => {
         typed('time 4/‸', '4', 'time 4/4‸');

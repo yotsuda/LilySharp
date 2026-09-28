@@ -179,7 +179,7 @@ internal static class FingeringEngraver
     /// <param name="fonts">The SCORE's text metrics — passed in rather than read off
     /// <paramref name="score"/>, because every caller hands this engraver a one-voice
     /// <see cref="Score"/> built for the walk, which carries no <c>fonts</c> plan of its
-    /// own; the plan the digits follow (<c>fonts { fingering step … }</c>) is the page's.</param>
+    /// own; the plan the digits follow (<c>fonts { finger step … }</c>) is the page's.</param>
     public static ImmutableArray<FingeringLayout> Calculate(
         Rendering.ScoreTextMetrics fonts,
         Score score,

@@ -256,7 +256,7 @@ public class MusicXmlRoundTripTests
             key c major
             part bass { clef bass }
             section A {
-              bass { c4@fig(6) d4@fig(6 4) e4@fig(7 s) f4@fig(_) | }
+              bass { c4@figuredBass(6) d4@figuredBass(6 4) e4@figuredBass(7 s) f4@figuredBass(_) | }
             }
             form main { A }
             score main { staff bass }
@@ -723,7 +723,7 @@ public class MusicXmlRoundTripTests
     public void TremoloAndInvertedTurn_ImportFromNotations()
     {
         // The Lily# exporter does not emit <tremolo>/<inverted-turn>, so import from
-        // hand-crafted MusicXML: a 2-beam single tremolo -> :16, plus @reverseturn
+        // hand-crafted MusicXML: a 2-beam single tremolo -> :16, plus @reverseTurn
         // (LilyPond's name for MusicXML's inverted-turn).
         var (lys, _) = new MusicXmlImporter().Import("""
             <?xml version="1.0"?>
@@ -743,7 +743,7 @@ public class MusicXmlRoundTripTests
         var tree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(tree), $"{lys}\n---\n{Diagnostics(tree)}");
         Assert.Contains("c'2:16", lys);          // 2 tremolo beams -> :16
-        Assert.Contains("@reverseturn", lys);
+        Assert.Contains("@reverseTurn", lys);
     }
 
     [Fact]

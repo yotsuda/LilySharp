@@ -6,7 +6,7 @@ part melody { clef treble }
 section Main {
   melody {
     c4@sfz d@fp e@sf f@rfz |
-    g4@staccatissimo a@staccatissimo b@upbow c@downbow |
+    g4@staccatissimo a@staccatissimo b@upBow c@downBow |
     d4@flageolet c@staccatissimo.down b@flageolet a@fz |
     <d f a>,2@fermata <g b d>2@staccato |
     e1@fermata |

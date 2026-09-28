@@ -7,7 +7,7 @@ part melody
 // ONE pitch; the pitch was written by habit and nobody looked at it until 2026-08-17.
 section A {
   melody {
-    a''4@accent a4@accent@fermata a4@accent@shortfermata a4@accent@longfermata
+    a''4@accent a4@accent@fermata a4@accent@shortFermata a4@accent@longFermata
   }
 }
 

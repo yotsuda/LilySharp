@@ -93,7 +93,9 @@ public class AtCompletionParsesTests
         var offered = LilySharpLanguageServer.GetArticulationCompletions().Items
             .Select(i => i.Label)
             .Where(l => !l.Contains('('))
-            .ToHashSet(System.StringComparer.OrdinalIgnoreCase);
+            // Ordinal: names are case-sensitive (owner's decision 2026-09-27), so a label
+            // that differs from the table only in case offers a name that does not compile.
+            .ToHashSet(System.StringComparer.Ordinal);
 
         var expected = ArticulationRegistry.Names
             .Concat(SyntaxFacts.DynamicTextLevels.Keys)
@@ -101,11 +103,11 @@ public class AtCompletionParsesTests
             // the table above.
             .Concat(new[] { "cresc", "decresc", "dim" })
             .Concat(AnnotationNameValidator.PlainFeatureNames)
-            .Distinct(System.StringComparer.OrdinalIgnoreCase);
+            .Distinct(System.StringComparer.Ordinal);
 
         var missing = expected
             .Where(n => !offered.Contains(n))
-            .OrderBy(n => n, System.StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, System.StringComparer.Ordinal)
             .ToList();
 
         Assert.True(missing.Count == 0,
@@ -126,8 +128,8 @@ public class AtCompletionParsesTests
     [InlineData("pluck")]          // right-hand (plucking) fingering
     [InlineData("bend")]           // string bends
     [InlineData("feather")]        // feathered beams
-    [InlineData("fig")]            // figured bass
-    [InlineData("frame(")]         // guitar chord frames — free-form, no second list
+    [InlineData("figuredBass")]            // figured bass
+    [InlineData("diagram(")]       // guitar chord diagrams — free-form, no second list
     [InlineData("ottava(")]        // ottava bassa
     [InlineData("quindicesima")]   // 15ma / 15mb
     [InlineData("text")]           // free expressive text
@@ -136,13 +138,13 @@ public class AtCompletionParsesTests
     {
         var offered = LilySharpLanguageServer.GetArticulationCompletions().Items;
         Assert.True(
-            offered.Any(i => i.Label.StartsWith(labelPrefix, System.StringComparison.OrdinalIgnoreCase)),
+            offered.Any(i => i.Label.StartsWith(labelPrefix, System.StringComparison.Ordinal)),
             $"The '@' completion offers nothing for the '{labelPrefix}…' family.");
     }
 
     /// <summary>The annotations whose argument is picked from a second list.</summary>
     public static TheoryData<string> ArgumentStubNames() =>
-        new() { "notehead", "finger", "pluck", "bend", "feather", "fig" };
+        new() { "notehead", "finger", "pluck", "bend", "feather", "figuredBass" };
 
     /// <summary>
     /// Each of these inserts an empty argument list and asks the editor to suggest
@@ -255,7 +257,7 @@ public class AtCompletionParsesTests
     [InlineData("ped", "sustain")]               // '@ped' is not a spelling; it is a search term
     [InlineData("lv", "laissezVibrer")]
     [InlineData("bartok", "snapPizz")]
-    [InlineData("figured", "fig")]
+    [InlineData("figured", "figuredBass")]
     [InlineData("rehearsal", "mark")]
     public void MatchAnywhere_FindsItemsByTheirSearchTerms(string query, string expected)
         => Assert.Contains(expected, MatchesFor(query));
@@ -353,7 +355,7 @@ public class AtCompletionParsesTests
     [InlineData("c4@", "")]
     [InlineData("c4@ill", "ill")]
     [InlineData("c'8@stacc", "stacc")]
-    [InlineData("c4@fig(6", "")]          // inside an argument, not the name
+    [InlineData("c4@figuredBass(6", "")]          // inside an argument, not the name
     [InlineData("c4 d4", "")]             // no annotation being typed
     public void PartialAnnotationName_ReadsWhatIsTypedAfterTheAt(string text, string expected)
         => Assert.Equal(expected, LilySharpLanguageServer.PartialAnnotationName(text, text.Length));

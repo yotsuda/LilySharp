@@ -84,7 +84,7 @@ internal static class FingeringGlyphRun
 
     /// <summary>
     /// The font-size step a fingering is set at for THIS score: the grob's own −5 plus
-    /// whatever the score's <c>fonts { }</c> wrote for <c>fingering</c> (a <c>step</c>
+    /// whatever the score's <c>fonts { }</c> wrote for <c>finger</c> (a <c>step</c>
     /// directly; a <c>size</c> as the step that em works out to). ONE HOME: the em, the
     /// design and the metrics below are all this step's, so a plan that moves the digit
     /// moves the glyph it is drawn from and the box it is reserved in together — the same

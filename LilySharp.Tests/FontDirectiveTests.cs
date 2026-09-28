@@ -183,7 +183,7 @@ public class FontDirectiveTests
     [Fact]
     public void ARedirectMovesTheMeasuredFamilyWithoutNamingAFace()
     {
-        // `chordName serif` is the one way a score can say "reserve this against the
+        // `chord serif` is the one way a score can say "reserve this against the
         // OTHER bundled face". It must move Family — what the layout measures — and must
         // not invent a face name.
         var plan = new TextFontPlan.Builder().Role(TextRole.ChordName, TextFontFamily.Serif).Build();
@@ -306,7 +306,7 @@ public class FontDirectiveTests
         string svg = Svg("""
             fonts {
               serif  "Georgia"
-              lyricText "Charis SIL"
+              lyrics "Charis SIL"
               title  "Cormorant"
             }
             """ + "\n" + Book);
@@ -321,7 +321,7 @@ public class FontDirectiveTests
     {
         // What a chain is FOR: a Latin face for the words and a CJK face for the
         // syllables it has no glyph for, walked per glyph by the viewer.
-        string svg = Svg("fonts { lyricText \"Charis SIL\" \"Noto Serif CJK JP\" }\n" + Book);
+        string svg = Svg("fonts { lyrics \"Charis SIL\" \"Noto Serif CJK JP\" }\n" + Book);
         Assert.Contains("font-family=\"Charis SIL, Noto Serif CJK JP\"", svg,
             StringComparison.Ordinal);
     }
@@ -358,22 +358,54 @@ public class FontDirectiveTests
         var err = Assert.Single(Check("fonts { lyrix \"Charis SIL\" }\n" + Book),
             x => x.Code == DiagnosticCodes.UnknownFontRole);
         // The message names the whole vocabulary, so the fix is one read.
-        Assert.Contains("lyricText", err.Message, StringComparison.Ordinal);
+        Assert.Contains("stanza", err.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The keys are spelled as the source writes the thing they style (2026-09-27), and the
+    /// old grob-named keys are gone rather than aliased — each is an unknown key now.
+    /// </summary>
+    [Theory]
+    [InlineData("lyricText")]    // the syllables: `lyrics`, which is also the group
+    [InlineData("chordName")]    // `chord`
+    [InlineData("fretFrame")]    // `diagram`
+    [InlineData("fingering")]    // `finger`
+    [InlineData("barNumber")]    // `barNumbers`
+    [InlineData("partCombine")]  // `partCombineText`
+    [InlineData("meter")]        // `time`
+    [InlineData("tabFret")]      // `tab`
+    public void ARetiredKeyIsUnknown(string key)
+        => Assert.Single(Check($"fonts {{ {key} \"Charis SIL\" }}\n" + Book),
+            x => x.Code == DiagnosticCodes.UnknownFontRole);
+
+    [Theory]
+    [InlineData("chord", TextRole.ChordName)]
+    [InlineData("diagram", TextRole.FretFrame)]
+    [InlineData("finger", TextRole.Fingering)]
+    [InlineData("barNumbers", TextRole.BarNumber)]
+    [InlineData("partCombineText", TextRole.PartCombine)]
+    [InlineData("time", TextRole.Meter)]
+    [InlineData("tab", TextRole.TabFret)]
+    public void AKeyIsTheSourceSpellingOfItsRole(string key, TextRole role)
+    {
+        Assert.True(TextRoles.TryParseKey(key, out var parsed, out var group, out _));
+        Assert.Equal(role, parsed);
+        Assert.Null(group);
     }
 
     [Fact]
     public void AKeyBoundTwiceInOneBlockIsAWarningAndTheLastOneWins()
     {
-        Assert.Single(Check("fonts { lyricText \"A\"  lyricText \"B\" }\n" + Book),
+        Assert.Single(Check("fonts { lyrics \"A\"  lyrics \"B\" }\n" + Book),
             x => x.Code == DiagnosticCodes.DuplicateFontBinding);
-        string svg = Svg("fonts { lyricText \"A\"  lyricText \"B\" }\n" + Book);
+        string svg = Svg("fonts { lyrics \"A\"  lyrics \"B\" }\n" + Book);
         Assert.Contains("font-family=\"B\"", svg, StringComparison.Ordinal);
         Assert.DoesNotContain("font-family=\"A\"", svg, StringComparison.Ordinal);
     }
 
     [Fact]
     public void AKeyWithNoFaceIsRefused()
-        => Assert.Single(Check("fonts { lyricText }\n" + Book),
+        => Assert.Single(Check("fonts { lyrics }\n" + Book),
             x => x.Code == DiagnosticCodes.FontBindingMissingValue);
 
     [Fact]
@@ -396,7 +428,7 @@ public class FontDirectiveTests
     {
         // A key is read inside `fonts { }` only, against the role vocabulary — never by the
         // lexer — so adding twenty-four role names must not cost a score twenty-four
-        // identifiers. `serif`, `header` and `chordName` are ordinary names everywhere else.
+        // identifiers. `serif`, `header` and `chord` are ordinary names everywhere else.
         var d = Check("""
             fonts { serif "Georgia" }
             part serif { clef treble }
@@ -415,7 +447,7 @@ public class FontDirectiveTests
         // The embed check read FontName — the FIRST name — which cleared a block whose
         // SECOND face was the restricted one.
         var notFound = Check(
-            "fonts { title \"ZzNoSuchFontA\"  lyricText \"ZzNoSuchFontB\" embedded }\n" + Book)
+            "fonts { title \"ZzNoSuchFontA\"  lyrics \"ZzNoSuchFontB\" embedded }\n" + Book)
             .Where(x => x.Code == DiagnosticCodes.FontNotFound).ToList();
         Assert.Equal(2, notFound.Count);
     }
@@ -442,7 +474,7 @@ public class FontDirectiveTests
         // A score that binds nothing, and one that only points a role at a generic family,
         // name no face at all — so neither can trip a "not installed" warning.
         Assert.DoesNotContain(Check(Book), x => x.Code == DiagnosticCodes.FontNotFound);
-        Assert.DoesNotContain(Check("fonts { chordName as serif }\n" + Book),
+        Assert.DoesNotContain(Check("fonts { chord as serif }\n" + Book),
             x => x.Code == DiagnosticCodes.FontNotFound);
 
         // ⚠️ THE "BUNDLED" HALF OF THIS NAME WAS NOT OBSERVED BY ANYTHING until 2026-08-18.
@@ -481,7 +513,7 @@ public class FontDirectiveTests
     private const string BoundTitle = "fonts { title \"TeX Gyre Heros\" }\n";
 
     /// <summary>The same face bound to the role whose width the SPACING reads.</summary>
-    private const string BoundLyrics = "fonts { lyricText \"TeX Gyre Heros\" }\n";
+    private const string BoundLyrics = "fonts { lyrics \"TeX Gyre Heros\" }\n";
 
     private const string TitleText = "T";
 
@@ -528,7 +560,8 @@ public class FontDirectiveTests
     /// said so (HANDOFF RULES §5.4: read WHICH case went red, not how many).
     /// </para>
     /// <para>
-    /// ⚠️ AND IT BINDS <c>lyricText</c> RATHER THAN <c>title</c>, which is the second thing
+    /// ⚠️ AND IT BINDS THE SYLLABLES (<c>lyricText</c> then, <c>lyrics</c> since 2026-09-27)
+    /// RATHER THAN <c>title</c>, which is the second thing
     /// the poison exposed. MEASURED on this book, 2026-08-18, geometry-only: binding
     /// <c>lyricText</c> moves the page; binding <c>title</c>, <c>chordName</c> or
     /// <c>barNumber</c> does NOT. A title is drawn centred and its width is reserved by

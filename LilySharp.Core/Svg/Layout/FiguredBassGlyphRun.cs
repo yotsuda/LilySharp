@@ -140,7 +140,7 @@ internal static class FiguredBassGlyphRun
     /// ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
     /// (2026-08-11, ledger <c>figbass.alone.head-anchor-to-box-left</c>) the run's total no
     /// longer reaches the drawn X at all; it survives as the feed BETWEEN glyphs, and Lily#'s
-    /// grammar has no two-glyph figure to show it (<c>@fig(13)</c> does not parse). It is
+    /// grammar has no two-glyph figure to show it (<c>@figuredBass(13)</c> does not parse). It is
     /// corrected here only because the design is one decision for the whole run and splitting
     /// it would be the invention.
     /// </para>

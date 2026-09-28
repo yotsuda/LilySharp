@@ -601,7 +601,7 @@ public class LilyPondExporterTests
 
     /// <summary>
     /// The remaining scripts the page draws from LilyPond's own glyphs: <c>@doit</c> is the
-    /// rising <c>\bendAfter</c>, <c>@reverseturn</c> / <c>@pralltriller</c> / <c>@snappizz</c>
+    /// rising <c>\bendAfter</c>, <c>@reverseTurn</c> / <c>@pralltriller</c> / <c>@snapPizz</c>
     /// the scripts of the same glyph names (reverseturn, prallprall, snappizzicato) with
     /// the neutral <c>-</c> an unforced side takes. All four were "not mapped, dropped".
     /// LILYPOND-REF: ly/music-functions-init.ly:357-361 bendAfter = define-event-function;
@@ -611,7 +611,7 @@ public class LilyPondExporterTests
     [Fact]
     public void RemainingScripts_AreWrittenByTheirGlyphNames()
     {
-        var (ly, warnings) = ExportWithWarnings(Score("c,4@doit d,4@reverseturn e,4@pralltriller f,4@snappizz"));
+        var (ly, warnings) = ExportWithWarnings(Score("c,4@doit d,4@reverseTurn e,4@pralltriller f,4@snapPizz"));
         Assert.Contains("c,4\\bendAfter #+4", ly);
         Assert.Contains("d,4-\\reverseturn", ly);
         Assert.Contains("e,4-\\prallprall", ly);
@@ -668,7 +668,7 @@ public class LilyPondExporterTests
     }
 
     /// <summary>
-    /// The TAB technique letters — <c>@hammeron</c> H, <c>@pulloff</c> P, <c>@tap</c> T — are
+    /// The TAB technique letters — <c>@hammerOn</c> H, <c>@pullOff</c> P, <c>@tap</c> T — are
     /// text scripts on their notes, <c>-\markup { \italic "H" }</c>, the letter the page prints
     /// (<c>ArticulationEngraver.TabTechniqueLetterOf</c>, the page's one home), a forced
     /// <c>.up</c>/<c>.down</c> as <c>^</c>/<c>_</c>. LilyPond has no grob for them, so the twin
@@ -681,7 +681,7 @@ public class LilyPondExporterTests
     public void TabTechniqueLetters_AreTextScriptsOnTheirNotes()
     {
         var (ly, warnings) = ExportWithWarnings(Score(
-            "c,4@tap d,4@hammeron e,4@pulloff f,4@staccato | g,4@tap.up a,4@pulloff.down b,4@hammeron c,4"));
+            "c,4@tap d,4@hammerOn e,4@pullOff f,4@staccato | g,4@tap.up a,4@pullOff.down b,4@hammerOn c,4"));
         Assert.Contains("c,4-\\markup { \\italic \"T\" }", ly);
         Assert.Contains("d,4-\\markup { \\italic \"H\" }", ly);
         Assert.Contains("e,4-\\markup { \\italic \"P\" }", ly);
@@ -822,15 +822,15 @@ public class LilyPondExporterTests
     [Fact]
     public void TrueScripts_ReachTheTwinAsDirectionCarryingPostEvents()
     {
-        Assert.Contains("c,1-\\upbow", Export(Score("c,1@upbow")));
-        Assert.Contains("c,1-\\downbow", Export(Score("c,1@downbow")));
+        Assert.Contains("c,1-\\upbow", Export(Score("c,1@upBow")));
+        Assert.Contains("c,1-\\downbow", Export(Score("c,1@downBow")));
         Assert.Contains("c,1-\\flageolet", Export(Score("c,1@flageolet")));
         Assert.Contains("c,1-\\portato", Export(Score("c,1@portato")));
 
         // A forced side still rides the same tail.
-        Assert.Contains("c,1^\\upbow", Export(Score("c,1@upbow.up")));
+        Assert.Contains("c,1^\\upbow", Export(Score("c,1@upBow.up")));
 
-        Assert.DoesNotContain("not mapped, dropped", Export(Score("c,1@upbow")));
+        Assert.DoesNotContain("not mapped, dropped", Export(Score("c,1@upBow")));
     }
 
     /// <summary>

@@ -5,7 +5,7 @@ part melody
 
 section A {
   melody {
-    e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
+    e'4(@accent@finger(0)@downBow c4@staccato) d@tenuto@downBow d,@staccato@finger(0)@accent |
   }
 }
 

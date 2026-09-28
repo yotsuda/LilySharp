@@ -30,7 +30,7 @@ namespace LilySharp.Core.Semantics;
 /// resolved to — if each parsed the entries itself they would eventually disagree about
 /// which directives are legal.
 /// <para>
-/// The vocabulary: <c>marks stacked|beside</c> (<see cref="MarkArrangement"/>) and
+/// The vocabulary: <c>markTempo stacked|beside</c> (<see cref="MarkArrangement"/>) and
 /// <c>barNumbers lines|none|every N</c> (<see cref="BarNumberPolicy"/>). What belongs
 /// here and not in <c>paper</c> is the rule <see cref="LayoutPlan"/> states: a switch
 /// among a few drawings, score-wide, with no unit.
@@ -129,7 +129,7 @@ internal static class LayoutPlanReader
         problem = new Problem(nameToken.Span, DiagnosticCodes.UnknownLayoutBlockName,
             $"No layout block is named '{name}'." + (declared.Count > 0
                 ? " Declared: " + string.Join(", ", declared) + "."
-                : $" Declare one at the top level: layout {name} {{ marks beside }}."),
+                : $" Declare one at the top level: layout {name} {{ markTempo beside }}."),
             IsError: true);
         return false;
     }
@@ -191,8 +191,11 @@ internal static class LayoutPlanReader
             if (key == null)
             {
                 found.Add(new Problem(span, DiagnosticCodes.UnknownLayoutKey,
-                    $"'{entry.Key}' is not a layout key. Known keys: "
-                    + string.Join(", ", AllKeySpellings()) + ".",
+                    SyntaxFacts.LayoutKeyCaseOnlyMatch(entry.Key) is { } canonicalKey
+                        ? $"'{entry.Key}' is not a layout key. Keys are case-sensitive: "
+                          + $"write '{canonicalKey}'."
+                        : $"'{entry.Key}' is not a layout key. Known keys: "
+                          + string.Join(", ", AllKeySpellings()) + ".",
                     IsError: true));
                 continue;
             }
@@ -235,7 +238,7 @@ internal static class LayoutPlanReader
         return plan;
     }
 
-    // marks stacked | beside — exactly one word.
+    // markTempo stacked | beside — exactly one word.
     private static LayoutPlan ReadMarks(
         LayoutPlan plan, LayoutDeclarationSyntax.Entry entry, TextSpan keySpan, List<Problem> found)
     {
@@ -383,12 +386,12 @@ internal static class LayoutPlanReader
         return bound;
     }
 
-    /// <summary>The canonical spelling <paramref name="word"/> matches among the keys, or
-    /// null. Case-insensitive, like a paper key.</summary>
+    /// <summary>The key <paramref name="word"/> spells, or null. Case-sensitive, like every
+    /// key (owner's decision 2026-09-27).</summary>
     private static string? Canonical(string word)
     {
         foreach (var candidate in AllKeySpellings())
-            if (word.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+            if (word.Equals(candidate, StringComparison.Ordinal))
                 return candidate;
         return null;
     }

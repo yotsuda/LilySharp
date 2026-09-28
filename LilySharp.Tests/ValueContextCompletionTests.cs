@@ -416,7 +416,7 @@ public class ValueContextCompletionTests
         // popup on the declared block names.
         var top = LilySharpLanguageServer.GetTopLevelCompletions().Items
             .Single(i => i.Label == "layout");
-        Assert.Contains("marks ${1:stacked}", top.InsertText, StringComparison.Ordinal);
+        Assert.Contains("markTempo ${1:stacked}", top.InsertText, StringComparison.Ordinal);
         Assert.Contains("barNumbers ${2:lines}", top.InsertText, StringComparison.Ordinal);
 
         var inScore = LilySharpLanguageServer.GetScoreBlockCompletions().Items
@@ -440,13 +440,13 @@ public class ValueContextCompletionTests
     [InlineData("score main { staff m  layout ch", "AfterLayoutBlockRef")]
     [InlineData("layout {", "LayoutBlock")]
     [InlineData("layout { ", "LayoutBlock")]
-    [InlineData("layout { marks beside\n  ", "LayoutBlock")]
+    [InlineData("layout { markTempo beside\n  ", "LayoutBlock")]
     [InlineData("layout chart { ", "LayoutBlock")]
     [InlineData("score main { layout chart { ", "LayoutBlock")]
-    [InlineData("layout { marks ", "AfterLayoutMarks")]
-    [InlineData("layout { marks be", "AfterLayoutMarks")]
+    [InlineData("layout { markTempo ", "AfterLayoutMarks")]
+    [InlineData("layout { markTempo be", "AfterLayoutMarks")]
     [InlineData("layout { barNumbers ", "AfterLayoutBarNumbers")]
-    [InlineData("layout { marks beside  barNumbers ev", "AfterLayoutBarNumbers")]
+    [InlineData("layout { markTempo beside  barNumbers ev", "AfterLayoutBarNumbers")]
     public void TheLayoutBlock_ServesItsKeysAndTheirWords(string text, string expected)
         => Assert.Equal(expected, ContextOf(text).ToString());
 

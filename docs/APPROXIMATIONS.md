@@ -276,10 +276,10 @@
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
 - **:705** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:476** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:552** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/FontPlanReader.cs`
-- **:264** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
-- **:272** The range a size may take, in staff spaces. LILYSHARP-OWN, as
+- **:271** LILYSHARP-OWN: a limit of the LANGUAGE, not a geometry — LilyPond's font-size
+- **:279** The range a size may take, in staff spaces. LILYSHARP-OWN, as
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:1287** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:1317** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -288,7 +288,7 @@
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2698** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:4946** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:4947** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -402,7 +402,7 @@
 - **:152** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:178** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN
 - **:644** ⚠️ LILYSHARP-OWN, AND IT IS A USER DECISION (2026-08-24), NOT A PORT. LilyPond puts
-- **:1505** LILYSHARP-OWN: `marks beside` is a Lily#-own arrangement (user decision 2026-09-02,
+- **:1505** LILYSHARP-OWN: `markTempo beside` is a Lily#-own arrangement (user decision 2026-09-02,
 - **:1540** side-by-side shared line itself is LILYSHARP-OWN: LilyPond prints a boundary
 - **:1659** (a sign the player must not miss). LILYSHARP-OWN with the composition.
 - **:1680** The air between the "To" advance and the coda sign's ink. LILYSHARP-OWN with the
@@ -471,7 +471,7 @@
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **:1360** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
-- **:158** LILYSHARP-OWN: the @fig(…) SPELLING is Lily#'s, not a port — LilyPond writes
+- **:159** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
 - **:272** LILYSHARP-OWN: LilyPond has no instrument presets, so which of its 128 sounds a preset
 ### `LilySharp.Core/Svg/Model/Measure.cs`

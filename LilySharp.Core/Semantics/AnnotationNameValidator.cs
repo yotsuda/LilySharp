@@ -39,19 +39,22 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// MusicMarkItem.ParseMarkName (trill spanners, courtesy accidentals,
     /// glissando, cue notes, cross-staff, arpeggio, l.v./repeat ties).
     /// </summary>
+    // Case-sensitive, each name in its one canonical spelling (owner's decision 2026-09-27).
     private static readonly HashSet<string> ExtraPlainNames =
-        new(StringComparer.OrdinalIgnoreCase)
+        new(StringComparer.Ordinal)
         {
-            "starttrillspan", "stoptrillspan",
+            "startTrillSpan", "stopTrillSpan",
             "courtesy", "editorial",
             "glissando",
             "cross",
             "arpeggio",
-            "laissezvibrer", "repeattie",
+            "laissezVibrer", "repeatTie",
             "dead",
             "rest",
-            "stemup", "stemdown",
-            "ho", "hammeron", "po", "pulloff", "tap", "snappizz", "slide", "stopped",
+            "stemUp", "stemDown",
+            // '@ho' / '@po' are NOT here: retired from the registry pre-0.3.0, they stayed in
+            // this list until 2026-09-27 and so compiled clean while drawing nothing.
+            "hammerOn", "pullOff", "tap", "snapPizz", "slide", "stopped",
             "thumb", "heel", "toe", "scoop", "plop",
         };
 
@@ -71,10 +74,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     private static readonly string[] SuggestionCandidates =
     [
         "staccato", "accent", "tenuto", "marcato", "fermata", "portato",
-        "staccatissimo", "upbow", "downbow", "harmonic", "flageolet",
+        "staccatissimo", "upBow", "downBow", "harmonic", "flageolet",
         "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
         "pppp", "ppppp", "ffff", "fffff",
-        "trill", "mordent", "prall", "turn", "reverseturn", "pralltriller",
+        "trill", "mordent", "prall", "turn", "reverseTurn", "pralltriller",
         "startTrillSpan", "stopTrillSpan", "courtesy", "editorial", "glissando",
         // ⚠️ The navigation marks (segno, coda, fine, ds, dc, to coda) are NOT
         // here: they are bare landmarks, and writing one with an '@' has its own
@@ -84,14 +87,14 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // LilyPond's cue is the CueVoice context and nothing attaches to a note. An `@cue`
         // now falls through to the ordinary unknown-annotation diagnostic, which is the
         // intended message. See docs/cue-context-design.md §5.
-        "cross", "arpeggio", "laissezvibrer", "repeattie",
+        "cross", "arpeggio", "laissezVibrer", "repeatTie",
         // The text spanner: the three sugar words and the general spelling. Their
         // TERMINATOR is not a separate candidate — '@!rit' reports the name "rit"
         // (MusicMarkSyntax.Name steps over the '!'), so one entry serves both ends.
         "rit", "accel", "rall", "textSpan",
         "cresc", "decresc", "dim",
-        // Spelled as they should be READ: the matcher lowercases both sides, so
-        // camelCase here only affects what the "did you mean" hint shows.
+        // Spelled exactly as they must be WRITTEN — names are case-sensitive. The typo
+        // matcher still lowercases both sides, so '@hammron' finds '@hammerOn'.
         // The ottava family, each ended by '@!ottava'. 'loco' is NOT here: it was
         // retired with MusicMarkType.Loco (session 289) and no longer compiles, and
         // every candidate in this list must (EverySuggestionCandidate_CompilesAsWritten).
@@ -107,7 +110,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // direction. An unknown '@feather(…)' gets the plain message.
         "mark.A", "finger.1",
         "notehead.x", "notehead.diamond", "notehead.slash",
-        "fig.6", "chord.C",
+        "figuredBass.6", "chord.C",
     ];
 
     /// <summary>The candidates above, for the test that pins every one of them to
@@ -116,7 +119,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
 
     /// <summary>
     /// A mark name as it must be TYPED. Internally a compound annotation is one
-    /// dotted string — "sost.off", "notehead.x", "fig.6.4" — because that is the
+    /// dotted string — "sost.off", "notehead.x", "figuredBass.6.4" — because that is the
     /// collector's lookup key, but it is NOT source syntax: the source puts the
     /// argument in parentheses, and stacked figures are separated by spaces.
     /// Diagnostics have to speak the typeable form; printed raw, "did you mean
@@ -174,7 +177,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 // '@rest' makes a NOTE print as a rest at that pitch, so it has a pitch
                 // to read only on a note. Written anywhere else it would be silently
                 // dropped — the failure this whole validator exists to give a voice to.
-                else if (name.Equals("rest", StringComparison.OrdinalIgnoreCase)
+                else if (name.Equals("rest", StringComparison.Ordinal)
                          && art.Parent is not NoteSyntax)
                     _diagnostics.Error(
                         art.Span,
@@ -205,7 +208,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 if (mark.IsSpanEnd)
                 {
                     var name = mark.MarkName;
-                    if (MusicMarkItem.ParseSpanEndName(name) is null)
+                    if (MusicMarkItem.ParseSpanEndName(name) is null
+                        && AnnotationNames.CaseOnlyMatch(name) is { } canonical
+                        && MusicMarkItem.ParseSpanEndName(canonical) is not null)
+                        _diagnostics.Warning(
+                            mark.Span,
+                            DiagnosticCodes.UnknownAnnotation,
+                            $"Unknown annotation '@!{name}' — it is ignored. "
+                            + CaseHint($"@!{canonical}"));
+                    else if (MusicMarkItem.ParseSpanEndName(name) is null)
                         _diagnostics.Warning(
                             mark.Span,
                             DiagnosticCodes.UnknownAnnotation,
@@ -454,13 +465,18 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         // ⚠️ The annotation itself is quoted from the SOURCE, not rebuilt from the
         // dotted name. SourceSpelling is a reconstruction and cannot be faithful: it
         // turns every '.' into a ' ', so it reported '@fig(6.4)' as '@fig(6 4)' — and
-        // '@fig(6 4)' is VALID, i.e. the message named a working spelling as the broken
+        // '@fig(6 4)' was VALID, i.e. the message named a working spelling as the broken
         // one. (It mis-punctuated dotted NAMES the same way: '@ds.al.fien' came out as
         // '@ds(al fien)'.) A candidate has no source text, so the suggestion below is
         // still rendered from its internal name, which is what that reconstruction is for.
         var message = $"Unknown annotation '{Written(node, name)}' — it is ignored.";
-        var suggestion = FindSuggestion(name);
-        if (suggestion != null)
+        // A name that differs from a real one only in case gets that spelling, not a typo
+        // guess: names are case-sensitive (owner's decision 2026-09-27).
+        if (CaseCorrected(node, name) is { } corrected)
+            message += " " + (SameHead(corrected, Written(node, name))
+                ? $"Values are case-sensitive: write '{corrected}'."
+                : CaseHint(corrected));
+        else if (FindSuggestion(name) is { } suggestion)
             message += $" Did you mean '@{SourceSpelling(suggestion)}'?";
 
         _diagnostics.Warning(
@@ -468,6 +484,66 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             DiagnosticCodes.UnknownAnnotation,
             message);
     }
+
+    /// <summary>Whether two written annotations share their name — the part before '(' —
+    /// i.e. the correction is in the VALUE, not the name.</summary>
+    private static bool SameHead(string corrected, string written)
+    {
+        int a = corrected.IndexOf('('), b = written.IndexOf('(');
+        return a > 0 && a == b && string.CompareOrdinal(corrected, 0, written, 0, a) == 0;
+    }
+
+    /// <summary>The sentence that names the canonical spelling of a wrong-case name.</summary>
+    internal static string CaseHint(string canonicalWritten)
+        => $"Names are case-sensitive: write '{canonicalWritten}'.";
+
+    /// <summary>
+    /// The annotation as it should have been written when its name differs from a
+    /// canonical one only in case (<c>@hammeron</c> → <c>@hammerOn</c>,
+    /// <c>@Mark("A")</c> → <c>@mark("A")</c>, <c>@ottava(BASSA)</c> →
+    /// <c>@ottava(bassa)</c>), or null.
+    /// </summary>
+    private static string? CaseCorrected(SyntaxNode node, string name)
+    {
+        // The whole dotted name first — a compound name (@ds(al fine)) is one name.
+        if (AnnotationNames.CaseOnlyMatch(name) is { } whole)
+            return $"@{SourceSpelling(whole)}";
+        // Then the head alone, keeping the argument as written: @FiguredBass(6 4).
+        if (node is MusicMarkSyntax mark && !string.Equals(mark.Name, name, StringComparison.Ordinal)
+            && AnnotationNames.CaseOnlyMatch(mark.Name) is { } head)
+        {
+            var written = Written(node, name);
+            return written.StartsWith("@" + mark.Name, StringComparison.Ordinal)
+                ? "@" + head + written[(1 + mark.Name.Length)..]
+                : $"@{head}";
+        }
+        // Then a VALUE word in the wrong case — the values are case-sensitive too:
+        // @notehead(TRIANGLE) → @notehead(triangle), @diagram(X32010) → @diagram(x32010).
+        // Every value vocabulary is lower case, so the lowered spelling is the only
+        // candidate; it is offered only when it would be known. Not @chord (its case is
+        // its meaning) nor the free-text annotations.
+        if (node is MusicMarkSyntax { HasArgumentList: true } valued
+            && valued.Name is not ("chord" or "text" or "mark" or "textSpan")
+            && AnnotationNames.All.Contains(valued.Name))
+        {
+            var written = Written(node, name);
+            int open = written.IndexOf('(');
+            if (open > 0)
+            {
+                var lowered = written[..open] + written[open..].ToLowerInvariant();
+                if (!string.Equals(lowered, written, StringComparison.Ordinal) && IsKnownWritten(lowered))
+                    return lowered;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Whether <paramref name="annotation"/> (written, from its '@') reads as a
+    /// known annotation — parsed on a note, the way the source would carry it.</summary>
+    private static bool IsKnownWritten(string annotation)
+        => SyntaxTree.Parse("melody { c4" + annotation + " }").GetRoot().DescendantNodes()
+            .OfType<MusicMarkSyntax>().FirstOrDefault() is { } parsed
+           && IsKnownCompoundName(parsed);
 
     /// <summary>
     /// The annotation exactly as it was written.

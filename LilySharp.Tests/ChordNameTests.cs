@@ -141,7 +141,7 @@ public class ChordNameTests
 
     [Theory]
     [InlineData("c4@segno |")]
-    [InlineData("c4@fig(6) |")]
+    [InlineData("c4@figuredBass(6) |")]
     [InlineData("c4@mark(\"A\") |")]
     [InlineData("c4@Chord(c) |")]   // the name gate is case-SENSITIVE, as it always was
     public void ParseChordName_NotChord_ReturnsNull(string music)
@@ -430,7 +430,7 @@ score main {{ chords prog  staff m }}
     public void Collector_ChordName_WithFiguredBass_BothCollected()
     {
         // Chord name and figured bass on the same note
-        var source = "c4 @chord(C) @fig(6) d e f";
+        var source = "c4 @chord(C) @figuredBass(6) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);

@@ -65,28 +65,28 @@ public class FiguredBassTests
         Assert.Equal("7\u266E", figure.DisplayText);  // 7♮
     }
 
-    // --- the @fig(…) spelling ---
+    // --- the @figuredBass(…) spelling ---
     //
     // These read the WRITTEN annotation, not an internal name. They used to pass the
-    // dotted "fig.6.s" that MarkName produced, which is the string round trip
+    // dotted "figuredBass.6.s" that MarkName produced, which is the string round trip
     // VALUE_SITE_AUDIT §9.5.3 ⑴ removed; a net that states the internal spelling cannot
     // notice when the written one stops parsing (and one of these comments already
-    // described "@fig(#6)" by its dotted name rather than by what the user types).
+    // described "@figuredBass(#6)" by its dotted name rather than by what the user types).
 
     private static MusicMarkSyntax Mark(string music)
         => Assert.Single(SyntaxTree.Parse("melody { " + music + " }")
             .GetRoot().DescendantNodes().OfType<MusicMarkSyntax>());
 
-    /// <summary>The figures of a written <c>@fig(<paramref name="argument"/>)</c>.</summary>
+    /// <summary>The figures of a written <c>@figuredBass(<paramref name="argument"/>)</c>.</summary>
     private static ImmutableArray<FiguredBassFigure>? Figures(string argument)
-        => LilySharp.Core.Semantics.AnnotationValues.Figures(Mark("c4@fig(" + argument + ") |"));
+        => LilySharp.Core.Semantics.AnnotationValues.Figures(Mark("c4@figuredBass(" + argument + ") |"));
 
     /// <summary>The figures as "number/alteration", or "held", for compact assertions.</summary>
     private static string[] Shape(ImmutableArray<FiguredBassFigure>? figures)
         => figures!.Value.Select(f => f.Held ? "held" : $"{f.Number}/{f.Alteration}").ToArray();
 
     [Theory]
-    // The four spellings every book on disk writes (13 @fig( sites, measured).
+    // The four spellings every book on disk writes (13 @figuredBass( sites, measured).
     [InlineData("6", new[] { "6/0" })]
     [InlineData("7", new[] { "7/0" })]
     [InlineData("5 3", new[] { "5/0", "3/0" })]
@@ -96,7 +96,6 @@ public class FiguredBassTests
     [InlineData("6 s", new[] { "6/1" })]
     [InlineData("4 f", new[] { "4/-1" })]
     [InlineData("7 n", new[] { "7/2" })]
-    [InlineData("6 S", new[] { "6/1" })]
     [InlineData("7 6 s 4 f", new[] { "7/0", "6/1", "4/-1" })]
     // A '#' before its figure sharpens it; alone it is the bare raised third.
     [InlineData("#6", new[] { "6/1" })]
@@ -122,11 +121,12 @@ public class FiguredBassTests
     [Theory]
     [InlineData("x")]        // no such alteration
     [InlineData("6 x")]
+    [InlineData("6 S")]      // alterations are lower case only (2026-09-27)
     [InlineData("s")]        // an alteration with no figure to attach to
     [InlineData("10")]       // a figure is one digit
     [InlineData("-1")]
     [InlineData("\"6\"")]    // a string is not a figure
-    [InlineData("")]         // @fig() writes no figures
+    [InlineData("")]         // @figuredBass() writes no figures
     public void AnUnwritableFigure_NamesNoFigures(string argument)
         => Assert.Null(Figures(argument));
 
@@ -152,19 +152,28 @@ public class FiguredBassTests
     [InlineData("c4@coda |")]
     [InlineData("c4@mark(\"A\") |")]
     [InlineData("c4@finger(3) |")]
+    [InlineData("c4@fig(6) |")]     // the name until 2026-09-27 — retired, not an alias
     public void AnnotationsThatAreNotFiguredBass_NameNoFigures(string music)
         => Assert.Null(LilySharp.Core.Semantics.AnnotationValues.Figures(Mark(music)));
 
     /// <summary>
-    /// The name gate is case-INSENSITIVE, which is what the string form asked
-    /// (<c>StartsWith("fig.", OrdinalIgnoreCase)</c>) and therefore what books may rely on.
+    /// The name gate is case-SENSITIVE (owner's decision 2026-09-27; it was case-insensitive
+    /// until then): a wrong-case name names no figures, and its warning names the spelling.
     /// </summary>
     [Theory]
-    [InlineData("Fig")]
-    [InlineData("FIG")]
-    public void TheNameIsCaseInsensitive(string name)
-        => Assert.Equal(["6/0"], Shape(
-            LilySharp.Core.Semantics.AnnotationValues.Figures(Mark("c4@" + name + "(6) |"))));
+    [InlineData("FiguredBass")]
+    [InlineData("FIGUREDBASS")]
+    [InlineData("figuredbass")]
+    public void TheNameIsCaseSensitive(string name)
+    {
+        string music = "c4@" + name + "(6) |";
+        Assert.Null(LilySharp.Core.Semantics.AnnotationValues.Figures(Mark(music)));
+        var validator = new LilySharp.Core.Semantics.AnnotationNameValidator();
+        validator.Validate(SyntaxTree.Parse("melody { " + music + " }"));
+        var warning = Assert.Single(validator.Diagnostics,
+            d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains("write '@figuredBass(6)'", warning.Message);
+    }
 
     // --- FiguredBassEngraver ---
 
@@ -235,7 +244,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_SingleFigure()
     {
-        var source = "c4 @fig(6) d e f";
+        var source = "c4 @figuredBass(6) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -251,7 +260,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_TwoFigures()
     {
-        var source = "c4 @fig(6 4) d e f";
+        var source = "c4 @figuredBass(6 4) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -266,7 +275,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_WithAlteration()
     {
-        var source = "c4 @fig(6 s) d e f";
+        var source = "c4 @figuredBass(6 s) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -280,7 +289,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_SharpPrefix()
     {
-        var source = "c4 @fig(#6) d e f";
+        var source = "c4 @figuredBass(#6) d e f";
         var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -297,7 +306,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_HeldFigure()
     {
-        var source = "c4 @fig(7 _) d e f";
+        var source = "c4 @figuredBass(7 _) d e f";
         var tree = MusicSource.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -314,7 +323,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_MultipleNotes()
     {
-        var source = "c4 @fig(6) d @fig(5) e @fig(6 4) f";
+        var source = "c4 @figuredBass(6) d @figuredBass(5) e @figuredBass(6 4) f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -419,7 +428,7 @@ public class FiguredBassTests
         var src =
             "octave absolute\n" +
             "part bs { clef treble }\n" +
-            $"section Main {{\n  bs {{ voice {{ b4@fig(6) b b b }} {{ {secondVoice} }} | }}\n}}\n" +
+            $"section Main {{\n  bs {{ voice {{ b4@figuredBass(6) b b b }} {{ {secondVoice} }} | }}\n}}\n" +
             "form main { Main }\n" +
             "score main \"o\" { staff bs }\n";
         var tree = SyntaxTree.Parse(src);

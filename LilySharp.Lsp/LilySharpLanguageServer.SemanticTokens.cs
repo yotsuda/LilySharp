@@ -325,7 +325,7 @@ public sealed partial class LilySharpLanguageServer
         else if (node is MusicMarkSyntax markNode)
         {
             // '@name' prefix only — parenthesised args keep their own colors
-            // (numbers in @fig(6 4), the string in @text("…")).
+            // (numbers in @figuredBass(6 4), the string in @text("…")).
             if (markNode.GetChild(1) is SyntaxTokenNode markName)
             {
                 var (line, character) = GetLineAndCharacter(text, markNode.Span.Start);

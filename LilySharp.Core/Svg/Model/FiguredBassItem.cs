@@ -31,7 +31,7 @@ public readonly record struct FiguredBassFigure(
     // Alteration: 0=none, 1=sharp, -1=flat, 2=natural (cautionary).
     // LILYPOND-REF: lily/figured-bass-engraver.cc:120 alteration property
     int Alteration = 0,
-    // A held / continuation figure ('_' in @fig): the figure sustains from the
+    // A held / continuation figure ('_' in @figuredBass): the figure sustains from the
     // previous bass note and is drawn as a horizontal extension dash. Continuo.
     bool Held = false
 )
@@ -74,8 +74,8 @@ public readonly record struct FiguredBassFigure(
 /// - 7 = seventh chord
 /// - 6/4/3 = third inversion of seventh
 ///
-/// Syntax in LilySharp: @fig.6 (single), @fig.6.4 (two figures),
-/// @fig.6.s (with sharp), @fig.4.f (with flat), @fig.7.n (with natural)
+/// Syntax in LilySharp: @figuredBass(6) (single), @figuredBass(6 4) (two figures),
+/// @figuredBass(6 s) (with sharp), @figuredBass(4 f) (with flat), @figuredBass(7 n) (with natural)
 /// </remarks>
 public sealed record FiguredBassItem
 {
@@ -117,14 +117,14 @@ public sealed record FiguredBassItem
     }
 
     /// <summary>
-    /// Parses the argument of a <c>@fig(…)</c> annotation into its stacked figures, or
+    /// Parses the argument of a <c>@figuredBass(…)</c> annotation into its stacked figures, or
     /// returns null when those tokens spell no figure group Lily# can draw.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Written <c>@fig(6)</c> (single), <c>@fig(5 3)</c> (two stacked), <c>@fig(6 s)</c>
-    /// (6♯; <c>f</c> flat, <c>n</c> natural), <c>@fig(#)</c> (a bare sharp — the raised
-    /// third), <c>@fig(_)</c> (a held / continuation figure). A figure is a digit 0-9,
+    /// Written <c>@figuredBass(6)</c> (single), <c>@figuredBass(5 3)</c> (two stacked), <c>@figuredBass(6 s)</c>
+    /// (6♯; <c>f</c> flat, <c>n</c> natural), <c>@figuredBass(#)</c> (a bare sharp — the raised
+    /// third), <c>@figuredBass(_)</c> (a held / continuation figure). A figure is a digit 0-9,
     /// where 0 is the empty placeholder.
     /// </para>
     /// <para>
@@ -133,8 +133,8 @@ public sealed record FiguredBassItem
     /// '.', which is the string round trip <c>@chord</c> and <c>@mark</c> have already
     /// left; it was the last argument still being read out of that name. Tokens are the
     /// right unit and not merely a tidier one: the spelling is whitespace-INSENSITIVE
-    /// because the token boundary is the separator, so <c>@fig(6#6)</c> means the same as
-    /// <c>@fig(6 # 6)</c> and <c>@fig(6_)</c> the same as <c>@fig(6 _)</c> — measured, and
+    /// because the token boundary is the separator, so <c>@figuredBass(6#6)</c> means the same as
+    /// <c>@figuredBass(6 # 6)</c> and <c>@figuredBass(6_)</c> the same as <c>@figuredBass(6 _)</c> — measured, and
     /// unchanged here. Reading the argument RUNS instead would have needed a second copy
     /// of the lexer to recover those boundaries (<c>6s6</c> splits because <c>s</c> is a
     /// pitch token, while <c>6S0</c> does not), which is the defect §5.2.1② names.
@@ -143,19 +143,20 @@ public sealed record FiguredBassItem
     /// ⚠️ <b>A behaviour change, declared and chosen</b> — the same one <c>@chord</c>'s
     /// swallowed dot was: MarkName DROPS a '.' written inside the brackets, so
     /// <c>@fig(6.4)</c> printed 6 over 4, and <c>@fig(.6)</c>, <c>@fig(6.)</c> and
-    /// <c>@fig(6.s)</c> all printed as though the dot had not been typed. A dot is a
+    /// <c>@fig(6.s)</c> all printed as though the dot had not been typed (the annotation's
+    /// name then; <c>@figuredBass</c> since 2026-09-27). A dot is a
     /// token here, so those now name no figure and are reported as unknown annotations.
     /// Measured over 3,825 generated spellings: 3,326 read identically, and every one of
     /// the 499 that differ contains a written '.', all in the direction "was accepted,
     /// now unknown" — nothing that was refused became accepted, and nothing that was
-    /// accepted draws different figures. No book writes a dot inside <c>@fig(</c>: all
-    /// 308 .lys on disk contain 13 <c>@fig(</c> sites spelling only <c>6</c>, <c>7</c>,
+    /// accepted draws different figures. No book wrote a dot inside <c>@fig(</c>: all
+    /// 308 .lys on disk contained 13 <c>@fig(</c> sites spelling only <c>6</c>, <c>7</c>,
     /// <c>5 3</c> and <c>6 4</c>, and the MusicXML importer writes the spaced forms
     /// (<see cref="MusicXmlImport.LysWriter"/>). The net is
     /// <c>FiguredBassTests.ADotWrittenInsideTheParentheses_…</c>.
     /// </para>
     /// <para>
-    /// LILYSHARP-OWN: the <c>@fig(…)</c> SPELLING is Lily#'s, not a port — LilyPond writes
+    /// LILYSHARP-OWN: the <c>@figuredBass(…)</c> SPELLING is Lily#'s, not a port — LilyPond writes
     /// figures in its own <c>\figuremode</c> language. What the figures MEAN is LilyPond's
     /// and is cited on <see cref="FiguredBassFigure"/> and on this type. Nothing observes
     /// the spelling but this reader and the importer that writes it.
@@ -214,12 +215,13 @@ public sealed record FiguredBassItem
             }
             else if (currentNumber >= 0 && part.Length == 1)
             {
-                // Alteration suffix for the current figure
+                // Alteration suffix for the current figure — lower case only, like every
+                // value word (owner's decision 2026-09-27; 'S' / 'F' / 'N' were read too).
                 currentAlteration = part[0] switch
                 {
-                    's' or 'S' => 1,   // sharp
-                    'f' or 'F' => -1,  // flat
-                    'n' or 'N' => 2,   // natural
+                    's' => 1,   // sharp
+                    'f' => -1,  // flat
+                    'n' => 2,   // natural
                     _ => 0
                 };
                 if (currentAlteration == 0)

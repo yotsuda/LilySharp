@@ -172,9 +172,9 @@ public class OutsideStaffSeedTests
     /// </para>
     /// </remarks>
     [Theory]
-    [InlineData("g,1( g,1@fig(6) g,1)", "g,1 g,1@fig(6) g,1", "slur", "12/4", "d,1 d,1 d,1")]
-    [InlineData("voice { b4 b b b } { tuplet 3/2 { c4@fig(6) c c } c2 }",
-                "voice { b4 b b b } { c4@fig(6) c c2 }", "tuplet bracket", "4/4", "d,1")]
+    [InlineData("g,1( g,1@figuredBass(6) g,1)", "g,1 g,1@figuredBass(6) g,1", "slur", "12/4", "d,1 d,1 d,1")]
+    [InlineData("voice { b4 b b b } { tuplet 3/2 { c4@figuredBass(6) c c } c2 }",
+                "voice { b4 b b b } { c4@figuredBass(6) c c2 }", "tuplet bracket", "4/4", "d,1")]
     public void FiguredBass_ClearsTheInsideStaffSpanners(
         string with, string without, string what, string time, string lower)
     {

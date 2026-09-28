@@ -114,14 +114,14 @@ internal static class PaperSizes
         ("f4", 210, 330),
     ];
 
-    /// <summary>Looks a name up, case-insensitively — the paper block's keys read the
-    /// same way. LilyPond's own lookup is exact lowercase; every table name IS
-    /// lowercase, so the relaxation admits spellings and never changes a meaning.</summary>
+    /// <summary>Looks a name up EXACTLY — LilyPond's own lookup is exact lowercase, and
+    /// every value word in Lily# is case-sensitive (owner's decision 2026-09-27; until then
+    /// <c>A4</c> was read as <c>a4</c>). <see cref="CaseOnlyMatch"/> names the spelling.</summary>
     internal static bool TryGet(string name, out double widthMm, out double heightMm)
     {
         foreach (var (candidate, w, h) in Table)
         {
-            if (name.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+            if (name.Equals(candidate, StringComparison.Ordinal))
             {
                 widthMm = w;
                 heightMm = h;
@@ -131,6 +131,17 @@ internal static class PaperSizes
         widthMm = 0;
         heightMm = 0;
         return false;
+    }
+
+    /// <summary>The size name <paramref name="name"/> differs from ONLY IN CASE
+    /// (<c>A4</c> → <c>a4</c>), or null — for the diagnostic.</summary>
+    internal static string? CaseOnlyMatch(string name)
+    {
+        foreach (var (candidate, _, _) in Table)
+            if (!name.Equals(candidate, StringComparison.Ordinal)
+                && name.Equals(candidate, StringComparison.OrdinalIgnoreCase))
+                return candidate;
+        return null;
     }
 
     /// <summary>Every name, in table (LilyPond) order — for messages and completion.</summary>

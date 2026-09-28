@@ -100,7 +100,7 @@ internal static class ArticulationSpacing
     };
 
     /// <summary>
-    /// The chord diagram's priority — it is no Script: LilyPond spells <c>@frame</c> as
+    /// The chord diagram's priority — it is no Script: LilyPond spells <c>@diagram</c> as
     /// <c>^\markup \fret-diagram-terse</c>, a TextScript, so it is a mover at TextScript's 450
     /// and is placed AFTER the dynamics (250), the text spanners (350) and the ottava (400).
     /// Neighbouring diagrams therefore stack, the later one clearing the earlier.

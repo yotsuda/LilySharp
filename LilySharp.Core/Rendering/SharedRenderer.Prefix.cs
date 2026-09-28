@@ -573,7 +573,7 @@ internal static partial class SharedRenderer
                 // LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
                 // spells with its own markup rather than a feta glyph. Drawn centred on its
                 // own advance, which is the serif face's at the run's em. Its em and style
-                // are the plan's (fonts { meter … }, MeterGlyphRun.PlusEm) — the same plan
+                // are the plan's (fonts { time … }, MeterGlyphRun.PlusEm) — the same plan
                 // the advance above was measured with — and the lift that centres the glyph
                 // on the numerator row scales with the em (0.55 at the engraving's 2.4).
                 double plusEm = MeterGlyphRun.PlusEm(fonts);

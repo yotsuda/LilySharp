@@ -282,20 +282,20 @@ c4@phrasingSlur d( e) f g@!phrasingSlur   // a phrasing slur over a whole phrase
   <p>Attach with <code>@</code>; one note may take several
   (<code>c4@staccato@p</code>). Two suffixes force a side: <code>.up</code> and
   <code>.down</code> (<code>c4@staccato.up</code>, <code>@f.up</code>). An annotation that
-  takes a value puts it in parentheses: <code>@finger(3)</code>, <code>@fig(6 4)</code>,
+  takes a value puts it in parentheses: <code>@finger(3)</code>, <code>@figuredBass(6 4)</code>,
   <code>@text("dolce")</code>.</p>
   <table class="g">
     <tr><th>Family</th><th>Names</th></tr>
     <tr><td>Articulations</td><td><code>@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato</code></td></tr>
-    <tr><td>String technique</td><td><code>@upbow @downbow @flageolet</code> — always above</td></tr>
-    <tr><td>Ornaments</td><td><code>@trill @mordent @prall @turn @reverseturn</code></td></tr>
+    <tr><td>String technique</td><td><code>@upBow @downBow @flageolet</code> — always above</td></tr>
+    <tr><td>Ornaments</td><td><code>@trill @mordent @prall @turn @reverseTurn</code></td></tr>
     <tr><td>Dynamics</td><td><code>@ppp @pp @p @mp @mf @f @ff @fff</code>, and <code>@sfz @sf @fp @rfz @fz</code></td></tr>
     <tr><td>Hairpins</td><td><code>@cresc @decresc @dim</code> — placed on the starting note, running to the next dynamic. No <code>.up</code>/<code>.down</code>: a hairpin is always below.</td></tr>
     <tr><td>Stems</td><td><code>@stemUp @stemDown</code> — on a beamed note the beam's shared direction wins</td></tr>
     <tr><td>Accidental style</td><td><code>@courtesy</code> (parenthesised), <code>@editorial</code></td></tr>
     <tr><td>Effects</td><td><code>@arpeggio @glissando @cross @dead @fall @doit @breath @caesura</code></td></tr>
     <tr><td>Half ties</td><td><code>@laissezVibrer</code>, <code>@repeatTie</code></td></tr>
-    <tr><td>With a value</td><td><code>@finger(3) @fig(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @frame(032010) @pluck(i) @ottava(bassa)</code></td></tr>
+    <tr><td>With a value</td><td><code>@finger(3) @figuredBass(6 4) @bend(half) @notehead(triangle) @feather(right) @text("dolce") @mark("A") @chord(Dm) @diagram(032010) @pluck(i) @ottava(bassa)</code></td></tr>
   </table>
 
   <h3>Spanners — the end is required</h3>
@@ -780,7 +780,7 @@ score main {
   say which you want with
   <code>tab gt as numbers</code> or <code>tab gt as full</code>.</p>
   <p><code>\N</code> pins a note to string N when the automatic choice is not the one your
-  fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammeron @pulloff
+  fingers want: <code>c'\2</code>. Technique letters (<code>@tap @hammerOn @pullOff
   @pluck(i)</code>) print on the tab, because they are ink a guitarist reads there.</p>
 </section>
 
@@ -805,16 +805,20 @@ score main {
 <pre>fonts {
   serif "Georgia"                      // the two generic families together are
   sans  "Verdana"                      //   "the whole document's text"
-  lyricText "Charis SIL" "Noto Serif CJK JP"   // several names = a fallback chain
+  lyrics "Charis SIL" "Noto Serif CJK JP"      // several names = a fallback chain
   tempo "Playfair Display"             // one role beats the group it belongs to
   embedded                             // subset the named faces into the PDF
 }</pre>
   <p>Keys are a generic family, a group, or a single role, and the <b>narrower</b> spelling
   wins in either source order. Groups map to roles as: <code>header</code> → title, composer,
-  instrument · <code>lyrics</code> → lyricText, stanza · <code>chords</code> → chordName,
-  fretFrame, figuredBass · <code>marks</code> → tempo, mark, pedal, navigation, text,
-  dynamics, partCombine · <code>numbers</code> → barNumber, fingering, tuplet, volta, ottava,
-  bend, tabTechnique · <code>notation</code> → clefOctave, meter, tabFret.</p>
+  instrument · <code>lyrics</code> → the syllables (no key of their own), stanza ·
+  <code>chords</code> → chord, diagram, figuredBass · <code>marks</code> → tempo, mark,
+  pedal, navigation, text, dynamics, partCombineText · <code>numbers</code> → barNumbers,
+  finger, tuplet, volta, ottava, bend, tabTechnique · <code>notation</code> → clefOctave,
+  time, tab. A key is spelled as the source writes what it styles (<code>@chord</code> →
+  <code>chord</code>, <code>time 6/8</code> → <code>time</code>, a <code>tab</code> staff →
+  <code>tab</code>); a key with no single source word names the family (<code>pedal</code>,
+  <code>dynamics</code>) or the printed text (<code>stanza</code>, <code>volta</code>).</p>
   <p class="note">The keyword is <code>fonts</code>, plural, and it takes a block — there is
   no <code>font</code> keyword and no one-line form. A named face is <b>measured</b> as well
   as drawn, so naming one that a machine lacks makes the page machine-dependent; a missing

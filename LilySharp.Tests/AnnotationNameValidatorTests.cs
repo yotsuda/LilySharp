@@ -102,6 +102,72 @@ public class AnnotationNameValidatorTests
     }
 
     /// <summary>
+    /// The retired short spellings warn like any unknown name. Until 2026-09-27 this
+    /// validator still listed them while the registry (pre-0.3.0) did not, so they compiled
+    /// clean and drew nothing — no H or P, no twin script, no MusicXML technical.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@ho d |")]
+    [InlineData("c4@po d |")]
+    public void TheRetiredTabTechniqueShortSpellings_Warn(string source)
+        => Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+
+    [Theory]
+    [InlineData("c4@hammerOn d |")]
+    [InlineData("c4@pullOff d |")]
+    public void TheTabTechniqueNames_AreKnown(string source)
+        => Assert.DoesNotContain(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+
+    /// <summary>
+    /// Annotation names are case-sensitive (owner's decision 2026-09-27): a name written
+    /// in another case is unknown, and the warning names the spelling to write.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@hammeron d |", "@hammerOn")]
+    [InlineData("c4@pulloff d |", "@pullOff")]
+    public void TheTabTechniqueNames_InTheWrongCase_AreUnknown_AndTheRightSpellingIsNamed(
+        string source, string canonical)
+    {
+        var warning = Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains($"Names are case-sensitive: write '{canonical}'.", warning.Message);
+    }
+
+    /// <summary>
+    /// The VALUE words are case-sensitive too (2026-09-27): the annotation is unknown and
+    /// the warning names the lower-case spelling — as a value, not a name.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@notehead(TRIANGLE) d |", "@notehead(triangle)")]
+    [InlineData("c4@diagram(X32010) d |", "@diagram(x32010)")]
+    [InlineData("c4@bend(Full) d |", "@bend(full)")]
+    [InlineData("c4@pluck(P) d |", "@pluck(p)")]
+    [InlineData("c4@feather(Right) d |", "@feather(right)")]
+    [InlineData("c4@arpeggio(BRACKET) d |", "@arpeggio(bracket)")]
+    [InlineData("c4@figuredBass(6 S) d |", "@figuredBass(6 s)")]
+    public void AValueInTheWrongCase_IsUnknown_AndTheRightSpellingIsNamed(string source, string canonical)
+    {
+        var warning = Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains($"Values are case-sensitive: write '{canonical}'.", warning.Message);
+    }
+
+    /// <summary>A value with no lower-case reading gets no case hint — and free text and a
+    /// chord symbol, whose case is their content, are not touched at all.</summary>
+    [Theory]
+    [InlineData("c4@notehead(SQUARE) d |")]
+    public void AValueWithNoLowerCaseReading_GetsNoCaseHint(string source)
+    {
+        var warning = Assert.Single(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.DoesNotContain("case-sensitive", warning.Message);
+    }
+
+    [Theory]
+    [InlineData("c4@text(\"DOLCE\") d |")]
+    [InlineData("c4@mark(\"A\") d |")]
+    [InlineData("c4@chord(Dm) d |")]
+    public void FreeTextAndChordSymbols_KeepTheirCase(string source)
+        => Assert.DoesNotContain(Validate(source), d => d.Code == DiagnosticCodes.UnknownAnnotation);
+
+    /// <summary>
     /// <c>@rest</c> prints a note as a rest at that note's pitch, so it has a pitch to
     /// read only on a note. Anywhere else it would be dropped without a word — which is
     /// the failure this validator exists to give a voice to.
@@ -155,14 +221,14 @@ public class AnnotationNameValidatorTests
     /// <summary>
     /// ⚠️ The annotation is QUOTED from the source, not rebuilt from its internal name.
     /// The reconstruction turns every '.' into a ' ', so a written dot came back as a
-    /// space: '@fig(6.4)' was reported as '@fig(6 4)' — and '@fig(6 4)' is a VALID
+    /// space: '@figuredBass(6.4)' was reported as '@figuredBass(6 4)' — and '@figuredBass(6 4)' is a VALID
     /// spelling, so the message named a working annotation as the broken one. Nothing
     /// observed this until the figured bass began refusing a written dot
     /// (VALUE_SITE_AUDIT §9.5.3 ⑴), which is what made the misreport reachable.
     /// </summary>
     [Theory]
-    [InlineData("c4@fig(6.4) d |", "'@fig(6.4)'", "@fig(6 4)")]
-    [InlineData("c4@fig(6.s) d |", "'@fig(6.s)'", "@fig(6 s)")]
+    [InlineData("c4@figuredBass(6.4) d |", "'@figuredBass(6.4)'", "@figuredBass(6 4)")]
+    [InlineData("c4@figuredBass(6.s) d |", "'@figuredBass(6.s)'", "@figuredBass(6 s)")]
     public void TheUnknownAnnotation_IsQuotedFromTheSource(
         string source, string written, string reconstruction)
     {
@@ -253,7 +319,7 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@laissezVibrer d@repeatTie e f |")]
     [InlineData("c16@feather(right) d e f g a b c' |")]
     [InlineData("c4@finger(1) d@finger(3) e f |")]
-    [InlineData("c4@fig(6) d@fig(6 4) e f |")]
+    [InlineData("c4@figuredBass(6) d@figuredBass(6 4) e f |")]
     [InlineData("c4@chord(C) d@chord(Am) e f |")]
     // Dynamics are parser-gated, never unknown
     [InlineData("c4@ff d@p e@mf f |")]

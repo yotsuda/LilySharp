@@ -51,7 +51,7 @@ public class VoiceScriptDirectionTests
     // voice 1 (stems up): a staccato and an accent go ABOVE, not opposite the stem
     [InlineData("voice { e''4@staccato f''@accent r2 | } { c'1 | }", true)]
     // voice 2 (stems down): a fermata, a trill and an up-bow go BELOW, not their default UP
-    [InlineData("voice { e''1 | } { c'4@fermata d'@trill e'@upbow r | }", false)]
+    [InlineData("voice { e''1 | } { c'4@fermata d'@trill e'@upBow r | }", false)]
     // voice 2: a staccato goes below — opposite-the-stem would have put it ABOVE
     [InlineData("voice { e''1 | } { c'2 e'2@staccato | }", false)]
     public void InAVoiceSpan_EveryScriptFollowsItsVoice(string music, bool above)

@@ -332,6 +332,18 @@ g4@fermata     // Fermata
 a4@portato     // Portato (tenuto + staccato)
 ```
 
+Every annotation name is case-sensitive and has one spelling: a name of several words is
+camelCase (`@upBow`, `@shortFermata`, `@reverseTurn`, `@laissezVibrer`, `@hammerOn`,
+`@figuredBass`) whatever LilyPond spells it (`\upbow`, `\shortfermata`), and a one-word
+name is lowercase (`@staccato`, `@pralltriller`). A name written in another case (`@hammeron`, `@Staccato`)
+is an unknown annotation: it draws and exports nothing, and the warning (LYS1008) names
+the spelling to write. The same holds for the VALUE words inside the parentheses, which
+are all lowercase: `@notehead(triangle)`, `@bend(full)`, `@pluck(p)`, `@feather(right)`,
+`@arpeggio(bracket)`, `@diagram(x32010)` (`x` and `o`), `@figuredBass(6 s)` —
+`@notehead(TRIANGLE)` is refused with "write '@notehead(triangle)'". Free text keeps its
+case (`@text("Dolce")`, `@mark("A")`), and so does a chord symbol, whose case is its
+meaning (`@chord(Dm)`).
+
 ### Placement (`.up` / `.down`)
 
 By default an articulation sits opposite the stem. Append `.up` or `.down` to force it
@@ -349,7 +361,7 @@ c4@trill         // Trill
 d4@mordent       // Mordent
 e4@prall         // Inverted mordent (pralltriller)
 f4@turn          // Turn
-g4@reverseturn   // Reverse (inverted) turn — LilyPond's \reverseturn
+g4@reverseTurn   // Reverse (inverted) turn — LilyPond's \reverseturn
 ```
 
 ## Dynamics
@@ -548,13 +560,13 @@ fonts {
   serif     "Georgia"                       // everything serif, unless overridden below
   sans      "Verdana"                       // chord symbols are the engine's one sans
 
-  lyricText "Charis SIL" "Noto Serif CJK JP"  // a fallback chain, most preferred first
+  lyrics    "Charis SIL" "Noto Serif CJK JP"  // a fallback chain, most preferred first
   title     "Cormorant" size 3.8 bold       // a face, an absolute em, a weight
-  chordName as sans                         // point a role at a bundled family
+  chord     as sans                         // point a role at a bundled family
   marks     "Georgia"                       // a whole group at once
   tempo     "Playfair Display" italic       // ...and one member of it, overriding the group
   mark      step +1                         // one LilyPond font-size step larger
-  lyrics    step -1                         // the whole group one step smaller
+  numbers   step -1                         // the whole group one step smaller
 
   embedded
 }
@@ -575,40 +587,44 @@ A written style **replaces** the engraving's own: `text bold` sets a text script
 upright, `tempo italic` sets the marking italic, not bold-italic. One entry takes `step` or
 `size`, not both.
 
-⚠️ **`chordName serif` — a bare family word after a key — is refused** since 2026-09-08:
+⚠️ **`chord serif` — a bare family word after a key — is refused** since 2026-09-08:
 a bare word after a key is the next key, so that line opens an empty `serif` entry. Write
-`chordName as serif`. A generic family (`serif`, `sans`) takes quoted faces only; a size
+`chord as serif`. A generic family (`serif`, `sans`) takes quoted faces only; a size
 or a style on it is an error.
 
-**Size and style reach these roles**: `title subtitle composer poet instrument lyricText stanza chordName
-fretFrame tempo mark pedal navigation text dynamics partCombine barNumber tuplet volta ottava
-bend tabTechnique clefOctave tabFret meter` — every role, and for each one the drawing and the
-reserved space read the plan together. `fingering` and `figuredBass` are Emmentaler digit
+**Size and style reach these roles**: `title subtitle composer poet instrument stanza chord
+diagram tempo mark pedal navigation text dynamics partCombineText barNumbers tuplet volta ottava
+bend tabTechnique clefOctave tab time` — every role, and for each one the drawing and the
+reserved space read the plan together (the `lyrics` group reaches the syllables themselves,
+which have no role of their own). `finger` and `figuredBass` are Emmentaler digit
 runs: a `step` moves the glyph's font-size (its design, em and box together), and a style has
-nothing to act on and **warns** (LYS8018). `tabFret step` moves the fret digit and everything
+nothing to act on and **warns** (LYS8018). `tab step` moves the fret digit and everything
 measured from it — its column, the bite out of the string line, the stem's near end, a tie's
 clearance — and not the string spacing (as LilyPond's `TabNoteHead.font-size` leaves
-`staff-space` alone). `meter` is the compound numerator's `+` alone — the signature's digits
+`staff-space` alone). `time` is the compound numerator's `+` alone — the signature's digits
 are Emmentaler glyphs — and its step widens the column the signature is booked at. A group
 warns only when none of its roles follows.
 
 **The narrower spelling wins**, in either source order and for each attribute on its own:
 `role` beats `group` beats `serif`/`sans` beats the bundled face (size and style have no
 family layer). So the `marks`/`tempo` pair above needs no special case, and `lyrics step -1`
-with `lyricText bold` gives a small bold syllable.
+with `stanza bold` gives small syllables under a small bold stanza number.
 
-The keys, by group:
+The keys, by group. A key is spelled as the source writes what it styles (`@chord` →
+`chord`, `time 6/8` → `time`, a `tab` staff → `tab`); a key with no single source word names
+the family (`pedal`, `navigation`, `dynamics`, `tabTechnique`) or the printed text (`stanza`,
+`volta`, `clefOctave`).
 
 | Group | Roles it covers |
 |---|---|
 | `header` | `title` `subtitle` `composer` `poet` `instrument` |
-| `lyrics` | `lyricText` `stanza` |
-| `chords` | `chordName` `fretFrame` `figuredBass` |
-| `marks` | `tempo` `mark` `pedal` `navigation` `text` `dynamics` `partCombine` |
-| `numbers` | `barNumber` `fingering` `tuplet` `volta` `ottava` `bend` `tabTechnique` |
-| `notation` | `clefOctave` `meter` `tabFret` |
+| `lyrics` | the syllables (no key of their own) and `stanza` |
+| `chords` | `chord` `diagram` `figuredBass` |
+| `marks` | `tempo` `mark` `pedal` `navigation` `text` `dynamics` `partCombineText` |
+| `numbers` | `barNumbers` `finger` `tuplet` `volta` `ottava` `bend` `tabTechnique` |
+| `notation` | `clefOctave` `time` `tab` |
 
-**`fretFrame` sizes the whole chord diagram**, not only its "5fr" label. `fonts { fretFrame step +3 }`
+**`diagram` sizes the whole chord diagram**, not only its "5fr" label. `fonts { diagram step +3 }`
 draws the grid, the dots and the o/x marks about 1.4× larger, and `step +6` draws them twice
 as large. With no entry, the diagram is LilyPond's default size: one staff space between
 strings and between frets. Chord diagrams stand side by side over their notes. When a bar is
@@ -616,11 +632,11 @@ too narrow for its diagrams, the bar gets wider instead of the diagrams stacking
 `\textLengthOn`, which the `.ly` export writes on each diagram).
 
 ⚠️ **`notation` is not reached by a `serif`/`sans` binding.** The
-octave digit under a `treble_8` clef, a compound meter's `+`, and tab fret numbers are
+octave digit under a `treble_8` clef, a compound time signature's `+`, and tab fret numbers are
 notation that happens to be drawn as text — restyling them changes the notation rather
 than the words — so they follow a face only when you name `notation` or the role itself.
 A size or a style has no family layer, so for those the named entry is the only door:
-`notation step +1` or `tabFret bold` is always deliberate.
+`notation step +1` or `tab bold` is always deliberate.
 
 **A named face is measured, not only drawn** (since 2026-08-18). The layout reserves space
 with the same file the string is drawn in, so a title in a wide face gets a wide box.
@@ -646,20 +662,20 @@ right on your box must not fail to compile on a runner that has no fonts.
 
 **A named block is per-score.** `fonts NAME { … }` at the top level declares a reusable
 block that binds nothing by itself; a score references it as `fonts NAME`, or overrides
-part of it with `fonts NAME { lyricText "…" }`:
+part of it with `fonts NAME { lyrics "…" }`:
 
 ```
-fonts house { serif "Georgia"  lyricText "Charis SIL" }
+fonts house { serif "Georgia"  lyrics "Charis SIL" }
 
 score main  { fonts house  staff melody }
-score parts { fonts house { lyricText "Noto Serif CJK JP" }  staff melody }
+score parts { fonts house { lyrics "Noto Serif CJK JP" }  staff melody }
 ```
 
 The reference **replaces** the file's unnamed default for that score, and the override
 block reads as if its entries were written at the end of the named block — the same key
 written again wins, with no duplicate warning across the two blocks. ⚠️ **The
-narrower-spelling rule keeps winning whichever block a binding came from**: the house
-block's `lyricText` (a role) beats the score's `lyrics` (its group) — deliberately, so a
+narrower-spelling rule keeps winning whichever block a binding came from**: a house
+block's `stanza` (a role) beats a score's `lyrics` (its group) — deliberately, so a
 house style's role choices survive a score swapping the broad base. Override a role with
 the same or a narrower key. An unknown reference name is an error naming the declared
 blocks; a named block no score references is a warning; a second reference in one score
@@ -690,15 +706,16 @@ paper {
 **A bare number is staff spaces** — the unit everything else in this language is measured
 in. A physical unit is a word **glued** to its number, one quantity: `210mm`, `29.7cm`,
 `8.5in` (LilyPond spells the same thing `210\mm`). A spaced `210 mm` is an error naming
-the glued spelling. The conversion is the one the engine's defaults were computed with
+the glued spelling, and so is a unit in another case (`210MM` → "write 'mm'"). The conversion is the one the engine's defaults were computed with
 (1 staff space = 5 TeX points), rounded the same way — so writing a default out **is**
 the default, byte for byte.
 
 **A whole page by name**: `size b5` sets the width, the height **and** the four
 margins, scaled the way LilyPond's `set-paper-size` scales them — each margin default by
 the size's ratio to a4, rounded to whole millimetres, so `size a4` is the identity and
-`size b5` gives 13mm sides and 8mm top/bottom. The name is **bare**, like every closed
-vocabulary's values (`clef treble`, `tuning guitar`); quote only a name that carries a
+`size b5` gives 13mm sides and 8mm top/bottom. The name is **bare** and lowercase, like
+every closed vocabulary's values (`clef treble`, `tuning guitar`) — `size A4` is refused
+with "write 'a4'"; quote only a name that carries a
 space (`size "ansi a"`) — the lyric syllable's rule. The names are LilyPond's paper
 table — `a0`…`a10`, `b0`…`b10`, `c0`…`c10`, `letter`, `legal`, `tabloid`, `ledger`, and
 the rest — plus **`jisb5`** (182 × 257 mm), which is Lily#-own: ISO `b5` (176 × 250) is
@@ -1185,7 +1202,7 @@ level — see those sections) and override part of it in place:
 
 ```
 paper wide  { paperWidth 250mm }
-fonts house { serif "Georgia"  lyricText "Charis SIL" }
+fonts house { serif "Georgia"  lyrics "Charis SIL" }
 
 score main  { paper wide  fonts house  staff melody }        // the conductor page
 score parts { paper wide { topMargin 12mm }  staff melody }  // same paper, wider top
@@ -1195,7 +1212,7 @@ The reference replaces the file's unnamed default for that score alone; the over
 block reads as if its entries were written at the end of the named block.
 
 A score references its own display switches the same way — `layout chart` names a
-top-level `layout chart { marks beside  barNumbers every 4 }` block (see *Display
+top-level `layout chart { markTempo beside  barNumbers every 4 }` block (see *Display
 switches* under Music Marks), replacing the file's unnamed `layout { }` default for that
 score alone.
 
@@ -1285,6 +1302,28 @@ form main { Main }
 score main { staff melody  lyrics words }
 ```
 
+**Verses** — different words for each pass of a section — are written as a verse header,
+`[1. syll syll | … ]`: the number names the pass (a play of the section in the form), and
+prints as the stanza number `1.` before the words. A list or a range covers several passes
+(`[1,3. …]`, `[1-2. …]`); a leading `~` keeps the words and hides the number (`[~1. …]`).
+Under a `|: B :|` repeat the section is printed once, so its
+verses stack under it as verses 1 and 2; a section the form plays twice written out takes
+each verse at its own play.
+
+```
+part melody
+section A { melody { c4 d e f | } }
+section B {
+  melody { g4 a b c | }
+  lyrics words sings melody {
+    [1. up up up up |]
+    [2. down down down down |]
+  }
+}
+form main { A |: B :| }
+score main { staff melody  lyrics words }
+```
+
 ## Music Marks
 
 ### Rehearsal Marks
@@ -1326,7 +1365,7 @@ coda coda D }`.
 
 ```
 layout {
-  marks stacked            // the default: LilyPond's arrangement
+  markTempo stacked        // the default: LilyPond's arrangement
   barNumbers lines         // the default: a number at the start of every line but the first
   accidentals default      // the default: the 18th-century style
   sectionLabels boxed      // the default: the section's name in a frame
@@ -1335,7 +1374,7 @@ layout {
   minorChords upper        // the default: Am, Am7
 }
 layout chart {
-  marks beside             // the chart's: "[Chorus] ♩ = 132" on one line
+  markTempo beside         // the chart's: "[Chorus] ♩ = 132" on one line
   barNumbers every 4       // a number on every fourth bar, wherever it stands
   accidentals modern       // Kurt Stone's: cancelled in other octaves and the next measure
   sectionLabels plain      // the name with no frame (LilyPond's own picture)
@@ -1355,7 +1394,7 @@ It is not an `override` (which reads a `once` / section scope a whole-score swit
 silently ignore) and not `paper` (a quantity with a unit — a length, `raggedRight` — is the
 page's and stays there).
 
-**`marks`** — a boxed section label (a `form` section's name, a `@mark`) and the metronome
+**`markTempo`** — a boxed section label (a `form` section's name, a `@mark`) and the metronome
 mark standing at the **same bar** are arranged one of two ways. `stacked` is LilyPond's:
 the label break-aligns to the key/clef column and the tempo to the meter column, each on
 its own anchor, and where their inks meet the label stacks over the tempo. `beside` is the
@@ -1363,8 +1402,8 @@ chart's one line: the label's box stands at the line-start edge and the tempo si
 right, its digits on the label's own baseline — a Lily#-own arrangement, chosen as an
 option (2026-09-02). A mid-line label is centred on its bar and a mid-measure `tempo` keeps
 its note column under either. The `.ly` twin has no spelling for `beside` and warns; the
-page is the reference. (The same word names a font *group* in `fonts { marks "Georgia" }`;
-the block says which aspect of the marks is meant.)
+page is the reference. (The key names the pair it arranges, the mark and the tempo; the
+font *group* that faces them is `fonts { marks "Georgia" }`.)
 
 **`barNumbers`** — which bars carry a printed number, in LilyPond's own vocabulary.
 `lines` (the default) is LilyPond's: the first bar of every line after the first. `none`
@@ -1432,8 +1471,9 @@ prints for the same chords, and with the default vocabulary the chord row lands 
 LilyPond's own distance from the staff to the digit. Neither key reaches MIDI or MusicXML —
 a `<harmony>` carries the chord as data, and asks for the words.
 
-The keys are matched case-insensitively; the value words are canonical case only. Neither
-is a reserved word (`part marks { … }` compiles). An unknown key is an error, a key set
+The keys are case-sensitive — `barnumbers` is refused with "write 'barNumbers'" — and so
+are the value words. Neither
+is a reserved word (`part markTempo { … }` compiles). An unknown key is an error, a key set
 twice warns (the last wins), and a brace inside the block is refused.
 
 ### Text Spanners
@@ -1518,7 +1558,7 @@ c4@glissando d |      // Glissando from C to D
 ## Figured Bass
 
 ```
-c4@fig(6) d@fig(6 4) e@fig(5 3) |
+c4@figuredBass(6) d@figuredBass(6 4) e@figuredBass(5 3) |
 ```
 
 ## Chord Names
@@ -1570,6 +1610,37 @@ but voices none, so Lily# picks one voicing, the same everywhere: every tone tak
 pitch from G3 up to (not including) G4, and a slash bass its pitch an octave below that —
 `G7/B` sounds B2 G3 B3 D4 F4. Hovering the symbol in the editor lists those pitches.
 
+## Chord Diagrams
+
+`@diagram(…)` draws a guitar chord diagram (a fret diagram) over its note. The argument is a
+position string, one character per string from the lowest to the highest: a digit is the
+fret (`0` or `o` open), `x` a muted string; 4 to 8 strings. Anything else is not a diagram:
+it warns as an unknown annotation and is ignored.
+
+```
+c4@diagram(x32010) d@diagram(xx0232) e@diagram(022100).down f |   // C, D, E (the E below)
+```
+
+A diagram stands above its note whatever the stem; `.down` puts it below. The `.ly` twin
+writes `\fret-diagram-terse`; MusicXML writes a `<frame>`, inside the `<harmony>` of an
+`@chord(…)` on the same note. Its size is the `fonts` key `diagram` (see *Text Fonts*).
+
+## Guitar Bends and Technique Letters
+
+`@bend(half|full|N)` draws a bend-up: a rising arrow off the note's right, labelled in
+steps. `half` is one semitone, `full` two, and `N` is 1–12 semitones (`@bend(3)` prints
+`1½`). It is drawn on the page only — the `.ly` twin drops it with a warning, and MusicXML
+does not carry it.
+
+`@hammerOn`, `@pullOff` and `@tap` print the tab letters H, P and T, small and italic,
+opposite the stem; `.up` / `.down` force the side. They are drawn on a `tab` staff as well.
+The `.ly` twin writes each as a text script (`-\markup { \italic "H" }`); MusicXML writes
+`<hammer-on>` / `<pull-off>` from the previous note, and `<tap/>`.
+
+```
+c4@hammerOn d@pullOff e@tap f@bend(full) |
+```
+
 ## Comments
 
 ```
@@ -1597,10 +1668,10 @@ be declared and referenced).
 | Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
 
-⚠️ The `fonts { }` keys (`serif` `header` `lyricText` `chordName` `barNumber` …) are **not**
+⚠️ The `fonts { }` keys (`serif` `header` `stanza` `chord` `barNumbers` …) are **not**
 reserved words — they are read inside that block only, against the role vocabulary, so
 they stay free as part / section / phrase names. Several of them (`title`, `lyrics`,
-`chords`, `tempo`, `instrument`, `tuplet`) are reserved for other reasons and
+`chords`, `tempo`, `instrument`, `tuplet`, `time`, `tab`) are reserved for other reasons and
 appear above. The `paper { }` keys and units (`paperWidth`, `mm`, `basicDistance`, …)
 are free the same way.
 

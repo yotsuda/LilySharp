@@ -177,7 +177,7 @@ public class VocabularyPerturbationTests
     /// </para>
     /// </remarks>
     [Theory]
-    [InlineData("@fig(6)", "@fig(6 4)")]
+    [InlineData("@figuredBass(6)", "@figuredBass(6 4)")]
     [InlineData("@chord(C)", "@chord(Dm)")]
     [InlineData("@finger(1)", "@finger(3)")]
     [InlineData("@mark(\"A\")", "@mark(\"B\")")]
@@ -255,7 +255,7 @@ public class VocabularyPerturbationTests
     [Theory]
     [MemberData(nameof(FiguredBassFigures))]
     public void EveryFiguredBassFigureReachesThePage(string value)
-        => AssertMoves(OnFirstNote(""), OnFirstNote($"@fig({value})"), "@fig(" + value + ")");
+        => AssertMoves(OnFirstNote(""), OnFirstNote($"@figuredBass({value})"), "@figuredBass(" + value + ")");
 
     /// <summary>Every bend amount is a DIFFERENT height, so no two may draw alike.</summary>
     [Fact]
@@ -338,7 +338,7 @@ public class VocabularyPerturbationTests
     {
         "barNumbers" => ManySystems,
         "accidentals" => WithAccidentals,
-        "sectionLabels" or "marks" => TwoLabelledSections,
+        "sectionLabels" or "markTempo" => TwoLabelledSections,
         "partCombineText" => CombinedParts,
         "chordQualities" or "minorChords" => ChordRow,
         _ => Plain,
@@ -360,7 +360,7 @@ public class VocabularyPerturbationTests
                 data.Add(key, value, value.Split(' ')[0] == @default);
             }
         }
-        Add("marks", LanguageVocabulary.MarkArrangements,
+        Add("markTempo", LanguageVocabulary.MarkArrangements,
             LilySharpLanguageServer.GetMarkArrangementCompletions().Items);
         Add("barNumbers", LanguageVocabulary.BarNumberPolicies,
             LilySharpLanguageServer.GetBarNumberPolicyCompletions().Items);

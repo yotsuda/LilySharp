@@ -3,7 +3,7 @@
 # 999-bar inputs, interleaved runs, median-of-5 BOTH orders.
 # Base = 37203165 (the commit before this session's repair).
 # Heavy sides of THESE changes:
-#  - perf-fingstack1k: 4 notes per bar, each @staccato@tenuto@finger(3)@upbow =
+#  - perf-fingstack1k: 4 notes per bar, each @staccato@tenuto@finger(3)@upBow =
 #    per-note fingering flush (chain distance over 2 placed profiles) + walk
 #    bookkeeping + feta digit draw. Fingering face/Y moved BY DESIGN -> no hash.
 #  - perf-scriptsym1k: 4 notes per bar @accent@staccato, no fingerings, no movers =

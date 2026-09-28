@@ -28,7 +28,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The TAB technique letters — <c>@tap</c> (T), <c>@hammeron</c> (H), <c>@pulloff</c> (P)
+/// The TAB technique letters — <c>@tap</c> (T), <c>@hammerOn</c> (H), <c>@pullOff</c> (P)
 /// and <c>@pluck</c>'s finger letter — are TEXT, and the room reserved for one has to be
 /// the ink that gets drawn.
 /// </summary>
@@ -46,7 +46,7 @@ namespace LilySharp.Tests;
 /// ⚠️⚠️ NOTHING IN THE TREE OBSERVED THESE LETTERS, and that is the whole reason the defect
 /// lived: LilyPond has no grob for them (a player writes them as markup), so there is no LP
 /// geometry and no ledger point can exist; and on 2026-08-28 <b>not one</b> of the 572
-/// tracked <c>.lys</c> books wrote <c>@tap</c>, <c>@hammeron</c>, <c>@pulloff</c> or
+/// tracked <c>.lys</c> books wrote <c>@tap</c>, <c>@hammerOn</c>, <c>@pullOff</c> or
 /// <c>@pluck</c> — no snapshot, no sweep, no fixture. This file and
 /// <c>Fixtures/test/tab-technique-letters.lys</c> are that missing observer. What replaces
 /// the ledger is an IDENTITY: the box the layout reserves IS the ink the renderer draws,
@@ -98,8 +98,8 @@ public class TabTechniqueLetterTests
     [InlineData("c4", "@tap", "T")]
     [InlineData("e4", "@tap", "T")]
     [InlineData("g4", "@tap", "T")]
-    [InlineData("c4", "@hammeron", "H")]
-    [InlineData("c4", "@pulloff", "P")]
+    [InlineData("c4", "@hammerOn", "H")]
+    [InlineData("c4", "@pullOff", "P")]
     // …and high ones ABOVE, where the same box is read the other way round.
     [InlineData("b4", "@tap", "T")]
     [InlineData("e'4", "@tap", "T")]

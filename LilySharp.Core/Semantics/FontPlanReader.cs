@@ -151,9 +151,9 @@ internal static class FontPlanReader
     /// detection is scoped to the one block: a repeat ACROSS blocks is an override.</summary>
     private static void ReadEntriesInto(TextFontPlan.Builder builder, FontDeclarationSyntax font, List<Problem> found)
     {
-        var boundKeys = new Dictionary<string, TextSpan>(StringComparer.OrdinalIgnoreCase);
+        var boundKeys = new Dictionary<string, TextSpan>(StringComparer.Ordinal);
         // The previous entry's canonical key when it was a role or a group — what the old
-        // redirect spelling (`chordName serif`) meant to point at, so the refusal of the
+        // redirect spelling (`chord serif`) meant to point at, so the refusal of the
         // orphaned `serif` can name the `as` form to write instead.
         string? previousRoleOrGroup = null;
         foreach (var entry in font.Entries)
@@ -167,9 +167,16 @@ internal static class FontPlanReader
                     found.Add(new Problem(span, DiagnosticCodes.FontAttributeMisplaced,
                         $"'{entry.Key}' is an attribute and follows a key; here it follows " +
                         $"none. Write the role first, e.g. mark {entry.Key}" +
-                        (entry.Key.Equals("step", StringComparison.OrdinalIgnoreCase) ? " +1" :
-                         entry.Key.Equals("size", StringComparison.OrdinalIgnoreCase) ? " 3" :
-                         entry.Key.Equals("as", StringComparison.OrdinalIgnoreCase) ? " sans" : "") + ".",
+                        (entry.Key.Equals("step", StringComparison.Ordinal) ? " +1" :
+                         entry.Key.Equals("size", StringComparison.Ordinal) ? " 3" :
+                         entry.Key.Equals("as", StringComparison.Ordinal) ? " sans" : "") + ".",
+                        IsError: true));
+                // A key or word written in the wrong case is named with its right spelling
+                // (owner's decision 2026-09-27: keys are case-sensitive).
+                else if (TextRoles.CaseOnlyMatch(entry.Key) is { } canonicalKey)
+                    found.Add(new Problem(span, DiagnosticCodes.UnknownFontRole,
+                        $"'{entry.Key}' is not a text role, a role group, or a generic family. " +
+                        $"Keys are case-sensitive: write '{canonicalKey}'.",
                         IsError: true));
                 else
                     found.Add(new Problem(span, DiagnosticCodes.UnknownFontRole,
@@ -182,7 +189,7 @@ internal static class FontPlanReader
                 continue;
             }
 
-            // A canonical key so `lyricText` and `lyrictext` count as the same binding.
+            // A canonical key so `lyrics` and `lyrictext` count as the same binding.
             string canonical = role is { } r ? TextRoles.Spelling(r)
                 : group is { } g ? TextRoles.Spelling(g)
                 : TextRoles.Spelling(family!.Value);
@@ -306,7 +313,7 @@ internal static class FontPlanReader
                     IsError: true));
                 continue;
             }
-            if (word.Equals("as", StringComparison.OrdinalIgnoreCase))
+            if (word.Equals("as", StringComparison.Ordinal))
             {
                 if (isFamily)
                 {
@@ -331,20 +338,22 @@ internal static class FontPlanReader
                     continue;
                 }
                 found.Add(new Problem(t.Span, DiagnosticCodes.FontBindingMissingValue,
-                    $"'as' takes a generic family: {canonical} as serif or {canonical} as sans.",
+                    $"'as' takes a generic family: {canonical} as serif or {canonical} as sans." +
+                    (i + 1 < tokens.Count && TextRoles.CaseOnlyMatch(tokens[i + 1].Text) is { } fw
+                        ? $" Families are case-sensitive: write '{canonical} as {fw}'." : ""),
                     IsError: true));
                 continue;
             }
-            if (word.Equals("step", StringComparison.OrdinalIgnoreCase)
-                || word.Equals("size", StringComparison.OrdinalIgnoreCase))
+            if (word.Equals("step", StringComparison.Ordinal)
+                || word.Equals("size", StringComparison.Ordinal))
             {
-                bool isStep = word.Equals("step", StringComparison.OrdinalIgnoreCase);
+                bool isStep = word.Equals("step", StringComparison.Ordinal);
                 if (isFamily)
                 {
                     found.Add(new Problem(t.Span, DiagnosticCodes.FontAttributeMisplaced,
                         $"'{word}' is written on a role or a group, not on the generic family " +
                         $"'{canonical}', which is a face table and has no size of its own. " +
-                        $"Write it on the role, e.g. lyricText {word} " + (isStep ? "-1" : "2") + ".",
+                        $"Write it on the role, e.g. lyrics {word} " + (isStep ? "-1" : "2") + ".",
                         IsError: true));
                     i += OperandLength(tokens, i + 1);
                     continue;
@@ -406,11 +415,11 @@ internal static class FontPlanReader
                     IsError: true));
                 continue;
             }
-            if (word.Equals("regular", StringComparison.OrdinalIgnoreCase))
+            if (word.Equals("regular", StringComparison.Ordinal))
                 style = FontStyle.Regular;
-            else if (word.Equals("bold", StringComparison.OrdinalIgnoreCase))
+            else if (word.Equals("bold", StringComparison.Ordinal))
                 style = (style ?? FontStyle.Regular) | FontStyle.Bold;
-            else if (word.Equals("italic", StringComparison.OrdinalIgnoreCase))
+            else if (word.Equals("italic", StringComparison.Ordinal))
                 style = (style ?? FontStyle.Regular) | FontStyle.Italic;
         }
 

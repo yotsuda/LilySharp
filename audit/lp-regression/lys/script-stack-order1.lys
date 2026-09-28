@@ -13,9 +13,9 @@ part melody
 
 section A {
   melody {
-    e'4(@accent@finger(0)@downbow c4@staccato) d@tenuto@downbow d,@staccato@finger(0)@accent |
-    r4 a@staccato@tenuto@upbow f''@staccato@tenuto@finger(3)@upbow e'@flageolet@fermata@upbow |
-    e,@tenuto@finger(0)@downbow@text("div.").up |
+    e'4(@accent@finger(0)@downBow c4@staccato) d@tenuto@downBow d,@staccato@finger(0)@accent |
+    r4 a@staccato@tenuto@upBow f''@staccato@tenuto@finger(3)@upBow e'@flageolet@fermata@upBow |
+    e,@tenuto@finger(0)@downBow@text("div.").up |
   }
 }
 

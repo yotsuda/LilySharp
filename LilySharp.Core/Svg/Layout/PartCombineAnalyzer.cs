@@ -51,7 +51,7 @@ internal static class PartCombineAnalyzer
 {
     /// <summary>The label's em for THIS score: <see cref="EngravingDefaults.CombineTextFontSize"/>
     /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for
-    /// <c>partCombine</c> (or <c>marks</c>). The draw, the outside-staff pass and the page's
+    /// <c>partCombineText</c> (or <c>marks</c>). The draw, the outside-staff pass and the page's
     /// extents all read this one call.</summary>
     internal static double LabelEm(Rendering.ScoreTextMetrics fonts)
         => fonts.Size(Rendering.TextRole.PartCombine, EngravingDefaults.CombineTextFontSize);

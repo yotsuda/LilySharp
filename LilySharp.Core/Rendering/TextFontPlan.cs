@@ -26,7 +26,7 @@ namespace LilySharp.Core.Rendering;
 /// <remarks>
 /// THE RESOLUTION ORDER IS ONE RULE, applied to two questions:
 /// <list type="number">
-/// <item>the leaf's own binding (<c>lyricText "Charis SIL"</c>),</item>
+/// <item>the leaf's own binding (<c>lyrics "Charis SIL"</c>),</item>
 /// <item>its group's binding (<c>lyrics "Charis SIL"</c>),</item>
 /// <item>the generic family it belongs to (<c>serif "Georgia"</c>) — binding BOTH
 /// families is how a score says "the whole document's text" — UNLESS the role is

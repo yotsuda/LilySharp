@@ -57,7 +57,7 @@ internal static partial class SharedRenderer
         // The one home for the chord em, shared with ChordNameEngraver so the reserved ink
         // and the drawn ink are the same size. It was a local FontSize * 0.65 (= 2.6), an
         // approximation of LilyPond's own ChordName size. Since 2026-09-08 the home answers
-        // for THIS score — a `fonts { chordName step … }` moves the draw and the reservation
+        // for THIS score — a `fonts { chord step … }` moves the draw and the reservation
         // together.
         double size = LilySharp.Core.Svg.Layout.ChordNameGlyphRun.Em(fonts);
         // The series shares the same home as the em: ChordName declares NO font-series
@@ -470,7 +470,7 @@ internal static partial class SharedRenderer
         ScoreTextMetrics fonts, List<FingeringLayout> pageItems, PageLayout page)
     {
         var hc = new MeasureContentKey.Hash64();
-        // The plan is in the fold: a `fonts { fingering step … }` edit changes the glyph's em
+        // The plan is in the fold: a `fonts { finger step … }` edit changes the glyph's em
         // and design while every layout number above stays put, and a replayed fragment would
         // draw the old size.
         hc.Add(fonts.Plan.Signature);
@@ -533,7 +533,7 @@ internal static partial class SharedRenderer
         in OssiaShrink os, IDrawingContext gc)
     {
         // The em and the design at the SCORE's step (FingeringGlyphRun.Step — the grob's −5
-        // plus the plan's `fingering step`), the same two the metric home measured with.
+        // plus the plan's `finger step`), the same two the metric home measured with.
         double size = FingeringGlyphRun.Em(fonts);
         // The design the metrics came out of, opened once for the whole pass: every
         // fingering in a score is at the same font-size, so this scope never nests.

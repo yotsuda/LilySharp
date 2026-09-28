@@ -541,8 +541,8 @@ public sealed class FontDeclarationSyntax : SyntaxNode
     /// next entry's key, and a grammar where <c>lyrics Georgia</c> silently binds nothing
     /// is worse than one that refuses the unquoted name.
     /// <para>
-    /// ⚠️ A bare family word after a key (<c>chordName serif</c>) does NOT continue the
-    /// entry any more (2026-09-08): the redirect is spelled <c>chordName as serif</c>, so a
+    /// ⚠️ A bare family word after a key (<c>chord serif</c>) does NOT continue the
+    /// entry any more (2026-09-08): the redirect is spelled <c>chord as serif</c>, so a
     /// role and a family may never both be bare words in one entry. The old spelling opens
     /// a <c>serif</c> entry with no face, which the reader refuses and answers with the
     /// <c>as</c> form.
@@ -599,7 +599,7 @@ public sealed class FontDeclarationSyntax : SyntaxNode
                 if (keyToken != null
                     && (Rendering.TextRoles.IsAttributeWord(token.Text)
                         || (attributes.Count > 0
-                            && attributes[^1].Text.Equals("as", StringComparison.OrdinalIgnoreCase)
+                            && attributes[^1].Text.Equals("as", StringComparison.Ordinal)
                             && Rendering.TextRoles.TryParseFamily(token.Text, out _))))
                 {
                     attributes.Add(token);
@@ -772,7 +772,7 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
                 // spells. `size` is matched by TEXT, the way the fonts walker asks
                 // TextRoles about a family word: only the key knows a word is a value.
                 if (depth == 0 && keyToken != null
-                    && string.Equals(keyToken.Text, "size", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(keyToken.Text, "size", StringComparison.Ordinal)
                     && number == null && str == null && !hasBlock
                     && token.Kind != SyntaxKind.OpenBrace
                     && token.Kind != SyntaxKind.CloseBrace
@@ -839,7 +839,7 @@ public sealed class PaperDeclarationSyntax : SyntaxNode
 
 /// <summary>
 /// Layout directive — <c>layout { KEY VALUE… }</c>, the score-wide display switches
-/// (<c>marks stacked|beside</c>, <c>barNumbers lines|none|every N</c>). ⚠️ A node whose
+/// (<c>markTempo stacked|beside</c>, <c>barNumbers lines|none|every N</c>). ⚠️ A node whose
 /// <c>IsBlock</c> is false is the refused blockless form, kept in the tree (with its
 /// diagnostic) so no source position slides — it sets nothing.
 /// </summary>
@@ -895,7 +895,7 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
 
     /// <summary>
     /// One entry of the block: a key and the value tokens that follow it up to the next
-    /// key (<c>marks beside</c> — one word; <c>barNumbers every 4</c> — a word and a number).
+    /// key (<c>markTempo beside</c> — one word; <c>barNumbers every 4</c> — a word and a number).
     /// </summary>
     /// <param name="Key">The key as written.</param>
     /// <param name="KeyToken">The key's token, for a diagnostic's span.</param>
@@ -932,7 +932,10 @@ public sealed class LayoutDeclarationSyntax : SyntaxNode
                     continue; // the block's own braces (a nested one was refused and skipped)
 
                 bool isWord = token.Text.Length > 0 && char.IsLetter(token.Text[0]);
-                if (isWord && (keyToken == null || SyntaxFacts.IsLayoutKey(token.Text)))
+                // A key written in the wrong case cuts too, so it is refused as a key (with
+                // its right spelling) rather than read as the previous entry's value.
+                if (isWord && (keyToken == null || SyntaxFacts.IsLayoutKey(token.Text)
+                               || SyntaxFacts.LayoutKeyCaseOnlyMatch(token.Text) != null))
                 {
                     Flush();
                     keyToken = token;

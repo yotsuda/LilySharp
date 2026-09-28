@@ -1231,7 +1231,7 @@ internal sealed class MultiStaffLayouter
 
         // A STAFFLESS sheet's section label sits ON the chord line (owner's decision
         // 2026-08-24), so the row's first symbol has to start clear of its box — and of the
-        // tempo beside it under `marks beside`. That reach is stated from the line start;
+        // tempo beside it under `markTempo beside`. That reach is stated from the line start;
         // the floor speaks the measure frame (prefix right + the opening bar), so the frame
         // comes off. Joins by max like the lyric floor; a sheet with no such label adds 0.
         // LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).

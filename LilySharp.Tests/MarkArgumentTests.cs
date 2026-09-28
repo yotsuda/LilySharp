@@ -38,7 +38,7 @@ public class MarkArgumentTests
     /// with a string prefix.
     /// </summary>
     [Theory]
-    [InlineData("c4@fig(6) |", "fig")]
+    [InlineData("c4@figuredBass(6) |", "figuredBass")]
     [InlineData("c4@chord(Cm7) |", "chord")]
     [InlineData("c4@finger(3) |", "finger")]
     [InlineData("c4@text(\"dolce\") |", "text")]
@@ -52,7 +52,7 @@ public class MarkArgumentTests
     /// </summary>
     [Theory]
     [InlineData("c4@finger(3) |", "3")]
-    [InlineData("c4@fig(6) |", "6")]
+    [InlineData("c4@figuredBass(6) |", "6")]
     [InlineData("c4@bend(5) |", "5")]
     public void AnIntegerArgument_IsAnInt(string music, string text)
     {
@@ -85,7 +85,7 @@ public class MarkArgumentTests
     }
 
     /// <summary>
-    /// ★ The constraint that decided the design (§9.2). <c>@frame(032010)</c> is a
+    /// ★ The constraint that decided the design (§9.2). <c>@diagram(032010)</c> is a
     /// fret position STRING — one character per string — so its leading zero is the
     /// sixth string, and reading only the value turns a six-string shape into a
     /// five-string one. The value is offered; the text is what survives.
@@ -93,7 +93,7 @@ public class MarkArgumentTests
     [Fact]
     public void AFretPositionArgument_KeepsItsLeadingZeroInTheText()
     {
-        var argument = Assert.Single(Mark("c4@frame(032010) |").Arguments);
+        var argument = Assert.Single(Mark("c4@diagram(032010) |").Arguments);
         Assert.Equal("032010", argument.Text);
         Assert.Equal(new LysValue.Int(32010), argument.Value);
         Assert.NotEqual(argument.Text, argument.Value!.AsText);   // the loss, stated
@@ -124,7 +124,7 @@ public class MarkArgumentTests
     [Fact]
     public void WhitespaceSeparatesArguments()
     {
-        var arguments = Mark("c4@fig(3 5) |").Arguments;
+        var arguments = Mark("c4@figuredBass(3 5) |").Arguments;
         Assert.Equal(2, arguments.Length);
         Assert.Equal(new LysValue.Int(3), arguments[0].Value);
         Assert.Equal(new LysValue.Int(5), arguments[1].Value);
@@ -134,20 +134,20 @@ public class MarkArgumentTests
     [Fact]
     public void ACommaSeparatesArgumentsAndIsNotPartOfOne()
     {
-        var arguments = Mark("c4@fig(6, 4) |").Arguments;
+        var arguments = Mark("c4@figuredBass(6, 4) |").Arguments;
         Assert.Equal(2, arguments.Length);
         Assert.Equal(["6", "4"], arguments.Select(a => a.Text));
     }
 
     /// <summary>
     /// A figure's alteration suffix is written with a space, so it is its own
-    /// argument — <c>@fig(6 s)</c> is two, matching the two parts MarkName's split
+    /// argument — <c>@figuredBass(6 s)</c> is two, matching the two parts MarkName's split
     /// hands the figured-bass parser today.
     /// </summary>
     [Fact]
     public void AFigureAndItsSuffix_AreTwoArguments()
     {
-        var arguments = Mark("c4@fig(6 s) |").Arguments;
+        var arguments = Mark("c4@figuredBass(6 s) |").Arguments;
         Assert.Equal(2, arguments.Length);
         Assert.Equal(new LysValue.Int(6), arguments[0].Value);
         Assert.Equal(new LysValue.Symbol("s"), arguments[1].Value);
@@ -157,7 +157,7 @@ public class MarkArgumentTests
     /// ⚠️ Where this reading and MarkName's DIFFER, pinned so the family migrations
     /// (§9.5 ⑵) start from a measured fact rather than an assumption: a leading '#'
     /// is written against its figure, so it is ONE argument here, while MarkName
-    /// splits it into two dotted parts ("fig.#.6") and the figured-bass parser binds
+    /// splits it into two dotted parts ("figuredBass.#.6") and the figured-bass parser binds
     /// them back together.
     /// <para>
     /// ★ This is the measurement that decided how the figured bass moved (§9.5.3 ⑴).
@@ -167,8 +167,8 @@ public class MarkArgumentTests
     /// </para>
     /// </summary>
     [Theory]
-    [InlineData("c4@fig(#6) |", "#6", "fig.#.6")]
-    [InlineData("c4@fig(6s) |", "6s", "fig.6.s")]
+    [InlineData("c4@figuredBass(#6) |", "#6", "figuredBass.#.6")]
+    [InlineData("c4@figuredBass(6s) |", "6s", "figuredBass.6.s")]
     public void AFigureWrittenWithoutASpace_IsOneRunButTwoDottedParts(
         string music, string run, string markName)
     {
@@ -210,10 +210,10 @@ public class MarkArgumentTests
     /// produces the dotted MarkName its consumers parse today.
     /// </summary>
     [Theory]
-    [InlineData("c4@fig(6) |", "fig.6")]
-    [InlineData("c4@fig(3 5) |", "fig.3.5")]
+    [InlineData("c4@figuredBass(6) |", "figuredBass.6")]
+    [InlineData("c4@figuredBass(3 5) |", "figuredBass.3.5")]
     [InlineData("c4@finger(3) |", "finger.3")]
-    [InlineData("c4@frame(032010) |", "frame.032010")]
+    [InlineData("c4@diagram(032010) |", "diagram.032010")]
     [InlineData("c4@chord(Cm7) |", "chord.Cm7")]
     [InlineData("c4@text(\"dolce\").up |", "text.\"dolce\".up")]
     [InlineData("c4@notehead(triangle) |", "notehead.triangle")]

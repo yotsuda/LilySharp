@@ -34,7 +34,7 @@ public sealed partial class MeasureCollector
     /// <remarks>
     /// <para>LILYPOND-REF: lily/figured-bass-engraver.cc - listen_bass_figure</para>
     /// <para>
-    /// Written <c>@fig(6)</c> (single), <c>@fig(3 5)</c> (two figures), <c>@fig(6 s)</c>
+    /// Written <c>@figuredBass(6)</c> (single), <c>@figuredBass(3 5)</c> (two figures), <c>@figuredBass(6 s)</c>
     /// (with sharp). One question, asked once:
     /// <see cref="Semantics.AnnotationValues.Figures"/> answers null both for "not a
     /// figured bass" and for "spells no figures", which is the only distinction this
@@ -603,9 +603,9 @@ public sealed partial class MeasureCollector
                 {
                     // Check for trill spanner start/stop
                     // LILYPOND-REF: scm/scheme-engravers.scm — \startTrillSpan / \stopTrillSpan
+                    // Names are case-sensitive (owner's decision 2026-09-27).
                     var nameText = articulationSyntax.Name;
-                    var nameLower = nameText.ToLowerInvariant();
-                    if (nameLower == "starttrillspan")
+                    if (nameText == "startTrillSpan")
                     {
                         // .up/.down forces the spanner's direction — LilyPond's
                         // ^\startTrillSpan / _\startTrillSpan, which the engraver sets
@@ -618,17 +618,17 @@ public sealed partial class MeasureCollector
                         };
                         _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.SourceStart, _cursor.StaffIndex, _cursor.VoiceIndex, forcedDir));
                     }
-                    else if (nameLower == "stoptrillspan")
+                    else if (nameText == "stopTrillSpan")
                     {
                         _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.SourceStart, _cursor.StaffIndex, _cursor.VoiceIndex, 0));
                     }
-                    else if (nameLower == "courtesy")
+                    else if (nameText == "courtesy")
                     {
                         // LILYPOND-REF: lily/accidental.cc:147-148 — parenthesized property
                         // Explicit @courtesy annotation forces courtesy (parenthesized) accidental
                         _courtesySourcePositions.Add(node.SourceStart);
                     }
-                    else if (nameLower == "editorial" && editorialAccidental != null)
+                    else if (nameText == "editorial" && editorialAccidental != null)
                     {
                         // Editorial (suggestion) accidental: a small accidental
                         // ABOVE the note; the kind was resolved in CreateNoteItem.
@@ -700,7 +700,7 @@ public sealed partial class MeasureCollector
                 }
                 else if (Semantics.AnnotationValues.Frame(markSyntax) is { } spec)
                 {
-                    // @frame(x32010) — chord diagram above the note (ArticulationEngraver's
+                    // @diagram(x32010) — chord diagram above the note (ArticulationEngraver's
                     // IsForcedAbove), or below with an explicit `.down`.
                     _articulations.Add(new ArticulationItem(
                         ArticulationType.FretFrame, measureIndex, itemIndex,
@@ -735,7 +735,7 @@ public sealed partial class MeasureCollector
                         VoiceIndex = _cursor.VoiceIndex,
                     });
                 }
-                else if (markSyntax.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
+                else if (markSyntax.Name.Equals("notehead", StringComparison.Ordinal)
                          && markSyntax.HasArgumentList)
                 {
                     // Consumed by ExtractNoteheadStyle at item creation — not a
@@ -749,7 +749,7 @@ public sealed partial class MeasureCollector
                     // the host note. Keyed by the note's source position.
                     _fingeringByPosition[node.SourceStart] = finger;
                 }
-                else if (markSyntax.Name.Equals("text", StringComparison.OrdinalIgnoreCase))
+                else if (markSyntax.Name.Equals("text", StringComparison.Ordinal))
                 {
                     // @text("dolce")[.up/.down] — free expressive text on the host
                     // note. Rides the DynamicText pipeline as expressive text: it

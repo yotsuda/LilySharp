@@ -329,7 +329,7 @@ public sealed class TabStaffStencilTests
     {
         const string book =
             "octave absolute\npart m { clef treble }\n"
-            + "section A { m { c4@tap e@hammeron g@pulloff b@pluck(p) | } }\n"
+            + "section A { m { c4@tap e@hammerOn g@pullOff b@pluck(p) | } }\n"
             + "form main { ~A }\nscore main { staff m  tab m as numbers }";
 
         var page = RenderFirstPage(book);

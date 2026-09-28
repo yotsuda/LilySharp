@@ -769,7 +769,7 @@ internal static class LysWriter
                + (alter switch { 1 => "#", -1 => "b", _ => "" });
     }
 
-    // ---- figured bass (@fig) ---------------------------------------------
+    // ---- figured bass (@figuredBass) -------------------------------------
 
     private static string? FigAnnotation(ImportFiguredBass fig, ImportReport report)
     {
@@ -798,7 +798,7 @@ internal static class LysWriter
                 report.Warn("figured-bass accidental without a figure dropped.");
             }
         }
-        return parts.Count > 0 ? "@fig(" + string.Join(" ", parts) + ")" : null;
+        return parts.Count > 0 ? "@figuredBass(" + string.Join(" ", parts) + ")" : null;
     }
 
     // Inverse of the exporter's suffix -> kind map (MusicXmlExporter.BuildHarmony).

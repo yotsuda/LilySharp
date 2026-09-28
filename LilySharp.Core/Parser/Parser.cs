@@ -52,15 +52,15 @@ internal sealed partial class Parser
         // clean and simply lost the "??"). Flag each one up front.
         //
         // Exception: '#' (a BadToken everywhere, since Lily# deliberately avoids
-        // Scheme's '#') is LEGAL inside a @chord(...) / @fig(...) argument AND in
+        // Scheme's '#') is LEGAL inside a @chord(...) / @figuredBass(...) argument AND in
         // a chords { } body, where it means "sharp" — sharp roots (C#/F#),
         // altered tensions (7#9, #11), and sharp figures (#6). It flows through
         // MusicMarkSyntax.MarkName / the chord-symbol token run to the chord /
         // figured-bass parsers. Track those regions so a '#' there is not
         // flagged; every other BadToken (and '#' anywhere else) is.
         int scanPos = 0;
-        int argDepth = 0;  // paren depth inside a @chord/@fig argument (0 = outside)
-        int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@fig' name
+        int argDepth = 0;  // paren depth inside a @chord/@figuredBass argument (0 = outside)
+        int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@figuredBass' name
         int chordsDepth = 0;   // brace depth inside a chords { } body (0 = outside)
         int chordsStage = 0;   // 0 = idle, 1 = saw 'chords', 2 = saw its name
         // A lyrics { } body is free text: a '?' or ';' written against a syllable is part
@@ -145,8 +145,8 @@ internal sealed partial class Parser
             else if (t.Kind == SyntaxKind.At)
                 stage = 1;
             else if (stage == 1 && t.Kind == SyntaxKind.Identifier
-                     && (t.Text.Equals("chord", StringComparison.OrdinalIgnoreCase)
-                         || t.Text.Equals("fig", StringComparison.OrdinalIgnoreCase)))
+                     && (t.Text.Equals("chord", StringComparison.Ordinal)
+                         || t.Text.Equals("figuredBass", StringComparison.Ordinal)))
                 stage = 2;
             else if (stage == 2 && t.Kind == SyntaxKind.OpenParen)
             {

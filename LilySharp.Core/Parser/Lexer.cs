@@ -704,7 +704,7 @@ internal sealed class Lexer
             // (measured 2026-08-23), and Lily# has never been released.
             "paper" => SyntaxKind.PaperKeyword,
             // `layout`, like `paper`: a block of KEY VALUE entries — the score-wide display
-            // switches (`marks stacked|beside`, `barNumbers lines|none|every N`) — and the
+            // switches (`markTempo stacked|beside`, `barNumbers lines|none|every N`) — and the
             // word LilyPond uses for the block that holds the same kind of setting
             // (\layout). Reserved 2026-09-11 (user decision): measured first, no tracked
             // `.lys` writes the word outside a comment. ⚠️ `marks` is NOT reserved any more

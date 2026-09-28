@@ -116,7 +116,7 @@ public sealed class MusicXmlExporter
     private bool _attributesDirty;
     private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
-    private string? _noteFrameSpec; // @frame(...) on the note being written
+    private string? _noteFrameSpec; // @diagram(...) on the note being written
     private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
     private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
@@ -1903,7 +1903,7 @@ public sealed class MusicXmlExporter
     {
         foreach (var art in articulations)
             if (art is MusicMarkSyntax mark
-                && mark.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
+                && mark.Name.Equals("notehead", StringComparison.Ordinal)
                 && mark.HasArgumentList)
                 return Semantics.AnnotationValues.Notehead(mark) switch
                 {
@@ -2030,9 +2030,9 @@ public sealed class MusicXmlExporter
         foreach (var art in note.Articulations)
         {
             if (art is ArticulationSyntax { Type: ArticulationType.None } named
-                && named.NameToken.Text.ToLowerInvariant() is "glissando" or "slide")
+                && named.NameToken.Text is "glissando" or "slide")
             {
-                string el = named.NameToken.Text.Equals("slide", StringComparison.OrdinalIgnoreCase)
+                string el = named.NameToken.Text.Equals("slide", StringComparison.Ordinal)
                     ? "slide" : "glissando";
                 xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(el,
                     new System.Xml.Linq.XAttribute("type", "start"),
@@ -2735,7 +2735,7 @@ public sealed class MusicXmlExporter
             {
                 bool hasArp = chord.Articulations.Any(a2 =>
                     a2 is ArticulationSyntax { Type: ArticulationType.None } na
-                    && na.NameToken.Text.Equals("arpeggio", StringComparison.OrdinalIgnoreCase));
+                    && na.NameToken.Text.Equals("arpeggio", StringComparison.Ordinal));
                 bool hasBracket = chord.Articulations.Any(a2 =>
                     a2 is MusicMarkSyntax mm
                     && Semantics.AnnotationValues.IsArpeggioBracket(mm));
@@ -3293,7 +3293,7 @@ public sealed class MusicXmlExporter
                 // Single-word direction marks (@sustain, @sostenuto, @ottava, @loco)
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)
-                    ProcessDirectionName(articulation.NameToken.Text.ToLowerInvariant());
+                    ProcessDirectionName(articulation.NameToken.Text);
                 // MusicXML has no phrasing-slur element: a phrasing slur is a <slur> with a
                 // number of its own, so it can overlap the ordinary slurs (number 1).
                 if (Semantics.AnnotationValues.IsPhrasingSlurName(articulation.NameToken.Text))
@@ -3453,7 +3453,7 @@ public sealed class MusicXmlExporter
         {
             if (BuildHarmony(chordText) is { } harmony)
             {
-                // A @frame on the same note nests inside the harmony (MusicXML
+                // A @diagram on the same note nests inside the harmony (MusicXML
                 // <frame> is a harmony child).
                 if (_noteFrameSpec is { } fspec && BuildFrame(fspec) is { } frameEl)
                     harmony.Add(frameEl);
@@ -3506,10 +3506,10 @@ public sealed class MusicXmlExporter
         ProcessDirectionName(mark.MarkName);
     }
 
-    private void ProcessDirectionName(string rawName)
+    private void ProcessDirectionName(string name)
     {
         if (_currentMeasure == null) return;
-        var name = rawName.ToLowerInvariant();
+        // Matched as written: names are case-sensitive (owner's decision 2026-09-27).
         switch (name)
         {
             case "sustain":
@@ -3517,7 +3517,7 @@ public sealed class MusicXmlExporter
                 break;
             // '@treCorde' is the una corda's release written as a word rather than as '@!';
             // it is the same mark, so it is the same <pedal type="stop">.
-            case "trecorde":
+            case "treCorde":
                 _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
                 break;
             case "sostenuto":

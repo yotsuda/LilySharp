@@ -1373,7 +1373,7 @@ internal static partial class SpacingRules
     }
 
     /// <summary>
-    /// Chord diagrams (<c>@frame(…)</c>) stand SIDE BY SIDE: each one's box is a rod against
+    /// Chord diagrams (<c>@diagram(…)</c>) stand SIDE BY SIDE: each one's box is a rod against
     /// the next diagram's on the same staff — adjacent or several columns on — and against
     /// both bar edges, so a bar too narrow for its diagrams grows instead of the diagrams
     /// stacking. Heights are not compared: a diagram clears its neighbour at any height.

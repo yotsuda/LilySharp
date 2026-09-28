@@ -28,9 +28,11 @@ namespace LilySharp.Core.Syntax;
 /// </summary>
 public static class ArticulationRegistry
 {
-    // Recognized articulation / ornament names. Case-insensitive.
+    // Recognized articulation / ornament names, each in its one canonical spelling.
+    // Case-sensitive since 2026-09-27 (owner's decision): '@hammeron' is unknown, and
+    // AnnotationNameValidator names '@hammerOn' in its diagnostic.
     private static readonly Dictionary<string, ArticulationType> ByName =
-        new(StringComparer.OrdinalIgnoreCase)
+        new(StringComparer.Ordinal)
         {
             // Articulations
             ["staccato"] = ArticulationType.Staccato,
@@ -38,22 +40,22 @@ public static class ArticulationRegistry
             ["tenuto"] = ArticulationType.Tenuto,
             ["marcato"] = ArticulationType.Marcato,
             ["fermata"] = ArticulationType.Fermata,
-            ["shortfermata"] = ArticulationType.FermataShort,
-            ["longfermata"] = ArticulationType.FermataLong,
+            ["shortFermata"] = ArticulationType.FermataShort,
+            ["longFermata"] = ArticulationType.FermataLong,
             ["portato"] = ArticulationType.Portato,
             ["staccatissimo"] = ArticulationType.Staccatissimo,
             // String bowing marks and the harmonic circle (○). '@harmonic' is the
             // familiar name for guitar / lead-sheet users; '@flageolet' is the
             // classical term — both render the circle. (The diamond harmonic
             // NOTEHEAD ◇ is '@notehead.diamond'.)
-            ["upbow"] = ArticulationType.UpBow,
-            ["downbow"] = ArticulationType.DownBow,
+            ["upBow"] = ArticulationType.UpBow,
+            ["downBow"] = ArticulationType.DownBow,
             ["flageolet"] = ArticulationType.Flageolet,
             ["harmonic"] = ArticulationType.Flageolet,
-            ["hammeron"] = ArticulationType.HammerOn,
-            ["pulloff"] = ArticulationType.PullOff,
+            ["hammerOn"] = ArticulationType.HammerOn,
+            ["pullOff"] = ArticulationType.PullOff,
             ["tap"] = ArticulationType.Tap,
-            ["snappizz"] = ArticulationType.SnapPizz,
+            ["snapPizz"] = ArticulationType.SnapPizz,
             ["stopped"] = ArticulationType.Stopped,
             ["thumb"] = ArticulationType.Thumb,
             ["heel"] = ArticulationType.Heel,
@@ -70,7 +72,7 @@ public static class ArticulationRegistry
             // LilyPond's name (\reverseturn, scm/script.scm); the MusicXML term
             // "inverted-turn" was the spelling until 2026-09-02. The enum member keeps its
             // name (a rename is the owner's MSVS job).
-            ["reverseturn"] = ArticulationType.InvertedTurn,
+            ["reverseTurn"] = ArticulationType.InvertedTurn,
             ["pralltriller"] = ArticulationType.PrallTriller,
             // Breathing signs (after the note they follow)
             ["breath"] = ArticulationType.Breath,

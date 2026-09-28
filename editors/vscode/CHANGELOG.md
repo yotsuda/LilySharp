@@ -2,6 +2,29 @@
 
 All notable changes to the Lily# VS Code extension are documented here.
 
+## Unreleased
+
+### Breaking changes
+
+- **Figured bass is written `@figuredBass(…)`** (was `@fig(…)`); the figures inside are
+  unchanged. `@fig(6)` now warns as an unknown annotation. Typing `@fig` still finds the new
+  name in the completion list.
+- **A chord diagram is written `@diagram(x32010)`** (was `@frame(…)`).
+- **`fonts { }` keys renamed** to the words the source uses: `chord`, `diagram`, `finger`,
+  `barNumbers`, `partCombineText`, `time`, `tab` (were `chordName`, `fretFrame`,
+  `fingering`, `barNumber`, `partCombine`, `meter`, `tabFret`); `lyricText` is gone —
+  `lyrics` binds the syllables.
+- **`layout { marks … }` is `layout { markTempo … }`.**
+- **`@ho` / `@po` are no longer offered** — they drew nothing. Typing `ho` or `po` in the
+  completion list finds `hammerOn` / `pullOff`.
+- **Names are case-sensitive** — annotations and `fonts` / `layout` / `paper` keys. A
+  wrong-case spelling (`@hammeron`, `barnumbers`) is refused, and the diagnostic names the
+  right one.
+- **`@upBow`, `@downBow`, `@shortFermata`, `@longFermata`, `@reverseTurn`** (were all
+  lowercase): a name of several words is camelCase.
+- **Value words are lowercase only** — `@notehead(triangle)`, `@diagram(x32010)`,
+  `size a4`, `210mm`; `@notehead(TRIANGLE)` or `size A4` is refused with the spelling.
+
 ## 0.9.0
 
 ### Breaking changes

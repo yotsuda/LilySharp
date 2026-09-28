@@ -200,7 +200,7 @@
 //
 // A caret INSIDE a chord is pointing at a member (`<c, e g>`, `<c 3 5>` — the
 // spaced digits are scale degrees), and one past the note's core is in its
-// annotations (`@fig(6,4)`); both are left as typed.
+// annotations (`@figuredBass(6,4)`); both are left as typed.
 //
 // The search for both the following note and the unresolved ')' is bounded by
 // the innermost `{ … }` block, so an auto-placed ')' never leaves the part (or
@@ -978,7 +978,7 @@ function slurAnchorAt(text: string, offset: number)
             && offset > event.start && offset < slots.marksEnd) { return 'member'; }
         // Past the core the caret is among the note's annotations, and an
         // unclosed '(' there that is GLUED TO A NAME is an argument list being
-        // typed (`@fig(6| 4)`) — the parens are the annotation's, not the
+        // typed (`@figuredBass(6| 4)`) — the parens are the annotation's, not the
         // music's. An unclosed slur '(' (`c4(|`) is the note's own mark, and
         // the caret after it is still on the note (2026-09-03: it used to read
         // as 'member' too, which left a '@' typed there where it was).
@@ -989,7 +989,7 @@ function slurAnchorAt(text: string, offset: number)
 }
 
 /** True when a caret past the note's core (which ends at `coreEnd`) sits inside
- * an annotation's still-open argument list (`@fig(6| 4)`): the unclosed '(' is
+ * an annotation's still-open argument list (`@figuredBass(6| 4)`): the unclosed '(' is
  * glued to a NAME — back over the name's characters to an '@', the same reading
  * isSlurOpen uses. An unclosed slur '(' (`c4(|`) is the note's own mark and the
  * caret after it is still on the note. ⚠️ Testing just the one character before

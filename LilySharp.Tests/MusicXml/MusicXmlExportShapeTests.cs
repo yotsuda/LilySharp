@@ -186,7 +186,7 @@ public class MusicXmlExportShapeTests
         var doc = Export("""
             octave absolute
             part m { clef treble }
-            section A { m { c'4@fig(#6) d' e' f' | } }
+            section A { m { c'4@figuredBass(#6) d' e' f' | } }
             form main { A }
             score main { staff m }
             """);

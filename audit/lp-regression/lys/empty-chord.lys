@@ -9,7 +9,7 @@ part melody
 section A {
   melody {
     r4 e8( g <>)@text("sul D").up@f @decresc c8@staccato c@staccato c@staccato c@staccato |
-    c@staccato c@staccato c@staccato c@staccato <>@sfz <>@downbow c g c g |
+    c@staccato c@staccato c@staccato c@staccato <>@sfz <>@downBow c g c g |
     c1 @decresc <>@pp |
   }
 }

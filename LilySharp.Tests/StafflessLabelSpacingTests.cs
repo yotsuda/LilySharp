@@ -27,7 +27,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// A staffless chord row makes ROOM for the section label that sits on its line: the
 /// line-start spring is floored at the label box's right edge (and, under
-/// <c>marks beside</c>, the tempo's), so the first symbol stands on its own column inside
+/// <c>markTempo beside</c>, the tempo's), so the first symbol stands on its own column inside
 /// its own bar instead of being shifted past the bar line after spacing.
 /// </summary>
 /// <remarks>
@@ -59,12 +59,12 @@ public class StafflessLabelSpacingTests
     [Theory]
     [InlineData("", "Intro", false)]
     [InlineData("", "IntroductionLong", false)]
-    [InlineData("layout { marks beside }\n", "Intro", false)]
+    [InlineData("layout { markTempo beside }\n", "Intro", false)]
     // A line opening on a drawn `|:` puts the box ON that bar (the label cannot sit on the
     // repeat sign, which is drawn on the row line), under both arrangements; the reach
     // starts there too (measured 2026-09-09, scratch/p356/mk10: bar and box at 3.50).
     [InlineData("", "Intro", true)]
-    [InlineData("layout { marks beside }\n", "Intro", true)]
+    [InlineData("layout { markTempo beside }\n", "Intro", true)]
     public void TheFirstSymbol_StaysInsideItsBar_ClearOfTheLabel(string top, string label, bool openingRepeat)
     {
         string Form(bool hidden) => openingRepeat
@@ -89,7 +89,7 @@ public class StafflessLabelSpacingTests
         double bar2 = layout.Systems[0].Measures[1].X;
         Assert.True(first.X < bar2, $"`C' at {first.X:F2} should stand left of bar 2 at {bar2:F2}");
 
-        // Clear of the label's box — and of the tempo beside it under `marks beside`.
+        // Clear of the label's box — and of the tempo beside it under `markTempo beside`.
         double window = box.X + MusicMarkEngraver.LabelBoxHalfWidth(
             fonts, box.MarkType, box.Text, box.Boxed);
         var tempo = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Tempo);

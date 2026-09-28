@@ -486,7 +486,7 @@ internal static partial class GlyphMetrics
     /// </para>
     /// </remarks>
     /// <param name="fonts">The score's text metrics — a compound numerator's <c>+</c> is a
-    /// text fallback whose advance follows <c>fonts { meter … }</c> (MeterGlyphRun); the
+    /// text fallback whose advance follows <c>fonts { time … }</c> (MeterGlyphRun); the
     /// digits themselves read nothing from it.</param>
     public static double GetTimeSigWidth(Rendering.ScoreTextMetrics fonts, string beats, string beatType)
     {

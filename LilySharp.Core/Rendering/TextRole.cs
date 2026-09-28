@@ -271,6 +271,24 @@ public static class TextRoles
     /// <remarks>
     /// camelCase, matching the language's own multi-word keywords (<c>grandStaff</c>,
     /// <c>staffGroup</c>, <c>choirStaff</c>) rather than inventing a second convention.
+    /// <para>
+    /// ★ A KEY IS SPELLED AS THE SOURCE WRITES THE THING IT STYLES (owner's decision,
+    /// 2026-09-27): <c>@chord</c> → <c>chord</c>, <c>@diagram</c> → <c>diagram</c>,
+    /// <c>@finger</c> → <c>finger</c>, <c>time 6/8</c> → <c>time</c>, a <c>tab</c> staff →
+    /// <c>tab</c>, <c>layout { barNumbers }</c> → <c>barNumbers</c>, <c>layout {
+    /// partCombineText }</c> → <c>partCombineText</c>. Only a role with no single source word
+    /// keeps a name of its own — a family of annotations (<c>pedal</c>, <c>navigation</c>,
+    /// <c>dynamics</c>, <c>tabTechnique</c>) or text the structure prints (<c>stanza</c>,
+    /// <c>volta</c>, <c>clefOctave</c>). Until then the keys were the LilyPond grob names
+    /// (<c>chordName</c>, <c>fretFrame</c>, <c>fingering</c>, <c>meter</c>, <c>tabFret</c>…).
+    /// </para>
+    /// <para>
+    /// ⚠️ <see cref="TextRole.LyricText"/> has NO key of its own: the syllables are what a
+    /// <c>lyrics { }</c> block writes, and <c>lyrics</c> is already the group (syllables and
+    /// stanza numbers). The narrower spelling wins, so <c>lyrics "X"  stanza "Y"</c> says
+    /// everything the old <c>lyricText</c> key could. Its spelling here is the group's word,
+    /// for diagnostics only — <see cref="IsWritable"/> keeps it out of the key vocabulary.
+    /// </para>
     /// </remarks>
     public static string Spelling(TextRole role) => role switch
     {
@@ -279,10 +297,10 @@ public static class TextRoles
         TextRole.Subtitle => "subtitle",
         TextRole.Poet => "poet",
         TextRole.Instrument => "instrument",
-        TextRole.LyricText => "lyricText",
+        TextRole.LyricText => "lyrics",
         TextRole.Stanza => "stanza",
-        TextRole.ChordName => "chordName",
-        TextRole.FretFrame => "fretFrame",
+        TextRole.ChordName => "chord",
+        TextRole.FretFrame => "diagram",
         TextRole.FiguredBass => "figuredBass",
         TextRole.Tempo => "tempo",
         TextRole.Mark => "mark",
@@ -290,17 +308,17 @@ public static class TextRoles
         TextRole.Navigation => "navigation",
         TextRole.Text => "text",
         TextRole.Dynamics => "dynamics",
-        TextRole.PartCombine => "partCombine",
-        TextRole.BarNumber => "barNumber",
-        TextRole.Fingering => "fingering",
+        TextRole.PartCombine => "partCombineText",
+        TextRole.BarNumber => "barNumbers",
+        TextRole.Fingering => "finger",
         TextRole.Tuplet => "tuplet",
         TextRole.Volta => "volta",
         TextRole.Ottava => "ottava",
         TextRole.Bend => "bend",
         TextRole.TabTechnique => "tabTechnique",
         TextRole.ClefOctave => "clefOctave",
-        TextRole.Meter => "meter",
-        TextRole.TabFret => "tabFret",
+        TextRole.Meter => "time",
+        TextRole.TabFret => "tab",
         // Not written in any score; see the remark on the member.
         TextRole.SystemBrace => "systemBrace",
         _ => role.ToString(),
@@ -325,18 +343,17 @@ public static class TextRoles
     /// <summary>
     /// Reads a <c>fonts { }</c> key: a leaf role, a group, or a generic family.
     /// </summary>
-    /// <param name="word">The written key, e.g. <c>lyricText</c> / <c>marks</c> /
+    /// <param name="word">The written key, e.g. <c>chord</c> / <c>marks</c> /
     /// <c>serif</c>.</param>
     /// <param name="role">The leaf, when <paramref name="word"/> spells one.</param>
     /// <param name="group">The group, when <paramref name="word"/> spells one.</param>
     /// <param name="family">The generic family, when <paramref name="word"/> spells one.</param>
     /// <returns>True when the word is a key this vocabulary knows.</returns>
     /// <remarks>
-    /// ⚠️ CASE-INSENSITIVE, deliberately: <c>lyricText</c> and <c>lyrictext</c> are the
-    /// same key, because the reader who mistypes the hump should get the binding rather
-    /// than a "no such role" they have to squint at. The DIAGNOSTIC still prints the
-    /// canonical spelling. <c>systemBrace</c> is refused — it is not a text role and
-    /// binding it would mean asking for the brace in Georgia.
+    /// CASE-SENSITIVE (owner's decision 2026-09-27; it was case-insensitive until then):
+    /// <c>figuredbass</c> is not a key, and the reader's LYS8004 names the canonical
+    /// <c>figuredBass</c> (<see cref="CaseOnlyMatch"/>). <c>systemBrace</c> is refused — it
+    /// is not a text role and binding it would mean asking for the brace in Georgia.
     /// </remarks>
     public static bool TryParseKey(string word, out TextRole? role, out TextRoleGroup? group,
         out TextFontFamily? family)
@@ -346,9 +363,9 @@ public static class TextRoles
         family = null;
         foreach (var candidate in All)
         {
-            if (candidate == TextRole.SystemBrace)
+            if (!IsWritable(candidate))
                 continue;
-            if (string.Equals(word, Spelling(candidate), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(word, Spelling(candidate), StringComparison.Ordinal))
             {
                 role = candidate;
                 return true;
@@ -356,7 +373,7 @@ public static class TextRoles
         }
         foreach (TextRoleGroup candidate in Enum.GetValues(typeof(TextRoleGroup)))
         {
-            if (string.Equals(word, Spelling(candidate), StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(word, Spelling(candidate), StringComparison.Ordinal))
             {
                 group = candidate;
                 return true;
@@ -384,13 +401,14 @@ public static class TextRoles
     /// </remarks>
     public static bool TryParseFamily(string word, out TextFontFamily family)
     {
-        if (string.Equals(word, "serif", StringComparison.OrdinalIgnoreCase))
+        // Case-sensitive, like the keys (owner's decision 2026-09-27).
+        if (string.Equals(word, "serif", StringComparison.Ordinal))
         {
             family = TextFontFamily.Serif;
             return true;
         }
-        if (string.Equals(word, "sans", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(word, "sans-serif", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(word, "sans", StringComparison.Ordinal) ||
+            string.Equals(word, "sans-serif", StringComparison.Ordinal))
         {
             family = TextFontFamily.Sans;
             return true;
@@ -407,9 +425,17 @@ public static class TextRoles
         foreach (TextRoleGroup g in Enum.GetValues(typeof(TextRoleGroup)))
             yield return Spelling(g);
         foreach (var r in All)
-            if (r != TextRole.SystemBrace)
+            if (IsWritable(r))
                 yield return Spelling(r);
     }
+
+    /// <summary>
+    /// Whether <paramref name="role"/> has a <c>fonts { }</c> key of its own. Not the brace
+    /// (it is not text), and not the lyric syllable, which the <c>lyrics</c> group names —
+    /// see the remark on <see cref="Spelling(TextRole)"/>.
+    /// </summary>
+    public static bool IsWritable(TextRole role)
+        => role is not (TextRole.SystemBrace or TextRole.LyricText);
 
     /// <summary>
     /// The words an entry may carry AFTER its key besides quoted face names: the redirect
@@ -431,13 +457,26 @@ public static class TextRoles
         ["as", "step", "size", "bold", "italic", "regular"];
 
     /// <summary>True when <paramref name="word"/> is one of <see cref="AttributeWords"/>
-    /// (case-insensitive, like the keys).</summary>
+    /// (case-sensitive, like the keys).</summary>
     public static bool IsAttributeWord(string word)
     {
         foreach (var w in AttributeWords)
-            if (string.Equals(word, w, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(word, w, StringComparison.Ordinal))
                 return true;
         return false;
+    }
+
+    /// <summary>
+    /// The key, family or attribute word <paramref name="word"/> differs from ONLY IN CASE
+    /// (<c>barnumbers</c> → <c>barNumbers</c>, <c>BOLD</c> → <c>bold</c>), or null — so a
+    /// diagnostic can name the spelling to write.
+    /// </summary>
+    public static string? CaseOnlyMatch(string word)
+    {
+        var known = AllKeySpellings().Append("sans-serif").Concat(AttributeWords).ToList();
+        return known.Contains(word, StringComparer.Ordinal)
+            ? null
+            : known.FirstOrDefault(k => string.Equals(k, word, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -461,7 +500,7 @@ public static class TextRoles
     /// </para>
     /// <para>
     /// USER DECISION 2026-09-09 (fifth leg): the NOTATION roles follow too, named out loud —
-    /// there is no family layer for a size or a style, so <c>tabFret step +1</c> or
+    /// there is no family layer for a size or a style, so <c>tab step +1</c> or
     /// <c>notation bold</c> is the only door and it is already the narrow one the face rule
     /// asked for. The tab fret digit moves with everything measured FROM the digit (its
     /// column width, the bite out of the string line, the skyline box, the stem's near end,
@@ -470,7 +509,7 @@ public static class TextRoles
     /// octave digit is drawn and reserved nowhere else (SharedRenderer.ClefModifierEm).
     /// </para>
     /// <para>
-    /// <c>meter</c> — the «+» of a compound meter's numerator, a Lily#-own fallback character
+    /// <c>time</c> — the «+» of a compound meter's numerator, a Lily#-own fallback character
     /// inside a feta glyph run (MeterGlyphRun.Pieces) — was the last to follow (2026-09-09,
     /// sixth leg): its ADVANCE is the TimeSignature's X extent, which the spacing core reads
     /// through <c>SpacingRules.CalculateNoteheadRightExtent</c>, the change-column walks

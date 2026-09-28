@@ -1251,7 +1251,7 @@ internal static class ArticulationEngraver
                 NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), fonts);
 
             // `fonts`, not score.TextMetrics: the score here is the one-voice walk Score, which
-            // carries no plan — a stepped fretFrame / tabTechnique was measured at the default
+            // carries no plan — a stepped diagram / tabTechnique was measured at the default
             // size and drawn at the stepped one (Lab sessions/p646 fr3, 2026-09-26).
             var seedBBox = GetSeedBBoxFor(effArt, fonts);
             var layout = new ArticulationLayout(
@@ -2446,10 +2446,10 @@ internal static class ArticulationEngraver
     /// stopped (+) / heel / toe / snap-pizzicato. Everything else is stem-coupled and
     /// takes the side opposite the (beam-resolved) stem.
     /// LILYPOND-REF: scm/script.scm — these entries carry (direction . UP).
-    /// ⚠️ The fret diagram (<c>@frame</c>) is here by DECISION, not by a script.scm entry: it
+    /// ⚠️ The fret diagram (<c>@diagram</c>) is here by DECISION, not by a script.scm entry: it
     /// is LilyPond's <c>\markup \fret-diagram</c>, a TextScript, whose default direction is DOWN
     /// (scm/define-grobs.scm:3804); a guitar chart puts the diagram over the chord, the twin
-    /// writes it with <c>^</c>, and <c>@frame(…).down</c> still puts it below. Until
+    /// writes it with <c>^</c>, and <c>@diagram(…).down</c> still puts it below. Until
     /// 2026-09-26 it took the side opposite the stem like a staccato — neither the
     /// collector's "above the note" nor LilyPond's default (Lab probes/complex-lys/06).
     /// Owner's decision, session 646.</summary>

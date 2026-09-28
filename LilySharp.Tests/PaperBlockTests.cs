@@ -377,6 +377,24 @@ public class PaperBlockTests
         Assert.Equal(LayoutOptions.Default.PageWidth, p.PageWidth); // the entry bound nothing
     }
 
+    /// <summary>
+    /// Size names and units are case-sensitive like every value word (owner's decision
+    /// 2026-09-27; `A4` and `210MM` were read until then) — refused, naming the spelling.
+    /// </summary>
+    [Theory]
+    [InlineData("paper { size A4 }", "UnknownPaperSizeName", "write 'a4'")]
+    [InlineData("paper { size \"ANSI A\" }", "UnknownPaperSizeName", "write 'ansi a'")]
+    [InlineData("paper { paperWidth 210MM }", "UnknownPaperUnit", "write 'mm'")]
+    [InlineData("paper { paperWidth 21Cm }", "UnknownPaperUnit", "write 'cm'")]
+    public void AWrongCaseSizeOrUnit_IsRefused_NamingTheSpelling(string block, string code, string hint)
+    {
+        var p = Read(block, out var problems);
+        var problem = Assert.Single(problems);
+        Assert.Equal((string)typeof(DiagnosticCodes).GetField(code)!.GetValue(null)!, problem.Code);
+        Assert.Contains(hint, problem.Message, StringComparison.Ordinal);
+        Assert.Equal(LayoutOptions.Default, p); // the entry bound nothing
+    }
+
     [Fact]
     public void AUnitOnStretchability_IsRefused()
     {

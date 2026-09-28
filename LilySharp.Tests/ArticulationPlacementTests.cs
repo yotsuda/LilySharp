@@ -161,7 +161,7 @@ public class ArticulationPlacementTests
         //   — every priority-less script so far supports the next script on the note.
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
             SyntaxTree.Parse("time 4/4 a''4@accent a4@accent@fermata" +
-                " a4@accent@shortfermata a4@accent@longfermata"),
+                " a4@accent@shortFermata a4@accent@longFermata"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
         double middle = MiddleLineY(svg);
         var glyphs = MusicGlyphs(svg);
@@ -197,8 +197,8 @@ public class ArticulationPlacementTests
         // LILYPOND-REF: lily/script-column.cc:160-186 order_grobs — the walk;
         //   lily/new-fingering-engraver.cc:314-340 position_scripts — the fingering.
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 f'4@staccato@tenuto@finger(3)@upbow" +
-                " e'@flageolet@fermata@upbow e,@tenuto@finger(0)@downbow r4 |"),
+            SyntaxTree.Parse("time 4/4 f'4@staccato@tenuto@finger(3)@upBow" +
+                " e'@flageolet@fermata@upBow e,@tenuto@finger(0)@downBow r4 |"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
         double middle = MiddleLineY(svg);
         var glyphs = MusicGlyphs(svg);
@@ -443,8 +443,8 @@ public class ArticulationPlacementTests
         // LILYPOND-REF: lily/slur.cc:364-387 auxiliary_acknowledge_extra_object
         // LILYPOND-REF: scm/script.scm avoid-slur declarations
         string svg = LilySharp.Core.Svg.SvgGenerator.Generate(
-            SyntaxTree.Parse("time 4/4 e'4(@accent@finger(0)@downbow c4@staccato)" +
-                " d@tenuto@downbow d,@staccato@finger(0)@accent |"),
+            SyntaxTree.Parse("time 4/4 e'4(@accent@finger(0)@downBow c4@staccato)" +
+                " d@tenuto@downBow d,@staccato@finger(0)@accent |"),
             new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
         double middle = MiddleLineY(svg);
         var glyphs = MusicGlyphs(svg);

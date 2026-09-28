@@ -69,8 +69,8 @@ public class AnnotationArgumentVocabularyTests
     }
 
     [Theory]
-    [InlineData("c4@fig(6) |", "fig.6")]
-    [InlineData("c4@fig(3 5) |", "fig.3.5")]
+    [InlineData("c4@figuredBass(6) |", "figuredBass.6")]
+    [InlineData("c4@figuredBass(3 5) |", "figuredBass.3.5")]
     [InlineData("c4@finger(3) |", "finger.3")]
     [InlineData("c4@bend(5) |", "bend.5")]
     [InlineData("c4@notehead(x) |", "notehead.x")]

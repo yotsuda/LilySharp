@@ -592,7 +592,7 @@ public sealed partial class LilySharpLanguageServer
         AfterFontKeyword,
         FontBlock,
         AfterFontRoleKey,
-        /// <summary><c>fonts { chordName as |</c> — the two generic families.</summary>
+        /// <summary><c>fonts { chord as |</c> — the two generic families.</summary>
         AfterFontAs,
         /// <summary><c>fonts { mark step |</c> / <c>size |</c> — a number belongs, which no list serves.</summary>
         AfterFontNumber,
@@ -613,7 +613,7 @@ public sealed partial class LilySharpLanguageServer
         LayoutBlock,
         /// <summary><c>score { layout |</c> — the declared block names.</summary>
         AfterLayoutBlockRef,
-        /// <summary><c>layout { marks |</c> — the two arrangements.</summary>
+        /// <summary><c>layout { markTempo |</c> — the two arrangements.</summary>
         AfterLayoutMarks,
         /// <summary><c>layout { barNumbers |</c> — the three policies.</summary>
         AfterLayoutBarNumbers,
@@ -865,15 +865,15 @@ public sealed partial class LilySharpLanguageServer
             if (IsInsideStringLiteral(text, offset))
                 return CompletionContext.AfterFontName;
             // `fonts { serif |` — a bound key takes quoted faces, and a role or group may
-            // also take the attributes (`chordName as sans`, `mark step +1 bold`).
+            // also take the attributes (`chord as sans`, `mark step +1 bold`).
             if (TextRoles.TryParseKey(prevWord, out _, out _, out _))
                 return CompletionContext.AfterFontRoleKey;
             // `… as |` — the generic family the key follows.
-            if (prevWord.Equals("as", StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals("as", StringComparison.Ordinal))
                 return CompletionContext.AfterFontAs;
             // `… step |` / `… size |` — a number, which no list can offer.
-            if (prevWord.Equals("step", StringComparison.OrdinalIgnoreCase)
-                || prevWord.Equals("size", StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals("step", StringComparison.Ordinal)
+                || prevWord.Equals("size", StringComparison.Ordinal))
                 return CompletionContext.AfterFontNumber;
             // After a face or an attribute of an OPEN entry (`mark "X" |`, `mark bold |`)
             // the entry may continue with another attribute or the next key may begin —
@@ -967,19 +967,20 @@ public sealed partial class LilySharpLanguageServer
         // articulations at every caret inside the block.
         if (IsInsideLayoutBlock(scan.Stack) && !IsInsideStringLiteral(text, offset))
         {
-            if (prevWord.Equals(MarkArrangement.Property, StringComparison.OrdinalIgnoreCase))
+            // Keys are case-sensitive (owner's decision 2026-09-27).
+            if (prevWord.Equals(MarkArrangement.Property, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutMarks;
-            if (prevWord.Equals(BarNumberPolicy.Key, StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals(BarNumberPolicy.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutBarNumbers;
-            if (prevWord.Equals(AccidentalStyles.Key, StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals(AccidentalStyles.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutAccidentals;
-            if (prevWord.Equals(SectionLabels.Key, StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals(SectionLabels.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutSectionLabels;
-            if (prevWord.Equals(PartCombineTexts.Key, StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals(PartCombineTexts.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutPartCombineText;
-            if (prevWord.Equals(ChordQualityStyles.Key, StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals(ChordQualityStyles.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutChordQualities;
-            if (prevWord.Equals(MinorChords.Key, StringComparison.OrdinalIgnoreCase))
+            if (prevWord.Equals(MinorChords.Key, StringComparison.Ordinal))
                 return CompletionContext.AfterLayoutMinorChords;
             return CompletionContext.LayoutBlock;
         }
@@ -1716,7 +1717,7 @@ public sealed partial class LilySharpLanguageServer
     /// <summary>True when <paramref name="offset"/> sits inside a <c>@chord(…)</c>
     /// argument.</summary>
     internal static bool IsInsideChordAnnotation(string text, int offset) =>
-        string.Equals(AnnotationArgumentName(text, offset), "chord", StringComparison.OrdinalIgnoreCase);
+        string.Equals(AnnotationArgumentName(text, offset), "chord", StringComparison.Ordinal);
 
     /// <summary>
     /// True when the cursor sits in the MUSIC of a percussion part: ascend the

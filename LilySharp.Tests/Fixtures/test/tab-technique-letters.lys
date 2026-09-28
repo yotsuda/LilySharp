@@ -1,5 +1,5 @@
 // TAB technique letters on a notation staff and on a tab staff: @tap (T),
-// @hammeron (H), @pulloff (P) and @pluck's finger letter. THE FIRST BOOK IN THE
+// @hammerOn (H), @pullOff (P) and @pluck's finger letter. THE FIRST BOOK IN THE
 // TREE THAT DRAWS ANY OF THEM — on 2026-08-28 not one of the 572 tracked .lys
 // wrote one, which is why a letter drawn 0.383 ss INTO its notehead survived
 // (reported that day). The low notes are the point: they take the letter BELOW,
@@ -11,8 +11,8 @@ time 4/4
 part gtr { clef treble }
 section S {
   gtr {
-    c4@tap e@tap g@tap b@hammeron |
-    c'4@tap e'@pulloff g'@tap b'@hammeron |
+    c4@tap e@tap g@tap b@hammerOn |
+    c'4@tap e'@pullOff g'@tap b'@hammerOn |
     e4@pluck(p) a@pluck(i) b@pluck(m) e'@pluck(a) |
   }
 }

@@ -657,7 +657,7 @@ lexer の 2 つ目の綴りになる**（§5.2.1②）——**実測でそこは
      ⇒ **ユーザー決定＝落とす**（宣言つき・網 `ADotWrittenInsideTheParentheses_…`）。
      **文書化されたことは一度も無く、往復の副産物だった。**
    - ★ **gate は case-SENSITIVE**（`@Chord(c)` は今日も昔も chord ではない）。
-     **`AnnotationValues.Named` は OrdinalIgnoreCase なので使えない**——
+     **`AnnotationValues.Named` は OrdinalIgnoreCase なので使えない**（2026-09-27 以降は Ordinal）——
      ⚠️ **他の 8 家族はそれで正しい**（旧 gate は `MarkName.ToLowerInvariant()` してから
      `StartsWith` だった＝**実測。第169 は受理を広げていない**）。
      **`@chord` だけが素の `MarkName` を見ていた例外。**
@@ -692,6 +692,8 @@ lexer の 2 つ目の綴りになる**（§5.2.1②）——**実測でそこは
      `AnnotationValues.Figures` に 1 回訊く**＝`ProcessDirectionName` は点つき名前だけの表になった。
    - ⚠️ **gate は case-INSENSITIVE**（`@Fig(6)` は今日も figured bass）＝`@mark` と同じ・
      `@chord` の逆。網 `TheNameIsCaseInsensitive`。
+     **→ 2026-09-27 オーナー決定で case-SENSITIVE に**（注釈名は全部 Ordinal・綴り違いは
+     LYS1008 が正しい綴りを示す）。網は `TheNameIsCaseSensitive`。
 ~~2. **`@mark("A")` のラベル**~~ — **第171第1便で移した**（`e2af674f`）。
    **島を数えたら綴りは 4 つあった**（引継ぎは「`ParseMarkName` に絡んでいる」＝2 つと読んでいた）:
    ⑴ `ParseMarkName` の `"mark."` 前置＋`Length > 5` の**ゲート** ⑵ `ParseRehearsalText` の
@@ -705,6 +707,8 @@ lexer の 2 つ目の綴りになる**（§5.2.1②）——**実測でそこは
    - ★ **gate は case-INSENSITIVE**＝`@Mark("A")`・`@MARK("A")` は今日も rehearsal
      （旧 gate は `MarkName.ToLowerInvariant().StartsWith("mark.")`）。**`@chord` の逆**なので、
      `AnnotationValues.Named`（OrdinalIgnoreCase）が**ここでは正しい**。
+     **→ 2026-09-27 オーナー決定で case-SENSITIVE に**（`Named` は Ordinal・`@Mark("A")` は
+     unknown で「write '@mark("A")'」と出る）。
    - **`@mark()`（引数 0 個）は「空のラベル」ではなく unknown annotation**＝旧 `Length > 5`。
      引数側では `Arguments.Length > 0`（`IsTextAnnotation` と同じ gate）。
    - ⚠️ ★★ **振る舞い 1＝ラベルは「書いたとおり」になった**（宣言・ユーザー決定・網つき）。

@@ -64,7 +64,6 @@ public class AnnotationValuesTests
     [Theory]
     [InlineData("c4@pluck(p) |", "p")]
     [InlineData("c4@pluck(i) |", "i")]
-    [InlineData("c4@pluck(M) |", "m")]    // the string form lower-cased first too
     public void APluckArgument_IsItsLetter(string music, string letter)
         => Assert.Equal(letter, AnnotationValues.Pluck(Mark(music)));
 
@@ -92,9 +91,27 @@ public class AnnotationValuesTests
     [Theory]
     [InlineData("c4@notehead(x) |", "x")]
     [InlineData("c4@notehead(cross) |", "cross")]
-    [InlineData("c4@notehead(TRIANGLE) |", "triangle")]
+    [InlineData("c4@notehead(triangle) |", "triangle")]
     public void ANoteheadArgument_IsItsStyleWord(string music, string style)
         => Assert.Equal(style, AnnotationValues.Notehead(Mark(music)));
+
+    /// <summary>
+    /// The VALUE words are case-sensitive like the names (owner's decision 2026-09-27):
+    /// until then each of these was lower-cased and read. Every value vocabulary is lower
+    /// case; the validator names the spelling (<c>AnnotationNameValidatorTests</c>).
+    /// </summary>
+    [Fact]
+    public void AValueWordInTheWrongCase_IsNoValue()
+    {
+        Assert.Null(AnnotationValues.Pluck(Mark("c4@pluck(M) |")));
+        Assert.Null(AnnotationValues.Notehead(Mark("c4@notehead(TRIANGLE) |")));
+        Assert.Null(AnnotationValues.Bend(Mark("c4@bend(Full) |")));
+        Assert.Equal(0, AnnotationValues.Feather(Mark("c4@feather(Right) |")));
+        Assert.False(AnnotationValues.IsArpeggioBracket(Mark("c4@arpeggio(BRACKET) |")));
+        Assert.Null(AnnotationValues.Frame(Mark("c4@diagram(X32010) |")));
+        Assert.Null(AnnotationValues.Frame(Mark("c4@diagram(x32O10) |")));   // a capital O
+        Assert.Null(AnnotationValues.Figures(Mark("c4@figuredBass(6 S) |")));
+    }
 
     [Fact]
     public void AnUnknownStyle_IsNoNotehead()
@@ -163,7 +180,6 @@ public class AnnotationValuesTests
 
     [Theory]
     [InlineData("c4@arpeggio(bracket) |", true)]
-    [InlineData("c4@arpeggio(BRACKET) |", true)]
     [InlineData("c4@arpeggio(arrow) |", false)]
     [InlineData("c4@notehead(x) |", false)]
     public void AnArpeggioBracket_IsRecognisedByItsArgument(string music, bool isBracket)
@@ -175,17 +191,17 @@ public class AnnotationValuesTests
     /// from the argument's text, never from the <c>Int(32010)</c> its value would be.
     /// </summary>
     [Theory]
-    [InlineData("c4@frame(032010) |", "032010")]
-    [InlineData("c4@frame(x32010) |", "x32010")]
-    [InlineData("c4@frame(X32010) |", "x32010")]
-    [InlineData("c4@frame(xx0232) |", "xx0232")]
+    [InlineData("c4@diagram(032010) |", "032010")]
+    [InlineData("c4@diagram(x32010) |", "x32010")]
+    [InlineData("c4@diagram(xx0232) |", "xx0232")]
+    [InlineData("c4@diagram(o32010) |", "o32010")]
     public void AFrameArgument_IsItsPositionString(string music, string spec)
         => Assert.Equal(spec, AnnotationValues.Frame(Mark(music)));
 
     [Theory]
-    [InlineData("c4@frame(032) |")]          // too few strings
-    [InlineData("c4@frame(032010789) |")]    // too many
-    [InlineData("c4@frame(zzzz) |")]         // not fret / open / muted
+    [InlineData("c4@diagram(032) |")]          // too few strings
+    [InlineData("c4@diagram(032010789) |")]    // too many
+    [InlineData("c4@diagram(zzzz) |")]         // not fret / open / muted
     public void SomethingElse_IsNoFrame(string music)
         => Assert.Null(AnnotationValues.Frame(Mark(music)));
 
@@ -205,8 +221,8 @@ public class AnnotationValuesTests
     [Fact]
     public void AFrameSpecLilySharpRefuses_NoLongerReachesTheXml()
     {
-        Assert.DoesNotContain("<frame>", Xml("c4@chord(C)@frame(zzzz) |"));
-        Assert.Contains("<frame>", Xml("c4@chord(C)@frame(032010) |"));
+        Assert.DoesNotContain("<frame>", Xml("c4@chord(C)@diagram(zzzz) |"));
+        Assert.Contains("<frame>", Xml("c4@chord(C)@diagram(032010) |"));
     }
 
     private static string Xml(string music) =>
@@ -229,7 +245,7 @@ public class AnnotationValuesTests
     [InlineData("c4@text(\"dolce\") |")]
     [InlineData("c4@feather(right) |")]
     [InlineData("c4@arpeggio(bracket) |")]
-    [InlineData("c4@frame(032010) |")]
+    [InlineData("c4@diagram(032010) |")]
     public void AValueFamilyAnnotation_IsNotWarnedAsUnknown(string music)
     {
         var tree = SyntaxTree.Parse("melody { " + music + " }");
@@ -246,7 +262,7 @@ public class AnnotationValuesTests
     [InlineData("c4@notehead(square) |")]
     [InlineData("c4@feather(sideways) |")]
     [InlineData("c4@arpeggio(arrow) |")]
-    [InlineData("c4@frame(zzzz) |")]
+    [InlineData("c4@diagram(zzzz) |")]
     public void AnArgumentNoConsumerAccepts_IsStillWarned(string music)
     {
         var tree = SyntaxTree.Parse("melody { " + music + " }");

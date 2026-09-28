@@ -4201,7 +4201,7 @@ public sealed partial class MeasureCollector
         {
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.Type == ArticulationType.None &&
-                artSyntax.Name.Equals("courtesy", StringComparison.OrdinalIgnoreCase))
+                artSyntax.Name.Equals("courtesy", StringComparison.Ordinal))
                 return true;
         }
         return false;
@@ -4212,7 +4212,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc — l.v. tie attachment.</remarks>
     private static bool HasLaissezVibrerAnnotation(SyntaxNode node)
-        => HasNamedArticulation(node, "laissezvibrer");
+        => HasNamedArticulation(node, "laissezVibrer");
 
     /// <summary>
     /// The forced curve side (<c>.up</c>/<c>.down</c>) of a node's
@@ -4224,7 +4224,7 @@ public sealed partial class MeasureCollector
     {
         foreach (var art in ArticulationsOf(node))
             if (art is ArticulationSyntax { Type: ArticulationType.None } a
-                && a.Name.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                && a.Name.Equals("laissezVibrer", StringComparison.Ordinal))
                 return a.ForcedAbove;
         return null;
     }
@@ -4234,7 +4234,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/repeat-tie-engraver.cc — repeat-tie attachment.</remarks>
     private static bool HasRepeatTieAnnotation(SyntaxNode node)
-        => HasNamedArticulation(node, "repeattie");
+        => HasNamedArticulation(node, "repeatTie");
 
     /// <summary>
     /// The forced curve side (<c>.up</c>/<c>.down</c>) of a node's
@@ -4247,7 +4247,7 @@ public sealed partial class MeasureCollector
     {
         foreach (var art in ArticulationsOf(node))
             if (art is ArticulationSyntax { Type: ArticulationType.None } a
-                && a.Name.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
+                && a.Name.Equals("repeatTie", StringComparison.Ordinal))
                 return a.ForcedAbove;
         return null;
     }
@@ -4269,7 +4269,7 @@ public sealed partial class MeasureCollector
     {
         foreach (var art in ArticulationsOf(node))
             if (art is ArticulationSyntax { Type: ArticulationType.None } a
-                && a.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                && a.Name.Equals(name, StringComparison.Ordinal))
                 return a.SourceStart;
         return MusicItem.NoSourcePosition;
     }
@@ -4349,7 +4349,7 @@ public sealed partial class MeasureCollector
         foreach (var art in ArticulationsOf(node))
         {
             if (art is MusicMarkSyntax mark
-                && mark.Name.Equals("notehead", StringComparison.OrdinalIgnoreCase)
+                && mark.Name.Equals("notehead", StringComparison.Ordinal)
                 && mark.HasArgumentList)
             {
                 return Semantics.AnnotationValues.Notehead(mark) switch
@@ -4366,7 +4366,8 @@ public sealed partial class MeasureCollector
         return NoteheadStyle.Default;
     }
 
-    private static bool HasNamedArticulation(SyntaxNode node, string lowerName)
+    // Case-sensitive: the name is its one canonical spelling (owner's decision 2026-09-27).
+    private static bool HasNamedArticulation(SyntaxNode node, string name)
     {
         var articulations = ArticulationsOf(node);
 
@@ -4374,7 +4375,7 @@ public sealed partial class MeasureCollector
         {
             if (art is ArticulationSyntax artSyntax &&
                 artSyntax.Type == ArticulationType.None &&
-                artSyntax.Name.Equals(lowerName, StringComparison.OrdinalIgnoreCase))
+                artSyntax.Name.Equals(name, StringComparison.Ordinal))
                 return true;
         }
         return false;
@@ -4390,8 +4391,8 @@ public sealed partial class MeasureCollector
     /// </summary>
     private static bool? GetStemDirectionOverride(SyntaxNode node)
     {
-        if (HasNamedArticulation(node, "stemup")) return true;
-        if (HasNamedArticulation(node, "stemdown")) return false;
+        if (HasNamedArticulation(node, "stemUp")) return true;
+        if (HasNamedArticulation(node, "stemDown")) return false;
         return null;
     }
 

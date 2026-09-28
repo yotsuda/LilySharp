@@ -109,17 +109,17 @@ public class NamedBlockReferenceTests
     [Fact]
     public void AFontsOverrideBlock_ReadsAsOneMergedBlock()
     {
-        string src = "fonts house { serif \"Georgia\"  lyricText \"Charis SIL\" }\n"
+        string src = "fonts house { serif \"Georgia\"  stanza \"Charis SIL\" }\n"
             + Music
-            + "score main { fonts house { lyricText \"Noto Serif CJK JP\" }  staff melody }\n";
+            + "score main { fonts house { stanza \"Noto Serif CJK JP\" }  staff melody }\n";
 
         var fonts = Collect(src, "main").Fonts;
         var expected = new TextFontPlan.Builder()
             .Family(TextFontFamily.Serif, ["Georgia"])
-            .Role(TextRole.LyricText, ["Noto Serif CJK JP"])
+            .Role(TextRole.Stanza, ["Noto Serif CJK JP"])
             .Build();
         Assert.Equal(expected, fonts);
-        // …and no duplicate-key warning for the cross-block lyricText repeat:
+        // …and no duplicate-key warning for the cross-block stanza repeat:
         // overriding a key is the override block's purpose.
         Assert.DoesNotContain(Check(src), d => d.Code == DiagnosticCodes.DuplicateFontBinding);
     }
@@ -128,20 +128,20 @@ public class NamedBlockReferenceTests
     public void TheNarrowerSpellingWins_WhicheverBlockItCameFrom()
     {
         // ⚠️ THE DELIBERATE SURPRISE, pinned by name (design decision 2026-08-23):
-        // the house block binds the ROLE lyricText, the score overrides the GROUP
+        // the house block binds the ROLE stanza, the score overrides the GROUP
         // lyrics — and the role still wins, because the resolution rule is ONE rule
         // (the narrower spelling wins, source not consulted). A house style's
         // deliberate role bindings survive a score swapping the broad base; to
         // override a role, write the same or a narrower key.
-        string src = "fonts house { lyricText \"Charis SIL\" }\n"
+        string src = "fonts house { stanza \"Charis SIL\" }\n"
             + Music
             + "score main { fonts house { lyrics \"Verdana\" }  staff melody }\n";
 
-        var resolved = Collect(src, "main").Fonts.Resolve(TextRole.LyricText);
+        var resolved = Collect(src, "main").Fonts.Resolve(TextRole.Stanza);
         Assert.Equal(["Charis SIL"], resolved.Names);
         // The control beside it: a role the house does NOT bind follows the group.
-        var stanza = Collect(src, "main").Fonts.Resolve(TextRole.Stanza);
-        Assert.Equal(["Verdana"], stanza.Names);
+        var syllable = Collect(src, "main").Fonts.Resolve(TextRole.LyricText);
+        Assert.Equal(["Verdana"], syllable.Names);
     }
 
     [Fact]

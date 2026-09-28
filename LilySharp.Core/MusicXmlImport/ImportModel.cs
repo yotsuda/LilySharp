@@ -248,7 +248,7 @@ internal sealed class ImportHarmony : ImportItem
 
 /// <summary>
 /// A figured-bass group (MusicXML <c>&lt;figured-bass&gt;</c>). Like a harmony it
-/// attaches to the FOLLOWING (bass) note, as an inline <c>@fig(...)</c>.
+/// attaches to the FOLLOWING (bass) note, as an inline <c>@figuredBass(...)</c>.
 /// </summary>
 internal sealed class ImportFiguredBass : ImportItem
 {

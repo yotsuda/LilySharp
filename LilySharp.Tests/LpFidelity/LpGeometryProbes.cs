@@ -6140,7 +6140,7 @@ internal static class LpGeometryProbes
         part fig { clef bass }
 
         section Main {
-          fig { c,,2@stemDown@fig(5 3) c,,@stemDown@fig(6) | c,,2@stemDown@fig(7) c,,@stemDown@fig(6 4) | }
+          fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
         }
 
         form main { ~Main }
@@ -6171,7 +6171,7 @@ internal static class LpGeometryProbes
         part fig { clef bass }
 
         section Main {
-          fig { d,2@stemUp@fig(5 3) d,@stemUp@fig(6) | d,2@stemUp@fig(7) d,@stemUp@fig(6 4) | }
+          fig { d,2@stemUp@figuredBass(5 3) d,@stemUp@figuredBass(6) | d,2@stemUp@figuredBass(7) d,@stemUp@figuredBass(6 4) | }
         }
 
         form main { ~Main }
@@ -6192,7 +6192,7 @@ internal static class LpGeometryProbes
         part comp { clef bass }
 
         section Main {
-          fig { c,,2@stemDown@fig(5 3) c,,@stemDown@fig(6) | c,,2@stemDown@fig(7) c,,@stemDown@fig(6 4) | }
+          fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
           comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
         }
 
@@ -6217,7 +6217,7 @@ internal static class LpGeometryProbes
 
         section Main {
           comp { c,,2@stemDown c,,@stemDown | c,,2@stemDown c,,@stemDown | }
-          fig { c,,2@stemDown@fig(5 3) c,,@stemDown@fig(6) | c,,2@stemDown@fig(7) c,,@stemDown@fig(6 4) | }
+          fig { c,,2@stemDown@figuredBass(5 3) c,,@stemDown@figuredBass(6) | c,,2@stemDown@figuredBass(7) c,,@stemDown@figuredBass(6 4) | }
         }
 
         form main { ~Main }
@@ -6260,7 +6260,7 @@ internal static class LpGeometryProbes
     /// </remarks>
     private static string FiguredPageScore(string tag, string note, string stem, bool figures)
     {
-        string fig = figures ? "@fig(5 3)" : "";
+        string fig = figures ? "@figuredBass(5 3)" : "";
         string bar = $"{note}4@{stem}{fig} {note}@{stem} {note}@{stem} {note}@{stem} | ";
         return $$"""
             octave absolute

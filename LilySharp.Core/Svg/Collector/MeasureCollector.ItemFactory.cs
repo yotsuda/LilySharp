@@ -191,9 +191,9 @@ public sealed partial class MeasureCollector
             // The half-tie names the '@' that wrote it, not this note's own address
             // (MusicItem.LaissezVibrerSourcePosition).
             LaissezVibrerSourcePosition = hasLv
-                ? NamedArticulationSourceOf(note, "laissezvibrer") : MusicItem.NoSourcePosition,
+                ? NamedArticulationSourceOf(note, "laissezVibrer") : MusicItem.NoSourcePosition,
             RepeatTieSourcePosition = hasRepeatTie
-                ? NamedArticulationSourceOf(note, "repeattie") : MusicItem.NoSourcePosition,
+                ? NamedArticulationSourceOf(note, "repeatTie") : MusicItem.NoSourcePosition,
             LineStartAccidental = lineStartAccidental,
         };
     }
@@ -393,9 +393,9 @@ public sealed partial class MeasureCollector
         // tie, so all of them cite this one offset; a member-level annotation carries its
         // own on the ChordNoteInfo and wins there.
         int chordLvSrc = chordLv
-            ? NamedArticulationSourceOf(chord, "laissezvibrer") : MusicItem.NoSourcePosition;
+            ? NamedArticulationSourceOf(chord, "laissezVibrer") : MusicItem.NoSourcePosition;
         int chordRtSrc = chordRt
-            ? NamedArticulationSourceOf(chord, "repeattie") : MusicItem.NoSourcePosition;
+            ? NamedArticulationSourceOf(chord, "repeatTie") : MusicItem.NoSourcePosition;
 
         // Octave marks AFTER the closing '>' (<1 3 5>' / <c e g>,,) shift the WHOLE
         // chord uniformly. Applying it to the root's resolved octave (and, for an
@@ -479,7 +479,7 @@ public sealed partial class MeasureCollector
             // print — the "parenthesized" property wraps the stencil.
             bool memberCourtesy = pitch.Articulations.Any(a =>
                 a is ArticulationSyntax { Type: ArticulationType.None } ca
-                && ca.Name.Equals("courtesy", StringComparison.OrdinalIgnoreCase));
+                && ca.Name.Equals("courtesy", StringComparison.Ordinal));
             if (memberCourtesy && accidental == null)
                 accidental = KeySignatureAccidentalName(rp.DisplayStep);
 
@@ -510,10 +510,10 @@ public sealed partial class MeasureCollector
                 if (a is ArticulationSyntax { Type: ArticulationType.None } la)
                 {
                     if (memberLv == null
-                        && la.Name.Equals("laissezvibrer", StringComparison.OrdinalIgnoreCase))
+                        && la.Name.Equals("laissezVibrer", StringComparison.Ordinal))
                         memberLv = la;
                     else if (memberRt == null
-                        && la.Name.Equals("repeattie", StringComparison.OrdinalIgnoreCase))
+                        && la.Name.Equals("repeatTie", StringComparison.Ordinal))
                         memberRt = la;
                 }
 

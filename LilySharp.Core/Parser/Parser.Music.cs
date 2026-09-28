@@ -1197,7 +1197,7 @@ internal sealed partial class Parser
                         }
                         GreenRun.Take(new ArticulationGreen(at, name, dot, dir, [.. rejected]), ref first, ref second, ref more);
                     }
-                    // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(d:m),
+                    // @name(args) — parenthesised arguments, e.g. @figuredBass(6 4), @chord(d:m),
                     // @mark("A"), @finger(3), @feather(right). The '.' is reserved
                     // for .up/.down placement (handled above); EVERY annotation argument now
                     // goes in parentheses, separated by whitespace or commas. The arg tokens
@@ -1209,7 +1209,7 @@ internal sealed partial class Parser
                     // SLUR: `c4@arpeggio ( d4 e4 )` used to read the parenthesised group
                     // as @arpeggio's argument and swallow three notes, reporting only
                     // "Unknown annotation '@arpeggio ( d4 e4 )'". Every argument anyone
-                    // writes is glued (`@fig(6 4)`, `@text("dolce")`), so the rule costs
+                    // writes is glued (`@figuredBass(6 4)`, `@text("dolce")`), so the rule costs
                     // nothing and the trap is gone.
                     // ⚠️ A name whose argument is OPTIONAL (@ottava, @ottava(bassa)) has the
                     // same trap GLUED: `e8@ottava( d c b)` is the slur, and it used to be read
@@ -1230,13 +1230,13 @@ internal sealed partial class Parser
                             parts.Add(Advance()); // argument token (or a ',' separator)
                         parts.Add(Expect(SyntaxKind.CloseParen));
                         // @text("…").up / .down — placement on the free-text
-                        // annotation — and @frame(…).down, the fret diagram being
+                        // annotation — and @diagram(…).down, the fret diagram being
                         // above by default (owner's decision, session 646). Only these
                         // two take it: the other value annotations have fixed sides,
                         // and consuming a '.' here would corrupt their dotted MarkName
                         // forms (both of these read their argument, never the name).
-                        if ((name.Text.Equals("text", StringComparison.OrdinalIgnoreCase)
-                             || name.Text.Equals("frame", StringComparison.OrdinalIgnoreCase))
+                        if ((name.Text.Equals("text", StringComparison.Ordinal)
+                             || name.Text.Equals("diagram", StringComparison.Ordinal))
                             && Current.Kind == SyntaxKind.Dot
                             && IsPlacementWord(Peek(1))
                             && Peek(2)?.Kind != SyntaxKind.Dot)
@@ -1247,7 +1247,7 @@ internal sealed partial class Parser
                         GreenRun.Take(new MusicMarkGreen([.. parts]), ref first, ref second, ref more);
                     }
                     else if (Current.Kind == SyntaxKind.Identifier
-                             && Current.Text.Equals("chord", StringComparison.OrdinalIgnoreCase))
+                             && Current.Text.Equals("chord", StringComparison.Ordinal))
                     {
                         // Bare '@chord' (no argument): auto-derive the chord symbol
                         // from the notes it is attached to. Kept as a MusicMark (like

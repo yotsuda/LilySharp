@@ -45,7 +45,7 @@ public static class PitchedRest
     /// <summary>Whether a post-event is the <c>@rest</c> marker.</summary>
     public static bool IsMarker(SyntaxNode articulation)
         => articulation is ArticulationSyntax { Type: ArticulationType.None } named
-           && named.NameToken.Text.Equals("rest", StringComparison.OrdinalIgnoreCase);
+           && named.NameToken.Text.Equals("rest", StringComparison.Ordinal);
 
     /// <summary>Whether a written note is really a pitched rest.</summary>
     public static bool Is(NoteSyntax note)
@@ -81,6 +81,6 @@ public static class PitchedRest
             return false;
         var name = articulation.GetSlot(1)?.Text ?? string.Empty;
         return ArticulationRegistry.Resolve(name) == ArticulationType.None
-            && name.Equals("rest", StringComparison.OrdinalIgnoreCase);
+            && name.Equals("rest", StringComparison.Ordinal);
     }
 }

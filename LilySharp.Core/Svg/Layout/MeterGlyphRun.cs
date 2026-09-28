@@ -109,7 +109,7 @@ internal static class MeterGlyphRun
     internal const double PlusEngravingEm = 2.4;
 
     /// <summary>The em the <c>+</c> is drawn at for THIS score: the engraving's
-    /// <see cref="PlusEngravingEm"/> stepped by what <c>fonts { }</c> wrote for <c>meter</c>
+    /// <see cref="PlusEngravingEm"/> stepped by what <c>fonts { }</c> wrote for <c>time</c>
     /// (or <c>notation</c>). USER DECISION 2026-09-09: the notation roles follow a written
     /// size and style, named out loud.</summary>
     internal static double PlusEm(ScoreTextMetrics fonts)

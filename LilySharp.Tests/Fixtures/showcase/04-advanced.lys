@@ -17,8 +17,8 @@ phrase chorale {
 
 phrase figured {
   // Figured bass annotations
-  c4@fig(5 3) d@fig(6) e@fig(6 4) f@fig(5 3) |
-  g4@fig(7) a@fig(6) g@fig(5 3) c@fig(5 3) |
+  c4@figuredBass(5 3) d@figuredBass(6) e@figuredBass(6 4) f@figuredBass(5 3) |
+  g4@figuredBass(7) a@figuredBass(6) g@figuredBass(5 3) c@figuredBass(5 3) |
 }
 
 // Was `overrideDemo`, opening with `override Stem.length = 10`. Stem.length is not a

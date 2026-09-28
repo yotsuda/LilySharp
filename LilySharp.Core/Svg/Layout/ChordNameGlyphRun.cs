@@ -130,7 +130,7 @@ internal static class ChordNameGlyphRun
 
     /// <summary>
     /// The markup property <c>font-size</c> in force inside this score's chord symbol — the
-    /// grob's own <see cref="FontSizeStep"/> as the score's <c>fonts { chordName … }</c>
+    /// grob's own <see cref="FontSizeStep"/> as the score's <c>fonts { chord … }</c>
     /// left it.
     /// </summary>
     /// <remarks>
@@ -363,7 +363,7 @@ internal static class ChordNameGlyphRun
     /// <summary>
     /// The symbol's text em for THIS score: <see cref="EngravingDefaults.ChordNameFontSize"/>
     /// unless the score's <c>fonts { }</c> wrote a <c>step</c> or <c>size</c> for
-    /// <c>chordName</c> (or <c>chords</c>). Every reader of the em — the draw, the run's
+    /// <c>chord</c> (or <c>chords</c>). Every reader of the em — the draw, the run's
     /// pieces, the row skyline — asks here.
     /// </summary>
     internal static double Em(ScoreTextMetrics fonts)

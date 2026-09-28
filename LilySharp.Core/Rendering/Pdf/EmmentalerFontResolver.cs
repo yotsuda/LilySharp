@@ -69,7 +69,7 @@ internal sealed class EmmentalerFontResolver : IFontResolver
     /// <remarks>
     /// <paramref name="Sans"/> comes from the ROLE the name was bound to — chord symbols
     /// are the only sans role — and decides the stand-in, so a non-embedded
-    /// <c>chordName "Georgia"</c> falls back to the Heros the layout measured rather than
+    /// <c>chord "Georgia"</c> falls back to the Heros the layout measured rather than
     /// to Schola.
     /// <para>
     /// ⚠️ LILYSHARP-OWN: ONE NAME BOUND TO BOTH FAMILIES keeps the FIRST role's answer.

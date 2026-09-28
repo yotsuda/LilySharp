@@ -19,7 +19,7 @@ using LilySharp.Core.Rendering;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
-/// The dimensions of a chord diagram (<c>@frame(…)</c>) — ONE home for the drawing
+/// The dimensions of a chord diagram (<c>@diagram(…)</c>) — ONE home for the drawing
 /// (<c>SharedRenderer.DrawFretFrame</c>) and the box the layout reserves for it
 /// (<c>ArticulationEngraver.FrameBox</c>), so the two cannot drift.
 /// </summary>
@@ -31,7 +31,7 @@ namespace LilySharp.Core.Svg.Layout;
 ///   string-distance 1.0; :306 sth = size × th (the thickness multiplies too).
 /// Until 2026-09-26 Lily# drew it at 0.55 × 0.5 staff spaces — about half LilyPond's —
 /// and a reader found it too small to read. The <c>size</c> is the score's
-/// <c>fonts { fretFrame step ±n }</c> (or <c>size n</c>, the "Nfr" label's em): the same ratio
+/// <c>fonts { diagram step ±n }</c> (or <c>size n</c>, the "Nfr" label's em): the same ratio
 /// the label's em takes (<see cref="Scale"/>), so the label and the grid move as one.
 /// Owner's decision, session 646.
 /// ⚠️ LILYSHARP-OWN in the detail: the o / x header, the dots and the label are drawn by
@@ -46,7 +46,7 @@ internal static class FretFrameGeometry
     internal const int FretRows = 4;
 
     /// <summary>LilyPond's <c>size</c> for this score: 1 with no directive, 2 at
-    /// <c>fretFrame step +6</c>.</summary>
+    /// <c>diagram step +6</c>.</summary>
     internal static double Scale(ScoreTextMetrics fonts)
         => fonts.Size(TextRole.FretFrame, LabelEm) / LabelEm;
 

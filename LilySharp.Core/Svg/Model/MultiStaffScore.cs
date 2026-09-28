@@ -136,7 +136,7 @@ public sealed record MultiStaffScore
     public Semantics.LayoutPlan LayoutPlan { get; init; } = Semantics.LayoutPlan.Default;
 
     /// <summary>
-    /// <c>marks beside</c>: a boxed section label stands at the line-start edge with the
+    /// <c>markTempo beside</c>: a boxed section label stands at the line-start edge with the
     /// bar's tempo mark to its right on one line (the chart's arrangement), instead of the
     /// stacked default that is LilyPond's — <see cref="LayoutPlan"/>'s bit, named for its
     /// readers (Semantics.MarkArrangement).
@@ -370,7 +370,7 @@ public sealed record MultiStaffScore
             Paper = score.Paper,
             // The wrap a SINGLE-staff score always takes: a score-global bit left out here
             // is silently the default on every solo book (measured 2026-09-09 — the first
-            // draft of `marks beside` reached the multi-staff path only).
+            // draft of `markTempo beside` reached the multi-staff path only).
             LayoutPlan = score.LayoutPlan,
         };
     }

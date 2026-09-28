@@ -192,7 +192,7 @@ internal sealed class MetadataState
         Poet = null;
         // (Fonts, Paper and LayoutPlan are deliberately NOT reset: they are resolved once by
         // CollectDefinitions and read at capture, and a per-pass reset here would drop
-        // them before the score is assembled — measured 2026-09-09 on `marks beside`.)
+        // them before the score is assembled — measured 2026-09-09 on `markTempo beside`.)
         TitlePosition = 0;
         ComposerPosition = 0;
         SubtitlePosition = 0;

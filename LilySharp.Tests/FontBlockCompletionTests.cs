@@ -63,8 +63,8 @@ public class FontBlockCompletionTests
 
     [Theory]
     [InlineData("fonts { serif ")]
-    [InlineData("fonts { lyricText ")]
-    [InlineData("fonts { chordName ")]
+    [InlineData("fonts { lyrics ")]
+    [InlineData("fonts { chord ")]
     [InlineData("fonts { notation ")]
     // Role keys that are also metadata / directive keywords elsewhere: inside the block they
     // are keys, not `title "…"` or `tempo 120` (2026-09-26 — each offered its own value).
@@ -92,7 +92,7 @@ public class FontBlockCompletionTests
     [InlineData("fonts { serif \"")]
     [InlineData("fonts { serif \"Geo")]
     [InlineData("fonts { serif \"Georgia\"  sans \"")]
-    [InlineData("fonts { lyricText \"Charis SIL\" \"Noto Ser")]
+    [InlineData("fonts { lyrics \"Charis SIL\" \"Noto Ser")]
     public void InsideABlockString_OffersTheInstalledFaces(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterFontName, Ctx(text));
 
@@ -110,7 +110,7 @@ public class FontBlockCompletionTests
     /// </remarks>
     [Theory]
     [InlineData("mark")]
-    [InlineData("chordName")]
+    [InlineData("chord")]
     [InlineData("lyrics")]
     public void AfterARoleKey_TheSizeWordsComeFirst_AndTheFaceLast(string key)
     {
@@ -153,7 +153,7 @@ public class FontBlockCompletionTests
 
         // …and what it writes compiles: the chain is a real spelling, not a guess.
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(
-            "fonts { lyricText \"Charis SIL\" \"Noto Sans\" }\n");
+            "fonts { lyrics \"Charis SIL\" \"Noto Sans\" }\n");
         Assert.False(tree.HasErrors);
         Assert.Empty(LilySharp.Core.Semantics.SemanticValidation.Run(tree)
             .Where(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error));
@@ -407,7 +407,7 @@ public class FontBlockCompletionTests
         var whole = LilySharpLanguageServer.GetFontNameCompletions()
             .Items.Select(i => i.Label).ToArray();
 
-        foreach (string key in new[] { "lyricText", "title", "marks", "notation", "" })
+        foreach (string key in new[] { "lyrics", "title", "marks", "notation", "" })
         {
             var offered = LilySharpLanguageServer.GetFontNameCompletions(key)
                 .Items.Select(i => i.Label).ToArray();
@@ -497,7 +497,7 @@ public class FontBlockCompletionTests
         // — and the size and style attributes, all of which ARE accepted there. The bare
         // family word is NOT offered any more: it is the next key now, and would complete
         // the line the reader refuses.
-        foreach (string key in new[] { "chordName", "lyrics", "title" })
+        foreach (string key in new[] { "chord", "lyrics", "title" })
         {
             var labels = LilySharpLanguageServer.GetFontRoleValueCompletions(key)
                 .Items.Select(i => i.Label).ToArray();

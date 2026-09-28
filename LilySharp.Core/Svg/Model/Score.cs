@@ -182,7 +182,7 @@ public sealed record Score
     /// </summary>
     public Semantics.LayoutPlan LayoutPlan { get; init; } = Semantics.LayoutPlan.Default;
 
-    /// <summary><c>marks beside</c> — <see cref="LayoutPlan"/>'s bit, named for its readers.</summary>
+    /// <summary><c>markTempo beside</c> — <see cref="LayoutPlan"/>'s bit, named for its readers.</summary>
     public bool MarksBeside => LayoutPlan.MarksBeside;
 
     /// <summary>

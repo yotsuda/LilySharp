@@ -776,7 +776,7 @@ public class EditorColouringTests
         // Each key's rule paints its own words, and only those.
         foreach (var (key, words) in new (string, IEnumerable<string>)[]
         {
-            ("marks", LanguageVocabulary.MarkArrangements),
+            ("markTempo", LanguageVocabulary.MarkArrangements),
             ("barNumbers", LanguageVocabulary.BarNumberPolicies),
             ("accidentals", LanguageVocabulary.AccidentalStyleWords),
             ("sectionLabels", LanguageVocabulary.SectionLabelStyles),
@@ -796,7 +796,7 @@ public class EditorColouringTests
 
         // The bare-key rule names exactly the compiler's keys.
         string keyRule = Assert.Single(rules, r => r.StartsWith("\\b(", StringComparison.Ordinal)
-            && !r.Contains("\\s+", StringComparison.Ordinal) && r.Contains("marks", StringComparison.Ordinal));
+            && !r.Contains("\\s+", StringComparison.Ordinal) && r.Contains("markTempo", StringComparison.Ordinal));
         Assert.Equal(LanguageVocabulary.LayoutKeys.OrderBy(k => k, StringComparer.Ordinal),
             Regex.Match(keyRule, @"\(([^)]+)\)").Groups[1].Value.Split('|').OrderBy(k => k, StringComparer.Ordinal));
 
@@ -804,7 +804,7 @@ public class EditorColouringTests
         foreach (string key in LanguageVocabulary.LayoutKeys)
             Assert.True(IsColoured(key), $"`{key}` is left plain inside layout {{ }}");
         foreach (string word in LanguageVocabulary.MarkArrangements)
-            Assert.True(IsColoured($"marks {word}"), $"`marks {word}` is left plain by the grammar");
+            Assert.True(IsColoured($"markTempo {word}"), $"`markTempo {word}` is left plain by the grammar");
         foreach (string word in LanguageVocabulary.BarNumberPolicies)
             Assert.True(IsColoured($"barNumbers {word}"), $"`barNumbers {word}` is left plain by the grammar");
         foreach (string word in LanguageVocabulary.AccidentalStyleWords)

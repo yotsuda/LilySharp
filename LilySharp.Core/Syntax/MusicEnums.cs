@@ -40,15 +40,15 @@ public enum ArticulationType
     FermataLong,
     /// <summary>Guitar bend-up with a semitone amount (<c>@bend(full)</c>).</summary>
     Bend,
-    /// <summary>Hammer-on — TAB "H" (<c>@hammeron</c>).</summary>
+    /// <summary>Hammer-on — TAB "H" (<c>@hammerOn</c>).</summary>
     HammerOn,
-    /// <summary>Pull-off — TAB "P" (<c>@pulloff</c>).</summary>
+    /// <summary>Pull-off — TAB "P" (<c>@pullOff</c>).</summary>
     PullOff,
     /// <summary>Tap — TAB "T" (<c>@tap</c>).</summary>
     Tap,
-    /// <summary>Bartók (snap) pizzicato (<c>@snappizz</c>).</summary>
+    /// <summary>Bartók (snap) pizzicato (<c>@snapPizz</c>).</summary>
     SnapPizz,
-    /// <summary>Fret chord diagram (<c>@frame(x32010)</c>).</summary>
+    /// <summary>Fret chord diagram (<c>@diagram(x32010)</c>).</summary>
     FretFrame,
     /// <summary>Stopped note — "+" above (closed hi-hat, stopped horn).</summary>
     Stopped,

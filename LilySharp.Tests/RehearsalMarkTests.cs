@@ -46,9 +46,7 @@ public class RehearsalMarkTests
 
     /// <summary>
     /// The label is the annotation's argument, printed as written — case and symbols
-    /// preserved, the quotes being delimiters rather than text. The name gate is
-    /// case-INSENSITIVE, which is what the string form's
-    /// <c>MarkName.ToLowerInvariant().StartsWith("mark.")</c> did.
+    /// preserved, the quotes being delimiters rather than text.
     /// </summary>
     [Theory]
     [InlineData("c4@mark(\"A\") |", "A")]
@@ -59,10 +57,26 @@ public class RehearsalMarkTests
     [InlineData("c4@mark(\"\") |", "")]
     [InlineData("c4@mark(A) |", "A")]              // unquoted: LYS1009, but the same label
     [InlineData("c4@mark(1) |", "1")]
-    [InlineData("c4@Mark(\"C\") |", "C")]
-    [InlineData("c4@MARK(\"z\") |", "z")]
     public void ARehearsalLabel_IsItsArgument(string music, string expected)
         => Assert.Equal(expected, AnnotationValues.Rehearsal(Mark(music), out _));
+
+    /// <summary>
+    /// The name gate is case-SENSITIVE (owner's decision 2026-09-27; <c>@Mark</c> and
+    /// <c>@MARK</c> were rehearsal marks until then): no label, and the warning names the
+    /// spelling to write.
+    /// </summary>
+    [Theory]
+    [InlineData("c4@Mark(\"C\") |", "@mark(\"C\")")]
+    [InlineData("c4@MARK(\"z\") |", "@mark(\"z\")")]
+    public void AWrongCaseMarkName_IsNotARehearsalMark_AndTheRightSpellingIsNamed(
+        string music, string canonical)
+    {
+        Assert.Null(AnnotationValues.Rehearsal(Mark(music), out _));
+        var validator = new AnnotationNameValidator();
+        validator.Validate(SyntaxTree.Parse("melody { " + music + " }"));
+        var warning = Assert.Single(validator.Diagnostics, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+        Assert.Contains($"write '{canonical}'", warning.Message);
+    }
 
     /// <summary>
     /// ⚠️ The declared behaviour change. MarkName joined the argument's tokens with '.',
