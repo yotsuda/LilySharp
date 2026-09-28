@@ -87,27 +87,40 @@
   </figure>
 
   <h3>A duration digit replaces the duration</h3>
-  <p>Type a digit with the caret anywhere on a note and it goes to the duration slot — and a
-  digit that starts a new duration <b>replaces</b> the one there rather than appending to it.
-  Dots stay.</p>
+  <p>Type a digit with the caret anywhere on a note, rest, chord or slash note and it goes to
+  the duration slot, and <b>what it leaves there is always a real duration</b> — 1, 2, 4, 8,
+  16, 32, 64 or 128. A digit that makes one together with the digits already there extends
+  them; otherwise it <b>replaces</b> them. Dots stay.</p>
   <table class="g">
     <tr><th>Before</th><th>Type</th><th>After</th></tr>
     <tr><td class="ba">c4|</td><td><code>8</code></td><td class="ba">c8|</td></tr>
     <tr><td class="ba">c|4</td><td><code>8</code></td><td class="ba">c|8</td></tr>
     <tr><td class="ba">c16|</td><td><code>8</code></td><td class="ba">c8|</td></tr>
+    <tr><td class="ba">c1|</td><td><code>6</code></td><td class="ba">c16| — 16 is a duration, so the 6 extends</td></tr>
+    <tr><td class="ba">c1|</td><td><code>2</code></td><td class="ba">c2| — 12 is not, so the 2 replaces</td></tr>
+    <tr><td class="ba">c4|</td><td><code>6</code></td><td class="ba">c64| — a 3 or 6 on its own is completed to 32 or 64</td></tr>
     <tr><td class="ba">c4.|</td><td><code>8</code></td><td class="ba">c8.| — the dot is kept</td></tr>
     <tr><td class="ba">&lt;c e g&gt;4|</td><td><code>8</code></td><td class="ba">&lt;c e g&gt;8|</td></tr>
     <tr><td class="ba">r4|</td><td><code>2</code></td><td class="ba">r2| — rests too</td></tr>
+    <tr><td class="ba">/4|</td><td><code>8</code></td><td class="ba">/8| — and slash notes</td></tr>
     <tr><td class="ba">c4@f|</td><td><code>8</code></td><td class="ba">c8@f|</td></tr>
+    <tr><td class="ba">c4|</td><td><code>5</code></td><td class="ba">c4| — no duration begins with 5: nothing changes</td></tr>
   </table>
-  <p>Longer values still type naturally: <b>directly after the digits</b> a keystroke that can
-  continue a duration extends it (<code>c1|</code> + <code>6</code> → <code>c16</code>; and
-  <code>c1|</code> + <code>2</code> → <code>c12</code>, on the way to a 128th). A
-  <code>3</code> or a <code>6</code> can only start 32 or 64, so on its own it is completed
-  (<code>c|4</code> + <code>3</code> → <code>c32</code>). A digit that begins no duration —
-  <code>5</code>, <code>7</code>, <code>9</code>, <code>0</code> — is typed as pressed, and so
-  is any digit inside a chord's brackets (a scale degree) or inside an annotation's
-  parentheses (<code>@finger(3)</code>).</p>
+  <p><b>Directly after the digits</b> a digit extends them only when the result is a duration
+  (<code>c1|</code> + <code>6</code> → <code>c16</code>, <code>c3|</code> + <code>2</code> →
+  <code>c32</code>). <b>Anywhere else on the note</b> a 1, 2, 4 or 8 starts a fresh duration
+  (<code>c1.|</code> + <code>2</code> → <code>c2.</code>), while a 3 or 6 — no duration by
+  itself — extends when it can (<code>c1.|</code> + <code>6</code> → <code>c16.</code>). A
+  <code>3</code> or <code>6</code> that extends into nothing is completed to the only
+  duration it can start: <code>32</code> or <code>64</code>. Retyping the duration a note
+  already has changes nothing. A digit that begins no duration — <code>5</code>,
+  <code>7</code>, <code>9</code>, <code>0</code> — <b>leaves the note unchanged</b> and says so
+  in the status bar: on a note it could only write an error such as <code>c45</code>.</p>
+  <p>A 128th cannot be typed digit by digit, since <code>c1|</code> + <code>2</code> is already
+  <code>c2</code>: paste <code>128</code>, type it with the aids turned off, or type
+  <code>8</code> after a <code>12</code> that is already there. Digits inside a chord's brackets
+  (scale degrees), inside an annotation's parentheses (<code>@finger(5)</code>) and outside
+  notes (<code>time 5/4</code>, <code>R1*5</code>) are typed as pressed.</p>
   <!-- VIDEO editor-duration-overwrite: source `c4 d4 e4 f4 |` with the preview open. Put the
        caret after `d4` and type 8, then after `e4` type 2, then in the middle of `f4` type 1:
        each duration is replaced, not appended, and the bar re-spaces in the preview. ~10 s. -->
@@ -127,11 +140,20 @@
     <tr><td><code>[</code> / <code>]</code></td><td>a manual beam, the same way, within the bar</td><td class="ba">c8| d e f → c8[ d] e f</td></tr>
     <tr><td><code>&lt;</code> / <code>&gt;</code></td><td><code>&lt;</code> before a note wraps it in a chord (the duration stays outside); turning one end into <code>&lt;&lt;</code> or back turns the matching end too</td><td class="ba">|c4 → &lt;c|&gt;4</td></tr>
   </table>
-  <p class="note"><b>When it steps aside.</b> With a selection, or with several cursors, every
-  key types exactly as pressed. So do keys inside strings and comments, and outside notes —
-  <code>time 4/4</code>, <code>tuplet 3/2</code>, a title. A slash note (<code>/4</code>) is not
-  handled: a digit there is appended. Every aid is one undo step with the keystroke. There is
-  no setting that turns the aids off.</p>
+  <p><b>Several cursors.</b> With more than one cursor, the octave marks, digits, dots,
+  <code>\</code> and <code>@</code> work at each cursor on its own note, all in one undo step:
+  <code>c4| d1| /4|</code> + <code>6</code> → <code>c64| d16| /64|</code>. Two cursors on the
+  same note have no single answer, so there the key is typed as pressed at every cursor. The
+  bracket, slur, beam and tie keys are single-cursor: with several cursors they type as
+  pressed.</p>
+  <p class="note"><b>When it steps aside.</b> With a selection the key replaces the selection,
+  as anywhere in VS Code. Keys inside strings and comments, and outside notes —
+  <code>time 4/4</code>, <code>tuplet 3/2</code>, a title — type as pressed. A slash note
+  takes durations, dots, ties, slurs and beams like a note but has no pitch, so
+  <code>'</code>, <code>,</code> and <code>\</code> type as pressed on it, as on a rest. Every
+  aid is one undo step with the keystroke. <b>To turn all of it off</b>, set
+  <code>lilysharp.typingAids.enabled</code> to <code>false</code> (Settings → Lily# → Typing
+  Aids): every key then types exactly as pressed.</p>
 </section>
 
 <section id="preview">

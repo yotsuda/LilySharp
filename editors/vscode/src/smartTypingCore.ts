@@ -109,30 +109,35 @@
 //
 // 16. A digit typed anywhere on a note moves into the duration slot, which sits
 //    AFTER the octave marks (`|c` and `c,|` alike → `c,4`).
-// 17. With the caret DIRECTLY AFTER the digits the keystroke lands in the slot by
-//    itself and simply EXTENDS them: `c1|` + '6' → `c16`, and `c1|.` + '2' →
-//    `c12.`, which is the one place a 128th can still be spelled out. The test is
-//    a PREFIX test against 1/2/4/8/16/32/64/128.
+// 17. WHAT A DIGIT WRITES IS ALWAYS A VALID DURATION (1 2 4 8 16 32 64 128 —
+//    GRAMMAR §Duration; there is no breve or longa). With the caret DIRECTLY
+//    AFTER the digits the keystroke EXTENDS them when that makes a duration
+//    (`c1|` + '6' → `c16`, `c3|`… never arises) and otherwise REPLACES them:
+//    `c1|` + '2' → `c2`, `c4|` + '8' → `c8`, `c16|` + '1' → `c1`. A PREFIX of a
+//    duration is not kept for the typist to finish — owner decision 2026-09-28,
+//    reversing the 2026-08-11 one that left `c12` on the page as a 128th in the
+//    making. ⇒ A 128th is written by typing '8' onto a `12` already there
+//    (`c12|` + '8' → `c128`), by pasting `128`, or with the aids off
+//    (`lilysharp.typingAids.enabled`); it cannot be typed digit by digit.
 // 18. ANYWHERE ELSE on the note it turns on whether the digit IS a duration.
-//    1, 2, 4 and 8 are, so they start a FRESH one: `c1.|` + '2' is `c2.`, a
-//    dotted half, and not the `c12.` that reading it as a 128th in the making
-//    would give. 3 and 6 are not — nothing sounds for six — so they can only be
-//    building one, and they EXTEND: `c1.|` + '6' is `c16.`.
-// 18a. A digit that cannot stand alone and has nothing to extend is COMPLETED to
-//    the one duration that begins with it — '3' writes `32` and '6' writes `64`,
-//    so `c1.|` + '3' is `c32.` and `c2.|` + '6' is `c64.`. Nothing is guessed:
-//    those are the only durations beginning with those digits, and the half-typed
-//    `c3` sounds as nothing, so there was never a reason to leave it on the page.
-//    ⚠️ Only a digit that is the WHOLE of what gets written is completed. A run
-//    being BUILT UP is left alone (`c1|` + '2' stays `c12`, rule 17): finishing
-//    it to `c128` would turn the '8' the typist goes on to press into `c8`.
-//    DECIDED (user, 2026-08-11): a 128th is rare enough that a caret past the
-//    digits is better evidence of a fresh duration than of one being built up,
-//    but only where the digit could have meant a fresh duration at all. So the
-//    ambiguous keystrokes (1/2/4/8) restart and the unambiguous ones (3/6) do
-//    not, and `c1|.` keeps both readings reachable. Retyping the SAME digit
-//    changes nothing at all, and a digit that starts no duration (5, 7, 9, 0) is
-//    left exactly as typed.
+//    1, 2, 4 and 8 are, so they start a FRESH one: `c1.|` + '2' is `c2.`.
+//    3 and 6 are not — nothing sounds for six — so they EXTEND when that makes a
+//    duration: `c1.|` + '6' is `c16.`.
+// 18a. A 3 or 6 that extends into no duration is COMPLETED to the one duration
+//    that begins with it — '3' writes `32` and '6' writes `64`, wherever the
+//    caret is: `c1.|` + '3' is `c32.`, `c2.|` + '6' is `c64.`, `c4|` + '6' is
+//    `c64`. Nothing is guessed: those are the only durations beginning with
+//    those digits. Retyping the SAME duration changes nothing at all.
+// 18b. A digit that begins no duration (5, 7, 9, 0) and continues none is
+//    ABSORBED on a note: the note is left exactly as it was and the status bar
+//    says why. Typed as pressed it could only write an invalid note (`c45`) —
+//    no spelling glues one of those digits to a note's core — so absorbing it
+//    loses nothing and keeps the score compiling. Off a note (a header, `time
+//    5/4`, `@finger(5)`, `R1*5`) it is ordinary typing.
+// Rules 16–18b hold for every event that takes a duration: a note, a rest, a
+// chord (at its ends) and a SLASH NOTE (`/4|` + '8' → `/8`). A slash note, like
+// a rest, takes no octave mark and no string number — those keys are typed as
+// pressed on it — but takes dots, ties, slurs and beams as a note does.
 //
 // 23. An augmentation dot is the LAST thing on a note's core, after the duration
 //    and after the dots already there, so one typed anywhere else on the note
@@ -189,13 +194,25 @@
 //    (`<c\3 e\2>`, `<c@finger(1) e>`). At the chord's ends and on a degree
 //    member they are typed as pressed.
 //
+// 30. SEVERAL CARETS: a key planned here (', ',', '.', '\', '@', the digits)
+//    typed with several empty carets is decided for EACH caret on its own, on
+//    the same pre-keystroke text, and carried out as one edit in one undo step
+//    (multiCursorPlan). Two carets whose rewrites would touch — both on one
+//    note — have no single answer, so the key is then typed as pressed at every
+//    caret. The bracket, slur, beam and tie keys are single-caret: with several
+//    carets they are typed as pressed. A NON-EMPTY selection is always ordinary
+//    typing — the key replaces the selection, as everywhere in VS Code.
+// 31. `lilysharp.typingAids.enabled: false` turns ALL of the above off: every
+//    key is typed as pressed. (The Ctrl+Shift+Up/Down step commands are
+//    commands, not typing, and are not affected.)
+//
 // Rules 14–23 and 25 move TEXT and never the CARET: the mark or digit travels to the
 // slot it belongs in and the cursor keeps the position it was pressed at (see
 // stayPut), because a correction to what was typed is not a request to go
 // somewhere. Octave marks stay reachable from wherever the caret rests and stack
 // there (`c4|` + "'" + "'" → `c''4|`), the slot being re-read off the note each
 // time rather than remembered from the caret. Durations read the caret once, and
-// only to break a tie: right after the digits it always builds on them (rule 17),
+// only to break a tie: right after the digits a valid extension wins (rule 17),
 // and elsewhere the digit itself decides (rule 18).
 //
 // A caret INSIDE a chord is pointing at a member (`<c, e g>`, `<c 3 5>` — the
@@ -264,15 +281,14 @@ const isBetweenEvents = (c: string): boolean =>
 // accidental spelling. The marks go after these and BEFORE the duration.
 const PITCH_LETTERS = /^[a-g](?:isis|eses|is|es)?/;
 
-// Every DurationBase there is (GRAMMAR.md §Duration). Tested as a PREFIX for
-// what a keystroke could still become — '3' is not a duration but it is the
-// first keystroke of '32', and '12' is the first two of '128' — and as a MEMBER
-// for what one already is. Dots and a ':' tremolo are separate slots.
+// Every DurationBase there is (GRAMMAR.md §Duration). Tested as a MEMBER for
+// what gets written (rule 17), and — for a single digit — as a PREFIX for
+// whether the key can mean a duration at all (5, 7, 9, 0 cannot: rule 18b).
+// Dots and a ':' tremolo are separate slots.
 const DURATIONS = ['1', '2', '4', '8', '16', '32', '64', '128'];
 const isDurationPrefix = (digits: string) => DURATIONS.some(d => d.startsWith(digits));
-// ⚠️ The two tests disagree on exactly 3 and 6, and that gap is what tells a
-// FRESH duration from one being BUILT UP: nothing sounds for six, so a typed '6'
-// can only ever be reaching for 16 or 64.
+// ⚠️ The two tests disagree, for one digit, on exactly 3 and 6: nothing sounds
+// for six, so a typed '6' can only ever be reaching for 16 or 64.
 const isDuration = (digits: string) => DURATIONS.includes(digits);
 
 // A mid-music command, which changes context between two notes without being one
@@ -324,7 +340,12 @@ export interface FixPlan { edits: Edit[], caret?: number, what: string }
  * `select`, the number of characters from `caret` to leave SELECTED, which is
  * how a keystroke that changes no text still offers something to retype
  * (rule 24a). */
-export interface TypePlan { at: number, del: number, ins: string, caret: number, what: string, select?: number }
+export interface TypePlan {
+    at: number, del: number, ins: string, caret: number, what: string, select?: number,
+    /** A short message for the status bar — set when the keystroke was
+     * absorbed for a reason the typist cannot see on the page (rule 18b). */
+    hint?: string,
+}
 
 /** The characters whose keys are intercepted, mapped to what they plan — and
  * '@', which is not intercepted but is decided the same way (rule 27). */
@@ -445,6 +466,73 @@ export function typedKeyOutcome(before: string, offset: number, plan: TypePlan):
         edits: [{ at: plan.at, del: plan.del, ins: plan.ins }],
         caret: plan.caret, select: plan.select ?? 0,
     };
+}
+
+/** One key typed at SEVERAL carets at once (rule 30): each caret gets the aid
+ * it would get alone, decided on the same pre-keystroke text, and the results
+ * are carried out together — one edit, one undo step.
+ *
+ * `intercepted` is the edit list for the document WITHOUT the keystrokes (the
+ * key binding's route); `afterKeystroke` the list for the document that
+ * already holds one `ch` at every caret (the change-event route). Both reach
+ * the same text, and `carets` are the finished text's offsets, in the order of
+ * `offsets`. A caret the key plans nothing for simply gets `ch` there.
+ *
+ * null when no caret has an aid — ordinary typing is then already right — or
+ * when two carets' rewrites would OVERLAP (two carets on one note): there is
+ * no single answer for that, so the key is typed as pressed at every caret. */
+export interface MultiCursorPlan {
+    intercepted: Edit[], afterKeystroke: Edit[],
+    carets: { caret: number, select: number }[], what: string[], hints: string[],
+}
+
+export function multiCursorPlan(ch: string, before: string, offsets: number[]): MultiCursorPlan | null {
+    const order = offsets.map((offset, k) => ({ offset, k })).sort((a, b) => a.offset - b.offset);
+    const spans: { lo: number, hi: number, out: string, caret: number, select: number, planned: boolean }[] = [];
+    const what: string[] = [];
+    const hints: string[] = [];
+    for (const { offset } of order) {
+        const plan = planFor(ch, before, offset);
+        if (!plan) {
+            spans.push({ lo: offset, hi: offset, out: ch, caret: offset + 1, select: 0, planned: false });
+            continue;
+        }
+        // The same one-span reading afterKeystrokeEdit makes: the plan's span
+        // widened to take in the caret, rebuilt without the keystroke.
+        const lo = Math.min(plan.at, offset);
+        const hi = Math.max(plan.at + plan.del, offset);
+        const out = before.slice(lo, plan.at) + plan.ins + before.slice(plan.at + plan.del, hi);
+        spans.push({ lo, hi, out, caret: plan.caret, select: plan.select ?? 0, planned: true });
+        what.push(plan.what);
+        if (plan.hint) { hints.push(plan.hint); }
+    }
+    if (!spans.some(s => s.planned)) { return null; }
+    for (let i = 1; i < spans.length; i++) {
+        // Touching counts as overlapping: two rewrites meeting at one offset
+        // have no order to be applied in.
+        if (spans[i].lo <= spans[i - 1].hi) { return null; }
+    }
+
+    const intercepted: Edit[] = [];
+    const afterKeystroke: Edit[] = [];
+    const sortedCarets: { caret: number, select: number }[] = [];
+    let shift = 0;
+    spans.forEach((s, i) => {
+        // `i` keystrokes stand before this caret in the document that holds them.
+        if (s.out !== before.slice(s.lo, s.hi)) {
+            intercepted.push({ at: s.lo, del: s.hi - s.lo, ins: s.out });
+        }
+        if (s.planned) {
+            afterKeystroke.push({ at: s.lo + i, del: s.hi - s.lo + 1, ins: s.out });
+        }
+        // Each caret is in the text with only its own span rewritten; every
+        // span before it moves it by that span's change in length.
+        sortedCarets.push({ caret: s.caret + shift, select: s.select });
+        shift += s.out.length - (s.hi - s.lo);
+    });
+    const carets: { caret: number, select: number }[] = new Array(offsets.length);
+    order.forEach(({ k }, i) => { carets[k] = sortedCarets[i]; });
+    return { intercepted, afterKeystroke, carets, what, hints };
 }
 
 /** Where the caret belongs when a keystroke was RELOCATED rather than accepted
@@ -825,6 +913,25 @@ function* musicEvents(text: string, from: number, end: number): Generator<MusicE
             i += 2;
             continue;
         }
+        if (c === '/') {
+            // A SLASH NOTE (`/4`, `/8.~`): a pitchless note, rhythm notation
+            // (GRAMMAR §8.2 SlashNote). Only a slash that STANDS ALONE is one —
+            // the other spellings of '/' are glued to what is before them
+            // (`tuplet 3/2`, a chord entry's `c/g`; `time 4/4` never gets here,
+            // MID_MUSIC_COMMAND takes it whole) — and like a note it may not
+            // run into a word.
+            const prev = text[i - 1];
+            let j = i + 1;
+            while (j < end && isDigit(text[j])) { j++; }
+            while (j < end && text[j] === '.') { j++; }
+            if (!isWordChar(prev) && prev !== '/' && prev !== '*'
+                && !(j < end && (isWordChar(text[j]) || isOctaveMark(text[j]) || text[j] === '/'))) {
+                const slashEnd = skipAnnotations(text, j, end);
+                yield { note: true, start: i, end: slashEnd };
+                i = slashEnd;
+                continue;
+            }
+        }
         if (c === '<') {
             // A chord `<c e g>4` or an arpeggio `<< c e g >>2`; members may nest.
             const arpeggio = text[i + 1] === '<';
@@ -1092,7 +1199,8 @@ function measureEvents(text: string, at: number): MeasureEvent[] {
         running = digits ? parseInt(digits, 10) : running;
         events.push({
             start: event.start, end: event.end, core: slots.coreEnd,
-            duration: running, rest: slots.octave === null,
+            // A slash note has no pitch either, but it is a NOTE to a beam.
+            duration: running, rest: slots.octave === null && text[event.start] !== '/',
         });
     }
     return events;
@@ -1351,7 +1459,9 @@ function noteSlots(text: string, start: number, end: number): NoteSlots | null {
     } else {
         const m = PITCH_LETTERS.exec(text.slice(start, end));
         if (m) { octave = marksEnd = start + m[0].length; }
-        else if ('rsR'.includes(text[start])) { marksEnd = start + 1; } // a rest
+        // A rest — or a slash note, pitchless like one: it takes a duration and
+        // dots but no octave mark and no string number.
+        else if ('rsR/'.includes(text[start])) { marksEnd = start + 1; }
         else { return null; }
     }
     while (marksEnd < end && isOctaveMark(text[marksEnd])) { marksEnd++; }
@@ -1429,11 +1539,12 @@ export function octaveMarkPlan(before: string, offset: number, mark: string): Ty
 
 /** A digit typed in music: a duration belongs AFTER the octave marks (`c,4`),
  * so one typed anywhere else on the note moves there — `|c` and `c,|` alike.
- * Digits already in the slot are EXTENDED while the result is still a duration
- * in the making (`c1` + '6' → `c16`, from any caret position on the note) and
- * REPLACED when it cannot become one (`c4` + '2' → `c2`, since neither `c42`
- * nor `c24` exists). A digit that starts no duration at all — 5, 7, 9, 0 — is
- * left exactly as typed. */
+ * Whatever is written is a VALID duration: digits already in the slot are
+ * EXTENDED only when that makes one (`c1` + '6' → `c16`), REPLACED otherwise
+ * (`c4` + '2' → `c2`, `c1|` + '2' → `c2`), and a 3 or 6 that extends into
+ * nothing is completed (`c4` + '6' → `c64`). A digit that starts no duration
+ * at all — 5, 7, 9, 0 — leaves the note unchanged (the keystroke is absorbed,
+ * with a status-bar hint). Notes, rests, chords and slash notes alike. */
 export function durationPlan(before: string, offset: number, digit: string): TypePlan | null {
     if (inStringOrComment(before, offset)) { return null; }
     const found = noteAtCaret(before, offset, true);
@@ -1443,8 +1554,8 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
     // A '\' on the note still waiting for its digit takes this one (rule 25): it
     // is the string number rule 24 opened, and handing the digit to the duration
     // would write `c43\`. The caret stays put here as well. 0 is no string number
-    // (the lexer reads `\1`–`\9`) and goes to the duration path, which leaves it
-    // as typed too. A caret DIRECTLY after that '\' — where rule 24 leaves it — is
+    // (the lexer reads `\1`–`\9`) and goes to the duration path, which absorbs
+    // it (rule 18b). A caret DIRECTLY after that '\' — where rule 24 leaves it — is
     // ordinary typing: the digit lands there by itself and carries the caret.
     const stringNumber = found.slots.octave === null ? null
         : stringNumberAt(before, found.slots.coreEnd);
@@ -1460,36 +1571,42 @@ export function durationPlan(before: string, offset: number, digit: string): Typ
 
     const digits = before.slice(marksEnd, digitsEnd);
 
-    const atRunEnd = offset === digitsEnd;
-    let written: string;
-    if (atRunEnd && isDurationPrefix(digits + digit)) {
-        // The caret is where the digits are being typed, so the keystroke simply
-        // joins them: `c1|` + '6' → `c16`, `c1|.` + '2' → `c12.`.
-        written = digits + digit;
-    } else if (!isDurationPrefix(digit)) {
-        return null;                                  // 5, 7, 9, 0 — no duration
-    } else if (!isDuration(digit) && isDurationPrefix(digits + digit)) {
-        // A '6' is no duration — nothing sounds for six — so it can only be
-        // building one, and it extends what is already there: `c1.|` + '6'.
-        written = digits + digit;
-    } else {
-        written = digit;                              // a fresh duration
+    // 5, 7, 9 and 0 begin no duration and continue none, so no reading of the
+    // keystroke leaves a valid note: it is ABSORBED, the note left as it was,
+    // and the status bar says why (rule 18b). Typing it as pressed would only
+    // write `c45`, an error the typist then has to find and delete.
+    if (!isDurationPrefix(digit)) {
+        return {
+            at: offset, del: 0, ins: '', caret: offset,
+            what: `${digit} starts no duration -> note left unchanged`,
+            hint: `Lily#: no duration begins with ${digit} (durations are ${DURATIONS.join(' ')})`,
+        };
     }
 
-    // A digit that cannot stand alone is FINISHED here rather than left for the
-    // typist to complete: only 32 begins with a 3 and only 64 with a 6, so there
-    // is nothing to guess and `c3` — which sounds as nothing — never has to be
-    // written down. ⚠️ Only when the digit is the WHOLE of what gets written. A
-    // run being built up must not be finished for the typist: completing the
-    // `c12` of a 128th would turn the '8' they go on to press into `c8`.
-    const finishes = DURATIONS.filter(d => d.startsWith(written));
+    // THE RULE: what is written is a VALID duration (rule 17). The digits
+    // already there are extended only when the result is one — `c1|` + '6' is
+    // `c16` — and never into a prefix that might become one later: `c1|` + '2'
+    // is `c2`, not `c12` (owner decision, 2026-09-28; this reverses the
+    // 2026-08-11 reading that kept `c12` open for a 128th). Right after the
+    // digits a valid extension always wins; ELSEWHERE on the note a digit that
+    // is a duration by itself (1/2/4/8) starts afresh (rule 18: `c1.|` + '2' is
+    // `c2.`, `c12.|` + '8' is `c8.`) and only 3 and 6 — which are not — extend.
+    const atRunEnd = offset === digitsEnd;
+    let written: string;
     let action: string;
-    if (written === digit && !isDuration(written) && finishes.length === 1) {
-        written = finishes[0];
+    if (isDuration(digits + digit) && (atRunEnd || !isDuration(digit))) {
+        written = digits + digit;
+        action = 'extended';
+    } else if (isDuration(digit)) {
+        written = digit;                              // a fresh duration
+        action = written === digits ? 'restarted' : 'replaced';
+    } else {
+        // 3 or 6 with nothing it extends into a duration: COMPLETED to the one
+        // duration that begins with it (rule 18a) — only 32 begins with a 3 and
+        // only 64 with a 6, so nothing is guessed, and `c3` sounds as nothing.
+        written = DURATIONS.find(d => d.startsWith(digit))!;
         action = 'completed';
-    } else if (written !== digit) { action = 'extended'; }
-    else if (written === digits) { action = 'restarted'; }
-    else { action = 'replaced'; }
+    }
 
     // Ordinary typing already produces this, so leave it to do so — that path
     // relocates nothing and cannot flicker.

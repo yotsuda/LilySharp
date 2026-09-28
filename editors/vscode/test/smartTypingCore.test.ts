@@ -24,8 +24,8 @@ import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { composeFix, stayPut } from '../src/smartTypingCore';
-import { pressBackspace, pressDelete, show, typeKey } from './simulate';
+import { composeFix, multiCursorPlan, stayPut } from '../src/smartTypingCore';
+import { parseMulti, pressBackspace, pressDelete, show, showMulti, typeKey, typeKeyAtCarets } from './simulate';
 
 /** Asserts that typing `key` at the caret of `before` leaves `after`. */
 function typed(before: string, key: string, after: string, opts?: { autoClose?: boolean }) {
@@ -199,27 +199,43 @@ describe('durations (rules 16–18a, 25, 28)', () => {
     it('16. a digit already in its slot is typed as pressed', () => {
         typed('c,‸', '4', 'c,4‸');
     });
-    it('17. right after the digits the keystroke extends them', () => {
+    it('17. right after the digits the keystroke extends them only into a valid duration', () => {
         typed('c1‸', '6', 'c16‸');
-        typed('c1‸.', '2', 'c12‸.');
-        typed('c1‸', '2', 'c12‸');                 // a run being built up is not finished
+        typed('c1‸', '2', 'c2‸');                  // 12 is no duration: replaced, not kept for 128
+        typed('c1‸.', '2', 'c2‸.');
+        typed('c4‸', '8', 'c8‸');
+        typed('c16‸', '1', 'c1‸');
+        typed('c12‸', '8', 'c128‸');               // a 12 already on the page is finished
     });
     it('18. elsewhere on the note, 1/2/4/8 start afresh and 3/6 extend', () => {
         typed('c1.‸', '2', 'c2.‸');
         typed('c1.‸', '6', 'c16.‸');
         typed('c‸1', '6', 'c‸16');
+        typed('c12.‸', '8', 'c8.‸');
     });
-    it('18a. a digit that cannot stand alone is completed', () => {
+    it('18a. a 3 or 6 that extends into nothing is completed, wherever the caret is', () => {
         typed('c1.‸', '3', 'c32.‸');
         typed('c2.‸', '6', 'c64.‸');
+        typed('c4‸', '6', 'c64‸');
+        typed('c1‸', '3', 'c32‸');
+        typed('c‸', '3', 'c32‸');
     });
     it('18a. retyping the same duration changes nothing', () => {
         typed('c1.‸', '1', 'c1.‸');
+        typed('c4‸', '4', 'c4‸');
+        typed('c32‸', '3', 'c32‸');
     });
-    it('18a. a digit that starts no duration is typed as pressed', () => {
-        typed('c4‸', '5', 'c45‸');
-        typed('c‸4', '7', 'c7‸4');
-        typed('c‸4', '0', 'c0‸4');
+    it('18b. a digit that starts no duration leaves the note unchanged', () => {
+        typed('c4‸', '5', 'c4‸');
+        typed('c‸4', '7', 'c‸4');
+        typed('c‸4', '0', 'c‸4');
+        typed('r2‸', '9', 'r2‸');
+        typed('c‸4\\', '0', 'c‸4\\');              // not a string number either
+    });
+    it('18b. off a note those digits are ordinary typing', () => {
+        typed('time ‸', '5', 'time 5‸');
+        typed('c4@finger(‸)', '5', 'c4@finger(5‸)');
+        typed('R1*‸', '5', 'R1*5‸');
     });
     it('25. a digit on a note whose \\ is waiting takes the string number', () => {
         typed('c‸4\\', '3', 'c‸4\\3');
@@ -233,6 +249,105 @@ describe('durations (rules 16–18a, 25, 28)', () => {
     });
     it('a digit in a header line is typed as pressed', () => {
         typed('time 4/‸', '4', 'time 4/4‸');
+    });
+});
+
+// THE DIGIT TABLE: every event that takes a duration, and what each digit
+// leaves on it, the caret right after the digits (rule 17), elsewhere on it
+// (rule 18) and at its start (rule 16). Every result is a valid duration or the
+// note untouched (rule 18b).
+describe('the digit table (rules 16–18b) over notes, rests, chords and slash notes', () => {
+    const cases: [string, string, string][] = [
+        // right after the digits
+        ['c1‸', '6', 'c16‸'], ['c1‸', '2', 'c2‸'], ['c1‸', '4', 'c4‸'], ['c1‸', '8', 'c8‸'],
+        ['c1‸', '3', 'c32‸'], ['c1‸', '1', 'c1‸'], ['c1‸', '5', 'c1‸'],
+        ['c2‸', '1', 'c1‸'], ['c2‸', '6', 'c64‸'], ['c4‸', '5', 'c4‸'], ['c4‸', '6', 'c64‸'],
+        ['c6‸', '4', 'c64‸'], ['c3‸', '2', 'c32‸'], ['c8‸', '6', 'c64‸'], ['c16‸', '8', 'c8‸'],
+        ['c64‸', '2', 'c2‸'], ['c‸', '8', 'c8‸'], ['c‸', '6', 'c64‸'], ['c,‸', '9', 'c,‸'],
+        // elsewhere on the note
+        ['c‸4', '8', 'c‸8'], ['‸c4.', '2', '‸c2.'], ['c\'‸4', '6', 'c\'‸64'], ['c‸1', '6', 'c‸16'],
+        // rests
+        ['r4‸', '8', 'r8‸'], ['r1‸', '2', 'r2‸'], ['R1‸', '6', 'R16‸'], ['s4‸', '0', 's4‸'],
+        // chords, at their ends
+        ['<c e>4‸', '8', '<c e>8‸'], ['<c e>1‸', '2', '<c e>2‸'], ['‸<c e>4', '7', '‸<c e>4'],
+        ['<c e>4‸', '6', '<c e>64‸'],
+        // slash notes (rule 3 of the review: `/4|` + '8' used to give `/48`)
+        ['/4‸', '8', '/8‸'], ['/1‸', '6', '/16‸'], ['/1‸', '2', '/2‸'], ['/4‸', '5', '/4‸'],
+        ['/‸', '4', '/4‸'], ['‸/4.', '2', '‸/2.'], ['c4 /4‸ d', '6', 'c4 /64‸ d'],
+        ['/4~‸', '8', '/8~‸'],
+    ];
+    for (const [before, key, after] of cases) {
+        it(`${before} + ${key} → ${after}`, () => typed(before, key, after));
+    }
+});
+
+describe('slash notes', () => {
+    it('take dots, ties and beams like a note', () => {
+        typed('‸/4', '.', '‸/4.');
+        typed('/‸2 /', '~', '/2~‸ /');
+        typed('/8‸ /', '[', '/8[‸ /]');
+    });
+    it('take no octave mark and no string number — those are typed as pressed', () => {
+        typed('/4‸', "'", '/4\'‸');
+        typed('/4‸', '\\', '/4\\‸');
+    });
+    it('only a slash that stands alone is one: tuplet ratios and chord slashes are not', () => {
+        typed('tuplet 3/‸', '8', 'tuplet 3/8‸');
+        typed('tuplet 3/2‸', '4', 'tuplet 3/24‸');
+        typed('c/g‸', '8', 'c/g8‸');
+        typed('time 3/4‸', '8', 'time 3/48‸');
+    });
+});
+
+describe('several carets (rule 30)', () => {
+    const multi = (before: string, key: string, after: string) =>
+        assert.equal(showMulti(typeKeyAtCarets(before, key)), after, `${JSON.stringify(before)} + ${key}`);
+    it('each caret gets its own aid, on its own note', () => {
+        multi('c4‸ d4‸ e4‸', '8', 'c8‸ d8‸ e8‸');
+        multi('c1‸ d2‸ /4‸', '6', 'c16‸ d64‸ /64‸');
+        multi('c4‸ d1‸ /4‸', '6', 'c64‸ d16‸ /64‸');   // the site's example
+        multi('c1‸ d4‸', '2', 'c2‸ d2‸');
+        multi('‸c4 ‸d4', "'", '‸c\'4 ‸d\'4');
+        multi('c4‸ d8.‸', '.', 'c4.‸ d8..‸');
+    });
+    it('a caret with no aid gets the key as pressed, the others their aid', () => {
+        multi('c4‸ time ‸', '8', 'c8‸ time 8‸');
+        multi('c4‸ d4‸', '5', 'c4‸ d4‸');
+        multi('c4‸ time ‸', '5', 'c4‸ time 5‸');
+    });
+    it('carets shift with the rewrites before them', () => {
+        multi('c‸ d‸ e‸', '3', 'c32‸ d32‸ e32‸');
+        multi('c32‸ d‸', '8', 'c8‸ d8‸');
+    });
+    it('two carets on one note have no single answer: the key is typed as pressed', () => {
+        multi('‸c‸4', '8', '8‸c8‸4');
+    });
+    it('the result is one set of edits — one undo step', () => {
+        const { text, carets } = parseMulti('c4‸ d4‸');
+        const plan = multiCursorPlan('8', text, carets)!;
+        assert.equal(plan.intercepted.length, 2);
+        assert.equal(plan.afterKeystroke.length, 2);
+    });
+});
+
+describe('the typingAids.enabled setting (rule 31)', () => {
+    const root = path.join(__dirname, '..', '..');
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+    it('is declared, on by default', () => {
+        const setting = pkg.contributes.configuration.properties['lilysharp.typingAids.enabled'];
+        assert.equal(setting?.type, 'boolean');
+        assert.equal(setting?.default, true);
+    });
+    it('holds off every intercepted key', () => {
+        const bindings = pkg.contributes.keybindings.filter((b: { command: string }) => b.command === 'lilysharp.smartType');
+        assert.equal(bindings.length, 14);
+        for (const b of bindings) { assert.match(b.when, /config\.lilysharp\.typingAids\.enabled/); }
+    });
+    it('holds off the change-event route and the command', () => {
+        const source = fs.readFileSync(path.join(root, 'src', 'smartTyping.ts'), 'utf8');
+        assert.match(source, /if \(applyingFix \|\| !aidsEnabled\) \{ return; \}/);
+        assert.match(source, /\|\| !aidsEnabled\s*\n/);
+        assert.match(source, /affectsConfiguration\('lilysharp\.typingAids\.enabled'\)/);
     });
 });
 

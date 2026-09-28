@@ -17,8 +17,22 @@
 import * as vscode from 'vscode';
 import {
     Edit, FixPlan, TypePlan, afterKeystrokeEdit, composeFix, deletionPlan, insertionPlan,
-    isPlannedKey, isSmartInsert, planFor, typedKeyOutcome,
+    isPlannedKey, isSmartInsert, multiCursorPlan, planFor, typedKeyOutcome,
 } from './smartTypingCore';
+
+// `lilysharp.typingAids.enabled` (rule 31): false turns every aid off. Read
+// once and kept current, so a keystroke pays for no configuration lookup. The
+// key bindings carry the same setting in their `when` clause, so while it is
+// off the keys are not even intercepted; this flag covers the change-event
+// route and a binding that fired anyway.
+let aidsEnabled = true;
+const readAidsEnabled = () =>
+    vscode.workspace.getConfiguration('lilysharp').get<boolean>('typingAids.enabled', true);
+
+/** Tells the typist why a keystroke changed nothing (rule 18b). */
+function showHint(hint: string | undefined) {
+    if (hint) { vscode.window.setStatusBarMessage(hint, 4000); }
+}
 
 // The CARRYING-OUT half of smart typing. What a keystroke does — the rules,
 // numbered 1–29, and every reading of the text they rest on — lives in
@@ -100,7 +114,11 @@ export function registerSmartTyping(
     for (const doc of vscode.workspace.textDocuments) {
         if (doc.languageId === 'lilysharp') { cacheWindow(doc, 0); }
     }
+    aidsEnabled = readAidsEnabled();
     context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('lilysharp.typingAids.enabled')) { aidsEnabled = readAidsEnabled(); }
+        }),
         vscode.workspace.onDidOpenTextDocument(doc => {
             if (doc.languageId === 'lilysharp') { cacheWindow(doc, 0); }
         }),
@@ -116,7 +134,8 @@ export function registerSmartTyping(
         vscode.workspace.onDidChangeTextDocument(event => {
             if (event.document.languageId !== 'lilysharp') { return; }
             const key = event.document.uri.toString();
-            // Multi-cursor / multi-range edits are out of scope (offsets shift per edit).
+            // Several changes at once are several carets typing (rule 30),
+            // handled apart below; the single-change route reads one offset.
             const change = event.contentChanges.length === 1 ? event.contentChanges[0] : undefined;
             // The change's START offset is identical in the old and new text
             // (everything before it is untouched), so one offset serves both.
@@ -128,13 +147,17 @@ export function registerSmartTyping(
                 ? deletedChar(key, offset) : undefined;
             if (change) { cacheWindow(event.document, offset); }
 
-            if (applyingFix || !change) { return; }
+            if (applyingFix || !aidsEnabled) { return; }
             // Never fight undo/redo — re-fixing would make undo circular.
             if (event.reason === vscode.TextDocumentChangeReason.Undo
                 || event.reason === vscode.TextDocumentChangeReason.Redo) { return; }
 
             const editor = vscode.window.activeTextEditor;
             if (!editor || editor.document !== event.document) { return; }
+            if (!change) {
+                multiCursorAfterKeystroke(editor, event.contentChanges, log);
+                return;
+            }
 
             // Only a matched change needs the document text, so the full read
             // stays off the path a paste or an unrelated keystroke takes.
@@ -209,10 +232,23 @@ function registerSmartTypeKeys(context: vscode.ExtensionContext, log: (msg: stri
             const plain = () => vscode.commands.executeCommand('type', { text: ch });
             if (typeof ch !== 'string' || ch.length !== 1) { return plain(); }
             // Anything the plan cannot speak for goes to the default insertion:
-            // another language, a selection to overtype, several cursors.
-            if (!editor || editor.document.languageId !== 'lilysharp'
-                || editor.selections.length !== 1 || !editor.selection.isEmpty) {
+            // another language, the aids switched off (rule 31), a selection
+            // to overtype — with one or with several carets, the key replaces
+            // what is selected, as everywhere in VS Code.
+            if (!editor || editor.document.languageId !== 'lilysharp' || !aidsEnabled
+                || editor.selections.some(s => !s.isEmpty)) {
                 return plain();
+            }
+            if (editor.selections.length > 1) {
+                // Several carets: each gets its own aid, all in one edit (rule 30).
+                const text = editor.document.getText();
+                const offsets = editor.selections.map(s => editor.document.offsetAt(s.active));
+                const multi = multiCursorPlan(ch, text, offsets);
+                if (!multi) { return plain(); }
+                applyMultiCursor(editor, multi.intercepted, multi.carets, true);
+                showHint(multi.hints[0]);
+                log(`smartTyping: ${ch} typed at ${offsets.length} carets -> ${multi.what.join('; ')}`);
+                return;
             }
             const before = editor.document.getText();
             const offset = editor.document.offsetAt(editor.selection.active);
@@ -279,7 +315,63 @@ function applyPlanAfterKeystroke(editor: vscode.TextEditor, text: string, offset
     plan: TypePlan, log: (msg: string) => void, typed: string, after?: () => void) {
     applyFixWithCaret(editor, text, [afterKeystrokeEdit(text, offset, plan)], plan.caret,
         false, plan.select ?? 0, after);
+    showHint(plan.hint);
     log(`smartTyping: ${typed} typed -> ${plan.what}`);
+}
+
+/** Carries out a multi-caret plan (rule 30): every caret's rewrite in ONE
+ * edit — one undo step — and then every caret placed. `ownUndoStep` as in
+ * applyFixWithCaret: an intercepted key opens its own step, a follow-up to a
+ * keystroke merges into the keystroke's.
+ *
+ * ⚠️ Unlike the single caret, the carets are placed AFTER the edit lands —
+ * a snippet places one tabstop per insertion, and these are several different
+ * insertions — so on this route they can be seen to settle a moment later. */
+function applyMultiCursor(editor: vscode.TextEditor, edits: Edit[],
+    carets: { caret: number, select: number }[], ownUndoStep: boolean) {
+    const doc = editor.document;
+    const ranges = edits.map(e => ({
+        range: new vscode.Range(doc.positionAt(e.at), doc.positionAt(e.at + (e.del ?? 0))),
+        ins: e.ins ?? '',
+    }));
+    applyingFix = true;
+    editor.edit(b => { for (const r of ranges) { b.replace(r.range, r.ins); } },
+        { undoStopBefore: ownUndoStep, undoStopAfter: true })
+        .then(ok => {
+            applyingFix = false;
+            if (!ok) { return; }
+            editor.selections = carets.map(c => new vscode.Selection(
+                doc.positionAt(c.caret), doc.positionAt(c.caret + c.select)));
+        }, () => { applyingFix = false; });
+}
+
+/** Several carets typed one planned key and VS Code has already inserted it at
+ * each (the change-event route of rule 30 — a key whose binding did not fire,
+ * or '@', which is never intercepted). The changes' `rangeOffset`s are offsets
+ * in the document as it was BEFORE them, which is the text the plans decide on. */
+function multiCursorAfterKeystroke(editor: vscode.TextEditor,
+    changes: readonly vscode.TextDocumentContentChangeEvent[], log: (msg: string) => void) {
+    const typed = changes[0]?.text;
+    if (!typed || !isPlannedKey(typed)
+        || changes.some(c => c.text !== typed || c.rangeLength !== 0)) { return; }
+    const offsets = changes.map(c => c.rangeOffset).sort((a, b) => a - b);
+    const text = editor.document.getText();
+    // The pre-keystroke text: the i-th keystroke (in document order) sits at
+    // its old offset plus the i keystrokes before it.
+    let before = '';
+    let from = 0;
+    for (let i = 0; i < offsets.length; i++) {
+        const at = offsets[i] + i;
+        if (text[at] !== typed) { return; } // not what it looks like — leave it
+        before += text.slice(from, at);
+        from = at + 1;
+    }
+    before += text.slice(from);
+    const multi = multiCursorPlan(typed, before, offsets);
+    if (!multi) { return; }
+    applyMultiCursor(editor, multi.afterKeystroke, multi.carets, false);
+    showHint(multi.hints[0]);
+    log(`smartTyping: ${typed} typed at ${offsets.length} carets -> ${multi.what.join('; ')}`);
 }
 
 /** Carries out a plan on a document that does NOT hold the keystroke — the
@@ -298,6 +390,7 @@ function applyPlanForTypedKey(editor: vscode.TextEditor, before: string, offset:
         return;
     }
     if (outcome.kind === 'absorbed') {
+        showHint(plan.hint);
         log(`smartTyping: ${typed} typed -> ${plan.what} (absorbed, nothing to change)`);
         return;
     }

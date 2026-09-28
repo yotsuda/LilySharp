@@ -27,7 +27,7 @@
 import * as assert from 'node:assert/strict';
 import {
     Edit, afterKeystrokeEdit, composeFix, deletionPlan, insertionPlan, isPlannedKey,
-    planFor, typedKeyOutcome,
+    multiCursorPlan, planFor, typedKeyOutcome,
 } from '../src/smartTypingCore';
 
 export const CARET = '‸';
@@ -129,6 +129,63 @@ export function typeKey(marked: string, key: string, opts: { autoClose?: boolean
     return plan.caret !== undefined
         ? applyComposed(withKey, plan.edits, plan.caret, 0)
         : applyBuilder(withKey, plan.edits, asTyped.caret);
+}
+
+/** Several carets, each with its selection length (0 when none). */
+export interface MultiState { text: string, carets: { caret: number, select: number }[] }
+
+/** Reads a document with SEVERAL ‸ carets: the text, and the carets' offsets
+ * in it, in document order. */
+export function parseMulti(marked: string): { text: string, carets: number[] } {
+    const parts = marked.split(CARET);
+    if (parts.length < 2) { throw new Error(`no ${CARET} in ${JSON.stringify(marked)}`); }
+    const carets: number[] = [];
+    let text = parts[0];
+    for (const part of parts.slice(1)) { carets.push(text.length); text += part; }
+    return { text, carets };
+}
+
+/** Writes several carets back in the marked form (a selection as «…»). */
+export function showMulti(s: MultiState): string {
+    let out = '';
+    let from = 0;
+    for (const { caret, select } of [...s.carets].sort((a, b) => a.caret - b.caret)) {
+        out += s.text.slice(from, caret) + CARET;
+        if (select > 0) { out += '«' + s.text.slice(caret, caret + select) + '»'; }
+        from = caret + select;
+    }
+    return out + s.text.slice(from);
+}
+
+/** Applies non-overlapping `edits` (offsets in `text`) all at once. */
+function applyAll(text: string, edits: Edit[]): string {
+    let out = text;
+    for (const e of [...edits].sort((a, b) => b.at - a.at)) {
+        out = out.slice(0, e.at) + (e.ins ?? '') + out.slice(e.at + (e.del ?? 0));
+    }
+    return out;
+}
+
+/** Types a planned key (', ',', '.', '\', '@', a digit) at EVERY caret of
+ * `marked` at once — VS Code's multi-cursor typing — and returns the document
+ * as smartTyping.ts leaves it (rule 30). Both routes are replayed, the
+ * intercepted key and the change event (the key already typed at every caret),
+ * and must agree. With no plan the key is typed as pressed at every caret. */
+export function typeKeyAtCarets(marked: string, key: string): MultiState {
+    const { text: before, carets } = parseMulti(marked);
+    let withKeys = '';
+    let from = 0;
+    carets.forEach(c => { withKeys += before.slice(from, c) + key; from = c; });
+    withKeys += before.slice(from);
+    const asTyped: MultiState = { text: withKeys, carets: carets.map((c, i) => ({ caret: c + i + 1, select: 0 })) };
+
+    const multi = multiCursorPlan(key, before, carets);
+    if (!multi) { return asTyped; }
+    const intercepted: MultiState = { text: applyAll(before, multi.intercepted), carets: multi.carets };
+    const changeEvent: MultiState = { text: applyAll(withKeys, multi.afterKeystroke), carets: multi.carets };
+    assert.deepEqual(changeEvent, intercepted,
+        `the intercepted and change-event routes disagree for ${JSON.stringify(marked)} + ${key}`);
+    return intercepted;
 }
 
 /** Presses Delete at the caret of `marked` (the character AFTER the caret goes)

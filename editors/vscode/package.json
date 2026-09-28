@@ -194,6 +194,11 @@
           "default": true,
           "description": "Sound notes as you edit: the note the caret lands on, a note as you type it, and what Ctrl+Shift+Up / Ctrl+Shift+Down step a note or a chord shape to. Plays through the open preview, so nothing sounds while no preview is open. Play Note at Cursor (Alt+P) and Play Current Measure (Alt+M) are not affected."
         },
+        "lilysharp.typingAids.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Typing aids in `.lys` music: an octave mark, a duration digit, a dot, a string number (`\\`) or an annotation (`@`) typed anywhere on a note moves into its slot on that note; a digit always leaves a valid duration (`c1` + `2` → `c2`, `c4` + `6` → `c64`; 5, 7, 9 and 0 leave the note unchanged); `<` `>` `(` `)` `[` `]` `~` keep chords, slurs, beams and ties paired and on their notes. Off: every key is typed exactly as pressed. Ctrl+Shift+Up / Ctrl+Shift+Down are not affected."
+        },
         "lilysharp.chordShapes.includeStretch": {
           "type": "boolean",
           "default": false,
@@ -645,85 +650,85 @@
         "command": "lilysharp.smartType",
         "key": "'",
         "args": { "text": "'" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": ",",
         "args": { "text": "," },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": ".",
         "args": { "text": "." },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "\\",
         "args": { "text": "\\" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "0",
         "args": { "text": "0" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "1",
         "args": { "text": "1" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "2",
         "args": { "text": "2" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "3",
         "args": { "text": "3" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "4",
         "args": { "text": "4" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "5",
         "args": { "text": "5" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "6",
         "args": { "text": "6" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "7",
         "args": { "text": "7" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "8",
         "args": { "text": "8" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       },
       {
         "command": "lilysharp.smartType",
         "key": "9",
         "args": { "text": "9" },
-        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp"
+        "when": "editorTextFocus && !editorReadonly && !suggestWidgetVisible && editorLangId == lilysharp && config.lilysharp.typingAids.enabled"
       }
     ]
   },
