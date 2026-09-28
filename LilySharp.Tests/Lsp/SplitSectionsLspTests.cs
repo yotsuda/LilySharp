@@ -139,15 +139,16 @@ public class SplitSectionsLspTests
               section B { a1 | }
             }
             part vn2 {
-              section A { d'1~ | d1 | }
+              section A { d'2 d4 d8[ d8 | d8] d8 d4 d2 | }
             }
             form main { A }
             score main { staff vn1 staff vn2 }
             """;
+        // A manual beam across the cut is refused (a tie there is now carried, and kept).
         var server = Open(text);
         var response = server.SplitSections(new SplitSectionsParams { TextDocument = new TextDocumentIdentifier { Uri = Uri } });
         Assert.False(response.Success);
         Assert.Null(response.NewText);
-        Assert.Contains("a tie (line 6) runs across the cut", response.Error);
+        Assert.Contains("a manual beam (opened line 6) runs across the cut", response.Error);
     }
 }

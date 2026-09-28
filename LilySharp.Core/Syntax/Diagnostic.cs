@@ -1240,6 +1240,26 @@ public static class DiagnosticCodes
     /// decision, session 645: the same rule as <see cref="RehearsalMarkShadowedBySectionLabel"/>.
     /// </para></summary>
     public const string DoubleDynamic = "LYS4022";
+    /// <summary>A slur, phrasing slur, tie or hairpin that breaks the SECTION CARRY RULE
+    /// (owner's decisions, 2026-09-28): a span open when a section ends is carried into the
+    /// section the form plays next and must end there. Four faults, checked per form, per part
+    /// and per play (<c>Svg.Collector.SectionPlayCursor</c>): carried in and not ended in that
+    /// next section, a close at a section's start with nothing carried in, carried into a
+    /// section the part does not play, and — a slur, phrasing slur or hairpin only — carried over
+    /// a repeat sign, volta edge or jump. The span is not drawn (a hairpin is cut at the end of
+    /// its own section).
+    /// <para>
+    /// ⚠️ ONE CODE, TWO SEVERITIES, as <see cref="UnpairedSpan"/>: a slur, phrasing slur or
+    /// hairpin crossing a repeat, volta or jump is FORBIDDEN (for now — the test is
+    /// <c>SectionPlayCursor.Carries</c> alone) and is an error; the other three are the
+    /// unpaired-span mistakes this rule adds places for, and are warnings like
+    /// <see cref="UnpairedSlur"/>. A TIE may cross any of them (owner's second decision of the
+    /// day, after the corpus sweep): it is carried to the first note of every play that follows
+    /// in the PLAYED order, and a target on another pitch is <see cref="TieTargetMismatch"/>.
+    /// A span never carried at all keeps its family's own code (a '(' opened in the last
+    /// section and never closed is still LYS4010).
+    /// </para></summary>
+    public const string SpanAcrossSectionBoundary = "LYS4023";
     /// <summary>Warning: a span that opens exactly ONE unnamed <c>voice { … }</c>. The
     /// block is then entirely transparent — stem forcing needs a second voice, so the
     /// music engraves as if the braces were not there. Someone who wrote it meaning

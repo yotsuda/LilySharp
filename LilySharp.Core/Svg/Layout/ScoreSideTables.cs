@@ -218,7 +218,8 @@ internal static class ScoreSideTables
             : _hairpinsByScore.GetValue(score,
                 s => IndexBuckets<HairpinItem>.Build(
                     TabStaffStencils.Blank(
-                        s, HairpinEngraver.DetectHairpins(s.MusicMarks, s.Dynamics),
+                        s, HairpinEngraver.DetectHairpins(s.MusicMarks, s.Dynamics,
+                            Collector.SectionPlays.For(s)),
                         static h => h.StaffIndex),
                     h => h.StaffIndex));
 

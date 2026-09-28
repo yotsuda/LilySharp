@@ -85,6 +85,45 @@ public enum VoiceContextId
 }
 
 /// <summary>
+/// How the form reaches one play of a section — stamped on the play's first timed item
+/// (<see cref="MusicItem.BeginsSectionPlay"/>). Ordered by strength: when a play writes no
+/// timed item at all its stamp merges into the next one, and the stronger edge wins.
+/// </summary>
+public enum SectionPlayEdge : byte
+{
+    /// <summary>Not the first item of a play.</summary>
+    None,
+
+    /// <summary>The play simply follows the one before it: a span may be carried over.</summary>
+    Sequential,
+
+    /// <summary>The play is a volta ending, or follows one: what precedes it differs from pass
+    /// to pass, so no slur, phrasing slur or hairpin may be carried over (a tie may — it is
+    /// carried along the PLAYED order, <see cref="Collector.SectionPlayGraph"/>).</summary>
+    Volta,
+
+    /// <summary>A repeat sign (<c>|:</c>, <c>:|</c>, <c>:|:</c>) or a jump mark (segno, coda,
+    /// D.S., D.C., fine) stands between the play and the one before it: no slur, phrasing slur
+    /// or hairpin may be carried over (a tie may, as for <see cref="Volta"/>).</summary>
+    Repeat,
+}
+
+/// <summary>
+/// What a section play is to a form repeat — stamped with <see cref="MusicItem.BeginsSectionPlay"/>
+/// so the PLAYED order can be rebuilt from the engraved one (<see cref="Collector.SectionPlayGraph"/>),
+/// the order MIDI plays: each run's body once per pass, then that pass's ending.
+/// </summary>
+public enum SectionRepeatRole : byte
+{
+    /// <summary>Not inside a form repeat block.</summary>
+    None,
+    /// <summary>A play of a repeat block's body.</summary>
+    Body,
+    /// <summary>One of a repeat block's endings (<c>[1. A]</c>), in written order.</summary>
+    Ending,
+}
+
+/// <summary>
 /// The <see cref="MusicItem"/> fields almost no item writes, held behind ONE reference so the
 /// ordinary item neither stores nor copies them — the base's half of the split
 /// <see cref="NoteItemRare"/> describes, under the same rules. Every item type pays for the
@@ -96,6 +135,12 @@ internal sealed record MusicItemRare
 
     public VoiceContextId VoiceContext { get; init; }
     public bool BeginsCueRegion { get; init; }
+    public SectionPlayEdge BeginsSectionPlay { get; init; }
+    public string? SectionPlayName { get; init; }
+    public SectionRepeatRole SectionRepeatRole { get; init; }
+    public bool SectionRepeatRunStart { get; init; }
+    public int SectionRepeatCount { get; init; }
+    public bool SectionPlayRewinds { get; init; }
     public bool GraceSlash { get; init; }
     public bool HasPhrasingSlurStart { get; init; }
     public bool HasPhrasingSlurEnd { get; init; }
@@ -197,6 +242,71 @@ public abstract record MusicItem
     {
         get => _rareBase?.BeginsCueRegion ?? false;
         init { if (value != BeginsCueRegion) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { BeginsCueRegion = value }; }
+    }
+
+    /// <summary>
+    /// Whether this item is the FIRST timed item (a note, a chord or a rest, spacer included;
+    /// never a grace) of one PLAY of a section, and how the form reached that play:
+    /// <see cref="SectionPlayEdge.None"/> on every other item.
+    /// </summary>
+    /// <remarks>
+    /// The edge a slur, phrasing slur, tie or hairpin may be carried over: a span open when a
+    /// section ends continues into the section the form plays NEXT, and must end there
+    /// (<see cref="Collector.SectionPlayCursor"/> holds the rule, and every reader of these spans
+    /// asks it). Played order is the collector's order, so <c>form { C D C E }</c> gives four
+    /// stamps and the second C's slur is carried into E, not into the D written after C.
+    /// <para>
+    /// ⚠️ A FLAG ON THE EDGE, NOT AN ORDINAL, for the reason <see cref="BeginsCueRegion"/>
+    /// gives: it is a function of the item's own place in its own play, so a resumed or spliced
+    /// collect adopts it unchanged, and it is position-independent CONTENT for
+    /// <c>MeasureContentKey</c>. Readers count plays as they walk.
+    /// </para>
+    /// </remarks>
+    public SectionPlayEdge BeginsSectionPlay
+    {
+        get => _rareBase?.BeginsSectionPlay ?? SectionPlayEdge.None;
+        init { if (value != BeginsSectionPlay) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { BeginsSectionPlay = value }; }
+    }
+
+    /// <summary>The name of the section whose play <see cref="BeginsSectionPlay"/> opens —
+    /// for the words of a diagnostic only; null on every other item.</summary>
+    public string? SectionPlayName
+    {
+        get => _rareBase?.SectionPlayName;
+        init { if (value != SectionPlayName) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionPlayName = value }; }
+    }
+
+    /// <summary>On a play's first item: what the play is to a form repeat block (body or
+    /// ending). With <see cref="SectionRepeatRunStart"/>, <see cref="SectionRepeatCount"/> and
+    /// <see cref="SectionPlayRewinds"/> it is what <see cref="Collector.SectionPlayGraph"/>
+    /// rebuilds the PLAYED order from — position-free content, like the edge.</summary>
+    public SectionRepeatRole SectionRepeatRole
+    {
+        get => _rareBase?.SectionRepeatRole ?? SectionRepeatRole.None;
+        init { if (value != SectionRepeatRole) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionRepeatRole = value }; }
+    }
+
+    /// <summary>On a play's first item: the play opens a repeat RUN (a block's first play, or
+    /// the first after a <c>:|:</c> inside it).</summary>
+    public bool SectionRepeatRunStart
+    {
+        get => _rareBase?.SectionRepeatRunStart ?? false;
+        init { if (value != SectionRepeatRunStart) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionRepeatRunStart = value }; }
+    }
+
+    /// <summary>On a run's first item: the written <c>:|*N</c> play count, 0 when none.</summary>
+    public int SectionRepeatCount
+    {
+        get => _rareBase?.SectionRepeatCount ?? 0;
+        init { if (value != SectionRepeatCount) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionRepeatCount = value }; }
+    }
+
+    /// <summary>On a play's first item: a one-sided form <c>:|</c> stands before the play, so
+    /// the piece so far is played again before it.</summary>
+    public bool SectionPlayRewinds
+    {
+        get => _rareBase?.SectionPlayRewinds ?? false;
+        init { if (value != SectionPlayRewinds) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionPlayRewinds = value }; }
     }
 
     /// <summary>
@@ -846,6 +956,21 @@ public sealed record NoteItem : MusicItem
 
     /// <summary>Stem direction: beam-resolved if beamed, else asked for, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? ForcedStemUp ?? StaffPosition < 0;
+
+    /// <summary>This note with a laissez-vibrer and/or a repeat tie added — the half-ties a tie
+    /// carried over a repeat draws (<c>Collector.SectionTieCarry</c>), exactly as if
+    /// <c>@laissezVibrer</c> / <c>@repeatTie</c> were written on it.</summary>
+    internal NoteItem WithHalfTies(bool laissezVibrer, bool repeatTie)
+    {
+        var copy = this with { };
+        var rare = copy._rare ?? NoteItemRare.Empty;
+        copy._rare = rare with
+        {
+            HasLaissezVibrer = rare.HasLaissezVibrer || laissezVibrer,
+            HasRepeatTie = rare.HasRepeatTie || repeatTie,
+        };
+        return copy;
+    }
 
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;

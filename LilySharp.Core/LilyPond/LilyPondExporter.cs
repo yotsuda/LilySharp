@@ -1556,7 +1556,10 @@ public sealed class LilyPondExporter
         var result = new List<SyntaxNode>();
         if (form != null)
         {
-            AppendFormItems(FormWalk.Read(form), byName, result);
+            var formItems = FormWalk.Read(form);
+            _repeatTiePlays = RepeatTiePlays(formItems, byName);
+            _lpPlayIndex = 0;
+            AppendFormItems(formItems, byName, result);
         }
         else
         {
@@ -1808,6 +1811,8 @@ public sealed class LilyPondExporter
         string? markLabel = null,
         int octaveOffset = 0)
     {
+        // The printed play this is — counted before the lookup, as RepeatTiePlays counts it.
+        int playIndex = _lpPlayIndex++;
         if (!byName.TryGetValue(name, out var entry))
             return;
         // A chord track's play of a section is its chord bars, nothing else: no play
@@ -1834,6 +1839,8 @@ public sealed class LilyPondExporter
             octaveOffset));
         if (headers != null)
             result.AddRange(headers);
+        if (_repeatTiePlays.Contains(playIndex))
+            result.Add(new RepeatTieMarker());
         result.AddRange(ContainerMusic(entry.Container));
         result.AddRange(PaddingBars(entry.Container));
     }
@@ -2279,6 +2286,7 @@ public sealed class LilyPondExporter
             or PartDeclarationSyntax or RenderDeclarationSyntax => false,
         { Green: SectionPlayGreen } => false,
         { Green: ClosedBarGreen } => false,
+        { Green: RepeatTieGreen } => false,
         _ => true,
     };
 
@@ -2388,10 +2396,11 @@ public sealed class LilyPondExporter
 
     private string EmitItem(SyntaxNode item) => item switch
     {
-        NoteSyntax n => CloseImprovisation() + EmitNote(n),
+        NoteSyntax n => CloseImprovisation() + EmitNote(n) + TakeRepeatTie(n.Articulations),
         DrumNoteSyntax dn => CloseImprovisation() + EmitDrumNote(dn),
-        RestSyntax r => EmitRest(r),
-        ChordSyntax c => CloseImprovisation() + EmitChord(c),
+        RestSyntax r => DropRepeatTie() + EmitRest(r),
+        ChordSyntax c => CloseImprovisation() + EmitChord(c) + TakeRepeatTie(c.Articulations),
+        { Green: RepeatTieGreen } => ArmRepeatTie(),
         ChordRepetitionSyntax q => EmitChordRepetition(q),
         SlashNoteSyntax sl => EmitSlashNote(sl),
         BareDurationSyntax bd => EmitBareDuration(bd),
@@ -2493,6 +2502,121 @@ public sealed class LilyPondExporter
             return "";
         _forceNextDuration = false;
         return _lastWrittenValue + new string('.', _lastWrittenDots);
+    }
+
+    // ---- a tie carried over a repeat (the section carry rule) ---------------------------
+    //
+    // A tie at the end of a play is carried to the first note of every play that follows it
+    // in the PLAYED order (Svg.Collector.PlayedOrder). LilyPond draws the arc to the note
+    // printed next by itself; every OTHER such note — the first of a repeat's body the pass
+    // returns to, of a later ending — takes \repeatTie, as the page draws it
+    // (Svg.Collector.SectionTieCarry). The plays that do are planned per part before its
+    // music is flattened (RepeatTiePlays), and a RepeatTieMarker in the stream arms the next
+    // note or chord. ⚠️ The pitch is not compared here: where it differs the page draws no
+    // repeat tie and warns (LYS4007), and the twin still writes one.
+
+    private bool _pendingRepeatTie;
+    private HashSet<int> _repeatTiePlays = new();
+    private int _lpPlayIndex;
+
+    private string ArmRepeatTie()
+    {
+        _pendingRepeatTie = true;
+        return "";
+    }
+
+    private string DropRepeatTie()
+    {
+        _pendingRepeatTie = false;
+        return "";
+    }
+
+    /// <summary>`\repeatTie` after the note or chord the marker armed, unless one is written.</summary>
+    private string TakeRepeatTie(IEnumerable<SyntaxNode> articulations)
+    {
+        if (!_pendingRepeatTie)
+            return "";
+        _pendingRepeatTie = false;
+        foreach (var a in articulations)
+            if (a is ArticulationSyntax { NameToken.Text: "repeatTie" })
+                return "";
+        return "\\repeatTie";
+    }
+
+    /// <summary>The printed plays (in form-walk order) whose first note gets a repeat tie in
+    /// this part: those a play ending in a tie is followed by in the PLAYED order, other than
+    /// the play printed right after it.</summary>
+    private HashSet<int> RepeatTiePlays(IReadOnlyList<FormWalk.Item> items,
+        Dictionary<string, (SectionDeclarationSyntax Section, SyntaxNode Container)> byName)
+    {
+        var plays = new List<Svg.Collector.PrintedPlay>();
+        var names = new List<string>();
+        bool rewind = false;
+        void Add(string name, Svg.Model.SectionRepeatRole role, bool runStart, int count)
+        {
+            plays.Add(new Svg.Collector.PrintedPlay(role, runStart, runStart ? count : 0, rewind));
+            names.Add(name);
+            rewind = false;
+        }
+        foreach (var item in items)
+        {
+            switch (item)
+            {
+                case FormWalk.SectionRef s:
+                    Add(s.Name, Svg.Model.SectionRepeatRole.None, false, 0);
+                    break;
+                case FormWalk.Ending e:
+                    Add(e.Node.SectionName.Text, Svg.Model.SectionRepeatRole.None, false, 0);
+                    break;
+                case FormWalk.LoneRepeatEnd:
+                    rewind = true;
+                    break;
+                case FormWalk.Repeat rb:
+                    bool runStart = true;
+                    int count = rb.ExplicitPlayCount ?? 0;
+                    foreach (var child in rb.Children)
+                    {
+                        if (child is FormWalk.SectionRef bs)
+                        {
+                            Add(bs.Name, Svg.Model.SectionRepeatRole.Body, runStart, count);
+                            runStart = false;
+                        }
+                        else if (child is FormWalk.Ending be)
+                        {
+                            Add(be.Node.SectionName.Text, Svg.Model.SectionRepeatRole.Ending, runStart, count);
+                            runStart = false;
+                        }
+                        else if (child is FormWalk.BothBar)
+                            runStart = true;
+                    }
+                    break;
+            }
+        }
+        var result = new HashSet<int>();
+        var successors = Svg.Collector.PlayedOrder.Successors(plays);
+        for (int q = 0; q < plays.Count; q++)
+        {
+            if (!byName.TryGetValue(names[q], out var entry) || !EndsWithTie(entry.Container))
+                continue;
+            foreach (int s in successors[q])
+                if (s != q + 1)
+                    result.Add(s);
+        }
+        return result;
+    }
+
+    /// <summary>Whether a part's music for a section ends on a tie (its last event is tied).</summary>
+    private bool EndsWithTie(SyntaxNode container)
+    {
+        var music = ContainerMusic(container).ToList();
+        for (int i = music.Count - 1; i >= 0; i--)
+        {
+            if (music[i] is TieSyntax)
+                return true;
+            if (TakesMeasureTime(music[i]))
+                return false;
+        }
+        return false;
     }
 
     private string EmitNote(NoteSyntax n)
@@ -5728,6 +5852,7 @@ public sealed class LilyPondExporter
         }
 
         var result = new List<SyntaxNode>();
+        _repeatTiePlays = new HashSet<int>(); // a chord track carries no ties
         _chordTrack = true;
         foreach (var block in loose)
             result.AddRange(ChordBars(block, (_homeTonic.Step, _homeKeySharps)));
@@ -6839,6 +6964,28 @@ internal sealed class ClosedBarMarker : SyntaxNode
 {
     public ClosedBarMarker()
         : base(new ClosedBarGreen(), parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>
+/// "The next note or chord takes \repeatTie" — a tie carried over a repeat reaches it from a
+/// play not printed before it (<c>LilyPondExporter.RepeatTiePlays</c>). Matched by its green,
+/// like <see cref="SectionPlayMarker"/>, so it survives a form ending's green rebuild.
+/// </summary>
+internal sealed class RepeatTieMarker : SyntaxNode
+{
+    public RepeatTieMarker()
+        : base(new RepeatTieGreen(), parent: null, position: 0)
+    {
+    }
+}
+
+/// <summary>The repeat-tie marker's green (see <see cref="RepeatTieMarker"/>).</summary>
+internal sealed class RepeatTieGreen : InternalSyntax.GreenNode
+{
+    public RepeatTieGreen()
+        : base(SyntaxKind.None, fullWidth: 0)
     {
     }
 }

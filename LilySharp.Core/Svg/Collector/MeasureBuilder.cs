@@ -345,6 +345,7 @@ internal sealed class MeasureBuilder
     /// <see cref="AddItemWithoutDuration"/>.</summary>
     private MusicItem TakePendingPhrasingSlur(MusicItem item)
     {
+        item = TakePendingSectionPlay(item);
         // Not in grace time: a grace column is not the note the mark was written on.
         if (_graceDepth > 0 || PendingPhrasingSlur is not { } phrasing || !BindsAPhrasingSlur(item))
             return item;
@@ -356,6 +357,42 @@ internal sealed class MeasureBuilder
             HasPhrasingSlurEnd = phrasing.End >= 0,
             PhrasingSlurEndSourcePosition = phrasing.End,
             PhrasingSlurDirection = phrasing.Direction,
+        };
+    }
+
+    // The section play the next timed item opens (MusicItem.BeginsSectionPlay), armed by the
+    // section prologue; null when no play is waiting for its first item.
+    private SectionPlayStamp? _pendingPlay;
+
+    /// <summary>Arms the stamp for a new section play: the next note, chord or rest to enter
+    /// (grace time excepted) carries it. A play that wrote no timed item leaves its stamp
+    /// pending; it merges into this one and the stronger edge wins
+    /// (<see cref="SectionPlayEdge"/>'s order), so a span can never be carried over an edge it
+    /// did not see.</summary>
+    public void ArmSectionPlay(SectionPlayStamp stamp)
+    {
+        if (_pendingPlay is { } earlier && earlier.Edge > stamp.Edge)
+            stamp = stamp with { Edge = earlier.Edge };
+        _pendingPlay = stamp;
+    }
+
+    /// <summary>Stamps the armed section play onto <paramref name="item"/> when it is the
+    /// play's first timed item, and clears it. Both doors call it, through
+    /// <see cref="TakePendingPhrasingSlur"/>.</summary>
+    private MusicItem TakePendingSectionPlay(MusicItem item)
+    {
+        if (_pendingPlay is not { } play || _graceDepth > 0
+            || item is not (NoteItem or ChordItem or RestItem))
+            return item;
+        _pendingPlay = null;
+        return item with
+        {
+            BeginsSectionPlay = play.Edge,
+            SectionPlayName = play.Section,
+            SectionRepeatRole = play.Role,
+            SectionRepeatRunStart = play.RunStart,
+            SectionRepeatCount = play.Count,
+            SectionPlayRewinds = play.Rewinds,
         };
     }
 
@@ -1754,7 +1791,8 @@ internal sealed class MeasureBuilder
         Fraction BarPosition,
         Fraction? AlternativeStart,
         Fraction? AlternativeUndo,
-        bool InEnding);
+        bool InEnding,
+        SectionPlayStamp? PendingPlay);
 
     /// <summary>True at a checkpointable boundary: nothing pending in the
     /// current measure, not even a zero-duration directive — and not inside a split bar
@@ -1775,7 +1813,8 @@ internal sealed class MeasureBuilder
         _pendingBreak, _pendingNoBreak, _pendingPageBreak, _pendingNoPageBreak,
         _sectionLabel, _sectionLabelPosition, _measureSourceStart,
         _measures.Count > 0 ? _measures[^1] : null,
-        _logicalCount, _barPosition, _alternativeStart, _alternativeUndo, _inEnding);
+        _logicalCount, _barPosition, _alternativeStart, _alternativeUndo, _inEnding,
+        _pendingPlay);
 
     /// <summary>Restores a captured boundary state, adopting <paramref name="prefix"/>
     /// as the measures emitted before it. The <see cref="MeasureCompleted"/> hook
@@ -1813,6 +1852,7 @@ internal sealed class MeasureBuilder
         _alternativeStart = ck.AlternativeStart;
         _alternativeUndo = ck.AlternativeUndo;
         _inEnding = ck.InEnding;
+        _pendingPlay = ck.PendingPlay;
     }
 
     /// <summary>A copy of the emitted measures BEFORE <see cref="FinalizeMeasures"/>

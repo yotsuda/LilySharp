@@ -432,25 +432,64 @@ public class SectionSplitterTests
     private static string With(string music, string form = "main { A }")
         => Frame.Replace("MUSIC", music).Replace("FORM", form);
 
+    // A slur, phrasing slur, tie or hairpin across a cut is KEPT (the section carry rule,
+    // 2026-09-28): every form plays the new section right after the old one, so the span is
+    // carried into it — as long as it ends there.
+
     [Fact]
-    public void ATieAcrossTheCut_IsReported_NotRewritten()
+    public void ATieAcrossTheCut_IsKept_AndSoundsTheSame()
     {
-        var error = Refusal(With("g'1 | g1~ | g1 | a1 |"));
-        Assert.Contains("ob, section A, after bar 2 (line 6): a tie (line 6) runs across the cut.", error);
+        string src = With("g'1 | g1~ | g1 | a1 |");
+        var result = Split(src);
+        Assert.True(result.NewText != null, result.Error);
+        Assert.Contains("g1~ | }\n  section B {", Lf(result.NewText!));
+        AssertSoundsTheSame(src, result.NewText!, "ob");
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)),
+            d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary or DiagnosticCodes.TieTargetMismatch);
     }
 
     [Fact]
-    public void ASlurAcrossTheCut_IsReported()
+    public void ASlurAcrossTheCut_IsKept()
     {
-        var error = Refusal(With("g'1 | g1( | a1) | a1 |"));
-        Assert.Contains("a slur (opened line 6) runs across the cut", error);
+        string src = With("g'1 | g1( | a1) | a1 |");
+        var result = Split(src);
+        Assert.True(result.NewText != null, result.Error);
+        Assert.Contains("g1( | }\n  section B {", Lf(result.NewText!));
+        Assert.Contains("1) |", result.NewText);
+        AssertSoundsTheSame(src, result.NewText!, "ob");
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)),
+            d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary or DiagnosticCodes.UnpairedSlur);
     }
 
     [Fact]
-    public void AHairpinStillOpenAtTheCut_IsReported()
+    public void ASlurStillOpenAtTheEndOfTheNewSection_IsReported()
     {
-        var error = Refusal(With("g'1@p | g1@cresc | a1@f | a1 |"));
-        Assert.Contains("a hairpin (@cresc line 6, with no dynamic before the cut) runs across the cut", error);
+        // Carried into B and never ended there: the carry rule would refuse it.
+        var error = Refusal(With("g'1 | g1( | a1 | a1 |"));
+        Assert.Contains("a slur (opened line 6) runs across the cut and is still open at the end of the new section B", error);
+    }
+
+    [Fact]
+    public void AHairpinEndedInTheNewSection_IsKept()
+    {
+        string src = With("g'1@p | g1@cresc | a1@f | a1 |");
+        var result = Split(src);
+        Assert.True(result.NewText != null, result.Error);
+        AssertSoundsTheSame(src, result.NewText!, "ob");
+    }
+
+    [Fact]
+    public void AHairpinNothingEndsInTheNewSection_IsReported()
+    {
+        var error = Refusal(With("g'1@p | g1@cresc | a1 | a1 |"));
+        Assert.Contains("a hairpin (@cresc line 6, with no dynamic before the cut) runs across the cut and is still open", error);
+    }
+
+    [Fact]
+    public void AManualBeamAcrossTheCut_IsStillReported()
+    {
+        var error = Refusal(With("g'1 | g2 g4 g8[ g8 | a8] a8 a4 a2 | a1 |"));
+        Assert.Contains("a manual beam (opened line 6) runs across the cut.", error);
     }
 
     [Fact]
@@ -504,7 +543,8 @@ public class SectionSplitterTests
     /// and a two-bar B that holds B + C; db writes everything in A, with a slur over the B/C
     /// boundary. Splitting B used to cut ob, say nothing about db, and be applied — leaving A
     /// three bars long in db. Now the plan continues into A (db must be cut to follow fl too),
-    /// and db's slur refuses the whole thing, whichever section it was started from.</summary>
+    /// and db's slur — which refused the whole thing until the section carry rule — is kept,
+    /// carried from B into C, whichever section the plan was started from.</summary>
     private const string Sequence = """
         part fl {
           section A { c'1 | }
@@ -525,31 +565,45 @@ public class SectionSplitterTests
         """;
 
     [Fact]
-    public void SplittingB_ContinuesIntoTheLongPartsA_AndItsSlurRefusesTheWhole()
+    public void SplittingB_ContinuesIntoTheLongPartsA_AndKeepsItsSlur()
     {
-        var error = Refusal(Sequence, "B");
-        Assert.StartsWith("Nothing was changed: after \"Follow fl: B 1 + C 1 bars.\" db still holds section A 3 bars long; "
-            + "following fl it has to be cut too, and that is refused", error);
-        // The line is the author's file's, not the rewritten text's.
-        Assert.Contains("• db, section A, after bar 2 (line 13): a slur (opened line 13) runs across the cut.", error);
+        var result = Split(Sequence, "B");
+        Assert.True(result.NewText != null, result.Error);
+        Assert.Contains("Split A in db after bars 1, 2 → A, B, C.", result.Plan);
+        Assert.Contains("section B { d'1( | }\n  section C { e'1) | }", Lf(result.NewText!));
+        AssertSoundsTheSame(Sequence, result.NewText!, "db");
+        Assert.Empty(LengthWarnings(result.NewText!));
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)),
+            d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary or DiagnosticCodes.UnpairedSlur);
 
-        // From A the parts disagree (fl: A B C, ob: A B) — following either lands on the same refusal.
-        Assert.True(Split(Sequence, "A").Offer!.NeedsChoice);
-        Assert.Contains("db, section A, after bar 2 (line 13): a slur", Refusal(Sequence, "A", "fl"));
-        // Following ob cuts db into A + B first; B is then split to follow fl, where the slur is.
-        Assert.Contains("db, section B, after bar 1 (line 13): a slur (opened line 13)", Refusal(Sequence, "A", "ob"));
+        // From A (following either part) it is the same file.
+        foreach (var follow in new[] { "fl", "ob" })
+        {
+            var fromA = Split(Sequence, "A", follow);
+            Assert.True(fromA.NewText != null, fromA.Error);
+            Assert.Equal(result.NewText, fromA.NewText);
+        }
     }
 
-    /// <summary>The owner's file as it is now: every part but db has A B C, db has them all in A.
-    /// There is no B warning any more; the command started from B is the same plan as from A.</summary>
+    /// <summary>The owner's file as it is now: every part but db has A B C, db has them all in A,
+    /// with a TIE over the A/B cut and a SLUR over the B/C cut (bohemian-rhapsody.lys's double
+    /// bass carries a slur over its C/D boundary). Both are carried into the section that follows
+    /// and end there, so the split is made, and db sounds exactly as it did — the tie included,
+    /// which MIDI re-attacked across a section boundary in a book of more than one part until
+    /// its tie memory was kept per part.</summary>
     [Fact]
-    public void TheLongPartAlone_IsRefusedWithItsSlur_FromEitherSection()
+    public void TheLongPartAlone_IsSplit_WithItsTieAndSlurCarried()
     {
-        string now = Lf(Sequence).Replace("section B { f1 | g1 | }", "section B { f1 | }\n  section C { g1 | }");
-        string expected = "Nothing was changed: db still holds section A 3 bars long, and splitting it to follow fl is refused:\n"
-            + "• db, section A, after bar 2 (line 14): a slur (opened line 14) runs across the cut.";
-        Assert.Equal(expected, Refusal(now, "A"));
-        Assert.Equal(expected, Refusal(now, "B"));
+        string now = Lf(Sequence).Replace("section B { f1 | g1 | }", "section B { f1 | }\n  section C { g1 | }")
+            .Replace("section A { c'1 | d1( | e1) | }", "section A { c'1~ | c1( | d1) | }");
+        var result = Split(now, "A");
+        Assert.True(result.NewText != null, result.Error);
+        Assert.Contains("section A { c'1~ | }\n  section B { c'1( | }\n  section C { d'1) | }", Lf(result.NewText!));
+        AssertSoundsTheSame(now, result.NewText!, "db");
+        Assert.Equal(result.NewText, Split(now, "B").NewText);
+        Assert.DoesNotContain(SemanticValidation.Run(SyntaxTree.Parse(result.NewText!)),
+            d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary or DiagnosticCodes.UnpairedSlur
+                or DiagnosticCodes.TieTargetMismatch);
     }
 
     /// <summary>The same without the slur: one plan cuts ob's B and db's A, each part still sounds

@@ -577,7 +577,8 @@ public readonly record struct MeasureContentKey(long Hash)
         // staff's silhouette on every system it crosses (SkylineBuilder.AddHairpinsToSkyline)
         // while the cresc mark sits in the first measure and the terminating dynamic in the
         // last, so deleting the terminator must re-derive the systems between.
-        BucketSpan(Svg.Layout.HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics), buckets);
+        BucketSpan(Svg.Layout.HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics,
+            Collector.SectionPlays.For(score)), buckets);
 
         return buckets;
     }
@@ -614,7 +615,8 @@ public readonly record struct MeasureContentKey(long Hash)
         // The pedal SPANS, for the reason the Score overload gives above.
         BucketSpan(Svg.Layout.PedalEngraver.DetectPedalBrackets(score.MusicMarks), buckets);
         // ...and the hairpin spans, for the reason the Score overload gives above.
-        BucketSpan(Svg.Layout.HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics), buckets);
+        BucketSpan(Svg.Layout.HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics,
+            Collector.SectionPlays.For(score)), buckets);
 
         return buckets;
     }

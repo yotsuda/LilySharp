@@ -30,10 +30,20 @@ internal sealed class TieDetector
         var ties = t_ties ?? new List<TieItem>();
         t_ties = null;
 
+        // The section plays of the voice being walked, built on its first tie: an arc crosses
+        // into the next printed play only when that play is also PLAYED next (SectionPlayGraph).
+        int graphVoice = -1;
+        SectionPlayGraph? graph = null;
+
         // Each voice runs its own tie engraver; VoiceScan walks them all so a
         // second voice's ties are not lost. LILYPOND-REF: ly/engraver-init.ly.
         foreach (var (v, measures, measureIdx, itemIdx, item) in VoiceScan.WalkVoiceItems(score))
         {
+            if (item is (NoteItem { HasTieStart: true } or ChordItem { HasTieStart: true }) && v != graphVoice)
+            {
+                graphVoice = v;
+                graph = SectionPlayGraph.Of(measures);
+            }
             if (item is NoteItem startNote && startNote.HasTieStart)
             {
                 // A tie binds only to the IMMEDIATELY following timed item:
@@ -42,7 +52,7 @@ internal sealed class TieDetector
                 // means NO tie — LilyPond reports an unterminated tie and
                 // never scans past intervening notes looking for a match.
                 // LILYPOND-REF: lily/tie-engraver.cc stop_translation_timestep.
-                var next = FindNextTimedItem(measures, measureIdx, itemIdx);
+                var next = FindNextTimedItem(measures, measureIdx, itemIdx, graph);
                 if (next != null)
                 {
                     var (endMeasureIdx, endItemIdx, endItem) = next.Value;
@@ -82,7 +92,7 @@ internal sealed class TieDetector
             {
                 // LILYPOND-REF: lily/tie-column.cc — tie every matching pitch
                 // between this chord and the next chord/note.
-                DetectChordTies(measures, v, measureIdx, itemIdx, startChord, ties,
+                DetectChordTies(measures, v, measureIdx, itemIdx, startChord, ties, graph,
                     // Polyphonic where the chord STARTS (VoiceScan.SpanCurvesUp's remarks).
                     multiVoice: VoiceScan.ForcedCurveUpAt(score.Voices, v, measureIdx, itemIdx) is not null);
             }
@@ -122,12 +132,13 @@ internal sealed class TieDetector
         ImmutableArray<Measure> measures, int voiceIndex, int measureIdx, int itemIdx,
         ChordItem startChord,
         List<TieItem> ties,
+        SectionPlayGraph? graph,
         bool multiVoice)
     {
         // Like the single-note path: the ties bind only to the IMMEDIATELY
         // following timed item. A rest there means no ties (LilyPond reports an
         // unterminated tie rather than tying across the rest).
-        var next = FindNextTimedItem(measures, measureIdx, itemIdx);
+        var next = FindNextTimedItem(measures, measureIdx, itemIdx, graph);
         if (next == null)
             return;
         var (mi, ii, item) = next.Value;
@@ -172,10 +183,22 @@ internal sealed class TieDetector
     /// legitimately crosses those — but notes, chords and rests all occupy the
     /// next musical moment and therefore terminate the search.
     /// </summary>
+    /// <remarks>
+    /// Over a section boundary the arc is drawn only when the play printed next is also PLAYED
+    /// next (<see cref="SectionPlayGraph.PrintedNextIsPlayedNext"/>); the tie's other
+    /// continuations — back to a <c>|:</c>, into a later ending — are drawn as a hanging tie on
+    /// the tied note and a repeat tie on the target (<c>SectionTieCarry</c>).
+    /// </remarks>
     private static (int MeasureIdx, int ItemIdx, MusicItem Item)? FindNextTimedItem(
-        ImmutableArray<Measure> measures, int measureIdx, int itemIdx)
-        => NoteScan.FindNext(measures, measureIdx, itemIdx,
+        ImmutableArray<Measure> measures, int measureIdx, int itemIdx, SectionPlayGraph? graph)
+    {
+        var next = NoteScan.FindNext(measures, measureIdx, itemIdx,
             x => x is NoteItem or ChordItem or RestItem);
+        if (next is { } n && graph != null && n.Item.BeginsSectionPlay != SectionPlayEdge.None
+            && !graph.PrintedNextIsPlayedNext(graph.PlayOf(measureIdx, itemIdx)))
+            return null;
+        return next;
+    }
 
     /// <summary>
     /// Whether two heads are the SAME PITCH for a tie: the same staff position, or — where the
@@ -193,7 +216,7 @@ internal sealed class TieDetector
     /// `@!ottava`. ⚠️ A clef change between the two heads moves the position by a non-octave
     /// amount and is still left untied (no corpus book writes one).
     /// </remarks>
-    private static bool SamePitch(int positionA, int midiA, int positionB, int midiB)
+    internal static bool SamePitch(int positionA, int midiA, int positionB, int midiB)
         => positionA == positionB
            || (midiA != 0 && midiA == midiB && (positionA - positionB) % 7 == 0);
 

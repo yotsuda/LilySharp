@@ -31,7 +31,13 @@ internal sealed class SlurDetector
         // Each voice runs its own slur engraver: a voice's open-slur stack must not
         // pair with another voice's close, so the stack resets at each voice change.
         // LILYPOND-REF: ly/engraver-init.ly — Slur_engraver lives in the Voice context.
-        var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
+        // A list used as a stack, each entry with the section play it opened in: a slur open
+        // when a section ends is carried into the next play and must end there, and the
+        // carry rule (SectionPlayCursor — SlurPairingScanner reports by the same) drops the
+        // ones it refuses from under the top.
+        var openSlurs = new List<(int measureIdx, int itemIdx, MusicItem item, int play)>();
+        var plays = new SectionPlayCursor();
+        int openPhrasingPlay = -1;
         int currentVoice = -1;
 
         // The phrasing slurs, paired on the same walk and appended AFTER every slur: the
@@ -49,7 +55,17 @@ internal sealed class SlurDetector
             {
                 openSlurs.Clear();
                 openPhrasing = null;
+                plays.Reset();
                 currentVoice = v;
+            }
+
+            if (plays.Enter(item))
+            {
+                for (int k = 0; k < openSlurs.Count; k++)
+                    if (plays.OnEntry(openSlurs[k].play) is not null)
+                        openSlurs.RemoveAt(k--);
+                if (openPhrasing is not null && plays.OnEntry(openPhrasingPlay) is not null)
+                    openPhrasing = null;
             }
 
             // Close before open, as for a slur below (lily/slur-engraver.cc:295-324 is the
@@ -75,7 +91,10 @@ internal sealed class SlurDetector
                 });
             }
             if (item.HasPhrasingSlurStart && openPhrasing is null)
+            {
                 openPhrasing = (measureIdx, itemIdx, item);
+                openPhrasingPlay = plays.Play;
+            }
 
             // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
             if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
@@ -90,7 +109,8 @@ internal sealed class SlurDetector
             // LILYPOND-REF: lily/slur-engraver.cc:295-324 process_music — stop_events_ before start_events_.
             if (hasEnd && openSlurs.Count > 0)
             {
-                var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
+                var (startMeasureIdx, startItemIdx, startItem, _) = openSlurs[^1];
+                openSlurs.RemoveAt(openSlurs.Count - 1);
 
                 // Single voice: default DOWN, flipped UP when ANY covered stem
                 // points DOWN — not just the start note's (a slur from a stem-up
@@ -123,7 +143,7 @@ internal sealed class SlurDetector
 
             if (hasStart)
             {
-                openSlurs.Push((measureIdx, itemIdx, item));
+                openSlurs.Add((measureIdx, itemIdx, item, plays.Play));
             }
         }
 

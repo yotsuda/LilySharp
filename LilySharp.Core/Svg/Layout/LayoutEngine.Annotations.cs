@@ -721,7 +721,9 @@ internal sealed partial class LayoutEngine
             ctx.MultiScore, dynamicLayouts, static d => d.StaffIndex);
 
         // Detect and layout hairpins from cresc/decresc marks
-        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
+        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics,
+            ctx.MultiScore is { } playsScore ? Collector.SectionPlays.For(playsScore)
+            : score is not null ? Collector.SectionPlays.For(score) : null);
         // A tab staff blanks the wedge too, and the ITEM carries its own SourceIndex, so
         // this one is cut before the layout is built rather than after.
         // LILYPOND-REF: ly/engraver-init.ly:1283 Tab_staff_symbol_engraver — that

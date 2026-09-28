@@ -40,6 +40,13 @@ public sealed partial class MeasureCollector
         // "form-repeat-block" walk ineligibility, which zeroed reuse for every
         // band book with a `|: … :|` in its form.
         _formRepeatDepth++;
+        // No slur, phrasing slur or hairpin is carried INTO a repeat block (the body's first
+        // play follows the section before the block once and the body's own end every other
+        // time) nor OUT of one. A tie is carried along the played order instead
+        // (SectionPlayGraph), which the roles stamped below let a reader rebuild.
+        MarkFormEdge(SectionPlayEdge.Repeat);
+        _pendingRunStart = true;
+        _pendingRunCount = Syntax.FormWalk.ExplicitPlayCount(repeat) ?? 0;
         try
         {
             ProcessRepeatBlockCore(repeat, processNodes, builder);
@@ -47,8 +54,19 @@ public sealed partial class MeasureCollector
         finally
         {
             _formRepeatDepth--;
+            _pendingRole = SectionRepeatRole.None;
+            _pendingRunStart = false;
         }
+        MarkFormEdge(SectionPlayEdge.Repeat);
     }
+
+    // What the NEXT section play is to a form repeat (MusicItem.SectionRepeatRole and its
+    // siblings) — set by the repeat walk and the form's one-sided `:|`, consumed by
+    // ProcessSection with the edge. Bookkeeping only, set live or not, like _pendingFormEdge.
+    private SectionRepeatRole _pendingRole;
+    private bool _pendingRunStart;
+    private int _pendingRunCount;
+    private bool _pendingRewind;
 
     private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
@@ -81,6 +99,11 @@ public sealed partial class MeasureCollector
 
             if (child is SyntaxTokenNode token)
             {
+                if (token.Text is "|:" or ":|" or ":|:")
+                    MarkFormEdge(SectionPlayEdge.Repeat);
+                // `:|:` closes one run and opens the next (MIDI plays them B B C C).
+                if (token.Text == ":|:")
+                    _pendingRunStart = true;
                 if (token.Text == "|:")
                 {
                     PushFormBarline(token.Text, token.SourceStart, token.Span);
@@ -129,6 +152,7 @@ public sealed partial class MeasureCollector
                             builder.SectionLabel = LabelForReference(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
+                        _pendingRole = SectionRepeatRole.Body;
                         ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                     }
                 }
@@ -146,11 +170,14 @@ public sealed partial class MeasureCollector
                         builder.SectionLabel = LabelForSilentReference(silent, silentName.Text);
                         builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
                     }
+                    _pendingRole = SectionRepeatRole.Body;
                     ProcessSection(silentSection, processNodes, builder,
                         SyntaxFacts.NetOctaveMarks(silent));
                 }
                 else if (child is FormAlternativeSyntax alt)
                 {
+                    MarkFormEdge(SectionPlayEdge.Volta);
+                    _pendingRole = SectionRepeatRole.Ending;
                     string altSectionName = alt.SectionName.Text;
                     if (_sectionState.Sections.TryGetValue(altSectionName, out var section))
                     {
@@ -242,6 +269,12 @@ public sealed partial class MeasureCollector
         // recording and a resume of the same document address the same boundary.
         int visit = _sectionVisit++;
         _invocationInSection = 0;
+        // Consumed at every play, live or skipped, so a resumed walk reads the same edges.
+        var playStamp = new SectionPlayStamp(_pendingFormEdge, section.SectionName, _pendingRole,
+            _pendingRunStart, _pendingRunStart ? _pendingRunCount : 0, _pendingRewind);
+        _pendingFormEdge = SectionPlayEdge.Sequential;
+        _pendingRunStart = false;
+        _pendingRewind = false;
         // A spliced walk adopted every remaining section — prologue, music,
         // padding epilogue — inside the recorded tail (the end checkpoint
         // carries the section maps and metadata the prologue would write).
@@ -278,6 +311,10 @@ public sealed partial class MeasureCollector
         else
         {
             ProcessSectionPrologue(section, builder, octaveOffset);
+            // The play's first timed item carries the edge (MusicItem.BeginsSectionPlay).
+            // Armed with the prologue, so a resume inside this play finds it in the
+            // builder's checkpoint if no item has taken it yet.
+            builder.ArmSectionPlay(playStamp);
         }
 
         int startMeasure = builder.CurrentMeasureIndex;

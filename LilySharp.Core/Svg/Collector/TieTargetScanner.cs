@@ -50,9 +50,12 @@ internal static class TieTargetScanner
     /// tie: it drops it, and in the outward direction WITHOUT A WARNING.
     /// </remarks>
     public static void Scan(Voice voice, List<TieTargetWarning> sink,
-        List<CueSpanBoundaryWarning> cueSink)
+        List<CueSpanBoundaryWarning> cueSink, List<SectionCarryWarning>? carrySink = null)
     {
         var measures = voice.Measures;
+        // The section plays and their PLAYED order, built on the first tie.
+        SectionPlayGraph? graph = null;
+        bool graphBuilt = false;
         for (int mi = 0; mi < measures.Length; mi++)
         {
             var items = measures[mi].Items;
@@ -61,8 +64,40 @@ internal static class TieTargetScanner
                 var item = items[ii];
                 if (item is not (NoteItem { HasTieStart: true } or ChordItem { HasTieStart: true }))
                     continue;
+                if (!graphBuilt)
+                {
+                    graph = SectionPlayGraph.Of(measures);
+                    graphBuilt = true;
+                }
                 var next = NoteScan.FindNext(measures, mi, ii,
                     x => x is NoteItem or ChordItem or RestItem);
+                // A tie at the end of a section play is carried to the first note of EVERY play
+                // that follows it in the PLAYED order — over any repeat sign, ending or jump
+                // (owner's decision 2026-09-28; SectionPlayGraph, which TieDetector and
+                // SectionTieCarry draw by). Each such note must repeat the tied pitch; one in a
+                // section the part does not play (padding) has nothing to reach.
+                int play = graph?.PlayOf(mi, ii) ?? -1;
+                if (graph != null && play >= 0
+                    && (next is { } boundary ? boundary.Item.BeginsSectionPlay != SectionPlayEdge.None
+                                             : graph.Successors(play).Count > 0))
+                {
+                    var successors = graph.Successors(play);
+                    if (successors.Count == 0)
+                        sink.Add(new TieTargetWarning(item.SourcePosition, TieTargetProblem.NoTarget));
+                    foreach (int s in successors)
+                    {
+                        var (sm, si) = graph.StartOf(s);
+                        var target = measures[sm].Items[si];
+                        if (target is RestItem { IsSpacer: true })
+                            carrySink?.Add(new SectionCarryWarning(item.SourcePosition, SectionSpanKind.Tie,
+                                SectionCarryFault.IntoEmptySection, graph.NameOf(play), graph.NameOf(s)));
+                        else if (target is RestItem)
+                            sink.Add(new TieTargetWarning(target.SourcePosition, TieTargetProblem.IntoRest));
+                        else if (!AnyPitchMatches(item, target))
+                            sink.Add(new TieTargetWarning(target.SourcePosition, TieTargetProblem.PitchMismatch));
+                    }
+                    continue;
+                }
                 if (next is not { } n)
                 {
                     // Nothing follows: the tie is the last thing in its voice. This used to

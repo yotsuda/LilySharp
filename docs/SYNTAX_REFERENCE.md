@@ -438,6 +438,64 @@ warned about, and **the end is required**: an unclosed one draws nothing and is 
 `@phrasingSlur.down` fixes its side (LilyPond's `^\(` / `_\(`); otherwise it takes a slur's
 rule.
 
+### Across a section boundary
+
+A slur, a phrasing slur, a tie or a hairpin that is still open when a section ends is carried
+into the section the form plays **next**, and must end there:
+
+```
+part vc {
+  section C { g4 a b c( || }
+  section D { d4) e f g~ || }
+  section E { g'1 | }   // the frame reset at E: g' is the tied G
+}
+form main { C D E }
+score main { staff vc }
+```
+
+The carry follows the form, play by play and part by part, so the same section can be followed
+by different sections in different places (`form main { C D C E }` carries C's slur into D the
+first time and into E the second). Every form a score plays is checked. A span that breaks the
+rule is not drawn (a hairpin is cut at the end of its own section) and is reported (**LYS4023**):
+
+- carried into the next section and not ended there — a span may cross one boundary, not run
+  through a whole section (warning);
+- a `)` or `@!phrasingSlur` at a section's start with nothing carried in from the section played
+  before it (warning);
+- carried into a section the part plays nothing in — its bars there are padding (warning);
+- a slur, phrasing slur or hairpin carried over a repeat sign (`|:` `:|` `:|:`), into or out
+  of a volta ending, or over a jump mark (segno, coda, D.S., D.C., fine) — what is played before
+  that section differs from pass to pass, so this is **an error**.
+
+A **tie** may cross all of those. It is carried to the first note of every section that is
+*played* after the tied note's section — the way the MIDI plays the form: the body again at
+each pass, that pass's ending, whatever follows the block — and each of those notes must repeat
+the tied pitch (otherwise LYS4007, as for any tie):
+
+```
+part vn {
+  section I { c''1~ || }
+  section A { c''1 | e1~ || }
+  section B { e''1 | }
+}
+form main { I |: A [1. B] :| [2. B] }
+score main { staff vn }
+```
+
+Where the section played next is also the one printed next, the tie is an ordinary arc (I into
+A, A into the first ending). Where it is not — back to the `|:`, into a later ending — the tied
+note gets a hanging tie and the note the music arrives at a repeat tie, drawn as if
+`@laissezVibrer` / `@repeatTie` were written there (once, however many ties arrive at it). The
+MIDI sustains the note on each pass the tie is carried on and re-attacks it on the others;
+MusicXML writes the tie's start on the tied note and its stop on every note it reaches; the
+LilyPond twin writes `\repeatTie`. Jumps (D.S., D.C.) are not followed, as the MIDI does not
+follow them.
+
+Everything else a section starts from still resets at the boundary (the relative frame, the note
+value, the meter, the key, the clef, overrides), so a tie's target states its octave. A span
+opened in the last section and never closed is still the ordinary unclosed slur (LYS4010) or
+phrasing slur (LYS4018). Text spanners, ottavas, pedals and trill spanners are paired as before.
+
 ## Barlines
 
 | Syntax | Type | Where |
@@ -1051,9 +1109,12 @@ the key and the clef, so at each cut the new section's first note is given the o
 and the note value that keep it where it was, and the meter / key / clef in force are
 restated. The rewrite is checked before it is offered — every part it cuts must sound exactly
 as before (the MIDI, part by part) and write as many bars, and the warning must be gone — and
-applied as one edit. A tie, slur, hairpin, pedal or other span running across a cut, a cut
-that falls mid-bar, or the section played as a repeat ending (`[1. A]`) is reported instead,
-with where. It works on files grouped by part; regroup a file grouped by section first.
+applied as one edit. A slur, phrasing slur, tie or hairpin running across a cut is kept as
+written: every form plays the new section right after the one it was cut from, so the span is
+carried into it ([Across a section boundary](#across-a-section-boundary)) — unless it is still
+open at the end of that new section, which is reported. A manual beam, a pedal or any other
+span running across a cut, a cut that falls mid-bar, or the section played as a repeat ending
+(`[1. A]`) is reported instead, with where. It works on files grouped by part; regroup a file grouped by section first.
 
 **Those four are the whole list.** A setting that belongs to ONE part — `clef`,
 `instrument`, `transpose`, `octave` — is refused beside a section's part cells

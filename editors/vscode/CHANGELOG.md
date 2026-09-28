@@ -100,12 +100,24 @@ All notable changes to the Lily# VS Code extension are documented here.
   follow; then one confirmation shows the plan, and **Apply** makes it one edit (one undo).
   The server checks the result first: every cut part sounds and counts exactly as before. The
   plan covers every part still holding the followed sections in one (from the A warning or the
-  B warning alike) and is refused whole — no partial split is offered. A
-  tie, slur or other span across a cut, or a cut mid-bar, is shown as the reason nothing
-  changed. Files grouped by part.
+  B warning alike) and is refused whole — no partial split is offered. A slur, phrasing slur,
+  tie or hairpin across a cut is kept (it is carried into the new section) unless it is still
+  open at that section's end; a beam, pedal or other span across a cut, or a cut mid-bar, is
+  shown as the reason nothing changed. Files grouped by part.
+- **A slur, phrasing slur, tie or hairpin may run into the next section** the form plays, and
+  must end there; the Problems list says where one does not (LYS4023) — carried through a
+  whole section, closing nothing carried in, carried into a section the part does not play
+  (warnings), or — a slur, phrasing slur or hairpin — carried over a repeat sign, volta edge or
+  jump (an error). Every form a score plays is checked, not only the first score's.
+- **A tie may cross any repeat sign or ending**: it reaches the first note of every section
+  played next (the body again, the next ending), and the preview draws the arc where that note
+  is printed next and a hanging tie plus an automatic repeat tie where it is not; playback
+  sustains the note on those passes. A target on another pitch is flagged (LYS4007).
 
 ### Fixes
 
+- **A tie into the next section sounds as one note in the preview's playback** in a book of
+  more than one part (it was played twice).
 - **An `@chord` on a rest or a spacer draws in the preview** (`r1@chord(C x32013)`,
   `s1@chord(G)` drew nothing): the name at that moment and its diagram, as on a note. The step,
   the hover and the audition work on it as on a note's. A bare `@chord` there warns — write

@@ -34,7 +34,10 @@ namespace LilySharp.Core.Editing;
 /// <para>
 /// Owner's decisions (2026-09-28): part-major files only; the part that subdivides the others
 /// is found, not asked for, unless two parts subdivide differently; a spanner crossing a cut
-/// and a cut that falls mid-bar are REPORTED, never rewritten; and the rewrite is checked
+/// and a cut that falls mid-bar are REPORTED, never rewritten
+/// (a slur, phrasing slur, tie or hairpin crossing a cut is the exception, second decision of
+/// the same day: the section carry rule lets it run into the new section, which every form
+/// plays next, provided it ends there — it is kept as written); and the rewrite is checked
 /// before it is offered — the result compiles, every rewritten part sounds exactly as it did
 /// (MIDI pitches and times, part by part) and writes as many bars, the length warning on the
 /// section is gone and no error is new. Anything else and nothing is returned but the reason.
@@ -673,13 +676,33 @@ public static class SectionSplitter
                     ok = false;
                     break;
                 }
-                foreach (var open in OpenAt(cell, bodyStart, cut))
-                {
-                    _problems.Add($"{where} ({LineOf(cut)}): {open} runs across the cut.");
-                    ok = false;
-                }
                 pieces.Add((cut, name));
                 prev = found + 1;
+            }
+            // What is open at each cut, judged against the NEXT boundary (the next cut, or the
+            // cell's end): a slur, phrasing slur, tie or hairpin may be carried into the section
+            // the cut opens — every form plays the new sections one after the other, so the
+            // continuation always follows — but must end there (the section carry rule,
+            // Svg.Collector.SectionPlayCursor); anything else open at a cut is refused.
+            for (int k = 0; ok && k < pieces.Count; k++)
+            {
+                int cut = pieces[k].Cut;
+                int next = k + 1 < pieces.Count ? pieces[k + 1].Cut : bodyEnd;
+                string where = $"{cell.Owner}, section {S}, after bar {_cuts[k].After}";
+                var stillOpen = new HashSet<string>(OpenSpans(cell, bodyStart, next).Select(s => s.Key),
+                    StringComparer.Ordinal);
+                foreach (var open in OpenSpans(cell, bodyStart, cut))
+                {
+                    if (!open.MayCarry)
+                        _problems.Add($"{where} ({LineOf(cut)}): {open.Text} runs across the cut.");
+                    else if (stillOpen.Contains(open.Key))
+                        _problems.Add($"{where} ({LineOf(cut)}): {open.Text} runs across the cut and is still "
+                            + $"open at the end of the new section {pieces[k].Name} — a span may be carried into "
+                            + "the next section only as far as its end.");
+                    else
+                        continue;
+                    ok = false;
+                }
             }
             return ok && pieces.Count > 0 ? pieces : null;
         }
@@ -763,12 +786,18 @@ public static class SectionSplitter
             ["phrasingSlur"] = "phrasing slur",
         };
 
+        /// <summary>One span open at a point of a cell: <see cref="Key"/> tells it from every
+        /// other (its family and where it opened), <see cref="MayCarry"/> whether the section
+        /// carry rule lets it run over a section boundary (a slur, phrasing slur, tie or
+        /// hairpin).</summary>
+        private readonly record struct OpenSpan(string Key, string Text, bool MayCarry);
+
         /// <summary>What is still open at <paramref name="cut"/> among the cell's items before
         /// it: a tie, a slur, a manual beam, and the <c>@</c> spans (a hairpin stays open until
         /// the next dynamic, a span until its <c>@!</c> end).</summary>
-        private List<string> OpenAt(Cell cell, int bodyStart, int cut)
+        private List<OpenSpan> OpenSpans(Cell cell, int bodyStart, int cut)
         {
-            var open = new List<string>();
+            var open = new List<OpenSpan>();
             var nodes = cell.Body.DescendantNodes()
                 .Where(n => n.Span.Start >= bodyStart && n.Span.Start < cut).ToList();
 
@@ -776,15 +805,17 @@ public static class SectionSplitter
                 .Select(n => n.Span.Start).DefaultIfEmpty(-1).Max();
             if (nodes.OfType<TieSyntax>().Select(t => t.Span.Start).DefaultIfEmpty(-1).Max() is var tie
                 && tie > lastOnset)
-                open.Add($"a tie ({LineOf(tie)})");
+                open.Add(new OpenSpan($"tie@{tie}", $"a tie ({LineOf(tie)})", MayCarry: true));
 
-            int slurs = 0, beams = 0, slurAt = -1, beamAt = -1;
+            // Slurs pair as a stack; each open one is its own span.
+            var slurs = new List<int>();
+            int beams = 0, beamAt = -1;
             foreach (var n in nodes.OrderBy(n => n.Span.Start))
             {
                 if (n is SlurSyntax slur)
                 {
-                    if (slur.IsOpen) { if (slurs++ == 0) slurAt = n.Span.Start; }
-                    else if (slurs > 0) slurs--;
+                    if (slur.IsOpen) slurs.Add(n.Span.Start);
+                    else if (slurs.Count > 0) slurs.RemoveAt(slurs.Count - 1);
                 }
                 else if (n is BeamMarkerSyntax beam)
                 {
@@ -792,8 +823,9 @@ public static class SectionSplitter
                     else if (beams > 0) beams--;
                 }
             }
-            if (slurs > 0) open.Add($"a slur (opened {LineOf(slurAt)})");
-            if (beams > 0) open.Add($"a manual beam (opened {LineOf(beamAt)})");
+            foreach (int slurAt in slurs)
+                open.Add(new OpenSpan($"slur@{slurAt}", $"a slur (opened {LineOf(slurAt)})", MayCarry: true));
+            if (beams > 0) open.Add(new OpenSpan($"beam@{beamAt}", $"a manual beam (opened {LineOf(beamAt)})", MayCarry: false));
 
             // The @ marks, read off the text at each '@' token: '@name' opens (or, for a
             // dynamic, closes a hairpin), '@!name' ends.
@@ -819,18 +851,20 @@ public static class SectionSplitter
                     spans[family] = (name, t.Span.Start);
             }
             foreach (var (family, (name, at)) in spans.OrderBy(s => s.Value.At))
-                open.Add(family == "hairpin"
-                    ? $"a hairpin (@{name} {LineOf(at)}, with no dynamic before the cut)"
-                    : $"a {family} (@{name} {LineOf(at)})");
+                open.Add(new OpenSpan($"{family}@{at}", family == "hairpin"
+                        ? $"a hairpin (@{name} {LineOf(at)}, with no dynamic before the cut)"
+                        : $"a {family} (@{name} {LineOf(at)})",
+                    MayCarry: family is "hairpin" or "phrasing slur"));
 
             // A lyric word whose hyphen or extender reaches over the bar line.
             if (cell.Kind == CellKind.Lyrics
                 && nodes.OfType<SyntaxTokenNode>().Where(t => !t.Text.Contains('|'))
                     .OrderBy(t => t.Span.Start).LastOrDefault() is { } word
                 && (word.Text.EndsWith('-') || word.Text == "__"))
-                open.Add($"a lyric word ('{word.Text}' {LineOf(word.Span.Start)})");
+                open.Add(new OpenSpan($"word@{word.Span.Start}",
+                    $"a lyric word ('{word.Text}' {LineOf(word.Span.Start)})", MayCarry: false));
             if (cell.Kind == CellKind.Lyrics && nodes.OfType<SyntaxTokenNode>().Any(t => t.Kind == SyntaxKind.OpenBracket))
-                open.Add("a verse bracket [N. …]");
+                open.Add(new OpenSpan("verse", "a verse bracket [N. …]", MayCarry: false));
             return open;
         }
 

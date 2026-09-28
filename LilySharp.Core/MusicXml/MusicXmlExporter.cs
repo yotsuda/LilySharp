@@ -362,7 +362,11 @@ public sealed class MusicXmlExporter
         {
             // No structure block: emit the sections in declaration order.
             foreach (var section in sectionDecls)
+            {
+                BeginPrintedPlay();
                 EmitSection(section);
+            }
+            FinishCarriedTies();
             return;
         }
 
@@ -378,6 +382,96 @@ public sealed class MusicXmlExporter
             list.Add(s);
         }
         WalkForm(structure, byName);
+        FinishCarriedTies();
+    }
+
+    // ---- ties carried over a section boundary (the section carry rule) ----------------
+    //
+    // A tie open at the end of a part's block is carried to the first note of EVERY play that
+    // follows that play in the PLAYED order (Svg.Collector.PlayedOrder — the order MIDI plays):
+    // the printed next one, back to a `|:`, into a later ending. The music is printed ONCE, so
+    // each such note gets the tie's stop and the tied note keeps its start; a start nothing
+    // stops is retracted (a start with no stop is a broken pair — CloseTies' remark).
+    // LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+    // a repeat's body, of a later ending) is how this exporter writes LilyPond's \repeatTie —
+    // MusicXML has no repeat-tie element; `<tie type="stop"/>` + `<tied type="stop"/>` with no
+    // start before it on the page is the spelling that plays right when the repeat is honoured.
+
+    // The printed plays, in emission order, with what each is to a form repeat.
+    private readonly List<Svg.Collector.PrintedPlay> _printedPlays = new();
+    // What the next printed play is to a form repeat (set by the form walk).
+    private Svg.Model.SectionRepeatRole _xmlRole;
+    private bool _xmlRunStart;
+    private int _xmlRunCount;
+    private bool _xmlRewind;
+    // Per (part, printed play): the tie starts open at the block's end, and the block's first onset.
+    private readonly Dictionary<(string Part, int Play), List<MusicXmlNote>> _openAtEnd = new();
+    private readonly Dictionary<(string Part, int Play), List<MusicXmlNote>> _firstOnset = new();
+    private string? _currentPartName;
+
+    /// <summary>The printed play now being emitted (1-based; 0 before the first).</summary>
+    private int _xmlPlaySerial => _printedPlays.Count;
+
+    /// <summary>Opens the next printed play with the repeat role the form walk set.</summary>
+    private void BeginPrintedPlay()
+    {
+        _printedPlays.Add(new Svg.Collector.PrintedPlay(_xmlRole, _xmlRunStart,
+            _xmlRunStart ? _xmlRunCount : 0, _xmlRewind));
+        _xmlRunStart = false;
+        _xmlRewind = false;
+    }
+
+    /// <summary>Stops every carried tie on the plays that follow its play, and retracts the
+    /// starts nothing stops.</summary>
+    private void FinishCarriedTies()
+    {
+        var successors = Svg.Collector.PlayedOrder.Successors(_printedPlays);
+        foreach (var ((part, play), open) in _openAtEnd)
+        {
+            var matched = new HashSet<MusicXmlNote>();
+            if (play >= 1 && play <= successors.Length)
+                foreach (int s in successors[play - 1])
+                {
+                    if (!_firstOnset.TryGetValue((part, s + 1), out var targets))
+                        continue;
+                    foreach (var t in targets)
+                        if (open.FirstOrDefault(n => SameNotehead(n, t)) is { } from)
+                        {
+                            t.TieStop = true;
+                            matched.Add(from);
+                        }
+                }
+            foreach (var n in open)
+                if (!matched.Contains(n))
+                    n.TieStart = false;
+        }
+        _openAtEnd.Clear();
+        _firstOnset.Clear();
+    }
+
+    /// <summary>The first onset of the notes emitted into <paramref name="part"/> from measure
+    /// <paramref name="fromMeasure"/> on: the first sounding note and its chord members, or
+    /// nothing when the block opens with a rest.</summary>
+    private static List<MusicXmlNote> FirstOnset(MusicXmlPart part, int fromMeasure)
+    {
+        var onset = new List<MusicXmlNote>();
+        for (int m = fromMeasure; m < part.Measures.Count; m++)
+            foreach (var n in part.Measures[m].Notes)
+            {
+                if (n.RawElement != null || n.IsBackup || n.IsGrace)
+                    continue;
+                if (onset.Count == 0)
+                {
+                    if (n.IsRest)
+                        return onset;
+                    onset.Add(n);
+                }
+                else if (n.IsChord)
+                    onset.Add(n);
+                else
+                    return onset;
+            }
+        return onset;
     }
 
     // The section's OWN key, if it states one beside its part blocks
@@ -549,6 +643,7 @@ public sealed class MusicXmlExporter
     private void EmitSectionByName(Dictionary<string, List<SectionDeclarationSyntax>> byName, string name,
         int octaveOffset = 0)
     {
+        BeginPrintedPlay(); // one section play, whichever parts write it
         if (byName.TryGetValue(name, out var list))
             foreach (var section in list)
                 EmitSection(section, octaveOffset);
@@ -597,6 +692,7 @@ public sealed class MusicXmlExporter
                 // for "repeat from the beginning", which is the reading this grammar gives
                 // a one-sided ':|', so nothing extra has to be written to say it.
                 case FormWalk.LoneRepeatEnd:
+                    _xmlRewind = true; // the piece so far plays again (PlayedOrder)
                     foreach (var p in Document.Parts)
                         if (p.Measures.Count > 0)
                             p.Measures[^1].RepeatBackward = true;
@@ -727,10 +823,15 @@ public sealed class MusicXmlExporter
     /// part — mirroring the inline-barline handling.</summary>
     private void EmitRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
+        // The block's plays are a repeat run: its body plays and endings (PlayedOrder).
+        _xmlRunStart = true;
+        _xmlRunCount = rb.ExplicitPlayCount ?? 0;
         if (rb.Children.Any(c => c is FormWalk.Ending))
             EmitVoltaRepeatBlock(rb, byName);
         else
             EmitPlainRepeatBlock(rb, byName);
+        _xmlRole = Svg.Model.SectionRepeatRole.None;
+        _xmlRunStart = false;
     }
 
     private void EmitPlainRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
@@ -753,6 +854,8 @@ public sealed class MusicXmlExporter
         {
             if (run.Count == 0)
                 continue;
+            _xmlRunStart = true; // a ':|:' divides two repeats
+            _xmlRole = Svg.Model.SectionRepeatRole.Body;
             var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
             foreach (var item in run)
                 EmitSectionByName(byName, item.Name, item.OctaveOffset);
@@ -790,6 +893,7 @@ public sealed class MusicXmlExporter
         {
             if (child is FormWalk.Ending { Node: var alt })
             {
+                _xmlRole = Svg.Model.SectionRepeatRole.Ending;
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 EmitSectionByName(byName, alt.SectionName.Text, alt.OctaveOffset);
                 string num = EndingNumbers(alt);
@@ -806,6 +910,7 @@ public sealed class MusicXmlExporter
             }
             else if (child is FormWalk.SectionRef s)
             {
+                _xmlRole = Svg.Model.SectionRepeatRole.Body;
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 EmitSectionByName(byName, s.Name, s.OctaveOffset);
                 if (forwardPending)
@@ -866,6 +971,9 @@ public sealed class MusicXmlExporter
         int missing = _sectionBars.Missing(voice, out bool open);
         if (missing <= 0)
             return;
+        // Silence follows the part's last note: no tie is carried over it.
+        if (_currentPartName != null && _openAtEnd.Remove((_currentPartName, _xmlPlaySerial), out var hanging))
+            foreach (var n in hanging) n.TieStart = false;
         if (_currentMeasure == null)
             StartNewMeasure();
         var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
@@ -958,11 +1066,20 @@ public sealed class MusicXmlExporter
         if (_sectionTime is { } st) ProcessTimeSignature(st);
         if (_sectionKey is { } sk) ProcessKeySignature(sk);
         _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
+        // THE SECTION CARRY RULE, for the tie: the open starts a part leaves at the end of a
+        // block are matched with the first notes of the plays that follow it in the PLAYED
+        // order once the whole document is written (FinishCarriedTies). Until 2026-09-28 they
+        // were forgotten here unretracted, so a `c~ ||` into the next section's `c`, which the
+        // page draws, was written as a tie start with no stop. A second block of the same part
+        // in the SAME play continues it in the flow, as it always did.
         _tieToNextNote = false;
-        // Forget the open starts WITHOUT retracting them: a tie left hanging at a part
-        // boundary is a separate question from an unmatched member, and this line only
-        // stops the next part's first onset from being paired against another part's note.
         _tieOpen.Clear();
+        _currentPartName = partName;
+        if (_openAtEnd.Remove((partName, _xmlPlaySerial), out var samePlay))
+        {
+            _tieOpen.AddRange(samePlay);
+            _tieToNextNote = true;
+        }
         _defaultDuration = Fraction.Quarter;
         _pendingDynamic = null;
 
@@ -1000,6 +1117,14 @@ public sealed class MusicXmlExporter
 
         FlushCurrentMeasure();
         AttachLyrics(_currentPart!, measuresBefore, lyricsBlocks);
+
+        // The block's first onset (what a tie carried into this play stops on), and what it
+        // leaves open (FinishCarriedTies matches them once every play is written).
+        _firstOnset.TryAdd((partName, _xmlPlaySerial), FirstOnset(_currentPart!, measuresBefore));
+        if (_tieToNextNote && _tieOpen.Count > 0)
+            _openAtEnd[(partName, _xmlPlaySerial)] = _tieOpen.ToList();
+        _tieOpen.Clear();
+        _tieToNextNote = false;
     }
 
     /// <summary>

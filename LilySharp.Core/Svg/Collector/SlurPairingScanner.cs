@@ -71,13 +71,22 @@ internal static class SlurPairingScanner
     /// every note and chord of the voice in order — the identity costs one increment, and no
     /// second walk exists to disagree with this one.
     /// </para>
+    /// <para>
+    /// A slur open when a section ends is carried into the section played next and must end
+    /// there — <see cref="SectionPlayCursor"/>'s rule, the one <see cref="SlurDetector"/>
+    /// draws by. What the rule refuses goes to <paramref name="carrySink"/> (null: reported
+    /// nowhere, but dropped all the same, so neither sink disagrees with the page).
+    /// </para>
     /// </remarks>
     public static void Scan(Voice voice, List<UnpairedSlurWarning> sink,
-        List<CueSpanBoundaryWarning> cueSink)
+        List<CueSpanBoundaryWarning> cueSink, List<SectionCarryWarning>? carrySink = null)
     {
-        // The '(' marks still looking for a ')' — position, and WHICH cue region that note sits
-        // in (0 = not in one).
-        var open = new Stack<(int Position, int Region)>();
+        // The '(' marks still looking for a ')' — position, WHICH cue region that note sits
+        // in (0 = not in one), and the section play it was opened in. A list used as a
+        // stack: the carry rule can drop an entry from under the top.
+        var open = new List<(int Position, int Region, int Play)>();
+        var plays = new SectionPlayCursor();
+        bool openedThisPlay = false;
         int regionsSeen = 0;
         int region = 0;
         var measures = voice.Measures;
@@ -86,6 +95,18 @@ internal static class SlurPairingScanner
             var items = measures[mi].Items;
             for (int ii = 0; ii < items.Length; ii++)
             {
+                if (plays.Enter(items[ii]))
+                {
+                    openedThisPlay = false;
+                    for (int k = 0; k < open.Count; k++)
+                    {
+                        if (plays.OnEntry(open[k].Play) is not { } fault)
+                            continue;
+                        var (from, into) = plays.NamesOnEntry(open[k].Play, fault);
+                        carrySink?.Add(new SectionCarryWarning(open[k].Position, SectionSpanKind.Slur, fault, from, into));
+                        open.RemoveAt(k--);
+                    }
+                }
                 if (!TryGetSlurFlags(items[ii], out bool hasStart, out bool hasEnd))
                     continue;
                 region = RegionOf(items[ii], region, ref regionsSeen);
@@ -93,27 +114,42 @@ internal static class SlurPairingScanner
                 {
                     if (open.Count > 0)
                     {
-                        var start = open.Pop();
+                        var start = open[^1];
+                        open.RemoveAt(open.Count - 1);
                         if (start.Region != region)
                             cueSink.Add(new CueSpanBoundaryWarning(
                                 start.Position, CueSpanKind.Slur,
                                 CrossingOf(start.Region, region)));
                     }
+                    else if (plays.OnUnmatchedClose(openedThisPlay) is { } fault)
+                    {
+                        var (from, into) = plays.NamesForClose();
+                        carrySink?.Add(new SectionCarryWarning(items[ii].SourcePosition, SectionSpanKind.Slur, fault, from, into, AtClose: true));
+                    }
                     else
                         sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: false));
                 }
                 if (hasStart)
-                    open.Push((items[ii].SourcePosition, region));
+                {
+                    open.Add((items[ii].SourcePosition, region, plays.Play));
+                    openedThisPlay = true;
+                }
             }
         }
 
         // Whatever is still open when the voice ends is dropped by the renderer. Reported
-        // in the order the marks were WRITTEN (the stack pops innermost-first), so a
+        // in the order the marks were WRITTEN (the list holds them oldest first), so a
         // diagnostic list reads down the score rather than back up it.
-        var dangling = new List<(int Position, int Region)>(open);
-        dangling.Reverse();
-        foreach (var (position, _) in dangling)
-            sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
+        foreach (var (position, _, play) in open)
+        {
+            if (plays.AtEnd(play) is { } fault)
+            {
+                var (from, into) = plays.NamesAtEnd(play);
+                carrySink?.Add(new SectionCarryWarning(position, SectionSpanKind.Slur, fault, from, into));
+            }
+            else
+                sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
+        }
     }
 
     /// <summary>
@@ -128,9 +164,13 @@ internal static class SlurPairingScanner
     /// "already have", :312 "cannot end" — the phrasing engraver is a Slur_engraver
     /// (lily/phrasing-slur-engraver.cc).
     /// </remarks>
-    public static void ScanPhrasing(Voice voice, List<UnpairedSpanWarning> sink)
+    public static void ScanPhrasing(Voice voice, List<UnpairedSpanWarning> sink,
+        List<SectionCarryWarning>? carrySink = null)
     {
         int open = MusicItem.NoSourcePosition;
+        int openPlay = -1;
+        var plays = new SectionPlayCursor();
+        bool openedThisPlay = false;
         var measures = voice.Measures;
         for (int mi = 0; mi < measures.Length; mi++)
         {
@@ -138,18 +178,39 @@ internal static class SlurPairingScanner
             for (int ii = 0; ii < items.Length; ii++)
             {
                 var item = items[ii];
+                // The carry rule, as SlurDetector reads it for the phrasing slur.
+                if (plays.Enter(item))
+                {
+                    openedThisPlay = false;
+                    if (open >= 0 && plays.OnEntry(openPlay) is { } fault)
+                    {
+                        var (from, into) = plays.NamesOnEntry(openPlay, fault);
+                        carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into));
+                        open = MusicItem.NoSourcePosition;
+                    }
+                }
                 if (item.HasPhrasingSlurEnd)
                 {
                     if (open >= 0)
                         open = MusicItem.NoSourcePosition;
+                    else if (plays.OnUnmatchedClose(openedThisPlay) is { } fault)
+                    {
+                        var (from, into) = plays.NamesForClose();
+                        carrySink?.Add(new SectionCarryWarning(item.PhrasingSlurEndSourcePosition,
+                            SectionSpanKind.PhrasingSlur, fault, from, into, AtClose: true));
+                    }
                     else
                         sink.Add(new UnpairedSpanWarning(item.PhrasingSlurEndSourcePosition,
                             SpanKind.PhrasingSlur, SpanPairingFault.StopWithNoStart));
                 }
                 if (item.HasPhrasingSlurStart)
                 {
+                    openedThisPlay = true;
                     if (open < 0)
+                    {
                         open = item.PhrasingSlurStartSourcePosition;
+                        openPlay = plays.Play;
+                    }
                     else
                         sink.Add(new UnpairedSpanWarning(item.PhrasingSlurStartSourcePosition,
                             SpanKind.PhrasingSlur, SpanPairingFault.StartWhileOpen));
@@ -157,7 +218,15 @@ internal static class SlurPairingScanner
             }
         }
         if (open >= 0)
-            sink.Add(new UnpairedSpanWarning(open, SpanKind.PhrasingSlur, SpanPairingFault.Unterminated));
+        {
+            if (plays.AtEnd(openPlay) is { } fault)
+            {
+                var (from, into) = plays.NamesAtEnd(openPlay);
+                carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into));
+            }
+            else
+                sink.Add(new UnpairedSpanWarning(open, SpanKind.PhrasingSlur, SpanPairingFault.Unterminated));
+        }
     }
 
     /// <summary>Which cue region an item sits in — 0 outside any, else a number counted from

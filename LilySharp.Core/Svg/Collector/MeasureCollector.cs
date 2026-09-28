@@ -351,6 +351,39 @@ public sealed partial class MeasureCollector
             ];
         }
     }
+    /// <summary>Slurs, phrasing slurs, ties and hairpins the section carry rule refuses
+    /// (<see cref="SectionPlayCursor"/>): carried into the next section and not ended there,
+    /// ending a span nothing carried in, carried into a section the part does not play, or
+    /// carried over a repeat, volta or jump. Surfaced by <c>SectionCarryValidator</c>.</summary>
+    /// <remarks>
+    /// ⚠️ NOT a side effect of Collect, for the reason <see cref="UnpairedSpanWarnings"/>
+    /// gives: each family is re-asked through the SAME call its reader draws by (the pairing
+    /// scanners with a carry sink, <c>HairpinEngraver.DetectHairpins</c> with the plays), over
+    /// the voices the sanity scan saw — once each. One per (position, kind, fault, sections):
+    /// a section played twice meets the same boundary twice.
+    /// </remarks>
+    public IReadOnlyList<SectionCarryWarning> SectionCarryWarnings
+    {
+        get
+        {
+            var carry = new List<SectionCarryWarning>();
+            var ignoredSlurs = new List<UnpairedSlurWarning>();
+            var ignoredCue = new List<CueSpanBoundaryWarning>();
+            var ignoredSpans = new List<UnpairedSpanWarning>();
+            var ignoredTies = new List<TieTargetWarning>();
+            foreach (var voice in _sanityScannedVoiceList)
+            {
+                SlurPairingScanner.Scan(voice, ignoredSlurs, ignoredCue, carry);
+                SlurPairingScanner.ScanPhrasing(voice, ignoredSpans, carry);
+                TieTargetScanner.Scan(voice, ignoredTies, ignoredCue, carry);
+            }
+            if (SectionPlays.Of(_sanityScannedVoiceList) is { } plays)
+                Layout.HairpinEngraver.DetectHairpins(_musicMarks.ToImmutableArray(),
+                    _dynamics.ToImmutableArray(), plays, carry);
+            return carry.Distinct().ToList();
+        }
+    }
+
     /// <summary>The source position of every REHEARSAL mark this collect produced, so a
     /// caller holding the tree can name the written marks that are not among them.
     /// Surfaced by <c>RehearsalMarkEngravedValidator</c>.</summary>
@@ -1068,6 +1101,10 @@ public sealed partial class MeasureCollector
         // multi-staff road applies (MarkBarsSplitBySectionBoundaries), on this one stream.
         foreach (var (i, from) in SectionBoundaryContinuations(measures))
             measures[i] = measures[i] with { ContinuesBar = true, ContinuedFromMeasure = from == i - 1 ? -1 : from };
+
+        // A tie carried over a repeat to a play that is not printed next: its repeat tie and
+        // hanging tie (SectionTieCarry — the multi-staff road applies it in CollectStaffVoices).
+        ApplySectionTieCarry(measures);
 
         // If any parallel span was seen, reconstruct the additional voices.
         // Pass the attached chord part through: BuildMultiVoiceScore collects it
@@ -2450,6 +2487,16 @@ public sealed partial class MeasureCollector
         return tracks;
     }
 
+    /// <summary>Gives a voice's ties carried over a repeat their repeat ties and hanging ties
+    /// (<see cref="SectionTieCarry"/>), in place.</summary>
+    private static void ApplySectionTieCarry(List<Measure> measures)
+    {
+        var carried = SectionTieCarry.Apply(measures.ToImmutableArray());
+        for (int i = 0; i < measures.Count; i++)
+            if (!ReferenceEquals(carried[i], measures[i]))
+                measures[i] = carried[i];
+    }
+
     /// <summary>
     /// Collects ALL voices of one staff in a multi-staff score: the primary
     /// (voice-0) stream plus any voices contributed by <c>&lt;&lt; \\ &gt;&gt;</c> spans inside
@@ -2462,6 +2509,7 @@ public sealed partial class MeasureCollector
         if (_lastEndsOffTheBar)
             _offBarVoices.Add(voiceName);
         ResolveBeamStemDirections(track0);
+        ApplySectionTieCarry(track0);
 
         var voices = ImmutableArray.CreateBuilder<Voice>();
         voices.Add(new Voice(voiceName, track0.ToImmutableArray()));
@@ -3354,6 +3402,7 @@ public sealed partial class MeasureCollector
         {
             // No `structure { }` — default to the order the sections were declared
             // (source order), so a single-section piece needs no structure at all.
+            _pendingFormEdge = SectionPlayEdge.Sequential;
             foreach (var section in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
             {
                 // Resume: the bookkeeping of a skipped/partially-resumed section is in
@@ -3568,8 +3617,48 @@ public sealed partial class MeasureCollector
         return false;
     }
 
+    /// <summary>How the form reaches the NEXT section play — consumed (and reset to
+    /// <see cref="SectionPlayEdge.Sequential"/>) by <see cref="ProcessSection"/>, which arms
+    /// the play's stamp with it (<see cref="MusicItem.BeginsSectionPlay"/>).</summary>
+    /// <remarks>Bookkeeping only, set whether or not the walk is live, so a resumed walk
+    /// consumes exactly the edges a full one does.</remarks>
+    private SectionPlayEdge _pendingFormEdge = SectionPlayEdge.Sequential;
+
+    /// <summary>Raises the edge the next section play is reached over; the stronger wins.</summary>
+    private void MarkFormEdge(SectionPlayEdge edge)
+    {
+        if (edge > _pendingFormEdge)
+            _pendingFormEdge = edge;
+    }
+
+    // A run a form-level `:|:` opened (FormWalk.GroupDividerRepeats' reading): open until the
+    // next form-level `:|`, whose trailing endings still belong to it (_formDividerClosed).
+    private bool _formDividerOpen;
+    private bool _formDividerClosed;
+
+    /// <summary>The repeat role of a play the form names OUTSIDE any repeat block: a body
+    /// play of a run a form-level <c>:|:</c> opened, an ending of such a run, or none.</summary>
+    private void SetTopLevelRole(bool ending)
+    {
+        if (ending && (_formDividerOpen || _formDividerClosed))
+            _pendingRole = SectionRepeatRole.Ending;
+        else if (!ending && _formDividerOpen)
+            _pendingRole = SectionRepeatRole.Body;
+        else
+        {
+            _pendingRole = SectionRepeatRole.None;
+            _formDividerClosed = false;
+        }
+    }
+
     private void ProcessForm(Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
+        _pendingFormEdge = SectionPlayEdge.Sequential;
+        _pendingRole = SectionRepeatRole.None;
+        _pendingRunStart = false;
+        _pendingRewind = false;
+        _formDividerOpen = false;
+        _formDividerClosed = false;
         foreach (var child in _form!.DescendantNodes())
         {
             switch (child)
@@ -3590,11 +3679,13 @@ public sealed partial class MeasureCollector
                             builder.SectionLabel = LabelForReference(reference);
                             builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         }
+                        SetTopLevelRole(ending: false);
                         ProcessSection(section, processNodes, builder, reference.OctaveOffset);
                     }
                     break;
 
                 case FormRepeatBlockSyntax repeat:
+                    _formDividerClosed = false;
                     ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
 
@@ -3626,6 +3717,7 @@ public sealed partial class MeasureCollector
                         builder.SectionLabel = LabelForEnding(alt);
                         builder.SectionLabelPosition = SectionDeclPos(alt.SectionName.Text);
                     }
+                    SetTopLevelRole(ending: true);
                     ProcessSection(altSection, processNodes, builder, alt.OctaveOffset);
                     break;
 
@@ -3633,6 +3725,10 @@ public sealed partial class MeasureCollector
                 // D.C. / D.S. al fine|coda) — engraved like the inline @-marks, at the
                 // boundary of the section just played.
                 case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
+                    // A jump lands here or leaves from here: no slur, phrasing slur or hairpin
+                    // is carried over this edge. (A tie is carried along the played order,
+                    // which does not follow jumps — neither does the MIDI.)
+                    MarkFormEdge(SectionPlayEdge.Repeat);
                     // Record mode: the mark BURNS the form line's position (its data-pos)
                     // into the cumulative table a prefix resume adopts unshifted, and the
                     // form line sits below the music — so, like a section header, it is
@@ -3707,6 +3803,7 @@ public sealed partial class MeasureCollector
                         builder.SectionLabel = LabelForSilentReference(silent, nameTok.Text);
                         builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     }
+                    SetTopLevelRole(ending: false);
                     ProcessSection(silentSection, processNodes, builder,
                         SyntaxFacts.NetOctaveMarks(silent));
                     break;
@@ -3732,6 +3829,31 @@ public sealed partial class MeasureCollector
                 // tokens inside FormRepeatBlockSyntax, not BarlineSyntax, so this arm
                 // cannot double-count them; the guard is for a nested form only.
                 case BarlineSyntax formBar when !IsInsideRepeatBlock(formBar):
+                    if (formBar.BarText.Contains(':'))
+                        MarkFormEdge(SectionPlayEdge.Repeat);
+                    // The played order a tie is carried along (SectionPlayGraph), read the way
+                    // FormWalk.GroupDividerRepeats reads it for the MIDI: a one-sided `:|` plays
+                    // the piece so far again (a rewind), unless it closes a run a form-level
+                    // `:|:` opened; a `:|:` rewinds (the first one) and opens a run.
+                    if (formBar.BarText == ":|:")
+                    {
+                        if (!_formDividerOpen)
+                            _pendingRewind = true;
+                        _formDividerOpen = true;
+                        _formDividerClosed = false;
+                        _pendingRunStart = true;
+                        _pendingRunCount = 0;
+                    }
+                    else if (formBar.BarText.StartsWith(":|", StringComparison.Ordinal))
+                    {
+                        if (_formDividerOpen)
+                        {
+                            _formDividerOpen = false;
+                            _formDividerClosed = true;
+                        }
+                        else if (!_formDividerClosed) // `:| [3. Z]` after a closed run is its own
+                            _pendingRewind = true;
+                    }
                     _formBarRead = formBar.Span;
                     try
                     {

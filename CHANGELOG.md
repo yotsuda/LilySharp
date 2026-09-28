@@ -154,12 +154,45 @@ workflow attaches that section to the GitHub Release verbatim.
   and checked before it is offered — every part it cuts sounds exactly as before (MIDI, part
   by part) and writes as many bars, the warning is gone, no error is new — and one
   confirmation shows the plan (*Follow vn1: A 16 + B 121 bars. Split A in vn2, va, vc and cb
-  after bar 16 → A, B. Form main: A → A B.*). A tie, slur, hairpin, pedal or other span across
-  a cut, a cut that falls mid-bar, or the section played as a repeat ending is reported with
-  where, and nothing changes. A file grouped by section is not supported yet (regroup it by
-  part first).
+  after bar 16 → A, B. Form main: A → A B.*). A slur, phrasing slur, tie or hairpin across a
+  cut is kept — carried into the new section, which every form plays next — unless it is still
+  open at that section's end. A manual beam, a pedal or other span across a cut, a cut that
+  falls mid-bar, or the section played as a repeat ending is reported with where, and nothing
+  changes. A file grouped by section is not supported yet (regroup it by part first).
+
+### Spans across a section boundary
+
+- **A slur, phrasing slur, tie or hairpin may run from one section into the next.** One still
+  open when a section ends is carried into the section the form plays next and must end there
+  (`section C { … f( || } section D { g4) … }`). It is checked per form, per part and per
+  play, in every form a score plays — so `form main { C D C E }` carries C's slur into D the
+  first time and into E the second — and a span that breaks the rule draws nothing (a hairpin
+  is cut at its own section's end) and is reported, **LYS4023**: carried in and not ended in
+  that next section, a close at a section's start with nothing carried in, or carried into a
+  section the part plays nothing in (warnings); a slur, phrasing slur or hairpin carried over a
+  repeat sign, into or out of a volta ending, or over a jump mark (an error). Until now such a
+  span was paired silently in printed order, over whole sections and repeats, and a reordered
+  form drew it between the wrong notes. The running state a section starts from (octaves, note
+  value, meter, key, clef, overrides) still resets at the boundary.
+- **A tie may cross any repeat sign or ending.** It is carried to the first note of every
+  section PLAYED after its own — the order the MIDI plays: the body again at each pass, that
+  pass's ending, what follows the block — and each such note must repeat the tied pitch
+  (LYS4007 otherwise). Where the section played next is also printed next the tie is an arc, as
+  before; where it is not (back to `|:`, into a later ending) the tied note gets a hanging tie
+  and the target an automatic repeat tie — drawn once, and not doubled where `@repeatTie` is
+  written. The MIDI sustains the note on the passes the tie is carried on, MusicXML writes the
+  stop on every note it reaches, and the LilyPond twin writes `\repeatTie`.
+- **Other scores' forms are checked.** An unpaired slur, phrasing slur or tie in a form only a
+  second score plays is now reported too, naming the form (`(in form 'other')`); only the first
+  score's form was checked before.
 
 ### Fixes
+
+- **A tie into the next section sounds and exports as one note in a book of several parts.**
+  The MIDI kept one tie memory for the whole score, and every other part's block of the section
+  overwrote it, so `c~ ||` into the next section's `c` played twice; the MusicXML forgot the
+  open tie at every section boundary and wrote a `<tie type="start">` with no stop. The page
+  drew the tie all along.
 
 - **An `@chord` on a rest or a spacer draws.** `r1@chord(C x32013)`, `s1@chord(G)` drew
   nothing — neither the name nor the diagram, and said nothing — while `r1@diagram(…)` drew. A

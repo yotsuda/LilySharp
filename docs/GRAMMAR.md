@@ -1924,6 +1924,19 @@ Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d
                                      slur and warns (LYS4010). *)
 Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
+(* SECTION CARRY RULE (owner's decisions 2026-09-28): a slur, phrasing slur, tie or hairpin
+   still open when a section ends is carried into the section the FORM plays next — per form,
+   per part, per play — and must end there. Carried and not ended in that next section, a close
+   at a section's start with nothing carried in, or carried into a section the part does not
+   play: warning (LYS4023). A slur, phrasing slur or hairpin carried over a repeat sign, into or
+   out of a volta ending, or over a jump mark: error (LYS4023). The span is not drawn (a hairpin
+   is cut at its own section's end). A TIE may cross all of those: it is carried to the first
+   note of every section PLAYED after its own (the MIDI's order — the body at each pass, that
+   pass's ending), each of which must repeat the tied pitch (else LYS4007); an arc where that
+   section is also printed next, else a hanging tie on the tied note and an automatic repeat tie
+   on the target. A beam and every other span never cross a section boundary; the running state
+   (frame, value, meter, key, clef, overrides) still resets there. *)
+
 ### 8.4 Annotations (@name, attached to a note or chord)
 
 Annotation     = '@' , [ '!' ] , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;

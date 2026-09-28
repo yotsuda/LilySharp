@@ -670,9 +670,17 @@ internal static class HairpinEngraver
     /// <remarks>
     /// LILYPOND-REF: lily/dynamic-engraver.cc start/end event handling
     /// </remarks>
+    /// <param name="plays">The score's section plays (<c>Collector.SectionPlays.For</c>),
+    /// or null for a score with none: a hairpin open when its section ends is carried into the
+    /// section played next and must end there (<see cref="Collector.SectionPlayCursor"/>'s rule).
+    /// One that does not — or is carried over a repeat, volta or jump — is cut at the end of its
+    /// own section, and reported to <paramref name="carrySink"/>.</param>
+    /// <param name="carrySink">Where the refused carries go; null to report none.</param>
     public static ImmutableArray<HairpinItem> DetectHairpins(
         ImmutableArray<MusicMarkItem> musicMarks,
-        ImmutableArray<DynamicItem> dynamics)
+        ImmutableArray<DynamicItem> dynamics,
+        Collector.SectionPlays? plays = null,
+        List<Collector.SectionCarryWarning>? carrySink = null)
     {
         // Sort all events by position (measure, item). F3/B: keep each mark's ORIGINAL
         // index in musicMarks (== score.MusicMarks) so the hairpin can re-derive its
@@ -775,6 +783,19 @@ internal static class HairpinEngraver
             {
                 // No end found — extend to end of the mark's measure + 1
                 endMeasure = mark.MeasureIndex + 1;
+                endItem = 0;
+            }
+
+            // The carry rule at section boundaries. Only an end the pairing FOUND is judged;
+            // the default end above never reaches past the next bar line.
+            if (plays != null && (nextDynamic != null || nextMark != null)
+                && plays.Judge(mark.MeasureIndex, endMeasure) is { } fault)
+            {
+                int ownPlay = plays.PlayAt(mark.MeasureIndex);
+                carrySink?.Add(new Collector.SectionCarryWarning(mark.SourcePosition,
+                    Collector.SectionSpanKind.Hairpin, fault, plays.NameOf(ownPlay),
+                    plays.NameOf(ownPlay + 1)));
+                endMeasure = plays.StartOf(ownPlay + 1);
                 endItem = 0;
             }
 

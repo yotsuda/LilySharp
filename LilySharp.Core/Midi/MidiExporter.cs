@@ -151,16 +151,67 @@ public sealed class MidiExporter
     // index a chord could neither be tied from nor tied into, and every tied chord
     // re-articulated in the MIDI while the page drew the tie and the MusicXML wrote
     // the second chord as a tie-stop (measured 2026-08-17 on 8 of 566 books).
+    // ⚠️ ONE MEMORY PER PART, and these fields are the CURRENT part's (SyncTieSlot swaps them).
+    // The walk plays a form section by section, every part's block of a section before the
+    // next section, so a single slot was overwritten by the other parts between a part's
+    // `c~ ||` and its next section's `c` — the tie the page draws over the boundary
+    // re-articulated here whenever a book had two parts (measured 2026-09-28: `c''4~ ||` into
+    // `c''4` sounded 480 + 480 ticks in a two-part book, 960 in a one-part one).
     private bool _tiePending;
     private readonly List<int> _lastOnset = new();
     private MidiTrack? _lastNoteTrack;
+    // The section play (_sectionPlaySerial) the remembered onset sounded in — the section
+    // carry rule (Svg.Collector.SectionPlayGraph): a tie is carried into the section PLAYED
+    // next, over any repeat sign or ending, and no further (a section the part does not play
+    // stands between: silence).
+    private int _lastOnsetSerial;
+    private string? _tieOwner;
+    private readonly Dictionary<string, (bool Pending, int[] Onset, MidiTrack? Track, int Serial)> _tieSlots = new();
+    // Counts every section play of the form, in the order they sound (PlaySectionByName).
+    private int _sectionPlaySerial;
+
+    /// <summary>Makes the tie fields the current part's, saving the previous part's.</summary>
+    private void SyncTieSlot()
+    {
+        string part = _currentPart ?? "";
+        if (part == _tieOwner)
+            return;
+        if (_tieOwner != null)
+            _tieSlots[_tieOwner] = (_tiePending, _lastOnset.ToArray(), _lastNoteTrack, _lastOnsetSerial);
+        _lastOnset.Clear();
+        if (_tieSlots.TryGetValue(part, out var slot))
+        {
+            _tiePending = slot.Pending;
+            _lastOnset.AddRange(slot.Onset);
+            _lastNoteTrack = slot.Track;
+            _lastOnsetSerial = slot.Serial;
+        }
+        else
+        {
+            _tiePending = false;
+            _lastNoteTrack = null;
+        }
+        _tieOwner = part;
+    }
+
+    /// <summary>Sets the current part's pending tie.</summary>
+    private void SetTiePending(bool pending)
+    {
+        SyncTieSlot();
+        _tiePending = pending;
+    }
 
     /// <summary>The notes a tie arriving at this onset may extend — the previous
-    /// onset's, when a tie is pending on the same track, and nothing otherwise. The
+    /// onset's, when a tie is pending on the same track in the same section play or the one
+    /// played just before it, and nothing otherwise. The
     /// caller consumes each index it uses, so a chord that sounds one pitch twice
     /// cannot extend one note twice.</summary>
     private List<int> OpenTieTargets(MidiTrack track)
-        => _tiePending && _lastNoteTrack == track ? new List<int>(_lastOnset) : new List<int>();
+    {
+        SyncTieSlot();
+        bool carries = _lastOnsetSerial == _sectionPlaySerial || _lastOnsetSerial + 1 == _sectionPlaySerial;
+        return _tiePending && carries && _lastNoteTrack == track ? new List<int>(_lastOnset) : new List<int>();
+    }
 
     /// <summary>Extend the tied-from note of <paramref name="midiPitch"/> and return its
     /// index, or -1 when nothing ties into it. A tie joins noteheads of the SAME pitch —
@@ -189,16 +240,19 @@ public sealed class MidiExporter
     /// <summary>Record what this onset sounded, so the next tie knows what to extend.</summary>
     private void CloseOnset(MidiTrack track, List<int> indices, bool startsTie)
     {
+        SyncTieSlot();
         _lastOnset.Clear();
         _lastOnset.AddRange(indices);
         _lastNoteTrack = track;
         _tiePending = startsTie;
+        _lastOnsetSerial = _sectionPlaySerial;
     }
 
     /// <summary>A silence (a rest, a slash) ends the tie memory both ways: no tie is pending
     /// past it, and nothing before it can be extended by a tie written after it.</summary>
     private void ForgetOnset()
     {
+        SyncTieSlot();
         _tiePending = false;
         _lastOnset.Clear();
         _lastNoteTrack = null;
@@ -526,7 +580,10 @@ public sealed class MidiExporter
                 // With a structure the play order is ITS job; declarations
                 // are silent (they used to play in file order regardless).
                 if (!_formDriven)
+                {
+                    _sectionPlaySerial++; // one play, as PlaySectionByName counts them
                     PlaySection(sectionDecl, track, conductorTrack);
+                }
                 break;
 
             case FormDeclarationSyntax formDecl:
@@ -579,7 +636,7 @@ public sealed class MidiExporter
             case TieSyntax:
                 // Tie between two sibling notes — the next same-pitch note extends
                 // the previous one rather than re-articulating.
-                _tiePending = true;
+                SetTiePending(true);
                 break;
 
             case RestSyntax rest:
@@ -1061,6 +1118,9 @@ public sealed class MidiExporter
         // lane — not just the last-declared one (which silently dropped every
         // earlier part, and yielded no notes at all when a chords part was
         // declared last). By-section names map to a single-element list.
+        // One section play of the form, whichever parts write it (a tie carries into the
+        // next play only — see _sectionPlaySerial).
+        _sectionPlaySerial++;
         if (_sections == null || !_sections.TryGetValue(name, out var sections))
             return;
         int start = _currentTick;
@@ -1387,6 +1447,8 @@ public sealed class MidiExporter
         var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
         for (int pass = 0; pass < passes; pass++)
         {
+            // A tie is carried to whatever is PLAYED next — back to the body at a new pass,
+            // into this pass's ending — as the page draws it (SectionPlayGraph).
             if (pass > 0)
                 _sourceOrdinals = new Dictionary<int, int>(structOrdSnapshot);
             foreach (var (name, bodyOctave) in body)
@@ -1976,7 +2038,7 @@ public sealed class MidiExporter
         // the whole of what the note it replaces contributes.
         if (Semantics.PitchedRest.Is(note))
         {
-            _tiePending = false; // like any rest: a tie cannot span it
+            SetTiePending(false); // like any rest: a tie cannot span it
             _currentTick += durationTicks;
             return;
         }
@@ -2042,7 +2104,7 @@ public sealed class MidiExporter
     /// Timbre 9 selects the preview's noise-based drum patch.</summary>
     private void ProcessDrumNote(DrumNoteSyntax drum, MidiTrack track)
     {
-        _tiePending = false; // drums do not tie
+        SetTiePending(false); // drums do not tie
         var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
         var duration = GetDuration(drum.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -2193,7 +2255,7 @@ public sealed class MidiExporter
             default:
                 // A slash (silent) or an unresolved repeat (validator reports it):
                 // occupy the time, sound nothing, break any pending tie.
-                _tiePending = false;
+                SetTiePending(false);
                 break;
         }
 

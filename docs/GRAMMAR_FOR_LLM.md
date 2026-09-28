@@ -478,6 +478,13 @@ score main { staff melody }
   no LYS2006), provided every neighbour completes it exactly, and one bar to the numbering
   (the written bar line between them is still drawn). A later ending continues the body's
   bar the same way, but its number keeps counting from the ending before it, as in LilyPond.
+- A slur, phrasing slur, tie or hairpin still open when a section ends is carried into the
+  section the form plays NEXT and must end there (checked per form, per part, per play; LYS4023
+  warns otherwise). A slur, phrasing slur or hairpin may NOT cross a repeat sign, a volta
+  ending's edge or a jump mark — an error. A TIE may: it reaches the first note of every section
+  PLAYED next (the body again, the next ending), which must repeat its pitch (LYS4007); the page
+  adds the repeat tie itself. Beams and other spans never cross a section.
+  The relative frame still resets at the boundary, so a tie's target writes its octave.
 - Line breaks: `break` / `noBreak` force / forbid a system break after the bar they stand
   in; `pageBreak` / `noPageBreak` do the same for the page. **A `break` written INSIDE a bar
   with notes on both sides — `c4 d break e f |` — breaks the bar there**: the first half ends
