@@ -1,0 +1,15 @@
+// A capo on the third fret. The music writes the SOUNDING chords (Eb, Ab, Bb7); the page
+// prints what the player presses (C, F, G7), draws the pressed shapes, and says "Capo 3"
+// at the head. `chordNames both` prints both: the sounding name, then the pressed one.
+layout { chordDiagrams guitar capo 3 all  chordNames both }
+title "Capo"
+octave absolute
+time 4/4
+key ees major
+part melody { clef treble }
+section A {
+  melody { g'2 ees'2 | aes'2 f'2 | bes'2 d'2 | ees'1 | }
+  chords prog { Eb | Ab | Bb7 | Eb | }
+}
+form main { ~A }
+score main { chords prog  staff melody }

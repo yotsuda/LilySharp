@@ -331,6 +331,53 @@ form main { ~A }
 score main { chords prog  staff uke }
 '@
 
+'chord-table' = @'
+// A shape table lists the chords that draw, wherever they are named. C draws its usual
+// shape and F the listed xx3211 - except in the Chorus, where F is the barre and G draws too.
+layout { chordDiagrams guitar { C  F xx3211  section Chorus { F 133211  G } } }
+octave absolute
+time 4/4
+part melody { clef treble }
+section Verse  { melody { e'2 c'2 | f'2 d'2 | }  chords prog { C | F G | } }
+section Chorus { melody { e'2 c'2 | f'2 d'2 | }  chords prog { C | F G | } }
+form main { ~Verse ~Chorus }
+score main { chords prog  staff melody }
+'@
+
+'chord-capo' = @'
+// A capo on the third fret. The music writes the SOUNDING chords (Eb, Ab, Bb7); the page
+// prints what the player presses (C, F, G7), draws the pressed shapes, and says "Capo 3"
+// at the head. `chordNames both` prints both: the sounding name, then the pressed one.
+layout { chordDiagrams guitar capo 3 all  chordNames both }
+title "Capo"
+octave absolute
+time 4/4
+key ees major
+part melody { clef treble }
+section A {
+  melody { g'2 ees'2 | aes'2 f'2 | bes'2 d'2 | ees'1 | }
+  chords prog { Eb | Ab | Bb7 | Eb | }
+}
+form main { ~A }
+score main { chords prog  staff melody }
+'@
+
+'chord-list' = @'
+// `chordList true` puts every chord the score names at its head, once each in order of
+// first appearance, over the diagram it draws there - the songbook's "chords used" row.
+layout { chordDiagrams guitar  chordList true }
+title "Chord list"
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody { e'2 c'2 | f'2 d'2 | g'2 b2 | c'1 | }
+  chords prog { C | F(xx3211) | G | C | }
+}
+form main { ~A }
+score main { chords prog  staff melody }
+'@
+
 }
 
 $failed = @()

@@ -947,7 +947,9 @@ score parts { layout chart  staff melody }   // this score's own</pre>
     <tr><td><code>partCombineText</code></td><td><code>true</code> · <code>false</code></td><td>whether a <code>combinedStaff</code> prints a2 / Solo</td></tr>
     <tr><td><code>chordQualities</code></td><td><code>symbols</code> · <code>words</code></td><td>C° C+ Cø C°7, or Cdim Caug Cm7♭5 Cdim7</td></tr>
     <tr><td><code>minorChords</code></td><td><code>upper</code> · <code>lower</code></td><td>Am, or a lowercase root with no m (a)</td></tr>
-    <tr><td><code>chordDiagrams</code></td><td>a tuning word · <code>none</code>, optionally <code>all</code></td><td>which instrument chord diagrams are drawn for, and whether every chord draws one — see <a href="chords.html#layout">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>chordDiagrams</code></td><td>a tuning word · <code>none</code>, then optionally <code>capo N</code>, <code>all</code>, <code>{ a shape table }</code></td><td>which instrument chord diagrams are drawn for, a capo, whether every chord draws one, and which listed chords draw — see <a href="chords.html#layout">Chords and chord diagrams</a></td></tr>
+    <tr><td><code>chordNames</code></td><td><code>shape</code> · <code>sounding</code> · <code>both</code></td><td>under a capo, whether a chord name is the pressed chord's, the sounding chord's, or both (“E♭m7 (Cm7)”) — see <a href="chords.html#capo">A capo</a></td></tr>
+    <tr><td><code>chordList</code></td><td><code>true</code> · <code>false</code></td><td>whether the chords the score uses are drawn at its head, each over its diagram — see <a href="chords.html#list">The chord list</a></td></tr>
     <tr><td><code>voltaBracket</code></td><td><code>all</code> · <code>line</code> · <code>N</code></td><td>how far a repeat ending's bracket reaches: all of the ending, to the end of its first line, or its first N bars (cut short, it ends straight); one ending overrides it with <code>[1. B]@voltaBracket(…)</code> — see <a href="#forms">Forms</a></td></tr>
   </table>
   <p>Keys and values are case-sensitive (<code>barnumbers</code> is refused with “write

@@ -8,8 +8,10 @@
     <li><a href="#onnote">3. On a note, and with no name</a></li>
     <li><a href="#notes">4. The notes on the staff</a></li>
     <li><a href="#layout">5. Which instrument, and every chord</a></li>
-    <li><a href="#check">6. When a shape is not the chord</a></li>
-    <li><a href="#editor">7. Let the editor write the shapes</a></li>
+    <li><a href="#capo">6. A capo</a></li>
+    <li><a href="#list">7. The chord list</a></li>
+    <li><a href="#check">8. When a shape is not the chord</a></li>
+    <li><a href="#editor">9. Let the editor write the shapes</a></li>
   </ol>
   <p class="grp">Elsewhere</p>
   <ol>
@@ -153,10 +155,90 @@ score main "piano" { layout piano  chords prog  staff melody } // no diagrams</p
   <p class="note">G7 above carries a written shape, <code>0212</code>, and draws it; the other
   three draw the ukulele's usual shapes. Without <code>all</code>, only G7 would have a
   diagram.</p>
+  <p>Lily#'s own order reaches the ukulele too. Its rules are the guitar's — chord tones only,
+  the required tones present, four frets, four fingers — less one: on a re-entrant tuning
+  (the ukulele's high G, a banjo's drone) the lowest string is not the lowest note, so "the
+  root is lowest" is not asked. With that, the order opens on LilyPond's own ukulele shape for
+  every chord tried, and a chord LilyPond's table lacks still has a usual shape
+  (<code>Cmaj9</code> is <code>4203</code>). A chord no rule can voice on four strings
+  (<code>C13</code>) has none, and warns.</p>
+
+  <h3>Listed chords — a shape table</h3>
+  <p>Between "only what is written" and "everything" sits a list. A table in braces after the
+  <code>chordDiagrams</code> words names the chords that draw a diagram <b>wherever they are
+  named</b> — in a row, in an <code>@chord</code>, in a bare <code>@chord</code> by the name
+  it derives — and the shape each draws, written as a row writes its shapes
+  (<code>F 133211 2010</code>, <code>F guitar 133211 ukulele 2010</code>); a name alone draws
+  the usual shape. A <code>section NAME { … }</code> block inside the table applies to the
+  chords written in that section, the rest to the whole song.</p>
+  <!--EXAMPLE:chord-table-->
+  <p>Strongest first: the shape written at the chord, the section's entry, the song's, then
+  — under <code>all</code> — the usual shape. The table follows <code>all</code>
+  (<code>chordDiagrams all { F xx3211 }</code>: the listed F, the usual shape for everything
+  else) or stands alone; <code>none</code> takes no table. A symbol that is no chord, a bad
+  shape and a chord listed twice (the last wins) are warnings and the rest of the table
+  stands; a section nothing declares warns.</p>
+</section>
+
+<section id="capo">
+  <p class="eyebrow">06</p>
+  <h2>A capo</h2>
+  <p><code>layout { chordDiagrams guitar capo 3 }</code> puts a capo on the third fret. The
+  music still writes the <b>sounding</b> chords — a row's <code>Eb</code>,
+  <code>@chord(Eb)</code> — and everything a player reads follows the capo:</p>
+  <ul>
+    <li><b>Every shape is the shape pressed above the capo.</b> <code>Eb(x32010)</code> is
+    the C shape, and it is checked against the pressed chord (<a href="#check">LYS1039</a>);
+    the usual shape of a chord is its pressed chord's, and the table's shapes are pressed
+    shapes.</li>
+    <li><b>The printed name is the pressed chord's</b> — <code>C</code> for <code>Eb</code>,
+    <code>G</code> for <code>Bb</code> — spelled in the key that many semitones below the key
+    at the bar (in E major at capo 3 a sounding <code>G#m</code> prints <code>Fm</code>). A
+    Roman degree is the sounding key's and is not moved.</li>
+    <li><b>"Capo 3" stands at the score's head</b>, on the header's instrument line.</li>
+    <li><b>A <code>chord(Eb x32010)</code> item sounds three semitones higher</b> — on the
+    staff, in the MIDI and in the <code>.ly</code> twin.</li>
+  </ul>
+  <p>What a name shows under the capo is <code>layout { chordNames … }</code>:</p>
+  <table class="g">
+    <tr><th>Value</th><th>Prints, for a sounding E♭m7 at capo 3</th></tr>
+    <tr><td><code>shape</code> (the default)</td><td><code>Cm7</code> — the chord the player presses</td></tr>
+    <tr><td><code>sounding</code></td><td><code>E♭m7</code> — the chord that sounds</td></tr>
+    <tr><td><code>both</code></td><td><code>E♭m7 (Cm7)</code> — the sounding name, then the pressed one in parentheses, each with its own raised quality</td></tr>
+  </table>
+  <!--EXAMPLE:chord-capo-->
+  <p>The capo goes after the tuning word and before <code>all</code>
+  (<code>chordDiagrams guitar capo 3 all</code>); a fret is 1 to 11, and <code>capo 0</code>
+  is refused — leave the word out. Without a capo the three <code>chordNames</code> values
+  print the same name. The <code>.ly</code> twin writes the pressed chords and
+  <code>instrument = "Capo 3"</code>, so LilyPond prints the same page (it cannot spell
+  <code>both</code>, and warns); MusicXML keeps the sounding chord in its
+  <code>&lt;harmony&gt;</code> and the pressed shape in its <code>&lt;frame&gt;</code>.</p>
+  <p class="note">Which fret? In VS Code, after <code>capo </code> the completion ranks the
+  frets 0 to 7 by how many of the file's chords would need a barre there, fewest first
+  (<i>capo 3: 0 barre chords of 3</i>); hovering <code>capo</code> shows the same ranking.
+  You pick the fret and write it — there is no <code>capo auto</code>.</p>
+</section>
+
+<section id="list">
+  <p class="eyebrow">07</p>
+  <h2>The chord list</h2>
+  <p>A songbook page opens with the chords it uses. <code>layout { chordList true }</code>
+  draws that row at the score's head, under the title and above the first system: every chord
+  the score names — its <code>chords</code> rows and every <code>@chord</code> — once, in
+  order of first appearance, as the name the score prints (a capo's pressed name) over the
+  diagram it draws there.</p>
+  <!--EXAMPLE:chord-list-->
+  <p>A chord that draws no diagram in the score still shows its usual shape in the list — the
+  list is where a shape is looked up — on the layout's tuning, else the guitar; under
+  <code>chordDiagrams none</code> the names stand alone. The cells fill the fewest rows that
+  fit the line, with as nearly equal counts as those rows allow (16 chords where 12 would fit
+  make two rows of 8), and each row is centred on the page. The <code>.ly</code> twin writes
+  the rows as <code>\markup</code> lines before the score.</p>
 </section>
 
 <section id="check">
-  <p class="eyebrow">06</p>
+  <p class="eyebrow">08</p>
   <h2>When a shape is not the chord</h2>
   <p>A written shape is checked against the name it is written for (<b>LYS1039</b>, a
   warning — the shape still draws). Two things are asked: every note it sounds is a tone of
@@ -176,14 +258,16 @@ score main "piano" { layout piano  chords prog  staff melody } // no diagrams</p
 </section>
 
 <section id="editor">
-  <p class="eyebrow">07</p>
+  <p class="eyebrow">09</p>
   <h2>Let the editor write the shapes</h2>
   <p>You rarely need to type a shape. In VS Code, put the caret on a chord — an
   <code>@chord(Cm7)</code> or a row's <code>Cm7</code> — and press <kbd>Ctrl+Shift+Up</kbd>:
   its usual shape is written and the diagram appears. Press it again to walk through the
   other playable shapes, each one sounded as you go; <kbd>Ctrl+Shift+Down</kbd> walks back,
-  and at the usual shape removes it again. Hovering a chord shows what it would draw. Hard
-  stretch shapes are left out unless you ask for them.</p>
+  and at the usual shape removes it again. Hovering a chord shows what it would draw — for
+  a listed chord, the table's shape (<i>guitar: xx3211 (layout)</i>) — and which of the order
+  it is (<i>shape 2 of 39</i>). It works on a ukulele part too. Hard stretch shapes are left
+  out unless you ask for them.</p>
   <!-- VIDEO chords-shape-step: caret on @chord(Cm7) in a melody with the preview open.
        Ctrl+Shift+Up four or five times: the shape appears (x35343), then steps; the preview's
        diagram changes and each shape sounds. Ctrl+Shift+Down back to the usual shape, once

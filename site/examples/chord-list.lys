@@ -1,0 +1,13 @@
+// `chordList true` puts every chord the score names at its head, once each in order of
+// first appearance, over the diagram it draws there - the songbook's "chords used" row.
+layout { chordDiagrams guitar  chordList true }
+title "Chord list"
+octave absolute
+time 4/4
+part melody { clef treble }
+section A {
+  melody { e'2 c'2 | f'2 d'2 | g'2 b2 | c'1 | }
+  chords prog { C | F(xx3211) | G | C | }
+}
+form main { ~A }
+score main { chords prog  staff melody }
