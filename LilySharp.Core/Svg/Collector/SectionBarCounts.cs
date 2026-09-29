@@ -127,21 +127,7 @@ internal static class SectionBarCounts
     public static List<SemanticVoice> SemanticVoices(SyntaxNode root,
         IReadOnlyDictionary<string, SyntaxNode>? phraseBodies = null, bool groupedByPartOnly = false)
     {
-        var phrases = phraseBodies;
-        if (phrases == null)
-        {
-            var gathered = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
-            // The same list PhraseCycleValidator and MeasureValidator.CollectPhraseBodies
-            // ask with — one list, three switches (HANDOFF §2 R13⒮).
-            foreach (var n in root.DescendantNodesOfKinds(Semantics.PhraseCycleValidator.DeclaringKinds))
-            {
-                if (n is PhraseDeclarationSyntax ph)
-                    gathered[ph.Name.Text] = ph.Body;
-                else if (n is VariableDeclarationSyntax vd)
-                    gathered[vd.Name.Text] = vd.Expression;
-            }
-            phrases = gathered;
-        }
+        var phrases = phraseBodies ?? PhraseBodies(root);
 
         var voices = new List<SemanticVoice>();
         var time = DurationCalculator.ParseTimeSignature(4, 4);
@@ -191,6 +177,23 @@ internal static class SectionBarCounts
                 voices.Add(Music(name, $"section '{name}'", sec, sec.Name.Span, local, phrases, groupedByPart: false));
         }
         return voices;
+    }
+
+    /// <summary>The book's phrase-body table — a phrase's body, a variable's expression, by
+    /// name — gathered with the same list PhraseCycleValidator and
+    /// MeasureValidator.CollectPhraseBodies ask with (one list, three switches; HANDOFF §2
+    /// R13⒮). What <see cref="MeasureModel.Split"/> expands references through.</summary>
+    public static IReadOnlyDictionary<string, SyntaxNode> PhraseBodies(SyntaxNode root)
+    {
+        var gathered = new Dictionary<string, SyntaxNode>(StringComparer.Ordinal);
+        foreach (var n in root.DescendantNodesOfKinds(Semantics.PhraseCycleValidator.DeclaringKinds))
+        {
+            if (n is PhraseDeclarationSyntax ph)
+                gathered[ph.Name.Text] = ph.Body;
+            else if (n is VariableDeclarationSyntax vd)
+                gathered[vd.Name.Text] = vd.Expression;
+        }
+        return gathered;
     }
 
     private static SemanticVoice Music(string section, string label, SyntaxNode container, TextSpan anchor,

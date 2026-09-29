@@ -49,6 +49,7 @@ public sealed class VoltaBracketShapeTests
         section D { m { f'1 | f'1 | } }
         section E { m { g'1 | g'1 | } }
         section F { m { a'1 | a'1 | break a'1 | a'1 | } }
+        section G { m { b'1 | time 3/4 b'2. | b'2. | } }
 
         """;
 
@@ -364,6 +365,29 @@ public sealed class VoltaBracketShapeTests
         string second = AlternativeBranch(ly, 1);
         Assert.DoesNotContain("musical-length", second);
         Assert.Contains(ForceHook, second);
+    }
+
+    /// <summary>N bars are the bars' OWN lengths, not N of the ending's opening meter: G's
+    /// first two bars are a whole note and a 3/4 bar, so the twin's bracket ends 7/4 after its
+    /// start — the bar the page ends it on (<c>VoltaBracketLength.LastBar</c> counts bars).
+    /// Until 2026-09-29 (第663 ⒀) the twin wrote 2 × 4/4 and ran a quarter into bar 3. An
+    /// ending of two sections sums across them (A's whole note, then G's first two bars).</summary>
+    [Theory]
+    [InlineData("form main { |: A [1. B] :| [2. G]@voltaBracket(2) }", "7/4")]
+    [InlineData("form main { |: A [1. B] :| [2. A G]@voltaBracket(3) }", "11/4")]
+    [InlineData("form main { |: A [1. B] :| [2. G]@voltaBracket(1) }", "1/1")]
+    public void Twin_NBars_AreTheBarsOwnLengths(string form, string moment)
+    {
+        string branch = AlternativeBranch(Twin(form), 1);
+        Assert.Contains($"\\once \\override Score.VoltaBracket.musical-length = #(ly:make-moment {moment})", branch);
+        Assert.Contains(OpenEnd, branch);
+        // …and the page cuts the same bracket at its second bar (G starts at bar 3 of the
+        // printed A B G: bars 3 and 4), straight-ended.
+        if (form.Contains("[2. G]@voltaBracket(2)"))
+        {
+            var second = Assert.Single(Brackets(form), v => v.VoltaText == "2.");
+            Assert.Equal((3, 4, false), (second.StartMeasureIndex, second.EndMeasureIndex, second.IsClosed));
+        }
     }
 
     [Fact]

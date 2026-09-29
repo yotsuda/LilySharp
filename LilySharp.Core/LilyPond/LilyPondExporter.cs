@@ -433,6 +433,7 @@ public sealed class LilyPondExporter
         // counter): a voice that writes fewer bars than its section-mates is padded with
         // silent bars when its play is appended (PaddingBars), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
+        _phraseBodies = Svg.Collector.SectionBarCounts.PhraseBodies(root);
 
         // Octave mode is a file-level directive; default is relative (Lily#'s default).
         var octaveDir = root.DescendantNodes<OctaveDirectiveSyntax>().FirstOrDefault();
@@ -1912,6 +1913,9 @@ public sealed class LilyPondExporter
 
     // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
     private Svg.Collector.SectionBarCounts.SemanticIndex _sectionBars = new();
+    // The book's phrase bodies (SectionBarCounts.PhraseBodies) — what MeasureModel.Split
+    // expands references through when a section's bars are measured (FirstBarsLength).
+    private IReadOnlyDictionary<string, SyntaxNode> _phraseBodies = new Dictionary<string, SyntaxNode>();
 
     /// <summary>
     /// The silent bars that bring one voice's play of a section up to the section's
@@ -2113,7 +2117,8 @@ public sealed class LilyPondExporter
         bool hooked = ending.EndsHooked && cutBars == 0;
         if (cutBars == 0 && !line && hooked && !lastEnding)
             return null; // a hooked ending before its ':|' — LilyPond's own picture
-        return new VoltaShapeMarker(new VoltaShapeGreen(hooked, lastEnding, line, cutBars));
+        return new VoltaShapeMarker(new VoltaShapeGreen(hooked, lastEnding, line, cutBars,
+            [.. written.Sections.Select(s => s.Name)]));
     }
 
     /// <summary>The LilyPond overrides a <see cref="VoltaShapeGreen"/> asks for, in the meter
@@ -2125,10 +2130,9 @@ public sealed class LilyPondExporter
         var parts = new List<string>();
         if (v.CutBars > 0)
         {
-            // N bars of the ending's opening meter, in whole notes.
-            long num = (long)v.CutBars * _timeBeats, den = _timeBeatType;
-            long g = (long)System.Numerics.BigInteger.GreatestCommonDivisor(num, den);
-            parts.Add(once + $"musical-length = #(ly:make-moment {num / g}/{den / g})");
+            // The ending's first N bars, in whole notes — the bars' own lengths.
+            var length = FirstBarsLength(v.Sections, v.CutBars);
+            parts.Add(once + $"musical-length = #(ly:make-moment {length.Numerator}/{length.Denominator})");
             parts.Add(openEnd);
             return string.Join(" ", parts);
         }
@@ -2149,6 +2153,51 @@ public sealed class LilyPondExporter
         if (!v.Hooked)
             parts.Add(openEnd);
         return string.Join(" ", parts);
+    }
+
+    /// <summary>
+    /// The musical length of an ending's first <paramref name="bars"/> bars — where the page's
+    /// <c>voltaBracket N</c> ends its bracket (<c>VoltaBracketLength.LastBar</c> counts bars),
+    /// as LilyPond's <c>musical-length</c> must be told it: the bars' OWN lengths
+    /// (<see cref="MeasureModel.Split"/>, the validators' bar model, over the section's longest
+    /// music voice), summed section by section for an ending of several. So a <c>time</c>
+    /// change inside the ending, or a bar shorter than its meter, ends the twin's bracket on
+    /// the bar the page ends it on. ⚠️ Until 2026-09-29 (第663 ⒀) this was N bars of the
+    /// meter the ending OPENS in — right for <c>b'1 | b'1 |</c>, a bar short for
+    /// <c>b'1 | time 3/4 b'2. |</c>. A section with no music voice indexed (a chord-row
+    /// section) still counts N bars of the opening meter, as before.
+    /// </summary>
+    private Fraction FirstBarsLength(IReadOnlyList<string> sections, int bars)
+    {
+        var meter = new Fraction(_timeBeats, _timeBeatType);
+        var total = Fraction.Zero;
+        int left = bars;
+        foreach (string name in sections)
+        {
+            if (left <= 0)
+                break;
+            Svg.Collector.SectionBarCounts.SemanticVoice? longest = null;
+            foreach (var voice in _sectionBars.ByContainer.Values)
+                if (voice.SectionName == name && !voice.IsChords && (longest == null || voice.Bars > longest.Bars))
+                    longest = voice;
+            if (longest == null)
+            {
+                // No music voice: N bars of the opening meter, as the section's bar count is
+                // the canonical one (a chord row's bars are the meter long).
+                int count = Math.Min(left, _sectionBars.Canonical.TryGetValue(name, out int n) ? n : left);
+                total += meter * new Fraction(count);
+                left -= count;
+                continue;
+            }
+            foreach (var bar in MeasureModel.Split(longest.Container, _phraseBodies, meter))
+            {
+                if (left <= 0)
+                    break;
+                total += bar.Duration;
+                left--;
+            }
+        }
+        return total;
     }
 
     /// <summary>
@@ -7301,14 +7350,19 @@ internal sealed class VoltaShapeGreen : InternalSyntax.GreenNode
     public bool FirstSystemOnly { get; }
     /// <summary><c>voltaBracket N</c> when N bars stop before the ending's end, else 0.</summary>
     public int CutBars { get; }
+    /// <summary>The ending's sections, in order — whose first <see cref="CutBars"/> bars are
+    /// measured for LilyPond's <c>musical-length</c> (<c>LilyPondExporter.FirstBarsLength</c>).</summary>
+    public IReadOnlyList<string> Sections { get; }
 
-    public VoltaShapeGreen(bool hooked, bool lastEnding, bool firstSystemOnly, int cutBars)
+    public VoltaShapeGreen(bool hooked, bool lastEnding, bool firstSystemOnly, int cutBars,
+        IReadOnlyList<string> sections)
         : base(SyntaxKind.None, fullWidth: 0)
     {
         Hooked = hooked;
         LastEnding = lastEnding;
         FirstSystemOnly = firstSystemOnly;
         CutBars = cutBars;
+        Sections = sections;
     }
 }
 

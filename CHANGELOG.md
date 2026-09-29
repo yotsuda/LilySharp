@@ -278,6 +278,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The `.ly` twin's `voltaBracket N` counts the ending's own bars.** LilyPond's
+  `VoltaBracket.musical-length` was written as N bars of the meter the ending opens in, so a
+  `time` change inside the ending (or a bar shorter than its meter) ended the twin's bracket
+  on a different bar from the page's. It is now the length of the first N bars themselves,
+  summed across an ending of several sections.
 - **The endings of a run a form-level `:|:` opens are endings to every reader.** In
   `form main { A :|: B [1. C] :| [2. D] }` the MIDI, MusicXML and the `.ly` twin already
   played and wrote C and D as the run's endings; the page played them so too but drew no
