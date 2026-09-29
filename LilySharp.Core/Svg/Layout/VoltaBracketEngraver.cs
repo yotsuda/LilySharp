@@ -349,6 +349,10 @@ internal static class VoltaBracketEngraver
         if (segment.IsFirst && !bars.OpensSystem(first))
         {
             // Mid-line: the bar line there, or the command column when there is none.
+            // ⚠️ LILYSHARP-OWN: that column's X extent is taken as EMPTY, where
+            // scm/bar-line.scm:1212 reads its real extent (the break-aligned items on it) — the
+            // model carries no column. It matters only to an ending opening mid-line with no
+            // bar line, which a form never writes. No observer; it goes when the column is modelled.
             left = bars.PieceAt(first, segment.SystemIndex) is { } bar
                 ? new Bound(bar.RefX, bar.Glyph.Length == 0)
                 : new Bound(bars.Measure(first).X, ExtentEmpty: true);
@@ -418,8 +422,14 @@ internal static class VoltaBracketEngraver
     ///   drops the ones with no glyph there. Its left bar line is the FIRST live one — on a
     ///   piece after a line break usually a bar line inside the ending, since the break's own
     ///   begin-of-line "|" is dead — and its right bar line the last of <c>bars-right</c>.
-    ///   One staff's bars stand for all (the <c>vertical-axis-group-index</c> match picks the
-    ///   same staff's).
+    /// <para>
+    /// NOT LITERAL, DERIVED: LilyPond's arrays hold every staff's bar lines in the order they
+    /// were acknowledged, the top staff's first, and the right one is matched to the left one by
+    /// <c>vertical-axis-group-index</c>. Here the primary content staff's bars stand for them
+    /// (<see cref="BarWalk"/>): the same answer while the staves draw the same bar lines at an
+    /// ending's edges, as a form's repeats make them. A score whose staves draw different bars
+    /// there would need the bars of every staff, in engraver order, from the model.
+    /// </para>
     /// </remarks>
     private static (double Left, double Right) ShortenPair(BarWalk bars, VoltaBracketItem bracket,
         int systemIndex, Bound leftBound)
@@ -467,6 +477,14 @@ internal static class VoltaBracketEngraver
     /// <c>EndBarWithBreakPieces</c> / <c>StartBarWithBreakPieces</c> and
     /// <see cref="MultiStaffLayouter.DrawnLineStartBarline"/>); its reference point is found
     /// from the drawn ink, since the main stencil starts at X = 0 (scm/bar-line.scm:756-802).
+    /// <para>
+    /// ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
+    /// pen does not draw and LilyPond never creates, are still read here — departs from
+    /// lily/volta-engraver.cc:394-404, whose <c>bars-left</c> never holds them. They matter
+    /// only as the first bar line of a piece after a break, where they would give 0.11 for
+    /// LilyPond's 0.92. It goes when this walk asks the pen's own suppression
+    /// (<c>SharedRenderer.IsMmrInnerEndBarline</c>). No observer.
+    /// </para>
     /// </remarks>
     private readonly struct BarWalk(MultiStaffScore score, Voice voice,
         ImmutableArray<SystemLayout> systems, ImmutableArray<MeasureLayout> measureLayouts,

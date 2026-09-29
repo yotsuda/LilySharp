@@ -13,9 +13,9 @@
 | 区分 | 件数 | 意味 |
 |---|---:|---|
 | `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
-| `OWN` | 197 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **312** | |
+| `UNWATCHED` | 58 | 観測者がゼロだと自認しているもの |
+| `OWN` | 199 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **316** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -131,7 +131,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（56 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（58 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3046** container, and the value stops being unobserved with the line above.
@@ -226,10 +226,13 @@
 - **:902** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
 - **:1245** positions are string slots; no ledger point measures that regime).
 - **:1697** ⚠️ THE BEAM-SLOPE CAP HAS NO OBSERVER YET: it is reached only when a covering beam
+### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
+- **:355** bar line, which a form never writes. No observer; it goes when the column is modelled.
+- **:486** (SharedRenderer.IsMmrInnerEndBarline). No observer.
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（197 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（199 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3041** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -508,6 +511,9 @@
 ### `LilySharp.Core/Svg/Layout/VerticalSkyline.cs`
 - **:216** ⚠️ LILYSHARP-OWN, one deviation, declared rather than hidden: LilyPond flattens each
 - **:1360** ⚠️ LILYSHARP-OWN: THIS EXISTS BECAUSE LILY# SCALES AT DRAW TIME. An ossia is drawn
+### `LilySharp.Core/Svg/Layout/VoltaBracketEngraver.cs`
+- **:352** ⚠️ LILYSHARP-OWN: that column's X extent is taken as EMPTY, where
+- **:481** ⚠️ LILYSHARP-OWN: the plain bar lines inside a compressed multi-measure rest, which the
 ### `LilySharp.Core/Svg/Model/FiguredBassItem.cs`
 - **:159** LILYSHARP-OWN: the @figuredBass(…) SPELLING is Lily#'s, not a port — LilyPond writes
 ### `LilySharp.Core/Svg/Model/InstrumentDefaults.cs`
