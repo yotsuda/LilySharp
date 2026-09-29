@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第679セッションの経緯
+
+### 1.1 第679セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p679`（HEAD `656a5b82`・未 push 24・full **10279 / 0 / 2 / 10281**）。
+★★ **⒀ 双子の `voltaBracket N` が ending の頭の拍子で N 小節を数える＝閉じた**（`23448ff8`）: `EmitVoltaShape` は `musical-length` を N × その時点の拍子で書いていたが、頁の `VoltaBracketLength.LastBar` は*小節*を数える＝ending の最初の N 小節の中で `time` が変わる（`b'1 | time 3/4 b'2. |`）か短い小節があると括弧の終わりが違う小節に落ちた（2×4/4 対 7/4）。`FirstBarsLength`＝ending の section を順に、`SectionBarCounts` の索引の最長の music voice を `MeasureModel.Split`（検証器の小節モデル・phrase は `SectionBarCounts.PhraseBodies`＝`SemanticVoices` から抜き出した同じ表）で割り、最初の N 小節の実長を足す（`VoltaShapeGreen` が section 名を運ぶ）。music voice の無い section（chord 行）は従来どおり拍子 × N。
+★ 検証: 網 `VoltaBracketShapeTests.Twin_NBars_AreTheBarsOwnLengths`（7/4・複数 section で 11/4・1 小節で 1/1・頁の括弧は同じ小節で切れる）。毒 2 本が各自赤（P1 拍子×N に戻す 2・P2 最初の section だけ 2・Lab `sessions/p679/poisons.ps1`）。LP 2.26.0 の証明: 探り本の双子が警告 0 で通り、括弧が G の 3/4 の小節の終わりで切れる絵（`probes/out/cut-meter-lp.png`）。射程: ディスクに `voltaBracket N`／`@voltaBracket(N)` を書く本 0（コメントと探り本だけ）＝動く本 0。
+⚠ 道具: 毒スクリプトの `dotnet build` が `< NUL` でも console 入力待ちに嵌った（第676 と同じ形・p679 で 1 回）＝`close_console` で捨てて新しい console で回し直した。毒は残っていなかった（`finally` は走っていた）が、**捨てたら必ず `POISON` を grep する**。⚠ Edit ツールは `-Start` が動かしたファイルを「読み直せ」と弾く＝その状態で `-End` を回すと継ぎ目の網 3 本が赤（第679 が踏んだ・run2.trx）。
+★ **終了**: `-End p679 -DiffBase 656a5b82`＝full **10282 / 0 / 2 / 10284**（+3＝網・run3.trx）・Core 0 警告・TEST EXIT 0。§7.5 Core '+' 78 行／REF 0／OWN 0＝双子の配管（既存の REF 持ち `musical-length` の値の出所を頁の小節モデルに揃えただけ）。7.7 匂い: chord 行だけの section の「拍子 × N」は旧規則の残り（観測者なし・ディスクに本 0）。perf: 打鍵経路ではない（双子の export 時に ending 1 つにつき `Split` を section 数ぶん）。push はユーザー（未 push 26）。**第663 の残りは ⑼ だけ。**
+
 ## 以下は第678セッションの経緯
 
 ### 1.1 第678セッション（2026-09-29・YT-DELL2）
