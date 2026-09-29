@@ -16,6 +16,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Linq;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Semantics;
@@ -119,6 +120,17 @@ public class SectionCarryTests
         // The page draws the one slur the rule allows: C (play 1) into D (play 2).
         var slur = Assert.Single(new SlurDetector().DetectSlurs(Collect(src)));
         Assert.Equal((0, 1), (slur.StartMeasureIndex, slur.EndMeasureIndex));
+        // …and so does the document: one start (the first C's f), one stop (the first D's g);
+        // the second C's `(` and the last D's `)` are not written. Until 2026-09-29 (第663 ⒂)
+        // every play wrote its mark — three starts, two stops. Poison (RULES §5.4): key the
+        // refusal on the position alone (ignore the play) and BOTH slurs go, the first too.
+        string xml = Xml(src);
+        Assert.Equal(1, CountOf(xml, "<slur type=\"start\""));
+        Assert.Equal(1, CountOf(xml, "<slur type=\"stop\""));
+        var measures = XDocument.Parse(xml).Descendants("measure").ToList();
+        Assert.Equal(5, measures.Count);
+        Assert.Contains(measures[0].Descendants("slur"), s => (string?)s.Attribute("type") == "start");
+        Assert.Contains(measures[1].Descendants("slur"), s => (string?)s.Attribute("type") == "stop");
     }
 
     /// <summary>A part with no music in the next section: its bars there are padding.</summary>
@@ -304,6 +316,8 @@ public class SectionCarryTests
         Assert.Contains(carry, d => d.Severity == DiagnosticSeverity.Error
             && d.Message.StartsWith("a slur '(' would be carried from section A into section B over a repeat sign, a volta ending or a jump"));
         Assert.Empty(new SlurDetector().DetectSlurs(Collect(src)));
+        // The document draws none either: no start on A's f, no stop on B's g (第663 ⒂).
+        Assert.Equal(0, CountOf(Xml(src), "<slur "));
     }
 
     [Fact]
@@ -324,6 +338,15 @@ public class SectionCarryTests
         var score = Collect(src);
         var hairpin = Assert.Single(HairpinEngraver.DetectHairpins(score.MusicMarks, score.Dynamics, SectionPlays.For(score)));
         Assert.Equal((1, 0), (hairpin.EndMeasureIndex, hairpin.EndItemIndex));
+        // The document's wedge stops where the page cuts it — at the end of C's bar (measure
+        // 1, offset 96 = the whole bar at 24 a quarter), not at E's f two bars on. Until
+        // 2026-09-29 (第663 ⒂) the stop stood in measure 3. Poison: drop CloseCutWedge and
+        // the stop moves back to measure 3.
+        var doc = XDocument.Parse(Xml(src));
+        var stop = Assert.Single(doc.Descendants("wedge").Where(w => (string?)w.Attribute("type") == "stop"));
+        var direction = stop.Ancestors("direction").Single();
+        Assert.Equal("1", direction.Ancestors("measure").Single().Attribute("number")?.Value);
+        Assert.Equal("96", direction.Element("offset")?.Value);
     }
 
     // ---- the second stage (2026-09-29): text spanner, ottava, pedal, trill span ---------------

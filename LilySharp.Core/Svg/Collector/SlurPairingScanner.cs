@@ -103,7 +103,8 @@ internal static class SlurPairingScanner
                         if (plays.OnEntry(open[k].Play) is not { } fault)
                             continue;
                         var (from, into) = plays.NamesOnEntry(open[k].Play, fault);
-                        carrySink?.Add(new SectionCarryWarning(open[k].Position, SectionSpanKind.Slur, fault, from, into));
+                        carrySink?.Add(new SectionCarryWarning(open[k].Position, SectionSpanKind.Slur, fault, from, into,
+                            Play: open[k].Play));
                         open.RemoveAt(k--);
                     }
                 }
@@ -124,7 +125,8 @@ internal static class SlurPairingScanner
                     else if (plays.OnUnmatchedClose(openedThisPlay) is { } fault)
                     {
                         var (from, into) = plays.NamesForClose();
-                        carrySink?.Add(new SectionCarryWarning(items[ii].SourcePosition, SectionSpanKind.Slur, fault, from, into, AtClose: true));
+                        carrySink?.Add(new SectionCarryWarning(items[ii].SourcePosition, SectionSpanKind.Slur, fault, from, into,
+                            AtClose: true, Play: plays.Play));
                     }
                     else
                         sink.Add(new UnpairedSlurWarning(items[ii].SourcePosition, IsOpen: false));
@@ -145,7 +147,7 @@ internal static class SlurPairingScanner
             if (plays.AtEnd(play) is { } fault)
             {
                 var (from, into) = plays.NamesAtEnd(play);
-                carrySink?.Add(new SectionCarryWarning(position, SectionSpanKind.Slur, fault, from, into));
+                carrySink?.Add(new SectionCarryWarning(position, SectionSpanKind.Slur, fault, from, into, Play: play));
             }
             else
                 sink.Add(new UnpairedSlurWarning(position, IsOpen: true));
@@ -185,7 +187,8 @@ internal static class SlurPairingScanner
                     if (open >= 0 && plays.OnEntry(openPlay) is { } fault)
                     {
                         var (from, into) = plays.NamesOnEntry(openPlay, fault);
-                        carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into));
+                        carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into,
+                            Play: openPlay));
                         open = MusicItem.NoSourcePosition;
                     }
                 }
@@ -197,7 +200,7 @@ internal static class SlurPairingScanner
                     {
                         var (from, into) = plays.NamesForClose();
                         carrySink?.Add(new SectionCarryWarning(item.PhrasingSlurEndSourcePosition,
-                            SectionSpanKind.PhrasingSlur, fault, from, into, AtClose: true));
+                            SectionSpanKind.PhrasingSlur, fault, from, into, AtClose: true, Play: plays.Play));
                     }
                     else
                         sink.Add(new UnpairedSpanWarning(item.PhrasingSlurEndSourcePosition,
@@ -222,7 +225,7 @@ internal static class SlurPairingScanner
             if (plays.AtEnd(openPlay) is { } fault)
             {
                 var (from, into) = plays.NamesAtEnd(openPlay);
-                carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into));
+                carrySink?.Add(new SectionCarryWarning(open, SectionSpanKind.PhrasingSlur, fault, from, into, Play: openPlay));
             }
             else
                 sink.Add(new UnpairedSpanWarning(open, SpanKind.PhrasingSlur, SpanPairingFault.Unterminated));

@@ -328,6 +328,7 @@ public sealed class MusicXmlExporter
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _placedChordRows = RenderSpecParser.PlacedChordRows(_playedSpec);
+        ReadCarryRefusals(tree);
         _pendingChordRows.Clear();
         _playStartMeasure.Clear();
         _homeTonic = ScoreHomeKey.Read(root);
@@ -473,6 +474,90 @@ public sealed class MusicXmlExporter
 
     /// <summary>The printed play now being emitted (1-based; 0 before the first).</summary>
     private int _xmlPlaySerial => _printedPlays.Count;
+
+    /// <summary>The slur and phrasing-slur marks the section carry rule refuses, by (the host
+    /// note's source position, 0-based play, whether it is the close) — the page draws no
+    /// slur for them (LYS4023), and neither does this document.</summary>
+    private readonly HashSet<(int Position, int Play, bool Close)> _refusedSlurs = new();
+
+    /// <summary>The hairpins the carry rule cuts at their own section's end, by (the mark's
+    /// source position, 0-based play): the wedge stops where the section's play ends
+    /// (<see cref="CloseCutWedge"/>), not at the next dynamic.</summary>
+    private readonly HashSet<(int Position, int Play)> _cutHairpins = new();
+
+    /// <summary>True while the open wedge is one the rule cuts at the block's end.</summary>
+    private bool _wedgeCut;
+
+    /// <summary>The source position of the note, chord or slash the last emitted onset came
+    /// from (-1 when unknown) — what a slur walked as a SIBLING after it is refused by.</summary>
+    private int _lastEmittedHost = -1;
+
+    /// <summary>
+    /// Reads the carry rule's refusals off the page's own collect of the exported score, so
+    /// this document draws the spans the page draws and no other. ⚠️ Until 2026-09-29
+    /// (HANDOFF §1.1 第663 ⒂) the exporter wrote every slur and hairpin as written — a slur the
+    /// page refuses (carried into the next section and not closed there, or over a repeat) was
+    /// a <c>&lt;slur type="start"&gt;</c> with its stop a section or a repeat away, and a
+    /// hairpin the page cuts at its section's end ran on to the next dynamic.
+    /// </summary>
+    /// <remarks>
+    /// The rule is <see cref="Svg.Collector.SectionPlayCursor"/>'s and the findings are the
+    /// collect's (<see cref="MeasureCollector.SectionCarryWarnings"/>), for the reason
+    /// <c>SectionCarryValidator</c> gives: one rule, read from one place. Keyed by PLAY as well
+    /// as position: <c>form { C D C E }</c> refuses the second C's slur and draws the first's.
+    /// A book with no section has no boundary and pays for no collect.
+    /// </remarks>
+    private void ReadCarryRefusals(SyntaxTree tree)
+    {
+        _refusedSlurs.Clear();
+        _cutHairpins.Clear();
+        _wedgeCut = false;
+        if (!tree.GetRoot().DescendantNodes().OfType<SectionDeclarationSyntax>().Any())
+            return;
+        var collector = Semantics.SemanticValidation.TryCollect(tree, _playedSpec);
+        if (collector == null)
+            return;
+        foreach (var w in collector.SectionCarryWarnings)
+        {
+            switch (w.Kind)
+            {
+                case Svg.Collector.SectionSpanKind.Slur:
+                case Svg.Collector.SectionSpanKind.PhrasingSlur:
+                    _refusedSlurs.Add((w.SourcePosition, w.Play, w.AtClose));
+                    break;
+                case Svg.Collector.SectionSpanKind.Hairpin:
+                    _cutHairpins.Add((w.SourcePosition, w.Play));
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Whether the slur mark on the onset from <paramref name="host"/> — its open, or
+    /// its close — is one the page refuses in the play being written.</summary>
+    private bool RefusedSlur(int host, bool close)
+        => host >= 0 && _refusedSlurs.Contains((host, _xmlPlaySerial - 1, close));
+
+    /// <summary>Stops the open wedge the rule cuts, at the end of the last written bar of the
+    /// block — where the page cuts the hairpin (HairpinEngraver.DetectHairpins: at the start
+    /// of the play that follows).</summary>
+    private void CloseCutWedge()
+    {
+        if (!_wedgeOpen || !_wedgeCut)
+            return;
+        _wedgeOpen = false;
+        _wedgeCut = false;
+        var measure = _currentMeasure is { Notes.Count: > 0 } m ? m
+            : _currentPart is { Measures.Count: > 0 } p ? p.Measures[^1]
+            : null;
+        if (measure == null)
+            return;
+        measure.Directions.Add(new MusicXmlDirection
+        {
+            WedgeType = "stop",
+            Placement = "below",
+            Offset = CurrentMeasurePosition(measure),
+        });
+    }
 
     /// <summary>Opens the next printed play with the repeat role the form walk set.</summary>
     private void BeginPrintedPlay()
@@ -1243,6 +1328,8 @@ public sealed class MusicXmlExporter
                 ProcessNode(child);
         }
 
+        // A hairpin the carry rule cuts stops at this play's end, before the bar is flushed.
+        CloseCutWedge();
         FlushCurrentMeasure();
         AttachLyrics(_currentPart!, measuresBefore, lyricsBlocks);
 
@@ -1684,7 +1771,7 @@ public sealed class MusicXmlExporter
                 break;
 
             case DynamicSyntax dynamic:
-                HandleDynamicText(dynamic.DynamicToken.Text);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart);
                 break;
 
             case TieSyntax:
@@ -2266,6 +2353,7 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
+        _lastEmittedHost = note.SourceStart;
 
         var (step, alter) = ParsePitch(note.Pitch);
         int targetOctave = ResolveRelativeOctave(note.Pitch);
@@ -2320,7 +2408,7 @@ public sealed class MusicXmlExporter
         };
 
         // Process articulations and slurs
-        ProcessArticulations(note.Articulations, xmlNote);
+        ProcessArticulations(note.Articulations, xmlNote, host: note.SourceStart);
 
         // Tie pairing: a preceding '~' ends on this note (tie-stop); a '~' on
         // this note (sibling or articulation) starts a tie to the next note.
@@ -2661,6 +2749,7 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
+        _lastEmittedHost = slash.SourceStart;
 
         var duration = GetDuration(slash.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -2680,7 +2769,7 @@ public sealed class MusicXmlExporter
             NormalNotes = tupletNormal,
             Notehead = "slash",
         };
-        ProcessArticulations(slash.Articulations, xmlNote);
+        ProcessArticulations(slash.Articulations, xmlNote, host: slash.SourceStart);
         // A slash ties to the next slash exactly as a note ties to the next note (`/8~ | /4`,
         // the page's CreateSlashNoteItem reads the same `~`). ⚠️ Until 2026-09-29 (HANDOFF
         // §1.1 第662 ⑻) this arm paired no tie at all: the `~` on a slash wrote a start with
@@ -2706,6 +2795,7 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
+        _lastEmittedHost = bare.SourceStart;
 
         var duration = GetDuration(bare.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -2728,7 +2818,7 @@ public sealed class MusicXmlExporter
                     ActualNotes = tupletActual,
                     NormalNotes = tupletNormal
                 };
-                ProcessArticulations(bare.Articulations, xmlNote);
+                ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
                 CloseTies([xmlNote]);
                 if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
                 _currentMeasure.Notes.Add(xmlNote);
@@ -2762,7 +2852,7 @@ public sealed class MusicXmlExporter
                     };
                     if (isFirst)
                     {
-                        ProcessArticulations(bare.Articulations, xmlNote);
+                        ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
                         isFirst = false;
                     }
                     _currentMeasure.Notes.Add(xmlNote);
@@ -2817,7 +2907,7 @@ public sealed class MusicXmlExporter
                 };
                 // The repeated slash ties as ProcessSlashNote's does (`/2~ | 4`): the copy
                 // ends the tie the slash opened, and its own `~` opens the next.
-                ProcessArticulations(bare.Articulations, xmlNote);
+                ProcessArticulations(bare.Articulations, xmlNote, host: bare.SourceStart);
                 CloseTies([xmlNote]);
                 if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
                 _currentMeasure.Notes.Add(xmlNote);
@@ -2884,7 +2974,7 @@ public sealed class MusicXmlExporter
                 var slurred = _lastEmittedNotes.Count > 0 ? _lastEmittedNotes[^1]
                     : _currentMeasure is { Notes.Count: > 0 } m ? m.Notes[^1]
                     : null;
-                if (slurred != null)
+                if (slurred != null && !RefusedSlur(_lastEmittedHost, close: !slur.IsOpen))
                 {
                     if (slur.IsOpen)
                         slurred.SlurStart = true;
@@ -2965,6 +3055,7 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
+        _lastEmittedHost = chord.SourceStart;
 
         var pitches = chord.Pitches.ToList();
         // chord(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —
@@ -3097,7 +3188,8 @@ public sealed class MusicXmlExporter
                     _chordArpeggio = "non-arpeggiate";
                 // The outside string numbers were paired above, member by member.
                 ProcessArticulations(
-                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote);
+                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote,
+                    host: chord.SourceStart);
                 isFirst = false;
             }
 
@@ -3247,6 +3339,7 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
+        _lastEmittedHost = rep.SourceStart;
 
         var duration = GetDuration(rep.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -3294,7 +3387,7 @@ public sealed class MusicXmlExporter
             {
                 // The repetition's OWN post-events only — LP copies note events,
                 // not the original's articulations.
-                ProcessArticulations(rep.Articulations, xmlNote);
+                ProcessArticulations(rep.Articulations, xmlNote, host: rep.SourceStart);
                 isFirst = false;
             }
             _currentMeasure.Notes.Add(xmlNote);
@@ -3768,7 +3861,10 @@ public sealed class MusicXmlExporter
         }
     }
 
-    private void ProcessArticulations(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote)
+    /// <param name="host">The source position of the note, chord or slash the marks ride —
+    /// what the carry rule's refusals of its slurs are keyed on (<see cref="RefusedSlur"/>);
+    /// -1 where none can be refused.</param>
+    private void ProcessArticulations(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote, int host = -1)
     {
         // Pre-scan the frame spec so a chord symbol on the same note can
         // embed it, whichever order the marks were written in.
@@ -3792,7 +3888,8 @@ public sealed class MusicXmlExporter
                     ProcessDirectionName(articulation.NameToken.Text);
                 // MusicXML has no phrasing-slur element: a phrasing slur is a <slur> with a
                 // number of its own, so it can overlap the ordinary slurs (number 1).
-                if (Semantics.AnnotationValues.IsPhrasingSlurName(articulation.NameToken.Text))
+                if (Semantics.AnnotationValues.IsPhrasingSlurName(articulation.NameToken.Text)
+                    && !RefusedSlur(articulation.SourceStart, close: false))
                 {
                     var start = PhrasingSlurNotation("start");
                     if (articulation.ForcedAbove is { } above)
@@ -3854,7 +3951,7 @@ public sealed class MusicXmlExporter
             }
             else if (artic is DynamicSyntax dynamic)
             {
-                HandleDynamicText(dynamic.DynamicToken.Text);
+                HandleDynamicText(dynamic.DynamicToken.Text, dynamic.SourceStart);
             }
             else if (artic is StringNumberAnnotationSyntax stringNumber)
             {
@@ -3869,16 +3966,19 @@ public sealed class MusicXmlExporter
                 // marks (pedal, ottava, chord symbol) go on to their own reader.
                 if (Semantics.AnnotationValues.Finger(mark) is { } finger)
                     xmlNote.Technicals.Add(new System.Xml.Linq.XElement("fingering", finger));
-                if (mark.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name))
+                if (mark.IsSpanEnd && Semantics.AnnotationValues.IsPhrasingSlurName(mark.Name)
+                    && !RefusedSlur(mark.SourceStart, close: true))
                     xmlNote.ExtraNotations.Add(PhrasingSlurNotation("stop"));
                 ProcessDirectionMark(mark);
             }
             else if (artic is SlurSyntax slur)
             {
+                // A slur the carry rule refuses in this play is not written (the page draws
+                // none, LYS4023) — its open, or its close.
                 if (slur.IsOpen)
-                    xmlNote.SlurStart = true;
+                    xmlNote.SlurStart = !RefusedSlur(host, close: false);
                 else
-                    xmlNote.SlurStop = true;
+                    xmlNote.SlurStop = !RefusedSlur(host, close: true);
             }
         }
     }
@@ -3937,7 +4037,7 @@ public sealed class MusicXmlExporter
     /// <summary>A dynamic word: cresc/decresc/dim OPEN a &lt;wedge&gt; (they
     /// used to leak into &lt;dynamics&gt; as invalid &lt;cresc/&gt;); a level
     /// mark closes any open wedge, then emits as a dynamics direction.</summary>
-    private void HandleDynamicText(string text)
+    private void HandleDynamicText(string text, int position = -1)
     {
         if (text is "cresc" or "decresc" or "dim")
         {
@@ -3947,6 +4047,9 @@ public sealed class MusicXmlExporter
                 Placement = "below",
             });
             _wedgeOpen = true;
+            // The rule cuts this one at its section's end (CloseCutWedge), whatever dynamic
+            // follows in the next section.
+            _wedgeCut = position >= 0 && _cutHairpins.Contains((position, _xmlPlaySerial - 1));
             return;
         }
         if (_wedgeOpen)

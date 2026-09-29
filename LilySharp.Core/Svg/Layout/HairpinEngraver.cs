@@ -794,7 +794,7 @@ internal static class HairpinEngraver
                 int ownPlay = plays.PlayAt(mark.MeasureIndex);
                 carrySink?.Add(new Collector.SectionCarryWarning(mark.SourcePosition,
                     Collector.SectionSpanKind.Hairpin, fault, plays.NameOf(ownPlay),
-                    plays.NameOf(ownPlay + 1)));
+                    plays.NameOf(ownPlay + 1), Play: ownPlay));
                 endMeasure = plays.StartOf(ownPlay + 1);
                 endItem = 0;
             }

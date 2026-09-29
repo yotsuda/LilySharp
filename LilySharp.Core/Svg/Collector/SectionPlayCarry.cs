@@ -87,7 +87,12 @@ public record SectionCarryWarning(
     SectionCarryFault Fault,
     string? From,
     string? Into,
-    bool AtClose = false);
+    bool AtClose = false,
+    // The printed play the refused mark stands in (0-based, the SectionPlayCursor's count) —
+    // a section played twice writes the same mark twice, and only one play may be refused
+    // (`form { C D C E }`: the second C's slur, not the first's). -1 where the family does not
+    // count plays. What the MusicXML export keys its refusals on, beside the position.
+    int Play = -1);
 
 /// <summary>
 /// THE carry rule for spans at section boundaries, in one place — every reader of a slur,
