@@ -467,6 +467,8 @@ public sealed class MusicXmlExporter
     private bool _xmlRunStart;
     private int _xmlRunCount;
     private bool _xmlRewind;
+    // The passes the next printed play's ending bracket names ([1-2. B] is {1, 2}).
+    private PassSet _xmlEndingPasses;
     // Per (part, printed play): the tie starts open at the block's end, and the block's first onset.
     private readonly Dictionary<(string Part, int Play), List<MusicXmlNote>> _openAtEnd = new();
     private readonly Dictionary<(string Part, int Play), List<MusicXmlNote>> _firstOnset = new();
@@ -563,9 +565,10 @@ public sealed class MusicXmlExporter
     private void BeginPrintedPlay()
     {
         _printedPlays.Add(new Svg.Collector.PrintedPlay(_xmlRole, _xmlRunStart,
-            _xmlRunStart ? _xmlRunCount : 0, _xmlRewind));
+            _xmlRunStart ? _xmlRunCount : 0, _xmlRewind, _xmlEndingPasses));
         _xmlRunStart = false;
         _xmlRewind = false;
+        _xmlEndingPasses = PassSet.None;
     }
 
     /// <summary>Stops every carried tie on the plays that follow its play, retracts the
@@ -1085,6 +1088,7 @@ public sealed class MusicXmlExporter
             if (child is FormWalk.Ending { Node: var alt } ending)
             {
                 _xmlRole = Svg.Model.SectionRepeatRole.Ending;
+                _xmlEndingPasses = PassSet.Of(alt.Numbers);
                 var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 // One <ending> across all of the ending's sections: start on the first
                 // measure of the first, stop on the last measure of the last.

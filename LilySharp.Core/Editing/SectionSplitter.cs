@@ -1294,9 +1294,9 @@ public static class SectionSplitter
                     int times = 1;
                     if (n.Parent is FormAlternativeSyntax a2)
                     {
-                        if (a2.Separator is { Kind: SyntaxKind.Minus } && a2.EndNumber is { } endNo
-                            && int.TryParse(endNo.Text, out int last))
-                            times = Math.Max(1, last - a2.AlternativeNumber + 1);
+                        // Once per pass the bracket names: [1-3. B] three, [1,3. B] two (the
+                        // list was counted once until 2026-09-29 — this arm read ranges only).
+                        times = Math.Max(1, a2.Numbers.Count());
                     }
                     else if (n.Parent is FormRepeatBlockSyntax block)
                         times = block.DescendantNodes().OfType<BarlineSyntax>().FirstOrDefault(b => b.HasExplicitRepeatCount)

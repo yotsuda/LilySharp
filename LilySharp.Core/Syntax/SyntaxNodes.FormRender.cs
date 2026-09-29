@@ -287,6 +287,12 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
         }
     }
 
+    /// <summary>The passes this ending plays on — <c>[1. B]</c> {1}, <c>[1-3. B]</c> {1, 2, 3},
+    /// <c>[1,3. B]</c> {1, 3} — the fold the inline ending shares
+    /// (<see cref="SyntaxFacts.VoltaPassNumbers"/>). What every reader of the form plays the
+    /// run by (<c>Semantics.RepeatPasses</c>).</summary>
+    public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber);
+
     /// <summary>
     /// The ending's sections in the order they play: each a <see cref="SectionReferenceSyntax"/>
     /// or a silent (<c>~</c>) reference. Never empty — a missing name is kept as an empty

@@ -1239,31 +1239,9 @@ public sealed class InlineVoltaSyntax : SyntaxNode
     /// barline, or the end of the block), and the engraver still opens line-break pieces.</summary>
     public bool IsClosed => GetChild(SlotCount - 1) is SyntaxTokenNode { Kind: SyntaxKind.CloseBracket };
 
-    /// <summary>The set of pass numbers this ending applies to.</summary>
-    public IEnumerable<int> Numbers
-    {
-        get
-        {
-            int start = int.Parse(Number.Text);
-            if (HasSeparator && EndNumber != null && int.TryParse(EndNumber.Text, out int end))
-            {
-                if (Separator!.Kind == SyntaxKind.Minus)
-                {
-                    for (int n = start; n <= end; n++)
-                        yield return n;
-                }
-                else // comma list: [1,3. …]
-                {
-                    yield return start;
-                    yield return end;
-                }
-            }
-            else
-            {
-                yield return start;
-            }
-        }
-    }
+    /// <summary>The set of pass numbers this ending applies to (<see cref="SyntaxFacts.VoltaPassNumbers"/>,
+    /// the fold a form ending shares).</summary>
+    public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber);
 
     /// <summary>Highest pass number this ending covers (drives the inferred repeat count).</summary>
     public int MaxNumber => Numbers.Max();

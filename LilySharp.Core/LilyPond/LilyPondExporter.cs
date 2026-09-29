@@ -2542,10 +2542,18 @@ public sealed class LilyPondExporter
 
         if (alternatives.Count > 0)
         {
+            // A ranged or listed ending ([1-2. …], [1,3. …]) names its volte: without a
+            // \volta on every alternative LilyPond hands the extra volte to the FIRST one.
+            // LILYPOND-REF: scm/music-functions.scm:346-354 make-repeat — with no specced alternative, alt-1-count = times - lalts + 1 volte go to the first.
+            // A plain `[1.] [2.]` run is left unspecced: LilyPond's fill IS that reading.
+            bool specced = alternatives.Any(a => a.HasSeparator);
             _sb.Append(indent).Append("\\alternative {\n");
             foreach (var alt in alternatives)
             {
-                _sb.Append(indent).Append("  {\n");
+                _sb.Append(indent).Append("  ");
+                if (specced)
+                    _sb.Append("\\volta ").Append(string.Join(",", alt.Numbers)).Append(' ');
+                _sb.Append("{\n");
                 EmitMusicStream(alt.Items.ToList(), indent + "    ");
                 _sb.Append(indent).Append("  }\n");
             }
@@ -2716,9 +2724,10 @@ public sealed class LilyPondExporter
         var plays = new List<Svg.Collector.PrintedPlay>();
         var names = new List<string>();
         bool rewind = false;
-        void Add(string name, Svg.Model.SectionRepeatRole role, bool runStart, int count)
+        void Add(string name, Svg.Model.SectionRepeatRole role, bool runStart, int count,
+            Semantics.PassSet passes = default)
         {
-            plays.Add(new Svg.Collector.PrintedPlay(role, runStart, runStart ? count : 0, rewind));
+            plays.Add(new Svg.Collector.PrintedPlay(role, runStart, runStart ? count : 0, rewind, passes));
             names.Add(name);
             rewind = false;
         }
@@ -2748,13 +2757,15 @@ public sealed class LilyPondExporter
                         }
                         else if (child is FormWalk.Ending be)
                         {
-                            // [1. C D] is two printed plays of ONE ending.
+                            // [1. C D] is two printed plays of ONE ending; its passes ride the first.
                             var role = Svg.Model.SectionRepeatRole.Ending;
+                            var passes = Semantics.PassSet.Of(be.Node.Numbers);
                             foreach (var es in be.Sections)
                             {
-                                Add(es.Name, role, runStart, count);
+                                Add(es.Name, role, runStart, count, passes);
                                 runStart = false;
                                 role = Svg.Model.SectionRepeatRole.EndingContinued;
+                                passes = default;
                             }
                         }
                         else if (child is FormWalk.BothBar)

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
-| `OWN` | 196 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **312** | |
+| `OWN` | 197 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **313** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（56 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2986** container, and the value stops being unobserved with the line above.
+- **:2997** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:687** no observer; add the paren widths when a book brings one. The unpacked
 - **:689** bare glyph width, which is exact for one and unobserved for many.
@@ -230,20 +230,20 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（196 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（197 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:2981** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3323** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
-- **:5263** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5322** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
-- **:7018** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:2992** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3334** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:5274** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5333** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
+- **:7029** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:496** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
 - **:1222** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2679** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:2674** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordShapes.cs`
@@ -262,7 +262,7 @@
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:458** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4427** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:4431** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
@@ -306,6 +306,8 @@
 - **:264** LILYSHARP-OWN: LilyPond 2.26 has no capo property on its ChordNames context (its
 - **:285** LILYSHARP-OWN: LilyPond has no such list; the twin writes a \markup line of
 - **:420** LILYSHARP-OWN: LilyPond's FretBoards context carries its own stringTunings
+### `LilySharp.Core/Semantics/RepeatPasses.cs`
+- **:115** LILYSHARP-OWN: a pass no ending names replays the LAST ending — |: A [1. B] :|*3 [2. C]
 ### `LilySharp.Core/Svg/Collector/BeamDetector.cs`
 - **:1287** LILYSHARP-OWN as a carrier: LilyPond has no such intermediate — its
 - **:1317** LILYSHARP-OWN wiring: LilyPond's beam engravers receive each stem's
@@ -316,7 +318,7 @@
 - **:901** ⚠️ LILYSHARP-OWN: on a multi-measure rest (`R1*4@text("tacet")`, and the
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2794** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5118** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:5125** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -324,7 +326,7 @@
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
 - **:175** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/SectionPlayCarry.cs`
-- **:525** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
+- **:537** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`

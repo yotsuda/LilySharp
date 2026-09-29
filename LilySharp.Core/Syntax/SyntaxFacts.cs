@@ -88,6 +88,40 @@ internal static class SyntaxFacts
     }
 
     /// <summary>
+    /// The pass numbers a volta bracket names: <c>1.</c> is {1}, a range <c>1-3.</c> is
+    /// {1, 2, 3}, a list <c>1,3.</c> is {1, 3}.
+    /// </summary>
+    /// <remarks>
+    /// ONE SENTENCE, TWO READERS: the inline ending in the music (<c>[1-2. g4]</c>,
+    /// <see cref="InlineVoltaSyntax.Numbers"/>) and the form ending (<c>[1-2. B]</c>,
+    /// <see cref="FormAlternativeSyntax.Numbers"/>) are the same bracket with the same three
+    /// spellings, held in the same three slots. Until 2026-09-29 only the inline one spelled
+    /// this fold; the form's readers each read the slots for themselves (the MIDI: the first
+    /// number only; Split Sections: ranges but not lists) — see <c>Semantics.RepeatPasses</c>.
+    /// </remarks>
+    public static IEnumerable<int> VoltaPassNumbers(SyntaxTokenNode number, SyntaxTokenNode? separator, SyntaxTokenNode? endNumber)
+    {
+        int start = int.Parse(number.Text);
+        if (separator != null && endNumber != null && int.TryParse(endNumber.Text, out int end))
+        {
+            if (separator.Kind == SyntaxKind.Minus)
+            {
+                for (int n = start; n <= end; n++)
+                    yield return n;
+            }
+            else // comma list: [1,3. …]
+            {
+                yield return start;
+                yield return end;
+            }
+        }
+        else
+        {
+            yield return start;
+        }
+    }
+
+    /// <summary>
     /// The occurrence label written on a form item — the quoted string, unquoted — or null.
     /// </summary>
     /// <remarks>

@@ -278,6 +278,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A form ending's range or list — `[1-2. B]`, `[1,3. B]` — plays on the passes it names.**
+  The MIDI played the first written ending on pass 1, the second on pass 2, and played the
+  body as many times as there were endings, so `form main { |: A [1-2. B] :| [3. C] }` sounded
+  A B A C (the same music written inline sounded A B A B A C). The tie carried along the played
+  order and the split-bar exemption at a section boundary read the form the same way; all three
+  now read the numbers, as the MusicXML `<ending number="1,2">` already did. The `.ly` twin
+  writes such endings with their `\volta 1,2 { … }`, and Split Sections counts a `[1,3. B]`
+  play twice. A pass past every number replays the last ending, as it always has inline
+  (`|: A [1. B] :|*3 [2. C]` plays C on passes 2 and 3).
 - **A tuplet — and everything else tied to a bar — in a lower voice of a later bar lands
   in its own bar.** In
   `voice { … } { tuplet 3/2 { … } … }` written anywhere but the first bar, the tuplet in voice

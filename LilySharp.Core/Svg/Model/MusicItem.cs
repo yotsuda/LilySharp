@@ -144,6 +144,7 @@ internal sealed record MusicItemRare
     public SectionRepeatRole SectionRepeatRole { get; init; }
     public bool SectionRepeatRunStart { get; init; }
     public int SectionRepeatCount { get; init; }
+    public PassSet SectionEndingPasses { get; init; }
     public bool SectionPlayRewinds { get; init; }
     public bool GraceSlash { get; init; }
     public bool HasPhrasingSlurStart { get; init; }
@@ -303,6 +304,15 @@ public abstract record MusicItem
     {
         get => _rareBase?.SectionRepeatCount ?? 0;
         init { if (value != SectionRepeatCount) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionRepeatCount = value }; }
+    }
+
+    /// <summary>On an ending's first item (<see cref="SectionRepeatRole.Ending"/>): the passes
+    /// its bracket names (<c>[1-2. B]</c> is {1, 2}) — which passes of the run the play follows
+    /// the body on. <see cref="PassSet.None"/> on every other item.</summary>
+    public PassSet SectionEndingPasses
+    {
+        get => _rareBase?.SectionEndingPasses ?? PassSet.None;
+        init { if (value != SectionEndingPasses) _rareBase = (_rareBase ?? MusicItemRare.Empty) with { SectionEndingPasses = value }; }
     }
 
     /// <summary>On a play's first item: a one-sided form <c>:|</c> stands before the play, so

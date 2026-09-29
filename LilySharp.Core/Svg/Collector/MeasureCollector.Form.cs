@@ -67,6 +67,8 @@ public sealed partial class MeasureCollector
     private bool _pendingRunStart;
     private int _pendingRunCount;
     private bool _pendingRewind;
+    // The passes the NEXT play's ending bracket names ([1-2. B] is {1, 2}); none for a body.
+    private Semantics.PassSet _pendingPasses;
 
     private void ProcessRepeatBlockCore(FormRepeatBlockSyntax repeat, Action<MusicSiteList> processNodes, MeasureBuilder builder)
     {
@@ -178,6 +180,7 @@ public sealed partial class MeasureCollector
                 {
                     MarkFormEdge(SectionPlayEdge.Volta);
                     _pendingRole = SectionRepeatRole.Ending;
+                    _pendingPasses = Semantics.PassSet.Of(alt.Numbers);
                     // The ending's sections the book declares, in order: [1. C D] plays C
                     // then D on the same pass, under ONE bracket.
                     var sections = new List<(SyntaxNode Reference, string Name, SectionDeclarationSyntax Section)>();
@@ -296,10 +299,11 @@ public sealed partial class MeasureCollector
         _invocationInSection = 0;
         // Consumed at every play, live or skipped, so a resumed walk reads the same edges.
         var playStamp = new SectionPlayStamp(_pendingFormEdge, section.SectionName, _pendingRole,
-            _pendingRunStart, _pendingRunStart ? _pendingRunCount : 0, _pendingRewind);
+            _pendingRunStart, _pendingRunStart ? _pendingRunCount : 0, _pendingRewind, _pendingPasses);
         _pendingFormEdge = SectionPlayEdge.Sequential;
         _pendingRunStart = false;
         _pendingRewind = false;
+        _pendingPasses = default;
         // A spliced walk adopted every remaining section — prologue, music,
         // padding epilogue — inside the recorded tail (the end checkpoint
         // carries the section maps and metadata the prologue would write).

@@ -225,28 +225,32 @@ public sealed class SectionReferenceOctaveTests
     /// An ending's RANGE SEPARATOR is a comma too, and it is not an octave mark.
     /// </summary>
     /// <remarks>
-    /// <c>[1,3. B]</c> holds a Comma TOKEN as a direct child of the ending node, standing
+    /// <c>[1,2. B]</c> holds a Comma TOKEN as a direct child of the ending node, standing
     /// before the section name. The shared counter scans a node's direct <c>'</c>/<c>,</c>
     /// children, which is right for the other six reference shapes and would read this one
     /// as "an octave down" — so the ending counts from the section-name slot instead
     /// (<c>SyntaxFacts.NetOctaveMarksFrom</c>). Without that, every ranged ending in the
-    /// tree would have dropped an octave the day the notation landed.
+    /// tree would have dropped an octave the day the notation landed. The control is the
+    /// RANGE spelling of the same passes, <c>[1-2. B]</c>: the two name the same passes, so
+    /// every reader plays them alike — the plain <c>[1. B]</c> was the control until
+    /// 2026-09-29, when the form's readers began to play the passes an ending names
+    /// (<see cref="FormEndingPassTests"/>), and it plays two passes to the list's three.
     /// </remarks>
     [Theory]
     [InlineData("")]
     [InlineData("octave absolute")]
     public void ARangedEndingIsNotShifted_TheSeparatorCommaIsNotAMark(string mode)
     {
-        string ranged = Book(mode, "g4 a b c |", "|: ~A [1,3. B ] :| [2. C ]");
-        string plain = Book(mode, "g4 a b c |", "|: ~A [1. B ] :| [2. C ]");
-        Assert.Equal(MidiPitches(plain), MidiPitches(ranged));
-        Assert.Equal(XmlPitches(plain), XmlPitches(ranged));
-        Assert.Equal(PageSteps(plain), PageSteps(ranged));
+        string listed = Book(mode, "g4 a b c |", "|: ~A [1,2. B ] :| [3. C ]");
+        string ranged = Book(mode, "g4 a b c |", "|: ~A [1-2. B ] :| [3. C ]");
+        Assert.Equal(MidiPitches(ranged), MidiPitches(listed));
+        Assert.Equal(XmlPitches(ranged), XmlPitches(listed));
+        Assert.Equal(PageSteps(ranged), PageSteps(listed));
 
-        // …and a ranged ending can still be marked, which is the other half of the same slot
+        // …and a listed ending can still be marked, which is the other half of the same slot
         // question: the separator is at a fixed index, the marks come after the name.
-        Assert.NotEqual(MidiPitches(ranged),
-            MidiPitches(Book(mode, "g4 a b c |", "|: ~A [1,3. B' ] :| [2. C ]")));
+        Assert.NotEqual(MidiPitches(listed),
+            MidiPitches(Book(mode, "g4 a b c |", "|: ~A [1,2. B' ] :| [3. C ]")));
     }
 
     /// <summary>

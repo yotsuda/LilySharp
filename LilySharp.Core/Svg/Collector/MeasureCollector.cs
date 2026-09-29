@@ -3683,6 +3683,7 @@ public sealed partial class MeasureCollector
         _pendingRole = SectionRepeatRole.None;
         _pendingRunStart = false;
         _pendingRewind = false;
+        _pendingPasses = default;
         _formDividerOpen = false;
         _formDividerClosed = false;
         foreach (var child in _form!.DescendantNodes())
@@ -3924,7 +3925,13 @@ public sealed partial class MeasureCollector
     private void SetLoneEndingAwareRole(SyntaxNode reference)
     {
         if (reference.Parent is FormAlternativeSyntax ending)
-            SetTopLevelRole(ending: true, continued: ending.Sections[0].Position != reference.Position);
+        {
+            bool continued = ending.Sections[0].Position != reference.Position;
+            SetTopLevelRole(ending: true, continued);
+            // The ending's passes ride its FIRST section's play, as inside a block.
+            if (!continued && _pendingRole == SectionRepeatRole.Ending)
+                _pendingPasses = Semantics.PassSet.Of(ending.Numbers);
+        }
         else
             SetTopLevelRole(ending: false);
     }

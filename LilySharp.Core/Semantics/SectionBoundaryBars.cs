@@ -36,8 +36,9 @@ namespace LilySharp.Core.Semantics;
 /// </para>
 /// <para>
 /// The play order comes from <see cref="FormWalk"/> (the one reader of a form's spellings);
-/// a repeat block plays its body once per turn with the turn's ending after it (the count
-/// is the written <c>:|*N</c>, else the number of endings, else 2 — the collector's rule).
+/// a repeat block plays its body once per turn with the turn's ending after it — the ending
+/// whose numbers name the turn, and as many turns as the written <c>:|*N</c>, else the highest
+/// number named (<see cref="RepeatPasses"/>, the MIDI's rule).
 /// The bar lengths come from <see cref="MeasureModel.Split"/> over the neighbour's cell for
 /// the same part, under the meter of the bar being judged; a section that has no cell for
 /// the part is padded by the collector and completes nothing.
@@ -171,13 +172,18 @@ internal sealed class SectionBoundaryBars
             else if (child is FormWalk.SectionRef or FormWalk.Repeat)
                 body.Add(child);
         }
-        // The collector's count: the written `:|*N`, else the number of endings, else 2.
-        int turns = rep.ExplicitPlayCount ?? (endings.Count > 0 ? endings.Count : rep.PlayCount);
-        for (int t = 0; t < turns; t++)
+        // The run's passes and the ending each plays (RepeatPasses — the MIDI's and the
+        // played order's rule): the written `:|*N`, else the highest number an ending names.
+        var endingPasses = new List<PassSet>(endings.Count);
+        foreach (var e in endings)
+            endingPasses.Add(PassSet.Of(e.Node.Numbers));
+        int turns = RepeatPasses.Count(rep.ExplicitPlayCount, endingPasses);
+        for (int t = 1; t <= turns; t++)
         {
             Expand(body, plays);
-            if (endings.Count > 0)
-                foreach (var s in endings[Math.Min(t, endings.Count - 1)].Sections)
+            int ending = RepeatPasses.EndingFor(t, endingPasses);
+            if (ending >= 0)
+                foreach (var s in endings[ending].Sections)
                     plays.Add(s.Name);
         }
     }

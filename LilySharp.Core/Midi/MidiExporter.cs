@@ -1407,8 +1407,9 @@ public sealed class MidiExporter
         // readers give B B C C — no book on disk writes the divider inside a block (925
         // scanned), so the observers are FormRepeatBarlineTests' own.
         var body = new List<(string Name, int OctaveOffset)>();
-        // One entry per ENDING, each the sections it plays in order ([1. C D]).
-        var alternatives = new List<List<(string Name, int OctaveOffset)>>();
+        // One entry per ENDING: the passes its bracket names and the sections it plays in
+        // order ([1-2. C D] is {1, 2} and C then D).
+        var alternatives = new List<(PassSet Passes, List<(string Name, int OctaveOffset)> Sections)>();
         foreach (var child in repeatBlock.Children)
         {
             switch (child)
@@ -1418,12 +1419,13 @@ public sealed class MidiExporter
                     body.Add((s.Name, s.OctaveOffset));
                     break;
                 case FormWalk.Ending e:
-                    alternatives.Add(e.Sections.Select(s => (s.Name, s.OctaveOffset)).ToList());
+                    alternatives.Add((PassSet.Of(e.Node.Numbers),
+                        e.Sections.Select(s => (s.Name, s.OctaveOffset)).ToList()));
                     break;
                 case FormWalk.BothBar:
                     PlayRepeatRun(repeatBlock, body, alternatives, track, conductorTrack);
                     body = new List<(string Name, int OctaveOffset)>();
-                    alternatives = new List<List<(string Name, int OctaveOffset)>>();
+                    alternatives = new List<(PassSet, List<(string Name, int OctaveOffset)>)>();
                     break;
             }
         }
@@ -1434,13 +1436,15 @@ public sealed class MidiExporter
     /// when it holds no <c>:|:</c>. The written <c>:|*N</c> is the block's and applies to
     /// every run, as the LilyPond twin writes it on each run's close.</summary>
     private void PlayRepeatRun(FormWalk.Repeat repeatBlock,
-        List<(string Name, int OctaveOffset)> body, List<List<(string Name, int OctaveOffset)>> alternatives,
+        List<(string Name, int OctaveOffset)> body,
+        List<(PassSet Passes, List<(string Name, int OctaveOffset)> Sections)> alternatives,
         MidiTrack track, MidiTrack conductorTrack)
     {
         if (body.Count == 0 && alternatives.Count == 0)
             return;
-        // The SAME three-way rule the music stream plays by (ProcessRepeatSpan): an explicit
-        // `:|*N` wins, else the number of endings, else 2.
+        // The SAME rule the music stream plays by (ProcessRepeatSpan, RepeatPasses): an
+        // explicit `:|*N` wins, else the highest pass an ending names, else 2 — and on pass p
+        // the ending whose numbers name p.
         // ⚠️ THIS ARM USED TO READ NEITHER — it was `Math.Max(2, alternatives.Count)`, so a
         // form's `:|*3` was silently dropped and the piece sounded twice while the same music
         // written inline sounded three times (MEASURED 2026-08-31: 24 note-ons against 16, on
@@ -1449,40 +1453,49 @@ public sealed class MidiExporter
         // one reader of the four that disagreed — and only about the FORM spelling, which is
         // why it survived: until LYS1034 an author could write the count in the music, where
         // it worked. Nineteen books on disk write `:|*N`.
-        int passes = repeatBlock.ExplicitPlayCount ?? Math.Max(2, alternatives.Count);
+        // ⚠️ AND UNTIL 2026-09-29 IT READ NO ENDING NUMBER EITHER (HANDOFF 第663 ⑾): the i-th
+        // written ending played on pass i and the count was the number of endings, so
+        // `|: A [1-2. B] :| [3. C]` sounded A B A C while the same music written inline
+        // sounded A B A B A C (FormEndingPassTests).
+        var endingPasses = new List<PassSet>(alternatives.Count);
+        foreach (var alternative in alternatives)
+            endingPasses.Add(alternative.Passes);
+        int passes = RepeatPasses.Count(repeatBlock.ExplicitPlayCount, endingPasses);
         // A structure repeat is engraved once (repeat barlines): later passes
         // revisit the same printed BODY copy, so the body's ordinals restart from
         // this snapshot each pass (the highlight re-lights the same printed body).
         var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
-        for (int pass = 0; pass < passes; pass++)
+        for (int pass = 1; pass <= passes; pass++)
         {
             // A tie is carried to whatever is PLAYED next — back to the body at a new pass,
             // into this pass's ending — as the page draws it (SectionPlayGraph).
-            if (pass > 0)
+            if (pass > 1)
                 _sourceOrdinals = new Dictionary<int, int>(structOrdSnapshot);
             foreach (var (name, bodyOctave) in body)
                 PlaySectionByName(name, track, conductorTrack, bodyOctave);
-            if (pass < alternatives.Count)
+            int ending = RepeatPasses.EndingFor(pass, endingPasses);
+            if (ending >= 0)
             {
                 // Each ENDING, unlike the body, is a distinct printed copy laid out
-                // in pass order after the body. When the endings reuse the body's
+                // in written order after the body. When the endings reuse the body's
                 // section they share its source positions, so the body's per-pass
                 // ordinal restart would otherwise map every ending onto the FIRST
                 // ending's printed copy (highlighting ending 1 each pass, never
-                // ending 2). Advance the body's positions by `pass` so this pass's
-                // ending resolves to its OWN printed copy. Only positions the body
-                // just bumped are advanced, leaving intro/outro sections intact.
-                if (pass > 0)
+                // ending 2). Advance the body's positions by the ENDING's index — not
+                // the pass: a ranged `[1-2. B]` is ONE printed copy played twice — so
+                // this pass's ending resolves to its OWN printed copy. Only positions
+                // the body just bumped are advanced, leaving intro/outro sections intact.
+                if (ending > 0)
                 {
                     foreach (var key in new List<int>(_sourceOrdinals.Keys))
                     {
                         structOrdSnapshot.TryGetValue(key, out int before);
                         if (_sourceOrdinals[key] > before)
-                            _sourceOrdinals[key] += pass;
+                            _sourceOrdinals[key] += ending;
                     }
                 }
                 // An ending's sections play in order, as one stretch of the pass.
-                foreach (var (name, endingOctave) in alternatives[pass])
+                foreach (var (name, endingOctave) in alternatives[ending].Sections)
                     PlaySectionByName(name, track, conductorTrack, endingOctave);
             }
         }
@@ -1704,7 +1717,8 @@ public sealed class MidiExporter
     /// <summary>
     /// Plays a <c>|: … :|</c> span: the common body N times, selecting the matching
     /// inline volta ending (<c>[1. …] [2. …]</c>) on each pass. N comes from an
-    /// explicit <c>:|*N</c>, else the highest volta number, else the default 2.
+    /// explicit <c>:|*N</c>, else the highest volta number, else the default 2
+    /// (<see cref="RepeatPasses"/> — the rule the form's readers share since 2026-09-29).
     /// Returns the index of the last item consumed (the <c>:|</c> or the last
     /// trailing ending) so the caller resumes after it.
     /// </summary>
@@ -1733,13 +1747,12 @@ public sealed class MidiExporter
         }
 
         var endBar = items[end] as BarlineSyntax;
-        int count;
-        if (endBar?.HasExplicitRepeatCount == true)
-            count = endBar.RepeatCount;
-        else if (endings.Count > 0)
-            count = Math.Max(2, endings.Max(e => e.MaxNumber));
-        else
-            count = 2;
+        // The rule every reader plays a run by (RepeatPasses): the written `:|*N`, else the
+        // highest pass an ending names (at least two), else 2; on pass p the ending naming p.
+        var endingPasses = new List<PassSet>(endings.Count);
+        foreach (var e in endings)
+            endingPasses.Add(PassSet.Of(e.Numbers));
+        int count = RepeatPasses.Count(endBar?.HasExplicitRepeatCount == true ? endBar.RepeatCount : null, endingPasses);
 
         int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
         var savedDuration = _defaultDuration;
@@ -1757,30 +1770,12 @@ public sealed class MidiExporter
 
             ProcessSequence(body, track, conductorTrack);
 
-            if (endings.Count > 0)
-            {
-                var ending = SelectEnding(endings, pass);
-                if (ending != null)
-                    ProcessSequence(ending.Items.ToList(), track, conductorTrack);
-            }
+            int ending = RepeatPasses.EndingFor(pass, endingPasses);
+            if (ending >= 0)
+                ProcessSequence(endings[ending].Items.ToList(), track, conductorTrack);
         }
 
         return last;
-    }
-
-    /// <summary>
-    /// Picks the inline volta ending for a (1-based) repeat pass: the one whose
-    /// number set contains the pass, else the last ending (clamping, mirroring the
-    /// keyword path's <c>Math.Min(i, count-1)</c> selection).
-    /// </summary>
-    private static InlineVoltaSyntax? SelectEnding(List<InlineVoltaSyntax> endings, int pass)
-    {
-        foreach (var ending in endings)
-        {
-            if (ending.Matches(pass))
-                return ending;
-        }
-        return endings.Count > 0 ? endings[^1] : null;
     }
 
     private static bool IsRepeatBar(SyntaxNode node, SyntaxKind kind)

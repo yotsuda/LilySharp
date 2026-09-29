@@ -16,20 +16,22 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>What the collector stamps on a section play's first timed item
 /// (<see cref="MusicItem.BeginsSectionPlay"/> and its siblings): how the form reached the play
-/// and what the play is to a form repeat.</summary>
+/// and what the play is to a form repeat — for an ending, the passes its bracket names.</summary>
 public readonly record struct SectionPlayStamp(
     SectionPlayEdge Edge,
     string Section,
     SectionRepeatRole Role = SectionRepeatRole.None,
     bool RunStart = false,
     int Count = 0,
-    bool Rewinds = false);
+    bool Rewinds = false,
+    PassSet Passes = default);
 
 /// <summary>Which span a section-boundary complaint is about — the four families a span may
 /// be carried from one section into the next (owner's decision, 2026-09-28), and the four
@@ -332,7 +334,8 @@ internal sealed class SectionPlays
 /// <summary>What one printed section play is to the PLAYED order — the input
 /// <see cref="PlayedOrder.Expand"/> rebuilds it from. The page reads it off the stamps
 /// (<see cref="SectionPlayGraph"/>); MusicXML and the LilyPond twin off the form.</summary>
-internal readonly record struct PrintedPlay(SectionRepeatRole Role, bool RunStart, int Count, bool Rewinds);
+internal readonly record struct PrintedPlay(SectionRepeatRole Role, bool RunStart, int Count, bool Rewinds,
+    PassSet Passes = default);
 
 /// <summary>
 /// The PLAYED order of a form's printed section plays: the order the MIDI plays them in
@@ -342,10 +345,13 @@ internal readonly record struct PrintedPlay(SectionRepeatRole Role, bool RunStar
 /// </summary>
 /// <remarks>
 /// A repeat RUN (a block, or a block's part between <c>:|:</c> dividers, or a run a form-level
-/// <c>:|:</c> opened) plays its body once per pass and, on pass N, its N-th ending; the passes
-/// are the written <c>:|*N</c>, else as many as there are endings, and at least two. A one-sided
-/// form <c>:|</c> plays the piece so far again (without its own earlier rewinds). Jumps
-/// (D.S., D.C.) are not followed, as the MIDI does not follow them.
+/// <c>:|:</c> opened) plays its body once per pass and, on pass p, the ending whose numbers name
+/// p (<see cref="RepeatPasses"/> — the one spelling; the passes are the written <c>:|*N</c>, else
+/// the highest number an ending names, and at least two). ⚠️ Until 2026-09-29 this reader
+/// played the N-th WRITTEN ending on pass N and counted the endings, so a tie out of
+/// <c>[2. C]</c> in <c>|: A [1,3. B] :| [2. C] D</c> was carried into D, which never follows it.
+/// A one-sided form <c>:|</c> plays the piece so far again (without its own earlier rewinds).
+/// Jumps (D.S., D.C.) are not followed, as the MIDI does not follow them.
 /// ⚠️ A one-sided <c>:|</c> at the very END of a form has no play after it to carry the stamp,
 /// so its rewind is not seen here: a tie at the end of such a piece has no successor.
 /// </remarks>
@@ -368,8 +374,10 @@ internal static class PlayedOrder
                 continue;
             }
             var body = new List<int>();
-            // One list per ending: its sections' plays in order ([1. C D] is two plays).
+            // One list per ending: its sections' plays in order ([1. C D] is two plays) — and
+            // the passes its bracket names, off its first play's stamp.
             var endings = new List<List<int>>();
+            var endingPasses = new List<PassSet>();
             int count = plays[i].Count;
             int j = i;
             do
@@ -379,20 +387,24 @@ internal static class PlayedOrder
                 else if (plays[j].Role == SectionRepeatRole.EndingContinued && endings.Count > 0)
                     endings[^1].Add(j);
                 else
+                {
                     endings.Add(new List<int> { j });
+                    endingPasses.Add(plays[j].Passes);
+                }
                 j++;
             }
             while (j < plays.Count && plays[j].Role != SectionRepeatRole.None
                    && !plays[j].RunStart && !plays[j].Rewinds);
-            int passes = count > 0 ? count : Math.Max(2, endings.Count);
-            for (int pass = 0; pass < passes; pass++)
+            int passes = RepeatPasses.Count(count > 0 ? count : null, endingPasses);
+            for (int pass = 1; pass <= passes; pass++)
             {
                 played.AddRange(body);
                 plain.AddRange(body);
-                if (pass < endings.Count)
+                int ending = RepeatPasses.EndingFor(pass, endingPasses);
+                if (ending >= 0)
                 {
-                    played.AddRange(endings[pass]);
-                    plain.AddRange(endings[pass]);
+                    played.AddRange(endings[ending]);
+                    plain.AddRange(endings[ending]);
                 }
             }
             i = j;
@@ -458,7 +470,7 @@ internal sealed class SectionPlayGraph
                 (starts ??= new()).Add((mi, ii));
                 (names ??= new()).Add(item.SectionPlayName);
                 (plays ??= new()).Add(new PrintedPlay(item.SectionRepeatRole, item.SectionRepeatRunStart,
-                    item.SectionRepeatCount, item.SectionPlayRewinds));
+                    item.SectionRepeatCount, item.SectionPlayRewinds, item.SectionEndingPasses));
             }
         }
         return starts is { Count: > 0 } ? new SectionPlayGraph(starts, names!, PlayedOrder.Successors(plays!)) : null;
