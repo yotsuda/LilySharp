@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第687セッションの経緯
+
+### 1.1 第687セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p687`（HEAD `65d8425d`・未 push 40・full **10303 / 1 / 2 / 10306**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（948 対 天井 947）＝第686 の 終了 行が Lab の commit SHA を引用していた＝Lab の SHA は本体の履歴に無い＝SHA を消して直した。天井は動かしていない）。
+★★ **第686 の直しが残した近い穴＝MIDI のカポは「最初の score」を読んでいた（§1.0 ⒜ カポの穴・第665）**: `MidiExporter.Capo` は `TopLevelNodes.OfRoot<RenderDeclarationSyntax>.FirstOrDefault()` の layout を読んでいたが、第686 から MIDI は鳴らす score（`_playedSpec`）を持つ。`LayoutPlanReader.ResolveFor(root, RenderSpec?)`（`Resolve(root, render)` の RenderSpec 版＝`RenderSpec.LayoutRef` は Parse が同じ「最後の layout 参照」を取っている・`Resolve` の名は null で曖昧になるので別名）で鳴らす score のカポを読む。`_playedSpec` を Export で 1 度取り、`SoundingParts` もそれを読む。ホバー側（`NoteStepper.CapoOf`）は今も最初の score＝未。
+★ 検証: 網 `ScorePartsMidiTests.TheCapo_IsThePlayedScores_NotTheFirstScores`（`layout capo3`／`layout open` を参照する 2 score・x32010 が main で E♭・"open" で C）。毒 P4（最初の score を読む形に戻す）が赤 1（Lab `sessions/p687/poisons.ps1`・baseline 9/0）。ShapeChordItem 23／ChordDiagram 256／Midi 216／Layout 335／HistoryCitation 3 緑。
+★ 拡張の配備: `tools\Deploy-Lsp.ps1`（Release publish → 入っている拡張へ server と out/ を配る・末尾のバイト比較と起動確認まで）＝ユーザーは「Developer: Reload Window」を押してから score を選んで Play を確かめる。
+
+★ **終了**: commit `6d8a9b0d`（Core 2・網 1・APPROXIMATIONS・CHANGELOG）。`-End p687 -DiffBase 65d8425d`（⚠ 1 回目は MCP console から `cmd … < NUL` で回したのに中の dotnet test が入力待ちで返らず（CPU 2 秒のまま・trx 無し）＝console を捨て、18:50 の孤児 dotnet／testhost を Stop-Process し、`-Start` と同じ **Start-Process の detached** で 2 回目が 1 分で通った＝**`-End` も detached で回すこと**）＝full **10305 / 0 / 2 / 10307**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,975 B）。§7.5 Core '+' 35 行（MidiExporter 14・LayoutPlanReader 21）／REF 0／OWN 0＝layout の読み手の RenderSpec 版。7.6: ⒟ 何も移植していない。7.7 匂い: 「score の最後の layout 参照」は Parse（`LayoutRef`）と `Resolve` の走査の 2 か所で取っている（同じ規則の 2 つ目の綴りに近い＝`ResolveFor` の註に書いた）。perf: export 時だけ。Lab は `sessions/p687/`（毒・start/end/deploy log）を commit。push はユーザー（未 push 42）。
+
 ## 以下は第686セッションの経緯
 
 ### 1.1 第686セッション（2026-09-29・YT-DELL2）

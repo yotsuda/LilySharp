@@ -119,6 +119,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第689セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（第688 の 6 個のコード図はユーザー実機確認済「改善した」）。ユーザー報告「`bohemian-rhapsody.lys` score tab の 8〜12 小節（L705〜709 の `R1`）で全休符が左右に割れ、左は五線の下にぶら下がる全休符・右は線の上に乗る二分休符に見える」＋「4 拍子なのに全休符と二分休符」。★ `-Start p689`（HEAD `97083e11`・未 push 45・full **10308 / 0 / 2 / 10310**）。
+★★ **根は 2 つ（どちらも 4 弦ベース tab・線間 1.5）**: probe `sessions/p689/probes/tabrest.lys`（`R1 | R1 | c'1 | r1 | r2 r2 |`・`tab cb`）の SVG で `R1` 1 小節に**全休符 U+E000 が 2 つ**＝⑴ tab の arm（`DrawTabMeasure` の RestItem）が `IsMmrCovered` を訊かず、全小節記号の下に小節自身の休符も描いていた（notation の arm は最初から訊いている・第 y=12.04＝上側中央線に正しく掛かる）。⑵ 全小節記号（`DrawChurchRest`）は y=11.54→（staff の高さを notation の 4.0 で読み中央を 2.0 に置く）＋（1 ポジション＝0.5 で数える）＋（`StaffLinesAt` が `Staff.Lines`＝5 を返し、さらに 4 線の notation 表 `{-2,0,2,4}` は tab の弦 `{-3,-1,1,3}` ではない）＝線から半単位浮いて「線の上に乗る二分休符」に見えた。LP 2.26.0 で twin（`lysc ly` → lilypond --png）を描いて基準を取った: R1・r1 は第 2 弦から下がり、r2 は第 3 弦に乗る（`probes/tabrest-lp.png`）。
+直し: ⑴ tab arm に `IsMmrCovered` の門（`layout` を渡す）。⑵ `MultiStaffLayouter.LineSpacingOf`（tab 1.5・他 1.0＝LP の `ss`）と `LinePositionsOf`（tab は `EngravingDefaults.TabLinePositions`＝LP の line-count 規則 N−1, N−3, …・他は `StaffLinePositions`）を足し、`MultiMeasureRestLayout.LineSpacing` を engraver（`staffByIndex` を受けて staff 自身の高さで中央を取る）が入れ、renderer は 1 ポジション＝`0.5 × LineSpacing`・長い記号は LP の `(ss − fs)` 分（tab で 0.5）上げる・数字は staff の最上線＋0.4・H-bar の太さと端も `ss` 倍。`ElementCoordinator.NeutralRestPosition`／`VoicedRestPosition` に line-positions を直接受ける版を足した（int 版はそれを呼ぶ）。
+★ 検証: 網 `TabWholeBarRestTests` 2（4 弦: 全休符 3 つ＝R1・R1・r1 が全部第 2 弦・r2 が第 3 弦／6 弦: 第 3 弦）。毒 3 本が各自赤 2（P1 門を外す・P2 LineSpacing 1.0・P3 notation 表で読む・Lab `sessions/p689/poisons.ps1`）。MultiMeasure 41／Mmr 16／Tab 639／SvgSnapshot 247／Rest 295／Percent 55 緑＝snapshot は動かない（tab の `R1` を持つ snapshot 本が無い）。目視: `probes/tabrest.png`（Lily#）対 `tabrest-lp.png`（LP）で同じ弦に掛かる・ユーザーの本 `bohemian-rhapsody-tab-page1.png` の 8〜12 小節。
+⚠ 射程: tab 譜の全小節記号だけ（notation 譜は LineSpacing 1.0・5 線表＝バイト不変）。tab の `R1*N`（教会休符の長い記号・H-bar・数字）は LP の式に沿って動かしたが目視は未（本に無い）。
+
+★ **終了**: commit `5e53afff`（Core 7・網 1・CHANGELOG・APPROXIMATIONS・magic_constants＝行番号だけ）。`-End p689 -DiffBase 97083e11`（detached・72 秒）＝full **10310 / 0 / 2 / 10312**（+2＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,300 B）。§7.5 Core '+' 156 行（Marks 47・EngravingDefaults 28・MultiStaffLayouter 27・MMR engraver 26・ElementCoordinator 15・Tab 11・Annotations 2）／REF 2（TabLinePositions＝staff-symbol.cc line_positions・LineSpacingOf＝engraver-init.ly TabStaff staff-space）／OWN 0。7.6: ⒜ LP の式（church_rest の ss × 0.5・(ss − fs)・line-count の N−1, N−3, …）を tab に通した＝移植。7.7 匂い: 「staff の線の位置」が `StaffLinePositions(int)`（notation の as lines 表）と `TabLinePositions(int)`（LP 規則）の 2 表になった＝`LinePositionsOf(Staff)` が 1 か所で選ぶ・int 版の `NeutralRestPosition`／`VoicedRestPosition` は span 版へ委譲（2 つ目の綴りではない）。perf: engraver の staff 表引きが staff ごとに 1 回増える（export/描画時だけ）。`Deploy-Lsp.ps1` で server を配り直した（Reload Window が要る）。Lab は `sessions/p689/`（毒・probe・LP の png・log）を commit。push はユーザー（未 push 47）。
+
+## 以下は第688セッションの経緯
+
 ### 1.1 第688セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き。ユーザー報告「`C:\tmp\diagram.lys` L7 の chord の上で Ctrl+Shift+↑ を押すと、レンダ上の 6 個のコード図が変わるべきなのに先頭しか変わらない」（section A を form が 6 回弾く本・`chord(C x35550)1@chord()`）。★ `-Start p688`（HEAD `14873092`・未 push 43・full **10305 / 0 / 2 / 10307**）。
@@ -128,17 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠ perf: 再生 play を含む尾の splice を失う（form の `A A B A` は普通の形）。値付けは未（数える計器＝corpus sweep での decline 回数）＝perf の島は一時停止中なので、再開時に「a section the tail plays again」の decline 数を数える。⚠ 道具: 長い `dotnet test`（corpus の脚）は MCP の「入力待ち」警告を出すが testhost の CPU が増えていれば本物＝第687 の `-End` とは別の顔。
 
 ★ **終了**: commit `c3cf289b`（Core 1・網 1・CHANGELOG）。`-End p688 -DiffBase 14873092`（detached・54 秒）＝full **10308 / 0 / 2 / 10310**（+3＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,380 B）。§7.5 Core '+' 26 行（Resume.cs の門 1 つ）／REF 0／OWN 0＝collect の resume の健全性（出所は repetition の門の形）。7.6: ⒟ 何も移植していない。7.7 匂い: 毒で赤になるのは 3 例中 2 例（音の挿入は別の門が先に decline する＝門の重なり・観測者は shape の 2 例）。perf: decline が増える分だけ（値付け未・上の ⚠）。拡張へ `Deploy-Lsp.ps1` で server を配り直した（Reload Window が要る）。Lab は `sessions/p688/`（毒・probe の diagram.lys・log）を commit。push はユーザー（未 push 45）。
-
-## 以下は第687セッションの経緯
-
-### 1.1 第687セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p687`（HEAD `65d8425d`・未 push 40・full **10303 / 1 / 2 / 10306**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（948 対 天井 947）＝第686 の 終了 行が Lab の commit SHA を引用していた＝Lab の SHA は本体の履歴に無い＝SHA を消して直した。天井は動かしていない）。
-★★ **第686 の直しが残した近い穴＝MIDI のカポは「最初の score」を読んでいた（§1.0 ⒜ カポの穴・第665）**: `MidiExporter.Capo` は `TopLevelNodes.OfRoot<RenderDeclarationSyntax>.FirstOrDefault()` の layout を読んでいたが、第686 から MIDI は鳴らす score（`_playedSpec`）を持つ。`LayoutPlanReader.ResolveFor(root, RenderSpec?)`（`Resolve(root, render)` の RenderSpec 版＝`RenderSpec.LayoutRef` は Parse が同じ「最後の layout 参照」を取っている・`Resolve` の名は null で曖昧になるので別名）で鳴らす score のカポを読む。`_playedSpec` を Export で 1 度取り、`SoundingParts` もそれを読む。ホバー側（`NoteStepper.CapoOf`）は今も最初の score＝未。
-★ 検証: 網 `ScorePartsMidiTests.TheCapo_IsThePlayedScores_NotTheFirstScores`（`layout capo3`／`layout open` を参照する 2 score・x32010 が main で E♭・"open" で C）。毒 P4（最初の score を読む形に戻す）が赤 1（Lab `sessions/p687/poisons.ps1`・baseline 9/0）。ShapeChordItem 23／ChordDiagram 256／Midi 216／Layout 335／HistoryCitation 3 緑。
-★ 拡張の配備: `tools\Deploy-Lsp.ps1`（Release publish → 入っている拡張へ server と out/ を配る・末尾のバイト比較と起動確認まで）＝ユーザーは「Developer: Reload Window」を押してから score を選んで Play を確かめる。
-
-★ **終了**: commit `6d8a9b0d`（Core 2・網 1・APPROXIMATIONS・CHANGELOG）。`-End p687 -DiffBase 65d8425d`（⚠ 1 回目は MCP console から `cmd … < NUL` で回したのに中の dotnet test が入力待ちで返らず（CPU 2 秒のまま・trx 無し）＝console を捨て、18:50 の孤児 dotnet／testhost を Stop-Process し、`-Start` と同じ **Start-Process の detached** で 2 回目が 1 分で通った＝**`-End` も detached で回すこと**）＝full **10305 / 0 / 2 / 10307**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,975 B）。§7.5 Core '+' 35 行（MidiExporter 14・LayoutPlanReader 21）／REF 0／OWN 0＝layout の読み手の RenderSpec 版。7.6: ⒟ 何も移植していない。7.7 匂い: 「score の最後の layout 参照」は Parse（`LayoutRef`）と `Resolve` の走査の 2 か所で取っている（同じ規則の 2 つ目の綴りに近い＝`ResolveFor` の註に書いた）。perf: export 時だけ。Lab は `sessions/p687/`（毒・start/end/deploy log）を commit。push はユーザー（未 push 42）。
 
 ## 2. 開いている作業
 
