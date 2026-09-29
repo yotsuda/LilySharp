@@ -233,4 +233,121 @@ public class ChordRowInlineAlignmentTests
             - ChordNameEngraver.SymbolInk(score.TextMetrics, inline).Bottom;
         Assert.Equal(expected, inline.YUp - staffY, precision: 6);
     }
+
+    /// <summary>
+    /// A row of fingered diagrams over a staff that KEEPS its own chord line (every
+    /// <c>@chord</c> stands on a row symbol's column, so the merge declines): the row's lowest
+    /// ink — the finger digits under its grids — must clear the line's highest ink, which is a
+    /// superscript, not a cap.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ SEEN IN THE PICTURE (Lab sessions/p668/demo.lys, 2026-09-29): the row's "1 3 1 2 1"
+    /// printed 0.45 into the "7" of the Cm7 under it, while the plain F beside it was clear.
+    /// The band the staff books for its line (<c>MultiStaffLayouter.ReserveChordRowBand</c>)
+    /// was a flat cap-height box — 1.9 over a baseline it assumed at ink-bottom 0 — and the
+    /// row was spaced off the band, so a raised "7" (top ≈ 2.4) and a ♭ (top ≈ 2.2) stood out
+    /// of it. The band now reads the line's own ink, the superscript and the accidental included,
+    /// which is what this pins: the two columns keep the same clearance over the LINE'S top.
+    /// </remarks>
+    [Fact]
+    public void ARowOverAStaffThatKeepsItsOwnLine_ClearsTheLinesSuperscript()
+    {
+        var tree = SyntaxTree.Parse(
+            "layout { chordDiagrams guitar all }\n"
+          + "octave absolute\n"
+          + "part m { clef treble }\n"
+          + "section A { m { c'1@chord(Cm7) | c'1@chord(F) | } chords prog { Cm7 | F | } }\n"
+          + "form main { A }\n"
+          + "score main { chords prog  staff m }\n");
+        Assert.False(tree.HasErrors,
+            string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var fonts = score.TextMetrics;
+        var layouts = new LayoutEngine().Layout(score).ChordNameLayouts;
+
+        // The premise: two lines — the row's (with fingered grids) and the staff's own.
+        var rowCm7 = layouts.Single(c => c.ChordText == "Cm7" && c.RowStaffIndex >= 0);
+        var rowF = layouts.Single(c => c.ChordText == "F" && c.RowStaffIndex >= 0);
+        var lineCm7 = layouts.Single(c => c.ChordText == "Cm7" && c.RowStaffIndex < 0);
+        var lineF = layouts.Single(c => c.ChordText == "F" && c.RowStaffIndex < 0);
+        Assert.NotNull(rowCm7.FrameSpec);
+        Assert.True(rowCm7.YUp > lineCm7.YUp, "the row must stand above the staff's line");
+        Assert.Equal(rowCm7.X, lineCm7.X, precision: 6);   // one column, so the ink really meets
+
+        // The row's lowest ink on each column: its grid's box, fingers included, hangs
+        // FrameBottom under the row's baseline.
+        double RowBottom(ChordNameLayout r)
+            => r.YUp + r.FrameBottom + ChordNameEngraver.DiagramBox(fonts, r.FrameSpec!).Bottom;
+        // The line's highest ink on each column: the symbol's own top — the raised 7 for Cm7.
+        double LineTop(ChordNameLayout s) => s.YUp + ChordNameEngraver.SymbolInk(fonts, s).Top;
+
+        double topCm7 = ChordNameEngraver.SymbolInk(fonts, lineCm7).Top;
+        double topF = ChordNameEngraver.SymbolInk(fonts, lineF).Top;
+        Assert.True(topCm7 > topF + 0.3, $"the probe needs a raised 7: {topCm7} vs {topF}");
+
+        double gapCm7 = RowBottom(rowCm7) - LineTop(lineCm7);
+        double gapF = RowBottom(rowF) - LineTop(lineF);
+        // The row clears the raised 7. (The F column's gap is the same clearance plus the
+        // 7's extra height — one line, one baseline — so it is reported, not asserted.)
+        Assert.True(gapCm7 > 0, $"the row's fingers print into the 7: gap {gapCm7} (F column {gapF})");
+    }
+
+    /// <summary>
+    /// The staff above a lower staff's own chord line (no row anywhere — the band arm every
+    /// two-staff book with a lower <c>@chord</c> takes) is spaced off the LINE'S OWN INK: the
+    /// distance is the line's top plus the staff pair's padding, and a high note in a bar with
+    /// no symbol over it does not lift the line's room.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ THE SECOND TERM WAS FOUND BY MEASURING THE FIRST AGAINST LILYPOND (2026-09-29): with
+    /// the band counting the raised 7 at last, test/figbass-chordname-lower-staff's staves
+    /// moved 0.62 apart and landed 0.45 FURTHER from LilyPond than before — because the band
+    /// had also been reading the highest note anywhere in the width (an f3 stem in bar 1, 1.0
+    /// over the line's own bar) where the engraver reads each symbol's own window. Two errors
+    /// had been cancelling to 0.17. The two books here take them one at a time.
+    /// </remarks>
+    [Fact]
+    public void AStaffOverALowerStaffsOwnChordLine_ClearsExactlyThatLinesInk()
+    {
+        static (double UpperY, double LowerY, ChordNameLayout? Chord, LilySharp.Core.Rendering.ScoreTextMetrics Fonts)
+            Lay(string lowerBars)
+        {
+            var tree = SyntaxTree.Parse(
+                "octave absolute\n"
+              + "part up { clef treble }\n"
+              + "part lo { clef treble }\n"
+              + $"section A {{ up {{ b'1 | b'1 | }} lo {{ {lowerBars} }} }}\n"
+              + "form main { A }\n"
+              + "score main { staff up  staff lo }\n");
+            Assert.False(tree.HasErrors,
+                string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            var layout = new LayoutEngine().Layout(score);
+            var staves = layout.Systems[0].StaffGroups.SelectMany(g => g.Staves).ToList();
+            Assert.Equal(2, staves.Count);
+            return (staves[0].Y, staves[1].Y,
+                    layout.ChordNameLayouts.IsDefaultOrEmpty ? null : layout.ChordNameLayouts.Single(),
+                    score.TextMetrics);
+        }
+
+        // ⑴ THE BAND BINDS: the symbol stands over a stemmed g'' (the line is high), the upper
+        // staff has nothing under its bottom line (b'1 sits on the middle line). The distance
+        // between the two top lines is the upper staff (4 ss) and its bottom line's half
+        // thickness, the staff pair's padding, and the line's top over the lower top line.
+        var bound = Lay("g''4 g'' g'' g''@chord(Cm7) | e'1 |");
+        Assert.NotNull(bound.Chord);
+        double lineTop = bound.Chord!.Value.YUp - bound.LowerY
+            + ChordNameEngraver.SymbolInk(bound.Fonts, bound.Chord.Value).Top;
+        double expected = 4.0 + EngravingDefaults.StaffLineThickness / 2.0
+            + StaffSpacingParameters.Default.DefaultStaffStaff.Padding + lineTop;
+        Assert.Equal(expected, bound.UpperY - bound.LowerY, precision: 6);
+
+        // ⑵ THE BAND DOES NOT OVER-REACH: the symbol is over a bare bar, the high note is in the
+        // other bar. The line's room lies under the a''; the staves stand exactly where the
+        // same book with no symbol at all puts them.
+        var quiet = Lay("e'1@chord(Cm7) | a''1 |");
+        var control = Lay("e'1 | a''1 |");
+        Assert.NotNull(quiet.Chord);
+        Assert.Equal(control.UpperY - control.LowerY, quiet.UpperY - quiet.LowerY, precision: 6);
+    }
 }

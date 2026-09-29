@@ -95,7 +95,7 @@
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3023** ⚠️ THREE OF LilyPond's CONSTRAINTS ON THIS SPRING ARE NOT PORTED, listed so the next
 - **:3075** ⚠️ WHAT IS STILL NOT PORTED, named rather than hidden: staff-refpoint-extent
-- **:4061** same approximation the scripts' own remark records for the movers; the books that
+- **:4080** same approximation the scripts' own remark records for the movers; the books that
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:1178** ⚠️ WHAT IS NOT PORTED: the STEPS between rows. LilyPond's are 1.961 then 2.443
 - **:2289** ⚠️ The 0.46 outside-staff branch is NOT this number and is not ported here: it is what
@@ -198,7 +198,7 @@
 - **:152** is measured-exact there, and no ledger point prices replacing it.
 ### `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs`
 - **:3631** staff down, and this reserves it on the hidden one. No book reaches that.
-- **:4980** company on a row whose symbols sit closer than its spec's 1.0. No point measures
+- **:4999** company on a row whose symbols sit closer than its spec's 1.0. No point measures
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:851** does not spell a per-type padding — no point observes a segno/coda over a
 - **:1510** pinned there), no ledger point.
@@ -364,10 +364,10 @@
 - **:125** LILYSHARP-OWN, and ONE HOME for it: the rule decides which baseline the symbols are
 - **:154** ⚠️ LILYSHARP-OWN. LilyPond cannot spell the configuration: a `ChordNames` context is its
 - **:227** ⚠️ LILYSHARP-OWN, all of it. LilyPond cannot spell the configuration: a
-- **:484** ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
-- **:816** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
-- **:941** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
-- **:985** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
+- **:584** ⚠️ LILYSHARP-OWN, and it is the SAME shift ClearOfPrevious makes — a symbol whose
+- **:916** LILYSHARP-OWN: LilyPond does not shift a ChordName off its column at all — a
+- **:1041** LILYSHARP-OWN: the 2.0 floor has no LilyPond source. It is inherited (it was a 1.0
+- **:1085** ⚠️ LILYSHARP-OWN, THE DIAGRAM'S X: its box stands with its LEFT edge on the symbol's
 ### `LilySharp.Core/Svg/Layout/CustomTextEngraver.cs`
 - **:118** LILYSHARP-OWN, two declared bridges inside that rule (HANDOFF 5.2):
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
@@ -435,7 +435,7 @@
 - **:1237** LILYSHARP-OWN (MusicMarkEngraver.StafflessLabelLineStartReach has the measurement).
 - **:1773** LILYSHARP-OWN, the lead-sheet grid's line-start bar (user request
 - **:2380** timing-placed chord symbol and a beat slash do. LILYSHARP-OWN: the filler-slot keep.
-- **:4672** band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
+- **:4690** LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
 ### `LilySharp.Core/Svg/Layout/MusicMarkEngraver.cs`
 - **:152** tagged LILYSHARP-OWN on 2026-08-18 (session 203) with the four things the tag owes,
 - **:178** ⚠️ IT USED TO ANSWER BoldItalic, and session 203 tagged that LILYSHARP-OWN

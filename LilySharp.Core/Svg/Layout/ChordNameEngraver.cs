@@ -390,6 +390,106 @@ internal static class ChordNameEngraver
     }
 
     /// <summary>
+    /// The top of the chord line a staff draws for ITSELF on one system — where the highest
+    /// ink of its own symbols reaches when the line stands at its floor over
+    /// <paramref name="up"/>, in that skyline's frame — or null when the staff prints no
+    /// symbol in the system's measures.
+    /// </summary>
+    /// <remarks>
+    /// ★ THE BAND'S HEIGHT (<c>MultiStaffLayouter.ReserveChordRowBand</c>): the room a staff
+    /// books above itself for this line was, until 2026-09-29, a flat cap (1.9) over a
+    /// baseline taken at ink-bottom 0, on top of the highest note ANYWHERE in the system's
+    /// width. Two things were wrong with it, in opposite directions: a raised 7 (top ≈ 2.47)
+    /// or a ♭ (bottom ≈ −0.35) stood OUT of the cap, so a fingered chord row spaced off the
+    /// band printed into them (Lab sessions/p668/demo.lys; <c>ChordRowInlineAlignmentTests</c>
+    /// pins the raised 7); and a high note in a bar with no symbol over it lifted the band
+    /// where the line itself, placed by its symbols' own windows, did not rise (the fixture
+    /// test/figbass-chordname-lower-staff: 1.0 of room over nothing). This is the line's real
+    /// top: the SAME floor <see cref="Calculate"/> places the line at — per symbol, the
+    /// skyline under its own footprint plus <see cref="RelatedStaffPadding"/> less its ink
+    /// bottom, the diagram term included, maxed over the line — plus the highest ink top over
+    /// the line. The symbols' X, footprint and ink come from the same readings the placement
+    /// and the drawing use (<see cref="SymbolX"/>, <see cref="SymbolWidth"/>,
+    /// <see cref="SymbolInk(Rendering.ScoreTextMetrics, ChordNameItem)"/> through
+    /// <c>DisplaySymbol</c>), so the reservation and the ink cannot drift apart.
+    /// <para>
+    /// ⚠️ THE FRAME IS <paramref name="up"/>'s — the room's skyline about the staff's
+    /// reference point (its middle line) — so <paramref name="staffTopEdge"/> is the top
+    /// line's ink edge in that frame (half the staff's height plus half a line), the floor
+    /// <see cref="Calculate"/> writes as <c>StaffLineThickness / 2</c> in its own top-line
+    /// frame. The answer is in the same frame and merges straight back into the skyline.
+    /// </para>
+    /// <para>
+    /// ⚠️ NOT THE SAME SKYLINE THE LINE IS PLACED AGAINST, by one family: the room's profile
+    /// carries the placed dynamics, hairpins, spanners and texts too, where a lower staff's
+    /// line reads the inside-staff profile alone (<c>LayoutEngine.LowerStaffUpSkylineSupplier</c>).
+    /// Over a symbol that stands on one of those the band is the higher of the two —
+    /// the over-reservation side — and the line under it is the engraver's business.
+    /// </para>
+    /// <para>
+    /// ⚠️ PER SYSTEM, like the line itself (<see cref="Calculate"/> keys its floor by system
+    /// and staff): a staff whose <c>@chord</c> all fall in one system draws no line in the
+    /// others, and books no band there.
+    /// </para>
+    /// <para>
+    /// ⚠️ THE SYMBOLS THE STAFF PRINTS: <paramref name="blanked"/> is the numbers-only tab's
+    /// blanking (<c>TabStaffStencils.BlanksNoteAttachedChord</c>), the same gate
+    /// <see cref="Calculate"/> skips by, so a symbol nothing draws reserves nothing.
+    /// </para>
+    /// </remarks>
+    internal static double? OwnLineTop(
+        Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<ChordNameItem> chordNames,
+        ImmutableArray<MeasureLayout> systemMeasureLayouts,
+        int staffIndex,
+        ImmutableArray<Measure> staffMeasures,
+        VerticalSkyline up,
+        double staffTopEdge,
+        Func<ChordNameItem, bool>? blanked = null)
+    {
+        if (chordNames.IsDefaultOrEmpty || systemMeasureLayouts.IsDefaultOrEmpty)
+            return null;
+        var byMeasure = new Dictionary<int, MeasureLayout>();
+        foreach (var ml in systemMeasureLayouts)
+            byMeasure[ml.MeasureIndex] = ml;
+
+        // The line's symbols at their drawn X — anchored, then cleared of each other exactly
+        // as Calculate and RowSkylines (attached) clear them.
+        var placed = new List<(double X, ChordNameItem Chord)>();
+        foreach (var c in chordNames)
+        {
+            if (c.IsChordRow || c.StaffIndex != staffIndex || (blanked != null && blanked(c))
+                || !byMeasure.TryGetValue(c.MeasureIndex, out var ml))
+                continue;
+            placed.Add((SymbolX(c, ml, staffMeasures), c));
+        }
+        if (placed.Count == 0)
+            return null;
+        placed.Sort((a, b) => a.X.CompareTo(b.X));
+        for (int i = 1; i < placed.Count; i++)
+            placed[i] = (ClearOfPrevious(fonts, placed[i - 1].Chord, placed[i - 1].X,
+                                         placed[i].Chord, placed[i].X), placed[i].Chord);
+
+        // The floor: Calculate's line-floor pass, term for term.
+        double? gridBottom = LineDiagramBottom(fonts, placed.Select(p => p.Chord));
+        double floor = double.NegativeInfinity, top = double.NegativeInfinity;
+        foreach (var (x, c) in placed)
+        {
+            double peak = Math.Max(up.MaxProtrusionInRange(x, x + SymbolWidth(fonts, c)), staffTopEdge);
+            var (b, t) = SymbolInk(fonts, c);
+            floor = Math.Max(floor, peak + RelatedStaffPadding - b);
+            top = Math.Max(top, t);
+            if (c.FrameSpec is { } spec && gridBottom is { } gb)
+            {
+                var (dl, dr, db, _) = PlacedDiagram(fonts, spec, x, gb);
+                double under = Math.Max(up.MaxProtrusionInRange(dl, dr), staffTopEdge);
+                floor = Math.Max(floor, under + RelatedStaffPadding - db);
+            }
+        }
+        return floor + top;
+    }
+
+    /// <summary>
     /// Calculates chord name layouts from collected items.
     /// </summary>
     /// <remarks>

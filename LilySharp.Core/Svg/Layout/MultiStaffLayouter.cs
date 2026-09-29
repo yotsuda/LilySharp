@@ -3674,6 +3674,17 @@ internal sealed class MultiStaffLayouter
                 // line nothing is drawn on is the empty room this gate already exists to
                 // avoid. The RESERVATION half of that blanking is this line and the width
                 // table (ScoreSideTables.ChordNames); the INK half is LayoutChordNames.
+                // ★ ...AND THE BAND'S TOP IS THE LINE'S OWN INK TOP ON THIS SYSTEM
+                // (2026-09-29, ChordNameEngraver.OwnLineTop): the engraver's floor over this
+                // very profile, symbol by symbol, plus the highest ink — a raised 7 or a ♭ is
+                // taller than the flat cap this used to book, and a high note in a bar with no
+                // symbol used to lift it. A staff with no symbol in this system's measures
+                // draws no line here and books nothing.
+                // ⚠️ READ LAST, after every gate that can say no: the symbols it measures are
+                // the ones the line then draws, so nothing is measured for a staff whose row
+                // took them (the score-wide `Any` in front keeps its early exit).
+                // ⚠️ THIS STAFF'S OWN HEIGHT for the frame (StaffHeightOf — a tab is 7.5 tall),
+                // the same question the engraver's reflection asks (LowerStaffUpSkylineSupplier).
                 if (!score.ChordNames.IsDefaultOrEmpty
                     && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow
                         && !TabStaffStencils.BlanksNoteAttachedChord(score, c))
@@ -3682,7 +3693,15 @@ internal sealed class MultiStaffLayouter
                         score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
                         ChordRowAbove(score, thisStaff), staff.PrimaryVoice.Measures,
                         RowStaffMeasures(score, ChordRowAbove(score, thisStaff))))
-                    ReserveChordRowBand(sky.Up, measureLayouts, _options.StaffHeight / 2.0);
+                {
+                    double halfStaff = StaffHeightOf(staff, _options.StaffHeight) / 2.0;
+                    if (ChordNameEngraver.OwnLineTop(
+                            score.TextMetrics, score.ChordNames, measureLayouts, thisStaff,
+                            staff.PrimaryVoice.Measures, sky.Up,
+                            halfStaff + EngravingDefaults.StaffLineThickness / 2.0,
+                            c => TabStaffStencils.BlanksNoteAttachedChord(score, c)) is { } lineTop)
+                        ReserveChordRowBand(sky.Up, measureLayouts, halfStaff, lineTop);
+                }
 
                 // An independent chord ROW is a line of the alignment in its own right, and
                 // what the lines above and below it are spaced against is its own symbol
@@ -4661,27 +4680,32 @@ internal sealed class MultiStaffLayouter
         return groups;
     }
 
-    /// <summary>Half-height (ss) of a bold sans chord symbol's cap above its
-    /// baseline — the renderer draws chord names at font 2.6 (FontSize 4.0 × 0.65),
-    /// cap height ≈ 0.72 × 2.6.</summary>
-    private const double ChordSymbolCapHeight = 1.9;
-
-    /// <summary>Chord-name baseline distance above the staff's skyline — the ChordNames
-    /// line's padding, ONE home with <see cref="ChordNameEngraver.RelatedStaffPadding"/>.
-    /// The engraver adds each symbol's own ink bottom to it (a few hundredths); this
-    /// band, a flat cap-height box, leaves that term out — LILYSHARP-OWN, the band being
-    /// Lily#'s model of a row LilyPond walks as a loose line (see AttachedChordLineInRun).</summary>
-    private const double ChordRowStaffPadding = ChordNameEngraver.RelatedStaffPadding;
-
     /// <summary>
-    /// Extends a staff's UP skyline to cover its associated chord-name row, so the
-    /// gap to the staff above reserves room for the symbols. The row's baseline sits
-    /// <see cref="ChordRowStaffPadding"/> + note-protrusion above the top line (see
-    /// <see cref="ChordNameEngraver"/>), and the symbol reaches ~cap-height higher;
-    /// reserve a flat band to that top across the drawn width.
+    /// Extends a staff's UP skyline to cover its own chord-name line, so the gap to the staff
+    /// above reserves room for the symbols: a flat band from the top line to
+    /// <paramref name="lineTop"/> — the line's real ink top over this skyline
+    /// (<see cref="ChordNameEngraver.OwnLineTop"/>) — across the drawn width.
     /// </summary>
+    /// <remarks>
+    /// LILYSHARP-OWN: the band is Lily#'s model of a line LilyPond walks as a loose line
+    /// (see <see cref="AttachedChordLineInRun"/> for which lines are walked instead); the
+    /// staff above then clears it by the staff pair's own padding, where LilyPond clears a
+    /// ChordNames line by its <c>nonstaff-unrelatedstaff-spacing</c> (1.5 — MEASURED on
+    /// test/figbass-chordname-lower-staff, 2.26.0: 1.511 from the upper staff's bottom line
+    /// to the raised 7, against this model's 1.0). Observed by that fixture's snapshot and by
+    /// nothing else; it goes when an <c>@chord</c> line joins the run.
+    /// ⚠️ UNTIL 2026-09-29 THE HEIGHT WAS A FLAT CAP (1.9 over a baseline taken at ink-bottom
+    /// 0) on top of the highest note anywhere in the width: a raised 7 and a ♭ stood out of
+    /// it, and a fingered chord row spaced off this band printed into them
+    /// (Lab sessions/p668/demo.lys), while a high note in another bar lifted it over nothing.
+    /// The top is now the engraver's own answer for the line, read off the same symbols.
+    /// ⚠️ STILL A FLAT BAND across the width, not the symbols' own boxes: between the symbols
+    /// it reserves the line's top where LilyPond's loose line has no ink — the
+    /// over-reservation side, which is the side it always sat on.
+    /// </remarks>
     private static void ReserveChordRowBand(
-        VerticalSkyline up, ImmutableArray<MeasureLayout> measureLayouts, double halfStaff)
+        VerticalSkyline up, ImmutableArray<MeasureLayout> measureLayouts, double halfStaff,
+        double lineTop)
     {
         if (up.IsEmpty || measureLayouts.IsDefaultOrEmpty)
             return;
@@ -4694,19 +4718,14 @@ internal sealed class MultiStaffLayouter
         if (xRight <= xLeft)
             return;
 
-        // Note ink already in the skyline sets where the shared-baseline row floats;
-        // the symbol top clears the top line by padding + that protrusion + cap.
-        // ⚠️ THE EXPRESSION IS FRAME-FREE AND THAT IS NOT LUCK: `protrusion` is read out of
-        // the same skyline the band is merged back into, so both sides move together when the
-        // frame does. Only the box's FLOOR names a place — the staff's top line, a half-staff
-        // above the reference point this skyline is built about
-        // (SkylineBuilder.BuildStaffSkylines). It never reaches the roof of an UP skyline and
-        // so cannot move the answer; it is written correctly anyway, because a floor that says
-        // "the top line" while meaning the middle one is how the next reader learns the wrong
-        // frame.
-        double protrusion = up.MaxProtrusionInRange(xLeft, xRight);
-        double bandTop = ChordRowStaffPadding + protrusion + ChordSymbolCapHeight;
-        up.MergeBox(xLeft, xRight, halfStaff, bandTop);
+        // ⚠️ ONE FRAME: `lineTop` was read out of the same skyline the band is merged back
+        // into (OwnLineTop's `up`), so both sides move together when the frame does. Only the
+        // box's FLOOR names a place — the staff's top line, a half-staff above the reference
+        // point this skyline is built about (SkylineBuilder.BuildStaffSkylines). It never
+        // reaches the roof of an UP skyline and so cannot move the answer; it is written
+        // correctly anyway, because a floor that says "the top line" while meaning the middle
+        // one is how the next reader learns the wrong frame.
+        up.MergeBox(xLeft, xRight, halfStaff, lineTop);
     }
 
     /// <summary>
