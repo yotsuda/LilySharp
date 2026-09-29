@@ -79,6 +79,8 @@ internal static partial class SpacingRules
     /// <summary>
     /// Gets the MINIMUM distance from a bar line to the next item — the mirror of
     /// <see cref="GetItemToBarlineSpace"/>, and NOT <see cref="GetBarlineToItemSpace"/>.
+    /// A musical column no longer comes here: its minimum is the skyline distance
+    /// <see cref="BarlineToColumnMinimum"/> takes; what is left is a non-musical item's X-only arm.
     /// </summary>
     /// <remarks>
     /// LilyPond's bar line → column minimum is <c>Paper_column::minimum_distance</c>, a
@@ -186,9 +188,7 @@ internal static partial class SpacingRules
             {
                 // Barline → item: the padding-free skyline minimum, NOT the space-alist
                 // ideal. LILYPOND-REF: lily/staff-spacing.cc:210.
-                double barlinePad = GetBarlineToItemMinimum(nextItem);
-                double itemExtent = CalculateLeftExtent(nextItem);
-                return barlinePad + itemExtent;
+                return BarlineToColumnMinimum(nextItem);
             }
             else if (prevItem != null && nextItem == null)
             {
@@ -397,6 +397,79 @@ internal static partial class SpacingRules
         HorizontalSkyline.GiveBox(barLeft);
         return (Math.Max(0.0, wishDistance),
                 Math.Max(0.0, SeparationRodPadding + distance));
+    }
+
+    /// <summary>
+    /// LilyPond's minimum over a bar line → note column pair, <c>Paper_column::minimum_distance</c>:
+    /// the bar line's spacing box against the column's LEFT skyline — its paper column's parts
+    /// padded 0.08, its accidentals and arpeggio merged in bare. Measured from the bar line's
+    /// ink RIGHT edge to the column origin (the head's left edge), the frame
+    /// <see cref="BarlineToFirstColumnSpring"/> stands in. The mirror of
+    /// <see cref="NoteColumnToBarlineFloorPair"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The box is the bar line's ink widened by its default <c>extra-spacing-width</c>, spanning
+    /// the staff and grown toward the column at most <see cref="BarLineExtraSpacingHeightCap"/>
+    /// each way, so a part of the column lying wholly beyond staff + 1.01 is never in its way.
+    /// Until session 693 this pair was priced along X alone (<see cref="GetBarlineToItemMinimum"/>
+    /// + <see cref="CalculateLeftExtent"/>), which made every accidental meet the bar line.
+    /// MEASURED (2.26.0, Lab sessions/p693/bl, raggedRight): <c>| fis,4</c> after a bar line
+    /// stands exactly where <c>| f,4</c> does (3.842 off the previous chord) — the sharp on
+    /// F#3 hangs below the box, and the head's own box, grown to the first ledger line
+    /// (<c>include-ledger-line-height</c>) and padded 0.08, is what meets it — where Lily#
+    /// put the sharp's whole width in front (4.992). <c>gis,</c> and <c>bes,</c> one and
+    /// two steps higher reach into the box and take it in both. The same book set above the
+    /// staff (<c>cis'''</c> <c>dis'''</c> <c>fis'''</c>, +1.036 before) and with a low flat
+    /// (<c>ees,</c> <c>des,</c>, +0.970 before) — sessions/p693/bl2, 18 books — now agrees
+    /// head for head; a system's FIRST note (the prefix → note spring, BreakAlignSpacing) agreed
+    /// before and still does (sessions/p693/bl3).
+    /// </para>
+    /// <para>
+    /// NOT PORTED HERE: the box's reach toward the OTHER neighbour. LilyPond grows it from
+    /// both columns beside the bar line; only this column is read — the restriction
+    /// <see cref="NoteColumnToBarlineFloorPair"/> makes from the other side. The column not
+    /// read can only grow the box into a Y band this column has no part in, so it would move
+    /// the distance only through the 0.08 padding at that band's edge. No ledger point
+    /// measures it.
+    /// </para>
+    /// <para>
+    /// ⚠️ A SECOND SPELLING OF THIS QUANTITY REMAINS: when a key or time change opens the bar,
+    /// <see cref="BarlineToFirstColumnSpring"/> takes the change column's branch and prices the
+    /// note's reach with <see cref="MusicalColumnLeftReach"/> — along X alone, the shape this
+    /// replaced. No book found yet where that minimum binds: a low F natural after a key change
+    /// to D major and <c>time 3/4 fis,4</c> agree with LilyPond as they are (sessions/p693/bl2,
+    /// the ideal after the change glyph is what holds them). Porting it needs the change glyphs'
+    /// own Y extents as boxes.
+    /// </para>
+    /// A non-musical item (a change glyph, a spacer) keeps the X-only arms it had.
+    /// LILYPOND-REF: lily/staff-spacing.cc:210 Staff_spacing::get_spacing — <c>min_dist = Paper_column::minimum_distance (left_col, right_col)</c>.
+    /// LILYPOND-REF: lily/paper-column.cc:145-164 Paper_column::minimum_distance — the left
+    ///   column's right skyline, the right column's left one merged with its
+    ///   <c>conditional_skyline</c>, <c>max (0.0, distance)</c>.
+    /// LILYPOND-REF: scm/define-grobs.scm:2747 PaperColumn skyline-vertical-padding 0.08 (a
+    ///   NonMusicalPaperColumn declares none); lily/separation-item.cc:83-110 conditional_skyline
+    ///   unpadded, calc_skylines padded.
+    /// LILYPOND-REF: scm/output-lib.scm:965-974 pure-from-neighbor-interface::account-for-span-bar — the box's reach, capped at 1.01.
+    /// </remarks>
+    internal static double BarlineToColumnMinimum(MusicItem item)
+    {
+        if (!IsMusicalColumn(item))
+            return GetBarlineToItemMinimum(item) + CalculateLeftExtent(item);
+
+        var itemLeft = ItemSkylineFactory.SharedLeftSkylineAtColumn(item, 0, staffY: 0);
+
+        var (yMin, yMax) = ItemSkylineFactory.ColumnYExtent(item, 0);
+        // Device frame, y down — BoundaryColumn's box convention, as in the mirror above.
+        double reachAbove = Math.Clamp(BoundaryColumn.StaffYBottom - yMin, 0, BarLineExtraSpacingHeightCap);
+        double reachBelow = Math.Clamp(yMax - BoundaryColumn.StaffYTop, 0, BarLineExtraSpacingHeightCap);
+        var barRight = HorizontalSkyline.RentBox(
+            BoundaryColumn.StaffYBottom - reachAbove, BoundaryColumn.StaffYTop + reachBelow,
+            -DefaultExtraSpacingWidth, DefaultExtraSpacingWidth, HorizontalDirection.Right);
+
+        double distance = barRight.Distance(itemLeft);
+        HorizontalSkyline.GiveBox(barRight);
+        return Math.Max(0.0, distance);
     }
 
     /// <summary>

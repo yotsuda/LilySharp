@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
-| `UNWATCHED` | 58 | 観測者がゼロだと自認しているもの |
+| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
+| `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
 | `OWN` | 199 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **316** | |
+| **計** | **318** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（59 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -114,6 +114,8 @@
 - **:978** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
 - **:1308** approximation there); RIGHT wins when both edges match, as LP's
+### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
+- **:429** NOT PORTED HERE: the box's reach toward the OTHER neighbour. LilyPond grows it from
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
@@ -131,7 +133,7 @@
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:272** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
-## UNWATCHED — 観測者がゼロだと自認しているもの（58 件）
+## UNWATCHED — 観測者がゼロだと自認しているもの（59 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3046** container, and the value stops being unobserved with the line above.
@@ -213,6 +215,8 @@
 - **:502** same part (leftHand). No book reaches the configuration, so no ledger point and
 ### `LilySharp.Core/Svg/Layout/SkylineDrop.cs`
 - **:56** the distance is taken at — and NO ledger point moves with it. An output change no point
+### `LilySharp.Core/Svg/Layout/SpacingRules.BarlineSkyline.cs`
+- **:433** the distance only through the 0.08 padding at that band's edge. No ledger point
 ### `LilySharp.Core/Svg/Layout/SpacingRules.cs`
 - **:890** constant with a name, and no ledger point reached it.
 ### `LilySharp.Core/Svg/Layout/SpacingRules.Grace.cs`
