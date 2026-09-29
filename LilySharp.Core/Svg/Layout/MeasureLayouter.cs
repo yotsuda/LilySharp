@@ -719,8 +719,18 @@ internal sealed class MeasureLayouter
                 if (onset > t)
                     break;
                 // The same column membership BuildTimingToItemsMap uses: a grace item's column
-                // is its own.
-                if (onset == t && !item.GraceTime)
+                // is its own. A change this STAFF does not engrave is not in its wish: each
+                // staff's Staff_spacing prices its note off ITS OWN last break-aligned grob with
+                // a non-empty extent, and a tab staff's meter is blanked (TimeSignature.stencil
+                // ##f) and it has no KeySignature at all — so its wish runs off its bar line.
+                // The item is shared with the staff that does engrave it (the voices are the
+                // same objects), which is why the score-level MeterStencil pass cannot say this.
+                // LILYPOND-REF: lily/spacing-interface.cc:217-220 extremal_break_aligned_grob — an
+                //   empty extent is skipped; ly/engraver-init.ly:1214 and :1219-1220 (TabStaff).
+                // MEASURED (2.26.0, Lab sessions/p692/ends p9-staff / p9-both, ABC.lys bar 36's
+                // shape): adding the numbers tab moves the 2/4 bar line from 74.454 to 73.955
+                // and its first note from 78.999 to 79.062; Lily# moved them to 74.36 / 79.00.
+                if (onset == t && !item.GraceTime && StaffWishReads(staff, item))
                     items.Add(item);
                 onset += item.Duration;
             }
@@ -731,6 +741,17 @@ internal sealed class MeasureLayouter
         GiveStaffItems(lists);
         return null;
     }
+
+    /// <summary>Whether <paramref name="staff"/>'s own Staff_spacing wish sees
+    /// <paramref name="item"/>: a meter or key change only where that staff engraves one
+    /// (<see cref="SpacingRules.ContributesToTimeColumnWidth"/>,
+    /// <see cref="SpacingRules.ContributesToKeyColumnWidth"/>); everything else always.</summary>
+    private static bool StaffWishReads(Staff staff, MusicItem item) => item switch
+    {
+        TimeSignatureChangeItem => SpacingRules.ContributesToTimeColumnWidth(staff),
+        KeySignatureChangeItem => SpacingRules.ContributesToKeyColumnWidth(staff),
+        _ => true,
+    };
 
     /// <summary>Gives back what <see cref="StaffItemsAt"/> lent: every per-staff list, then the
     /// outer one. Null (no per-staff answer) gives nothing.</summary>
