@@ -278,6 +278,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **MusicXML keeps every part's bars aligned across the sections.** A part with no block
+  for a played section now gets that section's bars as silence, under the section's meter
+  and pickup, as the page and the `.ly` twin already did — its next section no longer
+  follows its previous one directly — and a `chords` row over such a part keeps its
+  symbols on those bars. A second part writing a section that states its own `time` now
+  states it too, and no part repeats its clef at a section it did not change it in.
 - **A note's `@text("…")` and `@mark("…")` reach MusicXML.** Both were dropped on export; the
   text is now a `<words>` direction at the note (below, or above with `.up`), the rehearsal
   mark a `<rehearsal>`. A text on a multi-measure rest stands on the run's first bar.

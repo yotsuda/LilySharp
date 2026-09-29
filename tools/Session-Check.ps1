@@ -128,7 +128,9 @@ if (Get-Command gh -ErrorAction SilentlyContinue) { gh run list --limit 5 } else
 # ---------------------------------------------------------------- build
 if ($Build) {
     Section 'build (solution, --no-incremental; Core は 0 警告が期待値)'
-    $out = dotnet build LilySharp.slnx --no-incremental -v q 2>&1
+    # < NUL: a dotnet launched from the MCP console can queue behind the prompt's input read
+    # and never return (CLAUDE-OPERATIONS §3; three -Start runs hung on 2026-09-29).
+    $out = cmd /d /s /c "dotnet build LilySharp.slnx --no-incremental -v q < NUL 2>&1"
     $out | Select-String 'エラー|error|LilySharp\.Core.*warning' | ForEach-Object { $_.Line }
     "BUILD EXIT $LASTEXITCODE"
 }
@@ -141,7 +143,7 @@ if ($Test) {
     $n = 1; while (Test-Path (Join-Path $dir "run$n.trx")) { $n++ }
     $trx = Join-Path $dir "run$n.trx"
     Section "test (full, trx = $trx)"
-    $out = dotnet test LilySharp.Tests\LilySharp.Tests.csproj -v q --logger "trx;LogFileName=$trx" 2>&1
+    $out = cmd /d /s /c "dotnet test LilySharp.Tests\LilySharp.Tests.csproj -v q --logger ""trx;LogFileName=$trx"" < NUL 2>&1"
     $out | Select-String '成功!|失敗!|Passed!|Failed!' | ForEach-Object { $_.Line }
     "TEST EXIT $LASTEXITCODE"
     if (Test-Path $trx) {

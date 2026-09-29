@@ -110,6 +110,16 @@ public sealed class MusicXmlExporter
     private (int Fifths, string? Mode, string? Custom)? _writtenKey;
     private (int Beats, string? BeatsText, int BeatType, bool Senza)? _writtenTime;
     private (string Sign, int Line, int? OctaveChange)? _writtenClef;
+    // ⚠️ PER PART (2026-09-29): the three above are the part being written's, and
+    // EnsurePart swaps them in and out here. Until then one triple served every part, so the
+    // SECOND part of a section that states `time 3/4` saw "3/4 already written" — by the
+    // first part — and got no <time> at all, while each part's opening bar repeated its clef
+    // because the other part's clef was the last one "written" (MEASURED, Lab
+    // sessions/p684/probes/silentmeter2: bass B and C with no <time>, both parts' C with a
+    // second <clef>).
+    private readonly Dictionary<string, ((int Fifths, string? Mode, string? Custom)? Key,
+        (int Beats, string? BeatsText, int BeatType, bool Senza)? Time,
+        (string Sign, int Line, int? OctaveChange)? Clef)> _writtenByPart = new();
     // The score's own signature, captured after the metadata pass.
     private (int Fifths, string Mode, string? Custom)? _homeKey;
     // …and its own METER, captured at the same spot and reverted at the same boundary.
@@ -331,6 +341,8 @@ public sealed class MusicXmlExporter
         ReadCarryRefusals(tree);
         _pendingChordRows.Clear();
         _playStartMeasure.Clear();
+        _writtenByPart.Clear();
+        (_writtenKey, _writtenTime, _writtenClef) = (null, null, null);
         _homeTonic = ScoreHomeKey.Read(root);
         _ambientTonic = _homeTonic;
 
@@ -836,8 +848,51 @@ public sealed class MusicXmlExporter
     {
         BeginPrintedPlay(); // one section play, whichever parts write it
         if (byName.TryGetValue(name, out var list))
+        {
             foreach (var section in list)
                 EmitSection(section, octaveOffset);
+            PadPartsSilentInThisPlay(name, octaveOffset);
+        }
+    }
+
+    /// <summary>
+    /// The engraved parts that wrote NOTHING in the play just emitted get the section's bars
+    /// as silence — the canonical count (<see cref="Svg.Collector.SectionBarCounts"/>) of empty
+    /// <c>|</c> bars under the section's own header, the way the page pads their staves and
+    /// the twin their voices — so every part's measure N stays the same bar, and a placed
+    /// chord row over such a part has bars to stand in.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED 2026-09-29 (HANDOFF §1.1 第668's hole, Lab sessions/p684/probes): a bass with
+    /// no block for section B exported B's two bars NOWHERE — its C followed its A, three
+    /// measures against the melody's five (the twin and the MIDI had this right since
+    /// 2026-09-29 / 2026-09-10) — and a row over a melody that wrote nothing in B lost B's
+    /// harmonies, EmitPendingChordRows having no measure of that play to put them in.
+    /// <para>
+    /// Written through <see cref="EmitPartMusic"/> with the bars as its children, so the
+    /// silent play is the same play as a written one to everything downstream: the part's
+    /// header, the section's meter, key and pickup (the first bar is the pickup's length,
+    /// as the twin's <c>s4 | s2. |</c>), the measure numbering, and the
+    /// <c>_playStartMeasure</c> record the rows are placed by. A part with no <c>part</c>
+    /// declaration (a lead sheet's rows) is not engraved and gets nothing.
+    /// </para>
+    /// </remarks>
+    private void PadPartsSilentInThisPlay(string sectionName, int octaveOffset)
+    {
+        if (_playedSpec is not { } spec
+            || !_sectionBars.Canonical.TryGetValue(sectionName, out int bars) || bars <= 0)
+            return;
+        foreach (var partName in spec.EngravedPartNames)
+        {
+            if (partName.Length == 0 || _playStartMeasure.ContainsKey((partName, _xmlPlaySerial)))
+                continue;
+            _sectionOctaveOffset = octaveOffset;
+            // The bare bar line the author's own `| |` would be: ProcessNode's empty-bar rule
+            // gives each a bar of silence (AddSilentBar), as PadVoice's padding does.
+            var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
+                new Syntax.InternalSyntax.SyntaxToken(SyntaxKind.Bar, "|"), null, null), null, 0);
+            EmitPartMusic(partName, Enumerable.Repeat<SyntaxNode>(bar, bars));
+        }
     }
 
     // Segno / coda jump TARGETS wait here for the next section, whose first
@@ -1417,6 +1472,12 @@ public sealed class MusicXmlExporter
     private void EnsurePart(string name)
     {
         _barSeenInScope = false;
+        // The written-attributes record is the part's own (its remark says why).
+        if (_currentPart != null)
+            _writtenByPart[_currentPart.Name] = (_writtenKey, _writtenTime, _writtenClef);
+        (_writtenKey, _writtenTime, _writtenClef) = _writtenByPart.TryGetValue(name, out var written)
+            ? written
+            : (null, null, null);
         if (_partsByName.TryGetValue(name, out var existing))
         {
             _currentPart = existing;

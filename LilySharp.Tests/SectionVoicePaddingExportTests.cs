@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using System.Xml.Linq;
 using LilySharp.Core.LilyPond;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
@@ -465,5 +466,121 @@ public class SectionVoicePaddingExportTests
         Assert.Contains("<root-step>G</root-step>", padded.Notes.Single(n => n.RawElement != null).RawElement!.ToString());
         // …and numbered in sequence: the empty measure the closing bar line opened is not counted.
         Assert.Equal(new[] { 1, 2, 3 }, melody.Measures.Select(m => m.Number));
+    }
+
+    /// <summary>The roots of a measure's harmonies, in stream order, as one string.</summary>
+    private static string Roots(MusicXmlMeasure m) => string.Concat(m.Notes
+        .Where(n => n.RawElement != null)
+        .Select(n => n.RawElement!.Descendants("root-step").Single().Value));
+
+    /// <summary>
+    /// A part with NO block for a section gets that section's bars as silence, so every part's
+    /// measure N stays the same bar. MEASURED 2026-09-29 (HANDOFF §1.1 第668's hole): bass
+    /// exported B's two bars nowhere — its C followed its A, three measures against the
+    /// melody's five — while the twin and the MIDI padded them.
+    /// </summary>
+    [Fact]
+    public void Xml_PadsAPart_ThatWritesNoBlockForASection()
+    {
+        var doc = Xml(NoBlockForB);
+        var melody = doc.Parts.Single(p => p.Name == "melody");
+        var bass = doc.Parts.Single(p => p.Name == "bass");
+        Assert.Equal(5, melody.Measures.Count);
+        Assert.Equal(5, bass.Measures.Count);
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, bass.Measures.Select(m => m.Number));
+        // B's two bars: a whole rest each, nothing else.
+        foreach (var m in bass.Measures.Skip(2).Take(2))
+            Assert.True(m.Notes.Single().IsRest);
+        // C's two half notes follow them, not A's bars.
+        Assert.Equal(2, bass.Measures[4].Notes.Count(n => !n.IsRest && n.RawElement == null));
+        // The row over the melody: C and G on A's bars, G on C's, nothing on B's silent bars.
+        Assert.Equal(new[] { "C", "G", "", "", "G" }, melody.Measures.Select(Roots));
+        Assert.All(bass.Measures, m => Assert.Equal("", Roots(m)));
+    }
+
+    /// <summary>
+    /// A placed row over a part that writes nothing in the play lands on the part's silent
+    /// bars — the other half of 第668's hole: EmitPendingChordRows had no measure of that
+    /// play to put B's F and G in, and dropped them.
+    /// </summary>
+    [Fact]
+    public void Xml_ARowOverAPartSilentInThePlay_LandsOnItsSilentBars()
+    {
+        var doc = Xml("""
+            octave absolute
+            part melody { clef treble }
+            section A { melody { c'1 | } chords prog { C | } }
+            section B { chords prog { F | G | } }
+            section C { melody { e'1 | } chords prog { C | } }
+            form main { A B C }
+            score main { chords prog  staff melody }
+            """);
+        var melody = doc.Parts.Single(p => p.Name == "melody");
+        Assert.Equal(4, melody.Measures.Count);
+        Assert.Equal(new[] { "C", "F", "G", "C" }, melody.Measures.Select(Roots));
+        Assert.True(melody.Measures[1].Notes.Single(n => n.RawElement == null).IsRest);
+        Assert.True(melody.Measures[2].Notes.Single(n => n.RawElement == null).IsRest);
+        Assert.Equal(new[] { 1, 2, 3, 4 }, melody.Measures.Select(m => m.Number));
+    }
+
+    /// <summary>The silent play takes the section header's meter and pickup, as the twin's
+    /// does (<see cref="Twin_ASilentPlay_TakesTheSectionHeadersMeterAndPickup"/>): a quarter
+    /// pickup bar, implicit, then a 3/4 bar, then C back in 4/4.</summary>
+    [Fact]
+    public void Xml_ASilentPlay_TakesTheSectionHeadersMeterAndPickup()
+    {
+        var doc = Xml("""
+            octave absolute
+            part melody { clef treble }
+            part bass { clef bass }
+            section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
+            section B { time 3/4  partial 4  melody { c''4 | d''2. | } }
+            section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
+            form main { A B C }
+            score main { chords prog  staff melody  staff bass }
+            """);
+        var bass = doc.Parts.Single(p => p.Name == "bass");
+        Assert.Equal(4, bass.Measures.Count);
+        int divisions = bass.Measures[0].Attributes!.Divisions!.Value;
+        var pickup = bass.Measures[1];
+        Assert.True(pickup.Implicit);
+        Assert.Equal(3, pickup.Attributes?.TimeBeats);
+        Assert.Equal(4, pickup.Attributes?.TimeBeatType);
+        Assert.Equal(divisions, pickup.Notes.Single().Duration);          // a quarter's rest
+        Assert.Equal(3 * divisions, bass.Measures[2].Notes.Single().Duration); // a 3/4 bar's
+        Assert.Equal(4, bass.Measures[3].Attributes?.TimeBeats);
+        Assert.Equal(4 * divisions, bass.Measures[3].Notes.Where(n => n.RawElement == null).Sum(n => n.Duration));
+    }
+
+    /// <summary>
+    /// The written-attributes record is PER PART: a second part that writes a section with
+    /// its own <c>time</c> states it too, and neither part repeats its clef at a section it
+    /// did not change it in. MEASURED 2026-09-29 (Lab sessions/p684/probes/silentmeter2):
+    /// one exporter-wide record made the bass's B and C carry no <c>&lt;time&gt;</c> — the
+    /// melody had "already written" 3/4 and 4/4 — and made both parts' C open with a second
+    /// clef, the other part's being the last one written.
+    /// </summary>
+    [Fact]
+    public void Xml_ASecondPart_StatesTheSectionsMeterToo_AndRepeatsNoClef()
+    {
+        var doc = Xml("""
+            octave absolute
+            part melody { clef treble }
+            part bass { clef bass }
+            section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
+            section B { time 3/4  partial 4  melody { c''4 | d''2. | } bass { c4 | d2. | } }
+            section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
+            form main { A B C }
+            score main { chords prog  staff melody  staff bass }
+            """);
+        foreach (var part in doc.Parts.Where(p => p.Name is "melody" or "bass"))
+        {
+            Assert.Equal(4, part.Measures.Count);
+            Assert.Equal((3, 4), (part.Measures[1].Attributes?.TimeBeats, part.Measures[1].Attributes?.TimeBeatType));
+            Assert.Null(part.Measures[2].Attributes);
+            Assert.Equal((4, 4), (part.Measures[3].Attributes?.TimeBeats, part.Measures[3].Attributes?.TimeBeatType));
+            // The clef is stated once, in the opening bar; no section restates it.
+            Assert.All(part.Measures.Skip(1), m => Assert.Null(m.Attributes?.ClefSign));
+        }
     }
 }
