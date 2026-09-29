@@ -287,6 +287,11 @@ workflow attaches that section to the GitHub Release verbatim.
   the bracket takes the side the strings' stems point to. Its height is read off the tab too:
   the line stands LilyPond's padding (1.1) past the tab stems' tips and the fret digits,
   where it used to run through the stems of a down-stemmed triplet (bar 42 of the same score).
+  A bracket around another tuplet now clears the inner one's bracket and number; a script
+  under the bracket (a turn) is cleared; a covering beam on the bracket's side is followed;
+  when the stems split evenly the side is LilyPond's (the head reaching deeper past the
+  staff); and a beamed note counts its beam's direction. A tab triplet whose beam hides its
+  bracket puts its number one padding off the beam, where it used to sit on it.
 - **A whole-bar `R1` on a tab staff is one whole rest, hanging from the upper central
   string.** The tab drew the bar's own rest under the whole-bar symbol as well, and the symbol
   itself stood half a string high — its middle and staff positions were read in notation

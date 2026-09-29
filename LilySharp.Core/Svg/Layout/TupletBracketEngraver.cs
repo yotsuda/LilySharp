@@ -244,7 +244,21 @@ internal static class TupletBracketEngraver
 
         var layouts = ImmutableArray.CreateBuilder<TupletBracketLayout>(tuplets.Length);
 
-        for (int ti = 0; ti < tuplets.Length; ti++)
+        // INNER TUPLETS FIRST: a tab bracket clears the brackets it encloses (LilyPond's
+        // `tuplets' points, TabBracketPositions), so a nested one is computed before the one
+        // around it — deepest NestingDepth first — and the results are handed out in the
+        // input order all the same. A book with no nesting walks 0..n-1 as before.
+        var results = new TupletBracketLayout?[tuplets.Length];
+        bool anyNested = false;
+        foreach (var t in tuplets)
+            anyNested |= t.NestingDepth > 0;
+        int[] order = new int[tuplets.Length];
+        for (int i = 0; i < order.Length; i++)
+            order[i] = i;
+        if (anyNested)
+            order = order.OrderByDescending(i => tuplets[i].NestingDepth).ToArray();   // stable
+
+        foreach (int ti in order)
         {
             var tuplet = tuplets[ti];
             // Find measure layout — BY MEASURE INDEX: the array is keyed by it (its callers
@@ -346,16 +360,18 @@ internal static class TupletBracketEngraver
                 tabGeom = new TabStaffGeometry(fonts, tabStaff.Tuning!.Value, staffOffset,
                     tabStaff.TabSourceClef, tabStaff.Transposition);
                 if (!staffMultiVoice)
-                    isStemUp = TabDirection(tuplet, tupMeasures, tabGeom);
+                    isStemUp = TabDirection(tuplet, tupMeasures, tabGeom, beamLayouts);
             }
 
             var startItem = TupletItemAt(tuplet, tupMeasures, tuplet.StartNoteIndex);
             var endItem = TupletItemAt(tuplet, tupMeasures, tuplet.EndNoteIndex);
             double startX = measureLayout.X + startOffset + (tabStaff != null
-                ? TabBoundEdgeOffset(startItem, isStemUp, left: true, tabStaff, tabGeom, fonts)
+                ? TabBoundEdgeOffset(startItem, isStemUp, left: true, tabStaff, tabGeom, fonts,
+                    startItem is null || TabColumnStemUp(tuplet, startItem, tuplet.StartNoteIndex, tabGeom, beamLayouts))
                 : BoundEdgeOffset(startItem, isStemUp, left: true));
             double endX = measureLayout.X + endOffset + (tabStaff != null
-                ? TabBoundEdgeOffset(endItem, isStemUp, left: false, tabStaff, tabGeom, fonts)
+                ? TabBoundEdgeOffset(endItem, isStemUp, left: false, tabStaff, tabGeom, fonts,
+                    endItem is null || TabColumnStemUp(tuplet, endItem, tuplet.EndNoteIndex, tabGeom, beamLayouts))
                 : BoundEdgeOffset(endItem, isStemUp, left: false));
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility —
@@ -394,18 +410,38 @@ internal static class TupletBracketEngraver
             // the user's book: the offset that branch reads is not the one the renderer
             // places the staff at in a later system (bar 42 came out 1.04 high while the
             // engine's own layout of the same score had it right).
-            bool tabBeamPlaced = false;
-            if (tabStaff != null && showBracket)
+            // ★ PRINTED OR NOT: a tab tuplet whose own beam hides its bracket still has the
+            // bracket's positions — the follow_beam arm, one padding off the beam — and its
+            // number centres on them (lily/tuplet-number.cc:342 calc_y_offset), as the notation
+            // path already reads it. The tab-only beam-number formula below (a 1.7 digit height,
+            // a 0.5 clearance) put the number ON the beam, and a bracket enclosing it cleared
+            // that low number: MEASURED (2.26.0, Lab sessions/p690/probes/tt-nest.ly) the
+            // outer bracket stood 0.31 lower than LilyPond's.
+            if (tabStaff != null)
             {
                 var staffLocal = new TabStaffGeometry(fonts, tabStaff.Tuning!.Value, 0.0,
                     tabStaff.TabSourceClef, tabStaff.Transposition);
+                // The brackets this one encloses, already laid out (inner first, above).
+                List<TupletBracketLayout>? children = null;
+                for (int j = 0; j < tuplets.Length; j++)
+                {
+                    var inner = tuplets[j];
+                    if (results[j] is { } innerLayout
+                        && inner.NestingDepth == tuplet.NestingDepth + 1
+                        && inner.StaffIndex == tuplet.StaffIndex
+                        && inner.VoiceIndex == tuplet.VoiceIndex
+                        && inner.MeasureIndex == tuplet.MeasureIndex
+                        && inner.StartNoteIndex >= tuplet.StartNoteIndex
+                        && inner.EndNoteIndex <= tuplet.EndNoteIndex)
+                        (children ??= new()).Add(innerLayout);
+                }
                 (startY, endY) = TabBracketPositions(tuplet, tupMeasures, measureLayout, isStemUp,
-                    startX, endX, staffLocal, beamLayouts, fonts);
+                    startX, endX, staffLocal, beamLayouts, fonts, scripts, children, staffOffset);
             }
 
             // LILYPOND-REF: lily/tuplet-number.cc — number follows the beam
             // when there is no bracket.
-            if (!showBracket && !beamLayouts.IsDefaultOrEmpty)
+            if (!showBracket && !beamLayouts.IsDefaultOrEmpty && tabStaff == null)
             {
                 var beam = FindCoveringBeam(beamLayouts, tuplet, tupMeasures);
                 if (beam != null)
@@ -420,61 +456,9 @@ internal static class TupletBracketEngraver
                     // re-read the tuplet's bound MEMBERS' stems — right for a note-bound
                     // tuplet, and off by half the rest's reach for one bounded by a
                     // bracketed rest (`tuplet 3/2 { r8[ c c] }'), whose bound is no member.
-                    // TAB BRANCH ONLY: the tab renderer's text offset assumes a
-                    // baseline-anchored digit, so its clearance arithmetic still
-                    // carries the digit height. The notation branch below no
-                    // longer uses either — its number is centred on the
-                    // invisible bracket. No ledger point measures the tab
-                    // regime; when one does, this constant goes with it.
-                    const double digitHeight = 1.7; // cap height of the old 2.4-unit digit
-
-                    // On a TAB staff the beam floats a fixed distance off the fret
-                    // digits — NOT at the notation beam's staff-relative height — so
-                    // reconstructing its Y from beam.LeftY (a notation-frame value)
-                    // and shifting by the staff offset lands the number on the tab
-                    // beam. Instead clear the ACTUAL tab beam edge, recomputed from
-                    // the same quanter the renderer draws; that value already bakes
-                    // the staff offset, so skip the +staffOffset below.
-                    // LILYPOND-REF: ly/engraver-init.ly TabVoice — the tuplet number
-                    // sits outside the tab beam, mirroring ArticulationEngraver's
-                    // tab branch (TabBeamOuterEdgeY).
-                    if (staffByIndex != null
-                        && staffByIndex.TryGetValue(tuplet.StaffIndex, out var tstaff)
-                        && tstaff.IsTab && tstaff.Tuning.HasValue
-                        // The tab-beam edge math below (TabBeamOuterEdgeY / TabBeamQuant)
-                        // reads the beam MEMBERS' assigned strings, which is only valid
-                        // when the covering beam is the tuplet's OWN tab beam. FindCovering-
-                        // Beam can fall back to the companion NOTATION beam (a different
-                        // staff), whose members carry no string and would quant a beam line
-                        // from missing fret data. Require the tab staff's own beam; the
-                        // notation fallback drops to the plain placement below.
-                        && beam.StaffIndex == tuplet.StaffIndex)
-                    {
-                        var geom = new TabStaffGeometry(fonts,
-                            tstaff.Tuning.Value, staffOffset, tstaff.TabSourceClef, tstaff.Transposition);
-                        // A tab beam's direction is string-based, not the notation
-                        // Group.StemUp — so the number sits on the tab beam's OWN side.
-                        // Read it from the tuplet's tab notes (which carry the strings).
-                        isStemUp = geom.GroupStemUp(TupletNoteItems(tuplet, tupMeasures));
-                        startX = beam.LeftX + LayoutUtilities.StemAttachX(
-                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.ItemOf(0)),
-                            LayoutUtilities.NoteheadStyleOf(beam.Group.ItemOf(0)));
-                        endX = beam.RightX + LayoutUtilities.StemAttachX(
-                            isStemUp, GlyphMetrics.NoteValueOf(beam.Group.ItemOf(beam.Group.Members.Length - 1)),
-                            LayoutUtilities.NoteheadStyleOf(beam.Group.ItemOf(beam.Group.Members.Length - 1)));
-                        const double tabClearance = 0.5; // baseline above beam edge
-                        double sEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, startX);
-                        double eEdge = ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, endX);
-                        // Compensate the renderer's own -0.3 (up) / +0.8 (down) text
-                        // offset so the digit clears the beam by tabClearance.
-                        double tabOff = isStemUp
-                            ? -tabClearance + 0.3
-                            : tabClearance + digitHeight - 0.8;
-                        startY = sEdge + tabOff;
-                        endY = eEdge + tabOff;
-                        tabBeamPlaced = true;
-                    }
-                    else
+                    // (A TAB tuplet never reaches here: its positions, printed or not, come
+                    // from TabBracketPositions above — the tab-only beam-number formula that
+                    // stood here until 2026-09-29 put the number on the beam.)
                     {
                         // The INVISIBLE bracket spans the TUPLET'S OWN bounds (startX/endX
                         // above), not the covering beam's ends: one auto-beam can cover
@@ -511,16 +495,13 @@ internal static class TupletBracketEngraver
             }
 
             // Bake the staff's within-system offset (multi-staff) so the bracket
-            // sits over its OWN staff, not the first. The tab-beam path already
-            // baked it (its Y comes from TabStaffGeometry), so skip it there.
-            if (!tabBeamPlaced)
-            {
-                startY += staffOffset;
-                endY += staffOffset;
-            }
+            // sits over its OWN staff, not the first — the tab path's too (it is
+            // computed staff-local).
+            startY += staffOffset;
+            endY += staffOffset;
             // Store Y-up from the system top; the placement above stays in the
             // device staff-top frame (system.Y is added at draw), so negate here.
-            layouts.Add(new TupletBracketLayout(
+            results[ti] = new TupletBracketLayout(
                 tuplet.MeasureIndex,
                 startX,
                 endX,
@@ -533,9 +514,12 @@ internal static class TupletBracketEngraver
                 ti,
                 StaffIndex: tuplet.StaffIndex,
                 LineSpacing: tabStaff != null ? MultiStaffLayouter.LineSpacingOf(tabStaff) : 1.0
-            ));
+            );
         }
 
+        foreach (var r in results)
+            if (r is { } layout)
+                layouts.Add(layout);
         return layouts.ToImmutable();
     }
 
@@ -1640,9 +1624,14 @@ internal static class TupletBracketEngraver
     /// stem — or a rest's glyph box, which the tab draws at the same axis.
     /// </summary>
     /// <remarks>See the call site's citations (get_x_bound_item, calc_x_positions). A chord
-    /// reads its first note's fret for the width, as its bend does (ArticulationEngraver).</remarks>
+    /// reads its first note's fret for the width, as its bend does (ArticulationEngraver).
+    /// <paramref name="stemUp"/> is the column's own stem direction — a beam's when beamed
+    /// (<see cref="TabColumnStemUp"/>).
+    /// MEASURED (2.26.0, Lab sessions/p690/probes/tt-against{L,R}.ly): a bound whose stem
+    /// points the bracket's way sits at the stem's edge, one pointing away at the fret
+    /// digit's ink edge (LilyPond's whiteout box, 8.709 / 12.842) — both ends, both sides.</remarks>
     private static double TabBoundEdgeOffset(MusicItem? item, bool bracketUp, bool left,
-        Staff tab, TabStaffGeometry geom, Rendering.ScoreTextMetrics fonts)
+        Staff tab, TabStaffGeometry geom, Rendering.ScoreTextMetrics fonts, bool stemUp)
     {
         double halfStem = EngravingDefaults.StemThickness / 2;
         double centre = EngravingDefaults.TabHeadCenterOffset;
@@ -1657,7 +1646,7 @@ internal static class TupletBracketEngraver
             {
                 int value = GlyphMetrics.NoteValueOf(item);
                 bool hasStem = value >= 2;
-                if (hasStem && geom.TabStemUp(item) == bracketUp)
+                if (hasStem && stemUp == bracketUp)
                     return centre + (left ? -halfStem : halfStem);
                 var (_, fret) = ArticulationEngraver.TabFretOf(tab, Tablature.Tunings.GetTuning(tab.Tuning!.Value), item);
                 double half = Math.Max(ArticulationEngraver.TabFretHalfWidth(fonts, fret), hasStem ? halfStem : 0.0);
@@ -1686,21 +1675,40 @@ internal static class TupletBracketEngraver
     /// stands 1.13 below the stem tips (18.25 against 17.12), i.e. padding 1.1 off the
     /// columns' reach; the notation-frame reading put it 1.4 ABOVE them, through the stems.
     /// LILYPOND-REF: lily/tuplet-bracket.cc:463-477 calc_position_and_height — the staff
-    ///   widened by staff-padding; :520-562 the else arm: bound columns' cross_staff_extent
-    ///   united with the staff, the musical sign gates, one point per column; :566-630 the
-    ///   damping (max-slope-factor × the last column's x; the beam-slope cap is not ported —
-    ///   a tab tuplet's own beam hides its bracket); :633-637 the staff points; :708-746 the
-    ///   offset pass, padding, and the flat quantise (`*offset /= 0.5 * ss`, staff_span
-    ///   widened by ss, rint, off a line by dir).
+    ///   widened by staff-padding; :491-519 the follow_beam arm (a covering beam on the
+    ///   bracket's side: the outer stems' tips are the two points, their difference the dy,
+    ///   no staff points); :520-562 the else arm: bound columns' cross_staff_extent united
+    ///   with the staff, the musical sign gates, one point per column; :566-630 the damping
+    ///   (max-slope-factor × the last column's x, capped by the covering beam's slope, or the
+    ///   slope of the beam the last beamed column's stem belongs to over that beam's own
+    ///   extent); :633-637 the staff points; :646-680 the enclosed tuplets' points (each one's
+    ///   box at its two ends, taken at `linear_combination (d * sign (other_dy))`, and its
+    ///   number's outer edge at the number's centre); :682-706 avoid-scripts (every script of
+    ///   the tuplet's notes with no outside-staff-priority, its centre and its edge on the
+    ///   bracket's side); :708-746 the offset pass, padding, and the flat quantise
+    ///   (`*offset /= 0.5 * ss`, staff_span widened by ss, rint, off a line by dir).
     /// LILYPOND-REF: lily/note-column.cc:251-258 cross_staff_extent — the heads' extent
     ///   united with the stem's.
-    /// ⚠️ Not ported, disclosed: nested tuplets (:646-680) and avoid-scripts (:682-706) —
-    ///   no tab book carries either under a drawn bracket.
+    /// ⚠️ Narrowings, disclosed: the follow arm needs NOTE columns at both ends (a beamed
+    ///   rest at an edge falls to the else arm — LilyPond gives the rest an invisible stem);
+    ///   an enclosed tuplet whose own bracket is hidden adds its number only (LilyPond reads
+    ///   an empty stencil box there); scripts pair by (staff, bar, item range), not by voice —
+    ///   the notation port's same narrowing.
+    /// ⚠️ THE BEAM-SLOPE CAP HAS NO OBSERVER YET: it is reached only when a covering beam
+    ///   does NOT decide the bracket's side (else the follow arm runs) or when the last beamed
+    ///   column's beam leaves the tuplet, AND the slope passes the sign gates AND exceeds
+    ///   max-slope-factor × the last column's x. Six tab probes against 2.26.0
+    ///   (sessions/p690/probes/tt-cap*.ly) never reached it — poisoning it changed none.
+    /// MEASURED residuals, not of this method: a beamed tab stem ends 0.56 higher in Lily#
+    ///   than in LilyPond (the tab beam's own placement), and a tab turn 0.17 higher — the
+    ///   bracket clears both by LilyPond's padding, so it inherits the two differences.
     /// </remarks>
     private static (double startY, double endY) TabBracketPositions(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, MeasureLayout measureLayout,
         bool bracketUp, double x0, double x1, TabStaffGeometry geom,
-        ImmutableArray<BeamLayout> beamLayouts, Rendering.ScoreTextMetrics fonts)
+        ImmutableArray<BeamLayout> beamLayouts, Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<ArticulationLayout> scripts, IReadOnlyList<TupletBracketLayout>? children,
+        double staffOffset)
     {
         int dir = bracketUp ? 1 : -1;               // Y-up, from the tab's middle
         double ss = geom.StringSpace;               // the TabStaff's staff-space (1.5)
@@ -1730,6 +1738,49 @@ internal static class TupletBracketEngraver
             return null;
         }
 
+        // The x a beam's line is read at for a member: its column plus the stem attachment on
+        // the beam's side — the frame TabBeamOuterEdgeY quants the line in (the same read the
+        // tab slur's stem edge makes, ElementCoordinator's TabStemOf).
+        static double BeamFrameX(double columnX, MusicItem item, bool up)
+            => columnX + LayoutUtilities.StemAttachX(up, GlyphMetrics.NoteValueOf(item),
+                LayoutUtilities.NoteheadStyleOf(item));
+
+        // A beam's two ends in its own frame, and its outer edge there (Y-up): LilyPond's
+        // quantized-positions and the beam's X extent, as the damping reads them.
+        (double XL, double XR, double YL, double YR) BeamEnds(BeamLayout beam)
+        {
+            bool up = geom.GroupStemUp(beam.Group.MemberItems());
+            int n = beam.Group.Members.Length;
+            double xl = BeamFrameX(beam.MemberXPositions.Length > 0 ? beam.MemberXPositions[0] : 0,
+                beam.Group.ItemOf(0), up);
+            double xr = BeamFrameX(beam.MemberXPositions.Length >= n ? beam.MemberXPositions[n - 1] : 0,
+                beam.Group.ItemOf(n - 1), up);
+            return (xl, xr, YUp(ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, xl)),
+                YUp(ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, xr)));
+        }
+
+        // A note column's tab stem tip (Y-up): on its beam's OUTER edge when beamed, else where
+        // an unbeamed tab stem ends; null with no stem. ⚠️ The outer edge although LilyPond
+        // DRAWS a beamed tab stem only to the beam's middle: the stem's Y extent reaches the
+        // beam's far side. MEASURED (2.26.0, Lab sessions/p690/probes): tt-nest.ly's hidden
+        // bracket stands 1.10 off the beam's outer edge (1.34 off its middle, where the stem
+        // rect ends), and tt-cap2.ly comes out flat only if the first column reaches the outer
+        // edge (3.01 over the last digit's 2.85 — the sign gate zeroes the slope; the middle,
+        // 2.83, would have tilted it).
+        double? StemTipUp(MusicItem item, int itemIndex, double columnX)
+        {
+            if (NoteColumnLayout.Of(item) is not { HasStem: true })
+                return null;
+            var beam = MemberBeam(itemIndex);
+            if (beam is not null)
+            {
+                bool beamUp = geom.GroupStemUp(beam.Group.MemberItems());
+                return YUp(ArticulationEngraver.TabBeamOuterEdgeY(beam, geom, BeamFrameX(columnX, item, beamUp)));
+            }
+            bool up = geom.TabStemUp(item);
+            return geom.UnbeamedStemTipY(item, up, geom.StemHeadString(item, up)) is { } t ? YUp(t) : null;
+        }
+
         // A column's reach on the bracket's side (Y-up) and its strings' positions.
         (double Reach, int Lo, int Hi)? ColumnReach(MusicItem item, int itemIndex, double columnX)
         {
@@ -1743,20 +1794,8 @@ internal static class TupletBracketEngraver
                         ? hi * ss / 2.0 + halfDigit
                         : lo * ss / 2.0 - halfDigit;
                     // …united with the stem, whichever way it points (cross_staff_extent).
-                    if (NoteColumnLayout.Of(item) is { HasStem: true })
-                    {
-                        bool up = geom.TabStemUp(item);
-                        var beam = MemberBeam(itemIndex);
-                        double? tipDevice = beam is not null
-                            ? ArticulationEngraver.TabBeamOuterEdgeY(beam, geom,
-                                columnX + EngravingDefaults.TabHeadCenterOffset)
-                            : geom.UnbeamedStemTipY(item, up, geom.StemHeadString(item, up));
-                        if (tipDevice is { } t)
-                        {
-                            double tip = YUp(t);
-                            reach = dir > 0 ? Math.Max(reach, tip) : Math.Min(reach, tip);
-                        }
-                    }
+                    if (StemTipUp(item, itemIndex, columnX) is { } tip)
+                        reach = dir > 0 ? Math.Max(reach, tip) : Math.Min(reach, tip);
                     return (reach, lo, hi);
                 }
                 case RestItem { IsSpacer: false } rest:
@@ -1783,6 +1822,11 @@ internal static class TupletBracketEngraver
         var points = new List<(double X, double Y)>();
         (double Reach, int Lo, int Hi)? first = null, last = null;
         double lastX = 0;
+        int columnCount = 0;
+        // The outer COLUMNS (note or rest), and the last column whose stem carries a beam —
+        // the follow arm and the damping's beam read them.
+        (MusicItem Item, int Index, double X)? firstColumn = null, lastColumn = null;
+        BeamLayout? lastColumnBeam = null;
         for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < items.Length; i++)
         {
             if (items[i].GraceTime)
@@ -1791,6 +1835,12 @@ internal static class TupletBracketEngraver
                 + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, measureLayout);
             if (ColumnReach(items[i], i, columnX) is not { } col)
                 continue;
+            columnCount++;
+            firstColumn ??= (items[i], i, columnX);
+            lastColumn = (items[i], i, columnX);
+            if (items[i] is NoteItem or ChordItem && NoteColumnLayout.Of(items[i]) is { HasStem: true }
+                && MemberBeam(i) is { } b)
+                lastColumnBeam = b;
             double x = columnX - x0;
             points.Add((x, col.Reach));
             lastX = x;
@@ -1801,30 +1851,136 @@ internal static class TupletBracketEngraver
             }
         }
 
-        // The slope: the bound columns' reach united with the staff, the sign gates, the damping.
+        // par_beam: the tab beam that carries the tuplet's own stems (:481), and whether the
+        // bracket FOLLOWS it — the beam on the bracket's side, both outer columns stemmed
+        // notes (:491-496; a tab beam is never a knee).
+        var parBeam = beamLayouts.IsDefaultOrEmpty ? null : FindCoveringBeam(beamLayouts, tuplet, measures);
+        bool followBeam = parBeam is not null
+            && geom.GroupStemUp(parBeam.Group.MemberItems()) == bracketUp
+            && firstColumn is { Item: NoteItem or ChordItem } fc && NoteColumnLayout.Of(fc.Item) is { HasStem: true }
+            && lastColumn is { Item: NoteItem or ChordItem } lc && NoteColumnLayout.Of(lc.Item) is { HasStem: true };
+
         double dy = 0.0;
-        if (first is { } f && last is { } l)
+        if (followBeam)
         {
+            // The follow arm (:497-518): the two outer stems' tips, at the drawn stems' x.
+            var (fItem, fIndex, fX) = firstColumn!.Value;
+            var (lItem, lIndex, lX) = lastColumn!.Value;
+            double tipL = StemTipUp(fItem, fIndex, fX) ?? staffEdge;
+            double tipR = StemTipUp(lItem, lIndex, lX) ?? staffEdge;
+            dy = tipR - tipL;
+            points.Clear();
+            points.Add((fX + EngravingDefaults.TabHeadCenterOffset - x0, tipL));
+            points.Add((lX + EngravingDefaults.TabHeadCenterOffset - x0, tipR));
+        }
+        else if (first is { } f && last is { } l)
+        {
+            // The slope: the bound columns' reach united with the staff, the sign gates.
             double lv = dir > 0 ? Math.Max(f.Reach, staffEdge) : Math.Min(f.Reach, staffEdge);
             double rv = dir > 0 ? Math.Max(l.Reach, staffEdge) : Math.Min(l.Reach, staffEdge);
             double graphicalDy = rv - lv;
             int musUp = Math.Sign(l.Hi - f.Hi), musDown = Math.Sign(l.Lo - f.Lo);
             dy = musUp != musDown || Math.Sign(graphicalDy) != musDown ? 0.0 : graphicalDy;
-            if (dy != 0.0)
+        }
+
+        // The damping (:566-630): max_dy = max-slope-factor × the last column's x; a beam —
+        // par_beam over the bracket's own span, else the last beamed column's beam over its own
+        // extent — lends its slope as the cap.
+        if (dy != 0.0)
+        {
+            double span = x1 - x0;
+            double slope = Math.Abs(dy / span);
+            double maxDy = MaxSlopeFactor * lastX * Math.Sign(dy);
+            double beamDy = 0.0, subSpan = 0.0;
+            if (parBeam is not null)
             {
-                double maxDy = MaxSlopeFactor * lastX * Math.Sign(dy);
+                var e = BeamEnds(parBeam);
+                beamDy = e.YR - e.YL;
+            }
+            else if (lastColumnBeam is not null)
+            {
+                var e = BeamEnds(lastColumnBeam);
+                beamDy = e.YR - e.YL;
+                subSpan = e.XR - e.XL;
+            }
+            if (beamDy != 0.0)
+            {
+                double beamSlope = Math.Abs(beamDy / (subSpan != 0.0 ? subSpan : span));
+                double maxSlope = beamSlope != 0.0 ? Math.Max(beamSlope, MaxSlopeFactor) : MaxSlopeFactor;
+                slope = Math.Min(slope, maxSlope);
                 if (Math.Abs(dy) > Math.Abs(maxDy))
-                    dy = maxDy;
+                    dy = Math.Abs(dy * slope) <= Math.Abs(maxDy) ? dy * slope : maxDy;
+            }
+            else if (Math.Abs(dy) > Math.Abs(maxDy))
+            {
+                dy = maxDy;
             }
         }
 
-        // The staff's own edge joins the points (:633-637).
-        points.Add((0.0, staffEdge));
-        points.Add((x1 - x0, staffEdge));
+        // The staff's own edge joins the points (:633-637) — unless the bracket follows its beam.
+        if (!followBeam)
+        {
+            points.Add((0.0, staffEdge));
+            points.Add((x1 - x0, staffEdge));
+        }
+
+        // The enclosed tuplets (:646-680): each one's box at its two ends, and its number.
+        // Their layouts carry the staff offset (Y-up from the system top); this frame is
+        // the staff-local one, so it comes off again.
+        if (children is not null)
+        {
+            var numberStyle = NumberStyle(fonts);
+            double numberEm = NumberEm(fonts);
+            double halfThick = EngravingDefaults.TupletBracketThickness / 2.0;
+            foreach (var c in children)
+            {
+                double y0 = YUp(-c.StartYUp - staffOffset), y1 = YUp(-c.EndYUp - staffOffset);
+                if (c.ShowBracket)
+                {
+                    int cdir = c.IsStemUp ? 1 : -1;
+                    double edge = GetEdgeHeight() * c.LineSpacing;
+                    double lo = Math.Min(Math.Min(y0, y1), Math.Min(y0 - cdir * edge, y1 - cdir * edge)) - halfThick;
+                    double hi = Math.Max(Math.Max(y0, y1), Math.Max(y0 - cdir * edge, y1 - cdir * edge)) + halfThick;
+                    int otherSign = Math.Sign(y1 - y0);
+                    foreach (int d in new[] { -1, 1 })
+                    {
+                        double l = d * otherSign;
+                        double y = ((1 - l) * lo + (1 + l) * hi) / 2.0;
+                        double x = (d < 0 ? c.DrawnStartX - halfThick : c.DrawnEndX + halfThick) - x0;
+                        points.Add((x, y));
+                    }
+                }
+                if (!string.IsNullOrEmpty(c.NumberText))
+                {
+                    double halfH = fonts.InkHeight(c.NumberText, numberEm, Rendering.TextRole.Tuplet, numberStyle) / 2.0;
+                    points.Add((c.NumberX - x0, (y0 + y1) / 2.0 + dir * halfH));
+                }
+            }
+        }
+
+        // avoid-scripts (:682-706): every script of the tuplet's notes with no
+        // outside-staff-priority, at its ink centre and its edge on the bracket's side. A tab
+        // script's YUp is staff-local about the nominal middle (EngravingDefaults.StaffMiddle
+        // below the top line — ArticulationEngraver's tabYUp), so it re-bases onto the tab's.
+        if (!scripts.IsDefaultOrEmpty)
+        {
+            double rebase = middle - EngravingDefaults.StaffMiddle;
+            foreach (var a in scripts)
+            {
+                if (a.OutsideStaffPriority != null
+                    || a.StaffIndex != tuplet.StaffIndex
+                    || a.MeasureIndex != tuplet.MeasureIndex
+                    || a.ItemIndex < tuplet.StartNoteIndex
+                    || a.ItemIndex > tuplet.EndNoteIndex)
+                    continue;
+                points.Add((a.X + a.Ink.CenterX - x0,
+                    rebase + a.YUp + (dir > 0 ? a.Ink.Top : a.Ink.Bottom)));
+            }
+        }
 
         // The offset pass (:708-719): the line pushed just past the farthest point, then padding.
         double offset = -dir * double.PositiveInfinity;
-        double factor = points.Count > 3 ? 1.0 / (x1 - x0) : 1.0;
+        double factor = columnCount > 1 ? 1.0 / (x1 - x0) : 1.0;
         foreach (var (x, y) in points)
         {
             double tuplety = dy * x * factor;
@@ -1852,29 +2008,78 @@ internal static class TupletBracketEngraver
     }
 
     /// <summary>
-    /// <see cref="CalculateDirection"/> on a TAB staff: the columns' stems point their
-    /// STRINGS' way (<see cref="TabStaffGeometry.TabStemUp"/>), so the count reads those; a
-    /// tie with no stem at all goes UP, and a tie between stems to the side the farther
-    /// extreme decides, read over the strings by the same rule the tab beam takes
-    /// (<see cref="TabStaffGeometry.GroupStemUp"/>).
+    /// <see cref="CalculateDirection"/> on a TAB staff: each note column's stem points its
+    /// STRINGS' way (<see cref="TabStaffGeometry.TabStemUp"/>) — or its tab beam's
+    /// (<see cref="TabStaffGeometry.GroupStemUp"/>) when it is beamed — and the count reads
+    /// those; a tie with no stem at all goes UP; a tie between stems goes to the side whose
+    /// extreme head stands deeper past the staff's edge on its own side — LilyPond's
+    /// extremal-positions rule, with its unit mix (the staff extent in the tab's staff
+    /// spaces against head positions in half-spaces) kept.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir — the stems'
-    /// directions, then the extremal positions; on a TabVoice both are the strings'
-    /// (lily/tab-note-heads-engraver.cc:99-122).</remarks>
+    /// <remarks>LILYPOND-REF: lily/tuplet-bracket.cc:779-817 Tuplet_bracket::get_default_dir —
+    /// the columns' Note_column::dir (the stem's, a beam's when beamed), then :797-813 the
+    /// extremal positions against the staff symbol's extent; on a TabVoice a head's position
+    /// is its string's (lily/tab-note-heads-engraver.cc:99-122).
+    /// MEASURED (2.26.0, Lab sessions/p690/probes/tt-beam.ly — `f,4` on the D string, stem
+    /// down, and a beamed `bes,,8` on the A string, stem up): the tie goes UP; the tab beam's
+    /// own rule, which stood here, answered DOWN.</remarks>
     private static bool TabDirection(TupletBracketItem tuplet, ImmutableArray<Measure> measures,
-        TabStaffGeometry geom)
+        TabStaffGeometry geom, ImmutableArray<BeamLayout> beamLayouts)
     {
+        bool StemUp(MusicItem item, int itemIndex) => TabColumnStemUp(tuplet, item, itemIndex, geom, beamLayouts);
+
+        if (measures.IsDefaultOrEmpty || tuplet.MeasureIndex >= measures.Length)
+            return true;
+        var items = measures[tuplet.MeasureIndex].Items;
         int up = 0, down = 0;
-        foreach (var item in TupletNoteItems(tuplet, measures))
+        double extremeUp = double.NegativeInfinity, extremeDown = double.PositiveInfinity;
+        for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < items.Length; i++)
         {
-            if (geom.TabStemUp(item)) up++;
-            else down++;
+            if (items[i] is not (NoteItem or ChordItem) || items[i].GraceTime)
+                continue;
+            var (lo, hi) = geom.HeadPositionRange(items[i]);
+            if (StemUp(items[i], i))
+            {
+                up++;
+                extremeUp = Math.Max(extremeUp, hi);
+            }
+            else
+            {
+                down++;
+                extremeDown = Math.Min(extremeDown, lo);
+            }
         }
         if (up != down)
             return up > down;
         if (up == 0)
             return true;
-        return geom.GroupStemUp(TupletNoteItems(tuplet, measures));
+        // The staff symbol's extent (the outer strings ± half a line) in the tab's spaces.
+        double staffHalf = (geom.StringCount - 1) / 2.0 * geom.StringSpace + EngravingDefaults.StaffLineThickness / 2.0;
+        double upDepth = -(staffHalf - extremeUp);          // :811, d = UP
+        double downDepth = (-staffHalf - extremeDown);      // :811, d = DOWN
+        return upDepth <= downDepth;
+    }
+
+    /// <summary>A tab note column's stem direction: its tab beam's
+    /// (<see cref="TabStaffGeometry.GroupStemUp"/>) when the stem is beamed, else its
+    /// strings' (<see cref="TabStaffGeometry.TabStemUp"/>) — LilyPond's Note_column::dir,
+    /// which every tab reader of the bracket asks: the side it takes and which bound is a
+    /// stem. MEASURED (2.26.0, Lab sessions/p690/probes/tt-cap.ly): an A-string eighth
+    /// beamed DOWN with the D-string one is a stem-down bound — the bracket starts at its
+    /// stem's edge, where the strings' rule (up) put it at the digit's edge, 0.75 left.</summary>
+    private static bool TabColumnStemUp(TupletBracketItem tuplet, MusicItem item, int itemIndex,
+        TabStaffGeometry geom, ImmutableArray<BeamLayout> beamLayouts)
+    {
+        if (!beamLayouts.IsDefaultOrEmpty)
+            foreach (var b in beamLayouts)
+            {
+                if (b.StaffIndex != tuplet.StaffIndex || b.Group.VoiceIndex != tuplet.VoiceIndex)
+                    continue;
+                foreach (var m in b.Group.Members)
+                    if (m.ResolveMeasureIndex(b.Group.MeasureIndex) == tuplet.MeasureIndex && m.ItemIndex == itemIndex)
+                        return geom.GroupStemUp(b.Group.MemberItems());
+            }
+        return geom.TabStemUp(item);
     }
 
     private static MusicItem? TupletItemAt(

@@ -109,6 +109,115 @@ public class TabTupletBracketTests
         Assert.InRange(clearance, 1.05, 1.25);
     }
 
+    // ---- the three clauses ported on 2026-09-29 (nested tuplets, avoid-scripts, the beam
+    // reads), each against LilyPond 2.26.0 on its twin (Lab sessions/p690/probes/tt-*.ly).
+
+    /// <summary>An inner triplet whose own beam hides its bracket: its number stands one
+    /// padding off the beam (LilyPond's follow_beam arm, number centred on the invisible
+    /// bracket — 1.34 off the stem rect's end, i.e. 1.10 off the beam's outer edge), and the
+    /// outer bracket clears that number (the enclosed tuplets' points, :646-680) —
+    /// LilyPond's gap from the inner number's centre to the outer line is 1.70.</summary>
+    [Fact]
+    public void ANestedTuplet_TheOuterBracketClearsTheInnerNumber_WhichClearsItsBeam()
+    {
+        const string book = """
+            octave absolute
+            part cb {
+              instrument bass
+              section A { tuplet 3/2 { tuplet 3/2 { bes,,8 bes,, bes,, } bes,,4 bes,, } r2 | }
+            }
+            form main { A }
+            score main { tab cb }
+            """;
+        string svg = Render(book);
+        int outer = book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal);
+        int inner = book.IndexOf("tuplet 3/2", outer + 1, System.StringComparison.Ordinal);
+        var outerHooks = Hooks(svg, outer);
+        Assert.Equal(2, outerHooks.Count);
+        double outerLine = System.Math.Min(outerHooks[0].Y1, outerHooks[0].Y2);
+        var number = NumberCentre(svg, inner);
+        Assert.InRange(number.Y - outerLine, 1.60, 1.85);
+        // The inner triplet's first stem ends on its beam; the number stands above it.
+        var stem = Stems(svg).OrderBy(s => System.Math.Abs(s.X - number.X)).First();
+        double tip = System.Math.Min(stem.Y1, stem.Y2);
+        Assert.InRange(tip - number.Y, 1.25, 1.45);
+    }
+
+    /// <summary>A script of the tuplet's notes with no outside-staff-priority (a turn) is a
+    /// point the bracket clears (:682-706): LilyPond's line stands 1.63 above the turn's
+    /// origin, and Lily#'s too.</summary>
+    [Fact]
+    public void AScriptUnderTheBracket_IsCleared()
+    {
+        const string book = """
+            octave absolute
+            part cb {
+              instrument bass
+              section A { tuplet 3/2 { bes,,4@turn bes,,8@turn } r4 r2 | }
+            }
+            form main { A }
+            score main { tab cb }
+            """;
+        string svg = Render(book);
+        var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));
+        double line = System.Math.Min(hooks[0].Y1, hooks[0].Y2);
+        double turn = Regex.Matches(svg, "<text class=\"music\" x=\"[-\\d.]+\" y=\"([-\\d.]+)\"[^>]*>(.)</text>")
+            .Where(m => m.Groups[2].Value[0] == LilySharp.Core.Svg.EmmentalerGlyphs.OrnTurn)
+            .Select(m => double.Parse(m.Groups[1].Value)).Min();
+        Assert.InRange(turn - line, 1.55, 1.72);
+    }
+
+    /// <summary>A stem-down quarter on the D string and a beamed stem-up eighth on the A
+    /// string tie the stems' vote; LilyPond's extremal-positions rule puts the bracket UP,
+    /// and the beamed eighth's bound is ITS BEAM's direction.</summary>
+    [Fact]
+    public void ATieOfStems_GoesWhereTheExtremalPositionsSay()
+    {
+        const string book = """
+            octave absolute
+            part cb {
+              instrument bass
+              section A { tuplet 3/2 { f,4 bes,,8[ } bes,,8 bes,,] r4 r4 | }
+            }
+            form main { A }
+            score main { tab cb }
+            """;
+        string svg = Render(book);
+        var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));
+        double topLine = Regex.Matches(svg, "<line x1=\"[-\\d.]+\" y1=\"([-\\d.]+)\" x2=\"[-\\d.]+\" y2=\"\\1\" stroke=\"#000000\" stroke-width=\"0.100\"/>")
+            .Select(m => double.Parse(m.Groups[1].Value)).Min();
+        Assert.True(hooks[0].Y1 < topLine, "the bracket stands above the tab");
+    }
+
+    /// <summary>An A-string eighth beamed DOWN with the next one is a stem-down bound under a
+    /// bracket below: the bracket starts at that stem's edge, 0.365 out (LilyPond 9.153 −
+    /// 0.365 = 8.79), where reading the string's own direction (up) put it at the digit's
+    /// edge, 0.75 further left.</summary>
+    [Fact]
+    public void ABeamedBound_IsItsBeamsDirection()
+    {
+        const string book = """
+            octave absolute
+            part cb {
+              instrument bass
+              section A { tuplet 3/2 { a,,8 d,8 g,8[ } g,8] r4 r2 | }
+            }
+            form main { A }
+            score main { tab cb }
+            """;
+        string svg = Render(book);
+        var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));
+        double firstStem = Stems(svg).Min(s => s.X);
+        Assert.Equal(firstStem - 0.365, hooks[0].X, 2);
+    }
+
+    private static (double X, double Y) NumberCentre(string svg, int tupletPos)
+    {
+        var m = Regex.Match(svg, "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\"[^>]*font-style=\"italic\"[^>]*data-pos=\"" + tupletPos + "\">");
+        Assert.True(m.Success, "no number for the tuplet at " + tupletPos);
+        return (double.Parse(m.Groups[1].Value), double.Parse(m.Groups[2].Value));
+    }
+
     private static string Render(string lys)
         => SvgGenerator.Generate(SyntaxTree.Parse(lys), new SvgRenderOptions { EmbedFont = false });
 
