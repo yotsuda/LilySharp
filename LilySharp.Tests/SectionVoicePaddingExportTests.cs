@@ -337,6 +337,61 @@ public class SectionVoicePaddingExportTests
         Assert.Matches(@"d1:m7 \|\s*s1 \|\s*s1 \|\s*c1:maj7", ly);
     }
 
+    // A part and a chord row that write NO block for B: the page, the MIDI and the MusicXML
+    // pad B's two bars; the twin skipped the play whole until 2026-09-29 (HANDOFF §1.1 第662 ⑺).
+    private const string NoBlockForB = """
+        octave absolute
+        part melody { clef treble
+          section A { g'2 g' | a'1 | }
+          section B { c''2 c'' | d''1 | }
+          section C { e''2 e'' | }
+        }
+        part bass { clef bass
+          section A { c2 e | g1 | }
+          section C { g2 g | }
+        }
+        chords prog {
+          section A { C | G | }
+          section C { G | }
+        }
+        form main { A B C }
+        score main { chords prog  staff melody  staff bass }
+        """;
+
+    /// <summary>Poisons (RULES §5.4): return from AppendSection on the missing name, as it did,
+    /// and both facts go red — bass's C follows its A, the row's G follows its G.</summary>
+    [Fact]
+    public void Twin_PadsAPartAndAChordRow_ThatWriteNoBlockForASection()
+    {
+        var ly = Twin(NoBlockForB);
+        // Bass: A's two bars, then B's two silent bars under B's own mark, then C.
+        Assert.Matches(@"g1 \|\s*\\mark \\markup \\box ""B"" s1 \|\s*s1 \|\s*\\mark \\markup \\box ""C"" g2 g \|", ly);
+        // The chord row: two silent \chordmode bars between A's g1 and C's g1.
+        Assert.Matches(@"c1 \|\s*g1 \|\s*s1 \|\s*s1 \|\s*g1 \|", ly);
+        // The part that writes every section is untouched: no spacer bar in melody.
+        Assert.Matches(@"d''1 \|\s*\\mark \\markup \\box ""C"" e''2 e'' \|", ly);
+    }
+
+    /// <summary>The section's own header shapes the silence: its <c>time</c> is the bar's
+    /// length and its <c>partial</c> the first bar's, for the voice and the row alike.</summary>
+    [Fact]
+    public void Twin_ASilentPlay_TakesTheSectionHeadersMeterAndPickup()
+    {
+        // By-section spelling: the header is the SECTION's, so every voice of B reads it.
+        var ly = Twin("""
+            octave absolute
+            part melody { clef treble }
+            part bass { clef bass }
+            section A { melody { g'2 g' | } bass { c2 e | } chords prog { C | } }
+            section B { time 3/4  partial 4  melody { c''4 | d''2. | } }
+            section C { melody { e''2 e'' | } bass { g2 g | } chords prog { G | } }
+            form main { A B C }
+            score main { chords prog  staff melody  staff bass }
+            """);
+        Assert.Matches(@"c2 e \|\s*\\mark \\markup \\box ""B"" \\time 3/4 \\partial 4 s4 \|\s*s2\. \|\s*\\time 4/4 \\mark \\markup \\box ""C"" g2 g \|", ly);
+        Assert.Matches(@"c1 \|\s*s4 \|\s*s2\. \|\s*g1 \|", ly);
+    }
+
     // ---------------------------------------------------------------- MIDI
 
     [Fact]

@@ -1829,7 +1829,10 @@ public sealed class LilyPondExporter
         // The printed play this is — counted before the lookup, as RepeatTiePlays counts it.
         int playIndex = _lpPlayIndex++;
         if (!byName.TryGetValue(name, out var entry))
+        {
+            AppendSilentPlay(name, result, markLabel, octaveOffset);
             return;
+        }
         // A chord track's play of a section is its chord bars, nothing else: no play
         // marker (the \mark and the key/meter restores are the music stream's) and no
         // header directives — the key is read for the degree spelling instead.
@@ -1858,6 +1861,53 @@ public sealed class LilyPondExporter
             result.Add(new RepeatTieMarker());
         result.AddRange(ContainerMusic(entry.Container));
         result.AddRange(PaddingBars(entry.Container));
+    }
+
+    /// <summary>
+    /// A play of a section this voice writes NO block for: the section's canonical bars of
+    /// silence, so the voice's next play stands beside the other voices' — what the page
+    /// pads the staff with (MeasureCollector's section padding) and the MIDI walk and the
+    /// MusicXML export count (SectionVoicePaddingExportTests). ⚠️ Until 2026-09-29 (HANDOFF
+    /// §1.1 第662 ⑺) the play was skipped whole: `part bass { section A { … } section C { … } }`
+    /// under `form main { A B C }` wrote bass's C straight after its A, under the other
+    /// parts' B — a different piece from the page, silently (Lab sessions/p674/probes/emptysec).
+    /// </summary>
+    /// <remarks>
+    /// The same items <see cref="PaddingBars"/> writes for a SHORT play, from bar one: a music
+    /// voice gets the play sentinel (its <c>\mark</c> and the key/meter restores, which the
+    /// stream resets its bar clock on — every bare <c>|</c> after it is an empty bar, a spacer
+    /// of the running meter, the section's header <c>partial</c> included) and the header
+    /// directives, then one bare <c>|</c> a bar; a chord row a silent <c>\chordmode</c> bar a
+    /// bar, of the header meter or the score's, the first as long as the header pickup. A
+    /// section the index knows no voice of (a header-only declaration) has no bars to pad.
+    /// </remarks>
+    private void AppendSilentPlay(string name, List<SyntaxNode> result, string? markLabel, int octaveOffset)
+    {
+        if (!_sectionBars.Canonical.TryGetValue(name, out int bars) || bars <= 0)
+            return;
+        _sectionHeaders.TryGetValue(name, out var headers);
+        if (_chordTrack)
+        {
+            var meter = headers?.OfType<TimeSignatureSyntax>().LastOrDefault() is { IsSenzaMisura: false } t
+                ? new Fraction(t.Beats, t.BeatType)
+                : new Fraction(_homeTimeBeats, _homeTimeBeatType);
+            var pickup = ChordPickupFor(name);
+            for (int i = 0; i < bars; i++)
+            {
+                result.Add(new ChordBarMarker("s" + ChordModeDuration(i == 0 && pickup is { } p ? p : meter)));
+                result.Add(CreateBarline(SyntaxKind.Bar, "|", 0, 0));
+            }
+            return;
+        }
+        result.Add(new SectionPlayMarker(
+            markLabel,
+            headers?.Any(h => h is KeySignatureSyntax) == true,
+            headers?.Any(h => h is TimeSignatureSyntax) == true,
+            octaveOffset));
+        if (headers != null)
+            result.AddRange(headers);
+        for (int i = 0; i < bars; i++)
+            result.Add(CreateBarline(SyntaxKind.Bar, "|", 0, 0));
     }
 
     // The book's section voices (SectionBarCounts.BuildSemanticIndex), read once per Export.
