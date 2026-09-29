@@ -1059,7 +1059,6 @@ internal static class ArticulationEngraver
                     + LayoutUtilities.GetItemXOffset(artMeasures,
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                     + EngravingDefaults.TabHeadCenterOffset;
-                const double tabGap = 1.0;
                 var geom = new TabStaffGeometry(fonts,
                     tabStaff.Tuning.Value, staffOffset, tabStaff.TabSourceClef, tabStaff.Transposition);
                 beamGroups ??= BuildBeamGroupMap(beamLayouts, wantedBeamKeys);
@@ -1087,92 +1086,84 @@ internal static class ArticulationEngraver
                 // …and inside a voice span the voice decides (voiceScriptUp's remark above).
                 bool tabAbove = articulation.DirectionForced
                     ? articulation.IsAbove : voiceScriptUp ?? (tabForceAbove || !tabStemUp);
-                // A fret digit is centred on its string line, so a digit on the
-                // OUTER string protrudes half its height past the outer line. Clear
-                // that too, or an above-script (accent/staccato/fermata) lands on the
-                // number instead of above it.
+                // LilyPond places a Script on a TabStaff with the same aligned_side as on any
+                // staff — the TabStaff only changes the staff it reads: its staff-space is the
+                // string gap (StaffSymbol.staff-space 1.5), so `padding` and `staff-padding`
+                // are multiplied by it, the staff's extent is its outer strings, and a
+                // quantized script rounds to the tab's own half-spaces.
+                // LILYPOND-REF: lily/side-position-interface.cc:188-456 Side_position_interface::aligned_side
+                // LILYPOND-REF: lily/staff-symbol-referencer.cc:47-53 Staff_symbol_referencer::staff_space — the TabStaff's StaffSymbol.staff-space 1.5 (ly/engraver-init.ly TabStaff)
+                // MEASURED (2.26.0, Lab sessions/p694/ts3, the lysc-ly twins through
+                // sessions/p694/scriptdump.ily): LilyPond's Script origins on a bass tab, a turn /
+                // fermata / staccato / accent over each string, beamed and not, all agree now;
+                // the invented placement this replaces (the glyph centre a flat 1.0 from the
+                // digit, the stem tip or the staff edge) stood up to 1.0 off them.
+                // Y-up about the TAB staff's middle line, in staff spaces of the page.
+                double ss = space;
+                double tabMiddle = staffOffset + (strings - 1) * ss / 2;
+                int dir = tabAbove ? 1 : -1;
+                // The SUPPORT (Script_engraver): every head of the column — a fret digit, the
+                // one on the script's side reaching furthest — and the stem, unless it points
+                // away from the script.
+                // LILYPOND-REF: lily/script-engraver.cc:234-250 Script_engraver::acknowledge_rhythmic_head
+                // LILYPOND-REF: lily/script-engraver.cc:180-192 Script_engraver::acknowledge_stem
+                // LILYPOND-REF: lily/side-position-interface.cc:273-281 aligned_side — `if (dir == -get_grob_direction (e)) continue;`
+                // The digit's box is the DRAWN digit's, Lily#'s larger one (TabConstants.FretFontSize):
+                // user decision 2026-09-30 — a script clears the digit it would otherwise touch.
                 double fretHalf = TabConstants.FretDigitHeight(fonts) / 2.0;
-                double topLine = staffOffset;
-                double bottomLine = staffOffset + (strings - 1) * space;
-                // A stem-coupled mark (staccato/accent/tenuto/…) may sit INSIDE the
-                // tab staff, tucked just past the digit in the empty string-gap on the
-                // stem's FAR side; a forced-above script (fermata/ornament/bow/stopped/…)
-                // clears the whole staff. It must be the far side, though: an explicit
-                // .up/.down can force the mark onto the SAME side the stem travels
-                // (e.g. `@accent.down` on a top-string, stem-down note), where an inside
-                // mark collides with the stem — that case clears the whole staff instead.
-                // Tuning-agnostic — the string geometry drives it.
-                bool insideEligible = !IsForcedAbove(articulation) && (tabAbove != tabStemUp);
-                double tabY;
-                // `tabBeam is not null` is equivalent to isTabBeamed here (the
-                // TryGetValue out), but stated this way it narrows tabBeam to
-                // non-null for the TabBeamOuterEdgeY call inside.
-                if (tabAbove && tabBeam is not null && tabBeamUp)
+                int edgeString = geom.StemHeadString(item, stemUp: tabAbove);
+                double support = dir * (tabMiddle - geom.StringY(edgeString)) + fretHalf;
+                if (tabStemUp == tabAbove)
                 {
-                    // Beamed, stem-up: the beam floats above the digits, so an
-                    // above-script must clear the BEAM's outer edge at this note's x —
-                    // not just the digit — exactly like the companion notation staff.
-                    tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) - tabGap;
+                    // A beamed stem ends at its beam's outer edge; an unbeamed one at its tip.
+                    double? tip = tabBeam is not null
+                        ? TabBeamOuterEdgeY(tabBeam, geom, colX)
+                        : geom.UnbeamedStemTipY(item, stemUp: tabStemUp, edgeString);
+                    if (tip is { } stemEnd)
+                        support = Math.Max(support, dir * (tabMiddle - stemEnd));
                 }
-                else if (!tabAbove && tabBeam is not null && !tabBeamUp)
+                bool quantize = ShouldQuantize(articulation.Type);
+                double staffPadding = ArticulationSpacing.StaffPadding(articulation.Type);
+                // The staff's extent: its outer strings and half a line's thickness.
+                double staffExtent = (strings - 1) * ss / 2 + EngravingDefaults.StaffLineThickness / 2;
+                // include_staff: staff-padding set and no quantize-position puts the staff
+                // symbol's extent under the support.
+                // LILYPOND-REF: lily/side-position-interface.cc:217-223 aligned_side — include_staff
+                // LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — dim.set_minimum_height (staff_extents[dir])
+                if (!quantize)
+                    support = Math.Max(support, staffExtent);
+                // total_off = dist + dir * ss * padding.
+                // LILYPOND-REF: lily/side-position-interface.cc:353-370 aligned_side — `total_off += dir * ss * padding;`
+                double scriptUp = dir * (support + NearExtentOf(articulation, tabAbove, fonts)
+                                    + ss * PaddingFor(articulation.Type));
+                if (quantize)
                 {
-                    // Beamed, stem-down: the beam hangs below the digits, so a
-                    // below-script (e.g. a forced `@accent.down`) must clear the BEAM's
-                    // outer (bottom) edge, not just the bottom line — otherwise it
-                    // overprints the beam of its own long stem.
-                    tabY = TabBeamOuterEdgeY(tabBeam, geom, colX) + tabGap;
-                }
-                else if (tabAbove)
-                {
-                    // Above the note's own TOP digit. A stem-coupled mark tucks just
-                    // above that digit (inside the staff when it isn't the top string);
-                    // a forced-above script clears the whole staff (clamped to the top
-                    // line, so a low-string note's mark doesn't park at a phantom top
-                    // digit a staff away).
-                    int topString = geom.StemHeadString(item, stemUp: true);
-                    double noteTop = geom.StringY(topString);
-                    double clear = insideEligible
-                        ? noteTop - fretHalf
-                        : Math.Min(noteTop - fretHalf, topLine);
-                    // ⚠️ AND THE STEM, WHEN IT POINTS THIS WAY. An unbeamed up-stem
-                    // protrudes past the digits exactly as a beam does, and the BEAMED
-                    // branch above has always cleared the beam's outer edge — this one
-                    // had no stem term at all, so a forced-above script was seated on the
-                    // staff edge and the stem was drawn straight through it.
-                    // The CONDITION is LilyPond's, though the clamp around it is not:
-                    // LILYPOND-REF: lily/side-position-interface.cc:279-284 get_grob_direction
-                    //   — a support whose direction opposes the script's is skipped, so a
-                    //   stem is in the support exactly when it travels the script's way.
-                    // ⚠️ The rest of this branch is NOT aligned_side: it clamps to the staff
-                    //   and carries no glyph near-extent, which is why the two scripts below
-                    //   still land on ONE number. Named in HANDOFF §1 ▶ ⑵, not fixed here.
-                    // ⚠️ `!insideEligible` IS FOLDED OUT OF THE GUARD, and the proof is one
-                    //   line so the next reader does not have to redo it: insideEligible is
-                    //   `!forcedAbove && (tabAbove != tabStemUp)`, so inside THIS branch
-                    //   (tabAbove) a true tabStemUp makes the second conjunct false. Writing
-                    //   both would be a condition that cannot fire — but if insideEligible's
-                    //   definition changes, this fold is the thing that breaks.
-                    if (tabStemUp
-                        && geom.UnbeamedStemTipY(item, stemUp: true, topString) is { } tipUp)
-                        clear = Math.Min(clear, tipUp);
-                    tabY = clear - tabGap;
+                    // quantize-position in the tab's half-spaces. The script's X parent is the
+                    // stem's first head (calc_positioning_done), a TabNoteHead — a note head —
+                    // so the "between the head and the staff" arm applies too. A position is on a
+                    // line when it has the lines' parity: the strings, and the ledger positions
+                    // past them (on_line allows ledgers).
+                    // LILYPOND-REF: lily/side-position-interface.cc:409-432 aligned_side — quantize_position
+                    // LILYPOND-REF: lily/script-interface.cc:33-46 Script_interface::calc_positioning_done
+                    // LILYPOND-REF: lily/staff-symbol.cc Staff_symbol::on_line — line-positions, then ledger_positions
+                    double position = 2 * scriptUp / ss;
+                    double rounded = tabAbove ? Math.Ceiling(position) : Math.Floor(position);
+                    int outerLine = strings - 1;
+                    if ((position >= -outerLine - 1 && position <= outerLine + 1) || dir * position < 0)
+                    {
+                        scriptUp += (rounded - position) * 0.5 * ss;
+                        if (((int)rounded - outerLine) % 2 == 0)
+                            scriptUp += dir * 0.5 * ss;
+                    }
                 }
                 else
                 {
-                    // Below the note's own BOTTOM digit — inside the staff for a
-                    // stem-coupled mark (when it isn't the bottom string), else clamped
-                    // to the bottom line so a forced mark clears the whole staff.
-                    int bottomString = geom.StemHeadString(item, stemUp: false);
-                    double noteBottom = geom.StringY(bottomString);
-                    double clear = insideEligible
-                        ? noteBottom + fretHalf
-                        : Math.Max(noteBottom + fretHalf, bottomLine);
-                    // The same stem term on the other side (see the above branch).
-                    if (!tabStemUp
-                        && geom.UnbeamedStemTipY(item, stemUp: false, bottomString) is { } tipDown)
-                        clear = Math.Max(clear, tipDown);
-                    tabY = clear + tabGap;
+                    // staff-padding: the refpoint at least staff-padding (× ss) past the staff.
+                    // LILYPOND-REF: lily/side-position-interface.cc:433-453 aligned_side — staff_padding
+                    double diff = staffExtent + ss * staffPadding - dir * scriptUp;
+                    scriptUp += dir * Math.Max(diff, 0.0);
                 }
+                double tabY = tabMiddle - scriptUp;
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
                 string tabGlyph = articulation.Type switch

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="311.7" viewBox="0 0 119.50 31.17" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="308.9" viewBox="0 0 119.50 30.89" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="31.17" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="30.89" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="6">tab forced script side</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text class="music" x="9.14" y="19.56" font-size="4.00"></text>
@@ -26,9 +26,9 @@
   <line x1="21.45" y1="18.81" x2="29.09" y2="18.81" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="20.31" x2="29.09" y2="20.31" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="21.81" x2="29.09" y2="21.81" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="17.81" y="25.06" font-size="4.00" data-pos="101"></text>
-  <text class="music" x="20.60" y="16.73" font-size="4.00" data-pos="116"></text>
-  <text class="music" x="23.63" y="15.23" font-size="4.00" data-pos="126"></text>
+  <text class="music" x="17.81" y="24.78" font-size="4.00" data-pos="101"></text>
+  <text class="music" x="20.60" y="16.54" font-size="4.00" data-pos="116"></text>
+  <text class="music" x="23.63" y="15.73" font-size="4.00" data-pos="126"></text>
   <rect x="11.94" y="13.47" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="86"/>
   <text x="13.32" y="15.86" font-size="2.77" text-anchor="middle" data-pos="86">A</text>
   </g>
