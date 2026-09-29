@@ -278,6 +278,12 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **An edit in a section the form plays again reaches every play in the preview.** Stepping a
+  `chord(…)`'s shape (Ctrl+Shift+↑) in a section played six times redrew the first play's
+  diagram and kept the other five; typing a note there did the same. The incremental render
+  adopted its previous walk of the replayed section as if the edit lay past it — a replayed
+  measure cites the form's position, its notes the section's — and now walks those plays
+  again. A full render (`lysc`, the exports) was never affected.
 - **The preview plays the score it shows.** With `score main "p2" { staff p2 }` picked, Play
   (and the audition keys) sounded every part of the file, p1 included; the request now names the
   picked score and the MIDI sounds that score's parts and form. The same rule reaches every

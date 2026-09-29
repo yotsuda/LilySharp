@@ -446,6 +446,32 @@ public sealed partial class MeasureCollector
             }
         }
 
+        // A section the tail PLAYS AGAIN (the form's `A |: A … :| A`) is walked from its
+        // body's text wherever that body stands — usually ABOVE the candidate, so the
+        // measure-span test above cannot see it: a replayed measure's SourceStart is the
+        // form's bar or the previous play's end, its items cite the body. The tail's
+        // measures ARE the old walk of that body, so a window inside it makes them stale.
+        // MEASURED (user report 2026-09-29, C:\tmp\diagram.lys): `chord(C x35550)1@chord()`
+        // in a section the form plays six times; stepping the shape (Ctrl+Shift+↑) redrew
+        // the first play's diagram and the splice adopted the other five with the old
+        // shape — window [84,87), the replays' measures [124,99) / [102,99), items at 74.
+        // Each play appends the section's STRUCTURE read (ProcessSection), so the reads in
+        // the tail's range name exactly the sections it plays again; the structure test
+        // itself is by shape, never by span (HeaderRead.Structure says why), and the span
+        // test here is the suffix side's own. A trivia-only window changes no token and is
+        // let through, as the candidate-before-window guard lets it.
+        if ((w.Prefix < w.SuffixStart || w.Delta != 0) && rec.HeaderReads is { } tailReads)
+        {
+            for (int i = ck.HeaderReadCount; i < endCk.HeaderReadCount && i < tailReads.Count; i++)
+            {
+                var read = tailReads[i];
+                if (read.Structure != null
+                    && read.Span.Start < w.SuffixStart && read.Span.End >= w.Prefix
+                    && !CollectResumePlanner.WindowIsTriviaOnly(WalkProbe!))
+                    return DeclineSplice("a section the tail plays again holds the window");
+            }
+        }
+
         if (!SuffixStateMatches(ck, builder, w))
             return false; // SuffixStateMatches names the field
 
