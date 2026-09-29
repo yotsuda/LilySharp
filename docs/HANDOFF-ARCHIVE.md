@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第670セッションの経緯
+
+### 1.1 第670セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p670`（HEAD `77343645`・未 push 6・full **10242 / 0 / 2 / 10244**）。
+★★ **大文字小文字だけ違う綴りの quick fix＝完了**（`LilySharpLanguageServer.Editing.CaseSpellingAction`）: 「… case-sensitive: write 'X'」と言う診断（名前 `@upbow`→`@upBow`・値 `@ottava(BASSA)`・引数つきの名前 `@Mark("A")`→`@mark("A")`・コード形の語 `X32010`・layout のキー `ChordDiagrams`・値 `All`）に「Write 'X'」を出す。**文言を読む**だけで validator の span 規則は複写しない＝squiggle の文字列が X と大文字小文字違いで一致するときだけ出す（違えば黙る）。構文診断・意味診断の両方の輪に掛けた。
+★ 検証: 網 `Lsp/CaseSpellingQuickFixTests` 5（名前・値・引数つき／形の語とキー／typo は出さない）。
+★ **終了**: `93a1337b`「lsp: a quick fix for a spelling that differs from a real one only in case — "Write '@upBow'"」（site の editor 頁に 1 行）。`-End p670 -DiffBase 77343645` 緑・full **10247 / 0 / 2 / 10249**（run2.trx）。門 6 つ全 OK。§7.5 Core '+' 0 行（Lsp だけ）＝REF/OWN の話は無い。7.7 匂い: 提案は文言の regex 頼み（validator が文言を変えると黙る＝網が捕まえる）。push はユーザー（未 push 7）。
+
 ## 以下は第669セッションの経緯
 
 ### 1.1 第669セッション（2026-09-29・YT-DELL2）
