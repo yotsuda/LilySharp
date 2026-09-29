@@ -81,7 +81,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: 行の指番号と下の行の名前の上付きが 0.5 重なる（帯が上付きを数えない・第668）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
-- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672 で閉じた**。残り: ⑺ 双子の書かない section／⑻ スラッシュ記譜の tie／⑼〜⒂。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
+- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672・⑻ は第673 で閉じた**。残り: ⑺ 双子の書かない section／⑼〜⒂。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -118,6 +118,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第673セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p673`（HEAD `73dcf4f5`・未 push 12・full **10252 / 0 / 2 / 10254**）。
+★★ **⑻ スラッシュ記譜の tie が MusicXML で消える＝閉じた**（`5d4be237`）: `ProcessSlashNote` と bare duration のスラッシュの腕が `CloseTies`／`OpenTies` を呼ばず（`_lastEmittedNotes` も空にしていた＝兄弟の `~` も乗らない）、`/8~` の start は 9/28 の「stop の無い start は撤回」で tie ごと消えていた。両腕で音符と同じ対にし、`SameNotehead` は unpitched を「両方 slash の頭」のときだけ同じ頭とする（slash と実音の B4・ドラムは対にしない＝頁は LYS4007 で警告する所）。
+★ 検証: 網 `MusicXmlExportShapeTests` +1（`/8~ /8`・`/8~ | /4`・`/2~ | 4` の 3 対＝start と stop が隣り合う・`c'2~ /2` は対なし）・毒 3 本（slash 腕・bare 腕・`SameNotehead`）が各自赤（Lab `sessions/p673/poisons.ps1`）。射程: repo は `site/sketch-in-c.lys` 1 冊（`/8~ | /4`）・実コーパス 0＝MusicXML だけが変わる（頁・MIDI・双子は不変）。読み手（import）は unpitched を休符に丸めるので slash の tie は往復しない（既知）。
+★ **終了**: `-End p673 -DiffBase 73dcf4f5`＝full **10253 / 0 / 2 / 10255**（run2.trx）。§7.5 Core '+' 27 行／REF 0／OWN 0＝MusicXML の配管（LP の対応物は無い）。push はユーザー（未 push 14）。
+
+## 以下は第672セッションの経緯
+
 ### 1.1 第672セッション（2026-09-29・YT-DELL2）
 
 新しい会話（`/clear` の後・ユーザー「作業に着手して」）。★ `-Start p672`（HEAD `a3aa3ed6`・未 push 10・full **10249 / 0 / 2 / 10251**）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊が M＝改行だけ（`.gitattributes` の eol=lf に対し作業コピーが CRLF・中身の差分 0）＝私は触っていない・そのまま。
@@ -126,15 +135,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 検証: 網 3（`MultiMeasureRestTests`・`MusicXmlExportShapeTests`・`MusicXmlRoundTripTests` に +1 ずつ）・毒 3 本が各自の網だけ赤（Lab `sessions/p672/poisons.ps1`）・LP の絵（`< NUL`・`\compressMMRests` あり／なし・`probes/mmrest/out/`）と突き合わせ＝mark・p・fermata の位置は LP と同じ小節。射程: コーパス＋repo に `R*N@…` を書く本 0（audit の probe だけ）＝掃きは省略・MusicXML は `s` と `R*N` を持つ全本で変わる（意図した変化）。
 ⚠ **残した穴（LILYSHARP-OWN・`Annotations.cs` の `@text` の腕）**: `R*N@text` は LP では MultiMeasureRestText（UP・rest の span 中央・count の数字を side support に padding 0.2／staff-padding 0.25＝multi-measure-rest-engraver.cc:126-190 initialize_grobs）だが Lily# は TextScript のまま（DOWN・列の左）。UP にするだけだと "tacet" が "4" を貫く（数字の ink 箱が layout に無い＝`GlyphMetricsGenerated` は拍子数字の advance だけ）。
 ★ **終了**: `-End p672 -DiffBase a3aa3ed6`＝run2 は赤 4（HANDOFF 継ぎ目 3＝この文を書く前・citation 1＝`:131-150`→`:95-98` に直した）→ 直して full **10252 / 0 / 2 / 10254**（run4.trx・Core 0 警告 `--no-incremental`）。§7.5 Core '+' 122 行／REF 2／OWN 1（上の穴）。7.7 匂い: MusicXML の multiple-rest は読み手が畳まない（`r1 | r1 |` で戻る・音は同じ）。push はユーザー（未 push 12）。
-
-## 以下は第671セッションの経緯
-
-### 1.1 第671セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p671`（HEAD `27518b55`・未 push 8・full **10247 / 0 / 2 / 10249**）。
-★★ **MusicXML の既存欠陥 ⑴⑵⑹（第662 起票）を閉じた**: ⑹ **direction の位置**＝小節は direction を頭にまとめて書くので `c4 d@cresc` の wedge が 1 拍目に出ていた → `MusicXmlDirection.Offset`（divisions）を付けて `<offset>` で書く（`AddDirection` が `CurrentMeasurePosition` を刻む＝音符の印は音符を足す前に読むので音符の onset）。強弱は保留せず**その場で書く**（`_pendingDynamic` 撤去＝小節末の音符の強弱が次の小節の頭に出ていた・パート末の強弱は落ちていた）。読み手（`MusicXmlReader`）も `<offset>` を見て「その位置以降の最初の音符」に付ける（backup／forward で位置を動かす・残りは最後の音符へ）。⑴ `@unaCorda`／`@treCorde`＝`<words>una corda / tre corde</words>`（MusicXML に una corda の pedal type は無い・`@!unaCorda` は今まで開始の無い `<pedal type="stop">`）・`@quindicesima(.bassa)`＝`octave-shift size="15"`（stop も 15）。⑵ `@!X` の警告文＝終端を持つ 4 族を全部挙げる。
-★ 検証: 網 `MusicXmlExportShapeTests` +1（offset・words・size 15・末尾の強弱）・`MusicXmlRoundTripTests` +1（f'4@f と c'1@p が往復）。
-★ **終了**: `fb9549ce`「musicxml: a direction stands at its note (offset), the una corda and the quindicesima are written, the '@!X' words name every family (第662 ⑴⑵⑹)」。`-End p671 -DiffBase 27518b55` 緑・full **10249 / 0 / 2 / 10251**（run2.trx）。門 6 つ全 OK。§7.5 Core '+' 144 行／REF 0／OWN 0＝MusicXML の配管だけ（LP の対応物は無い・MusicXML の schema が出所）。7.7 匂い: 読み手は wedge／pedal／octave-shift を読まない（強弱だけ）・una corda は `<words>` なので読み戻しても `@unaCorda` にはならない。push はユーザー（未 push 9）。
 
 ## 2. 開いている作業
 
