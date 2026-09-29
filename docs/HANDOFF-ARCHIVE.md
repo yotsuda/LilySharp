@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第673セッションの経緯
+
+### 1.1 第673セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p673`（HEAD `73dcf4f5`・未 push 12・full **10252 / 0 / 2 / 10254**）。
+★★ **⑻ スラッシュ記譜の tie が MusicXML で消える＝閉じた**（`5d4be237`）: `ProcessSlashNote` と bare duration のスラッシュの腕が `CloseTies`／`OpenTies` を呼ばず（`_lastEmittedNotes` も空にしていた＝兄弟の `~` も乗らない）、`/8~` の start は 9/28 の「stop の無い start は撤回」で tie ごと消えていた。両腕で音符と同じ対にし、`SameNotehead` は unpitched を「両方 slash の頭」のときだけ同じ頭とする（slash と実音の B4・ドラムは対にしない＝頁は LYS4007 で警告する所）。
+★ 検証: 網 `MusicXmlExportShapeTests` +1（`/8~ /8`・`/8~ | /4`・`/2~ | 4` の 3 対＝start と stop が隣り合う・`c'2~ /2` は対なし）・毒 3 本（slash 腕・bare 腕・`SameNotehead`）が各自赤（Lab `sessions/p673/poisons.ps1`）。射程: repo は `site/sketch-in-c.lys` 1 冊（`/8~ | /4`）・実コーパス 0＝MusicXML だけが変わる（頁・MIDI・双子は不変）。読み手（import）は unpitched を休符に丸めるので slash の tie は往復しない（既知）。
+★ **終了**: `-End p673 -DiffBase 73dcf4f5`＝full **10253 / 0 / 2 / 10255**（run2.trx）。§7.5 Core '+' 27 行／REF 0／OWN 0＝MusicXML の配管（LP の対応物は無い）。push はユーザー（未 push 14）。
+
 ## 以下は第672セッションの経緯
 
 ### 1.1 第672セッション（2026-09-29・YT-DELL2）
