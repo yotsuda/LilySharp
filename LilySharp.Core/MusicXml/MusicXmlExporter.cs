@@ -483,15 +483,32 @@ public sealed class MusicXmlExporter
         _xmlRewind = false;
     }
 
-    /// <summary>Stops every carried tie on the plays that follow its play, and retracts the
-    /// starts nothing stops.</summary>
+    /// <summary>Stops every carried tie on the plays that follow its play, retracts the
+    /// starts nothing stops, and marks the start no arc leaves as the hanging tie the page
+    /// draws there.</summary>
+    /// <remarks>
+    /// The page's rule (SectionTieCarry): the arc goes to the play printed next when that
+    /// play is also played next; every other play that follows gets a repeat tie on its first
+    /// note — here a <c>&lt;tie type="stop"/&gt;</c> with no start before it, the spelling
+    /// <c>@repeatTie</c> gets — and when NO arc leaves the tied note (back to a <c>|:</c> at
+    /// the body's end, into a later ending only) the note carries a hanging tie, the
+    /// laissez-vibrer glyph. That last one is <c>&lt;tied type="let-ring"/&gt;</c>, the
+    /// spelling <c>@laissezVibrer</c> gets (ApplyHalfTies), beside the sounding
+    /// <c>&lt;tie type="start"/&gt;</c> the stop on the repeat's first note pairs with.
+    /// ⚠️ Until 2026-09-29 (HANDOFF §1.1 第663 ⑽) the hanging tie never reached the document:
+    /// the start stood alone, and a reader drew whatever it draws for a start with its stop
+    /// earlier in the part.
+    /// </remarks>
     private void FinishCarriedTies()
     {
         var successors = Svg.Collector.PlayedOrder.Successors(_printedPlays);
         foreach (var ((part, play), open) in _openAtEnd)
         {
             var matched = new HashSet<MusicXmlNote>();
-            if (play >= 1 && play <= successors.Length)
+            bool inRange = play >= 1 && play <= successors.Length;
+            // The play printed next (1-based play + 1 is 0-based play) is played next: the arc.
+            bool arc = inRange && successors[play - 1].Contains(play);
+            if (inRange)
                 foreach (int s in successors[play - 1])
                 {
                     if (!_firstOnset.TryGetValue((part, s + 1), out var targets))
@@ -504,8 +521,12 @@ public sealed class MusicXmlExporter
                         }
                 }
             foreach (var n in open)
+            {
                 if (!matched.Contains(n))
                     n.TieStart = false;
+                else if (!arc)
+                    LetRing(n);
+            }
         }
         _openAtEnd.Clear();
         _firstOnset.Clear();
@@ -3883,16 +3904,24 @@ public sealed class MusicXmlExporter
             switch (named.NameToken.Text)
             {
                 case "laissezVibrer":
-                    if (!xmlNote.ExtraNotations.Any(e => e.Name.LocalName == "tied"
-                            && (string?)e.Attribute("type") == "let-ring"))
-                        xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("tied",
-                            new System.Xml.Linq.XAttribute("type", "let-ring")));
+                    LetRing(xmlNote);
                     break;
                 case "repeatTie":
                     xmlNote.TieStop = true;
                     break;
             }
         }
+    }
+
+    /// <summary>The laissez-vibrer half-tie, <c>&lt;tied type="let-ring"/&gt;</c>, once —
+    /// written for <c>@laissezVibrer</c> and for the hanging tie a carried tie leaves
+    /// (FinishCarriedTies).</summary>
+    private static void LetRing(MusicXmlNote xmlNote)
+    {
+        if (!xmlNote.ExtraNotations.Any(e => e.Name.LocalName == "tied"
+                && (string?)e.Attribute("type") == "let-ring"))
+            xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("tied",
+                new System.Xml.Linq.XAttribute("type", "let-ring")));
     }
 
     /// <summary>A phrasing slur's <c>&lt;slur&gt;</c> end: number 2, the ordinary slurs

@@ -179,6 +179,7 @@ public class SectionCarryTests
         string xml = Xml(src);
         Assert.Equal(1, CountOf(xml, "<tie type=\"start\""));
         Assert.Equal(1, CountOf(xml, "<tie type=\"stop\""));
+        Assert.Equal(0, CountOf(xml, "<tied type=\"let-ring\""));  // an arc, no hanging tie
     }
 
     /// <summary>At the end of a repeat's body, back to its <c>|:</c>: the note the pass returns
@@ -205,6 +206,12 @@ public class SectionCarryTests
         string xml = Xml(src);
         Assert.Equal(1, CountOf(xml, "<tie type=\"start\""));
         Assert.Equal(1, CountOf(xml, "<tie type=\"stop\""));
+        // The hanging tie the page draws on the tied note is the document's let-ring, on
+        // that same note (the start with no arc) — until 2026-09-29 it was not written at
+        // all (第663 ⑽). Poison (RULES §5.4): drop the `else if (!arc) LetRing(n)` arm of
+        // FinishCarriedTies and this goes red while the arc case above stays green.
+        Assert.Equal(1, CountOf(xml, "<tied type=\"let-ring\""));
+        Assert.Matches(@"<tie type=""start"" />[\s\S]{0,400}?<tied type=""let-ring"" />", xml);
         Assert.Contains("\\repeatTie", Twin(src));
     }
 
@@ -252,6 +259,12 @@ public class SectionCarryTests
         Assert.False(notes[1].HasLaissezVibrer);
         string twin = Twin(src);
         Assert.Equal(1, CountOf(twin, "\\repeatTie"));
+        // MusicXML: both ties start, ending 1 and ending 2 stop A's, D stops C's — and no
+        // let-ring, since an arc leaves each tied note.
+        string xml = Xml(src);
+        Assert.Equal(2, CountOf(xml, "<tie type=\"start\""));
+        Assert.Equal(3, CountOf(xml, "<tie type=\"stop\""));
+        Assert.Equal(0, CountOf(xml, "<tied type=\"let-ring\""));
         // Pass 1: A's c into B; pass 2: A's c into C; C's c into D.
         Assert.Equal([(84, 0, 1920), (84, 1920, 3840), (84, 5760, 1920), (84, 7680, 3840),
             (84, 11520, 3840)], Midi(src));
