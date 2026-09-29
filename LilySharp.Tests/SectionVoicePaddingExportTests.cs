@@ -403,6 +403,12 @@ public class SectionVoicePaddingExportTests
         var doc = Xml(ChordRowLonger);
         var melody = doc.Parts.Single(p => p.Measures.Count > 0);
         Assert.Equal(3, melody.Measures.Count);
-        Assert.True(melody.Measures[1].Notes.Single().IsRest);
+        // The padding bar is a bar of silence — carrying the row's G7, the harmony the bar
+        // exists for (2026-09-29: a placed row's symbols are the staff's <harmony> elements).
+        var padded = melody.Measures[1];
+        Assert.True(padded.Notes.Single(n => n.RawElement == null).IsRest);
+        Assert.Contains("<root-step>G</root-step>", padded.Notes.Single(n => n.RawElement != null).RawElement!.ToString());
+        // …and numbered in sequence: the empty measure the closing bar line opened is not counted.
+        Assert.Equal(new[] { 1, 2, 3 }, melody.Measures.Select(m => m.Number));
     }
 }

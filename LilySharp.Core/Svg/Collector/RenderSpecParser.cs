@@ -483,25 +483,51 @@ public static class RenderSpecParser
     public static string? SingleEngravedPart(
         SyntaxTree tree, RenderSpec? score, FormDeclarationSyntax? form)
     {
-        var spec = score;
-        if (spec == null)
-        {
-            var played = form ?? Semantics.ScoreForms.Primary(tree.GetRoot());
-            RenderSpec? first = null;
-            foreach (var s in FindAll(tree))
-            {
-                first ??= s;
-                if (played != null && ReferenceEquals(s.Form, played))
-                {
-                    spec = s;
-                    break;
-                }
-            }
-            spec ??= first;
-        }
+        var spec = PlayedSpec(tree, score, form);
         if (spec == null) return null;
         var parts = spec.EngravedPartNames;
         return parts.Length == 1 ? parts[0] : null;
+    }
+
+    /// <summary>
+    /// The score being PLAYED: <paramref name="score"/> when the caller named one; else the one
+    /// whose form is <paramref name="form"/> (the form being played); else the file's first;
+    /// null when the file has none. ONE HOME for <see cref="SingleEngravedPart"/>, the MIDI's
+    /// sounding chord rows and the MusicXML's harmonies (<see cref="PlacedChordRows"/>).
+    /// </summary>
+    public static RenderSpec? PlayedSpec(SyntaxTree tree, RenderSpec? score, FormDeclarationSyntax? form)
+    {
+        if (score != null)
+            return score;
+        var played = form ?? Semantics.ScoreForms.Primary(tree.GetRoot());
+        RenderSpec? first = null;
+        foreach (var s in FindAll(tree))
+        {
+            first ??= s;
+            if (played != null && ReferenceEquals(s.Form, played))
+                return s;
+        }
+        return first;
+    }
+
+    /// <summary>
+    /// The chord tracks <paramref name="spec"/> PLACES — its <c>chords NAME</c> rows and its
+    /// staves' attached chord parts. Only these sound in the MIDI (owner decision 2026-09-25)
+    /// and write MusicXML <c>&lt;harmony&gt;</c> (owner decision 2026-09-29): a chord track no
+    /// score shows is a sketch, not part of the piece. Empty for no score.
+    /// </summary>
+    public static HashSet<string> PlacedChordRows(RenderSpec? spec)
+    {
+        var rows = new HashSet<string>(StringComparer.Ordinal);
+        if (spec == null)
+            return rows;
+        foreach (var item in spec.Items)
+            if (item is ChordRowSpec chordRow)
+                rows.Add(chordRow.PartName);
+        foreach (var binding in spec.GetVoiceBindings())
+            if (binding.WithChords is { } attached)
+                rows.Add(attached);
+        return rows;
     }
 
     /// <summary>

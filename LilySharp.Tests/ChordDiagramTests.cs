@@ -1623,6 +1623,88 @@ public class ChordDiagramTests
         Assert.True(pitch >= 0 && pitch < harmony && harmony < half.IndexOf("<rest", StringComparison.Ordinal), half);
     }
 
+    // ================================================================ chord rows in MusicXML
+    // Owner's decisions 2026-09-29 (HANDOFF §2 K5 ①'s last item): a chords row's symbols are
+    // <harmony> elements in the part of the staff directly under the row (the next staff in the
+    // score's order, else its first), each at its slot's <offset>; a lead sheet with no staff
+    // gets a part of whole rests named "ROW (chords)"; an @chord of the same chord at the same
+    // moment is dropped; N.C. writes nothing, as a rest's @chord path writes only a symbol.
+
+    private static string Measure(string xml, int number)
+        => Regex.Match(xml, $"<measure number=\"{number}\".*?</measure>", RegexOptions.Singleline).Value;
+
+    [Fact]
+    public void ARow_WritesItsSymbolsAsHarmonies_InTheStaffUnderIt_AtTheirOffsets()
+    {
+        string xml = Xml(Song(Guitar, "C G7 | F . Am . | r Dm |", "c'1 | c'1 | c'1 |"));
+        Assert.DoesNotContain("(chords)", xml);   // the row is no part of its own: gt holds it
+        string m1 = Measure(xml, 1), m2 = Measure(xml, 2), m3 = Measure(xml, 3);
+        Assert.Equal(2, Regex.Matches(m1, "<harmony>").Count);
+        // The bar's head: no offset. Beat 3 of 4/4: two quarters of 24 divisions.
+        Assert.Matches("<root-step>C</root-step>\\s*</root>\\s*<kind>major</kind>\\s*</harmony>", m1);
+        Assert.Matches("<root-step>G</root-step>\\s*</root>\\s*<kind>dominant</kind>\\s*<offset>48</offset>", m1);
+        Assert.Matches("<root-step>F</root-step>\\s*</root>\\s*<kind>major</kind>\\s*</harmony>", m2);
+        Assert.Matches("<root-step>A</root-step>\\s*</root>\\s*<kind>minor</kind>\\s*<offset>48</offset>", m2);
+        // N.C. writes nothing; the Dm after it keeps its offset.
+        Assert.Single(Regex.Matches(m3, "<harmony>"));
+        Assert.Matches("<root-step>D</root-step>\\s*</root>\\s*<kind>minor</kind>\\s*<offset>48</offset>", m3);
+        // The harmonies stand at the head of the bar's stream.
+        Assert.True(m1.LastIndexOf("</harmony>", StringComparison.Ordinal) < m1.IndexOf("<note", StringComparison.Ordinal), m1);
+        // A row the score does not place writes nothing.
+        Assert.DoesNotContain("<harmony>", Xml(Song(Guitar, "C G7 |", "c'1 |", "staff gt")));
+    }
+
+    [Fact]
+    public void ARowsHarmony_DropsTheSameChordsAtChord_AndCarriesTheDrawnFrame()
+    {
+        // @chord(C) at beat 1 beside the row's C: one harmony; the row's G7 at beat 3 and an
+        // @chord(Am) there: both stand.
+        string m1 = Measure(Xml(Song(GuitarAll, "C G7 |", "c'2@chord(C) a'2@chord(Am) |")), 1);
+        Assert.Equal(3, Regex.Matches(m1, "<harmony>").Count);
+        Assert.Single(Regex.Matches(m1, "<root-step>C</root-step>"));
+        Assert.Single(Regex.Matches(m1, "<root-step>A</root-step>"));
+        // Under `all` the row's F draws LilyPond's shape with its fingers and barre; a written
+        // shape has neither; under `chordDiagrams none` no frame at all.
+        string xml = Xml(Song(GuitarAll, "F | F(xx3211) |", "c'1 | c'1 |"));
+        Assert.Contains("<fingering>", Measure(xml, 1));
+        Assert.Contains("<barre type=\"start\" />", Measure(xml, 1));
+        Assert.Contains("<frame-strings>6</frame-strings>", Measure(xml, 2));
+        Assert.DoesNotContain("<fingering>", Measure(xml, 2));
+        Assert.DoesNotContain("<frame>", Xml(Song(NoDiagrams, "F |", "c'1 |")));
+        // A degree names its chord in the key: IV in G is C.
+        Assert.Contains("<root-step>C</root-step>", Xml(Song("key g major\n" + Guitar, "IV |", "c'1 |")));
+    }
+
+    [Fact]
+    public void ALeadSheetsRow_GetsAPartOfRests_AndTheByPartFormReadsTheSame()
+    {
+        const string sheet = """
+            octave absolute
+            section A { chords prog { C | G7 . Am . | } lyrics words { la | la la | } }
+            form main { A }
+            score main "sheet" { chords prog lyrics words }
+            """;
+        string xml = Xml(sheet);
+        Assert.Contains("prog (chords)", xml);
+        Assert.DoesNotContain("Part 1", xml);
+        Assert.Equal(2, Regex.Matches(xml, "<measure number=").Count);
+        Assert.Equal(2, Regex.Matches(xml, "<rest").Count);
+        Assert.Equal(3, Regex.Matches(xml, "<harmony>").Count);
+        Assert.Contains("<offset>48</offset>", Measure(xml, 2));
+        const string byPart = """
+            octave absolute
+            part gt { clef treble  section A { c'1 | c'1 | } }
+            chords prog { section A { C | G7 . Am . | } }
+            form main { A }
+            score main { chords prog  staff gt }
+            """;
+        string xml2 = Xml(byPart);
+        Assert.DoesNotContain("(chords)", xml2);
+        Assert.Equal(3, Regex.Matches(xml2, "<harmony>").Count);
+        Assert.Contains("<offset>48</offset>", Measure(xml2, 2));
+        Assert.Contains("<pitch>", Measure(xml2, 2));   // the row's harmonies sit in gt's bars
+    }
+
     [Fact]
     public void OnARest_TheHoverShowsTheDiagram()
     {

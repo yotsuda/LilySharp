@@ -327,6 +327,10 @@ public sealed class MusicXmlExporter
         // with silent measures when its span ends (PadVoice), as the page pads its staff.
         _sectionBars = Svg.Collector.SectionBarCounts.BuildSemanticIndex(root);
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
+        _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
+        _placedChordRows = RenderSpecParser.PlacedChordRows(_playedSpec);
+        _pendingChordRows.Clear();
+        _playStartMeasure.Clear();
         _homeTonic = ScoreHomeKey.Read(root);
         _ambientTonic = _homeTonic;
 
@@ -356,6 +360,9 @@ public sealed class MusicXmlExporter
             _homeTime = (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura);
             BuildSectionHeaderRegistry(root);
             ProcessSections(root);
+            // The chord rows, once every part has written its bars (their measures are the
+            // rows' homes). A flat top-level chord track is not handled, as the MIDI's is not.
+            EmitPendingChordRows();
         }
 
         return _document;
@@ -652,6 +659,23 @@ public sealed class MusicXmlExporter
         _sectionTempo = _sectionHeaderTempos.TryGetValue(section.SectionName, out var headerTempo) ? headerTempo : null;
         _sectionPartial = _sectionHeaderPartials.TryGetValue(section.SectionName, out var headerPartial) ? headerPartial : null;
 
+        // The section's chord rows (owner's decisions 2026-09-29, EmitPendingChordRows): a
+        // by-part chord track's section (`chords prog { section A { … } }`) holds a placed
+        // row's bars and no part's music — remembered for this play, and nothing else of it
+        // is written (until then it was walked as inline music under the bare-section owner
+        // and wrote nothing but, on a lead sheet, an empty "Part 1"). A by-section cell
+        // (`section A { … chords prog { C | F | } }`) is remembered beside its parts.
+        if (section.Parent is ChordPartBlockSyntax byPartTrack)
+        {
+            if (byPartTrack.PartName is { } trackRow && _placedChordRows.Contains(trackRow))
+                RememberChordRow(trackRow, Svg.Collector.ChordNameCollector.SectionItems(section));
+            return;
+        }
+        for (int i = 0; i < section.SlotCount; i++)
+            if (section.GetChild(i) is ChordPartBlockSyntax { HasSections: false, PartName: { } cellRow } cell
+                && _placedChordRows.Contains(cellRow))
+                RememberChordRow(cellRow, cell.Items);
+
         // Each section may contain part blocks
         var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
 
@@ -680,12 +704,15 @@ public sealed class MusicXmlExporter
             if (firstPart != null && sectionLyrics.Count > 0)
                 AttachLyrics(firstPart, firstBefore, sectionLyrics);
         }
-        else if (IsHeaderOnly(section))
+        else if (IsHeaderOnly(section)
+                 || (DirectChildren(section).Any() && DirectChildren(section).All(c => c is ChordPartBlockSyntax or LyricsBlockSyntax)))
         {
             // A standalone header (`section A { partial 8 }` beside the parts' cells): its
             // directives have already reached the registry, and it holds no music — emitting
             // it opened a part for it ("Part 1" when no single engraved part owned it) and
-            // wrote nothing into it, an empty <part/>.
+            // wrote nothing into it, an empty <part/>. A lead sheet's section — chord cells and
+            // lyrics, no notes — is the same empty part (2026-09-29): its rows are remembered
+            // above and get a part of their own (EmitRowAsItsOwnPart).
         }
         else
         {
@@ -1048,7 +1075,14 @@ public sealed class MusicXmlExporter
         if (_currentPartName != null && _openAtEnd.Remove((_currentPartName, _xmlPlaySerial), out var hanging))
             foreach (var n in hanging) n.TieStart = false;
         if (_currentMeasure == null)
+        {
+            // The number follows the part's last written bar: the empty measure the block's
+            // closing bar line opened took a number and was dropped unwritten by
+            // FlushCurrentMeasure, so the padding bar was numbered one too high (measured
+            // 2026-09-29 on SectionVoicePaddingExportTests' ChordRowLonger: 1, 3, 3).
+            _measureNumber = _currentPart is { Measures.Count: > 0 } p ? p.Measures[^1].Number + 1 : 1;
             StartNewMeasure();
+        }
         var bar = new BarlineSyntax(new Syntax.InternalSyntax.BarlineGreen(
             new Syntax.InternalSyntax.SyntaxToken(SyntaxKind.Bar, "|"), null, null), null, voice.Position);
         for (int i = 0; i < missing + (open ? 1 : 0); i++)
@@ -1179,6 +1213,8 @@ public sealed class MusicXmlExporter
         // Process the music; lyrics blocks are collected and mapped onto the emitted
         // notes afterwards.
         int measuresBefore = _currentPart!.Measures.Count;
+        // Where this play's bars of the part start — the home of a chord row's harmonies.
+        _playStartMeasure.TryAdd((partName, _xmlPlaySerial), measuresBefore);
         var lyricsBlocks = new List<LyricsBlockSyntax>();
         foreach (var child in children)
         {
@@ -4117,6 +4153,291 @@ public sealed class MusicXmlExporter
             frame.Add(note);
         }
         return frame;
+    }
+
+    // ---- chord rows as <harmony> (owner's decisions 2026-09-29, HANDOFF §2 K5 ①) ------------
+    //
+    // MusicXML has no chord-only part: a <harmony> lives in a part's <measure> at a musical
+    // position. So a placed `chords NAME` row is written into the part of the staff DIRECTLY
+    // UNDER it in the score's order (the next staff after the row, else the score's first —
+    // the page's own rule, "a row directly above a staff aligns over it"), each symbol at its
+    // slot's <offset> from the bar's head; a lead sheet with no staff at all gets a part of
+    // whole rests named "ROW (chords)" (the MIDI's track name) to hold them. An @chord of the
+    // SAME chord at the SAME moment is dropped (the page joins the two names on one line); a
+    // different one stands beside the row's. A rest (N.C.) and a leading '.' write nothing,
+    // as a rest carrying no symbol writes no harmony. Every written symbol is written again
+    // (`C | C |` is two harmonies), as the MIDI strikes it again. The harmony is the SOUNDING
+    // chord (a degree resolved in the key at its bar, a capo score's written name); the
+    // <frame> is the shape the page draws under the symbol (ChordShapes.Drawn on the target
+    // staff's tuning — pressed, under a capo), fingers and barre included.
+    // LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+    // own lead sheets carry their harmonies in the melody's part, which is what this mirrors.
+
+    /// <summary>One placed chord row's bars in one printed play, with the section state its
+    /// symbols are read in (meter for the slot grid, key for a degree, the pickup that cuts
+    /// its first bar).</summary>
+    private sealed record PendingChordRow(int Play, string Row, List<SyntaxNode> Items,
+        int Beats, int BeatType, Fraction? Pickup, int TonicStep, int Sharps,
+        (int Fifths, string Mode, string? Custom) Key);
+
+    private readonly List<PendingChordRow> _pendingChordRows = new();
+    /// <summary>The measure index a part's bars of a printed play begin at.</summary>
+    private readonly Dictionary<(string Part, int Play), int> _playStartMeasure = new();
+    private HashSet<string> _placedChordRows = new(StringComparer.Ordinal);
+    private RenderSpec? _playedSpec;
+
+    /// <summary>Remembers a placed row's bars of the section being emitted, with the section's
+    /// meter, key and pickup — the state <see cref="EmitPartMusic"/> applies to its parts
+    /// (the section's header, else the score's home).</summary>
+    private void RememberChordRow(string row, IEnumerable<SyntaxNode> items)
+    {
+        int beats = _timeNumerator, beatType = _timeDenominator;
+        if (_sectionTime is { } st)
+        {
+            if (!st.IsSenzaMisura)
+                (beats, beatType) = (st.Beats, st.BeatType);
+        }
+        else if (_homeTime is { } ht && !ht.Senza)
+            (beats, beatType) = (ht.Beats, ht.BeatType);
+        var (fifths, mode, custom) = _homeKey ?? (_keyFifths, _keyMode, _keyCustomXml);
+        var tonic = _homeTonic;
+        if (_sectionKey is { } sk)
+        {
+            tonic = KeyTonic.Of(sk);
+            if (sk.IsCustom)
+                (fifths, custom) = (0, LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(sk.CustomAlterations));
+            else
+            {
+                mode = sk.Mode.Text.ToLowerInvariant();
+                fifths = KeySpelling.SharpsFor(sk.Pitch?.ToFullString().Trim().ToLower() ?? "", mode) ?? 0;
+                custom = null;
+            }
+        }
+        _pendingChordRows.Add(new PendingChordRow(_xmlPlaySerial, row, items.ToList(), beats, beatType,
+            _sectionPartial?.ToFraction(), tonic.Valid ? tonic.Step : 0, fifths, (fifths, mode, custom)));
+    }
+
+    /// <summary>A row's items split into bars, as the page and the MIDI split them
+    /// (<c>MidiExporter.PlayChordRow</c>): every bar line closes a bar — a <c>|</c> opening the
+    /// run closes an EMPTY one — except <c>|:</c>, which only closes what is pending.</summary>
+    private static List<List<SyntaxNode>> RowBars(IReadOnlyList<SyntaxNode> items)
+    {
+        var bars = new List<List<SyntaxNode>>();
+        var bar = new List<SyntaxNode>();
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax barline)
+            {
+                if (Svg.Collector.MeasureCollector.ParseBarlineType(barline.BarText) != Svg.Model.BarlineType.RepeatStart
+                    || bar.Count > 0)
+                {
+                    bars.Add(bar);
+                    bar = new List<SyntaxNode>();
+                }
+                continue;
+            }
+            if (item is ChordEntrySyntax or RestSyntax or ChordExtendSyntax)
+                bar.Add(item);
+        }
+        if (bar.Count > 0)
+            bars.Add(bar);
+        return bars;
+    }
+
+    /// <summary>
+    /// The part a row's harmonies go to: the part of a staff that names the row as its attached
+    /// chords, else the first staff AFTER the row in the score's order, else the score's first
+    /// staff; null when the score engraves no staff at all (<paramref name="scoreHasStaff"/>
+    /// false: a lead sheet, whose row gets a part of its own).
+    /// </summary>
+    private string? RowTargetPart(string row, out bool scoreHasStaff)
+    {
+        scoreHasStaff = false;
+        if (_playedSpec is not { } spec)
+            return null;
+        var items = spec.Items;
+        int rowAt = -1;
+        for (int i = 0; i < items.Length; i++)
+            if (items[i] is ChordRowSpec r && r.PartName == row)
+            {
+                rowAt = i;
+                break;
+            }
+        string? first = null, after = null;
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (items[i] is SingleStaffSpec { Staff.WithChords: { } attached } s && attached == row)
+                return s.Staff.VoiceName;
+            if (FirstEngravedPart(items[i]) is not { } name)
+                continue;
+            first ??= name;
+            if (i > rowAt)
+                after ??= name;
+        }
+        scoreHasStaff = first != null;
+        return after ?? first;
+    }
+
+    /// <summary>The first part a score item engraves on a staff, or null (a row, an ossia).</summary>
+    private static string? FirstEngravedPart(RenderItemSpec item) => item switch
+    {
+        SingleStaffSpec s => s.Staff.VoiceName,
+        TabStaffSpec t => t.Staff.VoiceName,
+        GrandStaffRenderSpec g => g.GrandStaff.Members.Select(FirstEngravedPart).FirstOrDefault(n => n != null),
+        CondensedStaffSpec c => c.PartNames.FirstOrDefault(),
+        CombinedStaffSpec cb => cb.PartNames.FirstOrDefault(),
+        _ => null,
+    };
+
+    /// <summary>Writes every remembered row into its target part's measures of its play, or
+    /// into a part of its own on a lead sheet.</summary>
+    private void EmitPendingChordRows()
+    {
+        if (_pendingChordRows.Count == 0)
+            return;
+        DiagramTuning();   // reads the score's chordDiagrams word (the tuning is per target part)
+        foreach (var pending in _pendingChordRows)
+        {
+            var bars = RowBars(pending.Items);
+            string? target = RowTargetPart(pending.Row, out bool scoreHasStaff);
+            if (target != null)
+            {
+                // The part wrote nothing in this play: no bar of its holds the harmony.
+                if (!_partsByName.TryGetValue(target, out var part)
+                    || !_playStartMeasure.TryGetValue((target, pending.Play), out int start))
+                    continue;
+                var header = PartHeaderDefaults.Read(
+                    _root?.DescendantNodes().OfType<PartDeclarationSyntax>().FirstOrDefault(pd => pd.Name.Text == target));
+                var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, header.FrettedTuning);
+                for (int k = 0; k < bars.Count && start + k < part.Measures.Count; k++)
+                {
+                    var measure = part.Measures[start + k];
+                    AddRowHarmonies(measure, bars[k], pending, tuning, k == 0 && measure.Implicit ? pending.Pickup : null);
+                }
+            }
+            else if (!scoreHasStaff)
+                EmitRowAsItsOwnPart(pending, bars);
+        }
+        _pendingChordRows.Clear();
+    }
+
+    /// <summary>
+    /// One bar's symbols as harmonies at the head of <paramref name="measure"/>'s stream, each
+    /// with its slot's offset — the grid every reader of a row shares
+    /// (<see cref="Svg.Collector.ChordNameCollector.SlotGroups"/>) — dropping an @chord of the
+    /// same chord at the same moment. A slot past a pickup's end (<paramref name="cut"/>) is
+    /// not written, as the MIDI does not play it.
+    /// </summary>
+    private void AddRowHarmonies(MusicXmlMeasure measure, List<SyntaxNode> bar, PendingChordRow pending,
+        TuningType? tuning, Fraction? cut)
+    {
+        if (bar.Count == 0)
+            return;
+        var existing = HarmoniesWithOnsets(measure);
+        int insertAt = 0;
+        foreach (var (node, timing, _) in Svg.Collector.ChordNameCollector.SlotGroups(bar, pending.Beats, pending.BeatType, out _))
+        {
+            if (node is not ChordEntrySyntax entry)
+                continue;   // N.C. and a bar-head '.' write nothing
+            if (cut is { } pickup && timing >= pickup)
+                continue;
+            if (Svg.Collector.ChordNameCollector.StructureOf(entry.SymbolText, pending.TonicStep, pending.Sharps) is not { } chord)
+                continue;
+            if (BuildHarmony(chord.PrintedSymbol(LilySharp.Core.Semantics.ChordSpelling.Canonical).Text) is not { } harmony)
+                continue;
+            if (tuning is { } t)
+            {
+                var shapes = Semantics.ChordDiagramScores.ShapesOf(entry).Shapes;
+                var drawn = Music.ChordShapes.Drawn(t, shapes, DiagramsAll, chord, DiagramTable,
+                    DiagramTable != null ? Semantics.ChordDiagramScores.SectionNameOf(entry) : null, DiagramCapo);
+                if (drawn != null && BuildFrame(drawn.FrameSpec) is { } frame)
+                    harmony.Add(frame);
+            }
+            int offset = FractionToTicks(timing);
+            if (offset > 0)
+                harmony.Add(new System.Xml.Linq.XElement("offset", offset));
+            foreach (var (note, onset) in existing)
+                if (onset == offset && note.RawElement is { } other && SameChord(other, harmony))
+                    measure.Notes.Remove(note);
+            measure.Notes.Insert(insertAt++, new MusicXmlNote { RawElement = harmony });
+        }
+    }
+
+    /// <summary>The measure's harmonies with the position (divisions from the bar's head) each
+    /// stands at: its place in the stream, plus its own offset.</summary>
+    private static List<(MusicXmlNote Note, int Onset)> HarmoniesWithOnsets(MusicXmlMeasure measure)
+    {
+        var list = new List<(MusicXmlNote, int)>();
+        int position = 0;
+        foreach (var n in measure.Notes)
+        {
+            if (n.RawElement is { } raw)
+            {
+                if (raw.Name.LocalName == "harmony")
+                    list.Add((n, position + ((int?)raw.Element("offset") ?? 0)));
+                continue;
+            }
+            if (n.IsBackup)
+            {
+                position -= n.Duration;
+                continue;
+            }
+            if (n.IsGrace || n.IsChord)
+                continue;
+            position += n.Duration;
+        }
+        return list;
+    }
+
+    /// <summary>Two harmonies naming one chord: the same root, kind and bass (the frame and the
+    /// offset are not the chord).</summary>
+    private static bool SameChord(System.Xml.Linq.XElement a, System.Xml.Linq.XElement b)
+    {
+        static bool Same(System.Xml.Linq.XElement? x, System.Xml.Linq.XElement? y)
+            => x == null ? y == null : y != null && System.Xml.Linq.XNode.DeepEquals(x, y);
+        return Same(a.Element("root"), b.Element("root"))
+            && Same(a.Element("kind"), b.Element("kind"))
+            && Same(a.Element("bass"), b.Element("bass"));
+    }
+
+    /// <summary>A lead sheet's row (a score with no staff): a part named "ROW (chords)" — the
+    /// MIDI's track name — of one whole rest a bar (the pickup's length for a pickup bar), the
+    /// harmonies at their offsets, in the treble clef, the section's key and meter.</summary>
+    private void EmitRowAsItsOwnPart(PendingChordRow pending, List<List<SyntaxNode>> bars)
+    {
+        EnsurePart(pending.Row + " (chords)");
+        _currentTranspose = null;
+        _partTransposeSemitones = 0;
+        SetClef("treble");
+        _keyFifths = pending.Key.Fifths;
+        _keyMode = pending.Key.Mode;
+        _keyCustomXml = pending.Key.Custom;
+        (_timeNumerator, _timeNumeratorText, _timeDenominator, _timeSenzaMisura) = (pending.Beats, null, pending.BeatType, false);
+        _attributesDirty = true;
+        var tuning = Semantics.ChordDiagramsKey.Resolve(_diagramsWord.Word, null);
+        for (int k = 0; k < bars.Count; k++)
+        {
+            bool first = _currentPart!.Measures.Count == 0;
+            StartNewMeasure(addAttributes: first);
+            var length = new Fraction(pending.Beats, pending.BeatType);
+            Fraction? cut = null;
+            if (k == 0 && pending.Pickup is { } pickup && pickup < length)
+            {
+                length = pickup;
+                cut = pickup;
+                _currentMeasure!.Implicit = true;
+                if (first)
+                {
+                    _currentMeasure.Number = 0;
+                    _measureNumber = 1;
+                }
+            }
+            var (type, dots) = GetNoteType(length);
+            _currentMeasure!.Notes.Add(new MusicXmlNote { IsRest = true, Duration = FractionToTicks(length), Type = type, Dots = dots });
+            AddRowHarmonies(_currentMeasure, bars[k], pending, tuning, cut);
+            _currentPart.Measures.Add(_currentMeasure);
+            _currentMeasure = null;
+        }
     }
 
     private void EmitPendingDynamic()

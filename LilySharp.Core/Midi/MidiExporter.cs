@@ -1205,21 +1205,8 @@ public sealed class MidiExporter
     /// </summary>
     private static HashSet<string> SoundingChordRows(SyntaxTree tree, RenderSpec? score,
         FormDeclarationSyntax? form)
-    {
-        var spec = score
-            ?? (form != null ? RenderSpecParser.FindAll(tree).FirstOrDefault(s => s.Form == form) : null)
-            ?? RenderSpecParser.FindFirst(tree);
-        var rows = new HashSet<string>(StringComparer.Ordinal);
-        if (spec == null)
-            return rows;
-        foreach (var item in spec.Items)
-            if (item is ChordRowSpec chordRow)
-                rows.Add(chordRow.PartName);
-        foreach (var binding in spec.GetVoiceBindings())
-            if (binding.WithChords is { } attached)
-                rows.Add(attached);
-        return rows;
-    }
+        // ONE HOME with the MusicXML's harmonies (RenderSpecParser.PlacedChordRows, 2026-09-29).
+        => RenderSpecParser.PlacedChordRows(RenderSpecParser.PlayedSpec(tree, score, form));
 
     /// <summary>
     /// Sounds one chord row's bars from <paramref name="startTick"/> and returns where they

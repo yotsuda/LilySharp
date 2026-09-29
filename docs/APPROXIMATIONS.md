@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
-| `OWN` | 194 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **310** | |
+| `OWN` | 195 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **311** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -230,7 +230,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（194 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（195 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2931** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -242,8 +242,8 @@
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:496** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
-- **:1235** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2692** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:1222** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **:2679** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordShapes.cs`
@@ -261,7 +261,8 @@
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
-- **:451** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **:458** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **:4173** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
