@@ -85,14 +85,6 @@
   <line x1="43.12" y1="7.77" x2="52.72" y2="7.77" stroke="#000000" stroke-width="0.160" data-pos="2276"/>
   <line x1="52.72" y1="7.77" x2="52.72" y2="9.85" stroke="#000000" stroke-width="0.160" data-pos="2276"/>
   <text x="44.12" y="9.50" font-size="1.75" font-weight="bold" data-pos="2276">2.</text>
-  <line x1="31.73" y1="7.77" x2="31.73" y2="9.85" stroke="#000000" stroke-width="0.160" data-pos="2262"/>
-  <line x1="31.73" y1="7.77" x2="42.19" y2="7.77" stroke="#000000" stroke-width="0.160" data-pos="2262"/>
-  <line x1="42.19" y1="7.77" x2="42.19" y2="9.85" stroke="#000000" stroke-width="0.160" data-pos="2262"/>
-  <text x="32.73" y="9.50" font-size="1.75" font-weight="bold" data-pos="2262">1.</text>
-  <line x1="43.12" y1="7.77" x2="43.12" y2="9.85" stroke="#000000" stroke-width="0.160" data-pos="2276"/>
-  <line x1="43.12" y1="7.77" x2="52.72" y2="7.77" stroke="#000000" stroke-width="0.160" data-pos="2276"/>
-  <line x1="52.72" y1="7.77" x2="52.72" y2="9.85" stroke="#000000" stroke-width="0.160" data-pos="2276"/>
-  <text x="44.12" y="9.50" font-size="1.75" font-weight="bold" data-pos="2276">2.</text>
   <rect x="16.24" y="6.69" width="7.32" height="2.75" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="2092"/>
   <text x="19.91" y="9.04" font-size="2.77" text-anchor="middle" data-pos="2092">Main</text>
   </g>

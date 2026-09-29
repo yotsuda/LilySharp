@@ -278,6 +278,48 @@ public sealed class VoltaBracketShapeTests
                 $"end {i}: Lily# {ends[i]:F4}, LilyPond {lilyPond[i]:F3}");
     }
 
+    /// <summary>ONE bracket per ending however many staves the score draws — LilyPond's
+    /// Volta_engraver lives in the Score context. Until session 692 every staff's walk of the
+    /// form added its own copy, stacked on the same place; and the copies broke
+    /// <c>LaterEndingPredecessors</c>' pairing, so the 3rd and 4th endings of a four-ending
+    /// repeat paired with the ending before them instead of the first: a staff + tab score
+    /// printed a bar number at a line opening with those endings, mid-bar, where LilyPond
+    /// prints none (Disco Inferno "both": 36 and 54; its LilyPond twin, Lab sessions/p692/disco,
+    /// numbers 3 7 11 15 23 32 41 45 49 59 63).</summary>
+    [Theory]
+    [InlineData("staff m")]
+    [InlineData("staff m\n  tab m")]
+    [InlineData("grandStaff { staff m\n  staff m }")]
+    public void EveryEnding_HasOneBracket_HoweverManyStaves(string items)
+    {
+        string src = $$"""
+            octave absolute
+            time 4/4
+            part m { clef bass }
+            section A { m { c1 | c2 | break } }
+            section E1 { m { c2 | c1 | break } }
+            section E2 { m { d2 | d1 | break } }
+            section E3 { m { e2 | e1 | break } }
+            section E4 { m { f2 | f1 | break } }
+            form main { |: A [1. ~E1] :| [2. ~E2] :| [3. ~E3] :| [4. ~E4] }
+            score main {
+              {{items}}
+            }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal(new[] { "1.", "2.", "3.", "4." },
+            score.VoltaBrackets.Select(v => v.VoltaText).ToArray());
+
+        // Every ending opens a line mid-bar (the body's last bar is a half), so no line that an
+        // ending opens carries a bar number — the same on one staff and on several.
+        var layout = new LayoutEngine().Layout(score);
+        var numbered = layout.BarNumberLayouts.Select(b => b.MeasureIndex).ToHashSet();
+        foreach (var v in score.VoltaBrackets)
+            Assert.DoesNotContain(v.StartMeasureIndex, numbered);
+    }
+
     /// <summary>A cut bracket still pairs with the next ending of its repeat: the collector
     /// pairs a repeat's endings by where the ENDING ends, not where its ink does
     /// (<c>VoltaBracketItem.EndingLastMeasureIndex</c>). A tie from the body into the second

@@ -2154,12 +2154,7 @@ public sealed partial class MeasureCollector
         // Volta brackets ([1.] [2.]) are system-level like navigation marks — merge the ones the
         // score is missing (a part the score draws already contributed its own, deduped here).
         foreach (var volta in harvested.VoltaBrackets)
-        {
-            if (_voltaBrackets.Any(v => v.StartMeasureIndex == volta.StartMeasureIndex
-                    && v.VoltaText == volta.VoltaText && v.SourcePosition == volta.SourcePosition))
-                continue;
-            _voltaBrackets.Add(volta);
-        }
+            AddVoltaBracket(volta);
 
         var harvestedVoices = harvested.StaffGroups.SelectMany(g => g.Staves).SelectMany(s => s.Voices).ToList();
         // Kept for the mid-bar break table: these voices are synchronised by measure index
@@ -3979,7 +3974,7 @@ public sealed partial class MeasureCollector
         int endMeasureIndex = builder.CurrentMeasureIndex;
         if (builder.CurrentItemCount > 0)
             endMeasureIndex++;
-        _voltaBrackets.Add(EndingBracket(pending.Node, pending.Start, Math.Max(pending.Start, endMeasureIndex - 1)));
+        AddVoltaBracket(EndingBracket(pending.Node, pending.Start, Math.Max(pending.Start, endMeasureIndex - 1)));
     }
 
     /// <summary>True when another ending of the same run follows <paramref name="ending"/> in

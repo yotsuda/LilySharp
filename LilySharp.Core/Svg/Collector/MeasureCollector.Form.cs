@@ -261,7 +261,29 @@ public sealed partial class MeasureCollector
         // Each ending's right end follows its source (`]` hooks, `-]` stays straight) unless
         // its length cuts it short; the engraver's segment splitter opens only line-break
         // pieces of a hooked one.
-        _voltaBrackets.AddRange(pendingVoltaBrackets);
+        foreach (var bracket in pendingVoltaBrackets)
+            AddVoltaBracket(bracket);
+    }
+
+    /// <summary>
+    /// Adds an ending's bracket unless the score already has it — the same ending (its source
+    /// position and number) at the same bar.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly:767 — Volta_engraver is consisted in the Score
+    ///   context, so a score engraves ONE bracket per ending however many staves it has.
+    /// The form is walked once per staff this score draws, and every walk reaches the same
+    /// endings; until session 692 each walk added its own copy, so a staff + tab or grand-staff
+    /// score drew every bracket once per staff, stacked on the same place (test/grandstaff-repeat,
+    /// ABC.lys "both"). The harvest of omitted parts deduped by this same key; now every path does.
+    /// </remarks>
+    private void AddVoltaBracket(VoltaBracketItem volta)
+    {
+        foreach (var v in _voltaBrackets)
+            if (v.StartMeasureIndex == volta.StartMeasureIndex
+                && v.VoltaText == volta.VoltaText && v.SourcePosition == volta.SourcePosition)
+                return;
+        _voltaBrackets.Add(volta);
     }
 
     /// <summary>
@@ -1641,7 +1663,7 @@ public sealed partial class MeasureCollector
                         // the old gate until 2026-09-29 (第663 ⑿), so a staffless
                         // `|: A [1. ~D] :| [2. ~O]` drew no ending at all.
                         if (cur > altStart)
-                            _voltaBrackets.Add(EndingBracket(alt, altStart, cur - 1));
+                            AddVoltaBracket(EndingBracket(alt, altStart, cur - 1));
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when silent.GetChild(1) is SyntaxTokenNode silentName:
@@ -1672,7 +1694,7 @@ public sealed partial class MeasureCollector
                 return;
             dividerEnding = null;
             if (cur > pending.Start)
-                _voltaBrackets.Add(EndingBracket(pending.Node, pending.Start, cur - 1));
+                AddVoltaBracket(EndingBracket(pending.Node, pending.Start, cur - 1));
         }
 
         if (_form != null)

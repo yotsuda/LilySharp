@@ -319,8 +319,8 @@
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.Annotations.cs`
 - **:901** ⚠️ LILYSHARP-OWN: on a multi-measure rest (`R1*4@text("tacet")`, and the
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2809** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5212** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2804** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5207** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

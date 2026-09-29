@@ -442,7 +442,7 @@ public sealed partial class MeasureCollector
     private void FinalizeInlineVoltas()
     {
         foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in _pendingInlineVoltas)
-            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
+            AddVoltaBracket(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         _pendingInlineVoltas.Clear();
     }
 
