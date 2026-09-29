@@ -55,7 +55,7 @@ public class TabStringNumberEntryTests
         // Fret digits with their string rows (row = the digit's string line).
         var digits = new List<(double X, double Y, string Text)>();
         foreach (Match m in Regex.Matches(svg,
-            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"3.00\" font-weight=\"bold\" text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
+            "<text x=\"([-\\d.]+)\" y=\"([-\\d.]+)\" font-size=\"" + LilySharp.Core.Svg.Layout.TabConstants.FretFontSize.ToString("F2", CultureInfo.InvariantCulture) + "\" font-weight=\"bold\" text-anchor=\"middle\"[^>]*>(\\d+)</text>"))
             digits.Add((
                 double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture),
                 double.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture),

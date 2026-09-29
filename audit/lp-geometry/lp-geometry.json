@@ -1714,8 +1714,8 @@
       "probe": "tab-slur.ly",
       "score": "A",
       "lilypond": 1.2202227531373033,
-      "residual": 0.151777247,
-      "why": "THE FRET DIGIT'S OWN INK, and the whole residual is that one ratified deviation — no part of it is the slur. LilyPond's attachment is the digit's ink edge + dir*0.5*staff_space, then -0.35 for the tablature.scm transformer: 0.5 (string 2's position) + 0.570223 + 0.5 - 0.35 = 1.220223 tab spaces, so 0.570223 of it is HALF LILYPOND'S TabNoteHead. Lily#'s fret digits are deliberately larger (TabConstants.FretFontSize 3.0, ratified in HANDOFF §3 and tuned by eye on request): TabConstants.FretDigitHeight measures 2.166 at that size, half of it is 1.083 page = 0.722000 tab spaces, and 0.722000 - 0.570223 = 0.151777 to nine digits. ⚠️ RE-MEASURED session 376 WITH -dbackend=null: the value recorded until then (1.043326, residual 0.328674, half-digit 0.393326) came from an unpinned -dbackend=svg run, where LilyPond 2.26 drops fonts.serif to the generic 'serif' and fontconfig substitutes a machine face with smaller digits (scratch/p377/dual/tab-slur, both backends side by side). The decomposition was right; the LilyPond digit it subtracted was the fallback face's. It cannot go to 0 while the larger digits stand, and it is NOT a licence to tune the 0.5 or the 0.35 -- those two are exact (see the pairs below)."
+      "residual": 0.103643914,
+      "why": "THE FRET DIGIT'S OWN INK, and the whole residual is that one ratified deviation — no part of it is the slur. LilyPond's attachment is the digit's ink edge + dir*0.5*staff_space, then -0.35 for the tablature.scm transformer: 0.5 (string 2's position) + 0.570223 + 0.5 - 0.35 = 1.220223 tab spaces, so 0.570223 of it is HALF LILYPOND'S TabNoteHead. Lily#'s fret digits are deliberately larger (TabConstants.FretFontSize 2.8 since session 694, 3.0 before; ratified in HANDOFF §3 and tuned by eye on request): TabConstants.FretDigitHeight measures 2.0216 at that size, half of it is 1.0108 page = 0.673867 tab spaces, and 0.673867 - 0.570223 = 0.103644 to nine digits (at 3.0: 2.166 / 0.722000 / 0.151777). ⚠️ RE-MEASURED session 376 WITH -dbackend=null: the value recorded until then (1.043326, residual 0.328674, half-digit 0.393326) came from an unpinned -dbackend=svg run, where LilyPond 2.26 drops fonts.serif to the generic 'serif' and fontconfig substitutes a machine face with smaller digits (scratch/p377/dual/tab-slur, both backends side by side). The decomposition was right; the LilyPond digit it subtracted was the fallback face's. It cannot go to 0 while the larger digits stand, and it is NOT a licence to tune the 0.5 or the 0.35 -- those two are exact (see the pairs below)."
     },
     "slur.tab.up.attachment-to-control": {
       "probe": "tab-slur.ly",
@@ -1728,7 +1728,7 @@
       "probe": "tab-slur.ly",
       "score": "A",
       "lilypond": -1.2202227531373033,
-      "residual": -0.151777247,
+      "residual": -0.103643914,
       "why": "The exact negative of the up bow's, which is the point of the pair -- bar 2 is bar 1 with its strings REFLECTED (positions 1,3,3,1 become -1,-3,-3,-1), so LilyPond returns exactly minus bar 1's numbers. LilyPond's slur direction reads the STRING, not the notated pitch (lily/slur.cc:60-68 calc_direction -- UP as soon as one encompassed column's stem points DOWN), so the low strings bow DOWN and subtract the 0.525 upward instead. A constant absorbed on one side, or a direction rule that had fallen back to 'tab slurs bow up' (which is what Lily# did until 2026-09-01), breaks this symmetry rather than hiding in it. Same cause as slur.tab.up.string-to-attachment."
     },
     "slur.tab.down.attachment-to-control": {
@@ -1749,14 +1749,14 @@
       "probe": "tab-slur-full.ly",
       "score": "A",
       "lilypond": 1.5702227531373032,
-      "residual": 0.151777247,
+      "residual": 0.103643914,
       "why": "slur.tab.up.string-to-attachment's book on a FULL tab (Lily#'s default lone tab; the twin writes \\tabFullNotation), and the same residual: the larger fret digit's half-height (F9, ratified HANDOFF §3), nothing of the slur. \\tabFullNotation reverts TabStaff.Slur.control-points (ly/property-init.ly:845), so LilyPond's y is the plain tab's 1.220223 + 0.35 exactly. Until session 633 Lily# applied the tablature.scm translation on every tab, and this point read 0.151777 - 0.35 = -0.198223."
     },
     "slur.tab.full.down.string-to-attachment": {
       "probe": "tab-slur-full.ly",
       "score": "A",
       "lilypond": -1.5702227531373032,
-      "residual": -0.151777247,
+      "residual": -0.103643914,
       "why": "The exact negative of slur.tab.full.up.string-to-attachment (bar 2 is bar 1 with its strings reflected), so a translation that had kept its sign on one side only breaks the pair. Same cause: F9."
     },
     "slur.tab.stems.left-attachment": {
@@ -1798,15 +1798,15 @@
       "probe": "tab-slur-stems.ly",
       "score": "C",
       "lilypond": -1.0884802615022964,
-      "residual": -0.133519738,
-      "why": "F9 (the fret digit size). The bow attaches below the stem tip, so this is a base attachment read off the DIGIT (its ink bottom + dir*0.5*staff_space, lily/slur-scoring.cc:555-557, then the half-space grid): with the tab slur's half digit set to LilyPond's 0.6577 (a temporary experiment, session 638) this reads -0.013683. The X at both ends is LilyPond's: the stem-attachment rule (:738-760) puts it 0.3 past the flag's right edge, which is why slur.tab.stems.flag-span is exact."
+      "residual": -0.085386405,
+      "why": "F9 (the fret digit size; SESSION 694: the digit went 3.0 -> 2.8 and this -0.133520 -> -0.085386). The bow attaches below the stem tip, so this is a base attachment read off the DIGIT (its ink bottom + dir*0.5*staff_space, lily/slur-scoring.cc:555-557, then the half-space grid): with the tab slur's half digit set to LilyPond's 0.6577 (a temporary experiment, session 638) this reads -0.013683. The X at both ends is LilyPond's: the stem-attachment rule (:738-760) puts it 0.3 past the flag's right edge, which is why slur.tab.stems.flag-span is exact."
     },
     "slur.tab.stems.flag-control": {
       "probe": "tab-slur-stems.ly",
       "score": "C",
       "lilypond": -1.9438399128325674,
-      "residual": -0.060489706,
-      "why": "F9, with slur.tab.stems.flag-attachment: the control follows the lower base (+0.004561 with LilyPond's digit, session 638's experiment). Before session 638 -0.197158, the rest being the span."
+      "residual": -0.012356373,
+      "why": "F9, with slur.tab.stems.flag-attachment (SESSION 694: -0.060490 -> -0.012356 with the digit at 2.8): the control follows the lower base (+0.004561 with LilyPond's digit, session 638's experiment). Before session 638 -0.197158, the rest being the span."
     },
     "slur.tab.stems.flag-span": {
       "probe": "tab-slur-stems.ly",

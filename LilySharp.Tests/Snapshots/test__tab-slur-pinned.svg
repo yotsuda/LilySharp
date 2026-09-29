@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="218.1" viewBox="0 0 119.50 21.81" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="217.4" viewBox="0 0 119.50 21.74" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="21.81" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="21.74" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text class="music" x="9.14" y="12.79" font-size="4.00"></text>
   <rect x="25.44" y="10.54" width="0.19" height="4.50" data-pos="2522"/>
   <rect x="37.72" y="10.54" width="0.19" height="4.50" data-pos="2553"/>
-  <text x="14.99" y="13.08" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2501">5</text>
-  <text x="18.03" y="11.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2508">5</text>
-  <text x="20.81" y="11.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2512">5</text>
-  <text x="23.35" y="13.08" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2516">5</text>
-  <text x="27.19" y="14.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2528">5</text>
-  <text x="29.72" y="16.08" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2535">5</text>
-  <text x="32.51" y="16.08" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2541">5</text>
-  <text x="35.55" y="14.58" font-size="3.00" font-weight="bold" text-anchor="middle" data-pos="2547">5</text>
-  <line x1="8.59" y1="10.54" x2="17.17" y2="10.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="18.88" y1="10.54" x2="19.96" y2="10.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="21.67" y1="10.54" x2="37.86" y2="10.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="12.04" x2="14.13" y2="12.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="15.84" y1="12.04" x2="22.50" y2="12.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="24.20" y1="12.04" x2="37.86" y2="12.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="13.54" x2="26.33" y2="13.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="28.04" y1="13.54" x2="34.69" y2="13.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="36.40" y1="13.54" x2="37.86" y2="13.54" stroke="#000000" stroke-width="0.100"/>
-  <line x1="8.59" y1="15.04" x2="28.87" y2="15.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="30.58" y1="15.04" x2="31.66" y2="15.04" stroke="#000000" stroke-width="0.100"/>
-  <line x1="33.36" y1="15.04" x2="37.86" y2="15.04" stroke="#000000" stroke-width="0.100"/>
-  <path d="M 14.99,10.73 C 16.85,9.08 21.49,9.08 23.35,10.73 C 21.49,9.20 16.85,9.20 14.99,10.73 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2506"/>
-  <path d="M 27.19,14.84 C 29.05,16.37 33.69,16.37 35.55,14.84 C 33.69,16.49 29.05,16.49 27.19,14.84 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2533"/>
+  <text x="14.99" y="13.01" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2501">5</text>
+  <text x="18.03" y="11.51" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2508">5</text>
+  <text x="20.81" y="11.51" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2512">5</text>
+  <text x="23.35" y="13.01" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2516">5</text>
+  <text x="27.19" y="14.51" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2528">5</text>
+  <text x="29.72" y="16.01" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2535">5</text>
+  <text x="32.51" y="16.01" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2541">5</text>
+  <text x="35.55" y="14.51" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="2547">5</text>
+  <line x1="8.59" y1="10.54" x2="17.22" y2="10.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="18.83" y1="10.54" x2="20.01" y2="10.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="21.61" y1="10.54" x2="37.86" y2="10.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="12.04" x2="14.19" y2="12.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="15.79" y1="12.04" x2="22.55" y2="12.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="24.15" y1="12.04" x2="37.86" y2="12.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="13.54" x2="26.38" y2="13.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="27.99" y1="13.54" x2="34.75" y2="13.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="36.35" y1="13.54" x2="37.86" y2="13.54" stroke="#000000" stroke-width="0.100"/>
+  <line x1="8.59" y1="15.04" x2="28.92" y2="15.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="30.53" y1="15.04" x2="31.71" y2="15.04" stroke="#000000" stroke-width="0.100"/>
+  <line x1="33.31" y1="15.04" x2="37.86" y2="15.04" stroke="#000000" stroke-width="0.100"/>
+  <path d="M 14.99,10.80 C 16.85,9.15 21.49,9.15 23.35,10.80 C 21.49,9.27 16.85,9.27 14.99,10.80 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2506"/>
+  <path d="M 27.19,14.77 C 29.05,16.30 33.69,16.30 35.55,14.77 C 33.69,16.42 29.05,16.42 27.19,14.77 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="2533"/>
   <rect x="11.94" y="6.69" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="2478"/>
   <text x="13.32" y="9.08" font-size="2.77" text-anchor="middle" data-pos="2478">A</text>
   </g>

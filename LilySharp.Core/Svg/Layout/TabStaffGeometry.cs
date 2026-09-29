@@ -41,7 +41,10 @@ internal static class TabConstants
     /// TUNED BY EYE, on request, and the history is the spec: 2.6 → 2.9 (with the opaque
     /// background dropped — the string line breaks around the digit, so the digit carries
     /// the contrast on its own) → 3.3 → 3.0 (2026-08-06, "3.3 は少し大きすぎる" on a bass
-    /// tab). Every consumer — width reservation, string-line gap, skyline, stem clearance,
+    /// tab) → 2.8 (2026-09-30, the owner's decision after 3.0 / 2.8 / 2.6 / 2.4 were drawn side
+    /// by side on a staff + tab book: 3.0 stood heavier than the note heads above it and all
+    /// but touched the neighbouring strings; Lab sessions/p694/fretsize). Every consumer —
+    /// width reservation, string-line gap, skyline, stem clearance,
     /// articulation clearing — derives from this one constant through the face metrics
     /// below, so tuning it is a one-line change.
     /// </para>
@@ -51,7 +54,7 @@ internal static class TabConstants
     /// question and does follow LilyPond — see <c>EngravingDefaults.TabStringSpace</c>.
     /// </para>
     /// </remarks>
-    public const double FretFontSize = 3.0;
+    public const double FretFontSize = 2.8;
 
     /// <summary>The weight the engraving sets a fret number in — bold, so the digits read
     /// over the string lines they sit on.</summary>
