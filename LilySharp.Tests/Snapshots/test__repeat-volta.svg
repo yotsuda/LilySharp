@@ -91,14 +91,14 @@
   <rect x="81.51" y="23.96" width="0.60" height="4.00" data-pos="550"/>
   <rect x="94.59" y="23.96" width="0.19" height="4.00" data-pos="315"/>
   <rect x="102.24" y="23.96" width="0.19" height="4.00" data-pos="320"/>
-  <line x1="59.96" y1="20.83" x2="59.96" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="537"/>
-  <line x1="59.96" y1="20.83" x2="81.81" y2="20.83" stroke="#000000" stroke-width="0.160" data-pos="537"/>
-  <line x1="81.81" y1="20.83" x2="81.81" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="537"/>
-  <text x="60.96" y="22.57" font-size="1.75" font-weight="bold" data-pos="537">1.</text>
-  <line x1="82.41" y1="20.83" x2="82.41" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="553"/>
-  <line x1="82.41" y1="20.83" x2="102.13" y2="20.83" stroke="#000000" stroke-width="0.160" data-pos="553"/>
-  <line x1="102.13" y1="20.83" x2="102.13" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="553"/>
-  <text x="83.41" y="22.57" font-size="1.75" font-weight="bold" data-pos="553">2.</text>
+  <line x1="59.58" y1="20.83" x2="59.58" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="537"/>
+  <line x1="59.58" y1="20.83" x2="81.10" y2="20.83" stroke="#000000" stroke-width="0.160" data-pos="537"/>
+  <line x1="81.10" y1="20.83" x2="81.10" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="537"/>
+  <text x="60.58" y="22.57" font-size="1.75" font-weight="bold" data-pos="537">1.</text>
+  <line x1="82.03" y1="20.83" x2="82.03" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="553"/>
+  <line x1="82.03" y1="20.83" x2="102.35" y2="20.83" stroke="#000000" stroke-width="0.160" data-pos="553"/>
+  <line x1="102.35" y1="20.83" x2="102.35" y2="22.91" stroke="#000000" stroke-width="0.160" data-pos="553"/>
+  <text x="83.03" y="22.57" font-size="1.75" font-weight="bold" data-pos="553">2.</text>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="135"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="135"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="135">= 120</text>

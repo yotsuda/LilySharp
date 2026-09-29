@@ -224,6 +224,60 @@ public sealed class VoltaBracketShapeTests
         Assert.Equal(102.35, first.EndX, 0.01);
     }
 
+    /// <summary>Every piece's line, start and end, where LilyPond draws its centre: the port of
+    /// <c>ly:volta-bracket::calc-shorten-pair</c> and the print's bounds
+    /// (<c>VoltaBracketEngraver.PieceEnds</c>). MEASURED, LilyPond 2.26.0, on each source's
+    /// <c>lysc ly</c> twin (Lab sessions/p692/ends, the VoltaBracket stencil's extent in the
+    /// system less the 0.08 round cap): a hook on a mid-line "|" and on the ":|." the second
+    /// ending opens after, the closing hook on a ":|.", pieces cut by a break with and without
+    /// a courtesy meter, after a clef, a key, a meter at the line start, a second ending
+    /// opening a line, and a piece after a break with no bar line of the ending on its line
+    /// (the ad-hoc −1 of the port). Until session 692 every end was a bare 0.3 inside the
+    /// measure edges.</summary>
+    [Theory]
+    [InlineData("", "c1 | c1 |", "c2 c2 | break c1 | c1 |", "e1 |", "",
+        new[] { 67.980, 102.350, 3.593, 68.303, 69.233, 102.350 })]
+    [InlineData("", "c1 | c1 |", "time 2/4 c2 | break time 4/4 c1 | c1 |", "time 4/4 e1 |", "",
+        new[] { 75.685, 102.350, 6.813, 68.504, 69.434, 102.350 })]
+    [InlineData("key aes major", "c1 | c1 |", "c2 c2 | break c1 | c1 |", "e1 |", "",
+        new[] { 69.712, 102.350, 8.093, 69.918, 70.848, 102.350 })]
+    [InlineData("", "c1 | c1 |", "c1 | c1 | break", "e1 | e1 |", "",
+        new[] { 58.407, 102.350, 3.593, 102.350 })]
+    [InlineData("", "c1 | c1 |", "c1 |", "e1 |", " ~A",
+        new[] { 33.699, 42.569, 43.499, 51.619 })]
+    [InlineData("", "c1 | c1 |", "c1 | c1 | break", "e1 | e1 |", " ~A",
+        new[] { 58.407, 102.350, 3.593, 52.219 })]
+    [InlineData("key aes major", "c1 | c1 |", "c2 c2 | c2 c2 | break c1 | c1 |", "e1 |", "",
+        new[] { 56.362, 102.350, 8.093, 69.918, 70.848, 102.350 })]
+    [InlineData("", "c1 | c1 |", "c2 c2 | c2 c2 | c2 c2 | break c1 |", "e1 |", "",
+        new[] { 46.276, 102.350, 4.403, 50.883, 51.813, 102.350 })]
+    public void EveryPiece_EndsWhereLilyPondsDoes(string key, string a, string e1, string e2,
+        string tail, double[] lilyPond)
+    {
+        string src = $$"""
+            time 4/4
+            {{key}}
+            octave absolute
+            part bass { clef bass }
+            section A { bass { {{a}} } }
+            section E1 { bass { {{e1}} } }
+            section E2 { bass { {{e2}} } }
+            form main { |: A [1. ~E1] :| [2. ~E2]{{tail}} }
+            score main { staff bass }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var layout = new LayoutEngine().Layout(
+            new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!));
+        var ends = layout.VoltaBracketLayouts
+            .OrderBy(v => v.SourceIndex).ThenBy(v => v.StartMeasureIndex)
+            .SelectMany(v => new[] { v.StartX, v.EndX }).ToArray();
+        Assert.Equal(lilyPond.Length, ends.Length);
+        for (int i = 0; i < ends.Length; i++)
+            Assert.True(System.Math.Abs(ends[i] - lilyPond[i]) < 0.006,
+                $"end {i}: Lily# {ends[i]:F4}, LilyPond {lilyPond[i]:F3}");
+    }
+
     /// <summary>A cut bracket still pairs with the next ending of its repeat: the collector
     /// pairs a repeat's endings by where the ENDING ends, not where its ink does
     /// (<c>VoltaBracketItem.EndingLastMeasureIndex</c>). A tie from the body into the second

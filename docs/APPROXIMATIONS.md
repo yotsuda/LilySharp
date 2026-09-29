@@ -181,8 +181,8 @@
 - **:790** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1067** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2429** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2451** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2426** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2448** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -392,9 +392,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
-- **:1046** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1842** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2137** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1043** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1839** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2134** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:840** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`

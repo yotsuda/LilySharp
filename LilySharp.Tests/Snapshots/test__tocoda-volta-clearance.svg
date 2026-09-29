@@ -77,14 +77,14 @@
   <rect x="69.56" y="21.17" width="0.19" height="4.00" data-pos="927"/>
   <rect x="77.71" y="21.17" width="0.19" height="4.00" data-pos="954"/>
   <rect x="91.04" y="21.17" width="0.19" height="4.00" data-pos="830"/>
-  <line x1="45.06" y1="18.04" x2="45.06" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="986"/>
-  <line x1="45.06" y1="18.04" x2="59.42" y2="18.04" stroke="#000000" stroke-width="0.160" data-pos="986"/>
-  <line x1="59.42" y1="18.04" x2="59.42" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="986"/>
-  <text x="46.06" y="19.78" font-size="1.75" font-weight="bold" data-pos="986">1.</text>
-  <line x1="60.02" y1="18.04" x2="60.02" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="997"/>
-  <line x1="60.02" y1="18.04" x2="69.45" y2="18.04" stroke="#000000" stroke-width="0.160" data-pos="997"/>
-  <line x1="69.45" y1="18.04" x2="69.45" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="997"/>
-  <text x="61.02" y="19.78" font-size="1.75" font-weight="bold" data-pos="997">2.</text>
+  <line x1="44.68" y1="18.04" x2="44.68" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="986"/>
+  <line x1="44.68" y1="18.04" x2="58.71" y2="18.04" stroke="#000000" stroke-width="0.160" data-pos="986"/>
+  <line x1="58.71" y1="18.04" x2="58.71" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="986"/>
+  <text x="45.68" y="19.78" font-size="1.75" font-weight="bold" data-pos="986">1.</text>
+  <line x1="59.64" y1="18.04" x2="59.64" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="997"/>
+  <line x1="59.64" y1="18.04" x2="69.15" y2="18.04" stroke="#000000" stroke-width="0.160" data-pos="997"/>
+  <line x1="69.15" y1="18.04" x2="69.15" y2="20.12" stroke="#000000" stroke-width="0.160" data-pos="997"/>
+  <text x="60.64" y="19.78" font-size="1.75" font-weight="bold" data-pos="997">2.</text>
   <text class="music" x="8.84" y="17.41" font-size="4.00" data-pos="973"></text>
   <rect x="11.90" y="17.58" width="2.75" height="2.74" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="803"/>
   <text x="13.28" y="19.97" font-size="2.77" text-anchor="middle" data-pos="803">A</text>

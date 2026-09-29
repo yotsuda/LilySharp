@@ -964,15 +964,12 @@ internal sealed partial class LayoutEngine
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
-        // A piece a line break cuts runs to the system's last column — the span every staff's
-        // lines reach (the widest staff's courtesy suffix), read from the one home the draw uses.
-        var multiScore = ctx.MultiScore;
-        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml,
-            multiScore is null ? null : s =>
-            {
-                var (_, notationRight, tabRight) = Rendering.SharedRenderer.StaffRightEdges(multiScore, s);
-                return Math.Max(notationRight, tabRight);
-            });
+        // The ends read the bar lines and the system edges (VoltaBracketEngraver.PieceEnds).
+        var voltaBracketLayouts = voltaBrackets.IsDefaultOrEmpty
+            ? ImmutableArray<VoltaBracketLayout>.Empty
+            : VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml,
+                ctx.MultiScore ?? throw new InvalidOperationException(
+                    "volta brackets need the multi-staff score; both layout passes set it"));
 
         // LILYPOND-REF: lily/axis-group-interface.cc:860-985 Axis_group_interface::skyline_spacing
         // Post-process below-staff elements using priority-based stacking.
