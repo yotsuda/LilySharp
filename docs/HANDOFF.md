@@ -123,7 +123,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p671`（HEAD `27518b55`・未 push 8・full **10247 / 0 / 2 / 10249**）。
 ★★ **MusicXML の既存欠陥 ⑴⑵⑹（第662 起票）を閉じた**: ⑹ **direction の位置**＝小節は direction を頭にまとめて書くので `c4 d@cresc` の wedge が 1 拍目に出ていた → `MusicXmlDirection.Offset`（divisions）を付けて `<offset>` で書く（`AddDirection` が `CurrentMeasurePosition` を刻む＝音符の印は音符を足す前に読むので音符の onset）。強弱は保留せず**その場で書く**（`_pendingDynamic` 撤去＝小節末の音符の強弱が次の小節の頭に出ていた・パート末の強弱は落ちていた）。読み手（`MusicXmlReader`）も `<offset>` を見て「その位置以降の最初の音符」に付ける（backup／forward で位置を動かす・残りは最後の音符へ）。⑴ `@unaCorda`／`@treCorde`＝`<words>una corda / tre corde</words>`（MusicXML に una corda の pedal type は無い・`@!unaCorda` は今まで開始の無い `<pedal type="stop">`）・`@quindicesima(.bassa)`＝`octave-shift size="15"`（stop も 15）。⑵ `@!X` の警告文＝終端を持つ 4 族を全部挙げる。
 ★ 検証: 網 `MusicXmlExportShapeTests` +1（offset・words・size 15・末尾の強弱）・`MusicXmlRoundTripTests` +1（f'4@f と c'1@p が往復）。
-★ **終了**: （-End 後に記す）
+★ **終了**: `fb9549ce`「musicxml: a direction stands at its note (offset), the una corda and the quindicesima are written, the '@!X' words name every family (第662 ⑴⑵⑹)」。`-End p671 -DiffBase 27518b55` 緑・full **10249 / 0 / 2 / 10251**（run2.trx）。門 6 つ全 OK。§7.5 Core '+' 144 行／REF 0／OWN 0＝MusicXML の配管だけ（LP の対応物は無い・MusicXML の schema が出所）。7.7 匂い: 読み手は wedge／pedal／octave-shift を読まない（強弱だけ）・una corda は `<words>` なので読み戻しても `@unaCorda` にはならない。push はユーザー（未 push 9）。
 
 ## 以下は第670セッションの経緯
 
