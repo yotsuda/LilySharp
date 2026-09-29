@@ -119,6 +119,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第688セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き。ユーザー報告「`C:\tmp\diagram.lys` L7 の chord の上で Ctrl+Shift+↑ を押すと、レンダ上の 6 個のコード図が変わるべきなのに先頭しか変わらない」（section A を form が 6 回弾く本・`chord(C x35550)1@chord()`）。★ `-Start p688`（HEAD `14873092`・未 push 43・full **10305 / 0 / 2 / 10307**）。
+★★ **根＝collect の suffix splice**（頁の full render は正しい＝`lysc` と export は無関係）。計器（使い捨て probe・消した）: 内容キー `MeasureContentKey` は 6 play とも動く（m0/m2/…/m10 diff）・fresh の collect は 6 つとも新 shape・`LastCollectResume = (0, 0, 1, 11)`＝11 小節を splice。window [84,87)・Δ0 に対し、再生 play の小節は `[124,99)`／`[102,99)`（SourceStart は form の `|:` や前 play の終わり・SourceEnd は section 本体の小節線）・item は 74（section 本体）＝**「小節の文字領域が window を跨ぐか」の門が再生 play を見えない**（left=前小節の End=102 ≥ SuffixStart）。phrase 本体は `WindowTouchesPhraseOrVariable` で suffix を丸ごと切っているが、form の再生には相手が無かった。
+直し: `TrySpliceSuffix` に repetition の門と同じ形の門＝**候補より後の HeaderReads のうち Structure 読み（各 play が `ProcessSection` で積む section の FullSpan）が window に掛かるなら decline**「a section the tail plays again holds the window」（trivia-only の window は通す＝候補前の門と同じ）。1 回しか弾かない section は play 頭の読みが候補より前なので今まで通り splice する＝失うのは「再生 play を含む尾」だけ。
+★ 検証: 網 `ShapeChordIncrementalTests` 3（Δ0 の shape・長い shape・音の挿入＝resumed と fresh のバイト一致）。毒 P1（門を消す）赤（Lab `sessions/p688/poisons.ps1`）。CollectEditResume 49／CollectResume 3／IncrementalCompiler 86／TrailingGapSplice 3／Splice 17／Resume 62 緑（corpus の脚込み 4 分 50 秒）。
+⚠ perf: 再生 play を含む尾の splice を失う（form の `A A B A` は普通の形）。値付けは未（数える計器＝corpus sweep での decline 回数）＝perf の島は一時停止中なので、再開時に「a section the tail plays again」の decline 数を数える。⚠ 道具: 長い `dotnet test`（corpus の脚）は MCP の「入力待ち」警告を出すが testhost の CPU が増えていれば本物＝第687 の `-End` とは別の顔。
+
+★ **終了**: commit `c3cf289b`（Core 1・網 1・CHANGELOG）。`-End p688 -DiffBase 14873092`（detached・54 秒）＝full **10308 / 0 / 2 / 10310**（+3＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,380 B）。§7.5 Core '+' 26 行（Resume.cs の門 1 つ）／REF 0／OWN 0＝collect の resume の健全性（出所は repetition の門の形）。7.6: ⒟ 何も移植していない。7.7 匂い: 毒で赤になるのは 3 例中 2 例（音の挿入は別の門が先に decline する＝門の重なり・観測者は shape の 2 例）。perf: decline が増える分だけ（値付け未・上の ⚠）。拡張へ `Deploy-Lsp.ps1` で server を配り直した（Reload Window が要る）。Lab は `sessions/p688/`（毒・probe の diagram.lys・log）を commit。push はユーザー（未 push 45）。
+
+## 以下は第687セッションの経緯
+
 ### 1.1 第687セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p687`（HEAD `65d8425d`・未 push 40・full **10303 / 1 / 2 / 10306**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（948 対 天井 947）＝第686 の 終了 行が Lab の commit SHA を引用していた＝Lab の SHA は本体の履歴に無い＝SHA を消して直した。天井は動かしていない）。
@@ -127,17 +139,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 拡張の配備: `tools\Deploy-Lsp.ps1`（Release publish → 入っている拡張へ server と out/ を配る・末尾のバイト比較と起動確認まで）＝ユーザーは「Developer: Reload Window」を押してから score を選んで Play を確かめる。
 
 ★ **終了**: commit `6d8a9b0d`（Core 2・網 1・APPROXIMATIONS・CHANGELOG）。`-End p687 -DiffBase 65d8425d`（⚠ 1 回目は MCP console から `cmd … < NUL` で回したのに中の dotnet test が入力待ちで返らず（CPU 2 秒のまま・trx 無し）＝console を捨て、18:50 の孤児 dotnet／testhost を Stop-Process し、`-Start` と同じ **Start-Process の detached** で 2 回目が 1 分で通った＝**`-End` も detached で回すこと**）＝full **10305 / 0 / 2 / 10307**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,975 B）。§7.5 Core '+' 35 行（MidiExporter 14・LayoutPlanReader 21）／REF 0／OWN 0＝layout の読み手の RenderSpec 版。7.6: ⒟ 何も移植していない。7.7 匂い: 「score の最後の layout 参照」は Parse（`LayoutRef`）と `Resolve` の走査の 2 か所で取っている（同じ規則の 2 つ目の綴りに近い＝`ResolveFor` の註に書いた）。perf: export 時だけ。Lab は `sessions/p687/`（毒・start/end/deploy log）を commit。push はユーザー（未 push 42）。
-
-## 以下は第686セッションの経緯
-
-### 1.1 第686セッション（2026-09-29・YT-DELL2）
-
-新しい会話（`/clear`）。ユーザー報告「VS Code preview で score p2 を選んで再生すると p1 p2 の両方の音が鳴る」（`scratch/parts.lys`＝section A に p1・p2、`score main { staff p1 staff p2 }` と `score main "p2" { staff p2 }`）。★ `-Start p686`（HEAD `48329d05`・未 push 38・full **10293 / 0 / 2 / 10295**・log は Lab `sessions/p686/start.log`）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊のユーザー変更（触らない・commit に含めない）。
-★★ **根: `lilysharp/playback` は文書しか渡さず、`MidiExporter` は `Score` を bare section の帰属と chord row にしか読まなかった＝どの score を選んでも全 part が鳴る**（CLI の `song-p2.mid` も同じ）。直し＝「MIDI は score が*見せる* part を鳴らす」を chord row の規則（第625・owner decision 2026-09-25）と同じ形で: ⑴ `RenderSpec.MidiOnlyParts`（bare 名の MIDI-only 行＝`MidiPartRenderSyntax`・今まで RenderSpec は捨てていた）＋ `SoundingPartNames`（engraved ∪ MIDI-only）。⑵ `MidiExporter.Export` は全 part を今まで通り歩き（timeline・lane の padding・tie の target・tempo/meter は不変）、**split の前に見せない part の音を strip**（`_soundingParts`＝`PlayedSpec` の SoundingPartNames・score の無い本は null＝全部鳴る）。歌詞も `AttachLyrics` で同じ判定。⑶ LSP: `PlaybackParams.RenderName`（拡張は `selectedRenders` の値を送る）→ `RenderSpecParser.Choose`（public にした＝絵と同じ選び方: 名前・無ければ最初）で `Form`／`Score` を渡す。export の `midi` も `Score` を渡す（preview の Export・`--all` の各 score）。CLI `WriteMidi` も `Parse(score)` を渡す。拡張の保存ダイアログの `MIDI (whole piece)` → `MIDI`。
-★ 検証: 網 `Midi/ScorePartsMidiTests` 8（p2 だけ 6 音／main 12 音＋p2 の onset・pitch が両 score で同一／score 無し全部／MIDI-only 行が鳴る／座っている section が小節を取る＝p2 の音が tick 1920／鳴らない part の歌詞 0／chord row は残る）＋ `Lsp/PlaybackRequestTests` 3（"p2" 6・null 12・無い名前は最初）。毒 3 本が各自赤（P1 strip 無し 4・P2 MIDI-only 行を読まない 1・P3 RenderName 無視 1・Lab `sessions/p686/poisons.ps1`・baseline 8/0・3/0）。`lysc midi scratch\parts.lys` → parts.mid 12 音・parts-p2.mid 6 音。`npm run check-types` OK。Midi 215／Export 414／Lsp 439／Lyric 250／Phrase 145 緑。
-⚠ 射程: `PhraseExtractor`／`SectionSplitter`／`OctaveModeConverter` の「MIDI が同じ」検証は*その score が鳴らす part だけ*を比べる（chord row の先例と同じ）＝score に無い part の書き換えは検証されない。MusicXML は変えていない（export は今も全 part を書く）。拡張の実機確認は未（§1.0 ⒜「VS Code の手動確認が未」の試聴＝score を選んで Play）。⚠ 第684 の残した Core 警告 1（`MusicXmlExporter.EnsurePart` の `_currentPart.Name` CS8604＝`-Start` の --no-incremental で見えた）を pattern に直した。
-
-★ **終了**: commit `99b4a768`（Core 4・Lsp 2・Cli・拡張・網 2・APPROXIMATIONS・CHANGELOG）。`-End p686 -DiffBase 48329d05`（53 秒・code を commit する前に回した＝§7.5 の機械の行は 0 と出る）＝full **10304 / 0 / 2 / 10306**（+11＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,619 B）。§7.5 Core '+' 90 行（MidiExporter 47・RenderSpec 28・RenderSpecParser 13・MusicXmlExporter 2）／REF 0／OWN 0＝score の規則の配管（出所は chord row の先例＝第625）。7.6: ⒟ 何も移植していない。7.7 匂い: strip は「全部歩いてから消す」（歩かない形は timeline を壊す＝註に書いた）／`IsChordRowTrack` は " (chords)" の接尾辞で row と part を見分ける（既存 2 か所の綴りを 1 つに畳んだ）。perf: export 時だけ（RemoveAll 1 回）。Lab は `sessions/p686/`（毒と start/end log）を commit。push はユーザー（未 push 40）。
 
 ## 2. 開いている作業
 

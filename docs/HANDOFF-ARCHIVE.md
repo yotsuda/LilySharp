@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第686セッションの経緯
+
+### 1.1 第686セッション（2026-09-29・YT-DELL2）
+
+新しい会話（`/clear`）。ユーザー報告「VS Code preview で score p2 を選んで再生すると p1 p2 の両方の音が鳴る」（`scratch/parts.lys`＝section A に p1・p2、`score main { staff p1 staff p2 }` と `score main "p2" { staff p2 }`）。★ `-Start p686`（HEAD `48329d05`・未 push 38・full **10293 / 0 / 2 / 10295**・log は Lab `sessions/p686/start.log`）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊のユーザー変更（触らない・commit に含めない）。
+★★ **根: `lilysharp/playback` は文書しか渡さず、`MidiExporter` は `Score` を bare section の帰属と chord row にしか読まなかった＝どの score を選んでも全 part が鳴る**（CLI の `song-p2.mid` も同じ）。直し＝「MIDI は score が*見せる* part を鳴らす」を chord row の規則（第625・owner decision 2026-09-25）と同じ形で: ⑴ `RenderSpec.MidiOnlyParts`（bare 名の MIDI-only 行＝`MidiPartRenderSyntax`・今まで RenderSpec は捨てていた）＋ `SoundingPartNames`（engraved ∪ MIDI-only）。⑵ `MidiExporter.Export` は全 part を今まで通り歩き（timeline・lane の padding・tie の target・tempo/meter は不変）、**split の前に見せない part の音を strip**（`_soundingParts`＝`PlayedSpec` の SoundingPartNames・score の無い本は null＝全部鳴る）。歌詞も `AttachLyrics` で同じ判定。⑶ LSP: `PlaybackParams.RenderName`（拡張は `selectedRenders` の値を送る）→ `RenderSpecParser.Choose`（public にした＝絵と同じ選び方: 名前・無ければ最初）で `Form`／`Score` を渡す。export の `midi` も `Score` を渡す（preview の Export・`--all` の各 score）。CLI `WriteMidi` も `Parse(score)` を渡す。拡張の保存ダイアログの `MIDI (whole piece)` → `MIDI`。
+★ 検証: 網 `Midi/ScorePartsMidiTests` 8（p2 だけ 6 音／main 12 音＋p2 の onset・pitch が両 score で同一／score 無し全部／MIDI-only 行が鳴る／座っている section が小節を取る＝p2 の音が tick 1920／鳴らない part の歌詞 0／chord row は残る）＋ `Lsp/PlaybackRequestTests` 3（"p2" 6・null 12・無い名前は最初）。毒 3 本が各自赤（P1 strip 無し 4・P2 MIDI-only 行を読まない 1・P3 RenderName 無視 1・Lab `sessions/p686/poisons.ps1`・baseline 8/0・3/0）。`lysc midi scratch\parts.lys` → parts.mid 12 音・parts-p2.mid 6 音。`npm run check-types` OK。Midi 215／Export 414／Lsp 439／Lyric 250／Phrase 145 緑。
+⚠ 射程: `PhraseExtractor`／`SectionSplitter`／`OctaveModeConverter` の「MIDI が同じ」検証は*その score が鳴らす part だけ*を比べる（chord row の先例と同じ）＝score に無い part の書き換えは検証されない。MusicXML は変えていない（export は今も全 part を書く）。拡張の実機確認は未（§1.0 ⒜「VS Code の手動確認が未」の試聴＝score を選んで Play）。⚠ 第684 の残した Core 警告 1（`MusicXmlExporter.EnsurePart` の `_currentPart.Name` CS8604＝`-Start` の --no-incremental で見えた）を pattern に直した。
+
+★ **終了**: commit `99b4a768`（Core 4・Lsp 2・Cli・拡張・網 2・APPROXIMATIONS・CHANGELOG）。`-End p686 -DiffBase 48329d05`（53 秒・code を commit する前に回した＝§7.5 の機械の行は 0 と出る）＝full **10304 / 0 / 2 / 10306**（+11＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,619 B）。§7.5 Core '+' 90 行（MidiExporter 47・RenderSpec 28・RenderSpecParser 13・MusicXmlExporter 2）／REF 0／OWN 0＝score の規則の配管（出所は chord row の先例＝第625）。7.6: ⒟ 何も移植していない。7.7 匂い: strip は「全部歩いてから消す」（歩かない形は timeline を壊す＝註に書いた）／`IsChordRowTrack` は " (chords)" の接尾辞で row と part を見分ける（既存 2 か所の綴りを 1 つに畳んだ）。perf: export 時だけ（RemoveAll 1 回）。Lab は `sessions/p686/`（毒と start/end log）を commit。push はユーザー（未 push 40）。
+
 ## 以下は第685セッションの経緯
 
 ### 1.1 第685セッション（2026-09-29・YT-DELL2）
