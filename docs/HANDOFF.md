@@ -124,7 +124,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p669`（HEAD `2d5265d7`・未 push 4・full **10238 / 0 / 2 / 10240**）。
 ★★★ **セクション跨ぎの span の第 2 段＝完了**: text spanner／ottava／pedal／trill を第663 の規則（`fed7f176`・ユーザー決定 2026-09-28）に載せた。裁き方は**ヘアピンと同じ**＝`SectionPlays.Judge`（小節単位。`OnUnmatchedStop`／`Refused`／`RefusedClose`／`CutMeasure` を足した）: 次の演奏で閉じれば描いて黙る／D1 閉じない＝警告して**自分の section の終わりで切る**（ottava は表示の移調もそこまで）／D4 反復・volta・jump を跨ぐ＝エラー・切る／D2 何も持ち越されていない `@!`＝LYS4023（今までは LYS4018「閉じるものが無い」・trill は黙殺）。対にする呼び出しは 1 つのまま（`PairTextSpanners`／`PairOttavaBrackets`／`PairPedalBrackets`／`PairTrillSpannerEvents` に `plays`＋`carrySink`）＝collector の `UnpairedSpanWarnings`・`SectionCarryWarnings`・layout・`ScoreSideTables`・`MeasureContentKey`・`SharedRenderer.Curves`・`DetectOttavaSpans` が同じ答えを読む。`SectionSplitter` は `@` の全族を持ち越し可に。文言は `SectionCarryValidator.MessageFor`（閉じの D2/D4 は「nothing is drawn for it」）。GRAMMAR §8.3 の規則文を更新。
 ★ 検証: 網 `SectionCarryTests` +4（閉じる／D1 と切り口と移調／D4／D2）・Lab `sessions/p669/carry.lys` の絵（4 族が C→D を跨いで閉じ・D の accel が E で閉じず切れる）。
-★ **終了**: （-End 後に記す）
+★ **終了**: `bc7765fa`「spans: the section carry rule's second stage — …」。`-End p669 -DiffBase 2d5265d7` 緑・full **10242 / 0 / 2 / 10244**（run2.trx）。§7.5 Core '+' 285 行／REF 0／OWN 0＝**全部 Lily# 自身の言語規則の配管**（section は Lily# の概念・規則の出所は第663 のユーザー決定・幾何は 1 つも足していない）。7.6: ⒟ 何も移植していない（既存の `SectionPlays` の家に判定 4 つを足し、各族の対の呼び出しに旗を通した）。7.7 匂い: 印で対にする族は D3 を出せない（小節単位の裁き）／trill は staff・voice を見ずに対にする既存の形のまま／`OttavaDisplayProbe`（梁の向きの探り）は走査済みの voice が無い間は切っていない bracket を読む（描く量は無い）。push はユーザー（未 push 5）。
 
 ## 以下は第668セッションの経緯
 
