@@ -119,6 +119,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第690セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（第689 の tab の全休符はユーザー実機確認済「改善した」）。ユーザー報告「`bohemian-rhapsody.lys` score "tab2" 25 小節（L724 `tuplet 3/2 { ees,8@f ees4 }`）の tab 譜で、最初の tuplet のブレース開始 x と最初の音符の x がズレる」。★ `-Start p690`（HEAD `551da4ce`・未 push 47・full **10310 / 0 / 2 / 10312**）。
+★★ **根: `TupletBracketEngraver` の bound（`BoundEdgeOffset`）が tab でも notation の符頭・符幹の幾何で読んでいた**。tab の符幹は fret 数字の中央（column ＋ `TabHeadCenterOffset`）に立ち、向きは弦で決まる（`TabStaffGeometry.TabStemUp`）。本では bracket 開始 8.19 対 数字中央 9.05（0.86 左）・終端も逆側に 0.3 ずれ、さらに bracket が符幹と反対側（下）に出ていた。LP 2.26.0 の twin（Lab `sessions/p690/probes/tabtuplet*.ly`・`\tabFullNotation`）を SVG で読んだ基準: 符幹の rect は数字の whiteout 箱の中央（26.2243）・bracket の X-positions は符幹の縁（26.1593＝中央 −0.065）・hook はそこから 0.3 外（`print` が `shorten-pair` を TabStaff の staff-space 1.5 で scale・`edge-height` も 1.05）・向きは弦の符幹の側（低い弦＝上）。
+直し: `TupletBracketLayout.LineSpacing`（tab 1.5）＝`DrawnStartX`／`DrawnEndX` の reach と renderer の hook の高さを ss 倍。engraver に tab 枝: `TabBoundEdgeOffset`（符幹が bracket 側なら中央 ∓ 半符幹・逆なら数字の advance の縁 ∪ 符幹・休符は glyph 箱、すべて中央軸から）と `TabDirection`（弦の符幹の多数決・同数は `GroupStemUp` の極端）。`ArticulationEngraver.TabFretOf`／`TabFretHalfWidth` を internal に。
+★ 検証: 網 `TabTupletBracketTests` 3（高い弦＝下・低い弦＝上・弦と notated pitch が食い違う A 弦 7 fret の E2＝上（LP twin で確認・bass 譜なら下）: 両 hook が中央 ∓ 0.365・高さ 1.05・弦の側）。毒 3 本が各自赤（P1 左の bound を notation で読む 3・P2 reach を ss 倍しない 3・P3 向きを notated pitch で読む 1＝食い違いの例だけが観測者・Lab `sessions/p690/poisons.ps1`）。Tuplet 161／Tab 641／SvgSnapshot 247／Skyline 129 緑（snapshot は不変＝tab の tuplet を持つ snapshot 本が無い）。本の 25 小節: hook 8.68／12.22 対 数字 9.05／11.86・bracket は符幹の側（上）へ。
+⚠ 射程: tab の tuplet bracket だけ（notation は LineSpacing 1.0・`BoundEdgeOffset` 不変）。beam に付く番号（`!showBracket` の tab 枝）はそのまま。`TabDirection` の同数の裁きは tuplet-bracket.cc の極端の式ではなく beam の式で近似（同数の tab tuplet は本に無い）。
+
+★ **終了**: commit `e689e2fa`（Core 3・網 1・CHANGELOG・APPROXIMATIONS・magic_constants＝行番号だけ）。`-End p690 -DiffBase 551da4ce`（detached・3 回目で通った: 1 回目は `LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow`＝`LineSpacing` の註の引用が記号を名指していなかった→ `Tuplet_bracket::print scale_drul` を名指した／2 回目は行番号表の再生成漏れ）＝full **10313 / 0 / 2 / 10315**（+3＝網・run4.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 7,596 B）。§7.5 Core '+' ≈ 120 行（TupletBracketEngraver・Overlays 3・ArticulationEngraver 2）／REF 3（get_x_bound_item・Tuplet_bracket::print scale_drul・Tab_note_heads_engraver::process_music）／OWN 0。7.6: ⒜ LP の式（get_x_bound_item・calc_x_positions・print の ss 倍・TabVoice の符幹）を tab に通した＝移植。7.7 匂い: `TabDirection` の同数の裁きは tuplet-bracket.cc の極端の式ではなく `GroupStemUp`（beam の式）で近似＝2 つ目の綴りに近い（同数の例は本に無い・註に書いた）。perf: tab の tuplet ごとに `TabStaffGeometry` 1 つ（layout 時だけ）。`Deploy-Lsp.ps1` で server を配り直す（Reload Window が要る）。Lab は `sessions/p690/`（毒・probe 3 冊と LP twin・log）を commit。push はユーザー（未 push 49）。
+
+## 以下は第689セッションの経緯
+
 ### 1.1 第689セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（第688 の 6 個のコード図はユーザー実機確認済「改善した」）。ユーザー報告「`bohemian-rhapsody.lys` score tab の 8〜12 小節（L705〜709 の `R1`）で全休符が左右に割れ、左は五線の下にぶら下がる全休符・右は線の上に乗る二分休符に見える」＋「4 拍子なのに全休符と二分休符」。★ `-Start p689`（HEAD `97083e11`・未 push 45・full **10308 / 0 / 2 / 10310**）。
@@ -128,18 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⚠ 射程: tab 譜の全小節記号だけ（notation 譜は LineSpacing 1.0・5 線表＝バイト不変）。tab の `R1*N`（教会休符の長い記号・H-bar・数字）は LP の式に沿って動かしたが目視は未（本に無い）。
 
 ★ **終了**: commit `5e53afff`（Core 7・網 1・CHANGELOG・APPROXIMATIONS・magic_constants＝行番号だけ）。`-End p689 -DiffBase 97083e11`（detached・72 秒）＝full **10310 / 0 / 2 / 10312**（+2＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,300 B）。§7.5 Core '+' 156 行（Marks 47・EngravingDefaults 28・MultiStaffLayouter 27・MMR engraver 26・ElementCoordinator 15・Tab 11・Annotations 2）／REF 2（TabLinePositions＝staff-symbol.cc line_positions・LineSpacingOf＝engraver-init.ly TabStaff staff-space）／OWN 0。7.6: ⒜ LP の式（church_rest の ss × 0.5・(ss − fs)・line-count の N−1, N−3, …）を tab に通した＝移植。7.7 匂い: 「staff の線の位置」が `StaffLinePositions(int)`（notation の as lines 表）と `TabLinePositions(int)`（LP 規則）の 2 表になった＝`LinePositionsOf(Staff)` が 1 か所で選ぶ・int 版の `NeutralRestPosition`／`VoicedRestPosition` は span 版へ委譲（2 つ目の綴りではない）。perf: engraver の staff 表引きが staff ごとに 1 回増える（export/描画時だけ）。`Deploy-Lsp.ps1` で server を配り直した（Reload Window が要る）。Lab は `sessions/p689/`（毒・probe・LP の png・log）を commit。push はユーザー（未 push 47）。
-
-## 以下は第688セッションの経緯
-
-### 1.1 第688セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き。ユーザー報告「`C:\tmp\diagram.lys` L7 の chord の上で Ctrl+Shift+↑ を押すと、レンダ上の 6 個のコード図が変わるべきなのに先頭しか変わらない」（section A を form が 6 回弾く本・`chord(C x35550)1@chord()`）。★ `-Start p688`（HEAD `14873092`・未 push 43・full **10305 / 0 / 2 / 10307**）。
-★★ **根＝collect の suffix splice**（頁の full render は正しい＝`lysc` と export は無関係）。計器（使い捨て probe・消した）: 内容キー `MeasureContentKey` は 6 play とも動く（m0/m2/…/m10 diff）・fresh の collect は 6 つとも新 shape・`LastCollectResume = (0, 0, 1, 11)`＝11 小節を splice。window [84,87)・Δ0 に対し、再生 play の小節は `[124,99)`／`[102,99)`（SourceStart は form の `|:` や前 play の終わり・SourceEnd は section 本体の小節線）・item は 74（section 本体）＝**「小節の文字領域が window を跨ぐか」の門が再生 play を見えない**（left=前小節の End=102 ≥ SuffixStart）。phrase 本体は `WindowTouchesPhraseOrVariable` で suffix を丸ごと切っているが、form の再生には相手が無かった。
-直し: `TrySpliceSuffix` に repetition の門と同じ形の門＝**候補より後の HeaderReads のうち Structure 読み（各 play が `ProcessSection` で積む section の FullSpan）が window に掛かるなら decline**「a section the tail plays again holds the window」（trivia-only の window は通す＝候補前の門と同じ）。1 回しか弾かない section は play 頭の読みが候補より前なので今まで通り splice する＝失うのは「再生 play を含む尾」だけ。
-★ 検証: 網 `ShapeChordIncrementalTests` 3（Δ0 の shape・長い shape・音の挿入＝resumed と fresh のバイト一致）。毒 P1（門を消す）赤（Lab `sessions/p688/poisons.ps1`）。CollectEditResume 49／CollectResume 3／IncrementalCompiler 86／TrailingGapSplice 3／Splice 17／Resume 62 緑（corpus の脚込み 4 分 50 秒）。
-⚠ perf: 再生 play を含む尾の splice を失う（form の `A A B A` は普通の形）。値付けは未（数える計器＝corpus sweep での decline 回数）＝perf の島は一時停止中なので、再開時に「a section the tail plays again」の decline 数を数える。⚠ 道具: 長い `dotnet test`（corpus の脚）は MCP の「入力待ち」警告を出すが testhost の CPU が増えていれば本物＝第687 の `-End` とは別の顔。
-
-★ **終了**: commit `c3cf289b`（Core 1・網 1・CHANGELOG）。`-End p688 -DiffBase 14873092`（detached・54 秒）＝full **10308 / 0 / 2 / 10310**（+3＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,380 B）。§7.5 Core '+' 26 行（Resume.cs の門 1 つ）／REF 0／OWN 0＝collect の resume の健全性（出所は repetition の門の形）。7.6: ⒟ 何も移植していない。7.7 匂い: 毒で赤になるのは 3 例中 2 例（音の挿入は別の門が先に decline する＝門の重なり・観測者は shape の 2 例）。perf: decline が増える分だけ（値付け未・上の ⚠）。拡張へ `Deploy-Lsp.ps1` で server を配り直した（Reload Window が要る）。Lab は `sessions/p688/`（毒・probe の diagram.lys・log）を commit。push はユーザー（未 push 45）。
 
 ## 2. 開いている作業
 

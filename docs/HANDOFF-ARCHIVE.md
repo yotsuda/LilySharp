@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第688セッションの経緯
+
+### 1.1 第688セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き。ユーザー報告「`C:\tmp\diagram.lys` L7 の chord の上で Ctrl+Shift+↑ を押すと、レンダ上の 6 個のコード図が変わるべきなのに先頭しか変わらない」（section A を form が 6 回弾く本・`chord(C x35550)1@chord()`）。★ `-Start p688`（HEAD `14873092`・未 push 43・full **10305 / 0 / 2 / 10307**）。
+★★ **根＝collect の suffix splice**（頁の full render は正しい＝`lysc` と export は無関係）。計器（使い捨て probe・消した）: 内容キー `MeasureContentKey` は 6 play とも動く（m0/m2/…/m10 diff）・fresh の collect は 6 つとも新 shape・`LastCollectResume = (0, 0, 1, 11)`＝11 小節を splice。window [84,87)・Δ0 に対し、再生 play の小節は `[124,99)`／`[102,99)`（SourceStart は form の `|:` や前 play の終わり・SourceEnd は section 本体の小節線）・item は 74（section 本体）＝**「小節の文字領域が window を跨ぐか」の門が再生 play を見えない**（left=前小節の End=102 ≥ SuffixStart）。phrase 本体は `WindowTouchesPhraseOrVariable` で suffix を丸ごと切っているが、form の再生には相手が無かった。
+直し: `TrySpliceSuffix` に repetition の門と同じ形の門＝**候補より後の HeaderReads のうち Structure 読み（各 play が `ProcessSection` で積む section の FullSpan）が window に掛かるなら decline**「a section the tail plays again holds the window」（trivia-only の window は通す＝候補前の門と同じ）。1 回しか弾かない section は play 頭の読みが候補より前なので今まで通り splice する＝失うのは「再生 play を含む尾」だけ。
+★ 検証: 網 `ShapeChordIncrementalTests` 3（Δ0 の shape・長い shape・音の挿入＝resumed と fresh のバイト一致）。毒 P1（門を消す）赤（Lab `sessions/p688/poisons.ps1`）。CollectEditResume 49／CollectResume 3／IncrementalCompiler 86／TrailingGapSplice 3／Splice 17／Resume 62 緑（corpus の脚込み 4 分 50 秒）。
+⚠ perf: 再生 play を含む尾の splice を失う（form の `A A B A` は普通の形）。値付けは未（数える計器＝corpus sweep での decline 回数）＝perf の島は一時停止中なので、再開時に「a section the tail plays again」の decline 数を数える。⚠ 道具: 長い `dotnet test`（corpus の脚）は MCP の「入力待ち」警告を出すが testhost の CPU が増えていれば本物＝第687 の `-End` とは別の顔。
+
+★ **終了**: commit `c3cf289b`（Core 1・網 1・CHANGELOG）。`-End p688 -DiffBase 14873092`（detached・54 秒）＝full **10308 / 0 / 2 / 10310**（+3＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,380 B）。§7.5 Core '+' 26 行（Resume.cs の門 1 つ）／REF 0／OWN 0＝collect の resume の健全性（出所は repetition の門の形）。7.6: ⒟ 何も移植していない。7.7 匂い: 毒で赤になるのは 3 例中 2 例（音の挿入は別の門が先に decline する＝門の重なり・観測者は shape の 2 例）。perf: decline が増える分だけ（値付け未・上の ⚠）。拡張へ `Deploy-Lsp.ps1` で server を配り直した（Reload Window が要る）。Lab は `sessions/p688/`（毒・probe の diagram.lys・log）を commit。push はユーザー（未 push 45）。
+
 ## 以下は第687セッションの経緯
 
 ### 1.1 第687セッション（2026-09-29・YT-DELL2）
