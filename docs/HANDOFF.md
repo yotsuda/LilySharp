@@ -80,8 +80,9 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
-- ★ **tab の LP 差（第690 が tuplet の twin で見つけた・tuplet 側の問題ではない）**: beam 付き tab 符幹が LP より 0.56 高い（tab beam の高さ）／tab の turn が 0.17 高い／`g,4`（G2）を LP は G 弦開放、Lily# は D 弦 5 フレットに置く（フレット選択）／斜めの bracket の描画端を LP は傾きに沿って延ばす（`shorten-pair` を `dz` 方向に・Lily# は水平に延ばす＝notation も同じ）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
+- **tab の LP 差（第690 起票）は第694 で全部閉じた**: turn の 0.17＝tab の Script の独自配置（`893b968b` で aligned_side に移植）／斜めの bracket の端＝`a08b91df`（make_bracket の字面・隙間も）／「beam 付き tab 符幹が 0.56 高い」「`g,4` のフレット選択」はユーザー決定の帰結＝欠陥ではない（§1.1 第694）。**tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝隙間がその分広い・書体の問題）
 - **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
+- **Script のグリフの近い側の範囲が LP の輪郭でない（第694 が tab の twin で見つけた・五線も同じ）**: 装飾記号（turn ほか）は `GetGlyphBBox` の仮の箱 ±0.5（LP は輪郭＝turn 0.528）→ 0.028 低い／accent は箱（LP は輪郭）→ +0.033。`GetNearExtent` を LP の `vertical-skylines`（from-stencil）に合わせる。計器は Lab `sessions/p694/tabscript.ps1`・`scriptdump.ily`
 - **小節線 → 音の最小は第693 がスカイラインにした（`SpacingRules.BarlineToColumnMinimum`）。残る同じ量の 2 つ目の綴り**: 調号・拍子の変わり目が小節を開くときの枝（`BarlineToFirstColumnSpring` の `MusicalColumnLeftReach`）はまだ X だけ。LP と食い違う本は未発見（変わり目の後は ideal が効く・Lab `sessions/p693/bl2` q・s）。直すなら変わり目の glyph の Y extent を箱にする
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
@@ -120,6 +121,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第694セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p694`（HEAD `29c9edbc`・未 push 66）＝full **10355 / 0 / 2 / 10357**（引継ぎと一致）。
+⑴ §1.0 ⒜「tab の LP 差」に着手。**「beam 付き tab 符幹が 0.56 高い」は第569 の決定の帰結**＝`uniformBeamedLength` を false にすると双子 9 冊（Lab `sessions/p694/tb2`・`tb3`・計器 `tabbeams.ps1`）の beam positions が LP と完全一致（LP は数字の大きさ +0〜+3 でも positions 不動＝数字の大きさの帰結ではない）。ユーザー質問「LP の tab はなぜ 8 分と 16 分の高さが揃わないか」→ 五線用の `beamed-lengths (3.26 3.5 3.6)`（beam が増えるほど符幹を長く）を tab も継ぎ、五線でそれを隠す中央線への引き伸ばし（stem.cc:1235-1243）が tab では効かない＝tab 固有の意図ではない、と答えた。**ユーザー決定: 決定は維持**。「`g,4` のフレット選択」は §2 B の決定＝どちらも起票から外した。
+⑵ 「tab の turn が 0.17 高い」＝**tab の Script の枝が丸ごと独自配置**（中心を数字・符幹・五線の縁から一律 1.0）。双子 11 変種（`ts3`）で最大 1.0 ずれ。★ `893b968b`＝LP の aligned_side を tab の幾何で字面移植（padding・staff-padding に staff-space 1.5 を掛ける・支え＝同じ向きの符幹と数字・include_staff・量子化は tab の半 space と ledger 込みの on_line・X の親は first head＝TabNoteHead）。**ユーザー決定（2026-09-30）: 支えの数字は描いている Lily# の大きい数字**。数字の大きさと beam の決定を外すと 11 変種すべて LP と 0.033 以内（`ts4`）。網 `TabScriptAlignedSideTests` 5・毒 2（旧枝→5 赤／padding に ss を掛けない→4 赤・量子化の 1 本は構成上緑）。snapshot 7 枚をユーザー承認で再ベース（対にできた記号は全部 LP へ）・掃き 998 冊で fixture 6 冊・実コーパス 0 冊。full **10360 / 0 / 2 / 10362**。
+⑶ ユーザー質問「TAB の数字は少し大きすぎるか」→ 3.0／2.8／2.6／2.4 を描き比べて提示（Lab `sessions/p694/fretsize/compare.png`・`fonts { tab size N }`）、2.8 を勧めた→**ユーザー決定「既定値は 2.8」**（⑸）。
+⑷ 斜めの tuplet bracket: 描画が LP の `Bracket::make_bracket` でなかった（端を X だけ 0.2・隙間は一律 ±1.0）。★ `a08b91df`＝端は dz に沿って `shorten/length*dz`（`DrawnStartYUp` を足しスカイライン・ページ送りの memo 鍵も）・隙間は（数字の送り幅＋1.0）を中点から dz に沿って＋0.1。LP 双子（Lab `sessions/p694/tup`・`tup2`・計器 `tupbr.ps1`）で鉤・隙間の角が全部 LP へ（LP も鉤を −0.2746＝−0.3×dx/len に置くのを直接確認）。LP 6 桁一致の既存網 3 本は「描いた端の Y＝positions」と読んでいた＝線に沿って 0.2 戻す読みに直して緑のまま・`TabTupletBracketTests` の 0.365 は水平前提だった→ LP の式。網 `TupletBracketGapTests`・毒で 5 赤。snapshot 11 枚承認・掃き 37 冊（コーパス 19）は括弧の線だけ。
+⑸ `46ed6e28`＝`TabConstants.FretFontSize` 3.0 → 2.8。台帳 `slur.tab.*` 6 点と bow 双子の tab 14 本が全部 LP へ（記録を更新）・テスト 2 本の `font-size="3.00"` 直書きを定数から組むように。snapshot 37 枚（ユーザー指示）・掃き 258 冊（コーパス 207）・段の数が変わったのは 4 冊で全部減る向き（everybody goes 30→29・異邦人 27→26・星になれたら 32→30・全力少年 38→37）。CHANGELOG の Fixes に 4 件。full **10361 / 0 / 2 / 10363**。
+★ `-End p694 -DiffBase 29c9edbc`＝full **10361 / 0 / 2 / 10363**・門 6 つ全 OK・Core `+` 136 行に REF 15／OWN 0。7.6: tab の Script＝⒝（aligned_side の字面だが、支え〔符幹・数字・弦〕と Script の輪郭の X の重なりは箱で仮定＝五線の経路と同じ簡略）・tuplet の括弧＝⒜（make_bracket の字面）・数字の大きさ＝既存の OWN（批准済みの逸脱の値だけ）。7.7: 2 つ目の綴り＝五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。push はユーザー。
+
+## 以下は第693セッションの経緯
+
 ### 1.1 第693セッション（2026-09-30・YT-DELL2）
 
 新しい会話・HANDOFF から着手。★ `-Start p693`（HEAD `375db6a4`・未 push 64）＝full **10346 / 0 / 2 / 10348**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本は改行だけ（中身の差 0・9/29 の生成物）＝触らない。
@@ -127,18 +140,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ `b1645317`＝`SpacingRules.BarlineToColumnMinimum`（`NoteColumnToBarlineFloorPair` の鏡・同じ `ItemSkylineFactory` の view）。39 冊すべて符頭ごとに一致。網 `BarlineToColumnMinimumTests` 9（LP の間隔）・毒 2 本（旧式に戻す→くぐる 4 本赤／箱を伸ばさない→gis, aes, の 2 本赤）。掃き（998 冊・Lab `sessions/p693/sweep`）: 12 冊が動き、双子の段ごとの符頭間隔で測れるものは全部 LP へ（tie-lv 0.940→0・glissando-accidental 2.443→0・Are You Gonna Go My Way 0.463→0・Smooth Operator 40.96→39.37 ほか・`sessions/p693/moved`・`gapsum2.ps1`）。snapshot 2 枚（`test/cue-accidentals`＝第691 の残り 1 本・`test/transpose`）をユーザー承認で再ベース。full **10355 / 0 / 2 / 10357**。値段（実コーパス 332 冊・1 回ずつ）: 新経路 89,581 回（音 → 音の対 877,845 に対し）・スカイライン建築 736,078 → 772,146（+4.9%）。
 ⚠ 射程: 箱は「この列」の高さだけで伸ばす（LP は両隣・鏡と同じ・網なし）／調号・拍子の変わり目の枝は X のまま（§1.0 ⒜）。
 ★ `-End p693 -DiffBase 375db6a4`＝full **10355 / 0 / 2 / 10357**（run4.trx）・門 6 つ全 OK（HANDOFF 残り約 8 KB・§1 現在便 約 8,900 字）・Core `+` 76 行に REF 4／OWN 0。7.6: ⒝（LP 由来・字面でない＝LP は列の skyline を持ち、Lily# は小節線の箱をその場で建てる。鏡と同じ形）。7.7: 2 つ目の綴り＝変わり目の枝（上の射程）・`!IsMusicalColumn` の X だけの腕は既存のまま。push はユーザー。
-
-## 以下は第692セッションの経緯
-
-### 1.1 第692セッション（2026-09-30・YT-DELL2）
-
-ユーザー報告「`corpora/ベースタブLy/abc.lys` 36 小節目の `[1.` のブレースが五線の行末まで伸びていない。意図通りか」。★ `-Start p692` は修正の後に回した（開始時 HEAD `2c2cf887`・終了前の `-Start` は HEAD `700ebcf6`）。
-⑴ **意図通りではない＝LP の欠陥**。36 小節目（2/4 の 1 番括弧）は行末に予告の 4/4 が付く。LP は行で切れた括弧を段の右端（予告の上）まで引き、Lily# は小節線の 0.3 手前で止めていた（3.17 短い）。`0165608d` で切れた括弧の右端を段の右端（`StaffRightEdges`）− 0.08 にした。
-⑵ ユーザー「続けて」→ 残りの両端（左端 +0.38・閉じ側 +0.71 など、出典の無い `StartPadding`/`EndPadding` 0.3）。途中でユーザー指示「**出力に基づいて発明するのではなく、可能な限り字面を移植して**」。★ `700ebcf6`＝`VoltaBracketEngraver.PieceEnds` に字面で移植: `ly:volta-bracket::calc-shorten-pair`（bar-line.scm:1135-1245）・それが読む `bar-line::compound-bar-line`／`span-bar::compound-bar-line`／`define-bar-line` の span glyph（`BarGlyphs`）・print の `left`（行頭は break alignment の右端）と `spanner_length`・engraver と `do_break_processing` の bound（`Bounds`）。`bars-left` は ending の最後の小節線を除く全部で、切れた後の断片の左は「最初の生きた小節線」＝行頭の "|" は死んでいるので行内の小節線を読む（LP の 0.11 はそこから来る）。Lily# が渡すのは glyph の太さ・ペンの小節線位置（`BarWalk`）・行頭の前置きの右端・段の右端だけ。`Calculate` は `MultiStaffScore` 必須（両 pass が渡す）。
-★ 検証: 双子 8 形（Lab `sessions/p692/ends`・`hookE` で VoltaBracket の stencil 範囲 ∓0.08）の全端が LP と 0.006 以内。網 `VoltaBracketShapeTests.EveryPiece_EndsWhereLilyPondsDoes` 8＋`APieceTheBreakCuts_RunsToTheSystemsEnd` 2（shorten pair を 0 にする毒で 10 本赤）。掃き（998 冊・1199 svg・Lab `sessions/p692/sweep`）: 144 枚が動き、127 枚は括弧と番号の X だけ、17 枚は括弧の幅が変わって積み上げ（Y）も動く（ミュージック・アワーの最後の 1./2. は LP の双子と同じく符頭の上へ下がった）。snapshot 8 枚をユーザー承認で再ベース（7 枚 X だけ・`test/grammar-test` は Y も 0.03）。full **10341 / 0 / 2 / 10343**。
-⑶ 同じ会話で「続けて」→ 見つけた 2 件のうち「staff＋tab で括弧が 2 回」＝**段の数だけ重複していた**（grand staff も・snapshot 2 枚に既存）。form を staff ごとに歩くたび `_voltaBrackets` に足していた＝`MeasureCollector.AddVoltaBracket`（harvest と同じ鍵）に 6 経路を通した（LP は Score の Volta_engraver で 1 本）。★ 重複は `LaterEndingPredecessors` も壊していた（4 番まである繰り返しで 3・4 番の起点が 1 番でなく直前の括弧）＝Disco Inferno「both」の段頭の小節番号 36・54 が消えて LP の双子（Lab `sessions/p692/disco`）と一致。`758e5fb4`・網 `EveryEnding_HasOneBracket_HoweverManyStaves` 3（毒で複数段の 2 本赤）・snapshot 2 枚を承認で再ベース（削除 8 行ずつ）・full **10344 / 0 / 2 / 10346**。
-⑷ 「続けて」→ もう 1 件（staff＋tab の横の間隔）。**TAB の数字の大きさ（承認済みの逸脱）では説明できない**と先に確かめた（LP で数字を大きくすると逆へ動く）。原因は `MeasureLayouter.StaffItemsAt`: 段ごとの Staff_spacing wish に**共有 voice の拍子・調号の変わり目**をそのまま入れていた＝数字だけの TAB も拍子記号から wish していた（LP の TabStaff は拍子記号を ##f・調号なし＝小節線から）。その段が描かない変わり目を外した（`StaffWishReads`）。p9 と Desperado 1 段目の小節線が LP と一致。`34d62e18`・網 `StaffSpacingWishTests` 2（毒で TAB の 1 本赤）・掃き 47 枚（全部 staff＋tab・段割れ不変）・snapshot 不変・full **10346 / 0 / 2 / 10348**。
-⚠ 射程: 小節線は primary staff 1 本で読む（LP の vag-index 照合＝複数 staff で小節線が違うと差が出うる）／MMR の内側の小節線の抑止は見ていない／行中で小節線の無い境界の bound は `ExtentEmpty` 扱い（形の上で未測定）。§7 7.6 で 1 つ目を ⒝ の註、2・3 つ目を `LILYSHARP-OWN` 2 本（観測者なし）としてコードに書いた。
 
 ## 2. 開いている作業
 

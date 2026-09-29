@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第692セッションの経緯
+
+### 1.1 第692セッション（2026-09-30・YT-DELL2）
+
+ユーザー報告「`corpora/ベースタブLy/abc.lys` 36 小節目の `[1.` のブレースが五線の行末まで伸びていない。意図通りか」。★ `-Start p692` は修正の後に回した（開始時 HEAD `2c2cf887`・終了前の `-Start` は HEAD `700ebcf6`）。
+⑴ **意図通りではない＝LP の欠陥**。36 小節目（2/4 の 1 番括弧）は行末に予告の 4/4 が付く。LP は行で切れた括弧を段の右端（予告の上）まで引き、Lily# は小節線の 0.3 手前で止めていた（3.17 短い）。`0165608d` で切れた括弧の右端を段の右端（`StaffRightEdges`）− 0.08 にした。
+⑵ ユーザー「続けて」→ 残りの両端（左端 +0.38・閉じ側 +0.71 など、出典の無い `StartPadding`/`EndPadding` 0.3）。途中でユーザー指示「**出力に基づいて発明するのではなく、可能な限り字面を移植して**」。★ `700ebcf6`＝`VoltaBracketEngraver.PieceEnds` に字面で移植: `ly:volta-bracket::calc-shorten-pair`（bar-line.scm:1135-1245）・それが読む `bar-line::compound-bar-line`／`span-bar::compound-bar-line`／`define-bar-line` の span glyph（`BarGlyphs`）・print の `left`（行頭は break alignment の右端）と `spanner_length`・engraver と `do_break_processing` の bound（`Bounds`）。`bars-left` は ending の最後の小節線を除く全部で、切れた後の断片の左は「最初の生きた小節線」＝行頭の "|" は死んでいるので行内の小節線を読む（LP の 0.11 はそこから来る）。Lily# が渡すのは glyph の太さ・ペンの小節線位置（`BarWalk`）・行頭の前置きの右端・段の右端だけ。`Calculate` は `MultiStaffScore` 必須（両 pass が渡す）。
+★ 検証: 双子 8 形（Lab `sessions/p692/ends`・`hookE` で VoltaBracket の stencil 範囲 ∓0.08）の全端が LP と 0.006 以内。網 `VoltaBracketShapeTests.EveryPiece_EndsWhereLilyPondsDoes` 8＋`APieceTheBreakCuts_RunsToTheSystemsEnd` 2（shorten pair を 0 にする毒で 10 本赤）。掃き（998 冊・1199 svg・Lab `sessions/p692/sweep`）: 144 枚が動き、127 枚は括弧と番号の X だけ、17 枚は括弧の幅が変わって積み上げ（Y）も動く（ミュージック・アワーの最後の 1./2. は LP の双子と同じく符頭の上へ下がった）。snapshot 8 枚をユーザー承認で再ベース（7 枚 X だけ・`test/grammar-test` は Y も 0.03）。full **10341 / 0 / 2 / 10343**。
+⑶ 同じ会話で「続けて」→ 見つけた 2 件のうち「staff＋tab で括弧が 2 回」＝**段の数だけ重複していた**（grand staff も・snapshot 2 枚に既存）。form を staff ごとに歩くたび `_voltaBrackets` に足していた＝`MeasureCollector.AddVoltaBracket`（harvest と同じ鍵）に 6 経路を通した（LP は Score の Volta_engraver で 1 本）。★ 重複は `LaterEndingPredecessors` も壊していた（4 番まである繰り返しで 3・4 番の起点が 1 番でなく直前の括弧）＝Disco Inferno「both」の段頭の小節番号 36・54 が消えて LP の双子（Lab `sessions/p692/disco`）と一致。`758e5fb4`・網 `EveryEnding_HasOneBracket_HoweverManyStaves` 3（毒で複数段の 2 本赤）・snapshot 2 枚を承認で再ベース（削除 8 行ずつ）・full **10344 / 0 / 2 / 10346**。
+⑷ 「続けて」→ もう 1 件（staff＋tab の横の間隔）。**TAB の数字の大きさ（承認済みの逸脱）では説明できない**と先に確かめた（LP で数字を大きくすると逆へ動く）。原因は `MeasureLayouter.StaffItemsAt`: 段ごとの Staff_spacing wish に**共有 voice の拍子・調号の変わり目**をそのまま入れていた＝数字だけの TAB も拍子記号から wish していた（LP の TabStaff は拍子記号を ##f・調号なし＝小節線から）。その段が描かない変わり目を外した（`StaffWishReads`）。p9 と Desperado 1 段目の小節線が LP と一致。`34d62e18`・網 `StaffSpacingWishTests` 2（毒で TAB の 1 本赤）・掃き 47 枚（全部 staff＋tab・段割れ不変）・snapshot 不変・full **10346 / 0 / 2 / 10348**。
+⚠ 射程: 小節線は primary staff 1 本で読む（LP の vag-index 照合＝複数 staff で小節線が違うと差が出うる）／MMR の内側の小節線の抑止は見ていない／行中で小節線の無い境界の bound は `ExtentEmpty` 扱い（形の上で未測定）。§7 7.6 で 1 つ目を ⒝ の註、2・3 つ目を `LILYSHARP-OWN` 2 本（観測者なし）としてコードに書いた。
+
 ## 以下は第691セッションの経緯
 
 ### 1.1 第691セッション（2026-09-29・YT-DELL2）

@@ -278,6 +278,24 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Tab fret numbers are a little smaller.** The default is now 2.8 (it was 3.0): at 3.0 a
+  number stood heavier than the note heads above it and all but touched the neighbouring
+  strings. It is still larger than LilyPond's. `fonts { tab size 3 }` brings the old size back
+  for one book.
+- **A note just after a bar line no longer keeps room for an accidental that misses the bar
+  line.** A sharp on a low F (below the staff) or a high one (above it) stands under or over
+  the bar line, and LilyPond sets the note where it would set it with no accidental; Lily# put
+  the accidental's whole width in front, about 1 staff space more. The bar line and the note
+  are now kept apart as LilyPond keeps them, shape against shape.
+- **Articulations on a tab staff sit where LilyPond puts them.** A turn, fermata, staccato or
+  accent on a tab was set a fixed distance from the fret number, the stem or the staff edge,
+  up to a staff space from LilyPond's place. It is now placed the way LilyPond places any
+  script — clear of the stem that points its way and of the fret number, with its padding
+  scaled by the tab's wider line spacing, and a staccato rounded into a space between strings.
+- **A sloped tuplet bracket's ends and its gap for the number follow the slope.** The ends
+  reached past the notes level and the line broke a fixed width around the number; both now
+  run along the bracket as LilyPond draws it, and the gap is the number's width plus one staff
+  space.
 - **A tuplet bracket on a tab staff starts and ends at its stems.** The bracket's bounds were
   read with the notation staff's notehead geometry, so on a tab — where the stem stands at the
   fret digit's centre — each hook stood half a digit or more off the notes it bounds
