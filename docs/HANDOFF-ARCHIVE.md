@@ -129,6 +129,21 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第691セッションの経緯
+
+### 1.1 第691セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（第690 の tab の tuplet bracket はユーザー実機確認済「改善した」）。★ `-Start p691`（HEAD `363fe322`・未 push 53）。
+⑴ ユーザー報告「`bohemian-rhapsody.lys` score main 45 小節 L748 `g16( aes)` の 3 つめのスラーが aes の ♭ と重なる」→ **LP 2.26.0 も同じ絵＝欠陥ではない**。twin（Lab `sessions/p691/probes/br-cb*`）でスラーの制御点と ♭ の位置が g の頭から 0.02 以内で一致・画像もピクセル同一（`lp45.png`／`ls45.png`）。LP の accidental-collision は小さい罰（3）で、♭ を越える高さより安い。回避は譜面側（`@phrasingSlur.down` で下へ）＝ユーザーに伝えた。変更なし。
+⑵ ユーザー質問「タイ・スラーは LP を完全に模倣できているか」→ 答えの中で `move_away_from_staffline` と cue スラーを「未」と言ったのは**古い記述の読み違い**: 前者は 2026-08-08（`SlurScoringProblem.MoveAwayFromStaffline`）から移植済み（§2 の行を消した）・後者は第656 が符頭を直していた。
+⑶ ユーザー「move_away_from_staffline と cue 音符のスラーは移植して。slur_head-only も移植して」。
+★ **cue スラー**: probe（Lab `sessions/p691/cue/cue-slurs.lys` ほか 3 冊・`p647/bows/one.ps1` で twin 比較）で残っていた cue だけの差は 4 族: ⒜ 端の符幹 x がフルサイズの頭の attach（0.49 右）⒝ 覆う符幹の x も同じ ⒞ 臨時記号の extra object がフルサイズの箱と配置（高さ最大 0.87）⒟ 旗の箱。**`ElementCoordinator.BowFont`（cue なら `CueFont`）を stem x・旗・臨時記号（単音は `CalculateSinglePosition(n, font, font)`・和音は `ChordAccidentalLayouts(c, font)`）に通した**。付点の cue は元から一致（`cue-dots.lys` 5 本）。**残る cue の差はスラーの外**: ⓐ **cue の beam が未移植**（CueVoice の `Beam.length-fraction = magstep(-4)`・`beam-thickness 0.35` を `BeamEngraver` が渡さない＝beam 付き cue の符幹と beam が 1.06 高い・太さ 0.48）ⓑ **臨時記号付き cue の間隔がフルサイズの音符の値**（LP 2.513 対 Lily# 3.354）。この 2 つで cue-slurs の 3 本が LP とずれたまま＝§1.0 ⒜ に起票。
+★ **slur_head-only＝和音の中の音に付くスラー `<c e( g>4 <d f) a>`（新構文）**: 構文は `ParseChord` が pitch の後の `(`／`)` を子に持つ（`<< >>` の member スラーと同じ形・pitch が前に無い印は StrayItemToken で報告）。その印は `ChordSyntax.Articulations` にも入るので和音のスラー旗は今まで通り立ち、`ChordSyntax.MemberSlurs` が「どの member か」を返す→ `ChordItem.SlurStartHeadPosition`／`SlurEndHeadPosition` → `SlurItem.StartOnHead`／`EndOnHead`（staff 位置はその頭）。layout は LP の head 枝どおり: base＝頭の内側の縁（始点は右縁・終点は左縁）・Y は `linear_combination (0.5·dir)`（中心から頭の 1/4）・符幹なし・beam なし・範囲は base＋0.3（候補 1 つ）・min-length/max-slope の戻り先は頭の中心（`SlurEdgeInfo.OnHead`／`HeadCenterOffset`）・`move_away_from_staffline` しない・端の列も avoid 点。双子は member に印を書き、MusicXML はその音に `<slur>` を置く。LP twin（`sessions/p691/headslur/hs.lys`・6 小節 9 本）で全部 0.01 以内。
+★ 検証: 網 `CueBowTests` +2（cue 符幹から出るスラー・cue 臨時記号の上＝LP の高さ 4 本）・`ChordHeadSlurTests` 6（束縛・`>` の後は和音・形＝LP 1.4270／−2.2725／0.1228／−1.7725・双子の綴り・MusicXML・pitch の無い印の報告）・bow twin の本 +2（`Fixtures/bows/bow-chord-head`・`bow-cue-acc`＋LP の `.lp.txt`）・`CollectTailShifterTests` の NotAPosition に新 2 欄。毒 11 本（Lab `sessions/p691/poisons.ps1`）: 9 本赤・**P6（head の staff 線回避を外す）と P7（head 側の列を avoid から外す）は構成上緑**＝Emmentaler の頭では head base が線から 0.2 以内に来ない／avoid 点がスラーの X 範囲の外（註に書いた・LP の規則のまま移植）。`-End p691 -DiffBase 363fe322`（detached）＝full **10327 / 0 / 2 / 10329**（+8＝網・run2.trx）・snapshot 不変・Core 0 警告・門 6 つ全 OK（2 天井 残り 約 2.2 KB）。実コーパスは動かない（cue の本は無く、member スラーは新構文）。`Deploy-Lsp.ps1` で server を配り直す（Reload Window が要る）。push はユーザー。
+⚠ 射程: tab 譜の member スラーは和音の列のまま（tab の経路は head 枝を読まない）。`q` は member の印を写さない（未確認: LP の `q` が写すか）。
+
+★★ **追記（同じ便）**: ユーザー「cue の連桁と間隔の 2 つも直して」。⒜ **連桁**: `BeamGroup.IsCue`／`Thickness`（0.35）／`LengthFraction`（magstep(−4)）／`HeadFont`＝quanter（`BeamEngraver`）・描画（太さ・段の間隔・符幹の x）・`OuterEdgeStaffSpaceAtX`・休符の押し・スラーの符幹が読む（engraver-init.ly CueVoice）。LP twin（`cuebeam/cb.lys`）で 18 本の太さ・長さ・両端の高さが SVG の丸め内。⒝ **間隔**: `ItemSkylineFactory` の cue 列（頭・二度・臨時記号・符幹・旗）と小節線→音の臨時記号の届き（`CalculateLeftExtent`・`ChordSupportLeftReach`）を cue の font で（`SpacingRules.CueFontOf` に一本化・`BowFont` もこれ）。そのうえで**閉じのばね（音→小節線）の最小を stem の wish の merge より前に skyline で置き換えた**（前は merge の後に ensure＝増分 1.2 の上に 0.3＝cue の 8 分で 0.114 遅れた・LP note-spacing.cc:78-83）。cue の twin の本 13 冊の間隔が全部一致・cue-slurs の 10 本も全部一致。bow twin の本 +1（`bow-cue-slurs`）・`CueBowTests` を 0.002 に締めた。snapshot 2 冊（`test/cue-accidentals`・`cue-region-measure`）を再ベース＝どちらも LP へ寄った（前 6 本ずれ→残り 1 本は上の plain の族）。網 `CueBeamSpacingTests` 4。毒 7 本全部赤（Lab `sessions/p691/poisons2.ps1`・Q3 は網 `ACueBeamsMemberStems` が観測者）。`-End p691 -DiffBase ff1600ff`＝full **10331 / 0 / 2 / 10333**・門 全 OK。
+
 ## 以下は第690セッションの経緯
 
 ### 1.1 第690セッション（2026-09-29・YT-DELL2）
