@@ -81,7 +81,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: 行の指番号と下の行の名前の上付きが 0.5 重なる（帯が上付きを数えない・第668）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
-- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672・⑻ は第673・⑺ は第674・⑽ は第675・⒂ は第676・⑾ は第677・⑿⒁ は第678・⒀ は第679 で閉じた**。残り: ⑼ だけ＝half-tie の向きが声部 span の中・part-combine の声部で書いた符尾方向を無視（第663 起票＝ARCHIVE・描画側の島）。★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
+- ✅ **MusicXML／頁の既存欠陥 ⑴〜⒂（第662・第663 起票）は全部閉じた**（⑴⑵⑹ 第671・⑶ 欠陥ではない・⑷⑸ 第672・⑻ 第673・⑺ 第674・⑽ 第675・⒂ 第676・⑾ 第677・⑿⒁ 第678・⒀ 第679・⑼ 第680）。残る穴だけ: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第680セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p680`（HEAD `ca21b8cb`・未 push 26・full **10282 / 0 / 2 / 10284**）。
+★★ **⑼ half-tie の向きが声部 span の中の書いた符尾方向・part-combine の声部を無視＝閉じた**（`81fb4112`）: タイ・スラー・half-tie の側は `NoteItem.VoiceStemUp`（声部の props）から読む（LP の `make-voice-props-set` は Tie／Slur／LaissezVibrerTie／RepeatTie にも direction を立て、`\stemDown` は Stem だけ）。家が 2 つ空だった: ⑴ `ResolveVoiceStemDirections` が stamp 全体を `ForcedStemUp is null` で門番していた＝`@stemUp`／`@stemDown` を書いた音は符尾は正しく、弓は音高の規則に落ちていた→符尾の門はそのまま・`VoiceStemUp` は無条件に。⑵ `PartCombiner.WithVoiceDirection` が `StemUpOverride` だけ焼いていた＝combined staff の one／two の弓は声部の側を持ったことが無かった→`VoiceStemUp` も焼く・shared／solo の `WithoutVoiceDirection` は両方消す。
+★ 検証: `HalfTieEveryStaffTests.EveryVoiceDrawsItsHalfTies_TheLowerVoiceDown` を Theory に（span・符尾を声部と逆に書いた span＝前提として符尾 down/up と VoiceStemUp up/down を断言・combined staff の apart）。毒: P1 門を戻す 1・P2 combiner の符尾だけ 1 が各自赤、P3 shared の古い VoiceStemUp は観測者なし（part 自身の span は shared に来ない・Lab `sessions/p680/poisons.ps1`）。LP 2.26.0 の絵: 探り本 2 冊とも Lily# と同じ側（`probes/out/*-lp.png`）。射程: 掃き 995 冊 moved 0（base＝`ca21b8cb`）。
+⚠ 影響は half-tie だけでなく、同じ読み手のタイ（tab の側・`ElementCoordinator` :2474）とスラー（:4645）にも及ぶ＝combined staff の apart のスラー／タイは今後 `\voiceOne`／`\voiceTwo` の側（LP と同じ）。掃きで動く本は 0＝コーパスに該当の綴りは無い。
+★ **終了**: `-End p680 -DiffBase ca21b8cb`＝full **10284 / 0 / 2 / 10286**（+2＝網・run2.trx）・Core 0 警告・門 6 つ全 OK。§7.5 Core '+' 54 行／REF 2（`direction-polyphonic-grobs`・`make-voice-props-set`＝⒜ 字面ではなく規則の出所）／OWN 0。7.7 匂い: なし（既存の 2 つの家に stamp を足しただけ・幾何は動かしていない）。perf: 走査は足していない（同じ `with` の中の項目 1 つ）。push はユーザー（未 push 28）。**第662・第663 の欠陥 15 件は全部閉じた。**
+
+## 以下は第679セッションの経緯
+
 ### 1.1 第679セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p679`（HEAD `656a5b82`・未 push 24・full **10279 / 0 / 2 / 10281**）。
@@ -125,17 +135,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 検証: 網 `VoltaBracketShapeTests.Twin_NBars_AreTheBarsOwnLengths`（7/4・複数 section で 11/4・1 小節で 1/1・頁の括弧は同じ小節で切れる）。毒 2 本が各自赤（P1 拍子×N に戻す 2・P2 最初の section だけ 2・Lab `sessions/p679/poisons.ps1`）。LP 2.26.0 の証明: 探り本の双子が警告 0 で通り、括弧が G の 3/4 の小節の終わりで切れる絵（`probes/out/cut-meter-lp.png`）。射程: ディスクに `voltaBracket N`／`@voltaBracket(N)` を書く本 0（コメントと探り本だけ）＝動く本 0。
 ⚠ 道具: 毒スクリプトの `dotnet build` が `< NUL` でも console 入力待ちに嵌った（第676 と同じ形・p679 で 1 回）＝`close_console` で捨てて新しい console で回し直した。毒は残っていなかった（`finally` は走っていた）が、**捨てたら必ず `POISON` を grep する**。⚠ Edit ツールは `-Start` が動かしたファイルを「読み直せ」と弾く＝その状態で `-End` を回すと継ぎ目の網 3 本が赤（第679 が踏んだ・run2.trx）。
 ★ **終了**: `-End p679 -DiffBase 656a5b82`＝full **10282 / 0 / 2 / 10284**（+3＝網・run3.trx）・Core 0 警告・TEST EXIT 0。§7.5 Core '+' 78 行／REF 0／OWN 0＝双子の配管（既存の REF 持ち `musical-length` の値の出所を頁の小節モデルに揃えただけ）。7.7 匂い: chord 行だけの section の「拍子 × N」は旧規則の残り（観測者なし・ディスクに本 0）。perf: 打鍵経路ではない（双子の export 時に ending 1 つにつき `Split` を section 数ぶん）。push はユーザー（未 push 26）。**第663 の残りは ⑼ だけ。**
-
-## 以下は第678セッションの経緯
-
-### 1.1 第678セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p678`（HEAD `d8ddb1bb`・未 push 22・full **10269 / 0 / 2 / 10271**）。
-★★ **⒁ form 直下の `:|:` の run の ending（`A :|: B [1. C] :| [2. D]`）＝閉じた**（`b39e216e`）: `FormWalk.GroupDividerRepeats` は 09-10 から run の後続 ending を run のものと読み、MIDI・MusicXML・双子はそう鳴らし書いていた。頁は役割（第669）だけ ending で括弧を描かず、LYS6008 は「repeat が開いていない」と咎めていた。⑴ 検証器は `FormWalk.Read` に訊く（直下の `Ending` だけが loose）。⑵ 頁 `ProcessForm` に divider run の ending の腕（Volta の縁・`BeginAlternatives`・開始小節）と、最後の section を鳴らした参照の腕が閉じる `CloseDividerEndingAfter`（`EndAlternative(last)` は form から読む・`EndingBracket`）。⑶ rows-only の walk に form 直下の `:|`／`:|:` の小節線と run の ending の括弧の腕（無かった）。synthetic voice で `:|`＋`|:` を `RepeatBoth` に畳む（staff の `FinalizeMeasures` と同じ）。
-★ **⑿ rows-only の walk が `~` の ending の括弧を隠す＝閉じた**（同 commit）: `!allSilent` の門を外した（tilde が隠すのはラベル・08-25 の `ProcessRepeatBlock` の規則）。
-★ 検証: 網 `FormRepeatBarlineTests.ADividerRunsEndings_AreEndingsToEveryReader`（MIDI 順・括弧 2・`<ending>`・LYS6008 なし・loose の対照・小節位置の hand-back＝block 綴りと divider 綴りで「小節の途中で終わる」小節が一致）、`VoltaEndingWithoutRepeatDiagnosticTests`（run は沈黙・run の後の loose は警告・括弧／警告の分割の Theory）、`RowsOnlyFormOrderTests` の差分の網に `A :| B`・`A :|: B :|`・`A :|: B [1. A] :| [2. B]`・`~` 綴り、volta の fixture を Theory に（`[1. ~D] :| [2. ~O]`）。毒 7 本が各自赤（P1 検証器 4・P2 頁の腕 4・P3 rows の腕 2・P4 rows の小節線 4・P5 tilde 門 1・P6 hand-back 1・P7 `:|:` の畳み 3・Lab `sessions/p678/poisons.ps1`）。射程: 掃き 995 冊（`p397/sweep`・base＝`d8ddb1bb` の worktree 実行ファイル）**moved 0**（svg なし 216 は両側）・ディスクに form 直下 `:|:` の後に ending を書く本 0・rows-only で form 直下の小節線を書く本 0（`form-repeat-lines.csv`）。
-⚠ 残り: ⑼（half-tie の向き）・⒀（§1.0）。rows-only の walk は今も `ProcessForm` の第 2 の綴り（差分の網が継ぎ目）。
-★ **終了**: `-End p678 -DiffBase d8ddb1bb`＝full **10279 / 0 / 2 / 10281**（+10＝網・run2.trx）・Core 0 警告・門 6 つ全 OK。§7.5 Core '+' 160 行／REF 0／OWN 0＝全部 Lily# 自身の form 規則の配管（`BeginAlternatives`／`EndAlternative` は既存の REF 持ちの家を呼ぶだけ・幾何は足していない）。7.7 匂い: `AnotherEndingFollows` は form の直下の子を読む（block 内は `ProcessRepeatBlockCore` の同じ問い）／rows-only の `:|:` 畳みは staff の `FinalizeMeasures` の第 2 の綴り（差分の網 3 行が番人）。perf: 足した走査は form の item 数ぶん（`FormWalk.Read` を検証器で 1 回・打鍵経路だが form は数十 item）＝未計測。push はユーザー（未 push 24）。
 
 ## 2. 開いている作業
 

@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第678セッションの経緯
+
+### 1.1 第678セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p678`（HEAD `d8ddb1bb`・未 push 22・full **10269 / 0 / 2 / 10271**）。
+★★ **⒁ form 直下の `:|:` の run の ending（`A :|: B [1. C] :| [2. D]`）＝閉じた**（`b39e216e`）: `FormWalk.GroupDividerRepeats` は 09-10 から run の後続 ending を run のものと読み、MIDI・MusicXML・双子はそう鳴らし書いていた。頁は役割（第669）だけ ending で括弧を描かず、LYS6008 は「repeat が開いていない」と咎めていた。⑴ 検証器は `FormWalk.Read` に訊く（直下の `Ending` だけが loose）。⑵ 頁 `ProcessForm` に divider run の ending の腕（Volta の縁・`BeginAlternatives`・開始小節）と、最後の section を鳴らした参照の腕が閉じる `CloseDividerEndingAfter`（`EndAlternative(last)` は form から読む・`EndingBracket`）。⑶ rows-only の walk に form 直下の `:|`／`:|:` の小節線と run の ending の括弧の腕（無かった）。synthetic voice で `:|`＋`|:` を `RepeatBoth` に畳む（staff の `FinalizeMeasures` と同じ）。
+★ **⑿ rows-only の walk が `~` の ending の括弧を隠す＝閉じた**（同 commit）: `!allSilent` の門を外した（tilde が隠すのはラベル・08-25 の `ProcessRepeatBlock` の規則）。
+★ 検証: 網 `FormRepeatBarlineTests.ADividerRunsEndings_AreEndingsToEveryReader`（MIDI 順・括弧 2・`<ending>`・LYS6008 なし・loose の対照・小節位置の hand-back＝block 綴りと divider 綴りで「小節の途中で終わる」小節が一致）、`VoltaEndingWithoutRepeatDiagnosticTests`（run は沈黙・run の後の loose は警告・括弧／警告の分割の Theory）、`RowsOnlyFormOrderTests` の差分の網に `A :| B`・`A :|: B :|`・`A :|: B [1. A] :| [2. B]`・`~` 綴り、volta の fixture を Theory に（`[1. ~D] :| [2. ~O]`）。毒 7 本が各自赤（P1 検証器 4・P2 頁の腕 4・P3 rows の腕 2・P4 rows の小節線 4・P5 tilde 門 1・P6 hand-back 1・P7 `:|:` の畳み 3・Lab `sessions/p678/poisons.ps1`）。射程: 掃き 995 冊（`p397/sweep`・base＝`d8ddb1bb` の worktree 実行ファイル）**moved 0**（svg なし 216 は両側）・ディスクに form 直下 `:|:` の後に ending を書く本 0・rows-only で form 直下の小節線を書く本 0（`form-repeat-lines.csv`）。
+⚠ 残り: ⑼（half-tie の向き）・⒀（§1.0）。rows-only の walk は今も `ProcessForm` の第 2 の綴り（差分の網が継ぎ目）。
+★ **終了**: `-End p678 -DiffBase d8ddb1bb`＝full **10279 / 0 / 2 / 10281**（+10＝網・run2.trx）・Core 0 警告・門 6 つ全 OK。§7.5 Core '+' 160 行／REF 0／OWN 0＝全部 Lily# 自身の form 規則の配管（`BeginAlternatives`／`EndAlternative` は既存の REF 持ちの家を呼ぶだけ・幾何は足していない）。7.7 匂い: `AnotherEndingFollows` は form の直下の子を読む（block 内は `ProcessRepeatBlockCore` の同じ問い）／rows-only の `:|:` 畳みは staff の `FinalizeMeasures` の第 2 の綴り（差分の網 3 行が番人）。perf: 足した走査は form の item 数ぶん（`FormWalk.Read` を検証器で 1 回・打鍵経路だが form は数十 item）＝未計測。push はユーザー（未 push 24）。
+
 ## 以下は第677セッションの経緯
 
 ### 1.1 第677セッション（2026-09-29・YT-DELL2）
