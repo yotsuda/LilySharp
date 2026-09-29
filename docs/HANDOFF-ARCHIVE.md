@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第684セッションの経緯
+
+### 1.1 第684セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p684`（HEAD `6b2ae067`・未 push 34・full **10288 / 0 / 2 / 10290**）。⚠ 道具: `-Start` を MCP console で素に打つと `dotnet test` が console 入力待ちで止まった（今日 3 回目・p681 の「本当に遅いだけ」とは別）＝**`cmd /d /s /c "pwsh -NoProfile -File tools\Session-Check.ps1 -Start p684 < NUL > log 2>&1"` で完走**。本便で `Session-Check.ps1` 自身の `dotnet build`／`dotnet test` を `< NUL` 付きに直した。
+★★ **K5 の小穴「part が何も書かない便の行は MusicXML に出ない」（第668）＝閉じた。同じ根から 2 つ目の欠陥も**: ⑴ 便（section の play）に block を書かない part は、その play を*どこにも*書いていなかった（bass が B に無い本で bass の C が A の直後＝melody 5 小節に対し 3・頁と双子と MIDI は詰める）→ 行の宛先 part がその便に書かないと `EmitPendingChordRows` に置く小節が無く harmony を捨てていた。`PadPartsSilentInThisPlay`＝各 play の後、`_playStartMeasure` の無い engraved part に section の canonical 小節数の空の `|` を `EmitPartMusic` 経由で書く（part の header・section の拍子/調/partial・番号・`_playStartMeasure` まで書いた play と同じ）。⑵ 「最後に書いた attributes」の記録（`_writtenKey/Time/Clef`）が exporter で 1 組＝section が `time 3/4` を言う本で**2 番目の part は `<time>` を持たず**（1 番目が「書いた」ので）・各 part の section 頭で相手の clef を「最後」と見て自分の clef を繰り返していた → `EnsurePart` で part ごとに入れ替える。
+★ 検証: 網 4（`SectionVoicePaddingExportTests` の Xml_*＝bass 5 小節と B の全休符 2・行の C F G C・silent play の pickup 4 分と 3/4 の小節・2 番目の part の `<time>` と clef 1 回）。毒 2 本が各自赤（P1 padding の呼び出しを消す＝3 本・P2 記録を exporter 全体に戻す＝新網 1 本＋既存 `MusicXmlAttributeChangeTests` 1 本・Lab `sessions/p684/poisons.ps1`・baseline 103/0）。`MusicXml*` 209 本緑。射程: exporter だけ（頁・双子・MIDI 不変）＝section に拍子を書く複数 part の本と、便に居ない part を持つ本の XML が変わる（意図した向き＝双子と同じ形）。探り本 `sessions/p684/probes/{rowonly,noblock,silentmeter,silentmeter2}.lys`。
+⚠ 残る穴: 便に居ない part への tie の持ち越し（`FinishCarriedTies` は silent play の最初の音を探す＝観測者なし）／importer は今も `<harmony>` の行を row に戻さない。
+★ **終了**: commit `40dd2e93`（Core 1・網・APPROXIMATIONS・CHANGELOG・`tools/Session-Check.ps1`）。`-End p684 -DiffBase 6b2ae067`（detached）＝full **10292 / 0 / 2 / 10294**（+4＝網・run4.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 10,526 B）。§7.5 Core '+' 61 行／REF 0／OWN 0＝MusicXML の配管（出所は頁・双子と同じ規則＝`SectionBarCounts`）。7.6: ⒟ 何も移植していない。7.7 匂い: silent play は `EmitPartMusic` に合成の `|` を N 本渡す形（PadVoice と同じ型）・per-part の記録は「measures が既に持つ物の 2 つ目の綴り」（既存の註のまま）。perf: export 時だけ。⚠ 道具の所見の訂正: console で回した `-Start` 2 回は test 自体は完走していた（run2/run3.trx が書かれている）のに 5〜6 分返らなかった＝detached は 111 s・`-End` は 569 s（並走した 2 つ目の console の分）。push はユーザー（未 push 36）。
+
 ## 以下は第683セッションの経緯
 
 ### 1.1 第683セッション（2026-09-29・YT-DELL2）
