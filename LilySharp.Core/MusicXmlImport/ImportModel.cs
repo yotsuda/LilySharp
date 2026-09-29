@@ -165,6 +165,9 @@ internal abstract class ImportItem
 internal sealed class ImportNote : ImportItem
 {
     public bool IsRest { get; set; }
+    /// <summary>A rest with <c>print-object="no"</c>: time held, nothing drawn — written
+    /// as the spacer <c>s</c>. Only read when <see cref="IsRest"/>.</summary>
+    public bool IsSpacer { get; set; }
     /// <summary>Diatonic step, 0=C .. 6=B.</summary>
     public int Step { get; set; }
     /// <summary>Chromatic alteration in semitones (-2..+2).</summary>

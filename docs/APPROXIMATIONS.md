@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
-| `OWN` | 195 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **311** | |
+| `OWN` | 196 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **312** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -230,7 +230,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（195 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（196 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:2931** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -262,7 +262,7 @@
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:457** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4228** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:4272** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
@@ -312,6 +312,8 @@
 - **:1400** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
+### `LilySharp.Core/Svg/Collector/MeasureCollector.Annotations.cs`
+- **:901** ⚠️ LILYSHARP-OWN: on a multi-measure rest (`R1*4@text("tacet")`, and the
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2794** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **:5118** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a

@@ -97,6 +97,44 @@ public class MultiMeasureRestTests
         Assert.IsType<NoteItem>(lastMeasure.Items[0]);
     }
 
+    /// <summary>
+    /// The post-events of <c>R1*N</c> stand at the run's FIRST bar, on the written event —
+    /// the mark, the dynamic, the text and the fermata alike. Until 2026-09-29 (HANDOFF §1.1
+    /// 第662 ⑸) the expansion arm collected only the chord symbol: fermata, dynamic and text
+    /// were dropped in silence, and the mark fell back to the builder's position AFTER the N
+    /// bars (<c>R1*2@mark("Q")</c> drew Q over the bar that follows the rest).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc:95-98 listen_multi_measure_text —
+    /// the text is the event's, at the timestep the rest starts (:126-190 initialize_grobs
+    /// hangs it on the rest's spanner); scm/define-grobs.scm:2450-2452
+    /// MultiMeasureRestScript direction UP. ⚠️ The text's own placement (MultiMeasureRestText:
+    /// UP, centred, sided off the count) is NOT ported — it keeps the TextScript's, declared
+    /// LILYSHARP-OWN at the collect — so this pins its bar only, not its side. Poisons
+    /// (RULES §5.4): drop the two collects from the expansion arm and the dynamic, the text
+    /// and the fermata go missing while the mark moves to bar 3.
+    /// </remarks>
+    [Fact]
+    public void Collect_R1StarN_PostEvents_StandAtTheRunsFirstBar()
+    {
+        var (score, _) = BuildLayout(
+            "c'1 | R1*2@mark(\"Q\")@p@fermata@text(\"tacet\") | d'1 |");
+        Assert.Equal(4, score.Voice.Measures.Length);
+
+        var mark = Assert.Single(score.MusicMarks.Where(m => m.Type == MusicMarkType.Rehearsal));
+        Assert.Equal("Q", mark.Text);
+        Assert.Equal(1, mark.MeasureIndex);
+
+        var fermata = Assert.Single(score.Articulations.Where(a => a.Type == ArticulationType.Fermata));
+        Assert.Equal(1, fermata.MeasureIndex);
+        Assert.True(fermata.IsAbove);
+
+        var p = Assert.Single(score.Dynamics.Where(d => d.Text == "p"));
+        Assert.Equal(1, p.MeasureIndex);
+        var tacet = Assert.Single(score.Dynamics.Where(d => d.Text == "tacet"));
+        Assert.Equal(1, tacet.MeasureIndex);
+    }
+
     [Fact]
     public void Layout_R1Star4_DoesNotCrash()
     {

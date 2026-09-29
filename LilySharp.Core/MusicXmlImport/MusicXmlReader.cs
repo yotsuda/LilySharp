@@ -471,6 +471,9 @@ internal static class MusicXmlReader
         if (Local(el, "rest") != null)
         {
             note.IsRest = true;
+            // A rest that is not printed holds its time and shows nothing: Lily#'s spacer
+            // `s`, which is how the exporter writes one (MusicXmlNote.PrintObject).
+            note.IsSpacer = (string?)el.Attribute("print-object") == "no";
             return note;
         }
 

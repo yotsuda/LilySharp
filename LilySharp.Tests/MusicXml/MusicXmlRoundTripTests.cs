@@ -881,6 +881,24 @@ public class MusicXmlRoundTripTests
         Assert.Contains($"tempo {expected}", importedLys);
     }
 
+    /// <summary>
+    /// A multi-measure rest comes back as its N bars (the exporter writes every one since
+    /// 2026-09-29 — HANDOFF §1.1 第662 ⑷) and a spacer comes back as a spacer: the importer
+    /// reads <c>print-object="no"</c> on a rest as <c>s</c>, so the bar that printed nothing
+    /// still prints nothing.
+    /// </summary>
+    [Fact]
+    public void MultiMeasureRestAndSpacer_SurviveRoundTrip()
+    {
+        string original = MusicSource.Wrap("c'1 | R1*3 | s2 g'2 | r1 |", "octave absolute\ntime 4/4");
+        AssertRoundTrips(original);
+
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(original)).ToXml().ToString();
+        var (importedLys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("s2 g'2", importedLys);
+        Assert.Equal(6, new MeasureCollector().Collect(SyntaxTree.Parse(importedLys)).Voice.Measures.Length);
+    }
+
     private static void AssertRoundTrips(string originalLys)
     {
         var originalTree = SyntaxTree.Parse(originalLys);

@@ -1238,6 +1238,25 @@ public sealed partial class MeasureCollector
                         var following = builder.FollowingBoundary;
                         builder.ClearFollowingBarline();
                         builder.AddItem(restItem);
+                        // The written event carries the rest's post-events, exactly as the
+                        // count<=1 arm's does: `R1*4@fermata`, `R1*4@p`, `R1*4@text("tacet")`,
+                        // `R1*2@mark("Q")`. ⚠️ This arm collected only the chord symbol until
+                        // 2026-09-29 (HANDOFF §1.1 第662 ⑸): the fermata, the dynamic and the text
+                        // were dropped in silence, and the mark — whose measure is recorded by
+                        // CollectArticulations (_markHostMeasure) — fell back to the builder's
+                        // position AFTER the N copies, so `R1*2@mark("Q")` drew Q at the bar that
+                        // follows the rest. All of them stand at the run's first bar, on the
+                        // written event, where LilyPond puts them (MultiMeasureRestText and the
+                        // dynamic are the event's, not the interior bars').
+                        // LILYPOND-REF: lily/multi-measure-rest-engraver.cc:95-98
+                        //   Multi_measure_rest_engraver::listen_multi_measure_text — the text
+                        //   events of the timestep the rest STARTS in; :126-190 initialize_grobs
+                        //   makes the number, the scripts and the texts on the rest's own
+                        //   spanner; lily/dynamic-engraver.cc Dynamic_engraver listens to the
+                        //   event stream at that same moment.
+                        CollectArticulations(rest, restMeasureIndex, restItemIndex, stemUp: false,
+                            anchorTiming: restAnchorTiming);
+                        CollectDynamics(rest, restMeasureIndex, restItemIndex);
                         // `R1*4@chord(C)`: the symbol stands at the run's first bar, on the
                         // written event (the count<=1 arm's remark — owner's decision 2026-09-28).
                         CollectChordNames(rest, restMeasureIndex, restItemIndex, restAnchorTiming);

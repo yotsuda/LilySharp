@@ -351,6 +351,59 @@ public class MusicXmlExportShapeTests
         Assert.NotEmpty(fine.Elements("sound"));
     }
 
+    /// <summary>
+    /// <c>R1*N</c> is N measures — <c>&lt;multiple-rest&gt;N</c> on the first, a whole-measure
+    /// rest in each — and the rest's post-events reach the document; a spacer is a rest that
+    /// is not printed. Until 2026-09-29 (HANDOFF §1.1 第662 ⑷) the exporter wrote ONE bar for
+    /// the N (a 17-bar part came out 13), read only the chord family of a rest's post-events
+    /// (the fermata and the dynamic were dropped), and wrote <c>s</c> as a rest every other
+    /// program draws.
+    /// </summary>
+    /// <remarks>
+    /// MusicXML 4.0: measure-style/multiple-rest (attributes), rest@measure="yes",
+    /// note@print-object. Poisons (RULES §5.4): write one bar per <c>R1*N</c> and the measure
+    /// count and the multiple-rest go red; skip ProcessArticulations on the rest and the
+    /// dynamic and the fermata go red; drop PrintObject and the spacer's attribute goes red.
+    /// </remarks>
+    [Fact]
+    public void MultiMeasureRest_WritesEveryBar_WithItsPostEvents_AndASpacerIsNotPrinted()
+    {
+        var doc = Export("""
+            octave absolute
+            part m { clef treble }
+            section A { m { c'1 | R1*3@p@fermata | s2 d'2 | r1 | } }
+            form main { A }
+            score main { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(6, measures.Count);
+
+        // The run: its count on the first bar's attributes, a whole-measure rest in each.
+        Assert.Equal("3", measures[1].Descendants("multiple-rest").Single().Value);
+        Assert.Empty(doc.Descendants("multiple-rest").Skip(1));
+        for (int i = 1; i <= 3; i++)
+        {
+            var rest = Assert.Single(measures[i].Elements("note"));
+            Assert.Equal("yes", rest.Element("rest")!.Attribute("measure")?.Value);
+            Assert.Equal("96", rest.Element("duration")!.Value);
+        }
+
+        // The dynamic at the run's first bar, the fermata on its rest — once each.
+        var p = Assert.Single(doc.Descendants("p"));
+        Assert.Same(measures[1], p.Ancestors("measure").Single());
+        var fermata = Assert.Single(doc.Descendants("fermata"));
+        Assert.Same(measures[1], fermata.Ancestors("measure").Single());
+
+        // The spacer holds its half bar and prints nothing; the plain rest after it prints.
+        var spacer = measures[4].Elements("note").First();
+        Assert.NotNull(spacer.Element("rest"));
+        Assert.Equal("no", spacer.Attribute("print-object")?.Value);
+        Assert.Null(spacer.Element("rest")!.Attribute("measure"));
+        var plain = Assert.Single(measures[5].Elements("note"));
+        Assert.Null(plain.Attribute("print-object"));
+        Assert.Null(plain.Element("rest")!.Attribute("measure"));
+    }
+
     [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {

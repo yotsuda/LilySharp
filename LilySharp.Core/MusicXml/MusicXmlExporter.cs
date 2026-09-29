@@ -3355,31 +3355,75 @@ public sealed class MusicXmlExporter
         var duration = GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
+        int bars = rest.MeasureCount;
 
         var xmlNote = new MusicXmlNote
         {
             IsRest = true,
             Duration = durationTicks,
             Type = type,
-            Dots = dots
+            Dots = dots,
+            // `R1*N` is N whole-measure rests (<rest measure="yes"/>), one a bar; a plain
+            // `r1` is a rest at beat one, and the two are told apart by every reader.
+            IsMeasureRest = bars > 1,
+            // A spacer holds its time and prints nothing: MusicXML has no spacer, so it is a
+            // rest that is not printed. Until 2026-09-29 (HANDOFF §1.1 第662 ⑷) it was an
+            // ordinary <rest/> — a rest drawn where the page draws nothing.
+            PrintObject = rest.RestText != "s",
         };
 
-        // A chord symbol on a rest or a spacer (`r1@chord(C x32010)`, `s1@chord(G)`): a
-        // <harmony> before the rest, at its moment, with its <frame> — the page draws it there
-        // since 2026-09-28 (owner's decision: a chord symbol belongs to the beat). A spacer is
-        // written as a rest here, so the harmony stands before that. ONLY the chord family is
-        // read: this arm has never read a rest's other post-events (r@fermata, r@p — reported
-        // with the fix, not changed by it).
-        _noteFrameSpec = null;
-        foreach (var artic in rest.Articulations)
-            if (artic is MusicMarkSyntax fm && Semantics.AnnotationValues.Frame(fm) is { } spec)
-                _noteFrameSpec = spec;
-        foreach (var artic in rest.Articulations)
-            if (artic is MusicMarkSyntax mark && Semantics.ChordAnnotation.Of(mark) != null)
-                ProcessDirectionMark(mark);
+        // The rest's post-events are read by the reader every note's are, so `r2@fermata`,
+        // `R1*4@p`, `r1@chord(C x32010)` and `s1@chord(G)` all reach the document: the
+        // <harmony> (with its <frame>) stands before the rest, at its moment (the page draws
+        // it there since 2026-09-28 — owner's decision: a chord symbol belongs to the beat);
+        // the fermata is the rest's <notations>; the dynamic a <direction> at its onset.
+        // ⚠️ Until 2026-09-29 only the chord family was read here (第662 ⑷): the fermata and
+        // the dynamic on a rest were dropped in silence while the page drew them.
+        ProcessArticulations(rest.Articulations, xmlNote);
 
         _currentMeasure.Notes.Add(xmlNote);
         MaybeClosePickup(duration);
+        if (bars <= 1)
+            return;
+
+        // LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST — R<dur>*N is ONE event
+        // spanning N measures. MusicXML says the same with <measure-style><multiple-rest>N
+        // on the first of the N measures, and a whole-measure rest in each; the reader
+        // (MeasureCollector.MusicWalk's RestSyntax arm) expands the same N. Until 2026-09-29
+        // this arm wrote ONE rest for the N bars — a 17-bar part came out 13 (第662 ⑷) — and
+        // the bar count no longer matched the page, the MIDI or the LilyPond twin.
+        // The measures between the copies are closed here: the written bar line that
+        // follows the rest closes only the LAST of them (the BarlineSyntax arm).
+        if (_currentPart == null || _currentMeasure == null)
+            return;
+        var first = _currentMeasure.Notes.Count > 0 && _currentMeasure.Notes[^1] == xmlNote
+            ? _currentMeasure
+            : _currentPart.Measures.Count > 0 ? _currentPart.Measures[^1] : null;
+        if (first != null)
+        {
+            // A mid-piece measure carries no <attributes> unless something changed; the
+            // multiple-rest is such a change, and a change block repeats no <divisions>.
+            first.Attributes ??= new MusicXmlAttributes { Divisions = null };
+            first.Attributes.MultipleRest = bars;
+        }
+        for (int i = 1; i < bars; i++)
+        {
+            if (_currentMeasure.Notes.Count > 0)
+            {
+                _currentPart.Measures.Add(_currentMeasure);
+                StartNewMeasure();
+            }
+            _currentMeasure!.Notes.Add(new MusicXmlNote
+            {
+                IsRest = true,
+                IsMeasureRest = true,
+                PrintObject = xmlNote.PrintObject,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+            });
+            MaybeClosePickup(duration);
+        }
     }
 
     /// <summary>

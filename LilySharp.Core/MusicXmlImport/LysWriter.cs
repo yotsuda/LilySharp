@@ -512,7 +512,7 @@ internal static class LysWriter
             OpenCueIfNeeded(note);
             if (note.IsRest)
             {
-                tokens.Add("r" + Value(note.NoteValue, note.Dots));
+                tokens.Add((note.IsSpacer ? "s" : "r") + Value(note.NoteValue, note.Dots));
                 pendingChord = null; // a rest cannot carry a chord symbol
                 pendingFig = null;   // ... nor figured bass
                 i++;

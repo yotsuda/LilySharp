@@ -253,6 +253,11 @@ internal sealed class MusicXmlAttributes
     /// <summary>&lt;measure-style&gt;&lt;measure-repeat&gt; type
     /// ("start"/"stop") for percent-repeat signs.</summary>
     public string? MeasureRepeat { get; set; }
+    /// <summary>&lt;measure-style&gt;&lt;multiple-rest&gt;: the number of bars a multi-measure
+    /// rest (<c>R1*N</c>) spans, written on the FIRST of them; each of the N measures then
+    /// holds a whole-measure rest (<see cref="MusicXmlNote.IsMeasureRest"/>). Null when none
+    /// starts here.</summary>
+    public int? MultipleRest { get; set; }
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
     /// <summary>±1 for the _8 / ^8 octave clefs (&lt;clef-octave-change&gt;).</summary>
@@ -340,6 +345,11 @@ internal sealed class MusicXmlAttributes
                 mr.Add(new XAttribute("slashes", 1));
             attrs.Add(new XElement("measure-style", mr));
         }
+
+        // One <measure-style> holds ONE of multiple-rest / measure-repeat / beat-repeat / slash
+        // (the schema's choice), so a multi-measure rest gets a measure-style of its own.
+        if (MultipleRest is { } bars)
+            attrs.Add(new XElement("measure-style", new XElement("multiple-rest", bars)));
 
         return attrs;
     }
@@ -481,6 +491,15 @@ internal sealed class MusicXmlNote
     /// prints a rest.
     /// </remarks>
     public bool RestHasDisplayPitch { get; set; }
+    /// <summary>A whole-measure rest (<c>&lt;rest measure="yes"/&gt;</c>): what each bar of a
+    /// multi-measure rest holds, so a reader draws the bar-centred rest rather than a rest at
+    /// beat one.</summary>
+    public bool IsMeasureRest { get; set; }
+    /// <summary>False for a note that holds its time and prints nothing
+    /// (<c>print-object="no"</c>) — Lily#'s spacer <c>s</c>. MusicXML has no spacer of its
+    /// own; until 2026-09-29 a spacer was written as an ordinary <c>&lt;rest/&gt;</c>, so every
+    /// other program drew a rest where the page draws nothing.</summary>
+    public bool PrintObject { get; set; } = true;
     /// <summary>A &lt;backup&gt; pseudo-entry (multi-voice): rewinds the measure
     /// cursor by <see cref="Duration"/> before the next voice's notes.</summary>
     public bool IsBackup { get; set; }
@@ -538,6 +557,8 @@ internal sealed class MusicXmlNote
             return new XElement("backup", new XElement("duration", Duration));
 
         var note = new XElement("note");
+        if (!PrintObject)
+            note.Add(new XAttribute("print-object", "no"));
 
         if (IsGrace)
         {
@@ -556,7 +577,9 @@ internal sealed class MusicXmlNote
                 ? new XElement("rest",
                     new XElement("display-step", Step),
                     new XElement("display-octave", Octave))
-                : new XElement("rest"));
+                : IsMeasureRest
+                    ? new XElement("rest", new XAttribute("measure", "yes"))
+                    : new XElement("rest"));
         }
         else if (IsUnpitched)
         {
