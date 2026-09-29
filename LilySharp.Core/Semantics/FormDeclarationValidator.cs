@@ -119,12 +119,17 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The predicate is the ENGRAVER's, one ancestor walk, and it is deliberately not "does
-    /// this form contain a repeat block": that weaker rule misses <c>|: A :| B [1. B]</c>,
-    /// whose ending is a child of the form and is dropped exactly like one in a form with no
-    /// repeat at all. Asking the same question the collector and the MIDI exporter ask keeps
-    /// the diagnostic and the behaviour from drifting apart — there is no second spelling of
-    /// the rule to keep in step (HANDOFF §5.2.1②).
+    /// The predicate is the one reader of a form's spellings, <see cref="FormWalk"/>: an
+    /// ending a repeat opened is a child of a <c>FormWalk.Repeat</c> — written inside a
+    /// <c>|: … :|</c> block, or trailing the run a form-level <c>:|:</c> opened
+    /// (<c>A :|: B [1. C] :| [2. D]</c>, <c>FormWalk.GroupDividerRepeats</c>) — and a loose one
+    /// is an item of the form itself. It is deliberately not "does this form contain a repeat
+    /// block": that weaker rule misses <c>|: A :| B [1. B]</c>, whose ending is dropped exactly
+    /// like one in a form with no repeat at all. Asking the reader the MIDI, MusicXML and the
+    /// twin ask keeps the diagnostic and the behaviour from drifting apart (HANDOFF §5.2.1②).
+    /// ⚠️ Until 2026-09-29 (第663 ⒁) this asked the TREE instead — an ancestor
+    /// <c>FormRepeatBlockSyntax</c> — and so accused the divider run's endings, which every
+    /// reader played (and the page, from that day, brackets: <c>MeasureCollector.ProcessForm</c>).
     /// </para>
     /// <para>
     /// A legitimate <c>|: A [1. D] :| [2. O]</c> reaches neither arm: both endings, including
@@ -133,19 +138,19 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
     /// <para>
     /// ⚠️ PERF (HANDOFF §7 ⑼): semantic validation is the KEYSTROKE path — the LSP's
     /// PublishDiagnostics runs it on every edit — so what this walks matters. It walks the
-    /// FORM's own subtree, never <c>tree.DescendantNodes()</c>: a form body is a handful of
+    /// FORM's own items, never <c>tree.DescendantNodes()</c>: a form body is a handful of
     /// items, and the LYS6007 check one line above already walks exactly this subtree
-    /// (SectionReferenceFinder.AllSectionNameTokens). The added cost is a second pass over
-    /// that same handful, once per form declaration — no whole-tree scan, no allocation per
-    /// item, and nothing at all for the 1025 books that contain no such ending.
+    /// (SectionReferenceFinder.AllSectionNameTokens). The added cost is one
+    /// <see cref="FormWalk.Read"/> of that handful (a list of its items), once per form
+    /// declaration — no whole-tree scan, and nothing more for the 1025 books that contain no
+    /// such ending.
     /// </para>
     /// </remarks>
     private void ReportEndingsNoRepeatOpens(FormDeclarationSyntax form)
     {
-        foreach (var node in form.DescendantNodes())
+        foreach (var item in FormWalk.Read(form))
         {
-            if (node is not FormAlternativeSyntax ending
-                || ending.IsInside<FormRepeatBlockSyntax>())
+            if (item is not FormWalk.Ending { Node: var ending })
                 continue;
 
             var names = ending.Sections

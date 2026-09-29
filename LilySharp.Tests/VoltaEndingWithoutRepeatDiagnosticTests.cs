@@ -57,6 +57,7 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     [InlineData("form main { [1. A] }")]
     [InlineData("form main { A [1. B] }")]
     [InlineData("form main { |: A :| B [1. B] }")]     // has a repeat block, ending still loose
+    [InlineData("form main { A :|: B :| A [1. B] }")]  // the divider run ended at A; this one is loose
     [InlineData("form main { [1. ~A] }")]
     [InlineData("form main { [1-3. A] }")]
     public void ARepeatlessEnding_Warns(string form)
@@ -66,11 +67,15 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     }
 
     /// <summary>A real pair of endings is silent: both are children of the repeat block, the
-    /// one after the <c>:|</c> included.</summary>
+    /// one after the <c>:|</c> included — and so are the endings of a run a form-level
+    /// <c>:|:</c> opens, which <c>FormWalk.GroupDividerRepeats</c> reads as a block's (until
+    /// 2026-09-29, 第663 ⒁, they were accused while every reader played them).</summary>
     [Theory]
     [InlineData("form main { |: A [1. A] :| [2. B] }")]
     [InlineData("form main { |: A [1. A] :| }")]
     [InlineData("form main { A B }")]
+    [InlineData("form main { A :|: B [1. A] :| [2. B] }")]
+    [InlineData("form main { A :|: B :| [1. A] }")]
     public void ALegitimateArrangement_IsSilent(string form) => Assert.Empty(Warnings(form));
 
     /// <summary>
@@ -90,10 +95,13 @@ public sealed class VoltaEndingWithoutRepeatDiagnosticTests
     /// block, <c>[3. B]</c> loose after it — and the two sets partition it. If the validator
     /// and the collector ever answer differently, this is where it shows (HANDOFF §5.2.1②).
     /// </summary>
-    [Fact]
-    public void TheWarnedEndingsAreExactlyTheOnesTheEngraverDoesNotBracket()
+    [Theory]
+    [InlineData("form main { |: A [1. A] :| [2. B] [3. B] }")]
+    // …and the same partition over a run a form-level `:|:` opens: its endings are
+    // bracketed (ProcessForm's ending arm, 2026-09-29), the one after the plain A is loose.
+    [InlineData("form main { A :|: B [1. A] :| [2. B] A [3. B] }")]
+    public void TheWarnedEndingsAreExactlyTheOnesTheEngraverDoesNotBracket(string form)
     {
-        const string form = "form main { |: A [1. A] :| [2. B] [3. B] }";
         var tree = Parse(form);
 
         var written = tree.GetRoot().DescendantNodes().OfType<FormAlternativeSyntax>()

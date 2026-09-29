@@ -278,6 +278,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The endings of a run a form-level `:|:` opens are endings to every reader.** In
+  `form main { A :|: B [1. C] :| [2. D] }` the MIDI, MusicXML and the `.ly` twin already
+  played and wrote C and D as the run's endings; the page played them so too but drew no
+  bracket, and the checker warned (LYS6008) that no repeat opened them. The page now draws
+  the brackets (a staffless score too, which also drew none of its form-level repeat bars),
+  and the warning is kept for an ending nothing opened (`A :|: B :| A [1. B]`).
+- **A staffless score draws the bracket of a `~` ending.** `|: A [1. ~D] :| [2. ~O]` in a
+  score of chord or lyric rows only drew no ending: the tilde hides the section's label, not
+  the bracket, as it has on a staff since 0.6.
 - **A form ending's range or list — `[1-2. B]`, `[1,3. B]` — plays on the passes it names.**
   The MIDI played the first written ending on pass 1, the second on pass 2, and played the
   body as many times as there were endings, so `form main { |: A [1-2. B] :| [3. C] }` sounded

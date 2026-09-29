@@ -18,6 +18,7 @@ using System.Linq;
 using LilySharp.Core.LilyPond;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -376,6 +377,45 @@ public sealed class FormRepeatBarlineTests
                     c => Assert.IsType<FormWalk.RepeatEnd>(c),
                     c => Assert.Equal("D", Assert.Single(Assert.IsType<FormWalk.Ending>(c).Sections).Name));
             });
+    }
+
+    /// <summary>The run's endings are endings to EVERY reader: the MIDI plays C on pass 1 and D
+    /// on pass 2 (after A's rewind), the page brackets them, MusicXML writes their brackets —
+    /// and LYS6008 says nothing. Until 2026-09-29 (第663 ⒁) the page played them as endings
+    /// but drew no bracket, while the validator accused them of having no repeat.</summary>
+    [Fact]
+    public void ADividerRunsEndings_AreEndingsToEveryReader()
+    {
+        const string src =
+            "part m { clef treble section A { c1 } section B { d1 } section C { e1 } section D { f1 } }\n"
+            + "form main { A :|: B [1. C] :| [2. D] }\nscore main { staff m }";
+        Assert.Equal(new[] { 60, 60, 62, 64, 62, 65 }, Pitches(src));
+        var tree = SyntaxTree.Parse(src);
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.VoltaEndingWithoutRepeat);
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        Assert.Equal(new[] { (2, 2, "1."), (3, 3, "2.") },
+            score.VoltaBrackets.OrderBy(v => v.StartMeasureIndex)
+                .Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.VoltaText)).ToArray());
+        string xml = new MusicXmlExporter().Export(tree).ToXml().ToString();
+        Assert.Contains("<ending number=\"1\"", xml);
+        Assert.Contains("<ending number=\"2\"", xml);
+        // The control: a loose ending after the run's close draws nothing, as it always has.
+        var loose = SyntaxTree.Parse(src.Replace("[1. C] :| [2. D]", ":| C [1. D]"));
+        Assert.Empty(new MeasureCollector().CollectMultiStaff(loose, RenderSpecParser.FindFirst(loose)!).VoltaBrackets);
+
+        // The bar count too: every ending but the last hands the bar position back to where
+        // the first began (MeasureBuilder.EndAlternative — LilyPond's alternativeRestores), so
+        // a half-bar D ends off the bar exactly as it does inside a written block, and the two
+        // spellings agree on the last bar's line. Poison (RULES §5.4): call EndAlternative with
+        // `last: true` at every divider-run ending and the divider spelling's D fills the bar.
+        const string half =
+            "part m { clef treble section A { c1 } section B { d1 } section C { e2 } section D { f2 } }\n";
+        var block = Measures(half + "form main { A |: B [1. C] :| [2. D] }\nscore main { staff m }");
+        var divider = Measures(half + "form main { A :|: B [1. C] :| [2. D] }\nscore main { staff m }");
+        Assert.Equal(block.Length, divider.Length);
+        Assert.Equal(block[^1].EndBarline, divider[^1].EndBarline);
+        Assert.Equal(block.Select(m => m.EndBarline == BarlineType.None).ToArray(),
+            divider.Select(m => m.EndBarline == BarlineType.None).ToArray());
     }
 
     /// <summary>

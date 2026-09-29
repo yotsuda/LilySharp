@@ -1630,18 +1630,17 @@ public sealed partial class MeasureCollector
                         // ACROSS the advance — the same start/end pair ProcessRepeatBlock
                         // reads off the builder (Form.cs:105-125).
                         int altStart = cur;
-                        bool allSilent = true;
                         foreach (var reference in alt.Sections)
                         {
                             if (Editing.SectionSymbols.ReferencedName(reference)?.Text is not { } refName)
                                 continue;
                             AdvanceSection(refName, LabelForEndingSection(reference), SectionDeclPos(refName));
-                            allSilent &= reference.Kind == SyntaxKind.SilentSectionReference;
                         }
-                        // ⚠️ Gated on the tilde here and nowhere else — this rows-only walk kept
-                        // the rule ProcessRepeatBlock dropped on 2026-08-25 (a `~` hides the
-                        // label, not the bracket). Kept as found; not this change's to settle.
-                        if (!allSilent && cur > altStart)
+                        // ⚠️ NOT gated on a tilde — a `~` hides the section's LABEL, never the
+                        // bracket (ProcessRepeatBlock's rule since 2026-08-25). This walk kept
+                        // the old gate until 2026-09-29 (第663 ⑿), so a staffless
+                        // `|: A [1. ~D] :| [2. ~O]` drew no ending at all.
+                        if (cur > altStart)
                             _voltaBrackets.Add(EndingBracket(alt, altStart, cur - 1));
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
@@ -1652,6 +1651,30 @@ public sealed partial class MeasureCollector
             }
         }
 
+        // Form-level bars and the endings of a run a form-level `:|:` opens — ProcessForm's
+        // reading (MeasureCollector.cs: the BarlineSyntax arm, SetTopLevelRole and the ending
+        // arm): a `:|` closes the bar before it (a rewind, or the run's close), a `:|:` closes
+        // it and opens the next, and the run's endings — up to the plain reference after its
+        // `:|` — take brackets as a block's do. ⚠️ Until 2026-09-29 (第663 ⒁) this walk had
+        // no arm for either, so a staffless `A :|: B [1. C] :| [2. D]` drew no repeat bar and
+        // no bracket while its staffful twin drew the bars.
+        bool dividerOpen = false, dividerClosed = false;
+        (FormAlternativeSyntax Node, int Start)? dividerEnding = null;
+        void CloseDividerEndingAfter(SyntaxNode reference)
+        {
+            if (reference.Parent is not FormAlternativeSyntax parent)
+            {
+                dividerClosed = false; // a plain reference after the run's `:|` ends the run
+                return;
+            }
+            if (dividerEnding is not { } pending || parent.Position != pending.Node.Position
+                || parent.Sections[^1].Position != reference.Position)
+                return;
+            dividerEnding = null;
+            if (cur > pending.Start)
+                _voltaBrackets.Add(EndingBracket(pending.Node, pending.Start, cur - 1));
+        }
+
         if (_form != null)
         {
             foreach (var child in _form.DescendantNodes())
@@ -1660,13 +1683,38 @@ public sealed partial class MeasureCollector
                 {
                     case SectionReferenceSyntax r when !IsInsideRepeatBlock(r):
                         AdvanceSection(r.SectionName, LabelForReference(r), SectionDeclPos(r.SectionName));
+                        CloseDividerEndingAfter(r);
                         break;
                     // The arm ProcessForm has and this walk did not. Every other arm is
                     // gated on !IsInsideRepeatBlock, so without this one the whole block
                     // was stepped over: its sections took no bars and everything after it
                     // was laid on top of what came before.
                     case FormRepeatBlockSyntax repeat:
+                        dividerClosed = false;
                         AdvanceRepeatBlock(repeat);
+                        break;
+                    case BarlineSyntax formBar when !IsInsideRepeatBlock(formBar):
+                        if (formBar.BarText == ":|:")
+                        {
+                            CloseRepeatBefore(cur);
+                            OpenRepeatAt(cur);
+                            dividerOpen = true;
+                            dividerClosed = false;
+                        }
+                        else if (formBar.BarText.StartsWith(":|", StringComparison.Ordinal))
+                        {
+                            CloseRepeatBefore(cur);
+                            if (dividerOpen)
+                            {
+                                dividerOpen = false;
+                                dividerClosed = true;
+                            }
+                        }
+                        break;
+                    // An ending of the divider run: its bracket spans its sections, which the
+                    // reference arms advance; the arm that advances its last section closes it.
+                    case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt) && (dividerOpen || dividerClosed):
+                        dividerEnding = (alt, cur);
                         break;
                     // A volta ending that NO repeat block opened — `form main { A [1. B] }` —
                     // plays exactly once and engraves no bracket (see ProcessForm for the
@@ -1678,6 +1726,7 @@ public sealed partial class MeasureCollector
                             when !IsInsideRepeatBlock(silent)
                               && silent.GetChild(1) is SyntaxTokenNode nameTok:
                         AdvanceSection(nameTok.Text, LabelForSilentReference(silent, nameTok.Text), SectionDeclPos(nameTok.Text));
+                        CloseDividerEndingAfter(silent);
                         break;
                     case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
                         // Same anchoring as ProcessForm: targets (segno/coda)

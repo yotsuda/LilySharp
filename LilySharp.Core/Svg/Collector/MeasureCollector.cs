@@ -1885,6 +1885,21 @@ public sealed partial class MeasureCollector
                     {
                         var (start, end) = _rowsOnlyFormBars.TryGetValue(i, out var b)
                             ? b : (BarlineType.None, BarlineType.None);
+                        // A `:|` closing bar i met by a `|:` opening bar i+1 is ONE bar line,
+                        // `:|:` — the fold MeasureBuilder.FinalizeMeasures does for a staff
+                        // voice (the RepeatBoth join; a `:|:` written in the form, or a
+                        // block's `:|` right before the next block's `|:`). The rows-only walk
+                        // records the two edits on two bars, so they are joined here, or the
+                        // grid would carry a RepeatEnd and a RepeatStart where the staffful
+                        // twin carries RepeatBoth and None (2026-09-29, 第663 ⒁).
+                        bool nextOpens = _rowsOnlyFormBars.TryGetValue(i + 1, out var next)
+                            && next.Start is BarlineType.RepeatStart or BarlineType.RepeatBoth;
+                        bool prevCloses = _rowsOnlyFormBars.TryGetValue(i - 1, out var prev)
+                            && prev.End is BarlineType.RepeatEnd or BarlineType.RepeatBoth;
+                        if (end is BarlineType.RepeatEnd or BarlineType.RepeatBoth && nextOpens)
+                            end = BarlineType.RepeatBoth;
+                        if (start is BarlineType.RepeatStart or BarlineType.RepeatBoth && prevCloses)
+                            start = BarlineType.None;
                         return new Measure(ImmutableArray<MusicItem>.Empty, start, end,
                             sectionLabel: null, sourceStart: 0, sourceEnd: 0);
                     })
@@ -3686,6 +3701,7 @@ public sealed partial class MeasureCollector
         _pendingPasses = default;
         _formDividerOpen = false;
         _formDividerClosed = false;
+        _dividerEnding = null;
         foreach (var child in _form!.DescendantNodes())
         {
             switch (child)
@@ -3708,12 +3724,33 @@ public sealed partial class MeasureCollector
                         }
                         SetLoneEndingAwareRole(reference);
                         ProcessSection(section, processNodes, builder, reference.OctaveOffset);
+                        CloseDividerEndingAfter(reference, builder);
                     }
                     break;
 
                 case FormRepeatBlockSyntax repeat:
                     _formDividerClosed = false;
                     ProcessRepeatBlock(repeat, processNodes, builder);
+                    break;
+
+                // An ending of a run a form-level `:|:` opened — `A :|: B [1. C] :| [2. D]`.
+                // FormWalk.GroupDividerRepeats reads the run as a block whose trailing endings
+                // are its own, and the MIDI, MusicXML and the twin play them as endings; the
+                // roles stamped here read it so too (SetTopLevelRole). Its bracket and its bar
+                // count are the block's (ProcessRepeatBlockCore's pairing): this arm opens
+                // them, the reference arm that plays the ending's LAST section closes them
+                // (CloseDividerEndingAfter), and the sections in between are played by the
+                // reference arms as this walk meets them. ⚠️ Until 2026-09-29 (第663 ⒁) this
+                // walk had no arm here, so the run's endings played as endings and drew no
+                // bracket — while LYS6008 accused them of having no repeat.
+                case FormAlternativeSyntax alt when !IsInsideRepeatBlock(alt)
+                        && (_formDividerOpen || _formDividerClosed):
+                    // No slur, phrasing slur or hairpin into an ending (the block's own edge).
+                    MarkFormEdge(SectionPlayEdge.Volta);
+                    _dividerEnding = (alt, builder.CurrentMeasureIndex);
+                    // Resume: the bar count and the bracket are in the adopted prefix / tail.
+                    if (_resumePending == null && !_suffixSpliced)
+                        builder.BeginAlternatives();
                     break;
 
                 // A volta ending that NO repeat block opened — `form main { A [1. B] }`.
@@ -3821,6 +3858,7 @@ public sealed partial class MeasureCollector
                     SetLoneEndingAwareRole(silent);
                     ProcessSection(silentSection, processNodes, builder,
                         SyntaxFacts.NetOctaveMarks(silent));
+                    CloseDividerEndingAfter(silent, builder);
                     break;
 
                 // `break` / `noBreak` between sections force / forbid a system break
@@ -3919,6 +3957,55 @@ public sealed partial class MeasureCollector
         _ when section.GetChild(1) is SyntaxTokenNode name => LabelForSilentReference(section, name.Text),
         _ => null,
     };
+
+    // The ending of a divider run whose bracket ProcessForm's ending arm opened, with the bar
+    // it opened at — closed by CloseDividerEndingAfter once its last section has played.
+    private (FormAlternativeSyntax Node, int Start)? _dividerEnding;
+
+    /// <summary>Closes the bracket and the bar count of a divider run's ending
+    /// (<see cref="_dividerEnding"/>) once <paramref name="reference"/>, its LAST section, has
+    /// played — the pairing ProcessRepeatBlockCore does for a block's ending.</summary>
+    private void CloseDividerEndingAfter(SyntaxNode reference, MeasureBuilder builder)
+    {
+        if (_dividerEnding is not { } pending
+            || reference.Parent is not FormAlternativeSyntax parent
+            || parent.Position != pending.Node.Position
+            || parent.Sections[^1].Position != reference.Position)
+            return;
+        _dividerEnding = null;
+        if (_resumePending != null || _suffixSpliced)
+            return;
+        builder.EndAlternative(last: !AnotherEndingFollows(pending.Node));
+        int endMeasureIndex = builder.CurrentMeasureIndex;
+        if (builder.CurrentItemCount > 0)
+            endMeasureIndex++;
+        _voltaBrackets.Add(EndingBracket(pending.Node, pending.Start, Math.Max(pending.Start, endMeasureIndex - 1)));
+    }
+
+    /// <summary>True when another ending of the same run follows <paramref name="ending"/> in
+    /// the form — directly, or over the <c>:|</c> that closes the run (<c>[1. C] :| [2. D]</c>,
+    /// <c>:| [3. E]</c>) — so this one is not the run's last.</summary>
+    private static bool AnotherEndingFollows(FormAlternativeSyntax ending)
+    {
+        if (ending.Parent is not { } form)
+            return false;
+        bool after = false;
+        for (int i = 0; i < form.SlotCount; i++)
+        {
+            if (form.GetChild(i) is not { } child || child is SyntaxTokenNode)
+                continue;
+            if (!after)
+            {
+                after = child is FormAlternativeSyntax && child.Position == ending.Position;
+                continue;
+            }
+            if (child is BarlineSyntax bar && bar.BarText != ":|:"
+                && bar.BarText.StartsWith(":|", StringComparison.Ordinal))
+                continue;
+            return child is FormAlternativeSyntax;
+        }
+        return false;
+    }
 
     /// <summary>The role of a play the form names outside any repeat block — for a section of
     /// a lone ending, an ending (its first section) or the ending's continuation.</summary>

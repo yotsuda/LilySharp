@@ -118,6 +118,12 @@ public class RowsOnlyFormOrderTests
     [InlineData("A |: B :| A")]   // a repeat block between two passes of the same section
     [InlineData("A |: B :| A \"A2\"")] // …closed by a named alternative ending
     [InlineData("~A B")]          // a silent (unlabelled) reference
+    // Form-level repeat bars, and the endings of the run a `:|:` opens — the arms this walk
+    // did not have until 2026-09-29 (第663 ⒁): a staffless book drew none of them.
+    [InlineData("A :| B")]
+    [InlineData("A :|: B :|")]
+    [InlineData("A :|: B [1. A] :| [2. B]")]
+    [InlineData("A :|: B [1. ~A] :| [2. ~B]")]
     // Navigation marks are anchored by the same cursor. They are written BARE in a form
     // ('@' modifies a note) — the parser says so, and this fixture was rejected until it did.
     [InlineData("A segno B A fine")]
@@ -142,11 +148,16 @@ public class RowsOnlyFormOrderTests
     }
 
     // Two written-out endings around one repeat — the shape GRAMMAR.md gives for voltas.
-    // Its own differential, because the fixture needs three sections rather than two.
-    [Fact]
-    public void VoltaEndings_DrawTheSameBracketsWithoutAStaff()
+    // Its own differential, because the fixture needs three sections rather than two. The
+    // `~` spelling: a tilde hides the section's LABEL, never the bracket — the rule
+    // ProcessRepeatBlock took on 2026-08-25 and this walk kept the old gate against until
+    // 2026-09-29 (第663 ⑿), drawing no ending at all for a staffless `[1. ~D] :| [2. ~O]`.
+    [Theory]
+    [InlineData("|: A [1. D] :| [2. O]")]
+    [InlineData("|: A [1. ~D] :| [2. ~O]")]
+    public void VoltaEndings_DrawTheSameBracketsWithoutAStaff(string form)
     {
-        const string head = """
+        string head = $$"""
             time 4/4
             part melody {
               clef treble
@@ -159,7 +170,7 @@ public class RowsOnlyFormOrderTests
               section D { eight nine ten e- le- ven | }
               section O { twelve thir- teen | }
             }
-            form main { |: A [1. D] :| [2. O] }
+            form main { {{form}} }
             """;
         var staffless = Collect($"{head}\nscore main {{\n  lyrics verse\n}}");
         var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  lyrics verse\n}}");
