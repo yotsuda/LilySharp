@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第672セッションの経緯
+
+### 1.1 第672セッション（2026-09-29・YT-DELL2）
+
+新しい会話（`/clear` の後・ユーザー「作業に着手して」）。★ `-Start p672`（HEAD `a3aa3ed6`・未 push 10・full **10249 / 0 / 2 / 10251**）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊が M＝改行だけ（`.gitattributes` の eol=lf に対し作業コピーが CRLF・中身の差分 0）＝私は触っていない・そのまま。
+★ **⑶（1 section の本の 1 小節目の `@mark`）＝欠陥ではない**: `form main { A }` の形では label "A" が同じ小節の `@mark("Z")` を影にして LYS4021 を出す（第558 のユーザー決定・`~A` なら Z が描かれる・5 通りを Lab `sessions/p672/probes/mark1/` で再現）＝第662 の probe が `form main { A }` 型だったので「描かれない」と見えた。閉じる。
+★★ **⑷⑸ `R1*N` を閉じた**（`e5d1187a`）: 頁＝`MusicWalk` の展開の腕が chord 名しか集めず、`@fermata`／`@p`／`@text` が黙って落ち、`@mark` は N 小節*後*の builder 位置に落ちていた → 書いた事象（先頭小節）で `CollectArticulations`＋`CollectDynamics`。MusicXML＝`ProcessRest` が `R1*N` を 1 小節に書き（17→13）、休符の post-event は chord 族だけ読み、`s` を普通の `<rest/>` に書いていた → `<measure-style><multiple-rest>N`（先頭）＋各小節 `<rest measure="yes"/>`（間の小節はここで閉じる・書いた `|` は最後だけ閉じる）・`ProcessArticulations` を休符にも・spacer は `<note print-object="no">`（読み手は `s` に戻す＝`ImportNote.IsSpacer`）。
+★ 検証: 網 3（`MultiMeasureRestTests`・`MusicXmlExportShapeTests`・`MusicXmlRoundTripTests` に +1 ずつ）・毒 3 本が各自の網だけ赤（Lab `sessions/p672/poisons.ps1`）・LP の絵（`< NUL`・`\compressMMRests` あり／なし・`probes/mmrest/out/`）と突き合わせ＝mark・p・fermata の位置は LP と同じ小節。射程: コーパス＋repo に `R*N@…` を書く本 0（audit の probe だけ）＝掃きは省略・MusicXML は `s` と `R*N` を持つ全本で変わる（意図した変化）。
+⚠ **残した穴（LILYSHARP-OWN・`Annotations.cs` の `@text` の腕）**: `R*N@text` は LP では MultiMeasureRestText（UP・rest の span 中央・count の数字を side support に padding 0.2／staff-padding 0.25＝multi-measure-rest-engraver.cc:126-190 initialize_grobs）だが Lily# は TextScript のまま（DOWN・列の左）。UP にするだけだと "tacet" が "4" を貫く（数字の ink 箱が layout に無い＝`GlyphMetricsGenerated` は拍子数字の advance だけ）。
+★ **終了**: `-End p672 -DiffBase a3aa3ed6`＝run2 は赤 4（HANDOFF 継ぎ目 3＝この文を書く前・citation 1＝`:131-150`→`:95-98` に直した）→ 直して full **10252 / 0 / 2 / 10254**（run4.trx・Core 0 警告 `--no-incremental`）。§7.5 Core '+' 122 行／REF 2／OWN 1（上の穴）。7.7 匂い: MusicXML の multiple-rest は読み手が畳まない（`r1 | r1 |` で戻る・音は同じ）。push はユーザー（未 push 12）。
+
 ## 以下は第671セッションの経緯
 
 ### 1.1 第671セッション（2026-09-29・YT-DELL2）
