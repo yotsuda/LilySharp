@@ -328,6 +328,8 @@ public sealed partial class LilySharpLanguageServer
                 // Generate quick fixes based on diagnostic
                 var fixes = GenerateQuickFixes(doc, diagnostic, uri);
                 actions.AddRange(fixes);
+                if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
+                    actions.Add(spelling);
             }
         }
 
@@ -348,6 +350,8 @@ public sealed partial class LilySharpLanguageServer
                     actions.Add(PadBarsAction(doc, uri, diagnostic, pads));
                 if (SplitSectionsAction(doc, uri, diagnostic) is { } split)
                     actions.Add(split);
+                if (CaseSpellingAction(doc, uri, diagnostic) is { } spelling)
+                    actions.Add(spelling);
             }
         }
         catch
@@ -406,6 +410,61 @@ public sealed partial class LilySharpLanguageServer
 
     private static readonly System.Text.RegularExpressions.Regex SectionOfWarning =
         new(@"^Section '([^']+)' is not the same length", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    /// <summary>
+    /// The quick fix for a spelling that differs from a real one only in case (2026-09-29,
+    /// HANDOFF §1.0): every validator that finds one says "… case-sensitive: write 'X'" —
+    /// an annotation name (<c>@upbow</c> → <c>@upBow</c>), a value (<c>@ottava(BASSA)</c>),
+    /// a chord shape word (<c>X32010</c>), a layout key or value — and this offers X for the
+    /// squiggled text. ⚠️ ONLY when the squiggled text IS X in another case: the message is
+    /// read, not the validator, and a span that covers more or less than the spelling would
+    /// make an edit that says something else. That test is what keeps the offer honest
+    /// without a second copy of each validator's span rule.
+    /// </summary>
+    private static CodeAction? CaseSpellingAction(Document doc, Uri uri, CoreDiagnostic diagnostic)
+    {
+        var m = CaseSpellingOfWarning.Match(diagnostic.Message);
+        if (!m.Success)
+            return null;
+        string wanted = m.Groups[1].Value;
+        int start = diagnostic.Span.Start, end = diagnostic.Span.End;
+        if (start < 0 || end > doc.Text.Length || end <= start)
+            return null;
+        string written = doc.Text[start..end];
+        if (written == wanted || !string.Equals(written, wanted, StringComparison.OrdinalIgnoreCase))
+            return null;
+        var (startLine, startChar) = GetLineAndCharacter(doc.Text, start);
+        var (endLine, endChar) = GetLineAndCharacter(doc.Text, end);
+        string title = $"Write '{wanted}'";
+        return new CodeAction
+        {
+            Title = title,
+            Kind = CodeActionKind.QuickFix,
+            Diagnostics = [ConvertDiagnostic(diagnostic, doc.Text, uri)],
+            Edit = new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] =
+                    [
+                        new TextEdit
+                        {
+                            Range = new LspRange
+                            {
+                                Start = new Position { Line = startLine, Character = startChar },
+                                End = new Position { Line = endLine, Character = endChar },
+                            },
+                            NewText = wanted,
+                        },
+                    ],
+                },
+            },
+        };
+    }
+
+    /// <summary>The spelling a case hint names: "Names / Values / Keys are case-sensitive: write 'X'."</summary>
+    private static readonly System.Text.RegularExpressions.Regex CaseSpellingOfWarning =
+        new(@"case-sensitive: write '([^']+)'", System.Text.RegularExpressions.RegexOptions.Compiled);
 
     /// <summary>The quick fix for one LYS2007: insert the bare bar lines
     /// <see cref="BarCountPadding"/> settled on, at the end of each short layer's body — one

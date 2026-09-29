@@ -129,6 +129,20 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第668セッションの経緯
+
+### 1.1 第668セッション（2026-09-29・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p668`（HEAD `7725d9de`・未 push 0＝ユーザーが push 済み・full **10232 / 0 / 2 / 10234**・作業ツリーに `site/examples/*.lys` 20 冊の改行だけの差＝内容差 0・触っていない）。
+★★★ **§2 K5 ① の尾＝コード図の指とバレー＝完了**。fret-diagrams.scm を逐語で移植（`FretFrameGeometry.Measure` が唯一の家＝描画 `DrawFretFrame` と予約 `Box` が同じ数を読む）: 弦は最後のフレットの 1 つ先まで（string-overhang 1.0）・ドットはフレット枠の 0.6（dot-position・旧 0.5）・半径 0.25＋線 0.05・ナットは線の 3 倍の箱・X／O は sans の文字 0.4 倍（旧: 2 本線と輪）・「Nfr」は 0.5 倍を中央揃え・バレーは bezier sandwich（高さ 0.5・厚さ 0.1・ドット中心からドット中心）・指番号は弦の下 0.3（string-label-font-mag 0.6）。**指は FretBoard（chords 行の図）だけ・markup の図（`@chord`・一覧）は描かない**＝LP の既定（define-grobs.scm:1678 FretBoard は finger-code below-string・markup は none）。バレーは両方。X/O の無い形（133211）は上の行を描かない（LP と同じ）。`TextRoles.DefaultFamily` で diagram を sans に（LP は sans-serif-stencil）。
+★ 運び方: spec に接尾辞 `frets|指|バレー`（`133211|134211|6-1@1`・`FretFrameGeometry.Detailed`）＝predefined の形だけ持つ・書いた形は持たない（LP の terse も持たない）。`ChosenShape.FrameSpec` が一か所で付ける → 行・`@chord`・一覧・双子・MusicXML に届く。`Box(spec, fonts, fingers)`（行だけ `fingers: true`）。双子: terse に `-(`／`-)`（markup も）・行の FretBoards は指も（`1-1-(;3-3;…;1-1-);`）。MusicXML: `<fingering>`・`<barre type="start|stop">`。
+★ 検証: 網 +4（`FretFrameTests` 3・`ChordDiagramTests` 1）・既存の期待値を接尾辞に更新 12 本。Lab `sessions/p668/out/demo.png` 対 `demo-lp.png`（LP 2.26.0）＝目視で一致（一覧・行・`@chord` の 3 段）。
+⚠️ 見つけた穴: ⑴ chords 行と同じ staff の `@chord` 名が並ぶ本で、行の指番号（旧: 図の下端も同じ）が下の行の名前の上付き 7 に 0.5 重なる＝`ReserveChordRowBand` の帯（cap 1.9）が上付きを数えない（既存・Lab `sessions/p668/demo.lys`）⑵ LP の "10fr" が最後のドットに近く見える（150 dpi の目視・未計測）。
+★ 前半の commit `e0d6a935`「diagram: LilyPond's fret diagram stencil by stencil — …」（site の chords 頁の X／O の 2 行も同じ commit）・`91b4df65`（締めの行）。sweep 1,166 冊 × svg/ly/xml/midi/check（base は `7725d9de` の worktree・Release）: **moved 8 対＝7 冊、全部 `site/examples/chord-*.lys`**（図を描く冊はそれだけ＝実コーパスに図は無い）・check 差 0。§7.5 前半 Core '+' 515 行／REF 27／OWN 0（全部 fret-diagrams.scm の逐語。spec の接尾辞は運び方で幾何ではない）。7.6: ⒜ 字面＝弦・フレット・ナット・ドット・バレー・X/O・指・ラベルの各 stencil（出典は各行の REF）／⒝ 導出＝`Measure` が LP の stencil の extent を先に数える（LP は描いてから測る）・X/O の中心は「最も高い字」で揃える（LP の union と同じ答え）。
+★★★ **後半＝K5 ① の最後の項目・MusicXML の行＝完了（ユーザー決定 2026-09-29「4 点すべて案どおり」）**: ⑴ 行の `<harmony>` は**行の直下の譜表の part**（score の順で行の次の staff・無ければ最初の staff）に、各スロットの `<offset>`（divisions）つきで小節の頭に置く（`SlotGroups` の格子＝頁・MIDI と同じ）⑵ 譜表の無い lead sheet は全休符だけの part `NAME (chords)`（MIDI のトラック名）を作る ⑶ 同じ瞬間の同じコードの `@chord` は落とす（root／kind／bass が同じ）・違うコードは並ぶ ⑷ N.C.（`r`）と行頭の `.` は書かない（休符の `@chord` 経路と同じ＝記号が無ければ harmony 無し）。harmony は鳴る和音（度数は小節の調で解く）・`<frame>` は対象譜表の調弦で描く形（`ChordShapes.Drawn`＝指・バレー入り・カポは押さえる形）。置く場所の解決は export の最後（`EmitPendingChordRows`＝part の小節が全部揃ってから・`_playStartMeasure` が便ごとの開始小節）。**by-part の `chords prog { section A {…} }` は音楽として歩かなくなった**（旧: 唯一の part か "Part 1" の下で空歩き＝lead sheet に空の "Part 1" が出ていた）。**ついでの修正: `PadVoice` の詰め小節の番号**（閉じの小節線が開いた空小節が番号を取って落ちるので 1, 3, 3 だった → 1, 2, 3）。`RenderSpecParser.PlayedSpec`／`PlacedChordRows` を一か所に（MIDI の `SoundingChordRows` はそれを呼ぶ）。
+⚠️ 未: part がその便で何も書かない section の行は捨てる（置く小節が無い）／flat な top-level の chords track は MIDI と同じく未対応／行の途中の `time`・`key` は section の頭の値で読む（頁は小節ごと）。
+★ **終了**: `fa0a82ea`「musicxml: a placed chords row writes its symbols as <harmony> in the staff under it, at their offsets (K5 ① — the last item)」。`-End p668 -DiffBase 7725d9de` 緑・full **10238 / 0 / 2 / 10240**（run3.trx）。門 6 つ全 OK。§7.5 全体 Core '+' 882 行／REF 27／OWN 1（行の harmony＝LP の ChordNames は何も出さない）。7.7 匂い: 行の指番号と下の行の上付きの 0.5 重なり（既存の帯）・"10fr" の LP との差は未計測・site の例の絵（chord-*.svg）は次の site ビルドで変わる・part の無い便の行は黙って捨てる。push はユーザー（未 push 4）。
+
 ## 以下は第667セッションの経緯
 
 ### 1.1 第667セッション（2026-09-29・YT-DELL2）
