@@ -81,7 +81,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: 行の指番号と下の行の名前の上付きが 0.5 重なる（帯が上付きを数えない・第668）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
-- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672・⑻ は第673・⑺ は第674・⑽ は第675・⒂ は第676・⑾ は第677・⑿⒁ は第678 で閉じた**。残り: ⑼⒀（第663 起票＝ARCHIVE）。⒀ は双子が `voltaBracket N` の N 小節を ending の頭の拍子で musical-length に直す（`LilyPondExporter` の `VoltaShapeFor` 付近）＝拍子が ending の中で変わる本だけ頁と食い違う。★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
+- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672・⑻ は第673・⑺ は第674・⑽ は第675・⒂ は第676・⑾ は第677・⑿⒁ は第678・⒀ は第679 で閉じた**。残り: ⑼ だけ＝half-tie の向きが声部 span の中・part-combine の声部で書いた符尾方向を無視（第663 起票＝ARCHIVE・描画側の島）。★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -118,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第679セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p679`（HEAD `656a5b82`・未 push 24・full **10279 / 0 / 2 / 10281**）。
+★★ **⒀ 双子の `voltaBracket N` が ending の頭の拍子で N 小節を数える＝閉じた**（`23448ff8`）: `EmitVoltaShape` は `musical-length` を N × その時点の拍子で書いていたが、頁の `VoltaBracketLength.LastBar` は*小節*を数える＝ending の最初の N 小節の中で `time` が変わる（`b'1 | time 3/4 b'2. |`）か短い小節があると括弧の終わりが違う小節に落ちた（2×4/4 対 7/4）。`FirstBarsLength`＝ending の section を順に、`SectionBarCounts` の索引の最長の music voice を `MeasureModel.Split`（検証器の小節モデル・phrase は `SectionBarCounts.PhraseBodies`＝`SemanticVoices` から抜き出した同じ表）で割り、最初の N 小節の実長を足す（`VoltaShapeGreen` が section 名を運ぶ）。music voice の無い section（chord 行）は従来どおり拍子 × N。
+★ 検証: 網 `VoltaBracketShapeTests.Twin_NBars_AreTheBarsOwnLengths`（7/4・複数 section で 11/4・1 小節で 1/1・頁の括弧は同じ小節で切れる）。毒 2 本が各自赤（P1 拍子×N に戻す 2・P2 最初の section だけ 2・Lab `sessions/p679/poisons.ps1`）。LP 2.26.0 の証明: 探り本の双子が警告 0 で通り、括弧が G の 3/4 の小節の終わりで切れる絵（`probes/out/cut-meter-lp.png`）。射程: ディスクに `voltaBracket N`／`@voltaBracket(N)` を書く本 0（コメントと探り本だけ）＝動く本 0。
+⚠ 道具: 毒スクリプトの `dotnet build` が `< NUL` でも console 入力待ちに嵌った（第676 と同じ形・p679 で 1 回）＝`close_console` で捨てて新しい console で回し直した。毒は残っていなかった（`finally` は走っていた）が、**捨てたら必ず `POISON` を grep する**。⚠ Edit ツールは `-Start` が動かしたファイルを「読み直せ」と弾く＝その状態で `-End` を回すと継ぎ目の網 3 本が赤（第679 が踏んだ・run2.trx）。
+★ **終了**: `-End p679 -DiffBase 656a5b82`＝full **10282 / 0 / 2 / 10284**（+3＝網・run3.trx）・Core 0 警告・TEST EXIT 0。§7.5 Core '+' 78 行／REF 0／OWN 0＝双子の配管（既存の REF 持ち `musical-length` の値の出所を頁の小節モデルに揃えただけ）。7.7 匂い: chord 行だけの section の「拍子 × N」は旧規則の残り（観測者なし・ディスクに本 0）。perf: 打鍵経路ではない（双子の export 時に ending 1 つにつき `Split` を section 数ぶん）。push はユーザー（未 push 26）。**第663 の残りは ⑼ だけ。**
+
+## 以下は第678セッションの経緯
+
 ### 1.1 第678セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p678`（HEAD `d8ddb1bb`・未 push 22・full **10269 / 0 / 2 / 10271**）。
@@ -126,16 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 検証: 網 `FormRepeatBarlineTests.ADividerRunsEndings_AreEndingsToEveryReader`（MIDI 順・括弧 2・`<ending>`・LYS6008 なし・loose の対照・小節位置の hand-back＝block 綴りと divider 綴りで「小節の途中で終わる」小節が一致）、`VoltaEndingWithoutRepeatDiagnosticTests`（run は沈黙・run の後の loose は警告・括弧／警告の分割の Theory）、`RowsOnlyFormOrderTests` の差分の網に `A :| B`・`A :|: B :|`・`A :|: B [1. A] :| [2. B]`・`~` 綴り、volta の fixture を Theory に（`[1. ~D] :| [2. ~O]`）。毒 7 本が各自赤（P1 検証器 4・P2 頁の腕 4・P3 rows の腕 2・P4 rows の小節線 4・P5 tilde 門 1・P6 hand-back 1・P7 `:|:` の畳み 3・Lab `sessions/p678/poisons.ps1`）。射程: 掃き 995 冊（`p397/sweep`・base＝`d8ddb1bb` の worktree 実行ファイル）**moved 0**（svg なし 216 は両側）・ディスクに form 直下 `:|:` の後に ending を書く本 0・rows-only で form 直下の小節線を書く本 0（`form-repeat-lines.csv`）。
 ⚠ 残り: ⑼（half-tie の向き）・⒀（§1.0）。rows-only の walk は今も `ProcessForm` の第 2 の綴り（差分の網が継ぎ目）。
 ★ **終了**: `-End p678 -DiffBase d8ddb1bb`＝full **10279 / 0 / 2 / 10281**（+10＝網・run2.trx）・Core 0 警告・門 6 つ全 OK。§7.5 Core '+' 160 行／REF 0／OWN 0＝全部 Lily# 自身の form 規則の配管（`BeginAlternatives`／`EndAlternative` は既存の REF 持ちの家を呼ぶだけ・幾何は足していない）。7.7 匂い: `AnotherEndingFollows` は form の直下の子を読む（block 内は `ProcessRepeatBlockCore` の同じ問い）／rows-only の `:|:` 畳みは staff の `FinalizeMeasures` の第 2 の綴り（差分の網 3 行が番人）。perf: 足した走査は form の item 数ぶん（`FormWalk.Read` を検証器で 1 回・打鍵経路だが form は数十 item）＝未計測。push はユーザー（未 push 24）。
-
-## 以下は第677セッションの経緯
-
-### 1.1 第677セッション（2026-09-29・YT-DELL2）
-
-新しい会話（`/clear` の後・ユーザー「作業に着手して」）。★ `-Start p677`（HEAD `e22322fc`・未 push 20・full **10255 / 0 / 2 / 10257**）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊が M＝改行だけ（第672 と同じ・中身の差分 0）＝触っていない。
-★★ **⑾ MIDI が form の ending の範囲・列挙 `[1-2. B]`／`[1,3. B]` を無視＝閉じた**（`cdc1cf13`）: form の読み手 3 人（MIDI `PlayRepeatRun`・頁の played order `PlayedOrder.Expand`・境界の小節 `SectionBoundaryBars.ExpandRepeat`）が各自「i 番目の ending は i 周目・周回数＝ending の数」と綴り、番号を読んでいなかった＝`|: A [1-2. B] :| [3. C]` が A B A C（inline は A B A B A C）。規則を 1 か所 `Semantics.RepeatPasses`（`Count`＝`:|*N`、なければ最大番号≥2／`EndingFor`＝その周を名指す最初の ending、なければ最後）に置き、inline の MIDI（`ProcessRepeatSpan`）も同じ家へ。番号の畳みは `SyntaxFacts.VoltaPassNumbers`（inline と form の 2 読み手）。頁へは stamp に `SectionEndingPasses`（`PassSet`＝値）を足して `PrintedPlay` に運ぶ（collector・MusicXML・双子の 3 建て手）。MIDI の highlight の ordinal は「周」ではなく「ending の番号」で進める（範囲の ending は 1 枚の印刷）。双子は範囲・列挙のとき全 alternative に `\volta 1,3 { }` を書く（LP 2.26.0 で 2 冊とも警告 0・Lab `sessions/p677/probes/out/`）。Split Sections の `[1,3. B]` は 2 回に数える。
-★ 検証: 網 `FormEndingPassTests` 14 本（MIDI の 6 形・inline と一致・ordinal・タイの carry（頁・MIDI・MusicXML・双子）・`PlayedOrder`・split-bar・双子の `\volta`・`PassSet`）＋ `SectionReferenceOctaveTests` の対照を `[1,2.]` 対 `[1-2.]` に（旧 `[1. B]` は周回数が違う）。毒 6 本が各自赤（P1 規則 11・P2 周回数 12・P3 stamp 2＝頁のタイ・P4 ordinal 2・P5 双子 2・P6 split-bar 1・Lab `sessions/p677/poisons.ps1`）。射程: ディスクの 33,461 冊で範囲・列挙の ending を書く本 **1**（Lab `corpora/dogfood/volta-list.lys`＝lyrics の volta・form ではない）＝動く本 0・`:|*N` と ending が同じ block に在る本 0（`ranged-endings.csv`）。
-⚠ 残した穴（LILYSHARP-OWN・`RepeatPasses.EndingFor`）: 番号の無い周は最後の ending を繰り返す（`InlineVoltas_ExplicitCountClampsToLastEnding` が固定）が、LP は余りを*最初*の alternative に与える（music-functions.scm:346-352 `make-repeat`）＝`|: A [1. B] :|*3 [2. C]` は Lily# A B A C A C・双子 A B A B A C。観測する網は無い。
-★ **終了**: `-End p677 -DiffBase e22322fc`＝full **10269 / 0 / 2 / 10271**（+14＝網・run2.trx）・Core 0 警告（`--no-incremental`・build1.log）・門 6 つ全 OK。§7.5 Core '+' 302 行／REF 1（双子の `\volta`＝`make-repeat` の埋め方を読んで書く理由）／OWN 1（上の穴）＝残りは言語の規則の 1 本化と stamp の配管（LP の移植ではない）。7.7 匂い: `EndingFor` の −1（ending なし）は呼び手 4 人が `>= 0` で読む番人つき。perf: 足した計算は ending 1 つにつき `PassSet` 1 個（打鍵経路の音符ごとではない）＝未計測。push はユーザー（未 push 22）。
 
 ## 2. 開いている作業
 

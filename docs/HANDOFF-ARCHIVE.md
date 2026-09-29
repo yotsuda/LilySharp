@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第677セッションの経緯
+
+### 1.1 第677セッション（2026-09-29・YT-DELL2）
+
+新しい会話（`/clear` の後・ユーザー「作業に着手して」）。★ `-Start p677`（HEAD `e22322fc`・未 push 20・full **10255 / 0 / 2 / 10257**）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊が M＝改行だけ（第672 と同じ・中身の差分 0）＝触っていない。
+★★ **⑾ MIDI が form の ending の範囲・列挙 `[1-2. B]`／`[1,3. B]` を無視＝閉じた**（`cdc1cf13`）: form の読み手 3 人（MIDI `PlayRepeatRun`・頁の played order `PlayedOrder.Expand`・境界の小節 `SectionBoundaryBars.ExpandRepeat`）が各自「i 番目の ending は i 周目・周回数＝ending の数」と綴り、番号を読んでいなかった＝`|: A [1-2. B] :| [3. C]` が A B A C（inline は A B A B A C）。規則を 1 か所 `Semantics.RepeatPasses`（`Count`＝`:|*N`、なければ最大番号≥2／`EndingFor`＝その周を名指す最初の ending、なければ最後）に置き、inline の MIDI（`ProcessRepeatSpan`）も同じ家へ。番号の畳みは `SyntaxFacts.VoltaPassNumbers`（inline と form の 2 読み手）。頁へは stamp に `SectionEndingPasses`（`PassSet`＝値）を足して `PrintedPlay` に運ぶ（collector・MusicXML・双子の 3 建て手）。MIDI の highlight の ordinal は「周」ではなく「ending の番号」で進める（範囲の ending は 1 枚の印刷）。双子は範囲・列挙のとき全 alternative に `\volta 1,3 { }` を書く（LP 2.26.0 で 2 冊とも警告 0・Lab `sessions/p677/probes/out/`）。Split Sections の `[1,3. B]` は 2 回に数える。
+★ 検証: 網 `FormEndingPassTests` 14 本（MIDI の 6 形・inline と一致・ordinal・タイの carry（頁・MIDI・MusicXML・双子）・`PlayedOrder`・split-bar・双子の `\volta`・`PassSet`）＋ `SectionReferenceOctaveTests` の対照を `[1,2.]` 対 `[1-2.]` に（旧 `[1. B]` は周回数が違う）。毒 6 本が各自赤（P1 規則 11・P2 周回数 12・P3 stamp 2＝頁のタイ・P4 ordinal 2・P5 双子 2・P6 split-bar 1・Lab `sessions/p677/poisons.ps1`）。射程: ディスクの 33,461 冊で範囲・列挙の ending を書く本 **1**（Lab `corpora/dogfood/volta-list.lys`＝lyrics の volta・form ではない）＝動く本 0・`:|*N` と ending が同じ block に在る本 0（`ranged-endings.csv`）。
+⚠ 残した穴（LILYSHARP-OWN・`RepeatPasses.EndingFor`）: 番号の無い周は最後の ending を繰り返す（`InlineVoltas_ExplicitCountClampsToLastEnding` が固定）が、LP は余りを*最初*の alternative に与える（music-functions.scm:346-352 `make-repeat`）＝`|: A [1. B] :|*3 [2. C]` は Lily# A B A C A C・双子 A B A B A C。観測する網は無い。
+★ **終了**: `-End p677 -DiffBase e22322fc`＝full **10269 / 0 / 2 / 10271**（+14＝網・run2.trx）・Core 0 警告（`--no-incremental`・build1.log）・門 6 つ全 OK。§7.5 Core '+' 302 行／REF 1（双子の `\volta`＝`make-repeat` の埋め方を読んで書く理由）／OWN 1（上の穴）＝残りは言語の規則の 1 本化と stamp の配管（LP の移植ではない）。7.7 匂い: `EndingFor` の −1（ending なし）は呼び手 4 人が `>= 0` で読む番人つき。perf: 足した計算は ending 1 つにつき `PassSet` 1 個（打鍵経路の音符ごとではない）＝未計測。push はユーザー（未 push 22）。
+
 ## 以下は第676セッションの経緯
 
 ### 1.1 第676セッション（2026-09-29・YT-DELL2）
