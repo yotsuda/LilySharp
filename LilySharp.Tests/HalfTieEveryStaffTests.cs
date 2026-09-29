@@ -107,10 +107,43 @@ public sealed class HalfTieEveryStaffTests
         AssertInkIsTheReservation(score, layout);
     }
 
-    [Fact]
-    public void EveryVoiceDrawsItsHalfTies_TheLowerVoiceDown()
+    // The same, with the STEMS asked the other way: a written @stemDown / @stemUp is LilyPond's
+    // \stemDown / \stemUp, an override of Stem.direction alone — the voice props still set the
+    // half-ties' side. Until 2026-09-29 (第663 ⑼) a note with a written stem direction inside a
+    // span got no VoiceStemUp stamp at all, and its half-tie fell to the pitch rule.
+    private const string TwoVoicesStemsForced = """
+        octave absolute
+        part up { clef treble }
+        section A {
+          up { voice { a2@laissezVibrer@stemDown a2 } { e'2@laissezVibrer@stemUp g'2@repeatTie@stemUp } | c''1 | }
+        }
+        form main { A }
+        score main { staff up }
+        """;
+
+    // A combined staff: the parts are apart (their rhythms differ), so part one is \voiceOne and
+    // part two \voiceTwo. The pitches again oppose the pitch rule: part one's a (below the middle
+    // line) would curve down, part two's c'' (above it) up.
+    private const string Combined = """
+        octave absolute
+        time 4/4
+        part vone { clef treble }
+        part vtwo { clef treble }
+        section A {
+          vone { a4 a4 a2@laissezVibrer | a1 | }
+          vtwo { c''2@laissezVibrer c''2@repeatTie | c''1 | }
+        }
+        form main { A }
+        score main { combinedStaff { vone vtwo } }
+        """;
+
+    [Theory]
+    [InlineData(TwoVoices)]
+    [InlineData(TwoVoicesStemsForced)]
+    [InlineData(Combined)]
+    public void EveryVoiceDrawsItsHalfTies_TheLowerVoiceDown(string book)
     {
-        var (score, layout) = Lay(TwoVoices);
+        var (score, layout) = Lay(book);
         var drawn = layout.TieVariantLayouts;
 
         var v1 = drawn.Where(t => t.VoiceIndex == 0).ToList();
@@ -125,6 +158,18 @@ public sealed class HalfTieEveryStaffTests
         Assert.True(v1[0].CurveUp, "voice one's l.v. curves up");
         Assert.All(v2, t => Assert.False(t.CurveUp, $"voice two's {t.Kind} curves down"));
         AssertInkIsTheReservation(score, layout);
+
+        // The premise of the forced-stem row: the stems really are turned against the voice.
+        if (book == TwoVoicesStemsForced)
+        {
+            var staff = score.EnumerateStaves().Single().Staff;
+            var one = (NoteItem)staff.Voices[0].Measures[0].Items[0];
+            var two = (NoteItem)staff.Voices[1].Measures[0].Items[0];
+            Assert.False(one.StemUp);
+            Assert.True(two.StemUp);
+            Assert.Equal(true, one.VoiceStemUp);
+            Assert.Equal(false, two.VoiceStemUp);
+        }
     }
 
     /// <summary>

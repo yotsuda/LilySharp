@@ -1728,10 +1728,20 @@ internal static class PartCombiner
     /// created <c>\with { \voiceOne … }</c> and "two" <c>\with { \voiceTwo … }</c>, while
     /// "shared" and "solo" get no settings at all and keep the pitch rule.
     /// </remarks>
+    /// <remarks>
+    /// The voice props reach every direction-polyphonic grob, not the stem alone: the item's
+    /// <c>VoiceStemUp</c> is what a tie, a slur and a half-tie read for their side
+    /// (ElementCoordinator, TieVariantEngraver), and it is set whether or not the writer asked
+    /// the STEM a direction (<c>@stemDown</c> is LilyPond's \stemDown — Stem.direction only).
+    /// ⚠️ Until 2026-09-29 (第663 ⑼) this baked <c>StemUpOverride</c> alone, so the ties, slurs
+    /// and half-ties of a combined staff's "one" and "two" voices took the pitch rule.
+    /// LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs — Tie, Slur,
+    /// LaissezVibrerTie, RepeatTie are in the list make-voice-props-set (:666-674) sets.
+    /// </remarks>
     private static MusicItem WithVoiceDirection(MusicItem item, bool up) => item switch
     {
-        NoteItem n when n.ForcedStemUp is null => n with { StemUpOverride = up },
-        ChordItem c when c.ForcedStemUp is null => c with { StemUpOverride = up },
+        NoteItem n => n with { StemUpOverride = n.ForcedStemUp is null ? up : n.StemUpOverride, VoiceStemUp = up },
+        ChordItem c => c with { StemUpOverride = c.ForcedStemUp is null ? up : c.StemUpOverride, VoiceStemUp = up },
         // A multi-measure rest too — MultiMeasureRest is a direction-polyphonic grob.
         // LILYPOND-REF: scm/music-functions.scm:617-634 direction-polyphonic-grobs
         RestItem { IsSpacer: false } r => r with { VoiceDirection = up ? 1 : -1 },
@@ -1757,8 +1767,12 @@ internal static class PartCombiner
     /// </remarks>
     private static MusicItem WithoutVoiceDirection(MusicItem item) => item switch
     {
-        NoteItem { StemUpOverride: not null } n => n with { StemUpOverride = null },
-        ChordItem { StemUpOverride: not null } c => c with { StemUpOverride = null },
+        // …and the voice props' own stamp goes with it (a tie or slur of the shared / solo
+        // voice takes the pitch rule, as its stem does).
+        NoteItem n when n.StemUpOverride is not null || n.VoiceStemUp is not null
+            => n with { StemUpOverride = null, VoiceStemUp = null },
+        ChordItem c when c.StemUpOverride is not null || c.VoiceStemUp is not null
+            => c with { StemUpOverride = null, VoiceStemUp = null },
         RestItem { VoiceDirection: not 0 } r => r with { VoiceDirection = 0 },
         _ => item,
     };

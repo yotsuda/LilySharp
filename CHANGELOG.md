@@ -278,6 +278,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A voice's side reaches its ties, slurs and half-ties under a written stem direction, and
+  in a combined staff.** Inside `voice { } { }` a note with `@stemUp` / `@stemDown` lost the
+  voice's direction for everything but the stem, so its `@laissezVibrer` / `@repeatTie`, tie
+  and slur curved by pitch; on a `combinedStaff` the "one" and "two" voices never had it. They
+  now follow `\voiceOne` / `\voiceTwo` as in LilyPond (the stem alone obeys the annotation).
 - **The `.ly` twin's `voltaBracket N` counts the ending's own bars.** LilyPond's
   `VoltaBracket.musical-length` was written as N bars of the meter the ending opens in, so a
   `time` change inside the ending (or a bar shorter than its meter) ended the twin's bracket

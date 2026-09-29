@@ -894,17 +894,22 @@ public sealed record NoteItem : MusicItem
     }
 
     /// <summary>
-    /// The direction a polyphonic span's voice props set on this note's stem (<c>\voiceOne</c>
-    /// up, <c>\voiceTwo</c> down, …) — or null outside a span, for voices 5+, or when the writer
-    /// asked for a direction (<see cref="ForcedStemUp"/> wins).
+    /// The direction a polyphonic span's voice props set on this note (<c>\voiceOne</c> up,
+    /// <c>\voiceTwo</c> down, …; a combined staff's "one" and "two" voices the same) — or null
+    /// outside a span, for voices 5+, and in a combined staff's shared and solo voices.
     /// </summary>
     /// <remarks>
-    /// <c>MeasureCollector.ResolveVoiceStemDirections</c> writes it beside
-    /// <see cref="StemUpOverride"/>, which carries the same answer on a notation staff but is ALSO
-    /// the notation beam's pitch-derived direction — so a tab staff, whose stems read strings and
-    /// not pitches, cannot tell the two apart there. <c>TabStaffGeometry</c> reads this one as a
-    /// set direction: LilyPond's voice props reach the TabVoice's Stem like any other.
-    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — Stem.direction.
+    /// <c>MeasureCollector.ResolveVoiceStemDirections</c> (and <c>PartCombiner.WithVoiceDirection</c>)
+    /// writes it beside <see cref="StemUpOverride"/>, which carries the same answer on a notation
+    /// staff but is ALSO the notation beam's pitch-derived direction — so a tab staff, whose
+    /// stems read strings and not pitches, cannot tell the two apart there. <c>TabStaffGeometry</c>
+    /// reads this one as a set direction: LilyPond's voice props reach the TabVoice's Stem like
+    /// any other. It is also what a tie, a slur and a half-tie read for their side, and so it is
+    /// set even when the writer asked the STEM a direction (<see cref="ForcedStemUp"/> keeps the
+    /// stem; LilyPond's \stemDown overrides Stem.direction and no other grob's) — until 2026-09-29
+    /// (第663 ⑼) a written stem direction left it null and those bows to the pitch rule.
+    /// LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set — Stem.direction,
+    ///   and every other grob of direction-polyphonic-grobs (:617-634).
     /// </remarks>
     public bool? VoiceStemUp
     {

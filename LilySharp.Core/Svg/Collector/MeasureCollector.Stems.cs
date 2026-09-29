@@ -143,15 +143,30 @@ public sealed partial class MeasureCollector
                     // LILYPOND-REF: scm/music-functions.scm:666-674 make-voice-props-set
                     int restDir = forced ? 1 : -1;
                     // VoiceStemUp repeats the answer for a tab staff, which cannot read it
-                    // off StemUpOverride — see NoteItem.VoiceStemUp.
+                    // off StemUpOverride — see NoteItem.VoiceStemUp — and is the voice props'
+                    // answer for every OTHER direction-polyphonic grob (a tie, a slur, a
+                    // half-tie): those keep the voice's side under a written @stemUp /
+                    // @stemDown, which turns the STEM alone (LilyPond's \stemDown is an
+                    // override of Stem.direction and nothing else). ⚠️ Until 2026-09-29
+                    // (第663 ⑼) the stamp was gated on ForcedStemUp with the stem's, so a
+                    // note with a written stem direction inside a span left its half-tie,
+                    // tie and slur to the pitch rule.
                     MusicItem? updated = items[ii] switch
                     {
-                        NoteItem n when n.ForcedStemUp is null
-                                && (n.StemUpOverride != forced || n.VoiceStemUp != forced)
-                            => n with { StemUpOverride = forced, VoiceStemUp = forced },
-                        ChordItem c when c.ForcedStemUp is null
-                                && (c.StemUpOverride != forced || c.VoiceStemUp != forced)
-                            => c with { StemUpOverride = forced, VoiceStemUp = forced },
+                        NoteItem n when (n.ForcedStemUp is null && n.StemUpOverride != forced)
+                                || n.VoiceStemUp != forced
+                            => n with
+                            {
+                                StemUpOverride = n.ForcedStemUp is null ? forced : n.StemUpOverride,
+                                VoiceStemUp = forced,
+                            },
+                        ChordItem c when (c.ForcedStemUp is null && c.StemUpOverride != forced)
+                                || c.VoiceStemUp != forced
+                            => c with
+                            {
+                                StemUpOverride = c.ForcedStemUp is null ? forced : c.StemUpOverride,
+                                VoiceStemUp = forced,
+                            },
                         // ...and a multi-measure rest: MultiMeasureRest is in the same list,
                         // so an R in a span's block draws at that voice's position
                         // (MultiMeasureRestEngraver reads the stamp; the spacing does not).
