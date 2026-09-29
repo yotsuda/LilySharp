@@ -278,6 +278,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A note's `@text("…")` and `@mark("…")` reach MusicXML.** Both were dropped on export; the
+  text is now a `<words>` direction at the note (below, or above with `.up`), the rehearsal
+  mark a `<rehearsal>`. A text on a multi-measure rest stands on the run's first bar.
+- **A chord row clears the raised "7" and the ♭ of the chord names under it.** The room a
+  staff keeps above itself for its own `@chord` names was a flat cap height over the highest
+  note anywhere in the system, so a `chords` row's finger numbers printed into a Cm⁷ below,
+  and a high note in another bar pushed the row away for nothing. The room is now the names'
+  own ink, measured where they stand.
 - **A voice's side reaches its ties, slurs and half-ties under a written stem direction, and
   in a combined staff.** Inside `voice { } { }` a note with `@stemUp` / `@stemDown` lost the
   voice's direction for everything but the stem, so its `@laissezVibrer` / `@repeatTie`, tie

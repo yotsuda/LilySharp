@@ -4183,6 +4183,31 @@ public sealed class MusicXmlExporter
             return;
         }
 
+        // Free text and the rehearsal mark ON A NOTE (2026-09-29, HANDOFF §1.1 第672's hole:
+        // both fell through to the one-word table below, whose names they are not, and
+        // were dropped in silence). Each is read from the ANNOTATION like the chord and the
+        // figures above, by the same reader the page draws from
+        // (MeasureCollector.Annotations: `@text` is a TextScript, below unless `.up`;
+        // `@mark` a RehearsalMark, above). A direction at the note's own offset, as the
+        // dynamics are. On a multi-measure rest the text stands on the run's first bar,
+        // which is the bar the page prints it in.
+        if (_currentMeasure != null
+            && LilySharp.Core.Semantics.AnnotationValues.Text(mark) is { } freeText)
+        {
+            AddDirection(new MusicXmlDirection
+            {
+                Words = freeText,
+                Placement = mark.ForcedAbove == true ? "above" : "below",
+            });
+            return;
+        }
+        if (_currentMeasure != null
+            && LilySharp.Core.Semantics.AnnotationValues.Rehearsal(mark, out _) is { } rehearsal)
+        {
+            AddDirection(new MusicXmlDirection { Rehearsal = rehearsal });
+            return;
+        }
+
         // '@!X' is a TERMINATOR, and its NAME is the name of what it ENDS — so handing it to
         // the table below would emit that thing's START: '@!ottava' would OPEN an octave
         // shift. The families are told apart here instead.

@@ -398,6 +398,9 @@ internal sealed class MusicXmlDirection
     /// <summary>Free words (<c>una corda</c>, <c>tre corde</c>): MusicXML has no pedal type
     /// for the una corda, so it is the words a score prints.</summary>
     public string? Words { get; set; }
+    /// <summary>A rehearsal mark's label (<c>@mark("A")</c> on a note, 2026-09-29): MusicXML's
+    /// <c>&lt;rehearsal&gt;</c> direction, which is a boxed label like the page's.</summary>
+    public string? Rehearsal { get; set; }
     /// <summary>
     /// Where the direction stands in its bar, in divisions from the bar's head (2026-09-29).
     /// The measure writes every direction at its head (<see cref="MusicXmlMeasure.ToXml"/>),
@@ -435,6 +438,9 @@ internal sealed class MusicXmlDirection
 
         if (Words != null)
             direction.Add(new XElement("direction-type", new XElement("words", Words)));
+
+        if (Rehearsal != null)
+            direction.Add(new XElement("direction-type", new XElement("rehearsal", Rehearsal)));
 
         XElement? sound = null;
         if (Tempo.HasValue)

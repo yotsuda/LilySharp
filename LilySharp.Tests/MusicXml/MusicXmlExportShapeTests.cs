@@ -544,6 +544,48 @@ public class MusicXmlExportShapeTests
         Assert.True(measures[0].Elements("direction").Any() && measures[0].Elements().TakeWhile(e => e.Name != "note").Any(e => e.Name == "direction"));
     }
 
+    /// <summary>
+    /// Free text and a rehearsal mark ON A NOTE reach MusicXML (HANDOFF §1.1 第672's hole,
+    /// 2026-09-29 — both fell through the one-word direction table and were dropped):
+    /// <c>@text("…")</c> is a <c>&lt;words&gt;</c> direction at the note's offset, below unless
+    /// <c>.up</c>; <c>@mark("…")</c> a <c>&lt;rehearsal&gt;</c>, above; a text on a
+    /// multi-measure rest stands on the run's first bar.
+    /// </summary>
+    [Fact]
+    public void TextAndRehearsalMark_OnANote_AreDirections()
+    {
+        var doc = Export("""
+            octave absolute
+            part pno { clef treble }
+            section A { pno {
+              c'4@text("dolce") d' e'@text("sub.").up f' | R1*2@text("tacet") | g'1@mark("C") |
+            } }
+            form main { A }
+            score main { staff pno }
+            """);
+        int OffsetOf(XElement directionType)
+            => (int?)directionType.Parent!.Element("offset") ?? 0;
+        string PlacementOf(XElement directionType)
+            => (string?)directionType.Parent!.Attribute("placement") ?? "";
+        var measures = doc.Descendants("measure").ToList();
+
+        var bar1 = measures[0].Descendants("words").ToList();
+        Assert.Equal(new[] { "dolce", "sub." }, bar1.Select(w => w.Value));
+        Assert.Equal(new[] { 0, 48 }, bar1.Select(w => OffsetOf(w.Parent!)));
+        Assert.Equal(new[] { "below", "above" }, bar1.Select(w => PlacementOf(w.Parent!)));
+
+        // The multi-measure rest: the text on its first bar, at its head; nothing on the second.
+        var tacet = Assert.Single(measures[1].Descendants("words"));
+        Assert.Equal("tacet", tacet.Value);
+        Assert.Equal(0, OffsetOf(tacet.Parent!));
+        Assert.Empty(measures[2].Descendants("words"));
+
+        var mark = Assert.Single(measures[3].Descendants("rehearsal"));
+        Assert.Equal("C", mark.Value);
+        Assert.Equal("above", PlacementOf(mark.Parent!));
+        Assert.Empty(doc.Descendants("words").Where(w => w.Value == "C"));
+    }
+
     [Fact]
     public void LyricElision_SplitsInsideOneLyric()
     {
