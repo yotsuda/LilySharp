@@ -278,6 +278,9 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **MusicXML says where the capo is.** Under `chordDiagrams … capo N` the `<frame>`s were
+  the pressed shapes but the document never said so; every part that carries a frame now
+  opens with `<staff-details><capo>N</capo></staff-details>`.
 - **MusicXML keeps every part's bars aligned across the sections.** A part with no block
   for a played section now gets that section's bars as silence, under the section's meter
   and pickup, as the page and the `.ly` twin already did — its next section no longer

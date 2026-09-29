@@ -376,8 +376,34 @@ public sealed class MusicXmlExporter
             // rows' homes). A flat top-level chord track is not handled, as the MIDI's is not.
             EmitPendingChordRows();
         }
+        WriteCapo();
 
         return _document;
+    }
+
+    /// <summary>
+    /// The score's capo (<c>chordDiagrams … capo N</c>) as <c>&lt;staff-details&gt;&lt;capo&gt;</c>
+    /// in the opening attributes of every part whose harmonies carry a <c>&lt;frame&gt;</c>:
+    /// the frames are the shapes PRESSED above the capo (HANDOFF §2 K2), and without this a
+    /// reader fingers them at the nut. A part with no frame — a bass under the row, a part
+    /// naming chords alone — says nothing, its <c>&lt;harmony&gt;</c> being the sounding chord.
+    /// </summary>
+    /// <remarks>Left open by 第665 (HANDOFF §1.0 K5); written last, once every part has its
+    /// harmonies, the rows' included (<see cref="EmitPendingChordRows"/>).</remarks>
+    private void WriteCapo()
+    {
+        int capo = DiagramCapo;
+        if (capo <= 0)
+            return;
+        foreach (var part in Document.Parts)
+        {
+            if (part.Measures.Count == 0
+                || !part.Measures.Any(m => m.Notes.Any(n => n.RawElement is { } raw && raw.Descendants("frame").Any())))
+                continue;
+            var first = part.Measures[0];
+            first.Attributes ??= new MusicXmlAttributes { Divisions = null };
+            first.Attributes.Capo = capo;
+        }
     }
 
     private void CollectMetadata(SyntaxNode root)

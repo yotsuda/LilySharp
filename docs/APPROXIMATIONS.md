@@ -261,8 +261,8 @@
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
-- **:470** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4517** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:496** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **:4543** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.

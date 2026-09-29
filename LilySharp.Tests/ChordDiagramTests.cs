@@ -2108,6 +2108,46 @@ public class ChordDiagramTests
         Assert.Contains("\\fret-diagram-terse \"x;3;2;o;1;o;\"", Twin(book));
     }
 
+    /// <summary>
+    /// The capo reaches MusicXML as <c>&lt;staff-details&gt;&lt;capo&gt;</c> in the opening
+    /// attributes of every part whose harmonies carry a <c>&lt;frame&gt;</c> — the frames are the
+    /// PRESSED shapes, and this is what tells a reader so (left open by 第665; 2026-09-29). A
+    /// part with no frame under it says nothing, and a score without a capo writes none.
+    /// </summary>
+    [Fact]
+    public void UnderACapo_MusicXmlWritesTheCapo_OnEveryPartWithAFrame()
+    {
+        string Book(string layout) => layout + """
+            octave absolute
+            part gt { clef treble }
+            part bs { clef bass }
+            section A { gt { c'1@chord(Eb) | } bs { c1 | } chords prog { Eb | } }
+            form main { A }
+            score main { chords prog  staff gt  staff bs }
+            """;
+        var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(Book(Capo3All)));
+        var gt = doc.Parts.Single(p => p.Name == "gt");
+        var bs = doc.Parts.Single(p => p.Name == "bs");
+        Assert.Equal(3, gt.Measures[0].Attributes?.Capo);
+        Assert.Null(bs.Measures[0].Attributes?.Capo);
+        // In the document: one <staff-details><capo> per framed part, after the clef and before
+        // any <transpose> (the schema's order), in the first measure's attributes.
+        string xml = doc.ToXml().ToString();
+        Assert.Single(Regex.Matches(xml, @"<staff-details>\s*<capo>3</capo>\s*</staff-details>"));
+        var gtAttrs = Regex.Match(xml, @"<part id=""P1"">.*?</attributes>", RegexOptions.Singleline).Value;
+        Assert.Matches(@"</clef>\s*<staff-details>", gtAttrs);
+        // The row's part on a lead sheet (no staff) carries frames too, so it carries the capo.
+        var sheet = new MusicXmlExporter().Export(SyntaxTree.Parse(Capo3All + """
+            section A { chords prog { Eb | Bb | } }
+            form main { A }
+            score main { chords prog }
+            """));
+        Assert.Equal(3, sheet.Parts.Single().Measures[0].Attributes?.Capo);
+        // No capo, no element — with or without frames.
+        Assert.DoesNotContain("<capo>", Xml(Book(All)));
+        Assert.DoesNotContain("<capo>", Xml(Book(Guitar)));
+    }
+
     /// <summary>The capo suggestion: each fret 0–7 with the barre chords the file's chords take
     /// there, fewest first — F and C on the guitar: capo 3 (D and A) needs none.</summary>
     [Fact]

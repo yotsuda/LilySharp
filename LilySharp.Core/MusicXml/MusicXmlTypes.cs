@@ -281,6 +281,12 @@ internal sealed class MusicXmlAttributes
     /// </remarks>
     public int? TransposeSemitones { get; set; }
 
+    /// <summary>The capo's fret (<c>&lt;staff-details&gt;&lt;capo&gt;</c>, 2026-09-29): the
+    /// score's <c>chordDiagrams … capo N</c>, written on a part whose harmonies carry a
+    /// <c>&lt;frame&gt;</c> — the frames are the shapes PRESSED above the capo, and this is
+    /// what tells a reader so. Null when there is none.</summary>
+    public int? Capo { get; set; }
+
     public XElement ToXml()
     {
         var attrs = new XElement("attributes",
@@ -323,6 +329,10 @@ internal sealed class MusicXmlAttributes
                     ? new XElement("clef-octave-change", ClefOctaveChange.Value)
                     : null));
         }
+
+        // Schema order: … clef*, staff-details*, transpose*, …
+        if (Capo is { } capo && capo > 0)
+            attrs.Add(new XElement("staff-details", new XElement("capo", capo)));
 
         if (TransposeSemitones is { } semis && semis != 0)
         {
