@@ -2660,9 +2660,20 @@ public sealed class MusicXmlExporter
             Notehead = "slash",
         };
         ProcessArticulations(slash.Articulations, xmlNote);
+        // A slash ties to the next slash exactly as a note ties to the next note (`/8~ | /4`,
+        // the page's CreateSlashNoteItem reads the same `~`). ⚠️ Until 2026-09-29 (HANDOFF
+        // §1.1 第662 ⑻) this arm paired no tie at all: the `~` on a slash wrote a start with
+        // no stop, and once starts were retracted for want of a stop (2026-09-28) the tie
+        // vanished from the document altogether. The pairing is SameNotehead's — an unpitched
+        // slash joins only an unpitched slash.
+        CloseTies([xmlNote]);
+        if (slash.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
         _currentMeasure.Notes.Add(xmlNote);
         _lastPitchedNote = null;
+        // The onset just written, so a `~` walked as a SIBLING after the slash
+        // (ApplyMarkerToLastEmitted) opens its tie here rather than on nothing.
         _lastEmittedNotes.Clear();
+        _lastEmittedNotes.Add(xmlNote);
         MaybeClosePickup(duration);
     }
 
@@ -2771,7 +2782,7 @@ public sealed class MusicXmlExporter
             case SlashNoteSyntax:
             {
                 EmitPendingDynamic();
-                _currentMeasure.Notes.Add(new MusicXmlNote
+                var xmlNote = new MusicXmlNote
                 {
                     IsUnpitched = true,
                     Step = "B",
@@ -2782,9 +2793,16 @@ public sealed class MusicXmlExporter
                     ActualNotes = tupletActual,
                     NormalNotes = tupletNormal,
                     Notehead = "slash",
-                });
+                };
+                // The repeated slash ties as ProcessSlashNote's does (`/2~ | 4`): the copy
+                // ends the tie the slash opened, and its own `~` opens the next.
+                ProcessArticulations(bare.Articulations, xmlNote);
+                CloseTies([xmlNote]);
+                if (bare.Articulations.OfType<TieSyntax>().Any()) OpenTies([xmlNote]);
+                _currentMeasure.Notes.Add(xmlNote);
                 _lastPitchedNote = null;
                 _lastEmittedNotes.Clear();
+                _lastEmittedNotes.Add(xmlNote);
                 MaybeClosePickup(duration);
                 return;
             }
@@ -3275,8 +3293,13 @@ public sealed class MusicXmlExporter
     /// when the step, the accidental and the octave agree; an unpitched member (a drum in a
     /// chord) is never the same as anything, so it cannot be tied.</summary>
     private static bool SameNotehead(MusicXmlNote a, MusicXmlNote b)
-        => a.Step != null && b.Step != null && a.Step == b.Step && a.Octave == b.Octave
-           && (int)System.Math.Round(a.Alter ?? 0) == (int)System.Math.Round(b.Alter ?? 0);
+        => a.IsUnpitched || b.IsUnpitched
+            // The one unpitched head that ties is the slash (ProcessSlashNote): two slashes
+            // are the same head; a slash and a pitched B4 — the slash's display place — are
+            // not, and a drum member never is.
+            ? a.IsUnpitched && b.IsUnpitched && a.Notehead == "slash" && b.Notehead == "slash"
+            : a.Step != null && b.Step != null && a.Step == b.Step && a.Octave == b.Octave
+              && (int)System.Math.Round(a.Alter ?? 0) == (int)System.Math.Round(b.Alter ?? 0);
 
     /// <summary>Start a tie on every member of the onset just written.</summary>
     private void OpenTies(IReadOnlyList<MusicXmlNote> from)

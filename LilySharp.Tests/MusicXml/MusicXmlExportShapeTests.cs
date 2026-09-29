@@ -138,6 +138,44 @@ public class MusicXmlExportShapeTests
         Assert.Equal(3, ties.Count(t => t.Attribute("type")!.Value == "stop"));
     }
 
+    /// <summary>
+    /// A slash ties to the next slash — written on the slash (<c>/8~ /8</c>), across the bar
+    /// (<c>/8~ | /4</c>) and into a bare duration that repeats it (<c>/2~ | 4</c>) — and never
+    /// to a pitched note, which is not the same head (the page warns there, LYS4007). Until
+    /// 2026-09-29 (HANDOFF §1.1 第662 ⑻) the slash arms paired no tie: the start was written
+    /// with no stop, then retracted for want of one, so the tie left the document.
+    /// </summary>
+    /// <remarks>
+    /// Poisons (RULES §5.4): drop the pairing from ProcessSlashNote and the first two pairs
+    /// go; from the bare-duration slash arm and the third goes; let SameNotehead match a
+    /// slash to a pitch and the last bar writes a pair the page draws nothing for.
+    /// </remarks>
+    [Fact]
+    public void TiedSlash_TiesSlashToSlash_AndNeverToAPitch()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { /4 /4 /8~ /8 /4 | /2 /2~ | 4 /2 | /4 /4 /4 /8~ | /8 /2. | c'2~ /2 | } }
+            form main { A }
+            score main { staff m }
+            """);
+        var notes = doc.Descendants("note").ToList();
+        Assert.Equal(17, notes.Count);
+        var starts = notes.Where(n => n.Elements("tie").Any(t => (string?)t.Attribute("type") == "start")).ToList();
+        var stops = notes.Where(n => n.Elements("tie").Any(t => (string?)t.Attribute("type") == "stop")).ToList();
+        Assert.Equal(3, starts.Count);
+        Assert.Equal(3, stops.Count);
+        // Every tied head is a slash, and each stop is the note right after its start.
+        Assert.All(starts.Concat(stops), n => Assert.Equal("slash", n.Element("notehead")?.Value));
+        foreach (var start in starts)
+            Assert.Contains(notes[notes.IndexOf(start) + 1], stops);
+        // The pitched c' before a slash: no start survives, and the slash after it no stop.
+        var c = notes.Single(n => n.Element("pitch") != null);
+        Assert.Empty(c.Elements("tie"));
+    }
+
     [Fact]
     public void StructureOrder_EmitsSectionsInStructureOrderWithReplay()
     {
