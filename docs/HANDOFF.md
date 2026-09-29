@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: ~~行の指番号と下の行の名前の上付きが 0.5 重なる~~（第681 が閉じた）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
+- ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: ~~行の指番号と下の行の名前の上付きが 0.5 重なる~~（第681 が閉じた）／part が何も書かない便の行は MusicXML に出ない（第668）／~~行末の図の「5fr」が右へはみ出す~~（第683 再現せず・網を置いた）／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
 - ✅ **MusicXML／頁の既存欠陥 ⑴〜⒂（第662・第663 起票）は全部閉じた**（⑴⑵⑹ 第671・⑶ 欠陥ではない・⑷⑸ 第672・⑻ 第673・⑺ 第674・⑽ 第675・⒂ 第676・⑾ 第677・⑿⒁ 第678・⒀ 第679・⑼ 第680）。残る穴だけ: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: ~~`@text`／`@mark` は音符でも MusicXML に出ない~~（第682 が閉じた・importer は今も読まない）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
@@ -119,6 +119,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第683セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p683`（HEAD `2e39789f`・未 push 32・full **10287 / 0 / 2 / 10289**）。
+★★ **K5 の小穴「行末の図の「5fr」が右へはみ出す」（第663 起票）＝再現せず・観測者を置いて閉じた**: 探り本 3 冊（行の最後の symbol が小節頭／3 拍目の 5fr 形・chords だけの grid sheet・行末の音符の `@chord(A x57765)`）と site の `chord-shapes.lys`（8fr・10fr が行末）のどれも label は行の右端の内側（SVG 実測: 行末との隙間 0.3〜2.1 ss・Lab `sessions/p683/probes/`）。行の footprint（`FootprintWidth`＝図の箱ごと）と `@chord` の rod（`ApplyFretFrameSpacing`＝箱の右 ＋0.4 を小節端まで）が label を値付けしている。起票時の本は残っておらず（p663 に形を書いた探り本無し・ARCHIVE の第663 にも本の名は無い）、第668 の fret-diagrams.scm 逐語移植で label の位置が変わった（「Nfr」は 0.5 倍を中央揃え）のが直った理由と読む。
+★ 検証: 網 `ChordDiagramTests.ADiagramAtTheLineEnd_KeepsItsFretLabelInsideTheLine`（3 冊・全 system・行の図と `@chord` の図の箱の右端 ≤ 行の右端）。毒 2 本（P1 行の footprint を名前だけに＝3 本赤・P2 `@chord` の図の rod を消す＝1 本赤・Lab `sessions/p683/poisons.ps1`・baseline 264/0）。コードは触っていない（Core '+' 0）。
+★ **終了**: commit `d4140b14`（網だけ）。`-End p683 -DiffBase 2e39789f`＝full **10288 / 0 / 2 / 10290**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 11,336 B）。§7.5 Core '+' 0／REF 0／OWN 0。7.6・7.7: 該当なし（コード不変）。perf: 不変。push はユーザー（未 push 34）。
+
+## 以下は第682セッションの経緯
+
 ### 1.1 第682セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p682`（HEAD `d9a97659`・未 push 30・full **10286 / 0 / 2 / 10288**）。
@@ -126,18 +135,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 検証: 網 `MusicXmlExportShapeTests.TextAndRehearsalMark_OnANote_AreDirections`（dolce below 0・sub. above 48・tacet は R1*2 の 1 小節目だけ・C は `<rehearsal>` で words ではない）。毒 3 本（P1 text の腕・P2 側を読まない・P3 rehearsal の腕）が各自赤（Lab `sessions/p682/poisons.ps1`・baseline 80/0）。射程: exporter だけ＝svg/ly/midi は動かない（掃き省略・第671 と同じ）。XML が変わる本＝音符に `@mark("…")`／`@text("…")` を書く本: 実コーパス 212＋15 冊・repo 27 冊（grep）＝意図した変化。
 ⚠ 残る穴: importer は `<words>` も `<rehearsal>` も読まない（従来どおり・往復しない）／section label（`section A` の箱の字）は exporter が何も書かない（`<rehearsal>` の腕は無い）。
 ★ **終了**: commit `3c1a5d2a`（Core 2・網・APPROXIMATIONS・CHANGELOG＝第681 の帯の行も一緒に）。`-End p682 -DiffBase d9a97659`＝full **10287 / 0 / 2 / 10289**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,223 B）。§7.5 Core '+' 31 行／REF 0／OWN 0＝MusicXML の配管（出所は schema・LP の対応物無し）。7.6: ⒟ 何も移植していない。7.7 匂い: importer が読まない往復の片肺（既存）・section label は今も出ない。perf: 打鍵経路ではない（export 時に annotation を 2 回読むだけ）。push はユーザー（未 push 32）。
-
-## 以下は第681セッションの経緯
-
-### 1.1 第681セッション（2026-09-29・YT-DELL2）
-
-新しい会話（`/clear` の後・ユーザー「HANDOFF を読んで着手」）。★ `-Start p681`（HEAD `1371047c`・未 push 28・full **10284 / 0 / 2 / 10286**・56 秒）。作業ツリーの `site/examples/*.lys` 20 冊は改行だけ（内容差 0・触っていない）。
-★★ **§1.0 ⒜ K5 の穴「行の指番号が下の `@chord` 名の上付きに 0.5 重なる」＝直した（⚠ 未 commit＝下の GO 待ち）**: 原因は `MultiStaffLayouter.ReserveChordRowBand`＝staff が自分の chord line のために上へ積む帯（LILYSHARP-OWN）が「幅全体の最高音 ＋ 0.5 ＋ 平らな cap 1.9」で、上付きの 7（ink top 2.4731）と ♭ の足（−0.3496）が箱の外に出ていた。独立 row は帯の上に 0.5 で乗るので、指番号が 7 に 0.45 食い込んだ（Lab `sessions/p668/demo.lys`・再現 `sessions/p681/probes/out/demo.svg`＝指の baseline y 42.08・7 の頭 41.63）。直し＝帯の天井を **line の実 ink top** にする: `ChordNameEngraver.OwnLineTop`＝`Calculate` の床の計算を項ごとに同じ（symbol ごとに自分の footprint の窓で skyline を読み ＋0.5 −ink bottom・図の項も・line で max）＋ line の最高 ink top。room の skyline（middle 枠・床は `StaffHeightOf` の半分＋線の半分）で読んで同じ枠へ merge。`ChordSymbolCapHeight` 1.9 は消えた（magic_constants 再生成）。帯は system ごと（その system に symbol の無い staff は積まない）・門の最後で読む（row に取られた staff の symbol は測らない）。
-★ 検証: 網 2（`ChordRowInlineAlignmentTests.ARowOverAStaffThatKeepsItsOwnLine_ClearsTheLinesSuperscript`＝row の指の ink 下端が 7 の頭を越える（before −0.120）／`AStaffOverALowerStaffsOwnChordLine_ClearsExactlyThatLinesInk`＝2 段の本で上の staff が「line の ink top ＋ staff-staff padding 1.0」ちょうど・別の小節の高い音は帯を持ち上げない（対照と等距離））。毒 3 本が各自赤（P1 平らな cap・P2 上付きを数えない＝2 本／P3 幅全体の最高音＝1 本・Lab `sessions/p681/poisons.ps1`・baseline 311/0）。demo の実測: 指の下端と 7 の頭の隙間 −0.45 → **+0.50**（＝row の padding 0.5・`probes/probe.txt`）。
-★ 射程: 掃き 1,166 冊 × svg/ly/xml/midi/check（base `1371047c` の detached worktree・Release・`sessions/p681/sweep.ps1`）＝**moved 3 冊**（全部 svg・check 差 0）: `corpora/ベースタブLy/tab-chord.lys`（staff back の line＝0.31／0.57 下へ）・`site/chord-axes.lys`（0.10）・**`Fixtures/test/figbass-chordname-lower-staff.lys`（snapshot あり＝full で 1 赤）**。
-⚠ **GO 待ち＝snapshot の再ベース**（`test/figbass-chordname-lower-staff`）: 下段（bass・`@chord(Cm7)`／`(G7)`）が 0.62 下へ（7 の上付き 0.573 ＋ C の足 0.047）。LP 2.26.0 の双子（`probes/fb/lp.svg`）: 上段の下線 → 下段の上線 **5.5687**・Lily# before **5.40**（−0.17）→ after **6.02**（+0.45）。差の正体は帯の模型（平らな帯 ＋ staff-staff padding 1.0＝上段 c'' の符尾先 1.0 ＋ 1.0 ＋ line top 4.02・`probes/probe2.txt`）対 LP の loose line（x ごとに歩き・ばねで配る）＝`@chord` だけの line は run の要素にしない既存の決定（`AttachedChordLineInRun`・2026-08-26）。before が LP に近く見えたのは 2 つの誤りの相殺（帯が 0.62 低い × 帯の模型が広い）。⇒ **ユーザー GO（2026-09-29「続けて」→ 確認で「再ベースして commit」）**＝`LILYSHARP_UPDATE_SNAPSHOTS=1` で `SvgSnapshotTests` を回して再ベース（動いた snapshot はこの 1 枚だけ）・commit。LP に寄せる案（`@chord` だけの line も run の要素へ＝帯 ＋ staff-staff padding 1.0 を loose line の歩きに）は §1.0 ⒞ に候補として残す。
-⚠ 道具: `dotnet build` が MCP console で「CPU idle・入力待ち」と名指されたが実は掃きと並走して 4:41 かかっていただけ（`< NUL` は付いていた）＝殺してしまい regen をやり直した（第676・第679 の形とは別＝本当に遅いだけの顔もある）。
-★ **終了**: commit `e9e12636`（Core 2・網・snapshot 1・棚卸し 2）。`-End p681 -DiffBase 1371047c`＝full **10286 / 0 / 2 / 10288**（+2＝網・run3.trx。GO 前の run2 は赤 1＝上の snapshot だけ）・Core 0 警告・門 6 つ全 OK（2 天井 残り 7,348 B／9,442 字）。§7.5 Core '+' 151 行／REF 0／OWN 1（帯の remark＝LP の loose line との差を数字で名指す）。7.6: ⒟ 何も移植していない（`Calculate` の床の式を帯へ指し直しただけ・出所は既存の REF）。7.7 匂い: 帯は今も幅全体に平ら（symbol の箱ではない）／帯の skyline は room の profile（dynamics 等込み）で engraver の inside profile より高くなりうる＝過剰予約側。perf: 新しい pass 無し（帯を積む (system, staff) ごとに line の symbol を 1 周・`Any` の早期脱出は残した）。棚卸し: magic_constants −1（`ChordSymbolCapHeight`）・APPROXIMATIONS は行番号だけ。push はユーザー（未 push 28・Lab は commit のみ）。
 
 ## 2. 開いている作業
 

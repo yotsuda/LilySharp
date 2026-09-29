@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第681セッションの経緯
+
+### 1.1 第681セッション（2026-09-29・YT-DELL2）
+
+新しい会話（`/clear` の後・ユーザー「HANDOFF を読んで着手」）。★ `-Start p681`（HEAD `1371047c`・未 push 28・full **10284 / 0 / 2 / 10286**・56 秒）。作業ツリーの `site/examples/*.lys` 20 冊は改行だけ（内容差 0・触っていない）。
+★★ **§1.0 ⒜ K5 の穴「行の指番号が下の `@chord` 名の上付きに 0.5 重なる」＝直した（⚠ 未 commit＝下の GO 待ち）**: 原因は `MultiStaffLayouter.ReserveChordRowBand`＝staff が自分の chord line のために上へ積む帯（LILYSHARP-OWN）が「幅全体の最高音 ＋ 0.5 ＋ 平らな cap 1.9」で、上付きの 7（ink top 2.4731）と ♭ の足（−0.3496）が箱の外に出ていた。独立 row は帯の上に 0.5 で乗るので、指番号が 7 に 0.45 食い込んだ（Lab `sessions/p668/demo.lys`・再現 `sessions/p681/probes/out/demo.svg`＝指の baseline y 42.08・7 の頭 41.63）。直し＝帯の天井を **line の実 ink top** にする: `ChordNameEngraver.OwnLineTop`＝`Calculate` の床の計算を項ごとに同じ（symbol ごとに自分の footprint の窓で skyline を読み ＋0.5 −ink bottom・図の項も・line で max）＋ line の最高 ink top。room の skyline（middle 枠・床は `StaffHeightOf` の半分＋線の半分）で読んで同じ枠へ merge。`ChordSymbolCapHeight` 1.9 は消えた（magic_constants 再生成）。帯は system ごと（その system に symbol の無い staff は積まない）・門の最後で読む（row に取られた staff の symbol は測らない）。
+★ 検証: 網 2（`ChordRowInlineAlignmentTests.ARowOverAStaffThatKeepsItsOwnLine_ClearsTheLinesSuperscript`＝row の指の ink 下端が 7 の頭を越える（before −0.120）／`AStaffOverALowerStaffsOwnChordLine_ClearsExactlyThatLinesInk`＝2 段の本で上の staff が「line の ink top ＋ staff-staff padding 1.0」ちょうど・別の小節の高い音は帯を持ち上げない（対照と等距離））。毒 3 本が各自赤（P1 平らな cap・P2 上付きを数えない＝2 本／P3 幅全体の最高音＝1 本・Lab `sessions/p681/poisons.ps1`・baseline 311/0）。demo の実測: 指の下端と 7 の頭の隙間 −0.45 → **+0.50**（＝row の padding 0.5・`probes/probe.txt`）。
+★ 射程: 掃き 1,166 冊 × svg/ly/xml/midi/check（base `1371047c` の detached worktree・Release・`sessions/p681/sweep.ps1`）＝**moved 3 冊**（全部 svg・check 差 0）: `corpora/ベースタブLy/tab-chord.lys`（staff back の line＝0.31／0.57 下へ）・`site/chord-axes.lys`（0.10）・**`Fixtures/test/figbass-chordname-lower-staff.lys`（snapshot あり＝full で 1 赤）**。
+⚠ **GO 待ち＝snapshot の再ベース**（`test/figbass-chordname-lower-staff`）: 下段（bass・`@chord(Cm7)`／`(G7)`）が 0.62 下へ（7 の上付き 0.573 ＋ C の足 0.047）。LP 2.26.0 の双子（`probes/fb/lp.svg`）: 上段の下線 → 下段の上線 **5.5687**・Lily# before **5.40**（−0.17）→ after **6.02**（+0.45）。差の正体は帯の模型（平らな帯 ＋ staff-staff padding 1.0＝上段 c'' の符尾先 1.0 ＋ 1.0 ＋ line top 4.02・`probes/probe2.txt`）対 LP の loose line（x ごとに歩き・ばねで配る）＝`@chord` だけの line は run の要素にしない既存の決定（`AttachedChordLineInRun`・2026-08-26）。before が LP に近く見えたのは 2 つの誤りの相殺（帯が 0.62 低い × 帯の模型が広い）。⇒ **ユーザー GO（2026-09-29「続けて」→ 確認で「再ベースして commit」）**＝`LILYSHARP_UPDATE_SNAPSHOTS=1` で `SvgSnapshotTests` を回して再ベース（動いた snapshot はこの 1 枚だけ）・commit。LP に寄せる案（`@chord` だけの line も run の要素へ＝帯 ＋ staff-staff padding 1.0 を loose line の歩きに）は §1.0 ⒞ に候補として残す。
+⚠ 道具: `dotnet build` が MCP console で「CPU idle・入力待ち」と名指されたが実は掃きと並走して 4:41 かかっていただけ（`< NUL` は付いていた）＝殺してしまい regen をやり直した（第676・第679 の形とは別＝本当に遅いだけの顔もある）。
+★ **終了**: commit `e9e12636`（Core 2・網・snapshot 1・棚卸し 2）。`-End p681 -DiffBase 1371047c`＝full **10286 / 0 / 2 / 10288**（+2＝網・run3.trx。GO 前の run2 は赤 1＝上の snapshot だけ）・Core 0 警告・門 6 つ全 OK（2 天井 残り 7,348 B／9,442 字）。§7.5 Core '+' 151 行／REF 0／OWN 1（帯の remark＝LP の loose line との差を数字で名指す）。7.6: ⒟ 何も移植していない（`Calculate` の床の式を帯へ指し直しただけ・出所は既存の REF）。7.7 匂い: 帯は今も幅全体に平ら（symbol の箱ではない）／帯の skyline は room の profile（dynamics 等込み）で engraver の inside profile より高くなりうる＝過剰予約側。perf: 新しい pass 無し（帯を積む (system, staff) ごとに line の symbol を 1 周・`Any` の早期脱出は残した）。棚卸し: magic_constants −1（`ChordSymbolCapHeight`）・APPROXIMATIONS は行番号だけ。push はユーザー（未 push 28・Lab は commit のみ）。
+
 ## 以下は第680セッションの経緯
 
 ### 1.1 第680セッション（2026-09-29・YT-DELL2）
