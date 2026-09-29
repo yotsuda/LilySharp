@@ -3317,6 +3317,12 @@ public sealed class LilyPondExporter
                             $"chord member {p.PitchName}: {art.GetType().Name} dropped (out of scope)");
                         break;
                 }
+            // A slur mark written on this member (<c e( g>) — LilyPond's note-slur, bound to
+            // the head (lily/slur-engraver.cc:138-152). Written in source order after the
+            // member's other post-events; the chord's own post-events below skip it.
+            foreach (var (member, mark) in c.MemberSlurs)
+                if (member.SourceStart == p.SourceStart)
+                    sb.Append(mark.IsOpen ? '(' : ')');
             first = false;
         }
 
@@ -3371,7 +3377,14 @@ public sealed class LilyPondExporter
 
         sb.Append('>');
         sb.Append(EmitEventDuration(c.Duration));
-        var (prefix, suffix) = SplitAttachments(c.Articulations);
+        // The chord's post-events are the whole list less the member slurs written above.
+        IEnumerable<SyntaxNode> chordArts = c.Articulations;
+        if (c.MemberSlurs.Any())
+        {
+            var memberMarks = c.MemberSlurs.Select(ms => ms.Mark.SourceStart).ToHashSet();
+            chordArts = c.Articulations.Where(a => !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart))).ToList();
+        }
+        var (prefix, suffix) = SplitAttachments(chordArts);
         return prefix + sb.ToString() + suffix + memberFrames;
     }
 

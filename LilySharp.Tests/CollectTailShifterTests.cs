@@ -47,6 +47,9 @@ public class CollectTailShifterTests
         (null, "SourceIndex"),
         (typeof(ArpeggioItem), "MinStaffPosition"),
         (typeof(ArpeggioItem), "MaxStaffPosition"),
+        // The staff position of the chord member a slur mark inside the brackets binds to.
+        (typeof(ChordItem), "SlurStartHeadPosition"),
+        (typeof(ChordItem), "SlurEndHeadPosition"),
     };
 
     // The shifter's inventory, type by type (keep in step with

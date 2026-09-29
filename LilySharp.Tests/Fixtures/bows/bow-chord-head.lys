@@ -1,0 +1,16 @@
+octave absolute
+time 4/4
+part m {
+  section A {
+    <c e( g>4 <d f) a> <c( e g>4 <d f a)> |
+    <e g( c'>2 <f a) d'> |
+    <c' e'( g'>4 d' <e' g') c''> r |
+    <g c'( e'>4 <a d') f'> <g( c' e'>4 <a) d' f'> |
+    <c' e' g'( b'>4 <d' f' a') c''> <b( d' f'>2 |
+    <c' e'>2) <e' g'( c''>4 <d' f' b'>) |
+  }
+}
+form main { A }
+score main {
+  staff m
+}

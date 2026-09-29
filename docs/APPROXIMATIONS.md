@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
 | `OWN` | 197 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **313** | |
+| **計** | **312** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（59 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -75,9 +75,9 @@
 ### `LilySharp.Core/Svg/Layout/DynamicAlignEngraver.cs`
 - **:49** ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:1335** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
-- **:2242** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:3864** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:1339** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
+- **:2246** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
+- **:3911** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -113,8 +113,7 @@
 ### `LilySharp.Core/Svg/Layout/SkylineBuilder.cs`
 - **:978** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: the same
 ### `LilySharp.Core/Svg/Layout/SlurScoringProblem.cs`
-- **:895** column allows only 0.3 of movement) is not ported: every edge here
-- **:1282** approximation there); RIGHT wins when both edges match, as LP's
+- **:1308** approximation there); RIGHT wins when both edges match, as LP's
 ### `LilySharp.Core/Svg/Layout/SpacingRules.TimingSprings.cs`
 - **:329** ⚠️ THIS IS A DERIVATION, NOT A TRANSCRIPTION, and it rests on one premise worth
 ### `LilySharp.Core/Svg/Layout/StaffAffinity.cs`
@@ -166,7 +165,7 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2668** observed by: NOTHING. There is no ledger point on a tab tie's width,
+- **:2672** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:63** moving output no observer can check.
 - **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
@@ -234,10 +233,10 @@
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3041** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3383** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
-- **:5323** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5382** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
-- **:7078** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:3396** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:5336** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5395** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
+- **:7091** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -262,10 +261,10 @@
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:496** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4543** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:4555** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
-- **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
+- **:735** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
 ### `LilySharp.Core/Rendering/HarfBuzzOutline.cs`
 - **:50** LILYSHARP-OWN: LilyPond reads its text ink through FreeType as well (Pango over the
 ### `LilySharp.Core/Rendering/Pdf/EmmentalerFontResolver.cs`
@@ -375,8 +374,8 @@
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
 - **:121** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2657** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
-- **:2706** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
+- **:2661** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+- **:2710** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`
@@ -518,8 +517,8 @@
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **:280** coda itself (LILYSHARP-OWN, a Gould-style departure).
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
-- **:857** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
-- **:1036** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+- **:887** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
+- **:1066** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **:120** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`

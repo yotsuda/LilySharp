@@ -681,6 +681,24 @@ internal sealed partial class Parser
                 pitches.Add(new DrumNoteGreen(Advance(), null, null, []));
                 continue;
             }
+            // A slur mark on a pitch MEMBER (<c e( g>4 <d f) a>): the bow starts or ends on
+            // that note head, not on the whole chord — LilyPond's chord_body accepts the
+            // slur as a post-event of the note inside the chord, and the engraver binds the
+            // slur to that head (lily/slur-engraver.cc:138-152). Kept as a child before '>',
+            // which is how ChordSyntax.MemberSlurs tells it from a mark on the chord itself.
+            if (Check(SyntaxKind.OpenParen) || Check(SyntaxKind.CloseParen))
+            {
+                int owner = pitches.Count - 1;
+                while (owner >= 0 && pitches[owner] is SlurGreen)
+                    owner--;
+                if (owner < 0 || pitches[owner] is not PitchGreen)
+                    _diagnostics.Error(new TextSpan(_textPosition + Current.LeadingTriviaWidth, Current.Text.Length),
+                        DiagnosticCodes.StrayItemToken,
+                        "A slur mark inside < > goes after the pitch it starts or ends on "
+                        + "(<c e( g>4 <d f) a>); a slur on the whole chord goes after '>' (<c e g>4( <d f a>)).");
+                pitches.Add(ParseSlur());
+                continue;
+            }
             break;
         }
 

@@ -420,6 +420,18 @@ c4( d e f)        // Slur over four notes
 c4( d) e( f)      // Two separate slurs
 ```
 
+A slur mark written INSIDE a chord's brackets, after one of its pitches, binds the bow to
+that note head instead of the whole chord — LilyPond's `<c e( g>`:
+
+```
+<c e( g>4 <d f) a>      // from the e's head to the f's head
+<c( e g>4 <d f a>)      // from the c's head to the second chord
+```
+
+The bow then leaves the head's inner edge and stays close to it, as LilyPond draws it. The
+mark goes after a pitch member (after a scale degree or a drum name it is reported); a mark
+after `>` is the chord's own.
+
 ### Phrasing Slurs
 
 A phrasing slur — the long curve over a musical sentence, LilyPond's `\(` … `\)` — is a span,

@@ -89,6 +89,17 @@ public sealed record SlurItem
     /// — it alone acknowledges slurs.</remarks>
     public bool IsPhrasing { get; init; }
 
+    /// <summary>The slur starts on ONE HEAD of a chord (<c>&lt;c e( g&gt;</c>) rather than on
+    /// the chord's column: <see cref="StartStaffPosition"/> is that head's. LilyPond's bound is
+    /// then the NoteHead, with no note column and no stem.</summary>
+    /// <remarks>LILYPOND-REF: lily/slur-scoring.cc:216-219 get_bound_info — a bound that is a
+    /// note head is the slur_head_ alone; :505-509 get_y_attachment_range "allow only minimal
+    /// movement"; :574-582 get_base_attachments.</remarks>
+    public bool StartOnHead { get; init; }
+
+    /// <summary>The slur ends on one head of a chord. See <see cref="StartOnHead"/>.</summary>
+    public bool EndOnHead { get; init; }
+
     /// <summary>Creates a slur spanning from a start note to an end note.</summary>
     public SlurItem(
         int startStaffPosition,
@@ -121,5 +132,7 @@ public sealed record SlurItem
             StartSourcePosition = StartSourcePosition,
             EndSourcePosition = EndSourcePosition,
             IsPhrasing = IsPhrasing,
+            StartOnHead = StartOnHead,
+            EndOnHead = EndOnHead,
         };
 }

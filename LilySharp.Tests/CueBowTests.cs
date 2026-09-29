@@ -35,10 +35,11 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public sealed class CueBowTests
 {
-    private static RecordingDrawingContext Render(string music)
+    private static RecordingDrawingContext Render(string music, string header = "")
     {
         var tree = SyntaxTree.Parse($$"""
             octave absolute
+            {{header}}
             part m {
               section A { {{music}} }
             }
@@ -66,6 +67,60 @@ public sealed class CueBowTests
         // Start: the cue head's centre 0.4077 + the tilt shift; 0.354 under e's centre (−2.5).
         Assert.Equal(0.4607, slur.P0.X - HeadXs(page)[1], 3);
         Assert.Equal(-2.854178, middle - slur.P0.Y, 0.001);
+    }
+
+    /// <summary>
+    /// An up slur leaving an up-stemmed cue note attaches 0.3 past the CUE stem, which stands
+    /// on the cue head's own attachment (0.7504 from its left, not the twenty's 1.2392).
+    /// LilyPond 2.26.0, Lab sessions/p691/cue (cue-slurs.lys, bar 1): the slur starts 0.7695
+    /// right of the e's head and 1.4384 above the middle line. Until session 691 Lily# started
+    /// it 0.49 further right.
+    /// </summary>
+    [Fact]
+    public void ACueSlurLeavingACueStem_StandsOnTheCueStem()
+    {
+        var page = Render("""
+            cue { e4( a4 d'4 c4) } |
+            cue { f'4( e'4 c''4 b'4) } |
+            cue { g8( a b c' d'4 e'4) } |
+            cue { c''8( b' a' g' f'4) r4 } |
+            cue { <c e g>4( <d f a>4) <e' g' b'>4( <d' f' a'>4) } |
+            cue { e4( fis4 bes4 c'4) } |
+            cue { c'16( e' g' c'' e''4) a'4( g'4) } |
+            cue { b4( g'4 d'2) } |
+            """, "time 4/4");
+        var slur = page.Beziers.OrderBy(b => b.P0.X).First();
+        double middle = Assert.Single(TwinBeamSweep.StavesOf(page)).Middle;
+        // Within the twin net's 0.01: the cue columns stand ~0.1 apart from LilyPond's.
+        Assert.Equal(0.7695, slur.P0.X - HeadXs(page)[0], 0.01);
+        Assert.Equal(1.4384, middle - slur.P0.Y, 0.01);
+    }
+
+    /// <summary>
+    /// A cue note's accidental is an extra object of the CUE font's size, placed against the
+    /// cue head. LilyPond 2.26.0, Lab sessions/p691/cue (cue-acc.lys — half notes, so the
+    /// cue columns space as LilyPond's do): each slur's first control point stands
+    /// <c>h</c> above its start. With the twenty's accidentals Lily# drew these four
+    /// 0.22–0.87 taller.
+    /// </summary>
+    [Fact]
+    public void ACueSlurOverACueAccidental_ReadsTheCueAccidental()
+    {
+        var page = Render("""
+            cue { e2( fis4 g4) } |
+            cue { b2( fis'4 g'4) } |
+            cue { g'2( bes'4 a'4) } |
+            cue { c''2( fis''4 e''4) } |
+            cue { a'2( cis''4 d''4) } |
+            cue { e2( fis2) } |
+            cue { d''2( bes'4 c''4) } |
+            cue { f'1( | gis'1) } |
+            """, "time 4/4");
+        var slurs = page.Beziers.OrderBy(b => b.P0.X).ToArray();
+        Assert.Equal(8, slurs.Length);
+        double[] lpHeight = [1.5274, 1.4986, 1.7317, 1.4348];
+        for (int i = 0; i < lpHeight.Length; i++)
+            Assert.Equal(lpHeight[i], slurs[i + 1].P0.Y - slurs[i + 1].Centreline1.Y, 0.01);
     }
 
     [Fact]

@@ -1012,7 +1012,11 @@ internal sealed class ElementCoordinator
     /// baked it onto the members), else this chord's own <c>position_apes</c> solve — the same
     /// answer when the chord stands alone. Both are measured from the column.
     /// </summary>
-    private static IEnumerable<AccidentalLayout> ChordAccidentalLayouts(ChordItem chord)
+    /// <param name="font">The font the chord's heads and accidentals are read from — the cue's
+    /// for a cue chord, as SharedRenderer.DrawChord solves it; null reads the twenty (the beam
+    /// quanter's collision supply still asks this way).</param>
+    private static IEnumerable<AccidentalLayout> ChordAccidentalLayouts(
+        ChordItem chord, GlyphMetrics.DesignMetrics? font = null)
     {
         if (chord.HasPackedAccidentals)
         {
@@ -1024,9 +1028,9 @@ internal sealed class ElementCoordinator
 
         var offsets = ChordHeadPositioning.CalculateOffsets(
             chord.Notes, chord.StemUp,
-            LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration));
+            LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration), font);
         foreach (var al in BeamAccidentalColumn.CalculatePositions(chord.Notes, offsets,
-                     stem: AccidentalStem.Of(chord, chord.StemUp)))
+                     font, font, stem: AccidentalStem.Of(chord, chord.StemUp, font)))
             yield return al;
     }
 
@@ -3091,7 +3095,8 @@ internal sealed class ElementCoordinator
         if (hasStem && !double.IsNaN(columnX)
             && NoteColumnLayout.Of(items[itemIndex]) is { } col)
         {
-            double stemX = LayoutUtilities.StemX(columnX, stemUp, col.NoteValue, col.Notehead);
+            var bowFont = BowFont(items[itemIndex]);
+            double stemX = LayoutUtilities.StemX(columnX, stemUp, col.NoteValue, col.Notehead, bowFont);
             double halfStem = EngravingDefaults.StemThickness / 2.0;
             stemXLo = stemX - halfStem;
             stemXHi = stemX + halfStem;
@@ -3102,7 +3107,9 @@ internal sealed class ElementCoordinator
             else
                 stemTipY = staffMiddleDown - EngravingDefaults.StaffMiddle
                     + col.OutwardTipDeviceY(stemUp);
-            var flag = beamed ? default : GlyphMetrics.GetFlagBBox(col.NoteValue, stemUp);
+            var flag = beamed ? default
+                : bowFont is { } cueFont ? GlyphMetrics.GetFlagBBox(cueFont, col.NoteValue, stemUp)
+                : GlyphMetrics.GetFlagBBox(col.NoteValue, stemUp);
             if (flag != default)
             {
                 stemXHi = Math.Max(stemXHi, stemX + flag.Width);
@@ -3166,10 +3173,43 @@ internal sealed class ElementCoordinator
     /// of the head's left edge (the cue head's centre 0.4077 + the tilt shift); Lily# read the
     /// twenty's 0.545 and 0.652 until session 656.
     /// </remarks>
+    /// <summary>
+    /// Device Y of a HEAD-bound slur end's base: the head's Y extent read at
+    /// <c>linear_combination (0.5 · dir)</c> — three quarters of the way to its slurward edge.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/slur-scoring.cc:576-577 get_base_attachments,
+    /// <c>head->extent (common_[Y_AXIS], Y_AXIS).linear_combination (0.5 * dir_)</c>;
+    /// Interval::linear_combination (x) = ((1 − x)·lo + (1 + x)·hi) / 2.</remarks>
+    private static double HeadBoundBaseY(double staffMiddleDown, int staffPosition,
+        GlyphMetrics.BBox box, bool curveUp)
+    {
+        double x = curveUp ? 0.5 : -0.5;
+        double upOffset = ((1 - x) * box.Bottom + (1 + x) * box.Top) / 2.0;
+        return staffMiddleDown - staffPosition / 2.0 - upOffset;
+    }
+
     private static GlyphMetrics.BBox BowHeadBox(MusicItem item, int noteValue)
-        => item is NoteItem { IsCue: true } or ChordItem { IsCue: true }
-            ? GlyphMetrics.GetNoteheadBBox(EngravingDefaults.CueFont, noteValue)
+        => BowFont(item) is { } cueFont
+            ? GlyphMetrics.GetNoteheadBBox(cueFont, noteValue)
             : GlyphMetrics.GetNoteheadBBox(noteValue);
+
+    /// <summary>
+    /// The font a slur reads a note column's head-hung grobs from — its stem's attachment x
+    /// and its flag's box as well as its head: the cue's own font for a cue note, null (the
+    /// twenty) for everyone else.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc:184-203 get_bound_info — stem_extent_ is the Stem
+    /// grob's own extent united with the Flag's, and a CueVoice Stem stands on its head's
+    /// attachment in the cue font (lily/stem.cc internal_calc_stem_offset_from_head), as
+    /// SharedRenderer.DrawNote draws it. MEASURED, Lab sessions/p691/cue (LilyPond 2.26.0):
+    /// `cue { e4( a4 d'4 c4) }`'s up slur leaves the e's stem 0.3 right of its right edge;
+    /// with the twenty's attachment Lily# started it 0.49 further right.
+    /// </remarks>
+    private static GlyphMetrics.DesignMetrics? BowFont(MusicItem item)
+        => item is NoteItem { IsCue: true } or ChordItem { IsCue: true }
+            ? EngravingDefaults.CueFont
+            : null;
 
     /// <summary>
     /// Device-Y of the slur attachment when the endpoint note's stem joins a beam — LP's
@@ -3347,7 +3387,7 @@ internal sealed class ElementCoordinator
                     && col.HasStem && col.StemUp == slur.CurveUp)
                 {
                     double stemX = LayoutUtilities.StemX(
-                        x, col.StemUp, col.NoteValue, col.Notehead);
+                        x, col.StemUp, col.NoteValue, col.Notehead, BowFont(items[i]));
                     if (TryGetBeamedStemTipDeviceY(beamByMember, slur.VoiceIndex, mi, i, stemX,
                             staffMiddleDown, col.StemUp, out double beamTip))
                         // Beamed: the extent already ends on the stack's outer face
@@ -3576,22 +3616,29 @@ internal sealed class ElementCoordinator
         // the simplification this set already discloses for heads and dots.
         void AddAccidentals(MusicItem item, double columnX)
         {
+            // A cue note's accidental is the cue font's glyph, placed against the cue head —
+            // the solve SharedRenderer.DrawNote / DrawChord draw by (BowFont).
+            var font = BowFont(item);
             IEnumerable<AccidentalLayout> laid = item switch
             {
                 NoteItem { Accidental: { } acc, AccidentalX: { } px } pn
                     => [new AccidentalLayout(pn.StaffPosition, acc, px, pn.IsCourtesy)],
                 NoteItem { Accidental: not null } n
-                    => BeamAccidentalColumn.CalculateSinglePosition(n) is { } one ? [one] : [],
-                ChordItem c when c.Notes.Any(m => m.Accidental != null) => ChordAccidentalLayouts(c),
+                    => BeamAccidentalColumn.CalculateSinglePosition(n, font, font) is { } one ? [one] : [],
+                ChordItem c when c.Notes.Any(m => m.Accidental != null) => ChordAccidentalLayouts(c, font),
                 _ => [],
             };
             int dir = slur.CurveUp ? 1 : -1;
             foreach (var layout in laid)
             {
-                var box = GlyphMetrics.GetAccidentalBBox(layout.Accidental);
+                var box = font is { } f
+                    ? GlyphMetrics.GetAccidentalBBox(f, layout.Accidental)
+                    : GlyphMetrics.GetAccidentalBBox(layout.Accidental);
                 double width = box.Width;
                 if (layout.IsCourtesy)
-                    width += GlyphMetrics.AccidentalLeftParen.Width + GlyphMetrics.AccidentalRightParen.Width;
+                    width += font is { } pf
+                        ? pf.AccidentalLeftParen.Width + pf.AccidentalRightParen.Width
+                        : GlyphMetrics.AccidentalLeftParen.Width + GlyphMetrics.AccidentalRightParen.Width;
                 double left = columnX + layout.XOffset;
                 double centreDown = staffMiddleDown - layout.StaffPosition / 2.0;
                 double topDown = centreDown - box.Top, bottomDown = centreDown - box.Bottom;
@@ -4332,6 +4379,37 @@ internal sealed class ElementCoordinator
                     && EdgeColumn(pieceVoice, segSystem, slur, leftEdge: true) is { } lc
                     && lc.Measure == slur.EndMeasureIndex && lc.Item == slur.EndItemIndex)
                     segStartY = segEndY;
+
+                // A slur written on ONE CHORD HEAD (<c e( g>4 <d f) a>) is bound to that head,
+                // not to the column: its base is the head's INNER edge (the right edge of the
+                // start head, the left edge of the end head), a quarter of the head's height
+                // off its centre toward the slur, with no stem, no beam and no staff-line nudge
+                // (SlurScoringProblem reads SlurEdgeInfo.OnHead for the rest).
+                // LILYPOND-REF: lily/slur-scoring.cc:574-582 get_base_attachments — the
+                //   `else if (head)` arm: y = head extent (Y).linear_combination (0.5 * dir_),
+                //   x = head extent (X)[-d].
+                if (segment.IsFirst && slur.StartOnHead
+                    && ItemAt(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex) is ChordItem sHead)
+                {
+                    var box = BowHeadBox(sHead, GlyphMetrics.NoteValueOf(sHead));
+                    double headLeft = segStartX - EndpointHeadHalfWidth(
+                        score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex);
+                    segStartX = headLeft + box.Right;
+                    segStartY = HeadBoundBaseY(staffMiddleDown, slur.StartStaffPosition, box, slur.CurveUp);
+                    leftEdgeInfo = new SlurEdgeInfo(false, leftEdgeInfo.StemUp, false, false, box.Width,
+                        OnHead: true, HeadCenterOffset: (box.Left + box.Right) / 2.0 - box.Right);
+                }
+                if (segment.IsLast && slur.EndOnHead
+                    && ItemAt(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex) is ChordItem eHead)
+                {
+                    var box = BowHeadBox(eHead, GlyphMetrics.NoteValueOf(eHead));
+                    double headLeft = segEndX - EndpointHeadHalfWidth(
+                        score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex);
+                    segEndX = headLeft + box.Left;
+                    segEndY = HeadBoundBaseY(staffMiddleDown, slur.EndStaffPosition, box, slur.CurveUp);
+                    rightEdgeInfo = new SlurEdgeInfo(false, rightEdgeInfo.StemUp, false, false, box.Width,
+                        OnHead: true, HeadCenterOffset: (box.Left + box.Right) / 2.0 - box.Left);
+                }
 
                 var obstacles = BuildSlurObstacles(
                     score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleDown,

@@ -774,6 +774,36 @@ public sealed class ChordSyntax : SyntaxNode
         }
     }
 
+    /// <summary>
+    /// The slur marks written INSIDE the brackets, each with the pitch member it follows —
+    /// <c>&lt;c e( g&gt;</c> is the e with an open. Such a slur binds to that member's head,
+    /// not to the chord. Empty for the usual chord (a mark after <c>&gt;</c> is not here).
+    /// </summary>
+    /// <remarks>The marks are ALSO on <see cref="Articulations"/> (it scans the whole chord),
+    /// which is what makes the chord open or close the slur at all; this list only says
+    /// which head the bow hangs from.</remarks>
+    public IEnumerable<(PitchSyntax Member, SlurSyntax Mark)> MemberSlurs
+    {
+        get
+        {
+            if (IsShapeChord)
+                yield break;
+            PitchSyntax? last = null;
+            for (int i = 0; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is SyntaxTokenNode { Kind: SyntaxKind.CloseAngle })
+                    yield break;
+                if (child is PitchSyntax p)
+                    last = p;
+                else if (child is ScaleDegreeSyntax or DrumNoteSyntax)
+                    last = null;
+                else if (child is SlurSyntax s && last != null)
+                    yield return (last, s);
+            }
+        }
+    }
+
     /// <summary>The scale-degree members (<c>&lt;d 3 5 7,&gt;</c> → 3, 5, 7,). Empty
     /// for an ordinary all-pitch chord.</summary>
     public IEnumerable<ScaleDegreeSyntax> Degrees

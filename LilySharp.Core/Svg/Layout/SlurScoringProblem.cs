@@ -181,10 +181,21 @@ internal readonly record struct SlurExtraObject(
 /// <param name="StemBeginY">Device Y of the head-side end of the united
 /// extent (the head the stem hangs off; pushed further only by a flag longer
 /// than its stem). NaN when unresolved.</param>
+/// <param name="OnHead">The bound is ONE NOTE HEAD of a chord (<c>&lt;c e( g&gt;</c>), not a
+/// note column — LilyPond's <c>extremes_[d]</c> with a <c>slur_head_</c> and no
+/// <c>note_column_</c> (slur-scoring.cc:216-219). Such an edge has no stem, its base sits on
+/// the head's inner edge (:574-582), it may climb only 0.3 (:505-509), it is not moved off a
+/// staff line (:579-580), and its column is an avoid point like any other (:668-670 skips
+/// only note-column extremes).</param>
+/// <param name="HeadCenterOffset">The head's centre minus the base attachment X — 0 for a
+/// column bound, whose base IS the head centre; ∓ half a head for a head bound, whose base is
+/// the head's inner edge. LilyPond's snap-back and extra-encompass edge test read the head's
+/// own X extent (slur-scoring.cc:770-776; slur-configuration.cc:418-419).</param>
 internal readonly record struct SlurEdgeInfo(
     bool HasStem, bool StemUp, bool BeamedInner, bool Beamed, double HeadWidth = 0.0,
     double StemXLo = double.NaN, double StemXHi = double.NaN,
-    double StemTipY = double.NaN, double StemBeginY = double.NaN);
+    double StemTipY = double.NaN, double StemBeginY = double.NaN,
+    bool OnHead = false, double HeadCenterOffset = 0.0);
 
 internal sealed class SlurScoringProblem
 {
@@ -418,10 +429,18 @@ internal sealed class SlurScoringProblem
         // LILYPOND-REF: lily/slur-scoring.cc:559-616 move_away_from_staffline —
         //   both the real-head (:559) and broken-edge (:616) base attachments
         //   pass through it.
+        // …except a HEAD bound (<c e( g>): "Don't move_away_from_staffline because that makes
+        // it harder to recognize the specific attachment point" (slur-scoring.cc:579-580).
+        //   observed by: NOTHING, and nothing can be with Emmentaler heads — the head-bound
+        //     base sits a quarter head off the centre, 0.545 of a position from the head's
+        //     own, so it never rounds onto a line within the 0.2 the nudge needs (Lab
+        //     sessions/p691 poison P6 is green by construction). Ported as LilyPond writes it.
         _startX = startX;
-        _startY = MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
+        _startY = leftEdge.OnHead && !isBrokenLeft ? -startY
+            : MoveAwayFromStaffline(-startY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
         _endX = endX;
-        _endY = MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
+        _endY = rightEdge.OnHead && !isBrokenRight ? -endY
+            : MoveAwayFromStaffline(-endY, staffMiddleDown, slurDir, staffSpace, staffLineCount);
         _parameters = parameters
             ?? (slur.IsPhrasing ? SlurScoreParameters.PhrasingDefault : SlurScoreParameters.Default);
         _isBrokenLeft = isBrokenLeft;
@@ -614,8 +633,13 @@ internal sealed class SlurScoringProblem
         // its bound is the system's edge, so the piece's first (last) column stays in. Until
         // session 653 both ends were always dropped: `c2( e | break` kept its curve 0.24 under
         // LilyPond's, which lifts it over e's up stem (Lab sessions/p653 S1 slur-break).
-        int first = _isBrokenLeft ? 0 : 1;
-        int end = _isBrokenRight ? _obstacles.Count : _obstacles.Count - 1;
+        // A HEAD bound (<c e( g>) has no note column among the extremes either, so its
+        // column stays in too (slur-scoring.cc:668-670 skips only note-column extremes).
+        //   observed by: NOTHING — the column's point is its head centre or its stem, and the
+        //     curve runs between the two heads' INNER edges, so the point is always outside
+        //     the curve's X range (Lab sessions/p691 poison P7 is green by construction).
+        int first = _isBrokenLeft || _leftEdge.OnHead ? 0 : 1;
+        int end = _isBrokenRight || _rightEdge.OnHead ? _obstacles.Count : _obstacles.Count - 1;
         for (int i = first; i < end; i++)
         {
             var o = _obstacles[i];
@@ -838,7 +862,6 @@ internal sealed class SlurScoringProblem
         // Priority queue: lazy evaluation of scorers
         // LILYPOND-REF: lily/slur-scoring.cc:438-459
         var best = BestFirstScorer.Solve(candidates, this, static (p, c) => p.RunNextScorer(c));
-
         return CreateLayout(best);
     }
 
@@ -891,13 +914,14 @@ internal sealed class SlurScoringProblem
     /// The note-column extent is the edge obstacle's head box extended by its
     /// slurward stem when it carries one (LP's column extent covers head AND
     /// stem; a stem pointing away contributes nothing on this side).
-    /// ⚠️ LP's slur_head-only branch (:505-508 — a bound with a head but no note
-    /// column allows only 0.3 of movement) is not ported: every edge here
-    /// carries a note column or a broken-edge stand-in, so the branch has no
-    /// caller.
+    /// A HEAD bound (<c>&lt;c e( g&gt;</c>, <see cref="SlurEdgeInfo.OnHead"/>) is LP's
+    /// slur_head-only branch (:505-509): "allow only minimal movement", base + 0.3·dir —
+    /// less than one grid step, so that side has one candidate.
     /// </remarks>
     private double EndYFor(bool left, int dir)
     {
+        if ((left ? _leftEdge : _rightEdge).OnHead)
+            return (left ? _startY : _endY) + 0.3 * dir;
         double baseOwn = left ? _startY : _endY;
         double baseOther = left ? _endY : _startY;
         double range = dir * (baseOwn + _parameters.RegionSize * dir);
@@ -1084,14 +1108,16 @@ internal sealed class SlurScoringProblem
                 if (dzX < MinimumLength
                     || (dzX > 0.001 && Math.Abs(dzY / dzX) > _parameters.MaxSlope))
                 {
+                    // The head's own centre: the base for a column bound, half a head
+                    // inward-off the base for a head bound (SlurEdgeInfo.HeadCenterOffset).
                     if (_leftEdge.HeadWidth > 0)
                     {
-                        startX = _startX;
+                        startX = _startX + _leftEdge.HeadCenterOffset;
                         attachLeft = false;
                     }
                     if (_rightEdge.HeadWidth > 0)
                     {
-                        endX = _endX;
+                        endX = _endX + _rightEdge.HeadCenterOffset;
                         attachRight = false;
                     }
                 }
@@ -1332,15 +1358,15 @@ internal sealed class SlurScoringProblem
                 // A spanner (a tie) is never "over an edge head": LP's as_item cast is
                 // null for it and both sides are skipped (:413-416).
                 else if (!info.IsSpanner && _leftEdge.HeadWidth > 0
-                    && info.RightX >= _startX - _leftEdge.HeadWidth / 2.0
-                    && info.LeftX <= _startX + _leftEdge.HeadWidth / 2.0)
+                    && info.RightX >= _startX + _leftEdge.HeadCenterOffset - _leftEdge.HeadWidth / 2.0
+                    && info.LeftX <= _startX + _leftEdge.HeadCenterOffset + _leftEdge.HeadWidth / 2.0)
                 {
                     y = config.StartY;
                     found = true;
                 }
                 if (!info.IsSlurPoint && !info.IsSpanner && _rightEdge.HeadWidth > 0
-                    && info.RightX >= _endX - _rightEdge.HeadWidth / 2.0
-                    && info.LeftX <= _endX + _rightEdge.HeadWidth / 2.0)
+                    && info.RightX >= _endX + _rightEdge.HeadCenterOffset - _rightEdge.HeadWidth / 2.0
+                    && info.LeftX <= _endX + _rightEdge.HeadCenterOffset + _rightEdge.HeadWidth / 2.0)
                 {
                     y = config.EndY;
                     found = true;

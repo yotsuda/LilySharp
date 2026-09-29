@@ -121,10 +121,13 @@ internal sealed class SlurDetector
                 bool curveUp = VoiceScan.SpanCurvesUp(score.Voices, v, startMeasureIdx, startItemIdx,
                     AnyCoveredStemDown(measures, startMeasureIdx, startItemIdx, measureIdx, itemIdx));
 
+                // A mark written on a chord MEMBER (<c e( g>) binds the bow to that head.
+                int? startHead = startItem is ChordItem { SlurStartHeadPosition: { } sh } ? sh : null;
+                int? endHead = item is ChordItem { SlurEndHeadPosition: { } eh } ? eh : null;
                 slurs.Add(new SlurItem(
                     // For a chord the slur anchors at the head on the curve side.
-                    MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
-                    MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
+                    startHead ?? MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
+                    endHead ?? MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
                     curveUp,
                     startMeasureIdx,
                     measureIdx,
@@ -138,6 +141,8 @@ internal sealed class SlurDetector
                     // which is the only place that still knows where `(` and `)` stood.
                     StartSourcePosition = startItem.SlurStartSourcePosition,
                     EndSourcePosition = item.SlurEndSourcePosition,
+                    StartOnHead = startHead is not null,
+                    EndOnHead = endHead is not null,
                 });
             }
 

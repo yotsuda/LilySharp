@@ -393,6 +393,22 @@ public sealed partial class MeasureCollector
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, chord.SourceStart) { IsSpacer = true };
     }
 
+    /// <summary>Whether a slur mark stands INSIDE the chord's brackets — read off the green
+    /// slots' kinds, so the chord that has none (nearly every chord) materializes nothing.</summary>
+    private static bool HasMemberSlurMark(ChordSyntax chord)
+    {
+        var green = chord.Green;
+        for (int slot = 0; slot < green.SlotCount; slot++)
+        {
+            var kind = green.GetSlot(slot)?.Kind;
+            if (kind == SyntaxKind.CloseAngle)
+                return false;
+            if (kind == SyntaxKind.Slur)
+                return true;
+        }
+        return false;
+    }
+
     private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, (int Value, int Dots)? forcedDuration = null, int extraOctave = 0, MeasureBuilder? builder = null)
     {
         var notes = new List<ChordNoteInfo>();
@@ -750,8 +766,29 @@ public sealed partial class MeasureCollector
             dots = pairDisp.Dots;
         }
 
+        // A slur mark written on a MEMBER (<c e( g>) binds the bow to that member's head
+        // (ChordItem.SlurStartHeadPosition). The mark itself already set the chord's flag —
+        // it is on the chord's post-event list — so only the head is read here, and only
+        // when the green slots say a mark stands inside the brackets.
+        int? slurStartHead = null, slurEndHead = null;
+        if ((hasSlurStartAfter || hasSlurEndAfter) && HasMemberSlurMark(chord))
+        {
+            foreach (var (member, mark) in chord.MemberSlurs)
+            {
+                int? pos = null;
+                foreach (var n in notes)
+                    if (n.SourcePosition == member.SourceStart) { pos = n.StaffPosition; break; }
+                if (mark.IsOpen && hasSlurStartAfter)
+                    slurStartHead ??= pos;
+                else if (!mark.IsOpen && hasSlurEndAfter)
+                    slurEndHead ??= pos;
+            }
+        }
+
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.SourceStart, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter)
         {
+            SlurStartHeadPosition = slurStartHead,
+            SlurEndHeadPosition = slurEndHead,
             // A chord has ONE stem, so @stemUp / @stemDown on it is the same wish a note's is.
             ForcedStemUp = GetStemDirectionOverride(chord),
             // Read in the FACTORY so every chord-creating walk arm gets it — a walk-arm

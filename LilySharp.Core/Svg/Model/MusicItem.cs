@@ -1490,6 +1490,19 @@ public sealed record ChordItem : MusicItem
     /// <summary>Whether this chord closes a slur (a <c>)</c> follows it).</summary>
     public bool HasSlurEnd { get; }
 
+    /// <summary>The staff position of the member a <c>(</c> written INSIDE the brackets
+    /// follows — <c>&lt;c e( g&gt;</c> starts its slur on the e's head, not on the chord —
+    /// or null when the chord's slur (if any) starts on the whole chord.</summary>
+    /// <remarks>LILYPOND-REF: lily/slur-engraver.cc:138-152 acknowledge_note_column — a slur
+    /// event written on a chord NOTE binds the slur to that note head, which "overrides the
+    /// column bounds"; the scorer then reads the head alone (slur-scoring.cc:216-219, 505-509,
+    /// 574-582).</remarks>
+    public int? SlurStartHeadPosition { get; init; }
+
+    /// <summary>The staff position of the member a <c>)</c> written inside the brackets
+    /// follows, or null. See <see cref="SlurStartHeadPosition"/>.</summary>
+    public int? SlurEndHeadPosition { get; init; }
+
     /// <summary>Initializes a new <see cref="ChordItem"/>.</summary>
     public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false)
     {

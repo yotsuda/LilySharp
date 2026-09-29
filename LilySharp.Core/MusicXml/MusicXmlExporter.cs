@@ -3263,6 +3263,16 @@ public sealed class MusicXmlExporter
             // A member-level half-tie ties its own head (LP `<d\laissezVibrer g>`); the
             // chord-level one is written on every member below.
             ApplyHalfTies(pitch.Articulations, xmlNote);
+            // A slur mark written on this member (<c e( g>) is this note's <slur>, as the page
+            // binds it to this head; the chord-level list below skips it.
+            foreach (var (member, mark) in chord.MemberSlurs)
+                if (member.SourceStart == pitch.SourceStart)
+                {
+                    if (mark.IsOpen)
+                        xmlNote.SlurStart = !RefusedSlur(chord.SourceStart, close: false);
+                    else
+                        xmlNote.SlurStop = !RefusedSlur(chord.SourceStart, close: true);
+                }
 
             // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
@@ -3278,8 +3288,10 @@ public sealed class MusicXmlExporter
                 else if (hasBracket)
                     _chordArpeggio = "non-arpeggiate";
                 // The outside string numbers were paired above, member by member.
+                var memberMarks = chord.MemberSlurs.Select(ms => ms.Mark.SourceStart).ToHashSet();
                 ProcessArticulations(
-                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax), xmlNote,
+                    chord.Articulations.Where(a => a is not StringNumberAnnotationSyntax
+                        && !(a is SlurSyntax s && memberMarks.Contains(s.SourceStart))), xmlNote,
                     host: chord.SourceStart);
                 isFirst = false;
             }

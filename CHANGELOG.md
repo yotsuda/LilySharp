@@ -839,6 +839,13 @@ bare letters an octave down now needs `octave 3`), and **a slur or tie holds its
 
 ### Added
 
+- **A slur can start or end on one note of a chord.** Write the mark after the pitch inside
+  the brackets — `<c e( g>4 <d f) a>` — and the bow joins those two note heads instead of the
+  whole chords, as LilyPond's `<c e( g>` does: it leaves the head's inner edge, stays close to
+  it and does not climb over the chord. A mark after `>` still belongs to the chord. The `.ly`
+  twin writes the mark on the member and MusicXML puts the slur on that note. A mark with no
+  pitch before it inside the brackets is reported.
+
 - **`eses` and `ases` are E double flat and A double flat**, as in LilyPond, alongside
   `eeses` / `aeses` — the double-flat forms of the `es` / `as` contractions already accepted.
   They used to be read as undefined names; `key ases major` works too.
@@ -1717,6 +1724,15 @@ refused; they come first, each with what the compiler says.
   and offers a second face after the first, which is how a fallback chain is written.
 
 ### Fixed
+
+- **A slur on cue notes reads the cue stems and accidentals.** A cue slur started from the
+  cue head since last week, but the stem it attaches to still stood where a full-size head's
+  stem would, and the accidentals it avoids were full size: `cue { e4( a4 d'4 c4) }` started
+  its slur 0.49 space right of LilyPond's, and a slur over a cue sharp or flat stood up to
+  0.87 space taller. Both now read the cue font, as LilyPond's CueVoice does (measured on
+  2.26.0; every cue slur whose notes LilyPond spaces the same way now matches it). Two cue
+  differences remain and are not slur code: a beamed cue group's stems and beam are drawn at
+  full length, and the space before a cue note with an accidental is a full-size note's.
 
 - **A beat slash is spaced as LilyPond spaces it.** A `repeat percent` whose body is shorter
   than a bar draws a slash for each repetition and, until now, left too much room after it —
