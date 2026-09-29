@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第685セッションの経緯
+
+### 1.1 第685セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「ではここで続けて」＝「独立だから有利」は誤りと指摘され、判定文を直した: 独立なら差は小さく、切る理由が無いだけ）。★ `-Start p685`（detached・HEAD `5ad331ee`・未 push 36・full **10292 / 0 / 2 / 10294**・82 秒）。
+★★ **カポの穴のうち「MusicXML の `<staff-details><capo>` は未」（第665）＝閉じた**: `chordDiagrams … capo N` の本は `<frame>` が押さえる形なのに文書がカポを言わず、読み手はナットで押さえていた。`WriteCapo`（Export の最後・行の harmony が揃った後）＝`<frame>` を持つ harmony のある part（行の宛先・framed `@chord` の part・lead sheet の行の part）の最初の attributes に `<staff-details><capo>N</capo></staff-details>`（clef の後・transpose の前＝schema の順）。frame の無い part は何も言わない（`<harmony>` は鳴る和音）。`MusicXmlAttributes.Capo` を足した。
+★ 検証: 網 `ChordDiagramTests.UnderACapo_MusicXmlWritesTheCapo_OnEveryPartWithAFrame`（gt 3・bs 無し・文書に 1 つ・clef の直後・lead sheet の行の part 3・カポ無しなら無し）。毒 2 本（P1 書かない・P2 全 part に書く）が各自赤（Lab `sessions/p685/poisons.ps1`・baseline 460/0）。射程: exporter だけ・カポを書く本は corpus に 0（キーは 3 日前のもの）。
+⚠ カポの穴の残り: 双子は `chordNames both` を綴れない（警告）／MIDI と `chord(…)` のホバーは最初の score のカポを読む／importer は `<capo>` を読まない。
+★ **終了**: commit `2418a5ee`（Core 2・網・APPROXIMATIONS・CHANGELOG）。`-End p685 -DiffBase 5ad331ee`（detached・56 秒）＝full **10293 / 0 / 2 / 10295**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,689 B）。§7.5 Core '+' 36 行／REF 0／OWN 0＝MusicXML の配管（出所は schema の staff-details）。7.6: ⒟ 何も移植していない。7.7 匂い: 「frame を持つ part」を文書側の harmony を歩いて決める（exporter の状態ではなく出力を読む＝2 つ目の綴りではない）。perf: export 時だけ。push はユーザー（未 push 38）。
+
 ## 以下は第684セッションの経緯
 
 ### 1.1 第684セッション（2026-09-29・YT-DELL2）

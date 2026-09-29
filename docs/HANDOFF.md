@@ -79,10 +79,10 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: ~~行の指番号と下の行の名前の上付きが 0.5 重なる~~（第681 が閉じた）／~~part が何も書かない便の行は MusicXML に出ない~~（第684 が閉じた）／~~行末の図の「5fr」が右へはみ出す~~（第683 再現せず・網を置いた）／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝~~MusicXML の `<staff-details><capo>` は未~~（第685 が閉じた）・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
+- ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: ~~行の指番号と下の行の名前の上付きが 0.5 重なる~~（第681 が閉じた）／~~part が何も書かない便の行は MusicXML に出ない~~（第684 が閉じた）／~~行末の図の「5fr」が右へはみ出す~~（第683 再現せず・網を置いた）／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝~~MusicXML の `<staff-details><capo>` は未~~（第685 が閉じた）・双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
 - ✅ **MusicXML／頁の既存欠陥 ⑴〜⒂（第662・第663 起票）は全部閉じた**（⑴⑵⑹ 第671・⑶ 欠陥ではない・⑷⑸ 第672・⑻ 第673・⑺ 第674・⑽ 第675・⒂ 第676・⑾ 第677・⑿⒁ 第678・⒀ 第679・⑼ 第680）。残る穴だけ: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: ~~`@text`／`@mark` は音符でも MusicXML に出ない~~（第682 が閉じた・importer は今も読まない）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
-- ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
+- ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴（score を選んで Play＝第686）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
 - **T7 の残り（双子と段割れが違う 22 score＝双子の既定の数字と比べる限り残る差）**: ⒜ staff＋tab で Lily# が段を増やす族（Amanda・Butterfly ほか）＝**第583 が F9 の帰結と確定**（Lily# の数字の rod は LP の font-size 2〜3 の間＝§1.1 第583）／⒣ **カムフラージュ（staff＋tab）1 段目 LP 6,7・Lily# 7,6**＝第587 が値付けした（LP の割りを測るには percent 反復の内側で割らせる必要＝保留）／⒡ **小節の合計が合わない score（Disco Inferno ほか＝22 の外）は計器**（LP の小節番号の数え方）／⒞ tab だけの Lily# が段を増やす 5／⒟ Le Freak は A1 の僅差が逆に倒れた（`SystemCountPageScoreTests.LineStartInk` の説明）。閉じた分（merge・Universe・奏・rod・小節線のばね・first_head）は第576〜第661 の §1.1（ARCHIVE）
@@ -119,6 +119,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第687セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p687`（HEAD `65d8425d`・未 push 40・full **10303 / 1 / 2 / 10306**＝赤 1 は `HistoryCitationTests.DeadCitationsDoNotGrow`（948 対 天井 947）＝第686 の 終了 行が Lab の commit SHA を引用していた＝Lab の SHA は本体の履歴に無い＝SHA を消して直した。天井は動かしていない）。
+★★ **第686 の直しが残した近い穴＝MIDI のカポは「最初の score」を読んでいた（§1.0 ⒜ カポの穴・第665）**: `MidiExporter.Capo` は `TopLevelNodes.OfRoot<RenderDeclarationSyntax>.FirstOrDefault()` の layout を読んでいたが、第686 から MIDI は鳴らす score（`_playedSpec`）を持つ。`LayoutPlanReader.ResolveFor(root, RenderSpec?)`（`Resolve(root, render)` の RenderSpec 版＝`RenderSpec.LayoutRef` は Parse が同じ「最後の layout 参照」を取っている・`Resolve` の名は null で曖昧になるので別名）で鳴らす score のカポを読む。`_playedSpec` を Export で 1 度取り、`SoundingParts` もそれを読む。ホバー側（`NoteStepper.CapoOf`）は今も最初の score＝未。
+★ 検証: 網 `ScorePartsMidiTests.TheCapo_IsThePlayedScores_NotTheFirstScores`（`layout capo3`／`layout open` を参照する 2 score・x32010 が main で E♭・"open" で C）。毒 P4（最初の score を読む形に戻す）が赤 1（Lab `sessions/p687/poisons.ps1`・baseline 9/0）。ShapeChordItem 23／ChordDiagram 256／Midi 216／Layout 335／HistoryCitation 3 緑。
+★ 拡張の配備: `tools\Deploy-Lsp.ps1`（Release publish → 入っている拡張へ server と out/ を配る・末尾のバイト比較と起動確認まで）＝ユーザーは「Developer: Reload Window」を押してから score を選んで Play を確かめる。
+
+★ **終了**: commit `6d8a9b0d`（Core 2・網 1・APPROXIMATIONS・CHANGELOG）。`-End p687 -DiffBase 65d8425d`（⚠ 1 回目は MCP console から `cmd … < NUL` で回したのに中の dotnet test が入力待ちで返らず（CPU 2 秒のまま・trx 無し）＝console を捨て、18:50 の孤児 dotnet／testhost を Stop-Process し、`-Start` と同じ **Start-Process の detached** で 2 回目が 1 分で通った＝**`-End` も detached で回すこと**）＝full **10305 / 0 / 2 / 10307**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,975 B）。§7.5 Core '+' 35 行（MidiExporter 14・LayoutPlanReader 21）／REF 0／OWN 0＝layout の読み手の RenderSpec 版。7.6: ⒟ 何も移植していない。7.7 匂い: 「score の最後の layout 参照」は Parse（`LayoutRef`）と `Resolve` の走査の 2 か所で取っている（同じ規則の 2 つ目の綴りに近い＝`ResolveFor` の註に書いた）。perf: export 時だけ。Lab は `sessions/p687/`（毒・start/end/deploy log）を commit。push はユーザー（未 push 42）。
+
+## 以下は第686セッションの経緯
+
 ### 1.1 第686セッション（2026-09-29・YT-DELL2）
 
 新しい会話（`/clear`）。ユーザー報告「VS Code preview で score p2 を選んで再生すると p1 p2 の両方の音が鳴る」（`scratch/parts.lys`＝section A に p1・p2、`score main { staff p1 staff p2 }` と `score main "p2" { staff p2 }`）。★ `-Start p686`（HEAD `48329d05`・未 push 38・full **10293 / 0 / 2 / 10295**・log は Lab `sessions/p686/start.log`）。⚠ 作業ツリーに `site/examples/*.lys` 20 冊のユーザー変更（触らない・commit に含めない）。
@@ -126,17 +137,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ 検証: 網 `Midi/ScorePartsMidiTests` 8（p2 だけ 6 音／main 12 音＋p2 の onset・pitch が両 score で同一／score 無し全部／MIDI-only 行が鳴る／座っている section が小節を取る＝p2 の音が tick 1920／鳴らない part の歌詞 0／chord row は残る）＋ `Lsp/PlaybackRequestTests` 3（"p2" 6・null 12・無い名前は最初）。毒 3 本が各自赤（P1 strip 無し 4・P2 MIDI-only 行を読まない 1・P3 RenderName 無視 1・Lab `sessions/p686/poisons.ps1`・baseline 8/0・3/0）。`lysc midi scratch\parts.lys` → parts.mid 12 音・parts-p2.mid 6 音。`npm run check-types` OK。Midi 215／Export 414／Lsp 439／Lyric 250／Phrase 145 緑。
 ⚠ 射程: `PhraseExtractor`／`SectionSplitter`／`OctaveModeConverter` の「MIDI が同じ」検証は*その score が鳴らす part だけ*を比べる（chord row の先例と同じ）＝score に無い part の書き換えは検証されない。MusicXML は変えていない（export は今も全 part を書く）。拡張の実機確認は未（§1.0 ⒜「VS Code の手動確認が未」の試聴＝score を選んで Play）。⚠ 第684 の残した Core 警告 1（`MusicXmlExporter.EnsurePart` の `_currentPart.Name` CS8604＝`-Start` の --no-incremental で見えた）を pattern に直した。
 
-★ **終了**: commit `99b4a768`（Core 4・Lsp 2・Cli・拡張・網 2・APPROXIMATIONS・CHANGELOG）。`-End p686 -DiffBase 48329d05`（53 秒・code を commit する前に回した＝§7.5 の機械の行は 0 と出る）＝full **10304 / 0 / 2 / 10306**（+11＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,619 B）。§7.5 Core '+' 90 行（MidiExporter 47・RenderSpec 28・RenderSpecParser 13・MusicXmlExporter 2）／REF 0／OWN 0＝score の規則の配管（出所は chord row の先例＝第625）。7.6: ⒟ 何も移植していない。7.7 匂い: strip は「全部歩いてから消す」（歩かない形は timeline を壊す＝註に書いた）／`IsChordRowTrack` は " (chords)" の接尾辞で row と part を見分ける（既存 2 か所の綴りを 1 つに畳んだ）。perf: export 時だけ（RemoveAll 1 回）。Lab commit `7d7f8796`。push はユーザー（未 push 40）。
-
-## 以下は第685セッションの経緯
-
-### 1.1 第685セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「ではここで続けて」＝「独立だから有利」は誤りと指摘され、判定文を直した: 独立なら差は小さく、切る理由が無いだけ）。★ `-Start p685`（detached・HEAD `5ad331ee`・未 push 36・full **10292 / 0 / 2 / 10294**・82 秒）。
-★★ **カポの穴のうち「MusicXML の `<staff-details><capo>` は未」（第665）＝閉じた**: `chordDiagrams … capo N` の本は `<frame>` が押さえる形なのに文書がカポを言わず、読み手はナットで押さえていた。`WriteCapo`（Export の最後・行の harmony が揃った後）＝`<frame>` を持つ harmony のある part（行の宛先・framed `@chord` の part・lead sheet の行の part）の最初の attributes に `<staff-details><capo>N</capo></staff-details>`（clef の後・transpose の前＝schema の順）。frame の無い part は何も言わない（`<harmony>` は鳴る和音）。`MusicXmlAttributes.Capo` を足した。
-★ 検証: 網 `ChordDiagramTests.UnderACapo_MusicXmlWritesTheCapo_OnEveryPartWithAFrame`（gt 3・bs 無し・文書に 1 つ・clef の直後・lead sheet の行の part 3・カポ無しなら無し）。毒 2 本（P1 書かない・P2 全 part に書く）が各自赤（Lab `sessions/p685/poisons.ps1`・baseline 460/0）。射程: exporter だけ・カポを書く本は corpus に 0（キーは 3 日前のもの）。
-⚠ カポの穴の残り: 双子は `chordNames both` を綴れない（警告）／MIDI と `chord(…)` のホバーは最初の score のカポを読む／importer は `<capo>` を読まない。
-★ **終了**: commit `2418a5ee`（Core 2・網・APPROXIMATIONS・CHANGELOG）。`-End p685 -DiffBase 5ad331ee`（detached・56 秒）＝full **10293 / 0 / 2 / 10295**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,689 B）。§7.5 Core '+' 36 行／REF 0／OWN 0＝MusicXML の配管（出所は schema の staff-details）。7.6: ⒟ 何も移植していない。7.7 匂い: 「frame を持つ part」を文書側の harmony を歩いて決める（exporter の状態ではなく出力を読む＝2 つ目の綴りではない）。perf: export 時だけ。push はユーザー（未 push 38）。
+★ **終了**: commit `99b4a768`（Core 4・Lsp 2・Cli・拡張・網 2・APPROXIMATIONS・CHANGELOG）。`-End p686 -DiffBase 48329d05`（53 秒・code を commit する前に回した＝§7.5 の機械の行は 0 と出る）＝full **10304 / 0 / 2 / 10306**（+11＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 9,619 B）。§7.5 Core '+' 90 行（MidiExporter 47・RenderSpec 28・RenderSpecParser 13・MusicXmlExporter 2）／REF 0／OWN 0＝score の規則の配管（出所は chord row の先例＝第625）。7.6: ⒟ 何も移植していない。7.7 匂い: strip は「全部歩いてから消す」（歩かない形は timeline を壊す＝註に書いた）／`IsChordRowTrack` は " (chords)" の接尾辞で row と part を見分ける（既存 2 か所の綴りを 1 つに畳んだ）。perf: export 時だけ（RemoveAll 1 回）。Lab は `sessions/p686/`（毒と start/end log）を commit。push はユーザー（未 push 40）。
 
 ## 2. 開いている作業
 
