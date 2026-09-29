@@ -68,6 +68,47 @@ public class TabTupletBracketTests
         score main { tab cb }
         """;
 
+    // Two eighths on the D string, stems DOWN, bracket below: LilyPond 2.26.0 stands the
+    // bracket line 1.13 below the stem tips (padding 1.1 off the columns' reach); Lily# read
+    // the tips in the notation frame and ran the line THROUGH the stems, 1.4 above their
+    // tips (user report 2026-09-29, bohemian-rhapsody.lys score "tab", bar 42).
+    private const string DString = """
+        octave absolute
+        part cb {
+          instrument bass
+          section A { bes,4@mf tuplet 3/2 { g,8\2 g,4\2~ } g,4\2 f,4 | }
+        }
+        form main { A }
+        score main { tab cb }
+        """;
+
+    /// <summary>Every tab stem (0.130 wide vertical line) as (x, top y, bottom y).</summary>
+    private static List<(double X, double Y1, double Y2)> Stems(string svg) =>
+        Regex.Matches(svg, "<line x1=\"([-\\d.]+)\" y1=\"([-\\d.]+)\" x2=\"([-\\d.]+)\" y2=\"([-\\d.]+)\" stroke=\"#000000\" stroke-width=\"0.130\"/>")
+            .Where(m => m.Groups[1].Value == m.Groups[3].Value)
+            .Select(m => (double.Parse(m.Groups[1].Value), double.Parse(m.Groups[2].Value), double.Parse(m.Groups[4].Value)))
+            .ToList();
+
+    [Theory]
+    [InlineData(DString, "g,8\\2", false)]
+    [InlineData(LowString, "bes,,8@f", true)]
+    public void TheBracket_ClearsTheTabStems_ByLilyPondsPadding(string book, string first, bool bracketUp)
+    {
+        string svg = Render(book);
+        int tupletPos = book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal);
+        double firstCentre = DigitCentres(svg)[book.IndexOf(first, System.StringComparison.Ordinal)];
+        var hooks = Hooks(svg, tupletPos);
+        Assert.Equal(2, hooks.Count);
+        // The bracket line is the hooks' y on the staff side; the tuplet's first stem is the
+        // one at the first digit's centre.
+        double line = bracketUp ? System.Math.Min(hooks[0].Y1, hooks[0].Y2) : System.Math.Max(hooks[0].Y1, hooks[0].Y2);
+        var stem = Stems(svg).Single(s => System.Math.Abs(s.X - firstCentre) < 0.01);
+        double tip = bracketUp ? System.Math.Min(stem.Y1, stem.Y2) : System.Math.Max(stem.Y1, stem.Y2);
+        // padding 1.1 past the stem's tip, on the bracket's side (device y grows down).
+        double clearance = bracketUp ? tip - line : line - tip;
+        Assert.InRange(clearance, 1.05, 1.25);
+    }
+
     private static string Render(string lys)
         => SvgGenerator.Generate(SyntaxTree.Parse(lys), new SvgRenderOptions { EmbedFont = false });
 

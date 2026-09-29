@@ -383,9 +383,28 @@ internal static class TupletBracketEngraver
             // attaches to the BEAM: centered between the outer stems, sitting
             // just off the beam line on its stem side — not at the bracket's
             // notehead-based position (which reads as shifted up-left).
+            // A DRAWN bracket on a TAB staff clears the TAB's own columns — its stems end
+            // where TabStaffGeometry says (2.25 below the bottom string for a down-stem
+            // eighth), not where the notation frame CalculateSlope reads puts them, so the
+            // bracket ran through the stems (user report 2026-09-29, bohemian-rhapsody.lys
+            // score "tab", bar 42). LilyPond's offset pass, over the tab columns' reach.
+            // ⚠️ STAFF-RELATIVE, LIKE CalculateSlope: the geometry here stands at Y 0 (the
+            // staff's top line) and the staff offset is added below with the notation
+            // path's, not baked as the beam-attached number's branch bakes it — MEASURED on
+            // the user's book: the offset that branch reads is not the one the renderer
+            // places the staff at in a later system (bar 42 came out 1.04 high while the
+            // engine's own layout of the same score had it right).
+            bool tabBeamPlaced = false;
+            if (tabStaff != null && showBracket)
+            {
+                var staffLocal = new TabStaffGeometry(fonts, tabStaff.Tuning!.Value, 0.0,
+                    tabStaff.TabSourceClef, tabStaff.Transposition);
+                (startY, endY) = TabBracketPositions(tuplet, tupMeasures, measureLayout, isStemUp,
+                    startX, endX, staffLocal, beamLayouts, fonts);
+            }
+
             // LILYPOND-REF: lily/tuplet-number.cc — number follows the beam
             // when there is no bracket.
-            bool tabBeamPlaced = false;
             if (!showBracket && !beamLayouts.IsDefaultOrEmpty)
             {
                 var beam = FindCoveringBeam(beamLayouts, tuplet, tupMeasures);
@@ -1647,6 +1666,189 @@ internal static class TupletBracketEngraver
             default:
                 return centre + (left ? -halfStem : halfStem);
         }
+    }
+
+    /// <summary>
+    /// The DRAWN bracket's positions on a TAB staff — LilyPond's
+    /// <c>calc_position_and_height</c> run over the tab's own columns: each column reaches
+    /// as far as its fret digits' boxes and its tab stem (the tip
+    /// <see cref="TabStaffGeometry.UnbeamedStemTipY"/> gives, or the tab beam's edge), a rest
+    /// as far as its glyph where the tab draws it; the bound columns united with the strings
+    /// (widened by staff-padding) give the slope, gated by the strings' sign and damped; the
+    /// staff's edge joins the points; the line is pushed <c>padding</c> past the farthest point
+    /// and, when flat, quantised off the strings. Device Y in the frame the geometry's
+    /// <see cref="TabStaffGeometry.StaffY"/> sets — the caller hands a staff-local one
+    /// (top line at 0) and adds the staff offset as the notation path does.
+    /// </summary>
+    /// <remarks>
+    /// MEASURED (2.26.0, Lab sessions/p690/probes/tabtuplet5.ly — two eighths on the D
+    /// string, stems down): the stems end 2.25 below the bottom string and the bracket line
+    /// stands 1.13 below the stem tips (18.25 against 17.12), i.e. padding 1.1 off the
+    /// columns' reach; the notation-frame reading put it 1.4 ABOVE them, through the stems.
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:463-477 calc_position_and_height — the staff
+    ///   widened by staff-padding; :520-562 the else arm: bound columns' cross_staff_extent
+    ///   united with the staff, the musical sign gates, one point per column; :566-630 the
+    ///   damping (max-slope-factor × the last column's x; the beam-slope cap is not ported —
+    ///   a tab tuplet's own beam hides its bracket); :633-637 the staff points; :708-746 the
+    ///   offset pass, padding, and the flat quantise (`*offset /= 0.5 * ss`, staff_span
+    ///   widened by ss, rint, off a line by dir).
+    /// LILYPOND-REF: lily/note-column.cc:251-258 cross_staff_extent — the heads' extent
+    ///   united with the stem's.
+    /// ⚠️ Not ported, disclosed: nested tuplets (:646-680) and avoid-scripts (:682-706) —
+    ///   no tab book carries either under a drawn bracket.
+    /// </remarks>
+    private static (double startY, double endY) TabBracketPositions(
+        TupletBracketItem tuplet, ImmutableArray<Measure> measures, MeasureLayout measureLayout,
+        bool bracketUp, double x0, double x1, TabStaffGeometry geom,
+        ImmutableArray<BeamLayout> beamLayouts, Rendering.ScoreTextMetrics fonts)
+    {
+        int dir = bracketUp ? 1 : -1;               // Y-up, from the tab's middle
+        double ss = geom.StringSpace;               // the TabStaff's staff-space (1.5)
+        double middle = geom.MiddleY;               // device
+        double YUp(double device) => middle - device;
+        double halfDigit = TabConstants.FretDigitHeight(fonts) / 2.0;
+        int strings = geom.StringCount;
+        // The staff symbol's extent, widened by staff-padding (:471-476), Y-up.
+        double staffReach = (strings - 1) / 2.0 * ss + StaffPaddingLP;
+        double staffEdge = dir * staffReach;
+
+        // The tab beam a member stem belongs to, if any (this staff, this voice, this bar).
+        BeamLayout? MemberBeam(int itemIndex)
+        {
+            if (beamLayouts.IsDefaultOrEmpty)
+                return null;
+            foreach (var b in beamLayouts)
+            {
+                if (b.StaffIndex != tuplet.StaffIndex
+                    || b.Group.MeasureIndex != tuplet.MeasureIndex
+                    || b.Group.VoiceIndex != tuplet.VoiceIndex)
+                    continue;
+                foreach (var m in b.Group.Members)
+                    if (m.ResolveMeasureIndex(b.Group.MeasureIndex) == tuplet.MeasureIndex && m.ItemIndex == itemIndex)
+                        return b;
+            }
+            return null;
+        }
+
+        // A column's reach on the bracket's side (Y-up) and its strings' positions.
+        (double Reach, int Lo, int Hi)? ColumnReach(MusicItem item, int itemIndex, double columnX)
+        {
+            switch (item)
+            {
+                case NoteItem or ChordItem:
+                {
+                    var (lo, hi) = geom.HeadPositionRange(item);
+                    // The digits' boxes: every string the item sounds, ± half a digit.
+                    double reach = dir > 0
+                        ? hi * ss / 2.0 + halfDigit
+                        : lo * ss / 2.0 - halfDigit;
+                    // …united with the stem, whichever way it points (cross_staff_extent).
+                    if (NoteColumnLayout.Of(item) is { HasStem: true })
+                    {
+                        bool up = geom.TabStemUp(item);
+                        var beam = MemberBeam(itemIndex);
+                        double? tipDevice = beam is not null
+                            ? ArticulationEngraver.TabBeamOuterEdgeY(beam, geom,
+                                columnX + EngravingDefaults.TabHeadCenterOffset)
+                            : geom.UnbeamedStemTipY(item, up, geom.StemHeadString(item, up));
+                        if (tipDevice is { } t)
+                        {
+                            double tip = YUp(t);
+                            reach = dir > 0 ? Math.Max(reach, tip) : Math.Min(reach, tip);
+                        }
+                    }
+                    return (reach, lo, hi);
+                }
+                case RestItem { IsSpacer: false } rest:
+                {
+                    // Where the tab draws the rest (SharedRenderer.Tab): a whole hangs from
+                    // the upper central string, a half sits on the lower, the rest centre on
+                    // the tab's middle — the glyph's box from that origin.
+                    int value = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+                    var box = GlyphMetrics.GetRestBBox(value);
+                    double originUp = value switch
+                    {
+                        1 => YUp(geom.StringY(strings / 2)),
+                        2 => YUp(geom.StringY(strings / 2 + 1)),
+                        _ => -(box.Top + box.Bottom) / 2.0,
+                    };
+                    return (dir > 0 ? originUp + box.Top : originUp + box.Bottom, 0, 0);
+                }
+                default:
+                    return null;
+            }
+        }
+
+        var items = measures[tuplet.MeasureIndex].Items;
+        var points = new List<(double X, double Y)>();
+        (double Reach, int Lo, int Hi)? first = null, last = null;
+        double lastX = 0;
+        for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < items.Length; i++)
+        {
+            if (items[i].GraceTime)
+                continue;
+            double columnX = measureLayout.X
+                + LayoutUtilities.GetItemXOffset(measures, tuplet.MeasureIndex, i, measureLayout);
+            if (ColumnReach(items[i], i, columnX) is not { } col)
+                continue;
+            double x = columnX - x0;
+            points.Add((x, col.Reach));
+            lastX = x;
+            if (items[i] is NoteItem or ChordItem)
+            {
+                first ??= col;
+                last = col;
+            }
+        }
+
+        // The slope: the bound columns' reach united with the staff, the sign gates, the damping.
+        double dy = 0.0;
+        if (first is { } f && last is { } l)
+        {
+            double lv = dir > 0 ? Math.Max(f.Reach, staffEdge) : Math.Min(f.Reach, staffEdge);
+            double rv = dir > 0 ? Math.Max(l.Reach, staffEdge) : Math.Min(l.Reach, staffEdge);
+            double graphicalDy = rv - lv;
+            int musUp = Math.Sign(l.Hi - f.Hi), musDown = Math.Sign(l.Lo - f.Lo);
+            dy = musUp != musDown || Math.Sign(graphicalDy) != musDown ? 0.0 : graphicalDy;
+            if (dy != 0.0)
+            {
+                double maxDy = MaxSlopeFactor * lastX * Math.Sign(dy);
+                if (Math.Abs(dy) > Math.Abs(maxDy))
+                    dy = maxDy;
+            }
+        }
+
+        // The staff's own edge joins the points (:633-637).
+        points.Add((0.0, staffEdge));
+        points.Add((x1 - x0, staffEdge));
+
+        // The offset pass (:708-719): the line pushed just past the farthest point, then padding.
+        double offset = -dir * double.PositiveInfinity;
+        double factor = points.Count > 3 ? 1.0 / (x1 - x0) : 1.0;
+        foreach (var (x, y) in points)
+        {
+            double tuplety = dy * x * factor;
+            if (y * dir > (offset + tuplety) * dir)
+                offset = y - tuplety;
+        }
+        offset += BracketPadding * dir;
+
+        // A flat bracket keeps off the strings (:726-746): in the tab's positions, rounded,
+        // and stepped past a string it would sit on.
+        if (Math.Abs(dy) < 0.01)
+        {
+            offset /= 0.5 * ss;
+            double spanLo = -(strings - 1) - ss, spanHi = (strings - 1) + ss;
+            if (offset >= spanLo && offset <= spanHi)
+            {
+                offset = Math.Round(offset, MidpointRounding.ToEven);
+                if (EngravingDefaults.OnStaffLine((int)offset, strings))
+                    offset += dir;
+            }
+            offset *= 0.5 * ss;
+        }
+
+        return (middle - offset, middle - (offset + dy));
     }
 
     /// <summary>

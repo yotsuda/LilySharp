@@ -12,10 +12,10 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 62 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 56 | 観測者がゼロだと自認しているもの |
 | `OWN` | 197 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **313** | |
+| **計** | **315** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -27,14 +27,14 @@
 | `LilySharp.Core/Svg/Layout/MultiStaffLayouter.cs` | 11 |
 | `LilySharp.Core/Svg/Layout/NoteCollision.cs` | 9 |
 | `LilySharp.Core/Svg/Layout/ChordNameEngraver.cs` | 8 |
+| `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 8 |
 | `LilySharp.Core/Svg/Layout/FingeringEngraver.cs` | 7 |
 | `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs` | 7 |
 | `LilySharp.Core/LilyPond/LilyPondExporter.cs` | 6 |
 | `LilySharp.Core/Svg/Layout/ElementCoordinator.cs` | 6 |
-| `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（62 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -127,8 +127,10 @@
 - **:236** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
 - **:249** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:794** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
-- **:1455** inner tuplets' boxes, :646-680 — not ported; no pinned point).
+- **:813** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
+- **:1474** inner tuplets' boxes, :646-680 — not ported; no pinned point).
+- **:1691** damping (max-slope-factor × the last column's x; the beam-slope cap is not ported —
+- **:1697** ⚠️ Not ported, disclosed: nested tuplets (:646-680) and avoid-scripts (:682-706) —
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:233** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
@@ -224,9 +226,9 @@
 - **:503** named at the constant), because no point measures a barline-bound trill.
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
 - **:366** string slots, not pitches, and no ledger point measures the tab
-- **:408** invisible bracket. No ledger point measures the tab
-- **:899** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
-- **:1242** positions are string slots; no ledger point measures that regime).
+- **:427** invisible bracket. No ledger point measures the tab
+- **:918** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
+- **:1261** positions are string slots; no ledger point measures that regime).
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
