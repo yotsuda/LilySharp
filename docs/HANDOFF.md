@@ -80,8 +80,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: 行の指番号と下の行の名前の上付きが 0.5 重なる（帯が上付きを数えない・第668）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
-- ★★ **セクション跨ぎの span の第 2 段**: text spanner／ottava／pedal／trill の持ち越し（ユーザー「後で」・第663 `fed7f176` はスラー／フレージング／タイ／ヘアピンだけ）
 - ★ 大文字小文字だけ違う綴り（`@upbow`）の quick fix
+- ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
 - ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂）＝安いものから
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
@@ -119,6 +119,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第669セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p669`（HEAD `2d5265d7`・未 push 4・full **10238 / 0 / 2 / 10240**）。
+★★★ **セクション跨ぎの span の第 2 段＝完了**: text spanner／ottava／pedal／trill を第663 の規則（`fed7f176`・ユーザー決定 2026-09-28）に載せた。裁き方は**ヘアピンと同じ**＝`SectionPlays.Judge`（小節単位。`OnUnmatchedStop`／`Refused`／`RefusedClose`／`CutMeasure` を足した）: 次の演奏で閉じれば描いて黙る／D1 閉じない＝警告して**自分の section の終わりで切る**（ottava は表示の移調もそこまで）／D4 反復・volta・jump を跨ぐ＝エラー・切る／D2 何も持ち越されていない `@!`＝LYS4023（今までは LYS4018「閉じるものが無い」・trill は黙殺）。対にする呼び出しは 1 つのまま（`PairTextSpanners`／`PairOttavaBrackets`／`PairPedalBrackets`／`PairTrillSpannerEvents` に `plays`＋`carrySink`）＝collector の `UnpairedSpanWarnings`・`SectionCarryWarnings`・layout・`ScoreSideTables`・`MeasureContentKey`・`SharedRenderer.Curves`・`DetectOttavaSpans` が同じ答えを読む。`SectionSplitter` は `@` の全族を持ち越し可に。文言は `SectionCarryValidator.MessageFor`（閉じの D2/D4 は「nothing is drawn for it」）。GRAMMAR §8.3 の規則文を更新。
+★ 検証: 網 `SectionCarryTests` +4（閉じる／D1 と切り口と移調／D4／D2）・Lab `sessions/p669/carry.lys` の絵（4 族が C→D を跨いで閉じ・D の accel が E で閉じず切れる）。
+★ **終了**: （-End 後に記す）
+
+## 以下は第668セッションの経緯
+
 ### 1.1 第668セッション（2026-09-29・YT-DELL2）
 
 新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p668`（HEAD `7725d9de`・未 push 0＝ユーザーが push 済み・full **10232 / 0 / 2 / 10234**・作業ツリーに `site/examples/*.lys` 20 冊の改行だけの差＝内容差 0・触っていない）。
@@ -130,16 +139,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★★★ **後半＝K5 ① の最後の項目・MusicXML の行＝完了（ユーザー決定 2026-09-29「4 点すべて案どおり」）**: ⑴ 行の `<harmony>` は**行の直下の譜表の part**（score の順で行の次の staff・無ければ最初の staff）に、各スロットの `<offset>`（divisions）つきで小節の頭に置く（`SlotGroups` の格子＝頁・MIDI と同じ）⑵ 譜表の無い lead sheet は全休符だけの part `NAME (chords)`（MIDI のトラック名）を作る ⑶ 同じ瞬間の同じコードの `@chord` は落とす（root／kind／bass が同じ）・違うコードは並ぶ ⑷ N.C.（`r`）と行頭の `.` は書かない（休符の `@chord` 経路と同じ＝記号が無ければ harmony 無し）。harmony は鳴る和音（度数は小節の調で解く）・`<frame>` は対象譜表の調弦で描く形（`ChordShapes.Drawn`＝指・バレー入り・カポは押さえる形）。置く場所の解決は export の最後（`EmitPendingChordRows`＝part の小節が全部揃ってから・`_playStartMeasure` が便ごとの開始小節）。**by-part の `chords prog { section A {…} }` は音楽として歩かなくなった**（旧: 唯一の part か "Part 1" の下で空歩き＝lead sheet に空の "Part 1" が出ていた）。**ついでの修正: `PadVoice` の詰め小節の番号**（閉じの小節線が開いた空小節が番号を取って落ちるので 1, 3, 3 だった → 1, 2, 3）。`RenderSpecParser.PlayedSpec`／`PlacedChordRows` を一か所に（MIDI の `SoundingChordRows` はそれを呼ぶ）。
 ⚠️ 未: part がその便で何も書かない section の行は捨てる（置く小節が無い）／flat な top-level の chords track は MIDI と同じく未対応／行の途中の `time`・`key` は section の頭の値で読む（頁は小節ごと）。
 ★ **終了**: `fa0a82ea`「musicxml: a placed chords row writes its symbols as <harmony> in the staff under it, at their offsets (K5 ① — the last item)」。`-End p668 -DiffBase 7725d9de` 緑・full **10238 / 0 / 2 / 10240**（run3.trx）。門 6 つ全 OK。§7.5 全体 Core '+' 882 行／REF 27／OWN 1（行の harmony＝LP の ChordNames は何も出さない）。7.7 匂い: 行の指番号と下の行の上付きの 0.5 重なり（既存の帯）・"10fr" の LP との差は未計測・site の例の絵（chord-*.svg）は次の site ビルドで変わる・part の無い便の行は黙って捨てる。push はユーザー（未 push 4）。
-
-## 以下は第667セッションの経緯
-
-### 1.1 第667セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p667`（HEAD `2f0c5bd1`・未 push 42・full **10221 / 0 / 2 / 10223**）。
-★★★ **§2 K5 ⑥ 完了＝ウクレレの 1 番以降**（規則案を数字つきで示してユーザー「良い」）: 再入調弦（`IsGuitarType` が偽＝ウクレレ・バンジョー）では **V4（最低音は根音）だけ外して**列挙する（`ChordVoicings.Enumerate` が `bassPc` に −1 を渡す）。他の規則・並び順・極大の取り方はギターと同じ。**実測: V4 を外すと試した 10 コード（C Am F G7 Dm Em B♭ E A7 F♯m7-5）全部で並び順の先頭が LP の表と一致**＝表と規則が同じ答えを出す（網 `OnTheUkulele_TheOrderOpensOnLilyPondsShape` が 10 組と個数を固定）。C13 は 4 弦に 7 音で形無し（今までどおり警告）。`ChordShapes.Default`・`NoteStepper.ShapeOrder`／`SortKeyOf`・validator の「ギター型だけ」の門を外した＝ウクレレでも `Ctrl+Shift+↑↓` とホバーの「shape n of N」が効く。`NoShape` の文言から「rise in pitch」の分岐を落とした。
-★ 検証: 網 +12（theory 10・ホバー 1・step の行 3 を既存に足した・`ChordShapeCheckTests` のウクレレ例外を外した）。
-⚠️ 未: バンジョーは同じ扱いになるが実測していない（LP の表も無い）。
-★ **終了**: `381612ac`「voicings: the ukulele's shapes beyond LilyPond's table — the same rules less V4 (K5 ⑥)」。`-End p667 -DiffBase 2f0c5bd1` 緑・full **10232 / 0 / 2 / 10234**（run2.trx）。sweep 1,163 冊 × svg/ly/xml/midi/check（Release の HEAD worktree）: moved 0・check 行 0（ウクレレの既定形を描く冊は盤に無い）。門: 天井・seam・毒・inventory・worktree 全部 OK。§7.5 Core '+' 32 行／REF 0／OWN 0。push はユーザー（未 push 43）。
 
 ## 2. 開いている作業
 

@@ -182,8 +182,8 @@
 - **:766** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1039** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2418** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2440** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2420** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2442** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -313,8 +313,8 @@
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
-- **:2781** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5105** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:2794** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
+- **:5118** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`
@@ -322,7 +322,7 @@
 ### `LilySharp.Core/Svg/Collector/ScoreAssembler.cs`
 - **:175** omission. LILYSHARP-OWN: a `|:` that opens the piece IS printed. LilyPond's default
 ### `LilySharp.Core/Svg/Collector/SectionPlayCarry.cs`
-- **:472** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
+- **:520** LILYSHARP-OWN: the hanging tie is drawn as a laissez-vibrer tie, LilyPond's short half-tie,
 ### `LilySharp.Core/Svg/Collector/StaffAccidentalColumns.cs`
 - **:84** ⚠️ LILYSHARP-OWN GATE, and a DIVERGENCE: LilyPond packs a cue accidental into
 ### `LilySharp.Core/Svg/Collector/TabResolver.cs`
@@ -389,9 +389,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
-- **:1036** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1831** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2126** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1038** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1833** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2128** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:840** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`

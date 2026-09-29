@@ -414,9 +414,19 @@ internal static class TextSpannerEngraver
     /// carries everywhere, and the same doctrine the measure passes state.
     /// </para>
     /// </remarks>
+    /// <param name="musicMarks">The score's marks.</param>
+    /// <param name="plays">The score's section plays (<c>Collector.SectionPlays.For</c>), or
+    /// null for a score with none: a spanner open when its section ends is carried into the
+    /// section played next and must end there (<see cref="Collector.SectionPlayCursor"/>'s
+    /// rule, the hairpin's since 2026-09-28, this family's since 2026-09-29). One that does not
+    /// — or is carried over a repeat, volta or jump — is cut at the end of its own section and
+    /// reported to <paramref name="carrySink"/>; a stop at a section's start with nothing
+    /// carried in is reported there instead of as an unpaired stop.</param>
+    /// <param name="carrySink">Where the refused carries go; null to report none.</param>
     internal static (ImmutableArray<TextSpannerItem> Spanners,
                      ImmutableArray<UnpairedSpanWarning> Unpaired)
-        PairTextSpanners(ImmutableArray<MusicMarkItem> musicMarks)
+        PairTextSpanners(ImmutableArray<MusicMarkItem> musicMarks,
+            Collector.SectionPlays? plays = null, List<Collector.SectionCarryWarning>? carrySink = null)
     {
         if (musicMarks.IsDefaultOrEmpty)
             return ([], []);
@@ -442,6 +452,9 @@ internal static class TextSpannerEngraver
         var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
         var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
         var open = new Dictionary<(int Staff, int Voice), (MusicMarkItem Mark, int Index)>();
+        // The plays a start opened in, per (staff, voice) — a stop with nothing open asks
+        // whether its family opened in ITS play (else it was written to end a carried span).
+        var openedIn = plays != null ? new HashSet<((int, int) Key, int Play)>() : null;
 
         void Report(int sourcePosition, SpanPairingFault fault)
         {
@@ -457,10 +470,26 @@ internal static class TextSpannerEngraver
             {
                 if (!open.TryGetValue(key, out var start))
                 {
-                    Report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
+                    // The section carry rule's D2 / D4 for a close: nothing carried in.
+                    if (plays != null && plays.OnUnmatchedStop(mark.MeasureIndex,
+                            openedIn!.Contains((key, plays.PlayAt(mark.MeasureIndex)))) is { } closeFault)
+                        carrySink?.Add(plays.RefusedClose(mark.SourcePosition, Collector.SectionSpanKind.TextSpanner,
+                            closeFault, mark.MeasureIndex));
+                    else
+                        Report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
                     continue;
                 }
                 open.Remove(key);
+                int endMeasure = mark.MeasureIndex, endItem = Math.Max(mark.AnchorItemIndex, 0);
+                // The carry rule at section boundaries: a refused end cuts the spanner at the
+                // end of its own section, as the hairpin is cut.
+                if (plays?.Judge(start.Mark.MeasureIndex, mark.MeasureIndex) is { } fault)
+                {
+                    carrySink?.Add(plays.Refused(start.Mark.SourcePosition, Collector.SectionSpanKind.TextSpanner,
+                        fault, start.Mark.MeasureIndex));
+                    endMeasure = plays.CutMeasure(start.Mark.MeasureIndex);
+                    endItem = 0;
+                }
                 spanners.Add(new TextSpannerItem(
                     Text: start.Mark.Text,
                     StartMeasureIndex: start.Mark.MeasureIndex,
@@ -472,8 +501,8 @@ internal static class TextSpannerEngraver
                     // measure's head, while `@!rit` took its own note) is what ledger
                     // textspanner.x.label-to-notehead was opened to see.
                     StartItemIndex: Math.Max(start.Mark.AnchorItemIndex, 0),
-                    EndMeasureIndex: mark.MeasureIndex,
-                    EndItemIndex: Math.Max(mark.AnchorItemIndex, 0),
+                    EndMeasureIndex: endMeasure,
+                    EndItemIndex: endItem,
                     Style: TextSpannerStyle.DashedLine,
                     SourcePosition: start.Mark.SourcePosition,
                     SourceIndex: start.Index,
@@ -489,6 +518,7 @@ internal static class TextSpannerEngraver
                 continue;
             }
             open[key] = (mark, srcIndex);
+            openedIn?.Add((key, plays!.PlayAt(mark.MeasureIndex)));
         }
 
         foreach (var (mark, _) in open.Values)
@@ -504,8 +534,8 @@ internal static class TextSpannerEngraver
     /// warned about and drawn (or drawn and not warned about) at once.
     /// </summary>
     public static ImmutableArray<TextSpannerItem> DetectTextSpanners(
-        ImmutableArray<MusicMarkItem> musicMarks)
-        => PairTextSpanners(musicMarks).Spanners;
+        ImmutableArray<MusicMarkItem> musicMarks, Collector.SectionPlays? plays = null)
+        => PairTextSpanners(musicMarks, plays).Spanners;
 
     /// <summary>
     /// THIS STAFF'S accel./rit. SPANNERS AS INK ABOVE THE STAFF, in the staff-local frame

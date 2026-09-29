@@ -2034,13 +2034,15 @@ Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d
                                      slur and warns (LYS4010). *)
 Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
-(* SECTION CARRY RULE (owner's decisions 2026-09-28): a slur, phrasing slur, tie or hairpin
-   still open when a section ends is carried into the section the FORM plays next — per form,
-   per part, per play — and must end there. Carried and not ended in that next section, a close
-   at a section's start with nothing carried in, or carried into a section the part does not
-   play: warning (LYS4023). A slur, phrasing slur or hairpin carried over a repeat sign, into or
-   out of a volta ending, or over a jump mark: error (LYS4023). The span is not drawn (a hairpin
-   is cut at its own section's end). A TIE may cross all of those: it is carried to the first
+(* SECTION CARRY RULE (owner's decisions 2026-09-28; the '@' spans 2026-09-29): a slur, phrasing
+   slur, tie or hairpin — and a text spanner ('@rit' … '@!rit'), an ottava, a pedal and a trill
+   span — still open when a section ends is carried into the section the FORM plays next — per
+   form, per part, per play — and must end there. Carried and not ended in that next section, a
+   close at a section's start with nothing carried in, or carried into a section the part does
+   not play: warning (LYS4023). Any of them but a tie carried over a repeat sign, into or out of
+   a volta ending, or over a jump mark: error (LYS4023). The span is not drawn (a hairpin, a text
+   spanner, an ottava, a pedal and a trill span are cut at their own section's end — the notes
+   under a cut ottava are written at pitch from there). A TIE may cross all of those: it is carried to the first
    note of every section PLAYED after its own (the MIDI's order — the body at each pass, that
    pass's ending), each of which must repeat the tied pitch (else LYS4007); an arc where that
    section is also printed next, else a hanging tie on the tied note and an automatic repeat tie

@@ -1112,7 +1112,12 @@ public sealed partial class MeasureCollector
     private List<OttavaBracketItem> DetectOttavaSpans(int staffIndex)
     {
         var result = new List<OttavaBracketItem>();
-        foreach (var b in Layout.OttavaBracketEngraver.DetectOttavaBrackets(_musicMarks.ToImmutableArray()))
+        // The section carry rule's plays (2026-09-29): a bracket cut at its section's end
+        // transposes the display only that far. The voices scanned so far give the plays
+        // (they are aligned across staves); during the walk's beam probe none may be scanned
+        // yet, and the probe then reads the uncut bracket — it stamps no drawn quantity.
+        var plays = SectionPlays.Of(_sanityScannedVoiceList);
+        foreach (var b in Layout.OttavaBracketEngraver.DetectOttavaBrackets(_musicMarks.ToImmutableArray(), plays))
             if (b.StaffIndex == staffIndex)
                 result.Add(b);
         return result;

@@ -721,9 +721,11 @@ internal sealed partial class LayoutEngine
             ctx.MultiScore, dynamicLayouts, static d => d.StaffIndex);
 
         // Detect and layout hairpins from cresc/decresc marks
-        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics,
-            ctx.MultiScore is { } playsScore ? Collector.SectionPlays.For(playsScore)
-            : score is not null ? Collector.SectionPlays.For(score) : null);
+        // The section carry rule's plays — the hairpin's since 2026-09-28, the text spanner's,
+        // ottava's and pedal's since 2026-09-29 (the same calls the collector reports by).
+        var sectionPlays = ctx.MultiScore is { } playsScore ? Collector.SectionPlays.For(playsScore)
+            : score is not null ? Collector.SectionPlays.For(score) : null;
+        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics, sectionPlays);
         // A tab staff blanks the wedge too, and the ITEM carries its own SourceIndex, so
         // this one is cut before the layout is built rather than after.
         // LILYPOND-REF: ly/engraver-init.ly:1283 Tab_staff_symbol_engraver — that
@@ -763,12 +765,12 @@ internal sealed partial class LayoutEngine
         // LILYPOND-REF: ly/engraver-init.ly:1282 Tab_staff_symbol_engraver — that
         // context's \override TextSpanner.stencil = ##f.
         var textSpannerItems = TabStaffStencils.Blank(
-            ctx.MultiScore, TextSpannerEngraver.DetectTextSpanners(musicMarks),
+            ctx.MultiScore, TextSpannerEngraver.DetectTextSpanners(musicMarks, sectionPlays),
             static t => t.StaffIndex);
         var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt, ctx.Fonts);
 
         // Detect and layout ottava brackets from ottava/loco marks
-        var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+        var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks, sectionPlays);
         // The staff's voices and the drawn beams ride along: the bracket's quiet height is
         // aligned_side over its OWN staff's note columns (Ottava_spanner_engraver is a
         // Staff-context engraver, so every voice counts), and a beamed support column's
@@ -820,7 +822,7 @@ internal sealed partial class LayoutEngine
                 if (style == PedalStyle.Text)
                     continue;
                 var staffMarks = musicMarks.Where(m => m.StaffIndex == staffIndex).ToImmutableArray();
-                var brackets = PedalEngraver.DetectPedalBrackets(staffMarks);
+                var brackets = PedalEngraver.DetectPedalBrackets(staffMarks, sectionPlays);
                 // The line the staff's down profile was solved with -- null (fallback to
                 // the legacy below-the-system baseline) when the seed declined this staff
                 // or this pass has no per-staff skylines (the preliminary pass).

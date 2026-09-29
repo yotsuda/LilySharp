@@ -680,10 +680,12 @@ public static class SectionSplitter
                 prev = found + 1;
             }
             // What is open at each cut, judged against the NEXT boundary (the next cut, or the
-            // cell's end): a slur, phrasing slur, tie or hairpin may be carried into the section
-            // the cut opens — every form plays the new sections one after the other, so the
+            // cell's end): a slur, phrasing slur, tie, hairpin — and, since 2026-09-29, a text
+            // spanner, ottava, pedal or trill span — may be carried into the section the cut
+            // opens — every form plays the new sections one after the other, so the
             // continuation always follows — but must end there (the section carry rule,
-            // Svg.Collector.SectionPlayCursor); anything else open at a cut is refused.
+            // Svg.Collector.SectionPlayCursor); anything else open at a cut (a manual beam, a
+            // lyric word) is refused.
             for (int k = 0; ok && k < pieces.Count; k++)
             {
                 int cut = pieces[k].Cut;
@@ -854,7 +856,9 @@ public static class SectionSplitter
                 open.Add(new OpenSpan($"{family}@{at}", family == "hairpin"
                         ? $"a hairpin (@{name} {LineOf(at)}, with no dynamic before the cut)"
                         : $"a {family} (@{name} {LineOf(at)})",
-                    MayCarry: family is "hairpin" or "phrasing slur"));
+                    // Every '@' span family may be carried since 2026-09-29 (the second stage
+                    // of the carry rule: text spanner, ottava, pedal, trill span).
+                    MayCarry: true));
 
             // A lyric word whose hyphen or extender reaches over the bar line.
             if (cell.Kind == CellKind.Lyrics

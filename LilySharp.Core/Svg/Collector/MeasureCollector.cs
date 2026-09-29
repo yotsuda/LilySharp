@@ -350,11 +350,14 @@ public sealed partial class MeasureCollector
             var phrasing = new List<UnpairedSpanWarning>();
             foreach (var voice in _sanityScannedVoiceList)
                 SlurPairingScanner.ScanPhrasing(voice, phrasing);
+            // With the plays: a stop at a section's start that closes nothing is the carry
+            // rule's fault (SectionCarryWarnings), not an unpaired stop.
+            var plays = SectionPlays.Of(_sanityScannedVoiceList);
             return
             [
-                .. Layout.TextSpannerEngraver.PairTextSpanners(marks).Unpaired,
-                .. Layout.OttavaBracketEngraver.PairOttavaBrackets(marks).Unpaired,
-                .. Layout.PedalEngraver.PairPedalBrackets(marks).Unpaired,
+                .. Layout.TextSpannerEngraver.PairTextSpanners(marks, plays).Unpaired,
+                .. Layout.OttavaBracketEngraver.PairOttavaBrackets(marks, plays).Unpaired,
+                .. Layout.PedalEngraver.PairPedalBrackets(marks, plays).Unpaired,
                 // One per (position, fault): a repeated section plays the same mark twice
                 // (UnpairedSpanWarning's remark).
                 .. phrasing.Distinct(),
@@ -388,8 +391,16 @@ public sealed partial class MeasureCollector
                 TieTargetScanner.Scan(voice, ignoredTies, ignoredCue, carry);
             }
             if (SectionPlays.Of(_sanityScannedVoiceList) is { } plays)
-                Layout.HairpinEngraver.DetectHairpins(_musicMarks.ToImmutableArray(),
-                    _dynamics.ToImmutableArray(), plays, carry);
+            {
+                var marks = _musicMarks.ToImmutableArray();
+                Layout.HairpinEngraver.DetectHairpins(marks, _dynamics.ToImmutableArray(), plays, carry);
+                // The mark-paired families (2026-09-29), through the same calls their readers draw by.
+                Layout.TextSpannerEngraver.PairTextSpanners(marks, plays, carry);
+                Layout.OttavaBracketEngraver.PairOttavaBrackets(marks, plays, carry);
+                Layout.PedalEngraver.PairPedalBrackets(marks, plays, carry);
+                PairTrillSpannerEvents(
+                    _sanityScannedVoiceList.Select(v => v.Measures.Length).DefaultIfEmpty(0).Max(), plays, carry);
+            }
             return carry.Distinct().ToList();
         }
     }
@@ -944,7 +955,9 @@ public sealed partial class MeasureCollector
         _crossStaffItems.ToImmutableArray(),
         _grobOverrides.ToImmutableArray(),
         _grobReverts.ToImmutableArray(),
-        PairTrillSpannerEvents(measureCount),
+        // The section carry rule's plays: every voice has been sanity-scanned by now (the
+        // scan runs before the ottava display transposition, this after it).
+        PairTrillSpannerEvents(measureCount, SectionPlays.Of(_sanityScannedVoiceList)),
         new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition, _meta.TempoPosition,
             _meta.SubtitlePosition, _meta.PoetPosition,
             new TempoPiecePositions(_meta.TempoUnitPosition, _meta.TempoCountPosition, _meta.SwingPosition,

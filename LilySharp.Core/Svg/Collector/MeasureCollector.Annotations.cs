@@ -1012,8 +1012,17 @@ public sealed partial class MeasureCollector
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm:1798 Trill_spanner_engraver
+    /// <para>
+    /// The section carry rule (2026-09-29, with <paramref name="plays"/>): a trill open when
+    /// its section ends is carried into the section played next and must end there — by a
+    /// stop, a new start, or the score's end; a trill whose end is refused is cut at the end
+    /// of its own section, as the hairpin is, and reported to <paramref name="carrySink"/>.
+    /// A stop at a section's start with nothing open is the rule's D2 (nothing carried in) —
+    /// until now such a stop was ignored in silence.
+    /// </para>
     /// </remarks>
-    private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents(int measureCount)
+    private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents(int measureCount,
+        SectionPlays? plays = null, List<SectionCarryWarning>? carrySink = null)
     {
         if (_trillSpannerEvents.Count == 0)
             return ImmutableArray<TrillSpannerItem>.Empty;
@@ -1021,6 +1030,23 @@ public sealed partial class MeasureCollector
         var items = ImmutableArray.CreateBuilder<TrillSpannerItem>();
         (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex,
             int voiceIndex, int forcedDir)? pendingStart = null;
+        var startedIn = plays != null ? new HashSet<int>() : null;
+
+        // The spanner from `start` to (endMeasure, endItem) — cut at its own section's end
+        // when the carry rule refuses the end.
+        TrillSpannerItem Closed(
+            (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex, int voiceIndex, int forcedDir) start,
+            int endMeasure, int endItem)
+        {
+            if (plays?.Judge(start.measureIndex, endMeasure) is { } fault)
+            {
+                carrySink?.Add(plays.Refused(start.sourcePosition, SectionSpanKind.Trill, fault, start.measureIndex));
+                endMeasure = plays.CutMeasure(start.measureIndex);
+                endItem = 0;
+            }
+            return new TrillSpannerItem(start.measureIndex, start.itemIndex, endMeasure, endItem,
+                start.sourcePosition, start.staffIndex, start.voiceIndex, Direction: start.forcedDir);
+        }
 
         foreach (var evt in _trillSpannerEvents)
         {
@@ -1036,33 +1062,21 @@ public sealed partial class MeasureCollector
                 //   process-music — the ender path; :1833-1837 note-column-interface
                 //   acknowledger — the ended trill's right bound is the current column.
                 if (pendingStart != null)
-                    items.Add(new TrillSpannerItem(
-                        pendingStart.Value.measureIndex,
-                        pendingStart.Value.itemIndex,
-                        evt.measureIndex,
-                        evt.itemIndex,
-                        pendingStart.Value.sourcePosition,
-                        pendingStart.Value.staffIndex,
-                        pendingStart.Value.voiceIndex,
-                        Direction: pendingStart.Value.forcedDir));
+                    items.Add(Closed(pendingStart.Value, evt.measureIndex, evt.itemIndex));
                 pendingStart = evt;
+                startedIn?.Add(plays!.PlayAt(evt.measureIndex));
             }
             else if (pendingStart != null)
             {
                 // The START event's voice owns the spanner: LilyPond's engraver lives in
                 // that Voice context and makes the grob there (scheme-engravers.scm:1816),
                 // so its supports and its left bound are that voice's columns.
-                items.Add(new TrillSpannerItem(
-                    pendingStart.Value.measureIndex,
-                    pendingStart.Value.itemIndex,
-                    evt.measureIndex,
-                    evt.itemIndex,
-                    pendingStart.Value.sourcePosition,
-                    pendingStart.Value.staffIndex,
-                    pendingStart.Value.voiceIndex,
-                    Direction: pendingStart.Value.forcedDir));
+                items.Add(Closed(pendingStart.Value, evt.measureIndex, evt.itemIndex));
                 pendingStart = null;
             }
+            else if (plays != null && plays.OnUnmatchedStop(evt.measureIndex,
+                         startedIn!.Contains(plays.PlayAt(evt.measureIndex))) is { } closeFault)
+                carrySink?.Add(plays.RefusedClose(evt.sourcePosition, SectionSpanKind.Trill, closeFault, evt.measureIndex));
         }
 
         // A start with no @stopTrillSpan runs to the END OF THE SCORE (it used to
@@ -1071,19 +1085,12 @@ public sealed partial class MeasureCollector
         // the engraver's endsOnMeasureStart allows EndMeasureIndex ==
         // measureLayouts.Length exactly for this — so the line stops short of the
         // final barline by the same term a written stop-at-bar does (LP measured:
-        // both gaps 1.75, trillimpl/trillbar twins).
+        // both gaps 1.75, trillimpl/trillbar twins). Under the carry rule that end is
+        // judged like any other: past the section played next, the trill is cut.
         // LILYPOND-REF: scm/scheme-engravers.scm:1798 Trill_spanner_engraver —
         //   finalize ends an open spanner at the piece's end column.
         if (pendingStart != null)
-            items.Add(new TrillSpannerItem(
-                pendingStart.Value.measureIndex,
-                pendingStart.Value.itemIndex,
-                measureCount,
-                0,
-                pendingStart.Value.sourcePosition,
-                pendingStart.Value.staffIndex,
-                pendingStart.Value.voiceIndex,
-                Direction: pendingStart.Value.forcedDir));
+            items.Add(Closed(pendingStart.Value, measureCount, 0));
 
         return items.ToImmutable();
     }

@@ -313,6 +313,123 @@ public class SectionCarryTests
         Assert.Equal((1, 0), (hairpin.EndMeasureIndex, hairpin.EndItemIndex));
     }
 
+    // ---- the second stage (2026-09-29): text spanner, ottava, pedal, trill span ---------------
+    // The four mark-paired families take the same rule, judged over the score's plays
+    // (SectionPlays) as the hairpin is, and are cut at their own section's end as it is.
+
+    [Fact]
+    public void AMarkSpanCarriedIntoTheNextSection_AndClosedThere_IsDrawnAndSaysNothing()
+    {
+        const string src = """
+            part vn {
+              section C { c''4@rit d e f@ottava | g4@sustain a b@startTrillSpan c || }
+              section D { c''4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
+            }
+            form main { C D }
+            score main { staff vn }
+            """;
+        Assert.DoesNotContain(Check(src), d => d.Code is DiagnosticCodes.SpanAcrossSectionBoundary
+            or DiagnosticCodes.UnpairedSpan);
+        var score = Collect(src);
+        var plays = SectionPlays.For(score);
+        var rit = Assert.Single(TextSpannerEngraver.DetectTextSpanners(score.MusicMarks, plays));
+        Assert.Equal((0, 2), (rit.StartMeasureIndex, rit.EndMeasureIndex));
+        var ottava = Assert.Single(OttavaBracketEngraver.DetectOttavaBrackets(score.MusicMarks, plays));
+        Assert.Equal((0, 2), (ottava.StartMeasureIndex, ottava.EndMeasureIndex));
+        var pedal = Assert.Single(PedalEngraver.DetectPedalBrackets(score.MusicMarks, plays));
+        Assert.Equal((1, 2), (pedal.StartMeasureIndex, pedal.EndMeasureIndex));
+        var trill = Assert.Single(score.TrillSpanners);
+        Assert.Equal((1, 2), (trill.StartMeasureIndex, trill.EndMeasureIndex));
+    }
+
+    /// <summary>D1: carried into the next section and not closed there (closed two sections
+    /// on): a warning, and the span is cut at the end of its own section — the ottava's
+    /// display transposition with it.</summary>
+    [Fact]
+    public void AMarkSpanNotClosedInTheNextSection_IsCutAtItsOwnSectionsEnd()
+    {
+        const string src = """
+            part vn {
+              section C { c''4@rit d e f@ottava || }
+              section D { g4@sustain a b c@startTrillSpan || }
+              section E { c4@!rit d@!ottava e@!sustain f@stopTrillSpan | }
+            }
+            form main { C D E }
+            score main { staff vn }
+            """;
+        var carry = Carry(src);
+        Assert.Equal(2, carry.Count);
+        Assert.All(carry, d => Assert.Equal(DiagnosticSeverity.Warning, d.Severity));
+        Assert.Contains(carry, d => d.Message.StartsWith("a text spanner (@rit / @accel / @textSpan) is carried from section C "
+            + "into section D, which follows it in form 'main', and is not closed there, so it is cut at the end of section C; "
+            + "close it with '@!rit' (or '@!textSpan') in section D"));
+        Assert.Contains(carry, d => d.Message.StartsWith("an ottava (@ottava / @quindicesima) is carried from section C into section D"));
+        var score = Collect(src);
+        var plays = SectionPlays.For(score);
+        var rit = Assert.Single(TextSpannerEngraver.DetectTextSpanners(score.MusicMarks, plays));
+        Assert.Equal((0, 1, 0), (rit.StartMeasureIndex, rit.EndMeasureIndex, rit.EndItemIndex));
+        var ottava = Assert.Single(OttavaBracketEngraver.DetectOttavaBrackets(score.MusicMarks, plays));
+        Assert.Equal((0, 0), (ottava.StartMeasureIndex, ottava.EndMeasureIndex));
+        // D's pedal and trill close in E: drawn whole.
+        Assert.Single(PedalEngraver.DetectPedalBrackets(score.MusicMarks, plays), p => (p.StartMeasureIndex, p.EndMeasureIndex) == (1, 2));
+        Assert.Single(score.TrillSpanners, t => (t.StartMeasureIndex, t.EndMeasureIndex) == (1, 2));
+        // The notes of D are written at pitch: the cut bracket transposes nothing past C.
+        var plain = Collect(src.Replace("@ottava", "").Replace("@!ottava", ""));
+        Assert.Equal(Notes(plain)[4].StaffPosition, Notes(score)[4].StaffPosition);
+        Assert.NotEqual(Notes(plain)[3].StaffPosition, Notes(score)[3].StaffPosition);   // C's f, under the 8va
+    }
+
+    [Fact]
+    public void AMarkSpanIntoARepeatFromBeforeIt_IsAnError()
+    {
+        const string src = """
+            part vn {
+              section I { c''4@rit d e f@sustain || }
+              section A { g4@!rit a b c@!sustain | }
+            }
+            form main { I |: A :| }
+            score main { staff vn }
+            """;
+        var carry = Carry(src);
+        Assert.Equal(2, carry.Count);
+        Assert.All(carry, d => Assert.Equal(DiagnosticSeverity.Error, d.Severity));
+        Assert.Contains(carry, d => d.Message.StartsWith("a text spanner (@rit / @accel / @textSpan) would be carried from section I into section A over a repeat sign"));
+        Assert.Contains(carry, d => d.Message.StartsWith("a pedal (@sustain / @sostenuto / @unaCorda) would be carried from section I into section A over a repeat sign"));
+        var score = Collect(src);
+        var plays = SectionPlays.For(score);
+        Assert.Equal((0, 1, 0), Assert.Single(TextSpannerEngraver.DetectTextSpanners(score.MusicMarks, plays)) is var r
+            ? (r.StartMeasureIndex, r.EndMeasureIndex, r.EndItemIndex) : default);
+        Assert.Equal((0, 1), Assert.Single(PedalEngraver.DetectPedalBrackets(score.MusicMarks, plays)) is var p
+            ? (p.StartMeasureIndex, p.EndMeasureIndex) : default);
+    }
+
+    /// <summary>D2: a stop at a section's start with nothing carried in says the carry rule's
+    /// words (LYS4023), not the family's unpaired-stop words (LYS4018) — which it still says
+    /// when the section is the first played.</summary>
+    [Fact]
+    public void AMarkStopWithNothingCarriedIn_IsTheCarryRulesWords()
+    {
+        const string src = """
+            part vn {
+              section C { c''4 d e f || }
+              section D { g4@!rit a b c@!ottava | }
+            }
+            form main { C D }
+            score main { staff vn }
+            """;
+        var diagnostics = Check(src);
+        var carry = diagnostics.Where(d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary).ToList();
+        Assert.Equal(2, carry.Count);
+        Assert.Contains(carry, d => d.Message.StartsWith("this '@!rit' (or '@!textSpan') closes nothing: no text spanner is open, "
+            + "and section C, played before section D in form 'main', carries none into it, so nothing is drawn for it"));
+        Assert.Contains(carry, d => d.Message.StartsWith("this '@!ottava' closes nothing: no ottava is open"));
+        Assert.DoesNotContain(diagnostics, d => d.Code == DiagnosticCodes.UnpairedSpan);
+        // Played first, the same stops are the families' own unpaired stops.
+        var first = Check(src.Replace("form main { C D }", "form main { D C }"));
+        Assert.Equal(2, first.Count(d => d.Code == DiagnosticCodes.UnpairedSpan));
+        Assert.DoesNotContain(first, d => d.Code == DiagnosticCodes.SpanAcrossSectionBoundary);
+    }
+
     /// <summary>Every form a score plays is checked — not only the first score's. In
     /// <c>form other { D C }</c> C is last and D first: the slur is lost there.</summary>
     [Fact]

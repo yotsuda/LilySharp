@@ -545,7 +545,7 @@ internal static partial class SharedRenderer
             // music marks, so the list is rebuilt the way MusicMarks' is below and the
             // layout's SourceIndex points into that reconstruction.
             PedalBracketLayouts = ResolveArr(layout.PedalBracketLayouts,
-                PedalEngraver.DetectPedalBrackets(score.MusicMarks),
+                PedalEngraver.DetectPedalBrackets(score.MusicMarks, LilySharp.Core.Svg.Collector.SectionPlays.For(score)),
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             // MusicMarks (incl. section labels + tempo) aren't a flat score side-table;
             // their SourceIndex points into the reconstructed BuildAllMarks() list. Rebuild

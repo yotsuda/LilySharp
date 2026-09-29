@@ -32,7 +32,9 @@ public readonly record struct SectionPlayStamp(
     bool Rewinds = false);
 
 /// <summary>Which span a section-boundary complaint is about — the four families a span may
-/// be carried from one section into the next (owner's decision, 2026-09-28).</summary>
+/// be carried from one section into the next (owner's decision, 2026-09-28), and the four
+/// mark-paired families that took the same rule on 2026-09-29 (the second stage: the owner's
+/// "later" of the first).</summary>
 public enum SectionSpanKind
 {
     /// <summary>A slur <c>( )</c>.</summary>
@@ -44,6 +46,17 @@ public enum SectionSpanKind
     /// <summary>A hairpin <c>@cresc</c> / <c>@decresc</c> / <c>@dim</c>, ended by the next
     /// dynamic.</summary>
     Hairpin,
+    /// <summary>A text spanner <c>@rit</c> / <c>@accel</c> / <c>@textSpan("…")</c> … <c>@!rit</c>.</summary>
+    TextSpanner,
+    /// <summary>An ottava bracket <c>@ottava</c> / <c>@quindicesima</c> … <c>@!ottava</c> (or the
+    /// next ottava start, which closes it).</summary>
+    Ottava,
+    /// <summary>A piano pedal <c>@sustain</c> / <c>@sostenuto</c> / <c>@unaCorda</c> … its
+    /// release (or a re-pedalling, which closes it).</summary>
+    Pedal,
+    /// <summary>A trill spanner <c>@startTrillSpan</c> … <c>@stopTrillSpan</c> (or the next
+    /// start, which closes it).</summary>
+    Trill,
 }
 
 /// <summary>Why a span could not be carried over a section boundary.</summary>
@@ -274,6 +287,41 @@ internal sealed class SectionPlays
             return SectionPlayCursor.Carries(_starts[pe].Edge) ? null : SectionCarryFault.AcrossRepeat;
         return SectionCarryFault.NotClosedInNext;
     }
+
+    /// <summary>The verdict on a CLOSE in <paramref name="stopMeasure"/> that finds nothing
+    /// open, when nothing of its family has opened yet in that play
+    /// (<paramref name="openedThisPlay"/> false): it was written to end a span carried in
+    /// from the play before, and none was — <see cref="SectionPlayCursor.OnUnmatchedClose"/>
+    /// for the mark-paired families. Null in the first play (an ordinary unmatched close).</summary>
+    public SectionCarryFault? OnUnmatchedStop(int stopMeasure, bool openedThisPlay)
+    {
+        int q = PlayAt(stopMeasure);
+        if (q < 1 || openedThisPlay)
+            return null;
+        return SectionPlayCursor.Carries(_starts[q].Edge) ? SectionCarryFault.NothingCarriedIn : SectionCarryFault.AcrossRepeat;
+    }
+
+    /// <summary>The warning for a span opened in <paramref name="startMeasure"/> whose end
+    /// <see cref="Judge"/> refused with <paramref name="fault"/>: from its own play into the
+    /// play after it.</summary>
+    public SectionCarryWarning Refused(int sourcePosition, SectionSpanKind kind, SectionCarryFault fault, int startMeasure)
+    {
+        int own = PlayAt(startMeasure);
+        return new SectionCarryWarning(sourcePosition, kind, fault, NameOf(own), NameOf(own + 1));
+    }
+
+    /// <summary>The warning for an unmatched close in <paramref name="stopMeasure"/>
+    /// (<see cref="OnUnmatchedStop"/>): the play before it carried nothing in.</summary>
+    public SectionCarryWarning RefusedClose(int sourcePosition, SectionSpanKind kind, SectionCarryFault fault, int stopMeasure)
+    {
+        int q = PlayAt(stopMeasure);
+        return new SectionCarryWarning(sourcePosition, kind, fault, NameOf(q - 1), NameOf(q), AtClose: true);
+    }
+
+    /// <summary>Where a span opened in <paramref name="startMeasure"/> is CUT when its end is
+    /// refused: the first measure of the play after its own — the bar line its own play ends
+    /// at, as the hairpin is cut (<c>HairpinEngraver.DetectHairpins</c>).</summary>
+    public int CutMeasure(int startMeasure) => StartOf(PlayAt(startMeasure) + 1);
 }
 
 /// <summary>What one printed section play is to the PLAYED order — the input

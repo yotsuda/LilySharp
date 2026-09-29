@@ -20,7 +20,8 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Reports a slur, phrasing slur, tie or hairpin that breaks the section carry rule
+/// Reports a slur, phrasing slur, tie or hairpin — and, since 2026-09-29, a text spanner,
+/// ottava, pedal or trill span — that breaks the section carry rule
 /// (<see cref="DiagnosticCodes.SpanAcrossSectionBoundary"/>, LYS4023) — in EVERY FORM A SCORE
 /// PLAYS, not only the first score's.
 /// </summary>
@@ -122,14 +123,23 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
     internal static string MessageFor(SectionCarryWarning w, string form)
     {
         string from = w.From ?? "?", into = w.Into ?? "?";
+        string cut = "it is cut at the end of section " + from;
         (string noun, string open, string close, string nothing) = w.Kind switch
         {
             SectionSpanKind.Slur => ("slur", "a slur '('", "')'", "no slur is drawn"),
             SectionSpanKind.PhrasingSlur => ("phrasing slur", "a phrasing slur", "'@!phrasingSlur'", "no curve is drawn"),
             SectionSpanKind.Tie => ("tie", "a tie '~'", "", "no tie is drawn"),
-            _ => ("hairpin", "a hairpin", "a dynamic", "it is cut at the end of section " + from),
+            // The mark-paired families (2026-09-29): cut at their own section's end, as the hairpin is.
+            SectionSpanKind.TextSpanner => ("text spanner", "a text spanner (@rit / @accel / @textSpan)", "'@!rit' (or '@!textSpan')", cut),
+            SectionSpanKind.Ottava => ("ottava", "an ottava (@ottava / @quindicesima)", "'@!ottava'", cut),
+            SectionSpanKind.Pedal => ("pedal", "a pedal (@sustain / @sostenuto / @unaCorda)", "'@!sustain' (or '@!sostenuto' / '@!unaCorda')", cut),
+            SectionSpanKind.Trill => ("trill span", "a trill span (@startTrillSpan)", "'@stopTrillSpan'", cut),
+            _ => ("hairpin", "a hairpin", "a dynamic", cut),
         };
         string rule = " - a " + noun + " open when a section ends is carried into the section played next and must end there";
+        // At a CLOSE there is no span to cut: a mark-paired family's stray stop draws nothing.
+        string atClose = w.Kind is SectionSpanKind.Slur or SectionSpanKind.PhrasingSlur or SectionSpanKind.Tie
+            ? nothing : "nothing is drawn for it";
         return w.Fault switch
         {
             SectionCarryFault.NotClosedInNext => w.Kind == SectionSpanKind.Hairpin
@@ -142,7 +152,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
             SectionCarryFault.NothingCarriedIn =>
                 "this " + close + " closes nothing: no " + noun + " is open, and section " + from
                 + ", played before section " + into + " in " + form + ", carries none into it, so "
-                + nothing + rule,
+                + atClose + rule,
             SectionCarryFault.IntoEmptySection =>
                 open + " is carried from section " + from + " into section " + into
                 + ", where this part plays nothing in " + form + ", so " + nothing
@@ -153,7 +163,7 @@ internal sealed class SectionCarryValidator : ISharedCollectValidator
                     : open + " would be carried from section " + from + " into section " + into)
                 + " over a repeat sign, a volta ending or a jump in " + form
                 + " - what is played before section " + into + " differs from pass to pass, so a "
-                + noun + " may not cross there and " + nothing + "; end it in section " + from
+                + noun + " may not cross there and " + (w.AtClose ? atClose : nothing) + "; end it in section " + from
                 + " (only a tie may cross a repeat)",
         };
         // ⚠️ A TIE NEVER REACHES THE LAST ARM: it is carried over any repeat sign, ending or

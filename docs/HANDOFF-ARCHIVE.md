@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第667セッションの経緯
+
+### 1.1 第667セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p667`（HEAD `2f0c5bd1`・未 push 42・full **10221 / 0 / 2 / 10223**）。
+★★★ **§2 K5 ⑥ 完了＝ウクレレの 1 番以降**（規則案を数字つきで示してユーザー「良い」）: 再入調弦（`IsGuitarType` が偽＝ウクレレ・バンジョー）では **V4（最低音は根音）だけ外して**列挙する（`ChordVoicings.Enumerate` が `bassPc` に −1 を渡す）。他の規則・並び順・極大の取り方はギターと同じ。**実測: V4 を外すと試した 10 コード（C Am F G7 Dm Em B♭ E A7 F♯m7-5）全部で並び順の先頭が LP の表と一致**＝表と規則が同じ答えを出す（網 `OnTheUkulele_TheOrderOpensOnLilyPondsShape` が 10 組と個数を固定）。C13 は 4 弦に 7 音で形無し（今までどおり警告）。`ChordShapes.Default`・`NoteStepper.ShapeOrder`／`SortKeyOf`・validator の「ギター型だけ」の門を外した＝ウクレレでも `Ctrl+Shift+↑↓` とホバーの「shape n of N」が効く。`NoShape` の文言から「rise in pitch」の分岐を落とした。
+★ 検証: 網 +12（theory 10・ホバー 1・step の行 3 を既存に足した・`ChordShapeCheckTests` のウクレレ例外を外した）。
+⚠️ 未: バンジョーは同じ扱いになるが実測していない（LP の表も無い）。
+★ **終了**: `381612ac`「voicings: the ukulele's shapes beyond LilyPond's table — the same rules less V4 (K5 ⑥)」。`-End p667 -DiffBase 2f0c5bd1` 緑・full **10232 / 0 / 2 / 10234**（run2.trx）。sweep 1,163 冊 × svg/ly/xml/midi/check（Release の HEAD worktree）: moved 0・check 行 0（ウクレレの既定形を描く冊は盤に無い）。門: 天井・seam・毒・inventory・worktree 全部 OK。§7.5 Core '+' 32 行／REF 0／OWN 0。push はユーザー（未 push 43）。
+
 ## 以下は第666セッションの経緯
 
 ### 1.1 第666セッション（2026-09-29・YT-DELL2）

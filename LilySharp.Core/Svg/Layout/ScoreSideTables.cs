@@ -248,7 +248,7 @@ internal static class ScoreSideTables
             : _textSpannersByScore.GetValue(score,
                 s => IndexBuckets<TextSpannerItem>.Build(
                     TabStaffStencils.Blank(
-                        s, TextSpannerEngraver.DetectTextSpanners(s.MusicMarks),
+                        s, TextSpannerEngraver.DetectTextSpanners(s.MusicMarks, Collector.SectionPlays.For(s)),
                         static t => t.StaffIndex),
                     t => t.StaffIndex));
 

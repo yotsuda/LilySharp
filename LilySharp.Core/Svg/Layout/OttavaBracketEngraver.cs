@@ -556,9 +556,16 @@ internal static class OttavaBracketEngraver
     /// from its start, which is the only place it is written.
     /// </para>
     /// </remarks>
+    /// <param name="musicMarks">The score's marks.</param>
+    /// <param name="plays">The score's section plays, or null: the section carry rule
+    /// (<c>TextSpannerEngraver.PairTextSpanners</c> says it) — a bracket whose end is refused
+    /// is cut at the end of its own section, and so is the display transposition under it,
+    /// which reads the same brackets.</param>
+    /// <param name="carrySink">Where the refused carries go; null to report none.</param>
     internal static (ImmutableArray<OttavaBracketItem> Brackets,
                      ImmutableArray<UnpairedSpanWarning> Unpaired)
-        PairOttavaBrackets(ImmutableArray<MusicMarkItem> musicMarks)
+        PairOttavaBrackets(ImmutableArray<MusicMarkItem> musicMarks,
+            Collector.SectionPlays? plays = null, List<Collector.SectionCarryWarning>? carrySink = null)
     {
         if (musicMarks.IsDefaultOrEmpty)
             return ([], []);
@@ -584,11 +591,25 @@ internal static class OttavaBracketEngraver
         var unpaired = ImmutableArray.CreateBuilder<UnpairedSpanWarning>();
         var reported = new HashSet<(int Position, SpanPairingFault Fault)>();
         var open = new Dictionary<(int Staff, int Voice), (MusicMarkItem Mark, int Index)>();
+        var openedIn = plays != null ? new HashSet<((int, int) Key, int Play)>() : null;
 
         void Report(int sourcePosition, SpanPairingFault fault)
         {
             if (reported.Add((sourcePosition, fault)))
                 unpaired.Add(new UnpairedSpanWarning(sourcePosition, SpanKind.Ottava, fault));
+        }
+
+        // The bracket a start makes when `closer` ends it — cut at its own section's end when
+        // the section carry rule refuses the end (the hairpin's cut).
+        OttavaBracketItem Closed((MusicMarkItem Mark, int Index) start, MusicMarkItem closer)
+        {
+            if (plays?.Judge(start.Mark.MeasureIndex, closer.MeasureIndex) is { } fault)
+            {
+                carrySink?.Add(plays.Refused(start.Mark.SourcePosition, Collector.SectionSpanKind.Ottava,
+                    fault, start.Mark.MeasureIndex));
+                return CutAt(start, plays.CutMeasure(start.Mark.MeasureIndex));
+            }
+            return BracketFrom(start, closer);
         }
 
         foreach (var (mark, srcIndex) in ottavaMarks)
@@ -599,11 +620,16 @@ internal static class OttavaBracketEngraver
             {
                 if (!open.TryGetValue(key, out var start))
                 {
-                    Report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
+                    if (plays != null && plays.OnUnmatchedStop(mark.MeasureIndex,
+                            openedIn!.Contains((key, plays.PlayAt(mark.MeasureIndex)))) is { } closeFault)
+                        carrySink?.Add(plays.RefusedClose(mark.SourcePosition, Collector.SectionSpanKind.Ottava,
+                            closeFault, mark.MeasureIndex));
+                    else
+                        Report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
                     continue;
                 }
                 open.Remove(key);
-                brackets.Add(BracketFrom(start, closer: mark));
+                brackets.Add(Closed(start, closer: mark));
                 continue;
             }
 
@@ -616,8 +642,9 @@ internal static class OttavaBracketEngraver
             // audit/lpreg/ottcons.lys, the twin of LilyPond's own ottava-consecutive.ly,
             // caught it: that book exists to say consecutive ottavas are not merged.
             if (open.TryGetValue(key, out var previous))
-                brackets.Add(BracketFrom(previous, closer: mark));
+                brackets.Add(Closed(previous, closer: mark));
             open[key] = (mark, srcIndex);
+            openedIn?.Add((key, plays!.PlayAt(mark.MeasureIndex)));
         }
 
         foreach (var (mark, _) in open.Values)
@@ -663,6 +690,22 @@ internal static class OttavaBracketEngraver
             EndItemIndex: closeAt is null ? -1 : closer.AnchorItemIndex);
     }
 
+    /// <summary>The bracket one open START makes when the section carry rule refuses its end:
+    /// it runs to the bar line its own section ends at (<paramref name="cutMeasure"/> is the
+    /// next section's first measure), no end column.</summary>
+    private static OttavaBracketItem CutAt((MusicMarkItem Mark, int Index) start, int cutMeasure)
+        => new(
+            Type: TypeOf(start.Mark.Type),
+            StartMeasureIndex: start.Mark.MeasureIndex,
+            EndMeasureIndex: Math.Max(cutMeasure - 1, start.Mark.MeasureIndex),
+            SourcePosition: start.Mark.SourcePosition,
+            SourceIndex: start.Index,
+            StaffIndex: start.Mark.StaffIndex,
+            StartItemIndex: start.Mark.AnchorItemIndex,
+            StartMoment: MidMeasureMoment(start.Mark),
+            EndMoment: null,
+            EndItemIndex: -1);
+
     /// <summary>A mark's moment within its measure when it is past the measure's first one,
     /// else null (the measure's start, or no anchor — <c>AnchorTiming</c>'s default is 0/0).</summary>
     private static Fraction? MidMeasureMoment(MusicMarkItem mark)
@@ -686,6 +729,6 @@ internal static class OttavaBracketEngraver
     /// about and drawn at once.
     /// </summary>
     public static ImmutableArray<OttavaBracketItem> DetectOttavaBrackets(
-        ImmutableArray<MusicMarkItem> musicMarks)
-        => PairOttavaBrackets(musicMarks).Brackets;
+        ImmutableArray<MusicMarkItem> musicMarks, Collector.SectionPlays? plays = null)
+        => PairOttavaBrackets(musicMarks, plays).Brackets;
 }

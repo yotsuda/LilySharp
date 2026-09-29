@@ -503,9 +503,15 @@ internal static class PedalEngraver
     /// no fixture observes it — which is also why the repair needs a book written for it.
     /// </para>
     /// </remarks>
+    /// <param name="musicMarks">The score's marks.</param>
+    /// <param name="plays">The score's section plays, or null: the section carry rule
+    /// (<c>TextSpannerEngraver.PairTextSpanners</c> says it) — a bracket whose release is
+    /// refused is cut at the end of its own section.</param>
+    /// <param name="carrySink">Where the refused carries go; null to report none.</param>
     internal static (ImmutableArray<PedalBracketItem> Brackets,
                      ImmutableArray<UnpairedSpanWarning> Unpaired)
-        PairPedalBrackets(ImmutableArray<MusicMarkItem> musicMarks)
+        PairPedalBrackets(ImmutableArray<MusicMarkItem> musicMarks,
+            Collector.SectionPlays? plays = null, List<Collector.SectionCarryWarning>? carrySink = null)
     {
         if (musicMarks.IsDefaultOrEmpty)
             return ([], []);
@@ -519,7 +525,7 @@ internal static class PedalEngraver
             if (m.Type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
                 or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
                 or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
-                return PairPresentPedalBrackets(musicMarks);
+                return PairPresentPedalBrackets(musicMarks, plays, carrySink);
         return ([], []);
     }
 
@@ -528,7 +534,8 @@ internal static class PedalEngraver
     /// </summary>
     private static (ImmutableArray<PedalBracketItem> Brackets,
                     ImmutableArray<UnpairedSpanWarning> Unpaired)
-        PairPresentPedalBrackets(ImmutableArray<MusicMarkItem> musicMarks)
+        PairPresentPedalBrackets(ImmutableArray<MusicMarkItem> musicMarks,
+            Collector.SectionPlays? plays, List<Collector.SectionCarryWarning>? carrySink)
     {
         // ⚠️ ALL THREE WAIT FOR THEIR FIRST ELEMENT. `ImmutableArray.CreateBuilder<T>()` lays
         // out its first block — 88 B for a reference element — before a single Add, and over
@@ -550,11 +557,11 @@ internal static class PedalEngraver
 
         // Each pedal is its own span: a sustain is not closed by a una corda.
         DetectBracketsForType(musicMarks, MusicMarkType.SustainOn, MusicMarkType.SustainOff,
-            PedalType.Sustain, ref brackets, Report);
+            PedalType.Sustain, ref brackets, Report, plays, carrySink);
         DetectBracketsForType(musicMarks, MusicMarkType.SostenutoOn, MusicMarkType.SostenutoOff,
-            PedalType.Sostenuto, ref brackets, Report);
+            PedalType.Sostenuto, ref brackets, Report, plays, carrySink);
         DetectBracketsForType(musicMarks, MusicMarkType.UnaCordaOn, MusicMarkType.UnaCordaOff,
-            PedalType.UnaCorda, ref brackets, Report);
+            PedalType.UnaCorda, ref brackets, Report, plays, carrySink);
 
         return (brackets?.ToImmutable() ?? [], unpaired?.ToImmutable() ?? []);
     }
@@ -565,15 +572,16 @@ internal static class PedalEngraver
     /// <c>SpanPairingValidator</c>, which reads the SAME call.
     /// </summary>
     public static ImmutableArray<PedalBracketItem> DetectPedalBrackets(
-        ImmutableArray<MusicMarkItem> musicMarks)
-        => PairPedalBrackets(musicMarks).Brackets;
+        ImmutableArray<MusicMarkItem> musicMarks, Collector.SectionPlays? plays = null)
+        => PairPedalBrackets(musicMarks, plays).Brackets;
 
     private static void DetectBracketsForType(
         ImmutableArray<MusicMarkItem> musicMarks,
         MusicMarkType onType, MusicMarkType offType,
         PedalType pedalType,
         ref ImmutableArray<PedalBracketItem>.Builder? brackets,
-        Action<int, SpanPairingFault> report)
+        Action<int, SpanPairingFault> report,
+        Collector.SectionPlays? plays, List<Collector.SectionCarryWarning>? carrySink)
     {
         // Collect all on/off marks for this pedal type, ordered by position
         var marks = musicMarks
@@ -582,6 +590,26 @@ internal static class PedalEngraver
             .ToList();
 
         MusicMarkItem? activeOn = null;
+        // The plays a pedal went down in — a release with no pedal down asks whether one went
+        // down in ITS play (else it was written to lift a carried one).
+        var downIn = plays != null ? new HashSet<int>() : null;
+
+        // The bracket from `activeOn` to `closer` (a release, or a re-pedalling) — cut at the
+        // end of its own section when the section carry rule refuses the close (2026-09-29,
+        // the hairpin's cut).
+        PedalBracketItem Closed(MusicMarkItem down, MusicMarkItem closer)
+        {
+            if (plays?.Judge(down.MeasureIndex, closer.MeasureIndex) is { } fault)
+            {
+                carrySink?.Add(plays.Refused(down.SourcePosition, Collector.SectionSpanKind.Pedal,
+                    fault, down.MeasureIndex));
+                return new PedalBracketItem(pedalType, down.MeasureIndex, plays.CutMeasure(down.MeasureIndex),
+                    down.SourcePosition, down.AnchorItemIndex, 0, down.AnchorTiming, Fraction.Zero);
+            }
+            return new PedalBracketItem(pedalType, down.MeasureIndex, closer.MeasureIndex,
+                down.SourcePosition, down.AnchorItemIndex, closer.AnchorItemIndex,
+                down.AnchorTiming, closer.AnchorTiming);
+        }
 
         foreach (var mark in marks)
         {
@@ -590,35 +618,27 @@ internal static class PedalEngraver
                 // If there's already an active pedal and we get another ON,
                 // end the current bracket at this measure
                 if (activeOn != null)
-                {
-                    (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(
-                        new PedalBracketItem(
-                        pedalType,
-                        activeOn.MeasureIndex,
-                        mark.MeasureIndex,
-                        activeOn.SourcePosition,
-                        activeOn.AnchorItemIndex, mark.AnchorItemIndex,
-                        activeOn.AnchorTiming, mark.AnchorTiming));
-                }
+                    (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(Closed(activeOn, mark));
                 activeOn = mark;
+                downIn?.Add(plays!.PlayAt(mark.MeasureIndex));
             }
             else if (mark.Type == offType)
             {
                 if (activeOn == null)
                 {
                     // A release with no pedal down: nothing was drawn for it before this
-                    // and nothing is now — the only change is that it is said.
-                    report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
+                    // and nothing is now — the only change is that it is said. At a
+                    // section's start it says the carry rule's words instead: nothing was
+                    // carried in for it to lift.
+                    if (plays != null && plays.OnUnmatchedStop(mark.MeasureIndex,
+                            downIn!.Contains(plays.PlayAt(mark.MeasureIndex))) is { } closeFault)
+                        carrySink?.Add(plays.RefusedClose(mark.SourcePosition, Collector.SectionSpanKind.Pedal,
+                            closeFault, mark.MeasureIndex));
+                    else
+                        report(mark.SourcePosition, SpanPairingFault.StopWithNoStart);
                     continue;
                 }
-                (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(
-                    new PedalBracketItem(
-                    pedalType,
-                    activeOn.MeasureIndex,
-                    mark.MeasureIndex,
-                    activeOn.SourcePosition,
-                    activeOn.AnchorItemIndex, mark.AnchorItemIndex,
-                    activeOn.AnchorTiming, mark.AnchorTiming));
+                (brackets ??= ImmutableArray.CreateBuilder<PedalBracketItem>()).Add(Closed(activeOn, mark));
                 activeOn = null;
             }
         }
