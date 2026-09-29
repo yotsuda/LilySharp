@@ -81,7 +81,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: 行の指番号と下の行の名前の上付きが 0.5 重なる（帯が上付きを数えない・第668）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
-- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672・⑻ は第673・⑺ は第674・⑽ は第675 で閉じた**。残り: ⑼⑾〜⒂（第663 起票＝ARCHIVE）。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
+- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671・⑶（欠陥ではない）⑷⑸ は第672・⑻ は第673・⑺ は第674・⑽ は第675・⒂ は第676 で閉じた**。残り: ⑼⑾⑿⒀⒁（第663 起票＝ARCHIVE）。★ 第672 が見つけた穴: `@text`／`@mark` は音符でも MusicXML に出ない（`ProcessDirectionName` に腕が無い）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -118,23 +118,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第676セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p676`（HEAD `d66be3b8`・未 push 18・full **10255 / 0 / 2 / 10257**）。
+★★ **⒂ MusicXML が頁の拒む（LYS4023）スラー／ヘアピンも書く＝閉じた**（`69827b3b`）: exporter は書いた通りに全部書いていた。`ReadCarryRefusals` が頁自身の collect（`SemanticValidation.TryCollect(tree, _playedSpec)` → `SectionCarryWarnings`）から規則の判定を読む＝規則は 1 か所。**鍵は (source position, printed play)**＝`form { C D C E }` は 2 回目の C のスラーだけ拒む（`SectionCarryWarning` に `Play` を足した＝slur／phrasing／hairpin の scanner が cursor の count を入れる・tie と印の族は −1）。拒まれたスラーは open／close を書かない（`ProcessArticulations` の `host`・兄弟の `(` `)` は `_lastEmittedHost`）、phrasing も同じ、切られたヘアピンの wedge は block の最後の小節の末尾で stop（`CloseCutWedge`・flush の前）。section の無い本は collect を払わない。
+★ 検証: 網 `SectionCarryTests` 3 本に MusicXML の断言（並べ替えた form＝start 1／stop 1・volta の縁＝slur 0・切られたヘアピン＝measure 1 offset 96）・毒 3 本が各自赤（Lab `sessions/p676/poisons.ps1`）。射程（`sweep-xml.ps1`・1,166 冊・base＝拒否なしの exe）: **動く本 0**（母集団に LYS4023 の本が無い）。
+⚠ 残り: `<< >>`（arpeggio）の中のスラーは host を渡していない（拒否されない）／印で対にする 4 族（text spanner・ottava・pedal・trill）の切りは MusicXML 未対応（頁は切る）。⚠ 道具: `dotnet build` が cmd `< NUL` でも console 入力待ちに 2 回嵌り、`close_console` で新しいコンソールにして直った（console が多くのキャンセルを経て腐る形）。
+★ **終了**: `-End p676 -DiffBase d66be3b8`＝full **10255 / 0 / 2 / 10257**（run2.trx）。§7.5 Core '+' 135 行／REF 0／OWN 0（頁の規則の写し）。push はユーザー（未 push 20）。
+
+## 以下は第675セッションの経緯
+
 ### 1.1 第675セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p675`（HEAD `1110dc23`・未 push 16・full **10255 / 0 / 2 / 10257**）。
 ★★ **⑽ 自動 hanging tie が MusicXML に出ない＝閉じた**（`ccec3e1e`）: `FinishCarriedTies` は持ち越したタイの stop を後続の play の先頭に書き、stop の無い start を撤回するだけで、頁が「弧が出ない」とき（`|:` へ戻る本体末のタイ・後の ending だけへ）に描く hanging tie（laissez-vibrer の glyph・`SectionTieCarry`）を書かなかった。頁と同じ判定（printed-next が played-next か＝`PrintedNextIsPlayedNext` の写し）で、弧が無い start に `<tied type="let-ring"/>`（`@laissezVibrer` と同じ綴り・`LetRing` に一本化）。弧の場合は不変。
 ★ 検証: 網 `SectionCarryTests` の 3 本に let-ring の有無（hang 1・arc 0・endings 0＝start 2/stop 3）を足した・毒 2 本（let-ring 無し→hang が赤／常に hang→arc 2 本が赤・Lab `sessions/p675/poisons.ps1`）。射程（`sessions/p675/sweep-xml.ps1`・1,166 冊・base＝毒 P1 の exe）: MusicXML が動く本 1（Lab の `Neutron Dance.lys`）。読み手（import）は `tied let-ring` を読まない（従来どおり）。
 ★ **終了**: `-End p675 -DiffBase 1110dc23`＝full **10255 / 0 / 2 / 10257**（run2.trx）。§7.5 Core '+' 36 行／REF 0／OWN 0（頁の LILYSHARP-OWN の写し＝MusicXML の綴りは 4.0 の tied-type）。push はユーザー（未 push 18）。
-
-## 以下は第674セッションの経緯
-
-### 1.1 第674セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p674`（HEAD `880e36e7`・未 push 14・full **10253 / 0 / 2 / 10255**）。
-★★ **⑺ 双子: セクションを書かないパートはその小節が落ちる＝閉じた**（`bd7219bd`）: `AppendSection` が名前の無い part（と chord row）で return して play を丸ごと飛ばしていた（`part bass { section A … section C … }`＋`form main { A B C }` で bass の C が他の B の下に来る）。`AppendSilentPlay`＝play の sentinel（`\mark`・key/meter の戻し）と section header の指示、そのあと canonical の小節数ぶん裸の `|`（stream の empty-bar 規則が running meter の spacer に書く・header の `partial` も効く）。chord row は `\chordmode` の silent bar を小節ぶん（header の time か score の・先頭は pickup 長）。数は `SectionBarCounts` の semantic index（短い play の padding と同じ）。
-★ 検証: 網 `SectionVoicePaddingExportTests` +2（B を書かない part と row・header `time 3/4 partial 4` で `s4 | s2. |`）・毒 2 本が各自赤（Lab `sessions/p674/poisons.ps1`）。★ 掃き（`sessions/p674/sweep-ly.ps1`・1,166 冊・base＝旧 return を毒で作った exe）: 双子が動く本 7（全部 Lab corpora＝dogfood の grammar-demo2・tab-with-chords・trio／samples-playground の transpose-demo／ベースタブLy の accidental・She Bangs・Untitled-3）。trio・grammar-demo2・Untitled-3・She Bangs を LP に通して警告数は前後同じ（trio の bar check 1 は既存）。
-⚠ by-part の綴り（`part m { section B { time 3/4 … } }`）の `time`／`partial` は section header ではなく part の音楽＝書かない側の part には届かない（by-section の header なら届く）。頁がこの綴りでどう読むかは未確認（`PartSettingInSectionHeaderValidator` の族）。
-⚠ ユーザー報告（便の途中・LP の絵を見て「レンダがおかしい」）: `corpora/dogfood/trio.lys` は**構文エラーを含む古い本**＝`a'4@cue`（旧綴り・今は `cue { }`）で flute の block が壊れ、続く `clarinet { … }` が「未定義の変数」として flute に飲まれる（flute 24 小節・clarinet の音楽が flute に続く・双子の clarinet は空）。ほかに `removeEmpty`（未知の part property）・`@loco`（未知）・閉じない `@ottava`。私の変更とは無関係（base でも clarinet は空）。ユーザーが自分で調べる（ソースの場所を渡した）。
- -DiffBase 880e36e7`＝full **10255 / 0 / 2 / 10257**（run2.trx）。§7.5 Core '+' 50 行／REF 0／OWN 0（頁の規則の写し・LP の対応物は無い）。push はユーザー（未 push 16）。
 
 ## 2. 開いている作業
 

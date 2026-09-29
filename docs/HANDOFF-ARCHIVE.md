@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第674セッションの経緯
+
+### 1.1 第674セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p674`（HEAD `880e36e7`・未 push 14・full **10253 / 0 / 2 / 10255**）。
+★★ **⑺ 双子: セクションを書かないパートはその小節が落ちる＝閉じた**（`bd7219bd`）: `AppendSection` が名前の無い part（と chord row）で return して play を丸ごと飛ばしていた（`part bass { section A … section C … }`＋`form main { A B C }` で bass の C が他の B の下に来る）。`AppendSilentPlay`＝play の sentinel（`\mark`・key/meter の戻し）と section header の指示、そのあと canonical の小節数ぶん裸の `|`（stream の empty-bar 規則が running meter の spacer に書く・header の `partial` も効く）。chord row は `\chordmode` の silent bar を小節ぶん（header の time か score の・先頭は pickup 長）。数は `SectionBarCounts` の semantic index（短い play の padding と同じ）。
+★ 検証: 網 `SectionVoicePaddingExportTests` +2（B を書かない part と row・header `time 3/4 partial 4` で `s4 | s2. |`）・毒 2 本が各自赤（Lab `sessions/p674/poisons.ps1`）。★ 掃き（`sessions/p674/sweep-ly.ps1`・1,166 冊・base＝旧 return を毒で作った exe）: 双子が動く本 7（全部 Lab corpora＝dogfood の grammar-demo2・tab-with-chords・trio／samples-playground の transpose-demo／ベースタブLy の accidental・She Bangs・Untitled-3）。trio・grammar-demo2・Untitled-3・She Bangs を LP に通して警告数は前後同じ（trio の bar check 1 は既存）。
+⚠ by-part の綴り（`part m { section B { time 3/4 … } }`）の `time`／`partial` は section header ではなく part の音楽＝書かない側の part には届かない（by-section の header なら届く）。頁がこの綴りでどう読むかは未確認（`PartSettingInSectionHeaderValidator` の族）。
+⚠ ユーザー報告（便の途中・LP の絵を見て「レンダがおかしい」）: `corpora/dogfood/trio.lys` は**構文エラーを含む古い本**＝`a'4@cue`（旧綴り・今は `cue { }`）で flute の block が壊れ、続く `clarinet { … }` が「未定義の変数」として flute に飲まれる（flute 24 小節・clarinet の音楽が flute に続く・双子の clarinet は空）。ほかに `removeEmpty`（未知の part property）・`@loco`（未知）・閉じない `@ottava`。私の変更とは無関係（base でも clarinet は空）。ユーザーが自分で調べる（ソースの場所を渡した）。
+ -DiffBase 880e36e7`＝full **10255 / 0 / 2 / 10257**（run2.trx）。§7.5 Core '+' 50 行／REF 0／OWN 0（頁の規則の写し・LP の対応物は無い）。push はユーザー（未 push 16）。
+
 ## 以下は第673セッションの経緯
 
 ### 1.1 第673セッション（2026-09-29・YT-DELL2）
