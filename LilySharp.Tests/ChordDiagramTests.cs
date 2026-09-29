@@ -2287,4 +2287,62 @@ public class ChordDiagramTests
         Assert.Contains("only 'chordDiagrams' takes one", refusal.Message);
         Assert.Empty(SyntaxTree.Parse("layout { chordDiagrams guitar { C#m7 x46654  section A { F/A x03211 } } }\n").Diagnostics);
     }
+
+    /// <summary>
+    /// A diagram at the END of a line — a chords row's last symbol, on the bar's head or on a
+    /// later beat, on a lead sheet or a chords-only grid; an <c>@chord</c> on the line's last
+    /// note — keeps its whole box, the "Nfr" label included, inside the line: the row's
+    /// footprint (<see cref="ChordNameEngraver.FootprintWidth"/>) and the diagram's rod
+    /// (<c>SpacingRules.ApplyFretFrameSpacing</c>) both price it to the bar's edge.
+    /// </summary>
+    /// <remarks>
+    /// The HANDOFF carried "the 5fr of a diagram at the line end sticks out to the right"
+    /// from session 663 (the first diagrams). Session 683 could not reproduce it on these
+    /// three books nor on the site's own chord-shapes example — session 668's port of
+    /// fret-diagrams.scm moved the label to LilyPond's position — so this pins the claim
+    /// instead: on every line of every book here the label ends before the line does.
+    /// </remarks>
+    [Fact]
+    public void ADiagramAtTheLineEnd_KeepsItsFretLabelInsideTheLine()
+    {
+        foreach (var book in new[]
+        {
+            "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
+            + "section A { m { c'1 | c'1 | c'1 | c'2 c'2 | } chords prog { C | G | F | C A(x57765) | } }\n"
+            + "form main { A }\nscore main { chords prog  staff m }\n",
+            "layout { chordDiagrams guitar all }\n"
+            + "section A { chords prog { C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | C | G | F | C A(x57765) | } }\n"
+            + "form main { A }\nscore main { chords prog }\n",
+            "layout { chordDiagrams guitar all }\noctave absolute\npart m { clef treble }\n"
+            + "section A { m { c'4 d' e' f'@chord(A x57765) | } }\nform main { A }\nscore main { staff m }\n",
+        })
+        {
+            var tree = SyntaxTree.Parse(book);
+            Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+            var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+            var lay = new LayoutEngine().Layout(score);
+            int seen = 0;
+            foreach (var system in lay.Systems)
+            {
+                var (barlineRight, notationRight, tabRight) = Core.Rendering.SharedRenderer.StaffRightEdges(score, system);
+                double lineRight = Math.Max(barlineRight, Math.Max(notationRight, tabRight));
+                var measures = system.Measures.Select(m => m.MeasureIndex).ToHashSet();
+                // The row's diagram: its box stands with its left edge on the symbol's column.
+                foreach (var c in lay.ChordNameLayouts.Where(c => c.FrameSpec != null && measures.Contains(c.MeasureIndex)))
+                {
+                    double right = c.X + ChordNameEngraver.DiagramBox(score.TextMetrics, c.FrameSpec!).Width;
+                    Assert.True(right <= lineRight + 1e-6, $"the row's {c.ChordText} diagram ends at {right}, the line at {lineRight}");
+                    seen++;
+                }
+                // The @chord's diagram: a script centred on its note, its ink about that X.
+                foreach (var a in lay.ArticulationLayouts.Where(a => ArticulationEngraver.IsDiagramUnderName(a) && measures.Contains(a.MeasureIndex)))
+                {
+                    double right = a.X + a.Ink.Right;
+                    Assert.True(right <= lineRight + 1e-6, $"the @chord diagram ends at {right}, the line at {lineRight}");
+                    seen++;
+                }
+            }
+            Assert.True(seen > 0, "the book must draw a diagram");
+        }
+    }
 }
