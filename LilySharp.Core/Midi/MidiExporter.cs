@@ -262,20 +262,17 @@ public sealed class MidiExporter
     // transpose: shifts every note by the interval's semitones (no respelling).
     private SyntaxNode? _root;
 
-    /// <summary>The capo fret of the file's first score (its layout's <c>chordDiagrams … capo N</c>),
-    /// 0 for none: a <c>chord(…)</c> item's strings sound that many semitones higher. Read once
-    /// per export (<see cref="_capo"/>); the MIDI plays no score of its own, so the first
-    /// score's capo is the one it follows, as it follows the first score's tunings.</summary>
+    /// <summary>The capo fret of the score being played (its layout's <c>chordDiagrams … capo N</c>,
+    /// <see cref="_playedSpec"/>), 0 for none: a <c>chord(…)</c> item's strings sound that many
+    /// semitones higher. Read once per export (<see cref="_capo"/>). Until 2026-09-29 it was the
+    /// FIRST score's, whichever score was played — <c>score main "open" { … }</c> with no capo
+    /// sounded the main score's capo (HANDOFF §1.0 ⒜, the capo's holes).</summary>
     private int Capo
     {
         get
         {
             if (_capo < 0)
-            {
-                var render = _root != null
-                    ? Semantics.TopLevelNodes.OfRoot<RenderDeclarationSyntax>(_root).FirstOrDefault() : null;
-                _capo = _root != null ? Semantics.LayoutPlanReader.Resolve(_root, render).Chords.Capo : 0;
-            }
+                _capo = _root != null ? Semantics.LayoutPlanReader.ResolveFor(_root, _playedSpec).Chords.Capo : 0;
             return _capo;
         }
     }
@@ -450,9 +447,10 @@ public sealed class MidiExporter
         _partial = null;
         _formDriven = _root.DescendantNodes().OfType<FormDeclarationSyntax>().Any();
         _formPlayed = false;
+        _playedSpec = RenderSpecParser.PlayedSpec(tree, Score, Form);
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
-        _soundingParts = SoundingParts(tree, Score, Form);
+        _soundingParts = SoundingParts(_playedSpec);
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -1207,6 +1205,10 @@ public sealed class MidiExporter
     // The chord rows the exported score PLACES, read once per Export (SoundingChordRows).
     private HashSet<string> _soundingChordRows = new(StringComparer.Ordinal);
 
+    // The score being PLAYED (RenderSpecParser.PlayedSpec: Score, else the one engraving Form,
+    // else the file's first), read once per Export; null for a file with no score.
+    private RenderSpec? _playedSpec;
+
     // The parts the exported score SOUNDS, read once per Export (SoundingParts); null when
     // the file declares no score — then every part sounds, as it always did.
     private HashSet<string>? _soundingParts;
@@ -1218,9 +1220,8 @@ public sealed class MidiExporter
     /// does not place is (<see cref="SoundingChordRows"/>): until 2026-09-29 the preview's Play
     /// of <c>score main "p2" { staff p2 }</c> sounded every part of the file, p1 included.
     /// </summary>
-    private static HashSet<string>? SoundingParts(SyntaxTree tree, RenderSpec? score,
-        FormDeclarationSyntax? form)
-        => RenderSpecParser.PlayedSpec(tree, score, form) is { } spec
+    private static HashSet<string>? SoundingParts(RenderSpec? played)
+        => played is { } spec
             ? new HashSet<string>(spec.SoundingPartNames, StringComparer.Ordinal)
             : null;
 

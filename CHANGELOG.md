@@ -285,7 +285,9 @@ workflow attaches that section to the GitHub Release verbatim.
   parts that score engraves plus its bare MIDI-only rows (`click`), the way a `chords` row it
   does not place is already silent; a file with no `score` block still sounds every part. The
   timeline is untouched — a section the picked score's parts sit out still takes its bars — and
-  the words of a part that does not sound leave with its notes.
+  the words of a part that does not sound leave with its notes. The capo a `chord(…)` sounds
+  under is that score's too (`layout … chordDiagrams guitar capo N`); it was the first score's
+  whichever score was written.
 - **MusicXML says where the capo is.** Under `chordDiagrams … capo N` the `<frame>`s were
   the pressed shapes but the document never said so; every part that carries a frame now
   opens with `<staff-details><capo>N</capo></staff-details>`.

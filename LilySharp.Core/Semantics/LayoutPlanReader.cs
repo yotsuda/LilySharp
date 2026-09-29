@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Globalization;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -169,8 +170,7 @@ internal static class LayoutPlanReader
     /// </summary>
     internal static LayoutPlan Resolve(SyntaxNode root, RenderDeclarationSyntax? render)
     {
-        var file = FileDefault(root);
-        var plan = file != null ? Read(file, out _) : LayoutPlan.Default;
+        var plan = FilePlan(root);
         if (render == null)
             return plan;
         // The LAST reference wins, like every repeated single-value setting.
@@ -179,6 +179,25 @@ internal static class LayoutPlanReader
             if (node is LayoutDeclarationSyntax l)
                 reference = l;
         return reference != null ? ReadReference(root, reference, plan) : plan;
+    }
+
+    /// <summary>
+    /// <see cref="Resolve(SyntaxNode, RenderDeclarationSyntax?)"/> for a caller holding the
+    /// PARSED score (<see cref="RenderSpec.LayoutRef"/> is that same last reference, read by
+    /// <c>RenderSpecParser.Parse</c>) — the MIDI, which plays one score and reads its capo.
+    /// </summary>
+    internal static LayoutPlan ResolveFor(SyntaxNode root, RenderSpec? spec)
+    {
+        var plan = FilePlan(root);
+        return spec?.LayoutRef is { } reference ? ReadReference(root, reference, plan) : plan;
+    }
+
+    /// <summary>The plan a score that references nothing lays out by: the file's unnamed
+    /// default block, else <see cref="LayoutPlan.Default"/>.</summary>
+    private static LayoutPlan FilePlan(SyntaxNode root)
+    {
+        var file = FileDefault(root);
+        return file != null ? Read(file, out _) : LayoutPlan.Default;
     }
 
     /// <summary>Overlays one block's entries onto <paramref name="plan"/> — the loop the

@@ -164,6 +164,26 @@ public class ScorePartsMidiTests
     }
 
     [Fact]
+    public void TheCapo_IsThePlayedScores_NotTheFirstScores()
+    {
+        // x32010 is C major open; under the main score's capo 3 it sounds E♭ major, and the
+        // "open" score, which references a layout with no capo, sounds C — it used to sound
+        // the first score's E♭ whichever score was written (HANDOFF §1.0 ⒜ capo hole).
+        const string book = """
+            layout capo3 { chordDiagrams guitar capo 3 }
+            layout open { chordDiagrams guitar }
+            part gt { instrument guitar }
+            section A { gt { chord(C x32010)1 | } }
+            form main { A }
+            score main { layout capo3  staff gt }
+            score main "open" { layout open  staff gt }
+            """;
+        static int[] Pitches(MidiFile midi) => midi.Tracks.SelectMany(t => t.Notes).Select(n => n.Pitch).OrderBy(p => p).ToArray();
+        Assert.Equal(new[] { 51, 55, 58, 63, 67 }, Pitches(Export(book, "main")));   // E♭3 G3 B♭3 E♭4 G4
+        Assert.Equal(new[] { 48, 52, 55, 60, 64 }, Pitches(Export(book, "open")));   // C3 E3 G3 C4 E4
+    }
+
+    [Fact]
     public void AChordRowThePickedScorePlaces_StillSounds()
     {
         // The strip tells a row's notes ("harmony (chords)") from a part's: the row the
