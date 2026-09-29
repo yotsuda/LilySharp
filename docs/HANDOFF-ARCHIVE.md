@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第676セッションの経緯
+
+### 1.1 第676セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p676`（HEAD `d66be3b8`・未 push 18・full **10255 / 0 / 2 / 10257**）。
+★★ **⒂ MusicXML が頁の拒む（LYS4023）スラー／ヘアピンも書く＝閉じた**（`69827b3b`）: exporter は書いた通りに全部書いていた。`ReadCarryRefusals` が頁自身の collect（`SemanticValidation.TryCollect(tree, _playedSpec)` → `SectionCarryWarnings`）から規則の判定を読む＝規則は 1 か所。**鍵は (source position, printed play)**＝`form { C D C E }` は 2 回目の C のスラーだけ拒む（`SectionCarryWarning` に `Play` を足した＝slur／phrasing／hairpin の scanner が cursor の count を入れる・tie と印の族は −1）。拒まれたスラーは open／close を書かない（`ProcessArticulations` の `host`・兄弟の `(` `)` は `_lastEmittedHost`）、phrasing も同じ、切られたヘアピンの wedge は block の最後の小節の末尾で stop（`CloseCutWedge`・flush の前）。section の無い本は collect を払わない。
+★ 検証: 網 `SectionCarryTests` 3 本に MusicXML の断言（並べ替えた form＝start 1／stop 1・volta の縁＝slur 0・切られたヘアピン＝measure 1 offset 96）・毒 3 本が各自赤（Lab `sessions/p676/poisons.ps1`）。射程（`sweep-xml.ps1`・1,166 冊・base＝拒否なしの exe）: **動く本 0**（母集団に LYS4023 の本が無い）。
+⚠ 残り: `<< >>`（arpeggio）の中のスラーは host を渡していない（拒否されない）／印で対にする 4 族（text spanner・ottava・pedal・trill）の切りは MusicXML 未対応（頁は切る）。⚠ 道具: `dotnet build` が cmd `< NUL` でも console 入力待ちに 2 回嵌り、`close_console` で新しいコンソールにして直った（console が多くのキャンセルを経て腐る形）。
+★ **終了**: `-End p676 -DiffBase d66be3b8`＝full **10255 / 0 / 2 / 10257**（run2.trx）。§7.5 Core '+' 135 行／REF 0／OWN 0（頁の規則の写し）。push はユーザー（未 push 20）。
+
 ## 以下は第675セッションの経緯
 
 ### 1.1 第675セッション（2026-09-29・YT-DELL2）
