@@ -60,7 +60,12 @@ public readonly record struct TupletBracketLayout(
     bool ShowBracket,           // False = all notes beamed, show number only
     int SourcePosition,         // For click-to-source mapping
     int SourceIndex = -1,       // F3/B: index into score.TupletBrackets (data-pos resolved at render)
-    int StaffIndex = -1         // owning staff (ossia shrink); -1 = unknown/test construction
+    int StaffIndex = -1,        // owning staff (ossia shrink); -1 = unknown/test construction
+    // The staff's line spacing (MultiStaffLayouter.LineSpacingOf) — LilyPond's `ss`, by which
+    // print scales shorten-pair and edge-height: 1.5 on a tab, so its hooks reach 0.3 out
+    // and stand 1.05 tall. LILYPOND-REF: lily/tuplet-bracket.cc:343-347 Tuplet_bracket::print
+    // scale_drul (&shorten, ss); :360-366 scale_drul (&height, -ss * dir).
+    double LineSpacing = 1.0
 )
 {
     /// <summary>
@@ -96,10 +101,10 @@ public readonly record struct TupletBracketLayout(
     /// 16.076..19.910 and 22.285..26.119 — 0.2 outward at each of the four ends.
     /// </para>
     /// </remarks>
-    public double DrawnStartX => StartX - BracketOutwardReach;
+    public double DrawnStartX => StartX - BracketOutwardReach * LineSpacing;
 
     /// <inheritdoc cref="DrawnStartX"/>
-    public double DrawnEndX => EndX + BracketOutwardReach;
+    public double DrawnEndX => EndX + BracketOutwardReach * LineSpacing;
 
     /// <summary>
     /// How far each end reaches PAST its logical bound, in staff spaces.
@@ -313,10 +318,45 @@ internal static class TupletBracketEngraver
             // Each bound reads its OWN item: a tuplet whose ends are a half note and a
             // quarter has two different offsets; one whose end is a rest has that rest's
             // own ink edge (BoundEdgeOffset carries the citations).
+            // A TAB staff's bounds are its own (user report 2026-09-29, bohemian-rhapsody.lys
+            // score "tab2" bar 25): a tab stem stands at the fret digit's CENTRE — a
+            // TabHeadCenterOffset right of the column, where a notation head's LEFT edge
+            // stands — and points the way its STRING says (TabStaffGeometry.TabStemUp), not
+            // the notated pitch. Read with the notation offsets, the hook stood 0.5–0.7 off
+            // the digit at either end, and the bracket could take the wrong side.
+            // MEASURED (2.26.0, Lab sessions/p690/probes/tabtuplet*.ly, \tabFullNotation): the
+            // stem rect is centred on the digit (26.2243, the whiteout box's centre), the
+            // bracket's X-positions start at the stem's edge (26.1593 = centre − 0.065), and
+            // the hook is drawn 0.3 further out — print scales shorten-pair by the TabStaff's
+            // staff-space 1.5 (TupletBracketLayout.LineSpacing), as it scales edge-height.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:72-85 get_x_bound_item — the stem when the
+            //   column's direction is the bracket's and the stem has a stencil
+            //   (\tabFullNotation); :180-189 the bound's own extent edge; :343-347 and
+            //   :360-366 print — shorten-pair and edge-height scaled by ss.
+            // LILYPOND-REF: lily/tab-note-heads-engraver.cc:99-122 Tab_note_heads_engraver::process_music
+            //   — a TabNoteHead's staff position is its string's, which is what its stem's
+            //   direction reads.
+            Staff? tabStaff = staffByIndex != null
+                && staffByIndex.TryGetValue(tuplet.StaffIndex, out var ts)
+                && ts.IsTab && ts.Tuning.HasValue
+                ? ts : null;
+            TabStaffGeometry tabGeom = default;
+            if (tabStaff != null)
+            {
+                tabGeom = new TabStaffGeometry(fonts, tabStaff.Tuning!.Value, staffOffset,
+                    tabStaff.TabSourceClef, tabStaff.Transposition);
+                if (!staffMultiVoice)
+                    isStemUp = TabDirection(tuplet, tupMeasures, tabGeom);
+            }
+
             var startItem = TupletItemAt(tuplet, tupMeasures, tuplet.StartNoteIndex);
             var endItem = TupletItemAt(tuplet, tupMeasures, tuplet.EndNoteIndex);
-            double startX = measureLayout.X + startOffset + BoundEdgeOffset(startItem, isStemUp, left: true);
-            double endX = measureLayout.X + endOffset + BoundEdgeOffset(endItem, isStemUp, left: false);
+            double startX = measureLayout.X + startOffset + (tabStaff != null
+                ? TabBoundEdgeOffset(startItem, isStemUp, left: true, tabStaff, tabGeom, fonts)
+                : BoundEdgeOffset(startItem, isStemUp, left: true));
+            double endX = measureLayout.X + endOffset + (tabStaff != null
+                ? TabBoundEdgeOffset(endItem, isStemUp, left: false, tabStaff, tabGeom, fonts)
+                : BoundEdgeOffset(endItem, isStemUp, left: false));
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:100-115 bracket_basic_visibility —
             //   the bracket is hidden ONLY when the tuplet's own beam is equally long.
@@ -472,7 +512,8 @@ internal static class TupletBracketEngraver
                 showBracket,
                 tuplet.SourcePosition,
                 ti,
-                StaffIndex: tuplet.StaffIndex
+                StaffIndex: tuplet.StaffIndex,
+                LineSpacing: tabStaff != null ? MultiStaffLayouter.LineSpacingOf(tabStaff) : 1.0
             ));
         }
 
@@ -1570,6 +1611,68 @@ internal static class TupletBracketEngraver
                 return LayoutUtilities.StemAttachX(bracketUp, 4, NoteheadStyle.Default)
                     + (left ? -halfStem : halfStem);
         }
+    }
+
+    /// <summary>
+    /// <see cref="BoundEdgeOffset"/> on a TAB staff: the tab stem stands at the digit's
+    /// centre (<see cref="EngravingDefaults.TabHeadCenterOffset"/> from the column) and
+    /// points its string's way, so the bound is that stem's edge when it points the
+    /// bracket's way; otherwise the column's ink — the fret digit's advance united with its
+    /// stem — or a rest's glyph box, which the tab draws at the same axis.
+    /// </summary>
+    /// <remarks>See the call site's citations (get_x_bound_item, calc_x_positions). A chord
+    /// reads its first note's fret for the width, as its bend does (ArticulationEngraver).</remarks>
+    private static double TabBoundEdgeOffset(MusicItem? item, bool bracketUp, bool left,
+        Staff tab, TabStaffGeometry geom, Rendering.ScoreTextMetrics fonts)
+    {
+        double halfStem = EngravingDefaults.StemThickness / 2;
+        double centre = EngravingDefaults.TabHeadCenterOffset;
+        switch (item)
+        {
+            case RestItem { IsSpacer: false } rest:
+            {
+                var box = GlyphMetrics.GetRestBBox(GlyphMetrics.NoteValueOf(rest.BaseDuration));
+                return centre + (left ? box.Left : box.Right);
+            }
+            case NoteItem or ChordItem:
+            {
+                int value = GlyphMetrics.NoteValueOf(item);
+                bool hasStem = value >= 2;
+                if (hasStem && geom.TabStemUp(item) == bracketUp)
+                    return centre + (left ? -halfStem : halfStem);
+                var (_, fret) = ArticulationEngraver.TabFretOf(tab, Tablature.Tunings.GetTuning(tab.Tuning!.Value), item);
+                double half = Math.Max(ArticulationEngraver.TabFretHalfWidth(fonts, fret), hasStem ? halfStem : 0.0);
+                return centre + (left ? -half : half);
+            }
+            default:
+                return centre + (left ? -halfStem : halfStem);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="CalculateDirection"/> on a TAB staff: the columns' stems point their
+    /// STRINGS' way (<see cref="TabStaffGeometry.TabStemUp"/>), so the count reads those; a
+    /// tie with no stem at all goes UP, and a tie between stems to the side the farther
+    /// extreme decides, read over the strings by the same rule the tab beam takes
+    /// (<see cref="TabStaffGeometry.GroupStemUp"/>).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/tuplet-bracket.cc:779-817 get_default_dir — the stems'
+    /// directions, then the extremal positions; on a TabVoice both are the strings'
+    /// (lily/tab-note-heads-engraver.cc:99-122).</remarks>
+    private static bool TabDirection(TupletBracketItem tuplet, ImmutableArray<Measure> measures,
+        TabStaffGeometry geom)
+    {
+        int up = 0, down = 0;
+        foreach (var item in TupletNoteItems(tuplet, measures))
+        {
+            if (geom.TabStemUp(item)) up++;
+            else down++;
+        }
+        if (up != down)
+            return up > down;
+        if (up == 0)
+            return true;
+        return geom.GroupStemUp(TupletNoteItems(tuplet, measures));
     }
 
     private static MusicItem? TupletItemAt(

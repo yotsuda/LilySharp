@@ -51,7 +51,7 @@
 - **:1422** NOT ported; this takes the note's own stem direction. No book and
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
 - **:359** Lily# has not ported; this arrow is its own device.
-- **:809** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
+- **:811** ⚠️ NOT PORTED — THE CORNERS: LilyPond's boxes are round_filled_box(b, blot)
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:301** ⚠️ subdivide_beams (:186-188) is not ported: it is gated on
 ### `LilySharp.Core/Svg/Collector/PartCombiner.cs`
@@ -127,8 +127,8 @@
 - **:236** bound-details) and that branch is NOT PORTED HERE. No ledger point reads a
 - **:249** ⚠️ THE RIGHT BOUND'S ARITHMETIC IS NOT PORTED HERE, and the left repair is
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:753** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
-- **:1414** inner tuplets' boxes, :646-680 — not ported; no pinned point).
+- **:794** ⚠️ Disclosed, not ported: LilyPond also requires the last column's stem to share a
+- **:1455** inner tuplets' boxes, :646-680 — not ported; no pinned point).
 ### `LilySharp.Core/Svg/Model/BeamGroup.cs`
 - **:233** ⚠️ One more LilyPond clamp is NOT ported: lily/beam.cc:1260-1262 (Beam::set_beaming)
 
@@ -223,10 +223,10 @@
 ### `LilySharp.Core/Svg/Layout/TrillSpannerEngraver.cs`
 - **:503** named at the constant), because no point measures a barline-bound trill.
 ### `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs`
-- **:326** string slots, not pitches, and no ledger point measures the tab
-- **:368** invisible bracket. No ledger point measures the tab
-- **:858** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
-- **:1201** positions are string slots; no ledger point measures that regime).
+- **:366** string slots, not pitches, and no ledger point measures the tab
+- **:408** invisible bracket. No ledger point measures the tab
+- **:899** and no ledger point measures the tab bracket regime (LILYSHARP-OWN gate, the
+- **:1242** positions are string slots; no ledger point measures that regime).
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 

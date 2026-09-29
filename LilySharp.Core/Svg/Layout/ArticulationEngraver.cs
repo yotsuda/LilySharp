@@ -1972,7 +1972,7 @@ internal static class ArticulationEngraver
     /// </remarks>
     /// <summary>The string and fret a tab staff draws <paramref name="item"/> on — the same
     /// call the renderer makes, with the same sounding shift (a chord's first note).</summary>
-    private static (int StringNumber, int Fret) TabFretOf(Staff tab, int[] tuning, MusicItem item)
+    internal static (int StringNumber, int Fret) TabFretOf(Staff tab, int[] tuning, MusicItem item)
     {
         int midi = item switch
         {
@@ -1987,7 +1987,7 @@ internal static class ArticulationEngraver
 
     /// <summary>Half the advance of a fret digit at the score's fret em — half the box the tab
     /// reservation gives it (SkylineBuilder.AddTabStaffToSkylines).</summary>
-    private static double TabFretHalfWidth(ScoreTextMetrics fonts, int fret)
+    internal static double TabFretHalfWidth(ScoreTextMetrics fonts, int fret)
         => TabConstants.FretGlyphWidth(fonts,
             fret.ToString(System.Globalization.CultureInfo.InvariantCulture),
             TabConstants.FretEm(fonts)) / 2;

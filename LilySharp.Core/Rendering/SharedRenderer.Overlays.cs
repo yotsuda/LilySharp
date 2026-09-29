@@ -627,7 +627,9 @@ internal static partial class SharedRenderer
         foreach (var b in layout.TupletBracketLayouts)
         {
             if (!sysTopYUp.TryGetValue(b.MeasureIndex, out var syUp)) continue; // other page
-            double edgeHeight = os.Size(TupletBracketEngraver.GetEdgeHeight(), b.StaffIndex);
+            // The hook's height is edge-height × the staff's ss (1.05 on a tab), as the
+            // reach past the bound is (TupletBracketLayout.LineSpacing).
+            double edgeHeight = os.Size(TupletBracketEngraver.GetEdgeHeight() * b.LineSpacing, b.StaffIndex);
             // Page Y-up: lift the system top, add the stored offsets, then ossia.
             double startY = os.YUp(syUp + b.StartYUp, b.StaffIndex, b.MeasureIndex);
             double endY = os.YUp(syUp + b.EndYUp, b.StaffIndex, b.MeasureIndex);

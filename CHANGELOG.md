@@ -278,6 +278,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A tuplet bracket on a tab staff starts and ends at its stems.** The bracket's bounds were
+  read with the notation staff's notehead geometry, so on a tab — where the stem stands at the
+  fret digit's centre — each hook stood half a digit or more off the notes it bounds
+  (bohemian-rhapsody.lys, score "tab2", bar 25). The bounds are now the tab stems' edges (or a
+  digit's ink where the stem points away), the hooks reach 0.2 × the tab's line spacing past
+  them and stand 0.7 × it tall, as LilyPond scales them by the TabStaff's `staff-space`, and
+  the bracket takes the side the strings' stems point to.
 - **A whole-bar `R1` on a tab staff is one whole rest, hanging from the upper central
   string.** The tab drew the bar's own rest under the whole-bar symbol as well, and the symbol
   itself stood half a string high — its middle and staff positions were read in notation
