@@ -203,11 +203,17 @@ internal static class VoltaBracketEngraver
     /// The first segment shows the volta text and has no right hook.
     /// Continuation segments have no left hook and no text.
     /// The last segment has a right hook if the bracket is closed.
+    /// <para>
+    /// <paramref name="systemEnd"/> answers where a system's staff span ends — past the final
+    /// bar line when a courtesy key or meter follows it (<c>SharedRenderer.StaffRightEdges</c>).
+    /// A piece the break cuts ends there. Null ends it at its last bar line instead.
+    /// </para>
     /// </remarks>
     public static ImmutableArray<VoltaBracketLayout> Calculate(
         ImmutableArray<VoltaBracketItem> voltaBrackets,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Func<SystemLayout, double>? systemEnd = null)
     {
         if (voltaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<VoltaBracketLayout>.Empty;
@@ -263,11 +269,28 @@ internal static class VoltaBracketEngraver
                         systems[segSys], LayoutUtilities.TopScoreGrobStaff(systems[segSys]))
                     : 0.0;
 
+                // A piece the line break cuts runs to the SYSTEM's end, over the end-of-line
+                // courtesy key and meter, not to the last bar line: its right bound is the
+                // system's last column, and LilyPond's round cap ends the line's ink exactly
+                // there — so its CENTRE, which is what is stored, stops half a thickness short.
+                // MEASURED, 2.26.0 (Lab sessions/p692/abcvolta, the twin of ABC.lys bar 36): the
+                // "1." piece before a courtesy 4/4 ends its line's centre at 102.35 where the
+                // staff span ends at 102.43; Lily# stopped it 0.3 short of the bar line, 3.17
+                // short of the line's end.
+                // LILYPOND-REF: lily/spanner.cc:124-137 Spanner::do_break_processing — the broken
+                //   piece's bounds are the system-edge columns;
+                // LILYPOND-REF: lily/volta-bracket.cc:93 Volta_bracket_interface::print — the
+                //   line runs the piece's spanner_length.
+                double endX = !segment.IsLast && systemEnd is not null
+                    && segment.SystemIndex >= 0 && segment.SystemIndex < systems.Length
+                    ? systemEnd(systems[segment.SystemIndex]) - LineThickness / 2.0
+                    : segEndMeasure.X + segEndMeasure.Width - EndPadding;
+
                 layouts.Add(new VoltaBracketLayout(
                     segment.StartMeasureIndex,
                     segment.EndMeasureIndex,
                     segStartMeasure.X + StartPadding,
-                    segEndMeasure.X + segEndMeasure.Width - EndPadding,
+                    endX,
                     // Y-up from the system top (the renderer resolves the segment's system top).
                     YOffsetYUp + staffBelowTop,
                     segText,

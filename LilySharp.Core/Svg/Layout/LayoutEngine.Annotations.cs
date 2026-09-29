@@ -964,7 +964,15 @@ internal sealed partial class LayoutEngine
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
-        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml);
+        // A piece a line break cuts runs to the system's last column — the span every staff's
+        // lines reach (the widest staff's courtesy suffix), read from the one home the draw uses.
+        var multiScore = ctx.MultiScore;
+        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml,
+            multiScore is null ? null : s =>
+            {
+                var (_, notationRight, tabRight) = Rendering.SharedRenderer.StaffRightEdges(multiScore, s);
+                return Math.Max(notationRight, tabRight);
+            });
 
         // LILYPOND-REF: lily/axis-group-interface.cc:860-985 Axis_group_interface::skyline_spacing
         // Post-process below-staff elements using priority-based stacking.

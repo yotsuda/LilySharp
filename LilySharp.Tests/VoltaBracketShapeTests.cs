@@ -190,6 +190,40 @@ public sealed class VoltaBracketShapeTests
             pieces.Select(v => (v.StartMeasureIndex, v.EndMeasureIndex, v.IsClosed)));
     }
 
+    /// <summary>A piece a line break cuts runs to the SYSTEM's end — past the last bar line and
+    /// over an end-of-line courtesy meter — not to the bar line. MEASURED, LilyPond 2.26.0 (Lab
+    /// sessions/p692/abcvolta, the twins of both sources below): the "1." piece's line centre
+    /// ends at 102.35 in both, half its 0.16 thickness inside the 102.43 the staff spans to.
+    /// Until session 692 Lily# ended it 0.3 before the bar line — 3.17 short where ABC.lys bar
+    /// 36's 2/4 ending is followed by a courtesy 4/4.</summary>
+    [Theory]
+    [InlineData("c'2 c'2 | break c'1 | c'1", false)]
+    [InlineData("time 2/4 c'2 | break time 4/4 c'1 | c'1", true)]
+    public void APieceTheBreakCuts_RunsToTheSystemsEnd(string ending, bool courtesyMeter)
+    {
+        string src = $$"""
+            time 4/4
+            part bass { clef bass }
+            section A { bass { c'1 | c'1 | } }
+            section E1 { bass { {{ending}} | } }
+            section E2 { bass { e'1 | } }
+            form main { |: A [1. ~E1] :| [2. ~E2] }
+            score main { staff bass }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var score = new MeasureCollector().CollectMultiStaff(tree, RenderSpecParser.FindFirst(tree)!);
+        var layout = new LayoutEngine().Layout(score);
+        var first = Assert.Single(layout.VoltaBracketLayouts, v => v.VoltaText == "1.");
+        var system = layout.Systems[0];
+        Assert.Equal(first.EndMeasureIndex, system.Measures[^1].MeasureIndex);
+
+        var (barRight, notationRight, _) = LilySharp.Core.Rendering.SharedRenderer.StaffRightEdges(score, system);
+        Assert.Equal(courtesyMeter, notationRight > barRight + 1.0);
+        Assert.Equal(notationRight - VoltaBracketEngraver.LineThickness / 2.0, first.EndX, 9);
+        Assert.Equal(102.35, first.EndX, 0.01);
+    }
+
     /// <summary>A cut bracket still pairs with the next ending of its repeat: the collector
     /// pairs a repeat's endings by where the ENDING ends, not where its ink does
     /// (<c>VoltaBracketItem.EndingLastMeasureIndex</c>). A tie from the body into the second
