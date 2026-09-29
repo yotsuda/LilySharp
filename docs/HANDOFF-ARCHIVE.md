@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第675セッションの経緯
+
+### 1.1 第675セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p675`（HEAD `1110dc23`・未 push 16・full **10255 / 0 / 2 / 10257**）。
+★★ **⑽ 自動 hanging tie が MusicXML に出ない＝閉じた**（`ccec3e1e`）: `FinishCarriedTies` は持ち越したタイの stop を後続の play の先頭に書き、stop の無い start を撤回するだけで、頁が「弧が出ない」とき（`|:` へ戻る本体末のタイ・後の ending だけへ）に描く hanging tie（laissez-vibrer の glyph・`SectionTieCarry`）を書かなかった。頁と同じ判定（printed-next が played-next か＝`PrintedNextIsPlayedNext` の写し）で、弧が無い start に `<tied type="let-ring"/>`（`@laissezVibrer` と同じ綴り・`LetRing` に一本化）。弧の場合は不変。
+★ 検証: 網 `SectionCarryTests` の 3 本に let-ring の有無（hang 1・arc 0・endings 0＝start 2/stop 3）を足した・毒 2 本（let-ring 無し→hang が赤／常に hang→arc 2 本が赤・Lab `sessions/p675/poisons.ps1`）。射程（`sessions/p675/sweep-xml.ps1`・1,166 冊・base＝毒 P1 の exe）: MusicXML が動く本 1（Lab の `Neutron Dance.lys`）。読み手（import）は `tied let-ring` を読まない（従来どおり）。
+★ **終了**: `-End p675 -DiffBase 1110dc23`＝full **10255 / 0 / 2 / 10257**（run2.trx）。§7.5 Core '+' 36 行／REF 0／OWN 0（頁の LILYSHARP-OWN の写し＝MusicXML の綴りは 4.0 の tied-type）。push はユーザー（未 push 18）。
+
 ## 以下は第674セッションの経緯
 
 ### 1.1 第674セッション（2026-09-29・YT-DELL2）
