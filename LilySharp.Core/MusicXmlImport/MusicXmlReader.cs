@@ -145,9 +145,24 @@ internal static class MusicXmlReader
             // <harmony>/<figured-bass> precede their note in the stream; hold them
             // until the note arrives so they attach to it in the writer.
             var pendingAnnotations = new List<ImportItem>();
-            // <direction> dynamics and <grace> notes also precede the note they mark.
-            var pendingDynamics = new List<string>();
+            // <direction> dynamics and <grace> notes also precede the note they mark. A
+            // dynamic waits for the first note AT OR PAST its position (2026-09-29): a
+            // direction may carry an <offset> from where it stands in the stream — the
+            // exporter writes every direction at the bar's head with one — and until now a
+            // dynamic on beat 4 came in on beat 1.
+            var pendingDynamics = new List<(string Dynamic, int At)>();
             var pendingGrace = new List<ImportGraceNote>();
+            int position = 0;           // divisions from the bar's head, along the stream
+            ImportNote? lastNote = null;
+
+            void AttachDue(ImportNote note)
+            {
+                int k = 0;
+                for (int i = 0; i < pendingDynamics.Count; i++)
+                    if (pendingDynamics[i].At <= position)
+                        note.Articulations.Insert(k++, pendingDynamics[i].Dynamic);
+                pendingDynamics.RemoveAll(p => p.At <= position);
+            }
 
             foreach (var el in measEl.Elements())
             {
@@ -159,14 +174,18 @@ internal static class MusicXmlReader
                         break;
 
                     case "direction":
+                    {
                         if (ReadDirectionTempo(el) is int bpm)
                         {
                             doc.Tempo ??= bpm;
                             if (measureNo > 1 || measure.HasAnyItems)
                                 measure.Tempo = bpm;
                         }
-                        pendingDynamics.AddRange(ReadDirectionDynamics(el));
+                        int at = position + (int.TryParse(Local(el, "offset")?.Value, out int off) ? off : 0);
+                        foreach (var dyn in ReadDirectionDynamics(el))
+                            pendingDynamics.Add((dyn, at));
                         break;
+                    }
 
                     case "harmony":
                         if (ReadHarmony(el) is { } h)
@@ -180,7 +199,8 @@ internal static class MusicXmlReader
 
                     case "backup":
                         // A rewind to overlay another voice; voices are bucketed by
-                        // <voice>, so the cursor move is implicit — nothing to do.
+                        // <voice>, so the cursor move is implicit — only the position moves.
+                        position -= int.TryParse(Local(el, "duration")?.Value, out int back) ? back : 0;
                         break;
 
                     case "forward":
@@ -191,6 +211,7 @@ internal static class MusicXmlReader
                         int fdur = int.TryParse(Local(el, "duration")?.Value, out int fd) ? fd : 0;
                         foreach (var (value, dots) in DecomposeDuration(fdur, divisions))
                             measure.Voice(fvoice).Add(new ImportNote { IsRest = true, NoteValue = value, Dots = dots });
+                        position += fdur;
                         break;
                     }
 
@@ -220,10 +241,11 @@ internal static class MusicXmlReader
                         {
                             target.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
-                            note.Articulations.InsertRange(0, pendingDynamics);
-                            pendingDynamics.Clear();
+                            AttachDue(note);
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
+                            position += int.TryParse(Local(el, "duration")?.Value, out int ndur) ? ndur : 0;
+                            lastNote = note;
                         }
                         target.Add(note);
                         break;
@@ -237,6 +259,12 @@ internal static class MusicXmlReader
             // Any annotation with no following note still gets recorded (the writer
             // drops a dangling @chord/@fig with a warning rather than mis-attaching).
             measure.Voice(lastVoice).AddRange(pendingAnnotations);
+            // A dynamic past the bar's last onset (on its last note, at that note's end)
+            // belongs to that note: it used to be dropped.
+            if (lastNote != null)
+                foreach (var (dyn, _) in pendingDynamics)
+                    lastNote.Articulations.Add(dyn);
+            pendingDynamics.Clear();
 
             part.Measures.Add(measure);
         }

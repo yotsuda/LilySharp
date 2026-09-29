@@ -136,7 +136,6 @@ public sealed class MusicXmlExporter
     // not as a flag, because the pair is decided at the NEXT onset: a start is written
     // before its continuation is known, so an unmatched one has to be taken back.
     private readonly List<MusicXmlNote> _tieOpen = new();
-    private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
     private readonly Dictionary<string, MusicXmlPart> _partsByName = new();
@@ -1188,7 +1187,6 @@ public sealed class MusicXmlExporter
             _tieToNextNote = true;
         }
         _defaultDuration = Fraction.Quarter;
-        _pendingDynamic = null;
 
         // If this is the first measure for this part, add attributes
         bool isFirst = _currentPart!.Measures.Count == 0;
@@ -2013,7 +2011,7 @@ public sealed class MusicXmlExporter
         // A mid-piece tempo change emits a metronome direction at this point; the
         // initial tempo is carried by the first measure's attributes direction.
         if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
-            _currentMeasure.Directions.Add(TempoDirection());
+            AddDirection(TempoDirection());
     }
 
     // The beat unit the running _tempo counts in (session 398): `tempo 2 = 60` is sixty
@@ -3847,7 +3845,7 @@ public sealed class MusicXmlExporter
     {
         if (text is "cresc" or "decresc" or "dim")
         {
-            _currentMeasure?.Directions.Add(new MusicXmlDirection
+            AddDirection(new MusicXmlDirection
             {
                 WedgeType = text == "cresc" ? "crescendo" : "diminuendo",
                 Placement = "below",
@@ -3857,14 +3855,48 @@ public sealed class MusicXmlExporter
         }
         if (_wedgeOpen)
         {
-            _currentMeasure?.Directions.Add(new MusicXmlDirection
+            AddDirection(new MusicXmlDirection
             {
                 WedgeType = "stop",
                 Placement = "below",
             });
             _wedgeOpen = false;
         }
-        _pendingDynamic = text;
+        // Written where it stands — its note's onset (a note's marks are read before the note
+        // is added) — rather than held for the next note: a dynamic on a bar's last note used
+        // to be written at the next bar's head, and one on a part's last note never (2026-09-29).
+        AddDirection(new MusicXmlDirection { DynamicType = text, Placement = "below" });
+    }
+
+    /// <summary>
+    /// Adds a direction to the current measure at the position the stream has reached — the
+    /// onset of the note about to be written, since a note's marks are read before it is
+    /// added (<see cref="ProcessArticulations"/> precedes every <c>Notes.Add</c>). The measure
+    /// writes its directions at its head with this as their <c>&lt;offset&gt;</c>
+    /// (<see cref="MusicXmlDirection.Offset"/>): until 2026-09-29 every direction of a bar
+    /// stood at its first beat (HANDOFF §1.1 第662 ⑹).
+    /// </summary>
+    private void AddDirection(MusicXmlDirection direction)
+    {
+        if (_currentMeasure == null)
+            return;
+        direction.Offset = CurrentMeasurePosition(_currentMeasure);
+        _currentMeasure.Directions.Add(direction);
+    }
+
+    /// <summary>The position the measure's note stream has reached, in divisions from the
+    /// bar's head: the durations of its notes and rests, chord members and grace notes not
+    /// counted, a backup subtracted.</summary>
+    private static int CurrentMeasurePosition(MusicXmlMeasure measure)
+    {
+        int position = 0;
+        foreach (var n in measure.Notes)
+        {
+            if (n.RawElement != null || n.IsGrace || n.IsChord)
+                continue;
+            position += n.IsBackup ? -n.Duration : n.Duration;
+        }
+        return position;
     }
 
     /// <summary>Direction-family compound marks attached to a note:
@@ -3961,15 +3993,18 @@ public sealed class MusicXmlExporter
                 switch (Svg.Model.MusicMarkItem.ParseSpanEndName(mark.Name))
                 {
                     case Svg.Model.MusicMarkType.OttavaStop:
-                        _currentMeasure.Directions.Add(
-                            new MusicXmlDirection { OctaveShiftType = "stop" });
+                        AddDirection(new MusicXmlDirection { OctaveShiftType = "stop", OctaveShiftSize = _octaveShiftSize });
                         break;
-                    // MusicXML has ONE pedal stop for all three pedals.
+                    // MusicXML has ONE pedal stop for the sustain and the sostenuto.
                     case Svg.Model.MusicMarkType.SustainOff:
                     case Svg.Model.MusicMarkType.SostenutoOff:
+                        AddDirection(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                        break;
+                    // The una corda is no MusicXML pedal: its release is the words a score
+                    // prints, as its start is (ProcessDirectionName; 2026-09-29 — it used to
+                    // be a <pedal type="stop"> with no start before it).
                     case Svg.Model.MusicMarkType.UnaCordaOff:
-                        _currentMeasure.Directions.Add(
-                            new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                        AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
                         break;
                     // The text spanner has no stop spelling here — the silence '@rit' meets.
                 }
@@ -3986,26 +4021,46 @@ public sealed class MusicXmlExporter
         switch (name)
         {
             case "sustain":
-                _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "start", Placement = "below" });
-                break;
-            // '@treCorde' is the una corda's release written as a word rather than as '@!';
-            // it is the same mark, so it is the same <pedal type="stop">.
-            case "treCorde":
-                _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                AddDirection(new MusicXmlDirection { PedalType = "start", Placement = "below" });
                 break;
             case "sostenuto":
-                _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below" });
+                AddDirection(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below" });
+                break;
+            // The una corda (2026-09-29, HANDOFF §1.1 第662 ⑴ — it wrote nothing): MusicXML
+            // has no pedal type for it, so it is the words a score prints, and '@treCorde' —
+            // its release written as a word rather than as '@!' — the same words as '@!unaCorda'.
+            case "unaCorda":
+                AddDirection(new MusicXmlDirection { Words = "una corda", Placement = "below" });
+                break;
+            case "treCorde":
+                AddDirection(new MusicXmlDirection { Words = "tre corde", Placement = "below" });
                 break;
             case "ottava":
                 // 8va above: MusicXML octave-shift "down" (written an octave
                 // below the sounding pitch).
-                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "down" });
+                _octaveShiftSize = 8;
+                AddDirection(new MusicXmlDirection { OctaveShiftType = "down" });
                 break;
             case "ottava.bassa":
-                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "up", Placement = "below" });
+                _octaveShiftSize = 8;
+                AddDirection(new MusicXmlDirection { OctaveShiftType = "up", Placement = "below" });
+                break;
+            // The quindicesima (2026-09-29, 第662 ⑴): the same line two octaves wide — size 15,
+            // on its stop too.
+            case "quindicesima":
+                _octaveShiftSize = 15;
+                AddDirection(new MusicXmlDirection { OctaveShiftType = "down", OctaveShiftSize = 15 });
+                break;
+            case "quindicesima.bassa":
+                _octaveShiftSize = 15;
+                AddDirection(new MusicXmlDirection { OctaveShiftType = "up", OctaveShiftSize = 15, Placement = "below" });
                 break;
         }
     }
+
+    /// <summary>The size of the octave line running (8, or 15 for a quindicesima): what its
+    /// <c>@!ottava</c> stop is written with.</summary>
+    private int _octaveShiftSize = 8;
 
     /// <summary>A &lt;figured-bass&gt; from a parsed continuo figure group. Each
     /// figure emits a &lt;figure-number&gt; with the accidental as a &lt;suffix&gt;
@@ -4440,17 +4495,12 @@ public sealed class MusicXmlExporter
         }
     }
 
-    private void EmitPendingDynamic()
+    /// <summary>Nothing to emit since 2026-09-29: <see cref="HandleDynamicText"/> writes a
+    /// dynamic where it stands (<see cref="AddDirection"/>). Kept as the one line every
+    /// note-writing site calls before its note, so the order "direction, then note" stays
+    /// stated where the note is written.</summary>
+    private static void EmitPendingDynamic()
     {
-        if (_pendingDynamic != null && _currentMeasure != null)
-        {
-            _currentMeasure.Directions.Add(new MusicXmlDirection
-            {
-                DynamicType = _pendingDynamic,
-                Placement = "below"
-            });
-            _pendingDynamic = null;
-        }
     }
 
     private static string? MapArticulation(ArticulationType type)

@@ -225,8 +225,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                             mark.Span,
                             DiagnosticCodes.UnknownAnnotation,
                             $"'@!{name}' is ignored: nothing of that name can be ended. "
-                            + "Today only a text spanner has a terminator — '@!rit', "
-                            + "'@!accel', '@!rall', '@!textSpan'.");
+                            + "The spans with a terminator: a text spanner ('@!rit', '@!accel', "
+                            + "'@!rall', '@!textSpan'), an ottava ('@!ottava', '@!quindicesima'), "
+                            + "a pedal ('@!sustain', '@!sostenuto', '@!unaCorda') and a phrasing "
+                            + "slur ('@!phrasingSlur').");
                 }
                 else if (!IsKnownCompoundName(mark))
                 {

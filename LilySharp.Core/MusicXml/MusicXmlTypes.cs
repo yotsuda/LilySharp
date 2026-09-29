@@ -382,6 +382,19 @@ internal sealed class MusicXmlDirection
     public string? PedalType { get; set; }
     /// <summary>Ottava line: "down" (8va) / "up" (8vb) / "stop".</summary>
     public string? OctaveShiftType { get; set; }
+    /// <summary>The octave line's size: 8 for an ottava, 15 for a quindicesima (2026-09-29;
+    /// every line was written as 8 before, a <c>@quindicesima</c> included).</summary>
+    public int OctaveShiftSize { get; set; } = 8;
+    /// <summary>Free words (<c>una corda</c>, <c>tre corde</c>): MusicXML has no pedal type
+    /// for the una corda, so it is the words a score prints.</summary>
+    public string? Words { get; set; }
+    /// <summary>
+    /// Where the direction stands in its bar, in divisions from the bar's head (2026-09-29).
+    /// The measure writes every direction at its head (<see cref="MusicXmlMeasure.ToXml"/>),
+    /// so this is what places a wedge, a dynamic, a pedal or an octave line at ITS note:
+    /// until now <c>c4 d@cresc</c> opened its wedge at the bar's first beat.
+    /// </summary>
+    public int Offset { get; set; }
 
     public XElement ToXml()
     {
@@ -406,11 +419,14 @@ internal sealed class MusicXmlDirection
         if (OctaveShiftType != null)
         {
             var shift = new XElement("octave-shift", new XAttribute("type", OctaveShiftType));
-            if (OctaveShiftType != "stop")
-                shift.Add(new XAttribute("size", 8));
+            shift.Add(new XAttribute("size", OctaveShiftSize));
             direction.Add(new XElement("direction-type", shift));
         }
 
+        if (Words != null)
+            direction.Add(new XElement("direction-type", new XElement("words", Words)));
+
+        XElement? sound = null;
         if (Tempo.HasValue)
         {
             var metronome = new XElement("metronome", new XElement("beat-unit", BeatUnitName(TempoBeatUnit)));
@@ -420,9 +436,15 @@ internal sealed class MusicXmlDirection
             direction.Add(new XElement("direction-type", metronome));
             // <sound tempo> is in QUARTER notes per minute whatever the metronome's unit.
             var value = new Syntax.TempoValue(null, TempoBeatUnit, TempoBeatDots, Tempo.Value, 0);
-            direction.Add(new XElement("sound", new XAttribute("tempo",
-                System.Math.Round(value.QuarterBpm!.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture))));
+            sound = new XElement("sound", new XAttribute("tempo",
+                System.Math.Round(value.QuarterBpm!.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
+
+        // Schema order: direction-type+, offset?, …, sound?.
+        if (Offset > 0)
+            direction.Add(new XElement("offset", Offset));
+        if (sound != null)
+            direction.Add(sound);
 
         return direction;
     }

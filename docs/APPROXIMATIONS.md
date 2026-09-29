@@ -261,8 +261,8 @@
 ### `LilySharp.Core/Music/ShapeChords.cs`
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
-- **:458** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4173** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:457** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
+- **:4228** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:717** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
@@ -294,7 +294,7 @@
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system
 - **:705** LILYSHARP-OWN: a face with no readable extents (none of the bundled ones), so
 ### `LilySharp.Core/Semantics/AnnotationNameValidator.cs`
-- **:656** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
+- **:658** LILYSHARP-OWN: a message, so there is nothing in LilyPond to port. The guard is
 ### `LilySharp.Core/Semantics/CapoAdvisor.cs`
 - **:40** the barres and before the fret itself in the ranking. LILYSHARP-OWN: LilyPond has nothing
 ### `LilySharp.Core/Semantics/ChordAnnotation.cs`

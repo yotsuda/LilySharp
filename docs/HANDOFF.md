@@ -81,7 +81,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
 - ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: 行の指番号と下の行の名前の上付きが 0.5 重なる（帯が上付きを数えない・第668）／part が何も書かない便の行は MusicXML に出ない（第668）／行末の図の「5fr」が右へはみ出す／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
-- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂）＝安いものから
+- ⚠️ **MusicXML／頁の既存欠陥 ⑴〜⒂**（§1.1 第662 ⑴〜⑻・第663 ⑼〜⒂＝ARCHIVE）＝安いものから。**⑴⑵⑹ は第671 で閉じた**。残り: ⑶ 1 section の本の 1 小節目の `@mark`／⑷⑸ `R1*N`（MusicXML と頁）／⑺ 双子の書かない section／⑻ スラッシュ記譜の tie／⑼〜⒂
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**（36 件）
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -118,21 +118,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第671セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p671`（HEAD `27518b55`・未 push 8・full **10247 / 0 / 2 / 10249**）。
+★★ **MusicXML の既存欠陥 ⑴⑵⑹（第662 起票）を閉じた**: ⑹ **direction の位置**＝小節は direction を頭にまとめて書くので `c4 d@cresc` の wedge が 1 拍目に出ていた → `MusicXmlDirection.Offset`（divisions）を付けて `<offset>` で書く（`AddDirection` が `CurrentMeasurePosition` を刻む＝音符の印は音符を足す前に読むので音符の onset）。強弱は保留せず**その場で書く**（`_pendingDynamic` 撤去＝小節末の音符の強弱が次の小節の頭に出ていた・パート末の強弱は落ちていた）。読み手（`MusicXmlReader`）も `<offset>` を見て「その位置以降の最初の音符」に付ける（backup／forward で位置を動かす・残りは最後の音符へ）。⑴ `@unaCorda`／`@treCorde`＝`<words>una corda / tre corde</words>`（MusicXML に una corda の pedal type は無い・`@!unaCorda` は今まで開始の無い `<pedal type="stop">`）・`@quindicesima(.bassa)`＝`octave-shift size="15"`（stop も 15）。⑵ `@!X` の警告文＝終端を持つ 4 族を全部挙げる。
+★ 検証: 網 `MusicXmlExportShapeTests` +1（offset・words・size 15・末尾の強弱）・`MusicXmlRoundTripTests` +1（f'4@f と c'1@p が往復）。
+★ **終了**: （-End 後に記す）
+
+## 以下は第670セッションの経緯
+
 ### 1.1 第670セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p670`（HEAD `77343645`・未 push 6・full **10242 / 0 / 2 / 10244**）。
 ★★ **大文字小文字だけ違う綴りの quick fix＝完了**（`LilySharpLanguageServer.Editing.CaseSpellingAction`）: 「… case-sensitive: write 'X'」と言う診断（名前 `@upbow`→`@upBow`・値 `@ottava(BASSA)`・引数つきの名前 `@Mark("A")`→`@mark("A")`・コード形の語 `X32010`・layout のキー `ChordDiagrams`・値 `All`）に「Write 'X'」を出す。**文言を読む**だけで validator の span 規則は複写しない＝squiggle の文字列が X と大文字小文字違いで一致するときだけ出す（違えば黙る）。構文診断・意味診断の両方の輪に掛けた。
 ★ 検証: 網 `Lsp/CaseSpellingQuickFixTests` 5（名前・値・引数つき／形の語とキー／typo は出さない）。
 ★ **終了**: `93a1337b`「lsp: a quick fix for a spelling that differs from a real one only in case — "Write '@upBow'"」（site の editor 頁に 1 行）。`-End p670 -DiffBase 77343645` 緑・full **10247 / 0 / 2 / 10249**（run2.trx）。門 6 つ全 OK。§7.5 Core '+' 0 行（Lsp だけ）＝REF/OWN の話は無い。7.7 匂い: 提案は文言の regex 頼み（validator が文言を変えると黙る＝網が捕まえる）。push はユーザー（未 push 7）。
-
-## 以下は第669セッションの経緯
-
-### 1.1 第669セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p669`（HEAD `2d5265d7`・未 push 4・full **10238 / 0 / 2 / 10240**）。
-★★★ **セクション跨ぎの span の第 2 段＝完了**: text spanner／ottava／pedal／trill を第663 の規則（`fed7f176`・ユーザー決定 2026-09-28）に載せた。裁き方は**ヘアピンと同じ**＝`SectionPlays.Judge`（小節単位。`OnUnmatchedStop`／`Refused`／`RefusedClose`／`CutMeasure` を足した）: 次の演奏で閉じれば描いて黙る／D1 閉じない＝警告して**自分の section の終わりで切る**（ottava は表示の移調もそこまで）／D4 反復・volta・jump を跨ぐ＝エラー・切る／D2 何も持ち越されていない `@!`＝LYS4023（今までは LYS4018「閉じるものが無い」・trill は黙殺）。対にする呼び出しは 1 つのまま（`PairTextSpanners`／`PairOttavaBrackets`／`PairPedalBrackets`／`PairTrillSpannerEvents` に `plays`＋`carrySink`）＝collector の `UnpairedSpanWarnings`・`SectionCarryWarnings`・layout・`ScoreSideTables`・`MeasureContentKey`・`SharedRenderer.Curves`・`DetectOttavaSpans` が同じ答えを読む。`SectionSplitter` は `@` の全族を持ち越し可に。文言は `SectionCarryValidator.MessageFor`（閉じの D2/D4 は「nothing is drawn for it」）。GRAMMAR §8.3 の規則文を更新。
-★ 検証: 網 `SectionCarryTests` +4（閉じる／D1 と切り口と移調／D4／D2）・Lab `sessions/p669/carry.lys` の絵（4 族が C→D を跨いで閉じ・D の accel が E で閉じず切れる）。
-★ **終了**: `bc7765fa`「spans: the section carry rule's second stage — …」。`-End p669 -DiffBase 2d5265d7` 緑・full **10242 / 0 / 2 / 10244**（run2.trx）。§7.5 Core '+' 285 行／REF 0／OWN 0＝**全部 Lily# 自身の言語規則の配管**（section は Lily# の概念・規則の出所は第663 のユーザー決定・幾何は 1 つも足していない）。7.6: ⒟ 何も移植していない（既存の `SectionPlays` の家に判定 4 つを足し、各族の対の呼び出しに旗を通した）。7.7 匂い: 印で対にする族は D3 を出せない（小節単位の裁き）／trill は staff・voice を見ずに対にする既存の形のまま／`OttavaDisplayProbe`（梁の向きの探り）は走査済みの voice が無い間は切っていない bracket を読む（描く量は無い）。push はユーザー（未 push 5）。
 
 ## 2. 開いている作業
 

@@ -410,6 +410,49 @@ public class MusicXmlExportShapeTests
         Assert.Equal("B", doc.Descendants("bass-step").Single().Value);
     }
 
+    /// <summary>
+    /// A direction stands at ITS note (HANDOFF §1.1 第662 ⑹, 2026-09-29): the measure writes
+    /// its directions at its head with an &lt;offset&gt; in divisions, so <c>c4 d@cresc</c>
+    /// opens the wedge on beat 2, not beat 1; a dynamic on a bar's last note stays in that bar;
+    /// the una corda is written (as words, MusicXML having no pedal type for it — 第662 ⑴) and
+    /// a quindicesima is an octave line of size 15, on its stop too.
+    /// </summary>
+    [Fact]
+    public void Directions_StandAtTheirNotes_UnaCordaAndQuindicesimaAreWritten()
+    {
+        var doc = Export("""
+            octave absolute
+            part pno { clef treble }
+            section A { pno {
+              c'4 d'@cresc e' f'@f | c'4@unaCorda d' e' f'@treCorde | c'4@quindicesima d' e' f'@!ottava | c'1@p |
+            } }
+            form main { A }
+            score main { staff pno }
+            """);
+        int OffsetOf(XElement directionType)
+            => (int?)directionType.Parent!.Element("offset") ?? 0;
+        var measures = doc.Descendants("measure").ToList();
+        // Bar 1: the wedge on beat 2 (24 divisions a quarter), the f on beat 4 — in bar 1.
+        var wedge = measures[0].Descendants("wedge").Single(w => (string?)w.Attribute("type") == "crescendo");
+        Assert.Equal(24, OffsetOf(wedge.Parent!));
+        var f = measures[0].Descendants("dynamics").Single();
+        Assert.Equal(72, OffsetOf(f.Parent!));
+        Assert.Equal(72, OffsetOf(measures[0].Descendants("wedge").Single(w => (string?)w.Attribute("type") == "stop").Parent!));
+        // Bar 2: una corda at the head, tre corde on beat 4; no pedal element.
+        var words = measures[1].Descendants("words").ToList();
+        Assert.Equal(new[] { "una corda", "tre corde" }, words.Select(w => w.Value));
+        Assert.Equal(new[] { 0, 72 }, words.Select(w => OffsetOf(w.Parent!)));
+        Assert.Empty(measures[1].Descendants("pedal"));
+        // Bar 3: the quindicesima, size 15 on the start and on the stop.
+        var shifts = measures[2].Descendants("octave-shift").ToList();
+        Assert.Equal(new[] { "down", "stop" }, shifts.Select(s => (string?)s.Attribute("type")));
+        Assert.All(shifts, s => Assert.Equal("15", (string?)s.Attribute("size")));
+        // Bar 4: a dynamic on the part's last note is written (it was held for a next note that never came).
+        Assert.Single(measures[3].Descendants("dynamics"));
+        // Every direction precedes the bar's notes in the stream; the offset says where it stands.
+        Assert.True(measures[0].Elements("direction").Any() && measures[0].Elements().TakeWhile(e => e.Name != "note").Any(e => e.Name == "direction"));
+    }
+
     [Fact]
     public void LyricElision_SplitsInsideOneLyric()
     {

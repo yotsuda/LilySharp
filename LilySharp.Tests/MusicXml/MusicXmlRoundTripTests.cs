@@ -635,13 +635,33 @@ public class MusicXmlRoundTripTests
         return n;
     }
 
+    /// <summary>Since 2026-09-29 the exporter writes every direction at the bar's head WITH
+    /// its offset, and the reader waits for the first note at or past that offset: a dynamic on
+    /// beat 4 comes back on beat 4, and one on a part's last note comes back at all.</summary>
+    [Fact]
+    public void Dynamics_RoundTripAtTheirNotes()
+    {
+        const string lys = """
+            octave absolute
+            part melody { clef treble }
+            section A { melody { c'4 d'@cresc e' f'@f | c'1@p | } }
+            form main { A }
+            score main { staff melody }
+            """;
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString();
+        var (imported, _) = new MusicXmlImporter().Import(xml);
+        Assert.False(HasErrors(SyntaxTree.Parse(imported)), imported);
+        Assert.Matches(@"f'*4@f\b", imported);
+        Assert.DoesNotMatch(@"c'*4@f\b", imported);
+        Assert.Matches(@"c'*1@p\b", imported);
+    }
+
     [Fact]
     public void Dynamics_ImportOntoTheFollowingNote()
     {
-        // Real MusicXML interleaves a <direction> right before the note it marks. (The
-        // Lily# exporter instead piles every direction at the measure start, so a
-        // round-trip through it can't preserve per-note dynamics — hence hand-crafted
-        // XML here.) Each dynamic attaches to the next note as @p / @f.
+        // Real MusicXML interleaves a <direction> right before the note it marks (the Lily#
+        // exporter writes them at the measure's head with an <offset> instead — the round
+        // trip above). Each dynamic attaches to the next note as @p / @f.
         var (lys, _) = new MusicXmlImporter().Import("""
             <?xml version="1.0"?>
             <score-partwise version="4.0">
