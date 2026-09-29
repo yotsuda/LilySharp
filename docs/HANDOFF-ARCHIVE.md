@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第683セッションの経緯
+
+### 1.1 第683セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p683`（HEAD `2e39789f`・未 push 32・full **10287 / 0 / 2 / 10289**）。
+★★ **K5 の小穴「行末の図の「5fr」が右へはみ出す」（第663 起票）＝再現せず・観測者を置いて閉じた**: 探り本 3 冊（行の最後の symbol が小節頭／3 拍目の 5fr 形・chords だけの grid sheet・行末の音符の `@chord(A x57765)`）と site の `chord-shapes.lys`（8fr・10fr が行末）のどれも label は行の右端の内側（SVG 実測: 行末との隙間 0.3〜2.1 ss・Lab `sessions/p683/probes/`）。行の footprint（`FootprintWidth`＝図の箱ごと）と `@chord` の rod（`ApplyFretFrameSpacing`＝箱の右 ＋0.4 を小節端まで）が label を値付けしている。起票時の本は残っておらず（p663 に形を書いた探り本無し・ARCHIVE の第663 にも本の名は無い）、第668 の fret-diagrams.scm 逐語移植で label の位置が変わった（「Nfr」は 0.5 倍を中央揃え）のが直った理由と読む。
+★ 検証: 網 `ChordDiagramTests.ADiagramAtTheLineEnd_KeepsItsFretLabelInsideTheLine`（3 冊・全 system・行の図と `@chord` の図の箱の右端 ≤ 行の右端）。毒 2 本（P1 行の footprint を名前だけに＝3 本赤・P2 `@chord` の図の rod を消す＝1 本赤・Lab `sessions/p683/poisons.ps1`・baseline 264/0）。コードは触っていない（Core '+' 0）。
+★ **終了**: commit `d4140b14`（網だけ）。`-End p683 -DiffBase 2e39789f`＝full **10288 / 0 / 2 / 10290**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 11,336 B）。§7.5 Core '+' 0／REF 0／OWN 0。7.6・7.7: 該当なし（コード不変）。perf: 不変。push はユーザー（未 push 34）。
+
 ## 以下は第682セッションの経緯
 
 ### 1.1 第682セッション（2026-09-29・YT-DELL2）
