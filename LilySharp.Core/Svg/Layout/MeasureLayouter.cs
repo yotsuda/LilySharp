@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1084,6 +1084,31 @@ internal sealed class MeasureLayouter
                     mergeWishAverage: true, headOverrides: tabWishes.HeadOverrides)
                 : SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems, spacing.Increment);
 
+            // The column's whole skyline — flag included — against the bar line's box:
+            // the spring minimum now, the rod after the headroom.
+            // LILYPOND-REF: lily/note-spacing.cc:78-83 get_spacing (the minimum);
+            // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods (the rod).
+            double maxSkyDist = 0;
+            for (int q = 0; q < lastItems.Count; q++)
+            {
+                var item = lastItems[q];
+                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(fonts, item);
+                maxSkyDist = Math.Max(maxSkyDist, skyDist);
+                maxRod = Math.Max(maxRod, rod);
+            }
+
+            // The wish REPLACES the duration spring's increment minimum with the skyline
+            // distance, as the inter-column spring does — and BEFORE the stem wishes merge,
+            // whose headroom (min + 0.3) stands on it. LilyPond's note → bar line pair is a
+            // Note_spacing wish like any other (the non-musical right column only moves the
+            // IDEAL, :85-109). Until session 691 this came after the merge and only raised the
+            // minimum, so a narrow left column merged on the increment's 1.2: MEASURED (2.26.0,
+            // Lab sessions/p691/cuespace b35) a beamed cue eighth before a bar line took the
+            // ideal 1.5 = 1.2 + 0.3 where LilyPond's is its skyline 1.1153 + 0.3.
+            // LILYPOND-REF: lily/note-spacing.cc:78-83 Note_spacing::get_spacing —
+            //   min_dist = max (0.0, distance); base.set_min_distance (min_dist).
+            endSpring = endSpring.WithMinDistance(Math.Max(0.0, maxSkyDist));
+
             // Stem-direction optical correction, with the bar line standing in for the
             // right-hand stem. LilyPond runs stem_dir_correction on THIS spring too,
             // not only between musical columns; omitting it left a stemmed note ~0.24 ss
@@ -1099,22 +1124,6 @@ internal sealed class MeasureLayouter
             // The merge clamps the NOTE wishes; a rest's wish never reaches it, and
             // ApplyLeftHeadWidth (:77) does not clamp, so the spring is clamped here too.
             endSpring = endSpring.WithIdealDistance(Math.Max(0.0, endSpring.IdealDistance));
-
-            // The column's whole skyline — flag included — against the bar line's box:
-            // the spring minimum now, the rod after the headroom.
-            // LILYPOND-REF: lily/note-spacing.cc:78-83 get_spacing (the minimum);
-            // LILYPOND-REF: lily/spacing-spanner.cc:228-297 set_column_rods (the rod).
-            double maxSkyDist = 0;
-            for (int q = 0; q < lastItems.Count; q++)
-            {
-                var item = lastItems[q];
-                var (skyDist, rod) = SpacingRules.NoteColumnToBarlineFloorPair(fonts, item);
-                maxSkyDist = Math.Max(maxSkyDist, skyDist);
-                maxRod = Math.Max(maxRod, rod);
-            }
-
-            // LILYPOND-REF: lily/spring.cc:155-159 Spring::ensure_min_distance.
-            endSpring = endSpring.EnsureMinDistance(maxSkyDist);
 
             // NOTE: full-measure-extra-space is NOT applied here. LilyPond passes it
             // as `situational_space` to Staff_spacing::get_spacing, i.e. to the

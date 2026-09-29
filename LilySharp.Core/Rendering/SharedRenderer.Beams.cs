@@ -196,7 +196,7 @@ internal static partial class SharedRenderer
                 ? LayoutUtilities.InvisibleStemX(beam.MemberXPositions[i],
                     GlyphMetrics.NoteValueOf(grp.ItemOf(i)))
                 : LayoutUtilities.StemX(beam.MemberXPositions[i], MemberUp(i),
-                    GlyphMetrics.NoteValueOf(grp.ItemOf(i)), MemberStyle(i));
+                    GlyphMetrics.NoteValueOf(grp.ItemOf(i)), MemberStyle(i), grp.HeadFont);
 
         double leftBeamY = staffMiddleY + beam.LeftY / 2.0;
         double rightBeamY = staffMiddleY + beam.RightY / 2.0;
@@ -336,9 +336,9 @@ internal static partial class SharedRenderer
         // regression beam-quanting-horizontal.ly, groups 16-19).
         // LILYPOND-REF: lily/beam.cc:129-145 get_beam_translation (beam_count < 4 ?);
         //   :783 print draws every rank at that translation.
-        double beamTranslation = EngravingDefaults.BeamTranslationOf(
-            EngravingDefaults.BeamThickness, 1.0,
-            grp.Members.Max(m => m.BeamCount));
+        // The beam's OWN thickness and length-fraction: a cue beam's are 0.35 and magstep(−4).
+        double beamTranslation = grp.Translation;
+        double beamThickness = grp.Thickness;
         // Tremolo-pair gap: the gap-count beams NEAREST THE NOTEHEADS stop
         // short of the stems so the repeat symbol cannot be read as an
         // ordinary beam (half-note pairs carry GapCount 0 and reach).
@@ -428,7 +428,7 @@ internal static partial class SharedRenderer
             // parallel offset it has always been.
             double YOfRankAt(double x) =>
                 PrimaryBeamYAt(x) + beamTranslation * seg.Rank * FeatherFactorAt(x);
-            DrawBeamSegment(xl, YOfRankAt(xl), xr, YOfRankAt(xr), bgc);
+            DrawBeamSegment(xl, YOfRankAt(xl), xr, YOfRankAt(xr), beamThickness, bgc);
         }
         BeamSubdivision.GiveSegments(segments);
 
@@ -713,7 +713,8 @@ internal static partial class SharedRenderer
         return max > min ? max - min : 0.0;
     }
 
-    private static void DrawBeamSegment(double x1, double y1, double x2, double y2, IDrawingContext gc)
+    private static void DrawBeamSegment(double x1, double y1, double x2, double y2, double thickness,
+        IDrawingContext gc)
     {
         // A beam is a PARALLELOGRAM with VERTICAL ends, not a sloped thick line: a
         // butt-capped thick line caps its ends perpendicular to the slope, leaving a
@@ -726,7 +727,7 @@ internal static partial class SharedRenderer
         // LILYPOND-REF: lily/lookup.cc Lookup::beam — parallelogram of width `w`,
         //   thickness `thick`, sloped by `slope`, corners offset so the ends stay
         //   vertical; called from lily/beam.cc:794 Beam::print.
-        double beamHalf = EngravingDefaults.BeamThickness / 2;
+        double beamHalf = thickness / 2;
         gc.DrawFilledQuad(
             (x1, y1 + beamHalf), (x2, y2 + beamHalf),
             (x2, y2 - beamHalf), (x1, y1 - beamHalf), Color.Black);

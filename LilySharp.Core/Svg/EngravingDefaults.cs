@@ -492,13 +492,27 @@ internal static class EngravingDefaults
     /// flag and the flag scales by its own font size, so the two terms are not one product:
     /// the same probe reads 4.039985 where this fraction gives 4.252234. The fraction still
     /// moves an eighth much nearer than full size did (6.750000); it is not exact, and the
-    /// flag term wants its own measurement. ⚠️ BEAMED cues are untouched: a beam's stems come
-    /// from <see cref="Layout.BeamScoringProblem"/>, whose <c>lengthFraction</c> only the
-    /// grace and tab callers pass today.
+    /// flag term wants its own measurement. BEAMED cues read the cue beam's own two
+    /// properties since session 691 (<see cref="CueBeamThickness"/>,
+    /// <see cref="CueBeamLengthFraction"/>, passed by <c>BeamEngraver</c> for a cue group).
     /// </para>
     /// </remarks>
     internal static readonly Layout.StemDetails CueStemDetails =
         Layout.StemDetails.Default with { LengthFraction = CueScale };
+
+    /// <summary>A cue Beam's thickness, in staff spaces.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>\override Beam.beam-thickness = #0.35</c>.
+    /// STATED, not derived: 0.48 × magstep(−4) would be 0.302.
+    /// </remarks>
+    public const double CueBeamThickness = 0.35;
+
+    /// <summary>A cue Beam's (and its stems') <c>length-fraction</c> — magstep(−4).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice — <c>\override Beam.length-fraction =
+    /// #(magstep -4)</c> beside <c>\override Stem.length-fraction = #(magstep -4)</c>.
+    /// </remarks>
+    public static readonly double CueBeamLengthFraction = CueScale;
 
     // Rest collision avoidance.
     // ⚠️ FOUR CONSTANTS HERE REPORTED AS SOURCED UNTIL 2026-08-03 AND NEVER WERE (the

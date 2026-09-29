@@ -1730,9 +1730,19 @@ refused; they come first, each with what the compiler says.
   stem would, and the accidentals it avoids were full size: `cue { e4( a4 d'4 c4) }` started
   its slur 0.49 space right of LilyPond's, and a slur over a cue sharp or flat stood up to
   0.87 space taller. Both now read the cue font, as LilyPond's CueVoice does (measured on
-  2.26.0; every cue slur whose notes LilyPond spaces the same way now matches it). Two cue
-  differences remain and are not slur code: a beamed cue group's stems and beam are drawn at
-  full length, and the space before a cue note with an accidental is a full-size note's.
+  2.26.0).
+
+- **Cue beams and cue spacing are LilyPond's.** A beamed cue group was drawn with a full-size
+  beam: 0.48 space thick instead of 0.35, and 1.06 space too high because its stems took the
+  full-size length. Cue notes were also spaced as full-size notes wherever a minimum decided
+  the gap: beamed cue sixteenths stood 1.804 apart where LilyPond puts 1.315, a cue sharp or
+  flat widened its gap by up to 0.84, and a cue note after a bar line stood 0.41 late when it
+  carried an accidental. The beam now takes CueVoice's thickness, length and cue-sized stem
+  attachment, and every part of a cue note's spacing box is read at the cue size. On the
+  LilyPond books compared, every cue beam, cue gap and cue slur now matches. One general
+  closing gap moved with it. A note before a bar line whose own ink is narrower than the
+  spacing increment kept the increment as its minimum; it now takes its own, as LilyPond
+  does. No full-size book moved.
 
 - **A beat slash is spaced as LilyPond spaces it.** A `repeat percent` whose body is shorter
   than a bar draws a slash for each repetition and, until now, left too much room after it —

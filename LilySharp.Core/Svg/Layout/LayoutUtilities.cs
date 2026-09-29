@@ -183,9 +183,11 @@ internal static class LayoutUtilities
     {
         var item = group.ItemOf(memberIndex);
         int noteValue = GlyphMetrics.NoteValueOf(item);
+        // A cue beam's stems stand on the cue heads' attachment (BeamGroup.HeadFont).
         return noteValue <= 1
             ? InvisibleStemX(columnX, noteValue)
-            : StemX(columnX, group.Members[memberIndex].MemberStemUp, noteValue, NoteheadStyleOf(item), font);
+            : StemX(columnX, group.Members[memberIndex].MemberStemUp, noteValue, NoteheadStyleOf(item),
+                font ?? group.HeadFont);
     }
 
     /// <summary>

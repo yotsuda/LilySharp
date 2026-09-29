@@ -311,7 +311,10 @@ internal static partial class SpacingRules
     /// </remarks>
     private static double? SupportHeadRightExtent(MusicItem? item) => item switch
     {
-        NoteItem or ChordItem => GlyphMetrics.GetNoteheadBBox(GetNoteValue(item)).Right,
+        // A cue head's own box (CueFontOf), as every other reader of a cue column's head.
+        NoteItem or ChordItem => (CueFontOf(item) is { } cue
+            ? GlyphMetrics.GetNoteheadBBox(cue, GetNoteValue(item))
+            : GlyphMetrics.GetNoteheadBBox(GetNoteValue(item))).Right,
         _ => null,
     };
 

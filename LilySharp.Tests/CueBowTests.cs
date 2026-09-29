@@ -91,9 +91,8 @@ public sealed class CueBowTests
             """, "time 4/4");
         var slur = page.Beziers.OrderBy(b => b.P0.X).First();
         double middle = Assert.Single(TwinBeamSweep.StavesOf(page)).Middle;
-        // Within the twin net's 0.01: the cue columns stand ~0.1 apart from LilyPond's.
-        Assert.Equal(0.7695, slur.P0.X - HeadXs(page)[0], 0.01);
-        Assert.Equal(1.4384, middle - slur.P0.Y, 0.01);
+        Assert.Equal(0.7695, slur.P0.X - HeadXs(page)[0], 0.002);
+        Assert.Equal(1.4384, middle - slur.P0.Y, 0.002);
     }
 
     /// <summary>

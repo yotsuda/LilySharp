@@ -1196,11 +1196,9 @@ internal sealed class ElementCoordinator
             // LILYPOND-REF: beam.cc:1376-1377 — the translation is the BEAM's
             // (get_beam_translation narrows it from four beams up, beam.cc:129-145),
             // while the count in height_of_my_beams is the REST's own stem's (:1382).
-            double beamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
-            double beamTranslation = EngravingDefaults.ToStaffPositions(
-                EngravingDefaults.BeamTranslationOf(
-                    EngravingDefaults.BeamThickness, 1.0,
-                    group.Members.Max(m => m.BeamCount)));
+            // The beam's own thickness and translation (a cue beam's: BeamGroup.Thickness).
+            double beamThickness = EngravingDefaults.ToStaffPositions(group.Thickness);
+            double beamTranslation = EngravingDefaults.ToStaffPositions(group.Translation);
 
             bool haveRestX = beamLayout.RestXPositions.Length == group.RestStems.Length;
 
@@ -3207,9 +3205,7 @@ internal sealed class ElementCoordinator
     /// with the twenty's attachment Lily# started it 0.49 further right.
     /// </remarks>
     private static GlyphMetrics.DesignMetrics? BowFont(MusicItem item)
-        => item is NoteItem { IsCue: true } or ChordItem { IsCue: true }
-            ? EngravingDefaults.CueFont
-            : null;
+        => SpacingRules.CueFontOf(item);
 
     /// <summary>
     /// Device-Y of the slur attachment when the endpoint note's stem joins a beam — LP's
@@ -3394,7 +3390,9 @@ internal sealed class ElementCoordinator
                         // (beam_end_corrective, stem.cc:142); LP adds another half
                         // beam thickness on top (slur-scoring.cc:149-150).
                         stemY = beamTip + (col.StemUp ? -0.5 : 0.5)
-                            * EngravingDefaults.BeamThickness;
+                            // The beam's own thickness (a cue beam's is 0.35).
+                            * (beamByMember != null && beamByMember.TryGetValue((slur.VoiceIndex, mi, i), out var ownBeam)
+                                ? ownBeam.Group.Thickness : EngravingDefaults.BeamThickness);
                     else
                         // Unbeamed: the drawn stem end, from the one house
                         // (staff-top frame, middle at EngravingDefaults.StaffMiddle).

@@ -108,8 +108,13 @@ internal sealed class BeamEngraver
         // (BeamScoringProblem.SolveLent: one beam a problem, no fresh tables).
         // leftY/rightY are the line AT THE OUTER MEMBER STEMS (BeamScoringProblem.AtOuterStems);
         // the layout carries those stems' x as the frame the Y are read in.
+        // A CUE beam is quanted with its own thickness and length-fraction and stands on the
+        // cue heads (BeamGroup.IsCue) — LilyPond's CueVoice states all three
+        // (ly/engraver-init.ly CueVoice). A full-size group passes the defaults.
         var (leftY, rightY, (leftStemX, rightStemX)) = BeamScoringProblem.SolveLent(
             group, itemXPositions, _parameters, collisions,
+            lengthFraction: group.LengthFraction, beamThickness: group.Thickness,
+            headFont: group.HeadFont,
             restXPositions: restXPositions);
         return new BeamLayout(
             group, leftY, rightY, leftX, rightX, leftStemX, rightStemX,

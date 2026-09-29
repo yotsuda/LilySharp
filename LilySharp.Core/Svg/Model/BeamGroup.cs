@@ -113,6 +113,45 @@ public sealed record BeamGroup
     /// <summary>Gets the number of notes in this beam group.</summary>
     public int Count => Members.Length;
 
+    /// <summary>
+    /// Whether this is a CUE beam — its notes written inside <c>cue { }</c>. LilyPond's
+    /// CueVoice states the beam's own thickness and length-fraction and reduces the heads its
+    /// stems stand on, so every reader of the beam's size asks the three properties below
+    /// rather than the full-size constants.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize −4, <c>Stem.length-fraction</c>
+    /// and <c>Beam.length-fraction</c> magstep(−4), <c>Beam.beam-thickness</c> 0.35. A beam
+    /// never leaves its CueVoice in LilyPond, so the first member answers for the group.
+    /// </remarks>
+    public bool IsCue => Members.Length > 0
+        && ItemOf(0) is NoteItem { IsCue: true } or ChordItem { IsCue: true };
+
+    /// <summary>The beam's thickness in staff spaces — 0.35 for a cue beam, else 0.48.</summary>
+    public double Thickness => IsCue ? Svg.EngravingDefaults.CueBeamThickness : Svg.EngravingDefaults.BeamThickness;
+
+    /// <summary>The beam's and its stems' <c>length-fraction</c> — magstep(−4) for a cue
+    /// beam, else 1.</summary>
+    public double LengthFraction => IsCue ? Svg.EngravingDefaults.CueBeamLengthFraction : 1.0;
+
+    /// <summary>The font the stems' heads are read from — the cue font for a cue beam, null
+    /// (the staff's own twenty) otherwise.</summary>
+    internal Layout.GlyphMetrics.DesignMetrics? HeadFont =>IsCue ? Svg.EngravingDefaults.CueFont : null;
+
+    /// <summary>The distance between this beam's stacked lines (staff spaces) —
+    /// <see cref="Svg.EngravingDefaults.BeamTranslationOf"/> with this beam's thickness and
+    /// length-fraction and its largest beam count.</summary>
+    public double Translation
+    {
+        get
+        {
+            int count = 1;
+            foreach (var m in Members)
+                count = System.Math.Max(count, m.BeamCount);
+            return Svg.EngravingDefaults.BeamTranslationOf(Thickness, LengthFraction, count);
+        }
+    }
+
     /// <summary>The same group under other measure numbers: its own
     /// <see cref="MeasureIndex"/> and every member's and rest stem's EXPLICIT one moved
     /// by <paramref name="delta"/> (the <c>-1</c> "same as the group" sentinel stays).
@@ -662,11 +701,12 @@ public sealed record BeamLayout
         foreach (var m in Group.Members)
             beamCount = System.Math.Max(beamCount, m.BeamCount);
         bool stemSide = stemUp == Group.StemUp;
-        double halfStack = Svg.EngravingDefaults.BeamThickness / 2.0
+        // The beam's OWN thickness and translation — a cue beam's are 0.35 and magstep(−4).
+        double halfStack = Group.Thickness / 2.0
             + (stemSide
                 ? 0.0
                 : (beamCount - 1) * Svg.EngravingDefaults.BeamTranslationOf(
-                    Svg.EngravingDefaults.BeamThickness, 1.0, beamCount));       // staff-space
+                    Group.Thickness, Group.LengthFraction, beamCount));         // staff-space
         return centerSs + (stemUp ? halfStack : -halfStack);
     }
 }

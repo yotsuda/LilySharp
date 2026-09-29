@@ -1,0 +1,18 @@
+octave absolute
+time 4/4
+part m {
+  section A {
+    cue { e4( a4 d'4 c4) } |
+    cue { f'4( e'4 c''4 b'4) } |
+    cue { g8( a b c' d'4 e'4) } |
+    cue { c''8( b' a' g' f'4) r4 } |
+    cue { <c e g>4( <d f a>4) <e' g' b'>4( <d' f' a'>4) } |
+    cue { e4( fis4 bes4 c'4) } |
+    cue { c'16( e' g' c'' e''4) a'4( g'4) } |
+    cue { b4( g'4 d'2) } |
+  }
+}
+form main { A }
+score main {
+  staff m
+}

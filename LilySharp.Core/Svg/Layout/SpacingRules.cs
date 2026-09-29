@@ -1349,7 +1349,11 @@ internal static partial class SpacingRules
             if (x is null)
             {
                 var placement = new AccidentalPlacement();
-                x = placement.CalculateSinglePosition(note)?.XOffset;
+                // A cue note's accidental is the cue font's, placed against the cue head —
+                // the solve the renderer draws by (MEASURED, Lab sessions/p691/cuespace b8:
+                // `| cue { fis4 …` stood 0.407 further from the bar line than LilyPond's).
+                var cue = CueFontOf(note);
+                x = placement.CalculateSinglePosition(note, cue, cue)?.XOffset;
             }
             if (x is { } offset && offset < 0)
                 extent = Math.Max(extent, -offset);
@@ -1378,13 +1382,20 @@ internal static partial class SpacingRules
     /// the wiggle's right edge 8.585000 against the sharp's ink left 9.085000 — the padding,
     /// off the ACCIDENTAL; the heads start 1.45 further right.
     /// </remarks>
+    /// <summary>The cue font for a cue note or chord, null (the twenty) otherwise — what a
+    /// column's heads and accidentals are read from, as the renderer draws them.</summary>
+    internal static GlyphMetrics.DesignMetrics? CueFontOf(MusicItem item)
+        => item is NoteItem { IsCue: true } or ChordItem { IsCue: true } ? EngravingDefaults.CueFont : null;
+
     internal static double ChordSupportLeftReach(ChordItem chord)
     {
         int noteValue = GetNoteValue(chord);
+        // A cue chord's heads and accidentals are the cue font's (CueFontOf).
+        var cue = CueFontOf(chord);
         // Within-chord seconds: a head reversed to the LEFT of the stem (stem down)
         // extends the column's left ink even without accidentals.
         double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-            chord.Notes, chord.StemUp, noteValue);
+            chord.Notes, chord.StemUp, noteValue, cue);
         double reach = 0;
         // The reversed head sits `minHeadOffset` (negative) from the column, so its
         // leftward reach is that offset's magnitude — measured from the column, not from
@@ -1405,7 +1416,7 @@ internal static partial class SpacingRules
         {
             var placement = new AccidentalPlacement();
             var layouts = placement.CalculatePositions(chord.Notes, headOffsets,
-                stem: AccidentalStem.Of(chord, chord.StemUp));
+                cue, cue, stem: AccidentalStem.Of(chord, chord.StemUp, cue));
             if (layouts.Length > 0)
                 // XOffset is negative, representing distance to the left of notehead
                 leftmost = layouts.Min(l => l.XOffset);
