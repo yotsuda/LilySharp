@@ -1286,7 +1286,8 @@ internal sealed partial class LayoutEngine
             // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
             MultiMeasureRests: score != null && drawn
                 ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
-                    voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap)
+                    voicesByStaff: voicesByStaff, prebuiltMeasureMap: tailMeasureMap,
+                    staffByIndex: ctx.StaffByIndex)
                 : ImmutableArray<MultiMeasureRestLayout>.Empty,
             // (The ledger-line spans — lily/ledger-line-spanner.cc's LedgerLineSpanner — were
             // computed here until session 523 and read by nobody: the notehead path draws its

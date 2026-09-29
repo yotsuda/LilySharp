@@ -278,6 +278,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A whole-bar `R1` on a tab staff is one whole rest, hanging from the upper central
+  string.** The tab drew the bar's own rest under the whole-bar symbol as well, and the symbol
+  itself stood half a string high — its middle and staff positions were read in notation
+  spaces on strings 1.5 apart, through the notation staff's line table — so a 4/4 bar showed
+  what looked like a whole rest beside a half rest (bohemian-rhapsody.lys, score "tab", bars
+  8–12). The symbol now takes the tab's own line spacing and string positions, as LilyPond's
+  `church_rest` scales by the TabStaff's `staff-space`; the count of a longer run stands above
+  the tab's top string, and its H-bar scales the same way.
 - **An edit in a section the form plays again reaches every play in the preview.** Stepping a
   `chord(…)`'s shape (Ctrl+Shift+↑) in a section played six times redrew the first play's
   diagram and kept the other five; typing a note there did the same. The incremental render

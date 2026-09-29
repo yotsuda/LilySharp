@@ -1576,10 +1576,15 @@ internal sealed class ElementCoordinator
     ///   longer rest (upper_bound, then one back); :131-133 "Finished for neutral position".
     /// </remarks>
     internal static double NeutralRestPosition(int staffLines, int restValue)
+        => NeutralRestPosition(EngravingDefaults.StaffLinePositions(staffLines), restValue);
+
+    /// <summary><see cref="NeutralRestPosition(int, int)"/> over the staff's drawn line
+    /// positions themselves (ascending) — a tab's strings are not the notation table's lines
+    /// (<c>MultiStaffLayouter.LinePositionsOf</c>).</summary>
+    internal static double NeutralRestPosition(ReadOnlySpan<double> lines, int restValue)
     {
         if (restValue >= 4)   // duration_log > 1: no line alignment
             return 0.0;
-        var lines = EngravingDefaults.StaffLinePositions(staffLines);
         // rest.cc:96-97 — a breve (duration_log < 0) on a single line, neutral direction.
         if (lines.Length == 1 && restValue == 0)
             return lines[0] - 2.0;
@@ -1611,7 +1616,7 @@ internal sealed class ElementCoordinator
     /// aligns down to the nearest line at or below; a whole first drops one line in a
     /// lower voice, then hangs from the next line above (the top line when there is
     /// none). The proper-side check against the neutral letter
-    /// (<see cref="NeutralRestPosition"/>) is the tail of the same function, and direction
+    /// (<see cref="NeutralRestPosition(int, int)"/>) is the tail of the same function, and direction
     /// CENTER IS the neutral letter.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/rest.cc:46-141 staff_position_internal (the
@@ -1622,6 +1627,11 @@ internal sealed class ElementCoordinator
     /// </para>
     /// </remarks>
     internal static double VoicedRestPosition(int dir, int restValue, int staffLines)
+        => VoicedRestPosition(dir, restValue, EngravingDefaults.StaffLinePositions(staffLines));
+
+    /// <summary><see cref="VoicedRestPosition(int, int, int)"/> over the staff's drawn line
+    /// positions themselves (see <see cref="NeutralRestPosition(ReadOnlySpan{double}, int)"/>).</summary>
+    internal static double VoicedRestPosition(int dir, int restValue, ReadOnlySpan<double> lines)
     {
         const double VoicedPosition = 4.0;
         double pos = dir * VoicedPosition;
@@ -1630,9 +1640,8 @@ internal sealed class ElementCoordinator
         // rest.cc:131-133 — the neutral direction is finished at the aligned position,
         // which is the neutral letter itself (and the one-line breve arm lives there).
         if (dir == 0)
-            return NeutralRestPosition(staffLines, restValue);
+            return NeutralRestPosition(lines, restValue);
 
-        var lines = EngravingDefaults.StaffLinePositions(staffLines);
         // Whole: "lower voice semibreve rests generally hang a line lower" (:107-108),
         // then from the next available line; half (and breve): the line at or below.
         if (restValue == 1 && dir < 0)
@@ -1640,7 +1649,7 @@ internal sealed class ElementCoordinator
         pos = AlignRestToLine(lines, pos, restValue);
 
         // Keep the voiced position only on the proper side of the neutral one (:139-144).
-        double neutral = NeutralRestPosition(staffLines, restValue);
+        double neutral = NeutralRestPosition(lines, restValue);
         return dir * (pos - neutral) > 0 ? pos : neutral + dir * VoicedPosition;
     }
 
@@ -1654,7 +1663,7 @@ internal sealed class ElementCoordinator
     /// <remarks>
     /// LILYPOND-REF: lily/dot-column.cc:143-150, 194-227 calc_positioning_done — dots
     /// enter the configuration at their PURE positions and a rest's pure position is its
-    /// VOICED one (<see cref="VoicedRestPosition"/>): the Rest_collision and beam pushes
+    /// VOICED one (<see cref="VoicedRestPosition(int, int, int)"/>): the Rest_collision and beam pushes
     /// are unpure, and the dot, whose Y-parent is the rest, RIDES them afterwards — which
     /// is why the emitted answer is relative to the rest, not absolute.
     /// LILYPOND-REF: scm/output-lib.scm:652-664 dots::calc-staff-position — a log 2..4

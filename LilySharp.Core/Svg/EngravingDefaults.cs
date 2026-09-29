@@ -67,6 +67,34 @@ internal static class EngravingDefaults
         => System.Math.Abs(roundedPosition) <= lineCount - 1
            && ((roundedPosition - (lineCount - 1)) % 2 == 0);
 
+    /// <summary>The line positions of a TAB staff of <paramref name="stringCount"/> strings,
+    /// ascending: LilyPond's own <c>line-count</c> rule, <c>−(N−1), …, N−3, N−1</c> — the
+    /// positions <see cref="OnStaffLine(int, int)"/> tests, as a list a rest can be seated on
+    /// (<c>ElementCoordinator.NeutralRestPosition</c>). Not <see cref="StaffLinePositions"/>:
+    /// that table is the notation staff's <c>as lines N</c> drawing on the five-line frame
+    /// (four lines at −2, 0, 2, 4), and reading a four-string tab through it hung a whole-bar
+    /// rest a string too high (user report 2026-09-29).</summary>
+    /// <remarks>LILYPOND-REF: lily/staff-symbol.cc line_positions — no explicit
+    /// <c>line-positions</c>: N lines at N−1, N−3, …; ly/engraver-init.ly TabStaff keeps the
+    /// default list (Tab_staff_symbol_engraver sets line-count from the tuning).</remarks>
+    public static System.ReadOnlySpan<double> TabLinePositions(int stringCount)
+    {
+        int n = System.Math.Max(1, stringCount);
+        var table = n <= TabLinePositionTables.Length ? TabLinePositionTables[n - 1] : null;
+        if (table == null)
+        {
+            table = new double[n];
+            for (int i = 0; i < n; i++)
+                table[i] = -(n - 1) + 2 * i;
+            if (n <= TabLinePositionTables.Length)
+                TabLinePositionTables[n - 1] = table;
+        }
+        return table;
+    }
+
+    // One table per string count, built on first use (a bass's four, a guitar's six).
+    private static readonly double[]?[] TabLinePositionTables = new double[12][];
+
     /// <summary>The line count a reader prices with when it has no staff to ask — the ordinary
     /// five-line staff (<c>StaffSpec.MaxLines</c>): ItemSkylineFactory's column views without a
     /// staff, session 557 (HANDOFF ⒳¹⁷).</summary>

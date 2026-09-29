@@ -345,13 +345,39 @@ internal sealed class MultiStaffLayouter
     /// smaller one — HANDOFF §5.2.1②. The per-staff path has no <c>StaffLayout</c> to read,
     /// so it asks the model the same question this layouter does.
     /// </remarks>
+    /// <summary>
+    /// The distance between two neighbouring lines of <paramref name="staff"/>, in staff
+    /// spaces of the notation staff: a tab's strings are <see cref="EngravingDefaults.TabStringSpace"/>
+    /// apart (LilyPond's TabStaff <c>StaffSymbol.staff-space = 1.5</c>), every other staff's
+    /// lines one space. It is the <c>ss</c> LilyPond's grobs on that staff scale by — a
+    /// multi-measure rest's symbols sit <c>ss × 0.5</c> per staff position from its middle
+    /// (<c>Multi_measure_rest::church_rest</c>), so a reader that placed them at 0.5 on a tab
+    /// put the whole rest half a space above the string it hangs from (user report
+    /// 2026-09-29, a bass tab's <c>R1</c>).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly:1207 TabStaff — staff-space 1.5.</remarks>
+    internal static double LineSpacingOf(Staff staff)
+        => staff.IsTab && staff.Tuning.HasValue
+            ? EngravingDefaults.TabStringSpace(Tunings.GetStringCount(staff.Tuning.Value))
+            : 1.0;
+
+    /// <summary>The positions of the lines <paramref name="staff"/> DRAWS, ascending, in its
+    /// own staff positions: a tab's strings (<see cref="EngravingDefaults.TabLinePositions"/>
+    /// — four on a bass at ±1, ±3; <c>Staff.Lines</c> keeps the notation staff's five there),
+    /// else the notation staff's <see cref="EngravingDefaults.StaffLinePositions"/>. What a
+    /// rest's staff position is seated on (<c>ElementCoordinator.NeutralRestPosition</c>).</summary>
+    internal static ReadOnlySpan<double> LinePositionsOf(Staff staff)
+        => staff.IsTab && staff.Tuning.HasValue
+            ? EngravingDefaults.TabLinePositions(Tunings.GetStringCount(staff.Tuning.Value))
+            : EngravingDefaults.StaffLinePositions(staff.Lines);
+
     internal static double StaffHeightOf(Staff staff, double nominalStaffHeight)
     {
         if (staff.IsTab && staff.Tuning.HasValue)
         {
             int stringCount = Tunings.GetStringCount(staff.Tuning.Value);
             // Tab lines are spaced wider than a normal staff (TabStringSpace).
-            return (stringCount - 1) * EngravingDefaults.TabStringSpace(stringCount); // Bass: 3 → 4.5
+            return (stringCount - 1) * LineSpacingOf(staff); // Bass: 3 → 4.5
         }
         if (staff.IsTextRow)
             // A LYRIC row is "a staff with the lines removed": a full

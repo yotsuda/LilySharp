@@ -200,7 +200,7 @@ internal static partial class SharedRenderer
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(fonts, voice.Measures[ml.MeasureIndex], ml, staffY,
                         tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems,
-                        gc, digitGaps, pageHeight, atMeasuresLineStart);
+                        gc, digitGaps, pageHeight, layout, atMeasuresLineStart);
             }
         }
 
@@ -368,7 +368,7 @@ internal static partial class SharedRenderer
         Staff staff, int staffIndex, int voiceNumber,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
         List<(int StringIndex, double Left, double Right)> digitGaps,
-        double pageHeight, bool atLineStart = false)
+        double pageHeight, ScoreLayout layout, bool atLineStart = false)
     {
         // The first sounding item of a line-starting measure is where a tie can have
         // been split by the line break (a tie's two ends are always adjacent, so a
@@ -467,7 +467,15 @@ internal static partial class SharedRenderer
                 // prints nothing there on either staff (measured 2026-09-02, the owner's
                 // Billie Jean bassTab book, bars 8-10 / 12-14). Same shape as the dotted
                 // chord gate the day before: one rule, two arms, one of them not asking.
-                case RestItem rest when !numbersOnly && !rest.IsSpacer:
+                // ⚠️ AND THE SAME ARM DID NOT ASK THE MULTI-MEASURE-REST QUESTION EITHER
+                // (user report 2026-09-29, a bass tab's five `R1` bars): a whole-bar R gets its
+                // symbol from DrawMultiMeasureRests, so drawing the bar's own rest too printed
+                // two whole rests a hair apart — the symbol then sat half a space high (its
+                // middle and positions read in notation spaces, MultiMeasureRestLayout.LineSpacing)
+                // and the pair read as a whole rest beside a half rest. The notation arm has
+                // asked IsMmrCovered since the symbol pass existed (SharedRenderer.Noteheads).
+                case RestItem rest when !numbersOnly && !rest.IsSpacer
+                    && !IsMmrCovered(layout, staffIndex, voiceNumber - 1, ml.MeasureIndex):
                     // In \tabFullNotation whole and half rests ATTACH to a staff line, just
                     // like on the notation staff — a bar floating in a gap looks wrong. The
                     // central inter-line space holds both: the HALF rest SITS ON the lower

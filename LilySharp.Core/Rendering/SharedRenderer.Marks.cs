@@ -1030,25 +1030,29 @@ internal static partial class SharedRenderer
             // measure's system-top page Y-up, so the middle's page Y-up is that minus
             // the offset (byte-identical to the former pageHeight - absoluteMiddle).
             double cy = syUp - mmr.Y;
+            var lines = StaffLinePositionsAt(score, mmr.StaffIndex);
             if (mmr.UseChurchRest)
-                DrawChurchRest(mmr, cy, StaffLinesAt(score, mmr.StaffIndex), gc);
+                DrawChurchRest(mmr, cy, lines, gc);
             else
-                DrawBigRest(mmr, cy, gc);
+                DrawBigRest(mmr, cy, lines, gc);
         }
     }
 
-    /// <summary>The line count of the staff at a GLOBAL staff index (the index
-    /// <see cref="MultiStaffScore.EnumerateStaves"/> hands out); five when the layout
-    /// carries no staff (a legacy single-staff run).</summary>
-    private static int StaffLinesAt(MultiStaffScore score, int staffIndex)
+    /// <summary>The DRAWN line positions of the staff at a GLOBAL staff index (the index
+    /// <see cref="MultiStaffScore.EnumerateStaves"/> hands out) — a tab's strings at ±1, ±3, …
+    /// (<see cref="MultiStaffLayouter.LinePositionsOf"/>; <c>Staff.Lines</c> said five there,
+    /// and the four-line notation table sits at −2…4, either of which hung a bass tab's
+    /// whole-bar rest a string too high — user report 2026-09-29); the five-line staff's when
+    /// the layout carries no staff (a legacy single-staff run).</summary>
+    private static ReadOnlySpan<double> StaffLinePositionsAt(MultiStaffScore score, int staffIndex)
     {
         foreach (var (_, staff, index) in score.EnumerateStaves())
             if (index == staffIndex)
-                return staff.Lines;
-        return 5;
+                return MultiStaffLayouter.LinePositionsOf(staff);
+        return EngravingDefaults.StaffLinePositions(5);
     }
 
-    private static void DrawChurchRest(MultiMeasureRestLayout mmr, double cy, int staffLines,
+    private static void DrawChurchRest(MultiMeasureRestLayout mmr, double cy, ReadOnlySpan<double> lines,
         IDrawingContext gc)
     {
         double cx = (mmr.StartX + mmr.EndX) / 2.0;
@@ -1102,19 +1106,28 @@ internal static partial class SharedRenderer
         //   :256-260 the semibreve's pos minus (oneline ? 0 : 2); :282-292 spi −= 2 for
         //   dl == 0, and for dl < 0 when !dir, on one line.
         int dir = mmr.VoiceDirection;
-        bool oneline = EngravingDefaults.StaffLinePositions(staffLines).Length < 2;
+        bool oneline = lines.Length < 2;
         double pos = mmr.MeasureCount == 1
-            ? ElementCoordinator.VoicedRestPosition(dir, 1, staffLines) - (oneline ? 0.0 : 2.0)
-            : ElementCoordinator.VoicedRestPosition(dir, 2, staffLines);
+            ? ElementCoordinator.VoicedRestPosition(dir, 1, lines) - (oneline ? 0.0 : 2.0)
+            : ElementCoordinator.VoicedRestPosition(dir, 2, lines);
         double wholeSpi = pos + 2.0 - (oneline ? 2.0 : 0.0);
         double longSpi = pos - (oneline && dir == 0 ? 2.0 : 0.0);
+        // A staff position is HALF THE STAFF'S OWN LINE SPACING (LilyPond's `ss * 0.5 *
+        // (spi - pos)`): 0.5 on a notation staff, 0.75 on a tab, whose strings are 1.5 apart
+        // — read as 0.5 there, the whole rest hung from a point half a space above its
+        // string and looked like a half rest sitting on it (user report 2026-09-29, a bass
+        // tab's R1). The longer symbols carry LilyPond's extra `(ss - fs)`: with the default
+        // font size fs = 1 that is 0 on a notation staff and 0.5 on a tab.
+        // LILYPOND-REF: lily/multi-measure-rest.cc:293-300 church_rest — the translate.
+        double half = 0.5 * mmr.LineSpacing;
+        double longLift = mmr.LineSpacing - 1.0;
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
-            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, -0.5 * longSpi),       // neutral spi 0  → dy 0
-            (4, EmmentalerGlyphs.RestLonga, LongWidth, -0.5 * longSpi),         // neutral spi 0  → dy 0
-            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, -0.5 * longSpi),  // neutral spi 0  → dy 0
-            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -0.5 * wholeSpi),       // neutral spi +2 → dy -1.0
+            (8, EmmentalerGlyphs.RestMaxima, MaximaWidth, -half * longSpi - longLift),       // neutral spi 0  → dy 0
+            (4, EmmentalerGlyphs.RestLonga, LongWidth, -half * longSpi - longLift),         // neutral spi 0  → dy 0
+            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, -half * longSpi - longLift),  // neutral spi 0  → dy 0
+            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -half * wholeSpi),                  // neutral spi +2 → dy -1.0
         })
         {
             while (remaining >= span)
@@ -1159,8 +1172,14 @@ internal static partial class SharedRenderer
             x += p.Width + gap;
         }
         if (mmr.MeasureCount > 1 && mmr.DrawsCount)
-            DrawMmrNumber(mmr.MeasureCount, cx, cy, gc);
+            DrawMmrNumber(mmr.MeasureCount, cx, cy, TopLineOffset(lines, mmr.LineSpacing), gc);
     }
+
+    /// <summary>How far the staff's top line stands above its middle: its position (the
+    /// last of the ascending <paramref name="lines"/>) in the staff's own spacing — 2.0 on
+    /// five notation lines, 2.25 on a four-string tab (position 3 at 0.75).</summary>
+    private static double TopLineOffset(ReadOnlySpan<double> lines, double lineSpacing)
+        => lines.Length == 0 ? 2.0 : lines[^1] * 0.5 * lineSpacing;
 
     /// <summary>
     /// Draws a multi-measure rest's measure count above the staff.
@@ -1171,10 +1190,11 @@ internal static partial class SharedRenderer
     /// (self-alignment-X CENTER) and placed above the staff (direction UP,
     /// staff-padding 0.4). The feta digits are baseline-anchored (bottom =
     /// baseline), so the baseline sits 0.4 ss above the top staff line:
-    /// cy - 2.0 (top line) - 0.4 = cy - 2.4.
+    /// cy - 2.0 (top line) - 0.4 = cy - 2.4 on five notation lines; <paramref name="topLineOffset"/>
+    /// is that 2.0 for the staff at hand (<see cref="TopLineOffset"/>: 2.25 on a four-string tab).
     /// LILYPOND-REF: scm/define-grobs.scm MultiMeasureRestNumber.
     /// </remarks>
-    private static void DrawMmrNumber(int count, double cx, double cy, IDrawingContext gc)
+    private static void DrawMmrNumber(int count, double cx, double cy, double topLineOffset, IDrawingContext gc)
     {
         var digits = count.ToString();
         double totalAdvance = 0;
@@ -1182,7 +1202,7 @@ internal static partial class SharedRenderer
             totalAdvance += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
         double x = cx - totalAdvance / 2;
         // The number sits above the staff (device up = larger Y-up).
-        double baseline = cy + 2.4;
+        double baseline = cy + topLineOffset + 0.4;
         foreach (var ch in digits)
         {
             gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'), x, baseline, FontSize);
@@ -1193,12 +1213,14 @@ internal static partial class SharedRenderer
     // LILYPOND-REF: lily/multi-measure-rest.cc:195-220 Multi_measure_rest::big_rest —
     // thick horizontal bar (half-height = thick-thickness x line-thickness x ss/2) capped
     // by hair-thickness vertical end caps of full staff-space height.
-    private static void DrawBigRest(MultiMeasureRestLayout mmr, double cy, IDrawingContext gc)
+    private static void DrawBigRest(MultiMeasureRestLayout mmr, double cy, ReadOnlySpan<double> lines, IDrawingContext gc)
     {
-        const double thickness = EngravingDefaults.MultiMeasureRestThickThickness;
-        const double endCapHeight = 0.8;
+        // Every vertical measure is big_rest's `ss` (the bar's half-height, the caps' thickness
+        // and height): the staff's own line spacing, 1.5 on a tab.
+        double thickness = EngravingDefaults.MultiMeasureRestThickThickness * mmr.LineSpacing;
+        double endCapHeight = 0.8 * mmr.LineSpacing;
         const double padding = 1.0;
-        const double capThickness = EngravingDefaults.MultiMeasureRestHairThickness;
+        double capThickness = EngravingDefaults.MultiMeasureRestHairThickness * mmr.LineSpacing;
 
         double left = mmr.StartX + padding;
         double right = mmr.EndX - padding;
@@ -1213,7 +1235,7 @@ internal static partial class SharedRenderer
             capThickness, 2 * endCapHeight, fill: Color.Black);
 
         if (mmr.DrawsCount)
-            DrawMmrNumber(mmr.MeasureCount, (left + right) / 2, cy, gc);
+            DrawMmrNumber(mmr.MeasureCount, (left + right) / 2, cy, TopLineOffset(lines, mmr.LineSpacing), gc);
     }
 
     // ---------- Tie variants (laissez-vibrer / repeat-tie) ----------

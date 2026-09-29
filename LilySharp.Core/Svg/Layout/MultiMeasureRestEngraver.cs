@@ -57,7 +57,11 @@ public readonly record struct MultiMeasureRestLayout(
     // merges equal counts and keeps only the first one made.
     // LILYPOND-REF: scm/scheme-engravers.scm:354-370 Merge_mmrest_numbers_engraver — suicides all but the first of equal texts
     // LILYPOND-REF: ly/engraver-init.ly:98 Merge_mmrest_numbers_engraver — consisted in Staff
-    bool DrawsCount = true);
+    bool DrawsCount = true,
+    // The staff's line spacing (MultiStaffLayouter.LineSpacingOf): LilyPond's `ss` for every
+    // vertical measure of the symbol — a staff position is ss/2, the H-bar's thickness and
+    // caps scale with it, the count stands above the staff's own top line. 1.5 on a tab.
+    double LineSpacing = 1.0);
 
 /// <summary>
 /// A run of consecutive measures that EVERY staff rests with an explicit
@@ -166,7 +170,8 @@ internal static class MultiMeasureRestEngraver
         double staffHeight,
         int staffIndex = -1,
         IReadOnlyDictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null)
+        IReadOnlyDictionary<int, (SystemLayout System, MeasureLayout Measure)>? prebuiltMeasureMap = null,
+        IReadOnlyDictionary<int, Staff>? staffByIndex = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MultiMeasureRestLayout>.Empty;
@@ -176,6 +181,19 @@ internal static class MultiMeasureRestEngraver
         ImmutableArray<Voice> VoicesOf(int si)
             => si >= 0 && voicesByStaff != null && voicesByStaff.TryGetValue(si, out var vs)
                 ? vs : score.Voices;
+
+        // The staff's middle, as a within-system device offset (down from the system top),
+        // and its line spacing — THE STAFF'S OWN height, not the nominal one: a bass tab is
+        // 3 × 1.5 = 4.5 high, and its middle read as 2.0 from the top put every symbol half
+        // a space too high (user report 2026-09-29). A caller with no staff table (the
+        // single-staff path) keeps the nominal staff.
+        (double Y, double Spacing) StaffMiddle(SystemLayout system, int si)
+        {
+            var staff = si >= 0 && staffByIndex != null && staffByIndex.TryGetValue(si, out var s) ? s : null;
+            double height = staff != null ? MultiStaffLayouter.StaffHeightOf(staff, staffHeight) : staffHeight;
+            double spacing = staff != null ? MultiStaffLayouter.LineSpacingOf(staff) : 1.0;
+            return (LayoutUtilities.StaffOffsetInSystemDown(system, si) + height / 2.0, spacing);
+        }
 
         var measureMap = prebuiltMeasureMap ?? LayoutUtilities.BuildMeasureMap(systems);
         var voice = score.Voice;
@@ -277,8 +295,7 @@ internal static class MultiMeasureRestEngraver
                     // paging places the system. The draw resolves the system-top Y-up and
                     // subtracts this, which decouples the MMR from SystemLayout.Y for the
                     // Stage-4 W2 stacking-origin flip.
-                    double y = LayoutUtilities.StaffOffsetInSystemDown(startSystem, si)
-                        + staffHeight / 2.0;
+                    var (y, spacing) = StaffMiddle(startSystem, si);
 
                     // Every voice resting the run has the same count, so the staff's merge keeps
                     // the first voice's number only (see MultiMeasureRestLayout.DrawsCount).
@@ -304,7 +321,8 @@ internal static class MultiMeasureRestEngraver
                             UseChurchRest: count <= ExpandLimit,
                             VoiceDirection: ((RestItem)bar.Items[ri]).VoiceDirection,
                             StaffIndex: si,
-                            VoiceIndex: vi));
+                            VoiceIndex: vi,
+                            LineSpacing: spacing));
                     }
                 }
             }
@@ -338,7 +356,7 @@ internal static class MultiMeasureRestEngraver
                 if (percentCovered != null && percentCovered.Contains((si < 0 ? 0 : si, m)))
                     continue;
                 var voices = VoicesOf(si);
-                double y = LayoutUtilities.StaffOffsetInSystemDown(system, si) + staffHeight / 2.0;
+                var (y, spacing) = StaffMiddle(system, si);
                 for (int vi = 0; vi < voices.Length; vi++)
                 {
                     if (m >= voices[vi].Measures.Length)
@@ -357,7 +375,8 @@ internal static class MultiMeasureRestEngraver
                         UseChurchRest: true,
                         VoiceDirection: ((RestItem)bar.Items[ri]).VoiceDirection,
                         StaffIndex: si,
-                        VoiceIndex: vi));
+                        VoiceIndex: vi,
+                        LineSpacing: spacing));
                 }
             }
         }
