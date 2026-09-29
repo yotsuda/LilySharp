@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: ~~行の指番号と下の行の名前の上付きが 0.5 重なる~~（第681 が閉じた）／part が何も書かない便の行は MusicXML に出ない（第668）／~~行末の図の「5fr」が右へはみ出す~~（第683 再現せず・網を置いた）／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
+- ★★★ **コード図（§2 K が正）＝K5 は ①〜⑦ 全部閉じた（③ 第664・④ 第665・⑤ 第666・⑥ 第667・① の指とバレーと MusicXML の行 第668）**。小さい穴: ~~行の指番号と下の行の名前の上付きが 0.5 重なる~~（第681 が閉じた）／~~part が何も書かない便の行は MusicXML に出ない~~（第684 が閉じた）／~~行末の図の「5fr」が右へはみ出す~~（第683 再現せず・網を置いた）／複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝MusicXML の `<staff-details><capo>` は未・双子は `chordNames both` を綴れない（警告）・MIDI と `chord(…)` のホバーは最初の score のカポを読む（第665）
 - ⚠️ 持ち越し規則の残り（第669）: 印で対にする 4 族（text spanner／ottava／pedal／trill）は `SectionPlays`（小節単位）で裁くので **D3（そのパートが弾かない section へ）は出ない**（ヘアピンと同じ）／`@!` が別 staff の pedal を閉じる既存の穴はそのまま
 - ✅ **MusicXML／頁の既存欠陥 ⑴〜⒂（第662・第663 起票）は全部閉じた**（⑴⑵⑹ 第671・⑶ 欠陥ではない・⑷⑸ 第672・⑻ 第673・⑺ 第674・⑽ 第675・⒂ 第676・⑾ 第677・⑿⒁ 第678・⒀ 第679・⑼ 第680）。残る穴だけ: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: ~~`@text`／`@mark` は音符でも MusicXML に出ない~~（第682 が閉じた・importer は今も読まない）／`R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・試聴・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
@@ -119,22 +119,22 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第684セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p684`（HEAD `6b2ae067`・未 push 34・full **10288 / 0 / 2 / 10290**）。⚠ 道具: `-Start` を MCP console で素に打つと `dotnet test` が console 入力待ちで止まった（今日 3 回目・p681 の「本当に遅いだけ」とは別）＝**`cmd /d /s /c "pwsh -NoProfile -File tools\Session-Check.ps1 -Start p684 < NUL > log 2>&1"` で完走**。本便で `Session-Check.ps1` 自身の `dotnet build`／`dotnet test` を `< NUL` 付きに直した。
+★★ **K5 の小穴「part が何も書かない便の行は MusicXML に出ない」（第668）＝閉じた。同じ根から 2 つ目の欠陥も**: ⑴ 便（section の play）に block を書かない part は、その play を*どこにも*書いていなかった（bass が B に無い本で bass の C が A の直後＝melody 5 小節に対し 3・頁と双子と MIDI は詰める）→ 行の宛先 part がその便に書かないと `EmitPendingChordRows` に置く小節が無く harmony を捨てていた。`PadPartsSilentInThisPlay`＝各 play の後、`_playStartMeasure` の無い engraved part に section の canonical 小節数の空の `|` を `EmitPartMusic` 経由で書く（part の header・section の拍子/調/partial・番号・`_playStartMeasure` まで書いた play と同じ）。⑵ 「最後に書いた attributes」の記録（`_writtenKey/Time/Clef`）が exporter で 1 組＝section が `time 3/4` を言う本で**2 番目の part は `<time>` を持たず**（1 番目が「書いた」ので）・各 part の section 頭で相手の clef を「最後」と見て自分の clef を繰り返していた → `EnsurePart` で part ごとに入れ替える。
+★ 検証: 網 4（`SectionVoicePaddingExportTests` の Xml_*＝bass 5 小節と B の全休符 2・行の C F G C・silent play の pickup 4 分と 3/4 の小節・2 番目の part の `<time>` と clef 1 回）。毒 2 本が各自赤（P1 padding の呼び出しを消す＝3 本・P2 記録を exporter 全体に戻す＝新網 1 本＋既存 `MusicXmlAttributeChangeTests` 1 本・Lab `sessions/p684/poisons.ps1`・baseline 103/0）。`MusicXml*` 209 本緑。射程: exporter だけ（頁・双子・MIDI 不変）＝section に拍子を書く複数 part の本と、便に居ない part を持つ本の XML が変わる（意図した向き＝双子と同じ形）。探り本 `sessions/p684/probes/{rowonly,noblock,silentmeter,silentmeter2}.lys`。
+⚠ 残る穴: 便に居ない part への tie の持ち越し（`FinishCarriedTies` は silent play の最初の音を探す＝観測者なし）／importer は今も `<harmony>` の行を row に戻さない。
+★ **終了**: commit `40dd2e93`（Core 1・網・APPROXIMATIONS・CHANGELOG・`tools/Session-Check.ps1`）。`-End p684 -DiffBase 6b2ae067`（detached）＝full **10292 / 0 / 2 / 10294**（+4＝網・run4.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 10,526 B）。§7.5 Core '+' 61 行／REF 0／OWN 0＝MusicXML の配管（出所は頁・双子と同じ規則＝`SectionBarCounts`）。7.6: ⒟ 何も移植していない。7.7 匂い: silent play は `EmitPartMusic` に合成の `|` を N 本渡す形（PadVoice と同じ型）・per-part の記録は「measures が既に持つ物の 2 つ目の綴り」（既存の註のまま）。perf: export 時だけ。⚠ 道具の所見の訂正: console で回した `-Start` 2 回は test 自体は完走していた（run2/run3.trx が書かれている）のに 5〜6 分返らなかった＝detached は 111 s・`-End` は 569 s（並走した 2 つ目の console の分）。push はユーザー（未 push 36）。
+
+## 以下は第683セッションの経緯
+
 ### 1.1 第683セッション（2026-09-29・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p683`（HEAD `2e39789f`・未 push 32・full **10287 / 0 / 2 / 10289**）。
 ★★ **K5 の小穴「行末の図の「5fr」が右へはみ出す」（第663 起票）＝再現せず・観測者を置いて閉じた**: 探り本 3 冊（行の最後の symbol が小節頭／3 拍目の 5fr 形・chords だけの grid sheet・行末の音符の `@chord(A x57765)`）と site の `chord-shapes.lys`（8fr・10fr が行末）のどれも label は行の右端の内側（SVG 実測: 行末との隙間 0.3〜2.1 ss・Lab `sessions/p683/probes/`）。行の footprint（`FootprintWidth`＝図の箱ごと）と `@chord` の rod（`ApplyFretFrameSpacing`＝箱の右 ＋0.4 を小節端まで）が label を値付けしている。起票時の本は残っておらず（p663 に形を書いた探り本無し・ARCHIVE の第663 にも本の名は無い）、第668 の fret-diagrams.scm 逐語移植で label の位置が変わった（「Nfr」は 0.5 倍を中央揃え）のが直った理由と読む。
 ★ 検証: 網 `ChordDiagramTests.ADiagramAtTheLineEnd_KeepsItsFretLabelInsideTheLine`（3 冊・全 system・行の図と `@chord` の図の箱の右端 ≤ 行の右端）。毒 2 本（P1 行の footprint を名前だけに＝3 本赤・P2 `@chord` の図の rod を消す＝1 本赤・Lab `sessions/p683/poisons.ps1`・baseline 264/0）。コードは触っていない（Core '+' 0）。
 ★ **終了**: commit `d4140b14`（網だけ）。`-End p683 -DiffBase 2e39789f`＝full **10288 / 0 / 2 / 10290**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 11,336 B）。§7.5 Core '+' 0／REF 0／OWN 0。7.6・7.7: 該当なし（コード不変）。perf: 不変。push はユーザー（未 push 34）。
-
-## 以下は第682セッションの経緯
-
-### 1.1 第682セッション（2026-09-29・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p682`（HEAD `d9a97659`・未 push 30・full **10286 / 0 / 2 / 10288**）。
-★★ **第672 の穴「`@text`／`@mark` は音符でも MusicXML に出ない」＝閉じた**: `ProcessDirectionMark` が両方を一語の direction 表（sustain・ottava …）へ落として黙って捨てていた。annotation から読む（`AnnotationValues.Text`／`Rehearsal`＝頁と同じ読み手）: `@text("…")` は `<words>`（`.up` でなければ below＝collector の TextScript の側）・`@mark("…")` は `<rehearsal>`（above）。`AddDirection` 経由なので音符の `<offset>` に立つ（強弱と同じ）・`R*N@text` は周の先頭小節（頁が描く小節）。`MusicXmlDirection.Rehearsal` を足した。
-★ 検証: 網 `MusicXmlExportShapeTests.TextAndRehearsalMark_OnANote_AreDirections`（dolce below 0・sub. above 48・tacet は R1*2 の 1 小節目だけ・C は `<rehearsal>` で words ではない）。毒 3 本（P1 text の腕・P2 側を読まない・P3 rehearsal の腕）が各自赤（Lab `sessions/p682/poisons.ps1`・baseline 80/0）。射程: exporter だけ＝svg/ly/midi は動かない（掃き省略・第671 と同じ）。XML が変わる本＝音符に `@mark("…")`／`@text("…")` を書く本: 実コーパス 212＋15 冊・repo 27 冊（grep）＝意図した変化。
-⚠ 残る穴: importer は `<words>` も `<rehearsal>` も読まない（従来どおり・往復しない）／section label（`section A` の箱の字）は exporter が何も書かない（`<rehearsal>` の腕は無い）。
-★ **終了**: commit `3c1a5d2a`（Core 2・網・APPROXIMATIONS・CHANGELOG＝第681 の帯の行も一緒に）。`-End p682 -DiffBase d9a97659`＝full **10287 / 0 / 2 / 10289**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,223 B）。§7.5 Core '+' 31 行／REF 0／OWN 0＝MusicXML の配管（出所は schema・LP の対応物無し）。7.6: ⒟ 何も移植していない。7.7 匂い: importer が読まない往復の片肺（既存）・section label は今も出ない。perf: 打鍵経路ではない（export 時に annotation を 2 回読むだけ）。push はユーザー（未 push 32）。
 
 ## 2. 開いている作業
 

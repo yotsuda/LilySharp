@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第682セッションの経緯
+
+### 1.1 第682セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p682`（HEAD `d9a97659`・未 push 30・full **10286 / 0 / 2 / 10288**）。
+★★ **第672 の穴「`@text`／`@mark` は音符でも MusicXML に出ない」＝閉じた**: `ProcessDirectionMark` が両方を一語の direction 表（sustain・ottava …）へ落として黙って捨てていた。annotation から読む（`AnnotationValues.Text`／`Rehearsal`＝頁と同じ読み手）: `@text("…")` は `<words>`（`.up` でなければ below＝collector の TextScript の側）・`@mark("…")` は `<rehearsal>`（above）。`AddDirection` 経由なので音符の `<offset>` に立つ（強弱と同じ）・`R*N@text` は周の先頭小節（頁が描く小節）。`MusicXmlDirection.Rehearsal` を足した。
+★ 検証: 網 `MusicXmlExportShapeTests.TextAndRehearsalMark_OnANote_AreDirections`（dolce below 0・sub. above 48・tacet は R1*2 の 1 小節目だけ・C は `<rehearsal>` で words ではない）。毒 3 本（P1 text の腕・P2 側を読まない・P3 rehearsal の腕）が各自赤（Lab `sessions/p682/poisons.ps1`・baseline 80/0）。射程: exporter だけ＝svg/ly/midi は動かない（掃き省略・第671 と同じ）。XML が変わる本＝音符に `@mark("…")`／`@text("…")` を書く本: 実コーパス 212＋15 冊・repo 27 冊（grep）＝意図した変化。
+⚠ 残る穴: importer は `<words>` も `<rehearsal>` も読まない（従来どおり・往復しない）／section label（`section A` の箱の字）は exporter が何も書かない（`<rehearsal>` の腕は無い）。
+★ **終了**: commit `3c1a5d2a`（Core 2・網・APPROXIMATIONS・CHANGELOG＝第681 の帯の行も一緒に）。`-End p682 -DiffBase d9a97659`＝full **10287 / 0 / 2 / 10289**（+1＝網・run2.trx）・Core 0 警告・門 6 つ全 OK（2 天井 残り 8,223 B）。§7.5 Core '+' 31 行／REF 0／OWN 0＝MusicXML の配管（出所は schema・LP の対応物無し）。7.6: ⒟ 何も移植していない。7.7 匂い: importer が読まない往復の片肺（既存）・section label は今も出ない。perf: 打鍵経路ではない（export 時に annotation を 2 回読むだけ）。push はユーザー（未 push 32）。
+
 ## 以下は第681セッションの経緯
 
 ### 1.1 第681セッション（2026-09-29・YT-DELL2）
