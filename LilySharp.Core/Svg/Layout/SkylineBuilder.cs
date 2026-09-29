@@ -1926,7 +1926,7 @@ internal sealed class SkylineBuilder
     /// </param>
     // ⚠️ THE READS HERE ARE A MEMO KEY: PagingAugmentProgram stores a tuplet-group step's
     // key as exactly the per-bracket fields this method reads (IsStemUp, ShowBracket,
-    // StartX/EndX, DrawnStartX/DrawnEndX, StartYUp/EndYUp, NumberText, NumberX, NumberYUp).
+    // StartX/EndX, DrawnStartX/DrawnEndX, DrawnStartYUp/DrawnEndYUp, StartYUp/EndYUp, NumberText, NumberX, NumberYUp).
     // Reading a new layout field here without adding it to that key makes the paging memo stale.
     internal static void AddTupletBracketsToSkyline(
         Rendering.ScoreTextMetrics fonts,
@@ -1968,8 +1968,9 @@ internal sealed class SkylineBuilder
                 // FromSlope's thickness parameter: that parameter's DOWN arm is
                 // unexercised by any production caller and its sign is not pinned by a
                 // test, while thickness 0 means "store exactly this edge" in both arms.
-                double yLeft = size.Span(leftFirst ? b.StartYUp : b.EndYUp) + dir * half + staffTopUp;
-                double yRight = size.Span(leftFirst ? b.EndYUp : b.StartYUp) + dir * half + staffTopUp;
+                // At the DRAWN ends, whose Y follows the slope out past the bounds.
+                double yLeft = size.Span(leftFirst ? b.DrawnStartYUp : b.DrawnEndYUp) + dir * half + staffTopUp;
+                double yRight = size.Span(leftFirst ? b.DrawnEndYUp : b.DrawnStartYUp) + dir * half + staffTopUp;
                 sky.MergeSlope(xLeft, yLeft, xRight, yRight, thickness: 0);
             }
 

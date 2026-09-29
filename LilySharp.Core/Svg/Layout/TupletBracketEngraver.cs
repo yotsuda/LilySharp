@@ -101,10 +101,29 @@ public readonly record struct TupletBracketLayout(
     /// 16.076..19.910 and 22.285..26.119 — 0.2 outward at each of the four ends.
     /// </para>
     /// </remarks>
-    public double DrawnStartX => StartX - BracketOutwardReach * LineSpacing;
+    public double DrawnStartX => StartX - AlongBracket(EndX - StartX);
 
     /// <inheritdoc cref="DrawnStartX"/>
-    public double DrawnEndX => EndX + BracketOutwardReach * LineSpacing;
+    public double DrawnEndX => EndX + AlongBracket(EndX - StartX);
+
+    /// <summary>The Y-up of <see cref="DrawnStartX"/>'s end: the same move along the
+    /// bracket's slope, so a sloped bracket's drawn end stays ON its line.</summary>
+    /// <inheritdoc cref="DrawnStartX"/>
+    public double DrawnStartYUp => StartYUp - AlongBracket(EndYUp - StartYUp);
+
+    /// <inheritdoc cref="DrawnStartYUp"/>
+    public double DrawnEndYUp => EndYUp + AlongBracket(EndYUp - StartYUp);
+
+    /// <summary>One component of the reach past a bound, taken ALONG the bracket:
+    /// <c>shorten / length * dz</c>, the component of <c>dz</c> being <paramref name="d"/>.
+    /// Until session 694 the whole reach went into X and none into Y, so a sloped bracket's
+    /// ends ran out level instead of along its line.</summary>
+    private double AlongBracket(double d)
+    {
+        double length = Math.Sqrt((EndX - StartX) * (EndX - StartX)
+                                  + (EndYUp - StartYUp) * (EndYUp - StartYUp));
+        return length > 0 ? BracketOutwardReach * LineSpacing / length * d : 0.0;
+    }
 
     /// <summary>
     /// How far each end reaches PAST its logical bound, in staff spaces.

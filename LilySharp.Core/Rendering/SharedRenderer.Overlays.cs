@@ -641,26 +641,38 @@ internal static partial class SharedRenderer
             {
                 if (b.ShowBracket)
                 {
-                    // The DRAWN ends: shorten-pair reaches 0.2 further out than the logical
-                    // bound at each side (TupletBracketLayout.DrawnStartX carries the rule).
-                    double drawnStartX = b.DrawnStartX;
-                    double drawnEndX = b.DrawnEndX;
-                    gc.DrawLine(drawnStartX, startY, drawnStartX, startY - edgeHeight * hookDir,
-                        Color.Black, thickness);
-
-                    const double numberGap = 1.0;
-                    double totalWidth = drawnEndX - drawnStartX;
-                    double leftFrac = totalWidth > 0 ? (midX - numberGap - drawnStartX) / totalWidth : 0.5;
-                    double rightFrac = totalWidth > 0 ? (midX + numberGap - drawnStartX) / totalWidth : 0.5;
-                    double leftGapY = startY + (endY - startY) * leftFrac;
-                    double rightGapY = startY + (endY - startY) * rightFrac;
-
-                    gc.DrawLine(drawnStartX, startY, midX - numberGap, leftGapY,
-                        Color.Black, thickness);
-                    gc.DrawLine(midX + numberGap, rightGapY, drawnEndX, endY,
-                        Color.Black, thickness);
-                    gc.DrawLine(drawnEndX, endY, drawnEndX, endY - edgeHeight * hookDir,
-                        Color.Black, thickness);
+                    // LilyPond's make_bracket over the two positions, every offset taken ALONG
+                    // the bracket (dz): the ends reach past the bounds by shorten-pair (−0.2, ×
+                    // the staff's ss; TupletBracketLayout.DrawnStartX carries the rule), the
+                    // hooks stand at those ends, and the line breaks for the number over
+                    // (number's width + 1.0), centred on the midpoint and 0.1 to the right —
+                    // "more space at right due to italics".
+                    // LILYPOND-REF: lily/bracket.cc:39-87 Bracket::make_bracket — straight_corners, gap_corners, flare_corners
+                    // LILYPOND-REF: lily/tuplet-bracket.cc:326-337 Tuplet_bracket::print — gap = ext.length () + 1.0
+                    // LILYPOND-REF: lily/tuplet-bracket.cc:401-407 Tuplet_bracket::print — Interval (-0.5, 0.5) * gap + 0.1
+                    // Until session 694 the ends ran out LEVEL (X only) and the gap was a flat
+                    // ±1.0 about the midpoint, whatever the number's width.
+                    double dx = b.EndX - b.StartX, dy = endY - startY;
+                    double length = Math.Sqrt(dx * dx + dy * dy);
+                    double ux = length > 0 ? dx / length : 1.0, uy = length > 0 ? dy / length : 0.0;
+                    double reach = TupletBracketLayout.BracketOutwardReach * b.LineSpacing;
+                    double lx = b.StartX - reach * ux, ly = startY - reach * uy;
+                    double rx = b.EndX + reach * ux, ry = endY + reach * uy;
+                    gc.DrawLine(lx, ly, lx, ly - edgeHeight * hookDir, Color.Black, thickness);
+                    if (!string.IsNullOrEmpty(b.NumberText))
+                    {
+                        double gap = fonts.Advance(b.NumberText, os.Size(numberEm, b.StaffIndex),
+                            TextRole.Tuplet, numberStyle) + 1.0;
+                        double g0 = -0.5 * gap + 0.1, g1 = 0.5 * gap + 0.1;
+                        double mx = b.StartX + dx * 0.5, my = startY + dy * 0.5;
+                        gc.DrawLine(lx, ly, mx + g0 * ux, my + g0 * uy, Color.Black, thickness);
+                        gc.DrawLine(mx + g1 * ux, my + g1 * uy, rx, ry, Color.Black, thickness);
+                    }
+                    else
+                    {
+                        gc.DrawLine(lx, ly, rx, ry, Color.Black, thickness);
+                    }
+                    gc.DrawLine(rx, ry, rx, ry - edgeHeight * hookDir, Color.Black, thickness);
                 }
 
                 // CENTRED ON THE BRACKET LINE, both axes — LilyPond's own placement, and

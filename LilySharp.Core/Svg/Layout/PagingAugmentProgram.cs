@@ -48,7 +48,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// derived-from-those-fields values — into <see cref="_args"/>/<see cref="_texts"/>; the
 /// stored structs ride outside the key. Script reads (verified 2026-08-12):
 /// Glyph, FontSizeStep, SkylineHorizontalPadding, X, Ink (fallback box) + anchorY.
-/// Tuplet reads: IsStemUp, ShowBracket, StartX/EndX, DrawnStartX/DrawnEndX,
+/// Tuplet reads: IsStemUp, ShowBracket, StartX/EndX, DrawnStartX/DrawnEndX, DrawnStartYUp/DrawnEndYUp,
 /// StartYUp/EndYUp, NumberText, NumberX, NumberYUp. If a read is added to either callee,
 /// its value must join the key here — both callees carry a pointer back to this remark.
 /// Every other step is fully argument-driven (a resolved box or the bow's eight control
@@ -245,7 +245,7 @@ internal sealed class PagingAugmentProgram
     }
 
     private const int ScriptArgs = 8;        // anchorY, X, FontSizeStep, pad, Ink L/B/R/T
-    private const int TupletArgsPerItem = 10;
+    private const int TupletArgsPerItem = 12;
     private const int BowArgsPerItem = 8;
     private const int BoxArgs = 4;
     private const int LyricBandArgsPerBuilding = 4;  // start, valueAtStart, valueAtEnd, end
@@ -287,6 +287,8 @@ internal sealed class PagingAugmentProgram
                 _args.Add(b.EndX);
                 _args.Add(b.DrawnStartX);
                 _args.Add(b.DrawnEndX);
+                _args.Add(b.DrawnStartYUp);
+                _args.Add(b.DrawnEndYUp);
                 _args.Add(b.StartYUp);
                 _args.Add(b.EndYUp);
                 _args.Add(b.NumberX);

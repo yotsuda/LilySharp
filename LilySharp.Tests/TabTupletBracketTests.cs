@@ -192,7 +192,7 @@ public class TabTupletBracketTests
     /// <summary>An A-string eighth beamed DOWN with the next one is a stem-down bound under a
     /// bracket below: the bracket starts at that stem's edge, 0.365 out (LilyPond 9.153 −
     /// 0.365 = 8.79), where reading the string's own direction (up) put it at the digit's
-    /// edge, 0.75 further left.</summary>
+    /// edge, 0.75 further left. The 0.3 of that is the hook's reach past the bound, which LilyPond takes ALONG the sloped bracket (lily/bracket.cc:54-55 make_bracket; its twin draws this hook at −0.2746 = −0.3 × dx/length, session 694).</summary>
     [Fact]
     public void ABeamedBound_IsItsBeamsDirection()
     {
@@ -208,7 +208,12 @@ public class TabTupletBracketTests
         string svg = Render(book);
         var hooks = Hooks(svg, book.IndexOf("tuplet 3/2", System.StringComparison.Ordinal));
         double firstStem = Stems(svg).Min(s => s.X);
-        Assert.Equal(firstStem - 0.365, hooks[0].X, 2);
+        // The reach past the bound along the bracket: 0.2 x the tab's 1.5, times dx/length
+        // of the line the two hooks stand on.
+        double dx = hooks[^1].X - hooks[0].X, dy = hooks[^1].Y1 - hooks[0].Y1;
+        double reach = LilySharp.Core.Svg.Layout.TupletBracketLayout.BracketOutwardReach * 1.5
+                       * dx / System.Math.Sqrt(dx * dx + dy * dy);
+        Assert.Equal(firstStem - 0.065 - reach, hooks[0].X, 2);
     }
 
     private static (double X, double Y) NumberCentre(string svg, int tupletPos)

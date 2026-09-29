@@ -106,9 +106,16 @@ public class TupletBracketRestBoundTests
         Assert.Equal(2, pieces.Count);                          // split by the number
         var first = pieces[0];
         var last = pieces[^1];
+        double leftX = Math.Min(first.X1, first.X2), rightX = Math.Max(last.X1, last.X2);
         double leftY = first.X1 <= first.X2 ? first.Y1 : first.Y2;
         double rightY = last.X1 >= last.X2 ? last.Y1 : last.Y2;
-        double[] line = { middle - leftY, middle - rightY };
+        // The drawn ends stand shorten-pair past the bracket's bounds ALONG the line
+        // (lily/bracket.cc:54-55 make_bracket), so LilyPond's `positions` — the line's height
+        // AT its bounds — is read back that far in along it. (Until session 694 the ends ran
+        // out level and their Y was the positions outright.)
+        double length = Math.Sqrt((rightX - leftX) * (rightX - leftX) + (rightY - leftY) * (rightY - leftY));
+        double back = length > 0 ? TupletBracketLayout.BracketOutwardReach / length * (rightY - leftY) : 0.0;
+        double[] line = { middle - (leftY + back), middle - (rightY - back) };
         double inkTop = strokes.Max(l => middle - Math.Min(l.Y1, l.Y2));
         return (line, inkTop);
     }
