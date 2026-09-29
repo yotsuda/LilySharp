@@ -887,8 +887,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     return;
                 }
                 try {
+                    // Name the score the preview is showing, so Play sounds ITS parts and
+                    // form: with `score main "p2" { staff p2 }` picked, p1 stayed audible
+                    // until the server was told which score (user report 2026-09-29).
                     const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string }>(
-                        'lilysharp/playback', { textDocument: { uri } });
+                        'lilysharp/playback', { textDocument: { uri }, renderName: selectedRenders.get(uri) || null });
                     panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null });
                 } catch (e) {
                     panel.webview.postMessage({ type: 'playbackData', error: String(e) });
@@ -1313,8 +1316,8 @@ function revealInFileManager(file: string) {
 
 // Export the currently-previewed score: open the save dialog straight away and let
 // its "Save as type" dropdown choose the format; the saved file's extension decides
-// what the language server generates. SVG/PNG/PDF honour the selected score; MIDI
-// and MusicXML export the whole piece.
+// what the language server generates. SVG/PNG/PDF honour the selected score, and so
+// does MIDI (the score's parts, its form); MusicXML exports the primary form.
 async function exportPreview(
     uri: string,
     renderName: string | undefined
@@ -1361,7 +1364,7 @@ async function exportPreview(
             'PNG image': ['png'],
             'LilyPond source': ['ly'],
             'MusicXML': ['xml', 'musicxml'],
-            'MIDI (whole piece)': ['mid', 'midi'],
+            'MIDI': ['mid', 'midi'],
             'VOCALOID sequence (vocal + lyrics)': ['vsqx'],
         }
     });

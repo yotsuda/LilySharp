@@ -262,7 +262,10 @@ public sealed record RenderSpec(
     // `layout NAME [{ … }]`, same contract as PaperRef: this score's display switches
     // (Semantics.LayoutPlanReader), null when the score references none and the file's
     // unnamed default applies.
-    LayoutDeclarationSyntax? LayoutRef = null
+    LayoutDeclarationSyntax? LayoutRef = null,
+    // The bare part names of the score body (GRAMMAR §7 `PartRef`): parts PLAYED and never
+    // engraved — a click track, a cue part. Default (unset) reads as none.
+    ImmutableArray<string> MidiOnlyParts = default
 )
 {
     /// <summary>
@@ -320,6 +323,30 @@ public sealed record RenderSpec(
             }
             foreach (var item in Items)
                 AddItem(item);
+            return names.ToImmutable();
+        }
+    }
+
+    /// <summary>
+    /// The parts this score SOUNDS, without repeats: every part it engraves
+    /// (<see cref="EngravedPartNames"/>) and every bare MIDI-only row (<see cref="MidiOnlyParts"/>)
+    /// — the answer to "whose music does this score play". A part the score neither shows nor
+    /// names is a sketch to it, as a chord row it does not place is (<c>MidiExporter</c> reads
+    /// this; owner decision 2026-09-25 for the rows, extended to the parts 2026-09-29 when the
+    /// preview's Play of <c>score main "p2" { staff p2 }</c> sounded p1 as well).
+    /// </summary>
+    public ImmutableArray<string> SoundingPartNames
+    {
+        get
+        {
+            var engraved = EngravedPartNames;
+            if (MidiOnlyParts.IsDefaultOrEmpty)
+                return engraved;
+            var names = ImmutableArray.CreateBuilder<string>(engraved.Length + MidiOnlyParts.Length);
+            names.AddRange(engraved);
+            foreach (var n in MidiOnlyParts)
+                if (!names.Contains(n))
+                    names.Add(n);
             return names.ToImmutable();
         }
     }

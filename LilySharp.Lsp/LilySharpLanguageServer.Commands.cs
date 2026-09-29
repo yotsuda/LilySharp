@@ -908,7 +908,13 @@ public sealed partial class LilySharpLanguageServer
                     LilySharp.Core.Pdf.PdfGenerator.Generate(tree, null, renderName));
                 return [outputPath];
             case "midi":
-                new LilySharp.Core.Midi.MidiExporter { Form = form }.Export(tree).Save(outputPath);
+                // The named score's parts sound (its form is `form`); a request naming no
+                // score writes the file's first, as the preview draws it.
+                new LilySharp.Core.Midi.MidiExporter
+                {
+                    Form = form,
+                    Score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), renderName),
+                }.Export(tree).Save(outputPath);
                 return [outputPath];
             case "musicxml":
                 new LilySharp.Core.MusicXml.MusicXmlExporter { Form = form }.ExportToFile(tree, outputPath);
@@ -952,7 +958,11 @@ public sealed partial class LilySharpLanguageServer
             return new PlaybackResponse { Error = "Score has errors" };
         try
         {
-            var midi = new LilySharp.Core.Midi.MidiExporter().Export(tree);
+            // The score the preview DRAWS (the same choice the svg request makes), so its
+            // Play sounds that score's parts and form — `score main "p2" { staff p2 }`
+            // used to play p1 as well.
+            var score = RenderSpecParser.Choose(RenderSpecParser.FindAll(tree), @params.RenderName);
+            var midi = new LilySharp.Core.Midi.MidiExporter { Form = score?.Form, Score = score }.Export(tree);
             int tpq = midi.TicksPerQuarterNote;
 
             // Tempo map: merged from all tracks, sorted; default 120 bpm.

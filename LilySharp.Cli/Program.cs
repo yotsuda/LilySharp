@@ -479,7 +479,7 @@ static int RunMidi(string[] args)
         return 0;
     }
 
-    return RunFormOutput(args, "midi", ".mid", (tree, form, _, path) => WriteMidi(tree, form, path));
+    return RunFormOutput(args, "midi", ".mid", (tree, form, score, path) => WriteMidi(tree, form, score, path));
 }
 
 static void ShowMidiHelp()
@@ -508,9 +508,15 @@ static void ShowMidiHelp()
 }
 
 static int WriteMidi(SyntaxTree tree, LilySharp.Core.Syntax.FormDeclarationSyntax? form,
-                     string outputPath)
+                     LilySharp.Core.Syntax.RenderDeclarationSyntax? score, string outputPath)
 {
-    var exporter = new MidiExporter { Form = form };
+    // Each score's .mid sounds the parts THAT score shows (song-p2.mid is p2's staff, not
+    // the whole file); a scoreless file (null) sounds every part.
+    var exporter = new MidiExporter
+    {
+        Form = form,
+        Score = score != null ? LilySharp.Core.Svg.Collector.RenderSpecParser.Parse(score) : null,
+    };
     var midi = exporter.Export(tree);
     midi.Save(outputPath);
     Console.WriteLine($"Created: {outputPath}");

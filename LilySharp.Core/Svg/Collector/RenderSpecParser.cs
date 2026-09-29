@@ -106,6 +106,7 @@ public static class RenderSpecParser
     {
         var items = new List<RenderItemSpec>();
         var headerOverrides = new List<MetadataDeclarationSyntax>();
+        var midiOnlyParts = new List<string>();
         FontDeclarationSyntax? fontsRef = null;
         PaperDeclarationSyntax? paperRef = null;
         LayoutDeclarationSyntax? layoutRef = null;
@@ -182,6 +183,13 @@ public static class RenderSpecParser
                     items.Add(new LyricsRowSpec(lyricsRow.PartName, lyricsRow.SingsTarget));
                     break;
 
+                // A bare part name: the MIDI-only row (GRAMMAR §7 PartRef). It draws nothing,
+                // so it is not an item; it is kept beside them for the one reader that asks
+                // which parts the score SOUNDS (RenderSpec.SoundingPartNames).
+                case MidiPartRenderSyntax midiPart:
+                    midiOnlyParts.Add(midiPart.PartName.Text);
+                    break;
+
                 // `title` / `composer` inside the score block: this score's own
                 // header, applied over the file's when it is collected.
                 case MetadataDeclarationSyntax meta:
@@ -235,7 +243,8 @@ public static class RenderSpecParser
         return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form,
             [.. headerOverrides], fontsRef, paperRef,
             ScoreConcert: LilySharp.Core.Semantics.ConcertPitch.ScoreIsConcert(render),
-            LayoutRef: layoutRef);
+            LayoutRef: layoutRef,
+            MidiOnlyParts: [.. midiOnlyParts]);
     }
 
     /// <summary>
@@ -570,9 +579,10 @@ public static class RenderSpecParser
     /// back to the first spec when nothing matches — a stale preview selection still
     /// shows the default score rather than nothing. Shared by that full path and by
     /// <see cref="IncrementalCompiler"/> so a named session resolves the SAME spec
-    /// the full compile it must byte-match would.
+    /// the full compile it must byte-match would — and by the language server's playback
+    /// and export, so what the preview PLAYS is the score it DRAWS.
     /// </summary>
-    internal static RenderSpec? Choose(IReadOnlyList<RenderSpec> specs, string? renderName)
+    public static RenderSpec? Choose(IReadOnlyList<RenderSpec> specs, string? renderName)
     {
         if (!string.IsNullOrEmpty(renderName))
         {

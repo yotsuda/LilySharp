@@ -358,9 +358,11 @@ public sealed class MidiExporter
     /// form is being played, else the first).
     /// </summary>
     /// <remarks>
-    /// Read for ONE thing: which part a BARE section belongs to (see
-    /// <see cref="_bareSectionOwner"/>). Everything else this export does is still read
-    /// from the music itself, so a file with no <c>score</c> at all plays exactly as before.
+    /// Read for THREE things, all "what does this score show": which part a BARE section
+    /// belongs to (<see cref="_bareSectionOwner"/>), which chord rows sound
+    /// (<see cref="_soundingChordRows"/>) and which parts sound (<see cref="_soundingParts"/>).
+    /// Everything else this export does is read from the music itself, so a file with no
+    /// <c>score</c> at all plays exactly as before.
     /// </remarks>
     public RenderSpec? Score { get; init; }
 
@@ -450,6 +452,7 @@ public sealed class MidiExporter
         _formPlayed = false;
         _bareSectionOwner = RenderSpecParser.SingleEngravedPart(tree, Score, Form);
         _soundingChordRows = SoundingChordRows(tree, Score, Form);
+        _soundingParts = SoundingParts(tree, Score, Form);
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
@@ -461,6 +464,14 @@ public sealed class MidiExporter
         // changes later. Only seed the default when no tick-0 signature exists.
         if (!conductorTrack.TimeSignatures.Any(ts => ts.Tick == 0))
             conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
+
+        // The parts the score does not show are stripped HERE, after the whole stream is
+        // played and before it is split: every part walked as before, so the timeline (a
+        // section's length, a lane's padding, a tie's target, the tempo and meter events) is
+        // the one the page has, and only the notes of the unseen parts leave it. Stripping
+        // before the split also keeps them off the channel plan.
+        if (_soundingParts is { } sounding)
+            mainTrack.Notes.RemoveAll(n => n.Part is { } part && !IsChordRowTrack(part) && !sounding.Contains(part));
 
         // A section-less file's lyric blocks were met on the root stream: sing them now.
         AttachLyrics(mainTrack, null, 0, 0);
@@ -525,8 +536,8 @@ public sealed class MidiExporter
 
         // The chord rows' tracks (PlayChordRow) come AFTER every part's, whenever they first
         // sound, so a placed row never moves a part off the channel it had before rows sounded.
-        order = order.Where(p => p is null || !p.EndsWith(" (chords)", StringComparison.Ordinal))
-            .Concat(order.Where(p => p is not null && p.EndsWith(" (chords)", StringComparison.Ordinal)))
+        order = order.Where(p => p is null || !IsChordRowTrack(p))
+            .Concat(order.Where(p => p is not null && IsChordRowTrack(p)))
             .ToList();
 
         var channelByProgram = new Dictionary<int, int>();
@@ -1196,6 +1207,33 @@ public sealed class MidiExporter
     // The chord rows the exported score PLACES, read once per Export (SoundingChordRows).
     private HashSet<string> _soundingChordRows = new(StringComparer.Ordinal);
 
+    // The parts the exported score SOUNDS, read once per Export (SoundingParts); null when
+    // the file declares no score — then every part sounds, as it always did.
+    private HashSet<string>? _soundingParts;
+
+    /// <summary>
+    /// The parts the score being exported sounds — the ones it engraves and its bare MIDI-only
+    /// rows (<see cref="RenderSpec.SoundingPartNames"/>) — or null for a file with no score.
+    /// A part the score neither shows nor names is a sketch to it, exactly as a chord row it
+    /// does not place is (<see cref="SoundingChordRows"/>): until 2026-09-29 the preview's Play
+    /// of <c>score main "p2" { staff p2 }</c> sounded every part of the file, p1 included.
+    /// </summary>
+    private static HashSet<string>? SoundingParts(SyntaxTree tree, RenderSpec? score,
+        FormDeclarationSyntax? form)
+        => RenderSpecParser.PlayedSpec(tree, score, form) is { } spec
+            ? new HashSet<string>(spec.SoundingPartNames, StringComparer.Ordinal)
+            : null;
+
+    /// <summary>True when <paramref name="part"/> sounds in this export: every part of a file
+    /// with no score, else the ones the score shows or names.</summary>
+    private bool PartSounds(string part) => _soundingParts == null || _soundingParts.Contains(part);
+
+    // The track name a chord row's notes carry ("NAME (chords)", PlayChordRow) — what tells
+    // them apart from a part's notes in the one stream (SplitIntoPartTracks, the strip).
+    private const string ChordRowTrackSuffix = " (chords)";
+
+    private static bool IsChordRowTrack(string part) => part.EndsWith(ChordRowTrackSuffix, StringComparison.Ordinal);
+
     /// <summary>
     /// The chord tracks the score being exported places — its <c>chords NAME</c> rows and
     /// the <c>staff … with chords NAME</c> attachments. Only these sound (owner decision
@@ -1226,7 +1264,7 @@ public sealed class MidiExporter
     /// </remarks>
     private int PlayChordRow(IEnumerable<SyntaxNode> items, string rowName, int startTick, MidiTrack track)
     {
-        string part = rowName + " (chords)";
+        string part = rowName + ChordRowTrackSuffix;
         int timbre = PartTimbre(part);
         int velocity = Math.Max(1, _velocity * 7 / 10);
         int barTicks = FractionToTicks(new Fraction(_timeNumerator, _timeDenominator));
@@ -2981,6 +3019,9 @@ public sealed class MidiExporter
             string? sung = block.VoiceName is { } named && partNames.Contains(named)
                 ? named
                 : partAtBlock ?? partNames.FirstOrDefault();
+            // The words of a part the score does not sound leave with its notes (Export's strip).
+            if (sung != null && !PartSounds(sung))
+                continue;
             var onsets = track.Notes.Skip(notesBefore)
                 .Where(n => !n.IsGrace && (sung == null || n.Part == sung))
                 .Select(n => n.StartTick).Distinct().OrderBy(t => t).ToList();

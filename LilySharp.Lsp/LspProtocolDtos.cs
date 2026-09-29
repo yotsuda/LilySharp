@@ -256,6 +256,11 @@ public class ExportResponse
 public class PlaybackParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>The score the preview is showing — the picker's value, resolved the way the
+    /// drawing resolves it (<c>RenderSpecParser.Choose</c>: by name, else the first score).
+    /// Null or empty = the first score. What plays is that score's form and its parts; until
+    /// 2026-09-29 every part of the file sounded whichever score was picked.</summary>
+    public string? RenderName { get; set; }
 }
 
 /// <summary>One playable note, in SECONDS (tempo map already applied).</summary>

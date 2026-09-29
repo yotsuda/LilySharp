@@ -1499,8 +1499,8 @@ public sealed class MusicXmlExporter
     {
         _barSeenInScope = false;
         // The written-attributes record is the part's own (its remark says why).
-        if (_currentPart != null)
-            _writtenByPart[_currentPart.Name] = (_writtenKey, _writtenTime, _writtenClef);
+        if (_currentPart is { Name: { } leaving })
+            _writtenByPart[leaving] = (_writtenKey, _writtenTime, _writtenClef);
         (_writtenKey, _writtenTime, _writtenClef) = _writtenByPart.TryGetValue(name, out var written)
             ? written
             : (null, null, null);

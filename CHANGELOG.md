@@ -278,6 +278,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The preview plays the score it shows.** With `score main "p2" { staff p2 }` picked, Play
+  (and the audition keys) sounded every part of the file, p1 included; the request now names the
+  picked score and the MIDI sounds that score's parts and form. The same rule reaches every
+  `.mid`: a score's file (`song-p2.mid`, the preview's MIDI export, `lysc midi`) carries the
+  parts that score engraves plus its bare MIDI-only rows (`click`), the way a `chords` row it
+  does not place is already silent; a file with no `score` block still sounds every part. The
+  timeline is untouched — a section the picked score's parts sit out still takes its bars — and
+  the words of a part that does not sound leave with its notes.
 - **MusicXML says where the capo is.** Under `chordDiagrams … capo N` the `<frame>`s were
   the pressed shapes but the document never said so; every part that carries a frame now
   opens with `<staff-details><capo>N</capo></staff-details>`.
