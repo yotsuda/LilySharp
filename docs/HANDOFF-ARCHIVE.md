@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第680セッションの経緯
+
+### 1.1 第680セッション（2026-09-29・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p680`（HEAD `ca21b8cb`・未 push 26・full **10282 / 0 / 2 / 10284**）。
+★★ **⑼ half-tie の向きが声部 span の中の書いた符尾方向・part-combine の声部を無視＝閉じた**（`81fb4112`）: タイ・スラー・half-tie の側は `NoteItem.VoiceStemUp`（声部の props）から読む（LP の `make-voice-props-set` は Tie／Slur／LaissezVibrerTie／RepeatTie にも direction を立て、`\stemDown` は Stem だけ）。家が 2 つ空だった: ⑴ `ResolveVoiceStemDirections` が stamp 全体を `ForcedStemUp is null` で門番していた＝`@stemUp`／`@stemDown` を書いた音は符尾は正しく、弓は音高の規則に落ちていた→符尾の門はそのまま・`VoiceStemUp` は無条件に。⑵ `PartCombiner.WithVoiceDirection` が `StemUpOverride` だけ焼いていた＝combined staff の one／two の弓は声部の側を持ったことが無かった→`VoiceStemUp` も焼く・shared／solo の `WithoutVoiceDirection` は両方消す。
+★ 検証: `HalfTieEveryStaffTests.EveryVoiceDrawsItsHalfTies_TheLowerVoiceDown` を Theory に（span・符尾を声部と逆に書いた span＝前提として符尾 down/up と VoiceStemUp up/down を断言・combined staff の apart）。毒: P1 門を戻す 1・P2 combiner の符尾だけ 1 が各自赤、P3 shared の古い VoiceStemUp は観測者なし（part 自身の span は shared に来ない・Lab `sessions/p680/poisons.ps1`）。LP 2.26.0 の絵: 探り本 2 冊とも Lily# と同じ側（`probes/out/*-lp.png`）。射程: 掃き 995 冊 moved 0（base＝`ca21b8cb`）。
+⚠ 影響は half-tie だけでなく、同じ読み手のタイ（tab の側・`ElementCoordinator` :2474）とスラー（:4645）にも及ぶ＝combined staff の apart のスラー／タイは今後 `\voiceOne`／`\voiceTwo` の側（LP と同じ）。掃きで動く本は 0＝コーパスに該当の綴りは無い。
+★ **終了**: `-End p680 -DiffBase ca21b8cb`＝full **10284 / 0 / 2 / 10286**（+2＝網・run2.trx）・Core 0 警告・門 6 つ全 OK。§7.5 Core '+' 54 行／REF 2（`direction-polyphonic-grobs`・`make-voice-props-set`＝⒜ 字面ではなく規則の出所）／OWN 0。7.7 匂い: なし（既存の 2 つの家に stamp を足しただけ・幾何は動かしていない）。perf: 走査は足していない（同じ `with` の中の項目 1 つ）。push はユーザー（未 push 28）。**第662・第663 の欠陥 15 件は全部閉じた。**
+
 ## 以下は第679セッションの経緯
 
 ### 1.1 第679セッション（2026-09-29・YT-DELL2）
