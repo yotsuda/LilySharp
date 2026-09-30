@@ -329,6 +329,7 @@ public sealed class MusicXmlExporter
         _diagramsWord = default;
         _scoreLayoutPlan = null;
         _document = new MusicXmlDocument();
+        _pageModel = null;
 
         var root = tree.GetRoot();
         _root = root;
@@ -380,6 +381,7 @@ public sealed class MusicXmlExporter
         WriteCapo();
         WriteBeams(tree, hasSections);
         WriteTab(tree);
+        WriteTrackLyrics(tree);
 
         return _document;
     }
@@ -422,39 +424,9 @@ public sealed class MusicXmlExporter
         if (tabSpecs.Count == 0)
             return;
 
-        var page = new Svg.Collector.MeasureCollector
-        {
-            FontsOverride = spec.FontsRef,
-            PaperOverride = spec.PaperRef,
-            LayoutOverride = spec.LayoutRef,
-        }.CollectMultiStaff(tree, spec);
+        var page = PageModel(tree, spec);
         var tabStaves = page.StaffGroups.SelectMany(g => g.Staves).Where(s => s.IsTab && s.Tuning.HasValue).ToList();
-
-        // Each part's exported notes by where they were written, k-th printing by k-th
-        // printing: a chord is its first note and the members that follow it.
-        var byPart = new Dictionary<MusicXmlPart, Dictionary<int, List<List<MusicXmlNote>>>>();
-        foreach (var part in Document.Parts)
-        {
-            var bySource = new Dictionary<int, List<List<MusicXmlNote>>>();
-            List<MusicXmlNote>? chord = null;
-            foreach (var measure in part.Measures)
-                foreach (var note in measure.Notes)
-                {
-                    if (note.IsChord && chord != null)
-                    {
-                        chord.Add(note);
-                        continue;
-                    }
-                    chord = null;
-                    if (note.SourcePosition < 0 || note.IsRest || note.IsGrace || note.IsBackup
-                        || note.RawElement != null || note.IsUnpitched)
-                        continue;
-                    if (!bySource.TryGetValue(note.SourcePosition, out var printings))
-                        bySource[note.SourcePosition] = printings = new List<List<MusicXmlNote>>();
-                    printings.Add(chord = new List<MusicXmlNote> { note });
-                }
-            byPart[part] = bySource;
-        }
+        var byPart = Document.Parts.ToDictionary(p => p, PrintingsBySource);
 
         for (int t = 0; t < tabStaves.Count && t < tabSpecs.Count; t++)
         {
@@ -521,6 +493,138 @@ public sealed class MusicXmlExporter
                 var (s, fret) = Tablature.Tunings.CalculateFret(writtenMidi + shift, tuning, stringNumber ?? 0);
                 return fret < 0 ? null : (s, fret);
             }
+        }
+    }
+
+    /// <summary>The page's model of the exported score — the one the SVG renders, with the
+    /// score's own fonts / paper / layout references (SvgGenerator.CollectFor) — collected once
+    /// for the passes that read the page (<see cref="WriteTab"/>, <see cref="WriteTrackLyrics"/>).</summary>
+    private Svg.Model.MultiStaffScore PageModel(SyntaxTree tree, Svg.Collector.RenderSpec spec)
+        => _pageModel ??= new Svg.Collector.MeasureCollector
+        {
+            FontsOverride = spec.FontsRef,
+            PaperOverride = spec.PaperRef,
+            LayoutOverride = spec.LayoutRef,
+        }.CollectMultiStaff(tree, spec);
+
+    private Svg.Model.MultiStaffScore? _pageModel;
+
+    /// <summary>A part's exported pitched notes by where they were written, k-th printing by
+    /// k-th printing — the side of the page match (<see cref="MusicXmlNote.SourcePosition"/>) a
+    /// page item's own printing count indexes. A chord is its first note and the members that
+    /// follow it.</summary>
+    private static Dictionary<int, List<List<MusicXmlNote>>> PrintingsBySource(MusicXmlPart part)
+    {
+        var bySource = new Dictionary<int, List<List<MusicXmlNote>>>();
+        List<MusicXmlNote>? chord = null;
+        foreach (var measure in part.Measures)
+            foreach (var note in measure.Notes)
+            {
+                if (note.IsChord && chord != null)
+                {
+                    chord.Add(note);
+                    continue;
+                }
+                chord = null;
+                if (note.SourcePosition < 0 || note.IsRest || note.IsGrace || note.IsBackup
+                    || note.RawElement != null || note.IsUnpitched)
+                    continue;
+                if (!bySource.TryGetValue(note.SourcePosition, out var printings))
+                    bySource[note.SourcePosition] = printings = new List<List<MusicXmlNote>>();
+                printings.Add(chord = new List<MusicXmlNote> { note });
+            }
+        return bySource;
+    }
+
+    /// <summary>
+    /// The syllables of a TOP-LEVEL lyrics track (<c>lyrics words sings vo { … }</c> placed by
+    /// the score's <c>lyrics words</c>) as <c>&lt;lyric&gt;</c>: the page binds each syllable
+    /// to a note (LyricCollector — the row folds under the staff it sings), and the syllable
+    /// is written on the exported note that stands for that page note.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 only lyrics written INSIDE a section or part block reached the file
+    /// (<see cref="AttachLyrics"/>, which still writes those); a top-level track was dropped
+    /// (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #2). A track the score does not
+    /// place is not on the page, and is not in the file either. An unbound row (no melody —
+    /// the even-spread lead-sheet row) names no note and is left out.
+    /// </remarks>
+    private void WriteTrackLyrics(SyntaxTree tree)
+    {
+        var spec = _playedSpec;
+        if (spec == null)
+            return;
+        var tracks = tree.GetRoot().ChildNodes().OfType<LyricsBlockSyntax>().Select(b => b.Span).ToList();
+        if (tracks.Count == 0)
+            return;
+        var page = PageModel(tree, spec);
+        var staves = page.StaffGroups.SelectMany(g => g.Staves).ToList();
+        var byPart = Document.Parts.ToDictionary(p => p, PrintingsBySource);
+
+        // Each staff's items' printings, counted as the exported notes' are.
+        var printing = new Dictionary<Svg.Model.MusicItem, int>(ReferenceEqualityComparer.Instance);
+        foreach (var staff in staves)
+        {
+            var seen = new Dictionary<int, int>();
+            foreach (var voice in staff.Voices)
+                foreach (var measure in voice.Measures)
+                    foreach (var item in measure.Items)
+                        if (item is Svg.Model.NoteItem or Svg.Model.ChordItem && item.SourcePosition >= 0)
+                        {
+                            seen.TryGetValue(item.SourcePosition, out int k);
+                            printing[item] = k;
+                            seen[item.SourcePosition] = k + 1;
+                        }
+        }
+
+        var hyphenBefore = new Dictionary<(int Staff, int Voice, int Verse), bool>();
+        foreach (var lyric in page.Lyrics
+                     .Where(l => !l.IsLyricsRow && tracks.Any(t => l.SourcePosition >= t.Start && l.SourcePosition < t.End))
+                     .OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing))
+        {
+            if (lyric.StaffIndex >= staves.Count || SungItem(staves[lyric.StaffIndex], lyric) is not { } item
+                || !printing.TryGetValue(item, out int k))
+                continue;
+            var note = byPart.Values
+                .Select(bySource => bySource.TryGetValue(item.SourcePosition, out var p) && k < p.Count ? p[k][0] : null)
+                .FirstOrDefault(n => n != null);
+            if (note == null || note.Lyrics.Any(l => l.Verse == lyric.VerseNumber))
+                continue;
+            var key = (lyric.StaffIndex, lyric.VoiceId, lyric.VerseNumber);
+            bool prevHyphen = hyphenBefore.GetValueOrDefault(key);
+            bool hyphen = lyric.ConnectorType == Svg.Model.LyricConnectorType.Hyphen;
+            note.Lyrics.Add((lyric.VerseNumber, lyric.Text,
+                prevHyphen ? (hyphen ? "middle" : "end") : (hyphen ? "begin" : "single"),
+                lyric.ConnectorType == Svg.Model.LyricConnectorType.Extender));
+            hyphenBefore[key] = hyphen;
+        }
+
+        // The note a syllable is under: the primary voice's item it indexes, or — a bound
+        // voice's syllable — the note of another voice starting at its moment.
+        static Svg.Model.MusicItem? SungItem(Svg.Model.Staff staff, Svg.Model.LyricItem lyric)
+        {
+            if (lyric.VoiceId == 0)
+            {
+                var items = staff.PrimaryVoice.Measures is var ms && lyric.MeasureIndex < ms.Length
+                    ? ms[lyric.MeasureIndex].Items
+                    : default;
+                return !items.IsDefault && lyric.ItemIndex >= 0 && lyric.ItemIndex < items.Length
+                    ? items[lyric.ItemIndex]
+                    : null;
+            }
+            foreach (var voice in staff.Voices.Skip(1))
+            {
+                if (lyric.MeasureIndex >= voice.Measures.Length)
+                    continue;
+                var at = Fraction.Zero;
+                foreach (var item in voice.Measures[lyric.MeasureIndex].Items)
+                {
+                    if (at == lyric.Timing && item is Svg.Model.NoteItem or Svg.Model.ChordItem)
+                        return item;
+                    at += item.Duration;
+                }
+            }
+            return null;
         }
     }
 

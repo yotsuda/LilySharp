@@ -320,6 +320,11 @@ workflow attaches that section to the GitHub Release verbatim.
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and
   hooks).
+- **MusicXML carries a top-level lyrics track.** `lyrics words sings vo { … }`, placed by
+  the score's `lyrics words`, reached the page but not the file — only lyrics written inside
+  a section or part block did. Its syllables are now `<lyric>`s on the notes the page sets
+  them under, with their hyphens (`begin` / `middle` / `end`) and extenders. A track the
+  score does not place stays out, as it does on the page.
 - **MusicXML carries the tab staff.** `lysc xml` left a score's `tab` out entirely. A part
   shown as `staff gt  tab gt` is now one part on two staves — notation, and a TAB staff
   (`<clef>` TAB, `<staff-details>` with the lines and open strings) holding the same notes
