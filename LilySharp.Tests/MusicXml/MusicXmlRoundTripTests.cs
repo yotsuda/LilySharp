@@ -949,6 +949,32 @@ public class MusicXmlRoundTripTests
         => string.Join("\n", tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
 
     /// <summary>
+    /// Mid-piece changes of time, key, clef and tempo come back where they were written.
+    /// Until 2026-09-30 only the opening time and key reached the file, so later bars were
+    /// read against the first signature and the other changes were lost. In a part of two
+    /// voices the change rides the first voice's stream — where the source wrote it — and the
+    /// import reads exactly as the source does (that source warns about its own bar 1: a
+    /// `time` inside one voice block is checked against the other voice's first bar too).
+    /// </summary>
+    [Theory]
+    [InlineData("c'1 | time 3/4 c'2. | key d major d'2. | clef bass tempo 80 d2. | time 4/4 key c major clef treble c'1 |")]
+    [InlineData("voice { c''1 | time 3/4 c''2. | } { c'1 | c'2. | }")]
+    public void MidPieceChanges_RoundTrip(string music)
+    {
+        string source = "octave absolute\ntime 4/4\nkey c major\ntempo 100\npart m { clef treble }\n"
+                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+        var sourceTree = SyntaxTree.Parse(source);
+        string xml = new MusicXmlExporter().Export(sourceTree).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        var tree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(tree), $"{lys}\n---\n{Diagnostics(tree)}");
+        Assert.Contains(music, lys);
+        static IEnumerable<string> Messages(SyntaxTree t)
+            => t.Diagnostics.Concat(SemanticValidation.Run(t)).Select(d => d.Message);
+        Assert.Equal(Messages(sourceTree), Messages(tree));
+    }
+
+    /// <summary>
     /// A repeat pass that ends on a full bar closes it, as the page does — with or without a
     /// bar line written after the repeat. Until 2026-09-30 each pass ran on into the next:
     /// <c>repeat percent 2 { r2. | r2. } c'2. |</c> exported as <c>r | r r | r c</c>.

@@ -188,7 +188,7 @@ internal static class LysWriter
         foreach (var part in doc.Parts)
         {
             sb.Append("  ").Append(part.SafeName).Append(" {\n");
-            sb.Append("    ").Append(WriteMusic(part, report, relative)).Append('\n');
+            sb.Append("    ").Append(WriteMusic(part, report, relative, Directives(doc, part, report))).Append('\n');
             sb.Append("  }\n");
         }
         // Section-level lyrics sing the first part carrying them.
@@ -209,13 +209,14 @@ internal static class LysWriter
         StringBuilder sb, ImportDocument doc, VoltaLayout layout, ImportReport report, bool relative)
     {
         var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
+        var directives = doc.Parts.ToDictionary(p => p, p => Directives(doc, p, report));
         foreach (var seg in layout.Segments)
         {
             sb.Append("section ").Append(seg.Name).Append(" {\n");
             foreach (var part in doc.Parts)
             {
                 sb.Append("  ").Append(part.SafeName).Append(" {\n");
-                sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report, relative)).Append('\n');
+                sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report, relative, directives[part])).Append('\n');
                 sb.Append("  }\n");
             }
             // Lyrics for just this section's measures, so each ending sings its own text.
@@ -393,12 +394,14 @@ internal static class LysWriter
     // One part's music over a measure range [start, end), voice-aware, joined by plain
     // barlines (repeat/volta bars come from the structure, not the notes). Each section
     // is its own relative-octave stream (Lily# resets relative per section).
-    private static string WriteMusicRange(ImportPart part, int start, int end, ImportReport report, bool relative)
+    private static string WriteMusicRange(
+        ImportPart part, int start, int end, ImportReport report, bool relative, string[] directives)
     {
         var voices = part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().OrderBy(x => x).ToList();
         if (voices.Count <= 1)
-            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report, Rel(relative));
-        return VoiceSpan(voices.Select(v => WriteVoiceRange(part, v, start, end, report, Rel(relative))));
+            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report, Rel(relative), directives);
+        return VoiceSpan(voices.Select(v =>
+            WriteVoiceRange(part, v, start, end, report, Rel(relative), v == voices[0] ? directives : null)));
     }
 
     /// <summary>Wraps several simultaneous streams in one span. <c>voice</c> opens the span
@@ -407,7 +410,8 @@ internal static class LysWriter
         => "voice " + string.Join(" ", bodies.Select(b => "{ " + b + " }"));
 
     private static string WriteVoiceRange(
-        ImportPart part, int voice, int start, int end, ImportReport report, RelativeOctave? rel)
+        ImportPart part, int voice, int start, int end, ImportReport report, RelativeOctave? rel,
+        string[]? directives)
     {
         var sb = new StringBuilder();
         end = Math.Min(end, part.Measures.Count);
@@ -415,6 +419,8 @@ internal static class LysWriter
         {
             int bars = MultiRestSpan(part.Measures, i, end, voice);
             var items = part.Measures[i].VoiceItems.TryGetValue(voice, out var v) ? v : EmptyItems;
+            if (directives != null)
+                sb.Append(directives[i]);
             sb.Append(WriteMeasureItems(items, report, rel, bars)).Append(' ');
             i += bars;
             if (i < end)
@@ -463,24 +469,75 @@ internal static class LysWriter
             ? rest
             : null;
 
-    private static string WriteMusic(ImportPart part, ImportReport report, bool relative)
+    private static string WriteMusic(ImportPart part, ImportReport report, bool relative, string[] directives)
     {
         var voices = part.Measures
             .SelectMany(m => m.VoiceItems.Keys)
             .Distinct().OrderBy(n => n).ToList();
         if (voices.Count <= 1)
-            return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report, Rel(relative));
+            return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report, Rel(relative), directives);
 
         // Several voices on one staff → one parallel span. Ascending voice order puts
         // voice 1 (the upper part, stems up) first. Each voice is its own
-        // relative-octave stream.
-        return VoiceSpan(voices.Select(v => WriteVoiceStream(part, v, report, Rel(relative))));
+        // relative-octave stream; the staff's changes ride the first one only.
+        return VoiceSpan(voices.Select(v =>
+            WriteVoiceStream(part, v, report, Rel(relative), v == voices[0] ? directives : null)));
+    }
+
+    /// <summary>
+    /// Per measure, the changes that open it — <c>time</c>, <c>key</c>, <c>clef</c>,
+    /// <c>tempo</c> — as the directives written before its music ("" when none).
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 only the OPENING time and key reached the file (the header), so a
+    /// piece that changed meter came back reading every later bar against the first
+    /// signature (chord-tremolo.lys: its 3/4, 2/4 and 1/4 bars warned as short 4/4 ones), and
+    /// a key, clef or tempo change was lost outright. A change is written where it differs
+    /// from what is in force — the header's time/key/tempo and the part's clef at the start.
+    /// A grand staff's clef is left alone: the reader keeps one clef per measure, which
+    /// cannot say which staff changed.
+    /// </remarks>
+    private static string[] Directives(ImportDocument doc, ImportPart part, ImportReport report)
+    {
+        var time = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null);
+        var key = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null);
+        string clef = part.Clef;
+        int? tempo = doc.Tempo;
+        var result = new string[part.Measures.Count];
+        for (int i = 0; i < part.Measures.Count; i++)
+        {
+            var m = part.Measures[i];
+            var sb = new StringBuilder();
+            if (m.Time is { } t && t != time)
+            {
+                sb.Append("time ").Append(t.Beats).Append('/').Append(t.BeatType).Append(' ');
+                time = t;
+            }
+            if (m.Key is { } k && k != key)
+            {
+                sb.Append("key ").Append(KeyToLily(k, report)).Append(' ');
+                key = k;
+            }
+            if (part.StaffGroup == null && m.Clef is { } c && c != clef)
+            {
+                sb.Append("clef ").Append(c).Append(' ');
+                clef = c;
+            }
+            if (m.Tempo is int bpm && bpm != tempo)
+            {
+                sb.Append("tempo ").Append(bpm).Append(' ');
+                tempo = bpm;
+            }
+            result[i] = sb.ToString();
+        }
+        return result;
     }
 
     private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;
 
     // One voice's measures assembled with the shared barlines between them.
-    private static string WriteVoiceStream(ImportPart part, int voice, ImportReport report, RelativeOctave? rel)
+    private static string WriteVoiceStream(
+        ImportPart part, int voice, ImportReport report, RelativeOctave? rel, string[]? directives)
     {
         var measures = part.Measures;
         var sb = new StringBuilder();
@@ -490,6 +547,8 @@ internal static class LysWriter
         for (int i = 0; i < measures.Count;)
         {
             int bars = MultiRestSpan(measures, i, measures.Count, voice);
+            if (directives != null)
+                sb.Append(directives[i]);
             sb.Append(WriteMeasureItems(
                 measures[i].VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report, rel, bars));
             // The folded bars close at the LAST one's bar line.
