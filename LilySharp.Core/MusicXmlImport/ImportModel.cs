@@ -282,6 +282,8 @@ internal sealed class ImportGraceNote
     public bool Slash { get; set; }
     /// <summary>A slur opens on this grace note (<c>&lt;slur type="start"/&gt;</c>).</summary>
     public bool SlurStart { get; set; }
+    /// <summary>A member of the grace chord the previous grace note opens (<c>&lt;chord/&gt;</c>).</summary>
+    public bool ChordWithPrev { get; set; }
 }
 
 /// <summary>One sung syllable on a note.</summary>

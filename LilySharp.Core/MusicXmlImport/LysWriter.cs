@@ -779,14 +779,31 @@ internal static class LysWriter
     private static string GraceBlock(List<ImportGraceNote> grace, RelativeOctave? rel, ImportReport report)
     {
         string keyword = grace[0].Slash ? "acciaccatura" : "grace";
-        if (grace.Take(grace.Count - 1).Any(g => g.SlurStart))
+        // A grace chord is its head note plus the <chord/> members after it — one column, the
+        // way the main stream's chord is gathered (WriteMeasureItems). Until 2026-09-30 each
+        // member came back as a grace note of its own, one after another.
+        var columns = new List<List<ImportGraceNote>>();
+        foreach (var g in grace)
+        {
+            if (g.ChordWithPrev && columns.Count > 0)
+                columns[^1].Add(g);
+            else
+                columns.Add(new List<ImportGraceNote> { g });
+        }
+        if (columns.Take(columns.Count - 1).Any(c => c[0].SlurStart))
             report.Warn("a slur opening inside a grace group before its last note has no Lily# "
                 + "spelling (the group's one slur opens on its last note) and is dropped.");
-        var notes = string.Join(" ", grace.Select((g, i) =>
-            (rel != null ? rel.Note(g.Step, g.Alter, g.Octave) : PitchToken(g.Step, g.Alter, g.Octave))
-            + Value(g.NoteValue, g.Dots)
-            + (i == grace.Count - 1 && g.SlurStart ? "(" : "")));
-        return keyword + " { " + notes + " }";
+        var tokens = columns.Select((c, i) =>
+        {
+            var head = c[0];
+            string body = c.Count == 1
+                ? (rel != null ? rel.Note(head.Step, head.Alter, head.Octave) : PitchToken(head.Step, head.Alter, head.Octave))
+                : rel != null
+                    ? rel.Chord(c.Select(m => new ImportNote { Step = m.Step, Alter = m.Alter, Octave = m.Octave }).ToList())
+                    : "<" + string.Join(" ", c.Select(m => PitchToken(m.Step, m.Alter, m.Octave))) + ">";
+            return body + Value(head.NoteValue, head.Dots) + (i == columns.Count - 1 && head.SlurStart ? "(" : "");
+        });
+        return keyword + " { " + string.Join(" ", tokens) + " }";
     }
 
     /// <summary>Relative-octave spelling: each note sits in the octave nearest the
@@ -805,40 +822,42 @@ internal static class LysWriter
             return token;
         }
 
-        /// <summary>Spell a chord: the first member (root) is relative to the
-        /// running reference; every later member STACKS above the root (its octave
-        /// mark is the offset from the nearest octave at or above the root — the
-        /// same placement Lily# reads). The reference then advances to the root.
-        /// Root-anchored, so the emitted marks round-trip regardless of member
-        /// order and match <c>&lt;c 3 5&gt;</c>-style stacking.</summary>
+        /// <summary>Spell a chord the way Lily# reads one: the root's bare LETTER, placed
+        /// relative to the running reference, is the chord's ANCHOR; every member's own
+        /// <c>'</c>/<c>,</c> marks — the root's included — are local to that member; every
+        /// later member STACKS above the anchor (at or above its letter); and the reference
+        /// then advances to the ANCHOR, not to the root's sounding octave.</summary>
+        /// <remarks>
+        /// The rule is the page's and the exporter's (<c>MusicXmlExporter.ResolveChordMemberPitch</c>,
+        /// user decision 2026-09-27). ⚠️ Until 2026-09-30 this stacked the members above the
+        /// root's SOUNDING octave and advanced to it, which agrees only while the root needs
+        /// no marks: <c>c'''4 &lt;e' g'&gt;4</c> came back as <c>&lt;e,, g&gt;</c> — E5 and G7 —
+        /// and every note after it two octaves high.
+        /// </remarks>
         public string Chord(IReadOnlyList<ImportNote> members)
         {
             int rootStep = Mod7(members[0].Step);
-            int rootOctave = members[0].Octave;
+            int anchorOctave = DefaultOctave(_ref, rootStep);
             var parts = new List<string>();
             for (int i = 0; i < members.Count; i++)
             {
                 var m = members[i];
-                if (i == 0)
-                {
-                    parts.Add(Spell(_ref, m.Step, m.Alter, m.Octave) + MemberMarks(m));
-                }
-                else
-                {
-                    int letter = Mod7(m.Step);
-                    int stackedDefault = rootOctave + (letter >= rootStep ? 0 : 1);
-                    parts.Add(Format(letter, m.Alter, m.Octave - stackedDefault) + MemberMarks(m));
-                }
+                int letter = Mod7(m.Step);
+                int placed = i == 0 ? anchorOctave : anchorOctave + (letter >= rootStep ? 0 : 1);
+                parts.Add(Format(letter, m.Alter, m.Octave - placed) + MemberMarks(m));
             }
-            _ref = rootOctave * 7 + rootStep;
+            _ref = anchorOctave * 7 + rootStep;
             return "<" + string.Join(" ", parts) + ">";
         }
+
+        // The octave a bare letter takes: the one nearest the reference.
+        private static int DefaultOctave(int refDiatonic, int letter)
+            => (int)System.Math.Round((refDiatonic - letter) / 7.0, System.MidpointRounding.AwayFromZero);
 
         private static string Spell(int refDiatonic, int step, int alter, int octave)
         {
             int letter = Mod7(step);
-            int def = (int)System.Math.Round((refDiatonic - letter) / 7.0, System.MidpointRounding.AwayFromZero);
-            return Format(letter, alter, octave - def);
+            return Format(letter, alter, octave - DefaultOctave(refDiatonic, letter));
         }
 
         private static string Format(int letter, int alter, int marks)

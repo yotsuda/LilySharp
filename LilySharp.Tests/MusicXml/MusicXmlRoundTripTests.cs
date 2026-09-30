@@ -967,6 +967,38 @@ public class MusicXmlRoundTripTests
     }
 
     /// <summary>
+    /// A grace chord comes back as one chord, with its slur, in both octave modes. Until
+    /// 2026-09-30 each <c>&lt;chord/&gt;</c> member became a grace note of its own, one after
+    /// another, and the slur on the chord was then not on the group's last note; and the
+    /// relative spelling of ANY chord whose root needs marks was two octaves off from its
+    /// second member on. Asked of the pitches the re-export writes, so the relative spelling
+    /// is held to the same sounds.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void GraceChord_RoundTripsAsOneChord(bool relative)
+    {
+        // The second bar is the relative spelling's own case, no grace involved: a chord root
+        // that needs marks (`c'''4 <e' g'>4` is `<e,, g,,>` — the root's marks are local, the
+        // members stack above its bare-letter anchor, and the next note reads from the anchor).
+        const string music = "c'4 grace { a''16 <b'' d'''>16( } c'''4) acciaccatura { <e' g'>8 } f'4 d'4 | c'''4 <e' g'>4 f'4 d'4 |";
+        string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
+                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
+        var (lys, report) = new MusicXmlImporter().Import(xml, relativeOctave: relative);
+        Assert.Empty(report.Warnings);
+        if (!relative)
+            Assert.Contains(music, lys);
+        static string Pitches(string x) => string.Join(" ", XDocument.Parse(x).Descendants()
+            .Where(e => e.Name.LocalName == "note")
+            .Select(n => (n.Elements().Any(e => e.Name.LocalName == "chord") ? "+" : "")
+                + string.Concat(n.Descendants().Where(e => e.Name.LocalName is "step" or "alter" or "octave").Select(e => e.Value))));
+        string again = new MusicXmlExporter().Export(SyntaxTree.Parse(lys)).ToXml().ToString();
+        Assert.Equal(Pitches(xml), Pitches(again));
+    }
+
+    /// <summary>
     /// Mid-piece changes of time, key, clef and tempo come back where they were written.
     /// Until 2026-09-30 only the opening time and key reached the file, so later bars were
     /// read against the first signature and the other changes were lost. In a part of two

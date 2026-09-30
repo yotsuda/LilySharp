@@ -636,6 +636,7 @@ internal static class MusicXmlReader
             NoteValue = value,
             Dots = dots,
             Slash = (string?)Local(el, "grace")?.Attribute("slash") == "yes",
+            ChordWithPrev = Local(el, "chord") != null,
             // The slur a grace group carries into its main note (`grace { d16( } e4)`); the
             // stop is the main note's own <slur type="stop">. Not read until 2026-09-30.
             SlurStart = Els(Local(el, "notations"), "slur").Any(s =>
