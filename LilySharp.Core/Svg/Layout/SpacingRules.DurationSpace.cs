@@ -335,11 +335,15 @@ internal static partial class SpacingRules
     /// LILYPOND-REF: lily/spacing-options.cc:31-53 Spacing_options::init_from_grob,
     ///               lily/spacing-options.cc:72-107 get_duration_space.
     /// </remarks>
+    /// <param name="leftFrameWidth">How far past the left bounding column's origin the run
+    /// measure's spring chain opens: the left bound bar line's drawn width mid-line
+    /// (<see cref="RunLeftBoundBarline"/>), the prefix plus the opening bar at a line start
+    /// (MultiStaffLayouter.LineStartRunRodDistance).</param>
     internal static double MmrRodDistance(
         int measureCount,
         Fraction measureLength,
         double minimumDistance,
-        double runBarlineWidth)
+        double leftFrameWidth)
     {
         double length = MmrSymbolWidth(measureCount);
         length += FullMeasureExtraSpace
@@ -348,18 +352,20 @@ internal static partial class SpacingRules
         length += 2 * MmrBoundPadding;
 
         const double minlen = 0.0;
-        // LilyPond's rod is the whole li->ri COLUMN distance, with the bounding bar
-        // lines living INSIDE those columns (bar-line extent runs from the column
-        // origin). Lily#'s layout instead prices each measure as CONTENT + its own
-        // bar-line glyph widths (GetBarlineWidth(start)+(end), added by the layouter
-        // and the break gate alike), so the run measure would otherwise draw its
-        // bounding bar lines twice: once folded into minimum_distance, once as measure
-        // width. Subtract that run bar-line width here so the rod is the run's CONTENT
-        // span; the layout then re-adds the bar lines to reach LilyPond's column
-        // distance. (This is exactly what the old bw+0.2 form did implicitly by feeding
-        // a None start bar line — now made explicit, since minimum_distance carries the
-        // real left bar line and any break-aligned change.)
-        return Math.Max(minimumDistance + length - runBarlineWidth, minlen);
+        // LilyPond's rod is the whole li->ri COLUMN distance, origin to origin, with the
+        // bounding bar lines living INSIDE those columns (bar-line extent runs from the
+        // column origin). Lily#'s spring chain for the run measure opens past the LEFT
+        // bound's ink (the bar line is drawn in the width beside the chain, by this
+        // measure when it owns the line, by the previous one otherwise) and closes where
+        // the RIGHT bar line begins — LilyPond's right column origin mid-line, and at a
+        // line's end too, where the bar hangs left of its column by its ink and its box
+        // reaches that much further left. So the chain is the rod less the left frame
+        // alone. Until session 714 this shed the run measure's start + end bar-line
+        // widths, the same number only when the left bound is as wide as the end:
+        // MEASURED (2.26.0, LilySharp-Lab sessions/p714/mmrcol r1.ly, `R1 \bar "||" R1`)
+        // LilyPond closes the second bar at 31.9008 = 23.5208 + 0.88 + 7.5, where the
+        // start + end spelling drew 32.39 — the double bar's 0.68 less a single's 0.19.
+        return Math.Max(minimumDistance + length - leftFrameWidth, minlen);
     }
 
     /// <summary>

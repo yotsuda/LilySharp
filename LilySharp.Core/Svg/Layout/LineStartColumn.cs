@@ -302,6 +302,59 @@ internal static class LineStartColumn
     }
 
     /// <summary>
+    /// <c>min_dist</c> from a line start's prefatory column to the BAR-LINE column that closes
+    /// its first bar — the pair a multi-measure rest opening the line bounds, and the first
+    /// term of its rod (<see cref="SpacingRules.MmrRodDistance"/>).
+    /// </summary>
+    /// <remarks>
+    /// The rest's left bound is the line-start column itself: a run opening a line has no bar
+    /// line of its own before it, so LilyPond's <c>Multi_measure_rest::calculate_spacing_rods</c>
+    /// reads <c>Paper_column::minimum_distance</c> from the prefix (clef, key, meter) where a
+    /// run mid-line reads it from a bar line (<see cref="SpacingRules.MmrRodMinimumDistance"/>).
+    /// The right column's left skyline is its bar line's box, which reaches the default
+    /// <c>extra-spacing-width</c> −0.1 left of the column origin, as mid-line.
+    /// MEASURED (2.26.0, LilySharp-Lab sessions/p714/mmrcol r1.ly and m1.ly, ragged, a treble
+    /// staff in 4/4 opening on <c>R1</c>): the line-start column 8.535827, the bar line
+    /// 23.520827 — 14.985 = 7.485 (this distance, SKC's figure, the meter's ink + 0.8 + 0.1)
+    /// + the rod's 7.5.
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:374-389 calculate_spacing_rods — rod.distance_
+    ///   = max (Paper_column::minimum_distance (li, ri) + length, minlen), li the left bound's column.
+    /// </remarks>
+    public static double MinimumDistanceToBarAtLineStart(
+        Model.MultiStaffScore score,
+        BreakAlignSpacing.PrefixColumns columns,
+        double clefGroupLeft,
+        double timeInkWidth,
+        int startMeasureIndex)
+    {
+        double worst = 0.0;
+        // Lent, and given back cleared below (see t_prefatoryBoxes).
+        var boxes = t_prefatoryBoxes ?? new List<ColumnBox>();
+        t_prefatoryBoxes = null;
+        // The bar line's box from its column origin (its left edge): the default
+        // extra-spacing-width, separation-item.cc:166-167. Only its left reach is read.
+        var bar = new List<ColumnBox>
+        {
+            new ColumnBox(-SharedBand, SharedBand,
+                -SpacingRules.DefaultExtraSpacingWidth, SpacingRules.DefaultExtraSpacingWidth),
+        };
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+        {
+            if (staff.IsTextRow)
+                continue;
+            boxes.Clear();
+            foreach (var g in PrefatoryGrobs(
+                         score, staff, columns, clefGroupLeft, timeInkWidth, startMeasureIndex))
+                boxes.Add(new ColumnBox(-SharedBand, SharedBand,
+                    g.InkLeft + g.EswLeft, g.InkRight + g.EswRight));
+            worst = Math.Max(worst, MinimumDistance(boxes, bar));
+        }
+        boxes.Clear();
+        t_prefatoryBoxes = boxes;
+        return worst;
+    }
+
+    /// <summary>
     /// The prefatory boxes of one staff at a time for <see cref="MinimumDistanceAtLineStart"/>,
     /// lent from one list the thread keeps between line starts.
     /// </summary>

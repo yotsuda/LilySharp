@@ -310,6 +310,8 @@ internal sealed class SystemBreaker
             // is a constraint over the whole run, not a spring, and a line holding it takes
             // the linear force path (KnuthPlassBreaker.TryBuildLineSprings).
             bool runRod = false;
+            double springIdeal = ideal, springMin = min;
+            double? lineStartRod = null;
             if (runMap.TryGetRunStartingAt(i, out var run))
             {
                 runRod = true;
@@ -319,20 +321,19 @@ internal sealed class SystemBreaker
                 // Same minimum-distance quantity the layouter uses: LP's
                 // Paper_column::minimum_distance is the LEFT bounding column's skyline reach
                 // over its break-aligned grobs, NOT the accumulated spring minima this used
-                // to pass. The run measure's own bar-line widths (re-added at `barlines`
-                // below) are subtracted from the rod so the rod is the run's content span.
-                double runBarlineWidth =
-                    SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
-                    + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+                // to pass. The chain opens past the left bound bar line's ink, the frame the
+                // rod sheds (MmrRodDistance).
+                var leftBound = SpacingRules.RunLeftBoundBarline(measures, i);
                 double rod = SpacingRules.MmrRodDistance(
                     run.Count, measureLength,
-                    SpacingRules.MmrRodMinimumDistance(
-                        score.TextMetrics,
-                        SpacingRules.RunLeftBoundBarline(measures, i),
-                        primaryMeasure.Items),
-                    runBarlineWidth);
+                    SpacingRules.MmrRodMinimumDistance(score.TextMetrics, leftBound, primaryMeasure.Items),
+                    SpacingRules.GetBarlineWidth(leftBound));
                 ideal = Math.Max(ideal, rod);
                 min = Math.Max(min, rod);
+                // …and the rod the layout gives the run when it OPENS a line, the same
+                // implementation (MultiStaffLayouter.LineStartRunRodDistance).
+                lineStartRod = MultiStaffLayouter.LineStartRunRodDistance(
+                    score, i, isFirstSystem: i == 0, run.Count, measureLength);
             }
 
             double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
@@ -349,6 +350,22 @@ internal sealed class SystemBreaker
             var lineStartSpring = s0 is { } spring0
                 ? MultiStaffLayouter.LineStartSpringForLine(score, i, isFirstSystem: i == 0, spring0)
                 : null;
+            // A run opening a line is rodded from the prefix (lineStartRod), so its sums there
+            // are max(its springs with the line-start spring swapped in, that rod) — not the
+            // mid-line max(springs, rod) the breaker's spring swap would otherwise shift.
+            // Carried as the differences, which the breaker adds with the swap.
+            double runIdealDelta = 0, runMinDelta = 0, runNaturalDelta = 0;
+            if (lineStartRod is { } lsRod && lineStartSpring is { } ls && s0 is { } mid0)
+            {
+                double idealLine = Math.Max(springIdeal - mid0.IdealDistance + ls.IdealDistance, lsRod);
+                double minLine = Math.Max(springMin - mid0.MinDistance + ls.MinDistance, lsRod);
+                runIdealDelta = idealLine - (ideal - mid0.IdealDistance + ls.IdealDistance);
+                runMinDelta = minLine - (min - mid0.MinDistance + ls.MinDistance);
+                runNaturalDelta = Math.Max(idealLine, minLine)
+                    - (Math.Max(ideal, min)
+                       + Math.Max(ls.MinDistance, ls.IdealDistance)
+                       - Math.Max(mid0.MinDistance, mid0.IdealDistance));
+            }
             springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
                 primaryMeasure.BreakPenalty,
                 runMap.ForbidsBreakAfter(i)
@@ -367,7 +384,8 @@ internal sealed class SystemBreaker
                 // The courtesy is drawn with the clef in force at the ending line's START;
                 // the breaker does not know that start, so the clef of the measure before
                 // this one stands in for it (they differ only across a mid-line clef change).
-                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i));
+                i == 0 ? 0.0 : MultiStaffLayouter.LineEndCourtesyWidth(score, i - 1, i),
+                runIdealDelta, runMinDelta, runNaturalDelta);
         }
         return springData;
     }

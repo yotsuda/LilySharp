@@ -441,9 +441,26 @@ internal static partial class SpacingRules
                 // LILYPOND-REF: lily/note-spacing-engraver.cc:87-91 acknowledge_rhythmic_grob;
                 // LILYPOND-REF: lily/note-spacing.cc:46-77 Note_spacing::get_spacing —
                 //   left_note_columns, and the ideal at :77.
+                // ⚠️ A MEASURE REST FILES NO WISH EITHER: LilyPond's MultiMeasureRest is a
+                // Spanner on the bar-line columns, in no NoteColumn and without the
+                // rhythmic-grob-interface, so Note_spacing_engraver acknowledges nothing at
+                // its moment and the column → bar line pair keeps the bare duration spring.
+                // MEASURED (2.26.0, LilySharp-Lab sessions/p714/mmrcol a.ly, ragged,
+                // `c1 | R1\p | c1\p |`): the bar line → column 2.139665 and column → bar line
+                // 5.750335 are the rod 7.89 shared out over the ideals 2.09 + 5.298045 (the
+                // bare whole at gs 3/16) by stretch 0.45 : 4.098045; pricing the whole rest's
+                // glyph here made the ideal 5.598045 and put the column 0.029683 left.
+                // LILYPOND-REF: scm/define-grobs.scm:2386-2392 MultiMeasureRest, no rhythmic-grob-interface
+                //   among its interfaces, and class Spanner;
+                // LILYPOND-REF: lily/note-spacing-engraver.cc:81-91 acknowledge_note_column /
+                //   acknowledge_rhythmic_grob — the only two ways into a NoteSpacing;
+                // LILYPOND-REF: lily/spacing-spanner.cc:380-391 musical_column_spacing —
+                //   no wish leaves note_spacing's spring as it stands.
                 RestItem r => r.IsSpacer
                     ? (r.IsRepeatSlash ? 0.0 : double.NaN)
-                    : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
+                    : r.IsMultiMeasure
+                        ? double.NaN
+                        : GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
                 _ => double.NaN
             };
             if (p is NoteItem or ChordItem && i < headOverrides.Length && !double.IsNaN(headOverrides[i]))

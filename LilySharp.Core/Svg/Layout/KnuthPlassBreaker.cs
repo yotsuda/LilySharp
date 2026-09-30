@@ -86,7 +86,13 @@ internal readonly record struct MeasureSpringData(
     // What a line ENDING just before this measure reserves after its final bar line: the
     // courtesy key and meter when this measure opens with a change
     // (MultiStaffLayouter.LineEndCourtesyWidth).
-    double LineEndCourtesyWidth = 0)
+    double LineEndCourtesyWidth = 0,
+    // A multi-measure-rest run OPENING a line is rodded from the prefix, not from a bar line
+    // (MultiStaffLayouter.LineStartRunRodDistance): what that changes in the sums and the
+    // natural length beyond the spring 0 swap, added with it. 0 on every other measure.
+    double LineStartRunIdealDelta = 0,
+    double LineStartRunMinDelta = 0,
+    double LineStartRunNaturalDelta = 0)
 {
     /// <summary>Value equality, the spring vector included element by element — an
     /// ImmutableArray compares by reference on its own, which would make every
@@ -107,6 +113,9 @@ internal readonly record struct MeasureSpringData(
            && RigidWidth == other.RigidWidth
            && LineStartPrefixExtra == other.LineStartPrefixExtra
            && LineEndCourtesyWidth == other.LineEndCourtesyWidth
+           && LineStartRunIdealDelta == other.LineStartRunIdealDelta
+           && LineStartRunMinDelta == other.LineStartRunMinDelta
+           && LineStartRunNaturalDelta == other.LineStartRunNaturalDelta
            && SpringsEqual(Springs, other.Springs);
 
     public override int GetHashCode()
@@ -727,8 +736,8 @@ internal sealed class KnuthPlassBreaker
         if (first.LineStartSpring is not { } lineStart)
             return;
 
-        idealSum += lineStart.IdealDistance - first.Spring0Ideal;
-        minSum += lineStart.MinDistance - first.Spring0Min;
+        idealSum += lineStart.IdealDistance - first.Spring0Ideal + first.LineStartRunIdealDelta;
+        minSum += lineStart.MinDistance - first.Spring0Min + first.LineStartRunMinDelta;
         invStretchSum += lineStart.InverseStretchStrength - first.Spring0Stretch;
         invCompressSum += lineStart.InverseCompressStrength - first.Spring0Compress;
     }
@@ -763,6 +772,7 @@ internal sealed class KnuthPlassBreaker
         => first.LineStartSpring is { } lineStart
             ? Math.Max(lineStart.MinDistance, lineStart.IdealDistance)
               - Math.Max(first.Spring0Min, first.Spring0Ideal)
+              + first.LineStartRunNaturalDelta
             : 0;
 
     /// <summary>Break points of the best solution that uses exactly

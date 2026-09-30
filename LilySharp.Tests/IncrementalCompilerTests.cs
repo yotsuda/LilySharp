@@ -1414,12 +1414,18 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
-    /// The LEFT-neighbour window is load-bearing: a multi-measure-rest run whose opening
+    /// The LEFT-neighbour window over a run rod: a multi-measure-rest run whose opening
     /// measure declares no start bar line prices its run rod from the PREVIOUS measure's
     /// end bar line (SpacingRules.RunLeftBoundBarline) — a spring input that lives in key
     /// i−1, not in key i. The edit flips that bar line (double → regular) while leaving
-    /// the run-opening measure's own key untouched; a memo that only compared key i would
-    /// hand back the run's rod priced from the OLD bar line.
+    /// the run-opening measure's own key untouched, and the memo still recomputes the run.
+    /// ⚠️ SINCE SESSION 714 THE ROD'S VALUE NO LONGER MOVES WITH THAT BAR LINE: LilyPond's
+    /// min_dist runs from the bar line's column origin, so it holds the bar's ink, and the
+    /// run's spring chain opens past that same ink — the width cancels (every bar type gives
+    /// min_dist − width = 0.2; MEASURED, LilySharp-Lab sessions/p714/mmrcol r1.ly). Until
+    /// then the rod shed the run's own start + end widths, and this edit moved it by 0.49 —
+    /// which is what this test used to assert as the hazard. The window is now conservative
+    /// here, not load-bearing; the equality below says so.
     /// </summary>
     [Fact]
     public void SpringMemo_RunRodReadsThePreviousMeasuresBarline_LeftNeighbourWindow()
@@ -1443,9 +1449,9 @@ public class IncrementalCompilerTests
 
         Assert.Equal(Full(tree.WithChange(change).Text), incremental);
         AssertSpringsMatchFromScratch(session);
-        // The hazard is real, not vacuous: the run-opening measure's springs DID change
-        // even though its own content key did not (the rod reaches the left bar line).
-        Assert.NotEqual(before, session.SpringsForTest![1]);
+        // The bar line's width cancels out of the rod (see the summary), so the run-opening
+        // measure's springs are the same either way.
+        Assert.Equal(before, session.SpringsForTest![1]);
         // 5 measures; key 0 moved -> measure 0 (its own key) and 1 (the bar line it reads
         // of measure 0 is in 0's edge key) recomputed, measures 2..4 reused.
         Assert.Equal((3, 2), session.LastSpringMemo);

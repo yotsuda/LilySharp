@@ -1283,6 +1283,42 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// The rod of a multi-measure-rest run that OPENS a line, in the spring frame of the
+    /// line's first measure — or null on a lead sheet, whose line start is not LilyPond's
+    /// prefatory column (see the keep-inside-line rods in LayoutMeasures).
+    /// The ONE implementation, shared by the layout and the break gate
+    /// (SystemBreaker.ComputeMultiStaffSpringData), as <see cref="LineStartSpringForLine"/> is.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's rod runs from the line-start column's origin to the closing bar line's
+    /// (<see cref="LineStartColumn.MinimumDistanceToBarAtLineStart"/> + the rest's length);
+    /// the line's spring 0 opens at the prefix's right edge plus the opening bar line — the
+    /// frame the keep-inside-line rods shed for the same reason — so the rod sheds that frame
+    /// instead of the bar-line widths a run mid-line sheds. Until session 714 a run opening a
+    /// line was rodded as if a bar line bounded it on the left (0.39 of min_dist where the
+    /// meter's column gives 7.485), and its bar came out on its springs, 0.80 short of
+    /// LilyPond's on a treble staff in 4/4 (LilySharp-Lab sessions/p714/mmrcol r1.ly).
+    /// </remarks>
+    internal static double? LineStartRunRodDistance(
+        MultiStaffScore score, int startMeasureIndex, bool isFirstSystem,
+        int measureCount, Fraction measureLength)
+    {
+        if (score.IsLeadSheet)
+            return null;
+        var prefix = SolveLineStartPrefix(score, startMeasureIndex, isFirstSystem);
+        double minimumDistance = LineStartColumn.MinimumDistanceToBarAtLineStart(
+            score, prefix.Columns, SpacingRules.ClefGroupInkLeft(score),
+            prefix.HasTime
+                ? GlyphMetrics.GetTimeSigWidth(score.TextMetrics, prefix.Numerator, prefix.Denominator)
+                : 0.0,
+            startMeasureIndex);
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        double lineStartFrame = prefix.Columns.Right
+            + SpacingRules.GetBarlineWidth(measures[startMeasureIndex].StartBarline);
+        return SpacingRules.MmrRodDistance(measureCount, measureLength, minimumDistance, lineStartFrame);
+    }
+
+    /// <summary>
     /// The start bar line a measure DRAWS when it opens a system: its own
     /// <c>StartBarline</c>, or the begin-of-line piece of the combined <c>:|:</c> its
     /// predecessor's end carries (the collector folded the pair into the predecessor, so
@@ -1896,25 +1932,24 @@ internal sealed class MultiStaffLayouter
                 // accumulation of spacing minima, not a geometric column distance, and it
                 // inflated every run (an R1*5 run by ~3.4 ss).
                 var runStartMeasure = primaryVoice.Measures[measureIndex];
+                var leftBound = SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, measureIndex);
                 double minimumDistance = SpacingRules.MmrRodMinimumDistance(
-                    score.TextMetrics,
-                    SpacingRules.RunLeftBoundBarline(primaryVoice.Measures, measureIndex),
-                    runStartMeasure.Items);
+                    score.TextMetrics, leftBound, runStartMeasure.Items);
 
                 var measureLength = Fraction.Zero;
                 foreach (var item in runStartMeasure.Items)
                     measureLength += item.Duration;
 
-                // Bar lines this measure adds to its width below — subtracted from the
-                // rod so the run's CONTENT span, plus these bar lines, equals LilyPond's
-                // li->ri column distance. See MmrRodDistance.
-                double runBarlineWidth =
-                    SpacingRules.GetBarlineWidth(runStartMeasure.StartBarline)
-                    + SpacingRules.GetBarlineWidth(runStartMeasure.EndBarline);
-
-                rods.Add((springOffset, springOffset + springCount,
-                    SpacingRules.MmrRodDistance(
-                        run.Count, measureLength, minimumDistance, runBarlineWidth)));
+                // A run OPENING the line is bounded on the left by the prefatory column, not
+                // a bar line (LineStartRunRodDistance, the break gate's own reading too).
+                // Mid-line the chain opens past the left bound bar line's ink, which is the
+                // frame the rod sheds (see MmrRodDistance).
+                double rod = (i == 0
+                        ? LineStartRunRodDistance(score, measureIndex, systemIndex == 0, run.Count, measureLength)
+                        : null)
+                    ?? SpacingRules.MmrRodDistance(
+                        run.Count, measureLength, minimumDistance, SpacingRules.GetBarlineWidth(leftBound));
+                rods.Add((springOffset, springOffset + springCount, rod));
             }
             springOffset += springCount;
         }

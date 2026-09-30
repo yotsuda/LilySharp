@@ -317,6 +317,12 @@ workflow attaches that section to the GitHub Release verbatim.
   the rest, clear of its bar count. It printed below the staff at the bar's left edge, like
   text on a note; `.down` still puts it below, centred. The bar count itself stands 0.05 higher,
   0.4 over the staff line's ink as LilyPond puts it, where it stood 0.4 over the line's centre.
+- **Bars of multi-measure rest are as wide as LilyPond makes them.** A rest opening a line
+  was spaced as if a bar line stood before it rather than the clef and time signature, so its
+  bar came out narrower than LilyPond's (0.8 of a staff space for a treble staff in 4/4); a rest
+  after a double or repeat bar line was spaced wider by the difference between that bar line
+  and a single one. Inside the bar, a dynamic or chord written on the rest stands where
+  LilyPond puts it (about 0.03 further right).
 - **Ornaments and a few articulations sit where LilyPond puts them.** A script was set off its
   note by one fixed box — and every ornament by the same stand-in box — so a mordent stood
   about a sixth of a staff space too low, and a turn or trill a few hundredths. A script now

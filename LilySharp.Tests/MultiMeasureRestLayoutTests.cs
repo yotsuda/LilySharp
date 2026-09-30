@@ -14,8 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -37,6 +39,108 @@ public class MultiMeasureRestLayoutTests
         var score = collector.Collect(tree);
         var engine = new LayoutEngine(new LayoutOptions());
         return engine.Layout(score);
+    }
+
+    /// <summary>
+    /// The measure rest's column sits where LilyPond's rod puts it: the bar's two springs
+    /// share the rod's stretch by their stretch strengths, and the column → bar line spring
+    /// is the bare duration spring, because a MultiMeasureRest files no Note_spacing wish.
+    /// MEASURED (LilyPond 2.26.0, LilySharp-Lab sessions/p714/mmrcol a.ly, ragged,
+    /// <c>c1 | R1\p | c1\p |</c>): bar line 23.180872, column 25.320537, next bar line
+    /// 31.070872 — 2.139665 from the bar line's left edge. Pricing the rest's glyph as a
+    /// left head put the column 0.029683 left.
+    /// LILYPOND-REF: lily/note-spacing-engraver.cc:81-91 acknowledge_rhythmic_grob.
+    /// </summary>
+    [Fact]
+    public void MeasureRestColumn_StandsWhereTheRodSharesOutTheBareSprings()
+    {
+        var tree = SyntaxTree.Parse(
+            "octave absolute\ntime 4/4\npaper { raggedRight }\n" +
+            "part m { clef treble }\n" +
+            "section S { m { c'1 | R1 | c'1 | } }\n" +
+            "form main { S }\n" +
+            "score main \"o\" { staff m }\n");
+        Assert.False(tree.HasErrors);
+        var layout = new LayoutEngine().Layout(
+            LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree)));
+        var bar = layout.AllSystems.SelectMany(s => s.Measures).Single(m => m.MeasureIndex == 1);
+        // The measure's X is the start bar line's ink RIGHT edge; LilyPond's column origin
+        // is the bar line's left edge, 0.19 (a single line's ink) before it.
+        double barLineLeft = bar.X - SpacingRules.GetBarlineWidth(BarlineType.Single);
+        Assert.Equal(2.139665, bar.X + bar.Items[0].X - barLineLeft, 6);
+        Assert.Equal(7.89, bar.Width, 6);
+    }
+
+    /// <summary>
+    /// A run OPENING a line is rodded from the line's prefatory column, and a run after a
+    /// double bar sheds only that bar's ink. MEASURED (LilyPond 2.26.0, LilySharp-Lab
+    /// sessions/p714/mmrcol r1.ly / m1.ly, ragged, treble in 4/4): the line-start column
+    /// 8.535827 and the first bar line 23.520827 = + 7.485 (the prefix's min_dist) + 7.5 (the
+    /// rest's length); after <c>\bar "||"</c> the next bar line 31.900827 = 23.520827 + 0.88
+    /// (the double bar's min_dist) + 7.5. Lily# drew 22.72 and, after the double bar, 0.49
+    /// wide.
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:374-389 calculate_spacing_rods.
+    /// </summary>
+    [Theory]
+    [InlineData("R1 | g'1 |", 0, 23.520827)]
+    [InlineData("R1 || R1 |", 0, 23.520827)]
+    [InlineData("R1 || R1 |", 1, 31.900827)]
+    public void MeasureRestRod_RunsFromTheLeftColumnItIsBoundedBy(
+        string measures, int measureIndex, double barLineLeft)
+    {
+        var tree = SyntaxTree.Parse(
+            "octave absolute\ntime 4/4\npaper { raggedRight }\n" +
+            "part m { clef treble }\n" +
+            $"section S {{ m {{ {measures} }} }}\n" +
+            "form main { ~S }\n" +
+            "score main \"o\" { staff m }\n");
+        Assert.False(tree.HasErrors);
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        var system = Assert.Single(layout.AllSystems);
+        var bar = system.Measures.Single(m => m.MeasureIndex == measureIndex);
+        // The measure's width ends past its closing bar line's ink; LilyPond's figure is
+        // that bar line's left edge.
+        double closing = SpacingRules.GetBarlineWidth(
+            score.PrimaryContentStaff.PrimaryVoice.Measures[measureIndex].EndBarline);
+        Assert.Equal(barLineLeft, bar.X + bar.Width - closing, 5);
+    }
+
+    /// <summary>
+    /// The break gate prices a run OPENING a line with the rod the layout gives it (from the
+    /// prefix, <c>MultiStaffLayouter.LineStartRunRodDistance</c>): the line-start sums the DP
+    /// reads — spring 0 swapped, the run's delta added — are the bar the ragged layout draws.
+    /// Without the delta the gate booked the mid-line rod shifted by the spring swap: 7.79
+    /// here, against the 8.59 the layout sets (poisoned, session 714).
+    /// </summary>
+    [Fact]
+    public void BreakGate_PricesALineOpeningRunAsTheLayoutSetsIt()
+    {
+        var tree = SyntaxTree.Parse(
+            "octave absolute\ntime 4/4\npaper { raggedRight }\n" +
+            "part m { clef treble }\n" +
+            "section S { m { R1 | g'1 | } }\n" +
+            "form main { ~S }\n" +
+            "score main \"o\" { staff m }\n");
+        Assert.False(tree.HasErrors);
+        var score = LilySharp.Core.Svg.SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        var bar = Assert.Single(layout.AllSystems).Measures.Single(m => m.MeasureIndex == 0);
+
+        var gate = SystemBreaker.ComputeMultiStaffSpringData(
+            score, SpacingRules.CalculateCommonShortestDuration(score))[0];
+        var lineStart = Assert.IsType<Spring>(gate.LineStartSpring);
+        double ideal = gate.IdealWidth + lineStart.IdealDistance - gate.Spring0Ideal
+            + gate.LineStartRunIdealDelta;
+        double min = gate.MinWidth + lineStart.MinDistance - gate.Spring0Min
+            + gate.LineStartRunMinDelta;
+        // The rod binds (a whole rest's springs are shorter), so both sums are the rod.
+        Assert.Equal(bar.Width, ideal, 6);
+        Assert.Equal(bar.Width, min, 6);
+        Assert.Equal(bar.Width, KnuthPlassBreaker.NaturalWidthOf(gate)
+            + Math.Max(lineStart.MinDistance, lineStart.IdealDistance)
+            - Math.Max(gate.Spring0Min, gate.Spring0Ideal)
+            + gate.LineStartRunNaturalDelta, 6);
     }
 
     [Fact]
