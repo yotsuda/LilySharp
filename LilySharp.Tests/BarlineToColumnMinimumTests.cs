@@ -71,6 +71,62 @@ public class BarlineToColumnMinimumTests
         Assert.Equal(gap, heads[4] - heads[3], 0.001);
     }
 
+    /// <summary>MEASURED, LilyPond 2.26.0 (Lab sessions/p697/kc, the same instrument as above): a
+    /// key or time change opening the bar is NOT a bar line to the note after it. Its box is
+    /// grown to the staff and to the full height of the columns beside it, with no 1.01 cap
+    /// (<c>pure-from-neighbor-interface::extra-spacing-height-including-staff</c>), so a cluster
+    /// of four flats below, inside or above the staff meets it all the same and the gap does not
+    /// move: 11.709261 after D major, 10.663996 after 3/4. The minimum is what holds these — a
+    /// head with no accidental stands at the change's ideal (8.726973, 7.381709), two flats
+    /// already past it (10.032588). And the same cluster below a bare bar line passes under its
+    /// box (3.926973, the <c>f,4</c> control above) where inside the staff it meets it (7.609261).
+    /// The gap runs from the last quarter of bar 1 to the chord's leftmost head.</summary>
+    [Theory]
+    [InlineData("key d major <ces, des, ees, fes,>4 c' c' c'", 4, 11.709261)]       // below the staff
+    [InlineData("key d major <ces' des' ees' fes'>4 c' c' c'", 4, 11.709261)]       // in it
+    [InlineData("key d major <ces'' des'' ees'' fes''>4 c' c' c'", 4, 11.709261)]   // above it
+    [InlineData("key d major <ces''' des''' ees''' fes'''>4 c' c' c'", 4, 11.709261)] // far above
+    [InlineData("key d major <des, ees,>4 c' c' c'", 2, 10.032588)]
+    [InlineData("time 3/4 <ces, des, ees, fes,>4 c' c'", 4, 10.663996)]
+    [InlineData("time 3/4 <ces' des' ees' fes'>4 c' c'", 4, 10.663996)]
+    [InlineData("key d major e'4 c' c' c'", 1, 8.726973)]                           // control: the ideal holds
+    [InlineData("time 3/4 e'4 c' c'", 1, 7.381709)]
+    [InlineData("<ces, des, ees, fes,>4 c' c' c'", 4, 3.926973)]                    // control: a bare bar line
+    [InlineData("<ces' des' ees' fes'>4 c' c' c'", 4, 7.609261)]
+    public void AKeyOrTimeChangeOpeningTheBar_MeetsTheNoteColumnAtEveryHeight(
+        string bar2, int chordHeads, double gap)
+    {
+        string src = $$"""
+            octave absolute
+            time 4/4
+            paper { raggedRight }
+            part m {
+              section A {
+                c'4 c' c' c'4 |
+                {{bar2}} |
+              }
+            }
+            form main { A }
+            score main {
+              staff m
+            }
+            """;
+        var heads = Heads(TwinBowSweep.Dump(src));
+        double chordLeft = double.MaxValue;
+        for (int i = 4; i < 4 + chordHeads; i++)
+            chordLeft = System.Math.Min(chordLeft, heads[i]);
+        Assert.Equal(gap, chordLeft - heads[3], 0.001);
+    }
+
+    /// <summary>Every head x of the dump, in the order it lists them.</summary>
+    private static List<double> Heads(string dump)
+    {
+        var xs = new List<double>();
+        foreach (Match m in Regex.Matches(dump, @"^HEAD \S+ \S+ x=([-\d.]+)", RegexOptions.Multiline))
+            xs.Add(double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture));
+        return xs;
+    }
+
     /// <summary>The distinct head x of the dump, left to right (a chord's heads share one).</summary>
     private static List<double> HeadColumns(string dump)
     {

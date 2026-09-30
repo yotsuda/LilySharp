@@ -434,13 +434,20 @@ internal static partial class SpacingRules
     /// measures it.
     /// </para>
     /// <para>
-    /// ⚠️ A SECOND SPELLING OF THIS QUANTITY REMAINS: when a key or time change opens the bar,
+    /// NOT A SECOND SPELLING: when a key or time change opens the bar,
     /// <see cref="BarlineToFirstColumnSpring"/> takes the change column's branch and prices the
-    /// note's reach with <see cref="MusicalColumnLeftReach"/> — along X alone, the shape this
-    /// replaced. No book found yet where that minimum binds: a low F natural after a key change
-    /// to D major and <c>time 3/4 fis,4</c> agree with LilyPond as they are (sessions/p693/bl2,
-    /// the ideal after the change glyph is what holds them). Porting it needs the change glyphs'
-    /// own Y extents as boxes.
+    /// note's reach with <see cref="MusicalColumnLeftReach"/>, along X alone — and that is
+    /// LilyPond's shape for THAT pair, not the one this replaced. A KeySignature, KeyCancellation
+    /// or TimeSignature grows its box to the staff and to the full height of the columns beside
+    /// it with no 1.01 cap (only the bar line intersects with ±1.01), so whatever the note column
+    /// holds, at any height, meets it. MEASURED (2.26.0, Lab sessions/p697/kc): a cluster of four
+    /// flats after <c>key d major</c> stands 11.709261 off the previous note below, inside and
+    /// above the staff alike (10.663996 after <c>time 3/4</c>), where below a bare bar line it
+    /// passes under the box (3.926973) — the minimum binding, where a head with no accidental
+    /// stands at the change's ideal (8.726973). Giving the change glyph its own Y extent would
+    /// move the clusters beyond the staff away from LilyPond.
+    /// LILYPOND-REF: scm/output-lib.scm:976-979 pure-from-neighbor-interface::extra-spacing-height-including-staff — the neighbours' height and the staff's, uncapped.
+    /// LILYPOND-REF: scm/define-grobs.scm:1934-1935 KeyCancellation extra-spacing-height (KeySignature :1980-1981, TimeSignature :3931-3932 the same).
     /// </para>
     /// A non-musical item (a change glyph, a spacer) keeps the X-only arms it had.
     /// LILYPOND-REF: lily/staff-spacing.cc:210 Staff_spacing::get_spacing — <c>min_dist = Paper_column::minimum_distance (left_col, right_col)</c>.

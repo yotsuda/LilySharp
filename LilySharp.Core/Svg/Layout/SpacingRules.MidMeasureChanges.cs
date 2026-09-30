@@ -900,6 +900,10 @@ internal static partial class SpacingRules
                 // (0.0 . 0.8) — not the default), and the musical column reaches back by its
                 // leftmost ink plus that grob's own. This is the only term that carries an
                 // opening accidental into the gap, and it is what decides probe K.
+                // Along X alone, unlike the bare bar line's BarlineToColumnMinimum: the change's
+                // box reaches the full height of the columns beside it, uncapped, so every part
+                // of the note column meets it (that method's remarks carry the measurement).
+                // LILYPOND-REF: scm/output-lib.scm:976-979 pure-from-neighbor-interface::extra-spacing-height-including-staff
                 double reach = 0;
                 for (int i = 0; i < firstItems.Count; i++)
                     if (!IsChangeItem(firstItems[i]))
