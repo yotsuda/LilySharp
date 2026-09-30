@@ -663,7 +663,9 @@ internal static partial class SharedRenderer
         }
 
         int stringNum = chordStringNum
-            ?? Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0).stringNum;
+            ?? (item is NoteItem { IsPitchlessSlash: true }
+                ? TabStaffGeometry.SlashString(Tunings.GetStringCount(tuningType))
+                : Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0).stringNum);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuningType));
         double digitY = tabStaffTopY + (stringNum - 1) * stringSpace;
         // The stem starts on the far side of the digit, where LilyPond's stem-begin-position

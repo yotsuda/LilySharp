@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 204 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **322** | |
+| `OWN` | 205 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **323** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -42,7 +42,7 @@
 - **:333** ⚠️ NOT PORTED — backend-blocked: CHARACTERS AT THE CLUSTERS' POSITIONS, not glyphs at
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:270** fans twice. Not ported; no book in the corpus has one.
-- **:686** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
+- **:688** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
 - **:391** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
@@ -137,8 +137,8 @@
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3102** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
-- **:689** no observer; add the paren widths when a book brings one. The unpacked
-- **:691** bare glyph width, which is exact for one and unobserved for many.
+- **:691** no observer; add the paren widths when a book brings one. The unpacked
+- **:693** bare glyph width, which is exact for one and unobserved for many.
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1426** no observer reaches that branch yet.
 ### `LilySharp.Core/Rendering/SharedRenderer.Noteheads.cs`
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（204 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（205 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3097** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -503,6 +503,7 @@
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
 - **:401** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
+- **:468** the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
 - **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a

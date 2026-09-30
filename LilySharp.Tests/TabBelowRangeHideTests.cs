@@ -75,6 +75,35 @@ public sealed class TabBelowRangeHideTests
         Assert.Equal(empty.Texts, slashes.Texts);
     }
 
+    /// <summary>
+    /// A slash's stem starts at the tab staff's middle string (TabStaffGeometry.SlashString),
+    /// as the slash stands on a notation staff's middle line — its Midi 0 used to clamp to the
+    /// lowest string, and the stem ran up the whole staff from there.
+    /// </summary>
+    [Fact]
+    public void ASlashNotesStem_StartsAtTheMiddleString()
+    {
+        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(
+            "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
+            + "section A { gt { /4 4 4 4 | } }\nform main { A }\nscore main { tab gt }"));
+        static double Attr(System.Text.RegularExpressions.Match m, string name) => double.Parse(
+            System.Text.RegularExpressions.Regex.Match(m.Value, name + "=\"([^\"]+)\"").Groups[1].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+        var lines = System.Text.RegularExpressions.Regex.Matches(svg, "<line[^>]*>").ToList();
+        var staffYs = lines.Where(l => Attr(l, "y1") == Attr(l, "y2")).Select(l => Attr(l, "y1")).Distinct().Order().ToList();
+        var stems = lines.Where(l => Attr(l, "x1") == Attr(l, "x2")).ToList();
+        Assert.Equal(6, staffYs.Count);
+        Assert.Equal(4, stems.Count);
+        double middle = (staffYs[0] + staffYs[^1]) / 2, bottom = staffYs[^1];
+        foreach (var stem in stems)
+        {
+            // The renderer draws a tab stem from its head to its tip: y1 is the near end.
+            double near = Attr(stem, "y1");
+            Assert.True(System.Math.Abs(near - middle) < System.Math.Abs(near - bottom),
+                $"stem starts at {near}: middle {middle}, bottom line {bottom}");
+        }
+    }
+
     [Fact]
     public void NotationStaff_NeverFlagged()
     {

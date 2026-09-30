@@ -457,7 +457,17 @@ internal readonly struct TabStaffGeometry
     /// string (0 = automatic). The tuning's 8vb octave shift is applied here.
     /// </summary>
     public (int stringNum, int fret) Fret(int writtenMidi, int? preferredString = null)
-        => Tunings.CalculateFret(writtenMidi + _octaveShift, _tuning, preferredString ?? 0);
+        => writtenMidi == 0
+            ? (SlashString(StringCount), 0)
+            : Tunings.CalculateFret(writtenMidi + _octaveShift, _tuning, preferredString ?? 0);
+
+    /// <summary>
+    /// Where a slash note (<c>/4</c>, Midi 0 — NoteItem.IsPitchlessSlash) stands on a tab staff:
+    /// the middle string, as the slash stands on the notation staff's middle line. It has no
+    /// digit; its stem starts there (2026-10-01 — Midi 0 was clamped to the lowest string, and
+    /// the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
+    /// </summary>
+    public static int SlashString(int stringCount) => (stringCount + 1) / 2;
 
     /// <summary>Device-Y of the fret digit row for a written MIDI pitch.</summary>
     public double DigitY(int writtenMidi, int? preferredString = null)

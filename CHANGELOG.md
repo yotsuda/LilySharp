@@ -325,7 +325,8 @@ workflow attaches that section to the GitHub Release verbatim.
   the first staff's is 1 — where it was left to the reader beside the second staff's 5.
 - **A slash note on a tab staff is rhythm.** A tab that draws stems (`tab gt`) drew nothing
   for a slash but ran the beam over its place, so a group opening with slashes began in
-  mid-air. A slash now draws its stem and beam there, with no fret number. On the
+  mid-air. A slash now draws its stem and beam there, with no fret number, its stem starting
+  at the middle string as the slash stands on a staff's middle line. On the
   MusicXML's TAB staff, where a stem cannot stand without a note, a group with slashes is
   beamed over its fretted notes alone (one left alone is a flag).
 - **MusicXML import reads octave lines and pedals, and marks each staff's own notes.**
