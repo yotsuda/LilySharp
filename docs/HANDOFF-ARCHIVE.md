@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第709セッションの経緯
+
+### 1.1 第709セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p709`（HEAD `2121e0f2`・未 push 116）＝full **10453 / 0 / 2 / 10455**（引継ぎと一致）。
+⑴ ★ `bb885a34`（§1.0 ⒜ の最後のカポの穴「双子は `chordNames both` を綴れない（警告）」）: LP にカポの名付けは無く、押さえ名の綴りは根音ごとに「カポぶん下の調」で決まる（`ChordStructure.Pressed`）＝固定の音程の移調では再現できない。⇒ ChordNames の各和音が押さえた和音を持つ: `\once \set chordNameFunction = #(lysCapoBoth #{ \chordmode { c:m7 } #}) ees1:m7`。`lysCapoBoth`（header の直後に 1 回定義）は LP 自身の `ignatzek-chord-names` を鳴る和音と押さえた和音に 2 回かけ「E♭m7 (Cm7)」に連ねる（押さえた和音の音の読み方は scheme-engravers.scm:1530-1557 の写し）。FretBoards の行は押さえた和音のまま（名付けを付けない）。LP 2.26 の実物で 5 つとも Lily# のページと同じ名前（`E♭m⁷ (Cm⁷)`・`B♭ (G)`・`A♭/C (F/A)`・`Gø (Eø)`・`@chord` の `E♭ (C)`＝Lab `sessions/p709/both`）。網は `ChordDiagramTests.UnderACapo_TheTwinAndMusicXmlFollowThePage` の警告の行を書き換え（和音の綴り・定義 1 回・FretBoards に無し・警告なし・カポ無しなら出さない）・毒（exporter だけ HEAD）で赤。CHANGELOG（カポの項の「warns」を書き換え）。full **10453 / 0 / 2 / 10455**。
+★ `-End p709 -DiffBase 2121e0f2`＝full **10453 / 0 / 2 / 10455**・門 6 つ全 OK・Core `+` 57 行に REF 1／OWN 0（REF は `CapoBothNamer` の remarks＝名付け関数が音を読む形は Current_chord_text_engraver の写し・関数そのものは LP に無い capo の名付けを LP の部品で組んだもの＝双子の配管）。7.6: ⒜ のカポの穴（第665 起票）。7.7: ⑴ 和音ごとに `\once \set` が 1 行ずつ付く＝`both` の本の双子は読みにくい（正しさの代償・LP の既定の名付けは和音 1 つしか見ない）⑵ `ChordNames` の書式（`chordRootNamer` 等）を双子が将来変えても両方の名前に効く＝同じ context の `ignatzek-chord-names` を呼ぶため。カポの穴はこれで全部閉じた。push はユーザー。
+
 ## 以下は第708セッションの経緯
 
 ### 1.1 第708セッション（2026-09-30・YT-DELL2）
