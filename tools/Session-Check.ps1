@@ -6,7 +6,7 @@ re-derives (or mis-derives) a recipe.
 
 .DESCRIPTION
   tools/Session-Check.ps1 -Start p431           # ★ THE WHOLE START: verification, then §7 3.5's archive, then what §1 hands over
-  tools/Session-Check.ps1 -End p431 -DiffBase 7f4cf2ce  # ★ THE WHOLE END, mechanical half: full run + every ceiling and gate as a table
+  tools/Session-Check.ps1 -End p431 -DiffBase 7f4cf2ce  # ★ THE WHOLE END, mechanical half: build + full run + every ceiling and gate as a table
 
   tools/Session-Check.ps1                       # git state + every handed-over count
   tools/Session-Check.ps1 -Build                # + solution build (--no-incremental, Core warnings)
@@ -38,7 +38,10 @@ param(
 # so the numbers have ONE implementation. Everything below was already here; -Start and -End
 # only say which parts belong to which end, in the order they have to run.
 if ($Start) { $Session = $Start; $Build = $true; $Test = $true }
-if ($End) { $Session = $End; $Test = $true }
+# -End builds too: the test run's incremental build compiles nothing when nothing changed since
+# the last build, so without --no-incremental no gate can see a Core warning (p711 said "all OK"
+# over a CS1734 that p712's -Start build printed).
+if ($End) { $Session = $End; $Build = $true; $Test = $true }
 
 $ErrorActionPreference = 'Continue'
 $repo = Split-Path $PSScriptRoot -Parent
@@ -131,8 +134,11 @@ if ($Build) {
     # < NUL: a dotnet launched from the MCP console can queue behind the prompt's input read
     # and never return (CLAUDE-OPERATIONS §3; three -Start runs hung on 2026-09-29).
     $out = cmd /d /s /c "dotnet build LilySharp.slnx --no-incremental -v q < NUL 2>&1"
+    $buildExit = $LASTEXITCODE
     $out | Select-String 'エラー|error|LilySharp\.Core.*warning' | ForEach-Object { $_.Line }
-    "BUILD EXIT $LASTEXITCODE"
+    "BUILD EXIT $buildExit"
+    # msbuild can repeat a diagnostic in its summary; one warning is one distinct line.
+    $coreWarnings = @($out | Select-String 'LilySharp\.Core.*warning' | ForEach-Object { $_.Line.Trim() } | Sort-Object -Unique)
 }
 
 # ---------------------------------------------------------------- test
@@ -238,6 +244,9 @@ if ($End) {
     $c = HandoffCeilings
     Gate '2 天井' (($c.FileRoom -ge 0) -and ($c.BlockRoom -ge 0)) `
         "HANDOFF $($c.Bytes) B（残り $($c.FileRoom)）/ §1 現在便 $($c.Current) 字（残り $($c.BlockRoom)）"
+
+    Gate '0 build' (($buildExit -eq 0) -and ($coreWarnings.Count -eq 0)) `
+        "EXIT $buildExit / Core 警告 $($coreWarnings.Count)$(if ($coreWarnings.Count) { '（上の build 節に全文）' })"
 
     $hb = HandoffBlocks $handoff
     $ab = HandoffBlocks (Join-Path $repo 'docs\HANDOFF-ARCHIVE.md')
