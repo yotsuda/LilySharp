@@ -513,7 +513,7 @@ public class MusicXmlRoundTripTests
         var tree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(tree), $"{lys}\n---\n{Diagnostics(tree)}");
         Assert.Contains("octave relative", lys);
-        Assert.Contains("|: Body [1. End1] :| [2. End2]", lys);
+        Assert.Contains("|: ~Body [1. ~End1] :| [2. ~End2]", lys);
         Assert.Equal("N72:1 | N74:1 | N76:1", Signature(tree));
     }
 
@@ -549,7 +549,7 @@ public class MusicXmlRoundTripTests
             """);
         var importedTree = SyntaxTree.Parse(lys);
         Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}");
-        Assert.Contains("|: Body [1. End1] :| [2. End2]", lys);
+        Assert.Contains("|: ~Body [1. ~End1] :| [2. ~End2]", lys);
         Assert.Contains("section Body", lys);
         Assert.Contains("section End1", lys);
         Assert.Contains("section End2", lys);
@@ -964,6 +964,50 @@ public class MusicXmlRoundTripTests
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.Contains(music, lys);
+    }
+
+    /// <summary>
+    /// The direction's text survives the round trip: <c>@text</c> (with its side),
+    /// <c>@mark</c>, and the una corda pair. Until 2026-09-30 the importer read no
+    /// &lt;words&gt; and no &lt;rehearsal&gt; at all.
+    /// </summary>
+    [Fact]
+    public void TextRehearsalAndUnaCorda_RoundTrip()
+    {
+        const string music = "c'4@mark(\"Q\") d'4 e'4@text(\"dolce\").up f'4 | R1@text(\"tacet\") | c'4@unaCorda d'4 e'4@treCorde f'4 |";
+        string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
+                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains(music, lys);
+    }
+
+    /// <summary>
+    /// Another program's words: several &lt;words&gt; in one direction-type are one text; a
+    /// direction placed above is <c>.up</c>; a word paired with a jump is kept as text and the
+    /// report says the jump belongs in the form.
+    /// </summary>
+    [Fact]
+    public void PublishedWords_JoinAndKeepTheirSide_AndAJumpIsReported()
+    {
+        const string xml = """
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>A</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes><divisions>1</divisions><time><beats>2</beats><beat-type>4</beat-type></time>
+                    <clef><sign>G</sign><line>2</line></clef></attributes>
+                  <direction placement="above"><direction-type><words>poco </words><words>rit.</words></direction-type></direction>
+                  <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                  <direction placement="above"><direction-type><words>D.C. al Fine</words></direction-type><sound dacapo="yes"/></direction>
+                  <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                </measure>
+              </part>
+            </score-partwise>
+            """;
+        var (lys, report) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("c'4@text(\"poco rit.\").up d'4@text(\"D.C. al Fine\").up |", lys);
+        Assert.Contains(report.Warnings, w => w.Contains("D.C. al Fine") && w.Contains("form"));
     }
 
     /// <summary>

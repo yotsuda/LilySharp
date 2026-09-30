@@ -184,6 +184,10 @@ internal static class MusicXmlReader
                         int at = position + (int.TryParse(Local(el, "offset")?.Value, out int off) ? off : 0);
                         foreach (var dyn in ReadDirectionDynamics(el))
                             pendingDynamics.Add((dyn, at));
+                        // The direction's text rides the same queue: it marks the note at
+                        // its position exactly as a dynamic does.
+                        foreach (var text in ReadDirectionTexts(el, report, measureNo))
+                            pendingDynamics.Add((text, at));
                         break;
                     }
 
@@ -653,6 +657,48 @@ internal static class MusicXmlReader
                 case "crescendo": yield return "cresc"; break;
                 case "diminuendo": yield return "decresc"; break;
             }
+    }
+
+    /// <summary>
+    /// The text marks of a &lt;direction&gt;: its &lt;words&gt; as <c>text("…")</c> (<c>.up</c>
+    /// when the direction is placed above — <c>@text</c> stands below by default), the una
+    /// corda pair as their own names, and a &lt;rehearsal&gt; as <c>mark("…")</c>.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 neither was read: <c>R1@text("tacet")</c>, <c>c4@mark("A")</c> and
+    /// <c>@unaCorda</c> did not come back, and neither did any other program's "dolce" or
+    /// "rit.". Several &lt;words&gt; in one &lt;direction-type&gt; are one text in several
+    /// fonts, so they join. A word the source pairs with a jump (<c>&lt;sound dacapo&gt;</c>
+    /// and its kin) is still imported as text — the jump itself is a <c>form</c> matter
+    /// (<c>dc</c>, <c>ds</c>, <c>fine</c>, <c>coda</c>), and the report says so.
+    /// </remarks>
+    private static IEnumerable<string> ReadDirectionTexts(XElement dir, ImportReport report, int measureNo)
+    {
+        bool above = (string?)dir.Attribute("placement") == "above";
+        var sound = Local(dir, "sound");
+        bool jump = sound != null && new[] { "dacapo", "dalsegno", "fine", "tocoda" }
+            .Any(a => sound.Attribute(a) != null);
+        foreach (var dt in Els(dir, "direction-type"))
+        {
+            string text = string.Join(" ", string.Concat(Els(dt, "words").Select(w => w.Value))
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            if (text.Length > 0)
+            {
+                if (text == "una corda")
+                    yield return "unaCorda";
+                else if (text == "tre corde")
+                    yield return "treCorde";
+                else
+                {
+                    if (jump)
+                        report.Warn(measureNo, $"'{text}' is a jump in the source; it is imported as text only — write the jump in the form (dc, ds, fine, coda).");
+                    yield return "text(\"" + LysWriter.EscapeString(text) + "\")" + (above ? ".up" : "");
+                }
+            }
+            foreach (var r in Els(dt, "rehearsal"))
+                if (r.Value.Trim() is { Length: > 0 } label)
+                    yield return "mark(\"" + LysWriter.EscapeString(label) + "\")";
+        }
     }
 
     /// <summary>Greedily splits a tick duration into undotted rest note-values

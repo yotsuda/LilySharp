@@ -180,7 +180,7 @@ internal static class LysWriter
     // ---- sections ---------------------------------------------------------
 
     // The single-section flat layout: every part's full music in section A, played once by
-    // `form main { A }`. ⚠️ Reached only when the piece has NO repeat barline at all — a
+    // `form main { ~A }`. ⚠️ Reached only when the piece has NO repeat barline at all — a
     // repeat is cut into sections and spelled in the form (LYS1034, TryFactorPlainRepeats).
     private static void WriteFlatSection(StringBuilder sb, ImportDocument doc, ImportReport report, bool relative)
     {
@@ -197,7 +197,9 @@ internal static class LysWriter
             foreach (var line in WriteLyrics(lyricPart, 0, lyricPart.Measures.Count))
                 sb.Append("  ").Append(line).Append('\n');
         sb.Append("}\n\n");
-        sb.Append("form main { A }\n\n");
+        // `~`: the section is the importer's, not the source's — its label is not printed
+        // (see HiddenLabel).
+        sb.Append("form main { ").Append(HiddenLabel("A")).Append(" }\n\n");
     }
 
     // A first/second-ending layout: the music splits into named sections and the
@@ -259,16 +261,16 @@ internal static class LysWriter
         if (repeatFwd > 0)
         {
             segments.Add(new VoltaSegment("Intro", 0, repeatFwd));
-            structure.Append("Intro ");
+            structure.Append(HiddenLabel("Intro")).Append(' ');
         }
         segments.Add(new VoltaSegment("Body", repeatFwd, end1Start));
         segments.Add(new VoltaSegment("End1", end1Start, end1Stop + 1));
         segments.Add(new VoltaSegment("End2", end2Start, end2Stop + 1));
-        structure.Append("|: Body [1. End1] :| [2. End2]");
+        structure.Append($"|: {HiddenLabel("Body")} [1. {HiddenLabel("End1")}] :| [2. {HiddenLabel("End2")}]");
         if (end2Stop + 1 < n)
         {
             segments.Add(new VoltaSegment("Coda", end2Stop + 1, n));
-            structure.Append(" Coda");
+            structure.Append(' ').Append(HiddenLabel("Coda"));
         }
         return new VoltaLayout(segments, structure.ToString());
     }
@@ -311,11 +313,12 @@ internal static class LysWriter
         int segStart = 0;
         bool openRepeat = false;
 
+        // Returns the name as the FORM writes it (label hidden); the segment keeps the bare name.
         string Cut(int start, int end)
         {
             string name = "Sec" + (segments.Count + 1);
             segments.Add(new VoltaSegment(name, start, end));
-            return name;
+            return HiddenLabel(name);
         }
 
         for (int i = 0; i < n; i++)
@@ -361,6 +364,19 @@ internal static class LysWriter
 
         return new VoltaLayout(segments, structure.ToString());
     }
+
+    /// <summary>
+    /// A section of the importer's own making, as the form names it: with <c>~</c>, so its
+    /// label does not print.
+    /// </summary>
+    /// <remarks>
+    /// The names (<c>A</c>, <c>Intro</c>, <c>Body</c>, <c>End1</c>, <c>Sec1</c>…) are the
+    /// importer's cuts, not labels the source prints: a label the source DOES print is its
+    /// &lt;rehearsal&gt;, which arrives as <c>@mark</c>. Until 2026-09-30 the labels printed —
+    /// every import opened with a boxed "A" — and once the rehearsals were read, a source's own
+    /// mark on the first bar collided with that label (LYS4021, 270 times in 196 of 998 books).
+    /// </remarks>
+    private static string HiddenLabel(string name) => "~" + name;
 
     private static int IndexWhere(List<ImportMeasure> ms, int from, System.Func<ImportMeasure, bool> pred)
     {
@@ -998,6 +1014,6 @@ internal static class LysWriter
         return MajorTonics[majorFifths + 7] + " " + mode;
     }
 
-    private static string EscapeString(string s)
+    internal static string EscapeString(string s)
         => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }
