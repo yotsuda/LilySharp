@@ -4221,8 +4221,15 @@ internal sealed class ElementCoordinator
         ImmutableArray<GraceNoteItem> graceNotes = default,
         ImmutableArray<BeamLayout> beamLayouts = default,
         Func<ImmutableArray<InsideSlurScript>>? insideScripts = null,
-        ImmutableArray<TieLayout> tieLayouts = default)
+        ImmutableArray<TieLayout> tieLayouts = default,
+        int? graceStaffIndex = null)
     {
+        // Which staff's grace groups are this staff's: the score's own index, which a caller
+        // laying the staff out in a trivial one-staff frame (MultiStaffLayouter.StaffSlurLayouts,
+        // staffIndex 0) states apart — reading staff 0's groups there made staff N's grace
+        // slurs (and grace obstacles) out of another staff's grace runs.
+        int graceStaff = graceStaffIndex ?? Math.Max(staffIndex, 0);
+
         // No slur and no grace run that could make one (WithGraceSlurs, below).
         if (slurs.Length == 0 && graceNotes.IsDefaultOrEmpty)
             return ImmutableArray<SlurLayout>.Empty;
@@ -4246,7 +4253,6 @@ internal sealed class ElementCoordinator
         GraceObstacleGeom?[]? graceGeomCache = null;
         if (!graceNotes.IsDefaultOrEmpty)
         {
-            int graceStaff = Math.Max(staffIndex, 0);
             for (int gi = 0; gi < graceNotes.Length; gi++)
             {
                 var g = graceNotes[gi];
@@ -4269,7 +4275,7 @@ internal sealed class ElementCoordinator
         // LILYPOND-REF: ly/grace-init.ly startGraceSlur / stopGraceSlur — an ordinary Slur on
         // the last grace note and the main note; scm/music-functions.scm:652-656
         // score-grace-settings — (Voice Slur direction DOWN).
-        slurs = WithGraceSlurs(slurs, score, graceNotes, staffIndex, staff);
+        slurs = WithGraceSlurs(slurs, score, graceNotes, graceStaff, staff);
         if (slurs.Length == 0)
             return ImmutableArray<SlurLayout>.Empty;
 
