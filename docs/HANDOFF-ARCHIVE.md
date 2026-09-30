@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第714セッションの経緯
+
+### 1.1 第714セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「HANDOFF を読んで作業に着手」）。★ `-Start p714`（HEAD `59175414`・未 push 127）＝full **10470 / 0 / 2 / 10472**（引継ぎと一致）。作業ツリーに `site/examples/*.lys` 20 本の改行だけの差（内容差 0・09-29 から・この便は触っていない）。
+⑴ `e048ca88`（第712 ⑶ の穴）: `-End` も `--no-incremental` の build を回し、門「0 build」（exit 0 かつ Core の警告の行が 0）を足した。毒（Core に未使用の局所変数）で「Core 警告 1」の ⚠️。
+⑵ ★ `35aaedb5`（§1.0 ⒜「MMR の小節の列 X が LP より 0.027 左」）: LP の実測（Lab `sessions/p714/mmrcol`・dump.ily で BAR／DYN／MMR の X）で 3 つに分かれた。⒤ MultiMeasureRest は Spanner で rhythmic-grob-interface が無い＝Note_spacing の wish が無い＝列→小節線は裸の duration spring（5.298045）。Lily# は `ApplyLeftHeadWidth` が全休符の字を左の頭に数えて 5.598045＝rod の伸びの配分がずれた。`c1 | R1\p | c1\p |` で列が小節線から 2.139665（LP と一致・前は 2.109982）。⒥ sweep（998 冊）で行頭の MMR が 0.29 悪化 → 既存の欠陥が露出: 行頭の run の rod の min_dist は LP では prefix の列から（SKC の 7.485）、Lily# は小節線（0.39）で数えていた＝行頭の MMR の小節が LP より 0.80 狭かった。`LineStartColumn.MinimumDistanceToBarAtLineStart`＋`MultiStaffLayouter.LineStartRunRodDistance`（layout と break gate が共有）・gate は `MeasureSpringData` に差分 3 つ。`R1 | g1 |` の小節線 23.520827（LP と一致・前は 22.72）・pcmsh-run.ly の 3 run も LP と 0.001 以内。⒦ rod は run の小節の start＋end の幅を引いていた＝左の小節線が終わりの線と同じ幅のときだけ正しい（`EmptyBarSprings` の remarks が予告していた「2 つの綴り」）。`R1 \bar "||" R1` の 2 小節目が 0.49 広かった → 左の境界の ink を引く（LP 31.9008 と一致）。全小節線で min_dist − 幅＝0.2 になり、rod は前の小節線の幅を読まなくなった＝`IncrementalCompilerTests` の左窓のテストは「hazard が実在する」NotEqual を Equal に書き換えた（窓はここでは保守的なだけ）。網 `MultiMeasureRestLayoutTests` +5・毒 4 本（⒤ を外す・行頭 rod を外す・start＋end に戻す・gate の差分を 0）は全部狙った行だけ赤。sweep: 18 冊が動く＝全部 `audit/lpreg` のプローブ・実コーパス 0・snapshot 0。CHANGELOG（Fixes）。full **10475 / 0 / 2 / 10477**。
+★ `-End p714 -DiffBase 59175414`＝full **10475 / 0 / 2 / 10477**・門 7 つ全 OK（新しい「0 build」＝Core 警告 0）・Core `+` 180 行に REF 4／OWN 0（REF＝MultiMeasureRest の grob 定義・note-spacing-engraver・musical_column_spacing・calculate_spacing_rods）。7.6: ⑴ 第712 ⑶ ⑵ §1.0 ⒜ の MMR の列 X＋その sweep が露出させた 2 つ。7.7: ⑴ 左窓のテストは値の観測者を失った（rod が前の小節線の幅を読まなくなった＝窓は保守的なだけ）⑵ lead sheet の行頭の run は従来の式のまま（`LineStartRunRodDistance` が null）で、左の幅だけ新しい綴り＝未測定・sweep で動いた lead sheet は 0 ⑶ gate の行頭の差分は「run の小節は spring の和と rod の max」という gate の既存の近似の上に乗っている。push はユーザー。
+
 ## 以下は第713セッションの経緯
 
 ### 1.1 第713セッション（2026-09-30・YT-DELL2）

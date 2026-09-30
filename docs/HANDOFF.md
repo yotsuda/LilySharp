@@ -119,21 +119,21 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第716セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第715 の報告で「`,` の列は 2 つまで・必要なら広げます」と書いたことへの GO と読んだ）。★ `-Start p716`（HEAD `01a3866d`・未 push 133）＝full **10481 / 0 / 2 / 10483**（引継ぎと一致）。
+⑴ ★ `[1,3,5.` を書けるようにした（`b7ed6b10`）: 前は `,` の列が 2 つで止まり、`[1,3,5. B]` は構文エラー 11 個。`ParseVoltaPasses` が列を読み続け、3 つ目以降は「`,` と数」を end number と点の間の token として木に置く（点の位置が動くが、節と items の読み手は kind で探すので影響なし＝新しい node kind は作らなかった）。範囲は 2 つのまま。`SyntaxFacts.VoltaMorePasses`（slot 4 から点まで）を両方の ending が読み、`VoltaPassNumbers`／`VoltaWrittenText` に渡す＝MIDI・頁（"1. 3. 5."）・検査・双子（`\volta 1,3,5`）が追う。双子の inline の写しも運ぶ・MusicXML の `<ending number>` は `Numbers` を読む（前は 2 つを自前で組み立てていた）。網 `FormEndingPassTests` +3・列のループを毒にして 3 本赤。GRAMMAR（StructureVolta）・SYNTAX_REFERENCE・CHANGELOG。VS Code の文法は元から任意長を色付けしていた。full **10484 / 0 / 2 / 10486**。
+⚠ 手順の罠を 2 度踏んだ（CLAUDE-OPERATIONS §1 の「組の要素に演算を書かない」）: `@('旧', '新' + "`n" + '…')` で新が旧の 1 行目だけになり、1 度目は CHANGELOG/SYNTAX_REFERENCE を壊して `git checkout` で戻した・2 度目はテストの行が入らず 32 本（期待 34）で気づいた＝**本数を数えることが門になった**。
+★ `-End p716 -DiffBase 01a3866d`＝full **10484 / 0 / 2 / 10486**・門 7 つ全 OK・Core `+` 97 行に REF 0／OWN 0（Lily# の文法＝LP の移植ではない）。7.6: ⑴ 第715 の報告で私が挙げた穴＋ユーザーの「続けて」。7.7: ⑴ 3 つ以上の点の綴り `[1.3.5.` は LYS0037 に掛からない（lexer が `1.3` と `.5` に割る）＝今までどおりのエラーの列 ⑵ `[1,3,.` のような途中の欠けは Expected 1 つ＋読めた番号だけを pass にする。§1.0 ⒜ で手が動く項目は尽きたまま＝次の方針はユーザー判断。push はユーザー。
+
+## 以下は第715セッションの経緯
+
 ### 1.1 第715セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p715`（HEAD `9b22b9c4`・未 push 130）＝full **10475 / 0 / 2 / 10477**（引継ぎと一致）。
 ⑴ ⚠ **第714 が §1.0 に起票した穴（`<< { R1 } \\ { g4 a2. } >>` の g4 が LP より 0.125 右）は計器の誤りだった＝取り下げた**。Lily# の `octave absolute` の `g'` は LP の `g''`（`c'`→`c` の規則・pcsm-probe.lys の冒頭に在る）を第714 は忘れ、G5（符幹が下）を LP の G4 と比べていた。音高を揃えると LP と 4 桁で一致（Lab `sessions/p715/v2`）: 小節線→最初の音 g 1.09・e 1.09・c' 1.2222・b 1.1936（下向きの符幹の optical）・二声部 1.1365（上の声部が `R1`／`r1`／`s1` のどれでも LP も Lily# も同じ）・小節の幅 9.2297／小節線 32.2084。第714 の 3 つの修正は全音符と休符だけのプローブ（音高が入らない・小節の幅は LP と数字まで一致）で測ったので影響なし。コード変更なし。
 ⑵ ★ `95b2f6e9`（ユーザーの質問「`form main { A |: [1.3. B] :| [2.4. C] :| }` はできないんだっけ」→「直して」）: できない書き方で、しかも `lysc check` が `The input string '' was not in a correct format.` だけを出して落ちていた（lexer が `1.3` を DecimalLiteral にし、回復の空の番号を `SyntaxFacts.VoltaPassNumbers` の int.Parse が投げた＝診断が 1 つも出ない）。新 LYS0037（`ParseVoltaPasses`＝form と inline の両方）: `[1.3.` を 1 つのエラーで `[1,3.`／`[1-3.` と名指す（前は 1 エンディングに Expected が 5 つ）・decimal は番号の枠に残す・音楽の中の `[1.3.` も梁ではなく ending と読む。`VoltaPassNumbers` は投げない（読めない番号は pass 無し・decimal は意図した列として読む＝LYS1043 が後追いしない）。collector と MusicXML の最大 pass は空を 0 に（collector のそれは `[. B]` の描画を落としていた＝エディタのプレビューが打鍵中に踏む形）。検査: 読めない ending のある repeat は pass の穴を推測しない／**列の中の穴（`|: A [1,3. B] :|` の pass 2）で `First` が投げていた既存の欠陥**も LYS1043 に。網 `FormEndingPassTests` +6・5 つの変更を 1 つずつ毒にして全部赤。SYNTAX_REFERENCE・CHANGELOG。full **10481 / 0 / 2 / 10483**。ユーザーの意図（A のあと B C B C）の素直な書き方は `A |: B C :|`（エンディングは共通部分の後にしか置けない＝LYS1041）。
 ★ `-End p715 -DiffBase 9b22b9c4`＝full **10481 / 0 / 2 / 10483**・門 7 つ全 OK・Core `+` 89 行に REF 0／OWN 0（Lily# の文法と検査＝LP の移植ではない）。7.6: ⑴ 第714 の起票の検証 ⑵ ユーザーの質問。7.7: ⑴ 第714 の取り違えは既存の規則（Lily# の絶対音高は LP より 1 オクターブ低く綴る）の踏み外し ⑵ `,` の列は今も 2 つまで（`[1,3,5.` は読めない・ユーザーに伝えた）⑶ `[1.3.5.` のような 3 つ以上の点の綴りは LYS0037 に掛からず従来のエラーの列になる。§1.0 ⒜ で手が動く項目は尽きた＝次の方針はユーザー判断。push はユーザー。
-
-## 以下は第714セッションの経緯
-
-### 1.1 第714セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「HANDOFF を読んで作業に着手」）。★ `-Start p714`（HEAD `59175414`・未 push 127）＝full **10470 / 0 / 2 / 10472**（引継ぎと一致）。作業ツリーに `site/examples/*.lys` 20 本の改行だけの差（内容差 0・09-29 から・この便は触っていない）。
-⑴ `e048ca88`（第712 ⑶ の穴）: `-End` も `--no-incremental` の build を回し、門「0 build」（exit 0 かつ Core の警告の行が 0）を足した。毒（Core に未使用の局所変数）で「Core 警告 1」の ⚠️。
-⑵ ★ `35aaedb5`（§1.0 ⒜「MMR の小節の列 X が LP より 0.027 左」）: LP の実測（Lab `sessions/p714/mmrcol`・dump.ily で BAR／DYN／MMR の X）で 3 つに分かれた。⒤ MultiMeasureRest は Spanner で rhythmic-grob-interface が無い＝Note_spacing の wish が無い＝列→小節線は裸の duration spring（5.298045）。Lily# は `ApplyLeftHeadWidth` が全休符の字を左の頭に数えて 5.598045＝rod の伸びの配分がずれた。`c1 | R1\p | c1\p |` で列が小節線から 2.139665（LP と一致・前は 2.109982）。⒥ sweep（998 冊）で行頭の MMR が 0.29 悪化 → 既存の欠陥が露出: 行頭の run の rod の min_dist は LP では prefix の列から（SKC の 7.485）、Lily# は小節線（0.39）で数えていた＝行頭の MMR の小節が LP より 0.80 狭かった。`LineStartColumn.MinimumDistanceToBarAtLineStart`＋`MultiStaffLayouter.LineStartRunRodDistance`（layout と break gate が共有）・gate は `MeasureSpringData` に差分 3 つ。`R1 | g1 |` の小節線 23.520827（LP と一致・前は 22.72）・pcmsh-run.ly の 3 run も LP と 0.001 以内。⒦ rod は run の小節の start＋end の幅を引いていた＝左の小節線が終わりの線と同じ幅のときだけ正しい（`EmptyBarSprings` の remarks が予告していた「2 つの綴り」）。`R1 \bar "||" R1` の 2 小節目が 0.49 広かった → 左の境界の ink を引く（LP 31.9008 と一致）。全小節線で min_dist − 幅＝0.2 になり、rod は前の小節線の幅を読まなくなった＝`IncrementalCompilerTests` の左窓のテストは「hazard が実在する」NotEqual を Equal に書き換えた（窓はここでは保守的なだけ）。網 `MultiMeasureRestLayoutTests` +5・毒 4 本（⒤ を外す・行頭 rod を外す・start＋end に戻す・gate の差分を 0）は全部狙った行だけ赤。sweep: 18 冊が動く＝全部 `audit/lpreg` のプローブ・実コーパス 0・snapshot 0。CHANGELOG（Fixes）。full **10475 / 0 / 2 / 10477**。
-★ `-End p714 -DiffBase 59175414`＝full **10475 / 0 / 2 / 10477**・門 7 つ全 OK（新しい「0 build」＝Core 警告 0）・Core `+` 180 行に REF 4／OWN 0（REF＝MultiMeasureRest の grob 定義・note-spacing-engraver・musical_column_spacing・calculate_spacing_rods）。7.6: ⑴ 第712 ⑶ ⑵ §1.0 ⒜ の MMR の列 X＋その sweep が露出させた 2 つ。7.7: ⑴ 左窓のテストは値の観測者を失った（rod が前の小節線の幅を読まなくなった＝窓は保守的なだけ）⑵ lead sheet の行頭の run は従来の式のまま（`LineStartRunRodDistance` が null）で、左の幅だけ新しい綴り＝未測定・sweep で動いた lead sheet は 0 ⑶ gate の行頭の差分は「run の小節は spring の和と rod の max」という gate の既存の近似の上に乗っている。push はユーザー。
 
 ## 2. 開いている作業
 
