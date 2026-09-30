@@ -135,7 +135,7 @@
 ## UNWATCHED — 観測者がゼロだと自認しているもの（59 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:3096** container, and the value stops being unobserved with the line above.
+- **:3102** container, and the value stops being unobserved with the line above.
 ### `LilySharp.Core/Rendering/SharedRenderer.Beams.cs`
 - **:687** no observer; add the paren widths when a book brings one. The unpacked
 - **:689** bare glyph width, which is exact for one and unobserved for many.
@@ -238,11 +238,11 @@
 ## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（202 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
-- **:3091** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
-- **:3469** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
-- **:5420** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
-- **:5479** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
-- **:7175** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
+- **:3097** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
+- **:3475** (LYS1040). LilyPond has no such item (LILYSHARP-OWN).
+- **:5426** (MusicMarkEngraver.CalculateXPosition's LILYSHARP-OWN arm, the owner's choice), and the tweak
+- **:5485** LILYSHARP-OWN: LilyPond has no chord list. The names are plain markup text here
+- **:7181** somebody else. LILYSHARP-OWN — LilyPond has no section/part split to be loose in.
 ### `LilySharp.Core/Midi/GeneralMidi.cs`
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
@@ -271,7 +271,7 @@
 - **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:497** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4674** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:4670** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:735** LILYSHARP-OWN: LilyPond writes such a chord out note by note.

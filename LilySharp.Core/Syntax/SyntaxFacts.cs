@@ -108,7 +108,8 @@ internal static class SyntaxFacts
     /// "no ending plays pass 1" it caused. Until session 715 both threw a FormatException out
     /// of the validators, and <c>lysc check</c> printed that instead of any diagnostic.
     /// </remarks>
-    public static IEnumerable<int> VoltaPassNumbers(SyntaxTokenNode number, SyntaxTokenNode? separator, SyntaxTokenNode? endNumber)
+    public static IEnumerable<int> VoltaPassNumbers(SyntaxTokenNode number, SyntaxTokenNode? separator, SyntaxTokenNode? endNumber,
+        IReadOnlyList<SyntaxTokenNode>? morePasses = null)
     {
         if (!int.TryParse(number.Text, out int start))
         {
@@ -125,16 +126,53 @@ internal static class SyntaxFacts
                 for (int n = start; n <= end; n++)
                     yield return n;
             }
-            else // comma list: [1,3. …]
+            else // comma list: [1,3. …], and on — [1,3,5. …]
             {
                 yield return start;
                 yield return end;
+                if (morePasses != null)
+                    foreach (var more in morePasses)
+                        if (int.TryParse(more.Text, out int pass))
+                            yield return pass;
             }
         }
         else
         {
             yield return start;
         }
+    }
+
+    /// <summary>
+    /// A list ending's third and later numbers — <c>3</c>, <c>5</c> of <c>[1,2,3,5.</c> — the
+    /// number tokens the parser holds between the end number and the point (the commas are
+    /// skipped). Empty for every other ending.
+    /// </summary>
+    /// <remarks>Read by kind from slot 4 up to the point, because the list has no fixed length
+    /// (Parser.ParseVoltaPasses); the slots after the point are the ending's body.</remarks>
+    internal static IReadOnlyList<SyntaxTokenNode> VoltaMorePasses(SyntaxNode ending)
+    {
+        List<SyntaxTokenNode>? more = null;
+        for (int i = 4; i < ending.SlotCount; i++)
+        {
+            if (ending.GetChild(i) is not SyntaxTokenNode token || token.Kind == SyntaxKind.Dot)
+                break;
+            if (token.Kind == SyntaxKind.IntegerLiteral)
+                (more ??= []).Add(token);
+        }
+        return more ?? (IReadOnlyList<SyntaxTokenNode>)[];
+    }
+
+    /// <summary>An ending's passes as WRITTEN, with its point: <c>1.</c>, <c>1-3.</c>,
+    /// <c>1,3,5.</c> (<c>PrintedText</c> is what the bracket prints).</summary>
+    internal static string VoltaWrittenText(SyntaxTokenNode number, SyntaxTokenNode? separator,
+        SyntaxTokenNode? endNumber, IReadOnlyList<SyntaxTokenNode> morePasses)
+    {
+        if (separator is null || endNumber is null)
+            return $"{number.Text}.";
+        var text = new System.Text.StringBuilder($"{number.Text}{separator.Text}{endNumber.Text}");
+        foreach (var more in morePasses)
+            text.Append(',').Append(more.Text);
+        return text.Append('.').ToString();
     }
 
     /// <summary>

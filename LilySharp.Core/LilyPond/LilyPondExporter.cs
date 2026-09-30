@@ -2125,6 +2125,12 @@ public sealed class LilyPondExporter
             new InternalSyntax.SyntaxToken(SyntaxKind.IntegerLiteral, ending.Number.Text),
             ending.Separator is { } sep ? new InternalSyntax.SyntaxToken(sep.Kind, sep.Text) : null,
             ending.EndNumber is { } end ? new InternalSyntax.SyntaxToken(end.Kind, end.Text) : null,
+            // A list's further numbers, each with its comma: [1,3,5. …].
+            [.. ending.MorePasses.SelectMany(n => new[]
+            {
+                new InternalSyntax.SyntaxToken(SyntaxKind.Comma, ","),
+                new InternalSyntax.SyntaxToken(SyntaxKind.IntegerLiteral, n.Text),
+            })],
             new InternalSyntax.SyntaxToken(SyntaxKind.Dot, "."),
             [.. items.Select(n => n.Green)],
             new InternalSyntax.SyntaxToken(SyntaxKind.CloseBracket, "]"));

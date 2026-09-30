@@ -276,23 +276,18 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     /// <summary>Gets the end number token (e.g., "3" in [1-3. A]) if present (slot 3).</summary>
     public SyntaxTokenNode? EndNumber => HasSeparator ? (SyntaxTokenNode?)GetChild(3) : null;
 
-    /// <summary>
-    /// Gets the volta text for display (e.g., "1.", "1-3.", "1,3.").
-    /// </summary>
-    public string VoltaText
-    {
-        get
-        {
-            if (!HasSeparator) return $"{Number.Text}.";
-            return $"{Number.Text}{Separator!.Text}{EndNumber!.Text}.";
-        }
-    }
+    /// <summary>A list's third and later numbers (<c>[1,3,5.</c>), empty otherwise
+    /// (<see cref="SyntaxFacts.VoltaMorePasses"/>).</summary>
+    public IReadOnlyList<SyntaxTokenNode> MorePasses => SyntaxFacts.VoltaMorePasses(this);
+
+    /// <summary>The passes as written (e.g. "1.", "1-3.", "1,3.", "1,3,5.").</summary>
+    public string VoltaText => SyntaxFacts.VoltaWrittenText(Number, Separator, EndNumber, MorePasses);
 
     /// <summary>The passes this ending plays on — <c>[1. B]</c> {1}, <c>[1-3. B]</c> {1, 2, 3},
     /// <c>[1,3. B]</c> {1, 3} — the fold the inline ending shares
     /// (<see cref="SyntaxFacts.VoltaPassNumbers"/>). What every reader of the form plays the
     /// run by (<c>Semantics.RepeatPasses</c>).</summary>
-    public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber);
+    public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber, MorePasses);
 
     /// <summary>What the bracket prints, as LilyPond prints it (<see cref="SyntaxFacts.VoltaPrintedText"/>):
     /// <c>[1-2.</c> prints <c>1. 2.</c>. <see cref="VoltaText"/> is the written spelling.</summary>

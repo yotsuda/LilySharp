@@ -959,7 +959,8 @@ An ending NAMES a section — the music lives in the section, and the bracket go
 the reference. It may name several, played in order under one bracket:
 `|: A [1. B C] :| [2. D]` plays A B C, then A D. Each is written as in the form body
 (`[1. ~B C']` — `~` hides that play's label, a trailing mark shifts its octave). Endings
-accept ranges and lists: `[1-2. B]`, `[1,3. B]`. The bracket prints its passes as LilyPond
+accept ranges and lists: `[1-2. B]`, `[1,3. B]`, `[1,3,5. B]` (a list as long as you like; a
+range is two numbers). The bracket prints its passes as LilyPond
 does — `[1-2.` prints "1. 2.", `[1-3.` "1.–3.", `[1,3.` "1. 3." (a run of three or more
 passes as a range). The passes are written with `,` or `-` only — `[1.3. B]`, the printed
 points, is an error (**LYS0037**) that names both spellings. The first ending is the last thing before

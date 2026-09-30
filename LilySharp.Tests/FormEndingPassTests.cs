@@ -67,6 +67,7 @@ public sealed class FormEndingPassTests
     [InlineData("|: A [1. B] :| [2-3. C] D", "ABACACD")]
     [InlineData("|: A [1-2. B C] :| [3. D]", "ABCABCAD")]   // an ending of two sections, on both its passes
     [InlineData("|: A [1. B] :| [2. C]", "ABAC")]           // the plain spelling, as before
+    [InlineData("|: A [1,3,5. B] :| [2,4. C]", "ABACABACAB")] // a list past two numbers (session 716)
     public void TheMidiPlaysEachEndingOnThePassesItNames(string form, string played)
         => Assert.Equal(played, Played(form));
 
@@ -104,6 +105,7 @@ public sealed class FormEndingPassTests
     [InlineData("|: A [1. B] :| [2. C]", "1.", "2.")]
     [InlineData("|: A [1-2. B] :| [3. C]", "1. 2.", "3.")]
     [InlineData("|: A [1-3. B] :| [4. C]", "1.–3.", "4.")]
+    [InlineData("|: A [1,3,5. B] :| [2,4. C]", "1. 3. 5.", "2. 4.")]
     [InlineData("|: A [1,3. B] :| [2. C]", "1. 3.", "2.")]
     public void TheBracketPrintsItsPassesAsLilyPondDoes(string form, string first, string second)
         => Assert.Equal(new[] { first, second },
@@ -351,6 +353,40 @@ public sealed class FormEndingPassTests
         Assert.Equal(DiagnosticCodes.VoltaPassesWithPoints, parse.Code);
         // The music's own complaint about an ending in the music still stands beside it.
         Assert.Contains(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
+    }
+
+    /// <summary>
+    /// A list runs past two numbers — <c>[1,3,5. B]</c>, LilyPond's <c>\volta 1,3,5</c> — for
+    /// every reader: the written text keeps its spelling (and the tree every character), the
+    /// passes are 1, 3, 5, the twin writes <c>\volta 1,3,5</c>, MusicXML
+    /// <c>number="1,3,5"</c>, and the inline spelling in the music reads the same. A range is
+    /// still two numbers. Until session 716 <c>[1,3,5.</c> was eleven errors.
+    /// </summary>
+    [Fact]
+    public void AListEnding_NamesEveryPassItLists()
+    {
+        string src = Book("|: A [1,3,5. B] :| [2,4. C]");
+        var tree = SyntaxTree.Parse(src);
+        Assert.Empty(tree.Diagnostics);
+        Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.Equal(src, tree.GetRoot().ToFullString());
+        var ending = tree.GetRoot().DescendantNodesOfKinds(SyntaxKind.FormAlternative)
+            .Cast<FormAlternativeSyntax>().First();
+        Assert.Equal("1,3,5.", ending.VoltaText);
+        Assert.Equal(new[] { 1, 3, 5 }, ending.Numbers.ToArray());
+        Assert.Equal(new[] { "B" }, ending.Sections.Select(s => s.ToFullString().Trim()).ToArray());
+        Assert.Contains("\\volta 1,3,5 ", Twin(src));
+        Assert.Contains("number=\"1,3,5\"", Xml(src));
+
+        // (The bare-braces harness is LYS0020's top-level music; the ending adds nothing.)
+        var inline = SyntaxTree.Parse("{ |: c4 [1,3,5. d4] :| [2,4. e4] }");
+        Assert.Equal(DiagnosticCodes.TopLevelMusic, Assert.Single(inline.Diagnostics).Code);
+        Assert.Equal(new[] { 60, 62, 60, 64, 60, 62, 60, 64, 60, 62 },
+            MidiNotes("{ |: c4 [1,3,5. d4] :| [2,4. e4] }").Select(n => n.Pitch).ToArray());
+
+        // A range stays two numbers: a comma after it is the parser's error, as before.
+        Assert.Contains(SyntaxTree.Parse(Book("|: A [1-3,5. B] :| [4. C]")).Diagnostics,
+            d => d.Code == DiagnosticCodes.ExpectedToken);
     }
 
     /// <summary>

@@ -281,6 +281,10 @@ workflow attaches that section to the GitHub Release verbatim.
   breaking change on unclosed endings above). Split Sections now splits a section
   played as an ending (`[1. A]` → `[1. A B]`) instead of refusing. An undeclared section
   named in an ending is now reported as undefined (it was dropped in silence).
+- **An ending's list runs past two numbers.** `|: A [1,3,5. B] :| [2,4. C]` plays B on passes
+  1, 3 and 5 and C on 2 and 4; the bracket prints "1. 3. 5.", MusicXML writes
+  `number="1,3,5"` and the LilyPond twin `\volta 1,3,5`. The same holds for an ending in the
+  music. A list stopped at two numbers, and `[1,3,5.` was a string of syntax errors.
 - **A repeat needs a body.** `|: [1. B] :| [2. C]` (nothing before the first ending),
   `|: :|` and an empty run after `:|:` are errors (**LYS1041**) — they compiled in silence.
 

@@ -1285,7 +1285,7 @@ StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ,
    ⚠️ "Opened by a repeat" is about the TREE, not the text: in |: A [1. D] :| [2. O] the
    ending after the ':|' belongs to the repeat block, while in |: A :| B [1. B] the ending
    does not — that second one warns even though the form has a repeat in it. *)
-StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' ,
+StructureVolta = '[' , Integer , [ '-' , Integer | ',' , Integer , { ',' , Integer } ] , '.' ,
                  EndingSection , { EndingSection } ,
                  ( ( ']' | '-]' ) , [ '@voltaBracket(' , VoltaLength , ')' ]
                  | (* nothing — only when ':|' follows at once *) ) ;

@@ -354,7 +354,7 @@ internal sealed class BeamMarkerGreen : GreenSyntaxNode
 /// which references a named section rather than carrying literal music.
 /// </summary>
 /// <remarks>
-/// Slot layout: <c>[</c>, number, separator?, endNumber?, <c>.</c>, items…, <c>]</c>.
+/// Slot layout: <c>[</c>, number, separator?, endNumber?, (<c>,</c> number)… of a list's
 /// </remarks>
 internal sealed class InlineVoltaGreen : GreenSyntaxNode
 {
@@ -363,10 +363,11 @@ internal sealed class InlineVoltaGreen : GreenSyntaxNode
         SyntaxToken number,
         SyntaxToken? separator,
         SyntaxToken? endNumber,
+        SyntaxToken[] morePasses,
         SyntaxToken dot,
         GreenNode?[] items,
         SyntaxToken? closeBracket)
-        : base(SyntaxKind.InlineVolta, [openBracket, number, separator, endNumber, dot, .. items, closeBracket])
+        : base(SyntaxKind.InlineVolta, [openBracket, number, separator, endNumber, .. morePasses, dot, .. items, closeBracket])
     {
     }
 }
@@ -951,9 +952,10 @@ internal sealed class FormRepeatBlockGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class FormAlternativeGreen : GreenSyntaxNode
 {
-    // Slot layout, fixed at both ends: [openBracket, number, separator?, endNumber?, dot,
-    // section…, openEnd?, closeBracket?, annotation?]. Absent slots are null, so the dot is
-    // always slot 4, the first section slot 5, and the LAST THREE slots are always the
+    // Slot layout, fixed at both ends: [openBracket, number, separator?, endNumber?,
+    // (comma, number)… of a list's further passes ([1,3,5.), dot, section…, openEnd?,
+    // closeBracket?, annotation?]. Absent slots are null, so the dot is slot 4 unless a list
+    // runs past two numbers, and the LAST THREE slots are always the
     // `-` of a `-]`, the `]`, and the `@voltaBracket(…)` glued to it. Each section is an
     // ordinary SectionReference / SilentSectionReference node (octave marks and label
     // included), which is what keeps a range separator — the Comma in `[1,3. B]` — from being
@@ -963,13 +965,14 @@ internal sealed class FormAlternativeGreen : GreenSyntaxNode
         SyntaxToken number,
         SyntaxToken? separator,
         SyntaxToken? endNumber,
+        SyntaxToken[] morePasses,
         SyntaxToken dot,
         GreenNode?[] sections,
         SyntaxToken? openEnd,
         SyntaxToken? closeBracket,
         GreenNode? annotation)
         : base(SyntaxKind.FormAlternative,
-            [openBracket, number, separator, endNumber, dot, .. sections, openEnd, closeBracket, annotation])
+            [openBracket, number, separator, endNumber, .. morePasses, dot, .. sections, openEnd, closeBracket, annotation])
     {
     }
 }

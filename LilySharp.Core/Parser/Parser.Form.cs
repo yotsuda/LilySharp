@@ -271,7 +271,7 @@ internal sealed partial class Parser
     private FormAlternativeGreen ParseVoltaBracket()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
-        var (number, separator, endNumber, dot) = ParseVoltaPasses();
+        var (number, separator, endNumber, more, dot) = ParseVoltaPasses();
 
         // The ending's sections, played in order under one bracket: [1. B C] — each an
         // ordinary section reference, written exactly as in the form body (`~B` hides that
@@ -314,7 +314,7 @@ internal sealed partial class Parser
             && closeBracket.TrailingTriviaWidth == 0 && Current.LeadingTriviaWidth == 0)
             annotation = ParseEndingAnnotation();
 
-        return new FormAlternativeGreen(openBracket, number, separator, endNumber, dot, [.. sections],
+        return new FormAlternativeGreen(openBracket, number, separator, endNumber, more, dot, [.. sections],
             openEnd, closeBracket, annotation);
     }
 
@@ -349,8 +349,18 @@ internal sealed partial class Parser
     /// reported once here, naming both spellings, and the decimal stays in the number slot so
     /// the tree keeps every character; <see cref="Syntax.SyntaxFacts.VoltaPassNumbers"/> reads
     /// it as the list it was meant to be, so no follow-on pass error piles up.
+    /// <para>
+    /// A LIST runs on: <c>[1,3,5.</c> is passes 1, 3 and 5 (LilyPond's <c>\volta 1,3,5</c>),
+    /// its third and later numbers each a <c>,</c> and a number in <c>More</c>, between the end
+    /// number and the point — so the tree keeps every character in order, and the sections /
+    /// items after the point, which their readers find by kind, stay where they were read.
+    /// Until session 716 a list stopped at two and <c>[1,3,5.</c> drew a cascade of eleven
+    /// errors. A RANGE is two numbers: a <c>,</c> after <c>1-3</c> is the "Expected 'Dot'"
+    /// it was.
+    /// </para>
     /// </remarks>
-    private (SyntaxToken Number, SyntaxToken? Separator, SyntaxToken? EndNumber, SyntaxToken Dot)
+    private (SyntaxToken Number, SyntaxToken? Separator, SyntaxToken? EndNumber,
+             SyntaxToken[] More, SyntaxToken Dot)
         ParseVoltaPasses()
     {
         if (Check(SyntaxKind.DecimalLiteral) && Peek(1).Kind == SyntaxKind.Dot)
@@ -363,21 +373,27 @@ internal sealed partial class Parser
                 + $"or '[{written.Replace('.', '-')}.' for the range. The bracket prints the "
                 + "points itself.");
             var decimalNumber = Advance();
-            return (decimalNumber, null, null, Advance());
+            return (decimalNumber, null, null, [], Advance());
         }
 
         var number = Expect(SyntaxKind.IntegerLiteral);
 
-        // Check for range or list: [1-3. ] or [1,3. ]
+        // Check for range or list: [1-3. ] or [1,3. ] — and a list's further numbers, [1,3,5. ]
         SyntaxToken? separator = null;
         SyntaxToken? endNumber = null;
+        var more = new List<SyntaxToken>();
         if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
         {
             separator = Advance();
             endNumber = Expect(SyntaxKind.IntegerLiteral);
+            while (separator.Kind == SyntaxKind.Comma && Check(SyntaxKind.Comma))
+            {
+                more.Add(Advance());
+                more.Add(Expect(SyntaxKind.IntegerLiteral));
+            }
         }
 
-        return (number, separator, endNumber, Expect(SyntaxKind.Dot));
+        return (number, separator, endNumber, [.. more], Expect(SyntaxKind.Dot));
     }
 
     /// <summary>LYS1041 — a repeat run (from its <c>|:</c> or <c>:|:</c>) that names no section

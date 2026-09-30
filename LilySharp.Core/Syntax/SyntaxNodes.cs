@@ -1243,10 +1243,12 @@ public sealed class InlineVoltaSyntax : SyntaxNode
     /// <summary>The end volta-number token for a range/list form, or null.</summary>
     public SyntaxTokenNode? EndNumber => GetChild(3) as SyntaxTokenNode;
 
-    /// <summary>Display text for the bracket label, e.g. "1.", "1-2.", "1,3.".</summary>
-    public string VoltaText => HasSeparator
-        ? $"{Number.Text}{Separator!.Text}{EndNumber!.Text}."
-        : $"{Number.Text}.";
+    /// <summary>A list's third and later numbers (<c>[1,3,5.</c>), empty otherwise
+    /// (<see cref="SyntaxFacts.VoltaMorePasses"/>).</summary>
+    public IReadOnlyList<SyntaxTokenNode> MorePasses => SyntaxFacts.VoltaMorePasses(this);
+
+    /// <summary>The passes as written, e.g. "1.", "1-2.", "1,3.", "1,3,5.".</summary>
+    public string VoltaText => SyntaxFacts.VoltaWrittenText(Number, Separator, EndNumber, MorePasses);
 
     /// <summary>The ending's music items (between the dot and the closing bracket).</summary>
     public IEnumerable<SyntaxNode> Items
@@ -1271,7 +1273,7 @@ public sealed class InlineVoltaSyntax : SyntaxNode
 
     /// <summary>The set of pass numbers this ending applies to (<see cref="SyntaxFacts.VoltaPassNumbers"/>,
     /// the fold a form ending shares).</summary>
-    public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber);
+    public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber, MorePasses);
 
     /// <summary>What the bracket prints, as LilyPond prints it (<see cref="SyntaxFacts.VoltaPrintedText"/>).</summary>
     public string PrintedText => SyntaxFacts.VoltaPrintedText(Numbers);

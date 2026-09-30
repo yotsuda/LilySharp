@@ -1143,7 +1143,7 @@ internal sealed partial class Parser
     private InlineVoltaGreen ParseInlineVolta()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
-        var (number, separator, endNumber, dot) = ParseVoltaPasses();
+        var (number, separator, endNumber, more, dot) = ParseVoltaPasses();
 
         // The ending body runs until a structural boundary: the closing ']' (which
         // makes the ending CLOSED), the next ending '[N.', a repeat barline, the
@@ -1160,7 +1160,7 @@ internal sealed partial class Parser
         }
 
         SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
-        return new InlineVoltaGreen(openBracket, number, separator, endNumber, dot, [.. items], closeBracket);
+        return new InlineVoltaGreen(openBracket, number, separator, endNumber, more, dot, [.. items], closeBracket);
     }
 
     /// <summary>The token stream is at the end of an inline volta ending body: the

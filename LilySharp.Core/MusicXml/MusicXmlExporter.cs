@@ -1237,16 +1237,12 @@ public sealed class MusicXmlExporter
     }
 
     /// <summary>The MusicXML <c>&lt;ending number&gt;</c> list for a volta: "1", a
-    /// range <c>[1-3.]</c> → "1,2,3", a list <c>[1,3.]</c> → "1,3".</summary>
+    /// range <c>[1-3.]</c> → "1,2,3", a list <c>[1,3,5.]</c> → "1,3,5" — the passes every
+    /// reader plays it by (<see cref="FormAlternativeSyntax.Numbers"/>).</summary>
     private static string EndingNumbers(FormAlternativeSyntax alt)
     {
-        int n = alt.AlternativeNumber;
-        if (alt.Separator is not { } sep || alt.EndNumber is not { } endTok
-            || !int.TryParse(endTok.Text, out int e))
-            return n.ToString();
-        if (sep.Text == "-")
-            return string.Join(",", System.Linq.Enumerable.Range(n, System.Math.Max(1, e - n + 1)));
-        return $"{n},{e}";
+        var passes = alt.Numbers.ToList();
+        return passes.Count == 0 ? alt.AlternativeNumber.ToString() : string.Join(",", passes);
     }
 
     private void ProcessPartBlock(PartBlockSyntax partBlock)
