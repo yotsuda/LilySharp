@@ -46,6 +46,11 @@ internal static class LexicalDiagnostics
                     new TextSpan(tokenStart, token.Width),
                     DiagnosticCodes.UnterminatedString,
                     "Unterminated string literal (missing closing '\"')."));
+            if (token.Kind == SyntaxKind.StringLiteral)
+                foreach (var (offset, length, message) in StringLiteral.Errors(token.Text))
+                    diagnostics.Add(Diagnostic.Error(
+                        new TextSpan(tokenStart + offset, length),
+                        DiagnosticCodes.InvalidEscape, message));
 
             ScanTrivia(token.TrailingTrivia, tokenStart + token.Width, diagnostics);
 
@@ -86,6 +91,17 @@ internal static class LexicalDiagnostics
     /// the end, walking the same escape rule the lexer uses (so "\" at EOF is open).</summary>
     private static bool StringTerminated(string text)
     {
+        if (StringLiteral.IsVerbatim(text))
+        {
+            // @"…": "" is a quote; a lone " closes. No backslash escapes.
+            for (int v = 2; v < text.Length; v++)
+            {
+                if (text[v] != '"') continue;
+                if (v + 1 < text.Length && text[v + 1] == '"') { v++; continue; }
+                return true;
+            }
+            return false;
+        }
         int i = 1; // skip the opening quote
         while (i < text.Length)
         {

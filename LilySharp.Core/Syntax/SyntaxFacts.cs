@@ -138,10 +138,7 @@ internal static class SyntaxFacts
         {
             if (node.GetChild(i) is not SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } t)
                 continue;
-            var text = t.Text;
-            return text.Length >= 2 && text.StartsWith("\"") && text.EndsWith("\"")
-                ? text.Substring(1, text.Length - 2)
-                : text;
+            return StringLiteral.Value(t.Text);
         }
         return null;
     }

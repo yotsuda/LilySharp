@@ -371,7 +371,7 @@ internal static class PaperPlanReader
         // (size "ansi a") — the lyric syllable's rule, and a quoted single word is
         // accepted the same way.
         string? name = entry.StringToken != null
-            ? entry.StringToken.Text.Trim('"')
+            ? StringLiteral.Value(entry.StringToken.Text)
             : entry.BareValue;
         if (entry.HasBlock || entry.NumberToken != null || name == null)
         {

@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 199 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **317** | |
+| `OWN` | 200 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **318** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（199 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（200 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3041** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -525,6 +525,8 @@
 - **:278** ⚠️ LILYSHARP-OWN: THE FLAGGED ZERO-WIDTH MEASURE IS A TRANSLATION DEVICE. LilyPond
 ### `LilySharp.Core/Svg/Model/MusicMarkItem.cs`
 - **:280** coda itself (LILYSHARP-OWN, a Gould-style departure).
+### `LilySharp.Core/Syntax/StringLiteral.cs`
+- **:27** LILYSHARP-OWN: the owner's decision (2026-09-30) — Lily#'s strings follow C#'s grammar:
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
 - **:887** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
 - **:1066** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be

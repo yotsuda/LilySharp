@@ -6,6 +6,9 @@ All notable changes to the Lily# VS Code extension are documented here.
 
 ### Breaking changes
 
+- **Strings follow C#'s grammar.** `"…"` decodes C#'s escapes (`\"`, `\\`, `\n`, `\uXXXX`…) and
+  any other backslash is an error (LYS0036); `@"…"` is verbatim (`""` is a quote). Both forms
+  are coloured, escapes included, and an escaped quote no longer ends the string's colour.
 - **An unclosed last ending is a syntax error.** `:| [2. C D E` no longer holds C alone;
   write `[2. C -]` for the open (straight-ended) bracket, `[2. C]` for a hooked one. The
   `]` may still be left off right before a `:|`. New: `layout { voltaBracket all|line|N }`

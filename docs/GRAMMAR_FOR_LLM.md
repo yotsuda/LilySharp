@@ -178,6 +178,12 @@ Below, a code block that is only music (no `part`/`section`/`score`) is showing 
 body** — the four lines above are omitted so each example shows just what it teaches. To run
 one, put it where `c4 d e f |` sits in the minimal document.
 
+## Strings
+
+Quoted text follows C#: `"say \"hi\""`, `"a\\b"`, `"\n"`, `"\u00e9"` (escapes `\" \' \\ \0 \a
+\b \f \n \r \t \v \uXXXX \UXXXXXXXX \xH…`; any other backslash is error LYS0036), and the
+verbatim `@"C:\music"` / `@"say ""hi"""` (backslash as written, `""` = one quote).
+
 ## Pitches
 
 - Names: `c d e f g a b`. Sharp `is`, flat `es`: `cis`=C#, `ees`=Eb, `cisis`=C##, `deses`=Dbb. E/A flats also contract: `es`=`ees`, `as`=`aes`, `eses`=`eeses`, `ases`=`aeses`.

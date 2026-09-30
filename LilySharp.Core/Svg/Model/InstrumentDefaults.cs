@@ -39,8 +39,8 @@ public static class InstrumentDefaults
         var preset = new System.Text.StringBuilder();
         foreach (var t in valueTokenTexts)
         {
-            if (t.Length >= 2 && t[0] == '"' && t[^1] == '"')
-                label = t[1..^1];       // trailing quoted display label (last wins)
+            if (t.Length >= 2 && Syntax.StringLiteral.IsQuoted(t) && t[^1] == '"')
+                label = Syntax.StringLiteral.Value(t);   // trailing quoted display label (last wins)
             else
                 preset.Append(t);       // bare word / hyphen segment
         }

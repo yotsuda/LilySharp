@@ -85,7 +85,7 @@ public abstract record LysValue
     public static LysValue FromToken(SyntaxKind kind, string text)
     {
         if (kind == SyntaxKind.StringLiteral)
-            return new Str(text.Trim('"'));
+            return new Str(StringLiteral.Value(text));
 
         if (kind is SyntaxKind.IntegerLiteral or SyntaxKind.DecimalLiteral)
         {

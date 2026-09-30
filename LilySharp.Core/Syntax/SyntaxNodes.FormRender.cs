@@ -71,7 +71,7 @@ public sealed class UsingDirectiveSyntax : SyntaxNode
     public SyntaxTokenNode PathToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>The included file path, with surrounding quotes stripped.</summary>
-    public string Path => PathToken.Text.Trim('"');
+    public string Path => StringLiteral.Value(PathToken.Text);
 }
 
 /// <summary>
@@ -643,13 +643,7 @@ public sealed partial class CustomTextSyntax : SyntaxNode
         {
             // Slot 0: underscore, Slot 1: string literal
             var textToken = (SyntaxTokenNode)GetChild(1)!;
-            var text = textToken.Text;
-            // Remove surrounding quotes
-            if (text.StartsWith("\"") && text.EndsWith("\""))
-            {
-                return text.Substring(1, text.Length - 2);
-            }
-            return text;
+            return StringLiteral.Value(textToken.Text);
         }
     }
 }
@@ -684,7 +678,7 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     public SyntaxTokenNode? Basename => LeadingToken(basename: true);
 
     /// <summary>The basename text with surrounding quotes stripped, or null.</summary>
-    public string? BasenameText => Basename?.Text.Trim('"');
+    public string? BasenameText => Basename is { } b ? StringLiteral.Value(b.Text) : null;
 
     // Header tokens before the '{' are, in source order, an optional form-name
     // (any bare token) and an optional basename (a string literal); the transpose

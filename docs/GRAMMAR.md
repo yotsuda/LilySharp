@@ -37,7 +37,18 @@ Trivia         = { Whitespace | LineComment | BlockComment } ;
 Integer        = Digit , { Digit } ;
 Decimal        = Digit , { Digit } , '.' , Digit , { Digit } ;
 Digit          = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
-String         = '"' , { StringChar } , '"' ;
+String         = RegularString | VerbatimString ;
+RegularString  = '"' , { StringChar | Escape } , '"' ;
+VerbatimString = '@"' , { any except '"' | '""' } , '"' ;
+StringChar     = any except '"' | '\' ;
+Escape         = '\' , ( '"' | "'" | '\' | '0' | 'a' | 'b' | 'f' | 'n' | 'r' | 't' | 'v'
+                 | 'u' , Hex4 | 'U' , Hex8 | 'x' , Hex1to4 ) ;
+
+(* C#'s string grammar (owner's decision 2026-09-30). A regular string decodes the escapes
+   above; any other backslash is LYS0036. A verbatim string takes every character as written,
+   a backslash and a line break included, and '""' is one quote. `@"` is the verbatim opener
+   only — a bare '@' before a name is an annotation. The one reader is
+   LilySharp.Core.Syntax.StringLiteral. *)
 
 (* A Decimal REQUIRES a digit after the point, and that is what keeps it out of every
    dot the grammar already spells: the augmentation dot (c4. / R2.*3 / partial 2. /

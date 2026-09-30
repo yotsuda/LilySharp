@@ -243,8 +243,8 @@ public static class AnnotationValues
         // Quoted iff it opens and closes with a double quote, which is the test the
         // validator applied to the dotted tail; the quotes are the label's delimiters
         // and are not printed.
-        quoted = written.Length >= 2 && written[0] == '"' && written[^1] == '"';
-        return quoted ? written[1..^1] : written;
+        quoted = written.Length >= 2 && StringLiteral.IsQuoted(written) && written[^1] == '"';
+        return quoted ? StringLiteral.Value(written) : written;
     }
 
     /// <summary>

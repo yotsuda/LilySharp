@@ -2,6 +2,22 @@
 
 Complete reference for the `.lys` music notation language.
 
+## Strings
+
+Quoted text — a title, `@text("…")`, a label, a lyric syllable — follows **C#'s string
+grammar**:
+
+| Form | Example | Reads as |
+|---|---|---|
+| Regular `"…"` | `"say \"hi\""` | say "hi" |
+| | `"a\\b"`, `"one\ntwo"`, `"\u00e9"` | a\b, a line break, é |
+| Verbatim `@"…"` | `@"C:\music"` | C:\music (a backslash as written) |
+| | `@"say ""hi"""` | say "hi" (`""` is one quote) |
+
+A regular string decodes `\" \' \\ \0 \a \b \f \n \r \t \v`, `\uXXXX`, `\UXXXXXXXX` and
+`\x` + 1–4 hex digits. Any other backslash is an error (LYS0036) — write `\\`, or use the
+verbatim form, which is the easy spelling for text that is full of backslashes.
+
 ## Pitches
 
 ### Basic Pitch Names

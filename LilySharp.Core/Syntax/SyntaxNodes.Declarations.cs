@@ -75,8 +75,8 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
             if (sb.Length == 0)
                 return null;
             var text = sb.ToString();
-            return text.Length >= 2 && text[0] == '"' && text[^1] == '"'
-                ? text[1..^1]
+            return text.Length >= 2 && StringLiteral.IsQuoted(text) && text[^1] == '"'
+                ? StringLiteral.Value(text)
                 : text;
         }
     }
@@ -373,7 +373,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
             foreach (var value in Values)
             {
                 if (value is SyntaxTokenNode token && token.Kind == SyntaxKind.StringLiteral)
-                    return token.Text.Trim('"');
+                    return StringLiteral.Value(token.Text);
             }
             return null;
         }
@@ -470,7 +470,7 @@ public sealed class FontDeclarationSyntax : SyntaxNode
             for (int i = 1; i < SlotCount; i++)
             {
                 if (GetChild(i) is SyntaxTokenNode token && token.Kind == SyntaxKind.StringLiteral)
-                    return token.Text.Trim('"');
+                    return StringLiteral.Value(token.Text);
             }
             return null;
         }
@@ -502,7 +502,7 @@ public sealed class FontDeclarationSyntax : SyntaxNode
         {
             if (GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)
             {
-                string name = token.Text.Trim('"');
+                string name = StringLiteral.Value(token.Text);
                 if (name.Length > 0 && seen.Add(name))
                     result.Add(name);
             }
@@ -577,7 +577,7 @@ public sealed class FontDeclarationSyntax : SyntaxNode
                     case SyntaxKind.CloseBrace:
                         continue;
                     case SyntaxKind.StringLiteral:
-                        names.Add(token.Text.Trim('"'));
+                        names.Add(StringLiteral.Value(token.Text));
                         continue;
                     case SyntaxKind.EmbeddedKeyword:
                         // Read by Embedded; it ends the entry it trails.
@@ -1042,7 +1042,7 @@ public sealed class PartDeclarationSyntax : SyntaxNode
     /// <summary>The part's default display name (surrounding quotes stripped), or null.
     /// A score's <c>staff X "…"</c> overrides it for that score; otherwise this is the
     /// label printed at the staff's left. Not a symbol — free text, may contain spaces.</summary>
-    public string? DisplayName => DisplayNameToken is { } t ? t.Text.Trim('"') : null;
+    public string? DisplayName => DisplayNameToken is { } t ? StringLiteral.Value(t.Text) : null;
 
     // Layout: keyword name [displayName] [openBrace props… closeBrace]. The body,
     // when present, begins at the first token after the optional display name.

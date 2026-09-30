@@ -241,7 +241,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 // quoted). A bare word is refused too: none of the 128 names is one.
                 string midi = Joined(valueTokens);
                 if (valueTokens.Count != 1 || !IsQuoted(midi)
-                    || Midi.GeneralMidi.ProgramOf(midi[1..^1]) is null)
+                    || Midi.GeneralMidi.ProgramOf(StringLiteral.Value(midi)) is null)
                     Error(valueTokens[0],
                         $"Unknown midiInstrument {midi}. midiInstrument takes one of LilyPond's "
                         + "General MIDI names in quotes; known: "
@@ -281,7 +281,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 $"{string.Join(", ", known.OrderBy(s => s, StringComparer.Ordinal))}.");
     }
 
-    private static bool IsQuoted(string t) => t.Length >= 2 && t[0] == '"' && t[^1] == '"';
+    private static bool IsQuoted(string t) => t.Length >= 2 && StringLiteral.IsQuoted(t) && t[^1] == '"';
 
     /// <summary>A hyphenated or mark-carrying value is several tokens in the tree.</summary>
     private static string Joined(List<SyntaxTokenNode> tokens)

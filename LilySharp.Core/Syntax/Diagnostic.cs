@@ -247,6 +247,10 @@ public static class DiagnosticCodes
     public const string UnterminatedString = "LYS0003";
     /// <summary>Parser error: a comment was not terminated.</summary>
     public const string UnterminatedComment = "LYS0004";
+    /// <summary>Parser error: a string literal holds an escape C# does not define (<c>"\p"</c>),
+    /// or a <c>\u</c>/<c>\U</c>/<c>\x</c> without its hex digits — Lily#'s strings follow C#'s
+    /// grammar (owner's decision 2026-09-30; <see cref="StringLiteral"/>).</summary>
+    public const string InvalidEscape = "LYS0036";
     /// <summary>Parser error: LilyPond's <c>\repeat volta</c> spelling was written in the
     /// music. A Lily# repeat that changes the playing order lives in the form
     /// (<c>|: A [1. B] :| [2. C]</c>); the message points there. Kept as a code of its own

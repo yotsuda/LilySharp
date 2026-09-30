@@ -109,7 +109,7 @@ public sealed record TempoValue(
                     break;
 
                 case SyntaxKind.StringLiteral:
-                    marking ??= token.Text.Trim('"');
+                    marking ??= StringLiteral.Value(token.Text);
                     break;
 
                 case SyntaxKind.IntegerLiteral:

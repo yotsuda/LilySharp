@@ -155,12 +155,12 @@ public sealed record ChordAnnotation
 
         string first = words[0];
         // Quoted free text prints verbatim, as it always has; nothing may follow it.
-        if (first.Length > 0 && first[0] == '"')
+        if (StringLiteral.IsQuoted(first))
         {
             int close = first.LastIndexOf('"');
             return new ChordAnnotation
             {
-                QuotedText = close >= 1 ? first.Substring(1, close - 1) : null,
+                QuotedText = close >= (StringLiteral.IsVerbatim(first) ? 2 : 1) ? StringLiteral.Value(first) : null,
                 Problems = words.Count > 1
                     ? [new ChordShapes.Problem(1, ExtraWords(words[1]))]
                     : [],

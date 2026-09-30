@@ -43,14 +43,31 @@
             ]
         },
         "strings": {
+            "comment": "C#'s string grammar (owner's decision 2026-09-30): a verbatim @\"…\" takes a backslash as written and \"\" as one quote; a regular \"…\" decodes C#'s escapes and any other is LYS0036. The verbatim rule comes first so its @ is not read as an annotation.",
             "patterns": [
+                {
+                    "name": "string.quoted.double.verbatim.lilysharp",
+                    "begin": "@\"",
+                    "end": "\"(?!\")",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.lilysharp",
+                            "match": "\"\""
+                        }
+                    ]
+                },
                 {
                     "name": "string.quoted.double.lilysharp",
                     "begin": "\"",
                     "end": "\"",
                     "patterns": [
                         {
+                            "comment": "Only C#'s escapes are coloured; any other backslash stays string text and the language server reports it (LYS0036) — the grammar names nothing invalid.",
                             "name": "constant.character.escape.lilysharp",
+                            "match": "\\\\(?:[\"'\\\\0abfnrtv]|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|x[0-9A-Fa-f]{1,4})"
+                        },
+                        {
+                            "comment": "Consumed so an escaped quote (\\\") never ends the string; not coloured.",
                             "match": "\\\\."
                         }
                     ]
@@ -634,7 +651,8 @@
                     "end": "(\\))",
                     "endCaptures": { "1": { "name": "punctuation.section.annotation.end.lilysharp" } },
                     "patterns": [
-                        { "name": "string.quoted.double.lilysharp", "match": "\"[^\"]*\"" }
+                        { "include": "#comments" },
+                        { "include": "#strings" }
                     ]
                 },
                 {

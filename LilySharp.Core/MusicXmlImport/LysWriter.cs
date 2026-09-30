@@ -1105,6 +1105,11 @@ internal static class LysWriter
         return MajorTonics[majorFifths + 7] + " " + mode;
     }
 
+    // A value as the INSIDE of a regular literal — C#'s escapes (StringLiteral.Quote without
+    // its quotes): the reader decodes exactly these.
     internal static string EscapeString(string s)
-        => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    {
+        string quoted = Syntax.StringLiteral.Quote(s);
+        return quoted[1..^1];
+    }
 }

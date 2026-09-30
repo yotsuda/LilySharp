@@ -519,7 +519,7 @@ internal sealed partial class Parser
         // later `data-pos`, the LSP's jump targets and the columns of the diagnostics that
         // follow (RULES §5.1).
         var tokens = new List<GreenNode?>();
-        string? face = Check(SyntaxKind.StringLiteral) ? Current.Text.Trim('"') : null;
+        string? face = Check(SyntaxKind.StringLiteral) ? StringLiteral.Value(Current.Text) : null;
 
         var span = new TextSpan(_textPosition + Current.LeadingTriviaWidth,
             Math.Max(1, Current.Text.Length));

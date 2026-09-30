@@ -471,7 +471,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     {
         // The SYMBOL is the first word; the words after it choose a diagram (ChordAnnotation).
         var written = ChordAnnotation.Of(mark)?.Symbol ?? "";
-        if (written.Length == 0 || written[0] == '"')
+        if (written.Length == 0 || StringLiteral.IsQuoted(written))
             return null;
         int slash = written.IndexOf('/');
         string main = slash >= 0 ? written[..slash] : written;

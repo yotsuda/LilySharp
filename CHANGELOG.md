@@ -8,6 +8,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **Strings follow C#'s grammar.** A regular `"…"` decodes C#'s escapes — `\"`, `\\`, `\n`,
+  `\t`, `\uXXXX` and the rest — and any other backslash is an error (LYS0036); the new
+  verbatim `@"…"` takes a backslash as written, with `""` for a quote. Until now no escape
+  was decoded anywhere: `@text("say \"hi\"")` printed `say \"hi\`, and the LilyPond twin
+  doubled the backslashes. A backslash written for its own sake (`"\^{~}3"`) is now LYS0036
+  — write `"\\^{~}3"` or `@"\^{~}3"`. The MusicXML import writes values back in the same
+  escapes, and the editor colours both forms and marks an invalid escape.
 - **An ending's range, end shape and length are three separate settings.** The `]` ends an
   ending; it may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|`
   closes it, and its bracket now hooks). An **unclosed last ending is now a syntax error**

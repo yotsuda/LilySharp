@@ -212,8 +212,8 @@ public sealed class PartHeaderDefaults
                     break;
                 case "midiinstrument":
                     string written = Joined();
-                    midiName = written.Length >= 2 && written[0] == '"' && written[^1] == '"'
-                        ? written[1..^1]
+                    midiName = written.Length >= 2 && StringLiteral.IsQuoted(written) && written[^1] == '"'
+                        ? StringLiteral.Value(written)
                         : written;
                     break;
             }

@@ -779,7 +779,7 @@ public static class RenderSpecParser
         int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
         if (si >= 0)
         {
-            nameOverride = toks[si].Text.Trim('"');
+            nameOverride = StringLiteral.Value(toks[si].Text);
             toks.RemoveAt(si);
         }
         if (toks.Count == 0) return null;

@@ -576,28 +576,28 @@ public sealed partial class MeasureCollector
             case "title":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
                 {
-                    _meta.Title = titleToken.Text.Trim('"');
+                    _meta.Title = StringLiteral.Value(titleToken.Text);
                     _meta.TitlePosition = titleToken.Span.Start;
                 }
                 break;
             case "composer":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
                 {
-                    _meta.Composer = composerToken.Text.Trim('"');
+                    _meta.Composer = StringLiteral.Value(composerToken.Text);
                     _meta.ComposerPosition = composerToken.Span.Start;
                 }
                 break;
             case "subtitle":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode subtitleToken)
                 {
-                    _meta.Subtitle = subtitleToken.Text.Trim('"');
+                    _meta.Subtitle = StringLiteral.Value(subtitleToken.Text);
                     _meta.SubtitlePosition = subtitleToken.Span.Start;
                 }
                 break;
             case "poet":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode poetToken)
                 {
-                    _meta.Poet = poetToken.Text.Trim('"');
+                    _meta.Poet = StringLiteral.Value(poetToken.Text);
                     _meta.PoetPosition = poetToken.Span.Start;
                 }
                 break;

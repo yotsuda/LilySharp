@@ -207,7 +207,13 @@ internal sealed class Lexer
             case '!': _position++; return (SyntaxKind.DashedBar, "!"); // dashed barline (LP \bar "!")
             case '*': _position++; return (SyntaxKind.Asterisk, "*");
             case '=': _position++; return (SyntaxKind.Equals, "=");
-            case '@': _position++; return (SyntaxKind.At, "@");
+            case '@':
+                // `@"…"` is a verbatim string (C#'s, the owner's decision 2026-09-30); a bare
+                // `@` opens an annotation. `@` followed by `"` meant nothing before.
+                if (Peek() == '"')
+                    return ScanVerbatimStringLiteral();
+                _position++;
+                return (SyntaxKind.At, "@");
             case '\'': _position++; return (SyntaxKind.Apostrophe, "'");
             case ',': _position++; return (SyntaxKind.Comma, ",");
             case '-': _position++; return (SyntaxKind.Minus, "-");
@@ -344,6 +350,25 @@ internal sealed class Lexer
         // An unterminated string (no closing quote) is flagged post-lex by
         // LexicalDiagnostics, keeping the lexer stateless.
 
+        return (SyntaxKind.StringLiteral, _text[start.._position]);
+    }
+
+    /// <summary>A verbatim literal <c>@"…"</c>: every character as written, a backslash
+    /// included; <c>""</c> is one quote. Its content is read by <see cref="StringLiteral"/>.</summary>
+    private (SyntaxKind kind, string text) ScanVerbatimStringLiteral()
+    {
+        int start = _position;
+        _position += 2; // skip @"
+        while (!IsAtEnd)
+        {
+            if (Current == '"')
+            {
+                if (Peek() == '"') { _position += 2; continue; }
+                _position++; // closing quote
+                break;
+            }
+            _position++;
+        }
         return (SyntaxKind.StringLiteral, _text[start.._position]);
     }
 
