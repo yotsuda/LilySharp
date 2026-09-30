@@ -961,7 +961,8 @@ the reference. It may name several, played in order under one bracket:
 (`[1. ~B C']` — `~` hides that play's label, a trailing mark shifts its octave). Endings
 accept ranges and lists: `[1-2. B]`, `[1,3. B]`. The bracket prints its passes as LilyPond
 does — `[1-2.` prints "1. 2.", `[1-3.` "1.–3.", `[1,3.` "1. 3." (a run of three or more
-passes as a range). The first ending is the last thing before
+passes as a range). The passes are written with `,` or `-` only — `[1.3. B]`, the printed
+points, is an error (**LYS0037**) that names both spellings. The first ending is the last thing before
 the `:|`; a third and later ending is written by repeating the same shape: `:| [3. D]`.
 
 **Where an ending ends, how its bracket ends, and how far the bracket reaches** are three

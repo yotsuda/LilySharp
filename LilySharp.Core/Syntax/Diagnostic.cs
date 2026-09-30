@@ -641,6 +641,12 @@ public static class DiagnosticCodes
     /// the message names the fix (another shape, higher up the neck).</summary>
     public const string ShapeChordOctaveMarks = "LYS0035";
 
+    /// <summary>Parser error: an ending's passes written with the printed points —
+    /// <c>[1.3. B]</c>, where the spelling is <c>[1,3. B]</c> (a list) or <c>[1-3. B]</c> (a
+    /// range). The lexer reads <c>1.3</c> as one decimal number, so without this report the
+    /// ending drew a cascade of "Expected" errors that never named the separator.</summary>
+    public const string VoltaPassesWithPoints = "LYS0037";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

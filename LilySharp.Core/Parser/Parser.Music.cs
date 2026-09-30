@@ -1127,7 +1127,10 @@ internal sealed partial class Parser
     /// </summary>
     private GreenNode ParseBeamOrInlineVolta()
     {
-        if (Peek(1).Kind == SyntaxKind.IntegerLiteral)
+        // …or by the passes written with points, `[1.3.` (a decimal and its point), which
+        // ParseVoltaPasses reports — read as a beam it would report nothing useful.
+        if (Peek(1).Kind == SyntaxKind.IntegerLiteral
+            || (Peek(1).Kind == SyntaxKind.DecimalLiteral && Peek(2).Kind == SyntaxKind.Dot))
             return ParseInlineVolta();
         return ParseBeamMarker();
     }
@@ -1140,18 +1143,7 @@ internal sealed partial class Parser
     private InlineVoltaGreen ParseInlineVolta()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
-        var number = Expect(SyntaxKind.IntegerLiteral);
-
-        // Optional range/list: [1-2. …] or [1,3. …]
-        SyntaxToken? separator = null;
-        SyntaxToken? endNumber = null;
-        if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
-        {
-            separator = Advance();
-            endNumber = Expect(SyntaxKind.IntegerLiteral);
-        }
-
-        var dot = Expect(SyntaxKind.Dot);
+        var (number, separator, endNumber, dot) = ParseVoltaPasses();
 
         // The ending body runs until a structural boundary: the closing ']' (which
         // makes the ending CLOSED), the next ending '[N.', a repeat barline, the

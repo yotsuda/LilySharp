@@ -295,7 +295,7 @@ public sealed partial class MeasureCollector
         int highest = 0;
         for (int j = 0; j < repeat.SlotCount; j++)
             if (repeat.GetChild(j) is FormAlternativeSyntax a)
-                highest = Math.Max(highest, a.Numbers.Max());
+                highest = Math.Max(highest, a.Numbers.DefaultIfEmpty(0).Max());
         return highest;
     }
 

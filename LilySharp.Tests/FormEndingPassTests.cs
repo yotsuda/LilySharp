@@ -314,4 +314,73 @@ public sealed class FormEndingPassTests
         Assert.Equal(1, RepeatPasses.EndingFor(4, endings));  // past every number: the last
         Assert.Equal(-1, RepeatPasses.EndingFor(1, System.Array.Empty<PassSet>()));
     }
+
+    /// <summary>
+    /// The passes written with the points the bracket prints — <c>[1.3. B]</c> for
+    /// <c>[1,3. B]</c> — are ONE error naming both spellings (LYS0037), in the form and in the
+    /// music alike. The lexer reads <c>1.3</c> as a decimal: until session 715 that drew five
+    /// "Expected" errors an ending, and the pass reader then threw on the empty number the
+    /// recovery left, so <c>lysc check</c> printed "The input string '' was not in a correct
+    /// format." and no diagnostic at all (the owner wrote
+    /// <c>form main { A |: [1.3. B] :| [2.4. C] :| }</c>).
+    /// </summary>
+    [Theory]
+    [InlineData("|: A [1.3. B] :| [2.4. C]", 2)]
+    [InlineData("|: A [1.3. B] :| [2. C]", 1)]
+    public void PassesWrittenWithPoints_AreOneErrorAnEnding(string form, int endings)
+    {
+        var tree = SyntaxTree.Parse(Book(form));
+        var all = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
+        Assert.Equal(endings, all.Count);
+        Assert.All(all, d => Assert.Equal(DiagnosticCodes.VoltaPassesWithPoints, d.Code));
+        Assert.Contains("'[1,3.'", all[0].Message);
+        Assert.Contains("'[1-3.'", all[0].Message);
+    }
+
+    [Fact]
+    public void PassesWrittenWithPoints_InTheMusic_AreTheSameError()
+    {
+        const string src = """
+            octave absolute
+            part m { section A { c'1 |: d'1 [1.3. e'1] :| [2. f'1] } }
+            form main { A }
+            score main { staff m }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var parse = Assert.Single(tree.Diagnostics);
+        Assert.Equal(DiagnosticCodes.VoltaPassesWithPoints, parse.Code);
+        // The music's own complaint about an ending in the music still stands beside it.
+        Assert.Contains(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.RepeatStructureOutsideForm);
+    }
+
+    /// <summary>
+    /// An ending whose passes the parser could not read — <c>[. B]</c>, <c>[1-. B]</c>, a state
+    /// the editor sees on the way to <c>[1. B]</c> — is the parser's one error: the validators
+    /// and the preview run on it without throwing, and no pass error is guessed on top. And a gap
+    /// INSIDE a list (<c>|: A [1,3. B] :|</c>, pass 2) is LYS1043 on that ending — it threw
+    /// "Sequence contains no matching element" out of the validators until session 715.
+    /// </summary>
+    [Theory]
+    [InlineData("|: A [. B] :| [2. C]")]
+    [InlineData("|: A [1-. B] :| [2. C]")]
+    public void AnUnreadableEnding_IsTheParsersErrorAlone(string form)
+    {
+        var tree = SyntaxTree.Parse(Book(form));
+        Assert.Equal(DiagnosticCodes.ExpectedToken, Assert.Single(tree.Diagnostics).Code);
+        Assert.Empty(SemanticValidation.Run(tree).Where(d => d.Severity == DiagnosticSeverity.Error));
+        // Every reader of the passes runs on it: the page (the collector's highest pass), the
+        // MusicXML (its own), the MIDI and the twin.
+        Assert.NotEmpty(LilySharp.Core.Svg.SvgGenerator.Generate(tree,
+            new LilySharp.Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false }));
+        Assert.NotEmpty(Xml(Book(form)));
+        Assert.NotNull(MidiNotes(Book(form)));
+        Assert.NotEmpty(Twin(Book(form)));
+    }
+
+    [Fact]
+    public void AGapInsideAList_IsReportedOnThatEnding()
+    {
+        var gap = Assert.Single(Errors("|: A [1,3. B] :|", DiagnosticCodes.EndingPassNotNamedOnce));
+        Assert.Contains("No ending plays pass 2", gap.Message);
+    }
 }

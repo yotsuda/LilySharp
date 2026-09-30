@@ -317,6 +317,12 @@ workflow attaches that section to the GitHub Release verbatim.
   the rest, clear of its bar count. It printed below the staff at the bar's left edge, like
   text on a note; `.down` still puts it below, centred. The bar count itself stands 0.05 higher,
   0.4 over the staff line's ink as LilyPond puts it, where it stood 0.4 over the line's centre.
+- **An ending written with its printed points is one clear error.** `[1.3. B]` (for
+  `[1,3. B]`) stopped `lysc check` with "The input string '' was not in a correct format." and no
+  diagnostic at all; it is now LYS0037, naming `[1,3.` and `[1-3.`, in the form and in the
+  music alike. An ending whose number is missing (`[. B]`, as while typing one) and a repeat
+  whose one list skips a pass (`|: A [1,3. B] :|`) no longer crash the check or the preview
+  either — the first is the parser's one error, the second the usual LYS1043.
 - **Bars of multi-measure rest are as wide as LilyPond makes them.** A rest opening a line
   was spaced as if a bar line stood before it rather than the clef and time signature, so its
   bar came out narrower than LilyPond's (0.8 of a staff space for a treble staff in 4/4); a rest

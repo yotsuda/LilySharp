@@ -212,17 +212,26 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
                     namedBy[pass] = ending;
                 }
             }
+            // An ending whose number the parser could not read (`[. B]`) has had its error;
+            // which passes it meant is unknown, so a gap here would be a guess on top of it.
+            if (endings.Any(e => !e.Numbers.Any()))
+                continue;
             int highest = namedBy.Keys.DefaultIfEmpty(0).Max();
             var missing = Enumerable.Range(1, highest).Where(p => !namedBy.ContainsKey(p)).ToList();
             if (missing.Count == 0)
                 continue;
-            // At the ending after the first gap: the one whose lowest number passes it.
-            var after = endings.First(e => e.Numbers.Any() && e.Numbers.Min() > missing[0]);
+            // At the ending after the first gap: the one whose lowest number passes it — or,
+            // when the gap sits INSIDE a list (`|: A [1,3. B] :|`, pass 2), the ending that
+            // skips it. Until session 715 that second case had no ending to point at and
+            // First threw out of the validators.
+            var after = endings.FirstOrDefault(e => e.Numbers.Min() > missing[0])
+                ?? endings.First(e => e.Numbers.Max() > missing[0]);
             string passes = missing.Count == 1 ? $"pass {missing[0]}" : $"passes {string.Join(", ", missing)}";
+            string range = missing[0] > 1 ? $", or a range such as '[1-{missing[0]}. …]'" : "";
             _diagnostics.Error(InkSpan(after), DiagnosticCodes.EndingPassNotNamedOnce,
                 $"No ending plays {passes} of this repeat: every pass up to the highest number "
                 + $"({highest}) plays one ending — give {passes} to an ending's number "
-                + $"('[{missing[0]}. …]', or a range such as '[1-{missing[0]}. …]').");
+                + $"('[{missing[0]}. …]'{range}).");
         }
     }
 

@@ -99,9 +99,25 @@ internal static class SyntaxFacts
     /// this fold; the form's readers each read the slots for themselves (the MIDI: the first
     /// number only; Split Sections: ranges but not lists) — see <c>Semantics.RepeatPasses</c>.
     /// </remarks>
+    /// <remarks>
+    /// NEVER THROWS, because it is read on trees the parser has already complained about (the
+    /// validators and the editor's preview run on every keystroke): a number the parser could
+    /// not read — the empty token its recovery leaves for <c>[. B]</c> — names no pass, and
+    /// the passes written with points, <c>[1.3.</c> (LYS0037, one decimal token), are read
+    /// as the list they were meant to be, so the one parser error is not followed by a
+    /// "no ending plays pass 1" it caused. Until session 715 both threw a FormatException out
+    /// of the validators, and <c>lysc check</c> printed that instead of any diagnostic.
+    /// </remarks>
     public static IEnumerable<int> VoltaPassNumbers(SyntaxTokenNode number, SyntaxTokenNode? separator, SyntaxTokenNode? endNumber)
     {
-        int start = int.Parse(number.Text);
+        if (!int.TryParse(number.Text, out int start))
+        {
+            if (number.Kind == SyntaxKind.DecimalLiteral)
+                foreach (var part in number.Text.Split('.'))
+                    if (int.TryParse(part, out int pass))
+                        yield return pass;
+            yield break;
+        }
         if (separator != null && endNumber != null && int.TryParse(endNumber.Text, out int end))
         {
             if (separator.Kind == SyntaxKind.Minus)

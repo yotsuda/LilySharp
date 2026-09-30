@@ -271,18 +271,7 @@ internal sealed partial class Parser
     private FormAlternativeGreen ParseVoltaBracket()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
-        var number = Expect(SyntaxKind.IntegerLiteral);
-
-        // Check for range or list: [1-3. ] or [1,3. ]
-        SyntaxToken? separator = null;
-        SyntaxToken? endNumber = null;
-        if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
-        {
-            separator = Advance();
-            endNumber = Expect(SyntaxKind.IntegerLiteral);
-        }
-
-        var dot = Expect(SyntaxKind.Dot);
+        var (number, separator, endNumber, dot) = ParseVoltaPasses();
 
         // The ending's sections, played in order under one bracket: [1. B C] — each an
         // ordinary section reference, written exactly as in the form body (`~B` hides that
@@ -346,6 +335,49 @@ internal sealed partial class Parser
             parts.Add(Expect(SyntaxKind.CloseParen));
         }
         return new MusicMarkGreen([.. parts]);
+    }
+
+    /// <summary>
+    /// The passes an ending names, up to and including its point: <c>1.</c>, <c>1-3.</c> or
+    /// <c>1,3.</c> — shared by the form's ending (<see cref="ParseVoltaBracket"/>) and the
+    /// inline one in the music (<c>ParseInlineVolta</c>), which are the same bracket.
+    /// </summary>
+    /// <remarks>
+    /// <c>[1.3.</c> — the passes written with the points the bracket PRINTS ("1. 3.") — lexes
+    /// <c>1.3</c> as one DecimalLiteral, and until session 715 it drew five "Expected" errors
+    /// per ending (and crashed the pass reader on the empty number the recovery left). It is
+    /// reported once here, naming both spellings, and the decimal stays in the number slot so
+    /// the tree keeps every character; <see cref="Syntax.SyntaxFacts.VoltaPassNumbers"/> reads
+    /// it as the list it was meant to be, so no follow-on pass error piles up.
+    /// </remarks>
+    private (SyntaxToken Number, SyntaxToken? Separator, SyntaxToken? EndNumber, SyntaxToken Dot)
+        ParseVoltaPasses()
+    {
+        if (Check(SyntaxKind.DecimalLiteral) && Peek(1).Kind == SyntaxKind.Dot)
+        {
+            string written = Current.Text;
+            _diagnostics.Error(new TextSpan(_textPosition, Current.FullWidth + Peek(1).FullWidth),
+                DiagnosticCodes.VoltaPassesWithPoints,
+                $"An ending's passes are separated by ',' or '-', not by points: write "
+                + $"'[{written.Replace('.', ',')}.' for passes {written.Replace(".", " and ")}, "
+                + $"or '[{written.Replace('.', '-')}.' for the range. The bracket prints the "
+                + "points itself.");
+            var decimalNumber = Advance();
+            return (decimalNumber, null, null, Advance());
+        }
+
+        var number = Expect(SyntaxKind.IntegerLiteral);
+
+        // Check for range or list: [1-3. ] or [1,3. ]
+        SyntaxToken? separator = null;
+        SyntaxToken? endNumber = null;
+        if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
+        {
+            separator = Advance();
+            endNumber = Expect(SyntaxKind.IntegerLiteral);
+        }
+
+        return (number, separator, endNumber, Expect(SyntaxKind.Dot));
     }
 
     /// <summary>LYS1041 — a repeat run (from its <c>|:</c> or <c>:|:</c>) that names no section

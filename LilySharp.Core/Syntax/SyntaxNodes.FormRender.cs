@@ -266,8 +266,9 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     /// <summary>Gets the number token (slot 1, after the '[').</summary>
     public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(1)!;
 
-    /// <summary>Gets the alternative number.</summary>
-    public int AlternativeNumber => int.Parse(Number.Text);
+    /// <summary>Gets the alternative number: the first pass it names, 0 when the parser could
+    /// not read one (see <see cref="SyntaxFacts.VoltaPassNumbers"/>).</summary>
+    public int AlternativeNumber => Numbers.FirstOrDefault();
 
     /// <summary>Gets the separator token (- or ,) if present (slot 2).</summary>
     public SyntaxTokenNode? Separator => HasSeparator ? (SyntaxTokenNode?)GetChild(2) : null;
