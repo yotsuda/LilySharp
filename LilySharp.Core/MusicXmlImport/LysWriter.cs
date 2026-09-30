@@ -115,25 +115,35 @@ internal static class LysWriter
         // be a LYS4006 error.
         var scoreLyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         sb.Append("score main \"imported\" {\n");
-        for (int gi = 0; gi < doc.Parts.Count;)
+        // Each part's groups, outer first — the source's part-groups, then its own split into
+        // a grand staff. A run of parts sharing a group's key is that group's block.
+        var open = new List<string>();
+        foreach (var part in doc.Parts)
         {
-            var group = doc.Parts[gi].StaffGroup;
-            if (group == null)
+            var path = part.Groups.ToList();
+            if (part.StaffGroup is { } split)
+                path.Add((split, "grandStaff"));
+            int keep = 0;
+            while (keep < open.Count && keep < path.Count && open[keep] == path[keep].Key)
+                keep++;
+            while (open.Count > keep)
             {
-                sb.Append("  staff ").Append(doc.Parts[gi].SafeName).Append(StaffLabel(doc.Parts[gi]))
-                    .Append(LyricRowLines(doc.Parts[gi], scoreLyricPart, "  ")).Append('\n');
-                gi++;
-                continue;
+                open.RemoveAt(open.Count - 1);
+                sb.Append(new string(' ', 2 + 2 * open.Count)).Append("}\n");
             }
-            // A run of consecutive parts sharing a staff group = one grand staff.
-            sb.Append("  grandStaff {\n");
-            while (gi < doc.Parts.Count && doc.Parts[gi].StaffGroup == group)
+            for (int d = keep; d < path.Count; d++)
             {
-                sb.Append("    staff ").Append(doc.Parts[gi].SafeName).Append(StaffLabel(doc.Parts[gi]))
-                    .Append(LyricRowLines(doc.Parts[gi], scoreLyricPart, "    ")).Append('\n');
-                gi++;
+                sb.Append(new string(' ', 2 + 2 * open.Count)).Append(path[d].Kind).Append(" {\n");
+                open.Add(path[d].Key);
             }
-            sb.Append("  }\n");
+            string indent = new(' ', 2 + 2 * open.Count);
+            sb.Append(indent).Append("staff ").Append(part.SafeName).Append(StaffLabel(part))
+                .Append(LyricRowLines(part, scoreLyricPart, indent)).Append('\n');
+        }
+        while (open.Count > 0)
+        {
+            open.RemoveAt(open.Count - 1);
+            sb.Append(new string(' ', 2 + 2 * open.Count)).Append("}\n");
         }
         sb.Append("}\n");
 

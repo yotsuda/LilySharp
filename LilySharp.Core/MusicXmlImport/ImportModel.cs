@@ -89,6 +89,11 @@ internal sealed class ImportPart
     /// (a piano grand staff), they share this group id so the score wraps them in a
     /// single <c>grandStaff { }</c>. Null for an ordinary standalone part.</summary>
     public string? StaffGroup { get; set; }
+    /// <summary>The source's <c>&lt;part-group&gt;</c>s the part stands in, outer first: each a
+    /// key shared by the group's parts and the Lily# group it is written as
+    /// (<c>grandStaff</c>, <c>staffGroup</c>, <c>choirStaff</c>). The part's own split
+    /// (<see cref="StaffGroup"/>) nests inside them.</summary>
+    public List<(string Key, string Kind)> Groups { get; } = new();
     public List<ImportMeasure> Measures { get; } = new();
 }
 

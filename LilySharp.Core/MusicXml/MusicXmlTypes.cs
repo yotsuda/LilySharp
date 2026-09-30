@@ -29,9 +29,13 @@ internal sealed class MusicXmlDocument
     public string? Poet { get; set; }
     public List<MusicXmlPart> Parts { get; } = new();
 
-    /// <summary>Consecutive parts joined by a brace (<c>&lt;part-group&gt;</c>): a grand staff
-    /// whose two staves carry labels of their own, which one merged part could not keep.</summary>
-    public List<(MusicXmlPart First, MusicXmlPart Last)> BraceGroups { get; } = new();
+    /// <summary>
+    /// The score's staff groups over runs of consecutive parts (<c>&lt;part-group&gt;</c>), outer
+    /// before inner: a <c>grandStaff</c> kept as several parts (its staves labelled apart) is a
+    /// brace, a <c>staffGroup</c> a bracket with its bar lines through, a <c>choirStaff</c> a
+    /// bracket with its bar lines per staff. Until 2026-09-30 only the first was written.
+    /// </summary>
+    public List<(MusicXmlPart First, MusicXmlPart Last, string Symbol, bool Barline)> PartGroups { get; } = new();
 
     /// <summary>
     /// Converts to XML document.
@@ -71,16 +75,25 @@ internal sealed class MusicXmlDocument
 
         // Part list
         var partList = new XElement("part-list");
+        // A group's number is the smallest one no open group holds, so nested groups differ.
+        var groupNumbers = new Dictionary<int, int>();
         for (int i = 0; i < Parts.Count; i++)
         {
             var part = Parts[i];
             string id = $"P{i + 1}";
-            int group = BraceGroups.FindIndex(g => ReferenceEquals(g.First, part));
-            if (group >= 0)
+            for (int g = 0; g < PartGroups.Count; g++)
+            {
+                if (!ReferenceEquals(PartGroups[g].First, part))
+                    continue;
+                int number = 1;
+                while (groupNumbers.ContainsValue(number))
+                    number++;
+                groupNumbers[g] = number;
                 partList.Add(new XElement("part-group",
-                    new XAttribute("type", "start"), new XAttribute("number", group + 1),
-                    new XElement("group-symbol", "brace"),
-                    new XElement("group-barline", "yes")));
+                    new XAttribute("type", "start"), new XAttribute("number", number),
+                    new XElement("group-symbol", PartGroups[g].Symbol),
+                    new XElement("group-barline", PartGroups[g].Barline ? "yes" : "no")));
+            }
             var scorePart = new XElement("score-part",
                 new XAttribute("id", id),
                 // A staff the page labels nothing still needs a name: the id, marked as
@@ -105,10 +118,14 @@ internal sealed class MusicXmlDocument
                     new XElement("midi-program", program + 1)));
             }
             partList.Add(scorePart);
-            int closing = BraceGroups.FindIndex(g => ReferenceEquals(g.Last, part));
-            if (closing >= 0)
+            // Inner groups close first.
+            for (int g = PartGroups.Count - 1; g >= 0; g--)
+            {
+                if (!ReferenceEquals(PartGroups[g].Last, part) || !groupNumbers.Remove(g, out int number))
+                    continue;
                 partList.Add(new XElement("part-group",
-                    new XAttribute("type", "stop"), new XAttribute("number", closing + 1)));
+                    new XAttribute("type", "stop"), new XAttribute("number", number)));
+            }
         }
         scorePartwise.Add(partList);
 

@@ -713,6 +713,96 @@ public class MusicXmlRoundTripTests
             "staff left \"Left\"", "}", "staff fl", "}" }, score);
     }
 
+    /// <summary>
+    /// Every staff group is a <c>&lt;part-group&gt;</c> and comes back as written (2026-09-30:
+    /// a <c>staffGroup</c> or <c>choirStaff</c> wrote nothing, and the import read no group):
+    /// a staffGroup is a bracket with its bar lines through, a choirStaff one without, groups
+    /// nest with numbers apart, and a grand staff merged into one part is a part inside its
+    /// group, not a group.
+    /// </summary>
+    [Fact]
+    public void StaffGroups_AreWrittenAndComeBackNested()
+    {
+        var original = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            part vn { clef treble }
+            part sop { clef treble }
+            part alt { clef treble }
+            part fl { clef treble }
+            section A { rh { c''1 | } lh { c1 | } vn { g'1 | } sop { e''1 | } alt { c''1 | } fl { g''1 | } }
+            form main { ~A }
+            score main {
+              staffGroup { grandStaff { staff rh "Piano"  staff lh }  staff vn "Violin" }
+              choirStaff { staff sop "S"  staff alt "A" }
+              staff fl
+            }
+            """);
+        var xml = new MusicXmlExporter().Export(original).ToXml();
+        var list = xml.Descendants("part-list").Single().Elements().Select(e => e.Name == "part-group"
+            ? $"{e.Attribute("type")!.Value}{e.Attribute("number")!.Value}:{e.Element("group-symbol")?.Value}:{e.Element("group-barline")?.Value}"
+            : e.Element("part-name")!.Value);
+        Assert.Equal(new[] { "start1:bracket:yes", "Piano", "Violin", "stop1::", "start1:bracket:no", "S", "A",
+            "stop1::", "fl" }, list);
+
+        var (lys, _) = new MusicXmlImporter().Import(xml.ToString());
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        var score = lys[lys.IndexOf("score main", System.StringComparison.Ordinal)..]
+            .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+        Assert.Equal(new[] { "score main \"imported\" {", "staffGroup {", "grandStaff {",
+            "staff pianoRH \"Piano\"", "staff pianoLH", "}", "staff violin \"Violin\"", "}",
+            // "S" and "A" lex as a spacer and a note: those parts take their index names.
+            "choirStaff {", "staff part3 \"S\"", "staff part4 \"A\"", "}", "staff fl", "}" }, score);
+    }
+
+    /// <summary>A group of groups labelled apart nests its numbers: the outer bracket and the
+    /// inner brace start on the same part, the brace closing first.</summary>
+    [Fact]
+    public void NestedGroups_StartingOnOnePart_AreNumberedApart()
+    {
+        var original = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            part vn { clef treble }
+            section A { rh { c''1 | } lh { c1 | } vn { g'1 | } }
+            form main { ~A }
+            score main { staffGroup { grandStaff { staff rh "Right"  staff lh "Left" }  staff vn "Violin" } }
+            """);
+        var xml = new MusicXmlExporter().Export(original).ToXml();
+        var list = xml.Descendants("part-list").Single().Elements().Select(e => e.Name == "part-group"
+            ? $"{e.Attribute("type")!.Value}{e.Attribute("number")!.Value}:{e.Element("group-symbol")?.Value}"
+            : e.Element("part-name")!.Value);
+        Assert.Equal(new[] { "start1:bracket", "start2:brace", "Right", "Left", "stop2:", "Violin", "stop1:" }, list);
+        var (lys, _) = new MusicXmlImporter().Import(xml.ToString());
+        var score = lys[lys.IndexOf("score main", System.StringComparison.Ordinal)..]
+            .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+        Assert.Equal(new[] { "score main \"imported\" {", "staffGroup {", "grandStaff {",
+            "staff right \"Right\"", "staff left \"Left\"", "}", "staff violin \"Violin\"", "}", "}" }, score);
+    }
+
+    /// <summary>A part joined to a grand staff by a brace is a part of its own: its clef
+    /// changes come back (the split staves of ONE part take theirs from the staff instead).</summary>
+    [Fact]
+    public void APartUnderABrace_KeepsItsClefChanges()
+    {
+        var original = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section A { rh { c''1 | c''1 | } lh { c1 | clef treble c''1 | } }
+            form main { ~A }
+            score main { grandStaff { staff rh "Right"  staff lh "Left" } }
+            """);
+        var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("clef treble c", lys[lys.IndexOf("left {", System.StringComparison.Ordinal)..]);
+    }
+
     /// <summary>A brace around a single one-staff part is no grand staff: the part stays a
     /// plain staff.</summary>
     [Fact]

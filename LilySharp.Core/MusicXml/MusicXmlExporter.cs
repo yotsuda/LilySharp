@@ -387,9 +387,74 @@ public sealed class MusicXmlExporter
             WriteSectionLabels(tree);
         WritePartNames();
         MergeGrandStaves();
+        WritePartGroups();
 
         return _document;
     }
+
+    /// <summary>
+    /// The score's staff groups as <c>&lt;part-group&gt;</c>s (<see cref="MusicXmlDocument.PartGroups"/>),
+    /// read off the played score as the page draws them: every <c>grandStaff</c>,
+    /// <c>staffGroup</c> and <c>choirStaff</c>, at any depth, over the parts its staves are —
+    /// a grand staff merged into one part (MergeGrandStaves) is a part, not a group. Until
+    /// 2026-09-30 a <c>staffGroup</c> or <c>choirStaff</c> wrote nothing and a reader drew
+    /// its staves ungrouped.
+    /// </summary>
+    private void WritePartGroups()
+    {
+        if (_playedSpec == null)
+            return;
+        void Walk(IEnumerable<Svg.Collector.RenderItemSpec> items)
+        {
+            foreach (var item in items)
+            {
+                if (item is not Svg.Collector.GrandStaffRenderSpec g)
+                    continue;
+                var indices = PartsOf(g.GrandStaff.Members)
+                    .Select(p => Document.Parts.IndexOf(p)).Where(i => i >= 0).Distinct().Order().ToList();
+                // A group over one part says nothing; a group whose parts are not a run cannot be
+                // written as one.
+                if (indices.Count >= 2 && indices[^1] - indices[0] == indices.Count - 1)
+                {
+                    var (symbol, barline) = g.GrandStaff.Type switch
+                    {
+                        Svg.Model.StaffGroupType.GrandStaff => ("brace", true),
+                        Svg.Model.StaffGroupType.ChoirStaff => ("bracket", false),
+                        _ => ("bracket", true),
+                    };
+                    Document.PartGroups.Add((Document.Parts[indices[0]], Document.Parts[indices[^1]], symbol, barline));
+                }
+                Walk(g.GrandStaff.Members);
+            }
+        }
+        Walk(_playedSpec.Items);
+    }
+
+    /// <summary>The exported parts a group's staves show, a merged grand staff's lower part
+    /// answering as the one part it became.</summary>
+    private IEnumerable<MusicXmlPart> PartsOf(IEnumerable<Svg.Collector.RenderItemSpec> members)
+    {
+        foreach (var name in StaffNames(members))
+            if (_partsByName.TryGetValue(name, out var part))
+                yield return Document.Parts.Contains(part) ? part
+                    : _mergedInto.GetValueOrDefault(part) ?? part;
+    }
+
+    private static IEnumerable<string> StaffNames(IEnumerable<Svg.Collector.RenderItemSpec> members)
+    {
+        foreach (var member in members)
+            switch (member)
+            {
+                case Svg.Collector.SingleStaffSpec s: yield return s.Staff.VoiceName; break;
+                case Svg.Collector.TabStaffSpec t: yield return t.Staff.VoiceName; break;
+                case Svg.Collector.CondensedStaffSpec c: foreach (var n in c.PartNames) yield return n; break;
+                case Svg.Collector.CombinedStaffSpec c: foreach (var n in c.PartNames) yield return n; break;
+                case Svg.Collector.GrandStaffRenderSpec g: foreach (var n in StaffNames(g.GrandStaff.Members)) yield return n; break;
+            }
+    }
+
+    /// <summary>A merged grand staff's lower part → the upper part it was merged into.</summary>
+    private readonly Dictionary<MusicXmlPart, MusicXmlPart> _mergedInto = new();
 
     /// <summary>The played score's staff items, grand-staff members included, in score order.</summary>
     private static IEnumerable<Svg.Collector.RenderItemSpec> FlatItems(IEnumerable<Svg.Collector.RenderItemSpec> items)
@@ -473,6 +538,7 @@ public sealed class MusicXmlExporter
     /// </remarks>
     private void MergeGrandStaves()
     {
+        _mergedInto.Clear();
         if (_playedSpec == null)
             return;
         foreach (var group in FlatItems(_playedSpec.Items).OfType<Svg.Collector.GrandStaffRenderSpec>())
@@ -496,11 +562,7 @@ public sealed class MusicXmlExporter
             // two labels here are the writer's.
             if (upper.DisplayName is { } upperLabel && lower.DisplayName is { } lowerLabel
                 && upperLabel != lowerLabel)
-            {
-                if (Document.Parts.IndexOf(lower) == Document.Parts.IndexOf(upper) + 1)
-                    Document.BraceGroups.Add((upper, lower));
-                continue;
-            }
+                continue;   // WritePartGroups writes their brace
 
             for (int i = 0; i < upper.Measures.Count; i++)
             {
@@ -551,6 +613,7 @@ public sealed class MusicXmlExporter
             // The one part answers to the brace's label, which may be written on either staff.
             upper.DisplayName ??= lower.DisplayName;
             Document.Parts.Remove(lower);
+            _mergedInto[lower] = upper;
         }
     }
 

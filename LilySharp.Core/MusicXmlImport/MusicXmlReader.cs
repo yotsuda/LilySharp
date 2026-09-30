@@ -99,7 +99,7 @@ internal static class MusicXmlReader
             if ((string?)partName?.Attribute("print-object") != "no" && names[id] is { Length: > 0 } printed)
                 labels[id] = printed;
         }
-        var braces = ReadBraceGroups(Local(root, "part-list"));
+        var partGroups = ReadPartGroups(Local(root, "part-list"));
 
         var used = new HashSet<string>(StringComparer.Ordinal);
         int index = 0;
@@ -115,21 +115,23 @@ internal static class MusicXmlReader
             };
             // One MusicXML part may yield several Lily# parts (one per staff).
             var read = ReadPart(partEl, working, doc, report);
-            // A one-staff part under a brace joins the brace's grand staff; a part that
-            // splits into its own grand staff keeps that one.
-            if (read.Count == 1 && braces.TryGetValue(id, out var brace))
-                read[0].StaffGroup = brace;
+            // The part's groups; a part that splits into its own grand staff keeps that one
+            // rather than a brace around it.
+            if (partGroups.TryGetValue(id, out var path))
+                foreach (var p in read)
+                    p.Groups.AddRange(read.Count > 1 ? path.Where(g => g.Kind != "grandStaff") : path);
             foreach (var p in read)
             {
                 p.SafeName = SafeIdentifier(p.Name, index, used);
                 doc.Parts.Add(p);
             }
         }
-        // A brace left with one staff (its other members split into staves of their own, or
-        // were never read) is no grand staff.
-        foreach (var lone in doc.Parts.Where(p => p.StaffGroup is { } g && braces.ContainsValue(g))
-                     .GroupBy(p => p.StaffGroup).Where(g => g.Count() < 2).SelectMany(g => g).ToList())
-            lone.StaffGroup = null;
+        // A group left with one staff (its other members split into a grand staff of their own,
+        // or were never read) is no group.
+        foreach (var lone in doc.Parts.SelectMany(p => p.Groups).GroupBy(g => g.Key)
+                     .Where(g => g.Count() < 2).Select(g => g.Key).ToList())
+            foreach (var p in doc.Parts)
+                p.Groups.RemoveAll(g => g.Key == lone);
 
         // An empty score is a common surprise (e.g. a template exported with no
         // music): the output parses but renders nothing, so say so plainly rather
@@ -144,19 +146,20 @@ internal static class MusicXmlReader
     }
 
     /// <summary>
-    /// The parts a brace <c>&lt;part-group&gt;</c> joins, by part id → the group's key (a
-    /// <see cref="ImportPart.StaffGroup"/> value): a grand staff whose staves are separate
-    /// parts, which is how <c>MusicXmlExporter</c> writes one whose staves are labelled apart
-    /// and how other programs write a piano's two parts. Until 2026-09-30 the part-group was
-    /// not read and such a pair came back as two unrelated staves. A part under several
-    /// braces joins the innermost; bracket and other groups are not read.
+    /// The <c>&lt;part-group&gt;</c>s each part stands in, by part id, outer first
+    /// (<see cref="ImportPart.Groups"/>): a brace is a <c>grandStaff</c> — a grand staff whose
+    /// staves are separate parts, as <c>MusicXmlExporter</c> writes one labelled apart and
+    /// other programs a piano's two parts — a bracket (or square) a <c>staffGroup</c>, or a
+    /// <c>choirStaff</c> when its bar lines stop at each staff. Until 2026-09-30 no part-group
+    /// was read and every group came back as unrelated staves. A group with another symbol
+    /// (line, none) is not read.
     /// </summary>
-    private static Dictionary<string, string> ReadBraceGroups(XElement? partList)
+    private static Dictionary<string, List<(string Key, string Kind)>> ReadPartGroups(XElement? partList)
     {
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        var result = new Dictionary<string, List<(string Key, string Kind)>>(StringComparer.Ordinal);
         if (partList == null)
             return result;
-        var open = new List<(string Number, string? Key)>();
+        var open = new List<(string Number, string Key, string? Kind)>();
         int serial = 0;
         foreach (var el in partList.Elements())
         {
@@ -166,15 +169,21 @@ internal static class MusicXmlReader
                 {
                     string number = (string?)el.Attribute("number") ?? "1";
                     open.RemoveAll(g => g.Number == number);
-                    if ((string?)el.Attribute("type") == "start")
-                        open.Add((number, Local(el, "group-symbol")?.Value.Trim() == "brace"
-                            ? $"\u0001brace{++serial}" : null));
+                    if ((string?)el.Attribute("type") != "start")
+                        break;
+                    string? kind = Local(el, "group-symbol")?.Value.Trim() switch
+                    {
+                        "brace" => "grandStaff",
+                        "bracket" or "square" => Local(el, "group-barline")?.Value.Trim() == "no"
+                            ? "choirStaff" : "staffGroup",
+                        _ => null,
+                    };
+                    open.Add((number, $"\u0001group{++serial}", kind));
                     break;
                 }
                 case "score-part":
-                    if ((string?)el.Attribute("id") is { } id
-                        && open.LastOrDefault(g => g.Key != null).Key is { } key)
-                        result[id] = key;
+                    if ((string?)el.Attribute("id") is { } id)
+                        result[id] = open.Where(g => g.Kind != null).Select(g => (g.Key, g.Kind!)).ToList();
                     break;
             }
         }
@@ -1276,7 +1285,7 @@ internal static class MusicXmlReader
         else
             cleaned = "";
 
-        if (cleaned.Length == 0 || Reserved.Contains(cleaned))
+        if (cleaned.Length == 0 || Reserved.Contains(cleaned) || !LexesAsOneName(cleaned))
             cleaned = $"part{index}";
 
         string candidate = cleaned;
@@ -1285,6 +1294,17 @@ internal static class MusicXmlReader
             candidate = cleaned + suffix++;
         return candidate;
     }
+
+    /// <summary>Whether <paramref name="candidate"/> works as a part's name everywhere the
+    /// import writes one — asked of the parser itself, with a book that uses it in each place.
+    /// The table above could not keep up with the language: a part named "S" came back as
+    /// <c>part s</c>, a spacer, and the whole imported book failed to parse (2026-09-30).
+    /// The lexer alone is too strict — a clef word (<c>bass</c>, <c>soprano</c>) is a keyword
+    /// to it and still a good part name.</summary>
+    private static bool LexesAsOneName(string candidate)
+        => !Syntax.SyntaxTree.Parse($"part {candidate} {{ }}\nsection A {{ {candidate} {{ c1 | }} }}\n"
+                + $"form main {{ ~A }}\nscore main {{ staff {candidate} }}\n")
+            .Diagnostics.Any(d => d.Severity == Syntax.DiagnosticSeverity.Error);
 
     private static double ParseDouble(string? s)
         => double.TryParse(s, System.Globalization.NumberStyles.Float,

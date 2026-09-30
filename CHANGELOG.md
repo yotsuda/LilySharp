@@ -327,9 +327,15 @@ workflow attaches that section to the GitHub Release verbatim.
   `<part-name>` back as the staff's label (`staff pianoRH "Piano"`, on the first staff of a
   split grand staff); it used to drop every label. The export marks the name of a staff the
   page labels nothing `print-object="no"` — it writes the part's id there, which a reader
-  printed and the import would now bring back. Parts under a brace `<part-group>` — a
-  grand staff whose staves are labelled apart, as the export writes it, or a piano written
-  as two parts — come back as one `grandStaff`; they came back as unrelated staves.
+  printed and the import would now bring back.
+- **Staff groups survive a MusicXML round trip.** `staffGroup` and `choirStaff` wrote no
+  `<part-group>`, so a reader drew their staves unbracketed; every group is now written — a
+  `staffGroup` a bracket with its bar lines through, a `choirStaff` one without, a
+  `grandStaff` kept as two parts a brace — nested as written. The import reads them back
+  (brace → `grandStaff`, bracket → `staffGroup`, or `choirStaff` when the bar lines stop at
+  each staff), nested; it read none and every group came back as unrelated staves. A part
+  whose name is a Lily# word — "Soprano", "S", "A" — is imported under an index name
+  (`part1`): `part soprano` and `part s` do not parse, and the imported book failed to.
 - **MusicXML carries the page's beams.** `lysc xml` wrote no `<beam>`, so a reader beamed by
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and
