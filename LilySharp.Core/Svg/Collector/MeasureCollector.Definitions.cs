@@ -178,7 +178,7 @@ public sealed partial class MeasureCollector
         if (!key.IsCustom)
         {
             _meta.KeyTonicStep = Math.Max(0,
-                LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.PitchName[0]));
+                LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.BaseName));
             _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
         }
         _meta.KeyCustom = key.IsCustom ? KeySignature.EncodeCustom(key.CustomAlterations) : null;
@@ -325,7 +325,7 @@ public sealed partial class MeasureCollector
                         if (!key.IsCustom)
                         {
                             _meta.KeyTonicStep = Math.Max(0,
-                                LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.PitchName[0]));
+                                LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.BaseName));
                             _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
                         }
                         _meta.KeyCustom = key.IsCustom

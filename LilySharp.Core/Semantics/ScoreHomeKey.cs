@@ -34,7 +34,7 @@ public readonly record struct KeyTonic(int Step, int Alter, bool Valid)
     /// <summary>The tonic of a non-custom key declaration.</summary>
     public static KeyTonic Of(KeySignatureSyntax key) => key.IsCustom
         ? new KeyTonic(0, 0, false)
-        : new KeyTonic(Math.Max(0, KeySpelling.StepOf(key.Pitch.PitchName[0])),
+        : new KeyTonic(Math.Max(0, KeySpelling.StepOf(key.Pitch.BaseName)),
                        key.Pitch.AccidentalOffset, true);
 }
 

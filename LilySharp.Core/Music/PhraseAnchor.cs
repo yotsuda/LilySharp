@@ -146,5 +146,5 @@ internal static class PhraseAnchor
     }
 
     private static int StepOf(PitchSyntax p)
-        => "cdefgab".IndexOf(char.ToLowerInvariant(p.PitchName[0]));
+        => "cdefgab".IndexOf(p.BaseName);
 }

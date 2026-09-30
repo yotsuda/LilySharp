@@ -136,9 +136,14 @@ public sealed class PitchSyntax : SyntaxNode
     public int OctaveOffset => SyntaxFacts.NetOctaveMarks(this);
 
     /// <summary>
-    /// The base pitch letter (c, d, e, f, g, a, b) without accidentals.
+    /// The base pitch letter (c, d, e, f, g, a, b) without accidentals — <c>'\0'</c> when the
+    /// parser's recovery left the pitch empty (a <c>key</c> typed with nothing after it yet),
+    /// which every step reader maps to its "no step" (<c>KeySpelling.StepOf</c> → −1).
     /// </summary>
-    public char BaseName => char.ToLower(PitchName[0]);
+    /// <remarks>Until session 716 this, and the key readers that indexed <c>PitchName[0]</c>
+    /// themselves, threw IndexOutOfRange out of the collector on that state — the editor's
+    /// preview renders every keystroke, so it met it on the way to <c>key f major</c>.</remarks>
+    public char BaseName => PitchName is { Length: > 0 } name ? char.ToLower(name[0]) : '\0';
 
     /// <summary>
     /// The accidental suffix (is, es, isis, eses, s, as) or empty string.

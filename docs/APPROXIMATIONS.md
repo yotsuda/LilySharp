@@ -531,8 +531,8 @@
 ### `LilySharp.Core/Syntax/StringLiteral.cs`
 - **:27** LILYSHARP-OWN: the owner's decision (2026-09-30) — Lily#'s strings follow C#'s grammar:
 ### `LilySharp.Core/Syntax/SyntaxNodes.cs`
-- **:887** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
-- **:1066** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
+- **:892** LILYSHARP-OWN: LilyPond has no such item — the twin writes the notes out as an
+- **:1071** LILYSHARP-OWN: LilyPond's q repeats the previous chord and cannot be
 ### `LilySharp.Core/Tablature/TabFingeringPlanner.cs`
 - **:120** LILYSHARP-OWN, USER APPROVED (2026-09-14). A dynamic programme (Viterbi) over states
 ### `LilySharp.Core/Tablature/Tunings.cs`

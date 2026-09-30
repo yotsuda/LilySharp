@@ -139,7 +139,7 @@ public sealed class KeySignatureSyntax : SyntaxNode
             for (int i = 2; i < SlotCount; i++)
                 if (GetChild(i) is PitchSyntax p)
                     yield return (
-                        "cdefgab".IndexOf(char.ToLowerInvariant(p.PitchName[0])),
+                        "cdefgab".IndexOf(p.BaseName),
                         p.AccidentalOffset);
         }
     }

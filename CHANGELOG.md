@@ -327,6 +327,9 @@ workflow attaches that section to the GitHub Release verbatim.
   music alike. An ending whose number is missing (`[. B]`, as while typing one) and a repeat
   whose one list skips a pass (`|: A [1,3. B] :|`) no longer crash the check or the preview
   either — the first is the parser's one error, the second the usual LYS1043.
+- **A `key` with nothing after it yet no longer breaks the preview.** The half-typed `key`
+  (on the way to `key f major`) threw out of the page's collector, so the preview stopped
+  at that keystroke; it is now just the parser's error.
 - **Bars of multi-measure rest are as wide as LilyPond makes them.** A rest opening a line
   was spaced as if a bar line stood before it rather than the clef and time signature, so its
   bar came out narrower than LilyPond's (0.8 of a staff space for a treble staff in 4/4); a rest

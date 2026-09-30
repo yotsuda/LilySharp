@@ -796,13 +796,13 @@ public sealed partial class MeasureCollector
             newKey = new KeySignature(newSharps);
             // Advance the phrase auto-transpose baseline to this key's (written) tonic.
             _ambientTonicStep = Math.Max(0,
-                LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0]));
+                LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.BaseName));
             _ambientTonicAlter = keySig.Pitch.AccidentalOffset;
             _ambientTonicValid = true;
             // Record the modulation for Roman-numeral chord degrees at this bar onward
             // (per-voice walk, so the SortedDictionary dedups by measure).
             RecordKeyAtMeasure(builder.CurrentMeasureIndex,
-                Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
+                Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.BaseName)), newSharps);
         }
 
         // A key change at the very opening (bar 0, before any note sounds) IS the piece's
