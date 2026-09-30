@@ -1395,6 +1395,8 @@ internal sealed class ElementCoordinator
             }
         }
 
+        AddGraceRestCollisions(staff, shifts);
+
         if (staff.Voices.Length < 2)
             return shifts.ToImmutableDictionary();
 
@@ -1424,6 +1426,9 @@ internal sealed class ElementCoordinator
                 foreach (var (time, item, itemIndex) in byVoice[v])
                 {
                     if (item is not RestItem rest || rest.IsSpacer || rest.IsMultiMeasure)
+                        continue;
+                    // A grace rest was answered by AddGraceRestCollisions.
+                    if (rest.GraceTime)
                         continue;
 
                     // Pre-positioned rests were placed above and take no translation.
@@ -1528,6 +1533,89 @@ internal sealed class ElementCoordinator
         }
 
         return shifts.ToImmutableDictionary();
+    }
+
+    /// <summary>
+    /// A GRACE rest pushed clear of its own voice's note that still sounds at the grace's
+    /// moment — the main note before it, which LilyPond's Rest_collision_engraver counts as
+    /// busy: the grace sits at (X, −g), before that note's end (X, 0). MEASURED (Lab
+    /// sessions/p723/gr/lpx, LilyPond 2.26.0): `e''4 \grace { r16 f''16 } g''4` lifts the
+    /// rest +5 spaces, `e'4 …` +2, `c'4 \grace { r8 } c'4` 0 — each the rests-and-notes
+    /// branch's arithmetic; an ordinary rest after the same note does not move.
+    /// </summary>
+    /// <remarks>
+    /// The DIRECTION is why a grace rest moves and an ordinary one does not: the rest has
+    /// none, so Rest_collision falls back to its column's, which is its stem's — and a grace
+    /// stem is UP (score-grace-settings). An ordinary rest's column has no direction and
+    /// takes no translation. The rest's own position stays the unvoiced one.
+    /// LILYPOND-REF: lily/rest-collision-engraver.cc:55-80 process_acknowledged — busyGrobs,
+    ///   "Include notes that started any time";
+    /// LILYPOND-REF: lily/rest-collision.cc:222-284 calc_positioning_done — dir from the rest,
+    ///   else Note_column::dir; a note of another column counts by its head;
+    /// LILYPOND-REF: scm/music-functions.scm:652-656 score-grace-settings — Stem direction UP.
+    /// ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
+    /// no corpus book has one.
+    /// </remarks>
+    private static void AddGraceRestCollisions(Staff staff, Dictionary<RestShiftKey, double> shifts)
+    {
+        for (int v = 0; v < staff.Voices.Length; v++)
+        {
+            var measures = staff.Voices[v].Measures;
+            for (int m = 0; m < measures.Length; m++)
+            {
+                var items = measures[m].Items;
+                for (int i = 0; i < items.Length; i++)
+                    if (GraceRestShift(measures, m, i, staff.Lines) is { } shift && shift != 0.0)
+                        shifts[new RestShiftKey(m, v, i)] = shift;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The shift, in staff positions from the neutral letter, of the grace rest at item
+    /// <paramref name="i"/> of bar <paramref name="m"/> (<see cref="AddGraceRestCollisions"/>'s
+    /// rule), or null when the item is no unpitched grace rest. The one spelling: the slur's
+    /// obstacle for the rest (AddGraceObstaclesForMeasure) reads it too.
+    /// </summary>
+    internal static double? GraceRestShift(ImmutableArray<Measure> measures, int m, int i, int staffLines)
+    {
+        var items = measures[m].Items;
+        if (i < 0 || i >= items.Length
+            || items[i] is not RestItem { GraceTime: true, IsSpacer: false, IsMultiMeasure: false, StaffPosition: null } rest)
+            return null;
+        int restValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
+        double basePos = RestStaffPosition(rest, rest.VoiceDirection, restValue, staffLines);
+        double defaultPos = NeutralRestPosition(staffLines, restValue);
+
+        // The note still sounding: the voice's last main (non-grace) item before the rest,
+        // in this bar or at the end of the one before.
+        MusicItem? held = null;
+        for (int j = i - 1; j >= 0 && held is null; j--)
+            if (!items[j].GraceTime)
+                held = items[j];
+        if (held is null && m > 0)
+        {
+            var prev = measures[m - 1].Items;
+            for (int j = prev.Length - 1; j >= 0 && held is null; j--)
+                if (!prev[j].GraceTime)
+                    held = prev[j];
+        }
+        if (held is not (NoteItem or ChordItem))
+            return basePos - defaultPos;
+
+        int dir = rest.VoiceDirection != 0 ? rest.VoiceDirection : 1;
+        var box = GlyphMetrics.GetRestBBox(restValue);
+        double restNear = dir > 0 ? basePos + box.Bottom * 2.0 : basePos + box.Top * 2.0;
+        double half = EngravingDefaults.NoteheadHalfHeight * 2.0;
+        double noteFar = dir > 0
+            ? StaffPositionsOf(held).Max() + half
+            : StaffPositionsOf(held).Min() - half;
+        double y = dir * Math.Max(0.0,
+            -dir * restNear + dir * noteFar + RestCollisionMinimumDistance * 2.0);
+        double discrete = dir * Math.Ceiling(dir * y);
+        if (basePos + discrete >= -5.0 && basePos + discrete <= 5.0)
+            discrete = dir * Math.Ceiling(dir * discrete / 2.0) * 2.0;
+        return basePos - defaultPos + discrete;
     }
 
     /// <summary>RestCollision's <c>minimum-distance</c>, in staff spaces.</summary>
@@ -3301,7 +3389,8 @@ internal sealed class ElementCoordinator
                 // MEASURED on audit/lpreg/lyhygrace, the continuation segment of `g2( … g2)`
                 // stopped being flat and dipped 0.35 to clear a stem that is not that tall.
                 // (Invisible before session 310: a grace was not an item, so this loop could
-                // not reach one.)
+                // not reach one.) A grace REST too: AddGraceObstaclesForMeasure builds it, on
+                // the run's own column X.
                 if (items[i].GraceTime)
                     continue;
 
@@ -3486,16 +3575,29 @@ internal sealed class ElementCoordinator
                 if (hx < segStartX - eps || hx > segEndX + eps)
                     continue;
                 var note = g.Columns[k];
-                // A REST column has no head and no stem to keep the slur off
-                // (GraceColumnInfo.IsRest). Until session 717 it was asked for one and the
-                // page threw on `c'4( grace { r16 d'16 } e'4)`, a book with no error in it.
-                // LILYSHARP-OWN: the grace rest's own glyph is not an obstacle here.
-                //   departs from: LilyPond's slur encompasses every grob in the note columns it
-                //     spans (slur-scoring.cc extra encompass), a grace rest's included.
-                //   goes away when: a grace rest's glyph box is built as an obstacle.
-                //   observed by: IncompleteInputTests' grace-rest rows (that it does not throw).
+                // A REST column has no head and no stem (GraceColumnInfo.IsRest): the slur
+                // reads its glyph's box, as it reads an ordinary rest's (BuildSlurObstacles'
+                // rest branch — LP's no-stem encompass, slur-scoring.cc:117-122: x_ = the
+                // column's refpoint, head_ = stem_ = its Y extent). The glyph is the STAFF's
+                // size — general-grace-settings never names Rest (SharedRenderer.GraceNotes)
+                // — at LP's unvoiced position 0 (rest.cc:76-81). MEASURED (Lab sessions/p723/gr,
+                // LilyPond 2.26.0): `e'4( grace { r16 f'16 } g'4)` — LP lifts the slur over the
+                // rest; until session 723 Lily# ran under it (session 717 skipped the column so
+                // as not to throw; the controls without the rest agree exactly).
                 if (note.IsRest)
+                {
+                    int restValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
+                    var restBox = GlyphMetrics.GetRestBBox(restValue);
+                    // Where the rest is DRAWN: lifted off the held note before it
+                    // (GraceRestShift). The run's columns are the items just before its main
+                    // note, one each.
+                    int restItem = g.MainNoteItemIndex - g.Columns.Length + k;
+                    double lift = GraceRestShift(voice.Measures, mi, restItem, 5) ?? 0.0;
+                    double originDown = staffMiddleDown - (restValue == 1 ? 1.0 : 0.0) - lift / 2.0;
+                    obstacles.Add(new SlurObstacle(
+                        hx + restBox.Left, originDown - restBox.Top, originDown - restBox.Bottom));
                     continue;
+                }
                 // A slur under a grace is kept off the column's NEAREST ink, so an UP
                 // slur reads the top head of a chord and a DOWN slur its bottom one.
                 // For a single head the two are one number and the books do not move.

@@ -1815,6 +1815,48 @@
       "residual": 0.0,
       "why": "EXACT since session 638: THE FLAG IS IN THE EDGE STEM'S EXTENT. LilyPond's stem_extent_ is stem->extent united with flag->extent (lily/slur-scoring.cc:188-203 get_bound_info), so the left edge, attached to its stem (:748-752), sits 0.3 past the FLAG's right edge, not the stem's. The staff path did this already; the tab's edge record (ElementCoordinator.BuildTabSlurLayout TabStemOf) did not, and the span read 3.365562 (+0.667867)."
     },
+    "rest.grace.after-held-note.high": {
+      "probe": "grace-rest-collision.ly",
+      "score": "GRACE-HIGH",
+      "lilypond": 5.0,
+      "residual": 0.0,
+      "why": "EXACT since session 723: the grace rest is lifted off e'' (held until the grace's main moment, so busy to Rest_collision_engraver) by the rests-and-notes branch of Rest_collision, UP by its grace stem (score-grace-settings) — ElementCoordinator.GraceRestShift. Until session 723 Lily# left it on the middle line: residual -5.0."
+    },
+    "rest.grace.after-held-note.low": {
+      "probe": "grace-rest-collision.ly",
+      "score": "GRACE-LOW",
+      "lilypond": 2.0,
+      "residual": 0.0,
+      "why": "EXACT since session 723 (see .high): over e' the lift is +2 — half spaces first, then whole spaces inside the staff widened by one. Until session 723: -2.0."
+    },
+    "rest.grace.after-held-note.clear": {
+      "probe": "grace-rest-collision.ly",
+      "score": "GRACE-CLEAR",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT: a rest already clear of the held note (c') by minimum-distance 0.75 does not move."
+    },
+    "rest.grace.after-held-note.control": {
+      "probe": "grace-rest-collision.ly",
+      "score": "CONTROL",
+      "lilypond": 0.0,
+      "residual": 0.0,
+      "why": "EXACT: the ordinary rest after the same e'' has no direction (its column has no stem direction) and takes no translation — why a grace rest moves and this one does not."
+    },
+    "slur.over-grace-rest.left-attachment": {
+      "probe": "grace-rest-collision.ly",
+      "score": "SLUR-1",
+      "lilypond": 5.545,
+      "residual": 0.0,
+      "why": "EXACT since session 723: the bow clears the grace rest where it is DRAWN, lifted +5 (rest.grace.after-held-note.high): AddGraceObstaclesForMeasure enters the rest glyph at GraceRestShift, as LilyPond encompasses a stemless column by its Y extent (slur-scoring.cc:117-122). Until session 723 the grace rest was skipped and not lifted: residual -2.0."
+    },
+    "slur.over-grace-rest.alone.left-attachment": {
+      "probe": "grace-rest-collision.ly",
+      "score": "SLUR-2",
+      "lilypond": 4.545,
+      "residual": 0.0,
+      "why": "EXACT since session 723 (see slur.over-grace-rest.left-attachment): a grace body holding only a rest. Until session 723: -2.0."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",

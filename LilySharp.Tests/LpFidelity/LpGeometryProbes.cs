@@ -8682,6 +8682,46 @@ internal static class LpGeometryProbes
     private static readonly string SCSPL = ScriptPositionScore("SPL", "@staccato",
         "c8@S( d@S e@S f@S) g@S( a@S b@S c'@S) | c'4@S( b@S a@S g@S) |");
 
+    /// <summary>
+    /// A REST IN A GRACE BODY after a main note that still sounds (probes/grace-rest-collision.ly):
+    /// LilyPond lifts it off that note — +5 over e'', +2 over e', 0 when clear — by the
+    /// rests-and-notes branch of Rest_collision, the rest taking its grace stem's UP; the
+    /// ordinary rest after e'' (the control) stays on the middle line. LilyPond spelling
+    /// (one octave up): <c>e''4 \grace { r16 f''16 } g''4 e'4 \grace { r16 f'16 } g'4 |
+    /// c'4 \grace { r8 } c'4 e''4 r16 f''8. |</c>.
+    /// </summary>
+    private static readonly string GRC = """
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main { m { e'4 grace { r16 f'16 } g'4 e4 grace { r16 f16 } g4 | c4 grace { r8 } c4 e'4 r16 f'8. | } }
+
+        form main { ~Main }
+
+        score main "GRC" { staff m }
+        """;
+
+    /// <summary>
+    /// The slurs over GRC's lifted grace rests (probes/grace-rest-collision.ly, second score):
+    /// the bow clears the rest where it is DRAWN (ElementCoordinator.AddGraceObstaclesForMeasure
+    /// reads GraceRestShift). LilyPond spelling: <c>e''4( \grace { r16 f''16 } g''4)
+    /// e''4( \grace { r8 } g''4) |</c>.
+    /// </summary>
+    private static readonly string GRS = """
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main { m { e'4( grace { r16 f'16 } g'4) e'4( grace { r8 } g'4) | } }
+
+        form main { ~Main }
+
+        score main "GRS" { staff m }
+        """;
+
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -16229,6 +16269,14 @@ internal static class LpGeometryProbes
         new("slur.tab.stems.flag-attachment", TSS3, g => g.TabBowPointAboveStaffMiddle(0, 0)),
         new("slur.tab.stems.flag-control", TSS3, g => g.TabBowPointAboveStaffMiddle(0, 1)),
         new("slur.tab.stems.flag-span", TSS3, g => g.TabBowSpan(0)),
+        // A grace rest lifted off the main note that still sounds at the grace's moment
+        // (probes/grace-rest-collision.ly). See GRC. Rest16th = U+E00C, Rest8th = U+E00B.
+        new("rest.grace.after-held-note.high", GRC, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("rest.grace.after-held-note.low", GRC, g => g.GlyphAboveStaffMiddle('', 1)),
+        new("rest.grace.after-held-note.clear", GRC, g => g.GlyphAboveStaffMiddle('', 0)),
+        new("rest.grace.after-held-note.control", GRC, g => g.GlyphAboveStaffMiddle('', 2)),
+        new("slur.over-grace-rest.left-attachment", GRS, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.over-grace-rest.alone.left-attachment", GRS, g => g.BowAttachmentAboveStaffMiddle(1)),
         // The skyline reserves a slur laid out apart from the drawn one. See SBR.
         new("slur.beamed.reserved-text", SBR, g => g.TextBaselineAboveStaff("sul D")),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar

@@ -12,9 +12,9 @@
 
 | 区分 | 件数 | 意味 |
 |---|---:|---|
-| `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
+| `APPROX` | 60 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 205 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| `OWN` | 204 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
 | **計** | **323** | |
 
 ## 密度の高いファイル（上位 12）
@@ -34,7 +34,7 @@
 | `LilySharp.Core/Svg/Layout/TupletBracketEngraver.cs` | 6 |
 | `LilySharp.Core/Rendering/SharedRenderer.Beams.cs` | 5 |
 
-## APPROX — LP に対応物はあるが、形が違うと自認しているもの（59 件）
+## APPROX — LP に対応物はあるが、形が違うと自認しているもの（60 件）
 
 ### `LilySharp.Core/Music/ChordStructure.cs`
 - **:345** ⚠️ THE SIZE AND THE RAISE ARE NOT PORTED — Lily# draws a chord name as one baseline
@@ -75,8 +75,9 @@
 - **:49** ⚠️ NOT PORTED, DISCLOSED (no pair measures either) — both are LP behaviours this
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:1337** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
-- **:2244** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:3919** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:1556** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
+- **:2332** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
+- **:4021** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -166,7 +167,7 @@
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2670** observed by: NOTHING. There is no ledger point on a tab tie's width,
+- **:2758** observed by: NOTHING. There is no ledger point on a tab tie's width,
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:63** moving output no observer can check.
 - **:140** ⚠️ NOTHING WATCHES THIS WIDTH. Since the figure was left-aligned on its column
@@ -235,7 +236,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（205 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（204 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3097** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -384,9 +385,8 @@
 - **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
 - **:445** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
-- **:2659** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
-- **:2708** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
-- **:3492** LILYSHARP-OWN: the grace rest's own glyph is not an obstacle here.
+- **:2747** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
+- **:2796** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
 - **:133** ⚠️ LILYSHARP-OWN: the fallback branch. A character with no bass-figure glyph is
 ### `LilySharp.Core/Svg/Layout/FingeringGlyphRun.cs`
