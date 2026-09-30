@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第707セッションの経緯
+
+### 1.1 第707セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p707`（HEAD `5219307c`・未 push 111）＝full **10450 / 0 / 2 / 10452**（引継ぎと一致）。
+⑴ ★ `5ffda831`（§1.0 ⒜ のカポの穴「`chord(…)` のホバーは最初の score のカポを読む」）: ページと MIDI（第687）は score ごとのカポで鳴らす＝その part を描く score のカポが違うとき、ホバーはカポごとに 1 行（`guitar, capo 3 (main): …`／`guitar, no capo (open): …`・`ChordDiagramScores.CaposOfNode`＝basename か form 名）。1 つなら従来の行のまま。★ 網を書いて見つけた 2 つ目の欠陥: **カポの下ではホバーの音名そのものが誤り**だった（`ShapeNote.SoundingName`＝開放弦＋フレット・カポは shift＝書かれる音にしか入らない＝E♭ の形 x32010 capo 3 が D♯2 G2 A♯2 D♯3 G3）＝書かれる音＋part の shift で名付ける（`WrittenMidi`／`NameAt`）＝E♭3 G3 B♭3 E♭4 G4。`SoundingMidi` の doc を実態に（カポ無し・並べ替え用）。網 `ShapeChordItemTests` +1（毒 2＝旧 `SoundingName`／1 行だけ: どちらも赤）。⚠ 網の区切りは「空白＋NBSP」（`PitchGlyphs` の出力）＝空白 2 つで書いて外した。CHANGELOG（拡張）。full **10451 / 0 / 2 / 10453**。
+★ `-End p707 -DiffBase 5219307c`＝full **10451 / 0 / 2 / 10453**・門 6 つ全 OK・Core `+` 25 行に REF 0／OWN 0（`CaposOfNode` と `ShapeNote` の名前付け＝エディタの表示の配管・言語の規則でも LP の移植でもない）。7.6: ⒜ のカポの穴（第665 起票）。7.7: `SoundingMidi` という名前が「カポ無しの実音」を指す＝名前と中身がずれている（doc で名指した・改名は触る箇所が広いので見送り）。残るカポの穴＝`chord(…)` の検査（LYS1039）は最初の score のカポ・双子は `chordNames both` を綴れない。push はユーザー。
+
 ## 以下は第706セッションの経緯
 
 ### 1.1 第706セッション（2026-09-30・YT-DELL2）
