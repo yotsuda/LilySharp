@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="396.5" viewBox="0 0 119.50 39.65" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="396.6" viewBox="0 0 119.50 39.66" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="39.65" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="39.66" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="419">Tab beam slope</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <text x="6.98" y="20.56" font-size="3.00" text-anchor="end" dominant-baseline="central">bass</text>
@@ -31,16 +31,16 @@
   <text class="music" x="9.34" y="30.70" font-size="4.00"></text>
   <text class="music" x="13.66" y="30.70" font-size="4.00" data-pos="441"></text>
   <rect x="36.98" y="28.45" width="0.19" height="4.50" data-pos="530"/>
-  <text x="18.01" y="29.42" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="499">0</text>
-  <text x="17.11" y="32.42" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="499">3</text>
-  <text x="18.91" y="33.92" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="499">5</text>
-  <text x="20.81" y="32.42" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="508">0</text>
-  <text x="23.21" y="32.42" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="510">0</text>
-  <text x="25.61" y="32.42" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="520">0</text>
-  <text x="27.75" y="33.92" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="522">0</text>
-  <text x="30.15" y="33.94" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="524">1</text>
-  <text x="32.55" y="33.92" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="526">3</text>
-  <text x="35.07" y="32.42" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="528">0</text>
+  <text x="18.01" y="29.43" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="499">0</text>
+  <text x="17.11" y="32.43" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="499">3</text>
+  <text x="18.91" y="33.93" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="499">5</text>
+  <text x="20.81" y="32.43" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="508">0</text>
+  <text x="23.21" y="32.43" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="510">0</text>
+  <text x="25.61" y="32.43" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="520">0</text>
+  <text x="27.75" y="33.93" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="522">0</text>
+  <text x="30.15" y="33.95" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="524">1</text>
+  <text x="32.55" y="33.93" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="526">3</text>
+  <text x="35.07" y="32.43" font-size="2.80" font-weight="bold" text-anchor="middle" data-pos="528">0</text>
   <line x1="8.59" y1="28.45" x2="17.21" y2="28.45" stroke="#000000" stroke-width="0.100"/>
   <line x1="18.81" y1="28.45" x2="37.12" y2="28.45" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="29.95" x2="37.12" y2="29.95" stroke="#000000" stroke-width="0.100"/>
@@ -68,12 +68,12 @@
   <polygon points="17.94,24.46 25.67,26.15 25.67,26.63 17.94,24.94"/>
   <line x1="18.01" y1="27.09" x2="18.01" y2="24.72" stroke="#000000" stroke-width="0.130"/>
   <line x1="20.81" y1="30.09" x2="20.81" y2="25.33" stroke="#000000" stroke-width="0.130"/>
-  <line x1="23.21" y1="30.09" x2="23.21" y2="25.85" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.21" y1="30.09" x2="23.21" y2="25.86" stroke="#000000" stroke-width="0.130"/>
   <line x1="25.61" y1="30.09" x2="25.61" y2="26.38" stroke="#000000" stroke-width="0.130"/>
   <polygon points="27.69,27.46 35.14,26.71 35.14,27.19 27.69,27.94"/>
   <line x1="27.75" y1="31.59" x2="27.75" y2="27.70" stroke="#000000" stroke-width="0.130"/>
-  <line x1="30.15" y1="31.59" x2="30.15" y2="27.45" stroke="#000000" stroke-width="0.130"/>
-  <line x1="32.55" y1="31.59" x2="32.55" y2="27.21" stroke="#000000" stroke-width="0.130"/>
+  <line x1="30.15" y1="31.59" x2="30.15" y2="27.46" stroke="#000000" stroke-width="0.130"/>
+  <line x1="32.55" y1="31.59" x2="32.55" y2="27.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="35.07" y1="30.09" x2="35.07" y2="26.96" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="23.21" y="16.70" font-size="4.00" data-pos="511"></text>
   <text class="music" x="23.21" y="24.81" font-size="4.00" data-pos="511"></text>

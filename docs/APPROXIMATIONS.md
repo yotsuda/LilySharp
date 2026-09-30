@@ -65,7 +65,7 @@
 - **:140** ⚠️ THE ONE LINE OF THAT BRANCH NOT PORTED is its dy,
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:718** that does not exist yet. Named, not silently approximated.
-- **:2817** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
+- **:2897** whose floor binds. Session 158 named it NOT PORTED and session 276 audited
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`
 - **:112** ⚠️ The X test itself is NOT ported HERE: a row's ink X-range is not on StaffLayout.
 ### `LilySharp.Core/Svg/Layout/ChordNameGlyphRun.cs`
@@ -161,9 +161,9 @@
 - **:205** fixture carries one, so there is no ledger point and no twin — it is ported literally
 ### `LilySharp.Core/Svg/Layout/ArticulationEngraver.cs`
 - **:366** hands the scorer the band it would have had without the digit. No book reaches that
-- **:2040** them as markup — so there is no LP geometry to port and no ledger point can observe
-- **:2208** see the difference, and no fixture and no ledger point reaches it.
-- **:2929** box per duration, which Lily# does not read for this purpose. No ledger point observes
+- **:2049** them as markup — so there is no LP geometry to port and no ledger point can observe
+- **:2217** see the difference, and no fixture and no ledger point reaches it.
+- **:3009** box per duration, which Lily# does not read for this purpose. No ledger point observes
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:111** number. No Lily# fixture and no ledger point reaches that regime — a fermata on a
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
@@ -351,7 +351,7 @@
 - **:127** X offset of a bend-up's curve from the fret digit on a TAB staff. LILYSHARP-OWN (above).
 - **:129** X gap between a bend-up's curve and the notehead's right edge. LILYSHARP-OWN (above).
 - **:131** X offset for a curve that arrives FROM THE LEFT (scoop/plop). LILYSHARP-OWN (above).
-- **:2412** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
+- **:2421** LILYSHARP-OWN (2026-09-28, defect seen on the owner's "Shape chords" book: the Cm diagram's
 ### `LilySharp.Core/Svg/Layout/ArticulationSpacing.cs`
 - **:128** LILYSHARP-OWN (owner's decision 2026-09-27: "the diagram stands below the name, between
 ### `LilySharp.Core/Svg/Layout/BarNumberEngraver.cs`

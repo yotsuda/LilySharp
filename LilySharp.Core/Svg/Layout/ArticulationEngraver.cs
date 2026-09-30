@@ -1112,7 +1112,16 @@ internal static class ArticulationEngraver
                 // user decision 2026-09-30 — a script clears the digit it would otherwise touch.
                 double fretHalf = TabConstants.FretDigitHeight(fonts) / 2.0;
                 int edgeString = geom.StemHeadString(item, stemUp: tabAbove);
-                double support = dir * (tabMiddle - geom.StringY(edgeString)) + fretHalf;
+                // The script's outline meets the digit over the digit's own width (LP's TabNoteHead
+                // X extent is its text's), and the stem and the staff across the whole width
+                // (add-stem-support; include_staff) — see SupportReach for the notation staff's.
+                double nearAll = NearReachOver(articulation, tabAbove, fonts);
+                var (_, edgeFret) = geom.StemRootDigit(item, stemUp: !tabAbove);
+                double digitHalf = TabConstants.FretGlyphWidth(fonts,
+                    edgeFret.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    TabConstants.FretEm(fonts)) / 2.0;
+                double support = dir * (tabMiddle - geom.StringY(edgeString)) + fretHalf
+                                 + NearReachOver(articulation, tabAbove, fonts, -digitHalf, digitHalf);
                 if (tabStemUp == tabAbove)
                 {
                     // A beamed stem ends at its beam's outer edge; an unbeamed one at its tip.
@@ -1120,7 +1129,7 @@ internal static class ArticulationEngraver
                         ? TabBeamOuterEdgeY(tabBeam, geom, colX)
                         : geom.UnbeamedStemTipY(item, stemUp: tabStemUp, edgeString);
                     if (tip is { } stemEnd)
-                        support = Math.Max(support, dir * (tabMiddle - stemEnd));
+                        support = Math.Max(support, dir * (tabMiddle - stemEnd) + nearAll);
                 }
                 bool quantize = ShouldQuantize(articulation.Type);
                 double staffPadding = ArticulationSpacing.StaffPadding(articulation.Type);
@@ -1131,11 +1140,10 @@ internal static class ArticulationEngraver
                 // LILYPOND-REF: lily/side-position-interface.cc:217-223 aligned_side — include_staff
                 // LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — dim.set_minimum_height (staff_extents[dir])
                 if (!quantize)
-                    support = Math.Max(support, staffExtent);
+                    support = Math.Max(support, staffExtent + nearAll);
                 // total_off = dist + dir * ss * padding.
                 // LILYPOND-REF: lily/side-position-interface.cc:353-370 aligned_side — `total_off += dir * ss * padding;`
-                double scriptUp = dir * (support + NearExtentOf(articulation, tabAbove, fonts)
-                                    + ss * PaddingFor(articulation.Type));
+                double scriptUp = dir * (support + ss * PaddingFor(articulation.Type));
                 if (quantize)
                 {
                     // quantize-position in the tab's half-spaces. The script's X parent is the
@@ -1996,15 +2004,16 @@ internal static class ArticulationEngraver
     }
 
     private static double NoteheadHalfWidth(MusicItem item)
+        => GlyphMetrics.GetNoteheadBBox(ScriptHeadNoteValue(item)).CenterX;
+
+    /// <summary>The note value whose head a script centres on — one home for its X and
+    /// for the head's range in <see cref="HeadRangeAboutScript"/>.</summary>
+    private static int ScriptHeadNoteValue(MusicItem item) => item switch
     {
-        int noteValue = item switch
-        {
-            NoteItem n => n.BaseDuration.Numerator == 1 ? n.BaseDuration.Denominator : 1,
-            ChordItem c => c.BaseDuration.Numerator == 1 ? c.BaseDuration.Denominator : 1,
-            _ => 4
-        };
-        return GlyphMetrics.GetNoteheadBBox(noteValue).CenterX;
-    }
+        NoteItem n => n.BaseDuration.Numerator == 1 ? n.BaseDuration.Denominator : 1,
+        ChordItem c => c.BaseDuration.Numerator == 1 ? c.BaseDuration.Denominator : 1,
+        _ => 4
+    };
 
     /// <summary>
     /// Determines stem direction from the item.
@@ -2523,6 +2532,77 @@ internal static class ArticulationEngraver
     }
 
     /// <summary>
+    /// How far THIS script's outline reaches toward its support over the support's X range
+    /// (relative to the script's own X, the head's centre) — the script's side of
+    /// aligned_side's skyline distance, its horizon-padding spent. The whole width when the
+    /// support spans it (the staff line; a stem, see <see cref="SupportReach"/>); −∞ when the
+    /// outline does not reach over the range at all.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:225-260 aligned_side — my_dim is the Script's own vertical-skylines;
+    /// LILYPOND-REF: scm/define-grobs.scm:3006 Script — grob::always-vertical-skylines-from-stencil: the glyph's OUTLINE, not its box;
+    /// LILYPOND-REF: lily/side-position-interface.cc:353-358 aligned_side — dim.distance (my_dim, horizon-padding).
+    /// Until session 695 a script's reach was one number for every support — its box's
+    /// bottom, and for the ornament family a ±0.5 stand-in box — so a mordent (whose stroke
+    /// hangs below its origin) sat 0.173 low on every note and a turn 0.033 low (Lab
+    /// sessions/p695/ns). An editorial accidental and a tab technique letter keep their
+    /// own boxes (NearExtentOf).
+    /// </remarks>
+    private static double NearReachOver(ArticulationItem a, bool isAbove, ScoreTextMetrics? fonts,
+        double xFrom = double.NegativeInfinity, double xTo = double.PositiveInfinity)
+    {
+        if (IsEditorialType(a.Type) || TabTechniqueLetterOf(a) is not null)
+            return NearExtentOf(a, isAbove, fonts);
+        var probe = new ArticulationLayout(a.MeasureIndex, a.ItemIndex, 0.0, 0.0, a.GetGlyph(),
+            isAbove, a.SourcePosition, 0.0, GetSeedBBox(a.Type, isAbove),
+            SkylineHorizontalPadding: ArticulationSpacing.SkylineHorizontalPadding(a.Type));
+        var sky = ScriptSkyline(probe, 0.0,
+            isAbove ? VerticalDirection.Down : VerticalDirection.Up, extraPad: ScriptHorizonPadding);
+        double edge = sky.MaxHeightInRange(xFrom, xTo);
+        if (double.IsInfinity(edge))
+            return double.NegativeInfinity;
+        return isAbove ? -edge : edge;
+    }
+
+    /// <summary>
+    /// aligned_side's distance from the anchor head to this script's origin, before padding:
+    /// the largest of the supports', each measured over its own X range.
+    /// </summary>
+    /// <remarks>
+    /// The HEAD (Script_engraver::acknowledge_rhythmic_head) meets the outline over the head's
+    /// own width, centred where the script is. The STEM, when it travels the script's way
+    /// (acknowledge_stem; a stem pointing away is skipped), meets it across the WHOLE width:
+    /// Script declares add-stem-support, so the stem's skyline on the script's side is raised
+    /// to its own maximum everywhere (set_minimum_height) — a thin stem off the head's centre
+    /// still holds the script's lowest point clear of its tip.
+    /// LILYPOND-REF: lily/script-engraver.cc:234-250 Script_engraver::acknowledge_rhythmic_head
+    /// LILYPOND-REF: lily/script-engraver.cc:180-192 Script_engraver::acknowledge_stem
+    /// LILYPOND-REF: lily/side-position-interface.cc:273-308 aligned_side — the stem filter and `skyp[dir].set_minimum_height (skyp[dir].max_height ())` under add-stem-support
+    /// LILYPOND-REF: scm/define-grobs.scm:2994 Script — (add-stem-support . #t)
+    /// </remarks>
+    private static double SupportReach(ArticulationItem articulation, bool isAbove, bool stemUp,
+        MusicItem? item, NoteColumnLayout? column, ScoreTextMetrics? fonts)
+    {
+        var (headFrom, headTo) = item is null
+            ? (double.NegativeInfinity, double.PositiveInfinity)
+            : HeadRangeAboutScript(item);
+        double reach = HeadSupportExtent(column)
+                       + NearReachOver(articulation, isAbove, fonts, headFrom, headTo);
+        if (isAbove == stemUp)
+            reach = Math.Max(reach, StemSupportExtent(item, column)
+                                    + NearReachOver(articulation, isAbove, fonts));
+        return reach;
+    }
+
+    /// <summary>The head's X range about the script's X (the head's centre,
+    /// <see cref="NoteheadHalfWidth"/>).</summary>
+    private static (double From, double To) HeadRangeAboutScript(MusicItem item)
+    {
+        var box = GlyphMetrics.GetNoteheadBBox(ScriptHeadNoteValue(item));
+        return (box.Left - box.CenterX, box.Right - box.CenterX);
+    }
+
+    /// <summary>
     /// Beam-quanted stem tips by (staff, measure, item) in staff-local device Y,
     /// plus the beam-resolved stem direction. A beamed stem ends on the beam
     /// line — the unbeamed length formula under- or over-clears it — so the
@@ -2721,7 +2801,8 @@ internal static class ArticulationEngraver
         };
         if (pureTip is { } tip && stemUp == isAbove)
         {
-            double clear = NearExtentOf(sided, isAbove, fonts: null) + PaddingFor(sided.Type);
+            // A stem supports a Script across the whole width (add-stem-support; see SupportReach).
+            double clear = NearReachOver(sided, isAbove, fonts: null) + PaddingFor(sided.Type);
             anchorUp = isAbove
                 ? Math.Max(anchorUp, tip * 0.5 + clear)
                 : Math.Min(anchorUp, tip * 0.5 - clear);
@@ -2779,8 +2860,8 @@ internal static class ArticulationEngraver
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
         if (ShouldQuantize(articulation.Type))
         {
-            return QuantizedYPosition(noteUp, isAbove, stemUp, articulation.Type, item,
-                column);
+            return QuantizedYPosition(noteUp, isAbove, stemUp, articulation, item,
+                column, fonts);
         }
 
         // Non-quantized path: fermata, ornaments, accent, portato
@@ -2792,14 +2873,13 @@ internal static class ArticulationEngraver
 
         // StaffHalf = the outer staff line, staff-spaces above/below the middle (Y-up).
         const double StaffHalf = 2.0;
-        double glyphNearExtent = NearExtentOf(articulation, isAbove, fonts);
-        double supportExtent = isAbove
-            ? (stemUp ? StemSupportExtent(item, column) : HeadSupportExtent(column))
-            : (!stemUp ? StemSupportExtent(item, column) : HeadSupportExtent(column));
+        // The staff line spans the page, so the whole outline meets it.
+        double glyphNearExtent = NearReachOver(articulation, isAbove, fonts);
 
         // dist = skyline distance; total_off = dist + padding. In Y-up an above
         // script sits ABOVE the note (+) and a below script BELOW (−).
-        double totalOff = supportExtent + glyphNearExtent + PaddingFor(articulation.Type);
+        double totalOff = SupportReach(articulation, isAbove, stemUp, item, column, fonts)
+                          + PaddingFor(articulation.Type);
         double targetUp = isAbove ? noteUp + totalOff : noteUp - totalOff;
 
         // TWO staff clearances stack on a non-quantized script, and they are
@@ -2936,8 +3016,10 @@ internal static class ArticulationEngraver
         => column is { } c ? GlyphMetrics.GetNoteheadBBox(c.NoteValue).Top : NoteheadHalfHeight;
 
     private static double QuantizedYPosition(double noteUp, bool isAbove, bool stemUp,
-        ArticulationType type, MusicItem? item = null, NoteColumnLayout? column = null)
+        ArticulationItem articulation, MusicItem? item = null, NoteColumnLayout? column = null,
+        ScoreTextMetrics? fonts = null)
     {
+        var type = articulation.Type;
         // ── Stage 4-5 (aligned_side): Calculate total_off ──
         //
         // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines
@@ -2952,35 +3034,14 @@ internal static class ArticulationEngraver
         // In both normal cases, only the notehead is in the support.
         // Stem is only included when direction is forced (e.g., fermata above with stem up).
 
-        double supportExtent; // Support (notehead/stem) extent in the direction of placement
-        if (isAbove)
-        {
-            // For above: support's UP extent (top of notehead, or stem tip if stem goes up)
-            // Stem is included only when stem direction matches placement direction
-            supportExtent = stemUp
-                ? StemSupportExtent(item, column)
-                : HeadSupportExtent(column);
-            // ↑ if stemUp AND isAbove: stem IS in support (forced above case), real stem tip
-            // ↑ if !stemUp AND isAbove: stem skipped, just the notehead's own ink top
-        }
-        else
-        {
-            // For below: support's DOWN extent
-            supportExtent = !stemUp
-                ? StemSupportExtent(item, column)
-                : HeadSupportExtent(column);
-            // ↑ if !stemUp AND !isAbove: stem IS in support (forced below case), real stem tip
-            // ↑ if stemUp AND !isAbove: stem skipped, just the notehead's own ink bottom
-        }
-
-        // LILYPOND-REF: side-position-interface.cc:229-264 my_dim skyline (-dir direction)
-        // The glyph's "near extent" = how far it extends toward the note from its reference point
-        double glyphNearExtent = GetNearExtent(type, isAbove);
-
-        // LILYPOND-REF: side-position-interface.cc:360-365
-        // dist = dim.distance(my_dim, horizon_padding)
-        // For simple bounding boxes: dist = supportExtent + glyphNearExtent
-        double dist = supportExtent + glyphNearExtent;
+        // ── Stage 4-5 (aligned_side): the skyline distance to the supports ──
+        // The note head (over its own width) and, when it travels the script's way, the stem
+        // (across the whole width: add-stem-support) — SupportReach.
+        // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines
+        // Stems pointing AWAY from the articulation are skipped:
+        //   LILYPOND-REF: side-position-interface.cc:279-284
+        //   if (dir == -get_grob_direction(e)) continue;
+        double dist = SupportReach(articulation, isAbove, stemUp, item, column, fonts);
 
         // LILYPOND-REF: side-position-interface.cc:366-370
         // total_off = dir * dist + dir * ss * padding
