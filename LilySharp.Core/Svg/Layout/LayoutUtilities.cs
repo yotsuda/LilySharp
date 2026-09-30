@@ -987,12 +987,19 @@ internal static class LayoutUtilities
         // Multi-staff path: timing → column lookup.
         if (measures.IsDefault || measureIndex < 0 || measureIndex >= measures.Length)
             return 0;
-        var measure = measures[measureIndex];
+        return NearestColumnX(measureLayout.Columns, ItemOnset(measures[measureIndex], itemIndex));
+    }
+
+    /// <summary>
+    /// The measure-time onset of the measure's <paramref name="itemIndex"/>-th item: the
+    /// durations ahead of it (grace time counts zero — <see cref="MusicItem.Duration"/>).
+    /// </summary>
+    internal static Fraction ItemOnset(Measure measure, int itemIndex)
+    {
         var timing = Fraction.Zero;
         for (int i = 0; i < itemIndex && i < measure.Items.Length; i++)
             timing = timing + measure.Items[i].Duration;
-
-        return NearestColumnX(measureLayout.Columns, timing);
+        return timing;
     }
 
     /// <summary>

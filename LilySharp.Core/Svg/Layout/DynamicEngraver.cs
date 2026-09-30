@@ -743,10 +743,7 @@ internal static class DynamicEngraver
             return AnchorCentreOffset(own);
 
         int ownVoice = Math.Clamp(voiceIndex, 0, voices.Length - 1);
-        var ownItems = voices[ownVoice].Measures[measureIndex].Items;
-        var onset = Semantics.Fraction.Zero;
-        for (int i = 0; i < itemIndex; i++)
-            onset += ownItems[i].Duration;
+        var onset = LayoutUtilities.ItemOnset(voices[ownVoice].Measures[measureIndex], itemIndex);
 
         double left = double.PositiveInfinity, right = double.NegativeInfinity;
         for (int v = 0; v < voices.Length; v++)
