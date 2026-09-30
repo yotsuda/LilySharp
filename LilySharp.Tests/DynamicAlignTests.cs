@@ -114,6 +114,52 @@ public class DynamicAlignTests
     }
 
     /// <summary>
+    /// A spacer or a measure rest makes no NoteColumn, so the label's X-parent is the
+    /// PaperColumn: centred 0.675 right of the column (its X-alignment-extent (0 . 1.35)),
+    /// where a real rest keeps its own extent. MEASURED on LilyPond 2.26.0 (Lab
+    /// sessions/p698/sp/a.ly): R1\p, R1*2\f, s1\p, s4\p → 0.675; r1\p → 0.75. And a note
+    /// in another voice at that moment is a note column IN that paper column, so the label
+    /// centres on its head instead.
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:121-140 aligned_on_parent;
+    ///   scm/define-grobs.scm:2750 PaperColumn X-alignment-extent.
+    /// </summary>
+    [Theory]
+    [InlineData("c'1 | R1@p |", 1, 0.675)]
+    [InlineData("c'1 | R1*2@f | c'1 |", 1, 0.675)]
+    [InlineData("c'1 | s1@p |", 1, 0.675)]
+    [InlineData("c'1 | s4@p c'2. |", 1, 0.675)]
+    [InlineData("c'1 | r1@p |", 1, 0.75)]
+    public void DynamicWithoutANoteColumn_CentresOnThePaperColumn(
+        string measures, int measureIndex, double expected)
+    {
+        var layout = LayoutOf(measures);
+        var dyn = Assert.Single(layout.DynamicLayouts);
+        Assert.Equal(measureIndex, dyn.MeasureIndex);
+        Assert.Equal(expected, dyn.X - ColumnX(layout, dyn), 6);
+    }
+
+    /// <summary>MEASURED (Lab sessions/p698/sp/c.ly): <c>&lt;&lt; { s1\p } \\ { c1 } &gt;&gt;</c>
+    /// centres on the whole head (0.981), <c>&lt;&lt; { R1\p } \\ { g4 a2. } &gt;&gt;</c> on the
+    /// black one (0.6521).</summary>
+    [Theory]
+    [InlineData("voice { s1@p } { c'1 } |", 1)]
+    [InlineData("voice { R1@p } { g'4 a'2. } |", 4)]
+    public void SpacerOrMeasureRestDynamicOverANoteInAnotherVoice_CentresOnThatHead(
+        string measures, int headValue)
+    {
+        var layout = LayoutOf(measures);
+        var dyn = Assert.Single(layout.DynamicLayouts);
+        Assert.Equal(GlyphMetrics.GetNoteheadBBox(headValue).CenterX, dyn.X - ColumnX(layout, dyn), 6);
+    }
+
+    private static double ColumnX(ScoreLayout layout, DynamicLayout dyn)
+    {
+        var ml = layout.AllSystems.SelectMany(s => s.Measures)
+            .Single(m => m.MeasureIndex == dyn.MeasureIndex);
+        return ml.X + ml.Items[dyn.ItemIndex].X;
+    }
+
+    /// <summary>
     /// A hairpin terminated by a dynamic on a trailing EMPTY CHORD (c1@decresc <>@pp)
     /// still draws: the terminator's moment is one past the measure's last item.
     /// </summary>

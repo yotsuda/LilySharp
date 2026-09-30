@@ -254,8 +254,8 @@ internal static class DynamicEngraver
             string labelText = dynamic.Text ?? string.Empty;
             double x = xColumn + (dynamic.IsExpressiveText
                 ? LabelHalfWidth(score.TextMetrics, labelText, expressive: true)
-                : AnchorCentreOffset(
-                    AnchorItem(dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex)));
+                : DynamicAnchorCentreOffset(
+                    dynVoices, dynamic.VoiceIndex, dynamic.MeasureIndex, dynamic.ItemIndex));
 
             // The supports: EVERY voice's note column at this timing (a lower voice's
             // down-stem must not be overlapped by a dynamic positioned from the upper
@@ -713,6 +713,89 @@ internal static class DynamicEngraver
         var box = GlyphMetrics.GetRestBBox(
             LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration));
         return (box.Left + box.Right) / 2.0;
+    }
+
+    /// <summary>
+    /// The DynamicText's X-parent extent centre, right of the column X. A note, chord or
+    /// rest is its own NoteColumn (<see cref="AnchorCentreOffset"/>); a spacer or a measure
+    /// rest makes none, so the parent is the PaperColumn — which aligns on the note columns
+    /// standing in it, and on its fixed <c>X-alignment-extent</c> when there are none.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/self-alignment-interface.cc:121-140 aligned_on_parent — a
+    ///   PaperColumn parent reads <c>Paper_column::get_interface_extent</c> over
+    ///   note-column-interface and falls back to <c>X-alignment-extent</c>;
+    ///   scm/define-grobs.scm:2750 PaperColumn <c>(X-alignment-extent . (0 . 1.35))</c>.
+    /// MEASURED (LilyPond 2.26.0, Lab sessions/p698/sp): <c>R1\p</c>, <c>R1*2\f</c>,
+    ///   <c>s1\p</c> and <c>s4\p</c> alone on a staff all centre the label 0.675 right of the
+    ///   column, and <c>r1\p</c> stays on the rest's own extent (0.75). Until 2026-09-30 the
+    ///   first four read the rest glyph's ink as well — 0.75 for a whole-bar rest.
+    /// ⚠️ Named approximation: LilyPond's paper column spans EVERY staff, so a note in
+    ///   another staff at that moment moves the centre as well (measured 0.6887 over a half
+    ///   note, 0.6521 over a quarter). Lily# reads the dynamic's own staff's voices, which is
+    ///   all the skyline seed holds — the engraver and the seed must agree on the X.
+    /// </remarks>
+    internal static double DynamicAnchorCentreOffset(
+        ImmutableArray<Voice> voices, int voiceIndex, int measureIndex, int itemIndex)
+    {
+        var own = AnchorItem(voices, voiceIndex, measureIndex, itemIndex);
+        if (own is not RestItem { IsSpacer: true } and not RestItem { IsMultiMeasure: true })
+            return AnchorCentreOffset(own);
+
+        int ownVoice = Math.Clamp(voiceIndex, 0, voices.Length - 1);
+        var ownItems = voices[ownVoice].Measures[measureIndex].Items;
+        var onset = Semantics.Fraction.Zero;
+        for (int i = 0; i < itemIndex; i++)
+            onset += ownItems[i].Duration;
+
+        double left = double.PositiveInfinity, right = double.NegativeInfinity;
+        for (int v = 0; v < voices.Length; v++)
+        {
+            if (v == ownVoice || measureIndex >= voices[v].Measures.Length)
+                continue;
+            var t = Semantics.Fraction.Zero;
+            foreach (var item in voices[v].Measures[measureIndex].Items)
+            {
+                if (t > onset)
+                    break;
+                // A grace item stands before the onset in grace time (Duration 0), not in it.
+                if (t == onset && item.Duration > Semantics.Fraction.Zero
+                    && NoteColumnInk(item) is { } ink)
+                {
+                    left = Math.Min(left, ink.Left);
+                    right = Math.Max(right, ink.Right);
+                    break;
+                }
+                t += item.Duration;
+            }
+        }
+        return left <= right ? (left + right) / 2.0 : PaperColumnAlignmentCentre;
+    }
+
+    // LILYPOND-REF: scm/define-grobs.scm:2750 PaperColumn (X-alignment-extent . (0 . 1.35))
+    //   — the extent's centre, the CENTER linear_combination of self-alignment-interface.cc:172.
+    private const double PaperColumnAlignmentCentre = 1.35 / 2.0;
+
+    // The ink span, right of the column X, of an item that is a NoteColumn of its own; null
+    // for a spacer or a measure rest (neither makes one).
+    private static (double Left, double Right)? NoteColumnInk(MusicItem item)
+    {
+        GlyphMetrics.BBox box;
+        switch (item)
+        {
+            case NoteItem n:
+                box = GlyphMetrics.GetNoteheadBBox(LayoutUtilities.GetNoteValueFromFraction(n.BaseDuration));
+                break;
+            case ChordItem c when c.Notes.Length > 0:
+                box = GlyphMetrics.GetNoteheadBBox(LayoutUtilities.GetNoteValueFromFraction(c.BaseDuration));
+                break;
+            case RestItem { IsSpacer: false, IsMultiMeasure: false } r:
+                box = GlyphMetrics.GetRestBBox(LayoutUtilities.GetNoteValueFromFraction(r.BaseDuration));
+                break;
+            default:
+                return null;
+        }
+        return (box.Left, box.Right);
     }
 
     // The SCALAR support edge (ColumnUpEdge / ColumnSupportEdge / GetHighestExtent /

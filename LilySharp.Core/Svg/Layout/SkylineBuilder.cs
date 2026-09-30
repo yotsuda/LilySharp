@@ -2399,8 +2399,8 @@ internal sealed class SkylineBuilder
                 primaryMeasures, dyn.MeasureIndex, dyn.ItemIndex, measureLayout);
             double xLabel = xColumn + (dyn.IsExpressiveText
                 ? DynamicEngraver.LabelHalfWidth(_fonts, dyn.Text ?? string.Empty, expressive: true)
-                : DynamicEngraver.AnchorCentreOffset(
-                    DynamicEngraver.AnchorItem(voices, dyn.VoiceIndex, dyn.MeasureIndex, dyn.ItemIndex)));
+                : DynamicEngraver.DynamicAnchorCentreOffset(
+                    voices, dyn.VoiceIndex, dyn.MeasureIndex, dyn.ItemIndex));
 
             int mi = dyn.MeasureIndex, ii = dyn.ItemIndex;
             int dynStaff = dyn.StaffIndex;
