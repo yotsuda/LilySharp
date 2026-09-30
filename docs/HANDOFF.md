@@ -119,6 +119,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第721セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第720 の次の一手＝`staffGroup` の MusicXML）。`-Start p721`（HEAD `f1bc77dd`・未 push 6）＝full **10534 / 0 / 2 / 10536**（引継ぎと一致）。
+⑴ ★ `991c5e71` **全部の staff group を `<part-group>` に・import は入れ子で戻す**: 書き出しは第718 の「別々のラベルの大譜表」の brace しか書いていなかった＝`staffGroup`／`choirStaff` の段は読み手で括弧なし。`WritePartGroups` が演奏される score のグループを深さを問わず歩く（staffGroup＝bracket・小節線通し／choirStaff＝bracket・`group-barline` no／2 パートのままの grandStaff＝brace・1 パートに畳んだ大譜表はグループではなくパート＝`_mergedInto`）。入れ子は空いている番号・内側から閉じる（`MusicXmlDocument.PartGroups`・旧 `BraceGroups` を置換）。import は `ImportPart.Groups`（外→内の列）を持ち、writer が列の差でブロックを開閉＝パート自身の分割はその内側。⚠ **第720 の退行を見つけて直した**: brace で結んだパートに分割用の `StaffGroup` を入れていたので、`LysWriter` がそのパートの途中の音部記号変更を書かなくなっていた（網 `APartUnderABrace_KeepsItsClefChanges`＝Core を第720 に戻すと赤）。
+⒝ 既存の穴: パート名が Lily# の語だと壊れた本になっていた（"S"→`part s`＝スペーサー・"Soprano"→`part soprano`）。手書きの予約語表が言語に追いついていなかった＝**識別子は構文解析器に訊く**（part・cell・staff に使う小さな本を parse・`LexesAsOneName`）。字句解析だけでは厳しすぎる（`bass`・`alto` は字句ではキーワードでもパート名に使える＝1 回目の掃きで 24 冊が不要に `partN` になった）。
+網 `MusicXmlRoundTripTests` +3（入れ子・番号・音部記号）・毒 4 つ（書かない・読まない・名前の判定なし・Core を第720 に）がそれぞれ赤。掃き（Lab `sessions/p721/imp/sweep.ps1`）998 冊: import が変わった 6 冊＝`choir-staff.lys`・`staff-group.lys` がグループを取り戻す・4 冊の "soprano" が `part1` に・**import 後の check 不合格 4 → 0**（その 4 冊＝今までの不合格は全部この名前だった）。
+★ `-End p721 -DiffBase f1bc77dd`＝full **10537 / 0 / 2 / 10539**・門 7 つ全 OK・Core `+` 171 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴ 第720 の次の一手・⒝ ⑴ の掃きの check で見つけた。7.7: ⑴ 予約語の名前は `partN`（読みやすい別名＝`sopranoPart` 等にはしていない）⑵ `<part-group>` の line／none 記号・group-name は読まない・書かない ⑶ 分割した大譜表の上に brace がある形は brace を捨てる（二重になるため）⑷ ペダルの表はパート全体で 1 つ（第719 から）。push はユーザー（未 push 8）。
+
+## 以下は第720セッションの経緯
+
 ### 1.1 第720セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第719 の 7.7 の残り）。`-Start p720`（HEAD `a7f4ace5`・未 push 3）＝full **10531 / 0 / 2 / 10533**（引継ぎと一致）。
@@ -126,17 +136,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑴ ★ `e10d3c2c` **staff のラベルの往復**: import は `<part-name>` を全部捨てていた（`staff rh "Piano"` が素の `staff pianoRH`）。印刷される名前（`print-object="no"` でないもの）を score の `staff x "名前"` に戻す（分割した大譜表は最初の段・`ImportPart.Label`）。対になる書き出し: 頁がラベルを出さない staff の `<part-name>`（id を書く）に `print-object="no"`＝読み手は id を印刷していた。網 `MusicXmlRoundTripTests` +1・毒 2 つ（print-object を見ない・分割の全段にラベル）が赤。掃き（Lab `sessions/p720/imp/sweep.ps1`）998 冊: import が変わった 66 冊＝差は全部 staff のラベルの行・どれも原本の頁が印刷する名前（アンサンブルの既定の "Lh"・楽器の "guitar" ＝3 冊を SVG で確かめた）・check 不合格 4 → 4。
 ⑵ ★ `c5c0cefa` **brace の `<part-group>` を読む**: 第718 の「別々のラベルの大譜表＝brace の 2 パート」が import で無関係な 2 段に戻っていた。brace の下の 1 段のパートは 1 つの `grandStaff`（最も内側の brace・自分で割れるパートはそちら・1 段だけの brace は大譜表にしない）。bracket ほかの group は読まない。網 +2・毒 2 つ（結ぶ・1 段を外す）が赤。掃きは 0 冊（主 score にその形の本が無い）＝陽性対照はプローブ（Lab `sessions/p720/lbl/apart.lys`）。
 ★ `-End p720 -DiffBase a7f4ace5`＝full **10534 / 0 / 2 / 10536**・門 7 つ全 OK・Core `+` 77 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴⑵ とも第719 の 7.7 ⑶ の残り（表示名の往復）と第718 ⒦ の対。7.7: ⑴ import の pedal の「踏んでいる」表はパート全体で 1 つ（第719 から）⑵ bracket／line の `<part-group>`（`staffGroup`）は import も export も無い ⑶ `score main "imported"` の名前は固定のまま（`<work-title>` は title へ行く）⑷ `<part-abbreviation>` は読まない。push はユーザー（未 push 6）。
-
-## 以下は第719セッションの経緯
-
-### 1.1 第719セッション（2026-09-30・YT-DELL2）
-
-新しい会話。ユーザー「HANDOFF を読んで作業に着手して」。`-Start p719`（HEAD `3db4de10`・未 push 0＝ユーザーが push 済み）＝full **10528 / 0 / 2 / 10530**（引継ぎと一致）。
-第718 の 7.7 ⑵ から着手（同じ族＝MusicXML の大譜表）。
-⑴ ★ `ddabea7a`: 大譜表 1 パートの下の段の `<wedge>`／`<octave-shift>` に `number="2"`（`MusicXmlDirection.Number`・下の段から移した direction だけ）。両手に同時の cresc／ottava が互いの stop で閉じていた。網 `MusicXmlBandReportTests` +1・外すと赤。
-⑵ ★ `b57272bc`: 読んでいて見つけた **import の穴 2 つ**: ⒤ `<octave-shift>`／`<pedal>` を一切読んでいなかった＝`@ottava`・`@quindicesima`・`@sustain` が往復で全部消えていた（第671 の 7.7 の匂いの残り）。`ReadDirectionSpans`: down＝8va・up＝8vb・size 15＝quindicesima（他の size は警告して捨てる）・pedal の stop は踏んでいる最後の pedal を閉じる・change は start の繰り返し。**小節の最後の音の後に立つ `!` の終わりは次の小節の同じ段の最初の音へ運ぶ**（Lily# の `@!ottava` の音は括弧の外＝`OttavaBracketItem.EndMoment` が exclusive＝MusicXML の「最後の音の後の stop」と同じ意味）・曲の後なら最後の音。⒥ **複数段パートの direction が `<staff>` を見ていなかった**＝第718 で大譜表を 1 パートにして以来、左手の `@f` が同じ拍の右手の音に戻っていた（`hara-kiri.lys`・`perf-hairpingrand1k.lys` で実在）。網 `MusicXmlRoundTripTests` +2・毒 3 つ（staff・運び・spans）がそれぞれの行だけ赤。
-掃き（Lab `sessions/p719/imp/sweep.ps1`＝p698 の型・998 冊 export→import）: import が変わった 18 冊＝全部この方向（ottava／pedal が戻る・強弱が自分の段へ）・import 後の `lysc check` 不合格 5 → 5（同じ 5 冊）。⚠ 計器の罠: Tests の build は Cli の bin にも Core を写す＝**毒の後に Cli を建て直さないと掃きが毒入りの lysc で走る**（1 回目の掃きが 2 冊しか変わらないと言った）。
-★ `-End p719 -DiffBase 3db4de10`＝full **10531 / 0 / 2 / 10533**・門 7 つ全 OK・Core `+` 120 行に REF 0／OWN 0（MusicXML の読み書き＝LP に対応物が無い）。7.6: ⑴ 第718 の 7.7 ⑵・⑵ ⑴ を読んでいて見つけた穴（第671 の 7.7 の匂い「読み手は wedge／pedal／octave-shift を読まない」の残り）。7.7: ⑴ import は `<wedge type="stop">` を読まない（次の強弱が閉じる Lily# の規則に任せている）・`number` も見ない＝他のソフトが書いた重なる wedge は区別しない ⑵ pedal の「踏んでいる」表はパート全体で 1 つ（段ごとではない）⑶ import した大譜表は表示名（"Piano"）と score の名前を戻さない（`score main "imported"`）⑷ size 22 の octave-shift は警告して捨てる。push はユーザー（未 push 3）。
 
 ## 2. 開いている作業
 

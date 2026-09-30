@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第719セッションの経緯
+
+### 1.1 第719セッション（2026-09-30・YT-DELL2）
+
+新しい会話。ユーザー「HANDOFF を読んで作業に着手して」。`-Start p719`（HEAD `3db4de10`・未 push 0＝ユーザーが push 済み）＝full **10528 / 0 / 2 / 10530**（引継ぎと一致）。
+第718 の 7.7 ⑵ から着手（同じ族＝MusicXML の大譜表）。
+⑴ ★ `ddabea7a`: 大譜表 1 パートの下の段の `<wedge>`／`<octave-shift>` に `number="2"`（`MusicXmlDirection.Number`・下の段から移した direction だけ）。両手に同時の cresc／ottava が互いの stop で閉じていた。網 `MusicXmlBandReportTests` +1・外すと赤。
+⑵ ★ `b57272bc`: 読んでいて見つけた **import の穴 2 つ**: ⒤ `<octave-shift>`／`<pedal>` を一切読んでいなかった＝`@ottava`・`@quindicesima`・`@sustain` が往復で全部消えていた（第671 の 7.7 の匂いの残り）。`ReadDirectionSpans`: down＝8va・up＝8vb・size 15＝quindicesima（他の size は警告して捨てる）・pedal の stop は踏んでいる最後の pedal を閉じる・change は start の繰り返し。**小節の最後の音の後に立つ `!` の終わりは次の小節の同じ段の最初の音へ運ぶ**（Lily# の `@!ottava` の音は括弧の外＝`OttavaBracketItem.EndMoment` が exclusive＝MusicXML の「最後の音の後の stop」と同じ意味）・曲の後なら最後の音。⒥ **複数段パートの direction が `<staff>` を見ていなかった**＝第718 で大譜表を 1 パートにして以来、左手の `@f` が同じ拍の右手の音に戻っていた（`hara-kiri.lys`・`perf-hairpingrand1k.lys` で実在）。網 `MusicXmlRoundTripTests` +2・毒 3 つ（staff・運び・spans）がそれぞれの行だけ赤。
+掃き（Lab `sessions/p719/imp/sweep.ps1`＝p698 の型・998 冊 export→import）: import が変わった 18 冊＝全部この方向（ottava／pedal が戻る・強弱が自分の段へ）・import 後の `lysc check` 不合格 5 → 5（同じ 5 冊）。⚠ 計器の罠: Tests の build は Cli の bin にも Core を写す＝**毒の後に Cli を建て直さないと掃きが毒入りの lysc で走る**（1 回目の掃きが 2 冊しか変わらないと言った）。
+★ `-End p719 -DiffBase 3db4de10`＝full **10531 / 0 / 2 / 10533**・門 7 つ全 OK・Core `+` 120 行に REF 0／OWN 0（MusicXML の読み書き＝LP に対応物が無い）。7.6: ⑴ 第718 の 7.7 ⑵・⑵ ⑴ を読んでいて見つけた穴（第671 の 7.7 の匂い「読み手は wedge／pedal／octave-shift を読まない」の残り）。7.7: ⑴ import は `<wedge type="stop">` を読まない（次の強弱が閉じる Lily# の規則に任せている）・`number` も見ない＝他のソフトが書いた重なる wedge は区別しない ⑵ pedal の「踏んでいる」表はパート全体で 1 つ（段ごとではない）⑶ import した大譜表は表示名（"Piano"）と score の名前を戻さない（`score main "imported"`）⑷ size 22 の octave-shift は警告して捨てる。push はユーザー（未 push 3）。
+
 ## 以下は第718セッションの経緯
 
 ### 1.1 第718セッション（2026-09-30・YT-DELL2）
