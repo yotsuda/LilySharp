@@ -489,6 +489,108 @@ public sealed partial class LilySharpLanguageServer
         };
     }
 
+    /// <summary>
+    /// Inside a shape table (<c>layout { chordDiagrams guitar { | } }</c>, or a <c>section</c> of
+    /// it): the chords the file names (<see cref="Core.Semantics.CapoAdvisor.ChordsOf"/>, in the
+    /// order they first appear) that this scope does not list yet, then the key's diatonic chords,
+    /// then — at the table's own level — <c>section</c>. The shape after a name is typed.
+    /// </summary>
+    internal static CompletionList GetChordDiagramTableCompletions(string text, int offset)
+    {
+        var (listed, _) = ShapeTableScope(text, offset);
+        bool IsListed(string symbol)
+            => Core.Music.ChordStructure.TryParseChordEntry(symbol, out var chord)
+               && listed.Any(l => Core.Music.ChordShapeTable.SameChord(l, chord));
+
+        var items = new List<CompletionItem>();
+        var root = Core.Syntax.SyntaxTree.Parse(text).GetRoot();
+        foreach (var (symbol, _) in Core.Semantics.CapoAdvisor.ChordsOf(root))
+            if (!IsListed(symbol))
+                items.Add(new CompletionItem
+                {
+                    Label = symbol,
+                    Kind = CompletionItemKind.Value,
+                    Detail = "A chord this file names",
+                    SortText = "0" + items.Count.ToString("D3"),
+                });
+        foreach (var d in GetDiatonicChordCompletions(text, offset).Items)
+            if (!items.Any(i => i.Label == d.Label) && !IsListed(d.Label))
+                items.Add(new CompletionItem
+                {
+                    Label = d.Label, Kind = d.Kind, Detail = d.Detail, SortText = "1" + d.SortText,
+                });
+        if (ChordDiagramTableLevel(text, offset) == 1)
+            items.Add(new CompletionItem
+            {
+                Label = "section",
+                Kind = CompletionItemKind.Keyword,
+                Detail = "The shapes one section draws: section Chorus { C x35553 }",
+                InsertText = "section ",
+                SortText = "2",
+                Command = new Command { Title = "Suggest section", CommandIdentifier = "editor.action.triggerSuggest" },
+            });
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>After <c>section</c> in a shape table: the file's section names that the table
+    /// has no block for yet, each with its block (unless a <c>{</c> already follows).</summary>
+    internal static CompletionList GetChordDiagramTableSectionCompletions(string text, int offset)
+    {
+        var (_, sections) = ShapeTableScope(text, offset);
+        var root = Core.Syntax.SyntaxTree.Parse(text).GetRoot();
+        bool hasBrace = SectionNameIsFollowedByBrace(text, offset);
+        var names = SectionReferenceFinder.AllSectionNameTokens(root).Select(t => t.Text)
+            .Distinct(StringComparer.Ordinal).Where(n => !sections.Contains(n)).ToList();
+        return new CompletionList
+        {
+            Items = names.Select((n, i) => new CompletionItem
+            {
+                Label = n,
+                Kind = CompletionItemKind.Reference,
+                Detail = "Section — the shapes it draws",
+                InsertTextFormat = hasBrace ? default : InsertTextFormat.Snippet,
+                InsertText = hasBrace ? n : n + " {\n\t$0\n}",
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>What the caret's scope of a shape table already holds: the chords its entries
+    /// name (a section's own entries stay in the section's scope) and, at the table's level, the
+    /// sections it has blocks for. The word under the caret is being typed and is not counted.</summary>
+    private static (List<Core.Music.ChordStructure> Listed, HashSet<string> Sections) ShapeTableScope(
+        string text, int offset)
+    {
+        var listed = new List<Core.Music.ChordStructure>();
+        var sections = new HashSet<string>(StringComparer.Ordinal);
+        var opens = ScanOpenBlocks(text, offset, (_, i) => i);
+        if (opens.Count == 0)
+            return (listed, sections);
+        int end = offset;
+        while (end > opens[^1] + 1 && !char.IsWhiteSpace(text[end - 1]) && text[end - 1] is not ('{' or '}'))
+            end--;
+        var words = System.Text.RegularExpressions.Regex.Matches(text[(opens[^1] + 1)..end], @"[{}]|[^\s{}]+")
+            .Select(m => m.Value).ToList();
+        int depth = 0;
+        for (int w = 0; w < words.Count; w++)
+        {
+            string word = words[w];
+            if (word == "{") { depth++; continue; }
+            if (word == "}") { depth--; continue; }
+            if (depth > 0)
+                continue;                               // a section's entries: its own scope
+            if (word == "section")
+            {
+                if (w + 1 < words.Count && words[w + 1] is not ("{" or "}"))
+                    sections.Add(words[++w]);
+                continue;
+            }
+            if (Core.Music.ChordStructure.TryParseChordEntry(word, out var chord))
+                listed.Add(chord);
+        }
+        return (listed, sections);
+    }
+
     /// <summary>After <c>layout { chordNames</c>: what a name shows under a capo.</summary>
     internal static CompletionList GetChordNameCompletions()
         => WordList(LanguageVocabulary.ChordNameWords, ChordNameDetails);

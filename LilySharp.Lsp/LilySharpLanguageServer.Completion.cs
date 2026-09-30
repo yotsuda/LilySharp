@@ -220,6 +220,9 @@ public sealed partial class LilySharpLanguageServer
             // The ranked capo frets, on the entry's tuning (the word before `capo`), else the guitar.
             CompletionContext.AfterLayoutChordDiagramsCapo => GetChordDiagramCapoCompletions(
                 doc.Text, SecondWordBeforeCursor(doc.Text, offset)),
+            // Inside a shape table: chord names (and `section`); after `section` the sections.
+            CompletionContext.ChordDiagramTable => GetChordDiagramTableCompletions(doc.Text, offset),
+            CompletionContext.ChordDiagramTableSection => GetChordDiagramTableSectionCompletions(doc.Text, offset),
             CompletionContext.AfterLayoutChordNames => GetChordNameCompletions(),
             CompletionContext.AfterLayoutChordList => GetChordListCompletions(),
             // `layout { voltaBracket |` and a form ending's `]@voltaBracket(|` take the same

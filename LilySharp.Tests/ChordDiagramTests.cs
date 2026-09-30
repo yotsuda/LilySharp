@@ -2185,6 +2185,53 @@ public class ChordDiagramTests
         Assert.Contains("**Capo**", HoverAt(capoDoc, "capo 3", 6));
     }
 
+    /// <summary>The editor inside a shape table (2026-09-30): the chords the file names that the
+    /// scope does not list yet, then the key's, then <c>section</c> — not the layout's keys, which
+    /// it offered until then; after <c>section</c> the file's section names.</summary>
+    [Fact]
+    public void TheEditor_InsideTheShapeTable_OffersTheFilesChords()
+    {
+        static string Ctx(string text) => LilySharpLanguageServer.GetCompletionContext(text, text.Length).ToString();
+        Assert.Equal("ChordDiagramTable", Ctx("layout {\n  chordDiagrams guitar { "));
+        Assert.Equal("ChordDiagramTable", Ctx("layout {\n  chordDiagrams { Cm7 x35343 "));
+        Assert.Equal("ChordDiagramTable", Ctx("layout chart { chordDiagrams ukulele capo 2 all {\n  C "));
+        Assert.Equal("ChordDiagramTable", Ctx("layout { chordDiagrams guitar { C  section A { F "));
+        Assert.Equal("ChordDiagramTableSection", Ctx("layout { chordDiagrams guitar { C  section "));
+        // Out of the table the layout is the layout again; a brace elsewhere is no table.
+        Assert.Equal("LayoutBlock", Ctx("layout { chordDiagrams guitar { C } "));
+        Assert.Equal("LayoutBlock", Ctx("layout { chordDiagrams guitar { C  section A { F } } "));
+        Assert.NotEqual("ChordDiagramTable", Ctx("section A { gt { "));
+
+        (string Doc, int Caret) At(string layout)
+        {
+            string doc = Song(layout, "F | C | Bb |");
+            int caret = doc.IndexOf('▮');
+            return (doc.Remove(caret, 1), caret);
+        }
+        // The file's chords first, less the ones this scope lists; `section` at the table's level.
+        var (doc, caret) = At("layout { chordDiagrams guitar { C x32010  ▮ } }\n");
+        Assert.Equal("ChordDiagramTable", LilySharpLanguageServer.GetCompletionContext(doc, caret).ToString());
+        var items = LilySharpLanguageServer.GetChordDiagramTableCompletions(doc, caret).Items;
+        Assert.Equal(new[] { "F", "Bb" }, items.Take(2).Select(i => i.Label));
+        Assert.DoesNotContain(items, i => i.Label == "C" && i.Detail!.Contains("file"));
+        Assert.Contains(items, i => i.Label == "Dm");                   // the key's (C major)
+        Assert.Contains(items, i => i.Label == "section");
+        Assert.DoesNotContain(items, i => LanguageVocabulary.LayoutKeys.Contains(i.Label));
+        Assert.Equal(items.Length, items.Select(i => i.Label).Distinct().Count());
+        // In a section's table: that scope's own list, and no `section`.
+        (doc, caret) = At("layout { chordDiagrams guitar { C x32010  section A { F 133211  ▮ } } }\n");
+        items = LilySharpLanguageServer.GetChordDiagramTableCompletions(doc, caret).Items;
+        Assert.Equal(new[] { "C", "Bb" }, items.Take(2).Select(i => i.Label));
+        Assert.DoesNotContain(items, i => i.Label == "section");
+        // After `section`: the sections, less the ones the table has; the block comes with it.
+        (doc, caret) = At("layout { chordDiagrams guitar { section ▮ } }\n");
+        Assert.Equal("ChordDiagramTableSection", LilySharpLanguageServer.GetCompletionContext(doc, caret).ToString());
+        var section = Assert.Single(LilySharpLanguageServer.GetChordDiagramTableSectionCompletions(doc, caret).Items);
+        Assert.Equal(("A", "A {\n\t$0\n}"), (section.Label, section.InsertText));
+        (doc, caret) = At("layout { chordDiagrams guitar { section A { F }  section ▮ } }\n");
+        Assert.Empty(LilySharpLanguageServer.GetChordDiagramTableSectionCompletions(doc, caret).Items);
+    }
+
     /// <summary>The hover and the step read the pressed chord: under capo 3 an E♭ alone shows C's
     /// default in an <c>all</c> score, and the add hint names it in a plain one.</summary>
     [Fact]

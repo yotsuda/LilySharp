@@ -455,6 +455,47 @@ public sealed partial class LilySharpLanguageServer
         => stack.Count > 0
             && (stack[^1].Frame.Name == "layout" || stack[^1].Frame.Prefix == "layout");
 
+    /// <summary>How deep the caret sits in a layout's shape table
+    /// (<c>layout { chordDiagrams [tuning] [capo N] [all] { … } }</c>): 1 in the table, 2 in one
+    /// of its <c>section NAME { … }</c> blocks, 0 elsewhere.</summary>
+    /// <remarks>The table's brace is not a layout frame — its words before the brace are the
+    /// entry's (<c>guitar</c>, <c>capo 3</c>) — so until 2026-09-30 nothing claimed its body and
+    /// the popup offered what the words around it happened to match (HANDOFF §1.0, 第664).</remarks>
+    internal static int ChordDiagramTableLevel(string text, int offset)
+        => ChordDiagramTableLevel(text, new BlockContextScan(text, offset).Stack);
+
+    private static int ChordDiagramTableLevel(string text, List<OpenBlock> stack)
+    {
+        if (IsShapeTableOpener(text, stack, stack.Count - 1))
+            return 1;
+        if (stack.Count > 0 && stack[^1].Frame.Prefix == "section"
+            && IsShapeTableOpener(text, stack, stack.Count - 2))
+            return 2;
+        return 0;
+    }
+
+    /// <summary>Whether <c>stack[k]</c> is a shape table's brace: the block around it is a
+    /// layout, and the words from the layout's last <c>chordDiagrams</c> to the brace are that
+    /// entry's head (tuning, <c>capo N</c>, <c>all</c>).</summary>
+    private static bool IsShapeTableOpener(string text, List<OpenBlock> stack, int k)
+    {
+        if (k < 1 || !IsInsideLayoutBlock(stack.GetRange(0, k)))
+            return false;
+        var words = text[(stack[k - 1].OpenIndex + 1)..stack[k].OpenIndex]
+            .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        int key = Array.LastIndexOf(words, ChordDiagramsKey.Key);
+        if (key < 0)
+            return false;
+        for (int w = key + 1; w < words.Length; w++)
+        {
+            string word = words[w];
+            if (!(ChordDiagramsKey.IsTuningWord(word) || word == ChordDiagramsKey.CapoWord
+                  || word == ChordDiagramsKey.AllWord || word.All(char.IsAsciiDigit)))
+                return false;
+        }
+        return true;
+    }
+
     private static bool IsInsidePartBlock(List<OpenBlock> stack)
         => stack.Count > 0 && stack[^1].Frame.Prefix == "part";
 
@@ -633,6 +674,11 @@ public sealed partial class LilySharpLanguageServer
         AfterLayoutChordDiagramsTuning,
         /// <summary><c>layout { chordDiagrams guitar capo |</c> — the frets, ranked (CapoAdvisor).</summary>
         AfterLayoutChordDiagramsCapo,
+        /// <summary>Inside <c>layout { chordDiagrams … { | } }</c> (or a <c>section</c> of it) — the
+        /// chord names an entry starts with, and <c>section</c> at the table's own level.</summary>
+        ChordDiagramTable,
+        /// <summary><c>layout { chordDiagrams … { section |</c> — the file's section names.</summary>
+        ChordDiagramTableSection,
         /// <summary><c>layout { chordNames |</c> — shape / sounding / both.</summary>
         AfterLayoutChordNames,
         /// <summary><c>layout { chordList |</c> — none / center / left.</summary>
@@ -850,6 +896,16 @@ public sealed partial class LilySharpLanguageServer
         // Right after the `clef` keyword (in a header or mid-music), only the clef
         // names are valid — offer those alone, not notes/keywords.
         var prevWord = WordBeforeCursor(text, offset);
+
+        // Inside a layout's shape table: chord names (and `section`), or after `section` the
+        // section names. Ahead of every word arm below — the table's words are chord names and
+        // shapes, never a keyword — and of the section-block fallthroughs its `section A {`
+        // would otherwise reach.
+        if (ChordDiagramTableLevel(text, scan.Stack) is int tableLevel and > 0)
+            return tableLevel == 1 && prevWord == "section"
+                ? CompletionContext.ChordDiagramTableSection
+                : CompletionContext.ChordDiagramTable;
+
         if (prevWord == "clef")
             return CompletionContext.AfterClef;
 

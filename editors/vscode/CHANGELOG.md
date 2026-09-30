@@ -61,6 +61,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   listed name shows the shape it draws — `guitar: xx3211 (layout)` — and `Ctrl+Shift+Up` /
   `Down` count from it as in an `all` score. A bad symbol or shape in the table, a chord
   listed twice and a section nothing declares are warnings at the word.
+  Inside the table the completion offers the chords the file names that the table does not
+  list yet, then the key's, and `section` — then the file's section names after it.
 - **A capo: `chordDiagrams guitar capo 3`** — the shapes, the names (`chordNames shape |
   sounding | both`, a new key) and "Capo 3" at the score's head follow the capo, and the
   hover, `Ctrl+Shift+Up`/`Down` and the shape check read the pressed chord. **The capo

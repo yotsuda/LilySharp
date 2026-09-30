@@ -132,7 +132,9 @@ workflow attaches that section to the GitHub Release verbatim.
   warns as in an `all` score. The twin's `FretBoards` context now appears under a row when some
   entry DRAWS (written or listed) and is left out when none does — a row with a written shape
   whose symbol is a degree or does not parse used to get a context of silent slots; MusicXML
-  nests the listed shape's `<frame>`.
+  nests the listed shape's `<frame>`. Inside the table the editor's completion offers the chords the
+  file names that the table does not list yet, then the key's, and `section` (then the file's
+  section names); until now it offered the notes of a music block there.
 - **A capo: `chordDiagrams guitar capo 3`.** The music still writes the sounding chords (`Eb`,
   `@chord(Eb)`), and everything a player reads follows the capo: every shape is the shape
   PRESSED above it (`Eb(x32010)` is the C shape, and LYS1039 checks it against the pressed
