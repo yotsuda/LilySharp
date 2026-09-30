@@ -63,13 +63,14 @@ public sealed class MusicXmlExporter
     private Fraction _pickupLength = Fraction.Zero;
     private Fraction _pickupAccumulated = Fraction.Zero;
     private bool _justAutoClosedPickup;
-    // A `voice { } { }` span just closed its bars and handed back an EMPTY measure
-    // (ProcessParallelVoices). The `|` written after the span closes the span's last bar —
-    // time has passed since the boundary — so it must not read that empty measure as the
-    // second half of a `| |` pair: every `voice { … } { … } |` wrote a blank bar of rest
-    // after it (a two-bar repro exported four measures). Cleared at the next barline and
-    // by FlushCurrentMeasure.
-    private bool _voiceSpanJustClosed;
+    // A block just closed its last bar and handed back an EMPTY measure: a `voice { } { }`
+    // span (ProcessParallelVoices), or a repeat pass that ended on a full bar
+    // (CloseFullBarAtPassEnd). The `|` written after the block closes that bar — time has
+    // passed since the boundary — so it must not read the empty measure as the second half
+    // of a `| |` pair: every `voice { … } { … } |` wrote a blank bar of rest after it (a
+    // two-bar repro exported four measures). Cleared at the next barline and by
+    // FlushCurrentMeasure.
+    private bool _barClosedByBlock;
     // Whether a bar line has been met since this scope (part / section) opened — a `|:`
     // that opens the scope closes nothing, one met later pairs like a bare `|`
     // (MidiExporter.ProcessSequence's atScopeStart, MeasureBuilder._atScopeStart).
@@ -1527,7 +1528,7 @@ public sealed class MusicXmlExporter
         _currentMeasure = null;
         _pendingPickup = false;
         _justAutoClosedPickup = false;
-        _voiceSpanJustClosed = false;
+        _barClosedByBlock = false;
         _barSeenInScope = false;
     }
 
@@ -1611,6 +1612,41 @@ public sealed class MusicXmlExporter
                 _justAutoClosedPickup = true;
             }
         }
+    }
+
+    /// <summary>
+    /// Closes the open bar when a repeat pass ends on a FULL bar with no bar line written
+    /// after it — <c>repeat percent 4 { r2. | r2. }</c> — as the page does (MeasureBuilder
+    /// completes a bar when it reaches the time signature). Without it each pass ran on into
+    /// the next: that body exported as <c>r | r r | r …</c>, two rests to a 3/4 bar.
+    /// </summary>
+    private void CloseFullBarAtPassEnd()
+    {
+        if (_currentMeasure is not { Notes.Count: > 0 } open || _currentPart == null
+            || _timeSenzaMisura || _pendingPickup)
+            return;
+        int barTicks = 4 * DivisionsPerQuarter * _timeNumerator / _timeDenominator;
+        if (ElapsedTicks(open) < barTicks)
+            return;
+        _currentPart.Measures.Add(open);
+        StartNewMeasure();
+        _barClosedByBlock = true;
+    }
+
+    // The time a measure's notes fill: the furthest point any voice reaches (a <backup>
+    // rewinds for the next voice; chord members and grace notes take no time; raw elements
+    // — directions, harmony — none either).
+    private static int ElapsedTicks(MusicXmlMeasure measure)
+    {
+        int at = 0, furthest = 0;
+        foreach (var n in measure.Notes)
+        {
+            if (n.RawElement != null || n.IsChord || n.IsGrace)
+                continue;
+            at += n.IsBackup ? -n.Duration : n.Duration;
+            furthest = Math.Max(furthest, at);
+        }
+        return furthest;
     }
 
     /// <summary>The key signature as the DOCUMENT must spell it: the written fifths plus
@@ -1824,11 +1860,11 @@ public sealed class MusicXmlExporter
                     if (!inChordRow)
                         _barSeenInScope = true;
                     // Right after a voice span the bar behind this line is the span's last,
-                    // already written: this line closes IT (see _voiceSpanJustClosed).
-                    bool closesSpan = _voiceSpanJustClosed && !inChordRow
+                    // already written: this line closes IT (see _barClosedByBlock).
+                    bool closesSpan = _barClosedByBlock && !inChordRow
                         && _currentMeasure is { Notes.Count: 0 } && _currentPart is { Measures.Count: > 0 };
                     if (!inChordRow)
-                        _voiceSpanJustClosed = false;
+                        _barClosedByBlock = false;
                     if (pairsHere && !closesSpan && _currentMeasure != null && _currentPart != null
                         && _currentMeasure.Notes.Count == 0)
                         AddSilentBar();
@@ -1937,6 +1973,7 @@ public sealed class MusicXmlExporter
                         if (rep > 0)
                             (_currentOctave, _currentStep, _defaultDuration) = frame;
                         ProcessNode(repeat.Body);
+                        CloseFullBarAtPassEnd();
                     }
                 }
                 break;
@@ -2178,7 +2215,7 @@ public sealed class MusicXmlExporter
         // with no notes is never added by FlushCurrentMeasure, and a following barline
         // reuses it rather than emitting a blank bar.
         StartNewMeasure();
-        _voiceSpanJustClosed = true;
+        _barClosedByBlock = true;
         // ... and in the frame the span opened in, which is where the page reads the next
         // note from. Leaving voice 1's end here read `d` two octaves off in the probe.
         _currentOctave = spanOctave;

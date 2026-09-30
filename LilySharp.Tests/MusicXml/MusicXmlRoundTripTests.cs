@@ -949,6 +949,24 @@ public class MusicXmlRoundTripTests
         => string.Join("\n", tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
 
     /// <summary>
+    /// A repeat pass that ends on a full bar closes it, as the page does — with or without a
+    /// bar line written after the repeat. Until 2026-09-30 each pass ran on into the next:
+    /// <c>repeat percent 2 { r2. | r2. } c'2. |</c> exported as <c>r | r r | r c</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("repeat percent 2 { r2. | r2. } c'2. |", "r2. | r2. | r2. | r2. | c'2. |")]
+    [InlineData("repeat unfold 2 { c'2. | d'2. } | e'2. |", "c'2. | d'2. | c'2. | d'2. | e'2. |")]
+    [InlineData("c'4 repeat unfold 2 { d'4 } | e'2. |", "c'4 d'4 d'4 | e'2. |")]
+    public void RepeatPassEndingOnAFullBar_ClosesIt(string music, string expected)
+    {
+        string source = $"octave absolute\ntime 3/4\npart m {{ clef treble }}\n"
+                        + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains(expected, lys);
+    }
+
+    /// <summary>
     /// A rest's post-events, a whole-measure rest and a multi-measure rest survive the round
     /// trip. Until 2026-09-30 the importer wrote every rest bare (`R1*4@p` came back as four
     /// `r1`, `r2@fermata` as `r2`), the exporter wrote a lone `R1` as a plain rest and left
