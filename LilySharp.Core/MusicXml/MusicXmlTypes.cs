@@ -253,6 +253,10 @@ internal sealed class MusicXmlAttributes
     /// <summary>&lt;measure-style&gt;&lt;measure-repeat&gt; type
     /// ("start"/"stop") for percent-repeat signs.</summary>
     public string? MeasureRepeat { get; set; }
+
+    /// <summary>How many measures one repetition is — 1 for <c>%</c>, 2 for <c>%%</c> — written
+    /// as the content of a <c>start</c>.</summary>
+    public int MeasureRepeatBars { get; set; } = 1;
     /// <summary>&lt;measure-style&gt;&lt;multiple-rest&gt;: the number of bars a multi-measure
     /// rest (<c>R1*N</c>) spans, written on the FIRST of them; each of the N measures then
     /// holds a whole-measure rest (<see cref="MusicXmlNote.IsMeasureRest"/>). Null when none
@@ -350,9 +354,14 @@ internal sealed class MusicXmlAttributes
 
         if (MeasureRepeat != null)
         {
+            // The start names how many measures each repetition is — 1 for %, 2 for %% — as
+            // the element's content (MusicXML 4.0 measure-repeat); the stop has none.
             var mr = new XElement("measure-repeat", new XAttribute("type", MeasureRepeat));
             if (MeasureRepeat == "start")
+            {
                 mr.Add(new XAttribute("slashes", 1));
+                mr.Add(MeasureRepeatBars);
+            }
             attrs.Add(new XElement("measure-style", mr));
         }
 

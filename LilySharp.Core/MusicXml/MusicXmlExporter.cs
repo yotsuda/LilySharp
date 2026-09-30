@@ -747,6 +747,7 @@ public sealed class MusicXmlExporter
             }
         }
         _openAtEnd.Clear();
+        _pendingRepeatStop.Clear();
         _firstOnset.Clear();
     }
 
@@ -1625,6 +1626,11 @@ public sealed class MusicXmlExporter
         {
             _currentPart.Measures.Add(_currentMeasure);
         }
+        // A percent run that ends its block leaves its STOP on the empty bar its closing bar
+        // line opened, which is not written: the stop moves to the part's next bar, in the
+        // next play (StartNewMeasure), so the reader's repeat does not run on to the end.
+        else if (_currentMeasure?.Attributes is { MeasureRepeat: "stop" } dropped && _currentPartName != null)
+            _pendingRepeatStop[_currentPartName] = dropped.MeasureRepeatBars;
         _currentMeasure = null;
         _pendingPickup = false;
         _justAutoClosedPickup = false;
@@ -1789,7 +1795,14 @@ public sealed class MusicXmlExporter
         {
             SyncAttributes();
         }
+
+        if (_currentPartName != null && _pendingRepeatStop.Remove(_currentPartName, out int stopBars))
+            MarkMeasureRepeat(_currentMeasure, "stop", stopBars);
     }
+
+    /// <summary>A percent run's STOP whose bar was never written, waiting for the part's next
+    /// bar (<see cref="FlushCurrentMeasure"/>).</summary>
+    private readonly Dictionary<string, int> _pendingRepeatStop = new();
 
     /// <summary>Remember what the measure just written says, so the next change is a change.</summary>
     private void RecordWrittenAttributes()
@@ -1879,6 +1892,22 @@ public sealed class MusicXmlExporter
                     n.SourcePosition = source;
             }
         }
+    }
+
+    /// <summary>
+    /// Puts a <c>&lt;measure-repeat&gt;</c> on a measure, INTO the attributes it already has.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 both ends were set with <c>Attributes ??= new …</c>, so a measure that
+    /// already stated a clef, key or time — the measure after a section's percent run, which a
+    /// section opening restates — kept its attributes and lost the mark: the file had
+    /// <c>start</c>s and no <c>stop</c> (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #3).
+    /// </remarks>
+    private static void MarkMeasureRepeat(MusicXmlMeasure measure, string type, int bars)
+    {
+        measure.Attributes ??= new MusicXmlAttributes { Divisions = DivisionsPerQuarter };
+        measure.Attributes.MeasureRepeat = type;
+        measure.Attributes.MeasureRepeatBars = bars;
     }
 
     private void ProcessNode(SyntaxNode node)
@@ -2051,8 +2080,11 @@ public sealed class MusicXmlExporter
                     // <measure-style><measure-repeat> run (importers play the
                     // repeat and print %). Multi-measure bodies and the other
                     // repeat types stay unfolded (metrically correct).
+                    // …and a TWO-measure body its sign too (%%, the page's DoublePercentRepeat):
+                    // MusicXML's measure-repeat names the measures one repetition spans.
+                    int percentBars = repeat.Body.Items.Count(i => i is BarlineSyntax);
                     bool oneMeasurePercent = repeat.RepeatType.Text == "percent"
-                        && repeat.Body.Items.Count(i => i is BarlineSyntax) == 1
+                        && percentBars is 1 or 2
                         && repeat.Body.Items.LastOrDefault() is BarlineSyntax
                         && _currentPart != null;
                     // A percent sign and a tremolo are ENGRAVED ONCE, so every pass has to
@@ -2078,23 +2110,19 @@ public sealed class MusicXmlExporter
                             // nulls the open measure and drops later passes).
                             if (rep > 0)
                                 (_currentOctave, _currentStep, _defaultDuration) = frame;
+                            int passStart = _currentPart!.Measures.Count;
                             ProcessNode(repeat.Body);
-                            if (rep == 1 && _currentPart!.Measures.Count > 0)
-                            {
-                                var m = _currentPart.Measures[^1];
-                                m.Attributes ??= new MusicXmlAttributes
-                                {
-                                    Divisions = DivisionsPerQuarter,
-                                    MeasureRepeat = "start",
-                                };
-                            }
+                            // The START rides the FIRST measure of the first repetition (the pass
+                            // flushes it, so it is the first one added during the pass).
+                            if (rep == 1 && _currentPart.Measures.Count > passStart)
+                                MarkMeasureRepeat(_currentPart.Measures[passStart], "start", percentBars);
                         }
-                        if (_currentMeasure != null)
-                            _currentMeasure.Attributes ??= new MusicXmlAttributes
-                            {
-                                Divisions = DivisionsPerQuarter,
-                                MeasureRepeat = "stop",
-                            };
+                        // The STOP rides the measure AFTER the last repetition — "the first
+                        // measure where the repeats are no longer displayed" (MusicXML 4.0) —
+                        // the one the body's closing bar line opened. When nothing follows it
+                        // stays empty and is not written, and the sign runs to the part's end.
+                        if (repCount > 1 && _currentMeasure != null)
+                            MarkMeasureRepeat(_currentMeasure, "stop", percentBars);
                         break;
                     }
                     for (int rep = 0; rep < repCount; rep++)

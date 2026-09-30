@@ -316,6 +316,15 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **MusicXML carries the page's beams.** `lysc xml` wrote no `<beam>`, so a reader beamed by
+  its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
+  by the beat. Each note now carries the page's beam levels (begin / continue / end and
+  hooks).
+- **MusicXML `repeat percent` is a complete measure repeat.** The `<measure-repeat>` start
+  now sits on the first repetition and names its length (1 for `%`, 2 for `%%`), and the
+  stop sits on the first bar after the run — also when that bar restates a clef, key or
+  meter, or opens the next section, where it used to be dropped. A two-bar body is now a
+  `%%` in the file too, where it was only written out.
 - **Text on a multi-measure rest stands over it, as in LilyPond.** `R1*4@text("tacet")` (and
   `R1@text(…)`) is LilyPond's multi-measure-rest text: above the staff by default, centred on
   the rest, clear of its bar count. It printed below the staff at the bar's left edge, like
