@@ -119,6 +119,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第718セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`・`lysc xml` の 12 件）→「残りも直して」。作業は第717 の `-End` の後に行い、`-Start p718`（HEAD `88756938`・未 push 150）＝full **10528 / 0 / 2 / 10530**。
+⑴ ★ 12 件（`ae588dba`〜`7eda95d9`）: 連桁・TAB・歌詞・節の名前を**頁の model から読む**（exporter の音符に書いた位置 `SourcePosition` と、その位置の k 回目の印刷で、頁の item と対応づける）。#11 `<beam>`＝`BeamDetector` の群／#1 TAB＝`staff gt  tab gt` は 1 パート 2 段（2 段目が TAB・弦とフレットは頁の `ResolveTabStrings` の選び方）・`tab gt` だけなら TAB 1 段・import は TAB 段を写しとして読み捨てる／#2 トップレベルの `lyrics`＝頁が付けた音符に `<lyric>`／#4 節の名前＝`Measure.SectionLabel` を `<rehearsal>` に。#3 `%`/`%%`＝`start` に小節数を入れ、`stop` は次の小節へ（`??=` で落ちていた）／#9 打楽器に `<key>` なし（頁も描かない＝SVG が同一）／#7 テンポを書いていない曲は `<sound tempo>` だけ／#8 4/4＝common・2/2＝cut（頁は常に C）／#5 パート名＝頁の表示名／#6 grandStaff は 1 パート 2 段（下の段は voice 5〜・slur 番号 2）／#10 `hho`/`hhc`＝`<open/>`/`<stopped/>`。#12 は 40dd2e93 で既に直っていた（9/29 16:48 の Release では再現・網だけ足した）。
+⑵ ★ `88756938`（残り）: ⒤ **頁の欠陥**＝repeat の本体にある `voice { } { }` が音符を 1 つも集めなかった（`MusicSites*` の祖先チェックが container の上まで登っていた）。`repeat percent` の 1 小節目が空・`unfold` は全部の回が空。チェックを外し、`MusicSitesEquivalenceTests` の基準も container までに揃えた・snapshot 不変。⒥ TAB の前打音にフレット（1 音の前打音に書いた `\N` も出す）。⒦ 2 段に別の名前が書いてある大譜表は 2 パートのまま brace の `<part-group>`。
+網は項目ごと（`MusicXmlBeamTests`・`…PercentRepeatTests`・`…TabTests`・`…TrackLyricsTests`・`…BandReportTests`・`RepeatAroundVoiceTests`）・外すと各行が赤。掃き 1,118 冊＝例外 0・import 0・2 段の拍の不一致 6 小節（全部、元の本の足りない小節＝lysc も警告）。
+★ `-End p718 -DiffBase 5bd1c99a`＝full **10528 / 0 / 2 / 10530**・門 7 つ全 OK・Core `+` 946 行に REF 0／OWN 0（MusicXML の書き出しは LP に対応物が無い・頁の修正は検査を外しただけ）。7.6: ⑴⑵ ともユーザーの依頼（Omr のレポート）。
+7.7: ⑴ import は節の名前の `<rehearsal>` を最初の音符の `@mark` に戻す（section には戻さない・頁の絵は同じ）⑵ 大譜表の下の段の wedge／octave-shift の番号は振り直していない ⑶ Omr 側の回避（`ms_band_xml.py`・`run-ms.ps1`）はもう要らない＝Omr で外すかはユーザー。
+
+## 以下は第717セッションの経緯
+
 ### 1.1 第717セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第716 の報告で次の一手に挙げた「掃きを挿入・置換と他の出力へ広げる」）。★ `-Start p717`（HEAD `3299145f`・未 push 137）＝full **10488 / 0 / 2 / 10490**（引継ぎと一致）。
@@ -126,16 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑵ ★ `0b61d286`（同じ流れ・第716 の報告で次に挙げた「LSP を掃く」）: 言語サーバの掃き（Lab `sessions/p717/Zz717Lsp.cs.txt`）＝編集した本 2,532 件で、位置つきの handler（hover・definition・references・completion・highlight・signature・rename・code action・audition・facts）を編集点と乱数の位置で、文書の handler（semantic tokens・folding・symbols・code lens・format・playback）を全部、さらに**プレビューを編集をまたいで増分で描いたものと、編集後の本を新しく描いたものの一致**を見た。投げたのは 1 つ: outline と hover が `KeySignatureSyntax.Pitch` を null になりうるように読んでいたが cast で、`key custom fis cis` で InvalidCastException＝**custom key のある本はどれも outline が壊れていた**（編集ではなく元の本で起きる）。`KeySignatureSyntax.DisplayName`（"f major"・"custom"）を両方が読む。網 `IncompleteInputTests` +1・古い読み方に戻すと赤。CHANGELOG。**増分と新規の不一致は 6 件＝全部 data-pos だけ**（絵は同じ）＝§1.0 に起票。full **10495 / 0 / 2 / 10497**。
 ⑶ ★ `d6beadb7`（ユーザー「続けて」＝⑵ で起票した data-pos の不一致を追った。⚠ 途中でユーザーが `-Start p718` を拒否した＝便は第717 のまま続けた。拒否された呼び出しは実際には走っていて、build・途中までの test・§1 の見出しの挿入まで進んだ＝止めて `git checkout -- docs/HANDOFF.md` と Lab の `sessions/p718` の削除で元に戻した・アーカイブは起きていない）: 原因は**描画の fragment cache の鍵**。系の頭の調号／音部記号は「系の前の最後の change item」の data-pos で描かれる（`SharedRenderer.ResolveKeySignature`／`ResolveClef`）が、`MeasureContentKey` は entry context の**値**しか畳んでいなかった。A に打った調の変更が B の頭で見出しの調の「言い直し」（data-pos＝B の名前＝編集点から遠い）を生み、明示の break で B 以降の系の幾何が変わらないと、系は replay されて古い data-pos のまま（絵は同じ・クリック先だけ古い）。`MeasureContentKey` が各小節の前の key／clef／time の change item の**個数**も畳む（offset ではなく個数＝挿入でずれない・change item が現れる／消えるときだけ動く）。網 `IncrementalCompilerTests` +1（見出しの key・2 section・break・A に `key fis,`＝増分＝全体）・畳みを外すと赤。Billie Jean と no-op の対照も一致。CHANGELOG。full **10496 / 0 / 2 / 10498**。★ 触っていないもの: Lab の `corpora/` と `probes/` の 40 ファイルが今朝 10:08〜10:10 に変更済み（中身の変更・この会話の作業より前＝ユーザーの編集と判断して触らない）。
 ★ `-End p717 -DiffBase 3299145f`＝full **10496 / 0 / 2 / 10498**・門 7 つ全 OK・Core `+` 54 行に REF 0／OWN 1（OWN＝grace の休符の字を slur の障害物にしない）。7.6: ⑴⑵ 第716 の報告の次の一手（編集の掃き→LSP の掃き）⑶ ⑵ で起票した不一致。7.7: ⑴ slur が grace の休符の字を避けない（LP は encompass に入れる・未測定）⑵ 掃きの語彙は私が選んだ 90 語＝構文の網羅ではない ⑶ LSP の DidChange が起こす背景の診断（ScheduleDiagnostics）は掃きが観測していない ⑷ 拒否された `-Start p718` が走っていた件＝ツールの拒否が実行を止めない場合がある（元に戻した）。HANDOFF の残りは 4.7 KB＝次の便は `-Start` でアーカイブしてから（ユーザーの了承を得て）。push はユーザー。
-
-## 以下は第716セッションの経緯
-
-### 1.1 第716セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第715 の報告で「`,` の列は 2 つまで・必要なら広げます」と書いたことへの GO と読んだ）。★ `-Start p716`（HEAD `01a3866d`・未 push 133）＝full **10481 / 0 / 2 / 10483**（引継ぎと一致）。
-⑴ ★ `[1,3,5.` を書けるようにした（`b7ed6b10`）: 前は `,` の列が 2 つで止まり、`[1,3,5. B]` は構文エラー 11 個。`ParseVoltaPasses` が列を読み続け、3 つ目以降は「`,` と数」を end number と点の間の token として木に置く（点の位置が動くが、節と items の読み手は kind で探すので影響なし＝新しい node kind は作らなかった）。範囲は 2 つのまま。`SyntaxFacts.VoltaMorePasses`（slot 4 から点まで）を両方の ending が読み、`VoltaPassNumbers`／`VoltaWrittenText` に渡す＝MIDI・頁（"1. 3. 5."）・検査・双子（`\volta 1,3,5`）が追う。双子の inline の写しも運ぶ・MusicXML の `<ending number>` は `Numbers` を読む（前は 2 つを自前で組み立てていた）。網 `FormEndingPassTests` +3・列のループを毒にして 3 本赤。GRAMMAR（StructureVolta）・SYNTAX_REFERENCE・CHANGELOG。VS Code の文法は元から任意長を色付けしていた。full **10484 / 0 / 2 / 10486**。
-⚠ 手順の罠を 2 度踏んだ（CLAUDE-OPERATIONS §1 の「組の要素に演算を書かない」）: `@('旧', '新' + "`n" + '…')` で新が旧の 1 行目だけになり、1 度目は CHANGELOG/SYNTAX_REFERENCE を壊して `git checkout` で戻した・2 度目はテストの行が入らず 32 本（期待 34）で気づいた＝**本数を数えることが門になった**。
-⑵ ★ `84f069e4`（ユーザー「続けて」＝方向の指定なし・私が選んだ: 第715 の「打鍵中の形で落ちる」を 1 件ずつではなく族として狩る）: 本を途中で切った形（エディタのプレビューが打鍵ごとに検査と描画を回す状態）を 211 冊 × 40 点＝8,398 通り、検査と描画に通した（Lab `sessions/p716/Zz716Fuzz.cs.txt`＝使い捨ての計器・`fuzz.txt`）。**投げたのは 2 種だけ・どちらも裸の `key`**（ファイル先頭と section の中）: parser の回復が空の主音を残し、collector の調の読み手が `PitchName[0]` を読んで IndexOutOfRange。`PitchSyntax.BaseName` を空なら `'\0'` に（`KeySpelling.StepOf` は既に −1 と読む）・調／主音の読み手 7 か所を BaseName 経由に（note の exporter の 5 か所は note に必ず token があるので触らない）。修正後、同じ 8,398 通りも別の 211 冊の 8,374 通りも 0 件。網 `IncompleteInputTests`（4 形・検査・頁・MIDI・MusicXML・双子）・修正を外すと見つけた 2 形が赤。CHANGELOG。full **10488 / 0 / 2 / 10490**。⚠ 計器は「切る」と「1 文字消す」だけ＝挿入や置換の形は掃いていない（次に掃くならそこ）。
-★ `-End p716 -DiffBase 01a3866d`＝full **10488 / 0 / 2 / 10490**・門 7 つ全 OK・Core `+` 111 行に REF 0／OWN 0（Lily# の文法と頑健さ＝LP の移植ではない）。7.6: ⑴ 第715 の報告で私が挙げた穴 ⑵ 第715 の 2 件のクラッシュから族を推した。7.7: ⑴ 3 つ以上の点の綴り `[1.3.5.` は LYS0037 に掛からない ⑵ 切り詰めの掃きは「切る／1 文字消す」だけ・挿入や置換は未 ⑶ 掃きは検査と描画だけ（MIDI・MusicXML・双子・LSP の hover 等は網の 4 形でしか通していない）。§1.0 ⒜ で手が動く項目は尽きたまま＝次の方針はユーザー判断。push はユーザー。
 
 ## 2. 開いている作業
 
