@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第706セッションの経緯
+
+### 1.1 第706セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p706`（HEAD `cba36a92`・未 push 108）＝full **10447 / 0 / 2 / 10449**（引継ぎと一致）。
+⑴ ★ `42e1fba7`（`c6d8fd1a` の穴「harmonizer が無視」）: `ChordHarmonizer.PitchClassesByPosition` は和音の `PitchSyntax` を読む＝`chord(…)` と度数の和音 `<5 7 2>` は空＝その小節は休符扱いで前のコードを保持していた。構文から文字が取れない和音は collector が集めた音で数える。網 `ChordHarmonizerTests` +1（毒: `C | C | C` で赤）。
+⑵ ★ **ユーザー決定（2026-09-30）: `<< >>` の中の `chord(…)` は形を分散させる**（選択肢＝分散／1 メンバーとして同時に鳴らす／今のまま＝エラー・推奨を採用）。★ `e8efa025`: `Music.ArpeggioSpread`＝`Sequence` の shape member を音ごと（最低音から）に展開し、分け前の数も展開後で数える（調弦・カポ・調は構文の事実でない＝各 walker が item を鳴らす関数を渡す）。展開した音は「1 音に絞った item」として各 walker の既存の shape chord 経路で出す（`ShapeNotesOf` が再生中の 1 音だけを返す `_spreadNote`・green で照合）＝綴り・弦番号・絶対音高は item と同じ。先頭の形は群の根音（最低音＝item と phrase の規則）・分け前の点は最後の音・`(` は最初・`)` は最後・調弦に形が無ければ 1 分け前の spacer。parser（`ParseShapeChord(inGroup)`＝音価を持てない）・page・MIDI・MusicXML・双子（`\tuplet 5/4 { c8\5 e8\4 … }`・LilyPond 2.26 で通る）・`PhraseAnchor`・群の `@chord`（`TryNameArpeggio`）・validator。網 `ShapeChordItemTests` +2（展開・混在と点・根音・spacer・スラー・`@chord`・音価の拒否・オクターブ変換の往復）・毒 2（展開を止める／MIDI の根音の腕）とも赤。掃き svg 998 冊＝782/782 バイト同一（基準は p703 の build）。文法書 3 冊・CHANGELOG。⚠ 予測を 2 か所外した: `<< c' … >>` の根音は C5（相対の既定枠）・展開音の Duration は連符込みの実時間（1/18）＝網の側を直した。full **10450 / 0 / 2 / 10452**。
+★ `-End p706 -DiffBase cba36a92`＝full **10450 / 0 / 2 / 10452**・門 6 つ全 OK・Core `+` 271 行に REF 0／OWN 1（`ArpeggioSpread`＝ユーザー決定の言語規則・LP に `<< >>` も item も無い）。7.6: 出所はユーザー決定（⑵）と `c6d8fd1a` の報告。7.7: ⑴ `_spreadNote` は walker の可変状態で「再生中の 1 音」を `ShapeNotesOf` に渡す＝3 walker に同じ形で 3 つ（各 walker の shape 経路をそのまま使うための代償・設定と解除が 1 行ずつで囲まれている）⑵ harmonizer の fallback は度数の和音も数えるようになった（shape だけの修正ではない＝CHANGELOG に書いた）。push はユーザー。
+
 ## 以下は第705セッションの経緯
 
 ### 1.1 第705セッション（2026-09-30・YT-DELL2）
