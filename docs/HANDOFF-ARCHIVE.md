@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第710セッションの経緯
+
+### 1.1 第710セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p710`（HEAD `8f4e0a8d`・未 push 118）＝full **10453 / 0 / 2 / 10455**（引継ぎと一致）。
+⑴ ★ **ユーザー決定（2026-09-30）: ending の番号が周そのもの**。発端＝§1.0 ⒜ の第677 の穴（`|: A [1. B] :|*3 [2. C]` を Lily# は「1.」「2.」と刷り A B A C A C と弾く＝C の後に描かれない戻り・LP は「1.2.」「3.」で A B A B A C・双子は LP の読みで出ていた＝ページとも再生とも食い違い）。ユーザーとの問答: LP の読みが音楽的に正しい（最後の ending は出口・括弧の数字は弾く周）→「`*N` は分かりにくい・見たままなら [3. C]」→ ending の無い繰り返しは `*N` しか書く所が無い（コーパス 8 冊が「合計 N 回」で使う）→ **ending 付きの `*N` はエラー（LYS1042）・番号の抜けと重複もエラー（LYS1043）・ending 無しの `*N` は残す**・「括弧の番号の書式も LP に」。★ `deb5fbfe`: `FormDeclarationValidator.ReportEndingPasses`（`FormWalk.Repeat` を再帰で・`*N` に波線・抜けは直後の ending・重複は 2 つ目）／括弧の文字は `SyntaxFacts.VoltaPrintedText`（scm/output-lib.scm:2267-2290 の写し: 3 つ以上の連続は「1.–3.」・短い連続と飛び番号は「1. 2.」THIN SPACE）＝`PrintedText` を form と inline の描画に・診断の引用は書いた綴り（`VoltaText`）のまま／`EndingFor` の OWN の注＝その腕はエラーの本だけが通る。掃き 1169 冊（追跡＋コーパス）＝新しいエラー 0・範囲／列挙の form ending 0 冊＝ページは 1 冊も動かない（snapshot も 0）。LP 2.26 の実物で括弧の文字 6 つが一致（Lab `sessions/p710/volta`）。網 `FormEndingPassTests` +7・`InlineVoltaTests` の「1-2.」を書き換え・毒（検査の呼び出しと PrintedText を外す）で 4 赤。文法書 3 冊・CHANGELOG（Breaking）。⚠ `cmd /c "… --filter A|B"` の `|` を cmd がパイプに読んで止まった（CLAUDE-OPERATIONS §1 の既知の罠）＝フィルタは 1 本ずつ。⚠ 最初の毒は `git stash -- LilySharp.Core` で API ごと外してテストがコンパイルできず、古い dll で緑が出た＝毒は振る舞いだけを外す。full **10460 / 0 / 2 / 10462**。
+★ `-End p710 -DiffBase 8f4e0a8d`＝full **10460 / 0 / 2 / 10462**・門 6 つ全 OK・Core `+` 134 行に REF 1／OWN 0（REF は `VoltaPrintedText` の calc-text の写し・検査 LYS1042／1043 はユーザー決定の言語規則＝LP に対応物なし・`EndingFor` の既存 OWN は注の書き換えだけ）。7.6: ユーザー決定（⑴）と §1.0 の第677 の穴。7.7: ⑴ inline の繰り返し（音楽の中の `|:`）は LYS1034 のエラーなので LYS1042／1043 を持たない＝`MidiRepeatTests` の `*3` の網は「エラーの本で MIDI が何をするか」を固定するだけ ⑵ 見つけた穴（「2.」の後の戻りをページが描かない）を §1.0 に起票。push はユーザー。
+
 ## 以下は第709セッションの経緯
 
 ### 1.1 第709セッション（2026-09-30・YT-DELL2）
