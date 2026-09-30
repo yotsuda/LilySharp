@@ -305,7 +305,9 @@ internal sealed class MusicXmlMeasure
             measure.Add(dir.ToXml());
 
         foreach (var note in Notes)
-            measure.Add(note.ToXml(staff: tab?.WithNotation == true ? 1 : null, tabStaff: tab is { WithNotation: false }));
+            measure.Add(tab is { WithNotation: false } && note.IsPitchlessOnTab
+                ? note.TabGap(staff: null, voice: note.Voice)
+                : note.ToXml(staff: tab?.WithNotation == true ? 1 : null, tabStaff: tab is { WithNotation: false }));
 
         // The tablature beside a notation staff: back to the bar's start and the same notes
         // again on staff 2, with their strings and frets (directions and harmonies stay on
@@ -320,7 +322,9 @@ internal sealed class MusicXmlMeasure
                 measure.Add(new XElement("backup", new XElement("duration", at)));
             foreach (var note in Notes)
                 if (note.RawElement == null)
-                    measure.Add(note.ToXml(staff: 2, tabStaff: true, tabCopy: true));
+                    measure.Add(note.IsPitchlessOnTab
+                        ? note.TabGap(staff: 2, voice: (note.Voice ?? 1) + 4)
+                        : note.ToXml(staff: 2, tabStaff: true, tabCopy: true));
         }
 
         if (RepeatBackward || BarStyle != null || EndingStopNumbers != null)
@@ -769,6 +773,29 @@ internal sealed class MusicXmlNote
     /// part has no tab staff (or the note is off the fretboard).</summary>
     public (int String, int Fret)? Tab { get; set; }
 
+    /// <summary>
+    /// A pitchless head — the slash note <c>/4</c> — on a TAB staff: it has no string and no
+    /// fret, and the page's tab staff leaves it out (TabResolver). Written there as a note,
+    /// a reader fretted it anyway: MuseScore read the slash's display pitch B4 as a "7" on the
+    /// first string (LilySharp-Omr docs/repro/lilysharp-feedback-2026-09-30.md #13).
+    /// </summary>
+    public bool IsPitchlessOnTab => IsUnpitched && RawElement == null && !IsBackup;
+
+    /// <summary>
+    /// What a TAB staff writes in place of a <see cref="IsPitchlessOnTab"/> note: its time as
+    /// a <c>&lt;forward&gt;</c> in its voice — the staff stays empty there, as the page's does.
+    /// A chord member or a grace note takes no time and writes nothing.
+    /// </summary>
+    public XElement? TabGap(int? staff, int? voice)
+    {
+        if (IsChord || IsGrace)
+            return null;
+        return new XElement("forward",
+            new XElement("duration", Duration),
+            voice is { } v ? new XElement("voice", v) : null,
+            staff is { } s ? new XElement("staff", s) : null);
+    }
+
     /// <param name="staff">The staff to write, over <see cref="Staff"/>.</param>
     /// <param name="tabStaff">The note is on a TAB staff: it carries its
     /// <see cref="Tab"/> string and fret as <c>&lt;technical&gt;</c> (in place of a written
@@ -835,10 +862,15 @@ internal sealed class MusicXmlNote
         if (TieStop)
             note.Add(new XElement("tie", new XAttribute("type", "stop")));
 
+        // A note on a numbered staff always says its voice (2026-10-01, the Omr report #16):
+        // the second staff's voices are 5–8, and a first staff that left its voice to the
+        // reader's default leaned on the reader to tell the two apart.
         if (tabCopy)
             note.Add(new XElement("voice", (Voice ?? 1) + 4));
         else if (Voice.HasValue)
             note.Add(new XElement("voice", Voice.Value));
+        else if ((staff ?? Staff) is not null)
+            note.Add(new XElement("voice", 1));
 
         if (Type != null)
             note.Add(new XElement("type", Type));

@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.MusicXmlImport;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -74,6 +76,50 @@ public class MusicXmlTabTests
         Assert.Equal(new[] { "s6f0", "s5f0", "s4f0", "s3f0" }, Frets(doc, "2"));
         Assert.All(doc.Descendants("note").Where(n => (string?)n.Element("staff") == "2"),
             n => Assert.Equal("5", n.Element("voice")!.Value));
+    }
+
+    /// <summary>
+    /// A slash note (<c>/4</c>) is no note on the TAB staff — the page leaves it out there,
+    /// and a reader fretted the written one (MuseScore drew a "7" per slash; LilySharp-Omr
+    /// lilysharp-feedback-2026-09-30.md #13): the TAB copy keeps its time as a
+    /// <c>&lt;forward&gt;</c> in voice 5, and the notation staff's slash stays. Every note on
+    /// either staff names its voice (#16).
+    /// </summary>
+    [Fact]
+    public void ASlashNote_IsAGapOnTheTabStaff_AndEveryNoteNamesItsVoice()
+    {
+        var doc = Export("/4 4 8 8 4 | e,4 a, d g |", "staff gt\n tab gt");
+        var m1 = doc.Descendants("measure").First().Elements()
+            .Where(e => e.Name == "note" || e.Name == "forward")
+            .Select(e => $"{e.Name.LocalName}:{(e.Element("unpitched") != null ? "slash" : "-")}:s{e.Element("staff")?.Value}v{e.Element("voice")?.Value}")
+            .ToArray();
+        Assert.Equal(Enumerable.Repeat("note:slash:s1v1", 5).Concat(Enumerable.Repeat("forward:-:s2v5", 5)), m1);
+        Assert.Equal(new[] { "s6f0", "s5f0", "s4f0", "s3f0" }, Frets(doc, "2"));
+        Assert.All(doc.Descendants("note"), n => Assert.NotNull(n.Element("voice")));
+    }
+
+    /// <summary>On a TAB-only staff too, a slash is a gap, not a note to fret.</summary>
+    [Fact]
+    public void ASlashNote_OnATabAlone_IsAGap()
+    {
+        var doc = Export("/2 e,2 |", "tab gt");
+        Assert.Equal(new[] { "forward", "note" }, doc.Descendants("measure").First().Elements()
+            .Where(e => e.Name == "note" || e.Name == "forward").Select(e => e.Name.LocalName));
+        Assert.Empty(doc.Descendants("unpitched"));
+    }
+
+    /// <summary>A slash note beside a tab is no note written an octave too low: the tab leaves
+    /// it out without LYS5002 (#14), which still warns about a real pitch below the strings.</summary>
+    [Fact]
+    public void ASlashNote_DrawsNoLys5002()
+    {
+        static IEnumerable<string> Lys5002(string music)
+            => SemanticValidation.Run(SyntaxTree.Parse(
+                    "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
+                    + $"section A {{ gt {{ {music} }} }}\nform main {{ A }}\nscore main {{ staff gt\n tab gt }}"))
+                .Where(d => d.Code == "LYS5002").Select(d => d.Message);
+        Assert.Empty(Lys5002("/4 4 8 8 4 |"));
+        Assert.Single(Lys5002("/4 4 4 c,,4 |"));
     }
 
     [Fact]

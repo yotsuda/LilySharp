@@ -316,6 +316,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **A slash note stays off the tab, in MusicXML and in the warnings.** Beside a `tab`, the
+  MusicXML wrote each `/4` onto the TAB staff as a note with a display pitch, which readers
+  fretted — MuseScore drew a "7" per slash where the page's tab is empty. The TAB staff now
+  keeps the slash's time as a gap (`<forward>`), on a TAB-only staff too. The tab leaves a
+  slash out as before, but no longer warns LYS5002 ("likely an octave too low") once per
+  slash: a slash has no pitch. And every note on a two-staff part now names its `<voice>` —
+  the first staff's is 1 — where it was left to the reader beside the second staff's 5.
 - **MusicXML import reads octave lines and pedals, and marks each staff's own notes.**
   `<octave-shift>` and `<pedal>` were not read, so every `@ottava`, `@quindicesima` and
   `@sustain` was lost on import; they come back as the marks and their `@!` ends (a pedal

@@ -964,8 +964,9 @@ public sealed partial class MeasureCollector
         {
             Notehead = NoteheadStyle.Slash,
             // Silent: no pitch exists. The only NoteItem.Midi consumers are the
-            // tab renderers, where 0 falls outside every tuning and the range
-            // validator says so — a slash has no place on a fretboard.
+            // tab renderers, where 0 falls outside every tuning, so the tab leaves
+            // the slash out — a slash has no place on a fretboard. TabResolver knows
+            // this pair (slash head, Midi 0) and does not warn about it.
             Midi = 0,
             ForcedStemUp = GetStemDirectionOverride(slash),
         };

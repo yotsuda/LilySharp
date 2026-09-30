@@ -149,7 +149,8 @@ public class MusicXmlBandReportTests
                 : $"s{e.Element("staff")!.Value}v{e.Element("voice")?.Value ?? "-"}")
             .ToArray();
         Assert.Equal("backup", m1[2][..6]);
-        Assert.Equal(new[] { "s1v-", "s1v-" }, m1[..2]);
+        // Both staves say their voice (#16): the upper one's is 1, not left to the reader.
+        Assert.Equal(new[] { "s1v1", "s1v1" }, m1[..2]);
         Assert.Equal(new[] { "s2v5", "s2v5" }, m1[3..]);
         // The two staves' slurs are numbered apart, so neither ends the other.
         Assert.Equal(new[] { "1", "1", "2", "2" },
