@@ -119,6 +119,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第720セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第719 の 7.7 の残り）。`-Start p720`（HEAD `a7f4ace5`・未 push 3）＝full **10531 / 0 / 2 / 10533**（引継ぎと一致）。
+⒜ `<wedge type="stop">` は読まないまま＝**Lily# の松葉は常に次の強弱まで**（GRAMMAR_FOR_LLM「Hairpins」）で、止めだけを書く綴りが言語に無い（言語の制約・起票しない）。
+⑴ ★ `e10d3c2c` **staff のラベルの往復**: import は `<part-name>` を全部捨てていた（`staff rh "Piano"` が素の `staff pianoRH`）。印刷される名前（`print-object="no"` でないもの）を score の `staff x "名前"` に戻す（分割した大譜表は最初の段・`ImportPart.Label`）。対になる書き出し: 頁がラベルを出さない staff の `<part-name>`（id を書く）に `print-object="no"`＝読み手は id を印刷していた。網 `MusicXmlRoundTripTests` +1・毒 2 つ（print-object を見ない・分割の全段にラベル）が赤。掃き（Lab `sessions/p720/imp/sweep.ps1`）998 冊: import が変わった 66 冊＝差は全部 staff のラベルの行・どれも原本の頁が印刷する名前（アンサンブルの既定の "Lh"・楽器の "guitar" ＝3 冊を SVG で確かめた）・check 不合格 4 → 4。
+⑵ ★ `c5c0cefa` **brace の `<part-group>` を読む**: 第718 の「別々のラベルの大譜表＝brace の 2 パート」が import で無関係な 2 段に戻っていた。brace の下の 1 段のパートは 1 つの `grandStaff`（最も内側の brace・自分で割れるパートはそちら・1 段だけの brace は大譜表にしない）。bracket ほかの group は読まない。網 +2・毒 2 つ（結ぶ・1 段を外す）が赤。掃きは 0 冊（主 score にその形の本が無い）＝陽性対照はプローブ（Lab `sessions/p720/lbl/apart.lys`）。
+★ `-End p720 -DiffBase a7f4ace5`＝full **10534 / 0 / 2 / 10536**・門 7 つ全 OK・Core `+` 77 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴⑵ とも第719 の 7.7 ⑶ の残り（表示名の往復）と第718 ⒦ の対。7.7: ⑴ import の pedal の「踏んでいる」表はパート全体で 1 つ（第719 から）⑵ bracket／line の `<part-group>`（`staffGroup`）は import も export も無い ⑶ `score main "imported"` の名前は固定のまま（`<work-title>` は title へ行く）⑷ `<part-abbreviation>` は読まない。push はユーザー（未 push 6）。
+
+## 以下は第719セッションの経緯
+
 ### 1.1 第719セッション（2026-09-30・YT-DELL2）
 
 新しい会話。ユーザー「HANDOFF を読んで作業に着手して」。`-Start p719`（HEAD `3db4de10`・未 push 0＝ユーザーが push 済み）＝full **10528 / 0 / 2 / 10530**（引継ぎと一致）。
@@ -127,17 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑵ ★ `b57272bc`: 読んでいて見つけた **import の穴 2 つ**: ⒤ `<octave-shift>`／`<pedal>` を一切読んでいなかった＝`@ottava`・`@quindicesima`・`@sustain` が往復で全部消えていた（第671 の 7.7 の匂いの残り）。`ReadDirectionSpans`: down＝8va・up＝8vb・size 15＝quindicesima（他の size は警告して捨てる）・pedal の stop は踏んでいる最後の pedal を閉じる・change は start の繰り返し。**小節の最後の音の後に立つ `!` の終わりは次の小節の同じ段の最初の音へ運ぶ**（Lily# の `@!ottava` の音は括弧の外＝`OttavaBracketItem.EndMoment` が exclusive＝MusicXML の「最後の音の後の stop」と同じ意味）・曲の後なら最後の音。⒥ **複数段パートの direction が `<staff>` を見ていなかった**＝第718 で大譜表を 1 パートにして以来、左手の `@f` が同じ拍の右手の音に戻っていた（`hara-kiri.lys`・`perf-hairpingrand1k.lys` で実在）。網 `MusicXmlRoundTripTests` +2・毒 3 つ（staff・運び・spans）がそれぞれの行だけ赤。
 掃き（Lab `sessions/p719/imp/sweep.ps1`＝p698 の型・998 冊 export→import）: import が変わった 18 冊＝全部この方向（ottava／pedal が戻る・強弱が自分の段へ）・import 後の `lysc check` 不合格 5 → 5（同じ 5 冊）。⚠ 計器の罠: Tests の build は Cli の bin にも Core を写す＝**毒の後に Cli を建て直さないと掃きが毒入りの lysc で走る**（1 回目の掃きが 2 冊しか変わらないと言った）。
 ★ `-End p719 -DiffBase 3db4de10`＝full **10531 / 0 / 2 / 10533**・門 7 つ全 OK・Core `+` 120 行に REF 0／OWN 0（MusicXML の読み書き＝LP に対応物が無い）。7.6: ⑴ 第718 の 7.7 ⑵・⑵ ⑴ を読んでいて見つけた穴（第671 の 7.7 の匂い「読み手は wedge／pedal／octave-shift を読まない」の残り）。7.7: ⑴ import は `<wedge type="stop">` を読まない（次の強弱が閉じる Lily# の規則に任せている）・`number` も見ない＝他のソフトが書いた重なる wedge は区別しない ⑵ pedal の「踏んでいる」表はパート全体で 1 つ（段ごとではない）⑶ import した大譜表は表示名（"Piano"）と score の名前を戻さない（`score main "imported"`）⑷ size 22 の octave-shift は警告して捨てる。push はユーザー（未 push 3）。
-
-## 以下は第718セッションの経緯
-
-### 1.1 第718セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`・`lysc xml` の 12 件）→「残りも直して」。作業は第717 の `-End` の後に行い、`-Start p718`（HEAD `88756938`・未 push 150）＝full **10528 / 0 / 2 / 10530**。
-⑴ ★ 12 件（`ae588dba`〜`7eda95d9`）: 連桁・TAB・歌詞・節の名前を**頁の model から読む**（exporter の音符に書いた位置 `SourcePosition` と、その位置の k 回目の印刷で、頁の item と対応づける）。#11 `<beam>`＝`BeamDetector` の群／#1 TAB＝`staff gt  tab gt` は 1 パート 2 段（2 段目が TAB・弦とフレットは頁の `ResolveTabStrings` の選び方）・`tab gt` だけなら TAB 1 段・import は TAB 段を写しとして読み捨てる／#2 トップレベルの `lyrics`＝頁が付けた音符に `<lyric>`／#4 節の名前＝`Measure.SectionLabel` を `<rehearsal>` に。#3 `%`/`%%`＝`start` に小節数を入れ、`stop` は次の小節へ（`??=` で落ちていた）／#9 打楽器に `<key>` なし（頁も描かない＝SVG が同一）／#7 テンポを書いていない曲は `<sound tempo>` だけ／#8 4/4＝common・2/2＝cut（頁は常に C）／#5 パート名＝頁の表示名／#6 grandStaff は 1 パート 2 段（下の段は voice 5〜・slur 番号 2）／#10 `hho`/`hhc`＝`<open/>`/`<stopped/>`。#12 は 40dd2e93 で既に直っていた（9/29 16:48 の Release では再現・網だけ足した）。
-⑵ ★ `88756938`（残り）: ⒤ **頁の欠陥**＝repeat の本体にある `voice { } { }` が音符を 1 つも集めなかった（`MusicSites*` の祖先チェックが container の上まで登っていた）。`repeat percent` の 1 小節目が空・`unfold` は全部の回が空。チェックを外し、`MusicSitesEquivalenceTests` の基準も container までに揃えた・snapshot 不変。⒥ TAB の前打音にフレット（1 音の前打音に書いた `\N` も出す）。⒦ 2 段に別の名前が書いてある大譜表は 2 パートのまま brace の `<part-group>`。
-網は項目ごと（`MusicXmlBeamTests`・`…PercentRepeatTests`・`…TabTests`・`…TrackLyricsTests`・`…BandReportTests`・`RepeatAroundVoiceTests`）・外すと各行が赤。掃き 1,118 冊＝例外 0・import 0・2 段の拍の不一致 6 小節（全部、元の本の足りない小節＝lysc も警告）。
-★ `-End p718 -DiffBase 5bd1c99a`＝full **10528 / 0 / 2 / 10530**・門 7 つ全 OK・Core `+` 946 行に REF 0／OWN 0（MusicXML の書き出しは LP に対応物が無い・頁の修正は検査を外しただけ）。7.6: ⑴⑵ ともユーザーの依頼（Omr のレポート）。
-7.7: ⑴ import は節の名前の `<rehearsal>` を最初の音符の `@mark` に戻す（section には戻さない・頁の絵は同じ）⑵ 大譜表の下の段の wedge／octave-shift の番号は振り直していない ⑶ Omr 側の回避（`ms_band_xml.py`・`run-ms.ps1`）はもう要らない＝Omr で外すかはユーザー。
 
 ## 2. 開いている作業
 

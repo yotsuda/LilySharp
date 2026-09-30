@@ -129,6 +129,17 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第718セッションの経緯
+
+### 1.1 第718セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`・`lysc xml` の 12 件）→「残りも直して」。作業は第717 の `-End` の後に行い、`-Start p718`（HEAD `88756938`・未 push 150）＝full **10528 / 0 / 2 / 10530**。
+⑴ ★ 12 件（`ae588dba`〜`7eda95d9`）: 連桁・TAB・歌詞・節の名前を**頁の model から読む**（exporter の音符に書いた位置 `SourcePosition` と、その位置の k 回目の印刷で、頁の item と対応づける）。#11 `<beam>`＝`BeamDetector` の群／#1 TAB＝`staff gt  tab gt` は 1 パート 2 段（2 段目が TAB・弦とフレットは頁の `ResolveTabStrings` の選び方）・`tab gt` だけなら TAB 1 段・import は TAB 段を写しとして読み捨てる／#2 トップレベルの `lyrics`＝頁が付けた音符に `<lyric>`／#4 節の名前＝`Measure.SectionLabel` を `<rehearsal>` に。#3 `%`/`%%`＝`start` に小節数を入れ、`stop` は次の小節へ（`??=` で落ちていた）／#9 打楽器に `<key>` なし（頁も描かない＝SVG が同一）／#7 テンポを書いていない曲は `<sound tempo>` だけ／#8 4/4＝common・2/2＝cut（頁は常に C）／#5 パート名＝頁の表示名／#6 grandStaff は 1 パート 2 段（下の段は voice 5〜・slur 番号 2）／#10 `hho`/`hhc`＝`<open/>`/`<stopped/>`。#12 は 40dd2e93 で既に直っていた（9/29 16:48 の Release では再現・網だけ足した）。
+⑵ ★ `88756938`（残り）: ⒤ **頁の欠陥**＝repeat の本体にある `voice { } { }` が音符を 1 つも集めなかった（`MusicSites*` の祖先チェックが container の上まで登っていた）。`repeat percent` の 1 小節目が空・`unfold` は全部の回が空。チェックを外し、`MusicSitesEquivalenceTests` の基準も container までに揃えた・snapshot 不変。⒥ TAB の前打音にフレット（1 音の前打音に書いた `\N` も出す）。⒦ 2 段に別の名前が書いてある大譜表は 2 パートのまま brace の `<part-group>`。
+網は項目ごと（`MusicXmlBeamTests`・`…PercentRepeatTests`・`…TabTests`・`…TrackLyricsTests`・`…BandReportTests`・`RepeatAroundVoiceTests`）・外すと各行が赤。掃き 1,118 冊＝例外 0・import 0・2 段の拍の不一致 6 小節（全部、元の本の足りない小節＝lysc も警告）。
+★ `-End p718 -DiffBase 5bd1c99a`＝full **10528 / 0 / 2 / 10530**・門 7 つ全 OK・Core `+` 946 行に REF 0／OWN 0（MusicXML の書き出しは LP に対応物が無い・頁の修正は検査を外しただけ）。7.6: ⑴⑵ ともユーザーの依頼（Omr のレポート）。
+7.7: ⑴ import は節の名前の `<rehearsal>` を最初の音符の `@mark` に戻す（section には戻さない・頁の絵は同じ）⑵ 大譜表の下の段の wedge／octave-shift の番号は振り直していない ⑶ Omr 側の回避（`ms_band_xml.py`・`run-ms.ps1`）はもう要らない＝Omr で外すかはユーザー。
+
 ## 以下は第717セッションの経緯
 
 ### 1.1 第717セッション（2026-09-30・YT-DELL2）
