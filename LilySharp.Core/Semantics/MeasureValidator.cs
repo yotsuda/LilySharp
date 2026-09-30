@@ -432,7 +432,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         // running default note value there. Voices 2..N sound from that instant, so this
         // is the lead-in their own first bar is validated with. Collected during the
         // pass, validated after it (they are simultaneous with the music counted here).
-        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup)>();
+        var spanEntry = new List<(ParallelExpressionSyntax Span, Fraction LeadIn, Fraction Default, Fraction? Pickup, (Fraction, string, bool) Meter)>();
 
         // The opening pickup: the first sounding bar, when it is shorter than a
         // full bar. A legitimately shortened FINAL bar must complete it
@@ -531,7 +531,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 from = itemIndex;
                 if (span != null)
                 {
-                    spanEntry.Add((span, total, defaultDuration, i == 0 ? partialLength : null));
+                    spanEntry.Add((span, total, defaultDuration, i == 0 ? partialLength : null, MeterNow()));
                     continue;
                 }
 
@@ -745,16 +745,88 @@ internal sealed class MeasureValidator : ISemanticValidator
         // still has voices to check; they simply start on the boundary.
         foreach (var vs in voiceSpans)
             if (vs.MeasureIndex >= measures.Count)
-                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration, null));
+                spanEntry.Add((vs.Span, Fraction.Zero, defaultDuration, null, MeterNow()));
 
         // Voices 2..N of each span, once this stream's own bars are counted: they are
         // simultaneous with the music just validated, so each is its own bar stream that
         // begins with the span's lead-in already elapsed (and inherits the running note
         // value at that instant, as a bare note does anywhere else).
-        foreach (var (span, spanLeadIn, spanDefault, spanPickup) in spanEntry)
+        // ⚠️ AND WITH THE METER IN FORCE THERE, which voice 1 then changes for all of them.
+        // Until 2026-09-30 they were checked with whatever meter the whole stream ENDED on:
+        // `voice { c''1 | } { c'1 | } time 3/4 c'2. |` flagged the lower c'1 as overfull
+        // against 3/4, and a `time` inside voice 1 flagged voice 2's bars before it the same
+        // way. A `\time` in one voice sets the score's Timing at that moment, so voice 1's
+        // meter changes govern the other voices' same bars (voice 1 is the stream this pass
+        // counts; a voice that writes its own change in that bar keeps its own).
+        // LILYPOND-REF: lily/timing-translator.cc — timeSignatureFraction and measureLength
+        //   live in the Timing (Score-level) context that \time sets.
+        var streamEnd = MeterNow();
+        foreach (var (span, spanLeadIn, spanDefault, spanPickup, entryMeter) in spanEntry)
+        {
+            var leadMeters = MetersByBar(ItemsOf(span.Voices.First()));
             foreach (var voice in span.Voices.Skip(1))
-                ValidateItemsScoped(ItemsOf(voice), voice.Position, spanLeadIn, spanDefault,
-                    inheritedPickup: spanPickup);
+            {
+                RestoreMeter(entryMeter);
+                ValidateItemsScoped(WithMeters(ItemsOf(voice), leadMeters), voice.Position,
+                    spanLeadIn, spanDefault, inheritedPickup: spanPickup);
+            }
+        }
+        RestoreMeter(streamEnd);
+    }
+
+    private (Fraction, string, bool) MeterNow() => (_timeSignature, _meterText, _senzaMisura);
+
+    private void RestoreMeter((Fraction Signature, string Text, bool Senza) m)
+        => (_timeSignature, _meterText, _senzaMisura) = m;
+
+    // Voice 1's meter changes, by the bar of the span they stand in (bar lines counted).
+    private static Dictionary<int, List<TimeSignatureSyntax>> MetersByBar(IEnumerable<SyntaxNode> items)
+    {
+        var byBar = new Dictionary<int, List<TimeSignatureSyntax>>();
+        int bar = 0;
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax)
+                bar++;
+            else if (item is TimeSignatureSyntax ts)
+                (byBar.TryGetValue(bar, out var l) ? l : byBar[bar] = new()).Add(ts);
+        }
+        return byBar;
+    }
+
+    // The meter nodes WithMeters placed into another voice's bars (by reference).
+    private readonly HashSet<SyntaxNode> _carriedMeters = new(ReferenceEqualityComparer.Instance);
+
+    // A voice's items with voice 1's meter changes placed at the head of the same bars — the
+    // ones the voice does not change itself.
+    private IEnumerable<SyntaxNode> WithMeters(
+        IEnumerable<SyntaxNode> items, Dictionary<int, List<TimeSignatureSyntax>> meters)
+    {
+        if (meters.Count == 0)
+            return items;
+        var list = items.ToList();
+        var own = MetersByBar(list);
+        var result = new List<SyntaxNode>(list.Count + meters.Count);
+        int bar = 0;
+        void Head()
+        {
+            if (meters.TryGetValue(bar, out var m) && !own.ContainsKey(bar))
+            {
+                result.AddRange(m);
+                _carriedMeters.UnionWith(m);
+            }
+        }
+        Head();
+        foreach (var item in list)
+        {
+            result.Add(item);
+            if (item is BarlineSyntax)
+            {
+                bar++;
+                Head();
+            }
+        }
+        return result;
     }
 
     /// <summary>True when the repeat's played content can flow through the enclosing
@@ -893,7 +965,11 @@ internal sealed class MeasureValidator : ISemanticValidator
     /// </remarks>
     private TextSpan Reported(MeasureContent measure, TextSpan? leadInSpan)
     {
-        var own = MeasureDurations.GetSpan(measure.Items);
+        // A meter carried in from voice 1 (WithMeters) stands in another voice's text: the
+        // bar is reported by its own items, or the warning would point into voice 1.
+        var items = _carriedMeters.Count == 0 ? measure.Items
+            : measure.Items.Where(n => !_carriedMeters.Contains(n)).ToList();
+        var own = MeasureDurations.GetSpan(items.Count > 0 ? items : measure.Items);
         _warnedSpans.Add((own.Start, own.Length));
         return UnionSpans(leadInSpan, own) ?? own;
     }

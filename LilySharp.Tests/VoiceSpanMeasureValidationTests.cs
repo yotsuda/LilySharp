@@ -46,6 +46,33 @@ public sealed class VoiceSpanMeasureValidationTests
         || d.Code == DiagnosticCodes.PickupWithoutPartial
         || d.Code == DiagnosticCodes.MeasureDurationMismatch);
 
+    /// <summary>
+    /// The other voices of a span are checked in the meter in force where the span opens, and
+    /// a <c>time</c> in voice 1 governs their same bars — a <c>\time</c> sets the score's
+    /// Timing, whatever voice writes it. Until 2026-09-30 they were checked with the meter
+    /// the whole stream ENDED on: a <c>time</c> after the span, or inside voice 1, flagged
+    /// voice 2's earlier bars as overfull.
+    /// </summary>
+    [Theory]
+    [InlineData("voice { c''1 | } { c'1 | } time 3/4 c'2. |")]
+    [InlineData("voice { c''1 | time 3/4 c''2. | } { c'1 | c'2. | }")]
+    [InlineData("time 3/4 c'2. | voice { c''2. | time 4/4 c''1 | } { c'2. | c'1 | }")]
+    public void OtherVoicesReadTheMeterOfTheirOwnBar(string music)
+    {
+        var diags = Diagnose($"time 4/4\npart mel {{\n  section A {{ {music} }}\n}}\n");
+        Assert.False(AnyFullness(diags), string.Join("\n", diags.Select(d => d.Message)));
+    }
+
+    [Fact]
+    public void AVoiceBarThatIsReallyOverfull_StillWarns_AtItsOwnNotes()
+    {
+        // The control: voice 2's second bar holds a whole note where voice 1 made it 3/4. It
+        // warns, and on voice 2's own bar — not on the `time` carried in from voice 1.
+        const string source = "time 4/4\npart mel {\n  section A { voice { c''1 | time 3/4 c''2. | } { c'1 | c'1 | } }\n}\n";
+        var d = Assert.Single(Diagnose(source), x => x.Code == DiagnosticCodes.MeasureOverflow);
+        Assert.Equal(source.LastIndexOf("c'1", System.StringComparison.Ordinal), d.Span.Start);
+    }
+
     [Fact]
     public void LeadVoiceIsInlined_SoAnOverfullBarWarnsLikeTheBareSpelling()
     {
