@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第708セッションの経緯
+
+### 1.1 第708セッション（2026-09-30・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで作業に着手」）。★ `-Start p708`（HEAD `0a985ffd`・未 push 114）＝full **10451 / 0 / 2 / 10453**（引継ぎと一致）。⚠ 開始時の作業ツリーに `site/examples/*.lys` 20 本の改行だけの差（CRLF・内容差 0）＝この便の前から。
+⑴ ★ `b6fbd563`（§1.0 ⒜ のカポの穴「`chord(…)` の検査（LYS1039）は最初の score のカポ」）: `ShapeChordValidator` は `CapoOfNode`（最初の score）だけで照らしていた＝capo 3 の score と capo 無しの score が同じ part を描く本で、capo 3 が先だと `chord(Eb x32010)` が黙る（open の score では C が鳴る）。`CaposOfNode` の各カポで照らし、同じ文言は 1 回（LYS1040 の例示は最初のカポのまま）。`CapoOfNode` の doc を実態に（読むのはエディタの形の送りだけ）。網 `ShapeChordItemTests.TheShapeCheck_ReadsEachScoresCapo`（score の順 2 通り）・毒（Core の修正だけ HEAD に戻す）で capo が先の 1 本が赤。CHANGELOG 2 つ。⚠ 検査の文言は score を名指さない（`@chord` の LYS1039 と同じ）＝どの score で違うかは読み手が探す。⚠ full の途中で `LilySharp.sln`（実在は `.slnx`）を渡してビルドが走らず、毒入りの dll で 1 赤を見た＝前段の build の出力を読んで気づいた。full **10453 / 0 / 2 / 10455**。
+★ `-End p708 -DiffBase 0a985ffd`＝full **10453 / 0 / 2 / 10455**・門 6 つ全 OK・Core `+` 18 行に REF 0／OWN 0（検査がどの score のカポを読むか＝言語の検査の配管・LP の移植ではない）。7.6: ⒜ のカポの穴（第665 起票・第707 が残した）。7.7: LYS1039 の文言は score を名指さない（`chord(…)` も `@chord` も）＝カポの違う score が多い本で「どの score で違うか」が読めない・直すなら両方の検査を一緒に。残るカポの穴＝双子は `chordNames both` を綴れない。push はユーザー。
+
 ## 以下は第707セッションの経緯
 
 ### 1.1 第707セッション（2026-09-30・YT-DELL2）
