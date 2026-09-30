@@ -86,11 +86,18 @@ internal static class MusicXmlReader
 
         // Part names come from the part-list; the <part> elements carry the music.
         var names = new Dictionary<string, string?>();
+        var labels = new Dictionary<string, string?>();
         foreach (var sp in Els(Local(root, "part-list"), "score-part"))
         {
             var id = (string?)sp.Attribute("id");
-            if (id != null)
-                names[id] = Local(sp, "part-name")?.Value.Trim();
+            if (id == null)
+                continue;
+            var partName = Local(sp, "part-name");
+            names[id] = partName?.Value.Trim();
+            // The name the source PRINTS comes back as the staff's label (2026-09-30: every
+            // label was lost, `staff rh "Piano"` coming back as a bare `staff pianoRH`).
+            if ((string?)partName?.Attribute("print-object") != "no" && names[id] is { Length: > 0 } printed)
+                labels[id] = printed;
         }
 
         var used = new HashSet<string>(StringComparer.Ordinal);
@@ -103,6 +110,7 @@ internal static class MusicXmlReader
             {
                 Id = id,
                 Name = names.GetValueOrDefault(id),
+                Label = labels.GetValueOrDefault(id),
             };
             // One MusicXML part may yield several Lily# parts (one per staff).
             foreach (var p in ReadPart(partEl, working, doc, report))
@@ -359,6 +367,7 @@ internal static class MusicXmlReader
             {
                 Id = $"{part.Id}s{staff}",
                 Name = StaffPartName(part.Name, staff, staves),
+                Label = staff == staves[0] ? part.Label : null,
                 StaffGroup = part.Id,
                 Clef = staffClef,
                 // ⚠️ <transpose> is the PART's, so every staff of a split part keeps it —

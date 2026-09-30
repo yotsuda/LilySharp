@@ -323,6 +323,11 @@ workflow attaches that section to the GitHub Release verbatim.
   programs write it — closes on the next note, the first one outside the line. In a part on
   two staves a dynamic, a text or a line now marks a note of its own staff: the left hand's
   `@f` used to come back on the right hand's note at the same beat.
+- **Staff labels survive a MusicXML round trip.** The import now writes a part's printed
+  `<part-name>` back as the staff's label (`staff pianoRH "Piano"`, on the first staff of a
+  split grand staff); it used to drop every label. The export marks the name of a staff the
+  page labels nothing `print-object="no"` — it writes the part's id there, which a reader
+  printed and the import would now bring back.
 - **MusicXML carries the page's beams.** `lysc xml` wrote no `<beam>`, so a reader beamed by
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and

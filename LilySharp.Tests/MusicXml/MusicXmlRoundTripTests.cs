@@ -657,6 +657,34 @@ public class MusicXmlRoundTripTests
     }
 
     /// <summary>
+    /// A staff's label survives the round trip, and a staff with none stays unlabelled
+    /// (2026-09-30): the export writes a label-less staff's id as a part name marked
+    /// <c>print-object="no"</c>, and the import writes back only the names a source prints —
+    /// on a split grand staff, on its first staff, as it was written.
+    /// </summary>
+    [Fact]
+    public void AStaffsLabel_ComesBack_AndAnUnlabelledStaffStaysUnlabelled()
+    {
+        var original = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            part fl { clef treble }
+            section A { rh { c''1 | } lh { c1 | } fl { g''1 | } }
+            form main { ~A }
+            score main { grandStaff { staff rh "Piano"  staff lh }  staff fl }
+            """);
+        var xml = new MusicXmlExporter().Export(original).ToXml();
+        Assert.Equal(new[] { "Piano:-", "fl:no" }, xml.Descendants("part-name")
+            .Select(n => $"{n.Value}:{(string?)n.Attribute("print-object") ?? "-"}"));
+        var (lys, _) = new MusicXmlImporter().Import(xml.ToString());
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        var staves = lys.Split('\n').Select(l => l.Trim()).Where(l => l.StartsWith("staff ")).ToArray();
+        Assert.Equal(new[] { "staff pianoRH \"Piano\"", "staff pianoLH", "staff fl" }, staves);
+    }
+
+    /// <summary>
     /// A stop written where MusicXML programs usually write it — after the last note it covers,
     /// at the bar's end — closes on the NEXT note, the one outside the line: on the bar's last
     /// note it would end the line a note early. A stop after the part's last note stays on that

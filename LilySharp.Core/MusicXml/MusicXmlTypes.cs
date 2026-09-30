@@ -83,7 +83,11 @@ internal sealed class MusicXmlDocument
                     new XElement("group-barline", "yes")));
             var scorePart = new XElement("score-part",
                 new XAttribute("id", id),
-                new XElement("part-name", part.DisplayName ?? part.Name ?? $"Part {i + 1}"));
+                // A staff the page labels nothing still needs a name: the id, marked as
+                // not printed (2026-09-30), so a reader prints what the page prints.
+                new XElement("part-name",
+                    part.DisplayName == null ? new XAttribute("print-object", "no") : null,
+                    part.DisplayName ?? part.Name ?? $"Part {i + 1}"));
             if (part.MidiProgram is int program)
             {
                 // The sound the .mid gives the part (HANDOFF §2 F-midi): <score-instrument>

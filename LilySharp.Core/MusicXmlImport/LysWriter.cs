@@ -120,7 +120,7 @@ internal static class LysWriter
             var group = doc.Parts[gi].StaffGroup;
             if (group == null)
             {
-                sb.Append("  staff ").Append(doc.Parts[gi].SafeName)
+                sb.Append("  staff ").Append(doc.Parts[gi].SafeName).Append(StaffLabel(doc.Parts[gi]))
                     .Append(LyricRowLines(doc.Parts[gi], scoreLyricPart, "  ")).Append('\n');
                 gi++;
                 continue;
@@ -129,7 +129,7 @@ internal static class LysWriter
             sb.Append("  grandStaff {\n");
             while (gi < doc.Parts.Count && doc.Parts[gi].StaffGroup == group)
             {
-                sb.Append("    staff ").Append(doc.Parts[gi].SafeName)
+                sb.Append("    staff ").Append(doc.Parts[gi].SafeName).Append(StaffLabel(doc.Parts[gi]))
                     .Append(LyricRowLines(doc.Parts[gi], scoreLyricPart, "    ")).Append('\n');
                 gi++;
             }
@@ -139,6 +139,10 @@ internal static class LysWriter
 
         return sb.ToString();
     }
+
+    /// <summary>The staff's printed label (<see cref="ImportPart.Label"/>), or nothing.</summary>
+    private static string StaffLabel(ImportPart part)
+        => part.Label is { } label ? " \"" + EscapeString(label) + "\"" : "";
 
     // ---- paper ------------------------------------------------------------
 

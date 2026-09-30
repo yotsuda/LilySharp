@@ -62,6 +62,11 @@ internal sealed class ImportPart
     public string Id { get; set; } = "";
     /// <summary>The printed part name, if any (e.g. "Piano").</summary>
     public string? Name { get; set; }
+    /// <summary>The label the source prints at the part's staff — its <c>&lt;part-name&gt;</c>
+    /// unless that says <c>print-object="no"</c> — written as the score's
+    /// <c>staff x "Label"</c>; null prints none. A split part carries it on its first staff,
+    /// as <c>grandStaff { staff rh "Piano"  staff lh }</c> writes it.</summary>
+    public string? Label { get; set; }
     /// <summary>A sanitized Lily# identifier the scaffolding refers to (e.g. "melody", "part1").</summary>
     public string SafeName { get; set; } = "";
     /// <summary>The part's opening clef as a Lily# clef name ("treble", "bass", ...).</summary>
