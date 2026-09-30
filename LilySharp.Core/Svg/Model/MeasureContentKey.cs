@@ -198,6 +198,18 @@ public readonly record struct MeasureContentKey(long Hash)
             var measures = staff.PrimaryVoice.Measures;
             // MeasureContextChain's entries, folded in step (see MeasureContextChain.Advance).
             var entry = new MeasureContext(score.KeySignature, score.TimeSignature, staff.Clef);
+            // …and WHICH declaration the entry came from, as a count of the change items
+            // before this measure. The system prefix draws the entry key / clef with the
+            // data-pos of the LAST change before the system (SharedRenderer.ResolveKeySignature
+            // / ResolveClef), and the entry VALUE does not say which one that is: a key
+            // change typed into A1 makes section B1 restate the header key (a change item
+            // whose data-pos is B1's name, far from the edit), and the systems after B1 kept
+            // the header's data-pos on replay — the same glyphs, a different click target
+            // (MEASURED, session 718: `key ` typed into Billie Jean's A1, incremental 77 where
+            // a full compile writes 759). A COUNT, not the source offset: offsets shift with
+            // every insertion before them (the replay's window re-resolves those), while the
+            // count moves only when a change item appears or goes.
+            int changesBefore = 0;
             int m = Math.Min(n, measures.Length);
             for (int i = 0; i < m; i++)
             {
@@ -206,7 +218,11 @@ public readonly record struct MeasureContentKey(long Hash)
                 AddGroupIdentity(ref acc[i], group);    // ...and which brace/bracket it is in
                 AddIntrinsic(ref acc[i], measures, i);
                 acc[i].Add(entry);
+                acc[i].Add(changesBefore);
                 entry = MeasureContextChain.Advance(entry, measures[i]);
+                foreach (var item in measures[i].Items)
+                    if (item is KeySignatureChangeItem or ClefChangeItem or TimeSignatureChangeItem)
+                        changesBefore++;
 
                 // A clef change opening measure i+1 is engraved BEFORE the bar line the
                 // two measures share, so its width is charged to measure i's CLOSING

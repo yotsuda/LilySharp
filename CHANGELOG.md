@@ -327,6 +327,9 @@ workflow attaches that section to the GitHub Release verbatim.
   music alike. An ending whose number is missing (`[. B]`, as while typing one) and a repeat
   whose one list skips a pass (`|: A [1,3. B] :|`) no longer crash the check or the preview
   either — the first is the parser's one error, the second the usual LYS1043.
+- **A click on a line's key signature goes where the key was set, after any edit.** When a key
+  change typed into one section made a later section go back to the book's key, the preview's
+  later lines kept pointing a click at the old declaration until the whole book was redrawn.
 - **The editor's outline works in a book with a custom key.** `key custom fis cis` made the
   document outline (and the breadcrumbs that read it) fail for the whole book.
 - **A rest in a grace group no longer breaks the page.** `c'4 grace { r16 d'16 } e'4@staccato`

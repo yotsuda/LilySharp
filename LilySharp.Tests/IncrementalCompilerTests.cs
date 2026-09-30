@@ -1458,6 +1458,36 @@ public class IncrementalCompilerTests
     }
 
     /// <summary>
+    /// A system's opening key is drawn with the data-pos of the LAST change before it, and an
+    /// edit can change WHICH declaration that is without changing the key or touching the
+    /// systems that draw it: a key change typed into A makes section B restate the header key,
+    /// a change item whose data-pos is B's name — far after the edit. The render replay kept
+    /// the header key's data-pos for the systems after B (same glyphs, a stale click target)
+    /// until session 718 folded the count of change items before each measure into its content
+    /// key (found by the language-server sweep on Billie Jean, LilySharp-Lab sessions/p717).
+    /// </summary>
+    [Fact]
+    public void AKeyChangeThatMakesALaterSectionRestateTheKey_RedrawsTheSystemsAfterIt()
+    {
+        string bar = "fis,8 cis e fis e cis b, cis | ";
+        // Explicit breaks, as the owner's book has: the later systems keep their geometry, so
+        // the render replays them — the replay is where the stale data-pos lived.
+        string bars = string.Concat(Enumerable.Repeat(bar + bar + bar + bar + "break ", 3));
+        string src = "octave absolute\ntime 4/4\nkey d major\npart m { clef bass\n"
+            + "  section A { " + bars + "}\n  section B { " + bars + "}\n}\n"
+            + "form main { A B }\nscore main \"x\" { staff m }\n";
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // `key fis,` (F-sharp major, mode assumed) typed into A's fifth bar.
+        int at = src.IndexOf("fis,8", src.IndexOf("section A", StringComparison.Ordinal) + 200, StringComparison.Ordinal);
+        var change = new TextChange(new TextSpan(at, 0), "key fis, ");
+        string incremental = Norm(session.Edit(change));
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    /// <summary>
     /// The RIGHT-neighbour window is load-bearing: whether a break is forbidden AFTER
     /// measure i asks whether i+1 belongs to the same multi-measure-rest run
     /// (MmrRunMap.ForbidsBreakAfter) — visible in key i+1, never in key i. Extending the
