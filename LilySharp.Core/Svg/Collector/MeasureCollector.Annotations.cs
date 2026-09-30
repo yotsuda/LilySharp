@@ -491,7 +491,10 @@ public sealed partial class MeasureCollector
             .Select(m => m switch { PitchSyntax p => p, ChordSyntax c => c.Root, _ => null })
             .FirstOrDefault(p => p != null);
         int anchorStep;
-        if (members[0] is ScaleDegreeSyntax || firstPitch is null)
+        if (members[0] is ChordSyntax { IsShapeChord: true } firstShape
+            && Music.ShapeChords.Lowest(ShapeNotesOf(firstShape)) is { } lowest)
+            anchorStep = lowest.Step;   // the group's root is the shape's lowest note
+        else if (members[0] is ScaleDegreeSyntax || firstPitch is null)
             anchorStep = _ambientTonicValid ? _ambientTonicStep : 0;
         else
             anchorStep = GetPitchIndex(firstPitch.PitchName.ToLowerInvariant()[0]);
@@ -520,6 +523,11 @@ public sealed partial class MeasureCollector
             {
                 case PitchSyntax p:
                     AddPitch(p);
+                    break;
+                // A chord(…) member sounds its shape's notes, lowest first (ArpeggioSpread).
+                case ChordSyntax { IsShapeChord: true } shape:
+                    foreach (var n in Music.ShapeChords.Ascending(ShapeNotesOf(shape)))
+                        Add(n.Step, n.Alter);
                     break;
                 case ChordSyntax c:
                     foreach (var p in c.Pitches) AddPitch(p);

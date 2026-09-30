@@ -2140,6 +2140,10 @@ chord(x32010)2@chord             // no symbol: the shape alone gives the notes; 
   relative mode the next note is read from it; absolute mode changes nothing. A phrase that
   opens with the item hands the same note on after its reference (not moved by the
   reference's marks).
+- **In `<< >>`** the item is SPREAD: its notes, lowest first, each one member of the broken
+  chord — `<< chord(C x32010) >>2` plays the five strings in turn under 5:4, and
+  `<< c chord(G 320003) e >>` plays c, G's six strings, then e. A share dot after it holds its
+  last note, a `(` after it starts the bow on its first; first in the group, it is the root.
 - **Spelling:** a note that is a tone of the symbol (or its slash bass) is spelled as the chord
   spells it — Cm7's E♭ and B♭, never D♯ and A♯; any other note in the key.
 - **String numbers:** every note carries its string, so a `tab` of the part shows exactly the

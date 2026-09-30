@@ -213,6 +213,15 @@ workflow attaches that section to the GitHub Release verbatim.
   hands its lowest note on after the reference, as the item does (the reference's marks do not
   move it); it used to anchor on the body's next note, so editing the phrase moved the music
   after it.
+- **`chord(…)` in `<< >>` is spread.** `<< chord(C x32010) >>2` plays the shape's notes one
+  after another, lowest first, dividing the half into five (5:4) — a written-out broken chord
+  of a guitar shape — and mixed with other members (`<< c chord(G 320003) e >>`) its notes
+  take their places in the sequence. Each note is absolute with its string number; first in
+  the group, the shape is the root (the next note reads from its lowest note). A share dot
+  after it holds its last note, a `(` after it starts the bow on its first. The page, MIDI,
+  MusicXML and the LilyPond twin (`\tuplet 5/4 { c8\5 e8\4 … }`) agree. It used to be a syntax
+  error. The chord-track harmonizer also counts a shape's (and a degree chord's) notes now —
+  a bar of them used to read as a rest.
 
 ### Editor
 

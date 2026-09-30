@@ -1910,7 +1910,9 @@ public sealed class MidiExporter
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio, MidiTrack track, MidiTrack conductorTrack)
     {
-        var members = arpeggio.Sequence.ToList(); // bare pitches, degrees, chords and/or rests, with shares
+        // Bare pitches, degrees, chords and/or rests, with shares — a chord(…) member spread
+        // into its notes (the page's MeasureCollector.ProcessArpeggio).
+        var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
             return;
 
@@ -1920,7 +1922,7 @@ public sealed class MidiExporter
         // force each member's length — its shares of the unit — via _defaultDuration. A
         // member's parts (ArpeggioSubdivision.SpellShares) are ONE sounding note here.
         Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
-        var sub = ArpeggioSubdivision.Compute(arpeggio.ShareCount, total);
+        var sub = ArpeggioSubdivision.Compute(Music.ArpeggioSpread.ShareCount(members), total);
         if (sub.HasTuplet)
             _tupletStack.Push((sub.TupletNum, sub.TupletBase));
         var savedDefault = _defaultDuration;
@@ -1948,7 +1950,7 @@ public sealed class MidiExporter
         bool rootSet = false;
         int anchorOctave = 0;
         int rootStep = 0;
-        foreach (var (member, shares, _, _, _, _) in members)
+        foreach (var ((member, shares, _, _, _, _), spreadNote) in members)
         {
             _defaultDuration = sub.MemberDisplay * new Fraction(shares);
             if (member is ScaleDegreeSyntax degree)
@@ -1983,10 +1985,21 @@ public sealed class MidiExporter
             if (member is PitchSyntax pitch)
                 EmitArpeggioMidiPitch(pitch, track, isRoot ? groupOctave : 0);
             else if (member is ChordSyntax chord)
+            {
+                // A spread note plays as its chord(…) item narrowed to that note (the page's rule).
+                _spreadNote = spreadNote is { } sn ? (chord.Green, sn) : null;
                 ProcessChord(chord, track, isRoot ? groupOctave : 0);
+                _spreadNote = null;
+            }
             else
                 ProcessNode(member, track, conductorTrack); // rest
-            if (!rootSet && letter is { } rl)
+            if (!rootSet && spreadNote is { } rootNote)
+            {
+                rootSet = true;
+                anchorOctave = rootNote.Octave;
+                rootStep = rootNote.Step;
+            }
+            else if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
                 anchorOctave = _currentOctave;
@@ -2387,10 +2400,17 @@ public sealed class MidiExporter
     /// page's reading (Music.ShapeChords); the capo raises the strings (2026-09-29).</summary>
     private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
     {
+        // A spread note of a << >> group (ArpeggioSpread) is the item narrowed to that one note.
+        if (_spreadNote is { } spread && ReferenceEquals(spread.Item, chord.Green))
+            return [spread.Note];
         var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
         return Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
             header.SoundingShiftSemitones - Capo, _keySharps);
     }
+
+    /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
+    /// note at a time and the note it plays now (the page's MeasureCollector._spreadNote).</summary>
+    private (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? _spreadNote;
 
     /// <summary>A phrase's outgoing anchor when its body opens with a <c>chord(…)</c> item
     /// (<see cref="Music.PhraseAnchor.Shape"/>): the item's lowest note as written, as

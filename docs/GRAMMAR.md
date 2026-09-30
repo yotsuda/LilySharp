@@ -1898,8 +1898,14 @@ ShapeChord     = 'chord' , '(' , ChordArgument , ')'    (* ChordArgument: 8.4, n
    applied and warns (LYS4008) — write it on the member. A nested chord member keeps its own
    annotation handling ('<< <c e>@arpeggio g >>' is fine).
    This reuses '<< … >>' (LilyPond's parallel-voice form, which Lily# writes as
-   'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio. *)
-ArpMember      = PitchToken | ScaleDegree | Chord | Rest ;   (* no DurationToken on a member *)
+   'voice { }'); a '\\' inside is reported as the removed-polyphony form, not an arpeggio.
+   A ShapeChord member is SPREAD (owner's decision 2026-09-30): its notes, lowest sounding
+   first, each one member — '<< chord(C x32010) >>2' is five notes under 5:4. Each is absolute
+   with its string number; the first before any pitched member is the group's root (the
+   frame after the group is its lowest note, the item's rule). Its share dots go to its last
+   note, a '(' after it to its first, a ')' to its last; with no shape on the part's tuning it
+   is a silence of one share (LYS1040). *)
+ArpMember      = PitchToken | ScaleDegree | Chord | ShapeChord | Rest ;   (* no DurationToken on a member *)
 ScaleDegree    = Integer , [ 'is' | 'isis' | 'es' | 'eses' ] , { "'" | ',' } ;
                  (* anchor-relative degree: 1 = root/tonic, 3 = third, 8 = octave; also the '<c 3 5>' chord form *)
 ArpItem        = ArpMember | '.' | '(' | ')' ;               (* '.' = one more share for the member before it *)

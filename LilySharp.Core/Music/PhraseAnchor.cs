@@ -103,6 +103,12 @@ internal static class PhraseAnchor
             case ArpeggioSyntax a:
                 foreach (var member in a.Members)
                 {
+                    // A chord(…) member first: the group's root is its lowest note (ArpeggioSpread).
+                    if (member is ChordSyntax { IsShapeChord: true } spread)
+                    {
+                        shape = spread;
+                        return Shape;
+                    }
                     int? m = member switch
                     {
                         ScaleDegreeSyntax => Tonic,

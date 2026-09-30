@@ -3389,6 +3389,29 @@ public sealed class LilyPondExporter
     }
 
     /// <summary>
+    /// The notes of a <c>chord(…)</c> item (the page's ShapeNotesOf): the part's strings;
+    /// outside a part (a phrase body, written once for every part that plays it) the one tuning
+    /// the file's parts share, else the guitar — which <paramref name="warn"/> reports.
+    /// </summary>
+    private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax c, bool warn = false)
+    {
+        var (tuning, shift) = (TuningType.Guitar, 0);
+        if (_currentPartName != null && _root != null)
+        {
+            var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(_root, _currentPartName));
+            (tuning, shift) = (Music.ShapeChords.TuningOf(header), header.SoundingShiftSemitones);
+        }
+        else if (Music.ShapeChords.PartTuningsOf(c) is [var only])
+            (tuning, shift) = (only.Tuning, only.SoundingShift);
+        else if (warn)
+            _warnings.Add("a chord(...) item in a phrase played by parts of different tunings is "
+                + "written on the guitar's strings - check its notes by hand");
+        // A capo raises every string by its fret (the page's ShapeNotesOf; 2026-09-29): the shift
+        // is "sounding = written + shift", so the capo comes OFF it.
+        return Music.ShapeChords.Notes(c, tuning, shift - _layoutPlan.Chords.Capo, _keySharps);
+    }
+
+    /// <summary>
     /// <c>chord(SYMBOL SHAPE)</c> written out: the shape's strings on the part's tuning
     /// (<see cref="Music.ShapeChords"/>, the page's reading) as an ordinary LilyPond chord,
     /// lowest sounding note first, each note with its string number — <c>&lt;c\5 e\4 g\3 c'\2
@@ -3404,22 +3427,7 @@ public sealed class LilyPondExporter
     /// </remarks>
     private string EmitShapeChord(ChordSyntax c)
     {
-        // The part's strings; outside a part (a phrase body, written once for every part that
-        // plays it) the one tuning the file's parts share, else the guitar.
-        var (tuning, shift) = (TuningType.Guitar, 0);
-        if (_currentPartName != null && _root != null)
-        {
-            var header = Semantics.PartHeaderDefaults.Read(Semantics.ConcertPitch.FindPart(_root, _currentPartName));
-            (tuning, shift) = (Music.ShapeChords.TuningOf(header), header.SoundingShiftSemitones);
-        }
-        else if (Music.ShapeChords.PartTuningsOf(c) is [var only])
-            (tuning, shift) = (only.Tuning, only.SoundingShift);
-        else
-            _warnings.Add("a chord(...) item in a phrase played by parts of different tunings is "
-                + "written on the guitar's strings - check its notes by hand");
-        // A capo raises every string by its fret (the page's ShapeNotesOf; 2026-09-29): the shift
-        // is "sounding = written + shift", so the capo comes OFF it.
-        var notes = Music.ShapeChords.Notes(c, tuning, shift - _layoutPlan.Chords.Capo, _keySharps);
+        var notes = ShapeNotesOf(c, warn: true);
         var (prefix, suffix) = SplitAttachments(c.Articulations);
         if (notes.IsEmpty)
             return prefix + "s" + EmitEventDuration(c.Duration) + suffix;
@@ -4623,7 +4631,8 @@ public sealed class LilyPondExporter
     /// </remarks>
     private string EmitArpeggio(ArpeggioSyntax arp)
     {
-        var members = arp.Sequence.ToList();
+        // A chord(…) member spread into its notes (the page's MeasureCollector.ProcessArpeggio).
+        var members = Music.ArpeggioSpread.Of(arp, c => ShapeNotesOf(c));
         if (members.Count == 0)
             return "";
 
@@ -4633,10 +4642,10 @@ public sealed class LilyPondExporter
         int runningDots = _lastWrittenDots;
         Fraction total = arp.TotalDuration?.ToFraction()
             ?? Fraction.FromNoteValue(int.TryParse(runningValue, out int rv) ? rv : 4).Dotted(runningDots);
-        var sub = ArpeggioSubdivision.Compute(arp.ShareCount, total);
+        var sub = ArpeggioSubdivision.Compute(Music.ArpeggioSpread.ShareCount(members), total);
         int groupOctave = arp.OctaveOffset;
 
-        if (!_octaveAbsolute && !_frameTracked && members.Any(m => m.Node is ScaleDegreeSyntax))
+        if (!_octaveAbsolute && !_frameTracked && members.Any(m => m.Member.Node is ScaleDegreeSyntax))
             _warnings.Add(
                 "a degree arpeggio follows a phrase reference, whose nested \\relative leaves the "
                 + "octave frame with a different answer on each side — check its octave by hand");
@@ -4658,7 +4667,7 @@ public sealed class LilyPondExporter
         int rootStep = 0, anchorOctave = 0;
         for (int i = 0; i < members.Count; i++)
         {
-            var (member, shares, slurStart, slurEnd, _, _) = members[i];
+            var ((member, shares, slurStart, slurEnd, _, _), spreadNote) = members[i];
             // What the member's shares spell: one note, or notes tied to one another
             // (a rest's parts stand apart). Every part writes its duration.
             var parts = sub.SpellShares(shares);
@@ -4731,6 +4740,31 @@ public sealed class LilyPondExporter
                     AdvanceLilyPondFrame(step, want);
                     break;
                 }
+
+                // A spread note of a chord(…) member: that one note, absolute, on its string —
+                // the root when it comes first (its lowest note, as the item hands on).
+                case ChordSyntax spreadItem when spreadNote is { } sn:
+                {
+                    if (!rootSet)
+                    {
+                        rootSet = true;
+                        rootStep = sn.Step;
+                        anchorOctave = sn.Octave;
+                    }
+                    head = SpellPitch(sn.Step, sn.Alter) + OctaveMarks(ArpeggioMarks(sn.Step, sn.Octave));
+                    (prefix, suffix) = SplitAttachments(spreadItem.Articulations);
+                    suffix = "\\" + sn.StringNumber + suffix;
+                    AdvanceLilyPondFrame(sn.Step, sn.Octave);
+                    break;
+                }
+
+                // A chord(…) member with no shape on the tuning: a spacer of its share, as the
+                // item alone is (EmitShapeChord).
+                case ChordSyntax { IsShapeChord: true } unshaped:
+                    (prefix, suffix) = SplitAttachments(unshaped.Articulations);
+                    head = "s";
+                    tieParts = false;
+                    break;
 
                 case ChordSyntax chord:
                     head = EmitArpeggioChord(chord, groupOctave, ref rootSet, ref rootStep, ref anchorOctave);

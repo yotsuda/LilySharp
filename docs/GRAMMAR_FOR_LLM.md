@@ -339,6 +339,8 @@ degrees-only group anchors on the tonic. NOT LilyPond's `<< >>`
                  //  5 in a quarter → 16ths 5:4; 4 in a quarter → plain 16ths; 2 in a
                  //  dotted quarter → 8ths 2:3)
 << c e g >>'     // marks after >> shift the whole group and propagate to the next note
+<< chord(C x32010) >>2   // a chord(…) member is SPREAD: its notes lowest first, one member each (5:4)
+<< c chord(G 320003) e >>2   // mixed: c, G's six strings, then e (e stacks above the root c)
 ```
 
 Must fit in one measure (else it overflows the meter).

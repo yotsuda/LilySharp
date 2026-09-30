@@ -734,7 +734,11 @@ internal sealed partial class Parser
     /// is no slur to confuse it with (the glue rule of <c>@name(…)</c> guards a note's slur).
     /// LILYSHARP-OWN: LilyPond writes such a chord out note by note.
     /// </remarks>
-    private ChordGreen ParseShapeChord()
+    /// <param name="inGroup">A member of a <c>&lt;&lt; … &gt;&gt;</c> group (owner's decision
+    /// 2026-09-30: its notes are spread there, <see cref="Music.ArpeggioSpread"/>): no duration
+    /// of its own — the group's total is shared — so a glued one is reported, as a pitch
+    /// member's is, and a spaced number after it is the next member (a degree).</param>
+    private ChordGreen ParseShapeChord(bool inGroup = false)
     {
         int wordStart = _textPosition + Current.LeadingTriviaWidth;
         var word = Advance();
@@ -771,6 +775,15 @@ internal sealed partial class Parser
                 + "are, whatever the octave marks, the relative frame or 'octave absolute' say - "
                 + "remove the marks, and write a shape higher (or lower) on the neck to play it "
                 + "there. The marks are ignored.");
+        }
+        if (inGroup)
+        {
+            if (Current.Kind is SyntaxKind.IntegerLiteral && CurrentGluedToPrevious)
+                ReportDurationInsideChord(
+                    "A member of << >> can't carry a duration - its notes share the group's total, "
+                    + "written after the closing '>>': << chord(C x32010) >>2.");
+            return new ChordGreen(word, openParen, [.. tokens], closeParen, [.. octaveMarks], null, null,
+                ParsePostEvents());
         }
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
@@ -817,6 +830,11 @@ internal sealed partial class Parser
             else if (Check(SyntaxKind.OpenAngle))
             {
                 members.Add(ParseChord());
+            }
+            else if (Current.Kind == SyntaxKind.Identifier && Current.Text == ShapeChordWord)
+            {
+                // A chord from a shape: its notes are spread across the group (ArpeggioSpread).
+                members.Add(ParseShapeChord(inGroup: true));
             }
             else if (Current.Kind is SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full)
             {

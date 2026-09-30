@@ -315,6 +315,76 @@ public class ShapeChordItemTests
         Assert.Equal(43, played[^2]);
     }
 
+    // ================================================================ in << >>
+
+    /// <summary>Owner's decision 2026-09-30: a <c>chord(…)</c> member of <c>&lt;&lt; &gt;&gt;</c>
+    /// is SPREAD — its notes, lowest first, each one member of the broken chord, dividing the
+    /// group's total with the other members. Until then the parser refused it.</summary>
+    [Fact]
+    public void InAGroup_TheShapeIsSpread_LowestFirst()
+    {
+        // x32013 on a guitar: C3 E3 G3 C4 G4 sounding, five eighths of a quintuplet.
+        string alone = Book("instrument guitar", "<< chord(C x32013) >>2 r2 |");
+        Assert.DoesNotContain(Diagnostics(alone), d => d.Severity == DiagnosticSeverity.Error);
+        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, MidiPitches(alone));
+        var notes = Items(Collected(alone)).OfType<ChordItem>().ToList();
+        Assert.Equal(5, notes.Count);
+        Assert.All(notes, c => Assert.Single(c.Notes));
+        Assert.Equal(new int?[] { 5, 4, 3, 2, 1 }, notes.Select(c => c.Notes[0].StringNumber));
+        Assert.Equal(new[] { 48, 52, 55, 60, 67 }, notes.Select(c => c.Notes[0].Midi - 12));
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(alone)).ToXml().ToString();
+        Assert.Equal(5, Regex.Matches(xml, @"<actual-notes>5</actual-notes>").Count);
+        Assert.Equal(new[] { "5", "4", "3", "2", "1" },
+            Regex.Matches(xml, @"<string>(\d)</string>").Select(m => m.Groups[1].Value));
+        Assert.Contains(@"\tuplet 5/4 { c8\5 e8\4 g8\3 c8\2 g'8\1 }",
+            new LilyPondExporter().Export(SyntaxTree.Parse(alone)));
+
+        // Mixed: c, then G's six strings (its share dot on its LAST note), then e — nine shares;
+        // e stacks above the group's root c, and the d after the group reads from it.
+        string mixed = Book("instrument guitar", "<< c chord(G 320003) . e >>2 d2 |");
+        int[] played = MidiPitches(mixed);
+        Assert.Equal(new[] { 48, 43, 47, 50, 55, 59, 67, 52, 50 }, played);
+        var mixedItems = Items(Collected(mixed));
+        Assert.Equal(new Fraction(1, 9), mixedItems[6].Duration);   // the dotted last G note: two of nine shares of the half
+        Assert.Equal(new Fraction(1, 18), mixedItems[5].Duration);
+        // A shape first is the root: the group's frame is its lowest note, as the item's is.
+        Assert.Equal(new[] { 43, 47, 50, 55, 59, 67, 48 },
+            MidiPitches(Book("instrument guitar", "<< chord(G 320003) >>2 c2 |")));
+    }
+
+    /// <summary>The spread's edges: a shape with no notes on the tuning is a silence of its share
+    /// (LYS1040), a member's slur marks land on the spread's first and last notes, a bare
+    /// <c>@chord</c> names the notes it sounds, and a duration glued to the member is refused.</summary>
+    [Fact]
+    public void InAGroup_TheSpreadsEdges()
+    {
+        string unshaped = Book("instrument guitar", "<< c chord(C) e >>2 r2 |");
+        Assert.Equal(new[] { 48, 52 }, MidiPitches(unshaped));
+        var items = Items(Collected(unshaped));
+        Assert.True(Assert.IsType<RestItem>(items[1]).IsSpacer);
+        Assert.Contains(@"\tuplet 3/2 { c4 s4 e4 }", new LilyPondExporter().Export(SyntaxTree.Parse(unshaped)));
+
+        var slurred = Items(Collected(Book("instrument guitar", "<< chord(C x32010)( g) >>2 r2 |")));
+        Assert.True(Assert.IsType<ChordItem>(slurred[0]).HasSlurStart);
+        Assert.False(Assert.IsType<ChordItem>(slurred[4]).HasSlurStart);
+        Assert.True(Assert.IsType<NoteItem>(slurred[5]).HasSlurEnd);
+
+        var named = Collected(Book("instrument guitar", "<< chord(x02210) >>2@chord r2 |")).ChordNames;
+        Assert.Equal("Am", Assert.Single(named).ChordText);
+
+        Assert.Contains(Diagnostics(Book("instrument guitar", "<< chord(C x32010)4 >>2 r2 |")),
+            d => d.Code == DiagnosticCodes.DurationInsideChord);
+
+        // The octave-mode conversion keeps every note where it was, both ways.
+        string mixed = Book("instrument guitar", "<< chord(G 320003) c e >>2 d2 | << b chord(C x32010) >>1 |");
+        var absolute = LilySharp.Core.Editing.OctaveModeConverter.Convert(mixed, LilySharp.Core.Editing.OctaveMode.Absolute);
+        Assert.Null(absolute.Error);
+        Assert.Equal(MidiPitches(mixed), MidiPitches(absolute.NewText!));
+        var back = LilySharp.Core.Editing.OctaveModeConverter.Convert(absolute.NewText!, LilySharp.Core.Editing.OctaveMode.Relative);
+        Assert.Null(back.Error);
+        Assert.Equal(MidiPitches(mixed), MidiPitches(back.NewText!));
+    }
+
     // ================================================================ strings and the tab
 
     [Fact]

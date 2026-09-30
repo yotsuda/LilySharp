@@ -375,9 +375,17 @@ public sealed partial class MeasureCollector
     /// (<see cref="Music.ShapeChords"/>): its tuning and sounding shift, and the key as
     /// written here. Empty when no written shape fits — the walk then makes a spacer.</summary>
     private ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
-        // A capo raises every string by its fret: the shape is pressed above it (2026-09-29). The
-        // shift is "sounding = written + shift", so a higher sounding note is a SMALLER shift.
-        => Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps());
+        // A spread note of a << >> group (ArpeggioSpread) is the item narrowed to that one note.
+        => _spreadNote is { } spread && ReferenceEquals(spread.Item, chord.Green)
+            ? [spread.Note]
+            // A capo raises every string by its fret: the shape is pressed above it (2026-09-29).
+            // The shift is "sounding = written + shift", so a higher sounding note is a SMALLER shift.
+            : Music.ShapeChords.Notes(chord, _partShapeTuning, _partSoundingShift - _chordSpelling.Capo, WrittenKeySharps());
+
+    /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being played one
+    /// note at a time (<see cref="Music.ArpeggioSpread"/>) and the note it plays now; null
+    /// outside that member. Keyed by the item's green node — a red node is re-created per read.</summary>
+    private (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? _spreadNote;
 
     /// <summary>A <c>chord(…)</c> item with no usable shape as a SPACER of its written length —
     /// the duration carry as a chord's (LYS1040 says why nothing is drawn).</summary>

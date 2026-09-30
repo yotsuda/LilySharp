@@ -433,6 +433,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             {
                 case ScaleDegreeSyntax:
                     return true; // key-dependent — the collector's call
+                case ChordSyntax { IsShapeChord: true }:
+                    return true; // its notes depend on the part's tuning — the collector's call
                 case PitchSyntax p:
                     pitches.Add(p);
                     break;

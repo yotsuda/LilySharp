@@ -468,7 +468,9 @@ public sealed partial class MeasureCollector
         bool tieAfterGroup = false, bool slurStartAfterGroup = false, bool slurEndAfterGroup = false,
         int tieAfterSource = 0, int slurStartAfterSource = 0, int slurEndAfterSource = 0)
     {
-        var members = arpeggio.Sequence.ToList(); // bare pitches, degrees, chords and/or rests, with shares
+        // Bare pitches, degrees, chords and/or rests, with shares — a chord(…) member spread
+        // into its notes (owner's decision 2026-09-30, Music.ArpeggioSpread).
+        var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
             return;
 
@@ -480,7 +482,7 @@ public sealed partial class MeasureCollector
         // LILYPOND-REF: lily/parser.yy:3505-3514 optional_notemode_duration — default_duration_
         Fraction total = arpeggio.TotalDuration?.ToFraction()
             ?? _defaultDuration.Dotted(_defaultDots);
-        var sub = ArpeggioSubdivision.Compute(arpeggio.ShareCount, total);
+        var sub = ArpeggioSubdivision.Compute(Music.ArpeggioSpread.ShareCount(members), total);
         Fraction scale = sub.TimeScale;
         // Octave marks after '>>' shift the whole group (like a chord's '<c e g>,'): the
         // shift is applied to the ROOT, and the stacked members / degrees inherit it through
@@ -511,7 +513,7 @@ public sealed partial class MeasureCollector
         int rootStep = 0;
         for (int mi = 0; mi < members.Count; mi++)
         {
-            var (member, shares, slurStart, slurEnd, slurStartSrc, slurEndSrc) = members[mi];
+            var ((member, shares, slurStart, slurEnd, slurStartSrc, slurEndSrc), spreadNote) = members[mi];
             bool lastMember = mi == members.Count - 1;
             // The bows: the member's own marks, plus — on the last member — whatever was
             // written after '>>'.
@@ -559,9 +561,21 @@ public sealed partial class MeasureCollector
             Fraction onset = startTiming;
             for (int i = startNoteIndex; i < builder.CurrentItemCount; i++)
                 onset += builder.CurrentItems[i].Duration;
+            // A spread note plays as its chord(…) item narrowed to that note: absolute, with its
+            // string. The first one before any pitched member is the group's root — its lowest
+            // note, as the item hands on (the marks after '>>' do not move it).
+            _spreadNote = spreadNote is { } sn ? (member.Green, sn) : null;
             EmitArpeggioMember(member, builder, parts, scale, isRoot ? groupOctave : 0, marks, groupString,
                 measureIndex, onset);
-            if (!rootSet && letter is { } rl)
+            _spreadNote = null;
+            if (!rootSet && spreadNote is { } rootNote)
+            {
+                rootSet = true;
+                anchorOctave = rootNote.Octave;
+                rootStep = rootNote.Step;
+                rootLetter = "cdefgab"[rootStep];
+            }
+            else if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
                 anchorOctave = _octave.CurrentOctave;
@@ -655,6 +669,13 @@ public sealed partial class MeasureCollector
                 }
                 break;
             }
+            // A chord(…) member with no shape on the tuning is not spread (ArpeggioSpread): its
+            // share is a silence, as the item alone is a spacer (LYS1040 says why).
+            case ChordSyntax { IsShapeChord: true } unshaped when ShapeNotesOf(unshaped).IsEmpty:
+                foreach (var part in parts)
+                    builder.AddItemWithoutDuration(new RestItem(Fraction.FromNoteValue(part.Value), part.Dots,
+                        unshaped.SourceStart) { IsSpacer = true, TimeScale = scale });
+                break;
             case ChordSyntax chord:
             {
                 // A second part re-reads the chord, so the frame is put back to what the

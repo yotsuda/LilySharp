@@ -2594,7 +2594,8 @@ public sealed class MusicXmlExporter
     /// </summary>
     private void ProcessArpeggio(ArpeggioSyntax arpeggio)
     {
-        var members = arpeggio.Sequence.ToList();
+        // A chord(…) member spread into its notes (the page's MeasureCollector.ProcessArpeggio).
+        var members = Music.ArpeggioSpread.Of(arpeggio, ShapeNotesOf);
         if (members.Count == 0)
             return;
 
@@ -2603,7 +2604,7 @@ public sealed class MusicXmlExporter
         // P-note frame; a member's shares are written as ArpeggioSubdivision.SpellShares
         // spells them — one note, or tied notes.
         Fraction total = arpeggio.TotalDuration?.ToFraction() ?? _defaultDuration;
-        var sub = ArpeggioSubdivision.Compute(arpeggio.ShareCount, total);
+        var sub = ArpeggioSubdivision.Compute(Music.ArpeggioSpread.ShareCount(members), total);
         var tupletMeasure = _currentMeasure;
         int tupletFrom = _currentMeasure?.Notes.Count ?? 0;
         int tupletNumber = 0;
@@ -2640,7 +2641,7 @@ public sealed class MusicXmlExporter
         bool rootSet = false;
         int anchorOctave = 0;
         int rootStep = 0;
-        foreach (var (member, shares, slurStart, slurEnd, _, _) in members)
+        foreach (var ((member, shares, slurStart, slurEnd, _, _), spreadNote) in members)
         {
             var parts = sub.SpellShares(shares);
             if (member is ScaleDegreeSyntax degree)
@@ -2679,6 +2680,8 @@ public sealed class MusicXmlExporter
                 // A second part re-reads the chord, so the frame is put back to what the
                 // first part read (the root chord folds the group's marks in on every read).
                 var frame = (_octaveAbsolute, _octaveAnchor, _currentStep, _currentOctave);
+                // A spread note plays as its chord(…) item narrowed to that note (the page's rule).
+                _spreadNote = spreadNote is { } sn ? (chord.Green, sn) : null;
                 for (int k = 0; k < parts.Count; k++)
                 {
                     bool first = k == 0, last = k == parts.Count - 1;
@@ -2693,6 +2696,7 @@ public sealed class MusicXmlExporter
                     if (!last)
                         OpenTies(_chordMembers);
                 }
+                _spreadNote = null;
             }
             else
             {
@@ -2702,7 +2706,13 @@ public sealed class MusicXmlExporter
                     ProcessNode(member);
                 }
             }
-            if (!rootSet && letter is { } rl)
+            if (!rootSet && spreadNote is { } rootNote)
+            {
+                rootSet = true;
+                anchorOctave = rootNote.Octave;
+                rootStep = rootNote.Step;
+            }
+            else if (!rootSet && letter is { } rl)
             {
                 rootSet = true;
                 anchorOctave = _currentOctave;
@@ -3192,8 +3202,15 @@ public sealed class MusicXmlExporter
     /// <summary>A <c>chord(…)</c> item's strings on the part's tuning (Music.ShapeChords — the
     /// page's reading); the capo raises the strings (2026-09-29).</summary>
     private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
-        => Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-            _partTransposeSemitones - DiagramCapo, _keyFifths);
+        // A spread note of a << >> group (ArpeggioSpread) is the item narrowed to that one note.
+        => _spreadNote is { } spread && ReferenceEquals(spread.Item, chord.Green)
+            ? [spread.Note]
+            : Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
+                _partTransposeSemitones - DiagramCapo, _keyFifths);
+
+    /// <summary>The <c>chord(…)</c> member of a <c>&lt;&lt; &gt;&gt;</c> group being written one
+    /// note at a time and the note it writes now (the page's MeasureCollector._spreadNote).</summary>
+    private (Syntax.InternalSyntax.GreenNode Item, Music.ShapeNote Note)? _spreadNote;
 
     /// <summary>A phrase's outgoing anchor when its body opens with a <c>chord(…)</c> item
     /// (<see cref="Music.PhraseAnchor.Shape"/>): the item's lowest note as written, as
