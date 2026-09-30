@@ -119,20 +119,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第703セッション（2026-09-30・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p703`（HEAD `b95fd90d`・未 push 99）＝full **10429 / 0 / 2 / 10431**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本の `M` は改行だけ（CRLF・内容の差 0・2026-09-29 から在る）＝触らない。
+⑴ ★ `510ab1dc`（第702 の 7.7）: `StringLiteral.IsClosed`＝「閉じた 1 つの literal か」を 1 軒に。6 か所の「始まりが引用＋末尾が `"`」は `@"`（開きだけ）・`"a\"`（末尾の引用が escape）・`@"a""`・`"a" "b"`（2 つの literal）を閉じたと取っていた＋`ChordAnnotation.Parse` に 7 つ目の綴り（開きの後に `"` が在れば閉じた）＝全部 `Value` と同じ読みで閉じ引用を探す 1 関数に寄せた（残る引用の判定は `StringLiteral` の中だけ＝grep で確認）。網 `StringLiteralTests` +14（毒＝`IsClosed` を字面の判定に戻す: 予測した 4 件だけ赤）。掃き 998 冊: `lysc check` の診断の出入り 0・svg 782/782 がバイト同一（data-pos を伏せて）＝コーパスに無い形。full **10443 / 0 / 2 / 10445**。
+★ `-End p703 -DiffBase b95fd90d`＝full **10443 / 0 / 2 / 10445**・門 6 つ全 OK・Core `+` 39 行に REF 0／OWN 0（`StringLiteral` の家の中＝既に OWN の註の下・LP に対応物なし）。7.6: ⒜ なし。7.7: `SymbolCaseValidator.IsQuoted` は `IsClosed` をそのまま呼ぶだけの 1 行になった（名前が「開きだけ」の `StringLiteral.IsQuoted` と紛らわしい＝畳むなら呼び出し 1 か所を `IsClosed` に）。push はユーザー。
+
+## 以下は第702セッションの経緯
+
 ### 1.1 第702セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き。★ `-Start p702`（HEAD `2fce5152`・未 push 96）＝full **10409 / 0 / 2 / 10411**（引継ぎと一致）。**ユーザー決定（2026-09-30）: 文字列の escape は C# の文法に準じる・`@""` の verbatim 形式も使えるようにする。**
 ⑴ ★ `d39f1cda`: `Syntax.StringLiteral`（`Value`／`Errors`／`IsQuoted`／`Quote`）を 1 軒に・lexer が `@"…"` を読む・LYS0036（未知の escape・位置はその escape）・`Trim('"')`／`[1..^1]` の 23 か所＋引用の判定 6 か所を寄せた・import の `EscapeString` は `Quote`・LP export は既に値を LP の escape で書いていた（前は Lily# の escape を二重にしていた）・TextMate は verbatim と C# の escape を色付け（`invalid.*` は使わない方針＝`EditorColouringTests`）・GRAMMAR／SYNTAX_REFERENCE／LLM spec に文字列の定義を初めて書いた・CHANGELOG 2 本。コーパスで意味が変わる文字列は 2 本だけ（`chord-name-entry.lys` の `"\^{~}3"` 等＝`@"…"` に）。網 `StringLiteralTests` 20（毒＝`LysValue` を `Trim` に戻す: 読む 2 本だけ赤＝的中）。`lysc check` の掃き 998 冊: 診断の出入り 0。途中のユーザーの問い（`{fonts.serif}` の補間）は「今は入れない・入れるなら `$"…"`」と答えた（§3）。full **10429 / 0 / 2 / 10431**。
 ★ `-End p702 -DiffBase 2fce5152`＝full **10429 / 0 / 2 / 10431**・門 6 つ全 OK・Core `+` 258 行に REF 0／OWN 1（`StringLiteral`＝ユーザー決定の言語仕様・LP に対応物なし）。7.6: ⒜ なし。7.7: 引用の判定（`IsQuoted`＋末尾の `"`）がまだ 6 か所で「始まりが引用か＋終わりが `"`」と書かれている＝`StringLiteral` に「閉じた literal か」を聞く関数を置けば 1 軒（未着手）。push はユーザー。
-
-## 以下は第701セッションの経緯
-
-### 1.1 第701セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p701`（HEAD `27a97668`・未 push 94）＝full **10405 / 0 / 2 / 10407**（引継ぎと一致）。
-⑴ §1.0 ⒩（relative の import が音高を変える 5 score）を切り分けた: **5 つとも 1 score ずつ回すと音高は一致**＝第700 の `relsweep.ps1` の誤り。複数 score の本（2〜4 本の xml）で import の出力フォルダを*本の*フォルダで決めていたので互いに上書きし、別の score の xml と比べていた。直した計器（1 xml に 1 フォルダ・Lab `sessions/p700/relsweep.ps1`）で取り直すと **relative の音高のずれは `a9b61939` の前 68／1199 → 後 0／1199**（第700 と `a9b61939` の message の「73 → 5」は誤り＝ここで訂正）。コードは触っていない。
-⑵ 第700 が記録した「voice block の `time`」: `MeasureValidator` は span の voice 2..N を stream の*後*で、stream が*終わった*拍子で検査していた＝`voice { c''1 | } { c'1 | } time 3/4 c'2. |` の下声 c'1 が 3/4 超過（span の*後*の `time` でも起きる）。★ `e89da84d`: span の入口の拍子で始め（`MeterNow`／`RestoreMeter`）、voice 1 の `time` を同じ小節の頭に持ち込む（`WithMeters`・その小節に自分の `time` があれば自分のもの＝LP の `\time` は Timing に効く）。持ち込んだ `time` は警告の位置から除く（voice 1 を指さない）。網 `VoiceSpanMeasureValidationTests` +4（毒 2 本とも赤。⚠ 予測を 2 か所外した: A で対照も赤＝終わりの拍子で 1 小節目も警告／B で 2 行目も赤＝短い最後の小節は免除されない）。掃き（998 冊の `lysc check` 前後）: 警告の出入り 0＝コーパスに無い形。⚠ build が 8 分かかる回が 2 度あった（CPU 待ちの表示・放置で完走）。full **10409 / 0 / 2 / 10411**。
-★ `-End p701 -DiffBase 27a97668`＝full **10409 / 0 / 2 / 10411**・門 6 つ全 OK・Core `+` 83 行に REF 1／OWN 0（timing-translator.cc＝`\time` が Timing に効く）。7.6: ⒝（LP は Timing を 1 つ持ち全 voice が読む・Lily# の検査は voice ごとの流れなので voice 1 の `time` を他の voice の同じ小節に写す＝字面にするには検査を span 全体の時間軸で回す模型が要る）。7.7: 自分で足した「持ち込んだ node を警告位置から除く」集合は検査の外の状態（`_carriedMeters`）＝validator の寿命の間だけ・毒 A で対照が赤になったのは restore が効いている証。push はユーザー。
 
 ## 2. 開いている作業
 
