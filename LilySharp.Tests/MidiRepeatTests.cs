@@ -111,7 +111,9 @@ public sealed class MidiRepeatTests
     [Fact]
     public void InlineVoltas_ExplicitCountClampsToLastEnding()
     {
-        // :|*3 forces 3 passes but only two endings -> pass 3 reuses the last ending.
+        // :|*3 forces 3 passes but only two endings -> pass 3 reuses the last ending. The
+        // spelling is an error since 2026-09-30 (LYS1042 in a form; the music stream's repeat
+        // is LYS1034); this pins what the MIDI still does with it.
         Assert.Equal(new[] { 60, 62, 60, 64, 60, 64 },
             Pitches("{ |: c4 [1. d4] :|*3 [2. e4] }"));
     }

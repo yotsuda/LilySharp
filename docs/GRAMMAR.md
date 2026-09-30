@@ -1249,7 +1249,9 @@ StructureItem  = SectionRef                        (* Identifier , { OctaveMark 
    "Expected 'RepeatEndBar'" error, and the block ends there, unclosed.
    Every RUN — from the '|:', or from a ':|:' that opens the next — names at least one
    section before its first ending or its ':|' (LYS1041): the body is what every pass plays,
-   so |: [1. X] :| [2. Y], |: :| and |: A :|: :| are errors. *)
+   so |: [1. X] :| [2. Y], |: :| and |: A :|: :| are errors.
+   With endings the numbers are the passes: a '*' Integer beside them is an error (LYS1042),
+   and each pass from 1 to the highest number is named by exactly one ending (LYS1043). *)
 StructureRepeat = '|:' , { StructureItem } , ':|' , [ '*' , Integer ] ,
                   [ StructureVolta , { ':|' , StructureVolta } ] ;
 
@@ -1913,7 +1915,8 @@ Arpeggio       = '<<' , ArpMember , { ArpItem } , '>>' , { "'" | ',' } , [ Durat
 
 Barline        = '|' | '||' | '|.' | '!' ;           (* MUSIC: the divisions *)
 RepeatBarline  = '|:' | ':|:' | RepeatEnd ;          (* FORM ONLY — changes the playing order *)
-RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
+RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2;
+                                                        not beside endings (LYS1042) *)
 
 (* REPEAT BARLINES ARE FORM-ONLY (user decision, 2026-08-31; LYS1034). Written in music
    they are an error — see the note on MusicItem in §8.1 for the line the decision draws.

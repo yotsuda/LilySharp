@@ -8,6 +8,14 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Breaking changes
 
+- **An ending's numbers are its passes.** `|: A [1. B] :|*3 [2. C]` is now an error
+  (LYS1042): the count said three passes where the numbers said two, and the page printed
+  "1." "2." while it played A B A C A C — a C followed by a return no bar line shows (LilyPond
+  reads the same shape as "1. 2." "3.", A B A B A C). Write each pass as a number:
+  `|: A [1-2. B] :| [3. C]`. A pass no ending names, or two name (`[1. B] :| [3. C]`,
+  `[1-2. B] :| [2. C]`), is an error too (LYS1043). A repeat without endings keeps
+  `|: A :|*N`. A bracket now prints its passes as LilyPond does — `[1-2.` prints "1. 2.",
+  `[1-3.` "1.–3.", `[1,3.` "1. 3." — where it printed the written "1-2.".
 - **Strings follow C#'s grammar.** A regular `"…"` decodes C#'s escapes — `\"`, `\\`, `\n`,
   `\t`, `\uXXXX` and the rest — and any other backslash is an error (LYS0036); the new
   verbatim `@"…"` takes a backslash as written, with `""` for a quote. Until now no escape

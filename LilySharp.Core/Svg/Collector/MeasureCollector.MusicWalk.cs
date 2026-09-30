@@ -1521,7 +1521,7 @@ public sealed partial class MeasureCollector
                     if (builder.CurrentItemCount > 0)
                         endMeasureIndex++; // include the in-progress measure
                     int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.VoltaText, volta.IsClosed, volta.SourceStart));
+                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.PrintedText, volta.IsClosed, volta.SourceStart));
                 }
                 break;
 

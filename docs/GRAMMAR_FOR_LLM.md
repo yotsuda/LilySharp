@@ -470,8 +470,11 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
   An ending NAMES one or more sections, played in order under one bracket:
   `|: A [1. B C] :| [2. D]` plays A B C, then A D. The body before the first ending must
   name a section (`|: [1. B] :| [2. C]` and `|: :|` are errors, LYS1041).
-  Play count defaults to the number of endings (2 with none);
-  set it explicitly with `:|*N`. The `]` ends the ending and hooks its bracket's right end
+  With endings the numbers are the passes: `|: A [1-2. B] :| [3. C]` plays A B A B A C, and
+  every pass from 1 to the highest number must be named by exactly one ending (LYS1043); a
+  `:|*N` beside endings is an error (LYS1042). Without endings the body plays twice, or
+  `|: A :|*N` N times. A bracket prints its passes as LilyPond does: `[1-2.` "1. 2.",
+  `[1-3.` "1.–3.". The `]` ends the ending and hooks its bracket's right end
   down; `-]` ends it with a straight (open) right end: `|: A [1. B] :| [2. C D -]`. The
   `]` may be left off only right before a `:|` (`|: A [1. B C :| [2. D]` — the `:|` closes
   it, hooked); an unclosed LAST ending is an error. The first ending is the last thing

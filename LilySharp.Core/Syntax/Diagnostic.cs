@@ -690,6 +690,27 @@ public static class DiagnosticCodes
     /// </remarks>
     public const string EmptyRepeatBody = "LYS1041";
 
+    /// <summary>Error: a form repeat with endings writes a play count — <c>|: A [1. B] :|*3 [2. C]</c>.
+    /// The endings' numbers say which passes there are; a count beside them says it twice, and
+    /// where the two disagree the page shows one reading and plays another. Write every pass
+    /// as a number instead (<c>[1-2. B] :| [3. C]</c>). Reported at the <c>*N</c>.</summary>
+    /// <remarks>
+    /// Owner's decision 2026-09-30 (HANDOFF §1.1 第710): until then the count won and a pass no
+    /// ending named replayed the LAST ending — <c>[1. B] :|*3 [2. C]</c> printed "1." "2." and
+    /// played A B A C A C, a C followed by a return no bar line shows — while LilyPond reads the
+    /// same shape as "1. 2." "3.", A B A B A C. A repeat WITHOUT endings keeps <c>:|*N</c>: there
+    /// is no number to write the count on. Written by no book of the owner's corpus.
+    /// </remarks>
+    public const string RepeatCountWithEndings = "LYS1042";
+
+    /// <summary>Error: a pass of a form repeat is named by no ending, or by two —
+    /// <c>|: A [1. B] :| [3. C]</c> (pass 2), <c>|: A [1-2. B] :| [2. C]</c> (pass 2 twice).
+    /// Each pass from 1 to the highest number plays exactly one ending. Reported at the ending
+    /// after the gap, or at the second one naming the pass.</summary>
+    /// <remarks>Owner's decision 2026-09-30, with <see cref="RepeatCountWithEndings"/>: a pass
+    /// the numbers leave out, or name twice, has no reading the page can show.</remarks>
+    public const string EndingPassNotNamedOnce = "LYS1043";
+
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 

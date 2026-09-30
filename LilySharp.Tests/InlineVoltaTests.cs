@@ -68,11 +68,12 @@ public sealed class InlineVoltaTests
     }
 
     [Fact]
-    public void RangeEnding_KeepsRangeLabel()
+    public void RangeEnding_PrintsItsPassesAsLilyPondDoes()
     {
         var score = Collect("{ |: c4 d4 e4 f4 [1-2. g4 a4 b4 c5] :| [3. c4 d4 e4 f4] }");
 
-        Assert.Equal("1-2.", score.VoltaBrackets[0].VoltaText);
+        // "1. 2." (thin space), LilyPond's text for passes 1 and 2 — the written "1-2." until 2026-09-30.
+        Assert.Equal("1. 2.", score.VoltaBrackets[0].VoltaText);
         Assert.Equal("3.", score.VoltaBrackets[1].VoltaText);
     }
 

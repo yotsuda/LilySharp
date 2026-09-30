@@ -67,9 +67,54 @@ public sealed class FormEndingPassTests
     [InlineData("|: A [1. B] :| [2-3. C] D", "ABACACD")]
     [InlineData("|: A [1-2. B C] :| [3. D]", "ABCABCAD")]   // an ending of two sections, on both its passes
     [InlineData("|: A [1. B] :| [2. C]", "ABAC")]           // the plain spelling, as before
-    [InlineData("|: A [1. B] :|*3 [2. C]", "ABACAC")]       // a pass no ending names replays the last, as inline
     public void TheMidiPlaysEachEndingOnThePassesItNames(string form, string played)
         => Assert.Equal(played, Played(form));
+
+    private static List<Diagnostic> Errors(string form, string code)
+        => [.. SemanticValidation.Run(SyntaxTree.Parse(Book(form))).Where(d => d.Code == code)];
+
+    /// <summary>Owner's decision 2026-09-30: the endings' numbers are the passes. A count beside
+    /// them (LYS1042) and a pass no ending names or two name (LYS1043) are errors — until then
+    /// `[1. B] :|*3 [2. C]` printed "1." "2." and played A B A C A C, where LilyPond reads
+    /// "1. 2." "3.". A repeat without endings keeps its count.</summary>
+    [Fact]
+    public void TheNumbersAreThePasses_ACountBesideThemAndAGapAreErrors()
+    {
+        var count = Assert.Single(Errors("|: A [1. B] :|*3 [2. C]", DiagnosticCodes.RepeatCountWithEndings));
+        Assert.Equal(DiagnosticSeverity.Error, count.Severity);
+        Assert.Equal(2, count.Span.Length);                          // the "*3"
+        Assert.Contains("'|: A [1-2. B] :| [3. C]'", count.Message);
+        Assert.Empty(Errors("|: A :|*3", DiagnosticCodes.RepeatCountWithEndings));
+        Assert.Empty(Errors("|: A [1-2. B] :| [3. C]", DiagnosticCodes.RepeatCountWithEndings));
+
+        Assert.Contains("pass 2", Assert.Single(Errors("|: A [1. B] :| [3. C]", DiagnosticCodes.EndingPassNotNamedOnce)).Message);
+        Assert.Contains("Pass 2 is already '[1-2.'",
+            Assert.Single(Errors("|: A [1-2. B] :| [2. C]", DiagnosticCodes.EndingPassNotNamedOnce)).Message);
+        // Every pass once: no error — ranges, lists, a first ending alone.
+        foreach (string ok in new[] { "|: A [1-2. B] :| [3. C]", "|: A [1,3. B] :| [2. C]",
+                     "|: A [1. B] :| [2. C] :| [3. D]", "|: A [1. B] :| C" })
+            Assert.Empty(Errors(ok, DiagnosticCodes.EndingPassNotNamedOnce));
+    }
+
+    /// <summary>The bracket prints its passes as LilyPond does (scm/output-lib.scm
+    /// volta-bracket-interface::calc-text): a run under three each with its point, a longer
+    /// one as a range with an en dash, the runs apart by a thin space. Until 2026-09-30 the
+    /// page printed the written spelling, "1-2." where LilyPond prints "1. 2.".</summary>
+    [Theory]
+    [InlineData("|: A [1. B] :| [2. C]", "1.", "2.")]
+    [InlineData("|: A [1-2. B] :| [3. C]", "1. 2.", "3.")]
+    [InlineData("|: A [1-3. B] :| [4. C]", "1.–3.", "4.")]
+    [InlineData("|: A [1,3. B] :| [2. C]", "1. 3.", "2.")]
+    public void TheBracketPrintsItsPassesAsLilyPondDoes(string form, string first, string second)
+        => Assert.Equal(new[] { first, second },
+            Collect(Book(form)).VoltaBrackets.OrderBy(v => v.StartMeasureIndex).Select(v => v.VoltaText).ToArray());
+
+    [Theory]
+    [InlineData(new[] { 1, 2, 3, 5 }, "1.–3. 5.")]
+    [InlineData(new[] { 2, 1 }, "1. 2.")]
+    [InlineData(new[] { 4 }, "4.")]
+    public void ThePrintedTextGroupsRuns(int[] passes, string printed)
+        => Assert.Equal(printed, SyntaxFacts.VoltaPrintedText(passes));
 
     /// <summary>The form and the inline spelling of one piece sound the same: c d c e c d.</summary>
     [Fact]

@@ -1273,6 +1273,9 @@ public sealed class InlineVoltaSyntax : SyntaxNode
     /// the fold a form ending shares).</summary>
     public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber);
 
+    /// <summary>What the bracket prints, as LilyPond prints it (<see cref="SyntaxFacts.VoltaPrintedText"/>).</summary>
+    public string PrintedText => SyntaxFacts.VoltaPrintedText(Numbers);
+
     /// <summary>Highest pass number this ending covers (drives the inferred repeat count).</summary>
     public int MaxNumber => Numbers.Max();
 

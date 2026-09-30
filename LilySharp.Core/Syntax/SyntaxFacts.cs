@@ -122,6 +122,40 @@ internal static class SyntaxFacts
     }
 
     /// <summary>
+    /// The text a volta bracket PRINTS for the passes it names, as LilyPond prints it: the
+    /// passes grouped into runs; a run of three or more is <c>1.–3.</c> (EN DASH), a shorter
+    /// run each number with its point, <c>1. 2.</c>; the runs apart by a THIN SPACE — so
+    /// <c>[1-2.</c> prints <c>1. 2.</c>, <c>[1-3.</c> <c>1.–3.</c>, <c>[1,3.</c> <c>1. 3.</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm:2267-2290 volta-bracket-interface::calc-text —
+    ///   group-into-ranges (scm/lily-library.scm:747-767), a range at or over
+    ///   range-collapse-threshold (3, scm/define-grobs.scm:4299) as start "–" end, else each
+    ///   number "N." joined by " ", the ranges joined by " ".
+    /// Owner's decision 2026-09-30: the page printed the written spelling (<c>1-2.</c>,
+    /// <c>1,3.</c>) until then. The diagnostics still QUOTE the written spelling
+    /// (<see cref="FormAlternativeSyntax.VoltaText"/>).
+    /// </remarks>
+    public static string VoltaPrintedText(IEnumerable<int> passes)
+    {
+        const int RangeCollapseThreshold = 3;
+        var sorted = passes.Distinct().Order().ToList();
+        var runs = new List<string>();
+        for (int i = 0; i < sorted.Count;)
+        {
+            int j = i;
+            while (j + 1 < sorted.Count && sorted[j + 1] == sorted[j] + 1)
+                j++;
+            int start = sorted[i], end = sorted[j];
+            runs.Add(end - start + 1 >= RangeCollapseThreshold
+                ? $"{start}.–{end}."
+                : string.Join(" ", Enumerable.Range(start, end - start + 1).Select(n => $"{n}.")));
+            i = j + 1;
+        }
+        return string.Join(" ", runs);
+    }
+
+    /// <summary>
     /// The occurrence label written on a form item — the quoted string, unquoted — or null.
     /// </summary>
     /// <remarks>

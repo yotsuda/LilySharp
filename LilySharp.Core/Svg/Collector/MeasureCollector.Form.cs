@@ -298,7 +298,7 @@ public sealed partial class MeasureCollector
         var length = alt.LengthUnder(_meta.LayoutPlan.VoltaBracket);
         int lastCovered = length.LastBar(first, last);
         bool cut = lastCovered < last;
-        return new VoltaBracketItem(first, lastCovered, alt.VoltaText,
+        return new VoltaBracketItem(first, lastCovered, alt.PrintedText,
             IsClosed: alt.EndsHooked && !cut, alt.SourceStart,
             FirstSystemOnly: length.Mode == Semantics.VoltaBracketLengthMode.Line,
             CutEndingLastMeasureIndex: cut ? last : -1);

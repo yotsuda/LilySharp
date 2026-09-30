@@ -113,12 +113,13 @@ internal static class RepeatPasses
     /// written whose numbers name it, else the LAST written, or -1 with no endings.</summary>
     /// <remarks>
     /// LILYSHARP-OWN: a pass no ending names replays the LAST ending — <c>|: A [1. B] :|*3 [2. C]</c>
-    /// plays C on passes 2 and 3 (<c>MidiRepeatTests.InlineVoltas_ExplicitCountClampsToLastEnding</c>
-    /// has pinned it since the inline spelling landed). LilyPond departs here: with no <c>\volta</c>
-    /// on any alternative, <c>make-repeat</c> (scm/music-functions.scm:346-352) gives the extra
-    /// volte to the FIRST alternative, so <c>\repeat volta 3 { A } \alternative { { B } { C } }</c>
-    /// plays B B C. The twin therefore writes a count no ending covers as LilyPond reads it; the
-    /// difference is observed by no test and goes when the form's readers take LilyPond's fill.
+    /// plays C on passes 2 and 3 (<c>MidiRepeatTests.InlineVoltas_ExplicitCountClampsToLastEnding</c>).
+    /// LilyPond departs here: with no <c>\volta</c> on any alternative, <c>make-repeat</c>
+    /// (scm/music-functions.scm:346-352) gives the extra volte to the FIRST alternative, so
+    /// <c>\repeat volta 3 { A } \alternative { { B } { C } }</c> plays B B C. Since 2026-09-30
+    /// (owner's decision) such a pass is an ERROR — a count beside endings is LYS1042, a pass the
+    /// numbers skip or name twice LYS1043 — so this arm plays only a file that does not compile
+    /// clean; every clean form names each pass once and no reading is left to choose.
     /// </remarks>
     public static int EndingFor(int pass, IReadOnlyList<PassSet> endings)
     {

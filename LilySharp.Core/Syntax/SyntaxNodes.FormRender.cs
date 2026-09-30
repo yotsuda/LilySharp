@@ -293,6 +293,10 @@ public sealed partial class FormAlternativeSyntax : SyntaxNode
     /// run by (<c>Semantics.RepeatPasses</c>).</summary>
     public IEnumerable<int> Numbers => SyntaxFacts.VoltaPassNumbers(Number, Separator, EndNumber);
 
+    /// <summary>What the bracket prints, as LilyPond prints it (<see cref="SyntaxFacts.VoltaPrintedText"/>):
+    /// <c>[1-2.</c> prints <c>1. 2.</c>. <see cref="VoltaText"/> is the written spelling.</summary>
+    public string PrintedText => SyntaxFacts.VoltaPrintedText(Numbers);
+
     /// <summary>
     /// The ending's sections in the order they play: each a <see cref="SectionReferenceSyntax"/>
     /// or a silent (<c>~</c>) reference. Never empty — a missing name is kept as an empty

@@ -67,6 +67,7 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
                     + "('~A' plays it without printing a rehearsal label).");
 
             ReportEndingsNoRepeatOpens(form);
+            ReportEndingPasses(FormWalk.Read(form));
             ReportLabelsThatWillNotPrint(form);
         }
 
@@ -171,6 +172,68 @@ internal sealed class FormDeclarationValidator : ISemanticValidator
                 + $"('|: … [{ending.VoltaText} {section}] :| …'), or remove the brackets and "
                 + $"write '{section}' on its own.");
         }
+    }
+
+    /// <summary>
+    /// LYS1042 and LYS1043 — each repeat with endings: no <c>:|*N</c> beside the numbers, and
+    /// every pass from 1 to the highest number named by exactly one ending (owner's decision
+    /// 2026-09-30). The numbers are then the whole story the page prints and every reader plays
+    /// (<see cref="RepeatPasses"/>), as LilyPond's <c>\volta</c> numbers are.
+    /// </summary>
+    /// <remarks>⚠️ PERF: the form's own items, as <see cref="ReportEndingsNoRepeatOpens"/>.</remarks>
+    private void ReportEndingPasses(IReadOnlyList<FormWalk.Item> items)
+    {
+        foreach (var repeat in items.OfType<FormWalk.Repeat>())
+        {
+            ReportEndingPasses(repeat.Children);
+            var endings = repeat.Children.OfType<FormWalk.Ending>().Select(e => e.Node).ToList();
+            if (endings.Count == 0)
+                continue;
+
+            if (repeat.ExplicitPlayCount is { } count && repeat.Node is { } block && CountSpan(block) is { } countSpan)
+                _diagnostics.Error(countSpan, DiagnosticCodes.RepeatCountWithEndings,
+                    $"A repeat with endings takes its passes from the endings' numbers: remove "
+                    + $"'*{count}' and number every pass instead — the pass an ending plays on "
+                    + "is the number it prints: three passes, the first two on B, are "
+                    + "'|: A [1-2. B] :| [3. C]'.");
+
+            var namedBy = new Dictionary<int, FormAlternativeSyntax>();
+            foreach (var ending in endings)
+            {
+                foreach (int pass in ending.Numbers)
+                {
+                    if (namedBy.TryGetValue(pass, out var first))
+                    {
+                        _diagnostics.Error(InkSpan(ending), DiagnosticCodes.EndingPassNotNamedOnce,
+                            $"Pass {pass} is already '[{first.VoltaText}': each pass plays one ending "
+                            + $"— take {pass} out of one of the two numbers.");
+                        break;
+                    }
+                    namedBy[pass] = ending;
+                }
+            }
+            int highest = namedBy.Keys.DefaultIfEmpty(0).Max();
+            var missing = Enumerable.Range(1, highest).Where(p => !namedBy.ContainsKey(p)).ToList();
+            if (missing.Count == 0)
+                continue;
+            // At the ending after the first gap: the one whose lowest number passes it.
+            var after = endings.First(e => e.Numbers.Any() && e.Numbers.Min() > missing[0]);
+            string passes = missing.Count == 1 ? $"pass {missing[0]}" : $"passes {string.Join(", ", missing)}";
+            _diagnostics.Error(InkSpan(after), DiagnosticCodes.EndingPassNotNamedOnce,
+                $"No ending plays {passes} of this repeat: every pass up to the highest number "
+                + $"({highest}) plays one ending — give {passes} to an ending's number "
+                + $"('[{missing[0]}. …]', or a range such as '[1-{missing[0]}. …]').");
+        }
+    }
+
+    /// <summary>The written <c>*N</c> of a repeat block, or null.</summary>
+    private static TextSpan? CountSpan(FormRepeatBlockSyntax block)
+    {
+        for (int i = 0; i + 1 < block.SlotCount; i++)
+            if (block.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.Asterisk } star
+                && block.GetChild(i + 1) is SyntaxTokenNode count)
+                return new TextSpan(star.Span.Start, count.Span.End - star.Span.Start);
+        return null;
     }
 
     /// <summary>

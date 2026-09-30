@@ -940,8 +940,11 @@ Volta repeats are written symbolically with `|: … :|` repeat barlines and volt
 endings `[1. Section] [2. Section]` — **in the `form`, never in the music**
 (**LYS1034**, user decision 2026-08-31). A repeat changes the ORDER the music plays
 in, and a book's order is written in its form; that is the whole line the rule draws.
-The play count defaults to 2 (or, when endings are present, the number of endings);
-give it explicitly with `|: … :|*N`.
+With endings, **the numbers are the passes**: the repeat plays as many passes as the highest
+number, and each pass from 1 up plays the ending that names it — `|: A [1-2. B] :| [3. C]` is
+A B A B A C. A pass no ending names, or two name, is an error (**LYS1043**), and so is a count
+beside endings (`|: A [1. B] :|*3 [2. C]`, **LYS1042**) — write the pass as a number instead
+(owner's decision 2026-09-30). Without endings the body plays twice, or `|: A :|*N` N times.
 
 ```
 part m { clef treble }
@@ -956,7 +959,9 @@ An ending NAMES a section — the music lives in the section, and the bracket go
 the reference. It may name several, played in order under one bracket:
 `|: A [1. B C] :| [2. D]` plays A B C, then A D. Each is written as in the form body
 (`[1. ~B C']` — `~` hides that play's label, a trailing mark shifts its octave). Endings
-accept ranges and lists: `[1-2. B]`, `[1,3. B]`. The first ending is the last thing before
+accept ranges and lists: `[1-2. B]`, `[1,3. B]`. The bracket prints its passes as LilyPond
+does — `[1-2.` prints "1. 2.", `[1-3.` "1.–3.", `[1,3.` "1. 3." (a run of three or more
+passes as a range). The first ending is the last thing before
 the `:|`; a third and later ending is written by repeating the same shape: `:| [3. D]`.
 
 **Where an ending ends, how its bracket ends, and how far the bracket reaches** are three
