@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第713セッションの経緯
+
+### 1.1 第713セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「(a) で進めて」＝第712 ⑶ の MMR の数字を LP の実測で直して再ベース・台帳点は作らない）。★ `-Start p713`（HEAD `841a7bcd`・未 push 125）＝full **10469 / 0 / 2 / 10471**（引継ぎと一致）。
+⑴ ★ `0154c19c`（第712 ⑶・ユーザー承認）: `DrawMmrNumber` のベースラインを「上端の線の中心＋0.4」から「線の ink の外縁（＋半分の線の太さ）＋`NumberStaffPadding`」＝2.45 に（LP の MultiMeasureRestNumber は staff extent から staff-padding 0.4）。第712 で退避した差分（Lab `sessions/p712/mmr-number-baseline.diff`）を `git apply`。snapshot 7 本を名前指定で承認（`tools/Approve-Snapshots.ps1 -Name 'test/multi-measure-rest*','test/mmr-*'`）＝git の差分 11 行・全部が数字の `y` だけ（x・字・他の行は不変）。**再ベースの根拠は台帳キーではなく LP の実測**（MMR の数字の台帳点は無い＝ユーザーが (a)「実測を根拠にそのまま」を選んだ・commit message に実測の座標を書いた）。網 `MultiMeasureRestTests.TheDrawnCountNumber_StandsOnTheSameBaseline`（SVG の数字のベースラインを五線中央から読む＝2.45）・毒（描画だけ HEAD に戻す）で赤。`NumberStaffPadding` とテストの「描く数字はまだ 2.4」の注を実態に。CHANGELOG（MMR の文字の項に 1 文）。full **10470 / 0 / 2 / 10472**。
+★ `-End p713 -DiffBase 841a7bcd`＝full **10470 / 0 / 2 / 10472**・門 6 つ全 OK・Core `+` 11 行に REF 1／OWN 0（REF は `NumberStaffPadding` の注＝define-grobs.scm:2408-2413）。7.6: 第712 ⑶＝ユーザー承認 (a)。7.7: 再ベースを台帳点なしで行った初めての形（RULES §5.2.1③ は「名指せないなら先に台帳点」）＝例外はユーザー決定で、根拠の実測の座標は commit message と網に残した。push はユーザー。
+
 ## 以下は第712セッションの経緯
 
 ### 1.1 第712セッション（2026-09-30・YT-DELL2）
