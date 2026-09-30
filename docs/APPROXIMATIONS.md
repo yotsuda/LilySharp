@@ -503,7 +503,7 @@
 ### `LilySharp.Core/Svg/Layout/TabStaffGeometry.cs`
 - **:34** LILYSHARP-OWN: deliberately LARGER than LilyPond's, whose tab digits are small
 - **:401** LILYSHARP-OWN (owner's decision 2026-09-24): an eighth pair takes a sixteenth
-- **:468** the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
+- **:474** and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
 ### `LilySharp.Core/Svg/Layout/TabStaffStencils.cs`
 - **:122** note on the staff above and over the same note on the tab — but it is LILYSHARP-OWN
 - **:221** ★ LILYSHARP-OWN, and it has to be: LilyPond names chords only through a

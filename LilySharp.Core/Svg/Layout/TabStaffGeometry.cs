@@ -457,15 +457,21 @@ internal readonly struct TabStaffGeometry
     /// string (0 = automatic). The tuning's 8vb octave shift is applied here.
     /// </summary>
     public (int stringNum, int fret) Fret(int writtenMidi, int? preferredString = null)
-        => writtenMidi == 0
-            ? (SlashString(StringCount), 0)
-            : Tunings.CalculateFret(writtenMidi + _octaveShift, _tuning, preferredString ?? 0);
+        => Tunings.CalculateFret(writtenMidi + _octaveShift, _tuning, preferredString ?? 0);
+
+    /// <summary>A single note's (string, fret) — <see cref="Fret"/>, except for a slash note,
+    /// which stands on <see cref="SlashString"/> with no digit.</summary>
+    /// <remarks>⚠️ ASKED OF THE NOTE, NOT OF MIDI 0: other callers pass Midi 0 for things
+    /// that are no slash (a grace note's column in the slur's encompass did), and a first cut
+    /// that tested the pitch moved test/tab-grace-slur's slur.</remarks>
+    private (int stringNum, int fret) NoteFret(NoteItem n)
+        => n.IsPitchlessSlash ? (SlashString(StringCount), 0) : Fret(n.Midi, n.StringNumber);
 
     /// <summary>
-    /// Where a slash note (<c>/4</c>, Midi 0 — NoteItem.IsPitchlessSlash) stands on a tab staff:
-    /// the middle string, as the slash stands on the notation staff's middle line. It has no
-    /// digit; its stem starts there (2026-10-01 — Midi 0 was clamped to the lowest string, and
-    /// the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
+    /// Where a slash note (<c>/4</c> — NoteItem.IsPitchlessSlash) stands on a tab staff: the
+    /// middle string, as the slash stands on the notation staff's middle line. It has no
+    /// digit; its stem starts there (2026-10-01 — its Midi 0 was clamped to the lowest string,
+    /// and the stem ran up the whole staff). LILYSHARP-OWN: LilyPond has no pitchless note.
     /// </summary>
     public static int SlashString(int stringCount) => (stringCount + 1) / 2;
 
@@ -608,7 +614,7 @@ internal readonly struct TabStaffGeometry
         switch (item)
         {
             case NoteItem n:
-                return Fret(n.Midi, n.StringNumber).stringNum;
+                return NoteFret(n).stringNum;
             case ChordItem c when c.Notes.Length > 0:
                 int shift = _octaveShift;
                 var alloc = Tunings.CalculateChordFrets(
@@ -633,7 +639,7 @@ internal readonly struct TabStaffGeometry
         {
             case NoteItem n:
             {
-                var (str, fret) = Fret(n.Midi, n.StringNumber);
+                var (str, fret) = NoteFret(n);
                 return (StaffPositionOfString(str), fret);
             }
             case ChordItem c when c.Notes.Length > 0:
@@ -718,7 +724,7 @@ internal readonly struct TabStaffGeometry
         {
             case NoteItem n:
             {
-                int p = StaffPositionOfString(Fret(n.Midi, n.StringNumber).stringNum);
+                int p = StaffPositionOfString(NoteFret(n).stringNum);
                 return (p, p);
             }
             case ChordItem c when c.Notes.Length > 0:
