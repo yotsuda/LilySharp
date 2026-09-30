@@ -44,3 +44,11 @@
   { \override Slur.after-line-breaking = #dump-slur
     e''4( \grace { r16 f''16 } g''4) e''4( \grace { r8 } g''4) | }
 }
+
+% A slur over a FLAGGED grace (session 723, second find): the grace stem's tip is general-grace-
+% settings' length-fraction 0.8 (b'16: 2.7 above its head), which Lily#'s slur obstacle read as
+% 3.5 x the head's magstep(-3) = 2.475 until then -- the bow sat 0.5 low.
+\score {
+  { \override Slur.after-line-breaking = #dump-slur
+    a'4( \grace { b'16 } c''4) c'4( \grace { a16 } b4) | }
+}

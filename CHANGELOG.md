@@ -320,7 +320,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `c'4 grace { r16 d'16 } e'4` drew the grace rest on the middle line, where it ran into the
   held note above it, and a slur over the run passed through the rest. As in LilyPond, the
   rest now moves up off the note that still sounds at the grace's moment (two spaces over
-  an `e`, five over an `e'`), and the slur arches over it.
+  an `e`, five over an `e'`), and the slur arches over it. A slur over a single flagged
+  grace note (`a4( grace { b16 } c'4)`) now clears its stem as drawn; it sat half a space
+  low.
 - **A slash note stays off the tab, in MusicXML and in the warnings.** Beside a `tab`, the
   MusicXML wrote each `/4` onto the TAB staff as a note with a display pitch, which readers
   fretted — MuseScore drew a "7" per slash where the page's tab is empty. The TAB staff now

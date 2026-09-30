@@ -8722,6 +8722,25 @@ internal static class LpGeometryProbes
         score main "GRS" { staff m }
         """;
 
+    /// <summary>
+    /// Slurs over a FLAGGED grace (probes/grace-rest-collision.ly, third score): the obstacle is
+    /// the grace stem's drawn tip — GrobFontSize.GraceStemDetails, length-fraction 0.8 — not
+    /// 3.5 × the head's magstep. LilyPond spelling: <c>a'4( \grace { b'16 } c''4)
+    /// c'4( \grace { a16 } b4) |</c>.
+    /// </summary>
+    private static readonly string GFS = """
+        octave absolute
+        time 4/4
+
+        part m { clef treble }
+
+        section Main { m { a4( grace { b16 } c'4) c4( grace { a,16 } b,4) | } }
+
+        form main { ~Main }
+
+        score main "GFS" { staff m }
+        """;
+
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -16277,6 +16296,8 @@ internal static class LpGeometryProbes
         new("rest.grace.after-held-note.control", GRC, g => g.GlyphAboveStaffMiddle('', 2)),
         new("slur.over-grace-rest.left-attachment", GRS, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.over-grace-rest.alone.left-attachment", GRS, g => g.BowAttachmentAboveStaffMiddle(1)),
+        new("slur.over-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.under-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(1)),
         // The skyline reserves a slur laid out apart from the drawn one. See SBR.
         new("slur.beamed.reserved-text", SBR, g => g.TextBaselineAboveStaff("sul D")),
         // The REACH of a voice { } span, measured one bar outside it, against the same bar

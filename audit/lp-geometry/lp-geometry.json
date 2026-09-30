@@ -1857,6 +1857,20 @@
       "residual": 0.0,
       "why": "EXACT since session 723 (see slur.over-grace-rest.left-attachment): a grace body holding only a rest. Until session 723: -2.0."
     },
+    "slur.over-flagged-grace.left-attachment": {
+      "probe": "grace-rest-collision.ly",
+      "score": "SLUR-3",
+      "lilypond": 2.545,
+      "residual": 0.0,
+      "why": "EXACT since session 723: the bow over a flagged grace clears the grace stem's DRAWN tip — GrobFontSize.GraceStemDetails (general-grace-settings length-fraction 0.8; b'16: 2.7 above its head), the rule the renderer draws the stem by. Until session 723 the obstacle read 3.5 x the head's magstep(-3) = 2.475: residual -0.5."
+    },
+    "slur.under-flagged-grace.left-attachment": {
+      "probe": "grace-rest-collision.ly",
+      "score": "SLUR-4",
+      "lilypond": -4.045,
+      "residual": 0.0,
+      "why": "EXACT: the control under the same kind of run — an up grace stem does not reach a slur below, so the stem rule does not bind here (it was 0 before session 723 too)."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",

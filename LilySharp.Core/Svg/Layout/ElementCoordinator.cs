@@ -3627,10 +3627,18 @@ internal sealed class ElementCoordinator
                     }
                     else
                     {
-                        // Lone / flagged grace: the drawn stem end — head centre
-                        // plus the renderer's fixed grace stem length.
-                        stemY = headCenterY
-                            - EngravingDefaults.DefaultStemLength * g.HeadScale;
+                        // Lone / flagged grace: the drawn stem end — the stem rule the
+                        // renderer draws a grace-time stem with (StemDetailsOf →
+                        // GrobFontSize.GraceStemDetails: general-grace-settings' length-fraction
+                        // 0.8 and no-stem-extend), from the column's highest head. MEASURED
+                        // (Lab sessions/p723/gd, LilyPond 2.26.0): b'16 in a grace, tip 2.7
+                        // above its head, drawn 2.70. Until session 723 this read 3.5 × the
+                        // head's magstep(−3) = 2.475, and a slur over a flagged grace sat 0.5
+                        // low. ⚠️ The flag is not read (LP's encompass reads the stem extent
+                        // alone, slur-scoring.cc:146-151).
+                        int durationLog = StemCalculator.GetDurationLog(note.BaseDuration.Denominator);
+                        stemY = staffMiddleDown - StemCalculator.CalculateStemEndPosition(
+                            true, durationLog, note.Highest.StaffPosition, GrobFontSize.GraceStemDetails) / 2.0;
                     }
                     obstacleX = stemX;
                 }

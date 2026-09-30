@@ -48,7 +48,7 @@
   <line x1="8.59" y1="33.56" x2="16.81" y2="33.56" stroke="#000000" stroke-width="0.100"/>
   <line x1="18.41" y1="33.56" x2="23.03" y2="33.56" stroke="#000000" stroke-width="0.100"/>
   <line x1="26.24" y1="33.56" x2="31.62" y2="33.56" stroke="#000000" stroke-width="0.100"/>
-  <path d="M 18.56,20.26 C 19.40,19.47 21.02,19.47 21.86,20.26 C 21.02,19.59 19.40,19.59 18.56,20.26 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="507"/>
+  <path d="M 18.56,19.76 C 19.40,18.97 21.02,18.97 21.86,19.76 C 21.02,19.09 19.40,19.09 18.56,19.76 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="507"/>
   <path d="M 24.55,19.11 C 25.42,17.95 27.77,17.50 29.00,18.26 C 27.79,17.62 25.44,18.06 24.55,19.11 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="533"/>
   <path d="M 17.79,34.80 C 19.21,35.31 21.25,34.59 22.04,33.30 C 21.29,34.70 19.25,35.42 17.79,34.80 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="507"/>
   <path d="M 24.97,34.80 C 26.44,35.35 28.60,34.62 29.43,33.30 C 28.63,34.74 26.48,35.46 24.97,34.80 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="533"/>
