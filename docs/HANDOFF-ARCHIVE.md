@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第712セッションの経緯
+
+### 1.1 第712セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p712`（HEAD `a394e5a6`・未 push 122）＝full **10466 / 0 / 2 / 10468**（引継ぎと一致）。
+⑴ `7eda96b8`: 開始時の build に Core の警告 CS1734＝第711 が `EndingReturns` を `EndingFor` の doc コメントと本体の間に差し込んでいた（doc が別のメソッドに付いた）＝移した・Core 0 警告。⚠ **`-End` の門は Core の警告を見ない**（第711 の `-End` は全 OK と言った・`-Start` の build が刷って気づいた）。
+⑵ ★ `93a8e8a9`（§1.0 ⒜ 第672 の穴「`R*N@text` は TextScript のまま」）: LP の実測（2.26・`\compressMMRests`・Lab `sessions/p712/mmtext`）: 数字「4」のベースラインは五線中央から 2.45（ink の外縁 2.05＋staff-padding 0.4）・「4」の ink 0〜2.004・R1*4「tacet」4.936＝数字の ink 上端＋0.46＋文字の ink の下（＝outside-staff の積みで決まる・数字は LP では inside-staff の ink）・R1「solo」2.536。実装: collect が R の上の `@text` に `OnMultiMeasureRest`（既定 UP・`.down` で下）／`LayoutEngine.Annotations` が MMR 上の文字がある本だけ MMR の配置を尾より先に計算し `DynamicEngraver.PlaceOnMultiMeasureRests`＝X は MMR の span の中央・Y は数字の箱を支えに padding 0.2／staff-padding 0.25 の side と数字の ink＋0.46 の大きいほう（予備の段も同じ）／`MultiMeasureRestEngraver.NumberInkBox`（LP の 2.45・数字の高さは Emmentaler の箱）。Lily# 4.947／2.543＝両方とも outside-staff の積みなので残差は斜体の文字の輪郭のベースラインより下の深さ（Lily# 約 0.033・LP 0.022／0.026）＝網は LP 値からの残差の幅で固定。当初「数字の箱と輪郭の差」と仮説したが、数字の無い solo も同じ向きにずれて反証された。LILYSHARP-OWN（残す）: 数字はこの文字の支えだけ（inside-staff skyline には入らない）・文字の優先度は 250（LP 450）。網 `MultiMeasureRestTests` +3・毒（置き直しの呼び出しを殺す）で 2 赤。⚠ 最初の full で出典の検査が 681→684＝CamelCase の grob 名だけでは「名前」に数えない（下線か 3 語以上のハイフン名が同じ行に要る）＝3 行に書き足した。CHANGELOG（Fixes）。full **10469 / 0 / 2 / 10471**。
+⑶ ⚠ **描く数字は 0.05 低いまま＝ユーザー承認待ち**: `DrawMmrNumber` を 2.45 にすると snapshot 7 本（`test/multi-measure-rest*`・`mmr-*`）が動く＝全部「数字の Y が 0.05 上がるだけ」（計 11 行・他の差 0）。RULES §5.1（出力を変える変更は承認後）・§5.2.1③（再ベースは台帳点とセット＝MMR の数字の台帳点は無い・grob_coverage で Absent）。差分は Lab `sessions/p712/mmr-number-baseline.diff`。
+★ `-End p712 -DiffBase a394e5a6`＝full **10469 / 0 / 2 / 10471**・門 6 つ全 OK・Core `+` 155 行に REF 5／OWN 1（REF＝MultiMeasureRestText／Number の grob 定義と engraver・y-aligned-side・`EndingReturns` の注の書き換えは ⑴ の移動だけ／OWN＝`PlaceOnMultiMeasureRests` の残り＝数字は文字の支えだけ・優先度 250）。7.6: ⑴ 第711 の取りこぼし ⑵ §1.0 第672 の穴 ⑶ ⑵ の測定で見つけた。7.7: ⑴ MMR 上の文字がある本だけ MMR の配置を 2 度計算する（尾と積みの前）＝該当は 0 冊で費用は出ない ⑵ inter-staff の種（`SkylineBuilder` の `PointwiseBaselineY`）は MMR の文字を TextScript の静かな位置で見積もる＝段間の余白に僅差が出うる ⑶ `-End` に Core の警告の門が無い。push はユーザー。
+
 ## 以下は第711セッションの経緯
 
 ### 1.1 第711セッション（2026-09-30・YT-DELL2）
