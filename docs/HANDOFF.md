@@ -118,6 +118,18 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第724セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第723 の残り: 弧の終わり直前の高い旗つき前打音）。`-Start p724`（HEAD `0949c7b1`・未 push 20）＝full **10551 / 0 / 2 / 10553**（引継ぎと一致）。
+⒜ 第723 の残り（`a4( grace { e'16 } c'4)`＝弧の終わり直前の高い旗つき前打音・0.5 低い）: Lily# の障害物（符幹の先 4.1・X）は LP と一致＝差は採点の中。LP 2.26 の配布版は `debug-slur-scoring` の内訳を出さない（コンパイルされていない）＝区切った。
+⒝ 弧の全木の計器（p647 の S0・998 冊・Lab `sessions/p724/bows`）: 24,318 対中 2,453 対が差。⚠ 最初の族の集計は `summarize.ps1` に無い引数（`-Work`）を渡し、**既定の第647 の古いレポートを集計していた**（引数は `-Report`）。最大の族＝前打音の自動の弧（第647 が「設計級」と起票）→ **ユーザー決定「移植する」（AskUserQuestion）**。
+⑴ ★ `08d5019e` **前打音の弧を普通の弧に**: `ElementCoordinator.WithGraceSlurs` が「最後の前打音の列（`ColumnItemIndices`）→ 主音」の下向きの `SlurItem`（`StartGraceGroup`）を段の弧の前に足す（`LayoutSlurs` と、系ごとに振り分ける前の `LayoutPreliminaryStaffSlurs` の両方＝既に在れば足さない）。始点の X は前打音の列（`GraceGeomOf`／`GraceGroupX` に切り出した）・頭は前打音のフォント（`BowFont`）・符幹は上向き＋`GraceStemDetails`（`ResolveSlurEdge`）。`SharedRenderer.DrawGraceSlur`（固定の余白 0.5／0.65／0.15）は削除。**移植の穴を 1 つ埋めた**: `get_base_attachments` の `!spanner_less(slur, beam) || has_same_beam_`＝連桁の途中の主音への前打音の弧は連桁でなく頭に付く（普通の弧では束縛しない・Real Gone で新しい弧が 3.4 低く出て発覚）。第723 の休符の項目番号も `ColumnItemIndices` に。台帳 +6（`probes/grace-slur.ly`・`slur.grace.{acciaccatura,appoggiatura,beamed-main}.{left-attachment,span}`）EXACT・毒 2 つ（連桁の条件なし＝2 赤・始点を主音の X に＝6 赤）。**snapshot 5 枚をユーザー承認で再ベース**（02-ornaments・grace-explicit-slur・grace-notes・grace-chord-accidental・grace-accidental-line-start）。弧の計器: 差 2,453 → 1,637（一致 816・改善 308・悪化 3＝Real Gone ×2・02-ornaments＝前打音の列の間隔の既存の差が弧に出た）。全 score の SVG で 17 冊・22 枚。
+⑵ ★ `f30218fc` 複数段のスカイラインの pass（`StaffSlurLayouts`＝段番号 0 の自明な系）が前打音の群を段 0 で選んでいた＝段 N が段 0 の前打音から弧と障害物を作りうる→ `graceStaffIndex` を渡す。観測者なし（全 score の SVG 不変）。
+残り: 前打音の**中**の弧（`grace { d'16( e') }`・LYS4020＝§2 U8 ⒝2）・前打音の列の間隔の差（上の悪化 3 の元）。
+★ `-End p724 -DiffBase 0949c7b1`＝full **10557 / 0 / 2 / 10559**（台帳 +6）・門 7 つ全 OK・Core `+` 184 行に REF 3／OWN 0。7.6: ⑴ ユーザー決定（弧の最大の族の移植）・⑵ ⑴ の書きながら気づいた。push はユーザー（未 push 23）。
+
+## 以下は第723セッションの経緯
+
 ### 1.1 第723セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第722 で Omr のレポートと TAB のスラッシュが閉じた後の次の島）。`-Start p723`（HEAD `5aa3e7a0`・未 push 16）＝full **10543 / 0 / 2 / 10545**（引継ぎと一致）。
@@ -127,19 +139,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ `-End p723 -DiffBase 5aa3e7a0`＝full **10549 / 0 / 2 / 10551**（台帳 +6）・門 7 つ全 OK・Core `+` 111 行に REF 3／OWN 0（LILYSHARP-OWN 1 つ退役）。7.6: ⑴ 第717 の 7.7 ⑴。7.7: 上の「残り」2 つ（下向きの弧は ⑵ で閉じた）。
 ⑵ ★ `04402dfe`（ユーザー「続けて」＝⑴ の残りの下向きの弧）: 実は**旗つきの 1 音の前打音**の上の弧すべてが 0.5 低かった（Lab `sessions/p723/gd`・連桁つき 2 音と前打音なしは一致）。弧の障害物が前打音の符幹の先を「3.5 × 前打音の縮尺」＝2.475 で見ていた（コメントは「描画の固定長」だが、描画は既に通常の経路で `GrobFontSize.GraceStemDetails`＝length-fraction 0.8 を使い LP と同じ 2.7）→ 同じ規則（`CalculateStemEndPosition`＋`GraceStemDetails`）を呼ぶ。⚠ 最初に `NoteColumnLayout` を読ませたら悪化した（グレースの項目の列は符幹を持たない）。台帳 +2（`slur.{over,under}-flagged-grace.left-attachment`）EXACT・毒で前者だけ赤。**snapshot `test/tab-grace-slur` をユーザー承認で再ベース**（五線の弧が LP と一致・TAB 段の弧は前後で同値＝既存の差）。全 score の掃きで 2 枚（その snapshot と `bows/slur-grace.lys`＝動いた弧も LP と一致・この本は弧の数が合わず弧の計器が比べていなかった）。残り: 弧の終わり直前の**高い**旗つき前打音（`a4( grace { e'16 } c'4)`）は 0.5 低く右端が 0.125 右＝端の付き方の違い（符幹ではない）。
 ★ `-End p723`（2 回目）＝full **10551 / 0 / 2 / 10553**・門 7 つ全 OK・Core `+` 123 行に REF 3／OWN 0。push はユーザー（未 push 20）。
-
-## 以下は第722セッションの経緯
-
-### 1.1 第722セッション（2026-10-01・YT-DELL2）
-
-同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`＝12 件は全部直ったと確認済み・残りは `lilysharp-feedback-2026-09-30.md` の #13〜#16）。`-Start p722`（HEAD `579493bc`・未 push 8）＝full **10537 / 0 / 2 / 10539**（引継ぎと一致）。
-⑴ ★ `d334e6d4`（レポート #13・#14・#16）: #13 TAB 段の写しでスラッシュ（`/4`＝`<unpitched>` B4）が音符として書かれ、MuseScore がスラッシュごとに「7」を描いていた（頁の TAB は空）→ TAB 段では `<forward>`（voice 5・TAB だけの段も同じ・和音の構成音と前打音は何も書かない＝`MusicXmlNote.TabGap`）。#14 頁はスラッシュを TAB から外す（Midi 0＝どの弦にも無い）が、`TabResolver` が LYS5002「1 オクターブ低い」をスラッシュごとに出していた→ スラッシュの頭＋Midi 0 は黙って外す（本物の低すぎる音は今のまま警告）。#16 段番号を書く音符に voice が無ければ `1`（TAB つきパートの五線も・1 パートに畳んだ大譜表の上段も同じ穴＝`AGrandStaff_IsOnePartOnTwoStaves` の期待値を `s1v1` に）。**#15（隣り合う弦の数字が 2 列）は Lily# 独自のジグザグ**（`TabChordColumns`・LILYSHARP-OWN・2026-07-24 のユーザー決定）＝レポートの「意図した回避なら不要」＝変えない。
-網 `MusicXmlTabTests` +3・毒 3 つ（警告の除外・TAB の隙間・voice 1）がそれぞれ赤。掃き（Lab `sessions/p722/imp/sweep.ps1`）998 冊: import の変化 0・書き出しの変化 265 本（voice）。**母集団に「TAB の横のスラッシュ」の本が無い**（998 冊と実コーパスの TAB の本 296 冊で、base も head も TAB 段のスラッシュ 0・LYS5002 0）＝計器はレポートの `slash-tab.lys` で確かめた（base 5／5 → head 0／0・Lab `sessions/p722/slash/`）。レポートの「MuseScore 側の表示」（TAB の符幹・拍子記号を抑える `<stem>none`／`print-object="no"`）は未確認の候補＝触っていない。
-★ `-End p722 -DiffBase 579493bc`＝full **10540 / 0 / 2 / 10542**・門 7 つ全 OK・Core `+` 43 行に REF 0／OWN 0（MusicXML の書き出しと警告の条件だけ）。⚠ 途中の 2 つ: ⑴ 新しいメンバーを `ToXml` の `<param>` doc と本体のあいだに挟んで Core に CS1572（`-End` の build の門が落ちた）→ doc を本体の直前へ戻した ⑵ その修正を未 push の commit に amend したら、語りが引用していた旧 SHA が死んで `DeadCitationsDoNotGrow` が赤→ 語りの SHA を差し替えた（**amend したら語りの SHA を直す**）。7.6: ⑴ Omr のレポート（ユーザーの依頼）。7.7: ⑴ TAB だけの段でスラッシュに連桁が掛かっていると、`<forward>` に置き換えた音符の `<beam>` が消えて連桁が途切れうる（未測定・実例なし）⑵ TAB の符幹・拍子記号を MuseScore で抑える書き方は未確認。push はユーザー（未 push 10）。
-⑵ ★ `896fa982`（ユーザー「続けて」＝7.7 ⑴ を実測）: ⑴ の 7.7 ⑴ は実在した＝TAB 段の連桁がスラッシュの `<forward>` で途切れる（`continue` で始まる群）。**頁にも同じ穴**: 符幹を描く TAB（`tab gt`）はスラッシュを描かないのに連桁だけがその位置まで伸びていた。**ユーザー決定（2026-10-01・AskUserQuestion）「符幹だけ描く」**＝TAB のスラッシュはリズム（符幹・連桁あり・数字なし・`as numbers` は何も描かない）。`NoteItem.IsPitchlessSlash`（スラッシュの頭＋Midi 0）／`TabHidden`（低すぎて何も描かない＝スラッシュではない）を連桁の全隠しの門・連桁の符幹・TAB の音符の描画・LYS5002 の除外が読む。MusicXML の TAB 段は `<forward>` のまま（音符の無い符幹を書く標準の手段が無い）で、`MusicXmlMeasure.TabBeams` が群をフレットのある音だけで組み直す（五線の連桁がその段で途切れずに続いていれば結ぶ・1 音だけ残れば旗・フックは保つ）。GRAMMAR_FOR_LLM のスラッシュの段落に 1 文。網 +2（`TabBelowRangeHideTests`・`MusicXmlTabTests`）・毒 2 つが赤。SVG の掃き（Lab `sessions/p722/svg/sweep.ps1`＝p397 の型）998 冊で動いた本 0（母集団に TAB のスラッシュが無い）。
-★ `-End p722 -DiffBase 579493bc`（2 回目）＝full **10542 / 0 / 2 / 10544**・門 7 つ全 OK・Core `+` 152 行に REF 0／OWN 1（`200453de`＝TAB のスラッシュの符幹・LP に音高の無い音符は無い）。7.6: ⑵ ⑴ の 7.7 ⑴ ＋ユーザー決定。7.7: ⑴ TAB の横の写し（`staff gt  tab gt`）は数字だけの TAB なので頁ではスラッシュに何も出ない（変わらず）⑵ スラッシュの符幹の始まりの高さは Midi 0 の弦の計算に任せている（最低弦の側）＝見た目の調整はしていない。push はユーザー（未 push 13）。
-⑶ ★ `b8cf77f8`（ユーザー「続けて」＝⑵ の 7.7 ⑵）: スラッシュの Midi 0 が弦の計算で最低弦に丸められ、符幹が最低線から譜表を縦断していた→ `TabStaffGeometry.Fret` が Midi 0 に真ん中の弦を答える（`SlashString`＝(弦数+1)/2・LILYSHARP-OWN・五線でスラッシュが真ん中の線に立つのと同じ）・連桁の符幹の起点（`TabStemHeadY`）も同じ値。スラッシュだけの小節は真ん中の線の頭と同じく下向きの符幹になる。網 `ASlashNotesStem_StartsAtTheMiddleString`（SVG の符幹の `y1`＝頭の側が最低線より中央に近い）・毒（最低弦を返す）で赤。⚠ 網の最初の版は「中央に近い端」を近い端と読み、短い符幹では先端を拾って毒でも緑だった＝描画は頭から先端へ線を引く（`y1`）に直した。⚠ **最初の版（`b8cf77f8`）は `Fret` を Midi 0 で分けて広すぎた**＝前打音の列（TAB の弧の囲み）も Midi 0 で `Fret` を通っていて `test/tab-grace-slur` の snapshot が動いた（`-End` の full で発覚・「Midi 0 にしか効かない」と掃きを省いたのが誤り）。続く `b84ad7cd` で `Fret` を戻し、`NoteFret` が**音符に**訊く（`IsPitchlessSlash`・符幹の頭の弦・符幹の根の数字・頭の位置の 3 か所）。snapshot 不変・SVG の掃き 998 冊（base `200453de`）で動いた本 0。**教訓: 「この値にしか効かない」は掃きを省く理由にならない＝値の意味を持つ所で分ける（音符の性質）**。
-★ `-End p722`（3 回目）＝full **10543 / 0 / 2 / 10545**・門 7 つ全 OK・Core `+` 174 行に REF 0／OWN 2（TAB のスラッシュの符幹・真ん中の弦）。7.7: スラッシュの符幹の起点は数字 1 つ分の隙（`StemBeginOffset`）を数字が無くても空ける（見た目の調整はしていない）。HANDOFF の残りは約 4 KB＝**次の便は `-Start` でアーカイブしてから**。push はユーザー（未 push 17）。
 
 ## 2. 開いている作業
 
