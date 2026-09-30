@@ -685,6 +685,60 @@ public class MusicXmlRoundTripTests
     }
 
     /// <summary>
+    /// A grand staff labelled apart — two parts under a brace <c>&lt;part-group&gt;</c> in the
+    /// export — comes back as one grand staff with both labels (2026-09-30: the import did not
+    /// read the part-group, so it came back as two unrelated staves). A part outside the brace
+    /// stays outside.
+    /// </summary>
+    [Fact]
+    public void ABracePartGroup_ComesBackAsAGrandStaff()
+    {
+        var original = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            part fl { clef treble }
+            section A { rh { c''1 | } lh { c1 | } fl { g''1 | } }
+            form main { ~A }
+            score main { grandStaff { staff rh "Right"  staff lh "Left" }  staff fl }
+            """);
+        var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
+        Assert.Contains("<group-symbol>brace</group-symbol>", xml);
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        var score = lys[lys.IndexOf("score main", System.StringComparison.Ordinal)..]
+            .Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToArray();
+        Assert.Equal(new[] { "score main \"imported\" {", "grandStaff {", "staff right \"Right\"",
+            "staff left \"Left\"", "}", "staff fl", "}" }, score);
+    }
+
+    /// <summary>A brace around a single one-staff part is no grand staff: the part stays a
+    /// plain staff.</summary>
+    [Fact]
+    public void ABraceAroundOnePart_IsAPlainStaff()
+    {
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list>
+                <part-group type="start" number="1"><group-symbol>brace</group-symbol></part-group>
+                <score-part id="P1"><part-name>Harp</part-name></score-part>
+                <part-group type="stop" number="1"/>
+              </part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>1</divisions><time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef><sign>G</sign><line>2</line></clef></attributes>
+                <note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note>
+              </measure></part>
+            </score-partwise>
+            """);
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        Assert.DoesNotContain("grandStaff", lys);
+        Assert.Contains("staff harp \"Harp\"", lys);
+    }
+
+    /// <summary>
     /// A stop written where MusicXML programs usually write it — after the last note it covers,
     /// at the bar's end — closes on the NEXT note, the one outside the line: on the bar's last
     /// note it would end the line a note early. A stop after the part's last note stays on that

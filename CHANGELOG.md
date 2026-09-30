@@ -327,7 +327,9 @@ workflow attaches that section to the GitHub Release verbatim.
   `<part-name>` back as the staff's label (`staff pianoRH "Piano"`, on the first staff of a
   split grand staff); it used to drop every label. The export marks the name of a staff the
   page labels nothing `print-object="no"` — it writes the part's id there, which a reader
-  printed and the import would now bring back.
+  printed and the import would now bring back. Parts under a brace `<part-group>` — a
+  grand staff whose staves are labelled apart, as the export writes it, or a piano written
+  as two parts — come back as one `grandStaff`; they came back as unrelated staves.
 - **MusicXML carries the page's beams.** `lysc xml` wrote no `<beam>`, so a reader beamed by
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and

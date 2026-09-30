@@ -99,6 +99,7 @@ internal static class MusicXmlReader
             if ((string?)partName?.Attribute("print-object") != "no" && names[id] is { Length: > 0 } printed)
                 labels[id] = printed;
         }
+        var braces = ReadBraceGroups(Local(root, "part-list"));
 
         var used = new HashSet<string>(StringComparer.Ordinal);
         int index = 0;
@@ -113,12 +114,22 @@ internal static class MusicXmlReader
                 Label = labels.GetValueOrDefault(id),
             };
             // One MusicXML part may yield several Lily# parts (one per staff).
-            foreach (var p in ReadPart(partEl, working, doc, report))
+            var read = ReadPart(partEl, working, doc, report);
+            // A one-staff part under a brace joins the brace's grand staff; a part that
+            // splits into its own grand staff keeps that one.
+            if (read.Count == 1 && braces.TryGetValue(id, out var brace))
+                read[0].StaffGroup = brace;
+            foreach (var p in read)
             {
                 p.SafeName = SafeIdentifier(p.Name, index, used);
                 doc.Parts.Add(p);
             }
         }
+        // A brace left with one staff (its other members split into staves of their own, or
+        // were never read) is no grand staff.
+        foreach (var lone in doc.Parts.Where(p => p.StaffGroup is { } g && braces.ContainsValue(g))
+                     .GroupBy(p => p.StaffGroup).Where(g => g.Count() < 2).SelectMany(g => g).ToList())
+            lone.StaffGroup = null;
 
         // An empty score is a common surprise (e.g. a template exported with no
         // music): the output parses but renders nothing, so say so plainly rather
@@ -130,6 +141,44 @@ internal static class MusicXmlReader
         else if (totalNotes == 0)
             report.Warn("The MusicXML contains no notes; the imported score is empty.");
         return doc;
+    }
+
+    /// <summary>
+    /// The parts a brace <c>&lt;part-group&gt;</c> joins, by part id → the group's key (a
+    /// <see cref="ImportPart.StaffGroup"/> value): a grand staff whose staves are separate
+    /// parts, which is how <c>MusicXmlExporter</c> writes one whose staves are labelled apart
+    /// and how other programs write a piano's two parts. Until 2026-09-30 the part-group was
+    /// not read and such a pair came back as two unrelated staves. A part under several
+    /// braces joins the innermost; bracket and other groups are not read.
+    /// </summary>
+    private static Dictionary<string, string> ReadBraceGroups(XElement? partList)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (partList == null)
+            return result;
+        var open = new List<(string Number, string? Key)>();
+        int serial = 0;
+        foreach (var el in partList.Elements())
+        {
+            switch (el.Name.LocalName)
+            {
+                case "part-group":
+                {
+                    string number = (string?)el.Attribute("number") ?? "1";
+                    open.RemoveAll(g => g.Number == number);
+                    if ((string?)el.Attribute("type") == "start")
+                        open.Add((number, Local(el, "group-symbol")?.Value.Trim() == "brace"
+                            ? $"\u0001brace{++serial}" : null));
+                    break;
+                }
+                case "score-part":
+                    if ((string?)el.Attribute("id") is { } id
+                        && open.LastOrDefault(g => g.Key != null).Key is { } key)
+                        result[id] = key;
+                    break;
+            }
+        }
+        return result;
     }
 
     private static List<ImportPart> ReadPart(XElement partEl, ImportPart part, ImportDocument doc, ImportReport report)
