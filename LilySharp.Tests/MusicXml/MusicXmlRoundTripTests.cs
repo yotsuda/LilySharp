@@ -949,6 +949,24 @@ public class MusicXmlRoundTripTests
         => string.Join("\n", tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
 
     /// <summary>
+    /// A grace group's slur — the <c>(</c> on its last note, closed on the main note — survives
+    /// the round trip. Until 2026-09-30 neither side carried it: the export wrote the main
+    /// note's stop with no start, and the import came back with a stray <c>)</c> (LYS4010).
+    /// </summary>
+    [Fact]
+    public void GraceSlurIntoTheMainNote_RoundTrips()
+    {
+        const string music = "c'4 grace { d''16( } e''4) acciaccatura { f''8( } g''4) grace { a''16 b''16( } c'''4) |";
+        string source = "octave absolute\ntime 4/4\npart m { clef treble }\n"
+                        + $"section S {{ m {{ {music} }} }}\nform main {{ ~S }}\nscore main {{ staff m }}\n";
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
+        var (lys, report) = new MusicXmlImporter().Import(xml);
+        Assert.Contains(music, lys);
+        Assert.Empty(report.Warnings);
+        Assert.DoesNotContain("warning", Diagnostics(SyntaxTree.Parse(lys)));
+    }
+
+    /// <summary>
     /// Mid-piece changes of time, key, clef and tempo come back where they were written.
     /// Until 2026-09-30 only the opening time and key reached the file, so later bars were
     /// read against the first signature and the other changes were lost. In a part of two

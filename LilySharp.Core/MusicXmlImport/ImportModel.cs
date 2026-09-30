@@ -280,6 +280,8 @@ internal sealed class ImportGraceNote
     public int NoteValue { get; set; } = 8;
     public int Dots { get; set; }
     public bool Slash { get; set; }
+    /// <summary>A slur opens on this grace note (<c>&lt;slur type="start"/&gt;</c>).</summary>
+    public bool SlurStart { get; set; }
 }
 
 /// <summary>One sung syllable on a note.</summary>

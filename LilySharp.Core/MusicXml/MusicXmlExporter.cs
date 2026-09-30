@@ -3751,6 +3751,12 @@ public sealed class MusicXmlExporter
         // is rare (2 books in the whole 1754-book sweep) and this runs once per grace.
         Stack<((int step, int alt, int oct)? Transpose, int Anchor,
             int? AnchorStep, int Offset)>? phraseFrames = null;
+        // The one slur a grace group carries: a `(` on its LAST element, closed on the main
+        // note (`grace { d16( } e4)`) — the page engraves no other (LYS4020). A `(` followed
+        // by another grace element is not that slur, so the next element clears it. Until
+        // 2026-09-30 the `(` was not read here at all: the XML carried the main note's stop
+        // with no start, and the import came back with a stray `)`.
+        MusicXmlNote? lastGrace = null, graceSlurOn = null;
 
         foreach (var (item, _) in Semantics.GraceBodySupport.BodyElements(
                      grace,
@@ -3873,8 +3879,13 @@ public sealed class MusicXmlExporter
                     };
 
                     _currentMeasure.Notes.Add(xmlNote);
+                    (lastGrace, graceSlurOn) = (xmlNote, null);
                     break;
                 }
+
+                case SlurSyntax { IsOpen: true }:
+                    graceSlurOn = lastGrace;
+                    break;
 
                 // A CHORD IN A GRACE BODY IS ONE COLUMN WITH N HEADS (session 308), and this
                 // reader writes it the way it writes any chord: one <note> per member, with
@@ -3890,6 +3901,7 @@ public sealed class MusicXmlExporter
                         graceDuration = chord.Duration.ToFraction();
                     var (chordType, _) = GetNoteType(graceDuration);
                     var (chordActual, chordNormal) = CurrentTupletRatio();
+                    int graceChordAt = _currentMeasure.Notes.Count;
                     int chordOctave = chord.ChordOctaveOffset;
                     int frameStepIn = _currentStep, frameOctaveIn = _currentOctave;
                     int firstStep = _currentStep, firstOctave = _currentOctave;
@@ -3977,6 +3989,9 @@ public sealed class MusicXmlExporter
                         _currentStep = graceLow.Step;
                         _currentOctave = graceLow.Octave;
                     }
+                    // The slur rides the chord's first <note>, as a main-stream chord's does.
+                    if (_currentMeasure.Notes.Count > graceChordAt)
+                        (lastGrace, graceSlurOn) = (_currentMeasure.Notes[graceChordAt], null);
                     break;
                 }
 
@@ -3994,7 +4009,7 @@ public sealed class MusicXmlExporter
                         graceDuration = rest.Duration.ToFraction();
                     var (restType, _) = GetNoteType(graceDuration);
                     var (restActual, restNormal) = CurrentTupletRatio();
-                    _currentMeasure.Notes.Add(new MusicXmlNote
+                    var graceRest = new MusicXmlNote
                     {
                         IsGrace = true,
                         IsSlash = isAcciaccatura,
@@ -4002,11 +4017,15 @@ public sealed class MusicXmlExporter
                         Type = restType,
                         ActualNotes = restActual,
                         NormalNotes = restNormal
-                    });
+                    };
+                    _currentMeasure.Notes.Add(graceRest);
+                    (lastGrace, graceSlurOn) = (graceRest, null);
                     break;
                 }
             }
         }
+        if (graceSlurOn != null)
+            graceSlurOn.SlurStart = true;
     }
 
     /// <param name="host">The source position of the note, chord or slash the marks ride —

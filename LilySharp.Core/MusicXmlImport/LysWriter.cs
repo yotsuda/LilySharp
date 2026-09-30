@@ -676,7 +676,7 @@ internal static class LysWriter
 
             // Grace notes precede the main note, so (in relative mode) they thread the
             // reference first — build the grace block before the main note's body.
-            string? graceToken = note.LeadingGrace.Count > 0 ? GraceBlock(note.LeadingGrace, rel) : null;
+            string? graceToken = note.LeadingGrace.Count > 0 ? GraceBlock(note.LeadingGrace, rel, report) : null;
 
             // A chord member's string number and fingering are its own, so they are written
             // inside the brackets (<e\5 dis'\4>); a single note's follow its duration (c4\3),
@@ -771,12 +771,21 @@ internal static class LysWriter
 
     /// <summary>A leading grace block: <c>acciaccatura { … }</c> (slashed) or
     /// <c>grace { … }</c>, from the notes written before the main note.</summary>
-    private static string GraceBlock(List<ImportGraceNote> grace, RelativeOctave? rel)
+    /// <remarks>
+    /// The one slur a grace group carries is a <c>(</c> on its LAST note, closed on the main
+    /// note — the only one the page engraves (LYS4020) — so only that one is written; a slur
+    /// another program opens earlier in the group is reported and dropped.
+    /// </remarks>
+    private static string GraceBlock(List<ImportGraceNote> grace, RelativeOctave? rel, ImportReport report)
     {
         string keyword = grace[0].Slash ? "acciaccatura" : "grace";
-        var notes = string.Join(" ", grace.Select(g =>
+        if (grace.Take(grace.Count - 1).Any(g => g.SlurStart))
+            report.Warn("a slur opening inside a grace group before its last note has no Lily# "
+                + "spelling (the group's one slur opens on its last note) and is dropped.");
+        var notes = string.Join(" ", grace.Select((g, i) =>
             (rel != null ? rel.Note(g.Step, g.Alter, g.Octave) : PitchToken(g.Step, g.Alter, g.Octave))
-            + Value(g.NoteValue, g.Dots)));
+            + Value(g.NoteValue, g.Dots)
+            + (i == grace.Count - 1 && g.SlurStart ? "(" : "")));
         return keyword + " { " + notes + " }";
     }
 
