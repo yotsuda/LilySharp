@@ -947,4 +947,51 @@ public class MusicXmlRoundTripTests
 
     private static string Diagnostics(SyntaxTree tree)
         => string.Join("\n", tree.Diagnostics.Concat(SemanticValidation.Run(tree)));
+
+    /// <summary>
+    /// A rest's post-events, a whole-measure rest and a multi-measure rest survive the round
+    /// trip. Until 2026-09-30 the importer wrote every rest bare (`R1*4@p` came back as four
+    /// `r1`, `r2@fermata` as `r2`), the exporter wrote a lone `R1` as a plain rest and left
+    /// the tuplet ratio off a rest, so a bracket opening on one came back as a stray `}`.
+    /// </summary>
+    [Theory]
+    [InlineData("time 4/4", "c'1 | R1*4@p | c'2 r2@fermata | R1 | r4@f c'4 c'2 |")]
+    [InlineData("time 3/4", "c'2. | R2.*3@mf | tuplet 3/2 { r8 c'8 c'8 } c'2 | r2.@chord(C) | R2. | R2.*2 | c'2. |")]
+    public void RestsAndTheirPostEvents_RoundTrip(string time, string music)
+    {
+        string source = $"octave absolute\n{time}\npart m {{ clef treble }}\n"
+                        + $"section A {{ m {{ {music} }} }}\nform main {{ A }}\nscore main {{ staff m }}\n";
+        string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains(music, lys);
+    }
+
+    /// <summary>
+    /// A whole-measure rest from another program: MuseScore writes <c>&lt;rest measure="yes"/&gt;</c>
+    /// with no <c>&lt;type&gt;</c>, others write <c>whole</c> in any meter. Either way the bar's
+    /// length is the duration, and only a <c>multiple-rest</c> mark folds bars — two
+    /// consecutive bar rests without one stay two (LilyPond's <c>R2. | R2.</c> is two events).
+    /// </summary>
+    [Fact]
+    public void PublishedMeasureRests_TakeTheBarsLength_AndFoldOnlyUnderTheMark()
+    {
+        const string xml = """
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>A</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes><divisions>2</divisions><time><beats>3</beats><beat-type>4</beat-type></time>
+                    <clef><sign>G</sign><line>2</line></clef>
+                    <measure-style><multiple-rest>2</multiple-rest></measure-style></attributes>
+                  <note><rest measure="yes"/><duration>6</duration></note>
+                </measure>
+                <measure number="2"><note><rest measure="yes"/><duration>6</duration></note></measure>
+                <measure number="3"><note><rest measure="yes"/><duration>6</duration><type>whole</type></note></measure>
+                <measure number="4"><note><rest measure="yes"/><duration>6</duration><type>whole</type></note></measure>
+              </part>
+            </score-partwise>
+            """;
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains("R2.*2 | R2. | R2. |", lys);
+    }
 }

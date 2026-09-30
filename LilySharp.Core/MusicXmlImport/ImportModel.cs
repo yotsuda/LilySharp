@@ -129,6 +129,9 @@ internal sealed class ImportMeasure
     public bool EndingStop { get; set; }
     /// <summary>The measure's closing bar style.</summary>
     public BarlineKind BarlineRight { get; set; } = BarlineKind.Plain;
+    /// <summary><c>&lt;measure-style&gt;&lt;multiple-rest&gt;N</c>: this measure opens an
+    /// N-bar multi-measure rest (each of the N holds a whole-measure rest); null otherwise.</summary>
+    public int? MultipleRest { get; set; }
 
     /// <summary>Ordered contents per MusicXML voice number (ascending, so voice 1 —
     /// the upper voice, stems up — comes first).</summary>
@@ -168,6 +171,9 @@ internal sealed class ImportNote : ImportItem
     /// <summary>A rest with <c>print-object="no"</c>: time held, nothing drawn — written
     /// as the spacer <c>s</c>. Only read when <see cref="IsRest"/>.</summary>
     public bool IsSpacer { get; set; }
+    /// <summary>A <c>&lt;rest measure="yes"/&gt;</c>: the whole bar, written <c>R</c>. Only
+    /// read when <see cref="IsRest"/>.</summary>
+    public bool IsMeasureRest { get; set; }
     /// <summary>Diatonic step, 0=C .. 6=B.</summary>
     public int Step { get; set; }
     /// <summary>Chromatic alteration in semitones (-2..+2).</summary>

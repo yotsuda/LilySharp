@@ -358,6 +358,11 @@ internal static class MusicXmlReader
         if (int.TryParse(Local(el, "divisions")?.Value, out int d) && d > 0)
             divisions = d;
 
+        // The exporter writes `R1*N` as N whole-measure rests with this on the first; the
+        // writer folds them back into one `R…*N`.
+        if (int.TryParse(Local(Local(el, "measure-style"), "multiple-rest")?.Value, out int bars) && bars > 1)
+            measure.MultipleRest = bars;
+
         var keyEl = Local(el, "key");
         if (keyEl != null)
         {
@@ -468,12 +473,25 @@ internal static class MusicXmlReader
             note.IsRest = true;
             return note;
         }
-        if (Local(el, "rest") != null)
+        if (Local(el, "rest") is { } restEl)
         {
             note.IsRest = true;
             // A rest that is not printed holds its time and shows nothing: Lily#'s spacer
             // `s`, which is how the exporter writes one (MusicXmlNote.PrintObject).
             note.IsSpacer = (string?)el.Attribute("print-object") == "no";
+            // A whole-measure rest is the bar's length whatever its <type> says — writers
+            // commonly put "whole" on it in any meter — so its value comes from the duration.
+            note.IsMeasureRest = (string?)restEl.Attribute("measure") == "yes";
+            if (note.IsMeasureRest && ValueFromDuration(el, divisions) is { } bar)
+                (note.NoteValue, note.Dots) = bar;
+            // A rest carries post-events like a note: `r2@fermata`, `r4@staccato`, and a
+            // tuplet may open or close on it. Until 2026-09-30 this returned before reading
+            // <notations>, so all of them were dropped.
+            if (Local(el, "notations") is { } restNotations)
+            {
+                ReadMarks(restNotations, note);
+                ReadTuplets(restNotations, el, note);
+            }
             return note;
         }
 
@@ -528,13 +546,7 @@ internal static class MusicXmlReader
                     case "stop": note.SlurStop = true; break;
                 }
             }
-            // Fermata is a direct <notations> child in real files, but the Lily#
-            // exporter nests it under <articulations> (mapped below); handle both, once.
-            if (Local(notations, "fermata") != null && !note.Articulations.Contains("fermata"))
-                note.Articulations.Add("fermata");
-            foreach (var a in Local(notations, "articulations")?.Elements() ?? Enumerable.Empty<XElement>())
-                if (ArticulationMark(a.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
-                    note.Articulations.Add(mark);
+            ReadMarks(notations, note);
             foreach (var o in Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>())
             {
                 if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
@@ -568,13 +580,7 @@ internal static class MusicXmlReader
                         report.Warn(measureNo, $"fingering '{fingering.Value.Trim()}' is not a number and is dropped.");
                 }
             }
-            // Tuplet bracket: the ratio comes from <time-modification>.
-            foreach (var tup in Els(notations, "tuplet"))
-                switch ((string?)tup.Attribute("type"))
-                {
-                    case "start": note.TupletStart = ReadTimeModification(el); break;
-                    case "stop": note.TupletStop = true; break;
-                }
+            ReadTuplets(notations, el, note);
         }
 
         foreach (var lyric in Els(el, "lyric"))
@@ -582,6 +588,30 @@ internal static class MusicXmlReader
                 note.Lyrics.Add(imported);
 
         return note;
+    }
+
+    /// <summary>The fermata and the &lt;articulations&gt; marks, for a note or a rest.</summary>
+    private static void ReadMarks(XElement notations, ImportNote note)
+    {
+        // Fermata is a direct <notations> child in real files, but the Lily#
+        // exporter nests it under <articulations> (mapped below); handle both, once.
+        if (Local(notations, "fermata") != null && !note.Articulations.Contains("fermata"))
+            note.Articulations.Add("fermata");
+        foreach (var a in Local(notations, "articulations")?.Elements() ?? Enumerable.Empty<XElement>())
+            if (ArticulationMark(a.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
+                note.Articulations.Add(mark);
+    }
+
+    /// <summary>Tuplet bracket ends on a note or a rest; the ratio comes from
+    /// &lt;time-modification&gt;.</summary>
+    private static void ReadTuplets(XElement notations, XElement el, ImportNote note)
+    {
+        foreach (var tup in Els(notations, "tuplet"))
+            switch ((string?)tup.Attribute("type"))
+            {
+                case "start": note.TupletStart = ReadTimeModification(el); break;
+                case "stop": note.TupletStop = true; break;
+            }
     }
 
     /// <summary>A grace &lt;note&gt; → an <see cref="ImportGraceNote"/> (pitch + written
@@ -705,6 +735,13 @@ internal static class MusicXmlReader
             return (fromType, dots);
 
         // No usable <type>: recover a value+dots from the sounding duration.
+        return ValueFromDuration(el, divisions) ?? (4, dots);
+    }
+
+    /// <summary>The value+dots whose length is the element's &lt;duration&gt;, or null when
+    /// none is (a 5/4 bar, a tuplet member).</summary>
+    private static (int Value, int Dots)? ValueFromDuration(XElement el, int divisions)
+    {
         if (int.TryParse(Local(el, "duration")?.Value, out int ticks) && ticks > 0 && divisions > 0)
         {
             var frac = new Fraction(ticks, divisions * 4); // fraction of a whole note
@@ -713,7 +750,7 @@ internal static class MusicXmlReader
                     if (Fraction.FromNoteValue(baseVal).Dotted(k) == frac)
                         return (baseVal, k);
         }
-        return (4, dots);
+        return null;
     }
 
     private static ImportLyric? ReadLyric(XElement el)

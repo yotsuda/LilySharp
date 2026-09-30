@@ -394,15 +394,58 @@ internal static class LysWriter
         ImportPart part, int voice, int start, int end, ImportReport report, RelativeOctave? rel)
     {
         var sb = new StringBuilder();
-        for (int i = start; i < end && i < part.Measures.Count; i++)
+        end = Math.Min(end, part.Measures.Count);
+        for (int i = start; i < end;)
         {
+            int bars = MultiRestSpan(part.Measures, i, end, voice);
             var items = part.Measures[i].VoiceItems.TryGetValue(voice, out var v) ? v : EmptyItems;
-            sb.Append(WriteMeasureItems(items, report, rel)).Append(' ');
-            if (i < end - 1)
+            sb.Append(WriteMeasureItems(items, report, rel, bars)).Append(' ');
+            i += bars;
+            if (i < end)
                 sb.Append("| ");
         }
         return sb.ToString().TrimEnd();
     }
+
+    /// <summary>
+    /// How many bars from <paramref name="i"/> fold into one <c>R…*N</c>: the measure's
+    /// <c>multiple-rest</c> count, cut short where anything but another plain whole-measure
+    /// rest stands in the way (a bar line other than plain, a repeat, an ending, an
+    /// attribute change, a mark on a later bar) and at <paramref name="end"/>. 1 = no fold.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/parser.yy:3117-3120 MULTI_MEASURE_REST — <c>R1*4</c> is ONE event
+    /// over four bars, while <c>R1 | R1 | R1 | R1</c> is four (the exporter writes the one as
+    /// <c>multiple-rest 4</c> on the first of four bar rests); so only the mark folds, never
+    /// a run of bar rests that merely happen to follow each other.
+    /// </remarks>
+    private static int MultiRestSpan(IReadOnlyList<ImportMeasure> measures, int i, int end, int voice)
+    {
+        if (measures[i].MultipleRest is not int bars || LoneBarRest(measures[i], voice) is not { } head)
+            return 1;
+        int k = 1;
+        while (k < bars && i + k < end)
+        {
+            var prev = measures[i + k - 1];
+            var m = measures[i + k];
+            if (prev.BarlineRight != BarlineKind.Plain || prev.EndingStop
+                || m.RepeatForward || m.EndingStart != null || m.MultipleRest != null
+                || m.Key != null || m.Time != null || m.Clef != null || m.Tempo != null
+                || LoneBarRest(m, voice) is not { } r
+                || r.NoteValue != head.NoteValue || r.Dots != head.Dots || r.IsSpacer != head.IsSpacer
+                || r.Articulations.Count > 0 || r.TupletStart != null)
+                break;
+            k++;
+        }
+        return k;
+    }
+
+    // The measure's one item when it is a whole-measure rest alone in the bar, else null.
+    private static ImportNote? LoneBarRest(ImportMeasure m, int voice)
+        => m.VoiceItems.Count == 1 && m.VoiceItems.TryGetValue(voice, out var items) && items.Count == 1
+           && items[0] is ImportNote { IsRest: true, IsMeasureRest: true } rest
+            ? rest
+            : null;
 
     private static string WriteMusic(ImportPart part, ImportReport report, bool relative)
     {
@@ -424,29 +467,30 @@ internal static class LysWriter
     private static string WriteVoiceStream(ImportPart part, int voice, ImportReport report, RelativeOctave? rel)
     {
         var measures = part.Measures;
-        var cells = measures
-            .Select(m => WriteMeasureItems(
-                m.VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report, rel))
-            .ToList();
-
         var sb = new StringBuilder();
         if (measures.Count > 0 && measures[0].RepeatForward)
             sb.Append("|: ");
 
-        for (int i = 0; i < measures.Count; i++)
+        for (int i = 0; i < measures.Count;)
         {
-            sb.Append(cells[i]);
+            int bars = MultiRestSpan(measures, i, measures.Count, voice);
+            sb.Append(WriteMeasureItems(
+                measures[i].VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report, rel, bars));
+            // The folded bars close at the LAST one's bar line.
+            int last = i + bars - 1;
             sb.Append(' ');
-            sb.Append(i < measures.Count - 1
-                ? BarlineBetween(measures[i], measures[i + 1])
-                : FinalBarline(measures[i]));
-            if (i < measures.Count - 1)
+            sb.Append(last < measures.Count - 1
+                ? BarlineBetween(measures[last], measures[last + 1])
+                : FinalBarline(measures[last]));
+            if (last < measures.Count - 1)
                 sb.Append(' ');
+            i = last + 1;
         }
         return sb.ToString();
     }
 
-    private static string WriteMeasureItems(List<ImportItem> items, ImportReport report, RelativeOctave? rel = null)
+    private static string WriteMeasureItems(
+        List<ImportItem> items, ImportReport report, RelativeOctave? rel = null, int multiRest = 1)
     {
         var tokens = new List<string>();
         string? pendingChord = null;
@@ -512,9 +556,32 @@ internal static class LysWriter
             OpenCueIfNeeded(note);
             if (note.IsRest)
             {
-                tokens.Add((note.IsSpacer ? "s" : "r") + Value(note.NoteValue, note.Dots));
-                pendingChord = null; // a rest cannot carry a chord symbol
-                pendingFig = null;   // ... nor figured bass
+                // A whole-measure rest is `R` (and `R…*N` when the bars fold — WriteVoiceStream);
+                // its post-events follow as a note's do. Until 2026-09-30 a rest was written
+                // bare: `R1*4@p`, `r2@fermata` and `r4@f` came back as plain rests, and a tuplet
+                // opening or closing on a rest lost its brace.
+                string rest = (note.IsSpacer ? "s" : note.IsMeasureRest ? "R" : "r")
+                    + Value(note.NoteValue, note.Dots)
+                    + (note.IsMeasureRest && multiRest > 1 ? "*" + multiRest : "");
+                // A chord symbol stands on a rest's beat (owner's decision 2026-09-28: the
+                // page draws `r1@chord(C)`); figured bass on a rest has no Lily# spelling.
+                if (pendingChord != null)
+                    rest += pendingChord;
+                pendingChord = null;
+                pendingFig = null;
+                foreach (var art in note.Articulations)
+                    rest += "@" + art;
+                if (note.TupletStart is { } rt)
+                {
+                    tokens.Add($"tuplet {rt.Actual}/{rt.Normal} {{");
+                    tupletDepth++;
+                }
+                tokens.Add(rest);
+                if (note.TupletStop)
+                {
+                    tokens.Add("}");
+                    tupletDepth = Math.Max(0, tupletDepth - 1);
+                }
                 i++;
                 continue;
             }

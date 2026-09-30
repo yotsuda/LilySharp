@@ -3596,6 +3596,10 @@ public sealed class MusicXmlExporter
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
         int bars = rest.MeasureCount;
+        // A rest inside a tuplet plays its share like a note (the pitched rest above stamps
+        // the same): without the ratio a reader sees a plain eighth where a triplet eighth
+        // stands, and a bracket opening on the rest has no ratio to open with.
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
 
         var xmlNote = new MusicXmlNote
         {
@@ -3603,9 +3607,13 @@ public sealed class MusicXmlExporter
             Duration = durationTicks,
             Type = type,
             Dots = dots,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
             // `R1*N` is N whole-measure rests (<rest measure="yes"/>), one a bar; a plain
             // `r1` is a rest at beat one, and the two are told apart by every reader.
-            IsMeasureRest = bars > 1,
+            // `R1` alone is a whole-measure rest as well — it was written as `r1` until
+            // 2026-09-30, so it came back from an import as one.
+            IsMeasureRest = rest.RestText == "R",
             // A spacer holds its time and prints nothing: MusicXML has no spacer, so it is a
             // rest that is not printed. Until 2026-09-29 (HANDOFF §1.1 第662 ⑷) it was an
             // ordinary <rest/> — a rest drawn where the page draws nothing.
