@@ -378,8 +378,99 @@ public sealed class MusicXmlExporter
             EmitPendingChordRows();
         }
         WriteCapo();
+        WriteBeams(tree, hasSections);
 
         return _document;
+    }
+
+    /// <summary>
+    /// The page's beams as <c>&lt;beam&gt;</c> elements: each part is collected the way the page
+    /// collects it and its beam groups detected by the page's own <see cref="Svg.Collector.BeamDetector"/>
+    /// (automatic beaming by the meter, written <c>[ ]</c>, the tuplet and voice bounds), and every
+    /// member's levels are written on the exported note that stands for it.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 the file carried no <c>&lt;beam&gt;</c> at all, so a reader beamed by its own
+    /// rules: MuseScore joined nine eighths of a 7/4 bar under one beam where the page beams by the
+    /// beat (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #11, beams.lys).
+    /// <para>
+    /// THE MATCH: an exported note and a page item are the same written note when they share the
+    /// syntax node's <c>SourceStart</c> (<see cref="MusicXmlNote.SourcePosition"/>) and are its
+    /// k-th printing in the part, counted in measure order on both sides — a section printed twice
+    /// is two sets of notes in both. A chord's <c>&lt;beam&gt;</c> rides its first note.
+    /// </para>
+    /// <para>
+    /// THE LEVELS: a member with <c>BeamCount</c> beams, <c>BeamCountLeft</c> reaching its left
+    /// neighbour and <c>BeamCountRight</c> its right, writes one element per level: a level both
+    /// neighbours share on a side is joined there (<c>begin</c> / <c>continue</c> / <c>end</c>), a
+    /// level joined on neither side is a beamlet (<c>forward hook</c> when it points right,
+    /// <c>backward hook</c> otherwise) — the counts the renderer's segments are built from
+    /// (BeamSubdivision.CalcBeamSegments).
+    /// </para>
+    /// </remarks>
+    private void WriteBeams(SyntaxTree tree, bool hasSections)
+    {
+        var detector = new Svg.Collector.BeamDetector();
+        foreach (var part in Document.Parts)
+        {
+            // Where each written note falls in the part, k-th printing by k-th printing.
+            var xmlBySource = new Dictionary<int, List<MusicXmlNote>>();
+            foreach (var measure in part.Measures)
+                foreach (var note in measure.Notes)
+                    if (note.SourcePosition >= 0 && !note.IsChord && !note.IsRest && !note.IsGrace)
+                    {
+                        if (!xmlBySource.TryGetValue(note.SourcePosition, out var list))
+                            xmlBySource[note.SourcePosition] = list = new List<MusicXmlNote>();
+                        list.Add(note);
+                    }
+            if (xmlBySource.Count == 0)
+                continue;
+
+            var score = new Svg.Collector.MeasureCollector().Collect(tree, hasSections ? part.Name : null);
+            // The same count on the page: each item's printing, per voice, in measure order.
+            var printing = new Dictionary<Svg.Model.MusicItem, int>(ReferenceEqualityComparer.Instance);
+            foreach (var voice in score.Voices)
+            {
+                var seen = new Dictionary<int, int>();
+                foreach (var measure in voice.Measures)
+                    foreach (var item in measure.Items)
+                        if (item is Svg.Model.NoteItem or Svg.Model.ChordItem && item.SourcePosition >= 0)
+                        {
+                            seen.TryGetValue(item.SourcePosition, out int k);
+                            printing[item] = k;
+                            seen[item.SourcePosition] = k + 1;
+                        }
+            }
+
+            foreach (var group in detector.DetectBeamGroups(score))
+            {
+                var members = group.Members;
+                for (int i = 0; i < members.Length; i++)
+                {
+                    var m = members[i];
+                    var item = m.DetectedItem;
+                    if (!printing.TryGetValue(item, out int k)
+                        || !xmlBySource.TryGetValue(item.SourcePosition, out var notes) || k >= notes.Count)
+                        continue;
+                    var xmlNote = notes[k];
+                    xmlNote.Beams.Clear();
+                    for (int level = 1; level <= m.BeamCount; level++)
+                    {
+                        bool left = i > 0 && level <= m.BeamCountLeft && level <= members[i - 1].BeamCountRight;
+                        bool right = i < members.Length - 1 && level <= m.BeamCountRight
+                                     && level <= members[i + 1].BeamCountLeft;
+                        string value = (left, right) switch
+                        {
+                            (true, true) => "continue",
+                            (false, true) => "begin",
+                            (true, false) => "end",
+                            _ => level <= m.BeamCountRight && i < members.Length - 1 ? "forward hook" : "backward hook",
+                        };
+                        xmlNote.Beams.Add((level, value));
+                    }
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -1761,6 +1852,35 @@ public sealed class MusicXmlExporter
         RecordWrittenAttributes();
     }
 
+    /// <summary>
+    /// Runs the handler of one written note-like item and stamps the notes it added with the
+    /// item's <c>SourceStart</c> (<see cref="MusicXmlNote.SourcePosition"/>) — the offset the
+    /// page's items carry, so <see cref="WriteBeams"/> can find each exported note's place in
+    /// the page's beam groups. Grace notes, backups and raw pseudo-entries are not the item's.
+    /// A handler that starts a new measure leaves its notes in two lists; both are stamped.
+    /// </summary>
+    private void Stamped(SyntaxNode item, System.Action handle)
+    {
+        var before = _currentMeasure;
+        int count = before?.Notes.Count ?? 0;
+        handle();
+        int source = item.SourceStart;
+        if (before != null)
+            StampFrom(before, count);
+        if (_currentMeasure != null && !ReferenceEquals(_currentMeasure, before))
+            StampFrom(_currentMeasure, 0);
+
+        void StampFrom(MusicXmlMeasure measure, int from)
+        {
+            for (int i = from; i < measure.Notes.Count; i++)
+            {
+                var n = measure.Notes[i];
+                if (n.SourcePosition < 0 && !n.IsGrace && !n.IsBackup && n.RawElement == null)
+                    n.SourcePosition = source;
+            }
+        }
+    }
+
     private void ProcessNode(SyntaxNode node)
     {
         switch (node)
@@ -1807,26 +1927,26 @@ public sealed class MusicXmlExporter
                 break;
 
             case NoteSyntax note:
-                ProcessNote(note);
+                Stamped(note, () => ProcessNote(note));
                 break;
             case DrumNoteSyntax drumNote:
-                ProcessDrumNote(drumNote);
+                Stamped(drumNote, () => ProcessDrumNote(drumNote));
                 break;
 
             case ChordSyntax chord:
-                ProcessChord(chord);
+                Stamped(chord, () => ProcessChord(chord));
                 break;
 
             case ChordRepetitionSyntax rep:
-                ProcessChordRepetition(rep);
+                Stamped(rep, () => ProcessChordRepetition(rep));
                 break;
 
             case SlashNoteSyntax slash:
-                ProcessSlashNote(slash);
+                Stamped(slash, () => ProcessSlashNote(slash));
                 break;
 
             case BareDurationSyntax bare:
-                ProcessBareDuration(bare);
+                Stamped(bare, () => ProcessBareDuration(bare));
                 break;
 
             case ArpeggioSyntax arpeggio:
@@ -2697,7 +2817,7 @@ public sealed class MusicXmlExporter
                     if (!first)
                         (_octaveAbsolute, _octaveAnchor, _currentStep, _currentOctave) = frame;
                     _defaultDuration = Fraction.FromNoteValue(parts[k].Value).Dotted(parts[k].Dots);
-                    ProcessChord(chord, isRoot ? groupOctave : 0);
+                    Stamped(chord, () => ProcessChord(chord, isRoot ? groupOctave : 0));
                     if (first && slurStart)
                         foreach (var n in _chordMembers) n.SlurStart = true;
                     if (last && slurEnd)
@@ -2823,6 +2943,9 @@ public sealed class MusicXmlExporter
                 Notehead = NoteheadFromMarks(pitch.Articulations),
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal,
+                // The page's arpeggio note carries its MEMBER's offset (BuildArpeggioNoteItems),
+                // not the group's — the beams find it by this (WriteBeams).
+                SourcePosition = pitch.SourceStart,
             };
             if (first)
                 ProcessArticulations(
@@ -2873,6 +2996,7 @@ public sealed class MusicXmlExporter
                 Dots = dots,
                 ActualNotes = tupletActual,
                 NormalNotes = tupletNormal,
+                SourcePosition = degree.SourceStart,   // the page's EmitArpeggioDegree item's
             };
             if (groupString is { } s)
                 xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", s));

@@ -562,6 +562,20 @@ internal sealed class MusicXmlNote
     /// read these on import.</summary>
     public List<(int Verse, string Text, string Syllabic, bool Extend)> Lyrics { get; } = new();
 
+    /// <summary>Where the note was written — the syntax node's <c>SourceStart</c>, the offset the
+    /// page's items carry as <c>SourcePosition</c> — or −1 for a note no written item stands
+    /// behind (a pad, a pseudo-entry). It ties an exported note to the page's own reading of the
+    /// same note, which is where the beams come from.</summary>
+    public int SourcePosition { get; set; } = -1;
+
+    /// <summary>The staff of a multi-staff part this note is on (<c>&lt;staff&gt;</c>), or null
+    /// on a one-staff part.</summary>
+    public int? Staff { get; set; }
+
+    /// <summary>The note's <c>&lt;beam&gt;</c> elements, level 1 first: <c>begin</c>,
+    /// <c>continue</c>, <c>end</c>, <c>forward hook</c> or <c>backward hook</c>.</summary>
+    public List<(int Number, string Value)> Beams { get; } = new();
+
     public XElement ToXml()
     {
         // Non-note pseudo-entries keep their slot in the note stream.
@@ -641,6 +655,13 @@ internal sealed class MusicXmlNote
 
         if (Notehead != null)
             note.Add(new XElement("notehead", Notehead));
+
+        // MusicXML order: … notehead, staff, beam, notations, lyric.
+        if (Staff.HasValue)
+            note.Add(new XElement("staff", Staff.Value));
+
+        foreach (var (number, value) in Beams)
+            note.Add(new XElement("beam", new XAttribute("number", number), value));
 
         // Notations (articulations, ornaments, ties, slurs)
         var hasNotations = Articulations.Count > 0 || Ornaments.Count > 0 ||
