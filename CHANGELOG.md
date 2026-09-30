@@ -147,8 +147,10 @@ workflow attaches that section to the GitHub Release verbatim.
   name shows under the capo — the pressed chord's (default), the sounding chord's, or both,
   `E♭m7 (Cm7)`, each name with its own raised quality. The `.ly` twin writes the pressed chords
   into `\chordmode` and `instrument = "Capo 3"` in its `\header` (under `sounding` the sounding
-  chords; `both` it cannot spell, and warns); MusicXML's `<harmony>` stays the sounding chord,
-  its `<frame>` the pressed shape; the MIDI plays the sounding music.
+  chords; under `both` each name is set by a small `chordNameFunction` that names the sounding
+  chord and then, in brackets, the pressed one, so LilyPond prints `E♭m7 (Cm7)` too);
+  MusicXML's `<harmony>` stays the sounding chord, its `<frame>` the pressed shape; the MIDI
+  plays the sounding music.
 - **The chord list: `layout { chordList true }`.** Every chord the score names — its `chords`
   rows and every `@chord` — once, in order of first appearance, at the head of the score under
   the title, each as the name the score prints over the diagram it draws there (a chord that

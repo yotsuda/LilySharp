@@ -2086,13 +2086,25 @@ public class ChordDiagramTests
         Assert.Contains("\\storePredefinedDiagram #lysFretsA \\chordmode { c } #guitar-tuning", ly);
         Assert.Contains("instrument = \"Capo 3\"", ly);
         Assert.Empty(exporter.Warnings.Where(w => w.Contains("chordNames", StringComparison.Ordinal)));
-        // sounding: the sounding chords are named, the diagrams stay pressed; both: named sounding, and warned.
+        // sounding: the sounding chords are named, the diagrams stay pressed.
         string sounding = Twin(Song("layout { chordDiagrams guitar capo 3 all  chordNames sounding }\n", "Eb | Bb |", "c'1 | c'1 |"));
         Assert.Matches(@"progChords = \\chordmode \{\s+ees1 \|\s+bes1 \|", sounding);
         Assert.Contains("\\chordmode { c } #guitar-tuning", sounding);
+        // both: the sounding chord, named "E♭ (C)" by lysCapoBoth from the pressed chord each entry
+        // carries (LilyPond 2.26 prints the page's names — Lab sessions/p709/both); the FretBoards
+        // track keeps the pressed chords bare. Until 2026-09-30 named sounding alone, and warned.
         var both = new LilyPondExporter();
-        both.Export(SyntaxTree.Parse(Song("layout { chordDiagrams guitar capo 3  chordNames both }\n", "Eb |", "c'1 |")));
-        Assert.Contains(both.Warnings, w => w.Contains("chordNames both is not exported", StringComparison.Ordinal));
+        string bothLy = both.Export(SyntaxTree.Parse(Song("layout { chordDiagrams guitar capo 3 all  chordNames both }\n",
+            "Eb | Ab/C |", "c'1 | c'1 |")));
+        Assert.Single(Regex.Matches(bothLy, @"#\(define \(lysCapoBoth pressed\)"));
+        Assert.Matches(@"progChords = \\chordmode \{\s+"
+            + @"\\once \\set chordNameFunction = #\(lysCapoBoth #\{ \\chordmode \{ c \} #\}\) ees1 \|\s+"
+            + @"\\once \\set chordNameFunction = #\(lysCapoBoth #\{ \\chordmode \{ f/a \} #\}\) aes1/c \|", bothLy);
+        Assert.Equal(2, Regex.Matches(bothLy, @"lysCapoBoth #\{").Count);   // the ChordNames entries alone
+        Assert.Contains("\\chordmode { c } #guitar-tuning", bothLy);
+        Assert.DoesNotContain(both.Warnings, w => w.Contains("chordNames", StringComparison.Ordinal));
+        // No capo: `both` has nothing to add.
+        Assert.DoesNotContain("lysCapoBoth", Twin(Song("layout { chordNames both }\n", "Eb |", "c'1 |")));
         // MusicXML: the <harmony> is the sounding chord (data), the <frame> the pressed shape.
         string book = Capo3All + """
             octave absolute

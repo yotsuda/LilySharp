@@ -1206,12 +1206,62 @@ public sealed class LilyPondExporter
                 opened = true;
             }
             _sb.Append("  instrument = \"Capo ").Append(_layoutPlan.Chords.Capo.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("\"\n");
-            if (_layoutPlan.Chords.Names == Semantics.ChordNameMode.Both)
-                _warnings.Add("chordNames both is not exported: LilyPond names the sounding chord alone, "
-                    + "the page writes the pressed name in brackets after it");
         }
         if (opened)
             _sb.Append("}\n\n");
+        if (NamesBoth)
+            _sb.Append(CapoBothNamer);
+    }
+
+    /// <summary>Under a capo with <c>chordNames both</c>, the ChordNames track names each chord
+    /// "sounding (pressed)" as the page does (<see cref="Music.ChordStructure.PrintedSymbol"/>):
+    /// LilyPond has no capo naming, so each entry carries its pressed chord (<see cref="TwinEntry"/>).</summary>
+    private bool NamesBoth => _layoutPlan.Chords.Capo > 0 && _layoutPlan.Chords.Names == Semantics.ChordNameMode.Both;
+
+    /// <summary>
+    /// The chordNameFunction <see cref="TwinEntry"/> sets once per chord under <see cref="NamesBoth"/>:
+    /// LilyPond's own <c>ignatzek-chord-names</c> twice — on the sounding chord it is handed, and
+    /// on the pressed chord the entry carries — "E♭m7 (Cm7)". Until 2026-09-30 the twin named
+    /// the sounding chord alone and warned.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm:1530-1557 Current_chord_text_engraver — the
+    ///   pressed chord's note events are read the way the engraver reads its own: a <c>bass</c>
+    ///   note is the bass, an <c>inversion</c> note is named at its <c>octavation</c>-restored
+    ///   pitch and is the inversion, the rest sorted by <c>ly:pitch&lt;?</c>.
+    /// </remarks>
+    private static readonly string CapoBothNamer = """
+        #(define (lysCapoBoth pressed)
+           (lambda (pitches bass inversion context)
+             (let ((ps '()) (b '()) (inv '()))
+               (for-each
+                (lambda (m)
+                  (let ((p (ly:music-property m 'pitch)))
+                    (if (ly:music-property m 'bass #f)
+                        (set! b p)
+                        (let ((oct (ly:music-property m 'octavation)))
+                          (set! ps (cons (if (integer? oct) (ly:pitch-transpose p (ly:make-pitch (- oct) 0)) p) ps))
+                          (if (ly:music-property m 'inversion #f) (set! inv p))))))
+                (extract-typed-music pressed 'note-event))
+               (make-concat-markup
+                (list (ignatzek-chord-names pitches bass inversion context)
+                      " ("
+                      (ignatzek-chord-names (sort ps ly:pitch<?) b inv context)
+                      ")")))))
+
+
+        """.ReplaceLineEndings("\n");
+
+    /// <summary>A chord's <c>\chordmode</c> entry as the twin writes it (<see cref="TwinChord"/>);
+    /// under <see cref="NamesBoth"/> a ChordNames entry first sets the naming that prints its
+    /// pressed name after it (<see cref="CapoBothNamer"/>).</summary>
+    private string TwinEntry(Music.ChordStructure chord, int keySharps, string duration)
+    {
+        string spelled = TwinChord(chord, keySharps).ToChordMode(duration);
+        if (!NamesBoth || _fretTrack)
+            return spelled;
+        return "\\once \\set chordNameFunction = #(lysCapoBoth #{ \\chordmode { "
+            + chord.Pressed(_layoutPlan.Chords.Capo, keySharps).ToChordMode("") + " } #}) " + spelled;
     }
 
     private static string? MetaString(List<MetadataDeclarationSyntax> meta, string keyword)
@@ -6181,7 +6231,7 @@ public sealed class LilyPondExporter
             if (s.RawSuffix != null && _chordWarned.Add(c.ChordText))
                 _warnings.Add($"@chord '{c.ChordText}': the quality '{s.RawSuffix}' has no \\chordmode spelling — "
                     + $"the twin writes the root alone ({spelled})");
-            return spelled;
+            return TwinEntry(s, _keySharps, duration);
         }
         if (_chordWarned.Add(c.ChordText))
             _warnings.Add($"@chord '{c.ChordText}' is not a chord symbol the twin can spell — written as a silent slot");
@@ -6443,9 +6493,9 @@ public sealed class LilyPondExporter
     private string ChordModeEntry(string symbol, string duration, (int TonicStep, int Sharps) key)
     {
         if (Music.ChordStructure.TryParseChordEntry(symbol, out var parsed))
-            return TwinChord(parsed, key.Sharps).ToChordMode(duration);
+            return TwinEntry(parsed, key.Sharps, duration);
         if (Music.ChordStructure.TryParseRomanEntry(symbol, key.TonicStep, key.Sharps, out var degree))
-            return TwinChord(degree, key.Sharps).ToChordMode(duration);
+            return TwinEntry(degree, key.Sharps, duration);
 
         int slash = symbol.IndexOf('/');
         string main = slash >= 0 ? symbol[..slash] : symbol;
@@ -6466,7 +6516,7 @@ public sealed class LilyPondExporter
             if (_chordWarned.Add(symbol))
                 _warnings.Add($"chord '{symbol}': the quality '{qual}' has no \\chordmode spelling — "
                     + $"the twin writes the root alone ({spelled})");
-            return spelled;
+            return TwinEntry(raw, key.Sharps, duration);
         }
 
         if (_chordWarned.Add(symbol))
