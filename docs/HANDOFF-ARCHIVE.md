@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第703セッションの経緯
+
+### 1.1 第703セッション（2026-09-30・YT-DELL2）
+
+新しい会話（ユーザー「HANDOFF を読んで着手」）。★ `-Start p703`（HEAD `b95fd90d`・未 push 99）＝full **10429 / 0 / 2 / 10431**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本の `M` は改行だけ（CRLF・内容の差 0・2026-09-29 から在る）＝触らない。
+⑴ ★ `510ab1dc`（第702 の 7.7）: `StringLiteral.IsClosed`＝「閉じた 1 つの literal か」を 1 軒に。6 か所の「始まりが引用＋末尾が `"`」は `@"`（開きだけ）・`"a\"`（末尾の引用が escape）・`@"a""`・`"a" "b"`（2 つの literal）を閉じたと取っていた＋`ChordAnnotation.Parse` に 7 つ目の綴り（開きの後に `"` が在れば閉じた）＝全部 `Value` と同じ読みで閉じ引用を探す 1 関数に寄せた（残る引用の判定は `StringLiteral` の中だけ＝grep で確認）。網 `StringLiteralTests` +14（毒＝`IsClosed` を字面の判定に戻す: 予測した 4 件だけ赤）。掃き 998 冊: `lysc check` の診断の出入り 0・svg 782/782 がバイト同一（data-pos を伏せて）＝コーパスに無い形。full **10443 / 0 / 2 / 10445**。
+★ `-End p703 -DiffBase b95fd90d`＝full **10443 / 0 / 2 / 10445**・門 6 つ全 OK・Core `+` 39 行に REF 0／OWN 0（`StringLiteral` の家の中＝既に OWN の註の下・LP に対応物なし）。7.6: ⒜ なし。7.7: `SymbolCaseValidator.IsQuoted` は `IsClosed` をそのまま呼ぶだけの 1 行になった（名前が「開きだけ」の `StringLiteral.IsQuoted` と紛らわしい＝畳むなら呼び出し 1 か所を `IsClosed` に）。push はユーザー。
+
 ## 以下は第702セッションの経緯
 
 ### 1.1 第702セッション（2026-09-30・YT-DELL2）
