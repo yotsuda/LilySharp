@@ -40,6 +40,8 @@ internal static class PhraseAnchor
     /// caller can compute (the part's tuning, the capo, the key). It is absolute: the
     /// reference's own marks do not move it, as they do not move the item (owner's decision
     /// 2026-09-30). The item is <see cref="Anchor"/>'s <c>shape</c>.</summary>
+    /// <remarks>LILYSHARP-OWN: LilyPond has neither the item nor a phrase anchor — the twin's
+    /// nested <c>\relative</c> reads the note after it from the pitch BEFORE the reference (it warns there).</remarks>
     public const int Shape = -2;
 
     /// <summary>

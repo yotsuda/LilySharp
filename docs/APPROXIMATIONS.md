@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 200 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **318** | |
+| `OWN` | 201 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **319** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（200 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（201 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3041** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -259,6 +259,8 @@
 - **:29** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): the WINDOW voicing. Every
 ### `LilySharp.Core/Music/ChordVoicings.cs`
 - **:34** LILYSHARP-OWN, all of it: LilyPond has no voicing catalogue. Its predefined fret diagrams
+### `LilySharp.Core/Music/PhraseAnchor.cs`
+- **:43** LILYSHARP-OWN: LilyPond has neither the item nor a phrase anchor — the twin's
 ### `LilySharp.Core/Music/PredefinedFretboards.cs`
 - **:35** LILYSHARP-OWN: NINE of LilyPond's entries are LEFT OUT (owner's decisions 2026-09-28) — seven
 ### `LilySharp.Core/Music/PredefinedFretboardsGenerated.cs`
