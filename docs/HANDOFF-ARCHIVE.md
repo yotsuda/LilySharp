@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第720セッションの経緯
+
+### 1.1 第720セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第719 の 7.7 の残り）。`-Start p720`（HEAD `a7f4ace5`・未 push 3）＝full **10531 / 0 / 2 / 10533**（引継ぎと一致）。
+⒜ `<wedge type="stop">` は読まないまま＝**Lily# の松葉は常に次の強弱まで**（GRAMMAR_FOR_LLM「Hairpins」）で、止めだけを書く綴りが言語に無い（言語の制約・起票しない）。
+⑴ ★ `e10d3c2c` **staff のラベルの往復**: import は `<part-name>` を全部捨てていた（`staff rh "Piano"` が素の `staff pianoRH`）。印刷される名前（`print-object="no"` でないもの）を score の `staff x "名前"` に戻す（分割した大譜表は最初の段・`ImportPart.Label`）。対になる書き出し: 頁がラベルを出さない staff の `<part-name>`（id を書く）に `print-object="no"`＝読み手は id を印刷していた。網 `MusicXmlRoundTripTests` +1・毒 2 つ（print-object を見ない・分割の全段にラベル）が赤。掃き（Lab `sessions/p720/imp/sweep.ps1`）998 冊: import が変わった 66 冊＝差は全部 staff のラベルの行・どれも原本の頁が印刷する名前（アンサンブルの既定の "Lh"・楽器の "guitar" ＝3 冊を SVG で確かめた）・check 不合格 4 → 4。
+⑵ ★ `c5c0cefa` **brace の `<part-group>` を読む**: 第718 の「別々のラベルの大譜表＝brace の 2 パート」が import で無関係な 2 段に戻っていた。brace の下の 1 段のパートは 1 つの `grandStaff`（最も内側の brace・自分で割れるパートはそちら・1 段だけの brace は大譜表にしない）。bracket ほかの group は読まない。網 +2・毒 2 つ（結ぶ・1 段を外す）が赤。掃きは 0 冊（主 score にその形の本が無い）＝陽性対照はプローブ（Lab `sessions/p720/lbl/apart.lys`）。
+★ `-End p720 -DiffBase a7f4ace5`＝full **10534 / 0 / 2 / 10536**・門 7 つ全 OK・Core `+` 77 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴⑵ とも第719 の 7.7 ⑶ の残り（表示名の往復）と第718 ⒦ の対。7.7: ⑴ import の pedal の「踏んでいる」表はパート全体で 1 つ（第719 から）⑵ bracket／line の `<part-group>`（`staffGroup`）は import も export も無い ⑶ `score main "imported"` の名前は固定のまま（`<work-title>` は title へ行く）⑷ `<part-abbreviation>` は読まない。push はユーザー（未 push 6）。
+
 ## 以下は第719セッションの経緯
 
 ### 1.1 第719セッション（2026-09-30・YT-DELL2）

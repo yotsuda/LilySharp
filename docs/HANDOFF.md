@@ -119,6 +119,15 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第722セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`＝12 件は全部直ったと確認済み・残りは `lilysharp-feedback-2026-09-30.md` の #13〜#16）。`-Start p722`（HEAD `579493bc`・未 push 8）＝full **10537 / 0 / 2 / 10539**（引継ぎと一致）。
+⑴ ★ `d334e6d4`（レポート #13・#14・#16）: #13 TAB 段の写しでスラッシュ（`/4`＝`<unpitched>` B4）が音符として書かれ、MuseScore がスラッシュごとに「7」を描いていた（頁の TAB は空）→ TAB 段では `<forward>`（voice 5・TAB だけの段も同じ・和音の構成音と前打音は何も書かない＝`MusicXmlNote.TabGap`）。#14 頁はスラッシュを TAB から外す（Midi 0＝どの弦にも無い）が、`TabResolver` が LYS5002「1 オクターブ低い」をスラッシュごとに出していた→ スラッシュの頭＋Midi 0 は黙って外す（本物の低すぎる音は今のまま警告）。#16 段番号を書く音符に voice が無ければ `1`（TAB つきパートの五線も・1 パートに畳んだ大譜表の上段も同じ穴＝`AGrandStaff_IsOnePartOnTwoStaves` の期待値を `s1v1` に）。**#15（隣り合う弦の数字が 2 列）は Lily# 独自のジグザグ**（`TabChordColumns`・LILYSHARP-OWN・2026-07-24 のユーザー決定）＝レポートの「意図した回避なら不要」＝変えない。
+網 `MusicXmlTabTests` +3・毒 3 つ（警告の除外・TAB の隙間・voice 1）がそれぞれ赤。掃き（Lab `sessions/p722/imp/sweep.ps1`）998 冊: import の変化 0・書き出しの変化 265 本（voice）。**母集団に「TAB の横のスラッシュ」の本が無い**（998 冊と実コーパスの TAB の本 296 冊で、base も head も TAB 段のスラッシュ 0・LYS5002 0）＝計器はレポートの `slash-tab.lys` で確かめた（base 5／5 → head 0／0・Lab `sessions/p722/slash/`）。レポートの「MuseScore 側の表示」（TAB の符幹・拍子記号を抑える `<stem>none`／`print-object="no"`）は未確認の候補＝触っていない。
+★ `-End p722 -DiffBase 579493bc`＝full **10540 / 0 / 2 / 10542**・門 7 つ全 OK・Core `+` 43 行に REF 0／OWN 0（MusicXML の書き出しと警告の条件だけ）。⚠ 途中の 2 つ: ⑴ 新しいメンバーを `ToXml` の `<param>` doc と本体のあいだに挟んで Core に CS1572（`-End` の build の門が落ちた）→ doc を本体の直前へ戻した ⑵ その修正を未 push の commit に amend したら、語りが引用していた旧 SHA が死んで `DeadCitationsDoNotGrow` が赤→ 語りの SHA を差し替えた（**amend したら語りの SHA を直す**）。7.6: ⑴ Omr のレポート（ユーザーの依頼）。7.7: ⑴ TAB だけの段でスラッシュに連桁が掛かっていると、`<forward>` に置き換えた音符の `<beam>` が消えて連桁が途切れうる（未測定・実例なし）⑵ TAB の符幹・拍子記号を MuseScore で抑える書き方は未確認。push はユーザー（未 push 10）。
+
+## 以下は第721セッションの経緯
+
 ### 1.1 第721セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」＝第720 の次の一手＝`staffGroup` の MusicXML）。`-Start p721`（HEAD `f1bc77dd`・未 push 6）＝full **10534 / 0 / 2 / 10536**（引継ぎと一致）。
@@ -126,16 +135,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⒝ 既存の穴: パート名が Lily# の語だと壊れた本になっていた（"S"→`part s`＝スペーサー・"Soprano"→`part soprano`）。手書きの予約語表が言語に追いついていなかった＝**識別子は構文解析器に訊く**（part・cell・staff に使う小さな本を parse・`LexesAsOneName`）。字句解析だけでは厳しすぎる（`bass`・`alto` は字句ではキーワードでもパート名に使える＝1 回目の掃きで 24 冊が不要に `partN` になった）。
 網 `MusicXmlRoundTripTests` +3（入れ子・番号・音部記号）・毒 4 つ（書かない・読まない・名前の判定なし・Core を第720 に）がそれぞれ赤。掃き（Lab `sessions/p721/imp/sweep.ps1`）998 冊: import が変わった 6 冊＝`choir-staff.lys`・`staff-group.lys` がグループを取り戻す・4 冊の "soprano" が `part1` に・**import 後の check 不合格 4 → 0**（その 4 冊＝今までの不合格は全部この名前だった）。
 ★ `-End p721 -DiffBase f1bc77dd`＝full **10537 / 0 / 2 / 10539**・門 7 つ全 OK・Core `+` 171 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴ 第720 の次の一手・⒝ ⑴ の掃きの check で見つけた。7.7: ⑴ 予約語の名前は `partN`（読みやすい別名＝`sopranoPart` 等にはしていない）⑵ `<part-group>` の line／none 記号・group-name は読まない・書かない ⑶ 分割した大譜表の上に brace がある形は brace を捨てる（二重になるため）⑷ ペダルの表はパート全体で 1 つ（第719 から）。push はユーザー（未 push 8）。
-
-## 以下は第720セッションの経緯
-
-### 1.1 第720セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第719 の 7.7 の残り）。`-Start p720`（HEAD `a7f4ace5`・未 push 3）＝full **10531 / 0 / 2 / 10533**（引継ぎと一致）。
-⒜ `<wedge type="stop">` は読まないまま＝**Lily# の松葉は常に次の強弱まで**（GRAMMAR_FOR_LLM「Hairpins」）で、止めだけを書く綴りが言語に無い（言語の制約・起票しない）。
-⑴ ★ `e10d3c2c` **staff のラベルの往復**: import は `<part-name>` を全部捨てていた（`staff rh "Piano"` が素の `staff pianoRH`）。印刷される名前（`print-object="no"` でないもの）を score の `staff x "名前"` に戻す（分割した大譜表は最初の段・`ImportPart.Label`）。対になる書き出し: 頁がラベルを出さない staff の `<part-name>`（id を書く）に `print-object="no"`＝読み手は id を印刷していた。網 `MusicXmlRoundTripTests` +1・毒 2 つ（print-object を見ない・分割の全段にラベル）が赤。掃き（Lab `sessions/p720/imp/sweep.ps1`）998 冊: import が変わった 66 冊＝差は全部 staff のラベルの行・どれも原本の頁が印刷する名前（アンサンブルの既定の "Lh"・楽器の "guitar" ＝3 冊を SVG で確かめた）・check 不合格 4 → 4。
-⑵ ★ `c5c0cefa` **brace の `<part-group>` を読む**: 第718 の「別々のラベルの大譜表＝brace の 2 パート」が import で無関係な 2 段に戻っていた。brace の下の 1 段のパートは 1 つの `grandStaff`（最も内側の brace・自分で割れるパートはそちら・1 段だけの brace は大譜表にしない）。bracket ほかの group は読まない。網 +2・毒 2 つ（結ぶ・1 段を外す）が赤。掃きは 0 冊（主 score にその形の本が無い）＝陽性対照はプローブ（Lab `sessions/p720/lbl/apart.lys`）。
-★ `-End p720 -DiffBase a7f4ace5`＝full **10534 / 0 / 2 / 10536**・門 7 つ全 OK・Core `+` 77 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴⑵ とも第719 の 7.7 ⑶ の残り（表示名の往復）と第718 ⒦ の対。7.7: ⑴ import の pedal の「踏んでいる」表はパート全体で 1 つ（第719 から）⑵ bracket／line の `<part-group>`（`staffGroup`）は import も export も無い ⑶ `score main "imported"` の名前は固定のまま（`<work-title>` は title へ行く）⑷ `<part-abbreviation>` は読まない。push はユーザー（未 push 6）。
 
 ## 2. 開いている作業
 
