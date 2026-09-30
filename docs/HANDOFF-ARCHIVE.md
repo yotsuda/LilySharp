@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第711セッションの経緯
+
+### 1.1 第711セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p711`（HEAD `0c3f7fef`・未 push 120）＝full **10460 / 0 / 2 / 10462**（引継ぎと一致）。
+⑴ ★ `f8ed1aad`（第710 起票の穴「`|: A [1,3. B] :| [2. C]` の『2.』の後の戻りをページが描かない」）: 最後に書かれた ending の後には `:|` を書く場所が無い＝ページと MusicXML は戻りを描かず、MIDI だけが戻っていた。LP の規則は予想より広い＝alternative が最後の周より前の周を 1 つでも受け持てば戻る（alternative-sequence-iterator.cc:104-107 `Alternative_sequence_iterator::analyze` の return_count）＝`[1. B] :| [2-3. C]` の C にも付く。`RepeatPasses.EndingReturns` に規則を 1 か所・ページの form の歩き（`ProcessRepeatBlockCore`＝`PushFormBarline(":|")` と `MarkFormEdge(Repeat)`）・五線の無い score の二つ目の綴り（`EnsureSectionStartsForRows`＝`CloseRepeatBefore`）・MusicXML（`EmitVoltaRepeatBlock`＝`RepeatBackward`）の 3 か所が使う。書かれた `:|` が後に続く ending には付けない（`[1-2. B] :|` を二重にしない＝網で固定）。LP 2.26 の実物と一致（Lab `sessions/p711/range.png` 対 `lp-range.png`）。網 `FormEndingPassTests.AReturningLastEnding_EndsInARepeatBar`（4 形・ページと MusicXML）＋`RowsOnlyFormOrderTests.AReturningLastEnding_EndsInARepeatBarWithoutAStaff`（2 形）・毒（3 か所の条件を殺す）で 4 赤。⚠ 最初の full で `LpReferenceCitationTests.CitationsThatNameNothing_DoNotGrow` が 681→682 で赤＝出典に行番号だけで関数名が無かった＝`Alternative_sequence_iterator::analyze` を足した（天井は上げない）。CHANGELOG（第710 の項に 1 文）。full **10466 / 0 / 2 / 10468**。
+★ `-End p711 -DiffBase 0c3f7fef`＝full **10466 / 0 / 2 / 10468**・門 6 つ全 OK・Core `+` 62 行に REF 1／OWN 0（REF は `EndingReturns` の analyze の写し）。7.6: 第710 起票の穴（⑴）。7.7: ⑴ ページの戻りの判定は form の歩きとその二つ目の綴りに同じ 2 行＝`RowsOnlyFormOrderTests` の差分網が両者を縛る ⑵ MusicXML は `closingEnding`（書かれた `:|` が後に無い最後の ending）を自前で数える＝ページの `IsLastWrittenEnding` と同じ意味の二つ目の綴り（FormWalk の子と構文の子で入口が違うため）。push はユーザー。
+
 ## 以下は第710セッションの経緯
 
 ### 1.1 第710セッション（2026-09-30・YT-DELL2）
