@@ -129,6 +129,15 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第704セッションの経緯
+
+### 1.1 第704セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p704`（HEAD `7ec53814`・未 push 101）＝full **10443 / 0 / 2 / 10445**（引継ぎと一致）。
+⑴ ★ `25f34bd0`（§1.0 ⒜ の第664 の穴）: shape table の中の補完。表の `{` の前の語は entry のもの（`guitar`・`capo 3`）で layout の frame にならず、どの文脈も表の中を知らなかった＝**`MusicBlock`（音高と articulation）を勧めていた**（HANDOFF の「layout のキーを勧める」は不正確＝毒で実測）。`ChordDiagramTableLevel`（1＝表・2＝表の中の `section`）→ 文脈 `ChordDiagramTable`／`ChordDiagramTableSection`。表の中＝その scope がまだ挙げていない*本のコード*（`CapoAdvisor.ChordsOf`・初出順）→ 調の diatonic → 表の層だけ `section`。`section` の後＝本の section 名から表に block の無いもの（block つきで挿入）。網 `ChordDiagramTests` +1（毒＝分岐を外す: 赤）。CHANGELOG 2 本。
+⑵ ★ `99442ba8`（同じ穴の片割れ）: TextMate の `#shape-table`。表の `{` を誰も取らず `#layout-block` の end が `}` なので、**表（や表の section）の `}` で layout の色が終わり、後ろのキーが無色**だった＝`vscode-textmate` で前後を実測（Lab `sessions/p704/tm/tok.js`＝実エンジンで文法を回す道具・`node tok.js <grammar>`）。表を layout の最初の include にし、`section NAME { }`・調弦語・形（語全体だけ＝`C6/9` の 9 を形と取らない）を塗る。コード名は chords 行と同じく無色。網 `EditorColouringTests` +1（調弦語は `TuningValueVocabulary` と両方向・毒＝include を外す: これと到達性の門が赤）。full **10445 / 0 / 2 / 10447**。
+★ `-End p704 -DiffBase 7ec53814`＝full **10445 / 0 / 2 / 10447**・門 6 つ全 OK・Core `+` 0 行（LSP と文法だけ）。7.6: ⒜ の第664 の穴 2 つ（補完・色）。7.7: 表の判定は補完（`ChordDiagramTableLevel`＝`chordDiagrams` の後の語を見る）と文法（layout の中の `{` は全部表）で別の読み方＝layout に表以外の brace が入る日には文法側を直す。push はユーザー。
+
 ## 以下は第703セッションの経緯
 
 ### 1.1 第703セッション（2026-09-30・YT-DELL2）
