@@ -70,7 +70,7 @@ internal static class LyricSyllableReader
             return ("", node.Span.Start);
 
         var text = tok.Text;
-        if (text.Length >= 2 && StringLiteral.IsQuoted(text) && text[^1] == '"')
+        if (StringLiteral.IsClosed(text))
             text = StringLiteral.Value(text);
         return (text, tok.Span.Start);
     }

@@ -281,7 +281,7 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
                 $"{string.Join(", ", known.OrderBy(s => s, StringComparer.Ordinal))}.");
     }
 
-    private static bool IsQuoted(string t) => t.Length >= 2 && StringLiteral.IsQuoted(t) && t[^1] == '"';
+    private static bool IsQuoted(string t) => StringLiteral.IsClosed(t);
 
     /// <summary>A hyphenated or mark-carrying value is several tokens in the tree.</summary>
     private static string Joined(List<SyntaxTokenNode> tokens)

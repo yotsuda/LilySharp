@@ -61,6 +61,24 @@ public sealed class StringLiteralTests
         => Assert.Empty(StringLiteral.Errors("@\"\\p \\q \\\"")); // @"\p \q \"  — then open
 
     [Theory]
+    [InlineData("\"a\"", true)]
+    [InlineData("\"\"", true)]
+    [InlineData("\"say \\\"hi\\\"\"", true)]
+    [InlineData("\"a\\\\\"", true)]              // "a\\"  — the backslash is escaped, the quote closes
+    [InlineData("@\"\"", true)]
+    [InlineData("@\"say \"\"hi\"\"\"", true)]
+    [InlineData("@\"C:\\\"", true)]             // @"C:\"  — verbatim: the backslash escapes nothing
+    [InlineData("\"", false)]
+    [InlineData("@\"", false)]                  // the opening quote only
+    [InlineData("\"a\\\"", false)]              // "a\"  — the last quote is escaped
+    [InlineData("@\"a\"\"", false)]             // @"a""  — "" is a quote, not the close
+    [InlineData("\"a\" \"b\"", false)]          // two literals
+    [InlineData("\"a\"b", false)]
+    [InlineData("bare", false)]
+    public void IsClosed_ReadsTheClosingQuoteAsValueDoes(string text, bool closed)
+        => Assert.Equal(closed, StringLiteral.IsClosed(text));
+
+    [Theory]
     [InlineData("say \"hi\"")]
     [InlineData("C:\\path\\to")]
     [InlineData("two\nlines\tand\0nul")]

@@ -240,10 +240,9 @@ public static class AnnotationValues
             ? mark.Arguments[0].Text
             : string.Join(" ", mark.Arguments.Select(a => a.Text));
 
-        // Quoted iff it opens and closes with a double quote, which is the test the
-        // validator applied to the dotted tail; the quotes are the label's delimiters
-        // and are not printed.
-        quoted = written.Length >= 2 && StringLiteral.IsQuoted(written) && written[^1] == '"';
+        // Quoted iff it is one closed literal, which is the test the validator applied
+        // to the dotted tail; the quotes are the label's delimiters and are not printed.
+        quoted = StringLiteral.IsClosed(written);
         return quoted ? StringLiteral.Value(written) : written;
     }
 

@@ -39,7 +39,7 @@ public static class InstrumentDefaults
         var preset = new System.Text.StringBuilder();
         foreach (var t in valueTokenTexts)
         {
-            if (t.Length >= 2 && Syntax.StringLiteral.IsQuoted(t) && t[^1] == '"')
+            if (Syntax.StringLiteral.IsClosed(t))
                 label = Syntax.StringLiteral.Value(t);   // trailing quoted display label (last wins)
             else
                 preset.Append(t);       // bare word / hyphen segment

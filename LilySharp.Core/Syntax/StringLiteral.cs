@@ -45,6 +45,36 @@ public static class StringLiteral
     /// <summary>Whether the literal is verbatim (<c>@"…"</c>).</summary>
     public static bool IsVerbatim(string text) => text.Length >= 2 && text[0] == '@' && text[1] == '"';
 
+    /// <summary>Whether <paramref name="text"/> is ONE closed literal: its closing quote is its
+    /// last character. <c>@"</c> (the opening quote only), <c>"a\"</c> (the last quote is
+    /// escaped) and <c>"a" "b"</c> (two literals) are not.</summary>
+    /// <remarks>Until 2026-09-30 six readers spelled this as "opens with a quote and ends with
+    /// <c>"</c>", which took all three of those for one literal.</remarks>
+    public static bool IsClosed(string text) => IsQuoted(text) && ClosingQuote(text) == text.Length - 1;
+
+    /// <summary>The index of the closing quote, read as <see cref="Value"/> reads it; −1 when
+    /// the literal is unterminated.</summary>
+    private static int ClosingQuote(string text)
+    {
+        bool verbatim = IsVerbatim(text);
+        for (int i = verbatim ? 2 : 1; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (c == '"')
+            {
+                if (verbatim && i + 1 < text.Length && text[i + 1] == '"')
+                {
+                    i++; // "" is one quote
+                    continue;
+                }
+                return i;
+            }
+            if (c == '\\' && !verbatim)
+                i++; // the escaped character is never the closing quote
+        }
+        return -1;
+    }
+
     /// <summary>The literal's decoded content; <paramref name="text"/> itself when it is not
     /// quoted. An invalid escape keeps its characters (LYS0036 reports it).</summary>
     public static string Value(string text) => Decode(text, null);

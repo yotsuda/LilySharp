@@ -75,7 +75,7 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
             if (sb.Length == 0)
                 return null;
             var text = sb.ToString();
-            return text.Length >= 2 && StringLiteral.IsQuoted(text) && text[^1] == '"'
+            return StringLiteral.IsClosed(text)
                 ? StringLiteral.Value(text)
                 : text;
         }
