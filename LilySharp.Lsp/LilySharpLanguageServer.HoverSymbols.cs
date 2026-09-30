@@ -167,9 +167,16 @@ public sealed partial class LilySharpLanguageServer
         if (!words.Problems.IsEmpty)
             return head + " — " + words.Problems[0].Message;
         var lines = new List<string>();
-        // A capo raises every string by its fret (the first score's capo, as the step reads it).
-        int capo = NoteStepper.CapoOf(item);
+        // A capo raises every string by its fret. Each score sounds the item under its own capo:
+        // one line per capo when the scores drawing the part differ (2026-09-30 — until then the
+        // hover read the first score's alone, while the page and the MIDI read their own).
+        var capos = ChordDiagramScores.CaposOfNode(item);
+        var perCapo = capos.Count > 1
+            ? capos.Select(c => (c.Capo, Label: ", " + (c.Capo == 0 ? "no capo" : $"capo {c.Capo}")
+                + " (" + string.Join(", ", c.Scores) + ")")).ToList()
+            : [(NoteStepper.CapoOf(item), "")];
         int keySharps = CurrentKeySharps(text, item.SourceStart);
+        foreach (var (capo, label) in perCapo)
         foreach (var part in ShapeChords.PartTuningsOf(item))
         {
             var notes = ShapeChords.Notes(words, part.Tuning, part.SoundingShift - capo, keySharps);
@@ -182,8 +189,8 @@ public sealed partial class LilySharpLanguageServer
             string spelled = ChordVoicings.Spell(ChordShapes.Frets(shape));
             string place = words.Structure is { } chord
                 && NoteStepper.ShapePlace(item, chord, ChordShapes.Frets(shape)) is { } p ? $" — {p}" : "";
-            lines.Add($"{part.Word}: `{spelled}` — "
-                + string.Join("  ", ShapeChords.Ascending(notes).Select(n => PitchGlyphs(n.SoundingName)))
+            lines.Add($"{part.Word}{label}: `{spelled}` — "
+                + string.Join("  ", ShapeChords.Ascending(notes).Select(n => PitchGlyphs(n.NameAt(n.WrittenMidi + part.SoundingShift))))
                 + place);
         }
         return head + "\n\n" + string.Join("  \n", lines.Distinct(StringComparer.Ordinal));

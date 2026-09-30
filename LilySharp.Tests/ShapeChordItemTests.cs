@@ -519,6 +519,29 @@ public class ShapeChordItemTests
         Assert.Contains("nothing sounds", HoverAt(doc, "chord(C)"));
     }
 
+    /// <summary>Each score sounds the item under its own capo (the page and the MIDI read the
+    /// played score's): when the scores drawing the part differ, the hover lists each capo with
+    /// its scores. Until 2026-09-30 it read the first score's alone — E♭ where "open" sounds C.</summary>
+    [Fact]
+    public void Hover_ListsEachScoresCapo_WhenTheyDiffer()
+    {
+        const string book = """
+            layout capo3 { chordDiagrams guitar capo 3 }
+            layout open { chordDiagrams guitar }
+            part gt { instrument guitar }
+            section A { gt { chord(Eb x32010)1 | } }
+            form main { A }
+            score main { layout capo3  staff gt }
+            score main "open" { layout open  staff gt }
+            """;
+        string? hover = HoverAt(book, "chord(Eb x");
+        Assert.Contains("guitar, capo 3 (main): `x32010` — E♭3  G3  B♭3  E♭4  G4", hover);
+        Assert.Contains("guitar, no capo (open): `x32010` — C3  E3  G3  C4  E4", hover);
+        // One capo for every score: the line as it always was.
+        string single = Book("instrument guitar", "chord(C x32010)1 |");
+        Assert.Contains("guitar: `x32010` — C3  E3  G3  C4  E4", HoverAt(single, "chord(C x"));
+    }
+
     /// <summary>The hover spells a tone that is no chord tone as the key in force spells it, as the
     /// page does — x32012's top string is F♯ in C and G♭ under a flat key. Until 2026-09-30 the
     /// hover spelled it in C whatever the key.</summary>

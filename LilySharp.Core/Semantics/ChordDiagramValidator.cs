@@ -242,12 +242,21 @@ public static class ChordDiagramScores
     /// written in (every score when none does, or when the part is not the tree's to say), 0
     /// for none — what a <c>chord(…)</c> item's check and hover read (2026-09-29).</summary>
     public static int CapoOfNode(SyntaxNode node)
+        => RenderingScores(node) is { Count: > 0 } rendering ? rendering[0].Capo : 0;
+
+    /// <summary>The capo frets of the scores that draw the part <paramref name="node"/> is written
+    /// in (every score when none does), each once in score order, with the names of the scores on
+    /// it (the basename, else the form) — what a <c>chord(…)</c> item's hover lists when they
+    /// differ: each score sounds the item under its own capo (2026-09-30).</summary>
+    public static IReadOnlyList<(int Capo, IReadOnlyList<string> Scores)> CaposOfNode(SyntaxNode node)
+        => [.. RenderingScores(node).GroupBy(s => s.Capo)
+            .Select(g => (g.Key, (IReadOnlyList<string>)[.. g.Select(s => s.Node?.BasenameText ?? s.Node?.FormNameText ?? "")]))];
+
+    private static List<Score> RenderingScores(SyntaxNode node)
     {
         var scores = Of(RootOf(node));
         var rendering = PartNameOf(node) is { } part ? scores.Where(s => s.RendersPart(part)).ToList() : [];
-        if (rendering.Count == 0)
-            rendering = [.. scores];
-        return rendering.Count > 0 ? rendering[0].Capo : 0;
+        return rendering.Count > 0 ? rendering : [.. scores];
     }
 
     /// <summary>The <c>chords</c> block an entry is written in, or null.</summary>

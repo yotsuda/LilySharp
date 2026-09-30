@@ -268,7 +268,7 @@
 ### `LilySharp.Core/Music/PredefinedFretboardsGenerated.cs`
 - **:40** LILYSHARP-OWN: 9 entries are left out — each sounds a note that is no tone of its
 ### `LilySharp.Core/Music/ShapeChords.cs`
-- **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
+- **:91** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:497** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
 - **:4661** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's

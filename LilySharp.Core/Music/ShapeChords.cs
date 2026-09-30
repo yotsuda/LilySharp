@@ -32,16 +32,24 @@ namespace LilySharp.Core.Music;
 /// octave up). This is the pitch every reader hands to its ordinary written-pitch path.</param>
 /// <param name="StringNumber">The string, 1 = the highest-numbered in the tuning's list (the
 /// top string of a guitar) — what <c>c\3</c> would write.</param>
-/// <param name="SoundingMidi">The pitch that sounds: the open string plus the fret.</param>
+/// <param name="SoundingMidi">The open string plus the fret — the pitch that sounds with no capo (a capo raises it by its fret; the writers fold the capo into the shift, so it reaches <paramref name="Octave"/> but not this). Orders the notes.</param>
 public readonly record struct ShapeNote(int Step, int Alter, int Octave, int StringNumber, int SoundingMidi)
 {
-    /// <summary>The octave of the SOUNDING pitch, in the same spelling (what the hover lists).</summary>
+    /// <summary>The octave of <see cref="SoundingMidi"/>, in the same spelling.</summary>
     public int SoundingOctave => OctaveOf(SoundingMidi, Step, Alter);
 
-    /// <summary>The sounding pitch as a name — <c>C3</c>, <c>Eb4</c>.</summary>
-    public string SoundingName
+    /// <summary><see cref="SoundingMidi"/> as a name — <c>C3</c>, <c>Eb4</c>. ⚠️ Without a capo:
+    /// the capo reaches the note only through the shift (the written pitch), so under one the
+    /// note sounds <see cref="NameAt"/>(<see cref="WrittenMidi"/> + the part's own shift).</summary>
+    public string SoundingName => NameAt(SoundingMidi);
+
+    /// <summary>The written pitch as a MIDI number (C4 = 60).</summary>
+    public int WrittenMidi => (Octave + 1) * 12 + RelativeOctave.StepSemitoneOf(Step) + Alter;
+
+    /// <summary>This note's spelling at MIDI pitch <paramref name="midi"/> — <c>Eb3</c>.</summary>
+    public string NameAt(int midi)
         => "CDEFGAB"[Step] + (Alter switch { >= 2 => "x", 1 => "#", -1 => "b", <= -2 => "bb", _ => "" })
-           + SoundingOctave.ToString(System.Globalization.CultureInfo.InvariantCulture);
+           + OctaveOf(midi, Step, Alter).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>The octave (C4 = middle C) of MIDI pitch <paramref name="midi"/> spelled
     /// <paramref name="step"/>/<paramref name="alter"/> — B♯3 is MIDI 60.</summary>
