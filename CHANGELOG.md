@@ -320,6 +320,13 @@ workflow attaches that section to the GitHub Release verbatim.
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and
   hooks).
+- **MusicXML carries the tab staff.** `lysc xml` left a score's `tab` out entirely. A part
+  shown as `staff gt  tab gt` is now one part on two staves — notation, and a TAB staff
+  (`<clef>` TAB, `<staff-details>` with the lines and open strings) holding the same notes
+  with each one's `<string>` and `<fret>`; a part shown as `tab gt` alone is a TAB staff.
+  The strings are the ones the page prints (a written `\N`, and the page's own fingering);
+  a note below the fretboard, which the page hides, has no fret. Importing such a file reads
+  the TAB staff as the copy it is, not as a second staff of music.
 - **MusicXML `repeat percent` is a complete measure repeat.** The `<measure-repeat>` start
   now sits on the first repetition and names its length (1 for `%`, 2 for `%%`), and the
   stop sits on the first bar after the run — also when that bar restates a clef, key or

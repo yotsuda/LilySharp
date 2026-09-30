@@ -379,8 +379,159 @@ public sealed class MusicXmlExporter
         }
         WriteCapo();
         WriteBeams(tree, hasSections);
+        WriteTab(tree);
 
         return _document;
+    }
+
+    /// <summary>
+    /// The score's tab staves: each part the score shows as <c>tab</c> gets its TAB staff
+    /// (<see cref="MusicXmlTab"/>) and every note the string and fret the PAGE's tab staff
+    /// prints for it — the page's own string choice (<c>TabResolver.ResolveTabStrings</c>:
+    /// written <c>\N</c>, the bar-long reuse, the fingering planner), read off the page's model
+    /// and matched to the exported notes as <see cref="WriteBeams"/> matches its beams.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 a <c>tab gt</c> was not in the file at all — no TAB staff, no string,
+    /// no fret (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #1).
+    /// <para>
+    /// A chord's members are paired with the exported chord's notes by pitch. A note below the
+    /// fretboard, which the page hides on its tab staff, carries no fret.
+    /// </para>
+    /// </remarks>
+    private void WriteTab(SyntaxTree tree)
+    {
+        var spec = _playedSpec;
+        if (spec == null)
+            return;
+        var tabSpecs = new List<Svg.Collector.TabStaffSpec>();
+        var notationParts = new HashSet<string>(StringComparer.Ordinal);
+        void Walk(Svg.Collector.RenderItemSpec item)
+        {
+            switch (item)
+            {
+                case Svg.Collector.TabStaffSpec t: tabSpecs.Add(t); break;
+                case Svg.Collector.SingleStaffSpec s: notationParts.Add(s.Staff.VoiceName); break;
+                case Svg.Collector.GrandStaffRenderSpec g:
+                    foreach (var m in g.GrandStaff.Members) Walk(m);
+                    break;
+            }
+        }
+        foreach (var item in spec.Items)
+            Walk(item);
+        if (tabSpecs.Count == 0)
+            return;
+
+        var page = new Svg.Collector.MeasureCollector
+        {
+            FontsOverride = spec.FontsRef,
+            PaperOverride = spec.PaperRef,
+            LayoutOverride = spec.LayoutRef,
+        }.CollectMultiStaff(tree, spec);
+        var tabStaves = page.StaffGroups.SelectMany(g => g.Staves).Where(s => s.IsTab && s.Tuning.HasValue).ToList();
+
+        // Each part's exported notes by where they were written, k-th printing by k-th
+        // printing: a chord is its first note and the members that follow it.
+        var byPart = new Dictionary<MusicXmlPart, Dictionary<int, List<List<MusicXmlNote>>>>();
+        foreach (var part in Document.Parts)
+        {
+            var bySource = new Dictionary<int, List<List<MusicXmlNote>>>();
+            List<MusicXmlNote>? chord = null;
+            foreach (var measure in part.Measures)
+                foreach (var note in measure.Notes)
+                {
+                    if (note.IsChord && chord != null)
+                    {
+                        chord.Add(note);
+                        continue;
+                    }
+                    chord = null;
+                    if (note.SourcePosition < 0 || note.IsRest || note.IsGrace || note.IsBackup
+                        || note.RawElement != null || note.IsUnpitched)
+                        continue;
+                    if (!bySource.TryGetValue(note.SourcePosition, out var printings))
+                        bySource[note.SourcePosition] = printings = new List<List<MusicXmlNote>>();
+                    printings.Add(chord = new List<MusicXmlNote> { note });
+                }
+            byPart[part] = bySource;
+        }
+
+        for (int t = 0; t < tabStaves.Count && t < tabSpecs.Count; t++)
+        {
+            var staff = tabStaves[t];
+            int[] tuning = Tablature.Tunings.GetTuning(staff.Tuning!.Value);
+            int shift = Tablature.Tunings.SoundingShift(staff.TabSourceClef, staff.Transposition);
+            var items = staff.Voices
+                .SelectMany(v => v.Measures.SelectMany(m => m.Items))
+                .Where(i => i is Svg.Model.NoteItem or Svg.Model.ChordItem && i.SourcePosition >= 0)
+                .ToList();
+
+            // The part whose notes these are: the one that wrote the most of them.
+            var part = Document.Parts
+                .Select(p => (Part: p, Hits: items.Count(i => byPart[p].ContainsKey(i.SourcePosition))))
+                .Where(x => x.Hits > 0)
+                .OrderByDescending(x => x.Hits)
+                .Select(x => x.Part)
+                .FirstOrDefault();
+            if (part == null || part.Tab != null)
+                continue;
+            part.Tab = new MusicXmlTab(tuning.ToArray(), notationParts.Contains(tabSpecs[t].Staff.VoiceName));
+
+            var bySource = byPart[part];
+            var seen = new Dictionary<int, int>();
+            var lastDrawn = new Dictionary<int, List<MusicXmlNote>>();
+            foreach (var item in items)
+            {
+                seen.TryGetValue(item.SourcePosition, out int k);
+                seen[item.SourcePosition] = k + 1;
+                if (!bySource.TryGetValue(item.SourcePosition, out var printings) || k >= printings.Count)
+                    continue;
+                var notes = printings[k];
+                lastDrawn[item.SourcePosition] = notes;
+                switch (item)
+                {
+                    case Svg.Model.NoteItem note when !note.TabBelowRange:
+                        notes[0].Tab = Fretted(note.Midi, note.StringNumber);
+                        break;
+                    case Svg.Model.ChordItem chordItem:
+                        var free = chordItem.Notes.ToList();
+                        foreach (var xmlNote in notes)
+                        {
+                            int midi = WrittenMidi(xmlNote);
+                            int at = free.FindIndex(cn => cn.Midi == midi);
+                            if (at < 0)
+                                continue;
+                            xmlNote.Tab = Fretted(free[at].Midi, free[at].StringNumber);
+                            free.RemoveAt(at);
+                        }
+                        break;
+                }
+            }
+
+            // A printing the page does not draw — a percent repeat's repetitions, which the
+            // file writes out and the page shows as the sign — plays the same notes on the
+            // same strings as the last one it does.
+            foreach (var (position, drawn) in lastDrawn)
+                foreach (var printing in bySource[position].Skip(seen[position]))
+                    for (int i = 0; i < printing.Count && i < drawn.Count; i++)
+                        printing[i].Tab ??= drawn[i].Tab;
+
+            (int, int)? Fretted(int writtenMidi, int? stringNumber)
+            {
+                var (s, fret) = Tablature.Tunings.CalculateFret(writtenMidi + shift, tuning, stringNumber ?? 0);
+                return fret < 0 ? null : (s, fret);
+            }
+        }
+    }
+
+    /// <summary>An exported note's written pitch as a MIDI number.</summary>
+    private static int WrittenMidi(MusicXmlNote note)
+    {
+        int pc = note.Step switch
+        {
+            "C" => 0, "D" => 2, "E" => 4, "F" => 5, "G" => 7, "A" => 9, "B" => 11, _ => 0,
+        };
+        return ((note.Octave ?? 4) + 1) * 12 + pc + (int)Math.Round(note.Alter ?? 0);
     }
 
     /// <summary>

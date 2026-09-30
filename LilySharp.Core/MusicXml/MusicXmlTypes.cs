@@ -128,15 +128,65 @@ internal sealed class MusicXmlPart
     public int? MidiProgram { get; set; }
     public List<MusicXmlMeasure> Measures { get; } = new();
 
+    /// <summary>The part's tablature staff, or null when the score shows it on none.</summary>
+    public MusicXmlTab? Tab { get; set; }
+
     public XElement ToXml(string id)
     {
         var part = new XElement("part", new XAttribute("id", id));
-        foreach (var measure in Measures)
+        for (int i = 0; i < Measures.Count; i++)
         {
-            part.Add(measure.ToXml());
+            part.Add(Measures[i].ToXml(Tab, first: i == 0));
         }
         return part;
     }
+}
+
+/// <summary>
+/// A part's tablature staff: <c>tab gt</c> alone makes the part's one staff a TAB staff;
+/// <c>staff gt  tab gt</c> makes it a two-staff part, notation on staff 1 and the same
+/// notes again on staff 2 with their strings and frets — the way a guitar part with
+/// linked tablature is written (MusicXML 4.0 <c>&lt;staff-details&gt;</c> /
+/// <c>&lt;staff-tuning&gt;</c>, <c>&lt;clef&gt;&lt;sign&gt;TAB</c>).
+/// </summary>
+/// <param name="Tuning">The open strings' sounding MIDI pitches, lowest string first.</param>
+/// <param name="WithNotation">True when the score also shows the part on a notation staff.</param>
+internal sealed record MusicXmlTab(int[] Tuning, bool WithNotation)
+{
+    /// <summary>The staff the tablature is: 2 beside a notation staff, else the part's only one.</summary>
+    public int? StaffNumber => WithNotation ? 2 : null;
+
+    /// <summary>The TAB clef, numbered for its staff.</summary>
+    public XElement Clef() => new("clef",
+        StaffNumber is { } n ? new XAttribute("number", n) : null,
+        new XElement("sign", "TAB"),
+        new XElement("line", 5));
+
+    /// <summary>The TAB staff's lines and open strings (line 1 = the lowest string), and the capo.</summary>
+    public XElement Details(int? capo)
+    {
+        var details = new XElement("staff-details",
+            StaffNumber is { } n ? new XAttribute("number", n) : null,
+            new XElement("staff-lines", Tuning.Length));
+        for (int i = 0; i < Tuning.Length; i++)
+        {
+            int midi = Tuning[i];
+            var (step, alter) = SharpSpelling[((midi % 12) + 12) % 12];
+            details.Add(new XElement("staff-tuning", new XAttribute("line", i + 1),
+                new XElement("tuning-step", step),
+                alter != 0 ? new XElement("tuning-alter", alter) : null,
+                new XElement("tuning-octave", midi / 12 - 1)));
+        }
+        if (capo is { } c && c > 0)
+            details.Add(new XElement("capo", c));
+        return details;
+    }
+
+    private static readonly (char Step, int Alter)[] SharpSpelling =
+    {
+        ('C', 0), ('C', 1), ('D', 0), ('D', 1), ('E', 0), ('F', 0),
+        ('F', 1), ('G', 0), ('G', 1), ('A', 0), ('A', 1), ('B', 0),
+    };
 }
 
 /// <summary>
@@ -174,14 +224,16 @@ internal sealed class MusicXmlMeasure
     /// "discontinue" (open, e.g. the final ending). Defaults to "stop".</summary>
     public string? EndingStopType { get; set; }
 
-    public XElement ToXml()
+    public XElement ToXml(MusicXmlTab? tab = null, bool first = false)
     {
         var measure = new XElement("measure", new XAttribute("number", Number));
         if (Implicit)
             measure.Add(new XAttribute("implicit", "yes"));
 
         if (Attributes != null)
-            measure.Add(Attributes.ToXml());
+            measure.Add(Attributes.ToXml(tab, first));
+        else if (tab != null && first)
+            measure.Add(new MusicXmlAttributes { Divisions = null }.ToXml(tab, first));
 
         if (RepeatForward || EndingStartNumbers != null)
         {
@@ -207,7 +259,23 @@ internal sealed class MusicXmlMeasure
             measure.Add(dir.ToXml());
 
         foreach (var note in Notes)
-            measure.Add(note.ToXml());
+            measure.Add(note.ToXml(staff: tab?.WithNotation == true ? 1 : null, tabStaff: tab is { WithNotation: false }));
+
+        // The tablature beside a notation staff: back to the bar's start and the same notes
+        // again on staff 2, with their strings and frets (directions and harmonies stay on
+        // staff 1, where they were written).
+        if (tab is { WithNotation: true } && Notes.Any(n => n.RawElement == null && !n.IsBackup))
+        {
+            int at = 0;
+            foreach (var n in Notes)
+                if (n.RawElement == null && !n.IsChord && !n.IsGrace)
+                    at += n.IsBackup ? -n.Duration : n.Duration;
+            if (at > 0)
+                measure.Add(new XElement("backup", new XElement("duration", at)));
+            foreach (var note in Notes)
+                if (note.RawElement == null)
+                    measure.Add(note.ToXml(staff: 2, tabStaff: true, tabCopy: true));
+        }
 
         if (RepeatBackward || BarStyle != null || EndingStopNumbers != null)
         {
@@ -291,7 +359,7 @@ internal sealed class MusicXmlAttributes
     /// what tells a reader so. Null when there is none.</summary>
     public int? Capo { get; set; }
 
-    public XElement ToXml()
+    public XElement ToXml(MusicXmlTab? tab = null, bool first = false)
     {
         var attrs = new XElement("attributes",
             Divisions is { } div ? new XElement("divisions", div) : null);
@@ -324,18 +392,29 @@ internal sealed class MusicXmlAttributes
                 new XElement("beat-type", TimeBeatType.Value)));
         }
 
-        if (ClefSign != null)
+        // Schema order: … time*, staves?, … clef*, staff-details*, transpose*, …
+        if (tab is { WithNotation: true } && first)
+            attrs.Add(new XElement("staves", 2));
+
+        // A TAB-only part's staff is the TAB staff throughout: its clef is the TAB clef, and a
+        // notation clef change is not drawn on it. Beside a notation staff the written clef is
+        // staff 1's.
+        if (ClefSign != null && tab is not { WithNotation: false })
         {
             attrs.Add(new XElement("clef",
+                tab != null ? new XAttribute("number", 1) : null,
                 new XElement("sign", ClefSign),
                 ClefLine.HasValue ? new XElement("line", ClefLine.Value) : null,
                 ClefOctaveChange.HasValue
                     ? new XElement("clef-octave-change", ClefOctaveChange.Value)
                     : null));
         }
-
-        // Schema order: … clef*, staff-details*, transpose*, …
-        if (Capo is { } capo && capo > 0)
+        if (tab != null && first)
+        {
+            attrs.Add(tab.Clef());
+            attrs.Add(tab.Details(Capo));
+        }
+        else if (Capo is { } capo && capo > 0 && tab == null)
             attrs.Add(new XElement("staff-details", new XElement("capo", capo)));
 
         if (TransposeSemitones is { } semis && semis != 0)
@@ -585,7 +664,18 @@ internal sealed class MusicXmlNote
     /// <c>continue</c>, <c>end</c>, <c>forward hook</c> or <c>backward hook</c>.</summary>
     public List<(int Number, string Value)> Beams { get; } = new();
 
-    public XElement ToXml()
+    /// <summary>The string and fret the page's tab staff plays this note on, or null when the
+    /// part has no tab staff (or the note is off the fretboard).</summary>
+    public (int String, int Fret)? Tab { get; set; }
+
+    /// <param name="staff">The staff to write, over <see cref="Staff"/>.</param>
+    /// <param name="tabStaff">The note is on a TAB staff: it carries its
+    /// <see cref="Tab"/> string and fret as <c>&lt;technical&gt;</c> (in place of a written
+    /// string number's bare <c>&lt;string&gt;</c>).</param>
+    /// <param name="tabCopy">The note is the TAB staff's copy of a notation-staff note: its
+    /// voice moves to the second staff's range (5–8), and what the notation staff already
+    /// carries — lyrics, slurs, articulations, ornaments, other notations — is not repeated.</param>
+    public XElement ToXml(int? staff = null, bool tabStaff = false, bool tabCopy = false)
     {
         // Non-note pseudo-entries keep their slot in the note stream.
         if (RawElement != null)
@@ -644,7 +734,9 @@ internal sealed class MusicXmlNote
         if (TieStop)
             note.Add(new XElement("tie", new XAttribute("type", "stop")));
 
-        if (Voice.HasValue)
+        if (tabCopy)
+            note.Add(new XElement("voice", (Voice ?? 1) + 4));
+        else if (Voice.HasValue)
             note.Add(new XElement("voice", Voice.Value));
 
         if (Type != null)
@@ -666,16 +758,28 @@ internal sealed class MusicXmlNote
             note.Add(new XElement("notehead", Notehead));
 
         // MusicXML order: … notehead, staff, beam, notations, lyric.
-        if (Staff.HasValue)
-            note.Add(new XElement("staff", Staff.Value));
+        if ((staff ?? Staff) is { } staffNumber)
+            note.Add(new XElement("staff", staffNumber));
 
         foreach (var (number, value) in Beams)
             note.Add(new XElement("beam", new XAttribute("number", number), value));
 
+        var technicals = Technicals;
+        if (tabStaff && Tab is { } tab)
+        {
+            technicals = Technicals.Where(t => t.Name.LocalName != "string").ToList();
+            technicals.Add(new XElement("string", tab.String));
+            technicals.Add(new XElement("fret", tab.Fret));
+        }
+        bool slurStart = SlurStart && !tabCopy, slurStop = SlurStop && !tabCopy;
+        var articulations = tabCopy ? new List<string>() : Articulations;
+        var ornaments = tabCopy ? new List<string>() : Ornaments;
+        var extraNotations = tabCopy ? new List<XElement>() : ExtraNotations;
+
         // Notations (articulations, ornaments, ties, slurs)
-        var hasNotations = Articulations.Count > 0 || Ornaments.Count > 0 ||
-                          Technicals.Count > 0 || ExtraNotations.Count > 0 ||
-                          TieStart || TieStop || SlurStart || SlurStop;
+        var hasNotations = articulations.Count > 0 || ornaments.Count > 0 ||
+                          technicals.Count > 0 || extraNotations.Count > 0 ||
+                          TieStart || TieStop || slurStart || slurStop;
 
         if (hasNotations)
         {
@@ -688,46 +792,46 @@ internal sealed class MusicXmlNote
                 notations.Add(new XElement("tied", new XAttribute("type", "stop")));
 
             // Slur notations
-            if (SlurStart)
+            if (slurStart)
                 notations.Add(new XElement("slur", new XAttribute("type", "start"), new XAttribute("number", "1")));
-            if (SlurStop)
+            if (slurStop)
                 notations.Add(new XElement("slur", new XAttribute("type", "stop"), new XAttribute("number", "1")));
 
             // Articulations
-            if (Articulations.Count > 0)
+            if (articulations.Count > 0)
             {
                 var artics = new XElement("articulations");
-                foreach (var a in Articulations)
+                foreach (var a in articulations)
                     artics.Add(new XElement(a));
                 notations.Add(artics);
             }
 
             // Ornaments
-            if (Ornaments.Count > 0)
+            if (ornaments.Count > 0)
             {
                 var orns = new XElement("ornaments");
-                foreach (var o in Ornaments)
+                foreach (var o in ornaments)
                     orns.Add(new XElement(o));
                 notations.Add(orns);
             }
 
             // Technical (guitar/TAB techniques)
-            if (Technicals.Count > 0)
+            if (technicals.Count > 0)
             {
                 var tech = new XElement("technical");
-                foreach (var t in Technicals)
+                foreach (var t in technicals)
                     tech.Add(t);
                 notations.Add(tech);
             }
 
-            foreach (var extra in ExtraNotations)
+            foreach (var extra in extraNotations)
                 notations.Add(extra);
 
             note.Add(notations);
         }
 
         // <lyric> — after notations per the MusicXML order.
-        foreach (var (verse, text, syllabic, extend) in Lyrics)
+        foreach (var (verse, text, syllabic, extend) in tabCopy ? [] : Lyrics)
         {
             var lyric = new XElement("lyric", new XAttribute("number", verse));
             // A '~' inside the syllable is an ELISION: two texts joined by

@@ -279,6 +279,18 @@ internal static class MusicXmlReader
         // A part whose voices span more than one staff (a piano grand staff) splits
         // into one Lily# part per staff, grouped into a grandStaff by the score.
         var staves = voiceStaff.Values.Distinct().OrderBy(s => s).ToList();
+        // A TAB staff beside a notation staff holds the same notes again, with their strings
+        // and frets (what MusicXmlExporter writes for `staff gt  tab gt`): its voices are a
+        // copy, not more music, and are dropped rather than split into a part of their own.
+        var tabStaves = staves.Where(s => staffClefs.GetValueOrDefault(s) == TabClef).ToList();
+        if (tabStaves.Count > 0 && tabStaves.Count < staves.Count)
+        {
+            foreach (var measure in part.Measures)
+                foreach (var (voice, staff) in voiceStaff)
+                    if (tabStaves.Contains(staff))
+                        measure.VoiceItems.Remove(voice);
+            staves.RemoveAll(tabStaves.Contains);
+        }
         if (staves.Count <= 1)
             return new List<ImportPart> { part };
         return SplitByStaff(part, staves, voiceStaff, staffClefs, transposeSet);
@@ -395,8 +407,15 @@ internal static class MusicXmlReader
         // part omits the number (staff 1). Record each so a split keeps its own clef.
         foreach (var clefEl in Els(el, "clef"))
         {
-            string name = ClefName(clefEl, report, measureNo);
             int staff = int.TryParse((string?)clefEl.Attribute("number"), out int n) ? n : 1;
+            // A TAB staff is remembered as one (ReadPart drops it when it is a notation
+            // staff's copy); it names no clef of its own.
+            if (string.Equals(Local(clefEl, "sign")?.Value.Trim(), "TAB", StringComparison.OrdinalIgnoreCase))
+            {
+                staffClefs.TryAdd(staff, TabClef);
+                continue;
+            }
+            string name = ClefName(clefEl, report, measureNo);
             staffClefs.TryAdd(staff, name);
             measure.Clef = name;        // mid-piece single-staff clef change
             clefSet ??= name;           // first clef becomes the part header clef
@@ -425,6 +444,9 @@ internal static class MusicXmlReader
             }
         }
     }
+
+    /// <summary>What <c>staffClefs</c> records for a TAB staff — not a clef word.</summary>
+    private const string TabClef = "<tab>";
 
     private static string ClefName(XElement clefEl, ImportReport report, int measureNo)
     {
