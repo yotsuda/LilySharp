@@ -64,10 +64,9 @@ internal static class LysWriter
             sb.Append("tempo ").Append(tempo).Append('\n');
 
         // Opening time/key/clef come from the first measure that declares them.
-        var firstTime = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null);
+        var (firstTime, firstKey) = Opening(doc);
         if (firstTime is { } t0)
             sb.Append("time ").Append(t0.Beats).Append('/').Append(t0.BeatType).Append('\n');
-        var firstKey = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null);
         if (firstKey is { } k0)
             sb.Append("key ").Append(KeyToLily(k0, report)).Append('\n');
         sb.Append('\n');
@@ -497,10 +496,15 @@ internal static class LysWriter
     /// A grand staff's clef is left alone: the reader keeps one clef per measure, which
     /// cannot say which staff changed.
     /// </remarks>
+    // The time and key the header states: the first a measure declares, in any part. ONE
+    // house, so the header and the changes after it cannot disagree about what is in force.
+    private static (ImportTime? Time, ImportKey? Key) Opening(ImportDocument doc)
+        => (doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null),
+            doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null));
+
     private static string[] Directives(ImportDocument doc, ImportPart part, ImportReport report)
     {
-        var time = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Time).FirstOrDefault(t => t != null);
-        var key = doc.Parts.SelectMany(p => p.Measures).Select(m => m.Key).FirstOrDefault(k => k != null);
+        var (time, key) = Opening(doc);
         string clef = part.Clef;
         int? tempo = doc.Tempo;
         var result = new string[part.Measures.Count];
