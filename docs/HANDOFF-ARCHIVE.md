@@ -129,6 +129,14 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第696セッションの経緯
+
+### 1.1 第696セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p696`（HEAD `e16b17a7`・未 push 72）＝full **10371 / 0 / 2 / 10373**（引継ぎと一致）。
+⑴ 第695 が残した「五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている」を一本化。★ `8b8dfc1f`＝`AlignedSideUp(supportReach, staffSpace, staffLines, onNoteHead)`（include_staff・ss×padding・量子化〔span ±(本数−1)+1・ledger 込みの on_line・頭が note head なら「あいだ」の腕〕・staff-padding）を五線（ss 1・`Staff.Lines`）と tab（弦の間隔・弦の数）が呼ぶ。`QuantizedYPosition` は退場。五線の写しに無かった唯一の振る舞い＝**ledger 上の on_line**: 上声部の高い音に `staccato.down`（Lab `sessions/p696/led2`）で LP a''' 8.5・c'''' 9.5／Lily# 9.0・10.0 → 一致。網 `ScriptOutlineSupportTests` +3・毒で ledger の 2 本だけ赤。snapshot 不変・掃き 998 冊 0（その形を踏む本が無い＝結果であって構成ではない）。
+★ `-End p696 -DiffBase e16b17a7`＝full **10374 / 0 / 2 / 10376**・門 6 つ全 OK・Core `+` 112→75 行に REF 8／OWN 0。7.6: ⒜（aligned_side の後半の字面・五線と tab の 2 軒を 1 軒に）。7.7: 2 つ目の綴りは消えた（`CalculateYPosition`／tab の枝とも `AlignedSideUp`）。push はユーザー。
+
 ## 以下は第695セッションの経緯
 
 ### 1.1 第695セッション（2026-09-30・YT-DELL2）
