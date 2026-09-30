@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第700セッションの経緯
+
+### 1.1 第700セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p700`（HEAD `4f802569`・未 push 85）＝full **10400 / 0 / 2 / 10402**（引継ぎと一致）。
+⑴ §1.0 ⒧: import は途中の time／key／clef／tempo を一切書かなかった（header の最初の値だけ）。★ `5928d22f`: `LysWriter.Directives` が小節ごとに「効いている値と違う」変化を music の前に書く（first voice の流れだけ・grand staff の clef は読まない＝reader が小節に clef 1 つしか持たない）。網 `MidPieceChanges_RoundTrip` 2 行（毒＝何も書かない: 2 赤＝的中）。掃き 998 冊: 変わる 81・警告が減る 65・無警告 49・残る 1 種は元の本自身の警告（chord-tremolo の小節線の無い最後の 1/4）。副産物: `time` を片方の voice block に書くと他方の 1 小節目まで新しい拍子で数える（元の本でも同じ・§1.0 ⒧ に 1 行）。full **10402 / 0 / 2 / 10404**。
+★ `-End p700 -DiffBase 4f802569`＝full **10402 / 0 / 2 / 10404**・門 6 つ全 OK・Core `+` 70 行に REF 0／OWN 0（import は LP の外・定数なし）。7.6: ⒜ なし。7.7: 効いている値の初期値（最初の time／key）を header と `Directives` が別々に同じ式で求める＝2 つ目の綴り→`9c34a0b9` で `Opening` 1 軒に。⚠ p699／p700 の handoff commit に `HANDOFF-ARCHIVE.md` を入れ忘れた（commit された木では 2 便の語りがどこにも無かった・作業ツリーは正しいのでテストは緑）＝`1adf0d71`。**handoff の commit は `git add docs/HANDOFF.md docs/HANDOFF-ARCHIVE.md`**。
+⑵ §1.0 ⒦（grace の slur）: export は grace 内の `(` を読まず（main note の stop だけ）、import は grace の slur を読まなかった。★ `49fceda8`: export は grace の最後の要素に `(` が付いていれば start を刻む（後に grace 要素が続けば取り消す＝頁が彫る唯一の形）・import は grace の `<slur type="start">` を読み、群の最後の音なら `(` を書く（それ以外は report）。網 +1（毒 2 本＝export が刻まない／writer が書かない: どちらも赤＝的中）。掃き 998 冊: 変わる 6・全部で警告が減り 5 冊が無警告。副産物 ⒨（grace の和音）を §1.0 に。full **10403 / 0 / 2 / 10405**。
+★ `-End p700`（2 回目・end2.log）＝full **10403 / 0 / 2 / 10405**・門 6 つ全 OK・Core `+` 117 行に REF 0／OWN 0（MusicXML の読み書き＝LP の外）。7.7: grace の slur の「最後の要素だけ」という規則は頁（collector）・export・import の 3 か所に同じ文で書いた＝綴りが 3 つ（頁の規則を読む 1 軒にするなら `GraceBodySupport` に「群の slur の宿」を聞く関数を置く・未着手）。push はユーザー。push はユーザー。
+⑶ ⒨（grace の和音）: import は `<chord/>` の grace を別々の grace 音にしていた。直すと relative で音高が崩れ、**relative の和音の綴りそのものが壊れていた**と分かった＝root に印が要る和音は、members を root の*鳴る*オクターブの上に積み次の音もそこから読んでいたが、Lily# は root の印を局所・members は素の letter の anchor の上・次は anchor から（`ResolveChordMemberPitch`・2026-09-27 のユーザー決定）＝`c'''4 <e' g'>4` が E5＋G7 以降 2 オクターブ上。★ `a9b61939`: grace の和音を 1 列に・`RelativeOctave.Chord` を anchor の規則に（`DefaultOctave` 1 軒を `Spell` と共有）。網 `GraceChord_RoundTripsAsOneChord` 2 行（再 export の音高で比べる・毒＝鳴る root の上に積む: relative だけ赤＝的中）。**relative の掃き（新設 Lab `sessions/p700/relsweep.ps1`＝import --relative → 再 export → 音高の列を元と比べる）: 音高の違う score 73 → 5**（5 は前からの ⒩）・absolute の掃きは 0 冊動く。full **10405 / 0 / 2 / 10407**。
+★ `-End p700`（3 回目・end3.log）＝full **10405 / 0 / 2 / 10407**・門 6 つ全 OK・Core `+` 161 行に REF 0／OWN 0（import／export＝LP の外）。7.7: relative の和音の規則は頁・exporter・importer で 3 軒目（importer は逆向き＝綴る側）＝畳めない→差分の網は「再 export の音高の列」（テストと relsweep）。push はユーザー。
+
 ## 以下は第699セッションの経緯
 
 ### 1.1 第699セッション（2026-09-30・YT-DELL2）
