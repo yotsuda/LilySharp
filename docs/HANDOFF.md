@@ -79,9 +79,8 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴（`c6d8fd1a` の message）＝4 つとも閉じた（ホバー・phrase のアンカー＝第705・harmonizer・`<< >>` の中＝第706）／表の中の補完と色は第704 が閉じた（`25f34bd0`・`99442ba8`）／カポの穴は全部閉じた（`chord(…)` のカポ＝MIDI 第687・ホバー 第707・検査 LYS1039 第708・双子の `chordNames both`＝第709）
-- **tab の LP 差（第690 起票）は第694 で全部閉じた**: turn の 0.17＝tab の Script の独自配置（`893b968b` で aligned_side に移植）／斜めの bracket の端＝`a08b91df`（make_bracket の字面・隙間も）／「beam 付き tab 符幹が 0.56 高い」「`g,4` のフレット選択」はユーザー決定の帰結＝欠陥ではない（§1.1 第694）。**tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝隙間がその分広い・書体の問題）
-- **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第710 が見つけた穴（「2.」の後の戻りをページが描かない）は第711 が閉じた（`f8ed1aad`）。★ 第672 の穴（`R*N@text`＝MultiMeasureRestText）は第712 が閉じた（`93a8e8a9`・LILYSHARP-OWN の残り＝数字は文字の支えだけで inside-staff skyline に無い・優先度 250）。★ 第712 が見つけた MMR の数字の 0.05 は第713 が閉じた（`0154c19c`・ユーザー承認で再ベース）／MMR 上の dynamic の X＝**第698 が閉じた**（`9e88b601`・LP は PaperColumn の `X-alignment-extent` (0 . 1.35) の中心 0.675）。MMR の小節の列 X の 0.027 は第714 が閉じた（`35aaedb5`・MMR は Note_spacing の wish を持たない＋行頭の run の rod は prefix から＋rod は左の小節線の ink だけを引く）。休符の import（post-event・`R`・`R*N`）は第698 が閉じた（`928f06a9`）。**掃きが見つけた古い穴 3 つ**（Lab `sessions/p698/imp/sweep.ps1`）: ⒤ `<words>`／`<rehearsal>` の import は第698 が閉じた（`aa88c5e9`）／文字列の escape は第702 が C# の文法にした（`d39f1cda`・§3）／⒥ は第699 が閉じた（`dfac7b6c`）／⒧ 途中の time／key／clef／tempo の import は第700 が閉じた（`5928d22f`）・voice block の `time` の検査は第701 が直した（`e89da84d`）／⒦ grace の slur は第700 が閉じた（`49fceda8`）／⒨ grace の和音と relative の和音の綴りは第700 が閉じた（`a9b61939`）／⒩ は計器の誤り（第701・複数 score の本で import の出力フォルダが衝突）＝実際は relative の音高のずれ 68 → 0。5/4 のような 1 つの音価で書けない全小節休符は `<type>` のまま（`R1` が 4/4 ぶん）
+- **tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝書体の問題）。tab の LP 差の他は第694 で閉じた
+- **MusicXML**: 第662〜第722 の起票分は全部閉じた（ARCHIVE）。残りは 5/4 のような 1 つの音価で書けない全小節休符が `<type>` のまま（`R1` が 4/4 ぶん）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
 - ⚠️ **quartet の bar 25 の tempo mark の越境は段割れの差（T7 の族）**＝LP の MetronomeMark も右余白へ押し戻さない（第642）
@@ -119,6 +118,16 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第723セッション（2026-10-01・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第722 で Omr のレポートと TAB のスラッシュが閉じた後の次の島）。`-Start p723`（HEAD `5aa3e7a0`・未 push 16）＝full **10543 / 0 / 2 / 10545**（引継ぎと一致）。
+⒜ §1.0 を 2 KB 詰めた（閉じた経緯を ARCHIVE に任せた 3 行）。K3 の「複数楽器の本の調弦」は既に閉じていた（`NoteStepper.StepTuning`・網 `StepRequestTests`）＝行を消した。5/4 の全小節休符は **Lily# に 1 つの音価で書く綴りが無い**（`R4*5` は 5 小節・`R1` は 4/4 ぶん）＝MusicXML の残りは言語の設計の話で触らない。
+⑴ ★ `fecc35f1` **前打音の休符の上下と、それを越える弧**（第717 の 7.7 ⑴ を LP の双子で測った）: Lab `sessions/p723/gr` の弧の計器で、休符入りの前打音の弧が LP より 1〜2 スペース低い（休符なしの対照は完全一致）。原因は弧ではなく**休符の高さ**: LP は前打音の休符を**直前の主音**（前打音の時刻 (X, −g) ではまだ鳴っている＝`busyGrobs`）から Rest_collision の休符と音符の枝で離す。向きは休符に無いので列の＝**前打音の符幹の UP**（score-grace-settings）→ e'' の後 +5・e' の後 +2・離れていれば 0。普通の休符は向きが無く動かない（対照）。`ElementCoordinator.GraceRestShift`（`CalculateRestNoteCollisions` が公開・弧のグレースの障害物も同じ関数で休符の描かれる高さを読む）・第717 の LILYSHARP-OWN（休符は障害物でない）は退役。**台帳 +6 点**（`probes/grace-rest-collision.ly`・`rest.grace.after-held-note.{high,low,clear,control}`・`slur.over-grace-rest.{left-attachment,alone.left-attachment}`）全部 EXACT・毒 3 つ（持ち上げない＝4 赤／弧が持ち上げを読まない＝2 赤／弧が休符を飛ばす＝2 赤）。**snapshot `test/grace-rest` をユーザー承認で再ベース**（2・3 小節の休符が前の小節の c2. を避ける）。残り: 前打音の休符と別の声部の音符（未移植）・休符なし前打音の下向きの弧（`a4( grace { b16 } c'4)`）が LP と 0.5 違う（別の差・記録だけ）。
+⚠ **計器の穴**: p397 の SVG の掃きは `<本の名前>.svg` しか比べず、**score に別名のある 216 冊を見ていなかった**（第722 の 2 回の「動いた本 0」も同じ穴）。全 score を比べる `Lab sessions/p723/svg2/sweep-all.ps1`（998 冊・1,199 枚・data-pos を伏せる）で、第722＋第723（base `579493bc`）で変わったのは `grace-rest` の 1 枚だけ＝第722 は描画を動かしていないと確かめ直した。Lab の CLAUDE-OPERATIONS §4 に書いた。
+★ `-End p723 -DiffBase 5aa3e7a0`＝full **10549 / 0 / 2 / 10551**（台帳 +6）・門 7 つ全 OK・Core `+` 111 行に REF 3／OWN 0（LILYSHARP-OWN 1 つ退役）。7.6: ⑴ 第717 の 7.7 ⑴。7.7: 上の「残り」2 つ。push はユーザー（未 push 18）。
+
+## 以下は第722セッションの経緯
+
 ### 1.1 第722セッション（2026-10-01・YT-DELL2）
 
 同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`＝12 件は全部直ったと確認済み・残りは `lilysharp-feedback-2026-09-30.md` の #13〜#16）。`-Start p722`（HEAD `579493bc`・未 push 8）＝full **10537 / 0 / 2 / 10539**（引継ぎと一致）。
@@ -129,16 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ★ `-End p722 -DiffBase 579493bc`（2 回目）＝full **10542 / 0 / 2 / 10544**・門 7 つ全 OK・Core `+` 152 行に REF 0／OWN 1（`200453de`＝TAB のスラッシュの符幹・LP に音高の無い音符は無い）。7.6: ⑵ ⑴ の 7.7 ⑴ ＋ユーザー決定。7.7: ⑴ TAB の横の写し（`staff gt  tab gt`）は数字だけの TAB なので頁ではスラッシュに何も出ない（変わらず）⑵ スラッシュの符幹の始まりの高さは Midi 0 の弦の計算に任せている（最低弦の側）＝見た目の調整はしていない。push はユーザー（未 push 13）。
 ⑶ ★ `b8cf77f8`（ユーザー「続けて」＝⑵ の 7.7 ⑵）: スラッシュの Midi 0 が弦の計算で最低弦に丸められ、符幹が最低線から譜表を縦断していた→ `TabStaffGeometry.Fret` が Midi 0 に真ん中の弦を答える（`SlashString`＝(弦数+1)/2・LILYSHARP-OWN・五線でスラッシュが真ん中の線に立つのと同じ）・連桁の符幹の起点（`TabStemHeadY`）も同じ値。スラッシュだけの小節は真ん中の線の頭と同じく下向きの符幹になる。網 `ASlashNotesStem_StartsAtTheMiddleString`（SVG の符幹の `y1`＝頭の側が最低線より中央に近い）・毒（最低弦を返す）で赤。⚠ 網の最初の版は「中央に近い端」を近い端と読み、短い符幹では先端を拾って毒でも緑だった＝描画は頭から先端へ線を引く（`y1`）に直した。⚠ **最初の版（`b8cf77f8`）は `Fret` を Midi 0 で分けて広すぎた**＝前打音の列（TAB の弧の囲み）も Midi 0 で `Fret` を通っていて `test/tab-grace-slur` の snapshot が動いた（`-End` の full で発覚・「Midi 0 にしか効かない」と掃きを省いたのが誤り）。続く `b84ad7cd` で `Fret` を戻し、`NoteFret` が**音符に**訊く（`IsPitchlessSlash`・符幹の頭の弦・符幹の根の数字・頭の位置の 3 か所）。snapshot 不変・SVG の掃き 998 冊（base `200453de`）で動いた本 0。**教訓: 「この値にしか効かない」は掃きを省く理由にならない＝値の意味を持つ所で分ける（音符の性質）**。
 ★ `-End p722`（3 回目）＝full **10543 / 0 / 2 / 10545**・門 7 つ全 OK・Core `+` 174 行に REF 0／OWN 2（TAB のスラッシュの符幹・真ん中の弦）。7.7: スラッシュの符幹の起点は数字 1 つ分の隙（`StemBeginOffset`）を数字が無くても空ける（見た目の調整はしていない）。HANDOFF の残りは約 4 KB＝**次の便は `-Start` でアーカイブしてから**。push はユーザー（未 push 17）。
-
-## 以下は第721セッションの経緯
-
-### 1.1 第721セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第720 の次の一手＝`staffGroup` の MusicXML）。`-Start p721`（HEAD `f1bc77dd`・未 push 6）＝full **10534 / 0 / 2 / 10536**（引継ぎと一致）。
-⑴ ★ `991c5e71` **全部の staff group を `<part-group>` に・import は入れ子で戻す**: 書き出しは第718 の「別々のラベルの大譜表」の brace しか書いていなかった＝`staffGroup`／`choirStaff` の段は読み手で括弧なし。`WritePartGroups` が演奏される score のグループを深さを問わず歩く（staffGroup＝bracket・小節線通し／choirStaff＝bracket・`group-barline` no／2 パートのままの grandStaff＝brace・1 パートに畳んだ大譜表はグループではなくパート＝`_mergedInto`）。入れ子は空いている番号・内側から閉じる（`MusicXmlDocument.PartGroups`・旧 `BraceGroups` を置換）。import は `ImportPart.Groups`（外→内の列）を持ち、writer が列の差でブロックを開閉＝パート自身の分割はその内側。⚠ **第720 の退行を見つけて直した**: brace で結んだパートに分割用の `StaffGroup` を入れていたので、`LysWriter` がそのパートの途中の音部記号変更を書かなくなっていた（網 `APartUnderABrace_KeepsItsClefChanges`＝Core を第720 に戻すと赤）。
-⒝ 既存の穴: パート名が Lily# の語だと壊れた本になっていた（"S"→`part s`＝スペーサー・"Soprano"→`part soprano`）。手書きの予約語表が言語に追いついていなかった＝**識別子は構文解析器に訊く**（part・cell・staff に使う小さな本を parse・`LexesAsOneName`）。字句解析だけでは厳しすぎる（`bass`・`alto` は字句ではキーワードでもパート名に使える＝1 回目の掃きで 24 冊が不要に `partN` になった）。
-網 `MusicXmlRoundTripTests` +3（入れ子・番号・音部記号）・毒 4 つ（書かない・読まない・名前の判定なし・Core を第720 に）がそれぞれ赤。掃き（Lab `sessions/p721/imp/sweep.ps1`）998 冊: import が変わった 6 冊＝`choir-staff.lys`・`staff-group.lys` がグループを取り戻す・4 冊の "soprano" が `part1` に・**import 後の check 不合格 4 → 0**（その 4 冊＝今までの不合格は全部この名前だった）。
-★ `-End p721 -DiffBase f1bc77dd`＝full **10537 / 0 / 2 / 10539**・門 7 つ全 OK・Core `+` 171 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴ 第720 の次の一手・⒝ ⑴ の掃きの check で見つけた。7.7: ⑴ 予約語の名前は `partN`（読みやすい別名＝`sopranoPart` 等にはしていない）⑵ `<part-group>` の line／none 記号・group-name は読まない・書かない ⑶ 分割した大譜表の上に brace がある形は brace を捨てる（二重になるため）⑷ ペダルの表はパート全体で 1 つ（第719 から）。push はユーザー（未 push 8）。
 
 ## 2. 開いている作業
 

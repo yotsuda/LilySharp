@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第721セッションの経緯
+
+### 1.1 第721セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第720 の次の一手＝`staffGroup` の MusicXML）。`-Start p721`（HEAD `f1bc77dd`・未 push 6）＝full **10534 / 0 / 2 / 10536**（引継ぎと一致）。
+⑴ ★ `991c5e71` **全部の staff group を `<part-group>` に・import は入れ子で戻す**: 書き出しは第718 の「別々のラベルの大譜表」の brace しか書いていなかった＝`staffGroup`／`choirStaff` の段は読み手で括弧なし。`WritePartGroups` が演奏される score のグループを深さを問わず歩く（staffGroup＝bracket・小節線通し／choirStaff＝bracket・`group-barline` no／2 パートのままの grandStaff＝brace・1 パートに畳んだ大譜表はグループではなくパート＝`_mergedInto`）。入れ子は空いている番号・内側から閉じる（`MusicXmlDocument.PartGroups`・旧 `BraceGroups` を置換）。import は `ImportPart.Groups`（外→内の列）を持ち、writer が列の差でブロックを開閉＝パート自身の分割はその内側。⚠ **第720 の退行を見つけて直した**: brace で結んだパートに分割用の `StaffGroup` を入れていたので、`LysWriter` がそのパートの途中の音部記号変更を書かなくなっていた（網 `APartUnderABrace_KeepsItsClefChanges`＝Core を第720 に戻すと赤）。
+⒝ 既存の穴: パート名が Lily# の語だと壊れた本になっていた（"S"→`part s`＝スペーサー・"Soprano"→`part soprano`）。手書きの予約語表が言語に追いついていなかった＝**識別子は構文解析器に訊く**（part・cell・staff に使う小さな本を parse・`LexesAsOneName`）。字句解析だけでは厳しすぎる（`bass`・`alto` は字句ではキーワードでもパート名に使える＝1 回目の掃きで 24 冊が不要に `partN` になった）。
+網 `MusicXmlRoundTripTests` +3（入れ子・番号・音部記号）・毒 4 つ（書かない・読まない・名前の判定なし・Core を第720 に）がそれぞれ赤。掃き（Lab `sessions/p721/imp/sweep.ps1`）998 冊: import が変わった 6 冊＝`choir-staff.lys`・`staff-group.lys` がグループを取り戻す・4 冊の "soprano" が `part1` に・**import 後の check 不合格 4 → 0**（その 4 冊＝今までの不合格は全部この名前だった）。
+★ `-End p721 -DiffBase f1bc77dd`＝full **10537 / 0 / 2 / 10539**・門 7 つ全 OK・Core `+` 171 行に REF 0／OWN 0（MusicXML の読み書き・LP に対応物が無い）。7.6: ⑴ 第720 の次の一手・⒝ ⑴ の掃きの check で見つけた。7.7: ⑴ 予約語の名前は `partN`（読みやすい別名＝`sopranoPart` 等にはしていない）⑵ `<part-group>` の line／none 記号・group-name は読まない・書かない ⑶ 分割した大譜表の上に brace がある形は brace を捨てる（二重になるため）⑷ ペダルの表はパート全体で 1 つ（第719 から）。push はユーザー（未 push 8）。
+
 ## 以下は第720セッションの経緯
 
 ### 1.1 第720セッション（2026-09-30・YT-DELL2）
