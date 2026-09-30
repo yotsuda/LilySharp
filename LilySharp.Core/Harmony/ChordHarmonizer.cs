@@ -241,6 +241,11 @@ public static partial class ChordHarmonizer
             {
                 if (!pcByPos.TryGetValue(item.SourcePosition, out var pcs))
                     continue;
+                // A chord whose syntax spells no letter — one from a shape (chord(Am x02210)),
+                // a degree chord (<1 3 5>) — counts the notes the page collected for it. Until
+                // 2026-09-30 it counted nothing, so a bar of them read as a rest.
+                if (pcs.Count == 0 && item is ChordItem collected)
+                    pcs = collected.Notes.Select(n => ((n.Midi % 12) + 12) % 12).ToList();
                 double w = item.Duration.ToDouble() * (downbeat ? 2.0 : 1.0);
                 downbeat = false;
                 foreach (int pc in pcs) { weight[pc] += w; hasPitch = true; }

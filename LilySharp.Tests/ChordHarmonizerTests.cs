@@ -70,6 +70,14 @@ public class ChordHarmonizerTests
         Assert.Contains("C#dim", block);
     }
 
+    /// <summary>A chord whose syntax spells no letter — one from a shape, a degree chord — is
+    /// counted by the notes it sounds. Until 2026-09-30 such a bar read as a rest and held
+    /// the tonic: this melody harmonized C | C | C.</summary>
+    [Fact]
+    public void ShapeAndDegreeChords_AreCountedByTheirNotes()
+        => Assert.Contains("Am | F | G7",
+            Harmonize("chord(Am x02210)1 | chord(F xx3211)1 | <5 7 2>1 |"));
+
     [Fact]
     public void RestOnlyMeasure_HoldsThePreviousChord()
     {
