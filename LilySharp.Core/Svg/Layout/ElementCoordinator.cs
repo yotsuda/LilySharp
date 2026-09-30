@@ -3486,6 +3486,16 @@ internal sealed class ElementCoordinator
                 if (hx < segStartX - eps || hx > segEndX + eps)
                     continue;
                 var note = g.Columns[k];
+                // A REST column has no head and no stem to keep the slur off
+                // (GraceColumnInfo.IsRest). Until session 717 it was asked for one and the
+                // page threw on `c'4( grace { r16 d'16 } e'4)`, a book with no error in it.
+                // LILYSHARP-OWN: the grace rest's own glyph is not an obstacle here.
+                //   departs from: LilyPond's slur encompasses every grob in the note columns it
+                //     spans (slur-scoring.cc extra encompass), a grace rest's included.
+                //   goes away when: a grace rest's glyph box is built as an obstacle.
+                //   observed by: IncompleteInputTests' grace-rest rows (that it does not throw).
+                if (note.IsRest)
+                    continue;
                 // A slur under a grace is kept off the column's NEAREST ink, so an UP
                 // slur reads the top head of a chord and a DOWN slur its bottom one.
                 // For a single head the two are one number and the books do not move.

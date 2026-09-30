@@ -571,8 +571,16 @@ internal static class GraceNoteEngraver
         // Y-gate proxy: a grace below the main note keeps its flag out of the
         // above-script's band, so it needs no extra room.
         // The HIGHEST head of the highest column: the gate asks whether any grace ink
-        // rises into the script's band, so a chord answers with its top head.
-        if (grace.Columns.Max(n => n.Highest.StaffPosition) < mainPos)
+        // rises into the script's band, so a chord answers with its top head. A REST column
+        // has no head (GraceColumnInfo.IsRest) and raises no flag, so it does not answer;
+        // a group of rests alone keeps the old "below" verdict. Until session 717 the rest
+        // was asked for its highest head and the page threw on `grace { r16 d'16 } e'4@staccato`
+        // — a book with no error in it.
+        int graceTop = int.MinValue;
+        foreach (var column in grace.Columns)
+            if (!column.IsRest)
+                graceTop = Math.Max(graceTop, column.Highest.StaffPosition);
+        if (graceTop < mainPos)
             return 0;
 
         // A LOWER voice's script goes below unless it says .up (its voice forces it, as

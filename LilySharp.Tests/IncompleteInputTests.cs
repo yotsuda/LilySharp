@@ -51,4 +51,51 @@ public sealed class IncompleteInputTests
         _ = new MusicXmlExporter().Export(tree).ToXml().ToString();
         _ = new LilyPondExporter().Export(tree);
     }
+
+    private static string Book(string music) =>
+        "part m { clef treble }\nsection S { m { " + music + " } }\nform main { S }\nscore main { staff m }\n";
+
+    private static void EveryReader(SyntaxTree tree)
+    {
+        _ = SemanticValidation.Run(tree).ToList();
+        Assert.NotEmpty(SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false }));
+        _ = new MidiExporter().Export(tree);
+        _ = new MusicXmlExporter().Export(tree).ToXml().ToString();
+        _ = new LilyPondExporter().Export(tree);
+    }
+
+    /// <summary>
+    /// A REST in a grace group is a column with no head (GraceColumnInfo.IsRest), and two
+    /// readers asked it for its highest head: the script gate on the main note and the slur's
+    /// obstacles. Both books are VALID — no diagnostic — and the page threw on them until
+    /// session 717 (found by the edit sweep, LilySharp-Lab sessions/p717).
+    /// </summary>
+    [Theory]
+    [InlineData("c'4 grace { r16 d'16 } e'4@staccato f' g' |")]
+    [InlineData("c'4 grace { r16 } e'4@fermata f' g' |")]
+    [InlineData("c'4( grace { r16 d'16 } e'4) f' g' |")]
+    [InlineData("c'4 grace { d'16 e'16 r16 } e'4@staccato f' g' |")]
+    public void AGraceRest_IsReadAsTheRestItIs(string music)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        Assert.Empty(tree.Diagnostics);
+        Assert.DoesNotContain(SemanticValidation.Run(tree), d => d.Severity == DiagnosticSeverity.Error);
+        EveryReader(tree);
+    }
+
+    /// <summary>
+    /// A duration that is not a note value (<c>c'3</c>, or a chord shape's frets read as
+    /// durations while a line is typed) is LYS1004 — and only that: every reader takes the next
+    /// longer note value, where 1/3 + 1/5 + 1/7 + … overflowed a long in all of them and the
+    /// check printed an exception instead of the error (session 717).
+    /// </summary>
+    [Theory]
+    [InlineData("c'3 d'5 e'7 f'11 g'13 a'17 b'19 c''23 d''29 e''31 f''37 g''41 |")]
+    [InlineData("c'133211 d'320001 |")]
+    public void ADurationThatIsNoNoteValue_IsLys1004Alone(string music)
+    {
+        var tree = SyntaxTree.Parse(Book(music));
+        Assert.Contains(SemanticValidation.Run(tree), d => d.Code == DiagnosticCodes.InvalidDuration);
+        EveryReader(tree);
+    }
 }

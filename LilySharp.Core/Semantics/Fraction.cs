@@ -120,7 +120,16 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
             32 => ThirtySecond,
             64 => new(1, 64),
             128 => new(1, 128),
-            _ => new(1, noteValue)
+            > 0 when (noteValue & (noteValue - 1)) == 0 => new(1, noteValue),
+            // NOT A NOTE VALUE — `c'3`, a stray digit, a chord shape's frets read as durations
+            // while a line is being typed. LYS1004 reports it (DurationValidator reads the
+            // WRITTEN number, which this does not touch); every reader of the length takes the
+            // next LONGER note value, so the book's totals stay power-of-two fractions. Until
+            // session 717 this was 1/noteValue, and adding 1/3 + 1/5 + 1/7 + … multiplied the
+            // denominators past a long: the validators, the page, the MIDI, MusicXML and the
+            // twin all threw instead of reporting the one error.
+            > 0 => new(1, 1 << (31 - System.Numerics.BitOperations.LeadingZeroCount((uint)noteValue))),
+            _ => Quarter,
         };
     }
 
