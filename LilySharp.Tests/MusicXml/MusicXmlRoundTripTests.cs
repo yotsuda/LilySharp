@@ -628,6 +628,69 @@ public class MusicXmlRoundTripTests
         Assert.Contains("c,1", lys); // C3 whole, bass
     }
 
+    /// <summary>
+    /// A grand staff's marks come back on their own hand, and its octave lines and pedals come
+    /// back at all (2026-09-30): the import read neither &lt;octave-shift&gt; nor &lt;pedal&gt;,
+    /// and a direction of staff 2 marked staff 1's note at the same beat — the left hand's
+    /// <c>@f</c> came back on the right hand's first note.
+    /// </summary>
+    [Fact]
+    public void AGrandStaffsMarks_ComeBackOnTheirOwnStaff_WithTheirLinesAndPedals()
+    {
+        var original = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section A {
+              rh { c''4@quindicesima d'' e'' f''@!ottava@p | g''1 | g''1 | }
+              lh { c4@f@ottava(bassa) d e f@!ottava | g,1@sustain | c1@!sustain | }
+            }
+            form main { ~A }
+            score main { grandStaff { staff rh "Piano"  staff lh } }
+            """);
+        var xml = new MusicXmlExporter().Export(original).ToXml().ToString();
+        var (lys, _) = new MusicXmlImporter().Import(xml);
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        Assert.Contains("c''4@quindicesima d''4 e''4 f''4@!ottava@p |", lys);
+        Assert.Contains("c4@f@ottava(bassa) d4 e4 f4@!ottava | g,1@sustain | c1@!sustain |", lys);
+    }
+
+    /// <summary>
+    /// A stop written where MusicXML programs usually write it — after the last note it covers,
+    /// at the bar's end — closes on the NEXT note, the one outside the line: on the bar's last
+    /// note it would end the line a note early. A stop after the part's last note stays on that
+    /// note (Lily# requires the end). A pedal stop closes the pedal that is down.
+    /// </summary>
+    [Fact]
+    public void AStopAfterTheBarsLastNote_ClosesOnTheNextNote()
+    {
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Flute</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes><divisions>1</divisions><time><beats>2</beats><beat-type>4</beat-type></time>
+                    <clef><sign>G</sign><line>2</line></clef></attributes>
+                  <direction><direction-type><octave-shift type="down" size="8"/></direction-type></direction>
+                  <direction><direction-type><pedal type="sostenuto"/></direction-type></direction>
+                  <note><pitch><step>C</step><octave>6</octave></pitch><duration>1</duration><type>quarter</type></note>
+                  <note><pitch><step>D</step><octave>6</octave></pitch><duration>1</duration><type>quarter</type></note>
+                  <direction><direction-type><octave-shift type="stop" size="8"/></direction-type></direction>
+                </measure>
+                <measure number="2">
+                  <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                  <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                  <direction><direction-type><pedal type="stop"/></direction-type></direction>
+                </measure>
+              </part>
+            </score-partwise>
+            """);
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        Assert.Contains("c''4@ottava@sostenuto d''4 | e'4@!ottava f'4@!sostenuto |", lys);
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         int n = 0, i = 0;

@@ -316,6 +316,13 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **MusicXML import reads octave lines and pedals, and marks each staff's own notes.**
+  `<octave-shift>` and `<pedal>` were not read, so every `@ottava`, `@quindicesima` and
+  `@sustain` was lost on import; they come back as the marks and their `@!` ends (a pedal
+  stop ends the pedal that is down). A stop written after a bar's last note — where most
+  programs write it — closes on the next note, the first one outside the line. In a part on
+  two staves a dynamic, a text or a line now marks a note of its own staff: the left hand's
+  `@f` used to come back on the right hand's note at the same beat.
 - **MusicXML carries the page's beams.** `lysc xml` wrote no `<beam>`, so a reader beamed by
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and

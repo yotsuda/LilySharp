@@ -132,6 +132,14 @@ internal static class MusicXmlReader
         int measureNo = 0;
         var staffClefs = new Dictionary<int, string>();   // staff number -> clef
         var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
+        // A span's end (`!ottava`, `!sustain`) standing past a bar's last onset — where a
+        // MusicXML stop usually stands, after the last note it covers — closes on the next
+        // note of its staff, in the next bar: on the bar's last note it would end the line a
+        // note early (the note carrying `@!ottava` is outside the line).
+        var carriedEnds = new List<(string Mark, int? Staff)>();
+        var lastNoteOfStaff = new Dictionary<int, ImportNote>();
+        ImportNote? partLastNote = null;
+        var pedals = new List<string>();                   // the pedals down, oldest first
 
         foreach (var measEl in Els(partEl, "measure"))
         {
@@ -150,18 +158,25 @@ internal static class MusicXmlReader
             // direction may carry an <offset> from where it stands in the stream — the
             // exporter writes every direction at the bar's head with one — and until now a
             // dynamic on beat 4 came in on beat 1.
-            var pendingDynamics = new List<(string Dynamic, int At)>();
+            // A direction of a multi-staff part marks a note of ITS staff (<staff>; none = any):
+            // the lower hand's `@f` used to land on the upper hand's note at the same beat.
+            var pendingDynamics = new List<(string Dynamic, int At, int? Staff)>();
+            foreach (var (end, endStaff) in carriedEnds)
+                pendingDynamics.Add((end, 0, endStaff));
+            carriedEnds.Clear();
             var pendingGrace = new List<ImportGraceNote>();
             int position = 0;           // divisions from the bar's head, along the stream
             ImportNote? lastNote = null;
 
-            void AttachDue(ImportNote note)
+            void AttachDue(ImportNote note, int staff)
             {
+                bool Due((string Dynamic, int At, int? Staff) p)
+                    => p.At <= position && (p.Staff == null || p.Staff == staff);
                 int k = 0;
                 for (int i = 0; i < pendingDynamics.Count; i++)
-                    if (pendingDynamics[i].At <= position)
+                    if (Due(pendingDynamics[i]))
                         note.Articulations.Insert(k++, pendingDynamics[i].Dynamic);
-                pendingDynamics.RemoveAll(p => p.At <= position);
+                pendingDynamics.RemoveAll(Due);
             }
 
             foreach (var el in measEl.Elements())
@@ -182,12 +197,15 @@ internal static class MusicXmlReader
                                 measure.Tempo = bpm;
                         }
                         int at = position + (int.TryParse(Local(el, "offset")?.Value, out int off) ? off : 0);
+                        int? dirStaff = int.TryParse(Local(el, "staff")?.Value, out int ds) ? ds : null;
                         foreach (var dyn in ReadDirectionDynamics(el))
-                            pendingDynamics.Add((dyn, at));
-                        // The direction's text rides the same queue: it marks the note at
-                        // its position exactly as a dynamic does.
+                            pendingDynamics.Add((dyn, at, dirStaff));
+                        // The direction's text and its lines ride the same queue: they mark
+                        // the note at their position exactly as a dynamic does.
                         foreach (var text in ReadDirectionTexts(el, report, measureNo))
-                            pendingDynamics.Add((text, at));
+                            pendingDynamics.Add((text, at, dirStaff));
+                        foreach (var span in ReadDirectionSpans(el, pedals, report, measureNo))
+                            pendingDynamics.Add((span, at, dirStaff));
                         break;
                     }
 
@@ -245,11 +263,13 @@ internal static class MusicXmlReader
                         {
                             target.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
-                            AttachDue(note);
+                            AttachDue(note, staff);
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
                             position += int.TryParse(Local(el, "duration")?.Value, out int ndur) ? ndur : 0;
                             lastNote = note;
+                            lastNoteOfStaff[staff] = note;
+                            partLastNote = note;
                         }
                         target.Add(note);
                         break;
@@ -264,14 +284,25 @@ internal static class MusicXmlReader
             // drops a dangling @chord/@fig with a warning rather than mis-attaching).
             measure.Voice(lastVoice).AddRange(pendingAnnotations);
             // A dynamic past the bar's last onset (on its last note, at that note's end)
-            // belongs to that note: it used to be dropped.
-            if (lastNote != null)
-                foreach (var (dyn, _) in pendingDynamics)
-                    lastNote.Articulations.Add(dyn);
+            // belongs to that note of its staff: it used to be dropped. A span's end goes on
+            // to the next bar's note instead (carriedEnds).
+            foreach (var (dyn, _, dynStaff) in pendingDynamics)
+            {
+                if (dyn.StartsWith('!'))
+                    carriedEnds.Add((dyn, dynStaff));
+                else if ((dynStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own : lastNote) is { } host)
+                    host.Articulations.Add(dyn);
+            }
             pendingDynamics.Clear();
 
             part.Measures.Add(measure);
         }
+        // An end after the part's last note has no next note to stand on: its staff's last
+        // note carries it — Lily# requires the end, and a line one note short beats none.
+        foreach (var (end, endStaff) in carriedEnds)
+            if ((endStaff is { } s && lastNoteOfStaff.TryGetValue(s, out var own) ? own
+                    : partLastNote) is { } host)
+                host.Articulations.Add(end);
 
         part.Clef = clefSet ?? "treble";
         part.TranspositionSemitones = TranspositionBeyondClef(transposeSet, part.Clef);
@@ -685,6 +716,71 @@ internal static class MusicXmlReader
                 case "crescendo": yield return "cresc"; break;
                 case "diminuendo": yield return "decresc"; break;
             }
+    }
+
+    /// <summary>
+    /// The lines a &lt;direction&gt; opens and closes: an &lt;octave-shift&gt; as
+    /// <c>ottava</c> / <c>ottava(bassa)</c> / <c>quindicesima</c>(…) and its stop as
+    /// <c>!ottava</c>; a &lt;pedal&gt; as <c>sustain</c> / <c>sostenuto</c> and its stop as
+    /// the end of the pedal that is down (MusicXML has one stop for both). Until 2026-09-30
+    /// neither was read: every <c>@ottava</c> and <c>@sustain</c> was lost on import.
+    /// </summary>
+    /// <remarks>
+    /// MusicXML's octave-shift names the way the notes are MOVED on the page: "down" is an
+    /// 8va (the notes sound an octave above where they stand), "up" an 8vb — the spelling
+    /// <c>MusicXmlExporter.ProcessDirectionName</c> writes. A pedal <c>change</c> is Lily#'s
+    /// start again while the pedal is down (<c>g,4@sustain</c>). <paramref name="pedals"/>
+    /// holds the part's pedals that are down, so a stop closes the latest one.
+    /// </remarks>
+    private static IEnumerable<string> ReadDirectionSpans(XElement dir, List<string> pedals, ImportReport report, int measureNo)
+    {
+        foreach (var dt in Els(dir, "direction-type"))
+        {
+            foreach (var shift in Els(dt, "octave-shift"))
+            {
+                string type = (string?)shift.Attribute("type") ?? "";
+                if (type == "stop")
+                {
+                    yield return "!ottava";
+                    continue;
+                }
+                if (type is not ("up" or "down"))
+                    continue;
+                string? name = (string?)shift.Attribute("size") switch
+                {
+                    null or "8" => "ottava",
+                    "15" => "quindicesima",
+                    _ => null,
+                };
+                if (name == null)
+                {
+                    report.Warn(measureNo, $"An octave line of size {(string?)shift.Attribute("size")} has no Lily# spelling (8 or 15); it is dropped.");
+                    continue;
+                }
+                yield return type == "up" ? name + "(bassa)" : name;
+            }
+            foreach (var pedal in Els(dt, "pedal"))
+            {
+                switch ((string?)pedal.Attribute("type"))
+                {
+                    case "start" or "change":
+                        if (!pedals.Contains("sustain"))
+                            pedals.Add("sustain");
+                        yield return "sustain";
+                        break;
+                    case "sostenuto":
+                        if (!pedals.Contains("sostenuto"))
+                            pedals.Add("sostenuto");
+                        yield return "sostenuto";
+                        break;
+                    case "stop":
+                        string down = pedals.Count > 0 ? pedals[^1] : "sustain";
+                        pedals.Remove(down);
+                        yield return "!" + down;
+                        break;
+                }
+            }
+        }
     }
 
     /// <summary>
