@@ -14,8 +14,8 @@
 |---|---:|---|
 | `APPROX` | 59 | LP に対応物はあるが、形が違うと自認しているもの |
 | `UNWATCHED` | 59 | 観測者がゼロだと自認しているもの |
-| `OWN` | 203 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
-| **計** | **321** | |
+| `OWN` | 204 | LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN) |
+| **計** | **322** | |
 
 ## 密度の高いファイル（上位 12）
 
@@ -235,7 +235,7 @@
 ### `LilySharp.Core/Svg/Model/Score.cs`
 - **:38** numerator with its own markup; no ledger point watches one).
 
-## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（203 件）
+## OWN — LilyPond に対応物が無いと宣言しているもの (LILYSHARP-OWN)（204 件）
 
 ### `LilySharp.Core/LilyPond/LilyPondExporter.cs`
 - **:3097** ⚠️ LILYSHARP-OWN: correct by construction. A degree chord's two uses of this value
@@ -296,8 +296,9 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.Prefix.cs`
 - **:573** LILYSHARP-OWN: the '+' of a compound meter's numerator, which LilyPond
 ### `LilySharp.Core/Rendering/SharedRenderer.Tab.cs`
-- **:441** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
-- **:971** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
+- **:425** LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
+- **:443** ⚠️ LILYSHARP-OWN on a FULL tab, and deliberately so (USER DECISION,
+- **:973** ⚠️ LILYSHARP-OWN, the other half: which x IS the centre when the digits do not
 ### `LilySharp.Core/Rendering/TextFontMetrics.cs`
 - **:543** LILYSHARP-OWN: LilyPond has no equivalent refusal, and cannot — it resolves through
 - **:660** ⚠️ LILYSHARP-OWN: the glyphs a missing codepoint falls back to are drawn from a system

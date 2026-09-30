@@ -422,6 +422,8 @@ internal static partial class SharedRenderer
                         break;
                     // A slash note is rhythm with no string: its stem, no digit
                     // (NoteItem.IsPitchlessSlash; owner's decision 2026-10-01).
+                    // LILYSHARP-OWN: LilyPond has no pitchless note — its slash is a style on
+                    // a written pitch, which a TabStaff frets like any other.
                     if (note.IsPitchlessSlash)
                     {
                         if (!numbersOnly)
