@@ -129,6 +129,18 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第694セッションの経緯
+
+### 1.1 第694セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p694`（HEAD `29c9edbc`・未 push 66）＝full **10355 / 0 / 2 / 10357**（引継ぎと一致）。
+⑴ §1.0 ⒜「tab の LP 差」に着手。**「beam 付き tab 符幹が 0.56 高い」は第569 の決定の帰結**＝`uniformBeamedLength` を false にすると双子 9 冊（Lab `sessions/p694/tb2`・`tb3`・計器 `tabbeams.ps1`）の beam positions が LP と完全一致（LP は数字の大きさ +0〜+3 でも positions 不動＝数字の大きさの帰結ではない）。ユーザー質問「LP の tab はなぜ 8 分と 16 分の高さが揃わないか」→ 五線用の `beamed-lengths (3.26 3.5 3.6)`（beam が増えるほど符幹を長く）を tab も継ぎ、五線でそれを隠す中央線への引き伸ばし（stem.cc:1235-1243）が tab では効かない＝tab 固有の意図ではない、と答えた。**ユーザー決定: 決定は維持**。「`g,4` のフレット選択」は §2 B の決定＝どちらも起票から外した。
+⑵ 「tab の turn が 0.17 高い」＝**tab の Script の枝が丸ごと独自配置**（中心を数字・符幹・五線の縁から一律 1.0）。双子 11 変種（`ts3`）で最大 1.0 ずれ。★ `893b968b`＝LP の aligned_side を tab の幾何で字面移植（padding・staff-padding に staff-space 1.5 を掛ける・支え＝同じ向きの符幹と数字・include_staff・量子化は tab の半 space と ledger 込みの on_line・X の親は first head＝TabNoteHead）。**ユーザー決定（2026-09-30）: 支えの数字は描いている Lily# の大きい数字**。数字の大きさと beam の決定を外すと 11 変種すべて LP と 0.033 以内（`ts4`）。網 `TabScriptAlignedSideTests` 5・毒 2（旧枝→5 赤／padding に ss を掛けない→4 赤・量子化の 1 本は構成上緑）。snapshot 7 枚をユーザー承認で再ベース（対にできた記号は全部 LP へ）・掃き 998 冊で fixture 6 冊・実コーパス 0 冊。full **10360 / 0 / 2 / 10362**。
+⑶ ユーザー質問「TAB の数字は少し大きすぎるか」→ 3.0／2.8／2.6／2.4 を描き比べて提示（Lab `sessions/p694/fretsize/compare.png`・`fonts { tab size N }`）、2.8 を勧めた→**ユーザー決定「既定値は 2.8」**（⑸）。
+⑷ 斜めの tuplet bracket: 描画が LP の `Bracket::make_bracket` でなかった（端を X だけ 0.2・隙間は一律 ±1.0）。★ `a08b91df`＝端は dz に沿って `shorten/length*dz`（`DrawnStartYUp` を足しスカイライン・ページ送りの memo 鍵も）・隙間は（数字の送り幅＋1.0）を中点から dz に沿って＋0.1。LP 双子（Lab `sessions/p694/tup`・`tup2`・計器 `tupbr.ps1`）で鉤・隙間の角が全部 LP へ（LP も鉤を −0.2746＝−0.3×dx/len に置くのを直接確認）。LP 6 桁一致の既存網 3 本は「描いた端の Y＝positions」と読んでいた＝線に沿って 0.2 戻す読みに直して緑のまま・`TabTupletBracketTests` の 0.365 は水平前提だった→ LP の式。網 `TupletBracketGapTests`・毒で 5 赤。snapshot 11 枚承認・掃き 37 冊（コーパス 19）は括弧の線だけ。
+⑸ `46ed6e28`＝`TabConstants.FretFontSize` 3.0 → 2.8。台帳 `slur.tab.*` 6 点と bow 双子の tab 14 本が全部 LP へ（記録を更新）・テスト 2 本の `font-size="3.00"` 直書きを定数から組むように。snapshot 37 枚（ユーザー指示）・掃き 258 冊（コーパス 207）・段の数が変わったのは 4 冊で全部減る向き（everybody goes 30→29・異邦人 27→26・星になれたら 32→30・全力少年 38→37）。CHANGELOG の Fixes に 4 件。full **10361 / 0 / 2 / 10363**。
+★ `-End p694 -DiffBase 29c9edbc`＝full **10361 / 0 / 2 / 10363**・門 6 つ全 OK・Core `+` 136 行に REF 15／OWN 0。7.6: tab の Script＝⒝（aligned_side の字面だが、支え〔符幹・数字・弦〕と Script の輪郭の X の重なりは箱で仮定＝五線の経路と同じ簡略）・tuplet の括弧＝⒜（make_bracket の字面）・数字の大きさ＝既存の OWN（批准済みの逸脱の値だけ）。7.7: 2 つ目の綴り＝五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。push はユーザー。
+
 ## 以下は第693セッションの経緯
 
 ### 1.1 第693セッション（2026-09-30・YT-DELL2）

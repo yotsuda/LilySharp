@@ -120,23 +120,19 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第696セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p696`（HEAD `e16b17a7`・未 push 72）＝full **10371 / 0 / 2 / 10373**（引継ぎと一致）。
+⑴ 第695 が残した「五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている」を一本化。★ `8b8dfc1f`＝`AlignedSideUp(supportReach, staffSpace, staffLines, onNoteHead)`（include_staff・ss×padding・量子化〔span ±(本数−1)+1・ledger 込みの on_line・頭が note head なら「あいだ」の腕〕・staff-padding）を五線（ss 1・`Staff.Lines`）と tab（弦の間隔・弦の数）が呼ぶ。`QuantizedYPosition` は退場。五線の写しに無かった唯一の振る舞い＝**ledger 上の on_line**: 上声部の高い音に `staccato.down`（Lab `sessions/p696/led2`）で LP a''' 8.5・c'''' 9.5／Lily# 9.0・10.0 → 一致。網 `ScriptOutlineSupportTests` +3・毒で ledger の 2 本だけ赤。snapshot 不変・掃き 998 冊 0（その形を踏む本が無い＝結果であって構成ではない）。
+★ `-End p696 -DiffBase e16b17a7`＝full **10374 / 0 / 2 / 10376**・門 6 つ全 OK・Core `+` 112→75 行に REF 8／OWN 0。7.6: ⒜（aligned_side の後半の字面・五線と tab の 2 軒を 1 軒に）。7.7: 2 つ目の綴りは消えた（`CalculateYPosition`／tab の枝とも `AlignedSideUp`）。push はユーザー。
+
+## 以下は第695セッションの経緯
+
 ### 1.1 第695セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p695`（HEAD `227f2536`・未 push 70）＝full **10361 / 0 / 2 / 10363**（引継ぎと一致）。
 ⑴ §1.0 ⒜「Script のグリフの近い側の範囲が LP の輪郭でない」（第694 起票）。五線で 14 種 × 符頭が支え／符幹が支え（Lab `sessions/p695/ns`・計器 `scriptcmp.ps1`＋`pairs.ps1`）で測ると、ずれていたのは mordent −0.173・turn/reverseTurn −0.033・trill −0.039/−0.049・staccatissimo −0.017。原因は 2 層＝装飾記号の仮の箱 ±0.5 と、支えを問わず箱の下端 1 つで測っていたこと。LP は Script の輪郭のスカイラインと支えごとのスカイラインの距離＝符頭は符頭の幅の範囲・同じ向きの符幹は全幅（Script の `add-stem-support #t`＝`set_minimum_height`）・五線は全幅。★ `200a9480`＝`SupportReach`／`NearReachOver`（既存の `ScriptSkyline`＝輪郭＋horizon-padding を支えの範囲で読む）を五線・量子化・pure tip・tab の枝に。28 変種が SVG の丸めの範囲で LP と一致・台帳 `script.stem-support.staff-to-ink-bottom` −0.001 → 0。網 `ScriptOutlineSupportTests` 10（0.002）・毒で動いた 8 本赤／一致していた 2 本は緑。snapshot 7 枚承認・掃き 10 冊（コーパス 2）すべてインクだけ。full **10371 / 0 / 2 / 10373**。⚠ 残り: tab の accent −0.017（同梱書体の数字の幅の上での輪郭の読み＝決定済みの領域）／五線の `CalculateYPosition` と tab の枝は同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。
 ★ `-End p695 -DiffBase 227f2536`＝full **10371 / 0 / 2 / 10373**・門 6 つ全 OK・Core `+` 112 行に REF 9／OWN 0。7.6: ⒜（aligned_side の支えごとのスカイライン距離の字面・支えは箱〔符頭・数字〕と全幅〔符幹・五線〕で、LP の符頭／数字のスカイラインは箱で近似＝既存の HeadSupportExtent と同じ）。7.7: 残る 2 つ目の綴り＝上の一本化。CHANGELOG に 1 件。push はユーザー。
-
-## 以下は第694セッションの経緯
-
-### 1.1 第694セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p694`（HEAD `29c9edbc`・未 push 66）＝full **10355 / 0 / 2 / 10357**（引継ぎと一致）。
-⑴ §1.0 ⒜「tab の LP 差」に着手。**「beam 付き tab 符幹が 0.56 高い」は第569 の決定の帰結**＝`uniformBeamedLength` を false にすると双子 9 冊（Lab `sessions/p694/tb2`・`tb3`・計器 `tabbeams.ps1`）の beam positions が LP と完全一致（LP は数字の大きさ +0〜+3 でも positions 不動＝数字の大きさの帰結ではない）。ユーザー質問「LP の tab はなぜ 8 分と 16 分の高さが揃わないか」→ 五線用の `beamed-lengths (3.26 3.5 3.6)`（beam が増えるほど符幹を長く）を tab も継ぎ、五線でそれを隠す中央線への引き伸ばし（stem.cc:1235-1243）が tab では効かない＝tab 固有の意図ではない、と答えた。**ユーザー決定: 決定は維持**。「`g,4` のフレット選択」は §2 B の決定＝どちらも起票から外した。
-⑵ 「tab の turn が 0.17 高い」＝**tab の Script の枝が丸ごと独自配置**（中心を数字・符幹・五線の縁から一律 1.0）。双子 11 変種（`ts3`）で最大 1.0 ずれ。★ `893b968b`＝LP の aligned_side を tab の幾何で字面移植（padding・staff-padding に staff-space 1.5 を掛ける・支え＝同じ向きの符幹と数字・include_staff・量子化は tab の半 space と ledger 込みの on_line・X の親は first head＝TabNoteHead）。**ユーザー決定（2026-09-30）: 支えの数字は描いている Lily# の大きい数字**。数字の大きさと beam の決定を外すと 11 変種すべて LP と 0.033 以内（`ts4`）。網 `TabScriptAlignedSideTests` 5・毒 2（旧枝→5 赤／padding に ss を掛けない→4 赤・量子化の 1 本は構成上緑）。snapshot 7 枚をユーザー承認で再ベース（対にできた記号は全部 LP へ）・掃き 998 冊で fixture 6 冊・実コーパス 0 冊。full **10360 / 0 / 2 / 10362**。
-⑶ ユーザー質問「TAB の数字は少し大きすぎるか」→ 3.0／2.8／2.6／2.4 を描き比べて提示（Lab `sessions/p694/fretsize/compare.png`・`fonts { tab size N }`）、2.8 を勧めた→**ユーザー決定「既定値は 2.8」**（⑸）。
-⑷ 斜めの tuplet bracket: 描画が LP の `Bracket::make_bracket` でなかった（端を X だけ 0.2・隙間は一律 ±1.0）。★ `a08b91df`＝端は dz に沿って `shorten/length*dz`（`DrawnStartYUp` を足しスカイライン・ページ送りの memo 鍵も）・隙間は（数字の送り幅＋1.0）を中点から dz に沿って＋0.1。LP 双子（Lab `sessions/p694/tup`・`tup2`・計器 `tupbr.ps1`）で鉤・隙間の角が全部 LP へ（LP も鉤を −0.2746＝−0.3×dx/len に置くのを直接確認）。LP 6 桁一致の既存網 3 本は「描いた端の Y＝positions」と読んでいた＝線に沿って 0.2 戻す読みに直して緑のまま・`TabTupletBracketTests` の 0.365 は水平前提だった→ LP の式。網 `TupletBracketGapTests`・毒で 5 赤。snapshot 11 枚承認・掃き 37 冊（コーパス 19）は括弧の線だけ。
-⑸ `46ed6e28`＝`TabConstants.FretFontSize` 3.0 → 2.8。台帳 `slur.tab.*` 6 点と bow 双子の tab 14 本が全部 LP へ（記録を更新）・テスト 2 本の `font-size="3.00"` 直書きを定数から組むように。snapshot 37 枚（ユーザー指示）・掃き 258 冊（コーパス 207）・段の数が変わったのは 4 冊で全部減る向き（everybody goes 30→29・異邦人 27→26・星になれたら 32→30・全力少年 38→37）。CHANGELOG の Fixes に 4 件。full **10361 / 0 / 2 / 10363**。
-★ `-End p694 -DiffBase 29c9edbc`＝full **10361 / 0 / 2 / 10363**・門 6 つ全 OK・Core `+` 136 行に REF 15／OWN 0。7.6: tab の Script＝⒝（aligned_side の字面だが、支え〔符幹・数字・弦〕と Script の輪郭の X の重なりは箱で仮定＝五線の経路と同じ簡略）・tuplet の括弧＝⒜（make_bracket の字面）・数字の大きさ＝既存の OWN（批准済みの逸脱の値だけ）。7.7: 2 つ目の綴り＝五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。push はユーザー。
 
 ## 2. 開いている作業
 
