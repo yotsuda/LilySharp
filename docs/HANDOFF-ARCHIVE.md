@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第717セッションの経緯
+
+### 1.1 第717セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」＝第716 の報告で次の一手に挙げた「掃きを挿入・置換と他の出力へ広げる」）。★ `-Start p717`（HEAD `3299145f`・未 push 137）＝full **10488 / 0 / 2 / 10490**（引継ぎと一致）。
+⑴ ★ `b8107bdb`: 編集の掃き（Lab `sessions/p717/Zz717Fuzz.cs.txt`）＝211 冊 × 14 編集（打たれる token の挿入・1 文字置換・区間削除）を検査・頁・MIDI・MusicXML・双子の 5 つに通した。見つかった 2 族（最小化は Lab `e1`〜`e3.lys`＝本の切り詰めは描画ごとで遅すぎたので、スタックを刷って読んだ）: ⒤ **grace の休符**（`GraceColumnInfo.IsRest`＝頭の無い列）に最上の頭を訊く読み手が 2 つ＝`GraceNoteEngraver.ScriptOverhangForGrace`（主音の script の門）と `ElementCoordinator` の slur の障害物。**どちらも正しい本**（`c'4 grace { r16 d'16 } e'4@staccato`・`c'4( grace { r16 d'16 } e'4)`）で頁が投げていた。門は note の列の頭だけを読む・slur は休符の列を飛ばす（LILYSHARP-OWN: grace の休符の字は障害物にならない）。⒥ **音価でない duration**（`c'3`・編集中に frets が duration に読まれる）: `Fraction.FromNoteValue` が 1/n を返し、1/3 + 1/5 + … が long を溢れさせて検査を含む全出力が投げ、LYS1004 が出なかった＝次に長い音価として読む（LYS1004 が報告する書かれた数は触らない）。修正後、見つけた 2 標本と新しい 3 つ目（計 8,862 編集）は 0 件。網 `IncompleteInputTests` +6・3 つの修正を 1 つずつ外すとそれぞれの行だけ赤。CHANGELOG。full **10494 / 0 / 2 / 10496**・snapshot 不変。
+⑵ ★ `0b61d286`（同じ流れ・第716 の報告で次に挙げた「LSP を掃く」）: 言語サーバの掃き（Lab `sessions/p717/Zz717Lsp.cs.txt`）＝編集した本 2,532 件で、位置つきの handler（hover・definition・references・completion・highlight・signature・rename・code action・audition・facts）を編集点と乱数の位置で、文書の handler（semantic tokens・folding・symbols・code lens・format・playback）を全部、さらに**プレビューを編集をまたいで増分で描いたものと、編集後の本を新しく描いたものの一致**を見た。投げたのは 1 つ: outline と hover が `KeySignatureSyntax.Pitch` を null になりうるように読んでいたが cast で、`key custom fis cis` で InvalidCastException＝**custom key のある本はどれも outline が壊れていた**（編集ではなく元の本で起きる）。`KeySignatureSyntax.DisplayName`（"f major"・"custom"）を両方が読む。網 `IncompleteInputTests` +1・古い読み方に戻すと赤。CHANGELOG。**増分と新規の不一致は 6 件＝全部 data-pos だけ**（絵は同じ）＝§1.0 に起票。full **10495 / 0 / 2 / 10497**。
+⑶ ★ `d6beadb7`（ユーザー「続けて」＝⑵ で起票した data-pos の不一致を追った。⚠ 途中でユーザーが `-Start p718` を拒否した＝便は第717 のまま続けた。拒否された呼び出しは実際には走っていて、build・途中までの test・§1 の見出しの挿入まで進んだ＝止めて `git checkout -- docs/HANDOFF.md` と Lab の `sessions/p718` の削除で元に戻した・アーカイブは起きていない）: 原因は**描画の fragment cache の鍵**。系の頭の調号／音部記号は「系の前の最後の change item」の data-pos で描かれる（`SharedRenderer.ResolveKeySignature`／`ResolveClef`）が、`MeasureContentKey` は entry context の**値**しか畳んでいなかった。A に打った調の変更が B の頭で見出しの調の「言い直し」（data-pos＝B の名前＝編集点から遠い）を生み、明示の break で B 以降の系の幾何が変わらないと、系は replay されて古い data-pos のまま（絵は同じ・クリック先だけ古い）。`MeasureContentKey` が各小節の前の key／clef／time の change item の**個数**も畳む（offset ではなく個数＝挿入でずれない・change item が現れる／消えるときだけ動く）。網 `IncrementalCompilerTests` +1（見出しの key・2 section・break・A に `key fis,`＝増分＝全体）・畳みを外すと赤。Billie Jean と no-op の対照も一致。CHANGELOG。full **10496 / 0 / 2 / 10498**。★ 触っていないもの: Lab の `corpora/` と `probes/` の 40 ファイルが今朝 10:08〜10:10 に変更済み（中身の変更・この会話の作業より前＝ユーザーの編集と判断して触らない）。
+★ `-End p717 -DiffBase 3299145f`＝full **10496 / 0 / 2 / 10498**・門 7 つ全 OK・Core `+` 54 行に REF 0／OWN 1（OWN＝grace の休符の字を slur の障害物にしない）。7.6: ⑴⑵ 第716 の報告の次の一手（編集の掃き→LSP の掃き）⑶ ⑵ で起票した不一致。7.7: ⑴ slur が grace の休符の字を避けない（LP は encompass に入れる・未測定）⑵ 掃きの語彙は私が選んだ 90 語＝構文の網羅ではない ⑶ LSP の DidChange が起こす背景の診断（ScheduleDiagnostics）は掃きが観測していない ⑷ 拒否された `-Start p718` が走っていた件＝ツールの拒否が実行を止めない場合がある（元に戻した）。HANDOFF の残りは 4.7 KB＝次の便は `-Start` でアーカイブしてから（ユーザーの了承を得て）。push はユーザー。
+
 ## 以下は第716セッションの経緯
 
 ### 1.1 第716セッション（2026-09-30・YT-DELL2）

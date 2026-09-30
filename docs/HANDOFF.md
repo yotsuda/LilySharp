@@ -119,6 +119,17 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第719セッション（2026-09-30・YT-DELL2）
+
+新しい会話。ユーザー「HANDOFF を読んで作業に着手して」。`-Start p719`（HEAD `3db4de10`・未 push 0＝ユーザーが push 済み）＝full **10528 / 0 / 2 / 10530**（引継ぎと一致）。
+第718 の 7.7 ⑵ から着手（同じ族＝MusicXML の大譜表）。
+⑴ ★ `ddabea7a`: 大譜表 1 パートの下の段の `<wedge>`／`<octave-shift>` に `number="2"`（`MusicXmlDirection.Number`・下の段から移した direction だけ）。両手に同時の cresc／ottava が互いの stop で閉じていた。網 `MusicXmlBandReportTests` +1・外すと赤。
+⑵ ★ `b57272bc`: 読んでいて見つけた **import の穴 2 つ**: ⒤ `<octave-shift>`／`<pedal>` を一切読んでいなかった＝`@ottava`・`@quindicesima`・`@sustain` が往復で全部消えていた（第671 の 7.7 の匂いの残り）。`ReadDirectionSpans`: down＝8va・up＝8vb・size 15＝quindicesima（他の size は警告して捨てる）・pedal の stop は踏んでいる最後の pedal を閉じる・change は start の繰り返し。**小節の最後の音の後に立つ `!` の終わりは次の小節の同じ段の最初の音へ運ぶ**（Lily# の `@!ottava` の音は括弧の外＝`OttavaBracketItem.EndMoment` が exclusive＝MusicXML の「最後の音の後の stop」と同じ意味）・曲の後なら最後の音。⒥ **複数段パートの direction が `<staff>` を見ていなかった**＝第718 で大譜表を 1 パートにして以来、左手の `@f` が同じ拍の右手の音に戻っていた（`hara-kiri.lys`・`perf-hairpingrand1k.lys` で実在）。網 `MusicXmlRoundTripTests` +2・毒 3 つ（staff・運び・spans）がそれぞれの行だけ赤。
+掃き（Lab `sessions/p719/imp/sweep.ps1`＝p698 の型・998 冊 export→import）: import が変わった 18 冊＝全部この方向（ottava／pedal が戻る・強弱が自分の段へ）・import 後の `lysc check` 不合格 5 → 5（同じ 5 冊）。⚠ 計器の罠: Tests の build は Cli の bin にも Core を写す＝**毒の後に Cli を建て直さないと掃きが毒入りの lysc で走る**（1 回目の掃きが 2 冊しか変わらないと言った）。
+★ `-End p719 -DiffBase 3db4de10`＝full **10531 / 0 / 2 / 10533**・門 7 つ全 OK・Core `+` 120 行に REF 0／OWN 0（MusicXML の読み書き＝LP に対応物が無い）。7.6: ⑴ 第718 の 7.7 ⑵・⑵ ⑴ を読んでいて見つけた穴（第671 の 7.7 の匂い「読み手は wedge／pedal／octave-shift を読まない」の残り）。7.7: ⑴ import は `<wedge type="stop">` を読まない（次の強弱が閉じる Lily# の規則に任せている）・`number` も見ない＝他のソフトが書いた重なる wedge は区別しない ⑵ pedal の「踏んでいる」表はパート全体で 1 つ（段ごとではない）⑶ import した大譜表は表示名（"Piano"）と score の名前を戻さない（`score main "imported"`）⑷ size 22 の octave-shift は警告して捨てる。push はユーザー（未 push 3）。
+
+## 以下は第718セッションの経緯
+
 ### 1.1 第718セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き。ユーザー「次のレポートを読んで、MusicXML exporter を直して」（LilySharp-Omr `docs/repro/musicxml-exporter-bugs.md`・`lysc xml` の 12 件）→「残りも直して」。作業は第717 の `-End` の後に行い、`-Start p718`（HEAD `88756938`・未 push 150）＝full **10528 / 0 / 2 / 10530**。
@@ -127,16 +138,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 網は項目ごと（`MusicXmlBeamTests`・`…PercentRepeatTests`・`…TabTests`・`…TrackLyricsTests`・`…BandReportTests`・`RepeatAroundVoiceTests`）・外すと各行が赤。掃き 1,118 冊＝例外 0・import 0・2 段の拍の不一致 6 小節（全部、元の本の足りない小節＝lysc も警告）。
 ★ `-End p718 -DiffBase 5bd1c99a`＝full **10528 / 0 / 2 / 10530**・門 7 つ全 OK・Core `+` 946 行に REF 0／OWN 0（MusicXML の書き出しは LP に対応物が無い・頁の修正は検査を外しただけ）。7.6: ⑴⑵ ともユーザーの依頼（Omr のレポート）。
 7.7: ⑴ import は節の名前の `<rehearsal>` を最初の音符の `@mark` に戻す（section には戻さない・頁の絵は同じ）⑵ 大譜表の下の段の wedge／octave-shift の番号は振り直していない ⑶ Omr 側の回避（`ms_band_xml.py`・`run-ms.ps1`）はもう要らない＝Omr で外すかはユーザー。
-
-## 以下は第717セッションの経緯
-
-### 1.1 第717セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」＝第716 の報告で次の一手に挙げた「掃きを挿入・置換と他の出力へ広げる」）。★ `-Start p717`（HEAD `3299145f`・未 push 137）＝full **10488 / 0 / 2 / 10490**（引継ぎと一致）。
-⑴ ★ `b8107bdb`: 編集の掃き（Lab `sessions/p717/Zz717Fuzz.cs.txt`）＝211 冊 × 14 編集（打たれる token の挿入・1 文字置換・区間削除）を検査・頁・MIDI・MusicXML・双子の 5 つに通した。見つかった 2 族（最小化は Lab `e1`〜`e3.lys`＝本の切り詰めは描画ごとで遅すぎたので、スタックを刷って読んだ）: ⒤ **grace の休符**（`GraceColumnInfo.IsRest`＝頭の無い列）に最上の頭を訊く読み手が 2 つ＝`GraceNoteEngraver.ScriptOverhangForGrace`（主音の script の門）と `ElementCoordinator` の slur の障害物。**どちらも正しい本**（`c'4 grace { r16 d'16 } e'4@staccato`・`c'4( grace { r16 d'16 } e'4)`）で頁が投げていた。門は note の列の頭だけを読む・slur は休符の列を飛ばす（LILYSHARP-OWN: grace の休符の字は障害物にならない）。⒥ **音価でない duration**（`c'3`・編集中に frets が duration に読まれる）: `Fraction.FromNoteValue` が 1/n を返し、1/3 + 1/5 + … が long を溢れさせて検査を含む全出力が投げ、LYS1004 が出なかった＝次に長い音価として読む（LYS1004 が報告する書かれた数は触らない）。修正後、見つけた 2 標本と新しい 3 つ目（計 8,862 編集）は 0 件。網 `IncompleteInputTests` +6・3 つの修正を 1 つずつ外すとそれぞれの行だけ赤。CHANGELOG。full **10494 / 0 / 2 / 10496**・snapshot 不変。
-⑵ ★ `0b61d286`（同じ流れ・第716 の報告で次に挙げた「LSP を掃く」）: 言語サーバの掃き（Lab `sessions/p717/Zz717Lsp.cs.txt`）＝編集した本 2,532 件で、位置つきの handler（hover・definition・references・completion・highlight・signature・rename・code action・audition・facts）を編集点と乱数の位置で、文書の handler（semantic tokens・folding・symbols・code lens・format・playback）を全部、さらに**プレビューを編集をまたいで増分で描いたものと、編集後の本を新しく描いたものの一致**を見た。投げたのは 1 つ: outline と hover が `KeySignatureSyntax.Pitch` を null になりうるように読んでいたが cast で、`key custom fis cis` で InvalidCastException＝**custom key のある本はどれも outline が壊れていた**（編集ではなく元の本で起きる）。`KeySignatureSyntax.DisplayName`（"f major"・"custom"）を両方が読む。網 `IncompleteInputTests` +1・古い読み方に戻すと赤。CHANGELOG。**増分と新規の不一致は 6 件＝全部 data-pos だけ**（絵は同じ）＝§1.0 に起票。full **10495 / 0 / 2 / 10497**。
-⑶ ★ `d6beadb7`（ユーザー「続けて」＝⑵ で起票した data-pos の不一致を追った。⚠ 途中でユーザーが `-Start p718` を拒否した＝便は第717 のまま続けた。拒否された呼び出しは実際には走っていて、build・途中までの test・§1 の見出しの挿入まで進んだ＝止めて `git checkout -- docs/HANDOFF.md` と Lab の `sessions/p718` の削除で元に戻した・アーカイブは起きていない）: 原因は**描画の fragment cache の鍵**。系の頭の調号／音部記号は「系の前の最後の change item」の data-pos で描かれる（`SharedRenderer.ResolveKeySignature`／`ResolveClef`）が、`MeasureContentKey` は entry context の**値**しか畳んでいなかった。A に打った調の変更が B の頭で見出しの調の「言い直し」（data-pos＝B の名前＝編集点から遠い）を生み、明示の break で B 以降の系の幾何が変わらないと、系は replay されて古い data-pos のまま（絵は同じ・クリック先だけ古い）。`MeasureContentKey` が各小節の前の key／clef／time の change item の**個数**も畳む（offset ではなく個数＝挿入でずれない・change item が現れる／消えるときだけ動く）。網 `IncrementalCompilerTests` +1（見出しの key・2 section・break・A に `key fis,`＝増分＝全体）・畳みを外すと赤。Billie Jean と no-op の対照も一致。CHANGELOG。full **10496 / 0 / 2 / 10498**。★ 触っていないもの: Lab の `corpora/` と `probes/` の 40 ファイルが今朝 10:08〜10:10 に変更済み（中身の変更・この会話の作業より前＝ユーザーの編集と判断して触らない）。
-★ `-End p717 -DiffBase 3299145f`＝full **10496 / 0 / 2 / 10498**・門 7 つ全 OK・Core `+` 54 行に REF 0／OWN 1（OWN＝grace の休符の字を slur の障害物にしない）。7.6: ⑴⑵ 第716 の報告の次の一手（編集の掃き→LSP の掃き）⑶ ⑵ で起票した不一致。7.7: ⑴ slur が grace の休符の字を避けない（LP は encompass に入れる・未測定）⑵ 掃きの語彙は私が選んだ 90 語＝構文の網羅ではない ⑶ LSP の DidChange が起こす背景の診断（ScheduleDiagnostics）は掃きが観測していない ⑷ 拒否された `-Start p718` が走っていた件＝ツールの拒否が実行を止めない場合がある（元に戻した）。HANDOFF の残りは 4.7 KB＝次の便は `-Start` でアーカイブしてから（ユーザーの了承を得て）。push はユーザー。
 
 ## 2. 開いている作業
 
