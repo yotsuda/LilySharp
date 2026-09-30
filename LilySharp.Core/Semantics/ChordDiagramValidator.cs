@@ -240,7 +240,7 @@ public static class ChordDiagramScores
 
     /// <summary>The capo fret in the first score that draws the part <paramref name="node"/> is
     /// written in (every score when none does, or when the part is not the tree's to say), 0
-    /// for none — what a <c>chord(…)</c> item's check and hover read (2026-09-29).</summary>
+    /// for none — what the editor's shape step reads (2026-09-29).</summary>
     public static int CapoOfNode(SyntaxNode node)
         => RenderingScores(node) is { Count: > 0 } rendering ? rendering[0].Capo : 0;
 

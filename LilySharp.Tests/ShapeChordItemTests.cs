@@ -542,6 +542,32 @@ public class ShapeChordItemTests
         Assert.Contains("guitar: `x32010` — C3  E3  G3  C4  E4", HoverAt(single, "chord(C x"));
     }
 
+    /// <summary>LYS1039 checks the item under each score's capo, as each score sounds it: x32010
+    /// is E♭ at capo 3 and C with no capo, so `chord(Eb x32010)` warns once whichever score comes
+    /// first. Until 2026-09-30 it read the first score's capo alone — silent when that was capo 3.</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void TheShapeCheck_ReadsEachScoresCapo(bool capoFirst)
+    {
+        string capo = "score main { layout capo3  staff gt }";
+        string open = "score main \"open\" { layout open  staff gt }";
+        string book = $$"""
+            layout capo3 { chordDiagrams guitar capo 3 }
+            layout open { chordDiagrams guitar }
+            part gt { instrument guitar }
+            section A { gt { chord(Eb x32010)1 | } }
+            form main { A }
+            {{(capoFirst ? capo : open)}}
+            {{(capoFirst ? open : capo)}}
+            """;
+        var mismatch = Assert.Single(Diagnostics(book), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+        Assert.Contains("x32010", mismatch.Message);
+        // Under one capo that presses it, nothing to say.
+        Assert.DoesNotContain(Diagnostics(Book("instrument guitar", "chord(Eb x32010)1 |",
+            top: "layout { chordDiagrams guitar capo 3 }")), d => d.Code == DiagnosticCodes.ChordShapeMismatch);
+    }
+
     /// <summary>The hover spells a tone that is no chord tone as the key in force spells it, as the
     /// page does — x32012's top string is F♯ in C and G♭ under a flat key. Until 2026-09-30 the
     /// hover spelled it in C whatever the key.</summary>

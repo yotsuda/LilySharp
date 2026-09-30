@@ -74,7 +74,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   ranking. `capo`, `chordNames` and their words are completed and coloured.
   A `chord(…)` item's hover lists each score's capo when the scores playing the part
   differ, and names the notes it sounds under the capo (it used to read the first score's
-  capo, and under any capo named the notes as if there were none).
+  capo, and under any capo named the notes as if there were none). The item's shape check
+  reads each score's capo too.
 - **The chord list: `layout { chordList true }`** — every chord the score uses, with its
   diagram, under the title in centred rows; completed and coloured.
 - **`Ctrl+Shift+Up`/`Down` step on a ukulele part too**: past LilyPond's ukulele table the
