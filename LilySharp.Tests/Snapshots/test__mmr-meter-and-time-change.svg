@@ -47,9 +47,9 @@
   <text x="15.57" y="19.07" font-size="2.77" text-anchor="middle" data-pos="1198">Main</text>
   <text class="music" x="30.19" y="25.96" font-size="4.00"></text>
   <text class="music" x="33.28" y="24.96" font-size="4.00"></text>
-  <text class="music" x="31.82" y="23.56" font-size="4.00">3</text>
+  <text class="music" x="31.82" y="23.51" font-size="4.00">3</text>
   <text class="music" x="55.10" y="25.96" font-size="4.00"></text>
   <text class="music" x="58.21" y="24.96" font-size="4.00"></text>
-  <text class="music" x="56.74" y="23.56" font-size="4.00">3</text>
+  <text class="music" x="56.74" y="23.51" font-size="4.00">3</text>
   </g>
 </svg>

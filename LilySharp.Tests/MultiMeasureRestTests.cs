@@ -169,8 +169,8 @@ public class MultiMeasureRestTests
     }
 
     /// <summary>The count's box, the MultiMeasureRestText's support, stands 0.4 over the staff's
-    /// outer line INK, 2.45 over the middle, as LilyPond 2.26 draws the number (the drawn
-    /// number itself still stands on 2.4 — MultiMeasureRestEngraver.NumberStaffPadding).</summary>
+    /// outer line INK, 2.45 over the middle, as LilyPond 2.26 draws the number — and so does
+    /// the drawn number (<see cref="TheDrawnCountNumber_StandsOnTheSameBaseline"/>).</summary>
     [Fact]
     public void TheCountNumber_StandsOnTheStaffInkPlusItsPadding()
     {
@@ -178,6 +178,26 @@ public class MultiMeasureRestTests
         Assert.Equal(2.45, box.Bottom, 9);
         Assert.Equal(2.45 + 2.004, box.Top, 9);
         Assert.Equal(10.0, (box.Left + box.Right) / 2.0, 9);
+    }
+
+    /// <summary>The drawn count stands on 2.45 over the staff middle, as LilyPond 2.26 draws it
+    /// (Lab sessions/p712/mmtext: the "4" of an R1*4 at staff ink 2.05 + staff-padding 0.4).
+    /// Until 2026-09-30 it stood on the top line's centre + 0.4, 2.40 — rebased on the owner's
+    /// approval of that measurement (the seven MMR snapshots, the digits' Y alone).</summary>
+    [Fact]
+    public void TheDrawnCountNumber_StandsOnTheSameBaseline()
+    {
+        string svg = Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse("R1*4 | c'1 |"),
+            new Core.Svg.Renderer.SvgRenderOptions { EmbedFont = false });
+        var lines = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<line [^>]*y1=\"([\\d.]+)\" [^>]*y2=\"\\1\"")
+            .Select(m => double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
+            .Distinct().OrderBy(y => y).Take(5).ToArray();
+        double middle = lines[2];
+        var digit = System.Text.RegularExpressions.Regex.Match(svg, "<text class=\"music\"[^>]* y=\"([\\d.]+)\"[^>]*>4</text>");
+        Assert.True(digit.Success);
+        double baseline = double.Parse(digit.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal(2.45, middle - baseline, 2);
     }
 
     [Fact]

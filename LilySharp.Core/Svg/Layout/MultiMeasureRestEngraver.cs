@@ -163,9 +163,9 @@ internal static class MultiMeasureRestEngraver
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2408-2413 MultiMeasureRestNumber staff-padding 0.4, side-position-interface::y-aligned-side —
     ///   side-position-interface.cc's staff-padding floor over the staff extent, the line's ink
     ///   edge. MEASURED (2.26, Lab sessions/p712/mmtext): the "4" of an R1*4 stands on 2.45 over
-    ///   the staff middle, 2.05 + 0.4. ⚠️ The DRAWN number (SharedRenderer.DrawMmrNumber) still
-    ///   stands on the top line's centre + 0.4, 0.05 low: moving it rebases seven snapshots and
-    ///   waits for the owner's approval (HANDOFF §1.0). This box is the text's support only.</remarks>
+    ///   the staff middle, 2.05 + 0.4 — where the drawn number (SharedRenderer.DrawMmrNumber)
+    ///   and this box both stand. The drawn one stood on the top line's centre + 0.4, 0.05 low,
+    ///   until 2026-09-30 (rebased on the owner's approval of this measurement).</remarks>
     internal const double NumberStaffPadding = 0.4;
 
     /// <summary>

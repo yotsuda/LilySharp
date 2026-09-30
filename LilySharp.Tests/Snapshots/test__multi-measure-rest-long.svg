@@ -50,7 +50,7 @@
   <rect x="30.33" y="19.68" width="11.77" height="0.66"/>
   <rect x="30.23" y="19.21" width="0.20" height="1.60"/>
   <rect x="42.00" y="19.21" width="0.20" height="1.60"/>
-  <text class="music" x="34.85" y="17.61" font-size="4.00">1</text>
-  <text class="music" x="36.12" y="17.61" font-size="4.00">2</text>
+  <text class="music" x="34.85" y="17.56" font-size="4.00">1</text>
+  <text class="music" x="36.12" y="17.56" font-size="4.00">2</text>
   </g>
 </svg>

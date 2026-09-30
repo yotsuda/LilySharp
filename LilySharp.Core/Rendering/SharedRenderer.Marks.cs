@@ -1189,10 +1189,12 @@ internal static partial class SharedRenderer
     /// (font-encoding fetaText — NOT a text serif font), centred on the rest
     /// (self-alignment-X CENTER) and placed above the staff (direction UP,
     /// staff-padding 0.4). The feta digits are baseline-anchored (bottom =
-    /// baseline), so the baseline sits 0.4 ss above the top staff line:
-    /// cy - 2.0 (top line) - 0.4 = cy - 2.4 on five notation lines; <paramref name="topLineOffset"/>
-    /// is that 2.0 for the staff at hand (<see cref="TopLineOffset"/>: 2.25 on a four-string tab).
-    /// LILYPOND-REF: scm/define-grobs.scm MultiMeasureRestNumber.
+    /// baseline), so the baseline sits 0.4 ss above the top line's INK — half a line
+    /// thickness over its centre: 2.0 + 0.05 + 0.4 = 2.45 on five notation lines;
+    /// <paramref name="topLineOffset"/> is the line centre's 2.0 for the staff at hand
+    /// (<see cref="TopLineOffset"/>: 2.25 on a four-string tab).
+    /// LILYPOND-REF: scm/define-grobs.scm MultiMeasureRestNumber; the padding and its
+    /// measurement are MultiMeasureRestEngraver.NumberStaffPadding's.
     /// </remarks>
     private static void DrawMmrNumber(int count, double cx, double cy, double topLineOffset, IDrawingContext gc)
     {
@@ -1202,7 +1204,8 @@ internal static partial class SharedRenderer
             totalAdvance += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
         double x = cx - totalAdvance / 2;
         // The number sits above the staff (device up = larger Y-up).
-        double baseline = cy + topLineOffset + 0.4;
+        double baseline = cy + topLineOffset + EngravingDefaults.StaffLineThickness / 2.0
+                          + MultiMeasureRestEngraver.NumberStaffPadding;
         foreach (var ch in digits)
         {
             gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'), x, baseline, FontSize);

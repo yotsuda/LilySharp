@@ -315,7 +315,8 @@ workflow attaches that section to the GitHub Release verbatim.
 - **Text on a multi-measure rest stands over it, as in LilyPond.** `R1*4@text("tacet")` (and
   `R1@text(…)`) is LilyPond's multi-measure-rest text: above the staff by default, centred on
   the rest, clear of its bar count. It printed below the staff at the bar's left edge, like
-  text on a note; `.down` still puts it below, centred.
+  text on a note; `.down` still puts it below, centred. The bar count itself stands 0.05 higher,
+  0.4 over the staff line's ink as LilyPond puts it, where it stood 0.4 over the line's centre.
 - **Ornaments and a few articulations sit where LilyPond puts them.** A script was set off its
   note by one fixed box — and every ornament by the same stand-in box — so a mordent stood
   about a sixth of a staff space too low, and a turn or trill a few hundredths. A script now
