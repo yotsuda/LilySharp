@@ -158,6 +158,52 @@ internal static class MultiMeasureRestEngraver
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest (expand-limit . 10).</remarks>
     public const int ExpandLimit = 10;
 
+    /// <summary>The count number's staff-padding: its baseline stands this far over the staff's
+    /// outer line INK (the digits' bottom is their baseline).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2408-2413 MultiMeasureRestNumber staff-padding 0.4, side-position-interface::y-aligned-side —
+    ///   side-position-interface.cc's staff-padding floor over the staff extent, the line's ink
+    ///   edge. MEASURED (2.26, Lab sessions/p712/mmtext): the "4" of an R1*4 stands on 2.45 over
+    ///   the staff middle, 2.05 + 0.4. ⚠️ The DRAWN number (SharedRenderer.DrawMmrNumber) still
+    ///   stands on the top line's centre + 0.4, 0.05 low: moving it rebases seven snapshots and
+    ///   waits for the owner's approval (HANDOFF §1.0). This box is the text's support only.</remarks>
+    internal const double NumberStaffPadding = 0.4;
+
+    /// <summary>
+    /// The count number's ink box, Y-up about the staff middle: centred on <paramref name="cx"/>
+    /// at the digits' advances, standing <see cref="NumberStaffPadding"/> over
+    /// <paramref name="staffExtent"/> (the staff's outer line ink), as tall as its tallest digit.
+    /// </summary>
+    /// <remarks>
+    /// The heights are the Emmentaler numerals' boxes — read from the fingering cut, which
+    /// differs from the number's plain cut in pen, not in height (the "4" is 2.004 in both;
+    /// measured on the number LilyPond 2.26 draws, Lab sessions/p712/mmtext).
+    /// </remarks>
+    internal static (double Left, double Right, double Bottom, double Top) NumberInkBox(
+        int count, double cx, double staffExtent)
+    {
+        string digits = count.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        double width = 0, height = 0;
+        foreach (char ch in digits)
+        {
+            width += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
+            height = Math.Max(height, DigitBox(ch - '0').Top);
+        }
+        double bottom = staffExtent + NumberStaffPadding;
+        return (cx - width / 2.0, cx + width / 2.0, bottom, bottom + height);
+
+        static GlyphMetrics.BBox DigitBox(int digit)
+        {
+            var f = GlyphMetrics.Design20;
+            return digit switch
+            {
+                0 => f.FingeringDigit0, 1 => f.FingeringDigit1, 2 => f.FingeringDigit2,
+                3 => f.FingeringDigit3, 4 => f.FingeringDigit4, 5 => f.FingeringDigit5,
+                6 => f.FingeringDigit6, 7 => f.FingeringDigit7, 8 => f.FingeringDigit8,
+                _ => f.FingeringDigit9,
+            };
+        }
+    }
+
     /// <summary>
     /// Calculates MMR layouts for a single-staff score.
     /// </summary>

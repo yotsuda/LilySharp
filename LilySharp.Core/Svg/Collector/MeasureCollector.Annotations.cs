@@ -906,28 +906,24 @@ public sealed partial class MeasureCollector
                     // is NOT a dynamic level, so hairpins ignore it and MIDI is
                     // untouched. LILYPOND-REF: TextScript (LP's c^"text"/c_"text"),
                     // direction DOWN by default.
-                    // ⚠️ LILYSHARP-OWN: on a multi-measure rest (`R1*4@text("tacet")`, and the
-                    // one-bar `R1` too — the capital R is the multi-measure event whatever its
-                    // count) LilyPond makes a MultiMeasureRestText, not a TextScript: direction
-                    // UP by default, X centred on the rest's span, Y sided off the rest's count
-                    // number (padding 0.2, staff-padding 0.25). Lily# keeps the TextScript
-                    // placement — DOWN, ink-left on the column, staff floor + 0.3/0.5 — so the
-                    // text prints and collides with nothing (measured 2026-09-29, Lab
-                    // sessions/p672/probes/mmrest: UP alone puts "tacet" through the "4").
-                    //   departs from: scm/define-grobs.scm:2425-2438 MultiMeasureRestText;
-                    //     lily/multi-measure-rest-engraver.cc:126-190 initialize_grobs (the
-                    //     number is the text's side support, the rest its X parent).
-                    //   goes away when: the count number's ink box is a layout support (the
-                    //     time-signature digits have advances only in GlyphMetricsGenerated)
-                    //     and the text is centred on the run's span — HANDOFF §1.0.
+                    // On a multi-measure rest (`R1*4@text("tacet")`, and the one-bar `R1` too —
+                    // the capital R is the multi-measure event whatever its count) LilyPond makes
+                    // a MultiMeasureRestText, not a TextScript: direction UP by default, X centred
+                    // on the rest's span, Y sided off the rest's count number — placed by
+                    // DynamicEngraver.PlaceOnMultiMeasureRests once the rest's span is laid out
+                    // (2026-09-30; a TextScript below the column until then).
+                    // LILYPOND-REF: scm/define-grobs.scm:2425-2438 MultiMeasureRestText (outside-staff-priority 450);
+                    //   lily/multi-measure-rest-engraver.cc:150-164 Multi_measure_rest_engraver::initialize_grobs
                     // The fermata is MultiMeasureRestScript (UP, :2450-2452) and already stands
                     // up, from the rest arm's stemUp: false.
+                    bool onMmr = node is RestSyntax { RestText: "R" };
                     if (Semantics.AnnotationValues.Text(markSyntax) is { } freeText)
                         _dynamics.Add(new DynamicItem(
                             freeText, measureIndex, itemIndex, markSyntax.SourceStart, _cursor.StaffIndex)
                         {
-                            IsAbove = markSyntax.ForcedAbove == true,
+                            IsAbove = onMmr ? markSyntax.ForcedAbove != false : markSyntax.ForcedAbove == true,
                             VoiceIndex = _cursor.VoiceIndex,
+                            OnMultiMeasureRest = onMmr,
                         });
                 }
                 else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark

@@ -182,8 +182,8 @@
 - **:790** (staff-space 1.5) and reaches further; no point observes a tab-only beat slash
 - **:1067** NOT MEASURED — no ledger point reads a flag's draw x, and the last
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
-- **:2426** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
-- **:2448** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
+- **:2435** non-last group that carries lyrics; no fixture and no ledger point reaches it, which
+- **:2457** non-last group; no fixture and no ledger point reaches that". A CHORDS ROW REACHES IT
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`
 - **:919** THE CLEAR HAS NO OBSERVER HERE, and that was measured rather than assumed. Session 457's
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.PagingSkylines.cs`
@@ -323,8 +323,6 @@
 - **:1400** LILYSHARP-OWN guard: a bracket whose indices do not address this voice's
 ### `LilySharp.Core/Svg/Collector/BeamingPattern.cs`
 - **:179** LILYSHARP-OWN: a meter with no beats (senza misura, or a malformed one) has no
-### `LilySharp.Core/Svg/Collector/MeasureCollector.Annotations.cs`
-- **:909** ⚠️ LILYSHARP-OWN: on a multi-measure rest (`R1*4@text("tacet")`, and the
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2804** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
 - **:5215** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
@@ -382,7 +380,8 @@
 ### `LilySharp.Core/Svg/Layout/DotColumn.cs`
 - **:266** ⚠️ LILYSHARP-OWN: the dots' preferred DIRECTION is not read here. LilyPond's
 ### `LilySharp.Core/Svg/Layout/DynamicEngraver.cs`
-- **:121** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
+- **:122** ⚠️ LILYSHARP-OWN: a string the bundled face cannot spell (CJK — TextFontMetrics reports
+- **:445** ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
 ### `LilySharp.Core/Svg/Layout/ElementCoordinator.cs`
 - **:2659** LILYSHARP-OWN: no head extent on a tab, so the horizontal-distance term
 - **:2708** ⚠️ LILYSHARP-OWN, and LilyPond cannot be asked: MEASURED on 2.26.0, all three
@@ -402,9 +401,9 @@
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Annotations.cs`
 - **:456** ⚠️ LILYSHARP-OWN bridge, declared: LilyPond's mark aligns to the BreakAlignGroup,
 - **:487** LILYSHARP-OWN (2026-09-28): see for
-- **:1043** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
-- **:1839** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
-- **:2134** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
+- **:1052** ⚠️ LILYSHARP-OWN: SELECTING A GROB'S SIBLINGS OUT OF A SCORE-WIDE ARRAY. LilyPond
+- **:1848** ⚠️ ONLY ACROSS A GROUP BOUNDARY, AND THAT CONDITION IS LILYSHARP-OWN. LilyPond has
+- **:2143** ⚠️ LILYSHARP-OWN: departs from lily/page-layout-problem.cc:919-925
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.cs`
 - **:840** (LILYSHARP-OWN: LilyPond never emits a system with no live staff at all).
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Pages.cs`

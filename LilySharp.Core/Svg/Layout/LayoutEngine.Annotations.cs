@@ -719,6 +719,15 @@ internal sealed partial class LayoutEngine
         // See TabStaffStencils.
         dynamicLayouts = TabStaffStencils.Blank(
             ctx.MultiScore, dynamicLayouts, static d => d.StaffIndex);
+        // An @text on an R is LilyPond's MultiMeasureRestText: centred on the rest's span and
+        // sided off its count number, so it needs the rest laid out — here, ahead of the tail
+        // that lays the rests out for drawing, and only when a book writes one (both passes,
+        // so the preliminary extents reserve what the final pass draws).
+        if (score != null && dynamicLayouts.Any(static d => d.OnMultiMeasureRest))
+            dynamicLayouts = DynamicEngraver.PlaceOnMultiMeasureRests(ctx.Fonts, dynamicLayouts,
+                MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
+                    voicesByStaff: voicesByStaff, prebuiltMeasureMap: passMeasureMap,
+                    staffByIndex: ctx.StaffByIndex));
 
         // Detect and layout hairpins from cresc/decresc marks
         // The section carry rule's plays — the hairpin's since 2026-09-28, the text spanner's,

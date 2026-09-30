@@ -108,9 +108,9 @@ public class MultiMeasureRestTests
     /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc:95-98 listen_multi_measure_text —
     /// the text is the event's, at the timestep the rest starts (:126-190 initialize_grobs
     /// hangs it on the rest's spanner); scm/define-grobs.scm:2450-2452
-    /// MultiMeasureRestScript direction UP. ⚠️ The text's own placement (MultiMeasureRestText:
-    /// UP, centred, sided off the count) is NOT ported — it keeps the TextScript's, declared
-    /// LILYSHARP-OWN at the collect — so this pins its bar only, not its side. Poisons
+    /// MultiMeasureRestScript direction UP. The text's own placement (MultiMeasureRestText:
+    /// UP, centred, sided off the count) is <see cref="Layout_TextOnAnR_IsMultiMeasureRestText"/>'s;
+    /// this pins its bar. Poisons
     /// (RULES §5.4): drop the two collects from the expansion arm and the dynamic, the text
     /// and the fermata go missing while the mark moves to bar 3.
     /// </remarks>
@@ -133,6 +133,51 @@ public class MultiMeasureRestTests
         Assert.Equal(1, p.MeasureIndex);
         var tacet = Assert.Single(score.Dynamics.Where(d => d.Text == "tacet"));
         Assert.Equal(1, tacet.MeasureIndex);
+    }
+
+    /// <summary>
+    /// An <c>@text</c> on an R is LilyPond's MultiMeasureRestText: UP by default, centred on
+    /// the rest's span, clear of its count number. MEASURED (LilyPond 2.26, \compressMMRests,
+    /// Lab sessions/p712/mmtext): R1*4 "tacet" stands on 4.936 over the staff middle, R1
+    /// "solo" (no number) on 2.536. Until 2026-09-30 it was a TextScript: below the staff,
+    /// ink-left on the bar's column.
+    /// ⚠️ Both land a little over LilyPond — "tacet" 4.947 (+0.011), "solo" 2.543 (+0.007) —
+    /// and both are the outside-staff clearance (ink + 0.46), with and without the number, so
+    /// the residual is the italic text's own outline below its baseline, deeper in Lily# than
+    /// LilyPond's (0.022 / 0.026 there); the ranges pin it so a change to it is seen.
+    /// </summary>
+    [Theory]
+    [InlineData("c'1 | R1*4@text(\"tacet\") | c'1 |", 4.936, 0.012)]
+    [InlineData("c'1 | R1@text(\"solo\") | c'1 |", 2.536, 0.008)]
+    public void Layout_TextOnAnR_IsMultiMeasureRestText(string music, double lilyPond, double residual)
+    {
+        var (_, layout) = BuildLayout(music);
+        var rest = Assert.Single(layout.MultiMeasureRestLayouts);
+        var text = Assert.Single(layout.DynamicLayouts);
+        Assert.True(text.IsAbove);
+        Assert.Equal((rest.StartX + rest.EndX) / 2.0, text.X, 6);
+        Assert.InRange(text.YUp, lilyPond - 0.002, lilyPond + residual);
+        // `.down` puts it below, still centred.
+        var (_, below) = BuildLayout(music.Replace("\") |", "\").down |"));
+        var down = Assert.Single(below.DynamicLayouts);
+        Assert.False(down.IsAbove);
+        Assert.True(down.YUp < -2.05);
+        Assert.Equal(text.X, down.X, 6);
+        // A text on a note is the TextScript it always was.
+        var (_, onNote) = BuildLayout("c'1@text(\"dolce\") |");
+        Assert.False(Assert.Single(onNote.DynamicLayouts).IsAbove);
+    }
+
+    /// <summary>The count's box, the MultiMeasureRestText's support, stands 0.4 over the staff's
+    /// outer line INK, 2.45 over the middle, as LilyPond 2.26 draws the number (the drawn
+    /// number itself still stands on 2.4 — MultiMeasureRestEngraver.NumberStaffPadding).</summary>
+    [Fact]
+    public void TheCountNumber_StandsOnTheStaffInkPlusItsPadding()
+    {
+        var box = MultiMeasureRestEngraver.NumberInkBox(4, 10.0, 2.05);
+        Assert.Equal(2.45, box.Bottom, 9);
+        Assert.Equal(2.45 + 2.004, box.Top, 9);
+        Assert.Equal(10.0, (box.Left + box.Right) / 2.0, 9);
     }
 
     [Fact]

@@ -82,6 +82,14 @@ public sealed record DynamicItem
     /// </summary>
     public bool IsExpressiveText { get; init; }
 
+    /// <summary>
+    /// True for expressive text written on a multi-measure rest (<c>R1*4@text("tacet")</c>):
+    /// LilyPond's MultiMeasureRestText rather than a TextScript — UP by default, centred on
+    /// the rest's span, sided off its count number (<c>DynamicEngraver.PlaceOnMultiMeasureRests</c>).
+    /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc:150-164 Multi_measure_rest_engraver::initialize_grobs
+    /// </summary>
+    public bool OnMultiMeasureRest { get; init; }
+
     /// <summary>Creates a dynamic marking of the given level.</summary>
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)

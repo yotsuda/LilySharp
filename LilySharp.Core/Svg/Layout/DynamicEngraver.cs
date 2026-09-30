@@ -44,7 +44,8 @@ public readonly record struct DynamicLayout(
                             // -1 = "no source" (left unresolved): used by unit tests that build layouts directly.
     bool IsAbove = false,   // Forced above the staff (from @f.up); default below.
     int StaffIndex = 0,     // Which staff this dynamic hangs under (per-staff stacking).
-    bool IsExpressiveText = false // @text("…"): plain italic, not a dynamic level.
+    bool IsExpressiveText = false, // @text("…"): plain italic, not a dynamic level.
+    bool OnMultiMeasureRest = false // @text on an R: MultiMeasureRestText (DynamicItem.OnMultiMeasureRest).
 );
 
 /// <summary>
@@ -293,7 +294,8 @@ internal static class DynamicEngraver
                 di,
                 dynamic.IsAbove,
                 dynamic.StaffIndex,
-                dynamic.IsExpressiveText
+                dynamic.IsExpressiveText,
+                dynamic.OnMultiMeasureRest
             ));
         }
 
@@ -421,6 +423,75 @@ internal static class DynamicEngraver
         // total_off positions the SPANNER; the text's baseline sits TextOffsetInSpanner
         // below it (define-grobs.scm:1450 DynamicText Y-offset, "center on an 'm'").
         return SpannerOffsetY(above ? 1.0 : -1.0, support, my) - textOffset;
+    }
+
+    /// <summary>
+    /// Places each <c>@text</c> written on a multi-measure rest as LilyPond's
+    /// MultiMeasureRestText: X centred on the rest's span (the same interval the rest's
+    /// symbols and count centre in), Y sided off the rest — the count number its support —
+    /// with the grob's own padding 0.2 and staff-padding 0.25, and clear of the number's ink
+    /// by the outside-staff padding 0.46, the number being inside-staff ink in LilyPond.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2425-2438 MultiMeasureRestText, outside-staff-priority — direction UP,
+    ///   outside-staff-priority 450, padding 0.2, parent-alignment-X / self-alignment-X
+    ///   CENTER, skyline-horizontal-padding 0.2, staff-padding 0.25, y-aligned-side.
+    /// LILYPOND-REF: lily/multi-measure-rest-engraver.cc:169-189 Multi_measure_rest_engraver::initialize_grobs
+    ///   — each text supported by the number made before it (and by the rest), X-parented on the rest.
+    /// MEASURED (LilyPond 2.26, \compressMMRests, Lab sessions/p712/mmtext): R1*4 "tacet"
+    ///   baseline 4.936 over the staff middle = the "4"'s ink top 2.45 + 2.004 + 0.46 + the
+    ///   text's own ink below its baseline; R1 "solo" (no number) 2.536 = staff 2.05 + 0.25 +
+    ///   the text's extent below its baseline.
+    /// ⚠️ LILYSHARP-OWN: the number is a support of THIS text alone, not ink of the staff's
+    ///   inside-staff skyline as in LilyPond, so another above-staff grob over the number (a
+    ///   tempo mark centred on an R*N) does not clear it; the text stacks at DynamicText's 250,
+    ///   not 450. Goes away when the count number joins the inside-staff skyline.
+    /// </remarks>
+    internal static ImmutableArray<DynamicLayout> PlaceOnMultiMeasureRests(Rendering.ScoreTextMetrics fonts,
+        ImmutableArray<DynamicLayout> dynamics, ImmutableArray<MultiMeasureRestLayout> rests)
+    {
+        const double MmrTextPadding = 0.2, MmrTextStaffPadding = 0.25, SkylineHorizontalPadding = 0.2;
+        if (dynamics.IsDefaultOrEmpty || rests.IsDefaultOrEmpty)
+            return dynamics;
+        ImmutableArray<DynamicLayout>.Builder? placed = null;
+        for (int i = 0; i < dynamics.Length; i++)
+        {
+            var d = dynamics[i];
+            if (!d.OnMultiMeasureRest)
+                continue;
+            // The staff's rest that opens at the text's bar — the counted one when voices share it.
+            MultiMeasureRestLayout? found = null;
+            foreach (var r in rests)
+                if (r.StartMeasureIndex == d.MeasureIndex && (r.StaffIndex == d.StaffIndex || r.StaffIndex < 0)
+                    && (found is null || (r.DrawsCount && !found.Value.DrawsCount)))
+                    found = r;
+            if (found is not { } rest)
+                continue;
+
+            double cx = (rest.StartX + rest.EndX) / 2.0;
+            double dir = d.IsAbove ? 1.0 : -1.0;
+            var number = rest.MeasureCount > 1 && rest.DrawsCount && dir > 0
+                ? MultiMeasureRestEngraver.NumberInkBox(rest.MeasureCount, cx, StaffExtent)
+                : ((double Left, double Right, double Bottom, double Top)?)null;
+            var (floorUp, floorDown) = StaffFloorSupport();
+            VerticalSkyline? numberSky = null;
+            if (number is { } nb)
+            {
+                numberSky = VerticalSkyline.FromBox(nb.Left, nb.Right, nb.Bottom, nb.Top, VerticalDirection.Up);
+                floorUp.Merge(numberSky);
+            }
+            var mine = LabelSkylines(fonts, d.Text, true, cx, 0.0);
+            // aligned_side: the supports' distance, the padding, then the staff-padding floor.
+            double off = dir * (dir > 0 ? mine.Down.Distance(floorUp) : mine.Up.Distance(floorDown));
+            off += dir * MmrTextPadding;
+            off += dir * Math.Max(StaffExtent + MmrTextStaffPadding - dir * off, 0.0);
+            // The outside-staff pass: clear the number's INK by the outside-staff padding.
+            if (numberSky != null)
+                off = Math.Max(off, mine.Down.Distance(numberSky, SkylineHorizontalPadding)
+                                    + OutsideStaffStacker.OutsideStaffPadding);
+            (placed ??= dynamics.ToBuilder())[i] = d with { X = cx, YUp = off };
+        }
+        return placed?.MoveToImmutable() ?? dynamics;
     }
 
     /// <summary>
