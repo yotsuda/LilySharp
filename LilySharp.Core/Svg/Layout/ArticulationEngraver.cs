@@ -1131,46 +1131,11 @@ internal static class ArticulationEngraver
                     if (tip is { } stemEnd)
                         support = Math.Max(support, dir * (tabMiddle - stemEnd) + nearAll);
                 }
-                bool quantize = ShouldQuantize(articulation.Type);
-                double staffPadding = ArticulationSpacing.StaffPadding(articulation.Type);
-                // The staff's extent: its outer strings and half a line's thickness.
-                double staffExtent = (strings - 1) * ss / 2 + EngravingDefaults.StaffLineThickness / 2;
-                // include_staff: staff-padding set and no quantize-position puts the staff
-                // symbol's extent under the support.
-                // LILYPOND-REF: lily/side-position-interface.cc:217-223 aligned_side — include_staff
-                // LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — dim.set_minimum_height (staff_extents[dir])
-                if (!quantize)
-                    support = Math.Max(support, staffExtent + nearAll);
-                // total_off = dist + dir * ss * padding.
-                // LILYPOND-REF: lily/side-position-interface.cc:353-370 aligned_side — `total_off += dir * ss * padding;`
-                double scriptUp = dir * (support + ss * PaddingFor(articulation.Type));
-                if (quantize)
-                {
-                    // quantize-position in the tab's half-spaces. The script's X parent is the
-                    // stem's first head (calc_positioning_done), a TabNoteHead — a note head —
-                    // so the "between the head and the staff" arm applies too. A position is on a
-                    // line when it has the lines' parity: the strings, and the ledger positions
-                    // past them (on_line allows ledgers).
-                    // LILYPOND-REF: lily/side-position-interface.cc:409-432 aligned_side — quantize_position
-                    // LILYPOND-REF: lily/script-interface.cc:33-46 Script_interface::calc_positioning_done
-                    // LILYPOND-REF: lily/staff-symbol.cc Staff_symbol::on_line — line-positions, then ledger_positions
-                    double position = 2 * scriptUp / ss;
-                    double rounded = tabAbove ? Math.Ceiling(position) : Math.Floor(position);
-                    int outerLine = strings - 1;
-                    if ((position >= -outerLine - 1 && position <= outerLine + 1) || dir * position < 0)
-                    {
-                        scriptUp += (rounded - position) * 0.5 * ss;
-                        if (((int)rounded - outerLine) % 2 == 0)
-                            scriptUp += dir * 0.5 * ss;
-                    }
-                }
-                else
-                {
-                    // staff-padding: the refpoint at least staff-padding (× ss) past the staff.
-                    // LILYPOND-REF: lily/side-position-interface.cc:433-453 aligned_side — staff_padding
-                    double diff = staffExtent + ss * staffPadding - dir * scriptUp;
-                    scriptUp += dir * Math.Max(diff, 0.0);
-                }
+                // From here on the notation staff's aligned_side, read in the tab's own staff space
+                // (the string gap), line count (the strings) — AlignedSideUp. The script's X
+                // parent is the stem's first head, a TabNoteHead (a note head).
+                double scriptUp = AlignedSideUp(articulation, tabAbove, support, ss, strings,
+                    onNoteHead: item is NoteItem or ChordItem, fonts);
                 double tabY = tabMiddle - scriptUp;
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
@@ -1246,7 +1211,9 @@ internal static class ArticulationEngraver
             // the renderer/skyline resolve the staff middle at their own boundary.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
             double yUp = CalculateYPosition(effArt, staffPosition, stemUp, item,
-                NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), fonts);
+                NoteColumnLayout.Of(item, stemUp, memberBeam, memberStemX), fonts,
+                staffByIndex != null && staffByIndex.TryGetValue(effArt.StaffIndex, out var scriptStaff)
+                    ? scriptStaff.Lines : EngravingDefaults.DefaultStaffLines);
 
             // `fonts`, not score.TextMetrics: the score here is the one-voice walk Score, which
             // carries no plan — a stepped diagram / tabTechnique was measured at the default
@@ -2821,7 +2788,8 @@ internal static class ArticulationEngraver
     }
 
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
-        MusicItem? item = null, NoteColumnLayout? column = null, ScoreTextMetrics? fonts = null)
+        MusicItem? item = null, NoteColumnLayout? column = null, ScoreTextMetrics? fonts = null,
+        int staffLines = EngravingDefaults.DefaultStaffLines)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:4075 TrillSpanner: direction = UP
@@ -2856,76 +2824,13 @@ internal static class ArticulationEngraver
         // LILYPOND-REF: staff-symbol-referencer.cc:76-89 staff_symbol_referencer::get_position
         double noteUp = anchorPosition * 0.5;
 
-        // Use quantize-position for staccato, marcato, tenuto
-        // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
-        if (ShouldQuantize(articulation.Type))
-        {
-            return QuantizedYPosition(noteUp, isAbove, stemUp, articulation, item,
-                column, fonts);
-        }
-
-        // Non-quantized path: fermata, ornaments, accent, portato
-        // LILYPOND-REF: side-position-interface.cc:360-378 total_off calculation
-        // LILYPOND-REF: side-position-interface.cc:426-445 staff-padding clamp
-        //
-        // include_staff = true (staff-padding exists AND quantize-position = false)
-        // The staff is included in the support skyline, then staff-padding is applied.
-
-        // StaffHalf = the outer staff line, staff-spaces above/below the middle (Y-up).
-        const double StaffHalf = 2.0;
-        // The staff line spans the page, so the whole outline meets it.
-        double glyphNearExtent = NearReachOver(articulation, isAbove, fonts);
-
-        // dist = skyline distance; total_off = dist + padding. In Y-up an above
-        // script sits ABOVE the note (+) and a below script BELOW (−).
-        double totalOff = SupportReach(articulation, isAbove, stemUp, item, column, fonts)
-                          + PaddingFor(articulation.Type);
-        double targetUp = isAbove ? noteUp + totalOff : noteUp - totalOff;
-
-        // TWO staff clearances stack on a non-quantized script, and they are
-        // different quantities (probe-script-y measured both):
-        // ① include_staff: with staff-padding set (and no quantize), the STAFF INK
-        //    itself joins the support skyline (dim.set_minimum_height (staff_extents[dir]),
-        //    :323-330), so the glyph's near edge clears the outer line's ink by the
-        //    SCRIPT'S OWN padding (:370 total_off += dir * ss * padding): ink edge ≥
-        //    2.05 + padding — 2.25 for the 0.20 scripts (LP's accent over c'' sits exactly
-        //    there: origin 2.67 = 2.25 + 0.42), 2.45 for a fermata (script.scm 0.40),
-        //    2.50 for portato (0.45).
-        //    ⚠️ Until session 395 this was the FLAT `StaffHalf + StaffPadding` = 2.0 + 0.25,
-        //    the right number for the 0.20 scripts through two wrong terms cancelling
-        //    (2.0 + 0.25 = 2.05 + 0.20), and 0.20 / 0.25 too low for a fermata / portato
-        //    whose floor binds. Session 158 named it NOT PORTED and session 276 audited
-        //    it as an unverifiable cancellation claim; the port is the discriminator.
-        // LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — the staff
-        //   symbol's extent as the support floor (dim.set_minimum_height);
-        // LILYPOND-REF: lily/side-position-interface.cc:217-223 include_staff —
-        //   staff-padding present && !quantize_position puts staff_symbol in common.
-        // ② the staff-padding floor proper, on the REFPOINT (total_off): refpoint ≥
-        //    staff ink edge + staff-padding = 2.05 + 0.25 = 2.30. It only bites a
-        //    glyph whose ink barely dips below its origin (the trill: LP origin
-        //    exactly 2.30).
-        // LILYPOND-REF: lily/side-position-interface.cc:433-453 staff_padding —
-        //   diff = dir * staff_extent[dir] + staff_padding - dir * total_off …;
-        //   total_off += dir * max (diff, 0).
-        // ① the staff's own ink (DynamicEngraver.StaffExtent, the one home = 2.05) plus
-        //   THIS script's padding — the aligned_side support floor.
-        double inkFloor = DynamicEngraver.StaffExtent + PaddingFor(articulation.Type);
-        double refpointFloor = StaffHalf + EngravingDefaults.StaffLineThickness / 2
-            + ArticulationSpacing.StaffPadding(articulation.Type);   // ② = 2.05 ink + 0.25
-        if (isAbove)
-        {
-            double glyphEdgeUp = targetUp - glyphNearExtent;
-            if (glyphEdgeUp < inkFloor)
-                targetUp = inkFloor + glyphNearExtent;
-            return Math.Max(targetUp, refpointFloor);
-        }
-        else
-        {
-            double glyphEdgeUp = targetUp + glyphNearExtent;
-            if (glyphEdgeUp > -inkFloor)
-                targetUp = -inkFloor - glyphNearExtent;
-            return Math.Min(targetUp, -refpointFloor);
-        }
+        // From the supports' reach on, aligned_side is ONE house for every staff — AlignedSideUp,
+        // which a tab reads in its own staff space. The reach as a height on the script's side
+        // (dir-relative): the anchor head plus the distance to the script's outline.
+        int dir = isAbove ? 1 : -1;
+        double supportReach = dir * noteUp + SupportReach(articulation, isAbove, stemUp, item, column, fonts);
+        return AlignedSideUp(articulation, isAbove, supportReach, staffSpace: 1.0, staffLines,
+            onNoteHead: item is NoteItem or ChordItem, fonts);
     }
 
     /// <summary>
@@ -2942,25 +2847,6 @@ internal static class ArticulationEngraver
         _ => false
     };
 
-    /// <summary>
-    /// Calculates Y position using LilyPond's quantize-position algorithm.
-    /// Follows the aligned_side() flow from side-position-interface.cc:
-    ///   1. Calculate skyline distance (support extent + glyph extent)
-    ///   2. Add padding to get total_off
-    ///   3. Convert to LP staff position and apply quantize-position
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: side-position-interface.cc:193-448 aligned_side() full flow
-    /// LILYPOND-REF: side-position-interface.cc:360-378 total_off = dir * dist + dir * ss * padding
-    /// LILYPOND-REF: side-position-interface.cc:402-425 quantize-position
-    /// LILYPOND-REF: misc.cc directed_round() — ceil for UP, floor for DOWN
-    ///
-    /// LP staff positions for 5-line staff:
-    ///   Lines: -4 (bottom), -2, 0 (middle), 2, 4 (top)
-    ///   Spaces: -5, -3, -1, 1, 3, 5
-    ///
-    /// Conversion: lpPos = (StaffMiddle - Y) * 2;  Y = StaffMiddle - lpPos / 2
-    /// </remarks>
     /// <summary>
     /// The stem's contribution to the side-position support: the distance from
     /// the anchor head (the stem-tip-side head) to the REAL stem tip — the
@@ -3015,95 +2901,68 @@ internal static class ArticulationEngraver
     private static double HeadSupportExtent(NoteColumnLayout? column)
         => column is { } c ? GlyphMetrics.GetNoteheadBBox(c.NoteValue).Top : NoteheadHalfHeight;
 
-    private static double QuantizedYPosition(double noteUp, bool isAbove, bool stemUp,
-        ArticulationItem articulation, MusicItem? item = null, NoteColumnLayout? column = null,
-        ScoreTextMetrics? fonts = null)
+    /// <summary>
+    /// aligned_side from the supports' reach on, on the staff the script sits on: the staff as a
+    /// support floor (include_staff), the script's padding, then quantize-position or the
+    /// staff-padding floor. Y-up about the staff's middle line, in page staff spaces.
+    /// </summary>
+    /// <param name="supportReach">The heads' and the stem's reach on the script's side as a
+    /// height (dir-relative: up for an above script, down for a below one), the script's own
+    /// outline included (<see cref="SupportReach"/>).</param>
+    /// <param name="staffSpace">The staff's own staff space — 1 on a notation staff, the string
+    /// gap on a tab (StaffSymbol.staff-space 1.5): <c>padding</c>, <c>staff-padding</c> and the
+    /// half-spaces a script quantizes to are all in it.</param>
+    /// <param name="staffLines">The staff's line count; its lines stand one staff space apart,
+    /// centred on the middle (line-positions lineCount-1, lineCount-3, …).</param>
+    /// <param name="onNoteHead">Whether the script's X parent is a note head
+    /// (calc_positioning_done moves it to the stem's first head) — what lets a script between
+    /// its head and the staff quantize for ledger lines. A rest's is its column.</param>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:188-456 Side_position_interface::aligned_side
+    /// LILYPOND-REF: lily/side-position-interface.cc:217-223 aligned_side — include_staff when staff-padding is set and quantize-position is not
+    /// LILYPOND-REF: lily/side-position-interface.cc:323-330 aligned_side — dim.set_minimum_height (staff_extents[dir])
+    /// LILYPOND-REF: lily/side-position-interface.cc:353-370 aligned_side — `total_off += dir * ss * padding`
+    /// LILYPOND-REF: lily/side-position-interface.cc:409-432 aligned_side — quantize_position: directed_round, staff_span.widen (1), on_line
+    /// LILYPOND-REF: lily/side-position-interface.cc:433-453 aligned_side — staff_padding
+    /// LILYPOND-REF: lily/staff-symbol.cc Staff_symbol::on_line — the line positions, then the ledger positions (allow_ledger)
+    /// LILYPOND-REF: lily/script-interface.cc:33-46 Script_interface::calc_positioning_done
+    /// ⚠️ Until session 696 the notation staff had a copy of this written for five lines and
+    /// one staff space (the lines ±4, the span ±5, `on_line` without ledgers) and the tab branch
+    /// its own; a quantized script BETWEEN a high up-stemmed head and the staff that rounded
+    /// onto a ledger position was not pushed off it (LilyPond: `a'''` with a staccato.down in
+    /// the upper voice at 8.5, Lily# 9.0 — Lab sessions/p696/led2).
+    /// </remarks>
+    private static double AlignedSideUp(ArticulationItem articulation, bool isAbove,
+        double supportReach, double staffSpace, int staffLines, bool onNoteHead,
+        ScoreTextMetrics? fonts)
     {
-        var type = articulation.Type;
-        // ── Stage 4-5 (aligned_side): Calculate total_off ──
-        //
-        // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines
-        // The support skyline for a Script grob is the notehead (+ stem if same direction).
-        // Stems pointing AWAY from the articulation are skipped:
-        //   LILYPOND-REF: side-position-interface.cc:279-284
-        //   if (dir == -get_grob_direction(e)) continue;
-        //
-        // For staccato (side-relative-direction = DOWN):
-        //   stem UP → staccato dir=DOWN → stem dir=UP → dir != -stem_dir → stem SKIPPED
-        //   stem DOWN → staccato dir=UP → stem dir=DOWN → dir != -stem_dir → stem SKIPPED
-        // In both normal cases, only the notehead is in the support.
-        // Stem is only included when direction is forced (e.g., fermata above with stem up).
-
-        // ── Stage 4-5 (aligned_side): the skyline distance to the supports ──
-        // The note head (over its own width) and, when it travels the script's way, the stem
-        // (across the whole width: add-stem-support) — SupportReach.
-        // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines
-        // Stems pointing AWAY from the articulation are skipped:
-        //   LILYPOND-REF: side-position-interface.cc:279-284
-        //   if (dir == -get_grob_direction(e)) continue;
-        double dist = SupportReach(articulation, isAbove, stemUp, item, column, fonts);
-
-        // LILYPOND-REF: side-position-interface.cc:366-370
-        // total_off = dir * dist + dir * ss * padding
-        // (ss = staff_space = 1.0 in our coordinate system)
-        double totalOff = dist + PaddingFor(type);
-
-        // Convert total_off to target Y in the Y-up frame (above = +, below = −).
-        double targetUp = isAbove ? noteUp + totalOff : noteUp - totalOff;
-
-        // ── Stage 7 (aligned_side): Apply quantize-position ──
-        //
-        // LILYPOND-REF: side-position-interface.cc:402-425
-        // Note: include_staff = false when quantize-position = true (line 222-226)
-        // So staff-padding is NOT applied before quantization.
-
-        // Convert to LP staff position (half-spaces): Y-up staff-spaces × 2.
-        // LP: 0 = middle line, positive = up, negative = down.
-        double lpPosition = targetUp * 2.0;
-
-        // Directed round (away from the note)
-        // LILYPOND-REF: misc.cc directed_round(): ceil for UP, floor for DOWN
-        double rounded = isAbove ? Math.Ceiling(lpPosition) : Math.Floor(lpPosition);
-
-        // Check if quantization applies
-        // LILYPOND-REF: side-position-interface.cc:414-424
-        // Staff line span for 5-line staff: [-4, 4], widened by 1: [-5, 5]
-        const double StaffSpanMin = -5.0;
-        const double StaffSpanMax = 5.0;
-        bool inStaffSpan = lpPosition >= StaffSpanMin && lpPosition <= StaffSpanMax;
-        // LILYPOND-REF: side-position-interface.cc:418
-        // has_interface<Note_head>(head) && dir * position < 0
-        // Articulation is between note and staff center (ledger line note case)
-        bool betweenNoteAndStaff = isAbove ? lpPosition < 0 : lpPosition > 0;
-
-        if (inStaffSpan || betweenNoteAndStaff)
+        int dir = isAbove ? 1 : -1;
+        bool quantize = ShouldQuantize(articulation.Type);
+        double staffExtent = (staffLines - 1) * staffSpace / 2
+                             + EngravingDefaults.StaffLineThickness / 2;
+        double reach = supportReach;
+        if (!quantize)
+            reach = Math.Max(reach, staffExtent + NearReachOver(articulation, isAbove, fonts));
+        double up = dir * (reach + staffSpace * PaddingFor(articulation.Type));
+        if (quantize)
         {
-            // LILYPOND-REF: side-position-interface.cc:420
-            // total_off += (rounded - position) * 0.5 * ss;
-            // Equivalent: snap targetUp to the rounded LP position (half-spaces × 0.5).
-            targetUp = rounded * 0.5;
-
-            // LILYPOND-REF: side-position-interface.cc:421-422
-            // if (Staff_symbol_referencer::on_line(me, int(rounded)))
-            //     total_off += dir * 0.5 * ss;
-            // Even LP positions within staff lines [−4, 4] are on lines; push a
-            // half-space further OUT (up for above, down for below) — Y-up signs.
-            int roundedInt = (int)rounded;
-            if (roundedInt >= -4 && roundedInt <= 4 && roundedInt % 2 == 0)
+            double position = 2 * up / staffSpace;
+            double rounded = isAbove ? Math.Ceiling(position) : Math.Floor(position);
+            int outerLine = staffLines - 1;
+            if ((position >= -outerLine - 1 && position <= outerLine + 1)
+                || (onNoteHead && dir * position < 0))
             {
-                targetUp += isAbove ? 0.5 : -0.5;
+                up += (rounded - position) * 0.5 * staffSpace;
+                if (((int)rounded - outerLine) % 2 == 0)
+                    up += dir * 0.5 * staffSpace;
             }
         }
-
-        // ⚠️ A tall quantized script STAYS at its quantized in-staff position — an
-        // earlier guard here re-seated any quantized glyph taller than 1.0 ss outside
-        // the staff, claiming to "reproduce LP's result directly". MEASURED FALSE
-        // (audit/lpreg/probe-script-y.{ly,svg}): LilyPond's own page puts a forced-up
-        // marcato over c'' (and over c', via its stem tip) at staff POSITION 3 — origin
-        // 1.5 ss above the middle, INSIDE the staff, the chevron straddling the top
-        // line — 0.70 below where the guard seated it. With the guard gone all four
-        // probe marcatos (c''/g'/e'/c') land on LilyPond's positions exactly:
-        // 3 / 5.4 (past the +5 span gate, unquantized) / 5 (rounded 4 = a line, +1) / 3.
-        return targetUp;
+        else
+        {
+            double diff = staffExtent + staffSpace * ArticulationSpacing.StaffPadding(articulation.Type)
+                          - dir * up;
+            up += dir * Math.Max(diff, 0.0);
+        }
+        return up;
     }
 }

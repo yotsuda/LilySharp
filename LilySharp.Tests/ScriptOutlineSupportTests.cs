@@ -63,4 +63,30 @@ public sealed class ScriptOutlineSupportTests
         var script = g.Glyphs.OrderBy(x => x.Y).First();
         Assert.Equal(originUp, middle - script.Y, 0.002);
     }
+
+    /// <summary>MEASURED, LilyPond 2.26.0 (Lab sessions/p696/led2): a staccato forced DOWN
+    /// under a high head of the upper voice (stem up, so the stem is not its support) stands
+    /// between the head and the staff, where quantize-position still applies to a script on a
+    /// note head — and a rounded position on a LEDGER line (8, 10) is pushed a half space
+    /// further, as on_line allows ledgers. An odd position (b''', 9.5) stays. Until session 696
+    /// the notation staff's copy counted only the five lines (±4) and left 8.5 at 9.0.</summary>
+    [Theory]
+    [InlineData("a'''4@staccato.down", 8.5)]
+    [InlineData("c''''4@staccato.down", 9.5)]
+    [InlineData("b'''4@staccato.down", 9.5)]
+    public void AQuantizedScriptBetweenItsHeadAndTheStaff_LeavesALedgerPosition(string note, double originUp)
+    {
+        string src = $$"""
+            octave absolute
+            part m {
+              section A { voice { {{note}} r4 r2 } { c'1 } | }
+            }
+            form main { A }
+            score main { staff m }
+            """;
+        var g = RenderedGeometry.Render(src);
+        double middle = g.StaffRefpoints()[0];
+        var dot = g.Glyphs.Single(x => x.Glyph == LilySharp.Core.Svg.EmmentalerGlyphs.ArticStaccatoAbove);
+        Assert.Equal(originUp, middle - dot.Y, 0.002);
+    }
 }
