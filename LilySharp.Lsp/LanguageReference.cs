@@ -135,7 +135,7 @@ internal static class LanguageReference
             ParallelExpressionSyntax => "**Parallel**: Multiple voices played simultaneously",
             TimeSignatureSyntax ts => $"**Time Signature**: {ts.Beats}/{ts.BeatType}",
             TempoDeclarationSyntax tempo => $"**Tempo**: {tempo.Marking ?? ""} {(tempo.BeatUnit != null ? $"{tempo.BeatUnit} = " : "")}{tempo.Bpm ?? 120} BPM".Trim(),
-            KeySignatureSyntax key => $"**Key Signature**: {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}",
+            KeySignatureSyntax key => $"**Key Signature**: {key.DisplayName}",
             ClefDeclarationSyntax clef => $"**Clef**: {clef.ClefName.Text}",
             GraceExpressionSyntax grace => $"**Grace notes**: {(grace.IsAcciaccatura ? "Acciaccatura (slashed)" : grace.IsAppoggiatura ? "Appoggiatura" : "Grace")}",
             TupletExpressionSyntax tuplet => $"**Tuplet**: {tuplet.TupletRatio} in the time of {tuplet.BaseDivision}",

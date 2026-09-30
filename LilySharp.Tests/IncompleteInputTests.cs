@@ -52,6 +52,39 @@ public sealed class IncompleteInputTests
         _ = new LilyPondExporter().Export(tree);
     }
 
+    /// <summary>
+    /// The editor's outline and hover name a CUSTOM key without a tonic. Both read
+    /// <c>KeySignatureSyntax.Pitch</c> as if it could be null; it is a cast, and on
+    /// <c>key custom fis cis</c> it threw — the outline of every book with a custom key failed
+    /// (found by the language-server sweep, session 717, on Fixtures/test/custom-key.lys).
+    /// </summary>
+    [Fact]
+    public void ACustomKey_IsNamedInTheOutlineAndTheHover()
+    {
+        const string doc = "octave absolute\ntime 4/4\nkey custom fis cis\npart melody\n"
+            + "section Main { melody { d4 e fis g | } }\nform main { Main }\nscore main { staff melody }\n";
+        var server = new LilySharp.Lsp.LilySharpLanguageServer(System.IO.Stream.Null, System.IO.Stream.Null);
+        var uri = new System.Uri("file:///custom-key.lys");
+        server.DidOpen(new LilySharp.Lsp.Protocol.DidOpenTextDocumentParams
+        {
+            TextDocument = new LilySharp.Lsp.Protocol.TextDocumentItem { Uri = uri, Text = doc, Version = 1, LanguageId = "lilysharp" },
+        });
+        var id = new LilySharp.Lsp.Protocol.TextDocumentIdentifier { Uri = uri };
+        var symbols = server.DocumentSymbol(new LilySharp.Lsp.Protocol.DocumentSymbolParams { TextDocument = id });
+        Assert.NotNull(symbols);
+        Assert.Contains(Flatten(symbols!), s => s.Name == "key custom");
+        // Hover anywhere on the key line answers without throwing.
+        for (int col = 0; col < "key custom fis cis".Length; col++)
+            _ = server.Hover(new LilySharp.Lsp.Protocol.TextDocumentPositionParams
+            {
+                TextDocument = id, Position = new LilySharp.Lsp.Protocol.Position(2, col),
+            });
+
+        static System.Collections.Generic.IEnumerable<LilySharp.Lsp.Protocol.DocumentSymbol> Flatten(
+            System.Collections.Generic.IEnumerable<LilySharp.Lsp.Protocol.DocumentSymbol> list)
+            => list.SelectMany(s => new[] { s }.Concat(Flatten(s.Children ?? [])));
+    }
+
     private static string Book(string music) =>
         "part m { clef treble }\nsection S { m { " + music + " } }\nform main { S }\nscore main { staff m }\n";
 

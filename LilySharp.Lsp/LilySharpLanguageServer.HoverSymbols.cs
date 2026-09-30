@@ -457,7 +457,7 @@ public sealed partial class LilySharpLanguageServer
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             // Tuplets and voice-parallel blocks are inline music constructs, not
             // navigation landmarks — emitting one per triplet floods the outline.
-            KeySignatureSyntax key => ($"key {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}", SymbolKind.Key),
+            KeySignatureSyntax key => ($"key {key.DisplayName}", SymbolKind.Key),
             ClefDeclarationSyntax clef => ($"clef {clef.ClefName.Text}", SymbolKind.Key),
             LyricsBlockSyntax => ("lyrics", SymbolKind.String),
             OverrideDeclarationSyntax ovr => ($"override {ovr.GrobName.Text}.{ovr.PropertyName.Text}", SymbolKind.Property),

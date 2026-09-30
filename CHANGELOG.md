@@ -327,6 +327,8 @@ workflow attaches that section to the GitHub Release verbatim.
   music alike. An ending whose number is missing (`[. B]`, as while typing one) and a repeat
   whose one list skips a pass (`|: A [1,3. B] :|`) no longer crash the check or the preview
   either — the first is the parser's one error, the second the usual LYS1043.
+- **The editor's outline works in a book with a custom key.** `key custom fis cis` made the
+  document outline (and the breadcrumbs that read it) fail for the whole book.
 - **A rest in a grace group no longer breaks the page.** `c'4 grace { r16 d'16 } e'4@staccato`
   (a script on the note after a grace group with a rest in it) and `c'4( grace { r16 d'16 }
   e'4)` (a slur over one) are valid, and the page threw on both.

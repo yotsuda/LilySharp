@@ -123,6 +123,14 @@ public sealed class KeySignatureSyntax : SyntaxNode
 
     /// <summary>The tonic pitch of a traditional key.</summary>
     public PitchSyntax Pitch => (PitchSyntax)GetChild(1)!;
+
+    /// <summary>How the editor names this key — <c>f major</c>, <c>d minor</c>, or
+    /// <c>custom</c> for a custom signature, which has no tonic.</summary>
+    /// <remarks>The outline and the hover read <see cref="Pitch"/> as if it could be null;
+    /// it is a cast, and on <c>key custom …</c> it threw — every book with a custom key lost
+    /// its outline (found by the language-server sweep, session 717).</remarks>
+    public string DisplayName => IsCustom ? "custom"
+        : $"{(GetChild(1) as PitchSyntax)?.PitchName} {(IsMajor ? "major" : "minor")}";
     /// <summary>The mode token (e.g. <c>major</c>, <c>minor</c>).</summary>
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(2)!;
 
