@@ -123,7 +123,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p700`（HEAD `4f802569`・未 push 85）＝full **10400 / 0 / 2 / 10402**（引継ぎと一致）。
 ⑴ §1.0 ⒧: import は途中の time／key／clef／tempo を一切書かなかった（header の最初の値だけ）。★ `5928d22f`: `LysWriter.Directives` が小節ごとに「効いている値と違う」変化を music の前に書く（first voice の流れだけ・grand staff の clef は読まない＝reader が小節に clef 1 つしか持たない）。網 `MidPieceChanges_RoundTrip` 2 行（毒＝何も書かない: 2 赤＝的中）。掃き 998 冊: 変わる 81・警告が減る 65・無警告 49・残る 1 種は元の本自身の警告（chord-tremolo の小節線の無い最後の 1/4）。副産物: `time` を片方の voice block に書くと他方の 1 小節目まで新しい拍子で数える（元の本でも同じ・§1.0 ⒧ に 1 行）。full **10402 / 0 / 2 / 10404**。
-★ `-End p700 -DiffBase 4f802569`＝full **10402 / 0 / 2 / 10404**・門 6 つ全 OK・Core `+` 70 行に REF 0／OWN 0（import は LP の外・定数なし）。7.6: ⒜ なし。7.7: 効いている値の初期値（最初の time／key）を header と `Directives` が別々に同じ式で求める＝2 つ目の綴り（header 側も `Directives` の初期値を読む形に寄せられる・未着手）。push はユーザー。
+★ `-End p700 -DiffBase 4f802569`＝full **10402 / 0 / 2 / 10404**・門 6 つ全 OK・Core `+` 70 行に REF 0／OWN 0（import は LP の外・定数なし）。7.6: ⒜ なし。7.7: 効いている値の初期値（最初の time／key）を header と `Directives` が別々に同じ式で求める＝2 つ目の綴り→`9c34a0b9` で `Opening` 1 軒に。⚠ p699／p700 の handoff commit に `HANDOFF-ARCHIVE.md` を入れ忘れた（commit された木では 2 便の語りがどこにも無かった・作業ツリーは正しいのでテストは緑）＝`1adf0d71`。**handoff の commit は `git add docs/HANDOFF.md docs/HANDOFF-ARCHIVE.md`**。push はユーザー。
 
 ## 以下は第699セッションの経緯
 
