@@ -326,7 +326,8 @@ workflow attaches that section to the GitHub Release verbatim.
   A repeat written inside each voice was not affected.
 - **A MusicXML grand staff is one part.** `grandStaff { staff rh  staff lh }` was two
   unrelated parts; it is now one part on two staves (`<staves>2`, a numbered clef each, the
-  lower hand's notes on staff 2), as a piano part is written. Importing it splits it back
+  lower hand's notes on staff 2, its slurs, hairpins and octave lines numbered apart from the
+  upper hand's), as a piano part is written. Importing it splits it back
   into two parts as before. Only a plain two-staff brace of two parts is merged; other
   groups stay separate parts. When the two staves are labelled apart
   (`staff rh "Right"  staff lh "Left"`), they stay two parts under a brace `<part-group>`,

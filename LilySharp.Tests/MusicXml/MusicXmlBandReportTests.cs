@@ -156,6 +156,29 @@ public class MusicXmlBandReportTests
             part.Element("measure")!.Descendants("slur").Select(s => s.Attribute("number")!.Value));
     }
 
+    /// <summary>The two staves' hairpins and octave lines are numbered apart too: a crescendo
+    /// and an ottava under each hand at once are two wedges and two lines, not one of each
+    /// that the other hand's stop closes.</summary>
+    [Fact]
+    public void AGrandStaff_NumbersTheLowerStaffsWedgesAndOctaveLinesApart()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section A { rh { c''4@cresc@ottava d'' e'' f''@f@!ottava | } lh { c4@cresc@ottava d e f@f@!ottava | } }
+            form main { ~A }
+            score main { grandStaff { staff rh "Piano"  staff lh } }
+            """);
+        var part = Assert.Single(doc.Descendants("part"));
+        string Numbered(string name) => string.Join(" ", part.Descendants(name)
+            .Select(e => $"{e.Ancestors("direction").Single().Element("staff")?.Value ?? "-"}:{e.Attribute("type")!.Value}:{(string?)e.Attribute("number") ?? "-"}")
+            .Order());
+        Assert.Equal("-:crescendo:- -:stop:- 2:crescendo:2 2:stop:2", Numbered("wedge"));
+        Assert.Equal("-:down:- -:stop:- 2:down:2 2:stop:2", Numbered("octave-shift"));
+    }
+
     /// <summary>A grand staff whose staves are labelled apart keeps both labels: two parts
     /// under a brace part-group, not one part that could carry only one of them.</summary>
     [Fact]

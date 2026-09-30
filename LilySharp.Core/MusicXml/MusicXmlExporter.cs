@@ -525,6 +525,7 @@ public sealed class MusicXmlExporter
                 foreach (var d in l.Directions)
                 {
                     d.Staff = 2;
+                    d.Number = 2;
                     u.Directions.Add(d);
                 }
 

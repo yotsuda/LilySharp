@@ -570,6 +570,12 @@ internal sealed class MusicXmlDirection
     /// <summary>The staff of a multi-staff part the direction belongs to, or null.</summary>
     public int? Staff { get; set; }
 
+    /// <summary>The wedge's and octave line's <c>number</c>: null (the reader's 1), or 2 on a
+    /// grand staff's lower staff, whose hairpins and octave lines run beside the upper staff's
+    /// in the one part (2026-09-30; both staves' were number 1 before, so a hairpin under each
+    /// hand at once closed the other's).</summary>
+    public int? Number { get; set; }
+
     public XElement ToXml()
     {
         var placement = Placement ?? "above";
@@ -584,7 +590,8 @@ internal sealed class MusicXmlDirection
 
         if (WedgeType != null)
             direction.Add(new XElement("direction-type",
-                new XElement("wedge", new XAttribute("type", WedgeType))));
+                new XElement("wedge", new XAttribute("type", WedgeType),
+                    Number is { } wedgeNumber ? new XAttribute("number", wedgeNumber) : null)));
 
         if (PedalType != null)
             direction.Add(new XElement("direction-type",
@@ -593,6 +600,8 @@ internal sealed class MusicXmlDirection
         if (OctaveShiftType != null)
         {
             var shift = new XElement("octave-shift", new XAttribute("type", OctaveShiftType));
+            if (Number is { } shiftNumber)
+                shift.Add(new XAttribute("number", shiftNumber));
             shift.Add(new XAttribute("size", OctaveShiftSize));
             direction.Add(new XElement("direction-type", shift));
         }
