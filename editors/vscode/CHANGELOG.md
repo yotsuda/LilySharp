@@ -65,9 +65,6 @@ All notable changes to the Lily# VS Code extension are documented here.
   list yet, then the key's, and `section` — then the file's section names after it.
   The table is coloured — `section NAME`, the tuning words and the shapes — and its closing
   brace no longer ends the layout block's colours (the keys after a table used to go plain).
-  A `chord(…)` item's hover lists each score's capo when the scores playing the part
-  differ, and names the notes it sounds under the capo (it used to read the first score's
-  capo, and under any capo named the notes as if there were none).
 - **A capo: `chordDiagrams guitar capo 3`** — the shapes, the names (`chordNames shape |
   sounding | both`, a new key) and "Capo 3" at the score's head follow the capo, and the
   hover, `Ctrl+Shift+Up`/`Down` and the shape check read the pressed chord. **The capo
@@ -75,6 +72,9 @@ All notable changes to the Lily# VS Code extension are documented here.
   file's chords would take a barre there (`capo 3: 0 barre chords of 3` first, `capo 0: 2
   barre chords of 3 (F 133211, Bb x13331)`), and hovering `capo` or its fret shows the same
   ranking. `capo`, `chordNames` and their words are completed and coloured.
+  A `chord(…)` item's hover lists each score's capo when the scores playing the part
+  differ, and names the notes it sounds under the capo (it used to read the first score's
+  capo, and under any capo named the notes as if there were none).
 - **The chord list: `layout { chordList true }`** — every chord the score uses, with its
   diagram, under the title in centred rows; completed and coloured.
 - **`Ctrl+Shift+Up`/`Down` step on a ukulele part too**: past LilyPond's ukulele table the
