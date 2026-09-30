@@ -48,7 +48,10 @@ Escape         = '\' , ( '"' | "'" | '\' | '0' | 'a' | 'b' | 'f' | 'n' | 'r' | '
    above; any other backslash is LYS0036. A verbatim string takes every character as written,
    a backslash and a line break included, and '""' is one quote. `@"` is the verbatim opener
    only — a bare '@' before a name is an annotation. The one reader is
-   LilySharp.Core.Syntax.StringLiteral. *)
+   LilySharp.Core.Syntax.StringLiteral.
+   ⚠️ `$"…"` is NOT a string form: it is reserved for interpolation (`$"… {name} …"`), C#'s
+   spelling, should Lily# ever take it (owner's confirmation 2026-09-30). `@"…"` stays
+   verbatim only, so adding `$"…"` later cannot change what an existing file means. *)
 
 (* A Decimal REQUIRES a digit after the point, and that is what keeps it out of every
    dot the grammar already spells: the augmentation dot (c4. / R2.*3 / partial 2. /
