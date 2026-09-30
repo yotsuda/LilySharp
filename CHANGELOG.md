@@ -15,7 +15,10 @@ workflow attaches that section to the GitHub Release verbatim.
   `|: A [1-2. B] :| [3. C]`. A pass no ending names, or two name (`[1. B] :| [3. C]`,
   `[1-2. B] :| [2. C]`), is an error too (LYS1043). A repeat without endings keeps
   `|: A :|*N`. A bracket now prints its passes as LilyPond does — `[1-2.` prints "1. 2.",
-  `[1-3.` "1.–3.", `[1,3.` "1. 3." — where it printed the written "1-2.".
+  `[1-3.` "1.–3.", `[1,3.` "1. 3." — where it printed the written "1-2.". A last ending that
+  plays a pass before the last (`|: A [1,3. B] :| [2. C]`, `[2-3. C]`) now ends in the repeat
+  bar its return needs, on the page and in MusicXML, as LilyPond draws it; only the MIDI
+  returned there before.
 - **Strings follow C#'s grammar.** A regular `"…"` decodes C#'s escapes — `\"`, `\\`, `\n`,
   `\t`, `\uXXXX` and the rest — and any other backslash is an error (LYS0036); the new
   verbatim `@"…"` takes a backslash as written, with `""` for a quote. Until now no escape

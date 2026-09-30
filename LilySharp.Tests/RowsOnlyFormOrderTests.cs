@@ -185,6 +185,36 @@ public class RowsOnlyFormOrderTests
         Assert.Equal(new[] { (2, 2, "1."), (3, 3, "2.") }, Voltas(staffless));
     }
 
+    /// <summary>A last ending that plays a pass before the last returns, and ends in the ':|'
+    /// no one wrote (RepeatPasses.EndingReturns, 2026-09-30) — the staffless walk draws it as
+    /// the staff's does: O is bar 3, and its end is a repeat bar.</summary>
+    [Theory]
+    [InlineData("|: A [1,3. D] :| [2. O]")]
+    [InlineData("|: A [1. D] :| [2-3. O]")]
+    public void AReturningLastEnding_EndsInARepeatBarWithoutAStaff(string form)
+    {
+        string head = $$"""
+            time 4/4
+            part melody {
+              clef treble
+              section A { c4 c g' g | a a g2 | }
+              section D { f4 f e e | }
+              section O { d4 d c2 | }
+            }
+            lyrics verse {
+              section A { one two three four | five six sev- en | }
+              section D { eight nine ten e- le- ven | }
+              section O { twelve thir- teen | }
+            }
+            form main { {{form}} }
+            """;
+        var staffless = Collect($"{head}\nscore main {{\n  lyrics verse\n}}");
+        var staffful = Collect($"{head}\nscore main {{\n  staff melody\n  lyrics verse\n}}");
+
+        Assert.Equal(RowBarlines(staffful, "verse"), RowBarlines(staffless, "verse"));
+        Assert.Equal(LilySharp.Core.Svg.Model.BarlineType.RepeatEnd, RowBarlines(staffless, "verse")[3].End);
+    }
+
     // The measured answer, pinned independently of the differential above — so a
     // regression that moves BOTH walks the same way still fails something.
     [Fact]

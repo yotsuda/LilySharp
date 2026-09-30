@@ -121,6 +121,16 @@ internal static class RepeatPasses
     /// numbers skip or name twice LYS1043 — so this arm plays only a file that does not compile
     /// clean; every clean form names each pass once and no reading is left to choose.
     /// </remarks>
+    /// <summary>True when an ending on <paramref name="passes"/> returns to the body after it —
+    /// it plays on some pass before the last (<paramref name="highestPass"/>). What decides the
+    /// <c>:|</c> the last written ending ends in though no one wrote it: <c>|: A [1,3. B] :| [2. C]</c>
+    /// returns after C (2026-09-30; the page and MusicXML drew none until then).</summary>
+    /// <remarks>LILYPOND-REF: lily/alternative-sequence-iterator.cc:104-107 Alternative_sequence_iterator::analyze
+    /// — "we repeat after every volta except the last": each volta number below the repeat
+    /// count adds to the alternative's return_count.</remarks>
+    public static bool EndingReturns(IEnumerable<int> passes, int highestPass)
+        => passes.Any(p => p < highestPass);
+
     public static int EndingFor(int pass, IReadOnlyList<PassSet> endings)
     {
         for (int i = 0; i < endings.Count; i++)

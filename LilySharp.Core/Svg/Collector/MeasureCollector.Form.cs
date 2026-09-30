@@ -253,6 +253,19 @@ public sealed partial class MeasureCollector
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
                             pendingVoltaBrackets.Add(EndingBracket(alt, startMeasureIndex, lastMeasure));
                         }
+
+                        // The last written ending returns when it plays on a pass before the last:
+                        // `|: A [1,3. B] :| [2. C]` goes back to A after C (pass 3 plays B), and
+                        // `[2-3. C]` after its pass-2 C — so it ends in the ':|' the author had no
+                        // place to write; every reader plays that return (RepeatPasses). Until
+                        // 2026-09-30 the page alone drew none.
+                        // (Semantics.RepeatPasses.EndingReturns; measured: LilyPond 2.26 draws ':|'
+                        // after "2." in the first shape, Lab sessions/p710/volta/lp-printed.png.)
+                        if (IsLastWrittenEnding(repeat, i) && Semantics.RepeatPasses.EndingReturns(alt.Numbers, HighestPass(repeat)))
+                        {
+                            MarkFormEdge(SectionPlayEdge.Repeat);
+                            PushFormBarline(":|", alt.SourceStart, alt.Span);
+                        }
                     }
                 }
             }
@@ -263,6 +276,27 @@ public sealed partial class MeasureCollector
         // pieces of a hooked one.
         foreach (var bracket in pendingVoltaBrackets)
             AddVoltaBracket(bracket);
+    }
+
+    /// <summary>True when neither an ending nor a written <c>:|</c> follows the child at
+    /// <paramref name="index"/> — the ending the block closes on, with no bar of its own.</summary>
+    private static bool IsLastWrittenEnding(FormRepeatBlockSyntax repeat, int index)
+    {
+        for (int j = index + 1; j < repeat.SlotCount; j++)
+            if (repeat.GetChild(j) is FormAlternativeSyntax or SyntaxTokenNode { Text: ":|" })
+                return false;
+        return true;
+    }
+
+    /// <summary>The last pass of a repeat with endings: its highest ending number (the numbers
+    /// are the passes — LYS1042, LYS1043).</summary>
+    private static int HighestPass(FormRepeatBlockSyntax repeat)
+    {
+        int highest = 0;
+        for (int j = 0; j < repeat.SlotCount; j++)
+            if (repeat.GetChild(j) is FormAlternativeSyntax a)
+                highest = Math.Max(highest, a.Numbers.Max());
+        return highest;
     }
 
     /// <summary>
@@ -1664,6 +1698,9 @@ public sealed partial class MeasureCollector
                         // `|: A [1. ~D] :| [2. ~O]` drew no ending at all.
                         if (cur > altStart)
                             AddVoltaBracket(EndingBracket(alt, altStart, cur - 1));
+                        // The unwritten ':|' of a returning last ending, as ProcessRepeatBlockCore.
+                        if (IsLastWrittenEnding(repeat, i) && Semantics.RepeatPasses.EndingReturns(alt.Numbers, HighestPass(repeat)))
+                            CloseRepeatBefore(cur);
                         break;
                     case { Kind: SyntaxKind.SilentSectionReference } silent
                             when silent.GetChild(1) is SyntaxTokenNode silentName:

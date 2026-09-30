@@ -109,6 +109,27 @@ public sealed class FormEndingPassTests
         => Assert.Equal(new[] { first, second },
             Collect(Book(form)).VoltaBrackets.OrderBy(v => v.StartMeasureIndex).Select(v => v.VoltaText).ToArray());
 
+    /// <summary>The last written ending returns when it plays a pass before the last, and ends
+    /// in the ':|' no one wrote — on the page and in MusicXML, as LilyPond draws it
+    /// (alternative-sequence-iterator.cc:104-107) and as the MIDI already played it. Until
+    /// 2026-09-30 only the MIDI returned. A last ending on the last pass alone does not; a
+    /// single ending before its written ':|' gets no second bar.</summary>
+    [Theory]
+    [InlineData("|: A [1,3. B] :| [2. C] D", true)]      // A B A C | A B D
+    [InlineData("|: A [1. B] :| [2-3. C] D", true)]      // A B A C | A C D
+    [InlineData("|: A [1. B] :| [2. C] D", false)]
+    [InlineData("|: A [1-2. B] :| D", false)]
+    public void AReturningLastEnding_EndsInARepeatBar(string form, bool returns)
+    {
+        var measures = Collect(Book(form)).Voices[0].Measures;
+        // The written ':|' after the first ending, and the returning last ending's own.
+        int returnsDrawn = returns ? 2 : 1;
+        Assert.Equal(returnsDrawn, measures.Count(m => m.EndBarline is BarlineType.RepeatEnd or BarlineType.RepeatBoth));
+        if (returns)
+            Assert.Equal(BarlineType.RepeatEnd, measures[2].EndBarline);   // A B C D, one bar each: C
+        Assert.Equal(returnsDrawn, CountOf(Xml(Book(form)), "<repeat direction=\"backward\""));
+    }
+
     [Theory]
     [InlineData(new[] { 1, 2, 3, 5 }, "1.–3. 5.")]
     [InlineData(new[] { 2, 1 }, "1. 2.")]

@@ -1164,9 +1164,20 @@ public sealed class MusicXmlExporter
     private void EmitVoltaRepeatBlock(FormWalk.Repeat rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
         bool forwardPending = true;
+        // The last ending the block closes on returns when it plays a pass before the last
+        // (RepeatPasses.EndingReturns): `[1,3. B] :| [2. C]` ends C in a backward repeat no ':|'
+        // was written for. Until 2026-09-30 the file had none there.
+        int highestPass = rb.Children.OfType<FormWalk.Ending>().Select(e => e.Node.Numbers.Max()).DefaultIfEmpty(0).Max();
+        int closingEnding = -1;
+        for (int k = 0; k < rb.Children.Count; k++)
+            if (rb.Children[k] is FormWalk.Ending)
+                closingEnding = k;
+            else if (rb.Children[k] is FormWalk.RepeatEnd)
+                closingEnding = -1;
 
-        foreach (var child in rb.Children)
+        for (int k = 0; k < rb.Children.Count; k++)
         {
+            var child = rb.Children[k];
             if (child is FormWalk.Ending { Node: var alt } ending)
             {
                 _xmlRole = Svg.Model.SectionRepeatRole.Ending;
@@ -1197,6 +1208,8 @@ public sealed class MusicXmlExporter
                     p.Measures[stopAt].EndingStopNumbers = num;
                     p.Measures[stopAt].EndingStopType = alt.EndsHooked && stopAt == last ? "stop" : "discontinue";
                     if (forwardPending) p.Measures[first].RepeatForward = true;
+                    if (k == closingEnding && RepeatPasses.EndingReturns(alt.Numbers, highestPass))
+                        p.Measures[last].RepeatBackward = true;
                 }
                 forwardPending = false;
             }
