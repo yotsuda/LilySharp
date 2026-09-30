@@ -304,10 +304,12 @@ internal sealed class MusicXmlMeasure
         foreach (var dir in Directions)
             measure.Add(dir.ToXml());
 
+        var tabBeams = tab != null ? TabBeams() : null;
         foreach (var note in Notes)
             measure.Add(tab is { WithNotation: false } && note.IsPitchlessOnTab
                 ? note.TabGap(staff: null, voice: note.Voice)
-                : note.ToXml(staff: tab?.WithNotation == true ? 1 : null, tabStaff: tab is { WithNotation: false }));
+                : note.ToXml(staff: tab?.WithNotation == true ? 1 : null, tabStaff: tab is { WithNotation: false },
+                    beams: tab is { WithNotation: false } ? tabBeams!.GetValueOrDefault(note) : null));
 
         // The tablature beside a notation staff: back to the bar's start and the same notes
         // again on staff 2, with their strings and frets (directions and harmonies stay on
@@ -324,7 +326,7 @@ internal sealed class MusicXmlMeasure
                 if (note.RawElement == null)
                     measure.Add(note.IsPitchlessOnTab
                         ? note.TabGap(staff: 2, voice: (note.Voice ?? 1) + 4)
-                        : note.ToXml(staff: 2, tabStaff: true, tabCopy: true));
+                        : note.ToXml(staff: 2, tabStaff: true, tabCopy: true, beams: tabBeams!.GetValueOrDefault(note)));
         }
 
         if (RepeatBackward || BarStyle != null || EndingStopNumbers != null)
@@ -344,6 +346,77 @@ internal sealed class MusicXmlMeasure
         }
 
         return measure;
+    }
+
+    /// <summary>
+    /// The beams a TAB staff writes, by note, when a slash note in its group is a gap there
+    /// (<see cref="MusicXmlNote.TabGap"/>): the group rejoined over the notes that remain.
+    /// Two remaining notes stay joined at a level when the notation staff's beam at that level
+    /// ran unbroken from one to the other; a remaining note joined to neither side keeps a hook
+    /// it had and drops a primary beam (a flag). Notes of a group with no slash are absent
+    /// (they write their own beams).
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-10-01 the gap took its <c>&lt;beam&gt;</c> with it and left the rest as
+    /// written — a group opening with a slash began at "continue" on the TAB staff.
+    /// </remarks>
+    private Dictionary<MusicXmlNote, List<(int Number, string Value)>> TabBeams()
+    {
+        var result = new Dictionary<MusicXmlNote, List<(int Number, string Value)>>();
+        foreach (var voice in Notes.Where(n => n.RawElement == null && !n.IsBackup && !n.IsChord && !n.IsGrace)
+                     .GroupBy(n => n.Voice ?? 1))
+        {
+            var line = voice.ToList();
+            for (int start = 0; start < line.Count; start++)
+            {
+                if (!line[start].Beams.Any(b => b.Number == 1 && b.Value == "begin"))
+                    continue;
+                int end = start;
+                while (end + 1 < line.Count && line[end + 1].Beams.Any(b => b.Number == 1 && b.Value is "continue" or "end"))
+                {
+                    end++;
+                    if (line[end].Beams.Any(b => b.Number == 1 && b.Value == "end"))
+                        break;
+                }
+                var group = line.GetRange(start, end - start + 1);
+                start = end;
+                if (!group.Any(n => n.IsPitchlessOnTab))
+                    continue;
+                var kept = Enumerable.Range(0, group.Count).Where(i => !group[i].IsPitchlessOnTab).ToList();
+                int levels = group.Max(n => n.Beams.Count == 0 ? 0 : n.Beams.Max(b => b.Number));
+                bool Runs(int i, int k) => group[i].Beams.Any(b => b.Number == k && b.Value is "begin" or "continue" or "end");
+                // Joined at level k from kept note a to kept note b: every note from a to b
+                // carries a running beam at k, and none ends it before b.
+                bool Joined(int a, int b, int k)
+                {
+                    for (int i = a; i <= b; i++)
+                        if (!Runs(i, k)) return false;
+                    for (int i = a; i < b; i++)
+                        if (group[i].Beams.Any(x => x.Number == k && x.Value == "end")) return false;
+                    return !group[b].Beams.Any(x => x.Number == k && x.Value == "begin");
+                }
+                for (int j = 0; j < kept.Count; j++)
+                {
+                    var beams = new List<(int Number, string Value)>();
+                    for (int k = 1; k <= levels; k++)
+                    {
+                        bool left = j > 0 && Joined(kept[j - 1], kept[j], k);
+                        bool right = j + 1 < kept.Count && Joined(kept[j], kept[j + 1], k);
+                        string? value = (left, right) switch
+                        {
+                            (true, true) => "continue",
+                            (true, false) => "end",
+                            (false, true) => "begin",
+                            _ => group[kept[j]].Beams.FirstOrDefault(b => b.Number == k && b.Value.EndsWith("hook")).Value,
+                        };
+                        if (value != null)
+                            beams.Add((k, value));
+                    }
+                    result[group[kept[j]]] = beams;
+                }
+            }
+        }
+        return result;
     }
 }
 
@@ -803,7 +876,10 @@ internal sealed class MusicXmlNote
     /// <param name="tabCopy">The note is the TAB staff's copy of a notation-staff note: its
     /// voice moves to the second staff's range (5–8), and what the notation staff already
     /// carries — lyrics, slurs, articulations, ornaments, other notations — is not repeated.</param>
-    public XElement ToXml(int? staff = null, bool tabStaff = false, bool tabCopy = false)
+    /// <param name="beams">The beams to write in place of <see cref="Beams"/> — a TAB staff's
+    /// group rejoined over its slash notes' gaps (MusicXmlMeasure.TabBeams) — or null.</param>
+    public XElement ToXml(int? staff = null, bool tabStaff = false, bool tabCopy = false,
+        IReadOnlyList<(int Number, string Value)>? beams = null)
     {
         // Non-note pseudo-entries keep their slot in the note stream.
         if (RawElement != null)
@@ -894,7 +970,7 @@ internal sealed class MusicXmlNote
         if ((staff ?? Staff) is { } staffNumber)
             note.Add(new XElement("staff", staffNumber));
 
-        foreach (var (number, value) in Beams)
+        foreach (var (number, value) in beams ?? Beams)
             note.Add(new XElement("beam", new XAttribute("number", number), value));
 
         var technicals = Technicals;

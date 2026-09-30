@@ -417,7 +417,7 @@ internal sealed class TabResolver
                         // Midi 0): it has no place on a fretboard and the tab leaves it out, but
                         // it is no note written an octave too low — no LYS5002 (2026-10-01;
                         // LilySharp-Omr's report #14: a comping bar warned once per slash).
-                        if (!(note.Notehead == NoteheadStyle.Slash && note.Midi == 0))
+                        if (!note.IsPitchlessSlash)
                             _rangeWarnings.Add(new TabRangeWarning(note.SourcePosition, below));
                         // Below the lowest string it would clamp to a wrong open string
                         // (fret 0) — hide it on the tab entirely instead (see NoteItem).

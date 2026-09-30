@@ -323,6 +323,11 @@ workflow attaches that section to the GitHub Release verbatim.
   slash out as before, but no longer warns LYS5002 ("likely an octave too low") once per
   slash: a slash has no pitch. And every note on a two-staff part now names its `<voice>` —
   the first staff's is 1 — where it was left to the reader beside the second staff's 5.
+- **A slash note on a tab staff is rhythm.** A tab that draws stems (`tab gt`) drew nothing
+  for a slash but ran the beam over its place, so a group opening with slashes began in
+  mid-air. A slash now draws its stem and beam there, with no fret number. On the
+  MusicXML's TAB staff, where a stem cannot stand without a note, a group with slashes is
+  beamed over its fretted notes alone (one left alone is a flag).
 - **MusicXML import reads octave lines and pedals, and marks each staff's own notes.**
   `<octave-shift>` and `<pedal>` were not read, so every `@ottava`, `@quindicesima` and
   `@sustain` was lost on import; they come back as the marks and their `@!` ends (a pedal

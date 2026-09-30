@@ -418,8 +418,17 @@ internal static partial class SharedRenderer
                 case NoteItem note:
                     // A note below the tab's lowest string can't be fretted — show
                     // nothing (no digit, no stem) rather than a wrong open string.
-                    if (note.TabBelowRange)
+                    if (note.TabHidden)
                         break;
+                    // A slash note is rhythm with no string: its stem, no digit
+                    // (NoteItem.IsPitchlessSlash; owner's decision 2026-10-01).
+                    if (note.IsPitchlessSlash)
+                    {
+                        if (!numbersOnly)
+                            DrawUnbeamedTabStem(fonts, note, note.BaseDuration, dirGeom.TabStemUp(note),
+                                columnX, staffY, staff, isBeamed, gc, pageHeight);
+                        break;
+                    }
                     // A tie's destination keeps its rhythm (stem/beam) but hides
                     // its fret number — the held string is not re-struck. When the
                     // tie was SPLIT by a line break (the target opens the line), or

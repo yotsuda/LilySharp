@@ -973,6 +973,19 @@ public sealed record NoteItem : MusicItem
         init { if (value != TabBelowRange) _rare = (_rare ?? NoteItemRare.Empty) with { TabBelowRange = value }; }
     }
 
+    /// <summary>
+    /// The slash note <c>/4</c>: a slash head with no pitch (MeasureCollector.CreateSlashNoteItem
+    /// gives it Midi 0). On a tab staff it is <see cref="TabBelowRange"/> — no string, no fret
+    /// number — but, unlike a note too low to fret, it is rhythm: it keeps its stem and its
+    /// beam (owner's decision 2026-10-01; the beam used to run over slashes that drew no stem),
+    /// and it draws no LYS5002.
+    /// </summary>
+    public bool IsPitchlessSlash => Notehead == NoteheadStyle.Slash && Midi == 0;
+
+    /// <summary>A tab staff draws nothing at all for this note: it is off the fretboard and
+    /// is no slash note (<see cref="IsPitchlessSlash"/> keeps its stem and beam).</summary>
+    public bool TabHidden => TabBelowRange && !IsPitchlessSlash;
+
     /// <summary>Stem direction: beam-resolved if beamed, else asked for, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? ForcedStemUp ?? StaffPosition < 0;
 

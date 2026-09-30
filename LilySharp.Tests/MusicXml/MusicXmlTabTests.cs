@@ -98,6 +98,29 @@ public class MusicXmlTabTests
         Assert.All(doc.Descendants("note"), n => Assert.NotNull(n.Element("voice")));
     }
 
+    /// <summary>
+    /// A beam group with slashes rejoins over the fretted notes on the TAB staff (2026-10-01):
+    /// the gap used to take its <c>&lt;beam&gt;</c> with it, so a group opening with a slash began
+    /// at "continue". A fretted note left alone in its group is a flag. The notation staff
+    /// keeps the page's beams as they are.
+    /// </summary>
+    [Fact]
+    public void ABeamOverSlashes_RejoinsOverTheFrettedNotesOnTheTabStaff()
+    {
+        static string[] Beams(XDocument doc, string? staff) => doc.Descendants("note")
+            .Where(n => (string?)n.Element("staff") == staff)
+            .Select(n => string.Join("+", n.Elements("beam").Select(b => b.Value)))
+            .ToArray();
+        const string music = "/8 8 e,8 a,8 d8 /8 g8 /8 |";
+        var both = Export(music, "staff gt\n tab gt");
+        Assert.Equal(new[] { "begin", "continue", "continue", "end", "begin", "continue", "continue", "end" },
+            Beams(both, "1"));
+        Assert.Equal(new[] { "begin", "end", "begin", "end" }, Beams(both, "2"));
+        Assert.Equal(new[] { "begin", "end", "begin", "end" }, Beams(Export(music, "tab gt"), null));
+        // e, alone of its group (the slash is a gap) is a flag; the rest has no beam.
+        Assert.Equal(new[] { "", "" }, Beams(Export("/8 e,8 /4 r2 |", "tab gt"), null));
+    }
+
     /// <summary>On a TAB-only staff too, a slash is a gap, not a note to fret.</summary>
     [Fact]
     public void ASlashNote_OnATabAlone_IsAGap()

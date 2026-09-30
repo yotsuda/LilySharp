@@ -52,6 +52,29 @@ public sealed class TabBelowRangeHideTests
         Assert.All(TabNotes(score, 0), n => Assert.False(n.TabBelowRange));
     }
 
+    /// <summary>
+    /// A slash note on a tab staff has no digit but keeps its stem and beam — it is rhythm,
+    /// not a note too low to fret (owner's decision 2026-10-01; the beam used to run over
+    /// slashes that drew no stem). A TAB-only staff: four slashes draw four more lines (stems)
+    /// than an empty bar, and no digit.
+    /// </summary>
+    [Fact]
+    public void ASlashNote_OnATabStaff_DrawsItsStemButNoDigit()
+    {
+        static (int Lines, int Texts) Ink(string body)
+        {
+            var svg = LilySharp.Core.Svg.SvgGenerator.Generate(SyntaxTree.Parse(
+                "octave absolute\ntime 4/4\npart gt { clef treble_8  tuning guitar }\n"
+                + $"section A {{ gt {{ {body} }} }}\nform main {{ A }}\nscore main {{ tab gt }}"));
+            return (System.Text.RegularExpressions.Regex.Matches(svg, "<line\\b").Count,
+                System.Text.RegularExpressions.Regex.Matches(svg, "<text\\b").Count);
+        }
+        var empty = Ink("s1 |");
+        var slashes = Ink("/4 4 4 4 |");
+        Assert.Equal(empty.Lines + 4, slashes.Lines);
+        Assert.Equal(empty.Texts, slashes.Texts);
+    }
+
     [Fact]
     public void NotationStaff_NeverFlagged()
     {

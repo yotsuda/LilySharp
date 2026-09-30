@@ -84,9 +84,10 @@ internal static partial class SharedRenderer
         var grp = beam.Group;
 
         // A tab beam whose every member sounds below the lowest string is
-        // hidden entirely (no beam line, no stems) — see NoteItem.TabBelowRange.
+        // hidden entirely (no beam line, no stems) — see NoteItem.TabBelowRange. A slash
+        // note is rhythm and keeps its beam (NoteItem.IsPitchlessSlash).
         if (grp.Members.Length > 0
-            && grp.MemberItems().All(item => item is NoteItem { TabBelowRange: true }))
+            && grp.MemberItems().All(item => item is NoteItem { TabHidden: true }))
             return;
 
         // The quanter's Y positions are staff positions relative to the
@@ -441,8 +442,9 @@ internal static partial class SharedRenderer
         for (int i = 0; i < grp.Members.Length; i++)
         {
             var memberItem = grp.ItemOf(i);
-            // A member hidden below the tab's lowest string draws no stem.
-            if (memberItem is NoteItem { TabBelowRange: true })
+            // A member hidden below the tab's lowest string draws no stem; a slash
+            // note draws its stem (NoteItem.IsPitchlessSlash).
+            if (memberItem is NoteItem { TabHidden: true })
                 continue;
             // A whole-note display pair's stem has NO ink — the beam floats
             // between the heads and only the invisible stem's X survives (used
