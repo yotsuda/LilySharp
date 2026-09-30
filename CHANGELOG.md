@@ -209,7 +209,10 @@ workflow attaches that section to the GitHub Release verbatim.
   its shape. The shape is required: `chord(C)` warns (LYS1040) and keeps its time as a spacer.
   The MIDI plays it, MusicXML writes each note's `<string>`, the `.ly` twin writes the chord
   out with `\5`…`\1`. `chord` is now reserved in music — a phrase cannot be named it (none in
-  the repo's or the Lab corpora's 1,206 books was).
+  the repo's or the Lab corpora's 1,206 books was). A phrase whose body opens with the item
+  hands its lowest note on after the reference, as the item does (the reference's marks do not
+  move it); it used to anchor on the body's next note, so editing the phrase moved the music
+  after it.
 
 ### Editor
 

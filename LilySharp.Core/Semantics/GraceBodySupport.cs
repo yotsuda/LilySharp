@@ -401,10 +401,10 @@ internal static class GraceBodySupport
             {
                 if (charge())
                 {
+                    int? anchorStep = Music.PhraseAnchor.Anchor(body, resolvePhrase, out var anchorShape);
                     into.Add(new GraceBodyElement(
                         Svg.Collector.RelativeResetMarker.For(
-                            reference.OctaveOffset,
-                            Music.PhraseAnchor.AnchorStep(body, resolvePhrase)),
+                            reference.OctaveOffset, anchorStep, anchorShape: anchorShape),
                         via));
                     // The name that travels down is the OUTERMOST one — the phrase the
                     // reader wrote in the grace body. A drop three phrases deep is still

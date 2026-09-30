@@ -43,6 +43,10 @@ internal sealed class RelativeResetMarker : SyntaxNode
     /// reference); null = pitchless body, nothing to hand off.</summary>
     public int? AnchorStep { get; }
 
+    /// <summary>The chord from a shape the anchor is read from when <see cref="AnchorStep"/> is
+    /// <see cref="Music.PhraseAnchor.Shape"/> (its lowest sounding note); null otherwise.</summary>
+    public ChordSyntax? AnchorShape { get; }
+
     /// <summary>The end of the reference's own text (its full span) — the CALL SITE the
     /// expansion stands for. 0 for a marker without one (<see cref="Instance"/>). Folded
     /// into the walk's read extent when the marker is processed, so a checkpoint inside
@@ -64,17 +68,18 @@ internal sealed class RelativeResetMarker : SyntaxNode
     /// measure was lost.) Reuses <see cref="Instance"/> for a bare anchorless marker
     /// without a call site.</summary>
     public static RelativeResetMarker For(int octaveOffset, int? anchorStep = null, TextSpan? callSite = null,
-        string? phraseName = null)
-        => callSite == null && octaveOffset == 0 && anchorStep == null && phraseName == null
+        string? phraseName = null, ChordSyntax? anchorShape = null)
+        => callSite == null && octaveOffset == 0 && anchorStep == null && phraseName == null && anchorShape == null
             ? Instance
-            : new RelativeResetMarker(octaveOffset, anchorStep, callSite, phraseName);
+            : new RelativeResetMarker(octaveOffset, anchorStep, callSite, phraseName, anchorShape);
 
     private RelativeResetMarker(int octaveOffset, int? anchorStep, TextSpan? callSite = null,
-        string? phraseName = null)
+        string? phraseName = null, ChordSyntax? anchorShape = null)
         : base(MarkerGreen.Shared, parent: null, position: callSite?.Start ?? 0)
     {
         OctaveOffset = octaveOffset;
         AnchorStep = anchorStep;
+        AnchorShape = anchorShape;
         CallSiteEnd = callSite?.End ?? 0;
         PhraseName = phraseName;
     }

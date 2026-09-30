@@ -2033,7 +2033,10 @@ PhraseRef      = Identifier , { "'" | ',' } ;
                     never to its interior, so how the body ends — or is
                     later edited — cannot move the music after a reference. A body
                     evaluates in the
-                    default frame; a pitchless body (rests only) hands nothing off. *)
+                    default frame; a pitchless body (rests only) hands nothing off. A
+                    body that opens with a 'chord(…)' item anchors on that item's
+                    LOWEST note as written — what the item hands on — and the
+                    reference's marks do not move it (owner's decision 2026-09-30). *)
 
 ### 8.3 Ties, Slurs, Beams
 

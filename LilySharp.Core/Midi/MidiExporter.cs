@@ -819,10 +819,15 @@ public sealed class MidiExporter
                     // letter resolved in the fresh frame above, the ambient
                     // tonic for a degree-opened body — captured before the
                     // body runs (a mid-body key change must not move it).
-                    int? anchorStep = LilySharp.Core.Music.PhraseAnchor.AnchorStep(phraseBody,
-                        n => _phraseBodies!.TryGetValue(n, out var b) ? b : null);
+                    int? anchorStep = LilySharp.Core.Music.PhraseAnchor.Anchor(phraseBody,
+                        n => _phraseBodies!.TryGetValue(n, out var b) ? b : null, out var anchorShape);
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Tonic)
                         anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+                    // A body opening with a chord(…) item: its lowest note, absolute.
+                    var shapeAnchor = anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape
+                        ? ShapeAnchorOf(anchorShape) : null;
+                    if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape)
+                        anchorStep = null;
                     ProcessNode(phraseBody, track, conductorTrack);
                     _currentTransposeSemitones = savedTranspose;
                     _partAbsoluteBase = savedAbsBase;
@@ -832,7 +837,12 @@ public sealed class MidiExporter
                     // own marks shift what propagates, so a note after Melody'
                     // is relative to the shifted anchor. A pitchless body hands
                     // nothing off.
-                    if (anchorStep is { } astep)
+                    if (shapeAnchor is { } sa)
+                    {
+                        _currentNoteName = sa.Step;
+                        _currentOctave = sa.Octave;
+                    }
+                    else if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
                             0, _partOctaveAnchor + varRef.OctaveOffset, astep, 0);
@@ -2373,6 +2383,22 @@ public sealed class MidiExporter
         return WrittenToMidi(step, pitch.AccidentalOffset, octave);
     }
 
+    /// <summary>A <c>chord(…)</c> item's strings on the current part's tuning, as written — the
+    /// page's reading (Music.ShapeChords); the capo raises the strings (2026-09-29).</summary>
+    private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
+    {
+        var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
+        return Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
+            header.SoundingShiftSemitones - Capo, _keySharps);
+    }
+
+    /// <summary>A phrase's outgoing anchor when its body opens with a <c>chord(…)</c> item
+    /// (<see cref="Music.PhraseAnchor.Shape"/>): the item's lowest note as written, as
+    /// (step, octave) — the page's MeasureCollector.EnterPhraseTranspose; null when the part's
+    /// tuning has no shape for it.</summary>
+    private (int Step, int Octave)? ShapeAnchorOf(ChordSyntax? shape)
+        => shape != null && Music.ShapeChords.Lowest(ShapeNotesOf(shape)) is { } low ? (low.Step, low.Octave) : null;
+
     private void ProcessChord(ChordSyntax chord, MidiTrack track, int extraOctave = 0)
     {
         // A chord is ONE onset: a tie arriving here extends every member the previous
@@ -2464,9 +2490,7 @@ public sealed class MidiExporter
         Music.ShapeNote? shapeLowest = null;
         if (chord.IsShapeChord)
         {
-            var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
-            var shapeNotes = Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
-                header.SoundingShiftSemitones - Capo, _keySharps);   // the capo raises the strings (2026-09-29)
+            var shapeNotes = ShapeNotesOf(chord);
             shapeLowest = Music.ShapeChords.Lowest(shapeNotes);
             foreach (var sn in shapeNotes)
             {
@@ -2763,7 +2787,7 @@ public sealed class MidiExporter
         // ⚠️ ALLOCATED ONLY IF A REFERENCE IS ACTUALLY WRITTEN: a grace body naming a phrase
         // is rare (2 books in the whole 1754-book sweep), and this method runs once per grace
         // in the piece.
-        Stack<(int Transpose, int AbsBase, int? Anchor, int Offset)>? phraseFrames = null;
+        Stack<(int Transpose, int AbsBase, int? Anchor, int Offset, (int Step, int Octave)? ShapeAnchor)>? phraseFrames = null;
 
         foreach (var (item, _) in Semantics.GraceBodySupport.BodyElements(
                      grace,
@@ -2788,9 +2812,12 @@ public sealed class MidiExporter
                     // one answer.
                     int? anchor = reset.AnchorStep == Music.PhraseAnchor.Tonic
                         ? (_ambientTonic.Valid ? _ambientTonic.Step : 0)
+                        : reset.AnchorStep == Music.PhraseAnchor.Shape ? null
                         : reset.AnchorStep;
+                    var shapeAnchor = reset.AnchorStep == Music.PhraseAnchor.Shape
+                        ? ShapeAnchorOf(reset.AnchorShape) : null;
                     (phraseFrames ??= new()).Push((_currentTransposeSemitones,
-                        _partAbsoluteBase, anchor, reset.OctaveOffset));
+                        _partAbsoluteBase, anchor, reset.OctaveOffset, shapeAnchor));
                     _currentNoteName = 0;
                     _currentOctave = _partOctaveAnchor + reset.OctaveOffset;
                     _currentTransposeSemitones += PhraseTransposeSemitones();
@@ -2814,13 +2841,18 @@ public sealed class MidiExporter
                     // disagreeing about a malformed book.
                     if (phraseFrames is not { Count: > 0 })
                         break;
-                    var (savedTranspose, savedAbsBase, anchor, offset) = phraseFrames.Pop();
+                    var (savedTranspose, savedAbsBase, anchor, offset, shapeAnchor) = phraseFrames.Pop();
                     _currentTransposeSemitones = savedTranspose;
                     _partAbsoluteBase = savedAbsBase;
                     // The reference hands the chain back at its ANCHOR — one item, the chord
                     // rule — so a grace note written after it reads the frame it would read
                     // after one in the main stream. A pitchless body hands nothing off.
-                    if (anchor is { } astep)
+                    if (shapeAnchor is { } sa)
+                    {
+                        _currentNoteName = sa.Step;
+                        _currentOctave = sa.Octave;
+                    }
+                    else if (anchor is { } astep)
                     {
                         _currentNoteName = astep;
                         _currentOctave = RelativeOctave.Resolve(
@@ -2904,9 +2936,7 @@ public sealed class MidiExporter
                     Music.ShapeNote? graceLowest = null;
                     if (chord.IsShapeChord)
                     {
-                        var header = _currentPart != null ? Header(_currentPart) : Semantics.PartHeaderDefaults.Empty;
-                        var shapeNotes = Music.ShapeChords.Notes(chord, Music.ShapeChords.TuningOf(header),
-                            header.SoundingShiftSemitones - Capo, _keySharps);
+                        var shapeNotes = ShapeNotesOf(chord);
                         graceLowest = Music.ShapeChords.Lowest(shapeNotes);
                         foreach (var sn in shapeNotes)
                             track.Notes.Add(new MidiNote(track.Channel,

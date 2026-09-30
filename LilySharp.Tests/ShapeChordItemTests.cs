@@ -284,6 +284,37 @@ public class ShapeChordItemTests
         Assert.Equal(("D", "4"), (last.Groups[1].Value, last.Groups[2].Value));
     }
 
+    /// <summary>Owner's decision 2026-09-30: a phrase whose body OPENS with the item hands on the
+    /// item's lowest note as written — what the item itself hands on — and the reference's marks
+    /// do not move it (the item is absolute). Until then the anchor walk found no root on the
+    /// item and anchored on the body's NEXT note, so editing the phrase's second bar moved the
+    /// note after every reference (a' → G3, e' → G4).</summary>
+    [Fact]
+    public void APhraseOpeningWithTheItem_HandsOnTheItemsLowestNote()
+    {
+        static string Song(string second, string reference = "P")
+            => Book("instrument guitar", $"g''1 | {reference} | g1 |",
+                top: $"phrase P {{ chord(C x32013)1 | {second} | }}");
+        static (string Page, int Midi, string Xml) After(string book)
+        {
+            var tree = SyntaxTree.Parse(book);
+            var xml = Regex.Matches(new MusicXmlExporter().Export(tree).ToXml().ToString(),
+                @"<step>(\w)</step>\s*<octave>(\d)</octave>").Last();
+            return ((ResolvedPitches.ForFile(tree) ?? [])[^1].Pitch, MidiPitches(book)[^1],
+                xml.Groups[1].Value + xml.Groups[2].Value);
+        }
+        // The item's lowest note is written C4 on a guitar part: g reads G3 (sounding G2, 43).
+        foreach (string second in new[] { "a'1", "e'1", "f''1", "r1" })
+            Assert.Equal(("G3", 43, "G3"), After(Song(second)));
+        Assert.Equal(("G3", 43, "G3"), After(Song("e'1", "P'")));
+        Assert.Equal(("G3", 43, "G3"), After(Song("e'1", "P,")));
+        // A grace body naming such a phrase hands the same note on to the grace after it.
+        string grace = Book("instrument guitar", "g''1 | grace { Q g16 } c1 |",
+            top: "phrase Q { chord(C x32013)16 e'16 }");
+        int[] played = MidiPitches(grace);
+        Assert.Equal(43, played[^2]);
+    }
+
     // ================================================================ strings and the tab
 
     [Fact]

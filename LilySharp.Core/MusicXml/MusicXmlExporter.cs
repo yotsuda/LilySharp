@@ -2049,10 +2049,15 @@ public sealed class MusicXmlExporter
                     // letter resolved in the fresh frame above, the ambient
                     // tonic for a degree-opened body — captured before the
                     // body runs (a mid-body key change must not move it).
-                    int? anchorStep = LilySharp.Core.Music.PhraseAnchor.AnchorStep(varBody,
-                        n => _variables.TryGetValue(n, out var b) ? b : null);
+                    int? anchorStep = LilySharp.Core.Music.PhraseAnchor.Anchor(varBody,
+                        n => _variables.TryGetValue(n, out var b) ? b : null, out var anchorShape);
                     if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Tonic)
                         anchorStep = _ambientTonic.Valid ? _ambientTonic.Step : 0;
+                    // A body opening with a chord(…) item: its lowest note, absolute.
+                    var shapeAnchor = anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape
+                        ? ShapeAnchorOf(anchorShape) : null;
+                    if (anchorStep == LilySharp.Core.Music.PhraseAnchor.Shape)
+                        anchorStep = null;
                     ProcessNode(varBody);
                     _currentTranspose = savedTranspose;
                     _octaveAnchor = savedAnchor;
@@ -2062,7 +2067,12 @@ public sealed class MusicXmlExporter
                     // own marks shift what propagates, so a note after Melody'
                     // is relative to the shifted anchor. A pitchless body hands
                     // nothing off.
-                    if (anchorStep is { } astep)
+                    if (shapeAnchor is { } sa)
+                    {
+                        _currentStep = sa.Step;
+                        _currentOctave = sa.Octave;
+                    }
+                    else if (anchorStep is { } astep)
                     {
                         int oct = RelativeOctave.Resolve(
                             0, _partAnchorOctave + _sectionOctaveOffset + varRef.OctaveOffset,
@@ -3179,6 +3189,19 @@ public sealed class MusicXmlExporter
         return ApplyTranspose(pitch, step, alter, targetOctave);
     }
 
+    /// <summary>A <c>chord(…)</c> item's strings on the part's tuning (Music.ShapeChords — the
+    /// page's reading); the capo raises the strings (2026-09-29).</summary>
+    private System.Collections.Immutable.ImmutableArray<Music.ShapeNote> ShapeNotesOf(ChordSyntax chord)
+        => Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
+            _partTransposeSemitones - DiagramCapo, _keyFifths);
+
+    /// <summary>A phrase's outgoing anchor when its body opens with a <c>chord(…)</c> item
+    /// (<see cref="Music.PhraseAnchor.Shape"/>): the item's lowest note as written, as
+    /// (step, octave) — the page's MeasureCollector.EnterPhraseTranspose; null when the part's
+    /// tuning has no shape for it.</summary>
+    private (int Step, int Octave)? ShapeAnchorOf(ChordSyntax? shape)
+        => shape != null && Music.ShapeChords.Lowest(ShapeNotesOf(shape)) is { } low ? (low.Step, low.Octave) : null;
+
     private void ProcessChord(ChordSyntax chord, int extraOctave = 0)
     {
         if (_currentMeasure == null) return;
@@ -3189,10 +3212,7 @@ public sealed class MusicXmlExporter
         // chord(SYMBOL SHAPE): the shape's strings on the part's tuning (Music.ShapeChords —
         // the page's reading), each with its <technical><string>. No usable shape: a rest-
         // shaped silence keeps the time (the page's spacer, LYS1040).
-        var shapeNotes = chord.IsShapeChord
-            ? Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-                _partTransposeSemitones - DiagramCapo, _keyFifths)   // the capo raises the strings (2026-09-29)
-            : [];
+        var shapeNotes = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
         if (chord.IsShapeChord && shapeNotes.IsEmpty)
         {
             var spacerDuration = GetDuration(chord.Duration);
@@ -3750,7 +3770,7 @@ public sealed class MusicXmlExporter
         // ⚠️ ALLOCATED ONLY IF A REFERENCE IS ACTUALLY WRITTEN: a grace body naming a phrase
         // is rare (2 books in the whole 1754-book sweep) and this runs once per grace.
         Stack<((int step, int alt, int oct)? Transpose, int Anchor,
-            int? AnchorStep, int Offset)>? phraseFrames = null;
+            int? AnchorStep, int Offset, (int Step, int Octave)? ShapeAnchor)>? phraseFrames = null;
         // The one slur a grace group carries: a `(` on its LAST element, closed on the main
         // note (`grace { d16( } e4)`) — the page engraves no other (LYS4020). A `(` followed
         // by another grace element is not that slur, so the next element clears it. Until
@@ -3778,9 +3798,12 @@ public sealed class MusicXmlExporter
                 {
                     int? anchorStep = reset.AnchorStep == Music.PhraseAnchor.Tonic
                         ? (_ambientTonic.Valid ? _ambientTonic.Step : 0)
+                        : reset.AnchorStep == Music.PhraseAnchor.Shape ? null
                         : reset.AnchorStep;
+                    var shapeAnchor = reset.AnchorStep == Music.PhraseAnchor.Shape
+                        ? ShapeAnchorOf(reset.AnchorShape) : null;
                     (phraseFrames ??= new()).Push((_currentTranspose, _octaveAnchor,
-                        anchorStep, reset.OctaveOffset));
+                        anchorStep, reset.OctaveOffset, shapeAnchor));
                     // Section shift included, like the reference arm above.
                     _currentOctave = _partAnchorOctave + _sectionOctaveOffset + reset.OctaveOffset;
                     _currentStep = 0;
@@ -3803,12 +3826,17 @@ public sealed class MusicXmlExporter
                     // the same `Count > 0`.
                     if (phraseFrames is not { Count: > 0 })
                         break;
-                    var (savedTranspose, savedAnchor, anchorStep, offset) = phraseFrames.Pop();
+                    var (savedTranspose, savedAnchor, anchorStep, offset, shapeAnchor) = phraseFrames.Pop();
                     _currentTranspose = savedTranspose;
                     _octaveAnchor = savedAnchor;
                     // Hand-off at the phrase's ANCHOR — the reference is ONE item, the chord
                     // rule, so its interior never leaks into what follows.
-                    if (anchorStep is { } astep)
+                    if (shapeAnchor is { } sa)
+                    {
+                        _currentStep = sa.Step;
+                        _currentOctave = sa.Octave;
+                    }
+                    else if (anchorStep is { } astep)
                     {
                         _currentStep = astep;
                         _currentOctave = RelativeOctave.Resolve(
@@ -3957,10 +3985,7 @@ public sealed class MusicXmlExporter
                         firstMember = false;
                     }
                     // A chord(…) item in a grace body: its strings, as ProcessChord writes them.
-                    var graceShape = chord.IsShapeChord
-                        ? Music.ShapeChords.Notes(chord, _partFrettedTuning ?? TuningType.Guitar,
-                            _partTransposeSemitones - DiagramCapo, _keyFifths)
-                        : [];
+                    var graceShape = chord.IsShapeChord ? ShapeNotesOf(chord) : [];
                     foreach (var sn in Music.ShapeChords.Ascending(graceShape))
                     {
                         var (sstep, salter, soctave) = ApplyWrittenTransforms(sn.Step, sn.Alter, sn.Octave);

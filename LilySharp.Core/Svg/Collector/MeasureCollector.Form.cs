@@ -1470,10 +1470,10 @@ public sealed partial class MeasureCollector
         // so a note after the reference does not depend on how the body ends.
         // Trailing marks on the reference (Chorus' / Chorus,) shift that fresh
         // frame, and shift the outgoing anchor with them.
-        musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset,
-            Music.PhraseAnchor.AnchorStep(expression,
-                n => _variables.TryGetValue(n, out var nested) ? nested : null),
-            callSite?.Span, name)));
+        int? anchorStep = Music.PhraseAnchor.Anchor(expression,
+            n => _variables.TryGetValue(n, out var nested) ? nested : null, out var anchorShape);
+        musicNodes.Add(new GreenSite(RelativeResetMarker.For(octaveOffset, anchorStep,
+            callSite?.Span, name, anchorShape)));
 
         // A phrase body may itself reference other phrases (phrase x { y }): expand a
         // nested reference IN PLACE — recursing into its own fresh frame — instead of

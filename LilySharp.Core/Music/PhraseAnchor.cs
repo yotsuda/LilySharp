@@ -34,17 +34,34 @@ internal static class PhraseAnchor
     /// the AMBIENT tonic at the reference site (it may differ per call site).</summary>
     public const int Tonic = -1;
 
+    /// <summary>Sentinel step for a body that opens with a chord from a shape
+    /// (<c>chord(C x32010)</c>): the anchor is that item's LOWEST sounding note as written —
+    /// the note the item itself hands on (owner's decision 2026-09-28) — which only the
+    /// caller can compute (the part's tuning, the capo, the key). It is absolute: the
+    /// reference's own marks do not move it, as they do not move the item (owner's decision
+    /// 2026-09-30). The item is <see cref="Anchor"/>'s <c>shape</c>.</summary>
+    public const int Shape = -2;
+
     /// <summary>
     /// The written step (0 = c … 6 = b) of <paramref name="body"/>'s anchor,
     /// <see cref="Tonic"/> when the first pitched element is degree-anchored
-    /// (<c>&lt;1 3 5&gt;</c>), or null for a pitchless body (rests / drums only).
+    /// (<c>&lt;1 3 5&gt;</c>), <see cref="Shape"/> when it is a chord from a shape, or null
+    /// for a pitchless body (rests / drums only).
     /// <paramref name="resolveReference"/> maps a nested reference's name to its
     /// body (null when unknown); recursion is depth-capped.
     /// </summary>
     public static int? AnchorStep(SyntaxNode body, Func<string, SyntaxNode?> resolveReference)
-        => Walk(body, resolveReference, depth: 0);
+        => Anchor(body, resolveReference, out _);
 
-    private static int? Walk(SyntaxNode node, Func<string, SyntaxNode?> resolve, int depth)
+    /// <summary><see cref="AnchorStep"/>, with the chord from a shape the anchor is read from
+    /// when it is <see cref="Shape"/> (null otherwise).</summary>
+    public static int? Anchor(SyntaxNode body, Func<string, SyntaxNode?> resolveReference, out ChordSyntax? shape)
+    {
+        shape = null;
+        return Walk(body, resolveReference, depth: 0, ref shape);
+    }
+
+    private static int? Walk(SyntaxNode node, Func<string, SyntaxNode?> resolve, int depth, ref ChordSyntax? shape)
     {
         switch (node)
         {
@@ -53,6 +70,13 @@ internal static class PhraseAnchor
 
             case PitchSyntax p:
                 return StepOf(p);
+
+            // A chord from a shape anchors on its lowest sounding note (see Shape). Until
+            // 2026-09-30 it fell to the arm below, which found no root and anchored nothing,
+            // so the scan went on to the NEXT note of the body — the interior leaked.
+            case ChordSyntax { IsShapeChord: true } sc:
+                shape = sc;
+                return Shape;
 
             // A chord anchors on its root letter — or the tonic when it opens
             // with degrees (an all-degree chord; `<1 3 g>` is rejected upstream).
@@ -63,6 +87,11 @@ internal static class PhraseAnchor
             // A `q` anchors like the chord it repeats (an unresolvable one —
             // no chord before it — anchors nothing and the scan continues).
             case ChordRepetitionSyntax q:
+                if (ChordRepetitions.OriginalOf(q) is { IsShapeChord: true } shapeOrig)
+                {
+                    shape = shapeOrig;
+                    return Shape;
+                }
                 return ChordRepetitions.OriginalOf(q) is { } orig
                     ? (orig.Root is { } qr ? StepOf(qr) : orig.Degrees.Any() ? Tonic : null)
                     : null;
@@ -94,14 +123,14 @@ internal static class PhraseAnchor
             // phrase's anchor.
             case VariableReferenceSyntax v when depth < 16:
                 return resolve(v.Name.Text) is { } nested
-                    ? Walk(nested, resolve, depth + 1)
+                    ? Walk(nested, resolve, depth + 1, ref shape)
                     : null;
 
             default:
                 for (int i = 0; i < node.SlotCount; i++)
                 {
                     if (node.GetChild(i) is { } child && child is not SyntaxTokenNode
-                        && Walk(child, resolve, depth) is { } found)
+                        && Walk(child, resolve, depth, ref shape) is { } found)
                         return found;
                 }
                 return null;

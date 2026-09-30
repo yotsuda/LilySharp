@@ -78,7 +78,7 @@ public sealed partial class MeasureCollector
                     if (reset.PhraseName is { } opened)
                         _openPhrases.Add(opened);
                     EnterDefaultFrame(reset.OctaveOffset);
-                    EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
+                    EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
                     // ⚠️ ENTERING A PHRASE BODY TOUCHES THE BOUNDARY NOT AT ALL (owner's
                     // decision, 2026-08-28). It used to re-arm it, so a `|` at the body's
                     // head was absorbed — which would now mean that extracting a section

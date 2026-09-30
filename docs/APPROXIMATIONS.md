@@ -247,8 +247,8 @@
 - **:107** LILYSHARP-OWN: the preview synth is Lily#'s own nine-waveform approximation, so this is a
 ### `LilySharp.Core/Midi/MidiExporter.cs`
 - **:505** LILYSHARP-OWN: LilyPond's performer gives each staff its own channel in the same way
-- **:1261** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
-- **:2713** previous written duration), so this is LILYSHARP-OWN and Lily# used to
+- **:1271** LILYSHARP-OWN (owner decision 2026-09-25, HANDOFF §1.1 第625): LilyPond engraves a
+- **:2737** previous written duration), so this is LILYSHARP-OWN and Lily# used to
 ### `LilySharp.Core/Music/ChordRepetitions.cs`
 - **:69** LILYSHARP-OWN: LilyPond's q takes no marks, so there is nothing to port.
 ### `LilySharp.Core/Music/ChordShapes.cs`
@@ -267,7 +267,7 @@
 - **:83** LILYSHARP-OWN: LilyPond has no chord-from-a-shape item.
 ### `LilySharp.Core/MusicXml/MusicXmlExporter.cs`
 - **:497** LILYSHARP-OWN: a stop on a note the tied note does not PRINT before (the first note of
-- **:4619** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
+- **:4644** LILYSHARP-OWN: LilyPond's ChordNames context is engraved and exports nothing; MusicXML's
 ### `LilySharp.Core/Parser/Parser.Music.cs`
 - **:452** its '>': q' repeats the chord an octave up. LILYSHARP-OWN — LilyPond's q
 - **:735** LILYSHARP-OWN: LilyPond writes such a chord out note by note.
@@ -323,7 +323,7 @@
 - **:901** ⚠️ LILYSHARP-OWN: on a multi-measure rest (`R1*4@text("tacet")`, and the
 ### `LilySharp.Core/Svg/Collector/MeasureCollector.cs`
 - **:2804** LILYSHARP-OWN: no LilyPond counterpart — LilyPond itself hangs on the
-- **:5207** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
+- **:5215** voice last wrote. An undurated grace opens at an eighth — LILYSHARP-OWN, not a
 ### `LilySharp.Core/Svg/Collector/MidBarBreaks.cs`
 - **:71** a voice whose item sounds ACROSS the offset (LILYSHARP-OWN: LilyPond breaks under the
 ### `LilySharp.Core/Svg/Collector/RenderSpec.cs`

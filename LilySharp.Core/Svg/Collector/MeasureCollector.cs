@@ -3040,7 +3040,7 @@ public sealed partial class MeasureCollector
     /// it. The phrase shift composes UNDER any part/score transpose (the written
     /// pitch moves home→ambient first, then the instrument transpose applies).
     /// </summary>
-    private void EnterPhraseTranspose(int? anchorStep = null, int octaveOffset = 0)
+    private void EnterPhraseTranspose(int? anchorStep = null, int octaveOffset = 0, ChordSyntax? anchorShape = null)
     {
         var saved = _octave.GetTranspose();
         _phraseTransposeSaves.Push(saved);
@@ -3059,7 +3059,15 @@ public sealed partial class MeasureCollector
         // resolution of the body's first pitched element — or the AMBIENT tonic
         // for a degree-opened body — exactly what a chord root would propagate.
         (char Name, int Octave)? anchor = null;
-        if (anchorStep is { } astep)
+        if (anchorStep == Music.PhraseAnchor.Shape)
+        {
+            // A body opening with a chord from a shape: its lowest sounding note as written,
+            // the note the item itself hands on — absolute, so the marks do not move it
+            // (owner's decision 2026-09-30). No shape on this part's tuning: nothing.
+            if (anchorShape != null && Music.ShapeChords.Lowest(ShapeNotesOf(anchorShape)) is { } low)
+                anchor = ("cdefgab"[low.Step], low.Octave);
+        }
+        else if (anchorStep is { } astep)
         {
             int step = astep == Music.PhraseAnchor.Tonic
                 ? (_ambientTonicValid ? _ambientTonicStep : 0)
@@ -3379,7 +3387,7 @@ public sealed partial class MeasureCollector
                         if (reset.PhraseName is { } opened)
                             _openPhrases.Add(opened);
                         EnterDefaultFrame(reset.OctaveOffset);
-                        EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset);
+                        EnterPhraseTranspose(reset.AnchorStep, reset.OctaveOffset, reset.AnchorShape);
                         continue;
                     }
 

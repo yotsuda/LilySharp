@@ -310,6 +310,7 @@ chord(C xx-10-12-13-12)4.~  // frets 10-15 in the dash form
   part, treble_8, an octave up). ABSOLUTE: the frame, `octave absolute` and marks do not move
   it; marks after `)` are an error (LYS0035).
 - The note AFTER it is read from its LOWEST sounding note (relative mode).
+  A phrase whose body opens with it hands the same note on after its reference.
 - Chord tones are spelled from the symbol (Cm7 → E♭ B♭); every note carries its string
   number (a tab shows the shape). It draws no name/diagram itself.
 - `chord` is reserved in music: a phrase cannot be named it.

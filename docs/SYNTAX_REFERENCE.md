@@ -90,7 +90,9 @@ and duration — regardless of where the phrase is referenced, so a phrase
 always means the same notes at every call site. What flows out is the
 phrase's **anchor** — its first note's bare letter, shifted with the
 reference's own marks — exactly like a chord: a note written after the
-reference is relative to that anchor, never to how the body ends.
+reference is relative to that anchor, never to how the body ends. A body that opens
+with a `chord(…)` item anchors on the item's lowest note, as the item itself hands on —
+absolute, so the reference's marks do not move it.
 **Section boundaries** also reset the frame.
 
 ## Durations
@@ -2135,7 +2137,9 @@ chord(x32010)2@chord             // no symbol: the shape alone gives the notes; 
 - **Absolute.** Octave marks, the relative frame and `octave absolute` do not move the item;
   marks after its `)` are an error (LYS0035) and ignored — write a shape higher on the neck.
 - **The frame after it** is its LOWEST sounding note (as a `<…>` chord hands on its anchor): in
-  relative mode the next note is read from it; absolute mode changes nothing.
+  relative mode the next note is read from it; absolute mode changes nothing. A phrase that
+  opens with the item hands the same note on after its reference (not moved by the
+  reference's marks).
 - **Spelling:** a note that is a tone of the symbol (or its slash bass) is spelled as the chord
   spells it — Cm7's E♭ and B♭, never D♯ and A♯; any other note in the key.
 - **String numbers:** every note carries its string, so a `tab` of the part shows exactly the
