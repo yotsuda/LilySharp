@@ -278,6 +278,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **Ornaments and a few articulations sit where LilyPond puts them.** A script was set off its
+  note by one fixed box — and every ornament by the same stand-in box — so a mordent stood
+  about a sixth of a staff space too low, and a turn or trill a few hundredths. A script now
+  clears the note head over the head's width and the stem across its whole width by its own
+  outline, as LilyPond does.
 - **Tab fret numbers are a little smaller.** The default is now 2.8 (it was 3.0): at 3.0 a
   number stood heavier than the note heads above it and all but touched the neighbouring
   strings. It is still larger than LilyPond's. `fonts { tab size 3 }` brings the old size back

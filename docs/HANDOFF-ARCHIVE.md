@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第693セッションの経緯
+
+### 1.1 第693セッション（2026-09-30・YT-DELL2）
+
+新しい会話・HANDOFF から着手。★ `-Start p693`（HEAD `375db6a4`・未 push 64）＝full **10346 / 0 / 2 / 10348**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本は改行だけ（中身の差 0・9/29 の生成物）＝触らない。
+⑴ §1.0 ⒜「小節線の直後の低い音に臨時記号があると LP より 1.150 広い」に着手。**原因＝小節線 → 音の最小（LP は `Paper_column::minimum_distance`＝スカイライン）を Lily# は X だけ（`GetBarlineToItemMinimum + CalculateLeftExtent`）で測っていた**。LP の小節線の箱は五線＋隣へ最大 1.01（`account-for-span-bar`）なので、F#3 のシャープ（y = −5 の周り）は箱の下をくぐり、当たるのは加線まで伸びた符頭の箱（`include-ledger-line-height`・padding 0.08）＝LP は `| fis,` を `| f,` と同じ間隔に置く。双子 39 冊（Lab `sessions/p693/bl`・`bl2`・計器は `p647/bows` の bowdump＋`p693/gaps.ps1`）で修正前の差は 3 族: 低いシャープ +1.150・低い ♭（ees, des,）+0.970・五線上のシャープ（cis''' dis''' fis'''）+1.036。gis, aes, bes, と五線内は両側とも箱に届く。段頭（拍子 → 最初の音・`bl3`）は元から一致。
+★ `b1645317`＝`SpacingRules.BarlineToColumnMinimum`（`NoteColumnToBarlineFloorPair` の鏡・同じ `ItemSkylineFactory` の view）。39 冊すべて符頭ごとに一致。網 `BarlineToColumnMinimumTests` 9（LP の間隔）・毒 2 本（旧式に戻す→くぐる 4 本赤／箱を伸ばさない→gis, aes, の 2 本赤）。掃き（998 冊・Lab `sessions/p693/sweep`）: 12 冊が動き、双子の段ごとの符頭間隔で測れるものは全部 LP へ（tie-lv 0.940→0・glissando-accidental 2.443→0・Are You Gonna Go My Way 0.463→0・Smooth Operator 40.96→39.37 ほか・`sessions/p693/moved`・`gapsum2.ps1`）。snapshot 2 枚（`test/cue-accidentals`＝第691 の残り 1 本・`test/transpose`）をユーザー承認で再ベース。full **10355 / 0 / 2 / 10357**。値段（実コーパス 332 冊・1 回ずつ）: 新経路 89,581 回（音 → 音の対 877,845 に対し）・スカイライン建築 736,078 → 772,146（+4.9%）。
+⚠ 射程: 箱は「この列」の高さだけで伸ばす（LP は両隣・鏡と同じ・網なし）／調号・拍子の変わり目の枝は X のまま（§1.0 ⒜）。
+★ `-End p693 -DiffBase 375db6a4`＝full **10355 / 0 / 2 / 10357**（run4.trx）・門 6 つ全 OK（HANDOFF 残り約 8 KB・§1 現在便 約 8,900 字）・Core `+` 76 行に REF 4／OWN 0。7.6: ⒝（LP 由来・字面でない＝LP は列の skyline を持ち、Lily# は小節線の箱をその場で建てる。鏡と同じ形）。7.7: 2 つ目の綴り＝変わり目の枝（上の射程）・`!IsMusicalColumn` の X だけの腕は既存のまま。push はユーザー。
+
 ## 以下は第692セッションの経緯
 
 ### 1.1 第692セッション（2026-09-30・YT-DELL2）

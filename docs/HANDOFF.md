@@ -82,7 +82,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴＝phrase のアンカー・ホバーの綴り・`<< >>` の中／表の中で補完が layout のキーを勧める・TextMate は表を色付けしない（第664）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
 - **tab の LP 差（第690 起票）は第694 で全部閉じた**: turn の 0.17＝tab の Script の独自配置（`893b968b` で aligned_side に移植）／斜めの bracket の端＝`a08b91df`（make_bracket の字面・隙間も）／「beam 付き tab 符幹が 0.56 高い」「`g,4` のフレット選択」はユーザー決定の帰結＝欠陥ではない（§1.1 第694）。**tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝隙間がその分広い・書体の問題）
 - **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X（LP は列・Lily# は休符 ink 中央）／import は休符の post-event を書かず `multiple-rest` を畳まない
-- **Script のグリフの近い側の範囲が LP の輪郭でない（第694 が tab の twin で見つけた・五線も同じ）**: 装飾記号（turn ほか）は `GetGlyphBBox` の仮の箱 ±0.5（LP は輪郭＝turn 0.528）→ 0.028 低い／accent は箱（LP は輪郭）→ +0.033。`GetNearExtent` を LP の `vertical-skylines`（from-stencil）に合わせる。計器は Lab `sessions/p694/tabscript.ps1`・`scriptdump.ily`
 - **小節線 → 音の最小は第693 がスカイラインにした（`SpacingRules.BarlineToColumnMinimum`）。残る同じ量の 2 つ目の綴り**: 調号・拍子の変わり目が小節を開くときの枝（`BarlineToFirstColumnSpring` の `MusicalColumnLeftReach`）はまだ X だけ。LP と食い違う本は未発見（変わり目の後は ideal が効く・Lab `sessions/p693/bl2` q・s）。直すなら変わり目の glyph の Y extent を箱にする
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
 - ⚠️ **v0.10.0 の時期＝ユーザー判断**（site は master の push で公開され、0.9.0 の見出しの下に未リリースの機能が出る＝リリースと一緒に）／Lab の本の修正はユーザー（repeat.lys・Addicted To Love・Billie Jean・青い珊瑚礁・She Bangs・You're So Vain の警告＝§1.1 第663）／**push はユーザー**
@@ -121,6 +120,14 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 245,657 / 250,000 B・1,878 / 2,000 行**。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第695セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p695`（HEAD `227f2536`・未 push 70）＝full **10361 / 0 / 2 / 10363**（引継ぎと一致）。
+⑴ §1.0 ⒜「Script のグリフの近い側の範囲が LP の輪郭でない」（第694 起票）。五線で 14 種 × 符頭が支え／符幹が支え（Lab `sessions/p695/ns`・計器 `scriptcmp.ps1`＋`pairs.ps1`）で測ると、ずれていたのは mordent −0.173・turn/reverseTurn −0.033・trill −0.039/−0.049・staccatissimo −0.017。原因は 2 層＝装飾記号の仮の箱 ±0.5 と、支えを問わず箱の下端 1 つで測っていたこと。LP は Script の輪郭のスカイラインと支えごとのスカイラインの距離＝符頭は符頭の幅の範囲・同じ向きの符幹は全幅（Script の `add-stem-support #t`＝`set_minimum_height`）・五線は全幅。★ `200a9480`＝`SupportReach`／`NearReachOver`（既存の `ScriptSkyline`＝輪郭＋horizon-padding を支えの範囲で読む）を五線・量子化・pure tip・tab の枝に。28 変種が SVG の丸めの範囲で LP と一致・台帳 `script.stem-support.staff-to-ink-bottom` −0.001 → 0。網 `ScriptOutlineSupportTests` 10（0.002）・毒で動いた 8 本赤／一致していた 2 本は緑。snapshot 7 枚承認・掃き 10 冊（コーパス 2）すべてインクだけ。full **10371 / 0 / 2 / 10373**。⚠ 残り: tab の accent −0.017（同梱書体の数字の幅の上での輪郭の読み＝決定済みの領域）／五線の `CalculateYPosition` と tab の枝は同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。
+★ `-End p695 -DiffBase 227f2536`＝full **10371 / 0 / 2 / 10373**・門 6 つ全 OK・Core `+` 112 行に REF 9／OWN 0。7.6: ⒜（aligned_side の支えごとのスカイライン距離の字面・支えは箱〔符頭・数字〕と全幅〔符幹・五線〕で、LP の符頭／数字のスカイラインは箱で近似＝既存の HeadSupportExtent と同じ）。7.7: 残る 2 つ目の綴り＝上の一本化。CHANGELOG に 1 件。push はユーザー。
+
+## 以下は第694セッションの経緯
+
 ### 1.1 第694セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p694`（HEAD `29c9edbc`・未 push 66）＝full **10355 / 0 / 2 / 10357**（引継ぎと一致）。
@@ -130,16 +137,6 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 ⑷ 斜めの tuplet bracket: 描画が LP の `Bracket::make_bracket` でなかった（端を X だけ 0.2・隙間は一律 ±1.0）。★ `a08b91df`＝端は dz に沿って `shorten/length*dz`（`DrawnStartYUp` を足しスカイライン・ページ送りの memo 鍵も）・隙間は（数字の送り幅＋1.0）を中点から dz に沿って＋0.1。LP 双子（Lab `sessions/p694/tup`・`tup2`・計器 `tupbr.ps1`）で鉤・隙間の角が全部 LP へ（LP も鉤を −0.2746＝−0.3×dx/len に置くのを直接確認）。LP 6 桁一致の既存網 3 本は「描いた端の Y＝positions」と読んでいた＝線に沿って 0.2 戻す読みに直して緑のまま・`TabTupletBracketTests` の 0.365 は水平前提だった→ LP の式。網 `TupletBracketGapTests`・毒で 5 赤。snapshot 11 枚承認・掃き 37 冊（コーパス 19）は括弧の線だけ。
 ⑸ `46ed6e28`＝`TabConstants.FretFontSize` 3.0 → 2.8。台帳 `slur.tab.*` 6 点と bow 双子の tab 14 本が全部 LP へ（記録を更新）・テスト 2 本の `font-size="3.00"` 直書きを定数から組むように。snapshot 37 枚（ユーザー指示）・掃き 258 冊（コーパス 207）・段の数が変わったのは 4 冊で全部減る向き（everybody goes 30→29・異邦人 27→26・星になれたら 32→30・全力少年 38→37）。CHANGELOG の Fixes に 4 件。full **10361 / 0 / 2 / 10363**。
 ★ `-End p694 -DiffBase 29c9edbc`＝full **10361 / 0 / 2 / 10363**・門 6 つ全 OK・Core `+` 136 行に REF 15／OWN 0。7.6: tab の Script＝⒝（aligned_side の字面だが、支え〔符幹・数字・弦〕と Script の輪郭の X の重なりは箱で仮定＝五線の経路と同じ簡略）・tuplet の括弧＝⒜（make_bracket の字面）・数字の大きさ＝既存の OWN（批准済みの逸脱の値だけ）。7.7: 2 つ目の綴り＝五線の `CalculateYPosition` と tab の枝が同じ aligned_side を別々に書いている（五線は 5 線の直書き）＝一本化は次の島。push はユーザー。
-
-## 以下は第693セッションの経緯
-
-### 1.1 第693セッション（2026-09-30・YT-DELL2）
-
-新しい会話・HANDOFF から着手。★ `-Start p693`（HEAD `375db6a4`・未 push 64）＝full **10346 / 0 / 2 / 10348**（引継ぎと一致）。作業ツリーの `site/examples/*.lys` 20 本は改行だけ（中身の差 0・9/29 の生成物）＝触らない。
-⑴ §1.0 ⒜「小節線の直後の低い音に臨時記号があると LP より 1.150 広い」に着手。**原因＝小節線 → 音の最小（LP は `Paper_column::minimum_distance`＝スカイライン）を Lily# は X だけ（`GetBarlineToItemMinimum + CalculateLeftExtent`）で測っていた**。LP の小節線の箱は五線＋隣へ最大 1.01（`account-for-span-bar`）なので、F#3 のシャープ（y = −5 の周り）は箱の下をくぐり、当たるのは加線まで伸びた符頭の箱（`include-ledger-line-height`・padding 0.08）＝LP は `| fis,` を `| f,` と同じ間隔に置く。双子 39 冊（Lab `sessions/p693/bl`・`bl2`・計器は `p647/bows` の bowdump＋`p693/gaps.ps1`）で修正前の差は 3 族: 低いシャープ +1.150・低い ♭（ees, des,）+0.970・五線上のシャープ（cis''' dis''' fis'''）+1.036。gis, aes, bes, と五線内は両側とも箱に届く。段頭（拍子 → 最初の音・`bl3`）は元から一致。
-★ `b1645317`＝`SpacingRules.BarlineToColumnMinimum`（`NoteColumnToBarlineFloorPair` の鏡・同じ `ItemSkylineFactory` の view）。39 冊すべて符頭ごとに一致。網 `BarlineToColumnMinimumTests` 9（LP の間隔）・毒 2 本（旧式に戻す→くぐる 4 本赤／箱を伸ばさない→gis, aes, の 2 本赤）。掃き（998 冊・Lab `sessions/p693/sweep`）: 12 冊が動き、双子の段ごとの符頭間隔で測れるものは全部 LP へ（tie-lv 0.940→0・glissando-accidental 2.443→0・Are You Gonna Go My Way 0.463→0・Smooth Operator 40.96→39.37 ほか・`sessions/p693/moved`・`gapsum2.ps1`）。snapshot 2 枚（`test/cue-accidentals`＝第691 の残り 1 本・`test/transpose`）をユーザー承認で再ベース。full **10355 / 0 / 2 / 10357**。値段（実コーパス 332 冊・1 回ずつ）: 新経路 89,581 回（音 → 音の対 877,845 に対し）・スカイライン建築 736,078 → 772,146（+4.9%）。
-⚠ 射程: 箱は「この列」の高さだけで伸ばす（LP は両隣・鏡と同じ・網なし）／調号・拍子の変わり目の枝は X のまま（§1.0 ⒜）。
-★ `-End p693 -DiffBase 375db6a4`＝full **10355 / 0 / 2 / 10357**（run4.trx）・門 6 つ全 OK（HANDOFF 残り約 8 KB・§1 現在便 約 8,900 字）・Core `+` 76 行に REF 4／OWN 0。7.6: ⒝（LP 由来・字面でない＝LP は列の skyline を持ち、Lily# は小節線の箱をその場で建てる。鏡と同じ形）。7.7: 2 つ目の綴り＝変わり目の枝（上の射程）・`!IsMusicalColumn` の X だけの腕は既存のまま。push はユーザー。
 
 ## 2. 開いている作業
 
