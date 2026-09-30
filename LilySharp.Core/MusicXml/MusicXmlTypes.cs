@@ -204,6 +204,10 @@ internal sealed class MusicXmlMeasure
 
     public MusicXmlAttributes? Attributes { get; set; }
     public MusicXmlDirection? Direction { get; set; }
+
+    /// <summary>A playback tempo (quarters a minute) that prints nothing — a bare
+    /// <c>&lt;sound tempo&gt;</c> — or null.</summary>
+    public int? SoundTempo { get; set; }
     public List<MusicXmlDirection> Directions { get; } = new();
     public List<MusicXmlNote> Notes { get; } = new();
 
@@ -253,6 +257,8 @@ internal sealed class MusicXmlMeasure
         // Legacy single direction (tempo)
         if (Direction != null)
             measure.Add(Direction.ToXml());
+        if (SoundTempo is { } soundTempo)
+            measure.Add(new XElement("sound", new XAttribute("tempo", soundTempo)));
 
         // Interleave directions with notes by emitting all directions first
         foreach (var dir in Directions)
@@ -387,8 +393,20 @@ internal sealed class MusicXmlAttributes
         }
         else if (TimeBeats.HasValue && TimeBeatType.HasValue)
         {
+            // The page draws a written 4/4 as C and 2/2 as the cut C, always
+            // (GlyphMetrics.GetTimeSigWidth's glyph test); until 2026-09-30 the file said
+            // neither and a reader printed the digits (LilySharp-Omr
+            // docs/repro/musicxml-exporter-bugs.md #8).
+            string beats = TimeBeatsText ?? TimeBeats.Value.ToString();
+            string? symbol = (beats, TimeBeatType.Value) switch
+            {
+                ("4", 4) => "common",
+                ("2", 2) => "cut",
+                _ => null,
+            };
             attrs.Add(new XElement("time",
-                new XElement("beats", TimeBeatsText ?? TimeBeats.Value.ToString()),
+                symbol != null ? new XAttribute("symbol", symbol) : null,
+                new XElement("beats", beats),
                 new XElement("beat-type", TimeBeatType.Value)));
         }
 

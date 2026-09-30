@@ -320,6 +320,12 @@ workflow attaches that section to the GitHub Release verbatim.
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and
   hooks).
+- **MusicXML says what the page draws, and no more, at the head of a part.** A drum part
+  (`clef percussion`) carries no `<key>` — the page draws none, and MuseScore put the
+  piece's sharps on the drum staff. A piece that states no tempo opens with a bare
+  `<sound tempo="120">` for playback instead of a ♩ = 120 `<metronome>` the page never
+  printed. A 4/4 is written `symbol="common"` and a 2/2 `symbol="cut"`, the C the page draws
+  for them.
 - **MusicXML carries a top-level lyrics track.** `lyrics words sings vo { … }`, placed by
   the score's `lyrics words`, reached the page but not the file — only lyrics written inside
   a section or part block did. Its syllables are now `<lyric>`s on the notes the page sets

@@ -330,6 +330,7 @@ public sealed class MusicXmlExporter
         _scoreLayoutPlan = null;
         _document = new MusicXmlDocument();
         _pageModel = null;
+        _tempoStated = false;
 
         var root = tree.GetRoot();
         _root = root;
@@ -2018,6 +2019,15 @@ public sealed class MusicXmlExporter
             ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
             : _keyFifths;
 
+    /// <summary>
+    /// True while the part is on a percussion clef, which carries no key signature: the page
+    /// draws none on a drum staff (MEASURED 2026-09-30: `key d major` and `key c major` over
+    /// the same drum part render the same SVG), and a reader given one drew it — MuseScore put
+    /// ♯s on the drum staff and a ♮ on the bass drum (LilySharp-Omr
+    /// docs/repro/musicxml-exporter-bugs.md #9).
+    /// </summary>
+    private bool OnPercussionStaff => _clefSign == "percussion";
+
     private void StartNewMeasure(bool addAttributes = false)
     {
         _currentMeasure = new MusicXmlMeasure { Number = _measureNumber++ };
@@ -2031,9 +2041,9 @@ public sealed class MusicXmlExporter
                 TimeBeatsText = _timeNumeratorText,
                 TimeSenzaMisura = _timeSenzaMisura,
                 TimeBeatType = _timeDenominator,
-                KeyFifths = EffectiveKeyFifths(),
-                KeyCustom = _keyCustomXml,
-                KeyMode = _keyMode,
+                KeyFifths = OnPercussionStaff ? null : EffectiveKeyFifths(),
+                KeyCustom = OnPercussionStaff ? null : _keyCustomXml,
+                KeyMode = OnPercussionStaff ? null : _keyMode,
                 ClefSign = _clefSign,
                 ClefLine = _clefLine > 0 ? _clefLine : null,
                 ClefOctaveChange = _clefOctaveChange,
@@ -2042,7 +2052,7 @@ public sealed class MusicXmlExporter
                     : null
             };
 
-            _currentMeasure.Direction = TempoDirection();
+            SetOpeningTempo(_currentMeasure);
             RecordWrittenAttributes();
             _attributesDirty = false;
         }
@@ -2098,7 +2108,7 @@ public sealed class MusicXmlExporter
         if (attrs == null)
             _currentMeasure.Attributes = attrs = new MusicXmlAttributes { Divisions = null };
 
-        if (keyChanged)
+        if (keyChanged && !OnPercussionStaff)
         {
             attrs.KeyFifths = key.Item1;
             attrs.KeyMode = _keyMode;
@@ -2664,6 +2674,7 @@ public sealed class MusicXmlExporter
         if (value.Bpm is not int bpm)
             return;
         _tempo = bpm;
+        _tempoStated = true;
         _tempoBeatUnit = value.BeatUnit ?? 4;
         _tempoBeatDots = value.BeatDots;
         // A mid-piece tempo change emits a metronome direction at this point; the
@@ -2681,6 +2692,28 @@ public sealed class MusicXmlExporter
     /// <summary>The running tempo as a direction — the ONE place the three numbers meet.</summary>
     private MusicXmlDirection TempoDirection()
         => new() { Tempo = _tempo, TempoBeatUnit = _tempoBeatUnit, TempoBeatDots = _tempoBeatDots };
+
+    /// <summary>True once the source has stated a tempo. Until then the running
+    /// <see cref="_tempo"/> is only the playback default, which the page does not print.</summary>
+    private bool _tempoStated;
+
+    /// <summary>
+    /// A part's opening tempo: the stated one as its metronome direction, or — no tempo
+    /// stated — the playback default as a bare <c>&lt;sound tempo&gt;</c>, which sets the speed
+    /// and prints nothing.
+    /// </summary>
+    /// <remarks>
+    /// Until 2026-09-30 the default was a full direction, so every part of a piece with no
+    /// tempo opened with a ♩ = 120 the page never drew (LilySharp-Omr
+    /// docs/repro/musicxml-exporter-bugs.md #7).
+    /// </remarks>
+    private void SetOpeningTempo(MusicXmlMeasure measure)
+    {
+        if (_tempoStated)
+            measure.Direction = TempoDirection();
+        else
+            measure.SoundTempo = _tempo;
+    }
 
     private void ProcessMetadata(MetadataDeclarationSyntax metadata)
     {

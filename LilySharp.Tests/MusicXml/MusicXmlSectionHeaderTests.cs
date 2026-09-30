@@ -130,8 +130,10 @@ public class MusicXmlSectionHeaderTests
             """;
         var measures = Export(book).Parts.Single().Measures;
         Assert.Equal(2, measures.Count);
-        // B opens the piece at the file default; A's start carries its own mark.
-        Assert.Contains("<per-minute>120</per-minute>", measures[0].ToXml().ToString());
+        // B opens the piece at the file default — sounded, not printed, as the page prints no
+        // tempo there (musicxml-exporter-bugs.md #7) — and A's start carries its own mark.
+        Assert.Contains("<sound tempo=\"120\" />", measures[0].ToXml().ToString());
+        Assert.DoesNotContain("<metronome>", measures[0].ToXml().ToString());
         Assert.Contains("<per-minute>110</per-minute>", measures[1].ToXml().ToString());
 
         var opening = Export(book.Replace("form main { B A }", "form main { A B }")).Parts.Single().Measures;
