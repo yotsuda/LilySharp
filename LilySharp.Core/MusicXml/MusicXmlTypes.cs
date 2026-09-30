@@ -73,7 +73,7 @@ internal sealed class MusicXmlDocument
             string id = $"P{i + 1}";
             var scorePart = new XElement("score-part",
                 new XAttribute("id", id),
-                new XElement("part-name", part.Name ?? $"Part {i + 1}"));
+                new XElement("part-name", part.DisplayName ?? part.Name ?? $"Part {i + 1}"));
             if (part.MidiProgram is int program)
             {
                 // The sound the .mid gives the part (HANDOFF §2 F-midi): <score-instrument>
@@ -121,7 +121,12 @@ internal sealed class MusicXmlDocument
 /// </summary>
 internal sealed class MusicXmlPart
 {
+    /// <summary>The part's id in the source (<c>vo</c>) — what the exporter finds it by.</summary>
     public string? Name { get; set; }
+
+    /// <summary>The name the page labels the part's staff with (<c>part vo "Vocal"</c>,
+    /// <c>staff rh "Right"</c>), written as <c>&lt;part-name&gt;</c>; null writes the id.</summary>
+    public string? DisplayName { get; set; }
 
     /// <summary>The part's General MIDI program (0-based), written as its
     /// <c>&lt;midi-instrument&gt;</c>; null writes none.</summary>
@@ -336,6 +341,17 @@ internal sealed class MusicXmlAttributes
     /// holds a whole-measure rest (<see cref="MusicXmlNote.IsMeasureRest"/>). Null when none
     /// starts here.</summary>
     public int? MultipleRest { get; set; }
+    /// <summary>The part's staff count (<c>&lt;staves&gt;</c>) — 2 for a grand staff written as
+    /// one part — or null for one staff.</summary>
+    public int? Staves { get; set; }
+
+    /// <summary>The staff <see cref="ClefSign"/> is on in a multi-staff part (the clef's
+    /// <c>number</c>), or null on a one-staff part.</summary>
+    public int? ClefNumber { get; set; }
+
+    /// <summary>A grand staff's lower clef (<c>&lt;clef number="2"&gt;</c>), or null.</summary>
+    public (string Sign, int? Line, int? OctaveChange)? Staff2Clef { get; set; }
+
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
     /// <summary>±1 for the _8 / ^8 octave clefs (&lt;clef-octave-change&gt;).</summary>
@@ -413,6 +429,8 @@ internal sealed class MusicXmlAttributes
         // Schema order: … time*, staves?, … clef*, staff-details*, transpose*, …
         if (tab is { WithNotation: true } && first)
             attrs.Add(new XElement("staves", 2));
+        else if (Staves is { } staves)
+            attrs.Add(new XElement("staves", staves));
 
         // A TAB-only part's staff is the TAB staff throughout: its clef is the TAB clef, and a
         // notation clef change is not drawn on it. Beside a notation staff the written clef is
@@ -420,13 +438,19 @@ internal sealed class MusicXmlAttributes
         if (ClefSign != null && tab is not { WithNotation: false })
         {
             attrs.Add(new XElement("clef",
-                tab != null ? new XAttribute("number", 1) : null,
+                tab != null ? new XAttribute("number", 1)
+                    : ClefNumber is { } clefNumber ? new XAttribute("number", clefNumber) : null,
                 new XElement("sign", ClefSign),
                 ClefLine.HasValue ? new XElement("line", ClefLine.Value) : null,
                 ClefOctaveChange.HasValue
                     ? new XElement("clef-octave-change", ClefOctaveChange.Value)
                     : null));
         }
+        if (Staff2Clef is { } lower)
+            attrs.Add(new XElement("clef", new XAttribute("number", 2),
+                new XElement("sign", lower.Sign),
+                lower.Line is { } lowerLine ? new XElement("line", lowerLine) : null,
+                lower.OctaveChange is { } lowerOctave ? new XElement("clef-octave-change", lowerOctave) : null));
         if (tab != null && first)
         {
             attrs.Add(tab.Clef());
@@ -517,6 +541,10 @@ internal sealed class MusicXmlDirection
     /// <summary>A rehearsal mark's label (<c>@mark("A")</c> on a note, 2026-09-29): MusicXML's
     /// <c>&lt;rehearsal&gt;</c> direction, which is a boxed label like the page's.</summary>
     public string? Rehearsal { get; set; }
+
+    /// <summary>The rehearsal label's frame (<c>square</c>, <c>none</c>), or null for the
+    /// reader's default.</summary>
+    public string? RehearsalEnclosure { get; set; }
     /// <summary>
     /// Where the direction stands in its bar, in divisions from the bar's head (2026-09-29).
     /// The measure writes every direction at its head (<see cref="MusicXmlMeasure.ToXml"/>),
@@ -524,6 +552,9 @@ internal sealed class MusicXmlDirection
     /// until now <c>c4 d@cresc</c> opened its wedge at the bar's first beat.
     /// </summary>
     public int Offset { get; set; }
+
+    /// <summary>The staff of a multi-staff part the direction belongs to, or null.</summary>
+    public int? Staff { get; set; }
 
     public XElement ToXml()
     {
@@ -556,7 +587,9 @@ internal sealed class MusicXmlDirection
             direction.Add(new XElement("direction-type", new XElement("words", Words)));
 
         if (Rehearsal != null)
-            direction.Add(new XElement("direction-type", new XElement("rehearsal", Rehearsal)));
+            direction.Add(new XElement("direction-type", new XElement("rehearsal",
+                RehearsalEnclosure != null ? new XAttribute("enclosure", RehearsalEnclosure) : null,
+                Rehearsal)));
 
         XElement? sound = null;
         if (Tempo.HasValue)
@@ -572,9 +605,11 @@ internal sealed class MusicXmlDirection
                 System.Math.Round(value.QuarterBpm!.Value, 2).ToString(System.Globalization.CultureInfo.InvariantCulture)));
         }
 
-        // Schema order: direction-type+, offset?, …, sound?.
+        // Schema order: direction-type+, offset?, …, staff?, sound?.
         if (Offset > 0)
             direction.Add(new XElement("offset", Offset));
+        if (Staff is { } staff)
+            direction.Add(new XElement("staff", staff));
         if (sound != null)
             direction.Add(sound);
 
@@ -659,6 +694,10 @@ internal sealed class MusicXmlNote
     public bool TieStop { get; set; }
     public bool SlurStart { get; set; }
     public bool SlurStop { get; set; }
+
+    /// <summary>The slur's <c>number</c>: 1, or 2 on a grand staff's lower staff, whose slurs
+    /// run beside the upper staff's in the one part.</summary>
+    public int SlurNumber { get; set; } = 1;
 
     // Legacy property for backward compatibility
     public string? Dynamic { get; set; }
@@ -811,9 +850,9 @@ internal sealed class MusicXmlNote
 
             // Slur notations
             if (slurStart)
-                notations.Add(new XElement("slur", new XAttribute("type", "start"), new XAttribute("number", "1")));
+                notations.Add(new XElement("slur", new XAttribute("type", "start"), new XAttribute("number", SlurNumber)));
             if (slurStop)
-                notations.Add(new XElement("slur", new XAttribute("type", "stop"), new XAttribute("number", "1")));
+                notations.Add(new XElement("slur", new XAttribute("type", "stop"), new XAttribute("number", SlurNumber)));
 
             // Articulations
             if (articulations.Count > 0)

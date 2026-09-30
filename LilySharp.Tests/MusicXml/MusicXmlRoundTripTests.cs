@@ -1053,8 +1053,9 @@ public class MusicXmlRoundTripTests
     [InlineData("time 3/4", "c'2. | R2.*3@mf | tuplet 3/2 { r8 c'8 c'8 } c'2 | r2.@chord(C) | R2. | R2.*2 | c'2. |")]
     public void RestsAndTheirPostEvents_RoundTrip(string time, string music)
     {
+        // `~A`: no section label, which would come back as the first note's @mark.
         string source = $"octave absolute\n{time}\npart m {{ clef treble }}\n"
-                        + $"section A {{ m {{ {music} }} }}\nform main {{ A }}\nscore main {{ staff m }}\n";
+                        + $"section A {{ m {{ {music} }} }}\nform main {{ ~A }}\nscore main {{ staff m }}\n";
         string xml = new MusicXmlExporter().Export(SyntaxTree.Parse(source)).ToXml().ToString();
         var (lys, _) = new MusicXmlImporter().Import(xml);
         Assert.Contains(music, lys);

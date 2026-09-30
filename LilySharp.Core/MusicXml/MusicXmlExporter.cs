@@ -383,8 +383,159 @@ public sealed class MusicXmlExporter
         WriteBeams(tree, hasSections);
         WriteTab(tree);
         WriteTrackLyrics(tree);
+        if (hasSections)
+            WriteSectionLabels(tree);
+        WritePartNames();
+        MergeGrandStaves();
 
         return _document;
+    }
+
+    /// <summary>The played score's staff items, grand-staff members included, in score order.</summary>
+    private static IEnumerable<Svg.Collector.RenderItemSpec> FlatItems(IEnumerable<Svg.Collector.RenderItemSpec> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+            if (item is Svg.Collector.GrandStaffRenderSpec g)
+                foreach (var member in FlatItems(g.GrandStaff.Members))
+                    yield return member;
+        }
+    }
+
+    /// <summary>
+    /// Each part's <c>&lt;part-name&gt;</c> is the label the page gives its staff — the score's
+    /// <c>staff rh "Right"</c>, else the part's <c>part vo "Vocal"</c>, else its instrument's
+    /// (<c>StaffSpec.InstrumentName</c>, RenderSpecParser's one reading) — and the id only when
+    /// the page gives none. Until 2026-09-30 it was always the id (LilySharp-Omr
+    /// docs/repro/musicxml-exporter-bugs.md #5).
+    /// </summary>
+    private void WritePartNames()
+    {
+        if (_playedSpec == null)
+            return;
+        foreach (var item in FlatItems(_playedSpec.Items))
+        {
+            var staff = item switch
+            {
+                Svg.Collector.SingleStaffSpec s => s.Staff,
+                Svg.Collector.TabStaffSpec t => t.Staff,
+                _ => null,
+            };
+            if (staff is { InstrumentName: { } label } && _partsByName.TryGetValue(staff.VoiceName, out var part))
+                part.DisplayName ??= label;
+        }
+    }
+
+    /// <summary>
+    /// A section's label as the page draws it at the section's first bar — a boxed (or, under
+    /// <c>layout { sectionLabels plain }</c>, a bare) label, and none under <c>none</c> — as a
+    /// <c>&lt;rehearsal&gt;</c> direction on the first part's bar. The labels are the page's
+    /// own (<c>Measure.SectionLabel</c>: the section-label rule, repeats and all). Until
+    /// 2026-09-30 the file had none (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #4).
+    /// </summary>
+    private void WriteSectionLabels(SyntaxTree tree)
+    {
+        if (_playedSpec is not { } spec || Document.Parts.Count == 0)
+            return;
+        var page = PageModel(tree, spec);
+        var style = page.LayoutPlan.SectionLabels;
+        if (style == Semantics.SectionLabelStyle.None)
+            return;
+        var staff = page.StaffGroups.SelectMany(g => g.Staves).FirstOrDefault(s => !s.IsTextRow);
+        if (staff == null)
+            return;
+        var measures = Document.Parts[0].Measures;
+        var pageMeasures = staff.PrimaryVoice.Measures;
+        for (int i = 0; i < pageMeasures.Length && i < measures.Count; i++)
+            if (pageMeasures[i].SectionLabel is { Length: > 0 } label)
+                measures[i].Directions.Insert(0, new MusicXmlDirection
+                {
+                    Rehearsal = label,
+                    RehearsalEnclosure = style == Semantics.SectionLabelStyle.Plain ? "none" : "square",
+                });
+    }
+
+    /// <summary>
+    /// A <c>grandStaff { staff rh  staff lh }</c> is ONE part on two staves, as a piano part is
+    /// written: the upper part's notes on staff 1, then a <c>&lt;backup&gt;</c> and the lower
+    /// part's on staff 2 (voices 5–8, slurs numbered 2), with one <c>&lt;staves&gt;2</c> and a
+    /// numbered clef for each. Until 2026-09-30 it was two unrelated parts (LilySharp-Omr
+    /// docs/repro/musicxml-exporter-bugs.md #6); the importer splits it back
+    /// (MusicXmlReader.SplitByStaff).
+    /// </summary>
+    /// <remarks>
+    /// Only the plain piano shape is merged: a brace (<c>grandStaff</c>, not a bracket group)
+    /// holding exactly two notation staves of two different parts with the same bar count and
+    /// no tab. Anything else stays as separate parts, as before.
+    /// </remarks>
+    private void MergeGrandStaves()
+    {
+        if (_playedSpec == null)
+            return;
+        foreach (var group in FlatItems(_playedSpec.Items).OfType<Svg.Collector.GrandStaffRenderSpec>())
+        {
+            var g = group.GrandStaff;
+            if (g.Type != Svg.Model.StaffGroupType.GrandStaff || g.Members.Length != 2
+                || g.Members[0] is not Svg.Collector.SingleStaffSpec upperSpec
+                || g.Members[1] is not Svg.Collector.SingleStaffSpec lowerSpec
+                || upperSpec.Staff.VoiceName == lowerSpec.Staff.VoiceName
+                || !_partsByName.TryGetValue(upperSpec.Staff.VoiceName, out var upper)
+                || !_partsByName.TryGetValue(lowerSpec.Staff.VoiceName, out var lower)
+                || !Document.Parts.Contains(upper) || !Document.Parts.Contains(lower)
+                || upper.Tab != null || lower.Tab != null
+                || upper.Measures.Count != lower.Measures.Count || upper.Measures.Count == 0)
+                continue;
+
+            for (int i = 0; i < upper.Measures.Count; i++)
+            {
+                var u = upper.Measures[i];
+                var l = lower.Measures[i];
+                foreach (var n in u.Notes)
+                    if (n.RawElement == null && !n.IsBackup)
+                        n.Staff = 1;
+
+                if (u.Attributes != null)
+                    u.Attributes.ClefNumber = 1;
+                if (i == 0 || l.Attributes?.ClefSign != null)
+                {
+                    u.Attributes ??= new MusicXmlAttributes { Divisions = null };
+                    u.Attributes.ClefNumber = 1;
+                    if (i == 0)
+                        u.Attributes.Staves = 2;
+                    if (l.Attributes?.ClefSign is { } sign)
+                        u.Attributes.Staff2Clef = (sign, l.Attributes.ClefLine, l.Attributes.ClefOctaveChange);
+                }
+
+                foreach (var d in l.Directions)
+                {
+                    d.Staff = 2;
+                    u.Directions.Add(d);
+                }
+
+                if (l.Notes.Count == 0)
+                    continue;
+                int at = 0;
+                foreach (var n in u.Notes)
+                    if (n.RawElement == null && !n.IsChord && !n.IsGrace)
+                        at += n.IsBackup ? -n.Duration : n.Duration;
+                if (at > 0)
+                    u.Notes.Add(new MusicXmlNote { IsBackup = true, Duration = at });
+                foreach (var n in l.Notes)
+                {
+                    if (n.RawElement == null && !n.IsBackup)
+                    {
+                        n.Staff = 2;
+                        n.Voice = (n.Voice ?? 1) + 4;
+                        n.SlurNumber = 2;
+                    }
+                    u.Notes.Add(n);
+                }
+            }
+            // The one part answers to the brace's label, which may be written on either staff.
+            upper.DisplayName ??= lower.DisplayName;
+            Document.Parts.Remove(lower);
+        }
     }
 
     /// <summary>
@@ -2928,8 +3079,30 @@ public sealed class MusicXmlExporter
             NormalNotes = tupletNormal,
             Notehead = NoteheadName(info.Notehead),
         };
+        AddDrumMark(xmlNote, info);
         _currentMeasure.Notes.Add(xmlNote);
         MaybeClosePickup(duration);
+    }
+
+    /// <summary>
+    /// The mark a drum carries of itself (<see cref="DrumInfo.Mark"/>, LilyPond's style
+    /// table, which the page draws — MeasureCollector's drum walk): <c>+</c> on the closed
+    /// hi-hat and the muted hand drums as <c>&lt;technical&gt;&lt;stopped/&gt;</c>, <c>○</c> on
+    /// the open ones as <c>&lt;technical&gt;&lt;open/&gt;</c>, and the guiros' staccato / tenuto.
+    /// Until 2026-09-30 the file had neither, so <c>hho</c> and <c>hhc</c> read as one
+    /// instrument (LilySharp-Omr docs/repro/musicxml-exporter-bugs.md #10).
+    /// </summary>
+    private static void AddDrumMark(MusicXmlNote note, DrumInfo info)
+    {
+        switch (info.Mark)
+        {
+            case "open" or "stopped":
+                note.Technicals.Add(new System.Xml.Linq.XElement(info.Mark));
+                break;
+            case "staccato" or "tenuto":
+                note.Articulations.Add(info.Mark);
+                break;
+        }
     }
 
     private void ProcessNote(NoteSyntax note)
@@ -3470,7 +3643,7 @@ public sealed class MusicXmlExporter
                 int oct = 4 + (int)Math.Floor(idx / 7.0);
                 string step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString();
                 EmitPendingDynamic();
-                _currentMeasure.Notes.Add(new MusicXmlNote
+                var drumNote = new MusicXmlNote
                 {
                     IsUnpitched = true,
                     Step = step,
@@ -3481,7 +3654,9 @@ public sealed class MusicXmlExporter
                     ActualNotes = tupletActual,
                     NormalNotes = tupletNormal,
                     Notehead = NoteheadName(info.Notehead),
-                });
+                };
+                AddDrumMark(drumNote, info);
+                _currentMeasure.Notes.Add(drumNote);
                 _lastPitchedNote = null;
                 _lastEmittedNotes.Clear();
                 MaybeClosePickup(duration);

@@ -320,6 +320,17 @@ workflow attaches that section to the GitHub Release verbatim.
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and
   hooks).
+- **A MusicXML grand staff is one part.** `grandStaff { staff rh  staff lh }` was two
+  unrelated parts; it is now one part on two staves (`<staves>2`, a numbered clef each, the
+  lower hand's notes on staff 2), as a piano part is written. Importing it splits it back
+  into two parts as before. Only a plain two-staff brace of two parts is merged; other
+  groups stay separate parts.
+- **MusicXML names parts and sections as the page does.** A part's `<part-name>` is the
+  label the page gives its staff (`part vo "Vocal"`, `staff rh "Right"`) rather than its id,
+  and each section label the page draws is a `<rehearsal>` at the section's first bar
+  (framed, or unframed under `layout { sectionLabels plain }`). The open and closed hi-hat
+  (`hho`, `hhc`) and the other drums that carry a mark of their own write it too
+  (`<open/>`, `<stopped/>`).
 - **MusicXML says what the page draws, and no more, at the head of a part.** A drum part
   (`clef percussion`) carries no `<key>` — the page draws none, and MuseScore put the
   piece's sharps on the drum staff. A piece that states no tempo opens with a bare

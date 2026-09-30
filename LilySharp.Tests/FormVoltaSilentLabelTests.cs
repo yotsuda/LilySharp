@@ -191,9 +191,9 @@ public class FormVoltaSilentLabelTests
     }
 
     /// <summary>
-    /// MusicXML is INDIFFERENT to the tilde, and that is the right answer rather than a gap:
-    /// the tilde hides a section label and this exporter writes none, so the two books are
-    /// the same document.
+    /// MusicXML reads the tilde as the page does: the plain book's B label is a
+    /// <c>&lt;rehearsal&gt;</c> (the section labels are written since 2026-09-30,
+    /// musicxml-exporter-bugs.md #4) and the tilded book's is not — and NOTHING ELSE differs.
     /// </summary>
     /// <remarks>
     /// ⚠️ THIS ARM IS WHERE THE DEFECT CROSSED OVER. Until 2026-08-25 the exporter dropped
@@ -207,7 +207,14 @@ public class FormVoltaSilentLabelTests
         string Xml(string form) => new MusicXmlExporter()
             .Export(SyntaxTree.Parse(Source(form))).ToXml().ToString();
 
-        Assert.Equal(Xml("|: A [1. B :|"), Xml("|: A [1. ~B :|"));
+        var plain = System.Xml.Linq.XDocument.Parse(Xml("|: A [1. B :|"));
+        var tilded = System.Xml.Linq.XDocument.Parse(Xml("|: A [1. ~B :|"));
+        Assert.Contains(plain.Descendants("rehearsal"), r => r.Value == "B");
+        Assert.DoesNotContain(tilded.Descendants("rehearsal"), r => r.Value == "B");
+        foreach (var direction in plain.Descendants("rehearsal").Where(r => r.Value == "B")
+                     .Select(r => r.Parent!.Parent!).ToList())
+            direction.Remove();
+        Assert.Equal(plain.ToString(), tilded.ToString());
         // …and the endings are actually there, so the equality above is not two blanks.
         Assert.Contains("<ending", Xml("|: A [1. ~B :|"));
     }

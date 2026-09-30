@@ -236,14 +236,19 @@ public sealed class HalfTieEveryStaffTests
     public void MusicXml_WritesTheHalfTiesOfEveryPart(string book)
     {
         var doc = new MusicXmlExporter().Export(SyntaxTree.Parse(book));
-        Assert.Equal(2, doc.Parts.Count);
-        int LetRing(int part) => doc.Parts[part].Measures.SelectMany(m => m.Notes)
+        // Two staves are two parts; a grand staff is ONE part on two staves (since 2026-09-30,
+        // musicxml-exporter-bugs.md #6).
+        Assert.Equal(book == GrandStaff ? 1 : 2, doc.Parts.Count);
+        List<MusicXmlNote> Notes(int staff) => doc.Parts.Count == 2
+            ? doc.Parts[staff].Measures.SelectMany(m => m.Notes).ToList()
+            : doc.Parts[0].Measures.SelectMany(m => m.Notes).Where(n => n.Staff == staff + 1).ToList();
+        int LetRing(int staff) => Notes(staff)
             .Count(n => n.ExtraNotations.Any(e => e.Name.LocalName == "tied"
                 && (string?)e.Attribute("type") == "let-ring"));
         Assert.Equal(1, LetRing(0));
         Assert.Equal(1, LetRing(1));
         // lo's A opens on the note the carried tie stops on (the repeat tie's spelling).
-        var loNotes = doc.Parts[1].Measures.SelectMany(m => m.Notes).Where(n => n.Step != null).ToList();
+        var loNotes = Notes(1).Where(n => n.Step != null).ToList();
         Assert.True(loNotes[1].TieStop, "lo's first note of A carries the repeat tie's stop");
     }
 

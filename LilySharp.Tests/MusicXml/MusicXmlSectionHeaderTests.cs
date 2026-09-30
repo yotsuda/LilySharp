@@ -52,9 +52,11 @@ public class MusicXmlSectionHeaderTests
             octave absolute
             time 4/4
             section A { partial 8  melody { f'8 | g'4 a' b' c'' | } }
-            form main { A }
+            form main { ~A }
             score main { staff melody }
             """);
+        // `~A`: the section's label, which the page draws and the file writes as a rehearsal
+        // mark, is not what this compares — the inline spelling has no section to label.
 
         var inlineMeasures = inline.Parts.Single().Measures.Select(m => m.ToXml().ToString()).ToList();
         var headerMeasures = header.Parts.Single().Measures.Select(m => m.ToXml().ToString()).ToList();
