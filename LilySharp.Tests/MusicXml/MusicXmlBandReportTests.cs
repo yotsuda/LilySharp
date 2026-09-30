@@ -156,6 +156,28 @@ public class MusicXmlBandReportTests
             part.Element("measure")!.Descendants("slur").Select(s => s.Attribute("number")!.Value));
     }
 
+    /// <summary>A grand staff whose staves are labelled apart keeps both labels: two parts
+    /// under a brace part-group, not one part that could carry only one of them.</summary>
+    [Fact]
+    public void AGrandStaffLabelledApart_IsTwoPartsUnderABrace()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part rh { clef treble }
+            part lh { clef bass }
+            section A { rh { c''1 | } lh { c1 | } }
+            form main { ~A }
+            score main { grandStaff { staff rh "Right"  staff lh "Left" } }
+            """);
+        var list = doc.Descendants("part-list").Single().Elements()
+            .Select(e => e.Name == "part-group"
+                ? $"{e.Attribute("type")!.Value}:{e.Element("group-symbol")?.Value}"
+                : e.Element("part-name")!.Value);
+        Assert.Equal(new[] { "start:brace", "Right", "Left", "stop:" }, list);
+        Assert.Empty(doc.Descendants("staves"));
+    }
+
     [Theory]
     [InlineData("4/4", "common")]
     [InlineData("2/2", "cut")]

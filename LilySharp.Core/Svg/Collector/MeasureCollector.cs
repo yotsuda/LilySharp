@@ -4317,20 +4317,20 @@ public sealed partial class MeasureCollector
     /// and running an O(depth) Parent-chain guard per descendant, just to build
     /// the flat list. The green walk visits the same green node set in the same
     /// order and pays a red spine only per collected node.
-    /// ⚠️ The old guard's parent-chain walk extends ABOVE the container: a
-    /// container standing inside a processed container yielded NOTHING. The
-    /// ancestor pre-check reproduces that boundary exactly.
+    /// ⚠️ THE GATHER STOPS AT ITS CONTAINER. The old guard's parent-chain walk extended
+    /// ABOVE it, so a container standing inside a processed container yielded NOTHING,
+    /// and an ancestor pre-check kept that boundary until 2026-09-30. It was a defect,
+    /// not a rule: the processed container is the one walking its own body, and a
+    /// <c>voice { } { }</c> in a repeat's body gathered no note for either voice —
+    /// <c>repeat percent 3 { voice { … } { … } | }</c> drew its first bar empty
+    /// (LilySharp-Omr docs/repro/percent-around-voice.lys), and <c>unfold</c> lost every
+    /// pass the same way.
     /// </remarks>
     internal static IEnumerable<SyntaxNode> MusicSites(SyntaxNode container, bool includeParallel)
-    {
-        if (IsUnderProcessedContainer(container, includeParallel))
-            return [];
-        return container.GreenSites(MusicSiteRule(includeParallel));
-    }
+        => container.GreenSites(MusicSiteRule(includeParallel));
 
-    /// <summary>The old guard's boundary, as the gathers ask it of their container: a
-    /// container standing inside a processed container yields nothing (its parent-chain
-    /// walk extended ABOVE the container).</summary>
+    /// <summary>True when <paramref name="container"/> stands inside a processed container —
+    /// the one case ProcessMusicContainer keeps off its resumable (lazy) gather.</summary>
     private static bool IsUnderProcessedContainer(SyntaxNode container, bool includeParallel)
     {
         for (var p = container.Parent; p != null; p = p.Parent)
@@ -4368,11 +4368,7 @@ public sealed partial class MeasureCollector
     /// callers of the red spelling.
     /// </remarks>
     internal static IEnumerable<GreenSite> MusicSitesLazy(SyntaxNode container, bool includeParallel)
-    {
-        if (IsUnderProcessedContainer(container, includeParallel))
-            return [];
-        return container.GreenSitesLazy(MusicSiteRule(includeParallel));
-    }
+        => container.GreenSitesLazy(MusicSiteRule(includeParallel));
 
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.

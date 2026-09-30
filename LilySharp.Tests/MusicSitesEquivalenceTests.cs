@@ -28,10 +28,8 @@ namespace LilySharp.Tests;
 /// (<see cref="MeasureCollector.MusicSites"/> — HANDOFF's retired ▶ ⒭ (the incremental workstream, NOT §2 F ⒭) ⑵′): on every
 /// fixture and sample book, the finder must yield EXACTLY the node instances,
 /// in exactly the order, that the old red spelling produced —
-/// <c>DescendantNodes()</c> filtered by the ancestor guard
-/// (<see cref="MeasureCollector.IsInsideProcessedContainer"/> /
-/// <see cref="MeasureCollector.IsInsideProcessedContainerExceptParallel"/>,
-/// kept internal as this net's reference oracle) and the candidate type test.
+/// <c>DescendantNodes()</c> filtered by the ancestor guard (<see cref="MeasureCollector.IsProcessedContainer"/>
+/// up to the container — OldRedWalk's remarks) and the candidate type test.
 /// This is what pins the finder's KIND lists
 /// (IsMusicCandidateKind / IsProcessedContainerKind) to the TYPE lists the
 /// collector consumes (<see cref="MeasureCollector.IsCollectableMusicNode"/> /
@@ -130,16 +128,27 @@ public class MusicSitesEquivalenceTests
         }
     }
 
-    /// <summary>The old gather spelling, verbatim: every red descendant, the
-    /// per-descendant ancestor guard, the candidate type test (collectable
-    /// types plus variable references — what the call sites' own type
-    /// dispatches act on).</summary>
+    /// <summary>The old gather spelling: every red descendant, the per-descendant ancestor
+    /// guard, the candidate type test (collectable types plus variable references — what the
+    /// call sites' own type dispatches act on).</summary>
+    /// <remarks>
+    /// ⚠️ The guard climbs only as far as the CONTAINER (2026-09-30). The old one climbed to
+    /// the root, so a container inside a processed container — a <c>voice { } { }</c> block in
+    /// a repeat's body — gathered nothing, and the page drew that repeat's bar empty
+    /// (MeasureCollector.MusicSites' remarks).
+    /// </remarks>
     private static IEnumerable<SyntaxNode> OldRedWalk(SyntaxNode container, bool includeParallel)
         => container.DescendantNodes().Where(n =>
-            !(includeParallel
-                ? MeasureCollector.IsInsideProcessedContainer(n)
-                : MeasureCollector.IsInsideProcessedContainerExceptParallel(n))
+            !InsideProcessedContainerBelow(n, container, includeParallel)
             && (n is VariableReferenceSyntax || MeasureCollector.IsCollectableMusicNode(n)));
+
+    private static bool InsideProcessedContainerBelow(SyntaxNode node, SyntaxNode container, bool includeParallel)
+    {
+        for (var p = node.Parent; p != null && !ReferenceEquals(p, container); p = p.Parent)
+            if (MeasureCollector.IsProcessedContainer(p, includeParallel))
+                return true;
+        return false;
+    }
 
     /// <summary>
     /// The lazy production gather (<see cref="MeasureCollector.MusicSitesLazy"/>

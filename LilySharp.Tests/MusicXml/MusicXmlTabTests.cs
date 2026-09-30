@@ -95,6 +95,18 @@ public class MusicXmlTabTests
         => Assert.Equal(new[] { "s4f5", "s4f5" },
             Frets(Export("g4\\4 g4 r2 |", "tab gt"), null));
 
+    /// <summary>A grace note is fretted as the page frets it — from its own pitch and written
+    /// string: the a, before the e, is the open fifth string, and a, written \6 is its
+    /// fifth fret.</summary>
+    [Fact]
+    public void AGraceNote_IsFretted()
+    {
+        var doc = Export("grace { a,16 } e,4 grace { a,16\\6 } a,4 d g |", "tab gt");
+        var graces = doc.Descendants("note").Where(n => n.Element("grace") != null)
+            .Select(n => $"s{n.Descendants("string").Single().Value}f{n.Descendants("fret").Single().Value}");
+        Assert.Equal(new[] { "s5f0", "s6f5" }, graces);
+    }
+
     [Fact]
     public void AChordsNotesTakeOneStringEach()
     {

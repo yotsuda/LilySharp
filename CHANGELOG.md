@@ -320,11 +320,17 @@ workflow attaches that section to the GitHub Release verbatim.
   its own rule — MuseScore ran nine eighths of a 7/4 bar under one beam where the page beams
   by the beat. Each note now carries the page's beam levels (begin / continue / end and
   hooks).
+- **A repeat around `voice { } { }` draws its voices.** `repeat percent 3 { voice { … } { … } | }`
+  drew its first bar empty before the % signs, and `repeat unfold` lost both voices on
+  every pass: the music gather took nothing from a voice block standing inside a repeat.
+  A repeat written inside each voice was not affected.
 - **A MusicXML grand staff is one part.** `grandStaff { staff rh  staff lh }` was two
   unrelated parts; it is now one part on two staves (`<staves>2`, a numbered clef each, the
   lower hand's notes on staff 2), as a piano part is written. Importing it splits it back
   into two parts as before. Only a plain two-staff brace of two parts is merged; other
-  groups stay separate parts.
+  groups stay separate parts. When the two staves are labelled apart
+  (`staff rh "Right"  staff lh "Left"`), they stay two parts under a brace `<part-group>`,
+  so both labels survive.
 - **MusicXML names parts and sections as the page does.** A part's `<part-name>` is the
   label the page gives its staff (`part vo "Vocal"`, `staff rh "Right"`) rather than its id,
   and each section label the page draws is a `<rehearsal>` at the section's first bar
@@ -347,7 +353,8 @@ workflow attaches that section to the GitHub Release verbatim.
   (`<clef>` TAB, `<staff-details>` with the lines and open strings) holding the same notes
   with each one's `<string>` and `<fret>`; a part shown as `tab gt` alone is a TAB staff.
   The strings are the ones the page prints (a written `\N`, and the page's own fingering);
-  a note below the fretboard, which the page hides, has no fret. Importing such a file reads
+  a grace note is fretted as the page frets it, its written `\N` included; a note below
+  the fretboard, which the page hides, has no fret. Importing such a file reads
   the TAB staff as the copy it is, not as a second staff of music.
 - **MusicXML `repeat percent` is a complete measure repeat.** The `<measure-repeat>` start
   now sits on the first repetition and names its length (1 for `%`, 2 for `%%`), and the

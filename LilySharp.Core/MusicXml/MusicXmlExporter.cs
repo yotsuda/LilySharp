@@ -467,7 +467,9 @@ public sealed class MusicXmlExporter
     /// <remarks>
     /// Only the plain piano shape is merged: a brace (<c>grandStaff</c>, not a bracket group)
     /// holding exactly two notation staves of two different parts with the same bar count and
-    /// no tab. Anything else stays as separate parts, as before.
+    /// no tab. Anything else stays as separate parts, as before — and a pair whose staves are
+    /// labelled apart stays two parts joined by a brace <c>&lt;part-group&gt;</c>, so both
+    /// labels survive.
     /// </remarks>
     private void MergeGrandStaves()
     {
@@ -486,6 +488,19 @@ public sealed class MusicXmlExporter
                 || upper.Tab != null || lower.Tab != null
                 || upper.Measures.Count != lower.Measures.Count || upper.Measures.Count == 0)
                 continue;
+
+            // Two staves labelled apart (`staff rh "Right"  staff lh "Left"`) keep their two
+            // labels, as the page prints them: one merged part has one name, so they stay two
+            // parts under a brace — MusicXML's other spelling of a grand staff. A member of a
+            // grand staff gets no ensemble default (RenderSpecParser.ApplyEnsembleDefault), so
+            // two labels here are the writer's.
+            if (upper.DisplayName is { } upperLabel && lower.DisplayName is { } lowerLabel
+                && upperLabel != lowerLabel)
+            {
+                if (Document.Parts.IndexOf(lower) == Document.Parts.IndexOf(upper) + 1)
+                    Document.BraceGroups.Add((upper, lower));
+                continue;
+            }
 
             for (int i = 0; i < upper.Measures.Count; i++)
             {
@@ -639,6 +654,17 @@ public sealed class MusicXmlExporter
                 foreach (var printing in bySource[position].Skip(seen[position]))
                     for (int i = 0; i < printing.Count && i < drawn.Count; i++)
                         printing[i].Tab ??= drawn[i].Tab;
+
+            // A grace note is no page item: the page frets it from its own pitch and written
+            // \N alone (SharedRenderer.GraceNotes' tab digits), and so does the file.
+            foreach (var measure in part.Measures)
+                foreach (var note in measure.Notes)
+                    if (note.IsGrace && !note.IsRest && !note.IsUnpitched && note.Step != null && note.Tab == null)
+                    {
+                        int? written = note.Technicals.FirstOrDefault(t => t.Name.LocalName == "string") is { } s
+                                       && int.TryParse(s.Value, out int n) ? n : null;
+                        note.Tab = Fretted(WrittenMidi(note), written);
+                    }
 
             (int, int)? Fretted(int writtenMidi, int? stringNumber)
             {
@@ -4546,6 +4572,10 @@ public sealed class MusicXmlExporter
                         ActualNotes = tupletActual,
                         NormalNotes = tupletNormal
                     };
+                    // A grace's written \N, which the page frets it on (GraceHeadInfo.StringNumber);
+                    // until 2026-09-30 only a grace CHORD's member carried it here.
+                    foreach (var stringNumber in note.Articulations.OfType<StringNumberAnnotationSyntax>())
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("string", stringNumber.StringNumber));
 
                     _currentMeasure.Notes.Add(xmlNote);
                     (lastGrace, graceSlurOn) = (xmlNote, null);

@@ -29,6 +29,10 @@ internal sealed class MusicXmlDocument
     public string? Poet { get; set; }
     public List<MusicXmlPart> Parts { get; } = new();
 
+    /// <summary>Consecutive parts joined by a brace (<c>&lt;part-group&gt;</c>): a grand staff
+    /// whose two staves carry labels of their own, which one merged part could not keep.</summary>
+    public List<(MusicXmlPart First, MusicXmlPart Last)> BraceGroups { get; } = new();
+
     /// <summary>
     /// Converts to XML document.
     /// </summary>
@@ -71,6 +75,12 @@ internal sealed class MusicXmlDocument
         {
             var part = Parts[i];
             string id = $"P{i + 1}";
+            int group = BraceGroups.FindIndex(g => ReferenceEquals(g.First, part));
+            if (group >= 0)
+                partList.Add(new XElement("part-group",
+                    new XAttribute("type", "start"), new XAttribute("number", group + 1),
+                    new XElement("group-symbol", "brace"),
+                    new XElement("group-barline", "yes")));
             var scorePart = new XElement("score-part",
                 new XAttribute("id", id),
                 new XElement("part-name", part.DisplayName ?? part.Name ?? $"Part {i + 1}"));
@@ -91,6 +101,10 @@ internal sealed class MusicXmlDocument
                     new XElement("midi-program", program + 1)));
             }
             partList.Add(scorePart);
+            int closing = BraceGroups.FindIndex(g => ReferenceEquals(g.Last, part));
+            if (closing >= 0)
+                partList.Add(new XElement("part-group",
+                    new XAttribute("type", "stop"), new XAttribute("number", closing + 1)));
         }
         scorePartwise.Add(partList);
 
