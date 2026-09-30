@@ -63,6 +63,8 @@ All notable changes to the Lily# VS Code extension are documented here.
   listed twice and a section nothing declares are warnings at the word.
   Inside the table the completion offers the chords the file names that the table does not
   list yet, then the key's, and `section` — then the file's section names after it.
+  The table is coloured — `section NAME`, the tuning words and the shapes — and its closing
+  brace no longer ends the layout block's colours (the keys after a table used to go plain).
 - **A capo: `chordDiagrams guitar capo 3`** — the shapes, the names (`chordNames shape |
   sounding | both`, a new key) and "Capo 3" at the score's head follow the capo, and the
   hover, `Ctrl+Shift+Up`/`Down` and the shape check read the pressed chord. **The capo

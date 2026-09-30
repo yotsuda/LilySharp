@@ -826,6 +826,39 @@ public class EditorColouringTests
             Assert.Equal(SyntaxKind.Identifier, KindOf(word));
     }
 
+    /// <summary>A layout's shape table (<c>chordDiagrams guitar { Cm7 x35343  section A { … } }</c>)
+    /// is its own begin/end region, first in the layout block: until 2026-09-30 nothing claimed
+    /// its brace, so its <c>}</c> ended the layout block and the keys after it went plain. Inside,
+    /// the tuning words are exactly the compiler's and a shape is coloured only as a whole word.</summary>
+    [Fact]
+    public void TheShapeTable_IsItsOwnRegion_AndColoursTuningsAndShapes()
+    {
+        using var doc = JsonDocument.Parse(File.ReadAllText(GrammarPath));
+        var repository = doc.RootElement.GetProperty("repository");
+        var layout = Rules(repository.GetProperty("layout-block")).ToList();
+        int table = layout.FindIndex(r => r.TryGetProperty("include", out var i) && i.GetString() == "#shape-table");
+        int firstKey = layout.FindIndex(r => r.TryGetProperty("match", out _));
+        Assert.InRange(table, 0, firstKey - 1);
+
+        var region = repository.GetProperty("shape-table");
+        Assert.Equal(("\\{", "\\}"), (region.GetProperty("begin").GetString(), region.GetProperty("end").GetString()));
+        var section = Rules(region).Single(r => r.TryGetProperty("begin", out _));
+        Assert.Matches(section.GetProperty("begin").GetString()!, "section Chorus {");
+
+        var entry = Rules(repository.GetProperty("shape-table-entry")).ToList();
+        string tunings = entry.Single(r => r.GetProperty("name").GetString() == "support.constant.tuning.lilysharp")
+            .GetProperty("match").GetString()!;
+        Assert.Equal(SymbolCaseValidator.TuningValueVocabulary.OrderBy(w => w, StringComparer.Ordinal),
+            Regex.Match(tunings, @"\(([a-z0-9|]+)\)").Groups[1].Value.Split('|').OrderBy(w => w, StringComparer.Ordinal));
+        string shape = entry.Single(r => r.GetProperty("name").GetString() == "constant.numeric.lilysharp")
+            .GetProperty("match").GetString()!;
+        foreach (string s in new[] { "x35343", "133211", "2010", "x-10-12-12-11-10", "o2210x" })
+            Assert.True(Regex.IsMatch($"C {s} ", shape), $"the shape {s} is left plain");
+        foreach (string chord in new[] { "C6/9", "C7(9)", "Cm7", "F#m7-5/A" })
+            Assert.DoesNotMatch(shape, chord);
+        Assert.DoesNotMatch(tunings, "guitar7x");
+    }
+
     [Fact]
     public void ASectionInsideAPart_IsColouredLikeOneAtTheTopLevel()
     {

@@ -274,6 +274,7 @@
             "patterns": [
                 { "include": "#comments" },
                 { "include": "#strings" },
+                { "include": "#shape-table" },
                 {
                     "match": "\\b(markTempo)\\s+(stacked|beside)\\b",
                     "captures": {
@@ -368,6 +369,57 @@
                     "comment": "`every`'s count, and voltaBracket's.",
                     "name": "constant.numeric.lilysharp",
                     "match": "\\b\\d+\\b"
+                }
+            ]
+        },
+        "shape-table": {
+            "comment": "`layout { chordDiagrams guitar { Cm7 x35343  G  section Chorus { C x35553 } } }` (2026-09-30). The table is the ONE brace a layout body holds, so any `{` there opens it. ⚠️ Before this rule nothing claimed that brace, and #layout-block ends at `\\}` — so the table's own `}` (or its section's) ENDED THE LAYOUT BLOCK, and the keys after it were read by the top-level rules (the #part-inner-section shape: the tell is that a key BEFORE the table is coloured and one after it is not). Inside: `section NAME { … }` as a section is coloured anywhere, the tuning words and the shapes — each a whole word, so a digit inside a chord name (`C6/9`, `C7(9)`) is not taken for a shape. The chord names stay plain, as they are in a `chords` row.",
+            "begin": "\\{",
+            "beginCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#comments" },
+                { "include": "#strings" },
+                {
+                    "begin": "\\b(section)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\{)",
+                    "beginCaptures": {
+                        "1": { "name": "keyword.control.section.lilysharp" },
+                        "2": { "name": "entity.name.section.lilysharp" },
+                        "3": { "name": "punctuation.definition.block.lilysharp" }
+                    },
+                    "end": "\\}",
+                    "endCaptures": {
+                        "0": { "name": "punctuation.definition.block.lilysharp" }
+                    },
+                    "patterns": [
+                        { "include": "#comments" },
+                        { "include": "#strings" },
+                        { "include": "#shape-table-entry" }
+                    ]
+                },
+                {
+                    "comment": "`section` still gets its colour while the writer has typed it and not yet its name and brace.",
+                    "name": "keyword.control.section.lilysharp",
+                    "match": "\\bsection\\b"
+                },
+                { "include": "#shape-table-entry" }
+            ]
+        },
+        "shape-table-entry": {
+            "comment": "An entry's words after its chord name: the tuning words (the #tab-tuning list; EditorColouringTests holds both to LanguageVocabulary.TuningNames) and the shapes (ChordShapes.StartsShape: x, o, a digit or -).",
+            "patterns": [
+                {
+                    "name": "support.constant.tuning.lilysharp",
+                    "match": "(?<![^\\s{}])(baritoneukulele|banjodoublec|banjodoubled|guitardadgad|tenorukulele|banjoopendm|guitarasus4|guitardropc|guitardropd|guitaropend|guitaropeng|banjomodal|banjoopend|banjoopeng|doublebass|guitarlute|bassdropd|mandolin|ukuleled|guitar7|ukulele|banjoc|guitar|violin|bass4|bass5|bass6|viola|cello|bass)(?![^\\s{}])"
+                },
+                {
+                    "name": "constant.numeric.lilysharp",
+                    "match": "(?<![^\\s{}])[xo0-9-][xo0-9-]*(?![^\\s{}])"
                 }
             ]
         },
