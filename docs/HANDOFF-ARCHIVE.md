@@ -129,6 +129,16 @@
 # Lily# 開発ハンドオフ — 記録アーカイブ（2026-07-24 まで）
 
 
+## 以下は第705セッションの経緯
+
+### 1.1 第705セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p705`（HEAD `e8e1fb8d`・未 push 104）＝full **10445 / 0 / 2 / 10447**（引継ぎと一致）。
+⑴ ★ `b8c8b799`（`chord(X 形)` の穴・`c6d8fd1a` の message が名指した 4 つのうち「hover spells non-chord tones as in C」）: `ShapeChordHover` が `keySharps: 0` を渡していた＝flat 調で x32012 の最上弦を F♯4 と書き、ページは G♭4。エディタが全読者で使う `CurrentKey`（item の位置）を読む。網 `ShapeChordItemTests` +1（毒＝0 に戻す: 赤）。
+⑵ 残りの 3 つを読んだ: **phrase のアンカー**＝`PhraseAnchor.Walk` の `ChordSyntax` 腕は `Root`／度数しか見ない＝shape chord は null を返し、**body の次の音符がアンカーになる**（item 自身は「最低音を次へ渡す」＝ユーザー決定 09-28）。どれを渡すかは設計＝ユーザーに訊いた。harmonizer と `<< >>` は未着手。
+⑶ ★ **ユーザー決定（2026-09-30）: phrase の body が `chord(…)` で始まるとき、参照の後ろは item の最低音（書かれる音・絶対＝参照の `'` `,` で動かない）を読む**（選択肢＝最低音の実音／最低音の文字を枠で読む／今のまま・推奨を採用）。★ `40857dbd`: `PhraseAnchor.Shape`（-2）と `Anchor(…, out shape)`・`RelativeResetMarker.AnchorShape`・各 walker が item を鳴らすのと同じ `ShapeNotesOf` で最低音を出す（page `EnterPhraseTranspose`／MIDI・MusicXML の本流と grace の 4 経路・`ShapeAnchorOf`）。前は a' → G3・e' → G4 と body の 2 小節目で後ろが動いた（Lab `sessions/p705/anchor.lys`）。網 `ShapeChordItemTests` +1（page・MIDI・XML が 4 通りの中身と `P'`／`P,`・grace で一致）・毒 2（`PhraseAnchor` の腕を外す／MIDI の grace だけ捨てる）とも赤。コーパス 1,169 冊で phrase と `chord(…)` を両方持つ本は 0。文法書 3 冊・CHANGELOG。⚠ 毒の filter に `A|B` を cmd の中で書いて止まった（CLAUDE-OPERATIONS §1 の罠そのもの・毒は自分で戻し cmd を kill）。full **10447 / 0 / 2 / 10449**。
+★ `-End p705 -DiffBase e8e1fb8d`＝full **10447 / 0 / 2 / 10449**・門 6 つ全 OK・Core `+` 144 行に REF 0／OWN 0 → 7.5 の読み直しで `PhraseAnchor.Shape` に LILYSHARP-OWN を付けた（LP に item も phrase のアンカーも無い・双子の入れ子 `\relative` は参照の*前*の音から読む＝既に警告）＝`-End` の後の commit・full 同数。7.6: 出所はユーザー決定（上の ⑶）と `c6d8fd1a` の報告。7.7: 参照のアンカーの受け手が 4 経路（page・MIDI・XML 各本流＋grace）×（文字・主音・形）に増えた＝`ShapeAnchorOf` は MIDI と XML に同じ形で 2 つ（ShapeNotesOf の引数が walker ごとに違うので畳めない）。push はユーザー。
+
 ## 以下は第704セッションの経緯
 
 ### 1.1 第704セッション（2026-09-30・YT-DELL2）

@@ -79,7 +79,7 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 > ★★★★ **方針の系譜**: 第558（2026-09-24・ユーザー決定）「先に LP 忠実度」→ 第588（2026-09-25・ユーザー決定「1」）忠実度の項目は尽きた＝perf へ → 第647（2026-09-26・ユーザー決定）スラーとタイの LP 忠実度を先に閉じる（§2 S）→ **第659: S4 完了＝S5（独自の改善）の計画はユーザー判断**→ **第662〜663（2026-09-27〜28）はユーザーの指示で言語・エディタ・site の仕事**（§1.1 第662・第663）。perf の島は一時停止のまま。
 
 **⒜ 今すぐ手が動く（計器も直し方も分かっている）**
-- ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴（`c6d8fd1a` の message）＝4 つとも閉じた（ホバー・phrase のアンカー＝第705・harmonizer・`<< >>` の中＝第706）／表の中の補完と色は第704 が閉じた（`25f34bd0`・`99442ba8`）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` のホバーは最初の score のカポを読む（第665・MIDI 側は第687 が鳴らす score のカポに直した）
+- ★★★ **コード図（§2 K が正）＝K5 は全部閉じた（第664〜第668）**。小さい穴: 複数楽器の本でエディタが書く調弦はどれか（K3 は「最初の譜面」）／`chord(X 形)` の穴（`c6d8fd1a` の message）＝4 つとも閉じた（ホバー・phrase のアンカー＝第705・harmonizer・`<< >>` の中＝第706）／表の中の補完と色は第704 が閉じた（`25f34bd0`・`99442ba8`）／カポの穴＝双子は `chordNames both` を綴れない（警告）・`chord(…)` の検査（LYS1039）は最初の score のカポ（第665・MIDI は第687・ホバーは第707 が score ごとに直した）
 - **tab の LP 差（第690 起票）は第694 で全部閉じた**: turn の 0.17＝tab の Script の独自配置（`893b968b` で aligned_side に移植）／斜めの bracket の端＝`a08b91df`（make_bracket の字面・隙間も）／「beam 付き tab 符幹が 0.56 高い」「`g,4` のフレット選択」はユーザー決定の帰結＝欠陥ではない（§1.1 第694）。**tuplet の数字の送り幅が LP より 0.07 広い**（同梱書体の「3」0.96 対 LP 0.888＝隙間がその分広い・書体の問題）
 - **MusicXML／頁の既存欠陥（第662・第663 起票）の残る穴**: ★ 第677 の穴: 番号の無い周（`:|*3` に ending 2 つ）は Lily# が最後の ending を繰り返し、LP は余りを最初の alternative に与える＝双子はそのまま（`RepeatPasses.EndingFor` の OWN・観測者なし）。★ 第672 が見つけた穴: `R*N@text` は TextScript のまま＝LP は MultiMeasureRestText（UP・span 中央・count の数字を side support）＝LILYSHARP-OWN・count の数字の ink 箱を layout に持たせてから（§1.1 第672）／MMR 上の dynamic の X＝**第698 が閉じた**（`9e88b601`・LP は PaperColumn の `X-alignment-extent` (0 . 1.35) の中心 0.675）。残りは **MMR の小節の列 X が LP より 0.027 左**（小節線から Lily# 2.230・LP 2.257＝第697 の実測から逆算・Lab `sessions/p698/sp`）＝その列に載るのは dynamic と `R@chord` だけで実コーパス 0 冊＝値段は小さい・直すなら MMR の小節の間隔の組み方から／休符の import（post-event・`R`・`R*N`）は第698 が閉じた（`928f06a9`）。**掃きが見つけた古い穴 3 つ**（Lab `sessions/p698/imp/sweep.ps1`）: ⒤ `<words>`／`<rehearsal>` の import は第698 が閉じた（`aa88c5e9`）／文字列の escape は第702 が C# の文法にした（`d39f1cda`・§3）／⒥ は第699 が閉じた（`dfac7b6c`）／⒧ 途中の time／key／clef／tempo の import は第700 が閉じた（`5928d22f`）・voice block の `time` の検査は第701 が直した（`e89da84d`）／⒦ grace の slur は第700 が閉じた（`49fceda8`）／⒨ grace の和音と relative の和音の綴りは第700 が閉じた（`a9b61939`）／⒩ は計器の誤り（第701・複数 score の本で import の出力フォルダが衝突）＝実際は relative の音高のずれ 68 → 0。5/4 のような 1 つの音価で書けない全小節休符は `<type>` のまま（`R1` が 4/4 ぶん）
 - ⚠️ **VS Code の手動確認が未**: Ctrl+Shift+↑↓（形）・Ctrl+Alt+↑↓（番号・オクターブ）・開放弦の輪・Split Sections の UI・入力補助・`site/videos/SHOTLIST.md` の 9 本（ユーザーが録る）。⚠️ ユーザーの拡張は yotsuda.lilysharp-0.7.0＝更新してから
@@ -119,22 +119,20 @@ A/B の before はその場で・ベンチは静かな窓——は `-Start` が�
 - **`docs/RULES.md` は 247,333 / 250,000 B・1,879 / 2,000 行**（第697）。
   ⇒ **次に詰まったら、割るのではなく*規則そのもの*を畳む**（印のほうが高くつく）。
 
+### 1.1 第707セッション（2026-09-30・YT-DELL2）
+
+同じ会話の続き（ユーザー「続けて」）。★ `-Start p707`（HEAD `5219307c`・未 push 111）＝full **10450 / 0 / 2 / 10452**（引継ぎと一致）。
+⑴ ★ `5ffda831`（§1.0 ⒜ のカポの穴「`chord(…)` のホバーは最初の score のカポを読む」）: ページと MIDI（第687）は score ごとのカポで鳴らす＝その part を描く score のカポが違うとき、ホバーはカポごとに 1 行（`guitar, capo 3 (main): …`／`guitar, no capo (open): …`・`ChordDiagramScores.CaposOfNode`＝basename か form 名）。1 つなら従来の行のまま。★ 網を書いて見つけた 2 つ目の欠陥: **カポの下ではホバーの音名そのものが誤り**だった（`ShapeNote.SoundingName`＝開放弦＋フレット・カポは shift＝書かれる音にしか入らない＝E♭ の形 x32010 capo 3 が D♯2 G2 A♯2 D♯3 G3）＝書かれる音＋part の shift で名付ける（`WrittenMidi`／`NameAt`）＝E♭3 G3 B♭3 E♭4 G4。`SoundingMidi` の doc を実態に（カポ無し・並べ替え用）。網 `ShapeChordItemTests` +1（毒 2＝旧 `SoundingName`／1 行だけ: どちらも赤）。⚠ 網の区切りは「空白＋NBSP」（`PitchGlyphs` の出力）＝空白 2 つで書いて外した。CHANGELOG（拡張）。full **10451 / 0 / 2 / 10453**。
+★ `-End p707 -DiffBase 5219307c`＝full **10451 / 0 / 2 / 10453**・門 6 つ全 OK・Core `+` 25 行に REF 0／OWN 0（`CaposOfNode` と `ShapeNote` の名前付け＝エディタの表示の配管・言語の規則でも LP の移植でもない）。7.6: ⒜ のカポの穴（第665 起票）。7.7: `SoundingMidi` という名前が「カポ無しの実音」を指す＝名前と中身がずれている（doc で名指した・改名は触る箇所が広いので見送り）。残るカポの穴＝`chord(…)` の検査（LYS1039）は最初の score のカポ・双子は `chordNames both` を綴れない。push はユーザー。
+
+## 以下は第706セッションの経緯
+
 ### 1.1 第706セッション（2026-09-30・YT-DELL2）
 
 同じ会話の続き（ユーザー「続けて」）。★ `-Start p706`（HEAD `cba36a92`・未 push 108）＝full **10447 / 0 / 2 / 10449**（引継ぎと一致）。
 ⑴ ★ `42e1fba7`（`c6d8fd1a` の穴「harmonizer が無視」）: `ChordHarmonizer.PitchClassesByPosition` は和音の `PitchSyntax` を読む＝`chord(…)` と度数の和音 `<5 7 2>` は空＝その小節は休符扱いで前のコードを保持していた。構文から文字が取れない和音は collector が集めた音で数える。網 `ChordHarmonizerTests` +1（毒: `C | C | C` で赤）。
 ⑵ ★ **ユーザー決定（2026-09-30）: `<< >>` の中の `chord(…)` は形を分散させる**（選択肢＝分散／1 メンバーとして同時に鳴らす／今のまま＝エラー・推奨を採用）。★ `e8efa025`: `Music.ArpeggioSpread`＝`Sequence` の shape member を音ごと（最低音から）に展開し、分け前の数も展開後で数える（調弦・カポ・調は構文の事実でない＝各 walker が item を鳴らす関数を渡す）。展開した音は「1 音に絞った item」として各 walker の既存の shape chord 経路で出す（`ShapeNotesOf` が再生中の 1 音だけを返す `_spreadNote`・green で照合）＝綴り・弦番号・絶対音高は item と同じ。先頭の形は群の根音（最低音＝item と phrase の規則）・分け前の点は最後の音・`(` は最初・`)` は最後・調弦に形が無ければ 1 分け前の spacer。parser（`ParseShapeChord(inGroup)`＝音価を持てない）・page・MIDI・MusicXML・双子（`\tuplet 5/4 { c8\5 e8\4 … }`・LilyPond 2.26 で通る）・`PhraseAnchor`・群の `@chord`（`TryNameArpeggio`）・validator。網 `ShapeChordItemTests` +2（展開・混在と点・根音・spacer・スラー・`@chord`・音価の拒否・オクターブ変換の往復）・毒 2（展開を止める／MIDI の根音の腕）とも赤。掃き svg 998 冊＝782/782 バイト同一（基準は p703 の build）。文法書 3 冊・CHANGELOG。⚠ 予測を 2 か所外した: `<< c' … >>` の根音は C5（相対の既定枠）・展開音の Duration は連符込みの実時間（1/18）＝網の側を直した。full **10450 / 0 / 2 / 10452**。
 ★ `-End p706 -DiffBase cba36a92`＝full **10450 / 0 / 2 / 10452**・門 6 つ全 OK・Core `+` 271 行に REF 0／OWN 1（`ArpeggioSpread`＝ユーザー決定の言語規則・LP に `<< >>` も item も無い）。7.6: 出所はユーザー決定（⑵）と `c6d8fd1a` の報告。7.7: ⑴ `_spreadNote` は walker の可変状態で「再生中の 1 音」を `ShapeNotesOf` に渡す＝3 walker に同じ形で 3 つ（各 walker の shape 経路をそのまま使うための代償・設定と解除が 1 行ずつで囲まれている）⑵ harmonizer の fallback は度数の和音も数えるようになった（shape だけの修正ではない＝CHANGELOG に書いた）。push はユーザー。
-
-## 以下は第705セッションの経緯
-
-### 1.1 第705セッション（2026-09-30・YT-DELL2）
-
-同じ会話の続き（ユーザー「続けて」）。★ `-Start p705`（HEAD `e8e1fb8d`・未 push 104）＝full **10445 / 0 / 2 / 10447**（引継ぎと一致）。
-⑴ ★ `b8c8b799`（`chord(X 形)` の穴・`c6d8fd1a` の message が名指した 4 つのうち「hover spells non-chord tones as in C」）: `ShapeChordHover` が `keySharps: 0` を渡していた＝flat 調で x32012 の最上弦を F♯4 と書き、ページは G♭4。エディタが全読者で使う `CurrentKey`（item の位置）を読む。網 `ShapeChordItemTests` +1（毒＝0 に戻す: 赤）。
-⑵ 残りの 3 つを読んだ: **phrase のアンカー**＝`PhraseAnchor.Walk` の `ChordSyntax` 腕は `Root`／度数しか見ない＝shape chord は null を返し、**body の次の音符がアンカーになる**（item 自身は「最低音を次へ渡す」＝ユーザー決定 09-28）。どれを渡すかは設計＝ユーザーに訊いた。harmonizer と `<< >>` は未着手。
-⑶ ★ **ユーザー決定（2026-09-30）: phrase の body が `chord(…)` で始まるとき、参照の後ろは item の最低音（書かれる音・絶対＝参照の `'` `,` で動かない）を読む**（選択肢＝最低音の実音／最低音の文字を枠で読む／今のまま・推奨を採用）。★ `40857dbd`: `PhraseAnchor.Shape`（-2）と `Anchor(…, out shape)`・`RelativeResetMarker.AnchorShape`・各 walker が item を鳴らすのと同じ `ShapeNotesOf` で最低音を出す（page `EnterPhraseTranspose`／MIDI・MusicXML の本流と grace の 4 経路・`ShapeAnchorOf`）。前は a' → G3・e' → G4 と body の 2 小節目で後ろが動いた（Lab `sessions/p705/anchor.lys`）。網 `ShapeChordItemTests` +1（page・MIDI・XML が 4 通りの中身と `P'`／`P,`・grace で一致）・毒 2（`PhraseAnchor` の腕を外す／MIDI の grace だけ捨てる）とも赤。コーパス 1,169 冊で phrase と `chord(…)` を両方持つ本は 0。文法書 3 冊・CHANGELOG。⚠ 毒の filter に `A|B` を cmd の中で書いて止まった（CLAUDE-OPERATIONS §1 の罠そのもの・毒は自分で戻し cmd を kill）。full **10447 / 0 / 2 / 10449**。
-★ `-End p705 -DiffBase e8e1fb8d`＝full **10447 / 0 / 2 / 10449**・門 6 つ全 OK・Core `+` 144 行に REF 0／OWN 0 → 7.5 の読み直しで `PhraseAnchor.Shape` に LILYSHARP-OWN を付けた（LP に item も phrase のアンカーも無い・双子の入れ子 `\relative` は参照の*前*の音から読む＝既に警告）＝`-End` の後の commit・full 同数。7.6: 出所はユーザー決定（上の ⑶）と `c6d8fd1a` の報告。7.7: 参照のアンカーの受け手が 4 経路（page・MIDI・XML 各本流＋grace）×（文字・主音・形）に増えた＝`ShapeAnchorOf` は MIDI と XML に同じ形で 2 つ（ShapeNotesOf の引数が walker ごとに違うので畳めない）。push はユーザー。
 
 ## 2. 開いている作業
 
