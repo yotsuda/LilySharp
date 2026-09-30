@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="360.5" viewBox="0 0 119.50 36.05" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="368.6" viewBox="0 0 119.50 36.86" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   @font-face { font-family: 'Emmentaler-14'; src: local('Emmentaler-14'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="36.05" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="36.86" fill="#FFFFFF"/>
   <text x="59.75" y="12.26" font-size="3.49" font-weight="bold" text-anchor="middle" data-pos="69">Grace Notes</text>
   <text x="110.97" y="15.76" font-size="2.20" text-anchor="end" data-pos="92">Lily#</text>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
@@ -57,12 +57,12 @@
   <rect x="40.94" y="23.96" width="0.19" height="4.00" data-pos="344"/>
   <rect x="53.68" y="23.96" width="0.19" height="4.00" data-pos="452"/>
   <rect x="66.54" y="23.96" width="0.19" height="4.00" data-pos="537"/>
+  <path d="M 29.46,30.86 C 30.13,31.21 31.10,31.05 31.62,30.51 C 31.12,31.17 30.15,31.33 29.46,30.86 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="314"/>
+  <path d="M 42.32,29.86 C 42.99,30.21 43.96,30.05 44.47,29.51 C 43.98,30.17 43.00,30.33 42.32,29.86 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="423"/>
   <line x1="16.17" y1="28.46" x2="16.17" y2="25.81" stroke="#000000" stroke-width="0.130" data-pos="208"/>
   <line x1="17.59" y1="27.96" x2="17.59" y2="25.48" stroke="#000000" stroke-width="0.130" data-pos="208"/>
   <polygon points="16.11,25.63 17.66,25.27 17.66,25.66 16.11,26.01" data-pos="208"/>
   <polygon points="16.11,26.28 17.66,25.92 17.66,26.30 16.11,26.66" data-pos="208"/>
-  <path d="M 29.42,30.96 C 30.08,31.33 31.04,31.17 31.55,30.61 C 31.05,31.26 30.09,31.41 29.42,30.96 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="314"/>
-  <path d="M 42.27,29.96 C 42.94,30.33 43.89,30.17 44.40,29.61 C 43.91,30.26 42.95,30.41 42.27,29.96 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="423"/>
   <text class="music" x="13.42" y="22.60" font-size="3.56" data-pos="107"></text>
   <line x1="14.52" y1="22.43" x2="14.52" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="107"/>
   <text x="15.20" y="23.08" font-size="2.20" data-pos="107">= 120</text>

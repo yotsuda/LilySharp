@@ -8741,6 +8741,30 @@ internal static class LpGeometryProbes
         score main "GFS" { staff m }
         """;
 
+    /// <summary>
+    /// THE GRACE SLUR (probes/grace-slur.ly): the acciaccatura's and the appoggiatura's bow
+    /// from the grace to its main note, and a hand-written <c>grace { a16( } b8)</c> whose
+    /// main note is beamed on its left — the slur ends on the head, not the beam. LilyPond
+    /// spelling: <c>c''4 \acciaccatura { e''8 } d''4 e''4 f''4 |</c> (and \appoggiatura);
+    /// <c>\clef bass d8 d d d d \grace { a16( } b8) a d |</c>.
+    /// </summary>
+    private static string GraceSlurBook(string tag, string clef, string music) => $$"""
+        octave absolute
+        time 4/4
+
+        part m { clef {{clef}} }
+
+        section Main { m { {{music}} } }
+
+        form main { ~Main }
+
+        score main "{{tag}}" { staff m }
+        """;
+
+    private static readonly string GSA = GraceSlurBook("GSA", "treble", "c'4 acciaccatura { e'8 } d'4 e'4 f'4 |");
+    private static readonly string GSP = GraceSlurBook("GSP", "treble", "c'4 appoggiatura { e'8 } d'4 e'4 f'4 |");
+    private static readonly string GSB = GraceSlurBook("GSB", "bass", "d,8 d, d, d, d, grace { a,16( } b,8) a, d, |");
+
     private static readonly string BQA = """
         octave absolute
         time 4/4
@@ -16296,6 +16320,13 @@ internal static class LpGeometryProbes
         new("rest.grace.after-held-note.control", GRC, g => g.GlyphAboveStaffMiddle('', 2)),
         new("slur.over-grace-rest.left-attachment", GRS, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.over-grace-rest.alone.left-attachment", GRS, g => g.BowAttachmentAboveStaffMiddle(1)),
+        // The grace slur itself (probes/grace-slur.ly): an ordinary slur since session 724.
+        new("slur.grace.acciaccatura.left-attachment", GSA, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.acciaccatura.span", GSA, g => g.BowSpan(0)),
+        new("slur.grace.appoggiatura.left-attachment", GSP, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.appoggiatura.span", GSP, g => g.BowSpan(0)),
+        new("slur.grace.beamed-main.left-attachment", GSB, g => g.BowAttachmentAboveStaffMiddle(0)),
+        new("slur.grace.beamed-main.span", GSB, g => g.BowSpan(0)),
         new("slur.over-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(0)),
         new("slur.under-flagged-grace.left-attachment", GFS, g => g.BowAttachmentAboveStaffMiddle(1)),
         // The skyline reserves a slur laid out apart from the drawn one. See SBR.

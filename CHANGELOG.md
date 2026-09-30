@@ -316,6 +316,11 @@ workflow attaches that section to the GitHub Release verbatim.
 
 ### Fixes
 
+- **The slur of an acciaccatura or appoggiatura is shaped as LilyPond shapes it.** The bow
+  from a grace note to its main note (and a hand-written `grace { g16( } a8)`) was drawn
+  from fixed clearances; it is now laid out as an ordinary slur. It reaches under the main
+  note's head rather than stopping at its stem, clears what lies between, and ends on the
+  head when the main note is beamed with the notes before it.
 - **A rest in a grace body stands clear of the note before it, and a slur clears the rest.**
   `c'4 grace { r16 d'16 } e'4` drew the grace rest on the middle line, where it ran into the
   held note above it, and a slur over the run passed through the rest. As in LilyPond, the

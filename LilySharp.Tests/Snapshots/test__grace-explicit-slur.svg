@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="228.7" viewBox="0 0 119.50 22.87" font-family="TeX Gyre Schola, serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1195.0" height="236.8" viewBox="0 0 119.50 23.68" font-family="TeX Gyre Schola, serif">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   @font-face { font-family: 'Emmentaler-14'; src: local('Emmentaler-14'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <rect x="0" y="0" width="119.50" height="22.87" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="119.50" height="23.68" fill="#FFFFFF"/>
   <g transform="translate(8.54,0.00) scale(1.0000,1.0000)">
   <line x1="8.59" y1="10.28" x2="64.81" y2="10.28" stroke="#000000" stroke-width="0.100"/>
   <line x1="8.59" y1="11.28" x2="64.81" y2="11.28" stroke="#000000" stroke-width="0.100"/>
@@ -64,8 +64,8 @@
   <line x1="61.42" y1="11.43" x2="61.42" y2="14.78" stroke="#000000" stroke-width="0.130"/>
   <rect x="32.01" y="10.28" width="0.19" height="4.00" data-pos="797"/>
   <rect x="47.99" y="10.28" width="0.19" height="4.00" data-pos="831"/>
-  <path d="M 20.35,17.78 C 21.01,18.15 21.97,17.99 22.47,17.43 C 21.98,18.08 21.02,18.23 20.35,17.78 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="773"/>
-  <path d="M 36.33,17.78 C 36.99,18.15 37.95,17.99 38.46,17.43 C 37.96,18.08 37.00,18.23 36.33,17.78 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="802"/>
+  <path d="M 20.39,17.68 C 21.06,18.03 22.03,17.87 22.55,17.33 C 22.05,17.99 21.08,18.15 20.39,17.68 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="773"/>
+  <path d="M 36.37,17.68 C 37.04,18.03 38.01,17.87 38.53,17.33 C 38.03,17.99 37.06,18.15 36.37,17.68 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="802"/>
   <line x1="53.10" y1="13.78" x2="53.10" y2="11.13" stroke="#000000" stroke-width="0.130" data-pos="836"/>
   <line x1="54.52" y1="13.28" x2="54.52" y2="10.80" stroke="#000000" stroke-width="0.130" data-pos="836"/>
   <polygon points="53.04,10.95 54.58,10.59 54.58,10.98 53.04,11.33" data-pos="836"/>

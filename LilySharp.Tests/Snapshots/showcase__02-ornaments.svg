@@ -143,6 +143,8 @@
   <rect x="94.60" y="24.52" width="0.19" height="4.00" data-pos="676"/>
   <rect x="102.24" y="24.52" width="0.19" height="4.00" data-pos="720"/>
   <path d="M 44.53,33.27 C 45.01,33.72 46.03,33.72 46.51,33.27 C 46.03,33.84 45.01,33.84 44.53,33.27 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="393"/>
+  <path d="M 18.81,28.51 C 19.35,29.04 20.06,28.89 20.45,28.16 C 20.08,29.01 19.37,29.16 18.81,28.51 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="261"/>
+  <path d="M 26.66,25.91 C 27.29,26.30 28.26,26.21 28.81,25.71 C 28.27,26.33 27.30,26.42 26.66,25.91 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="299"/>
   <path d="M 35.60,32.06 C 37.14,32.75 40.46,31.90 41.47,30.56 C 40.49,32.02 37.16,32.87 35.60,32.06 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="377"/>
   <line x1="51.34" y1="23.12" x2="51.34" y2="23.82" stroke="#000000" stroke-width="0.160" data-pos="441"/>
   <line x1="51.34" y1="23.12" x2="52.69" y2="23.12" stroke="#000000" stroke-width="0.160" data-pos="441"/>
@@ -184,8 +186,6 @@
   <line x1="19.14" y1="27.52" x2="19.14" y2="25.03" stroke="#000000" stroke-width="0.130" data-pos="261"/>
   <polygon points="17.66,25.18 19.21,24.82 19.21,25.21 17.66,25.57" data-pos="261"/>
   <polygon points="17.66,25.83 19.21,25.47 19.21,25.86 17.66,26.21" data-pos="261"/>
-  <path d="M 18.75,28.70 C 19.31,28.91 20.01,28.69 20.36,28.20 C 20.04,28.77 19.34,28.99 18.75,28.70 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="261"/>
-  <path d="M 26.64,26.02 C 27.10,26.20 27.65,26.05 27.96,25.67 C 27.67,26.13 27.12,26.28 26.64,26.02 Z" stroke="#000000" stroke-width="0.08" stroke-linecap="round" stroke-linejoin="round" data-pos="299"/>
   <text class="music" x="14.97" y="22.60" font-size="3.56" data-pos="169"></text>
   <line x1="16.07" y1="22.43" x2="16.07" y2="19.92" stroke="#000000" stroke-width="0.116" data-pos="169"/>
   <text x="16.75" y="23.08" font-size="2.20" data-pos="169">= 100</text>

@@ -44,7 +44,7 @@
 - **:270** fans twice. Not ported; no book in the corpus has one.
 - **:688** ⚠️ NOT PORTED: courtesy parens are not counted, where LP's grob extent includes
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:391** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
+- **:368** ⚠️ NOT PORTED — the per-duration grace head, in the STEM's frame: this argument
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1300** ⚠️ NOT PORTED — the round-box form: LP draws each dash as a round_filled_box
 - **:1305** whiteout −1) is not ported.
@@ -77,7 +77,7 @@
 - **:1337** ⚠️ NOT PORTED, and named rather than left to be discovered: the ONLY-RESTS
 - **:1556** ⚠️ NOT PORTED: another VOICE's notes at that moment (a grace rest under polyphony);
 - **:2332** ⚠️ NOT PORTED — LP's solve-once-then-break order: A BROKEN COLUMN IS SOLVED
-- **:4029** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
+- **:4117** ⚠️ NOT PORTED, named rather than left to be discovered: the COMMAND COLUMN.
 ### `LilySharp.Core/Svg/Layout/FiguredBassEngraver.cs`
 - **:142** spells it after the digit — the order FiguredBassGlyphRun names as not ported. The box
 ### `LilySharp.Core/Svg/Layout/FiguredBassGlyphRun.cs`
@@ -287,7 +287,7 @@
 ### `LilySharp.Core/Rendering/SharedRenderer.cs`
 - **:652** prefix — LILYSHARP-OWN, a decided divergence (user decision
 ### `LilySharp.Core/Rendering/SharedRenderer.GraceNotes.cs`
-- **:237** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
+- **:214** as for a notation grace. ⚠️ LILYSHARP-OWN, and knowingly so: LilyPond's TabStaff
 ### `LilySharp.Core/Rendering/SharedRenderer.Marks.cs`
 - **:1419** LP: ss × length-fraction × 0.81. LILYSHARP-OWN: length-fraction is
 ### `LilySharp.Core/Rendering/SharedRenderer.Overlays.cs`
@@ -417,7 +417,7 @@
 - **:555** ⚠️ LILYSHARP-OWN: THE MAX FOLD. LilyPond's Hairpin carries
 - **:1017** LILYSHARP-OWN: the SILHOUETTE margin, not ink. It widens a mark's box before the
 ### `LilySharp.Core/Svg/Layout/LayoutEngine.Prelim.cs`
-- **:1489** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
+- **:1492** LILYSHARP-OWN: the shift itself. LilyPond has no counterpart, because it has no second
 ### `LilySharp.Core/Svg/Layout/LayoutOptions.cs`
 - **:122** ⚠️ LILYSHARP-OWN, AND INERT IN EVERY BOOK MEASURED. The distance between two systems
 ### `LilySharp.Core/Svg/Layout/LayoutUtilities.cs`

@@ -85,9 +85,7 @@ internal static partial class SharedRenderer
                 : GraceNoteItem.HeadFontOf(g.Columns).Scaled(unit);
             var colX = g.ColumnOffsets;
             double currentX = g.X;
-            double lastNoteX = g.X, lastNoteY = staffMiddleY;
             int headIndex = 0;
-            int lastGraceStaffPos = 0;
             // Per-head geometry, collected so the beam can be drawn once the whole group's
             // positions are known.
             var headX = new List<double>(g.Columns.Length);
@@ -134,15 +132,16 @@ internal static partial class SharedRenderer
                     // LilyPond does: grace is not a context, it is `\consists Grace_engraver`
                     // inside the ordinary Voice setting a per-grob table
                     // (scm/music-functions.scm:636-650 general-grace-settings).
-                    // WHAT IS LEFT HERE is the group's own two spanners, and NOTHING ELSE since
-                    // session 315 — the BEAM over its prefix, whose thickness, length-fraction
-                    // and prefix rule are all stated for the grace and nowhere else, and the
-                    // SLUR to the main note. The DOTS went home with the stem they are measured
+                    // WHAT IS LEFT HERE is the group's own BEAM over its prefix, whose thickness,
+                    // length-fraction and prefix rule are all stated for the grace and nowhere
+                    // else, and NOTHING ELSE: the SLUR to the main note went home in session 724
+                    // (an ordinary slur — ElementCoordinator.WithGraceSlurs). The DOTS went home
+                    // in session 315 with the stem they are measured
                     // against: DrawNote's dot column hangs its flag support off the stem it has
                     // just drawn, so a grace's dot now moves with the SHORTENING, which is what
                     // LilyPond does and what a flat side-model stem could not do
                     // (scratch/p315/measurements.md).
-                    // Both spanners need the run's head geometry, which is what this loop gathers.
+                    // The beam needs the run's head geometry, which is what this loop gathers.
                     double lowestY = double.MaxValue, highestY = double.MinValue;
                     foreach (var head in note.Heads)
                     {
@@ -159,11 +158,6 @@ internal static partial class SharedRenderer
                     headY.Add(lowestY);
                     headTopY.Add(highestY);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
-                    lastNoteX = currentX;
-                    // The grace slur bows DOWN (score-grace-settings pairs Slur direction
-                    // DOWN with Stem UP), so it leaves the column's BOTTOM head.
-                    lastNoteY = lowestY;
-                    lastGraceStaffPos = note.Lowest.StaffPosition;
                     headIndex++;
                 }
 
@@ -193,26 +187,9 @@ internal static partial class SharedRenderer
                 DrawGraceBeam(headX, headY, headTopY, beamCounts, eff, graceFont,
                     beamEnds, beamedPrefix, gc);
 
-                // Grace slur from the last grace notehead to the main notehead.
-                // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
-                // acciaccatura and appoggiatura are auto-slurred to the main note, and a
-                // hand-written `grace { g16( } a8)` is the same two slur events
-                // (GraceNoteItem.ExplicitSlur), so it draws the same bow.
-                if (g.Columns.Length > 0 &&
-                    (g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura
-                     || g.ExplicitSlur))
-                {
-                    double mainY = os.YUp(
-                        staffMiddleY + g.MainNoteStaffPosition / 2.0,
-                        g.StaffIndex, g.MeasureIndex);
-                    // A main note below the middle line is stem-up (stem on the head's
-                    // RIGHT); the slur can then run to the head centre. A stem-down note
-                    // keeps its stem on the LEFT, so the slur tucks short of it.
-                    bool mainStemUp = g.MainNoteStaffPosition < 0;
-                    DrawGraceSlur(lastNoteX, lastNoteY, lastGraceStaffPos,
-                        g.MainNoteX, mainY, g.MainNoteStaffPosition, mainStemUp,
-                        g.MeasureIndex, eff, gc, pageHeight, staffMiddleY);
-                }
+                // The grace slur (last grace column → main note) is NOT drawn here any more:
+                // since session 724 it is an ordinary slur, laid out with the rest
+                // (ElementCoordinator.WithGraceSlurs) and drawn by DrawSlurs.
             }
         }
     }
@@ -547,99 +524,5 @@ internal static partial class SharedRenderer
         gc.DrawLine(x1, y1, x2, y2, Color.Black, 1.5 * EngravingDefaults.StemThickness * scale);
     }
 
-    /// <summary>
-    /// Draws a small slur arcing below from the last grace note to the main
-    /// note (grace stems point up, so the slur bows underneath).
-    /// </summary>
-    /// <remarks>LILYPOND-REF: ly/grace-init.ly — grace auto-slur.</remarks>
-    // Drops of the slur's ends below the noteheads' bottom edges. LilyPond keeps
-    // free-head-distance (0.3) from a head; the main-note end drops further because
-    // that note is stem-down (its stem sits on the slur's side) and the slur clears
-    // it — measured ≈0.65 ss below the head in LP's output. The grace end keeps the
-    // plain free-head-distance (its stem points the other way).
-    // LILYPOND-REF: scm/layout-slur.scm default-slur-details free-head-distance 0.3,
-    //   stem-encompass-penalty 30.
-    private const double GraceSlurStartClearance = 0.5;
-    private const double GraceSlurEndClearance = 0.65;
-    // Tuck the main-note end a little further left of the stem (stem-down mains only).
-    private const double GraceSlurEndLeftShift = 0.15;
-
-    private static void DrawGraceSlur(double graceX, double graceY, int graceStaffPos,
-        double mainX, double mainY, int mainStaffPos, bool mainStemUp,
-        int measureIndex, double scale, IDrawingContext gc, double pageHeight,
-        double staffMiddleY)
-    {
-        // The slur scorer reasons in device coordinates (its result is layout Y-up =
-        // -device); convert the Y-up head anchors to device, solve, then flip the
-        // final curve back to page Y-up for the flipping context.
-        graceY = pageHeight - graceY;
-        mainY = pageHeight - mainY;
-        // staffMiddleY arrives page-Y-up (same as the head anchors did); the scorer
-        // needs it in the device frame so its staff-line avoidance lands correctly.
-        double staffMiddleYDevice = pageHeight - staffMiddleY;
-        double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
-        double startY = graceY + 0.5 + GraceSlurStartClearance;
-        // A stem-DOWN main note carries its stem on the head's LEFT, so end the slur
-        // short of it (tuck beside the stem). A stem-UP main note has a clear left side,
-        // so run the slur out to the head CENTRE. Dropped below the head either way so
-        // the bow does not hug the notehead.
-        double endX = mainStemUp
-            ? mainX + GlyphMetrics.NoteheadBlack.CenterX
-            : mainX - GraceSlurEndLeftShift;
-        double endY = mainY + 0.5 + GraceSlurEndClearance;
-
-        if (endX - startX < 0.5) return; // degenerate
-
-        // Optimise the endpoints through the SAME slur scorer the regular slurs use
-        // (LilyPond's Slur_score): enumerate attachment Ys around the base and pick the
-        // configuration that best encompasses the heads and flattens the slope. This is
-        // what pulls the grace-side start down when the main note is far below it,
-        // instead of a fixed clearance. The heads are fed as obstacles to encompass.
-        // LILYPOND-REF: lily/slur-scoring.cc:436 Slur_score_state::get_best_curve.
-        var slurItem = new SlurItem(graceStaffPos, mainStaffPos, curveUp: false,
-            measureIndex, measureIndex, startItemIndex: 0, endItemIndex: 0);
-        double graceHalf = 0.5 * scale, mainHalf = 0.5;
-        var obstacles = new List<SlurObstacle>
-        {
-            new(startX, graceY - graceHalf, graceY + graceHalf),
-            new(endX, mainY - mainHalf, mainY + mainHalf),
-        };
-        var solved = SlurScoringProblem.SolveLent(
-            slurItem, startX, startY, endX, endY, staffMiddleYDevice,
-            obstacles: obstacles);
-
-        // For a short grace→main span (a beamed grace run sits right against the main
-        // note) the scorer's free-head inset can drop every candidate, collapsing the
-        // width; keep the base attachments then so the bow stays visible.
-        bool degenerate = solved.EndX - solved.StartX < 1.0;
-        double sx = degenerate ? startX : solved.StartX;
-        // solved's Y is page Y-up (= -device); reflect back to the device startY/endY.
-        double sy = degenerate ? startY : -solved.StartYUp;
-        double ex = degenerate ? endX : solved.EndX;
-        double ey = degenerate ? endY : -solved.EndYUp;
-
-        // Draw the optimised endpoints with LilyPond's slur_shape base curve: both
-        // inner control points sit `height` off the chord PERPENDICULAR, indented
-        // `indent` along it — a rounder, symmetric arc. Slur grob defaults height-limit
-        // 2.0, ratio 0.25. LILYPOND-REF: lily/bezier-bow.cc slur_height /
-        //   get_slur_indent_height (height = F0_1(width*r0/h_inf)*h_inf,
-        //   F0_1(x)=2/pi*atan(pi*x/2); indent = 2*h_inf - q^2/3.1/(width+q),
-        //   q = 2*h_inf*3.1, cap width/3.1); slur-configuration.cc generate_curve.
-        const double hInf = 2.0, r0 = 0.25, maxFraction = 1.0 / 3.1;
-        double dx = ex - sx, dyc = ey - sy;
-        double len = Math.Sqrt(dx * dx + dyc * dyc);
-        double height = 2.0 / Math.PI * Math.Atan(Math.PI * (len * r0 / hInf) / 2.0) * hInf;
-        double q = 2.0 * hInf / maxFraction;
-        double indent = Math.Min(2.0 * hInf - q * q * maxFraction / (len + q), len * maxFraction);
-        double ux = dx / len, uy = dyc / len;   // chord unit
-        double perpX = -uy, perpY = ux;         // perpendicular, +Y (down) for a bow below
-        var c1 = (X: sx + perpX * height + ux * indent, Y: sy + perpY * height + uy * indent);
-        var c2 = (X: ex + perpX * height - ux * indent, Y: ey + perpY * height - uy * indent);
-
-        // Flip the device-space curve back to page Y-up for the flipping context.
-        DrawCurve(sx, pageHeight - sy, ex, pageHeight - ey,
-            (c1.X, pageHeight - c1.Y), (c2.X, pageHeight - c2.Y),
-            EngravingDefaults.SlurMidThickness * scale, gc);
-    }
 
 }

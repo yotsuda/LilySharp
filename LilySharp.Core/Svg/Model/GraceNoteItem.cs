@@ -312,9 +312,10 @@ public sealed record GraceNoteItem
     /// LILYPOND-REF: ly/grace-init.ly startGraceSlur / stopGraceSlur — an appoggiatura IS a
     /// grace with a slur event on its last note and the matching end on the main note; a
     /// hand-written <c>(</c> … <c>)</c> on a plain <c>\grace</c> is the same two events, and
-    /// LilyPond draws the same Slur for both. Lily# draws that bow from the group
-    /// (<c>SharedRenderer.DrawGraceSlur</c>) rather than through the ordinary slur engraver,
-    /// so the hand-written pair has to reach the group the way the keyword does: the
+    /// LilyPond draws the same Slur for both. Lily# makes that bow from the group — since
+    /// session 724 an ordinary slur from the last column to the main note
+    /// (<c>ElementCoordinator.WithGraceSlurs</c>; the renderer's own <c>DrawGraceSlur</c> is
+    /// gone) — so the hand-written pair has to reach the group the way the keyword does: the
     /// collector reads the <c>(</c> off the last column and takes the <c>)</c> off the main
     /// note (<c>MeasureCollector.ProcessGraceRegion</c> and the walk's main-note arm). A
     /// <c>(</c> on an EARLIER grace column, or one whose <c>)</c> lands past the main note,

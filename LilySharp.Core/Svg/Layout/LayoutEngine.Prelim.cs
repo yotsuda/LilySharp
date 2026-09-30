@@ -1081,6 +1081,9 @@ internal sealed partial class LayoutEngine
         ImmutableArray<ArticulationItem> staffScripts,
         SystemLayoutCache? systemCache, double commonShortestDuration)
     {
+        // The grace slurs join the list HERE, before it is bucketed by system and reassembled
+        // by identity (ElementCoordinator.WithGraceSlurs).
+        slurs = ElementCoordinator.WithGraceSlurs(slurs, staffSpannerScore, graceNotes, staffIndex, staff);
         if (systemCache is null || prelimSystems.Length == 0)
             return _elementCoordinator.LayoutSlurs(
                 fonts, slurs, staffSpannerScore, prelimSystems, staffIndex, staff, graceNotes,

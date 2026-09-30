@@ -100,6 +100,22 @@ public sealed record SlurItem
     /// <summary>The slur ends on one head of a chord. See <see cref="StartOnHead"/>.</summary>
     public bool EndOnHead { get; init; }
 
+    /// <summary>
+    /// A GRACE slur — from the last column of a grace run to its main note, the bow an
+    /// <c>acciaccatura</c> / <c>appoggiatura</c> implies and a hand-written
+    /// <c>grace { g16( } a8)</c> writes: the index, in the layout's own grace list, of the
+    /// group whose last column the slur starts on; −1 for every other slur.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ LAYOUT-ONLY: made by <c>ElementCoordinator.LayoutSlurs</c> from the staff's grace groups
+    /// (the detector never sees them — a staff's local score carries no grace list), so it
+    /// indexes THAT call's <c>graceNotes</c>. The start column stands at the grace run's own X
+    /// and in the grace font, which is why the layout has to know it is one.
+    /// LILYPOND-REF: ly/grace-init.ly startGraceSlur / stopGraceSlur — an ordinary Slur;
+    /// scm/music-functions.scm:652-656 score-grace-settings — (Voice Slur direction DOWN).
+    /// </remarks>
+    public int StartGraceGroup { get; init; } = -1;
+
     /// <summary>Creates a slur spanning from a start note to an end note.</summary>
     public SlurItem(
         int startStaffPosition,
@@ -134,5 +150,6 @@ public sealed record SlurItem
             IsPhrasing = IsPhrasing,
             StartOnHead = StartOnHead,
             EndOnHead = EndOnHead,
+            StartGraceGroup = StartGraceGroup,
         };
 }

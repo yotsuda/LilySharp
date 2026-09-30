@@ -60,6 +60,18 @@ public class SlurScoringTests
         return Enumerable.Range(1, 8).Select(i => double.Parse(m.Groups[i].Value)).ToArray();
     }
 
+    /// <summary>The WIDEST bow in the SVG — an enclosing slur, where grace slurs (drawn as
+    /// ordinary slurs since session 724, and laid out first) come before it.</summary>
+    private static double[] WidestBowCurve(string svg)
+    {
+        var bows = System.Text.RegularExpressions.Regex.Matches(svg,
+                "<path d=\"M ([-\\d.]+),([-\\d.]+) C ([-\\d.]+),([-\\d.]+) ([-\\d.]+),([-\\d.]+) ([-\\d.]+),([-\\d.]+)")
+            .Select(m => Enumerable.Range(1, 8).Select(i => double.Parse(m.Groups[i].Value)).ToArray())
+            .ToList();
+        Assert.NotEmpty(bows);
+        return bows.MaxBy(c => c[6] - c[0])!;
+    }
+
     [Fact]
     public void SteepSlur_StaysFlatOverTheDrop_AndClearsTheDot()
     {
@@ -136,7 +148,7 @@ public class SlurScoringTests
             "c'4( appoggiatura { e'8 } d'4 e'4 f'4) |\n" +
             "c'4 appoggiatura { e'8 } d'4 e'4 f'4 |\n");
         double middle = MiddleLineY(svg);
-        var c = BowCurve(svg);
+        var c = WidestBowCurve(svg);
 
         Assert.Equal(-3.54, c[1] - middle, 2);  // start Y (LP -3.5450)
         Assert.Equal(-3.54, c[7] - middle, 2);  // end Y (LP -3.5450)

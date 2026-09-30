@@ -1871,6 +1871,48 @@
       "residual": 0.0,
       "why": "EXACT: the control under the same kind of run — an up grace stem does not reach a slur below, so the stem rule does not bind here (it was 0 before session 723 too)."
     },
+    "slur.grace.acciaccatura.left-attachment": {
+      "probe": "grace-slur.ly",
+      "score": "ACC",
+      "lilypond": 0.10594049252121707,
+      "residual": 0.0,
+      "why": "EXACT since session 724: the grace slur is an ordinary slur (ElementCoordinator.WithGraceSlurs: last grace column -> main note, DOWN by score-grace-settings), starting at the grace column's own X and head in the grace font, scored by the slur port. Until session 724 the renderer drew it itself (SharedRenderer.DrawGraceSlur, fixed clearances 0.5/0.65/0.15, the two heads as the only obstacles) and it ended short of a stem-down main note: session 647's largest bow family."
+    },
+    "slur.grace.acciaccatura.span": {
+      "probe": "grace-slur.ly",
+      "score": "ACC",
+      "lilypond": 2.1137600208053833,
+      "residual": 0.0,
+      "why": "EXACT since session 724: the grace slur is an ordinary slur (ElementCoordinator.WithGraceSlurs: last grace column -> main note, DOWN by score-grace-settings), starting at the grace column's own X and head in the grace font, scored by the slur port. Until session 724 the renderer drew it itself (SharedRenderer.DrawGraceSlur, fixed clearances 0.5/0.65/0.15, the two heads as the only obstacles) and it ended short of a stem-down main note: session 647's largest bow family."
+    },
+    "slur.grace.appoggiatura.left-attachment": {
+      "probe": "grace-slur.ly",
+      "score": "APP",
+      "lilypond": 0.10594049252121707,
+      "residual": 0.0,
+      "why": "EXACT since session 724: the grace slur is an ordinary slur (ElementCoordinator.WithGraceSlurs: last grace column -> main note, DOWN by score-grace-settings), starting at the grace column's own X and head in the grace font, scored by the slur port. Until session 724 the renderer drew it itself (SharedRenderer.DrawGraceSlur, fixed clearances 0.5/0.65/0.15, the two heads as the only obstacles) and it ended short of a stem-down main note: session 647's largest bow family."
+    },
+    "slur.grace.appoggiatura.span": {
+      "probe": "grace-slur.ly",
+      "score": "APP",
+      "lilypond": 2.1137600208053833,
+      "residual": 0.0,
+      "why": "EXACT since session 724: the grace slur is an ordinary slur (ElementCoordinator.WithGraceSlurs: last grace column -> main note, DOWN by score-grace-settings), starting at the grace column's own X and head in the grace font, scored by the slur port. Until session 724 the renderer drew it itself (SharedRenderer.DrawGraceSlur, fixed clearances 0.5/0.65/0.15, the two heads as the only obstacles) and it ended short of a stem-down main note: session 647's largest bow family."
+    },
+    "slur.grace.beamed-main.left-attachment": {
+      "probe": "grace-slur.ly",
+      "score": "BEAMED",
+      "lilypond": 1.0415949617283493,
+      "residual": 0.0,
+      "why": "EXACT since session 724 (see slur.grace.acciaccatura.left-attachment): the main note is beamed on its left, so the slur - whose other bound, the grace column, stands inside that beam - ends on the head, not the beam (lily/slur-scoring.cc:549-554, !spanner_less || has_same_beam_). Before this clause the new grace slur hung from the beam, 3.4 low (Real Gone)."
+    },
+    "slur.grace.beamed-main.span": {
+      "probe": "grace-slur.ly",
+      "score": "BEAMED",
+      "lilypond": 2.1525631645391066,
+      "residual": 0.0,
+      "why": "EXACT since session 724 (see slur.grace.acciaccatura.left-attachment): the main note is beamed on its left, so the slur - whose other bound, the grace column, stands inside that beam - ends on the head, not the beam (lily/slur-scoring.cc:549-554, !spanner_less || has_same_beam_). Before this clause the new grace slur hung from the beam, 3.4 low (Real Gone)."
+    },
     "slur.beamed.reserved-text": {
       "probe": "slur-beam-reserve.ly",
       "score": "A",
